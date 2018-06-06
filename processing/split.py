@@ -39,5 +39,10 @@ test = threads.loc[test_bool.values]
 test.to_csv('data/test.csv')
 del test
 
+toy = random.sample(train, .1 * len(train))
+
 train = threads.loc[~test_bool.values]
 train.to_csv('data/train.csv')
+
+toy = threads[threads['anon_thread_id'].isin(toy)]
+toy.to_csv('data/toy.csv')
