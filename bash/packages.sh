@@ -1,5 +1,5 @@
 #!/bin/bash
-#$ -N JOBNAME
+#$ -N packages
 #$ -j y
 #$ -m e -M 4102158912@vtext.com
 
