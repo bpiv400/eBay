@@ -20,13 +20,16 @@ unique_threads = set(threads['anon_thread_id'].tolist())
 print('Check 2')
 
 # pure test extraction
-pure_test = random.sample(unique_threads, k=(.15 * len(unique_threads)))
-unique_threads = unique_threads.difference_update(set(pure_test))
+pure_test = random.sample(unique_threads, k=int(.15 * len(unique_threads)))
+unique_threads.difference_update(set(pure_test))
 print('Check 3')
+
 # test and train set extraction
-test = random.sample(unique_threads, len(unique_threads) * .2)
-train = unique_threads.difference_update(set(test))
-del unique_threads
+test = random.sample(unique_threads, int(len(unique_threads) * .2))
+unique_threads.difference_update(set(test))
+train = unique_threads
+toy = random.sample(train, int(.1 * len(train)))
+
 print('Check 4')
 # Extracts associated rows from threads dataframe for pure test
 ptest_bool = threads['anon_thread_id'].isin(pure_test)
@@ -42,8 +45,6 @@ test_bool = threads['anon_thread_id'].isin(test)
 test = threads.loc[test_bool.values]
 test.to_csv('data/test.csv')
 del test
-
-toy = random.sample(train, .1 * len(train))
 
 train = threads.loc[~test_bool.values]
 train.to_csv('data/train.csv')

@@ -11,6 +11,7 @@ filename = args.name
 
 data = pd.read_csv('data/' + filename)
 lists = pd.read_csv('data/lists.csv')
+lists.group_by
 
 
 def parApply(groupedDf, func):
