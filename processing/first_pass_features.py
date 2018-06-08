@@ -118,13 +118,31 @@ def gen_features(df, cnd_df=None, cat_df=None, leaf_df=None):
     response_code = int(df['status_id'].iloc[0])
     # create new column to encode price of the response offer
     df['rsp_offr'] = np.nan
-    listing_row = lists.loc[[df.at[0, 'anon_item_id']]]
+    curr_item_id = df.at[0, 'anon_item_id']
+    listing_row = lists.loc[[curr_item_id]]
     # NB not sure how to use anon_product_id when its missing sometimes, perhaps we can restrict later
     # excluding seller id
     listing_row.drop(columns=['anon_title_code', 'anon_slr_id',
                               'anon_item_id', 'anon_product_id', 'anon_buyer_id', 'ship_time_chosen'], inplace=True)
-    # BUG FIX this soooooooooooooooooooooooooooooooooon
-    # listing_row = genMetaIndicators(listing_row)
+
+    # grab leaf, category, and condition id's from listing
+    leaf = listing_row.at[curr_item_id, 'anon_leaf_categ_id']
+    categ = listing_row.at[curr_item_id, 'meta_categ_id']
+    condition = listing_row.at[curr_item_id, 'item_cndtn_id']
+
+    # extract corresponding rows in indicator look up tables
+    leaf_inds = leaf_df.loc[[leaf]]
+    categ_inds = cat_df.loc[[categ]]
+    cnd_inds = cnd_df.loc[[condition]]
+
+    # add all indicator columns
+    listing_row.merge(leaf_inds, left_on='anon_leaf_categ_id',
+                      right_index=True, inplace=True)
+    listing_row.merge(categ_inds, left_on='meta_categ_id',
+                      right_index=True, inplace=True)
+    listing_row.merge(cnd_inds, left_on='item_cndtn_id',
+                      right_index=True, inplace=True)
+
     list_price = listing_row['start_price_usd']
     if response_code == 1 or response_code == 9:
         df.at[0, 'rsp_offr'] = df.at[0, 'offr_price']
@@ -134,12 +152,13 @@ def gen_features(df, cnd_df=None, cat_df=None, leaf_df=None):
         df.at[0, 'rsp_offr'] = df.at[1, 'offr_price']
     if row_count > 1:
         df = df.iloc[[0]]
-    df.join(listing_row, inplace=True)
+    df.join(listing_row, inplace=True, how='right')
+    return df
 
 
 def par_apply(groupedDf, func):
     with Pool(cpu_count()) as p:
-        ret_list = p.map(func, [group for name, group in groupedDf], )
+        ret_list = p.map(func, [group for name, group in groupedDf])
     return pd.concat(ret_list)
 
 
