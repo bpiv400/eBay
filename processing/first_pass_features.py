@@ -168,29 +168,33 @@ def main():
     parser.add_argument('--name', action='store', type=str)
     args = parser.parse_args()
     filename = args.name
-
     data = pd.read_csv('data/' + filename)
+    print('Thread file loaded')
     global lists
     lists = pd.read_csv('data/lists.csv', index_col='anon_item_id')
-
+    print('Listing file loaded')
     # grabbing relevant indicator values
     condition_values = set(data['item_cndtn_id'])
     leaf_values = set(data['anon_leaf_categ_id'])
     categ_values = set(data['meta_categ_id'])
     title_values = set(data['anon_title'])
+    print('Indicators grabbed')
     print('Num leaves: ' + str(len(leaf_values)))
     print('Num titles: %d' % len(title_values))
 
     condition_inds = genIndicators(condition_values, 'c')
     categ_inds = genIndicators(categ_values, 'm')
     leaf_ids = genIndicators(leaf_values, 'l')
+    print('Indicator tables constructed')
 
     grouped_data = data.groupby(by='anon_thread_id')
-
+    del data
+    print('Threads grouped by thread id')
     applied_gen_features = partial(gen_features, cnd_df=condition_inds,
                                    cat_df=categ_inds,
-                                   leaf_df=categ_inds)
+                                   leaf_df=leaf_inds)
 
-
+    thread_features = par_apply(grouped_data,  applied_gen_features)
+    thread_features.to_csv('data/' + filename.replace('.csv', '') + '_feats.csv') 
 if __name__ == '__main__':
     main()
