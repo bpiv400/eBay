@@ -107,6 +107,10 @@ def genIndicators(all_ids, flag, hold_out=True):
 #     return row_df
 ######################################################################################
 
+# improve
+# filter all dates first
+# extract all threads that contain a row where type == 0 response_code == 7
+
 
 def sort_dates(df):
     # sort the thread by date (meaning buyers initial offer will be first)
@@ -212,6 +216,43 @@ def main():
     # leaf_inds.to_pickle('data/inds/leaf_inds.csv')
     categ_inds.to_pickle('data/inds/categ_inds.csv')
     print('Indicator tables pickled')
+
+    # subset data to extract only initial offers, we expect one such for each thread id
+    instance_data = data[data['offr_type_id'] == 0]
+    # add response offer price column
+    instance_data['rsp_offr'] == np.nan
+    # extract ids for offers which were declined
+    declined_ids = instance_data.loc[instance_data['status_id'].isin(
+        [0, 2, 6, 8]), 'anon_thread_id']
+    # extract ids for offers which were accepted
+    accepted_ids = instance_data.loc[instance_data['status_id'].isin(
+        [1, 9]), 'anon_thread_id']
+    # set the index of the instance data DataFrame to anon_thread id
+    instance_data.set_index('anon_thread_id', inplace=True)
+    # set accepted id response offers to equal the offer price
+    instance_data.loc[accepted_ids,
+                      'rsp_offr'] = instance_data.loc[accepted_ids, 'offr_price']
+    # extract the item codes for the items corresponding to the declined offers
+    declined_items = instance_data[declined_ids, 'anon_item_id']
+    # look these up in the lists DataFrame and extract the corresponding starting price
+    declined_prices = lists.loc[declined_items, 'start_price_usd']
+    # delete unnecesary data
+    del declined_items
+    # set response offer price for declined items to equal the list price we just extracted
+    instance_data.loc[declined_ids, 'rsp_offr'] = declined_prices
+
+    # get thread ids for threads where seller counter offered initial offer by
+    # subsetting instance data
+    counter_ids = instance_data[np.isnan(
+        instance_data.loc['rsp_offr'].values)].index
+
+    # subset original data to only include counter offers
+    counter_offers = data[data['offr_type_id'] == 2]
+    # set the index of the resulting data frame to be anon_thread_id
+    counter_offers.set_index('anon_thread_id', inplace=True)
+    # grab rows with thread id corresponding to instance_data where
+    # response offer price was left nan
+    counter_offers = counter_offers.loc[counter_ids]
 
     grouped_data = data.groupby(by='anon_thread_id')
     del data
