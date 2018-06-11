@@ -184,8 +184,15 @@ def main():
 
     condition_inds = genIndicators(condition_values, 'c')
     categ_inds = genIndicators(categ_values, 'm')
-    leaf_ids = genIndicators(leaf_values, 'l')
+    leaf_inds = genIndicators(leaf_values, 'l')
     print('Indicator tables constructed')
+
+    # pickling each indicator table
+    print('Pickling Indicator Tables')
+    condition_inds.to_pickle('data/inds/cnd_inds.csv')
+    leaf_inds.to_pickle('data/inds/leaf_inds.csv')
+    categ_inds.to_pickle('data/inds/categ_inds.csv')
+    print('Indicator tables pickled')
 
     grouped_data = data.groupby(by='anon_thread_id')
     del data
@@ -195,6 +202,9 @@ def main():
                                    leaf_df=leaf_inds)
 
     thread_features = par_apply(grouped_data,  applied_gen_features)
-    thread_features.to_csv('data/' + filename.replace('.csv', '') + '_feats.csv') 
+    thread_features.to_csv(
+        'data/' + filename.replace('.csv', '') + '_feats.csv')
+
+
 if __name__ == '__main__':
     main()
