@@ -16,12 +16,16 @@ def date_feats(feat_df):
     close_series = pd.to_datetime(close_series).values.astype('datetime64[D]')
     off_series = pd.to_datetime(off_series).values.astype('datetime64[D]')
 
-    # find the duration of the auction
-
+    # find the duration of the auction (inclusive)
     # (expiration time - post time)
+    dur = np.busday_count(post_series, close_series,
+                          weekmask=[1, 1, 1, 1, 1, 1, 1]) + 1
 
     # find time until the auction closes, remaining time,\
     #  (expiration time - offer time)
+    rem = np.busday_count(off_series, close_series,
+                          weekmask=[1, 1, 1, 1, 1, 1, 1]) + 1
 
     # convert time until auction close to fraction of
     # total duration (remaining time / duration)
+    rem = np.divide(rem, dur)
