@@ -53,8 +53,7 @@ def genIndicators(all_ids, flag):
         all_ids: a set containing all of the unique anon_leaf_cat_id's in the data set
         flag: 1 character string to append to identify the corresponding indicators 
         (and prevent collisions between indicator columns in finalized features)
-    Output: dictionary mapping anon_leaf_categ_ids to 1 row data_frames containing the
-    corresponding set of indicators
+    Output: dictionary mapping anon_leaf_categ_ids to 1 row data_frames containing the corresponding set of indicators
     '''
     comp_ids = []
     id_strings = []
@@ -174,10 +173,10 @@ def main():
     lists = pd.read_csv('data/lists.csv', index_col='anon_item_id')
     print('Listing file loaded')
     # grabbing relevant indicator values
-    condition_values = set(data['item_cndtn_id'])
-    leaf_values = set(data['anon_leaf_categ_id'])
-    categ_values = set(data['meta_categ_id'])
-    title_values = set(data['anon_title'])
+    condition_values = np.unique(data['item_cndtn_id'].values)
+    leaf_values = np.unique(data['anon_leaf_categ_id'].values)
+    categ_values = np.unique(data['meta_categ_id'].values)
+    title_values = np.unique(data['anon_title'].values)
     print('Indicators grabbed')
     print('Num leaves: ' + str(len(leaf_values)))
     print('Num titles: %d' % len(title_values))
