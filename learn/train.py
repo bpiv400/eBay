@@ -19,3 +19,8 @@ svr = svm.SVR()
 # gradient tree boosting
 
 # neural nonsense maybe?
+
+
+# main method
+if __name__ == '__main__':
+    main()

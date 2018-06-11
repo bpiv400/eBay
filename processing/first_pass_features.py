@@ -43,7 +43,7 @@ from functools import partial
 ##############################################
 
 
-def genIndicators(all_ids, flag):
+def genIndicators(all_ids, flag, hold_out=True):
     '''
     Description: Converts anonymized ids into a set of indicator variables and
     removes anonymized id. May be used for meta category id's, leaf ids, condition ids,
@@ -61,22 +61,24 @@ def genIndicators(all_ids, flag):
     # create list of ids as ints for index later
     for id in all_ids:
         comp_ids.append(id)
-        id_strings.append(str(id))
+        id_strings.append(str(int(id)) + flag)
     del all_ids
     # convert to nd array for efficient min
     comp_ids = np.array(comp_ids)
-    # extract min as a string to be used as hold out feature
-    hold_out = str(np.amin(comp_ids))
-    # remove hold out id (as string) from list of strings to be used for columns
-    id_strings.remove(hold_out)
+    if hold_out:
+        # extract min as a string to be used as hold out feature
+        hold_out = str(np.amin(comp_ids)) + flag
+        # remove hold out id (as string) from list of strings to be used for columns
+        id_strings.remove(hold_out)
     # create df of 0's with indices corresponding to all unique id's as ints
     # and columns corresponding to all id's (except hold_out) as strings
+    print('Num %s ids : %d' % (flag, len(id_strings)))
     leaf_df = pd.DataFrame(0, index=pd.Index(comp_ids), columns=id_strings)
     # iterate over all id's except the hold out id
     for id_string in id_strings:
         # subset the data frame at the corresponding row index and column name
         # to activate the indicator
-        leaf_df.at[int(id_string), id_string] = 1
+        leaf_df.at[int(id_string[0:len(id_string)-1]), id_string] = 1
     return leaf_df
 
 ##################################################################################
@@ -106,58 +108,68 @@ def genIndicators(all_ids, flag):
 ######################################################################################
 
 
-def gen_features(df, cnd_df=None, cat_df=None, leaf_df=None):
+def sort_dates(df):
     # sort the thread by date (meaning buyers initial offer will be first)
     df['src_cre_date'] = pd.to_datetime(df.src_cre_date)
     df.sort_values(by='src_cre_date', ascending=True,
-                   inplace=True).reset_index(drop=True, inplace=True)
-    # count rows
+                   inplace=True)
+    df.reset_index(drop=True, inplace=True)
     row_count = len(df.index)
+    # count rows
     # extract how seller responded to buyer's initial offer
     response_code = int(df['status_id'].iloc[0])
     # create new column to encode price of the response offer
     df['rsp_offr'] = np.nan
     curr_item_id = df.at[0, 'anon_item_id']
-    listing_row = lists.loc[[curr_item_id]]
+    list_price = lists.at[curr_item_id, 'start_price_usd']
+    if response_code == 1 or response_code == 9:
+        df.at[0, 'rsp_offr'] = df.at[0, 'offr_price']
+    elif response_code == 7:
+        df.at[0, 'rsp_offr'] = df.at[1, 'offr_price']
+    else:
+        df.at[0, 'rsp_offr'] = list_price
+    if row_count > 1:
+        df = df.iloc[[0]]
+    return df
+
+
+def gen_features(df, cnd_df=None, cat_df=None, leaf_df=None):
+    curr_item_id = df.at[0, 'anon_item_id']
+    listing_row = lists.loc[[curr_item_id]].copy()
     # NB not sure how to use anon_product_id when its missing sometimes, perhaps we can restrict later
     # excluding seller id
     listing_row.drop(columns=['anon_title_code', 'anon_slr_id',
-                              'anon_item_id', 'anon_product_id', 'anon_buyer_id', 'ship_time_chosen'], inplace=True)
+                              'anon_product_id', 'anon_buyer_id', 'ship_time_chosen'], inplace=True)
 
     # grab leaf, category, and condition id's from listing
-    leaf = listing_row.at[curr_item_id, 'anon_leaf_categ_id']
+    # leaf = listing_row.at[curr_item_id, 'anon_leaf_categ_id']
     categ = listing_row.at[curr_item_id, 'meta_categ_id']
     condition = listing_row.at[curr_item_id, 'item_cndtn_id']
 
     # extract corresponding rows in indicator look up tables
-    leaf_inds = leaf_df.loc[[leaf]]
+    # leaf_inds = leaf_df.loc[[leaf]]
     categ_inds = cat_df.loc[[categ]]
-    cnd_inds = cnd_df.loc[[condition]]
+    if np.isnan(condition):
+        cnd_inds = pd.DataFrame(0, index=[-1], columns=cnd_df.columns)
+        listing_row.at[curr_item_id, 'item_cndtn_id'] = -1
+    else:
+        cnd_inds = cnd_df.loc[[condition]]
 
     # add all indicator columns
-    listing_row.merge(leaf_inds, left_on='anon_leaf_categ_id',
-                      right_index=True, inplace=True)
-    listing_row.merge(categ_inds, left_on='meta_categ_id',
-                      right_index=True, inplace=True)
-    listing_row.merge(cnd_inds, left_on='item_cndtn_id',
-                      right_index=True, inplace=True)
+    # listing_row.merge(leaf_inds, left_on='anon_leaf_categ_id',
+    #                  right_index=True, inplace=True)
+    listing_row = listing_row.merge(categ_inds, left_on='meta_categ_id',
+                                    right_index=True)
+    listing_row = listing_row.merge(cnd_inds, left_on='item_cndtn_id',
+                                    right_index=True)
 
-    list_price = listing_row['start_price_usd']
-    if response_code == 1 or response_code == 9:
-        df.at[0, 'rsp_offr'] = df.at[0, 'offr_price']
-    elif response_code == 2 or response_code == 6 or response_code == 8:
-        df.at[0, 'rsp_offr'] = list_price
-    else:
-        df.at[0, 'rsp_offr'] = df.at[1, 'offr_price']
-    if row_count > 1:
-        df = df.iloc[[0]]
-    df.join(listing_row, inplace=True, how='right')
-    return df
+    return df.join(listing_row, how='right')
 
 
 def par_apply(groupedDf, func):
-    with Pool(cpu_count()) as p:
-        ret_list = p.map(func, [group for name, group in groupedDf])
+    # with Pool(1) as p:
+    #    ret_list = p.map(func, [group for name, group in groupedDf])
+    ret_list = map(func, [group for name, group in groupedDf])
     return pd.concat(ret_list)
 
 
@@ -170,37 +182,48 @@ def main():
     data = pd.read_csv('data/' + filename)
     print('Thread file loaded')
     global lists
-    lists = pd.read_csv('data/lists.csv', index_col='anon_item_id')
+    lists = pd.read_csv('data/toy_lists.csv')
+    lists.drop_duplicates(subset='anon_item_id', inplace=True)
+    lists.set_index('anon_item_id', inplace=True)
     print('Listing file loaded')
     # grabbing relevant indicator values
-    condition_values = np.unique(data['item_cndtn_id'].values)
-    leaf_values = np.unique(data['anon_leaf_categ_id'].values)
-    categ_values = np.unique(data['meta_categ_id'].values)
-    title_values = np.unique(data['anon_title'].values)
+    # temp: ignore leaves
+    # permanent: ignore titles (more than 200000 titles---far too many indicators
+    # for this iteration, even leaves are cumbersome (see below, ignored for now)
+    condition_values = np.unique(lists['item_cndtn_id'].values)
+    condition_values = condition_values[~np.isnan(condition_values)]
+    print(type(condition_values[0]))
+    # leaf_values = np.unique(lists['anon_leaf_categ_id'].values)
+    categ_values = np.unique(lists['meta_categ_id'].values)
+    categ_values = categ_values[~np.isnan(categ_values)]
+    print(categ_values)
     print('Indicators grabbed')
-    print('Num leaves: ' + str(len(leaf_values)))
-    print('Num titles: %d' % len(title_values))
+    # ignoring leaf indicators for now since there are ~18000 leaves
+    # print('Num leaves: ' + str(len(leaf_values)))
 
-    condition_inds = genIndicators(condition_values, 'c')
-    categ_inds = genIndicators(categ_values, 'm')
-    leaf_inds = genIndicators(leaf_values, 'l')
+    condition_inds = genIndicators(condition_values, 'c', hold_out=False)
+    categ_inds = genIndicators(categ_values, 'm', hold_out=True)
+    # leaf_inds = genIndicators(leaf_values, 'l')
     print('Indicator tables constructed')
 
     # pickling each indicator table
     print('Pickling Indicator Tables')
     condition_inds.to_pickle('data/inds/cnd_inds.csv')
-    leaf_inds.to_pickle('data/inds/leaf_inds.csv')
+    # leaf_inds.to_pickle('data/inds/leaf_inds.csv')
     categ_inds.to_pickle('data/inds/categ_inds.csv')
     print('Indicator tables pickled')
 
     grouped_data = data.groupby(by='anon_thread_id')
     del data
+    # too many leaves to make indicators
+    leaf_inds = None
     print('Threads grouped by thread id')
-    applied_gen_features = partial(gen_features, cnd_df=condition_inds,
-                                   cat_df=categ_inds,
-                                   leaf_df=leaf_inds)
-
-    thread_features = par_apply(grouped_data,  applied_gen_features)
+    # applied_gen_features = partial(gen_features, cnd_df=condition_inds,
+    #                                cat_df=categ_inds,
+    #                                leaf_df=leaf_inds)
+    thread_features = par_apply(grouped_data, sort_dates)
+    # thread_features = par_apply(grouped_data,  applied_gen_features)
+    print("sorted by date successfully")
     thread_features.to_csv(
         'data/' + filename.replace('.csv', '') + '_feats.csv')
 
