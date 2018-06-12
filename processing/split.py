@@ -43,7 +43,7 @@ for itm, slr, byr in zip(all_itm_ids.values, all_slr_ids.values, all_buyer_ids.v
             unique_ids[index_count] = id_count
             id_count = id_count + 1
     index_count = index_count + 1
-    if index_count % 500000:
+    if index_count % 500000 == 0:
         print(index_count)
         sys.stdout.flush()
 
