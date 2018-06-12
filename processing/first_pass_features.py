@@ -3,6 +3,7 @@ import numpy as np
 import argparse
 from multiprocessing import Pool, cpu_count
 from functools import partial
+from datetime import datetime as dt
 ############################################
 # DEPRECATED
 # excluding everything else to prevent
@@ -173,11 +174,20 @@ def gen_features(df, cnd_df=None, cat_df=None, leaf_df=None):
 def par_apply(groupedDf, func):
     # with Pool(1) as p:
     #    ret_list = p.map(func, [group for name, group in groupedDf])
-    ret_list = map(func, [group for name, group in groupedDf])
-    return pd.concat(ret_list)
+    #    ret_list = map(func, [group for name, group in groupedDf])
+    ret = groupedDf.apply(func)
+    # return pd.concat(ret_list)
+    return ret
+
+
+def sort_counter_offers(df):
+    df.sort_values(by='src_cre_date', ascending=True,
+                   inplace=True)
+    return df['offr_price'].values[0]
 
 
 def main():
+    startTime = dt.now()
     parser = argparse.ArgumentParser(
         description='associate threads with all relevant variables')
     parser.add_argument('--name', action='store', type=str)
@@ -217,6 +227,9 @@ def main():
     categ_inds.to_pickle('data/inds/categ_inds.csv')
     print('Indicator tables pickled')
 
+    # convert date of offer creation to datetime
+    data['src_cre_date'] = pd.to_datetime(data.src_cre_date)
+
     # subset data to extract only initial offers, we expect one such for each thread id
     instance_data = data[data['offr_type_id'] == 0]
     # add response offer price column
@@ -248,24 +261,30 @@ def main():
 
     # subset original data to only include counter offers
     counter_offers = data[data['offr_type_id'] == 2]
-    # set the index of the resulting data frame to be anon_thread_id
-    counter_offers.set_index('anon_thread_id', inplace=True)
+    del data
     # grab rows with thread id corresponding to instance_data where
     # response offer price was left nan
-    counter_offers = counter_offers.loc[counter_ids]
+    counter_offers = counter_offers[counter_offers['anon_thread_id'].isin(
+        counter_ids)]
+    counter_offers = counter_offers.groupby(by='anon_thread_id')
 
-    grouped_data = data.groupby(by='anon_thread_id')
-    del data
     # too many leaves to make indicators
-    leaf_inds = None
+    # leaf_inds = None
     print('Threads grouped by thread id')
     # applied_gen_features = partial(gen_features, cnd_df=condition_inds,
     #                                cat_df=categ_inds,
     #                                leaf_df=leaf_inds)
-    thread_features = par_apply(grouped_data, sort_dates)
+    # thread_features = par_apply(grouped_data, sort_date)
     # thread_features = par_apply(grouped_data,  applied_gen_features)
+    counter_offers = par_apply(counter_offers, sort_counter_offers)
+    print('done date sorting')
+    print(type(counter_offers))
+    instance_data[counter_offers.index, 'rsp_offr'] = counter_offers.values
+
     print("sorted by date successfully")
-    thread_features.to_csv(
+    endTime = dt.now()
+    print('Total Time: ' + str(endTime - startTime))
+    instance_data.to_csv(
         'data/' + filename.replace('.csv', '') + '_feats.csv')
 
 
