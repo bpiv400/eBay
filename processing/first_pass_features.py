@@ -231,28 +231,47 @@ def main():
     data['src_cre_date'] = pd.to_datetime(data.src_cre_date)
 
     # subset data to extract only initial offers, we expect one such for each thread id
-    instance_data = data[data['offr_type_id'] == 0]
+    print(len(data.index))
+    instance_data = data[data['offr_type_id'] == 0].copy()
     # add response offer price column
-    instance_data['rsp_offr'] == np.nan
+    print(len(instance_data.index))
+    print(np.sum(instance_data.index.duplicated()))
+    rsp_offer = pd.Series(np.nan, index=instance_data.index)
+    instance_data.assign(rsp_offr=rsp_offer, inplace=True)
+    print(len(instance_data.index))
+    print(np.sum(instance_data.index.duplicated()))
     # extract ids for offers which were declined
     declined_ids = instance_data.loc[instance_data['status_id'].isin(
         [0, 2, 6, 8]), 'anon_thread_id']
     # extract ids for offers which were accepted
+    print('1')
     accepted_ids = instance_data.loc[instance_data['status_id'].isin(
         [1, 9]), 'anon_thread_id']
+    print('2')
+    print(len(instance_data.index))
+    print(np.sum(instance_data.index.duplicated()))
     # set the index of the instance data DataFrame to anon_thread id
     instance_data.set_index('anon_thread_id', inplace=True)
+    print(
+        instance_data.index[instance_data.index.duplicated()].values[0:10])
+    print(len(instance_data.index))
+    print(np.sum(instance_data.index.duplicated()))
     # set accepted id response offers to equal the offer price
-    instance_data.loc[accepted_ids,
-                      'rsp_offr'] = instance_data.loc[accepted_ids, 'offr_price']
+    accepted_offer_prices = instance_data.loc[accepted_ids.values,
+                                              'offr_price']
+    instance_data.loc[accepted_ids.values,
+                      'rsp_offr'] = accepted_offer_prices.values
+    print('3')
     # extract the item codes for the items corresponding to the declined offers
-    declined_items = instance_data[declined_ids, 'anon_item_id']
+    declined_items = instance_data.loc[declined_ids.values, 'anon_item_id']
+    print('4')
     # look these up in the lists DataFrame and extract the corresponding starting price
-    declined_prices = lists.loc[declined_items, 'start_price_usd']
+    declined_prices = lists.loc[declined_items.values, 'start_price_usd']
+    print('5')
     # delete unnecesary data
     del declined_items
     # set response offer price for declined items to equal the list price we just extracted
-    instance_data.loc[declined_ids, 'rsp_offr'] = declined_prices
+    instance_data.loc[declined_ids.values, 'rsp_offr'] = declined_prices
 
     # get thread ids for threads where seller counter offered initial offer by
     # subsetting instance data
