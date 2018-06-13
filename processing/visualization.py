@@ -16,7 +16,7 @@ def summary(data):
 
 def main():
     data = pd.read_csv('data/train.csv')
-    offr = data['offr_price'].value
+    offr = data['offr_price'].values
     summary(offr)
     check_bins(offr)
 
@@ -41,7 +41,7 @@ def check_bins(offr):
     right = np.amax(offr)
     left = np.amin(offr)
 
-    for bin_cents in bin_array:
+    for bin_cents, bin_name in zip(bin_array, bin_names):
         odd_bin_cents = bin_cents[::2]
         ev_bin_cents = bin_cents[1::2]
         last_odd = None
@@ -92,7 +92,10 @@ def check_bins(offr):
             edges[edge_count - 1] = right
             edges[1:(edge_count - 2):2] = low_edges
             edges[2:(edge_count - 3):2] = high_edges
-        hist = plt.hist(offr, )
+        hist = plt.hist(offr, bins=edges)
+        hist.suptitle('Histogram of Rounded Data', font=20)
+        hist.title('(Rounded to %s of values' % bin_name)
+        hist.savefig('data/hist/' + bin_name[0:(len(bin_name) - 1)] + '.png')
 
 
 if __name__ == '__main__':
