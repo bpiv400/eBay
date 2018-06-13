@@ -14,11 +14,17 @@ def main():
     parser.add_argument('--name', action='store', type=str)
     args = parser.parse_args()
     filename = args.name
+    print('Loading Lists')
+    sys.stdout.flush()
+    lists = pd.read_csv('data/lists.csv')
+    lists.drop_duplicates(subset='anon_item_id', inplace=True)
+    lists.set_index('anon_item_id', inplace=True)
+
     subdir = filename.replace('.csv', '')
     subdir = subdir + '/'
     print('Reading file')
     sys.stdout.flush()
-    data = pd.read_csv('data/' + filename)
+    data = pd.read_csv('data/sorted_tog/' + filename)
     size = data.memory_usage().sum() * math.pow(2, -20)
     n_slice = int(size / 60)
     # group by unique_thread_id
@@ -46,14 +52,21 @@ def main():
             slice_dict = {}
             id_counter = 1
 
-    slice_counter = 0
+    slice_counter = 1
     for slice_dict in slice_list:
         print('Writing slices')
         sys.stdout.flush()
         slice_inds = np.concatenate(list(slice_dict.values()))
         data_slice = data.loc[slice_inds]
+
+        item_ids = data_slice['anon_item_id'].values
+        item_ids = np.unique(item_ids)
+        list_slice = lists.loc[item_ids]
+
         data_slice.to_csv(
             'data/' + subdir + filename.replace('.csv', '-') + str(slice_counter) + '.csv')
+        list_slice.to_csv('data/list_chunks/' + filename.replace('.csv',
+                                                                 '-') + str(slice_counter) + '_lists.csv')
         slice_counter = slice_counter + 1
 
 

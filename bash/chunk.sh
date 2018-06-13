@@ -1,7 +1,7 @@
 #!/bin/bash
 #$ -N chunk
 #$ -j y
-#$ -l m_mem_free=25G
+#$ -l m_mem_free=100G
 #$ -m e -M 4102158912@vtext.com
 
 scriptPath=repo/processing/chunk.py

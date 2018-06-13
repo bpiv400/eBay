@@ -4,6 +4,8 @@ import argparse
 from multiprocessing import Pool, cpu_count
 from functools import partial
 from datetime import datetime as dt
+import sys
+import os
 ############################################
 # DEPRECATED
 # excluding everything else to prevent
@@ -52,7 +54,7 @@ def genIndicators(all_ids, flag, hold_out=True):
 
     Inputs:
         all_ids: a set containing all of the unique anon_leaf_cat_id's in the data set
-        flag: 1 character string to append to identify the corresponding indicators 
+        flag: 1 character string to append to identify the corresponding indicators
         (and prevent collisions between indicator columns in finalized features)
     Output: dictionary mapping anon_leaf_categ_ids to 1 row data_frames containing the corresponding set of indicators
     '''
@@ -108,37 +110,39 @@ def genIndicators(all_ids, flag, hold_out=True):
 #     return row_df
 ######################################################################################
 
-# improve
-# filter all dates first
-# extract all threads that contain a row where type == 0 response_code == 7
-
-
-def sort_dates(df):
-    # sort the thread by date (meaning buyers initial offer will be first)
-    df['src_cre_date'] = pd.to_datetime(df.src_cre_date)
-    df.sort_values(by='src_cre_date', ascending=True,
-                   inplace=True)
-    df.reset_index(drop=True, inplace=True)
-    row_count = len(df.index)
-    # count rows
-    # extract how seller responded to buyer's initial offer
-    response_code = int(df['status_id'].iloc[0])
-    # create new column to encode price of the response offer
-    df['rsp_offr'] = np.nan
-    curr_item_id = df.at[0, 'anon_item_id']
-    list_price = lists.at[curr_item_id, 'start_price_usd']
-    if response_code == 1 or response_code == 9:
-        df.at[0, 'rsp_offr'] = df.at[0, 'offr_price']
-    elif response_code == 7:
-        df.at[0, 'rsp_offr'] = df.at[1, 'offr_price']
-    else:
-        df.at[0, 'rsp_offr'] = list_price
-    if row_count > 1:
-        df = df.iloc[[0]]
-    return df
+#######################################################################################
+# DEPRECEATED
+# def sort_dates(df):
+#     # sort the thread by date (meaning buyers initial offer will be first)
+#     df['src_cre_date'] = pd.to_datetime(df.src_cre_date)
+#     df.sort_values(by='src_cre_date', ascending=True,
+#                    inplace=True)
+#     df.reset_index(drop=True, inplace=True)
+#     row_count = len(df.index)
+#     # count rows
+#     # extract how seller responded to buyer's initial offer
+#     response_code = int(df['status_id'].iloc[0])
+#     # create new column to encode price of the response offer
+#     df['rsp_offr'] = np.nan
+#     curr_item_id = df.at[0, 'anon_item_id']
+#     list_price = lists.at[curr_item_id, 'start_price_usd']
+#     if response_code == 1 or response_code == 9:
+#         df.at[0, 'rsp_offr'] = df.at[0, 'offr_price']
+#     elif response_code == 7:
+#         df.at[0, 'rsp_offr'] = df.at[1, 'offr_price']
+#     else:
+#         df.at[0, 'rsp_offr'] = list_price
+#     if row_count > 1:
+#         df = df.iloc[[0]]
+#     return df
+############################################################################################
 
 
 def gen_features(df, cnd_df=None, cat_df=None, leaf_df=None):
+    df.sort_values(by='src_cre_date', ascending=True,
+                   inplace=True)
+    df.reset_index(drop=True, inplace=True)
+
     curr_item_id = df.at[0, 'anon_item_id']
     listing_row = lists.loc[[curr_item_id]].copy()
     # NB not sure how to use anon_product_id when its missing sometimes, perhaps we can restrict later
@@ -150,7 +154,7 @@ def gen_features(df, cnd_df=None, cat_df=None, leaf_df=None):
     # leaf = listing_row.at[curr_item_id, 'anon_leaf_categ_id']
     categ = listing_row.at[curr_item_id, 'meta_categ_id']
     condition = listing_row.at[curr_item_id, 'item_cndtn_id']
-
+    start_price = listing_row.at[curr_item_id, 'start_price_usd']
     # extract corresponding rows in indicator look up tables
     # leaf_inds = leaf_df.loc[[leaf]]
     categ_inds = cat_df.loc[[categ]]
@@ -167,23 +171,59 @@ def gen_features(df, cnd_df=None, cat_df=None, leaf_df=None):
                                     right_index=True)
     listing_row = listing_row.merge(cnd_inds, left_on='item_cndtn_id',
                                     right_index=True)
+    listing_row = pd.concat([listing_row]*len(df.index), ignore_index=True)
+    df = df.join(listing_row, how='right')
 
-    return df.join(listing_row, how='right')
+    counter_offers = df['status_id'] == 3
+    counter_offers = np.nonzero(counter_offers.values)
+    if counter_offers.size > 0:
+        next_offers = counter_offers + 1
+        next_offer_vals = df.loc[next_offers, 'resp_offr']
+        if isinstance(next_offer_vals, pd.Series):
+            next_offer_vals = next_offer_vals.values
+        df.loc[counter_offers, 'resp_offr'] = next_offer_vals
 
-
-def par_apply(groupedDf, func):
-    # with Pool(1) as p:
-    #    ret_list = p.map(func, [group for name, group in groupedDf])
-    #    ret_list = map(func, [group for name, group in groupedDf])
-    ret = groupedDf.apply(func)
-    # return pd.concat(ret_list)
-    return ret
-
-
-def sort_counter_offers(df):
-    df.sort_values(by='src_cre_date', ascending=True,
-                   inplace=True)
-    return df['offr_price'].values[0]
+    declined = df['status_id'].isin([0, 2, 6, 8]).values
+    if np.sum(declined) > 0:
+        seller = df['offr_type_id'] == 2
+        seller = seller.values
+        buyer = ~seller.values
+        declined_seller = np.nonzero(np.logical_and(declined, seller))
+        declined_buyer = np.nonzero(np.logical_and(declined, buyer))
+        seller = np.nonzero(seller)
+        buyer = np.nonzero(buyer)
+        if np.sum(declined_seller) > 0:
+            seller_inds = np.searchsorted(buyer, declined_seller, side='left')
+            nonzero_sellers = declined_seller[seller_inds != 0]
+            zero_sellers = declined_seller[seller_inds == 0]
+            seller_inds = seller_inds[seller_inds != 0]
+            # shouldn't need to check size, since none should equal 0, buyer should
+            # always occur first a listing
+            seller_inds = seller_inds - 1
+            prev_buyers = buyer[seller_inds]
+            prev_offers = df.loc[prev_buyers, 'offr_price']
+            if isinstance(prev_offers, pd.Series):
+                prev_offers = prev_offers.values
+            df.loc[declined_seller, 'resp_offr'] = prev_offers
+        if np.sum(declined_buyer) > 0:
+            if seller.size != 0:
+                buyer_inds = np.searchsorted(
+                    seller, declined_buyer, side='left')
+                nonzero_buyers = declined_buyer[buyer_inds != 0]
+                zero_buyers = declined_seller[seller_inds == 0]
+                buyer_inds = buyer_inds[buyer_inds != 0]
+                # shouldn't need to check size, since none should equal 0, buyer should
+                # always occur first a listing
+                buyer_inds = buyer_inds - 1
+                prev_sellers = seller[buyer_inds]
+                prev_offers = df.loc[prev_sellers, 'offr_price']
+                if isinstance(prev_offers, pd.Series):
+                    prev_offers = prev_offers.values
+                df.loc[nonzero_buyers, 'resp_offr'] = prev_offers
+                df.loc[zero_buyers, 'resp_offr'] = start_price
+            else:
+                df.loc[declined_buyer, 'resp_offr'] = start_price
+    return df
 
 
 def main():
@@ -191,14 +231,23 @@ def main():
     parser = argparse.ArgumentParser(
         description='associate threads with all relevant variables')
     parser.add_argument('--name', action='store', type=str)
+    parser.add_argument('--dir', action='store', type=str)
     args = parser.parse_args()
     filename = args.name
-    data = pd.read_csv('data/' + filename)
+    subdir = args.dir
+    data = pd.read_csv('data/' + subdir + '/' + filename)
     print('Thread file loaded')
+    sys.stdout.flush()
     global lists
-    lists = pd.read_csv('data/toy_lists.csv')
-    lists.drop_duplicates(subset='anon_item_id', inplace=True)
+    print('data/list_chunks/' +
+          filename.replace('.csv', '_lists.csv'))
+    print('data/' + subdir + '/' + filename)
+    lists = pd.read_csv('data/list_chunks/' +
+                        filename.replace('.csv', '_lists.csv'))
+    # change when ready to run full job
+    print(lists.columns)
     lists.set_index('anon_item_id', inplace=True)
+
     print('Listing file loaded')
     # grabbing relevant indicator values
     # temp: ignore leaves
@@ -206,12 +255,13 @@ def main():
     # for this iteration, even leaves are cumbersome (see below, ignored for now)
     condition_values = np.unique(lists['item_cndtn_id'].values)
     condition_values = condition_values[~np.isnan(condition_values)]
-    print(type(condition_values[0]))
+
     # leaf_values = np.unique(lists['anon_leaf_categ_id'].values)
     categ_values = np.unique(lists['meta_categ_id'].values)
     categ_values = categ_values[~np.isnan(categ_values)]
     print(categ_values)
     print('Indicators grabbed')
+    sys.stdout.flush()
     # ignoring leaf indicators for now since there are ~18000 leaves
     # print('Num leaves: ' + str(len(leaf_values)))
 
@@ -219,92 +269,54 @@ def main():
     categ_inds = genIndicators(categ_values, 'm', hold_out=True)
     # leaf_inds = genIndicators(leaf_values, 'l')
     print('Indicator tables constructed')
+    sys.stdout.flush()
 
     # pickling each indicator table
     print('Pickling Indicator Tables')
+    sys.stdout.flush()
     condition_inds.to_pickle('data/inds/cnd_inds.csv')
     # leaf_inds.to_pickle('data/inds/leaf_inds.csv')
     categ_inds.to_pickle('data/inds/categ_inds.csv')
     print('Indicator tables pickled')
-
+    sys.stdout.flush()
     # convert date of offer creation to datetime
     data['src_cre_date'] = pd.to_datetime(data.src_cre_date)
 
     # subset data to extract only initial offers, we expect one such for each thread id
-    print(len(data.index))
-    instance_data = data[data['offr_type_id'] == 0].copy()
+    # instance_data = data[data['offr_type_id'] == 0].copy()
+
     # add response offer price column
-    print(len(instance_data.index))
-    print(np.sum(instance_data.index.duplicated()))
-    rsp_offer = pd.Series(np.nan, index=instance_data.index)
-    instance_data.assign(rsp_offr=rsp_offer, inplace=True)
-    print(len(instance_data.index))
-    print(np.sum(instance_data.index.duplicated()))
-    # extract ids for offers which were declined
-    declined_bool = instance_data['status_id'].isin(
-        [0, 2, 6, 8]).values
+    rsp_offer = pd.Series(np.nan, index=data.index)
+    data.assign(rsp_offr=rsp_offer, inplace=True)
+
     # extract ids for offers which were accepted
     print('1')
-    accepted_bool = instance_data['status_id'].isin(
-        [1, 9])
-    print('2')
-    print(len(instance_data.index))
-    print(np.sum(instance_data.index.duplicated()))
-    # set the index of the instance data DataFrame to anon_thread id
-    # instance_data.set_index('anon_thread_id', inplace=True)
-    print(
-        instance_data.index[instance_data.index.duplicated()].values[0:10])
-    print(len(instance_data.index))
-    print(np.sum(instance_data.index.duplicated()))
+    sys.stdout.flush()
+    accepted_bool = data['status_id'].isin(
+        [1, 9]).values
+
     # set accepted id response offers to equal the offer price
-    accepted_offer_prices = instance_data.loc[accepted_bool.values,
-                                              'offr_price']
-    instance_data.loc[accepted_bool.values,
-                      'rsp_offr'] = accepted_offer_prices
+    accepted_offer_prices = data.loc[accepted_bool,
+                                     'offr_price']
+    if isinstance(accepted_offer_prices, pd.Series):
+        accepted_offer_prices = accepted_offer_prices.values
+    data.loc[accepted_bool,
+             'rsp_offr'] = accepted_offer_prices
     print('3')
-    # extract the item codes for the items corresponding to the declined offers
-    declined_items = instance_data.loc[declined_bool.values, 'anon_item_id']
-    print('4')
-    # look these up in the lists DataFrame and extract the corresponding starting price
-    declined_prices = lists.loc[declined_bool.values, 'start_price_usd']
-    print('5')
-    # delete unnecesary data
-    del declined_items
-    # set response offer price for declined items to equal the list price we just extracted
-    instance_data.loc[declined_bool.values, 'rsp_offr'] = declined_prices
+    sys.stdout.flush()
 
     # get thread ids for threads where seller counter offered initial offer by
     # subsetting instance data
 
     # TO BE CONTINUED HERE ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    counter_bool = np.isnan(instance_data.loc['rsp_offr'].values)
-
-    # subset original data to only include counter offers
-    counter_offers = data[data['offr_type_id'] == 2]
-    del data
-    # grab rows with thread id corresponding to instance_data where
-    # response offer price was left nan
-    counter_offers = counter_offers[counter_offers['anon_thread_id'].isin(
-        counter_ids)]
-    counter_offers = counter_offers.groupby(by='anon_thread_id')
-
-    # too many leaves to make indicators
-    # leaf_inds = None
-    print('Threads grouped by thread id')
-    # applied_gen_features = partial(gen_features, cnd_df=condition_inds,
-    #                                cat_df=categ_inds,
-    #                                leaf_df=leaf_inds)
-    # thread_features = par_apply(grouped_data, sort_date)
-    # thread_features = par_apply(grouped_data,  applied_gen_features)
-    counter_offers = par_apply(counter_offers, sort_counter_offers)
-    print('done date sorting')
-    print(type(counter_offers))
-    instance_data[counter_offers.index, 'rsp_offr'] = counter_offers.values
-
-    print("sorted by date successfully")
+    print('Grouping by unique thread id')
+    sys.stdout.flush()
+    data = data.groupby(by='unique_thread_id')
+    data = data.apply(gen_features, cnd_df=condition_inds,
+                      cat_df=categ_inds, leaf_df=None)
     endTime = dt.now()
     print('Total Time: ' + str(endTime - startTime))
-    instance_data.to_csv(
+    data.to_csv(
         'data/' + filename.replace('.csv', '') + '_feats.csv')
 
 
