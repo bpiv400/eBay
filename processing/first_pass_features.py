@@ -333,6 +333,7 @@ def main():
         new_group = gen_features(new_group)
         if new_group is not None:
             group_list.append(new_group)
+    del data
     data = pd.concat(group_list)
     # output=data.apply(gen_features)
     endTime = dt.now()
