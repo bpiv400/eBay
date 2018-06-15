@@ -27,25 +27,36 @@ unique_ids = np.zeros(len(all_buyer_ids.values))
 print('Generating unique ids')
 id_count = 0
 index_count = 0
+id_dict = {}
+
 for itm, slr, byr in zip(all_itm_ids.values, all_slr_ids.values, all_buyer_ids.values):
-    if itm not in item_buyer_dict:
-        byr_slr_dict = {}
-        byr_slr_dict[slr] = id_count
-        item_buyer_dict[itm] = byr_slr_dict
+    if (itm, slr, byr) not in id_dict:
+        id_dict[(itm, slr, byr)] = id_count
         unique_ids[index_count] = id_count
         id_count = id_count + 1
     else:
-        byr_slr_dict = item_buyer_dict[itm]
-        if slr in byr_slr_dict:
-            unique_ids[index_count] = byr_slr_dict[slr]
-        else:
-            byr_slr_dict[slr] = id_count
-            unique_ids[index_count] = id_count
-            id_count = id_count + 1
+        unique_ids[index_count] = id_dict[(itm, slr, byr)]
     index_count = index_count + 1
-    if index_count % 500000 == 0:
-        print(index_count)
-        sys.stdout.flush()
+
+# for itm, slr, byr in zip(all_itm_ids.values, all_slr_ids.values, all_buyer_ids.values):
+#    if itm not in item_buyer_dict:
+#        byr_slr_dict = {}
+#        byr_slr_dict[slr] = id_count
+#        item_buyer_dict[itm] = byr_slr_dict
+#        unique_ids[index_count] = id_count
+#        id_count = id_count + 1
+#    else:
+#        byr_slr_dict = item_buyer_dict[itm]
+#        if slr in byr_slr_dict:
+#            unique_ids[index_count] = byr_slr_dict[slr]
+#        else:
+#            byr_slr_dict[slr] = id_count
+#            unique_ids[index_count] = id_count
+#            id_count = id_count + 1
+#    index_count = index_count + 1
+#    if index_count % 500000 == 0:
+#        print(index_count)
+#        sys.stdout.flush()
 
 print('Done Generating Unique Ids')
 

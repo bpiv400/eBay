@@ -24,7 +24,7 @@ def main():
     subdir = subdir + '/'
     print('Reading file')
     sys.stdout.flush()
-    data = pd.read_csv('data/sorted_tog/' + filename)
+    data = pd.read_csv('data/' + filename)
     size = data.memory_usage().sum() * math.pow(2, -20)
     n_slice = int(size / 60)
     # group by unique_thread_id
@@ -62,7 +62,11 @@ def main():
         item_ids = data_slice['anon_item_id'].values
         item_ids = np.unique(item_ids)
         list_slice = lists.loc[item_ids]
-
+        list_ids = list_slice.index
+        diff = np.setdiff1d(item_ids, list_ids)
+        diff = diff.size
+        print('Diff %d' % diff)
+        sys.stdout.flush()
         data_slice.to_csv(
             'data/' + subdir + filename.replace('.csv', '-') + str(slice_counter) + '.csv')
         list_slice.to_csv('data/list_chunks/' + filename.replace('.csv',

@@ -138,18 +138,17 @@ def genIndicators(all_ids, flag, hold_out=True):
 ############################################################################################
 
 
-def gen_features(df, cnd_df=None, cat_df=None, leaf_df=None):
+def gen_features(df):
     df.sort_values(by='src_cre_date', ascending=True,
                    inplace=True)
     df.reset_index(drop=True, inplace=True)
-
+    early_row = len(df.index)
     curr_item_id = df.at[0, 'anon_item_id']
     listing_row = lists.loc[[curr_item_id]].copy()
     # NB not sure how to use anon_product_id when its missing sometimes, perhaps we can restrict later
     # excluding seller id
     listing_row.drop(columns=['anon_title_code', 'anon_slr_id',
                               'anon_product_id', 'anon_buyer_id', 'ship_time_chosen'], inplace=True)
-
     # grab leaf, category, and condition id's from listing
     # leaf = listing_row.at[curr_item_id, 'anon_leaf_categ_id']
     categ = listing_row.at[curr_item_id, 'meta_categ_id']
@@ -174,25 +173,30 @@ def gen_features(df, cnd_df=None, cat_df=None, leaf_df=None):
     listing_row = pd.concat([listing_row]*len(df.index), ignore_index=True)
     df = df.join(listing_row, how='right')
 
-    counter_offers = df['status_id'] == 3
-    counter_offers = np.nonzero(counter_offers.values)
-    if counter_offers.size > 0:
-        next_offers = counter_offers + 1
-        next_offer_vals = df.loc[next_offers, 'resp_offr']
+    counter_offers = df['status_id'] == 7
+    counter_offers = np.nonzero(counter_offers.values)[0]
+    if counter_offers.size != 0:
+        next_offers = np.add(counter_offers, 1)
+        next_offer_vals = df.loc[next_offers, 'offr_price']
         if isinstance(next_offer_vals, pd.Series):
             next_offer_vals = next_offer_vals.values
         df.loc[counter_offers, 'resp_offr'] = next_offer_vals
+    else:
+        print('did not check')
 
     declined = df['status_id'].isin([0, 2, 6, 8]).values
     if np.sum(declined) > 0:
+        print('Has declined')
         seller = df['offr_type_id'] == 2
         seller = seller.values
-        buyer = ~seller.values
-        declined_seller = np.nonzero(np.logical_and(declined, seller))
-        declined_buyer = np.nonzero(np.logical_and(declined, buyer))
-        seller = np.nonzero(seller)
-        buyer = np.nonzero(buyer)
+        print("seller size " + str(seller.shape))
+        buyer = ~seller
+        declined_seller = np.nonzero(np.logical_and(declined, seller))[0]
+        declined_buyer = np.nonzero(np.logical_and(declined, buyer))[0]
+        seller = np.nonzero(seller)[0]
+        buyer = np.nonzero(buyer)[0]
         if np.sum(declined_seller) > 0:
+            print('has declined seller')
             seller_inds = np.searchsorted(buyer, declined_seller, side='left')
             nonzero_sellers = declined_seller[seller_inds != 0]
             zero_sellers = declined_seller[seller_inds == 0]
@@ -206,11 +210,12 @@ def gen_features(df, cnd_df=None, cat_df=None, leaf_df=None):
                 prev_offers = prev_offers.values
             df.loc[declined_seller, 'resp_offr'] = prev_offers
         if np.sum(declined_buyer) > 0:
+            print('has declined buyer')
             if seller.size != 0:
                 buyer_inds = np.searchsorted(
                     seller, declined_buyer, side='left')
                 nonzero_buyers = declined_buyer[buyer_inds != 0]
-                zero_buyers = declined_seller[seller_inds == 0]
+                zero_buyers = declined_seller[buyer_inds == 0]
                 buyer_inds = buyer_inds[buyer_inds != 0]
                 # shouldn't need to check size, since none should equal 0, buyer should
                 # always occur first a listing
@@ -219,10 +224,19 @@ def gen_features(df, cnd_df=None, cat_df=None, leaf_df=None):
                 prev_offers = df.loc[prev_sellers, 'offr_price']
                 if isinstance(prev_offers, pd.Series):
                     prev_offers = prev_offers.values
-                df.loc[nonzero_buyers, 'resp_offr'] = prev_offers
-                df.loc[zero_buyers, 'resp_offr'] = start_price
+                if nonzero_buyers.size > 0:
+                    df.loc[nonzero_buyers, 'resp_offr'] = prev_offers
+                if zero_buyers.size > 0:
+                    df.loc[zero_buyers, 'resp_offr'] = start_price
             else:
                 df.loc[declined_buyer, 'resp_offr'] = start_price
+    late_row = len(df.index)
+    rsp = df['resp_offr'].values
+    if np.sum(np.isnan(rsp)) != 0:
+        print(df[['unique_thread_id', 'resp_offr', 'offr_price',
+                  'start_price_usd', 'offr_type_id', 'status_id']])
+    if late_row != early_row:
+        raise ValueError('Rows have been added')
     return df
 
 
@@ -236,6 +250,7 @@ def main():
     filename = args.name
     subdir = args.dir
     data = pd.read_csv('data/' + subdir + '/' + filename)
+    data.drop(columns=['Unnamed: 0', 'Unnamed: 0.1'], inplace=True)
     print('Thread file loaded')
     sys.stdout.flush()
     global lists
@@ -287,7 +302,7 @@ def main():
 
     # add response offer price column
     rsp_offer = pd.Series(np.nan, index=data.index)
-    data.assign(rsp_offr=rsp_offer, inplace=True)
+    data.assign(resp_offr=rsp_offer, inplace=True)
 
     # extract ids for offers which were accepted
     print('1')
@@ -301,7 +316,7 @@ def main():
     if isinstance(accepted_offer_prices, pd.Series):
         accepted_offer_prices = accepted_offer_prices.values
     data.loc[accepted_bool,
-             'rsp_offr'] = accepted_offer_prices
+             'resp_offr'] = accepted_offer_prices
     print('3')
     sys.stdout.flush()
 
@@ -312,12 +327,26 @@ def main():
     print('Grouping by unique thread id')
     sys.stdout.flush()
     data = data.groupby(by='unique_thread_id')
-    data = data.apply(gen_features, cnd_df=condition_inds,
-                      cat_df=categ_inds, leaf_df=None)
+    global cnd_df
+    cnd_df = condition_inds
+    global cat_df
+    cat_df = categ_inds
+    group_list = []
+    for _, group in data:
+        new_group = group.copy()
+        new_group = gen_features(new_group)
+        group_list.append(new_group)
+    data = pd.concat(group_list)
+    # output=data.apply(gen_features)
     endTime = dt.now()
     print('Total Time: ' + str(endTime - startTime))
-    data.to_csv(
+    output.to_csv(
         'data/' + filename.replace('.csv', '') + '_feats.csv')
+
+
+def test(df):
+    print(df)
+    sys.stdout.flush()
 
 
 if __name__ == '__main__':
