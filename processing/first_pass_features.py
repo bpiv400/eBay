@@ -177,26 +177,28 @@ def gen_features(df):
     counter_offers = np.nonzero(counter_offers.values)[0]
     if counter_offers.size != 0:
         next_offers = np.add(counter_offers, 1)
-        next_offer_vals = df.loc[next_offers, 'offr_price']
-        if isinstance(next_offer_vals, pd.Series):
-            next_offer_vals = next_offer_vals.values
-        df.loc[counter_offers, 'resp_offr'] = next_offer_vals
-    else:
-        print('did not check')
-
+        if np.amax(next_offers) < len(df.index):
+            next_offer_vals = df.loc[next_offers, 'offr_price']
+            if isinstance(next_offer_vals, pd.Series):
+                next_offer_vals = next_offer_vals.values
+            df.loc[counter_offers, 'resp_offr'] = next_offer_vals
+        else:
+            print(df[['unique_thread_id', 'anon_thread_id', 'resp_offr', 'offr_price',
+                      'start_price_usd', 'offr_type_id', 'status_id']])
+            return None
     declined = df['status_id'].isin([0, 2, 6, 8]).values
     if np.sum(declined) > 0:
-        print('Has declined')
         seller = df['offr_type_id'] == 2
         seller = seller.values
-        print("seller size " + str(seller.shape))
+        # print("seller size " + str(seller.shape))
         buyer = ~seller
         declined_seller = np.nonzero(np.logical_and(declined, seller))[0]
         declined_buyer = np.nonzero(np.logical_and(declined, buyer))[0]
+        # print(declined_buyer)
         seller = np.nonzero(seller)[0]
         buyer = np.nonzero(buyer)[0]
-        if np.sum(declined_seller) > 0:
-            print('has declined seller')
+        if declined_seller.size > 0:
+            # print('has declined seller')
             seller_inds = np.searchsorted(buyer, declined_seller, side='left')
             nonzero_sellers = declined_seller[seller_inds != 0]
             zero_sellers = declined_seller[seller_inds == 0]
@@ -209,13 +211,13 @@ def gen_features(df):
             if isinstance(prev_offers, pd.Series):
                 prev_offers = prev_offers.values
             df.loc[declined_seller, 'resp_offr'] = prev_offers
-        if np.sum(declined_buyer) > 0:
-            print('has declined buyer')
+        if declined_buyer.size > 0:
+            # print('has declined buyer')
             if seller.size != 0:
                 buyer_inds = np.searchsorted(
                     seller, declined_buyer, side='left')
                 nonzero_buyers = declined_buyer[buyer_inds != 0]
-                zero_buyers = declined_seller[buyer_inds == 0]
+                zero_buyers = declined_buyer[buyer_inds == 0]
                 buyer_inds = buyer_inds[buyer_inds != 0]
                 # shouldn't need to check size, since none should equal 0, buyer should
                 # always occur first a listing
@@ -254,9 +256,6 @@ def main():
     print('Thread file loaded')
     sys.stdout.flush()
     global lists
-    print('data/list_chunks/' +
-          filename.replace('.csv', '_lists.csv'))
-    print('data/' + subdir + '/' + filename)
     lists = pd.read_csv('data/list_chunks/' +
                         filename.replace('.csv', '_lists.csv'))
     # change when ready to run full job
@@ -305,7 +304,6 @@ def main():
     data.assign(resp_offr=rsp_offer, inplace=True)
 
     # extract ids for offers which were accepted
-    print('1')
     sys.stdout.flush()
     accepted_bool = data['status_id'].isin(
         [1, 9]).values
@@ -317,8 +315,6 @@ def main():
         accepted_offer_prices = accepted_offer_prices.values
     data.loc[accepted_bool,
              'resp_offr'] = accepted_offer_prices
-    print('3')
-    sys.stdout.flush()
 
     # get thread ids for threads where seller counter offered initial offer by
     # subsetting instance data
@@ -335,18 +331,14 @@ def main():
     for _, group in data:
         new_group = group.copy()
         new_group = gen_features(new_group)
-        group_list.append(new_group)
+        if new_group is not None:
+            group_list.append(new_group)
     data = pd.concat(group_list)
     # output=data.apply(gen_features)
     endTime = dt.now()
     print('Total Time: ' + str(endTime - startTime))
-    output.to_csv(
-        'data/' + filename.replace('.csv', '') + '_feats.csv')
-
-
-def test(df):
-    print(df)
-    sys.stdout.flush()
+    data.to_csv('data/' + subdir + '/' +
+                filename.replace('.csv', '') + '_feats.csv')
 
 
 if __name__ == '__main__':
