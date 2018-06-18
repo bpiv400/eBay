@@ -183,8 +183,6 @@ def gen_features(df):
                 next_offer_vals = next_offer_vals.values
             df.loc[counter_offers, 'resp_offr'] = next_offer_vals
         else:
-            print(df[['unique_thread_id', 'anon_thread_id', 'resp_offr', 'offr_price',
-                      'start_price_usd', 'offr_type_id', 'status_id']])
             return None
     declined = df['status_id'].isin([0, 2, 6, 8]).values
     if np.sum(declined) > 0:

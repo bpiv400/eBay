@@ -2,7 +2,7 @@
 #$ -N first_features
 #$ -js 1 
 #$ -j y
-#$ -l m_mem_free=5G
+#$ -l m_mem_free=15G
 #$ -m e -M 4102158912@vtext.com
 cd ~/eBay/data/$1
 scriptPath=repo/processing/first_pass_features.py  
