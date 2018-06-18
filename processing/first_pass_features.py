@@ -145,6 +145,17 @@ def gen_features(df):
     early_row = len(df.index)
     curr_item_id = df.at[0, 'anon_item_id']
     listing_row = lists.loc[[curr_item_id]].copy()
+
+    # if there's an accepted offer, drop the group if it is not the last offer
+    accepted = df['status_id'].isin([1, 9]).values
+    tot = np.sum(accepted)
+    if tot > 0:
+        if tot > 1:
+            return None
+        else:
+            if not accepted[len(accepted) - 1]:
+                return None
+
     # NB not sure how to use anon_product_id when its missing sometimes, perhaps we can restrict later
     # excluding seller id
     listing_row.drop(columns=['anon_title_code', 'anon_slr_id',
@@ -173,6 +184,8 @@ def gen_features(df):
     listing_row = pd.concat([listing_row]*len(df.index), ignore_index=True)
     df = df.join(listing_row, how='right')
 
+    df.drop(columns=['item_cndtn_id', 'anon_title_code',
+                     'meta_categ_id', 'anon_leaf_categ_id'])
     counter_offers = df['status_id'] == 7
     counter_offers = np.nonzero(counter_offers.values)[0]
     if counter_offers.size != 0:
@@ -294,8 +307,14 @@ def main():
     # convert date of offer creation to datetime
     data['src_cre_date'] = pd.to_datetime(data.src_cre_date)
 
-    # subset data to extract only initial offers, we expect one such for each thread id
-    # instance_data = data[data['offr_type_id'] == 0].copy()
+    # remove threads where an offer exists which is higher than the start price
+    # may be evidence of bundling etc.
+    larg_off = df['start_price_usd'].values < df['offr_price'].values
+    larg_off_threads = np.unique(df.loc[larg_off, 'unique_thread_id'].values)
+    larg_off = df['unique_thread_id'].isin(larg_off_threads).values
+    del larg_off_threads
+    small_off = ~larg_off
+    df = df.loc[small_off]
 
     # add response offer price column
     rsp_offer = pd.Series(np.nan, index=data.index)
@@ -317,7 +336,6 @@ def main():
     # get thread ids for threads where seller counter offered initial offer by
     # subsetting instance data
 
-    # TO BE CONTINUED HERE ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     print('Grouping by unique thread id')
     sys.stdout.flush()
     data = data.groupby(by='unique_thread_id')
