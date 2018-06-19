@@ -176,6 +176,33 @@ def clean_data(df):
     return df
 
 
+def add_offrs(df, turn):
+    prev_turn = turn - 1
+    curr_offr_inds = df.xs(turn, level='turn_count', drop_level=True).index
+    prev_offr_inds = [(ind, prev_turn) for ind in curr_offr_inds.values]
+    curr_offr_inds = [(ind, turn) for ind in curr_offr_inds.values]
+    prev_offrs = df.loc[prev_offr_inds, 'turn_count'].values
+    df.loc[curr_offr_inds, 'prev_offr_price'] = prev_offrs
+    return df
+
+
+def prev_offr(df):
+    # adding previous offer to initial offer
+    prev_offr = pd.Series(np.nan, index=df.index)
+    print('Adding initial offers')
+    df['prev_offr_price'] = prev_offr
+    init_offr_inds = df[df['turn_count'] == 0].index
+    start_price = df.loc[init_offr_inds, 'start_price_usd'].copy()
+    df.loc[init_offr_inds, 'prev_offr_price'] = start_price.values
+    df.set_index(['unique_thread_id', 'turn_count'], inplace=True)
+    all_turns = df.get_level_values('turn_count')
+    for i in range(1, 5):
+        if i in all_turns:
+            print('Adding turn %d' % i + 1)
+            df = add_offrs(df, i)
+    return df
+
+
 def main():
     parser = argparse.ArgumentParser(
         description='associate threads with all relevant variables')
@@ -185,7 +212,7 @@ def main():
     filename = args.name
     subdir = args.dir
     print('Reading csv')
-    feat_df = pd.read_csv('data/' + 'toy' + '/' + 'toy-1_feats.csv',
+    feat_df = pd.read_csv('data/' + subdir + '/' + filename,
                           parse_dates=['src_cre_date', 'auct_start_dt',
                                        'auct_end_dt', 'response_time'],
                           dtype={'unique_thread_id': np.int64})
@@ -199,6 +226,8 @@ def main():
     print('Creating Date feature')
     feat_df = date_feats(feat_df)
     feat_df = clean_data(feat_df)
+    print('Adding previous offer feature')
+    feat_df = prev_offr(feat_df)
     print('Writing csv')
     feat_df.to_csv('data/' + subdir + '/' + filename.replace('.csv', '2.csv'))
 
