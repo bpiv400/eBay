@@ -309,12 +309,12 @@ def main():
 
     # remove threads where an offer exists which is higher than the start price
     # may be evidence of bundling etc.
-    larg_off = df['start_price_usd'].values < df['offr_price'].values
-    larg_off_threads = np.unique(df.loc[larg_off, 'unique_thread_id'].values)
-    larg_off = df['unique_thread_id'].isin(larg_off_threads).values
+    larg_off = data['start_price_usd'].values < data['offr_price'].values
+    larg_off_threads = np.unique(data.loc[larg_off, 'unique_thread_id'].values)
+    larg_off = data['unique_thread_id'].isin(larg_off_threads).values
     del larg_off_threads
     small_off = ~larg_off
-    df = df.loc[small_off]
+    data = df.loc[small_off]
 
     # add response offer price column
     rsp_offer = pd.Series(np.nan, index=data.index)

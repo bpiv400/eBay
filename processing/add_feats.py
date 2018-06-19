@@ -176,13 +176,60 @@ def clean_data(df):
     return df
 
 
-def add_offrs(df, turn):
+def add_offrs_counter(df, turn):
     prev_turn = turn - 1
-    curr_offr_inds = df.xs(turn, level='turn_count', drop_level=True).index
+    curr_offr_inds = df[df['offr_type_id'].isin([1, 2])].xs(
+        turn, level='turn_count', drop_level=True).index
     prev_offr_inds = [(ind, prev_turn) for ind in curr_offr_inds.values]
     curr_offr_inds = [(ind, turn) for ind in curr_offr_inds.values]
-    prev_offrs = df.loc[prev_offr_inds, 'turn_count'].values
+    prev_offrs = df.loc[prev_offr_inds, 'offr_price'].values
     df.loc[curr_offr_inds, 'prev_offr_price'] = prev_offrs
+    return df
+
+
+def add_offrs_init(df):
+    df.set_index('turn_count', drop=True, inplace=True)
+    print(df)
+    byr_turns = df[df['offr_type_id'] == 0].index.values
+    slr_turns = df[df['offr_type_id'] == 2].index.values
+
+    if byr_turns.size > 0:
+        # sorting seller turn numbers
+        slr_turns = np.sort(slr_turns)
+        # if there has been at least one seller turn
+        if slr_turns.size > 0:
+            # find the indices in the slr_turns array where we can insert buyer
+            # turns to maintain order
+            # Since slr_turns[i] != byr_turns[j] \forall i,j,  these values
+            # implicitly correspond to 1 greater than the index in slr_turns
+            # of the seller turn before each buyer turn
+            insert_points = np.searchsorted(slr_turns, byr_turns)
+        else:
+            # if there hasn't been any sellers, just make insert points all 0's
+            insert_points = np.zeros(len(byr_turns))
+        # find the indices of byrs whose insert points corresopnd to 0's
+        init_inds = byr_turns[insert_points == 0]
+        # boolean array for whether each point is nonzero
+        nonzero_inserts = insert_points != 0
+        # indices of buyers whose insert points correspond to nonzero values
+        other_inds = byr_turns[nonzero_inserts]
+        # shrinking insert points to corresopnd only to those with nonzero values
+        insert_points = insert_points[nonzero_inserts]
+        if init_inds.size > 0:
+            # setting all indices of buyers who occur before seller counter offers
+            # to have prev offer equal to starting price
+            df.loc[init_inds, 'prev_offr_price'] = df.at[0, 'start_price_usd']
+        if insert_points.size > 0:
+            # incrementing insert_points down 1, so that insert points now give
+            # the indices in slr_turns corresponding to the sellers
+            # immediately before the nonzero insert points
+            insert_points = insert_points - 1
+            # grabbing seller indices by indexing by insert_points
+            other_sellers = slr_turns[insert_points]
+            # extract previous offer values using other_sellers array
+            prev_offrs = df.loc[other_sellers, 'offr_price'].values
+            df.loc[other_inds, 'prev_offr_price'] = prev_offrs
+    df.reset_index()
     return df
 
 
@@ -195,11 +242,22 @@ def prev_offr(df):
     start_price = df.loc[init_offr_inds, 'start_price_usd'].copy()
     df.loc[init_offr_inds, 'prev_offr_price'] = start_price.values
     df.set_index(['unique_thread_id', 'turn_count'], inplace=True)
-    all_turns = df.get_level_values('turn_count')
+    all_turns = df.index.levels[1]
     for i in range(1, 5):
         if i in all_turns:
-            print('Adding turn %d' % i + 1)
-            df = add_offrs(df, i)
+            print('Adding turn %d' % (i + 1))
+            df = add_offrs_counter(df, i)
+    df.reset_index(inplace=True, drop=False)
+    df = df.groupby(by='unique_thread_id').apply(add_offrs_init)
+
+    # to implement if necessary
+    # group_list = []
+    # for _, group in data:
+    #     new_group = group.copy()
+    #     new_group = add_offrs_byrs(new_group)
+    #     if new_group is not None:
+    #         group_list.append(new_group)
+
     return df
 
 
