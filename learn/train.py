@@ -22,10 +22,12 @@ svr = svm.SVR()
 # neural nonsense maybe?
 
 
-# main method
+def main():
+
+
+    # main method
 if __name__ == '__main__':
     main()
-
     parser = argparse.ArgumentParser(
         description='associate threads with all relevant variables')
     parser.add_argument('--name', action='store', type=str)

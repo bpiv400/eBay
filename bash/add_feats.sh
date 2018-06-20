@@ -2,7 +2,7 @@
 #$ -N add_feats 
 #$ -js 1 
 #$ -j y
-#$ -l m_mem_free=10G
+#$ -l m_mem_free=15G
 
 cd ~/eBay/data/$1
 scriptPath=repo/processing/add_feats.py  

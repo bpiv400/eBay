@@ -20,7 +20,7 @@ def main():
     subdir = args.dir
 
     # initialize model
-    model = sk.neural_network.MLPClassifier
+    model = sk.neural_network.MLPClassifier()
     # load data slice
     for i in range
     df = load_data(subdir, counter)

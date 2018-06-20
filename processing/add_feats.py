@@ -5,7 +5,7 @@ import argparse
 from multiprocessing import Pool, cpu_count
 from functools import partial
 import math
-
+import gc
 
 def date_feats(feat_df):
     # grab offer time
@@ -189,7 +189,6 @@ def add_offrs_counter(df, turn):
 
 def add_offrs_init(df):
     df.set_index('turn_count', drop=True, inplace=True)
-    print(df)
     byr_turns = df[df['offr_type_id'] == 0].index.values
     slr_turns = df[df['offr_type_id'] == 2].index.values
 
@@ -229,6 +228,12 @@ def add_offrs_init(df):
             # extract previous offer values using other_sellers array
             prev_offrs = df.loc[other_sellers, 'offr_price'].values
             df.loc[other_inds, 'prev_offr_price'] = prev_offrs
+
+    count_nan = np.sum(np.isnan(df['prev_offr_price'].values))
+    if count_nan > 0:
+        print(df[['offr_type_id', 'status_id', 'offr_price', 'start_price_usd',
+                  'prev_offr_price', 'resp_offr']])
+        raise ValueError('No NANs should escape this phase')
     df.reset_index()
     return df
 
@@ -243,21 +248,25 @@ def prev_offr(df):
     df.loc[init_offr_inds, 'prev_offr_price'] = start_price.values
     df.set_index(['unique_thread_id', 'turn_count'], inplace=True)
     all_turns = df.index.levels[1]
-    for i in range(1, 5):
+    for i in range(1, 6):
         if i in all_turns:
             print('Adding turn %d' % (i + 1))
             df = add_offrs_counter(df, i)
     df.reset_index(inplace=True, drop=False)
-    df = df.groupby(by='unique_thread_id').apply(add_offrs_init)
+    df = df.groupby(by='unique_thread_id')
 
     # to implement if necessary
-    # group_list = []
-    # for _, group in data:
-    #     new_group = group.copy()
-    #     new_group = add_offrs_byrs(new_group)
-    #     if new_group is not None:
-    #         group_list.append(new_group)
-
+    count = 0
+    group_list = []
+    for _, group in df:
+        new_group = group.copy()
+        new_group = add_offrs_init(new_group)
+        if new_group is not None:
+            group_list.append(new_group)
+            count = count + 1
+        if count % 500 == 0:
+            gc.collect()
+    df = pd.concat(group_list)
     return df
 
 

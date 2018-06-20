@@ -267,12 +267,14 @@ def main():
     print('Thread file loaded')
     sys.stdout.flush()
     global lists
+    print('data/list_chunks/' +
+          filename.replace('.csv', '_lists.csv'))
     lists = pd.read_csv('data/list_chunks/' +
                         filename.replace('.csv', '_lists.csv'))
     # change when ready to run full job
-    print(lists.columns)
     lists.set_index('anon_item_id', inplace=True)
 
+    print(lists.loc[[54687585]])
     print('Listing file loaded')
     # grabbing relevant indicator values
     # temp: ignore leaves
@@ -306,15 +308,6 @@ def main():
     sys.stdout.flush()
     # convert date of offer creation to datetime
     data['src_cre_date'] = pd.to_datetime(data.src_cre_date)
-
-    # remove threads where an offer exists which is higher than the start price
-    # may be evidence of bundling etc.
-    larg_off = data['start_price_usd'].values < data['offr_price'].values
-    larg_off_threads = np.unique(data.loc[larg_off, 'unique_thread_id'].values)
-    larg_off = data['unique_thread_id'].isin(larg_off_threads).values
-    del larg_off_threads
-    small_off = ~larg_off
-    data = df.loc[small_off]
 
     # add response offer price column
     rsp_offer = pd.Series(np.nan, index=data.index)
