@@ -137,10 +137,8 @@ def bins_from_common(offr):
 
 # currently doesn't produce a symmetric window around low and high points
 def bins_from_midpoints(low, high, step):
-    midpoints = np.array(list(range(low, high + step, step)))
-    print(len(midpoints))
+    midpoints = np.arange(low, high + step, step)
     odd_bin_cents = midpoints[::2]
-    print(odd_bin_cents)
     ev_bin_cents = midpoints[1::2]
     if len(midpoints) % 2 == 0:
         low_set = np.divide(np.add(odd_bin_cents, ev_bin_cents), 2)
@@ -153,9 +151,7 @@ def bins_from_midpoints(low, high, step):
         bins[:bin_count:2] = low_set
         bins[1:bin_count - 1:2] = high_set
     else:
-        print('odd')
         odd_bin_cents = odd_bin_cents[:len(odd_bin_cents) - 1]
-        print(odd_bin_cents)
         low_set = np.divide(np.add(odd_bin_cents, ev_bin_cents), 2)
         ev_high = ev_bin_cents[len(ev_bin_cents) - 1]
         last_bin = (high + ev_high) / 2
@@ -198,16 +194,12 @@ def main():
     high = args.high
     step = args.step
 
-    # initialize model
-    model = sk.linear_model.LogisticRegression(penalty='L2', solver='lbfgs', max_iter=100,
-                                               verbose=1, C=10)
-
     # load data slice
     read_loc = 'data/' + subdir + '/' + filename
     df = pd.read_csv(read_loc)
 
     # dropping columns that are not useful for prediction
-    df.drop(columns=['Unnamed: 0', 'anon_item_id', 'anon_thread_id', 'anon_byr_id',
+    df.drop(columns=['anon_item_id', 'anon_thread_id', 'anon_byr_id',
                      'anon_slr_id', 'src_cre_date', 'response_time', 'auct_start_dt',
                      'auct_end_dt', 'item_price', 'bo_ck_yn'], inplace=True)
 
@@ -258,14 +250,14 @@ def main():
 
     # setting nans for re-listing indicator to 0 because there are
     # no zeros in the indicator column, implying that nans indicate 0
-    not_listed = df[np.isnan(df['lstg_gen_type_id'].values)]
+    not_listed = df[np.isnan(df['lstg_gen_type_id'].values)].index
     df.loc[not_listed, 'lstg_gen_type_id'] = 0
     del not_listed
 
     # setting nans for mssg to 0 arbitrarily since only ~.001% of offers
     # have 0 for message
     no_msg = df[np.isnan(df['any_mssg'].values)].index
-    df.loc[never_sold, 'any_mssg'] = 0
+    df.loc[no_msg, 'any_mssg'] = 0
     del no_msg
 
     # dropping columns that have missing values for the timebeing
@@ -276,11 +268,11 @@ def main():
     df.drop(df[np.isnan(df['ref_price1'].values)].index, inplace=True)
 
     # drop rows with offers below low threshold or start price above high threshhold
-    low_threads = df[df[df['offr_price'] < low].index,
-                     'unique_thread_id'].values
-    high_threads = df[df[df['start_price_usd'] > high].index,
-                      'unique_thread_id'].values
-    outlier_threads = np.unique(np.array(low_threads, high_threads))
+    low_threads = df.loc[df[df['offr_price'] < low].index,
+                         'unique_thread_id'].values
+    high_threads = df.loc[df[df['start_price_usd'] > high].index,
+                          'unique_thread_id'].values
+    outlier_threads = np.unique(np.append(low_threads, high_threads))
     thread_ids = df[df['unique_thread_id'].isin(outlier_threads)].index
     df.drop(thread_ids, inplace=True)
     bins, midpoints = bins_from_midpoints(low, high, step)
@@ -292,5 +284,4 @@ def main():
 
 
 if __name__ == '__main__':
-    bins, midpoints = bins_from_midpoints(1, 10, 1)
-    print('%d, %d' % (len(bins), len(midpoints)))
+    main()
