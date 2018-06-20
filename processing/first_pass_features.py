@@ -274,7 +274,6 @@ def main():
     # change when ready to run full job
     lists.set_index('anon_item_id', inplace=True)
 
-    print(lists.loc[[54687585]])
     print('Listing file loaded')
     # grabbing relevant indicator values
     # temp: ignore leaves
