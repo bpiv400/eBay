@@ -177,6 +177,9 @@ def digitize(df, bins, midpoints, colname):
     df[colname] = rounded_vals
     return df
 
+# BUG ADD NAN REMOVAL FROM ACCEPT AND DECLINE PRICES
+##################################################
+
 
 def main():
     # parse parameters

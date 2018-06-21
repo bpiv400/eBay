@@ -6,11 +6,11 @@
 #$ -js 1
 
 first=true
-for i in $(find data/$1 -type f -name "*feats2.csv"); do
+for i in $(find data/curr_exp -type f -name "*$1*"); do
     if [ "$first" = true ] ; then
-        cp $i data/$1/$1_concat.csv
+        cp $i data/curr_exp/$1_concat.csv
         first=false
     else
-        tail -n +2 $i >> data/$1/$1_concat.csv
+        tail -n +2 $i >> data/curr_exp/$1_concat.csv
     fi
 done
