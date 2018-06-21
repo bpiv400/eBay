@@ -186,6 +186,18 @@ def gen_features(df):
 
     df.drop(columns=['item_cndtn_id', 'anon_title_code',
                      'meta_categ_id', 'anon_leaf_categ_id'])
+
+    # get indices of all declined sellers
+    declined_sellers = df[df['offr_type_id'] == 2 & df['status_id'].isin(
+        [0, 2, 6, 8])].index.values
+    if declined_sellers.size > 0:
+        # get indices of all declined sellers that are not at the end of the thread
+        countered_sellers = declined_sellers[declined_sellers != (
+            len(df.index) - 1)]
+        # reset response status for countered sellers to 7, ie counterofferd, to reflect
+        # the fact that the data set coded instances when buyers declined the seller offer
+        # then counter offered just as declining followed by an initial offer
+        df.loc[countered_sellers, 'status_id'] = 7
     counter_offers = df['status_id'] == 7
     counter_offers = np.nonzero(counter_offers.values)[0]
     if counter_offers.size != 0:

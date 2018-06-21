@@ -177,9 +177,6 @@ def digitize(df, bins, midpoints, colname):
     df[colname] = rounded_vals
     return df
 
-# BUG ADD NAN REMOVAL FROM ACCEPT AND DECLINE PRICES
-##################################################
-
 
 def main():
     # parse parameters
@@ -203,7 +200,7 @@ def main():
 
     # dropping columns that are not useful for prediction
     df.drop(columns=['anon_item_id', 'anon_thread_id', 'anon_byr_id',
-                     'anon_slr_id', 'src_cre_date', 'response_time', 'auct_start_dt',
+                     'anon_slr_id', 'auct_start_dt',
                      'auct_end_dt', 'item_price', 'bo_ck_yn'], inplace=True)
 
     # fixing seller and buyer history
@@ -264,8 +261,10 @@ def main():
     del no_msg
 
     # dropping columns that have missing values for the timebeing
+    # INCLUDING DROPPING decline, accept prices since it feels
+    # epistemologically disingenous to use them
     df.drop(columns=['count2', 'count3', 'count4', 'ship_time_fastest', 'ship_time_slowest',
-                     'ref_price2', 'ref_price3', 'ref_price4'], inplace=True)
+                     'ref_price2', 'ref_price3', 'ref_price4', 'decline_price', 'accept_price'], inplace=True)
 
     # dropping all threads that do not have ref_price1
     df.drop(df[np.isnan(df['ref_price1'].values)].index, inplace=True)
