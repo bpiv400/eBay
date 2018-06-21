@@ -198,6 +198,15 @@ def gen_features(df):
         # the fact that the data set coded instances when buyers declined the seller offer
         # then counter offered just as declining followed by an initial offer
         df.loc[countered_sellers, 'status_id'] = 7
+
+    # grab all buyer initial offers except for the first one and recode them as counteroffers
+    init_buyers = df[df['offr_type_id'] == 0].index.values
+    # remove the first initial offer from this list (since this truly is the initial offer)
+    init_buyers = init_buyers[init_buyers != 0]
+    # reset type id for these indices to 1 (implying a buyer offer, not an initial offer)
+    if init_buyers.size > 0:
+        df.loc[init_buyers, 'offr_type_id'] = 1
+
     counter_offers = df['status_id'] == 7
     counter_offers = np.nonzero(counter_offers.values)[0]
     if counter_offers.size != 0:
