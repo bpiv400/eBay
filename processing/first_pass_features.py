@@ -184,8 +184,7 @@ def gen_features(df):
     listing_row = pd.concat([listing_row]*len(df.index), ignore_index=True)
     df = df.join(listing_row, how='right')
 
-    df.drop(columns=['item_cndtn_id', 'anon_title_code',
-                     'meta_categ_id', 'anon_leaf_categ_id'])
+    df.drop(columns=['item_cndtn_id', 'meta_categ_id', 'anon_leaf_categ_id'])
 
     # get indices of all declined sellers
     declined_sellers = df[df['offr_type_id'] == 2 & df['status_id'].isin(
