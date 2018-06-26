@@ -525,11 +525,11 @@ def main():
 
     type_path = ''
     if seller:
-        type_path = 'slr'
+        type_path = 's'
     else:
-        type_path = 'byr'
-    write_path = 'data/' + subdir + '/' + type_path + '_' + \
-        str(turn) + '/' + filename.replace('_feats2.csv', '.csv')
+        type_path = 'b'
+    write_path = 'data/' + subdir + '/turns/' + \
+        + type_path + str(turn) + '/' + filename.replace('_feats2.csv', '.csv')
     df.to_csv(write_path)
 
 

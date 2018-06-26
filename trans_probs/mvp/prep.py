@@ -172,8 +172,12 @@ def bins_from_midpoints(low, high, step):
 def digitize(df, bins, midpoints, colname):
     col_series = df[colname]
     vals = col_series.values
+    ind = col_series.ind
     val_bins = np.digitize(vals, bins, right=True)
     rounded_vals = midpoints[val_bins]
+    del val_bins
+    del col_series
+    del vals
     df[colname] = rounded_vals
     return df
 
@@ -187,21 +191,64 @@ def main():
     parser.add_argument('--step', action='store', type=float)
     parser.add_argument('--dir', action='store', type=str)
     parser.add_argument('--name', action='store', type=str)
+    parser.add_argument('--turn', action='store', type=str)
     args = parser.parse_args()
     filename = args.name
     subdir = args.dir
     low = args.low
     high = args.high
     step = args.step
+    turn = args.turn.strip()
+    if len(turn) != 2:
+        raise ValueError('turn should be two 2 characters')
+    turn_num = turn[1]
+    turn_type = turn[0]
+    turn_num = int(turn_num)
 
     # load data slice
-    read_loc = 'data/' + subdir + '/' + filename
+    read_loc = 'data/' + subdir + '/' + 'turns/' + turn + '/' filename
     df = pd.read_csv(read_loc)
 
     # dropping columns that are not useful for prediction
     df.drop(columns=['anon_item_id', 'anon_thread_id', 'anon_byr_id',
                      'anon_slr_id', 'auct_start_dt',
                      'auct_end_dt', 'item_price', 'bo_ck_yn'], inplace=True)
+
+    # for the timebeing, leave frac_remain and the times observed thusfar
+    # as features
+    date_list = []
+    for i in range(turn_num + 1):
+
+        date_list.append('remain_' + 'b' + str(i))
+        date_list.append('passed_' + 'b' + str(i))
+        # date_list.append('frac_remain_' + 'b' + str(i))
+        date_list.append('frac_passed_' + 'b' + str(i))
+        date_list.append('date_b' + str(i))
+        date_list.append('date_s' + str(i))
+
+        if i < turn_num and turn_type == 'b':
+            date_list.append('remain_' + 's' + str(i))
+            date_list.append('passed_' + 's' + str(i))
+            # date_list.append('frac_remain_' + 's' + str(i))
+            date_list.append('frac_passed_' + 's' + str(i))
+        elif turn_type == 's':
+            date_list.append('remain_' + 's' + str(i))
+            date_list.append('passed_' + 's' + str(i))
+            # date_list.append('frac_remain_' + 's' + str(i))
+            date_list.append('frac_passed_' + 's' + str(i))
+
+        # if i > 0:
+        #     date_list.append('time_' + 'b' + str(i))
+        # date_list.append('time_s' + str(i))
+
+        if i == turn_num and turn_type == 'b':
+            date_list.append('time_s' + str(i))
+        elif i == turn_num and turn_type == 's':
+            date_list.apppend('time_b' + str(i+1))
+            date_list.append('date_b' + str(i+1))
+    print(date_list)
+    # dropping all unused date and time features
+    df.drop(columns=date_list, inplace=True)
 
     # fixing seller and buyer history
     # assumed that NAN slr and byr histories indicate having participated in
@@ -269,19 +316,29 @@ def main():
     # dropping all threads that do not have ref_price1
     df.drop(df[np.isnan(df['ref_price1'].values)].index, inplace=True)
 
+    # making thread id the index
+    df.set_index('unique_thread_id', inplace=True)
     # drop rows with offers below low threshold or start price above high threshhold
-    low_threads = df.loc[df[df['offr_price'] < low].index,
-                         'unique_thread_id'].values
-    high_threads = df.loc[df[df['start_price_usd'] > high].index,
-                          'unique_thread_id'].values
-    outlier_threads = np.unique(np.append(low_threads, high_threads))
-    thread_ids = df[df['unique_thread_id'].isin(outlier_threads)].index
-    df.drop(thread_ids, inplace=True)
+    for i in range(turn_num + 1):
+        low_b = df[df['offr_b' + str(i)] < low].index
+        low_s = df[df['offr_s' + str(i)] < low].index
+        threads = np.unique(np.append(low_b.values, low_s.values))
+        df.drop(index=threads, inplace=True)
+        if turn_type == 's' and i == turn_num:
+            low_b = df[df['offr_b' + str(i + 1)] < low].index
+            df.drop(index=threads, inplace=True)
+
+    high_threads = df[df['start_price_usd'] > high].index
+    df.drop(index=threads, inplace=True)
     bins, midpoints = bins_from_midpoints(low, high, step)
-    df = digitize(df, bins, midpoints, 'offr_price')
-    df = digitize(df, bins, midpoints, 'resp_offr')
+
+    for i in range(turn_num + 1):
+        df = digitize(df, bins, midpoints, 'offr_s' + str(i))
+        df = digitize(df, bins, midpoints, 'offr_b' + str(i))
+        if turn_type == 's' and i == turn_num:
+            df = digitize(df, bins, midpoints, 'offr_b' + str(i + 1))
     save_loc = 'data/' + 'curr_exp' + \
-        '/' + filename.replace('_feats2.csv', '.csv')
+        '/' + turn + '/' + filename
     df.to_csv(save_loc, index_label=False)
 
 

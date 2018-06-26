@@ -30,9 +30,8 @@ def main():
     filename = args.name
     df = load_data(filename)
 
-    # drop all rows except for those corresponding to the first turn
-    not_first_turn = df[df['turn_count'] != 0].index
-    df.drop(not_first_turn, inplace=True)
+    # drop any
+
     # initialize model
     model = lm.LogisticRegression(penalty='L2', solver='lbfgs', max_iter=100,
                                   verbose=1, C=10)
@@ -48,7 +47,6 @@ def main():
         has_nan(df, col)
         cntr = cntr + 1
     df = df.values
-
 
     # model.fit(df, y)
 if __name__ == '__main__':
