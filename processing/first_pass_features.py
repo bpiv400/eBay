@@ -187,8 +187,10 @@ def gen_features(df):
     df.drop(columns=['item_cndtn_id', 'meta_categ_id', 'anon_leaf_categ_id'])
 
     # get indices of all declined sellers
-    declined_sellers = df[df['offr_type_id'] == 2 & df['status_id'].isin(
-        [0, 2, 6, 8])].index.values
+    sellers = df['offr_type_id'] == 2
+    declined = df['status_id'].isin([0, 2, 6, 8])
+    declined_sellers = sellers & declined
+    declined_sellers = df[declined_sellers].index.values
     if declined_sellers.size > 0:
         # get indices of all declined sellers that are not at the end of the thread
         countered_sellers = declined_sellers[declined_sellers != (
@@ -268,6 +270,21 @@ def gen_features(df):
     if np.sum(np.isnan(rsp)) != 0:
         print(df[['unique_thread_id', 'resp_offr', 'offr_price',
                   'start_price_usd', 'offr_type_id', 'status_id']])
+
+    # fix date error
+    # grab src_cre_date for all but the first offer
+    cre_dates = df['src_cre_date'].values
+    resp_times = df['response_time'].values
+    if len(cre_dates) > 1:
+        cre_dates = cre_dates[1:]
+        resp_times = resp_times[:len(resp_times) - 1]
+        time_hop = (cre_dates - resp_times).astype(int)
+        time_hop = time_hop < 0
+        time_hop = np.nonzero(time_hop)[0]
+        if time_hop.size > 0:
+            next_dates = time_hop + 1
+            df.loc[time_hop, 'response_time'] = df.loc[next_dates,
+                                                       'src_cre_date'].values
     if late_row != early_row:
         raise ValueError('Rows have been added')
     return df
@@ -327,6 +344,7 @@ def main():
     sys.stdout.flush()
     # convert date of offer creation to datetime
     data['src_cre_date'] = pd.to_datetime(data.src_cre_date)
+    data['response_time'] = pd.to_datetime(data.response_time)
 
     # add response offer price column
     rsp_offer = pd.Series(np.nan, index=data.index)
