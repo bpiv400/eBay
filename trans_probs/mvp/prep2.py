@@ -6,43 +6,6 @@ import sys
 import os
 import argparse
 
-# to be used with digitize(right = True)
-# remove all vals from the associated array that are
-# greater than high or less than low (exclusive both)
-# before using
-# currently doesn't produce a symmetric window around low and high points
-
-
-def bins_from_midpoints(low, high, step):
-    midpoints = np.arange(low, high + step, step)
-    odd_bin_cents = midpoints[::2]
-    ev_bin_cents = midpoints[1::2]
-    if len(midpoints) % 2 == 0:
-        low_set = np.divide(np.add(odd_bin_cents, ev_bin_cents), 2)
-        odd_bin_cents = odd_bin_cents[1:]
-        ev_bin_cents = ev_bin_cents[:len(ev_bin_cents) - 1]
-        high_set = np.divide(np.add(odd_bin_cents, ev_bin_cents), 2)
-        bin_count = len(low_set) + len(high_set) + 1
-        bins = np.zeros(bin_count)
-        bins[bin_count - 1] = high
-        bins[:bin_count:2] = low_set
-        bins[1:bin_count - 1:2] = high_set
-    else:
-        odd_bin_cents = odd_bin_cents[:len(odd_bin_cents) - 1]
-        low_set = np.divide(np.add(odd_bin_cents, ev_bin_cents), 2)
-        ev_high = ev_bin_cents[len(ev_bin_cents) - 1]
-        last_bin = (high + ev_high) / 2
-        ev_bin_cents = ev_bin_cents[:len(ev_bin_cents) - 1]
-        odd_bin_cents = odd_bin_cents[1:]
-        high_set = np.divide(np.add(odd_bin_cents, ev_bin_cents), 2)
-        high_set = np.append(high_set, last_bin)
-        bin_count = len(low_set) + len(high_set) + 1
-        bins = np.zeros(bin_count)
-        bins[bin_count - 1] = high
-        bins[:bin_count - 1:2] = low_set
-        bins[1:bin_count:2] = high_set
-    return bins, midpoints
-
 
 def main():
     # parse parameters
@@ -51,6 +14,7 @@ def main():
     parser.add_argument('--dir', action='store', type=str)
     parser.add_argument('--name', action='store', type=str)
     parser.add_argument('--turn', action='store', type=str)
+    parser.add_argument('--exp', action='store', type=str)
     args = parser.parse_args()
     print(args)
     filename = args.name
@@ -74,8 +38,6 @@ def main():
                      'anon_slr_id', 'auct_start_dt',
                      'auct_end_dt', 'item_price', 'bo_ck_yn'], inplace=True)
 
-    # for the timebeing, leave frac_remain and the times observed thusfar
-    # as features
     date_list = []
     for i in range(turn_num + 1):
 

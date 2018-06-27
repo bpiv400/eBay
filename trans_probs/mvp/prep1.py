@@ -7,7 +7,7 @@ import os
 import argparse
 
 
-def bins_from_common(offr):
+def bins_from_common(offr, percent):
     # creates num_obv x 2 np.array where the first column
     # corresponds to observations and the second column to their frequencies
     freq_table = np.unique(offr, return_counts=True)
@@ -16,118 +16,85 @@ def bins_from_common(offr):
     freq_table = freq_table[freq_table[:, 1].argsort()[::-1]]
 
     # extract top percentiles of observations
-    top_one = freq_table[0:int(freq_table.shape[0] * .01), 0]
-    top_two = freq_table[0:int(freq_table.shape[0] * .02), 0]
-    top_ten = freq_table[0:int(freq_table.shape[0] * .1), 0]
-    top_five = freq_table[0:int(freq_table.shape[0] * .05), 0]
-
-    # collect
-    # bin_array = [top_one, top_two, top_ten, top_five]
-    # bin_names = ['1%', '2%', '10%', '5%']
-
-    bin_array = [top_one, top_two]
-    bin_names = ['1%', '2%']
+    bin_cents = freq_table[0:int(freq_table.shape[0] * percent), 0]
 
     # grab the high
     right = np.amax(offr)
+    # grab the low
     left = np.amin(offr)
 
-    for bin_cents, bin_name in zip(bin_array, bin_names):
-        bin_cents = np.sort(bin_cents)
-        odd_bin_cents = bin_cents[::2]
-        ev_bin_cents = bin_cents[1::2]
-        last_odd = None
-        if bin_cents.size % 2 != 0:
-            # extracting highest freq vals for even and odd freq vals
-            last_odd = odd_bin_cents[(odd_bin_cents.size - 1)]
-            last_even = ev_bin_cents[(ev_bin_cents.size - 1)]
-            # finding highest midpoint
-            highest_edge = (last_odd + last_even) / 2
+    bin_cents = np.sort(bin_cents)
+    odd_bin_cents = bin_cents[::2]
+    ev_bin_cents = bin_cents[1::2]
+    last_odd = None
+    if bin_cents.size % 2 != 0:
+        # extracting highest freq vals for even and odd freq vals
+        last_odd = odd_bin_cents[(odd_bin_cents.size - 1)]
+        last_even = ev_bin_cents[(ev_bin_cents.size - 1)]
+        # finding highest midpoint
+        highest_edge = (last_odd + last_even) / 2
 
-            odd_bin_cents = odd_bin_cents[:(odd_bin_cents.size - 1)]
-            low_edges = np.divide(np.add(odd_bin_cents, ev_bin_cents), 2)
+        odd_bin_cents = odd_bin_cents[:(odd_bin_cents.size - 1)]
+        low_edges = np.divide(np.add(odd_bin_cents, ev_bin_cents), 2)
 
-            # remove lowest element from odd bin centers
-            odd_bin_cents = odd_bin_cents[1:]
-            # remove highest element from even bin centers
-            ev_bin_cents = ev_bin_cents[:(ev_bin_cents.size - 1)]
-            # find midpoint between every even freq val (except the highest)
-            # and the odd freq val immediately above it
-            high_edges = np.divide(np.add(ev_bin_cents, odd_bin_cents), 2)
-            # adds highest edge to edge count
-            high_edges = np.append(high_edges, highest_edge)
-            edge_count = high_edges.size + low_edges.size + 2
-            edges = np.zeros(edge_count)
-            edges[0] = left
-            edges[edge_count - 1] = right
-            edges[1:(edge_count - 1):2] = low_edges
-            edges[2:(edge_count):2] = high_edges
-        else:
-            # find midpoint between every even  freq val and the odd freq val
-            # immediately below
-            low_edges = np.divide(np.add(odd_bin_cents, ev_bin_cents), 2)
-            # remove lowest element from odd bin centers
-            odd_bin_cents = odd_bin_cents[1:]
-            # remove highest element from even bin centers
-            ev_bin_cents = ev_bin_cents[:(ev_bin_cents.size - 1)]
+        # remove lowest element from odd bin centers
+        odd_bin_cents = odd_bin_cents[1:]
+        # remove highest element from even bin centers
+        ev_bin_cents = ev_bin_cents[:(ev_bin_cents.size - 1)]
+        # find midpoint between every even freq val (except the highest)
+        # and the odd freq val immediately above it
+        high_edges = np.divide(np.add(ev_bin_cents, odd_bin_cents), 2)
+        # adds highest edge to edge count
+        high_edges = np.append(high_edges, highest_edge)
+        edge_count = high_edges.size + low_edges.size + 2
+        edges = np.zeros(edge_count)
+        edges[0] = left
+        edges[edge_count - 1] = right
+        edges[1:(edge_count - 1):2] = low_edges
+        edges[2:(edge_count):2] = high_edges
+    else:
+        # find midpoint between every even  freq val and the odd freq val
+        # immediately below
+        low_edges = np.divide(np.add(odd_bin_cents, ev_bin_cents), 2)
+        # remove lowest element from odd bin centers
+        odd_bin_cents = odd_bin_cents[1:]
+        # remove highest element from even bin centers
+        ev_bin_cents = ev_bin_cents[:(ev_bin_cents.size - 1)]
 
-            # find midpoint between every even freq val (except the highest)
-            # and the odd freq val immediately above it
-            high_edges = np.divide(np.add(ev_bin_cents, odd_bin_cents), 2)
+        # find midpoint between every even freq val (except the highest)
+        # and the odd freq val immediately above it
+        high_edges = np.divide(np.add(ev_bin_cents, odd_bin_cents), 2)
 
-            # count total edges
-            edge_count = low_edges.size + high_edges.size + 2
+        # count total edges
+        edge_count = low_edges.size + high_edges.size + 2
 
-            # create edge vector
-            edges = np.zeros(edge_count)
-            edges[0] = left
-            edges[edge_count - 1] = right
-            edges[1:(edge_count):2] = low_edges
-            edges[2:(edge_count - 1):2] = high_edges
-        plt.figure(figsize=(11.5, 6), dpi=300)
-        n, _, _ = plt.hist(offr, bins=edges)
-        plt.suptitle('Histogram of Rounded Data')
-        plt.title('(Rounded to %s of values)' % bin_name)
-        max_bin = np.argmax(n)
-        med_bin = np.median(n)
-        n = np.sort(n)[::-1]
-        # print(n[0:10])
-        # zoomed in plot
-        highest_edge = np.amin(edges[edges > 1000])
-        edges = edges[edges <= highest_edge]
-        zoom = offr[offr <= np.amax(edges)]
-        plt.figure(figsize=(11.5, 6), dpi=300)
-        n, _, _ = plt.hist(zoom, bins=edges)
-        plt.suptitle('Zoomed Histogram of Rounded Data (<= $1000)')
-        plt.title('(Rounded to %s of values)' % bin_name)
-        plt.show()
+        # create edge vector
+        edges = np.zeros(edge_count)
+        edges[0] = left
+        edges[edge_count - 1] = right
+        edges[1:(edge_count):2] = low_edges
+        edges[2:(edge_count - 1):2] = high_edges
+    # remove low, since output is piped to np.digitize(..right = True)
+    edges = edges[1:]
+    # currently, high bin equals the highest rounding point
+    # this is fine but not ideal since we would prefer a symmetric bin around each
+    # binning value
+    # therefore, we increase the highest bin by (right side high bin - right side next highest bin),
+    # thereby creating a symmetric range
+    # we leave the highest midpoint value unchanged, because we would still like to round
+    # to this value
+    left_width = edges[len(edges) - 1] - edges[len(edges) - 2]
+    edges[len(edges) - 1] = edges[len(edges) - 1] + left_width
 
-        highest_edge = np.amin(edges[edges > 500])
-        edges = edges[edges <= highest_edge]
-        zoom = offr[offr <= np.amax(edges)]
-        plt.figure(figsize=(11.5, 6), dpi=300)
-        n, _, _ = plt.hist(zoom, bins=edges)
-        plt.suptitle('Zoomed Histogram of Rounded Data (<= $500)')
-        plt.title('(Rounded to %s of values)' % bin_name)
-        plt.show()
-
-        highest_edge = np.amin(edges[edges > 100])
-        edges = edges[edges <= highest_edge]
-        zoom = offr[offr <= np.amax(edges)]
-        plt.figure(figsize=(11.5, 6), dpi=300)
-        n, _, _ = plt.hist(zoom, bins=edges)
-        plt.suptitle('Zoomed Histogram of Rounded Data (<= $100)')
-        plt.title('(Rounded to %s of values)' % bin_name)
-        plt.show()
-
-        highest_edge = np.amin(edges[edges > 50])
-        edges = edges[edges <= highest_edge]
-        zoom = offr[offr <= np.amax(edges)]
-        plt.figure(figsize=(11.5, 6), dpi=300)
-        n, _, _ = plt.hist(zoom, bins=edges)
-        plt.suptitle('Zoomed Histogram of Rounded Data (<= $50)')
-        plt.title('(Rounded to %s of values)' % bin_name)
-        plt.show()
+    # the lowest bin's right edge is the first element in the edges array & digitize (as we call it)
+    # only takes in right edges for each bin
+    # the digitize function places all values lower than this right edge into the first
+    # bin...as a result, we don't need to similarly extend the left edge here
+    # however, we want to keep all threads in the data set with offers in range [left_edge_low_bin, right_edge_high_bin]
+    # as a result, we need to calculate this left edge and use it to subset data, so we don't just
+    # chop it at the bin center
+    # this is done after getting function output in main thread
+    return edges, bin_cents
 
 
 # to be used with digitize(right = True)
