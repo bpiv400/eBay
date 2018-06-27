@@ -91,7 +91,7 @@ def bins_from_common(offr):
         max_bin = np.argmax(n)
         med_bin = np.median(n)
         n = np.sort(n)[::-1]
-        print(n[0:10])
+        # print(n[0:10])
         # zoomed in plot
         highest_edge = np.amin(edges[edges > 1000])
         edges = edges[edges <= highest_edge]
@@ -172,7 +172,7 @@ def bins_from_midpoints(low, high, step):
 def digitize(df, bins, midpoints, colname):
     col_series = df[colname]
     vals = col_series.values
-    ind = col_series.ind
+    ind = col_series.index
     val_bins = np.digitize(vals, bins, right=True)
     rounded_vals = midpoints[val_bins]
     del val_bins
@@ -193,6 +193,7 @@ def main():
     parser.add_argument('--name', action='store', type=str)
     parser.add_argument('--turn', action='store', type=str)
     args = parser.parse_args()
+    print(args)
     filename = args.name
     subdir = args.dir
     low = args.low
@@ -206,7 +207,7 @@ def main():
     turn_num = int(turn_num)
 
     # load data slice
-    read_loc = 'data/' + subdir + '/' + 'turns/' + turn + '/' filename
+    read_loc = 'data/' + subdir + '/' + 'turns/' + turn + '/' + filename
     df = pd.read_csv(read_loc)
 
     # dropping columns that are not useful for prediction
@@ -244,9 +245,8 @@ def main():
         if i == turn_num and turn_type == 'b':
             date_list.append('time_s' + str(i))
         elif i == turn_num and turn_type == 's':
-            date_list.apppend('time_b' + str(i+1))
+            date_list.append('time_b' + str(i+1))
             date_list.append('date_b' + str(i+1))
-    print(date_list)
     # dropping all unused date and time features
     df.drop(columns=date_list, inplace=True)
 
@@ -326,10 +326,11 @@ def main():
         df.drop(index=threads, inplace=True)
         if turn_type == 's' and i == turn_num:
             low_b = df[df['offr_b' + str(i + 1)] < low].index
-            df.drop(index=threads, inplace=True)
+            df.drop(index=low_b, inplace=True)
 
+    del threads
     high_threads = df[df['start_price_usd'] > high].index
-    df.drop(index=threads, inplace=True)
+    df.drop(index=high_threads, inplace=True)
     bins, midpoints = bins_from_midpoints(low, high, step)
 
     for i in range(turn_num + 1):

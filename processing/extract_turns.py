@@ -41,7 +41,6 @@ def date_feats(feat_df, col_abv):
     return feat_df
 
 
-
 # double check what to do about response time and src_cre_date
 # for each offer
 # ONE SOLUTION
@@ -100,6 +99,7 @@ def get_time(df, end_code, init_code):
     df['time_' + end_code] = diff
     return df
 
+
 def grab_turn(df, turn, seller):
     if turn == 0:
         if not seller:
@@ -146,17 +146,19 @@ def grab_turn(df, turn, seller):
             df.set_index(['unique_thread_id', 'turn_count'], inplace=True)
             len_2_ids = thrd_len[thrd_len == 2].index
             len2 = df.loc[len_2_ids].copy(deep=True)
-            
+
             if len(len2.index) > 0:
                 # from length 2 subset, grab threads that contain a seller counteroffer
-                seller_counters = len2[len2['offr_type_id'] == 2].index.labels[0]
+                seller_counters = len2[len2['offr_type_id']
+                                       == 2].index.labels[0]
                 seller_counters = len2.index.levels[0][seller_counters]
                 df = df.loc[seller_counters].copy()
                 gc.collect()
                 if len(df.index) > 0:
-                    off1df = grab_turn(df.reset_index(drop=False).copy(), 0, False)
+                    off1df = grab_turn(df.reset_index(
+                        drop=False).copy(), 0, False)
                     # drop all initial turns
-                    df.drop(index=0, level = 'turn_count', inplace = True)
+                    df.drop(index=0, level='turn_count', inplace=True)
                     df.reset_index(level='turn_count', drop=True, inplace=True)
                     off1df['offr_b1'] = df['resp_offr']
                     off1df['date_b1'] = df['response_time']
@@ -184,10 +186,10 @@ def grab_turn(df, turn, seller):
             len_2_ids = thrd_len[thrd_len == 2].index
             len_34_ids = thrd_len[thrd_len.isin([3, 4])].index
             long_ids = thrd_len[thrd_len.isin([5, 6])].index
-            
+
             # set index to a multi index of unique
             df.set_index(['unique_thread_id', 'turn_count'], inplace=True)
-                                 
+
             # create len specific subsets of df using ids extracted above
             len2 = df.loc[len_2_ids].copy(deep=True)
             df.drop(index=len2.index, inplace=True)
@@ -201,17 +203,19 @@ def grab_turn(df, turn, seller):
             del len_2_ids
             del len_34_ids
             del long_ids
-            
+
             if len(len2.index) > 0:
                 # from length 2 subset, grab threads that contain a seller counteroffer
-                seller_counters = len2[len2['offr_type_id'] == 2].index.labels[0]
+                seller_counters = len2[len2['offr_type_id']
+                                       == 2].index.labels[0]
                 seller_counters = len2.index.levels[0][seller_counters]
                 gc.collect()
 
                 # now remove all corresponding rows, remaining dataframe only contains threads that
                 # correspond to those where the buyer makes two offers & the last row is the
                 # buyers second offer
-                len2.drop(index=seller_counters, level='unique_thread_id', inplace=True)
+                len2.drop(index=seller_counters,
+                          level='unique_thread_id', inplace=True)
                 del seller_counters
                 gc.collect()
 
@@ -220,11 +224,12 @@ def grab_turn(df, turn, seller):
             # counter offer occurs at turn_count = 2
             if len(len34.index) > 0:
                 # remove the fourth offer in each 4 len thread
-                if len(thrd_len[thrd_len==4].index) > 0:
+                if len(thrd_len[thrd_len == 4].index) > 0:
                     len34.drop(index=[3], level='turn_count', inplace=True)
 
                 # extract second turn in each thread
-                middle_offrs = len34.xs(1, level='turn_count', drop_level=False).copy()
+                middle_offrs = len34.xs(
+                    1, level='turn_count', drop_level=False).copy()
                 # thread ids for threads where the middle offer is a seller counter offer
                 middle_offr_ids = middle_offrs[middle_offrs['offr_type_id']
                                                == 2].index.labels[0]
@@ -248,7 +253,8 @@ def grab_turn(df, turn, seller):
             # throw out everything past turn_count = 2 and the second turn
             # which necessarily must be a seller offer
             if len(longdf.index) > 0:
-                longdf.drop(index=[1, 3, 4, 5], level='turn_count', inplace=True)
+                longdf.drop(index=[1, 3, 4, 5],
+                            level='turn_count', inplace=True)
 
             # concat all dfs
             out = pd.concat([len2, len34, longdf], sort=False)
@@ -280,15 +286,15 @@ def grab_turn(df, turn, seller):
             out.rename(columns={'response_time': 'date_s1',
                                 'src_cre_date': 'date_b1',
                                 'offr_price': 'offr_b1',
-                                'resp_offr': 'offr_s1'}, 
-                      inplace=True)
+                                'resp_offr': 'offr_s1'},
+                       inplace=True)
             # grab the initial offer time
             out = date_feats(out, 's0')
             out = date_feats(out, 'b1')
             out = get_time(out, 'b1', 's0')
             out = get_time(out, 's1', 'b1')
             out.drop(columns=['frac_remain', 'frac_passed', 'passed', 'remain', 'status_id',
-                             'offr_type_id'], inplace=True)
+                              'offr_type_id'], inplace=True)
             return out
         else:
             f2 = grab_turn(df.copy(), 2, False)
@@ -296,9 +302,9 @@ def grab_turn(df, turn, seller):
                 'date_s2', 'offr_s2', 'time_s2',
                 'frac_remain_b2',
                 'frac_passed_b2',
-                'passed_b2', 'remain_b2', 
+                'passed_b2', 'remain_b2',
             }, inplace=True)
-            
+
             # count turns in each thread
             thrd_len = df.groupby('unique_thread_id').count()['turn_count']
             # extract thread ids associated with each length thread
@@ -306,16 +312,18 @@ def grab_turn(df, turn, seller):
             len_3_ids = thrd_len[thrd_len == 3].index
             len_4_ids = thrd_len[thrd_len == 4].index
             df.set_index(['unique_thread_id', 'turn_count'], inplace=True)
-    
+
             len3 = df.loc[len_3_ids].copy(deep=True)
             len4 = df.loc[len_4_ids].copy(deep=True)
             del df
-            
+
             if len(len3.index) > 0:
-                last_turn_3 = len3.xs(2, level='turn_count', drop_level=True).copy()
+                last_turn_3 = len3.xs(
+                    2, level='turn_count', drop_level=True).copy()
                 last_turn_3 = last_turn_3[last_turn_3['offr_type_id'] == 2].index
                 len3 = len3.loc[last_turn_3].copy()
-                len3_comp = grab_turn(len3.reset_index(drop=False).copy(), 1, False)
+                len3_comp = grab_turn(len3.reset_index(
+                    drop=False).copy(), 1, False)
                 len3 = len3.xs(2, level='turn_count', drop_level=True).copy()
                 len3_comp['offr_b2'] = len3['resp_offr']
                 len3_comp['date_b2'] = len3['response_time']
@@ -325,16 +333,19 @@ def grab_turn(df, turn, seller):
                 del last_turn_3
             else:
                 len3_comp = None
-                
+
             if len(len4.index) > 0:
-                sec_turn = len4.xs(1, level='turn_count', drop_level=True).copy()
-                last_turn = len4.xs(3, level='turn_count', drop_level=True).copy()
+                sec_turn = len4.xs(1, level='turn_count',
+                                   drop_level=True).copy()
+                last_turn = len4.xs(3, level='turn_count',
+                                    drop_level=True).copy()
                 sec_turn_ids = sec_turn['offr_type_id'] == 2
                 last_turn_ids = last_turn['offr_type_id'] == 2
                 shared = sec_turn_ids & last_turn_ids
                 sec_turn_ids = sec_turn_ids[shared].index
                 len4 = len4.loc[sec_turn_ids].copy()
-                len4_comp = grab_turn(len4.reset_index(drop=False).copy(), 1, False)
+                len4_comp = grab_turn(len4.reset_index(
+                    drop=False).copy(), 1, False)
                 len4 = last_turn
                 len4_comp['offr_b2'] = len4['resp_offr']
                 len4_comp['date_b2'] = len4['response_time']
@@ -342,7 +353,7 @@ def grab_turn(df, turn, seller):
                 len4_comp = get_time(len4_comp, 'b2', 's1')
             else:
                 len4_comp = None
-            
+
             out = pd.concat([f2, len4_comp, len3_comp], sort=False)
             return out
     else:
@@ -354,7 +365,7 @@ def grab_turn(df, turn, seller):
                              'offr_s0', 'offr_s1', 'frac_passed_b0',
                              'frac_passed_b1', 'frac_passed_s0',
                              'frac_remain_b0', 'frac_remain_b1',
-                             'frac_remain_s0', 'time_s0', 'time_s1', 
+                             'frac_remain_s0', 'time_s0', 'time_s1',
                              'time_b1',
                              'passed_b0', 'passed_b1', 'passed_s0',
                              'remain_b0', 'remain_b1',
@@ -410,7 +421,8 @@ def grab_turn(df, turn, seller):
             if len(len4.index) > 0:
                 # moving on to length 4 threads
                 # extracting fourth offer from each thread
-                last = len4.xs(3, level='turn_count', drop_level=True)['offr_type_id']
+                last = len4.xs(3, level='turn_count', drop_level=True)[
+                    'offr_type_id']
 
                 # threads where the last offer is made by a seller
                 last_seller = last[last == 2].index
@@ -418,7 +430,8 @@ def grab_turn(df, turn, seller):
                 del last
 
                 # threads where the second offer is made by a seller
-                two = len4.xs(1, level='turn_count', drop_level=True)['offr_type_id']
+                two = len4.xs(1, level='turn_count', drop_level=True)[
+                    'offr_type_id']
                 two_seller = two[two == 2].index
                 # print(two_seller[0:10])
 
@@ -440,11 +453,11 @@ def grab_turn(df, turn, seller):
                 # is made by the seller)
                 # these are the threads where the last buyer offer is located
                 # at turn 3 (ie turn_count = 2)
-                
+
                 remaining = len4.index.labels[0]
                 remaining = len4.index.levels[0][remaining]
                 # print(remaining[0:10])
-                
+
                 last_seller = np.intersect1d(remaining, last_seller.values)
 
                 # get all other threads
@@ -455,7 +468,7 @@ def grab_turn(df, turn, seller):
                 # print(len(all_ids))
                 del last_seller
                 del remaining
-                #debugging 
+                # debugging
                 id_list = len4.index.values
                 # print(id_list[0:20])
                 # for ind in all_ids:
@@ -467,7 +480,8 @@ def grab_turn(df, turn, seller):
             # turning attention to longdf
             # all final turns are located in turn_count = 4 (the 5th turn)
             if len(longdf.index) > 0:
-                longdf = longdf.xs(4, level='turn_count', drop_level=False).copy()
+                longdf = longdf.xs(4, level='turn_count',
+                                   drop_level=False).copy()
             out = pd.concat([longdf, len4, len3])
             del longdf
             del len4
@@ -475,9 +489,10 @@ def grab_turn(df, turn, seller):
             out.rename(columns={'response_time': 'date_s2',
                                 'src_cre_date': 'date_b2',
                                 'offr_price': 'offr_b2',
-                                'resp_offr': 'offr_s2'}, 
-                      inplace=True)
-            out.drop(columns=['prev_offr_price', 'status_id', 'offr_type_id'], inplace=True)
+                                'resp_offr': 'offr_s2'},
+                       inplace=True)
+            out.drop(columns=['prev_offr_price', 'status_id',
+                              'offr_type_id'], inplace=True)
             # adding features
             out.reset_index(level='turn_count', drop=True, inplace=True)
             out = out.merge(off2df, how='inner',
@@ -487,7 +502,8 @@ def grab_turn(df, turn, seller):
             out = date_feats(out, 'b2')
             out = get_time(out, 'b2', 's1')
             out = get_time(out, 's2', 'b2')
-            out.drop(columns=['passed', 'frac_passed', 'remain', 'frac_remain'], inplace = True)
+            out.drop(columns=['passed', 'frac_passed',
+                              'remain', 'frac_remain'], inplace=True)
             return out
             # fill in with selle
 
@@ -522,6 +538,11 @@ def main():
 
     # calling grab turn method
     df = grab_turn(df, turn, seller)
+    cols = df.columns
+    for col in cols:
+        if 'time' in col:
+            inds = df[df[col] < 0].index
+            df.loc[inds, col] = 0
 
     type_path = ''
     if seller:
@@ -529,7 +550,7 @@ def main():
     else:
         type_path = 'b'
     write_path = 'data/' + subdir + '/turns/' + \
-        + type_path + str(turn) + '/' + filename.replace('_feats2.csv', '.csv')
+        type_path + str(turn) + '/' + filename.replace('_feats2.csv', '.csv')
     df.to_csv(write_path)
 
 

@@ -7,9 +7,11 @@
 
 
 turns=( "b0" "b1" "b2" "s0" "s1" )
-for j in "${turns[@]}" do
+for j in "${turns[@]}" 
+do
     first=true
-    for i in $(find data/curr_exp -type f -name "*$1*"); do
+    for i in $(find data/curr_exp/$j -type f -name "*$1*"); 
+    do
         if [ "$first" = true ] ; then
             cp $i data/curr_exp/$j/$1_concat.csv
             first=false
@@ -18,3 +20,5 @@ for j in "${turns[@]}" do
         fi
     done
 done
+
+
