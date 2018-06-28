@@ -89,11 +89,7 @@ if __name__ == '__main__':
     filename = name + '_concat.csv'
     print('Loading Data')
     sys.stdout.flush()
-    prep_type = exp_name[len(exp_name) - 1]
-    if int(prep_type) == 1:
-        prep_type = 'mvp1'
-    elif int(prep_type) == 2:
-        prep_type = 'mvp2'
+    prep_type = get_prep_type(exp_name)
     load_loc = 'data/exps/%s/%s/%s' % (prep_type, turn, filename)
     df = pd.read_csv(load_loc)
     print('Done Loading')

@@ -33,6 +33,20 @@ class Net(nn.Module):
         return x
 
 
+def get_resp_turn(turn):
+    if len(turn) != 2:
+        raise ValueError('turn should be two 2 characters')
+    turn_num = turn[1]
+    turn_type = turn[0]
+    turn_num = int(turn_num)
+    if turn_type == 'b':
+        resp_turn = 's' + str(turn_num)
+    else:
+        resp_turn = 'b' + str(turn_num + 1)
+    resp_col = 'offr_' + resp_turn
+    return resp_col
+
+
 def get_prep_type(exp_name):
     '''
     Description: uses the experiment name to determine
@@ -48,6 +62,32 @@ def get_prep_type(exp_name):
     elif int(prep_type) == 4:
         prep_type = 'mvp4'
     return prep_type
+
+
+def get_class_series(df, resp_turn):
+    '''
+    Description: replaces the prediction variable with
+    class ids from 0 to n-1 where n = number of classes
+    and returns the data frame with the converted column
+    and a series where index = original category
+    and values give the new index, which can be used as a 'map'
+    for outputted columns if necessary later
+
+    Input:
+        df: data frame containing 'resp_turn' col
+        resp_turn: string identifying the name of the prediction
+        variable in df
+    Output: tuple of (data frame, class series 'map')
+    '''
+    raw_classes = np.unique(df[resp_turn].values)
+    class_ids = np.arrange(0, len(raw_classes))
+    class_series = pd.Series(raw_classes, index=raw_classes)
+    del raw_classes
+    del class_ids
+    org_col = df[resp_turn].values
+    converted_classes = class_series.loc[org_col].values
+    df[resp_turn] = converted_classes
+    return df, class_series
 
 
 if __name__ == '__main__':
@@ -70,11 +110,6 @@ if __name__ == '__main__':
     name = args.name
     exp_name = args.exp.strip()
     turn = args.turn.strip()
-    if len(turn) != 2:
-        raise ValueError('turn should be two 2 characters')
-    turn_num = turn[1]
-    turn_type = turn[0]
-    turn_num = int(turn_num)
 
     # load data
     filename = name + '_concat.csv'
@@ -87,11 +122,8 @@ if __name__ == '__main__':
     print('Done Loading')
     sys.stdout.flush()
     # grab response variable
-    if turn_type == 'b':
-        resp_turn = 's' + str(turn_num)
-    else:
-        resp_turn = 'b' + str(turn_num + 1)
-    resp_col = 'offr_' + resp_turn
+    resp_turn = get_resp_turn(turn)
+    df, class_series = get_class_series(df, resp_turn)
     targ = df[resp_col].values
     df.drop(columns=resp_col, inplace=True)
     cols = df.columns
@@ -150,13 +182,13 @@ if __name__ == '__main__':
     sys.stdout.flush()
     torch.save(net.state_dict(), 'data/models/%s/model_%s.pth.tar' %
                (exp_name, turn))
-
-    loss_pickle = open('data/models/%s/loss_%s.pickle' %
+    class_series.to_csv('data/models/%s/class_series_%s.csv' % (exp_name, turn)
+    loss_pickle=open('data/models/%s/loss_%s.pickle' %
                        (exp_name, turn), 'wb')
     pickle.dump(loss_hist, loss_pickle)
     loss_pickle.close()
 
-    feat_dict_pick = open('data/models/%s/featdict_%s.pickle' %
+    feat_dict_pick=open('data/models/%s/featdict_%s.pickle' %
                           (exp_name, turn), 'wb')
     pickle.dump(colix, feat_dict_pick)
     feat_dict_pick.close()

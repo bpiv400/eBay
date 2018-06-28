@@ -19,7 +19,7 @@ class Net(nn.Module):
         # print('units %d' % num_units)
         # print('num_classes %d' % num_classes)
         self.fc1 = nn.Linear(num_feat, num_units)
-        self.fc2 = nn.Linear(num_units, num_units)
+        self.fc2 = nn.Linear(num_units, num_classes)
         self.expect = torch.from_numpy(classes).float()
         self.expect.requires_grad_(False)
         self.expect = self.expect.view(-1, 1)
@@ -35,6 +35,23 @@ class Net(nn.Module):
         # print(self.expect.size())
         x = torch.mm(x, self.expect)
         return x
+
+
+def get_prep_type(exp_name):
+    '''
+    Description: uses the experiment name to determine
+    where to load data from
+    '''
+    prep_type = exp_name[len(exp_name) - 1]
+    if int(prep_type) == 1:
+        prep_type = 'mvp1'
+    elif int(prep_type) == 2:
+        prep_type = 'mvp2'
+    elif int(prep_type) == 3:
+        prep_type = 'mvp3'
+    elif int(prep_type) == 4:
+        prep_type = 'mvp4'
+    return prep_type
 
 
 if __name__ == '__main__':
@@ -67,7 +84,9 @@ if __name__ == '__main__':
     filename = name + '_concat.csv'
     print('Loading Data')
     sys.stdout.flush()
-    df = pd.read_csv('data/curr_exp/%s/%s' % (turn, filename))
+    prep_type = get_prep_type(exp_name)
+    load_loc = 'data/exps/%s/%s/%s' % (prep_type, turn, filename)
+    df = pd.read_csv(load_loc)
     print('Done Loading')
     sys.stdout.flush()
     # grab response variable

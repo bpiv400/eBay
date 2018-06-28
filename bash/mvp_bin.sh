@@ -1,4 +1,4 @@
-#$ -N prep_training
+#$ -N bin 
 #!/bin/bash
 #$ -js 1
 #$ -j y

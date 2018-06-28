@@ -7,23 +7,29 @@
 
 # first argument gives experiment name
 # second argument gives file type 
-# (toy, test, train, etc)
+types=( "toy" "test" "train" )
 turns=( "b0" "b1" "b2" )
-for j in "${turns[@]}" 
-do   
-    first=true
-    for i in $(find data/exps/$1/$j -type f -name "*$2*"); 
+for k in "${types[@]}"
+do
+    for j in "${turns[@]}" 
     do
-        echo $j
-        echo $first
-        echo $i
-        if [ "$first" = true ] ; then
-            cp $i data/exps/$1/$j/$2_concat.csv
-            first=false ;
-        else
-            # echo "tail" ;
-            tail -n +2 $i >> data/exps/$1/$j/$2_concat.csv ;
-        fi
+        if [ -f data/exps/$1/$j/$k_concat.csv ]; then
+            rm data/exps/$1/$j/$k_concat.csv
+        fi   
+        first=true
+        for i in $(find data/exps/$1/$j -type f -name "*$k*"); 
+        do
+            echo $j
+            echo $first
+            echo $i
+            if [ "$first" = true ] ; then
+                cp $i data/exps/$1/$j/$k_concat.csv
+                first=false ;
+            else
+                # echo "tail" ;
+                tail -n +2 $i >> data/exps/$1/$j/$k_concat.csv ;
+            fi
+        done
     done
 done
 

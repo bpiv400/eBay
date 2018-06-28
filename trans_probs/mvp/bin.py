@@ -5,6 +5,7 @@ import numpy as np
 import sklearn as sk
 import sys
 import os
+import pickle
 import argparse
 
 # to be used with digitize(right = True)
@@ -36,7 +37,7 @@ def bins_from_midpoints(low, high, step):
     # if there are an even number of midpoints
     if len(midpoints) % 2 == 0:
         # find the midpoint between each odd and even midpoint\
-        # (taking midpoint of each odd center and the even midpoint 
+        # (taking midpoint of each odd center and the even midpoint
         # immediately above it)
         low_set = np.divide(np.add(odd_bin_cents, ev_bin_cents), 2)
         # remove the low
@@ -44,7 +45,7 @@ def bins_from_midpoints(low, high, step):
         # remove the high
         ev_bin_cents = ev_bin_cents[:len(ev_bin_cents) - 1]
         # find midpoints between each remaining elementwise pair,
-        # corresponds to taking the midpoint between each element in 
+        # corresponds to taking the midpoint between each element in
         # odd midpoint array and the element immediately below it
         high_set = np.divide(np.add(odd_bin_cents, ev_bin_cents), 2)
         # create bin array
@@ -57,7 +58,7 @@ def bins_from_midpoints(low, high, step):
         # remove the greatest bin center, corresopnding to high
         odd_bin_cents = odd_bin_cents[:len(odd_bin_cents) - 1]
         # find the midpoint between each odd and even midpoint\
-        # (taking midpoint of each odd center and the even midpoint 
+        # (taking midpoint of each odd center and the even midpoint
         # immediately above it)
         low_set = np.divide(np.add(odd_bin_cents, ev_bin_cents), 2)
         # remove the last midpoint from the even array, ie the second
@@ -68,8 +69,8 @@ def bins_from_midpoints(low, high, step):
         ev_bin_cents = ev_bin_cents[:len(ev_bin_cents) - 1]
         # remove the lowest bin from the odd array
         odd_bin_cents = odd_bin_cents[1:]
-                # find midpoints between each remaining elementwise pair,
-        # corresponds to taking the midpoint between each element in 
+        # find midpoints between each remaining elementwise pair,
+        # corresponds to taking the midpoint between each element in
         # odd midpoint array and the element immediately below it
         high_set = np.divide(np.add(odd_bin_cents, ev_bin_cents), 2)
         # append the greatest internal bin found onto high_set
@@ -223,6 +224,15 @@ def digitize(df, bins, midpoints, colname):
     return df
 
 
+def get_resp_turn(turn_type, turn_num):
+    if turn_type == 'b':
+        resp_turn = 's' + str(turn_num)
+    else:
+        resp_turn = 'b' + str(turn_num + 1)
+    resp_col = 'offr_' + resp_turn
+    return resp_col
+
+
 def get_diff(midpoints, abs_tol=None, perc_tol=None):
     '''
     Description: Calculate the difference between the midpoint of 
@@ -308,10 +318,10 @@ def squash(bins, midpoints, low, high, abs_tol=None, perc_tol=None):
         ############################################################
 
         # delete this midpoint from the midpoint array
-        midpoints.delete([left_ind])
+        midpoints = np.delete(midpoints, [left_ind])
         # delete the corresponding right side of the lower bin
         # from the bins array
-        bins.delete([left_ind])
+        bins = np.delete(bins, [left_ind])
         if left_ind != 0:
             # if the lower midpoint in the comparison is not the lowest
             # midpoint in the arary, recalculate the left side
@@ -320,6 +330,15 @@ def squash(bins, midpoints, low, high, abs_tol=None, perc_tol=None):
                                   midpoints[left_ind]) / 2
         diff = get_diff(midpoints, abs_tol, perc_tol)
     return bins, midpoints
+
+
+def get_turn_desc(turn):
+    if len(turn) != 2:
+        raise ValueError('turn should be two 2 characters')
+    turn_num = turn[1]
+    turn_type = turn[0]
+    turn_num = int(turn_num)
+    return turn_type, turn_num
 
 
 def main():
@@ -350,7 +369,7 @@ def main():
     # observations or what number of observations should be extracted
     parser.add_argument('--num', action='store', type=float)
     args = parser.parse_args()
-
+    name = args.name
     filename = args.name + '_concat.csv'
     low = args.low
     high = args.high
@@ -364,37 +383,42 @@ def main():
     # load data frame
     df = pd.read_csv('data/exps/%s/%s/%s' % (exp_name, turn, filename))
 
-    # convert index to thread id
-    df.set_index('unique_thread_id', inplace=True)
-    # ensures turn is appropriate form
-    if len(turn) != 2:
-        raise ValueError('turn should be two 2 characters')
-    turn_num = turn[1]
-    turn_type = turn[0]
-    turn_num = int(turn_num)
-
-    # grab response variable
-    if turn_type == 'b':
-        resp_turn = 's' + str(turn_num)
-    else:
-        resp_turn = 'b' + str(turn_num + 1)
+    # get response turn
+    turn_type, turn_num = get_turn_desc(turn)
+    resp_turn = get_resp_turn(turn_type, turn_num)
 
     # grab bins, using midpoint step algorithm if step flag is given
-    if step is not None:
-        bins, midpoints = bins_from_midpoints(low, high, step)
-    # otherwise find midpoints from the most commmon values separated by a
-    # minimum difference of tol (absolute difference if abs_tol,
-    #  percent difference otherwise)
-    else:
-        if num > 1:
-            bins, midpoints = bins_from_common(df[resp_turn].values, num=num)
+    if name == 'train' or name == 'toy':
+        if step is not None:
+            bins, midpoints = bins_from_midpoints(low, high, step)
+        # otherwise find midpoints from the most commmon values separated by a
+        # minimum difference of tol (absolute difference if abs_tol,
+        #  percent difference otherwise)
         else:
-            bins, midpoints = bins_from_common(
-                df[resp_turn].values, percent=num)
-        if abs_tol:
-            bins, midpoints = squash(bins, midpoints, low, high, abs_tol=tol)
-        else:
-            bins, midpoints = squash(bins, midpoints, low, high, perc_tol=tol)
+            if num > 1:
+                bins, midpoints = bins_from_common(
+                    df[resp_turn].values, num=num)
+            else:
+                bins, midpoints = bins_from_common(
+                    df[resp_turn].values, percent=num)
+            if abs_tol:
+                bins, midpoints = squash(
+                    bins, midpoints, low, high, abs_tol=tol)
+            else:
+                bins, midpoints = squash(
+                    bins, midpoints, low, high, perc_tol=tol)
+        if name == 'train':
+            pic_dic = {'bins': bins, 'midpoints': midpoints}
+            bins_pick = open('data/models/%s/%s/bins.pickle' %
+                             (exp_name, turn), 'wb')
+            pickle.dump(pic_dic, bins_pick)
+            bins_pick.close()
+    elif name == 'test':
+        f = open("data/models/%s/%s/bins.pickle" % (exp_name, turn), "r")
+        pic_dic = pickle.load(f)
+        bins = pic_dic['bins']
+        midpoints = pic_dic['midpoints']
+        f.close()
 
     # extract low and high thresholds from midpoints and bins
     high_thresh = midpoints[len(midpoints) - 1]
@@ -439,6 +463,7 @@ def main():
             df = digitize(df, bins, midpoints, 'offr_b' + str(i + 1))
 
     # saves the resulting data frame after manipulations
+    df.to_csv('data/exps/%s/%s/%s' % (exp_name, turn, filename))
 
 
 if __name__ == '__main__':
