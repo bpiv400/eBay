@@ -1,5 +1,5 @@
 #!/bin/bash
-#$ -N prep_training 
+#$ -N mvp_train 
 #$ -js 1 
 #$ -j y
 #$ -l m_mem_free=50G

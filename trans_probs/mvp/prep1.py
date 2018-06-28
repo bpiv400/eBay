@@ -7,166 +7,38 @@ import os
 import argparse
 
 
-def bins_from_common(offr, percent):
-    # creates num_obv x 2 np.array where the first column
-    # corresponds to observations and the second column to their frequencies
-    freq_table = np.unique(offr, return_counts=True)
-    freq_table = np.column_stack([freq_table[0], freq_table[1]])
-    # reverse sort rows by descending order of the second column (ie frequency)
-    freq_table = freq_table[freq_table[:, 1].argsort()[::-1]]
-
-    # extract top percentiles of observations
-    bin_cents = freq_table[0:int(freq_table.shape[0] * percent), 0]
-
-    # grab the high
-    right = np.amax(offr)
-    # grab the low
-    left = np.amin(offr)
-
-    bin_cents = np.sort(bin_cents)
-    odd_bin_cents = bin_cents[::2]
-    ev_bin_cents = bin_cents[1::2]
-    last_odd = None
-    if bin_cents.size % 2 != 0:
-        # extracting highest freq vals for even and odd freq vals
-        last_odd = odd_bin_cents[(odd_bin_cents.size - 1)]
-        last_even = ev_bin_cents[(ev_bin_cents.size - 1)]
-        # finding highest midpoint
-        highest_edge = (last_odd + last_even) / 2
-
-        odd_bin_cents = odd_bin_cents[:(odd_bin_cents.size - 1)]
-        low_edges = np.divide(np.add(odd_bin_cents, ev_bin_cents), 2)
-
-        # remove lowest element from odd bin centers
-        odd_bin_cents = odd_bin_cents[1:]
-        # remove highest element from even bin centers
-        ev_bin_cents = ev_bin_cents[:(ev_bin_cents.size - 1)]
-        # find midpoint between every even freq val (except the highest)
-        # and the odd freq val immediately above it
-        high_edges = np.divide(np.add(ev_bin_cents, odd_bin_cents), 2)
-        # adds highest edge to edge count
-        high_edges = np.append(high_edges, highest_edge)
-        edge_count = high_edges.size + low_edges.size + 2
-        edges = np.zeros(edge_count)
-        edges[0] = left
-        edges[edge_count - 1] = right
-        edges[1:(edge_count - 1):2] = low_edges
-        edges[2:(edge_count):2] = high_edges
-    else:
-        # find midpoint between every even  freq val and the odd freq val
-        # immediately below
-        low_edges = np.divide(np.add(odd_bin_cents, ev_bin_cents), 2)
-        # remove lowest element from odd bin centers
-        odd_bin_cents = odd_bin_cents[1:]
-        # remove highest element from even bin centers
-        ev_bin_cents = ev_bin_cents[:(ev_bin_cents.size - 1)]
-
-        # find midpoint between every even freq val (except the highest)
-        # and the odd freq val immediately above it
-        high_edges = np.divide(np.add(ev_bin_cents, odd_bin_cents), 2)
-
-        # count total edges
-        edge_count = low_edges.size + high_edges.size + 2
-
-        # create edge vector
-        edges = np.zeros(edge_count)
-        edges[0] = left
-        edges[edge_count - 1] = right
-        edges[1:(edge_count):2] = low_edges
-        edges[2:(edge_count - 1):2] = high_edges
-    # remove low, since output is piped to np.digitize(..right = True)
-    edges = edges[1:]
-    # currently, high bin equals the highest rounding point
-    # this is fine but not ideal since we would prefer a symmetric bin around each
-    # binning value
-    # therefore, we increase the highest bin by (right side high bin - right side next highest bin),
-    # thereby creating a symmetric range
-    # we leave the highest midpoint value unchanged, because we would still like to round
-    # to this value
-    left_width = edges[len(edges) - 1] - edges[len(edges) - 2]
-    edges[len(edges) - 1] = edges[len(edges) - 1] + left_width
-
-    # the lowest bin's right edge is the first element in the edges array & digitize (as we call it)
-    # only takes in right edges for each bin
-    # the digitize function places all values lower than this right edge into the first
-    # bin...as a result, we don't need to similarly extend the left edge here
-    # however, we want to keep all threads in the data set with offers in range [left_edge_low_bin, right_edge_high_bin]
-    # as a result, we need to calculate this left edge and use it to subset data, so we don't just
-    # chop it at the bin center
-    # this is done after getting function output in main thread
-    return edges, bin_cents
-
-
-# to be used with digitize(right = True)
-# remove all vals from the associated array that are
-# greater than high or less than low (exclusive both)
-# before using
-
-# currently doesn't produce a symmetric window around low and high points
-def bins_from_midpoints(low, high, step):
-    midpoints = np.arange(low, high + step, step)
-    odd_bin_cents = midpoints[::2]
-    ev_bin_cents = midpoints[1::2]
-    if len(midpoints) % 2 == 0:
-        low_set = np.divide(np.add(odd_bin_cents, ev_bin_cents), 2)
-        odd_bin_cents = odd_bin_cents[1:]
-        ev_bin_cents = ev_bin_cents[:len(ev_bin_cents) - 1]
-        high_set = np.divide(np.add(odd_bin_cents, ev_bin_cents), 2)
-        bin_count = len(low_set) + len(high_set) + 1
-        bins = np.zeros(bin_count)
-        bins[bin_count - 1] = high
-        bins[:bin_count:2] = low_set
-        bins[1:bin_count - 1:2] = high_set
-    else:
-        odd_bin_cents = odd_bin_cents[:len(odd_bin_cents) - 1]
-        low_set = np.divide(np.add(odd_bin_cents, ev_bin_cents), 2)
-        ev_high = ev_bin_cents[len(ev_bin_cents) - 1]
-        last_bin = (high + ev_high) / 2
-        ev_bin_cents = ev_bin_cents[:len(ev_bin_cents) - 1]
-        odd_bin_cents = odd_bin_cents[1:]
-        high_set = np.divide(np.add(odd_bin_cents, ev_bin_cents), 2)
-        high_set = np.append(high_set, last_bin)
-        bin_count = len(low_set) + len(high_set) + 1
-        bins = np.zeros(bin_count)
-        bins[bin_count - 1] = high
-        bins[:bin_count - 1:2] = low_set
-        bins[1:bin_count:2] = high_set
-    return bins, midpoints
-
-# bin all values in a particular column using an array of bin edges and bin midpoints
-
-
-def digitize(df, bins, midpoints, colname):
-    col_series = df[colname]
-    vals = col_series.values
-    ind = col_series.index
-    val_bins = np.digitize(vals, bins, right=True)
-    rounded_vals = midpoints[val_bins]
-    del val_bins
-    del col_series
-    del vals
-    df[colname] = rounded_vals
-    return df
-
-
 def main():
+    '''
+    Description: imputes variables for nan values when reasonable to do so,
+    removes all other nan columns, deletes all columns considered epistomological 
+    cheating (from the point of view of the buyer) for the time being, 
+    deletes all columns offers that do not have a reference price, 
+    deletes all date features except for observed time_ji features
+    and frac_remain_ji for observed turns
+
+    Input: See parameters from argparse
+    Output: data chunks prepped for final concatenation, binning, then training
+    '''
     # parse parameters
     parser = argparse.ArgumentParser(
         description='associate threads with all relevant variables')
-    parser.add_argument('--low', action='store', type=int)
-    parser.add_argument('--high', action='store', type=int)
-    parser.add_argument('--step', action='store', type=float)
+    # subdirectory name, corresponding to the type of file being pre-processed
+    # (toy, train, test, etc.)
     parser.add_argument('--dir', action='store', type=str)
+    # name of the file we're pre-processing, should be
+    # 'subdir-n.csv'
     parser.add_argument('--name', action='store', type=str)
+    # turn name of the last offer made before the prediction variable
+    # for this data set
     parser.add_argument('--turn', action='store', type=str)
+    # name of the experiment
+    parser.add_argument('--exp', action='store', type=str)
+    # parse arguments
     args = parser.parse_args()
-    print(args)
     filename = args.name
     subdir = args.dir
-    low = args.low
-    high = args.high
-    step = args.step
     turn = args.turn.strip()
+    exp_name = args.exp
     if len(turn) != 2:
         raise ValueError('turn should be two 2 characters')
     turn_num = turn[1]
@@ -182,16 +54,23 @@ def main():
                      'anon_slr_id', 'auct_start_dt',
                      'auct_end_dt', 'item_price', 'bo_ck_yn'], inplace=True)
 
-    # for the timebeing, leave frac_remain and the times observed thusfar
-    # as features
+    # creating a list of date features that should be dropped
+    # in this case, we're dropping all date features encountered
+    # except for observed time_ji and frac_remain_ji features
     date_list = []
     for i in range(turn_num + 1):
-
+        # up to and including the current turn number, drop all
+        # buyer date features (except time)
+        # and date for buyer and seller turns
+        # the date for all buyer and seller feautures is present
+        # up to and including the current turn because we include
+        # date for the prediction variable in extract_turns
         date_list.append('remain_' + 'b' + str(i))
         date_list.append('passed_' + 'b' + str(i))
         # date_list.append('frac_remain_' + 'b' + str(i))
         date_list.append('frac_passed_' + 'b' + str(i))
         date_list.append('date_b' + str(i))
+        # drop all seller dates
         date_list.append('date_s' + str(i))
 
         if i < turn_num and turn_type == 'b':
@@ -205,17 +84,23 @@ def main():
             # date_list.append('frac_remain_' + 's' + str(i))
             date_list.append('frac_passed_' + 's' + str(i))
 
+        # leaving time features for observed turns
         # if i > 0:
         #     date_list.append('time_' + 'b' + str(i))
         # date_list.append('time_s' + str(i))
 
+        # removing time feature for unobserved seller turn
         if i == turn_num and turn_type == 'b':
             date_list.append('time_s' + str(i))
+        # if the prediction variable is a buyer turn,
+        # remove the corresonding date features
         elif i == turn_num and turn_type == 's':
             date_list.append('time_b' + str(i+1))
             date_list.append('date_b' + str(i+1))
     # dropping all unused date and time features
     df.drop(columns=date_list, inplace=True)
+    # conduct visual inspection of remaining features
+    print(df.columns)
 
     # fixing seller and buyer history
     # assumed that NAN slr and byr histories indicate having participated in
@@ -283,29 +168,8 @@ def main():
     # dropping all threads that do not have ref_price1
     df.drop(df[np.isnan(df['ref_price1'].values)].index, inplace=True)
 
-    # making thread id the index
-    df.set_index('unique_thread_id', inplace=True)
-    # drop rows with offers below low threshold or start price above high threshhold
-    for i in range(turn_num + 1):
-        low_b = df[df['offr_b' + str(i)] < low].index
-        low_s = df[df['offr_s' + str(i)] < low].index
-        threads = np.unique(np.append(low_b.values, low_s.values))
-        df.drop(index=threads, inplace=True)
-        if turn_type == 's' and i == turn_num:
-            low_b = df[df['offr_b' + str(i + 1)] < low].index
-            df.drop(index=low_b, inplace=True)
-
-    del threads
-    high_threads = df[df['start_price_usd'] > high].index
-    df.drop(index=high_threads, inplace=True)
-    bins, midpoints = bins_from_midpoints(low, high, step)
-
-    for i in range(turn_num + 1):
-        df = digitize(df, bins, midpoints, 'offr_s' + str(i))
-        df = digitize(df, bins, midpoints, 'offr_b' + str(i))
-        if turn_type == 's' and i == turn_num:
-            df = digitize(df, bins, midpoints, 'offr_b' + str(i + 1))
-    save_loc = 'data/' + 'curr_exp' + \
+    # saving cleaned data frame, dropping unique_thread_id
+    save_loc = 'data/exps/' + exp_name + \
         '/' + turn + '/' + filename
     df.to_csv(save_loc, index_label=False)
 

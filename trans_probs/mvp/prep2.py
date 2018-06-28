@@ -26,9 +26,7 @@ def main():
     args = parser.parse_args()
     filename = args.name
     subdir = args.dir
-    low = args.low
-    high = args.high
-    step = args.step
+    exp_name = args.exp
     turn = args.turn.strip()
     # verify turn argument is of the correct form
     if len(turn) != 2:
@@ -114,78 +112,30 @@ def main():
     # dropping all unused date and time features
     df.drop(columns=date_list, inplace=True)
 
-    # visual check of correctness
-    print(df.columns)
-
-    # fixing seller and buyer history
-    # assumed that NAN slr and byr histories indicate having participated in
-    # 0 best offer threads previously
-    # deduced from the fact that no sellers / buyers have 0 as their history
-    no_hist_slr = df[np.isnan(df['slr_hist'])].index
-    df.loc[no_hist_slr, 'slr_hist'] = 0
-
-    no_hist_byr = df[np.isnan(df['byr_hist'])].index
-    df.loc[no_hist_byr, 'byr_hist'] = 0
-
-    del no_hist_byr
-    del no_hist_slr
-
-    # setting percent feedback for 'green' sellers to median feedback
-    # score -- a reasonable prior to assume buyers have about sellers
-    never_sold = df[np.isnan(df['fdbk_pstv_src'].values)].index
-    scores = df['fdbk_pstv_src'].values
-    scores = scores[~np.isnan(scores)]
-    med_score = np.median(scores)
-    df.loc[never_sold, 'fdbk_pstv_src'] = med_score
-    del scores
-    del med_score
-    del never_sold
-
-    # and setting number of previous feedbacks received to 0
-    never_sold = df[np.isnan(df['fdbk_score_src'].values)].index
-    df.loc[never_sold, 'fdbk_score_src'] = 0
-    del never_sold
-
-    # setting initial feedback for green sellers to median
-    # feedback score
-    never_sold = df[np.isnan(df['fdbk_pstv_start'].values)].index
-    scores = df['fdbk_pstv_start'].values
-    scores = scores[~np.isnan(scores)]
-    med_score = np.median(scores)
-    df.loc[never_sold, 'fdbk_pstv_start'] = med_score
-    del scores
-    del med_score
-    del never_sold
-
-    # and setting number of previous feedbacks received to 0
-    never_sold = df[np.isnan(df['fdbk_score_start'].values)].index
-    df.loc[never_sold, 'fdbk_score_start'] = 0
-    del never_sold
-
-    # setting nans for re-listing indicator to 0 because there are
-    # no zeros in the indicator column, implying that nans indicate 0
-    not_listed = df[np.isnan(df['lstg_gen_type_id'].values)].index
-    df.loc[not_listed, 'lstg_gen_type_id'] = 0
-    del not_listed
-
-    # setting nans for mssg to 0 arbitrarily since only ~.001% of offers
-    # have 0 for message, suggesting the overwhelming number o f Nan's corresopnd to
-    # not having a message
-    no_msg = df[np.isnan(df['any_mssg'].values)].index
-    df.loc[no_msg, 'any_mssg'] = 0
-    del no_msg
-
-    # dropping columns that have missing values for the timebeing
-    # INCLUDING DROPPING decline, accept prices since it feels
-    # epistemologically disingenous to use them
-    df.drop(columns=['count2', 'count3', 'count4', 'ship_time_fastest', 'ship_time_slowest',
-                     'ref_price2', 'ref_price3', 'ref_price4', 'decline_price', 'accept_price'], inplace=True)
-
     # dropping all threads that do not have ref_price1
     df.drop(df[np.isnan(df['ref_price1'].values)].index, inplace=True)
 
+    # remove ship time columns because they trip up the logic later
+    df.drop(columns=['ship_time_slowest', 'ship_time_fastest'], inplace=True)
+
+    # drop all features except for offer history and starting price
+    remove_cols = []
+    for col in df.columns:
+        if ('offr' not in col and
+                'date' not in col and
+                'time' not in col and
+                'remain' not in col and
+                'passed' not in col):
+            remove_cols.append(col)
+    remove_cols.remove('start_price_usd')
+    df.drop(columns=remove_cols, inplace=True)
+
+    # visual inspection for correctness
+    print(df.columns)
+
+    # write resulting csv to file, dropping unique_thread_id
     save_loc = 'data/' + 'exps' + \
-        '/' + exp_name + '/' turn + '/' + filename
+        '/' + exp_name + '/' + turn + '/' + filename
     df.to_csv(save_loc, index_label=False)
 
 

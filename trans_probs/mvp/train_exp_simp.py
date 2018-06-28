@@ -20,7 +20,6 @@ class Net(nn.Module):
         # print('num_classes %d' % num_classes)
         self.fc1 = nn.Linear(num_feat, num_units)
         self.fc2 = nn.Linear(num_units, num_units)
-        self.fc3 = nn.Linear(num_units, num_classes)
         self.expect = torch.from_numpy(classes).float()
         self.expect.requires_grad_(False)
         self.expect = self.expect.view(-1, 1)
@@ -30,10 +29,6 @@ class Net(nn.Module):
         # print(x.size())
         x = F.relu(x)
         x = self.fc2(x)
-        # print(x.size())
-        x = F.relu(x)
-        x = self.fc3(x)
-        # print(x.size())
         x = F.softmax(x, dim=1)
         # print(x)
         # print(x.size())
@@ -44,7 +39,7 @@ class Net(nn.Module):
 
 if __name__ == '__main__':
     # set number of hidden units per layer
-    num_units = 100
+    num_units = 30
     # set the number of mini batches
     batch_size = 32
     # set the number of batches as a fraction of
@@ -87,7 +82,7 @@ if __name__ == '__main__':
     colix = {}
     counter = 0
     for i in cols:
-        colix[counter] = i
+        colix[i] = counter
         counter = counter + 1
 
     data = df.values
@@ -139,9 +134,13 @@ if __name__ == '__main__':
     sys.stdout.flush()
     torch.save(net.state_dict(), 'data/models/%s/model_%s.pth.tar' %
                (exp_name, turn))
+
     loss_pickle = open('data/models/%s/loss_%s.pickle' %
                        (exp_name, turn), 'wb')
-    print('Done Saving outputs')
-    sys.stdout.flush()
     pickle.dump(loss_hist, loss_pickle)
     loss_pickle.close()
+
+    feat_dict_pick = open('data/models/%s/featdict_%s.pickle' %
+                          (exp_name, turn), 'wb')
+    pickle.dump(colix, feat_dict_pick)
+    feat_dict_pick.close()

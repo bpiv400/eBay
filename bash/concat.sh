@@ -5,18 +5,24 @@
 #$ -m e -M 4102158912@vtext.com
 #$ -js 1
 
-
-turns=( "b0" "b1" "b2" "s0" "s1" )
+# first argument gives experiment name
+# second argument gives file type 
+# (toy, test, train, etc)
+turns=( "b0" "b1" "b2" )
 for j in "${turns[@]}" 
-do
+do   
     first=true
-    for i in $(find data/curr_exp/$j -type f -name "*$1*"); 
+    for i in $(find data/exps/$1/$j -type f -name "*$2*"); 
     do
+        echo $j
+        echo $first
+        echo $i
         if [ "$first" = true ] ; then
-            cp $i data/curr_exp/$j/$1_concat.csv
-            first=false
+            cp $i data/exps/$1/$j/$2_concat.csv
+            first=false ;
         else
-            tail -n +2 $i >> data/curr_exp/$j/$1_concat.csv
+            # echo "tail" ;
+            tail -n +2 $i >> data/exps/$1/$j/$2_concat.csv ;
         fi
     done
 done

@@ -362,7 +362,7 @@ def main():
     num = args.num
 
     # load data frame
-    df = pd.read_csv('data/exps/%s/%s' % (exp_name, filename))
+    df = pd.read_csv('data/exps/%s/%s/%s' % (exp_name, turn, filename))
 
     # convert index to thread id
     df.set_index('unique_thread_id', inplace=True)
