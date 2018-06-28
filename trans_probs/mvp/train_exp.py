@@ -42,6 +42,27 @@ class Net(nn.Module):
         return x
 
 
+def get_class_series(df, resp_turn):
+    '''
+    Description: replaces the prediction variable with
+    class ids from 0 to n-1 where n = number of classes
+    and returns the data frame with the converted column
+    and a series where index = original category
+    and values give the new index, which can be used as a 'map'
+    for outputted columns if necessary later
+
+    Input:
+        df: data frame containing 'resp_turn' col
+        resp_turn: string identifying the name of the prediction
+        variable in df
+    Output: tuple of (data frame, class series 'map')
+    '''
+    raw_classes = np.unique(df[resp_turn].values)
+    class_ids = np.arange(0, len(raw_classes))
+    class_series = pd.Series(class_ids, index=raw_classes)
+    return class_series
+
+
 def get_prep_type(exp_name):
     '''
     Description: uses the experiment name to determine
@@ -94,14 +115,21 @@ if __name__ == '__main__':
     df = pd.read_csv(load_loc)
     print('Done Loading')
     sys.stdout.flush()
+
     # grab response variable
     if turn_type == 'b':
         resp_turn = 's' + str(turn_num)
     else:
         resp_turn = 'b' + str(turn_num + 1)
     resp_col = 'offr_' + resp_turn
+
+    # grab target
     targ = df[resp_col].values
+    # drop response variable
     df.drop(columns=resp_col, inplace=True)
+
+    # creating a dictionary which maps all column names to
+    # indices in the input data matrix
     cols = df.columns
     colix = {}
     counter = 0
@@ -112,9 +140,11 @@ if __name__ == '__main__':
     data = df.values
     del df
 
+    # calculating parameter values for the model from data
     num_feats = data.shape[1]
     num_batches = int(data.shape[0] / batch_size * num_batches)
-    classes = np.unique(targ)
+    class_series = get_class_series(df, resp_col)
+    classes = class_series.index.values
     num_classes = classes.size
 
     net = Net(num_feats, num_units, num_classes, classes)
@@ -154,14 +184,14 @@ if __name__ == '__main__':
     sys.stdout.flush()
     print('Pickling')
     sys.stdout.flush()
-    torch.save(net.state_dict(), 'data/models/%s/model_%s.pth.tar' %
+    torch.save(net.state_dict(), 'data/models/exps/%s/model_%s.pth.tar' %
                (exp_name, turn))
-    loss_pickle = open('data/models/%s/loss_%s.pickle' %
+    loss_pickle = open('data/models/exps/%s/loss_%s.pickle' %
                        (exp_name, turn), 'wb')
     pickle.dump(loss_hist, loss_pickle)
     loss_pickle.close()
 
-    feat_dict_pick = open('data/models/%s/featdict_%s.pickle' %
+    feat_dict_pick = open('data/models/exps/%s/featdict_%s.pickle' %
                           (exp_name, turn), 'wb')
     pickle.dump(colix, feat_dict_pick)
     feat_dict_pick.close()

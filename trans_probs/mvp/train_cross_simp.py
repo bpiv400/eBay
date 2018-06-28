@@ -80,14 +80,16 @@ def get_class_series(df, resp_turn):
     Output: tuple of (data frame, class series 'map')
     '''
     raw_classes = np.unique(df[resp_turn].values)
-    class_ids = np.arrange(0, len(raw_classes))
-    class_series = pd.Series(raw_classes, index=raw_classes)
-    del raw_classes
-    del class_ids
+    class_ids = np.arange(0, len(raw_classes))
+    class_series = pd.Series(class_ids, index=raw_classes)
+    return class_series
+
+
+def get_resp_turn_classes(df, resp_turn, class_series):
     org_col = df[resp_turn].values
     converted_classes = class_series.loc[org_col].values
     df[resp_turn] = converted_classes
-    return df, class_series
+    return df
 
 
 if __name__ == '__main__':
@@ -122,8 +124,9 @@ if __name__ == '__main__':
     print('Done Loading')
     sys.stdout.flush()
     # grab response variable
-    resp_turn = get_resp_turn(turn)
-    df, class_series = get_class_series(df, resp_turn)
+    resp_col = get_resp_turn(turn)
+    class_series = get_class_series(df, resp_col)
+    df = get_resp_turn_classes(df, resp_col, class_series)
     targ = df[resp_col].values
     df.drop(columns=resp_col, inplace=True)
     cols = df.columns
@@ -180,15 +183,16 @@ if __name__ == '__main__':
     sys.stdout.flush()
     print('Pickling')
     sys.stdout.flush()
-    torch.save(net.state_dict(), 'data/models/%s/model_%s.pth.tar' %
+    torch.save(net.state_dict(), 'data/models/exps/%s/model_%s.pth.tar' %
                (exp_name, turn))
-    class_series.to_csv('data/models/%s/class_series_%s.csv' % (exp_name, turn)
-    loss_pickle=open('data/models/%s/loss_%s.pickle' %
+    class_series.to_csv(
+        'data/models/exps/%s/class_series_%s.csv' % (exp_name, turn))
+    loss_pickle = open('data/models/exps/%s/loss_%s.pickle' %
                        (exp_name, turn), 'wb')
     pickle.dump(loss_hist, loss_pickle)
     loss_pickle.close()
 
-    feat_dict_pick=open('data/models/%s/featdict_%s.pickle' %
+    feat_dict_pick = open('data/models/exps/%s/featdict_%s.pickle' %
                           (exp_name, turn), 'wb')
     pickle.dump(colix, feat_dict_pick)
     feat_dict_pick.close()
