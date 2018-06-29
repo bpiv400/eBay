@@ -46,7 +46,7 @@ def main():
     exp_name = args.exp
 
     # load data frame
-    df = pd.read_csv('data/exps/%s/%s' % (exp_name, filename))
+    df = pd.read_csv('data/exps/%s/%s/%s' % (exp_name, turn, filename))
 
     # find response column name
     resp_turn = get_resp_turn(turn)
@@ -63,7 +63,10 @@ def main():
         df = (df - mean)/std
 
         # add response turn column back
+        print(df.dtypes)
+        print('This is my theory')
         df[resp_turn] = temp
+        print('After')
         del temp
 
         # compose mean and std into data frame with 2 columns (mean, std)
@@ -72,16 +75,20 @@ def main():
         if name == 'train':
             # pickle norm df
             norm_df = pd.DataFrame({'mean': mean, 'std': std})
+            norm_df.index.name = 'cols'
             norm_df.to_csv('data/exps/%s/%s/norm.csv' % (exp_name, turn))
     else:
         # load norm df from training corpus
         norm_df = pd.read_csv('data/exps/%s/%s/norm.csv' % (exp_name, turn))
+        norm_df.set_index('col', drop=True, inplace=True)
         mean = norm_df['mean']
         std = norm_df['std']
+        print(norm_df)
         df = (df - mean)/std
         df[resp_turn] = temp
     # save the current data frame
-    df.to_csv('data/exps/%s/%s/%s_concat.csv' % (exp_name, turn, name))
+    df.to_csv('data/exps/%s/%s/%s_concat.csv' %
+              (exp_name, turn, name), index_label=False)
 
 
 if __name__ == '__main__':

@@ -26,7 +26,6 @@ class Net(nn.Module):
         # print(x.size())
         x = F.relu(x)
         x = self.fc2(x)
-        x = F.softmax(x, dim=1)
         # print(x)
         # print(x.size())
         # print(self.expect.size())
@@ -144,7 +143,7 @@ if __name__ == '__main__':
     classes = np.unique(targ)
     num_classes = classes.size
 
-    net = Net(num_feats, num_units, num_classes, classes)
+    net = Net(num_feats, num_units, num_classes)
 
     # some debugging nonsense
     # print(list(net.parameters()))
@@ -155,7 +154,7 @@ if __name__ == '__main__':
 
     # set loss function
     # use MSE for now
-    criterion = nn.MSELoss(size_average=True, reduce=True)
+    criterion = nn.CrossEntropyLoss(size_average=True, reduce=True)
     optimizer = optim.Adam(net.parameters(), weight_decay=math.pow(10, -5))
     loss_hist = []
     loss = criterion

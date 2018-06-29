@@ -383,6 +383,8 @@ def main():
     # load data frame
     df = pd.read_csv('data/exps/%s/%s/%s' % (exp_name, turn, filename))
 
+    if 'unique_thread_id' in df.columns:
+        df.drop(columns=['unique_thread_id'], inplace=True)
     # get response turn
     turn_type, turn_num = get_turn_desc(turn)
     resp_turn = get_resp_turn(turn_type, turn_num)
@@ -409,12 +411,12 @@ def main():
                     bins, midpoints, low, high, perc_tol=tol)
         if name == 'train':
             pic_dic = {'bins': bins, 'midpoints': midpoints}
-            bins_pick = open('data/models/%s/%s/bins.pickle' %
+            bins_pick = open('data/exps/%s/%s/bins.pickle' %
                              (exp_name, turn), 'wb')
             pickle.dump(pic_dic, bins_pick)
             bins_pick.close()
     elif name == 'test':
-        f = open("data/models/%s/%s/bins.pickle" % (exp_name, turn), "r")
+        f = open("data/exps/%s/%s/bins.pickle" % (exp_name, turn), "rb")
         pic_dic = pickle.load(f)
         bins = pic_dic['bins']
         midpoints = pic_dic['midpoints']
@@ -463,7 +465,8 @@ def main():
             df = digitize(df, bins, midpoints, 'offr_b' + str(i + 1))
 
     # saves the resulting data frame after manipulations
-    df.to_csv('data/exps/%s/%s/%s' % (exp_name, turn, filename))
+    df.to_csv('data/exps/%s/%s/%s' %
+              (exp_name, turn, filename), index_label=False)
 
 
 if __name__ == '__main__':
