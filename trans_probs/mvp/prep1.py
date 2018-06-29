@@ -47,8 +47,9 @@ def main():
 
     # load data slice
     read_loc = 'data/' + subdir + '/' + 'turns/' + turn + '/' + filename
-    df = pd.read_csv(read_loc)
+    df = pd.read_csv(read_loc, index_col=False)
 
+    print(df)
     # dropping columns that are not useful for prediction
     df.drop(columns=['anon_item_id', 'anon_thread_id', 'anon_byr_id',
                      'anon_slr_id', 'auct_start_dt',
@@ -163,7 +164,7 @@ def main():
     # INCLUDING DROPPING decline, accept prices since it feels
     # epistemologically disingenous to use them
     df.drop(columns=['count2', 'count3', 'count4', 'ship_time_fastest', 'ship_time_slowest',
-                     'ref_price2', 'ref_price3', 'ref_price4', 'decline_price', 'accept_price'], inplace=True)
+                     'ref_price2', 'ref_price3', 'ref_price4', 'decline_price', 'accept_price', 'unique_thread_id'], inplace=True)
 
     # dropping all threads that do not have ref_price1
     df.drop(df[np.isnan(df['ref_price1'].values)].index, inplace=True)
@@ -171,7 +172,9 @@ def main():
     # saving cleaned data frame, dropping unique_thread_id
     save_loc = 'data/exps/' + exp_name + \
         '/' + turn + '/' + filename
-    df.to_csv(save_loc, index_label=False)
+    print(save_loc)
+    print(df)
+    df.to_csv(save_loc, index=False)
 
 
 if __name__ == '__main__':

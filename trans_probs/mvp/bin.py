@@ -19,12 +19,12 @@ def bins_from_midpoints(low, high, step):
     Description: Creates uniformly spaced bin midpoints and outputs these
     as well as an array of right sides for these bins to be used in np.digitize(...)
     later for rounding
-    Input: 
+    Input:
         low: float, lowest tolerated midpoint
         high: float, highest tolerated midpoint
         step: difference between successive midpoints
-    Output: 
-        Tuple of 2 np.array's where the first gives the right side of each 
+    Output:
+        Tuple of 2 np.array's where the first gives the right side of each
         bin created and the second gives the corresponding midpoints for each
         of these bins
     '''
@@ -91,7 +91,7 @@ def bins_from_midpoints(low, high, step):
 
 def bins_from_common(offr, percent=None, num=None):
     '''
-    Description: Given a 1-dimensional np.aray of offers, create 
+    Description: Given a 1-dimensional np.aray of offers, create
     a vector of the x most common values or the top y% of values
     and an array giving the right hand side of each resulting bin
     as a tuple (bins, midpoints)
@@ -100,9 +100,9 @@ def bins_from_common(offr, percent=None, num=None):
         percent: float < 1 denoting the percentage of most common
         values to be extracted and binned
         num: int > 1 denoting the number of most common values to be used
-    Output: 
-        tuple of np.array's of equal size where the first denotes the 
-        right edge of each bin and the second denotes the midpoint 
+    Output:
+        tuple of np.array's of equal size where the first denotes the
+        right edge of each bin and the second denotes the midpoint
         of each bin (ie the value to which offers will later be rounded)
     '''
 
@@ -200,7 +200,7 @@ def bins_from_common(offr, percent=None, num=None):
 
 def digitize(df, bins, midpoints, colname):
     '''
-    Description: Round values in a DataFrame column into 
+    Description: Round values in a DataFrame column into
     n particular bins
     Inputs:
         df: dataframe containing column whose values will
@@ -213,14 +213,12 @@ def digitize(df, bins, midpoints, colname):
     Output: df with rounded values in df[colname]
     '''
     col_series = df[colname]
+    midpoints = np.array(midpoints)
     vals = col_series.values
     ind = col_series.index
     val_bins = np.digitize(vals, bins, right=True)
     rounded_vals = midpoints[val_bins]
-    del val_bins
-    del col_series
-    del vals
-    df[colname] = rounded_vals
+    df[colname] = pd.Series(rounded_vals, index=ind)
     return df
 
 
@@ -235,9 +233,9 @@ def get_resp_turn(turn_type, turn_num):
 
 def get_diff(midpoints, abs_tol=None, perc_tol=None):
     '''
-    Description: Calculate the difference between the midpoint of 
+    Description: Calculate the difference between the midpoint of
     the ith bin and i+1 bin for all bins 0 to len(midpoints) - 2,
-    and give whether each is less than the hyperparameter for 
+    and give whether each is less than the hyperparameter for
     tolerance
     Inputs:
         midpoints: array where element i gives the midpoint (rounding point)
@@ -271,16 +269,16 @@ def get_diff(midpoints, abs_tol=None, perc_tol=None):
 
 def squash(bins, midpoints, low, high, abs_tol=None, perc_tol=None):
     '''
-    Description: Forces midpoints of all bins to be between [low, high] and 
+    Description: Forces midpoints of all bins to be between [low, high] and
     forces midpoints to be at least some tolerance distance apart
     If abs_tol is not none, this value represents an absolute tolerance in dollars
     If perc_tol is not none, this value represents a percent tolerance--(1-lower/higher)
 
-    Input: 
-        bins: an array of floats where each value gives the right side limit of the 
+    Input:
+        bins: an array of floats where each value gives the right side limit of the
         ith bin
         midpoints: an array of floats where each value gives the midpoint (the value to which
-        offers will be rounded) 
+        offers will be rounded)
         low: float giving lowest tolerated midpoint
         high: float giving highest tolerated midpoint
         abs_tol: minimum difference tolerance in dollars
@@ -381,10 +379,15 @@ def main():
     num = args.num
 
     # load data frame
-    df = pd.read_csv('data/exps/%s/%s/%s' % (exp_name, turn, filename))
+    print(turn)
+    print(filename)
+    df = pd.read_csv('data/exps/%s/%s/%s' %
+                     (exp_name, turn, filename), index_col=False)
 
     if 'unique_thread_id' in df.columns:
         df.drop(columns=['unique_thread_id'], inplace=True)
+    if 'Unnamed: 0' in df.columns:
+        df.drop(columns=['Unnamed: 0'], inplace=True)
     # get response turn
     turn_type, turn_num = get_turn_desc(turn)
     resp_turn = get_resp_turn(turn_type, turn_num)
@@ -465,8 +468,8 @@ def main():
             df = digitize(df, bins, midpoints, 'offr_b' + str(i + 1))
 
     # saves the resulting data frame after manipulations
-    df.to_csv('data/exps/%s/%s/%s' %
-              (exp_name, turn, filename), index_label=False)
+    df.to_csv('data/exps/%s/binned/%s_%s.csv' %
+              (exp_name, filename.replace('.csv', ''), turn), index_label=False)
 
 
 if __name__ == '__main__':

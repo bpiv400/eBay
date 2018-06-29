@@ -1,0 +1,20 @@
+#!/bin/bash
+
+while getopts 'e:f:b:' flag; do
+  case "${flag}" in
+    e) exp_name="${OPTARG}" ;;
+    f) file="${OPTARG}" ;;
+    b) batches="${OPTARG}" ;;
+  esac
+done
+scriptPath=repo/trans_probs/mvp/$file.py
+cd ~
+source /opt/rh/rh-python36/enable
+source ~/envs/bargain/bin/activate
+cd eBay
+turns=( "bo" "b1" "b2" )
+for t in "${turns[@]}"
+do
+  echo "Curr Turn" $t
+  qsub -js 1 repo/bash/mvp_train.sh -t $t -b $batches -f $file -e $exp_name
+done

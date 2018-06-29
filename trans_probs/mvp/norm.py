@@ -46,7 +46,8 @@ def main():
     exp_name = args.exp
 
     # load data frame
-    df = pd.read_csv('data/exps/%s/%s/%s' % (exp_name, turn, filename))
+    df = pd.read_csv('data/exps/%s/binned/%s_concat_%s.csv' %
+                     (exp_name, name, turn))
 
     # find response column name
     resp_turn = get_resp_turn(turn)
@@ -80,15 +81,15 @@ def main():
     else:
         # load norm df from training corpus
         norm_df = pd.read_csv('data/exps/%s/%s/norm.csv' % (exp_name, turn))
-        norm_df.set_index('col', drop=True, inplace=True)
+        norm_df.set_index('cols', drop=True, inplace=True)
         mean = norm_df['mean']
         std = norm_df['std']
         print(norm_df)
         df = (df - mean)/std
         df[resp_turn] = temp
     # save the current data frame
-    df.to_csv('data/exps/%s/%s/%s_concat.csv' %
-              (exp_name, turn, name), index_label=False)
+    df.to_csv('data/exps/%s/normed/%s_concat_%s.csv' %
+              (exp_name, name, turn), index_label=False)
 
 
 if __name__ == '__main__':

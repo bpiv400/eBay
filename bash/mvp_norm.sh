@@ -16,7 +16,7 @@ cd ~
 source /opt/rh/rh-python36/enable
 source ~/envs/bargain/bin/activate
 cd eBay
-types=( "toy" "train" "test" )
+types=( "test" )
 turns=( "b0" "b1" "b2" )
 for k in "${types[@]}"
 do

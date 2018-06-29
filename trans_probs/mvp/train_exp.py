@@ -87,8 +87,6 @@ if __name__ == '__main__':
     batch_size = 32
     # set the number of batches as a fraction of
     # training examples
-    # I'm thinking of this as "epochs"
-    num_batches = 5
 
     # parse parameters
     parser = argparse.ArgumentParser(
@@ -96,10 +94,13 @@ if __name__ == '__main__':
     parser.add_argument('--name', action='store', type=str)
     parser.add_argument('--turn', action='store', type=str)
     parser.add_argument('--exp', action='store', type=str)
+    parser.add_argument('--batches', action='store', type=int)
+
     args = parser.parse_args()
     name = args.name
     exp_name = args.exp.strip()
     turn = args.turn.strip()
+    num_batches = args.batches
     if len(turn) != 2:
         raise ValueError('turn should be two 2 characters')
     turn_num = turn[1]
@@ -125,6 +126,8 @@ if __name__ == '__main__':
 
     # grab target
     targ = df[resp_col].values
+    class_series = get_class_series(df, resp_col)
+
     # drop response variable
     df.drop(columns=resp_col, inplace=True)
 
@@ -143,7 +146,6 @@ if __name__ == '__main__':
     # calculating parameter values for the model from data
     num_feats = data.shape[1]
     num_batches = int(data.shape[0] / batch_size * num_batches)
-    class_series = get_class_series(df, resp_col)
     classes = class_series.index.values
     num_classes = classes.size
 
@@ -164,6 +166,8 @@ if __name__ == '__main__':
     loss = criterion
     print('Training')
     for i in range(num_batches):
+        if i % 500 == 0:
+            print('Batch: %d of %d' % (i, num_batches))
         optimizer.zero_grad()
         # extract label from batch
         sample_inds = np.random.random_integers(
@@ -184,14 +188,17 @@ if __name__ == '__main__':
     sys.stdout.flush()
     print('Pickling')
     sys.stdout.flush()
-    torch.save(net.state_dict(), 'data/models/exps/%s/model_%s.pth.tar' %
+    torch.save(net.state_dict(), 'models/exps/%s/model_%s.pth.tar' %
                (exp_name, turn))
-    loss_pickle = open('data/models/exps/%s/loss_%s.pickle' %
+    loss_pickle = open('models/exps/%s/loss_%s.pickle' %
                        (exp_name, turn), 'wb')
     pickle.dump(loss_hist, loss_pickle)
     loss_pickle.close()
 
-    feat_dict_pick = open('data/models/exps/%s/featdict_%s.pickle' %
+    class_series.to_csv(
+        'models/exps/%s/class_series_%s.csv' % (exp_name, turn))
+
+    feat_dict_pick = open('models/exps/%s/featdict_%s.pickle' %
                           (exp_name, turn), 'wb')
     pickle.dump(colix, feat_dict_pick)
     feat_dict_pick.close()

@@ -37,7 +37,7 @@ def main():
 
     # load data slice
     read_loc = 'data/' + subdir + '/' + 'turns/' + turn + '/' + filename
-    df = pd.read_csv(read_loc)
+    df = pd.read_csv(read_loc, index_col=False)
 
     # dropping columns that are not useful for prediction
     df.drop(columns=['anon_item_id', 'anon_thread_id', 'anon_byr_id',
@@ -136,7 +136,7 @@ def main():
     # write resulting csv to file, dropping unique_thread_id
     save_loc = 'data/' + 'exps' + \
         '/' + exp_name + '/' + turn + '/' + filename
-    df.to_csv(save_loc, index_label=False)
+    df.to_csv(save_loc, index=False)
 
 
 if __name__ == '__main__':
