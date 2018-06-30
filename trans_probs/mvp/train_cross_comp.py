@@ -19,13 +19,17 @@ class Net(nn.Module):
         # print('units %d' % num_units)
         # print('num_classes %d' % num_classes)
         self.fc1 = nn.Linear(num_feat, num_units)
-        self.fc2 = nn.Linear(num_units, num_classes)
+        self.fc2 = nn.Linear(num_units, num_units)
+        self.fc3 = nn.Linear(num_units, num_classes)
 
     def forward(self, x):
         x = self.fc1(x)
         # print(x.size())
         x = F.relu(x)
         x = self.fc2(x)
+
+        x = F.relu(x)
+        x = self.fc3(x)
         # print(x)
         # print(x.size())
         # print(self.expect.size())
@@ -93,7 +97,7 @@ def get_resp_turn_classes(df, resp_turn, class_series):
 
 if __name__ == '__main__':
     # set number of hidden units per layer
-    num_units = 30
+    num_units = 100
     # set the number of mini batches
     batch_size = 32
     # set the number of batches as a fraction of
@@ -115,6 +119,7 @@ if __name__ == '__main__':
     num_batches = args.batches
 
     # load data
+    filename = name + '_concat.csv'
     print('Loading Data')
     sys.stdout.flush()
 

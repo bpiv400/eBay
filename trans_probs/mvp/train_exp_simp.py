@@ -102,7 +102,7 @@ if __name__ == '__main__':
     parser.add_argument('--name', action='store', type=str)
     parser.add_argument('--turn', action='store', type=str)
     parser.add_argument('--exp', action='store', type=str)
-    parser.add_argument('--batches', action='store', type=int)
+    parser.add_argument('--batches', action='store', type=float)
 
     args = parser.parse_args()
     name = args.name
@@ -121,7 +121,7 @@ if __name__ == '__main__':
     print('Loading Data')
     sys.stdout.flush()
     prep_type = get_prep_type(exp_name)
-    load_loc = 'data/exps/%s/%s/%s' % (prep_type, turn, filename)
+    load_loc = 'data/exps/%s/normed/%s_concat_%s.csv' % (prep_type, name, turn)
     df = pd.read_csv(load_loc)
     print('Done Loading')
     sys.stdout.flush()

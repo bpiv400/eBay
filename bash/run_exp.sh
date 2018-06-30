@@ -12,7 +12,7 @@ cd ~
 source /opt/rh/rh-python36/enable
 source ~/envs/bargain/bin/activate
 cd eBay
-turns=( "bo" "b1" "b2" )
+turns=( "b0" "b1" "b2" )
 for t in "${turns[@]}"
 do
   echo "Curr Turn" $t
