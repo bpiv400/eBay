@@ -165,8 +165,10 @@ if __name__ == '__main__':
     loss = criterion
     print('Training')
     for i in range(num_batches):
-        if i % 500 == 0:
+        if i % 500 == 0 and i > 0:
             print('Batch: %d of %d' % (i, num_batches))
+            loss_hist.append(loss)
+
         sys.stdout.flush()
         optimizer.zero_grad()
         # extract label from batch
@@ -179,7 +181,6 @@ if __name__ == '__main__':
         sample_targ = sample_targ.view(-1)
         output = net(sample_input)
         loss = criterion(output, sample_targ)
-        loss_hist.append(loss)
         loss.backward()
         optimizer.step()
     # practice saving the model
