@@ -127,12 +127,16 @@ if __name__ == '__main__':
     sys.stdout.flush()
 
     resp_col = get_resp_turn(turn)
+    print(resp_col)
+
     # grab target
     class_series = get_class_series(df, resp_col)
 
     targ = df[resp_col].values
+    print(targ)
     # drop response variable
     df.drop(columns=resp_col, inplace=True)
+    print(df.columns)
 
     # creating a dictionary which maps all column names to
     # indices in the input data matrix
@@ -150,6 +154,7 @@ if __name__ == '__main__':
     num_feats = data.shape[1]
     num_batches = int(data.shape[0] / batch_size * num_batches)
     classes = class_series.index.values
+    print(classes)
     num_classes = classes.size
 
     net = Net(num_feats, num_units, num_classes, classes)
@@ -164,7 +169,8 @@ if __name__ == '__main__':
     # set loss function
     # use MSE for now
     criterion = nn.MSELoss(size_average=True, reduce=True)
-    optimizer = optim.Adam(net.parameters(), weight_decay=math.pow(10, -5))
+    optimizer = optim.Adam(net.parameters(), weight_decay=math.pow(10, -9))
+    print('weak reg')
     loss_hist = []
     loss = criterion
     print('Training')
@@ -172,18 +178,28 @@ if __name__ == '__main__':
         if i % 500 == 0 and i > 0:
             print('Batch: %d of %d' % (i, num_batches))
             loss_hist.append(loss)
+            print(loss)
 
         sys.stdout.flush()
         optimizer.zero_grad()
         # extract label from batch
         sample_inds = np.random.random_integers(
             0, (targ.size - 1), size=batch_size)
+
         sample_input = data[sample_inds, :]
         sample_input = torch.from_numpy(sample_input).float()
         sample_targ = targ[sample_inds]
         sample_targ = torch.from_numpy(sample_targ).float()
         sample_targ = sample_targ.view(-1, 1)
         output = net(sample_input)
+        if i % 2000 == 0 and i > 0:
+            print('resid: %.2f' % (sample_targ - output).mean().view(-1, 1))
+            # print(torch.cat([sample_targ.view(-1, 1), output.view(-1, 1),
+            #                ((sample_targ - output)**2).view(-1, 1)], 1))
+            print(output)
+            print(sample_inds[0:5])
+            print(sample_input[0:5, :].sum(1))
+
         loss = criterion(output, sample_targ)
         loss.backward()
         optimizer.step()
