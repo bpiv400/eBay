@@ -2,7 +2,7 @@
 #$ -N mvp_train 
 #$ -js 1 
 #$ -j y
-#$ -l m_mem_free=18G
+#$ -l m_mem_free=40G
 #$ -m e -M 4102158912@vtext.com
 
 while getopts 'e:t:f:b:' flag; do
@@ -13,7 +13,7 @@ while getopts 'e:t:f:b:' flag; do
     b) batches="${OPTARG}" ;;
   esac
 done
-cd ~/eBay/data/
+cd ~/eBay/data/$name
 scriptPath=repo/trans_probs/mvp/$file.py  
 cd ~
 source /opt/rh/rh-python36/enable

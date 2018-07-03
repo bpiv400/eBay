@@ -1,0 +1,16 @@
+data/exps/exp_name/turn/norm.csv -- df with two columns (mean and std) for all
+    columns except the response variable
+data/exps/exp_name/turn/bins.pickle  -- pickle containing dictionary with two entries 
+    bins and midpoints 
+data/models/exps/exp_name/loss_turn.pickle -- list of losses for each minibatch
+ data/models/exps/exp_name/featdict_turn.pickle -- dictionary of feature 
+ names mapped to column index in the data matrix for the model
+ 
+ data/models/exps/exp_name/class_series_turn.csv -- series where index gives
+ the original value of a the response variable (in dollars) and the 
+ value of the series gives the corresponding class index in the case 
+ of classification based models...In regression based models, 
+ the index of the series also corresponds to the value of one of the bins, 
+ but the value of the series corresponds to the index of that value 
+ in the expectation layer of the model
+ 
