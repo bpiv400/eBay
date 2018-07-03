@@ -13,6 +13,7 @@ import pandas as pd
 import argparse
 import pickle
 import math
+from datetime import datetime as dt
 
 
 def get_model_class(exp_name):
@@ -106,6 +107,11 @@ def get_num_units(exp_name):
 
 def main():
     # parse parameters
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    print(device)
+    sys.stdout.flush()
+    start_time = dt.now()
+
     parser = argparse.ArgumentParser(
         description='associate threads with all relevant variables')
     parser.add_argument('--turn', action='store', type=str)
@@ -134,7 +140,7 @@ def main():
     sys.stdout.flush()
 
     load_loc = 'data/exps/%s/normed/train_concat_%s.csv' % (
-        prep_type, name, turn)
+        prep_type, turn)
     df = pd.read_csv(load_loc)
     print('Done Loading')
     sys.stdout.flush()
@@ -164,6 +170,7 @@ def main():
     num_batches = int(data.shape[0] / batch_size * num_batches)
     classes = class_series.index.values
     num_classes = classes.size
+    num_units = get_num_units(exp_name)
 
     # initialize model with appropriate arguments
     if 'cross' in exp_name:
@@ -172,7 +179,8 @@ def main():
     else:
         net = Net(num_feats, num_units, num_classes, classes)
         criterion = nn.MSELoss(size_average=True, reduce=True)
-
+    # move net to appropriate device
+    net.to(device)
     # training loop prep
     loss = criterion
     loss_hist = []
@@ -187,6 +195,10 @@ def main():
             recent_hist = np.mean(recent_hist)
             loss_hist.append(recent_hist)
             print('Recent Loss Mean: %.2f' % recent_hist)
+            cuda_check = loss.is_cuda
+            if cuda_check:
+                print(loss.get_device())
+            sys.stdout.flush()
             recent_hist = []
             sys.stdout.flush()
         # grab sample indices
@@ -195,20 +207,28 @@ def main():
         # grab sample data
         sample_input = data[sample_inds, :]
         # convert to tensor
-        sample_input = torch.from_numpy(sample_input).float()
+        sample_input = torch.from_numpy(sample_input)
         # grab corresponding target
         sample_targ = targ[sample_inds]
+        sample_targ = torch.from_numpy(sample_targ)
+
+        # move sample targ and input to appropriate device
+        sample_targ, sample_input = sample_targ.to(
+            device), sample_input.to(device)
+
+        # convert input type to float
+        sample_input = sample_input.float()
         # convert target to appropriate data type
         if 'cross' in exp_name:
-            sample_targ = torch.from_numpy(sample_targ).long()
+            sample_targ = sample_targ.long()
         else:
-            sample_targ = torch.from_numpy(sample_targ).float()
-
+            sample_targ = sample_targ.float()
         sample_targ = sample_targ.view(-1)
         output = net(sample_input).view(-1)
         loss = criterion(output, sample_targ)
         loss.backward()
         optimizer.step()
+        recent_hist.append(loss.detach().numpy())
     print('Done Training')
     sys.stdout.flush()
     print('Pickling')
@@ -231,6 +251,8 @@ def main():
                           (exp_name, turn), 'wb')
     pickle.dump(colix, feat_dict_pick)
     feat_dict_pick.close()
+    end_time = dt.now()
+    print('Total Time: ' + str(end_time - start_time))
 
 
 if __name__ == '__main__':

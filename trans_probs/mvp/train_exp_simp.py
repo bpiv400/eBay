@@ -181,7 +181,7 @@ if __name__ == '__main__':
             0, (targ.size - 1), size=batch_size)
 
         sample_input = data[sample_inds, :]
-        print(sample_input.isna.any())
+        print(np.isnan(sample_input).any())
         sample_input = torch.from_numpy(sample_input).float()
         sample_targ = targ[sample_inds]
         sample_targ = torch.from_numpy(sample_targ).float()

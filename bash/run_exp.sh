@@ -18,8 +18,8 @@ for t in "${turns[@]}"
 do
   if [-z ${wait_id+x} ]; then
     echo "Curr Turn" $t
-    qsub -js 1 repo/bash/mvp_train.sh -t $t -b $batches -f $file -e $exp_name
+    qsub -js 1 repo/bash/mvp_train.sh -t $t -b $batches -f $file -e $exp_name ;
   else
-    qsub -js 1 -hold_jid $wait_id repo/bash/mvp_train.sh -t $t -b $batches -f $file -e $exp_name
+    qsub -js 1 -hold_jid $wait_id repo/bash/mvp_train.sh -t $t -b $batches -f $file -e $exp_name ;
   fi
 done

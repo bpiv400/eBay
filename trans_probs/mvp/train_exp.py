@@ -169,6 +169,7 @@ if __name__ == '__main__':
         if i % 1000 == 0 and i > 0:
             print('Batch: %d of %d' % (i, num_batches))
             loss_hist.append(loss)
+            sys.stdout.flush()
 
         optimizer.zero_grad()
         # extract label from batch
