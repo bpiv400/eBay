@@ -61,13 +61,19 @@ def main():
         # as series -- index gives name of the column for both
         mean = df.mean()
         std = df.std()
+        std_zeros = std[std == 0].index
+        df.drop(columns=std_zeros, inplace=True)
+        mean.drop(index=std_zeros, inplace=True)
+        std.drop(index=std_zeros, inplace=True)
         df = (df - mean)/std
 
+        count_nan_cols = df.isna().any().sum()
+        if count_nan_cols > 0:
+            raise ValueError(
+                'Somehow we got ourselves a NaN--find it, destroy it')
         # add response turn column back
         print(df.dtypes)
-        print('This is my theory')
         df[resp_turn] = temp
-        print('After')
         del temp
 
         # compose mean and std into data frame with 2 columns (mean, std)

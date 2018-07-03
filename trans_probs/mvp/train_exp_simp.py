@@ -127,16 +127,13 @@ if __name__ == '__main__':
     sys.stdout.flush()
 
     resp_col = get_resp_turn(turn)
-    print(resp_col)
 
     # grab target
     class_series = get_class_series(df, resp_col)
 
     targ = df[resp_col].values
-    print(targ)
     # drop response variable
     df.drop(columns=resp_col, inplace=True)
-    print(df.columns)
 
     # creating a dictionary which maps all column names to
     # indices in the input data matrix
@@ -154,7 +151,6 @@ if __name__ == '__main__':
     num_feats = data.shape[1]
     num_batches = int(data.shape[0] / batch_size * num_batches)
     classes = class_series.index.values
-    print(classes)
     num_classes = classes.size
 
     net = Net(num_feats, num_units, num_classes, classes)
@@ -169,15 +165,13 @@ if __name__ == '__main__':
     # set loss function
     # use MSE for now
     criterion = nn.MSELoss(size_average=True, reduce=True)
-    optimizer = optim.Adam(net.parameters(), weight_decay=math.pow(10, -9))
-    print('weak reg')
+    optimizer = optim.Adam(net.parameters(), weight_decay=math.pow(10, -5))
     loss_hist = []
     loss = criterion
     print('Training')
     for i in range(num_batches):
         if i % 500 == 0 and i > 0:
             print('Batch: %d of %d' % (i, num_batches))
-            loss_hist.append(loss)
             print(loss)
 
         sys.stdout.flush()
@@ -187,6 +181,7 @@ if __name__ == '__main__':
             0, (targ.size - 1), size=batch_size)
 
         sample_input = data[sample_inds, :]
+        print(sample_input.isna.any())
         sample_input = torch.from_numpy(sample_input).float()
         sample_targ = targ[sample_inds]
         sample_targ = torch.from_numpy(sample_targ).float()

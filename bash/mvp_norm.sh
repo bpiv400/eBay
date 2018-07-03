@@ -2,8 +2,8 @@
 #!/bin/bash
 #$ -js 1
 #$ -j y
-#$ -l m_mem_free=25G
-
+#$ -l m_mem_free=50G
+#$ -m e -M 4102158912@vtext.com 
 while getopts 'e:' flag; do
   case "${flag}" in
     e) exp="${OPTARG}" ;;
