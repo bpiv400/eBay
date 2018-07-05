@@ -11,7 +11,7 @@ import math
 from datetime import datetime as dt
 import sys
 import os
-
+    
 def get_offer_set(turn):
     '''
     Description: Generates a list of the offers that have been observed
