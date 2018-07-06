@@ -7,7 +7,7 @@ import os
 import argparse
 
 
-def get_resp_turn(turn):
+def get_resp_offr(turn):
     if len(turn) != 2:
         raise ValueError('turn should be two 2 characters')
     turn_num = turn[1]
@@ -75,7 +75,7 @@ def get_ref_offrs(offr_name):
         return prev_off, None
     # otherwise remove offr_ substring from previous offer and again compute
     # the previous offer
-    before_prev_turn = prev_off.remove('offr_', '')
+    before_prev_turn = prev_off.replace('offr_', '')
     before_prev_offr = get_prev_offr(before_prev_turn)
     return prev_off, before_prev_offr
 
@@ -91,6 +91,8 @@ def norm_by_recent_offers(df, turn):
     ref_offrs = [get_ref_offrs(offr_name) for offr_name in all_offrs]
     # create a data frame containing one column for each previous offer
     normed_df = pd.DataFrame(0.0, index=df.index, columns=all_offrs)
+    # create an empty array to populate with ids to drop
+    drop_ids = np.zeros(0)
     # iterate over tuple of reference offers and associate offer
     for ref_tup, curr_offr in zip(ref_offrs, all_offrs):
         # from the tuple of reference offers extract previous offer
@@ -111,10 +113,31 @@ def norm_by_recent_offers(df, turn):
         else:
             normed_df[curr_offr] = (
                 df[curr_offr] - df[old_offr]) / (df[prev_offr] - df[old_offr])
-    # finally, iterate over every column in the normalized df and replace the columns
+        # grab ids of rows with np.nan -- indicates division of 0 by 0
+        # this implies thread where the player made an offer of the same value
+        # as the other players most recent counter offer (instead of just accepting
+        # it)
+        # encode these as 1 for the current offer 
+        nan_ids = normed_df[normed_df[curr_offr].isna()].index.values
+        df.loc[nan_ids, curr_offr] = 1
+        # grab id's of rows with -np.inf, np.inf
+        inf_ids = normed_df[normed_df[curr_offr] == np.inf].index.values
+        ninf_ids = normed_df[normed_df[curr_offr] == -np.inf].index.values
+        # combine all into a single np.array
+        curr_drop_ids = np.append(ninf_ids, inf_ids)
+        # append this np array onto the running arary of ids to drop
+        drop_ids = np.append(drop_ids, curr_drop_ids)
+    
+    # iterate over every column in the normalized df and replace the columns
     # in the output df with these columns
     for col in normed_df.columns:
+        df['org_%s' % col] = df[col]
         df[col] = normed_df[col]
+    # now drop rows where one of the offr columns equals nan, inf, or -inf
+    drop_ids = np.unique(drop_ids)
+    print('Num dropped: %d' % len(drop_ids))
+    print(df.loc[drop_ids, ['start_price_usd', 'org_offr_b0', 'org_offr_s0']])
+    df.drop(index=drop_ids, inplace=True)
     # return the original data frame, now with normalized offer values
     return df
 
@@ -152,8 +175,8 @@ def round_inds(df, round_vals, turn):
         # slack indices because offers considered 'slack' must
         # not be equal to any of the even values, not just the current one
         # so we track all slack inds and round inds over all iterations
-        all_round_inds = np.array()
-        all_slack_inds = np.array()
+        all_round_inds = np.ones(0)
+        all_slack_inds = np.ones(0)
         for curr_val in round_vals:
             # create series for round indicator for current pair of
             # offer and value
@@ -234,7 +257,7 @@ def get_ref_cols(df, turn):
     '''
     ref_offr_rec = df['offr_%s' % turn]
     df['ref_offr_rec'] = ref_offr_rec
-    prev_offer = get_prev_offr(turn)
+    prev_offr = get_prev_offr(turn)
     if prev_offr != '':
         ref_offr_old = df[prev_offr]
         df['ref_offr_old'] = ref_offr_old
@@ -281,7 +304,6 @@ def main():
     read_loc = 'data/' + subdir + '/' + 'turns/' + turn + '/' + filename
     df = pd.read_csv(read_loc, index_col=False)
 
-    print(df)
     # dropping columns that are not useful for prediction
     df.drop(columns=['anon_item_id', 'anon_thread_id', 'anon_byr_id',
                      'anon_slr_id', 'auct_start_dt',
@@ -395,8 +417,8 @@ def main():
     # dropping columns that have missing values for the timebeing
     # INCLUDING DROPPING decline, accept prices since it feels
     # epistemologically disingenous to use them
-    df.drop(columns=['count2', 'count3', 'count4', 'ship_time_fastest', 'ship_time_slowest',
-                     'ref_price2', 'ref_price3', 'ref_price4', 'decline_price', 'accept_price', 'unique_thread_id'], inplace=True)
+    df.drop(columns=['count2', 'count3', 'count4', 'ship_time_fastest', 'ship_time_slowest', 'count1',
+                     'ref_price2', 'ref_price3', 'ref_price4', 'decline_price', 'accept_price'], inplace=True)
 
     # dropping all threads that do not have ref_price1
     df.drop(df[np.isnan(df['ref_price1'].values)].index, inplace=True)
@@ -408,13 +430,11 @@ def main():
     # create reference columns (ref_rec guaranteed and ref_old usually)
     # so that we can re-create the response offer
     df = get_ref_cols(df, turn)
-    df = norm_by_recent_offrs(df, turn)
+    df = norm_by_recent_offers(df, turn)
     # saving cleaned data frame, dropping unique_thread_id
     save_loc = 'data/exps/' + exp_name + \
         '/' + turn + '/' + filename
     print(save_loc)
-    print(df)
-
     df.to_csv(save_loc, index=False)
 
     # normalize in this script and save the columns required for reference
