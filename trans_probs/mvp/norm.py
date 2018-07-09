@@ -52,9 +52,18 @@ def main():
     # find response column name
     resp_turn = get_resp_turn(turn)
 
-    # temporarily extract response turn to normalize the rest of the data
-    temp = df[resp_turn]
-    df.drop(columns=[resp_turn], inplace=True)
+    # also temporarily extract all reference columns and the response column
+    extract_cols = ['ref_rec', 'ref_old', 'ref_resp']
+    extrac_cols.append(resp_turn)
+
+    # create a dictionary to store the columns in temporarily
+    # and remove each from the data frame
+    for col in extract_cols:
+        if col in df.columns:
+            temp_dict[col] = df[col].copy()
+            df.drop(columns=col, inplace=True)
+        else:
+            temp_dict[col] = None
 
     if name == 'train' or name == 'toy':
         # calculate mean and standard deviation for each remaining column
@@ -73,12 +82,14 @@ def main():
                 'Somehow we got ourselves a NaN--find it, destroy it')
         # add response turn column back
         print(df.dtypes)
-        df[resp_turn] = temp
-        del temp
+
+        # add all removed columns back into the data frame
+        for col_name, col_ser in temp_dict.items():
+            if col_ser is not None:
+                df[col_name] = col_ser
 
         # compose mean and std into data frame with 2 columns (mean, std)
         # where each index indicates the corresponding column
-
         if name == 'train':
             # pickle norm df
             norm_df = pd.DataFrame({'mean': mean, 'std': std})

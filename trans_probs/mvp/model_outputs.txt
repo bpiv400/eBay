@@ -1,6 +1,6 @@
 data/exps/exp_name/turn/norm.csv -- df with two columns (mean and std) for all
     columns except the response variable
-data/exps/exp_name/turn/bins.pickle  -- pickle containing dictionary with two entries 
+data/exps/exp_name/turn/.pickle  -- pickle containing dictionary with two entries 
     bins and midpoints 
 data/models/exps/exp_name/loss_turn.pickle -- list of losses for each minibatch
  data/models/exps/exp_name/featdict_turn.pickle -- dictionary of feature 

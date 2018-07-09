@@ -8,17 +8,18 @@ import argparse
 
 
 def get_resp_offr(turn):
-    if len(turn) != 2:
-        raise ValueError('turn should be two 2 characters')
+    '''
+    Description: Determines the name of the response column given the name of the last observed turn
+    '''
     turn_num = turn[1]
     turn_type = turn[0]
     turn_num = int(turn_num)
     if turn_type == 'b':
         resp_turn = 's' + str(turn_num)
+    elif turn == 'start_price_usd':
+        resp_turn = 'b0'
     elif turn_type == 's':
         resp_turn = 'b' + str(turn_num + 1)
-    elif turn_type == 'i':
-        resp_turn = 'b0'
     resp_col = 'offr_' + resp_turn
     return resp_col
 
@@ -266,15 +267,15 @@ def get_prev_offr(turn):
     '''
     turn_num = int(turn[1])
     turn_type = turn[0]
-    if turn_type == 's':
+    if turn == 'start_price_usd':
+        prev_turn = ''
+    elif turn_type == 's':
         prev_turn = 'b' + str(turn_num)
     elif turn_type == 'b':
         if turn_num == 0:
             prev_turn = 'start_price_usd'
         else:
             prev_turn = 's' + str(turn_num - 1)
-    elif turn_type == 'i':
-        prev_turn = ''
     if 'start_price_usd' not in prev_turn and prev_turn != '':
         prev_turn = 'offr_' + prev_turn
     return prev_turn
@@ -294,14 +295,14 @@ def get_ref_cols(df, turn):
     Output: df containing all the original features and new reference columns
     '''
     ref_offr_rec = df['offr_%s' % turn]
-    df['ref_offr_rec'] = ref_offr_rec
+    df['ref_rec'] = ref_offr_rec
     prev_offr = get_prev_offr(turn)
     resp_offr = get_resp_offr(turn)
     resp_offr = df[resp_offr]
     if prev_offr != '':
         ref_offr_old = df[prev_offr]
-        df['ref_offr_old'] = ref_offr_old
-    df['ref_resp_offr'] = resp_offr
+        df['ref_old'] = ref_offr_old
+    df['ref_resp'] = resp_offr
     return df
 
 

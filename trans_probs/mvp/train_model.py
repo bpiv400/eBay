@@ -36,7 +36,7 @@ def get_model_class(exp_name):
     return net
 
 
-def get_class_series(df, resp_turn):
+def get_class_series(midpoints):
     '''
     Description: replaces the prediction variable with
 
@@ -52,7 +52,7 @@ def get_class_series(df, resp_turn):
         variable in df
     Output: tuple of(data frame, class series 'map')
     '''
-    raw_classes = np.unique(df[resp_turn].values)
+    raw_classes = midpoints
     class_ids = np.arange(0, len(raw_classes))
     class_series = pd.Series(class_ids, index=raw_classes)
     return class_series
@@ -139,14 +139,32 @@ def main():
     print('Loading Data')
     sys.stdout.flush()
 
+    # load data frame containing training data
     load_loc = 'data/exps/%s/normed/train_concat_%s.csv' % (
         prep_type, turn)
     df = pd.read_csv(load_loc)
+
+    # bin location
+    bin_loc = 'data/exps/%s/%s/bins.pickle' % (prep_type, turn)
+    # load bins dictionary from pickle
+    with open('data/exps/%s/%s/bins.pickle' % (prep_type, turn), 'rb') as f:
+        bin_dict = pickle.load(f)
+    f.close()
+    # extract midpoints from bin dictionary
+    midpoints = bin_dict['midpoints']
+    # delete the dictionary itself
+    del bin_dict
     print('Done Loading')
     sys.stdout.flush()
 
+    # remove  refrerence columns from data frame
+    extra_cols = ['ref_old', 'ref_rec', 'ref_resp']
+    for col in extra_cols:
+        if col in df:
+            df.drop(column=col, inplace=True)
+
     # get class series (output later)
-    class_series = get_class_series(df, resp_col)
+    class_series = get_class_series(midpoints)
 
     # grab target
     targ = df[resp_col].values

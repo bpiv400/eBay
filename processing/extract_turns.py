@@ -686,7 +686,7 @@ def grab_turn(df, turn, seller):
             out=out.merge(b2df, how = 'inner',
                             left_index = True, right_index = True)
             out=date_feats(out, 's2')
-            out=time(out, 'b3', 's2')
+            out=get_time(out, 'b3', 's2')
             return out
 
             # grab all thread ids between the 3 df's
