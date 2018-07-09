@@ -198,6 +198,8 @@ def grab_turn(df, turn, seller):
             df.drop(index=len34.index, inplace=True)
             gc.collect()
             len5 = df.loc[len_5_ids].copy(deep=True)
+            df.drop(index=len5.index, inplace=True)
+            gc.collect()
             len6 = df.loc[len_6_ids].copy(deep=True)
 
             del df
@@ -284,26 +286,33 @@ def grab_turn(df, turn, seller):
             del first_turn
             # extract corresponding feature sets from dual indexed df
             first_dec_threads = sellers.loc[first_turn_dec].copy()
-            # drop all indices except the first and the second
+            # drop all indices except turn_count = 0 (the initial offer) and turn_count = 1
+            # which corresponds to b1
             first_dec_threads.drop(
                 index=[2, 3, 4], level='turn_count', inplace=True)
             # remove the isolated threads from the buyers df from which they were removed
             sellers.drop(index=first_turn_dec,
-                         level='turn_count', inplace=True)
+                         level='unique_thread_id', inplace=True)
             # this leaves only threads where the last offer is a seller and the
             # first offer is not declined
+            # in these cases, remove all turns except turn_count = 0 and turn_count = 2, since turn_count=1
+            # must be a counter offer
+            sellers.drop(index=[1, 3, 4], level='turn_count', inplace=True)
 
             # throw out everything past turn_count = 2 and the second turn
             # which necessarily must be a seller offer
             if len(len6.index) > 0:
                 len6.drop(index=[1, 3, 4, 5],
                           level='turn_count', inplace=True)
-
             # concat all dfs
-            out = pd.concat([len2, len34, buyers, len6], sort=False)
+            out = pd.concat([len2, len34, buyers, sellers,
+                             first_dec_threads, len6], sort=False)
             del len2
             del len34
-            del longdf
+            del sellers
+            del first_dec_threads
+            del buyers
+            del len6
 
             # grab all thread ids
             out.index = out.index.remove_unused_levels()
@@ -419,7 +428,8 @@ def grab_turn(df, turn, seller):
 
             len_3_ids = thrd_len[thrd_len == 3].index
             len_4_ids = thrd_len[thrd_len == 4].index
-            long_ids = thrd_len[thrd_len.isin([5, 6])].index
+            len_5_ids = thrd_len[thrd_len == 5].index
+            len_6_ids = thrd_len[thrd_len == 6].index
 
             # set index to a multi index of unique
             df.set_index(['unique_thread_id', 'turn_count'], inplace=True)
@@ -427,13 +437,17 @@ def grab_turn(df, turn, seller):
             # create len specific subsets of df using ids extracted above
             len3 = df.loc[len_3_ids].copy()
             len4 = df.loc[len_4_ids].copy()
-            longdf = df.loc[long_ids].copy()
+            len5 = df.loc[len_5_ids].copy(deep=True)
+            df.drop(index=len5.index, inplace=True)
+            gc.collect()
+            len6 = df.loc[len_6_ids].copy(deep=True)
 
-            # len
+            # clean up crew
             del df
             del len_3_ids
             del len_4_ids
-            del long_ids
+            del len_5_ids
+            del len_6_ids
 
             # focusing on len3--we only want threads where the
             # second and third offers are both buyer offers
@@ -460,7 +474,8 @@ def grab_turn(df, turn, seller):
                 del seller_threads
                 # from the remaining threads, remove the first and second offers
                 len3.drop(index=[0, 1], level='turn_count', inplace=True)
-
+            else:
+                len3 = None
             if len(len4.index) > 0:
                 # moving on to length 4 threads
                 # extracting fourth offer from each thread
@@ -520,15 +535,53 @@ def grab_turn(df, turn, seller):
                 len4 = len4.loc[all_ids].copy()
                 # print(len4)
                 # print(len(len4.index))
-            # turning attention to longdf
-            # all final turns are located in turn_count = 4 (the 5th turn)
-            if len(longdf.index) > 0:
-                longdf = longdf.xs(4, level='turn_count',
-                                   drop_level=False).copy()
-            out = pd.concat([longdf, len4, len3])
-            del longdf
+            else:
+                len4 = None
+            if len(len5.index) > 0:
+                # moving onto len 5 df
+                # split into threads where the last offer is a seller counter offer or not
+                last_seller_threads = len5.xs(4, level='turn_count', drop_level=True)[
+                    'offr_type_id']
+                # threads where teh last offer is a seller
+                seller_threads = last_seller_threads[last_seller_threads == 2].index
+                # threads where the last offer is a buyer
+                buyer_threads = last_seller_threads[last_seller_threads != 2].index
+                del last_seller_threads
+                # grab the corresponding feature sets from the df for buyers and sellers using
+                # the ids above
+                # in threads where the last offer is a buyer, there must have been exactly 2
+                # seller offers, meaning turn_count=4 corresponds to the buyer's third turn
+                buyers = len5.loc[buyer_threads].copy()
+                sellers = len5.loc[seller_threads].copy()
+                del len5
+
+                # for the buyers df, throw out everything except turn 4
+                if len(buyers.index) > 0:
+                    buyers.drop(index=[0, 1, 2, 3],
+                                level='turn_count', inplace=True, drop_level=True)
+                else:
+                    buyers = None
+                # for the seller's df, throw out everything except turn 3
+                if len(sellers.index) > 0:
+                    sellers.drop(index=[0, 1, 2, 4],
+                                 level='turn_count', inplace=True, drop_level=True)
+                else:
+                    sellers = None
+            else:
+                buyers = None
+                sellers = None
+
+            if len(len6.index) > 0:
+                len6.drop(index=[1, 3, 4, 5],
+                          level='turn_count', inplace=True)
+
+            out = pd.concat([len6, len4, len3, buyers, sellers])
             del len4
             del len3
+            del len6
+            del buyers
+            del sellers
+
             out.rename(columns={'response_time': 'date_s2',
                                 'src_cre_date': 'date_b2',
                                 'offr_price': 'offr_b2',
@@ -548,8 +601,95 @@ def grab_turn(df, turn, seller):
             out.drop(columns=['passed', 'frac_passed',
                               'remain', 'frac_remain'], inplace=True)
             return out
-            # fill in with selle
 
+        else:
+            # for the s2 model, we are predicting 'offr_b3'--since buyers
+            # don't technically have the ability to make a 4th offer,
+            # this offer can only be a response in the threads where the seller
+            # makes the last offer
+
+            # first, grab all threads where the buyer makes at least 3 offers
+            b2df = grab_turn(df.copy(), 2, seller=False)
+
+            # create subset dfs that only contain threads with 4, 5, or 6 offers (the minimum required for the
+            # seller to make a counter offer)
+            len_4_ids = thrd_len[thrd_len == 4].index
+            len_5_ids = thrd_len[thrd_len == 5].index
+            len_6_ids = thrd_len[thrd_len == 6].index
+
+            # set index to a multi index of unique
+            df.set_index(['unique_thread_id', 'turn_count'], inplace=True)
+
+            # create len specific subsets of df using ids extracted above
+            len4 = df.loc[len_4_ids].copy(deep=True)
+            df.drop(index=len5.index, inplace=True)
+            gc.collect()
+            len5 = df.loc[len_5_ids].copy(deep=True)
+            df.drop(index=len5.index, inplace=True)
+            gc.collect()
+            len6 = df.loc[len_6_ids].copy(deep=True)
+
+            # clean up crew
+            del df
+            del len_4_ids
+            del len_5_ids
+            del len_6_ids
+
+            # now, subset len4 to contain only threads where the last offer is a seller offer
+            # and the first offer is declined
+            first_off_stat = len4.xs(0, level='turn_count',
+                                  drop_level=True)['status_id'].copy()
+            last_off_type = len4.xs(3, level='turn_count',
+                                  drop_level=True)['offr_type_id'].copy()
+            # get indices where the first offer is declined
+            f_dec_inds = first_off_stat[first_off_stat.isin(
+                [0, 2, 6, 8])].index
+            # get indices where the last offer is a seller offer
+            l_sel_inds = last_off_type[last_off_type == 2].index
+            # clean up crew
+            del first_off_stat
+            del last_off_type
+            # create a set of thread ids where first_offer is declined and
+            # the last offer is a seller offer
+            shared_inds = np.intersect1d(f_dec_inds.values, l_sel_inds.values)
+            del f_dec_inds
+            del l_sel_inds
+
+            # now subset len4 df to only contain these threads
+            len4 = len4.loc[shared_inds].copy()
+
+            # subset len5 df to only contain threads where the last offer is a seller
+            last_off_type = len4.xs(4, level='turn_count',
+                                  drop_level=True)['offr_type_id'].copy()
+            l_sel_inds=last_off_type[last_off_type == 2].index
+            del last_off_type
+            len5=len5.loc[l_sel_inds]
+            del l_sel_inds
+
+            # remove all but the last offer for each data frame
+            len4.drop(index = [0, 1, 2], level = 'turn_count', inplace = True)
+            len5.drop(index = [0, 1, 2, 3],
+                      level = 'turn_count', inplace = True)
+            len6.drop(index = [0, 1, 2, 3, 4],
+                      level = 'turn_count', inplace = True)
+
+            out=pd.concat([len4, len5, len6])
+
+            out.rename(columns = {'response_time': 'date_b3',
+                                'resp_offr': 'offr_b3'},
+                       inplace = True)
+            out.drop(columns = ['prev_offr_price', 'status_id', 'passed', 'frac_passed',
+                              'remain', 'frac_remain',
+                              'offr_type_id', 'src_cre_date', 'offr_price'], inplace = True)
+            # adding features
+            out.reset_index(level = 'turn_count', drop = True, inplace = True)
+            out=out.merge(b2df, how = 'inner',
+                            left_index = True, right_index = True)
+            out=date_feats(out, 's2')
+            out=time(out, 'b3', 's2')
+            return out
+
+            # grab all thread ids between the 3 df's
 
 # at some point, may require a method to extract data useful for predicting initial offers
 # from selling price
@@ -559,40 +699,40 @@ def get_inits():
 
 def main():
     # parse parameters
-    parser = argparse.ArgumentParser(
-        description='associate threads with all relevant variables')
-    parser.add_argument('--name', action='store', type=str)
-    parser.add_argument('--dir', action='store', type=str)
-    parser.add_argument('--turn', action='store', type=int)
-    parser.add_argument('--seller', action='store_true')
-    args = parser.parse_args()
+    parser=argparse.ArgumentParser(
+        description = 'associate threads with all relevant variables')
+    parser.add_argument('--name', action = 'store', type = str)
+    parser.add_argument('--dir', action = 'store', type = str)
+    parser.add_argument('--turn', action = 'store', type = int)
+    parser.add_argument('--seller', action = 'store_true')
+    args=parser.parse_args()
 
-    filename = args.name
-    turn = args.turn
-    seller = args.seller
-    subdir = args.dir
+    filename=args.name
+    turn=args.turn
+    seller=args.seller
+    subdir=args.dir
     # should be called on feats2
-    path = 'data/' + subdir + '/' + filename
-    df = pd.read_csv(path, parse_dates=['src_cre_date', 'response_time',
+    path='data/' + subdir + '/' + filename
+    df=pd.read_csv(path, parse_dates = ['src_cre_date', 'response_time',
                                         'auct_start_dt',
                                         'auct_end_dt'])
     if turn > 2 or turn < 0:
         raise ValueError('Turn must be 0, 1, or 2')
 
     # calling grab turn method
-    df = grab_turn(df, turn, seller)
-    cols = df.columns
+    df=grab_turn(df, turn, seller)
+    cols=df.columns
     for col in cols:
         if 'time' in col:
-            inds = df[df[col] < 0].index
-            df.loc[inds, col] = 0
+            inds=df[df[col] < 0].index
+            df.loc[inds, col]=0
 
-    type_path = ''
+    type_path=''
     if seller:
-        type_path = 's'
+        type_path='s'
     else:
-        type_path = 'b'
-    write_path = 'data/' + subdir + '/turns/' + \
+        type_path='b'
+    write_path='data/' + subdir + '/turns/' + \
         type_path + str(turn) + '/' + filename.replace('_feats2.csv', '.csv')
     df.to_csv(write_path)
 
