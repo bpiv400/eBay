@@ -185,8 +185,8 @@ def grab_turn(df, turn, seller):
             # that can be associated with the second turn
             len_2_ids = thrd_len[thrd_len == 2].index
             len_34_ids = thrd_len[thrd_len.isin([3, 4])].index
-            long_ids = thrd_len[thrd_len.isin([5, 6])].index
-
+            len_5_ids = thrd_len[thrd_len.isin([5])].index
+            len_6_ids = thrd_len[thrd_len.isin([6])].index
             # set index to a multi index of unique
             df.set_index(['unique_thread_id', 'turn_count'], inplace=True)
 
@@ -197,12 +197,14 @@ def grab_turn(df, turn, seller):
             len34 = df.loc[len_34_ids].copy(deep=True)
             df.drop(index=len34.index, inplace=True)
             gc.collect()
-            longdf = df.loc[long_ids].copy(deep=True)
+            len5 = df.loc[len_5_ids].copy(deep=True)
+            len6 = df.loc[len_6_ids].copy(deep=True)
 
             del df
             del len_2_ids
             del len_34_ids
-            del long_ids
+            del len_5_ids
+            del len_6_ids
 
             if len(len2.index) > 0:
                 # from length 2 subset, grab threads that contain a seller counteroffer
@@ -249,15 +251,56 @@ def grab_turn(df, turn, seller):
                 del middle_offr_ids
                 del other_offr_ids
 
-            # moving on to longdf
-            # throw out everything past turn_count = 2 and the second turn
-            # which necessarily must be a seller offer
-            if len(longdf.index) > 0:
-                longdf.drop(index=[1, 3, 4, 5],
+            # moving onto len 5 df
+            # split into threads where the last offer is a seller counter offer or not
+            last_seller_threads = len5.xs(4, level='turn_count', drop_level=True)[
+                'offr_type_id']
+            # threads where teh last offer is a seller
+            seller_threads = last_seller_threads[last_seller_threads == 2].index
+            # threads where the last offer is a buyer
+            buyer_threads = last_seller_threads[last_seller_threads != 2].index
+            del last_seller_threads
+            # grab the corresponding feature sets from the df for buyers and sellers using
+            # the ids above
+            # in threads where the last offer is a buyer, there must have been exactly 2
+            # seller offers, meaning turn_count=2 corresponds to the buyer's second turn
+            buyers = len5.loc[buyer_threads].copy()
+            sellers = len5.loc[seller_threads].copy()
+            del len5
+
+            # for the buyers df, throw out everything
+            # moving on to 6 length
+            if len(buyers.index) > 0:
+                buyers.drop(index=[1, 3, 4],
                             level='turn_count', inplace=True)
 
+            # for the sellers df, if the first turn is declined, then the b1 is located
+            # at turn_count = 1
+            # find the subset of threads where turn_count = 0 is declined
+            first_turn = sellers.xs(0, level='turn_count', drop_level=True)[
+                'status_id']
+            first_turn_dec = first_turn[first_turn.isin([0, 2, 6, 8])].index
+            # remove unnecessary variable
+            del first_turn
+            # extract corresponding feature sets from dual indexed df
+            first_dec_threads = sellers.loc[first_turn_dec].copy()
+            # drop all indices except the first and the second
+            first_dec_threads.drop(
+                index=[2, 3, 4], level='turn_count', inplace=True)
+            # remove the isolated threads from the buyers df from which they were removed
+            sellers.drop(index=first_turn_dec,
+                         level='turn_count', inplace=True)
+            # this leaves only threads where the last offer is a seller and the
+            # first offer is not declined
+
+            # throw out everything past turn_count = 2 and the second turn
+            # which necessarily must be a seller offer
+            if len(len6.index) > 0:
+                len6.drop(index=[1, 3, 4, 5],
+                          level='turn_count', inplace=True)
+
             # concat all dfs
-            out = pd.concat([len2, len34, longdf], sort=False)
+            out = pd.concat([len2, len34, buyers, len6], sort=False)
             del len2
             del len34
             del longdf

@@ -466,7 +466,7 @@ def main():
         df = digitize(df, bins, midpoints, 'offr_b' + str(i))
         if turn_type == 's' and i == turn_num:
             df = digitize(df, bins, midpoints, 'offr_b' + str(i + 1))
-
+    df = digitize(df, bins, midpoints, 'start_price_usd')
     # saves the resulting data frame after manipulations
     df.to_csv('data/exps/%s/binned/%s_%s.csv' %
               (exp_name, filename.replace('.csv', ''), turn), index_label=False)

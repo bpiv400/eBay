@@ -99,6 +99,8 @@ def norm_by_recent_offers(df, turn):
         # and old offer
         prev_offr = ref_tup[0]
         old_offr = ref_tup[1]
+        print('Current_offer: %s' % curr_offr)
+        print('Reference Offers: (%s, %s)' % ref_tup)
         # if the old offer is none, meaning curr_offr is b0,
         # just use start_price_usd to normalize offers
         if old_offr is None:
@@ -117,9 +119,13 @@ def norm_by_recent_offers(df, turn):
         # this implies thread where the player made an offer of the same value
         # as the other players most recent counter offer (instead of just accepting
         # it)
-        # encode these as 1 for the current offer 
+        # encode these as 1 for the current offer
         nan_ids = normed_df[normed_df[curr_offr].isna()].index.values
-        df.loc[nan_ids, curr_offr] = 1
+        # debugging
+        # print(curr_offr)
+        # print(nan_ids)
+        normed_df.loc[nan_ids, curr_offr] = 1
+
         # grab id's of rows with -np.inf, np.inf
         inf_ids = normed_df[normed_df[curr_offr] == np.inf].index.values
         ninf_ids = normed_df[normed_df[curr_offr] == -np.inf].index.values
@@ -127,16 +133,17 @@ def norm_by_recent_offers(df, turn):
         curr_drop_ids = np.append(ninf_ids, inf_ids)
         # append this np array onto the running arary of ids to drop
         drop_ids = np.append(drop_ids, curr_drop_ids)
-    
+
     # iterate over every column in the normalized df and replace the columns
     # in the output df with these columns
+    print(df.loc[np.unique(drop_ids), np.append(
+        normed_df.columns.values, ['start_price_usd', 'unique_thread_id'])])
     for col in normed_df.columns:
-        df['org_%s' % col] = df[col]
         df[col] = normed_df[col]
     # now drop rows where one of the offr columns equals nan, inf, or -inf
     drop_ids = np.unique(drop_ids)
     print('Num dropped: %d' % len(drop_ids))
-    print(df.loc[drop_ids, ['start_price_usd', 'org_offr_b0', 'org_offr_s0']])
+    # print(df.loc[drop_ids, ['start_price_usd', 'org_offr_b0', 'org_offr_s0']])
     df.drop(index=drop_ids, inplace=True)
     # return the original data frame, now with normalized offer values
     return df
@@ -162,8 +169,14 @@ def round_inds(df, round_vals, turn):
     # get list of all offers in the data set except for the next
     # offer (ie response offer)
     offer_set = get_observed_offrs(turn)
+
+    # for debugging
+    # print(offer_set)
+    # sample_ind = df[df['unique_thread_id'].isin([96, 167, 206])].index
+    # print(sample_ind)
     # iterate over round values
     for offr_name in offer_set:
+        # print(offr_name)
         # iterate over all offers the data set except the next offr
         # create series to encode whether the offer in question
         # is near but not directly at a round value
@@ -175,42 +188,67 @@ def round_inds(df, round_vals, turn):
         # slack indices because offers considered 'slack' must
         # not be equal to any of the even values, not just the current one
         # so we track all slack inds and round inds over all iterations
-        all_round_inds = np.ones(0)
-        all_slack_inds = np.ones(0)
+        all_zero_inds = np.ones(0)
+        all_nonzero_inds = np.ones(0)
         for curr_val in round_vals:
+            # print('val: %s' % str(curr_val))
             # create series for round indicator for current pair of
             # offer and value
             curr_ser = pd.Series(0, index=df.index)
             # give a name to the current round series
             new_feat_name = 'rnd_%d_%s' % (curr_val, offr_name)
-            # find all indices for rows where the current offer is a multiple of the current value
-            offr_inds = df[df[offr_name] % curr_val == 0].index
-            # activate the indicator for the se values
-            curr_ser.loc[offr_inds] = 1
-            # add these indices to the list of all indices found round so far for the
-            # current offer
-            all_round_inds = np.append(all_round_inds, offr_inds.values)
+
             # grab a series of the current offer consisting of rows where the
             # offer in this iteration is nonzero because we must divide by this value
             # to determine slack indices -- which would create an NA headache that would
             # ruin my life for sure
             non_zero_offs = df.loc[df[df[offr_name]
                                       != 0].index, offr_name].copy()
+            # debugging
+            print('1:')
+            print('Initial: ')
+            # print(non_zero_offs.loc[sample_ind])
             # find slack indices by finding the remainder of the current offer
             # divided by the current value then dividing this value by the value of the
             # current offer and taking indices where this is below some threshold
             # arbitrary .01 for now
-            slack_inds = non_zero_offs[(
-                (non_zero_offs % curr_val) / non_zero_offs) < .01].index
-            # add these indices to the running list of slack indices for the current offer
-            all_slack_inds = np.append(all_slack_inds, slack_inds.values)
+            slack = (non_zero_offs % curr_val) / curr_val
+            print('First slack: ')
+            # print(slack.loc[sample_ind])
+            # for slack greater than 50 %, subtract from 1 (since this implies the
+            # original value is closer to the next factor of the current divisor than
+            # the one immediately below it, so it may be in its rounding range, even
+            # if not in that of the lower value)
+            high_slack_inds = slack[slack > .5].index
+            slack.loc[high_slack_inds] = 1 - slack.loc[high_slack_inds]
+            print('Adjusted slack: ')
+            # print(slack.loc[sample_ind])
+            # truthiness check
+            # print(slack.loc[sample_ind] == .01)
+            # subset to slack less than .01 of rounding point
+            print('adjusted')
+            slack = slack[slack <= .011]
+            print('Subset slack')
+            # print(sample_ind[sample_ind.isin(slack.index)])
+            # print(slack.loc[sample_ind[sample_ind.isin(slack.index)]])
+            # separate the indices where slack is 0 and non-zero
+            zero_slack = slack[slack == 0].index
+            non_zero_slack = slack[slack > 0].index
+            # activate the indicator for the non-zero and zero values
+            curr_ser.loc[zero_slack] = 1
+            curr_ser.loc[non_zero_slack] = 1
+
+            # add the 0 slack indices to a running list of 0 slack indices and
+            # the non-zero indices to a running list of non-zero indices for the current offer
+            all_zero_inds = np.append(all_zero_inds, zero_slack.values)
+            all_nonzero_inds = np.append(
+                all_nonzero_inds, non_zero_slack.values)
             # finally, add the indicator for the current round-offer pair to the
             # data frame under the name created for it previously
             df[new_feat_name] = curr_ser
-        # find all of the slack indices that are not round indices
-        slack_inds = np.setdiff1d(all_slack_inds, all_round_inds)
+
         # activate these indices in the slack series for the current offer
-        slack_ser.loc[slack_inds] = 1
+        slack_ser.loc[all_nonzero_inds] = 1
         # finally, add this series to the data frame with the name created for it
         # above
         df[slack_ser_name] = slack_ser
@@ -258,9 +296,12 @@ def get_ref_cols(df, turn):
     ref_offr_rec = df['offr_%s' % turn]
     df['ref_offr_rec'] = ref_offr_rec
     prev_offr = get_prev_offr(turn)
+    resp_offr = get_resp_offr(turn)
+    resp_offr = df[resp_offr]
     if prev_offr != '':
         ref_offr_old = df[prev_offr]
         df['ref_offr_old'] = ref_offr_old
+    df['ref_resp_offr'] = resp_offr
     return df
 
 
@@ -354,8 +395,6 @@ def main():
             date_list.append('date_b' + str(i+1))
     # dropping all unused date and time features
     df.drop(columns=date_list, inplace=True)
-    # conduct visual inspection of remaining features
-    print(df.columns)
 
     # fixing seller and buyer history
     # assumed that NAN slr and byr histories indicate having participated in
@@ -418,10 +457,15 @@ def main():
     # INCLUDING DROPPING decline, accept prices since it feels
     # epistemologically disingenous to use them
     df.drop(columns=['count2', 'count3', 'count4', 'ship_time_fastest', 'ship_time_slowest', 'count1',
-                     'ref_price2', 'ref_price3', 'ref_price4', 'decline_price', 'accept_price'], inplace=True)
+                     'ref_price2', 'ref_price3', 'ref_price4', 'decline_price', 'accept_price'
+                     # ,'unique_thread_id'
+                     ], inplace=True)
 
     # dropping all threads that do not have ref_price1
     df.drop(df[np.isnan(df['ref_price1'].values)].index, inplace=True)
+
+    # inspecting columns
+    print(df.columns)
 
     # generate indicator variables for whether eacah offer is round or
     # not
