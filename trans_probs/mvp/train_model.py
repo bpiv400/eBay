@@ -112,7 +112,7 @@ def main():
     sys.stdout.flush()
     start_time = dt.now()
 
-    parser = argparse.ArgumentParser(
+    parser = ardrparse.ArgumentParser(
         description='associate threads with all relevant variables')
     parser.add_argument('--turn', action='store', type=str)
     parser.add_argument('--exp', action='store', type=str)
