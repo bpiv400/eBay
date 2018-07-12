@@ -41,29 +41,34 @@ def main():
     # parse args
     args = parser.parse_args()
     name = args.name
-    filename = args.name + '_concat.csv'
     turn = args.turn.strip()
     exp_name = args.exp
 
     # load data frame
-    df = pd.read_csv('data/exps/%s/binned/%s_concat_%s.csv' %
-                     (exp_name, name, turn))
+    load_loc = 'data/exps/%s/binned/%s_concat_%s.csv' % (exp_name, name, turn)
+    df = pd.read_csv(load_loc)
 
     # find response column name
     resp_turn = get_resp_turn(turn)
 
     # also temporarily extract all reference columns and the response column
     extract_cols = ['ref_rec', 'ref_old', 'ref_resp']
-    extrac_cols.append(resp_turn)
+    extract_cols.append(resp_turn)
 
     # create a dictionary to store the columns in temporarily
     # and remove each from the data frame
+    temp_dict = {}
     for col in extract_cols:
         if col in df.columns:
             temp_dict[col] = df[col].copy()
             df.drop(columns=col, inplace=True)
         else:
             temp_dict[col] = None
+
+    # for debugging purposes, check which columns have been removed from
+    # the data frame
+    for col in temp_dict.keys():
+        print('Removed: %s' % col)
 
     if name == 'train' or name == 'toy':
         # calculate mean and standard deviation for each remaining column
@@ -76,18 +81,6 @@ def main():
         std.drop(index=std_zeros, inplace=True)
         df = (df - mean)/std
 
-        count_nan_cols = df.isna().any().sum()
-        if count_nan_cols > 0:
-            raise ValueError(
-                'Somehow we got ourselves a NaN--find it, destroy it')
-        # add response turn column back
-        print(df.dtypes)
-
-        # add all removed columns back into the data frame
-        for col_name, col_ser in temp_dict.items():
-            if col_ser is not None:
-                df[col_name] = col_ser
-
         # compose mean and std into data frame with 2 columns (mean, std)
         # where each index indicates the corresponding column
         if name == 'train':
@@ -95,15 +88,39 @@ def main():
             norm_df = pd.DataFrame({'mean': mean, 'std': std})
             norm_df.index.name = 'cols'
             norm_df.to_csv('data/exps/%s/%s/norm.csv' % (exp_name, turn))
+
+            # save index series of std zeros
+            std_zeros = pd.Series(std_zeros.values)
+            if len(std_zeros.index) == 0:
+                std_zeros = pd.Series('NO_ZEROS')
+            std_zeros.to_csv('data/exps/%s/%s/zeros.csv' % (exp_name, turn))
+
     else:
         # load norm df from training corpus
         norm_df = pd.read_csv('data/exps/%s/%s/norm.csv' % (exp_name, turn))
         norm_df.set_index('cols', drop=True, inplace=True)
+
+        # load index series giving names of columns with 0 standard deviation
+        std_zeros = pd.read_csv('data/exps/%s/%s/zeros.csv' % (exp_name, turn),
+                                squeeze=True, index_col=0, header=None)
+
+        # grab mean and standard deviation
         mean = norm_df['mean']
         std = norm_df['std']
-        print(norm_df)
+
+        # drop columns that were dropped
+        if 'NO_ZEROS' not in std_zeros.values:
+            df.drop(columns=std_zeros, inplace=True)
+
         df = (df - mean)/std
-        df[resp_turn] = temp
+
+    # check for NaN's created by normalization
+
+    # add all removed columns back into the data frame
+    for col_name, col_ser in temp_dict.items():
+        if col_ser is not None:
+            df[col_name] = col_ser
+
     # save the current data frame
     df.to_csv('data/exps/%s/normed/%s_concat_%s.csv' %
               (exp_name, name, turn), index_label=False)

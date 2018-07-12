@@ -14,6 +14,7 @@ import argparse
 import pickle
 import math
 from datetime import datetime as dt
+import re
 
 
 def get_model_class(exp_name):
@@ -25,13 +26,17 @@ def get_model_class(exp_name):
     '''
     if 'cross' in exp_name:
         if 'simp' in exp_name:
+            print('Model: Cross Simp')
             net = Cross_simp
         else:
             net = Cross_comp
+            print('Model cross comp')
     else:
         if 'simp' in exp_name:
+            print('model exp simp')
             net = Exp_simp
         else:
+            print('model exp comp')
             net = Exp_comp
     return net
 
@@ -81,15 +86,24 @@ def get_prep_type(exp_name):
     Description: uses the experiment name to determine
     where to load data from
     '''
-    prep_type = exp_name[len(exp_name) - 1]
+    # grab prep type (the integer contained in the
+    # experiment name)
+    prep_type = re.findall(r'\d+', exp_name)
+    prep_type = prep_type[0]
+    prep_type = int(prep_type)
+
     if int(prep_type) == 1:
-        prep_type = 'mvp1'
+        if 'norm' in exp_name:
+            prep_type = 'norm1'
+        else:
+            prep_type = 'mvp1'
     elif int(prep_type) == 2:
         prep_type = 'mvp2'
     elif int(prep_type) == 3:
         prep_type = 'mvp3'
     elif int(prep_type) == 4:
         prep_type = 'mvp4'
+    print('Prep type: %s' % prep_type)
     return prep_type
 
 
@@ -102,7 +116,20 @@ def get_num_units(exp_name):
         num_units = 30
     else:
         num_units = 100
+    print('Num units: %s' % num_units)
     return num_units
+
+
+def get_resp_turn_classes(df, resp_turn, class_series):
+    '''
+    Description: Converts data frame with raw class
+    target to indices representing class index for use 
+    in classifier NN
+    '''
+    org_col = df[resp_turn].values
+    converted_classes = class_series.loc[org_col].values
+    df[resp_turn] = converted_classes
+    return df
 
 
 def main():
@@ -112,7 +139,7 @@ def main():
     sys.stdout.flush()
     start_time = dt.now()
 
-    parser = ardrparse.ArgumentParser(
+    parser = argparse.ArgumentParser(
         description='associate threads with all relevant variables')
     parser.add_argument('--turn', action='store', type=str)
     parser.add_argument('--exp', action='store', type=str)
@@ -152,6 +179,12 @@ def main():
     f.close()
     # extract midpoints from bin dictionary
     midpoints = bin_dict['midpoints']
+
+    #########################################################
+    # TEMPORARY FIX UNTIL ROUNDING ERROR HAS BEEN SOLVED IN BIN
+    if 'norm' in exp_name:
+        midpoints = np.around(midpoints, 2)
+    ##########################################################
     # delete the dictionary itself
     del bin_dict
     print('Done Loading')
@@ -161,10 +194,14 @@ def main():
     extra_cols = ['ref_old', 'ref_rec', 'ref_resp']
     for col in extra_cols:
         if col in df:
-            df.drop(column=col, inplace=True)
+            df.drop(columns=col, inplace=True)
 
     # get class series (output later)
     class_series = get_class_series(midpoints)
+
+    # convert raw targets to classes if using cross entropy
+    if 'cross' in exp_name:
+        df = get_resp_turn_classes(df, resp_col, class_series)
 
     # grab target
     targ = df[resp_col].values
@@ -239,10 +276,12 @@ def main():
         # convert target to appropriate data type
         if 'cross' in exp_name:
             sample_targ = sample_targ.long()
+            output = net(sample_input)
         else:
             sample_targ = sample_targ.float()
+            output = net(sample_input).view(-1)
+
         sample_targ = sample_targ.view(-1)
-        output = net(sample_input).view(-1)
         loss = criterion(output, sample_targ)
         loss.backward()
         optimizer.step()

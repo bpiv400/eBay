@@ -137,8 +137,8 @@ def norm_by_recent_offers(df, turn):
 
     # iterate over every column in the normalized df and replace the columns
     # in the output df with these columns
-    print(df.loc[np.unique(drop_ids), np.append(
-        normed_df.columns.values, ['start_price_usd', 'unique_thread_id'])])
+    # print(df.loc[np.unique(drop_ids), np.append(
+    #     normed_df.columns.values, ['start_price_usd', 'unique_thread_id'])])
     for col in normed_df.columns:
         df[col] = normed_df[col]
     # now drop rows where one of the offr columns equals nan, inf, or -inf
@@ -306,6 +306,28 @@ def get_ref_cols(df, turn):
     return df
 
 
+def remove_oob(df, turn):
+    # get a list of all offers
+    offrs = get_all_offrs(turn)
+    # remove starting price, so this list is reduced to all normalized offers
+    offrs.remove('start_price_usd')
+    # get total number of threads initially
+    tot = len(df.index)
+    # create running tally of number of threads dropped
+    tally = 0
+    # iterate over these offers
+    for offr in offrs:
+        # grab corresponding column
+        offr_ser = df[offr]
+        above = offr_ser[offr_ser > 1].index
+        below = offr_ser[offr_ser < 0].index
+        tally = tally + len(above) + len(below)
+        df.drop(index=above, inplace=True)
+        df.drop(index=below, inplace=True)
+    print('OOB removed: %.2f %% ' % (tally/tot * 100))
+    return df
+
+
 def main():
     '''
     Description: imputes variables for nan values when reasonable to do so,
@@ -458,8 +480,8 @@ def main():
     # INCLUDING DROPPING decline, accept prices since it feels
     # epistemologically disingenous to use them
     df.drop(columns=['count2', 'count3', 'count4', 'ship_time_fastest', 'ship_time_slowest', 'count1',
-                     'ref_price2', 'ref_price3', 'ref_price4', 'decline_price', 'accept_price'
-                     # ,'unique_thread_id'
+                     'ref_price2', 'ref_price3', 'ref_price4', 'decline_price', 'accept_price',
+                     'unique_thread_id'
                      ], inplace=True)
 
     # dropping all threads that do not have ref_price1
@@ -476,6 +498,15 @@ def main():
     # so that we can re-create the response offer
     df = get_ref_cols(df, turn)
     df = norm_by_recent_offers(df, turn)
+
+    # remove threads with out of bounds offers, namely threads where
+    # a normalized offer is not in range [0, 1]
+    # these may be considered abhorrent threads (in some cases, these
+    # result from improper data entry, ie duplicated rows being mistaken as
+    # responses from the other party)
+    # in most cases, these are a result of "unfaithful" bargaining, abandoning
+    # agreement ranging during convergence
+    df = remove_oob(df, turn)
     # saving cleaned data frame, dropping unique_thread_id
     save_loc = 'data/exps/' + exp_name + \
         '/' + turn + '/' + filename

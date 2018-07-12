@@ -572,7 +572,7 @@ def grab_turn(df, turn, seller):
                 sellers = None
 
             if len(len6.index) > 0:
-                len6.drop(index=[1, 3, 4, 5],
+                len6.drop(index=[0, 1, 2, 3, 5],
                           level='turn_count', inplace=True)
 
             out = pd.concat([len6, len4, len3, buyers, sellers])
