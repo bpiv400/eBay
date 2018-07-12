@@ -28,12 +28,18 @@ def get_model_class(exp_name):
         if 'simp' in exp_name:
             print('Model: Cross Simp')
             net = Cross_simp
+        elif 'bet' in exp_name:
+            print('Model: Cross between')
+            net = Cross_simp
         else:
             net = Cross_comp
             print('Model cross comp')
     else:
         if 'simp' in exp_name:
             print('model exp simp')
+            net = Exp_simp
+        elif 'bet' in exp_name:
+            print('model exp between')
             net = Exp_simp
         else:
             print('model exp comp')
@@ -109,11 +115,13 @@ def get_prep_type(exp_name):
 
 def get_num_units(exp_name):
     '''
-    Description: gets the number of units in each 
+    Description: gets the number of units in each
     nonlinear activation layer using the experiment name
     '''
     if 'simp' in exp_name:
         num_units = 30
+    elif 'bet' in exp_name:
+        num_units = 100
     else:
         num_units = 100
     print('Num units: %s' % num_units)
@@ -123,13 +131,26 @@ def get_num_units(exp_name):
 def get_resp_turn_classes(df, resp_turn, class_series):
     '''
     Description: Converts data frame with raw class
-    target to indices representing class index for use 
+    target to indices representing class index for use
     in classifier NN
     '''
     org_col = df[resp_turn].values
     converted_classes = class_series.loc[org_col].values
     df[resp_turn] = converted_classes
     return df
+
+
+def get_optimizer(net, exp_name):
+    '''
+    Description: Parsing experiment name to extract optimizer
+    to be used
+    '''
+    if 'unr' in exp_name:
+        optimizer = optim.Adam(net.parameters(), weight_decay=0)
+    else:
+        optimizer = optimizer = optim.Adam(
+            net.parameters(), weight_decay=10 ^ -5)
+    return optimizer
 
 
 def main():
@@ -232,6 +253,8 @@ def main():
         net = Net(num_feats, num_units, num_classes)
         criterion = nn.CrossEntropyLoss(size_average=True, reduce=True)
     else:
+        classes = torch.from_numpy(classes).float()
+        classes = classes.to(device)
         net = Net(num_feats, num_units, num_classes, classes)
         criterion = nn.MSELoss(size_average=True, reduce=True)
     # move net to appropriate device
@@ -240,7 +263,7 @@ def main():
     loss = criterion
     loss_hist = []
     recent_hist = []
-    optimizer = optim.Adam(net.parameters(), weight_decay=math.pow(10, -5))
+    optimizer = get_optimizer(net, exp_name)
     # training loop iteration
     for i in range(num_batches):
         optimizer.zero_grad()

@@ -37,7 +37,7 @@ class Exp_comp(nn.Module):
         self.fc1 = nn.Linear(num_feat, num_units)
         self.fc2 = nn.Linear(num_units, num_units)
         self.fc3 = nn.Linear(num_units, num_classes)
-        self.expect = torch.from_numpy(classes).float()
+        self.expect = classes
         self.expect.requires_grad_(False)
         self.expect = self.expect.view(-1, 1)
 
@@ -68,7 +68,7 @@ class Exp_simp(nn.Module):
         # print('num_classes %d' % num_classes)
         self.fc1 = nn.Linear(num_feat, num_units)
         self.fc2 = nn.Linear(num_units, num_classes)
-        self.expect = torch.from_numpy(classes).float()
+        self.expect = classes
         self.expect.requires_grad_(False)
         self.expect = self.expect.view(-1, 1)
 
