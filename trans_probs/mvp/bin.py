@@ -14,6 +14,33 @@ import argparse
 # before using
 
 
+def bin_times_from_midpoints(step):
+    '''
+    Description: Creates uniformly spaced bin midpoints 
+    for times based on a step given in minutes for 
+    times from 0 to 48 hours and outputs these as well
+    as an array of right sides for these bins to 
+    be used in np.digitize
+    Input:
+        step: integer giving number of minutes between
+        midpoints
+    Output: length 2 tuple containing: bins, midpoints
+    arrays
+    '''
+    # create evenly spaced array for midpoints
+    midpoints = np.arange(0, (48*60 + step), step)
+    # round to the nearest minute
+    midpoints = np.around(midpoints, 0)
+    # grab high from midpoints
+    max_midpoint = np.amax(midpoints)
+    half_bin_width = step / 2
+    bins = np.arange(half_bin_width, max_midpoint +
+                     half_bin_width * 2, half_bin_width * 2)
+    if bins.size != midpoints.size:
+        raise ValueError('The number of midpoints and bins should be the same')
+    return bins, midpoints
+
+
 def bins_from_midpoints(low, high, step):
     '''
     Description: Creates uniformly spaced bin midpoints and outputs these
@@ -222,10 +249,38 @@ def digitize(df, bins, midpoints, colname):
     return df
 
 
-def get_resp_turn(turn_type, turn_num):
+def get_resp_time(turn):
+    '''
+    Description: Determines the name of the response column given the 
+    name of the last observed turn
+    for time models
+    '''
+    turn_num = turn[1]
+    turn_type = turn[0]
+    turn_num = int(turn_num)
     if turn_type == 'b':
         resp_turn = 's' + str(turn_num)
-    else:
+    elif turn == 'start_price_usd':
+        resp_turn = None
+    elif turn_type == 's':
+        resp_turn = 'b' + str(turn_num + 1)
+    resp_col = 'time_%s' % resp_turn
+    return resp_col
+
+
+def get_resp_offr(turn):
+    '''
+    Description: Determines the name of the response column given the name of the last observed turn
+    '''
+    turn_num = turn[1]
+    turn_type = turn[0]
+    if turn != 'start_price_usd':
+        turn_num = int(turn_num)
+    if turn_type == 'b':
+        resp_turn = 's' + str(turn_num)
+    elif turn == 'start_price_usd':
+        resp_turn = 'b0'
+    elif turn_type == 's':
         resp_turn = 'b' + str(turn_num + 1)
     resp_col = 'offr_' + resp_turn
     return resp_col
@@ -331,12 +386,26 @@ def squash(bins, midpoints, low, high, abs_tol=None, perc_tol=None):
 
 
 def get_turn_desc(turn):
-    if len(turn) != 2:
+    '''
+    Description: Extracts turn type and turn round number 
+    from turn name where possible. If the initial offering
+    is the last observed offer (thread has not started), 
+    we return a tuple where both elements are None
+    Input: 
+        turn: string giving turn name
+    Output: tuple of length 2 where the first element is a
+    string giving the type of turn 's' or 'b' and the second
+    element is an integer giving the number of the turn
+    '''
+    if turn == 'start_price_usd':
+        return None, None
+    elif len(turn) != 2:
         raise ValueError('turn should be two 2 characters')
-    turn_num = turn[1]
-    turn_type = turn[0]
-    turn_num = int(turn_num)
-    return turn_type, turn_num
+    else:
+        turn_num = turn[1]
+        turn_type = turn[0]
+        turn_num = int(turn_num)
+        return turn_type, turn_num
 
 
 def main():
@@ -390,7 +459,7 @@ def main():
         df.drop(columns=['Unnamed: 0'], inplace=True)
     # get response turn
     turn_type, turn_num = get_turn_desc(turn)
-    resp_turn = get_resp_turn(turn_type, turn_num)
+    resp_turn = get_resp_offr(turn)
 
     # grab bins, using midpoint step algorithm if step flag is given
     if name == 'train' or name == 'toy':
@@ -412,18 +481,40 @@ def main():
             else:
                 bins, midpoints = squash(
                     bins, midpoints, low, high, perc_tol=tol)
+        # get bins and midpoints for times
+        # currently, the only scheme for time bins is evenly spaced
+        # 15 minute intervals
+        time_bins, time_midpoints = bin_times_from_midpoints(15)
         if name == 'train':
             pic_dic = {'bins': bins, 'midpoints': midpoints}
             bins_pick = open('data/exps/%s/%s/bins.pickle' %
                              (exp_name, turn), 'wb')
             pickle.dump(pic_dic, bins_pick)
             bins_pick.close()
+
+            # pickle time data binning arrays
+            if turn != 'start_price_usd':
+                pic_dic = {'time_bins': time_bins,
+                           'time_midpoints': time_midpoints}
+                bins_pick = open('data/exps/%s/%s/time_bins.pickle' %
+                                 (exp_name, turn), 'wb')
+                pickle.dump(pic_dic, bins_pick)
+                bins_pick.close()
+
     elif name == 'test':
         f = open("data/exps/%s/%s/bins.pickle" % (exp_name, turn), "rb")
         pic_dic = pickle.load(f)
         bins = pic_dic['bins']
         midpoints = pic_dic['midpoints']
         f.close()
+
+        if turn != 'start_price_usd':
+            f = open("data/exps/%s/%s/time_bins.pickle" %
+                     (exp_name, turn), "rb")
+            pic_dic = pickle.load(f)
+            time_bins = pic_dic['time_bins']
+            time_midpoints = pic_dic['time_midpoints']
+            f.close()
 
     # extract low and high thresholds from midpoints and bins
     high_thresh = midpoints[len(midpoints) - 1]
@@ -433,40 +524,106 @@ def main():
 
     print(type(bins))
     print(type(midpoints))
-    # iterate over turns
-    for i in range(turn_num + 1):
-        # find threads where a buyer offer in the current turn is less than the
-        # low threshold
-        low_b = df[df['offr_b' + str(i)] < low_thresh].index
-        # find threads where a seller offer in the current turn is
-        # less than the low threshold
-        low_s = df[df['offr_s' + str(i)] < low_thresh].index
-        # find the union of these two 'sets' of threads
+    # if the last turn in the data set isn't the initial offering
+    if turn != 'start_price_usd':
+        # iterate over turns
+        for i in range(turn_num + 1):
+            # find threads where a buyer offer in the current turn is less than the
+            # low threshold
+            low_b = df[df['offr_b' + str(i)] < low_thresh].index
+            # find threads where a seller offer in the current turn is
+            # less than the low threshold
+            low_s = df[df['offr_s' + str(i)] < low_thresh].index
+            # find the union of these two 'sets' of threads
+            threads = np.unique(np.append(low_b.values, low_s.values))
+            # remove the these threads from the data
+            df.drop(index=threads, inplace=True)
+            # if we're predicting a buyer turn from a seller turn,
+            # we must also check the buyer turn on the next turn,
+            # since this is the predicted response for seller turn
+            # data sets
+            if turn_type == 's' and i == turn_num:
+                low_b = df[df['offr_b' + str(i + 1)] < low_thresh].index
+                df.drop(index=low_b, inplace=True)
+    else:
+        # if the only turn we've observed is the initial offering, don't
+        # iterate over seller turns at all
+        low_b = df[df['offr_b0'] < low_thresh].index
+        low_s = df[df['start_price_usd'] < low_thresh].index
         threads = np.unique(np.append(low_b.values, low_s.values))
         # remove the these threads from the data
         df.drop(index=threads, inplace=True)
-        # if we're predicting a buyer turn from a seller turn,
-        # we must also check the buyer turn on the next turn,
-        # since this is the predicted response for seller turn
-        # data sets
-        if turn_type == 's' and i == turn_num:
-            low_b = df[df['offr_b' + str(i + 1)] < low_thresh].index
-            df.drop(index=low_b, inplace=True)
-    print(df.columns)
-    del threads
+
     # find all threads where the starting price is above high thresh and remove them
     high_threads = df[df['start_price_usd'] > high_thresh].index
     df.drop(index=high_threads, inplace=True)
+    del low_b
+    del low_s
+    del high_threads
+    del threads
 
-    # iterate over all offr_ji features in the data set
-    for i in range(turn_num + 1):
-        # bin all seller / buyer offers for the current turns in the
-        # bins established above
-        df = digitize(df, bins, midpoints, 'offr_s' + str(i))
-        df = digitize(df, bins, midpoints, 'offr_b' + str(i))
-        if turn_type == 's' and i == turn_num:
-            df = digitize(df, bins, midpoints, 'offr_b' + str(i + 1))
+    # ensure we iterate over times only when there times to iterate over
+    if turn != 'start_price_usd':
+        # drop all threads with times outside the range 0-48*60
+        count = 0
+        tot = len(df.index)
+        # iterate over turn numbers through the current turn number
+        for i in range(turn_num + 1):
+            # grab buyer times if i not 0 b/c time_b0 doesn't exist
+            if i != 0:
+                low_b = df[df['time_b%d' % i] < 0].index
+                high_b = df[df['time_b%d' % i] > 48*60].index
+            else:
+                low_b = None
+                high_b = None
+            # grab out of bounds ids for the current seller turn
+            low_s = df[df['time_s%d' % i] < 0].index
+            high_s = df[df['time_s%d' % i] > 48*60].index
+            threads = np.unique(np.append(low_s.values, high_s.values))
+            # ensure that low and high b exist before trying to append
+            # them to the thread id list
+            if low_b is not None or high_b is not None:
+                threads = np.unique(np.append(threads, low_b.values))
+                threads = np.unique(np.append(threads, high_b.values))
+            # grab buyer turn for the next turn if the last observed
+            # turn in this data set is a seller turn
+            if turn_type == 's' and i == turn_num:
+                low_b = df[df['time_b%d' % i] < 0].index
+                high_b = df[df['time_b%d' % i] > 48*60].index
+                threads = np.unique(np.append(threads, low_b))
+                threads = np.unique(np.append(threads, high_b))
+            # increment count of dropped threads
+            count = count + threads.size
+            # actually drop threads from data frame
+            df.drop(index=threads, inplace=True)
+
+        print('Dropped %.2f %% of threads' % (count / tot))
+
+    # iterate over all offr_ji and time_ji features in the data set
+    # digitizing all of them including the response
+    if turn != 'start_price_usd':
+        for i in range(turn_num + 1):
+            # bin all seller / buyer offers for the current turns in the
+            # bins established above
+            df = digitize(df, bins, midpoints, 'offr_s' + str(i))
+            df = digitize(df, bins, midpoints, 'offr_b' + str(i))
+            # if the current turn number is not 0, bin the buyer turn time
+            if i != 0:
+                df = digitize(df, time_bins, time_midpoints, 'time_b%d' % i)
+            # bin seller times for each observed turn
+            df = digitize(df, time_bins, time_midpoints, 'time_s%d' % i)
+            # if the current turn is the last observed turn and the last observed
+            # turn is a seller turn, grab the buyer turn from the next turn round
+            if turn_type == 's' and i == turn_num:
+                df = digitize(df, bins, midpoints, 'offr_b' + str(i + 1))
+                df = digitize(df, time_bins, time_midpoints,
+                              'time_b' + str(i + 1))
+    # in this case, there are no times to digitize and only the buyers first offer
+    else:
+        df = digitize(df, bins, midpoints, 'offr_b0')
+    # in all cases, digitize the starting offer
     df = digitize(df, bins, midpoints, 'start_price_usd')
+
     # saves the resulting data frame after manipulations
     df.to_csv('data/exps/%s/binned/%s_%s.csv' %
               (exp_name, filename.replace('.csv', ''), turn), index_label=False)

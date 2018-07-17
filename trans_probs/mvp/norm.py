@@ -9,20 +9,39 @@ import argparse
 import pickle
 
 
-def get_resp_turn(turn):
+def get_resp_offr(turn):
     '''
-    Description: From a string of length two where first
-    digit indicates turn type (seller or buyer) and second
-    indicates turn number of the last observed turn, determine
-    the prediction value
+    Description: Determines the name of the response column given the name of the last observed turn
+    for offer models
     '''
-    turn_type = turn[0]
     turn_num = turn[1]
+    turn_type = turn[0]
+    turn_num = int(turn_num)
     if turn_type == 'b':
         resp_turn = 's' + str(turn_num)
-    else:
+    elif turn == 'start_price_usd':
+        resp_turn = 'b0'
+    elif turn_type == 's':
         resp_turn = 'b' + str(turn_num + 1)
     resp_col = 'offr_' + resp_turn
+    return resp_col
+
+
+def get_resp_time(turn):
+    '''
+    Description: Determines the name of the response column given the name of the last observed turn
+    for time models
+    '''
+    turn_num = turn[1]
+    turn_type = turn[0]
+    turn_num = int(turn_num)
+    if turn_type == 'b':
+        resp_turn = 's' + str(turn_num)
+    elif turn == 'start_price_usd':
+        resp_turn = 'b0'
+    elif turn_type == 's':
+        resp_turn = 'b' + str(turn_num + 1)
+    resp_col = 'time_%s' % resp_turn
     return resp_col
 
 
@@ -48,12 +67,14 @@ def main():
     load_loc = 'data/exps/%s/binned/%s_concat_%s.csv' % (exp_name, name, turn)
     df = pd.read_csv(load_loc)
 
-    # find response column name
-    resp_turn = get_resp_turn(turn)
+    # find response column names
+    resp_offr = get_resp_offr(turn)
+    resp_time = get_resp_time(turn)
 
     # also temporarily extract all reference columns and the response column
     extract_cols = ['ref_rec', 'ref_old', 'ref_resp']
-    extract_cols.append(resp_turn)
+    extract_cols.append(resp_offr)
+    extract_cols.append()
 
     # create a dictionary to store the columns in temporarily
     # and remove each from the data frame
@@ -64,6 +85,10 @@ def main():
             df.drop(columns=col, inplace=True)
         else:
             temp_dict[col] = None
+
+    # check for NaN's existing before normalization
+    if df.isna().any().any():
+        raise ValueError('NaN existed before normalization')
 
     # for debugging purposes, check which columns have been removed from
     # the data frame
@@ -115,7 +140,8 @@ def main():
         df = (df - mean)/std
 
     # check for NaN's created by normalization
-
+    if df.isna().any().any():
+        raise ValueError('Normalization introduced NaN somehwere')
     # add all removed columns back into the data frame
     for col_name, col_ser in temp_dict.items():
         if col_ser is not None:

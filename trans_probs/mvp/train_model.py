@@ -69,21 +69,40 @@ def get_class_series(midpoints):
     return class_series
 
 
-def get_resp_turn(turn):
+def get_resp_offr(turn):
     '''
-    Description: Uses name of the last turn in the model to get
-    the name of the next turn, ie the prediction variable
+    Description: Determines the name of the response column given the name of the last observed turn
     '''
-    if len(turn) != 2:
-        raise ValueError('turn should be two 2 characters')
+    turn_num = turn[1]
+    turn_type = turn[0]
+    if turn != 'start_price_usd':
+        turn_num = int(turn_num)
+    if turn_type == 'b':
+        resp_turn = 's' + str(turn_num)
+    elif turn == 'start_price_usd':
+        resp_turn = 'b0'
+    elif turn_type == 's':
+        resp_turn = 'b' + str(turn_num + 1)
+    resp_col = 'offr_' + resp_turn
+    return resp_col
+
+
+def get_resp_time(turn):
+    '''
+    Description: Determines the name of the response column given the 
+    name of the last observed turn
+    for time models
+    '''
     turn_num = turn[1]
     turn_type = turn[0]
     turn_num = int(turn_num)
     if turn_type == 'b':
         resp_turn = 's' + str(turn_num)
-    else:
+    elif turn == 'start_price_usd':
+        resp_turn = None
+    elif turn_type == 's':
         resp_turn = 'b' + str(turn_num + 1)
-    resp_col = 'offr_' + resp_turn
+    resp_col = 'time_%s' % resp_turn
     return resp_col
 
 
@@ -104,7 +123,10 @@ def get_prep_type(exp_name):
         else:
             prep_type = 'mvp1'
     elif int(prep_type) == 2:
-        prep_type = 'mvp2'
+        if 'norm' in exp_name:
+            prep_type = 'norm2'
+        else:
+            prep_type = 'mvp2'
     elif int(prep_type) == 3:
         prep_type = 'mvp3'
     elif int(prep_type) == 4:
@@ -148,8 +170,9 @@ def get_optimizer(net, exp_name):
     if 'unr' in exp_name:
         optimizer = optim.Adam(net.parameters(), weight_decay=0)
     else:
+        print('regularized')
         optimizer = optimizer = optim.Adam(
-            net.parameters(), weight_decay=10 ^ -5)
+            net.parameters(), weight_decay=math.pow(10, -5))
     return optimizer
 
 
@@ -177,8 +200,22 @@ def main():
     num_batches = args.batches
     batch_size = args.batch_size
 
+    # set flag indicating whether this is an offer model
+    if 'time' in exp_name:
+        offr_mod = False
+    else:
+        offr_mod = True
+
     # get response col
-    resp_col = get_resp_turn(turn)
+    if offr_mod:
+        resp_col = get_resp_offr(turn)
+    else:
+        if turn != 'start_price_usd':
+            resp_col = get_resp_time(turn)
+        else:
+            raise ValueError('Cannot train a model for time until the' +
+                             'buyer makes their first offer')
+
     # get data type
     prep_type = get_prep_type(exp_name)
     # get model class
@@ -192,19 +229,35 @@ def main():
         prep_type, turn)
     df = pd.read_csv(load_loc)
 
-    # bin location
-    bin_loc = 'data/exps/%s/%s/bins.pickle' % (prep_type, turn)
-    # load bins dictionary from pickle
-    with open('data/exps/%s/%s/bins.pickle' % (prep_type, turn), 'rb') as f:
-        bin_dict = pickle.load(f)
-    f.close()
-    # extract midpoints from bin dictionary
-    midpoints = bin_dict['midpoints']
+    if offr_mod:
+        # bin location
+        bin_loc = 'data/exps/%s/%s/bins.pickle' % (prep_type, turn)
+        # load bins dictionary from pickle
+        with open(bin_loc, 'rb') as f:
+            bin_dict = pickle.load(f)
+        f.close()
+        # extract midpoints from bin dictionary
+        midpoints = bin_dict['midpoints']
+    else:
+        # bin location
+        bin_loc = 'data/exps/%s/%s/time_bins.pickle' % (prep_type, turn)
+        # load bins dictionary from pickle
+        with open(bin_loc, 'rb') as f:
+            bin_dict = pickle.load(f)
+        f.close()
+        midpoints = bin_dict['time_midpoints']
 
     #########################################################
     # TEMPORARY FIX UNTIL ROUNDING ERROR HAS BEEN SOLVED IN BIN
     if 'norm' in exp_name:
         midpoints = np.around(midpoints, 2)
+        count = 0
+        for point in midpoints:
+            count = np.around(count, 2)
+            if point != count:
+                raise ValueError('Midpoints not rounded correctly')
+            count = count + .01
+
     ##########################################################
     # delete the dictionary itself
     del bin_dict
@@ -213,8 +266,18 @@ def main():
 
     # remove  refrerence columns from data frame
     extra_cols = ['ref_old', 'ref_rec', 'ref_resp']
+    # add the response column corresponding to the
+    # other kind of model (time_ji for offr_mod)
+    # offr_ji otherwise
+    if offr_mod:
+        if turn != 'start_price_usd':
+            extra_cols.append(get_resp_time(turn))
+    else:
+        extra_cols.append(get_resp_offr(turn))
+
     for col in extra_cols:
         if col in df:
+            print('Dropping %s' % col)
             df.drop(columns=col, inplace=True)
 
     # get class series (output later)
@@ -308,7 +371,7 @@ def main():
         loss = criterion(output, sample_targ)
         loss.backward()
         optimizer.step()
-        recent_hist.append(loss.detach().numpy())
+        recent_hist.append(loss.detach().cpu().numpy())
     print('Done Training')
     sys.stdout.flush()
     print('Pickling')
