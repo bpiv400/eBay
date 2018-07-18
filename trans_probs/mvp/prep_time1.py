@@ -333,7 +333,7 @@ def get_ref_cols(df, turn):
     return df
 
 
-def get_auto_reject_feat(df, turn):
+def get_auto_rej_feat(df, turn):
     '''
     Description: Adds an indicator feature for each observed 
     offer for whether the offer was automatically rejected

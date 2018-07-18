@@ -74,7 +74,7 @@ def main():
     # also temporarily extract all reference columns and the response column
     extract_cols = ['ref_rec', 'ref_old', 'ref_resp']
     extract_cols.append(resp_offr)
-    extract_cols.append()
+    extract_cols.append(resp_time)
 
     # create a dictionary to store the columns in temporarily
     # and remove each from the data frame
