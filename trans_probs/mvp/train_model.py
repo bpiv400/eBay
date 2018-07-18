@@ -378,7 +378,8 @@ def main():
     # whether a validation set should be used to determine stopping
     # value should give the percentage of the training sample to be used
     # for the validation step
-    parser.add_argument('--valid', action='store', type=float, default=None)
+    parser.add_argument('--valid_size', action='store',
+                        type=float, default=None)
     # gives the number of mini-batches that should take place before evaluating
     # the validation set
     parser.add_argument('--dur_valid', action='store', type=int, default=None)
@@ -400,7 +401,7 @@ def main():
     # indicating the stopping criterion should be based on
     # performance of a validation set
     if valid:
-        valid_size = args.valid
+        valid_size = args.valid_size
         # check whether a duration (ie number of batches between validation check)
         # has been given, if not, set to 1000
         if args.dur_valid is not None:
