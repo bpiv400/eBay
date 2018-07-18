@@ -15,6 +15,7 @@ import pickle
 import math
 from datetime import datetime as dt
 import re
+import copy
 
 
 def get_model_class(exp_name):
@@ -162,6 +163,188 @@ def get_resp_turn_classes(df, resp_turn, class_series):
     return df
 
 
+def update_loss_hist(loss_hist, recent_hist, curr_batch=None, num_batches=None):
+    if curr_batch is not None:
+        print('Batch: %d of %d' % (curr_batch, num_batches))
+    # convert recent hist to numpy array
+    recent_hist = recent_hist.detach().cpu().numpy()
+    # get the mean of the recent history
+    recent_hist = np.mean(recent_hist)
+    # append this to the long-run loss history
+    loss_hist.append(recent_hist)
+    print('Recent Loss Mean: %.2f' % recent_hist)
+    sys.stdout.flush()
+    return loss_hist
+
+
+def process_minibatch(num_samps, net, optimizer, data, targ, batch_size, device, criterion):
+    # grab sample indices
+    sample_inds = torch.randint(
+        low=0, high=num_samps, size=batch_size, device=device)
+
+    # grab sample data
+    sample_input = data[sample_inds, :]
+
+    # grab corresponding target
+    sample_targ = targ[sample_inds]
+
+    # get sample output
+    if 'cross' in exp_name:
+        output = net(sample_input)
+    else:
+        output = net(sample_input).view(-1)
+
+    # calculate loss and backpropogate gradient
+    loss = criterion(output, sample_targ)
+    loss.backward()
+    # update parameters
+    optimizer.step()
+    return loss
+
+
+def process_valid(net, valid_data, valid_targ, criterion):
+    # get sample output
+    if 'cross' in exp_name:
+        output = net(valid_data)
+    else:
+        output = net(valid_data).view(-1)
+
+    # calculate loss
+    loss = criterion(output, sample_targ)
+    # return as numpy
+    loss = loss.detach().cpu().numpy()
+    return loss
+
+
+def is_valid_dec(valid_hist, hist_len):
+    '''
+    Description: Returns whether the validation error history
+    DOES not satisfy the stopping criterion
+    Inputs:
+        valid_hist: a list containing numpy.float where each
+        element gives the validation error calculated at some 
+        step
+        hist_len: integer giving the number of consecutive 
+        validation error increases required to satisfy the stopping
+        criterion
+    Output: boolean giving whether training should continue
+    '''
+    # get the number of iterations
+    num_it = len(valid_hist)
+    # if there is not sufficient history for the validation error
+    # check, vacuously the stopping criterion fails
+    if num_it < (hist_len + 1):
+        return True
+    else:
+        # set the flag for whether any decreases have been wittnessed
+        any_dec_flag = False
+        # iterate over the loss history
+        for i in range(hist_len):
+            # get the current loss
+            curr_loss = valid_hist[num_it - (1 + i)]
+            # get the previous loss
+            prev_loss = valid_hist[num_it - (2 + i)]
+            if curr_loss < prev_loss:
+                any_dec_flag = True
+        # return whether any decreases have been observed in the
+        # duration of the history we're interested in
+        return any_dec_flag
+
+
+def batch_count_loop(num_batches, net, optimizer, data, targ, batch_size, device, criterion):
+    # get the total number of samples in the training data
+    num_samps = data.shape[0]
+    # create the initial copy of the recent_history tensory
+    recent_hist = torch.zeros(500, device=device)
+    # create an index counter to track where loss should be input to recent_hist tensor
+    hist_ind = 0
+    # create an empty list to store the mean of the last 500 batch losses
+    loss_hist = []
+    # iterate over the number of batches assigned
+    for i in range(1, num_batches):
+        # zero the gradient
+        optimizer.zero_grad()
+
+        # get error for minibatch, back prop, and update model
+        loss = process_minibatch(
+            num_samps, net, optimizer, data, targ, batch_size, device, criterion)
+
+        # add loss to the current recent loss history and update the index counter
+        recent_hist[hist_ind] = loss
+        hist_ind = hist_ind + 1
+
+        # update the long run loss history every 500 iterations
+        if i % 500 == 0:
+            loss_hist = update_loss_hist(
+                loss_hist, recent_hist, i, num_batches)
+            # reset recent history and associated index
+            recent_hist = torch.zeros(500, device=device)
+            hist_ind = 0
+    # return the state dictionary for the model after the last update
+    return net.state_dict()
+
+
+def valid_loop(valid_dur, valid_data, valid_targ, hist_len, net, optimizer, data, targ, batch_size, device, criterion):
+    # initialize counter for the total number of minibatches
+    batch_count = 1
+    # get the total number of samples in the training data
+    num_samps = data.shape[0]
+    # initialize recent history tensor and index counter to track where loss should be added to it
+    recent_hist = torch.zeros(500, device=device)
+    hist_ind = 0
+    # create an empty list to track validation history
+    valid_hist = []
+    # create an empty list to store the mean of the last 500 batch losses
+    loss_hist = []
+    # initialize the flag that determines whether validation error is decreasing
+    valid_dec = True
+    # initialize validation dictionary to contain dictionaries of model parameters so we can revert to last model before
+    # error increased
+    valid_dict = {}
+    # in the dictionary, higher integer keys indicate more recent model parameters
+    for i in range(hist_len + 1):
+        valid_dict[i] = None
+
+    # iterate while validation error is decreasing
+    while valid_dec:
+        # zero the gradient
+        optimizer.zero_grad()
+
+        # get error for minibatch, back prop, and update model
+        loss = process_minibatch(
+            num_samps, net, optimizer, data, targ, batch_size, device, criterion)
+
+        # add loss to the current recent loss history and update the index counter
+        recent_hist[hist_ind] = loss
+        hist_ind = hist_ind + 1
+
+        # update the long run loss history every 500 iterations
+        if batch_count % 500 == 0:
+            loss_hist = update_loss_hist(
+                loss_hist, recent_hist, batch_count)
+            # reset recent history and associated index
+            recent_hist = torch.zeros(500, device=device)
+            hist_ind = 0
+
+        # update valid history every valid_dur iterations
+        if batch_count % valid_dur == 0:
+            # get loss on the validation set
+            valid_loss = get_valid_loss(net, valid_data, valid_targ, criterion)
+            valid_hist.append(valid_loss)
+            # move state history back 1 iteration
+            for i in range(hist_len):
+                valid_dict[i] = copy.deepcopy(valid_dict[i + 1])
+            # make the most recent entry equal state dict
+            valid_dict[hist_len] = copy.deepcopy(net.state_dict)
+
+            # check the stopping criterion that the validation error has
+            # increased on the last two iterations
+            valid_dec = is_valid_dec(valid_hist, hist_len)
+    # exiting while loop indicates stopping criterion has been reached
+    # return the model state stored in the oldest recorded dictionary (valid_dict[0])
+    return valid_dict[0]
+
+
 def get_optimizer(net, exp_name):
     '''
     Description: Parsing experiment name to extract optimizer
@@ -196,7 +379,12 @@ def main():
     # value should give the percentage of the training sample to be used
     # for the validation step
     parser.add_argument('--valid', action='store', type=float, default=None)
-
+    # gives the number of mini-batches that should take place before evaluating
+    # the validation set
+    parser.add_argument('--dur_valid', action='store', type=int, default=None)
+    # gives the number of consecutive error increases required to
+    # trigger the stopping criterion
+    parser.add_argument('--hist_len', action='store', type=int, default=None)
     # extract parameters
     args = parser.parse_args()
     exp_name = args.exp.strip()
@@ -204,13 +392,28 @@ def main():
     num_batches = args.batches
     batch_size = args.batch_size
 
-    # check whether an argument was given for the valid flag,
+    # set a flag for whether the stopping criterion being used is
+    # a validation error set
+    valid = 'val' in exp_name
+
+    # check whether the validation flag has been activated
     # indicating the stopping criterion should be based on
     # performance of a validation set
-    if args.valid is not None:
+    if valid:
         valid_size = args.valid
-    else:
-        valid_size = None
+        # check whether a duration (ie number of batches between validation check)
+        # has been given, if not, set to 1000
+        if args.dur_valid is not None:
+            valid_dur = args.dur_valid
+        else:
+            valid_dur = 1000
+        # check whether a history length has been given (ie the number of consecutive)
+        # validation error increases required to trigger the stopping criterion
+        # if not, set to 1
+        if args.hist_len is not None:
+            hist_len = args.hist_len
+        else:
+            hist_len = 1
 
     # set flag indicating whether this is an offer model
     if 'time' in exp_name:
@@ -301,7 +504,7 @@ def main():
 
     # if stopping criterion is based ontest performance
     # initialize validation set
-    if valid_size is not None:
+    if valid:
         # get the number of samples associated with the percentage size
         valid_size = int(len(df.index) * valid_size)
         # valid_size samples from the range of integers in df.index (since this should
@@ -365,59 +568,39 @@ def main():
         classes = classes.to(device)
         net = Net(num_feats, num_units, num_classes, classes)
         criterion = nn.MSELoss(size_average=True, reduce=True)
+
     # move net to appropriate device
     net.to(device)
+
+    # convert data and target to tensors and place them on the appropriate
+    # device
+    data = torch.from_numpy(data).float()
+    targ = torch.from_numpy(targ)
+    # convert targ to appropriate type
+    if 'cross' in exp_name:
+        targ = targ.long()
+    else:
+        targ = targ.float()
+    # change dimension
+    targ = targ.view(-1)
+
+    # move to device
+    data, targ = data.to(device), targ.to(device)
+
     # training loop prep
-    loss = criterion
     loss_hist = []
-    recent_hist = []
     optimizer = get_optimizer(net, exp_name)
 
     # training loop iteration
-    for i in range(num_batches):
-        optimizer.zero_grad()
-        if i % 500 == 0 and i > 0:
-            print('Batch: %d of %d' % (i, num_batches))
-            recent_hist = np.array(recent_hist)
-            recent_hist = np.mean(recent_hist)
-            loss_hist.append(recent_hist)
-            print('Recent Loss Mean: %.2f' % recent_hist)
-            cuda_check = loss.is_cuda
-            if cuda_check:
-                print(loss.get_device())
-            sys.stdout.flush()
-            recent_hist = []
-            sys.stdout.flush()
-        # grab sample indices
-        sample_inds = np.random.random_integers(
-            0, (targ.size - 1), size=batch_size)
-        # grab sample data
-        sample_input = data[sample_inds, :]
-        # convert to tensor
-        sample_input = torch.from_numpy(sample_input)
-        # grab corresponding target
-        sample_targ = targ[sample_inds]
-        sample_targ = torch.from_numpy(sample_targ)
+    if valid_size is None:
+        # standard num iterations stopping criterion
+        state_dict = batch_count_loop(
+            num_batches, net, optimizer, data, targ, batch_size, device, criterion)
+    else:
+        # validation set stopping criterion
+        state_dict, val_hist = valid_loop(valid_dur, valid_data, valid_targ, hist_len, net,
+                                          optimizer, data, targ, batch_size, device, criterion)
 
-        # move sample targ and input to appropriate device
-        sample_targ, sample_input = sample_targ.to(
-            device), sample_input.to(device)
-
-        # convert input type to float
-        sample_input = sample_input.float()
-        # convert target to appropriate data type
-        if 'cross' in exp_name:
-            sample_targ = sample_targ.long()
-            output = net(sample_input)
-        else:
-            sample_targ = sample_targ.float()
-            output = net(sample_input).view(-1)
-
-        sample_targ = sample_targ.view(-1)
-        loss = criterion(output, sample_targ)
-        loss.backward()
-        optimizer.step()
-        recent_hist.append(loss.detach().cpu().numpy())
     print('Done Training')
     sys.stdout.flush()
     print('Pickling')
@@ -425,13 +608,23 @@ def main():
 
     # save outputs
     # save model parameters
-    torch.save(net.state_dict(), 'models/exps/%s/model_%s.pth.tar' %
+    torch.save(state_dict, 'models/exps/%s/model_%s.pth.tar' %
                (exp_name, turn))
-    # save loss history
+
+    # save loss history and validation loss history if its given
     loss_pickle = open('models/exps/%s/loss_%s.pickle' %
                        (exp_name, turn), 'wb')
-    pickle.dump(loss_hist, loss_pickle)
+    loss_dict = {}
+    loss_dict['train_loss'] = loss_hist
+
+    # save validation history if validation set is used as stopping criterion
+    if valid:
+        loss_dict['valid_loss'] = val_hist
+
+    # dump and close pickle
+    pickle.dump(loss_dict, loss_pickle)
     loss_pickle.close()
+
     # save class_series
     class_series.to_csv(
         'models/exps/%s/class_series_%s.csv' % (exp_name, turn))
