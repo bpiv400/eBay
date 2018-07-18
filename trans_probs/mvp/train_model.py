@@ -192,6 +192,10 @@ def main():
     parser.add_argument('--batches', action='store', type=float)
     # set the number of mini batches
     parser.add_argument('--batch_size', action='store', type=int)
+    # whether a validation set should be used to determine stopping
+    # value should give the percentage of the training sample to be used
+    # for the validation step
+    parser.add_argument('--valid', action='store', type=float, default=None)
 
     # extract parameters
     args = parser.parse_args()
@@ -199,6 +203,14 @@ def main():
     turn = args.turn.strip()
     num_batches = args.batches
     batch_size = args.batch_size
+
+    # check whether an argument was given for the valid flag,
+    # indicating the stopping criterion should be based on
+    # performance of a validation set
+    if args.valid is not None:
+        valid_size = args.valid
+    else:
+        valid_size = None
 
     # set flag indicating whether this is an offer model
     if 'time' in exp_name:
@@ -287,6 +299,38 @@ def main():
     if 'cross' in exp_name:
         df = get_resp_turn_classes(df, resp_col, class_series)
 
+    # if stopping criterion is based ontest performance
+    # initialize validation set
+    if valid_size is not None:
+        # get the number of samples associated with the percentage size
+        valid_size = int(len(df.index) * valid_size)
+        # valid_size samples from the range of integers in df.index (since this should
+        # be a simple step index)
+        valid_inds = np.random.random_integers(
+            0, (len(df.index) - 1), valid_size)
+        # grab the corresponding data then drop the rows from the data frame
+        valid_df = df.loc[valid_inds].copy()
+        df.drop(index=valid_inds, inplace=True)
+        # grab the target, drop the column, then export the rest as a
+        # numpy matrix for training
+        valid_targ = valid_df[resp_col].values
+        valid_df.drop(columns=resp_col, inplace=True)
+        valid_data = valid_df.data
+        del valid_df
+        # convert both valid_data and valid_targ to tensors for training
+        valid_targ = torch.from_numpy(valid_targ)
+        # convert data to a float
+        valid_data = torch.from_numpy(valid_data).float()
+        # converts valid targ to the appropriate type depending on kind of model
+        # float for exp
+        # long for crossent
+        if 'cross' in exp_name:
+            valid_targ = valid_targ.long()
+        else:
+            valid_targ = valid_targ.float()
+        # move both the correct device
+        valid_targ, valid_data = valid_targ.to(device), valid_data.to(device)
+
     # grab target
     targ = df[resp_col].values
     # drop response variable
@@ -302,6 +346,7 @@ def main():
         counter = counter + 1
 
     data = df.values
+
     del df
 
     # calculating parameter values for the model from data
@@ -327,6 +372,7 @@ def main():
     loss_hist = []
     recent_hist = []
     optimizer = get_optimizer(net, exp_name)
+
     # training loop iteration
     for i in range(num_batches):
         optimizer.zero_grad()
