@@ -164,10 +164,14 @@ def get_resp_turn_classes(df, resp_turn, class_series):
 
 
 def update_loss_hist(loss_hist, recent_hist, curr_batch=None, num_batches=None):
-    if curr_batch is not None:
+    if num_batches is not None:
         print('Batch: %d of %d' % (curr_batch, num_batches))
+    else:
+        print('Batche: %d' % curr_batch)
     # convert recent hist to numpy array
     recent_hist = recent_hist.detach().cpu().numpy()
+    # recent_hist bug
+    print('Recent hist bug: %r' % np.any(recent_hist == 0))
     # get the mean of the recent history
     recent_hist = np.mean(recent_hist)
     # append this to the long-run loss history
@@ -180,7 +184,7 @@ def update_loss_hist(loss_hist, recent_hist, curr_batch=None, num_batches=None):
 def process_minibatch(num_samps, net, optimizer, data, targ, batch_size, device, criterion):
     # grab sample indices
     sample_inds = torch.randint(
-        low=0, high=num_samps, size=batch_size, device=device)
+        low=0, high=num_samps, size=(batch_size,), device=device).long()
 
     # grab sample data
     sample_input = data[sample_inds, :]
@@ -210,7 +214,7 @@ def process_valid(net, valid_data, valid_targ, criterion):
         output = net(valid_data).view(-1)
 
     # calculate loss
-    loss = criterion(output, sample_targ)
+    loss = criterion(output, valid_targ)
     # return as numpy
     loss = loss.detach().cpu().numpy()
     return loss
@@ -281,7 +285,7 @@ def batch_count_loop(num_batches, net, optimizer, data, targ, batch_size, device
             recent_hist = torch.zeros(500, device=device)
             hist_ind = 0
     # return the state dictionary for the model after the last update
-    return net.state_dict()
+    return net.state_dict(), loss_hist
 
 
 def valid_loop(valid_dur, valid_data, valid_targ, hist_len, net, optimizer, data, targ, batch_size, device, criterion):
@@ -329,20 +333,22 @@ def valid_loop(valid_dur, valid_data, valid_targ, hist_len, net, optimizer, data
         # update valid history every valid_dur iterations
         if batch_count % valid_dur == 0:
             # get loss on the validation set
-            valid_loss = get_valid_loss(net, valid_data, valid_targ, criterion)
+            valid_loss = process_valid(net, valid_data, valid_targ, criterion)
             valid_hist.append(valid_loss)
+            print('Valid Loss %d: %.2f' % (len(valid_hist), valid_loss))
             # move state history back 1 iteration
             for i in range(hist_len):
                 valid_dict[i] = copy.deepcopy(valid_dict[i + 1])
             # make the most recent entry equal state dict
-            valid_dict[hist_len] = copy.deepcopy(net.state_dict)
+            valid_dict[hist_len] = copy.deepcopy(net.state_dict())
 
             # check the stopping criterion that the validation error has
             # increased on the last two iterations
             valid_dec = is_valid_dec(valid_hist, hist_len)
+        batch_count = batch_count + 1
     # exiting while loop indicates stopping criterion has been reached
     # return the model state stored in the oldest recorded dictionary (valid_dict[0])
-    return valid_dict[0]
+    return valid_dict[0], loss_hist, valid_hist
 
 
 def get_optimizer(net, exp_name):
@@ -388,6 +394,7 @@ def main():
     parser.add_argument('--hist_len', action='store', type=int, default=None)
     # extract parameters
     args = parser.parse_args()
+    global exp_name
     exp_name = args.exp.strip()
     turn = args.turn.strip()
     num_batches = args.batches
@@ -519,7 +526,7 @@ def main():
         # numpy matrix for training
         valid_targ = valid_df[resp_col].values
         valid_df.drop(columns=resp_col, inplace=True)
-        valid_data = valid_df.data
+        valid_data = valid_df.values
         del valid_df
         # convert both valid_data and valid_targ to tensors for training
         valid_targ = torch.from_numpy(valid_targ)
@@ -555,10 +562,12 @@ def main():
 
     # calculating parameter values for the model from data
     num_feats = data.shape[1]
-    num_batches = int(data.shape[0] / batch_size * num_batches)
     classes = class_series.index.values
     num_classes = classes.size
     num_units = get_num_units(exp_name)
+
+    if not valid:
+        num_batches = int(data.shape[0] / batch_size * num_batches)
 
     # initialize model with appropriate arguments
     if 'cross' in exp_name:
@@ -593,14 +602,14 @@ def main():
     optimizer = get_optimizer(net, exp_name)
 
     # training loop iteration
-    if valid_size is None:
+    if not valid:
         # standard num iterations stopping criterion
-        state_dict = batch_count_loop(
+        state_dict, loss_hist = batch_count_loop(
             num_batches, net, optimizer, data, targ, batch_size, device, criterion)
     else:
         # validation set stopping criterion
-        state_dict, val_hist = valid_loop(valid_dur, valid_data, valid_targ, hist_len, net,
-                                          optimizer, data, targ, batch_size, device, criterion)
+        state_dict, loss_hist, val_hist = valid_loop(valid_dur, valid_data, valid_targ, hist_len, net,
+                                                     optimizer, data, targ, batch_size, device, criterion)
 
     print('Done Training')
     sys.stdout.flush()

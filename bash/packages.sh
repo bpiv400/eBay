@@ -4,7 +4,7 @@
 #$ -m e -M 4102158912@vtext.com
 
 source /opt/rh/rh-python36/enable
-source ~/envs/bargain/bin/activate
+source ~/.virtualenvs/jupyterlab-py36/bin/activate
 pip install pandas
 pip install bokeh
 pip install nltk
