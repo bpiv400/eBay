@@ -45,7 +45,6 @@ import os
 #              }
 ##############################################
 
-
 def genIndicators(all_ids, flag, hold_out=True):
     '''
     Description: Converts anonymized ids into a set of indicator variables and
