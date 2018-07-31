@@ -849,6 +849,10 @@ def grab_seqs_len2(df):
     # drop the prev_offr_price feature...meaningless for b0
     df.drop(columns='prev_offr_price', inplace=True)
     # execute error checking function
+    # remove lagging columns
+    if 'passed' in df.columns:
+        df.drop(columns=['passed', 'frac_passed',
+                         'remain', 'frac_remain'], inplace=True)
     check_legit(df, 's0')
     # print(df.columns)
     return df
@@ -920,6 +924,11 @@ def grab_seqs_len3(df):
     if 'offr_type_id' in off1df.columns:
         off1df.drop(columns=['offr_type_id'], inplace=True)
 
+    # remove lagging columns
+    if 'passed' in df.columns:
+        df.drop(columns=['passed', 'frac_passed',
+                         'remain', 'frac_remain'], inplace=True)
+
     check_legit(off1df, 'b1')
     return off1df
 
@@ -978,6 +987,12 @@ def grab_seqs_len4(df):
     # add features for s1 and a filler time for b0
     df = date_feats(df, 's1')
     df['time_b0'] = df['passed_b0']
+
+    # remove lagging columns
+    if 'passed' in df.columns:
+        df.drop(columns=['passed', 'frac_passed',
+                         'remain', 'frac_remain'], inplace=True)
+
     # finally check the data for processing errors
     check_legit(df, 's1')
     return df
@@ -1039,6 +1054,11 @@ def grab_seqs_len5(df):
     # add date features for b2
     df = date_feats(df, 'b2')
     df['time_b0'] = df['passed_b0']
+
+    # remove lagging columns
+    if 'passed' in df.columns:
+        df.drop(columns=['passed', 'frac_passed',
+                         'remain', 'frac_remain'], inplace=True)
 
     # check validity
     check_legit(df, 'b2')
@@ -1117,6 +1137,11 @@ def grab_seqs_len6(df):
     df = date_feats(df, 's2')
     df['time_b0'] = df['passed_b0']
 
+    # remove lagging columns
+    if 'passed' in df.columns:
+        df.drop(columns=['passed', 'frac_passed',
+                         'remain', 'frac_remain'], inplace=True)
+
     # check validity
     check_legit(df, 's2')
     return df
@@ -1133,6 +1158,12 @@ def grab_seqs_len7(df):
     # create new date features
     df = date_feats(df, 'b3')
     df['time_b0'] = df['passed_b0']
+
+    # remove lagging columns
+    if 'passed' in df.columns:
+        df.drop(columns=['passed', 'frac_passed',
+                         'remain', 'frac_remain'], inplace=True)
+
     # check for legitimacy
     check_legit(df, 'b3')
     return df
