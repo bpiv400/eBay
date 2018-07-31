@@ -8,7 +8,8 @@ import matplotlib.pyplot as plt
 import gc
 
 # NOTE: ADDRESS THE MESSAGE PROBLEM
-# for the time being we remove message 
+# for the time being we remove message
+
 
 def date_feats(feat_df, col_abv):
     '''
@@ -199,7 +200,8 @@ def grab_turn(df, turn, seller):
                           level='unique_thread_id', inplace=True)
                 del seller_counters
                 gc.collect()
-
+            else:
+                len2 = None
             # moving on to len34
             # pattern: the buyer's second turn occurs on turn_count = 2 except when a seller
             # counter offer occurs at turn_count = 2
@@ -229,58 +231,67 @@ def grab_turn(df, turn, seller):
                 len34.drop(index=other_offr_ids, inplace=True)
                 del middle_offr_ids
                 del other_offr_ids
-
+            else:
+                len34 = None
             # moving onto len 5 df
             # split into threads where the last offer is a seller counter offer or not
-            last_seller_threads = len5.xs(4, level='turn_count', drop_level=True)[
-                'offr_type_id']
-            # threads where teh last offer is a seller
-            seller_threads = last_seller_threads[last_seller_threads == 2].index
-            # threads where the last offer is a buyer
-            buyer_threads = last_seller_threads[last_seller_threads != 2].index
-            del last_seller_threads
-            # grab the corresponding feature sets from the df for buyers and sellers using
-            # the ids above
-            # in threads where the last offer is a buyer, there must have been exactly 2
-            # seller offers, meaning turn_count=2 corresponds to the buyer's second turn
-            buyers = len5.loc[buyer_threads].copy()
-            sellers = len5.loc[seller_threads].copy()
-            del len5
+            if len(len5.index) > 0:
+                last_seller_threads = len5.xs(4, level='turn_count', drop_level=True)[
+                    'offr_type_id']
+                # threads where teh last offer is a seller
+                seller_threads = last_seller_threads[last_seller_threads == 2].index
+                # threads where the last offer is a buyer
+                buyer_threads = last_seller_threads[last_seller_threads != 2].index
+                del last_seller_threads
+                # grab the corresponding feature sets from the df for buyers and sellers using
+                # the ids above
+                # in threads where the last offer is a buyer, there must have been exactly 2
+                # seller offers, meaning turn_count=2 corresponds to the buyer's second turn
+                buyers = len5.loc[buyer_threads].copy()
+                sellers = len5.loc[seller_threads].copy()
 
-            # for the buyers df, throw out everything
-            # moving on to 6 length
-            if len(buyers.index) > 0:
-                buyers.drop(index=[1, 3, 4],
-                            level='turn_count', inplace=True)
+                del len5
 
-            # for the sellers df, if the first turn is declined, then the b1 is located
-            # at turn_count = 1
-            # find the subset of threads where turn_count = 0 is declined
-            first_turn = sellers.xs(0, level='turn_count', drop_level=True)[
-                'status_id']
-            first_turn_dec = first_turn[first_turn.isin([0, 2, 6, 8])].index
-            # remove unnecessary variable
-            del first_turn
-            # extract corresponding feature sets from dual indexed df
-            first_dec_threads = sellers.loc[first_turn_dec].copy()
-            # drop all indices except turn_count = 0 (the initial offer) and turn_count = 1
-            # which corresponds to b1
-            first_dec_threads.drop(
-                index=[2, 3, 4], level='turn_count', inplace=True)
-            # remove the isolated threads from the buyers df from which they were removed
-            sellers.drop(index=first_turn_dec,
-                         level='unique_thread_id', inplace=True)
-            # this leaves only threads where the last offer is a seller and the
-            # first offer is not declined
-            # in these cases, remove all turns except turn_count = 0 and turn_count = 2, since turn_count=1
-            # must be a counter offer
-            sellers.drop(index=[1, 3, 4], level='turn_count', inplace=True)
+                # for the buyers df, throw out everything
+                # moving on to 6 length
+                if len(buyers.index) > 0:
+                    buyers.drop(index=[1, 3, 4],
+                                level='turn_count', inplace=True)
 
+                # for the sellers df, if the first turn is declined, then the b1 is located
+                # at turn_count = 1
+                # find the subset of threads where turn_count = 0 is declined
+                first_turn = sellers.xs(0, level='turn_count', drop_level=True)[
+                    'status_id']
+                first_turn_dec = first_turn[first_turn.isin(
+                    [0, 2, 6, 8])].index
+                # remove unnecessary variable
+                del first_turn
+                # extract corresponding feature sets from dual indexed df
+                first_dec_threads = sellers.loc[first_turn_dec].copy()
+                # drop all indices except turn_count = 0 (the initial offer) and turn_count = 1
+                # which corresponds to b1
+                first_dec_threads.drop(
+                    index=[2, 3, 4], level='turn_count', inplace=True)
+                # remove the isolated threads from the buyers df from which they were removed
+                sellers.drop(index=first_turn_dec,
+                             level='unique_thread_id', inplace=True)
+                # this leaves only threads where the last offer is a seller and the
+                # first offer is not declined
+                # in these cases, remove all turns except turn_count = 0 and turn_count = 2, since turn_count=1
+                # must be a counter offer
+                sellers.drop(index=[1, 3, 4], level='turn_count', inplace=True)
+            else:
+                buyers = None
+                sellers = None
+                first_dec_threads = None
             # throw out everything past turn_count = 2 and the second turn
             # which necessarily must be a seller offer
             if len(len6.index) > 0:
                 len6.drop(index=[1, 3, 4, 5],
                           level='turn_count', inplace=True)
+            else:
+                len6 = None
             # concat all dfs
             out = pd.concat([len2, len34, buyers, sellers,
                              first_dec_threads, len6], sort=False)
@@ -444,7 +455,6 @@ def grab_turn(df, turn, seller):
                 third_off = len3.xs(2, level='turn_count', drop_level=True)[
                     'offr_type_id']
                 seller_threads = third_off[third_off == 2].index
-                print(seller_threads[seller_threads == 1055])
                 # remove these threads from the df
                 len3.drop(index=seller_threads,
                           level='unique_thread_id', inplace=True)
@@ -546,23 +556,28 @@ def grab_turn(df, turn, seller):
             if len(len6.index) > 0:
                 len6.drop(index=[0, 1, 2, 3, 5],
                           level='turn_count', inplace=True)
-
+            else:
+                len6 = None
             out = pd.concat([len6, len4, len3, buyers, sellers])
+            # cleaning unused vars
             del len4
             del len3
             del len6
             del buyers
             del sellers
 
+            # rename columns
             out.rename(columns={'response_time': 'date_s2',
                                 'src_cre_date': 'date_b2',
                                 'offr_price': 'offr_b2',
                                 'resp_offr': 'offr_s2'},
                        inplace=True)
+            # drop extra columns
             out.drop(columns=['prev_offr_price', 'status_id',
                               'offr_type_id'], inplace=True)
             # adding features
             out.reset_index(level='turn_count', drop=True, inplace=True)
+
             out = out.merge(off2df, how='inner',
                             left_index=True, right_index=True)
             del off2df
@@ -575,6 +590,8 @@ def grab_turn(df, turn, seller):
             return out
 
         else:
+            thrd_len = df.groupby('unique_thread_id').count()['turn_count']
+
             # for the s2 model, we are predicting 'offr_b3'--since buyers
             # don't technically have the ability to make a 4th offer,
             # this offer can only be a response in the threads where the seller
@@ -582,6 +599,23 @@ def grab_turn(df, turn, seller):
 
             # first, grab all threads where the buyer makes at least 3 offers
             b2df = grab_turn(df.copy(), 2, seller=False)
+            # retain only columns derived from offer-by-offer processing
+            b2df = b2df[['offr_b0', 'offr_b1', 'offr_b2', 'offr_s2',
+                         'date_b0', 'date_b1', 'date_b2',
+                         'date_s1', 'date_s0', 'date_s2',
+                         'offr_s0', 'offr_s1', 'frac_passed_b0',
+                         'frac_passed_b1', 'frac_passed_b2',
+                         'frac_passed_s0', 'frac_passed_s1',
+                         'frac_remain_b0', 'frac_remain_b1',
+                         'frac_remain_s0', 'frac_remain_b2',
+                         'frac_remain_s1', 'time_s0', 'time_s1',
+                         'time_b1', 'time_b2', 'time_s2',
+                         'passed_b0', 'passed_b1', 'passed_s0',
+                         'passed_b2', 'passed_s1',
+                         'remain_b0', 'remain_b1',
+                         'remain_b2', 'remain_s1',
+                         'remain_s0']].copy()
+            # error checking
 
             # create subset dfs that only contain threads with 4, 5, or 6 offers (the minimum required for the
             # seller to make a counter offer)
@@ -594,7 +628,7 @@ def grab_turn(df, turn, seller):
 
             # create len specific subsets of df using ids extracted above
             len4 = df.loc[len_4_ids].copy(deep=True)
-            df.drop(index=len5.index, inplace=True)
+            df.drop(index=len4.index, inplace=True)
             gc.collect()
             len5 = df.loc[len_5_ids].copy(deep=True)
             df.drop(index=len5.index, inplace=True)
@@ -609,41 +643,51 @@ def grab_turn(df, turn, seller):
 
             # now, subset len4 to contain only threads where the last offer is a seller offer
             # and the first offer is declined
-            first_off_stat = len4.xs(0, level='turn_count',
-                                     drop_level=True)['status_id'].copy()
-            last_off_type = len4.xs(3, level='turn_count',
-                                    drop_level=True)['offr_type_id'].copy()
-            # get indices where the first offer is declined
-            f_dec_inds = first_off_stat[first_off_stat.isin(
-                [0, 2, 6, 8])].index
-            # get indices where the last offer is a seller offer
-            l_sel_inds = last_off_type[last_off_type == 2].index
-            # clean up crew
-            del first_off_stat
-            del last_off_type
-            # create a set of thread ids where first_offer is declined and
-            # the last offer is a seller offer
-            shared_inds = np.intersect1d(f_dec_inds.values, l_sel_inds.values)
-            del f_dec_inds
-            del l_sel_inds
+            if len(len4.index) > 0:
+                first_off_stat = len4.xs(0, level='turn_count',
+                                         drop_level=True)['status_id'].copy()
+                last_off_type = len4.xs(3, level='turn_count',
+                                        drop_level=True)['offr_type_id'].copy()
+                # get indices where the first offer is declined
+                f_dec_inds = first_off_stat[first_off_stat.isin(
+                    [0, 2, 6, 8])].index
+                # get indices where the last offer is a seller offer
+                l_sel_inds = last_off_type[last_off_type == 2].index
+                # clean up crew
+                del first_off_stat
+                del last_off_type
+                # create a set of thread ids where first_offer is declined and
+                # the last offer is a seller offer
+                shared_inds = np.intersect1d(
+                    f_dec_inds.values, l_sel_inds.values)
+                del f_dec_inds
+                del l_sel_inds
 
-            # now subset len4 df to only contain these threads
-            len4 = len4.loc[shared_inds].copy()
+                # now subset len4 df to only contain these threads
+                len4 = len4.loc[shared_inds].copy()
+                # remove all but the last offer for each data frame
+                len4.drop(index=[0, 1, 2], level='turn_count', inplace=True)
+            else:
+                len4 = None
 
             # subset len5 df to only contain threads where the last offer is a seller
-            last_off_type = len4.xs(4, level='turn_count',
-                                    drop_level=True)['offr_type_id'].copy()
-            l_sel_inds = last_off_type[last_off_type == 2].index
-            del last_off_type
-            len5 = len5.loc[l_sel_inds]
-            del l_sel_inds
-
-            # remove all but the last offer for each data frame
-            len4.drop(index=[0, 1, 2], level='turn_count', inplace=True)
-            len5.drop(index=[0, 1, 2, 3],
-                      level='turn_count', inplace=True)
-            len6.drop(index=[0, 1, 2, 3, 4],
-                      level='turn_count', inplace=True)
+            if len(len5.index) > 0:
+                last_off_type = len5.xs(4, level='turn_count',
+                                        drop_level=True)['offr_type_id'].copy()
+                l_sel_inds = last_off_type[last_off_type == 2].index
+                del last_off_type
+                len5 = len5.loc[l_sel_inds]
+                del l_sel_inds
+                len5.drop(index=[0, 1, 2, 3],
+                          level='turn_count', inplace=True)
+            else:
+                # remove all but the last offer for each data frame
+                len5 = None
+            if len(len6.index) > 0:
+                len6.drop(index=[0, 1, 2, 3, 4],
+                          level='turn_count', inplace=True)
+            else:
+                len6 = None
 
             out = pd.concat([len4, len5, len6])
 
@@ -712,15 +756,31 @@ def check_legit(df, last_offr_code, feats=['frac_passed', 'frac_remain', 'passed
     print('Checking data frame for sequences ending with %s' % last_offr_code)
     # grab columns
     cols = df.columns
+    # create a boolean to track whether an engineered column contains null values
+    null_found = False
     # iterate over all codes
     for code in offr_codes:
         # iterate over all features whose existence we must ensure
         for feat in feats:
             # ensure the column is in the data frame, raise an error otherwise
+            # and if each column is contained, ensure that it does not have
+            # any null values
             feat_name = '%s_%s' % (feat, code)
             if feat_name not in cols:
                 raise ValueError(
                     'df expected %s, but does not contain it' % feat_name)
+            # if the column exists
+            else:
+                # check if the current column has any null values
+                has_null = df[feat_name].isnull().any()
+                # if a null value is detected, throw a value exception
+                if has_null:
+                    print('Null vals contained in %s' % feat_name)
+                    null_found = True
+    # after looping over all columns, if a null value has been discovered,
+    # stop execution
+    if null_found:
+        raise ValueError('Df contains null value in an engineering column')
     # check that df is indexed by unique_thread_id and turn_count doesn't exist in
     # the data frame
     if df.index.name != 'unique_thread_id':
@@ -734,16 +794,15 @@ def check_legit(df, last_offr_code, feats=['frac_passed', 'frac_remain', 'passed
     if len(df.index) != len(np.unique(df.index.values)):
         raise ValueError('index contains repeating thread ids')
     # check that the df does not contain any nan values
-    na_ser = df.isnull()
-    if na_ser.values.any():
-        # grab names of columns containing na values
-        nan_cols = na_ser[na_ser.values].index.values
-        # iterate over names
-        for col in nan_cols:
-            print('Null vals contained in %s' % col)
-        raise ValueError('DF contains null values')
+
     if 'offr_type_id' in cols or 'status_id' in cols:
         raise ValueError('DF contains status id or offr_type_id')
+
+    # ensure no collision columns exist in the output df
+    for col in cols:
+        if '_x' in col or '_y' in cols:
+            print('%s collided in output df' % col)
+            raise ValueError('DF contains column collision')
     pass
 
 
@@ -775,7 +834,7 @@ def grab_seqs_len2(df):
     df.rename(columns={'response_time': 'date_s0',
                        'offr_price': 'offr_b0',
                        'resp_offr': 'offr_s0',
-                       'src_cre_date': 'date_b0'})
+                       'src_cre_date': 'date_b0'}, inplace=True)
     # grab date features for the first two offers
     df = date_feats(df, 'b0')
     df = date_feats(df, 's0')
@@ -784,7 +843,14 @@ def grab_seqs_len2(df):
     # set time feature for the first buyer offer to equal the amount
     # of time that has passed since the beginning of the auction
     df['time_b0'] = df['passed_b0']
-    # return df
+
+    # drop status id and offr_type features
+    df.drop(columns=['offr_type_id', 'status_id'], inplace=True)
+    # drop the prev_offr_price feature...meaningless for b0
+    df.drop(columns='prev_offr_price', inplace=True)
+    # execute error checking function
+    check_legit(df, 's0')
+    # print(df.columns)
     return df
 
 
@@ -807,7 +873,7 @@ def grab_seqs_len3(df):
     # drop all seq threads, leaving only threads of length 2
     df.drop(index=seq_threads, level='unique_thread_id', inplace=True)
     # extract the offr type id for the second turn in each remaining thread
-    type_ids = df.xs(index=1, level='turn_count',
+    type_ids = df.xs(1, level='turn_count',
                      drop_level=True)['offr_type_id'].copy()
     # get the thread ids of the threads where the second offer isn't a seller offer
     not_seller_threads = type_ids[type_ids != 2].index
@@ -844,15 +910,18 @@ def grab_seqs_len3(df):
     # add date features for s0 (left out in grab_turn(...), since
     # the function was made not to generate date features for
     # response offers
-    off1df = date_feats(df, 's0')
-    off1df = date_feats(df, 'b1')
-    off1df = get_time(df, 'b1', 's0')
+    off1df = date_feats(off1df, 's0')
+    off1df = date_feats(off1df, 'b1')
+    off1df = get_time(off1df, 'b1', 's0')
     off1df['time_b0'] = off1df['passed_b0']
 
-    off1df.drop(columns=['status_id', 'offr_type_id'], inplace=True)
+    if 'status_id' in off1df.columns:
+        off1df.drop(columns=['status_id'], inplace=True)
+    if 'offr_type_id' in off1df.columns:
+        off1df.drop(columns=['offr_type_id'], inplace=True)
 
-    check_legit(df, 'b1')
-    return df
+    check_legit(off1df, 'b1')
+    return off1df
 
 
 def grab_seqs_len4(df):
@@ -883,8 +952,8 @@ def grab_seqs_len4(df):
     # set index to tuple of turn count and thread id
     df.set_index(['unique_thread_id', 'turn_count'], inplace=True)
     # grab the offr type of the last turn for the threads with 3 offers
-    final_turn_type = df.loc[len3_thrds].xs(
-        index=2, level='turn_count', drop_level=True)['offr_type_id'].copy()
+    final_turn_type = df.loc[len3_thrds].xs(2, level='turn_count', drop_level=True)[
+        'offr_type_id'].copy()
     # some error checking for the subset above
     if len(df.index) == len(final_turn_type.index):
         raise ValueError('Subset failure')
@@ -894,7 +963,7 @@ def grab_seqs_len4(df):
     final_turn_buyer = final_turn_type[final_turn_type != 2].index
     # grab the middle turn for the these threads
     mid_turn_type = df.loc[final_turn_buyer].xs(
-        index=2, level='turn_count', drop_level=True)['offr_type_id'].copy()
+        1, level='turn_count', drop_level=True)['offr_type_id'].copy()
     # get indices where the middle turn of the length 3 thread is also a buyer
     all_buyers = mid_turn_type[mid_turn_type != 2].index
     # drop len3 threads where the last offer is made by a seller
@@ -903,7 +972,8 @@ def grab_seqs_len4(df):
     df.drop(index=all_buyers, level='unique_thread_id', inplace=True)
     # drop all threads longer than 3 offers
     df.drop(index=long_thrds, level='unique_thread_id', inplace=True)
-    # grab thread offer features
+    # grab thread offer features after resetting index
+    df.reset_index(drop=False, inplace=True)
     df = grab_turn(df, 1, False)
     # add features for s1 and a filler time for b0
     df = date_feats(df, 's1')
@@ -922,11 +992,11 @@ def grab_seqs_len5(df):
     take place...This corresponds to removing:
     -all threads of with 6 offers stored
     -all threads of length 3 where all offers are made by buyers
-    -all threads of length 4 where at least offers are buyer offers
+    -all threads of length 4 where at least 3 offers are buyer offers
     -all threads where at least 5 offers are made 
     '''
     thrd_len = df.groupby('unique_thread_id').count()['turn_count']
-    long_thrds = thrd_len[thrd_len >= 4].index
+    long_thrds = thrd_len[thrd_len >= 5].index
     len3_thrds = thrd_len[thrd_len == 3].index
     len4_thrds = thrd_len[thrd_len == 4].index
     # set index to turn count, thread_id
@@ -942,6 +1012,7 @@ def grab_seqs_len5(df):
     byr_cnt = len4_type.groupby('unique_thread_id').count()['turn_count']
     # get all threads where 3 offers ha e been made by buyers
     three_byr_thrds = byr_cnt[byr_cnt == 3].index
+    # print(three_byr_thrds)
 
     # get offer type for threads of length 3
     len3_type = df.loc[len3_thrds, ['offr_type_id']].copy()
@@ -1000,7 +1071,7 @@ def grab_seqs_len6(df):
     # grab just offer_type_id and unique_thread_id columns for threads of length 4
     len4_type = df.loc[len4_thrds, ['offr_type_id']].copy()
     len4_last_type = len4_type.xs(
-        index=3, level='turn_count', drop_level=True).copy()
+        3, level='turn_count', drop_level=True).copy()
     # threads where the type of the last offer is a seller offer
     seller_last_thrds = len4_last_type[len4_last_type['offr_type_id'] == 2].index
     # now remove all seller offers from the len4_type data frame
@@ -1025,7 +1096,7 @@ def grab_seqs_len6(df):
     # find the type of the last offer for threads of len 5
     len5_type = df.loc[len5_thrds, ['offr_type_id']].copy()
     len5_last_type = len5_type.xs(
-        index=4, level='turn_count', drop_level=True).copy()
+        4, level='turn_count', drop_level=True).copy()
     # threads where the type of the last offer is a seller offer
     seller_last_thrds = len5_last_type[len5_last_type['offr_type_id'] == 2].index
 
@@ -1078,8 +1149,8 @@ def grab_seqs(df):
     seqs2 = grab_seqs_len2(df.copy())
     seqs3 = grab_seqs_len3(df.copy())
     seqs4 = grab_seqs_len4(df.copy())
-    seqs5 = grab_seqs_len5(df.copy())
-    seqs6 = grab_seqs_len6(df.copy())
+    seqs5 = grab_seqs_len5(df.copy())  # may contain the same index as
+    seqs6 = grab_seqs_len6(df.copy())  # seq 6 -- take a closer look
     seqs7 = grab_seqs_len7(df.copy())
 
     del df
@@ -1087,13 +1158,52 @@ def grab_seqs(df):
     # concatenate ids from all sequence dfs
     # ensure there are no repeats
     all_ids = seqs2.index.values
-    all_ids = np.concatenate(all_ids, seqs3.index.values)
-    all_ids = np.concatenate(all_ids, seqs4.index.values)
-    all_ids = np.concatenate(all_ids, seqs5.index.values)
-    all_ids = np.concatenate(all_ids, seqs6.index.values)
-    all_ids = np.concatenate(all_ids, seqs7.index.values)
+    ######################################################
+    # Error checking
+    # print(type(all_ids))
+    # print(type(all_ids[0]))
+    # print(type(seqs3.index.values))
+    # print(type(seqs3.index.values[0]))
+    ######################################################
+
+    all_ids = np.concatenate((all_ids, seqs3.index.values))
+
+    # compare indices of len2, len3, len4, and len5 to len6
+    #####################################################################
+    # ERROR CHECKING
+    if np.intersect1d(seqs2.index.values, seqs6.index.values).size > 0:
+        raise ValueError('len2 and len6 ids collide')
+    if np.intersect1d(seqs3.index.values, seqs6.index.values).size > 0:
+        raise ValueError('len3 and len6 ids collide')
+    if np.intersect1d(seqs4.index.values, seqs6.index.values).size > 0:
+        raise ValueError('len4 and len6 ids collide')
+    if np.intersect1d(seqs5.index.values, seqs6.index.values).size > 0:
+        print(np.intersect1d(seqs5.index.values, seqs6.index.values))
+        raise ValueError('len5 and len6 ids collide')
+    #######################################################################
+
     if len(all_ids) != len(np.unique(all_ids)):
-        raise ValueError('At least one thread is contained in multiple sequence' +
+        raise ValueError('1: At least one thread is contained in multiple sequence' +
+                         'dataFrames, which should represent sequences of distinct length')
+
+    all_ids = np.concatenate((all_ids, seqs4.index.values))
+    if len(all_ids) != len(np.unique(all_ids)):
+        raise ValueError('2: At least one thread is contained in multiple sequence' +
+                         'dataFrames, which should represent sequences of distinct length')
+
+    all_ids = np.concatenate((all_ids, seqs5.index.values))
+    if len(all_ids) != len(np.unique(all_ids)):
+        raise ValueError('3: At least one thread is contained in multiple sequence' +
+                         'dataFrames, which should represent sequences of distinct length')
+
+    all_ids = np.concatenate((all_ids, seqs6.index.values))
+    if len(all_ids) != len(np.unique(all_ids)):
+        raise ValueError('4: At least one thread is contained in multiple sequence' +
+                         'dataFrames, which should represent sequences of distinct length')
+
+    all_ids = np.concatenate((all_ids, seqs7.index.values))
+    if len(all_ids) != len(np.unique(all_ids)):
+        raise ValueError('5: At least one thread is contained in multiple sequence' +
                          'dataFrames, which should represent sequences of distinct length')
 
     # add empty features to the shorter length sequences to ensure equal dimensionality
@@ -1118,6 +1228,50 @@ def grab_seqs(df):
     return df
 
 
+def drop_buyer_thrds(df):
+    '''
+    Description: Drops all threads where 4 or more offers have been explicitly
+    made by the buyer, since these threads violate our assumption that 
+    both parties can only make 3 offers in all cases. These threads either
+    result from data processing errors or our lack of understanding of the 
+    eBay bargaining procedure. 
+
+    Pursue more after MVP has been developed 
+    '''
+    # group by thread length
+    df_type = df[['unique_thread_id', 'turn_count', 'offr_type_id']].copy()
+    # remove all seller offers from df_type
+    df_type = df_type[df_type['offr_type_id'] != 2]
+    # count remaining offers for each thread, giving a buyer count for each
+    # thread
+    byr_cnt = df_type.groupby('unique_thread_id').count()['turn_count']
+
+    # count the toal number of threads before removing any
+    tot = len(byr_cnt.index)
+
+    # grab all indices where buyer count is greater than or equal to 4
+    # since this should not be possible under our assumptions about the
+    # nature of eBay bargaining
+    many_byrs = byr_cnt[byr_cnt >= 4].index
+
+    # count the number of threads that will be dropped
+    num_drop = len(many_byrs)
+
+    # set df index to unique_thread, turn_count tuple
+    df.set_index(['unique_thread_id', 'turn_count'], inplace=True)
+
+    # drop allthreads with more than 4 buyers
+    df.drop(index=many_byrs, level='unique_thread_id', inplace=True)
+
+    # reset index
+    df.reset_index(inplace=True, drop=False)
+
+    # give the number of threads dropped due to this processing error
+    print('Dropped: %.2f %% of threads due to too many buyers' %
+          (num_drop / tot * 100))
+    return df
+
+
 def same_cols(df1, df2):
     '''
     Description: An error checking function that ensures both dataFrames contain the same features
@@ -1127,6 +1281,10 @@ def same_cols(df1, df2):
     infirst = np.setdiff1d(cols1, cols2)
     insecond = np.setdiff1d(cols2, cols1)
     if len(infirst) or len(insecond) != 0:
+        print('In the short sequence df')
+        print(infirst)
+        print('In the long sequence df')
+        print(insecond)
         raise ValueError(
             'Columns not correctly duplicated across data frames, missing in 1')
 
@@ -1144,9 +1302,9 @@ def add_empty_feats(df, final_code, feats=['frac_passed', 'frac_remain', 'passed
     all_offs = all_offr_codes('b3')
     print('Number of offers in the longest sequence: %d' % len(all_offs))
     observed_offs = all_offr_codes(final_code)
-    seq_len = 7 - (len(all_offr_codes) - len(observed_offs))
+    seq_len = 7 - (len(all_offs) - len(observed_offs))
     # create length feature
-    seq_len['length'] = pd.Series(seq_len, index=df.index)
+    df['length'] = pd.Series(seq_len, index=df.index)
     # generate list of offer codes not currently contained in df
     missing_offs = []
     for offr in all_offs:
@@ -1562,7 +1720,7 @@ def get_time_day_feats(df, time_dict):
             # create a string to name the new feature for the offer,
             # time period pair
             feat_name = '%s_%s' % (period, offr)
-            print(feat_name)
+            # print(feat_name)
             df[feat_name] = feat_ser
         # finally, add the raw time_of_day as a feature
         # first create a name for the feature
@@ -1573,7 +1731,8 @@ def get_time_day_feats(df, time_dict):
         df[time_feat_name] = time_of_day
     return df
 
-def inpute_missing_values(df):
+
+def impute_missing_values(df):
         # fixing seller and buyer history
     # assumed that NAN slr and byr histories indicate having participated in
     # 0 best offer threads previously
@@ -1631,7 +1790,7 @@ def inpute_missing_values(df):
     # no_msg = df[np.isnan(df['any_mssg'].values)].index
     # df.loc[no_msg, 'any_mssg'] = 0
     # del no_msg
-    # BUG MUST ADDRESS THE FACT THAT THIS IS A FEATURE OF THE THREAD NOT 
+    # BUG MUST ADDRESS THE FACT THAT THIS IS A FEATURE OF THE THREAD NOT
     # OF THE LISTING
     ###############################################################
 
@@ -1646,7 +1805,7 @@ def remove_oob(df):
     # get a list of all offers
     offrs = all_offr_codes('b3')
     offrs = ['offr_%s' for code in offrs]
-     # get total number of threads initially
+    # get total number of threads initially
     tot = len(df.index)
     # create running tally of number of threads dropped
     tally = 0
@@ -1661,6 +1820,7 @@ def remove_oob(df):
         df.drop(index=below, inplace=True)
     print('OOB removed: %.2f %% ' % (tally/tot * 100))
     return df
+
 
 def main():
     '''
@@ -1692,9 +1852,9 @@ def main():
     parser = argparse.ArgumentParser(
         description='associate threads with all relevant variables')
     # argument giving filename
-    parser.add_argument('--file', action='store', type=str, optional=False)
+    parser.add_argument('--file', action='store', type=str, required=False)
     # argument giving the read/write directory of the file
-    parser.add_argument('--dir', action='store', type=str, optional=False)
+    parser.add_argument('--dir', action='store', type=str, required=False)
 
     # grab args
     args = parser.parse_args()
@@ -1709,26 +1869,36 @@ def main():
     # should be called on some version of '_feats2.csv'
     read_loc = 'data/%s/%s' % (subdir, filename)
     # read chunk
+    print('Reading Data')
     df = pd.read_csv(read_loc, parse_dates=['src_cre_date', 'response_time',
                                             'auct_start_dt',
                                             'auct_end_dt'])
+
+    # drop threads which violate our assumptions about the rules eBay sets for
+    # bargaining -- investigate more later
+    print('Dropping threads with too many buyers')
+    df = drop_buyer_thrds(df)
 
     # convert sets of offer rows into sequences, where each thread corresponds
     # to 1 row and id's correspond to a tuple of (sequence length, thread_id)
     # each thread_id should occur exactly once
     # sequence length is a minimum of 2 (buyer makes an offer, seller responds)
+    print('Organizing into sequences')
     df = grab_seqs(df)
 
     # create a reference column for each offer in the longest sequence
     # Additionally copies columns for shorter sequences to maintain shared
     # dimensionality
+    print('Developing reference columns')
     df = get_ref_cols(df)
 
     # normalize all offers by the two most recent offers
+    print('Normalizing by recent offers')
     df = norm_by_recent_offers(df)
 
     # clamp time features to be positive (at least 0 inclusive for automatic
     # replies)
+    print('Clamping times')
     df = clamp_times(df)
 
     # initialize day period dictionary
@@ -1738,10 +1908,12 @@ def main():
         'eve': (17, 21),
     }
     # generate additional time features for each offer
+    print('Generating additional time features')
     df = get_time_day_feats(df, time_dict)
 
     # create indicators giving whether each offer is round and whether there is
     # slack at that round point
+    print('Generating round offer features')
     df = round_inds(df, [1, 5, 10, 25])
 
     # remove threads with out of bounds offers, namely threads where
@@ -1751,13 +1923,16 @@ def main():
     # responses from the other party)
     # in most cases, these are a result of "unfaithful" bargaining, abandoning
     # agreement ranging during convergence
+    print('Removing offers out of the range of last two offers')
     df = remove_oob(df)
 
-    df = inpute_missing_vals(df)
+    print('Impute missing values')
+    df = impute_missing_values(df)
 
     # dropping columns that have missing values for the timebeing
     # INCLUDING DROPPING decline, accept prices since it feels
     # epistemologically disingenous to use them
+    print('Dropping unnecessary or unusable columns')
     df.drop(columns=['count2', 'count3', 'count4', 'ship_time_fastest', 'ship_time_slowest', 'count1',
                      'ref_price2', 'ref_price3', 'ref_price4', 'decline_price', 'accept_price',
                      'unique_thread_id'
@@ -1773,9 +1948,17 @@ def main():
     df.drop(df[np.isnan(df['ref_price1'].values)].index, inplace=True)
 
     # drop outlier threads with extremely high start prices (greater than 1000)
+    print('Dropping outliers')
     start_price = df['start_price_usd']
     big_inds = start_price[start_price > 1000].index
     df.drop(index=big_inds, inplace=True)
+
+    # write resulting DataFrame to a csv
+    write_path = 'data/exps/rnn1/%s/%s' % (subdir,
+                                           filename.replace('_feats2.csv', '.csv'))
+    print('Writing output')
+    df.to_csv(write_path)
+
 
 if __name__ == '__main__':
     main()
