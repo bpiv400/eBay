@@ -58,18 +58,18 @@ def date_feats(feat_df, col_abv):
     return feat_df
 
 
-def get_time(df, end_code, init_code):
+def get_time_mins(df, end_code, init_code):
     '''
     Description: Creates a feature in df that gives the amount of time
-    in hours one player in the thread took to respond to offr_(init_code)
+    in minutes one player in the thread took to respond to offr_(init_code)
     with offr_(end_code)
     '''
     init_date = df['date_' + init_code]
     rsp_date = df['date_' + end_code]
 
-    # find the difference, in hours, between the response time and the offer time
+    # find the difference, in minutes, between the response time and the offer time
     diff = (rsp_date.values - init_date.values).astype(int) / \
-        1e9/math.pow(60, 2)
+        1e9/math.pow(60, 1)
     diff = pd.Series(diff, index=rsp_date.index)
 
     # add init_offr series as a new column, both should have the same
@@ -105,7 +105,7 @@ def grab_turn(df, turn, seller):
                 'frac_passed': 'frac_passed_b0',
                 'frac_remain': 'frac_remain_b0',
             }, inplace=True)
-            df = get_time(df, 's0', 'b0')
+            df = get_time_mins(df, 's0', 'b0')
             df.drop(columns=['status_id', 'offr_type_id'], inplace=True)
             return df
         else:
@@ -141,7 +141,7 @@ def grab_turn(df, turn, seller):
                     off1df['offr_b1'] = df['resp_offr']
                     off1df['date_b1'] = df['response_time']
                     off1df = date_feats(off1df, 's0')
-                    off1df = get_time(off1df, 'b1', 's0')
+                    off1df = get_time_mins(off1df, 'b1', 's0')
                     del df
                     f2 = pd.concat([f2, off1df], sort=False)
                     print(len(f2.index))
@@ -331,8 +331,8 @@ def grab_turn(df, turn, seller):
             # grab the initial offer time
             out = date_feats(out, 's0')
             out = date_feats(out, 'b1')
-            out = get_time(out, 'b1', 's0')
-            out = get_time(out, 's1', 'b1')
+            out = get_time_mins(out, 'b1', 's0')
+            out = get_time_mins(out, 's1', 'b1')
             out.drop(columns=['frac_remain', 'frac_passed', 'passed', 'remain', 'status_id',
                               'offr_type_id'], inplace=True)
             return out
@@ -368,7 +368,7 @@ def grab_turn(df, turn, seller):
                 len3_comp['offr_b2'] = len3['resp_offr']
                 len3_comp['date_b2'] = len3['response_time']
                 len3_comp = date_feats(len3_comp, 's1')
-                len3_comp = get_time(len3_comp, 'b2', 's1')
+                len3_comp = get_time_mins(len3_comp, 'b2', 's1')
                 del len3
                 del last_turn_3
             else:
@@ -390,7 +390,7 @@ def grab_turn(df, turn, seller):
                 len4_comp['offr_b2'] = len4['resp_offr']
                 len4_comp['date_b2'] = len4['response_time']
                 len4_comp = date_feats(len4_comp, 's1')
-                len4_comp = get_time(len4_comp, 'b2', 's1')
+                len4_comp = get_time_mins(len4_comp, 'b2', 's1')
             else:
                 len4_comp = None
 
@@ -583,8 +583,8 @@ def grab_turn(df, turn, seller):
             del off2df
             out = date_feats(out, 's1')
             out = date_feats(out, 'b2')
-            out = get_time(out, 'b2', 's1')
-            out = get_time(out, 's2', 'b2')
+            out = get_time_mins(out, 'b2', 's1')
+            out = get_time_mins(out, 's2', 'b2')
             out.drop(columns=['passed', 'frac_passed',
                               'remain', 'frac_remain'], inplace=True)
             return out
@@ -702,7 +702,7 @@ def grab_turn(df, turn, seller):
             out = out.merge(b2df, how='inner',
                             left_index=True, right_index=True)
             out = date_feats(out, 's2')
-            out = get_time(out, 'b3', 's2')
+            out = get_time_mins(out, 'b3', 's2')
             return out
 
 
@@ -839,7 +839,7 @@ def grab_seqs_len2(df):
     df = date_feats(df, 'b0')
     df = date_feats(df, 's0')
     # get time feature for the first seller offer
-    df = get_time(df, 's0', 'b0')
+    df = get_time_mins(df, 's0', 'b0')
     # set time feature for the first buyer offer to equal the amount
     # of time that has passed since the beginning of the auction
     df['time_b0'] = df['passed_b0']
@@ -916,7 +916,7 @@ def grab_seqs_len3(df):
     # response offers
     off1df = date_feats(off1df, 's0')
     off1df = date_feats(off1df, 'b1')
-    off1df = get_time(off1df, 'b1', 's0')
+    off1df = get_time_mins(off1df, 'b1', 's0')
     off1df['time_b0'] = off1df['passed_b0']
 
     if 'status_id' in off1df.columns:
