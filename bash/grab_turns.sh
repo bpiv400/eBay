@@ -1,6 +1,6 @@
 #!/bin/bash
-#$ -N grab_turns 
-#$ -js 1 
+#$ -N grab_turns
+#$ -js 1
 #$ -j y
 #$ -l m_mem_free=15G
 
@@ -12,7 +12,7 @@ source ~/envs/bargain/bin/activate
 cd eBay
 python "$scriptPath" --name $1-"$SGE_TASK_ID"_feats2.csv --dir $1 --turn 0
 # python "$scriptPath" --name $1-"$SGE_TASK_ID"_feats2.csv --dir $1 --turn 0 --seller 
-python "$scriptPath" --name $1-"$SGE_TASK_ID"_feats2.csv --dir $1 --turn 1 
+python "$scriptPath" --name $1-"$SGE_TASK_ID"_feats2.csv --dir $1 --turn 1
 # python "$scriptPath" --name $1-"$SGE_TASK_ID"_feats2.csv --dir $1 --turn 1 --seller 
-python "$scriptPath" --name $1-"$SGE_TASK_ID"_feats2.csv --dir $1 --turn 2  
+python "$scriptPath" --name $1-"$SGE_TASK_ID"_feats2.csv --dir $1 --turn 2 
 
