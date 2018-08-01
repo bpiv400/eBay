@@ -1976,10 +1976,14 @@ def main():
                      ], inplace=True)
 
     # ! FIX
-
     # drop any_mssg while we wait to address the fact that it is a feature of the offers
     # and not of the the listing itself
     df.drop(columns='any_mssg', inplace=True)
+
+    # drop all dates
+    all_codes = all_offr_codes('b3')
+    all_dates = ['date_%s' % code for code in all_codes]
+    df.drop(columns=all_dates, inplace=True)
 
     # dropping all threads that do not have ref_price1
     df.drop(df[np.isnan(df['ref_price1'].values)].index, inplace=True)
@@ -1991,7 +1995,8 @@ def main():
     df.drop(index=big_inds, inplace=True)
 
     # write resulting DataFrame to a csv
-    write_path = 'data/exps/%s/%s' % (exp, filename.replace('_feats2.csv', '.csv'))
+    write_path = 'data/exps/%s/%s' % (exp,
+                                      filename.replace('_feats2.csv', '.csv'))
 
     print('Writing output')
     df.to_csv(write_path)

@@ -17,10 +17,10 @@ import math
 
 def bin_times_from_midpoints(step):
     '''
-    Description: Creates uniformly spaced bin midpoints 
-    for times based on a step given in minutes for 
+    Description: Creates uniformly spaced bin midpoints
+    for times based on a step given in minutes for
     times from 0 to 48 hours and outputs these as well
-    as an array of right sides for these bins to 
+    as an array of right sides for these bins to
     be used in np.digitize
     Input:
         step: integer giving number of minutes between
@@ -270,7 +270,7 @@ def get_resp_offr(turn):
 
 def get_resp_time(turn):
     '''
-    Description: Determines the name of the response column given the 
+    Description: Determines the name of the response column given the
     name of the last observed turn
     for time models
     '''
@@ -388,11 +388,11 @@ def squash(bins, midpoints, low, high, abs_tol=None, perc_tol=None):
 
 def get_turn_desc(turn):
     '''
-    Description: Extracts turn type and turn round number 
+    Description: Extracts turn type and turn round number
     from turn name where possible. If the initial offering
-    is the last observed offer (thread has not started), 
+    is the last observed offer (thread has not started),
     we return a tuple where both elements are None
-    Input: 
+    Input:
         turn: string giving turn name
     Output: tuple of length 2 where the first element is a
     string giving the type of turn 's' or 'b' and the second
@@ -443,11 +443,11 @@ def dig_norm(df, sig_digs, offr_name):
 def get_round_vals(sig_digs):
     '''
     Description: Creates a list of values from [0,1] inclusive
-    equally spaced at increments of 10^(-sig_digs). These 
-    are intended to mimick the class values generated 
+    equally spaced at increments of 10^(-sig_digs). These
+    are intended to mimick the class values generated
     by bins_from_common and bins_from_even. Intended to be used
-    as classes in downstream transition probability after 
-    rounding offer values to sig_digs decimal places 
+    as classes in downstream transition probability after
+    rounding offer values to sig_digs decimal places
     and chopping values greater than 1 or less than 0
     Input: Number of decimals to be rounded to
     Output: List of rounded values used downstream as classes

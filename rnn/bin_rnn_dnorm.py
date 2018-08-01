@@ -515,10 +515,17 @@ def main():
     sig_digs = args.sig
 
     # load data
-    print('Loading Data')
+    print('Loading Data and parsing Dates')
+    sys.stdout.flush()
     df = pd.read_csv('data/exps/%s/%s' %
-                     (exp_name, filename), low_memory=False)
-
+                     (exp_name, filename),
+                     parse_dates=['date_b0', 'date_s0', 'date_b1',
+                                  'date_s1', 'date_b2', 'date_s2',
+                                  'date_b3'])
+    print('Done Loading Data')
+    gigs = df.memory_usage(deep=True).sum()/math.pow(10, 9)
+    print('Consumes: %.2f' % gigs)
+    sys.stdout.flush()
     # drop abhorent columns as necessary
     if 'unique_thread_id' in df.columns:
         df.drop(columns=['unique_thread_id'], inplace=True)
@@ -548,7 +555,7 @@ def main():
         count = count + threads.size
         # actually drop threads from data frame
         df.drop(index=threads, inplace=True)
-
+    print('Drooped %d threads for out of bounds times' % count)
     print('Dropped %.2f %% of threads' % (count / tot))
 
     # grab bins
