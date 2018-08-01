@@ -1615,6 +1615,9 @@ def round_inds(df, round_vals):
             # print('Initial: ')
             # print(non_zero_offs.loc[sample_ind])
 
+            # extract indices for offers that are less than the current value
+            below_inds = non_zero_offs[(offr_subset - curr_val) < 0].index
+
             # find slack indices by finding the remainder of the current offer
             # divided by the current value then dividing this value by the value of the
             # current offer and taking indices where this is below some threshold
@@ -1628,8 +1631,13 @@ def round_inds(df, round_vals):
             # original value is closer to the next factor of the current divisor than
             # the one immediately below it, so it may be in its rounding range, even
             # if not in that of the lower value)
+            low_slack_inds = slack[slack > .5].index
             high_slack_inds = slack[slack > .5].index
             slack.loc[high_slack_inds] = 1 - slack.loc[high_slack_inds]
+            # grab the intersection of the indices with low slack and the indices for
+            # offers worth less than the current value
+            low_below_inds = np.intersect1d(
+                low_slack_inds.values, below_inds.values)
 
             # print('Adjusted slack: ')
             # print(slack.loc[sample_ind])
@@ -1646,6 +1654,12 @@ def round_inds(df, round_vals):
             # separate the indices where slack is 0 and non-zero
             zero_slack = slack[slack == 0].index
             non_zero_slack = slack[slack > 0].index
+            # remove low_below_inds from non_zero_slack because these values
+            # are in the neighborhood around 0. They're not actually around
+            # a round value
+            non_zero_slack = np.setdiff1d(
+                non_zero_slack.values, low_below_inds)
+
             # activate the indicator for the non-zero and zero values
             curr_ser.loc[zero_slack] = 1
             curr_ser.loc[non_zero_slack] = 1
@@ -1653,7 +1667,7 @@ def round_inds(df, round_vals):
             # slack is greater than the threshhold, ie the indices where the
             # slack indicator should be defined but 0
             active_inds = np.concatenate(
-                (zero_slack.values, non_zero_slack.values))
+                (zero_slack.values, non_zero_slack))
             deactive_inds = np.setdiff1d(offr_subset.index.values, active_inds)
             # set the current series to 0 for these indices
             curr_ser.loc[deactive_inds] = 0
@@ -1929,6 +1943,11 @@ def main():
     print('Developing reference columns')
     df = get_ref_cols(df)
 
+    # create indicators giving whether each offer is round and whether there is
+    # slack at that round point
+    print('Generating round offer features')
+    df = round_inds(df, [1, 5, 10, 25])
+
     # normalize all offers by the two most recent offers
     print('Normalizing by recent offers')
     df = norm_by_recent_offers(df)
@@ -1947,11 +1966,6 @@ def main():
     # generate additional time features for each offer
     print('Generating additional time features')
     df = get_time_day_feats(df, time_dict)
-
-    # create indicators giving whether each offer is round and whether there is
-    # slack at that round point
-    print('Generating round offer features')
-    df = round_inds(df, [1, 5, 10, 25])
 
     # remove threads with out of bounds offers, namely threads where
     # a normalized offer is not in range [0, 1]

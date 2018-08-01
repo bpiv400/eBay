@@ -121,10 +121,15 @@ def main():
     # load data frame
     load_loc = 'data/exps/%s/binned/%s.csv' % (exp_name, name)
     print('load data')
-    # temporarily parse the dates if they're in the data frame
-    df = pd.read_csv(load_loc, parse_dates=[
-                     'date_%s' % code for code in all_offr_codes('b3')])
+    # grab all dates
 
+    # temporarily parse the dates if they're in the data frame
+    df = pd.read_csv(load_loc)
+
+    # debugging
+    for col in df.columns:
+        if 'date_' in col:
+            print(col)
     # remove date columns
     print('Removing date columns')
     df = remove_dates(df)
