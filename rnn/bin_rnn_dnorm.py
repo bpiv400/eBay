@@ -39,6 +39,8 @@ def bin_times_from_midpoints(step):
                      half_bin_width * 2, half_bin_width * 2)
     if bins.size != midpoints.size:
         raise ValueError('The number of midpoints and bins should be the same')
+    # debugging
+    print(midpoints)
     return bins, midpoints
 
 
@@ -240,14 +242,18 @@ def digitize(df, bins, midpoints, colname):
         colname: name of the column in df whose being operated on
     Output: df with rounded values in df[colname]
     '''
+    # print('Total rows: %d' % len(df.index))
     filled_series = df.loc[df[~df[colname].isna()].index, colname].copy()
     filled_inds = filled_series.index
+    # print('Filled Inds: %d' % len(filled_inds))
     midpoints = np.array(midpoints)
     filled_vals = filled_series.values
+    # print('Filled vals: %d' % len(filled_vals))
     val_bins = np.digitize(filled_vals, bins, right=True)
     rounded_vals = midpoints[val_bins]
+    # print('Rounded vals: %d' % len(rounded_vals))
     df[colname] = pd.Series(np.NaN, index=df.index)
-    df.loc[filled_inds] = rounded_vals
+    df.loc[filled_inds, colname] = rounded_vals
     return df
 
 
@@ -422,8 +428,8 @@ def dig_norm(df, sig_digs, offr_name):
     '''
     # grab offer values
     print(offr_name)
-    filled_inds = df[~df[colname].isna()].index
-    offr = df.loc[filled_inds, colname]
+    filled_inds = df[~df[offr_name].isna()].index
+    offr = df.loc[filled_inds, offr_name]
     # some error checking -- values inputted should be in range [0,1]
     off_max = np.amax(offr)
     off_min = np.amin(offr)
@@ -433,8 +439,7 @@ def dig_norm(df, sig_digs, offr_name):
     if off_min < 0:
         raise ValueError(
             'Offr min should be 0 or greater than 0, Actual min is %.2f' % off_min)
-    # grab corresponding index
-    ind = df[offr_name].index
+
     # round offers
     offr = np.around(offr, sig_digs)
     # place rounded offers back in the same column
@@ -509,11 +514,10 @@ def main():
     exp_name = args.exp
     sig_digs = args.sig
 
-    # load data frame
-    print(filename)
-
+    # load data
+    print('Loading Data')
     df = pd.read_csv('data/exps/%s/%s' %
-                     (exp_name, filename))
+                     (exp_name, filename), low_memory=False)
 
     # drop abhorent columns as necessary
     if 'unique_thread_id' in df.columns:
@@ -525,24 +529,23 @@ def main():
     count = 0
     tot = len(df.index)
 
+    print('Removing threads with out of bounds times')
     # iterate over turn numbers through the current turn number
     for i in all_offr_codes('b3'):
         # grab buyer times
-        if i != 'b0':
-            low = df[df['time_%s' % i] < 0].index
-            high = df[df['time_%s' % i] > 48*60].index
-        else:
-            low = None
-            high = None
+        low = df[df['time_%s' % i] < 0].index
+        high = df[df['time_%s' % i] > 48 * 60].index
+        if i == 'b0':
+            # ! TEMPORARILY BOUND B0 OFFERS AT 48*60 INSTEAD OF DROPPING THEM
+            # ! THE UNBOUNDED B0 TIME ISSUE MUST BE ADDRESSED AT  A LATER TIME
+            df.loc[high, 'time_%s' % i] = 48 * 60
+            high = pd.Series([], index=[])
 
         # ensure that low and high b exist before trying to append
         # them to the thread id list
-        if low is not None or high is not None:
-            threads = np.unique(np.append(low.values, high.values))
-
+        threads = np.unique(np.append(low.values, high.values))
         # increment total thread dropping counter
         count = count + threads.size
-
         # actually drop threads from data frame
         df.drop(index=threads, inplace=True)
 
@@ -564,9 +567,9 @@ def main():
             bins_pick.close()
 
             pic_dic = {'time_bins': time_bins,
-                        'time_midpoints': time_midpoints}
+                       'time_midpoints': time_midpoints}
             bins_pick = open('data/exps/%s/time_bins.pickle' %
-                                exp_name, 'wb')
+                             exp_name, 'wb')
             pickle.dump(pic_dic, bins_pick)
             bins_pick.close()
 
@@ -579,7 +582,7 @@ def main():
         f.close()
         # get time bins and midpoints
         f = open("data/exps/%s/time_bins.pickle" %
-                    exp_name, "rb")
+                 exp_name, "rb")
         pic_dic = pickle.load(f)
         time_bins = pic_dic['time_bins']
         time_midpoints = pic_dic['time_midpoints']
@@ -596,7 +599,7 @@ def main():
 
     # saves the resulting data frame after manipulations
     df.to_csv('data/exps/%s/binned/%s' %
-              (exp_name, filename.replace('_concat.csv', '.csv'), index_label=False)
+              (exp_name, filename.replace('_concat.csv', '.csv')), index_label=False)
 
 
 if __name__ == '__main__':
