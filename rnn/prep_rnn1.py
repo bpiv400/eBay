@@ -1675,7 +1675,7 @@ def round_inds(df, round_vals):
             # the non-zero indices to a running list of non-zero indices for the current offer
             # all_zero_inds = np.append(all_zero_inds, zero_slack.values)
             all_nonzero_inds = np.append(
-                all_nonzero_inds, non_zero_slack.values)
+                all_nonzero_inds, non_zero_slack)
             # finally, add the indicator for the current round-offer pair to the
             # data frame under the name created for it previously
             df[new_feat_name] = curr_ser
@@ -1986,7 +1986,8 @@ def main():
     print('Dropping unnecessary or unusable columns')
     df.drop(columns=['count2', 'count3', 'count4', 'ship_time_fastest', 'ship_time_slowest', 'count1',
                      'ref_price2', 'ref_price3', 'ref_price4', 'decline_price', 'accept_price',
-                     'bo_ck_yn', 'item_price'
+                     'bo_ck_yn', 'item_price', 'anon_item_id', 'anon_thread_id', 'anon_byr_id',
+                     'anon_slr_id', 'auct_start_dt', 'auct_end_dt'
                      ], inplace=True)
 
     # ! FIX

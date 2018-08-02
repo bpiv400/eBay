@@ -178,56 +178,14 @@ def main():
 
     # create two lists of columns in df -- the first consisting of all columns with
     # na values, the second consisting of all complete columns
-    inc_cols, full_cols = get_inc_full_cols(df)
+    full_cols = df.columns
 
     if name == 'train' or name == 'toy':
         # initialize a list to track dropped columns
         dropped_cols = []
-        # initialize lists to track mean, std, and colname for
-        # columns that aren't dropped
-        mean_list = []
-        std_list = []
-        name_list = []
-
-        # iterate over each incomplete column
-        print('Normalizing mean,std for incomplete columns')
-        sys.stdout.flush()
-        for colname in inc_cols:
-            print('Normalizing %s' % colname)
-            sys.stdout.flush()
-            # extract the column
-            col = df[colname]
-            # grab the mean and standard deviation
-            colmean = col.mean(skipna=True)
-            colstd = col.std(skipna=True)
-            # find the indices where the column is defined
-            full_inds = col[~col.isna()].index
-            # check whether the standard deviation is 0
-            # if so, remove the column from the data frame
-            if colstd == 0:
-                df.drop(columns=colname, inplace=True)
-                print('Dropping %s due to 0 deviation' % colname)
-                sys.stdout.flush()
-                # add dropped column to the list of dropped columns
-                dropped_cols.append(colname)
-            else:
-                # otherwise subtract the mean and divide by the standard deviation
-                # for all defined entries in the column
-                df.loc[full_inds, colname] = (
-                    df.loc[full_inds, colname] - colmean) / colstd
-                # add the mean, std, and colname to their respective accumulators
-                mean_list.append(colmean)
-                std_list.append(colstd)
-                name_list.append(colname)
-                # check whether normalization has  made any previously observed values
-                # na
-                na_flag = df.loc[full_inds, colname].isna().any()
-                # if so, raise a ValueError
-                if na_flag:
-                    raise ValueError('Normalizing data generated na values')
 
         # moving on to complete columns
-        print('Normalizing completely observed columns')
+        print('Normalizing all columns')
         sys.stdout.flush()
         # convert the numpy list of columns to an index series
         full_cols = pd.Index(full_cols)
@@ -248,12 +206,6 @@ def main():
         # update the values of the columns in the data frame
         df[full_cols] = (df[full_cols] - mean)/std
 
-        # check wether any of the previously full columns now have na values
-        na_flag = df[full_cols].isna().any().any()
-        # throw error if na values generated
-        if na_flag:
-            raise ValueError('Normalizing data generated na values')
-        # compose mean and std into data frame with 2 columns (mean, std)
         # where each index indicates the corresponding column
         if name == 'train':
             print('Save intermediate outputs for application to test set')
@@ -269,9 +221,6 @@ def main():
             # droppedlist: list of column names for columns where the standard dev
             # was equal to 0, forcing them to be removed from the dataframe
             output_dict = {}
-            output_dict['meanlist'] = mean_list
-            output_dict['stdlist'] = std_list
-            output_dict['namelist'] = name_list
             output_dict['droppedlist'] = dropped_cols
             # open a pickle and dump output dictionary into it
             norm_pick = open('data/exps/%s/norm.pickle' %
@@ -290,10 +239,6 @@ def main():
         f = open("data/exps/%s/norm.pickle" % exp_name, "rb")
         pic_dic = pickle.load(f)
         f.close()
-        # extract relevant lists from dictionary
-        mean_list = pic_dic['meanlist']
-        std_list = pic_dic['stdlist']
-        name_list = pic_dic['namelist']
         dropped_cols = pic_dic['droppedlist']
         # if the length of dropped_cols is greater than 0, drop all columns it contains
         # from the test df
@@ -310,27 +255,7 @@ def main():
         full_cols = mean_ser.index
         # update the values of all full columns
         df.loc[full_cols] = (df[full_cols] - mean_ser) / std_ser
-        # check wether any of the previously full columns now have na values
-        na_flag = df[full_cols].isna().any().any()
-        # throw error if na values generated
-        if na_flag:
-            raise ValueError('Normalizing data generated na values')
-        # zip list of names of incomplete columns, their means, and standard deviations
-        # and iterate over it
-        print('Normalizing partially observed columns')
-        sys.stdout.flush()
-        for curr_name, curr_mean, curr_std in zip(mean_list, std_list, name_list):
-            print('Normalizing %s' % curr_name)
-            curr_col = df[curr_name]
-            filled_inds = curr_col[~curr_col.isna()].index
-            # update filled inds in curr_col
-            df.loc[filled_inds, curr_name] = (
-                df.loc[filled_inds, curr_name] - curr_mean) / curr_std
-            # check whether any previously filled values have been made na
-            na_flag = df.loc[filled_inds, curr_name].isna().any()
-            # if so, raise a ValueError
-            if na_flag:
-                raise ValueError('Normalizing data generated na values')
+
     # add all removed columns back into the data frame
     print('Adding temporarily dropped columns back to the data frame')
     sys.stdout.flush()

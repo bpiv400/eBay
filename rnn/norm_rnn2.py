@@ -192,7 +192,7 @@ def main():
         # iterate over each incomplete column
         print('Normalizing mean,std for incomplete columns')
         sys.stdout.flush()
-        for colname in inc_cols:
+        for colname in df.columns:
             print('Normalizing %s' % colname)
             sys.stdout.flush()
             # extract the column
@@ -226,42 +226,9 @@ def main():
                 if na_flag:
                     raise ValueError('Normalizing data generated na values')
 
-        # moving on to complete columns
-        print('Normalizing completely observed columns')
-        sys.stdout.flush()
-        # convert the numpy list of columns to an index series
-        full_cols = pd.Index(full_cols)
-        # grab the mean and standard deviation for each complete column
-        mean = df[full_cols].mean()
-        std = df[full_cols].std()
-        # find column names with 0 deviation
-        std_zeros = std[std == 0].index
-        # drop these columns from the data frame, mean series, std series,
-        # and full columns index
-        df.drop(columns=std_zeros, inplace=True)
-        mean.drop(index=std_zeros, inplace=True)
-        std.drop(index=std_zeros, inplace=True)
-        # does not have inplace keyword for index
-        full_cols = full_cols.drop(std_zeros)
-        # add these columns to the list of dropped cols
-        dropped_cols = dropped_cols + list(std_zeros.values)
-        # update the values of the columns in the data frame
-        df[full_cols] = (df[full_cols] - mean)/std
-
-        # check wether any of the previously full columns now have na values
-        na_flag = df[full_cols].isna().any().any()
-        # throw error if na values generated
-        if na_flag:
-            raise ValueError('Normalizing data generated na values')
         # compose mean and std into data frame with 2 columns (mean, std)
         # where each index indicates the corresponding column
         if name == 'train':
-            print('Save intermediate outputs for application to test set')
-            # pickle norm df for complete columns
-            norm_df = pd.DataFrame({'mean': mean, 'std': std})
-            norm_df.index.name = 'cols'
-            norm_df.to_csv('data/exps/%s/norm.csv' % exp_name)
-
             # compile additional normalized data in a dictionary
             # meanlist: list of means for columns with np.NaN values
             # stdlist: list of standard deviations for columns with np.NaN values
@@ -282,9 +249,6 @@ def main():
     else:
         print('Loading outputs from training normalization')
         sys.stdout.flush()
-        # load norm df from training corpus
-        norm_df = pd.read_csv('data/exps/%s/norm.csv' % exp_name)
-        norm_df.set_index('cols', drop=True, inplace=True)
 
         # load additional mean,std data and dropped columns from training corpus pickle
         f = open("data/exps/%s/norm.pickle" % exp_name, "rb")
@@ -300,23 +264,6 @@ def main():
         if len(dropped_cols) > 0:
             df.drop(columns=dropped_cols, inplace=True)
 
-        # grab mean and standard deviation series from norm_df
-        # for the full columns
-        print('Normalizing fully observed columns')
-        sys.stdout.flush()
-        mean_ser = norm_df['mean']
-        std_ser = norm_df['std']
-        # get the index of full columns
-        full_cols = mean_ser.index
-        # update the values of all full columns
-        df.loc[full_cols] = (df[full_cols] - mean_ser) / std_ser
-        # check wether any of the previously full columns now have na values
-        na_flag = df[full_cols].isna().any().any()
-        # throw error if na values generated
-        if na_flag:
-            raise ValueError('Normalizing data generated na values')
-        # zip list of names of incomplete columns, their means, and standard deviations
-        # and iterate over it
         print('Normalizing partially observed columns')
         sys.stdout.flush()
         for curr_name, curr_mean, curr_std in zip(mean_list, std_list, name_list):

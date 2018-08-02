@@ -1,9 +1,9 @@
-#$ -N norm 
 #!/bin/bash
+#$ -N norm
 #$ -js 1
 #$ -j y
 #$ -l m_mem_free=50G
-#$ -m e -M 4102158912@vtext.com 
+#$ -m e -M 4102158912@vtext.com
 while getopts 'e:' flag; do
   case "${flag}" in
     e) exp="${OPTARG}" ;;
@@ -20,7 +20,7 @@ types=( "train" "toy" "test" )
 turns=( "b0" "b1" "b2" )
 for k in "${types[@]}"
 do
-    for j in "${turns[@]}" 
+    for j in "${turns[@]}"
     do
         python "$scriptPath" --name $k --exp $exp --turn $j
     done

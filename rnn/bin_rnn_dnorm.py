@@ -518,10 +518,7 @@ def main():
     print('Loading Data and parsing Dates')
     sys.stdout.flush()
     df = pd.read_csv('data/exps/%s/%s' %
-                     (exp_name, filename),
-                     parse_dates=['date_b0', 'date_s0', 'date_b1',
-                                  'date_s1', 'date_b2', 'date_s2',
-                                  'date_b3'])
+                     (exp_name, filename))
     print('Done Loading Data')
     gigs = df.memory_usage(deep=True).sum()/math.pow(10, 9)
     print('Consumes: %.2f' % gigs)
