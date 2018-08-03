@@ -154,6 +154,9 @@ def main():
     ref_cols = ['ref_%s' % col for col in offr_cols]
     # concat both lists of columns
     extract_cols = offr_cols + ref_cols
+    extract_cols.append('length')
+    extract_cols.append('unique_thread_id')
+
     # delete unnecessary variables
     del offr_cols
     del ref_cols
@@ -254,8 +257,10 @@ def main():
         # get the index of full columns
         full_cols = mean_ser.index
         # update the values of all full columns
-        df.loc[full_cols] = (df[full_cols] - mean_ser) / std_ser
+        df[full_cols] = (df[full_cols] - mean_ser) / std_ser
 
+    # Rounding all normalized columns to 4 decimal places
+    df = df.round(decimals=4)
     # add all removed columns back into the data frame
     print('Adding temporarily dropped columns back to the data frame')
     sys.stdout.flush()

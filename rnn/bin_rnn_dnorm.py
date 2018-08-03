@@ -523,9 +523,7 @@ def main():
     gigs = df.memory_usage(deep=True).sum()/math.pow(10, 9)
     print('Consumes: %.2f' % gigs)
     sys.stdout.flush()
-    # drop abhorent columns as necessary
-    if 'unique_thread_id' in df.columns:
-        df.drop(columns=['unique_thread_id'], inplace=True)
+
     if 'Unnamed: 0' in df.columns:
         df.drop(columns=['Unnamed: 0'], inplace=True)
 

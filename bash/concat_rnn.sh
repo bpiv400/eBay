@@ -12,10 +12,11 @@ for k in "${types[@]}"
 do
     echo data/exps/$1/"$k"_concat.csv
     if [ -f data/exps/$1/"$k"_concat.csv ] ; then
+	echo removing "$k"_concat.csv
         rm data/exps/$1/"$k"_concat.csv ;
     fi
     first=true
-    for i in $(find data/exps/$1 -type f -name "*$k*");
+    for i in $(find data/exps/$1 -type f -name "*$k*" -maxdepth 1);
     do
         echo $i
         echo $first
