@@ -15,7 +15,7 @@ import os
 import functools
 
 
-def get_colnames(columns, const=False, ref=False):
+def get_colnames(columns, const=False, ref=False, b3=False):
     '''
     Extracts the columns in df that correspond to
     constant features of the thread, the offer generated features of the thread,
@@ -26,7 +26,8 @@ def get_colnames(columns, const=False, ref=False):
         const: a boolean giving whether constant column names should be extracted
         Default is False
         ref: a boolean giving whether reference columns should be extracted
-
+        b3: boolean for whether model we are training will eventually be used to
+        predict b3
 
     Returns:
         A list of column names
@@ -74,8 +75,28 @@ def get_colnames(columns, const=False, ref=False):
         out_cols.remove('length')
     if 'unique_thread_id' in out_cols:
         out_cols.remove('unique_thread_id')
+    if not const and not ref:
+        # offr_cols should contain only columns ultimately used as sequence inputs
+        # therefore we remove all features corresponding to b3
+        # and all features corresponding to s2 IF b3 = False
+        drop_feats = feats_from_str('_b3$', out_cols)
+        if not b3:
+            drop_feats = drop_feats + feats_from_str('_s2$', out_cols)
+        # define a closure to generate a filter function that returns true
+        # only when the column name is not contained in the list of
+        # columns we are dropping
 
-    return const_cols
+        def make_col_filter(drop_feats):
+            def col_filter(x):
+                return x not in drop_feats
+            return col_filter
+
+        # call closure to generate function
+        col_filter = make_col_filter(drop_feats)
+        # apply filter to out out_cols
+        offr_cols = filter(col_filter, out_cols)
+
+    return out_cols
 
 
 def pickle_obj(obj, path, filename):
@@ -153,7 +174,71 @@ def feats_from_str(refstr, offr_cols):
     return matches
 
 
-def get_seq_lists(offr_cols, concat=False, sep=False):
+def seq_lists_legit(out, concat=False, sep=False, b3=False):
+    '''
+    Ensures the list of sequence features have appropriate relative
+    lengths. Specifically, if sep is true, the outer list should
+    have length 2, and the first inner list
+    should have one fewer element than the second list
+
+    Additionally, all inner elements of both lists should have the
+    same number of features UNLESS at some point we develop some
+    features for the one of the players that we do not have for the
+    other player
+
+    If concat is true, then the first element should have half as
+    many features as the remaining the elements, which should all
+    have the same number of elements
+
+    Throws an error if anything is wrong
+    '''
+    if sep:
+        # ensure the otuer lister has two elements
+        if len(out) != 2:
+            raise ValueError(
+                'Buyer and seller threads not separated correctly')
+        num_byr_seqs = len(out[0])
+        num_slr_seqs = len(out[1])
+        # ensure the inner list includes one more buyer thread than seller thread
+        if num_byr_seqs - num_slr_seqs != 1:
+            raise ValueError(
+                'Buyer and seller threads not separated correctly')
+        # ensure that each buyer and seller thread contain the same number of elements
+        # using list comprehension to extract a length for each inner list from
+        # the two outer lemeents
+        byr_lens = [len(byr_seq) for byr_seq in out[0]]
+        slr_lens = [len(slr_seq) for slr_seq in out[1]]
+        # set baseline length arbitrarily
+        init_len = byr_lens[0]
+        # iterate over concatented list in search of difference
+        for curr_len in byr_lens + slr_lens:
+            if init_len != curr_len:
+                raise ValueError(
+                    'Buyer and seller threads not separated correctly')
+    elif concat:
+        # if concatented, extrac tthe length of the first element
+        init_len = len(out[0])
+        # find the theoretical length of the next element
+        post_len = init_len * 2
+        # iterate over all elements except the first
+        for i in range(1, len(out)):
+            # ensure that each has length equal to double the length of the first element
+            curr_list_len = len(out[i])
+            if curr_list_len != post_len:
+                raise ValueError(
+                    'Buyer and seller threads not concatenated correctly')
+    else:
+        # if not concatenated or separated, ensure that each element of the list
+        # has the same length
+        init_len = len(out[0])
+        for curr_off in out:
+            if len(curr_off) != init_len:
+                raise ValueError(
+                    'Buyer and seller threads not processed correctly')
+    pass
+
+
+def get_seq_lists(offr_cols, concat=False, sep=False, b3=False):
     '''
     Extracts list where each entry gives a list of feature names for
     each entry in the sequence. If sep = True, then the list contains two
@@ -168,6 +253,9 @@ def get_seq_lists(offr_cols, concat=False, sep=False):
         sep: boolean giving whether buyer and seller features are
         being input separately downstream
 
+    # If b3, should contain b0 -> s2
+    # Otherwise, should contain b0 -> s1
+
     Return:
         If sep = False, list containing string lists
         If sep = True, list containing two lists, where each contains a set
@@ -176,7 +264,8 @@ def get_seq_lists(offr_cols, concat=False, sep=False):
     #! ERROR  CHECKING BASED ON THE FACT THAT WE ARE REMOVING b3 for the
     #! timebeing
     b3_matches = feats_from_str('_b3$', offr_cols)
-    if len(b3_matches) > 0:
+    s2_matches = feats_from_str('_s2$', offr_cols)
+    if (len(b3_matches) > 0 or len(s2_matches) > 0) and not b3:
         raise ValueError('b3 has not been totally removed')
     #! ##############################################################
     # more error checking for ref columns
@@ -185,12 +274,19 @@ def get_seq_lists(offr_cols, concat=False, sep=False):
         raise ValueError('ref columns remain')
     # intentionally excluding b3
     # grab all offer codes
-    offr_codes = all_offr_codes('s2')
+    if b3:
+        offr_codes = all_offr_codes('s2')
+        diff = 0
+    else:
+        offr_codes = all_offr_codes('b2')
+        diff = 1
+
     # separate them into buyer and seller offer codes
     byr_codes = feats_from_str('b', offr_codes)
     slr_codes = feats_from_str('s', offr_codes)
     # additional error checking
-    if len(byr_codes) != len(slr_codes):
+    act_diff = len(byr_codes) - len(slr_codes)
+    if diff != act_diff:
         raise ValueError('There should be one seller offer in response to every buyer' +
                          'offer, no more, no less')
     # initialize list for seller sequences and buyer sequences
@@ -219,24 +315,92 @@ def get_seq_lists(offr_cols, concat=False, sep=False):
         out.append(byr_seqs[0])
         # zip the remainder of the byr_features and the first two elements of the seller
         # features
-        for byr_feats, slr_feats in zip(byr_seqs[1:], slr_seqs[:len(slr_seqs - 1)]):
+        for byr_feats, slr_feats in zip(byr_seqs[1:], slr_seqs):
             # append the concatenated list of features from both
             out.append(byr_feats + slr_feats)
-        return out
     # if byrs and slrs are supposed to be separated into separate np.ararys for input through separate
     # matrices, return a list with two elements where the first is the list of byr feature lists
     # and the second is the list of slr feature lists
     elif sep:
-        return [byr_feats, slr_feats]
+        out = [byr_feats, slr_feats]
     # otherwise return all the buyer and seller features together in an ordered list
     else:
         for byr_feats, slr_feats in zip(byr_seqs, slr_seqs):
             out.append(byr_feats)
             out.append(slr_feats)
-        return out
+    # ensure that the seq_lists are appropriate relative length
+    seq_lists_legit(out, concat=concat, sep=sep, b3=b3)
+    return out
 
 
-def extract_cols(df, cols=[], is_const=False, sep=False, concat=False):
+def fix_odd_seqs(df, max_length):
+    '''
+    When inputs are being concatenated or we are using separate input paths
+    for buyer and seller threads, the thread lengths need to be adjusted to
+    reflect the fact that there are only 3 steps in RNN instead of 6
+
+    Args:
+        df: pd.DataFrame containing only features related to sequence input, ie
+        offer threads only for offers b0 -> s1
+        sep: boolean for whether seller and buyer offers are being input separately
+    '''
+    feats = df.columns
+    ###############################
+    #! b3 ERROR CHECKING
+    #! SHOULD ALWAYS BE REMOVED BEFORE
+    b3_matches = feats_from_str('_b3$', feats)
+    if len(b3_matches) > 0 or max_length >= 7:
+        raise ValueError('b3 has not been totally removed')
+    #################################
+    length = df['length'].copy()
+    # subtract one from odd length sequences
+    df['length'] = pd.Series((length - (length % 2)), index=df.index)
+    # grab min length for error checking
+    min_length = df['length'].min()
+    if min_length < 2:
+        raise ValueError(
+            'min length should never be less than 2 at this point')
+    # generate list of all remaining offer codes
+    all_offrs = all_offr_codes(get_last_code(max_length))
+    # extract updated length series
+    length = df['length'].copy()
+    for i in range(min_length, max_length + 1):
+        # get  indices of rows where where the current length is the max length
+        curr_inds = length[length == i].index
+        # get all observed offer codes
+        observed_offr_codes = all_offr_codes(get_last_code(i))
+        # generate unobserved offer codes, ie those in all_offrs
+        # not in observed_offr_codes
+        unobserved_offr_codes = [
+            code for code in all_offrs if code not in observed_offr_codes]
+        # for each unobserved_offr_code generate a list of matching columns
+        cols_for_code_list = [feats_from_str(
+            '_%s$' % code, feats) for code in unobserved_offr_codes]
+        # flatten list of lists
+        flat_cols = [
+            col for curr_code_list in cols_for_code_list for col in curr_code_list]
+        # set extracted indices for each matching column to 0
+        df.loc[curr_inds, flat_cols] = 0
+    # after resetting all values to appear as though odd length sequences did not observe the
+    # final turn, divide lenght by 2 to reflect actual length in rnn processing
+    df['length'] = df['length'] / 2
+    pass
+
+
+def get_seq_vals(df, seq_lists, concat=concat, sep=sep, b3=b3):
+    max_len = df['length'].max()
+    # sort by sequence length in descending order
+    df.sort_values(by='length', inplace=True, ascending=False)
+    if not sep:
+        # get the size of one sequence input
+        if not concat:
+            num_seq_feats = seq_lists[0]
+        else:
+            num_seq_feats = seq_lists[0] * 2
+        vals = np.empty(max_len, len(df.length), )
+
+
+def extract_cols(df, cols=[], is_const=False, sep=False, concat=False, b3=False):
     '''
     Extracts features from the data frame, converts the data these
     contain to a numpy.ndarray with size = (1, num_samp, num_feats), and
@@ -252,6 +416,7 @@ def extract_cols(df, cols=[], is_const=False, sep=False, concat=False):
         seller and buyer features as inputs
         sep: boolean giving whether the model is separating the buyer and
         seller offers as two separate sources of input
+        b3: boolean whether offr_b3 will be predicted by the final model
 
     Returns:
         columns formatted as np.array with appropriate dimensionality
@@ -270,14 +435,23 @@ def extract_cols(df, cols=[], is_const=False, sep=False, concat=False):
         vals = np.expand_dims(vals, 0)
         # finally remove constant features from data frame
     else:
-        # get length of each sequence
-        lengths = df['length'].values
-        # find longest sequence
-        max_length = np.amax(lengths)
+        # add length to the data frame
+        curr_cols['length'] = df['length']
+        # grab the max length
+        max_length = curr_cols['length'].max()
+        # if we are concatenating or separating, change thread lengths to reflect
+        # how long the threads will be when we input them to the model
+        # and hide the final offer features from odd length threads since
+        # these cannot be used
+        if concat or sep:
+            fix_odd_seqs(curr_cols)
         # fill na values with 0's (padding)
         df.fillna(value=0, inplace=True)
-        seq_feats =
-        max_length
+        # extract lists of sequence features
+        seq_lists = get_seq_lists(cols, concat=concat, sep=sep, b3=b3)
+        # extract values using seq_lists
+        vals = get_seq_vals(curr_cols, seq_lists,
+                            concat=concat, sep=sep, b3=b3)
     return vals
 
 
@@ -395,6 +569,8 @@ def main():
     # gives whether seller and buyer offers should be extracted into separate
     # numpy arrays for being input into a model downstream separately
     parser.add_argument('--separate', '-s', action='store_true')
+    # gives whether the last offer b3 should be kept in the data_frame
+    parser.add_argument('--b3', '-b3', action='store_true')
 
     # parse args
     args = parser.parse_args()
@@ -403,6 +579,18 @@ def main():
     data_name = args.data
     sep = args.separate
     concat = args.concat
+    b3 = args.b3
+
+    # quick argument error checking
+    # b3 cannot be active at the same time as sep or concat
+    if b3 and (sep or concat):
+        raise ValueError('we cannot keep b3, if we are inputting' +
+                         'seller and buyer offers separately or if we are concatenating seller' +
+                         'and buyer offers')
+    # sep and concat cannot be active at the same time
+    if sep and concat:
+        raise ValueError('We cannot separate AND concatenate buyer and seller' +
+                         'offers simultaneously')
 
     # load data
     load_loc = 'data/exps/%s/normed/%s.csv' % (data_name, name)
@@ -412,24 +600,33 @@ def main():
     #! NOTE: FOR THE TIME BEING DROP b3 offers since the seller cannot
     #! respond and we are presently only training models to predict
     #! seller responses to buyer offers
-    drop_b3(df)
+    #! CAVEAT: predictions made for b3 may help the model generalize for
+    #! its earlier seller predictions--therefore, in certain experiments,
+    #! we may choose to keep it
+    if not b3:
+        drop_b3(df)
 
     # load column name lists if currently processing test data
     if name == 'test':
         const_cols, offr_cols = get_training_features(exp_name)
+        # for ref columns, indescriminately grab ALL reference columns
+        ref_cols = get_colnames(df.columns, const=False, ref=True, b3=b3)
     else:
         # generate column name lists if the current data corresponds to training or toy data
-        const_cols = get_colnames(df.columns, const=True, ref=False)
-        offr_cols = get_colnames(df.columns, const=False, ref=False)
-        ref_cols = get_colnames(df.columns, const=False, ref=True)
+        const_cols = get_colnames(df.columns, const=True, ref=False, b3=b3)
+        # offr_cols should only generate exactly those columns that will be used as input to the
+        offr_cols = get_colnames(df.columns, const=False, ref=False, b3=b3)
+        # for ref columns, indescriminately grab ALL reference columns
+        ref_cols = get_colnames(df.columns, const=False, ref=True, b3=b3)
         feat_dict = {}
         feat_dict['offr_feats'] = offr_cols
         feat_dict['const_feats'] = const_cols
 
     # extract constant columns and corresponding data prepped for torch.rnn/lstm
     const_vals = extract_cols(df, cols=const_cols, is_const=True)
+    # extracts the sequence values numpy arary
     offr_vals = extract_cols(
-        df, cols=const_cols, is_const=False, sep=sep, concat=concat)
+        df, cols=offr_cols, is_const=False, sep=sep, concat=concat, b3=b3)
     #
 
 
