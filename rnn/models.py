@@ -34,7 +34,8 @@ class SimpleRNN(nn.Module):
         # of size (1, batch, hidden_size)
         x, _ = self.rnn(input=x, h_0=h_0)
         # self.rnn should output a tensor of (seq_len, batch, hidden_size)
-        x, lengths = torch.nn.utils.rnn.pad_packed_sequence(x)
+        x, _ = torch.nn.utils.rnn.pad_packed_sequence(x)
         # apply output layer
         x = self.oh(x)
-        return x, lengths
+
+        return x

@@ -1,6 +1,6 @@
 import sys
 import os
-sys.path.append(os.path.abspath('repo/trans_probs/mvp/'))
+sys.path.append(os.path.abspath('repo/rnn/models.py'))
 
 from models import *
 import torch

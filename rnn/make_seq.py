@@ -55,16 +55,16 @@ def get_colnames(columns, const=False, ref=False, b3=False):
             sys.stdout.flush()
         # otherwise if the current column is identified as having an offer
         # code and the function isn't seraching for constant columns
-        elif match and not const:
+        elif match_offr and not const:
             # add the column to the list if it is a reference column
             # and we're searching for reference columns
-            if ref and ref_re:
+            if ref and match_ref:
                 out_cols.append(col)
                 print('%s treated as ref column' % col)
                 sys.stdout.flush()
             # or add the column to the list if it is not a reference
             # column and we're not searching for reference columns
-            if not ref and not ref_re:
+            if not ref and not match_ref:
                 out_cols.append(col)
                 print('%s treated as offer generated' % col)
                 sys.stdout.flush()
@@ -94,7 +94,7 @@ def get_colnames(columns, const=False, ref=False, b3=False):
         # call closure to generate function
         col_filter = make_col_filter(drop_feats)
         # apply filter to out out_cols
-        offr_cols = filter(col_filter, out_cols)
+        out_cols = filter(col_filter, out_cols)
 
     return out_cols
 
@@ -191,7 +191,15 @@ def seq_lists_legit(out, concat=False, sep=False, b3=False):
     have the same number of elements
 
     Throws an error if anything is wrong
+
+    Can be enhanced to check tags if anything appears wrong as well
+    SHOULD BE ENHANCED TO CHECK TAGS
     '''
+    # seller feature tag
+    slr_tag = r'_s[0-2]$'
+    # buyer feature tag
+    byr_tag = r'_b[0-2]$'
+
     if sep:
         # ensure the otuer lister has two elements
         if len(out) != 2:
@@ -208,11 +216,29 @@ def seq_lists_legit(out, concat=False, sep=False, b3=False):
         # the two outer lemeents
         byr_lens = [len(byr_seq) for byr_seq in out[0]]
         slr_lens = [len(slr_seq) for slr_seq in out[1]]
+        # ensure that all strings in each byr_seq list contain a byr code
+        # by counting the number of strings that match the byr_tag pattern
+        matching_byr_lens = [len(feats_from_str(byr_tag, byr_feats))
+                             for byr_feats in out[0]]
+        # do the same for seller sequences
+        matching_slr_lens = [len(feats_from_str(byr_tag, slr_feats))
+                             for slr_feats in out[1]]
+        # similarly ensure that the seller features contain no byr tags
+        byr_tags_slr_seqs = functools.reduce(
+            lambda feats, acc: len(feats_from_str(byr_tag, feats)), out[1], 0)
+        # do the same for byr threads and the seller tag
+        slr_tags_byr_seqs = functools.reduce(
+            lambda feats, acc: len(feats_from_str(slr_tag, feats)), out[0], 0)
+        # ensure searches for slr tags in byr features and vice versa
+        # encountered no matches
+        if byr_tags_slr_seqs != slr_tags_byr_seqs or slr_tags_byr_seqs != 0:
+            raise ValueError('Seller tag detected in byr feats or vice versa')
         # set baseline length arbitrarily
         init_len = byr_lens[0]
-        # iterate over concatented list in search of difference
-        for curr_len in byr_lens + slr_lens:
-            if init_len != curr_len:
+        # iterate over concatented list in search of difference in length or
+        # number of tag matches
+        for curr_len, curr_matching_len in zip(byr_lens + slr_lens, matching_byr_lens + matching_slr_lens):
+            if init_len != curr_len or init_len != curr_matching_len:
                 raise ValueError(
                     'Buyer and seller threads not separated correctly')
     elif concat:
@@ -227,14 +253,52 @@ def seq_lists_legit(out, concat=False, sep=False, b3=False):
             if curr_list_len != post_len:
                 raise ValueError(
                     'Buyer and seller threads not concatenated correctly')
+            curr_list = out[i]
+            # ensure that that the list only contains all necessary byr_matches and
+            # no seller matches if the index is even and vice versa if odd
+            byr_matches = len(feats_from_str(byr_tag, curr_list))
+            slr_matches = len(feats_from_str(slr_tag, curr_list))
+            # set expectations depending on whether the current set of features
+            # should correspond to a buyer or a seller
+            if i % 2 == 0:
+                exp_byr = post_len
+                exp_slr = 0
+            else:
+                exp_byr = 0
+                exp_slr = post_len
+            if exp_byr != byr_matches or slr_matches != exp_slr:
+                raise ValueError('Buyer and seller thread codes not concatenated correctly' +
+                                 'Some buyer threads with sellers or vice versa')
+        # ensure the first buyer thread is fully composed of buyer feats
+        # and has no seller features, not checked in loop
+        byr_matches = len(feats_from_str(byr_tag, out[0]))
+        slr_matches = len(feats_from_str(slr_tag, out[0]))
+        if byr_matches != init_len or slr_matches != 0:
+            raise ValueError('Buyer and seller thread codes not concatenated correctly' +
+                             'Some buyer threads with sellers or vice versa')
     else:
         # if not concatenated or separated, ensure that each element of the list
         # has the same length
         init_len = len(out[0])
-        for curr_off in out:
-            if len(curr_off) != init_len:
+        for i in range(len(out)):
+            curr_list = out[i]
+            if len(curr_list) != init_len:
                 raise ValueError(
                     'Buyer and seller threads not processed correctly')
+            byr_matches = len(feats_from_str(byr_tag, curr_list))
+            slr_matches = len(feats_from_str(slr_tag, curr_list))
+            # set expectations depending on whether the current set of features
+            # should correspond to a buyer or a seller
+            if i % 2 == 0:
+                exp_byr = init_len
+                exp_slr = 0
+            else:
+                exp_byr = 0
+                exp_slr = init_len
+            if exp_byr != byr_matches or slr_matches != exp_slr:
+                raise ValueError(
+                    'Buyer and seller threads not processed correctly' +
+                    '. Some buyer threads in seller feats or vice versa')
     pass
 
 
@@ -306,7 +370,7 @@ def get_seq_lists(offr_cols, concat=False, sep=False, b3=False):
     for slr_code in slr_codes:
         slr_code = '%s$' % slr_code
         # grab all columns containing the seller code
-        slr_feats = feats_from_str(slr_feats, offr_cols)
+        slr_feats = feats_from_str(slr_code, offr_cols)
         slr_seqs.append(slr_feats)
     # if the output should be concatenated
     if concat:
@@ -331,6 +395,22 @@ def get_seq_lists(offr_cols, concat=False, sep=False, b3=False):
     # ensure that the seq_lists are appropriate relative length
     seq_lists_legit(out, concat=concat, sep=sep, b3=b3)
     return out
+
+
+def get_last_code(length):
+    '''
+    Maps an integer giving the length of a sequence
+    to the code for the last turn in the sequence
+    '''
+    if length % 2 == 0:
+        turn_type = 's'
+        adj_len = length - 1
+        turn_num = math.floor(adj_len / 2)
+    else:
+        turn_type = 'b'
+        turn_num = math.floor(length / 2)
+    turn_code = '%s%d' % (turn_type, turn_num)
+    return turn_code
 
 
 def fix_odd_seqs(df, max_length):
@@ -387,7 +467,7 @@ def fix_odd_seqs(df, max_length):
     pass
 
 
-def get_seq_vals(df, seq_lists, concat=concat, sep=sep, b3=b3):
+def get_seq_vals(df, seq_lists, concat=False, sep=False, b3=False):
     max_len = df['length'].max()
     # sort by sequence length in descending order
     df.sort_values(by='length', inplace=True, ascending=False)
@@ -398,6 +478,9 @@ def get_seq_vals(df, seq_lists, concat=concat, sep=sep, b3=b3):
         else:
             num_seq_feats = seq_lists[0] * 2
         vals = np.empty(max_len, len(df.length), )
+
+    # temp
+    return None
 
 
 def extract_cols(df, cols=[], is_const=False, sep=False, concat=False, b3=False):
@@ -444,7 +527,7 @@ def extract_cols(df, cols=[], is_const=False, sep=False, concat=False, b3=False)
         # and hide the final offer features from odd length threads since
         # these cannot be used
         if concat or sep:
-            fix_odd_seqs(curr_cols)
+            fix_odd_seqs(curr_cols, max_length)
         # fill na values with 0's (padding)
         df.fillna(value=0, inplace=True)
         # extract lists of sequence features
@@ -544,7 +627,7 @@ def unpickle(path):
     Returns:
         arbitrary object contained in pickle
     '''
-    f = open("data/exps/%s/bins.pickle" % exp_name, "rb")
+    f = open(path, "rb")
     obj = pickle.load(f)
     f.close()
     return obj
