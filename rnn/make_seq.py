@@ -467,20 +467,83 @@ def fix_odd_seqs(df, max_length):
     pass
 
 
-def get_seq_vals(df, seq_lists, concat=False, sep=False, b3=False):
+def get_seq_vals(df, seq_lists):
+    '''
+    Assumes ghost features have been added
+    '''
     max_len = df['length'].max()
-    # sort by sequence length in descending order
-    df.sort_values(by='length', inplace=True, ascending=False)
-    if not sep:
-        # get the size of one sequence input
-        if not concat:
-            num_seq_feats = seq_lists[0]
-        else:
-            num_seq_feats = seq_lists[0] * 2
-        vals = np.empty(max_len, len(df.length), )
+    # get the size of one sequence input
+    num_seq_feats = seq_lists[0]
+    vals = np.empty((max_len, len(df.index), num_seq_feats))
+    # initialize sequence index counter
+    seq_ind = 0
+    # iterate over lists of features contained in seq_lists
+    for curr_feats in seq_lists:
+        # final debugging check
+        if len(curr_feats) != num_seq_feats:
+            raise ValueError('unexpected number of features in sequence')
+        # extract columns from the data.frame as 2d numpy array
+        # of dim len(df) x num_seq_feats
+        curr_vals = df[curr_feats].values
+        # nan error checking
+        if np.any(np.isnan(curr_vals)):
+            raise ValueError('na value detected')
+        # insert curr_val matrix at seq_ind in the 3d ndarray
+        vals[seq_ind, :, :] = curr_vals
+        # increment ind counter
+        seq_ind = seq_ind + 1
+    return vals
 
-    # temp
-    return None
+
+def get_ghost_names(names):
+    '''
+    Get names of ghosts features corresponding to list of features...
+    for a feature 'x_[bs][012]' the ghost feature is 'x_ghost'
+
+    Args:
+        names: string list
+
+    Returns: String list of ghost features
+    '''
+    # generate sequence code for regular expression matching
+    seq_code = r'_[bs][0-3]$'
+    # remove seq_code and replace with _ghost
+    names = [re.sub(seq_code, '_ghost', feat_name) for feat_name in names]
+    return names
+
+
+def ghost_feats(seq_lists, df, concat=False, sep=False):
+    '''
+    If the experiment uses separated buyer and seller inputs or
+    concatenated inputs, add a set of ghost features (where all values are 0)
+    to the data frame and the appropriate location in seq_lists to account for
+    the fact that the first buyer offer does not have a preceeding seller offer
+    '''
+    if sep:
+        # extract list where the ghost features should be added
+        # if separated, this is the list consisting of seller sequences
+        underfull_seqs = seq_lists[1]
+        ghost_names = get_ghost_names(underfull_seqs[0])
+        # add list of ghost names as the element in the list of seller sequences
+        underfull_seqs = [ghost_names] + underfull_seqs
+        # replace the original list of seller seqs with this new list
+        seq_lists[1] = underfull_seqs
+    elif concat:
+        # extract features contained in the second sequence entry
+        # corresponding to the first full entry
+        byr_and_slr_feats = seq_lists[1]
+        # find all features in this list that have a seller code
+        slr_feats = feats_from_str(r'_s[012]$', byr_and_slr_feats)
+        # get list of all features contained only in slr_feats
+        ghost_names = get_ghost_names(slr_feats)
+        # pre-pend these features onto the list of features for the first
+        # sequence entry
+        seq_lists[0] = ghost_names + seq_lists[0]
+    # add ghost names to df
+    for curr_name in ghost_names:
+        df[curr_name] = pd.Series(0, index=df.index)
+    # return sequence list
+    return seq_lists
 
 
 def extract_cols(df, cols=[], is_const=False, sep=False, concat=False, b3=False):
@@ -518,23 +581,32 @@ def extract_cols(df, cols=[], is_const=False, sep=False, concat=False, b3=False)
         vals = np.expand_dims(vals, 0)
         # finally remove constant features from data frame
     else:
+        # fill na values with 0's (padding)
+        df.fillna(value=0, inplace=True)
         # add length to the data frame
         curr_cols['length'] = df['length']
         # grab the max length
         max_length = curr_cols['length'].max()
+        # extract lists of sequence features
+        seq_lists = get_seq_lists(cols, concat=concat, sep=sep, b3=b3)
         # if we are concatenating or separating, change thread lengths to reflect
         # how long the threads will be when we input them to the model
         # and hide the final offer features from odd length threads since
         # these cannot be used
         if concat or sep:
             fix_odd_seqs(curr_cols, max_length)
-        # fill na values with 0's (padding)
-        df.fillna(value=0, inplace=True)
-        # extract lists of sequence features
-        seq_lists = get_seq_lists(cols, concat=concat, sep=sep, b3=b3)
+            # additionally add ghost features to data frame and seq_lists
+            seq_lists = ghost_feats(seq_lists, df, concat=concat, sep=sep)
+        # sort by sequence length in descending order
+        df.sort_values(by='length', inplace=True, ascending=False)
         # extract values using seq_lists
-        vals = get_seq_vals(curr_cols, seq_lists,
-                            concat=concat, sep=sep, b3=b3)
+        if sep:
+            # extract value ndarray for buyers
+            byr_vals = get_seq_vals(curr_cols, seq_lists[0])
+            # extract value ndarray for sellers
+            slr_vals = get_seq_vals(curr_cols, seq_lists[1])
+            vals = (byr_vals, slr_vals)
+        vals = get_seq_vals(curr_cols, seq_lists)
     return vals
 
 
