@@ -2,7 +2,7 @@
 #!/bin/bash
 #$ -js 1
 #$ -j y
-#$ -l m_mem_free=25G
+#$ -l m_mem_free=100G
 
 while getopts 'l:h:s:n:t:p:d:ae:br:' flag; do
   case "${flag}" in
@@ -35,6 +35,7 @@ cd eBay
 types=( "toy" "train" "test" )
 for k in "${types[@]}"
 do
+    echo $k
     if [ -z ${step+x} ]; then
         if [ -z "$abs" ]; then
             if [ -n "$perc" ]; then

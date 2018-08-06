@@ -17,6 +17,7 @@ while getopts 'e:n:p:' flag; do
   esac
 done
 cd ~/eBay/data/$name
+echo $prep
 scriptPath=repo/rnn/prep_rnn$prep.py
 cd ~
 source /opt/rh/rh-python36/enable
