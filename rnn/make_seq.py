@@ -175,7 +175,36 @@ def feats_from_str(refstr, offr_cols):
     return matches
 
 
-def seq_lists_legit(out, concat=False, sep=False, b3=False, ghost=True):
+def neutralize_feats(feats):
+    '''
+    Remove offer codes from a list of offer generated feature names
+    '''
+    feats = copy.copy(feats)
+    any_tag = r'_([sb][0-3]|ghost)$'
+    feats = [re.sub(any_tag, '', curr_feat) for curr_feat in feats]
+    return feats
+
+
+def same_contents(nested_list):
+    '''
+    Ensures that element in a nested string list
+    contains the same elements
+    '''
+    # arbitrarily grab the first element from the outer list
+    first_el = nested_list[0]
+    # iterate over every other element in the outer list
+    for curr_el in nested_list[1:]:
+        # zip together the current element and the first element and
+        # iterate over them in tandem
+        for a, b in zip(first_el, curr_el):
+            # if the contents dont match at any point, return false
+            if a != b:
+                return False
+    # if we make it out of the loop, all contents must be identical
+    return True
+
+
+def seq_lists_legit(out, concat=False, sep=False, b3=False, ghost=False):
     '''
     Ensures the list of sequence features have appropriate relative
     lengths. Specifically, if sep is true, the outer list should
@@ -219,6 +248,12 @@ def seq_lists_legit(out, concat=False, sep=False, b3=False, ghost=True):
             raise ValueError(
                 'Buyer and seller threads not separated correctly')
         elif num_byr_seqs - num_slr_seqs != 0 and ghost:
+            raise ValueError(
+                'Buyer and seller threads not separated correctly')
+        # strip offr tags from byr and seller lists
+        byr_neut = [neutralize_feats(feats) for feats in out[0]]
+        slr_neut = [neutralize_feats(feats) for feats in out[1]]
+        if not same_contents(byr_neut) or not same_contents(slr_neut):
             raise ValueError(
                 'Buyer and seller threads not separated correctly')
         # ensure that each buyer and seller thread contain the same number of elements
@@ -311,6 +346,14 @@ def seq_lists_legit(out, concat=False, sep=False, b3=False, ghost=True):
         if exp_byr != byr_matches or slr_matches != exp_slr or ghost_matches != exp_ghost:
             raise ValueError('Buyer and seller thread codes not concatenated correctly' +
                              'Some buyer threads with sellers or vice versa')
+        # if ghost, check that each element contains the same neutralized features
+        # this will need to be changed if byr and seller turns have different features later
+        neut_feats = [neutralize_feats(feats) for feats in out]
+        if not ghost:
+            neut_feats[0] = neut_feats[0] + neut_feats[0]
+        if not same_contents(neut_feats):
+            raise ValueError('Buyer and seller thread codes not concatenated correctly' +
+                             'Some buyer threads with sellers or vice versa')
     else:
         # if not concatenated or separated, ensure that each element of the list
         # has the same length
@@ -335,6 +378,11 @@ def seq_lists_legit(out, concat=False, sep=False, b3=False, ghost=True):
             if exp_byr != byr_matches or slr_matches != exp_slr or ghost_matches != exp_ghost:
                 raise ValueError('Buyer and seller thread codes not concatenated correctly' +
                                  'Some buyer threads with sellers or vice versa')
+            # check that each element of the list has the same contents
+            neut_seqs = [neutralize_seqs(feats) for feats in out]
+            if not same_contents(neut_seqs):
+                raise ValueError(
+                    'Buyer and seller threads not processed correctly')
     pass
 
 
@@ -536,13 +584,17 @@ def get_seq_vals(df, seq_lists, is_targ=False, midpoint_ser=None):
         curr_vals = df[curr_feats].copy()
         # nan error checking
         if is_targ:
+            print('Targ %d: %s' % seq_ind, curr_feats)
             curr_vals.fillna(-100, inplace=True)
             curr_vals = curr_vals.squeeze()
-            print('Mean: %.2f' % curr_vals.mean())
-            print('Std: %.2f' % curr_vals.std())
-            print(midpoint_ser)
+            # print('Mean: %.2f' % curr_vals.mean())
+            # print('Std: %.2f' % curr_vals.std())
+            # print(midpoint_ser)
             sys.stdout.flush()
             curr_vals = midpoint_ser.loc[curr_vals.values]
+            curr_vals = curr_vals.to_frame()
+            # print(curr_vals)
+            # sys.stdout.flush()
         # convert to numpy array
         curr_vals = curr_vals.values
         if np.any(np.isnan(curr_vals)):
@@ -551,6 +603,9 @@ def get_seq_vals(df, seq_lists, is_targ=False, midpoint_ser=None):
         vals[seq_ind, :, :] = curr_vals
         # increment ind counter
         seq_ind = seq_ind + 1
+    # if targ values, remove the size 1 third dimension
+    if is_targ:
+        curr_vals = np.squeeze(curr_vals, axis=2)
     return vals
 
 
@@ -644,12 +699,12 @@ def extract_cols(df, cols=[], is_const=False, sep=False, concat=False, b3=False)
         # extract values using seq_lists
         if sep:
             # extract value ndarray for buyers
-            byr_vals = get_seq_vals(curr_cols, seq_lists[0])
+            byr_vals = get_seq_vals(df, seq_lists[0])
             # extract value ndarray for sellers
-            slr_vals = get_seq_vals(curr_cols, seq_lists[1])
+            slr_vals = get_seq_vals(df, seq_lists[1])
             vals = (byr_vals, slr_vals)
         else:
-            vals = get_seq_vals(curr_cols, seq_lists)
+            vals = get_seq_vals(df, seq_lists)
     return vals
 
 
@@ -777,6 +832,40 @@ def get_targ_lists(concat=False, sep=False, b3=False, time_mod=False):
     return targ_codes
 
 
+def get_byr_inds(seq_lists, df):
+    # regex expression for offer codes
+    offer_code_re = r'_([bs][0-9])$'
+    # initialize list counter
+    counter = 0
+    # iterate over all feature lists in seq_lists
+    for feat_list in seq_lists:
+        # arbitrarily grab the first feature in the list
+        arb_feat = feat_list[0]
+        # find offer code in the first feature
+        code_match = re.search(offer_code_re, arb_feat)
+        # extract matching substring
+        code_string = code_match.group(1)
+        # generate byr_ind for this match
+        byr_ind_name = 'byr_ind_%s' % code_string
+        # generate series to contain indicator
+        byr_ser = pd.Series(np.NaN, index=df.index)
+        # find indices where corresponding offer is not nan
+        curr_offr_name = 'offr_%s' % code_string
+        curr_offr = df[curr_offr_name].copy()
+        filled_inds = curr_offr[~curr_offr.isna()].index
+        # determine whether the buyer indicator should be activated
+        # for the current offer
+        ind_val = 1 if (code_string[0] == 'b') else 0
+        byr_ser.loc[filled_inds] = ind_val
+        # add series back to data frame
+        df[byr_ind_name] = byr_ser
+        # add indicator as the final entry in the current sequence list
+        seq_lists[counter] = seq_lists[counter].append(byr_ind_name)
+        # increment counter
+        counter = counter + 1
+    return seq_lists
+
+
 def main():
     # parse parameters
     parser = argparse.ArgumentParser()
@@ -848,11 +937,25 @@ def main():
     # midpoint and the value of the series is the index of the corresponding midpoint
     # list
     # ensure we append -100 for missing values to both
-    midpoint_ser = pd.Series(np.append(midpoint_list, -100),
-                             index=list(range(len(midpoint_list))).append(-100))
+    midpoint_vals = list(range(len(midpoint_list)))
+    midpoint_vals.append(-100)
+    midpoint_inds = np.append(midpoint_list, -100)
+    midpoint_ser = pd.Series(midpoint_vals, index=midpoint_inds)
+    print('midpoint series')
+    print(midpoint_ser)
+    sys.stdout.flush()
+    # Deprecate  maybe?
+    # work around since the insert above did not work
+    # midpoint_ind = df.index.tolist()
+    # idx = len(midpoint_ind) - 1
+    # midpoint_ind[idx] = -100
+    # midpoint_ser.index = midpoint_ind
+
     # delete used variables
     del midpoint_list
     del midpoint_dict
+    del midpoint_vals
+    del midpoint_inds
 
     # load column name lists if currently processing test data
     if name == 'test':
@@ -877,6 +980,10 @@ def main():
         # grab list of lists where each element corresopnds to a set of features for the
         # sequence entry in the same position
         seq_lists = get_seq_lists(offr_cols, concat=concat, sep=sep, b3=b3)
+        # add buyer indicator to each offer if buyer and seller inputs pass through the
+        # same weights
+        if not sep and not concat:
+            seq_lists = add_byr_ind(seq_lists, df)
         # ensure sequence list is valid
         seq_lists_legit(seq_lists, concat=concat, sep=sep, b3=b3, ghost=False)
         # initialize feature dictionary
