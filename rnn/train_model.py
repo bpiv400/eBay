@@ -77,7 +77,7 @@ def get_resp_time(turn):
     return resp_col
 
 
-def get_prep_type(exp_name):
+def get_prep_type(exp_name, is_rnn=False):
     '''
     Description: uses the experiment name to determine
     where to load data from
@@ -151,25 +151,34 @@ def update_loss_hist(loss_hist, recent_hist, curr_batch=None, num_batches=None):
     return loss_hist
 
 
-def process_minibatch(num_samps, net, optimizer, data, targ, batch_size, device, criterion):
+def process_minibatch(num_samps, net, optimizer, offr_vals, const_vals, targ_vals, length_vals, batch_size, device, criterion):
     # grab sample indices
     sample_inds = torch.randint(
         low=0, high=num_samps, size=(batch_size,), device=device).long()
 
     # grab sample data
-    sample_input = data[sample_inds, :]
+    sample_offr_vals = offr_vals[:, sample_inds, :]
+    sample_const_vals = const_vals[:, sample_inds, :]
+    sample_targ_vals = targ_vals[:, sample_inds]
+    sample_lengths = length_vals[sample_inds]
 
-    # grab corresponding target
-    sample_targ = targ[sample_inds]
+    # sort lengths and retrieved sorted indices as well
+    sample_lengths, sorted_inds = torch.sort(
+        sample_lengths, dim=0, descending=True)
 
-    # get sample output
-    if 'cross' in exp_name:
-        output = net(sample_input)
-    else:
-        output = net(sample_input).view(-1)
+    # apply same sorting to other inputs
+    sample_offr_vals = sample_offr_vals[:, sorted_inds, :]
+    sample_const_vals = sample_const_vals[:, sorted_inds, :]
+    sample_targ_vals = sample_targ_vals[:, sorted_inds]
 
-    # calculate loss and backpropogate gradient
-    loss = criterion(output, sample_targ)
+    # generate packed sequence
+    sample_offr_vals = torch.nn.utils.rnn.pack_padded_sequence(sample_offr_vals,
+                                                               sample_lengths)
+    # forward pass
+    output = net(x=sample_offr_vals, h_0=sample_const_vals)
+
+    # calculate loss on each entry
+    loss = criterion(output, sample_targ_vals)
     loss.backward()
     # update parameters
     optimizer.step()
@@ -225,9 +234,9 @@ def is_valid_dec(valid_hist, hist_len):
         return any_dec_flag
 
 
-def batch_count_loop(num_batches, net, optimizer, data, targ, batch_size, device, criterion):
+def batch_count_loop(num_batches, net, optimizer, offr_vals, const_vals, targ_vals, length_vals, batch_size, device, criterion):
     # get the total number of samples in the training data
-    num_samps = data.shape[0]
+    num_samps = offr_vals.shape[1]
     # create the initial copy of the recent_history tensory
     recent_hist = torch.zeros(500, device=device)
     # create an index counter to track where loss should be input to recent_hist tensor
@@ -240,8 +249,8 @@ def batch_count_loop(num_batches, net, optimizer, data, targ, batch_size, device
         optimizer.zero_grad()
 
         # get error for minibatch, back prop, and update model
-        loss = process_minibatch(
-            num_samps, net, optimizer, data, targ, batch_size, device, criterion)
+        loss = process_minibatch_rnn(
+            num_samps, net, optimizer, offr_vals, const_vals, targ_vals, batch_size, device, criterion, length_vals)
 
         # add loss to the current recent loss history and update the index counter
         recent_hist[hist_ind] = loss
@@ -335,6 +344,23 @@ def get_optimizer(net, exp_name):
     return optimizer
 
 
+def unpickle(path):
+    '''
+    Extracts an abritrary object from the pickle located at path and returns
+    that object
+
+    Args:
+        path: string denoting path to pickle
+
+    Returns:
+        arbitrary object contained in pickle
+    '''
+    f = open(path, "rb")
+    obj = pickle.load(f)
+    f.close()
+    return obj
+
+
 def main():
     # parse parameters
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -399,173 +425,177 @@ def main():
     else:
         offr_mod = True
 
-    # get response col
-    if offr_mod:
-        resp_col = get_resp_offr(turn)
-    else:
-        if turn != 'start_price_usd':
-            resp_col = get_resp_time(turn)
-        else:
-            raise ValueError('Cannot train a model for time until the' +
-                             'buyer makes their first offer')
-
     # get data type
-    prep_type = get_prep_type(exp_name)
+    # TODO: I don't think prep type is necessary here due to effects of make_seq
+    # prep_type = get_prep_type(exp_name, is_rnn=True)
     # get model class
     Net = get_model_class(exp_name)
 
     print('Loading Data')
     sys.stdout.flush()
 
-    # load data frame containing training data
-    load_loc = 'data/exps/%s/normed/train_concat_%s.csv' % (
-        prep_type, turn)
-    df = pd.read_csv(load_loc)
+    # load data pickle
+    data_loc = 'data/exps/%s/train_data.pickle' % exp_name
+    data_dict = unpickle(data_loc)
+    feats_loc = 'data/exps/%s/feats.pickle' % exp_name
+    feats_dict = unpickle(feats_loc)
 
-    if offr_mod:
-        # bin location
-        bin_loc = 'data/exps/%s/%s/bins.pickle' % (prep_type, turn)
-        # load bins dictionary from pickle
-        with open(bin_loc, 'rb') as f:
-            bin_dict = pickle.load(f)
-        f.close()
-        # extract midpoints from bin dictionary
-        midpoints = bin_dict['midpoints']
-    else:
-        # bin location
-        bin_loc = 'data/exps/%s/%s/time_bins.pickle' % (prep_type, turn)
-        # load bins dictionary from pickle
-        with open(bin_loc, 'rb') as f:
-            bin_dict = pickle.load(f)
-        f.close()
-        midpoints = bin_dict['time_midpoints']
+    # extract necessary components from data_dict
+    const_vals = data_dict['const_vals']
+    offr_vals = data_dict['offr_vals']
+    targ_vals = data_dict['target_vals']
+    midpoint_ser = data_dict['midpoint_ser']
+    length_vals = data_dict['length_vals']
 
+    # TODO: Consider removing when done update
+    #     if offr_mod:
+    #         # bin location
+    #         bin_loc = 'data/exps/%s/%s/bins.pickle' % (prep_type, turn)
+    #         # load bins dictionary from pickle
+    #         with open(bin_loc, 'rb') as f:
+    #             bin_dict = pickle.load(f)
+    #         f.close()
+    #         # extract midpoints from bin dictionary
+    #         midpoints = bin_dict['midpoints']
+    #     else:
+    #         # bin location
+    #         bin_loc = 'data/exps/%s/%s/time_bins.pickle' % (prep_type, turn)
+    #         # load bins dictionary from pickle
+    #         with open(bin_loc, 'rb') as f:
+    #             bin_dict = pickle.load(f)
+    #         f.close()
+    #         midpoints = bin_dict['time_midpoints']
+
+    # TODO: Consider removing this when done updating
     #########################################################
     # TEMPORARY FIX UNTIL ROUNDING ERROR HAS BEEN SOLVED IN BIN
-    if 'norm' in exp_name:
-        midpoints = np.around(midpoints, 2)
-        count = 0
-        for point in midpoints:
-            count = np.around(count, 2)
-            if point != count:
-                raise ValueError('Midpoints not rounded correctly')
-            count = count + .01
-
+    # if 'norm' in exp_name:
+    #    midpoints = np.around(midpoints, 2)
+    #    count = 0
+    #    for point in midpoints:
+    #        count = np.around(count, 2)
+    #        if point != count:
+    #            raise ValueError('Midpoints not rounded correctly')
+    #        count = count + .01
+    #
     ##########################################################
     # delete the dictionary itself
-    del bin_dict
+    del data_dict
     print('Done Loading')
     sys.stdout.flush()
 
+    # TODO: Consider removing this section when done updating
     # remove  refrerence columns from data frame
-    extra_cols = ['ref_old', 'ref_rec', 'ref_resp']
+    # extra_cols = ['ref_old', 'ref_rec', 'ref_resp']
     # add the response column corresponding to the
     # other kind of model (time_ji for offr_mod)
     # offr_ji otherwise
-    if offr_mod:
-        if turn != 'start_price_usd':
-            extra_cols.append(get_resp_time(turn))
-    else:
-        extra_cols.append(get_resp_offr(turn))
-
-    for col in extra_cols:
-        if col in df:
-            print('Dropping %s' % col)
-            df.drop(columns=col, inplace=True)
-
+    # if offr_mod:
+    #     if turn != 'start_price_usd':
+    #         extra_cols.append(get_resp_time(turn))
+    # else:
+    #     extra_cols.append(get_resp_offr(turn))
+    #
+    # for col in extra_cols:
+    #     if col in df:
+    #         print('Dropping %s' % col)
+    #         df.drop(columns=col, inplace=True)
     # get class series (output later)
-    class_series = get_class_series(midpoints)
-
+    # class_series = get_class_series(midpoints)
     # convert raw targets to classes if using cross entropy
-    if 'cross' in exp_name:
-        df = get_resp_turn_classes(df, resp_col, class_series)
+    # if 'cross' in exp_name:
+    #     df = get_resp_turn_classes(df, resp_col, class_series)
 
     # if stopping criterion is based ontest performance
     # initialize validation set
     if valid:
         # get the number of samples associated with the percentage size
-        valid_size = int(len(df.index) * valid_size)
+        valid_size = int(offr_vals.shape[1] * valid_size)
         # valid_size samples from the range of integers in df.index (since this should
         # be a simple step index)
         valid_inds = np.random.random_integers(
-            0, (len(df.index) - 1), valid_size)
-        # grab the corresponding data then drop the rows from the data frame
-        valid_df = df.loc[valid_inds].copy()
-        df.drop(index=valid_inds, inplace=True)
-        # grab the target, drop the column, then export the rest as a
-        # numpy matrix for training
-        valid_targ = valid_df[resp_col].values
-        valid_df.drop(columns=resp_col, inplace=True)
-        valid_data = valid_df.values
-        del valid_df
+            0, (offr_vals.shape[1] - 1), valid_size)
+        # sort valid_inds in ascending order
+        valid_inds = np.sort(valid_inds)
+
+        # grab the corresponding data then drop the rows from the offr_vals, const_vals, and
+        # targs df
+        valid_offr_vals = offr_vals[:, valid_inds, :]
+        valid_const_vals = const_vals[:, valid_inds, :]
+        valid_targs = targ_vals[:, valid_inds]
+        valid_length_vals = length_vals[valid_inds]
+        # dropping corresponding values
+        offr_vals = np.delete(offr_vals, valid_inds, axis=1)
+        const_vals = np.delete(const_vals, valid_inds, axis=1)
+        targ_vals = np.delete(targ_vals, valid_inds, axis=1)
+        length_vals = np.delete(length_vals, valid_inds)
+
+        # convert all three components to tensors for training
         # convert both valid_data and valid_targ to tensors for training
-        valid_targ = torch.from_numpy(valid_targ)
         # convert data to a float
-        valid_data = torch.from_numpy(valid_data).float()
-        # converts valid targ to the appropriate type depending on kind of model
-        # float for exp
-        # long for crossent
-        if 'cross' in exp_name:
-            valid_targ = valid_targ.long()
-        else:
-            valid_targ = valid_targ.float()
-        # move both the correct device
-        valid_targ, valid_data = valid_targ.to(device), valid_data.to(device)
+        valid_offr_vals = torch.from_numpy(valid_offr_vals).float()
+        valid_const_vals = torch.from_numpy(valid_const_vals).float()
+        # assuming cross-entropy environment
+        valid_targs = torch.from_numpy(valid_targs)
+        valid_targs = valid_targs.long()
+        # move all three valid tnesors to device
+        valid_targs = valid_targs.to(device)
+        valid_offr_vals = valid_offr_vals.to(device)
+        valid_const_vals = valid_const_vals.to(device)
+        valid_length_vals = valid_length_vals.to(device)
 
+    # complete the same conversion process for training components
+    offr_vals = torch.from_numpy(offr_vals).float()
+    const_vals = torch.from_numpy(const_vals).float()
+    # assuming cross-entropy environment
+    targ_vals = torch.from_numpy(targ_vals).long()
+    length_vals = torch.from_numpy(targ_vals).long()
+
+    # move offr_vals, const_vals, targ_vals, length_vals, to active device
+    offr_vals = offr_vals.to(device)
+    const_vals = const_vals.to(device)
+    targ_vals = targ_vals.to(device)
+    length_vals = length_vals.to(device)
+
+    #############################################
+    # TODO: Consider removing this when complete
     # grab target
-    targ = df[resp_col].values
+    # targ = df[resp_col].values
     # drop response variable
-    df.drop(columns=resp_col, inplace=True)
-
+    # df.drop(columns=resp_col, inplace=True)
     # creating a dictionary which maps all column names to
     # indices in the input data matrix
-    cols = df.columns
-    colix = {}
-    counter = 0
-    for i in cols:
-        colix[i] = counter
-        counter = counter + 1
+    #cols = df.columns
+    #colix = {}
+    #counter = 0
+    # for i in cols:
+    #    colix[i] = counter
+    #    counter = counter + 1
 
-    data = df.values
+    #data = df.values
 
-    del df
+    #del df
+    ###########################################################
 
     # calculating parameter values for the model from data
-    num_feats = data.shape[1]
-    classes = class_series.index.values
-    num_classes = classes.size
-    num_units = get_num_units(exp_name)
+    # gives the number of hidden features in the rnn
+    num_hidden_feats = const_vals.shape[2]
+    num_classes = len(midpoint_ser.index)
+    num_offr_feats = offr_vals.shape[2]
+
+    # TODO: Consider removing this when done updating
+    # num_units = get_num_units(exp_name)
 
     if not valid:
-        num_batches = int(data.shape[0] / batch_size * num_batches)
+        num_batches = int(offr_vals.shape[1] / batch_size * num_batches)
 
-    # initialize model with appropriate arguments
-    if 'cross' in exp_name:
-        net = Net(num_feats, num_units, num_classes)
-        criterion = nn.CrossEntropyLoss(size_average=True, reduce=True)
-    else:
-        classes = torch.from_numpy(classes).float()
-        classes = classes.to(device)
-        net = Net(num_feats, num_units, num_classes, classes)
-        criterion = nn.MSELoss(size_average=True, reduce=True)
-
+    # initialize model class
+    # TODO: ENSURE IGNORED LOSS INDICES DO NOT CONTRIBUTE TO LOSS SUMS
+    net = Net(num_offr_feats, num_classes, num_hidden_feats)
+    criterion = nn.CrossEntropyLoss(
+        reduce=False, size_average=False, ignore_index=-100)
     # move net to appropriate device
     net.to(device)
-
-    # convert data and target to tensors and place them on the appropriate
-    # device
-    data = torch.from_numpy(data).float()
-    targ = torch.from_numpy(targ)
-    # convert targ to appropriate type
-    if 'cross' in exp_name:
-        targ = targ.long()
-    else:
-        targ = targ.float()
-    # change dimension
-    targ = targ.view(-1)
-
-    # move to device
-    data, targ = data.to(device), targ.to(device)
 
     # training loop prep
     loss_hist = []
@@ -575,11 +605,12 @@ def main():
     if not valid:
         # standard num iterations stopping criterion
         state_dict, loss_hist = batch_count_loop(
-            num_batches, net, optimizer, data, targ, batch_size, device, criterion)
+            num_batches, net, optimizer, offr_vals, const_vals, targ_vals, length_vals, batch_size, device, criterion)
     else:
         # validation set stopping criterion
-        state_dict, loss_hist, val_hist = valid_loop(valid_dur, valid_data, valid_targ, hist_len, net,
-                                                     optimizer, data, targ, batch_size, device, criterion)
+        state_dict, loss_hist, val_hist = valid_loop(valid_dur, valid_offr_vals, valid_const_vals,
+                                                     valid_targs, valid_length_vals, hist_len, net, optimizer, offr_vals,
+                                                     const_vals, targ_vals, length_vals, batch_size, device, criterion)
 
     print('Done Training')
     sys.stdout.flush()
@@ -605,14 +636,16 @@ def main():
     pickle.dump(loss_dict, loss_pickle)
     loss_pickle.close()
 
+    # TODO: Consider deleting this when script is completely updated
     # save class_series
-    class_series.to_csv(
-        'models/exps/%s/class_series_%s.csv' % (exp_name, turn))
+    # class_series.to_csv(
+    #     'models/exps/%s/class_series_%s.csv' % (exp_name, turn))
     # save feature dictionary
-    feat_dict_pick = open('models/exps/%s/featdict_%s.pickle' %
-                          (exp_name, turn), 'wb')
-    pickle.dump(colix, feat_dict_pick)
-    feat_dict_pick.close()
+    # feat_dict_pick = open('models/exps/%s/featdict_%s.pickle' %
+    #                       (exp_name, turn), 'wb')
+    # pickle.dump(colix, feat_dict_pick)
+    # feat_dict_pick.close()
+
     end_time = dt.now()
     print('Total Time: ' + str(end_time - start_time))
 

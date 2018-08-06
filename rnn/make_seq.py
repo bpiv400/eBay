@@ -228,10 +228,11 @@ def seq_lists_legit(out, concat=False, sep=False, b3=False, ghost=False):
     Can be enhanced to check tags if anything appears wrong as well
     SHOULD BE ENHANCED TO CHECK TAGS
     '''
-    # for user interaction
+    # debugging
     print('input')
     print(out)
     sys.stdout.flush()
+    # for user interaction
     if ghost:
         print('Checking legitimacy of ghosted seq_lists')
     else:
@@ -538,6 +539,7 @@ def fix_lengths(df, max_length, sep_concat=False):
         offer threads only for offers b0 -> s1
         sep_concat: boolean for whether seller and buyer offers are being input separately
     '''
+    # print('is sep_concat: %d' % sep_concat)
     feats = df.columns
     if sep_concat:
         ###############################
@@ -551,7 +553,7 @@ def fix_lengths(df, max_length, sep_concat=False):
     length = df['length'].copy()
     # subtract one from odd length sequences
     if sep_concat:
-        df['length'] = pd.Series((length - (length % 2)), index=df.index)
+        length = pd.Series((length - (length % 2)), index=df.index)
     # subtract one from all lengths
     df['length'] = pd.Series((length - 1), index=df.index)
     # grab min length for error checking
@@ -568,6 +570,9 @@ def fix_lengths(df, max_length, sep_concat=False):
     if sep_concat:
         evs = np.any(length_vals % 2 == 0)
         if evs:
+            print(length_vals)
+            print(evs)
+            sys.stdout.flush()
             raise ValueError('Should not have any even lengths')
     # iterate over length values
     for i in length_vals:
@@ -612,6 +617,7 @@ def get_seq_vals(df, seq_lists, is_targ=False, midpoint_ser=None):
     Assumes ghost features have been added
     '''
     max_len = df['length'].max()
+    max_len = np.int(max_len)
     # get the size of one sequence input
     num_seq_feats = len(seq_lists[0])
     vals = np.empty((max_len, len(df.index), num_seq_feats))

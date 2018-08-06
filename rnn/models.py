@@ -1,15 +1,12 @@
 
 import torch
-import torch.autograd as autograd
 import torch.nn as nn
-import torch.nn.functional as F
 import torch.optim as optim
 import numpy as np
 import pandas as pd
 from torch import optim
 import numpy as np
 import math
-import random
 import sys
 import os
 import pickle
@@ -37,5 +34,27 @@ class SimpleRNN(nn.Module):
         x, _ = torch.nn.utils.rnn.pad_packed_sequence(x)
         # apply output layer
         x = self.oh(x)
-
+        # x should now be (seq_len, batch, num_classes)
+        # swap the second and last dimension to make output the shape expected
+        # by cross entropy
+        x = x.transpose(1, 2)
+        # output result
         return x
+
+
+def get_model_class(exp_name):
+    # returns the class of the model corresponding to the name of the
+    # experiment
+    if 'simp' in exp_name:
+        if 'lstm' not in exp_name:
+            net = SimpleRNN
+    elif 'cat' in exp_name:
+        concat = True
+        sep = False
+    elif 'sep' in exp_name:
+        sep = True
+        concat = False
+    else:
+        raise ValueError(
+            'Experiment name does not determine whether concat or simp')
+    return net
