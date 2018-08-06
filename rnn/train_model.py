@@ -60,7 +60,7 @@ def get_resp_offr(turn):
 
 def get_resp_time(turn):
     '''
-    Description: Determines the name of the response column given the 
+    Description: Determines the name of the response column given the
     name of the last observed turn
     for time models
     '''
@@ -151,7 +151,30 @@ def update_loss_hist(loss_hist, recent_hist, curr_batch=None, num_batches=None):
     return loss_hist
 
 
-def process_minibatch(num_samps, net, optimizer, offr_vals, const_vals, targ_vals, length_vals, batch_size, device, criterion):
+def rnn_loss_wrapper(loss_tensor, lengths):
+    '''
+    Computes the average loss per sequence entry for each sequence
+    then averages this over all sequences in the batch
+
+    Args:
+        loss_tensor: tensor.torch.float with dimensions (seq_length, batch_size)
+        lengths: 1 dimensional tensor.torch.float with size=batch_size
+
+    Returns:
+        Average per sequence entry loss, normalized by sequence length
+    '''
+    # loss output should have shape (seq_len, batch_size)
+    # compute the sum of each losses for each sequence
+    loss_tensor = loss_tensor.sum(dim=0)
+    # compute the average of losses for each sequence
+    # ie the average loss per turn for each sequence
+    loss_tensor = loss_tensor / lengths
+    # compute the mean sequence loss
+    loss_tensor = loss_tensor.mean()
+    return loss_tensor
+
+
+def process_minibatch_rnn(num_samps, net, optimizer, offr_vals, const_vals, targ_vals, length_vals, batch_size, device, criterion):
     # grab sample indices
     sample_inds = torch.randint(
         low=0, high=num_samps, size=(batch_size,), device=device).long()
@@ -176,24 +199,31 @@ def process_minibatch(num_samps, net, optimizer, offr_vals, const_vals, targ_val
                                                                sample_lengths)
     # forward pass
     output = net(x=sample_offr_vals, h_0=sample_const_vals)
+    # output should have shape (seq_len, num_classes, batch_size)
+    # calculate loss on each entry, wrap to calculate mean loss
+    loss = rnn_loss_wrapper(
+        criterion(output, sample_targ_vals), sample_lengths)
 
-    # calculate loss on each entry
-    loss = criterion(output, sample_targ_vals)
+    # average loss per sequence entry averaged over all sequences
     loss.backward()
-    # update parameters
+    # update parameters as necessary
     optimizer.step()
+
     return loss
 
 
-def process_valid(net, valid_data, valid_targ, criterion):
+def process_valid_rnn(net, valid_offr_vals, valid_const_vals,
+                      valid_targs, valid_length_vals, criterion):
+    '''
+    All data components are pre-sorted by length and valid_offr_vals
+    has already been packed
+    '''
     # get sample output
-    if 'cross' in exp_name:
-        output = net(valid_data)
-    else:
-        output = net(valid_data).view(-1)
+    output = net(x=valid_offr_vals, h_0=valid_const_vals)
 
     # calculate loss
-    loss = criterion(output, valid_targ)
+    loss = rnn_loss_wrapper(criterion(output, valid_targs),
+                            valid_length_vals)
     # return as numpy
     loss = loss.detach().cpu().numpy()
     return loss
@@ -205,9 +235,9 @@ def is_valid_dec(valid_hist, hist_len):
     DOES not satisfy the stopping criterion
     Inputs:
         valid_hist: a list containing numpy.float where each
-        element gives the validation error calculated at some 
+        element gives the validation error calculated at some
         step
-        hist_len: integer giving the number of consecutive 
+        hist_len: integer giving the number of consecutive
         validation error increases required to satisfy the stopping
         criterion
     Output: boolean giving whether training should continue
@@ -250,7 +280,7 @@ def batch_count_loop(num_batches, net, optimizer, offr_vals, const_vals, targ_va
 
         # get error for minibatch, back prop, and update model
         loss = process_minibatch_rnn(
-            num_samps, net, optimizer, offr_vals, const_vals, targ_vals, batch_size, device, criterion, length_vals)
+            num_samps, net, optimizer, offr_vals, const_vals, targ_vals, length_vals, batch_size, device, criterion)
 
         # add loss to the current recent loss history and update the index counter
         recent_hist[hist_ind] = loss
@@ -267,11 +297,14 @@ def batch_count_loop(num_batches, net, optimizer, offr_vals, const_vals, targ_va
     return net.state_dict(), loss_hist
 
 
-def valid_loop(valid_dur, valid_data, valid_targ, hist_len, net, optimizer, data, targ, batch_size, device, criterion):
+def valid_loop(valid_dur, valid_offr_vals, valid_const_vals,
+               valid_targs, valid_length_vals, hist_len, net,
+               optimizer, offr_vals, const_vals, targ_vals, length_vals,
+               batch_size, device, criterion):
     # initialize counter for the total number of minibatches
     batch_count = 1
     # get the total number of samples in the training data
-    num_samps = data.shape[0]
+    num_samps = offr_vals.shape[1]
     # initialize recent history tensor and index counter to track where loss should be added to it
     recent_hist = torch.zeros(500, device=device)
     hist_ind = 0
@@ -294,8 +327,9 @@ def valid_loop(valid_dur, valid_data, valid_targ, hist_len, net, optimizer, data
         optimizer.zero_grad()
 
         # get error for minibatch, back prop, and update model
-        loss = process_minibatch(
-            num_samps, net, optimizer, data, targ, batch_size, device, criterion)
+        loss = process_minibatch_rnn(
+            num_samps, net, optimizer, offr_vals, const_vals,
+            targ_vals, length_vals, batch_size, device, criterion)
 
         # add loss to the current recent loss history and update the index counter
         recent_hist[hist_ind] = loss
@@ -312,7 +346,8 @@ def valid_loop(valid_dur, valid_data, valid_targ, hist_len, net, optimizer, data
         # update valid history every valid_dur iterations
         if batch_count % valid_dur == 0:
             # get loss on the validation set
-            valid_loss = process_valid(net, valid_data, valid_targ, criterion)
+            valid_loss = process_valid_rnn(net, valid_offr_vals, valid_const_vals,
+                                           valid_targs, valid_length_vals, criterion)
             valid_hist.append(valid_loss)
             print('Valid Loss %d: %.2f' % (len(valid_hist), valid_loss))
             # move state history back 1 iteration
@@ -370,7 +405,6 @@ def main():
 
     parser = argparse.ArgumentParser(
         description='associate threads with all relevant variables')
-    parser.add_argument('--turn', action='store', type=str)
     parser.add_argument('--exp', action='store', type=str)
     # set the number of batches as a fraction of
     # training examples
@@ -392,7 +426,6 @@ def main():
     args = parser.parse_args()
     global exp_name
     exp_name = args.exp.strip()
-    turn = args.turn.strip()
     num_batches = args.batches
     batch_size = args.batch_size
 
@@ -447,38 +480,6 @@ def main():
     midpoint_ser = data_dict['midpoint_ser']
     length_vals = data_dict['length_vals']
 
-    # TODO: Consider removing when done update
-    #     if offr_mod:
-    #         # bin location
-    #         bin_loc = 'data/exps/%s/%s/bins.pickle' % (prep_type, turn)
-    #         # load bins dictionary from pickle
-    #         with open(bin_loc, 'rb') as f:
-    #             bin_dict = pickle.load(f)
-    #         f.close()
-    #         # extract midpoints from bin dictionary
-    #         midpoints = bin_dict['midpoints']
-    #     else:
-    #         # bin location
-    #         bin_loc = 'data/exps/%s/%s/time_bins.pickle' % (prep_type, turn)
-    #         # load bins dictionary from pickle
-    #         with open(bin_loc, 'rb') as f:
-    #             bin_dict = pickle.load(f)
-    #         f.close()
-    #         midpoints = bin_dict['time_midpoints']
-
-    # TODO: Consider removing this when done updating
-    #########################################################
-    # TEMPORARY FIX UNTIL ROUNDING ERROR HAS BEEN SOLVED IN BIN
-    # if 'norm' in exp_name:
-    #    midpoints = np.around(midpoints, 2)
-    #    count = 0
-    #    for point in midpoints:
-    #        count = np.around(count, 2)
-    #        if point != count:
-    #            raise ValueError('Midpoints not rounded correctly')
-    #        count = count + .01
-    #
-    ##########################################################
     # delete the dictionary itself
     del data_dict
     print('Done Loading')
@@ -544,6 +545,20 @@ def main():
         valid_const_vals = valid_const_vals.to(device)
         valid_length_vals = valid_length_vals.to(device)
 
+        # sort valid data components by associated sequence lengths
+        # sort lengths and retrieved sorted indices as well
+        valid_length_vals, sorted_inds = torch.sort(
+            valid_length_vals, dim=0, descending=True)
+
+        # apply same sorting to other inputs
+        valid_offr_vals = valid_offr_vals[:, sorted_inds, :]
+        valid_const_vals = valid_const_vals[:, sorted_inds, :]
+        valid_targs = valid_targs[:, sorted_inds]
+
+        # generate packed sequence
+        valid_offr_vals = torch.nn.utils.rnn.pack_padded_sequence(valid_offr_vals,
+                                                                  valid_length_vals)
+
     # complete the same conversion process for training components
     offr_vals = torch.from_numpy(offr_vals).float()
     const_vals = torch.from_numpy(const_vals).float()
@@ -556,26 +571,6 @@ def main():
     const_vals = const_vals.to(device)
     targ_vals = targ_vals.to(device)
     length_vals = length_vals.to(device)
-
-    #############################################
-    # TODO: Consider removing this when complete
-    # grab target
-    # targ = df[resp_col].values
-    # drop response variable
-    # df.drop(columns=resp_col, inplace=True)
-    # creating a dictionary which maps all column names to
-    # indices in the input data matrix
-    #cols = df.columns
-    #colix = {}
-    #counter = 0
-    # for i in cols:
-    #    colix[i] = counter
-    #    counter = counter + 1
-
-    #data = df.values
-
-    #del df
-    ###########################################################
 
     # calculating parameter values for the model from data
     # gives the number of hidden features in the rnn
@@ -590,7 +585,7 @@ def main():
         num_batches = int(offr_vals.shape[1] / batch_size * num_batches)
 
     # initialize model class
-    # TODO: ENSURE IGNORED LOSS INDICES DO NOT CONTRIBUTE TO LOSS SUMS
+    # CONFIRMED: IGNORED LOSS INDICES DO NOT CONTRIBUTE TO LOSS SUMS
     net = Net(num_offr_feats, num_classes, num_hidden_feats)
     criterion = nn.CrossEntropyLoss(
         reduce=False, size_average=False, ignore_index=-100)
@@ -619,12 +614,12 @@ def main():
 
     # save outputs
     # save model parameters
-    torch.save(state_dict, 'models/exps/%s/model_%s.pth.tar' %
-               (exp_name, turn))
+    torch.save(state_dict, 'data/exps/%s/model.pth.tar' %
+               exp_name)
 
     # save loss history and validation loss history if its given
-    loss_pickle = open('models/exps/%s/loss_%s.pickle' %
-                       (exp_name, turn), 'wb')
+    loss_pickle = open('data/exps/%s/loss.pickle' %
+                       exp_name, 'wb')
     loss_dict = {}
     loss_dict['train_loss'] = loss_hist
 
@@ -635,16 +630,6 @@ def main():
     # dump and close pickle
     pickle.dump(loss_dict, loss_pickle)
     loss_pickle.close()
-
-    # TODO: Consider deleting this when script is completely updated
-    # save class_series
-    # class_series.to_csv(
-    #     'models/exps/%s/class_series_%s.csv' % (exp_name, turn))
-    # save feature dictionary
-    # feat_dict_pick = open('models/exps/%s/featdict_%s.pickle' %
-    #                       (exp_name, turn), 'wb')
-    # pickle.dump(colix, feat_dict_pick)
-    # feat_dict_pick.close()
 
     end_time = dt.now()
     print('Total Time: ' + str(end_time - start_time))

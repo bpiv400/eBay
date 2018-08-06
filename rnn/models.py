@@ -38,7 +38,7 @@ class SimpleRNN(nn.Module):
         # swap the second and last dimension to make output the shape expected
         # by cross entropy
         x = x.transpose(1, 2)
-        # output result
+        # output result should have dimension (seq_len, num_classes, batch_size)
         return x
 
 
