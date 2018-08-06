@@ -13,6 +13,7 @@ import gc
 import sys
 import os
 import functools
+import copy
 
 
 def get_colnames(columns, const=False, ref=False, b3=False):
@@ -174,7 +175,7 @@ def feats_from_str(refstr, offr_cols):
     return matches
 
 
-def seq_lists_legit(out, concat=False, sep=False, b3=False):
+def seq_lists_legit(out, concat=False, sep=False, b3=False, ghost=True):
     '''
     Ensures the list of sequence features have appropriate relative
     lengths. Specifically, if sep is true, the outer list should
@@ -195,11 +196,17 @@ def seq_lists_legit(out, concat=False, sep=False, b3=False):
     Can be enhanced to check tags if anything appears wrong as well
     SHOULD BE ENHANCED TO CHECK TAGS
     '''
+    # for user interaction
+    if ghost:
+        print('Checking legitimacy of ghosted seq_lists')
+    else:
+        print('Checking legitimacy of ordinary seq_lists')
     # seller feature tag
-    slr_tag = r'_s[0-2]$'
+    slr_tag = r'_s[0-3]$'
     # buyer feature tag
-    byr_tag = r'_b[0-2]$'
-
+    byr_tag = r'_b[0-3]$'
+    # ghost tag
+    ghost_tag = r'_ghost$'
     if sep:
         # ensure the otuer lister has two elements
         if len(out) != 2:
@@ -208,7 +215,10 @@ def seq_lists_legit(out, concat=False, sep=False, b3=False):
         num_byr_seqs = len(out[0])
         num_slr_seqs = len(out[1])
         # ensure the inner list includes one more buyer thread than seller thread
-        if num_byr_seqs - num_slr_seqs != 1:
+        if num_byr_seqs - num_slr_seqs != 1 and not ghost:
+            raise ValueError(
+                'Buyer and seller threads not separated correctly')
+        elif num_byr_seqs - num_slr_seqs != 0 and ghost:
             raise ValueError(
                 'Buyer and seller threads not separated correctly')
         # ensure that each buyer and seller thread contain the same number of elements
@@ -223,6 +233,17 @@ def seq_lists_legit(out, concat=False, sep=False, b3=False):
         # do the same for seller sequences
         matching_slr_lens = [len(feats_from_str(byr_tag, slr_feats))
                              for slr_feats in out[1]]
+        # if ghost adjustment has been made, the first entry of the seller sequences
+        # should contain no seller codes, yet it should contain the same number
+        # of buyer codes
+        if ghost:
+            if matching_slr_lens[0] != 0:
+                raise ValueError('Ghost features added incorrectly')
+            # if the first seller entry actually contains 0 seller codes,
+            # replace the count of seller codes with a count of ghost codes
+            # since these should occur in every feature in the first seller
+            # sequence entry
+            matching_slr_lens[0] = len(feats_from_str(ghost_tag, out[1][0]))
         # similarly ensure that the seller features contain no byr tags
         byr_tags_slr_seqs = functools.reduce(
             lambda feats, acc: len(feats_from_str(byr_tag, feats)), out[1], 0)
@@ -245,10 +266,13 @@ def seq_lists_legit(out, concat=False, sep=False, b3=False):
         # if concatented, extrac tthe length of the first element
         init_len = len(out[0])
         # find the theoretical length of the next element
-        post_len = init_len * 2
+        if not ghost:
+            post_len = init_len * 2
+        else:
+            post_len = init_len  # since the ghost features should equalize the lengths
         # iterate over all elements except the first
         for i in range(1, len(out)):
-            # ensure that each has length equal to double the length of the first element
+            # ensure that each has length equal to expected feature length
             curr_list_len = len(out[i])
             if curr_list_len != post_len:
                 raise ValueError(
@@ -258,6 +282,7 @@ def seq_lists_legit(out, concat=False, sep=False, b3=False):
             # no seller matches if the index is even and vice versa if odd
             byr_matches = len(feats_from_str(byr_tag, curr_list))
             slr_matches = len(feats_from_str(slr_tag, curr_list))
+            ghost_matches = len(feats_from_str(ghost_tag, curr_list))
             # set expectations depending on whether the current set of features
             # should correspond to a buyer or a seller
             if i % 2 == 0:
@@ -266,14 +291,24 @@ def seq_lists_legit(out, concat=False, sep=False, b3=False):
             else:
                 exp_byr = 0
                 exp_slr = post_len
-            if exp_byr != byr_matches or slr_matches != exp_slr:
+            exp_ghost = 0
+            if exp_byr != byr_matches or slr_matches != exp_slr or ghost_matches != exp_ghost:
                 raise ValueError('Buyer and seller thread codes not concatenated correctly' +
                                  'Some buyer threads with sellers or vice versa')
         # ensure the first buyer thread is fully composed of buyer feats
         # and has no seller features, not checked in loop
         byr_matches = len(feats_from_str(byr_tag, out[0]))
         slr_matches = len(feats_from_str(slr_tag, out[0]))
-        if byr_matches != init_len or slr_matches != 0:
+        ghost_matches = len(feats_from_str(ghost_tag, out[0]))
+        if ghost:
+            exp_byr = init_len / 2
+            exp_ghost = init_len / 2
+            exp_slr = 0
+        else:
+            exp_byr = init_len
+            exp_slr = 0
+            exp_ghost = 0
+        if exp_byr != byr_matches or slr_matches != exp_slr or ghost_matches != exp_ghost:
             raise ValueError('Buyer and seller thread codes not concatenated correctly' +
                              'Some buyer threads with sellers or vice versa')
     else:
@@ -287,6 +322,7 @@ def seq_lists_legit(out, concat=False, sep=False, b3=False):
                     'Buyer and seller threads not processed correctly')
             byr_matches = len(feats_from_str(byr_tag, curr_list))
             slr_matches = len(feats_from_str(slr_tag, curr_list))
+            ghost_matches = len(feats_from_str(ghost_tag, curr_list))
             # set expectations depending on whether the current set of features
             # should correspond to a buyer or a seller
             if i % 2 == 0:
@@ -295,10 +331,10 @@ def seq_lists_legit(out, concat=False, sep=False, b3=False):
             else:
                 exp_byr = 0
                 exp_slr = init_len
-            if exp_byr != byr_matches or slr_matches != exp_slr:
-                raise ValueError(
-                    'Buyer and seller threads not processed correctly' +
-                    '. Some buyer threads in seller feats or vice versa')
+            exp_ghost = 0
+            if exp_byr != byr_matches or slr_matches != exp_slr or ghost_matches != exp_ghost:
+                raise ValueError('Buyer and seller thread codes not concatenated correctly' +
+                                 'Some buyer threads with sellers or vice versa')
     pass
 
 
@@ -392,8 +428,6 @@ def get_seq_lists(offr_cols, concat=False, sep=False, b3=False):
         for byr_feats, slr_feats in zip(byr_seqs, slr_seqs):
             out.append(byr_feats)
             out.append(slr_feats)
-    # ensure that the seq_lists are appropriate relative length
-    seq_lists_legit(out, concat=concat, sep=sep, b3=b3)
     return out
 
 
@@ -413,7 +447,7 @@ def get_last_code(length):
     return turn_code
 
 
-def fix_odd_seqs(df, max_length):
+def fix_lengths(df, max_length, sep_concat=False):
     '''
     When inputs are being concatenated or we are using separate input paths
     for buyer and seller threads, the thread lengths need to be adjusted to
@@ -422,29 +456,34 @@ def fix_odd_seqs(df, max_length):
     Args:
         df: pd.DataFrame containing only features related to sequence input, ie
         offer threads only for offers b0 -> s1
-        sep: boolean for whether seller and buyer offers are being input separately
+        sep_concat: boolean for whether seller and buyer offers are being input separately
     '''
     feats = df.columns
-    ###############################
-    #! b3 ERROR CHECKING
-    #! SHOULD ALWAYS BE REMOVED BEFORE
-    b3_matches = feats_from_str('_b3$', feats)
-    if len(b3_matches) > 0 or max_length >= 7:
-        raise ValueError('b3 has not been totally removed')
-    #################################
+    if sep_concat:
+        ###############################
+        #! b3 ERROR CHECKING
+        #! SHOULD ALWAYS BE REMOVED BEFORE
+        b3_matches = feats_from_str('_b3$', feats)
+        if len(b3_matches) > 0 or max_length >= 7:
+            raise ValueError('b3 has not been totally removed')
+        #################################
+
     length = df['length'].copy()
     # subtract one from odd length sequences
-    df['length'] = pd.Series((length - (length % 2)), index=df.index)
+    if sep_concat:
+        df['length'] = pd.Series((length - (length % 2)), index=df.index)
+    # subtract one from all lengths
+    df['length'] = pd.Series((length - 1), index=df.index)
     # grab min length for error checking
     min_length = df['length'].min()
-    if min_length < 2:
+    if min_length < 1:
         raise ValueError(
             'min length should never be less than 2 at this point')
     # generate list of all remaining offer codes
     all_offrs = all_offr_codes(get_last_code(max_length))
     # extract updated length series
     length = df['length'].copy()
-    for i in range(min_length, max_length + 1):
+    for i in range(min_length, df['length'].max() + 1):
         # get  indices of rows where where the current length is the max length
         curr_inds = length[length == i].index
         # get all observed offer codes
@@ -453,6 +492,15 @@ def fix_odd_seqs(df, max_length):
         # not in observed_offr_codes
         unobserved_offr_codes = [
             code for code in all_offrs if code not in observed_offr_codes]
+        # debugging
+        if sep_concat:
+            true_len = (i + 1) / 2
+        else:
+            true_len = i
+
+        print('Codes hidden for length %d:' % true_len)
+        print(unobserved_offr_codes)
+        sys.stdout.flush()
         # for each unobserved_offr_code generate a list of matching columns
         cols_for_code_list = [feats_from_str(
             '_%s$' % code, feats) for code in unobserved_offr_codes]
@@ -461,19 +509,20 @@ def fix_odd_seqs(df, max_length):
             col for curr_code_list in cols_for_code_list for col in curr_code_list]
         # set extracted indices for each matching column to 0
         df.loc[curr_inds, flat_cols] = 0
-    # after resetting all values to appear as though odd length sequences did not observe the
-    # final turn, divide lenght by 2 to reflect actual length in rnn processing
-    df['length'] = df['length'] / 2
+    if sep_concat:
+        # after resetting all values to appear as though odd length sequences did not observe the
+        # final turn, divide lenght by 2 to reflect actual length in rnn processing
+        df['length'] = (df['length'] + 1) / 2
     pass
 
 
-def get_seq_vals(df, seq_lists):
+def get_seq_vals(df, seq_lists, is_targ=False, midpoint_ser=None):
     '''
     Assumes ghost features have been added
     '''
     max_len = df['length'].max()
     # get the size of one sequence input
-    num_seq_feats = seq_lists[0]
+    num_seq_feats = len(seq_lists[0])
     vals = np.empty((max_len, len(df.index), num_seq_feats))
     # initialize sequence index counter
     seq_ind = 0
@@ -484,8 +533,18 @@ def get_seq_vals(df, seq_lists):
             raise ValueError('unexpected number of features in sequence')
         # extract columns from the data.frame as 2d numpy array
         # of dim len(df) x num_seq_feats
-        curr_vals = df[curr_feats].values
+        curr_vals = df[curr_feats].copy()
         # nan error checking
+        if is_targ:
+            curr_vals.fillna(-100, inplace=True)
+            curr_vals = curr_vals.squeeze()
+            print('Mean: %.2f' % curr_vals.mean())
+            print('Std: %.2f' % curr_vals.std())
+            print(midpoint_ser)
+            sys.stdout.flush()
+            curr_vals = midpoint_ser.loc[curr_vals.values]
+        # convert to numpy array
+        curr_vals = curr_vals.values
         if np.any(np.isnan(curr_vals)):
             raise ValueError('na value detected')
         # insert curr_val matrix at seq_ind in the 3d ndarray
@@ -567,38 +626,21 @@ def extract_cols(df, cols=[], is_const=False, sep=False, concat=False, b3=False)
     Returns:
         columns formatted as np.array with appropriate dimensionality
     '''
-    # extract relevant columns and drop them from data frame after
-    # extraction
-    curr_cols = df[cols].copy()
-    gc.collect()
-    df.drop(columns=cols, inplace=True)
     # processing for constant column features
     # should return (1, num_samp, num_feats) np.array
     if is_const:
+        # extract relevant columns and drop them from data frame after
+        # extraction
+        curr_cols = df[cols].copy()
+        gc.collect()
+        df.drop(columns=cols, inplace=True)
         # extract the associated values as numpy array of dim (samples, hidden_size)
         vals = curr_cols.values
         # add an empty dimension as the first in the numpy array
         vals = np.expand_dims(vals, 0)
         # finally remove constant features from data frame
     else:
-        # fill na values with 0's (padding)
-        df.fillna(value=0, inplace=True)
-        # add length to the data frame
-        curr_cols['length'] = df['length']
-        # grab the max length
-        max_length = curr_cols['length'].max()
-        # extract lists of sequence features
-        seq_lists = get_seq_lists(cols, concat=concat, sep=sep, b3=b3)
-        # if we are concatenating or separating, change thread lengths to reflect
-        # how long the threads will be when we input them to the model
-        # and hide the final offer features from odd length threads since
-        # these cannot be used
-        if concat or sep:
-            fix_odd_seqs(curr_cols, max_length)
-            # additionally add ghost features to data frame and seq_lists
-            seq_lists = ghost_feats(seq_lists, df, concat=concat, sep=sep)
-        # sort by sequence length in descending order
-        df.sort_values(by='length', inplace=True, ascending=False)
+        seq_lists = cols
         # extract values using seq_lists
         if sep:
             # extract value ndarray for buyers
@@ -606,7 +648,8 @@ def extract_cols(df, cols=[], is_const=False, sep=False, concat=False, b3=False)
             # extract value ndarray for sellers
             slr_vals = get_seq_vals(curr_cols, seq_lists[1])
             vals = (byr_vals, slr_vals)
-        vals = get_seq_vals(curr_cols, seq_lists)
+        else:
+            vals = get_seq_vals(curr_cols, seq_lists)
     return vals
 
 
@@ -644,13 +687,14 @@ def get_training_features(exp_name):
         the second gives the names of the offer columns
     '''
     # define path names
-    path = 'data/exps/%s/prepped/feats.pickle' % exp_name
+    path = 'data/exps/%s/feats.pickle' % exp_name
 
     # extract from pickles
     feats_dict = unpickle(path)
 
     # return as tuple
-    return feats_dict['const_feats'], feats_dict['offr_feats']
+    return (feats_dict['const_feats'], feats_dict['offr_feats'],
+            feats_dict['seq_feats'], feats_dict['targ_feats'])
 
 
 def drop_b3(df):
@@ -705,6 +749,34 @@ def unpickle(path):
     return obj
 
 
+def get_targ_lists(concat=False, sep=False, b3=False, time_mod=False):
+    '''
+    Extract target columns in order as a list of
+    single-item lists
+
+    For concatenation or separation, include only seller
+    offers as the targets. Otherwise, include both
+    '''
+    if b3:
+        # grab all target codes through b3
+        targ_codes = all_offr_codes('b3')
+        # drop b0
+        targ_codes.remove('b0')
+    else:
+        # grab all offer codes through s2
+        targ_codes = all_offr_codes('s2')
+        # drop b0
+        targ_codes.remove('b0')
+    if sep or concat:
+        # drop all buyer offers
+        targ_codes = [code for code in targ_codes if 's' in code]
+    # add offer prefix to each
+    targ_codes = ['offr_%s' % code for code in targ_codes]
+    # give each offr its own list to match seq_lists format
+    targ_codes = [[offr] for offr in targ_codes]
+    return targ_codes
+
+
 def main():
     # parse parameters
     parser = argparse.ArgumentParser()
@@ -748,6 +820,8 @@ def main():
                          'offers simultaneously')
 
     # load data
+    print('Loading data')
+    sys.stdout.flush()
     load_loc = 'data/exps/%s/normed/%s.csv' % (data_name, name)
     df = pd.read_csv(load_loc)
     # drop unnamed columns if they exist
@@ -759,30 +833,131 @@ def main():
     #! its earlier seller predictions--therefore, in certain experiments,
     #! we may choose to keep it
     if not b3:
+        print('Dropping unnecessary columns')
+        sys.stdout.flush()
         drop_b3(df)
+    # load midpoints
+    print('Preparing midpoints series')
+    sys.stdout.flush()
+    midpoint_dict = unpickle('data/exps/%s/bins.pickle' % data_name)
+    # extract numpy array of midpoints
+    midpoint_list = midpoint_dict['midpoints']
+    # ensure rounding
+    midpoint_list = np.around(midpoint_list, 2)
+    # generate a series from the midpoints where the index is the value of the
+    # midpoint and the value of the series is the index of the corresponding midpoint
+    # list
+    # ensure we append -100 for missing values to both
+    midpoint_ser = pd.Series(np.append(midpoint_list, -100),
+                             index=list(range(len(midpoint_list))).append(-100))
+    # delete used variables
+    del midpoint_list
+    del midpoint_dict
 
     # load column name lists if currently processing test data
     if name == 'test':
-        const_cols, offr_cols = get_training_features(exp_name)
+        print('Loading training feature dictionary')
+        sys.stdout.flush()
+        const_cols, offr_cols, seq_lists, targ_lists = get_training_features(
+            exp_name)
         # for ref columns, indescriminately grab ALL reference columns
         ref_cols = get_colnames(df.columns, const=False, ref=True, b3=b3)
     else:
+        print('Generating constant/offer cols & sequence lists')
+        sys.stdout.flush()
         # generate column name lists if the current data corresponds to training or toy data
         const_cols = get_colnames(df.columns, const=True, ref=False, b3=b3)
         # offr_cols should only generate exactly those columns that will be used as input to the
         offr_cols = get_colnames(df.columns, const=False, ref=False, b3=b3)
         # for ref columns, indescriminately grab ALL reference columns
         ref_cols = get_colnames(df.columns, const=False, ref=True, b3=b3)
+        # get target lists in the same format as seq_lists
+        # as a list of lists..here however, each list has length 1
+        targ_lists = get_targ_lists(concat=concat, sep=sep, b3=b3)
+        # grab list of lists where each element corresopnds to a set of features for the
+        # sequence entry in the same position
+        seq_lists = get_seq_lists(offr_cols, concat=concat, sep=sep, b3=b3)
+        # ensure sequence list is valid
+        seq_lists_legit(seq_lists, concat=concat, sep=sep, b3=b3, ghost=False)
+        # initialize feature dictionary
         feat_dict = {}
+        feat_dict['seq_feats'] = copy.deepcopy(seq_lists)
         feat_dict['offr_feats'] = offr_cols
         feat_dict['const_feats'] = const_cols
+        feat_dict['targ_feats'] = copy.deepcopy(targ_lists)
+        # pickle feature dictionary
+        if name == 'train':
+            print('Saving training dictionary')
+            sys.stdout.flush()
+            feat_path = 'data/exps/%s' % exp_name
+            feat_name = 'feats' % name
+            pickle_obj(obj=feat_dict, path=feat_path, filename=feat_name)
+    if sep or concat:
+        print('Getting ghost features')
+        sys.stdout.flush()
+        # grab sequence list and add ghost features
+        seq_lists = ghost_feats(seq_lists, df, sep=sep, concat=concat)
+        # ensure the seq list is still valid after adding ghost features
+        seq_lists_legit(seq_lists, concat=concat, sep=sep, b3=b3, ghost=True)
+
+    # sort by sequence length in descending order
+    print('Sorting by length')
+    sys.stdout.flush()
+    df.sort_values(by='length', inplace=True, ascending=False)
+
+    # grab the max length
+    max_length = df['length'].max()
+    # extract target values
+    print('Extracting target values')
+    sys.stdout.flush()
+    print(targ_lists)
+    targ_vals = get_seq_vals(
+        df, targ_lists, is_targ=True, midpoint_ser=midpoint_ser)
+
+    # get reference data frame and save it
+    print('Extracting and storing reference data frame')
+    sys.stdout.flush()
+    ref_df = df[ref_cols].copy()
+    # store reference data frame
+    ref_df.to_csv('data/exps/%s' % exp_name)
+
+    # if we are concatenating or separating, change thread lengths to reflect
+    # how long the threads will be when we input them to the model
+    # and hide the final offer features from odd length threads since
+    # these cannot be used
+    print('Updating thread lengths to reflect rnn architecture')
+    sys.stdout.flush()
+    fix_lengths(df, max_length, sep_concat=(sep or concat))
+
+    # fill na values with 0's (padding)
+    df.fillna(value=0, inplace=True)
 
     # extract constant columns and corresponding data prepped for torch.rnn/lstm
+    print('Extracting constant features')
+    sys.stdout.flush()
     const_vals = extract_cols(df, cols=const_cols, is_const=True)
     # extracts the sequence values numpy arary
+    print('Extracting sequence features')
+    sys.stdout.flush()
     offr_vals = extract_cols(
-        df, cols=offr_cols, is_const=False, sep=sep, concat=concat, b3=b3)
-    #
+        df, cols=seq_lists,  is_const=False, sep=sep, concat=concat, b3=b3)
+    # extracts teh gargs as numpy array
+
+    # store data in dictionary and pickle it
+    print('Compiling data dictionary')
+    data_dict = {}
+    data_dict['const_vals'] = const_vals
+    data_dict['ref_vals'] = ref_df
+    data_dict['offr_vals'] = offr_vals
+    data_dict['target_vals'] = targ_vals
+    data_dict['midpoint_ser'] = midpoint_ser
+    data_path = 'data/exps/%s'
+    data_name = '%s_data' % name
+    sys.stdout.flush()
+    print('Pickling data dictionary')
+    sys.stdout.flush()
+    pickle_obj(obj=data_dict, path=data_path, filename=data_name)
+    print('Done preparing for training')
 
 
 if __name__ == '__main__':
