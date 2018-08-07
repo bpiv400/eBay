@@ -46,7 +46,7 @@ do
                 else
  		    echo "Using normalized difference"
  		    python $scriptPath --name $k --exp $exp --turn $j --sig $roundLevel ;
-		fi
+		        fi
             else
                 echo "Using absolute difference"
                 python "$scriptPath" --name $k --low $low --exp $exp --high $high --turn $j --num $perc  --abs --tol $tol ;

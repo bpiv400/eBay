@@ -177,7 +177,11 @@ def rnn_loss_wrapper(loss_tensor, lengths):
 def process_minibatch_rnn(num_samps, net, optimizer, offr_vals, const_vals, targ_vals, length_vals, batch_size, device, criterion):
     # grab sample indices
     sample_inds = torch.randint(
-        low=0, high=num_samps, size=(batch_size,), device=device).long()
+        low=0, high=(num_samps - 1), size=(batch_size,), device=device).long()
+
+    # debugging
+    # print('offr val shape in minibatch processing')
+    # print(offr_vals.shape)
 
     # grab sample data
     sample_offr_vals = offr_vals[:, sample_inds, :]
@@ -188,21 +192,37 @@ def process_minibatch_rnn(num_samps, net, optimizer, offr_vals, const_vals, targ
     # sort lengths and retrieved sorted indices as well
     sample_lengths, sorted_inds = torch.sort(
         sample_lengths, dim=0, descending=True)
-
-    # apply same sorting to other inputs
-    sample_offr_vals = sample_offr_vals[:, sorted_inds, :]
-    sample_const_vals = sample_const_vals[:, sorted_inds, :]
-    sample_targ_vals = sample_targ_vals[:, sorted_inds]
+    # extract max length
+    max_length = sample_lengths[0]
+    # apply same sorting to other inputs and exclude all indices after
+    # max_length - 1
+    sample_offr_vals = sample_offr_vals[:max_length, sorted_inds, :]
+    sample_const_vals = sample_const_vals[:max_length, sorted_inds, :]
+    sample_targ_vals = sample_targ_vals[:max_length, sorted_inds]
 
     # generate packed sequence
+    # will the printing ever stop
+
+    # debugging
+    # print('Max length: %d' % max_length)
+    # print('sample offr input before padding')
+    # print(sample_offr_vals.shape)
     sample_offr_vals = torch.nn.utils.rnn.pack_padded_sequence(sample_offr_vals,
                                                                sample_lengths)
     # forward pass
-    output = net(x=sample_offr_vals, h_0=sample_const_vals)
+    net.set_init_state(sample_const_vals)
+    output = net(x=sample_offr_vals)
+
+    # debugging shapes
+    # print('output')
+    # print(output.shape)
+    # print('sample targ')
+    # print(sample_targ_vals.shape)
+
     # output should have shape (seq_len, num_classes, batch_size)
     # calculate loss on each entry, wrap to calculate mean loss
     loss = rnn_loss_wrapper(
-        criterion(output, sample_targ_vals), sample_lengths)
+        criterion(output, sample_targ_vals), sample_lengths.float())
 
     # average loss per sequence entry averaged over all sequences
     loss.backward()
@@ -219,7 +239,8 @@ def process_valid_rnn(net, valid_offr_vals, valid_const_vals,
     has already been packed
     '''
     # get sample output
-    output = net(x=valid_offr_vals, h_0=valid_const_vals)
+    net.set_init_state(valid_const_vals)
+    output = net(x=valid_offr_vals)
 
     # calculate loss
     loss = rnn_loss_wrapper(criterion(output, valid_targs),
@@ -396,6 +417,73 @@ def unpickle(path):
     return obj
 
 
+def add_empty_layers(const_vals, exp_name):
+    # find where layr is in the experiment name
+    layr_match = re.search('layr', exp_name)
+    # grab the index after the end of the match
+    last_ind = layr_match.span(0)[1]
+    # extract the corresponding substring beginning at that index
+    exp_name_sub = exp_name[last_ind:]
+    # match all consecutive numbers
+    num_match = re.search('[0-9]*', exp_name_sub)
+    # extract number and convert to int
+    num = int(num_match.group(0))
+    # this gives the total number of layers of rnns
+    # adjust to give layers of starting values that must be added
+    # since the constant features ( or 0's, should already occupy first layer)
+    num = num - 1
+    # grab sizes of other dimensions
+    batch = const_vals.size[1]
+    hidden_size = const_vals.size[2]
+    # iterate over values through num, add a layer of 0's for each
+    for _ in range(num):
+        # initialize empty array to add
+        empty_arr = np.zeros((1, batch, hidden_size))
+        # append along the first axis
+        const_vals = np.append(const_vals, empty_arr, axis=0)
+    return const_vals
+
+
+def increase_hidden_size(const_vals, exp_name):
+    layr_match = re.search('hidn', exp_name)
+    # grab the index after the end of the match
+    last_ind = layr_match.span(0)[1]
+    # extract the corresponding substring beginning at that index
+    exp_name_sub = exp_name[last_ind:]
+    # match all consecutive numbers
+    num_match = re.search('[0-9]*', exp_name_sub)
+    # extract number and convert to int
+    targ_size = int(num_match.group(0))
+
+    # grab current number of hidden units
+    curr_size = const_vals.size[2]
+    # return original if target is less than current size
+    if curr_size >= targ_size:
+        return const_vals
+    # determine how many additional 0's must be added
+    size_diff = targ_size - curr_size
+    # generate tensor of necessary size
+    # first and last dimensions must match const_vals
+    empty_arr = np.zeros((const_vals.shape[0], const_vals.shape[1], size_diff))
+    # append empty values to current vals
+    const_vals = np.append(const_vals, empty_arr, axis=2)
+    return const_vals
+
+
+def get_data_name(exp_name):
+    if 'lstm' in exp_name:
+        data_name = exp_name.replace('lstm', 'rnn')
+    else:
+        data_name = exp_name
+    arch_type_str = r'_(simp|cat|sep)'
+    type_match = re.search(arch_type_str, exp_name)
+    if type_match is None:
+        raise ValueError('Invalid experiment name')
+    type_match_end = type_match.span(0)[1]
+    data_name = data_name[:type_match_end]
+    return data_name
+
+
 def main():
     # parse parameters
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -422,6 +510,7 @@ def main():
     # gives the number of consecutive error increases required to
     # trigger the stopping criterion
     parser.add_argument('--hist_len', action='store', type=int, default=None)
+
     # extract parameters
     args = parser.parse_args()
     global exp_name
@@ -432,6 +521,11 @@ def main():
     # set a flag for whether the stopping criterion being used is
     # a validation error set
     valid = 'val' in exp_name
+    # sets a flag for whether the model being trained should have multiple layers
+    # in its multi_layer component
+    multi_lay = 'layr' in exp_name
+    # sets a flag for whether the experiment has a target number of hidden features
+    add_hidden = 'hidn' in exp_name
 
     # check whether the validation flag has been activated
     # indicating the stopping criterion should be based on
@@ -467,10 +561,12 @@ def main():
     print('Loading Data')
     sys.stdout.flush()
 
+    data_name = get_data_name(exp_name)
+
     # load data pickle
-    data_loc = 'data/exps/%s/train_data.pickle' % exp_name
+    data_loc = 'data/exps/%s/train_data.pickle' % data_name
     data_dict = unpickle(data_loc)
-    feats_loc = 'data/exps/%s/feats.pickle' % exp_name
+    feats_loc = 'data/exps/%s/feats.pickle' % data_name
     feats_dict = unpickle(feats_loc)
 
     # extract necessary components from data_dict
@@ -480,32 +576,22 @@ def main():
     midpoint_ser = data_dict['midpoint_ser']
     length_vals = data_dict['length_vals']
 
+    # if target size flag has been set in experiment name, add
+    # additional 0's to hidden state data
+    if add_hidden:
+        const_vals = increase_hidden_size(const_vals, exp_name)
+    # add additional hidden layers if necessary
+    if multi_lay:
+        const_vals = add_empty_layers(const_vals, exp_name)
+
+    # debugging
+    print(offr_vals.shape)
+    print(targ_vals.shape)
+
     # delete the dictionary itself
     del data_dict
     print('Done Loading')
     sys.stdout.flush()
-
-    # TODO: Consider removing this section when done updating
-    # remove  refrerence columns from data frame
-    # extra_cols = ['ref_old', 'ref_rec', 'ref_resp']
-    # add the response column corresponding to the
-    # other kind of model (time_ji for offr_mod)
-    # offr_ji otherwise
-    # if offr_mod:
-    #     if turn != 'start_price_usd':
-    #         extra_cols.append(get_resp_time(turn))
-    # else:
-    #     extra_cols.append(get_resp_offr(turn))
-    #
-    # for col in extra_cols:
-    #     if col in df:
-    #         print('Dropping %s' % col)
-    #         df.drop(columns=col, inplace=True)
-    # get class series (output later)
-    # class_series = get_class_series(midpoints)
-    # convert raw targets to classes if using cross entropy
-    # if 'cross' in exp_name:
-    #     df = get_resp_turn_classes(df, resp_col, class_series)
 
     # if stopping criterion is based ontest performance
     # initialize validation set
@@ -558,13 +644,15 @@ def main():
         # generate packed sequence
         valid_offr_vals = torch.nn.utils.rnn.pack_padded_sequence(valid_offr_vals,
                                                                   valid_length_vals)
+        # convert lengths to float tensor
+        valid_length_vals = valid_length_vals.float()
 
     # complete the same conversion process for training components
     offr_vals = torch.from_numpy(offr_vals).float()
     const_vals = torch.from_numpy(const_vals).float()
     # assuming cross-entropy environment
     targ_vals = torch.from_numpy(targ_vals).long()
-    length_vals = torch.from_numpy(targ_vals).long()
+    length_vals = torch.from_numpy(length_vals).long()
 
     # move offr_vals, const_vals, targ_vals, length_vals, to active device
     offr_vals = offr_vals.to(device)
@@ -577,6 +665,10 @@ def main():
     num_hidden_feats = const_vals.shape[2]
     num_classes = len(midpoint_ser.index)
     num_offr_feats = offr_vals.shape[2]
+    # characterizing relative sizes
+    print('offer features: %d' % num_offr_feats)
+    print('hidden state size: %d' % num_hidden_feats)
+    print('number of classes: %d' % num_classes)
 
     # TODO: Consider removing this when done updating
     # num_units = get_num_units(exp_name)

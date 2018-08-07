@@ -273,7 +273,7 @@ def seq_lists_legit(out, concat=False, sep=False, b3=False, ghost=False):
         matching_byr_lens = [len(feats_from_str(byr_tag, byr_feats))
                              for byr_feats in out[0]]
         # do the same for seller sequences
-        matching_slr_lens = [len(feats_from_str(byr_tag, slr_feats))
+        matching_slr_lens = [len(feats_from_str(slr_tag, slr_feats))
                              for slr_feats in out[1]]
         # if ghost adjustment has been made, the first entry of the seller sequences
         # should contain no seller codes, yet it should contain the same number
@@ -288,10 +288,10 @@ def seq_lists_legit(out, concat=False, sep=False, b3=False, ghost=False):
             matching_slr_lens[0] = len(feats_from_str(ghost_tag, out[1][0]))
         # similarly ensure that the seller features contain no byr tags
         byr_tags_slr_seqs = functools.reduce(
-            lambda feats, acc: len(feats_from_str(byr_tag, feats)), out[1], 0)
+            lambda acc, feats: len(feats_from_str(byr_tag, feats)) + acc, out[1], 0)
         # do the same for byr threads and the seller tag
         slr_tags_byr_seqs = functools.reduce(
-            lambda feats, acc: len(feats_from_str(slr_tag, feats)), out[0], 0)
+            lambda acc, feats: len(feats_from_str(slr_tag, feats)) + acc, out[0], 0)
         # ensure searches for slr tags in byr features and vice versa
         # encountered no matches
         if byr_tags_slr_seqs != slr_tags_byr_seqs or slr_tags_byr_seqs != 0:
@@ -302,6 +302,9 @@ def seq_lists_legit(out, concat=False, sep=False, b3=False, ghost=False):
         # number of tag matches
         for curr_len, curr_matching_len in zip(byr_lens + slr_lens, matching_byr_lens + matching_slr_lens):
             if init_len != curr_len or init_len != curr_matching_len:
+                print(curr_len)
+                print(init_len)
+                print(curr_matching_len)
                 raise ValueError(
                     'Buyer and seller threads not separated correctly')
     elif concat:
@@ -492,7 +495,7 @@ def get_seq_lists(offr_cols, concat=False, sep=False, b3=False):
     # matrices, return a list with two elements where the first is the list of byr feature lists
     # and the second is the list of slr feature lists
     elif sep:
-        out = [byr_feats, slr_feats]
+        out = [byr_seqs, slr_seqs]
     # otherwise return all the buyer and seller features together in an ordered list
     else:
         if not b3:
@@ -616,8 +619,12 @@ def get_seq_vals(df, seq_lists, is_targ=False, midpoint_ser=None):
     '''
     Assumes ghost features have been added
     '''
-    max_len = df['length'].max()
-    max_len = np.int(max_len)
+    if not is_targ:
+        max_len = df['length'].max()
+        max_len = np.int(max_len)
+    else:
+        max_len = len(seq_lists)
+        print(max_len)
     # get the size of one sequence input
     num_seq_feats = len(seq_lists[0])
     vals = np.empty((max_len, len(df.index), num_seq_feats))
@@ -884,7 +891,7 @@ def get_targ_lists(concat=False, sep=False, b3=False, time_mod=False):
     return targ_codes
 
 
-def get_byr_inds(seq_lists, df):
+def get_byr_inds(seq_lists, df, train=True):
     # regex expression for offer codes
     offer_code_re = r'_([bs][0-9])$'
     # initialize list counter
@@ -916,11 +923,30 @@ def get_byr_inds(seq_lists, df):
         byr_ser.loc[filled_inds] = ind_val
         # add series back to data frame
         df[byr_ind_name] = byr_ser
-        # add indicator as the final entry in the current sequence list
-        seq_lists[counter].append(byr_ind_name)
+        if train:
+            # add indicator as the final entry in the current sequence list
+            seq_lists[counter].append(byr_ind_name)
         # increment counter
         counter = counter + 1
-    return seq_lists
+    if train:
+        return seq_lists
+    else:
+        pass
+
+
+def get_architecture_mode(exp_name):
+    '''
+    Return length 2 tuple of separate
+    inputs flag and concatenated inputs flag in that order
+    '''
+    if 'simp' in exp_name:
+        return False, False
+    elif 'cat' in exp_name:
+        return False, True
+    elif 'sep' in exp_name:
+        return True, False
+    else:
+        raise ValueError('No architecture mode specified in name')
 
 
 def main():
@@ -936,23 +962,18 @@ def main():
     # ref cols and lengths can be found
     parser.add_argument('--data', '-d', action='store',
                         type=str, required=True)
-    # gives whether seller and buyer offers should be extracted
-    # as separate offers or whether they should be concatenated
-    parser.add_argument('--concat', '-c', action='store_true')
-    # gives whether seller and buyer offers should be extracted into separate
-    # numpy arrays for being input into a model downstream separately
-    parser.add_argument('--separate', '-s', action='store_true')
     # gives whether the last offer b3 should be kept in the data_frame
-    parser.add_argument('--b3', '-b3', action='store_true')
+    parser.add_argument('--b3', '-b3', action='store_true', default=False)
 
     # parse args
     args = parser.parse_args()
     name = args.name
     exp_name = args.exp
     data_name = args.data
-    sep = args.separate
-    concat = args.concat
     b3 = args.b3
+
+    # get architecture mode and set flags appropriately
+    sep, concat = get_architecture_mode(exp_name)
 
     # quick argument error checking
     # b3 cannot be active at the same time as sep or concat
@@ -998,15 +1019,21 @@ def main():
     midpoint_vals.append(-100)
     midpoint_inds = np.append(midpoint_list, -100)
     midpoint_ser = pd.Series(midpoint_vals, index=midpoint_inds)
-    print('midpoint series')
-    print(midpoint_ser)
-    sys.stdout.flush()
+
+    # debugging
+    # print('midpoint series')
+    # print(midpoint_ser)
+    # sys.stdout.flush()
+
+    ################################################
+    # NOTE: DEPRECATED
     # Deprecate  maybe?
     # work around since the insert above did not work
     # midpoint_ind = df.index.tolist()
     # idx = len(midpoint_ind) - 1
     # midpoint_ind[idx] = -100
     # midpoint_ser.index = midpoint_ind
+    #############################################
 
     # delete used variables
     del midpoint_list
@@ -1022,6 +1049,8 @@ def main():
             exp_name)
         # for ref columns, indescriminately grab ALL reference columns
         ref_cols = get_colnames(df.columns, const=False, ref=True, b3=b3)
+        if not sep and not concat:
+            get_byr_inds(seq_lists, df, train=False)
     else:
         print('Generating constant/offer cols & sequence lists')
         sys.stdout.flush()
@@ -1042,7 +1071,7 @@ def main():
         # add buyer indicator to each offer if buyer and seller inputs pass through the
         # same weights
         if not sep and not concat:
-            seq_lists = get_byr_inds(seq_lists, df)
+            seq_lists = get_byr_inds(seq_lists, df, train=True)
             # ensure sequence list is valid
             seq_lists_legit(seq_lists, concat=concat,
                             sep=sep, b3=b3, ghost=False)
