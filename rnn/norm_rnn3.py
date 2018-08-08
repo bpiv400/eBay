@@ -130,6 +130,10 @@ def main():
     if 'anon_item_id' in df.columns:
         df.drop(columns=['anon_item_id', 'anon_thread_id', 'anon_byr_id',
                          'anon_slr_id', 'auct_start_dt', 'auct_end_dt'], inplace=True)
+    #! TEMPORARY ADD A REF_START_PRICE_USD COLUMN SINCE ORIGINAL PREP CODE
+    #! DID NOT ACCIDENTLY
+    if 'ref_start_price_usd' not in df.columns:
+        df['ref_start_price_usd'] = df['start_price_usd']
     #! ############################################################
     print('Data Loaded')
     sys.stdout.flush()
@@ -152,6 +156,7 @@ def main():
     offr_cols = ['offr_%s' % code for code in offr_codes]
     # concat with ref to form ref offers
     ref_cols = ['ref_%s' % col for col in offr_cols]
+    ref_cols.append('ref_start_price_usd')
     # concat both lists of columns
     extract_cols = offr_cols + ref_cols
     extract_cols.append('length')

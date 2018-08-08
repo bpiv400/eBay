@@ -417,7 +417,7 @@ def unpickle(path):
     return obj
 
 
-def add_empty_layers(const_vals, exp_name):
+def add_layers(const_vals, exp_name, zeros=True):
     # find where layr is in the experiment name
     layr_match = re.search('layr', exp_name)
     # grab the index after the end of the match
@@ -427,36 +427,45 @@ def add_empty_layers(const_vals, exp_name):
     # match all consecutive numbers
     num_match = re.search('[0-9]*', exp_name_sub)
     # extract number and convert to int
-    num = int(num_match.group(0))
+    num_layers = int(num_match.group(0))
     # this gives the total number of layers of rnns
     # adjust to give layers of starting values that must be added
     # since the constant features ( or 0's, should already occupy first layer)
-    num = num - 1
+    num_add = num_layers - 1
     # grab sizes of other dimensions
-    batch = const_vals.size[1]
-    hidden_size = const_vals.size[2]
+    batch = const_vals.shape[1]
+    hidden_size = const_vals.shape[2]
     # iterate over values through num, add a layer of 0's for each
     for _ in range(num):
-        # initialize empty array to add
-        empty_arr = np.zeros((1, batch, hidden_size))
-        # append along the first axis
+        if zeros:
+            # initialize empty array to add
+            empty_arr = np.zeros((1, batch, hidden_size))
+            # append along the first axis
+        else:
+            empty_arr = const_vals
         const_vals = np.append(const_vals, empty_arr, axis=0)
-    return const_vals
+    return const_vals, num_layers
 
 
-def increase_hidden_size(const_vals, exp_name):
-    layr_match = re.search('hidn', exp_name)
-    # grab the index after the end of the match
-    last_ind = layr_match.span(0)[1]
-    # extract the corresponding substring beginning at that index
-    exp_name_sub = exp_name[last_ind:]
-    # match all consecutive numbers
-    num_match = re.search('[0-9]*', exp_name_sub)
-    # extract number and convert to int
-    targ_size = int(num_match.group(0))
+def get_hidden_size(const_vals, exp_name):
+    if 'hidn' in exp_name:
+        layr_match = re.search('hidn', exp_name)
+        # grab the index after the end of the match
+        last_ind = layr_match.span(0)[1]
+        # extract the corresponding substring beginning at that index
+        exp_name_sub = exp_name[last_ind:]
+        # match all consecutive numbers
+        num_match = re.search('[0-9]*', exp_name_sub)
+        # extract number and convert to int
+        targ_size = int(num_match.group(0))
+    else:
+        targ_size = const_vals.shape[2]
+    return targ_size
 
+
+def increase_hidden_size(const_vals, targ_size):
     # grab current number of hidden units
-    curr_size = const_vals.size[2]
+    curr_size = const_vals.shape[2]
     # return original if target is less than current size
     if curr_size >= targ_size:
         return const_vals
@@ -471,12 +480,14 @@ def increase_hidden_size(const_vals, exp_name):
 
 
 def get_data_name(exp_name):
+    print(exp_name)
+    sys.stdout.flush()
     if 'lstm' in exp_name:
         data_name = exp_name.replace('lstm', 'rnn')
     else:
         data_name = exp_name
     arch_type_str = r'_(simp|cat|sep)'
-    type_match = re.search(arch_type_str, exp_name)
+    type_match = re.search(arch_type_str, data_name)
     if type_match is None:
         raise ValueError('Invalid experiment name')
     type_match_end = type_match.span(0)[1]
@@ -510,13 +521,34 @@ def main():
     # gives the number of consecutive error increases required to
     # trigger the stopping criterion
     parser.add_argument('--hist_len', action='store', type=int, default=None)
-
+    # gives whether additional layers should be populated with zeros
+    parser.add_argument('--zeros', '-z', action='store',
+                        type=str, default="False")
+    # gives whether constant features should be passed through fully connected layers
+    # before entering rnn
+    parser.add_argument('--init', '-i', action='store',
+                        type=str, default="False")
     # extract parameters
     args = parser.parse_args()
     global exp_name
     exp_name = args.exp.strip()
     num_batches = args.batches
     batch_size = args.batch_size
+    zeros = args.zeros
+    init = args.init
+    # parse flag out of zeros argument
+    if zeros == 'True':
+        zeros = True
+        print('additional layers will have zeros')
+    else:
+        zeros = False
+    # parse flag out of init argument
+    if init == 'True':
+        init = True
+        print('hidden state will have pre-processing')
+    else:
+        init = False
+        print('if hidden state has more features than constant features, initialize as 0')
 
     # set a flag for whether the stopping criterion being used is
     # a validation error set
@@ -526,7 +558,8 @@ def main():
     multi_lay = 'layr' in exp_name
     # sets a flag for whether the experiment has a target number of hidden features
     add_hidden = 'hidn' in exp_name
-
+    # sets flag for whether the experiment is an lstm
+    lstm = 'lstm' in exp_name
     # check whether the validation flag has been activated
     # indicating the stopping criterion should be based on
     # performance of a validation set
@@ -578,11 +611,14 @@ def main():
 
     # if target size flag has been set in experiment name, add
     # additional 0's to hidden state data
-    if add_hidden:
-        const_vals = increase_hidden_size(const_vals, exp_name)
+    num_hidden_feats = get_hidden_size(const_vals, exp_name)
+    if add_hidden and not init:
+        const_vals = increase_hidden_size(const_vals, num_hidden_feats)
     # add additional hidden layers if necessary
     if multi_lay:
-        const_vals = add_empty_layers(const_vals, exp_name)
+        const_vals, num_layers = add_layers(const_vals, exp_name, zeros)
+    else:
+        num_layers = 1
 
     # debugging
     print(offr_vals.shape)
@@ -663,7 +699,7 @@ def main():
     # calculating parameter values for the model from data
     # gives the number of hidden features in the rnn
     num_hidden_feats = const_vals.shape[2]
-    num_classes = len(midpoint_ser.index)
+    num_classes = len(midpoint_ser.index) - 1  # subtract the filler class
     num_offr_feats = offr_vals.shape[2]
     # characterizing relative sizes
     print('offer features: %d' % num_offr_feats)
@@ -678,7 +714,9 @@ def main():
 
     # initialize model class
     # CONFIRMED: IGNORED LOSS INDICES DO NOT CONTRIBUTE TO LOSS SUMS
-    net = Net(num_offr_feats, num_classes, num_hidden_feats)
+    net = Net(num_offr_feats, num_classes, lstm=lstm, targ_hidden_size=num_hidden_feats,
+              org_hidden_size=const_vals.shape[2], bet_hidden_size=None,
+              layers=num_layers, init_processing=init)
     criterion = nn.CrossEntropyLoss(
         reduce=False, size_average=False, ignore_index=-100)
     # move net to appropriate device

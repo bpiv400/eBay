@@ -98,7 +98,8 @@ def get_colnames(columns, const=False, ref=False, b3=False):
         # print(drop_col_filter)
         # apply filter to out out_cols
         out_cols = list(filter(drop_col_filter, out_cols))
-
+    if ref:
+        out_cols.append('ref_start_price_usd')
     return out_cols
 
 
@@ -949,6 +950,39 @@ def get_architecture_mode(exp_name):
         raise ValueError('No architecture mode specified in name')
 
 
+def get_prep_type(data_name):
+    '''
+    Extracts the prep type from a data sequence name
+    '''
+    arch_type = r'_(simp|cat|sep)'
+    arch_match = re.search(arch_type, data_name)
+    start_arch = arch_match.span(0)[0]
+    prep_type = data_name[:start_arch]
+    return prep_type
+
+# TODO: AT SOME POINT, CHECK CORRECT
+
+
+def add_turn_indicators(offr_vals, length_vals):
+    # get total number of turns
+    max_turns = offr_vals.shape[0]
+    # get batch size
+    batch_size = offr_vals.shape[1]
+    # iterate up to the max number of turns
+    for i in range(max_turns):
+        # generate a max_turns, batch_size, 1 array of 0's
+        curr_ind = np.zeros((max_turns, batch_size, 1))
+        # get the current length being operated on
+        curr_length = i + 1
+        # count the number of threads with at least this length
+        count_seqs = np.sum(length_vals >= curr_length)
+        # activate indicator for corresponding threads
+        curr_ind[i, :count_seqs, 0] = 1
+        # append to the last dimension
+        offr_vals = np.append(offr_vals, curr_ind, axis=2)
+    return offr_vals
+
+
 def main():
     # parse parameters
     parser = argparse.ArgumentParser()
@@ -956,25 +990,23 @@ def main():
     # toy, train, test, pure_test (not the literal filename)
     parser.add_argument('--name', '-n', action='store',
                         type=str, required=True)
-    # gives the name of the current experiment
-    parser.add_argument('--exp', '-e', action='store', type=str, required=True)
-    # gives the name of the directory where the normalized data with
-    # ref cols and lengths can be found
+    # gives the name of the current data type
     parser.add_argument('--data', '-d', action='store',
                         type=str, required=True)
     # gives whether the last offer b3 should be kept in the data_frame
     parser.add_argument('--b3', '-b3', action='store_true', default=False)
-
+    # gives whether turn number indicators should be added
+    parser.add_argument('--inds', '-i', action='store_true', default=False)
     # parse args
     args = parser.parse_args()
     name = args.name
-    exp_name = args.exp
     data_name = args.data
     b3 = args.b3
+    inds = args.inds
 
     # get architecture mode and set flags appropriately
-    sep, concat = get_architecture_mode(exp_name)
-
+    sep, concat = get_architecture_mode(data_name)
+    prep_type = get_prep_type(data_name)
     # quick argument error checking
     # b3 cannot be active at the same time as sep or concat
     if b3 and (sep or concat):
@@ -989,7 +1021,7 @@ def main():
     # load data
     print('Loading data')
     sys.stdout.flush()
-    load_loc = 'data/exps/%s/normed/%s.csv' % (data_name, name)
+    load_loc = 'data/exps/%s/normed/%s.csv' % (prep_type, name)
     df = pd.read_csv(load_loc)
     # drop unnamed columns if they exist
     drop_unnamed(df)
@@ -1006,7 +1038,7 @@ def main():
     # load midpoints
     print('Preparing midpoints series')
     sys.stdout.flush()
-    midpoint_dict = unpickle('data/exps/%s/bins.pickle' % data_name)
+    midpoint_dict = unpickle('data/exps/%s/bins.pickle' % prep_type)
     # extract numpy array of midpoints
     midpoint_list = midpoint_dict['midpoints']
     # ensure rounding
@@ -1046,7 +1078,7 @@ def main():
         print('Loading training feature dictionary')
         sys.stdout.flush()
         const_cols, offr_cols, seq_lists, targ_lists = get_training_features(
-            exp_name)
+            data_name)
         # for ref columns, indescriminately grab ALL reference columns
         ref_cols = get_colnames(df.columns, const=False, ref=True, b3=b3)
         if not sep and not concat:
@@ -1085,7 +1117,7 @@ def main():
         if name == 'train':
             print('Saving training dictionary')
             sys.stdout.flush()
-            feat_path = 'data/exps/%s' % exp_name
+            feat_path = 'data/exps/%s' % data_name
             feat_name = 'feats'
             pickle_obj(obj=feat_dict, path=feat_path, filename=feat_name)
     if sep or concat:
@@ -1137,8 +1169,9 @@ def main():
     sys.stdout.flush()
     offr_vals = extract_cols(
         df, cols=seq_lists,  is_const=False, sep=sep, concat=concat, b3=b3)
-    # extracts teh gargs as numpy array
-
+    # add turn number indicators if flag activated
+    if inds:
+        offr_vals = add_turn_indicators(offr_vals, df['length'].values)
     # store data in dictionary and pickle it
     print('Compiling data dictionary')
     data_dict = {}
@@ -1150,12 +1183,12 @@ def main():
     data_dict['length_vals'] = df['length'].values
     # including for debugging
     data_dict['unique_thread_id'] = df['unique_thread_id'].values
-    data_path = 'data/exps/%s' % exp_name
-    data_name = '%s_data' % name
+    data_path = 'data/exps/%s' % data_name
+    data_dict_name = '%s_data' % name
     sys.stdout.flush()
     print('Pickling data dictionary')
     sys.stdout.flush()
-    pickle_obj(obj=data_dict, path=data_path, filename=data_name)
+    pickle_obj(obj=data_dict, path=data_path, filename=data_dict_name)
     print('Done preparing for training')
 
 

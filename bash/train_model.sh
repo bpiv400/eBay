@@ -5,7 +5,7 @@
 #$ -l m_mem_free=40G
 #$ -m e -M 4102158912@vtext.com
 
-while getopts 'e:b:s:h:d:v:f' flag; do
+while getopts 'e:b:s:h:d:v:z:i:f' flag; do
   case "${flag}" in
     e) exp_name="${OPTARG}" ;;
     b) batches="${OPTARG}" ;;
@@ -13,6 +13,8 @@ while getopts 'e:b:s:h:d:v:f' flag; do
     h) hist_len="${OPTARG}" ;;
     d) dur_valid="${OPTARG}" ;;
     v) val_size="${OPTARG}" ;;
+    z) zeros="${OPTARG}" ;;
+    i) init="${OPTARG}" ;;
     f) feedford="True" ;;
   esac
 done
@@ -25,6 +27,14 @@ fi
 
 if [ -z "${val_size}" ]; then
     val_size=.05 ;
+fi
+
+if [ -z "${init}" ]; then
+    init=False ;
+fi
+
+if [ -z "${zeros}" ]; then
+    zeros=False ;
 fi
 
 if [ -z "${batch_size}" ]; then
@@ -50,4 +60,4 @@ source /opt/rh/rh-python36/enable
 source ~/envs/bargain/bin/activate
 cd eBay
 
-python "$scriptPath" --batch_size $batch_size --batches $batches --exp $exp_name --hist_len $hist_len --dur_valid $dur_valid --valid_size $val_size
+python "$scriptPath" --batch_size $batch_size --batches $batches --exp $exp_name --hist_len $hist_len --dur_valid $dur_valid --valid_size $val_size --zeros $zeros --init $init

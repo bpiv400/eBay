@@ -1390,6 +1390,8 @@ def get_ref_cols(df):
         curr_offr = 'offr_%s' % code
         ref_offr_name = 'ref_%s' % curr_offr
         df[ref_offr_name] = df[curr_offr]
+    # add start_price_usd
+    df['ref_start_price_usd'] = df['start_price_usd']
     return df
 
 ###############################################################
