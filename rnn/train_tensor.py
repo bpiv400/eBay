@@ -2,12 +2,10 @@ import sys
 import os
 sys.path.append(os.path.abspath('repo/rnn/models.py'))
 
+from models_tensor import *
+from hooks_tensor import *
 from models import *
-import torch
-import torch.autograd as autograd
-import torch.nn as nn
-import torch.nn.functional as F
-import torch.optim as optim
+import tensorflow as tf
 import numpy as np
 import pandas as pd
 import argparse
@@ -267,137 +265,71 @@ def is_valid_dec(valid_hist, hist_len):
     num_it = len(valid_hist)
     # if there is not sufficient history for the validation error
     # check, vacuously the stopping criterion fails
-    if num_it < (hist_len + 1):
+    if num_it < hist_len:
         return True
     else:
-        # set the flag for whether any decreases have been wittnessed
-        any_dec_flag = False
-        # iterate over the loss history
-        for i in range(hist_len):
-            # get the current loss
-            curr_loss = valid_hist[num_it - (1 + i)]
-            # get the previous loss
-            prev_loss = valid_hist[num_it - (2 + i)]
-            if curr_loss < prev_loss:
-                any_dec_flag = True
-        # return whether any decreases have been observed in the
-        # duration of the history we're interested in
-        return any_dec_flag
+        return valid_hist[hist_len - 1] < valid_hist[0]
 
 
-def batch_count_loop(num_batches, net, optimizer, offr_vals, const_vals, targ_vals, length_vals, batch_size, device, criterion):
-    # get the total number of samples in the training data
-    num_samps = offr_vals.shape[1]
-    # create the initial copy of the recent_history tensory
-    recent_hist = torch.zeros(500, device=device)
-    # create an index counter to track where loss should be input to recent_hist tensor
-    hist_ind = 0
-    # create an empty list to store the mean of the last 500 batch losses
-    loss_hist = []
-    # iterate over the number of batches assigned
-    for i in range(1, num_batches):
-        # zero the gradient
-        optimizer.zero_grad()
-
-        # get error for minibatch, back prop, and update model
-        loss = process_minibatch_rnn(
-            num_samps, net, optimizer, offr_vals, const_vals, targ_vals, length_vals, batch_size, device, criterion)
-
-        # add loss to the current recent loss history and update the index counter
-        recent_hist[hist_ind] = loss
-        hist_ind = hist_ind + 1
-
-        # update the long run loss history every 500 iterations
-        if i % 500 == 0:
-            loss_hist = update_loss_hist(
-                loss_hist, recent_hist, i, num_batches)
-            # reset recent history and associated index
-            recent_hist = torch.zeros(500, device=device)
-            hist_ind = 0
-    # return the state dictionary for the model after the last update
-    return net.state_dict(), loss_hist
+def delete_checkpoints(checkpoint_dict):
+    for checkpoint_file in checkpoint_dict.values():
+        if os.path.exists(checkpoint_file):
+            os.remove(checkpoint_file)
+    pass
 
 
-def valid_loop(valid_dur, valid_offr_vals, valid_const_vals,
-               valid_targs, valid_length_vals, hist_len, net,
-               optimizer, offr_vals, const_vals, targ_vals, length_vals,
-               batch_size, device, criterion):
-    # initialize counter for the total number of minibatches
-    batch_count = 1
-    # get the total number of samples in the training data
-    num_samps = offr_vals.shape[1]
-    # initialize recent history tensor and index counter to track where loss should be added to it
-    recent_hist = torch.zeros(500, device=device)
-    hist_ind = 0
-    # create an empty list to track validation history
-    valid_hist = []
-    # create an empty list to store the mean of the last 500 batch losses
-    loss_hist = []
+def valid_loop(valid_dur, hist_len, estimator=None, valid_input_fn=None, training_input_fn=None,
+               valid_iterator_initializer_hook=None, train_iterator_initializer_hook=None,
+               valid_loss_logging_hook=None, loss_logging_hook=None, model_dir=None,
+               max_batches=None):
+
     # initialize the flag that determines whether validation error is decreasing
     valid_dec = True
     # initialize validation dictionary to contain dictionaries of model parameters so we can revert to last model before
     # error increased
-    valid_dict = {}
+    checkpoint_dict = {}
     # in the dictionary, higher integer keys indicate more recent model parameters
-    for i in range(hist_len + 1):
-        valid_dict[i] = None
-
+    for i in range(hist_len):
+        checkpoint_dict[i] = None
+    # initialize validation loss tracking list
+    valid_hist = []
+    # initialize evaluation batch count check
+    mini_batch_count = 1
     # iterate while validation error is decreasing
-    while valid_dec:
-        # zero the gradient
-        optimizer.zero_grad()
-
-        # get error for minibatch, back prop, and update model
-        loss = process_minibatch_rnn(
-            num_samps, net, optimizer, offr_vals, const_vals,
-            targ_vals, length_vals, batch_size, device, criterion)
-
-        # add loss to the current recent loss history and update the index counter
-        recent_hist[hist_ind] = loss
-        hist_ind = hist_ind + 1
-
-        # update the long run loss history every 500 iterations
-        if batch_count % 500 == 0:
-            loss_hist = update_loss_hist(
-                loss_hist, recent_hist, batch_count)
-            # reset recent history and associated index
-            recent_hist = torch.zeros(500, device=device)
-            hist_ind = 0
-
-        # update valid history every valid_dur iterations
-        if batch_count % valid_dur == 0:
-            # get loss on the validation set
-            valid_loss = process_valid_rnn(net, valid_offr_vals, valid_const_vals,
-                                           valid_targs, valid_length_vals, criterion)
-            valid_hist.append(valid_loss)
-            print('Valid Loss %d: %.2f' % (len(valid_hist), valid_loss))
-            # move state history back 1 iteration
+    while valid_dec & mini_batch_count < max_batches:
+        # train the estimator for valid_dur steps
+        estimator.train(training_input_fn, hooks=[train_iterator_initializer_hook,
+                                                  loss_logging_hook], steps=valid_dur)
+        # calculate the loss on the validation set
+        rec_loss = estimator.evaluate(valid_input_fn, hooks=[valid_iterator_initializer_hook,
+                                                             valid_loss_logging_hook], steps=1)
+        # store the path to the latest checkpoint
+        latest_checkpoint = tf.train.latest_checkpoint(model_dir)
+        # append the most recent loss to the list of losses if fewer than hist_len
+        # steps have been execute
+        if len(valid_hist) < hist_len:
+            valid_hist.append(rec_loss)
+        else:
+            # otherwise move all existing losses 1 index lower and add the most recent
+            # loss to the end
             for i in range(hist_len):
-                valid_dict[i] = copy.deepcopy(valid_dict[i + 1])
+                valid_hist[i] = valid_hist[i + 1]
+            valid_hist[hist_len - 1] = rec_loss
+        # iterate over checkpoint dictionary pushing each checkpoint in the dictionary to a lower index
+        for i in range(hist_len):
+            checkpoint_dict[i] = copy.deepcopy(checkpoint_dict[i + 1])
             # make the most recent entry equal state dict
-            valid_dict[hist_len] = copy.deepcopy(net.state_dict())
+            checkpoint_dict[hist_len - 1] = copy.deepcopy(latest_checkpoint)
 
             # check the stopping criterion that the validation error has
-            # increased on the last two iterations
+            # increased on the last hist_dur iterations
             valid_dec = is_valid_dec(valid_hist, hist_len)
-        batch_count = batch_count + 1
-    # exiting while loop indicates stopping criterion has been reached
-    # return the model state stored in the oldest recorded dictionary (valid_dict[0])
-    return valid_dict[0], loss_hist, valid_hist
-
-
-def get_optimizer(net, exp_name):
-    '''
-    Description: Parsing experiment name to extract optimizer
-    to be used
-    '''
-    if 'unr' in exp_name:
-        optimizer = optim.Adam(net.parameters(), weight_decay=0)
-    else:
-        print('regularized')
-        optimizer = optimizer = optim.Adam(
-            net.parameters(), weight_decay=math.pow(10, -5))
-    return optimizer
+        mini_batch_count = mini_batch_count + 1
+    # delete more recent checkpoint files
+    output_checkpoint = checkpoint_dict[0]
+    delete_checkpoints(checkpoint_dict)
+    # return nothing
+    pass
 
 
 def unpickle(path):
@@ -435,8 +367,6 @@ def get_data_name(exp_name):
 
 def main():
     # parse parameters
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    print(device)
     sys.stdout.flush()
     start_time = dt.now()
 
@@ -448,6 +378,9 @@ def main():
     parser.add_argument('--batches', action='store', type=float)
     # set the number of mini batches
     parser.add_argument('--batch_size', action='store', type=int)
+    # pre-processing middle layer hidden size
+    parser.add_argument('--pre_bet_size', action='store',
+                        type=int, default=None)
     # whether a validation set should be used to determine stopping
     # value should give the percentage of the training sample to be used
     # for the validation step
@@ -459,12 +392,17 @@ def main():
     # gives the number of consecutive error increases required to
     # trigger the stopping criterion
     parser.add_argument('--hist_len', action='store', type=int, default=None)
+    # gives the size of the L2 regularization parameter
+    parser.add_argument('--reg', action='store',
+                        type=float, default=math.pow(10, -5))
     # extract parameters
     args = parser.parse_args()
     global exp_name
     exp_name = args.exp.strip()
     num_batches = args.batches
     batch_size = args.batch_size
+    bet_hidden_size = args.pre_bet_size
+    reg_weight = args.reg
     # parse flag out of zeros argument
 
     # set a flag for whether the stopping criterion being used is
@@ -472,6 +410,15 @@ def main():
     valid = 'val' in exp_name
     init = 'init' in exp_name
     lstm = 'lstm' in exp_name
+
+    # initialize params dictionary
+    params = {}
+    # add args to estimator params dictionary
+    params['pre'] = init
+    params['lstm'] = lstm
+    params['bet_hidden_size'] = bet_hidden_size
+    params['reg_weight'] = reg_weight
+
     # check whether the validation flag has been activated
     # indicating the stopping criterion should be based on
     # performance of a validation set
@@ -497,12 +444,6 @@ def main():
     else:
         offr_mod = True
 
-    # get data type
-    # TODO: I don't think prep type is necessary here due to effects of make_seq
-    # prep_type = get_prep_type(exp_name, is_rnn=True)
-    # get model class
-    Net = SimpleRNN.get_model_class(exp_name)
-
     print('Loading Data')
     sys.stdout.flush()
 
@@ -521,10 +462,24 @@ def main():
     midpoint_ser = data_dict['midpoint_ser']
     length_vals = data_dict['length_vals']
 
+    # ######################################
+    # TODO: UNSORT ALL INPUT VALUES
+    ##########################################
+
+    # replace ignore indices with 0's--equivalently any value
+    replace_mask = targ_vals == -100
+    print(np.sum(replace_mask)/replace_mask.size)
+    targ_vals[replace_mask] = 0
+
     # if target size flag has been set in experiment name, add
     # additional 0's to hidden state data
-    const_vals, num_layers, targ_hidden_size = SimpleRNN.transform_hidden_state(
+    const_vals, num_layers, targ_hidden_size = transform_hidden_state(
         const_vals, exp_name)
+    # add additional parameters relating to depth of rnn
+    #  to params dictionary
+    params['deep'] = num_layers > 1
+    if params['deep']:
+        params['num_deep'] = num_layers
 
     # debugging
     print(offr_vals.shape)
@@ -559,111 +514,132 @@ def main():
         targ_vals = np.delete(targ_vals, valid_inds, axis=1)
         length_vals = np.delete(length_vals, valid_inds)
 
-        # convert all three components to tensors for training
-        # convert both valid_data and valid_targ to tensors for training
-        # convert data to a float
-        valid_offr_vals = torch.from_numpy(valid_offr_vals).float()
-        valid_const_vals = torch.from_numpy(valid_const_vals).float()
-        # assuming cross-entropy environment
-        valid_targs = torch.from_numpy(valid_targs)
-        valid_targs = valid_targs.long()
-        valid_length_vals = torch.from_numpy(valid_length_vals).long()
-        # move all three valid tnesors to device
-        valid_targs = valid_targs.to(device)
-        valid_offr_vals = valid_offr_vals.to(device)
-        valid_const_vals = valid_const_vals.to(device)
-        valid_length_vals = valid_length_vals.to(device)
-
-        # sort valid data components by associated sequence lengths
-        # sort lengths and retrieved sorted indices as well
-        valid_length_vals, sorted_inds = torch.sort(
-            valid_length_vals, dim=0, descending=True)
-
-        # apply same sorting to other inputs
-        valid_offr_vals = valid_offr_vals[:, sorted_inds, :]
-        valid_const_vals = valid_const_vals[:, sorted_inds, :]
-        valid_targs = valid_targs[:, sorted_inds]
-
-        # generate packed sequence
-        valid_offr_vals = torch.nn.utils.rnn.pack_padded_sequence(valid_offr_vals,
-                                                                  valid_length_vals)
-        # convert lengths to float tensor
-        valid_length_vals = valid_length_vals.float()
-
-    # complete the same conversion process for training components
-    offr_vals = torch.from_numpy(offr_vals).float()
-    const_vals = torch.from_numpy(const_vals).float()
-    # assuming cross-entropy environment
-    targ_vals = torch.from_numpy(targ_vals).long()
-    length_vals = torch.from_numpy(length_vals).long()
-
-    # move offr_vals, const_vals, targ_vals, length_vals, to active device
-    offr_vals = offr_vals.to(device)
-    const_vals = const_vals.to(device)
-    targ_vals = targ_vals.to(device)
-    length_vals = length_vals.to(device)
-
     # calculating parameter values for the model from data
     # gives the number of hidden features in the rnn
     num_classes = len(midpoint_ser.index) - 1  # subtract the filler class
+    # add corresponding parameter value to dictionary
+    params['num_classes'] = num_classes
     num_offr_feats = offr_vals.shape[2]
     # characterizing relative sizes
 
-    # TODO: Consider removing this when done updating
-    # num_units = get_num_units(exp_name)
-
+    # calculate the number of gradient descent steps to be taken if we are not
+    # using a validation set
     if not valid:
-        num_batches = int(offr_vals.shape[1] / batch_size * num_batches)
-
-    # initialize model class
-    # CONFIRMED: IGNORED LOSS INDICES DO NOT CONTRIBUTE TO LOSS SUMS
-    net = Net(num_offr_feats, num_classes, lstm=lstm, targ_hidden_size=targ_hidden_size,
-              org_hidden_size=const_vals.shape[2], bet_hidden_size=None,
-              layers=num_layers, init_processing=init)
-    criterion = nn.CrossEntropyLoss(
-        reduce=False, size_average=False, ignore_index=-100)
-    # move net to appropriate device
-    net.to(device)
+        steps = int(offr_vals.shape[1] / batch_size * num_batches)
+    else:
+        batch_size = 32
+        max_steps = 25 * int(offr_vals.shape[1] / batch_size)
 
     print('offer features: %d' % num_offr_feats)
     print('hidden state size: %d' % targ_hidden_size)
     print('number of classes: %d' % num_classes)
     print('org hidden size: %d' % const_vals.shape[2])
 
-    # training loop prep
-    loss_hist = []
-    optimizer = get_optimizer(net, exp_name)
+    # swap the first and second dimensions of the offrs, targets,
+    #  and const_vals numpy arrays to prep them for the
+    # which expects batch size as the primary axis input function
+    offr_vals = torch_tensor_prep(offr_vals)
+    const_vals = torch_tensor_prep(const_vals)
+    targ_vals = torch_tensor_prep(targ_vals)
+    # convert targets to integer
+    targ_vals = targ_vals.astype(np.int32)
 
-    sys.stdout.flush()
-    # training loop iteration
+    # do the same for valid numpy arrays if necessary
+    if valid:
+        valid_offr_vals = torch_tensor_prep(valid_offr_vals)
+        valid_const_vals = torch_tensor_prep(valid_const_vals)
+        valid_targs = torch_tensor_prep(valid_targs)
+        # convert targets to integer
+        valid_targs = valid_targs.astype(np.int32)
+
+    # give relative path from current directory to model directory
+    model_dir = 'data/exps/%s' % exp_name
+    # initialize estimator class using custom model_fn
+    # and accumulated params history
+    rnn_estimator = tf.estimator.Estimator(
+        model_fn=rnn_fun,
+        params=params,
+        model_dir=model_dir
+    )
+    # DEPRECATED SINCE IT SHOULD BE POSSIBLE TO LOAD MODEL FROM CHECKPOINT
+    ###############################################################################
+    # define input spec
+    # feature_spec = {
+    #     'lens': tf.placeholder(length_vals.dtype, length_vals.shape),
+    #     'offrs': tf.placeholder(offr_vals.dtype, offr_vals.shape),
+    #     'consts': tf.placeholder(const_vals.dtype, const_vals.shape)
+    # }
+    # # generate server receiver function from input spec
+    # serving_receiver_fn = tf.estimator.export.build_raw_serving_input_receiver_fn(
+    #     feature_spec)
+    #################################################################################
+
+    # initialize training loss logging hook
+    loss_logging_hook = LossOutputHook('loss:0', steps=500)
+
+    # initialize training data initializer hook and input function for training loop
+    train_input_fn, train_iterator_initializer_hook = get_inputs(offr_vals,
+                                                                 const_vals, length_vals, targ_vals, valid=False)
+    print(const_vals.dtype)
+
     if not valid:
-        # standard num iterations stopping criterion
-        state_dict, loss_hist = batch_count_loop(
-            num_batches, net, optimizer, offr_vals, const_vals, targ_vals, length_vals, batch_size, device, criterion)
+        # training loop iteration
+        # tf.logging.set_verbosity(tf.logging.INFO)
+        rnn_estimator.train(train_input_fn, hooks=[train_iterator_initializer_hook,
+                                                   loss_logging_hook], steps=steps)
     else:
-        # validation set stopping criterion
-        state_dict, loss_hist, val_hist = valid_loop(valid_dur, valid_offr_vals, valid_const_vals,
-                                                     valid_targs, valid_length_vals, hist_len, net, optimizer, offr_vals,
-                                                     const_vals, targ_vals, length_vals, batch_size, device, criterion)
+        # initialize validation input function and initializer for validation
+        # dataset
+        valid_input_fn, valid_iterator_initializer_hook = get_inputs(valid_offr_vals,
+                                                                     valid_const_vals, valid_length_vals, valid_targs, valid=True)
+        # initialize validation loss logging loop
+        valid_loss_logging_hook = LossOutputHook('loss', steps=1)
 
+        # DEPRECATED
+        ########################################################
+        # initialize exporter for validation loss training loop
+        # should be replaced with less costly custom exporter
+        # exporter = tf.estimator.BestExporter(
+        #     serving_input_receiver_fn=serving_receiver_fn)
+
+        # initialize training spec
+        # train_spec = tf.train.TrainSpec(train_input_fn, max_steps=2000,
+        #                                 hooks=[train_iterator_initializer_hook, loss_logging_hook])
+        # valid_spec = tf.train.EvalSpec(valid_input_fn, steps=exporters=exporter, throttle_secs=600,
+        #                                start_delay_secs=120, hooks=[valid_iterator_initializer_hook, valid_loss_logging_hook])
+        ########################################################
+
+        # validation set stopping criterion
+        valid_loop(valid_dur, hist_len, estimator=rnn_estimator, valid_input_fn=valid_input_fn, training_input_fn=training_input_fn,
+                   valid_iterator_initializer_hook=valid_iterator_initializer_hook,
+                   train_iterator_initializer_hook=train_iterator_initializer_hook,
+                   valid_loss_logging_hook=valid_loss_logging_hook, loss_logging_hook=loss_logging_hook,
+                   model_dir=model_dir)
     print('Done Training')
     sys.stdout.flush()
     print('Pickling')
     sys.stdout.flush()
 
-    # save outputs
-    # save model parameters
-    torch.save(state_dict, 'data/exps/%s/model.pth.tar' %
-               exp_name)
+    # Deprecated since for our purposes model can be loaded from latest checkpoint with warm start
+    # in evaluation script -- hopefully this occurs automatically
+    ###############################################################################################
+    # export the saved model
+    # rnn_estimator.export_savedmodel('data/exps/%s' % exp_name, serving_receiver_fn,
+    #                                 strip_default_attrs=True)
+    ###############################################################################################
 
     # save loss history and validation loss history if its given
     loss_pickle = open('data/exps/%s/loss.pickle' %
                        exp_name, 'wb')
+    # export loss history from loss_logging hook
+    loss_hist = loss_logging_hook.export_loss()
+    # add to loss dictionary
     loss_dict = {}
     loss_dict['train_loss'] = loss_hist
 
     # save validation history if validation set is used as stopping criterion
     if valid:
+        val_hist = valid_loss_logging_hook.export_loss()
         loss_dict['valid_loss'] = val_hist
 
     # dump and close pickle

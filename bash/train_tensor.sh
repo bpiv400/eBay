@@ -1,11 +1,11 @@
 #!/bin/bash
-#$ -N train_model 
+#$ -N train_tensor_model 
 #$ -js 1 
 #$ -j y
 #$ -l m_mem_free=60G
 #$ -m e -M 4102158912@vtext.com
 
-while getopts 'e:b:s:h:d:v:f' flag; do
+while getopts 'e:b:s:h:d:v:' flag; do
   case "${flag}" in
     e) exp_name="${OPTARG}" ;;
     b) batches="${OPTARG}" ;;
@@ -13,15 +13,10 @@ while getopts 'e:b:s:h:d:v:f' flag; do
     h) hist_len="${OPTARG}" ;;
     d) dur_valid="${OPTARG}" ;;
     v) val_size="${OPTARG}" ;;
-    f) feedford="True" ;;
   esac
 done
 
-if [ -z "${feedford}" ]; then
-    scriptPath=repo/rnn/train_model.py
-else
-    scriptPath=repo/trans_probs/mvp/train_model.py
-fi
+scriptPath=repo/rnn/train_tensor.py
 
 if [ -z "${val_size}" ]; then
     val_size=.05 ;

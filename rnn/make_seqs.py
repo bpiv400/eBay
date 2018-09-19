@@ -1008,7 +1008,7 @@ def main():
     sep, concat = get_architecture_mode(data_name)
     prep_type = get_prep_type(data_name)
     # quick argument error checking
-    # b3 cannot be active at the same time as sep or concat
+    # b3 cannot be active at the same time as sep or concatPrepP
     if b3 and (sep or concat):
         raise ValueError('we cannot keep b3, if we are inputting' +
                          'seller and buyer offers separately or if we are concatenating seller' +
