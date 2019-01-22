@@ -1,4 +1,3 @@
-
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -14,11 +13,11 @@ import pickle
 import re
 
 
-class SimpleRNN(nn.Module):
+class Simulator(nn.Module):
     def __init__(self, offr_size, output_size, lstm=False, targ_hidden_size=None, org_hidden_size=None,
                  bet_hidden_size=None, layers=1, init_processing=False):
         # super constructor
-        super(SimpleRNN, self).__init__()
+        super(Simulator, self).__init__()
         # error checking for required argument
         if org_hidden_size is None:
             raise ValueError("Original hidden size must be provided")
@@ -120,16 +119,30 @@ class SimpleRNN(nn.Module):
         # output result should have dimension (seq_len, num_classes, batch_size)
         return x
 
+    def init_hidden(self, const_feats):
+        '''
+        Converts raw vector of constant_features to initial hidden state
+        by passing raw features through pre-processing layers
+
+        Args:
+            const_feats: 2d numpy matrix with samples as rows and const features
+            as columns
+        Returns:
+            numpy matrix containing transformed hidden state values
+        '''
+
+        return self.__init_process(torch.from_numpy(const_feats)).numpy()
+
     @staticmethod
     def get_model_class(exp_name):
         # returns the class of the model corresponding to the name of the
         # experiment
         if 'simp' or 'cat' in exp_name:
             #     if 'lstm' not in exp_name:
-            #         net = SimpleRNN
+            #         net = Simulator
             #     else:
             #         net = SimpleLSTM
-            net = SimpleRNN
+            net = Simulator
         else:
             raise ValueError(
                 'Experiment name does not determine whether concat or simp')
@@ -253,17 +266,17 @@ class SimpleRNN(nn.Module):
             # parse experiment name from args
             exp_name = args[1]
             # parse experiment name for important variables
-            init = SimpleRNN.get_init(exp_name)
-            zeros = SimpleRNN.get_zeros(exp_name)
-            num_layers = SimpleRNN.get_num_layers(exp_name)
-            targ_hidden_size = SimpleRNN.get_hidden_size(const_vals, exp_name)
+            init = Simulator.get_init(exp_name)
+            zeros = Simulator.get_zeros(exp_name)
+            num_layers = Simulator.get_num_layers(exp_name)
+            targ_hidden_size = Simulator.get_hidden_size(const_vals, exp_name)
         # increase size of hidden state if necessary
         if not init:
-            const_vals = SimpleRNN.increase_hidden_size(
+            const_vals = Simulator.increase_hidden_size(
                 const_vals, targ_hidden_size)
         # increase the number of layers if necessary
         if num_layers > 1:
-            const_vals = SimpleRNN.increase_num_layers(
+            const_vals = Simulator.increase_num_layers(
                 const_vals, num_layers, zeros)
         if len(args) == 2:
             return const_vals, num_layers, targ_hidden_size
