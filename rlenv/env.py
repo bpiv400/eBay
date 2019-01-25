@@ -365,7 +365,7 @@ class ActorCriticEnvironment:
             # compute rejection probabilities
             aprobs[rejs] = 1 - aprobs
             # store log probabilities
-            self.lprobs[self.included, self.MAX_ROUNDS] =
+            self.lprobs[self.included, self.MAX_ROUNDS] = aprobs
             # find timeouts and acceptance/rejections
             _, acc_rejs, timeouts = self.remove_threads(
                 rlact, self.MAX_ROUNDS, sim=False)

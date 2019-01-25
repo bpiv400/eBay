@@ -39,8 +39,8 @@ class ListingEnvironment:
     and 'time' should be of type pd.datetime64. Remaining columns should fully specify
     time valued features. Expects these values to be columns rather than indices
 
-    3. Assumes the constant features dataframe does contains all constant features, including
-    (specifically byr_hist & byr_us). Assumes these features are not normalized
+    3. Assumes the constant features dataframe does contains all constant features.
+     Assumes these features are not normalized
 
     4. Assumes constant features data frame is stored in
     data/exps/data_name/consts/dataset-chunkNumber_consts.pkl.
