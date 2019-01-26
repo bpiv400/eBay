@@ -2,7 +2,8 @@
 generate_listings.py
 
 Interface for creating listing objects from raw data files
-Should be processed as set of array jobs
+
+Associated scripts: gen_init_listing.sh, gen_late_listings.sh, gen_listings.sh
 """
 import os
 import argparse

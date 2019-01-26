@@ -15,7 +15,7 @@ import pickle
 import os
 import pandas as pd
 import numpy as np
-from util import unpickle
+from util import unpickle, extract_datatype, is_none
 # from tree import AVLTree
 
 
@@ -59,26 +59,21 @@ class ListingEnvironment:
     The cost incurred at training time is made up for by creating fewer datasets
 
     TODO:
-    Ensure constant features are input into the simulator in correct order
-     (Depends on simulator training code)
+    Debug
+    Finish documentation
     '''
 
-    def __init__(self, data_name=None, chunk=None, generate_data=False):
+    def __init__(self, data_name=None, chunk=None):
         '''
-        1. Checks whether listing binaries exist for the current data set and simulator
-        2. If they already exist, throw an error telling user to load pickled environment
-        If not, generates the listing binaries and pickle this environment along with them
-        3. Listing binaries contain:
-            1. constant features transformed to necessary initial hidden state
-            2. time valued features tree
-            3. reward
-
-        Expects chunk of the form 'train-d'
+        Generates listing binaries for the first chunk of listings in a given dataset,
+        then saves the encapsulating ListingEnvironment class to a pickle binary
 
         Attributes:
             batch: list of listing objects representing current minibatch
-            dir: directory containing listing pickles and
-            ListingEnvironment pickle (data/exps/data_name/listings/)
+            base_dir: path to current dataset's directory
+            datatype: one of train, test, or toy
+            dir: dynamically computed string giving path to directory containing current
+            datatype
             rl_consts: numpy array of integers giving column-wise indices of rl
             constant features
             sim_consts: numpy array of integers giving column-wise indices of
@@ -93,18 +88,38 @@ class ListingEnvironment:
             columns and data gives the corresponding indices in the Listing.time
             nd.arrays
 
+        Class Methods:
+            load:
+
+        Instance Methods:
+            save:
+            load_listing:
+            load_batch:
+            gen_data:
+            query_time:
+            init:
+            get_sale_time:
+            get_sale_price:
+            get_bin_prices:
+            pickle_listing:
         '''
-        env_file = 'data/exps/%s/listings/env.pkl' % data_name
-        if generate_data:
-            self.gen_data(data_name, chunk)
+        # ensure arguments are defined
+        is_none(data_name, name='data_name')
+        is_none(chunk, name='chunk')
+        # initialize name tracking variables for finding the base directory
+        # containing all listing subdirectories (train, test, toy)
+        self.base_dir = 'data/datasets/%s/' % data_name
+        # path to environment encapsulating
+        env_file = '%slistings/env.pkl' % self.base_dir
         # initialize empty batch list
         self.batch = []
         self.ids = None
-        # initialize name tracking variables for finding the directory later
-        self.dir = 'data/exps/%s/listings' % data_name
+        # initialize name tracking variable for the datatype (train, test, toy)
+        self.datatype = extract_datatype(chunk)
+        # generate data for the initial chunk
+        self.gen_data(chunk)
         # store environment in pickle if one doesnt exist
-        if not os.path.isfile(env_file):
-            self.save()
+        self.save()
 
     def save(self):
         '''
@@ -120,7 +135,7 @@ class ListingEnvironment:
         Loads environment file from pickle and throws IOError if one doesn't exist
         '''
         # define environment file
-        env_file = 'data/datasets/listings/%s/env.pkl' % data_name
+        env_file = 'data/datasets/%s/listings/env.pkl' % data_name
         # throw an error if it doesn't exist
         if not os.path.isfile(env_file):
             raise IOError(
@@ -129,6 +144,10 @@ class ListingEnvironment:
             f = open(env_file, 'rb')
             out = pickle.load(f)
             return out
+
+    @property
+    def dir(self):
+        return self.base_dir + 'listings/' + self.datatype + '/'
 
     def load_listing(self, ix):
         '''
@@ -155,13 +174,14 @@ class ListingEnvironment:
         self.batch = [self.load_listing(ix) for ix in ids]
         self.ids = ids
 
-    def gen_data(self, data_name, chunk, new_env=True):
+    def gen_data(self, chunk, new_env=True):
         """
         Generates listing binaries for a particular chunk
         """
         # load consts data
-        consts_dir = 'data/exps/%s/consts/%s_consts.pkl' % (data_name, chunk)
-        consts_dict = unpickle(consts_dir)
+        consts_file = '%sconsts/%s/%s_consts.pkl' % (
+            self.base_dir, self.datatype, chunk)
+        consts_dict = unpickle(consts_file)
         # extract dictionary contents and delete dictionary
         constsdf = consts_dict['consts']  # shared features
         # rl specific features (string list)
@@ -169,8 +189,9 @@ class ListingEnvironment:
         # simulator specific features (string list)
         sim_consts = consts_dict['simfeats']
 
-        # set index, drop old index
-        constsdf.set_index('anon_item_id', drop=True, inplace=True)
+        # ensure df has expected index
+        if constsdf.index.name != 'item':
+            raise ValueError('consts must have item as index')
         # sort columns alphabetically
         constsdf = constsdf.reindex(sorted(constsdf.columns), axis=1)
         # create map for constant feature lookup later
@@ -205,14 +226,18 @@ class ListingEnvironment:
 
         constsdf = constsdf.values
         # load time features pickle
-        time_dir = 'data/exps/%s/time_chunks/%s' % (chunk, data_name)
+        time_dir = '%stime/%s/time_%s' % (self.base_dir, self.datatype, chunk)
         time_dict = unpickle(time_dir)
         # extract keys
         rl_time = time_dict['rlfeats']
         sim_time = time_dict['simfeats']
         timedf = time_dict['timedf']
+        # check whether the index is set correctly
+        if timedf.index.names is None or timedf.index.names[0] != 'item' or timedf.index.names[1] != 'clock':
+            raise ValueError(
+                'time dataframe index expected to be set in previous processing steps')
         # reset index
-        timedf.reset_index(drop=True, inplace=True)
+        timedf.reset_index(inplace=True, drop=False)
         # sort time valued feature columns alphabetically
         timedf = timedf.reindex(sorted(timedf.columns), axis=1)
         # create series to map time feautre to index in matrix

@@ -11,6 +11,31 @@ from actor import DeterministicActor
 from models import Model
 
 
+def is_none(obj, name='All arguments and keyword arguments'):
+    '''
+    Function that checks whether a given
+    argument is None and throws an error if so
+
+    Args:
+        obj: arbitrary object that should not be None
+
+    Kwargs:
+        name: name of the object in the calling function
+        (Default: 'All arguments and keyword arguments')
+    '''
+    if obj is None:
+        raise ValueError("%s must be defined" % name)
+
+
+def extract_datatype(name):
+    '''
+    Extracts dataset type (toy, train, test) from chunk name
+    of the form type-num (e.g. toy-1)
+    '''
+    datatype, _ = name.split('-')
+    return datatype
+
+
 def simulator_map():
     '''
     Defines dictionary mapping strings of simulator class names
