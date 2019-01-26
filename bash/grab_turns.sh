@@ -5,7 +5,7 @@
 #$ -l m_mem_free=15G
 
 cd ~/eBay/data/$1
-scriptPath=repo/processing/extract_turns.py  
+scriptPath=repo/processing/extract_turns.py 
 cd ~
 source /opt/rh/rh-python36/enable
 source ~/envs/bargain/bin/activate

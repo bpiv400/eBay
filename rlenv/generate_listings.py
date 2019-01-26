@@ -21,12 +21,15 @@ def main():
     # gives the name of the current data type
     parser.add_argument('--data', '-d', action='store',
                         type=str, required=True)
+    # first listing chunk
+    parser.add_argument('--init', '-i', action='store_true',
+                        type=bool, required=False, default=False)
     # parse args
     args = parser.parse_args()
     # define environment path
     path = 'data/datasets/%s/listings/env.pkl' % args.data
-    # if the environment already exists, load it and generate data for this chunk
-    if os.path.exists(path):
+    # if this is the first listing chunk
+    if not args.init:
         env = ListingEnvironment.load(args.data)
         env.generate_data(args.data, args.name, new_env=False)
     else:
