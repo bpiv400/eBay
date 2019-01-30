@@ -130,7 +130,7 @@ class ListingEnvironment:
         f.close()
 
     @classmethod
-    def load(cls, data_name=None, chunk=None):
+    def load(cls, data_name=None):
         '''
         Loads environment file from pickle and throws IOError if one doesn't exist
         '''
@@ -178,6 +178,8 @@ class ListingEnvironment:
         """
         Generates listing binaries for a particular chunk
         """
+        if not new_env:
+            self.datatype = extract_datatype(chunk)
         # load consts data
         consts_file = '%sconsts/%s/consts_%s.pkl' % (
             self.base_dir, self.datatype, chunk)

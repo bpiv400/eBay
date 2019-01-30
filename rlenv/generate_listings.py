@@ -31,8 +31,8 @@ def main():
     path = 'data/datasets/%s/listings/env.pkl' % args.data
     # if this is the first listing chunk
     if not args.init:
-        env = ListingEnvironment.load(args.data)
-        env.generate_data(args.data, args.name, new_env=False)
+        env = ListingEnvironment.load(data_name=args.data)
+        env.gen_data(args.data, args.name, new_env=False)
     else:
         # otherwise create the environment
         env = ListingEnvironment(data_name=args.data, chunk=args.name)
