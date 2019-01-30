@@ -244,15 +244,15 @@ class ListingEnvironment:
         # extract time from timedf
         timecol = timedf['clock'].values
         # drop former indices
-        timedf.drop(columns=['clock', item], inplace=True)
-        # convert data frame to np.array
-        timedf = timedf.values
+        timedf.drop(columns=['clock', 'item'], inplace=True)
         # sort time valued feature columns alphabetically
         timedf = timedf.reindex(sorted(timedf.columns), axis=1)
         # create series to map time feautre to index in matrix
         timecols = pd.Series(index=timedf.columns,
                              data=np.arange(len(timedf.columns)))
-        # if this is a new environment, create new class variable for time column
+        # convert data frame to np.array
+        timedf = timedf.values
+	# if this is a new environment, create new class variable for time column
         if new_env:
             self.timecols = timecols
         else:
