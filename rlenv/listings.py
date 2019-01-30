@@ -226,7 +226,8 @@ class ListingEnvironment:
 
         constsdf = constsdf.values
         # load time features pickle
-        time_dir = '%stime/%s/time_%s.pkl' % (self.base_dir, self.datatype, chunk)
+        time_dir = '%stime/%s/time_%s.pkl' % (
+            self.base_dir, self.datatype, chunk)
         time_dict = unpickle(time_dir)
         # extract keys
         rl_time = time_dict['rlfeats']
@@ -238,6 +239,14 @@ class ListingEnvironment:
                 'time dataframe index expected to be set in previous processing steps')
         # reset index
         timedf.reset_index(inplace=True, drop=False)
+        # group into threads
+        listing_groups = timedf.groupby('item')
+        # extract time from timedf
+        timecol = timedf['clock'].values
+        # drop former indices
+        timedf.drop(columns=['clock', item], inplace=True)
+        # convert data frame to np.array
+        timedf = timedf.values
         # sort time valued feature columns alphabetically
         timedf = timedf.reindex(sorted(timedf.columns), axis=1)
         # create series to map time feautre to index in matrix
@@ -264,14 +273,6 @@ class ListingEnvironment:
                     not np.array_equal(self.sim_time, sim_time)):
                 raise ValueError(
                     "current rl or sim time feats disagree with original")
-
-        # group into threads
-        listing_groups = timedf.groupby('item')
-        # extract time from timedf
-        timecol = timedf['clock'].values
-        timedf.drop(columns='clock', inplace=True)
-        # convert data frame to np.array
-        timedf = timedf.values
         # create item id output list
         ids = []
         for item_id, curr_ix in listing_groups.groups.items():
