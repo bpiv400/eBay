@@ -288,29 +288,18 @@ class ListingEnvironment:
                                    timecol=timecol[curr_ix],
                                    sale=curr_consts[constscols['item_price']],
                                    id=item_id)
-            self.pickle_listing(curr_listing, data_name=data_name, id=item_id)
-            # add current item ids to list of all item ids in dataset
-            path = 'data/datasets/%s/listings.txt' % data_name
-            ids.append(item_id)
-        # add current ids to list of listing ids for current dataset
-        if new_env:
-            write_type = 'w'
-        else:
-            write_type = 'a'
-        with open(path, write_type) as f:
-            for item_id in ids:
-                f.write('%d\n' % item_id)
+            self.pickle_listing(curr_listing, id=item_id)
 
     def pickle_listing(self, listing, **kwargs):
         """
         Pickle a particular listing binary
 
-        Expects keywords: id, data_name
+        Expects keywords: id
         """
-        pard = 'data/datasets/%s/listings' % kwargs['data_name']
+        pard = '%slistings/%s/' % (self.base_dir, self.datatype)
         if not os.path.isdir(pard):
             os.makedirs(pard)
-        pick = open('%s/%d' % (pard, kwargs['id']), 'wb')
+        pick = open('%s%d' % (pard, kwargs['id']), 'wb')
         pickle.dump(listing, pick)
         pick.close()
 
