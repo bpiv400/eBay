@@ -125,12 +125,12 @@ class ListingEnvironment:
         '''
         Stores environment in pickle if one doesn't already exist
         '''
-        f = open('%s/env.pkl' % self.dir, 'wb')
+        f = open('%slistings/env.pkl' % self.base_dir, 'wb')
         pickle.dump(self, f)
         f.close()
 
     @classmethod
-    def load(cls, data_name):
+    def load(cls, data_name=None, chunk=None):
         '''
         Loads environment file from pickle and throws IOError if one doesn't exist
         '''
@@ -297,10 +297,9 @@ class ListingEnvironment:
 
         Expects keywords: id
         """
-        pard = '%slistings/%s/' % (self.base_dir, self.datatype)
-        if not os.path.isdir(pard):
-            os.makedirs(pard)
-        pick = open('%s%d' % (pard, kwargs['id']), 'wb')
+        if not os.path.isdir(self.dir):
+            os.makedirs(self.dir)
+        pick = open('%s%d.pkl' % (self.dir, kwargs['id']), 'wb')
         pickle.dump(listing, pick)
         pick.close()
 
