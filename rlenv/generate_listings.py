@@ -24,7 +24,7 @@ def main():
                         type=str, required=True)
     # first listing chunk
     parser.add_argument('--init', '-i', action='store_true',
-                        type=bool, required=False, default=False)
+                        required=False, default=False)
     # parse args
     args = parser.parse_args()
     # define environment path
