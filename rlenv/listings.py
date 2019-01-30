@@ -252,7 +252,7 @@ class ListingEnvironment:
                              data=np.arange(len(timedf.columns)))
         # convert data frame to np.array
         timedf = timedf.values
-	# if this is a new environment, create new class variable for time column
+        # if this is a new environment, create new class variable for time column
         if new_env:
             self.timecols = timecols
         else:
@@ -422,7 +422,7 @@ class Listing:
         self.consts = kwargs['constfeats']
         self.end_time = self.timecol.max()
         self.start_time = self.timecol.min()
-        self.end_offset = (self.end_time - self.start_time).total_seconds()
+        self.end_offset = (self.end_time - self.start_time)
         self.id = kwargs['id']
 
     def init(self, ix):
@@ -450,7 +450,7 @@ class Listing:
             raise ValueError('names or ix must be given')
 
         # convert offset to seconds data type and add it to initial time
-        date = self.start_time + np.timedelta64(offset, 's')
+        date = self.start_time + offset
         # return none if the thread is over
         if date > self.end_time:
             return None
