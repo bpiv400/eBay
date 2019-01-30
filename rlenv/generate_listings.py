@@ -35,8 +35,7 @@ def main():
         env.generate_data(args.data, args.name, new_env=False)
     else:
         # otherwise create the environment
-        env = ListingEnvironment(
-            data_name=args.data, chunk=args.name, generate_data=True)
+        env = ListingEnvironment(data_name=args.data, chunk=args.name)
         env.save()
 
 
