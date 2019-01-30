@@ -179,7 +179,7 @@ class ListingEnvironment:
         Generates listing binaries for a particular chunk
         """
         # load consts data
-        consts_file = '%sconsts/%s/%s_consts.pkl' % (
+        consts_file = '%sconsts/%s/consts_%s.pkl' % (
             self.base_dir, self.datatype, chunk)
         consts_dict = unpickle(consts_file)
         # extract dictionary contents and delete dictionary
@@ -226,7 +226,7 @@ class ListingEnvironment:
 
         constsdf = constsdf.values
         # load time features pickle
-        time_dir = '%stime/%s/time_%s' % (self.base_dir, self.datatype, chunk)
+        time_dir = '%stime/%s/time_%s.pkl' % (self.base_dir, self.datatype, chunk)
         time_dict = unpickle(time_dir)
         # extract keys
         rl_time = time_dict['rlfeats']
@@ -266,10 +266,10 @@ class ListingEnvironment:
                     "current rl or sim time feats disagree with original")
 
         # group into threads
-        listing_groups = timedf.groupby('anon_item_id')
+        listing_groups = timedf.groupby('item')
         # extract time from timedf
-        timecol = timedf['time'].values
-        timedf.drop(columns='time', inplace=True)
+        timecol = timedf['clock'].values
+        timedf.drop(columns='clock', inplace=True)
         # convert data frame to np.array
         timedf = timedf.values
         # create item id output list
