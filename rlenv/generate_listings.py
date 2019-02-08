@@ -32,7 +32,7 @@ def main():
     # if this is the first listing chunk
     if not args.init:
         env = ListingEnvironment.load(data_name=args.data)
-        env.gen_data(args.data, args.name, new_env=False)
+        env.gen_data(args.name, new_env=False)
     else:
         # otherwise create the environment
         env = ListingEnvironment(data_name=args.data, chunk=args.name)
