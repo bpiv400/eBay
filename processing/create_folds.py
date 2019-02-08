@@ -55,8 +55,10 @@ def main():
             end = num_unique
         items = unique_listings[start:end]
         # extract associated listings and threads
-        curr_listings = listings[listings[listings['item'].isin(items)].loc, :]
-        curr_threads = threads[threads[threads['item'].isin(items)].loc, :]
+        curr_listings = listings.loc[listings[listings['item'].isin(
+            items)].index, :]
+        curr_threads = threads.loc[threads[threads['item'].isin(
+            items)].index, :]
         # extract associated data type name
         datatype = type_from_chunk(i, args.num, args.pure_test, args.test)
         # define paths
