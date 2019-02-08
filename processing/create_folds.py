@@ -37,7 +37,7 @@ def main():
     # set kernel
     random.seed(1000)
     # extract thread ids
-    threads = pd.read_csv('data/threads_clean.csv')
+    threads = pd.read_csv('data/offers_clean.csv')
     listings = pd.read_csv('data/listings_clean.csv')
     # extract listings and randomize the order
     unique_listings = np.unique(listings['item'].values)

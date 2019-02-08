@@ -4,9 +4,9 @@
 #$ -l m_mem_free=100G
 #$ -m e -M 4102158912@vtext.com
 
-scriptPath=repo/processing/chunk.py
+scriptPath=repo/processing/create_folds.py
 cd ~
 source /opt/rh/rh-python36/enable
 source ~/envs/bargain/bin/activate
 cd eBay
-python $scriptPath --name $1
+python $scriptPath
