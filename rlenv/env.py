@@ -13,7 +13,7 @@ import numpy as np
 from critic import Critic
 from actor import DeterministicActor
 from listings import ListingEnvironment
-from util import unpickle, actor_map, simulator_map
+from util import unpickle, actor_map, simulator_map, is_none
 
 
 class ActorCriticEnvironment:
@@ -115,7 +115,7 @@ class ActorCriticEnvironment:
         '''
 
         # error checking
-        self.__is_none(exp_name)
+        is_none(exp_name)
         # store experiment name as a local variable
         self.exp_name = exp_name
         # initialize empty simulator and rl parameter dictionaries
@@ -161,7 +161,7 @@ class ActorCriticEnvironment:
             for listings in the current batch. Default = None
         """
         # error checking
-        self.__is_none(listing_ids)
+        is_none(listing_ids)
         self.gen_seqs(listing_ids)  # generate sequences for each
 
     def __init_actor(self):
@@ -240,15 +240,6 @@ class ActorCriticEnvironment:
         self.delays = self.delays[keeps]
         self.sale_times = self.sale_times[keeps]
         return keeps, acc_rejs, timeouts
-
-    @staticmethod
-    def __is_none(obj):
-        '''
-        Private static method that checks whether a given
-        argument is None and throws an error if so
-        '''
-        if obj is None:
-            raise ValueError("All arguments must be defined")
 
     def gen_seqs(self, listing_ids):
         '''

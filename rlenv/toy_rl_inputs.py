@@ -89,5 +89,11 @@ def main():
         pickle.dump(time_dict, f)
 
 
+def remove_randos(df):
+    cols = df.columns.values.tolist()
+    removables = list(filter(lambda x: 'Untitled' in x, cols))
+    df.drop(columns=removables, inplace=True)
+
+
 if __name__ == '__main__':
     main()
