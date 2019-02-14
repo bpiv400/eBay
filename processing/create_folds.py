@@ -2,6 +2,9 @@
 Creates chunks of the clean listing and threads dataset
 and simultaneously separates the data into train, test, and pure_test
 sets
+
+Additionally, creates a unique identifier for each lstg and stores
+it as lstg
 """
 
 # packages
@@ -45,6 +48,23 @@ def main():
     # add listings to each chunk
     num_unique = unique_listings.size
     frac = 1 / args.num
+    counters = {'pure_test': 1,
+                'test': 1,
+                'train': 1}
+
+    # iterate over all listings and create a unique listing identifier for each
+    # identifier for each slr, lstg pair
+    slr = listings[:, 'slr'].values
+    lstg = listings[:, 'lstg'].values
+    index = pd.MultiIndex.from_arrays([slr, lstg], names=['slr', 'lstg'])
+    sldf = pd.Series(data=np.arange(lstg.size), index=index)
+    slr = threads['slr'].values
+    lstg = threads['lstg'].values
+    thrd_ind = list(zip(slr, lstg))
+    thrd_lstg = sldf.loc[thrd_ind].values
+    threads.loc[:, 'lstg'] = thrd_lstg
+    listings.loc[:, 'lstg'] = thrd_lstg
+
     # iterate over all chunks
     for i in range(args.num):
         # define start and end indices
@@ -63,9 +83,10 @@ def main():
         datatype = type_from_chunk(i, args.num, args.pure_test, args.test)
         # define paths
         path_listings = 'data/%s/listings/%s-%d_listings.pkl' % (
-            datatype, datatype, i+1)
+            datatype, datatype, counters[datatype])
         path_threads = 'data/%s/threads/%s-%d_threads.pkl' % (
-            datatype, datatype, i+1)
+            datatype, datatype, counters[datatype])
+        counters[datatype] = counters[datatype] + 1
         # pickle as necessary
         curr_listings.to_pickle(path_listings)
         curr_threads.to_pickle(path_threads)
