@@ -81,7 +81,8 @@ def main():
         curr_threads = threads.loc[threads[threads['lstg'].isin(
             items)].index, :]
         thread_ids = curr_threads['thread'].values
-        curr_offrs = offrs.loc[offrs[offrs['thread'].isin(thread_ids)], :]
+        curr_offrs = offrs.loc[offrs[offrs['thread'].isin(
+            thread_ids)].index, :]
         # extract associated data type name
         datatype = type_from_chunk(i, args.num, args.pure_test, args.test)
         # define paths
