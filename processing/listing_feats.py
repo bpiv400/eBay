@@ -1,14 +1,14 @@
 """
 Adds features to listings dataframe:
 -quality indicator
--sale time, if not included
+-sale time already included in days -- we should translate this to an exact time later
 -metacategory id indicator
 
 Removes features from the listing dataframe
--meta_categ_id
--item_cndtn_id
--anon_leaf_categ_id
--anon_product_id
+-meta
+-cndtn
+-byr_us
+-leaf
 """
 
 # modules
