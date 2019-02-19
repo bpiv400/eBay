@@ -1,5 +1,6 @@
 """
-Script for generating a toy dataset
+Script for generating a toy dataset and error
+checking some basic assumptions
 """
 import random
 import pandas as pd
@@ -33,8 +34,8 @@ def main():
     targ_dir = 'data/toy/'
     # pickle each file
     toy_lstgs.to_pickle('%slistings/toy-1_listings.pkl' % targ_dir)
-    toy_lstgs.to_pickle('%sthreads/toy-1_threads.pkl' % targ_dir)
-    toy_lstgs.to_pickle('%soffers/toy-1_offers.pkl' % targ_dir)
+    toy_threads.to_pickle('%sthreads/toy-1_threads.pkl' % targ_dir)
+    toy_offers.to_pickle('%soffers/toy-1_offers.pkl' % targ_dir)
 
     # some unrelated assertions about data integrity
     # check that all threads in offers are in threads

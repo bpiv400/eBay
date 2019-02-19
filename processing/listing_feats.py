@@ -83,11 +83,12 @@ def main():
     condition_inds = gen_indicators(condition_values, 'c', hold_out=False)
     categ_inds = gen_indicators(categ_vals, 'm', hold_out=False)
     # add indicators
-    lstgs = add_indicators(lstgs, condition_inds, 'item_cndtn_id')
-    lstgs = add_indicators(lstgs, categ_inds, 'meta_categ_id')
+    lstgs = add_indicators(lstgs, condition_inds, 'cndtn')
+    lstgs = add_indicators(lstgs, categ_inds, 'meta')
 
     # drop columns
-    lstgs.drop(columns=['anon_leaf_categ_id'])
+    # removing byr us since we only care about whether the buyer in a particular thread is in the us
+    lstgs.drop(columns=['leaf', 'byr_us'], inplace=True)
 
 
 if __name__ == "__main__":
