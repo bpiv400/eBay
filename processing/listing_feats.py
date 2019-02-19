@@ -3,12 +3,19 @@ Adds features to listings dataframe:
 -quality indicator
 -sale time, if not included
 -metacategory id indicator
+
+Removes features from the listing dataframe
+-meta_categ_id
+-item_cndtn_id
+-anon_leaf_categ_id
+-anon_product_id
 """
 
 # modules
 import argparse
 import pandas as pd
 import numpy as np
+from util_env import extract_datatype
 
 
 def gen_indicators(all_ids, flag, hold_out=True):
@@ -50,6 +57,13 @@ def gen_indicators(all_ids, flag, hold_out=True):
     return leaf_df
 
 
+def add_indicators(lstg, ind_table, ind_name):
+    ind_table.index.name = ind_name
+    lstg = lstg.join(ind_table, on=ind_name)
+    lstg.drop(columns=ind_name, inplace=True)
+    return lstg
+
+
 def main():
     # add arguments
     parser = argparse.ArgumentParser()
@@ -59,6 +73,32 @@ def main():
     # load lstings
     lstg_path = 'data/%s/offers/%s_offers.csv' % (datatype, chunk_name)
     lstgs = pd.read_pickle(lstg_path)
+    # obtain metacategory ids and condition ids
+    condition_values = get_condition_values()
+    categ_vals = get_metacat_values()
+    # convert category values to integers
+    condition_values = [int(val) for val in condition_values]
+    categ_vals = [int(val) for val in categ_vals]
+    # generate sets of indicators for each
+    condition_inds = gen_indicators(condition_values, 'c', hold_out=False)
+    categ_inds = gen_indicators(categ_vals, 'm', hold_out=False)
+    # add indicators
+    lstgs = add_indicators(lstgs, condition_inds, 'item_cndtn_id')
+    lstgs = add_indicators(lstgs, categ_inds, 'meta_categ_id')
+
+    # drop columns
+    lstgs.drop(columns=['anon_leaf_categ_id'])
+
+
+if __name__ == "__main__":
+    main()
+
+
+def get_condition_values():
+    """
+    Returns a list of strings giving the values of 
+    condition ids
+    """
     # enumerate all values of condition indicators
     condition_values = [
         '1000',
@@ -73,6 +113,13 @@ def main():
         '6000',
         '7000'
     ]
+    return condition_values
+
+
+def get_metacat_values():
+    """
+    Returns a list of strings giving the values of metacategory id
+    """
     # enumerate all values of the meta-categories
     categ_vals = [
         '1',
@@ -109,13 +156,4 @@ def main():
         '6448',
         '1720'
     ]
-    # convert category values to integers
-    condition_values = [int(val) for val in condition_values]
-    categ_vals = [int(val) for val in categ_vals]
-    # generate sets of indicators for each 
-    condition_inds = gen_indicators(condition_values, 'c', hold_out=False)
-    categ_inds = gen_indicators(categ_vals, 'm', hold_out=False)
-
-
-if __name__ == "__main__":
-    main()
+    return categ_vals
