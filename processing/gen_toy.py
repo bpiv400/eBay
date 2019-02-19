@@ -12,9 +12,9 @@ def main():
     """
     # paths
     gen_path = 'data/train/'
-    offers_path = '%soffers/train-25_offers.pkl'
-    lstg_path = '%slistings/train-25_listings.pkl'
-    threads_path = '%sthreads/train-25_threads.pkl'
+    offers_path = '%soffers/train-25_offers.pkl' % gen_path
+    lstg_path = '%slistings/train-25_listings.pkl' % gen_path
+    threads_path = '%sthreads/train-25_threads.pkl' % gen_path
     # load files
     lstgs = pd.read_pickle(lstg_path)
     threads = pd.read_pickle(threads_path)
@@ -32,9 +32,9 @@ def main():
     # target directory
     targ_dir = 'data/toy/'
     # pickle each file
-    toy_lstgs.to_pickle('%slistings/toy-1_listings.pkl')
-    toy_lstgs.to_pickle('%sthreads/toy-1_threads.pkl')
-    toy_lstgs.to_pickle('%soffers/toy-1_offers.pkl')
+    toy_lstgs.to_pickle('%slistings/toy-1_listings.pkl' % targ_dir)
+    toy_lstgs.to_pickle('%sthreads/toy-1_threads.pkl' % targ_dir)
+    toy_lstgs.to_pickle('%soffers/toy-1_offers.pkl' % targ_dir)
 
     # some unrelated assertions about data integrity
     # check that all threads in offers are in threads
@@ -42,7 +42,7 @@ def main():
     # check that all listings in thread are contained in lstgs
     assert threads['lstg'].isin(lstgs['lstg']).all()
     # check that lstg is unique in lstg
-    assert lstg['lstg'].size == lstg['lstg'].unique().size
+    assert lstgs['lstg'].size == lstgs['lstg'].unique().size
     # check that thread is unique in thread
     assert threads['thread'].size == threads['thread'].unique().size
 
