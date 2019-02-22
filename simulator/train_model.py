@@ -1,18 +1,13 @@
-import sys
-import os
-import torch
-import torch.nn as nn
-import torch.optim as optim
-import numpy as np
-import pandas as pd
-import argparse
-import pickle
+import sys, os, argparse, pickle
+import torch, torch.nn as nn, torch.optim as optim
+import numpy as np, pandas as pd
 from datetime import datetime as dt
 from models import Model
-from util import *
 
+CRITERION = nn.MSELoss(reduction='sum')
+OPTIMIZER = optim.ADAM()
 
-def processMinibatch(model, criterion, optimizer, x_offer, x_fixed, y, k, batch_ind_i):
+def processMinibatch(model, optimizer, x_offer, x_fixed, y, k, batch_ind_i):
     # zero the gradient
     optimizer.zero_grad()
 
@@ -37,6 +32,14 @@ def processMinibatch(model, criterion, optimizer, x_offer, x_fixed, y, k, batch_
     optimizer.step()
 
     return loss
+
+
+def getBatchIndices(samples, mbsize):
+    # create matrix of randomly sampled minibatch indices
+    shuffled = random.sample(range(samples), samples)
+    batches = math.ceil(samples / mbsize)
+    batchInd = [shuffled[mbsize*i:mbsize*(i+1)] for i in range(batches)]
+    return batches, batchInd
 
 
 def train(mbsize, tol, model, criterion, optimizer, x_offer, x_fixed, y, k):
@@ -73,43 +76,36 @@ if __name__ == '__main__':
         help='Stopping criterion: improvement in average loss.')
     parser.add_argument('--hidden', default=100, type=int,
         help='Number of nodes in each hidden layer.')
-    parser.add_argument('--dropout', default=0.1, type=float,
+    parser.add_argument('--dropout', default=0.01, type=float,
         help='Dropout rate.')
     args = parser.parse_args()
 
     # load data and extract comonents
     print('Loading Data')
     sys.stdout.flush()
-    data = unpickle('../data/exps/rnn2_cat/train_data.pickle')
+    data = pickle.load('../data/exps/rnn2_cat/train_data.pickle', 'rb')
 
     x_offer = torch.from_numpy(data['offr_vals']).float()
     x_fixed = torch.from_numpy(data['const_vals']).float()
-    y = torch.from_numpy(data['target_vals']).long()
+    y = torch.from_numpy(data['target_vals']).float()
     k = torch.from_numpy(data['length_vals']).long()
     print('Done Loading')
     sys.stdout.flush()
-
-    # calculating parameter values for the model from data
-    N_fixed = x_fixed.shape[2]
-    N_offer = x_offer.shape[2]
-    N_output = data['midpoint_ser'].shape[0] - 1  # subtract the filler class
     del data
 
-    # create LSTM
-    model = Model(N_fixed, N_offer, args.hidden, N_output)
+    # calculate parameter values for the model from data
+    N_fixed = x_fixed.shape[2]
+    N_offer = x_offer.shape[2]
+
+    # create LSTM and optimizer
+    model = Model(N_fixed, N_offer, args.hidden, args.dropout)
+    optimizer = OPTIMIZER(model.parameters())
     print(model)
     sys.stdout.flush()
 
-    # loss function
-    criterion = nn.CrossEntropyLoss(reduction='sum', ignore_index=-100)
-
-    # optimization algorithm
-    optimizer = optim.Adam(model.parameters())
-
     # training loop iteration
-    loss = train(args.mbsize, args.tol, model, criterion, optimizer, x_offer, x_fixed, y, k)
+    loss = train(args.mbsize, args.tol, model, optimizer, x_offer, x_fixed, y, k)
 
     # save model parameters and loss history
     torch.save(model.state_dict(), 'data/model.pth.tar')
-    loss_pickle = open('data/loss.pickle', 'wb')
-    pickle.dump(loss[1:], loss_pickle)
+    pickle.dump(loss[1:], open('data/loss.pkl', 'wb'))
