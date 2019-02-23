@@ -108,10 +108,9 @@ if __name__ == "__main__":
     chunk = pickle.load(open(path, 'rb'))
     L, T, O = [chunk[k] for k in['listings', 'threads', 'offers']]
     T = T.join(L.loc[:, ['start_price', 'bin_rev']], on='lstg')
-    T = T.join(O.price.loc[pd.IndexSlice[:, 1]])
 
     # ids of threads to keep
-    thread_ids = T[(T.bin_rev == 0) & (T.price < T.start_price)].index
+    thread_ids = T[(T.bin_rev == 0) & (T.flag == 0)].index
 
     # time-varying features
     time_feats = get_time_feats(O, T, L)
