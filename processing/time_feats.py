@@ -111,23 +111,12 @@ def gen_timedf(offrs, threads, listings):
     return time_feats, offrs
 
 
-def main():
-    """ 
-    main method for loading dataframes and calling feature creation
-    helper functions, then saving output
-    """
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--name', action='store', required=True)
-    chunk_name = parser.parse_args().name
-    datatype = extract_datatype(chunk_name)
-    # define paths to relevant files
-    offrs_path = 'data/%s/offers/%s_offers.csv' % (datatype, chunk_name)
-    lstgs_path = 'data/%s/listings/%s_listings.csv' % (datatype, chunk_name)
-    threads_path = 'data/%s/threads/%s_threads.csv' % (datatype, chunk_name)
-    # load files
-    offrs = pd.read_pickle(offrs_path)
-    threads = pd.read_pickle(threads_path)
-    lstgs = pd.read_pickle(lstgs_path)
-    # generate time df
-    timedf, offrs = gen_timedf(offrs, threads, lstgs)
-    timedf = tighten_removes(offrs, timedf)
+def get_time_feats(offrs, threads, lstgs):
+    # create dummy time-valued feature
+    time_stamps = [6*60 ^ 2*364*24, 6*60 ^ 2*367*24, 6*60 ^ 2*369*24]
+    time_index = pd.MultiIndex.from_product(
+        [lstgs['item'].unique()], time_stamps)
+    time_df = pd.DataFrame(0, columns='a', index=time_index)
+    return time_df
+    # timedf, offrs = gen_timedf(offrs, threads, lstgs)
+    # timedf = tighten_removes(offrs, timedf)
