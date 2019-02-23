@@ -107,7 +107,7 @@ if __name__ == "__main__":
     path = 'data/chunks/%d.pkl' % num
     chunk = pickle.load(open(path, 'rb'))
     L, T, O = [chunk[k] for k in['listings', 'threads', 'offers']]
-    T = T.join(L.loc[:, ['start_price', 'bin_rev']], on='lstg')
+    T = T.join(L.loc[:, ['item', 'start_price', 'bin_rev']], on='lstg')
 
     # ids of threads to keep
     thread_ids = T[(T.bin_rev == 0) & (T.flag == 0)].index
