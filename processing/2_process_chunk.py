@@ -28,7 +28,7 @@ def add_turn_mask(df, targ=True):
     else:
         missing_rows = df.isna().values
         df[missing_rows] = -100
-    return offer_feats
+    return df 
 
 
 def add_turn_indicators(offer_feats):
@@ -81,7 +81,7 @@ def get_offer_feats(concessions):
     # add turn mask
     offer_feats = add_turn_mask(offer_feats, targ=False)
     # reshape data frame into a num_threads x num_turns x num_feats dataframe
-    num_threads = len(offer_feats.levels[0])
+    num_threads = len(offer_feats.index.levels[0])
     offer_feats = offer_feats.values.reshape(num_threads, 3, -1)
     return offer_feats
 
@@ -105,34 +105,41 @@ if __name__ == "__main__":
 
     # load data
     path = 'data/chunks/%d.pkl' % num
+    print("Loading data")
     chunk = pickle.load(open(path, 'rb'))
     L, T, O = [chunk[k] for k in['listings', 'threads', 'offers']]
-    T = T.join(L.loc[:, ['item', 'start_price', 'bin_rev']], on='lstg')
-
+    T = T.join(L.loc[:, ['start_price', 'item', 'slr', 'bin_rev']], on='lstg')
+    print("Done loading")
     # ids of threads to keep
     thread_ids = T[(T.bin_rev == 0) & (T.flag == 0)].index
 
     # time-varying features
+    print("Getting time feats")
     time_feats = get_time_feats(O, T, L)
 
     # concessions
+    print("Getting concessions")
     concessions = getConcessions(O, T, thread_ids)
     slr_concessions = concessions.loc[:, ['s1', 's2', 's3']]
     slr_concessions = add_turn_mask(slr_concessions)
 
     # offer features
+    print("Getting concessions")
     offer_feats = get_offer_feats(concessions)
 
     # constant features
+    print("Getting constant features")
     sim_const_feats = T.start_price.loc[thread_ids]
     sim_const_feats = np.expand_dims(sim_const_feats.values, 1)
     rl_const_feats = T.loc[thread_ids, ['start_price', 'item']]
 
     # seller turns
+    print("Getting seller turns")
     slr_turns = slr_concessions.count().values
     slr = T.slr.loc[thread_ids]
 
     # write simulator chunk
+    print("Writing first chunk")
     chunk = {'offer_feats': offer_feats,
              'const_feats': sim_const_feats,
              'slr': slr,
@@ -142,6 +149,7 @@ if __name__ == "__main__":
     pickle.dump(chunk, open(path, 'wb'))
 
     # write rl chunk
+    print("Writing second chunk")
     chunk = {'time_feats': time_feats,
              'rl_time': ['a'],
              'const_feats': rl_const_feats,
@@ -149,3 +157,4 @@ if __name__ == "__main__":
              }
     path = 'data/chunks/%d_rl.pkl' % num
     pickle.dump(chunk, open(path, 'wb'))
+    print("Done")

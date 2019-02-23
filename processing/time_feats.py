@@ -116,7 +116,7 @@ def get_time_feats(offrs, threads, lstgs):
     time_stamps = [6*60 ^ 2*364*24, 6*60 ^ 2*367*24, 6*60 ^ 2*369*24]
     time_index = pd.MultiIndex.from_product(
         [lstgs['item'].unique(), time_stamps])
-    time_df = pd.DataFrame(0, columns='a', index=time_index)
+    time_df = pd.DataFrame(0, columns=['a'], index=time_index)
     return time_df
     # timedf, offrs = gen_timedf(offrs, threads, lstgs)
     # timedf = tighten_removes(offrs, timedf)
