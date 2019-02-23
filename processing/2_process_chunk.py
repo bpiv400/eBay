@@ -126,7 +126,7 @@ if __name__ == "__main__":
     # constant features
     sim_const_feats = T.start_price.loc[thread_ids]
     sim_const_feats = np.expand_dims(sim_const_feats.values, 1)
-    rl_const_feats = T.loc[thread_ids, 'start_price']
+    rl_const_feats = T.loc[thread_ids, ['start_price', 'item']]
 
     # seller turns
     slr_turns = slr_concessions.count().values
@@ -147,3 +147,5 @@ if __name__ == "__main__":
              'const_feats': rl_const_feats,
              'rl_const': ['start_price']
              }
+    path = 'data/chunks/%d_rl.pkl' % num
+    pickle.dump(chunk, open(path, 'wb'))

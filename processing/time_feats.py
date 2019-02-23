@@ -104,7 +104,7 @@ def gen_timedf(offrs, threads, listings):
     threads = threads.loc[:, ['thread', 'lstg', 'item', 'slr', 'start_price']]
     # join threads with offrs
     offrs = offrs.join(threads, on='thread')
-    offr_times = offrs.loc[: ['item', 'clock', 'slr', 'lstg']]
+    offr_times = offrs.loc[:, ['item', 'clock', 'slr', 'lstg']]
     offr_times.loc[:, ['end_ind', 'start_ind']] = 0
     # append to time valued features df
     time_feats = time_feats.append(offr_times)

@@ -31,7 +31,7 @@ def save_subset(name, slr, included_slrs, offer_feats, const_feats, slr_response
     """
     # calculate indices of appended datasets to include and subset
     if subset:
-        inds = np.contains(slr, included_slrs)
+        inds = np.isin(slr, included_slrs)
         offer_feats = offer_feats[inds, :, :]
         const_feats = const_feats[inds, :]
         slr_responses = slr_responses[inds, :]
@@ -88,7 +88,7 @@ def main():
     slr_responses = np.concatenate(slr_responses)
     # randomly order all components
     indices = np.arange(slr.size)
-    np.shuffle(indices)
+    np.random.shuffle(indices)
     slr = slr[indices]
     offer_feats = offer_feats[indices, :, :]
     const_feats = const_feats[indices, :]
@@ -97,7 +97,7 @@ def main():
     unique_slrs = np.unique(slr)
     num = unique_slrs.size
     test = unique_slrs[:int(num * PCT_TEST)]
-    pure_test = unique_slrs[int(num * PCT_TEST): int(num * (PCT_PURE + PCT_TEST))]
+    pure_test = unique_slrs[int(num * PCT_TEST)                            : int(num * (PCT_PURE + PCT_TEST))]
     train = unique_slrs[int(num * (PCT_PURE + PCT_TEST)):]
     # save test
     inds = save_subset('test', slr, train, offer_feats,
