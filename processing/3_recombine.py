@@ -71,14 +71,6 @@ def main():
     directory = './data/chunks'
     chunk_list = ['%s/%s' % (directory, name) for name in os.listdir(
         directory) if os.path.isfile('%s/%s' % (directory, name)) and 'simulator' in name]
-    #################
-    # TEMPORARILY SHRINK CHUNK LIST
-    ######################
-    temp = []
-    for i in range(5):
-        temp.append(chunk_list[i])
-    chunk_list = temp
-    ##################################
     # append chunks
     print(chunk_list)
     offer_feats = []
@@ -106,8 +98,7 @@ def main():
     unique_slrs = np.unique(slr)
     num = unique_slrs.size
     test = unique_slrs[:int(num * PCT_TEST)]
-    pure_test = unique_slrs[int(num * PCT_TEST)
-                                : int(num * (PCT_PURE + PCT_TEST))]
+    pure_test = unique_slrs[int(num * PCT_TEST)                            : int(num * (PCT_PURE + PCT_TEST))]
     train = unique_slrs[int(num * (PCT_PURE + PCT_TEST)):]
     # save test
     inds = save_subset('test', slr, test, offer_feats,
@@ -132,6 +123,7 @@ def main():
     }
     path = 'data/chunks/slrs.pkl'
     pickle.dump(slr_dict, open(path, 'wb'))
+
 
 if __name__ == '__main__':
     main()
