@@ -71,6 +71,14 @@ def main():
     directory = './data/chunks/'
     chunk_list = ['%sname' % directory for name in os.listdir(
         directory) if os.path.isfile(name) and 'simulator' in name]
+    #################
+    # TEMPORARILY SHRINK CHUNK LIST
+    ######################
+    temp = []
+    for i in range(5):
+        temp.append(chunk_list[i])
+    chunk_list = temp
+    ##################################
     # append chunks
     offer_feats = []
     const_feats = []
@@ -97,16 +105,17 @@ def main():
     unique_slrs = np.unique(slr)
     num = unique_slrs.size
     test = unique_slrs[:int(num * PCT_TEST)]
-    pure_test = unique_slrs[int(num * PCT_TEST)                            : int(num * (PCT_PURE + PCT_TEST))]
+    pure_test = unique_slrs[int(num * PCT_TEST)
+                                : int(num * (PCT_PURE + PCT_TEST))]
     train = unique_slrs[int(num * (PCT_PURE + PCT_TEST)):]
     # save test
-    inds = save_subset('test', slr, train, offer_feats,
+    inds = save_subset('test', slr, test, offer_feats,
                        const_feats, slr_responses)
     # update aggregate contents
     slr, offer_feats, const_feats, slr_responses = subset_aggregate(
         inds, slr, offer_feats, const_feats, slr_responses)
     # save pure_test
-    inds = save_subset('pure_test', slr, train, offer_feats,
+    inds = save_subset('pure_test', slr, pure_test, offer_feats,
                        const_feats, slr_responses)
     # update aggregate contents
     slr, offer_feats, const_feats, slr_responses = subset_aggregate(
@@ -114,3 +123,11 @@ def main():
     # save train
     save_subset('train', slr, train, offer_feats,
                 const_feats, slr_responses, subset=False)
+    # create dictionary associating seller with dataset for listing code
+    slr_dict = {
+        'train': train,
+        'pure_test': pure_test,
+        'test': test
+    }
+    path = 'data/chunks/slrs.pkl'
+    pickle.dump(slr_dict, open(path, 'wb'))

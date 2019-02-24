@@ -28,7 +28,7 @@ def add_turn_mask(df, targ=True):
     else:
         missing_rows = df.isna().values
         df[missing_rows] = -100
-    return df 
+    return df
 
 
 def add_turn_indicators(offer_feats):
@@ -132,7 +132,7 @@ if __name__ == "__main__":
     print("Getting constant features")
     sim_const_feats = T.start_price.loc[thread_ids]
     sim_const_feats = np.expand_dims(sim_const_feats.values, 1)
-    rl_const_feats = T.loc[thread_ids, ['start_price', 'item']]
+    rl_const_feats = T.loc[thread_ids, ['start_price', 'item', 'slr']]
 
     # seller turns
     print("Getting seller turns")
