@@ -11,8 +11,8 @@ import numpy as np
 from util_env import unpickle
 
 SEED = 123456
-PCT_PURE = 20
-PCT_TEST = 20
+PCT_PURE = .20
+PCT_TEST = .20
 
 
 def save_subset(name, slr, included_slrs, offer_feats, const_feats, slr_responses, subset=True):
@@ -68,9 +68,9 @@ def main():
     # set seed
     random.seed(SEED)
     # generate list of chunks
-    directory = './data/chunks/'
-    chunk_list = ['%sname' % directory for name in os.listdir(
-        directory) if os.path.isfile(name) and 'simulator' in name]
+    directory = './data/chunks'
+    chunk_list = ['%s/%s' % (directory, name) for name in os.listdir(
+        directory) if os.path.isfile('%s/%s' % (directory, name)) and 'simulator' in name]
     #################
     # TEMPORARILY SHRINK CHUNK LIST
     ######################
@@ -80,6 +80,7 @@ def main():
     chunk_list = temp
     ##################################
     # append chunks
+    print(chunk_list)
     offer_feats = []
     const_feats = []
     slr = []
@@ -131,3 +132,6 @@ def main():
     }
     path = 'data/chunks/slrs.pkl'
     pickle.dump(slr_dict, open(path, 'wb'))
+
+if __name__ == '__main__':
+    main()
