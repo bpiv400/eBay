@@ -102,6 +102,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--num', action='store', type=int, required=True)
     num = parser.parse_args().num
+    num = num - 1
 
     # load data
     path = 'data/chunks/%d.pkl' % num
