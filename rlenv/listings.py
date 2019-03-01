@@ -21,43 +21,30 @@ from util_env import unpickle, extract_datatype, is_none
 
 class ListingEnvironment:
     '''
-    Notes to Etan:
     1. Assumes the time valued features are stored in chunked pickled dictionaries in
-     a data/time_chunks/... directory where each file has
-    the name dataset-chunkNumber_time.pkl. (e.g. train-42_time.pkl).
-    Each dictionary contains 3 keys:
-        timedf: dataframe containing all constant feature entries for listings in this chunk
-        rlfeats: list of strings giving the names of the time features exposed
-        to the reinforcement learner
-        simfeats: list of strings giving the names of the time features exposed to the simulator
+    data/chunks/(NUM)_rl.pkl
+    Each dictionary contains 6 keys:
+        time_feats: dataframe containing time valued features and two identifier columns:
+            'item' and 'clock'. Assumes the tuple of 'item' and 'clock' uniquely identifies rows.
+            'clock' should be of type int and should denote seconds since some prior time
+        rl_time: list of strings giving the names of the time features exposed
+            to the reinforcement learner
+        sim_time: list of strings giving the names of the time features exposed to the simulator
+        const_feats:  dataframe containing all constant feature entries for listings in this chunk. Also
+            includes columns for 'slr' and 'item', indexed by thread id (but this isn't particularly relevant)
+        rl_const: list of strings giving the names of constant features exposed to the rl
+        sim_const: list of strings giving the names of time valued features exposed to the simulator
 
-    2. Assumes the time features dataframe contains 2 columns 'anon_item_id'
-    and 'time' and that rows are uniquely identifiably by this pair of columns,
-    such that each row gives the time-valued features for a particular timestep of
-    a particular listings. 'anon_item_id' should be an integer
-    corresponding to the id as its given in the listing files,
-    and 'time' should be of type pd.datetime64. Remaining columns should fully specify
-    time valued features. Expects these values to be columns rather than indices
 
-    3. Assumes the constant features dataframe does contains all constant features.
-     Assumes these features are not normalized
-
-    4. Assumes constant features data frame is stored in
-    data/exps/data_name/consts/dataset-chunkNumber_consts.pkl.
-    Assumes the constants pickle contains a dictionary with three entries:
-        consts: pd.DataFrame containing all constant features for
-        the reinforcement learner and simulator
-        rlfeats: list of names of constant features exposed to the reinforcement learner
-        simfeats: list of names of constant features exposed to simulator
-
-    5. Tree data structure assumes no two entries for the same listing have the same datetime tag
+    2. Tree data structure assumes no two entries for the same item have the same 'clock' identifier
     (Throws an error if they do)
 
-    6. Does NOT populate data with model's byr_us and byr_hist parameters.
+    3. Does NOT populate data with model's byr_us and byr_hist parameters.
     We can perform this operation at initialization time, so we don't
     need to make separate datasets for different model parameters.
     The cost incurred at training time is made up for by creating fewer datasets
 
+    4. Frustrating that listing is a misnomer at this point
     TODO:
     Debug
     Finish documentation
@@ -87,6 +74,8 @@ class ListingEnvironment:
             timecols: pd.Series where index gives names of time valued feature
             columns and data gives the corresponding indices in the Listing.time
             nd.arrays
+            env_path:
+            slr_path:
 
         Class Methods:
             load:
@@ -103,19 +92,23 @@ class ListingEnvironment:
             get_bin_prices:
             pickle_listing:
         '''
+        self.data_name = data_name
         # ensure arguments are defined
-        is_none(data_name, name='data_name')
         is_none(chunk, name='chunk')
         # initialize name tracking variables for finding the base directory
         # containing all listing subdirectories (train, test, toy)
-        self.base_dir = 'data/datasets/%s/' % data_name
+        if self.data_name is None:
+            self.base_dir = 'data/chunks/'
+        else:
+            self.base_dir = 'data/datasets/%s/' % data_name
         # path to environment encapsulating
-        env_file = '%slistings/env.pkl' % self.base_dir
+        self.env_path = '%slisting_env.pkl' % self.base_dir
+        # path to slrs file and slrs dictionary
+        self.slr_path = '%sslrs.pkl' % self.base_dir
+        self.slrs = None
         # initialize empty batch list
         self.batch = []
         self.ids = None
-        # initialize name tracking variable for the datatype (train, test, toy)
-        self.datatype = extract_datatype(chunk)
         # generate data for the initial chunk
         self.gen_data(chunk)
         # store environment in pickle if one doesnt exist
@@ -125,7 +118,7 @@ class ListingEnvironment:
         '''
         Stores environment in pickle if one doesn't already exist
         '''
-        f = open('%slistings/env.pkl' % self.base_dir, 'wb')
+        f = open(self.env_path, 'wb')
         pickle.dump(self, f)
         f.close()
 
@@ -135,7 +128,10 @@ class ListingEnvironment:
         Loads environment file from pickle and throws IOError if one doesn't exist
         '''
         # define environment file
-        env_file = 'data/datasets/%s/listings/env.pkl' % data_name
+        if data_name is None:
+            env_path = 'data/chunks/listing_env.pkl'
+        else:
+            env_file = 'data/datasets/%s/listing_env.pkl' % data_name
         # throw an error if it doesn't exist
         if not os.path.isfile(env_file):
             raise IOError(
@@ -147,14 +143,14 @@ class ListingEnvironment:
 
     @property
     def dir(self):
-        return self.base_dir + 'listings/' + self.datatype + '/'
+        return self.base_dir + 'listings/'
 
     def load_listing(self, ix):
         '''
         Loads a particular listing. Throws an IOError if the target listing
         does not exist
         '''
-        path = '%s/%d.pkl' % (self.dir, ix)
+        path = '%s%d.pkl' % (self.dir, ix)
         if not os.path.isfile(path):
             raise IOError("Listing file does not exist in %s for %d" %
                           (self.dir, ix))
@@ -177,23 +173,30 @@ class ListingEnvironment:
     def gen_data(self, chunk, new_env=True):
         """
         Generates listing binaries for a particular chunk
+
+        Args:
+            chunk: integer denoting the number of the chunk for which the object is generating listing
+            binaries
         """
         if not new_env:
             self.datatype = extract_datatype(chunk)
-        # load consts data
-        consts_file = '%sconsts/%s/consts_%s.pkl' % (
-            self.base_dir, self.datatype, chunk)
-        consts_dict = unpickle(consts_file)
+        # load slrs file
+        self.slrs = pickle.load(open(self.slr_path, 'rb'))
+        # load chunk
+        chunk = pickle.load(open('%s%d_rl.pkl' % (self.base_dir, chunk)))
+
         # extract dictionary contents and delete dictionary
-        constsdf = consts_dict['consts']  # shared features
+        constsdf = chunk['const_feats']  # shared features
         # rl specific features (string list)
-        rl_consts = consts_dict['rlfeats']
+        rl_consts = chunk['rl_consts']
         # simulator specific features (string list)
-        sim_consts = consts_dict['simfeats']
+        sim_consts = chunk['sim_consts']
 
         # ensure df has expected index
-        if constsdf.index.name != 'item':
+        if 'item' not in constsdf.columns:
             raise ValueError('consts must have item as index')
+        else:
+            constsdf.set_index('item', inplace=True)
         # sort columns alphabetically
         constsdf = constsdf.reindex(sorted(constsdf.columns), axis=1)
         # create map for constant feature lookup later

@@ -1,31 +1,22 @@
 import sys, os, argparse, pickle
-import torch, torch.nn as nn, torch.optim as optim
-import numpy as np, pandas as pd
+import torch, torch.nn.utils.rnn as rnn
+import numpy as np
 from datetime import datetime as dt
-from models import Model
+from models import *
+from utils import *
 
-CRITERION = nn.MSELoss(reduction='sum')
-OPTIMIZER = optim.ADAM()
+OPTIMIZER = torch.optim.Adam
+CRITERION = BetaMixtureLoss.apply
 
-def processMinibatch(model, optimizer, x_offer, x_fixed, y, k, batch_ind_i):
+def process_mb(simulator, optimizer, y_i, x_fixed_i, x_offer_i):
     # zero the gradient
     optimizer.zero_grad()
 
-    # subset and sort data
-    k_i, sort_ind = torch.sort(k[batch_ind_i], dim=0, descending=True)
-    indices = [batch_ind_i[sort_ind[j]] for j in range(len(sort_ind))]
-    x_offer_i = x_offer[:, indices, :]
-    x_fixed_i = x_fixed[:, indices, :]
-    y_i = y[:, indices]
+    # forward pass to get parameters of beta mixture
+    p, a, b = simulator(x_fixed_i, x_offer_i)
 
-    # generate packed sequence
-    x_offer_i = torch.nn.utils.rnn.pack_padded_sequence(x_offer_i,k_i)
-
-    # forward pass
-    y_hat_i = model(x_fixed_i, x_offer_i)
-
-    # calculate total loss over minibatch and update gradients
-    loss = criterion(y_hat_i, y_i)
+    # calculate total loss over minibatch
+    loss = CRITERION(p, a, b, y_i)
 
     # update parameters
     loss.backward()
@@ -34,17 +25,11 @@ def processMinibatch(model, optimizer, x_offer, x_fixed, y, k, batch_ind_i):
     return loss
 
 
-def getBatchIndices(samples, mbsize):
-    # create matrix of randomly sampled minibatch indices
-    shuffled = random.sample(range(samples), samples)
-    batches = math.ceil(samples / mbsize)
-    batchInd = [shuffled[mbsize*i:mbsize*(i+1)] for i in range(batches)]
-    return batches, batchInd
+def train(simulator, optimizer, x_offer, x_fixed, y, turns, mbsize, tol):
+    loss_hist = np.array([np.inf]) # loss in each epoch
+    N_turns = torch.sum(turns).item() # total number of turns
 
-
-def train(mbsize, tol, model, criterion, optimizer, x_offer, x_fixed, y, k):
-    loss_hist = [float('Inf')] # loss in each epoch
-    N_seq = k.sum().item() # number of sequences
+    print('Training')
     while True:
         start = dt.now()
         epoch = len(loss_hist)
@@ -52,14 +37,19 @@ def train(mbsize, tol, model, criterion, optimizer, x_offer, x_fixed, y, k):
             break
 
         # iterate over minibatches
-        batches, indices = getBatchIndices(x_offer.shape[1], mbsize)
+        batches, indices = get_batch_indices(y.size()[1], mbsize)
         loss = 0
         for i in range(batches):
-            # get error for minibatch, back prop, and update model
-            loss += processMinibatch(model, criterion, optimizer, x_offer, x_fixed, y, k, indices[i])
+            idx = indices[i]
+            x_offer_i = rnn.pack_padded_sequence(x_offer[:, idx, :], turns[idx])
+
+            loss += process_mb(simulator, optimizer, y[:, idx, :],
+                                x_fixed[:, idx, :], x_offer_i)
+
+        #compute_example(simulator)
 
         # update loss history
-        loss_hist.append(loss.item() / N_seq)
+        loss_hist = np.append(loss_hist, torch.div(loss, N_turns).item())
         print('Epoch %d: %1.6f (%s)' % (epoch, loss_hist[epoch], dt.now() - start))
         sys.stdout.flush()
 
@@ -73,39 +63,47 @@ if __name__ == '__main__':
     parser.add_argument('--mbsize', default=128, type=int,
         help='Number of samples per minibatch.')
     parser.add_argument('--tol', default=1e-6, type=float,
-        help='Stopping criterion: improvement in average loss.')
+        help='Stopping criterion: improvement in log-likelihood.')
     parser.add_argument('--hidden', default=100, type=int,
         help='Number of nodes in each hidden layer.')
-    parser.add_argument('--dropout', default=0.01, type=float,
+    parser.add_argument('--dropout', default=0.5, type=float,
         help='Dropout rate.')
+    parser.add_argument('--step_size', default=0.001, type=float,
+        help='Learning rate for optimizer.')
+    parser.add_argument('--layers', default=2, type=int,
+        help='Number of recurrent layers.')
+    parser.add_argument('--check_grad', default=False, type=bool,
+        help='Boolean flag to check gradients.')
     args = parser.parse_args()
 
     # load data and extract comonents
     print('Loading Data')
     sys.stdout.flush()
-    data = pickle.load('../data/exps/rnn2_cat/train_data.pickle', 'rb')
-
-    x_offer = torch.from_numpy(data['offr_vals']).float()
-    x_fixed = torch.from_numpy(data['const_vals']).float()
-    y = torch.from_numpy(data['target_vals']).float()
-    k = torch.from_numpy(data['length_vals']).long()
-    print('Done Loading')
+    data = pickle.load(open('../../data/chunks/0_simulator.pkl', 'rb'))
+    x_offer, x_fixed, y = [data[i] for i in ['x_offer','x_fixed','y']]
+    turns = 3 - torch.sum(torch.isnan(y[:,:,0]), 0)
     sys.stdout.flush()
     del data
 
-    # calculate parameter values for the model from data
-    N_fixed = x_fixed.shape[2]
-    N_offer = x_offer.shape[2]
-
-    # create LSTM and optimizer
-    model = Model(N_fixed, N_offer, args.hidden, args.dropout)
-    optimizer = OPTIMIZER(model.parameters())
-    print(model)
+    # create neural net
+    N_fixed = x_fixed.size()[2]
+    N_offer = x_offer.size()[2]
+    simulator = Simulator(N_fixed, N_offer, args.hidden, args.layers, args.dropout)
+    print(simulator)
     sys.stdout.flush()
 
-    # training loop iteration
-    loss = train(args.mbsize, args.tol, model, optimizer, x_offer, x_fixed, y, k)
+    # check gradient
+    if args.check_grad:
+        print('Checking gradient')
+        check_gradient(simulator, CRITERION, x_fixed, x_offer, y, turns)
 
-    # save model parameters and loss history
-    torch.save(model.state_dict(), 'data/model.pth.tar')
-    pickle.dump(loss[1:], open('data/loss.pkl', 'wb'))
+    # initialize optimizer
+    optimizer = OPTIMIZER(simulator.parameters(), lr=args.step_size)
+
+    # training loop iteration
+    loss = train(simulator, optimizer, x_offer, x_fixed, y, turns,
+        args.mbsize, args.tol)
+
+    # save simulator parameters and loss history
+    torch.save(simulator.state_dict(), '../../data/simulator/0.pth.tar')
+    pickle.dump(loss[1:], open('../../data/simulator/0_loss.pkl', 'wb'))

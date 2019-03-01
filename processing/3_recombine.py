@@ -98,7 +98,7 @@ def main():
     unique_slrs = np.unique(slr)
     num = unique_slrs.size
     test = unique_slrs[:int(num * PCT_TEST)]
-    pure_test = unique_slrs[int(num * PCT_TEST)                            : int(num * (PCT_PURE + PCT_TEST))]
+    pure_test = unique_slrs[int(num * PCT_TEST): int(num * (PCT_PURE + PCT_TEST))]
     train = unique_slrs[int(num * (PCT_PURE + PCT_TEST)):]
     # save test
     inds = save_subset('test', slr, test, offer_feats,
