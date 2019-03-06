@@ -18,7 +18,7 @@ step = int(sellers.size / N_CHUNKS) + 1
 S = [sellers[m * step:(m+1) * step] for m in range(0, N_CHUNKS)]
 
 # iterate over all chunks
-for i in range(1, N_CHUNKS+1):
+for i in range(N_CHUNKS):
     # extract associated listings, threads and offers
     L_i = L.join(pd.DataFrame(index=S[i]), on='slr', how='inner')
     T_i = T.join(pd.DataFrame(index=L_i.index), on='lstg', how='inner')
@@ -26,5 +26,5 @@ for i in range(1, N_CHUNKS+1):
 
     # write chunk
     chunk = {'listings': L_i, 'threads': T_i, 'offers': O_i}
-    path = 'data/chunks/%d.pkl' % i
+    path = 'data/chunks/%d.pkl' % i+1
     pickle.dump(chunk, open(path, 'wb'))
