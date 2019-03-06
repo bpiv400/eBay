@@ -4,39 +4,30 @@ For each chunk of data, create simulator and RL inputs.
 
 import argparse, pickle
 import numpy as np, pandas as pd
-import torch, torch.nn as nn
 #from time_feats import get_time_feats
 
 
-def convert_to_tensors(x_offer, x_fixed, y):
-    tensors = {}
-
-    # order threads by sequence length
-    threads = (y.isnull().sum(1)).sort_values(ascending=True).index
-
-    # seller concessions
-    M_y = np.transpose(y.loc[threads].values)
-    tensors['y'] = torch.tensor(np.reshape(M_y, (3, len(threads), 1))).float()
-
-    # fixed features
-    M_fixed = np.reshape(x_fixed.loc[threads].values, (1, len(threads), -1))
-    tensors['x_fixed'] = torch.tensor(M_fixed).float()
-
-    # offer features
-    dfs = [x_offer.xs(t, level='turn').loc[threads] for t in range(1, 4)]
-    arrays = [dfs[t].values.astype(float) for t in range(3)]
-    reshaped = [np.reshape(arrays[t], (1, len(threads), -1)) for t in range(3)]
-    ttuple = tuple([torch.tensor(reshaped[i]) for i in range(3)])
-    tensors['x_offer'] = torch.cat(ttuple, 0).float()
-
-    return tensors, threads
+def get_slr_concessions(C):
+    '''
+    Creates a data frame of seller concessions with automatic accepts/rejects
+    set to NA, and then removes threads for which all seller concessions are
+    automatic.
+    '''
+    y = C[['s1', 's2', 's3']].copy()
+    y.loc[C.s1_auto, 's1'] = np.nan
+    y.loc[C.s2_auto, 's2'] = np.nan
+    y.loc[C.s3_auto, 's3'] = np.nan
+    # drop threads with no human slr concessions
+    no_live_turns = pd.isna(y).sum(1) == 3
+    y = y[~no_live_turns]
+    return y
 
 
 def add_turn_indicators(offer_feats):
     """
-    Creates an indicator for each turn
+    Creates indicator for each turn
     """
-    # initialize table of indicators
+    # turns
     turns = pd.DataFrame(0, index=[1, 2, 3], columns=['t1', 't2', 't3'])
     turns.index.name = 'turn'
     turns.loc[1, 't1'] = 1
@@ -47,39 +38,42 @@ def add_turn_indicators(offer_feats):
     return offer_feats
 
 
-def get_offer_feats(C):
+def get_x_offer(C):
     """
     Creates a dataframe where each row gives the input to
-    the simulator model at one step
-
-    Columns: [previous seller concession, current buyer concession, [set of 3 turn indicators]]
+    the simulator model at one step. Output variables:
+        1. previous seller concession
+        2. indicator for automatic rejection on last seller concession
+        3. current buyer concession
+        4. indicator for turn 1
+        5. indicator for turn 2
+        6. indicator for turn 3
     Index: [thread_id, turn] (turn in range 1...3)
-
-    For each timestep where at least 1 input or the response variable does not exist, we leave
-    the corresponding row as a row of NAs
     """
-    # create index
-    index = pd.MultiIndex.from_product(
-        [C.index.values, [1, 2, 3]], names=['thread', 'turn'])
-    # create dataframe
-    offer_feats = pd.DataFrame(index=index, columns=['con_slr', 'con_byr'])
+    # initialize data frame
+    x_offer = pd.DataFrame(index=pd.MultiIndex.from_product(
+        [C.index.values, [1, 2, 3]], names=['thread', 'turn']))
     # prefix s0 column to concessions
     C['s0'] = 0
+    C['s0_auto'] = 0
+    # loop over turns
     for i in range(1, 4):
         prev = 's%d' % (i - 1)
+        prev_auto = 's%d_auto' % (i - 1)
         curr = 'b%d' % i
         pred = 's%d' % i
         # subset to thread ids where the response offer is defined
         threads = C.loc[~C[pred].isna(), pred].index
         index = pd.MultiIndex.from_product([threads, [i]])
-        offer_feats.loc[index, 'con_slr'] = C.loc[threads, prev].values
-        offer_feats.loc[index, 'con_byr'] = C.loc[threads, curr].values
+        x_offer.loc[index, 'con_slr'] = C.loc[threads, prev].values
+        x_offer.loc[index, 'auto'] = C.loc[threads, prev_auto].values
+        x_offer.loc[index, 'con_byr'] = C.loc[threads, curr].values
     # add turn indicators
-    offer_feats = add_turn_indicators(offer_feats)
-    return offer_feats
+    x_offer = add_turn_indicators(x_offer)
+    return x_offer
 
 
-def get_fixed_feats(T, thread_ids):
+def get_x_fixed(T, thread_ids):
     # initialize dataframe
     fixed_feats = pd.DataFrame(index=thread_ids)
     # start_price
@@ -87,10 +81,12 @@ def get_fixed_feats(T, thread_ids):
     return fixed_feats
 
 
-def getConcessions(O, T, thread_ids):
+def get_concessions(O, T, thread_ids):
     '''
     Creates data frame of concessions for each buyer and seller turn.
     '''
+    # create dataframe of clock times for each offer
+    clock = O.loc[thread_ids]['clock'].unstack(level='index')
     # create dataframe of offers in dollars
     offers = O.loc[thread_ids]['price'].unstack(level='index')
     offers[0] = T.start_price.loc[thread_ids]
@@ -107,6 +103,10 @@ def getConcessions(O, T, thread_ids):
     # verify that all concessions are in bounds
     v = C.values.flatten()
     assert np.nanmax(v) <= 1 and np.nanmin(v) >= 0
+    # auto accepts / rejects
+    C['s1_auto'] = clock[2] == clock[1]
+    C['s2_auto'] = clock[4] == clock[3]
+    C['s3_auto'] = clock[6] == clock[5]
     return C
 
 
@@ -133,28 +133,28 @@ if __name__ == "__main__":
 
     # concessions
     print("Getting concessions")
-    C = getConcessions(O, T, thread_ids)
+    C = get_concessions(O, T, thread_ids)
+    y = get_slr_concessions(C)
+
+    # trim thread_ids
+    thread_ids = y.index
+    C = C.loc[thread_ids]
 
     # offer features
     print("Getting offer features")
-    x_offer = get_offer_feats(C)
+    x_offer = get_x_offer(C)
 
     # constant features
     print("Getting constant features")
-    x_fixed = get_fixed_feats(T, thread_ids)
+    x_fixed = get_x_fixed(T, thread_ids)
     rl_const_feats = T.loc[thread_ids, ['start_price', 'item', 'slr']]
-
-    # seller concessions
-    y = C[['s1', 's2', 's3']]
 
     # write simulator chunk
     print("Writing first chunk")
-    tensors, threads = convert_to_tensors(x_offer, x_fixed, y)
-    chunk = {'x_offer': tensors['x_offer'],
-             'x_fixed': tensors['x_fixed'],
-             'y': tensors['y'],
-             'slr': T.slr.loc[thread_ids],
-             'threads': threads}
+    chunk = {'x_offer': x_offer,
+             'x_fixed': x_fixed,
+             'y': y,
+             'slr': T.slr.loc[thread_ids]}
     path = 'data/chunks/%d_simulator.pkl' % num
     pickle.dump(chunk, open(path, 'wb'))
 

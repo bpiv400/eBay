@@ -5,6 +5,7 @@ from datetime import datetime as dt
 from models import *
 from utils import *
 
+INPUT_PATH = '../../data/train/simulator_input.pkl'
 OPTIMIZER = torch.optim.Adam
 CRITERION = BetaMixtureLoss.apply
 
@@ -25,16 +26,13 @@ def process_mb(simulator, optimizer, y_i, x_fixed_i, x_offer_i):
     return loss
 
 
-def train(simulator, optimizer, x_offer, x_fixed, y, turns, mbsize, tol):
+def train(simulator, optimizer, x_offer, x_fixed, y, turns, mbsize, epochs):
     loss_hist = np.array([np.inf]) # loss in each epoch
     N_turns = torch.sum(turns).item() # total number of turns
 
     print('Training')
-    while True:
+    for epoch in range(1,epochs+1):
         start = dt.now()
-        epoch = len(loss_hist)
-        if epoch > 1 and loss_hist[epoch-2] - loss_hist[epoch-1] < tol:
-            break
 
         # iterate over minibatches
         batches, indices = get_batch_indices(y.size()[1], mbsize)
@@ -46,11 +44,10 @@ def train(simulator, optimizer, x_offer, x_fixed, y, turns, mbsize, tol):
             loss += process_mb(simulator, optimizer, y[:, idx, :],
                                 x_fixed[:, idx, :], x_offer_i)
 
-        #compute_example(simulator)
-
         # update loss history
         loss_hist = np.append(loss_hist, torch.div(loss, N_turns).item())
         print('Epoch %d: %1.6f (%s)' % (epoch, loss_hist[epoch], dt.now() - start))
+        compute_example(simulator)
         sys.stdout.flush()
 
     return loss_hist
@@ -58,37 +55,21 @@ def train(simulator, optimizer, x_offer, x_fixed, y, turns, mbsize, tol):
 
 if __name__ == '__main__':
     # extract parameters from command line
-    parser = argparse.ArgumentParser(
-        description='Model of environment for bargaining AI.')
-    parser.add_argument('--mbsize', default=128, type=int,
-        help='Number of samples per minibatch.')
-    parser.add_argument('--tol', default=1e-6, type=float,
-        help='Stopping criterion: improvement in log-likelihood.')
-    parser.add_argument('--hidden', default=100, type=int,
-        help='Number of nodes in each hidden layer.')
-    parser.add_argument('--dropout', default=0.5, type=float,
-        help='Dropout rate.')
-    parser.add_argument('--step_size', default=0.001, type=float,
-        help='Learning rate for optimizer.')
-    parser.add_argument('--layers', default=2, type=int,
-        help='Number of recurrent layers.')
-    parser.add_argument('--check_grad', default=False, type=bool,
-        help='Boolean flag to check gradients.')
-    args = parser.parse_args()
+    args = get_args()
 
     # load data and extract comonents
     print('Loading Data')
     sys.stdout.flush()
-    data = pickle.load(open('../../data/chunks/0_simulator.pkl', 'rb'))
-    x_offer, x_fixed, y = [data[i] for i in ['x_offer','x_fixed','y']]
-    turns = 3 - torch.sum(torch.isnan(y[:,:,0]), 0)
+    data = pickle.load(open(INPUT_PATH, 'rb'))
+    x_offer, x_fixed, y, turns = convert_to_tensors(data)
     sys.stdout.flush()
     del data
 
     # create neural net
     N_fixed = x_fixed.size()[2]
     N_offer = x_offer.size()[2]
-    simulator = Simulator(N_fixed, N_offer, args.hidden, args.layers, args.dropout)
+    simulator = Simulator(N_fixed, N_offer,
+        args.hidden, args.layers, args.dropout, args.is_lstm)
     print(simulator)
     sys.stdout.flush()
 
@@ -102,7 +83,7 @@ if __name__ == '__main__':
 
     # training loop iteration
     loss = train(simulator, optimizer, x_offer, x_fixed, y, turns,
-        args.mbsize, args.tol)
+        args.mbsize, args.epochs)
 
     # save simulator parameters and loss history
     torch.save(simulator.state_dict(), '../../data/simulator/0.pth.tar')
