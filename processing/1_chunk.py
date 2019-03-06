@@ -5,7 +5,7 @@ Chunks listing, threads, and offers by seller.
 import pickle
 import pandas as pd, numpy as np
 
-N_CHUNKS = 512
+N_CHUNKS = 256
 
 # read in data frames
 L = pd.read_csv('data/clean/listings.csv').set_index('lstg')
@@ -18,7 +18,7 @@ step = int(sellers.size / N_CHUNKS) + 1
 S = [sellers[m * step:(m+1) * step] for m in range(0, N_CHUNKS)]
 
 # iterate over all chunks
-for i in range(N_CHUNKS):
+for i in range(1, N_CHUNKS+1):
     # extract associated listings, threads and offers
     L_i = L.join(pd.DataFrame(index=S[i]), on='slr', how='inner')
     T_i = T.join(pd.DataFrame(index=L_i.index), on='lstg', how='inner')

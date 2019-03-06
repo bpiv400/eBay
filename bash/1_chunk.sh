@@ -1,6 +1,6 @@
 #!/bin/bash
-#$ -l m_mem_free=100G
-#$ -N recombine
+#$ -l m_mem_free=50G
+#$ -N chunk
 #$ -j y
 #$ -o logs/$JOB_NAME-$JOB_ID.log
 
