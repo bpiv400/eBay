@@ -1,0 +1,2 @@
+exp_id,epochs,mbsize,hidden,dropout,lr,layers,lstm
+1,50,128,100,0.5,0.001,2,True

@@ -12,7 +12,7 @@ L = pd.read_csv('data/clean/listings.csv').set_index('lstg')
 T = pd.read_csv('data/clean/threads.csv').set_index('thread')
 O = pd.read_csv('data/clean/offers.csv').set_index(['thread','index'])
 
-# extract sellers, randomize order, and slice into chunks
+# extract sellers and slice into chunks
 sellers = np.unique(L['slr'].values)
 step = int(sellers.size / N_CHUNKS) + 1
 S = [sellers[m * step:(m+1) * step] for m in range(0, N_CHUNKS)]
@@ -26,5 +26,5 @@ for i in range(N_CHUNKS):
 
     # write chunk
     chunk = {'listings': L_i, 'threads': T_i, 'offers': O_i}
-    path = 'data/chunks/%d.pkl' % i+1
+    path = 'data/chunks/%d.pkl' % (i+1)
     pickle.dump(chunk, open(path, 'wb'))
