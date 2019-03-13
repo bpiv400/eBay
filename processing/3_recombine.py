@@ -11,18 +11,18 @@ PCT_PURE = .15
 PCT_TEST = .15
 
 
-def save_partitions(slr_dict, slr, x_offer, x_fixed, y):
+def save_partitions(slr_dict, x_offer, T, y):
     """
     Saves the train, test, and pure test partitions.
     """
-    for key in slr_dict:
-        threads = slr.index[np.isin(slr.values, slr_dict[key])]
+    for key, val in slr_dict.items():
+        print('Saving' + key)
+        threads = T.slr.index[np.isin(T.slr.values, val)]
         idx = pd.MultiIndex.from_product([threads, [1, 2, 3]],
             names=x_offer.index.names)
         data = {'x_offer': x_offer.loc[idx, :],
-                'x_fixed': x_fixed.loc[threads, :],
-                'y': y.loc[threads],
-                'slr': slr.loc[threads]}
+                'T': T.loc[threads, :],
+                'y': {key: val.loc[threads] for key, val in y.items()}}
         path = 'data/%s/simulator_input.pkl' % key
         pickle.dump(data, open(path, 'wb'))
 
@@ -30,9 +30,9 @@ def save_partitions(slr_dict, slr, x_offer, x_fixed, y):
 def append_chunks():
     # initialize output
     x_offer = pd.DataFrame()
-    x_fixed = pd.DataFrame()
-    y = pd.DataFrame()
-    slr = pd.Series()
+    T = pd.DataFrame()
+    idx = pd.MultiIndex.from_product([[], [1, 2, 3]], names=['thread', 'turn'])
+    y = {key: pd.Series(index=idx) for key in ['delay', 'con', 'msg']}
     # list of chunks
     chunks = ['%s/%s' % (DIR, name) for name in os.listdir(DIR)
         if os.path.isfile('%s/%s' % (DIR, name)) and 'simulator' in name]
@@ -40,10 +40,10 @@ def append_chunks():
     for chunk in sorted(chunks):
         chunk = pickle.load(open(chunk, 'rb'))
         x_offer = x_offer.append(chunk['x_offer'], verify_integrity=True)
-        x_fixed = x_fixed.append(chunk['x_fixed'], verify_integrity=True)
-        y = y.append(chunk['y'], verify_integrity=True)
-        slr = slr.append(chunk['slr'], verify_integrity=True)
-    return x_offer, x_fixed, y, slr
+        T = T.append(chunk['T'], verify_integrity=True)
+        for key, val in y.items():
+            y[key] = val.append(chunk['y'][key], verify_integrity=True)
+    return x_offer, T, y
 
 
 def randomize_sellers(slr):
@@ -58,10 +58,10 @@ def randomize_sellers(slr):
 
 if __name__ == '__main__':
     # append files
-    x_offer, x_fixed, y, slr = append_chunks()
+    x_offer, T, y = append_chunks()
 
     # randomize sellers into train, test and pure test
-    slr_dict = randomize_sellers(slr)
+    slr_dict = randomize_sellers(T.slr)
 
     # partition the data and save
-    save_partitions(slr_dict, slr, x_offer, x_fixed, y)
+    save_partitions(slr_dict, x_offer, T, y)

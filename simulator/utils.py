@@ -30,27 +30,33 @@ def reshape_wide(df, threads):
     return torch.cat(ttuple, 0).float()
 
 
+def trim_threads(s):
+    keep = s.isna().groupby(level='thread').sum() < 3
+    return s[keep[s.index.get_level_values('thread')].values]
+
+
 def convert_to_tensors(data):
     '''
     Converts data frames to tensors sorted (descending) by N_turns.
     '''
+    tensors = {}
     # order threads by sequence length
     turns = MAX_TURNS - data['y'].isna().groupby(level='thread').sum()
     turns = turns.sort_values(ascending=False)
     threads = turns.index
-    turns = torch.tensor(turns.values).int()
+    tensors['turns'] = torch.tensor(turns.values).int()
 
     # outcome
-    y = torch.squeeze(reshape_wide(data['y'], threads))
+    tensors['y'] = torch.squeeze(reshape_wide(data['y'], threads))
 
     # fixed features
     M_fixed = data['x_fixed'].loc[threads].astype(np.float64).values
-    x_fixed = torch.tensor(np.reshape(M_fixed, (1, len(threads), -1))).float()
+    tensors['x_fixed'] = torch.tensor(np.reshape(M_fixed, (1, len(threads), -1))).float()
 
     # offer features
-    x_offer = reshape_wide(data['x_offer'], threads)
+    tensors['x_offer'] = reshape_wide(data['x_offer'], threads)
 
-    return x_offer, x_fixed, y, turns
+    return tensors
 
 
 def add_offer_feats(x_offer):
@@ -168,11 +174,11 @@ def compute_example(simulator):
     print('\t\tbeta = %2.1f' % b[0,:].item())
 
 
-def check_gradient(simulator, criterion, x_fixed, x_offer, y, turns):
-    x_fixed = x_fixed[:, :N_SAMPLES, :]
-    x_offer = x_offer[:, :N_SAMPLES, :]
-    turns = turns[:N_SAMPLES]
-    y = y[:, :N_SAMPLES].double()
+def check_gradient(simulator, criterion, tensors):
+    x_fixed = tensors['x_fixed'][:, :N_SAMPLES, :]
+    x_offer = tensors['x_offer'][:, :N_SAMPLES, :]
+    turns = tensors['turns'][:N_SAMPLES]
+    y = tensors['y'][:, :N_SAMPLES].double()
     theta = simulator(x_fixed, rnn.pack_padded_sequence(x_offer, turns))
     gradcheck(criterion, (theta.double(), y))
 

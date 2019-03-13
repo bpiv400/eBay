@@ -18,11 +18,6 @@ def reshape_long(df, cols):
     return z
 
 
-def trim_threads(v):
-    keep = v.isna().groupby(level='thread').sum() < 3
-    return v[keep[v.index.get_level_values('thread')].values]
-
-
 def add_offer_vars(x_offer, d, cols, prefix):
     for key, val in d.items():
         x_offer['_'.join([prefix, key])] = reshape_long(val, cols)
@@ -66,8 +61,7 @@ def get_y(slr):
     y['msg'] = reshape_long(slr['msg'], [2, 3, 4])
     y['msg'].loc[y['con'].isna()] = np.nan    # no concession
     y['msg'].loc[y['con'] == 1.] = np.nan    # accepts
-    # trim threads
-    return {k: trim_threads(v) for k, v in y.items()}
+    return y
 
 
 def split_byr_slr(df):
@@ -164,9 +158,7 @@ if __name__ == "__main__":
     print("Loading data")
     chunk = pickle.load(open(path, 'rb'))
     L, T, O = [chunk[k] for k in ['listings', 'threads', 'offers']]
-    L.rename(columns={'start':'start_date'}, inplace=True)
-    T.rename(columns={'start':'start_time'}, inplace=True)
-    T = T.join(L, on='lstg')
+    T = T.join(L.drop('byr_us', axis=1), on='lstg')
 
     # ids of threads to keep
     threads = T[(T.bin_rev == 0) & (T.flag == 0)].index.sort_values()
