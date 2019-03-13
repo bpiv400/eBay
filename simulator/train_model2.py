@@ -7,7 +7,7 @@ import torch.nn.utils.rnn as rnn
 import numpy as np
 import pandas as pd
 from datetime import datetime as dt
-from models2 import *
+from models import *
 from utils import *
 
 INPUT_PATH = {name: '../../data/%s/simulator_input.pkl' % name
@@ -16,7 +16,7 @@ EXP_PATH = 'experiments.csv'
 OPTIMIZER = torch.optim.Adam
 
 
-def process_mb(simulator, optimizer, criterion, train, idx):
+def process_mb(simulator, optimizer, train, idx):
     # zero the gradient
     optimizer.zero_grad()
 
@@ -30,39 +30,39 @@ def process_mb(simulator, optimizer, criterion, train, idx):
     theta = simulator(x_fixed_i, x_offer_i)
 
     # calculate total loss over minibatch
-    loss = criterion(theta, y_i)
+    loss = simulator.loss_forward(theta, y_i)
 
     # update parameters
     loss.backward()
     optimizer.step()
 
 
-def get_avg_ll(simulator, criterion, d):
+def get_avg_ll(simulator, d):
     x_offer = rnn.pack_padded_sequence(d['x_offer'], d['turns'])
-    ll = -criterion(simulator(d['x_fixed'], x_offer), d['y'])
+    ll = simulator.loss_forward(simulator(d['x_fixed'], x_offer), d['y'])
     return ll.item() / torch.sum(d['turns']).item()
 
 
-def run_epoch(simulator, optimizer, criterion, train, mbsize, N_threads):
+def run_epoch(simulator, optimizer, train, mbsize, N_threads):
     batches, indices = get_batch_indices(N_threads, mbsize)
     for i in range(batches):
-        process_mb(simulator, optimizer, criterion,
+        process_mb(simulator, optimizer,
                    tensors['train'], indices[i])
 
 
-def train_model(simulator, optimizer, criterion, tensors, mbsize, epochs):
+def train_model(simulator, optimizer, tensors, mbsize, epochs):
     ll = {'train': np.full(epochs, np.nan), 'test': np.full(epochs, np.nan)}
     N_threads = tensors['train']['y'].size()[1]
     for epoch in range(1, epochs+1):
         start = dt.now()
 
         # iterate over minibatches
-        run_epoch(simulator, optimizer, criterion,
+        run_epoch(simulator, optimizer,
                   tensors['train'], mbsize, N_threads)
 
         # calculate average log-likelihood
         for key, val in tensors.items():
-            ll[key][epoch-1] = get_avg_ll(simulator, criterion, val)
+            ll[key][epoch-1] = get_avg_ll(simulator, val)
 
         print('Epoch %d: %s' % (epoch, dt.now() - start))
         print('\tAvg lnL in train: %1.6f' % ll['train'][epoch-1])
@@ -99,7 +99,6 @@ if __name__ == '__main__':
     print('Model: ' + args.model)
     if args.model == 'delay':
         N_out = 3
-        criterion = DelayLoss.apply
     elif args.model == 'con':
         N_out = 5
         criterion = ConLoss.apply
@@ -120,17 +119,12 @@ if __name__ == '__main__':
     optimizer = OPTIMIZER(simulator.parameters(), lr=params.lr)
     sys.stdout.flush()
 
-    # check gradient
-    if args.gradcheck:
-        print('Checking gradient')
-        check_gradient(simulator, criterion, tensors['train'])
-
     # training loop
     print('Training')
-    ll = train_model(simulator, optimizer, criterion,
-                     tensors, params.mbsize, params.epochs)
+    ll = train_model(simulator, optimizer, tensors,
+                     params.mbsize, params.epochs)
 
     # save simulator parameters and loss history
     path_prefix = '../../data/simulator/%d_' % args.num
     torch.save(simulator.state_dict(), path_prefix + 'pth.tar')
-    pickle.dump(loss_hist[1:], open(path_prefix + 'loss.pkl', 'wb'))
+    # pickle.dump(loss_hist[1:], open(path_prefix + 'loss.pkl', 'wb'))
