@@ -59,7 +59,7 @@ class Simulator(nn.Module):
         Computes the nll given delay parameters and targets y
         """
         # parameters of mixture model
-        g = theta[:, :, 0]
+        g = theta[:, :, 0] * 1.0
         a = theta[:, :, 1] + 1
         b = theta[:, :, 2] + 1
         # treat slices as leaves
@@ -74,20 +74,21 @@ class Simulator(nn.Module):
         idx[2] = y == 1  # indices for full delay
         idx[3] = ~idx[2] * ~torch.isnan(y)  # indices for small delay
 
-        # ensure all are leaves
-        print('Leaves - g: %r, a: %r, b: %r, p: %r' %
-              (g.is_leaf, a.is_leaf, b.is_leaf, p.is_leaf))
         dist = torch.distributions.beta.Beta(a, b)  # initialize distribution
-        ln_density = dist.log_prob(y)[idx[3]]
-        lnp_early = p[idx[3]]
-        lnp_late = p[idx[2]]
+        ln_density = dist.log_prob(y)[idx[3]] * 1.0
+        lnp_early = torch.log(p[idx[3]] * 1.0)
+        lnp_late = torch.log(p[idx[2]] * 1.0)
+        print(torch.isnan(ln_density).any())
+        print(torch.isnan(lnp_early).any())
+        print(torch.isnan(lnp_late).any())
         # treat slices as leaves
         ln_density.retain_grad()
         lnp_early.retain_grad()
         lnp_late.retain_grad()
         ll = torch.sum(ln_density) + torch.sum(lnp_early) + torch.sum(lnp_late)
+        ll.retain_grad()
+        print(ll)
         #  final leaf check
-        print('Leaves - ln_density: %r' % ln_density.is_leaf)
         return -ll
 
 

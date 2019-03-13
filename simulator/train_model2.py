@@ -7,7 +7,7 @@ import torch.nn.utils.rnn as rnn
 import numpy as np
 import pandas as pd
 from datetime import datetime as dt
-from models import *
+from models2 import *
 from utils import *
 
 INPUT_PATH = {name: '../../data/%s/simulator_input.pkl' % name
@@ -34,6 +34,7 @@ def process_mb(simulator, optimizer, train, idx):
 
     # update parameters
     loss.backward()
+    print(list(simulator.parameters())[2].grad)
     optimizer.step()
 
 
@@ -111,7 +112,11 @@ if __name__ == '__main__':
 
     # load data
     tensors, N_fixed, N_offer = load_data(args.model)
-
+    N_offer = int(N_offer)
+    N_fixed = int(N_fixed)
+    params.hidden = int(params.hidden)
+    params.layers = int(params.layers)
+    type(N_fixed) 
     # initialize neural net and optimizer
     simulator = Simulator(N_fixed, N_offer, params.hidden, N_out,
                           params.layers, params.dropout, params.lstm)
@@ -121,6 +126,7 @@ if __name__ == '__main__':
 
     # training loop
     print('Training')
+    print(list(simulator.parameters()))
     ll = train_model(simulator, optimizer, tensors,
                      params.mbsize, params.epochs)
 
