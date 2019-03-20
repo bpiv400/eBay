@@ -1,8 +1,7 @@
 #!/bin/bash
-#$ -l m_mem_free=100G
+#$ -l m_mem_free=50G
 #$ -N recombine
 #$ -j y
-#$ -o logs/$JOB_NAME-$JOB_ID.log
+#$ -o logs/
 
-scriptPath=./repo/processing/3_recombine.py
-python "$scriptPath"
+python repo/processing/3_recombine.py
