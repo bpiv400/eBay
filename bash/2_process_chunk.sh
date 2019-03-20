@@ -5,5 +5,4 @@
 #$ -j y
 #$ -o logs/
 
-scriptPath=repo/processing/2_process_chunk.py
-python "$scriptPath" --num "$SGE_TASK_ID"
+python repo/processing/2_process_chunk.py --num "$SGE_TASK_ID"
