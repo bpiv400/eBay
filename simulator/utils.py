@@ -1,25 +1,34 @@
-import argparse, string
+import argparse, string, sys, pickle
+from datetime import datetime as dt
 import numpy as np, pandas as pd
 import torch, torch.nn.utils.rnn as rnn
 import torch.autograd.gradcheck as gradcheck
-
-MAX_TURNS = 3
-N_SAMPLES = 100
-CON_PRE = tuple('s_curr_' + x for x in ['con', 'rej', 'digit', 'offer', 'lnoffer'])
-TOL_HALF = 0.02 # count concessions within this range as 1/2
+from constants import *
 
 
 def ln_beta_pdf(a, b, z):
+    z = z.unsqueeze(dim=2)
     lbeta = torch.lgamma(a) + torch.lgamma(b) - torch.lgamma(a + b)
     la = torch.mul(a-1, torch.log(z))
     lb = torch.mul(b-1, torch.log(1-z))
     return la + lb - lbeta
 
 
-def dlnLda(a, b, z, indices):
-    da = indices * (torch.log(z) - torch.digamma(a) + torch.digamma(a + b))
+def dlnLda(a, b, z, gamma, indices):
+    z = z.unsqueeze(dim=2)
+    da = torch.log(z) - torch.digamma(a) + torch.digamma(a + b)
+    da *= indices.unsqueeze(dim=2) * gamma
     da[torch.isnan(da)] = 0
     return da
+
+
+def get_rounded(offer):
+    digits = np.ceil(np.log10(offer.clip(lower=0.01)))
+    factor = 5 * np.power(10, digits-3)
+    rounded = np.round(offer / factor) * factor
+    is_round = rounded == offer
+    is_nines = ((rounded > offer) & (rounded - offer <= factor / 5))
+    return rounded, is_round, is_nines
 
 
 def reshape_wide(df, threads):
@@ -28,11 +37,6 @@ def reshape_wide(df, threads):
     reshaped = [np.reshape(arrays[t], (1, len(threads), -1)) for t in range(3)]
     ttuple = tuple([torch.tensor(reshaped[i]) for i in range(3)])
     return torch.cat(ttuple, 0).float()
-
-
-def trim_threads(s):
-    keep = s.isna().groupby(level='thread').sum() < 3
-    return s[keep[s.index.get_level_values('thread')].values]
 
 
 def convert_to_tensors(data):
@@ -59,7 +63,7 @@ def convert_to_tensors(data):
     return tensors
 
 
-def add_offer_feats(x_offer):
+def add_turn_feats(x_offer):
     '''
     Creates indicator for each turn
     '''
@@ -73,67 +77,76 @@ def add_offer_feats(x_offer):
     return x_offer.join(turns, on='turn')
 
 
-def get_digit_indicators(offer, digit, prefix):
-    '''
-    Creates a dataframe with indicators for the following:
-        a. offer == digit in hundredths
-        b. offer == digit in tenths
-        c. offer == digit in ones
-        d. offer == digit in tens
-        e. offer == digit in hundreds
-    '''
-    strings = 'XXXXX' + offer.map('{0:.2f}'.format)
-    df = pd.DataFrame(index=strings.index)
-    indices = [-1, -2, -4, -5, -6]
-    for i in range(len(indices)):
-        # define place
-        newname = '_'.join([prefix, 'digit', string.ascii_lowercase[i] + digit])
-        df[newname] = strings.str[indices[i]] == digit
-    return df
-
-
-def expand_offer_vars(x, prefix, model):
-    # delay and time variables
-    if model != 'delay' or prefix != 's_curr':
-        days = x[prefix + '_days']
-        if prefix == 's_prev':
-            x = x.join((days == 0).rename('_'.join([prefix, 'auto'])))
-            x = x.join((days == 2).rename('_'.join([prefix, 'exp'])))
-        time = x[prefix + '_time']
-        year = time.dt.year - 2012
-        for i in range(2):
-            x = x.join((year == i).rename('_'.join([prefix, 'year' + str(i)])))
-        dow = time.dt.dayofweek
-        for i in range(7):
-            x = x.join((dow == i).rename('_'.join([prefix, 'dow' + str(i)])))
-        week = time.dt.week
-        for i in range(1, 53):
-            x = x.join((week == i).rename('_'.join([prefix, 'week' + str(i)])))
-        hour = time.dt.hour
-        for i in range(24):
-            x = x.join((hour == i).rename('_'.join([prefix, 'hour' + str(i)])))
-    x.drop(prefix + '_time', axis=1, inplace=True)
-    # concession and offer variables
-    if model == 'msg' or prefix != 's_curr':
-        con = x[prefix + '_con']
-        x = x.join((con == 0).rename('_'.join([prefix, 'rej'])))
-        x = x.join((np.abs(con - 0.5) < TOL_HALF).rename('_'.join([prefix, 'half'])))
-        offer = x[prefix + '_offer']
-        x = x.join(get_digit_indicators(offer, '9', prefix))
-        x = x.join(get_digit_indicators(offer, '0', prefix))
-        x = x.join(np.log(1 + offer).rename('_'.join([prefix, 'lnoffer'])))
-    if prefix == 's_curr':
-        if model != 'msg':
-            x.drop(['s_curr_offer', 's_curr_con'], axis=1, inplace=True)
-        if model == 'delay':
-            x.drop('s_curr_days', axis=1, inplace=True)
+def add_time_feats(x, pre):
+    days = x[pre + '_days']
+    if pre == 's_prev':
+        x[pre + '_auto'] = days == 0
+        x[pre + '_exp'] = days == 2
+    time = x[pre + '_time']
+    x[pre + '_year'] = time.dt.year - 2012
+    x[pre + '_week'] = time.dt.week
+    x[pre + '_minutes'] = 60 * time.dt.hour + time.dt.minute
+    dow = time.dt.dayofweek
+    for i in range(7):
+        x[pre + '_dow' + str(i)] = dow == i
     return x
+
+
+def add_offer_feats(x, pre, rounded):
+    con = x[pre + '_con']
+    x[pre + '_rej'] = con == 0
+    x[pre + '_half'] = np.abs(con - 0.5) < TOL_HALF
+    x[pre + '_round'] = rounded
+    x[pre + '_lnround'] = np.log(1+rounded)
+    return x
+
+
+def expand_offer_feats(x, pre, model):
+    # delay and time variables
+    if pre != 's_curr' or model in MODELS[1:]:
+        x = add_time_feats(x, pre)
+    # concession and rounded offer
+    rounded, is_round, is_nines = get_rounded(x[pre + '_offer'])
+    if pre != 's_curr' or model in MODELS[2:]:
+        x = add_offer_feats(x, pre, rounded)
+    # boolean for round offer
+    if pre != 's_curr' or model in MODELS[3:]:
+        x[pre + '_isround'] = is_round
+    # boolean for nines
+    if pre != 's_curr' or model in MODELS[4:]:
+        x[pre + '_isnines'] = is_nines
+    # drop columns
+    x.drop([pre + s for s in ['_time', '_offer']], axis=1, inplace=True)
+    if pre == 's_curr':
+        if model in MODELS[:2]:
+            x.drop('s_curr_con', axis=1, inplace=True)
+        if model in MODELS[0]:
+            x.drop('s_curr_days', axis=1, inplace=True)
+    return x.reindex(sorted(x.columns), axis=1)
 
 
 def expand_x_offer(x, model):
-    for prefix in ['s_prev', 'b', 's_curr']:
-        x = expand_offer_vars(x, prefix, model)
+    for pre in ['s_prev', 'b', 's_curr']:
+        x = expand_offer_feats(x, pre, model)
+    return add_turn_feats(x)
+
+
+def add_count_feats(x, T):
+    for z in COUNT_FEATS:
+        x[z] = T[z]
+        x['ln' + z] = np.log(1 + x[z])
+        x['has_' + z] = T[z] > 0
     return x
+
+
+def add_cat_feats(x, T):
+    u = pickle.load(open(BASEDIR + 'input/cat_feats.pkl', 'rb'))
+    for key, vec in u.items():
+        if key != 'product':
+            for i in range(1, len(vec)):
+                x[key + str(i)] = T[key] == vec[i]
+    return x
+
 
 def get_x_fixed(T):
     # initialize dataframe
@@ -142,10 +155,22 @@ def get_x_fixed(T):
     for z in ['decline', 'accept']:
         x[z] = T[z + '_price']
         x['ln' + z] = np.log(1 + x[z])
+        x[z + '_round'], x[z + '_isround'], x[z + '_isnines'] = get_rounded(x[z])
         x['has_' + z] = x[z] > 0. if z == 'decline' else x[z] < T['start_price']
-        x = x.join(get_digit_indicators(x[z], '9', z))
-        x = x.join(get_digit_indicators(x[z], '0', z))
-    return x
+    # binary features
+    for z in BINARY_FEATS:
+        x[z] = T[z]
+    # count variables
+    x = add_count_feats(x, T)
+    # categorical features
+    x = add_cat_feats(x, T)
+    # feedback score
+    x['fdbk_pstv'] = T['fdbk_pstv']
+    x['fdbk_100'] = T['fdbk_pstv'] == 100.
+    # shipping speed
+    for z in ['ship_fast', 'ship_slow']:
+        x['has_' + z] = (T[z] != -1.).astype(np.bool) & ~T[z].isna()
+    return x.reindex(sorted(x.columns), axis=1)
 
 
 def get_batch_indices(count, mbsize):
@@ -154,33 +179,50 @@ def get_batch_indices(count, mbsize):
     np.random.shuffle(v)
     batches = int(np.ceil(count / mbsize))
     indices = [sorted(v[mbsize*i:mbsize*(i+1)]) for i in range(batches)]
-    return batches, indices
+    return indices
 
 
-def compute_example(simulator):
-    x_fixed = torch.tensor([[[20.]]])
-    x_offer = torch.tensor([[[0., 0., 0.5, 1., 0., 0.]],
-                            [[0., 0., 0.5, 0., 1., 0.]],
-                            [[0.5, 0., 0.5, 0., 0., 1.]]])
-    x_offer = rnn.pack_padded_sequence(x_offer, torch.tensor([3]))
-    p, a, b = simulator(x_fixed, x_offer)
-    print('\tOffer of $10 on $20 listing:')
-    print('\t\tp_expire = %.2f' % p[0,:,0].item())
-    print('\t\tp_reject = %.2f' % p[0,:,1].item())
-    print('\t\tp_accept = %.2f' % p[0,:,2].item())
-    print('\t\tp_50 = %.2f' % p[0,:,3].item())
-    print('\t\tp_beta = %.2f' % (1-torch.sum(p[0,:,:])).item())
-    print('\t\talpha = %2.1f' % a[0,:].item())
-    print('\t\tbeta = %2.1f' % b[0,:].item())
+def initialize_gamma(N, K):
+    if K == 0:
+        return None
+    gamma = np.full(tuple(N) + (K,), 1/K)
+    return torch.as_tensor(gamma, dtype=torch.float)
 
 
-def check_gradient(simulator, criterion, tensors):
-    x_fixed = tensors['x_fixed'][:, :N_SAMPLES, :]
-    x_offer = tensors['x_offer'][:, :N_SAMPLES, :]
-    turns = tensors['turns'][:N_SAMPLES]
-    y = tensors['y'][:, :N_SAMPLES].double()
-    theta = simulator(x_fixed, rnn.pack_padded_sequence(x_offer, turns))
-    gradcheck(criterion, (theta.double(), y))
+def get_gamma(a, b, y):
+    dens = torch.exp(ln_beta_pdf(a, b, y))
+    return torch.div(dens, torch.sum(dens, dim=2, keepdim=True))
+
+
+def get_lnL(simulator, d):
+    x_offer = rnn.pack_padded_sequence(d['x_offer'], d['turns'])
+    p, a, b = simulator(d['x_fixed'], x_offer)
+    gamma = get_gamma(a, b, d['y'])
+    criterion = simulator.get_criterion()
+    lnL = -criterion(p, a, b, d['y'], gamma, simulator).item()
+    return lnL / torch.sum(d['turns']).item(), p, a, b, gamma
+
+
+def print_summary(epoch, start, lnL_train, simulator):
+    sec = (dt.now() - start).seconds
+    print('Epoch %d: %dsec. Train lnL: %1.4f. Test lnL: %1.4f.' %
+        (epoch + 1, sec, lnL_train, lnL_test))
+    #compute_example(p, a, b, gamma, simulator)
+    sys.stdout.flush()
+
+
+def check_gradient(simulator, d):
+    x_fixed = d['x_fixed'][:, :N_SAMPLES, :]
+    x_offer = d['x_offer'][:, :N_SAMPLES, :]
+    turns = d['turns'][:N_SAMPLES]
+    y = d['y'][:, :N_SAMPLES].double()
+    p, a, b = simulator(x_fixed, rnn.pack_padded_sequence(x_offer, turns))
+    criterion = simulator.get_criterion()
+    if simulator.get_model() in ['delay', 'con']:
+        gamma = initialize_gamma(y.size(), simulator.get_K()).double()
+        gradcheck(criterion, (p.double(), a.double(), b.double(), y, gamma))
+    else:
+        gradcheck(criterion, (p.double(), y))
 
 
 def get_args():
@@ -188,8 +230,8 @@ def get_args():
         description='Model of environment for bargaining AI.')
     parser.add_argument('--id', default=1, type=int,
         help='Experiment ID.')
-    parser.add_argument('--model', default='con', type=str,
-        help='Model outcome: delay, con, or msg.')
     parser.add_argument('--gradcheck', default=False, type=bool,
         help='Boolean flag to first check gradients.')
+    parser.add_argument('--model', default='delay', type=str,
+        help='One of: delay, con, round, nines, msg.')
     return parser.parse_args()

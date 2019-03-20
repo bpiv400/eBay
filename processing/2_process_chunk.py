@@ -18,6 +18,11 @@ def reshape_long(df, cols):
     return z
 
 
+def trim_threads(s):
+    keep = s.isna().groupby(level='thread').sum() < 3
+    return s[keep[s.index.get_level_values('thread')].values]
+
+
 def add_offer_vars(x_offer, d, cols, prefix):
     for key, val in d.items():
         x_offer['_'.join([prefix, key])] = reshape_long(val, cols)
@@ -45,6 +50,19 @@ def get_x_offer(byr, slr):
     return x_offer
 
 
+def get_round(offer):
+    digits = np.ceil(np.log10(offer))
+    factor = 5 * np.power(10, digits-3)
+    rounded = np.round(offer / factor) * factor
+    isRound = (rounded == offer).astype(np.float64)
+    isRound.loc[np.isnan(offer)] = np.nan
+    isNines = ((rounded > offer) &
+        (rounded - offer <= factor / 5)).astype(np.float64)
+    isNines.loc[np.isnan(offer)] = np.nan
+    isNines.loc[isRound == 1.] = np.nan
+    return isRound, isNines
+
+
 def get_y(slr):
     '''
     Creates a dataframe of slr delays, concessions and msg indicators.
@@ -55,13 +73,19 @@ def get_y(slr):
     y['delay'].loc[y['delay'] == 0.] = np.nan     # automatic responses
     # concession
     y['con'] = reshape_long(slr['con'], [2, 3, 4])
-    y['con'].loc[np.isnan(y['delay'])] = np.nan  # non-exsitent offers
+    y['con'].loc[np.isnan(y['delay'])] = np.nan  # non-existent offers
     y['con'].loc[y['delay'] == 1.] = np.nan  # expired offers
+    # round
+    y['round'], y['nines'] = get_round(reshape_long(slr['offer'], [2, 3, 4]))
+    for key in ['round', 'nines']:
+        y[key].loc[y['con'].isna()] = np.nan
+        y[key].loc[y['con'] == 1.] = np.nan
+        y[key].loc[y['con'] == 0.] = np.nan
     # message
     y['msg'] = reshape_long(slr['msg'], [2, 3, 4])
     y['msg'].loc[y['con'].isna()] = np.nan    # no concession
     y['msg'].loc[y['con'] == 1.] = np.nan    # accepts
-    return y
+    return {key: trim_threads(val) for key, val in y.items()}
 
 
 def split_byr_slr(df):
@@ -134,7 +158,7 @@ def get_role_vars(timestamps, offers, msgs):
 
 
 def split_var(O, T, name):
-    df = O[name].unstack()
+    df = O[name].unstack().loc[T.index]
     if name == 'price':
         df[0] = T.start_price
     elif name == 'message':
@@ -162,16 +186,19 @@ if __name__ == "__main__":
 
     # ids of threads to keep
     threads = T[(T.bin_rev == 0) & (T.flag == 0)].index.sort_values()
+    T = T.drop(['bin_rev', 'flag'], axis=1)
 
     # time-varying features
     print("Calculating time features")
     #time_feats = get_time_feats(O, T, L)
+    T = T.drop(['end_date', 'byr', 'lstg', 'sale_price', 'ship_chosen'], axis=1).loc[threads]
 
     # attributes
     print("Calculating attributes")
-    timestamps = split_var(O, T, 'clock').loc[threads]
-    offers = split_var(O, T, 'price').loc[threads]
-    msgs = split_var(O, T, 'message').loc[threads]
+    timestamps = split_var(O, T, 'clock')
+    offers = split_var(O, T, 'price')
+    msgs = split_var(O, T, 'message')
+    T = T.drop(['start_time', 'start_date'], axis=1)
 
     # byr and slr dictionaries
     byr, slr = get_role_vars(timestamps, offers, msgs)
@@ -188,6 +215,6 @@ if __name__ == "__main__":
     print("Writing first chunk")
     chunk = {'y': y,
              'x_offer': x_offer,
-             'T': T.loc[threads]}
+             'T': T}
     path = 'data/chunks/%d_simulator.pkl' % num
     pickle.dump(chunk, open(path, 'wb'))
