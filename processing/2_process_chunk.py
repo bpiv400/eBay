@@ -2,9 +2,11 @@
 For each chunk of data, create simulator and RL inputs.
 """
 
-import argparse, pickle
-import numpy as np, pandas as pd
-#from time_feats import get_time_feats
+import argparse
+import pickle
+import numpy as np
+import pandas as pd
+from time_feats import get_time_feats, LSTG_FEATS, ITEM_FEATS, SLR_FEATS
 
 ORIGIN = '2012-06-01 00:00:00'
 
@@ -14,7 +16,7 @@ def reshape_long(df, cols):
     if cols != [1, 2, 3]:
         z = z.rename(columns={cols[0]: 1, cols[1]: 2, cols[2]: 3})
     z = z.stack(dropna=False)
-    z.index.rename(['thread','turn'], inplace=True)
+    z.index.rename(['thread', 'turn'], inplace=True)
     return z
 
 
@@ -57,7 +59,7 @@ def get_round(offer):
     isRound = (rounded == offer).astype(np.float64)
     isRound.loc[np.isnan(offer)] = np.nan
     isNines = ((rounded > offer) &
-        (rounded - offer <= factor / 5)).astype(np.float64)
+               (rounded - offer <= factor / 5)).astype(np.float64)
     isNines.loc[np.isnan(offer)] = np.nan
     isNines.loc[isRound == 1.] = np.nan
     return isRound, isNines
@@ -89,8 +91,8 @@ def get_y(slr):
 
 
 def split_byr_slr(df):
-    b = df[[1, 3, 5, 7]].rename(columns={3:2, 5:3, 7:4})
-    s = df[[0, 2, 4, 6]].rename(columns={0:1, 4:3, 6:4})
+    b = df[[1, 3, 5, 7]].rename(columns={3: 2, 5: 3, 7: 4})
+    s = df[[0, 2, 4, 6]].rename(columns={0: 1, 4: 3, 6: 4})
     return b, s
 
 
@@ -182,7 +184,8 @@ if __name__ == "__main__":
     print("Loading data")
     chunk = pickle.load(open(path, 'rb'))
     L, T, O = [chunk[k] for k in ['listings', 'threads', 'offers']]
-    T = T.join(L.drop('byr_us', axis=1), on='lstg')
+    T1 = T.copy()  # temporary solution
+    T = T.join(L, on='lstg')
 
     # ids of threads to keep
     threads = T[(T.bin_rev == 0) & (T.flag == 0)].index.sort_values()
@@ -190,8 +193,9 @@ if __name__ == "__main__":
 
     # time-varying features
     print("Calculating time features")
-    #time_feats = get_time_feats(O, T, L)
-    T = T.drop(['end_date', 'byr', 'lstg', 'sale_price', 'ship_chosen'], axis=1).loc[threads]
+    time_feats = get_time_feats(O, T1, L)
+    T = T.drop(['end_date', 'byr', 'lstg', 'sale_price',
+                'ship_chosen'], axis=1).loc[threads]
 
     # attributes
     print("Calculating attributes")

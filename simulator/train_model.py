@@ -25,10 +25,8 @@ def process_mb(simulator, optimizer, d):
     else:
         loss = criterion(p, d['y'])
 
-    # backward pass
+    # backward pass and update model weights
     loss.backward()
-
-    # update model weights
     optimizer.step()
 
     # return gamma and lnL
@@ -103,12 +101,11 @@ if __name__ == '__main__':
 
     # training data
     train = load_data(args.model)
-    print(train['y'].size())
 
     # initialize neural net
     N_fixed = train['x_fixed'].size()[2]
     N_offer = train['x_offer'].size()[2]
-    simulator = Simulator(N_fixed, N_offer, args.model, params)
+    simulator = Simulator(M_cat, N_fixed, N_offer, args.model, params)
     print(simulator)
     sys.stdout.flush()
 

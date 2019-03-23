@@ -8,7 +8,7 @@ Functions:
 import re
 import pickle
 from actor import DeterministicActor
-from models import Model
+from models import Simulator
 
 
 def is_none(obj, name='All arguments and keyword arguments'):
@@ -42,7 +42,7 @@ def simulator_map():
     to corresponding classes
     '''
     sim_map = {}
-    sim_map['model'] = Model
+    sim_map['model'] = Simulator
     return sim_map
 
 

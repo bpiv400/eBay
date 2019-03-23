@@ -9,15 +9,7 @@ DIR = './data/chunks'
 SEED = 123456
 SHARES = {'dev': .15, 'test': .3}
 MODELS = ['delay', 'con', 'round', 'nines', 'msg']
-CAT_FEATS = ['meta', 'leaf', 'product', 'cndtn']
 OUT_PATH = 'data/simulator/input/'
-
-
-def save_unique(T):
-    u = {}
-    for key in CAT_FEATS:
-        u[key] = np.unique(T[key])
-    pickle.dump(u, open(OUT_PATH + 'cat_feats.pkl', 'wb'))
 
 
 def save_partitions(slr_dict, x_offer, T, y):
@@ -78,6 +70,3 @@ if __name__ == '__main__':
 
     # partition the data and save
     save_partitions(slr_dict, x_offer, T, y)
-
-    # save vectors of unique values for categorical variables
-    save_unique(T)

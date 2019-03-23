@@ -1,12 +1,29 @@
-import argparse, string, sys, pickle
+import argparse
+import string
+import sys
+import pickle
+import math
 from datetime import datetime as dt
-import numpy as np, pandas as pd
-import torch, torch.nn.utils.rnn as rnn
+import numpy as np
+import pandas as pd
+import torch
+import torch.nn.utils.rnn as rnn
 import torch.autograd.gradcheck as gradcheck
 from constants import *
 
 
 def ln_beta_pdf(a, b, z):
+    '''
+    Computes the log density of the beta distribution with parameters [a, b].
+
+    Inputs:
+        - a (3, N, K): alpha parameters
+        - b (3, N, K): beta parameters
+        - z (3, N): observed outcome (i.e., delay or concession)
+
+    Output:
+        - lnf (3, N, K): log density under beta distribution
+    '''
     z = z.unsqueeze(dim=2)
     lbeta = torch.lgamma(a) + torch.lgamma(b) - torch.lgamma(a + b)
     la = torch.mul(a-1, torch.log(z))
@@ -15,6 +32,19 @@ def ln_beta_pdf(a, b, z):
 
 
 def dlnLda(a, b, z, gamma, indices):
+    '''
+    Computes the derivative of the log of the beta pdf with respect to alpha.
+
+    Inputs:
+        - a (3, N, K): alpha parameters
+        - b (3, N, K): beta parameters
+        - z (3, N): observed outcome (i.e., delay or concession)
+        - gamma (3, N, K): mixture weights
+        - indices (3, N): 1.0 when 0 < z < 1
+
+    Output:
+        - da (3, N, K): derivative of lnL wrt alpha
+    '''
     z = z.unsqueeze(dim=2)
     da = torch.log(z) - torch.digamma(a) + torch.digamma(a + b)
     da *= indices.unsqueeze(dim=2) * gamma
@@ -53,9 +83,15 @@ def convert_to_tensors(data):
     # outcome
     tensors['y'] = torch.squeeze(reshape_wide(data['y'], threads))
 
-    # fixed features
+    # categorical fixed features
+    tensors['x_cat'] = {}
+    for col in data['x_cat'].columns:
+        s = data['x_cat'][col].loc[threads].values
+        tensors['x_cat'][col] = torch.tensor(s).unsqueeze(dim=0)
+
+    # non-categorical fixed features
     M_fixed = data['x_fixed'].loc[threads].astype(np.float64).values
-    tensors['x_fixed'] = torch.tensor(np.reshape(M_fixed, (1, len(threads), -1))).float()
+    tensors['x_fixed'] = torch.tensor(M_fixed).float().unsqueeze(dim=0)
 
     # offer features
     tensors['x_offer'] = reshape_wide(data['x_offer'], threads)
@@ -126,44 +162,36 @@ def expand_offer_feats(x, pre, model):
 
 
 def expand_x_offer(x, model):
+    '''
+    A wrapper function that loops over recent offers.
+    '''
     for pre in ['s_prev', 'b', 's_curr']:
         x = expand_offer_feats(x, pre, model)
     return add_turn_feats(x)
 
 
-def add_count_feats(x, T):
-    for z in COUNT_FEATS:
-        x[z] = T[z]
-        x['ln' + z] = np.log(1 + x[z])
-        x['has_' + z] = T[z] > 0
-    return x
-
-
-def add_cat_feats(x, T):
-    u = pickle.load(open(BASEDIR + 'input/cat_feats.pkl', 'rb'))
-    for key, vec in u.items():
-        if key != 'product':
-            for i in range(1, len(vec)):
-                x[key + str(i)] = T[key] == vec[i]
-    return x
-
-
 def get_x_fixed(T):
+    '''
+    Constructs a dataframe of fixed features that are used to initialize the
+    hidden state and the LSTM cell.
+    '''
     # initialize dataframe
     x = pd.DataFrame(index=T.index)
     # decline and accept price
     for z in ['decline', 'accept']:
         x[z] = T[z + '_price']
         x['ln' + z] = np.log(1 + x[z])
-        x[z + '_round'], x[z + '_isround'], x[z + '_isnines'] = get_rounded(x[z])
+        x[z + '_round'], x[z + '_isround'], x[z +
+                                              '_isnines'] = get_rounded(x[z])
         x['has_' + z] = x[z] > 0. if z == 'decline' else x[z] < T['start_price']
     # binary features
     for z in BINARY_FEATS:
         x[z] = T[z]
     # count variables
-    x = add_count_feats(x, T)
-    # categorical features
-    x = add_cat_feats(x, T)
+    for z in COUNT_FEATS:
+        x[z] = T[z]
+        x['ln' + z] = np.log(1 + x[z])
+        x['has_' + z] = T[z] > 0
     # feedback score
     x['fdbk_pstv'] = T['fdbk_pstv']
     x['fdbk_100'] = T['fdbk_pstv'] == 100.
@@ -174,7 +202,9 @@ def get_x_fixed(T):
 
 
 def get_batch_indices(count, mbsize):
-    # create matrix of randomly sampled minibatch indices
+    '''
+    Creates matrix of randomly sampled minibatch indices.
+    '''
     v = [i for i in range(count)]
     np.random.shuffle(v)
     batches = int(np.ceil(count / mbsize))
@@ -183,6 +213,9 @@ def get_batch_indices(count, mbsize):
 
 
 def initialize_gamma(N, K):
+    '''
+    Creates a (3, N_obs, K) tensor filled with 1/K.
+    '''
     if K == 0:
         return None
     gamma = np.full(tuple(N) + (K,), 1/K)
@@ -190,6 +223,9 @@ def initialize_gamma(N, K):
 
 
 def get_gamma(a, b, y):
+    '''
+    Calculates gamma from the predicted beta densities.
+    '''
     dens = torch.exp(ln_beta_pdf(a, b, y))
     return torch.div(dens, torch.sum(dens, dim=2, keepdim=True))
 
@@ -203,15 +239,11 @@ def get_lnL(simulator, d):
     return lnL / torch.sum(d['turns']).item(), p, a, b, gamma
 
 
-def print_summary(epoch, start, lnL_train, simulator):
-    sec = (dt.now() - start).seconds
-    print('Epoch %d: %dsec. Train lnL: %1.4f. Test lnL: %1.4f.' %
-        (epoch + 1, sec, lnL_train, lnL_test))
-    #compute_example(p, a, b, gamma, simulator)
-    sys.stdout.flush()
-
-
 def check_gradient(simulator, d):
+    '''
+    Implements the Torch gradcheck function to numerically verify
+    analytical gradients.
+    '''
     x_fixed = d['x_fixed'][:, :N_SAMPLES, :]
     x_offer = d['x_offer'][:, :N_SAMPLES, :]
     turns = d['turns'][:N_SAMPLES]
@@ -226,12 +258,18 @@ def check_gradient(simulator, d):
 
 
 def get_args():
+    '''
+    Command-line parser for following arguments:
+        --gradcheck: boolean for verifying gradients
+        --model: the outcome to predict, one of:
+            ['delay', 'con', 'round', 'nines', 'msg']
+    '''
     parser = argparse.ArgumentParser(
         description='Model of environment for bargaining AI.')
     parser.add_argument('--id', default=1, type=int,
-        help='Experiment ID.')
+                        help='Experiment ID.')
     parser.add_argument('--gradcheck', default=False, type=bool,
-        help='Boolean flag to first check gradients.')
+                        help='Boolean flag to first check gradients.')
     parser.add_argument('--model', default='delay', type=str,
-        help='One of: delay, con, round, nines, msg.')
+                        help='One of: delay, con, round, nines, msg.')
     return parser.parse_args()

@@ -29,3 +29,11 @@ def compute_example(p, a, b, gamma, simulator):
     elif model == 'msg':
         p = np.mean(theta / (1 + theta), axis=1)
         print('\tTurn 1: %.2f. Turn 2: %.2f. Turn 3: %.2f.' % tuple(p))
+
+
+def print_summary(epoch, start, lnL_train, simulator):
+    sec = (dt.now() - start).seconds
+    print('Epoch %d: %dsec. Train lnL: %1.4f. Test lnL: %1.4f.' %
+        (epoch + 1, sec, lnL_train, lnL_test))
+    #compute_example(p, a, b, gamma, simulator)
+    sys.stdout.flush()

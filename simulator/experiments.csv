@@ -1,2 +1,2 @@
-exp_id,epochs,mbsize,hidden,dropout,lr,layers,K,f
-1,500,128,100,0.5,1e-4,2,10,relu
+exp_id,epochs,mbsize,hidden,dropout,lr,layers,K,f,embed
+1,500,128,100,0.5,1e-4,2,10,relu,3
