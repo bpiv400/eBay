@@ -5,7 +5,7 @@ from gensim import models as lda
 TEST_PCT = .10
 SEED = 123123
 N_TOPICS = range(2, 21)
-DIR = 'data/lda/'
+DIR = './data/lda/'
 
 # read in leaf counts
 counts = pd.read_csv(DIR + 'leafcounts.csv', index_col=[0, 1], squeeze=True)
