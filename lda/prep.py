@@ -4,7 +4,6 @@ from gensim import models as lda
 
 TEST_PCT = .10
 SEED = 123123
-N_TOPICS = range(2, 21)
 DIR = './data/lda/'
 
 # read in leaf counts
@@ -20,7 +19,7 @@ np.random.shuffle(u)
 slrs = {'test': u[:index], 'train': u[index:]}
 
 # construct bag of words (i.e., items)
-print('Constructing inputs')
+print('Constructing LDA inputs')
 bow = {}
 for key, val in slrs.items():
 	bow[key] = []
@@ -28,19 +27,14 @@ for key, val in slrs.items():
 		slr = slrs[key][i]
 		s = counts.loc[slr]
 		bow[key].append(list(zip(s.index, s)))
-tfidf = lda.TfidfModel(bow['train'])[bow['train']]	# TF-IDF statistic
 
-# run LDA
-print('Running model')
-models = {}
-lnL = {}
-for i in range(len(N_TOPICS)):
-	key = N_TOPICS[i]
-	models[key] = lda.LdaMulticore(tfidf, num_topics=key, workers=4, eta='auto')
-	lnL[key] = models[key].log_perplexity(bow['test'])
-	print('%d: %1.4f.' % (key, lnL[key]))
+# TF-IDF statistic
+tfidf = lda.TfidfModel(bow['train'])[bow['train']]
 
 # save output
-print('Saving output')
-output = {'lnL': lnL, 'models': models}
-pickle.dump(output, open(DIR + 'output.pkl', 'wb'))
+print('Saving LDA inputs')
+pickle.dump(bow, open(DIR + 'bow.pkl', 'wb'))
+pickle.dump(tfidf, open(DIR + 'tfidf.pkl', 'wb'))
+
+
+
