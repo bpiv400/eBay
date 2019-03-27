@@ -9,8 +9,8 @@ N_CHUNKS = 256
 
 # read in data frames
 L = pd.read_csv('data/clean/listings.csv').set_index('lstg')
-T = pd.read_csv('data/clean/threads.csv').set_index('thread')
-O = pd.read_csv('data/clean/offers.csv').set_index(['thread','index'])
+T = pd.read_csv('data/clean/threads.csv').set_index(['lstg', 'thread'])
+O = pd.read_csv('data/clean/offers.csv').set_index(['lstg', 'thread','index'])
 
 # extract sellers and slice into chunks
 sellers = np.unique(L['slr'].values)
