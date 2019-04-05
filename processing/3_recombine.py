@@ -5,68 +5,65 @@ Recombines chunks and splits into dev, test, and train.
 import os, random, pickle
 import pandas as pd, numpy as np
 
-DIR = './data/chunks'
+DIR = '../../data/chunks'
 SEED = 123456
 SHARES = {'dev': .15, 'test': .3}
-MODELS = ['delay', 'con', 'round', 'nines', 'msg']
-OUT_PATH = 'data/simulator/input/'
+OUT_PATH = '../../data/simulator/input/'
 
 
-def save_partitions(slr_dict, x_offer, T, y):
+def save_partitions(slr_dict, O, T, time_feats):
     """
     Saves the data partitions.
     """
     for key, val in slr_dict.items():
         print('Saving', key)
-        threads = T.slr.index[np.isin(T.slr.values, val)]
-        idx = pd.MultiIndex.from_product([threads, [1, 2, 3]],
-            names=x_offer.index.names)
-        data = {'x_offer': x_offer.loc[idx],
-                'T': T.loc[threads, :],
-                'y': {key: val.loc[threads] for key, val in y.items()}}
+        idx = pd.Index(val, name='lstg')
+        # get boolean series of listings specific to seller
+        data = {'O': O.loc[idx],
+                'T': T.loc[idx].drop('slr', axis=1),
+                'time_feats': time_feats.loc[idx]}
         path = OUT_PATH + '%s.pkl' % key
         pickle.dump(data, open(path, 'wb'))
 
 
 def append_chunks():
-    # initialize output
-    x_offer = pd.DataFrame()
-    T = pd.DataFrame()
-    idx = pd.MultiIndex.from_product([[], [1, 2, 3]], names=['thread', 'turn'])
-    y = {key: pd.Series(index=idx) for key in MODELS}
     # list of chunks
-    chunks = ['%s/%s' % (DIR, name) for name in os.listdir(DIR)
+    paths = ['%s/%s' % (DIR, name) for name in os.listdir(DIR)
         if os.path.isfile('%s/%s' % (DIR, name)) and 'simulator' in name]
+    # initialize output
+    O = pd.DataFrame()
+    T = pd.DataFrame()
+    time_feats = pd.DataFrame()
     # loop over chunks
-    for chunk in sorted(chunks):
-        chunk = pickle.load(open(chunk, 'rb'))
-        x_offer = x_offer.append(chunk['x_offer'], verify_integrity=True)
+    for path in sorted(paths):
+        chunk = pickle.load(open(path, 'rb'))
+        O = O.append(chunk['O'], verify_integrity=True)
         T = T.append(chunk['T'], verify_integrity=True)
-        for key, val in y.items():
-            y[key] = val.append(chunk['y'][key], verify_integrity=True)
-    return x_offer, T, y
+        time_feats = time_feats.append(chunk['time_feats'],
+            verify_integrity=True)
+    return O, T, time_feats
 
 
-def randomize_sellers(slr):
-    u = np.unique(slr.values)
+def randomize_sellers(u):
     random.seed(SEED)   # set seed
     np.random.shuffle(u)
     slr_dict = {}
     last = 0
     for key, val in SHARES.items():
         curr = last + int(u.size * val)
-        slr_dict[key] = u[last:curr]
+        slr_dict[key] = sorted(u[last:curr])
         last = curr
-    slr_dict['train'] = u[last:]
+    slr_dict['train'] = sorted(u[last:])
     return slr_dict
 
 
 if __name__ == '__main__':
     # append files
-    x_offer, T, y = append_chunks()
+    O, T, time_feats = append_chunks()
 
-    # randomize sellers into train, test and pure test
-    slr_dict = randomize_sellers(T.slr)
+    # randomize sellers into train, test and dev
+    slr_dict = randomize_sellers(
+        np.unique(T.index.get_level_values(level='lstg')))
 
     # partition the data and save
-    save_partitions(slr_dict, x_offer, T, y)
+    save_partitions(slr_dict, O, T, time_feats)

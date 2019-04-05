@@ -6,171 +6,343 @@ import argparse
 import pickle
 import numpy as np
 import pandas as pd
-from time_feats import get_time_feats, LSTG_FEATS, ITEM_FEATS, SLR_FEATS
+from time_funcs import *
 
-ORIGIN = '2012-06-01 00:00:00'
-
-
-def reshape_long(df, cols):
-    z = df[cols]
-    if cols != [1, 2, 3]:
-        z = z.rename(columns={cols[0]: 1, cols[1]: 2, cols[2]: 3})
-    z = z.stack(dropna=False)
-    z.index.rename(['thread', 'turn'], inplace=True)
-    return z
-
-
-def trim_threads(s):
-    keep = s.isna().groupby(level='thread').sum() < 3
-    return s[keep[s.index.get_level_values('thread')].values]
+END = 136079999
+DIR = '../../data/chunks/'
+LEVELS = ['slr', 'meta', 'leaf', 'title', 'cndtn', 'lstg']
+FUNCTIONS = {'slr': [open_lstgs, open_threads],
+             'meta': [open_lstgs, open_threads],
+             'leaf': [open_lstgs, open_threads],
+             'title': [open_lstgs, open_threads],
+             'cndtn': [slr_min, byr_max,
+                       slr_offers, byr_offers,
+                       open_lstgs, open_threads],
+             'lstg': [slr_min, byr_max,
+                      slr_offers, byr_offers,
+                      open_threads]}
 
 
-def add_offer_vars(x_offer, d, cols, prefix):
-    for key, val in d.items():
-        x_offer['_'.join([prefix, key])] = reshape_long(val, cols)
-    if prefix == 's_curr':
-        x_offer.drop('s_curr_msg', axis=1, inplace=True)
-    return x_offer
+def create_obs(listings, cols, keep=None):
+    df = listings[cols].copy()
+    if keep is not None:
+        df = df.loc[keep]
+    df = df.rename(axis=1,
+                   mapper={'start_price': 'price', 'start': 'clock', 'end': 'clock'})
+    df['index'] = int('end' in cols)
+    if 'start_price' not in cols:
+        df['price'] = -1
+    df['accept'] = int('end' in cols and 'start_price' in cols)
+    df['reject'] = (df['price'] == -1).astype(np.int64)
+    df.set_index('index', append=True, inplace=True)
+    return df
 
 
-def get_x_offer(byr, slr):
+def add_start_end(offers, listings):
+    # create data frames to append to offers
+    start = create_obs(listings, ['start', 'start_price'])
+    bins = create_obs(listings, ['end', 'start_price'],
+                      listings['bo'] == 0)
+    end = create_obs(listings, ['end'],
+                     (listings['bo'] != 0) & (listings['accept'] != 1))
+    # append to offers
+    offers = offers.append(start).append(bins).append(end)
+    # put clock into index
+    offers.set_index('clock', append=True, inplace=True)
+    # sort
+    offers.sort_values(offers.index.names, inplace=True)
+    return offers
+
+
+def reindex(df):
+    df.set_index(LEVELS[:5], append=True, inplace=True)
+    idxcols = LEVELS + ['thread']
+    if 'index' in df.index.names:
+        idxcols += ['index']
+    df = df.reorder_levels(idxcols)
+    df.sort_values(idxcols, inplace=True)
+    return df
+
+
+def init_listings(L, offers):
+    listings = L[LEVELS[:5] + ['start_date',
+                               'end_date', 'start_price', 'bo']].copy()
+    listings['thread'] = 0
+    listings.set_index('thread', append=True, inplace=True)
+    listings = reindex(listings)
+    # convert start and end dates to seconds
+    listings['end_date'] += 1
+    for z in ['start', 'end']:
+        listings[z + '_date'] *= 60 * 60 * 24
+        listings.rename(columns={z + '_date': z}, inplace=True)
+    listings['end'] -= 1
+    # indicator for whether a bo was accepted
+    listings = listings.join(offers['accept'].groupby('lstg').max())
+    # change end time if bo was accepted
+    t_accept = offers.loc[offers['accept'] == 1, 'clock']
+    listings = listings.join(t_accept.groupby('lstg').min())
+    listings['end'] = listings[['end', 'clock']].min(axis=1).astype(np.int64)
+    listings.drop('clock', axis=1, inplace=True)
+    return listings
+
+
+def init_offers(L, T, O):
+    offers = O[['clock', 'price', 'accept', 'reject']].copy()
+    offers = offers.join(T['start_time'])
+    offers['clock'] += offers['start_time']
+    offers.drop('start_time', axis=1, inplace=True)
+    offers = offers.join(L[LEVELS[:5]])
+    offers = reindex(offers)
+    return offers
+
+
+def get_offers(L, T, O):
+    # initial offers data frame
+    offers = init_offers(L, T, O)
+    # listings data frame
+    listings = init_listings(L, offers)
+    # add buy it nows
+    offers = add_start_end(offers, listings)
+    # start price for normalization
+    start_price = listings['start_price'].reset_index(
+        level='thread', drop=True)
+    return offers, start_price
+
+
+def get_continuous_df(offers):
     """
-    Creates a df with simulator input at each turn.
-
-    Categories of output variables:
-        1. prev slr offer
-        2. curr byr offer
-        3. curr slr offer
-    Index: [thread_id, turn] (turn in range 1...3)
+    Build dataframe of index:
+    slr meta leaf  title    cndtn lstg, 
+    where each row gives the start time ('start') and 
+    end time ('end') of that listing and 'accept' gives
+    whether the listing was sold
     """
-    idx = pd.MultiIndex.from_product(
-        [byr['con'].index.values, [1, 2, 3]], names=['thread', 'turn'])
-    x_offer = pd.DataFrame(index=idx)
-    x_offer = add_offer_vars(x_offer, slr, [1, 2, 3], 's_prev')
-    x_offer = add_offer_vars(x_offer, byr, [1, 2, 3], 'b')
-    x_offer = add_offer_vars(x_offer, slr, [2, 3, 4], 's_curr')
-    return x_offer
+    # subset to only thread 0 and last thread for each lstg
+    zeros = offers.loc[offers['thread' == 0], :]
+    zeros.reset_index(level='clock', drop=False, inplace=True)
+    zeros.reset_index(level='thread', drop=False, inplace=True)
+    # lstgs that end in an acceptance
+    accepts = offers.loc[offers['accept' == 1]]  # accept indices
+    accepts.reset_index(level=['thread', 'index'], drop=True, inplace=True)
+    accepts.reset_index(level='clock', drop=False, inplace=True)
+    accepts.drop(columns=['price', 'accept', 'reject'], inplace=True)
+    unique_lstg = len(accepts.get_level_values('lstg').unique())
+    # ensure each lstg has at most 1 acceptance
+    assert unique_lstg == len(accepts)
+    accepts['index'] = 1
+    accepts['offer_accept'] = 1
+    accepts.set_index('index', inplace=True, drop=True, append=True)
+    accepts.index = accepts.index.reorder_levels(list(zeros.index.names))
+    accepts.rename({'clock': 'accept_clock'}, inplace=True)
+    lstgs = pd.merge(zeros, accepts, how='left',
+                     left_index=True, right_index=True)
+    accepts = lstgs['offer_accept'] == 1
+    lstgs.loc[accepts, 'clock'] = lstgs.loc[accepts, 'accept_clock']
+    lstgs.drop(columns=['accept_clock',
+                        'offer_accept', 'reject'], inplace=True)
+    # ensure lstgs contains two rows for each lstg (1 for start, 1 for end)
+    assert len(lstgs) == 2 * len(lstgs.index.get_level_values('lstg').unqiue())
+    # split lstg into start rows and end rows
+    starts = lstgs.xs(0, level='index', drop=True)
+    starts.drop(columns='accept', inplace=True)
+    starts.rename({'clock': 'start'}, inplace=True)
+    ends = lstgs.xs(1, level='index', drop=True)
+    ends.rename({'clock': 'end'}, inplace=True)
+    # ensure that each lstg has a start and end
+    assert len(starts) == starts.index.get_level_values('lstg').unqiue()
+    assert len(ends) == ends.index.get_level_values('lstg').unqiue()
+    assert len(starts) == len(ends)
+    assert len(ends) == 1 / 2 * len(lstgs)
+    # merge starts and ends
+    lstgs = pd.merge(starts, ends, how='inner',
+                     right_index=True, left_index=True)
+    return lstgs
 
 
-def get_round(offer):
-    digits = np.ceil(np.log10(offer))
-    factor = 5 * np.power(10, digits-3)
-    rounded = np.round(offer / factor) * factor
-    isRound = (rounded == offer).astype(np.float64)
-    isRound.loc[np.isnan(offer)] = np.nan
-    isNines = ((rounded > offer) &
-               (rounded - offer <= factor / 5)).astype(np.float64)
-    isNines.loc[np.isnan(offer)] = np.nan
-    isNines.loc[isRound == 1.] = np.nan
-    return isRound, isNines
+def get_cont_index(lstgs):
+    """
+    Replace unique cont-item pairs with unique const index
+    """
+    mapping = lstgs.reset_index(drop=False)
+    mapping = mapping.loc[:, ['item', 'cont']]
+    mapping['def'] = True
+    mapping.drop_duplicates(inplace=True, keep='first')
+    mapping.reset_index(inplace=True, drop=True)
+    mapping.reset_index(inplace=True, drop=False)
+    mapping.rename(columns={'index': 'true_cont'}, inplace=True)
+    mapping.drop(columns='def', inplace=True)
+    lstgs.reset_index(inplace=True, drop=False)
+    lstgs = pd.merge(lstgs, mapping, how='inner', on=['lstg', 'cont'])
+    lstgs.drop(columns='cont', inplace=True)
+    lstgs.rename(columns={'true_cont': 'cont'}, inplace=True)
+    lstgs.drop(columns=['item', 'start', 'end', 'accept'], inplace=True)
+    lstgs.set_index('lstg', inplace=True)
 
 
-def get_y(slr):
-    '''
-    Creates a dataframe of slr delays, concessions and msg indicators.
-    '''
-    y = {}
-    # delay
-    y['delay'] = reshape_long(slr['days'], [2, 3, 4]) / 2
-    y['delay'].loc[y['delay'] == 0.] = np.nan     # automatic responses
-    # concession
-    y['con'] = reshape_long(slr['con'], [2, 3, 4])
-    y['con'].loc[np.isnan(y['delay'])] = np.nan  # non-existent offers
-    y['con'].loc[y['delay'] == 1.] = np.nan  # expired offers
-    # round
-    y['round'], y['nines'] = get_round(reshape_long(slr['offer'], [2, 3, 4]))
-    for key in ['round', 'nines']:
-        y[key].loc[y['con'].isna()] = np.nan
-        y[key].loc[y['con'] == 1.] = np.nan
-        y[key].loc[y['con'] == 0.] = np.nan
-    # message
-    y['msg'] = reshape_long(slr['msg'], [2, 3, 4])
-    y['msg'].loc[y['con'].isna()] = np.nan    # no concession
-    y['msg'].loc[y['con'] == 1.] = np.nan    # accepts
-    return {key: trim_threads(val) for key, val in y.items()}
+def get_item_index(lstgs):
+    """
+    Replace slr-title-condtn with item identifer in lstgs
+    (inplace) and return a mapping dataframe with columns
+    slr, title, condtn, item
+    """
+    mapping = lstgs.reset_index(drop=False)
+    mapping = mapping.loc[:, ['slr', 'title', 'condtn']]
+    mapping['def'] = True
+    mapping.drop_duplicates(inplace=True, keep='first')
+    mapping.reset_index(inplace=True, drop=True)
+    mapping.reset_index(inplace=True, drop=False)  # create mapper var
+    mapping.rename(columns={'index': 'item'}, inplace=True)
+    mapping.drop(columns='def', inplace=True)
+    lstgs.reset_index(drop=False, inplace=True)
+    lstgs = pd.merge(lstgs, mapping, how='inner',
+                     on=['slr', 'title', 'condtn'])
+    lstgs.drop(columns=['slr', 'title', 'condtn'], inplace=True)
+    return mapping
 
 
-def split_byr_slr(df):
-    b = df[[1, 3, 5, 7]].rename(columns={3: 2, 5: 3, 7: 4})
-    s = df[[0, 2, 4, 6]].rename(columns={0: 1, 4: 3, 6: 4})
-    return b, s
+def broadcast_items(targdf, sourcedf, tcol, scol):
+    """
+    Broadcasts values of sourcedf through items in targdf
+    """
+    sourcedf = sourcedf.reindex(index=targdf.index, level='item')
+    invalids = sourcedf[sourcedf[scol].isna()].index
+    sourcedf.drop(index=invalids, inplace=True)
+    targdf.loc[sourcedf.index, tcol] = sourcedf[scol]
+    pass
 
 
-def get_days(timestamps):
-    # initialize dataframes
-    b_days = pd.DataFrame(index=timestamps.index, columns=[1, 2, 3, 4])
-    s_days = pd.DataFrame(index=timestamps.index, columns=[1, 2, 3, 4])
-    # first delay
-    s_days[1] = 0.
-    # remaining delays
-    for i in range(1, 8):
-        sec = timestamps[i] - timestamps[i-1]
-        sec = sec.dt.total_seconds().astype(np.float64)
-        sec[sec <= 1] = 0
-        if i % 2:
-            b_days[int((i+1)/2)] = sec / (24 * 3600)
-        else:
-            sec[sec > 48 * 3600] = 48 * 3600
-            s_days[int(1 + i/2)] = sec / (24 * 3600)
-    return b_days, s_days
+def get_candidate_lstgs(cands):
+    """
+    Returns rows of dataframe corresponding to the listing in each item,
+    for which the finish time of the current listing occurs before
+    the start time of the earliest added to each listing sequence
+    """
+    cands['util'] = cands['end'] < cands['early_start']
+    firsts = cands.groupby('item').cumsum()
+    firsts = cands.loc[firsts['util'] == 1, :]
+    return firsts
 
 
-def get_con(offers):
-    '''
-    Creates dataframes of concessions at each turn,
-    separately for buyer and seller.
-    '''
-    # initialize dataframes
-    b_con = pd.DataFrame(index=offers.index, columns=[1, 2, 3, 4])
-    s_con = pd.DataFrame(index=offers.index, columns=[1, 2, 3, 4])
-    # first concession
-    b_con[1] = offers[1] / offers[0]
-    s_con[1] = 0
-    assert np.count_nonzero(np.isnan(b_con[1].values)) == 0
-    # remaining concessions
-    for i in range(2, 8):
-        norm = (offers[i] - offers[i-2]) / (offers[i-1] - offers[i-2])
-        if i % 2:
-            b_con[int((i+1)/2)] = norm
-        else:
-            s_con[int(1 + i/2)] = norm
-    # verify that all concessions are in bounds
-    assert np.nanmax(b_con.values) <= 1 and np.nanmin(b_con.values) >= 0
-    assert np.nanmax(s_con.values) <= 1 and np.nanmin(s_con.values) >= 0
-    return b_con, s_con
+def longest(lstgs, unsold, counter, shadow=None):
+    """
+    Finds the longest non-overlapping sequence of intervals
+    among listings in unsold dataframe. Counter denotes the
+    number of 'cont' in lstgs corresponding to the current
+    sequences being built for each item
+
+    Shadow is not null if unsold is a copy of the actual unsold
+    dataframe which must be subset (i.e. in the case where we have
+    subset the dataframe to only listings that began before the selling
+    of the current listing occurred)
+    """
+    cands = get_candidate_lstgs(unsold)
+    while len(cands) > 0:
+        # add selected listings to the current sequences being built
+        lstgs.loc[cands.index, 'cont'] = counter
+        # remove from unsold and unsold subset
+        unsold.drop(index=cands.index, inplace=True)
+        if shadow is not None:
+            shadow.drop(index=cands.index, inplace=True)
+        # update value of early_start for each item
+        cands.index = cands.index.droplevel('lstg')
+        broadcast_items(unsold, cands, 'early_start', 'start')
+        # update candidates using new list of unsold listings
+        cands = get_candidate_lstgs(unsold)
+    pass
 
 
-def get_role_vars(timestamps, offers, msgs):
-    b_time, s_time = split_byr_slr(timestamps)
-    b_days, s_days = get_days(timestamps)
-    b_offer, s_offer = split_byr_slr(offers)
-    b_con, s_con = get_con(offers)
-    b_msg, s_msg = split_byr_slr(msgs)
-    byr = {'time': b_time,
-           'days': b_days,
-           'offer': b_offer,
-           'con': b_con,
-           'msg': b_msg}
-    slr = {'time': s_time,
-           'days': s_days,
-           'offer': s_offer,
-           'con': s_con,
-           'msg': s_msg}
-    return byr, slr
+def add_continuous_lstg(offers):
+    """
+    Adds an index variable for continuous listings
+    In the dataset, we have items (e.g. slr-condtn-title tuples)
+    which correspond to the same item. If these appear simultaneously,
+    i.e. if the listing with the earlier finish time finishes after
+    the other starts
+    """
+    print("adding continuous listing")
+    lstgs = get_continuous_df(offers)
+    # set index to slr-title-condtn-lstg
+    lstgs.drop(level=['meta', 'leaf'], inplace=True)
+    lstgs.index = lstgs.index.reorder_levels(
+        ['slr', 'title', 'condtn', 'lstg'])
+    # make slr-title-condtn -> item mapping and reset
+    # lstgs index to 'item', 'lstg'
+    mapping = get_item_index(lstgs)
+    lstgs['cont'] = 0
+    sold = lstgs.loc[lstgs['accept'] == 1, ['start', 'end']]
+    unsold = lstgs.loc[lstgs['accept'] == 0, ['start', 'end']]
+    # sort sold by ascending finish time
+    sold.sort(columns='end', ascending=True, inplace=True)
+    # sort unsold by descending start time
+    unsold.sort(columns='start', ascending=False, inplace=True)
+    # add utility column to sold
+    sold['util'] == True
+    # initialize sequence counter
+    counter = 1
+    while len(sold) > 0:
+        # indicate that the most recent sold copy for each item never sold
+        unsold['sold_finish'] = np.inf
+        unsold['early_start'] = np.inf
+        # extract indices of sold lstgs with earliest finish time for each item
+        order = sold.groupby(level=['item']).cumsum()['util']
+        firsts = unsold[order == 1]
+        # add to sequence counter for each lstg
+        lstgs.loc[firsts.index, 'cont'] = counter
+        # remove from sold
+        sold.drop(index=firsts.index, inplace=True)
+        if len(unsold) > 0:
+            # drop lstg from extracted index
+            firsts.index = firsts.index.droplevel('lstg')
+            # set sold_finish/early_start for unsold lstgs and subset to lstgs
+            #  that started before each in-item sale
+            broadcast_items(unsold, firsts, 'sold_finish', 'end')
+            broadcast_items(unsold, firsts, 'early_start', 'start')
+            unsold_subset = unsold.loc[unsold['sold_finish']
+                                       > unsold['start'], :]
+            longest(lstgs, unsold_subset, counter, shadow=unsold)
+        counter += 1  # increment sequence counter
+    # after having removed all sold listings, if any unsold listings remain,
+    # greedily combine these into non-overlapping sequences of maximum length within
+    # each item
+    while len(unsold) > 0:
+        unsold['early_start'] = np.inf
+        longest(lstgs, unsold_subset, counter)
+        counter += 1
+    # generate a unique index for each cont-item pair in lstg and replace
+    # cont with this new value
+    get_cont_index(lstgs)
+    # ensure all listings are members of some continous listing
+    assert (lstgs['cont'] != 0).all()
+    offers = pd.merge(offers, lstgs, how='inner',
+                      left_on='lstg', left_index=False, right_on='lstg')
+    return offers
 
 
-def split_var(O, T, name):
-    df = O[name].unstack().loc[T.index]
-    if name == 'price':
-        df[0] = T.start_price
-    elif name == 'message':
-        df[0] = 0.
-    elif name == 'clock':
-        t0 = pd.to_datetime(T.start_time, unit='s', origin=ORIGIN)
-        for col in df.columns:
-            df[col] = t0 + pd.to_timedelta(df[col], unit='s')
-        df[0] = pd.to_datetime(T.start_date, unit='D', origin=ORIGIN)
-    return df.sort_index(axis=1)
+def get_time_feats(L, T, O):
+    print('Creating offer dataframe')
+    offers, start_price = get_offers(L, T, O)
+    add_continuous_lstg(offers)
+    print('Creating time features')
+    time_feats = pd.DataFrame(index=offers.index)
+    for i in range(len(LEVELS)):
+        levels = LEVELS[: i+1]
+        ordered = offers.copy().sort_values(levels + ['clock'])
+        name = levels[-1]
+        f = FUNCTIONS[name]
+        for j in range(len(f)):
+            feat = f[j](ordered.copy(), levels)
+            if f[j].__name__ in ['slr_min', 'byr_max']:
+                feat = feat.div(start_price)
+                feat = feat.reorder_levels(
+                    LEVELS + ['thread', 'index', 'clock'])
+            newname = '_'.join([name, f[j].__name__])
+            print('\t%s' % newname)
+            time_feats[newname] = feat
+    # set [lstg, thread, index] as index
+    time_feats.reset_index(level=LEVELS[:len(LEVELS)-1],
+                           drop=True, inplace=True)
+    time_feats.reset_index(level='clock', inplace=True)
+    return time_feats
 
 
 if __name__ == "__main__":
@@ -180,45 +352,23 @@ if __name__ == "__main__":
     num = parser.parse_args().num
 
     # load data
-    path = 'data/chunks/%d.pkl' % num
     print("Loading data")
-    chunk = pickle.load(open(path, 'rb'))
+    chunk = pickle.load(open(DIR + '%d.pkl' % num, 'rb'))
     L, T, O = [chunk[k] for k in ['listings', 'threads', 'offers']]
-    T1 = T.copy()  # temporary solution
-    T = T.join(L, on='lstg')
-
-    # ids of threads to keep
-    threads = T[(T.bin_rev == 0) & (T.flag == 0)].index.sort_values()
-    T = T.drop(['bin_rev', 'flag'], axis=1)
 
     # time-varying features
-    print("Calculating time features")
-    time_feats = get_time_feats(O, T1, L)
-    T = T.drop(['end_date', 'byr', 'lstg', 'sale_price',
-                'ship_chosen'], axis=1).loc[threads]
+    time_feats = get_time_feats(L, T, O)
 
-    # attributes
-    print("Calculating attributes")
-    timestamps = split_var(O, T, 'clock')
-    offers = split_var(O, T, 'price')
-    msgs = split_var(O, T, 'message')
-    T = T.drop(['start_time', 'start_date'], axis=1)
-
-    # byr and slr dictionaries
-    byr, slr = get_role_vars(timestamps, offers, msgs)
-
-    # simulator outcomes
-    print("Calculating outcomes")
-    y = get_y(slr)
-
-    # offer features
-    print("Calculating offer features")
-    x_offer = get_x_offer(byr, slr)
+    # ids of threads to keep
+    T = T.join(L.drop(['bo', 'title', 'end_date'], axis=1))
+    end_time = time_feats['clock'].groupby(level='lstg').max()
+    keep = (T.bin_rev == 0) & (T.flag == 0) & (end_time < END)
+    T = T.loc[keep].drop(['start_time', 'bin_rev', 'flag'], axis=1)
+    O = O.loc[keep][['price', 'message']]
 
     # write simulator chunk
     print("Writing first chunk")
-    chunk = {'y': y,
-             'x_offer': x_offer,
-             'T': T}
-    path = 'data/chunks/%d_simulator.pkl' % num
-    pickle.dump(chunk, open(path, 'wb'))
+    chunk = {'O': O,
+             'T': T,
+             'time_feats': time_feats}
+    pickle.dump(chunk, open(DIR + '%d_simulator.pkl' % num, 'wb'))
