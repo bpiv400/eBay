@@ -2,6 +2,7 @@ import torch
 from torch.autograd import Function
 import numpy as np
 from utils import *
+from constants import N_CAT
 
 
 class BetaMixtureLoss(Function):
@@ -37,8 +38,8 @@ class BetaMixtureLoss(Function):
             ctx.idx = {key: val.float() for key, val in idx.items()}
 
         # log-likelihood
-        lnp = ln_beta_pdf(a, b, y)
-        Q = torch.sum(gamma[idx[2]] * lnp[idx[2]], dim=1)
+        lndens = ln_beta_pdf(a, b, y)
+        Q = torch.sum(gamma[idx[2]] * lndens[idx[2]], dim=1)
         ll = torch.sum(torch.log(1 - torch.sum(p, 2)[idx[2]]) + Q)
 
         for i in range(p.size()[2]):
@@ -68,9 +69,9 @@ class BetaMixtureLoss(Function):
         return outp, outa, outb, None, None
 
 
-class BinaryLoss(Function):
+class CatLoss(Function):
     '''
-    Computes the negative log-likelihood for the slr msg model.
+    Computes the negative log-likelihood for the categorical model.
 
     Inputs to forward:
         - p (N_turns, mbsize, 1): probability of msg
@@ -82,8 +83,10 @@ class BinaryLoss(Function):
     def forward(ctx, p, y):
         # indices
         idx = {}
-        idx[1] = y == 1
-        idx[0] = ~idx[1] * ~torch.isnan(y)
+        idx[N_CAT] = ~torch.isnan(y)
+        for i in range(N_CAT-1):
+            idx[i] = y == i
+            idx[N_CAT] *= ~idx[i]
 
         # store variables for backward method
         ctx.p = p
@@ -94,14 +97,18 @@ class BinaryLoss(Function):
             ctx.idx = {key: val.float() for key, val in idx.items()}
 
         # log-likelihood
-        ll = torch.sum(torch.log(1 - p[idx[0]]))
-        ll += torch.sum(torch.log(p[idx[1]]))
+        ll = torch.sum(torch.log(1 - torch.sum(p, 2)[idx[N_CAT]]))
+        for i in range(N_CAT-1):
+            ll += torch.sum(torch.log(p[idx[i], [i]]))
 
         return -ll
 
     @staticmethod
     def backward(ctx, grad_output):
-        dp = - ctx.idx[0].unsqueeze(dim=2) * torch.pow(1-ctx.p, -1)
-        dp += ctx.idx[1].unsqueeze(dim=2) * torch.pow(ctx.p, -1)
+        p0 = 1 - torch.sum(ctx.p, dim=2, keepdim=True)
+        inverse = torch.pow(p0, -1).repeat(1, 1, N_CAT-1)
+        dp = ctx.idx[N_CAT].unsqueeze(dim=2) * -inverse
+        for i in range(N_CAT-1):
+            dp[:,:,i] += ctx.idx[i] * torch.pow(ctx.p[:,:,i], -1)
 
         return grad_output * -dp, None

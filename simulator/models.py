@@ -2,35 +2,33 @@ import torch, torch.nn as nn
 from torch.autograd import Function
 from utils import *
 from loss import *
+from constants import N_CAT
 
 
 class Simulator(nn.Module):
-    def __init__(self, N_fixed, N_offer, model, params):
+    def __init__(self, N_fixed, N_offer, params):
         # super constructor
         super(Simulator, self).__init__()
 
         # save parameters to self
         self.N_layers = params.layers
-        self.model = model
-        if model in ['delay', 'con']:
-            self.M = 2 if model == 'con' else 1
+        self.model = params.model
+        if self.model in ['delay', 'con']:
+            self.M = 2 if self.model == 'con' else 1
             self.K = params.K
             N_out = self.M + 2 * params.K
             self.criterion = BetaMixtureLoss.apply
         else:
-            self.M = N_out = 1
+            self.M = N_out = N_CAT - 1
             self.K = 0
-            self.criterion = BinaryLoss.apply
+            self.criterion = CatLoss.apply
 
         # initial hidden nodes and LSTM cell
         self.h0 = nn.Linear(N_fixed, params.hidden)
         self.c0 = nn.Linear(N_fixed, params.hidden)
 
         # activation function
-        if params.f == 'relu':
-            self.f = nn.ReLU()
-        elif params.f == 'sigmoid':
-            self.f = nn.Sigmoid()
+        self.f = nn.ReLU()
 
         # lstm layer
         self.lstm = nn.LSTM(input_size=N_offer, hidden_size=params.hidden,

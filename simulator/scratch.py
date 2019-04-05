@@ -37,3 +37,16 @@ def print_summary(epoch, start, lnL_train, simulator):
         (epoch + 1, sec, lnL_train, lnL_test))
     #compute_example(p, a, b, gamma, simulator)
     sys.stdout.flush()
+
+
+def get_round(offer):
+    digits = np.ceil(np.log10(offer))
+    factor = 5 * np.power(10, digits-3)
+    rounded = np.round(offer / factor) * factor
+    isRound = (rounded == offer).astype(np.float64)
+    isRound.loc[np.isnan(offer)] = np.nan
+    isNines = ((rounded > offer) &
+               (rounded - offer <= factor / 5)).astype(np.float64)
+    isNines.loc[np.isnan(offer)] = np.nan
+    isNines.loc[isRound == 1.] = np.nan
+    return isRound, isNines

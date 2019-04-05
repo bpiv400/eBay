@@ -18,4 +18,4 @@ if __name__ == "__main__":
 	model = lda.LdaModel(tfidf, num_topics=topics, eta='auto')
 
 	# save model
-	pickle.dump(model, open(DIR + 'm' + str(topics) + '.pkl', 'wb'))
+	pickle.dump(model, open(, 'wb'))
