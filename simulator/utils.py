@@ -211,8 +211,10 @@ def get_x_offer(byr, slr, model):
 
 
 def trim_threads(s):
-    keep = s.isna().groupby(level=['lstg','thread']).sum() < 3
-    return s[keep]
+    '''
+    Restricts series to threads with at least one non-NA value.
+    '''
+    return s[s.isna().groupby(level=['lstg','thread']).sum() < 3]
 
 
 def get_y(d, model):
@@ -242,12 +244,20 @@ def get_y(d, model):
 
 
 def split_byr_slr(df):
+    '''
+    Splits a dataframe with turn indices for columns into separate
+    dataframes corresponding to byr and solr turns.
+    '''
     b = df[[1, 3, 5, 7]].rename(columns={3: 2, 5: 3, 7: 4})
     s = df[[0, 2, 4, 6]].rename(columns={0: 1, 4: 3, 6: 4})
     return b, s
 
 
 def get_days(clock):
+    '''
+    Creates two series, one for the byr and one for the slr, counting
+    the number of days (as a float) since the last offer.
+    '''
     # initialize dataframes
     b_days = pd.DataFrame(index=clock.index, columns=[1, 2, 3, 4])
     s_days = pd.DataFrame(index=clock.index, columns=[1, 2, 3, 4])
@@ -292,20 +302,27 @@ def get_con(offers):
 
 
 def create_variables(O, T, time_feats):
-    print('Creating variables')
+    '''
+    Creates dictionaries of variables by role.
+    '''
+    # unstack offers and msgs by index
     offers = O['price'].unstack()
     offers[0] = T['start_price']
     msgs = O['message'].unstack()
     msgs[0] = 0
+
+    # seconds since beginning of lstg
     clock = time_feats['clock'].drop(0, level='thread').unstack()
     clock = clock.join(time_feats['clock'].groupby('lstg').min().rename(0))
     clock = clock.loc[msgs.index]
+
     # dictionary of time-valued features
     df = time_feats.drop('clock', axis=1)
     df0 = df.xs(0, level='thread').xs(0, level='index')
     df = df.drop(0, level='thread')
     d_time = {c: df0[c].rename(0).to_frame().join(
         df[c].unstack()).loc[msgs.index] for c in df.columns}
+
     # dictionaries by role
     byr = {}
     slr = {}
@@ -316,30 +333,55 @@ def create_variables(O, T, time_feats):
     byr['msg'], slr['msg'] = split_byr_slr(msgs)
     for key, val in d_time.items():
         byr[key], slr[key] = split_byr_slr(val)
+
     return byr, slr
 
 
 def load_data():
-    print('Loading data')
+    # training data
     data = pickle.load(open(BASEDIR + 'input/train.pkl', 'rb'))
     O, T, time_feats = [data[key] for key in ['O', 'T', 'time_feats']]
+
+    # LDA weights from slr-leaf matrix
     lda_weights = pickle.load(open(LDADIR + 'weights.pkl', 'rb'))
+
     # fill in NA values
     T.loc[T['fdbk_pstv'].isna(), 'fdbk_pstv'] = 100
     T.loc[T['fdbk_score'].isna(), 'fdbk_score'] = 0
     T.loc[T['slr_hist'].isna(), 'slr_hist'] = 0
+
     return O, T, time_feats, lda_weights
 
 
 def process_inputs(model):
+    # load dataframes
+    print('Loading data')
     O, T, time_feats, lda_weights = load_data()
+
+    # split into role-specific dictionaries of dataframes
+    print('Creating variables')
     byr, slr = create_variables(O, T, time_feats)
-    # input tensors
+
+    # dictionary of tensors
     d = {}
     d['y'] = get_y({key: val[[2, 3, 4]] for key, val in slr.items()}, model)
     d['x_fixed'] = get_x_fixed(T, lda_weights, slr, model)
     d['x_offer'] = get_x_offer(byr, slr, model)
     return convert_to_tensors(d)
+
+
+def prepare_batch(train, g, idx):
+    '''
+    Slices data and component weights, and puts them in dictionary.
+    '''
+    batch = {}
+    batch['y'] = train['y'][:, idx]
+    batch['x_fixed'] = train['x_fixed'][:, idx, :]
+    batch['x_offer'] = rnn.pack_padded_sequence(
+        train['x_offer'][:, idx, :], train['turns'][idx])
+    if g is not None:
+        batch['g'] = g[:, idx, :]
+    return batch
 
 
 def get_batch_indices(count, mbsize):
@@ -411,6 +453,4 @@ def get_args():
                         help='Experiment ID.')
     parser.add_argument('--gradcheck', default=False, type=bool,
                         help='Boolean flag to first check gradients.')
-    parser.add_argument('--model', default='delay', type=str,
-                        help='One of: delay, con, round, nines, msg.')
     return parser.parse_args()

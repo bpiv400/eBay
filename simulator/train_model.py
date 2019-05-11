@@ -12,6 +12,9 @@ from constants import *
 
 
 def process_mb(simulator, optimizer, d):
+    '''
+    Update the model parameters and component weights.
+    '''
     # zero the gradient
     optimizer.zero_grad()
 
@@ -34,18 +37,10 @@ def process_mb(simulator, optimizer, d):
     return -loss.item(), g
 
 
-def prepare_batch(train, g, idx):
-    batch = {}
-    batch['y'] = train['y'][:, idx]
-    batch['x_fixed'] = train['x_fixed'][:, idx, :]
-    batch['x_offer'] = rnn.pack_padded_sequence(
-        train['x_offer'][:, idx, :], train['turns'][idx])
-    if g is not None:
-        batch['g'] = g[:, idx, :]
-    return batch
-
-
 def run_epoch(simulator, optimizer, train, g, mbsize):
+    '''
+    Splits training data into minibatchs and loops over minibatches.
+    '''
     lnL = 0
     indices = get_batch_indices(train['y'].size()[1], mbsize)
     for i in range(len(indices)):
@@ -59,6 +54,10 @@ def run_epoch(simulator, optimizer, train, g, mbsize):
 
 
 def train_model(simulator, train, params):
+    '''
+    Initializes gamma and the optimizer and loops over epochs.
+    '''
+
     # initialize lnL vector
     time0 = dt.now()
     lnL= np.full(EPOCHS, np.nan)
@@ -99,7 +98,6 @@ if __name__ == '__main__':
     N_offer = train['x_offer'].size()[2]
     simulator = Simulator(N_fixed, N_offer, params)
     print(simulator)
-    sys.stdout.flush()
 
     # check gradient
     if args.gradcheck:
