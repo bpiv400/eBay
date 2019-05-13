@@ -33,7 +33,7 @@ def process_mb(simulator, optimizer, train, idx):
     loss = simulator.loss_forward(theta, y_i)
 
     # update parameters
-    loss.backward(retain_graph=True)
+    loss.backward()
     print(list(simulator.parameters())[2].grad)
     optimizer.step()
 

@@ -12,6 +12,9 @@ from constants import *
 
 
 def process_mb(simulator, optimizer, d):
+    '''
+    Update the model parameters and component weights.
+    '''
     # zero the gradient
     optimizer.zero_grad()
 
@@ -33,18 +36,11 @@ def process_mb(simulator, optimizer, d):
     g = get_gamma(a.detach(), b.detach(), d['y']) if 'g' in d else None
     return -loss.item(), g
 
-def prepare_batch(train, g, idx):
-    batch = {}
-    batch['y'] = train['y'][:, idx]
-    batch['x_fixed'] = train['x_fixed'][:, idx, :]
-    batch['x_offer'] = rnn.pack_padded_sequence(
-        train['x_offer'][:, idx, :], train['turns'][idx])
-    if g is not None:
-        batch['g'] = g[:, idx, :]
-    return batch
-
 
 def run_epoch(simulator, optimizer, train, g, mbsize):
+    '''
+    Splits training data into minibatchs and loops over minibatches.
+    '''
     lnL = 0
     indices = get_batch_indices(train['y'].size()[1], mbsize)
     for i in range(len(indices)):
@@ -58,9 +54,13 @@ def run_epoch(simulator, optimizer, train, g, mbsize):
 
 
 def train_model(simulator, train, params):
-    # initialize lnL vectors
+    '''
+    Initializes gamma and the optimizer and loops over epochs.
+    '''
+
+    # initialize lnL vector
     time0 = dt.now()
-    lnL= np.full(params.epochs, np.nan)
+    lnL= np.full(EPOCHS, np.nan)
 
     # initialize gamma
     g = initialize_gamma(train['y'].size(), simulator.get_K())
@@ -68,7 +68,7 @@ def train_model(simulator, train, params):
     # initialize optimizer
     optimizer = torch.optim.Adam(simulator.parameters(), lr=params.lr)
 
-    for epoch in range(params.epochs):
+    for epoch in range(EPOCHS):
         start = dt.now()
 
         # iterate over minibatches
@@ -82,15 +82,6 @@ def train_model(simulator, train, params):
     return {'lnL': lnL, 'duration': dt.now() - time0}
 
 
-def load_data(model):
-    print('Loading data')
-    data = pickle.load(open(BASEDIR + 'input/train.pkl', 'rb'))
-    data['y'] = data['y'][model]
-    data['x_fixed'] = get_x_fixed(data['T'])
-    data['x_offer'] = expand_x_offer(data['x_offer'], model)
-    return convert_to_tensors(data)
-
-
 if __name__ == '__main__':
     # extract parameters from command line
     args = get_args()
@@ -100,14 +91,13 @@ if __name__ == '__main__':
     print(params)
 
     # training data
-    train = load_data(args.model)
+    train = process_inputs(params.model)
 
     # initialize neural net
     N_fixed = train['x_fixed'].size()[2]
     N_offer = train['x_offer'].size()[2]
-    simulator = Simulator(M_cat, N_fixed, N_offer, args.model, params)
+    simulator = Simulator(N_fixed, N_offer, params)
     print(simulator)
-    sys.stdout.flush()
 
     # check gradient
     if args.gradcheck:

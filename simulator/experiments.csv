@@ -1,2 +1,4 @@
-exp_id,epochs,mbsize,hidden,dropout,lr,layers,K,f,embed
-1,500,128,100,0.5,1e-4,2,10,relu,3
+exp_id,model,mbsize,lr,hidden,dropout,layers,K
+1,delay,128,1e-4,128,0.5,2,10
+2,con,128,1e-4,128,0.5,2,10
+3,cat,128,1e-4,128,0.5,2,

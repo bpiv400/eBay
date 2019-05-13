@@ -52,15 +52,6 @@ def dlnLda(a, b, z, gamma, indices):
     return da
 
 
-def get_rounded(offer):
-    digits = np.ceil(np.log10(offer.clip(lower=0.01)))
-    factor = 5 * np.power(10, digits-3)
-    rounded = np.round(offer / factor) * factor
-    is_round = rounded == offer
-    is_nines = ((rounded > offer) & (rounded - offer <= factor / 5))
-    return rounded, is_round, is_nines
-
-
 def reshape_wide(df, threads):
     dfs = [df.xs(t, level='turn').loc[threads] for t in range(1, 4)]
     arrays = [dfs[t].values.astype(float) for t in range(3)]
@@ -69,32 +60,26 @@ def reshape_wide(df, threads):
     return torch.cat(ttuple, 0).float()
 
 
-def convert_to_tensors(data):
+def convert_to_tensors(d):
     '''
     Converts data frames to tensors sorted (descending) by N_turns.
     '''
     tensors = {}
     # order threads by sequence length
-    turns = MAX_TURNS - data['y'].isna().groupby(level='thread').sum()
+    turns = MAX_TURNS - d['y'].isna().groupby(level=['lstg', 'thread']).sum()
     turns = turns.sort_values(ascending=False)
     threads = turns.index
     tensors['turns'] = torch.tensor(turns.values).int()
 
     # outcome
-    tensors['y'] = torch.squeeze(reshape_wide(data['y'], threads))
-
-    # categorical fixed features
-    tensors['x_cat'] = {}
-    for col in data['x_cat'].columns:
-        s = data['x_cat'][col].loc[threads].values
-        tensors['x_cat'][col] = torch.tensor(s).unsqueeze(dim=0)
+    tensors['y'] = reshape_wide(d['y'], threads).squeeze()
 
     # non-categorical fixed features
-    M_fixed = data['x_fixed'].loc[threads].astype(np.float64).values
+    M_fixed = d['x_fixed'].loc[threads].astype(np.float64).values
     tensors['x_fixed'] = torch.tensor(M_fixed).float().unsqueeze(dim=0)
 
     # offer features
-    tensors['x_offer'] = reshape_wide(data['x_offer'], threads)
+    tensors['x_offer'] = reshape_wide(d['x_offer'], threads)
 
     return tensors
 
@@ -113,92 +98,290 @@ def add_turn_feats(x_offer):
     return x_offer.join(turns, on='turn')
 
 
-def add_time_feats(x, pre):
-    days = x[pre + '_days']
-    if pre == 's_prev':
-        x[pre + '_auto'] = days == 0
-        x[pre + '_exp'] = days == 2
-    time = x[pre + '_time']
-    x[pre + '_year'] = time.dt.year - 2012
-    x[pre + '_week'] = time.dt.week
-    x[pre + '_minutes'] = 60 * time.dt.hour + time.dt.minute
-    dow = time.dt.dayofweek
-    for i in range(7):
-        x[pre + '_dow' + str(i)] = dow == i
-    return x
-
-
-def add_offer_feats(x, pre, rounded):
-    con = x[pre + '_con']
-    x[pre + '_rej'] = con == 0
-    x[pre + '_half'] = np.abs(con - 0.5) < TOL_HALF
-    x[pre + '_round'] = rounded
-    x[pre + '_lnround'] = np.log(1+rounded)
-    return x
-
-
-def expand_offer_feats(x, pre, model):
-    # delay and time variables
-    if pre != 's_curr' or model in MODELS[1:]:
-        x = add_time_feats(x, pre)
-    # concession and rounded offer
-    rounded, is_round, is_nines = get_rounded(x[pre + '_offer'])
-    if pre != 's_curr' or model in MODELS[2:]:
-        x = add_offer_feats(x, pre, rounded)
-    # boolean for round offer
-    if pre != 's_curr' or model in MODELS[3:]:
-        x[pre + '_isround'] = is_round
-    # boolean for nines
-    if pre != 's_curr' or model in MODELS[4:]:
-        x[pre + '_isnines'] = is_nines
-    # drop columns
-    x.drop([pre + s for s in ['_time', '_offer']], axis=1, inplace=True)
-    if pre == 's_curr':
-        if model in MODELS[:2]:
-            x.drop('s_curr_con', axis=1, inplace=True)
-        if model in MODELS[0]:
-            x.drop('s_curr_days', axis=1, inplace=True)
-    return x.reindex(sorted(x.columns), axis=1)
-
-
-def expand_x_offer(x, model):
-    '''
-    A wrapper function that loops over recent offers.
-    '''
-    for pre in ['s_prev', 'b', 's_curr']:
-        x = expand_offer_feats(x, pre, model)
-    return add_turn_feats(x)
-
-
-def get_x_fixed(T):
+def get_x_fixed(T, lda_weights, slr, model):
     '''
     Constructs a dataframe of fixed features that are used to initialize the
     hidden state and the LSTM cell.
     '''
     # initialize dataframe
     x = pd.DataFrame(index=T.index)
-    # decline and accept price
-    for z in ['decline', 'accept']:
+    # start date
+    date = pd.to_datetime(T['start_date'], unit='D', origin=ORIGIN)
+    x['year'] = date.dt.year - 2012
+    x['week'] = date.dt.week
+    for i in range(7):
+        x['dow' + str(i)] = date.dt.dayofweek == i
+    # prices
+    for z in ['start', 'decline', 'accept']:
         x[z] = T[z + '_price']
-        x['ln' + z] = np.log(1 + x[z])
-        x[z + '_round'], x[z + '_isround'], x[z +
-                                              '_isnines'] = get_rounded(x[z])
-        x['has_' + z] = x[z] > 0. if z == 'decline' else x[z] < T['start_price']
-    # binary features
-    for z in BINARY_FEATS:
+        if z != 'start' or model == 'cat':
+            x[z + '_round'], x[z +'_nines'] = do_rounding(x[z])
+    x['has_decline'] = x['decline'] > 0.
+    x['has_accept'] = x['accept'] <  T['start_price']
+    # features without transformations
+    for z in ['fdbk_pstv'] + BINARY_FEATS + COUNT_FEATS:
         x[z] = T[z]
-    # count variables
-    for z in COUNT_FEATS:
-        x[z] = T[z]
-        x['ln' + z] = np.log(1 + x[z])
-        x['has_' + z] = T[z] > 0
-    # feedback score
-    x['fdbk_pstv'] = T['fdbk_pstv']
-    x['fdbk_100'] = T['fdbk_pstv'] == 100.
+    # leaf LDA scores
+    w = lda_weights[:,T.leaf]
+    for i in range(len(lda_weights)):
+        x['lda' + str(i)] = w[i, :]
+    # one-hot vectors
+    for z in ['meta', 'cndtn']:
+        for i in range(0, np.max(T[z])+1):
+            x[z + str(i)] = T[z] == i
+    # indicator for perfect feedback score
+    x['fdbk_100'] = x['fdbk_pstv'] == 100.
     # shipping speed
     for z in ['ship_fast', 'ship_slow']:
         x['has_' + z] = (T[z] != -1.).astype(np.bool) & ~T[z].isna()
-    return x.reindex(sorted(x.columns), axis=1)
+    # initial time-valued features
+    if model != 'delay':
+        for key, val in slr.items():
+            if key not in ['days', 'offer', 'norm', 'con', 'msg']:
+                x[key] = val[1]
+    return x
+
+
+def reshape_long(df, name=None):
+    col = df.columns
+    if col[0] != 1:
+        df = df.rename(columns={col[0]: 1, col[1]: 2, col[2]: 3})
+    s = df.stack(dropna=False)
+    s.index.rename(['lstg', 'thread', 'turn'], inplace=True)
+    if name is not None:
+        s.rename(name, inplace=True)
+    return s
+
+
+def do_rounding(offer):
+    digits = np.ceil(np.log10(offer.clip(lower=0.01)))
+    factor = 5 * np.power(10, digits-3)
+    diff = np.round(offer / factor) * factor - offer
+    is_round = (diff == 0).rename('round')
+    is_nines = ((diff > 0) & (diff <= factor / 5)).rename('nines')
+    return is_round, is_nines
+
+
+def add_y(x, d, pre, feats=[], islast=True, include=True):
+    col = [1, 2, 3] if islast else [2, 3, 4]
+    if not include:
+        feats = [k for k in d.keys() if k not in feats + ['offer', 'con']]
+    for key, val in d.items():
+        if key in feats:
+            x['_'.join([pre, key])] = reshape_long(val[col])
+    return x
+
+
+def add_y_binary(x, d, pre, islast):
+    col = [1, 2, 3] if islast else [2, 3, 4]
+    if pre == 's':
+        x['s_auto'] = x['s_days'] == 0  # auto-accept/reject
+        x['s_exp'] = x['s_days'] == 2   # expired
+    # round and nines indicators
+    offer = reshape_long(d['offer'][col])
+    x[pre + '_round'], x[pre + '_nines'] = do_rounding(offer)
+    # reject and split-the-difference indicators
+    con = reshape_long(d['con'][col])
+    x[pre + '_rej'] = con == 0
+    x[pre + '_half'] = np.abs(con - 0.5) < TOL_HALF
+    return x
+
+
+def get_x_offer(byr, slr, model):
+    """
+    Creates a df with simulator input at each turn.
+    Index: [lstg, thread, turn] (turn in range 1..3)
+    """
+    x = pd.DataFrame()
+    # last buyer offer
+    x = add_y(x, byr, 'b', include=False)
+    x = add_y_binary(x, byr, 'b', True)
+    # slr offer
+    if model == 'delay':
+        x = add_y(x, slr, 's', include=False)
+    elif model == 'con':
+        x = add_y(x, slr, 's', feats=['norm', 'msg'])
+        x = add_y(x, slr, 's', feats=['norm', 'msg'],
+            islast=False, include=False)
+    elif model == 'cat':
+        x = add_y(x, slr, 's', feats=['msg'])
+        x = add_y(x, slr, 's', feats=['msg'], islast=False, include=False)
+    x = add_y_binary(x, slr, 's', model != 'cat')
+    return add_turn_feats(x)
+
+
+def trim_threads(s):
+    '''
+    Restricts series to threads with at least one non-NA value.
+    '''
+    return s[s.isna().groupby(level=['lstg','thread']).sum() < 3]
+
+
+def get_y(d, model):
+    '''
+    Creates a series of model-specific outcome.
+    '''
+    # delay
+    delay = reshape_long(d['days'] / 2, name='delay')
+    delay.loc[delay == 0] = np.nan    # automatic responses
+    if model == 'delay':
+        return trim_threads(delay)
+    # concession
+    con = reshape_long(d['con'], name='con')
+    con.loc[delay.isna()] = np.nan
+    con.loc[delay == 1] = np.nan    # expired offers
+    if model == 'con':
+        return trim_threads(con)
+    # categorical outcome
+    msg = reshape_long(d['msg'], name='msg')
+    offer = reshape_long(d['offer'], name='offer')
+    is_round, is_nines = do_rounding(offer)
+    cat = is_round + 2 * is_nines + 3 * msg
+    cat.loc[con.isna()] = np.nan
+    cat.loc[con == 1] = np.nan    # accepts
+    cat.loc[con == 0] = np.nan    # rejects
+    return trim_threads(cat)
+
+
+def split_byr_slr(df):
+    '''
+    Splits a dataframe with turn indices for columns into separate
+    dataframes corresponding to byr and solr turns.
+    '''
+    b = df[[1, 3, 5, 7]].rename(columns={3: 2, 5: 3, 7: 4})
+    s = df[[0, 2, 4, 6]].rename(columns={0: 1, 4: 3, 6: 4})
+    return b, s
+
+
+def get_days(clock):
+    '''
+    Creates two series, one for the byr and one for the slr, counting
+    the number of days (as a float) since the last offer.
+    '''
+    # initialize dataframes
+    b_days = pd.DataFrame(index=clock.index, columns=[1, 2, 3, 4])
+    s_days = pd.DataFrame(index=clock.index, columns=[1, 2, 3, 4])
+    # first delay
+    s_days[1] = 0.
+    # remaining delays
+    for i in range(1, 8):
+        sec = clock[i] - clock[i-1]
+        if i % 2:
+            b_days[int((i+1)/2)] = sec / (24 * 3600)
+        else:
+            sec[sec > 48 * 3600] = 48 * 3600    # temporary fix
+            s_days[int(1 + i/2)] = sec / (24 * 3600)
+    assert np.min(b_days.stack()) > 0
+    assert np.min(s_days.stack()) >= 0
+    return b_days, s_days
+
+
+def get_con(offers):
+    '''
+    Creates dataframes of concessions at each turn,
+    separately for buyer and seller.
+    '''
+    # initialize dataframes
+    b_con = pd.DataFrame(index=offers.index, columns=[1, 2, 3, 4])
+    s_con = pd.DataFrame(index=offers.index, columns=[1, 2, 3, 4])
+    # first concession
+    b_con[1] = offers[1] / offers[0]
+    s_con[1] = 0
+    assert np.count_nonzero(np.isnan(b_con[1].values)) == 0
+    # remaining concessions
+    for i in range(2, 8):
+        norm = (offers[i] - offers[i-2]) / (offers[i-1] - offers[i-2])
+        if i % 2:
+            b_con[int((i+1)/2)] = norm
+        else:
+            s_con[int(1 + i/2)] = norm
+    # verify that all concessions are in bounds
+    assert np.nanmax(b_con.values) <= 1 and np.nanmin(b_con.values) >= 0
+    assert np.nanmax(s_con.values) <= 1 and np.nanmin(s_con.values) >= 0
+    return b_con, s_con
+
+
+def create_variables(O, T, time_feats):
+    '''
+    Creates dictionaries of variables by role.
+    '''
+    # unstack offers and msgs by index
+    offers = O['price'].unstack()
+    offers[0] = T['start_price']
+    msgs = O['message'].unstack()
+    msgs[0] = 0
+
+    # seconds since beginning of lstg
+    clock = time_feats['clock'].drop(0, level='thread').unstack()
+    clock = clock.join(time_feats['clock'].groupby('lstg').min().rename(0))
+    clock = clock.loc[msgs.index]
+
+    # dictionary of time-valued features
+    df = time_feats.drop('clock', axis=1)
+    df0 = df.xs(0, level='thread').xs(0, level='index')
+    df = df.drop(0, level='thread')
+    d_time = {c: df0[c].rename(0).to_frame().join(
+        df[c].unstack()).loc[msgs.index] for c in df.columns}
+
+    # dictionaries by role
+    byr = {}
+    slr = {}
+    byr['days'], slr['days'] = get_days(clock)
+    byr['offer'], slr['offer'] = split_byr_slr(offers)
+    byr['norm'], slr['norm'] = split_byr_slr(offers.div(offers[0], axis=0))
+    byr['con'], slr['con'] = get_con(offers)
+    byr['msg'], slr['msg'] = split_byr_slr(msgs)
+    for key, val in d_time.items():
+        byr[key], slr[key] = split_byr_slr(val)
+
+    return byr, slr
+
+
+def load_data():
+    # training data
+    data = pickle.load(open(BASEDIR + 'input/train.pkl', 'rb'))
+    O, T, time_feats = [data[key] for key in ['O', 'T', 'time_feats']]
+
+    # LDA weights from slr-leaf matrix
+    lda_weights = pickle.load(open(LDADIR + 'weights.pkl', 'rb'))
+
+    # fill in NA values
+    T.loc[T['fdbk_pstv'].isna(), 'fdbk_pstv'] = 100
+    T.loc[T['fdbk_score'].isna(), 'fdbk_score'] = 0
+    T.loc[T['slr_hist'].isna(), 'slr_hist'] = 0
+
+    return O, T, time_feats, lda_weights
+
+
+def process_inputs(model):
+    # load dataframes
+    print('Loading data')
+    O, T, time_feats, lda_weights = load_data()
+
+    # split into role-specific dictionaries of dataframes
+    print('Creating variables')
+    byr, slr = create_variables(O, T, time_feats)
+
+    # dictionary of tensors
+    d = {}
+    d['y'] = get_y({key: val[[2, 3, 4]] for key, val in slr.items()}, model)
+    d['x_fixed'] = get_x_fixed(T, lda_weights, slr, model)
+    d['x_offer'] = get_x_offer(byr, slr, model)
+    return convert_to_tensors(d)
+
+
+def prepare_batch(train, g, idx):
+    '''
+    Slices data and component weights, and puts them in dictionary.
+    '''
+    batch = {}
+    batch['y'] = train['y'][:, idx]
+    batch['x_fixed'] = train['x_fixed'][:, idx, :]
+    batch['x_offer'] = rnn.pack_padded_sequence(
+        train['x_offer'][:, idx, :], train['turns'][idx])
+    if g is not None:
+        batch['g'] = g[:, idx, :]
+    return batch
 
 
 def get_batch_indices(count, mbsize):
@@ -270,6 +453,4 @@ def get_args():
                         help='Experiment ID.')
     parser.add_argument('--gradcheck', default=False, type=bool,
                         help='Boolean flag to first check gradients.')
-    parser.add_argument('--model', default='delay', type=str,
-                        help='One of: delay, con, round, nines, msg.')
     return parser.parse_args()
