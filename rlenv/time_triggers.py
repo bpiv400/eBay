@@ -1,0 +1,13 @@
+"""
+File giving constants used to update time valued features after some
+event has occurred
+
+"""
+SALE = 'SALE'
+SLR_REJECTION = 'SLR_REJECTION'
+BYR_REJECTION = 'BYR_REJECTION'
+BUYER_OFFER = 'BUYER_OFFER'
+SELLER_OFFER = 'SELLER_OFFER'
+LSTG_EXPIRATION = 'LSTG_EXPIRATION'
+THREAD_EXPIRATION = 'THREAD_EXPIRATION'
+NEW_THREAD = 'NEW_THREAD'

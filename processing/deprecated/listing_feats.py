@@ -15,7 +15,7 @@ Removes features from the listing dataframe
 import argparse
 import pandas as pd
 import numpy as np
-from util_env import extract_datatype
+from deprecated.util_env import extract_datatype
 
 
 def gen_indicators(all_ids, flag, hold_out=True):

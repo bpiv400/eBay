@@ -4,7 +4,7 @@ Imputes values associated with seller rejections
 import argparse
 import numpy as np
 import pandas as pd
-from util_env import extract_datatype
+from deprecated.util_env import extract_datatype
 
 
 def update_same_vars(df, inds, index, same_vars):

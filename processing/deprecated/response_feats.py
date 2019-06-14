@@ -11,7 +11,7 @@
 import argparse
 import pandas as pd
 import numpy as np
-from util_env import extract_datatype
+from deprecated.util_env import extract_datatype
 
 
 def add_norm_val(offrs, threads):

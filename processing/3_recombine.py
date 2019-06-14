@@ -9,19 +9,17 @@ DIR = '../../data/chunks'
 SEED = 123456
 SHARES = {'dev': .15, 'test': .3}
 OUT_PATH = '../../data/simulator/input/'
+TABLE_NAMES = ['time_feats', 'L', 'T', 'O']
 
 
-def save_partitions(slr_dict, O, T, time_feats):
+def save_partitions(slr_dict, d):
     """
     Saves the data partitions.
     """
     for key, val in slr_dict.items():
         print('Saving', key)
-        idx = pd.Index(val, name='lstg')
-        # get boolean series of listings specific to seller
-        data = {'O': O.loc[idx],
-                'T': T.loc[idx].drop('slr', axis=1),
-                'time_feats': time_feats.loc[idx]}
+        idx = pd.Index(val, name='slr')
+        data = {key: val.loc[idx] for key, val in d.items()}
         path = OUT_PATH + '%s.pkl' % key
         pickle.dump(data, open(path, 'wb'))
 
@@ -29,19 +27,15 @@ def save_partitions(slr_dict, O, T, time_feats):
 def append_chunks():
     # list of chunks
     paths = ['%s/%s' % (DIR, name) for name in os.listdir(DIR)
-        if os.path.isfile('%s/%s' % (DIR, name)) and 'simulator' in name]
+        if os.path.isfile('%s/%s' % (DIR, name)) and 'out' in name]
     # initialize output
-    O = pd.DataFrame()
-    T = pd.DataFrame()
-    time_feats = pd.DataFrame()
+    d = {key: pd.DataFrame() for key in TABLE_NAMES}
     # loop over chunks
     for path in sorted(paths):
         chunk = pickle.load(open(path, 'rb'))
-        O = O.append(chunk['O'], verify_integrity=True)
-        T = T.append(chunk['T'], verify_integrity=True)
-        time_feats = time_feats.append(chunk['time_feats'],
-            verify_integrity=True)
-    return O, T, time_feats
+        for key, val in d.items():
+            d[key] = val.append(chunk[key], verify_integrity=True)
+    return d
 
 
 def randomize_sellers(u):
@@ -59,11 +53,11 @@ def randomize_sellers(u):
 
 if __name__ == '__main__':
     # append files
-    O, T, time_feats = append_chunks()
+    d = append_chunks()
 
     # randomize sellers into train, test and dev
-    slr_dict = randomize_sellers(
-        np.unique(T.index.get_level_values(level='lstg')))
+    slrs = np.unique(d['L'].index.get_level_values(level='slr'))
+    slr_dict = randomize_sellers(slrs)
 
     # partition the data and save
-    save_partitions(slr_dict, O, T, time_feats)
+    save_partitions(slr_dict, d)

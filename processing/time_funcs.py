@@ -2,51 +2,60 @@ import numpy as np
 import pandas as pd
 
 
-# minimum offer made by a slr
-def slr_min(df, levels):
-    keep = df.index.get_level_values('index') % 2 == 0
-    df.loc[~keep, 'price'] = np.inf
-    return df['price'].groupby(by=levels).cummin()
-
-
-# maximum offer made by a byr
-def byr_max(df, levels):
-    keep = df.index.get_level_values('index') % 2 == 1
-    df.loc[~keep, 'price'] = 0
-    return df['price'].groupby(by=levels).cummax()
-
-
-# cumulative number of offers made by byrs
-def byr_offers(df, levels):
-    idx = df.index.get_level_values('index')
-    s = (df['price'] >= 0) & (idx % 2 == 1) & ~df['accept'] & ~df['reject']
-    return s.astype(np.int64).groupby(by=levels).cumsum()
-
-
-# cumulative number of offers made by the slr
-def slr_offers(df, levels):
-    thread = df.index.get_level_values('thread')
-    idx = df.index.get_level_values('index')
-    s = (thread > 0) & (idx % 2 == 0) & ~df['accept'] & ~df['reject']
-    return s.astype(np.int64).groupby(by=levels).cumsum()
-
-
-# number of other threads for which an offer is outstanding
-def open_threads(df, levels):
-    idx = df.index.get_level_values('index')
-    s = (idx % 2 == 1).astype(np.int64) - df['accept'] - df['reject']
-    total = s.groupby(by=levels).cumsum()
-    focal = s.groupby(by=['lstg', 'thread']).cumsum()
-    diff = total - focal
-    return diff.groupby(by=levels + ['clock']).transform('max')
+# cumulative number of offers made by role
+def num_offers(df, role):
+    if role == 'slr':
+        s = ~df.byr & ~df.reject
+    elif role == 'byr':
+        s = df.byr & ~df.reject
+    total = s.groupby('lstg').cumsum()
+    focal = s.groupby(['lstg', 'thread']).cumsum()
+    return (total - focal).astype(np.int64)
 
 
 # number of open listings
 def open_lstgs(df, levels):
+    # variables from index levels
     thread = df.index.get_level_values('thread')
-    idx = df.index.get_level_values('index')
-    opened = (df['price'] > 0) & (thread == 0) & (idx == 0)
-    closed = ((df['price'] > 0) & (thread == 0) & (idx == 1)) | (df['accept'] == 1)
-    s = opened.astype(np.int64) - closed.astype(np.int64)
-    runmax = s.groupby(by=levels).cumsum().rename('runmax')
-    return runmax.groupby(by=levels + ['clock']).transform('max')
+    index = df.index.get_level_values('index')
+    # listing opens at thread 0 and index 0
+    start = pd.Series(index == 0, index=df.index)
+    # listing ends with accept or expiration
+    end = df.accept | ((thread == 0) & (index == 1))
+    # open - closed
+    s = start.astype(np.int64) - end.astype(np.int64)
+    # cumulative max by levels grouping
+    return s.groupby(by=levels).cumsum()
+
+
+# number of threads for which an offer from role is outstanding
+def open_offers(df, levels, role):
+    # index number
+    if 'index' in df.columns:
+        index = df['index']
+    else:
+        index = df.index.get_level_values('index')
+    # open and closed markers
+    if role == 'slr':
+        start = ~df.byr & ~df.accept & (index > 0)
+        end = df.byr & (index > 1)
+    elif role == 'byr':
+        start = df.byr & ~df.reject & ~df.accept
+        end = ~df.byr & (index > 1)
+    # open - closed
+    s = start.astype(np.int64) - end.astype(np.int64)
+    # cumulative sum by levels grouping
+    return s.groupby(by=levels).cumsum()
+
+
+# best offer from role
+def past_best(df, role, levels='lstg', index=None):
+    s = df.norm.copy()
+    if role == 'slr':
+        s.loc[df.byr] = 0.0
+    elif role == 'byr':
+        s.loc[~df.byr] = 0.0
+        s.loc[s.isna()] = 0.0
+    if index is not None:
+        s.loc[index] = 0.0
+    return s.groupby(by=levels).cummax()

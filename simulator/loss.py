@@ -1,114 +1,49 @@
 import torch
-from torch.autograd import Function
-import numpy as np
-from utils import *
-from constants import N_CAT
+from torch.distributions.beta import Beta
 
 
-class BetaMixtureLoss(Function):
-    '''
-    Computes the negative log-likelihood for the beta mixture model.
-
-    Inputs to forward:
-        - p (N_turns, mbsize, M): discrete weights
-        - a (N_turns, mbsize, K): alpha parameter of beta distribution
-        - b (N_turns, mbsize, K): beta parameter of beta distribution
-        - y (N_turns, mbsize): continuous outcome
-        - gamma (N_turns, mbsize, K): class probabilities
-
-    Output: negative log-likelihood
-    '''
-    @staticmethod
-    def forward(ctx, p, a, b, y, gamma):
-        # indices
-        idx = {}
-        idx[0] = y == 0
-        idx[1] = y == 1
-        idx[2] = ~idx[0] * ~idx[1] * ~torch.isnan(y)
-
-        # store variables for backward method
-        ctx.p = p
-        ctx.a = a
-        ctx.b = b
-        ctx.y = y
-        ctx.gamma = gamma
-        if ctx.a.type() == 'torch.DoubleTensor':    # for gradcheck
-            ctx.idx = {key: val.double() for key, val in idx.items()}
-        else:
-            ctx.idx = {key: val.float() for key, val in idx.items()}
-
-        # log-likelihood
-        lndens = ln_beta_pdf(a, b, y)
-        Q = torch.sum(gamma[idx[2]] * lndens[idx[2]], dim=1)
-        ll = torch.sum(torch.log(1 - torch.sum(p, 2)[idx[2]]) + Q)
-
-        for i in range(p.size()[2]):
-            ll += torch.sum(torch.log(p[idx[1-i], [i]]))
-
-        return -ll
-
-    @staticmethod
-    def backward(ctx, grad_output):
-        # gradient for discrete probabilies
-        p0 = 1 - torch.sum(ctx.p, dim=2, keepdim=True)
-        psize = ctx.p.size()[2]
-        inverse = torch.pow(p0, -1).repeat(1, 1, psize)
-        dp = ctx.idx[2].unsqueeze(dim=2) * -inverse
-        for i in range(psize):
-            dp[:,:,i] += ctx.idx[1-i] * torch.pow(ctx.p[:,:,i], -1)
-
-        # gradients for beta parameters
-        da = dlnLda(ctx.a, ctx.b, ctx.y, ctx.gamma, ctx.idx[2])
-        db = dlnLda(ctx.b, ctx.a, 1-ctx.y, ctx.gamma, ctx.idx[2])
-
-        # output
-        outp = grad_output * -dp
-        outa = grad_output * -da
-        outb = grad_output * -db
-
-        return outp, outa, outb, None, None
+def LogitLoss(theta, y):
+	p = torch.sigmoid(theta)
+	ll = y * torch.log(p) + (1-y) * torch.log(1-p)
+	return -torch.sum(ll)
 
 
-class CatLoss(Function):
-    '''
-    Computes the negative log-likelihood for the categorical model.
+def BetaMixtureLoss(theta, omega, y):
+    # exponentiate
+	theta = torch.exp(theta)
 
-    Inputs to forward:
-        - p (N_turns, mbsize, 1): probability of msg
-        - y (N_turns, mbsize): indicator for msg
+    # parse parameters
+	K = int(theta.size()[-1] / 3)
+	a = 1 + torch.index_select(theta, -1, torch.tensor(range(K)))
+	b = 1 + torch.index_select(theta, -1, torch.tensor(range(K, 2 * K)))
+	c = torch.index_select(theta, -1, torch.tensor(range(2 * K, 3 * K)))
 
-    Output: negative log-likelihood
-    '''
-    @staticmethod
-    def forward(ctx, p, y):
-        # indices
-        idx = {}
-        idx[N_CAT] = ~torch.isnan(y)
-        for i in range(N_CAT-1):
-            idx[i] = y == i
-            idx[N_CAT] *= ~idx[i]
+    # beta densities
+	lndens = Beta(a, b).log_prob(y.unsqueeze(dim=-1))
 
-        # store variables for backward method
-        ctx.p = p
-        ctx.y = y
-        if ctx.p.type() == 'torch.DoubleTensor':    # for gradcheck
-            ctx.idx = {key: val.double() for key, val in idx.items()}
-        else:
-            ctx.idx = {key: val.float() for key, val in idx.items()}
+	# multinomial probabilities
+	phi = torch.div(c, torch.sum(c, dim=-1, keepdim=True))
 
-        # log-likelihood
-        ll = torch.sum(torch.log(1 - torch.sum(p, 2)[idx[N_CAT]]))
-        for i in range(N_CAT-1):
-            ll += torch.sum(torch.log(p[idx[i], [i]]))
+	# expected log-likelihood
+	ll = (lndens + torch.log(phi) - torch.log(omega))
+	Q = torch.sum(omega * ll)
 
-        return -ll
+	# calculate new weights
+	dens = torch.exp(lndens.detach())
+	w = torch.div(dens, torch.sum(dens, dim=-1, keepdim=True))
 
-    @staticmethod
-    def backward(ctx, grad_output):
-        p0 = 1 - torch.sum(ctx.p, dim=2, keepdim=True)
-        inverse = torch.pow(p0, -1).repeat(1, 1, N_CAT-1)
-        dp = ctx.idx[N_CAT].unsqueeze(dim=2) * -inverse
-        for i in range(N_CAT-1):
-            dp[:,:,i] += ctx.idx[i] * torch.pow(ctx.p[:,:,i], -1)
+    # calculate negative log-likelihood
+	return -Q, w
 
-        return grad_output * -dp, None
+
+def NegativeBinomialLoss(theta, y):
+    # parameters
+    r = torch.exp(torch.index_select(theta, -1,
+        torch.tensor(0))).squeeze()
+    p = torch.sigmoid(torch.index_select(theta, -1,
+        torch.tensor(1))).squeeze()
+    # log-likelihood components
+    ll = torch.mvlgamma(y + r, 1) - torch.mvlgamma(r, 1)
+    ll += y * torch.log(p) + r * torch.log(1-p)
+    return -torch.sum(ll)
+
