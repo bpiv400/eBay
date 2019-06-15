@@ -443,7 +443,7 @@ if __name__ == "__main__":
         ['lstg', 'thread']).shift().dropna().astype(np.int64)
     for k, v in INTERVAL.items():
         print('\t%s' % k)
-        z[k] = get_period_time_feats(tf, start, k)
+        z[k] = get_period_time_feats(tf, z['start'], k)
 
     # write simulator chunk
     print("Writing chunk")

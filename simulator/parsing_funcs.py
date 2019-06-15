@@ -62,8 +62,7 @@ def add_turn_indicators(df):
 
 def parse_time_feats_role(model, outcome, x_offer):
     # initialize output dataframe
-    indices = IDX[model]
-    idx = x_offer.index[x_offer.index.isin(indices, level='index')]
+    idx = x_offer.index[x_offer.index.isin(IDX[model], level='index')]
     x_time = pd.DataFrame(index=idx)
     # current offer
     curr = x_offer.loc[idx]
@@ -75,21 +74,19 @@ def parse_time_feats_role(model, outcome, x_offer):
         periods=2).reindex(index=idx)
     if model == 'byr':
         start = x_offer.xs(0, level='index')
-        start.loc['index'] = 1
-        start = start.set_index('index', append=True)
+        start = start.assign(index=1).set_index('index', append=True)
         offer2 = offer2.dropna().append(start).sort_index()
-    # remove features that are constant for buyer
-    if model == 'byr':
+        # remove features that are constant for buyer
         offer2 = offer2.drop(['auto', 'exp', 'reject'], axis=1)
     else:
         offer1 = offer1.drop(['auto', 'exp', 'reject'], axis=1)
     # current offer
     excluded = ['nines', 'auto', 'exp', 'reject']
-    if outcome in ['round', 'msg', 'con']:
+    if outcome in ['round', 'msg', 'con', 'accept', 'reject']:
         excluded += ['round']
-        if outcome in ['msg', 'con']:
+        if outcome in ['msg', 'con', 'accept', 'reject']:
             excluded += ['msg']
-            if outcome == 'con':
+            if outcome in ['con', 'accept', 'reject']:
                 excluded += ['con', 'norm', 'split']
     last_vars = [c for c in offer2.columns if c in excluded]
     # join dataframes
@@ -160,7 +157,6 @@ def parse_fixed_feats_arrival(outcome, x):
     threads = x['offer'].xs(1, level='index')
     # intialize output
     x_fixed = pd.DataFrame(index=threads.index).join(x['lstg'])
-    # days since start of listing
     # days since lstg start, holiday and day of week
     dow = [v for v in threads.columns if v.startswith('dow')]
     x_fixed = x_fixed.join(threads[['days', 'holiday'] + dow].rename(
@@ -180,7 +176,7 @@ def parse_fixed_feats_days(x, idx):
     # lstg features
     x_fixed = x['lstg'].reindex(index=idx, level='lstg')
     # period
-    x_fixed['period'] = x_fixed.index.get_level_values('period')
+    x_fixed['focal_days'] = x_fixed.index.get_level_values('period')
     # days since lstg start
     day = x_fixed.start_days + x_fixed.period
     clock = pd.to_datetime(day, unit='D', origin=START)

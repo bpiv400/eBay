@@ -29,16 +29,41 @@ def append_chunks():
     paths = ['%s/%s' % (DIR, name) for name in os.listdir(DIR)
         if os.path.isfile('%s/%s' % (DIR, name)) and 'out' in name]
     # initialize output
-    d = {key: pd.DataFrame() for key in TABLE_NAMES}
+    x = {}
+    y = {}
+    z = {}
     # loop over chunks
     for path in sorted(paths):
         chunk = pickle.load(open(path, 'rb'))
-        for key, val in d.items():
-            d[key] = val.append(chunk[key], verify_integrity=True)
-    return d
+
+        # x
+        for key, val in chunk['x'].items():
+            if key in x:
+                x[key] = x[key].append(val, verify_integrity=True)
+            else:
+                x[key] = val
+
+        # y
+        for model, d in chunk['y'].items():
+            if model not in y:
+                y[model] = {}
+            for outcome, val in d.items():
+                if outcome in y[model]:
+                    y[model][outcome] = y[model][outcome].append(
+                        val, verify_integrity=True)
+                else:
+                    y[model][outcome] = val
+        # z
+        for key, val in chunk['z'].items():
+            if key in z:
+                z[key] = z[key].append(val, verify_integrity=True)
+            else:
+                z[key] = val
+
+    return x, y, z
 
 
-def randomize_sellers(u):
+def randomize_lstgs(u):
     random.seed(SEED)   # set seed
     np.random.shuffle(u)
     slr_dict = {}
@@ -56,8 +81,8 @@ if __name__ == '__main__':
     d = append_chunks()
 
     # randomize sellers into train, test and dev
-    slrs = np.unique(d['L'].index.get_level_values(level='slr'))
-    slr_dict = randomize_sellers(slrs)
+    slrs = np.unique(x['lstg'].index.get_level_values(level='lstg'))
+    slr_dict = randomize_lstgs(slrs)
 
     # partition the data and save
     save_partitions(slr_dict, d)
