@@ -115,7 +115,7 @@ def get_multi_lstgs(L):
     return overlap.groupby(df.index.names).max()
 
 
- def clean_events(events, L):
+def clean_events(events, L):
 	# identify multi-listings
 	ismulti = get_multi_lstgs(L)
 	# drop multi-listings
