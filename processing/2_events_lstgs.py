@@ -139,6 +139,10 @@ if __name__ == "__main__":
 
     # load data
     print('Loading data')
+    outfile = CHUNKS_DIR + '%d_events_lstgs.pkl' % num
+    if os.path.isfile(outfile):
+        print('%s already exists.' % outfile)
+        exit()
     chunk = pickle.load(open(CHUNKS_DIR + '%d.pkl' % num, 'rb'))
     L, T, O = [chunk[k] for k in ['listings', 'threads', 'offers']]
 
@@ -164,4 +168,4 @@ if __name__ == "__main__":
     # write chunk
     print("Writing chunk")
     chunk = {'events': events, 'lstgs': lstgs}
-    pickle.dump(chunk, open(CHUNKS_DIR + '%d_events_lstgs.pkl' % num, 'wb'))
+    pickle.dump(chunk, open(outfile, 'wb'))

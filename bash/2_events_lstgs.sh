@@ -1,6 +1,7 @@
 #!/bin/bash
 #$ -t 1-256
 #$ -q short.q
+#$ -l m_mem_free=10G
 #$ -N events
 #$ -j y
 #$ -o logs/
