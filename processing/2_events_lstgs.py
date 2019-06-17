@@ -116,19 +116,19 @@ def get_multi_lstgs(L):
 
 
  def clean_events(events, L):
- 	# identify multi-listings
-    ismulti = get_multi_lstgs(L)
-    # drop multi-listings
-    events = events[~ismulti.reindex(index=events.index)]
-    # limit index to ['lstg', 'thread', 'index']
-    events = events.reset_index(LEVELS[:-1], drop=True).sort_index()
-    # 30-day burn in
-    events = events.join(L['start_date'])
-    events = events[events.start_date >= 30].drop('start_date', axis=1)
-    # drop listings in which prices have changed
-    events = events.join(L['flag'])
-    events = events[events.flag == 0].drop('flag', axis=1)
-    return events
+	# identify multi-listings
+	ismulti = get_multi_lstgs(L)
+	# drop multi-listings
+	events = events[~ismulti.reindex(index=events.index)]
+	# limit index to ['lstg', 'thread', 'index']
+	events = events.reset_index(LEVELS[:-1], drop=True).sort_index()
+	# 30-day burn in
+	events = events.join(L['start_date'])
+	events = events[events.start_date >= 30].drop('start_date', axis=1)
+	# drop listings in which prices have changed
+	events = events.join(L['flag'])
+	events = events[events.flag == 0].drop('flag', axis=1)
+	return events
 
 
 if __name__ == "__main__":
