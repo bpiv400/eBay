@@ -1,4 +1,4 @@
-import sys
+import sys, os
 sys.path.append('repo/')
 sys.path.append('repo/processing/')
 import argparse, pickle
