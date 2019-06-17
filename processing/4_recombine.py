@@ -1,5 +1,5 @@
 """
-Recombines chunks and splits into dev, test, and train.
+Recombines chunks and splits into train, dev, sim, and test.
 """
 
 import os, random, pickle
@@ -7,21 +7,28 @@ import pandas as pd, numpy as np
 
 DIR = '../../data/chunks'
 SEED = 123456
-SHARES = {'dev': .15, 'test': .3}
-OUT_PATH = '../../data/simulator/input/'
-TABLE_NAMES = ['time_feats', 'L', 'T', 'O']
+SHARES = {'dev': .1, 'sim': .3, 'test': .3}
+OUT_PATH = '../../data/partitions/'
 
 
-def save_partitions(slr_dict, d):
-    """
-    Saves the data partitions.
-    """
+def save_partitions(slr_dict, x, y, z):
     for key, val in slr_dict.items():
         print('Saving', key)
-        idx = pd.Index(val, name='slr')
-        data = {key: val.loc[idx] for key, val in d.items()}
+        # index of lstgs to slice with
+        idx = pd.Index(val, name='lstg')
+        # write path
         path = OUT_PATH + '%s.pkl' % key
-        pickle.dump(data, open(path, 'wb'))
+        # only x_lstg required for simulation
+        if key == 'sim':
+            pickle.dump(x['lstg'].loc[idx], open(path, 'wb'))
+        else:
+            data = {}
+            data['x'] = {k: v.loc[idx] for k, v in x.items()}
+            data['z'] = {k: v.loc[idx] for k, v in z.items()}
+            data['y'] = {}
+            for model, d in y.items():
+                data['y'][model] = {k: v.loc[idx] for k, v in d.items()}
+            pickle.dump(data, open(path, 'wb'))
 
 
 def append_chunks():
@@ -35,14 +42,12 @@ def append_chunks():
     # loop over chunks
     for path in sorted(paths):
         chunk = pickle.load(open(path, 'rb'))
-
         # x
         for key, val in chunk['x'].items():
             if key in x:
                 x[key] = x[key].append(val, verify_integrity=True)
             else:
                 x[key] = val
-
         # y
         for model, d in chunk['y'].items():
             if model not in y:
@@ -59,7 +64,6 @@ def append_chunks():
                 z[key] = z[key].append(val, verify_integrity=True)
             else:
                 z[key] = val
-
     return x, y, z
 
 
@@ -78,11 +82,11 @@ def randomize_lstgs(u):
 
 if __name__ == '__main__':
     # append files
-    d = append_chunks()
+    x, y, z = append_chunks()
 
     # randomize sellers into train, test and dev
-    slrs = np.unique(x['lstg'].index.get_level_values(level='lstg'))
-    slr_dict = randomize_lstgs(slrs)
+    lstgs = np.unique(x['lstg'].index.get_level_values(level='lstg'))
+    slr_dict = randomize_lstgs(lstgs)
 
     # partition the data and save
-    save_partitions(slr_dict, d)
+    save_partitions(slr_dict, x, y, z)

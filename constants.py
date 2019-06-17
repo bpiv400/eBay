@@ -4,16 +4,16 @@ from pandas.tseries.holiday import USFederalHolidayCalendar as calendar
 TOL_HALF = 0.02 
 
 # optimization parameters
-EPOCHS = 1000
+EPOCHS = 100
 MBSIZE = 32
 LR = 1e-4
 
 # paths and directories
 
-TRAIN_PATH = '../../data/simulator/train.pkl'
+TRAIN_PATH = '../../data/partitions/train.pkl'
 CHUNKS_DIR = '../../data/chunks/'
 LDA_DIR = '../../data/lda/'
-MODEL_DIR = '../../data/simulator/output/'
+MODEL_DIR = '../../data/models/'
 
 # maximal delay times
 MAX_DELAY = {'slr': 2 * 24 * 3600, 'byr': 14 * 24 * 3600}

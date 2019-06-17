@@ -178,7 +178,7 @@ def parse_fixed_feats_days(x, idx):
     # period
     x_fixed['focal_days'] = x_fixed.index.get_level_values('period')
     # days since lstg start
-    day = x_fixed.start_days + x_fixed.period
+    day = x_fixed.start_days + x_fixed.focal_days
     clock = pd.to_datetime(day, unit='D', origin=START)
     x_fixed = x_fixed.join(extract_day_feats(clock).rename(
         lambda x: 'focal_' + x, axis=1))

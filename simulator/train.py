@@ -71,8 +71,7 @@ if __name__ == '__main__':
 
     # load data
     print('Loading data')
-    #data = pickle.load(open(TRAIN_PATH, 'rb'))
-    data = pickle.load(open('../../data/chunks/1_out.pkl', 'rb'))
+    data = pickle.load(open(TRAIN_PATH, 'rb'))
 
     # create inputs to model
     print('Creating model inputs')
