@@ -15,7 +15,7 @@ if __name__ == "__main__":
     # load data
     print('Loading data')
     d = pickle.load(open(CHUNKS_DIR + '%d.pkl' % num, 'rb'))
-    T = d['T']
+    T = d['threads']
     d = pickle.load(open(CHUNKS_DIR + '%d_events_lstgs.pkl' % num, 'rb'))
     events, lstgs = [d[k] for k in ['events', 'lstgs']]
 
