@@ -12,7 +12,7 @@ LR = 1e-4
 
 TRAIN_PATH = 'data/partitions/train.pkl'
 CHUNKS_DIR = 'data/chunks/'
-LDA_DIR = '../../data/lda/'
+LDA_DIR = 'data/lda/'
 MODEL_DIR = '../../data/models/'
 
 # maximal delay times
