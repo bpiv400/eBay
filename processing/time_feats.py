@@ -46,7 +46,7 @@ def add_lstg_time_feats(subset, role, isOpen):
 def get_lstg_time_feats(events):
     # create dataframe for variable creation
     ordered = events.sort_values(['lstg', 'clock', 'censored']).drop(
-        ['bin', 'message', 'price', 'censored'], axis=1)
+        ['message', 'price', 'censored'], axis=1)
     # identify listings with multiple, interspersed threads
     s1 = ordered.groupby('lstg').cumcount()
     s2 = ordered.sort_index().groupby('lstg').cumcount()
