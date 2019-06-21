@@ -2,8 +2,8 @@
 #$ -t 1-256
 #$ -q short.q
 #$ -l m_mem_free=10G
-#$ -N frames
+#$ -N feats
 #$ -j y
 #$ -o logs/
 
-python repo/processing/2_frames.py --num "$SGE_TASK_ID"
+python repo/processing/3_feats.py --num "$SGE_TASK_ID"
