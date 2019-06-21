@@ -139,7 +139,7 @@ if __name__ == "__main__":
 
     # load data
     print('Loading data')
-    outfile = CHUNKS_DIR + '%d_events_lstgs.pkl' % num
+    outfile = CHUNKS_DIR + '%d_frames.pkl' % num
     if os.path.isfile(outfile):
         print('%s already exists.' % outfile)
         exit()
@@ -165,7 +165,16 @@ if __name__ == "__main__":
         tf_hier.rename(lambda x: 'tf_' + x, axis=1))   
     events = events.drop(0, level='thread') # remove lstg start/end obs
 
+    # split off threads dataframe
+    events = events.join(T[['byr_hist', 'byr_us']])
+    threads = events[['clock', 'byr_us', 'byr_hist', 'bin']].xs(
+        1, level='index')
+    events = events.drop(['byr_us', 'byr_hist', 'bin'], axis=1)
+
+    # exclude current thread from byr_hist
+    threads['byr_hist'] -= (1-threads.bin) 
+
     # write chunk
     print("Writing chunk")
-    chunk = {'events': events, 'lstgs': lstgs}
+    chunk = {'events': events, 'lstgs': lstgs, 'threads': threads}
     pickle.dump(chunk, open(outfile, 'wb'))

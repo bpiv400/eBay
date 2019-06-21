@@ -41,8 +41,8 @@ def add_lstg_time_feats(subset, role, isOpen):
         names=['thread'] + s.index.names).reorder_levels(
         df.index.names).sort_index()
     return f(count), f(best)
-
-
+ 
+ 
 def get_lstg_time_feats(events):
     # create dataframe for variable creation
     ordered = events.sort_values(['lstg', 'clock', 'censored']).drop(
@@ -71,7 +71,6 @@ def get_lstg_time_feats(events):
     assert (tf.byr_best >= tf.byr_best_open).min()
     # sort and return
     return tf
-
 
 def get_hierarchical_time_feats(events):
     # initialize output dataframe

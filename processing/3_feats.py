@@ -1,5 +1,6 @@
 import sys
-sys.path.append('../')
+sys.path.append('repo/')
+sys.path.append('repo/processing/')
 import argparse, pickle
 from datetime import datetime as dt
 from sklearn.utils.extmath import cartesian
@@ -272,21 +273,13 @@ if __name__ == "__main__":
 
     # load data
     print('Loading data')
-    chunk = pickle.load(open(CHUNKS_DIR + '%d.pkl' % num, 'rb'))
-    events, lstgs = [chunk[k] for k in ['events', 'lstgs']]
+    infile = CHUNKS_DIR + '%d_frames.pkl' % num
+    d = pickle.load(open(infile, 'rb'))
+    events, lstgs, threads = [d[k] for k in ['events', 'lstgs', 'threads']]
 
     # add lstg-level time-valued features
-    print('Creating lstg-level time-valued features.')
+    print('Creating lstg-level time-valued features')
     tf = get_lstg_time_feats(events)
-
-    # split off threads dataframe
-    events = events.join(T[['byr_hist', 'byr_us']])
-    threads = events[['clock', 'byr_us', 'byr_hist', 'bin']].xs(
-        1, level='index')
-    events = events.drop(['byr_us', 'byr_hist', 'bin'], axis=1)
-
-    # exclude current thread from byr_hist
-    threads['byr_hist'] -= (1-threads.bin) 
 
     # input features
     print('Creating input features')
