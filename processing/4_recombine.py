@@ -5,10 +5,10 @@ Recombines chunks and splits into train, dev, sim, and test.
 import os, random, pickle
 import pandas as pd, numpy as np
 
-DIR = '../../data/chunks'
+DIR = 'data/chunks'
 SEED = 123456
 SHARES = {'train_models': 1/3, 'train_rl': 1/3}
-OUT_PATH = '../../data/partitions/'
+OUT_PATH = 'data/partitions/'
 
 
 def save_partitions(slr_dict, x, y, z):

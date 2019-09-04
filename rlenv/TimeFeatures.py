@@ -18,14 +18,14 @@ class TimeFeatures:
     """
         Object for updating and setting time valued features
         Current list of features:
-            - slr offers: number of seller oers in other threads, excluding rejects.
-            - byr offers: number of buyer oers in other threads, excluding rejects.
-            - slr offers open: number of current open slr offers in other threads.
-            - byr offers open: number of current open byr offers in other threads.
+            - slr offers: number of seller offers in other threads, excluding rejects.
+            - byr offers: number of buyer offers in other threads, excluding rejects.
+            - slr offers open: number of open, unanswered slr offers in other open threads.
+            - byr offers open: number of open, unanswered byr offers in other open threads.
             - slr best: the highest seller total concession in other threads, defined as 1-offer/start_price
             - byr best: the highest buyer total concession in other threads, defined as offr/start_price
-            - slr best open: the highest seller total concession among open seller offers.
-            - byr best open: the highest buyer total concession among open buyer offers.
+            - slr best open: the highest unanswered seller concession among open seller offers.
+            - byr best open: the highest unanswered buyer total concession among open buyer offers.
         Attributes:
             offers)
             feats: dictionary containing time valued features for each listing. Values are dictionaries
@@ -735,7 +735,9 @@ class FeatureCounter:
         contents: dictionary mapping thread ids to their contribution to the
         total
     Public Functions:
-        increment:
+        increment: Increments the counter in response to an event in some given thread
+        remove: removes the contribution of a given thread from the total
+        peek: gets the total excluding the current thread
     """
     def __init__(self, name):
         """
@@ -778,6 +780,61 @@ class FeatureCounter:
             return self.total - self.contents[exclude]
 
 
+class SmallHeap:
+    """
+    Max heap that only contains two items for tracking historical max
+    with the option of excluding 1 entry from max calculation
+
+    Attributes:
+        contents: array of len <= 2 containing the current max and second
+        largest elements
+    Public Functions:
+        peek: gives the max excluding the current thread
+        promote: updates the value associated some thread
+        remove: removes the element associated with some thread
+    """
+    def __init__(self):
+        """
+        Initialize attributes
+        """
+        self.contents = []
+
+    def promote(self, thread_id=None, value=None):
+        """
+        Promotes the value associated with some given thread
+        :param thread_id: id of thread
+        :param value: new value
+        :return: NA
+        """
+        ind = self.__index_of(thread_id=thread_id)
+        if ind == -1:
+            return
+    def __index_of(self, thread_id=None):
+        """
+        Returns the index of the element associated with the
+        given thread_id in self.contents
+
+        :param thread_id: id of the thread to search for
+        :return: NA
+        """
+        if thread_id is None:
+            return -1
+        for index, entry in enumerate(self.contents):
+            if entry.thread_id == thread_id:
+                return index
+        return -1
+
+    def __contains__(self, item):
+        """
+        Checks whether the heap contains an entry associated with the
+        given thread_id
+        :param item: given thread id
+        :return:
+        """
+        for entry in self.contents:
+            if entry.thread_id == item:
+                return True
+        return False
 
 
 class ExpirationQueue:
