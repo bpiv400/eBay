@@ -23,7 +23,7 @@ class Simulator:
         # save parameters from inputs
         self.model = model
         self.outcome = outcome
-        self.isLSTM = 'lstm_layers' in params
+        self.isRNN = model != 'arrival'
         self.EM = self.outcome in ['sec', 'con']
 
         # parameters and loss function
@@ -42,12 +42,12 @@ class Simulator:
 
         # neural net(s)
         N_fixed = train['x_fixed'].size()[-1]
-        if self.isLSTM:
+        if self.isRNN:
             self.steps = train['y'].size()[0]
             N_time = train['x_time'].size()[-1]
-            self.net = LSTM(N_fixed, N_time, N_out, params)
+            self.net = RNN(N_fixed, N_time, N_out, params.hidden)
         else:
-            self.net = FeedForward(N_fixed, N_out, params)
+            self.net = FeedForward(N_fixed, N_out, params.hidden)
 
         # optimizer
         self.optimizer = optim.Adam(self.net.parameters(), lr=LR)
@@ -68,7 +68,7 @@ class Simulator:
 
             # prediction using net
             x_fixed = torch.index_select(self.train['x_fixed'], -2, idx)
-            if self.isLSTM:
+            if self.isRNN:
                 x_time = rnn.pack_padded_sequence(
                     self.train['x_time'][:, idx, :],
                     self.train['turns'][idx])
@@ -78,7 +78,7 @@ class Simulator:
 
             # outcome
             y = torch.index_select(self.train['y'], -1, idx)
-            if self.isLSTM:
+            if self.isRNN:
                 mask = ~torch.isnan(y)
                 y = y[mask]
                 theta = theta[mask]
@@ -86,7 +86,7 @@ class Simulator:
             # calculate loss
             if self.EM:
                 omega = torch.index_select(self.omega, -2, idx)
-                if self.isLSTM:
+                if self.isRNN:
                     loss, omega[mask] = self.loss(theta, omega[mask], y)
                     self.omega[:, idx, :] = omega
                 else:

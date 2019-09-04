@@ -13,18 +13,24 @@ def train_model(simulator):
     time0 = dt.now()
 
     # initialize array for log-likelihoods by epoch
-    lnL = np.full(EPOCHS, np.nan)
+    lnL = []
 
     # loop over epochs, record log-likelihood
-    for i in range(EPOCHS):
+    i = 0
+    while True:
         start = dt.now()
 
         # iterate over minibatches
-        lnL[i] = simulator.run_epoch()
+        lnL.append(simulator.run_epoch())
 
         # print log-likelihood and duration
         print('Epoch %d: %dsec. lnL: %1.4f.' %
             (i+1, (dt.now() - start).seconds, lnL[i]))
+
+        # break if no improvement for 100 epochs
+        if (i >= 100) and (lnL[i] <= lnL[i-100]):
+            break
+        i += 1
 
     # return loss history and total duration
     return lnL, dt.now() - time0

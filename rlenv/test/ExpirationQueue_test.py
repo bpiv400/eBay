@@ -1,4 +1,4 @@
-from TimeFeatures import ExpirationQueue
+from deprecated.TimeFeatures import ExpirationQueue
 import pytest
 
 

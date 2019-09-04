@@ -7,55 +7,27 @@ LSTG_COLUMNS = ['start_date', 'meta', 'leaf', 'cndtn', 'title', 'lstg', 'slr_his
                 'photos', 'slr_lstgs', 'slr_bos', 'decline_price', 'accept_price',
                 'store', 'slr_us', 'fast', 'end_time']
 
-# all columns that correspond to an identifier, rather than a feature of the lstg
-LSTG_IDS = ['slr', 'meta', 'leaf', 'cndtn', 'title', 'lstg']
+SLR_OFFERS = 'slr_offers'
+BYR_OFFERS = 'byr_offers'
+SLR_OFFERS_OPEN = 'slr_offers_open'
+BYR_OFFERS_OPEN = 'byr_offers_open'
+SLR_BEST = 'slr_best'
+BYR_BEST = 'byr_best'
+SLR_BEST_OPEN = 'slr_best_open'
+BYR_BEST_OPEN = 'byr_best_open'
 
-# all columns except identifiers
-CONSTS = [col for col in LSTG_COLUMNS if col not in LSTG_IDS]
+TIME_FEATS = [
+    SLR_OFFERS,
+    BYR_OFFERS,
+    SLR_OFFERS_OPEN,
+    BYR_OFFERS_OPEN,
+    SLR_BEST,
+    BYR_BEST,
+    SLR_BEST_OPEN,
+    BYR_BEST_OPEN
+]
 
-# dictionary of lists where order defines feature hierarchy  from broadest to
-# most narrow and each entry gives an idientifier level containing names of
-# features to be computed at that level
-TIME_FEATS = OrderedDict({
-    'slr': [
-        'open_lstgs',
-        'open_threads'
-        ],
-    'meta': [
-        'open_lstgs',
-        'open_threads'
-        ],
-    'leaf': [
-        'open_lstgs',
-        'open_threads'
-        ],
-    'title': [
-        'open_lstgs',
-        'open_threads',
-        'byr_offers',
-        'slr_offers',
-        ],
-    'cndtn': [
-        'open_lstgs',
-        'open_threads',
-        'byr_offers_recent',
-        'slr_offers_recent',
-        'slr_min',
-        'byr_max',
-        'byr_max_recent',
-        'slr_min_recent'
-        ],
-    'lstg': [
-        'open_threads',
-        'byr_offers',
-        'slr_offers',
-        'slr_min',
-        'byr_max',
-        'byr_max_recent',
-        'slr_min_recent'
-        ]
-})
-
+EXPIRATION = 48 * 60 * 60
 
 def make_column_map(cols, consts=False):
     """

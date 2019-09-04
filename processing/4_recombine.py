@@ -7,7 +7,7 @@ import pandas as pd, numpy as np
 
 DIR = '../../data/chunks'
 SEED = 123456
-SHARES = {'dev': .1, 'sim': .3, 'test': .3}
+SHARES = {'train_models': 1/3, 'train_rl': 1/3}
 OUT_PATH = '../../data/partitions/'
 
 
@@ -34,7 +34,7 @@ def save_partitions(slr_dict, x, y, z):
 def append_chunks():
     # list of chunks
     paths = ['%s/%s' % (DIR, name) for name in os.listdir(DIR)
-        if os.path.isfile('%s/%s' % (DIR, name)) and 'out' in name]
+        if os.path.isfile('%s/%s' % (DIR, name)) and 'feats' in name]
     # initialize output
     x = {}
     y = {}
@@ -76,7 +76,7 @@ def randomize_lstgs(u):
         curr = last + int(u.size * val)
         slr_dict[key] = sorted(u[last:curr])
         last = curr
-    slr_dict['train'] = sorted(u[last:])
+    slr_dict['test'] = sorted(u[last:])
     return slr_dict
 
 

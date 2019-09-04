@@ -9,7 +9,7 @@ import h5py
 import pandas as pd
 import numpy as np
 from tqdm import tqdm
-from env_constants import LSTG_COLUMNS
+from deprecated.env_constants import LSTG_COLUMNS
 
 # paths for inputs and outputs
 H5_PATH = 'data/rl/input.h5'

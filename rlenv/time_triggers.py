@@ -5,9 +5,10 @@ event has occurred
 """
 SALE = 'SALE'
 SLR_REJECTION = 'SLR_REJECTION'
+# event triggered by a buyer rejecting a seller's offer -- closes the thread
 BYR_REJECTION = 'BYR_REJECTION'
-BUYER_OFFER = 'BUYER_OFFER'
-SELLER_OFFER = 'SELLER_OFFER'
+# event triggered by a buyer or seller offer that's not an acceptance or rejection
+OFFER = 'OFFER'
 LSTG_EXPIRATION = 'LSTG_EXPIRATION'
 THREAD_EXPIRATION = 'THREAD_EXPIRATION'
 NEW_THREAD = 'NEW_THREAD'

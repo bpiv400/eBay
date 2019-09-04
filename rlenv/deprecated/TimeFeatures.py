@@ -2,135 +2,293 @@
 Class for storing and updating time valued features
 
 TODO:
-1. Fix everything and document
+1. Documentation
 2. Update testing to reflect that expiration queue now counts how many come from each thread
 5. Find out from Etan whether he has signed off on the final list of time-valued features
-
+6. Update offer object to contain, time, price, byr boolean
 """
 
 import math
 from collections import deque, Counter
 import numpy as np
+from deprecated.env_constants import TIME_FEATS
 import rlenv.time_triggers as time_triggers
-import rlenv.env_constants as consts
+
+SLR_PARAMS = {
+    'type': 'slr',
+    'direction': 'min'
+}
+
+BYR_PARAMS = {
+    'type': 'byr',
+    'direction': 'max'
+}
+
 
 class TimeFeatures:
     """
-        Object for updating and setting time valued features
-        Current list of features:
-            - slr offers: number of seller oers in other threads, excluding rejects.
-            - byr offers: number of buyer oers in other threads, excluding rejects.
-            - slr offers open: number of current open slr offers in other threads.
-            - byr offers open: number of current open byr offers in other threads.
-            - slr best: the highest seller total concession in other threads, defined as 1-offer/start_price
-            - byr best: the highest buyer total concession in other threads, defined as offr/start_price
-            - slr best open: the highest seller total concession among open seller offers.
-            - byr best open: the highest buyer total concession among open buyer offers.
-        Attributes:
-            offers)
-            feats: dictionary containing time valued features for each listing. Values are dictionaries
-            containing data structures and values required to calculate all time valued features in list
-        Public functions:
-            get_feats: returns a dictionary of time features for a given set of ids
-            lstg_active: checks whether a given lstg is still open (e.g. not sold in some other thread
-            or expired)
-            initialize_time_feats: initializes self.feats with all objects necessary to contain a new
-            lstg
-            update_features: dispatches helper update function to update all time features reelvant to
-            a given event
-        Private functions:
-            _get_feat: helper function for get_feats that returns value of a specific level-feature
-            _initialize_feature: helper function for initialize_time_feats
-            _update_thread_close: updates features after thread closes for some reason (expiration or byr rejection)
-            _update_thread_expire: updates features after a thread has expired (time out of byr or slr)
-            _update_byr_rejection: updates features after byr rejects an offer, closing thread
-        """
-    def __init__(self):
-        """
-        Initializes features object
-
-        """
+    Attributes:
+        expiration: number of seconds for expiration features (max recent byr, min recent slr, number of recent
+        offers)
+        feats: dictionary containing hierarchy of time valued features
+    Public functions:
+        get_feats: returns a dictionary of time features for a given set of ids
+        lstg_active: checks whether a given lstg is still open (e.g. not sold in some other thread
+        or expired)
+        initialize_time_feats: initializes self.feats with all objects necessary to contain a new
+        lstg
+        update_features: dispatches helper update function to update all time features reelvant to
+        a given event
+    Private functions:
+        _get_feat: helper function for get_feats that returns value of a specific level-feature
+        _initialize_feature: helper function for initialize_time_feats
+        _initialize_count_level: initializes features at high hierarchy levels where only
+        thread, lstg, and offer counts are tracked
+        _initialize_cndtn_level: initializes features at the cndtn level
+        _initialize_lstg_level: initializes features at the lstg level
+        _update_lstg_close: update features after a lstg closure (expire or sale)
+        _update_lstg_expire: updates features after lstg expiration
+        _update_lstg_sale: updates features after lstg sale
+        _update_thread_close: updates features after thread closes for some reason
+        _update_byr_rejection: updates features after byr rejects an offer, closing thread
+        _update_thread_expire: updates features after a thread has expired (time out of byr or slr)
+        _add_thread: adds a thread to the list of threads tracked for a given lstg
+        _remove_thread: removes a thread from list of threads tracked after thread closes
+        _remove_lstg: removes a lstg from the time features object after it closes
+        _lstg_time_feat: returns the value of a given feature at the lowest level
+    """
+    def __init__(self, expiration=None):
         super(TimeFeatures, self).__init__()
         self.feats = dict()
+        self.expiration = expiration
 
-    def lstg_active(self, lstg_id):
+    def lstg_active(self, ids):
         """
-        Returns whether a particular listing is open
-        :param lstg_id: id for a lstg
+        Returns whether the lstg associated with a given set of ids still exists
+        :param ids: gives the ids associated with an event (includes lstg identifier)
         :return: Bool
         """
-        return lstg_id in self.feats
+        return ids['lstg'] in self.feats[ids['slr']][ids['meta']][ids['leaf']][ids['title']][ids['cndtn']]
 
     @staticmethod
-    def _get_feat(thread_id=None, feat=None, feat_dict=None, time=0):
+    def _get_feat(ids=None, feat=None, feat_dict=None, level=None, time=0):
         """
         Gets the value of a specific feature for a thread
 
-        :param thread_id: current thread id if any
-        :param feat: string giving name of the target feature
+        :param ids: dictionary of ids for the current offer
+        :param feat: string giving name of the feature
         :param feat_dict: dictionary where the feature value is stored
+        :param level: string naming the current feature level (slr, meta, leaf, ...)
         :return: Numeric giving feature
         """
-        args = {
-            'exclude': thread_id
-        }
-        if 'recent' in feat: # ignored for the timebeing
-            args['time'] = time
-        return feat_dict[feat].peek(**args)
+        if 'thread_id' in ids:
+            thread_id = ids['thread_id']
+            adjust = 1
+        else:
+            thread_id = None
+            adjust = 0
+        if 'max' not in feat and 'min' not in feat:
+            if 'recent' in feat:
+                return feat_dict[feat].peak(time=time, exclude=thread_id)
+            else:
+                if 'thread' in feat:
+                    return feat_dict[feat] - adjust
+                elif 'lstg' in feat:
+                    return feat_dict[feat]
+                elif feat == 'slr_offers':
+                    if 'slr_count' in ids:
+                        return feat_dict[feat] - ids['slr_count']
+                    else:
+                        return feat_dict[feat]
+                else:
+                    if 'byr_count' in ids:
+                        return feat_dict[feat] - ids['byr_count']
+                    else:
+                        return feat_dict[feat]
+        else:
+            args = {
+                'exclude': thread_id
+            }
+            if 'recent' in feat:
+                args['time'] = time
+            val = feat_dict[feat].peak(**args)
+            if val == -1:
+                if level == 'lstg':
+                    return feat_dict['start_price']
+                else:
+                    return feat_dict['start_price'].peak(exclude=None)
+            else:
+                return val
 
     def get_feats(self, ids, time):
         """
         Gets the time features associated with a specific lstg
 
-        :param ids: ids dictionary for a specific listing (possibly thread)
+        :param ids: ids dictionary for a listing
         :param time: integer giving current time
-        :return: array of time-valued features in the order given by env_consts.TIME_FEATURES
+        :return: dictionary of time valued features where names match names from 2_process_chunk
         """
-        output = []
-        if 'thread_id' in ids:
-            thread_id = ids['thread_id']
-        else:
-            thread_id = None
-
-        for feat in consts.TIME_FEATS:
-            output.append(self._get_feat(thread_id=thread_id,
-                                         feat=feat,
-                                         feat_dict=self.feats[ids['lstg_id']],
-                                         time=time))
-        return output
+        time_feats = {}
+        outer = self.feats
+        for level in TIME_FEATS:
+            inner = outer[ids[level]]
+            for feat in TIME_FEATS[level]:
+                feat_id = '%s_%s' % (level, feat)
+                time_feats[feat_id] = TimeFeatures._get_feat(feat=feat,
+                                                             feat_dict=inner,
+                                                             ids=ids,
+                                                             level=level,
+                                                             time=time)
+            outer = inner
+        time_feats['time'] = time
+        return time_feats
 
     @staticmethod
+    def _initialize_count_level(outer_dict=None, level=None, level_value=None):
+        """
+        Initializes time features for 1 of the outer count levels
+        (meta, leaf, slr, title)
+
+        :param outer_dict: dictionary in which the dictionary for this
+        level will be placed or exists
+        :param level: string denoting the current level (slr, title, etc)
+        :param level_value: value of identifier for level
+        :return: NA
+        """
+        if level_value in outer_dict:
+            feature_dict = outer_dict[level_value]
+        else:
+            feature_dict = dict()
+            for feat in TIME_FEATS[level]:
+                feature_dict[feat] = 0
+            outer_dict[level_value] = feature_dict
+        feature_dict['open_lstgs'] += 1
+        return feature_dict
+
     def _initialize_feature(self, feat):
         """
         Initializes a given feature
         :param feat: name of the feature
         :return: Object encapsulating feature
         """
-        if 'best' not in feat:
-            if 'recent' in feat: # will be ignored for the timebeing
-                return ExpirationQueue(expiration=consts.EXPIRATION)
+        if 'max' not in feat and 'min' not in feat:
+            if 'recent' in feat:
+                return ExpirationQueue(expiration=self.expiration)
             else:
-                return FeatureCounter(feat)
+                return 0
         else:
-            if 'recent' in feat: # will be ignored for the timebeing
-                return ExpirationHeap(min_heap=False,
-                                      expiration=consts.EXPIRATION)
+            if 'max' in feat:
+                min_heap = False
             else:
-                return FeatureHeap(min_heap=False)
+                min_heap = True
+            if 'recent' in feat:
+                return ExpirationHeap(min_heap=min_heap, expiration=self.expiration)
+            else:
+                return FeatureHeap(min_heap=min_heap)
 
-    def initialize_time_feats(self, lstg_id):
+    def _initialize_lstg_level(self, start_price=None):
+        """
+        Get feature dictionary representing a given lstg
+        :param start_price: double giving start price of an item
+        :return: dictionary
+        """
+        lstg_dict = dict()
+        lstg_dict['start_price'] = start_price
+        for feat in TIME_FEATS['lstg']:
+            lstg_dict[feat] = self._initialize_feature(feat)
+        lstg_dict['threads'] = set()
+        return lstg_dict
+
+    def _initialize_cndtn_level(self, outer_dict=None, ids=None, start_price=None):
+        """
+        Initialize condition level features for a given cndtn, assuming a new
+        lstg is opening
+
+        :param outer_dict: dictionary in which the dictionary for this
+        level will be placed or exists
+        :param ids: id dictionary from NewItem event
+        :param start_price: start price for this listing
+        :return: NA
+        """
+        if ids['cndtn'] in outer_dict:
+            feature_dict = outer_dict[ids['cndtn']]
+        else:
+            feature_dict = dict()
+            feature_dict['start_price'] = FeatureHeap(min_heap=True)
+            outer_dict[ids['cndtn']] = feature_dict
+            for feat in TIME_FEATS['cndtn']:
+                feature_dict[feat] = self._initialize_feature(feat)
+            # updating with initial listing value
+        feature_dict['open_lstgs'] += 1
+        feature_dict['start_price'].push(thread_id=ids['lstg'], value=start_price)
+        return feature_dict
+
+    def initialize_time_feats(self, ids, start_price=None):
         """
         Creates time feats for a listing, assuming the time feats up to this point
-        have been computed correctly.
+        have been computed correctly. Adds a new open lstg at each relevant level for this
+        listing and updates seller min to incorporate the start price of this listing
 
-        :param lstg_id: id of the lstg being initialized
+        :param ids: event ids dictionary
+        :param start_price: start price of the lstg
+        :return: NA
         """
-        self.feats[lstg_id] = dict()
-        for feat in consts.TIME_FEATS:
-            self.feats[lstg_id] = self._initialize_feature(feat)
+        outer: dict = self.feats
+        for level in TIME_FEATS:
+            if level == 'cndtn':
+                outer = self._initialize_cndtn_level(outer_dict=outer, ids=ids, start_price=start_price)
+            elif level == 'lstg':
+                outer[ids['lstg']] = self._initialize_lstg_level(start_price=start_price)
+            else:
+                outer = self._initialize_count_level(outer_dict=outer, level=level, level_value=ids[level])
+
+    def _update_lstg_close(self, feat_dict=None, feat_name=None, offer=None, ids=None, expired=False):
+        """
+        Updates time valued features after a lstg has closed (expired or sale)
+
+        :param feat_dict: dictionary of time valued features for the current level
+        :param offer: dictionary giving parameters of the offer
+        :param feat_name: string giving name of time valued feature
+        :param ids: dictionary giving the ids of the current thread
+        :param expired: flag giving whether the lstg has expired (sold if not)
+        :return: NA
+        """
+        if feat_name == 'open_threads':
+            feat_dict[feat_name] -= self._lstg_time_feat(ids, 'open_threads')
+        elif feat_name == 'open_lstgs':
+            feat_dict[feat_name] -= 1
+        elif feat_name == 'byr_offers':
+            if offer['byr']:
+                feat_dict[feat_name] += (1 - self._lstg_time_feat(ids, 'byr_offers'))
+            else:
+                feat_dict[feat_name] += -self._lstg_time_feat(ids, 'byr_offers')
+        elif feat_name == 'slr_offers':
+            if offer['byr']:
+                feat_dict[feat_name] += - self._lstg_time_feat(ids, 'byr_offers')
+            else:
+                feat_dict[feat_name] += 1 - self._lstg_time_feat(ids, 'byr_offers')
+        elif ('max' in feat_name or 'min' in feat_name) and 'recent' not in feat_name:
+            for thread_id in self._lstg_time_feat(ids, 'threads'):
+                feat_dict[feat_name].remove(thread_id=thread_id)
+        elif not expired:
+            TimeFeatures._update_offer(feat_dict=feat_dict, feat_name=feat_name,
+                                       offer=offer, ids=ids)
+
+    def _update_lstg_expire(self, feat_dict=None, feat_name=None, offer=None, ids=None):
+        """
+        Updates time valued features after a listing has expired
+
+        :param feat_dict: dictionary of time valued features for the current level
+        :param offer: dictionary giving parameters of the offer
+        :param feat_name: string giving name of time valued feature
+        :param ids: dictionary giving the ids of the current thread
+        :return: NA
+        """
+        self._update_lstg_close(feat_dict=feat_dict, feat_name=feat_name, offer=offer, ids=ids,
+                                expired=True)
 
     @staticmethod
-    def _update_thread_expire(feat_dict=None, feat_name=None, offer=None, thread_id=None):
+    def _update_thread_expire(feat_dict=None, feat_name=None, offer=None, ids=None):
         """
         Updates time valued features with result of thread expiring,
         currently just updates features to close the current thread
@@ -143,25 +301,30 @@ class TimeFeatures:
         :return: NA
         """
         TimeFeatures._update_thread_close(feat_dict=feat_dict, feat_name=feat_name,
-                                          offer=offer, thread_id=thread_id)
+                                          offer=offer, ids=ids)
 
     @staticmethod
-    def _update_thread_close(feat_dict=None, feat_name=None, offer=None, thread_id=None)
+    def _update_thread_close(feat_dict=None, feat_name=None, offer=None, ids=None):
         """
         Updates time features to reflect the thread for the given event closing
 
         :param feat_dict: dictionary of time valued features for the current level
         :param offer: dictionary giving parameters of the offer
         :param feat_name: string giving name of time valued feature
-        :param thread_id: id of the current thread
+        :param ids: dictionary giving the ids of the current thread
         :return: NA
         """
-        if 'recent' not in feat_name: # always true for the time being
-            if 'open' in feat_name:
-                feat_dict[feat_name].remove(thread_id=thread_id)
+        if feat_name == 'byr_offers':
+            feat_dict[feat_name] -= ids['byr_count']
+        elif feat_name == 'slr_offers':
+            feat_dict[feat_name] -= ids['slr_count']
+        elif feat_name == 'open_threads':
+            feat_dict[feat_name] -= 1
+        elif ('max' in feat_name or 'min' in feat_name) and 'recent' not in feat_name:
+            feat_dict[feat_name].remove(thread_id=ids['thread_id'])
 
     @staticmethod
-    def _update_byr_rejection(feat_dict=None, feat_name=None, offer=None, thread_id=None):
+    def _update_byr_rejection(feat_dict=None, feat_name=None, offer=None, ids=None):
         """
         Updates time valued features with the result of byr rejection
         (currently identical to closing a thread for any reason)
@@ -169,14 +332,28 @@ class TimeFeatures:
         :param feat_dict: dictionary of features containing given feat
         :param feat_name: str name of feat
         :param offer: dictionary containing details of the offer
-        :param thread_id: id of the current thread
+        :param ids: dictionary containing identifiers for the event that transpired
         :return: NA
         """
         TimeFeatures._update_thread_close(feat_dict=feat_dict, feat_name=feat_name,
-                                          offer=offer, thread_id=thread_id)
+                                          offer=offer, ids=ids)
+
+    def _update_lstg_sale(self, feat_dict=None, feat_name=None, offer=None, ids=None):
+        """
+        Updates a feature given a lstg has sold, should not be used at the lstg level,
+        since lstg sale deletes the original lstg
+
+        :param feat_dict: dictionary of features containing given feat
+        :param feat_name: str name of feat
+        :param offer: dictionary containing details of the offer
+        :param ids: dictionary containing identifiers for the event that transpired
+        :return: NA
+        """
+        self._update_lstg_close(feat_dict=feat_dict, feat_name=feat_name, offer=offer, ids=ids,
+                                expired=False)
 
     @staticmethod
-    def _update_offer(feat_dict=None, feat_name=None, offer=None, thread_id=None):
+    def _update_offer(feat_dict=None, feat_name=None, offer=None, ids=None):
         """
         Updates value of feature after buyer or seller concession offer (not acceptance
         or rejection)
@@ -184,20 +361,31 @@ class TimeFeatures:
         :param feat_dict: dictionary of time valued features for the current level
         :param offer: dictionary giving parameters of the offer
         :param feat_name: string giving name of time valued feature
-        :param thread_id: id of the current thread where there's been an offer
+        :param ids: dictionary giving the ids of the current thread
         :return: NA
         """
-        if offer['type'] in feat_name:
-            if 'best' not in feat_name:
-                feat_dict[feat_name].increment(thread_id=thread_id)
+        if offer['byr']:
+            params = BYR_PARAMS
+        else:
+            params = SLR_PARAMS
+
+        if params['type'] in feat_name:
+            if params['direction'] not in feat_name and 'recent' not in feat_name:
+                feat_dict[feat_name] += 1
             else:
-                args = {
-                    'value' : offer['price'],
-                    'thread_id' : thread_id
-                }
-                if 'recent' in feat_name: # ignored for time being
+                args = dict()
+                if params['direction'] in feat_name:
+                    args['value'] = offer['price']
+                if 'recent' in feat_name:
                     args['time'] = offer['time']
-                feat_dict[feat_name].promote(**args)
+                args['thread_id'] = ids['thread_id']
+                if ids['thread_id'] in feat_dict[feat_name]:
+                    feat_dict[feat_name].promote(**args)
+                else:
+                    feat_dict[feat_name].push(**args)
+        else:
+            if feat_name == 'open_threads' and ids['byr_count'] == 0:
+                feat_dict[feat_name] += 1
 
     def update_features(self, trigger_type=None, ids=None, offer=None):
         """
@@ -210,26 +398,87 @@ class TimeFeatures:
         :param trigger_type: string defining event type
         :return: NA
         """
-        feature_function = None
-        if trigger_type == time_triggers.OFFER:
+        if trigger_type == time_triggers.BUYER_OFFER or time_triggers.SELLER_OFFER:
             feature_function = TimeFeatures._update_offer
         elif trigger_type == time_triggers.BYR_REJECTION:
             feature_function = TimeFeatures._update_byr_rejection
+        elif trigger_type == time_triggers.SLR_REJECTION:
+            pass
+        elif trigger_type == time_triggers.LSTG_EXPIRATION:
+            feature_function = self._update_lstg_expire
+        elif trigger_type == time_triggers.SALE:
+            feature_function = self._update_lstg_sale
         elif trigger_type == time_triggers.THREAD_EXPIRATION:
             feature_function = TimeFeatures._update_thread_expire
-        elif trigger_type == time_triggers.SLR_REJECTION:
-            pass  # no updates
-        elif trigger_type == time_triggers.LSTG_EXPIRATION:
-            del self.feats[ids['lstg_id']]  # just delete the lstg
-            pass
-        elif trigger_type == time_triggers.SALE:
-            del self.feats[ids['lstg_id']]  # just delete the lstg
-            pass
         else:
             raise NotImplementedError()
-        for feat in consts.TIME_FEATS:
-            feature_function(feat_dict=self.feats[ids['lstg_id']],
-                             offer=offer, thread_id=ids['thread_id'])
+        outer = self.feats
+        for level in TIME_FEATS:
+            if level != 'lstg' or trigger_type not in [time_triggers.LSTG_EXPIRATION, time_triggers.SALE]:
+                inner = outer[ids[level]]
+                for feat in TIME_FEATS[level]:
+                    feature_function(feat_dict=inner, feat_name=feat,
+                                     offer=offer, ids=ids)
+                outer = inner
+
+        if trigger_type == time_triggers.BUYER_OFFER:
+            if ids['byr_count'] == 0:
+                self._add_thread(ids)
+            ids['byr_count'] += 1
+        elif trigger_type == time_triggers.SELLER_OFFER:
+            ids['slr_count'] += 1
+        elif trigger_type in [time_triggers.LSTG_EXPIRATION, time_triggers.SALE]:
+            self._remove_lstg(ids)
+        elif trigger_type in [time_triggers.BYR_REJECTION, time_triggers.THREAD_EXPIRATION]:
+            self._remove_thread(ids)
+
+    def _remove_lstg(self, ids):
+        """
+        Removes the given lstg from the time_features dictionary
+
+        :param ids: id dictionary
+        :return: NA
+        """
+        outer = self.feats
+        for level in TIME_FEATS:
+            if level != 'lstg':
+                outer = outer[ids[level]]
+        outer.remove(ids['lstg'])
+        outer['start_price'].remove(thread_id=ids['lstg'])
+        del outer[ids['lstg']]
+
+    def _add_thread(self, ids):
+        """
+        Adds a given thread to the set of threads tracked for the current listing
+
+        :param ids: ids dictionary
+        :return: NA
+        """
+        outer = self.feats
+        for level in TIME_FEATS:
+            outer = outer[ids[level]]
+        outer['threads'].add(ids['thread_id'])
+
+    def _remove_thread(self, ids):
+        """
+        Removes a given thread from the set of threads tracked for the current lstg
+        :param ids:
+        :return:
+        """
+        outer = self.feats
+        for level in TIME_FEATS:
+            outer = outer[ids[level]]
+        outer['threads'].remove(ids['thread_id'])
+
+    def _lstg_time_feat(self, ids, feat):
+        """
+        Returns the value of the time valued feature at the lowest level
+
+        :param ids: id dictionary
+        :param feat: string giving feature name
+        :return: feature value
+        """
+        return self.feats[ids['slr']][ids['meta']][ids['leaf']][ids['title']][ids['cndtn']][ids['lstg']][feat]
 
 
 class FeatureHeap:
@@ -245,13 +494,12 @@ class FeatureHeap:
         _bad_order: returns whether two elements (a parent and child) are out of order
     Public functions:
         pop: pops the top element off the heap
-        peek: peeks at the top element on the heap (excluding a given entry)
+        peak: peaks at the top element on the heap (excluding a given entry)
         demote: updates the value of an entry, pushing it lower in the heap
         promote: updates the value of an entry, pushing it higher in the heap
         remove: removes a given entry from the heap
         push: adds a given entry to the heap
     """
-
     def __init__(self, min_heap=False):
         """
         Constructor
@@ -264,9 +512,9 @@ class FeatureHeap:
         self.index_map = dict()
         self.min = min_heap
 
-    def peek(self, exclude=None):
+    def peak(self, exclude=None):
         """
-        peeks at the value on the top of the heap, excludes this value if has the id of the excluded thread
+        Peaks at the value on the top of the heap, excludes this value if has the id of the excluded thread
 
         :param exclude: thread_id of an entry that should not be considered among candidate elements for the min(max)
         :return: value of the min(max) element. If the heap is empty, a max heap returns 0 and a min heap returns -1
@@ -321,7 +569,7 @@ class FeatureHeap:
                 return not self.heap[index].value > value
         child_index = index
         while True:
-            parent_index = math.ceil(child_index / 2) - 1
+            parent_index = math.ceil(child_index/2) - 1
             if self._bad_order(child_index, parent_index) and child_index != 0:
                 self._swap(child_index, parent_index)
                 child_index = parent_index
@@ -450,7 +698,7 @@ class FeatureHeap:
             while child != 0 and self._bad_order(child, parent):
                 self._swap(child, parent)
                 child = parent
-                parent = math.ceil(child / 2) - 1
+                parent = math.ceil(child/2) - 1
         self.size += 1
 
     def __contains__(self, item):
@@ -527,7 +775,6 @@ class HeapEntry:
         thread_id: gives the unique identifier of the thread associated with this value
         value: value of the feature
     """
-
     def __init__(self, thread_id=None, value=None):
         """
         :param value: updated value of thread_id. None implies
@@ -582,7 +829,6 @@ class ExpirationHeap:
     Private functions:
         _add_backup: adds a new backup
     """
-
     def __init__(self, min_heap=False, expiration=None):
         """
         
@@ -616,20 +862,20 @@ class ExpirationHeap:
             self.size -= 1
         return popped
 
-    def peek(self, time=None, exclude=None):
+    def peak(self, time=None, exclude=None):
         """
-        peeks at the element on top of the heap, and returns the value of the top element after removing all expired
+        Peaks at the element on top of the heap, and returns the value of the top element after removing all expired
         elements. Before removing a given element, checks whether any backups exist for that element and updates
         accordingly. 
         
-        :param time: integer time stamp of peek 
+        :param time: integer time stamp of peak 
         :param exclude: thread_id of an entry that should be ignored
         :return: value of min(max) among non-expired entries
         """
         if self.size == 0:
-            return self.feat_heap.peek()
+            return self.feat_heap.peak()
         else:
-            while self.size > 0 and (time - self.time_heap.peek() > self.expiration):
+            while self.size > 0 and (time - self.time_heap.peak() > self.expiration):
                 thread_id = self.time_heap.heap[0].thread_id
                 if thread_id not in self.backups:
                     self.time_heap.remove(thread_id=thread_id)
@@ -645,11 +891,11 @@ class ExpirationHeap:
                     if index == len(backups) - 1:
                         del self.backups[thread_id]
                     else:
-                        self.backups[thread_id] = [backups[i] for i in range(index + 1, len(backups))]
+                        self.backups[thread_id] = [backups[i] for i in range(index+1, len(backups))]
                     self.time_heap.demote(value=backup[0], thread_id=thread_id)
                     self.feat_heap.demote(value=backup[1], thread_id=thread_id)
             # default return value for empty feature
-            return self.feat_heap.peek(exclude=exclude)
+            return self.feat_heap.peak(exclude=exclude)
 
     def push(self, time=None, thread_id=None, value=None):
         """
@@ -701,7 +947,7 @@ class ExpirationHeap:
         else:
             self._add_backup(thread_id=thread_id, value=value, time=time)
             return False
-
+    
     def _add_backup(self, time=None, thread_id=None, value=None):
         """
         Helper function that adds a backup entry for the given thread_id with the given time, value pair
@@ -714,7 +960,7 @@ class ExpirationHeap:
         if thread_id not in self.backups:
             self.backups[thread_id] = deque()
         self.backups[thread_id].append((time, value))
-
+    
     def __contains__(self, item):
         """
         Returns whether a given thread_id is in the heap
@@ -724,79 +970,22 @@ class ExpirationHeap:
         return item in self.feat_heap
 
 
-class FeatureCounter:
-    """
-    Class for features that require continually updating a total and excluding
-    the current thread's count from that total
-
-    Attributes:
-        total: integer giving the current count
-        name: name of the feature this object counts
-        contents: dictionary mapping thread ids to their contribution to the
-        total
-    Public Functions:
-        increment:
-    """
-    def __init__(self, name):
-        """
-        Initializes attributes
-        """
-        self.total = 0
-        self.name = name
-        self.contents = Counter()
-
-    def increment(self, thread_id=None):
-        """
-        Increments the total and the thread-specific
-        counter for a given thread
-
-        :param thread_id: id of current thread
-        :return: NA
-        """
-        self.contents[thread_id] += 1
-        self.total += 1
-
-    def remove(self, thread_id=None):
-        """
-        Remove contribution of some thread from the total
-
-        :param thread_id: id of the current thread
-        :return: NA
-        """
-        self.total -= self.contents[thread_id]
-        del self.contents[thread_id]
-
-    def peek(self, exclude=None):
-        """
-        Gets the total excluding the given thread
-        :param exclude: id of the current thread
-        :return: integer
-        """
-        if exclude is None:
-            return self.total
-        else:
-            return self.total - self.contents[exclude]
-
-
-
-
 class ExpirationQueue:
     """
     Cannot handle arbitrary removal by thread_id (e.g. can't handle listing
     closings). Should only be used for time-valued expiration based features
 
     Attributes:
-        size: number of elements in the queue at the time of last peek
+        size: number of elements in the queue at the time of last peak
         queue: deque of tuples where recent items are pushed to the right
         and expired elements are popped from the left. Each tuple gives (time, thread_id) of the entry
         expiration: number of seconds after which an item expires
         thread_counter: counter that gives the number of entries in deque for given thread_ids
     Public Functions:
-        peek: counts how many elements the queue contains at a given time step, exlcudes count of entries
+        peak: counts how many elements the queue contains at a given time step, exlcudes count of entries
         from some given thread_id
         push: adds another element to the queue
     """
-
     def __init__(self, expiration=None):
         self.queue = deque()
         self.thread_counter = Counter()
@@ -816,7 +1005,7 @@ class ExpirationQueue:
         self.thread_counter[thread_id] += 1
         self.size += 1
 
-    def peek(self, time=None, exclude=None):
+    def peak(self, time=None, exclude=None):
         """
         Returns the number of non-expired elements in the queue at the given time
         :param time: integer giving the current time

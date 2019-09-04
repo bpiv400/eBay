@@ -187,9 +187,7 @@ def parse_fixed_feats_days(x, idx):
 
 def parse_params(args):
     # returns the path of the appropriate experiments file
-    path = 'experiments/'
-    # neural network architecture
-    path += 'FF' if args.model == 'arrival' else 'LSTM'
+    path = 'experiments/hidden'
     # parameter K for mixture models
     if args.outcome in ['sec', 'con']:
         path += '_K'

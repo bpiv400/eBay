@@ -1,4 +1,4 @@
-from TimeFeatures import ExpirationHeap
+from deprecated.TimeFeatures import ExpirationHeap
 import pytest
 
 @pytest.fixture

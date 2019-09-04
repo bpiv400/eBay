@@ -48,7 +48,6 @@ def date_feats(feat_df, col_abv):
 # and throw nothing out
 # e.g. src_cre_dt_b0, src_cre_dt_s0
 # NOTE: Tell Etan about the response time
-# TODO: fix all encoding to match the less verbose pattern above
 
 # Downstream
 # the dataframe for predicting particpant p turn i shall refered to

@@ -1,31 +1,29 @@
 import torch, torch.nn as nn
 from torch.nn.utils import rnn
+from constants import *
 
 
 class FeedForward(nn.Module):
-    def __init__(self, N_in, N_out, params):
+    def __init__(self, N_in, N_out, hidden):
         # super constructor
         super(FeedForward, self).__init__()
-
-        # divide dropout by 10
-        dropout = params.dropout / 10
 
         # activation function
         f = nn.Sigmoid()
 
         # initial layer
         self.seq = nn.ModuleList(
-            [nn.Linear(N_in, params.hidden), f, nn.Dropout(dropout)])
+            [nn.Linear(N_in, hidden), f, nn.Dropout(DROPOUT)])
 
         # intermediate layers
-        for i in range(params.ff_layers-1):
-            self.seq.append(nn.Linear(params.hidden, params.hidden))
+        for i in range(LAYERS-1):
+            self.seq.append(nn.Linear(hidden, hidden))
             self.seq.append(f)
-            if i < params.ff_layers-2:
-                self.seq.append(nn.Dropout(dropout))
+            if i < LAYERS-2:
+                self.seq.append(nn.Dropout(DROPOUT))
 
         # output layer
-        self.seq.append(nn.Linear(params.hidden, N_out))
+        self.seq.append(nn.Linear(hidden, N_out))
 
 
     def forward(self, x):
@@ -34,36 +32,30 @@ class FeedForward(nn.Module):
         return x.squeeze()
 
 
-class LSTM(nn.Module):
-    def __init__(self, N_fixed, N_time, N_out, params):
+class RNN(nn.Module):
+    def __init__(self, N_fixed, N_time, N_out, hidden):
 
         # super constructor
-        super(LSTM, self).__init__()
+        super(RNN, self).__init__()
 
-        # save parameters to self
-        self.layers = int(params.lstm_layers)
-
-        # initial hidden nodes and LSTM cell
-        self.h0 = FeedForward(N_fixed, params.hidden, params)
-        self.c0 = FeedForward(N_fixed, params.hidden, params)
+        # initial hidden nodes
+        self.h0 = FeedForward(N_fixed, hidden, hidden)
 
         # lstm layer
-        self.lstm = nn.LSTM(input_size=N_time,
-                            hidden_size=params.hidden,
+        self.rnn = nn.RNN(input_size=N_time,
+                            hidden_size=hidden,
                             bias=True,
-                            num_layers=self.layers,
-                            dropout=params.dropout / 10)
+                            num_layers=LAYERS,
+                            dropout=DROPOUT)
 
         # output layer
-        self.output = nn.Linear(params.hidden, N_out)
+        self.output = nn.Linear(hidden, N_out)
 
 
     # output discrete weights and parameters of continuous components
     def forward(self, x_fixed, x_time, steps):
-        # initialize model
-        x_fixed = x_fixed.repeat(self.layers, 1, 1)
-        init = (self.h0(x_fixed), self.c0(x_fixed))
-        theta, _ = self.lstm(x_time, init)
+        x_fixed = x_fixed.repeat(LAYERS, 1, 1)
+        theta, _ = self.rnn(x_time, self.h0(x_fixed))
 
         # pad
         theta, _ = nn.utils.rnn.pad_packed_sequence(

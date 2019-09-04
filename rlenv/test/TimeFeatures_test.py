@@ -1,6 +1,5 @@
-from TimeFeatures import TimeFeatures
+from deprecated.TimeFeatures import TimeFeatures
 import pytest
-from pprint import pprint
 import time_triggers
 
 @pytest.fixture

@@ -1,4 +1,4 @@
-from env_constants import LSTG_IDS, LSTG_FEATS_MAP
+from deprecated.env_constants import LSTG_IDS, LSTG_FEATS_MAP
 
 
 def get_ids(slr, data):
