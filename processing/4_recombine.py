@@ -11,60 +11,56 @@ SHARES = {'train_models': 1/3, 'train_rl': 1/3}
 OUT_PATH = 'data/partitions/'
 
 
-def save_partitions(slr_dict, x, y, z):
+def save_partitions(slr_dict, data, name):
     for key, val in slr_dict.items():
-        print('Saving', key)
+        print('Saving %s/%s' % (key, name))
+        # create directory if one does not exist
+        if not os.path.exists(OUT_PATH + key):
+            os.mkdir(OUT_PATH + key)
         # index of lstgs to slice with
         idx = pd.Index(val, name='lstg')
         # write path
-        path = OUT_PATH + '%s.pkl' % key
-        # only x_lstg required for simulation
-        if key == 'sim':
-            pickle.dump(x['lstg'].loc[idx], open(path, 'wb'))
-        else:
-            data = {}
-            data['x'] = {k: v.loc[idx] for k, v in x.items()}
-            data['z'] = {k: v.loc[idx] for k, v in z.items()}
-            data['y'] = {}
-            for model, d in y.items():
-                data['y'][model] = {k: v.loc[idx] for k, v in d.items()}
-            pickle.dump(data, open(path, 'wb'))
+        path = OUT_PATH + '%s/%s.pkl' % (key, name)
+        # reindex contents of dictionary
+        out = {}
+        if name == 'y':
+            for m, d in data.items():
+                out[m] = {k: v.reindex(
+                    index=idx, level='lstg') for k, v in d.items()}
+        elif name in ['x', 'z']:
+            for k, v in data.items():
+                if len(v.index.names) == 1:
+                    out[k] = v.reindex(index=idx)
+                else:
+                    out[k] = v.reindex(index=idx, level='lstg')
+        # write to pickle
+        print(out)
+        pickle.dump(out, open(path, 'wb'))
 
 
-def append_chunks():
-    # list of chunks
-    paths = ['%s/%s' % (DIR, name) for name in os.listdir(DIR)
-        if os.path.isfile('%s/%s' % (DIR, name)) and 'feats' in name]
+def append_chunks(paths, name):
     # initialize output
-    x = {}
-    y = {}
-    z = {}
+    out = {}
     # loop over chunks
     for path in sorted(paths):
         chunk = pickle.load(open(path, 'rb'))
-        # x
-        for key, val in chunk['x'].items():
-            if key in x:
-                x[key] = x[key].append(val, verify_integrity=True)
-            else:
-                x[key] = val
-        # y
-        for model, d in chunk['y'].items():
-            if model not in y:
-                y[model] = {}
-            for outcome, val in d.items():
-                if outcome in y[model]:
-                    y[model][outcome] = y[model][outcome].append(
-                        val, verify_integrity=True)
+        if name == 'y':
+            for m, d in chunk[name].items():
+                if m not in out:
+                    out[m] = {}
+                for outcome, val in d.items():
+                    if outcome in out[m]:
+                        out[m][outcome] = out[m][outcome].append(
+                            val, verify_integrity=True)
+                    else:
+                        out[m][outcome] = val
+        elif name in ['x', 'z']:
+            for k, v in chunk[name].items():
+                if k in out:
+                    out[k] = out[k].append(v, verify_integrity=True)
                 else:
-                    y[model][outcome] = val
-        # z
-        for key, val in chunk['z'].items():
-            if key in z:
-                z[key] = z[key].append(val, verify_integrity=True)
-            else:
-                z[key] = val
-    return x, y, z
+                    out[k] = v
+    return out
 
 
 def randomize_lstgs(u):
@@ -81,12 +77,22 @@ def randomize_lstgs(u):
 
 
 if __name__ == '__main__':
-    # append files
-    x, y, z = append_chunks()
+    # list of feats files
+    paths = ['%s/%s' % (DIR, name) for name in os.listdir(DIR)
+        if os.path.isfile('%s/%s' % (DIR, name)) and 'feats' in name]
 
-    # randomize sellers into train, test and dev
-    lstgs = np.unique(x['lstg'].index.get_level_values(level='lstg'))
-    slr_dict = randomize_lstgs(lstgs)
+    # loop over data
+    for name in ['x', 'y', 'z']:
+        d = append_chunks(paths, name)
 
-    # partition the data and save
-    save_partitions(slr_dict, x, y, z)
+        # randomize listings
+        if name == 'x':
+            lstgs = np.unique(d['lstg'].index.get_level_values(
+                level='lstg'))
+            slr_dict = randomize_lstgs(lstgs)
+
+        # save to pickle
+        save_partitions(slr_dict, d, name)
+
+        # save some RAM
+        del d

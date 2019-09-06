@@ -48,4 +48,4 @@ def make_column_map(cols, consts=False):
 
 # ordered dictionary for accessing elements of const array
 LSTG_FEATS_MAP = make_column_map(LSTG_COLUMNS, consts=False)
-CONSTS_MAP = make_column_map(CONSTS, consts=True)
+# CONSTS_MAP = make_column_map(CONSTS, consts=True)

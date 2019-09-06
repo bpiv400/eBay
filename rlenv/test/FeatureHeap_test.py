@@ -1,4 +1,4 @@
-from deprecated.TimeFeatures import FeatureHeap, HeapEntry
+from TimeFeatures import FeatureHeap, HeapEntry
 import pytest
 
 
@@ -61,8 +61,8 @@ def test_push_reverse_order(make_heap):
     min_heap.push(thread_id=1, value=5)
     min_heap.push(thread_id=0, value=0)
 
-    assert min_heap.peak(exclude=None) == 0
-    assert max_heap.peak(exclude=None) == 20
+    assert min_heap.peek(exclude=None) == 0
+    assert max_heap.peek(exclude=None) == 20
 
     index_map_correct(min_heap)
     index_map_correct(max_heap)
@@ -780,12 +780,26 @@ def test_remove_root_large(make_heap):
 
 def test_promote_not_in_heap(make_heap):
     max_heap, min_heap = make_heap
-    with pytest.raises(RuntimeError):
-        max_heap.promote(thread_id=0, value=5)
+    max_heap.promote(thread_id=0, value=5)
+    min_heap.promote(thread_id=0, value=-5)
 
-    with pytest.raises(RuntimeError):
-        min_heap.promote(thread_id=0, value=-5)
+    min_expect = [-5]
+    max_expect = [5]
 
+    index_map_correct(max_heap)
+    index_map_correct(min_heap)
+
+    for i in range(1):
+        a = max_heap.pop()
+        assert a.value == max_expect[i]
+        assert a.thread_id not in max_heap
+        assert max_heap.size == (0 - i)
+        index_map_correct(max_heap)
+        a = min_heap.pop()
+        assert a.value == min_expect[i]
+        assert a.thread_id not in min_heap
+        assert min_heap.size == (0 - i)
+        index_map_correct(min_heap)
 
 def test_promote_singleton(make_heap):
     max_heap, min_heap = make_heap
@@ -885,15 +899,6 @@ def test_demote_singleton(make_heap):
         index_map_correct(min_heap)
 
 
-def test_demote_not_in(make_heap):
-    max_heap, min_heap = make_heap
-    with pytest.raises(RuntimeError):
-        max_heap.demote(value=1, thread_id=5)
-
-    with pytest.raises(RuntimeError):
-        min_heap.demote(value=1, thread_id=5)
-
-
 def test_demote_for_promote(make_heap):
     max_heap, min_heap = make_heap
     max_heap.push(thread_id=4, value=2)
@@ -963,7 +968,7 @@ def test_push_none_value(make_heap):
         max_heap.push(thread_id=5)
 
 
-def test_peak_no_exclude(make_heap):
+def test_peek_no_exclude(make_heap):
     max_heap, min_heap = make_heap
     max_heap.push(thread_id=0, value=0)
     max_heap.push(thread_id=1, value=15)
@@ -983,11 +988,11 @@ def test_peak_no_exclude(make_heap):
     min_heap.push(thread_id=6, value=28)
     min_heap.push(thread_id=7, value=1)
 
-    assert min_heap.peak(exclude=None) == 0
-    assert max_heap.peak(exclude=None) == 50
+    assert min_heap.peek(exclude=None) == 0
+    assert max_heap.peek(exclude=None) == 50
 
 
-def test_peak_exclude_root_two_children_large(make_heap):
+def test_peek_exclude_root_two_children_large(make_heap):
     max_heap, min_heap = make_heap
     max_heap.push(thread_id=0, value=0)
     max_heap.push(thread_id=1, value=15)
@@ -1007,11 +1012,11 @@ def test_peak_exclude_root_two_children_large(make_heap):
     min_heap.push(thread_id=6, value=28)
     min_heap.push(thread_id=7, value=1)
 
-    assert min_heap.peak(exclude=0) == 1
-    assert max_heap.peak(exclude=4) == 28
+    assert min_heap.peek(exclude=0) == 1
+    assert max_heap.peek(exclude=4) == 28
 
 
-def test_peak_exclude_root_two_children_small(make_heap):
+def test_peek_exclude_root_two_children_small(make_heap):
     max_heap, min_heap = make_heap
     max_heap.push(thread_id=0, value=0)
     max_heap.push(thread_id=1, value=15)
@@ -1021,11 +1026,11 @@ def test_peak_exclude_root_two_children_small(make_heap):
     min_heap.push(thread_id=1, value=15)
     min_heap.push(thread_id=2, value=2)
 
-    assert min_heap.peak(exclude=0) == 2
-    assert max_heap.peak(exclude=1) == 2
+    assert min_heap.peek(exclude=0) == 2
+    assert max_heap.peek(exclude=1) == 2
 
 
-def test_peak_exclude_root_one_child(make_heap):
+def test_peek_exclude_root_one_child(make_heap):
     max_heap, min_heap = make_heap
     max_heap.push(thread_id=0, value=0)
     max_heap.push(thread_id=1, value=15)
@@ -1033,11 +1038,11 @@ def test_peak_exclude_root_one_child(make_heap):
     min_heap.push(thread_id=0, value=0)
     min_heap.push(thread_id=1, value=15)
 
-    assert min_heap.peak(exclude=0) == 15
-    assert max_heap.peak(exclude=1) == 0
+    assert min_heap.peek(exclude=0) == 15
+    assert max_heap.peek(exclude=1) == 0
 
 
-def test_peak_exclude_irrelevant(make_heap):
+def test_peek_exclude_irrelevant(make_heap):
     max_heap, min_heap = make_heap
     max_heap.push(thread_id=0, value=0)
     max_heap.push(thread_id=1, value=15)
@@ -1045,8 +1050,8 @@ def test_peak_exclude_irrelevant(make_heap):
     min_heap.push(thread_id=0, value=0)
     min_heap.push(thread_id=1, value=15)
 
-    assert min_heap.peak(exclude=1) == 0
-    assert max_heap.peak(exclude=0) == 15
+    assert min_heap.peek(exclude=1) == 0
+    assert max_heap.peek(exclude=0) == 15
 
 
 def test_pop_empty(make_heap):

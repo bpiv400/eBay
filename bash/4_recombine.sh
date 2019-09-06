@@ -1,5 +1,5 @@
 #!/bin/bash
-#$ -l m_mem_free=150G
+#$ -l m_mem_free=250G
 #$ -N recombine
 #$ -j y
 #$ -o logs/
