@@ -34,11 +34,12 @@ def save_partitions(slr_dict, data, name):
                 else:
                     out[k] = v.reindex(index=idx, level='lstg')
         # write to pickle
-        print(out)
-        pickle.dump(out, open(path, 'wb'))
+        pickle.dump(out, open(path, 'wb'), protocol=4)
 
 
 def append_chunks(paths, name):
+    print('Appending %s dataframes. % name')
+
     # initialize output
     out = {}
     # loop over chunks
@@ -63,20 +64,47 @@ def append_chunks(paths, name):
     return out
 
 
-def randomize_lstgs(u):
+def partition_lstgs():
+    print('Randomly partitioning listings by seller.')
+
+    # list of frames files
+    paths = ['%s/%s' % (DIR, name) for name in os.listdir(DIR)
+        if os.path.isfile('%s/%s' % (DIR, name)) and 'frames' in name]
+
+    # loop over files, create series of sellers
+    flag = False
+    for path in sorted(paths):
+        chunk = pickle.load(open(path, 'rb'))
+        if not flag:
+            slrs = chunk['lstgs'].slr
+            flag = True
+        else:
+            slrs = slrs.append(chunk['lstgs'].slr, verify_integrity=True)
+
+    # flip 
+    slrs = slrs.reset_index().sort_values(
+        by=['slr','lstg']).set_index('slr').squeeze()
+
+    # randomly order sellers
+    u = np.unique(slrs.index.values)
     random.seed(SEED)   # set seed
     np.random.shuffle(u)
-    slr_dict = {}
+
+    # partition listings into dictionary
+    d = {}
     last = 0
     for key, val in SHARES.items():
         curr = last + int(u.size * val)
-        slr_dict[key] = sorted(u[last:curr])
+        d[key] = np.sort(slrs.loc[u[last:curr]].values)
         last = curr
-    slr_dict['test'] = sorted(u[last:])
-    return slr_dict
+    d['test'] = np.sort(slrs.loc[u[last:]].values)
+    return d
 
 
 if __name__ == '__main__':
+    # randomize sellers, create mapping of partition to listings
+    partitions = partition_lstgs()
+
     # list of feats files
     paths = ['%s/%s' % (DIR, name) for name in os.listdir(DIR)
         if os.path.isfile('%s/%s' % (DIR, name)) and 'feats' in name]
@@ -85,14 +113,8 @@ if __name__ == '__main__':
     for name in ['x', 'y', 'z']:
         d = append_chunks(paths, name)
 
-        # randomize listings
-        if name == 'x':
-            lstgs = np.unique(d['lstg'].index.get_level_values(
-                level='lstg'))
-            slr_dict = randomize_lstgs(lstgs)
-
         # save to pickle
-        save_partitions(slr_dict, d, name)
+        save_partitions(partitions, d, name)
 
         # save some RAM
         del d
