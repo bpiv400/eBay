@@ -1,4 +1,4 @@
-from pandas.tseries.holiday import USFederalHolidayCalendar as calendar
+from pandas.tseries.holiday import USFederalHolidayCalendar as Calendar
 
 # count concessions within this range as 1/2
 TOL_HALF = 0.02 
@@ -12,11 +12,10 @@ LAYERS = 2
 DROPOUT = 0.5
 
 # paths and directories
-
-TRAIN_PATH = '../../data/partitions/train.pkl'
-CHUNKS_DIR = '../../data/chunks/'
-LDA_DIR = '../../data/lda/'
-MODEL_DIR = '../../data/models/'
+TRAIN_PATH = 'data/partitions/train_models/'
+CHUNKS_DIR = 'data/chunks/'
+LDA_DIR = 'data/lda/'
+MODEL_DIR = 'data/models/'
 
 # maximal delay times
 MAX_DELAY = {'slr': 2 * 24 * 3600, 'byr': 14 * 24 * 3600}
@@ -44,7 +43,7 @@ IDX = {'byr': [1, 3, 5, 7], 'slr': [2, 4, 6]}
 # date range and holidays
 START = '2012-06-01 00:00:00'
 END = '2013-05-31 23:59:59'
-HOLIDAYS = calendar().holidays(start=START, end=END)
+HOLIDAYS = Calendar().holidays(start=START, end=END)
 
 # count feats for hierarchical time features
 CT_FEATS = ['lstg', 'thread', 'slr_offer', 'byr_offer', 'accept']

@@ -2,9 +2,9 @@
 Class for storing and updating time valued features
 
 TODO:
-1. Fix everything and document
-2. Update testing to reflect that expiration queue now counts how many come from each thread
-5. Find out from Etan whether he has signed off on the final list of time-valued features
+1. Update expiration queue and heap if necessary
+2. Double check expiration queue and heap tests to ensure they still pass
+3. Add expiring features to TimeFeatures object
 
 """
 
@@ -135,22 +135,6 @@ class TimeFeatures:
         for feat in consts.TIME_FEATS:
             self.feats[lstg][feat] = TimeFeatures._initialize_feature(feat)
 
-    @staticmethod
-    def _update_thread_expire(feat_dict=None, feat_name=None, offer=None, thread_id=None):
-        """
-        Updates time valued features with result of thread expiring,
-        currently just updates features to close the current thread
-        (May need to be changed)
-
-        :param feat_dict: dictionary of time valued features for the current level
-        :param offer: dictionary giving parameters of the offer
-        :param feat_name: string giving name of time valued feature
-        :param thread_id: dictionary giving the ids of the current thread
-        :return: NA
-        """
-        TimeFeatures._update_thread_close(feat_dict=feat_dict, feat_name=feat_name,
-                                          offer=offer, thread_id=thread_id)
-
     # noinspection PyUnusedLocal
     @staticmethod
     def _update_thread_close(feat_dict=None, feat_name=None, offer=None, thread_id=None):
@@ -166,21 +150,6 @@ class TimeFeatures:
         if 'recent' not in feat_name:  # always true for the time being
             if 'open' in feat_name:
                 feat_dict[feat_name].remove(thread_id=thread_id)
-
-    @staticmethod
-    def _update_byr_rejection(feat_dict=None, feat_name=None, offer=None, thread_id=None):
-        """
-        Updates time valued features with the result of byr rejection
-        (currently identical to closing a thread for any reason)
-
-        :param feat_dict: dictionary of features containing given feat
-        :param feat_name: str name of feat
-        :param offer: dictionary containing details of the offer
-        :param thread_id: id of the current thread
-        :return: NA
-        """
-        TimeFeatures._update_thread_close(feat_dict=feat_dict, feat_name=feat_name,
-                                          offer=offer, thread_id=thread_id)
 
     @staticmethod
     def _update_offer(feat_dict=None, feat_name=None, offer=None, thread_id=None):
@@ -207,22 +176,6 @@ class TimeFeatures:
                 feat_dict[feat_name].promote(**args)
         elif 'open' in feat_name and 'recent' not in feat_name:  # temporary do not consider recent features
             feat_dict[feat_name].remove(thread_id=thread_id)
-
-    # noinspection PyUnusedLocal
-    @staticmethod
-    def _update_slr_rejection_final(feat_dict=None, feat_name=None, offer=None, thread_id=None):
-        """
-        Updates time valued features with the result of slr rejection in the last
-        turn
-
-        :param feat_dict: dictionary of time valued features for the current level
-        :param offer: dictionary giving parameters of the offer
-        :param feat_name: string giving name of time valued feature
-        :param thread_id: id of the current thread where there's been an offer
-        :return: NA
-        """
-        if feat_name == consts.BYR_BEST_OPEN or feat_name == consts.BYR_OFFERS_OPEN:
-            feat_dict[consts.BYR_BEST_OPEN].remove(thread_id=thread_id)
 
     @staticmethod
     def _update_slr_rejection(feat_dict=None, feat_name=None, offer=None, thread_id=None):
@@ -270,14 +223,8 @@ class TimeFeatures:
         if trigger_type == time_triggers.OFFER:
             feature_function = TimeFeatures._update_offer
         elif trigger_type == time_triggers.BYR_REJECTION:
-            feature_function = TimeFeatures._update_byr_rejection
-        # trigger_type == time_triggers.THREAD_EXPIRATION:
-        #    feature_function = TimeFeatures._update_thread_expire
+            feature_function = TimeFeatures._update_thread_close
         elif trigger_type == time_triggers.SLR_REJECTION:
-            feature_function = TimeFeatures._update_slr_rejection
-        elif trigger_type == time_triggers.SLR_REJECTION_FINAL:
-            # temporarily treat a final rejection the same as an early
-            # rejection, pending further input from Etan
             feature_function = TimeFeatures._update_slr_rejection
         elif trigger_type == time_triggers.LSTG_EXPIRATION:
             del self.feats[ids['lstg']]  # just delete the lstg

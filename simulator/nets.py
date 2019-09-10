@@ -12,15 +12,12 @@ class FeedForward(nn.Module):
         f = nn.Sigmoid()
 
         # initial layer
-        self.seq = nn.ModuleList(
-            [nn.Linear(N_in, hidden), f, nn.Dropout(DROPOUT)])
+        self.seq = nn.ModuleList([nn.Linear(N_in, hidden)])
 
         # intermediate layers
         for i in range(LAYERS-1):
             self.seq.append(nn.Linear(hidden, hidden))
             self.seq.append(f)
-            if i < LAYERS-2:
-                self.seq.append(nn.Dropout(DROPOUT))
 
         # output layer
         self.seq.append(nn.Linear(hidden, N_out))
@@ -29,7 +26,7 @@ class FeedForward(nn.Module):
     def forward(self, x):
         for _, m in enumerate(self.seq):
             x = m(x)
-        return x.squeeze()
+        return x
 
 
 class RNN(nn.Module):
@@ -62,4 +59,4 @@ class RNN(nn.Module):
             theta, total_length=steps)
 
         # output layer: (seq_len, batch_size, N_output)
-        return self.output(theta).squeeze()
+        return self.output(theta)

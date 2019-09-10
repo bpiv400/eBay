@@ -3,14 +3,14 @@ from torch.distributions.beta import Beta
 
 
 def LogitLoss(theta, y):
-	p = torch.sigmoid(theta)
+	p = torch.sigmoid(theta.squeeze())
 	ll = y * torch.log(p) + (1-y) * torch.log(1-p)
 	return -torch.sum(ll)
 
 
 def BetaMixtureLoss(theta, omega, y):
     # exponentiate
-	theta = torch.exp(theta)
+	theta = torch.exp(theta.squeeze())
 
     # parse parameters
 	K = int(theta.size()[-1] / 3)
@@ -37,13 +37,14 @@ def BetaMixtureLoss(theta, omega, y):
 
 
 def NegativeBinomialLoss(theta, y):
+	theta = theta.squeeze()
     # parameters
-    r = torch.exp(torch.index_select(theta, -1,
-        torch.tensor(0))).squeeze()
-    p = torch.sigmoid(torch.index_select(theta, -1,
-        torch.tensor(1))).squeeze()
+	r = torch.exp(torch.index_select(theta, -1,
+		torch.tensor(0))).squeeze()
+	p = torch.sigmoid(torch.index_select(theta, -1,
+		torch.tensor(1))).squeeze()
     # log-likelihood components
-    ll = torch.mvlgamma(y + r, 1) - torch.mvlgamma(r, 1)
-    ll += y * torch.log(p) + r * torch.log(1-p)
-    return -torch.sum(ll)
+	ll = torch.mvlgamma(y + r, 1) - torch.mvlgamma(r, 1)
+	ll += y * torch.log(p) + r * torch.log(1-p)
+	return -torch.sum(ll)
 

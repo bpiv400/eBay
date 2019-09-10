@@ -1,12 +1,13 @@
 import sys
-sys.path.append('../')
+sys.path.append('repo/')
+sys.path.append('repo/simulator/')
 import os, pickle, argparse
 import torch
 import numpy as np, pandas as pd
 from datetime import datetime as dt
 from simulator import Simulator
-from parsing_funcs import *
 from constants import *
+from utils import *
 
 
 def train_model(simulator):
@@ -36,28 +37,37 @@ def train_model(simulator):
     return lnL, dt.now() - time0
 
 
-def process_inputs(model, outcome, data):
-    x, y, z = [data[k] for k in ['x', 'y' ,'z']]
+# loads data and calls functions in utils.py to construct training inputs
+def process_inputs(model, outcome):
     # initialize output dictionary
     d = {}
+
     # outcome
+    y = pickle.load(open(TRAIN_PATH + 'y.pkl', 'rb'))
     d['y'] = y[model][outcome]
+    del y
+
     # arrival models are all feed-forward
+    x = pickle.load(open(TRAIN_PATH + 'x.pkl', 'rb'))
     if model == 'arrival':
         if outcome == 'days':
             d['x_fixed'] = parse_fixed_feats_days(x, d['y'].index)
         else:
             d['x_fixed'] = parse_fixed_feats_arrival(outcome, x)
+
     # byr and slr models are RNN-like
     else:
         if outcome == 'delay':
+            z = pickle.load(open(TRAIN_PATH + 'z.pkl', 'rb'))
             d['x_fixed'] = parse_fixed_feats_delay(model, x)
             d['x_time'] = parse_time_feats_delay(model, d['y'].index, z)
         else:
             d['x_fixed'] = parse_fixed_feats_role(x)
             d['x_time'] = parse_time_feats_role(model, outcome, x['offer'])
+
     # dictionary of feature names, in order
     featnames = {k: v.columns for k, v in d.items() if k.startswith('x')}
+
     return convert_to_tensors(d), featnames
 
 
@@ -75,13 +85,9 @@ if __name__ == '__main__':
     params = parse_params(args)
     print(params)
 
-    # load data
-    print('Loading data')
-    data = pickle.load(open(TRAIN_PATH, 'rb'))
-
     # create inputs to model
     print('Creating model inputs')
-    train, featnames = process_inputs(args.model, args.outcome, data)
+    train, featnames = process_inputs(args.model, args.outcome)
 
     # print feature names
     for k, v in featnames.items():

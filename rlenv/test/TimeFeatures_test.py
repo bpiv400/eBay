@@ -56,8 +56,8 @@ def init_timefeats():
 
 def test_initialize_feats(init_timefeats):
     timefeats = init_timefeats
+    assert timefeats.lstg_active({'lstg': 6})
     assert timefeats.lstg_active({'lstg': 7})
-    assert timefeats.lstg_active({'lstg': 8})
 
 
 def test_initial_feats(lstgs, init_timefeats):
@@ -858,3 +858,47 @@ def test_slr_acceptance(lstgs, init_timefeats):
         assert next5[feat] == 0
         assert next_lstg[feat] == 0
 
+
+def test_lstg_expiration(lstgs, init_timefeats):
+    lstg1, lstg2 = lstgs
+    thread1, thread2, thread3, lstg1 = lstg1
+    thread4, thread5, lstg2 = lstg2
+    timefeats = init_timefeats
+    prev = timefeats.get_feats(thread1, 0)
+    timefeats.update_features(trigger_type=time_triggers.OFFER, ids=thread1,
+                              offer={
+                                  'type': 'byr',
+                                  'time': 5,
+                                  'price': .2
+                              })
+    timefeats.update_features(trigger_type=time_triggers.OFFER, ids=thread2,
+                              offer={
+                                  'type': 'byr',
+                                  'time': 6,
+                                  'price': .3
+                              })
+    timefeats.update_features(trigger_type=time_triggers.OFFER, ids=thread1,
+                              offer={
+                                  'type': 'slr',
+                                  'time': 7,
+                                  'price': 1 - .8,
+                              })
+    timefeats.update_features(trigger_type=time_triggers.LSTG_EXPIRATION,
+                              ids=lstg1)
+
+    assert not timefeats.lstg_active(thread1)
+    assert not timefeats.lstg_active(thread2)
+    assert not timefeats.lstg_active(thread3)
+    assert not timefeats.lstg_active(lstg1)
+    assert timefeats.lstg_active(lstg2)
+    with pytest.raises(RuntimeError):
+        timefeats.get_feats(lstg1, 9)
+    with pytest.raises(RuntimeError):
+        timefeats.get_feats(thread1, 9)
+    timefeats.update_features(trigger_type=time_triggers.LSTG_EXPIRATION,
+                              ids=lstg2)
+    with pytest.raises(RuntimeError):
+        timefeats.get_feats(lstg2, 9)
+    assert not timefeats.lstg_active(lstg2)
+    assert not timefeats.lstg_active(thread5)
+    assert not timefeats.lstg_active(thread4)
