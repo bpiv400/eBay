@@ -1,28 +1,29 @@
-"""
-class for encapsulating data and methods related to a buyer offer
-"""
 from Event import Event
 from event_types import ARRIVAL
 
 
 class Arrival(Event):
     """
-    Attributes:
-        consts: np.array of constants for the lstg
-        hidden: hidden state representation for arrival model(s)
-        priority: int timestamp
-        type: event_types.ARRIVAL
-        ids: identifier dictionary for the event
-        lstg_expiration: timestamp giving when the relevant lstg expires
-    """
-    def __init__(self, priority=None, ids=None, data=None):
-        """
+    Event that corresponds to processing arrivals for a listing
+    for some day
 
-        :param priority: int time stamp of this event
-        :param ids: id dictionary for the relevant lstg
-        :param data: dictionary containing entries for consts, hidden, and lstg_expiration
+    Attributes:
+        priority: inherited from Event
+        ids: dictionary containing ids for the Event
+        type: string giving the type of the event
+        lstg_expiration: int denoting when the given lstg expires
+        hidden: placeholder None
+    """
+    def __init__(self, priority, ids, consts=None, end_time=None):
         """
-        super(Arrival, self).__init__(ARRIVAL, priority=priority, ids=ids)
-        self.consts = data['consts']
-        self.hidden = data['hidden']
-        self.lstg_expiration = data['lstg_expiration']
+        Constructor
+
+        :param ids: dictionary giving identifiers of the current lstg
+        :param priority: integer time of the event
+        :param consts: np.array containing constant features of lstg
+        :param end_time: integer denoting when this lstg was sold or expired in the data
+        """
+        super(Arrival, self).__init__(ARRIVAL, priority=int(priority), ids=ids)
+        self.consts = consts
+        self.lstg_expiration = end_time
+        self.hidden = None

@@ -54,17 +54,16 @@ class TimeFeatures:
         super(TimeFeatures, self).__init__()
         self.feats = dict()
 
-    def lstg_active(self, ids):
+    def lstg_active(self, lstg):
         """
         Returns whether a particular listing is open, given that listing's
         id dictionary. This gives the function the flexibility to check whether
         the listing associated with some thread is open more easily
 
-        :param ids: dictionary containing a key-value pair for the lstg id, where
-        key = 'lstg'
+        :param lstg: integer giving unique identifier for the lstg
         :return: Bool
         """
-        return ids['lstg'] in self.feats
+        return lstg in self.feats
 
     @staticmethod
     def _get_feat(thread_id=None, feat=None, feat_dict=None, time=0):
@@ -87,21 +86,21 @@ class TimeFeatures:
         """
         Gets the time features associated with a specific lstg
 
-        :param ids: ids dictionary for a specific listing (possibly thread)
+        :param ids: tuple giving identifiers for the event (lstg, thread_id)
         :param time: integer giving current time
         :return: array of time-valued features in the order given by env_consts.TIME_FEATURES
         """
-        if ids['lstg'] not in self.feats:
+        if ids[0] not in self.feats:
             raise RuntimeError('lstg not active')
         output = {}
-        if 'thread_id' in ids:
-            thread_id = ids['thread_id']
+        if len(ids) > 1:
+            thread_id = ids[1]
         else:
             thread_id = None
 
         for feat in consts.TIME_FEATS:
             output[feat] = self._get_feat(thread_id=thread_id, feat=feat,
-                                          feat_dict=self.feats[ids['lstg']],
+                                          feat_dict=self.feats[ids[0]],
                                           time=time)
         return output
 
@@ -213,8 +212,7 @@ class TimeFeatures:
         """
         Updates the time valued features after some type of event
 
-        :param ids: dictionary giving identifiers for the event
-        (expects slr, meta, leaf, title, cndtn, lstg, thread_id)
+        :param ids: tuple giving identifiers for the event (lstg, thread_id)
         :param offer: dictionary containing time of offer (time),
          count of offer in the thread (count), and price (price)
         :param trigger_type: string defining event type
@@ -227,16 +225,35 @@ class TimeFeatures:
         elif trigger_type == time_triggers.SLR_REJECTION:
             feature_function = TimeFeatures._update_slr_rejection
         elif trigger_type == time_triggers.LSTG_EXPIRATION:
-            del self.feats[ids['lstg']]  # just delete the lstg
+            del self.feats[ids[0]]  # just delete the lstg
             return None
         elif trigger_type == time_triggers.SALE:
-            del self.feats[ids['lstg']]  # just delete the lstg
+            [print(key) for key in self.feats]
+            del self.feats[ids[0]]  # just delete the lstg
+            [print(key) for key in self.feats]
             return None
         else:
             raise NotImplementedError()
         for feat in consts.TIME_FEATS:
-            feature_function(feat_dict=self.feats[ids['lstg']], feat_name=feat,
-                             offer=offer, thread_id=ids['thread_id'])
+            feature_function(feat_dict=self.feats[ids[0]], feat_name=feat,
+                             offer=offer, thread_id=ids[1])
+
+    def __contains__(self, item):
+        """
+        Checks whether a lstg is active right now
+        :param item: lstg id
+        :return: NA
+        """
+        return self.lstg_active(item)
+
+    def __delitem__(self, key):
+        """
+        Delete lstg from time feats object
+        :param key: lstg id
+        :return: NA
+        """
+        del self.feats[key]
+
 
 
 # noinspection DuplicatedCode

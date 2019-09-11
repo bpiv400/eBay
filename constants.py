@@ -5,17 +5,15 @@ TOL_HALF = 0.02
 
 # optimization parameters
 MBSIZE = 32 * 3
-LR = 1e-3
-
-# fixed neural net parameters
-LAYERS = 2
 DROPOUT = 0.5
+UPDATES = 2.5e3
 
 # paths and directories
-TRAIN_PATH = 'data/partitions/train_models/'
+DATA_PATH = 'data/partitions/'
 CHUNKS_DIR = 'data/chunks/'
 LDA_DIR = 'data/lda/'
-MODEL_DIR = 'data/models/'
+MODEL_DIR = 'models/'
+EXP_PATH = 'repo/simulator/experiments/'
 
 # maximal delay times
 MAX_DELAY = {'slr': 2 * 24 * 3600, 'byr': 14 * 24 * 3600}

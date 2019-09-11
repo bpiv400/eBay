@@ -1,4 +1,4 @@
-import sys
+import sys, math
 sys.path.append('../')
 from constants import *
 import torch, torch.nn as nn, torch.optim as optim
@@ -13,44 +13,67 @@ class Simulator:
     '''
     Constructs neural network and holds gamma for beta mixture model.
     '''
-    def __init__(self, model, outcome, train, params):
+    def __init__(self, model, outcome, train, params, sizes):
         # initialize parameters to be set later
         self.train = train
-        self.N = torch.sum(~torch.isnan(train['y'])).item()
-        self.v = [i for i in range(train['y'].size()[-1])]
-        self.batches = int(np.ceil(len(self.v) / MBSIZE))
+        N = train['y'].size()[-1]
+        self.v = [i for i in range(N)]
+        self.epochs = int(np.ceil(UPDATES * MBSIZE / N))
 
         # save parameters from inputs
         self.model = model
         self.outcome = outcome
         self.isRNN = model != 'arrival'
-        self.EM = self.outcome in ['sec', 'con']
+        self.EM = outcome in ['sec', 'con']
 
         # parameters and loss function
         if self.EM:
-            self.K = params.K
-            N_out = 3 * self.K
             self.loss = BetaMixtureLoss
-            vals = np.full(tuple(train['y'].size()) + (self.K,), 1/self.K)
+            vals = np.full(tuple(train['y'].size()) + (params.K,), 1/params.K)
             self.omega = torch.as_tensor(vals, dtype=torch.float).detach()
         elif self.outcome in ['days', 'hist']:
-            N_out = 2
             self.loss = NegativeBinomialLoss
         else:
-            N_out = 1
             self.loss = LogitLoss
 
         # neural net(s)
-        N_fixed = train['x_fixed'].size()[-1]
         if self.isRNN:
-            self.steps = train['y'].size()[0]
-            N_time = train['x_time'].size()[-1]
-            self.net = RNN(N_fixed, N_time, N_out, params.hidden)
+            self.net = RNN(params, sizes)
         else:
-            self.net = FeedForward(N_fixed, N_out, params.hidden)
+            self.net = FeedForward(params, sizes)
 
         # optimizer
-        self.optimizer = optim.Adam(self.net.parameters(), lr=LR)
+        self.optimizer = optim.Adam(
+            self.net.parameters(), lr=math.pow(10, params['lr']))
+
+
+    def evaluate_loss(self, data, train=True):
+        # train / eval mode
+        self.net.train(train)
+
+        # prediction using net
+        if self.isRNN:
+            x_time = rnn.pack_padded_sequence(data['x_time'], data['turns'])
+            theta = self.net(data['x_fixed'], x_time)
+        else:
+            theta = self.net(data['x_fixed'])
+
+        # outcome
+        if self.isRNN:
+            mask = ~torch.isnan(data['y'])
+            data['y'] = data['y'][mask]
+            theta = theta[mask]
+
+        # calculate loss
+        if 'omega' in data:
+            if self.isRNN:
+                loss, data['omega'][mask] = self.loss(
+                    theta, data['y'], data['omega'][mask])
+            else:
+                loss, data['omega'] = self.loss(theta, data['y'], data['omega'])
+            return loss, data['omega']
+        else: 
+            return self.loss(theta, data['y'])  
 
 
     def run_epoch(self):
@@ -60,40 +83,30 @@ class Simulator:
 
         # loop over batches
         lnL = 0
-        for i in range(self.batches):
-            idx = torch.tensor(np.sort(indices[i]))
-
+        for i in range(len(indices)):
             # zero gradient
             self.optimizer.zero_grad()
 
-            # prediction using net
-            x_fixed = torch.index_select(self.train['x_fixed'], -2, idx)
+            # index data
+            idx = torch.tensor(np.sort(indices[i]))
+            data = {}
+            data['x_fixed'] = torch.index_select(self.train['x_fixed'], -2, idx)
+            data['y'] = torch.index_select(self.train['y'], -1, idx)
             if self.isRNN:
-                x_time = rnn.pack_padded_sequence(
-                    self.train['x_time'][:, idx, :],
-                    self.train['turns'][idx])
-                theta = self.net(x_fixed, x_time, self.steps)
-            else:
-                theta = self.net(x_fixed)
-
-            # outcome
-            y = torch.index_select(self.train['y'], -1, idx)
-            if self.isRNN:
-                mask = ~torch.isnan(y)
-                y = y[mask]
-                theta = theta[mask]
+                data['x_time'] = self.train['x_time'][:,idx,:]
+                data['turns'] = self.train['turns'][idx]
+            if self.EM:
+                data['omega'] = torch.index_select(self.omega, -2, idx)
 
             # calculate loss
+            loss, omega = self.evaluate_loss(data)
+
+            # update omega
             if self.EM:
-                omega = torch.index_select(self.omega, -2, idx)
                 if self.isRNN:
-                    loss, omega[mask] = self.loss(theta, omega[mask], y)
                     self.omega[:, idx, :] = omega
                 else:
-                    loss, omega = self.loss(theta, omega, y)
                     self.omega[idx, :] = omega
-            else:
-                loss = self.loss(theta, y)
 
             # step down gradients
             loss.backward()
@@ -102,4 +115,4 @@ class Simulator:
             # return log-likelihood
             lnL += -loss.item()
 
-        return lnL / self.N
+        return lnL

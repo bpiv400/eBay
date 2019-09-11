@@ -5,10 +5,10 @@ from torch.distributions.beta import Beta
 def LogitLoss(theta, y):
 	p = torch.sigmoid(theta.squeeze())
 	ll = y * torch.log(p) + (1-y) * torch.log(1-p)
-	return -torch.sum(ll)
+	return -torch.sum(ll), None
 
 
-def BetaMixtureLoss(theta, omega, y):
+def BetaMixtureLoss(theta, y, omega=None):
     # exponentiate
 	theta = torch.exp(theta.squeeze())
 
@@ -24,16 +24,21 @@ def BetaMixtureLoss(theta, omega, y):
 	# multinomial probabilities
 	phi = torch.div(c, torch.sum(c, dim=-1, keepdim=True))
 
+	# calculate weights
+	if omega is None:
+		dens = torch.exp(lndens.detach())
+		omega = torch.div(dens, torch.sum(dens, dim=-1, keepdim=True))
+
 	# expected log-likelihood
 	ll = (lndens + torch.log(phi) - torch.log(omega))
 	Q = torch.sum(omega * ll)
 
 	# calculate new weights
 	dens = torch.exp(lndens.detach())
-	w = torch.div(dens, torch.sum(dens, dim=-1, keepdim=True))
+	omega = torch.div(dens, torch.sum(dens, dim=-1, keepdim=True))
 
     # calculate negative log-likelihood
-	return -Q, w
+	return -Q, omega
 
 
 def NegativeBinomialLoss(theta, y):
@@ -46,5 +51,5 @@ def NegativeBinomialLoss(theta, y):
     # log-likelihood components
 	ll = torch.mvlgamma(y + r, 1) - torch.mvlgamma(r, 1)
 	ll += y * torch.log(p) + r * torch.log(1-p)
-	return -torch.sum(ll)
+	return -torch.sum(ll), None
 

@@ -1,2 +1,2 @@
-﻿id,arrive_model,byr_model,slr_model,byr_us,byr_hist,interval,RLPARAMS
-2,path_arrive,path_byr,path_slr,1,15,15,NOPARAMSYET
+﻿id,arrive_models,byr_models,slr_models,byr_us,byr_hist,n,lstg_dur,RLPARAMS
+1,1,1,1,1,15,10,12,NOPARAMSYET

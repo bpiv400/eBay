@@ -7,7 +7,8 @@ import numpy as np, pandas as pd
 from datetime import datetime as dt
 from simulator import Simulator
 from constants import *
-from utils import *
+from parsing_funcs import *
+#from utils import *
 
 
 def train_model(simulator):
@@ -17,58 +18,18 @@ def train_model(simulator):
     lnL = []
 
     # loop over epochs, record log-likelihood
-    i = 0
-    while True:
+    for i in range(simulator.epochs):
         start = dt.now()
 
         # iterate over minibatches
         lnL.append(simulator.run_epoch())
 
         # print log-likelihood and duration
-        print('Epoch %d: %dsec. lnL: %1.4f.' %
-            (i+1, (dt.now() - start).seconds, lnL[i]))
-
-        # break if no improvement for 100 epochs
-        if (i >= 100) and (lnL[i] <= lnL[i-100]):
-            break
-        i += 1
+        print('Epoch %d: lnL: %1.4f. (%dsec)' %
+            (i+1, lnL[-1], (dt.now() - start).seconds))
 
     # return loss history and total duration
-    return lnL, dt.now() - time0
-
-
-# loads data and calls functions in utils.py to construct training inputs
-def process_inputs(model, outcome):
-    # initialize output dictionary
-    d = {}
-
-    # outcome
-    y = pickle.load(open(TRAIN_PATH + 'y.pkl', 'rb'))
-    d['y'] = y[model][outcome]
-    del y
-
-    # arrival models are all feed-forward
-    x = pickle.load(open(TRAIN_PATH + 'x.pkl', 'rb'))
-    if model == 'arrival':
-        if outcome == 'days':
-            d['x_fixed'] = parse_fixed_feats_days(x, d['y'].index)
-        else:
-            d['x_fixed'] = parse_fixed_feats_arrival(outcome, x)
-
-    # byr and slr models are RNN-like
-    else:
-        if outcome == 'delay':
-            z = pickle.load(open(TRAIN_PATH + 'z.pkl', 'rb'))
-            d['x_fixed'] = parse_fixed_feats_delay(model, x)
-            d['x_time'] = parse_time_feats_delay(model, d['y'].index, z)
-        else:
-            d['x_fixed'] = parse_fixed_feats_role(x)
-            d['x_time'] = parse_time_feats_role(model, outcome, x['offer'])
-
-    # dictionary of feature names, in order
-    featnames = {k: v.columns for k, v in d.items() if k.startswith('x')}
-
-    return convert_to_tensors(d), featnames
+    return lnL, (dt.now() - time0).seconds
 
 
 if __name__ == '__main__':
@@ -81,29 +42,49 @@ if __name__ == '__main__':
     parser.add_argument('--id', type=int, help='Experiment ID.')
     args = parser.parse_args()
 
-    # extract parameters from CSV
-    params = parse_params(args)
+    # extract parameters from CSV, training data
+    params = parse_params(args.model, args.outcome, args.id)
     print(params)
 
     # create inputs to model
     print('Creating model inputs')
-    train, featnames = process_inputs(args.model, args.outcome)
+    train, featnames = process_inputs(
+        'train_models', args.model, args.outcome)
 
-    # print feature names
-    for k, v in featnames.items():
-        print(k)
-        for c in v:
-            print('\t%s' % c)
+    # get data size parameters
+    sizes = get_sizes(args.model, args.outcome, params, train)
 
     # initialize neural net
-    simulator = Simulator(args.model, args.outcome, train, params)
+    simulator = Simulator(args.model, args.outcome, train, params, sizes)
     print(simulator.net)
 
     # train model
-    print('Training')
-    lnL, duration = train_model(simulator)
+    print('Training: %d epochs.' % simulator.epochs)
+    lnL_train, duration = train_model(simulator)
 
-    # save simulator parameters and other output
-    prefix = MODEL_DIR + '_'.join([args.model, args.outcome, str(args.id)])
-    torch.save(simulator.net.state_dict(), prefix + '.pt')
-    pickle.dump([featnames, lnL, duration], open(prefix + '.pkl', 'wb'))
+    # holdout
+    print('Evaluating on holdout set')
+    holdout, _ = process_inputs('train_rl', args.model, args.outcome)
+    loss_holdout, _ = simulator.evaluate_loss(holdout, train=False)
+
+    # save model
+    folder = MODEL_DIR + args.model + '/' + args.outcome + '/' 
+    torch.save(simulator.net.state_dict(), folder + str(args.id) + '.pt')
+
+    # save featnames and sizes once per model
+    if args.id == 1:
+        pickle.dump([featnames, sizes], open(folder + 'info.pkl', 'wb'))
+
+    # save log-likelihood and duration to results CSV
+    path = folder + 'results.csv'
+    if os.path.exists(path):
+        T = pd.read_csv(path, index_col=0)
+    else:
+        T = pd.DataFrame(index=pd.Index([], name='expid'))
+    T.loc[args.id, 'lnL_holdout'] = -loss_holdout.item()
+    T.loc[args.id, 'sec_per_epoch'] = duration / simulator.epochs
+    for i in range(simulator.epochs):
+        T.loc[args.id, 'lnL_train_' + str(i+1)] = lnL_train[i]
+
+    T.to_csv(path)
+    

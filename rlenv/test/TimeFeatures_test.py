@@ -5,36 +5,13 @@ import rlenv.env_constants as consts
 
 @pytest.fixture
 def lstgs():
-    thread1 = {
-        'lstg': 6,
-        'thread_id': 10
-    }
-
-    thread2 = {
-        'lstg': 6,
-        'thread_id': 11
-    }
-
-    thread3 = {
-        'lstg': 6,
-        'thread_id': 12
-    }
-
-    thread4 = {
-        'lstg': 7,
-        'thread_id': 10
-    }
-
-    thread5 = {
-        'lstg': 7,
-        'thread_id': 11
-    }
-    first_lstg = {
-        'lstg': 6
-    }
-    second_lstg = {
-        'lstg': 7
-    }
+    thread1 = (6, 10)
+    thread2 = (6, 11)
+    thread3 = (6, 12)
+    thread4 = (7, 10)
+    thread5 = (7, 11)
+    first_lstg = (6, )
+    second_lstg = (7, )
 
     lstg1 = (thread1, thread2, thread3, first_lstg)
     lstg2 = (thread4, thread5, second_lstg)
@@ -56,8 +33,8 @@ def init_timefeats():
 
 def test_initialize_feats(init_timefeats):
     timefeats = init_timefeats
-    assert timefeats.lstg_active({'lstg': 6})
-    assert timefeats.lstg_active({'lstg': 7})
+    assert timefeats.lstg_active(6)
+    assert timefeats.lstg_active(7)
 
 
 def test_initial_feats(lstgs, init_timefeats):
@@ -777,6 +754,7 @@ def test_slr_rejection_early(init_timefeats, lstgs):
         else:
             raise RuntimeError()
 
+
 def test_buyer_acceptance(lstgs, init_timefeats):
     lstg1, lstg2 = lstgs
     thread1, thread2, thread3, lstg1 = lstg1
@@ -808,11 +786,12 @@ def test_buyer_acceptance(lstgs, init_timefeats):
                                   'price': 1 - .7,
                               })
     timefeats.update_features(trigger_type=time_triggers.SALE, ids=thread1)
-    assert not timefeats.lstg_active(thread1)
-    assert not timefeats.lstg_active(thread2)
-    assert not timefeats.lstg_active(thread3)
-    assert not timefeats.lstg_active(lstg1)
-    assert timefeats.lstg_active(lstg2)
+    assert not timefeats.lstg_active(thread1[0])
+    assert not timefeats.lstg_active(thread2[0])
+    assert not timefeats.lstg_active(thread3[0])
+    assert not timefeats.lstg_active(lstg1[0])
+    print(lstg2)
+    assert timefeats.lstg_active(lstg2[0])
     with pytest.raises(RuntimeError):
         timefeats.get_feats(lstg1, 9)
     next4 = timefeats.get_feats(thread4, 9)
@@ -843,11 +822,11 @@ def test_slr_acceptance(lstgs, init_timefeats):
                                   'price': .3
                               })
     timefeats.update_features(trigger_type=time_triggers.SALE, ids=thread1)
-    assert not timefeats.lstg_active(thread1)
-    assert not timefeats.lstg_active(thread2)
-    assert not timefeats.lstg_active(thread3)
-    assert not timefeats.lstg_active(lstg1)
-    assert timefeats.lstg_active(lstg2)
+    assert not timefeats.lstg_active(thread1[0])
+    assert not timefeats.lstg_active(thread2[0])
+    assert not timefeats.lstg_active(thread3[0])
+    assert not timefeats.lstg_active(lstg1[0])
+    assert timefeats.lstg_active(lstg2[0])
     with pytest.raises(RuntimeError):
         timefeats.get_feats(lstg1, 9)
     next4 = timefeats.get_feats(thread4, 9)
@@ -886,11 +865,11 @@ def test_lstg_expiration(lstgs, init_timefeats):
     timefeats.update_features(trigger_type=time_triggers.LSTG_EXPIRATION,
                               ids=lstg1)
 
-    assert not timefeats.lstg_active(thread1)
-    assert not timefeats.lstg_active(thread2)
-    assert not timefeats.lstg_active(thread3)
-    assert not timefeats.lstg_active(lstg1)
-    assert timefeats.lstg_active(lstg2)
+    assert not timefeats.lstg_active(thread1[0])
+    assert not timefeats.lstg_active(thread2[0])
+    assert not timefeats.lstg_active(thread3[0])
+    assert not timefeats.lstg_active(lstg1[0])
+    assert timefeats.lstg_active(lstg2[0])
     with pytest.raises(RuntimeError):
         timefeats.get_feats(lstg1, 9)
     with pytest.raises(RuntimeError):
@@ -899,6 +878,6 @@ def test_lstg_expiration(lstgs, init_timefeats):
                               ids=lstg2)
     with pytest.raises(RuntimeError):
         timefeats.get_feats(lstg2, 9)
-    assert not timefeats.lstg_active(lstg2)
-    assert not timefeats.lstg_active(thread5)
-    assert not timefeats.lstg_active(thread4)
+    assert not timefeats.lstg_active(lstg2[0])
+    assert not timefeats.lstg_active(thread5[0])
+    assert not timefeats.lstg_active(thread4[0])

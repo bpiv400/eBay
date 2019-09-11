@@ -1,11 +1,4 @@
-from collections import OrderedDict
-
-# the list of columns contained in the 2d np.array containing all lstgs for a
-# given seller
-LSTG_COLUMNS = ['start_date', 'meta', 'leaf', 'cndtn', 'title', 'lstg', 'slr_hist',
-                'relisted', 'fdbk_score', 'fdbk_pstv', 'start_price',
-                'photos', 'slr_lstgs', 'slr_bos', 'decline_price', 'accept_price',
-                'store', 'slr_us', 'fast', 'end_time']
+from utils import unpickle
 
 SLR_OFFERS = 'slr_offers'
 BYR_OFFERS = 'byr_offers'
@@ -29,23 +22,9 @@ TIME_FEATS = [
 
 EXPIRATION = 48 * 60 * 60
 
-def make_column_map(cols, consts=False):
-    """
-    Generates a dictionary mapping column name to position in numpy array
-    of constants stored for environment input
-
-    :return: OrderedDict
-    """
-    col_map = OrderedDict()
-    for i, name in enumerate(cols):
-        col_map[name] = i
-    if consts:
-        i = len(col_map)
-        col_map['byr_us'] = i
-        col_map['byr_hist'] = (i+1)
-    return col_map
-
-
-# ordered dictionary for accessing elements of const array
-LSTG_FEATS_MAP = make_column_map(LSTG_COLUMNS, consts=False)
-# CONSTS_MAP = make_column_map(CONSTS, consts=True)
+INPUT_DIR = 'data/partitions/train_rl'
+LSTG_FILENAME = '{}/lstg.h5df'.format(INPUT_DIR)
+COL_FILENAME = '{}/x_lstg_cols.pkl'.format(INPUT_DIR)
+LSTG_COLS = unpickle(COL_FILENAME)
+MONTH = 30 * 24 * 3600
+DAY = 24 * 3600

@@ -12,7 +12,7 @@ class Event:
     attributes:
         type: string giving the type of event
         priority: integer giving time of event
-        ids: dictionary giving identifiers for event
+        ids: tuple giving identifiers for event (lstg, thread_id)
     """
     def __init__(self, event_type, priority=None, ids=None):
         super(Event, self).__init__()

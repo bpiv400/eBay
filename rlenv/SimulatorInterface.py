@@ -1,4 +1,11 @@
 # TODO UPDATE DOCUMENTATION
+# WRITE METHODS
+
+import numpy as np
+import torch
+from torch.nn.functional import sigmoid
+from rlenv.model_names import *
+
 class SimulatorInterface:
     def __init__(self, params):
         """
@@ -6,7 +13,61 @@ class SimulatorInterface:
 
         :param params:
         """
-        pass
+        self.params = params
+        self.models = {model: self._init_arrival_model(model)
+                       for model in ARRIVAL_MODELS}
+
+    def _init_arrival_model(self, model_name):
+        """
+        TODO: Incomplete
+
+        Initialize an arrival model based on its name and the parameters
+        of the experiment
+
+        :param model_name: str
+        :return: PyTorch Module
+        """
+        model = None
+        return model
+
+    def loc(self, consts=None, num_byrs=None):
+        """
+        Returns indicators for whether each buyer in a set of size
+        num_byrs is from the US
+        :param consts: tensor giving input features
+        :param num_byrs: int number of buyers
+        :return: 1d tensor giving whether each buyer is from the US
+        """
+        output = self.models[LOC].forward(consts)
+        output = sigmoid(output)
+        return np.random.binomial(1, output, num_byrs)
+
+    def hist(self, consts=None, byrs_us=None):
+        """
+        Returns the number of previous best offer threads each
+        buyer has participated in
+
+        :param consts: tensor giving constants
+        :param byrs_us: 1d np.array giving whether each byr is from the us
+        :return: 1d np.array giving number of experiences each buyer has had
+        """
+        if np.any(byrs_us):
+            # compute parameters for byrs from the us
+        else:
+            # compute parameters for byrs from abroad
+    def num_byrs(self, consts=None):
+        """
+        Returns the number of buyers who arrive on a particular day
+
+        :return:
+        :param consts: constants from the lstg as tensor
+        :return: int
+        """
+        output = self.models[NUM_BYRS].forward(consts)
+        output[0] = torch.exp(output[0])
+        output[1] = sigmoid(output[0])
+        return np.random.negative_binomial(output[0], output[1])
+
 
     def arrival_time(self, consts=None, time_feats=None, hidden=None):
         """
