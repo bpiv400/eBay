@@ -4,5 +4,6 @@
 #$ -t 1-2352
 #$ -N slr_delay
 #$ -o logs/
+#$ -j y
 
 python repo/simulator/train.py --model slr --outcome delay --id "$SGE_TASK_ID"

@@ -4,5 +4,6 @@
 #$ -t 1-2352
 #$ -N byr_nines
 #$ -o logs/
+#$ -j y
 
 python repo/simulator/train.py --model byr --outcome nines --id "$SGE_TASK_ID"

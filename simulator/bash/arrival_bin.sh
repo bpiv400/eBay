@@ -4,5 +4,6 @@
 #$ -t 1-84
 #$ -N arrival_bin
 #$ -o logs/
+#$ -j y
 
 python repo/simulator/train.py --model arrival --outcome bin --id "$SGE_TASK_ID"

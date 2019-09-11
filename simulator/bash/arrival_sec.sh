@@ -4,5 +4,6 @@
 #$ -t 1-588
 #$ -N arrival_sec
 #$ -o logs/
+#$ -j y
 
 python repo/simulator/train.py --model arrival --outcome sec --id "$SGE_TASK_ID"

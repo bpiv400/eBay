@@ -27,7 +27,8 @@ def create_bash(model, outcome, last):
 	f.write('#$ -l m_mem_free=50G\n')
 	f.write('#$ -t 1-%d\n' % last)
 	f.write('#$ -N %s_%s\n' % (model, outcome))
-	f.write('#$ -o logs/\n\n')
+	f.write('#$ -o logs/\n')
+	f.write('#$ -j y\n\n')
 	f.write('python repo/simulator/train.py --model %s --outcome %s --id "$SGE_TASK_ID"'
 		% (model, outcome))
 	f.close()
