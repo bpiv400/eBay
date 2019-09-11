@@ -21,13 +21,13 @@ def create_df(name, cols, l):
 
 # function to construct bash file
 def create_bash(model, outcome, last):
-	f = open(EXP_PATH + model + '_' + outcome + '.sh', 'w')
+	f = open('repo/simulator/bash/' + model + '_' + outcome + '.sh', 'w')
 	f.write('#!/bin/bash\n')
 	f.write('#$ -q all.q\n')
 	f.write('#$ -l m_mem_free=50G\n')
-	f.write('#$ -o logs/\n')
 	f.write('#$ -t 1-%d\n' % last)
-	f.write('#$ -N %s_%s\n\n' % (model, outcome))
+	f.write('#$ -N %s_%s\n' % (model, outcome))
+	f.write('#$ -o logs/\n\n')
 	f.write('python repo/simulator/train.py --model %s --outcome %s --id "$SGE_TASK_ID"'
 		% (model, outcome))
 	f.close()
