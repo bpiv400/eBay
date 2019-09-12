@@ -215,22 +215,23 @@ def process_inputs(source, model, outcome):
     # load dataframes of input variables
     x_lstg = pickle.load(open(getPath(['x', 'lstg']), 'rb'))
     x_thread = pickle.load(open(getPath(['x', 'thread']), 'rb'))
-    x_offer = pickle.load(open(getPath(['x', 'offer']), 'rb'))
 
     # arrival models are all feed-forward
     if model == 'arrival':
         if outcome == 'days':
             d['x_fixed'] = parse_fixed_feats_days(x_lstg, d['y'].index)
         else:
+            x_offer = pickle.load(open(getPath(['x', 'offer']), 'rb'))
             d['x_fixed'] = parse_fixed_feats_arrival(
                 outcome, x_lstg, x_thread, x_offer)
 
     # byr and slr models are RNN-like
     else:
         if outcome == 'delay':
+            x_offer = pickle.load(open(getPath(['x', 'offer']), 'rb'))
             d['x_fixed'] = parse_fixed_feats_delay(
                 model, x_lstg, x_thread, x_offer)
-            del x_lstg x_thred x_offer
+            del x_lstg, x_thread, x_offer
 
             z_start = pickle.load(open(getPath(['z', 'start']), 'rb'))
             z_role = pickle.load(open(getPath(['z', model]), 'rb'))
@@ -238,7 +239,8 @@ def process_inputs(source, model, outcome):
                 model, d['y'].index, z_start, z_role)
         else:
             d['x_fixed'] = parse_fixed_feats_role(x_lstg, x_thread)
-            del x_lstg x_thread
+            del x_lstg, x_thread
+            x_offer = pickle.load(open(getPath(['x', 'offer']), 'rb'))
             d['x_time'] = parse_time_feats_role(model, outcome, x_offer)
 
     # dictionary of feature names
