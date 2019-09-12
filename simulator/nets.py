@@ -16,10 +16,11 @@ class FeedForward(nn.Module):
             f, nn.Dropout(p=DROPOUT)])
 
         # intermediate layers
-        for i in range(params['ff_layers']-2):
+        for i in range(params['ff_layers']-1):
             self.seq.append(nn.Linear(params['ff_hidden'], params['ff_hidden']))
             self.seq.append(f)
-            self.seq.append(nn.Dropout(p=DROPOUT))
+            if i < params['ff_layers']-2:
+                self.seq.append(nn.Dropout(p=DROPOUT))
 
         # output layer
         if toRNN:
