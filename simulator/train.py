@@ -63,9 +63,9 @@ if __name__ == '__main__':
     lnL_train, duration = train_model(simulator)
 
     # holdout
-    print('Evaluating on holdout set')
     holdout, _ = process_inputs('train_rl', args.model, args.outcome)
     loss_holdout, _ = simulator.evaluate_loss(holdout, train=False)
+    print('Holdout lnL: %.4f.' % -loss_holdout.item())
 
     # save model
     folder = MODEL_DIR + args.model + '/' + args.outcome + '/' 

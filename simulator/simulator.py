@@ -43,8 +43,7 @@ class Simulator:
             self.net = FeedForward(params, sizes)
 
         # optimizer
-        self.optimizer = optim.Adam(
-            self.net.parameters(), lr=math.pow(10, params['lr']))
+        self.optimizer = optim.Adam(self.net.parameters(), lr=LR)
 
 
     def evaluate_loss(self, data, train=True):
