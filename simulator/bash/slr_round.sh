@@ -1,6 +1,6 @@
 #!/bin/bash
 #$ -q all.q
-#$ -l m_mem_free=30G
+#$ -l m_mem_free=40G
 #$ -t 1-784
 #$ -N slr_round
 #$ -o logs/

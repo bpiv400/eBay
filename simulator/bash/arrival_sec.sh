@@ -1,6 +1,6 @@
 #!/bin/bash
 #$ -q all.q
-#$ -l m_mem_free=30G
+#$ -l m_mem_free=40G
 #$ -t 1-196
 #$ -N arrival_sec
 #$ -o logs/
