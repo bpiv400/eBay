@@ -1,7 +1,7 @@
 #!/bin/bash
 #$ -q all.q
-#$ -l m_mem_free=50G
-#$ -t 1-2352
+#$ -l m_mem_free=30G
+#$ -t 1-784
 #$ -N byr_round
 #$ -o logs/
 #$ -j y

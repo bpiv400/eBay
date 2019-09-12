@@ -6,7 +6,8 @@ TOL_HALF = 0.02
 # optimization parameters
 MBSIZE = 32 * 3
 DROPOUT = 0.5
-UPDATES = 1e6
+UPDATES = 5e6
+LR = 1e-4
 
 # paths and directories
 DATA_PATH = 'data/partitions/'

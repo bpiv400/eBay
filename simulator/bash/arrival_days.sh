@@ -1,7 +1,7 @@
 #!/bin/bash
 #$ -q all.q
-#$ -l m_mem_free=50G
-#$ -t 1-84
+#$ -l m_mem_free=30G
+#$ -t 1-28
 #$ -N arrival_days
 #$ -o logs/
 #$ -j y

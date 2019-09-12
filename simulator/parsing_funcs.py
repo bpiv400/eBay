@@ -230,6 +230,7 @@ def process_inputs(source, model, outcome):
         if outcome == 'delay':
             d['x_fixed'] = parse_fixed_feats_delay(
                 model, x_lstg, x_thread, x_offer)
+            del x_lstg x_thred x_offer
 
             z_start = pickle.load(open(getPath(['z', 'start']), 'rb'))
             z_role = pickle.load(open(getPath(['z', model]), 'rb'))
@@ -237,6 +238,7 @@ def process_inputs(source, model, outcome):
                 model, d['y'].index, z_start, z_role)
         else:
             d['x_fixed'] = parse_fixed_feats_role(x_lstg, x_thread)
+            del x_lstg x_thread
             d['x_time'] = parse_time_feats_role(model, outcome, x_offer)
 
     # dictionary of feature names
