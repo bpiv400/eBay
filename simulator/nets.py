@@ -12,14 +12,16 @@ class FeedForward(nn.Module):
         f = nn.Sigmoid()
 
         # initial layer
-        self.seq = nn.ModuleList([nn.Linear(sizes['fixed'], params['ff_hidden']),
-            f, nn.Dropout(p=DROPOUT)])
+        self.seq = nn.ModuleList(
+            [nn.Linear(sizes['fixed'], params['ff_hidden'], f)])
+        if not toRNN:
+            self.seq.append(nn.Dropout(p=DROPOUT))
 
         # intermediate layers
         for i in range(params['ff_layers']-1):
             self.seq.append(nn.Linear(params['ff_hidden'], params['ff_hidden']))
             self.seq.append(f)
-            if i < params['ff_layers']-2:
+            if not toRNN and (i < params['ff_layers']-2):
                 self.seq.append(nn.Dropout(p=DROPOUT))
 
         # output layer
