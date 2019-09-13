@@ -5,9 +5,11 @@ TOL_HALF = 0.02
 
 # optimization parameters
 MBSIZE = 32 * 3
-DROPOUT = 0.5
 UPDATES = 5e6
 LR = 1e-4
+
+# dropout rate
+DROPOUT = 0.5
 
 # paths and directories
 DATA_PATH = 'data/partitions/'
@@ -15,6 +17,27 @@ CHUNKS_DIR = 'data/chunks/'
 LDA_DIR = 'data/lda/'
 MODEL_DIR = 'models/'
 EXP_PATH = 'repo/simulator/experiments/'
+
+# model directories
+MODEL_DIRS = ['arrival/days/',
+		  	  'arrival/bin/',
+		  	  'arrival/loc/',
+		  	  'arrival/hist/',
+		  	  'arrival/sec/',
+		  	  'byr/delay/',
+		  	  'byr/accept/',
+		  	  'byr/reject/',
+		  	  'byr/con/',
+		  	  'byr/msg/',
+		  	  'byr/round/',
+		  	  'byr/nines/',
+		  	  'slr/delay/',
+		  	  'slr/accept/',
+		  	  'slr/reject/',
+		  	  'slr/con/',
+		  	  'slr/msg/',
+		  	  'slr/round/',
+		  	  'slr/nines/']
 
 # maximal delay times
 MAX_DELAY = {'slr': 2 * 24 * 3600, 'byr': 14 * 24 * 3600}

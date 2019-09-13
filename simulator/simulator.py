@@ -23,11 +23,13 @@ class Simulator:
         # save parameters from inputs
         self.model = model
         self.outcome = outcome
-        self.isRNN = model != 'arrival'
+        self.isRecurrent = (model != 'arrival') or (outcome == 'days')
+        self.isLSTM = outcome in ['days', 'delay']
         self.EM = outcome in ['sec', 'con']
 
         # parameters and loss function
         if self.EM:
+            sizes['out'] *= params.K
             self.loss = BetaMixtureLoss
             vals = np.full(tuple(train['y'].size()) + (params.K,), 1/params.K)
             self.omega = torch.as_tensor(vals, dtype=torch.float).detach()
@@ -37,8 +39,11 @@ class Simulator:
             self.loss = LogitLoss
 
         # neural net(s)
-        if self.isRNN:
-            self.net = RNN(params, sizes)
+        if self.isRecurrent:
+            if self.isLSTM:
+                self.net = LSTM(params, sizes)
+            else:
+                self.net = RNN(params, sizes)
         else:
             self.net = FeedForward(params, sizes)
 
@@ -51,21 +56,21 @@ class Simulator:
         self.net.train(train)
 
         # prediction using net
-        if self.isRNN:
+        if self.isRecurrent:
             x_time = rnn.pack_padded_sequence(data['x_time'], data['turns'])
             theta = self.net(data['x_fixed'], x_time)
         else:
             theta = self.net(data['x_fixed'])
 
         # outcome
-        if self.isRNN:
+        if self.isRecurrent:
             mask = ~torch.isnan(data['y'])
             data['y'] = data['y'][mask]
             theta = theta[mask]
 
         # calculate loss
         if 'omega' in data:
-            if self.isRNN:
+            if self.isRecurrent:
                 loss, data['omega'][mask] = self.loss(
                     theta, data['y'], data['omega'][mask])
             else:
@@ -91,7 +96,7 @@ class Simulator:
             data = {}
             data['x_fixed'] = torch.index_select(self.train['x_fixed'], -2, idx)
             data['y'] = torch.index_select(self.train['y'], -1, idx)
-            if self.isRNN:
+            if self.isRecurrent:
                 data['x_time'] = self.train['x_time'][:,idx,:]
                 data['turns'] = self.train['turns'][idx]
             if self.EM:
@@ -102,7 +107,7 @@ class Simulator:
 
             # update omega
             if self.EM:
-                if self.isRNN:
+                if self.isRecurrent:
                     self.omega[:, idx, :] = omega
                 else:
                     self.omega[idx, :] = omega

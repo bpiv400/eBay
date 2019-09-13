@@ -22,9 +22,16 @@ TIME_FEATS = [
 
 EXPIRATION = 48 * 60 * 60
 
-INPUT_DIR = 'data/partitions/train_rl'
-LSTG_FILENAME = '{}/lstg.h5df'.format(INPUT_DIR)
-COL_FILENAME = '{}/x_lstg_cols.pkl'.format(INPUT_DIR)
-LSTG_COLS = unpickle(COL_FILENAME)
+DATA_DIR = 'data/partitions/train_rl'
+MODEL_DIR = 'data/models'
+LSTG_FILENAME = '{}/lstg.h5df'.format(DATA_DIR)
+FIXED_COLS_FILENAME = '{}/x_lstg_cols.pkl'.format(DATA_DIR)
+COMPOSER_FILENAME = '{}/composer.pkl'
+LSTG_COLS = unpickle(FIXED_COLS_FILENAME)
+INFO_FILENAME = 'info.pkl'
 MONTH = 30 * 24 * 3600
 DAY = 24 * 3600
+
+ARRIVAL_CLOCK_FEATS = ['focal_days', 'focal_holiday', 'focal_dow0',
+                       'focal_dow1', 'focal_dow2', 'focal_dow3',
+                       'focal_dow4', 'focal_dow5']

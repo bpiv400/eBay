@@ -1,6 +1,6 @@
 #!/bin/bash
 #$ -q all.q
-#$ -l m_mem_free=40G
+#$ -l m_mem_free=10G
 #$ -t 1-784
 #$ -N slr_accept
 #$ -o logs/

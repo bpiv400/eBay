@@ -7,15 +7,16 @@ from constants import *
 
 # parameter values
 hidden = np.power(2, np.array(range(4, 11)))
+lstm_hidden = np.power(2, np.array(range(0, 5)))
 layers = np.array(range(2, 6))
 K = np.array(range(2, 9))
 
 # function to construct dataframe
-def create_df(name, cols, l):
+def create_df(path, cols, l):
 	M = cartesian(l)
 	idx = pd.Index(range(1, len(M)+1), name='id')
 	df = pd.DataFrame(M, index=idx, columns=cols, dtype='int64')
-	df.to_csv(EXP_PATH + name + '.csv')
+	df.to_csv(path)
 	return df.index[-1]
 
 # function to construct bash file
@@ -23,7 +24,7 @@ def create_bash(model, outcome, last):
 	f = open('repo/simulator/bash/' + model + '_' + outcome + '.sh', 'w')
 	f.write('#!/bin/bash\n')
 	f.write('#$ -q all.q\n')
-	f.write('#$ -l m_mem_free=40G\n')
+	f.write('#$ -l m_mem_free=10G\n')
 	f.write('#$ -t 1-%d\n' % last)
 	f.write('#$ -N %s_%s\n' % (model, outcome))
 	f.write('#$ -o logs/\n')
@@ -32,29 +33,36 @@ def create_bash(model, outcome, last):
 		% (model, outcome))
 	f.close()
 
-# feed-forward non-mixture
-ff = create_df('ff', ['ff_hidden', 'ff_layers'], [hidden, layers])
+# path
+getPath = lambda model, outcome: MODEL_DIR + '/'.join(
+	[model, outcome, 'params.csv'])
 
-for outcome in ['bin', 'days', 'hist', 'loc', 'sec']:
-	create_bash('arrival', outcome, ff)
+# days and delay models
+for names in [['arrival', 'days'], ['byr', 'delay'], ['slr', 'delay']]:
+	path = getPath(*names)
+	last = create_df(path, ['ff_hidden', 'ff_layers', 'rnn_hidden'], 
+		[hidden, layers, lstm_hidden])
+	create_bash(*names, last)
 
-# feed-forward mixture
-ff_K = create_df('ff_K', ['ff_hidden', 'ff_layers', 'K'], [hidden, layers, K])
+# feed-forward models
+for outcome in ['bin', 'hist', 'loc', 'sec']:
+	path = getPath('arrival', outcome)
+	if outcome == 'sec':
+		last = create_df(path, ['ff_hidden', 'ff_layers', 'K'], 
+			[hidden, layers, K])
+	else:
+		last = create_df(path, ['ff_hidden', 'ff_layers'], [hidden, layers])
+	create_bash('arrival', outcome, last)
 
-create_bash('arrival', 'sec', ff_K)
-
-# rnn non-mixture
-rnn = create_df('rnn', ['ff_hidden', 'rnn_hidden', 'ff_layers', 'rnn_layers'], 
-	[hidden, hidden, layers, layers])
-
+# other recurrent models
 for model in ['byr', 'slr']:
-	for outcome in ['accept', 'delay', 'msg', 'nines', 'reject', 'round']:
-		create_bash(model, outcome, rnn)
-
-# rnn mixture
-rnn_K = create_df('rnn_K', 
-	['ff_hidden', 'rnn_hidden', 'ff_layers', 'rnn_layers', 'K'], 
-	[hidden, hidden, layers, layers, K])
-
-for model in ['byr', 'slr']:
-	create_bash(model, 'con', rnn_K)
+	for outcome in ['accept', 'msg', 'nines', 'reject', 'round']:
+		path = getPath(model, outcome)
+		if outcome == 'con':
+			last = create_df(path, 
+				['ff_hidden', 'rnn_hidden', 'ff_layers', 'rnn_layers', 'K'], 
+				[hidden, hidden, layers, layers, K])
+		else:
+			last = create_df(path, ['ff_hidden', 'rnn_hidden', 'ff_layers', 'rnn_layers'], 
+				[hidden, hidden, layers, layers])
+		create_bash(model, outcome, last)

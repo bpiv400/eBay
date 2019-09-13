@@ -1,7 +1,7 @@
 #!/bin/bash
 #$ -q all.q
-#$ -l m_mem_free=40G
-#$ -t 1-784
+#$ -l m_mem_free=10G
+#$ -t 1-140
 #$ -N byr_delay
 #$ -o logs/
 #$ -j y

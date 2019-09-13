@@ -7,8 +7,6 @@ import numpy as np, pandas as pd
 from datetime import datetime as dt
 from simulator import Simulator
 from constants import *
-from parsing_funcs import *
-#from utils import *
 
 
 def train_model(simulator):
@@ -42,17 +40,14 @@ if __name__ == '__main__':
     parser.add_argument('--id', type=int, help='Experiment ID.')
     args = parser.parse_args()
 
-    # extract parameters from CSV, training data
-    params = parse_params(args.model, args.outcome, args.id)
-    print(params)
+    # model folder
+    folder = MODEL_DIR + args.model + '/' + args.outcome + '/' 
 
-    # create inputs to model
-    print('Creating model inputs')
-    train, featnames = process_inputs(
-        'train_models', args.model, args.outcome)
-
-    # get data size parameters
-    sizes = get_sizes(args.model, args.outcome, params, train)
+    # load inputs to model
+    print('Loading model inputs')
+    train = pickle.load(open(folder + 'train_models.pkl', 'rb'))
+    sizes = pickle.load(open(folder + 'sizes.pkl', 'rb'))
+    params = pd.read_csv(folder + 'params.csv', index_col=0).loc[args.id]
 
     # initialize neural net
     simulator = Simulator(args.model, args.outcome, train, params, sizes)
@@ -63,17 +58,12 @@ if __name__ == '__main__':
     lnL_train, duration = train_model(simulator)
 
     # holdout
-    holdout, _ = process_inputs('train_rl', args.model, args.outcome)
+    holdout = pickle.load(open(folder + 'train_rl.pkl', 'rb'))
     loss_holdout, _ = simulator.evaluate_loss(holdout, train=False)
     print('Holdout lnL: %.4f.' % -loss_holdout.item())
 
     # save model
-    folder = MODEL_DIR + args.model + '/' + args.outcome + '/' 
     torch.save(simulator.net.state_dict(), folder + str(args.id) + '.pt')
-
-    # save featnames and sizes once per model
-    if args.id == 1:
-        pickle.dump([featnames, sizes], open(folder + 'info.pkl', 'wb'))
 
     # save log-likelihood and duration to results CSV
     path = folder + 'results.csv'

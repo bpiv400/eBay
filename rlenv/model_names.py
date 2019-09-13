@@ -1,7 +1,7 @@
-NUM_BYRS = 'arrival_days'
-BIN = 'arrival_bin'
-HIST = 'arrival_hist'
-LOC = 'arrival_loc'
-SEC = 'arrival_sec'
+DAYS = 'days'
+BIN = 'bin'
+HIST = 'hist'
+LOC = 'loc'
+SEC = 'sec'
 
-ARRIVAL_MODELS = [NUM_BYRS, BIN, HIST, LOC, SEC]
+ARRIVAL_MODELS = [DAYS, BIN, HIST, LOC, SEC]

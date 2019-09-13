@@ -118,21 +118,30 @@ def parse_time_feats_role(model, outcome, x_offer):
     return add_turn_indicators(x_time)
 
 
-def get_clock_feats(time):
+def get_clock_feats(time, start_days):
     """
     Gets clock features as np.array given the time
-    (day of week indicators -- 6 excluded)
+
+    Features are:
+    days since start
+    holiday indicator
+    day of week indicators
 
     Will need to add argument to include minutes for other models
 
     :param time: int giving time in seconds
     :return: NA
     """
-    out = np.zeros(7, dtype='float32')
+    start_time = pd.to_datetime(start_days, unit='d', origin=START)
+    out = np.zeros(7, dtype='float64')
     clock = pd.to_datetime(time.clock, unit='s', origin=START)
+    focal_days = (clock - start_time).days
+
+    out[0] = focal_days
+    out[1] = clock.isin(HOLIDAYS)
     if clock.dayofweek < 6:
-        out[clock.dayofweek + 1] = 1
-    out[0] = clock.isin(HOLIDAYS)
+        out[clock.dayofweek + 2] = 1
+
     return out
 
 

@@ -14,7 +14,7 @@ import pandas
 import pickle
 import h5py
 from utils import unpickle
-from rlenv.env_constants import LSTG_FILENAME, COL_FILENAME
+from rlenv.env_constants import LSTG_FILENAME, FIXED_COLS_FILENAME
 # constants
 INPUT_PATH = 'data/partitions/train_rl/x_lstg.pkl'
 
@@ -24,12 +24,11 @@ def main():
     column_dict = dict()
     for i, col in enumerate(x.columns):
         column_dict[col] = i
-    pickle.dump(column_dict, open(COL_FILENAME, 'wb'))
+    pickle.dump(column_dict, open(FIXED_COLS_FILENAME, 'wb'))
     f = h5py.File(LSTG_FILENAME, 'w')
     lstg = f.create_dataset('lstg', shape=x.shape, dtype='float64')
     x = x.to_numpy()
-    x = x.astype('float32')
-    print(x.dtype)
+    x = x.astype('float64')
     lstg[:, :] = x
     f.close()
 

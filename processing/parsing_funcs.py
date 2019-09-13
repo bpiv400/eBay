@@ -142,6 +142,17 @@ def parse_time_feats_delay(model, idx, z_start, z_role):
     return x_time.join(z_role.reindex(index=idx, fill_value=0))
 
 
+def parse_time_feats_days(d):
+    # initialize output
+    x_time = pd.DataFrame(index=d['y'].index)
+    # add period
+    x_time['days'] = d['y'].index.get_level_values('period')
+    # day attributes
+    clock = pd.to_datetime(d['x_fixed'].start_days + x_time.days, 
+        unit='D', origin=START)
+    return x_time.join(extract_day_feats(clock))
+
+
 def parse_fixed_feats_role(x_lstg, x_thread):
     return x_thread.join(x_lstg)
 
@@ -186,99 +197,3 @@ def parse_fixed_feats_arrival(outcome, x_lstg, x_thread, x_offer):
     x_fixed = x_fixed.join(x_thread['byr_hist'])
     if outcome in ['bin', 'sec']:
         return x_fixed
-
-
-def parse_fixed_feats_days(x_lstg, idx):
-    # lstg features
-    x_fixed = x_lstg.reindex(index=idx, level='lstg')
-    # period
-    x_fixed['focal_days'] = x_fixed.index.get_level_values('period')
-    # days since lstg start
-    day = x_fixed.start_days + x_fixed.focal_days
-    clock = pd.to_datetime(day, unit='D', origin=START)
-    x_fixed = x_fixed.join(extract_day_feats(clock).rename(
-        lambda x: 'focal_' + x, axis=1))
-    return x_fixed
-
-
-# loads data and calls helper functions to construct training inputs
-def process_inputs(source, model, outcome):
-    # initialize output dictionary and size dictionary
-    d = {}
-
-    # path name function
-    getPath = lambda names: DATA_PATH + source + '/' + '_'.join(names) + '.pkl'
-
-    # outcome
-    d['y'] = pickle.load(open(getPath(['y', model, outcome]), 'rb'))
-
-    # load dataframes of input variables
-    x_lstg = pickle.load(open(getPath(['x', 'lstg']), 'rb'))
-    x_thread = pickle.load(open(getPath(['x', 'thread']), 'rb'))
-
-    # arrival models are all feed-forward
-    if model == 'arrival':
-        if outcome == 'days':
-            d['x_fixed'] = parse_fixed_feats_days(x_lstg, d['y'].index)
-        else:
-            x_offer = pickle.load(open(getPath(['x', 'offer']), 'rb'))
-            d['x_fixed'] = parse_fixed_feats_arrival(
-                outcome, x_lstg, x_thread, x_offer)
-
-    # byr and slr models are RNN-like
-    else:
-        if outcome == 'delay':
-            x_offer = pickle.load(open(getPath(['x', 'offer']), 'rb'))
-            d['x_fixed'] = parse_fixed_feats_delay(
-                model, x_lstg, x_thread, x_offer)
-            del x_lstg, x_thread, x_offer
-
-            z_start = pickle.load(open(getPath(['z', 'start']), 'rb'))
-            z_role = pickle.load(open(getPath(['z', model]), 'rb'))
-            d['x_time'] = parse_time_feats_delay(
-                model, d['y'].index, z_start, z_role)
-        else:
-            d['x_fixed'] = parse_fixed_feats_role(x_lstg, x_thread)
-            del x_lstg, x_thread
-            x_offer = pickle.load(open(getPath(['x', 'offer']), 'rb'))
-            d['x_time'] = parse_time_feats_role(model, outcome, x_offer)
-
-    # dictionary of feature names
-    featnames = {k: v.columns for k, v in d.items() if k.startswith('x')}
-
-    return convert_to_tensors(d), featnames
-
-
-def parse_params(model, outcome, expid):
-    # feed-forward or rnn
-    path = 'ff' if model == 'arrival' else 'rnn'
-    # parameter K for mixture models
-    if outcome in ['sec', 'con']:
-        path += '_K'
-    try:
-        return pd.read_csv(EXP_PATH + path + '.csv', index_col=0).loc[expid]
-    except:
-        print('No experiment #%d.' % args.id)
-        exit()
-
-
-def get_sizes(model, outcome, params, data):
-    sizes = {}
-
-    # fixed inputs
-    sizes['fixed'] = data['x_fixed'].size()[-1]
-
-    # output parameters
-    if 'K' in params:
-        sizes['out'] = 3 * params['K']
-    elif outcome in ['days', 'hist']:
-        sizes['out'] = 2
-    else:
-        sizes['out'] = 1
-
-    # RNN parameters
-    if model != 'arrival':
-        sizes['steps'] = data['y'].size()[0]
-        sizes['time'] = data['x_time'].size()[-1]
-
-    return sizes
