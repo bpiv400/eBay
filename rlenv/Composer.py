@@ -5,7 +5,7 @@ import numpy as np
 import torch
 from rlenv.env_consts import *
 from utils import unpickle
-import model_names
+from rlenv import model_names
 
 
 class Composer:
@@ -151,12 +151,13 @@ class Composer:
     @staticmethod
     def _build_time(model_name, featnames):
         """
-        Builds time feature maps for recurrent nets
+        Creates input maps for recurrent models' time step input vectors
 
-        :param model_name:
-        :param featnames: pd.DataFrame containing a column "to" that gives the position
-        of each index feature in the input vector
-        :return:
+        :param model_name: str giving the name of the focal model (see model_names.py)
+        "from" gives the index number of each feature in the lstg tensor used in environment
+        :param featnames: pd.DataFrame index containing names of all the features in
+        the current model's fixed feature input vector in order
+        :return: dictionary containing all necessary maps
         """
         featnames = pd.DataFrame(data={'to': np.arange(len(featnames))}, index=featnames)
         time_maps = dict()
@@ -207,11 +208,14 @@ class Composer:
     @staticmethod
     def _build_recurrent(model_name, fixed):
         """
-        Creates input indices for recurrent models
+        Creates all input maps for recurrent models (see build() for details)
 
-        :param model_name:
-        :param fixed:
-        :return:
+        :param model_name: str giving the name of the focal model (see model_names.py)
+        "from" gives the index number of each feature in the lstg tensor used in environment
+        :param fixed: dataFrame that maps feature names to their location in
+        the lstg tensor used in the environment
+        :return: dictionary containing two entries, one for all time step input maps
+        and one for fixed feature input maps
         """
         if model_name == model_names.DAYS:
             model_type = model_names.ARRIVAL_PREFIX
@@ -239,26 +243,37 @@ class Composer:
         return maps
 
     @staticmethod
-    def _build_lstg_map(fixed_df, featnames):
+    def _build_lstg_map(fixed, featnames):
         """
         Creates a 2 dimensional numpy array mapping indices in the lstg data file
         to indices in a model's fixed input vector, given the index of the feature
         names for that input vector
 
-        :param fixed_df: dataFrame that maps feature names to their location in
-        the lstg data file
-        :param featnames: dataFrame that aps feature names to their location
+        :param fixed: dataFrame that maps feature names to their location in
+        the lstg feature tensor used in the environment. Contains feature names in
+        index and positions in the "from" column
+        :param featnames: dataFrame that maps feature names to their location
         in a model's input vector
-        :return: 2-dimensional np.array
+        :return: 2-dimensional tensor where the first column gives the index of each
+        feature in the source vector and the second column gives the index of each in
+        the input vector
         """
-        fixed_map = fixed_df.merge(featnames, how='inner',
-                                   left_index=True, right_index=True)
+        fixed_map = fixed.merge(featnames, how='inner',
+                                left_index=True, right_index=True)
         fixed_map = fixed_map.to_numpy().astype(int)
         fixed_map = torch.from_numpy(fixed_map).long()
         return fixed_map
 
     @staticmethod
     def _build_clock_map(model_name, featnames):
+        """
+        Creates simple map for a given model's clock features
+
+        :param model_name: str giving the name of the focal model (see model_names.py)
+        :param featnames: pd.DataFrame index containing names of all the features in
+        the current model's fixed feature input vector in order
+        :return: 1-dimensional tensor
+        """
         if model_name in model_names.FEED_FORWARD:
             clock_feats = FF_CLOCK_FEATS
         elif model_name == model_names.DAYS:
@@ -273,24 +288,14 @@ class Composer:
     @staticmethod
     def _build_ff(model_name, fixed):
         """
-        Creates input indices for feed forward models
+        Creates input maps for feed forward networks
 
-        Returns a 2-tuple, where the first element is a 3-tuple
-        of np.arrays indicating where each feature
-        should be passed in the input vector:
-            fixed_map: 2-dimensional np.array where first column contains the
-            indices in the lstg dataset where each feature comes from and
-            the second column gives where each of those features should be placed
-            clock_map: 1-dimensional np.array where each clock feature should
-            be placed in the input vector
-            indiv_map: np.array giving position of byr_us and byr_hist
-        and the second element is an integer giving the number of input features
-
-        :param model_name: str giving name of the model
-        :param fixed: pandas dataframe with colnames as index and
-        col position as first and only column ('pos')
-        :return: tuple containing input maps (see above for description
-        for each model)
+        :param model_name: str giving the name of the focal model (see model_names.py)
+        "from" gives the index number of each feature in the lstg tensor used in environment
+        :param fixed: dataFrame that maps feature names to their location in
+        the lstg tensor used in the environment
+        :return: dictionary containing input maps under the 'fixed' index --
+        see build() for details
         """
         featnames_path = '{}/arrival/{}/{}'.format(MODEL_DIR, model_name,
                                                    FEATNAMES_FILENAME)
@@ -298,31 +303,30 @@ class Composer:
                                               SIZES_FILENAME)
         sizes = unpickle(size_path)
         input_featnames = unpickle(featnames_path)['x_fixed']
-        input_featnames = pd.DataFrame(data={'to': np.arange(len(input_featnames))}, index=input_featnames)
+        input_featnames = pd.DataFrame(data={'to': np.arange(len(input_featnames))},
+                                       index=input_featnames)
         fixed_map = Composer._build_lstg_map(fixed, input_featnames)
         clock_map = Composer._build_clock_map(model_name, input_featnames)
         assert clock_map.numel() == len(FF_CLOCK_FEATS)
+        maps = {
+            LSTG_MAP: fixed_map,
+            SIZE : torch.tensor(sizes[FIXED]).long()
+        }
         if model_name == model_names.LOC:
             assert clock_map.numel() + fixed_map.shape[0] == len(input_featnames)
-            loc_map = None
-            hist_map = None
         else:
             loc_map = input_featnames.loc[input_featnames.index == 'byr_us', 'to']
             loc_map = torch.tensor(loc_map.to_numpy().astype(int)).long()
+            maps[BYR_US_MAP] = loc_map
             if model_name == model_names.HIST:
                 assert clock_map.numel() + fixed_map.shape[0] + 1 == len(input_featnames)
-                hist_map = None
             elif model_name == model_names.BIN or model_name == model_names.SEC:
                 hist_map = input_featnames.loc[input_featnames.index == 'byr_hist', 'to']
                 hist_map = torch.tensor(hist_map.to_numpy().astype(int)).long()
                 assert clock_map.numel() + fixed_map.shape[0] + 2 == len(input_featnames)
+                maps[BYR_HIST_MAP] = hist_map
             else:
                 raise RuntimeError('Invalid model name. See model_names.py')
-        maps = {LSTG_MAP: fixed_map,
-                CLOCK_MAP: clock_map,
-                BYR_US_MAP: loc_map,
-                BYR_HIST_MAP: hist_map,
-                SIZE: torch.tensor(sizes[FIXED]).long()}
         maps = {FIXED: maps}
         Composer._check_maps(model_name, maps)
         return maps
@@ -330,12 +334,21 @@ class Composer:
     @staticmethod
     def _check_maps(model_name, maps):
         """
-        Performs some simple sanity checks on the index maps to ensure
-        they're not clearly incorrect
-        :param maps: tuple containing input maps generated by
-        Composer._build_ff or Composer._build_recurrent
-        (recurrent if not)
-        :return: True if maps are valid
+        Performs sanity checks to ensure that input maps aren't clearly
+        incorrect:
+        -Each feature maps to a distinct index in the input vectors
+        -All indices in the input vector have at least 1 source
+        index mapping to them
+        -The size of the input maps in sum equals the size of the input
+        vector
+
+        Note that the composer could still produce incorrect results
+        if the order of the features in the source vectors doesn't
+        match the order specified by input lists in env_consts
+
+        :param model_name: str giving the name of the focal model (see model_names.py)
+        "from" gives the index number of each feature in the lstg tensor used in environment
+        :param maps: dictionary output by Composer._build_ff or Composer._build_recurrent
         :raises AssertionError: when maps are not valid
         """
         print("Checking maps for {}".format(model_name))
@@ -364,113 +377,66 @@ class Composer:
             assert all_to.min() == 0
             assert all_to.numel() == curr_maps[SIZE]
 
-    def days_input(self, consts=None, clock_feats=None, fixed=False):
-        """
-        Returns input tensors for the days model
 
-        :param consts:
-        :param clock_feats:
-        :param fixed:
+    #TODO: DOCUMENT BELOW FUNCTIONS
+    @staticmethod
+    def _build_input_vector(maps, sources, size):
+        """
+
+        :param maps:
+        :param sources:
+        :param size:
         :return:
         """
-        maps = self.maps[model_names.DAYS]
-        if fixed:
+        x = torch.zeros(size, maps[SIZE])
+        # other features
+        for map_name, curr_map in maps.items():
+            if len(maps[curr_map].shape) == 1:
+                x[:, maps[curr_map]] = sources[curr_map]
+            else:
+                x[:, maps[curr_map][:, 1]] = sources[maps[curr_map[:, 0]]]
+        return x
 
-            fixed_maps = maps[FIXED][LSTG_MAP]
-            x_fixed = torch.empty(1, 1, fixed_maps[LSTG_MAP].shape[0])
-            x_fixed[:, :, fixed_maps[LSTG_MAP][:, 1]] = consts[fixed_maps[LSTG_MAP][:, 0]]
+    def build_input_vector(self, model_name, sources=None, fixed=False, recurrent=False, size=1):
+        """
+
+        :param model_name:
+        :param sources:
+        :param fixed:
+        :param recurrent:
+        :param size:
+        :return:
+        """
+        if recurrent:
+            x_time = Composer._build_input_vector(self.maps[model_name][TIME], sources, size)
+            x_time = x_time.unsqueeze(-1)
+        else:
+            x_time = None
+        if fixed:
+            x_fixed = Composer._build_input_vector(self.maps[model_name][FIXED], sources, size)
         else:
             x_fixed = None
-        time_maps = maps[TIME]
-        x_time = torch.empty(1, 1, time_maps[CLOCK_MAP].shape[0])
-
-        x_time[:, :, time_maps[CLOCK_MAP]] = clock_feats
         return x_fixed, x_time
 
-    def loc_input(self, consts=None, clock_feats=None):
-        """
-        Returns input tensor for the location model
-
-        :param consts:
-        :param clock_feats:
-        :return:
-        """
-        maps_dict = self.maps[model_names.LOC]
-        fixed_maps = maps_dict[FIXED]
-
-        x_fixed = torch.empty(1, fixed_maps[SIZE])
-        x_fixed[:, fixed_maps[LSTG_MAP][:, 1]] = consts[fixed_maps[LSTG_MAP][:, 0]]
-        x_fixed[:, fixed_maps[LSTG_MAP][:, 1]] = clock_feats[fixed_maps[LSTG_MAP][:, 0]]
-        return x_fixed
-
-    def hist_input(self, consts=None, clock_feats=None, us=False, foreign=False):
+    def hist_input(self, sources=None, us=False, foreign=False):
         """
         Returns input tensor for the history model
 
-        :param consts:
-        :param clock_feats:
+        NOTE: Sources should not include byr_us
+
+        :param sources:
         :param us:
         :param foreign:
         :return: 2-dimensional
         """
-        maps = self.maps[model_names.HIST][FIXED]
         if us and foreign:
-            x_fixed = torch.empty(2, maps[SIZE]).long()
-            x_fixed[:, maps[BYR_US_MAP]] = torch.tensor([0, 1])
+            sources[BYR_US_MAP] = torch.tensor([0, 1])
+            size = 2
         else:
-            x_fixed = torch.empty(1, maps[SIZE])
-            x_fixed[:, maps[BYR_US_MAP]] = (1 if us else 0)
-        x_fixed[:, maps[LSTG_MAP][:, 1]] = consts[maps[LSTG_MAP][:, 1]]
-        x_fixed[:, maps[CLOCK_MAP]] = clock_feats
+            sources[BYR_US_MAP] = (1 if us else 0)
+            size = 1
+        x_fixed = Composer._build_input_vector(self.maps[model_names.HIST][FIXED], sources, size)
         return x_fixed
-
-    def sec_input(self, consts=None, clock_feats=None, byr_us=None, byr_hist=None):
-        """
-        Returns the input tensor for the seconds arrival model
-
-        :param consts:
-        :param clock_feats:
-        :param byr_us:
-        :param byr_hist:
-        :return:
-        """
-        return Composer.final_arrival_inputs(self.maps[model_names.SEC],
-                                             consts, clock_feats, byr_us,
-                                             byr_hist)
-
-    @staticmethod
-    def final_arrival_inputs(maps, consts, clock_feats, byr_us, byr_hist):
-        """
-        Returns the input tensor for the seconds or buy-it-now arrival models
-
-        :param maps:
-        :param consts:
-        :param clock_feats:
-        :param byr_us:
-        :param byr_hist:
-        :return:
-        """
-        maps = maps[FIXED]
-        x_fixed = torch.empty(len(byr_us), maps[SIZE])
-        x_fixed[:, maps[LSTG_MAP][:, 1]] = consts[maps[LSTG_MAP][:, 1]]
-        x_fixed[:, maps[CLOCK_MAP]] = clock_feats
-        x_fixed[:, maps[BYR_US_MAP]] = byr_us
-        x_fixed[:, maps[BYR_HIST_MAP]] = byr_hist
-        return x_fixed
-
-    def bin_input(self, consts=None, clock_feats=None, byr_us=None, byr_hist=None):
-        """
-        Returns the input tensor for the buy it now model
-
-        :param consts:
-        :param clock_feats:
-        :param byr_us:
-        :param byr_hist:
-        :return:
-        """
-        return Composer.final_arrival_inputs(self.maps[model_names.BIN],
-                                             consts, clock_feats, byr_us,
-                                             byr_hist)
 
 
 

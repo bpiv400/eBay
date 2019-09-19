@@ -1,4 +1,5 @@
 from utils import unpickle
+import torch
 
 # time feats
 SLR_OFFERS = 'slr_offers'
@@ -33,6 +34,7 @@ BYR_TURN_INDS = SLR_TURN_INDS + ['t3']
 DAYS_CLOCK_FEATS = ['days', 'holiday', 'dow0', 'dow1', 'dow2', 'dow3', 'dow4', 'dow5']
 FF_CLOCK_FEATS = ['focal_{}'.format(feat) for feat in DAYS_CLOCK_FEATS]
 OFFER_CLOCK_FEATS = DAYS_CLOCK_FEATS + ['minutes']
+# remove when Etan adds days to delay model cock
 DELAY_CLOCK_FEATS = [feat for feat in OFFER_CLOCK_FEATS if feat != 'days']
 
 # filenames
@@ -71,7 +73,18 @@ O_DIFFS_MAP = 'other_diffs'
 L_CLOCK_MAP = 'last_clock'
 L_OUTCOMES_MAP = 'last_outcomes'
 L_TIME_MAP = 'last_time'
+
+# zero vectors
+TIME_ZEROS = torch.zeros(len(TIME_FEATS))
+OFFER_CLOCK_ZEROS = torch.zeros(len(OFFER_CLOCK_FEATS))
+# remove when Etan adds days to delay model cock
+DELAY_CLOCK_ZEROS = torch.zeros(len(DELAY_CLOCK_FEATS))
+
+
+
 PERIODS_MAP = 'periods'
+
+FIRST_TURN_MAPS = [BYR_ATTR_MAP, OUTCOMES_MAP, ]
 
 BYR_ATTRS = ['byr_us', 'byr_hist']
 FIXED = 'fixed'
