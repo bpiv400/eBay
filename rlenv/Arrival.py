@@ -11,19 +11,14 @@ class Arrival(Event):
         priority: inherited from Event
         ids: dictionary containing ids for the Event
         type: string giving the type of the event
-        lstg_expiration: int denoting when the given lstg expires
-        hidden: placeholder None
+        hidden_days: tensor giving the hidden state of the arrival days model
     """
-    def __init__(self, priority, ids, consts=None, end_time=None):
+    def __init__(self, priority, ids, hidden_days=None):
         """
         Constructor
 
         :param ids: dictionary giving identifiers of the current lstg
         :param priority: integer time of the event
-        :param consts: np.array containing constant features of lstg
-        :param end_time: integer denoting when this lstg was sold or expired in the data
         """
         super(Arrival, self).__init__(ARRIVAL, priority=int(priority), ids=ids)
-        self.consts = consts
-        self.lstg_expiration = end_time
-        self.hidden = None
+        self.hidden_days = hidden_days

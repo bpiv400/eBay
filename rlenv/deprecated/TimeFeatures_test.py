@@ -1,7 +1,7 @@
 import pytest
 from rlenv.TimeFeatures import TimeFeatures
 import rlenv.time_triggers as time_triggers
-import rlenv.env_constants as consts
+import rlenv.env_consts as consts
 
 @pytest.fixture
 def lstgs():

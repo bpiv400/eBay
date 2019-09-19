@@ -4,13 +4,14 @@ populate the model input tensors
 """
 
 from rlenv.Composer import Composer
+
+
 def main():
     """
     Main method
     :return: NA
     """
-    composer = Composer()
-    composer.build()
+    composer = Composer({'composer': 1}, rebuild=True)
 
 
 if __name__ == '__main__':

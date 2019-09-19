@@ -1,6 +1,6 @@
 import argparse
 import pickle
-# from datetime import datetime as dt
+from datetime import datetime as dt
 import numpy as np
 import pandas as pd
 import torch
@@ -118,30 +118,34 @@ def parse_time_feats_role(model, outcome, x_offer):
     return add_turn_indicators(x_time)
 
 
-def get_clock_feats(time, start_days):
+def get_clock_feats(time, start_days, arrival=False, delay=False):
     """
     Gets clock features as np.array given the time
 
-    Features are:
-    days since start
-    holiday indicator
-    day of week indicators
+    For arrival models, gives outputs in order of ARRIVAL_CLOCK_FEATS
+    For offer models, gives outputs in order of
 
     Will need to add argument to include minutes for other models
 
     :param time: int giving time in seconds
+    :param start_days: int giving the day on which the lstg started
     :return: NA
     """
     start_time = pd.to_datetime(start_days, unit='d', origin=START)
-    out = np.zeros(7, dtype='float64')
+    if not delay and arrival:
+        out = torch.zeros(8, dtype=torch.float64)
+    elif not delay:
+        out = torch.zeros(9, dtype=torch.float64)
+    else:
+        out = None
     clock = pd.to_datetime(time.clock, unit='s', origin=START)
     focal_days = (clock - start_time).days
-
     out[0] = focal_days
     out[1] = clock.isin(HOLIDAYS)
     if clock.dayofweek < 6:
         out[clock.dayofweek + 2] = 1
-
+    if not delay and arrival:
+        out[8] = (clock - clock.replace(minute=0, hour=0, second=0)) / dt.timedelta(minutes=1)
     return out
 
 

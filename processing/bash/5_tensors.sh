@@ -1,5 +1,5 @@
 #!/bin/bash
-#$ -t 1-18
+#$ -t 1-19
 #$ -l m_mem_free=50G
 #$ -N tensors
 #$ -j y

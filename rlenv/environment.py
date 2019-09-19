@@ -8,14 +8,15 @@ import random
 import h5py
 import pandas as pd
 import numpy as np
+import torch
 import utils
 from Arrival import Arrival
-from ThreadEvent import ThreadEvent
+from FirstOffer import FirstOffer
 from event_types import BUYER_OFFER, SELLER_OFFER, ARRIVAL, BUYER_DELAY, SELLER_DELAY
 from EventQueue import EventQueue
 from TimeFeatures import TimeFeatures
 import time_triggers
-from env_constants import LSTG_FILENAME, LSTG_COLS, MONTH, DAY
+from env_consts import LSTG_FILENAME, LSTG_COLS, MONTH, DAY
 from SimulatorInterface import SimulatorInterface
 
 EXPERIMENT_PATH = 'repo/rlenv/experiments.csv'
@@ -128,7 +129,7 @@ class Environment:
     def _get_event_data(next_type=None, event=None, hidden=None, offer=None, delay=None):
         """
         Generates data object for the next event given the previous event. See
-        Arrival.py, and ThreadEvent.py for details of what each
+        Arrival.py, and FirstOffer.py for details of what each
         event type expects in the data object
 
         :param event: Event object containing the previous event
@@ -331,8 +332,8 @@ class Environment:
                         data = self._get_event_data(next_type=SELLER_DELAY, event=event, hidden=hidden, offer=offer)
                         delay_type = SELLER_DELAY
 
-                    delay = ThreadEvent(priority=event.priority, ids=event.ids.copy(),
-                                        data=data, event_type=SELLER_DELAY)
+                    delay = FirstOffer(priority=event.priority, ids=event.ids.copy(),
+                                       data=data, event_type=SELLER_DELAY)
                     queue.push(delay)
         else:
             if event.delay > SLR_DELAY_TIME:
@@ -361,8 +362,8 @@ class Environment:
                         self.time_feats.update_features(trigger_type=time_triggers.SELLER_OFFER,
                                                         ids=event.ids, offer=time_offer)
                     data = self._get_event_data(next_type=BUYER_DELAY, event=event, hidden=hidden, offer=offer)
-                    delay = ThreadEvent(priority=event.priority, ids=event.ids.copy(), data=data,
-                                        event_type=BUYER_DELAY)
+                    delay = FirstOffer(priority=event.priority, ids=event.ids.copy(), data=data,
+                                       event_type=BUYER_DELAY)
                     queue.push(delay)
 
     def _process_delay(self, event, queue=None):
@@ -413,8 +414,8 @@ class Environment:
                     next_type = SELLER_DELAY
                     delay = self.params['interval']
         data = self._get_event_data(next_type=next_type, event=event, hidden=hidden, offer=None, delay=delay)
-        next_event = ThreadEvent(priority=event.priority + delay,
-                                 ids=event.ids, data=data, event_type=next_type)
+        next_event = FirstOffer(priority=event.priority + delay,
+                                ids=event.ids, data=data, event_type=next_type)
         queue.push(next_event)
 
     def _lstg_close(self, lstg):
@@ -444,36 +445,40 @@ class Environment:
             else:
                 self.end_time[event.ids[0]] = event.priority + MONTH
 
-        # get time features
-        start_days = self.consts[event.ids[0]][LSTG_COLS['start_days']]
-        clock_feats = utils.get_clock_feats(event.priority, start_days)
-        days_input = compose.days_input(self.consts[event.ids[0]], clock_feats)
+        # get clock features
+        consts = self.consts[event.ids[0]]
+        start_days = consts[LSTG_COLS['start_days']]
+        clock_feats = utils.get_clock_feats(event.priority, start_days, arrival=True,
+                                            delay=False)
+        # get number of buyers who arrive
+        num_byrs, hidden_days = self.interface.days(consts=consts,
+                                                    clock_feats=clock_feats,
+                                                    hidden=event.hidden_days)
 
-        consts = self.consts[event.ids[0]].copy()
-        consts[1:8] = clock_feats
-        # TODO: SOME CODE TO CONVERT CONSTS TO TENSOR
-        # get buyer arrival count
-        num_byrs = self.interface.num_byrs(consts=consts)
+        # get attributes of each buyer who arrives
         if num_byrs > 0:
-            byrs_us = self.interface.loc(consts=consts, num_byrs=num_byrs)
-            byrs_exp = self.interface.hist(consts=consts, byrs_us=byrs_us)
+            loc = self.interface.loc(consts=consts, clock_feats=clock_feats,
+                                     num_byrs=num_byrs)
+            hist = self.interface.hist(consts=consts, clock_feats=clock_feats,
+                                       byr_us=loc)
+            sec = self.interface.sec(consts=consts, clock_feats=clock_feats,
+                                     byr_us=loc, byr_hist=hist)
+            bin = self.interface.bin(consts=consts, clock_feats=clock_feats,
+                                     byr_us=loc, byr_hist=hist)
+            # place each into the queue
+            for i in range(num_byrs):
+                byr_attr = torch.zeros(2)
+                byr_attr[0] = loc[i]
+                byr_attr[1] = hist[i]
+                priority = event.priority + int(sec[i] * DAY)
+                ids = event.ids[0], self.thread_counter
+                self.thread_counter += 1
+                offer_event = FirstOffer(ids=ids, byr_us=loc[i], byr_attr=byr_attr,
+                                         priority=priority, bin=bin[i] == 1, turn=0)
+                self.queues[event.ids[0]].push(offer_event, offer_event.priority)
 
 
-        if realization == 1:
-            # ADD BUYER OFFER
-            ids = event.ids.copy()
-            ids['thread_id'] = self.thread_counter
-            self.thread_counter += 1
-            time = random.randint(1, self.params['interval'])
-            time += event.priority
-            #################
-            # HARD CODING byr_us and byr_hist until arrival model integration
-            # treat first element as byr_us, second as byr_hist
-            offer = np.array(1, 2)
-            ##############
-            data = self._get_event_data(next_type=BUYER_OFFER, event=event, offer=offer)
-            offer = ThreadEvent(ids=ids, data=data, priority=time, event_type=BUYER_OFFER)
-            queue.push(offer)
+
         # ADD ARRIVAL CHECK
         time = event.priority + self.params['interval']
         data = self._get_event_data(next_type=ARRIVAL, event=event, hidden=hidden)

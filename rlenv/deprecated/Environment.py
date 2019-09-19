@@ -10,14 +10,14 @@ import pandas as pd
 import numpy as np
 from Arrival import Arrival
 from deprecated.Arrival import Arrival
-from ThreadEvent import ThreadEvent
+from FirstOffer import FirstOffer
 from deprecated.env_constants import LSTG_FEATS_MAP, CONSTS_MAP, CONSTS
 from event_types import NEW_ITEM, BUYER_OFFER, SELLER_OFFER, ARRIVAL, BUYER_DELAY, SELLER_DELAY
 from EventQueue import EventQueue
 from TimeFeatures import TimeFeatures
 import time_triggers
 import env_utils
-import env_constants
+import env_consts
 from SimulatorInterface import SimulatorInterface
 
 EXPERIMENT_PATH = 'repo/rlenv/experiments.csv'
@@ -63,7 +63,7 @@ class Environment:
         self.experiment_id = experiment_id
         self.slr_queues = dict()
         self.time_feats = TimeFeatures()
-        self.input_file = h5py.File(env_constants.LSTG_FILENAME, 'r')
+        self.input_file = h5py.File(env_consts.LSTG_FILENAME, 'r')
         self.slrs = self.input_file['slrs']
         self.params = self._load_params()
         self.thread_counter = 0
@@ -106,7 +106,7 @@ class Environment:
     def _get_event_data(next_type=None, event=None, hidden=None, offer=None, delay=None):
         """
         Generates data object for the next event given the previous event. See
-        Arrival.py, and ThreadEvent.py for details of what each
+        Arrival.py, and FirstOffer.py for details of what each
         event type expects in the data object
 
         :param event: Event object containing the previous event
@@ -309,8 +309,8 @@ class Environment:
                         data = self._get_event_data(next_type=SELLER_DELAY, event=event, hidden=hidden, offer=offer)
                         delay_type = SELLER_DELAY
 
-                    delay = ThreadEvent(priority=event.priority, ids=event.ids.copy(),
-                                        data=data, event_type=SELLER_DELAY)
+                    delay = FirstOffer(priority=event.priority, ids=event.ids.copy(),
+                                       data=data, event_type=SELLER_DELAY)
                     queue.push(delay)
         else:
             if event.delay > SLR_DELAY_TIME:
@@ -339,8 +339,8 @@ class Environment:
                         self.time_feats.update_features(trigger_type=time_triggers.SELLER_OFFER,
                                                         ids=event.ids, offer=time_offer)
                     data = self._get_event_data(next_type=BUYER_DELAY, event=event, hidden=hidden, offer=offer)
-                    delay = ThreadEvent(priority=event.priority, ids=event.ids.copy(), data=data,
-                                        event_type=BUYER_DELAY)
+                    delay = FirstOffer(priority=event.priority, ids=event.ids.copy(), data=data,
+                                       event_type=BUYER_DELAY)
                     queue.push(delay)
 
     def _process_delay(self, event, queue=None):
@@ -391,8 +391,8 @@ class Environment:
                     next_type = SELLER_DELAY
                     delay = self.params['interval']
         data = self._get_event_data(next_type=next_type, event=event, hidden=hidden, offer=None, delay=delay)
-        next_event = ThreadEvent(priority=event.priority + delay,
-                                 ids=event.ids, data=data, event_type=next_type)
+        next_event = FirstOffer(priority=event.priority + delay,
+                                ids=event.ids, data=data, event_type=next_type)
         queue.push(next_event)
 
     def _process_arrival(self, event, queue=None):
@@ -424,7 +424,7 @@ class Environment:
             offer = np.array(1, 2)
             ##############
             data = self._get_event_data(next_type=BUYER_OFFER, event=event, offer=offer)
-            offer = ThreadEvent(ids=ids, data=data, priority=time, event_type=BUYER_OFFER)
+            offer = FirstOffer(ids=ids, data=data, priority=time, event_type=BUYER_OFFER)
             queue.push(offer)
         # ADD ARRIVAL CHECK
         time = event.priority + self.params['interval']

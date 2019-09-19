@@ -14,7 +14,7 @@ import pandas
 import pickle
 import h5py
 from utils import unpickle
-from rlenv.env_constants import LSTG_FILENAME, FIXED_COLS_FILENAME
+from rlenv.env_consts import LSTG_FILENAME, FIXED_COLS_FILENAME
 # constants
 INPUT_PATH = 'data/partitions/train_rl/x_lstg.pkl'
 

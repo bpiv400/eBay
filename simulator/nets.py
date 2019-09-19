@@ -30,11 +30,13 @@ class FeedForward(nn.Module):
             self.seq.append(
                 nn.Linear(params['ff_hidden'], sizes['out']))
 
-
     def forward(self, x):
         for _, m in enumerate(self.seq):
             x = m(x)
         return x
+
+    def simulate(self, x):
+        return self.forward(x)
 
 
 class RNN(nn.Module):
@@ -88,7 +90,7 @@ class LSTM(nn.Module):
 
         # rnn layer
         self.rnn = nn.LSTM(input_size=sizes['time'],
-                            hidden_size=params['rnn_hidden'])
+                           hidden_size=params['rnn_hidden'])
 
         # output layer
         self.output = nn.Linear(params['rnn_hidden'], sizes['out'])
@@ -104,3 +106,19 @@ class LSTM(nn.Module):
 
         # output layer: (seq_len, batch_size, N_output)
         return self.output(theta)
+
+    def simulate(self, x_time, x_fixed=None, hidden=None):
+        """
+
+        :param x_time:
+        :param x_fixed:
+        :param hidden:
+        :return:
+        """
+        if hidden is None:
+            theta, hidden = self.rnn(x_time, (self.h0(x_fixed), self.c0(x_fixed)))
+        else:
+            theta, hidden = self.rnn(x_time, hidden)
+
+        # output layer: (seq_len, batch_size, N_output)
+        return self.output(theta), hidden
