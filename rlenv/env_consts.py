@@ -23,7 +23,7 @@ TIME_FEATS = [
 ]
 
 # outcomes
-SLR_OUTCOMES = ['delay', 'auto', 'reject', 'exp', 'con', 'norm', 'split', 'round', 'nines', 'msg']
+SLR_OUTCOMES = ['delay', 'con', 'norm', 'split', 'round', 'nines', 'msg', 'auto', 'reject', 'exp']
 BYR_OUTCOMES = ['delay', 'con', 'norm', 'split', 'round', 'nines', 'msg']
 
 # turn indices

@@ -377,18 +377,19 @@ class Composer:
             assert all_to.min() == 0
             assert all_to.numel() == curr_maps[SIZE]
 
-
-    #TODO: DOCUMENT BELOW FUNCTIONS
     @staticmethod
-    def _build_input_vector(maps, sources, size):
+    def _build_input_vector(maps, sources, batch_size):
         """
+        Helper method that composes a model's input vector given a dictionaries of
+        the relevant input maps and  sources
 
-        :param maps:
-        :param sources:
-        :param size:
-        :return:
+        :param maps: dictionary containing input maps
+        :param sources: dictionary containing tensors from the environment that contain
+        features the model expects in the input
+        :param batch_size: number of examples in the batch
+        :return: batch_size x maps[SIZE] tensor to be passed to a simulator model
         """
-        x = torch.zeros(size, maps[SIZE])
+        x = torch.zeros(batch_size, maps[SIZE])
         # other features
         for map_name, curr_map in maps.items():
             if len(maps[curr_map].shape) == 1:
@@ -399,17 +400,21 @@ class Composer:
 
     def build_input_vector(self, model_name, sources=None, fixed=False, recurrent=False, size=1):
         """
+        Public method that composes input vectors (x_time and x_fixed) from tensors in the
+        environment
 
-        :param model_name:
-        :param sources:
-        :param fixed:
-        :param recurrent:
-        :param size:
-        :return:
+        :param model_name: str giving the name of the focal model (see model_names.py)
+        :param sources: dictionary containing tensors from the environment that contain
+        features the model expects in the input
+        :param fixed: boolean for whether x_fixed needs to be compute
+        :param recurrent: boolean for whether the target model is recurrent
+        :param size: number of samples in the batch that will be input to the model
+        :return: 2-tuple of x_fixed, x_time. If not recurrent, x_time = None. If fixed=False,
+        x_fixed = None
         """
         if recurrent:
             x_time = Composer._build_input_vector(self.maps[model_name][TIME], sources, size)
-            x_time = x_time.unsqueeze(-1)
+            x_time = x_time.unsqueeze(0)
         else:
             x_time = None
         if fixed:
@@ -420,14 +425,16 @@ class Composer:
 
     def hist_input(self, sources=None, us=False, foreign=False):
         """
-        Returns input tensor for the history model
+        Returns input tensor for the history model -- requires special logic
+        to only compute model outputs for the 2 possible sets of inputs (byr_us = 0 or 1)
+        rather than redundantly for each buyer with the same params
 
-        NOTE: Sources should not include byr_us
-
-        :param sources:
-        :param us:
-        :param foreign:
-        :return: 2-dimensional
+        :param sources: dictionary containing tensors from the environment that contain
+        features the model expects in the input
+        :param us: boolean for whether at least one buyer is from the us
+        :param foreign: boolean for whether at least one buyer is not from the us
+        :return: 2-dimensional tensor containing model inputs for us buyers in the first
+        row and model inputs for foreign buyers in the second row
         """
         if us and foreign:
             sources[BYR_US_MAP] = torch.tensor([0, 1])

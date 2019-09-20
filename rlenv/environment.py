@@ -22,6 +22,7 @@ from SimulatorInterface import SimulatorInterface
 EXPERIMENT_PATH = 'repo/rlenv/experiments.csv'
 
 # TODO: Redo documentation when all is said and done
+# TODO: Ensure default value tensors are calculated and stored correctly and efficiently
 
 
 class Environment:

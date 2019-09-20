@@ -35,6 +35,7 @@ class SimulatorInterface:
         """
         Initialize pytorch network for some model
         TODO: Make pathing names function in utils or in parsing file
+
         :param model_exp: experiment number for the model
         :return: PyTorch Module
         """
@@ -66,17 +67,85 @@ class SimulatorInterface:
         return net
 
     @staticmethod
-    def _bernoulli_sample(logits, num_byrs, ff=True):
+    def proper_squeeze(tensor):
         """
+        Squeezes a tensor to 1 rather than 0 dimensions
 
-        :param logits:
-        :param num_byrs:
-        :param ff:
-        :return:
+        :param tensor: torch.tensor with only 1 non-singleton dimension
+        :return: 1 dimensional tensor
+        """
+        tensor = tensor.squeeze()
+        if len(tensor.shape) == 0:
+            tensor = tensor.unsqueeze(0)
+        return tensor
+
+    @staticmethod
+    def _bernoulli_sample(logits, sample_size):
+        """
+        Returns sample of bernoulli distributions defined by logits
+
+        :param logits: 2 dimensional tensor containing logits for a batch of
+        distributions. Currently, expects 1 distribution
+        :param sample_size: number of samples to draw from each distribution
+        :return: 1-dimensional tensor containing
         """
         dist = Bernoulli(logits=logits)
-        # this squeeze might create a bug when num_byrs = 1
-        return SimulatorInterface.proper_squeeze(dist.sample((num_byrs, )))
+        return SimulatorInterface.proper_squeeze(dist.sample((sample_size, )))
+
+    @staticmethod
+    def _mixed_beta_sample(params, sample_size):
+        """
+        Samples a mixed beta distribution parameterized by the first index
+        of the params tensor
+
+        :param params: 2-dimensional tensor output by secs model or
+        sliced from concession model. The first dimension separates the
+        batch members and the second dimension gives parameters for each batch member.
+        In the second dimension, the first k elements correspond to mixing coefficients,
+        the second k elements correspond to alpha, and the third k/3 correspond to beta
+        :param sample_size: size of the batch
+        :return: 1-dimensional tensor containing 1 sample for each batch member's dist
+        """
+        # compute sample
+        params = params.reshape(sample_size, 3, -1).permute(0, 2, 1)
+        params[:, :, [0, 1]] = torch.exp(params[:, :, [0, 1]]) + 1
+        ancestor = Categorical(logits=params[:, :, 2])
+        draws = ancestor.sample(sample_shape=(1,))
+        beta_params = params[torch.arange(params.shape[0]), draws[0, :], :]
+        beta = Beta(beta_params[:, 0], beta_params[:, 1])
+        sample = SimulatorInterface.proper_squeeze(beta.sample((1,)))
+        return sample
+
+    @staticmethod
+    def _negative_binomial_sample(params):
+        """
+        Returns a sample from a batched negative binomial distribution
+
+        :param params: n x 2  tensor containing model outputs that correspond
+        to the parameters of a negative binomial distribution in each row
+        :return: 1-dimensional tensor containing 1 sample drawn from each distribution
+        """
+        dist = NegativeBinomial(total_count=torch.exp(params[:, 0]), logits=params[:, 1])
+        sample = SimulatorInterface.proper_squeeze(dist.sample((1, )))
+        return sample
+
+    def days(self, sources=None, hidden=None):
+        """
+        Returns the number of buyers who arrive on a particular day
+        # TODO: Update after Etan makes feed forward
+
+        :param sources: dictionary containing entries for all  input maps (see env_consts)
+        required to construct the model's inputs from source vectors in the environment
+        :param hidden: tensor giving the hidden state of the model up to this point
+        """
+        fixed = hidden is None
+        x_fixed, x_time = self.composer.build_input_vector(DAYS, sources=sources,
+                                                           fixed=fixed, recurrent=True,
+                                                           size=1)
+        params, hidden = self.models[DAYS].simulate(x_time, x_fixed=x_fixed, hidden=hidden)
+        params = params.squeeze().unsqueeze(0)
+        sample = SimulatorInterface._negative_binomial_sample(params)
+        return sample
 
     def loc(self, sources=None, num_byrs=None):
         """
@@ -88,8 +157,8 @@ class SimulatorInterface:
         """
         x_fixed, _ = self.composer.build_input_vector(model_name=LOC, sources=sources,
                                                       fixed=True, recurrent=False, size=1)
-        output = self.models[LOC].simulate(x_fixed)
-        locs = SimulatorInterface._bernoulli_sample(output, num_byrs, ff=True)
+        params = self.models[LOC].simulate(x_fixed)
+        locs = SimulatorInterface._bernoulli_sample(params, num_byrs, ff=True)
         return locs
 
     def hist(self, sources=None, byr_us=None):
@@ -105,80 +174,27 @@ class SimulatorInterface:
         foreign = us_count < byr_us.shape[0]
         us = us_count > 0
         x_fixed = self.composer.hist_input(sources=sources, us=us, foreign=foreign)
-        output = self.models[HIST].simulate(x_fixed)
+        params = self.models[HIST].simulate(x_fixed)
 
-        params = torch.zeros(byr_us.shape[0], output.shape[1])
+        params = torch.zeros(byr_us.shape[0], params.shape[1])
         if foreign and us:
             foreign = byr_us == 0
-            params[foreign, :] = output[0, :]
-            params[~foreign, :] = output[1, :]
+            params[foreign, :] = params[0, :]
+            params[~foreign, :] = params[1, :]
         else:
-            params[:, :] = output[0, :]
-        hists = SimulatorInterface._sample_negative_binomial(params)
+            params[:, :] = params[0, :]
+        hists = SimulatorInterface._negative_binomial_sample(params)
         return hists
-
-    @staticmethod
-    def proper_squeeze(tensor):
-        """
-        Squeezes a tensor to 1 rather than 0 dimensions
-        :param tensor:
-        :return:
-        """
-        tensor = tensor.squeeze()
-        if len(tensor.shape) == 0:
-            tensor = tensor.unsqueeze(-1)
-        return tensor
-
-    @staticmethod
-    def _sample_negative_binomial(params):
-        """
-        Returns a sample from a batched negative binomial distribution
-
-        :param params:
-        :return:
-        """
-        dist = NegativeBinomial(total_count=torch.exp(params[:, 0]), logits=params[:, 1])
-        sample = SimulatorInterface.proper_squeeze(dist.sample((1, )))
-        return sample
-
-    def days(self, sources=None, hidden=None):
-        """
-        Returns the number of buyers who arrive on a particular day
-
-        """
-        fixed = hidden is None
-        x_fixed, x_time = self.composer.build_input_vector(DAYS, sources=sources,
-                                                           fixed=fixed, recurrent=True,
-                                                           size=1)
-        params, hidden = self.models[DAYS].simulate(x_time, x_fixed=x_fixed, hidden=hidden)
-        params = params.squeeze().unsqueeze(-1)
-        sample = SimulatorInterface._sample_negative_binomial(params)
-        return sample
-
-    @staticmethod
-    def _mixed_beta_sample(params, sample_size):
-        """
-
-        :param params:
-        :return:
-        """
-        params = params.reshape(sample_size, 3, -1).permute(0, 2, 1)
-        params[:, :, [0, 1]] = torch.exp(params[:, :, [0, 1]]) + 1
-        ancestor = Categorical(logits=params[:, :, 2])
-        draws = ancestor.sample(sample_shape=(1,))
-        beta_params = params[torch.arange(params.shape[0]), draws[0, :], :]
-        beta = Beta(beta_params[:, 0], beta_params[:, 1])
-        sample = beta.sample((1,)).squeeze()
-        if len(sample.shape) == 0:
-            sample = sample.unsqueeze(-1)
-        return sample
 
     def sec(self, sources=None, num_byrs=None):
         """
+        Samples the time of day when the buyer arrives
 
-        :param sources:
-        :param num_byrs:
-        :return:
+        :param sources: dictionary containing entries for all  input maps (see env_consts)
+        required to construct the model's inputs from source vectors in the environment
+        :param num_byrs: total number of buyers
+        :return: a tensor of length num_byrs where each element contains a float in [0, 1],
+        giving the time of day the buyer arrives in
         """
         x_fixed, _ = self.composer.build_input_vector(SEC, sources=sources, recurrent=False,
                                                       size=num_byrs, fixed=True)
@@ -188,13 +204,15 @@ class SimulatorInterface:
 
     def bin(self, sources=None, num_byrs=None):
         """
-        Returns whether each buyer chooses to buy the listing now
+        Runs the bin model to determine whether each buyer chooses to buy the listing now
+        upon arrival
 
-        :param consts:
-        :param clock_feats:
-        :param byr_us:
-        :param byr_hist:
-        :return:
+        # TODO: ensure sources includes num_byr length vectors for byr_us and byr_hist
+
+        :param sources: dictionary containing entries for all  input maps (see env_consts)
+        required to construct the model's inputs from source vectors in the environment
+        :param num_byrs: total number of buyers
+        :return: tensor containing a {0, 1} bin indicator for each buyer
         """
         x_fixed, _ = self.composer.build_input_vector(BIN, sources=sources, recurrent=False,
                                                       size=num_byrs, fixed=True)
@@ -202,25 +220,57 @@ class SimulatorInterface:
         bins = SimulatorInterface._bernoulli_sample(params, num_byrs, ff=True)
         return bins
 
-    def cn(self, model_name, sources=None, hidden=None, turn=1):
+    def cn(self, sources=None, hidden=None, slr=False):
         """
-        If turn = 1, or 2, ensure default values have been computed for all sources in environment
-        :param model_name:
-        :param sources:
-        :param hidden:
-        :param turn:
-        :return:
+        Samples an offer from the relevant concession model and returns
+        the concession value along with the total normalized concession and an indicator for
+        split
+
+        :param sources: dictionary containing entries for all  input maps (see env_consts)
+        required to construct the model's inputs from source vectors in the environment
+        :param hidden: tensor giving the hidden state of the model up to this point
+        :param slr: boolean giving whether it's the seller's turn to make an offer
+        :return: 4-tuple containing an a float [0, 1] drawn from the distribution parameters
+        the model outputs, the corresponding normalized concession value, an indicator
+        for split, and the hidden state after processing  the turn
         """
         fixed = hidden is None
+        if slr:
+            model_name = '{}_{}'.format(SLR_PREFIX, CON)
+        else:
+            model_name = '{}_{}'.format(SLR_PREFIX, CON)
         x_fixed, x_time = self.composer.build_input_vector(model_name, sources=sources,
                                                            recurrent=True, size=1, fixed=fixed)
         params, hidden = self.models[model_name].simulate(x_time, x_fixed=x_fixed, hidden=hidden)
-        cn = SimulatorInterface._mixed_beta_sample(params, 1)
+        cn = SimulatorInterface._mixed_beta_sample(params[0, :, :], 1)
         # compute norm, split, and cn
         split = 1 if abs(.5 - cn) < TOL_HALF else 0
-        # rethink this norm business...
-        if turn == 1:
-            norm = cn
-        elif turn == 2:
-            norm = cn - cn * sources[env_consts.O_OUTCOMES_MAP][2]
+        # slr norm
+        if slr:
+            norm = 1 - cn * sources[env_consts.O_OUTCOMES_MAP][2] - \
+                   (1 - sources[env_consts.L_OUTCOMES_MAP]) * (1 - cn)
+        # byr norm
         else:
+            norm = (1 - sources[env_consts.O_OUTCOMES_MAP][2]) * cn + \
+                sources[env_consts.L_OUTCOMES_MAP][2] * (1 - cn)
+        return cn, norm, split, hidden
+
+    def offer_indicator(self, model_name, sources=None, hidden=None):
+        """
+        Computes outputs of recurrent offer models that produce an indicator for some event
+        (round, msg, nines, accept, reject, delay)
+
+        :param model_name: str giving name of the target model (see model_names.MODELS for
+        valid model names)
+        :param sources: dictionary containing entries for all  input maps (see env_consts)
+        required to construct the model's inputs from source vectors in the environment
+        :param hidden: tensor giving the hidden state of the model up to this point
+        :return: 2-tuple containing an int {0, 1} drawn from the model's parameters and
+        a tensor giving the hidden state after this time step
+        """
+        fixed = hidden is None
+        x_fixed, x_time = self.composer.build_input_vector(model_name, sources=sources,
+                                                           recurrent=True, size=1, fixed=True)
+        params, hidden = self.models[model_name].simulate(x_time, x_fixed=x_fixed, hidden=hidden)
+        sample = SimulatorInterface._bernoulli_sample(params[0, :, :], 1)
+        return sample, hidden
