@@ -469,7 +469,6 @@ def test_slr_offer(init_timefeats, lstgs):
             raise RuntimeError()
 
 
-
 def test_byr_rejection(init_timefeats, lstgs):
     lstg1, _ = lstgs
     thread1, thread2, thread3, lstg1 = lstg1

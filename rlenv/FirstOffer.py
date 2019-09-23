@@ -2,7 +2,7 @@
 class for encapsulating data and methods related to a buyer offer
 """
 from Event import Event
-
+from event_types import FIRST_OFFER
 
 class FirstOffer(Event):
     """
@@ -18,7 +18,8 @@ class FirstOffer(Event):
         priority: integer giving time inherited from Event
         ids: identifier dictionary
     """
-    def __init__(self, ids=None, priority=None, byr_attr=None,
-                 bin=None, turn=0):
-        super(FirstOffer, self).__init__(priority=priority, ids=ids)
-        self
+    def __init__(self, priority, thread_id=None, byr_attr=None, bin=None):
+        super(FirstOffer, self).__init__(event_type=FIRST_OFFER,
+                                         priority=priority, thread_id=thread_id)
+        self.bin = bin == 1  # make sure this actually works
+        self.byr_attr = byr_attr

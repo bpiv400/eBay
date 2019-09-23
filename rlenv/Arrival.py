@@ -13,12 +13,12 @@ class Arrival(Event):
         type: string giving the type of the event
         hidden_days: tensor giving the hidden state of the arrival days model
     """
-    def __init__(self, priority, ids, hidden_days=None):
+    def __init__(self, priority, hidden_days=None):
         """
         Constructor
 
-        :param ids: dictionary giving identifiers of the current lstg
         :param priority: integer time of the event
+        :param hidden_days: hidden state of the recurrent arrival days model
         """
-        super(Arrival, self).__init__(ARRIVAL, priority=int(priority), ids=ids)
+        super(Arrival, self).__init__(ARRIVAL, priority=int(priority), thread_id=None)
         self.hidden_days = hidden_days

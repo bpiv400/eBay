@@ -43,6 +43,7 @@ MODEL_DIR = 'models'
 COMPOSER_DIR = '{}/composer'.format(MODEL_DIR)
 LSTG_FILENAME = '{}/lstg.h5df'.format(DATA_DIR)
 FIXED_COLS_FILENAME = '{}/x_lstg_cols.pkl'.format(DATA_DIR)
+EXPERIMENT_PATH = 'repo/rlenv/experiments.csv'
 
 LSTG_COLS = unpickle(FIXED_COLS_FILENAME)
 FEATNAMES_FILENAME = 'featnames.pkl'
@@ -61,6 +62,7 @@ BYR_US_MAP = 'byr_us'
 BYR_HIST_MAP = 'byr_hist'
 OUTCOMES_MAP = 'outcomes'
 SIZE = 'size'
+PERIODS_MAP = 'periods'
 TIME_MAP = 'time'
 TURN_IND_MAP = 'turn_inds'
 DIFFS_MAP = 'diffs'
@@ -82,12 +84,14 @@ DELAY_CLOCK_ZEROS = torch.zeros(len(DELAY_CLOCK_FEATS))
 
 
 
-PERIODS_MAP = 'periods'
-
-FIRST_TURN_MAPS = [BYR_ATTR_MAP, OUTCOMES_MAP, ]
-
 BYR_ATTRS = ['byr_us', 'byr_hist']
 FIXED = 'fixed'
 TIME = 'time'
 
+# parameter names
+SIM_COUNT = 'n'
+RELIST_COUNT = 'lstg_dur'
 
+
+# fee constants
+ANCHOR_STORE_INSERT = .03

@@ -5,72 +5,84 @@ from gensim.models import Word2Vec
 INPUT_DIR = 'data/raw/'
 OUTPUT_PATH = 'data/clean/w2v.csv'
 DEVPCT = 0.2
-SIZES = np.power(2, range(10))
+SIZE = 256
+MIN_COUNT = 100
 
 
-def run_model(df, leafs):
-	# max sentence length
-	maxlength = df.groupby(df.index.name).count().max()
+def run_model(s, prefix):
+	# construct sentences
+	sentences = []
+	for idx in np.unique(s.index.values):
+		sentences.append(s.loc[idx].values.tolist())
 
-	# train and test ids
-	u = np.unique(df.index.values)
-	N = length(u)
-	ids = np.sort(np.random.choice(N, round(N * DEVPCT),
-		replace=False))
-
-	# split into holdout and train
-	holdout = []
-	train = []
-	for i in range(N):
-		if i in ids:
-			holdout.append(df.loc[u[i]].values.tolist())
-		else:
-			train.append(df.loc[u[i]].values.tolist())
-
-	# word2vec, loop over possible vector sizes
-	loss = []
-	models = []
-	for size in SIZES:
-		models.append(Word2Vec(train, sg=1,
-			min_count=1, window=maxlength, size=size, workers=7))
-		loss.append(models[-1].wv.accuracy(holdout))
-
-	# find optimal vector size
-	idx = np.argmin(loss)
+	# word2vec
+	model = Word2Vec(sentences, sg=1, window=15,
+		min_count=1, size=SIZE, workers=7)
 
 	# output dataframe
-	output = pd.DataFrame(index=leafs, 
-		columns=['s' + str(i) for i in range(1, SIZES[idx]+1)])
+	leafs = model.wv.vocab.keys()
+	output = pd.DataFrame(index=pd.Index([], name='leaf'), 
+		columns=[prefix + str(i) for i in range(SIZE)])
 	for leaf in leafs:
-		output.loc[leaf] = models[idx].wv.get_vector(str(leaf))
+		output.loc[leaf] = model.wv.get_vector(leaf)
 
-	return output
+	return output.sort_index()
+
+
+def create_category(df):
+	# create collapsed category id
+	s = df['product']
+	mask = s == 'p0'
+	s[mask] = leaf[mask]
+
+	# replace infrequent products with leaf
+	ct = s.groupby(s.name).transform('count')
+	mask = ct < MIN_COUNT
+	s[mask] = leaf[mask]
+
+	# replace infrequent leafs with meta
+	ct = s.groupby(s.name).transform('count')
+	mask = ct < MIN_COUNT
+	s[mask] = meta[mask]
+
+	return s
 
 
 if __name__ == '__main__':
 	# seller data
-	L = pd.read_csv('data/raw/listings.csv', usecols=[0,3,4]).rename(
-		columns=lambda x: x.split('_')[1])
+	print('Loading listings')
+	L = pd.read_csv('data/clean/listings.csv', 
+		usecols=[0,1,2,3,4,7]).sort_values(
+		['slr', 'start_date', 'lstg']).drop('start_date', axis=1)
 
-	# lookup table
-	items = L[['item', 'leaf']].set_index('item').squeeze()
+	# convert categories to strings
+	for c in ['meta', 'leaf', 'product']:
+		L[c] = c[0] + L[c].astype(str)
 
-	# array of leafs
-	leafs = np.sort(items.unique())
+	# lookup tables
+	lstgs = L[['lstg', 'meta', 'leaf', 'product']].set_index(
+		'lstg').sort_index()
 
-	# clean seller data
-	L = L.drop('item', axis=1).set_index('slr').squeeze().sort_index()
-	L = L[L.groupby('slr').count() > 1].astype(str)
+	# remove one-listing sellers
+	L = L.set_index('slr')
+	L = L.loc[L['lstg'].groupby(L.index.name).count() > 1]
+
+	# create category id
+	cat_slr = create_category(L)
+
+	# run seller model
+	print('Training seller embeddings')
+	df_slr = run_model(cat_slr, 'slr')
+	df_slr.to_csv(OUTPUT_PATH)
 
 	# buyer data
-	T = pd.read_csv('data/raw/threads.csv', usecols=[0,2]).rename(
-		columns=lambda x: x.split('_')[1])
-	T = T.set_index('item').join(items).reset_index(
-		drop=True).set_index('byr').squeeze().sort_index()
-	T = T[T.groupby('byr').count() > 1].astype(str)
+	T = pd.read_csv('data/clean/threads.csv', 
+		usecols=[0,2,5]).sort_values(
+		['byr', 'start_time', 'lstg']).drop('start_time', axis=1)
 
-	# run seller and buyer models
-	df = run_model(L, leafs, 'slr').join(run_model(T, leafs, 'byr'))
+	# remove one-listing buyers
+	T = T.set_index('byr')
+	T = T.loc[T['lstg'].groupby(T.index.name).count() > 1]
 
-	# save
-	df.to_csv(OUTPUT_PATH)
+	# join with categories
+	T = T.join(lstgs, on='lstg').set_index('lstg', append=True)

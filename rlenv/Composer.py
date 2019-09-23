@@ -310,7 +310,8 @@ class Composer:
         assert clock_map.numel() == len(FF_CLOCK_FEATS)
         maps = {
             LSTG_MAP: fixed_map,
-            SIZE : torch.tensor(sizes[FIXED]).long()
+            CLOCK_MAP: clock_map,
+            SIZE: torch.tensor(sizes[FIXED]).long()
         }
         if model_name == model_names.LOC:
             assert clock_map.numel() + fixed_map.shape[0] == len(input_featnames)

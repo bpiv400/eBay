@@ -11,6 +11,7 @@ TODO:
 import math
 from collections import deque, Counter
 import numpy as np
+import torch
 import rlenv.time_triggers as time_triggers
 import rlenv.env_consts as consts
 
@@ -53,26 +54,15 @@ class TimeFeatures:
         """
         super(TimeFeatures, self).__init__()
         self.feats = dict()
+        for feat in consts.TIME_FEATS:
+            self.feats[feat] = TimeFeatures._initialize_feature(feat)
 
-    def lstg_active(self, lstg):
-        """
-        Returns whether a particular listing is open, given that listing's
-        id dictionary. This gives the function the flexibility to check whether
-        the listing associated with some thread is open more easily
-
-        :param lstg: integer giving unique identifier for the lstg
-        :return: Bool
-        """
-        return lstg in self.feats
-
-    @staticmethod
-    def _get_feat(thread_id=None, feat=None, feat_dict=None, time=0):
+    def _get_feat(self, thread_id=None, feat=None, time=0):
         """
         Gets the value of a specific feature for a thread
 
         :param thread_id: current thread id if any
         :param feat: string giving name of the target feature
-        :param feat_dict: dictionary where the feature value is stored
         :return: Numeric giving feature
         """
         args = {
@@ -80,29 +70,20 @@ class TimeFeatures:
         }
         if 'recent' in feat:  # ignored for the timebeing
             args['time'] = time
-        return feat_dict[feat].peek(**args)
+        return self.feats[feat].peek(**args)
 
-    def get_feats(self, ids, time):
+    def get_feats(self, thread_id=None, time=None):
         """
         Gets the time features associated with a specific lstg
 
-        :param ids: tuple giving identifiers for the event (lstg, thread_id)
+        :param thread_id: current thread id if any. If none, return the lstg level features
         :param time: integer giving current time
         :return: array of time-valued features in the order given by env_consts.TIME_FEATURES
         """
-        if ids[0] not in self.feats:
-            raise RuntimeError('lstg not active')
-        output = {}
-        if len(ids) > 1:
-            thread_id = ids[1]
-        else:
-            thread_id = None
-
-        for feat in consts.TIME_FEATS:
-            output[feat] = self._get_feat(thread_id=thread_id, feat=feat,
-                                          feat_dict=self.feats[ids[0]],
-                                          time=time)
-        return output
+        x = torch.zeros(len(consts.TIME_FEATS)).float()
+        for i, feat in enumerate(consts.TIME_FEATS):
+            x[i] = self._get_feat(thread_id=thread_id, feat=feat, time=time)
+        return x
 
     @staticmethod
     def _initialize_feature(feat):
@@ -123,24 +104,11 @@ class TimeFeatures:
             else:
                 return FeatureHeap(min_heap=False)
 
-    def initialize_time_feats(self, lstg):
-        """
-        Creates time feats for a listing, assuming the time feats up to this point
-        have been computed correctly.
-
-        :param lstg: id of the lstg being initialized
-        """
-        self.feats[lstg] = dict()
-        for feat in consts.TIME_FEATS:
-            self.feats[lstg][feat] = TimeFeatures._initialize_feature(feat)
-
     # noinspection PyUnusedLocal
-    @staticmethod
-    def _update_thread_close(feat_dict=None, feat_name=None, offer=None, thread_id=None):
+    def _update_thread_close(self, feat_name=None, offer=None, thread_id=None):
         """
         Updates time features to reflect the thread for the given event closing
 
-        :param feat_dict: dictionary of time valued features for the current level
         :param offer: dictionary giving parameters of the offer
         :param feat_name: string giving name of time valued feature
         :param thread_id: id of the current thread
@@ -148,15 +116,13 @@ class TimeFeatures:
         """
         if 'recent' not in feat_name:  # always true for the time being
             if 'open' in feat_name:
-                feat_dict[feat_name].remove(thread_id=thread_id)
+                self.feats[feat_name].remove(thread_id=thread_id)
 
-    @staticmethod
-    def _update_offer(feat_dict=None, feat_name=None, offer=None, thread_id=None):
+    def _update_offer(self, feat_name=None, offer=None, thread_id=None):
         """
         Updates value of feature after buyer or seller concession offer (not acceptance
         or rejection)
 
-        :param feat_dict: dictionary of time valued features for the current level
         :param offer: dictionary giving parameters of the offer
         :param feat_name: string giving name of time valued feature
         :param thread_id: id of the current thread where there's been an offer
@@ -164,7 +130,7 @@ class TimeFeatures:
         """
         if offer['type'] in feat_name:
             if 'best' not in feat_name:
-                feat_dict[feat_name].increment(thread_id=thread_id)
+                self.feats[feat_name].increment(thread_id=thread_id)
             else:
                 args = {
                     'value': offer['price'],
@@ -172,12 +138,11 @@ class TimeFeatures:
                 }
                 if 'recent' in feat_name:  # ignored for time being
                     args['time'] = offer['time']
-                feat_dict[feat_name].promote(**args)
+                self.feats[feat_name].promote(**args)
         elif 'open' in feat_name and 'recent' not in feat_name:  # temporary do not consider recent features
-            feat_dict[feat_name].remove(thread_id=thread_id)
+            self.feats[feat_name].remove(thread_id=thread_id)
 
-    @staticmethod
-    def _update_slr_rejection(feat_dict=None, feat_name=None, offer=None, thread_id=None):
+    def _update_slr_rejection(self, feat_name=None, offer=None, thread_id=None):
         """
         Updates time valued features with the result of slr rejection at turn 2 or 4
         - Increments number of open slr offers
@@ -186,7 +151,6 @@ class TimeFeatures:
         - Closes previously open buyer offer in the same thread (decrements
         number of open buyer offers and removes best open buyer offer)
 
-        :param feat_dict: dictionary of time valued features for the current level
         :param offer: dictionary giving parameters of the offer
         :param feat_name: string giving name of time valued feature
         :param thread_id: id of the current thread where there's been an offer
@@ -194,7 +158,7 @@ class TimeFeatures:
         """
         if offer['type'] in feat_name:
             if 'best' not in feat_name and 'open' in feat_name:
-                feat_dict[feat_name].increment(thread_id=thread_id)
+                self.feats[feat_name].increment(thread_id=thread_id)
             # will never update slr best since it's the same as previous value
             elif 'open' in feat_name:
                 args = {
@@ -203,57 +167,31 @@ class TimeFeatures:
                 }
                 if 'recent' in feat_name:  # ignored for time being
                     args['time'] = offer['time']
-                feat_dict[feat_name].promote(**args)
+                self.feats[feat_name].promote(**args)
         elif 'open' in feat_name and 'recent' not in feat_name:
             # temporary do not consider recent features
-            feat_dict[feat_name].remove(thread_id=thread_id)
+            self.feats[feat_name].remove(thread_id=thread_id)
 
-    def update_features(self, trigger_type=None, ids=None, offer=None):
+    def update_features(self, trigger_type=None, thread_id=None, offer=None):
         """
         Updates the time valued features after some type of event
 
-        :param ids: tuple giving identifiers for the event (lstg, thread_id)
         :param offer: dictionary containing time of offer (time),
          count of offer in the thread (count), and price (price)
+        :param thread_id: id of the current thread where there's been an offer
         :param trigger_type: string defining event type
         :return: NA
         """
         if trigger_type == time_triggers.OFFER:
-            feature_function = TimeFeatures._update_offer
+            feature_function = self._update_offer
         elif trigger_type == time_triggers.BYR_REJECTION:
-            feature_function = TimeFeatures._update_thread_close
+            feature_function = self._update_thread_close
         elif trigger_type == time_triggers.SLR_REJECTION:
-            feature_function = TimeFeatures._update_slr_rejection
-        elif trigger_type == time_triggers.LSTG_EXPIRATION:
-            del self.feats[ids[0]]  # just delete the lstg
-            return None
-        elif trigger_type == time_triggers.SALE:
-            [print(key) for key in self.feats]
-            del self.feats[ids[0]]  # just delete the lstg
-            [print(key) for key in self.feats]
-            return None
+            feature_function = self._update_slr_rejection
         else:
             raise NotImplementedError()
         for feat in consts.TIME_FEATS:
-            feature_function(feat_dict=self.feats[ids[0]], feat_name=feat,
-                             offer=offer, thread_id=ids[1])
-
-    def __contains__(self, item):
-        """
-        Checks whether a lstg is active right now
-        :param item: lstg id
-        :return: NA
-        """
-        return self.lstg_active(item)
-
-    def __delitem__(self, key):
-        """
-        Delete lstg from time feats object
-        :param key: lstg id
-        :return: NA
-        """
-        del self.feats[key]
-
+            feature_function(feat_name=feat, offer=offer, thread_id=thread_id)
 
 
 # noinspection DuplicatedCode

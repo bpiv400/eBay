@@ -1,7 +1,3 @@
-# TODO UPDATE DOCUMENTATION
-# WRITE METHODS
-
-import numpy as np
 import torch
 from torch.distributions.categorical import Categorical
 from torch.distributions.beta import Beta
@@ -9,7 +5,6 @@ from torch.distributions.bernoulli import Bernoulli
 from torch.distributions.negative_binomial import NegativeBinomial
 import pandas as pd
 import utils
-from torch.nn.functional import sigmoid
 from rlenv.model_names import *
 from rlenv.Composer import Composer
 from rlenv import env_consts
@@ -199,7 +194,7 @@ class SimulatorInterface:
         x_fixed, _ = self.composer.build_input_vector(SEC, sources=sources, recurrent=False,
                                                       size=num_byrs, fixed=True)
         params = self.models[SEC].simulate(x_fixed)
-        times = SimulatorInterface._mixed_beta_sample(params, num_byrs)
+        times = SimulatorInterface._mixed_beta_sample(params, 1)
         return times
 
     def bin(self, sources=None, num_byrs=None):
@@ -217,7 +212,7 @@ class SimulatorInterface:
         x_fixed, _ = self.composer.build_input_vector(BIN, sources=sources, recurrent=False,
                                                       size=num_byrs, fixed=True)
         params = self.models[BIN].simulate(x_fixed)
-        bins = SimulatorInterface._bernoulli_sample(params, num_byrs, ff=True)
+        bins = SimulatorInterface._bernoulli_sample(params, 1)
         return bins
 
     def cn(self, sources=None, hidden=None, slr=False):

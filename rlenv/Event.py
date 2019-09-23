@@ -14,15 +14,14 @@ class Event:
         priority: integer giving time of event
         ids: tuple giving identifiers for event (lstg, thread_id)
     """
-    def __init__(self, event_type, priority=None, ids=None):
+    def __init__(self, event_type, priority=None, thread_id=None):
         super(Event, self).__init__()
         # error checking
         assert(isinstance(event_type, str))
         assert(isinstance(priority, int))
-        assert(isinstance(ids, dict))
         self.type = event_type
         self.priority = priority
-        self.ids = ids
+        self.thread_id = thread_id
 
     def __lt__(self, other):
         """
@@ -31,9 +30,8 @@ class Event:
 
         Throws RuntimeError if both have the same lstg and same time
         """
-        if self.priority == other.priority and self.ids['lstg'] == other.ids['lstg']:
+        if self.priority == other.priority:
             raise RuntimeError("Two events for one lstg executed at same time")
-        elif self.priority == other.priority:
-            return random.randint(1, 2) == 1
-        return self.priority < other.priority
+        else:
+            return self.priority < other.priority
 
