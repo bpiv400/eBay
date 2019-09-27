@@ -1,21 +1,15 @@
-from deprecated.env_constants import LSTG_IDS, LSTG_FEATS_MAP
+from model_names import *
 
 
-def get_ids(slr, data):
+def model_str(model_name, byr=False):
     """
-    Returns a dictionary giving all of the identification categories for a given lstg
-    (slr, meta, leaf, cndtn, title, lstg)
 
-    :param slr: int giving slr id
-    :param data: row of 3_environment output
-    :return: Dict
+    :param model_name:
+    :param slr:
+    :return:
     """
-    out = {}
-    for idx in LSTG_IDS:
-        if idx == 'slr':
-            out['slr'] = int(slr)
-        else:
-            out[idx] = int(data[LSTG_FEATS_MAP[idx]])
-    out['byr_count'] = 0
-    out['slr_count'] = 0
-    return out
+    if not byr:
+        name = '{}_{}'.format(SLR_PREFIX, model_name)
+    else:
+        name = '{}_{}'.format(BYR_PREFIX, model_name)
+    return name

@@ -215,7 +215,7 @@ class SimulatorInterface:
         bins = SimulatorInterface._bernoulli_sample(params, 1)
         return bins
 
-    def cn(self, sources=None, hidden=None, slr=False):
+    def cn(self, sources=None, hidden=None, slr=False, sample=False):
         """
         Samples an offer from the relevant concession model and returns
         the concession value along with the total normalized concession and an indicator for
@@ -237,6 +237,8 @@ class SimulatorInterface:
         x_fixed, x_time = self.composer.build_input_vector(model_name, sources=sources,
                                                            recurrent=True, size=1, fixed=fixed)
         params, hidden = self.models[model_name].simulate(x_time, x_fixed=x_fixed, hidden=hidden)
+        if not sample:
+            return 0, 0, 0, hidden
         cn = SimulatorInterface._mixed_beta_sample(params[0, :, :], 1)
         # compute norm, split, and cn
         split = 1 if abs(.5 - cn) < TOL_HALF else 0
@@ -250,7 +252,7 @@ class SimulatorInterface:
                 sources[env_consts.L_OUTCOMES_MAP][2] * (1 - cn)
         return cn, norm, split, hidden
 
-    def offer_indicator(self, model_name, sources=None, hidden=None):
+    def offer_indicator(self, model_name, sources=None, hidden=None, sample=True):
         """
         Computes outputs of recurrent offer models that produce an indicator for some event
         (round, msg, nines, accept, reject, delay)
@@ -267,5 +269,7 @@ class SimulatorInterface:
         x_fixed, x_time = self.composer.build_input_vector(model_name, sources=sources,
                                                            recurrent=True, size=1, fixed=True)
         params, hidden = self.models[model_name].simulate(x_time, x_fixed=x_fixed, hidden=hidden)
-        sample = SimulatorInterface._bernoulli_sample(params[0, :, :], 1)
-        return sample, hidden
+        samp = 0
+        if sample:
+            samp = SimulatorInterface._bernoulli_sample(params[0, :, :], 1)
+        return samp, hidden

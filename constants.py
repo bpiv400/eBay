@@ -48,8 +48,14 @@ MAX_DAYS = 30
 # intervals for checking byr and offer arrivals
 INTERVAL = {'slr': 15 * 60, 'byr': 3 * 60 * 60}
 
+INTERVAL_COUNTS = {
+					'slr': MAX_DELAY['slr'] / INTERVAL['slr'],
+					'byr': MAX_DELAY['byr'] / INTERVAL['byr'],
+					'byr_7': MAX_DELAY['slr'] / INTERVAL['byr']
+				}
+
 # organizing hierarchy
-LEVELS = ['slr', 'meta', 'leaf', 'title', 'cndtn', 'lstg']
+LEVELS = ['slr', 'meta', 'leaf', 'product', 'title', 'cndtn', 'lstg']
 
 # for lstg feature construction
 META_OTHER = [0, 19]

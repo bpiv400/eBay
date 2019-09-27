@@ -3,7 +3,7 @@ import sys, pickle
 from gensim.models import Word2Vec
 
 INPUT_DIR = 'data/raw/'
-OUTPUT_PATH = 'data/clean/w2v.csv'
+OUTPUT_PATH = lambda x: 'data/clean/w2v_' + x + '.csv'
 DEVPCT = 0.2
 SIZE = 256
 MIN_COUNT = 100
@@ -21,7 +21,7 @@ def run_model(s, prefix):
 
 	# output dataframe
 	leafs = model.wv.vocab.keys()
-	output = pd.DataFrame(index=pd.Index([], name='leaf'), 
+	output = pd.DataFrame(index=pd.Index([], name='category'), 
 		columns=[prefix + str(i) for i in range(SIZE)])
 	for leaf in leafs:
 		output.loc[leaf] = model.wv.get_vector(leaf)
@@ -31,26 +31,27 @@ def run_model(s, prefix):
 
 def create_category(df):
 	# create collapsed category id
-	s = df['product']
-	mask = s == 'p0'
-	s[mask] = leaf[mask]
+	mask = df['product'] == 'p0'
+	df.loc[mask, 'product'] = df.loc[mask, 'leaf']
 
 	# replace infrequent products with leaf
-	ct = s.groupby(s.name).transform('count')
+	ct = df['product'].groupby(df['product']).transform('count')
 	mask = ct < MIN_COUNT
-	s[mask] = leaf[mask]
+	df.loc[mask, 'product'] = df.loc[mask, 'leaf']
+	df.drop('leaf', axis=1, inplace=True)
 
 	# replace infrequent leafs with meta
-	ct = s.groupby(s.name).transform('count')
+	ct = df['product'].groupby(df['product']).transform('count')
 	mask = ct < MIN_COUNT
-	s[mask] = meta[mask]
+	df.loc[mask, 'product'] = df.loc[mask, 'meta']
+	df.drop('meta', axis=1, inplace=True)
 
-	return s
+	return df.squeeze()
 
 
 if __name__ == '__main__':
 	# seller data
-	print('Loading listings')
+	print('Preparing seller model')
 	L = pd.read_csv('data/clean/listings.csv', 
 		usecols=[0,1,2,3,4,7]).sort_values(
 		['slr', 'start_date', 'lstg']).drop('start_date', axis=1)
@@ -66,23 +67,34 @@ if __name__ == '__main__':
 	# remove one-listing sellers
 	L = L.set_index('slr')
 	L = L.loc[L['lstg'].groupby(L.index.name).count() > 1]
+	L.drop('lstg', axis=1, inplace=True)
 
 	# create category id
 	cat_slr = create_category(L)
+	del L
 
 	# run seller model
 	print('Training seller embeddings')
 	df_slr = run_model(cat_slr, 'slr')
-	df_slr.to_csv(OUTPUT_PATH)
+	df_slr.to_csv(OUTPUT_PATH('slr'))
 
 	# buyer data
+	print('Preparing buyer model')
 	T = pd.read_csv('data/clean/threads.csv', 
 		usecols=[0,2,5]).sort_values(
 		['byr', 'start_time', 'lstg']).drop('start_time', axis=1)
 
 	# remove one-listing buyers
-	T = T.set_index('byr')
-	T = T.loc[T['lstg'].groupby(T.index.name).count() > 1]
+	T = T.set_index('byr').squeeze()
+	T = T.loc[T.groupby('byr').count() > 1]
 
 	# join with categories
-	T = T.join(lstgs, on='lstg').set_index('lstg', append=True)
+	T = T.to_frame().join(lstgs, on='lstg').drop('lstg', axis=1).squeeze()
+
+	# create category id
+	cat_byr = create_category(T)
+
+	# run buyer model
+	print('Training buyer embeddings')
+	df_byr = run_model(cat_byr, 'byr')
+	df_byr.to_csv(OUTPUT_PATH('byr'))

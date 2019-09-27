@@ -12,6 +12,7 @@ class Arrival(Event):
         ids: dictionary containing ids for the Event
         type: string giving the type of the event
         hidden_days: tensor giving the hidden state of the arrival days model
+        turn: integer giving that the current turn is turn 1
     """
     def __init__(self, priority, hidden_days=None):
         """

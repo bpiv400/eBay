@@ -48,7 +48,7 @@ def create_obs(df, isStart):
 
 def add_start_end(offers, L):
     # listings dataframe
-    lstgs = L[LEVELS[:5] + ['start_date', 'end_time', 'start_price']].copy()
+    lstgs = L[LEVELS[:6] + ['start_date', 'end_time', 'start_price']].copy()
     lstgs['thread'] = 0
     lstgs.set_index('thread', append=True, inplace=True)
     lstgs = expand_index(lstgs)
@@ -65,7 +65,7 @@ def add_start_end(offers, L):
 
 
 def expand_index(df):
-    df.set_index(LEVELS[:5], append=True, inplace=True)
+    df.set_index(LEVELS[:6], append=True, inplace=True)
     idxcols = LEVELS + ['thread']
     if 'index' in df.index.names:
         idxcols += ['index']
@@ -80,7 +80,7 @@ def init_offers(L, T, O):
         offers[c] = offers[c].astype(np.bool)
     offers['clock'] += offers['start_time']
     offers.drop('start_time', axis=1, inplace=True)
-    offers = offers.join(L[LEVELS[:5]])
+    offers = offers.join(L[LEVELS[:6]])
     offers = expand_index(offers)
     return offers
 
@@ -140,11 +140,14 @@ if __name__ == "__main__":
     # load data
     print('Loading data')
     outfile = CHUNKS_DIR + '%d_frames.pkl' % num
-    if os.path.isfile(outfile):
-        print('%s already exists.' % outfile)
-        exit()
     chunk = pickle.load(open(CHUNKS_DIR + '%d.pkl' % num, 'rb'))
     L, T, O = [chunk[k] for k in ['listings', 'threads', 'offers']]
+
+    # categories to strings
+    for c in ['meta', 'leaf', 'product']:
+        L[c] = c[0] + L[c].astype(str)
+    mask = L['product'] == 'p0'
+    L.loc[mask, 'product'] = L.loc[mask, 'leaf']
 
     # create events dataframe
     print('Creating offer events.')

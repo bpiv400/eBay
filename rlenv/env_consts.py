@@ -30,12 +30,6 @@ BYR_OUTCOMES = ['delay', 'con', 'norm', 'split', 'round', 'nines', 'msg']
 SLR_TURN_INDS = ['t1', 't2']
 BYR_TURN_INDS = SLR_TURN_INDS + ['t3']
 
-# clock feats
-DAYS_CLOCK_FEATS = ['days', 'holiday', 'dow0', 'dow1', 'dow2', 'dow3', 'dow4', 'dow5']
-FF_CLOCK_FEATS = ['focal_{}'.format(feat) for feat in DAYS_CLOCK_FEATS]
-OFFER_CLOCK_FEATS = DAYS_CLOCK_FEATS + ['minutes']
-# remove when Etan adds days to delay model cock
-DELAY_CLOCK_FEATS = [feat for feat in OFFER_CLOCK_FEATS if feat != 'days']
 
 # filenames
 DATA_DIR = 'data/partitions/train_rl'
@@ -44,10 +38,17 @@ COMPOSER_DIR = '{}/composer'.format(MODEL_DIR)
 LSTG_FILENAME = '{}/lstg.h5df'.format(DATA_DIR)
 FIXED_COLS_FILENAME = '{}/x_lstg_cols.pkl'.format(DATA_DIR)
 EXPERIMENT_PATH = 'repo/rlenv/experiments.csv'
-
-LSTG_COLS = unpickle(FIXED_COLS_FILENAME)
 FEATNAMES_FILENAME = 'featnames.pkl'
 SIZES_FILENAME = 'sizes.pkl'
+LSTG_COLS = unpickle(FIXED_COLS_FILENAME)
+
+# clock feats
+DAYS_CLOCK_FEATS = ['days', 'holiday', 'dow0', 'dow1', 'dow2', 'dow3', 'dow4', 'dow5']
+FF_CLOCK_FEATS = ['focal_{}'.format(feat) for feat in DAYS_CLOCK_FEATS]
+OFFER_CLOCK_FEATS = DAYS_CLOCK_FEATS + ['minutes']
+# remove when Etan adds days to delay model cock
+DELAY_CLOCK_FEATS = [feat for feat in OFFER_CLOCK_FEATS if feat != 'days']
+
 
 # temporal constants
 MONTH = 30 * 24 * 3600
@@ -76,9 +77,15 @@ L_CLOCK_MAP = 'last_clock'
 L_OUTCOMES_MAP = 'last_outcomes'
 L_TIME_MAP = 'last_time'
 
+# start map
+START_CLOCK_MAP = [LSTG_COLS[clock_feat] for
+                   clock_feat in DAYS_CLOCK_FEATS if clock_feat != 'days']
+
 # zero vectors
-TIME_ZEROS = torch.zeros(len(TIME_FEATS))
-OFFER_CLOCK_ZEROS = torch.zeros(len(OFFER_CLOCK_FEATS))
+ZERO_SLR_OUTCOMES = torch.zeros(len(SLR_OUTCOMES))
+ZERO_SLR_OUTCOMES[[7, 8]] = 1
+
+
 # remove when Etan adds days to delay model cock
 DELAY_CLOCK_ZEROS = torch.zeros(len(DELAY_CLOCK_FEATS))
 
@@ -95,3 +102,9 @@ RELIST_COUNT = 'lstg_dur'
 
 # fee constants
 ANCHOR_STORE_INSERT = .03
+
+# reject outcomes
+AUTO_REJ_OUTCOMES = torch.zeros(len(SLR_OUTCOMES))
+AUTO_REJ_OUTCOMES[[7, 8]] = 1  # automatic, rejected
+EXP_REJ_OUTCOMES = torch.zeros(len(SLR_OUTCOMES))
+EXP_REJ_OUTCOMES[[0, 8, 9]] = 1  # full delay, rejected, expired

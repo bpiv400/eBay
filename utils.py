@@ -127,25 +127,38 @@ def get_clock_feats(time, start_days, arrival=False, delay=False):
 
     Will need to add argument to include minutes for other models
 
+    TODO: When days is added to delay, this will need to be changed
+
     :param time: int giving time in seconds
     :param start_days: int giving the day on which the lstg started
+    :param arrival: boolean for whether this is an arrival model
+    :param delay: boolean for whether this is for a delay model
     :return: NA
     """
     start_time = pd.to_datetime(start_days, unit='d', origin=START)
-    if not delay and arrival:
+    if arrival:
         out = torch.zeros(8, dtype=torch.float64)
+        min_ind = None
     elif not delay:
         out = torch.zeros(9, dtype=torch.float64)
+        min_ind = 8
     else:
-        out = None
+        out = torch.zeros(8, dtype=torch.float64)
+        min_ind = 7
     clock = pd.to_datetime(time.clock, unit='s', origin=START)
-    focal_days = (clock - start_time).days
-    out[0] = focal_days
-    out[1] = clock.isin(HOLIDAYS)
+
+    if not delay:
+        focal_days = (clock - start_time).days
+        out[0] = focal_days
+        hol_ind = 1
+    else:
+        hol_ind = 0
+
+    out[hol_ind] = clock.isin(HOLIDAYS)
     if clock.dayofweek < 6:
-        out[clock.dayofweek + 2] = 1
-    if not delay and arrival:
-        out[8] = (clock - clock.replace(minute=0, hour=0, second=0)) / dt.timedelta(minutes=1)
+        out[clock.dayofweek + hol_ind + 1] = 1
+    if not arrival:
+        out[min_ind] = (clock - clock.replace(minute=0, hour=0, second=0)) / dt.timedelta(minutes=1)
     return out
 
 
