@@ -1,7 +1,7 @@
 from pandas.tseries.holiday import USFederalHolidayCalendar as Calendar
 
 # number of chunks for preprocessing
-CHUNKS = 1024
+N_CHUNKS = 1024
 
 # count concessions within this range as 1/2
 TOL_HALF = 0.02 
