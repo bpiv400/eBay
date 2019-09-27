@@ -1,6 +1,6 @@
 #!/bin/bash
 #$ -t 1-256
-#$ -q short.q
+#$ -q all.q
 #$ -l m_mem_free=10G
 #$ -N frames
 #$ -j y
