@@ -4,8 +4,7 @@ from gensim.models import Word2Vec
 
 INPUT_DIR = 'data/raw/'
 OUTPUT_PATH = lambda x: 'data/clean/w2v_' + x + '.csv'
-DEVPCT = 0.2
-SIZE = 256
+SIZE = 128
 MIN_COUNT = 100
 
 
@@ -33,19 +32,16 @@ def create_category(df):
 	# create collapsed category id
 	mask = df['product'] == 'p0'
 	df.loc[mask, 'product'] = df.loc[mask, 'leaf']
-
 	# replace infrequent products with leaf
 	ct = df['product'].groupby(df['product']).transform('count')
 	mask = ct < MIN_COUNT
 	df.loc[mask, 'product'] = df.loc[mask, 'leaf']
 	df.drop('leaf', axis=1, inplace=True)
-
 	# replace infrequent leafs with meta
 	ct = df['product'].groupby(df['product']).transform('count')
 	mask = ct < MIN_COUNT
 	df.loc[mask, 'product'] = df.loc[mask, 'meta']
 	df.drop('meta', axis=1, inplace=True)
-
 	return df.squeeze()
 
 

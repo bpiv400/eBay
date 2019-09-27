@@ -8,6 +8,7 @@ import utils
 from rlenv.model_names import *
 from rlenv.Composer import Composer
 from rlenv import env_consts
+from rlenv.env_utils import model_str
 from simulator.nets import FeedForward, RNN, LSTM
 from constants import TOL_HALF
 
@@ -215,7 +216,7 @@ class SimulatorInterface:
         bins = SimulatorInterface._bernoulli_sample(params, 1)
         return bins
 
-    def cn(self, sources=None, hidden=None, slr=False, sample=False):
+    def cn(self, sources=None, hidden=None, model_name=None, sample=True):
         """
         Samples an offer from the relevant concession model and returns
         the concession value along with the total normalized concession and an indicator for
@@ -224,16 +225,13 @@ class SimulatorInterface:
         :param sources: dictionary containing entries for all  input maps (see env_consts)
         required to construct the model's inputs from source vectors in the environment
         :param hidden: tensor giving the hidden state of the model up to this point
-        :param slr: boolean giving whether it's the seller's turn to make an offer
+        :param model_name: string giving name of model
+        :param sample: boolean giving whether a sample should be drawn from the parameterized dist
         :return: 4-tuple containing an a float [0, 1] drawn from the distribution parameters
         the model outputs, the corresponding normalized concession value, an indicator
         for split, and the hidden state after processing  the turn
         """
         fixed = hidden is None
-        if slr:
-            model_name = '{}_{}'.format(SLR_PREFIX, CON)
-        else:
-            model_name = '{}_{}'.format(SLR_PREFIX, CON)
         x_fixed, x_time = self.composer.build_input_vector(model_name, sources=sources,
                                                            recurrent=True, size=1, fixed=fixed)
         params, hidden = self.models[model_name].simulate(x_time, x_fixed=x_fixed, hidden=hidden)
@@ -243,9 +241,9 @@ class SimulatorInterface:
         # compute norm, split, and cn
         split = 1 if abs(.5 - cn) < TOL_HALF else 0
         # slr norm
-        if slr:
+        if SLR_PREFIX in model_name:
             norm = 1 - cn * sources[env_consts.O_OUTCOMES_MAP][2] - \
-                   (1 - sources[env_consts.L_OUTCOMES_MAP]) * (1 - cn)
+                   (1 - sources[env_consts.L_OUTCOMES_MAP][2]) * (1 - cn)
         # byr norm
         else:
             norm = (1 - sources[env_consts.O_OUTCOMES_MAP][2]) * cn + \
@@ -262,6 +260,7 @@ class SimulatorInterface:
         :param sources: dictionary containing entries for all  input maps (see env_consts)
         required to construct the model's inputs from source vectors in the environment
         :param hidden: tensor giving the hidden state of the model up to this point
+        :param sample: boolean indicating whether a sample should be drawn
         :return: 2-tuple containing an int {0, 1} drawn from the model's parameters and
         a tensor giving the hidden state after this time step
         """

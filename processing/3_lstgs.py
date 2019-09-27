@@ -92,12 +92,6 @@ def get_x_lstg(lstgs):
     df['used'] = cndtn == 7
     df['refurb'] = cndtn.isin([2, 3, 4, 5, 6])
     df['wear'] = cndtn.isin([8, 9, 10, 11]) * (cndtn - 7)
-    # word2vec scores
-    df = df.join(get_w2v(lstgs, 'slr'))
-    df = df.join(get_w2v(lstgs, 'byr'))
-    # time features
-    tfcols = [c for c in lstgs.columns if c.startswith('tf_')]
-    df = df.join(lstgs[tfcols])
     return df
 
 
@@ -113,6 +107,7 @@ if __name__ == "__main__":
     print('Loading data')
     lstgs = load_frames('lstgs')
     threads = load_frames('threads')
+    events = load_frames('events')
 
     # arrival variables
     print('Creating arrival variables')
@@ -124,10 +119,22 @@ if __name__ == "__main__":
     x_thread = threads[['byr_us', 'byr_hist']]
     pickle.dump(x_thread, open(FRAMES_DIR + 'x_thread.pkl', 'wb'))
 
-    # listing features
-    print('Creating listing features')
+    # time features
+    print('Creating time features')
+    tf_cat = get_cat_time_feats(lstgs, events)
+    tfcols = [c for c in lstgs.columns if c.startswith('tf_')]
+    tf_lstg = tf_cat.join(lstgs[tfcols])
+    tf_lstg = do_pca(tf_lstg)
+    pickle.dump(tf_lstg, open(FRAMES_DIR + 'tf_lstg.pkl', 'wb'))
+
+    # word2vec features
+    w2v = get_w2v(lstgs, 'slr').join(get_w2v(lstgs, 'byr'))
+    w2v = do_pca(w2v)
+    pickle.dump(w2v, open(FRAMES_DIR + 'w2v_lstg.pkl', 'wb'))
+
+    # other listing features
+    print('Creating other listing features')
     x_lstg = get_x_lstg(lstgs)
-    x_lstg = do_pca(x_lstg)
     pickle.dump(x_lstg, open(FRAMES_DIR + 'x_lstg.pkl', 'wb'))
 
     # lookup file

@@ -194,6 +194,7 @@ class Environment:
             self._process_sale(norm=1, time=event.priority)
             return True
         sources = self._make_offer_sources(event)
+        #TODO: Execute accept and reject models
         cn, norm, split, hidden_cn = self.interface.cn(sources=sources, hidden=None, slr=False)
         sources[OUTCOMES_MAP][[1, 2, 3]] = [cn, norm, split]
 
@@ -209,17 +210,17 @@ class Environment:
         nine, hidden_nine = self.interface.offer_indicator(model_name, sources=sources,
                                                            hidden=None, sample=(rnd == 0))
         sources[OUTCOMES_MAP][5] = nine
+        hidden = self._make_hidden(hidden_msg=hidden_msg, hidden_cn=hidden_cn, hidden_nine=hidden_nine,
+                                   hidden_rnd=hidden_rnd)
 
         if norm < self.consts[LSTG_COLS['accept']]:
-            hidden = self._make_hidden(hidden_msg=hidden_msg, hidden_cn=hidden_cn, hidden_nine=hidden_nine,
-                                       hidden_rnd=hidden_rnd)
             self.time_feats.update_features(time_trigger=time_triggers.OFFER, thread_id=event.thread_id,
                                             offer={
                                                 'time': event.priority,
                                                 'type': model_names.BYR_PREFIX,
                                                 'price': norm
                                             })
-            if event.sources[O_OUTCOMES_MAP][2] <= self.consts[LSTG_COLS['decline']]:
+            if norm > self.consts[LSTG_COLS['decline']]:
                 return self._prepare_delay(event, sources=sources, hidden=hidden, byr=True)
             else:
                 self._increment_sources(sources)
@@ -265,9 +266,9 @@ class Environment:
         """
         if auto:
             sources[DIFFS_MAP] = torch.zeros(len(TIME_FEATS))
-            sources[OUTCOMES_MAP] = AUTO_REJ_OUTCOMES
+            sources[OUTCOMES_MAP] = AUTO_REJ_OUTCOMES.clone()
         elif exp:
-            sources[OUTCOMES_MAP] = EXP_REJ_OUTCOMES
+            sources[OUTCOMES_MAP] = EXP_REJ_OUTCOMES.clone()
             sources[CLOCK_MAP] = utils.get_clock_feats(event.priority,
                                                        start_days=self.consts[LSTG_COLS['start_days']],
                                                        arrival=False, delay=False)
@@ -279,9 +280,9 @@ class Environment:
             _, hdn = self.interface.offer_indicator(model_name, sources=sources,
                                                     hidden=hidden[model_name], sample=False)
             hidden[model_name] = hdn
-        return self._process_slr_rej(event, sources=sources, hidden=hidden, con_rej=False)
+        return self._process_slr_rej(event, sources=sources, hidden=hidden)
 
-    def _process_slr_rej(self, event, sources=None, hidden=None, con_rej=False):
+    def _process_slr_rej(self, event, sources=None, hidden=None):
         """
         Processes an ordinary seller rejection (see _process_slr_rej_early for handling automatic
         and expiration rejections)
@@ -289,13 +290,10 @@ class Environment:
         :param event:
         :param sources:
         :param hidden:
-        :param con_rej:
         :return:
         """
         for base_model in model_names.OFFER_NO_PREFIXES:
             if base_model in [model_names.ACC, model_names.REJ]:
-                continue
-            if con_rej and base_model == model_names.CON:
                 continue
             model_name = model_str(base_model, byr=False)
             if base_model != model_names.CON:
@@ -304,7 +302,7 @@ class Environment:
                                                         sample=False)
             else:
                 _, _, _, hdn = self.interface.cn(sources=sources, hidden=None,
-                                                 slr=False, sample=False)
+                                                 model_name=model_name, sample=False)
             hidden[model_name] = hdn
         self.time_feats.update_features(time_trigger=time_triggers.SLR_REJECTION, thread_id=event.thread_id,
                                         offer={
@@ -353,6 +351,8 @@ class Environment:
         """
         self._increment_sources(sources, turn=event.turn)
         turn = event.turn + 1
+        if turn > 7:
+            return False
         if byr:
             event_type = BUYER_DELAY
         else:
@@ -368,8 +368,10 @@ class Environment:
         """
 
         :param event:
+        :param byr:
         :return:
         """
+
         if self._lstg_expiration(event):
             return True
         hidden, sources = event.hidden, event.sources
@@ -388,17 +390,75 @@ class Environment:
         model_name = model_str(model_names.REJ, byr=byr)
         rej, hdn = self.interface.offer_indicator(model_name, sources=sources,
                                                   hidden=hidden[model_name], sample=True)
+
         hidden[model_name] = hdn
         if rej == 1:
             if byr:
                 self.time_feats.update_features(trigger_type=time_triggers.BYR_REJECTION,
                                                 thread_id=event.thread_id)
+                return False
             else:
+                sources[OUTCOMES_MAP][8] = 1
+                sources[OUTCOMES_MAP][1:6] = sources[L_OUTCOMES_MAP][1:6]
                 return self._process_slr_rej(event, sources=sources, hidden=hidden)
         # concession
+        model_name = model_str(model_names.CON, byr=False)
+        cn, norm, split, hdn = self.interface.cn(sources=sources, hidden=hidden[model_name],
+                                                 sample=True)
+        hidden[model_name] = hdn
+        sources[OUTCOMES_MAP][1:4] = torch.tensor([cn, norm, split])
+        # msg
+        model_name = model_str(model_names.MSG, byr=byr)
+        msg, hdn = self.interface.offer_indicator(model_name, sources=sources,
+                                                  hidden=hidden[model_name])
+        hidden[model_name] = hdn
+        sources[OUTCOMES_MAP][6] = msg
+        # round
+        model_name = model_str(model_names.RND, byr=byr)
+        rnd, hdn = self.interface.offer_indicator(model_name, sources=sources, hidden=hidden[model_name])
+        hidden[model_name] = hdn
+        sources[OUTCOMES_MAP][4] = rnd
+        # nine
+        model_name = model_str(model_names.NINE, byr=byr)
+        nine, hdn = self.interface.offer_indicator(model_name, sources=sources,
+                                                   hidden=hidden[model_name], sample=(rnd == 0))
+        hidden[model_name] = hdn
+        sources[OUTCOMES_MAP][5] = nine
 
+        if byr:
+            return self._check_slr_autos(event, sources=sources, hidden=hidden)
+        else:
+            self.time_feats.update_features(time_trigger=time_triggers.OFFER, thread_id=event.thread_id,
+                                            offer={
+                                                'time': event.priority,
+                                                'type': model_names.SLR_PREFIX,
+                                                'price':norm
+                                            })
+            return self._prepare_delay(event, sources=sources, hidden=hidden, byr=True)
 
+    def _check_slr_autos(self, event, sources=None, hidden=None):
+        """
 
+        :param event:
+        :param sources:
+        :param hidden:
+        :return:
+        """
+        norm = sources[OUTCOMES_MAP][2]
+        if norm < self.consts[LSTG_COLS['accept']]:
+            self.time_feats.update_features(time_trigger=time_triggers.OFFER, thread_id=event.thread_id,
+                                            offer={
+                                                'time': event.priority,
+                                                'type': model_names.BYR_PREFIX,
+                                                'price': norm
+                                            })
+            if norm > self.consts[LSTG_COLS['decline']]:
+                return self._prepare_delay(event, sources=sources, hidden=hidden, byr=False)
+            else:
+                self._increment_sources(sources)
+                return self._process_slr_rej_early(event, sources=sources, hidden=hidden, auto=True, exp=False)
+        else:
+            return self._process_sale(norm=norm, time=event.priority)
 
     @staticmethod
     def _is_turn_expired(periods, turn=1, byr=False):

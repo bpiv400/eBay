@@ -283,7 +283,6 @@ if __name__ == "__main__":
 
     # load data
     print('Loading data')
-    outfile = CHUNKS_DIR + '%d_frames.pkl' % num
     chunk = pickle.load(open(CHUNKS_DIR + '%d.pkl' % num, 'rb'))
     L, T, O = [chunk[k] for k in ['listings', 'threads', 'offers']]
 
