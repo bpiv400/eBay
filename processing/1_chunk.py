@@ -1,16 +1,15 @@
-"""
-Chunks listing, threads, and offers by seller.
-"""
-
+import sys
+sys.path.append('repo/')
 import pickle
 import pandas as pd, numpy as np
+from constants import *
 
-N_CHUNKS = 256
 
 # read in data frames
-L = pd.read_csv('data/clean/listings.csv').set_index('lstg')
-T = pd.read_csv('data/clean/threads.csv').set_index(['lstg', 'thread'])
-O = pd.read_csv('data/clean/offers.csv').set_index(['lstg', 'thread','index'])
+L = pd.read_csv(CLEAN_DIR + 'listings.csv').set_index('lstg')
+T = pd.read_csv(CLEAN_DIR + 'threads.csv').set_index(['lstg', 'thread'])
+O = pd.read_csv(CLEAN_DIR + 'offers.csv').set_index(
+	['lstg', 'thread','index'])
 
 # extract sellers and slice into chunks
 sellers = np.unique(L['slr'].values)

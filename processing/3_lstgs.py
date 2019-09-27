@@ -3,13 +3,46 @@ sys.path.append('repo/')
 sys.path.append('repo/processing/')
 import argparse, pickle
 from datetime import datetime as dt
-from sklearn.utils.extmath import cartesian
 import numpy as np, pandas as pd
 from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
 from constants import *
-from time_feats import *
 from utils import *
+from processing_utils import *
+
+
+def parse_days(diff, t0, t1):
+    # count of arrivals by day
+    days = diff.dt.days.rename('period')
+    days = days[days <= MAX_DAYS].to_frame()
+    days = days.assign(count=1)
+    days = days.groupby(['lstg', 'period']).sum().squeeze()
+    # end of listings
+    T1 = int((pd.to_datetime(END) - pd.to_datetime(START)).total_seconds())
+    t1.loc[t1[t1 > T1].index] = T1
+    end = (pd.to_timedelta(t1 - t0, unit='s').dt.days + 1).rename('period')
+    end.loc[end > MAX_DAYS] = MAX_DAYS + 1
+    # create multi-index from end stamps
+    idx = multiply_indices(end)
+    # expand to new index and return
+    return days.reindex(index=idx, fill_value=0).sort_index()
+
+
+def get_y_arrival(lstgs, threads):
+    d = {}
+    # time_stamps
+    t0 = lstgs.start_date * 24 * 3600
+    t1 = lstgs.end_time
+    diff = pd.to_timedelta(threads.clock - t0, unit='s')
+    # append arrivals to end stamps
+    d['days'] = parse_days(diff, t0, t1)
+    # create other outcomes
+    d['loc'] = threads.byr_us.rename('loc')
+    d['hist'] = threads.byr_hist.rename('hist')
+    d['bin'] = threads.bin
+    sec = ((diff.dt.seconds[threads.bin == 0] + 0.5) / (24 * 3600 + 1))
+    d['sec'] = sec.rename('sec')
+    return d
 
 
 def get_w2v(lstgs, role):
@@ -70,27 +103,26 @@ def get_x_lstg(lstgs):
 
 def do_pca(df):
     df = StandardScaler().fit_transform(df)
-    df = PCA(n_components=len(df.columns)).fit_transform(df)
+    pca = PCA(n_components=len(df.columns), svd_solver='full')
+    df = pca.fit_transform(df)
     return df
 
 
 if __name__ == "__main__":
-    # load data
+    # load dataframes
     print('Loading data')
-    threads = pd.DataFrame()
-    lstgs = pd.DataFrame()
-    paths = ['%s/%s' % (CHUNKS_DIR, name) for name in os.listdir(CHUNKS_DIR)
-        if os.path.isfile('%s/%s' % (CHUNKS_DIR, name)) and 'frames' in name]
-    for path in sorted(paths):
-        d = pickle.load(open(path, 'rb'))
-        threads = threads.append(d['threads'])
-        lstgs = lstgs.append(d['lstgs'])
+    lstgs = load_frames('lstgs')
+    threads = load_frames('threads')
+
+    # arrival variables
+    print('Creating arrival variables')
+    y_arrival = get_y_arrival(lstgs, threads)
+    pickle.dump(y_arrival, open(FRAMES_DIR + 'y_arrival.pkl', 'wb'))
 
     # thread features
     print('Creating thread features')
     x_thread = threads[['byr_us', 'byr_hist']]
     pickle.dump(x_thread, open(FRAMES_DIR + 'x_thread.pkl', 'wb'))
-    del threads x_thread
 
     # listing features
     print('Creating listing features')

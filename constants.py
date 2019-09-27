@@ -1,5 +1,8 @@
 from pandas.tseries.holiday import USFederalHolidayCalendar as Calendar
 
+# number of chunks for preprocessing
+CHUNKS = 1024
+
 # count concessions within this range as 1/2
 TOL_HALF = 0.02 
 
@@ -12,6 +15,7 @@ LR = 1e-4
 DROPOUT = 0.5
 
 # paths and directories
+CLEAN_DIR = 'data/clean/'
 DATA_PATH = 'data/partitions/'
 CHUNKS_DIR = 'data/chunks/'
 FRAMES_DIR = 'data/frames/'

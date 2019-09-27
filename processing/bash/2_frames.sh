@@ -1,7 +1,7 @@
 #!/bin/bash
-#$ -t 1-256
-#$ -q all.q
-#$ -l m_mem_free=10G
+#$ -t 1-1024
+#$ -q short.q
+#$ -l m_mem_free=3G
 #$ -N frames
 #$ -j y
 #$ -o logs/
