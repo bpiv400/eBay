@@ -175,9 +175,26 @@ if __name__ == "__main__":
     events = events.drop(['byr_us', 'byr_hist', 'bin'], axis=1)
 
     # exclude current thread from byr_hist
-    threads['byr_hist'] -= (1-threads.bin) 
+    threads['byr_hist'] -= (1-threads.bin)
+
+    # create lstg-level time-valued features
+    print('Creating lstg-level time-valued features')
+    tf = get_lstg_time_feats(events)
+    
+    # differenced time features
+    print('Differencing time features')
+    z = {}
+    z['start'] = events.clock.groupby(
+        ['lstg', 'thread']).shift().dropna().astype(np.int64)
+    for k, v in INTERVAL.items():
+        print('\t%s' % k)
+        z[k] = get_period_time_feats(tf, z['start'], k)
 
     # write chunk
     print("Writing chunk")
-    chunk = {'events': events, 'lstgs': lstgs, 'threads': threads}
+    chunk = {'events': events, 
+             'lstgs': lstgs, 
+             'threads': threads,
+             'tf': tf,
+             'z': z}
     pickle.dump(chunk, open(outfile, 'wb'))

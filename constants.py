@@ -14,9 +14,9 @@ DROPOUT = 0.5
 # paths and directories
 DATA_PATH = 'data/partitions/'
 CHUNKS_DIR = 'data/chunks/'
-LDA_DIR = 'data/lda/'
 MODEL_DIR = 'models/'
 EXP_PATH = 'repo/simulator/experiments/'
+W2V_PATH = lambda x: 'data/clean/w2v_' + x + '.csv'
 
 # model directories
 MODEL_DIRS = ['arrival/days/',
@@ -58,8 +58,7 @@ INTERVAL_COUNTS = {
 LEVELS = ['slr', 'meta', 'leaf', 'product', 'title', 'cndtn', 'lstg']
 
 # for lstg feature construction
-META_OTHER = [0, 19]
-BINARY_FEATS = ['relisted', 'store', 'slr_us', 'store', 'fast']
+BINARY_FEATS = ['store', 'slr_us', 'fast']
 COUNT_FEATS = ['photos', 'slr_bos', 'slr_lstgs', 'fdbk_score']
 
 # sequence of arrival models

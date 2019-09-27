@@ -154,21 +154,32 @@ def get_y_arrival(lstgs, threads):
     return d
 
 
+def get_w2v(lstgs, role):
+    # create lstg-category map
+    lookup = lstgs[['meta', 'leaf', 'product']]
+    # read in vectors
+    w2v = pd.read_csv(W2V_PATH(role), index_col=0)
+    # hierarchical join
+    df = pd.DataFrame(np.nan, index=lookup.index, columns=w2v.columns)
+    for level in ['product', 'leaf', 'meta']:
+        mask = np.isnan(df[role[0] + '0'])
+        df[mask] = lookup.loc[mask[mask].index, level].rename(
+            'category').to_frame().join(w2v, on='category').drop(
+            'category', axis=1)
+    return df
+
+
 def get_x_lstg(lstgs):
     '''
     Constructs a dataframe of fixed features that are used to initialize the
     hidden state and the LSTM cell.
     '''
-    # initialize output dataframe
-    df = pd.DataFrame(index=lstgs.index)
+    # initialize output dataframe with as-is features
+    df = lstgs[BINARY_FEATS + COUNT_FEATS]
     # clock features
     df['start_days'] = lstgs.start_date
     clock = pd.to_datetime(lstgs.start_date, unit='D', origin=START)
     df = df.join(extract_day_feats(clock))
-    # as-is features
-    tfcols = [c for c in lstgs.columns if c.startswith('tf_')]
-    for z in tfcols + BINARY_FEATS + COUNT_FEATS:
-        df[z] = lstgs[z]
     # slr feedback
     df.loc[df.fdbk_score.isna(), 'fdbk_score'] = 0
     df['fdbk_score'] = df.fdbk_score.astype(np.int64)
@@ -184,21 +195,19 @@ def get_x_lstg(lstgs):
     df['has_decline'] = df['decline'] > 0
     df['has_accept'] = df['accept'] < 1
     df['auto_dist'] = df['accept'] - df['decline']
-    # leaf LDA scores
-    lda_weights = pickle.load(open(LDA_DIR + 'weights.pkl', 'rb'))
-    w = lda_weights[:, lstgs.leaf]
-    for i in range(len(lda_weights)):
-        df['lda' + str(i)] = w[i, :]
-    # one-hot vector for meta
-    for i in range(1, 35):
-        if i not in META_OTHER:
-            df['meta' + str(i)] = lstgs['meta'] == i
     # condition
     cndtn = lstgs['cndtn']
     df['new'] = cndtn == 1
     df['used'] = cndtn == 7
     df['refurb'] = cndtn.isin([2, 3, 4, 5, 6])
     df['wear'] = cndtn.isin([8, 9, 10, 11]) * (cndtn - 7)
+    # word2vec scores
+    df = df.join(get_w2v(lstgs, 'slr'))
+    df = df.join(get_w2v(lstgs, 'byr'))
+    # time features
+    tfcols = [c for c in lstgs.columns if c.startswith('tf_')]
+    df = df.join(lstgs[tfcols])
+
     return df
 
 
@@ -275,35 +284,21 @@ if __name__ == "__main__":
     print('Loading data')
     infile = CHUNKS_DIR + '%d_frames.pkl' % num
     d = pickle.load(open(infile, 'rb'))
-    events, lstgs, threads = [d[k] for k in ['events', 'lstgs', 'threads']]
-
-    # add lstg-level time-valued features
-    print('Creating lstg-level time-valued features')
-    tf = get_lstg_time_feats(events)
-
+    
     # input features
     print('Creating input features')
     x = {}
-    x['offer'] = get_x_offer(lstgs, events, tf)
-    x['thread'] = threads[['byr_us', 'byr_hist']]
-    x['lstg'] = get_x_lstg(lstgs)
+    x['offer'] = get_x_offer(d['lstgs'], d['events'], d['tf'])
+    x['thread'] = d['threads'][['byr_us', 'byr_hist']]
+    x['lstg'] = get_x_lstg(d['lstgs'])
 
     # outcome variables
     print('Creating outcome variables')
     y = {}
-    y['arrival'] = get_y_arrival(lstgs, threads)
+    y['arrival'] = get_y_arrival(d['lstgs'], d['threads'])
     y['slr'], y['byr'] = get_y_seq(x['offer'])
-
-    # differenced time features
-    print('Differencing time features')
-    z = {}
-    z['start'] = events.clock.groupby(
-        ['lstg', 'thread']).shift().dropna().astype(np.int64)
-    for k, v in INTERVAL.items():
-        print('\t%s' % k)
-        z[k] = get_period_time_feats(tf, z['start'], k)
 
     # write simulator chunk
     print('Writing chunk')
-    chunk = {'y': y, 'x': x, 'z': z}
+    chunk = {'y': y, 'x': x, 'z': d['z']}
     pickle.dump(chunk, open(CHUNKS_DIR + '%d_feats.pkl' % num, 'wb'))
