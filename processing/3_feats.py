@@ -10,46 +10,6 @@ from time_feats import *
 from utils import *
 
 
-def get_period_time_feats(tf, start, model):
-    # initialize output
-    output = pd.DataFrame()
-    # loop over indices
-    for i in IDX[model]:
-        if i == 1:
-            continue
-        df = tf.reset_index('clock')
-        # count seconds from previous offer
-        df['clock'] -= start.xs(i, level='index').reindex(df.index)
-        df = df[~df.clock.isna()]
-        df = df[df.clock >= 0]
-        df['clock'] = df.clock.astype(np.int64)
-        # add index
-        df = df.assign(index=i).set_index('index', append=True)
-        # collapse to period
-        df['period'] = (df.clock - 1) // INTERVAL[model]
-        df['order'] = df.groupby(df.index.names + ['period']).cumcount()
-        df = df.sort_values(df.index.names + ['period', 'order'])
-        df = df.groupby(df.index.names + ['period']).last().drop(
-            ['clock', 'order'], axis=1)
-        # reset clock to beginning of next period
-        df.index.set_levels(df.index.levels[-1] + 1, 
-            level='period', inplace=True)
-        # appoend to output
-        output = output.append(df)
-    return output.sort_index()
-
-
-def diff_time_feats(tf):
-    # difference time features
-    dtypes = {c: tf[c].dtype for c in tf.columns}
-    diff = tf.groupby(['lstg', 'thread']).diff().dropna()
-    first = tf.reset_index('clock').groupby(['lstg', 'thread']).first()
-    diff = diff.append(first.set_index('clock', append=True)).sort_index()
-    diff = diff.astype(dtypes).rename(lambda x: x + '_diff', axis=1)
-    # create dataframe of raw and differenced features
-    return tf.join(diff)
-
-
 def multiply_indices(s):
     # initialize arrays
     k = len(s.index.names)
@@ -207,7 +167,6 @@ def get_x_lstg(lstgs):
     # time features
     tfcols = [c for c in lstgs.columns if c.startswith('tf_')]
     df = df.join(lstgs[tfcols])
-
     return df
 
 
@@ -284,7 +243,7 @@ if __name__ == "__main__":
     print('Loading data')
     infile = CHUNKS_DIR + '%d_frames.pkl' % num
     d = pickle.load(open(infile, 'rb'))
-    
+
     # input features
     print('Creating input features')
     x = {}

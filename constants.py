@@ -14,6 +14,7 @@ DROPOUT = 0.5
 # paths and directories
 DATA_PATH = 'data/partitions/'
 CHUNKS_DIR = 'data/chunks/'
+FRAMES_DIR = 'data/frames/'
 MODEL_DIR = 'models/'
 EXP_PATH = 'repo/simulator/experiments/'
 W2V_PATH = lambda x: 'data/clean/w2v_' + x + '.csv'
