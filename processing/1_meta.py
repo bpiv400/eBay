@@ -21,5 +21,5 @@ for m in u:
 
     # write chunk
     chunk = {'listings': L_i, 'offers': O_i}
-    path = 'data/chunks/m%d.pkl' % (i+1)
+    path = 'data/chunks/m%d.pkl' % m
     pickle.dump(chunk, open(path, 'wb'))
