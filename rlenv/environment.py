@@ -193,66 +193,21 @@ class Environment:
         if event.bin:
             self._process_sale(norm=1, time=event.priority)
             return True
-        sources = self._make_offer_sources(event)
-        #TODO: Execute accept and reject models
-        cn, norm, split, hidden_cn = self.interface.cn(sources=sources, hidden=None, slr=False)
-        sources[OUTCOMES_MAP][[1, 2, 3]] = [cn, norm, split]
-
-        model_name = model_str(model_names.MSG, byr=True)
-        msg, hidden_msg = self.interface.offer_indicator(model_name, sources=sources,
-                                                         hidden=None)
-        sources[OUTCOMES_MAP][6] = msg
-        model_name = model_str(model_names.RND, byr=True)
-        rnd, hidden_rnd = self.interface.offer_indicator(model_name, sources=sources,
-                                                         hidden=None)
-        sources[OUTCOMES_MAP][4] = rnd
-        model_name = model_str(model_names.NINE, byr=True)
-        nine, hidden_nine = self.interface.offer_indicator(model_name, sources=sources,
-                                                           hidden=None, sample=(rnd == 0))
-        sources[OUTCOMES_MAP][5] = nine
-        hidden = self._make_hidden(hidden_msg=hidden_msg, hidden_cn=hidden_cn, hidden_nine=hidden_nine,
-                                   hidden_rnd=hidden_rnd)
-
-        if norm < self.consts[LSTG_COLS['accept']]:
-            self.time_feats.update_features(time_trigger=time_triggers.OFFER, thread_id=event.thread_id,
-                                            offer={
-                                                'time': event.priority,
-                                                'type': model_names.BYR_PREFIX,
-                                                'price': norm
-                                            })
-            if norm > self.consts[LSTG_COLS['decline']]:
-                return self._prepare_delay(event, sources=sources, hidden=hidden, byr=True)
-            else:
-                self._increment_sources(sources)
-                return self._process_slr_rej_early(event, sources=sources, hidden=hidden, auto=True, exp=False)
-        else:
-            return self._process_sale(norm=norm, time=event.priority)
+        sources = self._make_sources(event)
+        hidden = self._make_hidden()
+        event.sources = sources
+        event.hidden = hidden
+        return self._process_offer(event, byr=True)
 
     @staticmethod
-    def _make_hidden(hidden_msg=None, hidden_cn=None, hidden_nine=None, hidden_rnd=None):
+    def _make_hidden():
         """
-
-        :param hidden_msg:
-        :param hidden_cn:
-        :param hidden_nine:
-        :param hidden_rnd:
+        Constructs hidden dictionary for start of a thread
         :return:
         """
         hidden = dict()
-        # byr models
-        hidden[model_str(model_names.MSG, byr=True)] = hidden_msg
-        hidden[model_str(model_names.CON, byr=True)] = hidden_cn
-        hidden[model_str(model_names.NINE, byr=True)] = hidden_nine
-        hidden[model_str(model_names.RND, byr=True)] = hidden_rnd
-        hidden[model_str(model_names.ACC, byr=True)] = None
-        hidden[model_str(model_names.REJ, byr=True)] = None
-        # slr models
-        hidden[model_str(model_names.MSG, byr=False)] = None
-        hidden[model_str(model_names.CON, byr=False)] = None
-        hidden[model_str(model_names.NINE, byr=False)] = None
-        hidden[model_str(model_names.RND, byr=False)] = None
-        hidden[model_str(model_names.ACC, byr=False)] = None
-        hidden[model_str(model_names.REJ, byr=False)] = None
+        for model in model_names.OFFER:
+            hidden[model] = None
         return hidden
 
     def _process_slr_rej_early(self, event, sources=None, hidden=None, auto=False, exp=False):
@@ -649,13 +604,13 @@ class Environment:
         """
         sources = dict()
         start_days = self.consts[LSTG_COLS['start_days']]
-        sources[CLOCK_MAP] = utils.get_clock_feats(time, start_days, arrival=True,
-                                                   delay=False)
+        sources[CLOCK_MAP] = utils.get_clock_feats(time, start_days, arrival=arrival,
+                                                   delay=delay)
         sources[LSTG_MAP] = self.consts
         sources[TIME_MAP] = self.time_feats.get_feats(time=time)
         return sources
 
-    def _make_offer_sources(self, event):
+    def _make_sources(self, event):
         """
         Creates a source dictionary for the first offer in a thread
         :param event: rlenv.Event
