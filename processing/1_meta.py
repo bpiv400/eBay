@@ -20,7 +20,7 @@ for m in u:
     idx = L.loc[L['meta'] == m].index
     L_i = L.loc[idx, ['meta', 'leaf', 'product', 'start_date', 'end_time']]
     T_i = T.loc[idx, ['start_time']]
-    O_i = O.loc[idx, ['clock', 'price', 'accept', 'reject']]
+    O_i = O.loc[idx, ['clock', 'price', 'accept', 'reject', 'censored']]
 
     # write chunk
     chunk = {'listings': L_i, 'threads': T_i, 'offers': O_i}
