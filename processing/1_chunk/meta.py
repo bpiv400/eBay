@@ -1,6 +1,6 @@
 import sys
 sys.path.append('repo/')
-import pickle
+from compress_pickle import dump
 import pandas as pd, numpy as np
 from constants import *
 
@@ -20,14 +20,14 @@ O = pd.read_csv(CLEAN_DIR + 'offers.csv').set_index(
 u = np.unique(L['meta'])
 
 # iterate over meta
-for m in u:
+for num in u:
     # extract associated listings and offers
-    idx = L.loc[L['meta'] == m].index
+    idx = L.loc[L['meta'] == num].index
     L_i = L[LVARS].reindex(index=idx)
     T_i = T[TVARS].reindex(index=idx, level='lstg')
     O_i = O[OVARS].reindex(index=idx, level='lstg')
 
     # write chunk
     chunk = {'listings': L_i, 'threads': T_i, 'offers': O_i}
-    path = 'data/chunks/m%d.pkl' % m
-    pickle.dump(chunk, open(path, 'wb'))
+    path = 'data/chunks/m%d.gz' % num
+    dump(chunk, path)
