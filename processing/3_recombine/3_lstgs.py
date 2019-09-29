@@ -28,23 +28,6 @@ def parse_days(diff, t0, t1):
     return days.reindex(index=idx, fill_value=0).sort_index()
 
 
-def get_y_arrival(lstgs, threads):
-    d = {}
-    # time_stamps
-    t0 = lstgs.start_date * 24 * 3600
-    t1 = lstgs.end_time
-    diff = pd.to_timedelta(threads.clock - t0, unit='s')
-    # append arrivals to end stamps
-    d['days'] = parse_days(diff, t0, t1)
-    # create other outcomes
-    d['loc'] = threads.byr_us.rename('loc')
-    d['hist'] = threads.byr_hist.rename('hist')
-    d['bin'] = threads.bin
-    sec = ((diff.dt.seconds[threads.bin == 0] + 0.5) / (24 * 3600 + 1))
-    d['sec'] = sec.rename('sec')
-    return d
-
-
 def get_w2v(lstgs, role):
     # create lstg-category map
     lookup = lstgs[['meta', 'leaf', 'product']]
@@ -106,22 +89,11 @@ if __name__ == "__main__":
     # load dataframes
     print('Loading data')
     lstgs = load_frames('lstgs')
-    threads = load_frames('threads')
-    events = load_frames('events')
-
-    # arrival variables
-    print('Creating arrival variables')
-    y_arrival = get_y_arrival(lstgs, threads)
-    pickle.dump(y_arrival, open(FRAMES_DIR + 'y_arrival.pkl', 'wb'))
-
-    # thread features
-    print('Creating thread features')
-    x_thread = threads[['byr_us', 'byr_hist']]
-    pickle.dump(x_thread, open(FRAMES_DIR + 'x_thread.pkl', 'wb'))
+    tf_slr = load_frames('tf_slr')
+    tf_meta = load_frames('tf_meta')
 
     # time features
     print('Creating time features')
-    tf_cat = get_cat_time_feats(lstgs, events)
     tfcols = [c for c in lstgs.columns if c.startswith('tf_')]
     tf_lstg = tf_cat.join(lstgs[tfcols])
     tf_lstg = do_pca(tf_lstg)

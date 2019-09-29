@@ -1,5 +1,4 @@
-import numpy as np
-import pandas as pd
+import numpy as np, pandas as pd
 
 
 # cumulative number of offers made by role

@@ -1,42 +1,63 @@
 import pickle, numpy as np, pandas as pd
 from constants import *
+from time_funcs import *
 
 
-def load_frames(name):
-    # list of paths
-    paths = ['%s/%s' % (CHUNKS_DIR, p) for p in os.listdir(CHUNKS_DIR)
-        if os.path.isfile('%s/%s' % (CHUNKS_DIR, p)) and name in p]
-    # loop and append
-    df = pd.DataFrame()
-    for path in sorted(paths):
-        stub = pickle.load(open(path, 'rb'))
-        df = df.append(stub)
-        del stub
-    return df
+def get_quantiles(df, l, featname):
+    # initialize output dataframe
+    out = pd.DataFrame(index=df.index)
+    # subset columns and group by levels
+    groups = df[[featname, 'clock']].groupby(by=l)
+    # function to estimation quantile q
+    f = lambda q: groups.apply(lambda x: x.rolling(
+        '30D', on='clock').quantile(quantile=q, interpolation='lower'))
+    # loop over quantiles
+    for q in QUANTILES:
+        tfname = '_'.join([l[-1], featname, str(int(100 * q))])
+        out[tfname] = f(q).drop('clock', axis=1).squeeze().fillna(0)
+    return out
 
 
-def multiply_indices(s):
-    # initialize arrays
-    k = len(s.index.names)
-    arrays = np.zeros((s.sum(),k+1), dtype=np.int64)
-    count = 0
-    # outer loop: range length
-    for i in range(1, max(s)+1):
-        index = s.index[s == i].values
-        if len(index) == 0:
-            continue
-        # cartesian product of existing level(s) and period
-        if k == 1:
-            f = lambda x: cartesian([[x], list(range(i))])
-        else:
-            f = lambda x: cartesian([[e] for e in x] + [list(range(i))])
-        # inner loop: rows of period
-        for j in range(len(index)):
-            arrays[count:count+i] = f(index[j])
-            count += i
-    # convert to multi-index
-    return pd.MultiIndex.from_arrays(np.transpose(arrays), 
-        names=s.index.names + ['period'])
+def get_cat_time_feats(events, levels):
+    # initialize output dataframe
+    tf = events[['clock']]
+    # dataframe for variable calculations
+    df = events.drop(['message', 'bin'], axis=1)
+    df['clock'] = pd.to_datetime(df.clock, unit='s', origin=START)
+    df['lstg'] = df.index.get_level_values('index') == 0
+    df['thread'] = df.index.get_level_values('index') == 1
+    df['slr_offer'] = ~df.byr & ~df.reject & ~df.lstg
+    df['byr_offer'] = df.byr & ~df.reject
+    df['accept_norm'] = df.norm[df.accept]
+    df['accept_price'] = df.price[df.accept]
+    # loop over hierarchy, exlcuding lstg
+    for i in range(len(levels)):
+        l = levels[: i+1]
+        print(l[-1])
+        # sort by levels
+        df = df.sort_values(l + ['clock', 'censored'])
+        tf = tf.reindex(df.index)
+        # open listings
+        tfname = '_'.join([l[-1], 'lstgs_open'])
+        tf[tfname] = open_lstgs(df, l)
+        # count features over rolling 30-day window
+        ct_feats = df[['lstg', 'thread', 'slr_offer', 'byr_offer', \
+            'accept', 'clock']].groupby(by=l).apply(
+            lambda x: x.rolling('30D', on='clock').sum())
+        ct_feats = ct_feats.drop('clock', axis=1).rename(lambda x: 
+            '_'.join([l[-1], x]) + 's', axis=1).astype(np.int64)
+        tf = tf.join(ct_feats)
+        # quantiles of (normalized) accept price over 30-day window
+        tf = tf.join(get_quantiles(df, l, 'accept_price'))
+        tf = tf.join(get_quantiles(df, l, 'accept_norm'))
+        # for identical timestamps
+        cols = [c for c in tf.columns if c.startswith(levels[-1])]
+        tf[cols] = tf[['clock'] + cols].groupby(
+            by=l + ['clock']).transform('last')
+    # collapse to lstg
+    tf = tf.xs(0, level='index').reset_index(levels + ['thread'],
+        drop=True).drop('clock', axis=1)
+    return tf.sort_index()
 
 
 def create_obs(df, isStart, cols):
@@ -47,15 +68,13 @@ def create_obs(df, isStart, cols):
     if isStart:
         toAppend.loc[:, 'reject'] = False
         toAppend.loc[:, 'index'] = 0
-        if 'censored' in cols:
-            toAppend.loc[:, 'censored'] = False
+        toAppend.loc[:, 'censored'] = False
         toAppend.loc[:, 'price'] = df.start_price
         toAppend.loc[:, 'clock'] = df.start_time
     else:
         toAppend.loc[:, 'reject'] = True
         toAppend.loc[:, 'index'] = 1
-        if 'censored' in cols:
-            toAppend.loc[:, 'censored'] = True
+        toAppend.loc[:, 'censored'] = True
         toAppend.loc[:, 'price'] = np.nan
         toAppend.loc[:, 'clock'] = df.end_time
     return toAppend.set_index('index', append=True)
@@ -109,8 +128,7 @@ def create_events(L, T, O, levels):
     events = add_start_end(offers, L, levels)
     # add features for later use
     events['byr'] = events.index.isin(IDX['byr'], level='index')
-    if 'title' in levels:
-        events = add_feats(events, L)
+    events['norm'] = events.price / L.start_price
     # recode byr rejects that don't end thread
     idx = events.reset_index('index')[['index']].set_index(
         'index', append=True, drop=False).squeeze()

@@ -18,7 +18,7 @@ DROPOUT = 0.5
 CLEAN_DIR = 'data/clean/'
 DATA_PATH = 'data/partitions/'
 CHUNKS_DIR = 'data/chunks/'
-FRAMES_DIR = 'data/frames/'
+FEATS_DIR = 'data/feats/'
 MODEL_DIR = 'models/'
 EXP_PATH = 'repo/simulator/experiments/'
 W2V_PATH = lambda x: 'data/clean/w2v_' + x + '.csv'
@@ -76,9 +76,6 @@ IDX = {'byr': [1, 3, 5, 7], 'slr': [2, 4, 6]}
 START = '2012-06-01 00:00:00'
 END = '2013-05-31 23:59:59'
 HOLIDAYS = Calendar().holidays(start=START, end=END)
-
-# count feats for hierarchical time features
-CT_FEATS = ['lstg', 'thread', 'slr_offer', 'byr_offer', 'accept']
 
 # quantiles of accept_norm distribution
 QUANTILES = [0.25, 0.5, 0.75, 1]

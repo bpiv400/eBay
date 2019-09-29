@@ -10,6 +10,52 @@ from utils import *
 from processing_utils import *
 
 
+def get_y_arrival(lstgs, threads):
+    d = {}
+    # time_stamps
+    t0 = lstgs.start_date * 24 * 3600
+    t1 = lstgs.end_time
+    diff = pd.to_timedelta(threads.clock - t0, unit='s')
+    # append arrivals to end stamps
+    d['days'] = parse_days(diff, t0, t1)
+    # create other outcomes
+    d['loc'] = threads.byr_us.rename('loc')
+    d['hist'] = threads.byr_hist.rename('hist')
+    d['bin'] = threads.bin
+    sec = ((diff.dt.seconds[threads.bin == 0] + 0.5) / (24 * 3600 + 1))
+    d['sec'] = sec.rename('sec')
+    return d
+
+
+def get_period_time_feats(tf, start, model):
+    # initialize output
+    output = pd.DataFrame()
+    # loop over indices
+    for i in IDX[model]:
+        if i == 1:
+            continue
+        df = tf.reset_index('clock')
+        # count seconds from previous offer
+        df['clock'] -= start.xs(i, level='index').reindex(df.index)
+        df = df[~df.clock.isna()]
+        df = df[df.clock >= 0]
+        df['clock'] = df.clock.astype(np.int64)
+        # add index
+        df = df.assign(index=i).set_index('index', append=True)
+        # collapse to period
+        df['period'] = (df.clock - 1) // INTERVAL[model]
+        df['order'] = df.groupby(df.index.names + ['period']).cumcount()
+        df = df.sort_values(df.index.names + ['period', 'order'])
+        df = df.groupby(df.index.names + ['period']).last().drop(
+            ['clock', 'order'], axis=1)
+        # reset clock to beginning of next period
+        df.index.set_levels(df.index.levels[-1] + 1, 
+            level='period', inplace=True)
+        # appoend to output
+        output = output.append(df)
+    return output.sort_index()
+
+
 def parse_delay(df):
     # drop delays of 0
     df = df[df.delay > 0]
@@ -66,11 +112,22 @@ def get_x_offer(lstgs, events, tf):
     offers = offers.rename_axis('index', axis=1).stack().sort_index()
     # initialize output dataframe
     df = pd.DataFrame(index=offers.index)
-    # concession
-    df['con'] = events.con.reindex(df.index, fill_value=0)
-    df['norm'] = events.norm.reindex(df.index, fill_value=0)
+    # concession DEBUG
+    offers = events.price.drop(0, level='thread').unstack().join(
+        L.start_price)
+    offers = offers.rename({'start_price': 0}, axis=1)
+    con = pd.DataFrame(index=offers.index)
+    con[0] = 0
+    con[1] = offers[1] / offers[0]
+    for i in range(2, 8):
+        con[i] = (offers[i] - offers[i-2]) / (offers[i-1] - offers[i-2])
+    df['con'] = con.stack()
     df['reject'] = df['con'] == 0
     df['split'] = np.abs(df['con'] - 0.5) < TOL_HALF
+    # total concession
+    df['norm'] = events['price'] / lstgs['start_price']
+    mask = events.index.isin(IDX['slr'], level='index')
+    df.loc[mask, 'norm'] = 1 - df.loc[mask, 'norm']
     # offer digits
     df['round'], df['nines'] = do_rounding(offers)
     # message
@@ -122,23 +179,41 @@ def get_x_offer(lstgs, events, tf):
 if __name__ == "__main__":
     # load dataframes
     lstgs = load_frames('lstgs')
+    threads = load_frames('threads')
     events = load_frames('events')
-    tf = load_frames('tf')
-    z = load_frames('z')
+    tf_lstg = load_frames('tf_lstg')
 
     # delay features
     print('Creating delay features')
-    pickle.dump(z, open(FRAMES_DIR + 'z.pkl', 'wb'))
+    z = {}
+    z['start'] = events.clock.groupby(
+        ['lstg', 'thread']).shift().dropna().astype(np.int64)
+    for k, v in INTERVAL.items():
+        print('\t%s' % k)
+        z[k] = get_period_time_feats(tf_lstg, z['start'], k)
+    pickle.dump(z, open(FEATS_DIR + 'z.pkl', 'wb'))
 
-    # offer features
-    print('Creating offer features')
-    x_offer = get_x_offer(lstgs, events, tf)
-    pickle.dump(x_offer, open(FRAMES_DIR + 'x_offer.pkl', 'wb'))
+    # outcome for arrival model
+    print('Creating arrival model outcome variables')
+    y_arrival = get_y_arrival(lstgs, threads)
+    pickle.dump(y_arrival, open(FEATS_DIR + 'y_arrival.pkl', 'wb'))
 
     # role outcome variables
     print('Creating role outcome variables')
     y_slr, y_byr = get_y_seq(x_offer)
-    pickle.dump(y_slr, open(FRAMES_DIR + 'y_slr.pkl', 'wb'))
-    pickle.dump(y_byr, open(FRAMES_DIR + 'y_byr.pkl', 'wb'))
+    pickle.dump(y_slr, open(FEATS_DIR + 'y_slr.pkl', 'wb'))
+    pickle.dump(y_byr, open(FEATS_DIR + 'y_byr.pkl', 'wb'))
+
+    # thread features to save
+    print('Creating thread features')
+    x_thread = threads[['byr_us', 'byr_hist']]
+    pickle.dump(x_thread, open(FEATS_DIR + 'x_thread.pkl', 'wb'))
+
+    # offer features
+    print('Creating offer features')
+    x_offer = get_x_offer(lstgs, events, tf_lstg)
+    pickle.dump(x_offer, open(FEATS_DIR + 'x_offer.pkl', 'wb'))
+
+    
 
     
