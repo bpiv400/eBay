@@ -6,8 +6,47 @@ from datetime import datetime as dt
 from sklearn.utils.extmath import cartesian
 import numpy as np, pandas as pd
 from constants import *
-from utils import *
-from processing_utils import *
+
+
+def multiply_indices(s):
+    # initialize arrays
+    k = len(s.index.names)
+    arrays = np.zeros((s.sum(),k+1), dtype=np.int64)
+    count = 0
+    # outer loop: range length
+    for i in range(1, max(s)+1):
+        index = s.index[s == i].values
+        if len(index) == 0:
+            continue
+        # cartesian product of existing level(s) and period
+        if k == 1:
+            f = lambda x: cartesian([[x], list(range(i))])
+        else:
+            f = lambda x: cartesian([[e] for e in x] + [list(range(i))])
+        # inner loop: rows of period
+        for j in range(len(index)):
+            arrays[count:count+i] = f(index[j])
+            count += i
+    # convert to multi-index
+    return pd.MultiIndex.from_arrays(np.transpose(arrays), 
+        names=s.index.names + ['period'])
+
+
+def parse_days(diff, t0, t1):
+    # count of arrivals by day
+    days = diff.dt.days.rename('period')
+    days = days[days <= MAX_DAYS].to_frame()
+    days = days.assign(count=1)
+    days = days.groupby(['lstg', 'period']).sum().squeeze()
+    # end of listings
+    T1 = int((pd.to_datetime(END) - pd.to_datetime(START)).total_seconds())
+    t1.loc[t1[t1 > T1].index] = T1
+    end = (pd.to_timedelta(t1 - t0, unit='s').dt.days + 1).rename('period')
+    end.loc[end > MAX_DAYS] = MAX_DAYS + 1
+    # create multi-index from end stamps
+    idx = multiply_indices(end)
+    # expand to new index and return
+    return days.reindex(index=idx, fill_value=0).sort_index()
 
 
 def get_y_arrival(lstgs, threads):
@@ -102,6 +141,41 @@ def get_y_seq(x_offer):
     return slr, byr
 
 
+def get_x_lstg(lstgs):
+    '''
+    Constructs a dataframe of fixed features that are used to initialize the
+    hidden state and the LSTM cell.
+    '''
+    # initialize output dataframe with as-is features
+    df = lstgs[BINARY_FEATS + COUNT_FEATS]
+    # clock features
+    df['start_days'] = lstgs.start_date
+    clock = pd.to_datetime(lstgs.start_date, unit='D', origin=START)
+    df = df.join(extract_day_feats(clock))
+    # slr feedback
+    df.loc[df.fdbk_score.isna(), 'fdbk_score'] = 0
+    df['fdbk_score'] = df.fdbk_score.astype(np.int64)
+    df['fdbk_pstv'] = lstgs['fdbk_pstv'] / 100
+    df.loc[df.fdbk_pstv.isna(), 'fdbk_pstv'] = 1
+    df['fdbk_100'] = df['fdbk_pstv'] == 1
+    # prices
+    df['start'] = lstgs['start_price']
+    df['decline'] = lstgs['decline_price'] / lstgs['start_price']
+    df['accept'] = lstgs['accept_price'] / lstgs['start_price']
+    for z in ['start', 'decline', 'accept']:
+        df[z + '_round'], df[z +'_nines'] = do_rounding(df[z])
+    df['has_decline'] = df['decline'] > 0
+    df['has_accept'] = df['accept'] < 1
+    df['auto_dist'] = df['accept'] - df['decline']
+    # condition
+    cndtn = lstgs['cndtn']
+    df['new'] = cndtn == 1
+    df['used'] = cndtn == 7
+    df['refurb'] = cndtn.isin([2, 3, 4, 5, 6])
+    df['wear'] = cndtn.isin([8, 9, 10, 11]) * (cndtn - 7)
+    return df
+
+
 def get_x_offer(lstgs, events, tf):
     '''
     Creates dataframe of offer and time variables.
@@ -176,6 +250,18 @@ def get_x_offer(lstgs, events, tf):
     return df
 
 
+def load_frames(name):
+    # path to file number x
+    path = lambda x: CHUNKS_DIR + str(x) + '_' + name + '.pkl'
+    # loop and append
+    df = pd.DataFrame()
+    for i in range(1,N_CHUNKS+1):
+        stub = pickle.load(open(path(i), 'rb'))
+        df = df.append(stub)
+        del stub
+    return df
+
+
 if __name__ == "__main__":
     # load dataframes
     lstgs = load_frames('lstgs')
@@ -209,11 +295,19 @@ if __name__ == "__main__":
     x_thread = threads[['byr_us', 'byr_hist']]
     pickle.dump(x_thread, open(FEATS_DIR + 'x_thread.pkl', 'wb'))
 
+    # listing features
+    print('Creating listing features')
+    x_lstg = get_x_lstg(lstgs)
+    pickle.dump(x_lstg, open(FEATS_DIR + 'x_lstg.pkl', 'wb'))
+
     # offer features
     print('Creating offer features')
     x_offer = get_x_offer(lstgs, events, tf_lstg)
     pickle.dump(x_offer, open(FEATS_DIR + 'x_offer.pkl', 'wb'))
 
+    #  lookup file
+    lookup = lstgs[['start_price', 'decline_price', 'accept_price', 'start_days']]
+    pickle.dump(lookup, open(FEATS_DIR + 'lookup.pkl', 'wb'))
     
 
     
