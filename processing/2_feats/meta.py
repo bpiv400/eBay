@@ -30,7 +30,7 @@ if __name__ == "__main__":
 
     # get upper-level time-valued features
     print('Creating categorical time features') 
-    tf = get_cat_time_feats(events, L.start_price, levels)
+    tf = get_cat_time_feats(events, levels)
 
     # save
     pickle.dump(tf, open(FEATS_DIR + 'm%d' % num + '_tf_meta.pkl', 'wb'))

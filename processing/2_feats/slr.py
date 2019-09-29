@@ -100,7 +100,6 @@ def clean_events(events, L):
 	events = events.join(L['start_date'])
 	events = events[events.start_date >= 30].drop('start_date', axis=1)
 	# drop listings in which prices have changed
-	events = events.join(L['flag'])
 	events = events[events.flag == 0].drop('flag', axis=1)
 	return events
 
@@ -145,13 +144,16 @@ if __name__ == "__main__":
     events = events.join(T[['byr_hist', 'byr_us']])
     threads = events[['clock', 'byr_us', 'byr_hist', 'bin']].xs(
         1, level='index')
-    events = events.drop(['byr_us', 'byr_hist', 'bin'], axis=1)
+    events = events.drop(['byr_us', 'byr_hist', 'bin', 'flag', 'start_price'], 
+        axis=1)
 
     # exclude current thread from byr_hist
     threads['byr_hist'] -= (1-threads.bin)
 
     # create lstg-level time-valued features
     print('Creating lstg-level time-valued features')
+    events['norm'] = events.price / events.start_price
+    events.loc[~events['byr'], 'norm'] = 1 - events['norm']
     tf_lstg = get_lstg_time_feats(events)
     events = events.drop(['byr', 'norm'], axis=1)
 
