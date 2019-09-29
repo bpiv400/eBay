@@ -4,7 +4,8 @@ import pickle
 import pandas as pd, numpy as np
 from constants import *
 
-LVARS = ['meta', 'leaf', 'product', 'start_date', 'end_time', 'start_price']
+LVARS = ['meta', 'leaf', 'product', 'start_date', 'end_time', \
+    'start_price', 'flag']
 TVARS = ['start_time']
 OVARS = ['clock', 'price', 'accept', 'reject', 'censored']
 

@@ -18,7 +18,7 @@ def get_quantiles(df, l, featname):
     return out
 
 
-def get_cat_time_feats(events, levels):
+def get_cat_time_feats(events, start_price, levels):
     # initialize output dataframe
     tf = events[['clock']]
     # dataframe for variable calculations
@@ -28,8 +28,8 @@ def get_cat_time_feats(events, levels):
     df['thread'] = df.index.get_level_values('index') == 1
     df['slr_offer'] = ~df.byr & ~df.reject & ~df.lstg
     df['byr_offer'] = df.byr & ~df.reject
-    df['accept_norm'] = df.norm[df.accept]
     df['accept_price'] = df.price[df.accept]
+    df['accept_norm'] = df.price[df.accept & ~df.flag] / start_price
     # loop over hierarchy, exlcuding lstg
     for i in range(len(levels)):
         l = levels[: i+1]
@@ -129,6 +129,7 @@ def create_events(L, T, O, levels):
     # add features for later use
     events['byr'] = events.index.isin(IDX['byr'], level='index')
     events['norm'] = events.price / L.start_price
+    events.loc[~events['byr'], 'norm'] = 1 - events['norm']
     # recode byr rejects that don't end thread
     idx = events.reset_index('index')[['index']].set_index(
         'index', append=True, drop=False).squeeze()

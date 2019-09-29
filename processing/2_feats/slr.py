@@ -128,18 +128,16 @@ if __name__ == "__main__":
 
     # get upper-level time-valued features
     print('Creating hierarchical time features') 
-    tf_slr = get_cat_time_feats(events, levels)
+    tf_slr = get_cat_time_feats(events, L.start_price, levels)
 
     # drop flagged lstgs
     print('Restricting observations')
     events = clean_events(events, L)
 
-    # restrict time feats to beginning of remaining listings
-    tf_slr = tf_slr.reindex_like(events).xs(
-        0, level='index').reset_index('thread', drop=True)
-
     # split off listing events
-    lstgs = pd.DataFrame(index=tf_slr.index).join(
+    idx = events.reset_index('thread', drop=True).xs(0, level='index').index
+    tf_slr = tf_slr.reindex(index=idx)
+    lstgs = pd.DataFrame(index=idx).join(
         L.drop(['meta', 'leaf', 'product', 'flag'], axis=1))
     events = events.drop(0, level='thread') # remove lstg start/end obs
 
@@ -155,6 +153,7 @@ if __name__ == "__main__":
     # create lstg-level time-valued features
     print('Creating lstg-level time-valued features')
     tf_lstg = get_lstg_time_feats(events)
+    events = events.drop(['byr', 'norm'], axis=1)
 
     # save separately
     filename = lambda x: FEATS_DIR + '%d' % num + '_' + x + '.pkl'
