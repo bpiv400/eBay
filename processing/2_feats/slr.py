@@ -1,7 +1,8 @@
 import sys, os
 sys.path.append('repo/')
 sys.path.append('repo/processing/2_feats/')
-import argparse, pickle
+import argparse
+from compress_pickle import dump, load
 import numpy as np, pandas as pd
 from constants import *
 from time_funcs import *
@@ -75,35 +76,6 @@ def get_lstg_time_feats(events):
     return tf
 
 
-def get_multi_lstgs(L):
-    df = L[LEVELS[:-1] + ['start_date', 'end_time']].set_index(
-        LEVELS[:-1], append=True).reorder_levels(LEVELS).sort_index()
-    # start time
-    df['start_date'] *= 24 * 3600
-    df = df.rename(lambda x: x.split('_')[0], axis=1)
-    # find multi-listings
-    df = df.sort_values(df.index.names[:-1] + ['start'])
-    maxend = df.end.groupby(df.index.names[:-1]).cummax()
-    maxend = maxend.groupby(df.index.names[:-1]).shift(1)
-    overlap = df.start <= maxend
-    return overlap.groupby(df.index.names).max()
-
-
-def clean_events(events, L):
-	# identify multi-listings
-	ismulti = get_multi_lstgs(L)
-	# drop multi-listings
-	events = events[~ismulti.reindex(index=events.index)]
-	# limit index to ['lstg', 'thread', 'index']
-	events = events.reset_index(LEVELS[:-1], drop=True).sort_index()
-	# 30-day burn in
-	events = events.join(L['start_date'])
-	events = events[events.start_date >= 30].drop('start_date', axis=1)
-	# drop listings in which prices have changed
-	events = events[events.flag == 0].drop('flag', axis=1)
-	return events
-
-
 if __name__ == "__main__":
     # parse parameters
     parser = argparse.ArgumentParser()
@@ -112,8 +84,8 @@ if __name__ == "__main__":
 
     # load data
     print('Loading data')
-    chunk = pickle.load(open(CHUNKS_DIR + '%d' % num + '.pkl', 'rb'))
-    L, T, O = [chunk[k] for k in ['listings', 'threads', 'offers']]
+    d = load(CHUNKS_DIR + '%d' % num + '.gz')
+    L, T, O = [d[k] for k in ['listings', 'threads', 'offers']]
 
     # categories to strings
     L = categories_to_string(L)
@@ -127,14 +99,15 @@ if __name__ == "__main__":
 
     # get upper-level time-valued features
     print('Creating hierarchical time features') 
-    tf_slr = get_cat_time_feats(events, L.start_price, levels)
+    tf_slr = get_cat_time_feats(events, levels)
 
     # drop flagged lstgs
     print('Restricting observations')
     events = clean_events(events, L)
 
     # split off listing events
-    idx = events.reset_index('thread', drop=True).xs(0, level='index').index
+    idx = events.reset_index('thread', drop=True).xs(
+        0, level='index').index
     tf_slr = tf_slr.reindex(index=idx)
     lstgs = pd.DataFrame(index=idx).join(
         L.drop(['meta', 'leaf', 'product', 'flag'], axis=1))
@@ -144,8 +117,7 @@ if __name__ == "__main__":
     events = events.join(T[['byr_hist', 'byr_us']])
     threads = events[['clock', 'byr_us', 'byr_hist', 'bin']].xs(
         1, level='index')
-    events = events.drop(['byr_us', 'byr_hist', 'bin', 'flag', 'start_price'], 
-        axis=1)
+    events = events.drop(['byr_us', 'byr_hist', 'bin'], axis=1)
 
     # exclude current thread from byr_hist
     threads['byr_hist'] -= (1-threads.bin)
@@ -158,6 +130,6 @@ if __name__ == "__main__":
     events = events.drop(['byr', 'norm'], axis=1)
 
     # save separately
-    filename = lambda x: FEATS_DIR + '%d' % num + '_' + x + '.pkl'
-    for name in ['events', 'threads', 'lstgs', 'tf_slr', 'tf_lstg']:
-        pickle.dump(globals()[name], open(filename(name), 'wb'))
+    filename = lambda x: FEATS_DIR + '%d' % num + '_' + x + '.gz'
+    for name in ['events', 'threads', 'lstgs', 'tf_lstg', 'tf_slr']:
+        dump(globals()[name], filename(name))

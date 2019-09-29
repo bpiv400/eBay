@@ -1,7 +1,8 @@
 import sys, os
 sys.path.append('repo/')
 sys.path.append('repo/processing/2_feats/')
-import argparse, pickle
+import argparse
+from compress_pickle import dump, load
 import numpy as np, pandas as pd
 from constants import *
 from util import *
@@ -15,8 +16,8 @@ if __name__ == "__main__":
 
     # load data
     print('Loading data')
-    chunk = pickle.load(open(CHUNKS_DIR + 'm%d' % num + '.pkl', 'rb'))
-    L, T, O = [chunk[k] for k in ['listings', 'threads', 'offers']]
+    d = load(CHUNKS_DIR + 'm%d' % num + '.gz')
+    L, T, O = [d[k] for k in ['listings', 'threads', 'offers']]
 
     # categories to strings
     L = categories_to_string(L)
@@ -32,5 +33,14 @@ if __name__ == "__main__":
     print('Creating categorical time features') 
     tf = get_cat_time_feats(events, levels)
 
+    # drop flagged lstgs
+    print('Restricting observations')
+    events = clean_events(events, L)
+
+    # split off listing events
+    idx = events.reset_index('thread', drop=True).xs(
+        0, level='index').index
+    tf = tf.reindex(index=idx)
+
     # save
-    pickle.dump(tf, open(FEATS_DIR + 'm%d' % num + '_tf_meta.pkl', 'wb'))
+    dump(tf, FEATS_DIR + 'm%d' % num + '_tf_meta.gz')
