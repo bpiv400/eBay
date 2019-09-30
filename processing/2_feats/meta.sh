@@ -1,7 +1,7 @@
 #!/bin/bash
 #$ -t 1-35
 #$ -q all.q
-#$ -l m_mem_free=12G
+#$ -l m_mem_free=50G
 #$ -N feats_meta
 #$ -j y
 #$ -o logs/
