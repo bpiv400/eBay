@@ -33,14 +33,5 @@ if __name__ == "__main__":
     print('Creating categorical time features') 
     tf = get_cat_time_feats(events, levels)
 
-    # drop flagged lstgs
-    print('Restricting observations')
-    events = clean_events(events, L)
-
-    # split off listing events
-    idx = events.reset_index('thread', drop=True).xs(
-        0, level='index').index
-    tf = tf.reindex(index=idx)
-
     # save
     dump(tf, FEATS_DIR + 'm%d' % num + '_tf_meta.gz')

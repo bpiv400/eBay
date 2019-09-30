@@ -60,35 +60,6 @@ def get_cat_time_feats(events, levels):
     return tf.sort_index()
 
 
-def get_multi_lstgs(L):
-    df = L[LEVELS[:-1] + ['start_date', 'end_time']].set_index(
-        LEVELS[:-1], append=True).reorder_levels(LEVELS).sort_index()
-    # start time
-    df['start_date'] *= 24 * 3600
-    df = df.rename(lambda x: x.split('_')[0], axis=1)
-    # find multi-listings
-    df = df.sort_values(df.index.names[:-1] + ['start'])
-    maxend = df.end.groupby(df.index.names[:-1]).cummax()
-    maxend = maxend.groupby(df.index.names[:-1]).shift(1)
-    overlap = df.start <= maxend
-    return overlap.groupby(df.index.names).max()
-
-
-def clean_events(events, L):
-    # identify multi-listings
-    ismulti = get_multi_lstgs(L)
-    # drop multi-listings
-    events = events[~ismulti.reindex(index=events.index)]
-    # limit index to ['lstg', 'thread', 'index']
-    events = events.reset_index(LEVELS[:-1], drop=True).sort_index()
-    # 30-day burn in
-    events = events.join(L['start_date'])
-    events = events[events.start_date >= 30].drop('start_date', axis=1)
-    # drop listings in which prices have changed
-    events = events[events.flag == 0].drop('flag', axis=1)
-    return events
-
-
 def create_obs(df, isStart, cols):
     toAppend = pd.DataFrame(index=df.index, columns=['index'] + cols)
     for c in ['accept', 'message', 'bin']:
