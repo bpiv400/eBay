@@ -1,7 +1,7 @@
 #!/bin/bash
-#$ -t 1-1024
+#$ -t 1-835
 #$ -q short.q
-#$ -l m_mem_free=3G
+#$ -l m_mem_free=10G
 #$ -N feats_slr
 #$ -j y
 #$ -o logs/
