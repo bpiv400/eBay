@@ -7,6 +7,10 @@ from sklearn.utils.extmath import cartesian
 import numpy as np, pandas as pd
 from constants import *
 
+LSTG_VARS = ['slr', 'lstg', 'cndtn', 'start_date', 'end_time', \
+    'fdbk_score', 'fdbk_pstv', 'start_price', 'photos', 'slr_lstgs', \
+    'slr_bos', 'decline_price', 'accept_price', 'store', 'slr_us', 'fast']
+
 
 def multiply_indices(s):
     # initialize arrays
@@ -252,22 +256,26 @@ def get_x_offer(lstgs, events, tf):
 
 def load_frames(name):
     # path to file number x
-    path = lambda x: CHUNKS_DIR + str(x) + '_' + name + '.pkl'
+    path = lambda x: FEATS_DIR + str(x) + '_' + name + '.gz'
     # loop and append
     df = pd.DataFrame()
     for i in range(1,N_CHUNKS+1):
-        stub = pickle.load(open(path(i), 'rb'))
+        stub = load(path(i))
         df = df.append(stub)
         del stub
-    return df
+    return df.sort_index()
 
 
 if __name__ == "__main__":
     # load dataframes
-    lstgs = load_frames('lstgs')
     threads = load_frames('threads')
     events = load_frames('events')
     tf_lstg = load_frames('tf_lstg')
+
+    # listings
+    ids = tf_lstg.index
+    lstgs = pd.read_csv(CLEAN_DIR + 'listings.csv', index_col='lstg',
+            usecols=LSTG_VARS).reindex(index=ids)
 
     # delay features
     print('Creating delay features')
@@ -277,37 +285,38 @@ if __name__ == "__main__":
     for k, v in INTERVAL.items():
         print('\t%s' % k)
         z[k] = get_period_time_feats(tf_lstg, z['start'], k)
-    pickle.dump(z, open(FEATS_DIR + 'z.pkl', 'wb'))
+    dump(z, PARTS_DIR + 'z.gz')
 
     # outcome for arrival model
     print('Creating arrival model outcome variables')
     y_arrival = get_y_arrival(lstgs, threads)
-    pickle.dump(y_arrival, open(FEATS_DIR + 'y_arrival.pkl', 'wb'))
+    dump(y_arrival, PARTS_DIR + 'y_arrival.gz')
 
     # role outcome variables
     print('Creating role outcome variables')
     y_slr, y_byr = get_y_seq(x_offer)
-    pickle.dump(y_slr, open(FEATS_DIR + 'y_slr.pkl', 'wb'))
-    pickle.dump(y_byr, open(FEATS_DIR + 'y_byr.pkl', 'wb'))
+    dump(y_slr, PARTS_DIR + 'y_slr.gz')
+    dump(y_byr, PARTS_DIR + 'y_byr.gz')
 
     # thread features to save
     print('Creating thread features')
     x_thread = threads[['byr_us', 'byr_hist']]
-    pickle.dump(x_thread, open(FEATS_DIR + 'x_thread.pkl', 'wb'))
+    dump(x_thread, PARTS_DIR + 'x_thread.gz')
 
     # listing features
     print('Creating listing features')
     x_lstg = get_x_lstg(lstgs)
-    pickle.dump(x_lstg, open(FEATS_DIR + 'x_lstg.pkl', 'wb'))
+    dump(x_lstg, PARTS_DIR + 'x_lstg.gz')
 
     # offer features
     print('Creating offer features')
     x_offer = get_x_offer(lstgs, events, tf_lstg)
-    pickle.dump(x_offer, open(FEATS_DIR + 'x_offer.pkl', 'wb'))
+    dump(x_offer, PARTS_DIR + 'x_offer.gz')
 
     #  lookup file
-    lookup = lstgs[['start_price', 'decline_price', 'accept_price', 'start_days']]
-    pickle.dump(lookup, open(FEATS_DIR + 'lookup.pkl', 'wb'))
+    lookup = lstgs.reset_index().set_index(['slr', 'lstg']).sort_index()
+    lookup = lookup[['start_price', 'decline_price', 'accept_price', 'start_date']]
+    dump(lookup, PARTS_DIR + 'lookup.gz')
     
 
     

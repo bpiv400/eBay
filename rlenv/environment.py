@@ -663,22 +663,27 @@ class Environment:
         if sale_price is None:
             sale_price = norm * self.consts[LSTG_COLS['start']]
         insertion_fees = self._insertion_fees(time)
-        value_fee = self._value_fee(sale_price, time)
+        value_fee = self._value_fee(sale_price)
         net = sale_price - insertion_fees - value_fee
         self.sales[self.curr_lstg].append(True, net, time)
         return True
 
-    def _value_fee(self, price, time):
+    def _value_fee(self, price):
         """
         Computes the value fee. For now, just set to 10%
         of sale price, pending refinement decisions
 
-        # TODO: Implement full meta conditional logic
+        # TODO: What did we decide about shipping?
+
         :param price: price of sale
-        :param time: int giving time of sale
         :return: float
         """
-        return .1 * price
+        rate = .09
+        if torch.nonzero(self.consts[META_7]).numel() > 0:
+            rate = .07
+        elif torch.nonzero(self.consts[META_6]).numel() > 0:
+            rate = .06
+        return rate * price
 
 
 

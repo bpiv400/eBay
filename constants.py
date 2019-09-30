@@ -1,7 +1,11 @@
 from pandas.tseries.holiday import USFederalHolidayCalendar as Calendar
 
 # number of chunks for preprocessing
-N_CHUNKS = 1024
+N_CHUNKS = 835
+N_META = 35
+
+# keep PCA components with this share of variance or higher
+PCA_CUTOFF = 0.01
 
 # count concessions within this range as 1/2
 TOL_HALF = 0.02 
@@ -19,6 +23,8 @@ CLEAN_DIR = 'data/clean/'
 DATA_PATH = 'data/partitions/'
 CHUNKS_DIR = 'data/chunks/'
 FEATS_DIR = 'data/feats/'
+PCA_DIR = 'data/pca/'
+PARTS_DIR = 'data/partitions/'
 MODEL_DIR = 'models/'
 EXP_PATH = 'repo/simulator/experiments/'
 W2V_PATH = lambda x: 'data/clean/w2v_' + x + '.csv'

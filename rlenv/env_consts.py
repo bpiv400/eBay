@@ -42,6 +42,10 @@ FEATNAMES_FILENAME = 'featnames.pkl'
 SIZES_FILENAME = 'sizes.pkl'
 LSTG_COLS = unpickle(FIXED_COLS_FILENAME)
 
+# meta feats
+META_7 = [LSTG_COLS[meta] for meta in ['meta21', 'meta10']]
+META_6 = [LSTG_COLS[meta] for meta in ['meta32', 'meta14', 'meta11', 'meta7', 'meta28']]
+
 # clock feats
 DAYS_CLOCK_FEATS = ['days', 'holiday', 'dow0', 'dow1', 'dow2', 'dow3', 'dow4', 'dow5']
 FF_CLOCK_FEATS = ['focal_{}'.format(feat) for feat in DAYS_CLOCK_FEATS]

@@ -143,8 +143,6 @@ if __name__ == "__main__":
     idx = events.reset_index('thread', drop=True).xs(
         0, level='index').index
     tf_slr = tf_slr.reindex(index=idx)
-    lstgs = pd.DataFrame(index=idx).join(
-        L.drop(['meta', 'leaf', 'product', 'flag'], axis=1))
     events = events.drop(0, level='thread') # remove lstg start/end obs
 
     # split off threads dataframe
@@ -164,5 +162,5 @@ if __name__ == "__main__":
     events = events.drop(['byr', 'norm'], axis=1)
 
     # save separately
-    for name in ['events', 'threads', 'lstgs', 'tf_lstg', 'tf_slr']:
+    for name in ['events', 'threads', 'tf_lstg', 'tf_slr']:
         dump(globals()[name], filename(name))
