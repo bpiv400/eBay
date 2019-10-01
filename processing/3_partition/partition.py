@@ -1,7 +1,7 @@
 import sys
 sys.path.append('repo/')
-sys.path.append('repo/processing/')
-import argparse, pickle
+import argparse
+from compress_pickle import load, dump
 from datetime import datetime as dt
 from sklearn.utils.extmath import cartesian
 import numpy as np, pandas as pd
@@ -246,18 +246,15 @@ def get_x_offer(lstgs, events, tf):
 def do_pca(df):
     # standardize variables
     vals = StandardScaler().fit_transform(df)
-
     # PCA
     N = len(df.columns)
     pca = PCA(n_components=N, svd_solver='full')
     components = pca.fit_transform(vals)
-
     # select number of components
     shares = np.var(components, axis=0) / N
     keep = 1
     while np.sum(shares[:keep]) < PCA_CUTOFF:
         keep += 1
-
     # return dataframe
     return pd.DataFrame(components[:,:keep], index=df.index, 
         columns=['c' + str(i) for i in range(1,keep+1)])
@@ -316,12 +313,12 @@ def load_frames(name):
 
 
 if __name__ == "__main__":
-    # load lstg-level time features
-    tf_lstg = load_frames('tf_lstg')
+    # load slr time features
+    tf_slr = load_frames('tf_slr')
 
     # listings
     lstgs = pd.read_csv(CLEAN_DIR + 'listings.csv', index_col='lstg').drop(
-        ['title', 'flag'], axis=1).reindex(index=tf_lstg.index)
+        ['title', 'flag'], axis=1).reindex(index=tf_slr.index)
     for c in ['meta', 'leaf', 'product']:
         lstgs[c] = c[0] + lstgs[c].astype(str)
     mask = lstgs['product'] == 'p0'
@@ -330,18 +327,17 @@ if __name__ == "__main__":
     # partition by seller
     partitions = partition_lstgs(lstgs)
 
+    # slr time-valued features
+    print('PCA on slr time-valued features')
+    tf_slr = do_pca(tf_slr)
+    partition_frames(partitions, tf_slr, 'x_slr')
+    del tf_slr
+
     # word2vec
     w2v = get_w2v(lstgs, 'slr').join(get_w2v(lstgs, 'byr'))
     partition_frame(partitions, w2v, 'x_w2v')
     lstgs = lstgs.drop(['leaf', 'product'], axis=1)
     del w2v
-
-    # slr time-valued features
-    print('PCA on slr time-valued features')
-    tf_slr = load_frames('tf_slr')
-    tf_slr = do_pca(tf_slr)
-    partition_frames(partitions, tf_slr, 'x_slr')
-    del tf_slr
 
     # lookup file
     lookup = lookup[['slr', 'store', 'meta', 'start_date', \
@@ -352,13 +348,15 @@ if __name__ == "__main__":
     # load events
     events = load_frames('events')
 
-    # delay features
+    # delay start
     print('Creating delay features')
     z_start = events.clock.groupby(
         ['lstg', 'thread']).shift().dropna().astype(np.int64)
     partition_frame(partitions, z_start, 'z_start')
     del z_start
 
+    # delay role
+    tf_lstg = load_frames('tf_lstg')
     for model in ['slr', 'byr']:
         z = get_period_time_feats(tf_lstg, z_start, model)
         partition_frame(partitions, z, 'z_' + model)
