@@ -169,16 +169,16 @@ class SimulatorInterface:
         us_count = torch.nonzero(byr_us).item()
         foreign = us_count < byr_us.shape[0]
         us = us_count > 0
-        x_fixed = self.composer.hist_input(sources=sources, us=us, foreign=foreign)
-        params = self.models[HIST].simulate(x_fixed)
+        x_fixed = self.composer.build_hist_input(sources=sources, us=us, foreign=foreign)
+        model_output = self.models[HIST].simulate(x_fixed)
 
-        params = torch.zeros(byr_us.shape[0], params.shape[1])
+        params = torch.zeros(byr_us.shape[0], model_output.shape[1])
         if foreign and us:
             foreign = byr_us == 0
-            params[foreign, :] = params[0, :]
-            params[~foreign, :] = params[1, :]
+            params[foreign, :] = model_output[0, :]
+            params[~foreign, :] = model_output[1, :]
         else:
-            params[:, :] = params[0, :]
+            params[:, :] = model_output[0, :]
         hists = SimulatorInterface._negative_binomial_sample(params)
         return hists
 

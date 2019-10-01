@@ -4,7 +4,7 @@ from gensim.models import Word2Vec
 
 INPUT_DIR = 'data/raw/'
 OUTPUT_PATH = lambda x: 'data/clean/w2v_' + x + '.csv'
-SIZE = 128
+SIZE = 64
 MIN_COUNT = 100
 
 
@@ -77,7 +77,7 @@ if __name__ == '__main__':
 	# buyer data
 	print('Preparing buyer model')
 	T = pd.read_csv('data/clean/threads.csv', 
-		usecols=[0,2,5]).sort_values(
+		usecols=['lstg', 'byr', 'start_time']).sort_values(
 		['byr', 'start_time', 'lstg']).drop('start_time', axis=1)
 
 	# remove one-listing buyers

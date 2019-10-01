@@ -7,10 +7,6 @@ from sklearn.utils.extmath import cartesian
 import numpy as np, pandas as pd
 from constants import *
 
-LSTG_VARS = ['slr', 'lstg', 'cndtn', 'start_date', 'end_time', \
-    'fdbk_score', 'fdbk_pstv', 'start_price', 'photos', 'slr_lstgs', \
-    'slr_bos', 'decline_price', 'accept_price', 'store', 'slr_us', 'fast']
-
 
 def multiply_indices(s):
     # initialize arrays
@@ -146,10 +142,6 @@ def get_y_seq(x_offer):
 
 
 def get_x_lstg(lstgs):
-    '''
-    Constructs a dataframe of fixed features that are used to initialize the
-    hidden state and the LSTM cell.
-    '''
     # initialize output dataframe with as-is features
     df = lstgs[BINARY_FEATS + COUNT_FEATS]
     # clock features
@@ -181,9 +173,6 @@ def get_x_lstg(lstgs):
 
 
 def get_x_offer(lstgs, events, tf):
-    '''
-    Creates dataframe of offer and time variables.
-    '''
     # vector of offers
     offers = events.price.unstack().join(lstgs.start_price)
     offers = offers.rename({'start_price': 0}, axis=1)
@@ -254,6 +243,66 @@ def get_x_offer(lstgs, events, tf):
     return df
 
 
+def do_pca(df):
+    # standardize variables
+    vals = StandardScaler().fit_transform(df)
+
+    # PCA
+    N = len(df.columns)
+    pca = PCA(n_components=N, svd_solver='full')
+    components = pca.fit_transform(vals)
+
+    # select number of components
+    shares = np.var(components, axis=0) / N
+    keep = 1
+    while np.sum(shares[:keep]) < PCA_CUTOFF:
+        keep += 1
+
+    # return dataframe
+    return pd.DataFrame(components[:,:keep], index=df.index, 
+        columns=['c' + str(i) for i in range(1,keep+1)])
+
+
+def get_w2v(lstgs, role):
+    # read in vectors
+    w2v = pd.read_csv(W2V_PATH(role), index_col=0)
+    # hierarchical join
+    df = pd.DataFrame(np.nan, index=lstgs.index, columns=w2v.columns)
+    for level in ['product', 'leaf', 'meta']:
+        mask = np.isnan(df[role + '0'])
+        idx = mask[mask].index
+        cat = lstgs[level].rename('category').reindex(index=idx).to_frame()
+        df[mask] = cat.join(w2v, on='category').drop('category', axis=1)
+    return df
+
+
+def partition_frame(partitions, df, name):
+    for part, idx in partitions.items():
+        if len(df.columns) == 1:
+            toSave = df.reindex(index=idx)
+        else:
+            toSave = df.reindex(index=idx, level='lstg')
+        dump(toSave, PARTS_DIR + part + '/' + name + '.gz')
+
+
+def partition_lstgs(lstgs):
+    slrs = lstgs['slr'].reset_index().sort_values(
+        by=['slr','lstg']).set_index('slr').squeeze()
+    # randomly order sellers
+    u = np.unique(slrs.index.values)
+    random.seed(SEED)   # set seed
+    np.random.shuffle(u)
+    # partition listings into dictionary
+    d = {}
+    last = 0
+    for key, val in SHARES.items():
+        curr = last + int(u.size * val)
+        d[key] = np.sort(slrs.loc[u[last:curr]].values)
+        last = curr
+    d['test'] = np.sort(slrs.loc[u[last:]].values)
+    return d
+
+
 def load_frames(name):
     # path to file number x
     path = lambda x: FEATS_DIR + str(x) + '_' + name + '.gz'
@@ -267,56 +316,102 @@ def load_frames(name):
 
 
 if __name__ == "__main__":
-    # load dataframes
-    threads = load_frames('threads')
-    events = load_frames('events')
+    # load lstg-level time features
     tf_lstg = load_frames('tf_lstg')
 
     # listings
-    ids = tf_lstg.index
-    lstgs = pd.read_csv(CLEAN_DIR + 'listings.csv', index_col='lstg',
-            usecols=LSTG_VARS).reindex(index=ids)
+    lstgs = pd.read_csv(CLEAN_DIR + 'listings.csv', index_col='lstg').drop(
+        ['title', 'flag'], axis=1).reindex(index=tf_lstg.index)
+    for c in ['meta', 'leaf', 'product']:
+        lstgs[c] = c[0] + lstgs[c].astype(str)
+    mask = lstgs['product'] == 'p0'
+    lstgs.loc[mask, 'product'] = lstgs.loc[mask, 'leaf']
 
-    # delay features
-    print('Creating delay features')
-    z = {}
-    z['start'] = events.clock.groupby(
-        ['lstg', 'thread']).shift().dropna().astype(np.int64)
-    for k, v in INTERVAL.items():
-        print('\t%s' % k)
-        z[k] = get_period_time_feats(tf_lstg, z['start'], k)
-    dump(z, PARTS_DIR + 'z.gz')
+    # partition by seller
+    partitions = partition_lstgs(lstgs)
 
-    # outcome for arrival model
-    print('Creating arrival model outcome variables')
-    y_arrival = get_y_arrival(lstgs, threads)
-    dump(y_arrival, PARTS_DIR + 'y_arrival.gz')
-
-    # role outcome variables
-    print('Creating role outcome variables')
-    y_slr, y_byr = get_y_seq(x_offer)
-    dump(y_slr, PARTS_DIR + 'y_slr.gz')
-    dump(y_byr, PARTS_DIR + 'y_byr.gz')
-
-    # thread features to save
-    print('Creating thread features')
-    x_thread = threads[['byr_us', 'byr_hist']]
-    dump(x_thread, PARTS_DIR + 'x_thread.gz')
-
-    # listing features
-    print('Creating listing features')
-    x_lstg = get_x_lstg(lstgs)
-    dump(x_lstg, PARTS_DIR + 'x_lstg.gz')
-
-    # offer features
-    print('Creating offer features')
-    x_offer = get_x_offer(lstgs, events, tf_lstg)
-    dump(x_offer, PARTS_DIR + 'x_offer.gz')
+    # word2vec
+    w2v = get_w2v(lstgs, 'slr').join(get_w2v(lstgs, 'byr'))
+    partition_frame(partitions, w2v, 'x_w2v')
+    lstgs = lstgs.drop(['meta', 'leaf', 'product'], axis=1)
+    del w2v
 
     #  lookup file
     lookup = lstgs.reset_index().set_index(['slr', 'lstg']).sort_index()
     lookup = lookup[['start_price', 'decline_price', 'accept_price', 'start_date']]
-    dump(lookup, PARTS_DIR + 'lookup.gz')
-    
+    partition_frame(partitions, lookup, 'lookup')
+    del lookup
+
+    # load events
+    events = load_frames('events')
+
+    # delay features
+    print('Creating delay features')
+    z_start = events.clock.groupby(
+        ['lstg', 'thread']).shift().dropna().astype(np.int64)
+    partition_frame(partitions, z_start, 'z_start')
+    del z_start
+
+    for model in ['slr', 'byr']:
+        z = get_period_time_feats(tf_lstg, z_start, model)
+        partition_frame(partitions, z, 'z_' + model)
+        del z
+
+    # offer features
+    print('Creating offer features')
+    x_offer = get_x_offer(lstgs, events, tf_lstg)
+    partition_frames(partitions, x_offer, 'x_offer')
+    del tf_lstg, events
+
+    # role outcome variables
+    print('Creating role outcome variables')
+    y = {}
+    y['slr'], y['byr'] = get_y_seq(x_offer)
+    for model in ['slr', 'byr']:
+        for k, v in y[model].items():
+            partition_frames(partitions, v, '_'.join(['y', model, k]))
+    del x_offer, y
+
+    # load threads
+    threads = load_frames('threads')
+
+    # thread features to save
+    print('Creating thread features')
+    x_thread = threads[['byr_us', 'byr_hist']]
+    partition_frames(partitions, x_thread, 'x_thread')
+
+    # listing features
+    print('Creating listing features')
+    x_lstg = get_x_lstg(lstgs)
+    partition_frames(partitions, x_lstg, 'x_lstg')
+
+    # outcomes for arrival model
+    print('Creating arrival model outcome variables')
+    y_arrival = get_y_arrival(lstgs, threads)
+    for k, v in y_arrival.items():
+        partition_frame(partitions, v, 'y_' + k)
+    del threads, x_thread, x_lstg, y_arrival
+
+    # meta time-valued features
+    print('PCA on meta time-valued features')
+    tf_meta = pd.DataFrame()
+    for i in range(N_META):
+        stub = load(FEATS_DIR + 'm' + str(i) + '_tf_meta.gz')
+        tf_meta = tf_meta.append(stub)
+        del stub
+    tf_meta = tf_meta.reindex(index=lstgs.index)
+    del lstgs
+
+    tf_meta = do_pca(tf_meta)
+    partition_frames(partitions, tf_meta, 'x_meta')
+    del tf_meta
+
+    # slr time-valued features
+    print('PCA on slr time-valued features')
+    tf_slr = load_frames('tf_slr')
+    tf_slr = do_pca(tf_slr)
+    partition_frames(partitions, tf_slr, 'x_slr')
+    del tf_slr
+
 
     

@@ -4,8 +4,12 @@ from pandas.tseries.holiday import USFederalHolidayCalendar as Calendar
 N_CHUNKS = 835
 N_META = 35
 
-# keep PCA components with this share of variance or higher
-PCA_CUTOFF = 0.01
+# for partitioning
+SEED = 123456
+SHARES = {'train_models': 1/3, 'train_rl': 1/3}
+
+# keep PCA components that capture this total variance
+PCA_CUTOFF = 0.9
 
 # count concessions within this range as 1/2
 TOL_HALF = 0.02 

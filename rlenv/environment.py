@@ -40,27 +40,11 @@ class Environment:
         input.h5: h5py file containing a dataset called 'slrs' 1-d np array containing all slr ids
         and a 2-dimensional np.array of lstg features for each slr in datasets named after the slrs
     Attributes:
-        experiment_id: unique experiment id to extract features from experiments.csv
-        time_feats: TimeFeatures Object
-        slr_queues: dictionary mapping slr id to EventQueue object containing all events
-        for that slr
-        input_file: input file
-        slrs: 1-d np.array containing all slr ids
-        params: dictionary containing parameters extracted from experiments.csv
-        thread_counter: integer giving a count of the number of open threads, ensures each
-        thread has a unique id
-        interface: SimulatorInterface object
-        sales: dictionary mapping lstg id to sale
-    Public Functions:
-        iterate_queue: executes a defined number of steps in some slr's queue
-        initialize_slr: initializes the queue of lstgs for a given slr
+        fix shit
+    Public functions:
+        fix
     Private functions:
-        _load_params: loads experiment parameters from experiments.csv
-        _get_event_data: constructs 'data' argument for some given next event
-        _make_offer: constructs the 'offer' input to TimeFeatures update functions
-        _process_delay: executes a delay event
-        _process_offer: executes an offer event
-        _process_arrival: executes an arrival / newItem events
+        fix
     """
     def __init__(self, experiment_id):
         """
@@ -648,8 +632,8 @@ class Environment:
         has participated in in the past
         :return: None (modifies dictionary in place)
         """
-        sources[BYR_US_MAP] = byr_us
-        sources[BYR_HIST_MAP] = byr_hist
+        sources[BYR_US_MAP] = byr_us.unsqueeze(1)
+        sources[BYR_HIST_MAP] = byr_hist.unsqueeze(1)
 
     def _process_sale(self, norm=0, sale_price=None, time=0):
         """

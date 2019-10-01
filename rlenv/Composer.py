@@ -393,10 +393,21 @@ class Composer:
         x = torch.zeros(batch_size, maps[SIZE])
         # other features
         for map_name, curr_map in maps.items():
-            if len(maps[curr_map].shape) == 1:
-                x[:, maps[curr_map]] = sources[curr_map]
-            else:
-                x[:, maps[curr_map][:, 1]] = sources[maps[curr_map[:, 0]]]
+            try:
+                if map_name == SIZE:
+                    continue
+                if len(curr_map.shape) == 1:
+                    x[:, curr_map] = sources[map_name]
+                else:
+                    x[:, curr_map[:, 1]] = sources[map_name][curr_map[:, 0]]
+            except RuntimeError as e:
+                print('NAME')
+                print(e)
+                print(map_name)
+                print('stored map: {}'.format(curr_map))
+                print('stored map size: {}'.format(curr_map.shape))
+                print('sourced map: {}'.format(sources[map_name]))
+                raise RuntimeError()
         return x
 
     def build_input_vector(self, model_name, sources=None, fixed=False, recurrent=False, size=1):
@@ -424,7 +435,7 @@ class Composer:
             x_fixed = None
         return x_fixed, x_time
 
-    def hist_input(self, sources=None, us=False, foreign=False):
+    def build_hist_input(self, sources=None, us=False, foreign=False):
         """
         Returns input tensor for the history model -- requires special logic
         to only compute model outputs for the 2 possible sets of inputs (byr_us = 0 or 1)
@@ -434,11 +445,11 @@ class Composer:
         features the model expects in the input
         :param us: boolean for whether at least one buyer is from the us
         :param foreign: boolean for whether at least one buyer is not from the us
-        :return: 2-dimensional tensor containing model inputs for us buyers in the first
-        row and model inputs for foreign buyers in the second row
+        :return: 2-dimensional tensor containing model inputs for foreign buyers in the first
+        row and model inputs for us buyers in the second row
         """
         if us and foreign:
-            sources[BYR_US_MAP] = torch.tensor([0, 1])
+            sources[BYR_US_MAP] = torch.tensor([[0], [1]]).float()
             size = 2
         else:
             sources[BYR_US_MAP] = (1 if us else 0)
