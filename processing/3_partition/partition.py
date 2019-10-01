@@ -336,7 +336,26 @@ if __name__ == "__main__":
     lstgs = lstgs.drop(['meta', 'leaf', 'product'], axis=1)
     del w2v
 
-    #  lookup file
+    # meta time-valued features
+    print('PCA on meta time-valued features')
+    tf_meta = pd.DataFrame()
+    for i in range(N_META):
+        stub = load(FEATS_DIR + 'm' + str(i) + '_tf_meta.gz')
+        tf_meta = tf_meta.append(stub)
+        del stub
+    tf_meta = tf_meta.reindex(index=lstgs.index)
+    tf_meta = do_pca(tf_meta)
+    partition_frames(partitions, tf_meta, 'x_meta')
+    del tf_meta
+
+    # slr time-valued features
+    print('PCA on slr time-valued features')
+    tf_slr = load_frames('tf_slr')
+    tf_slr = do_pca(tf_slr)
+    partition_frames(partitions, tf_slr, 'x_slr')
+    del tf_slr
+
+    # lookup file
     lookup = lstgs.reset_index().set_index(['slr', 'lstg']).sort_index()
     lookup = lookup[['start_price', 'decline_price', 'accept_price', 'start_date']]
     partition_frame(partitions, lookup, 'lookup')
@@ -390,28 +409,6 @@ if __name__ == "__main__":
     y_arrival = get_y_arrival(lstgs, threads)
     for k, v in y_arrival.items():
         partition_frame(partitions, v, 'y_' + k)
-    del threads, x_thread, x_lstg, y_arrival
-
-    # meta time-valued features
-    print('PCA on meta time-valued features')
-    tf_meta = pd.DataFrame()
-    for i in range(N_META):
-        stub = load(FEATS_DIR + 'm' + str(i) + '_tf_meta.gz')
-        tf_meta = tf_meta.append(stub)
-        del stub
-    tf_meta = tf_meta.reindex(index=lstgs.index)
-    del lstgs
-
-    tf_meta = do_pca(tf_meta)
-    partition_frames(partitions, tf_meta, 'x_meta')
-    del tf_meta
-
-    # slr time-valued features
-    print('PCA on slr time-valued features')
-    tf_slr = load_frames('tf_slr')
-    tf_slr = do_pca(tf_slr)
-    partition_frames(partitions, tf_slr, 'x_slr')
-    del tf_slr
 
 
     

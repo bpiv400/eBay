@@ -659,7 +659,18 @@ def test_byr_delay_fixed(composer):
     sources[O_CLOCK_MAP] = torch.arange(start, tot).float()
     start = tot
     tot += len(TIME_FEATS)
-    
+    sources[O_TIME_MAP] = torch.arange(start, tot).float()
+    sources[L_OUTCOMES_MAP] = torch.tensor([162, 156, 157, 158, 159, 160, 161]).float()
+    start = tot + len(BYR_OUTCOMES)
+    tot = start + len(OFFER_CLOCK_FEATS)
+    sources[L_CLOCK_MAP] = torch.arange(start, tot).float()
+    start = tot
+    tot += len(TIME_FEATS)
+    sources[L_TIME_MAP] = torch.arange(start, tot).float()
+    x_fixed, _ = composer.build_input_vector(model_name, sources=sources, fixed=True,
+                                             recurrent=False, size=1)
+    assert torch.all(torch.eq(targ, x_fixed))
+
 def test_byr_delay_time(composer):
     pass
 
