@@ -142,7 +142,7 @@ if __name__ == "__main__":
     # split off listing events
     #idx = events.reset_index('thread', drop=True).xs(
     #    0, level='index').index
-    tf_slr = tf_slr.reindex(index=idx)
+    #tf_slr = tf_slr.reindex(index=idx)
     events = events.drop(0, level='thread') # remove lstg start/end obs
 
     # split off threads dataframe
