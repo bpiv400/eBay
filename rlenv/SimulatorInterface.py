@@ -134,7 +134,38 @@ class SimulatorInterface:
         return SimulatorInterface.proper_squeeze(dist.sample((sample_size, )))
 
     @staticmethod
-    def _mixed_beta_sample(params, sample_size):
+    def _beta_prep(params):
+        """
+        Reshapes the output of a model that parameterizes a mixed beta
+        distribution to have shape (sample, k, 3) where k gives the number
+        of components in the mixture:
+
+        [i, j, 0] gives alpha for the jth component of the ith sample
+        [i, j, 1] gives beta for the jth component of the ith sample
+        [i, j, 2] gives the mixing coefficient logit for the jth component of the ith sample
+
+        :param params: Same as input to _beta_sample
+        :return:
+        """
+        sample_size = params.shape[0]
+        params = params.reshape(sample_size, 3, -1).permute(0, 2, 1)
+        params[:, :, [0, 1]] = params[:, :, [0, 1]] = torch.exp(params[:, :, [0, 1]]) + 1
+        return params
+
+    @staticmethod
+    def _beta_ancestor(logits):
+        """
+        Makes the categorical distribution that governs the mixture for an
+        arbitrary beta mixture
+
+        :param logits: output of _beta_prep
+        :return: torch.distributions.categorical.Categorical
+        """
+        ancestor = Categorical(logits=logits[:, :, 2])
+        return ancestor
+
+    @staticmethod
+    def _mixed_beta_sample(params):
         """
         Samples a mixed beta distribution parameterized by the first index
         of the params tensor
@@ -142,15 +173,13 @@ class SimulatorInterface:
         :param params: 2-dimensional tensor output by secs model or
         sliced from concession model. The first dimension separates the
         batch members and the second dimension gives parameters for each batch member.
-        In the second dimension, the first k elements correspond to mixing coefficients,
-        the second k elements correspond to alpha, and the third k/3 correspond to beta
-        :param sample_size: size of the batch
+        In the second dimension, the first k elements correspond to to alpha,
+        the second k elements correspond to beta, and the third k correspond to mixing coefficients
         :return: 1-dimensional tensor containing 1 sample for each batch member's dist
         """
         # compute sample
-        params = params.reshape(sample_size, 3, -1).permute(0, 2, 1)
-        params[:, :, [0, 1]] = torch.exp(params[:, :, [0, 1]]) + 1
-        ancestor = Categorical(logits=params[:, :, 2])
+        params = SimulatorInterface._beta_prep(params)
+        ancestor = SimulatorInterface._beta_ancestor(params)
         draws = ancestor.sample(sample_shape=(1,))
         beta_params = params[torch.arange(params.shape[0]), draws[0, :], :]
         beta = Beta(beta_params[:, 0], beta_params[:, 1])
@@ -199,7 +228,7 @@ class SimulatorInterface:
         x_fixed, _ = self.composer.build_input_vector(model_name=LOC, sources=sources,
                                                       fixed=True, recurrent=False, size=1)
         params = self.models[LOC].simulate(x_fixed)
-        locs = SimulatorInterface._bernoulli_sample(params, num_byrs, ff=True)
+        locs = SimulatorInterface._bernoulli_sample(params, num_byrs)
         return locs
 
     def hist(self, sources=None, byr_us=None):
@@ -240,7 +269,7 @@ class SimulatorInterface:
         x_fixed, _ = self.composer.build_input_vector(SEC, sources=sources, recurrent=False,
                                                       size=num_byrs, fixed=True)
         params = self.models[SEC].simulate(x_fixed)
-        times = SimulatorInterface._mixed_beta_sample(params, 1)
+        times = SimulatorInterface._mixed_beta_sample(params)
         return times
 
     def bin(self, sources=None, num_byrs=None):
@@ -282,7 +311,7 @@ class SimulatorInterface:
         params, hidden = self.models[model_name].simulate(x_time, x_fixed=x_fixed, hidden=hidden)
         if not sample:
             return 0, 0, 0, hidden
-        cn = SimulatorInterface._mixed_beta_sample(params[0, :, :], 1)
+        cn = SimulatorInterface._mixed_beta_sample(params[0, :, :])
         # compute norm, split, and cn
         split = 1 if abs(.5 - cn) < TOL_HALF else 0
         # slr norm
@@ -315,5 +344,5 @@ class SimulatorInterface:
         params, hidden = self.models[model_name].simulate(x_time, x_fixed=x_fixed, hidden=hidden)
         samp = 0
         if sample:
-            samp = SimulatorInterface._bernoulli_sample(params[0, 0, :], 1)
+            samp = SimulatorInterface._bernoulli_sample(params[0, :, :], 1)
         return samp, hidden
