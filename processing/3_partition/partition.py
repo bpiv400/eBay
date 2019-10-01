@@ -336,18 +336,6 @@ if __name__ == "__main__":
     lstgs = lstgs.drop(['leaf', 'product'], axis=1)
     del w2v
 
-    # meta time-valued features
-    print('PCA on meta time-valued features')
-    tf_meta = pd.DataFrame()
-    for i in range(N_META):
-        stub = load(FEATS_DIR + 'm' + str(i) + '_tf_meta.gz')
-        tf_meta = tf_meta.append(stub)
-        del stub
-    tf_meta = tf_meta.reindex(index=lstgs.index)
-    tf_meta = do_pca(tf_meta)
-    partition_frames(partitions, tf_meta, 'x_meta')
-    del tf_meta
-
     # slr time-valued features
     print('PCA on slr time-valued features')
     tf_slr = load_frames('tf_slr')
@@ -409,6 +397,17 @@ if __name__ == "__main__":
     y_arrival = get_y_arrival(lstgs, threads)
     for k, v in y_arrival.items():
         partition_frame(partitions, v, 'y_' + k)
+    del threads, y_arrival
 
+    # meta time-valued features
+    print('PCA on meta time-valued features')
+    tf_meta = pd.DataFrame()
+    for i in range(N_META):
+        stub = load(FEATS_DIR + 'm' + str(i) + '_tf_meta.gz')
+        tf_meta = tf_meta.append(stub)
+        del stub
+    tf_meta = tf_meta.reindex(index=lstgs.index)
+    tf_meta = do_pca(tf_meta)
+    partition_frames(partitions, tf_meta, 'x_meta')
 
     
