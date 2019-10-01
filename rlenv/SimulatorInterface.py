@@ -35,6 +35,64 @@ class SimulatorInterface:
         :param model_exp: experiment number for the model
         :return: PyTorch Module
         """
+        err_name = model_name
+        model_dir = SimulatorInterface._model_dir(model_name)
+        paths = SimulatorInterface._input_paths(model_dir, model_exp)
+        params_path, sizes_path, model_path = paths
+        try:
+            sizes = utils.unpickle(sizes_path)
+            params = pd.read_csv(params_path, index_col='id')
+            params = params.loc[model_exp].to_dict()
+            model_type = SimulatorInterface._model_type(model_name)
+            net = model_type(params, sizes)
+            net.load_state_dict(torch.load(model_path))
+        except (RuntimeError, FileNotFoundError) as e:
+            print(e)
+            print('failed for {}'.format(err_name))
+            return None
+        return net
+
+    @staticmethod
+    def _model_type(model_name):
+        """
+        Returns the class of the given model
+
+        :param model_name: str giving the name of the model
+        :return: simulator.nets.RNN, simulator.nets.LSTM, or
+        simulator.nets.FeedForward
+        """
+        if model_name in FEED_FORWARD:
+            mod_type = FeedForward
+        elif model_name in LSTM_MODELS:
+            mod_type = LSTM
+        else:
+            mod_type = RNN
+        return mod_type
+
+    @staticmethod
+    def _input_paths(model_dir, exp):
+        """
+        Helper method that returns the paths to files related to some model, given
+        that model's path and experiment number
+
+        :param model_dir: string giving path to model directory
+        :param exp: int giving integer number of the experiment
+        :return: 3-tuple of params path, sizes path, model path
+        """
+        params_path = '{}params.csv'.format(model_dir)
+        sizes_path = '{}sizes.pkl'.format(model_dir)
+        model_path = '{}{}.pt'.format(model_dir, exp)
+        return params_path, sizes_path, model_path
+
+    @staticmethod
+    def _model_dir(model_name):
+        """
+        Helper method that returns the path to a model's directory, given
+        the name of that model
+
+        :param model_name: str naming model (following naming conventions in rlenv/model_names.py)
+        :return: str
+        """
         # get pathing names
         if SLR_PREFIX in model_name:
             model_type = SLR_PREFIX
@@ -47,20 +105,7 @@ class SimulatorInterface:
 
         model_dir = '{}/{}/{}/'.format(env_consts.MODEL_DIR,
                                        model_type, model_name)
-        model_params_path = '{}params.csv'.format(model_dir)
-        sizes_path = '{}sizes.pkl'.format(model_dir)
-        model_path = '{}{}.pt'.format(model_dir, model_exp)
-        sizes = utils.unpickle(sizes_path)
-        params = pd.from_csv(model_params_path, index_col='id')
-        params = params.loc[model_exp].to_dict()
-        if model_name in FEED_FORWARD:
-            net = FeedForward(params, sizes, toRNN=False)
-        elif model_name in LSTM:
-            net = LSTM(params, sizes)
-        else:
-            net = RNN(params, sizes)
-        net.load_state_dict(torch.load(model_path))
-        return net
+        return model_dir
 
     @staticmethod
     def proper_squeeze(tensor):
@@ -270,5 +315,5 @@ class SimulatorInterface:
         params, hidden = self.models[model_name].simulate(x_time, x_fixed=x_fixed, hidden=hidden)
         samp = 0
         if sample:
-            samp = SimulatorInterface._bernoulli_sample(params[0, :, :], 1)
+            samp = SimulatorInterface._bernoulli_sample(params[0, 0, :], 1)
         return samp, hidden

@@ -133,35 +133,34 @@ if __name__ == "__main__":
 
     # get upper-level time-valued features
     print('Creating hierarchical time features') 
-    #tf_slr = get_cat_time_feats(events, levels)
+    tf_slr = get_cat_time_feats(events, levels)
 
     # drop flagged lstgs
     print('Restricting observations')
     events = clean_events(events, L)
 
     # split off listing events
-    #idx = events.reset_index('thread', drop=True).xs(
-    #    0, level='index').index
-    #tf_slr = tf_slr.reindex(index=idx)
+    idx = events.reset_index('thread', drop=True).xs(
+        0, level='index').index
+    tf_slr = tf_slr.reindex(index=idx)
     events = events.drop(0, level='thread') # remove lstg start/end obs
 
     # split off threads dataframe
     events = events.join(T[['byr_hist', 'byr_us']])
-    #threads = events[['clock', 'byr_us', 'byr_hist', 'bin']].xs(
-    #    1, level='index')
+    threads = events[['clock', 'byr_us', 'byr_hist', 'bin']].xs(
+        1, level='index')
     events = events.drop(['byr_us', 'byr_hist', 'bin'], axis=1)
 
     # exclude current thread from byr_hist
-    #threads['byr_hist'] -= (1-threads.bin)
+    threads['byr_hist'] -= (1-threads.bin)
 
     # create lstg-level time-valued features
     print('Creating lstg-level time-valued features')
     events['norm'] = events.price / events.start_price
     events.loc[~events['byr'], 'norm'] = 1 - events['norm']
     tf_lstg = get_lstg_time_feats(events)
-    #events = events.drop(['byr', 'norm'], axis=1)
-    dump(tf_lstg, filename('tf_lstg'))
+    events = events.drop(['byr', 'norm'], axis=1)
 
     # save separately
-    #for name in ['events', 'threads', 'tf_lstg', 'tf_slr']:
-    #    dump(globals()[name], filename(name))
+    for name in ['events', 'threads', 'tf_lstg', 'tf_slr']:
+        dump(globals()[name], filename(name))

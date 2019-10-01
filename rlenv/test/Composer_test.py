@@ -688,6 +688,7 @@ def test_byr_delay_time(composer):
                                             recurrent=True, size=1)
     assert torch.all(torch.eq(targ, x_time))
 
+
 def test_slr_delay_fixed(composer):
     model_name = model_str(DELAY, byr=False)
     feats = load_featnames(SLR_PREFIX, DELAY)['x_fixed']

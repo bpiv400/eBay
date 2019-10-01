@@ -1,2 +1,2 @@
-﻿id,days,loc,hist,sec,bin,slr_accept,byr_accept,byr_round,slr_round,byr_nines,slr_nines,slr_msg,byr_msg,slr_con,byr_con,byr_us,byr_hist,n,lstg_dur,RLPARAMS
-1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,15,10,12,NOPARAMSYET
+﻿id,days,loc,hist,sec,bin,slr_accept,byr_accept,slr_reject,byr_reject,byr_round,slr_round,byr_nines,slr_nines,slr_msg,byr_msg,slr_cn,byr_cn,byr_delay,slr_delay,n,lstg_dur,composer,RLPARAMS
+1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,10,12,1,NOPARAMSYET

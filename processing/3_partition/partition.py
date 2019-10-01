@@ -1,6 +1,6 @@
 import sys
 sys.path.append('repo/')
-import argparse
+import argparse, random
 from compress_pickle import load, dump
 from datetime import datetime as dt
 from sklearn.utils.extmath import cartesian
