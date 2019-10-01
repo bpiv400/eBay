@@ -333,7 +333,7 @@ if __name__ == "__main__":
     # word2vec
     w2v = get_w2v(lstgs, 'slr').join(get_w2v(lstgs, 'byr'))
     partition_frame(partitions, w2v, 'x_w2v')
-    lstgs = lstgs.drop(['meta', 'leaf', 'product'], axis=1)
+    lstgs = lstgs.drop(['leaf', 'product'], axis=1)
     del w2v
 
     # meta time-valued features
@@ -356,8 +356,8 @@ if __name__ == "__main__":
     del tf_slr
 
     # lookup file
-    lookup = lstgs.reset_index().set_index(['slr', 'lstg']).sort_index()
-    lookup = lookup[['start_price', 'decline_price', 'accept_price', 'start_date']]
+    lookup = lookup[['slr', 'store', 'meta', 'start_date', \
+        'start_price', 'decline_price', 'accept_price']]
     partition_frame(partitions, lookup, 'lookup')
     del lookup
 

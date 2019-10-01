@@ -671,11 +671,68 @@ def test_byr_delay_fixed(composer):
                                              recurrent=False, size=1)
     assert torch.all(torch.eq(targ, x_fixed))
 
+
 def test_byr_delay_time(composer):
-    pass
+    model_name = model_str(DELAY, byr=True)
+    feats = load_featnames(BYR_PREFIX, DELAY)['x_time']
+    targ = torch.arange(len(feats)).float()
+    sources = dict()
+    sources[PERIODS_MAP] = 0
+    start = 1
+    tot = start + len(DELAY_CLOCK_FEATS)
+    sources[CLOCK_MAP] = torch.arange(start, tot).float()
+    start = tot
+    tot += len(TIME_FEATS)
+    sources[TIME_MAP] = torch.arange(start, tot).float()
+    _, x_time = composer.build_input_vector(model_name, sources=sources, fixed=False,
+                                            recurrent=True, size=1)
+    assert torch.all(torch.eq(targ, x_time))
 
 def test_slr_delay_fixed(composer):
-    pass
+    model_name = model_str(DELAY, byr=False)
+    feats = load_featnames(SLR_PREFIX, DELAY)['x_fixed']
+    targ = torch.arange(len(feats)).float()
+    sources = dict()
+    start = 0
+    tot = len(SLR_TURN_INDS)
+    sources[TURN_IND_MAP] = torch.arange(start, tot).float()
+    start = 2
+    tot += len(LSTG_COLS)
+    sources[LSTG_MAP] = torch.arange(start, tot).float()
+    start = tot
+    tot += len(BYR_ATTRS)
+    sources[BYR_ATTR_MAP] = torch.arange(start, tot).float()
+    sources[O_OUTCOMES_MAP] = torch.tensor([134, 128, 129, 130, 131, 132, 133]).float()
+    start = tot + len(BYR_OUTCOMES)
+    tot = start + len(OFFER_CLOCK_FEATS)
+    sources[O_CLOCK_MAP] = torch.arange(start, tot).float()
+    start = tot
+    tot += len(TIME_FEATS)
+    sources[O_TIME_MAP] = torch.arange(start, tot).float()
+    sources[L_OUTCOMES_MAP] = torch.tensor([159, 152, 153, 155, 156, 157, 158, 160, 154, 161]).float()
+    start = tot + len(SLR_OUTCOMES)
+    tot = start + len(OFFER_CLOCK_FEATS)
+    sources[L_CLOCK_MAP] = torch.arange(start, tot).float()
+    start = tot
+    tot += len(TIME_FEATS)
+    sources[L_TIME_MAP] = torch.arange(start, tot).float()
+    x_fixed, _ = composer.build_input_vector(model_name, sources=sources, fixed=True,
+                                             recurrent=False, size=1)
+    assert torch.all(torch.eq(targ, x_fixed))
+
 
 def test_slr_delay_time(composer):
-    pass
+    model_name = model_str(DELAY, byr=False)
+    feats = load_featnames(SLR_PREFIX, DELAY)['x_time']
+    targ = torch.arange(len(feats)).float()
+    sources = dict()
+    sources[PERIODS_MAP] = 0
+    start = 1
+    tot = start + len(DELAY_CLOCK_FEATS)
+    sources[CLOCK_MAP] = torch.arange(start, tot).float()
+    start = tot
+    tot += len(TIME_FEATS)
+    sources[TIME_MAP] = torch.arange(start, tot).float()
+    _, x_time = composer.build_input_vector(model_name, sources=sources, fixed=False,
+                                            recurrent=True, size=1)
+    assert torch.all(torch.eq(targ, x_time))
