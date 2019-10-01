@@ -4,8 +4,19 @@ import argparse, random
 from compress_pickle import load, dump
 from datetime import datetime as dt
 from sklearn.utils.extmath import cartesian
+from sklearn.decomposition import PCA
+from sklearn.preprocessing import StandardScaler
 import numpy as np, pandas as pd
 from constants import *
+
+
+def do_rounding(offer):
+    digits = np.ceil(np.log10(offer.clip(lower=0.01)))
+    factor = 5 * np.power(10, digits-3)
+    diff = np.round(offer / factor) * factor - offer
+    is_round = diff == 0
+    is_nines = (diff > 0) & (diff <= factor / 5)
+    return is_round, is_nines
 
 
 def multiply_indices(s):
@@ -174,15 +185,12 @@ def get_x_lstg(lstgs):
 
 def get_x_offer(lstgs, events, tf):
     # vector of offers
-    offers = events.price.unstack().join(lstgs.start_price)
-    offers = offers.rename({'start_price': 0}, axis=1)
-    offers = offers.rename_axis('index', axis=1).stack().sort_index()
+    offers = lstgs[['start_price']].join(events.price.unstack())
+    offers = offers.rename({'start_price': 0}, axis=1).rename_axis(
+        'index', axis=1)
     # initialize output dataframe
-    df = pd.DataFrame(index=offers.index)
-    # concession DEBUG
-    offers = events.price.drop(0, level='thread').unstack().join(
-        L.start_price)
-    offers = offers.rename({'start_price': 0}, axis=1)
+    df = pd.DataFrame(index=offers.stack().index)
+    # concession
     con = pd.DataFrame(index=offers.index)
     con[0] = 0
     con[1] = offers[1] / offers[0]
@@ -196,7 +204,7 @@ def get_x_offer(lstgs, events, tf):
     mask = events.index.isin(IDX['slr'], level='index')
     df.loc[mask, 'norm'] = 1 - df.loc[mask, 'norm']
     # offer digits
-    df['round'], df['nines'] = do_rounding(offers)
+    df['round'], df['nines'] = do_rounding(offers.stack())
     # message
     df['msg'] = events.message.reindex(
         df.index, fill_value=0).astype(np.bool)
@@ -275,7 +283,7 @@ def get_w2v(lstgs, role):
 
 def partition_frame(partitions, df, name):
     for part, idx in partitions.items():
-        if len(df.columns) == 1:
+        if len(df.index.names) == 1:
             toSave = df.reindex(index=idx)
         else:
             toSave = df.reindex(index=idx, level='lstg')
@@ -330,7 +338,7 @@ if __name__ == "__main__":
     # slr time-valued features
     print('PCA on slr time-valued features')
     tf_slr = do_pca(tf_slr)
-    partition_frames(partitions, tf_slr, 'x_slr')
+    partition_frame(partitions, tf_slr, 'x_slr')
     del tf_slr
 
     # word2vec
@@ -340,10 +348,9 @@ if __name__ == "__main__":
     del w2v
 
     # lookup file
-    lookup = lookup[['slr', 'store', 'meta', 'start_date', \
+    lookup = lstgs[['slr', 'store', 'meta', 'start_date', \
         'start_price', 'decline_price', 'accept_price']]
     partition_frame(partitions, lookup, 'lookup')
-    del lookup
 
     # load events
     events = load_frames('events')
@@ -365,7 +372,7 @@ if __name__ == "__main__":
     # offer features
     print('Creating offer features')
     x_offer = get_x_offer(lstgs, events, tf_lstg)
-    partition_frames(partitions, x_offer, 'x_offer')
+    partition_frame(partitions, x_offer, 'x_offer')
     del tf_lstg, events
 
     # role outcome variables
@@ -374,7 +381,7 @@ if __name__ == "__main__":
     y['slr'], y['byr'] = get_y_seq(x_offer)
     for model in ['slr', 'byr']:
         for k, v in y[model].items():
-            partition_frames(partitions, v, '_'.join(['y', model, k]))
+            partition_frame(partitions, v, '_'.join(['y', model, k]))
     del x_offer, y
 
     # load threads
@@ -382,8 +389,8 @@ if __name__ == "__main__":
 
     # thread features to save
     print('Creating thread features')
-    x_thread = threads[['byr_us', 'byr_hist']]
-    partition_frames(partitions, x_thread, 'x_thread')
+    partition_frames(partitions, 
+        threads[['byr_us', 'byr_hist']], 'x_thread')
 
     # listing features
     print('Creating listing features')
