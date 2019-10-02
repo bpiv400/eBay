@@ -4,7 +4,7 @@ from gensim.models import Word2Vec
 
 INPUT_DIR = 'data/raw/'
 OUTPUT_PATH = lambda x: 'data/clean/w2v_' + x + '.csv'
-SIZE = 64
+SIZE = 32
 MIN_COUNT = 100
 
 

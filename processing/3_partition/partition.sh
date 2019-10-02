@@ -1,6 +1,6 @@
 #!/bin/bash
 #$ -q all.q
-#$ -l m_mem_free=250G
+#$ -l m_mem_free=150G
 #$ -N partition
 #$ -j y
 #$ -o logs/

@@ -19,6 +19,14 @@ def do_rounding(offer):
     return is_round, is_nines
 
 
+def extract_day_feats(clock):
+    df = pd.DataFrame(index=clock.index)
+    df['holiday'] = clock.dt.date.astype('datetime64').isin(HOLIDAYS)
+    for i in range(6):
+        df['dow' + str(i)] = clock.dt.dayofweek == i
+    return df
+
+
 def multiply_indices(s):
     # initialize arrays
     k = len(s.index.names)
@@ -154,9 +162,8 @@ def get_y_seq(x_offer):
 
 def get_x_lstg(lstgs):
     # initialize output dataframe with as-is features
-    df = lstgs[BINARY_FEATS + COUNT_FEATS]
+    df = lstgs[BINARY_FEATS + COUNT_FEATS + ['start_date']]
     # clock features
-    df['start_days'] = lstgs.start_date
     clock = pd.to_datetime(lstgs.start_date, unit='D', origin=START)
     df = df.join(extract_day_feats(clock))
     # slr feedback
@@ -256,7 +263,7 @@ def do_pca(df):
     vals = StandardScaler().fit_transform(df)
     # PCA
     N = len(df.columns)
-    pca = PCA(n_components=N, svd_solver='full')
+    pca = PCA(n_components=N, svd_solver='randomized')
     components = pca.fit_transform(vals)
     # select number of components
     shares = np.var(components, axis=0) / N
@@ -351,6 +358,7 @@ if __name__ == "__main__":
     lookup = lstgs[['slr', 'store', 'meta', 'start_date', \
         'start_price', 'decline_price', 'accept_price']]
     partition_frame(partitions, lookup, 'lookup')
+    lstgs = lstgs.drop(['slr', 'meta'], axis=1)
 
     # load events
     events = load_frames('events')
@@ -360,14 +368,13 @@ if __name__ == "__main__":
     z_start = events.clock.groupby(
         ['lstg', 'thread']).shift().dropna().astype(np.int64)
     partition_frame(partitions, z_start, 'z_start')
-    del z_start
 
     # delay role
     tf_lstg = load_frames('tf_lstg')
     for model in ['slr', 'byr']:
         z = get_period_time_feats(tf_lstg, z_start, model)
         partition_frame(partitions, z, 'z_' + model)
-        del z
+    del z, z_start
 
     # offer features
     print('Creating offer features')
@@ -389,13 +396,13 @@ if __name__ == "__main__":
 
     # thread features to save
     print('Creating thread features')
-    partition_frames(partitions, 
+    partition_frame(partitions, 
         threads[['byr_us', 'byr_hist']], 'x_thread')
 
     # listing features
     print('Creating listing features')
     x_lstg = get_x_lstg(lstgs)
-    partition_frames(partitions, x_lstg, 'x_lstg')
+    partition_frame(partitions, x_lstg, 'x_lstg')
 
     # outcomes for arrival model
     print('Creating arrival model outcome variables')
@@ -413,6 +420,6 @@ if __name__ == "__main__":
         del stub
     tf_meta = tf_meta.reindex(index=lstgs.index)
     tf_meta = do_pca(tf_meta)
-    partition_frames(partitions, tf_meta, 'x_meta')
+    partition_frame(partitions, tf_meta, 'x_meta')
 
     

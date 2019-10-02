@@ -101,3 +101,10 @@ def test_beta_prep_multiple_sample_multiple_mixture():
     assert list(trans.shape) == list(expect.shape)
     assert torch.all(torch.lt(torch.abs(torch.add(expect, -trans)), 1e-6))
     assert torch.all(torch.lt(torch.abs(torch.add(expect[0, :, :], -first_samp)), 1e-6))
+
+
+def test_beta_cat_singleton_sample_single_mixture():
+    params = torch.tensor([[1.2, 1.3, 2]]).float()
+    trans = SimulatorInterface._beta_prep(params)
+    cat = SimulatorInterface._beta_ancestor(trans)
+    print('logits: {}'.format(cat.logits))
