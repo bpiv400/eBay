@@ -9,7 +9,7 @@ from utils import *
 
 
 # Converts data frames to tensors sorted (descending) by N_turns.
-def convert_to_tensors(d):
+def convert_to_arrays(d):
     # for feed-forward networks
     if 'x_time' not in d:
         d['x_fixed'] = torch.tensor(d['x_fixed'].reindex(

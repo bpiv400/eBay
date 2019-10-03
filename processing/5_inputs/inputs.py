@@ -1,27 +1,28 @@
 import numpy as np, pandas as pd
 import torch, argparse, sys
 from compress_pickle import load, dump
+
 sys.path.append('repo/')
 from constants import *
 from utils import *
-sys.path.append('repo/processing/4_tensors/')
+
+sys.path.append('repo/processing/4_inputs/')
 from parsing_funcs import *
 
 
 # loads data and calls helper functions to construct training inputs
-def process_inputs(partition, model, outcome):
+def process_inputs(part, model, outcome):
 	# initialize output dictionary and size dictionary
 	d = {}
 
 	# path name function
-	getPath = lambda names: \
-		PARTS_DIR + partition + '/' + '_'.join(names) + '.gz'
+	getPath = lambda names: '%s/%s/%s.gz' % (PARTS_DIR, part, '_'.join(names))
 
 	# outcome
 	d['y'] = load(getPath(['y', model, outcome]))
 
 	# fixed features
-	x_lstg = cat_x_lstg(partition)
+	x_lstg = cat_x_lstg(part)
 
     # other input variables
 	x_thread = load(getPath(['x', 'thread']))
@@ -53,7 +54,7 @@ def process_inputs(partition, model, outcome):
     # dictionary of feature names
 	featnames = {k: v.columns for k, v in d.items() if k.startswith('x')}
 
-	return convert_to_tensors(d), featnames
+	return convert_to_arrays(d), featnames
 
 
 def get_sizes(model, outcome, data):

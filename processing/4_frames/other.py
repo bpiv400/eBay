@@ -13,21 +13,42 @@ sys.path.append('repo/processing/')
 from processing_utils import *
 
 
+def multiply_indices(s):
+    # initialize arrays
+    k = len(s.index.names)
+    arrays = np.zeros((s.sum(),k+1), dtype=np.int64)
+    count = 0
+    # outer loop: range length
+    for i in range(1, max(s)+1):
+        index = s.index[s == i].values
+        if len(index) == 0:
+            continue
+        # cartesian product of existing level(s) and period
+        if k == 1:
+            f = lambda x: cartesian([[x], list(range(i))])
+        else:
+            f = lambda x: cartesian([[e] for e in x] + [list(range(i))])
+        # inner loop: rows of period
+        for j in range(len(index)):
+            arrays[count:count+i] = f(index[j])
+            count += i
+    # convert to multi-index
+    return pd.MultiIndex.from_arrays(np.transpose(arrays), 
+        names=s.index.names + ['period'])
+
+
 def parse_days(diff, t0, t1):
     # count of arrivals by day
     days = diff.dt.days.rename('period').to_frame().assign(count=1)
-    days = days.groupby(['lstg', 'period']).sum().squeeze()
+    days = days.groupby(['lstg', 'period']).sum().squeeze().astype(np.uint8)
     # end of listings
     T1 = int((pd.to_datetime(END) - pd.to_datetime(START)).total_seconds())
     t1[t1 > T1] = T1
     end = (pd.to_timedelta(t1 - t0, unit='s').dt.days).rename('period')
-    # append end to days with count of 0
-    end = end.to_frame().assign(count=0).set_index(
-        'period', append=True).squeeze()
-    days = days.append(end).sort_index()
-    # replace censoring threshold with max of count
-    days = days.groupby(days.index.names).max()
-    return days
+    # create multi-index from end stamps
+    idx = multiply_indices(end+1)
+    # expand to new index and return
+    return days.reindex(index=idx, fill_value=0).sort_index()
 
 
 def get_y_arrival(lstgs, threads):
@@ -87,8 +108,13 @@ def parse_delay(df):
         level='index')] *= INTERVAL_COUNTS['byr']
     period.loc[period.index.isin([7], 
         level='index')] *= INTERVAL_COUNTS['byr_7']
-    period = period.astype(np.int64)
-    return period
+    period = period.astype(np.uint8)
+    # create multi-index from number of periods
+    idx = multiply_indices(period+1)
+    # expand to new index and return
+    arrival = ~df[['exp']].join(period).set_index(
+        'period', append=True).squeeze()
+    return arrival.reindex(index=idx, fill_value=False).sort_index()
 
 
 def get_y_seq(x_offer):
