@@ -84,7 +84,6 @@ if __name__ == "__main__":
     lstgs = pd.read_csv(CLEAN_DIR + 'listings.csv').drop(
         ['title', 'flag'], axis=1).set_index('lstg').reindex(index=idx)
     threads = load_frames('threads').reindex(index=idx, level='lstg')
-    events = load_frames('events').reindex(index=idx, level='lstg')
 
     # outcomes for arrival model
     print('Creating arrival model outcome variables')
