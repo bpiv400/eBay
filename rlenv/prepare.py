@@ -1,35 +1,32 @@
 """
 prepare.py
 
-Prepares input for environment by pulling lstg data out of
-train_rl/x_lstg.pkl and storing it in a .hdf5 file called
-x_lstg.hdf5.
-
-x_lstg contains:
-'lstg': matrix
-Stores dictionary mapping column names to col position in lstg.hdf5
-
+Prepares input file for the environment in relevant partition subdirectory
 """
-import pandas
 import pickle
+import compress_pickle as cp
 import h5py
-from utils import unpickle
-from rlenv.env_consts import LSTG_FILENAME, FIXED_COLS_FILENAME
-# constants
-INPUT_PATH = 'data/partitions/train_rl/x_lstg.pkl'
+from utils import cat_x_lstg
+from rlenv.env_consts import (PARTITION, DATA_DIR, LOOKUP_FILENAME,
+                              X_LSTG_FILENAME, X_LSTG, LOOKUP, LOOKUP_COLS_FILENAME,
+                              ACC_PRICE, DEC_PRICE, START_PRICE)
 
 
 def main():
-    x = unpickle(INPUT_PATH)
-    column_dict = dict()
-    for i, col in enumerate(x.columns):
-        column_dict[col] = i
-    pickle.dump(column_dict, open(FIXED_COLS_FILENAME, 'wb'))
-    f = h5py.File(LSTG_FILENAME, 'w')
-    lstg = f.create_dataset('lstg', shape=x.shape, dtype='float64')
-    x = x.to_numpy()
-    x = x.astype('float64')
-    lstg[:, :] = x
+    x_lstg = cat_x_lstg(PARTITION)
+    x_lstg = x_lstg.to_numpy().astype('float64')
+
+    lookup = cp.load('{}{}'.format(DATA_DIR, LOOKUP_FILENAME))
+    lookup.reset_index(drop=False, inplace=True)
+    cols = {col: i for i, col in enumerate(list(lookup.columns))}
+    pickle.dump(cols, open(LOOKUP_COLS_FILENAME, 'wb'))
+    lookup[ACC_PRICE] = lookup[ACC_PRICE] / lookup[START_PRICE]
+    lookup[DEC_PRICE] = lookup[DEC_PRICE] / lookup[START_PRICE]
+    lookup = lookup.to_numpy().astype('float64')
+
+    f = h5py.File(X_LSTG_FILENAME, 'w')
+    f.create_dataset(X_LSTG, shape=x_lstg.shape, dtype='float64', data=x_lstg)
+    f.create_dataset(LOOKUP, shape=lookup.shape, dtype='float64', data=lookup)
     f.close()
 
 

@@ -1,5 +1,9 @@
 from pandas.tseries.holiday import USFederalHolidayCalendar as Calendar
 
+# strings for referencing quantities related to buyer and seller models
+SLR_PREFIX = 'slr'
+BYR_PREFIX = 'byr'
+
 # number of chunks for preprocessing
 N_CHUNKS = 835
 N_META = 35
@@ -22,15 +26,15 @@ LR = 1e-4
 # dropout rate
 DROPOUT = 0.5
 
+# device
+DEVICE = 'cuda.001'
+
 # paths and directories
 CLEAN_DIR = 'data/clean/'
-DATA_PATH = 'data/partitions/'
 CHUNKS_DIR = 'data/chunks/'
 FEATS_DIR = 'data/feats/'
-PCA_DIR = 'data/pca/'
 PARTS_DIR = 'data/partitions/'
 MODEL_DIR = 'models/'
-EXP_PATH = 'repo/simulator/experiments/'
 W2V_PATH = lambda x: 'data/clean/w2v_' + x + '.csv'
 
 # model directories
@@ -55,19 +59,22 @@ MODEL_DIRS = ['arrival/days/',
 		  	  'slr/nines/']
 
 # maximal delay times
-MAX_DELAY = {'slr': 2 * 24 * 3600, 'byr': 14 * 24 * 3600}
-
-# censoring threshold for days model
-MAX_DAYS = 30
+MAX_DELAY = {
+	SLR_PREFIX: 2 * 24 * 3600,
+	BYR_PREFIX: 14 * 24 * 3600
+}
 
 # intervals for checking byr and offer arrivals
-INTERVAL = {'slr': 15 * 60, 'byr': 3 * 60 * 60}
+INTERVAL = {
+	SLR_PREFIX: 15 * 60,
+	BYR_PREFIX: 3 * 60 * 60
+}
 
 INTERVAL_COUNTS = {
-					'slr': MAX_DELAY['slr'] / INTERVAL['slr'],
-					'byr': MAX_DELAY['byr'] / INTERVAL['byr'],
-					'byr_7': MAX_DELAY['slr'] / INTERVAL['byr']
-				}
+	SLR_PREFIX: MAX_DELAY[SLR_PREFIX] / INTERVAL[SLR_PREFIX],
+	BYR_PREFIX: MAX_DELAY[BYR_PREFIX] / INTERVAL[BYR_PREFIX],
+	'{}_7'.format(BYR_PREFIX): MAX_DELAY[SLR_PREFIX] / INTERVAL[BYR_PREFIX]
+}
 
 # organizing hierarchy
 LEVELS = ['slr', 'meta', 'leaf', 'product', 'title', 'cndtn', 'lstg']
@@ -80,7 +87,10 @@ COUNT_FEATS = ['photos', 'slr_bos', 'slr_lstgs', 'fdbk_score']
 ARRIVAL_MODELS = ['days', 'loc', 'hist', 'bin', 'sec', 'msg', 'con', 'round', 'nines']
 
 # indices for byr and slr offers
-IDX = {'byr': [1, 3, 5, 7], 'slr': [2, 4, 6]}
+IDX = {
+	BYR_PREFIX: [1, 3, 5, 7],
+	SLR_PREFIX: [2, 4, 6]
+}
 
 # date range and holidays
 START = '2012-06-01 00:00:00'
@@ -89,3 +99,4 @@ HOLIDAYS = Calendar().holidays(start=START, end=END)
 
 # quantiles of accept_norm distribution
 QUANTILES = [0.25, 0.5, 0.75, 1]
+

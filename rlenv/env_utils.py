@@ -2,7 +2,7 @@
 Utility functions for use in objects related to the RL environment
 """
 import utils
-from rlenv.model_names import *
+from constants import SLR_PREFIX, BYR_PREFIX
 from rlenv.env_consts import MODEL_DIR
 
 

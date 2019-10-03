@@ -2,6 +2,7 @@ import sys
 sys.path.append('repo/')
 sys.path.append('repo/simulator/')
 import os, pickle, argparse
+from compress_pickle import load, dump
 import torch
 import numpy as np, pandas as pd
 from datetime import datetime as dt
@@ -41,7 +42,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     # model folder
-    folder = MODEL_DIR + args.model + '/' + args.outcome + '/' 
+    folder = MODEL_DIR + args.model + '/' + args.outcome + '/'
 
     # load inputs to model
     print('Loading model inputs')

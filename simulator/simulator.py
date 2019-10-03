@@ -23,8 +23,8 @@ class Simulator:
         # save parameters from inputs
         self.model = model
         self.outcome = outcome
-        self.isRecurrent = (model != 'arrival') or (outcome == 'days')
-        self.isLSTM = outcome in ['days', 'delay']
+        self.isRecurrent = model != 'arrival'
+        self.isLSTM = outcome == 'delay'
         self.EM = outcome in ['sec', 'con']
 
         # parameters and loss function
@@ -57,7 +57,8 @@ class Simulator:
 
         # prediction using net
         if self.isRecurrent:
-            x_time = rnn.pack_padded_sequence(data['x_time'], data['turns'])
+            x_time = rnn.pack_padded_sequence(
+                data['x_time'], data['turns'])
             theta = self.net(data['x_fixed'], x_time)
         else:
             theta = self.net(data['x_fixed'])
@@ -74,7 +75,8 @@ class Simulator:
                 loss, data['omega'][mask] = self.loss(
                     theta, data['y'], data['omega'][mask])
             else:
-                loss, data['omega'] = self.loss(theta, data['y'], data['omega'])
+                loss, data['omega'] = self.loss(
+                    theta, data['y'], data['omega'])
             return loss, data['omega']
         else: 
             return self.loss(theta, data['y'])  
@@ -91,10 +93,11 @@ class Simulator:
             # zero gradient
             self.optimizer.zero_grad()
 
-            # index data
+            # subset to minibatch
             idx = torch.tensor(np.sort(indices[i]))
             data = {}
-            data['x_fixed'] = torch.index_select(self.train['x_fixed'], -2, idx)
+            data['x_fixed'] = torch.index_select(
+                self.train['x_fixed'], -2, idx)
             data['y'] = torch.index_select(self.train['y'], -1, idx)
             if self.isRecurrent:
                 data['x_time'] = self.train['x_time'][:,idx,:]

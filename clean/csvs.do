@@ -12,7 +12,7 @@ export delim lstg-message using clean/offers.csv, dataf replace
 
 use dta/threads, clear
 
-drop end_time flag bin
+drop end_time flag
 format %9.0f start_time
 replace start_time = ///
 	(start_time - clock("01jun2012 00:00:00","DMYhms")) / 1000

@@ -8,9 +8,8 @@ import utils
 from rlenv.model_names import *
 from rlenv.Composer import Composer
 from rlenv import env_consts
-from rlenv.env_utils import model_str
 from simulator.nets import FeedForward, RNN, LSTM
-from constants import TOL_HALF
+from constants import TOL_HALF, SLR_PREFIX, BYR_PREFIX
 
 
 class SimulatorInterface:

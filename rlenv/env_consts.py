@@ -1,4 +1,5 @@
 from utils import unpickle
+from constants import MODEL_DIR, PARTS_DIR
 import torch
 
 # time feats
@@ -30,21 +31,21 @@ BYR_OUTCOMES = ['delay', 'con', 'norm', 'split', 'round', 'nines', 'msg']
 SLR_TURN_INDS = ['t1', 't2']
 BYR_TURN_INDS = SLR_TURN_INDS + ['t3']
 
+# dataset dictionary keys
+X_LSTG = 'x_lstg'
+LOOKUP = 'lookup'
 
 # filenames
-DATA_DIR = 'data/partitions/train_rl'
-MODEL_DIR = 'models'
-COMPOSER_DIR = '{}/composer'.format(MODEL_DIR)
-LSTG_FILENAME = '{}/lstg.h5df'.format(DATA_DIR)
-FIXED_COLS_FILENAME = '{}/x_lstg_cols.pkl'.format(DATA_DIR)
+PARTITION = 'train_rl'
+DATA_DIR = '{}{}/'.format(PARTS_DIR, PARTITION)
+X_LSTG_FILENAME = '{}{}.hdf5'.format(DATA_DIR, X_LSTG)
+COMPOSER_DIR = '{}composer'.format(MODEL_DIR)
 EXPERIMENT_PATH = 'repo/rlenv/experiments.csv'
 FEATNAMES_FILENAME = 'featnames.pkl'
 SIZES_FILENAME = 'sizes.pkl'
-LSTG_COLS = unpickle(FIXED_COLS_FILENAME)
+LOOKUP_FILENAME = 'lookup.gz'
+LOOKUP_COLS_FILENAME = '{}lookup_cols.pkl'.format(DATA_DIR)
 
-# meta feats
-META_7 = [LSTG_COLS[meta] for meta in ['meta21', 'meta10']]
-META_6 = [LSTG_COLS[meta] for meta in ['meta32', 'meta14', 'meta11', 'meta7', 'meta28']]
 
 # clock feats
 DAYS_CLOCK_FEATS = ['days', 'holiday', 'dow0', 'dow1', 'dow2', 'dow3', 'dow4', 'dow5']
@@ -52,7 +53,6 @@ FF_CLOCK_FEATS = ['focal_{}'.format(feat) for feat in DAYS_CLOCK_FEATS]
 OFFER_CLOCK_FEATS = DAYS_CLOCK_FEATS + ['minutes']
 # remove when Etan adds days to delay model cock
 DELAY_CLOCK_FEATS = [feat for feat in OFFER_CLOCK_FEATS if feat != 'days']
-
 
 # temporal constants
 MONTH = 30 * 24 * 3600
@@ -81,19 +81,13 @@ L_CLOCK_MAP = 'last_clock'
 L_OUTCOMES_MAP = 'last_outcomes'
 L_TIME_MAP = 'last_time'
 
-# start map
-START_CLOCK_MAP = [LSTG_COLS[clock_feat] for
-                   clock_feat in DAYS_CLOCK_FEATS if clock_feat != 'days']
-
 # zero vectors
+# TODO: check whether there are similar outcome vectors
 ZERO_SLR_OUTCOMES = torch.zeros(len(SLR_OUTCOMES))
 ZERO_SLR_OUTCOMES[[7, 8]] = 1
 
-
 # remove when Etan adds days to delay model cock
 DELAY_CLOCK_ZEROS = torch.zeros(len(DELAY_CLOCK_FEATS))
-
-
 
 BYR_ATTRS = ['byr_us', 'byr_hist']
 FIXED = 'fixed'
@@ -103,7 +97,6 @@ TIME = 'time'
 SIM_COUNT = 'n'
 RELIST_COUNT = 'lstg_dur'
 
-
 # fee constants
 ANCHOR_STORE_INSERT = .03
 
@@ -112,3 +105,15 @@ AUTO_REJ_OUTCOMES = torch.zeros(len(SLR_OUTCOMES))
 AUTO_REJ_OUTCOMES[[7, 8]] = 1  # automatic, rejected
 EXP_REJ_OUTCOMES = torch.zeros(len(SLR_OUTCOMES))
 EXP_REJ_OUTCOMES[[0, 8, 9]] = 1  # full delay, rejected, expired
+
+# lookup column names
+LSTG = 'lstg'
+SLR = 'slr'
+STORE = 'store'
+META = 'meta'
+START_DAY = 'start_date'
+START_PRICE = 'start_price'
+DEC_PRICE = 'decline_price'
+ACC_PRICE = 'accept_price'
+
+
