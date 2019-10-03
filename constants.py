@@ -37,26 +37,12 @@ PARTS_DIR = 'data/partitions/'
 MODEL_DIR = 'models/'
 W2V_PATH = lambda x: 'data/clean/w2v_' + x + '.csv'
 
-# model directories
-MODEL_DIRS = ['arrival/days/',
-		  	  'arrival/bin/',
-		  	  'arrival/loc/',
-		  	  'arrival/hist/',
-		  	  'arrival/sec/',
-		  	  'byr/delay/',
-		  	  'byr/accept/',
-		  	  'byr/reject/',
-		  	  'byr/con/',
-		  	  'byr/msg/',
-		  	  'byr/round/',
-		  	  'byr/nines/',
-		  	  'slr/delay/',
-		  	  'slr/accept/',
-		  	  'slr/reject/',
-		  	  'slr/con/',
-		  	  'slr/msg/',
-		  	  'slr/round/',
-		  	  'slr/nines/']
+# outcomes for input creation
+OUTCOMES = {'arrival': ['bin', 'loc', 'hist', 'sec'],
+	'role': ['delay', 'accept', 'reject', 'con', 'msg', 'round', 'nines']}
+
+# partitions
+PARTITIONS = ['train_models', 'train_rl', 'test']
 
 # maximal delay times
 MAX_DELAY = {

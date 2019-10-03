@@ -1,10 +1,6 @@
-import numpy as np, pandas as pd
-import torch, argparse, sys
+import sys, pickle
 from compress_pickle import load, dump
-
-sys.path.append('repo/')
-from constants import *
-from utils import *
+import numpy as np, pandas as pd
 
 sys.path.append('repo/processing/4_inputs/')
 from parsing_funcs import *
@@ -85,8 +81,16 @@ if __name__ == '__main__':
 	# extract model and outcome from int
 	parser = argparse.ArgumentParser(
 		description='Model of environment for bargaining AI.')
-	parser.add_argument('--id', type=int, help='Model ID.')
-	path = MODEL_DIRS[parser.parse_args().id-1]
+	parser.add_argument('--num', type=int, help='Model ID.')
+	num = parser.parse_args().num-1
+	modelid = num % len(MODEL_DIRS)
+	partid = num // len(MODEL_DIRS)
+
+	# partition, model and outcome
+	part = PARTITIONS[partid]
+	path = part + '/' + MODEL_DIRS[modelid]
+
+	path = MODEL_DIRS[]
 	print(path)
 	model, outcome, _ = path.split('/')
 

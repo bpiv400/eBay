@@ -5,4 +5,4 @@
 #$ -j y
 #$ -o logs/
 
-python repo/processing/5_inputs.py --id "$SGE_TASK_ID"
+python repo/processing/5_inputs/inputs.py --num "$SGE_TASK_ID"

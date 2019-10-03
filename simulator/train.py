@@ -1,12 +1,12 @@
-import sys
-sys.path.append('repo/')
-sys.path.append('repo/simulator/')
-import os, pickle, argparse
-from compress_pickle import load, dump
+import sys, os, pickle, argparse
 import torch
 import numpy as np, pandas as pd
 from datetime import datetime as dt
+from torch.utils.data import DataLoader
+from interface import *
 from simulator import Simulator
+
+sys.path.append('repo/')
 from constants import *
 
 
@@ -40,15 +40,25 @@ if __name__ == '__main__':
     parser.add_argument('--outcome', type=str, help='Outcome to predict.')
     parser.add_argument('--id', type=int, help='Experiment ID.')
     args = parser.parse_args()
+    model = args.model
+    outcome = args.outcome
 
     # model folder
-    folder = MODEL_DIR + args.model + '/' + args.outcome + '/'
+    folder = '%s/%s/%s/' % (MODEL_DIR, model, outcome)
 
     # load inputs to model
-    print('Loading model inputs')
-    train = pickle.load(open(folder + 'train_models.pkl', 'rb'))
+    print('Loading parameters')
     sizes = pickle.load(open(folder + 'sizes.pkl', 'rb'))
     params = pd.read_csv(folder + 'params.csv', index_col=0).loc[args.id]
+
+    # data loader
+    dataset = Inputs('train_models', model, outcome)
+    sampler = Sample(dataset)
+    if model == 'arrival':
+        f = collateFF
+
+    loader = DataLoader(dataset, batch_sampler=sampler,
+        num_workers=1, collate_fn=f)
 
     # initialize neural net
     simulator = Simulator(args.model, args.outcome, train, params, sizes)

@@ -3,6 +3,7 @@ import pickle
 
 import constants
 import pandas as pd
+import h5py
 import numpy as np
 import torch
 from rlenv.env_consts import *
@@ -55,8 +56,9 @@ class Composer:
         :return: dictionary of maps for all models
         """
         output = dict()
-        fixed = pd.DataFrame.from_dict(LSTG_COLS, orient='index')
-        fixed.rename(columns={0: 'from'}, inplace=True)
+        x_lstg = h5py.File(X_LSTG_FILENAME, 'r')[X_LSTG]
+        x_lstg_size = x_lstg.shape[1]
+        fixed = torch.arange(x_lstg_size).long()
 
         for model_name in model_names.MODELS:
             if model_name in model_names.FEED_FORWARD:

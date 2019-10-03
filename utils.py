@@ -1,4 +1,4 @@
-import argparse
+import argparse, os
 import pickle
 from compress_pickle import load, dump
 from datetime import datetime as dt
@@ -9,14 +9,16 @@ from constants import *
 
 
 # concatenates listing features into single dataframe
-def cat_x_lstg(partition):
+def cat_x_lstg(part):
     """
-    partition: one of 'test', 'train_models', 'train_rl'
+    part: one of 'test', 'train_models', 'train_rl'
     """
-    prefix = PARTS_DIR + partition + '/' + 'x_'
+    prefix = PARTS_DIR + part + '/' + 'x_'
     x_lstg = load(prefix + 'lstg.gz')
-    for s in ['slr', 'w2v']:
-        x_lstg = x_lstg.join(load(prefix + s + '.gz'))
+    for s in ['slr', 'meta', 'w2v']:
+        filename = prefix + s + '.gz'
+        if os.path.isfile(filename):
+            x_lstg = x_lstg.join(load(prefix + s + '.gz'), rsuffix=s)
     return x_lstg
 
 

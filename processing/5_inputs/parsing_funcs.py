@@ -158,21 +158,3 @@ def parse_fixed_feats_delay(model, x_lstg, x_thread, x_offer):
     return x_fixed
 
 
-def parse_fixed_feats_arrival(outcome, x_lstg, x_thread, x_offer):
-    # thread-level attributes
-    threads = x_offer.xs(1, level='index')
-    # intialize output
-    x_fixed = pd.DataFrame(index=threads.index).join(x_lstg)
-    # days since lstg start, holiday and day of week
-    dow = [v for v in threads.columns if v.startswith('dow')]
-    x_fixed = x_fixed.join(threads[['days', 'holiday'] + dow].rename(
-        lambda x: 'focal_' + x, axis=1))
-    # return or add features
-    if outcome == 'loc':
-        return x_fixed
-    x_fixed = x_fixed.join(x_thread['byr_us'])
-    if outcome == 'hist':
-        return x_fixed
-    x_fixed = x_fixed.join(x_thread['byr_hist'])
-    if outcome in ['bin', 'sec']:
-        return x_fixed
