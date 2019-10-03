@@ -6,4 +6,4 @@
 #$ -j y
 #$ -o logs/
 
-python repo/processing/4_pca/pca.py --num "$SGE_TASK_ID"
+python repo/processing/4_frames/pca.py --num "$SGE_TASK_ID"
