@@ -3,11 +3,13 @@ import torch
 import numpy as np, pandas as pd
 from datetime import datetime as dt
 from torch.utils.data import DataLoader
-from interface import *
-from simulator import Simulator
 
 sys.path.append('repo/')
 from constants import *
+
+sys.path.append('repo/simulator/')
+from interface import *
+from simulator import Simulator
 
 
 def train_model(simulator):
@@ -42,14 +44,15 @@ if __name__ == '__main__':
     args = parser.parse_args()
     model = args.model
     outcome = args.outcome
+    paramsid = args.id
 
     # model folder
-    folder = '%s/%s/%s/' % (MODEL_DIR, model, outcome)
+    folder = 'models/%s/%s/' % (model, outcome)
 
     # load inputs to model
     print('Loading parameters')
     sizes = pickle.load(open(folder + 'sizes.pkl', 'rb'))
-    params = pd.read_csv(folder + 'params.csv', index_col=0).loc[args.id]
+    params = pd.read_csv(folder + 'params.csv', index_col=0).loc[paramsid]
 
     # data loader
     dataset = Inputs('train_models', model, outcome)

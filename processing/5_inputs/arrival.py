@@ -32,7 +32,7 @@ def process_inputs(part, outcome):
 
 	# path name function
 	getPath = lambda names: \
-		'%s/%s/%s.gz' % (PARTS_DIR, part, '_'.join(names))
+		'data/partitions/%s/%s.gz' % (part, '_'.join(names))
 
 	# outcome
 	y = load(getPath(['y_arrival', outcome]))
@@ -50,7 +50,7 @@ def process_inputs(part, outcome):
 
 	# add byr_us
 	if outcome != 'loc':
-		x_thread = load(getPath(['x', 'loc']))
+		x_thread = load(getPath(['x', 'thread']))
 		x_fixed = add_thread_feats(outcome, x_fixed, x_thread)
 
 	return y, x_fixed
