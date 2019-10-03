@@ -41,22 +41,28 @@ def do_pca(df):
 
 
 if __name__ == "__main__":
+    # parse parameters
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--num', action='store', type=int, required=True)
+    num = parser.parse_args().num
+
     # load partitions
     partitions = load(PARTS_DIR + 'partitions.gz')
 
-    # slr time-valued features
-    print('slr time-valued features')
-    tf_slr = load_frames('tf_slr')
-    tf_slr = do_pca(tf_slr)
-    partition_frame(partitions, tf_slr, 'x_slr')
-    idx = tf_slr.index
-    del tf_slr
-
-    # meta time-valued features
-    print('meta time-valued features')
-    tf_meta = []
-    for i in range(N_META):
-        tf_meta.append(load(FEATS_DIR + 'm' + str(i) + '_tf_meta.gz'))
-    tf_meta = pd.concat(tf_meta).reindex(index=idx)
-    tf_meta = do_pca(tf_meta)
-    partition_frame(partitions, tf_meta, 'x_meta')
+    # do pca on time-valued features
+    if num == 1:
+        # slr
+        print('slr time-valued features')
+        tf_slr = load_frames('tf_slr')
+        tf_slr = do_pca(tf_slr)
+        partition_frame(partitions, tf_slr, 'x_slr')
+    elif num == 2:
+        # meta
+        print('meta time-valued features')
+        idx = np.sort(np.concatenate(list(partitions.values())))
+        tf_meta = []
+        for i in range(N_META):
+            tf_meta.append(load(FEATS_DIR + 'm' + str(i) + '_tf_meta.gz'))
+        tf_meta = pd.concat(tf_meta).reindex(index=idx)
+        tf_meta = do_pca(tf_meta)
+        partition_frame(partitions, tf_meta, 'x_meta')
