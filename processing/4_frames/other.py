@@ -261,11 +261,11 @@ if __name__ == "__main__":
     # partition number from command line
     parser = argparse.ArgumentParser()
     parser.add_argument('--num', action='store', type=int, required=True)
-    num = parser.parse_args().num-1
+    num = parser.parse_args().num
 
     # partition
     partitions = load(PARTS_DIR + 'partitions.gz')
-    part = partitions.keys()[num]
+    part = list(partitions.keys())[num-1]
     idx = partitions[part]
     path = lambda name: PARTS_DIR + part + '/' + name + '.gz'
 
@@ -277,7 +277,7 @@ if __name__ == "__main__":
     tf_lstg = load_frames('tf_lstg').reindex(index=idx, level='lstg')
 
     # lookup file
-    lookup = lstgs[['slr', 'store', 'meta', 'start_date', \
+    lookup = lstgs[['meta', 'start_date', \
         'start_price', 'decline_price', 'accept_price']]
     dump(lookup, path('lookup'))
 
@@ -286,6 +286,7 @@ if __name__ == "__main__":
     w2v = get_w2v(lstgs, 'slr').join(get_w2v(lstgs, 'byr'))
     dump(w2v, path('w2v'))
     lstgs = lstgs.drop(['slr', 'meta', 'leaf', 'product'], axis=1)
+    del w2v
 
     # delay start
     print('Creating delay features')
