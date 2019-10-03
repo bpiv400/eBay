@@ -10,8 +10,6 @@ def lstgs():
     thread3 = (6, 12)
     thread4 = (7, 10)
     thread5 = (7, 11)
-    first_lstg = (6, )
-    second_lstg = (7, )
 
     lstg1 = (thread1, thread2, thread3, first_lstg)
     lstg2 = (thread4, thread5, second_lstg)

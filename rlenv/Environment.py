@@ -28,7 +28,6 @@ import rlenv.model_names as model_names
 
 
 # TODO: Redo documentation when all is said and done
-# TODO: Ensure default value tensors are calculated and stored correctly and efficiently
 
 
 class Environment:
@@ -672,9 +671,9 @@ class Environment:
         :return: float
         """
         rate = .09
-        if torch.nonzero(self.lookup[META_7]).numel() > 0:
+        if self.lookup[self.lookup_dict[META]] in META_7:
             rate = .07
-        elif torch.nonzero(self.lookup[META_6]).numel() > 0:
+        elif self.lookup[self.lookup_dict[META]] in META_6:
             rate = .06
         return rate * price
 
