@@ -1,5 +1,7 @@
+import sys
 import numpy as np, pandas as pd
 import torch
+from torch.nn.utils import rnn
 from torch.utils.data import Dataset, Sampler
 import h5py, pickle
 
@@ -13,7 +15,6 @@ class Inputs(Dataset):
     def __init__(self, partition, model, outcome):
 
         # save parameters to self
-        self.partition = partition
         self.model = model
         self.outcome = outcome
 
@@ -38,13 +39,14 @@ class Inputs(Dataset):
 
         # arrival models are feed-forward
         if self.model == 'arrival':
-            return y, x_fixed
+            return y, x_fixed, idx
         
         # role models are recurrent
-        x_time = self.d['x_time'][idx,:]
+        x_time = self.d['x_time'][:,idx,:]
         turns = self.d['turns'][idx]
 
-        return y, x_fixed, x_time, turns
+        return y, x_fixed, x_time, turns, idx
+
 
     def __len__(self):
         return self.N
@@ -66,8 +68,7 @@ class Sample(Sampler):
         N = len(dataset)
         v = [i for i in range(N)]
         np.random.shuffle(v)
-        self.batches = np.array_split(v, N+1 // MBSIZE)
-        print('Batch count: %d' % len(self.batches))
+        self.batches = np.array_split(v, 1 + N // MBSIZE)
 
     def __iter__(self):
         """
@@ -82,6 +83,41 @@ class Sample(Sampler):
 
 # collate function for feedforward networks
 def collateFF(batch):
-    y, x_fixed = batch
-    return torch.from_numpy(y), torch.from_numpy(x_fixed)
+    y, x_fixed, idx = [], [], []
+    for b in batch:
+        y.append(b[0])
+        x_fixed.append(torch.from_numpy(b[1]))
+        idx.append(b[2])
 
+    # convert to tensor
+    y = torch.tensor(y)
+    x_fixed = torch.stack(x_fixed)
+    idx = torch.tensor(idx)
+
+    # output is (dictionary, indices)
+    return {'y': y, 'x_fixed': x_fixed}, idx
+
+
+# collate function for recurrent networks
+def collateRNN(batch):
+    # initialize output
+    y, x_fixed, x_time, turns, idx = [], [], [], [], []
+
+    # sorts the batch list in decreasing order of turns
+    ordered = sorted(batch, key=lambda x: len(x[3]), reverse=True)
+    for b in ordered:
+        y.append(b[0])
+        x_fixed.append(torch.from_numpy(b[1]))
+        x_time.append(torch.from_numpy(b[2]))
+        turns.append(b[3])
+        idx.append(b[4])
+
+    # convert to tensor, pack if needed
+    y = torch.tensor(y).float()
+    x_fixed = torch.stack(x_fixed)
+    x_time = rnn.pack_padded_sequence(
+        torch.stack(x_time, dim=1), torch.from_numpy(turns))
+    idx = torch.tensor(idx)
+
+    # output is (dictionary, indices)
+    return {'y': y, 'x_fixed': x_fixed, 'x_time': x_time}, idx

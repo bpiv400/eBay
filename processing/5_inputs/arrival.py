@@ -59,6 +59,9 @@ def process_inputs(part, outcome):
 def get_sizes(outcome, x_fixed):
     sizes = {}
 
+    # number of observations
+    sizes['N'] = len(x_fixed.index)
+
     # fixed inputs
     sizes['fixed'] = len(x_fixed.columns)
 
@@ -81,7 +84,7 @@ if __name__ == '__main__':
 
 	# partition and outcome
 	part = PARTITIONS[num // len(OUTCOMES[MODEL])]
-	outcome = OUTCOMES[MODEL][num]
+	outcome = OUTCOMES[MODEL][num % len(OUTCOMES[MODEL])]
 	outdir = 'models/%s/%s/' % (MODEL, outcome)
 	print('Directory: %s' % outdir)
 	print('Partition: %s' % part)
@@ -96,12 +99,12 @@ if __name__ == '__main__':
 		pickle.dump(featnames, open(outdir + 'featnames.pkl', 'wb'))
 
 		# get data size parameters and save
-		pickle.dump(get_sizes(outcome, x_fixed), 
-			open(outdir + 'sizes.pkl', 'wb'))
+		sizes = get_sizes(outcome, x_fixed)
+		pickle.dump(sizes, open(outdir + 'sizes.pkl', 'wb'))
 
 	# convert to numpy arrays, save in hdf5
 	path = 'data/inputs/%s/%s_%s.hdf5' % (part, MODEL, outcome)
 	f = h5py.File(path, 'w')
-	f.create_dataset('y', data=y.values)
+	f.create_dataset('y', data=y.astype(np.float32).values)
 	f.create_dataset('x_fixed', data=x_fixed.astype(np.float32).values)
 	f.close()

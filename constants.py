@@ -1,4 +1,5 @@
 from pandas.tseries.holiday import USFederalHolidayCalendar as Calendar
+import torch
 
 # strings for referencing quantities related to buyer and seller models
 SLR_PREFIX = 'slr'
@@ -27,7 +28,7 @@ LR = 1e-4
 DROPOUT = 0.5
 
 # device
-DEVICE = 'cuda.001'
+DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 # paths and directories
 CLEAN_DIR = 'data/clean/'

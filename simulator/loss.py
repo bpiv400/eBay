@@ -5,6 +5,13 @@ from torch.distributions.beta import Beta
 def LogitLoss(theta, y):
 	p = torch.sigmoid(theta.squeeze())
 	ll = y * torch.log(p) + (1-y) * torch.log(1-p)
+
+	print(y)
+	print(p)
+	print(ll)
+	print(torch.sum(ll))
+	exit()
+
 	return -torch.sum(ll), None
 
 
