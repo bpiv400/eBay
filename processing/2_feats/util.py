@@ -62,7 +62,7 @@ def get_cat_time_feats(events, levels):
 
 def create_obs(df, isStart, cols):
     toAppend = pd.DataFrame(index=df.index, columns=['index'] + cols)
-    for c in ['accept', 'message', 'bin']:
+    for c in ['accept', 'message']:
         if c in cols:
             toAppend[c] = False
     if isStart:
@@ -111,7 +111,7 @@ def add_start_end(offers, L, levels):
 
 def init_offers(L, T, O, levels):
     offers = O.join(T['start_time'])
-    for c in ['accept', 'bin', 'reject', 'censored', 'message']:
+    for c in ['accept', 'reject', 'censored', 'message']:
         if c in offers:
             offers[c] = offers[c].astype(np.bool)
     offers['clock'] += offers['start_time']

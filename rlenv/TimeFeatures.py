@@ -18,39 +18,37 @@ import rlenv.env_consts as consts
 
 class TimeFeatures:
     """
-        Object for updating and setting time valued features
+        Object for updating and setting time valued features for a particular lstg
         Current list of features:
             - slr offers: number of seller offers in other threads, excluding rejects.
-            - byr offers: number of buyer offers in other threads, excluding rejects.
-            - slr offers open: number of open, unanswered slr offers in other open threads.
-            - byr offers open: number of open, unanswered byr offers in other open threads.
             - slr best: the highest seller total concession in other threads, defined as 1-offer/start_price
-            - byr best: the highest buyer total concession in other threads, defined as offr/start_price
+            - slr offers open: number of open, unanswered slr offers in other open threads.
             - slr best open: the highest unanswered seller concession among open seller offers.
+            - byr offers: number of buyer offers in other threads, excluding rejects.
+            - byr best: the highest buyer total concession in other threads, defined as offr/start_price
+            - byr offers open: number of open, unanswered byr offers in other open threads.
             - byr best open: the highest unanswered buyer total concession among open buyer offers.
         Attributes:
             offers)
-            feats: dictionary containing time valued features for each listing. Values are dictionaries
-            containing data structures and values required to calculate all time valued features in list
+            feats: dictionary containing time valued features for the current listing. Values are data
+            structures that calculate individual features
         Public functions:
-            get_feats: returns a dictionary of time features for a given set of ids
-            lstg_active: checks whether a given lstg is still open (e.g. not sold in some other thread
-            or expired)
-            initialize_time_feats: initializes self.feats with all objects necessary to contain a new
-            lstg
+            get_feats: returns a tensor representing current time valued features, ordered like
+            rlenv.env_consts.TIME_FEATS
             update_features: dispatches helper update function to update all time features relevant to
-            a given event
+            a given event (buyer offer, seller offer, buyer rejection, or seller rejection)
         Private functions:
-            _get_feat: helper function for get_feats that returns value of a specific level-feature
-            _initialize_feature: helper function for initialize_time_feats
-            _update_thread_close: updates features after thread closes for some reason (expiration or byr rejection)
-            _update_thread_expire: updates features after a thread has expired (time out of byr or slr)
-            _update_byr_rejection: updates features after byr rejects an offer, closing thread
+            _get_feat: helper function for get_feats that returns value of a specific feature
+            _initialize_feature: helper function that initializes the data structure for tracking any particular
+            feature
+            _update_thread_close: updates features after thread closes for some reason (buyer rejection or
+            allowing offer to expire)
+            _update_offer: updates features after an offer (excluding rejections and acceptances)
+            _update_slr_rejection: updates features after slr rejects an offer
         """
     def __init__(self):
         """
-        Initializes features object
-
+        Initializes features object for a particular lstg
         """
         super(TimeFeatures, self).__init__()
         self.feats = dict()
@@ -78,7 +76,7 @@ class TimeFeatures:
 
         :param thread_id: current thread id if any. If none, return the lstg level features
         :param time: integer giving current time
-        :return: array of time-valued features in the order given by env_consts.TIME_FEATURES
+        :return: tensor of time-valued features in the order given by env_consts.TIME_FEATURES
         """
         x = torch.zeros(len(consts.TIME_FEATS)).float()
         for i, feat in enumerate(consts.TIME_FEATS):

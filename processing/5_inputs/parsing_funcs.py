@@ -5,30 +5,11 @@ import torch
 
 sys.path.append('repo/')
 from constants import *
-#from utils import *
-
-
-# returns booleans for whether offer is round and ends in nines
-def do_rounding(offer):
-    digits = np.ceil(np.log10(offer.clip(lower=0.01)))
-    factor = 5 * np.power(10, digits-3)
-    diff = np.round(offer / factor) * factor - offer
-    is_round = diff == 0
-    is_nines = (diff > 0) & (diff <= factor / 5)
-    return is_round, is_nines
-
-
-# returns dataframe with US holiday and day-of-week indicators
-def extract_day_feats(clock):
-    df = pd.DataFrame(index=clock.index)
-    df['holiday'] = clock.dt.date.astype('datetime64').isin(HOLIDAYS)
-    for i in range(6):
-        df['dow' + str(i)] = clock.dt.dayofweek == i
-    return df
+from utils import *
 
 
 # Converts data frames to tensors sorted (descending) by N_turns.
-def convert_to_tensors(d):
+def convert_to_arrays(d):
     # for feed-forward networks
     if 'x_time' not in d:
         d['x_fixed'] = torch.tensor(d['x_fixed'].reindex(
@@ -98,13 +79,11 @@ def parse_time_feats_role(model, outcome, x_offer):
     else:
         offer1 = offer1.drop(['auto', 'exp', 'reject'], axis=1)
     # current offer
-    excluded = ['nines', 'auto', 'exp', 'reject']
-    if outcome in ['round', 'msg', 'con', 'accept', 'reject']:
-        excluded += ['round']
-        if outcome in ['msg', 'con', 'accept', 'reject']:
-            excluded += ['msg']
-            if outcome in ['con', 'accept', 'reject']:
-                excluded += ['con', 'norm', 'split']
+    excluded = ['round', 'nines', 'auto', 'exp', 'reject']
+    if outcome in ['msg', 'con', 'accept', 'reject']:
+        excluded += ['msg']
+        if outcome in ['con', 'accept', 'reject']:
+            excluded += ['con', 'norm', 'split']
     last_vars = [c for c in offer2.columns if c in excluded]
     # join dataframes
     x_time = x_time.join(curr.drop(excluded, axis=1))
@@ -179,21 +158,3 @@ def parse_fixed_feats_delay(model, x_lstg, x_thread, x_offer):
     return x_fixed
 
 
-def parse_fixed_feats_arrival(outcome, x_lstg, x_thread, x_offer):
-    # thread-level attributes
-    threads = x_offer.xs(1, level='index')
-    # intialize output
-    x_fixed = pd.DataFrame(index=threads.index).join(x_lstg)
-    # days since lstg start, holiday and day of week
-    dow = [v for v in threads.columns if v.startswith('dow')]
-    x_fixed = x_fixed.join(threads[['days', 'holiday'] + dow].rename(
-        lambda x: 'focal_' + x, axis=1))
-    # return or add features
-    if outcome == 'loc':
-        return x_fixed
-    x_fixed = x_fixed.join(x_thread['byr_us'])
-    if outcome == 'hist':
-        return x_fixed
-    x_fixed = x_fixed.join(x_thread['byr_hist'])
-    if outcome in ['bin', 'sec']:
-        return x_fixed

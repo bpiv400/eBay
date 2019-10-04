@@ -379,16 +379,15 @@ order newid, a(thread)
 drop new thread_start thread
 rename newid thread
 
-* save temp
-
-save ~/temp3, replace
-
 * flag weird behavior
 
 replace flag = 1 if sale_price != start_price & bin
 replace flag = 1 if sale_price != price & accept
-replace flag = 1 if price > start_price
 drop sale_price
+
+replace flag = 1 if price > start_price
+replace flag = 1 if price == start_price & !bin & index == 1
+drop start_price
 
 sort lstg thread index
 by lstg thread: replace flag = 1 ///
@@ -406,7 +405,7 @@ by lstg thread: replace flag = 1 if _n < _N & ///
 by lstg thread: replace flag = 1 if _n < _N & ///
 	price <= decline_price & mod(index,2) == 1 & ///
 	(clock != clock[_n+1] | !reject[_n+1])
-drop *_price
+drop accept_price decline_price
 
 * start time
 
@@ -417,7 +416,7 @@ replace clock = (clock - start_time) / 1000
 
 * save temp
 
-save ~/temp3a, replace
+save ~/temp3, replace
 
 * delete activity after 0 concession from buyer
 
@@ -437,16 +436,24 @@ foreach x in byr slr {
 	by `x': replace `x'_hist = `x'_hist[_n-1] if `x'_hist == . & _n > 1
 	replace `x'_hist = 0 if `x'_hist == .
 }
-drop slr
+drop slr type status
+
+* save temp
+
+save ~/temp3a, replace
 
 * save offers
 
-drop type status
 sort lstg thread index
-order lstg thread index clock price accept bin reject censored message flag byr* start_time end_time
+order lstg thread index clock price accept reject censored message ///
+	bin flag byr* start_time end_time
 savesome lstg-message using dta/offers, replace
 
 * save threads
 
-collapse (max) flag (max) byr_us, by(lstg thread byr byr_hist *_time bin)
+collapse (max) bin (max) flag (max) byr_us, ///
+	by(lstg thread byr byr_hist *_time)
+	
+replace byr_hist = byr_hist - (1-bin)
+
 save dta/threads, replace

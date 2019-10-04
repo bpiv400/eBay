@@ -1,5 +1,7 @@
 # arrival models
-DAYS = 'days' # recurrent
+from constants import SLR_PREFIX, BYR_PREFIX
+
+DAYS = 'days'  # recurrent
 BIN = 'bin'
 HIST = 'hist'
 LOC = 'loc'
@@ -15,12 +17,9 @@ CON = 'cn'
 DELAY = 'delay'
 
 # prefixes
-SLR_PREFIX = 'slr'
-BYR_PREFIX = 'byr'
 ARRIVAL_PREFIX = 'arrival'
 
 # model sets
-OFFER_INDS = []
 FEED_FORWARD = [BIN, HIST, LOC, SEC]
 RECURRENT = [DAYS, DELAY, ACC, REJ, RND, NINE, MSG, CON]
 LSTM_MODELS = [DAYS, '{}_{}'.format(SLR_PREFIX, DELAY), '{}_{}'.format(BYR_PREFIX, DELAY)]

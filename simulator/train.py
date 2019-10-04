@@ -1,30 +1,67 @@
-import sys
-sys.path.append('repo/')
-sys.path.append('repo/simulator/')
-import os, pickle, argparse
+import sys, os, pickle, argparse
 import torch
 import numpy as np, pandas as pd
 from datetime import datetime as dt
-from simulator import Simulator
+from torch.utils.data import DataLoader
+from tqdm import tqdm
+
+sys.path.append('repo/')
 from constants import *
 
+sys.path.append('repo/simulator/')
+from interface import *
+from simulator import Simulator
 
-def train_model(simulator):
+
+def get_dataloader(model, outcome):
+    data = Inputs('train_models', model, outcome)
+    if model == 'arrival':
+        f = collateFF
+    else:
+        f = collateRNN
+
+    loader = DataLoader(data, batch_sampler=Sample(data),
+        num_workers=7, collate_fn=f)
+
+    return data, loader
+
+
+def train_model(simulator, epochs):
     time0 = dt.now()
 
     # initialize array for log-likelihoods by epoch
     lnL = []
 
     # loop over epochs, record log-likelihood
-    for i in range(simulator.epochs):
+    for i in range(epochs):
         start = dt.now()
 
-        # iterate over minibatches
-        lnL.append(simulator.run_epoch())
+        # get data and data loader
+        dataset, loader = get_dataloader(simulator.model, simulator.outcome)
+
+        # loop over batches
+        lnL_i = 0
+        for j, batch in enumerate(loader):
+            # unpack batch
+            data, idx = batch
+
+            # move tensors to GPU
+            data = {k: v.to(DEVICE) for k, v in data.items()}
+            idx = idx.to(DEVICE)
+
+            lnL_i += simulator.run_batch(data, idx)
+            if (j > 0) and (j % 1000 == 0):
+                print('\tBatch %d of %d' % (j, len(loader)))
+
+        # append log-likelihood to list
+        lnL.append(lnL_i)
 
         # print log-likelihood and duration
         print('Epoch %d: lnL: %1.4f. (%dsec)' %
             (i+1, lnL[-1], (dt.now() - start).seconds))
+
+        # close hdf5 file
+        dataset.close()
 
     # return loss history and total duration
     return lnL, (dt.now() - time0).seconds
@@ -39,23 +76,28 @@ if __name__ == '__main__':
     parser.add_argument('--outcome', type=str, help='Outcome to predict.')
     parser.add_argument('--id', type=int, help='Experiment ID.')
     args = parser.parse_args()
+    model = args.model
+    outcome = args.outcome
+    paramsid = args.id
 
     # model folder
-    folder = MODEL_DIR + args.model + '/' + args.outcome + '/' 
+    folder = 'models/%s/%s/' % (model, outcome)
 
     # load inputs to model
-    print('Loading model inputs')
-    train = pickle.load(open(folder + 'train_models.pkl', 'rb'))
+    print('Loading parameters')
     sizes = pickle.load(open(folder + 'sizes.pkl', 'rb'))
-    params = pd.read_csv(folder + 'params.csv', index_col=0).loc[args.id]
+    params = pd.read_csv(folder + 'params.csv', index_col=0).loc[paramsid]
 
     # initialize neural net
-    simulator = Simulator(args.model, args.outcome, train, params, sizes)
+    simulator = Simulator(model, outcome, params, sizes)
     print(simulator.net)
 
+    # number of epochs
+    epochs = int(np.ceil(UPDATES * MBSIZE / sizes['N']))
+
     # train model
-    print('Training: %d epochs.' % simulator.epochs)
-    lnL_train, duration = train_model(simulator)
+    print('Training: %d epochs.' % epochs)
+    lnL_train, duration = train_model(simulator, epochs)
 
     # holdout
     holdout = pickle.load(open(folder + 'train_rl.pkl', 'rb'))

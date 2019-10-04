@@ -8,9 +8,8 @@ import utils
 from rlenv.model_names import *
 from rlenv.Composer import Composer
 from rlenv import env_consts
-from rlenv.env_utils import model_str
 from simulator.nets import FeedForward, RNN, LSTM
-from constants import TOL_HALF
+from constants import TOL_HALF, SLR_PREFIX, BYR_PREFIX
 
 
 class SimulatorInterface:
@@ -153,6 +152,23 @@ class SimulatorInterface:
         return params
 
     @staticmethod
+    def _make_beta_params(ancestor, params):
+        """
+        Helper function that reshapes parameters to build params for beta distribution
+
+        :param ancestor: torch.distributions.categorical.Categorical
+        :param params: tensor output by _beta_prep
+        """
+        draws = ancestor.sample(sample_shape=(1,))
+        print('draws: {}'.format(draws))
+        print(torch.arange(params.shape[0]))
+        beta_params = params[torch.arange(params.shape[0]), draws[0, :], :]
+        if len(beta_params.shape) == 1:
+            beta_params = beta_params.unsqueeze(0)
+        beta_params = beta_params[:, [0, 1]]
+        return beta_params
+
+    @staticmethod
     def _beta_ancestor(logits):
         """
         Makes the categorical distribution that governs the mixture for an
@@ -163,6 +179,21 @@ class SimulatorInterface:
         """
         ancestor = Categorical(logits=logits[:, :, 2])
         return ancestor
+
+    @staticmethod
+    def _make_beta(params):
+        """
+        Helper method that makes a beta distribution given the output of a
+        model trained to construct a mixed beta distribution
+
+        :param params: output of mixed beta model
+        :return: torch.distributions.beta.Beta
+        """
+        params = SimulatorInterface._beta_prep(params)
+        ancestor = SimulatorInterface._beta_ancestor(params)
+        beta_params = SimulatorInterface._make_beta_params(ancestor, params)
+        beta = Beta(beta_params[:, 0], beta_params[:, 1])
+        return beta
 
     @staticmethod
     def _mixed_beta_sample(params):
@@ -180,8 +211,7 @@ class SimulatorInterface:
         # compute sample
         params = SimulatorInterface._beta_prep(params)
         ancestor = SimulatorInterface._beta_ancestor(params)
-        draws = ancestor.sample(sample_shape=(1,))
-        beta_params = params[torch.arange(params.shape[0]), draws[0, :], :]
+        beta_params = SimulatorInterface._make_beta_params(ancestor, params)
         beta = Beta(beta_params[:, 0], beta_params[:, 1])
         sample = SimulatorInterface.proper_squeeze(beta.sample((1,)))
         return sample

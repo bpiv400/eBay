@@ -6,6 +6,8 @@ that executes queues for multiple sellers in parallel
 """
 import random
 import math
+
+import constants
 import h5py
 import pandas as pd
 import numpy as np
@@ -20,13 +22,12 @@ import time_triggers
 from env_consts import *
 from event_types import *
 from env_utils import *
-from constants import INTERVAL_COUNTS, INTERVAL, MAX_DELAY
+from constants import INTERVAL_COUNTS, INTERVAL
 from SimulatorInterface import SimulatorInterface
 import rlenv.model_names as model_names
 
 
 # TODO: Redo documentation when all is said and done
-# TODO: Ensure default value tensors are calculated and stored correctly and efficiently
 
 
 class Environment:
@@ -53,18 +54,22 @@ class Environment:
         """
         # experiment level data
         self.experiment_id = experiment_id
-        self.input_file = h5py.File(LSTG_FILENAME, 'r')
-        self.k = self.input_file['lstg'].size[0]
+        self.input_file = h5py.File(X_LSTG_FILENAME, 'r')
+        self.lstg_count = self.input_file[X_LSTG].size[0]
         self.params = self._load_params()
         self.thread_counter = 0
         self.lstgs = []
-        self.lstg_slice = None
+        self.x_lstg_slice = None
+        self.lookup_slice = None
+        self.lookup_dict = unpickle(LOOKUP_COLS_FILENAME)
 
         # lstg level data
         self.time_feats = None
-        self.end_time = None  # can just be an integer now
+        self.end_time = None
         self.queue = None
         self.curr_lstg = None
+        self.x_lstg = None
+        self.lookup = None
         self.sales = dict()
 
         # interface data
@@ -90,33 +95,35 @@ class Environment:
         :param index: index of the lstg in the lstg slice object
         :return: NA
         """
-        self.consts = self.lstg_slice[index, :]
-        start_time = self.consts[LSTG_COLS['start_days']]
+        self.x_lstg = self.x_lstg_slice[index, :]
+        self.lookup = self.lookup_slice[index, :]
+        start_time = self.lookup[self.lookup_dict[START_DAY]]
         self.queue = EventQueue()
         self.queue.push(Arrival(start_time))
         self.time_feats = TimeFeatures()
         self.end_time = start_time + MONTH * self.params[RELIST_COUNT]
 
-    def prepare_simulation(self, lstgs):
+    def prepare_simulation(self, indices):
         """
         Initializes a priority queue for each lstg in lstgs
         Function should be called by master node when environment is first
         created
 
-        :param lstgs: list of lstg indices in h5df file
+        :param indices: list of lstg indices in h5df file
         :return: NA
         """
         # type cast to list to ensure lstg_slice is 2 dimensional
-        if type(lstgs) == int:
-            lstgs = [lstgs]
-        self.lstgs = lstgs
-        if max(lstgs) >= self.k:
-            raise RuntimeError("lstg {} invalid".format(max(lstgs)))
-        self.lstg_slice = self.input_file[self.lstgs, :]
+        if type(indices) == int:
+            indices = [indices]
+        self.lstgs = indices
+        if max(indices) >= self.lstg_count:
+            raise RuntimeError("lstg {} invalid".format(max(indices)))
+        self.x_lstg_slice = self.input_file[X_LSTG][self.lstgs, :]
+        self.lookup_slice = self.input_file[LOOKUP][self.lstgs, :]
+        self.x_lstg_slice = torch.from_numpy(self.x_lstg_slice).float()
+        for idx in indices:
+            self.sales[idx] = []
         self.input_file.close()
-        self.lstg_slice = torch.from_numpy(self.lstg_slice)
-        for lstg in lstgs:
-            self.sales[lstg] = []
 
     def _simulate_market(self):
         """
@@ -209,7 +216,7 @@ class Environment:
         elif exp:
             sources[OUTCOMES_MAP] = EXP_REJ_OUTCOMES.clone()
             sources[CLOCK_MAP] = utils.get_clock_feats(event.priority,
-                                                       start_days=self.consts[LSTG_COLS['start_days']],
+                                                       start_days=self.lookup[self.lookup_dict[START_DAY]],
                                                        arrival=False, delay=False)
             sources[TIME_MAP] = self.time_feats.get_feats(thread_id=event.thread_id, time=event.priority)
             sources[DIFFS_MAP] = sources[TIME_MAP] - sources[O_TIME_MAP]
@@ -246,7 +253,7 @@ class Environment:
         self.time_feats.update_features(time_trigger=time_triggers.SLR_REJECTION, thread_id=event.thread_id,
                                         offer={
                                             'time': event.priority,
-                                            'type': model_names.SLR_PREFIX,
+                                            'type': constants.SLR_PREFIX,
                                             'price': sources[OUTCOMES_MAP][2]
                                         })
         return self._prepare_delay(event, sources=sources, hidden=hidden, byr=True)
@@ -299,7 +306,7 @@ class Environment:
         next_event = ThreadEvent(event.priority, sources=sources, hidden=hidden, turn=turn,
                                  thread_id=event.thread_id, event_type=event_type)
         sources[PERIODS_MAP] = torch.zeros(1).float()
-        sources[model_str(DELAY, byr=byr)] = None
+        sources[model_str(model_names.DELAY, byr=byr)] = None
         self.queue.push(next_event)
         return False
 
@@ -370,7 +377,7 @@ class Environment:
             self.time_feats.update_features(time_trigger=time_triggers.OFFER, thread_id=event.thread_id,
                                             offer={
                                                 'time': event.priority,
-                                                'type': model_names.SLR_PREFIX,
+                                                'type': constants.SLR_PREFIX,
                                                 'price':norm
                                             })
             return self._prepare_delay(event, sources=sources, hidden=hidden, byr=True)
@@ -384,14 +391,14 @@ class Environment:
         :return:
         """
         norm = sources[OUTCOMES_MAP][2]
-        if norm < self.consts[LSTG_COLS['accept']]:
+        if norm < self.lookup[self.lookup_dict[ACC_PRICE]]:
             self.time_feats.update_features(time_trigger=time_triggers.OFFER, thread_id=event.thread_id,
                                             offer={
                                                 'time': event.priority,
-                                                'type': model_names.BYR_PREFIX,
+                                                'type': constants.BYR_PREFIX,
                                                 'price': norm
                                             })
-            if norm > self.consts[LSTG_COLS['decline']]:
+            if norm > self.lookup[self.lookup_dict[DEC_PRICE]]:
                 return self._prepare_delay(event, sources=sources, hidden=hidden, byr=False)
             else:
                 self._increment_sources(sources)
@@ -408,11 +415,11 @@ class Environment:
         :return:
         """
         if not byr:
-            max_periods = INTERVAL_COUNTS[model_names.SLR_PREFIX]
+            max_periods = INTERVAL_COUNTS[constants.SLR_PREFIX]
         elif turn == 7:
-            max_periods = INTERVAL_COUNTS['{}_7'.format(model_names.BYR_PREFIX)]
+            max_periods = INTERVAL_COUNTS['{}_7'.format(constants.BYR_PREFIX)]
         else:
-            max_periods = INTERVAL_COUNTS[model_names.BYR_PREFIX]
+            max_periods = INTERVAL_COUNTS[constants.BYR_PREFIX]
         return periods >= max_periods
 
     def _thread_expiration(self, event, byr=False):
@@ -429,7 +436,7 @@ class Environment:
                                                 thread_id=event.thread_id,
                                                 offer={
                                                     'time': event.priority,
-                                                    'type': model_names.BYR_PREFIX,
+                                                    'type': constants.BYR_PREFIX,
                                                     'price': 0
                                                 })
             else:
@@ -437,7 +444,7 @@ class Environment:
                                                 thread_id=event.thread_id,
                                                 offer={
                                                     'time': event.priority,
-                                                    'type': model_names.SLR_PREFIX,
+                                                    'type': constants.SLR_PREFIX,
                                                     'price': event.sources[L_OUTCOMES_MAP][2]
                                                 })
             return True
@@ -460,7 +467,7 @@ class Environment:
         sources = event.sources
         hidden = event.hidden
         sources[TIME_MAP] = self.time_feats.get_feats(thread_id=event.thread_id, time=event.priority)
-        sources[CLOCK_MAP] = utils.get_clock_feats(event.priority, self.consts[LSTG_COLS['start_days']],
+        sources[CLOCK_MAP] = utils.get_clock_feats(event.priority, self.lookup[self.lookup_dict['start_days']],
                                                    arrival=False, delay=True)
         sources[DIFFS_MAP] = sources[TIME_MAP] - sources[O_TIME_MAP]
         model_name = model_str(model_names.DELAY, byr=byr)
@@ -469,10 +476,10 @@ class Environment:
         hidden[model_name] = hdn_del
         if delay == 0:
             if byr:
-                turn_name = model_names.BYR_PREFIX
+                turn_name = constants.BYR_PREFIX
                 next_type = BUYER_DELAY
             else:
-                turn_name = model_names.SLR_PREFIX
+                turn_name = constants.SLR_PREFIX
                 next_type = SELLER_DELAY
             priority = event.priority + INTERVAL[turn_name]
             sources[PERIODS_MAP] += 1
@@ -480,10 +487,10 @@ class Environment:
                                      turn=event.turn)
         else:
             if byr:
-                turn_name = model_names.BYR_PREFIX
+                turn_name = constants.BYR_PREFIX
                 next_type = BUYER_OFFER
             else:
-                turn_name = model_names.SLR_PREFIX
+                turn_name = constants.SLR_PREFIX
                 next_type = SELLER_OFFER
             last_interval = np.random.randint(0, INTERVAL[turn_name], size=1)
             priority = event.priority + last_interval
@@ -505,14 +512,14 @@ class Environment:
         :return:
         """
         if turn == 7:
-            max_periods = INTERVAL_COUNTS['{}_7'.format(model_names.BYR_PREFIX)]
-            period_len = INTERVAL[model_names.BYR_PREFIX]
+            max_periods = INTERVAL_COUNTS['{}_7'.format(constants.BYR_PREFIX)]
+            period_len = INTERVAL[constants.BYR_PREFIX]
         elif turn % 2 == 0:
-            max_periods = INTERVAL_COUNTS[model_names.SLR_PREFIX]
-            period_len = INTERVAL[model_names.SLR_PREFIX]
+            max_periods = INTERVAL_COUNTS[constants.SLR_PREFIX]
+            period_len = INTERVAL[constants.SLR_PREFIX]
         else:
-            max_periods = INTERVAL_COUNTS[model_names.BYR_PREFIX]
-            period_len = INTERVAL[model_names.BYR_PREFIX]
+            max_periods = INTERVAL_COUNTS[constants.BYR_PREFIX]
+            period_len = INTERVAL[constants.BYR_PREFIX]
         period_count = periods + last_interval / period_len
         return period_count / max_periods
 
@@ -573,7 +580,7 @@ class Environment:
         :param time: int giving the time of the sale
         :return: Float
         """
-        dur = time - self.consts[LSTG_COLS['start_days']] * DAY
+        dur = time - self.lookup[self.lookup_dict['start_days']] * DAY
         periods = math.ceil(dur / MONTH)
         periods = min(periods, self.params[RELIST_COUNT])
         fees = periods * ANCHOR_STORE_INSERT
@@ -587,10 +594,10 @@ class Environment:
         :return: dict containing LST_MAP, TIME_MAP, CLOCK_MAP
         """
         sources = dict()
-        start_days = self.consts[LSTG_COLS['start_days']]
+        start_days = self.lookup[self.lookup_dict['start_days']]
         sources[CLOCK_MAP] = utils.get_clock_feats(time, start_days, arrival=arrival,
                                                    delay=delay)
-        sources[LSTG_MAP] = self.consts
+        sources[LSTG_MAP] = self.x_lstg_slice
         sources[TIME_MAP] = self.time_feats.get_feats(time=time)
         return sources
 
@@ -608,12 +615,13 @@ class Environment:
         sources[DIFFS_MAP] = torch.zeros(len(TIME_FEATS)).float()
         # other turn maps
         sources[O_OUTCOMES_MAP] = ZERO_SLR_OUTCOMES
-        sources[O_OUTCOMES_MAP][[4, 5]] = self.consts[[LSTG_COLS['start_round'],
-                                                       LSTG_COLS['start_nines']]].float()
+        sources[O_OUTCOMES_MAP][[4, 5]] = self.lookup[[self.lookup_dict['start_round'],
+                                                       self.lookup_dict['start_nines']]].float()
         sources[O_TIME_MAP] = torch.zeros(len(TIME_FEATS)).float()
         sources[O_DIFFS_MAP] = torch.zeros(len(TIME_FEATS)).float()
         sources[O_CLOCK_MAP] = torch.zeros(len(OFFER_CLOCK_FEATS)).float()
-        sources[O_CLOCK_MAP][1:len(DAYS_CLOCK_FEATS)] = self.consts[START_CLOCK_MAP]
+        start_time = self.lookup[self.lookup_dict[START_DAY]] * DAY
+        sources[O_CLOCK_MAP][1:len(DAYS_CLOCK_FEATS)] = utils.get_day_inds(start_time)
         # last turn maps
         sources[L_OUTCOMES_MAP] = torch.zeros(len(BYR_OUTCOMES)).float()
         sources[L_TIME_MAP] = torch.zeros(len(TIME_FEATS)).float()
@@ -645,7 +653,7 @@ class Environment:
         :return: None
         """
         if sale_price is None:
-            sale_price = norm * self.consts[LSTG_COLS['start']]
+            sale_price = norm * self.lookup[self.lookup_dict['start']]
         insertion_fees = self._insertion_fees(time)
         value_fee = self._value_fee(sale_price)
         net = sale_price - insertion_fees - value_fee
@@ -663,9 +671,9 @@ class Environment:
         :return: float
         """
         rate = .09
-        if torch.nonzero(self.consts[META_7]).numel() > 0:
+        if self.lookup[self.lookup_dict[META]] in META_7:
             rate = .07
-        elif torch.nonzero(self.consts[META_6]).numel() > 0:
+        elif self.lookup[self.lookup_dict[META]] in META_6:
             rate = .06
         return rate * price
 

@@ -1,7 +1,6 @@
 import pytest
-import torch
+from constants import SLR_PREFIX, BYR_PREFIX
 from rlenv.Composer import Composer
-from rlenv.model_names import *
 from rlenv.env_consts import *
 from rlenv.env_utils import *
 

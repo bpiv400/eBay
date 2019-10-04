@@ -1,6 +1,9 @@
 import os
 import pickle
+
+import constants
 import pandas as pd
+import h5py
 import numpy as np
 import torch
 from rlenv.env_consts import *
@@ -14,7 +17,7 @@ class Composer:
 
     """
     def __init__(self, params, rebuild=False):
-        composer_path = '{}/{}.pkl'.format(COMPOSER_DIR, params['composer'])
+        composer_path = '{}{}.pkl'.format(COMPOSER_DIR, params['composer'])
         if not os.path.exists(composer_path) or rebuild:
             self.maps = Composer.build()
             pickle.dump(self.maps, open(composer_path, 'wb'))
@@ -53,8 +56,9 @@ class Composer:
         :return: dictionary of maps for all models
         """
         output = dict()
-        fixed = pd.DataFrame.from_dict(LSTG_COLS, orient='index')
-        fixed.rename(columns={0: 'from'}, inplace=True)
+        x_lstg = h5py.File(X_LSTG_FILENAME, 'r')[X_LSTG]
+        x_lstg_size = x_lstg.shape[1]
+        fixed = torch.arange(x_lstg_size).long()
 
         for model_name in model_names.MODELS:
             if model_name in model_names.FEED_FORWARD:
@@ -83,7 +87,7 @@ class Composer:
             SIZE: torch.tensor(len(featnames)).long()
         }
         if model_names.DELAY in model_name:
-            if model_names.SLR_PREFIX in model_name:
+            if constants.SLR_PREFIX in model_name:
                 other_outcomes = ['{}_other'.format(feat) for feat in BYR_OUTCOMES]
                 last_outcomes = ['{}_last'.format(feat) for feat in SLR_OUTCOMES]
                 indicators = SLR_TURN_INDS
@@ -171,7 +175,7 @@ class Composer:
             time_maps[PERIODS_MAP] = torch.tensor([featnames.loc['period', 'to']])
             time_maps[PERIODS_MAP] = time_maps[PERIODS_MAP].long()
         elif model_name != model_names.DAYS:
-            if model_names.SLR_PREFIX in model_name:
+            if constants.SLR_PREFIX in model_name:
                 outcomes = SLR_OUTCOMES
                 other_outcomes = ['{}_other'.format(feat) for feat in BYR_OUTCOMES]
                 last_outcomes = ['{}_last'.format(feat) for feat in SLR_OUTCOMES]
@@ -220,12 +224,12 @@ class Composer:
         if model_name == model_names.DAYS:
             model_type = model_names.ARRIVAL_PREFIX
             subdir = model_name
-        elif model_names.SLR_PREFIX in model_name:
-            model_type = model_names.SLR_PREFIX
-            subdir = model_name.replace('{}_'.format(model_names.SLR_PREFIX), '')
+        elif constants.SLR_PREFIX in model_name:
+            model_type = constants.SLR_PREFIX
+            subdir = model_name.replace('{}_'.format(constants.SLR_PREFIX), '')
         else:
-            model_type = model_names.BYR_PREFIX
-            subdir = model_name.replace('{}_'.format(model_names.BYR_PREFIX), '')
+            model_type = constants.BYR_PREFIX
+            subdir = model_name.replace('{}_'.format(constants.BYR_PREFIX), '')
 
         featnames_path = '{}/{}/{}/{}'.format(MODEL_DIR, model_type,
                                               subdir, FEATNAMES_FILENAME)
