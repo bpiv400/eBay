@@ -56,6 +56,7 @@ class RNN(nn.Module):
         self.rnn = nn.RNN(input_size=sizes['time'],
                             hidden_size=params['rnn_hidden'],
                             num_layers=self.layers,
+                            batch_first=True,
                             dropout=DROPOUT)
 
         # output layer
@@ -69,7 +70,7 @@ class RNN(nn.Module):
 
         # pad
         theta, _ = nn.utils.rnn.pad_packed_sequence(
-            theta, total_length=self.steps)
+            theta, total_length=self.steps, batch_first=True)
 
         # output layer: (seq_len, batch_size, N_output)
         return self.output(theta)
@@ -90,7 +91,8 @@ class LSTM(nn.Module):
 
         # rnn layer
         self.rnn = nn.LSTM(input_size=sizes['time'],
-                           hidden_size=params['rnn_hidden'])
+                           hidden_size=params['rnn_hidden'],
+                           batch_first=True)
 
         # output layer
         self.output = nn.Linear(params['rnn_hidden'], sizes['out'])
@@ -102,7 +104,7 @@ class LSTM(nn.Module):
 
         # pad
         theta, _ = nn.utils.rnn.pad_packed_sequence(
-            theta, total_length=self.steps)
+            theta, total_length=self.steps, batch_first=True)
 
         # output layer: (seq_len, batch_size, N_output)
         return self.output(theta)

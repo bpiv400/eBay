@@ -1,17 +1,13 @@
-import torch
+import torch, sys
 from torch.distributions.beta import Beta
+
+sys.path.append('repo/')
+from constants import *
 
 
 def LogitLoss(theta, y):
 	p = torch.sigmoid(theta.squeeze())
 	ll = y * torch.log(p) + (1-y) * torch.log(1-p)
-
-	print(y)
-	print(p)
-	print(ll)
-	print(torch.sum(ll))
-	exit()
-
 	return -torch.sum(ll), None
 
 
@@ -21,9 +17,12 @@ def BetaMixtureLoss(theta, y, omega=None):
 
     # parse parameters
 	K = int(theta.size()[-1] / 3)
-	a = 1 + torch.index_select(theta, -1, torch.tensor(range(K)))
-	b = 1 + torch.index_select(theta, -1, torch.tensor(range(K, 2 * K)))
-	c = torch.index_select(theta, -1, torch.tensor(range(2 * K, 3 * K)))
+	a = 1 + torch.index_select(theta, -1, 
+		torch.tensor(range(K), device=DEVICE))
+	b = 1 + torch.index_select(theta, -1, 
+		torch.tensor(range(K, 2 * K), device=DEVICE))
+	c = torch.index_select(theta, -1, 
+		torch.tensor(range(2 * K, 3 * K), device=DEVICE))
 
     # beta densities
 	lndens = Beta(a, b).log_prob(y.unsqueeze(dim=-1))

@@ -9,12 +9,6 @@ from utils import *
 MODEL = 'arrival'
 
 
-def convert_to_arrays(d):
-    d['x_fixed'] = d['x_fixed'].values
-    d['y'] = d['y'].values
-    return d
-
-
 def add_thread_feats(outcome, x_fixed, x_thread):
     # return or add features
     x_fixed = x_fixed.join(x_thread['byr_us'])
@@ -27,9 +21,6 @@ def add_thread_feats(outcome, x_fixed, x_thread):
 
 # loads data and calls helper functions to construct training inputs
 def process_inputs(part, outcome):
-	# initialize output dictionary and size dictionary
-	d = {}
-
 	# path name function
 	getPath = lambda names: \
 		'data/partitions/%s/%s.gz' % (part, '_'.join(names))
@@ -85,8 +76,9 @@ if __name__ == '__main__':
 	# partition and outcome
 	part = PARTITIONS[num // len(OUTCOMES[MODEL])]
 	outcome = OUTCOMES[MODEL][num % len(OUTCOMES[MODEL])]
-	outdir = 'models/%s/%s/' % (MODEL, outcome)
-	print('Directory: %s' % outdir)
+	outfile = lambda x: 'data/inputs/%s/%s_%s.pkl' % (x, MODEL, outcome)
+	print('Model: %s' % MODEL)
+	print('Outcome: %s' % outcome)
 	print('Partition: %s' % part)
 
 	# input dataframes, output processed dataframes
@@ -96,15 +88,16 @@ if __name__ == '__main__':
 	if part == 'train_models':
 		# save featnames
 		featnames = {'x_fixed': x_fixed.columns}
-		pickle.dump(featnames, open(outdir + 'featnames.pkl', 'wb'))
+		pickle.dump(featnames, open(outfile('featnames'), 'wb'))
 
 		# get data size parameters and save
 		sizes = get_sizes(outcome, x_fixed)
-		pickle.dump(sizes, open(outdir + 'sizes.pkl', 'wb'))
+		pickle.dump(sizes, open(outfile('sizes'), 'wb'))
 
 	# convert to numpy arrays, save in hdf5
 	path = 'data/inputs/%s/%s_%s.hdf5' % (part, MODEL, outcome)
 	f = h5py.File(path, 'w')
-	f.create_dataset('y', data=y.astype(np.float32).values)
-	f.create_dataset('x_fixed', data=x_fixed.astype(np.float32).values)
+	for var in ['y', 'x_fixed']:
+		array = globals()[var].to_numpy.astype('float32')
+		f.create_dataset(var, data=array, dtype='float32')
 	f.close()

@@ -1,6 +1,6 @@
 import numpy as np, pandas as pd
 from sklearn.utils.extmath import cartesian
-import sys
+import sys, pickle
 sys.path.append('repo/')
 from constants import *
 
@@ -16,7 +16,7 @@ def create_df(path, cols, l):
 	M = cartesian(l)
 	idx = pd.Index(range(1, len(M)+1), name='id')
 	df = pd.DataFrame(M, index=idx, columns=cols, dtype='int64')
-	df.to_csv(path)
+	pickle.dump(df, open(path, 'wb'))
 	return df.index[-1]
 
 # function to construct bash file
@@ -34,8 +34,8 @@ def create_bash(model, outcome, last):
 	f.close()
 
 # path
-getPath = lambda model, outcome: MODEL_DIR + '/'.join(
-	[model, outcome, 'params.csv'])
+getPath = lambda model, outcome: 'data/inputs/params/%s_%s.pkl' \
+	% (model, outcome)
 
 # days and delay models
 for names in [['arrival', 'days'], ['byr', 'delay'], ['slr', 'delay']]:

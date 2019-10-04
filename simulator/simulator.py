@@ -21,10 +21,20 @@ class Simulator:
 
         # parameters and loss function
         if self.EM:
-            sizes['out'] *= params.K
             self.loss = BetaMixtureLoss
-            vals = np.full(tuple(sizes['N'], 1) + (params.K,), 1/params.K)
-            self.omega = torch.as_tensor(vals, dtype=torch.float).detach()
+
+            # size of out vector is 3 * K
+            sizes['out'] *= params.K
+            
+            # initialize omega to 1/K
+            if isRecurrent:
+                vals = np.full((sizes['N'], sizes['steps'],) + (params.K,), 
+                    1/params.K)
+            else:
+                vals = np.full((sizes['N'],) + (params.K,), 1/params.K)
+            self.omega = torch.as_tensor(vals, dtype=torch.float, 
+                device=DEVICE).detach()
+            
         elif self.outcome in ['days', 'hist']:
             self.loss = NegativeBinomialLoss
         else:
@@ -85,10 +95,7 @@ class Simulator:
 
         # update omega
         if self.EM:
-            if self.isRecurrent:
-                self.omega[:, idx, :] = omega
-            else:
-                self.omega[idx, :] = omega
+            self.omega[idx, :] = omega
 
         # step down gradients
         loss.backward()

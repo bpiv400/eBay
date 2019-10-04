@@ -19,33 +19,29 @@ class Inputs(Dataset):
         self.outcome = outcome
 
         # path
-        path = 'data/inputs/%s/%s_%s.hdf5' % (partition, model, outcome)
-
-        # load data file
-        self.d = h5py.File(path, 'r')
+        self.path = 'data/inputs/%s/%s_%s.hdf5' % (partition, model, outcome)
 
         # save length
-        self.N = np.shape(self.d['x_fixed'])[0]
-
-
-    def close(self):
-        self.d.close()
+        d = h5py.File(self.path, 'r')
+        self.N = np.shape(d['x_fixed'])[0]
+        d.close()
 
 
     def __getitem__(self, idx):
-        # all models have y and x_fixed
-        y = self.d['y'][idx]
-        x_fixed = self.d['x_fixed'][idx,:]
+        # load data file
+        with h5py.File(self.path, 'r') as d:
+            # all models have y and x_fixed
+            y = d['y'][idx]
+            x_fixed = d['x_fixed'][idx,:]
 
-        # arrival models are feed-forward
-        if self.model == 'arrival':
-            return y, x_fixed, idx
-        
-        # role models are recurrent
-        x_time = self.d['x_time'][:,idx,:]
-        turns = self.d['turns'][idx]
+            # arrival models are feed-forward
+            if self.model == 'arrival':
+                return y, x_fixed, idx
+            
+            # role models are recurrent
+            x_time = d['x_time'][idx,:,:]
 
-        return y, x_fixed, x_time, turns, idx
+        return y, x_fixed, x_time, idx
 
 
     def __len__(self):
@@ -90,8 +86,8 @@ def collateFF(batch):
         idx.append(b[2])
 
     # convert to tensor
-    y = torch.tensor(y)
-    x_fixed = torch.stack(x_fixed)
+    y = torch.from_numpy(np.asarray(y)).float()
+    x_fixed = torch.stack(x_fixed).float()
     idx = torch.tensor(idx)
 
     # output is (dictionary, indices)
@@ -104,19 +100,19 @@ def collateRNN(batch):
     y, x_fixed, x_time, turns, idx = [], [], [], [], []
 
     # sorts the batch list in decreasing order of turns
-    ordered = sorted(batch, key=lambda x: len(x[3]), reverse=True)
+    ordered = sorted(batch, key=lambda x: np.sum(np.isnan(x[0])))
     for b in ordered:
         y.append(b[0])
         x_fixed.append(torch.from_numpy(b[1]))
         x_time.append(torch.from_numpy(b[2]))
-        turns.append(b[3])
-        idx.append(b[4])
+        idx.append(b[3])
 
     # convert to tensor, pack if needed
-    y = torch.tensor(y).float()
-    x_fixed = torch.stack(x_fixed)
+    y = torch.from_numpy(np.asarray(y)).float()
+    x_fixed = torch.stack(x_fixed).float().unsqeeze(dim=1)
     x_time = rnn.pack_padded_sequence(
-        torch.stack(x_time, dim=1), torch.from_numpy(turns))
+        torch.stack(x_time, dim=1).float(), torch.from_numpy(turns),
+        batch_first=True)
     idx = torch.tensor(idx)
 
     # output is (dictionary, indices)

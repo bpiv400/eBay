@@ -21,7 +21,7 @@ def get_dataloader(model, outcome):
         f = collateRNN
 
     loader = DataLoader(data, batch_sampler=Sample(data),
-        num_workers=7, collate_fn=f)
+        num_workers=2, collate_fn=f)
 
     return data, loader
 
@@ -37,7 +37,8 @@ def train_model(simulator, epochs):
         start = dt.now()
 
         # get data and data loader
-        dataset, loader = get_dataloader(simulator.model, simulator.outcome)
+        dataset, loader = get_dataloader(
+            simulator.model, simulator.outcome)
 
         # loop over batches
         lnL_i = 0
@@ -45,13 +46,13 @@ def train_model(simulator, epochs):
             # unpack batch
             data, idx = batch
 
-            # move tensors to GPU
+            # move to GPU
             data = {k: v.to(DEVICE) for k, v in data.items()}
             idx = idx.to(DEVICE)
 
             lnL_i += simulator.run_batch(data, idx)
             if (j > 0) and (j % 1000 == 0):
-                print('\tBatch %d of %d' % (j, len(loader)))
+                print('\tBatch %d: %1.4f' % (j, lnL_i))
 
         # append log-likelihood to list
         lnL.append(lnL_i)
@@ -61,7 +62,7 @@ def train_model(simulator, epochs):
             (i+1, lnL[-1], (dt.now() - start).seconds))
 
         # close hdf5 file
-        dataset.close()
+        #dataset.close()
 
     # return loss history and total duration
     return lnL, (dt.now() - time0).seconds
@@ -81,12 +82,13 @@ if __name__ == '__main__':
     paramsid = args.id
 
     # model folder
-    folder = 'models/%s/%s/' % (model, outcome)
+    file = lambda x: 'data/inputs/%s/%s_%s.pkl' % (x, model, outcome)
 
     # load inputs to model
     print('Loading parameters')
-    sizes = pickle.load(open(folder + 'sizes.pkl', 'rb'))
-    params = pd.read_csv(folder + 'params.csv', index_col=0).loc[paramsid]
+    sizes = pickle.load(open(file('sizes'), 'rb'))
+    params = pickle.load(open(file('params'), 'rb')).loc[paramsid]
+    print(params)
 
     # initialize neural net
     simulator = Simulator(model, outcome, params, sizes)
@@ -99,13 +101,16 @@ if __name__ == '__main__':
     print('Training: %d epochs.' % epochs)
     lnL_train, duration = train_model(simulator, epochs)
 
+    # save model
+    torch.save(simulator.net.state_dict(), folder + str(args.id) + '.pt')
+
+
+    #### NEED TO UPDATE WITH DATALOADER
+
     # holdout
     holdout = pickle.load(open(folder + 'train_rl.pkl', 'rb'))
     loss_holdout, _ = simulator.evaluate_loss(holdout, train=False)
     print('Holdout lnL: %.4f.' % -loss_holdout.item())
-
-    # save model
-    torch.save(simulator.net.state_dict(), folder + str(args.id) + '.pt')
 
     # save log-likelihood and duration to results CSV
     path = folder + 'results.csv'
