@@ -1,2 +1,4 @@
 *.dropbox.attr
 notebooks/.ipynb_checkpoints/
+__pycache__/
+*.py[cod]
