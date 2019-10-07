@@ -19,30 +19,39 @@ def process_inputs(part):
 	# fixed features
 	x_fixed = cat_x_lstg(part)
 
-	# day features to merge in collate function
-	x_days = pd.DataFrame(index=y.index)
-	x_days['days'] = y.index.get_level_values('period')
-	clock = pd.to_datetime(x_fixed.start_days + x_days.days, 
-        unit='D', origin=START)
-	x_days = x_days.join(extract_day_feats(clock))
+	# index of x_fixed for each y
+	lookup = np.array(range(len(x_fixed.index)))
+	counts = y.groupby('lstg').count().values
+	idx_fixed = np.repeat(lookup, counts)
 
-	return y, x_fixed, x_days
+	# day features
+	N = pd.to_timedelta(pd.to_datetime(END) - pd.to_datetime(START)).days
+	clock = pd.to_datetime(range(N+30+1), unit='D', origin=START)
+	x_days = pd.Series(clock, name='clock')
+	x_days = extract_day_feats(x_days).join(x_days).set_index('clock')
+
+	# index of x_days for each y
+	period = y.reset_index('period')['period']
+	idx_days = (period + x_fixed.start_date).values
+
+	return y, x_fixed, idx_fixed, x_days, idx_days
 
 
 if __name__ == '__main__':
 	# extract model and outcome from int
 	parser = argparse.ArgumentParser()
 	parser.add_argument('--num', type=int)
+	num = parser.parse_args().num-1
 
 	# partition and outcome
-	part = PARTITIONS[parser.parse_args().num-1]
-	outfile = lambda x: 'data/inputs/part/arrival_days.pkl' % x
-	print('Model: %s' % MODEL)
-	print('Outcome: %s' % OUTCOME)
+	part = PARTITIONS[num]
+	outfile = 'data/inputs/%s/arrival_days.pkl' % part
+	print('Model: arrival')
+	print('Outcome: days')
 	print('Partition: %s' % part)
 
 	# input dataframes, output processed dataframes
-	y, x_fixed, x_days = process_inputs(part)
+	y, x_fixed, idx_fixed, x_days, idx_days = process_inputs(part)
 
 	# save featnames and sizes once
 	if part == 'train_models':
@@ -59,7 +68,16 @@ if __name__ == '__main__':
 	# convert to numpy arrays, save in hdf5
 	path = 'data/inputs/%s/arrival_days.hdf5' % part
 	f = h5py.File(path, 'w')
-	for var in ['y', 'x_fixed', 'x_days']:
+
+	f.create_dataset('y', data=y.to_numpy(), dtype='uint8')
+
+	for var in ['x_fixed', 'x_days']:
 		array = globals()[var].to_numpy().astype('float32')
 		f.create_dataset(var, data=array, dtype='float32')
+
+	f.create_dataset('idx_fixed', data=idx_fixed.astype('uint32'), 
+		dtype='uint32')
+	f.create_dataset('idx_days', data=idx_days.astype('uint16'), 
+		dtype='uint16')
+
 	f.close()
