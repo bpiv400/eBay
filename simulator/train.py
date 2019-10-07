@@ -3,14 +3,11 @@ import torch
 import numpy as np, pandas as pd
 from datetime import datetime as dt
 from torch.utils.data import DataLoader
-from tqdm import tqdm
+from interface import *
+from simulator import Simulator
 
 sys.path.append('repo/')
 from constants import *
-
-sys.path.append('repo/simulator/')
-from interface import *
-from simulator import Simulator
 
 
 def get_dataloader(model, outcome):
@@ -21,9 +18,9 @@ def get_dataloader(model, outcome):
         f = collateRNN
 
     loader = DataLoader(data, batch_sampler=Sample(data),
-        num_workers=2, collate_fn=f)
+        num_workers=0, collate_fn=f)
 
-    return data, loader
+    return loader
 
 
 def train_model(simulator, epochs):
@@ -34,11 +31,10 @@ def train_model(simulator, epochs):
 
     # loop over epochs, record log-likelihood
     for i in range(epochs):
-        start = dt.now()
+        epoch_start = dt.now()
 
         # get data and data loader
-        dataset, loader = get_dataloader(
-            simulator.model, simulator.outcome)
+        loader = get_dataloader(simulator.model, simulator.outcome)
 
         # loop over batches
         lnL_i = 0
@@ -48,21 +44,16 @@ def train_model(simulator, epochs):
 
             # move to GPU
             data = {k: v.to(DEVICE) for k, v in data.items()}
-            idx = idx.to(DEVICE)
 
             lnL_i += simulator.run_batch(data, idx)
-            if (j > 0) and (j % 1000 == 0):
-                print('\tBatch %d: %1.4f' % (j, lnL_i))
+            print(lnL_i)
 
         # append log-likelihood to list
         lnL.append(lnL_i)
 
         # print log-likelihood and duration
         print('Epoch %d: lnL: %1.4f. (%dsec)' %
-            (i+1, lnL[-1], (dt.now() - start).seconds))
-
-        # close hdf5 file
-        #dataset.close()
+            (i+1, lnL[-1], (dt.now() - time0).seconds))
 
     # return loss history and total duration
     return lnL, (dt.now() - time0).seconds

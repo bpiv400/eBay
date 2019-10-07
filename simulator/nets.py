@@ -54,7 +54,7 @@ class RNN(nn.Module):
 
         # rnn layer
         self.rnn = nn.RNN(input_size=sizes['time'],
-                            hidden_size=params['rnn_hidden'],
+                            hidden_size=int(params['rnn_hidden']),
                             num_layers=self.layers,
                             batch_first=True,
                             dropout=DROPOUT)
@@ -65,7 +65,7 @@ class RNN(nn.Module):
 
     # output discrete weights and parameters of continuous components
     def forward(self, x_fixed, x_time):
-        x_fixed = x_fixed.repeat(self.layers, 1, 1)
+        x_fixed = x_fixed.unsqueeze(dim=0).repeat(self.layers, 1, 1)
         theta, _ = self.rnn(x_time, self.h0(x_fixed))
 
         # pad
@@ -91,7 +91,7 @@ class LSTM(nn.Module):
 
         # rnn layer
         self.rnn = nn.LSTM(input_size=sizes['time'],
-                           hidden_size=params['rnn_hidden'],
+                           hidden_size=int(params['rnn_hidden']),
                            batch_first=True)
 
         # output layer

@@ -97,7 +97,7 @@ def collateFF(batch):
 # collate function for recurrent networks
 def collateRNN(batch):
     # initialize output
-    y, x_fixed, x_time, turns, idx = [], [], [], [], []
+    y, x_fixed, x_time, idx = [], [], [], []
 
     # sorts the batch list in decreasing order of turns
     ordered = sorted(batch, key=lambda x: np.sum(np.isnan(x[0])))
@@ -109,10 +109,10 @@ def collateRNN(batch):
 
     # convert to tensor, pack if needed
     y = torch.from_numpy(np.asarray(y)).float()
-    x_fixed = torch.stack(x_fixed).float().unsqeeze(dim=1)
-    x_time = rnn.pack_padded_sequence(
-        torch.stack(x_time, dim=1).float(), torch.from_numpy(turns),
-        batch_first=True)
+    turns = torch.sum(~torch.isnan(y), dim=1)
+    x_fixed = torch.stack(x_fixed).float()
+    x_time = torch.stack(x_time, dim=0).float()
+    x_time = rnn.pack_padded_sequence(x_time, turns, batch_first=True)
     idx = torch.tensor(idx)
 
     # output is (dictionary, indices)

@@ -6,8 +6,6 @@ sys.path.append('repo/')
 from constants import *
 from utils import *
 
-MODEL = 'arrival'
-
 
 def add_thread_feats(outcome, x_fixed, x_thread):
     # return or add features
@@ -74,10 +72,11 @@ if __name__ == '__main__':
 	num = parser.parse_args().num-1
 
 	# partition and outcome
-	part = PARTITIONS[num // len(OUTCOMES[MODEL])]
-	outcome = OUTCOMES[MODEL][num % len(OUTCOMES[MODEL])]
-	outfile = lambda x: 'data/inputs/%s/%s_%s.pkl' % (x, MODEL, outcome)
-	print('Model: %s' % MODEL)
+	k = len(OUTCOMES_ARRIVAL)
+	part = PARTITIONS[num // k]
+	outcome = OUTCOMES_ARRIVAL[num % k]
+	outfile = lambda x: 'data/inputs/%s/arrival_%s.pkl' % (x, outcome)
+	print('Model: arrival')
 	print('Outcome: %s' % outcome)
 	print('Partition: %s' % part)
 
@@ -95,9 +94,9 @@ if __name__ == '__main__':
 		pickle.dump(sizes, open(outfile('sizes'), 'wb'))
 
 	# convert to numpy arrays, save in hdf5
-	path = 'data/inputs/%s/%s_%s.hdf5' % (part, MODEL, outcome)
+	path = 'data/inputs/%s/arrival_%s.hdf5' % (part, outcome)
 	f = h5py.File(path, 'w')
 	for var in ['y', 'x_fixed']:
-		array = globals()[var].to_numpy.astype('float32')
+		array = globals()[var].to_numpy().astype('float32')
 		f.create_dataset(var, data=array, dtype='float32')
 	f.close()

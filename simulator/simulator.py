@@ -21,24 +21,23 @@ class Simulator:
 
         # parameters and loss function
         if self.EM:
-            self.loss = BetaMixtureLoss
+            self.loss = beta_mixture_loss
 
             # size of out vector is 3 * K
             sizes['out'] *= params.K
             
             # initialize omega to 1/K
-            if isRecurrent:
+            if self.isRecurrent:
                 vals = np.full((sizes['N'], sizes['steps'],) + (params.K,), 
                     1/params.K)
             else:
                 vals = np.full((sizes['N'],) + (params.K,), 1/params.K)
-            self.omega = torch.as_tensor(vals, dtype=torch.float, 
-                device=DEVICE).detach()
+            self.omega = torch.as_tensor(vals, dtype=torch.float).detach()
             
         elif self.outcome in ['days', 'hist']:
-            self.loss = NegativeBinomialLoss
+            self.loss = negative_binomial_loss
         else:
-            self.loss = LogitLoss
+            self.loss = logit_loss
 
         # neural net(s)
         if self.isRecurrent:
@@ -88,14 +87,14 @@ class Simulator:
 
         # include omega for expectation-maximization
         if self.EM:
-            data['omega'] = torch.index_select(self.omega, -2, idx)
+            data['omega'] = self.omega[idx, :].to(DEVICE)
 
         # calculate loss
         loss, omega = self.evaluate_loss(data)
 
         # update omega
         if self.EM:
-            self.omega[idx, :] = omega
+            self.omega[idx, :] = omega.to('cpu')
 
         # step down gradients
         loss.backward()
