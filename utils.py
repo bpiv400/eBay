@@ -17,8 +17,7 @@ def cat_x_lstg(part):
     x_lstg = load(prefix + 'lstg.gz')
     for s in ['slr', 'meta', 'w2v']:
         filename = prefix + s + '.gz'
-        if os.path.isfile(filename):
-            x_lstg = x_lstg.join(load(prefix + s + '.gz'), rsuffix=s)
+        x_lstg = x_lstg.join(load(filename), rsuffix=s)
     return x_lstg
 
 

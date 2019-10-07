@@ -15,9 +15,12 @@ def beta_mixture_loss(theta, y, omega=None):
 
 	# parse parameters
 	k = int(theta.size()[-1] / 3)
-	a = 1 + torch.index_select(theta, -1, torch.tensor(range(k), device=DEVICE))
-	b = 1 + torch.index_select(theta, -1, torch.tensor(range(k, 2 * k), device=DEVICE))
-	c = torch.index_select(theta, -1, torch.tensor(range(2 * k, 3 * k), device=DEVICE))
+	a = 1 + torch.index_select(theta, -1, 
+		torch.tensor(range(k), device=DEVICE))
+	b = 1 + torch.index_select(theta, -1,
+	 torch.tensor(range(k, 2 * k), device=DEVICE))
+	c = torch.index_select(theta, -1, 
+		torch.tensor(range(2 * k, 3 * k), device=DEVICE))
 
 	# beta densities
 	lndens = Beta(a, b).log_prob(y.unsqueeze(dim=-1))
@@ -45,8 +48,10 @@ def beta_mixture_loss(theta, y, omega=None):
 def negative_binomial_loss(theta, y):
 	theta = theta.squeeze()
 	# parameters
-	r = torch.exp(torch.index_select(theta, -1, torch.tensor(0))).squeeze()
-	p = torch.sigmoid(torch.index_select(theta, -1, torch.tensor(1))).squeeze()
+	r = torch.exp(torch.index_select(theta, -1, 
+		torch.tensor(0, device=DEVICE))).squeeze()
+	p = torch.sigmoid(torch.index_select(theta, -1, 
+		torch.tensor(1, device=DEVICE))).squeeze()
 	# log-likelihood components
 	ll = torch.mvlgamma(y + r, 1) - torch.mvlgamma(r, 1)
 	ll += y * torch.log(p) + r * torch.log(1 - p)

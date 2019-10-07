@@ -41,9 +41,7 @@ class Inputs(Dataset):
                 idx_days = d['idx_days'][idx]
                 x_days = d['x_days'][idx_days,:]
 
-                x_fixed = np.concatenate(
-                    (x_fixed, x_days), axis=1)
-
+                x_fixed = np.concatenate((x_fixed, x_days))
 
             # non-days models also index x_fixed using idx
             else:
