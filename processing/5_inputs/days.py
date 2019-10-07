@@ -56,11 +56,12 @@ if __name__ == '__main__':
 	# save featnames and sizes once
 	if part == 'train_models':
 		# save featnames
-		featnames = {'x_fixed': x_fixed.columns + x_days.columns}
+		featnames = {'x_fixed': list(x_fixed.columns) + \
+			list(x_days.rename(lambda x: x + '_focal', axis=1).columns)}
 		pickle.dump(featnames, open(outfile('featnames'), 'wb'))
 
 		# get data size parameters and save
-		sizes = {'N': len(x_fixed.index), 
+		sizes = {'N': len(y.index), 
 				 'fixed': len(x_fixed.columns) + len(x_days.columns),
 				 'out': 2}
 		pickle.dump(sizes, open(outfile('sizes'), 'wb'))
