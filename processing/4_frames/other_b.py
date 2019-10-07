@@ -1,17 +1,22 @@
+<<<<<<< HEAD
 import argparse, random, sys
+=======
+>>>>>>> 4448e0b7a3b2f9cca2b4f5395d4fd9517d672c4e
 from compress_pickle import load, dump
-from datetime import datetime as dt
-from sklearn.utils.extmath import cartesian
-import numpy as np, pandas as pd
+import pandas as pd
+import argparse, sys
 
 sys.path.append('repo/')
 from constants import *
-from utils import *
-
-sys.path.append('repo/processing/')
-from processing_utils import *
 
 
+if __name__ == "__main__":
+	# partition number from command line
+	parser = argparse.ArgumentParser()
+	parser.add_argument('--num', action='store', type=int, required=True)
+	num = parser.parse_args().num
+
+<<<<<<< HEAD
 def multiply_indices(s):
     # initialize arrays
     k = len(s.index.names)
@@ -59,13 +64,13 @@ def get_y_arrival(lstgs, threads):
     d['days'] = parse_days(diff, t0, t1)
     return d
 
+=======
+	part = PARTITIONS[num-1]
+>>>>>>> 4448e0b7a3b2f9cca2b4f5395d4fd9517d672c4e
 
-if __name__ == "__main__":
-    # partition number from command line
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--num', action='store', type=int, required=True)
-    num = parser.parse_args().num
+	path = 'data/partitions/%s/x_offer.gz' % part
 
+<<<<<<< HEAD
     # partition
 	partitions = load(PARTS_DIR + 'partitions.gz')
 	part = list(partitions.keys())[num-1]
@@ -77,9 +82,10 @@ if __name__ == "__main__":
     	usecols=['lstg', 'start_date', 'end_time']).set_index(
     	'lstg').reindex(index=idx)
     threads = load_frames('threads').reindex(index=idx, level='lstg')
+=======
+	x_offer = load(path)
 
-    # outcomes for arrival model
-    print('Creating arrival model outcome variables')
-    y_arrival = get_y_arrival(lstgs, threads)
-    for k, v in y_arrival.items():
-        dump(v, path('y_arrival_' + k))
+	x_offer.loc[x_offer.norm.isna(), 'norm'] = 0
+>>>>>>> 4448e0b7a3b2f9cca2b4f5395d4fd9517d672c4e
+
+	dump(x_offer, path)
