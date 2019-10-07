@@ -30,9 +30,24 @@ class Inputs(Dataset):
     def __getitem__(self, idx):
         # load data file
         with h5py.File(self.path, 'r') as d:
-            # all models have y and x_fixed
+            # all models index y using idx
             y = d['y'][idx]
-            x_fixed = d['x_fixed'][idx,:]
+
+            # create x_fixed for days model
+            if self.outcome == 'days':
+                idx_fixed = d['idx_fixed'][idx]
+                x_fixed = d['x_fixed'][idx_fixed,:]
+
+                idx_days = d['idx_days'][idx]
+                x_days = d['x_days'][idx_days,:]
+
+                x_fixed = np.concatenate(
+                    (x_fixed, x_days), axis=1)
+
+
+            # non-days models also index x_fixed using idx
+            else:
+                x_fixed = d['x_fixed'][idx,:]
 
             # arrival models are feed-forward
             if self.model == 'arrival':
@@ -40,8 +55,7 @@ class Inputs(Dataset):
             
             # role models are recurrent
             x_time = d['x_time'][idx,:,:]
-
-        return y, x_fixed, x_time, idx
+            return y, x_fixed, x_time, idx
 
 
     def __len__(self):

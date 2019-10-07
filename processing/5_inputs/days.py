@@ -45,7 +45,7 @@ if __name__ == '__main__':
 
 	# partition and outcome
 	part = PARTITIONS[num]
-	outfile = 'data/inputs/%s/arrival_days.pkl' % part
+	outfile = lambda x: 'data/inputs/%s/arrival_days.pkl' % x
 	print('Model: arrival')
 	print('Outcome: days')
 	print('Partition: %s' % part)
