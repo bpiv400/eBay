@@ -1,5 +1,4 @@
-import sys
-import argparse, random
+import argparse, random, sys
 from compress_pickle import load, dump
 from datetime import datetime as dt
 from sklearn.utils.extmath import cartesian
@@ -42,9 +41,8 @@ def parse_days(diff, t0, t1):
     days = diff.dt.days.rename('period').to_frame().assign(count=1)
     days = days.groupby(['lstg', 'period']).sum().squeeze().astype(np.uint8)
     # end of listings
-    T1 = int((pd.to_datetime(END) - pd.to_datetime(START)).total_seconds())
-    t1[t1 > T1] = T1
     end = (pd.to_timedelta(t1 - t0, unit='s').dt.days).rename('period')
+    end.loc[end > MAX_DAYS] = MAX_DAYS
     # create multi-index from end stamps
     idx = multiply_indices(end+1)
     # expand to new index and return
@@ -59,12 +57,6 @@ def get_y_arrival(lstgs, threads):
     diff = pd.to_timedelta(threads.clock - t0, unit='s')
     # append arrivals to end stamps
     d['days'] = parse_days(diff, t0, t1)
-    # create other outcomes
-    d['loc'] = threads.byr_us.rename('loc')
-    d['hist'] = threads.byr_hist.rename('hist')
-    d['bin'] = threads.bin
-    sec = ((diff.dt.seconds[threads.bin == 0] + 0.5) / (24 * 3600 + 1))
-    d['sec'] = sec.rename('sec')
     return d
 
 
@@ -75,14 +67,15 @@ if __name__ == "__main__":
     num = parser.parse_args().num
 
     # partition
-    partitions = load(PARTS_DIR + 'partitions.gz')
-    part = list(partitions.keys())[num-1]
-    idx = partitions[part]
-    path = lambda name: PARTS_DIR + part + '/' + name + '.gz'
+	partitions = load(PARTS_DIR + 'partitions.gz')
+	part = list(partitions.keys())[num-1]
+	idx = partitions[part]
+	path = lambda name: PARTS_DIR + part + '/' + name + '.gz'
 
     # load data and 
-    lstgs = pd.read_csv(CLEAN_DIR + 'listings.csv').drop(
-        ['title', 'flag'], axis=1).set_index('lstg').reindex(index=idx)
+    lstgs = pd.read_csv(CLEAN_DIR + 'listings.csv', 
+    	usecols=['lstg', 'start_date', 'end_time']).set_index(
+    	'lstg').reindex(index=idx)
     threads = load_frames('threads').reindex(index=idx, level='lstg')
 
     # outcomes for arrival model

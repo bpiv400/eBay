@@ -1,30 +1,25 @@
-import torch, sys
-from torch.distributions.beta import Beta
-
-sys.path.append('repo/')
 from constants import *
+from torch.distributions.beta import Beta
+import torch
 
 
-def LogitLoss(theta, y):
+def logit_loss(theta, y):
 	p = torch.sigmoid(theta.squeeze())
-	ll = y * torch.log(p) + (1-y) * torch.log(1-p)
+	ll = y * torch.log(p) + (1-y) * torch.log(1 - p)
 	return -torch.sum(ll), None
 
 
-def BetaMixtureLoss(theta, y, omega=None):
-    # exponentiate
+def beta_mixture_loss(theta, y, omega=None):
+	# exponentiate
 	theta = torch.exp(theta.squeeze())
 
-    # parse parameters
-	K = int(theta.size()[-1] / 3)
-	a = 1 + torch.index_select(theta, -1, 
-		torch.tensor(range(K), device=DEVICE))
-	b = 1 + torch.index_select(theta, -1, 
-		torch.tensor(range(K, 2 * K), device=DEVICE))
-	c = torch.index_select(theta, -1, 
-		torch.tensor(range(2 * K, 3 * K), device=DEVICE))
+	# parse parameters
+	k = int(theta.size()[-1] / 3)
+	a = 1 + torch.index_select(theta, -1, torch.tensor(range(k), device=DEVICE))
+	b = 1 + torch.index_select(theta, -1, torch.tensor(range(k, 2 * k), device=DEVICE))
+	c = torch.index_select(theta, -1, torch.tensor(range(2 * k, 3 * k), device=DEVICE))
 
-    # beta densities
+	# beta densities
 	lndens = Beta(a, b).log_prob(y.unsqueeze(dim=-1))
 
 	# multinomial probabilities
@@ -43,19 +38,17 @@ def BetaMixtureLoss(theta, y, omega=None):
 	dens = torch.exp(lndens.detach())
 	omega = torch.div(dens, torch.sum(dens, dim=-1, keepdim=True))
 
-    # calculate negative log-likelihood
+	# calculate negative log-likelihood
 	return -Q, omega
 
 
-def NegativeBinomialLoss(theta, y):
+def negative_binomial_loss(theta, y):
 	theta = theta.squeeze()
-    # parameters
-	r = torch.exp(torch.index_select(theta, -1,
-		torch.tensor(0))).squeeze()
-	p = torch.sigmoid(torch.index_select(theta, -1,
-		torch.tensor(1))).squeeze()
-    # log-likelihood components
+	# parameters
+	r = torch.exp(torch.index_select(theta, -1, torch.tensor(0))).squeeze()
+	p = torch.sigmoid(torch.index_select(theta, -1, torch.tensor(1))).squeeze()
+	# log-likelihood components
 	ll = torch.mvlgamma(y + r, 1) - torch.mvlgamma(r, 1)
-	ll += y * torch.log(p) + r * torch.log(1-p)
+	ll += y * torch.log(p) + r * torch.log(1 - p)
 	return -torch.sum(ll), None
 

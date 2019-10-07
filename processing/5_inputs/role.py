@@ -7,6 +7,15 @@ from constants import *
 from utils import *
 
 
+def add_turn_indicators(df):
+    indices = np.unique(df.index.get_level_values('index'))
+    for i in range(len(indices)-1):
+        ind = indices[i]
+        featname = 't' + str((ind+1) // 2)
+        df[featname] = df.index.isin([ind], level='index')
+    return df
+
+
 def parse_time_feats_role(model, outcome, x_offer):
     # initialize output dataframe
     idx = x_offer.index[x_offer.index.isin(IDX[model], level='index')]
@@ -51,42 +60,36 @@ def process_inputs(part, model, outcome):
 		'data/partitions/%s/%s.gz' % (part, '_'.join(names))
 
 	# outcome
-	y = load(getPath(['y_arrival', outcome])).unstack()
+	y = load(getPath(['y', model, outcome])).unstack()
 
 	# fixed features
 	x_fixed = load(getPath(['x', 'thread'])).join(cat_x_lstg(part))
 	x_fixed = x_fixed.reindex(index=y.index)
-	cols = x_fixed.columns
+	cols = list(x_fixed.columns)
 	cols = cols[2:] + cols[:2]
 	x_fixed = x_fixed[cols]
 
 	# time features
 	x_offer = load(getPath(['x', 'offer']))
 	x_time = parse_time_feats_role(model, outcome, x_offer)
-	x_time = x_time.unstack().reindex(y.index)
 
 	return y, x_fixed, x_time
 
 
 def get_sizes(outcome, y, x_fixed, x_time):
     sizes = {}
-
     # number of observations
     sizes['N'] = len(x_fixed.index)
-
     # fixed inputs
     sizes['fixed'] = len(x_fixed.columns)
-
     # output parameters
     if outcome == 'con':
         sizes['out'] = 3
     else:
         sizes['out'] = 1
-
    # RNN parameters
-    sizes['steps'] = y.size()[0]
-    sizes['time'] = x_time.size()[-1]
-
+    sizes['steps'] = len(y.columns)
+    sizes['time'] = len(x_time.columns)
     return sizes
 
 
@@ -97,13 +100,13 @@ if __name__ == '__main__':
 	num = parser.parse_args().num-1
 
 	# partition and outcome
-	v = OUTCOMES['role']
-	part = PARTITIONS[num // (2 * len(v))]
-	remainder = num % (2 * len(v))
-	model = 'slr' if remainder > len(v) else 'byr'
-	outcome = OUTCOMES[MODEL][remainder % len(v)]
+	k = len(OUTCOMES_ROLE)
+	part = PARTITIONS[num // (2 * k)]
+	remainder = num % (2 * k)
+	model = 'slr' if remainder >= k else 'byr'
+	outcome = OUTCOMES_ROLE[remainder % k]
 	outfile = lambda x: 'data/inputs/%s/%s_%s.pkl' % (x, model, outcome)
-	print('Model: %s' % MODEL)
+	print('Model: %s' % model)
 	print('Outcome: %s' % outcome)
 	print('Partition: %s' % part)
 
@@ -121,9 +124,19 @@ if __name__ == '__main__':
 		pickle.dump(sizes, open(outfile('sizes'), 'wb'))
 
 	# convert to numpy arrays, save in hdf5
-	path = 'data/inputs/%s/%s_%s.hdf5' % (part, MODEL, outcome)
+	path = 'data/inputs/%s/%s_%s.hdf5' % (part, model, outcome)
 	f = h5py.File(path, 'w')
-	for var in ['y', 'x_fixed', 'x_time']:
-		array = globals()[var].to_numpy.astype('float32')
-		f.create_dataset(var, data=array, dtype='float32')
+	for name in ['y', 'x_fixed']:
+		array = globals()[name].to_numpy().astype('float32')
+		f.create_dataset(name, data=array, dtype='float32')
+
+	# x_time
+	arrays = []
+	for c in x_time.columns:
+		array = x_time[c].astype('float32').unstack().reindex(
+			index=y.index).to_numpy()
+		arrays.append(np.expand_dims(array, axis=2))
+	arrays = np.concatenate(arrays, axis=2)
+	f.create_dataset('x_time', data=arrays, dtype='float32')
+		
 	f.close()

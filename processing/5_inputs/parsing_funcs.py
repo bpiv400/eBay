@@ -49,15 +49,6 @@ def convert_to_arrays(d):
     return d
 
 
-def add_turn_indicators(df):
-    indices = np.unique(df.index.get_level_values('index'))
-    for i in range(len(indices)-1):
-        ind = indices[i]
-        featname = 't' + str((ind+1) // 2)
-        df[featname] = df.index.isin([ind], level='index')
-    return df
-
-
 def add_clock_feats(x_time, model):
     clock = pd.to_datetime(x_time.clock, unit='s', origin=START)
     # US holiday indicator
@@ -82,17 +73,6 @@ def parse_time_feats_delay(model, idx, z_start, z_role):
     x_time = add_clock_feats(x_time, model)
     # time-varying features
     return x_time.join(z_role.reindex(index=idx, fill_value=0))
-
-
-def parse_time_feats_days(d):
-    # initialize output
-    x_time = pd.DataFrame(index=d['y'].index)
-    # add period
-    x_time['days'] = d['y'].index.get_level_values('period')
-    # day attributes
-    clock = pd.to_datetime(d['x_fixed'].start_days + x_time.days, 
-        unit='D', origin=START)
-    return x_time.join(extract_day_feats(clock))
 
 
 def parse_fixed_feats_delay(model, x_lstg, x_thread, x_offer):

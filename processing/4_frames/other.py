@@ -195,6 +195,7 @@ def get_x_offer(lstgs, events, tf):
     df['norm'] = events['price'] / lstgs['start_price']
     mask = events.index.isin(IDX['slr'], level='index')
     df.loc[mask, 'norm'] = 1 - df.loc[mask, 'norm']
+    df.loc[df.norm.isna(), 'norm'] = 0
     # offer digits
     df['round'], df['nines'] = do_rounding(offers.stack())
     # message

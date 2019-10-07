@@ -22,6 +22,7 @@ TOL_HALF = 0.02
 # optimization parameters
 MBSIZE = 32 * 3
 UPDATES = 5e6
+EPOCHS = 5
 LR = 1e-4
 
 # dropout rate
@@ -39,11 +40,17 @@ MODEL_DIR = 'models/'
 W2V_PATH = lambda x: 'data/clean/w2v_' + x + '.csv'
 
 # outcomes for input creation
-OUTCOMES = {'arrival': ['bin', 'loc', 'hist', 'sec'],
+OUTCOMES = {'arrival': ['days', 'bin', 'loc', 'hist', 'sec'],
 	'role': ['delay', 'accept', 'reject', 'con', 'msg', 'round', 'nines']}
+
+OUTCOMES_ARRIVAL = ['bin', 'loc', 'hist', 'sec']
+OUTCOMES_ROLE = ['accept', 'reject', 'con', 'msg', 'round', 'nines']
 
 # partitions
 PARTITIONS = ['train_models', 'train_rl', 'test']
+
+# delete activity after lstg is open MAX_DAYS
+MAX_DAYS = 30
 
 # maximal delay times
 MAX_DELAY = {
@@ -87,3 +94,24 @@ HOLIDAYS = Calendar().holidays(start=START, end=END)
 # quantiles of accept_norm distribution
 QUANTILES = [0.25, 0.5, 0.75, 1]
 
+# timings related constants
+FF_TIMINGS_LOG_DIR = 'data/logs/ff_timings/'
+BATCH_TIMES = 'batch_time'
+FULL_BATCH = 'full_batch'  # full batch time
+DL_TIME = 'data_loader'  # time for moving to device
+MOVE_TIME = 'move'  # time for moving to device
+LOSS_TIME = 'loss'  # time for computing the loss
+FORWARD_TIME = 'forward'  # time for forward pass of model
+BACKWARD_TIME = 'backward'  # time for backproping loss
+LIKELIHOOD = 'likelihood'   # log likelihood
+
+BATCH_TIMINGS_LIST = [  # list of batch timing names
+	FULL_BATCH,
+	DL_TIME,
+	MOVE_TIME,
+	LOSS_TIME,
+	FORWARD_TIME,
+	BACKWARD_TIME
+]
+
+EPOCH_TIME = 'epoch_time'

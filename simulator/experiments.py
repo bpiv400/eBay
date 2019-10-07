@@ -37,15 +37,15 @@ def create_bash(model, outcome, last):
 getPath = lambda model, outcome: 'data/inputs/params/%s_%s.pkl' \
 	% (model, outcome)
 
-# days and delay models
-for names in [['arrival', 'days'], ['byr', 'delay'], ['slr', 'delay']]:
-	path = getPath(*names)
+# delay models
+for model in ['byr', 'slr']:
+	path = getPath(model, 'delay')
 	last = create_df(path, ['ff_hidden', 'ff_layers', 'rnn_hidden'], 
 		[hidden, layers, lstm_hidden])
-	create_bash(*names, last)
+	create_bash(model, 'delay', last)
 
 # feed-forward models
-for outcome in ['bin', 'hist', 'loc', 'sec']:
+for outcome in ['days', 'bin', 'hist', 'loc', 'sec']:
 	path = getPath('arrival', outcome)
 	if outcome == 'sec':
 		last = create_df(path, ['ff_hidden', 'ff_layers', 'K'], 
@@ -54,9 +54,9 @@ for outcome in ['bin', 'hist', 'loc', 'sec']:
 		last = create_df(path, ['ff_hidden', 'ff_layers'], [hidden, layers])
 	create_bash('arrival', outcome, last)
 
-# other recurrent models
+# recurrent models
 for model in ['byr', 'slr']:
-	for outcome in ['accept', 'msg', 'nines', 'reject', 'round']:
+	for outcome in ['accept', 'con', 'msg', 'nines', 'reject', 'round']:
 		path = getPath(model, outcome)
 		if outcome == 'con':
 			last = create_df(path, 
