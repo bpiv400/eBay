@@ -79,16 +79,18 @@ def process_inputs(part, model):
     idx = y.index
     y = y.unstack()
 
-    # fixed features
+    # load in other dataframes
     x_lstg = cat_x_lstg(part)
     x_thread = load(getPath(['x', 'thread']))
     x_offer = load(getPath(['x', 'offer']))
-    x_fixed = parse_fixed_feats_delay(
-    	model, y.index, x_lstg, x_thread, x_offer)
-
-    # time features
     z_start = load(getPath(['z', 'start']))
     z_role = load(getPath(['z', model]))
+
+    # fixed features
+    x_fixed = parse_fixed_feats_delay(
+    	model, y.index, x_lstg, x_thread, x_offer, z_role)
+
+    # time features
     x_time = parse_time_feats_delay(
         model, idx, z_start, z_role)
 
