@@ -70,29 +70,29 @@ def parse_fixed_feats_delay(model, idx, x_lstg, x_thread, x_offer, z_role):
 
 # loads data and calls helper functions to construct training inputs
 def process_inputs(part, model):
-	# path name function
-	getPath = lambda names: \
-		'data/partitions/%s/%s.gz' % (part, '_'.join(names))
+    # path name function
+    getPath = lambda names: \
+    	'data/partitions/%s/%s.gz' % (part, '_'.join(names))
 
-	# outcome
-	y = load(getPath(['y', model, 'delay']))
-	idx = y.index
+    # outcome
+    y = load(getPath(['y', model, 'delay']))
+    idx = y.index
     y = y.unstack()
 
-	# fixed features
+    # fixed features
     x_lstg = cat_x_lstg(part)
     x_thread = load(getPath(['x', 'thread']))
     x_offer = load(getPath(['x', 'offer']))
-	x_fixed = parse_fixed_feats_delay(
-		model, y.index, x_lstg, x_thread, x_offer)
+    x_fixed = parse_fixed_feats_delay(
+    	model, y.index, x_lstg, x_thread, x_offer)
 
-	# time features
-	z_start = load(getPath(['z', 'start']))
-	z_role = load(getPath(['z', model]))
-	x_time = parse_time_feats_delay(
+    # time features
+    z_start = load(getPath(['z', 'start']))
+    z_role = load(getPath(['z', model]))
+    x_time = parse_time_feats_delay(
         model, idx, z_start, z_role)
 
-	return y, x_fixed, x_time
+    return y, x_fixed, x_time
 
 
 def get_sizes(outcome, y, x_fixed, x_time):
@@ -110,12 +110,12 @@ def get_sizes(outcome, y, x_fixed, x_time):
 
 
 if __name__ == '__main__':
-	# extract model and outcome from int
-	parser = argparse.ArgumentParser()
-	parser.add_argument('--num', type=int)
-	num = parser.parse_args().num-1
+    # extract model and outcome from int
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--num', type=int)
+    num = parser.parse_args().num-1
 
-	# partition and outcome
+    # partition and outcome
     part = PARTITIONS[num // 2]
     model = 'slr' if num % 2 else 'byr'
     outfile = lambda x: 'data/inputs/%s/%s_delay.pkl' % (x, model)
@@ -123,33 +123,33 @@ if __name__ == '__main__':
     print('Outcome: delay')
     print('Partition: %s' % part)
 
-	# input dataframes, output processed dataframes
-	y, x_fixed, x_time = process_inputs(part, model)
+    # input dataframes, output processed dataframes
+    y, x_fixed, x_time = process_inputs(part, model)
 
-	# save featnames and sizes once
-	if part == 'train_models':
-		# save featnames
-		featnames = {'x_fixed': x_fixed.columns, 'x_time': x_time.columns}
-		pickle.dump(featnames, open(outfile('featnames'), 'wb'))
+    # save featnames and sizes once
+    if part == 'train_models':
+    	# save featnames
+    	featnames = {'x_fixed': x_fixed.columns, 'x_time': x_time.columns}
+    	pickle.dump(featnames, open(outfile('featnames'), 'wb'))
 
-		# get data size parameters and save
-		sizes = get_sizes(outcome, y, x_fixed, x_time)
-		pickle.dump(sizes, open(outfile('sizes'), 'wb'))
+    	# get data size parameters and save
+    	sizes = get_sizes(outcome, y, x_fixed, x_time)
+    	pickle.dump(sizes, open(outfile('sizes'), 'wb'))
 
-	# convert to numpy arrays, save in hdf5
-	path = 'data/inputs/%s/%s_%s.hdf5' % (part, model, outcome)
-	f = h5py.File(path, 'w')
-	for name in ['y', 'x_fixed']:
-		array = globals()[name].to_numpy().astype('float32')
-		f.create_dataset(name, data=array, dtype='float32')
+    # convert to numpy arrays, save in hdf5
+    path = 'data/inputs/%s/%s_%s.hdf5' % (part, model, outcome)
+    f = h5py.File(path, 'w')
+    for name in ['y', 'x_fixed']:
+    	array = globals()[name].to_numpy().astype('float32')
+    	f.create_dataset(name, data=array, dtype='float32')
 
-	# x_time
-	arrays = []
-	for c in x_time.columns:
-		array = x_time[c].astype('float32').unstack().reindex(
-			index=y.index).to_numpy()
-		arrays.append(np.expand_dims(array, axis=2))
-	arrays = np.concatenate(arrays, axis=2)
-	f.create_dataset('x_time', data=arrays, dtype='float32')
-		
-	f.close()
+    # x_time
+    arrays = []
+    for c in x_time.columns:
+    	array = x_time[c].astype('float32').unstack().reindex(
+    		index=y.index).to_numpy()
+    	arrays.append(np.expand_dims(array, axis=2))
+    arrays = np.concatenate(arrays, axis=2)
+    f.create_dataset('x_time', data=arrays, dtype='float32')
+    	
+    f.close()
