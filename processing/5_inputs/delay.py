@@ -97,7 +97,7 @@ def process_inputs(part, model):
     return y, x_fixed, x_time
 
 
-def get_sizes(outcome, y, x_fixed, x_time):
+def get_sizes(y, x_fixed, x_time):
     sizes = {}
     # number of observations
     sizes['N'] = len(x_fixed.index)
@@ -135,11 +135,11 @@ if __name__ == '__main__':
     	pickle.dump(featnames, open(outfile('featnames'), 'wb'))
 
     	# get data size parameters and save
-    	sizes = get_sizes(outcome, y, x_fixed, x_time)
+    	sizes = get_sizes(y, x_fixed, x_time)
     	pickle.dump(sizes, open(outfile('sizes'), 'wb'))
 
     # convert to numpy arrays, save in hdf5
-    path = 'data/inputs/%s/%s_%s.hdf5' % (part, model, outcome)
+    path = 'data/inputs/%s/%s_delay.hdf5' % (part, model)
     f = h5py.File(path, 'w')
     for name in ['y', 'x_fixed']:
     	array = globals()[name].to_numpy().astype('float32')
