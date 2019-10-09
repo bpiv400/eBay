@@ -77,7 +77,8 @@ def process_inputs(part, model):
     # outcome
     y = load(getPath(['y', model, 'delay']))
     idx = y.index
-    y = y.unstack()
+    y = y.astype('float32').unstack()
+    y[y.isna()] = -1
 
     # load in other dataframes
     x_lstg = cat_x_lstg(part)
@@ -143,7 +144,6 @@ if __name__ == '__main__':
     f = h5py.File(path, 'w')
 
     # y
-    y.loc[y.isna()] = -1
     f.create_dataset('y', data=y.to_numpy().astype('int8'), dtype='int8')
 
     # x_fixed

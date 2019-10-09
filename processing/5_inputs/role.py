@@ -60,7 +60,8 @@ def process_inputs(part, model, outcome):
 		'data/partitions/%s/%s.gz' % (part, '_'.join(names))
 
 	# outcome
-	y = load(getPath(['y', model, outcome])).unstack()
+	y = load(getPath(['y', model, outcome])).astype('float32').unstack()
+	y[y.isna()] = -1
 
 	# fixed features
 	x_fixed = load(getPath(['x', 'thread'])).join(cat_x_lstg(part))
@@ -128,7 +129,6 @@ if __name__ == '__main__':
 	f = h5py.File(path, 'w')
 
 	# y
-	y.loc[y.isna()] = -1
 	if outcome == 'con':
 		f.create_dataset('y', data=y.to_numpy().astype('float32'), 
 			dtype='float32')
