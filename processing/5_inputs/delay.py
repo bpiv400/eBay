@@ -141,7 +141,7 @@ if __name__ == '__main__':
     # convert to numpy arrays, save in hdf5
     path = 'data/inputs/%s/%s_delay.hdf5' % (part, model)
     f = h5py.File(path, 'w')
-    
+
     # y
     y.loc[y.isna()] = -1
     f.create_dataset('y', data=y.to_numpy().astype('int8'), dtype='int8')

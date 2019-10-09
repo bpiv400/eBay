@@ -128,16 +128,16 @@ if __name__ == '__main__':
 	f = h5py.File(path, 'w')
 
 	# y
-    y.loc[y.isna()] = -1
-    if outcome == 'con':
-    	f.create_dataset('y', data=y.to_numpy().astype('float32'), 
-    		dtype='float32')
-    else:
-    	f.create_dataset('y', data=y.to_numpy().astype('int8'), dtype='int8')
+	y.loc[y.isna()] = -1
+	if outcome == 'con':
+		f.create_dataset('y', data=y.to_numpy().astype('float32'), 
+			dtype='float32')
+	else:
+		f.create_dataset('y', data=y.to_numpy().astype('int8'), dtype='int8')
 
-    # x_fixed
-    f.create_dataset('x_fixed', data=x_fixed.to_numpy().astype('float32'),
-        dtype='float32')
+	# x_fixed
+	f.create_dataset('x_fixed', data=x_fixed.to_numpy().astype('float32'),
+		dtype='float32')
 
 	# x_time
 	arrays = []
