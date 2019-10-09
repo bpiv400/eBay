@@ -111,14 +111,9 @@ if __name__ == "__main__":
     parser.add_argument('--num', action='store', type=int, required=True)
     num = parser.parse_args().num
 
-    # quit if output files already exist
-    filename = lambda x: FEATS_DIR + '%d' % num + '_' + x + '.gz'
-    if os.path.isfile(filename('tf_lstg')):
-        print('%d: output already exists.' % num), exit()
-
     # load data
     print('Loading data')
-    d = load(CHUNKS_DIR + '%d' % num + '.gz')
+    d = load('%s/%d.gz' % (CHUNKS_DIR, num))
     L, T, O = [d[k] for k in ['listings', 'threads', 'offers']]
 
     # categories to strings
@@ -153,5 +148,6 @@ if __name__ == "__main__":
     events = events.drop(['byr', 'norm'], axis=1)
 
     # save separately
+    filename = lambda x: '%s/%d_%s.gz' % (FEATS_DIR, num, x)
     for name in ['events', 'threads', 'tf_lstg', 'tf_slr']:
         dump(globals()[name], filename(name))

@@ -100,6 +100,7 @@ class LSTM(nn.Module):
 
     # output discrete weights and parameters of continuous components
     def forward(self, x_fixed, x_time):
+        x_fixed = x_fixed.unsqueeze(dim=0)
         theta, _ = self.rnn(x_time, (self.h0(x_fixed), self.c0(x_fixed)))
 
         # pad
