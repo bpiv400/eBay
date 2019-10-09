@@ -177,7 +177,7 @@ def get_x_lstg(lstgs):
 
 def get_x_offer(lstgs, events, tf):
     # vector of offers
-    offers = events.price.unstack().join(events.start_price)
+    offers = events.price.unstack().join(lstgs.start_price)
     offers = offers.rename({'start_price': 0}, axis=1).rename_axis(
         'index', axis=1)
     # initialize output dataframe
