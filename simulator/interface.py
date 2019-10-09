@@ -112,7 +112,7 @@ def collateRNN(batch):
     y, x_fixed, x_time, idx = [], [], [], []
 
     # sorts the batch list in decreasing order of turns
-    ordered = sorted(batch, key=lambda x: np.sum(np.isnan(x[0])))
+    ordered = sorted(batch, key=lambda x: np.sum(x[0] == -1))
     for b in ordered:
         y.append(b[0])
         x_fixed.append(torch.from_numpy(b[1]))
@@ -121,7 +121,7 @@ def collateRNN(batch):
 
     # convert to tensor, pack if needed
     y = torch.from_numpy(np.asarray(y)).float()
-    turns = torch.sum(~torch.isnan(y), dim=1)
+    turns = torch.sum(y > -1, dim=1)
     x_fixed = torch.stack(x_fixed).float()
     x_time = torch.stack(x_time, dim=0).float()
     x_time = rnn.pack_padded_sequence(x_time, turns, batch_first=True)
