@@ -64,7 +64,7 @@ class Simulator:
 
         # outcome
         if self.isRecurrent:
-            mask = ~torch.isnan(data['y'])
+            mask = data['y'] > -1
             data['y'] = data['y'][mask]
             theta = theta[mask]
 

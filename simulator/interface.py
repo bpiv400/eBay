@@ -124,11 +124,6 @@ def collateRNN(batch):
     turns = torch.sum(~torch.isnan(y), dim=1)
     x_fixed = torch.stack(x_fixed).float()
     x_time = torch.stack(x_time, dim=0).float()
-
-    print(torch.sum(torch.isnan(x_fixed)))
-    exit()
-
-
     x_time = rnn.pack_padded_sequence(x_time, turns, batch_first=True)
     idx = torch.tensor(idx)
 
