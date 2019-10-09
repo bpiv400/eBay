@@ -141,9 +141,14 @@ if __name__ == '__main__':
     # convert to numpy arrays, save in hdf5
     path = 'data/inputs/%s/%s_delay.hdf5' % (part, model)
     f = h5py.File(path, 'w')
-    for name in ['y', 'x_fixed']:
-    	array = globals()[name].to_numpy().astype('float32')
-    	f.create_dataset(name, data=array, dtype='float32')
+    
+    # y
+    y.loc[y.isna()] = -1
+    f.create_dataset('y', data=y.to_numpy().astype('int8'), dtype='int8')
+
+    # x_fixed
+    f.create_dataset('x_fixed', data=x_fixed.to_numpy().astype('float32'),
+        dtype='float32')
 
     # x_time
     arrays = []

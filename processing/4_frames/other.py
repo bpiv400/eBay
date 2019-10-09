@@ -56,7 +56,7 @@ def get_y_arrival(lstgs, threads):
     # time_stamps
     t0 = lstgs.start_date * 24 * 3600
     t1 = lstgs.end_time
-    diff = pd.to_timedelta(threads.clock - t0, unit='s')
+    diff = pd.to_timedelta(threads.start_time - t0, unit='s')
     # append arrivals to end stamps
     d['days'] = parse_days(diff, t0, t1)
     # create other outcomes
@@ -272,7 +272,8 @@ if __name__ == "__main__":
     # load data and 
     lstgs = pd.read_csv(CLEAN_DIR + 'listings.csv').drop(
         ['title', 'flag'], axis=1).set_index('lstg').reindex(index=idx)
-    threads = load_frames('threads').reindex(index=idx, level='lstg')
+    threads = pd.read_csv(CLEAN_DIR + 'threads.csv').set_index(
+        ['lstg', 'thread']).reindex(index=idx, level='lstg')
     events = load_frames('events').reindex(index=idx, level='lstg')
     tf_lstg = load_frames('tf_lstg').reindex(index=idx, level='lstg')
 
