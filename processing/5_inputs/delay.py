@@ -61,7 +61,8 @@ def parse_fixed_feats_delay(model, idx, x_lstg, x_thread, x_offer, z_role):
     x_fixed = x_fixed.join(offer2.rename(
         lambda x: x + '_last', axis=1))
     # time-varying features
-    x_fixed = x_fixed.join(z_role.xs(0, level='period'))
+    x_fixed = x_fixed.join(z_role.xs(0, level='period').reindex(
+        index=x_fixed.index, fill_value=0.0))
     # drop columns with zero variation
     keep = x_fixed.max() > x_fixed.min()
     x_fixed = x_fixed.loc[:, x_fixed.columns[keep]]
