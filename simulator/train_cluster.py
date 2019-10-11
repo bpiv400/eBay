@@ -97,7 +97,7 @@ if __name__ == '__main__':
     sizefile = '%s/inputs/sizes/%s_%s.pkl' % (prefix, model, outcome)
     sizes = pickle.load(open(sizefile, 'rb'))
     params = {'ff_layers': LAYERS, 'rnn_layers': LAYERS, 
-              'ff_hidden': HIDDEN, 'rnn_hidden': HIDDEN}
+              'ff_hidden': HIDDEN, 'rnn_hidden': HIDDEN, K: 10}
 
     # initialize neural net
     simulator = Simulator(model, outcome, params, sizes)
