@@ -69,7 +69,7 @@ if __name__ == '__main__':
 	# extract model and outcome from int
 	parser = argparse.ArgumentParser()
 	parser.add_argument('--num', type=int, help='Model ID.')
-	parser.add_argument('--output', type=str, default='hdf5')
+	parser.add_argument('--output', type=str, default='gz')
 	num = parser.parse_args().num-1
 	output = parser.parse_args().output
 
