@@ -66,7 +66,6 @@ def train_model(simulator, outfile, train, test):
             # create dictionary and run batch
             data = get_minibatch(train, idx)
             lnL_train += simulator.run_batch(data, idx)
-            print(lnL_train)
 
         # training duration
         dur = np.round((dt.now() - t0).seconds)
