@@ -1,8 +1,11 @@
 import sys, math
-sys.path.append('../')
-from constants import *
 import torch, torch.optim as optim
 import numpy as np
+
+sys.path.append('repo/')
+from constants import *
+
+sys.path.append('repo/simulator/')
 from loss import *
 from nets import *
 
