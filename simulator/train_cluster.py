@@ -1,5 +1,6 @@
 import sys, os, pickle, argparse
 import torch
+from torch.nn.utils import rnn
 import numpy as np, pandas as pd
 from compress_pickle import load, dump
 from datetime import datetime as dt

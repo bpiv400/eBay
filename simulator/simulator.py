@@ -32,9 +32,9 @@ class Simulator:
             # initialize omega to 1/K
             if self.isRecurrent:
                 vals = np.full((sizes['N'], sizes['steps'],) + (params['K'],), 
-                    1/params.K)
+                    1/params['K'])
             else:
-                vals = np.full((sizes['N'],) + (params.K,), 1/params['K'])
+                vals = np.full((sizes['N'],) + (params['K'],), 1/params['K'])
             self.omega = torch.as_tensor(vals, dtype=torch.float).detach()
             
         elif self.outcome in ['days', 'hist']:
