@@ -19,7 +19,8 @@ class Inputs(Dataset):
         self.outcome = outcome
 
         # path
-        self.path = 'data/inputs/%s/%s_%s.hdf5' % (partition, model, outcome)
+        self.path = '%s/inputs/%s/%s_%s.hdf5' % \
+            (PREFIX, partition, model, outcome)
 
         # save length
         d = h5py.File(self.path, 'r')
@@ -98,8 +99,8 @@ def collateFF(batch):
         idx.append(b[2])
 
     # convert to tensor
-    y = torch.from_numpy(np.asarray(y)).float().to(DEVICE)
-    x_fixed = torch.stack(x_fixed).float().to(DEVICE)
+    y = torch.from_numpy(np.asarray(y)).float().to('cuda')
+    x_fixed = torch.stack(x_fixed).float().to('cuda')
     idx = torch.tensor(idx)
 
     # output is (dictionary, indices)
@@ -119,10 +120,10 @@ def collateRNN(batch):
         idx.append(b[3])
 
     # convert to tensor, pack if needed
-    y = torch.from_numpy(np.asarray(y)).float().to(DEVICE)
-    turns = torch.sum(y > -1, dim=1).to(DEVICE)
-    x_fixed = torch.stack(x_fixed).float().to(DEVICE)
-    x_time = torch.stack(x_time, dim=0).float().to(DEVICE)
+    y = torch.from_numpy(np.asarray(y)).float().to('cuda')
+    turns = torch.sum(y > -1, dim=1).to('cuda')
+    x_fixed = torch.stack(x_fixed).float().to('cuda')
+    x_time = torch.stack(x_time, dim=0).float().to('cuda')
     x_time = rnn.pack_padded_sequence(x_time, turns, 
         batch_first=True, enforce_sorted=False)
     idx = torch.tensor(idx)

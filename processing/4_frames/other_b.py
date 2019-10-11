@@ -25,5 +25,5 @@ if __name__ == "__main__":
     idx = partitions[part]
     path = lambda name: '%s/%s/%s.gz' % (PARTS_DIR, part, name)
 
-    x_offer = load(path('x_offer')).sort_values()
+    x_offer = load(path('x_offer')).sort_index()
     dump(x_offer, path('x_offer'))

@@ -66,7 +66,7 @@ if __name__ == '__main__':
     paramsid = args.id
 
     # model folder
-    file = lambda x: 'data/inputs/%s/%s_%s.pkl' % (x, model, outcome)
+    file = lambda x: '%s/inputs/%s/%s_%s.pkl' % (PREFIX, x, model, outcome)
 
     # load inputs to model
     print('Loading parameters')
@@ -75,7 +75,7 @@ if __name__ == '__main__':
     print(params)
 
     # initialize neural net
-    simulator = Simulator(model, outcome, params, sizes)
+    simulator = Simulator(model, outcome, params, sizes, device='cuda')
     print(simulator.net)
 
     # number of epochs
@@ -85,11 +85,11 @@ if __name__ == '__main__':
     print('Training: %d epochs.' % epochs)
     lnL_train, duration = train_model(simulator, epochs)
 
+
+    #### NEED TO UPDATE
+
     # save model
     torch.save(simulator.net.state_dict(), folder + str(args.id) + '.pt')
-
-
-    #### NEED TO UPDATE WITH DATALOADER
 
     # holdout
     holdout = pickle.load(open(folder + 'train_rl.pkl', 'rb'))

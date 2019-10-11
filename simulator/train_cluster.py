@@ -95,14 +95,8 @@ if __name__ == '__main__':
     model, outcome = MODELS[args.id-1]
     print('%s: %s' % (model, outcome))
 
-    # input prefix
-    if torch.cuda.is_available():
-        prefix = '/data/eBay'
-    else:
-        prefix = 'data'
-
     # load sizes
-    sizefile = '%s/inputs/sizes/%s_%s.pkl' % (prefix, model, outcome)
+    sizefile = '%s/inputs/sizes/%s_%s.pkl' % (PREFIX, model, outcome)
     sizes = pickle.load(open(sizefile, 'rb'))
     params = {'ff_layers': LAYERS, 'rnn_layers': LAYERS, 
               'ff_hidden': HIDDEN, 'rnn_hidden': HIDDEN, 'K': 10}
@@ -113,10 +107,10 @@ if __name__ == '__main__':
 
     # load data
     print('Loading data')
-    trainfile = '%s/inputs/train_models/%s_%s.gz' % (prefix, model, outcome)
+    trainfile = '%s/inputs/train_models/%s_%s.gz' % (PREFIX, model, outcome)
     train = load(trainfile)
 
-    testfile = '%s/inputs/train_rl/%s_%s.gz' % (prefix, model, outcome)
+    testfile = '%s/inputs/train_rl/%s_%s.gz' % (PREFIX, model, outcome)
     test = load(testfile)
 
     # create outfile
