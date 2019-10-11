@@ -69,7 +69,9 @@ if __name__ == '__main__':
 	# extract model and outcome from int
 	parser = argparse.ArgumentParser()
 	parser.add_argument('--num', type=int, help='Model ID.')
+	parser.add_argument('--output', type=str, default='gz')
 	num = parser.parse_args().num-1
+	output = parser.parse_args().output
 
 	# partition and outcome
 	k = len(OUTCOMES_ARRIVAL)
@@ -93,10 +95,16 @@ if __name__ == '__main__':
 		sizes = get_sizes(outcome, x_fixed)
 		pickle.dump(sizes, open(outfile('sizes'), 'wb'))
 
-	# convert to numpy arrays, save in hdf5
-	path = 'data/inputs/%s/arrival_%s.hdf5' % (part, outcome)
-	f = h5py.File(path, 'w')
-	for var in ['y', 'x_fixed']:
-		array = globals()[var].to_numpy().astype('float32')
-		f.create_dataset(var, data=array, dtype='float32')
-	f.close()
+	# convert to numpy
+	data = {'y': y, 'x_fixed': x_fixed}
+	data = {k: v.to_numpy().astype('float32') for k, v in data.items()}
+
+	# save as either hdf5 or compressed numpy array
+	path = 'data/inputs/%s/arrival_%s.%s' % (part, outcome, output)
+	if output == 'hdf5':
+		f = h5py.File(path, 'w')
+		for k, v in data.items():
+			f.create_dataset(k, data=v, dtype='float32')
+		f.close()
+	else:
+		dump(data, path)

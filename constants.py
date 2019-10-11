@@ -31,6 +31,9 @@ DROPOUT = 0.5
 # device
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
+# directory prefix to differentiate between local and cluster
+PREFIX = '/data/eBay' if torch.cuda.is_available() else 'data'
+
 # paths and directories
 CLEAN_DIR = 'data/clean/'
 CHUNKS_DIR = 'data/chunks/'

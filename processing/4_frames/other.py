@@ -181,7 +181,7 @@ def get_x_offer(lstgs, events, tf):
     offers = offers.rename({'start_price': 0}, axis=1).rename_axis(
         'index', axis=1)
     # initialize output dataframe
-    df = pd.DataFrame(index=offers.stack().index)
+    df = pd.DataFrame(index=offers.stack().index).sort_index()
     # concession
     con = pd.DataFrame(index=offers.index)
     con[0] = 0

@@ -37,18 +37,18 @@ def parse_time_feats_role(model, outcome, x_offer):
     else:
         offer1 = offer1.drop(['auto', 'exp', 'reject'], axis=1)
     # current offer
-    excluded = ['round', 'nines', 'auto', 'exp', 'reject']
-    if outcome in ['msg', 'con', 'accept', 'reject']:
-        excluded += ['msg']
-        if outcome in ['con', 'accept', 'reject']:
-            excluded += ['con', 'norm', 'split']
-    last_vars = [c for c in offer2.columns if c in excluded]
+	excluded = ['round', 'nines', 'auto', 'exp', 'reject']
+	if outcome in ['msg', 'con', 'accept', 'reject']:
+	    excluded += ['msg']
+	    if outcome in ['con', 'accept', 'reject']:
+	        excluded += ['con', 'norm', 'split']
+	last_vars = [c for c in offer2.columns if c in excluded]
     # join dataframes
-    x_time = x_time.join(curr.drop(excluded, axis=1))
-    x_time = x_time.join(offer1.rename(
-        lambda x: x + '_other', axis=1))
-    x_time = x_time.join(offer2[last_vars].rename(
-        lambda x: x + '_last', axis=1))
+	x_time = x_time.join(curr.drop(excluded, axis=1))
+	x_time = x_time.join(offer1.rename(
+	    lambda x: x + '_other', axis=1))
+	x_time = x_time.join(offer2[last_vars].rename(
+	    lambda x: x + '_last', axis=1))
     # add turn indicators and return
     return add_turn_indicators(x_time)
 
@@ -56,8 +56,8 @@ def parse_time_feats_role(model, outcome, x_offer):
 # loads data and calls helper functions to construct training inputs
 def process_inputs(part, model, outcome):
 	# path name function
-	getPath = lambda names: \
-		'data/partitions/%s/%s.gz' % (part, '_'.join(names))
+	getPath = lambda names: '%s/partitions/%s/%s.gz' % \
+		(PREFIX, part, '_'.join(names))
 
 	# outcome
 	y = load(getPath(['y', model, outcome])).astype('float32').unstack()
@@ -98,7 +98,9 @@ if __name__ == '__main__':
 	# extract model and outcome from int
 	parser = argparse.ArgumentParser()
 	parser.add_argument('--num', type=int)
+	parser.add_argument('--output', type=str, default='gz')
 	num = parser.parse_args().num-1
+	output = parser.parse_args().output
 
 	# partition and outcome
 	k = len(OUTCOMES_ROLE)
@@ -106,10 +108,13 @@ if __name__ == '__main__':
 	remainder = num % (2 * k)
 	model = 'slr' if remainder >= k else 'byr'
 	outcome = OUTCOMES_ROLE[remainder % k]
-	outfile = lambda x: 'data/inputs/%s/%s_%s.pkl' % (x, model, outcome)
 	print('Model: %s' % model)
 	print('Outcome: %s' % outcome)
 	print('Partition: %s' % part)
+
+	# path to write file
+	outfile = lambda x: '%s/inputs/%s/%s_%s.pkl' % \
+		(PREFIX, x, model, outcome)
 
 	# input dataframes, output processed dataframes
 	y, x_fixed, x_time = process_inputs(part, model, outcome)
@@ -124,28 +129,24 @@ if __name__ == '__main__':
 		sizes = get_sizes(outcome, y, x_fixed, x_time)
 		pickle.dump(sizes, open(outfile('sizes'), 'wb'))
 
-	# convert to numpy arrays, save in hdf5
-	path = 'data/inputs/%s/%s_%s.hdf5' % (part, model, outcome)
-	f = h5py.File(path, 'w')
+	# convert to numpy
+	data = {'y': y, 'x_fixed': x_fixed}
+	data = {k: v.to_numpy().astype('float32') for k, v in data.items()}
 
-	# y
-	if outcome == 'con':
-		f.create_dataset('y', data=y.to_numpy().astype('float32'), 
-			dtype='float32')
-	else:
-		f.create_dataset('y', data=y.to_numpy().astype('int8'), dtype='int8')
-
-	# x_fixed
-	f.create_dataset('x_fixed', data=x_fixed.to_numpy().astype('float32'),
-		dtype='float32')
-
-	# x_time
 	arrays = []
 	for c in x_time.columns:
 		array = x_time[c].astype('float32').unstack().reindex(
 			index=y.index).to_numpy()
 		arrays.append(np.expand_dims(array, axis=2))
-	arrays = np.concatenate(arrays, axis=2)
-	f.create_dataset('x_time', data=arrays, dtype='float32')
-		
-	f.close()
+	data['x_time'] = np.concatenate(arrays, axis=2)
+
+	# save as either hdf5 or compressed numpy array
+	path = '%s/inputs/%s/%s_%s.%s' % \
+		(PREFIX, part, model, outcome, output)
+	if output == 'hdf5':
+		f = h5py.File(path, 'w')
+		for k, v in data.items():
+			f.create_dataset(k, data=v, dtype='float32')
+		f.close()
+	else:
+		dump(data, path)

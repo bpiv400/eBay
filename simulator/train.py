@@ -24,14 +24,12 @@ def get_dataloader(model, outcome):
 
 
 def train_model(simulator, epochs):
-    time0 = dt.now()
-
     # initialize array for log-likelihoods by epoch
     lnL = []
 
     # loop over epochs, record log-likelihood
     for i in range(epochs):
-        epoch_start = dt.now()
+        time0 = dt.now()
 
         # get data and data loader
         loader = get_dataloader(simulator.model, simulator.outcome)
@@ -39,13 +37,8 @@ def train_model(simulator, epochs):
         # loop over batches
         lnL_i = 0
         for j, batch in enumerate(loader):
-            # unpack batch
-            data, idx = batch
-
-            # move to GPU
-            data = {k: v.to(DEVICE) for k, v in data.items()}
-
-            lnL_i += simulator.run_batch(data, idx)
+            # batch is [data, idx]
+            lnL_i += simulator.run_batch(*batch)
             print(lnL_i)
 
         # append log-likelihood to list

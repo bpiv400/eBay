@@ -1,8 +1,11 @@
 import sys, math
-sys.path.append('../')
-from constants import *
 import torch, torch.optim as optim
 import numpy as np
+
+sys.path.append('repo/')
+from constants import *
+
+sys.path.append('repo/simulator/')
 from loss import *
 from nets import *
 
@@ -11,27 +14,28 @@ class Simulator:
     '''
     Constructs neural network and holds omega for beta mixture model.
     '''
-    def __init__(self, model, outcome, params, sizes):
+    def __init__(self, model, outcome, params, sizes, device='cpu'):
         # save parameters from inputs
         self.model = model
         self.outcome = outcome
         self.isRecurrent = model != 'arrival'
         self.isLSTM = outcome == 'delay'
         self.EM = outcome in ['sec', 'con']
+        self.device = device
 
         # parameters and loss function
         if self.EM:
             self.loss = beta_mixture_loss
 
             # size of out vector is 3 * K
-            sizes['out'] *= params.K
+            sizes['out'] *= params['K']
             
             # initialize omega to 1/K
             if self.isRecurrent:
-                vals = np.full((sizes['N'], sizes['steps'],) + (params.K,), 
-                    1/params.K)
+                vals = np.full((sizes['N'], sizes['steps'],) + (params['K'],), 
+                    1/params['K'])
             else:
-                vals = np.full((sizes['N'],) + (params.K,), 1/params.K)
+                vals = np.full((sizes['N'],) + (params['K'],), 1/params['K'])
             self.omega = torch.as_tensor(vals, dtype=torch.float).detach()
             
         elif self.outcome in ['days', 'hist']:
@@ -42,11 +46,11 @@ class Simulator:
         # neural net(s)
         if self.isRecurrent:
             if self.isLSTM:
-                self.net = LSTM(params, sizes).to(DEVICE)
+                self.net = LSTM(params, sizes).to(device)
             else:
-                self.net = RNN(params, sizes).to(DEVICE)
+                self.net = RNN(params, sizes).to(device)
         else:
-            self.net = FeedForward(params, sizes).to(DEVICE)
+            self.net = FeedForward(params, sizes).to(device)
 
         # optimizer
         self.optimizer = optim.Adam(self.net.parameters(), lr=LR)
@@ -87,7 +91,7 @@ class Simulator:
 
         # include omega for expectation-maximization
         if self.EM:
-            data['omega'] = self.omega[idx, :].to(DEVICE)
+            data['omega'] = self.omega[idx, :].to(self.device)
 
         # calculate loss
         loss, omega = self.evaluate_loss(data)
