@@ -27,14 +27,14 @@ class Simulator:
             self.loss = beta_mixture_loss
 
             # size of out vector is 3 * K
-            sizes['out'] *= params.K
+            sizes['out'] *= params['K']
             
             # initialize omega to 1/K
             if self.isRecurrent:
-                vals = np.full((sizes['N'], sizes['steps'],) + (params.K,), 
+                vals = np.full((sizes['N'], sizes['steps'],) + (params['K'],), 
                     1/params.K)
             else:
-                vals = np.full((sizes['N'],) + (params.K,), 1/params.K)
+                vals = np.full((sizes['N'],) + (params.K,), 1/params['K'])
             self.omega = torch.as_tensor(vals, dtype=torch.float).detach()
             
         elif self.outcome in ['days', 'hist']:
