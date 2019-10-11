@@ -32,8 +32,15 @@ MODELS = [['arrival', 'bin'],
 
 
 def get_minibatch(d, idx):
-    return {k: torch.from_numpy(
-        np.take(v, idx, axis=0)).float().to(DEVICE) for k, v in d.items()}
+    data = {k: torch.from_numpy(np.take(v, idx, axis=0)).to(DEVICE) \
+        for k, v in d.items()}
+
+    if 'x_time' in data:
+        data['x_time'] = rnn.pack_padded_sequence(data['x_time'], 
+            torch.sum(data['y'] > -1, dim=1).to(DEVICE), 
+            batch_first=True, enforce_sorted=False)
+
+    return data
 
 
 def get_batches(d, randomize=True):
