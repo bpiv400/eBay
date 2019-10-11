@@ -98,7 +98,9 @@ if __name__ == '__main__':
 	# extract model and outcome from int
 	parser = argparse.ArgumentParser()
 	parser.add_argument('--num', type=int)
+	parser.add_argument('--output', type=str, default='hdf5')
 	num = parser.parse_args().num-1
+	output = parser.parse_args().output
 
 	# partition and outcome
 	k = len(OUTCOMES_ROLE)
@@ -124,28 +126,23 @@ if __name__ == '__main__':
 		sizes = get_sizes(outcome, y, x_fixed, x_time)
 		pickle.dump(sizes, open(outfile('sizes'), 'wb'))
 
-	# convert to numpy arrays, save in hdf5
-	path = 'data/inputs/%s/%s_%s.hdf5' % (part, model, outcome)
-	f = h5py.File(path, 'w')
+	# convert to numpy
+	data = {'y': y, 'x_fixed': x_fixed}
+	data = {k: v.to_numpy().astype('float32') for k, v in data.items()}
 
-	# y
-	if outcome == 'con':
-		f.create_dataset('y', data=y.to_numpy().astype('float32'), 
-			dtype='float32')
-	else:
-		f.create_dataset('y', data=y.to_numpy().astype('int8'), dtype='int8')
-
-	# x_fixed
-	f.create_dataset('x_fixed', data=x_fixed.to_numpy().astype('float32'),
-		dtype='float32')
-
-	# x_time
 	arrays = []
 	for c in x_time.columns:
 		array = x_time[c].astype('float32').unstack().reindex(
 			index=y.index).to_numpy()
 		arrays.append(np.expand_dims(array, axis=2))
-	arrays = np.concatenate(arrays, axis=2)
-	f.create_dataset('x_time', data=arrays, dtype='float32')
-		
-	f.close()
+	data['x_time'] = np.concatenate(arrays, axis=2)
+
+	# save as either hdf5 or compressed numpy array
+	path = 'data/inputs/%s/%s_%s.%s' % (part, model, outcome, output)
+	if output == 'hdf5':
+		f = h5py.File(path, 'w')
+		for k, v in data.items():
+			f.create_dataset(k, data=v, dtype='float32')
+		f.close()
+	else:
+		dump(data, path)
