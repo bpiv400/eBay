@@ -17,40 +17,40 @@ def add_turn_indicators(df):
 
 
 def parse_time_feats_role(model, outcome, x_offer):
-    # initialize output dataframe
-    idx = x_offer.index[x_offer.index.isin(IDX[model], level='index')]
-    x_time = pd.DataFrame(index=idx)
-    # current offer
-    curr = x_offer.loc[idx]
-    # last offer from other role
-    offer1 = x_offer.groupby(['lstg', 'thread']).shift(
-        periods=1).reindex(index=idx)
-    # last offer from same role
-    offer2 = x_offer.groupby(['lstg', 'thread']).shift(
-        periods=2).reindex(index=idx)
-    if model == 'byr':
-        start = x_offer.xs(0, level='index')
-        start = start.assign(index=1).set_index('index', append=True)
-        offer2 = offer2.dropna().append(start).sort_index()
-        # remove features that are constant for buyer
-        offer2 = offer2.drop(['auto', 'exp', 'reject'], axis=1)
-    else:
-        offer1 = offer1.drop(['auto', 'exp', 'reject'], axis=1)
-    # current offer
+	# initialize output dataframe
+	idx = x_offer.index[x_offer.index.isin(IDX[model], level='index')]
+	x_time = pd.DataFrame(index=idx)
+	# current offer
+	curr = x_offer.loc[idx]
+	# last offer from other role
+	offer1 = x_offer.groupby(['lstg', 'thread']).shift(
+		periods=1).reindex(index=idx)
+	# last offer from same role
+	offer2 = x_offer.groupby(['lstg', 'thread']).shift(
+		periods=2).reindex(index=idx)
+	if model == 'byr':
+		start = x_offer.xs(0, level='index')
+		start = start.assign(index=1).set_index('index', append=True)
+		offer2 = offer2.dropna().append(start).sort_index()
+		# remove features that are constant for buyer
+		offer2 = offer2.drop(['auto', 'exp', 'reject'], axis=1)
+	else:
+		offer1 = offer1.drop(['auto', 'exp', 'reject'], axis=1)
+	# current offer
 	excluded = ['round', 'nines', 'auto', 'exp', 'reject']
 	if outcome in ['msg', 'con', 'accept', 'reject']:
-	    excluded += ['msg']
-	    if outcome in ['con', 'accept', 'reject']:
-	        excluded += ['con', 'norm', 'split']
+		excluded += ['msg']
+		if outcome in ['con', 'accept', 'reject']:
+			excluded += ['con', 'norm', 'split']
 	last_vars = [c for c in offer2.columns if c in excluded]
-    # join dataframes
+	# join dataframes
 	x_time = x_time.join(curr.drop(excluded, axis=1))
 	x_time = x_time.join(offer1.rename(
-	    lambda x: x + '_other', axis=1))
+		lambda x: x + '_other', axis=1))
 	x_time = x_time.join(offer2[last_vars].rename(
-	    lambda x: x + '_last', axis=1))
-    # add turn indicators and return
-    return add_turn_indicators(x_time)
+		lambda x: x + '_last', axis=1))
+	# add turn indicators and return
+	return add_turn_indicators(x_time)
 
 
 # loads data and calls helper functions to construct training inputs
