@@ -25,23 +25,24 @@ class Simulator:
 
         # parameters and loss function
         if self.EM:
-            self.loss = beta_mixture_loss
-
-            # size of out vector is 3 * K
-            sizes['out'] *= params['K']
+            sizes['out'] = 2 * params['K']
+            self.loss = beta_mixture_loss      
             
             # initialize omega to 1/K
             if self.isRecurrent:
-                vals = np.full((sizes['N'], sizes['steps'],) + (params['K'],), 
+                vals = np.full(
+                    (sizes['N'], sizes['steps'],) + (params['K'],), 
                     1/params['K'])
             else:
-                vals = np.full((sizes['N'],) + (params['K'],), 1/params['K'])
+                vals = np.full((sizes['N'],) + (params['K'],), 
+                    1/params['K'])
             self.omega = torch.as_tensor(vals, dtype=torch.float).detach()
-            
-        elif self.outcome in ['days', 'hist']:
-            self.loss = negative_binomial_loss
         else:
-            self.loss = logit_loss
+            sizes['out'] = 1
+            if self.outcome == 'days':
+                self.loss = poisson_loss
+            else:
+                self.loss = logit_loss
 
         # neural net(s)
         if self.isRecurrent:

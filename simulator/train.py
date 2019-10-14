@@ -73,6 +73,7 @@ if __name__ == '__main__':
     sizes = pickle.load(open(file('sizes'), 'rb'))
     params = pickle.load(open(file('params'), 'rb')).loc[paramsid]
     print(params)
+    print(sizes)
 
     # initialize neural net
     simulator = Simulator(model, outcome, params, sizes, device='cuda')

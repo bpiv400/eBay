@@ -14,31 +14,24 @@ def beta_mixture_loss(theta, y, omega=None):
 	theta = torch.exp(theta.squeeze())
 
 	# parse parameters
-	k = int(theta.size()[-1] / 3)
+	k = int(theta.size()[-1] / 2)
 	a = 1 + torch.index_select(theta, -1, 
 		torch.tensor(range(k), device=DEVICE))
 	b = 1 + torch.index_select(theta, -1,
-	 torch.tensor(range(k, 2 * k), device=DEVICE))
-	c = torch.index_select(theta, -1, 
-		torch.tensor(range(2 * k, 3 * k), device=DEVICE))
+		torch.tensor(range(k, 2 * k), device=DEVICE))
 
 	# beta densities
 	lndens = Beta(a, b).log_prob(y.unsqueeze(dim=-1))
-
-	# multinomial probabilities
-	phi = torch.div(c, torch.sum(c, dim=-1, keepdim=True))
+	dens = torch.exp(lndens.detach())
 
 	# calculate weights
 	if omega is None:
-		dens = torch.exp(lndens.detach())
 		omega = torch.div(dens, torch.sum(dens, dim=-1, keepdim=True))
 
 	# expected log-likelihood
-	ll = (lndens + torch.log(phi) - torch.log(omega))
-	Q = torch.sum(omega * ll)
+	Q = torch.sum(omega * lndens)
 
 	# calculate new weights
-	dens = torch.exp(lndens.detach())
 	omega = torch.div(dens, torch.sum(dens, dim=-1, keepdim=True))
 
 	# calculate negative log-likelihood
@@ -55,5 +48,15 @@ def negative_binomial_loss(theta, y):
 	# log-likelihood components
 	ll = torch.mvlgamma(y + r, 1) - torch.mvlgamma(r, 1)
 	ll += y * torch.log(p) + r * torch.log(1 - p)
+
 	return -torch.sum(ll), None
 
+
+def poisson_loss(theta, y):
+	# parameter
+	l = torch.exp(theta.squeeze())
+
+	# log-likelihood
+	ll = -l + y * torch.log(l)
+
+	return -torch.sum(ll), None

@@ -83,11 +83,6 @@ def get_sizes(outcome, y, x_fixed, x_time):
     sizes['N'] = len(x_fixed.index)
     # fixed inputs
     sizes['fixed'] = len(x_fixed.columns)
-    # output parameters
-    if outcome == 'con':
-        sizes['out'] = 3
-    else:
-        sizes['out'] = 1
    # RNN parameters
     sizes['steps'] = len(y.columns)
     sizes['time'] = len(x_time.columns)
