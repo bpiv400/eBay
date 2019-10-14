@@ -46,7 +46,7 @@ W2V_PATH = lambda x: 'data/clean/w2v_' + x + '.csv'
 OUTCOMES = {'arrival': ['days', 'bin', 'loc', 'hist', 'sec'],
 	'role': ['delay', 'accept', 'reject', 'con', 'msg', 'round', 'nines']}
 
-OUTCOMES_ARRIVAL = ['bin', 'loc', 'hist', 'sec']
+OUTCOMES_ARRIVAL = ['bin', 'sec']
 OUTCOMES_ROLE = ['accept', 'reject', 'con', 'msg', 'round', 'nines']
 
 # partitions
