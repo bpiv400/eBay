@@ -145,7 +145,7 @@ if __name__ == "__main__":
     events['norm'] = events.price / events.start_price
     events.loc[~events['byr'], 'norm'] = 1 - events['norm']
     tf_lstg = get_lstg_time_feats(events)
-    events = events.drop(['byr', 'norm'], axis=1)
+    events = events.drop(['byr', 'norm', 'start_price'], axis=1)
 
     # save separately
     filename = lambda x: '%s/%d_%s.gz' % (FEATS_DIR, num, x)

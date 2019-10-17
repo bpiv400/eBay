@@ -1,5 +1,6 @@
 from pandas.tseries.holiday import USFederalHolidayCalendar as Calendar
 import torch
+import numpy as np
 
 # strings for referencing quantities related to buyer and seller models
 SLR_PREFIX = 'slr'
@@ -31,23 +32,13 @@ DROPOUT = 0.5
 # device
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-# directory prefix to differentiate between local and cluster
-PREFIX = '/data/eBay' if torch.cuda.is_available() else 'data'
-
 # paths and directories
-CLEAN_DIR = 'data/clean/'
-CHUNKS_DIR = 'data/chunks/'
-FEATS_DIR = 'data/feats/'
-PARTS_DIR = 'data/partitions/'
-MODEL_DIR = 'models/'
-W2V_PATH = lambda x: 'data/clean/w2v_' + x + '.csv'
-
-# outcomes for input creation
-OUTCOMES = {'arrival': ['days', 'bin', 'loc', 'hist', 'sec'],
-	'role': ['delay', 'accept', 'reject', 'con', 'msg', 'round', 'nines']}
-
-OUTCOMES_ARRIVAL = ['bin', 'sec']
-OUTCOMES_ROLE = ['accept', 'reject', 'con', 'msg', 'round', 'nines']
+PREFIX = '/data/eBay' if torch.cuda.is_available() else 'data'
+CLEAN_DIR = '%s/clean/' % PREFIX
+CHUNKS_DIR = '%s/chunks/' % PREFIX
+FEATS_DIR = '%s/feats/' % PREFIX
+PARTS_DIR = '%s/partitions/' % PREFIX
+W2V_PATH = lambda x: '%s/clean/w2v_%s.csv' %(PREFIX, x)
 
 # partitions
 PARTITIONS = ['train_models', 'train_rl', 'test']
@@ -73,15 +64,15 @@ INTERVAL_COUNTS = {
 	'{}_7'.format(BYR_PREFIX): MAX_DELAY[SLR_PREFIX] / INTERVAL[BYR_PREFIX]
 }
 
+# model names
+MODELS = ['arrival', 'delay_byr', 'delay_slr', 'con_byr', 'con_slr']
+
 # organizing hierarchy
 LEVELS = ['slr', 'meta', 'leaf', 'product', 'title', 'cndtn', 'lstg']
 
 # for lstg feature construction
 BINARY_FEATS = ['store', 'slr_us', 'fast']
 COUNT_FEATS = ['photos', 'slr_bos', 'slr_lstgs', 'fdbk_score']
-
-# sequence of arrival models
-ARRIVAL_MODELS = ['days', 'loc', 'hist', 'bin', 'sec', 'msg', 'con', 'round', 'nines']
 
 # indices for byr and slr offers
 IDX = {
@@ -118,3 +109,9 @@ BATCH_TIMINGS_LIST = [  # list of batch timing names
 ]
 
 EPOCH_TIME = 'epoch_time'
+
+# for concession model
+CON_SEGMENTS = 100
+CON_SEP = 1/CON_SEGMENTS
+CON_DIM = torch.tensor(np.sort(np.append(np.array([0.0, 1.0]), 
+	np.arange(CON_SEP/2, 1, CON_SEP)))).unsqueeze(dim=0).to(DEVICE)

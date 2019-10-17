@@ -1,6 +1,6 @@
 #!/bin/bash
-#$ -t 1-3
-#$ -l m_mem_free=150G
+#$ -t 1-6
+#$ -l m_mem_free=50G
 #$ -N arrival
 #$ -j y
 #$ -o logs/

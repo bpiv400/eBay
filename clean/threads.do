@@ -1,5 +1,5 @@
 clear all
-cd ~/Dropbox/eBay/data
+cd /data/eBay
 import delim using raw/threads.csv
 
 rename anon_* *
@@ -92,7 +92,7 @@ drop slr
 * merge in listing information
 
 rename item lstg
-merge m:1 lstg using dta/listings, nogen keep(3) //
+merge m:1 lstg using dta/listings, nogen keep(3) ///
 	keepus(start_price accept_price decline_price)
 
 * new thread id
@@ -106,7 +106,7 @@ rename newid thread
 
 * save temp
 
-save ~/temp, replace
+save dta/temp1, replace
 
 * drop offers after two week lapse
 
@@ -146,7 +146,7 @@ by lstg thread: replace price = price[_n-2] if price == . & reject
 
 * save temp
 
-save ~/temp2, replace
+save dta/temp2, replace
 
 * clean seller auto-response
 
@@ -187,7 +187,7 @@ drop sec
 
 * save temp
 
-save ~/temp2a, replace
+save dta/temp2a, replace
 
 * add in BINs
 
@@ -237,14 +237,7 @@ drop count
 replace type = 0 if bin
 replace thread = 0 if bin
 replace index = 1 if bin
-
-g double temp = clock if status == 8
-replace temp = end_time if temp == .
-
-sort lstg thread index
-by lstg: egen double temp2 = min(temp)
-replace clock = temp2 if bin
-drop temp*
+replace clock = end_time if bin
 
 * bins in threads
 
@@ -271,7 +264,7 @@ by lstg thread index: keep if _n == _N
 
 * save temp
 
-save ~/temp2b, replace
+save dta/temp2b, replace
 
 * recode accepts
 
@@ -310,7 +303,7 @@ replace accept = 0 if flag & accept & reject
 	
 * save temp
 
-save ~/temp2c, replace
+save dta/temp2c, replace
 
 * add expired rejects on 7th index
 
@@ -416,7 +409,7 @@ replace clock = (clock - start_time) / 1000
 
 * save temp
 
-save ~/temp3, replace
+save dta/temp3, replace
 
 * delete activity after 0 concession from buyer
 
@@ -440,7 +433,7 @@ drop slr type status
 
 * save temp
 
-save ~/temp3a, replace
+save dta/temp3a, replace
 
 * save offers
 

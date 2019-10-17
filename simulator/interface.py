@@ -12,15 +12,13 @@ from constants import *
 # defines a dataset that extends torch.utils.data.Dataset
 class Inputs(Dataset):
 
-    def __init__(self, partition, model, outcome):
+    def __init__(self, partition, model):
 
         # save parameters to self
         self.model = model
-        self.outcome = outcome
 
         # path
-        self.path = '%s/inputs/%s/%s_%s.hdf5' % \
-            (PREFIX, partition, model, outcome)
+        self.path = '%s/inputs/%s/%s.hdf5' % (PREFIX, partition, model)
 
         # save length
         d = h5py.File(self.path, 'r')
@@ -34,8 +32,8 @@ class Inputs(Dataset):
             # all models index y using idx
             y = d['y'][idx]
 
-            # create x_fixed for days model
-            if self.outcome == 'days':
+            # create x_fixed for days model and return
+            if self.model == 'arrival':
                 idx_fixed = d['idx_fixed'][idx]
                 x_fixed = d['x_fixed'][idx_fixed,:]
 
@@ -43,15 +41,11 @@ class Inputs(Dataset):
                 x_days = d['x_days'][idx_days,:]
 
                 x_fixed = np.concatenate((x_fixed, x_days))
-
-            # non-days models also index x_fixed using idx
-            else:
-                x_fixed = d['x_fixed'][idx,:]
-
-            # arrival models are feed-forward
-            if self.model == 'arrival':
                 return y, x_fixed, idx
-            
+
+            # non-arrival models also index x_fixed using idx
+            x_fixed = d['x_fixed'][idx,:]
+
             # role models are recurrent
             x_time = d['x_time'][idx,:,:]
             return y, x_fixed, x_time, idx

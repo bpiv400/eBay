@@ -1,5 +1,5 @@
 clear all
-cd ~/Dropbox/eBay/data
+cd /data/eBay
 import delim using raw/listings.csv
 
 * rename variables

@@ -6,6 +6,9 @@ sys.path.append('repo/')
 from constants import *
 from utils import *
 
+sys.path.append('repo/processing/5_inputs/')
+from inputs_util import *
+
 
 def add_clock_feats(x_time):
     clock = pd.to_datetime(x_time.clock, unit='s', origin=START)
@@ -33,15 +36,6 @@ def parse_time_feats_delay(model, idx, z_start, z_role):
     tfdiff = tfdiff.rename(lambda x: x + '_diff', axis=1)
     x_time = x_time.join(tfdiff.reindex(idx, fill_value=0))
     return x_time
-
-
-def add_turn_indicators(df):
-    indices = np.unique(df.index.get_level_values('index'))
-    for i in range(len(indices)-1):
-        ind = indices[i]
-        featname = 't' + str((ind+1) // 2)
-        df[featname] = df.index.isin([ind], level='index')
-    return df
 
 
 def parse_fixed_feats_delay(model, idx, x_lstg, x_thread, x_offer, z_role):
@@ -93,24 +87,11 @@ def process_inputs(part, model):
     	model, y.index, x_lstg, x_thread, x_offer, z_role)
 
     # time features
-    x_time = parse_time_feats_delay(
-        model, idx, z_start, z_role)
+    x_time = parse_time_feats_delay(model, idx, z_start, z_role)
 
-    return y, x_fixed, x_time
-
-
-def get_sizes(y, x_fixed, x_time):
-    sizes = {}
-    # number of observations
-    sizes['N'] = len(x_fixed.index)
-    # fixed inputs
-    sizes['fixed'] = len(x_fixed.columns)
-    # output parameters
-    sizes['out'] = 1
-    # RNN parameters
-    sizes['steps'] = len(y.columns)
-    sizes['time'] = len(x_time.columns)
-    return sizes
+    return {'y': y.astype('int8', copy=False), 
+            'x_fixed': x_fixed.astype('float32', copy=False), 
+            'x_time': x_time.astype('float32', copy=False)}
 
 
 if __name__ == '__main__':
@@ -121,43 +102,15 @@ if __name__ == '__main__':
 
     # partition and outcome
     part = PARTITIONS[num // 2]
-    model = 'slr' if num % 2 else 'byr'
-    outfile = lambda x: 'data/inputs/%s/%s_delay.pkl' % (x, model)
-    print('Model: %s' % model)
-    print('Outcome: delay')
-    print('Partition: %s' % part)
+    role = 'slr' if num % 2 else 'byr'
+    model = 'delay_%s' % role
+    print('%s/%s' % (part, model))
+
+    # out path
+    path = lambda x: '%s/%s/%s/delay_%s' % (PREFIX, x, part, role)
 
     # input dataframes, output processed dataframes
-    y, x_fixed, x_time = process_inputs(part, model)
+    d = process_inputs(part, model)
 
-    # save featnames and sizes once
-    if part == 'train_models':
-    	# save featnames
-    	featnames = {'x_fixed': x_fixed.columns, 'x_time': x_time.columns}
-    	pickle.dump(featnames, open(outfile('featnames'), 'wb'))
-
-    	# get data size parameters and save
-    	sizes = get_sizes(y, x_fixed, x_time)
-    	pickle.dump(sizes, open(outfile('sizes'), 'wb'))
-
-    # convert to numpy arrays, save in hdf5
-    path = 'data/inputs/%s/%s_delay.hdf5' % (part, model)
-    f = h5py.File(path, 'w')
-
-    # y
-    f.create_dataset('y', data=y.to_numpy().astype('int8'), dtype='int8')
-
-    # x_fixed
-    f.create_dataset('x_fixed', data=x_fixed.to_numpy().astype('float32'),
-        dtype='float32')
-
-    # x_time
-    arrays = []
-    for c in x_time.columns:
-    	array = x_time[c].astype('float32').unstack().reindex(
-    		index=y.index).to_numpy()
-    	arrays.append(np.expand_dims(array, axis=2))
-    arrays = np.concatenate(arrays, axis=2)
-    f.create_dataset('x_time', data=arrays, dtype='float32')
-    	
-    f.close()
+    # save featnames and sizes, and save numpy arrays as hdf5 and gz
+    save_params_data(path, part, d)

@@ -8,10 +8,9 @@ CUTOFF = 1e5
 
 
 # read in data frames
-L = pd.read_csv(CLEAN_DIR + 'listings.csv').set_index('lstg')
-T = pd.read_csv(CLEAN_DIR + 'threads.csv').set_index(['lstg', 'thread'])
-O = pd.read_csv(CLEAN_DIR + 'offers.csv').set_index(
-	['lstg', 'thread','index'])
+L = load(CLEAN_DIR + 'listings.gz')
+T = load(CLEAN_DIR + 'threads.gz')
+O = load(CLEAN_DIR + 'offers.gz')
 
 # assign sellers to chunks
 S = L['slr'].reset_index().set_index('slr').squeeze()

@@ -14,39 +14,24 @@ class Simulator:
     '''
     Constructs neural network and holds omega for beta mixture model.
     '''
-    def __init__(self, model, outcome, params, sizes, device='cpu'):
+    def __init__(self, model, params, sizes, device='cpu'):
         # save parameters from inputs
-        self.model = model
-        self.outcome = outcome
         self.isRecurrent = model != 'arrival'
-        self.isLSTM = outcome == 'delay'
-        self.EM = outcome in ['sec', 'con']
-        self.device = device
 
-        # parameters and loss function
-        if self.EM:
-            sizes['out'] = 2 * params['K']
-            self.loss = beta_mixture_loss      
-            
-            # initialize omega to 1/K
-            if self.isRecurrent:
-                vals = np.full(
-                    (sizes['N'], sizes['steps'],) + (params['K'],), 
-                    1/params['K'])
-            else:
-                vals = np.full((sizes['N'],) + (params['K'],), 
-                    1/params['K'])
-            self.omega = torch.as_tensor(vals, dtype=torch.float).detach()
+        # size of theta and loss function
+        if 'con' in model:
+            sizes['out'] = 2 + CON_SEGMENTS
+            self.loss = emd_loss
         else:
             sizes['out'] = 1
-            if self.outcome == 'days':
+            if model == 'arrival':
                 self.loss = poisson_loss
             else:
                 self.loss = logit_loss
 
         # neural net(s)
         if self.isRecurrent:
-            if self.isLSTM:
+            if 'delay' in model:
                 self.net = LSTM(params, sizes).to(device)
             else:
                 self.net = RNN(params, sizes).to(device)
@@ -64,42 +49,22 @@ class Simulator:
         # prediction using net
         if self.isRecurrent:
             theta = self.net(data['x_fixed'], data['x_time'])
+            mask = data['y'] > -1
+            data['y'] = data['y'][mask]
+            theta = theta[mask,:]
         else:
             theta = self.net(data['x_fixed'])
 
-        # outcome
-        if self.isRecurrent:
-            mask = data['y'] > -1
-            data['y'] = data['y'][mask]
-            theta = theta[mask]
-
         # calculate loss
-        if 'omega' in data:
-            if self.isRecurrent:
-                loss, data['omega'][mask] = self.loss(
-                    theta, data['y'], data['omega'][mask])
-            else:
-                loss, data['omega'] = self.loss(
-                    theta, data['y'], data['omega'])
-            return loss, data['omega']
-        else: 
-            return self.loss(theta, data['y'])  
+        return self.loss(theta.squeeze(), data['y'])  
 
 
     def run_batch(self, data, idx):
         # zero gradient
         self.optimizer.zero_grad()
 
-        # include omega for expectation-maximization
-        if self.EM:
-            data['omega'] = self.omega[idx, :].to(self.device)
-
         # calculate loss
-        loss, omega = self.evaluate_loss(data)
-
-        # update omega
-        if self.EM:
-            self.omega[idx, :] = omega.to('cpu')
+        loss = self.evaluate_loss(data)
 
         # step down gradients
         loss.backward()

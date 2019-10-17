@@ -9,9 +9,12 @@ from simulator import Simulator
 sys.path.append('repo/')
 from constants import *
 
+LAYERS = 2
+HIDDEN = 256
 
-def get_dataloader(model, outcome):
-    data = Inputs('train_models', model, outcome)
+
+def get_dataloader(model):
+    data = Inputs('train_models', model)
     if model == 'arrival':
         f = collateFF
     else:
@@ -32,12 +35,13 @@ def train_model(simulator, epochs):
         time0 = dt.now()
 
         # get data and data loader
-        loader = get_dataloader(simulator.model, simulator.outcome)
+        loader = get_dataloader(simulator.model)
 
         # loop over batches
         lnL_i = 0
         for j, batch in enumerate(loader):
             # batch is [data, idx]
+            t0 = dt.now()
             lnL_i += simulator.run_batch(*batch)
             print(lnL_i)
 
@@ -56,27 +60,25 @@ if __name__ == '__main__':
     # extract parameters from command line
     parser = argparse.ArgumentParser(
         description='Model of environment for bargaining AI.')
-    parser.add_argument('--model', type=str,
-        help='One of: arrival, byr, slr.')
-    parser.add_argument('--outcome', type=str, help='Outcome to predict.')
+    parser.add_argument('--model', type=str, 
+        help='One of arrival, delay_byr, delay_slr, con_byr, con_slr.')
     parser.add_argument('--id', type=int, help='Experiment ID.')
     args = parser.parse_args()
     model = args.model
-    outcome = args.outcome
     paramsid = args.id
 
     # model folder
-    file = lambda x: '%s/inputs/%s/%s_%s.pkl' % (PREFIX, x, model, outcome)
+    file = lambda x: '%s/inputs/%s/%s.pkl' % (PREFIX, x, model)
 
-    # load inputs to model
+    # load model sizes and parameters
     print('Loading parameters')
     sizes = pickle.load(open(file('sizes'), 'rb'))
-    params = pickle.load(open(file('params'), 'rb')).loc[paramsid]
-    print(params)
     print(sizes)
-
+    params = {'layers': LAYERS, 'hidden': HIDDEN}
+    print(params)
+    
     # initialize neural net
-    simulator = Simulator(model, outcome, params, sizes, device='cuda')
+    simulator = Simulator(model, params, sizes, device='cuda')
     print(simulator.net)
 
     # number of epochs

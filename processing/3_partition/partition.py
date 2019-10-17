@@ -6,9 +6,7 @@ sys.path.append('repo/')
 from constants import *
 
 
-def partition_lstgs(lstgs):
-    slrs = lstgs['slr'].reset_index().sort_values(
-        by=['slr','lstg']).set_index('slr').squeeze()
+def partition_lstgs(slrs):
     # randomly order sellers
     u = np.unique(slrs.index.values)
     random.seed(SEED)   # set seed
@@ -26,16 +24,17 @@ def partition_lstgs(lstgs):
 
 if __name__ == "__main__":
     # load listing indices
-    path = lambda x: FEATS_DIR + str(x) + '_tf_slr.gz'
+    path = lambda x: FEATS_DIR + '%d_tf_slr.gz' % x
     idx = []
     for i in range(1,N_CHUNKS+1):
         idx += list(load(path(i)).index)
 
     # listings
-    lstgs = pd.read_csv(CLEAN_DIR + 'listings.csv', 
-        index_col='lstg', usecols=['lstg', 'slr'])
+    lstgs = load(CLEAN_DIR + 'listings.gz')['slr']
     lstgs = lstgs.reindex(index=idx)
+    slrs = lstgs.reset_index().sort_values(
+        by=['slr','lstg']).set_index('slr').squeeze()
     
     # partition by seller
-    partitions = partition_lstgs(lstgs)
+    partitions = partition_lstgs(slrs)
     dump(partitions, PARTS_DIR + 'partitions.gz')

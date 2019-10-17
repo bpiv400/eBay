@@ -1,5 +1,5 @@
 clear all
-cd ~/Dropbox/eBay/data
+cd /data/eBay
 
 * offers
 

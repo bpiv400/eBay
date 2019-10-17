@@ -16,7 +16,7 @@ if __name__ == "__main__":
 
     # load data
     print('Loading data')
-    d = load(CHUNKS_DIR + 'm%d' % num + '.gz')
+    d = load(CHUNKS_DIR + 'm%d.gz' % num)
     L, T, O = [d[k] for k in ['listings', 'threads', 'offers']]
 
     # categories to strings
@@ -34,4 +34,4 @@ if __name__ == "__main__":
     tf = get_cat_time_feats(events, levels)
 
     # save
-    dump(tf, FEATS_DIR + 'm%d' % num + '_tf_meta.gz')
+    dump(tf, FEATS_DIR + 'm%d_tf_meta.gz' % num)

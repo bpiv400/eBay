@@ -2,6 +2,8 @@ import torch, torch.nn as nn
 from torch.nn.utils import rnn
 from constants import *
 
+MAX = 1.0
+
 
 class FeedForward(nn.Module):
     def __init__(self, params, sizes, toRNN=False):
@@ -10,25 +12,26 @@ class FeedForward(nn.Module):
 
         # activation function
         f = nn.Sigmoid()
+        #f = nn.Hardtanh(max_val=MAX)
 
         # initial layer
         self.seq = nn.ModuleList(
-            [nn.Linear(sizes['fixed'], params['ff_hidden']), f])
+            [nn.Linear(sizes['fixed'], params['hidden']), f])
 
         # intermediate layers
-        for i in range(params['ff_layers']-1):
+        for i in range(params['layers']-1):
             self.seq.append(nn.Dropout(p=DROPOUT))
             self.seq.append(
-                nn.Linear(params['ff_hidden'], params['ff_hidden']))
+                nn.Linear(params['hidden'], params['hidden']))
             self.seq.append(f)
 
         # output layer
         if toRNN:
             self.seq.append(
-                nn.Linear(params['ff_hidden'], params['rnn_hidden']))
+                nn.Linear(params['hidden'], params['hidden']))
         else:
             self.seq.append(
-                nn.Linear(params['ff_hidden'], sizes['out']))
+                nn.Linear(params['hidden'], sizes['out']))
 
     def forward(self, x):
         for _, m in enumerate(self.seq):
@@ -46,7 +49,7 @@ class RNN(nn.Module):
         super(RNN, self).__init__()
 
         # save parameters to self
-        self.layers = int(params['rnn_layers'])
+        self.layers = int(params['layers'])
         self.steps = sizes['steps']
 
         # initial hidden nodes
@@ -54,13 +57,13 @@ class RNN(nn.Module):
 
         # rnn layer
         self.rnn = nn.RNN(input_size=sizes['time'],
-                            hidden_size=int(params['rnn_hidden']),
+                            hidden_size=int(params['hidden']),
                             num_layers=self.layers,
                             batch_first=True,
                             dropout=DROPOUT)
 
         # output layer
-        self.output = nn.Linear(params['rnn_hidden'], sizes['out'])
+        self.output = nn.Linear(params['hidden'], sizes['out'])
 
 
     # output discrete weights and parameters of continuous components
@@ -91,7 +94,7 @@ class LSTM(nn.Module):
 
         # rnn layer
         self.rnn = nn.LSTM(input_size=sizes['time'],
-                           hidden_size=int(params['rnn_hidden']),
+                           hidden_size=int(params['hidden']),
                            batch_first=True)
 
         # output layer
