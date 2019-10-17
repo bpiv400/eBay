@@ -1,8 +1,7 @@
-import sys, random
+import random
 from compress_pickle import load, dump
 import numpy as np, pandas as pd
 
-sys.path.append('repo/')
 from constants import *
 
 

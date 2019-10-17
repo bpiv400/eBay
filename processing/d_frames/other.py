@@ -1,16 +1,12 @@
-import sys
 import argparse, random
 from compress_pickle import load, dump
 from datetime import datetime as dt
 from sklearn.utils.extmath import cartesian
 import numpy as np, pandas as pd
 
-sys.path.append('repo/')
 from constants import *
 from utils import *
-
-sys.path.append('repo/processing/')
-from processing_utils import *
+from processing.processing_utils import *
 
 
 def multiply_indices(s):

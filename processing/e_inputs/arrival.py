@@ -1,8 +1,7 @@
-import sys, pickle, os, h5py
+import pickle, os, h5py
 from compress_pickle import load, dump
 import numpy as np, pandas as pd
 
-sys.path.append('repo/')
 from constants import *
 from utils import *
 

@@ -2,7 +2,6 @@ import sys, pickle, os, h5py
 from compress_pickle import load, dump
 import numpy as np, pandas as pd
 
-sys.path.append('repo/')
 from constants import *
 from utils import *
 
@@ -37,8 +36,6 @@ if __name__ == '__main__':
 	# partition and outcome
 	part = PARTITIONS[parser.parse_args().num-1]
 	outfile = lambda x: 'data/inputs/part/arrival_days.pkl' % x
-	print('Model: %s' % MODEL)
-	print('Outcome: %s' % OUTCOME)
 	print('Partition: %s' % part)
 
 	# input dataframes, output processed dataframes

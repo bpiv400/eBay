@@ -3,7 +3,6 @@ from datetime import datetime as dt
 import numpy as np, pandas as pd
 import torch
 
-sys.path.append('repo/')
 from constants import *
 from utils import *
 

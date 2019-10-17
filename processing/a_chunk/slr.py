@@ -1,5 +1,3 @@
-import sys
-sys.path.append('repo/')
 from compress_pickle import dump
 import pandas as pd, numpy as np
 from constants import *
