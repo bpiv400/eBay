@@ -1,6 +1,6 @@
 import sys
 sys.path.append('repo/')
-from compress_pickle import dump
+from compress_pickle import dump, load
 import pandas as pd, numpy as np
 from constants import *
 
