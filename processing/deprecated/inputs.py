@@ -2,8 +2,8 @@ import sys, pickle
 from compress_pickle import load, dump
 import numpy as np, pandas as pd
 
-
-from processing.e_inputs.parsing_funcs import *
+sys.path.append('repo/processing/4_inputs/')
+from parsing_funcs import *
 
 
 # loads data and calls helper functions to construct training inputs

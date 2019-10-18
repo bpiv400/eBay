@@ -1,11 +1,15 @@
+import sys
 from compress_pickle import load, dump
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
 import numpy as np, pandas as pd
 
+sys.path.append('repo/')
 from constants import *
 from utils import *
-from processing.processing_utils import *
+
+sys.path.append('repo/processing/')
+from processing_utils import *
 
 
 # partitions dataframe on lstg using partitions dictionary

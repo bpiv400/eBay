@@ -1,12 +1,16 @@
+import sys
 import argparse, random
 from compress_pickle import load, dump
 from datetime import datetime as dt
 from sklearn.utils.extmath import cartesian
 import numpy as np, pandas as pd
 
+sys.path.append('repo/')
 from constants import *
 from utils import *
-from processing.processing_utils import *
+
+sys.path.append('repo/processing/')
+from processing_utils import *
 
 
 def multiply_indices(s):
@@ -33,35 +37,22 @@ def multiply_indices(s):
         names=s.index.names + ['period'])
 
 
-def parse_days(diff, t0, t1):
-    # count of arrivals by day
-    days = diff.dt.days.rename('period').to_frame().assign(count=1)
-    days = days.groupby(['lstg', 'period']).sum().squeeze().astype(np.uint8)
-    # end of listings
-    T1 = int((pd.to_datetime(END) - pd.to_datetime(START)).total_seconds())
-    t1[t1 > T1] = T1
-    end = (pd.to_timedelta(t1 - t0, unit='s').dt.days).rename('period')
-    # create multi-index from end stamps
-    idx = multiply_indices(end+1)
-    # expand to new index and return
-    return days.reindex(index=idx, fill_value=0).sort_index()
-
-
 def get_y_arrival(lstgs, threads):
-    d = {}
     # time_stamps
     t0 = lstgs.start_date * 24 * 3600
     t1 = lstgs.end_time
-    diff = pd.to_timedelta(threads.clock - t0, unit='s')
-    # append arrivals to end stamps
-    d['days'] = parse_days(diff, t0, t1)
-    # create other outcomes
-    d['loc'] = threads.byr_us.rename('loc')
-    d['hist'] = threads.byr_hist.rename('hist')
-    d['bin'] = threads.bin
-    sec = ((diff.dt.seconds[threads.bin == 0] + 0.5) / (24 * 3600 + 1))
-    d['sec'] = sec.rename('sec')
-    return d
+    diff = pd.to_timedelta(threads.start_time - t0, unit='s')
+    # count of arrivals by hour
+    hours = diff.dt.hours.rename('period').to_frame().assign(count=1)
+    hours = days.groupby(['lstg', 'period']).sum().squeeze().astype(np.uint16)
+    # end of listings
+    T1 = int((pd.to_datetime(END) - pd.to_datetime(START)).total_seconds())
+    t1[t1 > T1] = T1
+    end = (pd.to_timedelta(t1 - t0, unit='s').dt.hours).rename('period')
+    # create multi-index from end stamps
+    idx = multiply_indices(end+1)
+    # expand to new index and return
+    return hours.reindex(index=idx, fill_value=0).sort_index()
 
 
 def get_period_time_feats(tf, start, model):
@@ -113,32 +104,41 @@ def parse_delay(df):
     return arrival.reindex(index=idx, fill_value=False).sort_index()
 
 
-def get_y_seq(x_offer):
-    d = {}
-    # drop index 0
-    df = x_offer.drop(0, level='index')
-    # variables to restrict by
-    auto = df.delay == 0
-    exp = df.exp
-    accept = (df.con == 1).rename('accept')
-    reject = (df.con == 0).rename('reject')
-    iscon = ~auto & ~exp & ~accept & ~reject
-    first = df.index.get_level_values('index') == 1
-    last = df.index.get_level_values('index') == 7
-    # apply restrictions
-    d['delay'] = parse_delay(df[~first])
-    d['accept'] = accept[~auto & ~exp & ~first]
-    d['reject'] = reject[~auto & ~exp & ~accept & ~first & ~last]
-    d['con'] = df.con[iscon]
-    d['msg'] = df['msg'][iscon]
-    d['round'] = df['round'][iscon]
-    d['nines'] = df['nines'][iscon & ~d['round']]
-    # split by byr and slr
-    slr = {k: v[v.index.isin(IDX['slr'], 
-        level='index')] for k, v in d.items()}
-    byr = {k: v[v.index.isin(IDX['byr'], 
-        level='index')] for k, v in d.items()}
-    return slr, byr
+def split_by_role(s):
+    byr = s[s.index.isin(IDX['byr'], level='index')]
+    slr = s[s.index.isin(IDX['slr'], level='index')]
+    return byr, slr
+
+
+def get_y_delay(x_offer):
+    # drop indices 0 and 1
+    period = x_offer['delay'].drop([0, 1], level='index').rename('period')
+    # remove delays of 0
+    period = period[period > 0]
+    # convert to period in interval
+    period.loc[period.index.isin([2, 4, 6], 
+        level='index')] *= INTERVAL_COUNTS['slr']
+    period.loc[period.index.isin([3, 5], 
+        level='index')] *= INTERVAL_COUNTS['byr']
+    period.loc[period.index.isin([7], 
+        level='index')] *= INTERVAL_COUNTS['byr_7']
+    period = period.astype(np.uint8)
+    # create multi-index from number of periods
+    idx = multiply_indices(period+1)
+    # expand to new index
+    offer = period.assign(offer=False).set_index(
+        'period', append=True).squeeze()
+    offer = offer.reindex(index=idx, fill_value=False).sort_index()
+    # split by role and return
+    return split_by_role(offer)
+
+
+def get_y_con(x_offer):
+    # drop zero delay and expired offers
+    mask = (x_offer.delay > 0) & ~x_offer.exp
+    s = x_offer.loc[mask, 'con']
+    # split by role and return
+    return split_by_role(s)
 
 
 def get_x_lstg(lstgs):
@@ -173,11 +173,11 @@ def get_x_lstg(lstgs):
 
 def get_x_offer(lstgs, events, tf):
     # vector of offers
-    offers = lstgs[['start_price']].join(events.price.unstack())
+    offers = events.price.unstack().join(lstgs.start_price)
     offers = offers.rename({'start_price': 0}, axis=1).rename_axis(
         'index', axis=1)
     # initialize output dataframe
-    df = pd.DataFrame(index=offers.stack().index)
+    df = pd.DataFrame(index=offers.stack().index).sort_index()
     # concession
     con = pd.DataFrame(index=offers.index)
     con[0] = 0
@@ -192,11 +192,6 @@ def get_x_offer(lstgs, events, tf):
     mask = events.index.isin(IDX['slr'], level='index')
     df.loc[mask, 'norm'] = 1 - df.loc[mask, 'norm']
     df.loc[df.norm.isna(), 'norm'] = 0
-    # offer digits
-    df['round'], df['nines'] = do_rounding(offers.stack())
-    # message
-    df['msg'] = events.message.reindex(
-        df.index, fill_value=0).astype(np.bool)
     # clock variable
     clock = 24 * 3600 * lstgs.start_date.rename(0).to_frame()
     clock = clock.join(events.clock.unstack())
@@ -263,21 +258,24 @@ if __name__ == "__main__":
     partitions = load(PARTS_DIR + 'partitions.gz')
     part = list(partitions.keys())[num-1]
     idx = partitions[part]
-    path = lambda name: PARTS_DIR + part + '/' + name + '.gz'
+    path = lambda name: PARTS_DIR + '%s/%s.gz' % (part, name)
 
     # load data and 
-    lstgs = pd.read_csv(CLEAN_DIR + 'listings.csv').drop(
-        ['title', 'flag'], axis=1).set_index('lstg').reindex(index=idx)
-    threads = load_frames('threads').reindex(index=idx, level='lstg')
+    lstgs = load(CLEAN_DIR + 'listings.gz').drop(
+        ['title', 'flag'], axis=1).reindex(index=idx)
+    threads = load(CLEAN_DIR + 'threads.gz').reindex(
+        index=idx, level='lstg')
     events = load_frames('events').reindex(index=idx, level='lstg')
     tf_lstg = load_frames('tf_lstg').reindex(index=idx, level='lstg')
 
     # lookup file
+    print('lookup')
     lookup = lstgs[['meta', 'start_date', \
         'start_price', 'decline_price', 'accept_price']]
     dump(lookup, path('lookup'))
 
     # word2vec
+    print('x_w2v')
     lstgs = categories_to_string(lstgs)
     w2v = get_w2v(lstgs, 'slr').join(get_w2v(lstgs, 'byr'))
     dump(w2v, path('x_w2v'))
@@ -285,38 +283,39 @@ if __name__ == "__main__":
     del w2v
 
     # delay start
-    print('Creating delay features')
+    print('z')
     z_start = events.clock.groupby(
         ['lstg', 'thread']).shift().dropna().astype(np.int64)
     dump(z_start, path('z_start'))
 
     # delay role
-    for model in ['slr', 'byr']:
-        z = get_period_time_feats(tf_lstg, z_start, model)
-        dump(z, path('z_' + model))
+    for role in ['slr', 'byr']:
+        z = get_period_time_feats(tf_lstg, z_start, role)
+        dump(z, path('z_' + role))
     del z, z_start
 
     # offer features
-    print('Creating offer features')
+    print('x_offer')
     x_offer = get_x_offer(lstgs, events, tf_lstg)
     dump(x_offer, path('x_offer'))
     del tf_lstg, events
 
-    # role outcome variables
-    print('Creating role outcome variables')
-    y = {}
-    y['slr'], y['byr'] = get_y_seq(x_offer)
-    for model in ['slr', 'byr']:
-        for k, v in y[model].items():
-            dump(v, path('_'.join(['y', model, k])))
-    del x_offer, y
+    # delay outcome
+    print('y_delay')
+    y_delay_byr, y_delay_slr = get_y_delay(x_offer)
+    dump(y_delay_byr, path('y_delay_byr'))
+    dump(y_delay_slr, path('y_delay_slr'))
+    del y_delay_byr, y_delay_slr
 
-    # thread features to save
-    print('Creating thread features')
-    dump(threads[['byr_us', 'byr_hist']], path('x_thread'))
+    # concession outcome
+    print('y_con')
+    y_con_byr, y_con_slr = get_y_con(x_offer)
+    dump(y_con_byr, path('y_con_byr'))
+    dump(y_con_slr, path('y_con_slr'))
+    del x_offer, y_con_byr, y_con_slr
 
     # listing features
-    print('Creating listing features')
+    print('x_lstg')
     x_lstg = get_x_lstg(lstgs)
     dump(x_lstg, path('x_lstg'))
     del x_lstg
@@ -324,5 +323,4 @@ if __name__ == "__main__":
     # outcomes for arrival model
     print('Creating arrival model outcome variables')
     y_arrival = get_y_arrival(lstgs, threads)
-    for k, v in y_arrival.items():
-        dump(v, path('y_arrival_' + k))
+    dump(y_arrival, path('y_arrival'))

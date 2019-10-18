@@ -1,101 +1,70 @@
-import pickle, os, h5py
+import sys, pickle, os, h5py
 from compress_pickle import load, dump
 import numpy as np, pandas as pd
 
+sys.path.append('repo/')
 from constants import *
 from utils import *
 
 
-def add_thread_feats(outcome, x_fixed, x_thread):
-    # return or add features
-    x_fixed = x_fixed.join(x_thread['byr_us'])
-    if outcome == 'hist':
-        return x_fixed
-    x_fixed = x_fixed.join(x_thread['byr_hist'])
-    if outcome in ['bin', 'sec']:
-        return x_fixed
+def extract_hour_feats(clock):
+	df = pd.DataFrame(index=clock.index)
+    df['holiday'] = clock.dt.date.astype('datetime64').isin(HOLIDAYS)
+    for i in range(6):
+        df['dow' + str(i)] = clock.dt.dayofweek == i
+    df['hour'] = clock.dt.hour
+    return df
 
 
 # loads data and calls helper functions to construct training inputs
-def process_inputs(part, outcome):
+def process_inputs(part):
 	# path name function
 	getPath = lambda names: \
 		'data/partitions/%s/%s.gz' % (part, '_'.join(names))
 
 	# outcome
-	y = load(getPath(['y_arrival', outcome]))
+	y = load(getPath(['y_arrival']))
 
-	# initialize fixed features with thread ids and listing variables
-	threads = load(getPath(['x', 'offer'])).xs(
-		1, level='index').reindex(index=y.index)
-	x_fixed = pd.DataFrame(index=threads.index).join(cat_x_lstg(part))
+	# fixed features
+	x_fixed = cat_x_lstg(part)
 
-	# add days since lstg start, holiday and day of week
-	dow = [v for v in threads.columns if v.startswith('dow')]
-	cols = ['days', 'holiday'] + dow
-	x_fixed = x_fixed.join(threads[cols].rename(
-		lambda x: 'focal_' + x, axis=1))
+	# index of x_fixed for each y
+	lookup = np.array(range(len(x_fixed.index)))
+	counts = y.groupby('lstg').count().values
+	idx_fixed = np.repeat(lookup, counts)
 
-	# add byr_us
-	if outcome != 'loc':
-		x_thread = load(getPath(['x', 'thread']))
-		x_fixed = add_thread_feats(outcome, x_fixed, x_thread)
+	# clock features
+	N = pd.to_timedelta(pd.to_datetime(END) - pd.to_datetime(START)).hours
+	clock = pd.to_datetime(range(N+30*24+1), unit='h', origin=START)
+	x_hour = pd.Series(clock, name='clock')
+	x_hour = extract_hour_feats(x_hour).join(x_hour).set_index('clock')
 
-	return y, x_fixed
+	# index of x_hour for each y
+	period = y.reset_index('period')['period']
+	idx_hour = (period + x_fixed.start_date * 24).values
 
-
-def get_sizes(outcome, x_fixed):
-    sizes = {}
-
-    # number of observations
-    sizes['N'] = len(x_fixed.index)
-
-    # fixed inputs
-    sizes['fixed'] = len(x_fixed.columns)
-
-    # output parameters
-    if outcome == 'sec':
-        sizes['out'] = 3
-    elif outcome == 'hist':
-        sizes['out'] = 2
-    else:
-        sizes['out'] = 1
-
-    return sizes
+	return {'y': y.astype('uint8', copy=False), 
+            'x_fixed': x_fixed.astype('float32', copy=False), 
+            'x_hour': x_hour.astype('float32', copy=False),
+            'idx_fixed': idx_fixed.astype('uint32', copy=False),
+            'idx_hour': idx_hour.astype('uint16', copy=False)}
 
 
 if __name__ == '__main__':
 	# extract model and outcome from int
 	parser = argparse.ArgumentParser()
-	parser.add_argument('--num', type=int, help='Model ID.')
+	parser.add_argument('--num', type=int)
 	num = parser.parse_args().num-1
 
 	# partition and outcome
-	v = OUTCOMES['arrival']
-	part = PARTITIONS[num // len(v)]
-	outcome = v[num % len(v)]
-	outfile = lambda x: 'data/inputs/%s/arrival_%s.pkl' % (x, outcome)
-	print('Model: arrival')
-	print('Outcome: %s' % outcome)
-	print('Partition: %s' % part)
+	part = PARTITIONS[num]
+	print('%s/arrival' % part)
+
+	# out path
+    path = lambda x: '%s/%s/%s/delay_%s' % (PREFIX, x, part, role)
 
 	# input dataframes, output processed dataframes
-	y, x_fixed = process_inputs(part, outcome)
+	d = process_inputs(part)
 
-	# save featnames and sizes once
-	if part == 'train_models':
-		# save featnames
-		featnames = {'x_fixed': x_fixed.columns}
-		pickle.dump(featnames, open(outfile('featnames'), 'wb'))
-
-		# get data size parameters and save
-		sizes = get_sizes(outcome, x_fixed)
-		pickle.dump(sizes, open(outfile('sizes'), 'wb'))
-
-	# convert to numpy arrays, save in hdf5
-	path = 'data/inputs/%s/arrival_%s.hdf5' % (part, outcome)
-	f = h5py.File(path, 'w')
-	for var in ['y', 'x_fixed']:
-		array = globals()[var].to_numpy().astype('float32')
-		f.create_dataset(var, data=array, dtype='float32')
-	f.close()
+	# save featnames and sizes, and save numpy arrays as hdf5 and gz
+    save_params_data(path, part, d)

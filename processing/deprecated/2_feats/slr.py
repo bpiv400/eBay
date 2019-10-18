@@ -1,66 +1,32 @@
-import sys
-import os
+import sys, os
+sys.path.append('repo/')
+sys.path.append('repo/processing/2_feats/')
 import argparse
 from compress_pickle import dump, load
-import numpy as np
-import pandas as pd
-from processing.b_feats.time_funcs import *
-from processing.b_feats.util import *
+import numpy as np, pandas as pd
 from constants import *
-
-
-def thread_count(subset):
-    df = subset.copy()
-    s = df.reset_index()['index'] == 1
-    s.index = df.index
-    N = s.reset_index('thread').thread.groupby('lstg').max()
-    s = s.unstack('thread')
-    N = N.reindex(index=s.index, level='lstg')
-    count = {}
-    # count and max over non-focal threads
-    for n in s.columns:
-        # restrict observations
-        cut = s.drop(n, axis=1).loc[N >= n]
-        counts = cut.sum(axis=1)
-        counts = counts.groupby('lstg').cumsum()
-        count[n] = counts
-    # concat into series and return
-    output = pd.concat(count,names=['thread'] + s.index.names).reorder_levels(
-        df.index.names).sort_index()
-    return output
+from time_funcs import *
+from util import *
 
 
 def add_lstg_time_feats(subset, role, isOpen):
     df = subset.copy()
-    df.byr = df.byr.astype(bool)
-    df.reject = df.reject.astype(bool)
-    df.accept = df.accept.astype(bool)
     # set closed offers to 0
     if isOpen:
         keep = open_offers(df, ['lstg', 'thread'], role)
         assert (keep.max() == 1) & (keep.min() == 0)
         df.loc[keep == 0, 'norm'] = 0.0
     else:
-        keep = None
         if role == 'slr':
             df.loc[df.byr, 'norm'] = np.nan
         elif role == 'byr':
             df.loc[~df.byr, 'norm'] = np.nan
     # use max value for thread events at same clock time
     s = df.norm.groupby(df.index.names).max()
-
     # number of threads in each lstg
     N = s.reset_index('thread').thread.groupby('lstg').max()
     # unstack by thread and fill with last value
-    s = s.unstack(level='thread').groupby('lstg').ffill()
-
-    if role == 'byr':
-        s2 = df.byr & ~df.reject
-    else:
-        s2 = ~df.byr & ~df.reject
-    s2 = s2.unstack(level='thread')
-    if isOpen:
-        keep = keep.unstack(level='thread').groupby('lstg').ffill()
+    s = s.unstack(level='thread').groupby('lstg').transform('ffill')
     N = N.reindex(index=s.index, level='lstg')
     # initialize dictionaries for later concatenation
     count = {}
@@ -69,18 +35,8 @@ def add_lstg_time_feats(subset, role, isOpen):
     for n in s.columns:
         # restrict observations
         cut = s.drop(n, axis=1).loc[N >= n]
-        cut2 = s2.drop(n, axis=1).loc[N >= n]
-        if isOpen:
-            cut3 = keep.drop(n, axis=1).loc[N >= n]
         # number of offers
-        if isOpen and role == 'slr':
-            count[n] = cut3.sum(axis=1)
-        elif isOpen:
-            count[n] = (cut > 0).sum(axis=1)
-        else:
-            counts = cut2.sum(axis=1)
-            counts = counts.groupby('lstg').cumsum()
-            count[n] = counts
+        count[n] = (cut > 0).sum(axis=1)
         # best offer
         best[n] = cut.max(axis=1).fillna(0.0)
     # concat into series and return
@@ -94,9 +50,10 @@ def get_lstg_time_feats(events):
     # create dataframe for variable creation
     ordered = events.sort_values(['lstg', 'clock', 'censored']).drop(
         ['message', 'price', 'censored'], axis=1)
-    # identify listings with multiple threads
-    threads = ordered.reset_index().groupby('lstg')['thread'].nunique()
-    check = threads > 1
+    # identify listings with multiple, interspersed threads
+    s1 = ordered.groupby('lstg').cumcount()
+    s2 = ordered.sort_index().groupby('lstg').cumcount()
+    check = (s1 != s2.reindex(s1.index)).groupby('lstg').max()
     subset = ordered.loc[check[check].index].reset_index(
         'index').set_index('clock', append=True)
     # add features for open offers
@@ -109,9 +66,9 @@ def get_lstg_time_feats(events):
             print(cols)
             tf[cols[0]], tf[cols[1]] = add_lstg_time_feats(
                 subset, role, isOpen)
-    tf['thread_count'] = thread_count(subset)
     # error checking
     assert (tf.byr_offers >= tf.slr_offers).min()
+    assert (tf.slr_offers >= tf.slr_offers_open).min()
     assert (tf.byr_offers >= tf.byr_offers_open).min()
     assert (tf.slr_best >= tf.slr_best_open).min()
     assert (tf.byr_best >= tf.byr_best_open).min()
@@ -154,14 +111,9 @@ if __name__ == "__main__":
     parser.add_argument('--num', action='store', type=int, required=True)
     num = parser.parse_args().num
 
-    # quit if output files already exist
-    filename = lambda x: FEATS_DIR + '%d' % num + '_' + x + '.gz'
-    if os.path.isfile(filename('tf_lstg')):
-        print('%d: output already exists.' % num)
-
     # load data
     print('Loading data')
-    d = load(CHUNKS_DIR + '%d' % num + '.gz')
+    d = load('%s/%d.gz' % (CHUNKS_DIR, num))
     L, T, O = [d[k] for k in ['listings', 'threads', 'offers']]
 
     # categories to strings
@@ -196,5 +148,6 @@ if __name__ == "__main__":
     events = events.drop(['byr', 'norm', 'start_price'], axis=1)
 
     # save separately
+    filename = lambda x: '%s/%d_%s.gz' % (FEATS_DIR, num, x)
     for name in ['events', 'threads', 'tf_lstg', 'tf_slr']:
         dump(globals()[name], filename(name))
