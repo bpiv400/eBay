@@ -6,11 +6,15 @@ from datetime import datetime as dt
 from constants import *
 
 # read in data frames
-L = pd.read_csv(CLEAN_DIR + 'listings.csv').set_index('lstg')
 T = pd.read_csv(CLEAN_DIR + 'threads.csv').set_index(
 	['lstg', 'thread'])
 O = pd.read_csv(CLEAN_DIR + 'offers.csv').set_index(
 	['lstg', 'thread','index'])
+
+# save offers and delete
+clock = O.clock.copy()
+dump(O, CLEAN_DIR + 'offers.gz')
+del O
 
 # seconds function
 seconds = lambda t: t.hour*3600 + t.minute*60 + t.second
@@ -30,7 +34,7 @@ pctile.loc[-1] = 0
 pctile = pctile.sort_index().rename('pctile')
 
 # calculate censoring second
-last = O.clock.groupby(['lstg', 'thread']).max()
+last = clock.groupby(['lstg', 'thread']).max()
 last = last.loc[~toReplace] + T.start_time
 last = last.groupby('lstg').max()
 last = pd.to_datetime(last, origin=START, unit='s')
@@ -63,14 +67,17 @@ tdiff = tdiff.dt.total_seconds().astype('int64')
 # update thread start time
 T.loc[missing.index, 'start_time'] = tdiff
 
-# update listing end time
-tdiff.reset_index('thread', drop=True, inplace=True)
-L.loc[tdiff.index, 'end_time'] = tdiff
-
 # percentiles of buyer history
 
 
-# save compressed
-dump(L, CLEAN_DIR + 'listings.gz')
+# save threads
 dump(T, CLEAN_DIR + 'threads.gz')
-dump(O, CLEAN_DIR + 'offers.gz')
+del T
+
+# update listing end time
+tdiff.reset_index('thread', drop=True, inplace=True)
+L = pd.read_csv(CLEAN_DIR + 'listings.csv').set_index('lstg')
+L.loc[tdiff.index, 'end_time'] = tdiff
+
+# save listings
+dump(L, CLEAN_DIR + 'listings.gz')
