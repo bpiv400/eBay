@@ -242,51 +242,6 @@ class TimeFeatures:
             else:
                 outer = self._initialize_count_level(outer_dict=outer, level=level, level_value=ids[level])
 
-    def _update_lstg_close(self, feat_dict=None, feat_name=None, offer=None, ids=None, expired=False):
-        """
-        Updates time valued features after a lstg has closed (expired or sale)
-
-        :param feat_dict: dictionary of time valued features for the current level
-        :param offer: dictionary giving parameters of the offer
-        :param feat_name: string giving name of time valued feature
-        :param ids: dictionary giving the ids of the current thread
-        :param expired: flag giving whether the lstg has expired (sold if not)
-        :return: NA
-        """
-        if feat_name == 'open_threads':
-            feat_dict[feat_name] -= self._lstg_time_feat(ids, 'open_threads')
-        elif feat_name == 'open_lstgs':
-            feat_dict[feat_name] -= 1
-        elif feat_name == 'byr_offers':
-            if offer['byr']:
-                feat_dict[feat_name] += (1 - self._lstg_time_feat(ids, 'byr_offers'))
-            else:
-                feat_dict[feat_name] += -self._lstg_time_feat(ids, 'byr_offers')
-        elif feat_name == 'slr_offers':
-            if offer['byr']:
-                feat_dict[feat_name] += - self._lstg_time_feat(ids, 'byr_offers')
-            else:
-                feat_dict[feat_name] += 1 - self._lstg_time_feat(ids, 'byr_offers')
-        elif ('max' in feat_name or 'min' in feat_name) and 'recent' not in feat_name:
-            for thread_id in self._lstg_time_feat(ids, 'threads'):
-                feat_dict[feat_name].remove(thread_id=thread_id)
-        elif not expired:
-            TimeFeatures._update_offer(feat_dict=feat_dict, feat_name=feat_name,
-                                       offer=offer, ids=ids)
-
-    def _update_lstg_expire(self, feat_dict=None, feat_name=None, offer=None, ids=None):
-        """
-        Updates time valued features after a listing has expired
-
-        :param feat_dict: dictionary of time valued features for the current level
-        :param offer: dictionary giving parameters of the offer
-        :param feat_name: string giving name of time valued feature
-        :param ids: dictionary giving the ids of the current thread
-        :return: NA
-        """
-        self._update_lstg_close(feat_dict=feat_dict, feat_name=feat_name, offer=offer, ids=ids,
-                                expired=True)
-
     @staticmethod
     def _update_thread_expire(feat_dict=None, feat_name=None, offer=None, ids=None):
         """
@@ -404,8 +359,6 @@ class TimeFeatures:
             feature_function = TimeFeatures._update_byr_rejection
         elif trigger_type == time_triggers.SLR_REJECTION:
             pass
-        elif trigger_type == time_triggers.LSTG_EXPIRATION:
-            feature_function = self._update_lstg_expire
         elif trigger_type == time_triggers.SALE:
             feature_function = self._update_lstg_sale
         elif trigger_type == time_triggers.THREAD_EXPIRATION:

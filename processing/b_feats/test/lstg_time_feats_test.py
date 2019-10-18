@@ -2,7 +2,7 @@ import pytest
 import pandas as pd
 import numpy as np
 import torch
-from processing.b_feats.slr import get_lstg_time_feats
+from processing.b_feats.tf_lstg import get_lstg_time_feats
 from rlenv.TimeFeatures import TimeFeatures
 from rlenv.time_triggers import *
 

@@ -2,7 +2,7 @@ import pytest
 import torch
 from rlenv.TimeFeatures import TimeFeatures
 import rlenv.time_triggers as time_triggers
-from rlenv.env_consts import TIME_FEATS
+from rlenv.env_consts import TIME_FEATS, THREAD_COUNT
 
 
 @pytest.fixture
@@ -67,7 +67,7 @@ def test_first_byr_offer(lstgs, init_timefeats):
     assert torch.all(torch.lt(torch.abs(torch.add(next, -exp)), 1e-6))
 
     next = timefeats.get_feats(thread2, 6)
-    exp = torch.tensor([0, 0, 0, 0, 1, .2, 1, .2]).float()
+    exp = torch.tensor([0, 0, 0, 0, 1, .2, 1, .2, 1]).float()
     compare(next, exp)
 
     timefeats.update_features(trigger_type=time_triggers.OFFER, thread_id=thread2,
@@ -77,15 +77,15 @@ def test_first_byr_offer(lstgs, init_timefeats):
                                   'price': .3
                               })
     next3 = timefeats.get_feats(thread3, 6)
-    exp3 = torch.tensor([0, 0, 0, 0, 2, .3, 2, .3]).float()
+    exp3 = torch.tensor([0, 0, 0, 0, 2, .3, 2, .3, 2]).float()
     compare(next3, exp3)
 
     next2 = timefeats.get_feats(thread2, 6)
-    exp2 = torch.tensor([0, 0, 0, 0, 1, .2, 1, .2]).float()
+    exp2 = torch.tensor([0, 0, 0, 0, 1, .2, 1, .2, 1]).float()
     compare(next, exp2)
 
     next1 = timefeats.get_feats(thread1, 6)
-    exp1 = torch.tensor([0, 0, 0, 0, 1, .3, 1, .3]).float()
+    exp1 = torch.tensor([0, 0, 0, 0, 1, .3, 1, .3, 1]).float()
     compare(next1, exp1)
 
 
@@ -142,8 +142,13 @@ def test_first_slr_offer(init_timefeats, lstgs):
             compare(next1[i], torch.tensor(0))
             compare(next2[i], torch.tensor(.2).float())
             compare(next3[i], torch.tensor(.2).float())
+        elif feat == THREAD_COUNT:
+            compare(next3[i], torch.tensor(2).float())
+            compare(next1[i], torch.tensor(1).float())
+            compare(next2[i], torch.tensor(1).float())
         else:
             raise RuntimeError()
+
     timefeats.update_features(trigger_type=time_triggers.OFFER, thread_id=thread2,
                               offer={
                                   'type': 'slr',
@@ -180,6 +185,10 @@ def test_first_slr_offer(init_timefeats, lstgs):
             compare(next1[i], torch.tensor(.3).float())
             compare(next2[i], torch.tensor(.2).float())
             compare(next3[i], torch.tensor(.3).float())
+        elif feat == THREAD_COUNT:
+            compare(next3[i], torch.tensor(2).float())
+            compare(next1[i], torch.tensor(1).float())
+            compare(next2[i], torch.tensor(1).float())
         else:
             raise RuntimeError()
 
@@ -259,8 +268,13 @@ def test_byr_offer(init_timefeats, lstgs):
                 compare(next1[i], torch.tensor(.3).float())
                 compare(next2[i], torch.tensor(.2).float())
                 compare(next3[i], torch.tensor(.3).float())
+        elif feat == THREAD_COUNT:
+            compare(next3[i], torch.tensor(2).float())
+            compare(next1[i], torch.tensor(1).float())
+            compare(next2[i], torch.tensor(1).float())
         else:
             raise RuntimeError()
+
     timefeats.update_features(trigger_type=time_triggers.OFFER, thread_id=thread2,
                               offer={
                                   'type': 'byr',
@@ -307,6 +321,10 @@ def test_byr_offer(init_timefeats, lstgs):
                 compare(next1[i], torch.tensor(.3).float())
                 compare(next2[i], torch.tensor(.2).float())
                 compare(next3[i], torch.tensor(.3).float())
+        elif feat == THREAD_COUNT:
+            compare(next3[i], torch.tensor(2).float())
+            compare(next1[i], torch.tensor(1).float())
+            compare(next2[i], torch.tensor(1).float())
         else:
             raise RuntimeError()
 
@@ -398,6 +416,10 @@ def test_slr_offer(init_timefeats, lstgs):
                 compare(next1[i], torch.tensor(.3).float())
                 compare(next2[i], torch.tensor(.4).float())
                 compare(next3[i], torch.tensor(.4).float())
+        elif feat == THREAD_COUNT:
+            compare(next3[i], torch.tensor(2).float())
+            compare(next1[i], torch.tensor(1).float())
+            compare(next2[i], torch.tensor(1).float())
         else:
             raise RuntimeError()
     timefeats.update_features(trigger_type=time_triggers.OFFER, thread_id=thread2,
@@ -446,6 +468,10 @@ def test_slr_offer(init_timefeats, lstgs):
                 compare(next1[i], torch.tensor(.35).float())
                 compare(next2[i], torch.tensor(.4).float())
                 compare(next3[i], torch.tensor(.4).float())
+        elif feat == THREAD_COUNT:
+            compare(next3[i], torch.tensor(2).float())
+            compare(next1[i], torch.tensor(1).float())
+            compare(next2[i], torch.tensor(1).float())
         else:
             raise RuntimeError()
 
@@ -545,8 +571,13 @@ def test_byr_rejection(init_timefeats, lstgs):
                 compare(next1[i], torch.tensor(.35).float())
                 compare(next2[i], torch.tensor(.4).float())
                 compare(next3[i], torch.tensor(.4).float())
+        elif feat == THREAD_COUNT:
+            compare(next3[i], torch.tensor(2).float())
+            compare(next1[i], torch.tensor(1).float())
+            compare(next2[i], torch.tensor(1).float())
         else:
             raise RuntimeError()
+
     timefeats.update_features(trigger_type=time_triggers.BYR_REJECTION, thread_id=thread2)
     next3 = timefeats.get_feats(thread3, 6)
     next2 = timefeats.get_feats(thread2, 6)
@@ -588,6 +619,10 @@ def test_byr_rejection(init_timefeats, lstgs):
                 compare(next1[i], torch.tensor(.35).float())
                 compare(next2[i], torch.tensor(.4).float())
                 compare(next3[i], torch.tensor(.4).float())
+        elif feat == THREAD_COUNT:
+            compare(next3[i], torch.tensor(2).float())
+            compare(next1[i], torch.tensor(1).float())
+            compare(next2[i], torch.tensor(1).float())
         else:
             raise RuntimeError()
 
@@ -676,10 +711,10 @@ def test_slr_rejection_early(init_timefeats, lstgs):
                 compare(next1[i], torch.tensor(0).float())
                 compare(next2[i], torch.tensor(.2).float())
                 compare(next3[i], torch.tensor(.2).float())
-            else:
-                compare(next1[i], torch.tensor(.3).float())
-                compare(next2[i], torch.tensor(.2).float())
-                compare(next3[i], torch.tensor(.3).float())
+        elif feat == THREAD_COUNT:
+            compare(next3[i], torch.tensor(2).float())
+            compare(next1[i], torch.tensor(1).float())
+            compare(next2[i], torch.tensor(1).float())
         else:
             raise RuntimeError()
     timefeats.update_features(trigger_type=time_triggers.SLR_REJECTION, thread_id=thread2,
@@ -729,5 +764,9 @@ def test_slr_rejection_early(init_timefeats, lstgs):
                 compare(next1[i], torch.tensor(.3).float())
                 compare(next2[i], torch.tensor(.2).float())
                 compare(next3[i], torch.tensor(.3).float())
+        elif feat == THREAD_COUNT:
+            compare(next3[i], torch.tensor(2).float())
+            compare(next1[i], torch.tensor(1).float())
+            compare(next2[i], torch.tensor(1).float())
         else:
             raise RuntimeError()
