@@ -115,3 +115,5 @@ CON_SEGMENTS = 100
 CON_SEP = 1/CON_SEGMENTS
 CON_DIM = torch.tensor(np.sort(np.append(np.array([0.0, 1.0]), 
 	np.arange(CON_SEP/2, 1, CON_SEP)))).unsqueeze(dim=0).to(DEVICE)
+
+MODEL_DIR = 'output fake'
