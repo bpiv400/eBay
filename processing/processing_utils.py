@@ -2,8 +2,6 @@ import sys
 from compress_pickle import load, dump
 from datetime import datetime as dt
 import numpy as np, pandas as pd
-
-sys.path.append('repo/')
 from constants import *
 
 
@@ -20,12 +18,12 @@ def load_frames(name):
 
 
 # converts meta, leaf and product to str, replaces missing product w/leaf
-def categories_to_string(lstgs):
+def categories_to_string(L):
     '''
-    lstgs: dataframe with index 'lstg' and columns 'meta', 'leaf', and 'product'
+    L: dataframe with index 'lstg' and columns 'meta', 'leaf', and 'product'
     '''
     for c in ['meta', 'leaf', 'product']:
-        lstgs[c] = c[0] + lstgs[c].astype(str)
-    mask = lstgs['product'] == 'p0'
-    lstgs.loc[mask, 'product'] = lstgs.loc[mask, 'leaf']
-    return lstgs
+        L[c] = np.char.add(c[0], L[c].astype(str).values)
+    mask = L['product'] == 'p0'
+    L.loc[mask, 'product'] = L.loc[mask, 'leaf']
+    return L

@@ -132,11 +132,3 @@ def create_events(L, T, O, levels):
     events['byr'] = events.index.isin(IDX['byr'], level='index')
     events = events.join(L[['flag', 'start_price']])
     return events
-
-
-def categories_to_string(L):
-    for c in ['meta', 'leaf', 'product']:
-        L[c] = np.char.add(c[0], L[c].astype(str).values)
-    mask = L['product'] == 'p0'
-    L.loc[mask, 'product'] = L.loc[mask, 'leaf']
-    return L
