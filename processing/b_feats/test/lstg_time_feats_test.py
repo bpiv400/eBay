@@ -2,7 +2,7 @@ import pytest
 import pandas as pd
 import numpy as np
 import torch
-from processing.b_feats.slr import get_lstg_time_feats
+from processing.b_feats.tf_lstg import get_lstg_time_feats
 from rlenv.TimeFeatures import TimeFeatures
 from rlenv.time_triggers import *
 
@@ -168,6 +168,59 @@ def test_interwoven_byr_rejection(timefeats):
     compare(act.loc[(0, 2, 9)].values, t2_o4)
     compare(act.loc[(0, 1, 9)].values, t1_o4)
     compare(act.loc[(0, 1, 10)].values, t1_o5)
+
+
+def test_slr_auto_reject_offer_while_byr_offer_outstanding(timefeats):
+    offer = {
+        'type': 'byr',
+        'price': .5,
+        'time': 4,
+    }
+    time_checks = list()
+    exp = list()
+    events = update(None, timefeats, offer=offer, trigger_type=OFFER, thread_id=1)
+
+    offer['time'] = 5
+    offer['price'] = .4
+    events = update(events, timefeats, offer=offer, trigger_type=OFFER, thread_id=2)
+    offer['type'] = 'slr'
+    offer['price'] = 0
+    events = update(events, timefeats, offer=offer, trigger_type=SLR_REJECTION, thread_id=2)
+    get_exp_feats((1, offer['time']), timefeats, exp, time_checks)
+    get_exp_feats((2, offer['time']), timefeats, exp, time_checks)
+
+    offer['time'] = 6
+    offer['type'] = 'slr'
+    offer['price'] = .5
+    events = update(events, timefeats, offer=offer, trigger_type=ACCEPTANCE, thread_id=1)
+    compare_all(events, exp, time_checks)
+
+
+def test_same_time_byr_offer(timefeats):
+    offer = {
+        'type': 'byr',
+        'price': .5,
+        'time': 4,
+    }
+    time_checks = list()
+    exp = list()
+    events = update(None, timefeats, offer=offer, trigger_type=OFFER, thread_id=1)
+    offer['price'] = .6
+    events = update(events, timefeats, offer=offer, trigger_type=OFFER, thread_id=2)
+    get_exp_feats((1, offer['time']), timefeats, exp, time_checks)
+    get_exp_feats((2, offer['time']), timefeats, exp, time_checks)
+
+    offer['time'] = 5
+    offer['type'] = 'slr'
+    offer['price'] = 0
+    events = update(events, timefeats, offer=offer, trigger_type=SLR_REJECTION, thread_id=1)
+    get_exp_feats((1, offer['time']), timefeats, exp, time_checks)
+    get_exp_feats((2, offer['time']), timefeats, exp, time_checks)
+
+    offer['price'] = .4
+    offer['time'] = 6
+    events = update(events, timefeats, offer=offer, trigger_type=ACCEPTANCE, thread_id=2)
+    compare_all(events, exp, time_checks)
 
 
 def test_sequential_rej_byr_accept(timefeats):

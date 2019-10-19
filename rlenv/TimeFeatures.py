@@ -28,6 +28,7 @@ class TimeFeatures:
             - byr best: the highest buyer total concession in other threads, defined as offr/start_price
             - byr offers open: number of open, unanswered byr offers in other open threads.
             - byr best open: the highest unanswered buyer total concession among open buyer offers.
+            - thread count: number of historic threads
         Attributes:
             offers)
             feats: dictionary containing time valued features for the current listing. Values are data
@@ -90,6 +91,8 @@ class TimeFeatures:
         :param feat: name of the feature
         :return: Object encapsulating feature
         """
+        if feat == consts.THREAD_COUNT:
+            return ThreadSet()
         if 'best' not in feat:
             if 'recent' in feat:  # will be ignored for the timebeing
                 return ExpirationQueue(expiration=consts.EXPIRATION)
@@ -126,6 +129,8 @@ class TimeFeatures:
         :param thread_id: id of the current thread where there's been an offer
         :return: NA
         """
+        if feat_name == consts.THREAD_COUNT:
+            self.feats[feat_name].push(thread_id=thread_id)
         if offer['type'] in feat_name:
             if 'best' not in feat_name:
                 self.feats[feat_name].increment(thread_id=thread_id)
@@ -894,3 +899,19 @@ class ExpirationQueue:
         :return: false always
         """
         return False
+
+
+class ThreadSet:
+    def __init__(self):
+        self.threads = set()
+
+    def peek(self, exclude=None):
+        if exclude is None:
+            return len(self.threads)
+        elif exclude in self.threads:
+            return len(self.threads) - 1
+        else:
+            return len(self.threads)
+
+    def push(self, thread_id=None):
+        self.threads.add(thread_id)

@@ -11,6 +11,7 @@ SLR_BEST = 'slr_best'
 BYR_BEST = 'byr_best'
 SLR_BEST_OPEN = 'slr_best_open'
 BYR_BEST_OPEN = 'byr_best_open'
+THREAD_COUNT = 'thread_count'
 
 TIME_FEATS = [
     SLR_OFFERS,
@@ -20,7 +21,8 @@ TIME_FEATS = [
     BYR_OFFERS,
     BYR_BEST,
     BYR_OFFERS_OPEN,
-    BYR_BEST_OPEN
+    BYR_BEST_OPEN,
+    THREAD_COUNT
 ]
 
 # outcomes
