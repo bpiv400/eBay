@@ -13,9 +13,9 @@ COLS = ['accept', 'clock', 'reject', 'byr',
 ACCEPTANCE = 'acceptance' # time trigger for df not needed for environment
 
 
-def compare_all(events, exp, time_checks):
+def compare_all(events, exp, time_checks, lstg=0):
     events = get_lstg_time_feats(events)
-    act = [events.loc[(0, idx[0], idx[1])].values for idx in time_checks]
+    act = [events.loc[(lstg, idx[0], idx[1])].values for idx in time_checks]
     for curr_act, curr_exp, idx in zip(act, exp, time_checks):
         print('')
         print('thread : {}, time: {}'.format(idx[0], idx[1]))
@@ -43,7 +43,7 @@ def get_exp_feats(idx, timefeats, exp, time_checks):
     time_checks.append(idx)
 
 
-def update(events, timefeats, trigger_type=None, thread_id=None, offer=None):
+def update(events, timefeats, trigger_type=None, thread_id=None, offer=None, lstg=0):
     """
     Updates events DataFrame and TimeFeatures object with the same event
     :param events: pd.DataFrame containing events
@@ -53,14 +53,17 @@ def update(events, timefeats, trigger_type=None, thread_id=None, offer=None):
     :param trigger_type: str defined in rlenv.time_triggers giving type of event
     :return: updated events df
     """
-    events = add_event(events, trigger_type=trigger_type, thread_id=thread_id, offer=offer)
+    events = add_event(events, trigger_type=trigger_type, thread_id=thread_id, offer=offer,
+                       lstg=lstg)
     if trigger_type == ACCEPTANCE:
         return events
-    timefeats.update_features(trigger_type=trigger_type, thread_id=thread_id, offer=offer)
+    if timefeats is not None:
+        timefeats.update_features(trigger_type=trigger_type,
+                                  thread_id=thread_id, offer=offer)
     return events
 
 
-def add_event(df, trigger_type=None, offer=None, thread_id=None):
+def add_event(df, trigger_type=None, offer=None, thread_id=None, lstg=0):
     """
     Adds an event to an events dataframe using the same dictionary of offer features
     as that TimeFeatures.update_feat
@@ -76,16 +79,17 @@ def add_event(df, trigger_type=None, offer=None, thread_id=None):
         df.index = pd.MultiIndex(levels=[[], [], []],
                                  codes=[[], [], []],
                                  names=['lstg', 'thread', 'index'])
-    if 0 in df.index.levels[0]:
-        last_index = df.xs(0, level='lstg', drop_level=True)
-        if thread_id in last_index.index.levels[0]:
-            last_index = df.xs(thread_id, level='thread',
-                               drop_level=True).reset_index()['index'].max() + 1
+    if lstg in df.index.levels[0]:
+        last_index = df.xs(lstg, level='lstg', drop_level=True)
+        if (lstg, thread_id, 1) in df.index:
+            last_index = last_index.xs(thread_id, level='thread',
+                                       drop_level=True).reset_index()['index'].max() + 1
         else:
             last_index = 1
     else:
         last_index = 1
-    offer_index = pd.MultiIndex.from_tuples([(0, thread_id, last_index)], names=['lstg', 'thread', 'index'])
+    offer_index = pd.MultiIndex.from_tuples([(lstg, thread_id, last_index)],
+                                            names=['lstg', 'thread', 'index'])
 
     # repurpose offer dictionary
     offer['start_price'] = 0
@@ -169,6 +173,164 @@ def test_interwoven_byr_rejection(timefeats):
     compare(act.loc[(0, 1, 9)].values, t1_o4)
     compare(act.loc[(0, 1, 10)].values, t1_o5)
 
+
+def test_two_lstgs_interwoven_two_threads(timefeats):
+    offer = {
+        'type': 'byr',
+        'price': .5,
+        'time': 4,
+    }
+    time_checks = list()
+    exp = list()
+    events = update(None, timefeats, thread_id=1, offer=offer, trigger_type=OFFER,
+                    lstg=0)
+    events = update(events, None, thread_id=1, offer=offer, trigger_type=OFFER,
+                    lstg=1)
+    get_exp_feats((1, 4), timefeats, exp, time_checks)
+
+    offer['type'] = 'slr'
+    offer['price'] = .1
+    offer['time'] = 5
+    events = update(events, timefeats, thread_id=1, offer=offer, trigger_type=OFFER, lstg=0)
+    events = update(events, None, thread_id=1, offer=offer, trigger_type=OFFER, lstg=1)
+    get_exp_feats((1, 5), timefeats, exp, time_checks)
+
+    offer['type'] = 'byr'
+    offer['price'] = .6
+    offer['time'] = 6
+    events = update(events, timefeats, thread_id=1, offer=offer, trigger_type=OFFER, lstg=0)
+    events = update(events, None, thread_id=1, offer=offer, trigger_type=OFFER, lstg=1)
+    get_exp_feats((1, offer['time']), timefeats, exp, time_checks)
+
+    offer['type'] = 'slr'
+    offer['price'] = .2
+    offer['time'] = 7
+    events = update(events, timefeats, thread_id=1, offer=offer, trigger_type=OFFER, lstg=0)
+    events = update(events, None, thread_id=1, offer=offer, trigger_type=OFFER, lstg=1)
+    get_exp_feats((1, offer['time']), timefeats, exp, time_checks)
+
+    offer['type'] = 'byr'
+    offer['price'] = .4
+    offer['time'] = 8
+    events = update(events, timefeats, thread_id=2, offer=offer, trigger_type=OFFER, lstg=0)
+    events = update(events, None, thread_id=2, offer=offer, trigger_type=OFFER, lstg=1)
+    get_exp_feats((1, offer['time']), timefeats, exp, time_checks)
+    get_exp_feats((2, offer['time']), timefeats, exp, time_checks)
+
+    offer['type'] = 'slr'
+    offer['price'] = .2
+    offer['time'] = 9
+    events = update(events, timefeats, thread_id=2, offer=offer, trigger_type=OFFER, lstg=0)
+    events = update(events, None, thread_id=2, offer=offer, trigger_type=OFFER, lstg=1)
+    get_exp_feats((1, offer['time']), timefeats, exp, time_checks)
+    get_exp_feats((2, offer['time']), timefeats, exp, time_checks)
+
+    offer['type'] = 'byr'
+    offer['price'] = .65
+    offer['time'] = 10
+    events = update(events, timefeats, thread_id=3, offer=offer, trigger_type=OFFER, lstg=0)
+    events = update(events, None, thread_id=3, offer=offer, trigger_type=OFFER, lstg=1)
+    get_exp_feats((1, offer['time']), timefeats, exp, time_checks)
+    get_exp_feats((2, offer['time']), timefeats, exp, time_checks)
+    get_exp_feats((3, offer['time']), timefeats, exp, time_checks)
+
+    offer['type'] = 'slr'
+    offer['price'] = .2
+    offer['time'] = 11
+    events = update(events, timefeats, thread_id=3, offer=offer, trigger_type=OFFER, lstg=0)
+    events = update(events, None, thread_id=3, offer=offer, trigger_type=OFFER, lstg=1)
+    get_exp_feats((1, offer['time']), timefeats, exp, time_checks)
+    get_exp_feats((2, offer['time']), timefeats, exp, time_checks)
+    get_exp_feats((3, offer['time']), timefeats, exp, time_checks)
+
+    offer['type'] = 'byr'
+    offer['price'] = .6
+    offer['time'] = 12
+    events = update(events, timefeats, thread_id=1, offer=offer, lstg=0,
+                    trigger_type=BYR_REJECTION)
+    events = update(events, None, thread_id=1, offer=offer, lstg=1,
+                    trigger_type=BYR_REJECTION)
+    get_exp_feats((2, offer['time']), timefeats, exp, time_checks)
+    get_exp_feats((3, offer['time']), timefeats, exp, time_checks)
+
+    offer['price'] = .4
+    offer['time'] = 13
+    events = update(events, timefeats, thread_id=2, offer=offer, lstg=0,
+                    trigger_type=BYR_REJECTION)
+    events = update(events, None, thread_id=2, offer=offer, lstg=1,
+                    trigger_type=BYR_REJECTION)
+    get_exp_feats((3, offer['time']), timefeats, exp, time_checks)
+
+    offer['price'] = .8
+    offer['time'] = 14
+    events = update(events, timefeats, thread_id=3, offer=offer, lstg=0,
+                    trigger_type=ACCEPTANCE)
+    events = update(events, None, thread_id=3, offer=offer, lstg=1,
+                    trigger_type=ACCEPTANCE)
+    compare_all(events, exp, time_checks, lstg=0)
+    compare_all(events, exp, time_checks, lstg=1)
+
+
+def test_slr_auto_reject_offer_while_slr_offer_outstanding(timefeats):
+    offer = {
+        'type': 'byr',
+        'price': .5,
+        'time': 4,
+    }
+    time_checks = list()
+    exp = list()
+    events = update(None, timefeats, offer=offer, trigger_type=OFFER, thread_id=1)
+    get_exp_feats((1, offer['time']), timefeats, exp, time_checks)
+    get_exp_feats((2, offer['time']), timefeats, exp, time_checks)
+
+    offer['time'] = 5
+    offer['price'] = .55
+    events = update(events, timefeats, offer=offer, trigger_type=OFFER, thread_id=2)
+    get_exp_feats((1, offer['time']), timefeats, exp, time_checks)
+    get_exp_feats((2, offer['time']), timefeats, exp, time_checks)
+
+
+    offer['time'] = 6
+    offer['price'] = .3
+    offer['type'] = 'slr'
+    events = update(events, timefeats, offer=offer, trigger_type=OFFER, thread_id=1)
+    get_exp_feats((1, offer['time']), timefeats, exp, time_checks)
+    get_exp_feats((2, offer['time']), timefeats, exp, time_checks)
+
+    offer['time'] = 7
+    offer['price'] = .4
+    offer['type'] = 'slr'
+    events = update(events, timefeats, offer=offer, trigger_type=OFFER, thread_id=2)
+    get_exp_feats((1, offer['time']), timefeats, exp, time_checks)
+    get_exp_feats((2, offer['time']), timefeats, exp, time_checks)
+
+    offer['time'] = 8
+    offer['price'] = .6
+    offer['type'] = 'byr'
+    events = update(events, timefeats, offer=offer, trigger_type=OFFER, thread_id=1)
+    offer['type'] = 'slr'
+    offer['price'] = .3
+    events = update(events, timefeats, offer=offer, trigger_type=SLR_REJECTION, thread_id=1)
+    get_exp_feats((1, offer['time']), timefeats, exp, time_checks)
+    get_exp_feats((2, offer['time']), timefeats, exp, time_checks)
+    get_exp_feats((3, offer['time']), timefeats, exp, time_checks)
+
+    offer['price'] = .1
+    offer['type'] = 'byr'
+    offer['time'] = 9
+    events = update(events, timefeats, offer=offer, trigger_type=OFFER, thread_id=3)
+    offer['type'] = 'slr'
+    offer['price'] = 0
+    events = update(events, timefeats, offer=offer, trigger_type=SLR_REJECTION, thread_id=3)
+    get_exp_feats((1, offer['time']), timefeats, exp, time_checks)
+    get_exp_feats((2, offer['time']), timefeats, exp, time_checks)
+    get_exp_feats((3, offer['time']), timefeats, exp, time_checks)
+
+    offer['type'] = 'byr'
+    offer['price'] = .6
+    offer['time'] = 10
+    events = update(events, timefeats, offer=offer, trigger_type=ACCEPTANCE, thread_id=1)
+    compare_all(events, exp, time_checks)
 
 def test_slr_auto_reject_offer_while_byr_offer_outstanding(timefeats):
     offer = {

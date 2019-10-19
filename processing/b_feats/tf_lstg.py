@@ -40,8 +40,8 @@ def thread_count(subset):
 
 
 def add_lstg_time_feats(subset, role, isOpen):
-    print('input')
-    print(subset)
+    # print('input')
+    # print(subset)
     subset.byr = subset.byr.astype(bool)
     subset.reject = subset.reject.astype(bool)
     subset.accept = subset.accept.astype(bool)
@@ -58,7 +58,7 @@ def add_lstg_time_feats(subset, role, isOpen):
         assert (keep.max() == 1) & (keep.min() == 0)
         df2.loc[keep == 0, 'norm'] = 0.0
         # keep = open_offers(df2, ['lstg', 'thread'], role)
-        # print('keep')
+        #print('keep')
         # print(keep)
     else:
         keep = None
@@ -76,19 +76,19 @@ def add_lstg_time_feats(subset, role, isOpen):
 
     if role == 'byr':
         s2 = df2.byr & ~df2.reject
-        print('s2')
-        print(s2)
+        #print('s2')
+        # print(s2)
     else:
         s2 = ~df2.byr & ~df2.reject
-    print('s2 setup')
+    #  print('s2 setup')
     N2 = s2.reset_index('thread').thread.groupby('lstg').max()
-    print('n2 setup')
+    # print('n2 setup')
     s2 = s2.unstack(level='thread')
     if isOpen:
         keep = keep.unstack(level='thread').groupby('lstg').ffill()
     N = N.reindex(index=s.index, level='lstg')
     N2 = N2.reindex(index=s2.index, level='lstg')
-    print('n2 reindex')
+    # print('n2 reindex')
     # initialize dictionaries for later concatenation
     count = {}
     best = {}
@@ -113,8 +113,8 @@ def add_lstg_time_feats(subset, role, isOpen):
             # print(count[n])
             # print(count[n].index.names)
         else:
-            print('cut 2')
-            print(cut2)
+            # print('cut 2')
+            # print(cut2)
             counts = cut2.sum(axis=1)
             counts = counts.groupby('lstg').cumsum()
             counts = counts.reset_index('index', drop=True)
@@ -132,12 +132,12 @@ def add_lstg_time_feats(subset, role, isOpen):
         curr_best = curr_best.groupby(level=curr_best.index.names).last()
         best[n] = curr_best
     # concat into series and return
-    print('concat is all that left')
+    # print('concat is all that left')
     f = lambda x: pd.concat(x, 
         names=['thread'] + ['lstg', 'clock']).reorder_levels(
         index_names).sort_index()
     output = f(count), f(best)
-    print('done concat')
+    # print('done concat')
     return output
 
 
