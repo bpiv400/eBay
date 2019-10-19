@@ -33,13 +33,15 @@ class FeedForward(nn.Module):
             self.seq.append(
                 nn.Linear(params['hidden'], sizes['out']))
 
+
     def forward(self, x):
         for _, m in enumerate(self.seq):
             x = m(x)
         return x
 
+
     def simulate(self, x):
-        return self.forward(x)
+        return self.forward(x).squeeze()
 
 
 class RNN(nn.Module):
@@ -65,6 +67,9 @@ class RNN(nn.Module):
         # output layer
         self.output = nn.Linear(params['hidden'], sizes['out'])
 
+        # for last byr turn
+        self.output4 = nn.Linear(params['hidden'], 1)
+
 
     # output discrete weights and parameters of continuous components
     def forward(self, x_fixed, x_time):
@@ -75,8 +80,12 @@ class RNN(nn.Module):
         theta, _ = nn.utils.rnn.pad_packed_sequence(
             theta, total_length=self.steps, batch_first=True)
 
-        # output layer: (seq_len, batch_size, N_output)
-        return self.output(theta)
+        # output layer: split if turns == 4 (i.e., con_byr model)
+        if self.steps == 4:
+            return self.output(theta[:,:self.steps-1,:]), 
+                self.output4(theta[:,self.steps-1,:]).squeeze()
+        else:
+            return self.output(theta)   # (batch_size, seq_len, N_out)
 
 
 class LSTM(nn.Module):
@@ -110,8 +119,9 @@ class LSTM(nn.Module):
         theta, _ = nn.utils.rnn.pad_packed_sequence(
             theta, total_length=self.steps, batch_first=True)
 
-        # output layer: (seq_len, batch_size, N_output)
-        return self.output(theta)
+        # output layer: (batch_size, seq_len, N_output)
+        return self.output(theta).squeeze()
+
 
     def simulate(self, x_time, x_fixed=None, hidden=None):
         """
@@ -126,5 +136,5 @@ class LSTM(nn.Module):
         else:
             theta, hidden = self.rnn(x_time, hidden)
 
-        # output layer: (seq_len, batch_size, N_output)
+        # output layer: (seq_len, batch_size, N_out)
         return self.output(theta), hidden

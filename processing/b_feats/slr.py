@@ -43,6 +43,11 @@ if __name__ == "__main__":
     parser.add_argument('--num', action='store', type=int, required=True)
     num = parser.parse_args().num
 
+    # quit if output files already exist
+    filename = lambda x: FEATS_DIR + '%d_%s.gz' % (num, x)
+    if os.path.isfile(filename('tf_lstg')):
+        print('%d: output already exists.' % num)
+
     # load data
     print('Loading data')
     d = load(CHUNKS_DIR + '%d' % num + '.gz')
@@ -73,6 +78,5 @@ if __name__ == "__main__":
     events = events.drop(0, level='thread') # remove lstg start/end obs
 
     # save separately
-    filename = lambda x: FEATS_DIR + '%d_%s.gz' % (num, x)
     for name in ['events', 'tf_slr']:
         dump(globals()[name], filename(name))

@@ -1,13 +1,9 @@
 import sys, pickle, os, h5py
 from compress_pickle import load, dump
 import numpy as np, pandas as pd
-
-sys.path.append('repo/')
 from constants import *
 from utils import *
-
-sys.path.append('repo/processing/5_inputs/')
-from inputs_util import *
+from processing.e_inputs.inputs_util import *
 
 
 def add_clock_feats(x_time):
@@ -66,28 +62,27 @@ def parse_fixed_feats_delay(model, idx, x_lstg, x_thread, x_offer, z_role):
 # loads data and calls helper functions to construct training inputs
 def process_inputs(part, model):
     # path name function
-    getPath = lambda names: \
-    	'data/partitions/%s/%s.gz' % (part, '_'.join(names))
+    getPath = lambda names: '%s/partitions/%s/%s.gz' % \
+        (PREFIX, part, '_'.join(names))
 
     # outcome
     y = load(getPath(['y', model, 'delay']))
-    idx = y.index
+
+    # time features
+    z_start = load(getPath(['z', 'start']))
+    z_role = load(getPath(['z', model]))
+    x_time = parse_time_feats_delay(model, y.index, z_start, z_role)
+
+    # unstack y
     y = y.astype('float32').unstack()
     y[y.isna()] = -1
 
-    # load in other dataframes
+    # fixed features
     x_lstg = cat_x_lstg(part)
     x_thread = load(getPath(['x', 'thread']))
     x_offer = load(getPath(['x', 'offer']))
-    z_start = load(getPath(['z', 'start']))
-    z_role = load(getPath(['z', model]))
-
-    # fixed features
     x_fixed = parse_fixed_feats_delay(
     	model, y.index, x_lstg, x_thread, x_offer, z_role)
-
-    # time features
-    x_time = parse_time_feats_delay(model, idx, z_start, z_role)
 
     return {'y': y.astype('int8', copy=False), 
             'x_fixed': x_fixed.astype('float32', copy=False), 
@@ -107,10 +102,18 @@ if __name__ == '__main__':
     print('%s/%s' % (part, model))
 
     # out path
-    path = lambda x: '%s/%s/%s/delay_%s' % (PREFIX, x, part, role)
+    path = lambda x: '%s/%s/%s/delay_%s.gz' % (PREFIX, x, part, role)
 
     # input dataframes, output processed dataframes
     d = process_inputs(part, model)
 
-    # save featnames and sizes, and save numpy arrays as hdf5 and gz
-    save_params_data(path, part, d)
+    # save featnames and sizes
+    if part == 'train_models':
+        pickle.dump(get_featnames(d), 
+            open('%s/featnames/con_%s.pkl' % (PREFIX, role), 'wb'))
+        pickle.dump(get_sizes(d), 
+            open('%s/sizes/con_%s.pkl' % (PREFIX, role), 'wb'))
+
+    # save dictionary of numpy arrays
+    dump(convert_to_numpy(d), 
+        '%s/inputs/%s/delay_%s.gz' % (PREFIX, part, role))
