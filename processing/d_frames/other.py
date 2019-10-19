@@ -186,7 +186,7 @@ def get_x_offer(lstgs, events, tf):
     # total concession
     df['norm'] = events['price'] / lstgs['start_price']
     mask = events.index.isin(IDX['slr'], level='index')
-    df.loc[mask, 'norm'] = 1 - df.loc[mask, 'norm']
+    df.loc[mask, 'norm'] = 1 - df['norm']
     df.loc[df.norm.isna(), 'norm'] = 0
     # clock variable
     clock = 24 * 3600 * lstgs.start_date.rename(0).to_frame()
@@ -264,31 +264,31 @@ if __name__ == "__main__":
     events = load_frames('events').reindex(index=idx, level='lstg')
     tf_lstg = load_frames('tf_lstg').reindex(index=idx, level='lstg')
 
-    # lookup file
-    print('lookup')
-    lookup = lstgs[['meta', 'start_date', \
-        'start_price', 'decline_price', 'accept_price']]
-    dump(lookup, path('lookup'))
+    # # lookup file
+    # print('lookup')
+    # lookup = lstgs[['meta', 'start_date', \
+    #     'start_price', 'decline_price', 'accept_price']]
+    # dump(lookup, path('lookup'))
 
-    # word2vec
-    print('x_w2v')
-    lstgs = categories_to_string(lstgs)
-    w2v = get_w2v(lstgs, 'slr').join(get_w2v(lstgs, 'byr'))
-    dump(w2v, path('x_w2v'))
-    lstgs = lstgs.drop(['slr', 'meta', 'leaf', 'product'], axis=1)
-    del w2v
+    # # word2vec
+    # print('x_w2v')
+    # lstgs = categories_to_string(lstgs)
+    # w2v = get_w2v(lstgs, 'slr').join(get_w2v(lstgs, 'byr'))
+    # dump(w2v, path('x_w2v'))
+    # lstgs.drop(['slr', 'meta', 'leaf', 'product'], axis=1, inplace=True)
+    # del w2v
 
-    # delay start
-    print('z')
-    z_start = events.clock.groupby(
-        ['lstg', 'thread']).shift().dropna().astype(np.int64)
-    dump(z_start, path('z_start'))
+    # # delay start
+    # print('z')
+    # z_start = events.clock.groupby(
+    #     ['lstg', 'thread']).shift().dropna().astype(np.int64)
+    # dump(z_start, path('z_start'))
 
-    # delay role
-    for role in ['slr', 'byr']:
-        z = get_period_time_feats(tf_lstg, z_start, role)
-        dump(z, path('z_' + role))
-    del z, z_start
+    # # delay role
+    # for role in ['slr', 'byr']:
+    #     z = get_period_time_feats(tf_lstg, z_start, role)
+    #     dump(z, path('z_' + role))
+    # del z, z_start
 
     # offer features
     print('x_offer')
