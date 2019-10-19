@@ -184,9 +184,11 @@ def get_x_offer(lstgs, events, tf):
     df['reject'] = df['con'] == 0
     df['split'] = np.abs(df['con'] - 0.5) < TOL_HALF
     # total concession
-    df['norm'] = events['price'] / lstgs['start_price']
-    mask = events.index.isin(IDX['slr'], level='index')
-    df.loc[mask, 'norm'] = 1 - df['norm']
+    df['norm'] = np.nan
+    df.loc[events.index.isin(IDX['byr'], level='index'), 'norm'] = \
+        events['price'] / lstgs['start_price']
+    df.loc[events.index.isin(IDX['slr'], level='index'), 'norm'] = \
+        1 - events['price'] / lstgs['start_price']
     df.loc[df.norm.isna(), 'norm'] = 0
     # clock variable
     clock = 24 * 3600 * lstgs.start_date.rename(0).to_frame()
