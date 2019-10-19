@@ -47,6 +47,7 @@ if __name__ == "__main__":
     filename = lambda x: FEATS_DIR + '%d_%s.gz' % (num, x)
     if os.path.isfile(filename('tf_lstg')):
         print('%d: output already exists.' % num)
+        exit()
 
     # load data
     print('Loading data')
