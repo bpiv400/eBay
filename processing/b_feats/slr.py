@@ -45,7 +45,7 @@ if __name__ == "__main__":
 
     # quit if output files already exist
     filename = lambda x: FEATS_DIR + '%d_%s.gz' % (num, x)
-    if os.path.isfile(filename('tf_lstg')):
+    if os.path.isfile(filename('tf_slr')):
         print('%d: output already exists.' % num)
         exit()
 
