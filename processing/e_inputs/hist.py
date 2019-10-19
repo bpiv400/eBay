@@ -6,43 +6,28 @@ from utils import *
 from processing.e_inputs.inputs_util import *
 
 
-def extract_hour_feats(clock):
-	df = pd.DataFrame(index=clock.index)
-    df['holiday'] = clock.dt.date.astype('datetime64').isin(HOLIDAYS)
-    for i in range(6):
-        df['dow' + str(i)] = clock.dt.dayofweek == i
-    df['hour'] = clock.dt.hour
-    return df
-
-
 # loads data and calls helper functions to construct training inputs
 def process_inputs(part):
+	# path name function
+	getPath = lambda names: '%s/partitions/%s/%s.gz' % \
+		(PREFIX, part, '_'.join(names))
+
 	# outcome
-	y = load('data/partitions/%s/y_arrival.gz' % part)
+	y = load(getPath(['x', 'thread']))['byr_pctile']
 
-	# fixed features
-	x_fixed = cat_x_lstg(part)
+	# initialize fixed features with listing variables
+	x_fixed = cat_x_lstg(part).reindex(index=y.index, level='thread')
 
-	# index of x_fixed for each y
-	lookup = np.array(range(len(x_fixed.index)))
-	counts = y.groupby('lstg').count().values
-	idx_fixed = np.repeat(lookup, counts)
-
-	# clock features
-	N = pd.to_timedelta(pd.to_datetime(END) - pd.to_datetime(START)).hours
-	clock = pd.to_datetime(range(N+30*24+1), unit='h', origin=START)
-	x_hour = pd.Series(clock, name='clock')
-	x_hour = extract_hour_feats(x_hour).join(x_hour).set_index('clock')
-
-	# index of x_hour for each y
-	period = y.reset_index('period')['period']
-	idx_hour = (period + x_fixed.start_date * 24).values
+	# add days since lstg start, holiday, day of week, and minutes since midnight
+	threads = load(getPath(['x', 'offer'])).xs(1, level='index')
+	cols = ['days', 'holiday', 'hour_of_day'] + \
+		[c for c in threads.columns if 'dow' in c]
+	x_fixed = x_fixed.join(threads[cols].rename(
+		lambda x: 'focal_' + x, axis=1))
 
 	return {'y': y.astype('uint8', copy=False), 
             'x_fixed': x_fixed.astype('float32', copy=False), 
-            'x_hour': x_hour.astype('uint16', copy=False),
-            'idx_fixed': idx_fixed.astype('uint32', copy=False),
-            'idx_hour': idx_hour.astype('uint16', copy=False)}
+            'x_hour': x_hour.astype('uint16', copy=False)}
 
 
 if __name__ == '__main__':

@@ -4,13 +4,9 @@ from compress_pickle import load, dump
 from datetime import datetime as dt
 from sklearn.utils.extmath import cartesian
 import numpy as np, pandas as pd
-
-sys.path.append('repo/')
 from constants import *
 from utils import *
-
-sys.path.append('repo/processing/')
-from processing_utils import *
+from processing.processing_utils import *
 
 
 def multiply_indices(s):
@@ -221,7 +217,7 @@ def get_x_offer(lstgs, events, tf):
         'clock').sort_index().astype(np.int64)
     clock = pd.to_datetime(df.clock, unit='s', origin=START)
     df = df.join(extract_day_feats(clock))
-    df['minutes'] = clock.dt.hour * 60 + clock.dt.minute
+    df['hour_of_day'] = clock.dt.hour
     # raw time-varying features
     df = df.reset_index('index').set_index('clock', append=True)
     df = pd.concat([df, tf.reindex(df.index, fill_value=0)], axis=1)
@@ -299,6 +295,12 @@ if __name__ == "__main__":
     x_offer = get_x_offer(lstgs, events, tf_lstg)
     dump(x_offer, path('x_offer'))
     del tf_lstg, events
+
+    # thread features
+    print('x_thread')
+    x_thread = threads[['byr_pctile']]
+    x_thread.loc[x_thread.byr_pctile == 100, 'byr_pctile'] = 99
+    dump(x_thread, path('x_offer'))
 
     # delay outcome
     print('y_delay')

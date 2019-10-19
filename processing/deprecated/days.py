@@ -1,19 +1,15 @@
-import sys, pickle, os, h5py
+import sys, pickle, os
 from compress_pickle import load, dump
 import numpy as np, pandas as pd
-
 from constants import *
 from utils import *
+from processing.e_inputs.inputs_util import *
 
 
 # loads data and calls helper functions to construct training inputs
 def process_inputs(part):
-	# path name function
-	getPath = lambda names: \
-		'data/partitions/%s/%s.gz' % (part, '_'.join(names))
-
 	# outcome
-	y = load(getPath(['y_arrival_days']))
+	y = load('data/partitions/%s/y_arrival_days.gz' % part)
 
 	# fixed features
 	x_fixed = cat_x_lstg(part)
@@ -25,7 +21,9 @@ def process_inputs(part):
         unit='D', origin=START)
 	x_days = x_days.join(extract_day_feats(clock))
 
-	return y, x_fixed, x_days
+	return {'y': y.astype('uint8', copy=False), 
+			'x_fixed': x_fixed.astype('float32', copy=False), 
+			'x_days': x_days.astype('uint8', copy=False)}
 
 
 if __name__ == '__main__':
@@ -39,7 +37,7 @@ if __name__ == '__main__':
 	print('Partition: %s' % part)
 
 	# input dataframes, output processed dataframes
-	y, x_fixed, x_days = process_inputs(part)
+	d = process_inputs(part)
 
 	# save featnames and sizes once
 	if part == 'train_models':
@@ -53,8 +51,8 @@ if __name__ == '__main__':
 				 'out': 2}
 		pickle.dump(sizes, open(outfile('sizes'), 'wb'))
 
-	# convert to numpy arrays, save in hdf5
-	path = 'data/inputs/%s/arrival_days.hdf5' % part
+	# convert to numpy arrays, save compressed
+	path = 'data/inputs/%s/arrival_days.gz' % part
 	f = h5py.File(path, 'w')
 	for var in ['y', 'x_fixed', 'x_days']:
 		array = globals()[var].to_numpy().astype('float32')

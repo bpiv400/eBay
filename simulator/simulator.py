@@ -1,13 +1,9 @@
-import sys, math
+import sys
 import torch, torch.optim as optim
 import numpy as np
-
-sys.path.append('repo/')
 from constants import *
-
-sys.path.append('repo/simulator/')
-from loss import *
-from nets import *
+from simulator.loss import *
+from simulator.nets import *
 
 
 class Simulator:
@@ -16,12 +12,15 @@ class Simulator:
     '''
     def __init__(self, model, params, sizes, device='cpu'):
         # save parameters from inputs
-        self.isRecurrent = model != 'arrival'
+        self.model = model
 
         # size of theta and loss function
-        if 'con' in model:
-            sizes['out'] = 2 + CON_SEGMENTS
+        if model in ['hist', 'con_byr', 'con_slr']:
             self.loss = emd_loss
+            if model == 'hist':
+                sizes['out'] = 100
+            else:
+                sizes['out'] = 2 + CON_SEGMENTS
         else:
             sizes['out'] = 1
             if model == 'arrival':
@@ -30,11 +29,10 @@ class Simulator:
                 self.loss = logit_loss
 
         # neural net(s)
-        if self.isRecurrent:
-            if 'delay' in model:
-                self.net = LSTM(params, sizes).to(device)
-            else:
-                self.net = RNN(params, sizes).to(device)
+        if 'delay' in model:
+            self.net = LSTM(params, sizes).to(device)
+        elif 'con' in model:
+            self.net = RNN(params, sizes).to(device)
         else:
             self.net = FeedForward(params, sizes).to(device)
 
@@ -47,16 +45,21 @@ class Simulator:
         self.net.train(train)
 
         # prediction using net
-        if self.isRecurrent:
-            theta = self.net(data['x_fixed'], data['x_time'])
+        if model in ['arrival', 'hist']:
+            theta = self.net(data['x_fixed'])
+        else:
             mask = data['y'] > -1
             data['y'] = data['y'][mask]
-            theta = theta[mask,:]
-        else:
-            theta = self.net(data['x_fixed'])
+
+            if model == 'con_byr':
+                t, t4 = self.net(data['x_fixed'], data['x_time'])
+                theta = [t[mask], t4[mask]]
+            else:
+                theta = self.net(data['x_fixed'], data['x_time'])
+                theta = theta[mask]
 
         # calculate loss
-        return self.loss(theta.squeeze(), data['y'])  
+        return self.loss(theta, data['y'])  
 
 
     def run_batch(self, data, idx):
