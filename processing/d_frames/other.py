@@ -12,7 +12,7 @@ from processing.processing_utils import *
 def multiply_indices(s):
     # initialize arrays
     k = len(s.index.names)
-    arrays = np.zeros((s.sum(),k+1), dtype=np.int64)
+    arrays = np.zeros((s.sum(),k+1), dtype='uint16')
     count = 0
     # outer loop: range length
     for i in range(1, max(s)+1):
@@ -29,26 +29,29 @@ def multiply_indices(s):
             arrays[count:count+i] = f(index[j])
             count += i
     # convert to multi-index
-    return pd.MultiIndex.from_arrays(np.transpose(arrays), 
+    idx = pd.MultiIndex.from_arrays(np.transpose(arrays), 
         names=s.index.names + ['period'])
+    return idx.sortlevel(idx.names)[0]
 
 
 def get_y_arrival(lstgs, threads):
     # time_stamps
     t0 = lstgs.start_date * 24 * 3600
-    t1 = lstgs.end_time
     diff = pd.to_timedelta(threads.start_time - t0, unit='s')
+    end = pd.to_timedelta(lstgs.end_time - t0, unit='s')
+    # convert to hours
+    diff = (diff.dt.total_seconds() // 3600).astype('uint16')
+    end = (end.dt.total_seconds() // 3600).astype('uint16')
+    # censor to first 31 days
+    diff = diff.loc[diff < 31 * 24]
+    end.loc[end >= 31 * 24] = 31 * 24 - 1
     # count of arrivals by hour
-    hours = diff.dt.hours.rename('period').to_frame().assign(count=1)
-    hours = days.groupby(['lstg', 'period']).sum().squeeze().astype(np.uint16)
-    # end of listings
-    T1 = int((pd.to_datetime(END) - pd.to_datetime(START)).total_seconds())
-    t1[t1 > T1] = T1
-    end = (pd.to_timedelta(t1 - t0, unit='s').dt.hours).rename('period')
+    hours = diff.rename('period').to_frame().assign(count=1)
+    arrivals = hours.groupby(['lstg', 'period']).sum().squeeze()
     # create multi-index from end stamps
     idx = multiply_indices(end+1)
     # expand to new index and return
-    return hours.reindex(index=idx, fill_value=0).sort_index()
+    return arrivals.reindex(index=idx, fill_value=0)
 
 
 def get_period_time_feats(tf, start, model):
@@ -264,8 +267,8 @@ if __name__ == "__main__":
         ['title', 'flag'], axis=1).reindex(index=idx)
     threads = load(CLEAN_DIR + 'threads.gz').reindex(
         index=idx, level='lstg')
-    events = load_frames('events').reindex(index=idx, level='lstg')
-    tf_lstg = load_frames('tf_lstg').reindex(index=idx, level='lstg')
+    # events = load_frames('events').reindex(index=idx, level='lstg')
+    # tf_lstg = load_frames('tf_lstg').reindex(index=idx, level='lstg')
 
     # # lookup file
     # print('lookup')
@@ -294,36 +297,36 @@ if __name__ == "__main__":
     # del z, z_start
 
     # offer features
-    print('x_offer')
-    x_offer = get_x_offer(lstgs, events, tf_lstg)
-    dump(x_offer, path('x_offer'))
-    del tf_lstg, events
+    # print('x_offer')
+    # x_offer = get_x_offer(lstgs, events, tf_lstg)
+    # dump(x_offer, path('x_offer'))
+    # del tf_lstg, events
 
-    # thread features
-    print('x_thread')
-    x_thread = threads[['byr_pctile']]
-    x_thread.loc[x_thread.byr_pctile == 100, 'byr_pctile'] = 99
-    dump(x_thread, path('x_offer'))
+    # # thread features
+    # print('x_thread')
+    # x_thread = threads[['byr_pctile']]
+    # x_thread.loc[x_thread.byr_pctile == 100, 'byr_pctile'] = 99
+    # dump(x_thread, path('x_offer'))
 
-    # delay outcome
-    print('y_delay')
-    y_delay_byr, y_delay_slr = get_y_delay(x_offer)
-    dump(y_delay_byr, path('y_delay_byr'))
-    dump(y_delay_slr, path('y_delay_slr'))
-    del y_delay_byr, y_delay_slr
+    # # delay outcome
+    # print('y_delay')
+    # y_delay_byr, y_delay_slr = get_y_delay(x_offer)
+    # dump(y_delay_byr, path('y_delay_byr'))
+    # dump(y_delay_slr, path('y_delay_slr'))
+    # del y_delay_byr, y_delay_slr
 
-    # concession outcome
-    print('y_con')
-    y_con_byr, y_con_slr = get_y_con(x_offer)
-    dump(y_con_byr, path('y_con_byr'))
-    dump(y_con_slr, path('y_con_slr'))
-    del x_offer, y_con_byr, y_con_slr
+    # # concession outcome
+    # print('y_con')
+    # y_con_byr, y_con_slr = get_y_con(x_offer)
+    # dump(y_con_byr, path('y_con_byr'))
+    # dump(y_con_slr, path('y_con_slr'))
+    # del x_offer, y_con_byr, y_con_slr
 
-    # listing features
-    print('x_lstg')
-    x_lstg = get_x_lstg(lstgs)
-    dump(x_lstg, path('x_lstg'))
-    del x_lstg
+    # # listing features
+    # print('x_lstg')
+    # x_lstg = get_x_lstg(lstgs)
+    # dump(x_lstg, path('x_lstg'))
+    # del x_lstg
 
     # outcomes for arrival model
     print('Creating arrival model outcome variables')
