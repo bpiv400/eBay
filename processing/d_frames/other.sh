@@ -1,7 +1,7 @@
 #!/bin/bash
 #$ -q all.q
 #$ -t 1-3
-#$ -l m_mem_free=150G
+#$ -l m_mem_free=100G
 #$ -N other
 #$ -j y
 #$ -o logs/

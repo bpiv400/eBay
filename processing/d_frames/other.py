@@ -184,12 +184,10 @@ def get_x_offer(lstgs, events, tf):
     df['reject'] = df['con'] == 0
     df['split'] = np.abs(df['con'] - 0.5) < TOL_HALF
     # total concession
-    df['norm'] = np.nan
-    df.loc[events.index.isin(IDX['byr'], level='index'), 'norm'] = \
-        events['price'] / lstgs['start_price']
-    df.loc[events.index.isin(IDX['slr'], level='index'), 'norm'] = \
-        1 - events['price'] / lstgs['start_price']
-    df.loc[df.norm.isna(), 'norm'] = 0
+    df['norm'] = (events['price'] / lstgs['start_price']).reindex(
+        index=df.index, fill_value=0.0)
+    df.loc[df.index.isin(IDX['slr'], level='index'), 'norm'] = \
+        1 - df['norm']
     # clock variable
     clock = 24 * 3600 * lstgs.start_date.rename(0).to_frame()
     clock = clock.join(events.clock.unstack())
@@ -222,13 +220,16 @@ def get_x_offer(lstgs, events, tf):
     df['hour_of_day'] = clock.dt.hour
     # raw time-varying features
     df = df.reset_index('index').set_index('clock', append=True)
-    df = pd.concat([df, tf.reindex(df.index, fill_value=0)], axis=1)
+    df = pd.concat([df, tf.reindex(df.index, fill_value=0).rename(
+        lambda x: x + '_raw', axis=1)], axis=1)
     df = df.reset_index('clock', drop=True).set_index(
         'index', append=True)
     # change in time-varying features
-    dtypes = {c: tf[c].dtype for c in tf.columns}
-    tfdiff = df[tf.columns].groupby(['lstg', 'thread']).diff().dropna()
-    tfdiff = tfdiff.astype(dtypes).rename(lambda x: x + '_diff', axis=1)
+    tfeats = [c for c in df.columns if c.endswith('_raw')]
+    dtypes = {c: df[c].dtype for c in tfeats}
+    tfdiff = df[tfeats].groupby(['lstg', 'thread']).diff().dropna()
+    tfdiff = tfdiff.astype(dtypes).rename(
+        lambda x: x.replace('_raw', '_diff'), axis=1)
     df = df.join(tfdiff.reindex(df.index, fill_value=0))
     return df
 
