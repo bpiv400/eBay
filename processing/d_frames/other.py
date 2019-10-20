@@ -296,7 +296,6 @@ if __name__ == "__main__":
     #     dump(z, path('z_' + role))
     # del z, z_start
 
-    offer features
     print('x_offer')
     x_offer = get_x_offer(lstgs, events, tf_lstg)
     dump(x_offer, path('x_offer'))
