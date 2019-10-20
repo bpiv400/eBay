@@ -2,56 +2,10 @@ import sys
 import argparse, random
 from compress_pickle import load, dump
 from datetime import datetime as dt
-from sklearn.utils.extmath import cartesian
 import numpy as np, pandas as pd
 from constants import *
 from utils import *
 from processing.processing_utils import *
-
-
-def multiply_indices(s):
-    # initialize arrays
-    k = len(s.index.names)
-    arrays = np.zeros((s.sum(),k+1), dtype='uint16')
-    count = 0
-    # outer loop: range length
-    for i in range(1, max(s)+1):
-        index = s.index[s == i].values
-        if len(index) == 0:
-            continue
-        # cartesian product of existing level(s) and period
-        if k == 1:
-            f = lambda x: cartesian([[x], list(range(i))])
-        else:
-            f = lambda x: cartesian([[e] for e in x] + [list(range(i))])
-        # inner loop: rows of period
-        for j in range(len(index)):
-            arrays[count:count+i] = f(index[j])
-            count += i
-    # convert to multi-index
-    idx = pd.MultiIndex.from_arrays(np.transpose(arrays), 
-        names=s.index.names + ['period'])
-    return idx.sortlevel(idx.names)[0]
-
-
-def get_y_arrival(lstgs, threads):
-    # time_stamps
-    t0 = lstgs.start_date * 24 * 3600
-    diff = pd.to_timedelta(threads.start_time - t0, unit='s')
-    end = pd.to_timedelta(lstgs.end_time - t0, unit='s')
-    # convert to hours
-    diff = (diff.dt.total_seconds() // 3600).astype('uint16')
-    end = (end.dt.total_seconds() // 3600).astype('uint16')
-    # censor to first 31 days
-    diff = diff.loc[diff < 31 * 24]
-    end.loc[end >= 31 * 24] = 31 * 24 - 1
-    # count of arrivals by hour
-    hours = diff.rename('period').to_frame().assign(count=1)
-    arrivals = hours.groupby(['lstg', 'period']).sum().squeeze()
-    # create multi-index from end stamps
-    idx = multiply_indices(end+1)
-    # expand to new index and return
-    return arrivals.reindex(index=idx, fill_value=0)
 
 
 def get_period_time_feats(tf, start, model):
@@ -140,36 +94,6 @@ def get_y_con(x_offer):
     return split_by_role(s)
 
 
-def get_x_lstg(lstgs):
-    # initialize output dataframe with as-is features
-    df = lstgs[BINARY_FEATS + COUNT_FEATS + ['start_date']]
-    # clock features
-    clock = pd.to_datetime(lstgs.start_date, unit='D', origin=START)
-    df = df.join(extract_day_feats(clock))
-    # slr feedback
-    df.loc[df.fdbk_score.isna(), 'fdbk_score'] = 0
-    df['fdbk_score'] = df.fdbk_score.astype(np.int64)
-    df['fdbk_pstv'] = lstgs['fdbk_pstv'] / 100
-    df.loc[df.fdbk_pstv.isna(), 'fdbk_pstv'] = 1
-    df['fdbk_100'] = df['fdbk_pstv'] == 1
-    # prices
-    df['start'] = lstgs['start_price']
-    df['decline'] = lstgs['decline_price'] / lstgs['start_price']
-    df['accept'] = lstgs['accept_price'] / lstgs['start_price']
-    for z in ['start', 'decline', 'accept']:
-        df[z + '_round'], df[z +'_nines'] = do_rounding(df[z])
-    df['has_decline'] = df['decline'] > 0
-    df['has_accept'] = df['accept'] < 1
-    df['auto_dist'] = df['accept'] - df['decline']
-    # condition
-    cndtn = lstgs['cndtn']
-    df['new'] = cndtn == 1
-    df['used'] = cndtn == 7
-    df['refurb'] = cndtn.isin([2, 3, 4, 5, 6])
-    df['wear'] = cndtn.isin([8, 9, 10, 11]) * (cndtn - 7)
-    return df
-
-
 def get_x_offer(lstgs, events, tf):
     # vector of offers
     offers = events.price.unstack().join(lstgs.start_price)
@@ -237,19 +161,6 @@ def get_x_offer(lstgs, events, tf):
     return df
 
 
-def get_w2v(lstgs, role):
-    # read in vectors
-    w2v = pd.read_csv(W2V_PATH(role), index_col=0)
-    # hierarchical join
-    df = pd.DataFrame(np.nan, index=lstgs.index, columns=w2v.columns)
-    for level in ['product', 'leaf', 'meta']:
-        mask = np.isnan(df[role + '0'])
-        idx = mask[mask].index
-        cat = lstgs[level].rename('category').reindex(index=idx).to_frame()
-        df[mask] = cat.join(w2v, on='category').drop('category', axis=1)
-    return df
-
-
 if __name__ == "__main__":
     # partition number from command line
     parser = argparse.ArgumentParser()
@@ -257,77 +168,39 @@ if __name__ == "__main__":
     num = parser.parse_args().num
 
     # partition
-    partitions = load(PARTS_DIR + 'partitions.gz')
-    part = list(partitions.keys())[num-1]
-    idx = partitions[part]
-    path = lambda name: PARTS_DIR + '%s/%s.gz' % (part, name)
+    idx, path = get_partition(num)
 
     # load data and 
-    lstgs = load(CLEAN_DIR + 'listings.gz').drop(
-        ['title', 'flag'], axis=1).reindex(index=idx)
-    threads = load(CLEAN_DIR + 'threads.gz').reindex(
-        index=idx, level='lstg')
+    lstgs = load(CLEAN_DIR + 'listings.gz')
+    lstgs = lstgs[['start_price', 'start_day']].reindex(index=idx)
     events = load_frames('events').reindex(index=idx, level='lstg')
     tf_lstg = load_frames('tf_lstg').reindex(index=idx, level='lstg')
 
-    # # lookup file
-    # print('lookup')
-    # lookup = lstgs[['meta', 'start_date', \
-    #     'start_price', 'decline_price', 'accept_price']]
-    # dump(lookup, path('lookup'))
+    # delay start
+    print('z')
+    z_start = events.clock.groupby(
+        ['lstg', 'thread']).shift().dropna().astype(np.int64)
+    dump(z_start, path('z_start'))
 
-    # # word2vec
-    # print('x_w2v')
-    # lstgs = categories_to_string(lstgs)
-    # w2v = get_w2v(lstgs, 'slr').join(get_w2v(lstgs, 'byr'))
-    # dump(w2v, path('x_w2v'))
-    # lstgs.drop(['slr', 'meta', 'leaf', 'product'], axis=1, inplace=True)
-    # del w2v
+    # delay role
+    for role in ['slr', 'byr']:
+        z = get_period_time_feats(tf_lstg, z_start, role)
+        dump(z, path('z_' + role))
 
-    # # delay start
-    # print('z')
-    # z_start = events.clock.groupby(
-    #     ['lstg', 'thread']).shift().dropna().astype(np.int64)
-    # dump(z_start, path('z_start'))
-
-    # # delay role
-    # for role in ['slr', 'byr']:
-    #     z = get_period_time_feats(tf_lstg, z_start, role)
-    #     dump(z, path('z_' + role))
-    # del z, z_start
-
+    # offer features
     print('x_offer')
     x_offer = get_x_offer(lstgs, events, tf_lstg)
     dump(x_offer, path('x_offer'))
-    del tf_lstg, events
-
-    # thread features
-    print('x_thread')
-    x_thread = threads[['byr_pctile']]
-    x_thread.loc[x_thread.byr_pctile == 100, 'byr_pctile'] = 99
-    dump(x_thread, path('x_thread'))
 
     # delay outcome
     print('y_delay')
     y_delay_byr, y_delay_slr = get_y_delay(x_offer)
     dump(y_delay_byr, path('y_delay_byr'))
     dump(y_delay_slr, path('y_delay_slr'))
-    del y_delay_byr, y_delay_slr
 
     # concession outcome
     print('y_con')
     y_con_byr, y_con_slr = get_y_con(x_offer)
     dump(y_con_byr, path('y_con_byr'))
     dump(y_con_slr, path('y_con_slr'))
-    del x_offer, y_con_byr, y_con_slr
-
-    # listing features
-    print('x_lstg')
-    x_lstg = get_x_lstg(lstgs)
-    dump(x_lstg, path('x_lstg'))
-    del x_lstg
-
-    # outcomes for arrival model
-    print('Creating arrival model outcome variables')
-    y_arrival = get_y_arrival(lstgs, threads)
-    dump(y_arrival, path('y_arrival'))
+ 
