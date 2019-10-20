@@ -3,7 +3,7 @@ from compress_pickle import load, dump
 import numpy as np, pandas as pd
 from constants import *
 from utils import *
-from processing.e_inputs.inputs_util import *
+from processing.processing_utils import *
 
 
 def add_clock_feats(x_time):
@@ -34,7 +34,7 @@ def parse_time_feats_delay(model, idx, z_start, z_role):
     return x_time
 
 
-def parse_fixed_feats_delay(model, idx, x_lstg, x_thread, x_offer, z_role):
+def parse_fixed_feats_delay(model, idx, x_lstg, x_thread, x_offer):
     # lstg and byr attributes
     x_fixed = pd.DataFrame(index=idx).join(x_lstg).join(x_thread)
 	# turn indicators
@@ -50,12 +50,6 @@ def parse_fixed_feats_delay(model, idx, x_lstg, x_thread, x_offer, z_role):
         lambda x: x + '_other', axis=1))
     x_fixed = x_fixed.join(offer2.rename(
         lambda x: x + '_last', axis=1))
-    # time-varying features
-    x_fixed = x_fixed.join(z_role.xs(0, level='period').reindex(
-        index=x_fixed.index, fill_value=0.0))
-    # drop columns with zero variation
-    keep = x_fixed.max() > x_fixed.min()
-    x_fixed = x_fixed.loc[:, x_fixed.columns[keep]]
     return x_fixed
 
 
@@ -82,7 +76,7 @@ def process_inputs(part, model):
     x_thread = load(getPath(['x', 'thread']))
     x_offer = load(getPath(['x', 'offer']))
     x_fixed = parse_fixed_feats_delay(
-    	model, y.index, x_lstg, x_thread, x_offer, z_role)
+    	model, y.index, x_lstg, x_thread, x_offer)
 
     return {'y': y.astype('int8', copy=False), 
             'x_fixed': x_fixed.astype('float32', copy=False), 

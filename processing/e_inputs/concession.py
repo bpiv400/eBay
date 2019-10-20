@@ -3,7 +3,7 @@ from compress_pickle import load, dump
 import numpy as np, pandas as pd
 from constants import *
 from utils import *
-from processing.e_inputs.inputs_util import *
+from processing.processing_utils import *
 
 
 def parse_time_feats_role(role, x_offer):
@@ -69,9 +69,9 @@ if __name__ == '__main__':
 	num = parser.parse_args().num-1
 
 	# partition and role
-    part = PARTITIONS[num // 2]
-    role = 'slr' if num % 2 else 'byr'
-    model = 'con_%s' % role
+	part = PARTITIONS[num // 2]
+	role = 'slr' if num % 2 else 'byr'
+	model = 'con_%s' % role
 	print('%s/%s' % (part, model))
 
 	# out path

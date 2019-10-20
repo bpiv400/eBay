@@ -3,7 +3,7 @@ from compress_pickle import load, dump
 import numpy as np, pandas as pd
 from constants import *
 from utils import *
-from processing.e_inputs.inputs_util import *
+from processing.processing_utils import *
 
 
 def extract_hour_feats(clock):

@@ -8,8 +8,11 @@ from constants import *
 
 # loads processed chunk files
 def load_frames(name):
+    '''
+    name: one of 'events', 'tf_lstg', 'tf_slr'.
+    '''
     # path to file number x
-    path = lambda x: FEATS_DIR + str(x) + '_' + name + '.gz'
+    path = lambda num: FEATS_DIR + '%s_%s.gz' % (num, name)
     # loop and append
     output = []
     for i in range(1,N_CHUNKS+1):
@@ -32,6 +35,9 @@ def categories_to_string(L):
 
 # for creating arrival and delay outcomes
 def multiply_indices(s):
+    '''
+    s: Series with index ['lstg'] or ['lstg', 'thread'] and number of periods.
+    '''
     # initialize arrays
     k = len(s.index.names)
     arrays = np.zeros((s.sum(),k+1), dtype='uint16')
@@ -58,8 +64,74 @@ def multiply_indices(s):
 
 # returns partition indices and path to file function
 def get_partition(num):
+    '''
+    num: 1, 2 or 3; to index PARTITIONS.
+    '''
     partitions = load(PARTS_DIR + 'partitions.gz')
     part = list(partitions.keys())[num-1]
     idx = partitions[part]
     path = lambda name: PARTS_DIR + '%s/%s.gz' % (part, name)
     return idx, path
+
+
+# appends turn indicator variables to offer matrix
+def add_turn_indicators(df):
+    '''
+    df: dataframe with index ['lstg', 'thread', 'index'].
+    '''
+    indices = np.unique(df.index.get_level_values('index'))
+    for i in range(len(indices)-1):
+        ind = indices[i]
+        featname = 't' + str((ind+1) // 2)
+        df[featname] = df.index.isin([ind], level='index')
+    return df
+
+
+# returns dictionary of feature names for each 'x' dataframe in d
+def get_featnames(d):
+    '''
+    d: dictionary with dataframes.
+    '''
+    featnames = {'x_fixed': list(d['x_fixed'].columns)}
+    if 'x_hour' in d:
+        featnames['x_fixed'] += list(d['x_hour'].rename(
+            lambda x: x + '_focal', axis=1).columns)
+    if 'x_time' in d:
+        featnames['x_time'] = list(d['x_time'].columns)
+    return featnames
+
+
+# returns dictionary of input sizes
+def get_sizes(d):
+    '''
+    d: dictionary with dataframes.
+    '''
+    sizes = {'N': len(d['y'].index), 
+        'fixed': len(d['x_fixed'].columns)}
+    if 'x_hour' in d:
+        sizes['fixed'] += len(d['x_hour'].columns)
+    if 'x_time' in d:
+        sizes['steps'] = len(d['y'].columns)
+        sizes['time'] = len(d['x_time'].columns)
+    return sizes
+
+
+# converts dictionary of dataframes to dictionary of numpy arrays
+def convert_to_numpy(d):
+    '''
+    d: dictionary with dataframes.
+    '''
+    # convert y and x_fixed to numpy directly
+    for k in ['y', 'x_fixed']:
+        d[k] = d[k].to_numpy()
+
+    # reshape columns of x_time before converting
+    if 'x_time' in d:
+        arrays = []
+        for c in x_time.columns:
+            array = d['x_time'][c].astype('float32').unstack().reindex(
+                index=y.index).to_numpy()
+            arrays.append(np.expand_dims(array, axis=2))
+        d['x_time'] = np.concatenate(arrays, axis=2)
+
+    return d

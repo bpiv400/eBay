@@ -21,11 +21,12 @@ def get_y_arrival(lstgs, threads):
     end.loc[end >= 31 * 24] = 31 * 24 - 1
     # count of arrivals by hour
     hours = diff.rename('period').to_frame().assign(count=1)
-    arrivals = hours.groupby(['lstg', 'period']).sum().squeeze()
+    arrivals = hours.groupby(['lstg', 'period']).sum()
+    arrivals = arrivals.squeeze().astype('uint8')
     # create multi-index from end stamps
     idx = multiply_indices(end+1)
     # expand to new index and return
-    return arrivals.astype('uint8').reindex(index=idx, fill_value=0)
+    return arrivals.reindex(index=idx, fill_value=0)
 
 
 if __name__ == "__main__":
@@ -37,7 +38,7 @@ if __name__ == "__main__":
     # partition
     idx, path = get_partition(num)
 
-    # load data and 
+    # load data
     lstgs = load(CLEAN_DIR + 'listings.gz')
     lstgs = lstgs[['start_date', 'end_time']].reindex(index=idx)
     threads = load(CLEAN_DIR + 'threads.gz').reindex(
