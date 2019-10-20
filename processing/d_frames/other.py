@@ -125,7 +125,7 @@ def get_y_delay(x_offer):
     # create multi-index from number of periods
     idx = multiply_indices(period+1)
     # expand to new index
-    offer = period.assign(offer=False).set_index(
+    offer = period.to_frame().assign(offer=False).set_index(
         'period', append=True).squeeze()
     offer = offer.reindex(index=idx, fill_value=False).sort_index()
     # split by role and return
@@ -306,7 +306,7 @@ if __name__ == "__main__":
     print('x_thread')
     x_thread = threads[['byr_pctile']]
     x_thread.loc[x_thread.byr_pctile == 100, 'byr_pctile'] = 99
-    dump(x_thread, path('x_offer'))
+    dump(x_thread, path('x_thread'))
 
     # delay outcome
     print('y_delay')
