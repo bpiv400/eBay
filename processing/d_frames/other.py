@@ -267,8 +267,8 @@ if __name__ == "__main__":
         ['title', 'flag'], axis=1).reindex(index=idx)
     threads = load(CLEAN_DIR + 'threads.gz').reindex(
         index=idx, level='lstg')
-    # events = load_frames('events').reindex(index=idx, level='lstg')
-    # tf_lstg = load_frames('tf_lstg').reindex(index=idx, level='lstg')
+    events = load_frames('events').reindex(index=idx, level='lstg')
+    tf_lstg = load_frames('tf_lstg').reindex(index=idx, level='lstg')
 
     # # lookup file
     # print('lookup')
@@ -296,37 +296,37 @@ if __name__ == "__main__":
     #     dump(z, path('z_' + role))
     # del z, z_start
 
-    # offer features
-    # print('x_offer')
-    # x_offer = get_x_offer(lstgs, events, tf_lstg)
-    # dump(x_offer, path('x_offer'))
-    # del tf_lstg, events
+    offer features
+    print('x_offer')
+    x_offer = get_x_offer(lstgs, events, tf_lstg)
+    dump(x_offer, path('x_offer'))
+    del tf_lstg, events
 
-    # # thread features
-    # print('x_thread')
-    # x_thread = threads[['byr_pctile']]
-    # x_thread.loc[x_thread.byr_pctile == 100, 'byr_pctile'] = 99
-    # dump(x_thread, path('x_offer'))
+    # thread features
+    print('x_thread')
+    x_thread = threads[['byr_pctile']]
+    x_thread.loc[x_thread.byr_pctile == 100, 'byr_pctile'] = 99
+    dump(x_thread, path('x_offer'))
 
-    # # delay outcome
-    # print('y_delay')
-    # y_delay_byr, y_delay_slr = get_y_delay(x_offer)
-    # dump(y_delay_byr, path('y_delay_byr'))
-    # dump(y_delay_slr, path('y_delay_slr'))
-    # del y_delay_byr, y_delay_slr
+    # delay outcome
+    print('y_delay')
+    y_delay_byr, y_delay_slr = get_y_delay(x_offer)
+    dump(y_delay_byr, path('y_delay_byr'))
+    dump(y_delay_slr, path('y_delay_slr'))
+    del y_delay_byr, y_delay_slr
 
-    # # concession outcome
-    # print('y_con')
-    # y_con_byr, y_con_slr = get_y_con(x_offer)
-    # dump(y_con_byr, path('y_con_byr'))
-    # dump(y_con_slr, path('y_con_slr'))
-    # del x_offer, y_con_byr, y_con_slr
+    # concession outcome
+    print('y_con')
+    y_con_byr, y_con_slr = get_y_con(x_offer)
+    dump(y_con_byr, path('y_con_byr'))
+    dump(y_con_slr, path('y_con_slr'))
+    del x_offer, y_con_byr, y_con_slr
 
-    # # listing features
-    # print('x_lstg')
-    # x_lstg = get_x_lstg(lstgs)
-    # dump(x_lstg, path('x_lstg'))
-    # del x_lstg
+    # listing features
+    print('x_lstg')
+    x_lstg = get_x_lstg(lstgs)
+    dump(x_lstg, path('x_lstg'))
+    del x_lstg
 
     # outcomes for arrival model
     print('Creating arrival model outcome variables')
