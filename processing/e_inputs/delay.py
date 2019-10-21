@@ -54,15 +54,13 @@ def parse_fixed_feats_delay(idx, x_lstg, x_thread, x_offer):
 
 
 # loads data and calls helper functions to construct training inputs
-def process_inputs(part, model):
-    role = model.split('_')[1]
-
+def process_inputs(part, role):
     # path name function
     getPath = lambda names: '%s/partitions/%s/%s.gz' % \
         (PREFIX, part, '_'.join(names))
 
     # outcome
-    y = load(getPath(['y', model]))
+    y = load(getPath(['y', 'delay', role]))
 
     # time features
     z_start = load(getPath(['z', 'start']))
@@ -98,7 +96,7 @@ if __name__ == '__main__':
     print('%s/%s' % (part, model))
 
     # input dataframes, output processed dataframes
-    d = process_inputs(part, model)
+    d = process_inputs(part, role)
 
     # save featnames and sizes
     if part == 'train_models':
