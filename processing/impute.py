@@ -74,10 +74,16 @@ idx = np.arange(101)
 hist_pct = pd.Series(idx, 
 	index=np.percentile(T.byr_hist.values, idx).astype('int32'))
 hist_pct = hist_pct.groupby(hist_pct.index).first()
-T['byr_pctile'] = hist_pct.reindex(
+byr_pctile = hist_pct.reindex(
 	index=T.byr_hist, method='ffill').values
+byr_pctile.loc[byr_pctile == 100] = 99	# only max is in the 100th pctile
+
+# save unique byr percentiles
+u = np.unique(byr_pctile)
+dump(u, CLEAN_DIR + 'byr_pctiles.gz')
 
 # save threads
+T['byr_pctile'] = byr_pctile
 dump(T, CLEAN_DIR + 'threads.gz')
 del T
 

@@ -1,4 +1,4 @@
-import sys, pickle, os, h5py
+import sys, pickle, os
 from compress_pickle import load, dump
 import numpy as np, pandas as pd
 from constants import *
@@ -16,7 +16,7 @@ def process_inputs(part):
 	y = load(getPath(['x', 'thread']))['byr_pctile']
 
 	# initialize fixed features with listing variables
-	x_fixed = cat_x_lstg(part).reindex(index=y.index, level='thread')
+	x_fixed = cat_x_lstg(part).reindex(index=y.index, level='lstg')
 
 	# add days since lstg start, holiday, day of week, and minutes since midnight
 	threads = load(getPath(['x', 'offer'])).xs(1, level='index')
@@ -46,7 +46,10 @@ if __name__ == '__main__':
 	if part == 'train_models':
 		pickle.dump(get_featnames(d), 
 			open('%s/inputs/featnames/hist.pkl' % PREFIX, 'wb'))
-		pickle.dump(get_sizes(d), 
+
+		sizes = get_sizes(d)
+		sizes['dim'] = load('%s/clean/byr_pctiles.gz' % PREFIX)
+		pickle.dump(sizes, 
 			open('%s/inputs/sizes/hist.pkl' % PREFIX, 'wb'))
 
 	# save dictionary of numpy arrays

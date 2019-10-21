@@ -110,10 +110,4 @@ BATCH_TIMINGS_LIST = [  # list of batch timing names
 
 EPOCH_TIME = 'epoch_time'
 
-# for concession model
-CON_SEGMENTS = 100
-CON_SEP = 1/CON_SEGMENTS
-CON_DIM = torch.tensor(np.arange(
-	0, 1 + CON_SEP, CON_SEP)).float().unsqueeze(dim=0)
-
 MODEL_DIR = 'output fake'

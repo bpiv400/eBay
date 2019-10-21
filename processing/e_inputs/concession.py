@@ -81,7 +81,10 @@ if __name__ == '__main__':
 	if part == 'train_models':
 		pickle.dump(get_featnames(d), 
 			open('%s/inputs/featnames/con_%s.pkl' % (PREFIX, role), 'wb'))
-		pickle.dump(get_sizes(d), 
+
+		sizes = get_sizes(d)
+		sizes['dim'] = np.arange(0, 1.01, 0.01)
+		pickle.dump(sizes, 
 			open('%s/inputs/sizes/con_%s.pkl' % (PREFIX, role), 'wb'))
 
 	# save dictionary of numpy arrays
