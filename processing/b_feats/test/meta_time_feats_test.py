@@ -6,7 +6,7 @@ import pandas as pd
 from rlenv.time_triggers import *
 
 
-COLS = ['accept', 'censored', 'clock', 'price', 'reject', 'byr', 'flag']
+COLS = ['accept', 'censored', 'clock', 'price', 'reject', 'byr', 'flag', 'start_price']
 INDEX_LEVELS = ['meta', 'leaf', 'cndtn', 'lstg', 'thread', 'index']
 EMPTIES = [[] for _ in INDEX_LEVELS]
 NEW_LSTG = 'new_lstg'
@@ -25,6 +25,14 @@ def add_event(df, offer, trigger_type=None, meta=None, leaf=None):
     :param offer: dictionary containing 'price', 'clock', 'lstg', 'thread', 'byr'
     :return: updated dataframe
     """
+    thread_based = trigger_type in [SLR_REJECTION, BYR_REJECTION, OFFER, ACCEPTANCE]
+    if thread_based:
+        print('{}: (lstg: {}, thread: {})'.format(trigger_type,
+                                                  offer['lstg'],
+                                                  offer['thread']))
+    else:
+        print('{}: (lstg: {})'.format(trigger_type, offer['lstg']))
+    # print(df)
     offer = offer.copy()
     data = dict()
     if df is None:
@@ -63,8 +71,9 @@ def add_event(df, offer, trigger_type=None, meta=None, leaf=None):
         offer['thread'] = 0
         last_index = 0
 
-    offer_index = pd.MultiIndex.from_tuples([(meta, leaf, CNDTN, ['lstg'], offer['thread'],
+    offer_index = pd.MultiIndex.from_tuples([(meta, leaf, CNDTN, offer['lstg'], offer['thread'],
                                               last_index)], names=INDEX_LEVELS)
+    print('index: {}'.format(offer_index))
 
     # repurpose offer dictionary
     data['start_price'] = 100
@@ -93,6 +102,7 @@ def add_event(df, offer, trigger_type=None, meta=None, leaf=None):
     # create row
     offer_df = pd.DataFrame(data=offer, index=offer_index)
     df = df.append(offer_df, verify_integrity=True, sort=True)
+    print('contains 4: {}'.format((1, 1, 1, 4, 0, 0) in df.index))
     return df
 
 
@@ -238,7 +248,7 @@ def setup_complex_lstg(events, meta=1, leaf=1):
     # start new lstg = 4
     offer['lstg'] = 4
     offer['clock'] = 145
-    event = add_event(events, offer, trigger_type=NEW_LSTG, meta=meta, leaf=leaf)
+    events = add_event(events, offer, trigger_type=NEW_LSTG, meta=meta, leaf=leaf)
 
     # byr counter in thread = 1 for lstg = 2
     offer['byr'] = True
@@ -442,7 +452,7 @@ def setup_complex_lstg(events, meta=1, leaf=1):
 
     # start lstg = 10
     offer['clock'] = 270
-    offer['lstg'] = 9
+    offer['lstg'] = 10
     events = add_event(events, offer, trigger_type=NEW_LSTG, meta=meta, leaf=leaf)
 
     # byr accept thread = 1 for lstg = 9
@@ -477,9 +487,9 @@ def setup_complex_lstg(events, meta=1, leaf=1):
     offer['byr'] = True
     events = add_event(events, offer, trigger_type=ACCEPTANCE, meta=meta, leaf=leaf)
 
-    # start lstg 10
+    # start lstg 11
     offer['clock'] = 290
-    offer['lstg'] = 10
+    offer['lstg'] = 11
     events = add_event(events, offer, trigger_type=NEW_LSTG, meta=meta, leaf=leaf)
 
     # close lstg 10
@@ -487,22 +497,32 @@ def setup_complex_lstg(events, meta=1, leaf=1):
     offer['lstg'] = 10
     events = add_event(events, offer, trigger_type=EXPIRE_LSTG, meta=meta, leaf=leaf)
 
+    # close lstg 11
+    offer['clock'] = 295
+    offer['lstg'] = 11
+    events = add_event(events, offer, trigger_type=EXPIRE_LSTG, meta=meta, leaf=leaf)
+    
     return events
+
 
 def test_lstgs_open_meta():
     events = setup_complex_lstg(None, meta=1, leaf=1)
-    events = setup_complex_lstg(events, meta=2, leaf=1)
+    # events = setup_complex_lstg(events, meta=2, leaf=1)
     # check values
+    print(events)
 
 
 def test_lstgs_open_leaf():
     pass
 
+
 def test_lstgs_meta():
     pass
 
+
 def test_lstgs_leaf():
     pass
+
 
 def test_slr_offers_meta():
     pass
@@ -516,11 +536,7 @@ def test_byr_offers_meta():
     pass
 
 
-def test_slr_offers_leaf():
-    pass
-
-
-def test_slr_offers_meta():
+def test_byr_offers_leaf():
     pass
 
 
