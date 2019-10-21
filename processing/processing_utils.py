@@ -121,11 +121,7 @@ def convert_to_numpy(d):
     '''
     d: dictionary with dataframes.
     '''
-    # convert y and x_fixed to numpy directly
-    for k in ['y', 'x_fixed']:
-        d[k] = d[k].to_numpy()
-
-    # reshape columns of x_time before converting
+    # reshape columns of x_time and convert
     if 'x_time' in d:
         arrays = []
         for c in d['x_time'].columns:
@@ -133,5 +129,9 @@ def convert_to_numpy(d):
                 index=d['y'].index).to_numpy()
             arrays.append(np.expand_dims(array, axis=2))
         d['x_time'] = np.concatenate(arrays, axis=2)
+
+    # convert y and x_fixed to numpy directly
+    for k in ['y', 'x_fixed']:
+        d[k] = d[k].to_numpy()
 
     return d

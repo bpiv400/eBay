@@ -17,38 +17,37 @@ class Inputs(Dataset):
         # save parameters to self
         self.model = model
 
-        # path
-        self.path = '%s/inputs/%s/%s.hdf5' % (PREFIX, partition, model)
+        # inputs
+        self.d = load('%s/inputs/%s/%s.gz' % (PREFIX, partition, model))
 
         # save length
-        d = h5py.File(self.path, 'r')
         self.N = np.shape(d['x_fixed'])[0]
-        d.close()
 
 
     def __getitem__(self, idx):
-        # load data file
-        with h5py.File(self.path, 'r') as d:
-            # all models index y using idx
-            y = d['y'][idx]
+        # all models index y using idx
+        y = d['y'][idx]
 
-            # create x_fixed for days model and return
-            if self.model == 'arrival':
-                idx_fixed = d['idx_fixed'][idx]
-                x_fixed = d['x_fixed'][idx_fixed,:]
+        # x_fixed
+        if self.model == 'arrival':
+            idx_fixed = d['idx_fixed'][idx]
+            x_fixed = d['x_fixed'][idx_fixed,:]
 
-                idx_days = d['idx_days'][idx]
-                x_days = d['x_days'][idx_days,:]
+            idx_days = d['idx_days'][idx]
+            x_days = d['x_days'][idx_days,:]
 
-                x_fixed = np.concatenate((x_fixed, x_days))
-                return y, x_fixed, idx
+            x_fixed = np.concatenate((x_fixed, x_days))
 
-            # non-arrival models also index x_fixed using idx
+        else:
             x_fixed = d['x_fixed'][idx,:]
 
-            # role models are recurrent
-            x_time = d['x_time'][idx,:,:]
-            return y, x_fixed, x_time, idx
+        # feed-forward models
+        if model in ['arrival', 'hist']:
+            return y, x_fixed, idx
+
+        # role models are recurrent
+        x_time = d['x_time'][idx,:,:]
+        return y, x_fixed, x_time, idx
 
 
     def __len__(self):

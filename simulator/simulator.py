@@ -20,7 +20,7 @@ class Simulator:
             if model == 'hist':
                 sizes['out'] = 100
             else:
-                sizes['out'] = 2 + CON_SEGMENTS
+                sizes['out'] = 1 + CON_SEGMENTS
         else:
             sizes['out'] = 1
             if model == 'arrival':
