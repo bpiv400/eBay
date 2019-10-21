@@ -18,7 +18,7 @@ def poisson_loss(theta, y):
 	return -torch.sum(ll)
 
 
-def emd_loss(theta, y):
+def emd_loss(theta, y, dim):
 	# for con_byr model, theta is a list
 	if isinstance(theta, list):
 		theta, theta4 = theta
@@ -27,8 +27,8 @@ def emd_loss(theta, y):
 	num = torch.exp(theta)
 	p = torch.div(theta, torch.sum(theta, dim=-1, keepdim=True))
 
-	# earth mover's distance, broadcasting both y and CON_DIM
-	dist = torch.pow(y - CON_DIM, 2)
+	# earth mover's distance, broadcasting both y and dim
+	dist = torch.pow(y.unsqueeze(dim=-1) - dim, 2)
 
 	# loss is dot product of flow (p) and distance
 	loss = torch.sum(p * dist)

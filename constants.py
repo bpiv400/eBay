@@ -68,7 +68,7 @@ INTERVAL_COUNTS = {
 MODELS = ['arrival', 'delay_byr', 'delay_slr', 'con_byr', 'con_slr']
 
 # organizing hierarchy
-LEVELS = ['slr', 'meta', 'leaf', 'product', 'title', 'cndtn', 'lstg']
+LEVELS = ['slr', 'meta', 'leaf', 'cndtn', 'lstg']
 
 # for lstg feature construction
 BINARY_FEATS = ['store', 'slr_us', 'fast']
@@ -113,7 +113,7 @@ EPOCH_TIME = 'epoch_time'
 # for concession model
 CON_SEGMENTS = 100
 CON_SEP = 1/CON_SEGMENTS
-CON_DIM = torch.tensor(np.sort(np.append(np.array([0.0, 1.0]), 
-	np.arange(CON_SEP/2, 1, CON_SEP)))).unsqueeze(dim=0).to(DEVICE)
+CON_DIM = torch.tensor(np.arange(
+	0, 1 + CON_SEP, CON_SEP)).float().unsqueeze(dim=0)
 
 MODEL_DIR = 'output fake'

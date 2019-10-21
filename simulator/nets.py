@@ -82,7 +82,7 @@ class RNN(nn.Module):
 
         # output layer: split if turns == 4 (i.e., con_byr model)
         if self.steps == 4:
-            return self.output(theta[:,:self.steps-1,:]), 
+            return self.output(theta[:,:self.steps-1,:]), \
                 self.output4(theta[:,self.steps-1,:]).squeeze()
         else:
             return self.output(theta)   # (batch_size, seq_len, N_out)

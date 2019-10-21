@@ -4,7 +4,7 @@ from compress_pickle import dump, load
 import pandas as pd, numpy as np
 from constants import *
 
-LVARS = ['meta', 'leaf', 'product', 'start_date', 'end_time', \
+LVARS = ['meta', 'leaf', 'cndtn', 'start_date', 'end_time', \
     'start_price', 'flag']
 TVARS = ['start_time']
 OVARS = ['clock', 'price', 'accept', 'reject', 'censored']

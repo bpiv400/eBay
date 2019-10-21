@@ -21,7 +21,7 @@ def get_dataloader(model):
         f = collateRNN
 
     loader = DataLoader(data, batch_sampler=Sample(data),
-        num_workers=0, collate_fn=f)
+        num_workers=0, collate_fn=f, pin_memory=True)
 
     return loader
 
@@ -40,8 +40,6 @@ def train_model(simulator, epochs):
         # loop over batches
         lnL_i = 0
         for j, batch in enumerate(loader):
-            # batch is [data, idx]
-            t0 = dt.now()
             lnL_i += simulator.run_batch(*batch)
             print(lnL_i)
 

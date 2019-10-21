@@ -3,7 +3,7 @@ import numpy as np, pandas as pd
 import torch
 from torch.nn.utils import rnn
 from torch.utils.data import Dataset, Sampler
-import h5py, pickle
+from compress_pickle import load
 
 sys.path.append('repo/')
 from constants import *
@@ -21,32 +21,32 @@ class Inputs(Dataset):
         self.d = load('%s/inputs/%s/%s.gz' % (PREFIX, partition, model))
 
         # save length
-        self.N = np.shape(d['x_fixed'])[0]
+        self.N = np.shape(self.d['x_fixed'])[0]
 
 
     def __getitem__(self, idx):
         # all models index y using idx
-        y = d['y'][idx]
+        y = self.d['y'][idx]
 
         # x_fixed
         if self.model == 'arrival':
-            idx_fixed = d['idx_fixed'][idx]
-            x_fixed = d['x_fixed'][idx_fixed,:]
+            idx_fixed = self.d['idx_fixed'][idx]
+            x_fixed = self.d['x_fixed'][idx_fixed,:]
 
-            idx_days = d['idx_days'][idx]
-            x_days = d['x_days'][idx_days,:]
+            idx_days = self.d['idx_days'][idx]
+            x_days = self.d['x_days'][idx_days,:]
 
             x_fixed = np.concatenate((x_fixed, x_days))
 
         else:
-            x_fixed = d['x_fixed'][idx,:]
+            x_fixed = self.d['x_fixed'][idx,:]
 
         # feed-forward models
-        if model in ['arrival', 'hist']:
+        if self.model in ['arrival', 'hist']:
             return y, x_fixed, idx
 
         # role models are recurrent
-        x_time = d['x_time'][idx,:,:]
+        x_time = self.d['x_time'][idx,:,:]
         return y, x_fixed, x_time, idx
 
 
@@ -92,8 +92,8 @@ def collateFF(batch):
         idx.append(b[2])
 
     # convert to tensor
-    y = torch.from_numpy(np.asarray(y)).float().to('cuda')
-    x_fixed = torch.stack(x_fixed).float().to('cuda')
+    y = torch.from_numpy(np.asarray(y)).float()
+    x_fixed = torch.stack(x_fixed).float()
     idx = torch.tensor(idx)
 
     # output is (dictionary, indices)
@@ -113,10 +113,10 @@ def collateRNN(batch):
         idx.append(b[3])
 
     # convert to tensor, pack if needed
-    y = torch.from_numpy(np.asarray(y)).float().to('cuda')
-    turns = torch.sum(y > -1, dim=1).to('cuda')
-    x_fixed = torch.stack(x_fixed).float().to('cuda')
-    x_time = torch.stack(x_time, dim=0).float().to('cuda')
+    y = torch.from_numpy(np.asarray(y)).float()
+    turns = torch.sum(y > -1, dim=1)
+    x_fixed = torch.stack(x_fixed).float()
+    x_time = torch.stack(x_time, dim=0).float()
     x_time = rnn.pack_padded_sequence(x_time, turns, 
         batch_first=True, enforce_sorted=False)
     idx = torch.tensor(idx)

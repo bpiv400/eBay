@@ -59,7 +59,7 @@ if __name__ == "__main__":
     L = categories_to_string(L)
 
     # set levels for hierarchical time feats
-    levels = LEVELS[:6]
+    levels = 'slr'
 
     # create events dataframe
     print('Creating offer events.')
