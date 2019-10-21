@@ -41,7 +41,7 @@ if __name__ == '__main__':
 	print('%s/arrival' % part)
 
 	# out path
-    path = lambda x: '%s/%s/%s/arrival.gz' % (PREFIX, x, part)
+	path = lambda x: '%s/%s/%s/arrival.gz' % (PREFIX, x, part)
 
 	# input dataframes, output processed dataframes
 	d = process_inputs(part)
@@ -54,5 +54,5 @@ if __name__ == '__main__':
 			open('%s/sizes/con_%s.pkl' % (PREFIX, role), 'wb'))
 
 	# save dictionary of numpy arrays
-    dump(convert_to_numpy(d), 
-    	'%s/inputs/%s/arrival.gz' % (PREFIX, part))
+	dump(convert_to_numpy(d), 
+		'%s/inputs/%s/arrival.gz' % (PREFIX, part))

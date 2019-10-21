@@ -18,13 +18,13 @@ def add_clock_feats(x_time):
     return x_time.drop('clock', axis=1)
 
 
-def parse_time_feats_delay(model, idx, z_start, z_role):
+def parse_time_feats_delay(role, idx, z_start, z_role):
     # initialize output
     x_time = pd.DataFrame(index=idx).join(z_start)
     # add period
     x_time['period'] = idx.get_level_values('period')
     # time of each pseudo-observation
-    x_time['clock'] += INTERVAL[model] * x_time.period
+    x_time['clock'] += INTERVAL[role] * x_time.period
     # features from clock
     x_time = add_clock_feats(x_time)
     # differenced time-varying features
@@ -34,7 +34,7 @@ def parse_time_feats_delay(model, idx, z_start, z_role):
     return x_time
 
 
-def parse_fixed_feats_delay(model, idx, x_lstg, x_thread, x_offer):
+def parse_fixed_feats_delay(idx, x_lstg, x_thread, x_offer):
     # lstg and byr attributes
     x_fixed = pd.DataFrame(index=idx).join(x_lstg).join(x_thread)
 	# turn indicators
@@ -55,17 +55,19 @@ def parse_fixed_feats_delay(model, idx, x_lstg, x_thread, x_offer):
 
 # loads data and calls helper functions to construct training inputs
 def process_inputs(part, model):
+    role = model.split('_')[1]
+
     # path name function
     getPath = lambda names: '%s/partitions/%s/%s.gz' % \
         (PREFIX, part, '_'.join(names))
 
     # outcome
-    y = load(getPath(['y', model, 'delay']))
+    y = load(getPath(['y', model]))
 
     # time features
     z_start = load(getPath(['z', 'start']))
-    z_role = load(getPath(['z', model]))
-    x_time = parse_time_feats_delay(model, y.index, z_start, z_role)
+    z_role = load(getPath(['z', role]))
+    x_time = parse_time_feats_delay(role, y.index, z_start, z_role)
 
     # unstack y
     y = y.astype('float32').unstack()
@@ -76,7 +78,7 @@ def process_inputs(part, model):
     x_thread = load(getPath(['x', 'thread']))
     x_offer = load(getPath(['x', 'offer']))
     x_fixed = parse_fixed_feats_delay(
-    	model, y.index, x_lstg, x_thread, x_offer)
+    	y.index, x_lstg, x_thread, x_offer)
 
     return {'y': y.astype('int8', copy=False), 
             'x_fixed': x_fixed.astype('float32', copy=False), 

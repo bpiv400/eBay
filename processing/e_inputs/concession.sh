@@ -1,5 +1,5 @@
 #!/bin/bash
-#$ -t 1-6
+#$ -t 1-3
 #$ -l m_mem_free=50G
 #$ -N concession
 #$ -j y

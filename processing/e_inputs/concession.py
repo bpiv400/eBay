@@ -40,13 +40,15 @@ def parse_time_feats_role(role, x_offer):
 
 
 # loads data and calls helper functions to construct training inputs
-def process_inputs(part, role):
+def process_inputs(part, model):
+	role = model.split('_')[1]
+
 	# path name function
 	getPath = lambda names: '%s/partitions/%s/%s.gz' % \
 		(PREFIX, part, '_'.join(names))
 
 	# outcome
-	y = load(getPath(['y', 'con', role])).astype('float32').unstack()
+	y = load(getPath(['y', model])).astype('float32').unstack()
 	y[y.isna()] = -1
 
 	# fixed features
@@ -88,5 +90,5 @@ if __name__ == '__main__':
 			open('%s/sizes/con_%s.pkl' % (PREFIX, role), 'wb'))
 
 	# save dictionary of numpy arrays
-    dump(convert_to_numpy(d), 
-    	'%s/inputs/%s/con_%s.gz' % (PREFIX, part, role))
+	dump(convert_to_numpy(d), 
+		'%s/inputs/%s/con_%s.gz' % (PREFIX, part, role))
