@@ -26,8 +26,7 @@ def process_inputs(part):
 		lambda x: 'focal_' + x, axis=1))
 
 	return {'y': y.astype('uint8', copy=False), 
-            'x_fixed': x_fixed.astype('float32', copy=False), 
-            'x_hour': x_hour.astype('uint16', copy=False)}
+            'x_fixed': x_fixed.astype('float32', copy=False)}
 
 
 if __name__ == '__main__':
