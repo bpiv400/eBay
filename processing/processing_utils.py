@@ -128,7 +128,7 @@ def convert_to_numpy(d):
     # reshape columns of x_time before converting
     if 'x_time' in d:
         arrays = []
-        for c in x_time.columns:
+        for c in d['x_time'].columns:
             array = d['x_time'][c].astype('float32').unstack().reindex(
                 index=y.index).to_numpy()
             arrays.append(np.expand_dims(array, axis=2))

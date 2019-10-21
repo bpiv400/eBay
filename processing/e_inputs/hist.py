@@ -39,19 +39,16 @@ if __name__ == '__main__':
 	part = PARTITIONS[num]
 	print('%s/arrival' % part)
 
-	# out path
-	path = lambda x: '%s/%s/%s/arrival.gz' % (PREFIX, x, part)
-
 	# input dataframes, output processed dataframes
 	d = process_inputs(part)
 
 	# save featnames and sizes
 	if part == 'train_models':
 		pickle.dump(get_featnames(d), 
-			open('%s/inputs/featnames/con_%s.pkl' % (PREFIX, role), 'wb'))
+			open('%s/inputs/featnames/hist.pkl' % PREFIX, 'wb'))
 		pickle.dump(get_sizes(d), 
-			open('%s/inputs/sizes/con_%s.pkl' % (PREFIX, role), 'wb'))
+			open('%s/inputs/sizes/hist.pkl' % PREFIX, 'wb'))
 
 	# save dictionary of numpy arrays
 	dump(convert_to_numpy(d), 
-		'%s/inputs/%s/arrival.gz' % (PREFIX, part))
+		'%s/inputs/%s/hist.gz' % (PREFIX, part))

@@ -97,18 +97,15 @@ if __name__ == '__main__':
     model = 'delay_%s' % role
     print('%s/%s' % (part, model))
 
-    # out path
-    path = lambda x: '%s/%s/%s/delay_%s.gz' % (PREFIX, x, part, role)
-
     # input dataframes, output processed dataframes
     d = process_inputs(part, model)
 
     # save featnames and sizes
     if part == 'train_models':
         pickle.dump(get_featnames(d), 
-            open('%s/inputs/featnames/con_%s.pkl' % (PREFIX, role), 'wb'))
+            open('%s/inputs/featnames/delay_%s.pkl' % (PREFIX, role), 'wb'))
         pickle.dump(get_sizes(d), 
-            open('%s/inputs/sizes/con_%s.pkl' % (PREFIX, role), 'wb'))
+            open('%s/inputs/sizes/delay_%s.pkl' % (PREFIX, role), 'wb'))
 
     # save dictionary of numpy arrays
     dump(convert_to_numpy(d), 

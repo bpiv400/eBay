@@ -76,9 +76,6 @@ if __name__ == '__main__':
 	model = 'con_%s' % role
 	print('%s/%s' % (part, model))
 
-	# out path
-	path = lambda x: '%s/%s/%s/con_%s.gz' % (PREFIX, x, part, role)
-
 	# input dataframes, output processed dataframes
 	d = process_inputs(part, model)
 
