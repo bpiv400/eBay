@@ -24,7 +24,7 @@ def open_lstgs(df, levels):
     end = df.accept | ((thread == 0) & (index == 1))
     # open - closed
     s = start.astype(np.int64) - end.astype(np.int64)
-    # cumulative max by levels grouping
+    # cumulative total by levels grouping
     return s.groupby(by=levels).cumsum()
 
 

@@ -1,11 +1,9 @@
 import sys, os
-sys.path.append('repo/')
-sys.path.append('repo/processing/b_feats/')
 import argparse
 from compress_pickle import dump, load
-import numpy as np, pandas as pd
 from constants import *
-from util import *
+import processing.b_feats.util as util
+import processing.processing_utils as putil
 
 
 if __name__ == "__main__":
@@ -20,18 +18,18 @@ if __name__ == "__main__":
     L, T, O = [d[k] for k in ['listings', 'threads', 'offers']]
 
     # categories to strings
-    L = categories_to_string(L)
+    L = putil.categories_to_string(L)
 
     # set levels for hierarchical time feats
     levels = LEVELS[1:4]
 
     # create events dataframe
     print('Creating offer events.')
-    events = create_events(L, T, O, levels)
+    events = util.create_events(L, T, O, levels)
 
     # get upper-level time-valued features
     print('Creating categorical time features') 
-    tf = get_cat_time_feats(events, levels)
+    tf = util.get_cat_time_feats(events, levels)
 
     # save
     dump(tf, FEATS_DIR + 'm%d' % num + '_tf_meta.gz')

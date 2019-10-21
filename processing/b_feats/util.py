@@ -28,8 +28,8 @@ def get_cat_time_feats(events, levels):
     df['clock'] = pd.to_datetime(df.clock, unit='s', origin=START)
     df['lstg'] = df.index.get_level_values('index') == 0
     df['thread'] = df.index.get_level_values('index') == 1
-    df['slr_offer'] = ~df.byr & ~df.reject & ~df.lstg
-    df['byr_offer'] = df.byr & ~df.reject
+    df['slr_offer'] = ~df.byr & ~df.reject & ~df.lstg & ~df.accept
+    df['byr_offer'] = df.byr & ~df.reject & ~df.accept
     df['accept_price'] = df.price[df.accept]
     df['accept_norm'] = df.price[df.accept & ~df.flag] / df.start_price
     # loop over hierarchy, exlcuding lstg
@@ -50,7 +50,6 @@ def get_cat_time_feats(events, levels):
             '_'.join([l[-1], x]) + 's', axis=1).astype(np.int64)
         tf = tf.join(ct_feats)
         # quantiles of (normalized) accept price over 30-day window
-        tf = tf.join(get_quantiles(df, l, 'accept_price'))
         tf = tf.join(get_quantiles(df, l, 'accept_norm'))
         # for identical timestamps
         cols = [c for c in tf.columns if c.startswith(levels[-1])]
