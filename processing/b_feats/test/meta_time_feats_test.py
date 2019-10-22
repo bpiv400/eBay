@@ -302,7 +302,7 @@ def setup_complex_lstg(events, meta=1, leaf=1, starter=0):
     offer['price'] = 70
     offer['lstg'] = 3 + starter
     offer['thread'] = 1
-    events = add_event(events, offer, trigger_type=OFFER, meta=meta, leaf=leaf)
+    events = add_event(events, offer, trigger_type=ACCEPTANCE, meta=meta, leaf=leaf)
 
     # slr accept in thread = 1 for lstg = 4 (simultanoues lstg close)
     offer['byr'] = False
@@ -463,6 +463,7 @@ def setup_complex_lstg(events, meta=1, leaf=1, starter=0):
     offer['price'] = 85
     offer['byr'] = True
     events = add_event(events, offer, trigger_type=ACCEPTANCE, meta=meta, leaf=leaf)
+    print(events.tail())
 
     # slr counter in thread = 1 for lstg = 8
     offer['clock'] = 280
@@ -506,6 +507,7 @@ def setup_complex_lstg(events, meta=1, leaf=1, starter=0):
     events.reject = events.reject.astype(bool)
     events.accept = events.accept.astype(bool)
     events.censored = events.censored.astype(bool)
+    events.flag = events.flag.astype(bool)
     events.price = events.price.astype(np.int64)
     events.clock = events.price.astype(np.int64)
     return events

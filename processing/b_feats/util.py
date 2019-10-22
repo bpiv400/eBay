@@ -18,17 +18,30 @@ def collapse_dict(feat_dict, index_names, meta=False):
 
 def get_quantiles(df, l, featname):
     # initialize output dataframe
+    print('featname: {}'.format(featname))
+    df = df.copy()
+    df = df.drop(columns='thread')
     converter = df[['lstg_counter']]
-    converter = df.set_index('lstg_counter').reset_index('lstg', drop=False)
+    converter = df.set_index('lstg_counter', append=True).reset_index('lstg', drop=False)['lstg']
+    drop_levels = [ind_level for ind_level in converter.index.names if ind_level != 'lstg_counter'
+                   and ind_level not in l]
+    converter.index = converter.index.droplevel(drop_levels)
+    converter = converter.drop_duplicates(keep='first')
+    print('converter')
+    print(converter)
     # subset to 1 entry per lstg per hierarchy group
-    accepts = df.reset_index()[[featname, 'lstg_counter'] + l]
-    accepts = accepts.groupby(by=l + ['lstg_counter']).max()
+
+    accepts = df.reset_index(drop=False)
+    accepts = accepts[[featname, 'lstg_counter'] + l]
+    accepts = accepts.groupby(by=l + ['lstg_counter']).max()[featname]
 
     # sanity checking for unsold lstgs
     if 0 in df.index.get_level_values('thread'):
         unsold_count = df.xs(0, level='thread')
-        if 1 in unsold_count.get_level_values('index'):
+        if 1 in unsold_count.index.get_level_values('index'):
             unsold_count = len(unsold_count.xs(1, level='index').index)
+            print('unsold count: {}'.format(unsold_count))
+            print('accepts na: {}'.format(accepts))
             assert unsold_count == accepts.isna().sum()
 
     # total lstgs
@@ -57,16 +70,16 @@ def get_quantiles(df, l, featname):
 
 
 def get_cat_time_feats(events, levels):
+    print('fart')
     # initialize output dataframe
     tf = events[['clock']]
     # dataframe for variable calculations
     df = events.copy()
     df['clock'] = pd.to_datetime(df.clock, unit='s', origin=START)
-    df['lstg'] = (df.index.get_level_values('index') == 0).astype(bool)
+    df['lstg_ind'] = (df.index.get_level_values('index') == 0).astype(bool)
     df['thread'] = (df.index.get_level_values('index') == 1).astype(bool)
-    df['slr_offer'] = ~df.byr & ~df.reject & ~df.lstg & ~df.accept
+    df['slr_offer'] = ~df.byr & ~df.reject & ~df.lstg_ind & ~df.accept
     df['byr_offer'] = df.byr & ~df.reject & ~df.accept
-    df['accept_price'] = df.price[df.accept]
     df['accept_norm'] = df.price[df.accept & ~df.flag] / df.start_price
     df['lstg_id'] = df.index.get_level_values('lstg').astype(np.int64)
     df['lstg_counter'] = df['lstg_id'].groupby(by=levels).transform(
@@ -78,6 +91,7 @@ def get_cat_time_feats(events, levels):
     for i in range(len(levels)):
         l = levels[: i+1]
         print(l[-1])
+        print('metas')
         # sort by levels
         df = df.sort_values(l + ['clock', 'censored'])
         tf = tf.reindex(df.index)
@@ -85,14 +99,15 @@ def get_cat_time_feats(events, levels):
         tfname = '_'.join([l[-1], 'lstgs_open'])
         tf[tfname] = open_lstgs(df, l)
         # count features grouped by current level
-        ct_feats = df[['lstg', 'thread', 'slr_offer',
+        ct_feats = df[['lstg_ind', 'thread', 'slr_offer',
                        'byr_offer', 'accept']].groupby(by=l).sum()
-        ctl_feats = df[['lstg', 'thread', 'slr_offer',
+        ctl_feats = df[['lstg_ind', 'thread', 'slr_offer',
                        'byr_offer', 'accept']].groupby(by=l + ['lstg']).sum()
         ct_feats = ct_feats - ctl_feats
-        ct_feats = ct_feats.drop('clock', axis=1)
         ct_feats = ct_feats.rename(lambda x:'_'.join([l[-1], x]) + 's', axis=1)
         ct_feats = ct_feats.astype(np.int64)
+        print('ctfeats')
+        print(ct_feats)
         tf = tf.join(ct_feats)
 
         # quantiles of (normalized) accept price over 30-day window
