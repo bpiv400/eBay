@@ -5,7 +5,7 @@ from constants import *
 
 
 def thread_count(subset):
-    df = subset.copy().reset_index('index',drop=False)
+    df = subset.copy()
     index_names = [ind for ind in df.index.names if ind != 'index']
     thread_counter = df.reset_index()['index'] == 1
     thread_counter.index = df.index
@@ -28,6 +28,7 @@ def conform_cut(cut):
     cut = cut.reset_index('index', drop=True)
     cut = cut.groupby(level=cut.index.names).last()
     return cut
+
 
 def recent_count(subset, role):
     df = subset.copy()
@@ -75,6 +76,8 @@ def recent_count(subset, role):
         count[n] = conform_cut(count[n])
     # concat into series and return
     return collapse_dict(count, index_names), collapse_dict(best, index_names)
+
+
 def add_lstg_time_feats(subset, role, is_open):
     df = subset.copy()
     df.byr = df.byr.astype(bool)
@@ -106,6 +109,7 @@ def add_lstg_time_feats(subset, role, is_open):
         offer_counter = ~df.byr & ~df.reject
     offer_counter = offer_counter.unstack(level='thread')
     thread_counter = thread_counter.reindex(index=offer_counter.index, level='lstg')
+    print(thread_counter)
     # initialize dictionaries for later concatenation
     count = {}
     best = {}
@@ -129,12 +133,6 @@ def add_lstg_time_feats(subset, role, is_open):
         count[n] = conform_cut(count[n])
     # concat into series and return
     return collapse_dict(count, index_names), collapse_dict(best, index_names)
-
-
-def collapse_dict(feat_dict, index_names):
-    df = pd.concat(feat_dict, names=['thread'] + ['lstg', 'clock'])
-    df = df.reorder_levels(index_names).sort_index()
-    return df
 
 
 def get_lstg_time_feats(events):
