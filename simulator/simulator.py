@@ -77,8 +77,6 @@ class Simulator:
         # prediction using net
         if self.model in ['arrival', 'hist']:
             theta = self.net(data['x_fixed'])
-            print(theta)
-            exit()
                 
         elif self.model == 'con_byr':
             t, t4 = self.net(data['x_fixed'], data['x_time'])

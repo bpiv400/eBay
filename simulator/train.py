@@ -41,7 +41,6 @@ def train_model(simulator, epochs):
         lnL_i = 0
         for j, batch in enumerate(loader):
             lnL_i += simulator.run_batch(*batch)
-            print(lnL_i)
 
         # append log-likelihood to list
         lnL.append(lnL_i)

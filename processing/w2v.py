@@ -1,5 +1,6 @@
 import numpy as np, pandas as pd
 import sys, pickle
+from compress_pickle import load, dump
 from gensim.models import Word2Vec
 
 INPUT_DIR = 'data/raw/'
@@ -53,8 +54,7 @@ if __name__ == '__main__':
 		['slr', 'start_date', 'lstg']).drop('start_date', axis=1)
 
 	# convert categories to strings
-	for c in ['meta', 'leaf', 'product']:
-		L[c] = c[0] + L[c].astype(str)
+	L = categories_to_string(L)
 
 	# lookup tables
 	lstgs = L[['lstg', 'meta', 'leaf', 'product']].set_index(

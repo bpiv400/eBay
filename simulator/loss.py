@@ -26,18 +26,17 @@ def emd_loss(theta, y):
 
 	# predicted bucket probabilities
 	num = torch.exp(theta)
-	p = torch.div(theta, torch.sum(theta, dim=-1, keepdim=True))
-
-	print(num)
-	print(num.size())
-	print(p)
-	print(p.size())
+	p = torch.div(num, torch.sum(num, dim=-1, keepdim=True))
 
 	# loss is dot product of flow (p) and distance (y)
 	loss = torch.sum(p * y)
 
-	print(loss)
-	exit()
+	if torch.any(torch.isnan(loss)):
+		print(theta)
+		print(num)
+		print(p)
+		print(y)
+		exit()
 
 	# add in loss for 4th byr turn
 	if 'theta4' in vars():
