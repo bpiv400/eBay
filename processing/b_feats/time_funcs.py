@@ -18,14 +18,25 @@ def open_lstgs(df, levels):
     # variables from index levels
     thread = df.index.get_level_values('thread')
     index = df.index.get_level_values('index')
+    converter = df['clock'].xs(0, level='thread').xs(0, level='index').reset_index()
+
     # listing opens at thread 0 and index 0
-    start = pd.Series(index == 0, index=df.index)
-    # listing ends with accept or expiration
-    end = df.accept | ((thread == 0) & (index == 1))
-    # open - closed
+    start_end_df = pd.DataFrame(data={'clock': df['clock'],
+                               'start': index == 0,
+                               'end': df.accept | ((thread == 0) & (index == 1))},
+                         index=df.index)
+
+    # experimental
+    start_end_df = start_end_df.groupby(by=levels + ['clock']).sum()
+    start = start_end_df['start']
+    end = start_end_df['end']
     s = start.astype(np.int64) - end.astype(np.int64)
+    s = s.groupby(by=levels).cumsum().to_frame(name='lstg_open').reset_index()
+    s = s.merge(converter, on=levels + ['clock'], how='inner')
+    s = s.set_index(levels + ['lstg'], append=False, drop=True)
+    s = s['lstg_open']
     # cumulative total by levels grouping
-    return s.groupby(by=levels).cumsum()
+    return s
 
 
 # number of threads for which an offer from role is outstanding

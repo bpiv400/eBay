@@ -101,9 +101,8 @@ def add_event(df, offer, trigger_type=None, meta=None, leaf=None):
 
     # create row
     offer_df = pd.DataFrame(data=data, index=offer_index)
-
-    df = df.append(offer_df, verify_integrity=True, sort=True)
-    # print('contains 4: {}'.format((1, 1, 1, 4, 0, 0) in df.index))
+    pre = df.copy(deep=True)
+    df = df.append(offer_df, verify_integrity=True)
     return df
 
 
@@ -463,7 +462,7 @@ def setup_complex_lstg(events, meta=1, leaf=1, starter=0):
     offer['price'] = 85
     offer['byr'] = True
     events = add_event(events, offer, trigger_type=ACCEPTANCE, meta=meta, leaf=leaf)
-    print(events.tail())
+    # print(events.tail())
 
     # slr counter in thread = 1 for lstg = 8
     offer['clock'] = 280
@@ -509,22 +508,56 @@ def setup_complex_lstg(events, meta=1, leaf=1, starter=0):
     events.censored = events.censored.astype(bool)
     events.flag = events.flag.astype(bool)
     events.price = events.price.astype(np.int64)
-    events.clock = events.price.astype(np.int64)
+    events.clock = events.clock.astype(np.int64)
     return events
+
+
+def make_exp(exp, exp_array):
+    if exp is None:
+        exp = pd.DataFrame(data={'exp': exp_array}, index=np.arange(1, len(exp_array) + 1))
+    else:
+        start = len(exp.index) + 1
+        new_index = pd.Index(np.arange(start, start + len(exp_array)))
+        new_exp = pd.DataFrame(data={'exp': exp_array}, index=new_index)
+        exp = exp.append(new_exp, verify_integrity=True, sort=True)
+        exp = exp.sort_index()
+    return exp
 
 
 def test_lstgs_open_meta():
     events = setup_complex_lstg(None, meta=1, leaf=1)
     events = setup_complex_lstg(events, meta=2, leaf=1, starter=11)
+    events.index = events.index.droplevel(['leaf', 'cndtn'])
     # check values
-    print(events)
-    # time feats
-    get_cat_time_feats(events, levels=['meta'])
+    exp_array = [0, 1, 2, 2, 0, 1, 2, 0, 1, 2, 1]
+    exp_array = [1 + exp for exp in exp_array]
+    exp = make_exp(None, exp_array)
+    exp = make_exp(exp, exp_array)
 
+    exp = exp['exp']
+    actual = get_cat_time_feats(events, levels=['meta'])
+    print(actual.columns)
+    print(exp)
+    print(actual)
+    assert np.all(np.isclose(exp.values, actual['meta_lstgs_open'].values))
 
 
 def test_lstgs_open_leaf():
-    pass
+    events = setup_complex_lstg(None, meta=1, leaf=1)
+    events = setup_complex_lstg(events, meta=1, leaf=2, starter=11)
+    events.index = events.index.droplevel(['cndtn'])
+    actual = get_cat_time_feats(events, levels=['meta', 'leaf'])
+    exp_array = [0, 1, 2, 2, 0, 1, 2, 0, 1, 2, 1]
+    exp_array = [1 + exp for exp in exp_array]
+    exp = make_exp(None, exp_array)
+    exp = make_exp(exp, exp_array)
+    exp = exp['exp']
+    assert np.all(np.isclose(exp.values, actual['leaf_lstgs_open'].values))
+    exp_array = [2, 4, 6, 6, 2, 4, 6, 2, 4, 6, 4]
+    exp = make_exp(None, exp_array)
+    exp = make_exp(exp, exp_array)
+    exp = exp['exp']
+    assert np.all(np.isclose(exp.values, actual['meta_lstgs_open'].values))
 
 
 def test_lstgs_meta():
