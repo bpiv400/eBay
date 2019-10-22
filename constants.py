@@ -38,7 +38,8 @@ CLEAN_DIR = '%s/clean/' % PREFIX
 CHUNKS_DIR = '%s/chunks/' % PREFIX
 FEATS_DIR = '%s/feats/' % PREFIX
 PARTS_DIR = '%s/partitions/' % PREFIX
-W2V_PATH = lambda x: '%s/clean/w2v_%s.csv' %(PREFIX, x)
+PCTILE_DIR = '%s/pctile/' % PREFIX
+W2V_PATH = lambda x: '%s/clean/w2v_%s.gz' %(PREFIX, x)
 
 # partitions
 PARTITIONS = ['train_models', 'train_rl', 'test']
@@ -72,7 +73,7 @@ LEVELS = ['slr', 'meta', 'leaf', 'cndtn', 'lstg']
 
 # for lstg feature construction
 BINARY_FEATS = ['store', 'slr_us', 'fast']
-COUNT_FEATS = ['photos', 'slr_bos', 'slr_lstgs', 'fdbk_score']
+COUNT_FEATS = ['photos', 'slr_bos', 'slr_lstgs', 'fdbk_score', 'fdbk_pstv']
 
 # indices for byr and slr offers
 IDX = {

@@ -33,22 +33,17 @@ if __name__ == "__main__":
     # partition number from command line
     parser = argparse.ArgumentParser()
     parser.add_argument('--num', action='store', type=int, required=True)
-    num = parser.parse_args().num
+    num = parser.parse_args().num-1
 
     # partition
-    idx, path = get_partition(num)
+    part = PARTITIONS[num]
+    idx, path = get_partition(part)
 
     # load data
     lstgs = load(CLEAN_DIR + 'listings.gz')
     lstgs = lstgs[['start_date', 'end_time']].reindex(index=idx)
     threads = load(CLEAN_DIR + 'threads.gz').reindex(
         index=idx, level='lstg')
-
-    # thread features
-    print('x_thread')
-    x_thread = threads[['byr_pctile']]
-    x_thread.loc[x_thread.byr_pctile == 100, 'byr_pctile'] = 99
-    dump(x_thread, path('x_thread'))
 
     # outcomes for arrival model
     print('Creating arrival model outcome variables')

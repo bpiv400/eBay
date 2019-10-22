@@ -2,9 +2,9 @@ import numpy as np, pandas as pd
 import sys, pickle
 from compress_pickle import load, dump
 from gensim.models import Word2Vec
+from constants import *
+from processing.processing_utils import *
 
-INPUT_DIR = 'data/raw/'
-OUTPUT_PATH = lambda x: 'data/clean/w2v_' + x + '.csv'
 SIZE = 32
 MIN_COUNT = 100
 
@@ -49,19 +49,17 @@ def create_category(df):
 if __name__ == '__main__':
 	# seller data
 	print('Preparing seller model')
-	L = pd.read_csv('data/clean/listings.csv', 
-		usecols=[0,1,2,3,4,7]).sort_values(
-		['slr', 'start_date', 'lstg']).drop('start_date', axis=1)
+	L = load(CLEAN_DIR + 'listings.gz').sort_values(
+		['slr', 'start_date', 'lstg'])[['slr', 'meta', 'leaf', 'product']]
 
 	# convert categories to strings
 	L = categories_to_string(L)
 
 	# lookup tables
-	lstgs = L[['lstg', 'meta', 'leaf', 'product']].set_index(
-		'lstg').sort_index()
+	lstgs = L[['meta', 'leaf', 'product']]
 
 	# remove one-listing sellers
-	L = L.set_index('slr')
+	L = L.reset_index().set_index('slr')
 	L = L.loc[L['lstg'].groupby(L.index.name).count() > 1]
 	L.drop('lstg', axis=1, inplace=True)
 
@@ -72,20 +70,21 @@ if __name__ == '__main__':
 	# run seller model
 	print('Training seller embeddings')
 	df_slr = run_model(cat_slr, 'slr')
-	df_slr.to_csv(OUTPUT_PATH('slr'))
+	dump(df_slr, CLEAN_DIR + 'w2v_slr.gz')
 
 	# buyer data
 	print('Preparing buyer model')
-	T = pd.read_csv('data/clean/threads.csv', 
-		usecols=['lstg', 'byr', 'start_time']).sort_values(
-		['byr', 'start_time', 'lstg']).drop('start_time', axis=1)
+	T = load(CLEAN_DIR + 'threads.gz').sort_values(
+		['byr', 'start_time', 'lstg'])['byr']
 
 	# remove one-listing buyers
+	T = T.reset_index().drop('thread', axis=1)
 	T = T.set_index('byr').squeeze()
 	T = T.loc[T.groupby('byr').count() > 1]
 
 	# join with categories
-	T = T.to_frame().join(lstgs, on='lstg').drop('lstg', axis=1).squeeze()
+	T = T.to_frame().join(lstgs, on='lstg').drop('lstg', axis=1)
+	del lstgs
 
 	# create category id
 	cat_byr = create_category(T)
@@ -93,4 +92,4 @@ if __name__ == '__main__':
 	# run buyer model
 	print('Training buyer embeddings')
 	df_byr = run_model(cat_byr, 'byr')
-	df_byr.to_csv(OUTPUT_PATH('byr'))
+	dump(df_byr, CLEAN_DIR + 'w2v_byr.gz')

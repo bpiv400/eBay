@@ -1,19 +1,8 @@
 import sys
-sys.path.append('repo/')
 from compress_pickle import dump
 import pandas as pd, numpy as np
 from datetime import datetime as dt
 from constants import *
-
-# creates series of percentiles indexed by column variable
-def save_pctiles(s):
-	name = s.name
-	N = len(s.index)
-	s = pd.Series(np.arange(1, N+1) / N, 
-		index=np.sort(s.values), 
-		name=name + '_pctile')
-	s = s.groupby(s.index).max()
-	dump(s, '%s/pctile/%s.gz' % (PREFIX, name))
 
 # offers dataframe
 O = pd.read_csv(CLEAN_DIR + 'offers.csv').set_index(
@@ -40,8 +29,10 @@ missing = pd.to_datetime(s.loc[toReplace].dt.date)
 labeled = s.loc[~toReplace]
 
 # cdf using labeled data
-sec = seconds(labeled.dt)
-pctile = (sec.groupby(sec).count() / sec.count()).cumsum()
+N = len(labeled.index)
+sec = pd.Series(np.arange(1, N+1) / N, 
+	index=np.sort(seconds(labeled.dt).values), name='pctile')
+pctile = sec.groupby(sec.index).min()
 pctile.loc[-1] = 0
 pctile = pctile.sort_index().rename('pctile')
 
@@ -77,30 +68,13 @@ tdiff = (missing + delta - pd.to_datetime(START))
 tdiff = tdiff.dt.total_seconds().astype('int64')
 
 # update thread start time
-T.loc[missing.index, 'start_time'] = tdiff
-
-# percentiles of buyer history
-save_pctiles(T.byr_hist)
-
-# save threads
-dump(T, CLEAN_DIR + 'threads.gz')
+T.loc[tdiff.index, 'start_time'] = tdiff
 
 # update listing end time
-tdiff.reset_index('thread', drop=True, inplace=True)
+end_time = tdiff.reset_index('thread', drop=True)
 L = pd.read_csv(CLEAN_DIR + 'listings.csv').set_index('lstg')
-L.loc[tdiff.index, 'end_time'] = tdiff
+L.loc[end_time.index, 'end_time'] = end_time
 
-# percentiles of start_price
-save_pctiles(L.start_price)
-
-# add arrivals per day to listings
-arrivals = T['start_time'].groupby('lstg').count().reindex(
-	L.index, fill_value=0)
-duration = (L.end_time+1) / (24 * 3600) - L.start_date
-L['arrival_rate'] = arrivals / duration
-
-# percentiles of arrivals per day
-save_pctiles(L.arrival_rate)
-
-# save listings
+# save threads and listings
+dump(T, CLEAN_DIR + 'threads.gz')
 dump(L, CLEAN_DIR + 'listings.gz')

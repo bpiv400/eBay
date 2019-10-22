@@ -7,25 +7,29 @@ from processing.processing_utils import *
 
 
 # loads data and calls helper functions to construct training inputs
-def process_inputs(part):
+def process_inputs(part, idx):
 	# path name function
-	getPath = lambda names: '%s/partitions/%s/%s.gz' % \
-		(PREFIX, part, '_'.join(names))
+    getPath = lambda names: '%s/partitions/%s/%s.gz' % \
+        (PREFIX, part, '_'.join(names))
 
 	# outcome
-	y = load(getPath(['x', 'thread']))['byr_pctile']
+	pctile = load(PCTILE_DIR + 'byr_hist.gz')
+	threads = load(CLEAN_DIR + 'threads.gz').reindex(
+		index=idx, level='lstg').join(pctile, on='byr_hist')
+	y = threads['byr_hist_pctile']
 
 	# initialize fixed features with listing variables
-	x_fixed = cat_x_lstg(part).reindex(index=y.index, level='lstg')
+	x_fixed = load(getPath(['x', 'fixed'])).reindex(
+		index=idx, level='lstg')
 
 	# add days since lstg start, holiday, day of week, and minutes since midnight
-	threads = load(getPath(['x', 'offer'])).xs(1, level='index')
+	offers = load(getPath(['x', 'offer'])).xs(1, level='index')
 	cols = ['days', 'holiday', 'hour_of_day'] + \
-		[c for c in threads.columns if 'dow' in c]
-	x_fixed = x_fixed.join(threads[cols].rename(
+		[c for c in offers.columns if 'dow' in c]
+	x_fixed = x_fixed.join(offers[cols].rename(
 		lambda x: 'focal_' + x, axis=1))
 
-	return {'y': y.astype('uint8', copy=False), 
+	return {'y': y.astype('float32', copy=False), 
             'x_fixed': x_fixed.astype('float32', copy=False)}
 
 
@@ -38,9 +42,10 @@ if __name__ == '__main__':
 	# partition and outcome
 	part = PARTITIONS[num]
 	print('%s/arrival' % part)
+	idx, _ = get_partition(part)
 
 	# input dataframes, output processed dataframes
-	d = process_inputs(part)
+	d = process_inputs(part, idx)
 
 	# save featnames and sizes
 	if part == 'train_models':
@@ -48,7 +53,9 @@ if __name__ == '__main__':
 			open('%s/inputs/featnames/hist.pkl' % PREFIX, 'wb'))
 
 		sizes = get_sizes(d)
-		sizes['dim'] = load('%s/clean/byr_pctiles.gz' % PREFIX)
+		pctiles = load('%s/pctile/byr_hist.gz' % PREFIX).values
+		pctiles = np.unique(np.floor(pctiles * 100)) / 100
+		sizes['dim'] = pctiles[:-1]
 		pickle.dump(sizes, 
 			open('%s/inputs/sizes/hist.pkl' % PREFIX, 'wb'))
 

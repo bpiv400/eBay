@@ -63,12 +63,11 @@ def multiply_indices(s):
 
 
 # returns partition indices and path to file function
-def get_partition(num):
+def get_partition(part):
     '''
-    num: 1, 2 or 3; to index PARTITIONS.
+    part: one of 'train_models', 'train_rl', 'test'
     '''
     partitions = load(PARTS_DIR + 'partitions.gz')
-    part = list(partitions.keys())[num-1]
     idx = partitions[part]
     path = lambda name: PARTS_DIR + '%s/%s.gz' % (part, name)
     return idx, path

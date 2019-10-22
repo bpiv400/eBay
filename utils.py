@@ -35,15 +35,6 @@ def get_day_inds(time):
         out[clock.dayofweek + 1] = 1
     return out
 
-# returns booleans for whether offer is round and ends in nines
-def do_rounding(offer):
-    digits = np.ceil(np.log10(offer.clip(lower=0.01)))
-    factor = 5 * np.power(10, digits-3)
-    diff = np.round(offer / factor) * factor - offer
-    is_round = diff == 0
-    is_nines = (diff > 0) & (diff <= factor / 5)
-    return is_round, is_nines
-
 
 # returns dataframe with US holiday and day-of-week indicators
 def extract_day_feats(clock):

@@ -165,10 +165,11 @@ if __name__ == "__main__":
     # partition number from command line
     parser = argparse.ArgumentParser()
     parser.add_argument('--num', action='store', type=int, required=True)
-    num = parser.parse_args().num
+    num = parser.parse_args().num-1
 
     # partition
-    idx, path = get_partition(num)
+    part = PARTITIONS[num]
+    idx, path = get_partition(part)
 
     # load data and 
     lstgs = load(CLEAN_DIR + 'listings.gz')
