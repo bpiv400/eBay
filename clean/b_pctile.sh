@@ -1,7 +1,7 @@
 #!/bin/bash
 #$ -l m_mem_free=150G
-#$ -N impute
+#$ -N pctile
 #$ -j y
 #$ -o logs/
 
-python repo/processing/impute.py
+python repo/processing/clean/b_pctile.py

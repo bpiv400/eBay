@@ -1,7 +1,6 @@
 import sys
 from compress_pickle import dump, load
 import pandas as pd, numpy as np
-from datetime import datetime as dt
 from constants import *
 
 
@@ -33,17 +32,19 @@ arrivals = T['start_time'].groupby('lstg').count().reindex(
     L.index, fill_value=0)
 duration = (L.end_time+1) / (24 * 3600) - L.start_date
 L['arrival_rate'] = arrivals / duration
-L['arrival_rate'] *= 7
 
-# replace feedback score
-for feat in ['fdbk_score', 'slr_lstgs', 'slr_bos', 'start_price']:
+# replace count and rate variables with percentiles
+for feat in ['fdbk_score', 'slr_lstgs', 'slr_bos', 'arrival_rate']:
 	print(feat)
 	pctile = get_pctiles(L[feat])
 	dump(pctile, '%s/pctile/%s.gz' % (PREFIX, feat))
 	L = L.join(pctile, on=feat)
-	if feat == 'start_price':
-		L = L.rename({'pctile': 'start_price_pctile'}, axis=1)
-	else:
-		L = L.drop(feat, axis=1).rename({'pctile': feat}, axis=1)
+	L = L.drop(feat, axis=1).rename({'pctile': feat}, axis=1)
 
+# add start_price percentile
+pctile = get_pctiles(L['start_price'])
+dump(pctile, '%s/pctile/%s.gz' % (PREFIX, 'start_price'))
+L = L.join(pctile.rename('start_price_pctile'), on='start_price')
+
+# save listings
 dump(L, CLEAN_DIR + 'listings.gz')
