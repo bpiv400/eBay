@@ -23,8 +23,7 @@ def process_inputs(part, idx):
 	offers = load(getPath(['x', 'offer'])).xs(1, level='index')
 	cols = ['days', 'holiday', 'hour_of_day'] + \
 		[c for c in offers.columns if 'dow' in c]
-	x_fixed = x_fixed.join(offers[cols].rename(
-		lambda x: 'focal_' + x, axis=1))
+	x_fixed = x_fixed.join(offers[cols])
 
 	return {'y': y.astype('float32', copy=False), 
             'x_fixed': x_fixed.astype('float32', copy=False)}

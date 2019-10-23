@@ -15,7 +15,7 @@ HIDDEN = 256
 
 def get_dataloader(model):
     data = Inputs('train_models', model)
-    if model in ['arrival', 'hist']:
+    if model == 'hist':
         f = collateFF
     else:
         f = collateRNN

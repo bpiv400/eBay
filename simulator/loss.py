@@ -22,26 +22,26 @@ def emd_loss(theta, y):
 	# for con_byr model, theta is a list
 	if isinstance(theta, list):
 		theta, theta4 = theta
-		y, y4 = y
+		distance, accept4 = y
 
 	# predicted bucket probabilities
 	num = torch.exp(theta)
 	p = torch.div(num, torch.sum(num, dim=-1, keepdim=True))
 
-	# loss is dot product of flow (p) and distance (y)
-	loss = torch.sum(p * y)
+	# loss is dot product of flow (p) and distance
+	loss = torch.sum(p * distance)
 
 	if torch.any(torch.isnan(loss)):
 		print(theta)
 		print(num)
 		print(p)
-		print(y)
+		print(distance)
 		exit()
 
 	# add in loss for 4th byr turn
 	if 'theta4' in vars():
 		p = torch.sigmoid(theta4)	# probability of accept
-		errors = torch.pow(y4 - p, 2)
+		errors = torch.pow(accept4 - p, 2)
 		loss += torch.sum(errors)
 
 	return loss
