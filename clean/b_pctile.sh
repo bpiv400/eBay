@@ -4,4 +4,4 @@
 #$ -j y
 #$ -o logs/
 
-python repo/processing/clean/b_pctile.py
+python repo/clean/b_pctile.py

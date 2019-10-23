@@ -45,6 +45,10 @@ if __name__ == "__main__":
     threads = load(CLEAN_DIR + 'threads.gz').reindex(
         index=idx, level='lstg')
 
+    # thread variables
+    print('x_thread')
+    dump(threads[['byr_hist']], path('x_thread'))
+
     # outcomes for arrival model
     print('Creating arrival model outcome variables')
     y_arrival = get_y_arrival(lstgs, threads)

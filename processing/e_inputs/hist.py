@@ -13,14 +13,11 @@ def process_inputs(part, idx):
         (PREFIX, part, '_'.join(names))
 
 	# outcome
-	pctile = load(PCTILE_DIR + 'byr_hist.gz')
-	threads = load(CLEAN_DIR + 'threads.gz').reindex(
-		index=idx, level='lstg').join(pctile, on='byr_hist')
-	y = threads['byr_hist_pctile']
+	y = load(getPath(['x', 'thread']))['byr_hist']
 
 	# initialize fixed features with listing variables
 	x_fixed = load(getPath(['x', 'fixed'])).reindex(
-		index=idx, level='lstg')
+		index=y.index, level='lstg')
 
 	# add days since lstg start, holiday, day of week, and minutes since midnight
 	offers = load(getPath(['x', 'offer'])).xs(1, level='index')
@@ -42,10 +39,9 @@ if __name__ == '__main__':
 	# partition and outcome
 	part = PARTITIONS[num]
 	print('%s/arrival' % part)
-	idx, _ = get_partition(part)
 
 	# input dataframes, output processed dataframes
-	d = process_inputs(part, idx)
+	d = process_inputs(part)
 
 	# save featnames and sizes
 	if part == 'train_models':
