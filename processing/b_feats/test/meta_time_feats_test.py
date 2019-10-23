@@ -3,7 +3,7 @@ import numpy as np
 from copy import deepcopy
 import pandas as pd
 from rlenv.time_triggers import *
-from processing.b_feats.util import get_cat_time_feats, get_cat_feats
+from processing.b_feats.util import get_cat_feats
 
 
 COLS = ['accept', 'censored', 'clock', 'price', 'reject', 'byr', 'flag', 'start_price']
@@ -98,6 +98,13 @@ def add_event(df, offer, trigger_type=None, meta=None, leaf=None):
     df = df.append(offer_df, verify_integrity=True)
     return df
 
+
+def add_bins(events, meta=1, leaf=1, starter=0):
+    offer = {
+        'lstg': 1 + starter,
+        'clock': 300,
+    }
+    return events
 
 def setup_complex_lstg(events, meta=1, leaf=1, starter=0):
     # start new lstg = 1
@@ -854,3 +861,142 @@ def test_price_quantile_leaf():
         name = '_accept_norm_{}'.format(int(q * 100))
         assert np.all(np.isclose(exp.values, actual['meta{}'.format(name)].values))
         assert np.all(np.isclose(exp.values, actual['leaf{}'.format(name)].values))
+
+
+def test_con_quantile_meta():
+    events = setup_complex_lstg(None, meta=1, leaf=1)
+    events = setup_complex_lstg(events, meta=2, leaf=1, starter=11)
+    actual = get_cat_feats(events, levels= ['meta'], feat_ind=3)
+    offers = {
+        0: [50, 30, 50],
+        1: [50],
+        2: [50, 55],
+        3: [50],
+        4: [75, 60],
+        5: [20, 25],
+        6: [60],
+        7: [90],
+        8: [30],
+        9: [],
+        10: []
+    }
+    for q in [.25, .75, 1]:
+        exp_array = list()
+        for i in range(len(offers)):
+            considered = list()
+            for j in range(len(offers)):
+                if j != i:
+                    considered = considered + offers[j]
+            considered = np.array(considered)
+            considered = considered / 100
+            exp_array.append(np.nanquantile(considered, q=q, interpolation='lower'))
+        exp = make_exp(None, exp_array)
+        exp = make_exp(exp, exp_array)['exp']
+        name = '_first_offer_{}'.format(int(q * 100))
+        assert np.all(np.isclose(exp.values, actual['meta{}'.format(name)].values))
+
+
+def test_con_quantile_leaf():
+    events = setup_complex_lstg(None, meta=1, leaf=2)
+    events = setup_complex_lstg(events, meta=1, leaf=1, starter=11)
+    events.index = events.index.droplevel(['cndtn'])
+    actual = get_cat_feats(events, levels=['meta', 'leaf'], feat_ind=3)
+    offers = {
+        0: [50, 30, 50],
+        1: [50],
+        2: [50, 55],
+        3: [50],
+        4: [75, 60],
+        5: [20, 25],
+        6: [60],
+        7: [90],
+        8: [30],
+        9: [],
+        10: []
+    }
+    for q in [.25, .75, 1]:
+        exp_array = list()
+        for i in range(len(offers)):
+            considered = list()
+            for j in range(len(offers)):
+                if j != i:
+                    considered = considered + offers[j]
+            considered = np.array(considered)
+            considered = considered / 100
+            exp_array.append(np.nanquantile(considered, q=q, interpolation='lower'))
+        exp = make_exp(None, exp_array)
+        exp = make_exp(exp, exp_array)['exp']
+        name = '_first_offer_{}'.format(int(q * 100))
+        assert np.all(np.isclose(exp.values, actual['leaf{}'.format(name)].values))
+
+    offers = {
+        0: [50, 30, 50],
+        1: [50],
+        2: [50, 55],
+        3: [50],
+        4: [75, 60],
+        5: [20, 25],
+        6: [60],
+        7: [90],
+        8: [30],
+        9: [],
+        10: []
+    }
+    for i in range(len(offers)):
+        offers[i + 11] = offers[i].copy()
+    for q in [.25, .75, 1]:
+        exp_array = list()
+        for i in range(len(offers)):
+            considered = list()
+            for j in range(len(offers)):
+                if j != i:
+                    considered = considered + offers[j]
+            considered = np.array(considered)
+            considered = considered / 100
+            exp_array.append(np.nanquantile(considered, q=q, interpolation='lower'))
+        exp = make_exp(None, exp_array)['exp']
+        name = '_first_offer_{}'.format(int(q * 100))
+        assert np.all(np.isclose(exp.values, actual['meta{}'.format(name)].values))
+
+    events = setup_complex_lstg(None, meta=2, leaf=1)
+    events = setup_complex_lstg(events, meta=1, leaf=1, starter=11)
+    events.index = events.index.droplevel(['cndtn'])
+    actual = get_cat_feats(events, levels=['meta', 'leaf'], feat_ind=3)
+    offers = {
+        0: [50, 30, 50],
+        1: [50],
+        2: [50, 55],
+        3: [50],
+        4: [75, 60],
+        5: [20, 25],
+        6: [60],
+        7: [90],
+        8: [30],
+        9: [],
+        10: []
+    }
+    for q in [.25, .75, 1]:
+        exp_array = list()
+        for i in range(len(offers)):
+            considered = list()
+            for j in range(len(offers)):
+                if j != i:
+                    considered = considered + offers[j]
+            considered = np.array(considered)
+            considered = considered / 100
+            exp_array.append(np.nanquantile(considered, q=q, interpolation='lower'))
+        exp = make_exp(None, exp_array)
+        exp = make_exp(exp, exp_array)['exp']
+        name = '_first_offer_{}'.format(int(q * 100))
+        assert np.all(np.isclose(exp.values, actual['leaf{}'.format(name)].values))
+        assert np.all(np.isclose(exp.values, actual['meta{}'.format(name)].values))
+
+
+def test_bin_perc_meta():
+    events = setup_complex_lstg(None, meta=1, leaf=1)
+    events = setup_complex_lstg(events, meta=2, leaf=1, starter=11)
+    events = add_bins(events, meta=1, leaf=1, starter=22)
+
+
+def test_bin_perc_leaf():
+    pass
