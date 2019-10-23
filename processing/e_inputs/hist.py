@@ -9,8 +9,8 @@ from processing.processing_utils import *
 # loads data and calls helper functions to construct training inputs
 def process_inputs(part, idx):
 	# path name function
-    getPath = lambda names: '%s/partitions/%s/%s.gz' % \
-        (PREFIX, part, '_'.join(names))
+	getPath = lambda names: '%s/partitions/%s/%s.gz' % \
+		(PREFIX, part, '_'.join(names))
 
 	# outcome
 	y = load(getPath(['x', 'thread']))['byr_hist']
