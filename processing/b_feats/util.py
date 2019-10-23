@@ -52,36 +52,13 @@ def get_quantiles(df, l, featname):
     output = collapse_dict(quants, l + ['lstg_counter'], meta=True)
     assert output.index.is_unique
     output = output.join(converter)
-    output = output.reset_index('lstg_counter', drop=True).set_index('lstg', append=True)
+    output = output.reset_index('lstg_counter', drop=True).set_index('lstg', append=False,
+                                                                     drop=True)
     return output
 
 
-
-def get_cat_feats(events, levels, feat_ind):
-    if feat_ind == 1:
-        return get_cat_lstg_counts(events, levels)
-    elif feat_ind == 2:
-        return get_cat_accepts(events, levels)
-    elif feat_ind == 3:
-        return get_cat_con(events, levels)
-    elif feat_ind == 4:
-        return get_cat_delay(events, levels)
-    elif feat_ind == 5:
-        return get_cat_start_price(events, levels)
-    elif feat_ind == 6:
-        return get_cat_byr_hist(events, levels)
-    elif feat_ind == 7:
-        return get_cat_arrival(events, levels)
-    else:
-        raise NotImplementedError('feature index must be between 1 and 7')
-
-
-def get_cat_lstg_counts(events, levels):
-    # initialize output dataframe
-    tf = events[['clock']].xs(0, level='thread', drop=True)
-    tf = tf.xs(0, level='index', drop=True)
-
-    # dataframe for variable calculations
+def get_cat_feats(events, levels=None, feat_ind=None):
+    # helper features
     df = events.copy()
     df['clock'] = pd.to_datetime(df.clock, unit='s', origin=START)
     df['lstg_ind'] = (df.index.get_level_values('index') == 0).astype(bool)
@@ -92,43 +69,100 @@ def get_cat_lstg_counts(events, levels):
     df['byr_offer'] = df.byr & ~df.reject & ~df.accept
     df['lstg_id'] = df.index.get_level_values('lstg').astype(np.int64)
 
+    if feat_ind == 1:
+        return get_cat_lstg_counts(df, levels)
+    elif feat_ind == 2:
+        return get_cat_accepts(df, levels)
+    elif feat_ind == 3:
+        return get_cat_con(df, levels)
+    elif feat_ind == 4:
+        return get_cat_delay(df, levels)
+    elif feat_ind == 5:
+        return get_cat_start_price(df, levels)
+    elif feat_ind == 6:
+        return get_cat_byr_hist(df, levels)
+    elif feat_ind == 7:
+        return get_cat_arrival(df, levels)
+    else:
+        raise NotImplementedError('feature index must be between 1 and 7')
+
+
+def get_cat_accepts(events, levels):
     # loop over hierarchy, exlcuding lstg
+    events['accept_norm'] = events.price[events.accept & ~events.flag] / events.start_price
+    tf = events[['clock']].xs(0, level='thread', drop_level=True)
+    tf = tf.drop(columns=['clock'])
+    tf = tf.xs(0, level='index', drop_level=True)
+    tf = tf.reset_index('lstg', drop=False)
+    tf = tf.reset_index(drop=True)
+    tf = tf.set_index('lstg', drop=True)
+
     for i in range(len(levels)):
-        l = levels[: i + 1]
-        if len(l) != len(levels):
-            others = levels[i + 1:]
-        else:
-            others = []
-        print(l[-1])
-        print(l)
-        df['lstg_counter'] = df['lstg_id'].groupby(by=l).transform(
+        curr_levels = levels[: i + 1]
+        events['lstg_counter'] = events['lstg_id'].groupby(by=curr_levels).transform(
             lambda x: x.factorize()[0].astype(np.int64)
         )
-        # sort by levels
-        curr_order = l + ['lstg', 'thread', 'index'] + others
-        df = df.sort_values(['clock', 'censored'] + l).reorder_levels(curr_order)
-        tf = tf.reorder_levels(curr_order).reindex(df.index)
-        # sanity check
-        pre_index = tf.index
-        # open listings
-        tfname = '_'.join([l[-1], 'lstgs_open'])
-        tf[tfname] = open_lstgs(df, l)
-        # count features grouped by current level
-        ct_feats = df[['lstg_ind', 'thread', 'slr_offer',
-                       'byr_offer', 'accept']].groupby(by=l).sum()
-        ctl_feats = df[['lstg_ind', 'thread', 'slr_offer',
-                        'byr_offer', 'accept']].groupby(by=l + ['lstg']).sum()
-        ct_feats = ct_feats - ctl_feats
-        ct_feats = ct_feats.rename(lambda x: '_'.join([l[-1], x]) + 's', axis=1)
-        ct_feats = ct_feats.astype(np.int64).reorder_levels(l + ['lstg'])
-        ct_feats = ct_feats.reindex(tf.index)
-        tf = tf.join(ct_feats)
+        # quantiles of (normalized) accept price over 30-day window
+        quants = get_quantiles(events, curr_levels, 'accept_norm')
+        tf = tf.join(quants)
+        # for identical timestamps
         cols = [c for c in tf.columns if c.startswith(levels[-1])]
-        tf = tf.reindex(pre_index)
-        tf[cols] = tf[['clock'] + cols].groupby(
-            by=l + ['clock', 'lstg']).transform('last')
     # collapse to lstg
-    tf = tf.xs(0, level='index').reset_index(levels + ['thread'], drop=True).drop('clock', axis=1)
+    return tf.sort_index()
+
+
+def get_cat_con(events, levels):
+    pass
+
+
+def get_cat_delay(events, levels):
+    pass
+
+
+def get_cat_start_price(events, levels):
+    pass
+
+
+def get_cat_byr_hist(events, levels):
+    pass
+
+
+def get_cat_arrival(events, levels):
+    pass
+
+
+def get_cat_lstg_counts(events, levels):
+    # initialize output dataframe
+    tf = events[['clock']].xs(0, level='thread', drop_level=True)
+    print(events.columns)
+    tf = tf.drop(columns=['clock'])
+    tf = tf.xs(0, level='index', drop_level=True)
+    tf = tf.reset_index('lstg', drop=False)
+    tf = tf.reset_index(drop=True)
+    tf = tf.set_index('lstg', drop=True)
+
+    # loop over hierarchy, exlcuding lstg
+    for i in range(len(levels)):
+        curr_levels = levels[: i+1]
+        # open listings
+        tfname = '_'.join([curr_levels[-1], 'lstgs_open'])
+        events = events.sort_values(['clock', 'censored'] + curr_levels)
+        tf[tfname] = open_lstgs(events, curr_levels)
+        # count features grouped by current level
+        ct_feats = events[['lstg_ind', 'thread', 'slr_offer',
+                       'byr_offer', 'accept']].groupby(by=curr_levels).sum()
+        ctl_feats = events[['lstg_ind', 'thread', 'slr_offer',
+                        'byr_offer', 'accept']].groupby(by=curr_levels + ['lstg']).sum()
+        ct_feats = ct_feats - ctl_feats
+        per_lstg_feats = ['accept', 'slr_offer', 'byr_offer', 'thread']
+        for feat in per_lstg_feats:
+            ct_feats[feat] = ct_feats[feat] / (ct_feats['lstg_ind'] + 1)
+        ct_feats = ct_feats.rename(lambda x: '_'.join([curr_levels[-1], x]) + 's', axis=1)
+        tf = tf.join(ct_feats)
+        tf.index = tf.index.droplevel(level=curr_levels)
+        cols = [c for c in tf.columns if c.startswith(levels[-1])]
+
+    # collapse to lstg
     tf = tf.rename(lambda curr_name:
                    curr_name if 'lstg_ind' not in curr_name else curr_name.replace('_ind', ''),
                    axis=1)

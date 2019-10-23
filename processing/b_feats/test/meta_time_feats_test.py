@@ -3,7 +3,7 @@ import numpy as np
 from copy import deepcopy
 import pandas as pd
 from rlenv.time_triggers import *
-from processing.b_feats.util import get_cat_time_feats
+from processing.b_feats.util import get_cat_time_feats, get_cat_feats
 
 
 COLS = ['accept', 'censored', 'clock', 'price', 'reject', 'byr', 'flag', 'start_price']
@@ -528,7 +528,7 @@ def test_lstgs_open_meta():
     exp = make_exp(exp, exp_array)
 
     exp = exp['exp']
-    actual = get_cat_time_feats(events, levels=['meta'])
+    actual = get_cat_feats(events, levels=['meta'], feat_ind=1)
     assert np.all(np.isclose(exp.values, actual['meta_lstgs_open'].values))
 
 
@@ -536,7 +536,7 @@ def test_lstgs_open_leaf():
     events = setup_complex_lstg(None, meta=1, leaf=1)
     events = setup_complex_lstg(events, meta=1, leaf=2, starter=11)
     events.index = events.index.droplevel(['cndtn'])
-    actual = get_cat_time_feats(events, levels=['meta', 'leaf'])
+    actual = get_cat_feats(events, levels=['meta', 'leaf'], feat_ind=1)
     exp_array = [0, 1, 2, 2, 0, 1, 2, 0, 1, 2, 1]
     exp_array = [1 + exp for exp in exp_array]
     exp = make_exp(None, exp_array)
@@ -552,7 +552,7 @@ def test_lstgs_open_leaf():
     events = setup_complex_lstg(None, meta=2, leaf=1)
     events = setup_complex_lstg(events, meta=1, leaf=1, starter=11)
     events.index = events.index.droplevel(['cndtn'])
-    actual = get_cat_time_feats(events, levels=['meta', 'leaf'])
+    actual = get_cat_feats(events, levels=['meta', 'leaf'], feat_ind=1)
     exp_array = [0, 1, 2, 2, 0, 1, 2, 0, 1, 2, 1]
     exp_array = [1 + exp for exp in exp_array]
     exp = make_exp(None, exp_array)
@@ -566,7 +566,7 @@ def test_lstgs_meta():
     events = setup_complex_lstg(None, meta=1, leaf=1)
     events = setup_complex_lstg(events, meta=2, leaf=1, starter=11)
     events.index = events.index.droplevel(['leaf', 'cndtn'])
-    actual = get_cat_time_feats(events, levels=['meta'])
+    actual = get_cat_feats(events, levels=['meta'], feat_ind=1)
     exp_array = [10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10]
     exp = make_exp(None, exp_array)
     exp = make_exp(exp, exp_array)['exp']
@@ -577,7 +577,7 @@ def test_lstgs_leaf():
     events = setup_complex_lstg(None, meta=1, leaf=2)
     events = setup_complex_lstg(events, meta=1, leaf=1, starter=11)
     events.index = events.index.droplevel(['cndtn'])
-    actual = get_cat_time_feats(events, levels=['meta', 'leaf'])
+    actual = get_cat_feats(events, levels=['meta', 'leaf'], feat_ind=1)
     exp_array = [10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10]
     exp = make_exp(None, exp_array)
     exp = make_exp(exp, exp_array)['exp']
@@ -588,7 +588,7 @@ def test_lstgs_leaf():
     events = setup_complex_lstg(None, meta=2, leaf=1)
     events = setup_complex_lstg(events, meta=1, leaf=1, starter=11)
     events.index = events.index.droplevel(['cndtn'])
-    actual = get_cat_time_feats(events, levels=['meta', 'leaf'])
+    actual = get_cat_feats(events, levels=['meta', 'leaf'], feat_ind=1)
     assert np.all(np.isclose(exp.values, actual['leaf_lstgs'].values))
     assert np.all(np.isclose(exp.values, actual['meta_lstgs'].values))
 
@@ -597,8 +597,9 @@ def test_slr_offers_meta():
     events = setup_complex_lstg(None, meta=1, leaf=1)
     events = setup_complex_lstg(events, meta=2, leaf=1, starter=11)
     events.index = events.index.droplevel(['leaf', 'cndtn'])
-    actual = get_cat_time_feats(events, levels=['meta'])
+    actual = get_cat_feats(events, levels=['meta'], feat_ind=1)
     exp_array = [6, 7, 8, 9, 9, 8, 9, 8, 8, 9, 9]
+    exp_array = [curr_exp / 11 for curr_exp in exp_array]
     exp = make_exp(None, exp_array)
     exp = make_exp(exp, exp_array)['exp']
     print(exp.values)
@@ -610,13 +611,17 @@ def test_slr_offers_leaf():
     events = setup_complex_lstg(None, meta=1, leaf=2)
     events = setup_complex_lstg(events, meta=1, leaf=1, starter=11)
     events.index = events.index.droplevel(['cndtn'])
-    actual = get_cat_time_feats(events, levels=['meta', 'leaf'])
+    actual = get_cat_feats(events, levels=['meta', 'leaf'], feat_ind=1)
     exp_array = [6, 7, 8, 9, 9, 8, 9, 8, 8, 9, 9]
+    exp_array = [curr_exp / 11 for curr_exp in exp_array]
     exp = make_exp(None, exp_array)
     exp = make_exp(exp, exp_array)['exp']
     assert np.all(np.isclose(exp.values, actual['leaf_slr_offers'].values))
+
+    exp_array = [6, 7, 8, 9, 9, 8, 9, 8, 8, 9, 9]
     diff = [9 - ent for ent in exp_array]
     exp_array = [18 - ent_diff for ent_diff in diff]
+    exp_array = [curr_exp / 22 for curr_exp in exp_array]
     exp = make_exp(None, exp_array)
     exp = make_exp(exp, exp_array)['exp']
     assert np.all(np.isclose(exp, actual['meta_slr_offers'].values))
@@ -624,8 +629,9 @@ def test_slr_offers_leaf():
     events = setup_complex_lstg(None, meta=2, leaf=1)
     events = setup_complex_lstg(events, meta=1, leaf=1, starter=11)
     events.index = events.index.droplevel(['cndtn'])
-    actual = get_cat_time_feats(events, levels=['meta', 'leaf'])
+    actual = get_cat_feats(events, levels=['meta', 'leaf'], feat_ind=1)
     exp_array = [6, 7, 8, 9, 9, 8, 9, 8, 8, 9, 9]
+    exp_array = [curr_exp / 11 for curr_exp in exp_array]
     exp = make_exp(None, exp_array)
     exp = make_exp(exp, exp_array)['exp']
     assert np.all(np.isclose(exp.values, actual['leaf_slr_offers'].values))
@@ -636,9 +642,10 @@ def test_byr_offers_meta():
     events = setup_complex_lstg(None, meta=1, leaf=1)
     events = setup_complex_lstg(events, meta=2, leaf=1, starter=11)
     events.index = events.index.droplevel(['leaf', 'cndtn'])
-    actual = get_cat_time_feats(events, levels=['meta'])
+    actual = get_cat_feats(events, levels=['meta'], feat_ind=1)
     byr_offers = [5, 3, 2, 1, 2, 2, 1, 2, 1, 0, 0]
     exp_array = [sum(byr_offers) - curr for curr in byr_offers]
+    exp_array = [curr_exp / 11 for curr_exp in exp_array]
     exp = make_exp(None, exp_array)
     exp = make_exp(exp, exp_array)['exp']
     assert np.all(np.isclose(exp.values, actual['meta_byr_offers'].values))
@@ -648,15 +655,17 @@ def test_byr_offers_leaf():
     events = setup_complex_lstg(None, meta=1, leaf=2)
     events = setup_complex_lstg(events, meta=1, leaf=1, starter=11)
     events.index = events.index.droplevel(['cndtn'])
-    actual = get_cat_time_feats(events, levels=['meta', 'leaf'])
+    actual = get_cat_feats(events, levels=['meta', 'leaf'], feat_ind=1)
     byr_offers = [5, 3, 2, 1, 2, 2, 1, 2, 1, 0, 0]
     exp_array = [sum(byr_offers) - curr for curr in byr_offers]
+    exp_array = [curr_exp / 11 for curr_exp in exp_array]
     exp = make_exp(None, exp_array)
     exp = make_exp(exp, exp_array)['exp']
     assert np.all(np.isclose(exp.values, actual['leaf_byr_offers'].values))
 
     total = sum(byr_offers) * 2
     exp_array = [total - curr for curr in byr_offers]
+    exp_array = [curr_exp / 22 for curr_exp in exp_array]
     exp = make_exp(None, exp_array)
     exp = make_exp(exp, exp_array)['exp']
     assert np.all(np.isclose(exp, actual['meta_byr_offers'].values))
@@ -664,9 +673,10 @@ def test_byr_offers_leaf():
     events = setup_complex_lstg(None, meta=2, leaf=1)
     events = setup_complex_lstg(events, meta=1, leaf=1, starter=11)
     events.index = events.index.droplevel(['cndtn'])
-    actual = get_cat_time_feats(events, levels=['meta', 'leaf'])
+    actual = get_cat_feats(events, levels=['meta', 'leaf'], feat_ind=1)
     byr_offers = [5, 3, 2, 1, 2, 2, 1, 2, 1, 0, 0]
     exp_array = [sum(byr_offers) - curr for curr in byr_offers]
+    exp_array = [curr_exp / 11 for curr_exp in exp_array]
     exp = make_exp(None, exp_array)
     exp = make_exp(exp, exp_array)['exp']
     assert np.all(np.isclose(exp.values, actual['leaf_byr_offers'].values))
@@ -677,10 +687,11 @@ def test_threads_meta():
     events = setup_complex_lstg(None, meta=1, leaf=1)
     events = setup_complex_lstg(events, meta=2, leaf=1, starter=11)
     events.index = events.index.droplevel(['leaf', 'cndtn'])
-    actual = get_cat_time_feats(events, levels=['meta'])
+    actual = get_cat_feats(events, levels=['meta'], feat_ind=1)
     threads = [3, 2, 1, 1, 2, 2, 1, 1, 1, 0, 0]
     total = sum(threads)
     exp_array = [total - curr for curr in threads]
+    exp_array = [curr_exp / 11 for curr_exp in exp_array]
     exp = make_exp(None, exp_array)
     exp = make_exp(exp, exp_array)['exp']
     assert np.all(np.isclose(exp.values, actual['meta_threads'].values))
@@ -690,15 +701,17 @@ def test_threads_leaf():
     events = setup_complex_lstg(None, meta=1, leaf=2)
     events = setup_complex_lstg(events, meta=1, leaf=1, starter=11)
     events.index = events.index.droplevel(['cndtn'])
-    actual = get_cat_time_feats(events, levels=['meta', 'leaf'])
+    actual = get_cat_feats(events, levels=['meta', 'leaf'], feat_ind=1)
     threads = [3, 2, 1, 1, 2, 2, 1, 1, 1, 0, 0]
     exp_array = [sum(threads) - curr for curr in threads]
+    exp_array = [curr_exp / 11 for curr_exp in exp_array]
     exp = make_exp(None, exp_array)
     exp = make_exp(exp, exp_array)['exp']
     assert np.all(np.isclose(exp.values, actual['leaf_threads'].values))
 
     total = sum(threads) * 2
     exp_array = [total - curr for curr in threads]
+    exp_array = [curr_exp / 22 for curr_exp in exp_array]
     exp = make_exp(None, exp_array)
     exp = make_exp(exp, exp_array)['exp']
     assert np.all(np.isclose(exp, actual['meta_threads'].values))
@@ -706,9 +719,10 @@ def test_threads_leaf():
     events = setup_complex_lstg(None, meta=2, leaf=1)
     events = setup_complex_lstg(events, meta=1, leaf=1, starter=11)
     events.index = events.index.droplevel(['cndtn'])
-    actual = get_cat_time_feats(events, levels=['meta', 'leaf'])
+    actual = get_cat_feats(events, levels=['meta', 'leaf'], feat_ind=1)
     threads = [3, 2, 1, 1, 2, 2, 1, 1, 1, 0, 0]
     exp_array = [sum(threads) - curr for curr in threads]
+    exp_array = [curr_exp / 11 for curr_exp in exp_array]
     exp = make_exp(None, exp_array)
     exp = make_exp(exp, exp_array)['exp']
     assert np.all(np.isclose(exp.values, actual['leaf_threads'].values))
@@ -719,10 +733,11 @@ def test_accepts_meta():
     events = setup_complex_lstg(None, meta=1, leaf=1)
     events = setup_complex_lstg(events, meta=2, leaf=1, starter=11)
     events.index = events.index.droplevel(['leaf', 'cndtn'])
-    actual = get_cat_time_feats(events, levels=['meta'])
+    actual = get_cat_feats(events, levels=['meta'], feat_ind=1)
     accepts = [0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0]
     total = sum(accepts)
     exp_array = [total - curr for curr in accepts]
+    exp_array = [curr_exp / 11 for curr_exp in exp_array]
     exp = make_exp(None, exp_array)
     exp = make_exp(exp, exp_array)['exp']
     assert np.all(np.isclose(exp.values, actual['meta_accepts'].values))
@@ -732,15 +747,17 @@ def test_accepts_leaf():
     events = setup_complex_lstg(None, meta=1, leaf=2)
     events = setup_complex_lstg(events, meta=1, leaf=1, starter=11)
     events.index = events.index.droplevel(['cndtn'])
-    actual = get_cat_time_feats(events, levels=['meta', 'leaf'])
+    actual = get_cat_feats(events, levels=['meta', 'leaf'], feat_ind=1)
     accepts = [0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0]
     exp_array = [sum(accepts) - curr for curr in accepts]
+    exp_array = [curr_exp / 11 for curr_exp in exp_array]
     exp = make_exp(None, exp_array)
     exp = make_exp(exp, exp_array)['exp']
     assert np.all(np.isclose(exp.values, actual['leaf_accepts'].values))
 
     total = sum(accepts) * 2
     exp_array = [total - curr for curr in accepts]
+    exp_array = [curr_exp / 22 for curr_exp in exp_array]
     exp = make_exp(None, exp_array)
     exp = make_exp(exp, exp_array)['exp']
     assert np.all(np.isclose(exp, actual['meta_accepts'].values))
@@ -748,9 +765,10 @@ def test_accepts_leaf():
     events = setup_complex_lstg(None, meta=2, leaf=1)
     events = setup_complex_lstg(events, meta=1, leaf=1, starter=11)
     events.index = events.index.droplevel(['cndtn'])
-    actual = get_cat_time_feats(events, levels=['meta', 'leaf'])
+    actual = get_cat_feats(events, levels=['meta', 'leaf'], feat_ind=1)
     accepts = [0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0]
     exp_array = [sum(accepts) - curr for curr in accepts]
+    exp_array = [curr_exp / 11 for curr_exp in exp_array]
     exp = make_exp(None, exp_array)
     exp = make_exp(exp, exp_array)['exp']
     assert np.all(np.isclose(exp.values, actual['leaf_accepts'].values))
@@ -761,7 +779,7 @@ def test_price_quantile_meta():
     events = setup_complex_lstg(None, meta=1, leaf=1)
     events = setup_complex_lstg(events, meta=2, leaf=1, starter=11)
     events.index = events.index.droplevel(['leaf', 'cndtn'])
-    actual = get_cat_time_feats(events, levels=['meta'])
+    actual = get_cat_feats(events, levels=['meta'], feat_ind=2)
     accepts = [np.NaN, 80, 70, 50, 60, 25, 100, 95, 85, np.NaN, np.NaN]
     accepts = [accept / 100 for accept in accepts]
     accepts = np.array(accepts)
@@ -783,7 +801,7 @@ def test_price_quantile_leaf():
     events = setup_complex_lstg(None, meta=1, leaf=2)
     events = setup_complex_lstg(events, meta=1, leaf=1, starter=11)
     events.index = events.index.droplevel(['cndtn'])
-    actual = get_cat_time_feats(events, levels=['meta', 'leaf'])
+    actual = get_cat_feats(events, levels=['meta', 'leaf'], feat_ind=2)
     accepts = [np.NaN, 80, 70, 50, 60, 25, 100, 95, 85, np.NaN, np.NaN]
     accepts = [accept / 100 for accept in accepts]
     accepts = np.array(accepts)
@@ -819,7 +837,7 @@ def test_price_quantile_leaf():
     events = setup_complex_lstg(None, meta=2, leaf=1)
     events = setup_complex_lstg(events, meta=1, leaf=1, starter=11)
     events.index = events.index.droplevel(['cndtn'])
-    actual = get_cat_time_feats(events, levels=['meta', 'leaf'])
+    actual = get_cat_feats(events, levels=['meta', 'leaf'], feat_ind=2)
     accepts = [np.NaN, 80, 70, 50, 60, 25, 100, 95, 85, np.NaN, np.NaN]
     accepts = [accept / 100 for accept in accepts]
     accepts = np.array(accepts)

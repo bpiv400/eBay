@@ -33,7 +33,7 @@ def open_lstgs(df, levels):
     s = start.astype(np.int64) - end.astype(np.int64)
     s = s.groupby(by=levels).cumsum().to_frame(name='lstg_open').reset_index()
     s = s.merge(converter, on=levels + ['clock'], how='inner')
-    s = s.set_index(levels + ['lstg'], append=False, drop=True)
+    s = s.set_index(['lstg'], append=False, drop=True)
     s = s['lstg_open']
     # cumulative total by levels grouping
     return s
