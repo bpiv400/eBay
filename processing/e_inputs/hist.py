@@ -7,7 +7,7 @@ from processing.processing_utils import *
 
 
 # loads data and calls helper functions to construct training inputs
-def process_inputs(part, idx):
+def process_inputs(part):
 	# path name function
 	getPath = lambda names: '%s/partitions/%s/%s.gz' % \
 		(PREFIX, part, '_'.join(names))
