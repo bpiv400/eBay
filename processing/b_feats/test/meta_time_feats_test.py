@@ -26,13 +26,6 @@ def add_event(df, offer, trigger_type=None, meta=None, leaf=None):
     :return: updated dataframe
     """
     thread_based = trigger_type in [SLR_REJECTION, BYR_REJECTION, OFFER, ACCEPTANCE]
-    #if thread_based:
-    #    print('{}: (lstg: {}, thread: {})'.format(trigger_type,
-    #                                              offer['lstg'],
-    #                                              offer['thread']))
-    #else:
-    #    print('{}: (lstg: {})'.format(trigger_type, offer['lstg']))
-    # print(df)
     offer = offer.copy()
     data = dict()
     if df is None:

@@ -17,8 +17,6 @@ if __name__ == "__main__":
     d = load(CHUNKS_DIR + 'm%d' % num + '.gz')
     L, T, O = [d[k] for k in ['listings', 'threads', 'offers']]
 
-    # categories to strings
-    L = putil.categories_to_string(L)
 
     # set levels for hierarchical time feats
     levels = LEVELS[1:4]
@@ -33,3 +31,38 @@ if __name__ == "__main__":
 
     # save
     dump(tf, FEATS_DIR + 'm%d' % num + '_tf_meta.gz')
+
+
+    # separate feature sets:
+
+
+    # lstg counts  - 1
+    #   accept counts per listing
+    #   slr offers per lstg
+    #   byr offers per lstg
+    #   threads per lstg
+    #   total
+    #   open
+
+    # accept norm quantiles - 2
+
+    # concessions - 3
+    #   first byr offer quantile
+    #   bin probability
+
+    # delay - 4
+    #   probability an offer expires (slr)
+    #   probability an offer expires (byr)
+    #   quantiles
+
+    # start price percentile quantiles - 5
+
+    # history percentile quantiles - 6
+
+    # arrival rate percentile quantiles - 7
+
+
+
+
+
+
