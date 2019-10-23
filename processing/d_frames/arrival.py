@@ -22,7 +22,7 @@ def get_y_arrival(lstgs, threads):
     # count of arrivals by hour
     hours = diff.rename('period').to_frame().assign(count=1)
     arrivals = hours.groupby(['lstg', 'period']).sum()
-    arrivals = arrivals.squeeze().astype('uint8')
+    arrivals = arrivals.squeeze().astype('int8')
     # create multi-index from end stamps
     idx = multiply_indices(end+1)
     # expand to new index and return

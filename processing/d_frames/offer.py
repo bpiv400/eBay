@@ -173,9 +173,9 @@ if __name__ == "__main__":
 
     # load data and 
     lstgs = load(CLEAN_DIR + 'listings.gz')
-    lstgs = lstgs[['start_price', 'start_day']].reindex(index=idx)
+    lstgs = lstgs[['start_price', 'start_date']].reindex(index=idx)
     events = load_frames('events').reindex(index=idx, level='lstg')
-    tf_lstg = load_frames('tf_lstg').reindex(index=idx, level='lstg')
+    tf = load_frames('tf_lstg').reindex(index=idx, level='lstg')
 
     # delay start
     print('z')
@@ -185,12 +185,12 @@ if __name__ == "__main__":
 
     # delay role
     for role in ['slr', 'byr']:
-        z = get_period_time_feats(tf_lstg, z_start, role)
+        z = get_period_time_feats(tf, z_start, role)
         dump(z, path('z_' + role))
 
     # offer features
     print('x_offer')
-    x_offer = get_x_offer(lstgs, events, tf_lstg)
+    x_offer = get_x_offer(lstgs, events, tf)
     dump(x_offer, path('x_offer'))
 
     # delay outcome

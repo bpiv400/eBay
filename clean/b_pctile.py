@@ -37,13 +37,13 @@ L['arrival_rate'] = arrivals / duration
 for feat in ['fdbk_score', 'slr_lstgs', 'slr_bos', 'arrival_rate']:
 	print(feat)
 	pctile = get_pctiles(L[feat])
-	dump(pctile, '%s/pctile/%s.gz' % (PREFIX, feat))
+	if feat != 'arrival_rate':
+		dump(pctile, '%s/pctile/%s.gz' % (PREFIX, feat))
 	L = L.join(pctile, on=feat)
 	L = L.drop(feat, axis=1).rename({'pctile': feat}, axis=1)
 
 # add start_price percentile
 pctile = get_pctiles(L['start_price'])
-dump(pctile, '%s/pctile/%s.gz' % (PREFIX, 'start_price'))
 L = L.join(pctile.rename('start_price_pctile'), on='start_price')
 
 # save listings

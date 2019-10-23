@@ -17,11 +17,16 @@ def extract_hour_feats(clock):
 
 # loads data and calls helper functions to construct training inputs
 def process_inputs(part):
+    # path name function
+    getPath = lambda names: '%s/partitions/%s/%s.gz' % \
+        (PREFIX, part, '_'.join(names))
+
     # outcome
-    y = load('data/partitions/%s/y_arrival.gz' % part)
+    y = load(getPath(['y', 'arrival'])).unstack(fill_value=-1)
 
     # fixed features
-    x_fixed = cat_x_lstg(part)
+    x_fixed = load(getPath(['x_fixed']))
+    assert(x_fixed.index.equals(y.index))
 
     # index of x_fixed for each y
     lookup = np.array(range(len(x_fixed.index)))
@@ -38,10 +43,9 @@ def process_inputs(part):
     period = y.reset_index('period')['period']
     idx_hour = (period + x_fixed.start_date * 24).values
 
-    return {'y': y.astype('uint8', copy=False),
+    return {'y': y.astype('int8', copy=False),
             'x_fixed': x_fixed.astype('float32', copy=False), 
             'x_hour': x_hour.astype('uint16', copy=False),
-            'idx_fixed': idx_fixed.astype('uint32', copy=False),
             'idx_hour': idx_hour.astype('uint16', copy=False)}
 
 

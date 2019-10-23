@@ -26,18 +26,18 @@ def get_x_lstg(lstgs):
     df['decline'] = lstgs['decline_price'] / lstgs['start_price']
     df['accept'] = lstgs['accept_price'] / lstgs['start_price']
     for z in ['start', 'decline', 'accept']:
-        is_round, is_nines = do_rounding(df[z])
+        is_round, is_nines = do_rounding(lstgs[z + '_price'])
         df.loc[:, z + '_round'] = is_round
         df.loc[:, z +'_nines'] = is_nines
     df['has_decline'] = df['decline'] > 0
     df['has_accept'] = df['accept'] < 1
     df['auto_dist'] = df['accept'] - df['decline']
     # condition
-    cndtn = lstgs['cndtn']
-    df['new'] = cndtn == 1
-    df['used'] = cndtn == 7
-    df['refurb'] = cndtn.isin([2, 3, 4, 5, 6])
-    df['wear'] = cndtn.isin([8, 9, 10, 11]) * (cndtn - 7)
+    s = lstgs['cndtn']
+    df['new'] = s == 1
+    df['used'] = s == 7
+    df['refurb'] = s.isin([2, 3, 4, 5, 6])
+    df['wear'] = s.isin([8, 9, 10, 11]) * (s - 7)
     return df
 
 
@@ -67,8 +67,8 @@ if __name__ == "__main__":
     # load data 
     lstgs = load(CLEAN_DIR + 'listings.gz').drop(
         ['title', 'flag'], axis=1).reindex(index=idx)
-    tf_slr = load_frames('tf_slr').reindex(index=idx)
-    tf_meta = load_frames('tf_meta').reindex(index=idx)
+    #tf_slr = load_frames('tf_slr').reindex(index=idx)
+    #tf_meta = load_frames('tf_meta').reindex(index=idx)
 
     # lookup file
     lookup = lstgs[['meta', 'start_date', \

@@ -46,15 +46,17 @@ def process_inputs(part, role):
 		(PREFIX, part, '_'.join(names))
 
 	# outcome
-	y = load(getPath(['y', 'con', role])).astype('float32').unstack()
-	y[y.isna()] = -1
+	y = load(getPath(['y', 'con', role])).astype(
+		'float32').unstack(fill_value=-1)
 
-	# fixed features
-	x_thread = load(getPath(['x', 'thread']))
-	x_fixed = cat_x_lstg(part).reindex(index=y.index).join(x_thread)
+	# x_fixed: x_lstg and x_thread
+	x_fixed = load(getPath(['x', 'lstg'])).reindex(
+		index=y.index).join(load(getPath(['x', 'thread'])))
 
 	# time features
 	x_offer = load(getPath(['x', 'offer']))
+	raw = [c for c in x_offer.columns if c.endswith('_raw')]
+	x_offer = x_offer.drop(raw, axis=1)
 	x_time = parse_time_feats_role(role, x_offer)
 
 	return {'y': y.astype('float32', copy=False), 

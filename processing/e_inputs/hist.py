@@ -16,7 +16,7 @@ def process_inputs(part, idx):
 	y = load(getPath(['x', 'thread']))['byr_hist']
 
 	# initialize fixed features with listing variables
-	x_fixed = load(getPath(['x', 'fixed'])).reindex(
+	x_fixed = load(getPath(['x', 'lstg'])).reindex(
 		index=y.index, level='lstg')
 
 	# add days since lstg start, holiday, day of week, and minutes since midnight
