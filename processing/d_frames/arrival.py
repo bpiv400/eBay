@@ -23,10 +23,18 @@ def get_y_arrival(lstgs, threads):
     hours = diff.rename('period').to_frame().assign(count=1)
     arrivals = hours.groupby(['lstg', 'period']).sum()
     arrivals = arrivals.squeeze().astype('int8')
-    # create multi-index from end stamps
-    idx = multiply_indices(end+1)
-    # expand to new index and return
-    return arrivals.reindex(index=idx, fill_value=0)
+    # initialize output dataframe
+    N = np.max(end)+1
+    df = pd.DataFrame(0, index=end.index, dtype='int8',
+        columns=range(N))
+    # fill in arrivals and censored times
+    for i in range(N):
+        print(i)
+        value = arrivals.xs(i, level='period').reindex(
+            index=end.index, fill_value=0)
+        value -= (end < i).astype('int8')
+        df[i] = value
+    return df
 
 
 if __name__ == "__main__":

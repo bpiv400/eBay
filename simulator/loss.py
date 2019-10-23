@@ -18,11 +18,11 @@ def poisson_loss(theta, y):
 	return -torch.sum(ll)
 
 
-def emd_loss(theta, y):
+def emd_loss(theta, distance):
 	# for con_byr model, theta is a list
 	if isinstance(theta, list):
 		theta, theta4 = theta
-		distance, accept4 = y
+		distance, accept4 = distance
 
 	# predicted bucket probabilities
 	num = torch.exp(theta)
@@ -30,13 +30,6 @@ def emd_loss(theta, y):
 
 	# loss is dot product of flow (p) and distance
 	loss = torch.sum(p * distance)
-
-	if torch.any(torch.isnan(loss)):
-		print(theta)
-		print(num)
-		print(p)
-		print(distance)
-		exit()
 
 	# add in loss for 4th byr turn
 	if 'theta4' in vars():
