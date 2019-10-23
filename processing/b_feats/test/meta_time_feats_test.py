@@ -411,7 +411,7 @@ def setup_complex_lstg(events, meta=1, leaf=1, starter=0):
     # byr accept for thread = 1 lstg = 7
     offer['clock'] = 240
     offer['lstg'] = 7 + starter
-    offer['thread'] = 2
+    offer['thread'] = 1
     offer['price'] = 100
     offer['byr'] = True
     events = add_event(events, offer, trigger_type=ACCEPTANCE, meta=meta, leaf=leaf)
@@ -477,7 +477,7 @@ def setup_complex_lstg(events, meta=1, leaf=1, starter=0):
     offer['lstg'] = 8 + starter
     offer['thread'] = 1
     offer['price'] = 95
-    offer['byr'] = False
+    offer['byr'] = True
     events = add_event(events, offer, trigger_type=OFFER, meta=meta, leaf=leaf)
 
     # slr accept thread = 1 for lstg = 8
@@ -536,9 +536,6 @@ def test_lstgs_open_meta():
 
     exp = exp['exp']
     actual = get_cat_time_feats(events, levels=['meta'])
-    print(actual.columns)
-    print(exp)
-    print(actual)
     assert np.all(np.isclose(exp.values, actual['meta_lstgs_open'].values))
 
 
@@ -559,50 +556,290 @@ def test_lstgs_open_leaf():
     exp = exp['exp']
     assert np.all(np.isclose(exp.values, actual['meta_lstgs_open'].values))
 
+    events = setup_complex_lstg(None, meta=2, leaf=1)
+    events = setup_complex_lstg(events, meta=1, leaf=1, starter=11)
+    events.index = events.index.droplevel(['cndtn'])
+    actual = get_cat_time_feats(events, levels=['meta', 'leaf'])
+    exp_array = [0, 1, 2, 2, 0, 1, 2, 0, 1, 2, 1]
+    exp_array = [1 + exp for exp in exp_array]
+    exp = make_exp(None, exp_array)
+    exp = make_exp(exp, exp_array)
+    exp = exp['exp']
+    assert np.all(np.isclose(exp.values, actual['leaf_lstgs_open'].values))
+    assert np.all(np.isclose(exp.values, actual['meta_lstgs_open'].values))
+
 
 def test_lstgs_meta():
-    pass
+    events = setup_complex_lstg(None, meta=1, leaf=1)
+    events = setup_complex_lstg(events, meta=2, leaf=1, starter=11)
+    events.index = events.index.droplevel(['leaf', 'cndtn'])
+    actual = get_cat_time_feats(events, levels=['meta'])
+    exp_array = [10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10]
+    exp = make_exp(None, exp_array)
+    exp = make_exp(exp, exp_array)['exp']
+    assert np.all(np.isclose(exp.values, actual['meta_lstgs'].values))
 
 
 def test_lstgs_leaf():
-    pass
+    events = setup_complex_lstg(None, meta=1, leaf=2)
+    events = setup_complex_lstg(events, meta=1, leaf=1, starter=11)
+    events.index = events.index.droplevel(['cndtn'])
+    actual = get_cat_time_feats(events, levels=['meta', 'leaf'])
+    exp_array = [10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10]
+    exp = make_exp(None, exp_array)
+    exp = make_exp(exp, exp_array)['exp']
+    assert np.all(np.isclose(exp.values, actual['leaf_lstgs'].values))
+    exp_array = [21] * 22
+    assert np.all(np.isclose(make_exp(None, exp_array),
+                             actual['meta_lstgs'].values))
+    events = setup_complex_lstg(None, meta=2, leaf=1)
+    events = setup_complex_lstg(events, meta=1, leaf=1, starter=11)
+    events.index = events.index.droplevel(['cndtn'])
+    actual = get_cat_time_feats(events, levels=['meta', 'leaf'])
+    assert np.all(np.isclose(exp.values, actual['leaf_lstgs'].values))
+    assert np.all(np.isclose(exp.values, actual['meta_lstgs'].values))
 
 
 def test_slr_offers_meta():
-    pass
+    events = setup_complex_lstg(None, meta=1, leaf=1)
+    events = setup_complex_lstg(events, meta=2, leaf=1, starter=11)
+    events.index = events.index.droplevel(['leaf', 'cndtn'])
+    actual = get_cat_time_feats(events, levels=['meta'])
+    exp_array = [6, 7, 8, 9, 9, 8, 9, 8, 8, 9, 9]
+    exp = make_exp(None, exp_array)
+    exp = make_exp(exp, exp_array)['exp']
+    print(exp.values)
+    print(actual['meta_slr_offers'].values)
+    assert np.all(np.isclose(exp.values, actual['meta_slr_offers'].values))
 
 
 def test_slr_offers_leaf():
-    pass
+    events = setup_complex_lstg(None, meta=1, leaf=2)
+    events = setup_complex_lstg(events, meta=1, leaf=1, starter=11)
+    events.index = events.index.droplevel(['cndtn'])
+    actual = get_cat_time_feats(events, levels=['meta', 'leaf'])
+    exp_array = [6, 7, 8, 9, 9, 8, 9, 8, 8, 9, 9]
+    exp = make_exp(None, exp_array)
+    exp = make_exp(exp, exp_array)['exp']
+    assert np.all(np.isclose(exp.values, actual['leaf_slr_offers'].values))
+    diff = [9 - ent for ent in exp_array]
+    exp_array = [18 - ent_diff for ent_diff in diff]
+    exp = make_exp(None, exp_array)
+    exp = make_exp(exp, exp_array)['exp']
+    assert np.all(np.isclose(exp, actual['meta_slr_offers'].values))
+
+    events = setup_complex_lstg(None, meta=2, leaf=1)
+    events = setup_complex_lstg(events, meta=1, leaf=1, starter=11)
+    events.index = events.index.droplevel(['cndtn'])
+    actual = get_cat_time_feats(events, levels=['meta', 'leaf'])
+    exp_array = [6, 7, 8, 9, 9, 8, 9, 8, 8, 9, 9]
+    exp = make_exp(None, exp_array)
+    exp = make_exp(exp, exp_array)['exp']
+    assert np.all(np.isclose(exp.values, actual['leaf_slr_offers'].values))
+    assert np.all(np.isclose(exp.values, actual['meta_slr_offers'].values))
 
 
 def test_byr_offers_meta():
-    pass
+    events = setup_complex_lstg(None, meta=1, leaf=1)
+    events = setup_complex_lstg(events, meta=2, leaf=1, starter=11)
+    events.index = events.index.droplevel(['leaf', 'cndtn'])
+    actual = get_cat_time_feats(events, levels=['meta'])
+    byr_offers = [5, 3, 2, 1, 2, 2, 1, 2, 1, 0, 0]
+    exp_array = [sum(byr_offers) - curr for curr in byr_offers]
+    exp = make_exp(None, exp_array)
+    exp = make_exp(exp, exp_array)['exp']
+    assert np.all(np.isclose(exp.values, actual['meta_byr_offers'].values))
 
 
 def test_byr_offers_leaf():
-    pass
+    events = setup_complex_lstg(None, meta=1, leaf=2)
+    events = setup_complex_lstg(events, meta=1, leaf=1, starter=11)
+    events.index = events.index.droplevel(['cndtn'])
+    actual = get_cat_time_feats(events, levels=['meta', 'leaf'])
+    byr_offers = [5, 3, 2, 1, 2, 2, 1, 2, 1, 0, 0]
+    exp_array = [sum(byr_offers) - curr for curr in byr_offers]
+    exp = make_exp(None, exp_array)
+    exp = make_exp(exp, exp_array)['exp']
+    assert np.all(np.isclose(exp.values, actual['leaf_byr_offers'].values))
+
+    total = sum(byr_offers) * 2
+    exp_array = [total - curr for curr in byr_offers]
+    exp = make_exp(None, exp_array)
+    exp = make_exp(exp, exp_array)['exp']
+    assert np.all(np.isclose(exp, actual['meta_byr_offers'].values))
+
+    events = setup_complex_lstg(None, meta=2, leaf=1)
+    events = setup_complex_lstg(events, meta=1, leaf=1, starter=11)
+    events.index = events.index.droplevel(['cndtn'])
+    actual = get_cat_time_feats(events, levels=['meta', 'leaf'])
+    byr_offers = [5, 3, 2, 1, 2, 2, 1, 2, 1, 0, 0]
+    exp_array = [sum(byr_offers) - curr for curr in byr_offers]
+    exp = make_exp(None, exp_array)
+    exp = make_exp(exp, exp_array)['exp']
+    assert np.all(np.isclose(exp.values, actual['leaf_byr_offers'].values))
+    assert np.all(np.isclose(exp.values, actual['meta_byr_offers'].values))
 
 
 def test_threads_meta():
-    pass
+    events = setup_complex_lstg(None, meta=1, leaf=1)
+    events = setup_complex_lstg(events, meta=2, leaf=1, starter=11)
+    events.index = events.index.droplevel(['leaf', 'cndtn'])
+    actual = get_cat_time_feats(events, levels=['meta'])
+    threads = [3, 2, 1, 1, 2, 2, 1, 1, 1, 0, 0]
+    total = sum(threads)
+    exp_array = [total - curr for curr in threads]
+    exp = make_exp(None, exp_array)
+    exp = make_exp(exp, exp_array)['exp']
+    assert np.all(np.isclose(exp.values, actual['meta_threads'].values))
 
 
 def test_threads_leaf():
-    pass
+    events = setup_complex_lstg(None, meta=1, leaf=2)
+    events = setup_complex_lstg(events, meta=1, leaf=1, starter=11)
+    events.index = events.index.droplevel(['cndtn'])
+    actual = get_cat_time_feats(events, levels=['meta', 'leaf'])
+    threads = [3, 2, 1, 1, 2, 2, 1, 1, 1, 0, 0]
+    exp_array = [sum(threads) - curr for curr in threads]
+    exp = make_exp(None, exp_array)
+    exp = make_exp(exp, exp_array)['exp']
+    assert np.all(np.isclose(exp.values, actual['leaf_threads'].values))
+
+    total = sum(threads) * 2
+    exp_array = [total - curr for curr in threads]
+    exp = make_exp(None, exp_array)
+    exp = make_exp(exp, exp_array)['exp']
+    assert np.all(np.isclose(exp, actual['meta_threads'].values))
+
+    events = setup_complex_lstg(None, meta=2, leaf=1)
+    events = setup_complex_lstg(events, meta=1, leaf=1, starter=11)
+    events.index = events.index.droplevel(['cndtn'])
+    actual = get_cat_time_feats(events, levels=['meta', 'leaf'])
+    threads = [3, 2, 1, 1, 2, 2, 1, 1, 1, 0, 0]
+    exp_array = [sum(threads) - curr for curr in threads]
+    exp = make_exp(None, exp_array)
+    exp = make_exp(exp, exp_array)['exp']
+    assert np.all(np.isclose(exp.values, actual['leaf_threads'].values))
+    assert np.all(np.isclose(exp.values, actual['meta_threads'].values))
 
 
 def test_accepts_meta():
-    pass
+    events = setup_complex_lstg(None, meta=1, leaf=1)
+    events = setup_complex_lstg(events, meta=2, leaf=1, starter=11)
+    events.index = events.index.droplevel(['leaf', 'cndtn'])
+    actual = get_cat_time_feats(events, levels=['meta'])
+    accepts = [0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0]
+    total = sum(accepts)
+    exp_array = [total - curr for curr in accepts]
+    exp = make_exp(None, exp_array)
+    exp = make_exp(exp, exp_array)['exp']
+    assert np.all(np.isclose(exp.values, actual['meta_accepts'].values))
 
 
 def test_accepts_leaf():
-    pass
+    events = setup_complex_lstg(None, meta=1, leaf=2)
+    events = setup_complex_lstg(events, meta=1, leaf=1, starter=11)
+    events.index = events.index.droplevel(['cndtn'])
+    actual = get_cat_time_feats(events, levels=['meta', 'leaf'])
+    accepts = [0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0]
+    exp_array = [sum(accepts) - curr for curr in accepts]
+    exp = make_exp(None, exp_array)
+    exp = make_exp(exp, exp_array)['exp']
+    assert np.all(np.isclose(exp.values, actual['leaf_accepts'].values))
+
+    total = sum(accepts) * 2
+    exp_array = [total - curr for curr in accepts]
+    exp = make_exp(None, exp_array)
+    exp = make_exp(exp, exp_array)['exp']
+    assert np.all(np.isclose(exp, actual['meta_accepts'].values))
+
+    events = setup_complex_lstg(None, meta=2, leaf=1)
+    events = setup_complex_lstg(events, meta=1, leaf=1, starter=11)
+    events.index = events.index.droplevel(['cndtn'])
+    actual = get_cat_time_feats(events, levels=['meta', 'leaf'])
+    accepts = [0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0]
+    exp_array = [sum(accepts) - curr for curr in accepts]
+    exp = make_exp(None, exp_array)
+    exp = make_exp(exp, exp_array)['exp']
+    assert np.all(np.isclose(exp.values, actual['leaf_accepts'].values))
+    assert np.all(np.isclose(exp.values, actual['meta_accepts'].values))
 
 
 def test_price_quantile_meta():
-    pass
+    events = setup_complex_lstg(None, meta=1, leaf=1)
+    events = setup_complex_lstg(events, meta=2, leaf=1, starter=11)
+    events.index = events.index.droplevel(['leaf', 'cndtn'])
+    actual = get_cat_time_feats(events, levels=['meta'])
+    accepts = [np.NaN, 80, 70, 50, 60, 25, 100, 95, 85, np.NaN, np.NaN]
+    accepts = [accept / 100 for accept in accepts]
+    accepts = np.array(accepts)
+    for q in [.25, .75, 1]:
+        exp_array = list()
+        for i in range(len(accepts)):
+            curr = np.delete(accepts, i)
+            val = np.nanquantile(curr, q=q, interpolation='lower')
+            if np.isnan(val):
+                val = 0
+            exp_array.append(val)
+        exp = make_exp(None, exp_array)
+        exp = make_exp(exp, exp_array)['exp']
+        name = 'meta_accept_norm_{}'.format(int(q * 100))
+        assert np.all(np.isclose(exp.values, actual[name].values))
 
 
 def test_price_quantile_leaf():
-    pass
+    events = setup_complex_lstg(None, meta=1, leaf=2)
+    events = setup_complex_lstg(events, meta=1, leaf=1, starter=11)
+    events.index = events.index.droplevel(['cndtn'])
+    actual = get_cat_time_feats(events, levels=['meta', 'leaf'])
+    accepts = [np.NaN, 80, 70, 50, 60, 25, 100, 95, 85, np.NaN, np.NaN]
+    accepts = [accept / 100 for accept in accepts]
+    accepts = np.array(accepts)
+    for q in [.25, .75, 1]:
+        exp_array = list()
+        for i in range(len(accepts)):
+            curr = np.delete(accepts, i)
+            val = np.nanquantile(curr, q=q, interpolation='lower')
+            if np.isnan(val):
+                val = 0
+            exp_array.append(val)
+        exp = make_exp(None, exp_array)
+        exp = make_exp(exp, exp_array)['exp']
+        name = 'leaf_accept_norm_{}'.format(int(q * 100))
+        assert np.all(np.isclose(exp.values, actual[name].values))
+
+    accepts = [np.NaN, 80, 70, 50, 60, 25, 100, 95, 85, np.NaN, np.NaN]
+    accepts = accepts + accepts
+    accepts = [accept / 100 for accept in accepts]
+    accepts = np.array(accepts)
+    for q in [.25, .75, 1]:
+        exp_array = list()
+        for i in range(len(accepts)):
+            curr = np.delete(accepts, i)
+            val = np.nanquantile(curr, q=q, interpolation='lower')
+            if np.isnan(val):
+                val = 0
+            exp_array.append(val)
+        exp = make_exp(None, exp_array)['exp']
+        name = 'meta_accept_norm_{}'.format(int(q * 100))
+        assert np.all(np.isclose(exp.values, actual[name].values))
+
+    events = setup_complex_lstg(None, meta=2, leaf=1)
+    events = setup_complex_lstg(events, meta=1, leaf=1, starter=11)
+    events.index = events.index.droplevel(['cndtn'])
+    actual = get_cat_time_feats(events, levels=['meta', 'leaf'])
+    accepts = [np.NaN, 80, 70, 50, 60, 25, 100, 95, 85, np.NaN, np.NaN]
+    accepts = [accept / 100 for accept in accepts]
+    accepts = np.array(accepts)
+    for q in [.25, .75, 1]:
+        exp_array = list()
+        for i in range(len(accepts)):
+            curr = np.delete(accepts, i)
+            val = np.nanquantile(curr, q=q, interpolation='lower')
+            if np.isnan(val):
+                val = 0
+            exp_array.append(val)
+        exp = make_exp(None, exp_array)
+        exp = make_exp(exp, exp_array)['exp']
+        name = '_accept_norm_{}'.format(int(q * 100))
+        assert np.all(np.isclose(exp.values, actual['meta{}'.format(name)].values))
+        assert np.all(np.isclose(exp.values, actual['leaf{}'.format(name)].values))
