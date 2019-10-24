@@ -992,10 +992,159 @@ def test_con_quantile_leaf():
         assert np.all(np.isclose(exp.values, actual['meta{}'.format(name)].values))
 
 
+def calc_bin(bin, threads):
+    assert len(bin) == len(threads)
+    out = list()
+    bin_sum = sum(bin)
+    threads_sum = sum(threads)
+    for i in range(len(bin)):
+        div = (threads_sum - threads[i])
+        if div == 0:
+            out.append(0)
+        else:
+            curr = (bin_sum - bin[i]) / div
+            out.append(curr)
+    return out
+
+
 def test_bin_perc_meta():
     events = setup_complex_lstg(None, meta=1, leaf=1)
-    events = setup_complex_lstg(events, meta=2, leaf=1, starter=11)
-    events = add_bins(events, meta=1, leaf=1, starter=22)
+
+    # add a group where there are 2 lstgs and no threads
+    offer = {
+        'lstg': 23,
+        'clock': 300
+    }
+    events = add_event(events, offer, trigger_type=NEW_LSTG, meta=3, leaf=1)
+    offer['clock'] = 325
+    events = add_event(events, offer, trigger_type=EXPIRE_LSTG, meta=3, leaf=1)
+
+    offer = {
+        'lstg': 24,
+        'clock': 350
+    }
+    events = add_event(events, offer, trigger_type=NEW_LSTG, meta=3, leaf=1)
+    offer['clock'] = 355
+    events = add_event(events, offer, trigger_type=EXPIRE_LSTG, meta=3, leaf=1)
+
+    # add a group where there are 2 lstgs, several threads, and 1 bin
+    offer = {
+        'lstg': 25,
+        'clock': 360
+    }
+    events = add_event(events, offer, trigger_type=NEW_LSTG, meta=4, leaf=1)
+    offer['clock'] = 365
+    offer['byr'] = True
+    offer['price'] = 35
+    offer['thread'] = 1
+    events = add_event(events, offer, trigger_type=OFFER, meta=4, leaf=1)
+
+    offer['price'] = 45
+    offer['clock'] = 370
+    offer['thread'] = 2
+    events = add_event(events, offer, trigger_type=OFFER, meta=4, leaf=1)
+
+    offer['price'] = 55
+    offer['clock'] = 375
+    offer['thread'] = 3
+    events = add_event(events, offer, trigger_type=OFFER, meta=4, leaf=1)
+
+    offer['price'] = 60
+    offer['clock'] = 380
+    offer['thread'] = 4
+    events = add_event(events, offer, trigger_type=OFFER, meta=4, leaf=1)
+
+    offer['clock'] = 385
+    offer['lstg'] = 26
+    events = add_event(events, offer, trigger_type=NEW_LSTG, meta=4, leaf=1)
+
+    offer['thread'] = 1
+    offer['price'] = 50
+    offer['clock'] = 387
+    offer['byr'] = True
+    events = add_event(events, offer, trigger_type=OFFER, meta=4, leaf=1)
+
+    offer['thread'] = 2
+    offer['price'] = 100
+    offer['clock'] = 389
+    events = add_event(events, offer, trigger_type=ACCEPTANCE, meta=4, leaf=1)
+    offer['thread'] = 1
+    offer['byr'] = False
+    events = add_event(events, offer, trigger_type=CENSORED, meta=4, leaf=1)
+
+    offer['clock'] = 400
+    offer['byr'] = False
+    offer['lstg'] = 25
+    offer['price'] = 60
+    offer['thread'] = 4
+    events = add_event(events, offer, trigger_type=ACCEPTANCE, meta=4, leaf=1)
+    offer['thread'] = 3
+    events = add_event(events, offer, trigger_type=CENSORED, meta=4, leaf=1)
+    offer['thread'] = 2
+    events = add_event(events, offer, trigger_type=CENSORED, meta=4, leaf=1)
+    offer['thread'] = 1
+    events = add_event(events, offer, trigger_type=CENSORED, meta=4, leaf=1)
+
+    threads = [3, 2, 1, 1, 2, 2, 1, 1, 1, 0, 0]
+    bin = [0] * 11
+    threads2 = [0, 0]
+    bin2 = [0] * 2
+    threads3 = [4, 2]
+    bin3 = [0, 1]
+
+    offers1 = {
+        0: [50, 30, 50],
+        1: [50],
+        2: [50, 55],
+        3: [50],
+        4: [75, 60],
+        5: [20, 25],
+        6: [60],
+        7: [90],
+        8: [30],
+        9: [],
+        10: []
+    }
+    offers2 = {
+        0: [],
+        1: []
+    }
+    offers3 = {
+        0: [35, 45, 55, 60],
+        1: [50]
+    }
+    events.index = events.index.droplevel(['leaf', 'cndtn'])
+
+    actual = get_cat_feats(events, levels=['meta'], feat_ind=3)
+    perc_exp1 = calc_bin(bin, threads)
+    perc_exp2 = calc_bin(bin2, threads2)
+    perc_exp3 = calc_bin(bin3, threads3)
+    perc_exp = np.concatenate([perc_exp1, perc_exp2, perc_exp3])
+    print('')
+    print('perc_exp')
+    print(perc_exp)
+    print(actual['meta_bin'].values)
+    assert np.all(np.isclose(perc_exp, actual['meta_bin'].values))
+    for q in [.25, .75, 1]:
+        exp_array = list()
+        for offers in [offers1, offers2, offers3]:
+            for i in range(len(offers)):
+                considered = list()
+                for j in range(len(offers)):
+                    if j != i:
+                        considered = considered + offers[j]
+                considered = np.array(considered)
+                considered = considered / 100
+                quant = np.nanquantile(considered, q=q, interpolation='lower')
+                if np.isnan(quant):
+                    quant = 0
+                exp_array.append(quant)
+        exp = make_exp(None, exp_array)['exp']
+        name = '_first_offer_{}'.format(int(q * 100))
+        assert np.all(np.isclose(exp.values, actual['meta{}'.format(name)].values))
+
+
+
 
 
 def test_bin_perc_leaf():

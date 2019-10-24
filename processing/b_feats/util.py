@@ -30,6 +30,30 @@ def prep_quantiles(df, l, featname):
     return quant_vector
 
 
+def get_bin_perc(df, l):
+    df = df.copy()
+    level_group = df[['bin', 'thread']].groupby(by=l).sum()
+    lstg_group = df[['bin', 'thread']].groupby(by=l + ['lstg']).sum()
+    print('lstg group')
+    print(lstg_group)
+    print('level group')
+    print(level_group)
+    bin_count = level_group['bin']
+    bin_ind = lstg_group['bin']
+    bin_count = bin_count - bin_ind
+
+    assert bin_ind.max() <= 1  # sanity check
+    thread_tot = level_group['thread']
+    thread_count = lstg_group['thread']
+    thread_count = thread_tot - thread_count
+
+    bin = (bin_count / thread_count).fillna(0)
+    assert not np.any(np.isinf(bin.values))
+    bin.index = bin.index.droplevel(level=l)
+    bin = bin.rename('{}_bin'.format(l[-1]))
+    return bin
+
+
 def get_quantiles(df, l, featname):
     # initialize output dataframe
     df = df.copy()
@@ -87,6 +111,12 @@ def get_cat_feats(events, levels=None, feat_ind=None):
     df['byr_offer'] = df.byr & ~df.reject & ~df.accept
     df['lstg_id'] = df.index.get_level_values('lstg').astype(np.int64)
 
+    df['offer_norm'] = df.price / df.start_price
+    real_threads = (df.index.get_level_values('thread') != 0).astype(bool)
+    first_offer = (df.index.get_level_values('index') == 1).astype(bool)
+    df['bin'] = (first_offer & real_threads & (df.offer_norm == 1).astype(bool)).astype(bool)
+    first_offer = first_offer & real_threads & ~df.flag & ~df.bin
+    df['first_offer'] = (df.offer_norm[first_offer]).astype(np.float64)
     if feat_ind == 1:
         return get_cat_lstg_counts(df, levels)
     elif feat_ind == 2:
@@ -145,7 +175,7 @@ def get_cat_lstg_counts(events, levels):
 
 def get_cat_accepts(events, levels):
     # loop over hierarchy, exlcuding lstg
-    events['accept_norm'] = events.price[events.accept & ~events.flag] / events.start_price
+    events['accept_norm'] = events.price[events.accept & ~events.flag & ~events.bin] / events.start_price
     tf = events[['clock']].xs(0, level='thread', drop_level=True)
     tf = tf.drop(columns=['clock'])
     tf = tf.xs(0, level='index', drop_level=True)
@@ -166,11 +196,7 @@ def get_cat_accepts(events, levels):
 
 def get_cat_con(events, levels):
     # loop over hierarchy, exlcuding lstg
-    events['offer_norm'] = events.price / events.start_price
-    real_threads = (events.index.get_level_values('thread') != 0).astype(bool)
-    first_offer = (events.index.get_level_values('index') == 1).astype(bool)
-    first_offer = first_offer & real_threads & ~events.flag
-    events['first_offer'] = (events.offer_norm[first_offer]).astype(np.float64)
+    # bin / thread (excluding curr)
     tf = events[['clock']].xs(0, level='thread', drop_level=True)
     tf = tf.drop(columns=['clock'])
     tf = tf.xs(0, level='index', drop_level=True)
@@ -183,6 +209,8 @@ def get_cat_con(events, levels):
         events['lstg_counter'] = events['lstg_id'].groupby(by=curr_levels).transform(
             lambda x: x.factorize()[0].astype(np.int64)
         )
+        bin = get_bin_perc(events, curr_levels)
+        tf = tf.join(bin)
         # quantiles of (normalized) accept price over 30-day window
         quants = get_quantiles(events, curr_levels, 'first_offer')
         tf = tf.join(quants)
