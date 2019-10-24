@@ -43,7 +43,11 @@ def prep_quantiles(df, l, featname):
         quant_vector = df.reset_index(drop=False)
         quant_vector = quant_vector[['delay', 'lstg_counter'] + l]
         quant_vector = quant_vector.set_index(l + ['lstg_counter'], append=False, drop=True)
-        quant_vector.loc[other_turn, other_turn] = np.NaN
+        # excluding the other turn
+        quant_vector.loc[other_turn, 'delay'] = np.NaN
+        # excluding expirations
+        auto_rej = quant_vector['delay'] == 1
+        quant_vector.loc[auto_rej, 'delay'] = np.NaN
         quant_vector = quant_vector['delay']
         quant_vector = quant_vector.rename(featname)
     else:
@@ -81,7 +85,7 @@ def get_expire_perc(df, l, byr=False):
     else:
         other_turn = df.index.get_level_values('index').isin([3, 5])
         name = 'slr_expire'
-    df[other_turn, 'delay'] = np.NaN
+    df.loc[other_turn, 'delay'] = np.NaN
     df['expire'] = (df['delay'] == 1).astype(bool)
     df['curr_offer'] = df['delay'].notna()
     return get_perc(df, l, 'expire', 'curr_offer', name=name)
@@ -111,14 +115,15 @@ def get_quantiles(df, l, featname):
         total_lstgs = total_lstgs.reindex(quant_vector.index)
 
     quants = dict()
+    print('number to consider: {}'.format(total_lstgs.max()))
     # loop over quantiles
     for n in range(int(total_lstgs.max()) + 1):
         cut = quant_vector.loc[total_lstgs >= n].drop(n, level='lstg_counter')
-        if n == 1 or n == 2:
-            print('')
-            print('n: {}'.format(n))
-            print(cut)
         rel_groups = cut.index.droplevel('lstg_counter').drop_duplicates()
+        print('n: {}'.format(n))
+        with pd.option_context('display.max_rows', None, 'display.max_columns', None):  # more options can be specified also
+            print('cut')
+            print(cut)
         cut = cut.groupby(by=l)
         partial = pd.DataFrame(index=rel_groups)
         for q in QUANTILES:
@@ -245,23 +250,26 @@ def get_cat_delay(events, levels):
     tf = prepare_tf(events)
     clock_df = events.clock.unstack()
     delay = pd.DataFrame(index=clock_df.index)
-    delay[0] = np.NaN
+    delay[0] = np.NaN # excluding turn 0
     for i in range(1, 8):
         if i in clock_df.columns:
-            delay[i] = clock_df[i] - clock_df[i - 1]
+            delay[i] = (clock_df[i] - clock_df[i - 1]).dt.total_seconds()
             if i in [2, 4, 6]:
                 max_delay = MAX_DELAY['slr']
                 censored = delay[i] > MAX_DELAY['slr']
             elif i in [3, 5]:
                 censored = delay[i] > MAX_DELAY['byr']
                 max_delay = MAX_DELAY['byr']
-            else: # censor 7 and 1
+            else: # excluding turn 1 and turn 7
                 censored = delay.index
                 max_delay = 1
             delay.loc[censored, i] = np.NaN
             delay[i] = delay[i] / max_delay
     events['delay'] = delay.rename_axis('index', axis=1).stack()
-
+    # excluding auto rejections
+    events.loc[events['delay'] == 0, 'delay'] = np.NaN
+    # excluding censored rejections
+    events.loc[events['censored'], 'delay'] = np.NaN
     for i in range(len(levels)):
         curr_levels = levels[: i + 1]
         events['lstg_counter'] = events['lstg_id'].groupby(by=curr_levels).transform(

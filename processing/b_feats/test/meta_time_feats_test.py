@@ -4,6 +4,7 @@ from copy import deepcopy
 import pandas as pd
 from rlenv.time_triggers import *
 from processing.b_feats.util import get_cat_feats
+from constants import MAX_DELAY
 
 
 COLS = ['accept', 'censored', 'clock', 'price', 'reject', 'byr', 'flag', 'start_price']
@@ -1375,3 +1376,203 @@ def test_bin_perc_leaf():
         print('actual')
         print(actual)
         assert np.all(np.isclose(exp.values, actual['meta{}'.format(name)].values))
+
+
+def delay_appendix_1(events, meta=1, leaf=1):
+    # buyer delays up to turn 7
+    # all seller offers are auto rejects
+    offer = {
+        'lstg': 23,
+        'clock': 300
+    }
+    events = add_event(events, offer, trigger_type=NEW_LSTG, meta=meta, leaf=leaf)
+    offer['byr'] = True
+    offer['clock'] = 305
+    offer['price'] = 30
+    offer['thread'] = 1
+    events = add_event(events, offer, trigger_type=OFFER, meta=meta, leaf=leaf)
+    offer['byr'] = False
+    offer['price'] = 100
+    events = add_event(events, offer, trigger_type=SLR_REJECTION, meta=meta, leaf=leaf)
+
+    offer['byr'] = True
+    offer['clock'] = 320
+    offer['price'] = 40
+    events = add_event(events, offer, trigger_type=OFFER, meta=meta, leaf=leaf)
+    offer['byr'] = False
+    offer['price'] = 100
+    events = add_event(events, offer, trigger_type=SLR_REJECTION, meta=meta, leaf=leaf)
+
+    offer['byr'] = True
+    offer['clock'] = 370
+    offer['price'] = 50
+    events = add_event(events, offer, trigger_type=OFFER, meta=meta, leaf=leaf)
+    offer['byr'] = False
+    offer['price'] = 100
+    events = add_event(events, offer, trigger_type=SLR_REJECTION, meta=meta, leaf=leaf)
+
+    offer['byr'] = True
+    offer['clock'] = 600
+    offer['price'] = 50
+    events = add_event(events, offer, trigger_type=BYR_REJECTION, meta=meta, leaf=leaf)
+
+    offer = {
+        'lstg': 24,
+        'clock': 450
+    }
+    events = add_event(events, offer, trigger_type=NEW_LSTG, meta=meta, leaf=leaf)
+    offer['clock'] = 500
+    events = add_event(events, offer, trigger_type=EXPIRE_LSTG, meta=meta, leaf=leaf)
+    return events
+
+
+def delay_appendix_2(events, meta=1, leaf=1):
+    # one max seller delay
+    # one max buyer delay
+    time = 700
+    offer = {
+        'lstg': 25,
+        'clock': 700
+    }
+    events = add_event(events, offer, trigger_type=NEW_LSTG, meta=meta, leaf=leaf)
+    time += 5
+    offer['byr'] = True
+    offer['clock'] = time
+    offer['price'] = 30
+    offer['thread'] = 1
+    events = add_event(events, offer, trigger_type=OFFER, meta=meta, leaf=leaf)
+
+    time += 800
+    offer['clock'] = time
+    offer['byr'] = False
+    offer['price'] = 70
+    events = add_event(events, offer, trigger_type=OFFER, meta=meta, leaf=leaf)
+
+    time += 600
+    offer['byr'] = True
+    offer['clock'] = time
+    offer['price'] = 50
+    offer['thread'] = 1
+    events = add_event(events, offer, trigger_type=OFFER, meta=meta, leaf=leaf)
+
+    time += MAX_DELAY['slr']
+    offer['clock'] = time
+    offer['byr'] = False
+    offer['price'] = 30
+    events = add_event(events, offer, trigger_type=SLR_REJECTION, meta=meta, leaf=leaf)
+
+    time += MAX_DELAY['byr']
+    offer['clock'] = time
+    offer['byr'] = True
+    offer['price'] = 50
+    events = add_event(events, offer, trigger_type=BYR_REJECTION, meta=meta, leaf=leaf)
+
+    time += 15
+    offer['clock'] = time
+    events = add_event(events, offer, trigger_type=EXPIRE_LSTG, meta=meta, leaf=leaf)
+
+    time += 15
+    offer = {
+        'lstg': 26,
+        'clock': time
+    }
+    events = add_event(events, offer, trigger_type=NEW_LSTG, meta=meta, leaf=leaf)
+    time += 15
+    offer['clock'] = time
+    events = add_event(events, offer, trigger_type=EXPIRE_LSTG, meta=meta, leaf=leaf)
+    return events
+
+
+def test_delay_meta():
+    events = setup_complex_lstg(None, meta=1, leaf=1)
+    events = delay_appendix_1(events, meta=2, leaf=1)
+    events = delay_appendix_2(events, meta=3, leaf=1)
+
+    byr_delays = {
+        0: [10, 5, 30, 15],
+        1: [5, 5],
+        2: [20],
+        3: [],
+        4: [],
+        5: [20],
+        6: [5],
+        7: [5],
+        8: [7],
+        9: [],
+        10: []
+    }
+
+    byr_delays2 = {
+        0: [15, 50],
+        1: []
+    }
+
+    byr_delays3 = {
+        0: [600],
+        1: []
+    }
+
+    slr_delays = {
+        0: [10, 30, 10],
+        1: [20, 25],
+        2: [20, 10],
+        3: [10],
+        4: [30],
+        5: [5],
+        6: [15],
+        7: [20],
+        8: [1],
+        9: [],
+        10: []
+    }
+
+    slr_delays2 = {
+        0: [],
+        1: []
+    }
+
+    slr_delays3 = {
+        0: [800],
+        1: []
+    }
+
+    events.byr = events.byr.astype(bool)
+    events.reject = events.reject.astype(bool)
+    events.accept = events.accept.astype(bool)
+    events.censored = events.censored.astype(bool)
+    events.flag = events.flag.astype(bool)
+    events.price = events.price.astype(np.int64)
+    events.clock = events.clock.astype(np.int64)
+    events.index = events.index.droplevel(['leaf', 'cndtn'])
+
+    actual = get_cat_feats(events, levels=['meta'], feat_ind=4)
+    for delay_type in ['byr', 'slr']:
+        print('type: {}'.format(delay_type))
+        if delay_type == 'byr':
+            delay_list = [byr_delays, byr_delays2, byr_delays3]
+        else:
+            delay_list = [slr_delays, slr_delays2, slr_delays3]
+        for q in [.25, .75, 1]:
+            print('q: {}'.format(q))
+            exp_array = list()
+            for offers in delay_list:
+                for i in range(len(offers)):
+                    considered = list()
+                    for j in range(len(offers)):
+                        if j != i:
+                            considered = considered + offers[j]
+                    considered = np.array(considered)
+                    considered = considered / MAX_DELAY[delay_type]
+                    quant = np.nanquantile(considered, q=q, interpolation='lower')
+                    if np.isnan(quant):
+                        quant = 0
+                    exp_array.append(quant)
+            exp = make_exp(None, exp_array)['exp']
+            print(exp)
+            print(actual['meta_byr_delay_25'])
+            name = '_{}_delay_{}'.format(delay_type, int(q * 100))
+            assert np.all(np.isclose(exp.values, actual['meta{}'.format(name)].values))
+
+
+
+
