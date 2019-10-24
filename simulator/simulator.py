@@ -73,7 +73,7 @@ class Simulator:
 
                 # squared distance for earth-mover distance
                 if self.model == 'con_slr':
-                   y = self.distance(data['y'])
+                   y = self.distance(y)
 
         # prediction using net
         if not self.isRecurrent:

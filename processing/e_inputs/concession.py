@@ -51,7 +51,7 @@ def process_inputs(part, role):
 
 	# x_fixed: x_lstg and x_thread
 	x_fixed = load(getPath(['x', 'lstg'])).reindex(
-		index=y.index).join(load(getPath(['x', 'thread'])))
+		index=y.index, level='lstg').join(load(getPath(['x', 'thread'])))
 
 	# time features
 	x_offer = load(getPath(['x', 'offer']))
