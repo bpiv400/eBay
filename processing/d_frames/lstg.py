@@ -20,11 +20,11 @@ def get_x_lstg(lstgs):
     # initialize output dataframe with as-is features
     df = lstgs[BINARY_FEATS + COUNT_FEATS + ['start_date']]
     # slr feedback
-    df['fdbk_100'] = df['fdbk_pstv'] == 1
+    df.loc[:, 'fdbk_100'] = df['fdbk_pstv'] == 1
     # prices
-    df['start'] = lstgs['start_price_pctile']
-    df['decline'] = lstgs['decline_price'] / lstgs['start_price']
-    df['accept'] = lstgs['accept_price'] / lstgs['start_price']
+    df.loc[:, 'start'] = lstgs['start_price_pctile']
+    df.loc[:, 'decline'] = lstgs['decline_price'] / lstgs['start_price']
+    df.loc[:, 'accept'] = lstgs['accept_price'] / lstgs['start_price']
     for z in ['start', 'decline', 'accept']:
         is_round, is_nines = do_rounding(lstgs[z + '_price'])
         df.loc[:, z + '_round'] = is_round

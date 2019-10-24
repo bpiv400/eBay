@@ -31,7 +31,7 @@ def get_y_delay(delay, censored, role):
         v.loc[mask] = INTERVAL_COUNTS['byr_7']
     # replace censored observations with -1
     for i in range(INTERVAL_COUNTS[role]):
-        df[i] -= (i >= vec).astype('int8')
+        df[i] -= (i >= v).astype('int8')
     return df
 
 

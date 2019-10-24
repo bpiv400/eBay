@@ -39,7 +39,7 @@ def train_model(simulator, epochs):
 
         # loop over batches
         lnL_i = 0
-        for j, batch in enumerate(loader):
+        for batch in loader:
             lnL_i += simulator.run_batch(*batch)
             print(lnL_i)
 

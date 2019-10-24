@@ -64,14 +64,18 @@ class Simulator:
 
             # separate output for last turn of con_byr model
             if self.model == 'con_byr':
-                y = [data['y'][mask[:,:3]], data['y'][mask[:,3]]]
+                # split y by turn
+                y = [data['y'][:,:3], data['y'][:,3]]
 
-                # squared distance for earth-mover distance
-                y[0] = self.distance(data['y'])
+                # apply mask separately
+                y = [y[0][mask[:,:3]], y[1][mask[:,3]]]
+
+                # squared distance for first 3 turns
+                y[0] = self.distance(y[0])
             else:
                 y = data['y'][mask]
 
-                # squared distance for earth-mover distance
+                # squared distance
                 if self.model == 'con_slr':
                    y = self.distance(y)
 
