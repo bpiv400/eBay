@@ -45,7 +45,7 @@ W2V_PATH = lambda x: '%s/clean/w2v_%s.gz' %(PREFIX, x)
 PARTITIONS = ['train_models', 'train_rl', 'test']
 
 # delete activity after lstg is open MAX_DAYS
-MAX_DAYS = 30
+MAX_DAYS = 31
 
 # maximal delay times
 MAX_DELAY = {

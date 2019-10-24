@@ -3,18 +3,14 @@ import torch
 
 
 def logit_loss(theta, y):
-	p = torch.sigmoid(theta)
+	p = torch.sigmoid(theta)	# predicted probability
 	ll = y * torch.log(p) + (1-y) * torch.log(1 - p)
 	return -torch.sum(ll)
 
 
 def poisson_loss(theta, y):
-	# parameter
-	l = torch.exp(theta)
-
-	# log-likelihood
-	ll = -l + y * torch.log(l)
-
+	l = torch.exp(theta)	# lambda parameter
+	ll = -l + y * torch.log(l)	# log-likelihood
 	return -torch.sum(ll)
 
 

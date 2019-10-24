@@ -37,26 +37,6 @@ def get_period_time_feats(tf, start, model):
     return output.sort_index()
 
 
-def parse_delay(df):
-    # drop delays of 0
-    df = df[df.delay > 0]
-    # convert to period in interval
-    period = df.delay.rename('period')
-    period.loc[period.index.isin([2, 4, 6], 
-        level='index')] *= INTERVAL_COUNTS['slr']
-    period.loc[period.index.isin([3, 5], 
-        level='index')] *= INTERVAL_COUNTS['byr']
-    period.loc[period.index.isin([7], 
-        level='index')] *= INTERVAL_COUNTS['byr_7']
-    period = period.astype(np.uint8)
-    # create multi-index from number of periods
-    idx = multiply_indices(period+1)
-    # expand to new index and return
-    arrival = ~df[['exp']].join(period).set_index(
-        'period', append=True).squeeze()
-    return arrival.reindex(index=idx, fill_value=False).sort_index()
-
-
 def split_by_role(s):
     byr = s[s.index.isin(IDX['byr'], level='index')]
     slr = s[s.index.isin(IDX['slr'], level='index')]

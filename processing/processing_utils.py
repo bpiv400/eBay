@@ -93,8 +93,7 @@ def get_featnames(d):
     '''
     featnames = {'x_fixed': list(d['x_fixed'].columns)}
     if 'x_hour' in d:
-        featnames['x_fixed'] += list(d['x_hour'].rename(
-            lambda x: x + '_focal', axis=1).columns)
+        featnames['x_time'] = list(d['x_hour'].columns)
     if 'x_time' in d:
         featnames['x_time'] = list(d['x_time'].columns)
     return featnames
@@ -108,7 +107,8 @@ def get_sizes(d):
     sizes = {'N': len(d['y'].index), 
         'fixed': len(d['x_fixed'].columns)}
     if 'x_hour' in d:
-        sizes['fixed'] += len(d['x_hour'].columns)
+        sizes['time'] = len(d['x_hour'].columns)
+        sizes['steps'] = len(d['y'].columns)
     if 'x_time' in d:
         sizes['steps'] = len(d['y'].columns)
         sizes['time'] = len(d['x_time'].columns)
@@ -128,9 +128,8 @@ def convert_to_numpy(d):
                 index=d['y'].index).to_numpy()
             arrays.append(np.expand_dims(array, axis=2))
         d['x_time'] = np.concatenate(arrays, axis=2)
-
     # convert y and x_fixed to numpy directly
-    for k in ['y', 'x_fixed']:
-        d[k] = d[k].to_numpy()
-
+    for k in ['y', 'x_fixed', 'idx_hour', 'x_hour']:
+        if k in d:
+            d[k] = d[k].to_numpy()
     return d

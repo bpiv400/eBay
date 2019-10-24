@@ -107,7 +107,7 @@ class LSTM(nn.Module):
                            batch_first=True)
 
         # output layer
-        self.output = nn.Linear(params['rnn_hidden'], sizes['out'])
+        self.output = nn.Linear(params['hidden'], sizes['out'])
 
 
     # output discrete weights and parameters of continuous components

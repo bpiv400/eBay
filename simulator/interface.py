@@ -4,49 +4,51 @@ import torch
 from torch.nn.utils import rnn
 from torch.utils.data import Dataset, Sampler
 from compress_pickle import load
-
-sys.path.append('repo/')
 from constants import *
 
 
 # defines a dataset that extends torch.utils.data.Dataset
 class Inputs(Dataset):
 
-    def __init__(self, partition, model):
+    def __init__(self, part, model):
 
         # save parameters to self
         self.model = model
 
         # inputs
-        self.d = load('%s/inputs/%s/%s.gz' % (PREFIX, partition, model))
+        self.d = load('%s/inputs/%s/%s.gz' % (PREFIX, part, model))
 
         # save length
         self.N = np.shape(self.d['x_fixed'])[0]
 
 
     def __getitem__(self, idx):
-        # all models index y using idx
+        # all models index y and x_fixed using idx
         y = self.d['y'][idx]
-
-        # x_fixed
-        if self.model == 'arrival':
-            idx_fixed = self.d['idx_fixed'][idx]
-            x_fixed = self.d['x_fixed'][idx_fixed,:]
-
-            idx_days = self.d['idx_days'][idx]
-            x_days = self.d['x_days'][idx_days,:]
-
-            x_fixed = np.concatenate((x_fixed, x_days))
-
-        else:
-            x_fixed = self.d['x_fixed'][idx,:]
+        x_fixed = self.d['x_fixed'][idx,:]
 
         # feed-forward models
-        if self.model in ['arrival', 'hist']:
+        if self.model == 'hist':
             return y, x_fixed, idx
 
-        # role models are recurrent
-        x_time = self.d['x_time'][idx,:,:]
+        # x_time
+        if self.model == 'arrival':
+            # number of hours
+            n = MAX_DAYS * 24
+
+            # index of first hour
+            idx_hour = self.d['idx_hour'][idx] + \
+                np.array(range(n), dtype='uint16')
+
+            # hour features
+            x_hour = self.d['x_hour'][idx_hour].astype('float32')
+
+            # time feats
+            x_time = x_hour
+
+        else:
+            x_time = self.d['x_time'][idx,:,:]
+        
         return y, x_fixed, x_time, idx
 
 
@@ -117,9 +119,10 @@ def collateRNN(batch):
     turns = torch.sum(y > -1, dim=1)
     x_fixed = torch.stack(x_fixed).float()
     x_time = torch.stack(x_time, dim=0).float()
-    x_time = rnn.pack_padded_sequence(x_time, turns, 
-        batch_first=True, enforce_sorted=False)
     idx = torch.tensor(idx)
 
     # output is (dictionary, indices)
-    return {'y': y, 'x_fixed': x_fixed, 'x_time': x_time}, idx
+    return {'y': y, 
+            'x_fixed': x_fixed, 
+            'x_time': x_time, 
+            'turns': turns}, idx

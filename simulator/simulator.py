@@ -1,5 +1,6 @@
 import sys
 import torch, torch.optim as optim
+from torch.nn.utils import rnn
 import numpy as np
 from constants import *
 from loss import *
@@ -21,6 +22,7 @@ class Simulator:
         # save parameters from inputs
         self.model = model
         self.device = device
+        self.isRecurrent = model != 'hist'
 
         # size of theta and loss function
         if model in ['hist', 'con_byr', 'con_slr']:
@@ -38,12 +40,12 @@ class Simulator:
                 self.loss = logit_loss
 
         # neural net(s)
-        if 'delay' in model:
+        if not self.isRecurrent:
+            self.net = FeedForward(params, sizes).to(self.device)
+        elif ('delay' in model) or (model == 'arrival'):
             self.net = LSTM(params, sizes).to(self.device)
         elif 'con' in model:
-            self.net = RNN(params, sizes).to(self.device)
-        else:
-            self.net = FeedForward(params, sizes).to(self.device)
+            self.net = RNN(params, sizes).to(self.device)          
 
         # optimizer
         self.optimizer = optim.Adam(self.net.parameters(), lr=LR)
@@ -54,9 +56,7 @@ class Simulator:
         self.net.train(train)
 
         # outcome
-        if self.model == 'arrival':
-            y = data['y']
-        elif self.model == 'hist':
+        if not self.isRecurrent:
             y = self.distance(data['y'])
         else:
             # retain indices with outcomes
@@ -76,7 +76,7 @@ class Simulator:
                    y = self.distance(data['y'])
 
         # prediction using net
-        if self.model in ['arrival', 'hist']:
+        if not self.isRecurrent:
             theta = self.net(data['x_fixed'])
         elif self.model == 'con_byr':
             t, t4 = self.net(data['x_fixed'], data['x_time'])
@@ -96,6 +96,11 @@ class Simulator:
         # move to gpu
         data = {k: v.to(self.device) for k, v in data.items()}
         idx = idx.to(self.device)
+
+        if self.isRecurrent:
+            data['x_time'] = rnn.pack_padded_sequence(
+                data['x_time'], data['turns'], 
+                batch_first=True, enforce_sorted=False)
 
         # calculate loss
         loss = self.evaluate_loss(data)

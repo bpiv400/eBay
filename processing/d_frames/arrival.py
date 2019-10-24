@@ -17,8 +17,8 @@ def get_y_arrival(lstgs, threads):
     diff = (diff.dt.total_seconds() // 3600).astype('uint16')
     end = (end.dt.total_seconds() // 3600).astype('uint16')
     # censor to first 31 days
-    diff = diff.loc[diff < 31 * 24]
-    end.loc[end >= 31 * 24] = 31 * 24 - 1
+    diff = diff.loc[diff < MAX_DAYS * 24]
+    end.loc[end >= MAX_DAYS * 24] = MAX_DAYS * 24 - 1
     # count of arrivals by hour
     hours = diff.rename('period').to_frame().assign(count=1)
     arrivals = hours.groupby(['lstg', 'period']).sum()
@@ -29,7 +29,6 @@ def get_y_arrival(lstgs, threads):
         columns=range(N))
     # fill in arrivals and censored times
     for i in range(N):
-        print(i)
         value = arrivals.xs(i, level='period').reindex(
             index=end.index, fill_value=0)
         value -= (end < i).astype('int8')
