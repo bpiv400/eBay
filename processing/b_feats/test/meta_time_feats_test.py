@@ -869,8 +869,8 @@ def test_con_quantile_meta():
     actual = get_cat_feats(events, levels= ['meta'], feat_ind=3)
     offers = {
         0: [50, 30, 50],
-        1: [50],
-        2: [50, 55],
+        2: [50],
+        1: [50, 55],
         3: [50],
         4: [75, 60],
         5: [20, 25],
@@ -903,8 +903,8 @@ def test_con_quantile_leaf():
     actual = get_cat_feats(events, levels=['meta', 'leaf'], feat_ind=3)
     offers = {
         0: [50, 30, 50],
-        1: [50],
-        2: [50, 55],
+        2: [50],
+        1: [50, 55],
         3: [50],
         4: [75, 60],
         5: [20, 25],
@@ -1094,8 +1094,8 @@ def test_bin_perc_meta():
 
     offers1 = {
         0: [50, 30, 50],
-        1: [50],
-        2: [50, 55],
+        2: [50],
+        1: [50, 55],
         3: [50],
         4: [75, 60],
         5: [20, 25],
@@ -1143,9 +1143,235 @@ def test_bin_perc_meta():
         name = '_first_offer_{}'.format(int(q * 100))
         assert np.all(np.isclose(exp.values, actual['meta{}'.format(name)].values))
 
-
-
+    # check accept norm
+    accepts1 = [np.NaN, .80, .70, .50, .60, .25, 1.00, .95, .85, np.NaN, np.NaN]
+    accepts2 = [np.NaN, np.NaN]
+    accepts3 = [.6, np.NaN]
+    actual = get_cat_feats(events, levels=['meta'], feat_ind=2)
+    for q in [.25, .75, 1]:
+        exp_array = list()
+        for offers in [accepts1, accepts2, accepts3]:
+            for i in range(len(offers)):
+                considered = list()
+                for j in range(len(offers)):
+                    if j != i:
+                        considered.append(offers[j])
+                considered = np.array(considered)
+                quant = np.nanquantile(considered, q=q, interpolation='lower')
+                if np.isnan(quant):
+                    quant = 0
+                exp_array.append(quant)
+        exp = make_exp(None, exp_array)['exp']
+        name = '_accept_norm_{}'.format(int(q * 100))
+        assert np.all(np.isclose(exp.values, actual['meta{}'.format(name)].values))
 
 
 def test_bin_perc_leaf():
-    pass
+    events = setup_complex_lstg(None, meta=1, leaf=1)
+
+    # add a group where there are 2 lstgs and no threads
+    offer = {
+        'lstg': 23,
+        'clock': 300
+    }
+    events = add_event(events, offer, trigger_type=NEW_LSTG, meta=1, leaf=2)
+    offer['clock'] = 325
+    events = add_event(events, offer, trigger_type=EXPIRE_LSTG, meta=1, leaf=2)
+
+    offer = {
+        'lstg': 24,
+        'clock': 350
+    }
+    events = add_event(events, offer, trigger_type=NEW_LSTG, meta=1, leaf=2)
+    offer['clock'] = 355
+    events = add_event(events, offer, trigger_type=EXPIRE_LSTG, meta=1, leaf=2)
+
+    # add a group where there are 2 lstgs, several threads, and 1 bin
+    offer = {
+        'lstg': 25,
+        'clock': 360
+    }
+    events = add_event(events, offer, trigger_type=NEW_LSTG, meta=1, leaf=3)
+    offer['clock'] = 365
+    offer['byr'] = True
+    offer['price'] = 35
+    offer['thread'] = 1
+    events = add_event(events, offer, trigger_type=OFFER, meta=1, leaf=3)
+
+    offer['price'] = 45
+    offer['clock'] = 370
+    offer['thread'] = 2
+    events = add_event(events, offer, trigger_type=OFFER, meta=1, leaf=3)
+
+    offer['price'] = 55
+    offer['clock'] = 375
+    offer['thread'] = 3
+    events = add_event(events, offer, trigger_type=OFFER, meta=1, leaf=3)
+
+    offer['price'] = 60
+    offer['clock'] = 380
+    offer['thread'] = 4
+    events = add_event(events, offer, trigger_type=OFFER, meta=1, leaf=3)
+
+    offer['clock'] = 385
+    offer['lstg'] = 26
+    events = add_event(events, offer, trigger_type=NEW_LSTG, meta=1, leaf=3)
+
+    offer['thread'] = 1
+    offer['price'] = 50
+    offer['clock'] = 387
+    offer['byr'] = True
+    events = add_event(events, offer, trigger_type=OFFER, meta=1, leaf=3)
+
+    offer['thread'] = 2
+    offer['price'] = 100
+    offer['clock'] = 389
+    events = add_event(events, offer, trigger_type=ACCEPTANCE,  meta=1, leaf=3)
+    offer['thread'] = 1
+    offer['byr'] = False
+    events = add_event(events, offer, trigger_type=CENSORED,  meta=1, leaf=3)
+
+    offer['clock'] = 400
+    offer['byr'] = False
+    offer['lstg'] = 25
+    offer['price'] = 60
+    offer['thread'] = 4
+    events = add_event(events, offer, trigger_type=ACCEPTANCE,  meta=1, leaf=3)
+    offer['thread'] = 3
+    events = add_event(events, offer, trigger_type=CENSORED,  meta=1, leaf=3)
+    offer['thread'] = 2
+    events = add_event(events, offer, trigger_type=CENSORED,  meta=1, leaf=3)
+    offer['thread'] = 1
+    events = add_event(events, offer, trigger_type=CENSORED,  meta=1, leaf=3)
+
+    events.byr = events.byr.astype(bool)
+    events.reject = events.reject.astype(bool)
+    events.accept = events.accept.astype(bool)
+    events.censored = events.censored.astype(bool)
+    events.flag = events.flag.astype(bool)
+    events.price = events.price.astype(np.int64)
+    events.clock = events.clock.astype(np.int64)
+
+    threads = [3, 2, 1, 1, 2, 2, 1, 1, 1, 0, 0]
+    bin = [0] * 11
+    threads2 = [0, 0]
+    bin2 = [0] * 2
+    threads3 = [4, 2]
+    bin3 = [0, 1]
+
+    offers1 = {
+        0: [50, 30, 50],
+        1: [50],
+        2: [50, 55],
+        3: [50],
+        4: [75, 60],
+        5: [20, 25],
+        6: [60],
+        7: [90],
+        8: [30],
+        9: [],
+        10: []
+    }
+    offers2 = {
+        0: [],
+        1: []
+    }
+    offers3 = {
+        0: [35, 45, 55, 60],
+        1: [50]
+    }
+
+    events.index = events.index.droplevel(['cndtn'])
+
+    actual = get_cat_feats(events, levels=['meta', 'leaf'], feat_ind=3)
+    perc_exp1 = calc_bin(bin, threads)
+    perc_exp2 = calc_bin(bin2, threads2)
+    perc_exp3 = calc_bin(bin3, threads3)
+    perc_exp = np.concatenate([perc_exp1, perc_exp2, perc_exp3])
+    assert np.all(np.isclose(perc_exp, actual['leaf_bin'].values))
+    for q in [.25, .75, 1]:
+        exp_array = list()
+        for offers in [offers1, offers2, offers3]:
+            for i in range(len(offers)):
+                considered = list()
+                for j in range(len(offers)):
+                    if j != i:
+                        considered = considered + offers[j]
+                considered = np.array(considered)
+                considered = considered / 100
+                quant = np.nanquantile(considered, q=q, interpolation='lower')
+                if np.isnan(quant):
+                    quant = 0
+                exp_array.append(quant)
+        exp = make_exp(None, exp_array)['exp']
+        name = '_first_offer_{}'.format(int(q * 100))
+        assert np.all(np.isclose(exp.values, actual['leaf{}'.format(name)].values))
+
+    # check accept norm
+    accepts1 = [np.NaN, .80, .70, .50, .60, .25, 1.00, .95, .85, np.NaN, np.NaN]
+    accepts2 = [np.NaN, np.NaN]
+    accepts3 = [.6, np.NaN]
+    actual = get_cat_feats(events, levels=['meta', 'leaf'], feat_ind=2)
+    for q in [.25, .75, 1]:
+        exp_array = list()
+        for offers in [accepts1, accepts2, accepts3]:
+            for i in range(len(offers)):
+                considered = list()
+                for j in range(len(offers)):
+                    if j != i:
+                        considered.append(offers[j])
+                considered = np.array(considered)
+                quant = np.nanquantile(considered, q=q, interpolation='lower')
+                if np.isnan(quant):
+                    quant = 0
+                exp_array.append(quant)
+        exp = make_exp(None, exp_array)['exp']
+        name = '_accept_norm_{}'.format(int(q * 100))
+        assert np.all(np.isclose(exp.values, actual['leaf{}'.format(name)].values))
+
+    # meta
+    threads = [3, 2, 1, 1, 2, 2, 1, 1, 1, 0, 0, 0, 0, 4, 2]
+    bin = ([0] * 11) + [0, 0, 1]
+
+    offers = {
+        0: [50, 30, 50],
+        1: [50, 55],
+        2: [50],
+        3: [50],
+        4: [75, 60],
+        5: [20, 25],
+        6: [60],
+        7: [90],
+        8: [30],
+        9: [],
+        10: [],
+        11: [],
+        12: [],
+        13: [35, 45, 55, 60],
+        14: [50]
+    }
+    accepts1 = [np.NaN, .80, .70, .50, .60, .25, 1.00,
+                .95, .85, np.NaN, np.NaN, np.NaN, np.NaN, .6, np.NaN]
+    actual = get_cat_feats(events, levels=['meta', 'leaf'], feat_ind=3)
+    for q in [.25, .75, 1]:
+        print('q: {}'.format(q))
+        exp_array = list()
+        for i in range(len(offers)):
+            considered = list()
+            for j in range(len(offers)):
+                if j != i:
+                    considered = considered + offers[j]
+            considered = np.array(considered)
+            considered = considered / 100
+            quant = np.nanquantile(considered, q=q, interpolation='lower')
+            if np.isnan(quant):
+                quant = 0
+            if i == 1 or i == 2:
+                print('considered')
+                print(considered)
+            exp_array.append(quant)
+        exp = make_exp(None, exp_array)['exp']
+        name = '_first_offer_{}'.format(int(q * 100))
+        print('actual')
+        print(actual)
+        assert np.all(np.isclose(exp.values, actual['meta{}'.format(name)].values))

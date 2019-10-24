@@ -2,6 +2,16 @@ from constants import *
 from processing.b_feats.time_funcs import *
 
 
+def prepare_tf(events):
+    tf = events[['clock']].xs(0, level='thread', drop_level=True)
+    tf = tf.drop(columns=['clock'])
+    tf = tf.xs(0, level='index', drop_level=True)
+    tf = tf.reset_index('lstg', drop=False)
+    tf = tf.reset_index(drop=True)
+    tf = tf.set_index('lstg', drop=True)
+    return tf
+
+
 def collapse_dict(feat_dict, index_names, meta=False):
     if not meta:
         remaining = [ind for ind in index_names if ind != 'thread']
@@ -25,33 +35,56 @@ def prep_quantiles(df, l, featname):
         quant_vector = quant_vector.set_index(l + ['lstg_counter'], append=False,
                                               drop=True)
         quant_vector = quant_vector[featname]
+    elif featname == 'slr_delay' or 'byr_delay':
+        if featname == 'slr_delay':
+            other_turn = df.index.get_level_values('index').isin([3, 5])
+        else:
+            other_turn = df.index.get_level_values('index').isin([2, 4, 6])
+        quant_vector = df.reset_index(drop=False)
+        quant_vector = quant_vector[['delay', 'lstg_counter'] + l]
+        quant_vector = quant_vector.set_index(l + ['lstg_counter'], append=False, drop=True)
+        quant_vector.loc[other_turn, other_turn] = np.NaN
+        quant_vector = quant_vector['delay']
+        quant_vector = quant_vector.rename(featname)
     else:
         raise NotImplementedError()
     return quant_vector
 
 
-def get_bin_perc(df, l):
+def get_perc(df, l, num, denom, name=None):
     df = df.copy()
-    level_group = df[['bin', 'thread']].groupby(by=l).sum()
-    lstg_group = df[['bin', 'thread']].groupby(by=l + ['lstg']).sum()
-    print('lstg group')
-    print(lstg_group)
-    print('level group')
-    print(level_group)
-    bin_count = level_group['bin']
-    bin_ind = lstg_group['bin']
-    bin_count = bin_count - bin_ind
+    level_group = df[[num, denom]].groupby(by=l).sum()
+    lstg_group = df[[num, denom]].groupby(by=l + ['lstg']).sum()
+    num_level = level_group[num]
+    num_lstg = lstg_group[num]
+    num_ser = num_level - num_lstg
 
-    assert bin_ind.max() <= 1  # sanity check
-    thread_tot = level_group['thread']
-    thread_count = lstg_group['thread']
-    thread_count = thread_tot - thread_count
+    if name == 'bin':
+        assert num_ser.max() <= 1  # sanity check
 
-    bin = (bin_count / thread_count).fillna(0)
-    assert not np.any(np.isinf(bin.values))
-    bin.index = bin.index.droplevel(level=l)
-    bin = bin.rename('{}_bin'.format(l[-1]))
-    return bin
+    denom_level = level_group[denom]
+    denom_lstg = lstg_group[denom]
+    denom_ser = denom_level - denom_lstg
+
+    output_ser = (num_ser / denom_ser).fillna(0)
+    assert not np.any(np.isinf(output_ser.values))
+    output_ser.index = output_ser.index.droplevel(level=l)
+    output_ser = output_ser.rename('{}_{}'.format(l[-1], name))
+    return output_ser
+
+
+def get_expire_perc(df, l, byr=False):
+    df = df.copy()
+    if byr:
+        other_turn = df.index.get_level_values('index').isin([2, 4, 6])
+        name = 'byr_expire'
+    else:
+        other_turn = df.index.get_level_values('index').isin([3, 5])
+        name = 'slr_expire'
+    df[other_turn, 'delay'] = np.NaN
+    df['expire'] = (df['delay'] == 1).astype(bool)
+    df['curr_offer'] = df['delay'].notna()
+    return get_perc(df, l, 'expire', 'curr_offer', name=name)
 
 
 def get_quantiles(df, l, featname):
@@ -81,6 +114,10 @@ def get_quantiles(df, l, featname):
     # loop over quantiles
     for n in range(int(total_lstgs.max()) + 1):
         cut = quant_vector.loc[total_lstgs >= n].drop(n, level='lstg_counter')
+        if n == 1 or n == 2:
+            print('')
+            print('n: {}'.format(n))
+            print(cut)
         rel_groups = cut.index.droplevel('lstg_counter').drop_duplicates()
         cut = cut.groupby(by=l)
         partial = pd.DataFrame(index=rel_groups)
@@ -137,13 +174,7 @@ def get_cat_feats(events, levels=None, feat_ind=None):
 
 def get_cat_lstg_counts(events, levels):
     # initialize output dataframe
-    tf = events[['clock']].xs(0, level='thread', drop_level=True)
-    print(events.columns)
-    tf = tf.drop(columns=['clock'])
-    tf = tf.xs(0, level='index', drop_level=True)
-    tf = tf.reset_index('lstg', drop=False)
-    tf = tf.reset_index(drop=True)
-    tf = tf.set_index('lstg', drop=True)
+    tf = prepare_tf(events)
 
     # loop over hierarchy, exlcuding lstg
     for i in range(len(levels)):
@@ -154,9 +185,9 @@ def get_cat_lstg_counts(events, levels):
         tf[tfname] = open_lstgs(events, curr_levels)
         # count features grouped by current level
         ct_feats = events[['lstg_ind', 'thread', 'slr_offer',
-                       'byr_offer', 'accept']].groupby(by=curr_levels).sum()
+                           'byr_offer', 'accept']].groupby(by=curr_levels).sum()
         ctl_feats = events[['lstg_ind', 'thread', 'slr_offer',
-                        'byr_offer', 'accept']].groupby(by=curr_levels + ['lstg']).sum()
+                            'byr_offer', 'accept']].groupby(by=curr_levels + ['lstg']).sum()
         ct_feats = ct_feats - ctl_feats
         per_lstg_feats = ['accept', 'slr_offer', 'byr_offer', 'thread']
         for feat in per_lstg_feats:
@@ -174,14 +205,9 @@ def get_cat_lstg_counts(events, levels):
 
 
 def get_cat_accepts(events, levels):
-    # loop over hierarchy, exlcuding lstg
+    # loop over hierarchy, excluding lstg
     events['accept_norm'] = events.price[events.accept & ~events.flag & ~events.bin] / events.start_price
-    tf = events[['clock']].xs(0, level='thread', drop_level=True)
-    tf = tf.drop(columns=['clock'])
-    tf = tf.xs(0, level='index', drop_level=True)
-    tf = tf.reset_index('lstg', drop=False)
-    tf = tf.reset_index(drop=True)
-    tf = tf.set_index('lstg', drop=True)
+    tf = prepare_tf(events)
 
     for i in range(len(levels)):
         curr_levels = levels[: i + 1]
@@ -197,19 +223,14 @@ def get_cat_accepts(events, levels):
 def get_cat_con(events, levels):
     # loop over hierarchy, exlcuding lstg
     # bin / thread (excluding curr)
-    tf = events[['clock']].xs(0, level='thread', drop_level=True)
-    tf = tf.drop(columns=['clock'])
-    tf = tf.xs(0, level='index', drop_level=True)
-    tf = tf.reset_index('lstg', drop=False)
-    tf = tf.reset_index(drop=True)
-    tf = tf.set_index('lstg', drop=True)
+    tf = prepare_tf(events)
 
     for i in range(len(levels)):
         curr_levels = levels[: i + 1]
         events['lstg_counter'] = events['lstg_id'].groupby(by=curr_levels).transform(
             lambda x: x.factorize()[0].astype(np.int64)
         )
-        bin = get_bin_perc(events, curr_levels)
+        bin = get_perc(events, 'bin', 'thread', curr_levels, name='bin')
         tf = tf.join(bin)
         # quantiles of (normalized) accept price over 30-day window
         quants = get_quantiles(events, curr_levels, 'first_offer')
@@ -221,7 +242,39 @@ def get_cat_con(events, levels):
 
 
 def get_cat_delay(events, levels):
-    pass
+    tf = prepare_tf(events)
+    clock_df = events.clock.unstack()
+    delay = pd.DataFrame(index=clock_df.index)
+    delay[0] = np.NaN
+    for i in range(1, 8):
+        if i in clock_df.columns:
+            delay[i] = clock_df[i] - clock_df[i - 1]
+            if i in [2, 4, 6]:
+                max_delay = MAX_DELAY['slr']
+                censored = delay[i] > MAX_DELAY['slr']
+            elif i in [3, 5]:
+                censored = delay[i] > MAX_DELAY['byr']
+                max_delay = MAX_DELAY['byr']
+            else: # censor 7 and 1
+                censored = delay.index
+                max_delay = 1
+            delay.loc[censored, i] = np.NaN
+            delay[i] = delay[i] / max_delay
+    events['delay'] = delay.rename_axis('index', axis=1).stack()
+
+    for i in range(len(levels)):
+        curr_levels = levels[: i + 1]
+        events['lstg_counter'] = events['lstg_id'].groupby(by=curr_levels).transform(
+            lambda x: x.factorize()[0].astype(np.int64)
+        )
+        tf = tf.join(get_quantiles(events, curr_levels, 'slr_delay'))
+        tf = tf.join(get_quantiles(events, curr_levels, 'byr_delay'))
+        tf = tf.join(get_expire_perc(events, curr_levels, byr=False))
+        tf = tf.join(get_expire_perc(events, curr_levels, byr=True))
+
+
+    # collapse to lstg
+    return tf.sort_index()
 
 
 def get_cat_start_price(events, levels):
