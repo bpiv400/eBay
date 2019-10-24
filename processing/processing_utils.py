@@ -73,6 +73,13 @@ def get_partition(part):
     return idx, path
 
 
+# splits series by turn index according to role
+def split_by_role(s):
+    byr = s[s.index.isin(IDX['byr'], level='index')]
+    slr = s[s.index.isin(IDX['slr'], level='index')]
+    return byr, slr
+
+
 # appends turn indicator variables to offer matrix
 def add_turn_indicators(df):
     '''

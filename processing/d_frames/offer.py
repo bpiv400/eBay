@@ -8,6 +8,24 @@ from utils import *
 from processing.processing_utils import *
 
 
+def get_delay(clock):
+    delay = pd.DataFrame(index=clock.index)
+    delay[0] = 0
+    for i in range(1, 8):
+        delay[i] = clock[i] - clock[i-1]
+        if i in [2, 4, 6, 7]: # byr has 2 days for last turn
+            censored = delay[i] > MAX_DELAY['slr']
+            delay.loc[censored, i] = MAX_DELAY['slr']
+            delay[i] /= MAX_DELAY['slr']
+        elif i in [3, 5]:   # ignore byr arrival and last turn
+            censored = delay[i] > MAX_DELAY['byr']
+            delay.loc[censored, i] = MAX_DELAY['byr']
+            delay[i] /= MAX_DELAY['byr']
+        elif i == 1:
+            delay[i] /= MAX_DELAY['byr']
+    return delay.rename_axis('index', axis=1).stack()
+
+
 def get_period_time_feats(tf, start, model):
     # initialize output
     output = pd.DataFrame()
@@ -37,35 +55,6 @@ def get_period_time_feats(tf, start, model):
     return output.sort_index()
 
 
-def split_by_role(s):
-    byr = s[s.index.isin(IDX['byr'], level='index')]
-    slr = s[s.index.isin(IDX['slr'], level='index')]
-    return byr, slr
-
-
-def get_y_delay(x_offer):
-    # drop indices 0 and 1
-    period = x_offer['delay'].drop([0, 1], level='index').rename('period')
-    # remove delays of 0
-    period = period[period > 0]
-    # convert to period in interval
-    period.loc[period.index.isin([2, 4, 6], 
-        level='index')] *= INTERVAL_COUNTS['slr']
-    period.loc[period.index.isin([3, 5], 
-        level='index')] *= INTERVAL_COUNTS['byr']
-    period.loc[period.index.isin([7], 
-        level='index')] *= INTERVAL_COUNTS['byr_7']
-    period = period.astype(np.uint8)
-    # create multi-index from number of periods
-    idx = multiply_indices(period+1)
-    # expand to new index
-    offer = period.to_frame().assign(offer=False).set_index(
-        'period', append=True).squeeze()
-    offer = offer.reindex(index=idx, fill_value=False).sort_index()
-    # split by role and return
-    return split_by_role(offer)
-
-
 def get_y_con(x_offer):
     # drop zero delay and expired offers
     mask = (x_offer.delay > 0) & ~x_offer.exp
@@ -74,7 +63,7 @@ def get_y_con(x_offer):
     return split_by_role(s)
 
 
-def get_x_offer(lstgs, events, tf):
+def get_x_offer(lstgs, events, clock, tf):
     # vector of offers
     offers = events.price.unstack().join(lstgs.start_price)
     offers = offers.rename({'start_price': 0}, axis=1).rename_axis(
@@ -95,25 +84,8 @@ def get_x_offer(lstgs, events, tf):
         index=df.index, fill_value=0.0)
     df.loc[df.index.isin(IDX['slr'], level='index'), 'norm'] = \
         1 - df['norm']
-    # clock variable
-    clock = 24 * 3600 * lstgs.start_date.rename(0).to_frame()
-    clock = clock.join(events.clock.unstack())
-    # seconds since last offers
-    delay = pd.DataFrame(index=clock.index)
-    delay[0] = 0
-    for i in range(1, 8):
-        delay[i] = clock[i] - clock[i-1]
-        if i in [2, 4, 6, 7]: # byr has 2 days for last turn
-            censored = delay[i] > MAX_DELAY['slr']
-            delay.loc[censored, i] = MAX_DELAY['slr']
-            delay[i] /= MAX_DELAY['slr']
-        elif i in [3, 5]:   # ignore byr arrival and last turn
-            censored = delay[i] > MAX_DELAY['byr']
-            delay.loc[censored, i] = MAX_DELAY['byr']
-            delay[i] /= MAX_DELAY['byr']
-        elif i == 1:
-            delay[i] /= MAX_DELAY['byr']
-    df['delay'] = delay.rename_axis('index', axis=1).stack()
+    # delay features
+    df['delay'] = get_delay(clock)
     df['auto'] = df.delay == 0
     df['exp'] = (df.delay == 1) | events.censored.reindex(
         df.index, fill_value=False)
@@ -151,7 +123,7 @@ if __name__ == "__main__":
     part = PARTITIONS[num]
     idx, path = get_partition(part)
 
-    # load data and 
+    # load data
     lstgs = load(CLEAN_DIR + 'listings.gz')
     lstgs = lstgs[['start_price', 'start_date']].reindex(index=idx)
     events = load_frames('events').reindex(index=idx, level='lstg')
@@ -168,16 +140,14 @@ if __name__ == "__main__":
         z = get_period_time_feats(tf, z_start, role)
         dump(z, path('z_' + role))
 
+    # clock variable
+    clock = 24 * 3600 * lstgs.start_date.rename(0).to_frame()
+    clock = clock.join(events.clock.unstack())
+
     # offer features
     print('x_offer')
-    x_offer = get_x_offer(lstgs, events, tf)
+    x_offer = get_x_offer(lstgs, events, clock, tf)
     dump(x_offer, path('x_offer'))
-
-    # delay outcome
-    print('y_delay')
-    y_delay_byr, y_delay_slr = get_y_delay(x_offer)
-    dump(y_delay_byr, path('y_delay_byr'))
-    dump(y_delay_slr, path('y_delay_slr'))
 
     # concession outcome
     print('y_con')
