@@ -2,7 +2,7 @@ from constants import *
 from processing.b_feats.time_funcs import *
 
 
-def prepare_tf(events):
+def prep_tf(events):
     tf = events[['clock']].xs(0, level='thread', drop_level=True)
     tf = tf.drop(columns=['clock'])
     tf = tf.xs(0, level='index', drop_level=True)
@@ -23,6 +23,15 @@ def collapse_dict(feat_dict, index_names, meta=False):
     return df
 
 
+def quant_vector_index(quant_vector, l, name):
+    quant_vector = quant_vector.reset_index(drop=False)
+    quant_vector = quant_vector[[name, 'lstg_counter'] + l]
+    quant_vector = quant_vector.set_index(l + ['lstg_counter'], append=False,
+                                          drop=True)
+    quant_vector = quant_vector[name]
+    return quant_vector
+
+
 def prep_quantiles(df, l, featname):
     if featname == 'accept_norm':
         quant_vector = df.reset_index(drop=False)
@@ -30,26 +39,25 @@ def prep_quantiles(df, l, featname):
         quant_vector = quant_vector.groupby(by=l + ['lstg_counter']).max()[featname]
     elif featname == 'first_offer':
         quant_vector = df.xs(1, level='index')
-        quant_vector = quant_vector.reset_index(drop=False)
-        quant_vector = quant_vector[[featname, 'lstg_counter'] + l]
-        quant_vector = quant_vector.set_index(l + ['lstg_counter'], append=False,
-                                              drop=True)
-        quant_vector = quant_vector[featname]
+        quant_vector = quant_vector_index(quant_vector, l, featname)
     elif featname == 'slr_delay' or 'byr_delay':
         if featname == 'slr_delay':
             other_turn = df.index.get_level_values('index').isin([3, 5])
         else:
             other_turn = df.index.get_level_values('index').isin([2, 4, 6])
-        quant_vector = df.reset_index(drop=False)
-        quant_vector = quant_vector[['delay', 'lstg_counter'] + l]
-        quant_vector = quant_vector.set_index(l + ['lstg_counter'], append=False, drop=True)
-        # excluding the other turn
-        quant_vector.loc[other_turn, 'delay'] = np.NaN
-        # excluding expirations
-        auto_rej = quant_vector['delay'] == 1
-        quant_vector.loc[auto_rej, 'delay'] = np.NaN
-        quant_vector = quant_vector['delay']
+        # removing the other turn from the distribution
+        df.loc[other_turn, 'delay'] = np.NaN
+        # removing auto rejects from the distribution
+        auto_rej = df['delay'] == 1
+        df.loc[auto_rej, 'delay'] = np.NaN
+        quant_vector = quant_vector_index(df, l, 'delay')
         quant_vector = quant_vector.rename(featname)
+    elif featname == 'start_price_pctile' or featname == 'arrival_rate':
+        quant_vector = df.xs(0, level='thread').xs(0, level='index')
+        quant_vector = quant_vector_index(quant_vector, l, featname)
+    elif featname == 'byr_hist':
+        quant_vector = df.xs(1, level='index')
+        quant_vector = quant_vector_index(quant_vector, l, featname)
     else:
         raise NotImplementedError()
     return quant_vector
@@ -115,15 +123,10 @@ def get_quantiles(df, l, featname):
         total_lstgs = total_lstgs.reindex(quant_vector.index)
 
     quants = dict()
-    # print('number to consider: {}'.format(total_lstgs.max()))
     # loop over quantiles
     for n in range(int(total_lstgs.max()) + 1):
         cut = quant_vector.loc[total_lstgs >= n].drop(n, level='lstg_counter')
         rel_groups = cut.index.droplevel('lstg_counter').drop_duplicates()
-        # print('n: {}'.format(n))
-        # with pd.option_context('display.max_rows', None, 'display.max_columns', None):  # more options can be specified also
-        #     print('cut')
-        #     print(cut)
         cut = cut.groupby(by=l)
         partial = pd.DataFrame(index=rel_groups)
         for q in QUANTILES:
@@ -144,6 +147,7 @@ def get_quantiles(df, l, featname):
 def get_cat_feats(events, levels=None, feat_ind=None):
     # helper features
     df = events.copy()
+    df = df.sort_index()
     df['clock'] = pd.to_datetime(df.clock, unit='s', origin=START)
     df['lstg_ind'] = (df.index.get_level_values('index') == 0).astype(bool)
     df['base'] = (df.index.get_level_values('thread') == 0).astype(bool)
@@ -179,7 +183,7 @@ def get_cat_feats(events, levels=None, feat_ind=None):
 
 def get_cat_lstg_counts(events, levels):
     # initialize output dataframe
-    tf = prepare_tf(events)
+    tf = prep_tf(events)
 
     # loop over hierarchy, exlcuding lstg
     for i in range(len(levels)):
@@ -212,7 +216,7 @@ def get_cat_lstg_counts(events, levels):
 def get_cat_accepts(events, levels):
     # loop over hierarchy, excluding lstg
     events['accept_norm'] = events.price[events.accept & ~events.flag & ~events.bin] / events.start_price
-    tf = prepare_tf(events)
+    tf = prep_tf(events)
 
     for i in range(len(levels)):
         curr_levels = levels[: i + 1]
@@ -228,7 +232,7 @@ def get_cat_accepts(events, levels):
 def get_cat_con(events, levels):
     # loop over hierarchy, exlcuding lstg
     # bin / thread (excluding curr)
-    tf = prepare_tf(events)
+    tf = prep_tf(events)
 
     for i in range(len(levels)):
         curr_levels = levels[: i + 1]
@@ -247,7 +251,7 @@ def get_cat_con(events, levels):
 
 
 def get_cat_delay(events, levels):
-    tf = prepare_tf(events)
+    tf = prep_tf(events)
     clock_df = events.clock.unstack()
     delay = pd.DataFrame(index=clock_df.index)
     delay[0] = np.NaN # excluding turn 0
@@ -279,24 +283,32 @@ def get_cat_delay(events, levels):
         tf = tf.join(get_quantiles(events, curr_levels, 'byr_delay'))
         tf = tf.join(get_expire_perc(events, curr_levels, byr=False))
         tf = tf.join(get_expire_perc(events, curr_levels, byr=True))
-
-
     # collapse to lstg
     return tf.sort_index()
 
 
 def get_cat_start_price(events, levels):
-    pass
+    return get_cat_quantiles_wrapper(events, levels, 'start_price_pctile')
 
 
 def get_cat_byr_hist(events, levels):
-    pass
+    events.loc[events.base, 'byr_hist'] = np.NaN
+    return get_cat_quantiles_wrapper(events, levels, 'byr_hist')
 
 
 def get_cat_arrival(events, levels):
-    pass
+    return get_cat_quantiles_wrapper(events, levels, 'arrival_rate')
 
 
+def get_cat_quantiles_wrapper(events, levels, featname):
+    tf = prep_tf(events)
+    for i in range(len(levels)):
+        curr_levels = levels[: i + 1]
+        events['lstg_counter'] = events['lstg_id'].groupby(by=curr_levels).transform(
+            lambda x: x.factorize()[0].astype(np.int64)
+        )
+        tf = tf.join(get_quantiles(events, curr_levels, featname))
+    return tf.sort_index()
 
 def create_obs(df, isStart, cols):
     toAppend = pd.DataFrame(index=df.index, columns=['index'] + cols)
@@ -348,7 +360,7 @@ def add_start_end(offers, L, levels):
 
 
 def init_offers(L, T, O, levels):
-    offers = O.join(T['start_time'])
+    offers = O.join(T[['start_time', 'byr_hist']])
     for c in ['accept', 'reject', 'censored', 'message']:
         if c in offers:
             offers[c] = offers[c].astype(np.bool)
@@ -366,7 +378,7 @@ def create_events(L, T, O, levels):
     events = add_start_end(offers, L, levels)
     # add features for later use
     events['byr'] = events.index.isin(IDX['byr'], level='index')
-    events = events.join(L[['flag', 'start_price']])
+    events = events.join(L[['flag', 'start_price', 'arrival_rate']])
     return events
 
 
