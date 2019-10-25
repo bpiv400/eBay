@@ -12,17 +12,24 @@ TRAIN_PART = 'train_models'
 TEST_PART = 'train_rl'
 
 
-def get_dataloader(model, part):
+def run_loop(model, simulator, train=True):
+    # partition
+    part = TRAIN_PART if train else TEST_PART
     data = Inputs(part, model)
-    if model == 'hist':
-        f = collateFF
-    else:
-        f = collateRNN
 
+    # collate function
+    f = collateFF if model == 'hist' else collateRNN
+
+    # data loader
     loader = DataLoader(data, batch_sampler=Sample(data),
-        num_workers=0, collate_fn=f, pin_memory=True)
+        collate_fn=f, num_workers=0, pin_memory=True)
 
-    return loader
+    # loop
+    lnL = 0
+    for batch in loader:
+        lnL += simulator.run_batch(*batch, train)
+
+    return lnL
 
 
 def train_model(simulator, outfile):
@@ -31,26 +38,16 @@ def train_model(simulator, outfile):
 
     # loop over epochs, record log-likelihood
     for i in range(EPOCHS):
-        time0 = dt.now()
+        t0 = dt.now()
 
         # training loop
-        train = get_dataloader(simulator.model, TRAIN_PART)
-        lnL_train = 0
-        for batch in train:
-            lnL_train += simulator.run_batch(*batch, train=True)
+        lnL_train = run_loop(model, simulator, train=True)
 
         # training duration
         dur = np.round((dt.now() - t0).seconds)
 
         # test loop
-        test = get_dataloader(simulator.model, TEST_PART)
-        lnL_test = 0
-        for batch in test:
-            lnL_test += simulator.run_batch(*batch, train=False)
-
-        # print log-likelihood and duration
-        print('Epoch %d: lnL: %1.4f. (%dsec)' %
-            (i+1, lnL[-1], (dt.now() - time0).seconds))
+        lnL_test = run_loop(model, simulator, train=False)
 
         # write to file
         f = open(outfile, 'a')
@@ -69,13 +66,13 @@ if __name__ == '__main__':
     model = args.model
     paramsid = args.id
 
-    # model folder
-    file = lambda x: '%s/inputs/%s/%s.pkl' % (PREFIX, x, model)
-
-    # load model sizes and parameters
+    # load model sizes
     print('Loading parameters')
-    sizes = pickle.load(open(file('sizes'), 'rb'))
+    sizes = pickle.load(
+        open('%s/inputs/sizes/%s.pkl' % (PREFIX, model), 'rb'))
     print(sizes)
+
+    # load neural net parameters
     params = pd.read_csv('%s/inputs/params.csv' % PREFIX, 
         index_col=0).loc[paramsid].to_dict()
     print(params)
