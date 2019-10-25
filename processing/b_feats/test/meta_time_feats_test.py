@@ -1086,11 +1086,11 @@ def test_bin_perc_meta():
     offer['thread'] = 1
     events = add_event(events, offer, trigger_type=CENSORED, meta=4, leaf=1)
 
-    threads = [3, 2, 1, 1, 2, 2, 1, 1, 1, 0, 0]
+    threads = [1] * 11
     bin = [0] * 11
-    threads2 = [0, 0]
+    threads2 = [1, 1]
     bin2 = [0] * 2
-    threads3 = [4, 2]
+    threads3 = [1, 1]
     bin3 = [0, 1]
 
     offers1 = {
@@ -1253,11 +1253,11 @@ def test_bin_perc_leaf():
     events.price = events.price.astype(np.int64)
     events.clock = events.clock.astype(np.int64)
 
-    threads = [3, 2, 1, 1, 2, 2, 1, 1, 1, 0, 0]
+    threads = [1] * 11
     bin = [0] * 11
-    threads2 = [0, 0]
+    threads2 = [1, 1]
     bin2 = [0] * 2
-    threads3 = [4, 2]
+    threads3 = [1] * 2
     bin3 = [0, 1]
 
     offers1 = {
@@ -1331,7 +1331,7 @@ def test_bin_perc_leaf():
         assert np.all(np.isclose(exp.values, actual['leaf{}'.format(name)].values))
 
     # meta
-    threads = [3, 2, 1, 1, 2, 2, 1, 1, 1, 0, 0, 0, 0, 4, 2]
+    threads = [1] * 15
     bin = ([0] * 11) + [0, 0, 1]
 
     offers = {
@@ -1488,6 +1488,16 @@ def test_delay_meta():
     events = delay_appendix_1(events, meta=2, leaf=1)
     events = delay_appendix_2(events, meta=3, leaf=1)
 
+    events.byr = events.byr.astype(bool)
+    events.reject = events.reject.astype(bool)
+    events.accept = events.accept.astype(bool)
+    events.censored = events.censored.astype(bool)
+    events.flag = events.flag.astype(bool)
+    events.price = events.price.astype(np.int64)
+    events.clock = events.clock.astype(np.int64)
+    events.index = events.index.droplevel(['cndtn', 'leaf'])
+
+    # leaf
     byr_delays = {
         0: [10, 5, 30, 15],
         1: [5, 5],
@@ -1536,16 +1546,33 @@ def test_delay_meta():
         1: []
     }
 
-    events.byr = events.byr.astype(bool)
-    events.reject = events.reject.astype(bool)
-    events.accept = events.accept.astype(bool)
-    events.censored = events.censored.astype(bool)
-    events.flag = events.flag.astype(bool)
-    events.price = events.price.astype(np.int64)
-    events.clock = events.clock.astype(np.int64)
-    events.index = events.index.droplevel(['leaf', 'cndtn'])
+    byr_expire = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    byr_count = [4, 2, 1, 0, 0, 1, 1, 1, 1, 0, 0]
+    slr_expire = byr_expire.copy()
+    slr_count = [3, 2, 2, 1, 1, 1, 1, 1, 1, 0, 0]
+    byr_expire2 = [0, 0]
+    byr_count2 = [2, 0]
+    slr_expire2 = byr_expire2.copy()
+    slr_count2 = [0, 0]
+    byr_expire3 = [1, 0]
+    byr_count3 = [2, 0]
+    slr_expire3 = byr_expire3.copy()
+    slr_count3 = [2, 0]
 
     actual = get_cat_feats(events, levels=['meta'], feat_ind=4)
+
+    perc_exp1 = calc_bin(byr_expire, byr_count)
+    perc_exp2 = calc_bin(byr_expire2, byr_count2)
+    perc_exp3 = calc_bin(byr_expire3, byr_count3)
+    perc_exp = np.concatenate([perc_exp1, perc_exp2, perc_exp3])
+    assert np.all(np.isclose(perc_exp, actual['meta_byr_expire'].values))
+
+    perc_exp1 = calc_bin(slr_expire, slr_count)
+    perc_exp2 = calc_bin(slr_expire2, slr_count2)
+    perc_exp3 = calc_bin(slr_expire3, slr_count3)
+    perc_exp = np.concatenate([perc_exp1, perc_exp2, perc_exp3])
+    assert np.all(np.isclose(perc_exp, actual['meta_slr_expire'].values))
+
     for delay_type in ['byr', 'slr']:
         print('type: {}'.format(delay_type))
         if delay_type == 'byr':
@@ -1568,11 +1595,198 @@ def test_delay_meta():
                         quant = 0
                     exp_array.append(quant)
             exp = make_exp(None, exp_array)['exp']
-            print(exp)
-            print(actual['meta_byr_delay_25'])
             name = '_{}_delay_{}'.format(delay_type, int(q * 100))
             assert np.all(np.isclose(exp.values, actual['meta{}'.format(name)].values))
 
+
+def test_delay_leaf():
+    events = setup_complex_lstg(None, meta=1, leaf=1)
+    events = delay_appendix_1(events, meta=1, leaf=2)
+    events = delay_appendix_2(events, meta=1, leaf=3)
+
+    events.byr = events.byr.astype(bool)
+    events.reject = events.reject.astype(bool)
+    events.accept = events.accept.astype(bool)
+    events.censored = events.censored.astype(bool)
+    events.flag = events.flag.astype(bool)
+    events.price = events.price.astype(np.int64)
+    events.clock = events.clock.astype(np.int64)
+    events.index = events.index.droplevel(['cndtn'])
+
+    byr_delays_all = {
+        0: [10, 5, 30, 15],
+        1: [5, 5],
+        2: [20],
+        3: [],
+        4: [],
+        5: [20],
+        6: [5],
+        7: [5],
+        8: [7],
+        9: [],
+        10: [],
+        11: [15, 50],
+        12: [],
+        13: [600],
+        14: []
+    }
+    byr_delays = {
+        0: [10, 5, 30, 15],
+        1: [5, 5],
+        2: [20],
+        3: [],
+        4: [],
+        5: [20],
+        6: [5],
+        7: [5],
+        8: [7],
+        9: [],
+        10: []
+    }
+
+    byr_delays2 = {
+        0: [15, 50],
+        1: []
+    }
+
+    byr_delays3 = {
+        0: [600],
+        1: []
+    }
+
+    slr_delays_all = {
+        0: [10, 30, 10],
+        1: [20, 25],
+        2: [20, 10],
+        3: [10],
+        4: [30],
+        5: [5],
+        6: [15],
+        7: [20],
+        8: [1],
+        9: [],
+        10: [],
+        11: [],
+        12: [],
+        13: [800],
+        14: []
+    }
+
+    slr_delays = {
+        0: [10, 30, 10],
+        1: [20, 25],
+        2: [20, 10],
+        3: [10],
+        4: [30],
+        5: [5],
+        6: [15],
+        7: [20],
+        8: [1],
+        9: [],
+        10: []
+    }
+
+    slr_delays2 = {
+        0: [],
+        1: []
+    }
+
+    slr_delays3 = {
+        0: [800],
+        1: []
+    }
+
+    byr_expire = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    byr_count = [4, 2, 1, 0, 0, 1, 1, 1, 1, 0, 0]
+    slr_expire = byr_expire.copy()
+    slr_count = [3, 2, 2, 1, 1, 1, 1, 1, 1, 0, 0]
+    byr_expire2 = [0, 0]
+    byr_count2 = [2, 0]
+    slr_expire2 = byr_expire2.copy()
+    slr_count2 = [0, 0]
+    byr_expire3 = [1, 0]
+    byr_count3 = [2, 0]
+    slr_expire3 = byr_expire3.copy()
+    slr_count3 = [2, 0]
+
+    byr_expire_all = byr_expire + byr_expire2 + byr_expire3
+    slr_expire_all = slr_expire + slr_expire2 + slr_expire3
+    byr_count_all = byr_count + byr_count2 + byr_count3
+    slr_count_all = slr_count + slr_count2 + slr_count3
+
+    actual = get_cat_feats(events, levels=['meta', 'leaf'], feat_ind=4)
+
+    perc_exp1 = calc_bin(byr_expire, byr_count)
+    perc_exp2 = calc_bin(byr_expire2, byr_count2)
+    perc_exp3 = calc_bin(byr_expire3, byr_count3)
+    perc_exp = np.concatenate([perc_exp1, perc_exp2, perc_exp3])
+    assert np.all(np.isclose(perc_exp, actual['leaf_byr_expire'].values))
+
+    print('expected')
+    print(perc_exp)
+
+
+    perc_exp = np.array(calc_bin(byr_expire_all, byr_count_all))
+    assert np.all(np.isclose(perc_exp, actual['meta_byr_expire'].values))
+
+
+    perc_exp1 = calc_bin(slr_expire, slr_count)
+    perc_exp2 = calc_bin(slr_expire2, slr_count2)
+    perc_exp3 = calc_bin(slr_expire3, slr_count3)
+    perc_exp = np.concatenate([perc_exp1, perc_exp2, perc_exp3])
+    assert np.all(np.isclose(perc_exp, actual['leaf_slr_expire'].values))
+
+    perc_exp = np.array(calc_bin(slr_expire_all, slr_count_all))
+    assert np.all(np.isclose(perc_exp, actual['meta_slr_expire'].values))
+
+    for delay_type in ['byr', 'slr']:
+        print('type: {}'.format(delay_type))
+        if delay_type == 'byr':
+            delay_list = [byr_delays, byr_delays2, byr_delays3]
+        else:
+            delay_list = [slr_delays, slr_delays2, slr_delays3]
+        for q in [.25, .75, 1]:
+            print('q: {}'.format(q))
+            exp_array = list()
+            for offers in delay_list:
+                for i in range(len(offers)):
+                    considered = list()
+                    for j in range(len(offers)):
+                        if j != i:
+                            considered = considered + offers[j]
+                    considered = np.array(considered)
+                    considered = considered / MAX_DELAY[delay_type]
+                    quant = np.nanquantile(considered, q=q, interpolation='lower')
+                    if np.isnan(quant):
+                        quant = 0
+                    exp_array.append(quant)
+            exp = make_exp(None, exp_array)['exp']
+            name = '_{}_delay_{}'.format(delay_type, int(q * 100))
+            assert np.all(np.isclose(exp.values, actual['leaf{}'.format(name)].values))
+
+    for delay_type in ['byr', 'slr']:
+        print('type: {}'.format(delay_type))
+        if delay_type == 'byr':
+            offers = byr_delays_all
+        else:
+            offers = slr_delays_all
+        for q in [.25, .75, 1]:
+            print('q: {}'.format(q))
+            exp_array = list()
+            for i in range(len(offers)):
+                considered = list()
+                for j in range(len(offers)):
+                    if j != i:
+                        considered = considered + offers[j]
+                considered = np.array(considered)
+                considered = considered / MAX_DELAY[delay_type]
+                quant = np.nanquantile(considered, q=q, interpolation='lower')
+                if np.isnan(quant):
+                    quant = 0
+                exp_array.append(quant)
+            exp = make_exp(None, exp_array)['exp']
+            name = '_{}_delay_{}'.format(delay_type, int(q * 100))
+            assert np.all(np.isclose(exp.values, actual['meta{}'.format(name)].values))
 
 
 

@@ -115,15 +115,15 @@ def get_quantiles(df, l, featname):
         total_lstgs = total_lstgs.reindex(quant_vector.index)
 
     quants = dict()
-    print('number to consider: {}'.format(total_lstgs.max()))
+    # print('number to consider: {}'.format(total_lstgs.max()))
     # loop over quantiles
     for n in range(int(total_lstgs.max()) + 1):
         cut = quant_vector.loc[total_lstgs >= n].drop(n, level='lstg_counter')
         rel_groups = cut.index.droplevel('lstg_counter').drop_duplicates()
-        print('n: {}'.format(n))
-        with pd.option_context('display.max_rows', None, 'display.max_columns', None):  # more options can be specified also
-            print('cut')
-            print(cut)
+        # print('n: {}'.format(n))
+        # with pd.option_context('display.max_rows', None, 'display.max_columns', None):  # more options can be specified also
+        #     print('cut')
+        #     print(cut)
         cut = cut.groupby(by=l)
         partial = pd.DataFrame(index=rel_groups)
         for q in QUANTILES:
@@ -235,7 +235,7 @@ def get_cat_con(events, levels):
         events['lstg_counter'] = events['lstg_id'].groupby(by=curr_levels).transform(
             lambda x: x.factorize()[0].astype(np.int64)
         )
-        bin = get_perc(events, 'bin', 'thread', curr_levels, name='bin')
+        bin = get_perc(events,  curr_levels, 'bin', 'lstg_ind', name='bin')
         tf = tf.join(bin)
         # quantiles of (normalized) accept price over 30-day window
         quants = get_quantiles(events, curr_levels, 'first_offer')
