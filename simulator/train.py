@@ -86,7 +86,7 @@ if __name__ == '__main__':
     print(simulator.net)
 
     # create outfile
-    outfile = 'outputs/cluster/%s_%d.gz' % (model, paramsid)
+    outfile = 'outputs/cluster/%s_%d.csv' % (model, paramsid)
     f = open(outfile, 'w')
     f.write('epoch,seconds,lnL_train,lnL_holdout\n')
     f.close()
