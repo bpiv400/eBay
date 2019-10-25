@@ -7,7 +7,8 @@ from processing.b_feats.util import get_cat_feats
 from constants import MAX_DELAY
 
 
-COLS = ['accept', 'censored', 'clock', 'price', 'reject', 'byr', 'flag', 'start_price']
+COLS = ['accept', 'censored', 'clock', 'price', 'reject', 'byr', 'flag', 'start_price',
+        'start_price_pctile', 'arrival_rate']
 INDEX_LEVELS = ['meta', 'leaf', 'cndtn', 'lstg', 'thread', 'index']
 EMPTIES = [[] for _ in INDEX_LEVELS]
 NEW_LSTG = 'new_lstg'
@@ -68,7 +69,16 @@ def add_event(df, offer, trigger_type=None, meta=None, leaf=None):
     offer_index = pd.MultiIndex.from_tuples([(meta, leaf, CNDTN, offer['lstg'], offer['thread'],
                                               last_index)], names=INDEX_LEVELS)
     # print('index: {}'.format(offer_index))
-
+    if trigger_type == NEW_LSTG:
+        if 'start_price_pctile' not in offer:
+            offer['start_price_pctile'] = 0
+        if 'arrival_rate' not in offer:
+            offer['arrival_rate'] = 0
+        data['start_price_pctile'] = offer['start_price_pctile']
+        data['arrival_rate'] = offer['arrival_rate']
+    else:
+        data['arrival_rate'] = 0
+        data['start_price_pctile'] = 0
     # repurpose offer dictionary
     data['start_price'] = 100
     data['flag'] = False
@@ -112,6 +122,8 @@ def setup_complex_lstg(events, meta=1, leaf=1, starter=0):
     offer = {
         'lstg': 1 + starter,
         'clock': 15,
+        'start_price_pctile': .8,
+        'arrival_rate': .4
     }
     events = add_event(events, offer, trigger_type=NEW_LSTG, meta=meta, leaf=leaf)
 
@@ -162,6 +174,8 @@ def setup_complex_lstg(events, meta=1, leaf=1, starter=0):
     # start new lstg = 2
     offer['lstg'] = 2 + starter
     offer['clock'] = 90
+    offer['start_price_pctile'] = .7
+    offer['arrival_rate'] = .2
     events = add_event(events, offer, trigger_type=NEW_LSTG, meta=meta, leaf=leaf)
 
     # start new thread = 3 for lstg = 1
@@ -181,6 +195,8 @@ def setup_complex_lstg(events, meta=1, leaf=1, starter=0):
     # start new lstg = 3
     offer['lstg'] = 3 + starter
     offer['clock'] = 115
+    offer['start_price_pctile'] = .9
+    offer['arrival_rate'] = .3
     events = add_event(events, offer, trigger_type=NEW_LSTG, meta=meta, leaf=leaf)
 
     # slr counter offer in thread = 2 for lstg = 1
@@ -249,6 +265,8 @@ def setup_complex_lstg(events, meta=1, leaf=1, starter=0):
     # start new lstg = 4
     offer['lstg'] = 4 + starter
     offer['clock'] = 145
+    offer['start_price_pctile'] = .4
+    offer['arrival_rate'] = .6
     events = add_event(events, offer, trigger_type=NEW_LSTG, meta=meta, leaf=leaf)
 
     # byr counter in thread = 1 for lstg = 2
@@ -315,6 +333,8 @@ def setup_complex_lstg(events, meta=1, leaf=1, starter=0):
     # start lstg = 5
     offer['clock'] = 185
     offer['lstg'] = 5 + starter
+    offer['start_price_pctile'] = .6
+    offer['arrival_rate'] = .65
     events = add_event(events, offer, trigger_type=NEW_LSTG, meta=meta, leaf=leaf)
 
     # start thread = 1 for lstg = 5
@@ -336,6 +356,8 @@ def setup_complex_lstg(events, meta=1, leaf=1, starter=0):
     # start lstg = 6
     offer['clock'] = 200
     offer['lstg'] = 6 + starter
+    offer['start_price_pctile'] = .75
+    offer['arrival_rate'] = .7
     events = add_event(events, offer, trigger_type=NEW_LSTG, meta=meta, leaf=leaf)
 
     # start thread = 1 for lstg = 6
@@ -365,6 +387,8 @@ def setup_complex_lstg(events, meta=1, leaf=1, starter=0):
     # start lstg = 7
     offer['clock'] = 215
     offer['lstg'] = 7 + starter
+    offer['start_price_pctile'] = .2
+    offer['arrival_rate'] = .45
     events = add_event(events, offer, trigger_type=NEW_LSTG, meta=meta, leaf=leaf)
 
     # start thread = 1 for lstg = 7
@@ -420,6 +444,8 @@ def setup_complex_lstg(events, meta=1, leaf=1, starter=0):
     # start lstg = 8
     offer['clock'] = 255
     offer['lstg'] = 8 + starter
+    offer['start_price_pctile'] = .3
+    offer['arrival_rate'] = .35
     events = add_event(events, offer, trigger_type=NEW_LSTG, meta=meta, leaf=leaf)
 
     # start thread = 1 for lstg = 8
@@ -433,6 +459,8 @@ def setup_complex_lstg(events, meta=1, leaf=1, starter=0):
     # start lstg = 9
     offer['clock'] = 265
     offer['lstg'] = 9 + starter
+    offer['start_price_pctile'] = .50
+    offer['arrival_rate'] = .55
     events = add_event(events, offer, trigger_type=NEW_LSTG, meta=meta, leaf=leaf)
 
     # start thread 1 for lstg = 9
@@ -454,6 +482,8 @@ def setup_complex_lstg(events, meta=1, leaf=1, starter=0):
     # start lstg = 10
     offer['clock'] = 270
     offer['lstg'] = 10 + starter
+    offer['start_price_pctile'] = .65
+    offer['arrival_rate'] = .8
     events = add_event(events, offer, trigger_type=NEW_LSTG, meta=meta, leaf=leaf)
 
     # byr accept thread = 1 for lstg = 9
@@ -492,6 +522,8 @@ def setup_complex_lstg(events, meta=1, leaf=1, starter=0):
     # start lstg 11
     offer['clock'] = 290
     offer['lstg'] = 11 + starter
+    offer['start_price_pctile'] = .1
+    offer['arrival_rate'] = .9
     events = add_event(events, offer, trigger_type=NEW_LSTG, meta=meta, leaf=leaf)
 
     # close lstg 10
@@ -1332,7 +1364,7 @@ def test_bin_perc_leaf():
 
     # meta
     threads = [1] * 15
-    bin = ([0] * 11) + [0, 0, 1]
+    bin = ([0] * 11) + [0, 0, 0, 1]
 
     offers = {
         0: [50, 30, 50],
@@ -1351,9 +1383,15 @@ def test_bin_perc_leaf():
         13: [35, 45, 55, 60],
         14: [50]
     }
-    accepts1 = [np.NaN, .80, .70, .50, .60, .25, 1.00,
-                .95, .85, np.NaN, np.NaN, np.NaN, np.NaN, .6, np.NaN]
     actual = get_cat_feats(events, levels=['meta', 'leaf'], feat_ind=3)
+
+    perc_exp = np.array(calc_bin(bin, threads))
+    print('exp')
+    print(perc_exp)
+    print('actual')
+    print(actual['meta_bin'])
+    assert np.all(np.isclose(perc_exp, actual['meta_bin'].values))
+
     for q in [.25, .75, 1]:
         print('q: {}'.format(q))
         exp_array = list()
@@ -1375,6 +1413,26 @@ def test_bin_perc_leaf():
         name = '_first_offer_{}'.format(int(q * 100))
         print('actual')
         print(actual)
+        assert np.all(np.isclose(exp.values, actual['meta{}'.format(name)].values))
+
+    # accept norm
+    offers = [np.NaN, .80, .70, .50, .60, .25, 1.00,
+               .95, .85, np.NaN, np.NaN, np.NaN, np.NaN, .6, np.NaN]
+    actual = get_cat_feats(events, levels=['meta', 'leaf'], feat_ind=2)
+    for q in [.25, .75, 1]:
+        exp_array = list()
+        for i in range(len(offers)):
+            considered = list()
+            for j in range(len(offers)):
+                if j != i:
+                    considered.append(offers[j])
+            considered = np.array(considered)
+            quant = np.nanquantile(considered, q=q, interpolation='lower')
+            if np.isnan(quant):
+                quant = 0
+            exp_array.append(quant)
+        exp = make_exp(None, exp_array)['exp']
+        name = '_accept_norm_{}'.format(int(q * 100))
         assert np.all(np.isclose(exp.values, actual['meta{}'.format(name)].values))
 
 
@@ -1789,4 +1847,72 @@ def test_delay_leaf():
             assert np.all(np.isclose(exp.values, actual['meta{}'.format(name)].values))
 
 
+def test_start_price_pctile_meta():
+    pass
 
+
+def test_start_price_pctile_leaf():
+    pass
+
+
+def test_arrival_rate_pctile_meta():
+    rates = [.4, .2, .3, .6, .65, .7, .45, .35, .55, .8, .9]
+    check_quantiles_wrapper(rates, leaf=False, feat_ind=7)
+
+
+def test_arrival_rate_pctile_leaf():
+    rates = [.4, .2, .3, .6, .65, .7, .45, .35, .55, .8, .9]
+
+
+def test_byr_hist_pctile_meta():
+    pass
+
+
+def test_byr_hist_pctile_leaf():
+    pass
+
+
+def check_quantiles_wrapper(offers, leaf=True, feat_ind=1):
+    if feat_ind == 5:
+        featname = 'start_price_pctile'
+    elif feat_ind == 7:
+        featname = 'arrival_rate'
+    else:
+        raise NotImplementedError()
+    if leaf:
+        events = setup_complex_lstg(None, meta=1, leaf=1)
+        events = setup_complex_lstg(events, meta=1, leaf=2)
+        events.index = events.index.droplevel(['cndtn'])
+        actual = get_cat_feats(events, levels=['meta', 'leaf'], feat_ind=feat_ind)
+        check_quantiles(offers, actual, level_type='leaf', featname=featname, double=True)
+        check_quantiles(offers + offers, actual, level_type='meta', featname=featname, double=False)
+    else:
+        events = setup_complex_lstg(None, meta=1, leaf=1)
+        events = setup_complex_lstg(events, meta=2, leaf=1, starter=11)
+        events.index = events.index.droplevel(['leaf', 'cndtn'])
+        actual = get_cat_feats(events, levels=['meta'], feat_ind=feat_ind)
+        check_quantiles(offers, actual, level_type='meta', featname=featname, double=True)
+
+
+def check_quantiles(offers, actual, level_type='leaf', featname=None, double=False):
+    for q in [.25, .75, 1]:
+        print('q: {}'.format(q))
+        exp_array = list()
+        for i in range(len(offers)):
+            considered = list()
+            for j in range(len(offers)):
+                if j != i:
+                    considered.append(offers[j])
+            considered = np.array(considered)
+            quant = np.nanquantile(considered, q=q, interpolation='lower')
+            if np.isnan(quant):
+                quant = 0
+            exp_array.append(quant)
+        exp = make_exp(None, exp_array)
+        if double:
+            exp = make_exp(exp, exp_array)
+        exp = exp['exp']
+        print('exp')
+        print(exp)
+        name = '{}_{}_{}'.format(level_type, featname, int(q * 100))
+        assert np.all(np.isclose(exp.values, actual[name].values))

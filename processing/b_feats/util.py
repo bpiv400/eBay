@@ -33,6 +33,9 @@ def quant_vector_index(quant_vector, l, name):
 
 
 def prep_quantiles(df, l, featname):
+    print('')
+    print(featname)
+    print(featname == 'arrival_rate')
     if featname == 'accept_norm':
         quant_vector = df.reset_index(drop=False)
         quant_vector = quant_vector[[featname, 'lstg_counter'] + l]
@@ -40,7 +43,7 @@ def prep_quantiles(df, l, featname):
     elif featname == 'first_offer':
         quant_vector = df.xs(1, level='index')
         quant_vector = quant_vector_index(quant_vector, l, featname)
-    elif featname == 'slr_delay' or 'byr_delay':
+    elif featname == 'slr_delay' or featname == 'byr_delay':
         if featname == 'slr_delay':
             other_turn = df.index.get_level_values('index').isin([3, 5])
         else:
@@ -55,6 +58,8 @@ def prep_quantiles(df, l, featname):
     elif featname == 'start_price_pctile' or featname == 'arrival_rate':
         quant_vector = df.xs(0, level='thread').xs(0, level='index')
         quant_vector = quant_vector_index(quant_vector, l, featname)
+        print('quant vec')
+        print(quant_vector)
     elif featname == 'byr_hist':
         quant_vector = df.xs(1, level='index')
         quant_vector = quant_vector_index(quant_vector, l, featname)
@@ -125,7 +130,10 @@ def get_quantiles(df, l, featname):
     quants = dict()
     # loop over quantiles
     for n in range(int(total_lstgs.max()) + 1):
+        print('n: {}'.format(n))
         cut = quant_vector.loc[total_lstgs >= n].drop(n, level='lstg_counter')
+        print('cut')
+        print(cut)
         rel_groups = cut.index.droplevel('lstg_counter').drop_duplicates()
         cut = cut.groupby(by=l)
         partial = pd.DataFrame(index=rel_groups)
@@ -141,6 +149,8 @@ def get_quantiles(df, l, featname):
     output = output.join(converter)
     output = output.reset_index('lstg_counter', drop=True).set_index('lstg', append=False,
                                                                      drop=True)
+    print('output')
+    print(output)
     return output
 
 
@@ -302,12 +312,13 @@ def get_cat_arrival(events, levels):
 
 def get_cat_quantiles_wrapper(events, levels, featname):
     tf = prep_tf(events)
+    print('tf pre')
+    print(tf.index)
     for i in range(len(levels)):
         curr_levels = levels[: i + 1]
-        events['lstg_counter'] = events['lstg_id'].groupby(by=curr_levels).transform(
-            lambda x: x.factorize()[0].astype(np.int64)
-        )
         tf = tf.join(get_quantiles(events, curr_levels, featname))
+    print('final output')
+    print(tf['meta_arrival_rate_25'])
     return tf.sort_index()
 
 def create_obs(df, isStart, cols):
