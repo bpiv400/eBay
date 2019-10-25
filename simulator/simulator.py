@@ -3,8 +3,8 @@ import torch, torch.optim as optim
 from torch.nn.utils import rnn
 import numpy as np
 from constants import *
-from simulator.loss import *
-from simulator.nets import *
+from loss import *
+from nets import *
 
 
 # constructs model-specific neural network.
