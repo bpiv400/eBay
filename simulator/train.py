@@ -3,18 +3,17 @@ import torch
 import numpy as np, pandas as pd
 from datetime import datetime as dt
 from torch.utils.data import DataLoader
-from interface import *
-from simulator import Simulator
-
-sys.path.append('repo/')
+from simulator.interface import *
+from simulator.simulator import Simulator
 from constants import *
 
-LAYERS = 2
-HIDDEN = 256
+EPOCHS = 1000
+TRAIN_PART = 'train_models'
+TEST_PART = 'train_rl'
 
 
-def get_dataloader(model):
-    data = Inputs('train_models', model)
+def get_dataloader(model, part):
+    data = Inputs(part, model)
     if model == 'hist':
         f = collateFF
     else:
@@ -26,32 +25,37 @@ def get_dataloader(model):
     return loader
 
 
-def train_model(simulator, epochs):
+def train_model(simulator, outfile):
     # initialize array for log-likelihoods by epoch
     lnL = []
 
     # loop over epochs, record log-likelihood
-    for i in range(epochs):
+    for i in range(EPOCHS):
         time0 = dt.now()
 
-        # get data and data loader
-        loader = get_dataloader(simulator.model)
+        # training loop
+        train = get_dataloader(simulator.model, TRAIN_PART)
+        lnL_train = 0
+        for batch in train:
+            lnL_train += simulator.run_batch(*batch, train=True)
 
-        # loop over batches
-        lnL_i = 0
-        for batch in loader:
-            lnL_i += simulator.run_batch(*batch)
-            print(lnL_i)
+        # training duration
+        dur = np.round((dt.now() - t0).seconds)
 
-        # append log-likelihood to list
-        lnL.append(lnL_i)
+        # test loop
+        test = get_dataloader(simulator.model, TEST_PART)
+        lnL_test = 0
+        for batch in test:
+            lnL_test += simulator.run_batch(*batch, train=False)
 
         # print log-likelihood and duration
         print('Epoch %d: lnL: %1.4f. (%dsec)' %
             (i+1, lnL[-1], (dt.now() - time0).seconds))
 
-    # return loss history and total duration
-    return lnL, (dt.now() - time0).seconds
+        # write to file
+        f = open(outfile, 'a')
+        f.write('%d,%d,%.4f,%.4f\n' % (i+1, dur, lnL_train, lnL_test))
+        f.close()
 
 
 if __name__ == '__main__':
@@ -72,41 +76,21 @@ if __name__ == '__main__':
     print('Loading parameters')
     sizes = pickle.load(open(file('sizes'), 'rb'))
     print(sizes)
-    params = {'layers': LAYERS, 'hidden': HIDDEN}
+    params = pd.read_csv('%s/inputs/params.csv' % PREFIX, 
+        index_col=0).loc[paramsid].to_dict()
     print(params)
     
     # initialize neural net
-    simulator = Simulator(model, params, sizes, device='cuda')
+    simulator = Simulator(model, params, sizes, 
+        device='cuda' if torch.cuda.is_available() else 'cpu')
     print(simulator.net)
 
-    # number of epochs
-    epochs = int(np.ceil(UPDATES * MBSIZE / sizes['N']))
+    # create outfile
+    outfile = 'outputs/cluster/%s_%d.gz' % (model, paramsid)
+    f = open(outfile, 'w')
+    f.write('epoch,seconds,lnL_train,lnL_holdout\n')
+    f.close()
 
     # train model
-    print('Training: %d epochs.' % epochs)
-    lnL_train, duration = train_model(simulator, epochs)
-
-
-    #### NEED TO UPDATE
-
-    # save model
-    torch.save(simulator.net.state_dict(), folder + str(args.id) + '.pt')
-
-    # holdout
-    holdout = pickle.load(open(folder + 'train_rl.pkl', 'rb'))
-    loss_holdout, _ = simulator.evaluate_loss(holdout, train=False)
-    print('Holdout lnL: %.4f.' % -loss_holdout.item())
-
-    # save log-likelihood and duration to results CSV
-    path = folder + 'results.csv'
-    if os.path.exists(path):
-        T = pd.read_csv(path, index_col=0)
-    else:
-        T = pd.DataFrame(index=pd.Index([], name='expid'))
-    T.loc[args.id, 'lnL_holdout'] = -loss_holdout.item()
-    T.loc[args.id, 'sec_per_epoch'] = duration / simulator.epochs
-    for i in range(simulator.epochs):
-        T.loc[args.id, 'lnL_train_' + str(i+1)] = lnL_train[i]
-
-    T.to_csv(path)
+    train_model(simulator, outfile)
     

@@ -3,8 +3,8 @@ import torch, torch.optim as optim
 from torch.nn.utils import rnn
 import numpy as np
 from constants import *
-from loss import *
-from nets import *
+from simulator.loss import *
+from simulator.nets import *
 
 
 # constructs model-specific neural network.
@@ -51,10 +51,7 @@ class Simulator:
         self.optimizer = optim.Adam(self.net.parameters(), lr=LR)
 
 
-    def evaluate_loss(self, data, train=True):
-        # train / eval mode
-        self.net.train(train)
-
+    def evaluate_loss(self, data):
         # outcome
         if not self.isRecurrent:
             y = self.distance(data['y'])
@@ -93,13 +90,18 @@ class Simulator:
         return self.loss(theta, y)
 
 
-    def run_batch(self, data, idx):
+    def run_batch(self, data, idx, train=True):
+        # train / eval mode
+        self.net.train(train)
+
         # zero gradient
-        self.optimizer.zero_grad()
+        if train:
+            self.optimizer.zero_grad()
 
         # move to gpu
-        data = {k: v.to(self.device) for k, v in data.items()}
-        idx = idx.to(self.device)
+        if self.device != 'cpu':
+            data = {k: v.to(self.device) for k, v in data.items()}
+            idx = idx.to(self.device)
 
         if self.isRecurrent:
             data['x_time'] = rnn.pack_padded_sequence(
@@ -110,8 +112,9 @@ class Simulator:
         loss = self.evaluate_loss(data)
 
         # step down gradients
-        loss.backward()
-        self.optimizer.step()
+        if train:
+            loss.backward()
+            self.optimizer.step()
 
         # return log-likelihood
         return -loss.item()

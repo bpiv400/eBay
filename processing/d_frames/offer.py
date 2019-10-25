@@ -26,35 +26,6 @@ def get_delay(clock):
     return delay.rename_axis('index', axis=1).stack()
 
 
-def get_period_time_feats(tf, start, model):
-    # initialize output
-    output = pd.DataFrame()
-    # loop over indices
-    for i in IDX[model]:
-        if i == 1:
-            continue
-        df = tf.reset_index('clock')
-        # count seconds from previous offer
-        df['clock'] -= start.xs(i, level='index').reindex(df.index)
-        df = df[~df.clock.isna()]
-        df = df[df.clock >= 0]
-        df['clock'] = df.clock.astype(np.int64)
-        # add index
-        df = df.assign(index=i).set_index('index', append=True)
-        # collapse to period
-        df['period'] = (df.clock - 1) // INTERVAL[model]
-        df['order'] = df.groupby(df.index.names + ['period']).cumcount()
-        df = df.sort_values(df.index.names + ['period', 'order'])
-        df = df.groupby(df.index.names + ['period']).last().drop(
-            ['clock', 'order'], axis=1)
-        # reset clock to beginning of next period
-        df.index.set_levels(df.index.levels[-1] + 1, 
-            level='period', inplace=True)
-        # appoend to output
-        output = output.append(df)
-    return output.sort_index()
-
-
 def get_y_con(x_offer):
     # drop zero delay and expired offers
     mask = (x_offer.delay > 0) & ~x_offer.exp
@@ -63,7 +34,7 @@ def get_y_con(x_offer):
     return split_by_role(s)
 
 
-def get_x_offer(lstgs, events, clock, tf):
+def get_x_offer(lstgs, events, tf):
     # vector of offers
     offers = events.price.unstack().join(lstgs.start_price)
     offers = offers.rename({'start_price': 0}, axis=1).rename_axis(
@@ -84,6 +55,9 @@ def get_x_offer(lstgs, events, clock, tf):
         index=df.index, fill_value=0.0)
     df.loc[df.index.isin(IDX['slr'], level='index'), 'norm'] = \
         1 - df['norm']
+    # clock variable
+    clock = 24 * 3600 * lstgs.start_date.rename(0).to_frame()
+    clock = clock.join(events.clock.unstack())
     # delay features
     df['delay'] = get_delay(clock)
     df['auto'] = df.delay == 0
@@ -129,24 +103,9 @@ if __name__ == "__main__":
     events = load_frames('events').reindex(index=idx, level='lstg')
     tf = load_frames('tf_lstg').reindex(index=idx, level='lstg')
 
-    # delay start
-    print('z')
-    z_start = events.clock.groupby(
-        ['lstg', 'thread']).shift().dropna().astype(np.int64)
-    dump(z_start, path('z_start'))
-
-    # delay role
-    for role in ['slr', 'byr']:
-        z = get_period_time_feats(tf, z_start, role)
-        dump(z, path('z_' + role))
-
-    # clock variable
-    clock = 24 * 3600 * lstgs.start_date.rename(0).to_frame()
-    clock = clock.join(events.clock.unstack())
-
     # offer features
     print('x_offer')
-    x_offer = get_x_offer(lstgs, events, clock, tf)
+    x_offer = get_x_offer(lstgs, events, tf)
     dump(x_offer, path('x_offer'))
 
     # concession outcome

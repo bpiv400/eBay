@@ -29,9 +29,6 @@ LR = 1e-4
 # dropout rate
 DROPOUT = 0.5
 
-# device
-DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
 # paths and directories
 PREFIX = '/data/eBay' if torch.cuda.is_available() else 'data'
 CLEAN_DIR = '%s/clean/' % PREFIX
@@ -67,7 +64,7 @@ INTERVAL_COUNTS = {
 }
 
 # model names
-MODELS = ['arrival', 'delay_byr', 'delay_slr', 'con_byr', 'con_slr']
+MODELS = ['arrival','hist', 'delay_byr', 'delay_slr', 'con_byr', 'con_slr']
 
 # organizing hierarchy
 LEVELS = ['slr', 'meta', 'leaf', 'cndtn', 'lstg']

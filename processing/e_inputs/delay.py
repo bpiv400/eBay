@@ -67,12 +67,8 @@ def process_inputs(part, role):
     z_role = load(getPath(['z', role]))
     x_time = parse_time_feats_delay(role, y.index, z_start, z_role)
 
-    # unstack y
-    y = y.astype('float32').unstack()
-    y[y.isna()] = -1
-
     # fixed features
-    x_lstg = cat_x_lstg(part)
+    x_lstg = load(getPath(['x', 'lstg']))
     x_thread = load(getPath(['x', 'thread']))
     x_offer = load(getPath(['x', 'offer']))
     x_fixed = parse_fixed_feats_delay(
