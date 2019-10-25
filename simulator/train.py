@@ -8,15 +8,8 @@ from simulator import Simulator
 from constants import *
 
 EPOCHS = 1000
-TRAIN_PART = 'train_models'
-TEST_PART = 'train_rl'
 
-
-def run_loop(model, simulator, train=True):
-    # partition
-    part = TRAIN_PART if train else TEST_PART
-    data = Inputs(part, model)
-
+def run_loop(model, simulator, data, isTraining):
     # collate function
     f = collateFF if model == 'hist' else collateRNN
 
@@ -24,34 +17,31 @@ def run_loop(model, simulator, train=True):
     loader = DataLoader(data, batch_sampler=Sample(data),
         collate_fn=f, num_workers=0, pin_memory=True)
 
-    # loop
-    lnL = 0
+    # loop over batches, calculate loss
+    loss = 0
     for batch in loader:
-        lnL += simulator.run_batch(*batch, train)
+        loss += simulator.run_batch(*batch, isTraining)
 
-    return lnL
+    return loss
 
 
-def train_model(simulator, outfile):
-    # initialize array for log-likelihoods by epoch
-    lnL = []
-
-    # loop over epochs, record log-likelihood
+def train_model(simulator, train, test, outfile):
+    # loop over epochs, record loss
     for i in range(EPOCHS):
         t0 = dt.now()
 
         # training loop
-        lnL_train = run_loop(model, simulator, train=True)
+        loss_train = run_loop(model, simulator, train, True)
 
         # training duration
         dur = np.round((dt.now() - t0).seconds)
 
         # test loop
-        lnL_test = run_loop(model, simulator, train=False)
+        loss_test = run_loop(model, simulator, test, False)
 
         # write to file
         f = open(outfile, 'a')
-        f.write('%d,%d,%.4f,%.4f\n' % (i+1, dur, lnL_train, lnL_test))
+        f.write('%d,%d,%.4f,%.4f\n' % (i+1, dur, loss_train, loss_test))
         f.close()
 
 
@@ -82,12 +72,16 @@ if __name__ == '__main__':
         device='cuda' if torch.cuda.is_available() else 'cpu')
     print(simulator.net)
 
+    # create datasets
+    train = Inputs('train_models', model)
+    test = Inputs('train_rl', model)
+
     # create outfile
     outfile = 'outputs/cluster/%s_%d.csv' % (model, paramsid)
     f = open(outfile, 'w')
-    f.write('epoch,seconds,lnL_train,lnL_holdout\n')
+    f.write('epoch,seconds,loss_train,loss_holdout\n')
     f.close()
 
     # train model
-    train_model(simulator, outfile)
+    train_model(simulator, train, test, outfile)
     

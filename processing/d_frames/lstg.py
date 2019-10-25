@@ -18,7 +18,12 @@ def do_rounding(offer):
 
 def get_x_lstg(lstgs):
     # initialize output dataframe with as-is features
-    df = lstgs[BINARY_FEATS + COUNT_FEATS + ['start_date']]
+    df = lstgs[ASIS_FEATS]
+    # photos divided by 12, and binary indicator
+    df.loc[:, 'photos'] = lstgs['photos'] / 12
+    df.loc[:, 'has_photos'] = lstgs['photos'] > 0
+    # start date divided by 365
+    df.loc[:, 'start_date'] = lstgs['start_date'] / 365
     # slr feedback
     df.loc[:, 'fdbk_100'] = df['fdbk_pstv'] == 1
     # prices

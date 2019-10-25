@@ -11,7 +11,7 @@ class FeedForward(nn.Module):
         super(FeedForward, self).__init__()
 
         # activation function
-        f = nn.Sigmoid()
+        f = nn.ReLU()
         #f = nn.Hardtanh(max_val=MAX)
 
         # initial layer

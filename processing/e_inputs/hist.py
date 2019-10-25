@@ -19,11 +19,16 @@ def process_inputs(part):
 	x_fixed = load(getPath(['x', 'lstg'])).reindex(
 		index=y.index, level='lstg')
 
-	# add days since lstg start, holiday, day of week, and minutes since midnight
+	# load offer dataframe
 	offers = load(getPath(['x', 'offer'])).xs(1, level='index')
-	cols = ['days', 'holiday', 'hour_of_day'] + \
-		[c for c in offers.columns if 'dow' in c]
-	x_fixed = x_fixed.join(offers[cols])
+
+	# add calendar indicator variables
+	dummies = ['holiday'] + [c for c in offers.columns if 'dow' in c]
+	x_fixed = x_fixed.join(offers[dummies])
+
+	# rescale days and hour of day, and add
+	x_fixed.loc[:, 'years'] = offers['days'] / 365
+	x_fixed.loc[:, 'hour_of_day'] = offers['hour_of_day'] / 24
 
 	return {'y': y.astype('float32', copy=False), 
             'x_fixed': x_fixed.astype('float32', copy=False)}

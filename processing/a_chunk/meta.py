@@ -5,7 +5,7 @@ import pandas as pd, numpy as np
 from constants import *
 
 LVARS = ['meta', 'leaf', 'cndtn', 'start_date', 'end_time', \
-    'start_price', 'arrival_rate', 'flag']
+    'start_price', 'start_price_pctile', 'arrival_rate', 'flag']
 TVARS = ['start_time', 'byr_hist', 'bin']
 OVARS = ['clock', 'price', 'accept', 'reject', 'censored']
 

@@ -25,7 +25,11 @@ def emd_loss(theta, distance):
 	p = torch.div(num, torch.sum(num, dim=-1, keepdim=True))
 
 	# loss is dot product of flow (p) and distance
-	loss = torch.sum(p * distance)
+	loss_i = torch.sum(p * distance, dim=1)
+	loss = torch.sum(loss_i)
+
+	print(torch.mean(loss_i).item())
+	print(torch.max(loss_i).item())
 
 	# add in loss for 4th byr turn
 	if 'theta4' in vars():

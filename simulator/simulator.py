@@ -90,12 +90,12 @@ class Simulator:
         return self.loss(theta, y)
 
 
-    def run_batch(self, data, idx, train=True):
+    def run_batch(self, data, idx, isTraining):
         # train / eval mode
-        self.net.train(train)
+        self.net.train(isTraining)
 
         # zero gradient
-        if train:
+        if isTraining:
             self.optimizer.zero_grad()
 
         # move to gpu
@@ -112,10 +112,10 @@ class Simulator:
         loss = self.evaluate_loss(data)
 
         # step down gradients
-        if train:
+        if isTraining:
             loss.backward()
             self.optimizer.step()
 
-        # return log-likelihood
-        return -loss.item()
+        # return loss
+        return loss.item()
 

@@ -70,8 +70,8 @@ MODELS = ['arrival','hist', 'delay_byr', 'delay_slr', 'con_byr', 'con_slr']
 LEVELS = ['slr', 'meta', 'leaf', 'cndtn', 'lstg']
 
 # for lstg feature construction
-BINARY_FEATS = ['store', 'slr_us', 'fast']
-COUNT_FEATS = ['photos', 'slr_bos', 'slr_lstgs', 'fdbk_score', 'fdbk_pstv']
+ASIS_FEATS = ['store', 'slr_us', 'fast', 'slr_bos', 'slr_lstgs', \
+	'fdbk_score', 'fdbk_pstv']
 
 # indices for byr and slr offers
 IDX = {
