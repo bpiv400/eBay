@@ -22,7 +22,7 @@ def run_loop(model, simulator, data, isTraining):
     for batch in loader:
         lnL += simulator.run_batch(*batch, isTraining)
 
-    return loss
+    return lnL
 
 
 def train_model(simulator, train, test, outfile):
@@ -41,7 +41,7 @@ def train_model(simulator, train, test, outfile):
 
         # write to file
         f = open(outfile, 'a')
-        f.write('%d,%d,%.4f,%.4f\n' % (i+1, dur, loss_train, loss_test))
+        f.write('%d,%d,%.4f,%.4f\n' % (i+1, dur, lnL_train, lnL_test))
         f.close()
 
 
