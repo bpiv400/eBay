@@ -63,6 +63,9 @@ INTERVAL_COUNTS = {
 		int(MAX_DELAY[SLR_PREFIX] / INTERVAL[BYR_PREFIX])
 }
 
+# quantiles of byr_hist distribution
+HIST_QUANTILES = 5
+
 # model names
 MODELS = ['arrival','hist', 'delay_byr', 'delay_slr', 'con_byr', 'con_slr']
 

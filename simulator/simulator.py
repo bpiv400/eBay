@@ -28,7 +28,7 @@ class Simulator:
         if model in ['hist', 'con_byr', 'con_slr']:
             self.loss = cross_entropy_loss
             if model == 'hist':
-                sizes['out'] = 100
+                sizes['out'] = HIST_QUANTILES
             else:
                 sizes['out'] = 101
         else:

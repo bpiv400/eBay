@@ -14,7 +14,7 @@ def process_inputs(part):
 
 	# outcome
 	pctiles = load(getPath(['x', 'thread']))['byr_hist']
-	y = (100 * pctiles).astype('uint8')
+	y = (HIST_BUCKETS * pctiles).astype('uint8')
 
 	# initialize fixed features with listing variables
 	x_fixed = load(getPath(['x', 'lstg'])).reindex(
