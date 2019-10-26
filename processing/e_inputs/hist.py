@@ -13,7 +13,8 @@ def process_inputs(part):
 		(PREFIX, part, '_'.join(names))
 
 	# outcome
-	y = load(getPath(['x', 'thread']))['byr_hist']
+	pctiles = load(getPath(['x', 'thread']))['byr_hist']
+	y = (100 * pctiles).astype('uint8')
 
 	# initialize fixed features with listing variables
 	x_fixed = load(getPath(['x', 'lstg'])).reindex(
@@ -30,7 +31,7 @@ def process_inputs(part):
 	x_fixed.loc[:, 'years'] = offers['days'] / 365
 	x_fixed.loc[:, 'hour_of_day'] = offers['hour_of_day'] / 24
 
-	return {'y': y.astype('float32', copy=False), 
+	return {'y': y.astype('uint8', copy=False), 
             'x_fixed': x_fixed.astype('float32', copy=False)}
 
 
@@ -52,11 +53,7 @@ if __name__ == '__main__':
 		pickle.dump(get_featnames(d), 
 			open('%s/inputs/featnames/hist.pkl' % PREFIX, 'wb'))
 
-		sizes = get_sizes(d)
-		pctiles = load('%s/pctile/byr_hist.gz' % PREFIX).values
-		pctiles = np.unique(np.floor(pctiles * 100)) / 100
-		sizes['dim'] = pctiles[:-1]
-		pickle.dump(sizes, 
+		pickle.dump(get_sizes(d), 
 			open('%s/inputs/sizes/hist.pkl' % PREFIX, 'wb'))
 
 	# save dictionary of numpy arrays

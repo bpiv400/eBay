@@ -359,6 +359,24 @@ by lstg thread: replace price = start_price if copy & index == 2
 replace censored = 1 if copy
 drop copy
 
+* mark last seller reject on bin date as censored
+
+g int temp = dofc(end_time) if bin
+by lstg, sort: egen int bindate = min(temp)
+drop temp
+
+g double temp = clock ///
+	if reject & mod(index, 2) == 0 & bindate != .
+by lstg, sort: egen double lastclock = max(temp)
+drop temp
+
+replace censored = 1 if bindate != . & reject ///
+	& dofc(lastclock) == bindate & clock >= lastclock
+
+* save temp
+
+save dta/temp2d, replace
+
 * renumber threads
 
 g byte new = index == 1

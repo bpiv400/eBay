@@ -26,12 +26,11 @@ class Simulator:
 
         # size of theta and loss function
         if model in ['hist', 'con_byr', 'con_slr']:
-            self.loss = emd_loss
-            dim = torch.from_numpy(sizes['dim']).unsqueeze(
-                dim=0).float().to(device)  # bucket values
-            sizes['out'] = dim.size()[-1]
-            self.distance = lambda y: torch.pow(
-                y.unsqueeze(dim=-1) - dim, 2)
+            self.loss = cross_entropy_loss
+            if model == 'hist':
+                sizes['out'] = 100
+            else:
+                sizes['out'] = 101
         else:
             sizes['out'] = 1
             if model == 'arrival':
@@ -54,7 +53,7 @@ class Simulator:
     def evaluate_loss(self, data):
         # outcome
         if not self.isRecurrent:
-            y = self.distance(data['y'])
+            y = data['y']
         else:
             # retain indices with outcomes
             mask = data['y'] > -1
@@ -66,15 +65,8 @@ class Simulator:
 
                 # apply mask separately
                 y = [y[0][mask[:,:3]], y[1][mask[:,3]]]
-
-                # squared distance for first 3 turns
-                y[0] = self.distance(y[0])
             else:
                 y = data['y'][mask]
-
-                # squared distance
-                if self.model == 'con_slr':
-                   y = self.distance(y)
 
         # prediction using net
         if not self.isRecurrent:

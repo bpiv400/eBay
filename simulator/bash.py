@@ -19,7 +19,7 @@ def create_bash(model, T):
 	f = open('repo/simulator/bash/%s.sh' % model, 'w')
 	f.write('#!/bin/bash\n')
 	f.write('#$ -q all.q\n')
-	f.write('#$ -l m_mem_free=16G\n')
+	f.write('#$ -l m_mem_free=30G\n')
 	f.write('#$ -t 1-%d\n' % T)
 	f.write('#$ -N %s\n' % model)
 	f.write('#$ -o logs/\n')

@@ -114,8 +114,8 @@ def get_sizes(d):
     sizes = {'N': len(d['y'].index), 
         'fixed': len(d['x_fixed'].columns)}
     if 'x_hour' in d:
-        sizes['time'] = len(d['x_hour'].columns)
         sizes['steps'] = len(d['y'].columns)
+        sizes['time'] = len(d['x_hour'].columns)
     if 'x_time' in d:
         sizes['steps'] = len(d['y'].columns)
         sizes['time'] = len(d['x_time'].columns)
