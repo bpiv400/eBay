@@ -8,7 +8,7 @@ from constants import MAX_DELAY
 
 
 COLS = ['accept', 'censored', 'clock', 'price', 'reject', 'byr', 'flag', 'start_price',
-        'start_price_pctile', 'arrival_rate']
+        'start_price_pctile', 'arrival_rate', 'byr_hist']
 INDEX_LEVELS = ['meta', 'leaf', 'cndtn', 'lstg', 'thread', 'index']
 EMPTIES = [[] for _ in INDEX_LEVELS]
 NEW_LSTG = 'new_lstg'
@@ -69,6 +69,8 @@ def add_event(df, offer, trigger_type=None, meta=None, leaf=None):
     offer_index = pd.MultiIndex.from_tuples([(meta, leaf, CNDTN, offer['lstg'], offer['thread'],
                                               last_index)], names=INDEX_LEVELS)
     # print('index: {}'.format(offer_index))
+    if 'byr_hist' not in offer:
+        offer['byr_hist'] = 0
     if trigger_type == NEW_LSTG:
         if 'start_price_pctile' not in offer:
             offer['start_price_pctile'] = 0
@@ -91,9 +93,11 @@ def add_event(df, offer, trigger_type=None, meta=None, leaf=None):
     if trigger_type == NEW_LSTG or trigger_type == EXPIRE_LSTG:
         data['price'] = 0
         data['byr'] = False
+        data['byr_hist'] = 0
     else:
         data['price'] = offer['price']
         data['byr'] = offer['byr']
+        data['byr_hist'] = offer['byr_hist']
 
     # prepare for row creation
     keys = list(data.keys())
@@ -131,6 +135,7 @@ def setup_complex_lstg(events, meta=1, leaf=1, starter=0):
     offer['price'] = 50
     offer['thread'] = 1
     offer['byr'] = True
+    offer['byr_hist'] = .2
     offer['clock'] = 20
     events = add_event(events, offer, trigger_type=OFFER, meta=meta, leaf=leaf)
 
@@ -164,6 +169,7 @@ def setup_complex_lstg(events, meta=1, leaf=1, starter=0):
     offer['thread'] = 2
     offer['price'] = 30
     offer['clock'] = 80
+    offer['byr_hist'] = .9
     events = add_event(events, offer, trigger_type=OFFER, meta=meta, leaf=leaf)
 
     # slr auto reject for thread = 2
@@ -184,6 +190,7 @@ def setup_complex_lstg(events, meta=1, leaf=1, starter=0):
     offer['lstg'] = 1 + starter
     offer['byr'] = True
     offer['clock'] = 100
+    offer['byr_hist'] = .6
     events = add_event(events, offer, trigger_type=OFFER, meta=meta, leaf=leaf)
 
     # byr offer in thread = 2 for lstg = 1
@@ -213,6 +220,7 @@ def setup_complex_lstg(events, meta=1, leaf=1, starter=0):
     offer['clock'] = 125
     offer['price'] = 50
     offer['byr'] = True
+    offer['byr_hist'] = .7
     events = add_event(events, offer, trigger_type=OFFER, meta=meta, leaf=leaf)
 
     # start new thread = 1 for lstg = 3
@@ -221,6 +229,7 @@ def setup_complex_lstg(events, meta=1, leaf=1, starter=0):
     offer['clock'] = 125
     offer['price'] = 50
     offer['byr'] = True
+    offer['byr_hist'] = .15
     events = add_event(events, offer, trigger_type=OFFER, meta=meta, leaf=leaf)
 
     # start new thread = 2 for lstg = 2
@@ -229,6 +238,7 @@ def setup_complex_lstg(events, meta=1, leaf=1, starter=0):
     offer['clock'] = 130
     offer['price'] = 55
     offer['byr'] = True
+    offer['byr_hist'] = .25
     events = add_event(events, offer, trigger_type=OFFER, meta=meta, leaf=leaf)
 
     # byr reject in thread = 2 for lstg = 1
@@ -312,6 +322,7 @@ def setup_complex_lstg(events, meta=1, leaf=1, starter=0):
     offer['price'] = 50
     offer['lstg'] = 4 + starter
     offer['thread'] = 1
+    offer['byr_hist'] = .75
     events = add_event(events, offer, trigger_type=OFFER, meta=meta, leaf=leaf)
 
     # slr accept in thread = 1 for lstg = 3 (simultaneous lstg close)
@@ -343,6 +354,7 @@ def setup_complex_lstg(events, meta=1, leaf=1, starter=0):
     offer['thread'] = 1
     offer['price'] = 75
     offer['byr'] = True
+    offer['byr_hist'] = .5
     events = add_event(events, offer, trigger_type=OFFER, meta=meta, leaf=leaf)
 
     # start thread = 2 for lstg = 5
@@ -351,6 +363,7 @@ def setup_complex_lstg(events, meta=1, leaf=1, starter=0):
     offer['thread'] = 2
     offer['price'] = 60
     offer['byr'] = True
+    offer['byr_hist'] = .65
     events = add_event(events, offer, trigger_type=OFFER, meta=meta, leaf=leaf)
 
     # start lstg = 6
@@ -366,6 +379,7 @@ def setup_complex_lstg(events, meta=1, leaf=1, starter=0):
     offer['thread'] = 1
     offer['price'] = 20
     offer['byr'] = True
+    offer['byr_hist'] = .25
     events = add_event(events, offer, trigger_type=OFFER, meta=meta, leaf=leaf)
 
     # start thread = 2 for lstg = 6
@@ -374,6 +388,7 @@ def setup_complex_lstg(events, meta=1, leaf=1, starter=0):
     offer['thread'] = 2
     offer['price'] = 25
     offer['byr'] = True
+    offer['byr_hist'] = .3
     events = add_event(events, offer, trigger_type=OFFER, meta=meta, leaf=leaf)
 
     # slr counter thread = 2 for lstg = 6
@@ -397,6 +412,7 @@ def setup_complex_lstg(events, meta=1, leaf=1, starter=0):
     offer['thread'] = 1
     offer['price'] = 60
     offer['byr'] = True
+    offer['byr_hist'] = .8
     events = add_event(events, offer, trigger_type=OFFER, meta=meta, leaf=leaf)
 
     # slr accept in thread = 2 for lstg = 5
@@ -454,6 +470,7 @@ def setup_complex_lstg(events, meta=1, leaf=1, starter=0):
     offer['thread'] = 1
     offer['price'] = 90
     offer['byr'] = True
+    offer['byr_hist'] = .85
     events = add_event(events, offer, trigger_type=OFFER, meta=meta, leaf=leaf)
 
     # start lstg = 9
@@ -469,6 +486,7 @@ def setup_complex_lstg(events, meta=1, leaf=1, starter=0):
     offer['thread'] = 1
     offer['price'] = 30
     offer['byr'] = True
+    offer['byr_hist'] = .95
     events = add_event(events, offer, trigger_type=OFFER, meta=meta, leaf=leaf)
 
     # slr counter in thread = 1 for lstg = 9
@@ -568,6 +586,7 @@ def test_lstgs_open_meta():
     exp = make_exp(exp, exp_array)
 
     exp = exp['exp']
+    exp = exp - 1
     actual = get_cat_feats(events, levels=['meta'], feat_ind=1)
     assert np.all(np.isclose(exp.values, actual['meta_lstgs_open'].values))
 
@@ -582,11 +601,13 @@ def test_lstgs_open_leaf():
     exp = make_exp(None, exp_array)
     exp = make_exp(exp, exp_array)
     exp = exp['exp']
+    exp = exp - 1
     assert np.all(np.isclose(exp.values, actual['leaf_lstgs_open'].values))
     exp_array = [2, 4, 6, 6, 2, 4, 6, 2, 4, 6, 4]
     exp = make_exp(None, exp_array)
     exp = make_exp(exp, exp_array)
     exp = exp['exp']
+    exp = exp - 1
     assert np.all(np.isclose(exp.values, actual['meta_lstgs_open'].values))
 
     events = setup_complex_lstg(None, meta=2, leaf=1)
@@ -598,6 +619,7 @@ def test_lstgs_open_leaf():
     exp = make_exp(None, exp_array)
     exp = make_exp(exp, exp_array)
     exp = exp['exp']
+    exp = exp - 1
     assert np.all(np.isclose(exp.values, actual['leaf_lstgs_open'].values))
     assert np.all(np.isclose(exp.values, actual['meta_lstgs_open'].values))
 
@@ -1848,11 +1870,13 @@ def test_delay_leaf():
 
 
 def test_start_price_pctile_meta():
-    pass
+    prices = [.8, .7, .9, .4, .6, .75, .2, .3, .5, .65, .1]
+    check_quantiles_wrapper(prices, leaf=False, feat_ind=5)
 
 
 def test_start_price_pctile_leaf():
-    pass
+    prices = [.8, .7, .9, .4, .6, .75, .2, .3, .5, .65, .1]
+    check_quantiles_wrapper(prices, leaf=True, feat_ind=5)
 
 
 def test_arrival_rate_pctile_meta():
@@ -1862,30 +1886,66 @@ def test_arrival_rate_pctile_meta():
 
 def test_arrival_rate_pctile_leaf():
     rates = [.4, .2, .3, .6, .65, .7, .45, .35, .55, .8, .9]
+    check_quantiles_wrapper(rates, leaf=True, feat_ind=7)
 
 
 def test_byr_hist_pctile_meta():
-    pass
+    byr_hist = {
+        0: [.2, .9, .6],
+        1: [.7, .25],
+        2: [.15],
+        3: [.75],
+        4: [.5, .65],
+        5: [.25, .3],
+        6: [.8],
+        7: [.85],
+        8: [.95],
+        9: [],
+        10: []
+    }
+    check_quantiles_wrapper(byr_hist, leaf=False, feat_ind=6)
 
 
 def test_byr_hist_pctile_leaf():
-    pass
+    byr_hist = {
+        0: [.2, .9, .6],
+        1: [.7, .25],
+        2: [.15],
+        3: [.75],
+        4: [.5, .65],
+        5: [.25, .3],
+        6: [.8],
+        7: [.85],
+        8: [.95],
+        9: [],
+        10: []
+    }
+    check_quantiles_wrapper(byr_hist, leaf=True, feat_ind=6)
 
 
 def check_quantiles_wrapper(offers, leaf=True, feat_ind=1):
     if feat_ind == 5:
         featname = 'start_price_pctile'
+    elif feat_ind == 6:
+        featname = 'byr_hist'
     elif feat_ind == 7:
         featname = 'arrival_rate'
     else:
         raise NotImplementedError()
     if leaf:
         events = setup_complex_lstg(None, meta=1, leaf=1)
-        events = setup_complex_lstg(events, meta=1, leaf=2)
+        events = setup_complex_lstg(events, meta=1, leaf=2, starter=11)
         events.index = events.index.droplevel(['cndtn'])
         actual = get_cat_feats(events, levels=['meta', 'leaf'], feat_ind=feat_ind)
         check_quantiles(offers, actual, level_type='leaf', featname=featname, double=True)
-        check_quantiles(offers + offers, actual, level_type='meta', featname=featname, double=False)
+        if isinstance(offers, dict):
+            prev = len(offers)
+            for i in range(prev):
+                offers[i + prev] = offers[i].copy()
+            meta_offers = offers
+        else:
+            meta_offers = offers + offers
+        check_quantiles(meta_offers, actual, level_type='meta', featname=featname, double=False)
     else:
         events = setup_complex_lstg(None, meta=1, leaf=1)
         events = setup_complex_lstg(events, meta=2, leaf=1, starter=11)
@@ -1902,7 +1962,10 @@ def check_quantiles(offers, actual, level_type='leaf', featname=None, double=Fal
             considered = list()
             for j in range(len(offers)):
                 if j != i:
-                    considered.append(offers[j])
+                    if isinstance(offers, dict):
+                        considered = considered + offers[j]
+                    else:
+                        considered.append(offers[j])
             considered = np.array(considered)
             quant = np.nanquantile(considered, q=q, interpolation='lower')
             if np.isnan(quant):
@@ -1916,3 +1979,125 @@ def check_quantiles(offers, actual, level_type='leaf', featname=None, double=Fal
         print(exp)
         name = '{}_{}_{}'.format(level_type, featname, int(q * 100))
         assert np.all(np.isclose(exp.values, actual[name].values))
+
+
+def add_empty_lstg(events, meta=1, leaf=1, starter=11):
+    offer = {
+        'lstg': 1 + starter,
+        'clock': 300
+    }
+    events = add_event(events, offer=offer, trigger_type=NEW_LSTG, meta=meta, leaf=leaf)
+
+    offer['clock'] = 450
+    events = add_event(events, offer=offer, trigger_type=EXPIRE_LSTG, meta=meta, leaf=leaf)
+    return events
+
+
+def add_active_lstg(events, meta=1, leaf=1, starter=11):
+    # start new lstg = 1
+    offer = {
+        'lstg': 1 + starter,
+        'clock': 15,
+        'start_price_pctile': .8,
+        'arrival_rate': .4
+    }
+    events = add_event(events, offer, trigger_type=NEW_LSTG, meta=meta, leaf=leaf)
+
+    # start new thread =1 for lstg = 1
+    offer['price'] = 50
+    offer['thread'] = 1
+    offer['byr'] = True
+    offer['byr_hist'] = .2
+    offer['clock'] = 20
+    events = add_event(events, offer, trigger_type=OFFER, meta=meta, leaf=leaf)
+
+    # slr counter offer in thread = 1 for lstg = 1
+    offer['byr'] = False
+    offer['price'] = 80
+    offer['clock'] = 30
+    events = add_event(events, offer, trigger_type=OFFER, meta=meta, leaf=leaf)
+
+    # byr counter offer in thread = 1 for lstg = 1
+    offer['byr'] = True
+    offer['price'] = 60
+    offer['clock'] = 40
+    events = add_event(events, offer, trigger_type=OFFER, meta=meta, leaf=leaf)
+
+    # wait 30 days
+
+    # slr counter offer in thread = 1 for lstg = 1
+    offer['byr'] = False
+    offer['price'] = 75
+    offer['clock'] = 70
+    events = add_event(events, offer, trigger_type=OFFER, meta=meta, leaf=leaf)
+
+    # byr rejection in thread = 1 for lstg = 1
+    offer['byr'] = True
+    offer['price'] = 60
+    offer['clock'] = 75
+    events = add_event(events, offer, trigger_type=BYR_REJECTION, meta=meta, leaf=leaf)
+
+    # start new thread = 2 for lstg = 1
+    offer['thread'] = 2
+    offer['price'] = 30
+    offer['clock'] = 80
+    offer['byr_hist'] = .9
+    events = add_event(events, offer, trigger_type=OFFER, meta=meta, leaf=leaf)
+
+    # slr auto reject for thread = 2
+    offer['byr'] = False
+    offer['price'] = 100
+    events = add_event(events, offer, trigger_type=SLR_REJECTION, meta=meta, leaf=leaf)
+
+    # byr offer in thread = 2 for lstg = 1
+    offer['thread'] = 2
+    offer['clock'] = 110
+    offer['price'] = 70
+    events = add_event(events, offer, trigger_type=OFFER, meta=meta, leaf=leaf)
+
+    # slr counter offer in thread = 2 for lstg = 1
+    offer['byr'] = False
+    offer['price'] = 75
+    offer['thread'] = 2
+    offer['lstg'] = 1 + starter
+    offer['clock'] = 120
+    events = add_event(events, offer, trigger_type=OFFER, meta=meta, leaf=leaf)
+
+    # byr reject in thread = 2 for lstg = 1
+    offer['lstg'] = 1 + starter
+    offer['thread'] = 2
+    offer['clock'] = 135
+    offer['price'] = 70
+    offer['byr'] = True
+    events = add_event(events, offer, trigger_type=BYR_REJECTION, meta=meta, leaf=leaf)
+
+    # close lstg = 1
+    offer['lstg'] = 1 + starter
+    offer['clock'] = 140
+    events = add_event(events, offer, trigger_type=EXPIRE_LSTG, meta=meta, leaf=leaf)
+    return events
+
+def test_one_lstg_no_arrivals_meta():
+    events = setup_complex_lstg(None, meta=1, leaf=1)
+    events = add_empty_lstg(events, meta=2, leaf=1, starter=11)
+    events.index = events.index.droplevel(['leaf', 'cndtn'])
+    for i in range(1, 8):
+        actual = get_cat_feats(events, levels=['meta'], feat_ind=i)
+        actual = actual.loc[12, :].values
+        actual = np.squeeze(actual)
+        exp = np.zeros(actual.shape)
+        assert np.all(np.isclose(exp, actual))
+
+
+def test_one_lstg_active_meta():
+    events = setup_complex_lstg(None, meta=1, leaf=1)
+    events = add_active_lstg(events, meta=2, leaf=1, starter=11)
+    events.index = events.index.droplevel(['leaf', 'cndtn'])
+    for i in range(1, 8):
+        actual = get_cat_feats(events, levels=['meta'], feat_ind=i)
+        actual = actual.loc[12, :].values
+        actual = np.squeeze(actual)
+        exp = np.zeros(actual.shape)
+        assert np.all(np.isclose(exp, actual))
+
+
