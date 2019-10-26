@@ -108,6 +108,6 @@ class Simulator:
             loss.backward()
             self.optimizer.step()
 
-        # return loss
-        return loss.item()
+        # return log-likelihood
+        return -loss.item()
 

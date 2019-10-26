@@ -94,7 +94,7 @@ def collateFF(batch):
         idx.append(b[2])
 
     # convert to tensor
-    y = torch.from_numpy(np.asarray(y)).float()
+    y = torch.from_numpy(np.asarray(y))
     x_fixed = torch.stack(x_fixed).float()
     idx = torch.tensor(idx)
 
@@ -115,7 +115,7 @@ def collateRNN(batch):
         idx.append(b[3])
 
     # convert to tensor, pack if needed
-    y = torch.from_numpy(np.asarray(y)).float()
+    y = torch.from_numpy(np.asarray(y))
     turns = torch.sum(y > -1, dim=1)
     x_fixed = torch.stack(x_fixed).float()
     x_time = torch.stack(x_time, dim=0).float()

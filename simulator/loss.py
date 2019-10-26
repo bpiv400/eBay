@@ -37,21 +37,14 @@ def emd_loss(theta, distance):
 	return loss
 
 def cross_entropy_loss(theta, y):
-	# for con_byr model, theta is a list
-	if isinstance(theta, list):
-		theta, theta4 = theta
-		y, y4 = y
-
 	# predicted bucket probabilities
 	num = torch.exp(theta)
 	p = torch.div(num, torch.sum(num, dim=-1, keepdim=True))
 
-	# loss is dot product of flow (p) and distance
-	loss = torch.sum(torch.log(p[y]))
+	# reshape y
+	idx = y.unsqueeze(dim=1).long()
 
-	# add in loss for 4th byr turn
-	if 'theta4' in vars():
-		p4 = torch.sigmoid(theta4)	# probability of accept
-		loss += torch.sum(torch.log(p4[y4]))
+	# log-likelihood
+	ll = torch.log(torch.gather(p, 1, idx))
 
-	return loss
+	return -torch.sum(ll)

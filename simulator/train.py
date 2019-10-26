@@ -18,9 +18,9 @@ def run_loop(model, simulator, data, isTraining):
         collate_fn=f, num_workers=0, pin_memory=True)
 
     # loop over batches, calculate loss
-    loss = 0
+    lnL = 0
     for batch in loader:
-        loss += simulator.run_batch(*batch, isTraining)
+        lnL += simulator.run_batch(*batch, isTraining)
 
     return loss
 
@@ -31,13 +31,13 @@ def train_model(simulator, train, test, outfile):
         t0 = dt.now()
 
         # training loop
-        loss_train = run_loop(model, simulator, train, True)
+        lnL_train = run_loop(model, simulator, train, True)
 
         # training duration
         dur = np.round((dt.now() - t0).seconds)
 
         # test loop
-        loss_test = run_loop(model, simulator, test, False)
+        lnL_test = run_loop(model, simulator, test, False)
 
         # write to file
         f = open(outfile, 'a')
@@ -79,7 +79,7 @@ if __name__ == '__main__':
     # create outfile
     outfile = 'outputs/cluster/%s_%d.csv' % (model, paramsid)
     f = open(outfile, 'w')
-    f.write('epoch,seconds,loss_train,loss_holdout\n')
+    f.write('epoch,seconds,lnL_train,lnL_holdout\n')
     f.close()
 
     # train model
