@@ -8,30 +8,30 @@ from utils import *
 from processing.processing_utils import *
 
 
+# delay
 def get_delay(clock):
     delay = pd.DataFrame(index=clock.index)
     delay[0] = 0
-    for i in range(1, 8):
+    delay[1] = (clock[1] - clock[0]) / MAX_DELAY['byr']
+    for i in range(2, 8):
         delay[i] = clock[i] - clock[i-1]
         if i in [2, 4, 6, 7]: # byr has 2 days for last turn
-            censored = delay[i] > MAX_DELAY['slr']
-            delay.loc[censored, i] = MAX_DELAY['slr']
             delay[i] /= MAX_DELAY['slr']
         elif i in [3, 5]:   # ignore byr arrival and last turn
-            censored = delay[i] > MAX_DELAY['byr']
-            delay.loc[censored, i] = MAX_DELAY['byr']
             delay[i] /= MAX_DELAY['byr']
-        elif i == 1:
-            delay[i] /= MAX_DELAY['byr']
+        # censor delays at MAX_DELAY
+        delay.loc[delay[i] > 1, i] = 1
     return delay.rename_axis('index', axis=1).stack()
 
 
-def get_y_con(x_offer):
-    # drop zero delay and expired offers
-    mask = (x_offer.delay > 0) & ~x_offer.exp
-    s = x_offer.loc[mask, 'con']
-    # split by role and return
-    return split_by_role(s)
+# concession
+def get_con(offers):
+    con = pd.DataFrame(index=offers.index)
+    con[0] = 0
+    con[1] = offers[1] / offers[0]
+    for i in range(2, 8):
+        con[i] = (offers[i] - offers[i-2]) / (offers[i-1] - offers[i-2])
+    return con.stack()
 
 
 def get_x_offer(lstgs, events, tf):
@@ -42,12 +42,7 @@ def get_x_offer(lstgs, events, tf):
     # initialize output dataframe
     df = pd.DataFrame(index=offers.stack().index).sort_index()
     # concession
-    con = pd.DataFrame(index=offers.index)
-    con[0] = 0
-    con[1] = offers[1] / offers[0]
-    for i in range(2, 8):
-        con[i] = (offers[i] - offers[i-2]) / (offers[i-1] - offers[i-2])
-    df['con'] = con.stack()
+    df['con'] = get_con(offers)
     df['reject'] = df['con'] == 0
     df['split'] = np.abs(df['con'] - 0.5) < TOL_HALF
     # total concession
@@ -55,6 +50,8 @@ def get_x_offer(lstgs, events, tf):
         index=df.index, fill_value=0.0)
     df.loc[df.index.isin(IDX['slr'], level='index'), 'norm'] = \
         1 - df['norm']
+    # message indicator
+    df['msg'] = events['message']
     # clock variable
     clock = 24 * 3600 * lstgs.start_date.rename(0).to_frame()
     clock = clock.join(events.clock.unstack())
@@ -107,10 +104,4 @@ if __name__ == "__main__":
     print('x_offer')
     x_offer = get_x_offer(lstgs, events, tf)
     dump(x_offer, path('x_offer'))
-
-    # concession outcome
-    print('y_con')
-    y_con_byr, y_con_slr = get_y_con(x_offer)
-    dump(y_con_byr, path('y_con_byr'))
-    dump(y_con_slr, path('y_con_slr'))
  

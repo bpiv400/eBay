@@ -25,9 +25,12 @@ def process_inputs(part):
     # outcome
     y = load(getPath(['y', 'arrival']))
 
+    # sort by number of turns
+    turns = get_sorted_turns(y)
+    y = y.reindex(index=turns.index)
+
     # fixed features
-    x_fixed = load(getPath(['x', 'lstg']))
-    assert(x_fixed.index.equals(y.index))
+    x_fixed = load(getPath(['x', 'lstg'])).reindex(index=turns.index)
 
     # clock features
     N = pd.to_timedelta(pd.to_datetime(END) - pd.to_datetime(START))
@@ -40,6 +43,7 @@ def process_inputs(part):
     idx_hour = x_fixed.start_date * 24
 
     return {'y': y.astype('int8', copy=False),
+            'turns': turns.astype('uint16', copy=False),
             'x_fixed': x_fixed.astype('float32', copy=False), 
             'x_hour': x_hour.astype('uint16', copy=False),
             'idx_hour': idx_hour.astype('uint16', copy=False)}

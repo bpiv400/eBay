@@ -33,35 +33,6 @@ def categories_to_string(L):
     return L
 
 
-# for creating arrival and delay outcomes
-def multiply_indices(s):
-    '''
-    s: Series with index ['lstg'] or ['lstg', 'thread'] and number of periods.
-    '''
-    # initialize arrays
-    k = len(s.index.names)
-    arrays = np.zeros((s.sum(),k+1), dtype='uint16')
-    count = 0
-    # outer loop: range length
-    for i in range(1, max(s)+1):
-        index = s.index[s == i].values
-        if len(index) == 0:
-            continue
-        # cartesian product of existing level(s) and period
-        if k == 1:
-            f = lambda x: cartesian([[x], list(range(i))])
-        else:
-            f = lambda x: cartesian([[e] for e in x] + [list(range(i))])
-        # inner loop: rows of period
-        for j in range(len(index)):
-            arrays[count:count+i] = f(index[j])
-            count += i
-    # convert to multi-index
-    idx = pd.MultiIndex.from_arrays(np.transpose(arrays), 
-        names=s.index.names + ['period'])
-    return idx.sortlevel(idx.names)[0]
-
-
 # returns partition indices and path to file function
 def get_partition(part):
     '''
@@ -71,13 +42,6 @@ def get_partition(part):
     idx = partitions[part]
     path = lambda name: PARTS_DIR + '%s/%s.gz' % (part, name)
     return idx, path
-
-
-# splits series by turn index according to role
-def split_by_role(s):
-    byr = s[s.index.isin(IDX['byr'], level='index')]
-    slr = s[s.index.isin(IDX['slr'], level='index')]
-    return byr, slr
 
 
 # appends turn indicator variables to offer matrix
@@ -91,6 +55,17 @@ def add_turn_indicators(df):
         featname = 't' + str((ind+1) // 2)
         df[featname] = df.index.isin([ind], level='index')
     return df
+
+
+# count number of time steps in each observations
+def get_sorted_turns(y):
+    '''
+    y: dataframe of outcomes
+        - columns are time steps
+        - missing outcomes are coded -1
+    '''
+    turns = (y > -1).sum(axis=1)
+    return turns.sort_values(ascending=False, kind='mergesort')
 
 
 # returns dictionary of feature names for each 'x' dataframe in d
@@ -136,7 +111,7 @@ def convert_to_numpy(d):
             arrays.append(np.expand_dims(array, axis=2))
         d['x_time'] = np.concatenate(arrays, axis=2)
     # convert y and x_fixed to numpy directly
-    for k in ['y', 'x_fixed', 'idx_hour', 'x_hour']:
+    for k in ['y', 'turns', 'x_fixed', 'idx_hour', 'x_hour']:
         if k in d:
             d[k] = d[k].to_numpy()
     return d

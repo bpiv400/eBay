@@ -97,8 +97,7 @@ class Simulator:
 
         if self.isRecurrent:
             data['x_time'] = rnn.pack_padded_sequence(
-                data['x_time'], data['turns'], 
-                batch_first=True, enforce_sorted=False)
+                data['x_time'], data['turns'], batch_first=True)
 
         # calculate loss
         loss = self.evaluate_loss(data)

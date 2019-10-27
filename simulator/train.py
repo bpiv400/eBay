@@ -9,35 +9,35 @@ from constants import *
 
 EPOCHS = 1000
 
-def run_loop(model, simulator, data, isTraining):
+def run_loop(model, simulator, data):
     # collate function
-    f = collateFF if model == 'hist' else collateRNN
+    f = collateRNN if data.isRecurrent else collateFF
 
-    # data loader
-    loader = DataLoader(data, batch_sampler=Sample(data),
+    # load batches
+    batches = DataLoader(data, batch_sampler=Sample(data),
         collate_fn=f, num_workers=0, pin_memory=True)
 
-    # loop over batches, calculate loss
+    # loop over batches, calculate log-likelihood
     lnL = 0
-    for batch in loader:
-        lnL += simulator.run_batch(*batch, isTraining)
+    for batch in batches:
+        lnL += simulator.run_batch(*batch, data.isTraining)
 
     return lnL
 
 
 def train_model(simulator, train, test, outfile):
-    # loop over epochs, record loss
+    # loop over epochs, record log-likelihood
     for i in range(EPOCHS):
         t0 = dt.now()
 
         # training loop
-        lnL_train = run_loop(model, simulator, train, True)
+        lnL_train = run_loop(model, simulator, train)
 
         # training duration
         dur = np.round((dt.now() - t0).seconds)
 
         # test loop
-        lnL_test = run_loop(model, simulator, test, False)
+        lnL_test = run_loop(model, simulator, test)
 
         # write to file
         f = open(outfile, 'a')

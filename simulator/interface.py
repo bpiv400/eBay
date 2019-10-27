@@ -12,14 +12,25 @@ class Inputs(Dataset):
 
     def __init__(self, part, model):
 
-        # save parameters to self
-        self.model = model
-
         # inputs
         self.d = load('%s/inputs/%s/%s.gz' % (PREFIX, part, model))
 
-        # save length
+        # save parameters to self
+        self.model = model
+        self.isTraining = part == 'train_models'
+        self.isRecurrent = 'turns' in self.d
         self.N = np.shape(self.d['x_fixed'])[0]
+        
+        # save list of arrays of indices with same number of turns
+        if self.isRecurrent:
+            sizes = np.unique(self.d['turns'])
+            self.groups = [np.nonzero(self.d['turns'] == n)[0] for n in sizes]
+
+            print(sizes)
+            print(len(sizes))
+            print(self.groups[0])
+        else:
+            self.groups = [np.array(range(self.N))]
 
 
     def __getitem__(self, idx):
@@ -28,8 +39,11 @@ class Inputs(Dataset):
         x_fixed = self.d['x_fixed'][idx,:]
 
         # feed-forward models
-        if self.model == 'hist':
+        if not self.recurrent:
             return y, x_fixed, idx
+
+        # number of turns
+        turns = self.d['turns'][idx]
 
         # x_time
         if self.model == 'arrival':
@@ -49,7 +63,7 @@ class Inputs(Dataset):
         else:
             x_time = self.d['x_time'][idx,:,:]
         
-        return y, x_fixed, x_time, idx
+        return y, turns, x_fixed, x_time, idx
 
 
     def __len__(self):
@@ -62,17 +76,22 @@ class Sample(Sampler):
     def __init__(self, dataset):
         """
         dataset: instance of Inputs
+        isTraining: chop into minibatches if True
         """
         super().__init__(None)
 
-        # save dataset to self
-        self.dataset = dataset
-        
-        # shuffle indices and batch
-        N = len(dataset)
-        v = [i for i in range(N)]
-        np.random.shuffle(v)
-        self.batches = np.array_split(v, 1 + N // MBSIZE)
+        # for training, shuffle and chop into minibatches
+        if dataset.isTraining:
+            self.batches = []
+            for v in dataset.groups:
+                np.random.shuffle(v)
+                self.batches += np.array_split(v, 1 + len(v) // MBSIZE)
+            # shuffle training batches
+            np.random.shuffle(self.batches)
+
+        # for test, create batch of samples of same length
+        else:
+            self.batches = dataset.groups
 
     def __iter__(self):
         """
@@ -105,24 +124,28 @@ def collateFF(batch):
 # collate function for recurrent networks
 def collateRNN(batch):
     # initialize output
-    y, x_fixed, x_time, idx = [], [], [], []
+    y, turns, x_fixed, x_time, idx = [], [], [], [], []
 
     # sorts the batch list in decreasing order of turns
     for b in batch:
         y.append(b[0])
-        x_fixed.append(torch.from_numpy(b[1]))
-        x_time.append(torch.from_numpy(b[2]))
-        idx.append(b[3])
+        turns.append(b[1])
+        x_fixed.append(torch.from_numpy(b[2]))
+        x_time.append(torch.from_numpy(b[3]))
+        idx.append(b[4])
 
     # convert to tensor, pack if needed
     y = torch.from_numpy(np.asarray(y))
-    turns = torch.sum(y > -1, dim=1)
+    turns = torch.from_numpy(np.asarray(turns)).long()
     x_fixed = torch.stack(x_fixed).float()
     x_time = torch.stack(x_time, dim=0).float()
     idx = torch.tensor(idx)
 
+    print(torch.min(turns))
+    print(torch.max(turns))
+
     # output is (dictionary, indices)
     return {'y': y, 
+            'turns': turns,
             'x_fixed': x_fixed, 
-            'x_time': x_time, 
-            'turns': turns}, idx
+            'x_time': x_time}, idx

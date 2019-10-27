@@ -62,6 +62,10 @@ def process_inputs(part, role):
     # outcome
     y = load(getPath(['y', 'delay', role]))
 
+    # sort by number of turns
+    turns = get_sorted_turns(y)
+    y = y.reindex(index=turns.index)
+
     # time features
     z_start = load(getPath(['z', 'start']))
     z_role = load(getPath(['z', role]))
@@ -74,7 +78,8 @@ def process_inputs(part, role):
     x_fixed = parse_fixed_feats_delay(
     	y.index, x_lstg, x_thread, x_offer)
 
-    return {'y': y.astype('int8', copy=False), 
+    return {'y': y.astype('int8', copy=False),
+            'turns': turns.astype('uint16', copy=False),
             'x_fixed': x_fixed.astype('float32', copy=False), 
             'x_time': x_time.astype('float32', copy=False)}
 

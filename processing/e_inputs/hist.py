@@ -14,7 +14,6 @@ def process_inputs(part):
 
 	# outcome
 	pctiles = load(getPath(['x', 'thread']))['byr_hist']
-	y = (HIST_QUANTILES * pctiles).astype('uint8')
 
 	# initialize fixed features with listing variables
 	x_fixed = load(getPath(['x', 'lstg'])).reindex(
@@ -27,11 +26,15 @@ def process_inputs(part):
 	dummies = ['holiday'] + [c for c in offers.columns if 'dow' in c]
 	x_fixed = x_fixed.join(offers[dummies])
 
-	# rescale days and hour of day, and add
+	# rescale days and hour of day, and add to fixed features
 	x_fixed.loc[:, 'years'] = offers['days'] / 365
 	x_fixed.loc[:, 'hour_of_day'] = offers['hour_of_day'] / 24
 
-	return {'y': y.astype('uint8', copy=False), 
+	# add time feats at arrival
+	tfeats = [c for c in offers.columns if c.endswith('_raw')]
+	x_fixed = x_fixed.join(offers[tfeats])
+
+	return {'y': y.astype('int64', copy=False), 
             'x_fixed': x_fixed.astype('float32', copy=False)}
 
 

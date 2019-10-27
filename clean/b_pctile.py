@@ -7,7 +7,7 @@ from constants import *
 # creates series of percentiles indexed by column variable
 def get_pctiles(s):
 	N = len(s.index)
-	s = pd.Series(np.arange(1, N+1) / N, 
+	s = pd.Series(np.arange(N) / (N-1), 
 		index=np.sort(s.values), name='pctile')
 	return s.groupby(s.index).min()
 

@@ -36,6 +36,14 @@ def get_y_arrival(lstgs, threads):
     return df
 
 
+def get_x_thread(threads):
+    x_thread = threads['byr_hist']
+    # decrement 100th percentile by epsilon
+    x_thread.loc[x_thread == 1] -= 1e-16
+    # convert to quantiles and return
+    return np.floor(HIST_QUANTILES * x_thread) / HIST_QUANTILES
+
+
 if __name__ == "__main__":
     # partition number from command line
     parser = argparse.ArgumentParser()
@@ -54,6 +62,7 @@ if __name__ == "__main__":
 
     # thread variables
     print('x_thread')
+    x_thread = get_x_thread(threads)
     dump(threads[['byr_hist']], path('x_thread'))
 
     # outcomes for arrival model

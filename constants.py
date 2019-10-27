@@ -64,7 +64,7 @@ INTERVAL_COUNTS = {
 }
 
 # quantiles of byr_hist distribution
-HIST_QUANTILES = 5
+HIST_QUANTILES = 10
 
 # model names
 MODELS = ['arrival','hist', 'delay_byr', 'delay_slr', 'con_byr', 'con_slr']
