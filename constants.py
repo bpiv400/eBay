@@ -1,6 +1,7 @@
 from pandas.tseries.holiday import USFederalHolidayCalendar as Calendar
 import torch
 import numpy as np
+from platform import platform
 
 # strings for referencing quantities related to buyer and seller models
 SLR_PREFIX = 'slr'
@@ -33,7 +34,10 @@ DROPOUT = 0.5
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 # paths and directories
-PREFIX = '/data/eBay' if torch.cuda.is_available() else 'data'
+if torch.cuda.is_available() and 'Windows' not in platform():
+	PREFIX = '/data/eBay'
+else:
+	PREFIX = 'data'
 CLEAN_DIR = '%s/clean/' % PREFIX
 CHUNKS_DIR = '%s/chunks/' % PREFIX
 FEATS_DIR = '%s/feats/' % PREFIX

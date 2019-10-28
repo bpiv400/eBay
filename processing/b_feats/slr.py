@@ -73,8 +73,8 @@ if __name__ == "__main__":
     tf_slr = tf_slr.reindex(index=idx)
     events = events.drop(0, level='thread') # remove lstg start/end obs
 
-    tf_file = '{}/{}_slr_feat_{}.gz'.format(FEATS_DIR, args.num, args.feat)
+    tf_file = '{}{}_slr_feat_{}.gz'.format(FEATS_DIR, args.num, args.feat)
     dump(tf_slr, tf_file)
     if args.feat == 7:
-        events_file = '{}/{}_events.gz'.format(FEATS_DIR, args.num)
+        events_file = '{}{}_events.gz'.format(FEATS_DIR, args.num)
         dump(events, events_file)

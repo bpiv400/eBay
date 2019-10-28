@@ -1,10 +1,7 @@
-import sys, os
 import argparse
 from compress_pickle import dump, load
 from datetime import datetime as dt
-from constants import *
 import processing.b_feats.util as util
-import processing.processing_utils as putil
 
 
 if __name__ == "__main__":
@@ -19,26 +16,20 @@ if __name__ == "__main__":
     FEATS_DIR = 'data/feats/'
     # load data
     print('Loading data')
-    d = load(CHUNKS_DIR + 'm%d' % args.num + '.gz')
-    L, T, O = [d[k] for k in ['listings', 'threads', 'offers']]
+    events = load('{}m{}_events.gz'.format(FEATS_DIR, args.num))
 
-
-    # set levels for hierarchical time feats
-    levels = ['meta', 'leaf', 'cndtn']
-
-    # create events dataframe
-    print('Creating offer events.')
     start = dt.now()
-    events = util.create_events(L, T, O, levels)
 
     # get upper-level time-valued features
+    levels = ['meta', 'leaf', 'cndtn']
     print('Creating categorical time features') 
     tf = util.get_cat_feats(events, levels, feat_ind=args.feat)
     assert not tf.isna().any().any()
     # save
     end = dt.now()
-    print('time: {}'.format((end-start).seconds//3600))
-    dump(tf, FEATS_DIR + 'm{}_meta_feats_{}.gz'.format(args.num, args.feat))
+    print('minutes: {}'.format((end-start).seconds//60))
+    dump(tf, FEATS_DIR + 'm{}_cat_feats_{}.gz'.format(args.num, args.feat))
+
 
 
     # separate feature sets:
