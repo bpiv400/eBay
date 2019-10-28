@@ -33,9 +33,6 @@ def quant_vector_index(quant_vector, l, name):
 
 
 def prep_quantiles(df, l, featname):
-    print('')
-    print(featname)
-    print(featname == 'arrival_rate')
     if featname == 'accept_norm':
         quant_vector = df.reset_index(drop=False)
         quant_vector = quant_vector[[featname, 'lstg_counter'] + l]

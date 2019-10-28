@@ -2,7 +2,7 @@ import argparse
 from compress_pickle import dump, load
 from datetime import datetime as dt
 import processing.b_feats.util as util
-
+from constants import FEATS_DIR
 
 if __name__ == "__main__":
     # parse parameters
@@ -12,8 +12,6 @@ if __name__ == "__main__":
     args = parser.parse_args()
     if args.feat > 7 or args.feat < 1:
         raise RuntimeError("feat must be an integer in range [1, 7]")
-    CHUNKS_DIR = 'data/chunks/'
-    FEATS_DIR = 'data/feats/'
     # load data
     print('Loading data')
     events = load('{}m{}_events.gz'.format(FEATS_DIR, args.num))

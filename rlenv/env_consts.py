@@ -12,6 +12,9 @@ BYR_BEST = 'byr_best'
 SLR_BEST_OPEN = 'slr_best_open'
 BYR_BEST_OPEN = 'byr_best_open'
 THREAD_COUNT = 'thread_count'
+SLR_OFFERS_RECENT = 'slr_offers_recent'
+BYR_OFFERS_RECENT = 'byr_offers_recent'
+SLR_OFFERS_
 
 TIME_FEATS = [
     SLR_OFFERS,

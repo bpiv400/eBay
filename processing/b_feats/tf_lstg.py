@@ -72,6 +72,8 @@ def recent_count(subset, role):
         curr_best = max_cut.max(axis=1).fillna(0.0)
         curr_best = curr_best.groupby('lstg')
         curr_best = curr_best.apply(lambda x: x.rolling('172800s', on='clock').cummax())
+
+        # reconform
         best[n] = conform_cut(curr_best)
         count[n] = conform_cut(count[n])
     # concat into series and return

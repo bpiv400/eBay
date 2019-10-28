@@ -770,3 +770,5 @@ def test_slr_rejection_early(init_timefeats, lstgs):
             compare(next2[i], torch.tensor(1).float())
         else:
             raise RuntimeError()
+
+

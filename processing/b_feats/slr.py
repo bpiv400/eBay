@@ -2,11 +2,8 @@ import sys
 import os
 import argparse
 from compress_pickle import dump, load
-import numpy as np
-import pandas as pd
-from processing.b_feats.util import *
-from processing.processing_utils import *
-from constants import *
+from processing.b_feats.util import get_cat_feats, create_events
+from constants import CHUNKS_DIR, FEATS_DIR, LEVELS
 
 
 def get_multi_lstgs(L):
@@ -26,10 +23,13 @@ def get_multi_lstgs(L):
 def clean_events(events, L):
     # identify multi-listings
     ismulti = get_multi_lstgs(L)
+    ismulti.index = ismulti.index.droplevel(level=['meta', 'leaf', 'cndtn'])
     # drop multi-listings
+    print(events.index.names)
+    print(ismulti.index.names)
     events = events[~ismulti.reindex(index=events.index)]
     # limit index to ['lstg', 'thread', 'index']
-    events = events.reset_index(LEVELS[:-1], drop=True).sort_index()
+    events = events.reset_index('slr', drop=True).sort_index()
     # 30-day burn in
     events = events.join(L['start_date'])
     events = events[events.start_date >= 30].drop('start_date', axis=1)
@@ -45,7 +45,6 @@ if __name__ == "__main__":
     parser.add_argument('--feat', action='store', type=int, required=True)
     args = parser.parse_args()
 
-    CHUNKS_DIR = 'data/chunks'
 
     # load data
     print('Loading data')
