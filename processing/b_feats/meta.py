@@ -1,6 +1,7 @@
 import sys, os
 import argparse
 from compress_pickle import dump, load
+from datetime import datetime as dt
 from constants import *
 import processing.b_feats.util as util
 import processing.processing_utils as putil
@@ -10,27 +11,34 @@ if __name__ == "__main__":
     # parse parameters
     parser = argparse.ArgumentParser()
     parser.add_argument('--num', action='store', type=int, required=True)
-    num = parser.parse_args().num
-
+    parser.add_argument('--feat', action='store', type=int, required=True)
+    args = parser.parse_args()
+    if args.feat > 7 or args.feat < 1:
+        raise RuntimeError("feat must be an integer in range [1, 7]")
+    CHUNKS_DIR = 'data/chunks/'
+    FEATS_DIR = 'data/feats/'
     # load data
     print('Loading data')
-    d = load(CHUNKS_DIR + 'm%d' % num + '.gz')
+    d = load(CHUNKS_DIR + 'm%d' % args.num + '.gz')
     L, T, O = [d[k] for k in ['listings', 'threads', 'offers']]
 
 
     # set levels for hierarchical time feats
-    levels = LEVELS[1:4]
+    levels = ['meta', 'leaf', 'cndtn']
 
     # create events dataframe
     print('Creating offer events.')
+    start = dt.now()
     events = util.create_events(L, T, O, levels)
 
     # get upper-level time-valued features
     print('Creating categorical time features') 
-    tf = util.get_cat_time_feats(events, levels)
-
+    tf = util.get_cat_feats(events, levels, feat_ind=args.feat)
+    assert not tf.isna().any().any()
     # save
-    dump(tf, FEATS_DIR + 'm%d' % num + '_tf_meta.gz')
+    end = dt.now()
+    print('time: {}'.format((end-start).seconds//3600))
+    dump(tf, FEATS_DIR + 'm{}_meta_feats_{}.gz'.format(args.num, args.feat))
 
 
     # separate feature sets:

@@ -42,24 +42,18 @@ if __name__ == "__main__":
     # parse parameters
     parser = argparse.ArgumentParser()
     parser.add_argument('--num', action='store', type=int, required=True)
-    num = parser.parse_args().num
+    parser.add_argument('--feat', action='store', type=int, required=True)
+    args = parser.parse_args()
 
-    # quit if output files already exist
-    filename = lambda x: FEATS_DIR + '%d_%s.gz' % (num, x)
-    if os.path.isfile(filename('tf_slr')):
-        print('%d: output already exists.' % num)
-        exit()
+    CHUNKS_DIR = 'data/chunks'
 
     # load data
     print('Loading data')
-    d = load(CHUNKS_DIR + '%d' % num + '.gz')
+    d = load(CHUNKS_DIR + '%d' % args.num + '.gz')
     L, T, O = [d[k] for k in ['listings', 'threads', 'offers']]
 
-    # categories to strings
-    L = categories_to_string(L)
-
     # set levels for hierarchical time feats
-    levels = LEVELS[:6]
+    levels = ['slr']
 
     # create events dataframe
     print('Creating offer events.')
@@ -67,7 +61,7 @@ if __name__ == "__main__":
 
     # get upper-level time-valued features
     print('Creating hierarchical time features') 
-    tf_slr = get_cat_time_feats(events, levels)
+    tf_slr = get_cat_feats(events, levels, feat_ind=args.feat)
 
     # drop flagged lstgs
     print('Restricting observations')
@@ -79,6 +73,8 @@ if __name__ == "__main__":
     tf_slr = tf_slr.reindex(index=idx)
     events = events.drop(0, level='thread') # remove lstg start/end obs
 
-    # save separately
-    for name in ['events', 'tf_slr']:
-        dump(globals()[name], filename(name))
+    tf_file = '{}/{}_slr_feat_{}.gz'.format(FEATS_DIR, args.num, args.feat)
+    dump(tf_slr, tf_file)
+    if args.feat == 7:
+        events_file = '{}/{}_events.gz'.format(FEATS_DIR, args.num)
+        dump(events, events_file)
