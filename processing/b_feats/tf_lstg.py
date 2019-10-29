@@ -251,13 +251,8 @@ def get_lstg_time_feats(events, full=False):
     return tf
 
 
-def arrival_time_feats(tf_lstg):
-    df = tf_lstg.copy()
-    # sort and group
-    df = df.sort_index(level='clock')
-    group_df = df.groupby('lstg')
-    # compute row-wise differences
-    diff = group_df.diff()
+def get_diffs(grouped_df, df):
+    diff = grouped_df.diff()
     # find the first row in each lstg and replace with raw features
     firsts = diff.isna().any(axis=1)
     diff.loc[firsts, :] = df.loc[firsts, :]
@@ -267,18 +262,62 @@ def arrival_time_feats(tf_lstg):
     return diff
 
 
-if __name__ == "__main__":
+def arrival_time_feats(tf_lstg):
+    df = tf_lstg.copy()
+    # sort and group
+    df = df.sort_index(level='clock')
+    diff = get_diffs(df.groupby('lstg'), df)
+    return diff
+
+
+def subset_to_turns(tf, events):
+    events = events.reset_index(drop=False)
+    # one entry for each lstg, thread, index
+    events = events[['lstg', 'thread', 'clock']]
+    events = pd.MultiIndex.from_frame(events)
+    events = events.reorder_levels(tf.index.names)
+    # subset events to lstgs contained in tf
+    event_lstgs = events.get_level_values('lstg')
+    subset_lstgs = tf.index.get_level_values('lstg')
+    events = events[event_lstgs.isin(subset_lstgs)]
+    # subset tf to only include turns
+    tf = tf.loc[events, :]
+    return tf
+
+
+def con_time_feats(tf_lstg, events):
+    tf = subset_to_turns(tf_lstg.copy(), events.copy())
+    print('getting diffs')
+    diff = get_diffs(tf.groupby(['lstg', 'thread']), tf)
+    return diff
+
+
+def delay_time_feats(tf_lstg, events):
+    # compute raw features at each turn
+    raw = subset_to_turns(tf_lstg.copy(), events.copy())
+    # sort and group
+    tf_lstg = tf_lstg.sort_index(level='clock')
+    # compute timestep differences
+    deltas = get_diffs(tf_lstg.groupby(['lstg', 'thread']), tf_lstg)
+    return raw, deltas
+
+
+def output_path(model, num):
+    gz_path = '{}{}_tf_lstg_{}.gz'.format(FEATS_DIR, num, model)
+    return gz_path
+
+
+def main():
     # parse parameters
     parser = argparse.ArgumentParser()
     parser.add_argument('--num', action='store', type=int, required=True)
-    parser.add_argument('--model', action='store', type=str, required=True)
+    parser.add_argument('--arrival', action='store_true', default=False)
     args = parser.parse_args()
     num = args.num
-    model = args.model
+    arrival = args.arrival
 
     # load data
     print('Loading data')
-    FEATS_DIR = 'data/feats/'
     print(FEATS_DIR + '%d_events.gz' % num)
     events = load(FEATS_DIR + '%d_events.gz' % num)
 
@@ -286,14 +325,29 @@ if __name__ == "__main__":
     print('Creating lstg-level time-valued features')
     events['norm'] = events.price / events.start_price
     events.loc[~events['byr'], 'norm'] = 1 - events['norm']
-    if model != 'arrival':
+    if not arrival:
         tf_lstg_focal = get_lstg_time_feats(events, full=False)
+        tf_lstg_focal = tf_lstg_focal.sort_index(level=['clock', 'lstg', 'thread'])
+        print('preparing concession output...')
+        con_feats = con_time_feats(tf_lstg_focal, events)
+        print('preparing delay output...')
+        raw_delay_feats, diff_delay_feats = delay_time_feats(tf_lstg_focal, events)
+        assert not con_feats.isna().any().any()
+        assert not raw_delay_feats.isna().any().any()
+        assert not diff_delay_feats.isna().any().any()
+        dump(diff_delay_feats, output_path('delay_diff', num))
+        dump(raw_delay_feats, output_path('delay_raw', num))
+        dump(con_feats, output_path('con', num))
     else:
-        print('arrival model')
         tf_lstg_full = get_lstg_time_feats(events, full=True)
+        print('preparing arrival output...')
         arrival_feats = arrival_time_feats(tf_lstg_full)
-        dump(arrival_feats, FEATS_DIR + '%d_tf_lstg_arrival.gz' % num)
-    # con_feats = con_time_feats(tf_lstg_focal)
+        assert not arrival_feats.isna().any().any()
+        dump(arrival_feats, output_path('arrival', num))
+
+
+if __name__ == "__main__":
+    main()
 
 
     # save
