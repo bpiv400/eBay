@@ -255,6 +255,7 @@ def get_diffs(grouped_df, df):
     diff = grouped_df.diff()
     # find the first row in each lstg and replace with raw features
     firsts = diff.isna().any(axis=1)
+    print(firsts.index.names)
     diff.loc[firsts, :] = df.loc[firsts, :]
     # subset to only time steps where a change occurs
     nonzeros = (diff != 0).any(axis=1)
@@ -287,6 +288,7 @@ def subset_to_turns(tf, events):
 
 def con_time_feats(tf_lstg, events):
     tf = subset_to_turns(tf_lstg.copy(), events.copy())
+    tf = tf.sort_index(level=['clock', 'lstg', 'thread'])
     print('getting diffs')
     diff = get_diffs(tf.groupby(['lstg', 'thread']), tf)
     return diff
@@ -294,9 +296,9 @@ def con_time_feats(tf_lstg, events):
 
 def delay_time_feats(tf_lstg, events):
     # compute raw features at each turn
+    tf_lstg = tf_lstg.sort_index(level=['clock', 'lstg', 'thread'])
     raw = subset_to_turns(tf_lstg.copy(), events.copy())
     # sort and group
-    tf_lstg = tf_lstg.sort_index(level='clock')
     # compute timestep differences
     deltas = get_diffs(tf_lstg.groupby(['lstg', 'thread']), tf_lstg)
     return raw, deltas
@@ -327,7 +329,6 @@ def main():
     events.loc[~events['byr'], 'norm'] = 1 - events['norm']
     if not arrival:
         tf_lstg_focal = get_lstg_time_feats(events, full=False)
-        tf_lstg_focal = tf_lstg_focal.sort_index(level=['clock', 'lstg', 'thread'])
         print('preparing concession output...')
         con_feats = con_time_feats(tf_lstg_focal, events)
         print('preparing delay output...')
