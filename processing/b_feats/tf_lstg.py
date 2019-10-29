@@ -40,9 +40,10 @@ def recent_count(subset, role):
         df.loc[df.byr, 'norm'] = np.nan
     elif role == 'byr':
         df.loc[~df.byr, 'norm'] = np.nan
-    df.index = df.set_levels(pd.to_datetime(df.index.get_level_values('clock'),
-                                            origin=START, unit='s'),
-                             level='clock')
+    df.loc[df.reject, 'norm'] = np.nan
+    converter = df.index.levels[df.index.names.index('clock')]
+    converter = pd.to_datetime(converter, origin=START, unit='s')
+    df.index = df.index.set_levels(converter, level='clock')
     # use max value for thread events at same clock time
     max_offers = df.norm.groupby(df.index.names).max()
     max_offers = max_offers.unstack(level='thread')
@@ -58,26 +59,46 @@ def recent_count(subset, role):
     # initialize dictionaries for later concatenation
     count = {}
     best = {}
+
     for n in max_offers.columns:
         # restrict observations
         max_cut = max_offers.drop(n, axis=1).loc[thread_counter >= n]
         counter_cut = offer_counter.drop(n, axis=1).loc[thread_counter >= n]
-
         # sum across threads
         counts = counter_cut.sum(axis=1)
+        counts = counts.reset_index('clock', drop=False)
         counts = counts.groupby('lstg')
-        count[n] = counts.apply(lambda x: x.rolling('172800s', on='clock').cumsum())
-
+        counts = counts.apply(lambda x: x.rolling('172800s', on='clock', min_periods=1).sum())
+        count[n] = counts.set_index('clock', append=True, drop=True).squeeze()
         # best offer
         curr_best = max_cut.max(axis=1).fillna(0.0)
+        curr_best = curr_best.reset_index('clock', drop=False)
         curr_best = curr_best.groupby('lstg')
-        curr_best = curr_best.apply(lambda x: x.rolling('172800s', on='clock').cummax())
+        curr_best = curr_best.apply(lambda x: x.rolling('172800s', on='clock', min_periods=1).max())
+        curr_best = curr_best.set_index('clock', append=True, drop=True).squeeze()
 
         # reconform
         best[n] = conform_cut(curr_best)
         count[n] = conform_cut(count[n])
     # concat into series and return
-    return collapse_dict(count, index_names), collapse_dict(best, index_names)
+    count = collapse_dict(count, index_names)
+    best = collapse_dict(best, index_names)
+    count = fix_clock(count)
+    best = fix_clock(best)
+    print('count')
+    print(count)
+    print('best')
+    print(best)
+    return count, best
+
+
+def fix_clock(df):
+    start = pd.to_datetime(START)
+    diff = df.index.levels[df.index.names.index('clock')] - start
+    diff = diff.total_seconds().astype(int)
+    print(diff)
+    df.index = df.index.set_levels(diff, level='clock')
+    return df
 
 
 def add_lstg_time_feats(subset, role, is_open):
@@ -111,7 +132,6 @@ def add_lstg_time_feats(subset, role, is_open):
         offer_counter = ~df.byr & ~df.reject
     offer_counter = offer_counter.unstack(level='thread')
     thread_counter = thread_counter.reindex(index=offer_counter.index, level='lstg')
-    print(thread_counter)
     # initialize dictionaries for later concatenation
     count = {}
     best = {}
@@ -155,6 +175,8 @@ def get_lstg_time_feats(events):
                 cols = [c + '_open' for c in cols]
             tf[cols[0]], tf[cols[1]] = add_lstg_time_feats(
                 subset, role, is_open)
+        cols = [role + c for c in ['_offers_recent', '_best_recent']]
+        tf[cols[0]], tf[cols[1]] = recent_count(subset, role)
     tf['thread_count'] = thread_count(subset)
     # error checking
     assert (tf.byr_offers >= tf.slr_offers).min()

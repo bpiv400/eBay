@@ -2,7 +2,7 @@ import pytest
 import torch
 from rlenv.TimeFeatures import TimeFeatures
 import rlenv.time_triggers as time_triggers
-from rlenv.env_consts import TIME_FEATS, THREAD_COUNT
+from rlenv.env_consts import TIME_FEATS, THREAD_COUNT, EXPIRATION
 
 
 @pytest.fixture
@@ -67,7 +67,7 @@ def test_first_byr_offer(lstgs, init_timefeats):
     assert torch.all(torch.lt(torch.abs(torch.add(next, -exp)), 1e-6))
 
     next = timefeats.get_feats(thread2, 6)
-    exp = torch.tensor([0, 0, 0, 0, 1, .2, 1, .2, 1]).float()
+    exp = torch.tensor([0, 0, 0, 0, 0, 0, 1, .2, 1, .2, 1, .2, 1]).float()
     compare(next, exp)
 
     timefeats.update_features(trigger_type=time_triggers.OFFER, thread_id=thread2,
@@ -77,15 +77,15 @@ def test_first_byr_offer(lstgs, init_timefeats):
                                   'price': .3
                               })
     next3 = timefeats.get_feats(thread3, 6)
-    exp3 = torch.tensor([0, 0, 0, 0, 2, .3, 2, .3, 2]).float()
+    exp3 = torch.tensor([0, 0, 0, 0, 0, 0, 2, .3, 2, .3, 2, .3, 2]).float()
     compare(next3, exp3)
 
     next2 = timefeats.get_feats(thread2, 6)
-    exp2 = torch.tensor([0, 0, 0, 0, 1, .2, 1, .2, 1]).float()
+    exp2 = torch.tensor([0, 0, 0, 0, 0, 0, 1, .2, 1, .2, 1, .2, 1]).float()
     compare(next, exp2)
 
     next1 = timefeats.get_feats(thread1, 6)
-    exp1 = torch.tensor([0, 0, 0, 0, 1, .3, 1, .3, 1]).float()
+    exp1 = torch.tensor([0, 0, 0, 0, 0, 0, 1, .3, 1, .3, 1, .3, 1]).float()
     compare(next1, exp1)
 
 
@@ -772,3 +772,287 @@ def test_slr_rejection_early(init_timefeats, lstgs):
             raise RuntimeError()
 
 
+def test_byr_offer_best_expire_no_backup(init_timefeats, lstgs):
+    thread1, thread2, thread3 = lstgs
+    timefeats = init_timefeats
+    prev = timefeats.get_feats(thread1, 0)
+    timefeats.update_features(trigger_type=time_triggers.OFFER, thread_id=thread1,
+                              offer={
+                                  'type': 'byr',
+                                  'time': 5,
+                                  'price': .2
+                              })
+    timefeats.update_features(trigger_type=time_triggers.OFFER, thread_id=thread2,
+                              offer={
+                                  'type': 'byr',
+                                  'time': 6,
+                                  'price': .3
+                              })
+    next2 = timefeats.get_feats(thread2, 6)
+    next1 = timefeats.get_feats(thread1, 6)
+    next3 = timefeats.get_feats(thread3, 6)
+    for i, feat in enumerate(TIME_FEATS):
+        if 'byr_offers' in feat:
+            if 'open' in feat:
+                assert next1[i] == 1
+                assert next2[i] == 1
+                assert next3[i] == 2
+            else:
+                assert next1[i] == 1
+                assert next2[i] == 1
+                assert next3[i] == 2
+        elif 'slr_offers' in feat:
+            assert next1[i] == 0
+            assert next2[i] == 0
+            assert next3[i] == 0
+        elif 'byr_best' in feat:
+            if 'open' in feat:
+                compare(next1[i], torch.tensor(.3).float())
+                compare(next2[i], torch.tensor(.2).float())
+                compare(next3[i], torch.tensor(.3).float())
+            else:
+                compare(next1[i], torch.tensor(.3).float())
+                compare(next2[i], torch.tensor(.2).float())
+                compare(next3[i], torch.tensor(.3).float())
+        elif 'slr_best' in feat:
+            compare(next1[i], torch.tensor(0))
+            compare(next2[i], torch.tensor(0).float())
+            compare(next3[i], torch.tensor(0).float())
+        elif feat == THREAD_COUNT:
+            compare(next1[i], torch.tensor(1).float())
+            compare(next2[i], torch.tensor(1).float())
+            compare(next3[i], torch.tensor(2).float())
+        else:
+            raise RuntimeError()
+
+    next1 = timefeats.get_feats(thread1, 8 + EXPIRATION)
+    next2 = timefeats.get_feats(thread2, 8 + EXPIRATION)
+    next3 = timefeats.get_feats(thread3, 8 + EXPIRATION)
+
+    for i, feat in enumerate(TIME_FEATS):
+        if 'byr_offers' in feat:
+            if 'open' in feat:
+                assert next1[i] == 1
+                assert next2[i] == 1
+                assert next3[i] == 2
+            elif 'recent' in feat:
+                assert next1[i] == 0
+                assert next2[i] == 0
+                assert next3[i] == 0
+            else:
+                assert next1[i] == 1
+                assert next2[i] == 1
+                assert next3[i] == 2
+        elif 'slr_offers' in feat:
+            assert next1[i] == 0
+            assert next2[i] == 0
+            assert next3[i] == 0
+        elif 'byr_best' in feat:
+            if 'open' in feat:
+                compare(next1[i], torch.tensor(.3).float())
+                compare(next2[i], torch.tensor(.2).float())
+                compare(next3[i], torch.tensor(.3).float())
+            elif 'recent' in feat:
+                compare(next1[i], torch.tensor(0).float())
+                compare(next2[i], torch.tensor(0).float())
+                compare(next3[i], torch.tensor(0).float())
+        elif 'slr_best' in feat:
+            compare(next1[i], torch.tensor(0).float())
+            compare(next2[i], torch.tensor(0).float())
+            compare(next3[i], torch.tensor(0).float())
+        elif feat == THREAD_COUNT:
+            compare(next3[i], torch.tensor(2).float())
+            compare(next1[i], torch.tensor(1).float())
+            compare(next2[i], torch.tensor(1).float())
+        else:
+            raise RuntimeError()
+
+
+def test_byr_best_expire_with_backup(init_timefeats, lstgs):
+    thread1, thread2, thread3 = lstgs
+    timefeats = init_timefeats
+    prev = timefeats.get_feats(thread1, 0)
+    timefeats.update_features(trigger_type=time_triggers.OFFER, thread_id=thread1,
+                              offer={
+                                  'type': 'byr',
+                                  'time': 5,
+                                  'price': .2
+                              })
+    timefeats.update_features(trigger_type=time_triggers.OFFER, thread_id=thread2,
+                              offer={
+                                  'type': 'byr',
+                                  'time': 6,
+                                  'price': .3
+                              })
+    timefeats.update_features(trigger_type=time_triggers.OFFER, thread_id=thread1,
+                              offer={
+                                  'type': 'slr',
+                                  'time': 15,
+                                  'price': .25
+                              })
+    timefeats.update_features(trigger_type=time_triggers.OFFER, thread_id=thread1,
+                              offer={
+                                  'type': 'byr',
+                                  'time': 20,
+                                  'price': .18
+                              })
+
+
+    next1 = timefeats.get_feats(thread1, 16 + EXPIRATION)
+    next2 = timefeats.get_feats(thread2, 16 + EXPIRATION)
+    next3 = timefeats.get_feats(thread3, 16 + EXPIRATION)
+
+    for i, feat in enumerate(TIME_FEATS):
+        if 'byr_offers' in feat:
+            if 'open' in feat:
+                assert next1[i] == 1
+                assert next2[i] == 1
+                assert next3[i] == 2
+            elif 'recent' in feat:
+                assert next1[i] == 0
+                assert next2[i] == 1
+                assert next3[i] == 1
+            else:
+                assert next1[i] == 1
+                assert next2[i] == 2
+                assert next3[i] == 3
+        elif 'slr_offers' in feat:
+            if 'open' in feat:
+                assert next1[i] == 0
+                assert next2[i] == 0
+                assert next3[i] == 0
+            elif 'recent' in feat:
+                assert next1[i] == 0
+                assert next2[i] == 0
+                assert next3[i] == 0
+            else:
+                assert next1[i] == 0
+                assert next2[i] == 1
+                assert next3[i] == 1
+        elif 'byr_best' in feat:
+            if 'open' in feat:
+                compare(next1[i], torch.tensor(.3).float())
+                compare(next2[i], torch.tensor(.18).float())
+                compare(next3[i], torch.tensor(.3).float())
+            elif 'recent' in feat:
+                compare(next1[i], torch.tensor(0).float())
+                compare(next2[i], torch.tensor(.18).float())
+                compare(next3[i], torch.tensor(.18).float())
+        elif 'slr_best' in feat:
+            if 'open' in feat:
+                compare(next1[i], torch.tensor(0).float())
+                compare(next2[i], torch.tensor(0).float())
+                compare(next3[i], torch.tensor(0).float())
+            elif 'recent' in feat:
+                compare(next1[i], torch.tensor(0).float())
+                compare(next2[i], torch.tensor(0).float())
+                compare(next3[i], torch.tensor(0).float())
+            else:
+                compare(next1[i], torch.tensor(0).float())
+                compare(next2[i], torch.tensor(.25).float())
+                compare(next3[i], torch.tensor(.25).float())
+        elif feat == THREAD_COUNT:
+            compare(next3[i], torch.tensor(2).float())
+            compare(next1[i], torch.tensor(1).float())
+            compare(next2[i], torch.tensor(1).float())
+        else:
+            raise RuntimeError()
+
+
+def test_overriding_recent_max(init_timefeats, lstgs):
+    thread1, thread2, thread3 = lstgs
+    timefeats = init_timefeats
+    timefeats.update_features(trigger_type=time_triggers.OFFER, thread_id=thread1,
+                              offer={
+                                  'type': 'byr',
+                                  'time': 5,
+                                  'price': .2
+                              })
+    timefeats.update_features(trigger_type=time_triggers.OFFER, thread_id=thread2,
+                              offer={
+                                  'type': 'byr',
+                                  'time': 25,
+                                  'price': .35
+                              })
+
+    next1 = timefeats.get_feats(thread1, 16 + EXPIRATION)
+    next2 = timefeats.get_feats(thread2, 16 + EXPIRATION)
+    next3 = timefeats.get_feats(thread3, 16 + EXPIRATION)
+
+    for i, feat in enumerate(TIME_FEATS):
+        if 'byr_offers' in feat:
+            if 'recent' in feat:
+                assert next1[i] == 1
+                assert next2[i] == 0
+                assert next3[i] == 1
+        elif 'slr_offers' in feat:
+            if 'recent' in feat:
+                assert next1[i] == 0
+                assert next2[i] == 0
+                assert next3[i] == 0
+        elif 'byr_best' in feat:
+            if 'recent' in feat:
+                compare(next1[i], torch.tensor(.35).float())
+                compare(next2[i], torch.tensor(0).float())
+                compare(next3[i], torch.tensor(.35).float())
+        elif 'slr_best' in feat:
+            if 'recent' in feat:
+                compare(next1[i], torch.tensor(0).float())
+                compare(next2[i], torch.tensor(0).float())
+                compare(next3[i], torch.tensor(0).float())
+
+
+def test_overriding_recent_max_same_thread(init_timefeats, lstgs):
+    thread1, thread2, thread3 = lstgs
+    timefeats = init_timefeats
+    timefeats.update_features(trigger_type=time_triggers.OFFER, thread_id=thread1,
+                              offer={
+                                  'type': 'byr',
+                                  'time': 5,
+                                  'price': .2
+                              })
+    timefeats.update_features(trigger_type=time_triggers.OFFER, thread_id=thread2,
+                              offer={
+                                  'type': 'byr',
+                                  'time': 25,
+                                  'price': .18
+                              })
+    timefeats.update_features(trigger_type=time_triggers.OFFER, thread_id=thread1,
+                              offer={
+                                    'type': 'slr',
+                                    'time': 35,
+                                    'price': .3
+                              })
+
+    timefeats.update_features(trigger_type=time_triggers.OFFER, thread_id=thread1,
+                              offer={
+                                  'type': 'byr',
+                                  'time': 40,
+                                  'price': .35
+                              })
+
+    next1 = timefeats.get_feats(thread1, 16 + EXPIRATION)
+    next2 = timefeats.get_feats(thread2, 16 + EXPIRATION)
+    next3 = timefeats.get_feats(thread3, 16 + EXPIRATION)
+
+    for i, feat in enumerate(TIME_FEATS):
+        if 'byr_offers' in feat:
+            if 'recent' in feat:
+                assert next1[i] == 1
+                assert next2[i] == 1
+                assert next3[i] == 2
+        elif 'slr_offers' in feat:
+            if 'recent' in feat:
+                assert next1[i] == 0
+                assert next2[i] == 1
+                assert next3[i] == 1
+        elif 'byr_best' in feat:
+            if 'recent' in feat:
+                compare(next1[i], torch.tensor(.18).float())
+                compare(next2[i], torch.tensor(.35).float())
+                compare(next3[i], torch.tensor(.35).float())
+        elif 'slr_best' in feat:
+            if 'recent' in feat:
+                compare(next1[i], torch.tensor(0).float())
+                compare(next2[i], torch.tensor(.3).float())
+                compare(next3[i], torch.tensor(.3).float())

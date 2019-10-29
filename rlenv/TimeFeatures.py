@@ -24,12 +24,12 @@ class TimeFeatures:
             - slr best: the highest seller total concession in other threads, defined as 1-offer/start_price
             - slr offers open: number of open, unanswered slr offers in other open threads.
             - slr best open: the highest unanswered seller concession among open seller offers.
+            - slr offers recent: the number of seller offers in the last 48 hours
+            - slr best recent: the best slr offer in the last 48 hours
             - byr offers: number of buyer offers in other threads, excluding rejects.
             - byr best: the highest buyer total concession in other threads, defined as offr/start_price
             - byr offers open: number of open, unanswered byr offers in other open threads.
             - byr best open: the highest unanswered buyer total concession among open buyer offers.
-            - slr offers recent: the number of seller offers in the last 48 hours
-            - slr best recent: the best slr offer in the last 48 hours
             - byr offers recent: the best buyer offer in the last 48 hours
             - byr best recent: the best buyer offer in the last 48 hours
             - thread count: number of historic threads
