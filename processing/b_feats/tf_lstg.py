@@ -253,11 +253,15 @@ def get_lstg_time_feats(events, full=False):
 
 def arrival_time_feats(tf_lstg):
     df = tf_lstg.copy()
+    # sort and group
     df = df.sort_index(level='clock')
     group_df = df.groupby('lstg')
+    # compute row-wise differences
     diff = group_df.diff()
+    # find the first row in each lstg and replace with raw features
     firsts = diff.isna().any(axis=1)
-    diff.loc[firsts, :] = 0
+    diff.loc[firsts, :] = df.loc[firsts, :]
+    # subset to only time steps where a change occurs
     nonzeros = (diff != 0).any(axis=1)
     diff = diff.loc[nonzeros, :]
     return diff
@@ -267,7 +271,10 @@ if __name__ == "__main__":
     # parse parameters
     parser = argparse.ArgumentParser()
     parser.add_argument('--num', action='store', type=int, required=True)
-    num = parser.parse_args().num
+    parser.add_argument('--model', action='store', type=str, required=True)
+    args = parser.parse_args()
+    num = args.num
+    model = args.model
 
     # load data
     print('Loading data')
@@ -279,12 +286,15 @@ if __name__ == "__main__":
     print('Creating lstg-level time-valued features')
     events['norm'] = events.price / events.start_price
     events.loc[~events['byr'], 'norm'] = 1 - events['norm']
-    # tf_lstg_focal = get_lstg_time_feats(events, full=False)
-    tf_lstg_full = get_lstg_time_feats(events, full=True)
-    arrival_feats = arrival_time_feats(tf_lstg_full)
-    print(arrival_feats.isna().any().any())
+    if model != 'arrival':
+        tf_lstg_focal = get_lstg_time_feats(events, full=False)
+    else:
+        print('arrival model')
+        tf_lstg_full = get_lstg_time_feats(events, full=True)
+        arrival_feats = arrival_time_feats(tf_lstg_full)
+        dump(arrival_feats, FEATS_DIR + '%d_tf_lstg_arrival.gz' % num)
     # con_feats = con_time_feats(tf_lstg_focal)
 
 
     # save
-    dump(tf_lstg_full, FEATS_DIR + '%d_tf_lstg.gz' % num)
+
