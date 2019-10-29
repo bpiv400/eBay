@@ -55,11 +55,8 @@ def recent_count(offer_counter):
 
 
 def full_recent(max_offers=None, offer_counter=None):
-    print('full recent count')
     count = recent_count(offer_counter)
-    print('full recent best')
     best = recent_best(max_offers)
-    print('done best')
     return conform_cut(count), conform_cut(best)
 
 
@@ -122,12 +119,9 @@ def get_recent_feats(subset, role, full=False):
         count = collapse_dict(count, index_names)
         best = collapse_dict(best, index_names)
     else:
-        print('full recent')
         count, best = full_recent(max_offers=max_offers, offer_counter=offer_counter)
 
-    print('count clock...')
     count = fix_clock(count)
-    print('best clock...')
     best = fix_clock(best)
     return count, best
 
@@ -241,15 +235,12 @@ def get_lstg_time_feats(events, full=False):
     for role in ['slr', 'byr']:
         cols = [role + c for c in ['_offers', '_best']]
         for is_open in [False, True]:
-            print('role: {}, open: {}'.format(role, is_open))
             if is_open:
                 cols = [c + '_open' for c in cols]
             tf[cols[0]], tf[cols[1]] = add_lstg_time_feats(
                 subset, role, is_open, full=full)
         cols = [role + c for c in ['_offers_recent', '_best_recent']]
-        print('recent')
         tf[cols[0]], tf[cols[1]] = get_recent_feats(subset, role, full=full)
-    print('thread count')
     tf['thread_count'] = thread_count(subset, full=full)
     # error checking
     assert (tf.byr_offers >= tf.slr_offers).min()
@@ -258,6 +249,18 @@ def get_lstg_time_feats(events, full=False):
     assert (tf.byr_best >= tf.byr_best_open).min()
     # sort and return
     return tf
+
+
+def arrival_time_feats(tf_lstg):
+    df = tf_lstg.copy()
+    df = df.sort_index(level='clock')
+    group_df = df.groupby('lstg')
+    diff = group_df.diff()
+    firsts = diff.isna().any(axis=1)
+    diff.loc[firsts, :] = 0
+    nonzeros = (diff != 0).any(axis=1)
+    diff = diff.loc[nonzeros, :]
+    return diff
 
 
 if __name__ == "__main__":
@@ -276,8 +279,12 @@ if __name__ == "__main__":
     print('Creating lstg-level time-valued features')
     events['norm'] = events.price / events.start_price
     events.loc[~events['byr'], 'norm'] = 1 - events['norm']
-    tf_lstg_focal = get_lstg_time_feats(events, full=False)
-    # tf_lstg_full = get_lstg_time_feats(events, full=True)
+    # tf_lstg_focal = get_lstg_time_feats(events, full=False)
+    tf_lstg_full = get_lstg_time_feats(events, full=True)
+    arrival_feats = arrival_time_feats(tf_lstg_full)
+    print(arrival_feats.isna().any().any())
+    # con_feats = con_time_feats(tf_lstg_focal)
+
 
     # save
-    dump(tf_lstg_focal, FEATS_DIR + '%d_tf_lstg.gz' % num)
+    dump(tf_lstg_full, FEATS_DIR + '%d_tf_lstg.gz' % num)
