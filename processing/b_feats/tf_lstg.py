@@ -55,9 +55,12 @@ def recent_count(offer_counter):
 
 
 def full_recent(max_offers=None, offer_counter=None):
+    print('full recent count')
     count = recent_count(offer_counter)
+    print('full recent best')
     best = recent_best(max_offers)
-    return count, best
+    print('done best')
+    return conform_cut(count), conform_cut(best)
 
 
 def prepare_counters(df, role):
@@ -119,9 +122,12 @@ def get_recent_feats(subset, role, full=False):
         count = collapse_dict(count, index_names)
         best = collapse_dict(best, index_names)
     else:
+        print('full recent')
         count, best = full_recent(max_offers=max_offers, offer_counter=offer_counter)
 
+    print('count clock...')
     count = fix_clock(count)
+    print('best clock...')
     best = fix_clock(best)
     return count, best
 
@@ -235,13 +241,16 @@ def get_lstg_time_feats(events, full=False):
     for role in ['slr', 'byr']:
         cols = [role + c for c in ['_offers', '_best']]
         for is_open in [False, True]:
+            print('role: {}, open: {}'.format(role, is_open))
             if is_open:
                 cols = [c + '_open' for c in cols]
             tf[cols[0]], tf[cols[1]] = add_lstg_time_feats(
                 subset, role, is_open, full=full)
         cols = [role + c for c in ['_offers_recent', '_best_recent']]
+        print('recent')
         tf[cols[0]], tf[cols[1]] = get_recent_feats(subset, role, full=full)
-    tf['thread_count'] = thread_count(subset)
+    print('thread count')
+    tf['thread_count'] = thread_count(subset, full=full)
     # error checking
     assert (tf.byr_offers >= tf.slr_offers).min()
     assert (tf.byr_offers >= tf.byr_offers_open).min()
