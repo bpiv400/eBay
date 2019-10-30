@@ -48,15 +48,22 @@ class Inputs(Dataset):
             # number of hours
             n = MAX_DAYS * 24
 
-            # index of first hour
+            # index of hour
             idx_hour = self.d['idx_hour'][idx] + \
                 np.array(range(n), dtype='uint16')
 
             # hour features
             x_hour = self.d['x_hour'][idx_hour].astype('float32')
 
+            # initialize array of time features
+            x_tf = np.zeros((n, NUM_TFEATS), dtype='float32')
+
+            # add nonzero time feats to x_tf
+            if idx in self.d['tf']:
+                tf = self.d['tf'][idx]
+
             # time feats
-            x_time = x_hour
+            x_time = np.concatenate((x_hour, x_tf), axis=1)
 
         else:
             x_time = self.d['x_time'][idx,:,:]

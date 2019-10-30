@@ -103,6 +103,16 @@ def convert_to_numpy(d):
     '''
     d: dictionary with dataframes.
     '''
+    # convert time features to dictionary
+    if 'tf' in d:
+        tf_dict = {}
+        for i in range(len(d['turns'].index)):
+            try:
+                tf_dict[i] = d['tf'].xs(
+                    d['turns'].index[i], level='lstg')
+            except:
+                continue
+        d['tf'] = tf_dict
     # reshape columns of x_time and convert
     if 'x_time' in d:
         arrays = []

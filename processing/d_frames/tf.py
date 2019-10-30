@@ -8,7 +8,7 @@ from utils import *
 from processing.processing_utils import *
 
 
-def get_period_time_feats(tf, start, model):
+def get_delay_time_feats(tf, start, model):
     # initialize output
     output = pd.DataFrame()
     # loop over indices
@@ -50,7 +50,10 @@ if __name__ == "__main__":
     # load data
     clock = load_frames('events')['clock'].reindex(
         index=idx, level='lstg')
-    tf = load_frames('tf_lstg').reindex(index=idx, level='lstg')
+    #tf = load_frames('tf_lstg').reindex(index=idx, level='lstg')
+
+    tf_arrival = load(FEATS_DIR + '1_tf_lstg_arrival.gz').reindex(
+        index=idx, level='lstg')
 
     # delay start
     start = clock.groupby(
@@ -59,5 +62,5 @@ if __name__ == "__main__":
 
     # delay role
     for role in ['slr', 'byr']:
-        z = get_period_time_feats(tf, z_start, role)
+        z = get_delay_time_feats(tf, z_start, role)
         dump(z, path('z_' + role))

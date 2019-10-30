@@ -80,8 +80,8 @@ def process_inputs(part, outcome, role):
 	y = get_y(x_offer, outcome, role)
 
 	# sort by number of turns
-    turns = get_sorted_turns(y)
-    y = y.reindex(index=turns.index)
+	turns = get_sorted_turns(y)
+	y = y.reindex(index=turns.index)
 
 	# fixed features
 	x_fixed = x_lstg.reindex(

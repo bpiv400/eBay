@@ -22,13 +22,10 @@ def process_inputs(part):
 	# load offer dataframe
 	offers = load(getPath(['x', 'offer'])).xs(1, level='index')
 
-	# add calendar indicator variables
-	dummies = ['holiday'] + [c for c in offers.columns if 'dow' in c]
-	x_fixed = x_fixed.join(offers[dummies])
-
-	# rescale days and hour of day, and add to fixed features
-	x_fixed.loc[:, 'years'] = offers['days'] / 365
-	x_fixed.loc[:, 'hour_of_day'] = offers['hour_of_day'] / 24
+	# add calendar variables
+	toAdd = ['holiday', 'years', 'hour_of_day'] + \
+		[c for c in offers.columns if 'dow' in c]
+	x_fixed = x_fixed.join(offers[toAdd])
 
 	# add time feats at arrival
 	tf = load(getPath(['tf', 'role', 'raw'])).xs(1, level='index')

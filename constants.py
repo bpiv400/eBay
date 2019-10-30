@@ -38,6 +38,9 @@ W2V_PATH = lambda x: '%s/clean/w2v_%s.gz' %(PREFIX, x)
 # partitions
 PARTITIONS = ['train_models', 'train_rl', 'test']
 
+# number of time feats
+NUM_TFEATS = 9
+
 # delete activity after lstg is open MAX_DAYS
 MAX_DAYS = 31
 
