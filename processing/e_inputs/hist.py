@@ -13,7 +13,7 @@ def process_inputs(part):
 		(PREFIX, part, '_'.join(names))
 
 	# outcome
-	y = load(getPath(['x', 'thread']))['byr_hist']
+	y = load(getPath(['x', 'thread']))['byr_hist'] * HIST_QUANTILES
 
 	# initialize fixed features with listing variables
 	x_fixed = load(getPath(['x', 'lstg'])).reindex(
@@ -31,7 +31,7 @@ def process_inputs(part):
 	tf = load(getPath(['tf', 'role', 'raw'])).xs(1, level='index')
 	x_fixed = x_fixed.join(tf.reindex(index=x_fixed.index, fill_value=0))
 
-	return {'y': y.astype('int64', copy=False), 
+	return {'y': y.astype('uint8', copy=False), 
             'x_fixed': x_fixed.astype('float32', copy=False)}
 
 

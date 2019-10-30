@@ -21,7 +21,8 @@ def run_loop(model, simulator, data):
     # loop over batches, calculate log-likelihood
     lnL = 0
     for batch in batches:
-        lnL += simulator.run_batch(*batch, data.isTraining)
+        lnL += simulator.run_batch(batch, data.isTraining)
+        print(lnL)
 
     return lnL
 

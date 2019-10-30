@@ -1,9 +1,24 @@
 import sys, argparse
 from compress_pickle import load, dump
+from sklearn.decomposition import PCA
+from sklearn.preprocessing import StandardScaler
 import numpy as np, pandas as pd
 from constants import *
 from utils import *
 from processing.processing_utils import *
+
+
+# scales variables and performs PCA
+def do_pca(df):
+    # standardize variables
+    vals = StandardScaler().fit_transform(df)
+    # PCA
+    N = len(df.columns)
+    pca = PCA(n_components=N, svd_solver='full')
+    components = pca.fit_transform(vals)
+    # return dataframe
+    return pd.DataFrame(components, index=df.index, 
+        columns=['c' + str(i) for i in range(N)])
 
 
 # returns booleans for whether offer is round and ends in nines
@@ -18,12 +33,10 @@ def do_rounding(offer):
 
 def get_x_lstg(lstgs):
     # initialize output dataframe with as-is features
-    df = lstgs[ASIS_FEATS]
+    df = lstgs[ASIS_FEATS + ['start_date']]
     # photos divided by 12, and binary indicator
     df.loc[:, 'photos'] = lstgs['photos'] / 12
     df.loc[:, 'has_photos'] = lstgs['photos'] > 0
-    # start date divided by 365
-    df.loc[:, 'start_date'] = lstgs['start_date'] / 365
     # slr feedback
     df.loc[:, 'fdbk_100'] = df['fdbk_pstv'] == 1
     # prices
@@ -60,21 +73,13 @@ def get_w2v(lstgs, role):
 
 
 if __name__ == "__main__":
-    # partition number from command line
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--num', action='store', type=int, required=True)
-    num = parser.parse_args().num-1
-
-    # partition
-    part = PARTITIONS[num]
-    idx, path = get_partition(part)
-
-    # load data 
-    lstgs = load(CLEAN_DIR + 'listings.gz').drop(
-        ['title', 'flag'], axis=1).reindex(index=idx)
-    #slr = load_frames('slr').reindex(index=idx)
+    # load partitions, concatenate indices
+    partitions = load(PARTS_DIR + 'partitions.gz')
+    idx = np.sort(np.concatenate(list(partitions.values())))
 
     # listing features
+    lstgs = load(CLEAN_DIR + 'listings.gz').drop(
+        ['title', 'flag'], axis=1).reindex(index=idx)
     x_lstg = get_x_lstg(lstgs)
 
     # add slr and byr embeddings
@@ -83,15 +88,12 @@ if __name__ == "__main__":
         w2v = get_w2v(lstgs, role)
         x_lstg = x_lstg.join(w2v)
 
-    # add slr features
-    # x_lstg = x_lstg.join(slr)
+    ##### add categorical features
 
-    # # add categorical features
-    # meta = []
-    # for i in range(N_META):
-    #     meta.append(load(FEATS_DIR + 'm%d_meta.gz' % i))
-    # meta = pd.concat(meta).reindex(index=idx)
-    # x_lstg = x_lstg.join(meta)
+    # perform pca
+    x_lstg = do_pca(x_lstg)
 
-    # save
-    dump(x_lstg, path('x_lstg'))
+    # save by partition
+    for part, idx in partitions.items():
+        dump(x_lstg.reindex(index=idx, 
+            PARTS_DIR + '%s/x_lstg.gz' % part)

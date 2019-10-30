@@ -1,9 +1,8 @@
 #!/bin/bash
 #$ -q all.q
-#$ -t 1-3
-#$ -l m_mem_free=150G
+#$ -l m_mem_free=250G
 #$ -N frames_lstg
 #$ -j y
 #$ -o logs/
 
-python repo/processing/d_frames/lstg.py --num "$SGE_TASK_ID"
+python repo/processing/d_frames/lstg.py

@@ -44,7 +44,7 @@ class Inputs(Dataset):
         turns = self.d['turns'][idx]
 
         # x_time
-        if self.model == 'arrival':
+        if self.model in ['arrival', 'delay']:
             # number of hours
             n = MAX_DAYS * 24
 
@@ -122,8 +122,8 @@ def collateFF(batch):
     x_fixed = torch.stack(x_fixed).float()
     idx = torch.tensor(idx)
 
-    # output is (dictionary, indices)
-    return {'y': y, 'x_fixed': x_fixed}, idx
+    # output is dictionary of tensors
+    return {'y': y, 'x_fixed': x_fixed}
 
 
 # collate function for recurrent networks
@@ -146,11 +146,8 @@ def collateRNN(batch):
     x_time = torch.stack(x_time, dim=0).float()
     idx = torch.tensor(idx)
 
-    print(torch.min(turns))
-    print(torch.max(turns))
-
-    # output is (dictionary, indices)
+    # output is dictionary of tensors
     return {'y': y, 
             'turns': turns,
             'x_fixed': x_fixed, 
-            'x_time': x_time}, idx
+            'x_time': x_time}

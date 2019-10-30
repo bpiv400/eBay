@@ -81,7 +81,7 @@ class Simulator:
         return self.loss(theta, y)
 
 
-    def run_batch(self, data, idx, isTraining):
+    def run_batch(self, data, isTraining):
         # train / eval mode
         self.net.train(isTraining)
 
@@ -92,7 +92,6 @@ class Simulator:
         # move to gpu
         if self.device != 'cpu':
             data = {k: v.to(self.device) for k, v in data.items()}
-            idx = idx.to(self.device)
 
         if self.isRecurrent:
             data['x_time'] = rnn.pack_padded_sequence(
@@ -100,6 +99,7 @@ class Simulator:
 
         # calculate loss
         loss = self.evaluate_loss(data)
+        del data
 
         # step down gradients
         if isTraining:
