@@ -30,7 +30,7 @@ class Simulator:
             if model == 'hist':
                 sizes['out'] = HIST_QUANTILES
             else:
-                sizes['out'] = 100
+                sizes['out'] = 101
         else:
             sizes['out'] = 1
             if model == 'arrival':

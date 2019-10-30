@@ -41,25 +41,25 @@ def get_x_time(x_offer, outcome, role):
 	return add_turn_indicators(x_time)
 
 
- def get_y(x_offer, outcome, role):
- 	# subset to relevant observations
- 	if outcome == 'con':
+def get_y(x_offer, outcome, role):
+	# subset to relevant observations
+	if outcome == 'con':
 		# drop zero delay and expired offers
-	    mask = (x_offer.delay > 0) & ~x_offer.exp
- 	elif outcome == 'msg':
- 		# drop accepts and rejects
- 		mask = (x_offer.con > 0) & (x_offer.con < 1)
- 	s = x_offer.loc[mask, outcome]
+		mask = (x_offer.delay > 0) & ~x_offer.exp
+	elif outcome == 'msg':
+		# drop accepts and rejects
+		mask = (x_offer.con > 0) & (x_offer.con < 1)
+	s = x_offer.loc[mask, outcome]
 	# subset to role
-    s = s[s.index.isin(IDX[role], level='index')]
-    # for concession, convert to index
-    if outcome == 'con':
-    	s *= 100
-    	s.loc[(s > 99) & (s < 100)] = 99
-    	s.loc[(s > 0) & (s < 1)] = 1
-    	s = np.round(s)
-    # convert to byte and unstack
-    return s.astype('int8').unstack(fill_value=-1)
+	s = s[s.index.isin(IDX[role], level='index')]
+	# for concession, convert to index
+	if outcome == 'con':
+		s *= 100
+		s.loc[(s > 99) & (s < 100)] = 99
+		s.loc[(s > 0) & (s < 1)] = 1
+		s = np.round(s)
+	# convert to byte and unstack
+	return s.astype('int8').unstack(fill_value=-1)
 
 
 # loads data and calls helper functions to construct training inputs
@@ -84,7 +84,8 @@ def process_inputs(part, outcome, role):
     y = y.reindex(index=turns.index)
 
 	# fixed features
-	x_fixed = x_lstg.reindex(index=turns.index, level='lstg').join(x_thread)
+	x_fixed = x_lstg.reindex(
+		index=turns.index, level='lstg').join(x_thread)
 
 	# time features
 	x_time = get_x_time(x_offer, outcome, role)

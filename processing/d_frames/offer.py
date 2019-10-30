@@ -51,7 +51,7 @@ def get_x_offer(lstgs, events):
     df.loc[df.index.isin(IDX['slr'], level='index'), 'norm'] = \
         1 - df['norm']
     # message indicator
-    df['msg'] = events['message']
+    df['msg'] = events['message'].reindex(index=df.index, fill_value=0)
     # clock variable
     clock = 24 * 3600 * lstgs.start_date.rename(0).to_frame()
     clock = clock.join(events.clock.unstack())
