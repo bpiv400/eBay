@@ -55,12 +55,12 @@ class Inputs(Dataset):
             # hour features
             x_hour = self.d['x_hour'][idx_hour].astype('float32')
 
-            # initialize array of time features
-            x_tf = np.zeros((n, NUM_TFEATS), dtype='float32')
-
-            # add nonzero time feats to x_tf
+            # fill in missing time feats with zeros
             if idx in self.d['tf']:
-                tf = self.d['tf'][idx]
+                x_tf = self.d['tf'][idx].reindex(
+                    index=range(n), fill_value=0).to_numpy()
+            else:
+                x_tf = np.zeros((n, NUM_TFEATS), dtype='float32')
 
             # time feats
             x_time = np.concatenate((x_hour, x_tf), axis=1)

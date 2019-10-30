@@ -1,8 +1,8 @@
 #!/bin/bash
 #$ -q all.q
 #$ -l m_mem_free=50G
-#$ -N partition
+#$ -N lookup
 #$ -j y
 #$ -o logs/
 
-python repo/processing/c_partition/partition.py
+python repo/processing/c_partition/lookup.py

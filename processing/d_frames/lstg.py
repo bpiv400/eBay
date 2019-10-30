@@ -74,11 +74,6 @@ if __name__ == "__main__":
         ['title', 'flag'], axis=1).reindex(index=idx)
     #slr = load_frames('slr').reindex(index=idx)
 
-    # lookup file
-    lookup = lstgs[['meta', 'start_date', \
-        'start_price', 'decline_price', 'accept_price']]
-    dump(lookup, path('lookup'))
-
     # listing features
     x_lstg = get_x_lstg(lstgs)
 

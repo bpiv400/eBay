@@ -4,7 +4,10 @@ import numpy as np, pandas as pd
 from constants import *
 
 
-def partition_lstgs(slrs):
+def partition_lstgs(lstgs):
+    # series of index slr and value lstg
+    slrs = lstgs['slr'].reset_index().sort_values(
+        by=['slr','lstg']).set_index('slr').squeeze()
     # randomly order sellers
     u = np.unique(slrs.index.values)
     random.seed(SEED)   # set seed
@@ -28,11 +31,15 @@ if __name__ == "__main__":
         idx += list(load(path(i)).index)
 
     # listings
-    lstgs = load(CLEAN_DIR + 'listings.gz')['slr']
-    lstgs = lstgs.reindex(index=idx)
-    slrs = lstgs.reset_index().sort_values(
-        by=['slr','lstg']).set_index('slr').squeeze()
+    lstgs = load(CLEAN_DIR + 'listings.gz').reindex(index=idx)
     
     # partition by seller
     partitions = partition_lstgs(slrs)
     dump(partitions, PARTS_DIR + 'partitions.gz')
+
+    # save lookup file
+    lstgs = lstgs[['meta', 'start_date', 'end_time', \
+        'start_price', 'decline_price', 'accept_price']]
+    for part, idx in partitions.items():
+        lookup = lstgs.reindex(index=idx)
+        dump(lookup, PARTS_DIR + '%s/lookup.gz' % part)

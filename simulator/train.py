@@ -16,7 +16,7 @@ def run_loop(model, simulator, data):
 
     # load batches
     batches = DataLoader(data, batch_sampler=Sample(data),
-        collate_fn=f, num_workers=0, pin_memory=True)
+        collate_fn=f, num_workers=NUM_WORKERS, pin_memory=True)
 
     # loop over batches, calculate log-likelihood
     lnL = 0

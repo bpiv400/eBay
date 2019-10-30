@@ -7,10 +7,10 @@ from utils import *
 from processing.processing_utils import *
 
 
-def get_arrival_time_feats(lstgs, tf):
+def get_arrival_time_feats(lookup, tf):
     # add period to tf_arrival
     tf = tf.reset_index('clock')
-    tf = tf.join((lstgs.start_date * 24 * 3600).rename('start_time'))
+    tf = tf.join((lookup.start_date * 24 * 3600).rename('start_time'))
     tf['period'] = (tf.clock - tf.start_time) // 3600
     tf = tf.drop(['clock', 'start_time'], axis=1)
     # increment period by 1; time feats are up to t-1
@@ -21,11 +21,11 @@ def get_arrival_time_feats(lstgs, tf):
     return tf.groupby(['lstg', 'period']).sum()
 
 
-def get_y_arrival(lstgs, threads):
+def get_y_arrival(lookup, threads):
     # time_stamps
-    t0 = lstgs.start_date * 24 * 3600
+    t0 = lookup.start_date * 24 * 3600
     diff = pd.to_timedelta(threads.start_time - t0, unit='s')
-    end = pd.to_timedelta(lstgs.end_time - t0, unit='s')
+    end = pd.to_timedelta(lookup.end_time - t0, unit='s')
     # convert to hours
     diff = (diff.dt.total_seconds() // 3600).astype('uint16')
     end = (end.dt.total_seconds() // 3600).astype('uint16')
@@ -68,8 +68,7 @@ if __name__ == "__main__":
     idx, path = get_partition(part)
 
     # load data
-    lstgs = load(CLEAN_DIR + 'listings.gz')[['start_date', 'end_time']]
-    lstgs = lstgs.reindex(index=idx)
+    lookup = load(PARTS_DIR + '%s/lookup.gz' % part)
     threads = load(CLEAN_DIR + 'threads.gz').reindex(
         index=idx, level='lstg')
     tf = load_frames('tf_lstg_arrival').reindex(
@@ -82,10 +81,10 @@ if __name__ == "__main__":
 
     # time feats
     print('tf_arrival')
-    tf_arrival = get_arrival_time_feats(lstgs, tf)
+    tf_arrival = get_arrival_time_feats(lookup, tf)
     dump(tf_arrival, path('tf_arrival'))
 
     # outcomes for arrival model
     print('Creating arrival model outcome variables')
-    y_arrival = get_y_arrival(lstgs, threads)
+    y_arrival = get_y_arrival(lookup, threads)
     dump(y_arrival, path('y_arrival'))

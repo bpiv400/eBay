@@ -34,9 +34,9 @@ def get_con(offers):
     return con.stack()
 
 
-def get_x_offer(lstgs, events):
+def get_x_offer(lookup, events):
     # vector of offers
-    offers = events.price.unstack().join(lstgs.start_price)
+    offers = events.price.unstack().join(lookup.start_price)
     offers = offers.rename({'start_price': 0}, axis=1).rename_axis(
         'index', axis=1)
     # initialize output dataframe
@@ -46,14 +46,14 @@ def get_x_offer(lstgs, events):
     df['reject'] = df['con'] == 0
     df['split'] = np.abs(df['con'] - 0.5) < TOL_HALF
     # total concession
-    df['norm'] = (events['price'] / lstgs['start_price']).reindex(
+    df['norm'] = (events['price'] / lookup['start_price']).reindex(
         index=df.index, fill_value=0.0)
     df.loc[df.index.isin(IDX['slr'], level='index'), 'norm'] = \
         1 - df['norm']
     # message indicator
     df['msg'] = events['message'].reindex(index=df.index, fill_value=0)
     # clock variable
-    clock = 24 * 3600 * lstgs.start_date.rename(0).to_frame()
+    clock = 24 * 3600 * lookup.start_date.rename(0).to_frame()
     clock = clock.join(events.clock.unstack())
     # delay features
     df['delay'] = get_delay(clock)
@@ -62,7 +62,7 @@ def get_x_offer(lstgs, events):
         df.index, fill_value=False)
     # clock features
     df['years'] = ((clock.stack() // (24 * 3600)).astype(
-        np.int64) - lstgs.start_date) / 365
+        np.int64) - lookup.start_date) / 365
     df['clock'] = clock.rename_axis('index', axis=1).stack().rename(
         'clock').sort_index().astype(np.int64)
     clock = pd.to_datetime(df.clock, unit='s', origin=START)
@@ -94,12 +94,11 @@ if __name__ == "__main__":
     dump(tf_role_raw, path('tf_role_raw'))
 
     # load other data
-    lstgs = load(CLEAN_DIR + 'listings.gz')
-    lstgs = lstgs[['start_price', 'start_date']].reindex(index=idx)
+    lookup = load(PARTS_DIR + '%s/lookup.gz' % part)
     events = load_frames('events').reindex(index=idx, level='lstg')
 
     # offer features
     print('x_offer')
-    x_offer = get_x_offer(lstgs, events)
+    x_offer = get_x_offer(lookup, events)
     dump(x_offer, path('x_offer'))
  

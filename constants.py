@@ -22,6 +22,7 @@ MBSIZE = 32 * 3
 UPDATES = 5e6
 EPOCHS = 5
 LR = 1e-4
+NUM_WORKERS = 7 if torch.cuda.is_available() else 0
 
 # dropout rate
 DROPOUT = 0.5
