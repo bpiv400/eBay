@@ -81,7 +81,6 @@ def exclude_focal_recent(max_offers=None, offer_counter=None, thread_counter=Non
     # initialize dictionaries for later concatenation
     count = {}
     best = {}
-
     for n in max_offers.columns:
         # restrict observations
         max_cut = max_offers.drop(n, axis=1).loc[thread_counter >= n]
@@ -251,17 +250,22 @@ def get_lstg_time_feats(events, full=False):
     return tf
 
 
-def get_diffs(grouped_df, df):
+def get_diffs(grouped_df, df, remove_zeros=True):
     diff = grouped_df.diff()
     # find the first row in each lstg and replace with raw features
     firsts = diff.isna().any(axis=1)
     print(firsts.index.names)
     diff.loc[firsts, :] = df.loc[firsts, :]
+    if remove_zeros:
+        diff = drop_zeros(diff)
+    return diff
+
+
+def drop_zeros(diff):
     # subset to only time steps where a change occurs
     nonzeros = (diff != 0).any(axis=1)
     diff = diff.loc[nonzeros, :]
     return diff
-
 
 def arrival_time_feats(tf_lstg):
     df = tf_lstg.copy()
@@ -271,37 +275,65 @@ def arrival_time_feats(tf_lstg):
     return diff
 
 
-def subset_to_turns(tf, events):
+def prepare_index_join(tf, events):
     events = events.reset_index(drop=False)
     # one entry for each lstg, thread, index
-    events = events[['lstg', 'thread', 'clock']]
-    events = pd.MultiIndex.from_frame(events)
+    events = events[['lstg', 'thread', 'clock', 'index']]
+    events = events.set_index(['lstg', 'thread', 'clock'], append=False, drop=True)
     events = events.reorder_levels(tf.index.names)
     # subset events to lstgs contained in tf
-    event_lstgs = events.get_level_values('lstg')
+    event_lstgs = events.index.get_level_values('lstg')
     subset_lstgs = tf.index.get_level_values('lstg')
-    events = events[event_lstgs.isin(subset_lstgs)]
+    events = events.loc[event_lstgs.isin(subset_lstgs), :]
+    return events
+
+
+def subset_to_turns(tf, events):
+    events = prepare_index_join(tf, events)
     # subset tf to only include turns
-    tf = tf.loc[events, :]
+    # add index to tf
+    tf = tf.join(events, how='inner')
+    tf = tf.set_index('index', append=True, drop=True)
+    # drop clock
+    tf = tf.reset_index('clock', drop=True)
+    tf = tf.sort_index(level=['lstg', 'thread', 'index'])
     return tf
 
 
 def con_time_feats(tf_lstg, events):
     tf = subset_to_turns(tf_lstg.copy(), events.copy())
-    tf = tf.sort_index(level=['clock', 'lstg', 'thread'])
     print('getting diffs')
-    diff = get_diffs(tf.groupby(['lstg', 'thread']), tf)
+    diff = get_diffs(tf.groupby(['lstg', 'thread']), tf, remove_zeros=True)
     return diff
 
 
 def delay_time_feats(tf_lstg, events):
     # compute raw features at each turn
-    tf_lstg = tf_lstg.sort_index(level=['clock', 'lstg', 'thread'])
-    raw = subset_to_turns(tf_lstg.copy(), events.copy())
-    # sort and group
+    tf_lstg = tf_lstg.copy()
+    raw = subset_to_turns(tf_lstg, events.copy())
     # compute timestep differences
-    deltas = get_diffs(tf_lstg.groupby(['lstg', 'thread']), tf_lstg)
+    deltas = get_diffs(tf_lstg.groupby(['lstg', 'thread']), tf_lstg, remove_zeros=False)
+    deltas = add_deltas_index(deltas, events.copy())
+    deltas = drop_zeros(deltas)
     return raw, deltas
+
+
+def add_deltas_index(deltas, events):
+    events = prepare_index_join(deltas, events)
+    print('events cols: {}'.format(events.columns))
+    events = events.rename(columns={'index': 'ind'})
+    deltas = deltas.join(events, how='left')
+    deltas = deltas.reset_index(drop=False)
+    deltas = deltas.sort_values(['lstg', 'thread', 'ind'])
+    deltas = deltas.groupby(by=['lstg', 'thread', 'clock']).first()
+    deltas = deltas.reset_index(drop=False)
+    deltas = deltas.set_index(['lstg', 'thread'], drop=True, append=False)
+    deltas = deltas.groupby(level=['lstg', 'thread']).bfill()
+    deltas = deltas.set_index(['ind', 'clock'], drop=True, append=True)
+    first_turn = deltas.index.get_level_values('ind') != 1
+    deltas = deltas.loc[first_turn, :]
+    deltas.index = deltas.index.rename(names='index', level='ind')
+    return deltas
 
 
 def output_path(model, num):

@@ -101,6 +101,34 @@ def get_expire_perc(df, l, byr=False):
     return get_perc(df, l, 'expire', 'curr_offer', name=name)
 
 
+def original_quantiles(quant_vector=None, total_lstgs=None, featname=None, l=None, converter=None):
+    quants = dict()
+    # loop over quantiles
+    for n in range(int(total_lstgs.max()) + 1):
+        cut = quant_vector.loc[total_lstgs >= n].drop(n, level='lstg_counter')
+        rel_groups = cut.index.droplevel('lstg_counter').drop_duplicates()
+        cut = cut.groupby(by=l)
+        partial = pd.DataFrame(index=rel_groups)
+        for q in QUANTILES:
+            tfname = '_'.join([l[-1], featname, str(int(100 * q))])
+            partial[tfname] = cut.quantile(q=q, interpolation='lower')
+            partial[tfname] = partial[tfname].fillna(0)
+        quants[n] = partial
+    # combine
+    output = collapse_dict(quants, l + ['lstg_counter'], meta=True)
+    assert output.index.is_unique
+    output = output.join(converter, how='right')
+    output = output.reset_index('lstg_counter', drop=True).set_index('lstg', append=False,
+                                                                     drop=True)
+    output = output.fillna(0)
+    assert not output.isna().any().any()
+    return output
+
+
+def fast_quantiles(quant_vector=None, total_lstgs=None, featname=None, l=None, converter=None):
+    quant_vector = quant_vector.sort(na_position='last')
+    
+
 def get_quantiles(df, l, featname):
     # initialize output dataframe
     df = df.copy()
@@ -124,27 +152,8 @@ def get_quantiles(df, l, featname):
     else:
         total_lstgs = total_lstgs.reindex(quant_vector.index)
 
-    quants = dict()
-    # loop over quantiles
-    for n in range(int(total_lstgs.max()) + 1):
-        cut = quant_vector.loc[total_lstgs >= n].drop(n, level='lstg_counter')
-        rel_groups = cut.index.droplevel('lstg_counter').drop_duplicates()
-        cut = cut.groupby(by=l)
-        partial = pd.DataFrame(index=rel_groups)
-        for q in QUANTILES:
-            tfname = '_'.join([l[-1], featname, str(int(100 * q))])
-            partial[tfname] = cut.quantile(q=q, interpolation='lower')
-            partial[tfname] = partial[tfname].fillna(0)
-        quants[n] = partial
-    # combine
-    output = collapse_dict(quants, l + ['lstg_counter'], meta=True)
-    assert output.index.is_unique
-    output = output.join(converter, how='right')
-    output = output.reset_index('lstg_counter', drop=True).set_index('lstg', append=False,
-                                                                     drop=True)
-    output = output.fillna(0)
-    assert not output.isna().any().any()
-    return output
+    return original_quantiles(quant_vector=quant_vector, total_lstgs=total_lstgs,
+                              featname=featname, l=l, converter=converter)
 
 
 def get_cat_feats(events, levels=None, feat_ind=None):
