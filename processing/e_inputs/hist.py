@@ -13,7 +13,7 @@ def process_inputs(part):
 		(PREFIX, part, '_'.join(names))
 
 	# outcome
-	pctiles = load(getPath(['x', 'thread']))['byr_hist']
+	y = load(getPath(['x', 'thread']))['byr_hist']
 
 	# initialize fixed features with listing variables
 	x_fixed = load(getPath(['x', 'lstg'])).reindex(
@@ -31,8 +31,8 @@ def process_inputs(part):
 	x_fixed.loc[:, 'hour_of_day'] = offers['hour_of_day'] / 24
 
 	# add time feats at arrival
-	tfeats = [c for c in offers.columns if c.endswith('_raw')]
-	x_fixed = x_fixed.join(offers[tfeats])
+	tf = load(getPath(['tf', 'role', 'raw'])).xs(1, level='index')
+	x_fixed = x_fixed.join(tf.reindex(index=x_fixed.index, fill_value=0))
 
 	return {'y': y.astype('int64', copy=False), 
             'x_fixed': x_fixed.astype('float32', copy=False)}

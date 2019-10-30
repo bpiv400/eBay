@@ -1,8 +1,6 @@
 import sys, random
 from compress_pickle import load, dump
 import numpy as np, pandas as pd
-
-sys.path.append('repo/')
 from constants import *
 
 
@@ -24,7 +22,7 @@ def partition_lstgs(slrs):
 
 if __name__ == "__main__":
     # load listing indices
-    path = lambda x: FEATS_DIR + '%d_tf_slr.gz' % x
+    path = lambda x: FEATS_DIR + '%d_events.gz' % x
     idx = []
     for i in range(1,N_CHUNKS+1):
         idx += list(load(path(i)).index)

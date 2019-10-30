@@ -55,6 +55,9 @@ def get_x_time(x_offer, outcome, role):
     # for concession, convert to index
     if outcome == 'con':
     	s *= 100
+    	s.loc[(s > 99) & (s < 100)] = 99
+    	s.loc[(s > 0) & (s < 1)] = 1
+    	s = np.round(s)
     # convert to byte and unstack
     return s.astype('int8').unstack(fill_value=-1)
 
@@ -69,7 +72,7 @@ def process_inputs(part, outcome, role):
 	x_lstg = load(getPath(['x', 'lstg']))
 	x_thread = load(getPath(['x', 'thread']))
 	x_offer = load(getPath(['x', 'offer']))
-	x_offer = x_offer[[c for c in x_offer.columns if not c.endswith('_raw')]]
+	tf = load(getPath(['tf', 'role', 'diff']))
 
 	# outcome
 	y = get_y(x_offer, outcome, role)
@@ -83,6 +86,7 @@ def process_inputs(part, outcome, role):
 
 	# time features
 	x_time = get_x_time(x_offer, outcome, role)
+	x_time = x_time.join(tf.reindex(index=x_time.index, fill_value=0))
 
 	return {'y': y.astype('int8', copy=False), 
 			'turns': turns.astype('uint8', copy=False),

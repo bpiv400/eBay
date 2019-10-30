@@ -360,7 +360,7 @@ replace censored = 1 if copy
 drop copy
 
 * mark last seller reject on bin date as censored
-
+/*
 g int temp = dofc(end_time) if bin
 by lstg, sort: egen int bindate = min(temp)
 drop temp
@@ -372,7 +372,7 @@ drop temp
 
 replace censored = 1 if bindate != . & reject ///
 	& dofc(lastclock) == bindate & clock >= lastclock
-
+*/
 * save temp
 
 save dta/temp2d, replace

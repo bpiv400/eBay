@@ -14,15 +14,13 @@ def add_clock_feats(x_time):
     for i in range(6):
         x_time['dow' + str(i)] = clock.dt.dayofweek == i
     # minute in day
-    x_time['minutes'] = clock.dt.hour * 60 + clock.dt.minute
+    x_time['minutes'] = (clock.dt.hour * 60 + clock.dt.minute) / (24 * 60)
     return x_time.drop('clock', axis=1)
 
 
 def parse_time_feats_delay(role, idx, z_start, z_role):
     # initialize output
     x_time = pd.DataFrame(index=idx).join(z_start)
-    # add period
-    x_time['period'] = idx.get_level_values('period')
     # time of each pseudo-observation
     x_time['clock'] += INTERVAL[role] * x_time.period
     # features from clock

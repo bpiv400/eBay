@@ -72,8 +72,7 @@ if __name__ == "__main__":
     # load data 
     lstgs = load(CLEAN_DIR + 'listings.gz').drop(
         ['title', 'flag'], axis=1).reindex(index=idx)
-    #tf_slr = load_frames('tf_slr').reindex(index=idx)
-    #tf_meta = load_frames('tf_meta').reindex(index=idx)
+    #slr = load_frames('slr').reindex(index=idx)
 
     # lookup file
     lookup = lstgs[['meta', 'start_date', \
@@ -90,14 +89,14 @@ if __name__ == "__main__":
         x_lstg = x_lstg.join(w2v)
 
     # add slr features
-    # x_lstg = x_lstg.join(tf_slr)
+    # x_lstg = x_lstg.join(slr)
 
     # # add categorical features
-    # tf_meta = []
+    # meta = []
     # for i in range(N_META):
-    #     tf_meta.append(load(FEATS_DIR + 'm' + str(i) + '_tf_meta.gz'))
-    # tf_meta = pd.concat(tf_meta).reindex(index=idx)
-    # x_lstg = x_lstg.join(tf_meta)
+    #     meta.append(load(FEATS_DIR + 'm%d_meta.gz' % i))
+    # meta = pd.concat(meta).reindex(index=idx)
+    # x_lstg = x_lstg.join(meta)
 
     # save
     dump(x_lstg, path('x_lstg'))

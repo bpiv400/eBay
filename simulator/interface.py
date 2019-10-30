@@ -26,9 +26,7 @@ class Inputs(Dataset):
             sizes = np.unique(self.d['turns'])
             self.groups = [np.nonzero(self.d['turns'] == n)[0] for n in sizes]
 
-            print(sizes)
-            print(len(sizes))
-            print(self.groups[0])
+        # for feed-forward nets, create single vector of indices
         else:
             self.groups = [np.array(range(self.N))]
 
@@ -39,7 +37,7 @@ class Inputs(Dataset):
         x_fixed = self.d['x_fixed'][idx,:]
 
         # feed-forward models
-        if not self.recurrent:
+        if not self.isRecurrent:
             return y, x_fixed, idx
 
         # number of turns

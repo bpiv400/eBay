@@ -1,11 +1,24 @@
-import sys
-import argparse, random
+import sys, argparse
 from compress_pickle import load, dump
 from datetime import datetime as dt
 import numpy as np, pandas as pd
 from constants import *
 from utils import *
 from processing.processing_utils import *
+
+
+def get_arrival_time_feats(lstgs, tf):
+    # add period to tf_arrival
+    tf = tf.reset_index('clock')
+    tf = tf.join((lstgs.start_date * 24 * 3600).rename('start_time'))
+    tf['period'] = (tf.clock - tf.start_time) // 3600
+    tf = tf.drop(['clock', 'start_time'], axis=1)
+    # increment period by 1; time feats are up to t-1
+    tf['period'] += 1
+    # drop periods beyond censoring threshold
+    tf = tf[tf.period < MAX_DAYS * 24]
+    # sum count features by period and return
+    return tf.groupby(['lstg', 'period']).sum()
 
 
 def get_y_arrival(lstgs, threads):
@@ -55,15 +68,22 @@ if __name__ == "__main__":
     idx, path = get_partition(part)
 
     # load data
-    lstgs = load(CLEAN_DIR + 'listings.gz')
-    lstgs = lstgs[['start_date', 'end_time']].reindex(index=idx)
+    lstgs = load(CLEAN_DIR + 'listings.gz')[['start_date', 'end_time']]
+    lstgs = lstgs.reindex(index=idx)
     threads = load(CLEAN_DIR + 'threads.gz').reindex(
+        index=idx, level='lstg')
+    tf = load_frames('tf_lstg_arrival').reindex(
         index=idx, level='lstg')
 
     # thread variables
     print('x_thread')
     x_thread = get_x_thread(threads)
     dump(threads[['byr_hist']], path('x_thread'))
+
+    # time feats
+    print('tf_arrival')
+    tf_arrival = get_arrival_time_feats(lstgs, tf)
+    dump(tf_arrival, path('tf_arrival'))
 
     # outcomes for arrival model
     print('Creating arrival model outcome variables')

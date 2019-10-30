@@ -14,9 +14,6 @@ N_META = 35
 SEED = 123456
 SHARES = {'train_models': 1/3, 'train_rl': 1/3}
 
-# keep PCA components that capture this total variance
-PCA_CUTOFF = 0.9
-
 # count concessions within this range as 1/2
 TOL_HALF = 0.02 
 

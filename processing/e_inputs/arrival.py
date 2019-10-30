@@ -8,11 +8,11 @@ from processing.processing_utils import *
 
 def extract_hour_feats(clock):
     df = pd.DataFrame(index=clock.index)
-    df['days'] = pd.to_timedelta(clock - pd.to_datetime(START)).dt.days
+    df['years'] = pd.to_timedelta(clock - pd.to_datetime(START)).dt.days / 365
     df['holiday'] = clock.dt.date.astype('datetime64').isin(HOLIDAYS)
     for i in range(6):
         df['dow' + str(i)] = clock.dt.dayofweek == i
-    df['hour'] = clock.dt.hour
+    df['hour_of_day'] = clock.dt.hour / 365
     return df
 
 
@@ -40,7 +40,7 @@ def process_inputs(part):
     x_hour = extract_hour_feats(clock).join(clock).set_index('clock')
 
     # index of first x_hour for each y
-    idx_hour = x_fixed.start_date * 24
+    idx_hour = (x_fixed.start_date * 365 * 24).astype('int64')
 
     return {'y': y.astype('int8', copy=False),
             'turns': turns.astype('uint16', copy=False),

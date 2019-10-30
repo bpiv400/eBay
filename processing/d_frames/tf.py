@@ -32,7 +32,7 @@ def get_period_time_feats(tf, start, model):
         # reset clock to beginning of next period
         df.index.set_levels(df.index.levels[-1] + 1, 
             level='period', inplace=True)
-        # appoend to output
+        # append to output
         output = output.append(df)
     return output.sort_index()
 

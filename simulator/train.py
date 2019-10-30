@@ -9,6 +9,7 @@ from constants import *
 
 EPOCHS = 1000
 
+
 def run_loop(model, simulator, data):
     # collate function
     f = collateRNN if data.isRecurrent else collateFF

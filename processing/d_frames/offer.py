@@ -61,26 +61,13 @@ def get_x_offer(lstgs, events, tf):
     df['exp'] = (df.delay == 1) | events.censored.reindex(
         df.index, fill_value=False)
     # clock features
-    df['days'] = (clock.stack() // (24 * 3600)).astype(
-        np.int64) - lstgs.start_date
+    df['years'] = ((clock.stack() // (24 * 3600)).astype(
+        np.int64) - lstgs.start_date) / 365
     df['clock'] = clock.rename_axis('index', axis=1).stack().rename(
         'clock').sort_index().astype(np.int64)
     clock = pd.to_datetime(df.clock, unit='s', origin=START)
     df = df.join(extract_day_feats(clock))
-    df['hour_of_day'] = clock.dt.hour
-    # raw time-varying features
-    df = df.reset_index('index').set_index('clock', append=True)
-    df = pd.concat([df, tf.reindex(df.index, fill_value=0).rename(
-        lambda x: x + '_raw', axis=1)], axis=1)
-    df = df.reset_index('clock', drop=True).set_index(
-        'index', append=True)
-    # change in time-varying features
-    tfeats = [c for c in df.columns if c.endswith('_raw')]
-    dtypes = {c: df[c].dtype for c in tfeats}
-    tfdiff = df[tfeats].groupby(['lstg', 'thread']).diff().dropna()
-    tfdiff = tfdiff.astype(dtypes).rename(
-        lambda x: x.replace('_raw', '_diff'), axis=1)
-    df = df.join(tfdiff.reindex(df.index, fill_value=0))
+    df['hour_of_day'] = clock.dt.hour / 24
     return df
 
 
@@ -94,11 +81,22 @@ if __name__ == "__main__":
     part = PARTITIONS[num]
     idx, path = get_partition(part)
 
-    # load data
+    # differenced time features
+    print('tf_role_diff')
+    tf_role_diff = load_frames('tf_lstg_con').reindex(
+        index=idx, level='lstg')
+    dump(tf_role_diff, path('tf_role_diff'))
+
+    # raw time features
+    print('tf_role_raw')
+    tf_role_raw = load_frames('tf_lstg_delay_raw').reindex(
+        index=idx, level='lstg')
+    dump(tf_role_raw, path('tf_role_diff'))
+
+    # load other data
     lstgs = load(CLEAN_DIR + 'listings.gz')
     lstgs = lstgs[['start_price', 'start_date']].reindex(index=idx)
     events = load_frames('events').reindex(index=idx, level='lstg')
-    tf = load_frames('tf_lstg').reindex(index=idx, level='lstg')
 
     # offer features
     print('x_offer')

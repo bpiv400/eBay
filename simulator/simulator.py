@@ -30,7 +30,7 @@ class Simulator:
             if model == 'hist':
                 sizes['out'] = HIST_QUANTILES
             else:
-                sizes['out'] = 101
+                sizes['out'] = 100
         else:
             sizes['out'] = 1
             if model == 'arrival':
@@ -51,32 +51,31 @@ class Simulator:
 
 
     def evaluate_loss(self, data):
-        # outcome
+        # feed-forward
         if not self.isRecurrent:
             y = data['y']
+            theta = self.net(data['x_fixed'])
+
+        # use mask for recurrent
         else:
             # retain indices with outcomes
             mask = data['y'] > -1
 
             # separate output for last turn of con_byr model
             if self.model == 'con_byr':
+                # parameters come in list with two tensors
+                theta = self.net(data['x_fixed'], data['x_time'])
+
                 # split y by turn
                 y = [data['y'][:,:3], data['y'][:,3]]
 
                 # apply mask separately
+                theta = [theta[0][mask[:,:3]], theta[1][mask[:,3]]]
                 y = [y[0][mask[:,:3]], y[1][mask[:,3]]]
             else:
+                theta = self.net(data['x_fixed'], data['x_time'])
+                theta = theta[mask]
                 y = data['y'][mask]
-
-        # prediction using net
-        if not self.isRecurrent:
-            theta = self.net(data['x_fixed'])
-        elif self.model == 'con_byr':
-            t, t4 = self.net(data['x_fixed'], data['x_time'])
-            theta = [t[mask[:,:3]], t4[mask[:,3]]]
-        else:
-            theta = self.net(data['x_fixed'], data['x_time'])
-            theta = theta[mask]
             
         # calculate loss
         return self.loss(theta, y)
