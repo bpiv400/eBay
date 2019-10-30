@@ -125,9 +125,31 @@ def original_quantiles(quant_vector=None, total_lstgs=None, featname=None, l=Non
     return output
 
 
+def curr_quantiles(df, name):
+    """
+    Assumptions
+    1. df contains targ (vector of interest)
+    2. df contains lstg (vector giving lstg id)
+
+    :param df:
+    :param name: gives the name of the feature being created (e.g. first_offer)
+    :return:
+    """
+    lstg_map = dict()
+    total_count = len(df)
+    nan_count = df['targ'].isna().sum()
+    filled_count = total_count - nan_count
+    if filled_count == 0:
+        for i in [25, 75, 100]:
+            df['{}_{}'.format(name, i)] = 0
+        return df
+    targ = df['targ'].values
+    lstgs = df['lstg']
+
 def fast_quantiles(quant_vector=None, total_lstgs=None, featname=None, l=None, converter=None):
     quant_vector = quant_vector.sort(na_position='last')
-    
+    quant_vector = quant_vector.groupby(by=l).transform(curr_quantiles)
+
 
 def get_quantiles(df, l, featname):
     # initialize output dataframe
