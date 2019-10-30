@@ -72,7 +72,9 @@ def process_inputs(part, outcome, role):
 	x_lstg = load(getPath(['x', 'lstg']))
 	x_thread = load(getPath(['x', 'thread']))
 	x_offer = load(getPath(['x', 'offer']))
-	tf = load(getPath(['tf', 'role', 'diff']))
+	tf = load(getPath(['tf', 'role', 'diff'])).reindex(
+		index=x_offer, fill_value=0)
+	x_offer = x_offer.join(tf)
 
 	# outcome
 	y = get_y(x_offer, outcome, role)
@@ -86,7 +88,6 @@ def process_inputs(part, outcome, role):
 
 	# time features
 	x_time = get_x_time(x_offer, outcome, role)
-	x_time = x_time.join(tf.reindex(index=x_time.index, fill_value=0))
 
 	return {'y': y.astype('int8', copy=False), 
 			'turns': turns.astype('uint8', copy=False),

@@ -34,7 +34,7 @@ def get_con(offers):
     return con.stack()
 
 
-def get_x_offer(lstgs, events, tf):
+def get_x_offer(lstgs, events):
     # vector of offers
     offers = events.price.unstack().join(lstgs.start_price)
     offers = offers.rename({'start_price': 0}, axis=1).rename_axis(
@@ -100,6 +100,6 @@ if __name__ == "__main__":
 
     # offer features
     print('x_offer')
-    x_offer = get_x_offer(lstgs, events, tf)
+    x_offer = get_x_offer(lstgs, events)
     dump(x_offer, path('x_offer'))
  
