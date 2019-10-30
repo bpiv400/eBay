@@ -91,7 +91,7 @@ if __name__ == "__main__":
     print('tf_role_raw')
     tf_role_raw = load_frames('tf_lstg_delay_raw').reindex(
         index=idx, level='lstg')
-    dump(tf_role_raw, path('tf_role_diff'))
+    dump(tf_role_raw, path('tf_role_raw'))
 
     # load other data
     lstgs = load(CLEAN_DIR + 'listings.gz')

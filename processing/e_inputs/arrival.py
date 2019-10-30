@@ -40,13 +40,20 @@ def process_inputs(part):
     x_hour = extract_hour_feats(clock).join(clock).set_index('clock')
 
     # index of first x_hour for each y
-    idx_hour = (x_fixed.start_date * 365 * 24).astype('int64')
+    start_date = load(getPath(['lookup']))['start_date'].reindex(
+        index=turns.index)
+    idx_hour = (start_date * 24).astype('uint16')
+
+    # time features
+    tf = load(getPath(['tf', 'arrival'])).reindex(
+        index=turns.index, level='lstg')
 
     return {'y': y.astype('int8', copy=False),
             'turns': turns.astype('uint16', copy=False),
             'x_fixed': x_fixed.astype('float32', copy=False), 
             'x_hour': x_hour.astype('uint16', copy=False),
-            'idx_hour': idx_hour.astype('uint16', copy=False)}
+            'idx_hour': idx_hour.astype('uint16', copy=False),
+            'tf': tf.astype('float32', copy=False)}
 
 
 if __name__ == '__main__':
