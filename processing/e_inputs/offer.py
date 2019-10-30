@@ -73,7 +73,7 @@ def process_inputs(part, outcome, role):
 	x_thread = load(getPath(['x', 'thread']))
 	x_offer = load(getPath(['x', 'offer']))
 	tf = load(getPath(['tf', 'role', 'diff'])).reindex(
-		index=x_offer, fill_value=0)
+		index=x_offer.index, fill_value=0)
 	x_offer = x_offer.join(tf)
 
 	# outcome
