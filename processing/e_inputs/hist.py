@@ -13,7 +13,7 @@ def process_inputs(part):
 		(PREFIX, part, '_'.join(names))
 
 	# outcome
-	y = load(getPath(['x', 'thread']))['byr_hist'] * HIST_QUANTILES
+	y = load(getPath(['x', 'thread'])) * HIST_QUANTILES
 
 	# initialize fixed features with listing variables
 	x_fixed = load(getPath(['x', 'lstg'])).reindex(
