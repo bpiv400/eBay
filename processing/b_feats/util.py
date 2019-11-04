@@ -23,23 +23,25 @@ def collapse_dict(feat_dict, index_names, meta=False):
     return df
 
 
-def quant_vector_index(quant_vector, l, name):
+def quant_vector_index(quant_vector, l, name, new=False):
+    lstg_ind = 'lstg_id' if new else 'lstg_counter'
     quant_vector = quant_vector.reset_index(drop=False)
-    quant_vector = quant_vector[[name, 'lstg_counter'] + l]
-    quant_vector = quant_vector.set_index(l + ['lstg_counter'], append=False,
+    quant_vector = quant_vector[[name, lstg_ind] + l]
+    quant_vector = quant_vector.set_index(l + [lstg_ind], append=False,
                                           drop=True)
     quant_vector = quant_vector[name]
     return quant_vector
 
 
-def prep_quantiles(df, l, featname):
+def prep_quantiles(df, l, featname, new=False):
+    lstg_ind = 'lstg_id' if new else 'lstg_counter'
     if featname == 'accept_norm':
         quant_vector = df.reset_index(drop=False)
-        quant_vector = quant_vector[[featname, 'lstg_counter'] + l]
-        quant_vector = quant_vector.groupby(by=l + ['lstg_counter']).max()[featname]
+        quant_vector = quant_vector[[featname, lstg_ind] + l]
+        quant_vector = quant_vector.groupby(by=l + [lstg_ind]).max()[featname]
     elif featname == 'first_offer' or featname == 'byr_hist':
         quant_vector = df.xs(1, level='index')
-        quant_vector = quant_vector_index(quant_vector, l, featname)
+        quant_vector = quant_vector_index(quant_vector, l, featname, new=new)
     elif featname == 'slr_delay' or featname == 'byr_delay':
         if featname == 'slr_delay':
             other_turn = df.index.get_level_values('index').isin([3, 5])
@@ -50,16 +52,16 @@ def prep_quantiles(df, l, featname):
         # removing auto rejects from the distribution
         auto_rej = df['delay'] == 1
         df.loc[auto_rej, 'delay'] = np.NaN
-        quant_vector = quant_vector_index(df, l, 'delay')
+        quant_vector = quant_vector_index(df, l, 'delay', new=new)
         quant_vector = quant_vector.rename(featname)
     elif featname == 'start_price_pctile' or featname == 'arrival_rate':
         quant_vector = df.xs(0, level='thread').xs(0, level='index')
-        quant_vector = quant_vector_index(quant_vector, l, featname)
+        quant_vector = quant_vector_index(quant_vector, l, featname, new=new)
         print('quant vec')
         print(quant_vector)
     elif featname == 'byr_hist':
         quant_vector = df.xs(1, level='index')
-        quant_vector = quant_vector_index(quant_vector, l, featname)
+        quant_vector = quant_vector_index(quant_vector, l, featname, new=new)
     else:
         raise NotImplementedError()
     return quant_vector
@@ -125,30 +127,112 @@ def original_quantiles(quant_vector=None, total_lstgs=None, featname=None, l=Non
     return output
 
 
-def curr_quantiles(df, name):
+def inplace_quantiles(df):
     """
     Assumptions
     1. df contains targ (vector of interest)
     2. df contains lstg (vector giving lstg id)
+    3. Some or all of the entries in targ may be nans
+    4. df is sorted in ascending order of targ (with nans at back)
 
-    :param df:
+    :param df: pandas.DataFrame
     :param name: gives the name of the feature being created (e.g. first_offer)
     :return:
     """
+
     lstg_map = dict()
     total_count = len(df)
     nan_count = df['targ'].isna().sum()
     filled_count = total_count - nan_count
+    # edge case of all nans
     if filled_count == 0:
-        for i in [25, 75, 100]:
-            df['{}_{}'.format(name, i)] = 0
-        return df
-    targ = df['targ'].values
-    lstgs = df['lstg']
+        lstgs = df['lstg'].unique()
+        lstgs = pd.Index(lstgs, name='lstg')
+        cols = [str(i) for i in [25, 75, 100]]
+        res_dict = pd.DataFrame(0, columns=cols, index=lstgs)
+        return res_dict
+    last_filled = filled_count - 1
+    targs = df['targ'].values
+    lstgs = df['lstg'].values
+    # compute indices of quantiles in full distribution
+    full_quant_inds = {q:int(q * last_filled / 100) for q in [25, 75, 1]}
+    lstg_ind_dict = dict()
+    lstg_count_dict = dict()
+    # populate dictionary of lstgs with lists containing indices corresponding
+    # to each lstg and a count of the number of non-nan elements
+    for i, curr_targ, curr_lstg in enumerate(zip(targs, lstgs)):
+        if curr_lstg not in lstg_ind_dict:
+            lstg_ind_dict[curr_lstg] = list()
+            lstg_count_dict[curr_lstg] = 0
+        lstg_ind_dict[curr_lstg].append(i)
+        if i <= last_filled:
+            lstg_count_dict[curr_lstg] += 1
 
-def fast_quantiles(quant_vector=None, total_lstgs=None, featname=None, l=None, converter=None):
+    res_dict = {i:list() for i in [25, 75, 100]}
+    lstg_order = []
+    # iterate over all lstgs
+    for curr_lstg, curr_inds in lstg_ind_dict.items():
+        # establish order in which we iterated over lstgs for index population later
+        lstg_order.append(curr_lstg)
+        non_nan_count = lstg_count_dict[curr_lstg]
+        # iterate over quantiles
+        for q in res_dict.keys():
+            q_normal = q / 100
+            # handle edge case where no elements are removed for the current lstg
+            if non_nan_count == 0:
+                res_dict[q].append(targs[full_quant_inds[q]])
+            # handle edge case where all elements are removed for the current lstg
+            elif non_nan_count == filled_count:
+                res_dict[q].append(0)
+            else:
+                # set a guess for the index of the quantile assuming no values
+                # occur before the quantile
+                q_g = int((filled_count - non_nan_count - 1) * q_normal)
+                # for each index that occurs before the quantile, increment the quantile
+                for ind in curr_inds:
+                    if ind <= q_g:
+                        q_g += 1
+                    else:
+                        break
+                q_val = targs[q_g]
+                if np.isnan(q_val):
+                    raise RuntimeError('hmm... we gotta problem')
+                res_dict[q].append(q_val)
+    # convert output into a dataframe
+    res_dict = pd.DataFrame.from_dict(res_dict, orient='columns')
+    res_dict = res_dict.rename(columns=lambda col: str(col))
+    lstg_order = pd.Index(lstg_order, name='lstg')
+    res_dict.index = lstg_order
+    return res_dict
+
+
+def fast_quantiles(df, l, featname):
+    # initialize output dataframe
+    df = df.copy()
+    df = df.drop(columns='thread')
+    # subset to minimal entries per lstg
+    quant_vector = prep_quantiles(df, l, featname, new=True)
+    # sort
     quant_vector = quant_vector.sort(na_position='last')
-    quant_vector = quant_vector.groupby(by=l).transform(curr_quantiles)
+    # name feature series
+    quant_vector.name = 'targ'
+    # add lstg as separate column
+    quant_vector = quant_vector.reset_index(level='lstg_id', drop=False)
+    quant_vector = quant_vector.rename(columns={'lstg_id': 'lstg'})
+    print('index names: {}'.format(quant_vector.index.names))
+    # group
+    vector_groups = quant_vector.groupby(by=l)
+    acc = list()
+    # iterate over groups
+    for index_subset in vector_groups.groups.values():
+        subset = quant_vector.loc[index_subset].copy()
+        subset_quants = inplace_quantiles(subset)
+        acc.append(subset_quants)
+    # concatenate results for each group
+    output = pd.concat(acc, axis=0)
+    # append feature name to the column
+    output = output.rename(columns=lambda q: '{}_{}'.format(featname, q))
+    return output.sort_index()
 
 
 def get_quantiles(df, l, featname):

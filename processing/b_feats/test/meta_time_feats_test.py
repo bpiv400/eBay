@@ -837,7 +837,7 @@ def test_accepts_leaf():
     assert np.all(np.isclose(exp.values, actual['meta_accepts'].values))
 
 
-def test_price_quantile_meta():
+def test_accept_norm_meta():
     events = setup_complex_lstg(None, meta=1, leaf=1)
     events = setup_complex_lstg(events, meta=2, leaf=1, starter=11)
     events.index = events.index.droplevel(['leaf', 'cndtn'])
@@ -859,7 +859,7 @@ def test_price_quantile_meta():
         assert np.all(np.isclose(exp.values, actual[name].values))
 
 
-def test_price_quantile_leaf():
+def test_accept_norm_leaf():
     events = setup_complex_lstg(None, meta=1, leaf=2)
     events = setup_complex_lstg(events, meta=1, leaf=1, starter=11)
     events.index = events.index.droplevel(['cndtn'])
