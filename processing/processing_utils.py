@@ -124,6 +124,6 @@ def convert_to_numpy(d):
 
     # for feed-forward nets, create single vector of indices
     else:
-        d['groups'] = np.shape(d['x_fixed'])[0]
+        d['groups'] = [np.array(range(np.shape(d['x_fixed'])[0]))]
 
     return d

@@ -26,7 +26,7 @@ if __name__ == '__main__':
 		d['groups'] = [np.nonzero(d['turns'] == n)[0] \
 			for n in np.unique(d['turns'])]
 	else:
-		d['groups'] = np.shape(d['x_fixed'])[0]
+		d['groups'] = [np.array(range(np.shape(d['x_fixed'])[0]))]
 
 	# save dictionary
 	dump(d, filename)
