@@ -23,10 +23,10 @@ if __name__ == '__main__':
 
 	# add groups
 	if 'turns' in d:
-        d['groups'] = [np.nonzero(d['turns'] == n)[0] \
-                        for n in np.unique(d['turns'])]
-    else:
-        d['groups'] = np.shape(d['x_fixed'])[0]
+		d['groups'] = [np.nonzero(d['turns'] == n)[0] \
+			for n in np.unique(d['turns'])]
+	else:
+		d['groups'] = np.shape(d['x_fixed'])[0]
 
-    # save dictionary
-    dump(d, filename)
+	# save dictionary
+	dump(d, filename)
