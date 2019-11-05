@@ -72,7 +72,7 @@ INTERVAL_COUNTS = {
 MODELS = ['arrival', 'delay_byr', 'delay_slr', 'con_byr', 'con_slr']
 
 # organizing hierarchy
-LEVELS = ['slr', 'meta', 'leaf', 'cndtn', 'lstg']
+LEVELS = ['slr', 'cat', 'cndtn', 'lstg']
 
 # for lstg feature construction
 BINARY_FEATS = ['store', 'slr_us', 'fast']

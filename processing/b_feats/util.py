@@ -209,13 +209,10 @@ def fast_quantiles(df, l, featname):
     df = df.copy()
     df = df.drop(columns='thread')
     # subset to minimal entries per lstg
-    print('preparing vector...')
     quant_vector = prep_quantiles(df, l, featname, new=True)
     # sort
-    print('sorting vector...')
     quant_vector = quant_vector.sort_values(na_position='last')
     # name feature series
-    print('cleaning indices...')
     quant_vector.name = 'targ'
     # reset index and add unique counter
     quant_vector = quant_vector.reset_index(drop=False)
@@ -224,23 +221,19 @@ def fast_quantiles(df, l, featname):
     # add lstg column
     quant_vector = quant_vector.rename(columns={'lstg_id': 'lstg'})
     # group
-    print('group...')
     vector_groups = quant_vector.groupby(by=l)
     acc = list()
     # iterate over groups
-    print('iterating over groups...')
     for index_subset in vector_groups.groups.values():
         subset = quant_vector.loc[index_subset].copy()
         subset_quants = inplace_quantiles(subset)
         acc.append(subset_quants)
     # concatenate results for each group
-    print('concating result...')
     output = pd.concat(acc, axis=0, sort=False)
     # append feature and level name to the column
     level_name = l[-1]
     output = output.rename(columns=lambda q: '{}_{}_{}'.format(level_name,
                                                                featname, q))
-    print('sorting result...')
     output = output.sort_index()
     return output
 
@@ -333,9 +326,15 @@ def get_cat_lstg_counts(events, levels):
     for i in range(len(levels)):
         curr_levels = levels[: i+1]
         # open listings
-        tfname = '_'.join([curr_levels[-1], 'lstgs_open'])
+
         events = events.sort_values(['clock', 'censored'] + curr_levels)
-        tf[tfname] = open_lstgs(events, curr_levels)
+
+        #########
+        # REMOVED OPEN LSTGS
+        # tfname = '_'.join([curr_levels[-1], 'lstgs_open'])
+        # tf[tfname] = open_lstgs(events, curr_levels)
+        ##########
+
         # count features grouped by current level
         ct_feats = events[['lstg_ind', 'thread', 'slr_offer',
                            'byr_offer', 'accept']].groupby(by=curr_levels).sum()
@@ -348,7 +347,6 @@ def get_cat_lstg_counts(events, levels):
         ct_feats = ct_feats.rename(lambda x: '_'.join([curr_levels[-1], x]) + 's', axis=1)
         tf = tf.join(ct_feats)
         tf.index = tf.index.droplevel(level=curr_levels)
-        cols = [c for c in tf.columns if c.startswith(levels[-1])]
 
     # collapse to lstg
     tf = tf.rename(lambda curr_name:
@@ -367,7 +365,6 @@ def get_cat_accepts(events, levels):
         print('curr level: {}'.format(curr_levels[-1]))
         # quantiles of (normalized) accept price over 30-day window
         quants = fast_quantiles(events, curr_levels, 'accept_norm')
-        print('joining result...')
         tf = tf.join(quants)
         # for identical timestamps
         cols = [c for c in tf.columns if c.startswith(levels[-1])]
