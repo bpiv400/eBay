@@ -139,8 +139,6 @@ def inplace_quantiles(df):
     :param name: gives the name of the feature being created (e.g. first_offer)
     :return:
     """
-
-    lstg_map = dict()
     total_count = len(df)
     nan_count = df['targ'].isna().sum()
     filled_count = total_count - nan_count
@@ -148,19 +146,23 @@ def inplace_quantiles(df):
     if filled_count == 0:
         lstgs = df['lstg'].unique()
         lstgs = pd.Index(lstgs, name='lstg')
-        cols = [str(i) for i in [25, 75, 100]]
+        cols = [str(i) for i in [25, 50, 75, 100]]
         res_dict = pd.DataFrame(0, columns=cols, index=lstgs)
         return res_dict
     last_filled = filled_count - 1
     targs = df['targ'].values
     lstgs = df['lstg'].values
+    # print('targs')
+    # print(targs)
+    # print('lstgs')
+    # print(lstgs)
     # compute indices of quantiles in full distribution
-    full_quant_inds = {q:int(q * last_filled / 100) for q in [25, 75, 1]}
+    full_quant_inds = {q:int(q * last_filled / 100) for q in [25, 50, 75, 100]}
     lstg_ind_dict = dict()
     lstg_count_dict = dict()
     # populate dictionary of lstgs with lists containing indices corresponding
     # to each lstg and a count of the number of non-nan elements
-    for i, curr_targ, curr_lstg in enumerate(zip(targs, lstgs)):
+    for i, (curr_targ, curr_lstg) in enumerate(zip(targs, lstgs)):
         if curr_lstg not in lstg_ind_dict:
             lstg_ind_dict[curr_lstg] = list()
             lstg_count_dict[curr_lstg] = 0
@@ -168,10 +170,11 @@ def inplace_quantiles(df):
         if i <= last_filled:
             lstg_count_dict[curr_lstg] += 1
 
-    res_dict = {i:list() for i in [25, 75, 100]}
+    res_dict = {i:list() for i in [25, 50, 75, 100]}
     lstg_order = []
     # iterate over all lstgs
     for curr_lstg, curr_inds in lstg_ind_dict.items():
+        # print('curr lstg: {}'.format(curr_lstg))
         # establish order in which we iterated over lstgs for index population later
         lstg_order.append(curr_lstg)
         non_nan_count = lstg_count_dict[curr_lstg]
@@ -195,8 +198,8 @@ def inplace_quantiles(df):
                     else:
                         break
                 q_val = targs[q_g]
-                if np.isnan(q_val):
-                    raise RuntimeError('hmm... we gotta problem')
+                # if np.isnan(q_val):
+                #     raise RuntimeError('hmm... we gotta problem')
                 res_dict[q].append(q_val)
     # convert output into a dataframe
     res_dict = pd.DataFrame.from_dict(res_dict, orient='columns')
@@ -211,28 +214,48 @@ def fast_quantiles(df, l, featname):
     df = df.copy()
     df = df.drop(columns='thread')
     # subset to minimal entries per lstg
+    print('preparing vector...')
     quant_vector = prep_quantiles(df, l, featname, new=True)
     # sort
-    quant_vector = quant_vector.sort(na_position='last')
+    print('sorting vector...')
+    quant_vector = quant_vector.sort_values(na_position='last')
+    # print('quant vector')
+    # print(quant_vector)
     # name feature series
+    print('cleaning indices...')
     quant_vector.name = 'targ'
-    # add lstg as separate column
-    quant_vector = quant_vector.reset_index(level='lstg_id', drop=False)
+    # reset index and add unique counter
+    quant_vector = quant_vector.reset_index(drop=False)
+    quant_vector.index.name = 'counter'
+    quant_vector = quant_vector.set_index(l, append=True, drop=True)
+    # add lstg column
     quant_vector = quant_vector.rename(columns={'lstg_id': 'lstg'})
-    print('index names: {}'.format(quant_vector.index.names))
+    # print('index names: {}'.format(quant_vector.index.names))
+    # print('columns: {}'.format(quant_vector.columns))
+    # print('final input vector')
+    # print(quant_vector)
     # group
+    print('group...')
     vector_groups = quant_vector.groupby(by=l)
     acc = list()
     # iterate over groups
+    print('iterating over groups...')
     for index_subset in vector_groups.groups.values():
+        # print('index subset')
+        # print(index_subset)
         subset = quant_vector.loc[index_subset].copy()
         subset_quants = inplace_quantiles(subset)
         acc.append(subset_quants)
     # concatenate results for each group
-    output = pd.concat(acc, axis=0)
-    # append feature name to the column
-    output = output.rename(columns=lambda q: '{}_{}'.format(featname, q))
-    return output.sort_index()
+    print('concating result...')
+    output = pd.concat(acc, axis=0, sort=False)
+    # append feature and level name to the column
+    level_name = l[-1]
+    output = output.rename(columns=lambda q: '{}_{}_{}'.format(level_name,
+                                                               featname, q))
+    print('sorting result...')
+    output = output.sort_index()
+    return output
 
 
 def get_quantiles(df, l, featname):
@@ -338,8 +361,10 @@ def get_cat_accepts(events, levels):
 
     for i in range(len(levels)):
         curr_levels = levels[: i + 1]
+        print('curr level: {}'.format(curr_levels[-1]))
         # quantiles of (normalized) accept price over 30-day window
-        quants = get_quantiles(events, curr_levels, 'accept_norm')
+        quants = fast_quantiles(events, curr_levels, 'accept_norm')
+        print('joining result...')
         tf = tf.join(quants)
         # for identical timestamps
         cols = [c for c in tf.columns if c.startswith(levels[-1])]
@@ -360,7 +385,7 @@ def get_cat_con(events, levels):
         bin = get_perc(events,  curr_levels, 'bin', 'lstg_ind', name='bin')
         tf = tf.join(bin)
         # quantiles of (normalized) accept price over 30-day window
-        quants = get_quantiles(events, curr_levels, 'first_offer')
+        quants = fast_quantiles(events, curr_levels, 'first_offer')
         tf = tf.join(quants)
         # for identical timestamps
         cols = [c for c in tf.columns if c.startswith(levels[-1])]
@@ -397,8 +422,8 @@ def get_cat_delay(events, levels):
         events['lstg_counter'] = events['lstg_id'].groupby(by=curr_levels).transform(
             lambda x: x.factorize()[0].astype(np.int64)
         )
-        tf = tf.join(get_quantiles(events, curr_levels, 'slr_delay'))
-        tf = tf.join(get_quantiles(events, curr_levels, 'byr_delay'))
+        tf = tf.join(fast_quantiles(events, curr_levels, 'slr_delay'))
+        tf = tf.join(fast_quantiles(events, curr_levels, 'byr_delay'))
         tf = tf.join(get_expire_perc(events, curr_levels, byr=False))
         tf = tf.join(get_expire_perc(events, curr_levels, byr=True))
     # collapse to lstg
@@ -423,8 +448,9 @@ def get_cat_quantiles_wrapper(events, levels, featname):
     tf = prep_tf(events)
     for i in range(len(levels)):
         curr_levels = levels[: i + 1]
-        tf = tf.join(get_quantiles(events, curr_levels, featname))
+        tf = tf.join(fast_quantiles(events, curr_levels, featname))
     return tf.sort_index()
+
 
 def create_obs(df, isStart, cols):
     toAppend = pd.DataFrame(index=df.index, columns=['index'] + cols)
