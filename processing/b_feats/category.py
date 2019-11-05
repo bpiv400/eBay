@@ -83,7 +83,7 @@ def main():
         chunk_name = 'slr'
 
     print('Saving...')
-    dump(tf, '{}{}_feat_{}.gz'.format(FEATS_DIR, chunk_name, args.num))
+    dump(tf, '{}{}_{}.gz'.format(FEATS_DIR, args.num, chunk_name))
 
 
 if __name__ == "__main__":

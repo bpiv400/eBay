@@ -1,11 +1,8 @@
 #!/bin/bash
-#$ -t 1-245
+#$ -t 1-20000
 #$ -q short.q
 #$ -l m_mem_free=75G
 #$ -N feats_meta
 #$ -j y
 #$ -o logs/
-TASK_ID=$((SGE_TASK_ID - 1))
-NUM=$((TASK_ID / 7 + 1))
-FEAT=$((TASK_ID % 7 + 1))
-python repo/processing/b_feats/category.py --num "$NUM" --feat "$FEAT"
+python repo/processing/b_feats/category.py --num "$NUM" --feat "$SGE_TASK_ID"
