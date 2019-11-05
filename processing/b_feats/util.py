@@ -69,6 +69,8 @@ def prep_quantiles(df, l, featname, new=False):
 
 def get_perc(df, l, num, denom, name=None):
     df = df.copy()
+    df[num] = df[num].astype(int)
+    df[denom] = df[denom].astype(int)
     level_group = df[[num, denom]].groupby(by=l).sum()
     lstg_group = df[[num, denom]].groupby(by=l + ['lstg']).sum()
     num_level = level_group[num]
@@ -76,7 +78,7 @@ def get_perc(df, l, num, denom, name=None):
     num_ser = num_level - num_lstg
 
     if name == 'bin':
-        assert num_ser.max() <= 1  # sanity check
+        assert num_lstg.max() <= 1  # sanity check
 
     denom_level = level_group[denom]
     denom_lstg = lstg_group[denom]
@@ -152,10 +154,6 @@ def inplace_quantiles(df):
     last_filled = filled_count - 1
     targs = df['targ'].values
     lstgs = df['lstg'].values
-    # print('targs')
-    # print(targs)
-    # print('lstgs')
-    # print(lstgs)
     # compute indices of quantiles in full distribution
     full_quant_inds = {q:int(q * last_filled / 100) for q in [25, 50, 75, 100]}
     lstg_ind_dict = dict()
@@ -174,7 +172,6 @@ def inplace_quantiles(df):
     lstg_order = []
     # iterate over all lstgs
     for curr_lstg, curr_inds in lstg_ind_dict.items():
-        # print('curr lstg: {}'.format(curr_lstg))
         # establish order in which we iterated over lstgs for index population later
         lstg_order.append(curr_lstg)
         non_nan_count = lstg_count_dict[curr_lstg]
@@ -219,8 +216,6 @@ def fast_quantiles(df, l, featname):
     # sort
     print('sorting vector...')
     quant_vector = quant_vector.sort_values(na_position='last')
-    # print('quant vector')
-    # print(quant_vector)
     # name feature series
     print('cleaning indices...')
     quant_vector.name = 'targ'
@@ -230,10 +225,6 @@ def fast_quantiles(df, l, featname):
     quant_vector = quant_vector.set_index(l, append=True, drop=True)
     # add lstg column
     quant_vector = quant_vector.rename(columns={'lstg_id': 'lstg'})
-    # print('index names: {}'.format(quant_vector.index.names))
-    # print('columns: {}'.format(quant_vector.columns))
-    # print('final input vector')
-    # print(quant_vector)
     # group
     print('group...')
     vector_groups = quant_vector.groupby(by=l)
@@ -241,8 +232,6 @@ def fast_quantiles(df, l, featname):
     # iterate over groups
     print('iterating over groups...')
     for index_subset in vector_groups.groups.values():
-        # print('index subset')
-        # print(index_subset)
         subset = quant_vector.loc[index_subset].copy()
         subset_quants = inplace_quantiles(subset)
         acc.append(subset_quants)
@@ -302,6 +291,10 @@ def get_cat_feats(events, levels=None, feat_ind=None):
     real_threads = (df.index.get_level_values('thread') != 0).astype(bool)
     first_offer = (df.index.get_level_values('index') == 1).astype(bool)
     df['bin'] = (first_offer & real_threads & (df.offer_norm == 1).astype(bool)).astype(bool)
+    df['bin'] = (df['bin'] & df['accept']).astype(bool)
+    ## error checking
+    bin_sum = df['bin'].astype(int).groupby('lstg').sum().max()
+    print('bin sum: {}'.format(bin_sum))
     first_offer = first_offer & real_threads & ~df.flag & ~df.bin
     df['first_offer'] = (df.offer_norm[first_offer]).astype(np.float64)
     if feat_ind == 1:
@@ -325,7 +318,6 @@ def get_cat_feats(events, levels=None, feat_ind=None):
 def get_cat_lstg_counts(events, levels):
     # initialize output dataframe
     tf = prep_tf(events)
-
     # loop over hierarchy, exlcuding lstg
     for i in range(len(levels)):
         curr_levels = levels[: i+1]
@@ -379,9 +371,6 @@ def get_cat_con(events, levels):
 
     for i in range(len(levels)):
         curr_levels = levels[: i + 1]
-        events['lstg_counter'] = events['lstg_id'].groupby(by=curr_levels).transform(
-            lambda x: x.factorize()[0].astype(np.int64)
-        )
         bin = get_perc(events,  curr_levels, 'bin', 'lstg_ind', name='bin')
         tf = tf.join(bin)
         # quantiles of (normalized) accept price over 30-day window
@@ -520,7 +509,8 @@ def create_events(L, T, O, levels):
     events = add_start_end(offers, L, levels)
     # add features for later use
     events['byr'] = events.index.isin(IDX['byr'], level='index')
-    events = events.join(L[['flag', 'start_price', 'arrival_rate']])
+    events = events.join(L[['flag', 'start_price', 'arrival_rate',
+                            'start_price_pctile']])
     return events
 
 

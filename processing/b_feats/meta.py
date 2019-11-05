@@ -15,7 +15,7 @@ if __name__ == "__main__":
     # load data
     print('Loading data')
     events = load('{}m{}_events.gz'.format(FEATS_DIR, args.num))
-
+    print('features: {}'.format(events.columns))
     start = dt.now()
 
     # get upper-level time-valued features
