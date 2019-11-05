@@ -18,7 +18,6 @@ class Inputs(Dataset):
         # save parameters to self
         self.model = model
         self.isRecurrent = 'turns' in self.d
-        self.groups = self.d['groups']
 
 
     def __getitem__(self, idx):
@@ -78,7 +77,7 @@ class Sample(Sampler):
         # for training, shuffle and chop into minibatches
         if isTraining:
             self.batches = []
-            for v in dataset.groups:
+            for v in dataset.d['groups']:
                 np.random.shuffle(v)
                 self.batches += np.array_split(v, 1 + len(v) // MBSIZE)
             # shuffle training batches
@@ -86,7 +85,7 @@ class Sample(Sampler):
 
         # for test, create batch of samples of same length
         else:
-            self.batches = dataset.groups
+            self.batches = dataset.d['groups']
 
     def __iter__(self):
         """
