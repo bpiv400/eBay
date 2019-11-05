@@ -17,18 +17,8 @@ class Inputs(Dataset):
 
         # save parameters to self
         self.model = model
-        self.isTraining = part == 'train_models'
         self.isRecurrent = 'turns' in self.d
-        self.N = np.shape(self.d['x_fixed'])[0]
-        
-        # save list of arrays of indices with same number of turns
-        if self.isRecurrent:
-            sizes = np.unique(self.d['turns'])
-            self.groups = [np.nonzero(self.d['turns'] == n)[0] for n in sizes]
-
-        # for feed-forward nets, create single vector of indices
-        else:
-            self.groups = [np.array(range(self.N))]
+        self.groups = self.d['groups']
 
 
     def __getitem__(self, idx):
@@ -78,7 +68,7 @@ class Inputs(Dataset):
 # defines a sampler that extends torch.utils.data.Sampler
 class Sample(Sampler):
 
-    def __init__(self, dataset):
+    def __init__(self, dataset, isTraining):
         """
         dataset: instance of Inputs
         isTraining: chop into minibatches if True
@@ -86,7 +76,7 @@ class Sample(Sampler):
         super().__init__(None)
 
         # for training, shuffle and chop into minibatches
-        if dataset.isTraining:
+        if isTraining:
             self.batches = []
             for v in dataset.groups:
                 np.random.shuffle(v)
@@ -141,7 +131,8 @@ def collateRNN(batch):
 
     # convert to tensor, pack if needed
     y = torch.from_numpy(np.asarray(y))
-    turns = torch.from_numpy(np.asarray(turns)).long()
+    turns = torch.from_numpy(np.asarray(
+        turns, dtype='int64'))
     x_fixed = torch.stack(x_fixed).float()
     x_time = torch.stack(x_time, dim=0).float()
     idx = torch.tensor(idx)

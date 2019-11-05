@@ -21,18 +21,6 @@ def load_frames(name):
     return output
 
 
-# converts meta, leaf and product to str, replaces missing product w/leaf
-def categories_to_string(L):
-    '''
-    L: dataframe with index 'lstg' and columns 'meta', 'leaf', and 'product'
-    '''
-    for c in ['meta', 'leaf', 'product']:
-        L[c] = np.char.add(c[0], L[c].astype(str).values)
-    mask = L['product'] == 'p0'
-    L.loc[mask, 'product'] = L.loc[mask, 'leaf']
-    return L
-
-
 # returns partition indices and path to file function
 def get_partition(part):
     '''
@@ -103,6 +91,7 @@ def convert_to_numpy(d):
     '''
     d: dictionary with dataframes.
     '''
+
     # convert time features to dictionary
     if 'tf' in d:
         tf_dict = {}
@@ -113,6 +102,7 @@ def convert_to_numpy(d):
             except:
                 continue
         d['tf'] = tf_dict
+
     # reshape columns of x_time and convert
     if 'x_time' in d:
         arrays = []
@@ -121,8 +111,19 @@ def convert_to_numpy(d):
                 index=d['y'].index).to_numpy()
             arrays.append(np.expand_dims(array, axis=2))
         d['x_time'] = np.concatenate(arrays, axis=2)
+
     # convert y and x_fixed to numpy directly
     for k in ['y', 'turns', 'x_fixed', 'idx_hour', 'x_hour']:
         if k in d:
             d[k] = d[k].to_numpy()
+
+    # save list of arrays of indices with same number of turns
+    if 'turns' in d:
+        d['groups'] = [np.nonzero(d['turns'] == n)[0] \
+                        for n in np.unique(d['turns'])]
+
+    # for feed-forward nets, create single vector of indices
+    else:
+        d['groups'] = np.shape(d['x_fixed'])[0]
+
     return d

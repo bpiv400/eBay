@@ -25,12 +25,13 @@ def cross_entropy_loss(theta, y):
 	p = torch.div(num, torch.sum(num, dim=-1, keepdim=True))
 
 	# log-likelihood
-	ll = torch.log(torch.gather(p, 1, y.unsqueeze(dim=1).long()))
+	ll = torch.sum(torch.log(
+		torch.gather(p, 1, y.unsqueeze(dim=1).long())))
 
 	# add in logistic log-likelihood for 4th byr turn
-	if 'theta4' in vars():
-		p4 = torch.sigmoid(theta4)	# probability of accept
-		y4 = (y4 == 100).unsqueeze(dim-1)
-		ll += y4 * torch.log(p4) + (1-y4) * torch.log(1-p4)
+	if ('theta4' in vars()) and (theta4.size()[0] > 0):
+		p4 = torch.sigmoid(theta4.squeeze())	# probability of accept
+		ll += torch.sum(torch.log(p4[y4 == 100])) \
+				+ torch.sum(torch.log(1-p4[y4 < 100]))
 
 	return -torch.sum(ll)

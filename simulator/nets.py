@@ -68,7 +68,8 @@ class RNN(nn.Module):
         self.output = nn.Linear(params['hidden'], sizes['out'])
 
         # for last byr turn
-        self.output4 = nn.Linear(params['hidden'], 1)
+        if self.steps == 4:
+            self.output4 = nn.Linear(params['hidden'], 1)
 
 
     # output discrete weights and parameters of continuous components

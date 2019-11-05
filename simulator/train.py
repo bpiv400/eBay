@@ -3,26 +3,25 @@ import torch
 import numpy as np, pandas as pd
 from datetime import datetime as dt
 from torch.utils.data import DataLoader
-from interface import *
-from simulator import Simulator
+from simulator.interface import *
+from simulator.simulator import Simulator
 from constants import *
 
 EPOCHS = 1000
 
 
-def run_loop(model, simulator, data):
+def run_loop(model, simulator, data, isTraining=False):
     # collate function
     f = collateRNN if data.isRecurrent else collateFF
 
     # load batches
-    batches = DataLoader(data, batch_sampler=Sample(data),
+    batches = DataLoader(data, batch_sampler=Sample(data, isTraining),
         collate_fn=f, num_workers=NUM_WORKERS, pin_memory=True)
 
     # loop over batches, calculate log-likelihood
     lnL = 0
     for batch in batches:
-        lnL += simulator.run_batch(batch, data.isTraining)
-        print(lnL)
+        lnL += simulator.run_batch(batch, isTraining)
 
     return lnL
 
@@ -33,12 +32,13 @@ def train_model(simulator, train, test, outfile):
         t0 = dt.now()
 
         # training loop
-        lnL_train = run_loop(model, simulator, train)
+        run_loop(model, simulator, train, isTraining=True)
 
         # training duration
         dur = np.round((dt.now() - t0).seconds)
 
-        # test loop
+        # calculate log-likelihood on training and test
+        lnL_train = run_loop(model, simulator, train)
         lnL_test = run_loop(model, simulator, test)
 
         # write to file

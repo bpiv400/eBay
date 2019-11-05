@@ -42,6 +42,9 @@ PARTITIONS = ['train_models', 'train_rl', 'test']
 # number of time feats
 NUM_TFEATS = 9
 
+# minimum number of listings that define a category
+MIN_COUNT = 1000
+
 # delete activity after lstg is open MAX_DAYS
 MAX_DAYS = 31
 

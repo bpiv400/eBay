@@ -11,6 +11,26 @@ def get_pctiles(s):
 		index=np.sort(s.values), name='pctile')
 	return s.groupby(s.index).min()
 
+# creates a single category id from 
+def create_category(df):
+	# convert categorical variables to strings
+	for c in ['meta', 'leaf', 'product']:
+		df[c] = np.char.add(c[0], df[c].astype(str).values)
+	mask = df['product'] == 'p0'
+	df.loc[mask, 'product'] = df.loc[mask, 'leaf']
+	# replace infrequent products with leaf
+	ct = df['product'].groupby(df['product']).transform('count')
+	mask = ct < MIN_COUNT
+	df.loc[mask, 'product'] = df.loc[mask, 'leaf']
+	df.drop('leaf', axis=1, inplace=True)
+	# replace infrequent leafs with meta
+	ct = df['product'].groupby(df['product']).transform('count')
+	mask = ct < MIN_COUNT
+	df.loc[mask, 'product'] = df.loc[mask, 'meta']
+	df.drop('meta', axis=1, inplace=True)
+	return df.squeeze()
+
+
 # buyer history
 T = load(CLEAN_DIR + 'threads.gz')
 pctile = get_pctiles(T['byr_hist'])
@@ -45,6 +65,10 @@ for feat in ['fdbk_score', 'slr_lstgs', 'slr_bos', 'arrival_rate']:
 # add start_price percentile
 pctile = get_pctiles(L['start_price'])
 L = L.join(pctile.rename('start_price_pctile'), on='start_price')
+
+# convert to single category
+L.loc[:, 'cat'] = create_category(L[['meta', 'product', 'leaf']])
+L = L.drop(['meta', 'product', 'leaf'], axis=1)
 
 # save listings
 dump(L, CLEAN_DIR + 'listings.gz')

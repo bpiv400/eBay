@@ -3,8 +3,8 @@ import torch, torch.optim as optim
 from torch.nn.utils import rnn
 import numpy as np
 from constants import *
-from loss import *
-from nets import *
+from simulator.loss import *
+from simulator.nets import *
 
 
 # constructs model-specific neural network.
@@ -43,7 +43,7 @@ class Simulator:
             self.net = FeedForward(params, sizes).to(self.device)
         elif ('delay' in model) or (model == 'arrival'):
             self.net = LSTM(params, sizes).to(self.device)
-        elif 'con' in model:
+        else:
             self.net = RNN(params, sizes).to(self.device)          
 
         # optimizer
@@ -61,11 +61,11 @@ class Simulator:
             # retain indices with outcomes
             mask = data['y'] > -1
 
-            # separate output for last turn of con_byr model
-            if self.model == 'con_byr':
-                # parameters come in list with two tensors
-                theta = self.net(data['x_fixed'], data['x_time'])
+            # prediction from recurrent net
+            theta = self.net(data['x_fixed'], data['x_time'])
 
+            # separate last turn of con_byr model
+            if self.model == 'con_byr':
                 # split y by turn
                 y = [data['y'][:,:3], data['y'][:,3]]
 
@@ -73,7 +73,6 @@ class Simulator:
                 theta = [theta[0][mask[:,:3]], theta[1][mask[:,3]]]
                 y = [y[0][mask[:,:3]], y[1][mask[:,3]]]
             else:
-                theta = self.net(data['x_fixed'], data['x_time'])
                 theta = theta[mask]
                 y = data['y'][mask]
             
