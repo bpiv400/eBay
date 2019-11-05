@@ -1,6 +1,6 @@
 #!/bin/bash
 #$ -t 1-835
-#$ -q all.q
+#$ -q short.q
 #$ -l m_mem_free=10G
 #$ -N feats_slr
 #$ -j y
