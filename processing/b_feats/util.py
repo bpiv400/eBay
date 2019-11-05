@@ -342,8 +342,11 @@ def get_cat_lstg_counts(events, levels):
                             'byr_offer', 'accept']].groupby(by=curr_levels + ['lstg']).sum()
         ct_feats = ct_feats - ctl_feats
         per_lstg_feats = ['accept', 'slr_offer', 'byr_offer', 'thread']
+        divisor = ct_feats['lstg_ind'].copy()
+        divisor[divisor == 0] = 1
         for feat in per_lstg_feats:
-            ct_feats[feat] = ct_feats[feat] / (ct_feats['lstg_ind'] + 1)
+            ct_feats[feat] = ct_feats[feat] / divisor
+
         ct_feats = ct_feats.rename(lambda x: '_'.join([curr_levels[-1], x]) + 's', axis=1)
         tf = tf.join(ct_feats)
         tf.index = tf.index.droplevel(level=curr_levels)
