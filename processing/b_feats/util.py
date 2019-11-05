@@ -57,8 +57,6 @@ def prep_quantiles(df, l, featname, new=False):
     elif featname == 'start_price_pctile' or featname == 'arrival_rate':
         quant_vector = df.xs(0, level='thread').xs(0, level='index')
         quant_vector = quant_vector_index(quant_vector, l, featname, new=new)
-        print('quant vec')
-        print(quant_vector)
     elif featname == 'byr_hist':
         quant_vector = df.xs(1, level='index')
         quant_vector = quant_vector_index(quant_vector, l, featname, new=new)
@@ -274,10 +272,8 @@ def get_quantiles(df, l, featname):
                               featname=featname, l=l, converter=converter)
 
 
-def get_cat_feats(events, levels=None, feat_ind=None):
-    # helper features
-    df = events.copy()
-    df = df.sort_index()
+def make_helper_feats(events):
+    df = events.sort_index()
     df['clock'] = pd.to_datetime(df.clock, unit='s', origin=START)
     df['lstg_ind'] = (df.index.get_level_values('index') == 0).astype(bool)
     df['base'] = (df.index.get_level_values('thread') == 0).astype(bool)
@@ -292,11 +288,26 @@ def get_cat_feats(events, levels=None, feat_ind=None):
     first_offer = (df.index.get_level_values('index') == 1).astype(bool)
     df['bin'] = (first_offer & real_threads & (df.offer_norm == 1).astype(bool)).astype(bool)
     df['bin'] = (df['bin'] & df['accept']).astype(bool)
-    ## error checking
-    bin_sum = df['bin'].astype(int).groupby('lstg').sum().max()
-    print('bin sum: {}'.format(bin_sum))
     first_offer = first_offer & real_threads & ~df.flag & ~df.bin
     df['first_offer'] = (df.offer_norm[first_offer]).astype(np.float64)
+    return df
+
+
+def get_all_cat_feats(events, levels):
+    # helper features
+    df = make_helper_feats(events)
+    tf = None
+    for i in range(1, 8):
+        temp = get_cat_feat(df, levels=levels, feat_ind=i)
+        if i == 1:
+            tf = temp
+        else:
+            tf = tf.join(temp)
+    return tf.sort_index()
+
+
+def get_cat_feat(events, levels=None, feat_ind=None):
+    df = events.copy()
     if feat_ind == 1:
         return get_cat_lstg_counts(df, levels)
     elif feat_ind == 2:

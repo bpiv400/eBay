@@ -2,7 +2,7 @@ import sys
 import os
 import argparse
 from compress_pickle import dump, load
-from processing.b_feats.util import get_cat_feats, create_events
+from processing.b_feats.util import get_all_cat_feats, create_events
 from constants import CHUNKS_DIR, FEATS_DIR, LEVELS
 
 
@@ -38,13 +38,11 @@ def clean_events(events, L):
     return events
 
 
-if __name__ == "__main__":
+def main():
     # parse parameters
     parser = argparse.ArgumentParser()
     parser.add_argument('--num', action='store', type=int, required=True)
-    parser.add_argument('--feat', action='store', type=int, required=True)
     args = parser.parse_args()
-
 
     # load data
     print('Loading data')
@@ -59,8 +57,8 @@ if __name__ == "__main__":
     events = create_events(L, T, O, levels)
 
     # get upper-level time-valued features
-    print('Creating hierarchical time features') 
-    tf_slr = get_cat_feats(events, levels, feat_ind=args.feat)
+    print('Creating hierarchical time features')
+    tf_slr = get_all_cat_feats(events, levels)
 
     # drop flagged lstgs
     print('Restricting observations')
@@ -70,10 +68,13 @@ if __name__ == "__main__":
     idx = events.reset_index('thread', drop=True).xs(
         0, level='index').index
     tf_slr = tf_slr.reindex(index=idx)
-    events = events.drop(0, level='thread') # remove lstg start/end obs
+    events = events.drop(0, level='thread')  # remove lstg start/end obs
 
     tf_file = '{}{}_slr_feat_{}.gz'.format(FEATS_DIR, args.num, args.feat)
     dump(tf_slr, tf_file)
-    if args.feat == 7:
-        events_file = '{}{}_events.gz'.format(FEATS_DIR, args.num)
-        dump(events, events_file)
+    events_file = '{}{}_events.gz'.format(FEATS_DIR, args.num)
+    dump(events, events_file)
+
+
+if __name__ == "__main__":
+    main()

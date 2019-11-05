@@ -8,4 +8,4 @@
 TASK_ID=$((SGE_TASK_ID - 1))
 NUM=$((TASK_ID / 7 + 1))
 FEAT=$((TASK_ID % 7 + 1))
-python repo/processing/b_feats/meta.py --num "$NUM" --feat "$FEAT"
+python repo/processing/b_feats/category.py --num "$NUM" --feat "$FEAT"

@@ -4,4 +4,4 @@
 #$ -j y
 #$ -o logs/
 
-python repo/processing/a_chunk/meta.py
+python repo/processing/a_chunk/category.py
