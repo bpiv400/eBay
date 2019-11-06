@@ -6,10 +6,6 @@ import numpy as np
 SLR_PREFIX = 'slr'
 BYR_PREFIX = 'byr'
 
-# number of chunks for preprocessing
-CHUNKS_SLR = 835
-CHUNKS_CAT = 35
-
 # for partitioning
 SEED = 123456
 SHARES = {'train_models': 1/3, 'train_rl': 1/3}

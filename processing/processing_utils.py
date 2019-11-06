@@ -1,4 +1,4 @@
-import sys
+import sys, os
 from compress_pickle import load, dump
 from datetime import datetime as dt
 import numpy as np, pandas as pd
@@ -14,7 +14,7 @@ def load_frames(name):
     path = lambda num: FEATS_DIR + '%s_%s.gz' % (num, name)
     # loop and append
     output = []
-    n = CHUNKS_CAT if name == 'cat' else CHUNKS_SLR
+    n = len([f for f in os.listdir(FEATS_DIR) if name in f])
     for i in range(1,n+1):
         output.append(load(path(i)))
     output = pd.concat(output).sort_index()
@@ -54,7 +54,7 @@ def extract_clock_feats(clock):
     df['holiday'] = clock.dt.date.astype('datetime64').isin(HOLIDAYS)
     for i in range(6):
         df['dow' + str(i)] = clock.dt.dayofweek == i
-    df['minute_of_day_norm'] = (clock.dt.hour * 60 + clock.dt.minute) / (24 * 60)
+    df['minute_of_day'] = (clock.dt.hour * 60 + clock.dt.minute) / (24 * 60)
     return df
 
 

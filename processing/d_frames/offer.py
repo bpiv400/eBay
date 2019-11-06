@@ -10,9 +10,7 @@ from processing.processing_utils import *
 
 # delay
 def get_delay(clock):
-    delay = pd.DataFrame(index=clock.index)
-    delay[0] = 0
-    delay[1] = (clock[1] - clock[0]) / MAX_DELAY['byr']
+    delay = pd.DataFrame(0, index=clock.index)
     for i in range(2, 8):
         delay[i] = clock[i] - clock[i-1]
         if i in [2, 4, 6, 7]: # byr has 2 days for last turn
@@ -47,11 +45,12 @@ def get_x_offer(lookup, events):
     df['split'] = np.abs(df['con'] - 0.5) < TOL_HALF
     # total concession
     df['norm'] = (events['price'] / lookup['start_price']).reindex(
-        index=df.index, fill_value=0.0)
+        index=df.index, fill_value=0)
     df.loc[df.index.isin(IDX['slr'], level='index'), 'norm'] = \
         1 - df['norm']
     # message indicator
-    df['msg'] = events['message'].reindex(index=df.index, fill_value=0)
+    df['msg'] = events['message'].reindex(
+        index=df.index, fill_value=False)
     # clock variable
     clock = 24 * 3600 * lookup.start_date.rename(0).to_frame()
     clock = clock.join(events.clock.unstack())
@@ -61,13 +60,11 @@ def get_x_offer(lookup, events):
     df['exp'] = (df.delay == 1) | events.censored.reindex(
         df.index, fill_value=False)
     # clock features
-    df['years'] = ((clock.stack() // (24 * 3600)).astype(
-        np.int64) - lookup.start_date) / 365
     df['clock'] = clock.rename_axis('index', axis=1).stack().rename(
         'clock').sort_index().astype(np.int64)
+    #df['minutes_since_lstg'] = 
     clock = pd.to_datetime(df.clock, unit='s', origin=START)
-    df = df.join(extract_day_feats(clock))
-    df['hour_of_day'] = clock.dt.hour / 24
+    df = df.join(extract_clock_feats(clock))
     return df
 
 
