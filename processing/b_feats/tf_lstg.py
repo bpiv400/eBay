@@ -319,20 +319,31 @@ def delay_time_feats(tf_lstg, events):
 
 
 def add_deltas_index(deltas, events):
+    # prepare events
     events = prepare_index_join(deltas, events)
-    print('events cols: {}'.format(events.columns))
     events = events.rename(columns={'index': 'ind'})
+    events = events.sort_values(by='ind')
+    events = events.groupby(by=['lstg', 'thread', 'clock']).first()
+
+    # add index to deltas
     deltas = deltas.join(events, how='left')
     deltas = deltas.reset_index(drop=False)
-    deltas = deltas.sort_values(['lstg', 'thread', 'ind'])
-    deltas = deltas.groupby(by=['lstg', 'thread', 'clock']).first()
+    deltas = deltas.sort_values(['lstg', 'thread', 'clock', 'ind'])
     deltas = deltas.reset_index(drop=False)
     deltas = deltas.set_index(['lstg', 'thread'], drop=True, append=False)
     deltas = deltas.groupby(level=['lstg', 'thread']).bfill()
     deltas = deltas.set_index(['ind', 'clock'], drop=True, append=True)
-    first_turn = deltas.index.get_level_values('ind') != 1
-    deltas = deltas.loc[first_turn, :]
+
+    # drop first turn and nans
+    # nans occur because some rows give values after the last turn in a thread
+    not_first = deltas.index.get_level_values('ind') != 1
+    not_nan = ~deltas.index.get_level_values('ind').isna()
+    drops = (not_first.astype(bool) & not_nan.astype(bool)).astype(bool)
+    deltas = deltas.loc[drops, :]
+
+    # rename index and check for nans
     deltas.index = deltas.index.rename(names='index', level='ind')
+    assert (~deltas.index.get_level_values('index').isna()).all()
     return deltas
 
 
@@ -364,6 +375,7 @@ def main():
         print('preparing concession output...')
         con_feats = con_time_feats(tf_lstg_focal, events)
         print('preparing delay output...')
+        # dump([tf_lstg_focal, events], 'data/temp/delay.gz')
         raw_delay_feats, diff_delay_feats = delay_time_feats(tf_lstg_focal, events)
         assert not con_feats.isna().any().any()
         assert not raw_delay_feats.isna().any().any()
