@@ -10,7 +10,7 @@ from processing.processing_utils import *
 
 # delay
 def get_delay(clock):
-    delay = pd.DataFrame(0, index=clock.index)
+    delay = pd.DataFrame(0., index=clock.index, columns=clock.columns)
     for i in range(2, 8):
         delay[i] = clock[i] - clock[i-1]
         if i in [2, 4, 6, 7]: # byr has 2 days for last turn
@@ -60,10 +60,9 @@ def get_x_offer(lookup, events):
     df['exp'] = (df.delay == 1) | events.censored.reindex(
         df.index, fill_value=False)
     # clock features
-    df['clock'] = clock.rename_axis('index', axis=1).stack().rename(
-        'clock').sort_index().astype(np.int64)
-    #df['minutes_since_lstg'] = 
-    clock = pd.to_datetime(df.clock, unit='s', origin=START)
+    clock = clock.rename_axis('index', axis=1).stack().rename(
+        'clock').astype(np.int64)
+    clock = pd.to_datetime(clock, unit='s', origin=START)
     df = df.join(extract_clock_feats(clock))
     return df
 
@@ -98,4 +97,8 @@ if __name__ == "__main__":
     print('x_offer')
     x_offer = get_x_offer(lookup, events)
     dump(x_offer, path('x_offer'))
+
+    # offer timestamps
+    print('clock')
+    dump(events.clock, path('clock'))
  

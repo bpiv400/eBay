@@ -88,6 +88,7 @@ if __name__ == "__main__":
 
     # pca and join
     for pre in ['w2v', 'slr', 'cat']:
+        print(pre)
         df = do_pca(globals()['x_' + pre], pre)
         x_lstg = x_lstg.join(df)
 
