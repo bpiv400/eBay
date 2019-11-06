@@ -84,11 +84,13 @@ if __name__ == "__main__":
     x_lstg = x_lstg.join(cat.drop('cat', axis=1))
     del lstgs, w2v, cat
 
-    # add slr and cat features
-    slr_feats = load_frames('slr')
-    cat_feats = load_frames('cat')
-    x_lstg = pd.concat([x_lstg, slr_feats, cat_feats])
-    del slr_feats, cat_feats
+    # add slr features
+    x_lstg = x_lstg.join(load_frames('slr').reindex(
+        index=x_lstg.index, fill_value=0))
+
+    # add cat features
+    x_lstg = x_lstg.join(load_frames('cat').reindex(
+        index=x_lstg.index, fill_value=0))
 
     # perform pca
     x_lstg = do_pca(x_lstg)
