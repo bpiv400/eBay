@@ -46,6 +46,21 @@ def add_turn_indicators(df):
     return df
 
 
+# creates features from timestapes
+def extract_clock_feats(clock):
+    '''
+    clock: pandas series of timestamps.
+    '''
+    df = pd.DataFrame(index=clock.index)
+    df['months_since_start'] = pd.to_timedelta(
+        clock - pd.to_datetime(START)).dt.days / MAX_DAYS
+    df['holiday'] = clock.dt.date.astype('datetime64').isin(HOLIDAYS)
+    for i in range(6):
+        df['dow' + str(i)] = clock.dt.dayofweek == i
+    df['minute_of_day_norm'] = (clock.dt.hour * 60 + clock.dt.minute) / (24 * 60)
+    return df
+
+
 # count number of time steps in each observations
 def get_sorted_turns(y):
     '''
@@ -63,9 +78,9 @@ def get_featnames(d):
     d: dictionary with dataframes.
     '''
     featnames = {'x_fixed': list(d['x_fixed'].columns)}
-    if 'x_hour' in d:
+    if 'x_clock' in d:
         featnames['x_time'] = \
-            list(d['x_hour'].columns) + list(d['tf'].columns)
+            list(d['x_clock'].columns) + list(d['tf'].columns)
     if 'x_time' in d:
         featnames['x_time'] = list(d['x_time'].columns)
     return featnames
@@ -78,9 +93,9 @@ def get_sizes(d):
     '''
     sizes = {'N': len(d['y'].index), 
         'fixed': len(d['x_fixed'].columns)}
-    if 'x_hour' in d:
+    if 'x_clock' in d:
         sizes['steps'] = len(d['y'].columns)
-        sizes['time'] = len(d['x_hour'].columns) + len(d['tf'].columns)
+        sizes['time'] = len(d['x_clock'].columns) + len(d['tf'].columns)
     if 'x_time' in d:
         sizes['steps'] = len(d['y'].columns)
         sizes['time'] = len(d['x_time'].columns)
@@ -114,7 +129,7 @@ def convert_to_numpy(d):
         d['x_time'] = np.concatenate(arrays, axis=2)
 
     # convert y and x_fixed to numpy directly
-    for k in ['y', 'turns', 'x_fixed', 'idx_hour', 'x_hour']:
+    for k in ['y', 'turns', 'x_fixed', 'idx_clock', 'x_clock']:
         if k in d:
             d[k] = d[k].to_numpy()
 

@@ -6,44 +6,24 @@ from utils import *
 from processing.processing_utils import *
 
 
-def add_clock_feats(x_time):
-    clock = pd.to_datetime(x_time.clock, unit='s', origin=START)
-    # US holiday indicator
-    x_time['holiday'] = clock.isin(HOLIDAYS)
-    # day of week indicator
-    for i in range(6):
-        x_time['dow' + str(i)] = clock.dt.dayofweek == i
-    # minute in day
-    x_time['minutes'] = (clock.dt.hour * 60 + clock.dt.minute) / (24 * 60)
-    return x_time.drop('clock', axis=1)
-
-
-def parse_time_feats_delay(role, idx, z_start, z_role):
-    # initialize output
-    x_time = pd.DataFrame(index=idx).join(z_start)
-    # time of each pseudo-observation
-    x_time['clock'] += INTERVAL[role] * x_time.period
-    # features from clock
-    x_time = add_clock_feats(x_time)
-    # differenced time-varying features
-    tfdiff = z_role.groupby(['lstg', 'thread', 'index']).diff().dropna()
-    tfdiff = tfdiff.rename(lambda x: x + '_diff', axis=1)
-    x_time = x_time.join(tfdiff.reindex(idx, fill_value=0))
-    return x_time
-
-
-def parse_fixed_feats_delay(idx, x_lstg, x_thread, x_offer):
+def parse_fixed_feats_delay(idx, role, x_lstg, x_thread, x_offer, tf_raw):
     # lstg and byr attributes
     x_fixed = pd.DataFrame(index=idx).join(x_lstg).join(x_thread)
 	# turn indicators
     x_fixed = add_turn_indicators(x_fixed)
     # last 2 offers
-    drop = [c for c in x_offer.columns if c.endswith('_diff')]
-    df = x_offer.drop(drop, axis=1)
+    df = x_offer.join(tf_raw.reindex(
+        index=x_offer.index, fill_value=0))
     offer1 = df.groupby(['lstg', 'thread']).shift(
         periods=1).reindex(index=idx)
     offer2 = df.groupby(['lstg', 'thread']).shift(
         periods=2).reindex(index=idx)
+    # drop constant features
+    if role == 'byr':
+        offer2 = offer2.drop(['auto', 'exp', 'reject'], axis=1)
+    elif role == 'slr':
+        offer1 = offer1.drop(['auto', 'exp', 'reject'], axis=1)
+    # append to x_fixed
     x_fixed = x_fixed.join(offer1.rename(
         lambda x: x + '_other', axis=1))
     x_fixed = x_fixed.join(offer2.rename(
@@ -68,20 +48,32 @@ def process_inputs(part, role):
     x_lstg = load(getPath(['x', 'lstg']))
     x_thread = load(getPath(['x', 'thread']))
     x_offer = load(getPath(['x', 'offer']))
-    tf_raw = load(getPath(['tf', 'delay', 'raw', role]))
+    tf_raw = load(getPath(['tf', 'delay', 'raw']))
     x_fixed = parse_fixed_feats_delay(
-        y.index, x_lstg, x_thread, x_offer, tf_raw)
+        turns.index, role, x_lstg, x_thread, x_offer, tf_raw)
+
+    # clock features by minute
+    N = pd.to_timedelta(
+        pd.to_datetime('2016-12-31 23:59:59') - pd.to_datetime(START))
+    N = int((N.total_seconds()+1) / 60)
+    clock = pd.to_datetime(range(N), unit='m', origin=START)
+    clock = pd.Series(clock, name='clock')
+    x_clock = extract_clock_feats(clock).join(clock).set_index('clock')
+
+    # index of first x_hour for each y
+    start = x_offer.clock.groupby(['lstg', 'thread']).shift().reindex(
+        index=turns.index)
+    idx_clock = (start // 60).astype('int64')
 
     # time features
-    z_role = load(getPath(['z', role]))
-    x_time = parse_time_feats_delay(role, y.index, z_start, z_role)
-
-    
+    tf = load(getPath(['tf', 'delay', 'diff', role]))
 
     return {'y': y.astype('int8', copy=False),
             'turns': turns.astype('uint16', copy=False),
             'x_fixed': x_fixed.astype('float32', copy=False), 
-            'x_time': x_time.astype('float32', copy=False)}
+            'x_clock': x_clock.astype('uint16', copy=False),
+            'idx_clock': idx_clock.astype('int64', copy=False),
+            'tf': tf.astype('float32', copy=False)}
 
 
 if __name__ == '__main__':
