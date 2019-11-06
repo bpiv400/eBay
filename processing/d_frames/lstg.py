@@ -95,5 +95,5 @@ if __name__ == "__main__":
 
     # save by partition
     for part, idx in partitions.items():
-        dump(x_lstg.reindex(index=idx, 
+        dump(x_lstg.reindex(index=idx), 
             PARTS_DIR + '%s/x_lstg.gz' % part)
