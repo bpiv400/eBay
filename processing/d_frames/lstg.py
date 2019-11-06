@@ -82,9 +82,13 @@ if __name__ == "__main__":
         w2v = load(W2V_PATH(role))
         cat = cat.join(w2v, on='cat')
     x_lstg = x_lstg.join(cat.drop('cat', axis=1))
+    del lstgs, w2v, cat
 
-    # add slr features
+    # add slr and cat features
     slr_feats = load_frames('slr')
+    cat_feats = load_frames('cat')
+    x_lstg = pd.concat([x_lstg, slr_feats, cat_feats])
+    del slr_feats, cat_feats
 
     # perform pca
     x_lstg = do_pca(x_lstg)
