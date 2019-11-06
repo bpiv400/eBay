@@ -47,13 +47,11 @@ def add_turn_indicators(df):
 
 
 # creates features from timestapes
-def extract_clock_feats(clock):
+def extract_clock_feats(clock, start):
     '''
     clock: pandas series of timestamps.
     '''
     df = pd.DataFrame(index=clock.index)
-    df['months_since_start'] = pd.to_timedelta(
-        clock - pd.to_datetime(START)).dt.days / MAX_DAYS
     df['holiday'] = clock.dt.date.astype('datetime64').isin(HOLIDAYS)
     for i in range(6):
         df['dow' + str(i)] = clock.dt.dayofweek == i

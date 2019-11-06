@@ -16,6 +16,7 @@ class Inputs(Dataset):
 
         # save parameters to self
         self.model = model
+        self.role = model.split('_')[1]
         self.isRecurrent = 'turns' in self.d
 
 
@@ -32,16 +33,21 @@ class Inputs(Dataset):
         turns = self.d['turns'][idx]
 
         # x_time
-        if self.model in ['arrival', 'delay']:
-            # number of hours
-            n = MAX_DAYS * 24
+        if self.model in ['arrival', 'delay_byr', 'delay_slr']:
+            # number of time steps
+            n = self.d['turns'][0]
 
-            # index of hour
-            idx_hour = self.d['idx_hour'][idx] + \
-                np.array(range(n), dtype='uint16')
+            # index of first timestamp
+            start = self.d['idx_clock'][idx]
+            if self.model == arrival:
+                idx_clock = start + np.array(range(n), dtype='uint16')
+            else:
+                interval = int(INTERVAL[self.role] / 60) # interval in minutes
+                idx_clock = start + interval * np.array(
+                    range(n), dtype='uint16')
 
-            # hour features
-            x_hour = self.d['x_hour'][idx_hour].astype('float32')
+            # clock features
+            x_clock = self.d['x_clock'][idx_clock].astype('float32')
 
             # fill in missing time feats with zeros
             if idx in self.d['tf']:
@@ -50,8 +56,8 @@ class Inputs(Dataset):
             else:
                 x_tf = np.zeros((n, NUM_TFEATS), dtype='float32')
 
-            # time feats
-            x_time = np.concatenate((x_hour, x_tf), axis=1)
+            # time feats: first clock feats, then time-varying feats
+            x_time = np.concatenate((x_clock, x_tf), axis=1)
 
         else:
             x_time = self.d['x_time'][idx,:,:]
