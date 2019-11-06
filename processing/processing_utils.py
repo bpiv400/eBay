@@ -47,7 +47,7 @@ def add_turn_indicators(df):
 
 
 # creates features from timestapes
-def extract_clock_feats(clock, start):
+def extract_clock_feats(clock):
     '''
     clock: pandas series of timestamps.
     '''

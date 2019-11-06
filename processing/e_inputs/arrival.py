@@ -27,8 +27,7 @@ def process_inputs(part):
     N = int((N.total_seconds()+1) / 3600)
     clock = pd.to_datetime(range(N+30*24), unit='h', origin=START)
     clock = pd.Series(clock, name='clock')
-    x_clock = extract_clock_feats(clock, START).join(
-        clock).set_index('clock')
+    x_clock = extract_clock_feats(clock).join(clock).set_index('clock')
 
     # index of first x_clock for each y
     start = load(getPath(['lookup']))['start_date'].reindex(
