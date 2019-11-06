@@ -1,15 +1,15 @@
 import sys, argparse
 from compress_pickle import load, dump
+import numpy as np, pandas as pd
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
-import numpy as np, pandas as pd
 from constants import *
 from utils import *
 from processing.processing_utils import *
 
 
 # scales variables and performs PCA
-def do_pca(df):
+def do_pca(df, pre):
     # standardize variables
     vals = StandardScaler().fit_transform(df)
     # PCA
@@ -18,7 +18,7 @@ def do_pca(df):
     components = pca.fit_transform(vals)
     # return dataframe
     return pd.DataFrame(components, index=df.index, 
-        columns=['c' + str(i) for i in range(N)])
+        columns=['%s%d' % (pre, i) for i in range(N)])
 
 
 # returns booleans for whether offer is round and ends in nines
@@ -59,13 +59,6 @@ def get_x_lstg(lstgs):
     return df
 
 
-def get_w2v(lstgs, role):
-    # read in vectors
-    w2v = load(W2V_PATH(role))
-    # hierarchical join
-    return lstgs[['cat']].join(w2v, on='cat').drop('cat', axis=1)
-
-
 if __name__ == "__main__":
     # load partitions, concatenate indices
     partitions = load(PARTS_DIR + 'partitions.gz')
@@ -76,26 +69,34 @@ if __name__ == "__main__":
         ['title', 'flag'], axis=1).reindex(index=idx)
     x_lstg = get_x_lstg(lstgs)
 
-    # add slr and byr embeddings
+    # split lstgs
+    lookup = lstgs[['start_date', 'end_time', \
+        'start_price', 'decline_price', 'accept_price']]
     cat = lstgs[['cat']]
+
+    # embeddings
     for role in ['byr', 'slr']:
         w2v = load(W2V_PATH(role))
         cat = cat.join(w2v, on='cat')
-    x_lstg = x_lstg.join(cat.drop('cat', axis=1))
-    del lstgs, w2v, cat
+    x_w2v = cat.drop('cat', axis=1)
 
-    # add slr features
-    x_lstg = x_lstg.join(load_frames('slr').reindex(
-        index=x_lstg.index, fill_value=0))
+    # slr features
+    x_slr = load_frames('slr').reindex(index=idx, fill_value=0)
 
-    # add cat features
-    x_lstg = x_lstg.join(load_frames('cat').reindex(
-        index=x_lstg.index, fill_value=0))
+    # categorical features
+    x_cat = load_frames('cat').reindex(index=idx, fill_value=0)
 
-    # perform pca
-    x_lstg = do_pca(x_lstg)
+    # pca and join
+    for pre in ['w2v', 'slr', 'cat']:
+        df = do_pca(globals()['x_' + pre], pre)
+        x_lstg = x_lstg.join(df)
 
     # save by partition
-    for part, idx in partitions.items():
-        dump(x_lstg.reindex(index=idx), 
+    for part, indices in partitions.items():
+        # x_lstg
+        dump(x_lstg.reindex(index=indices), 
             PARTS_DIR + '%s/x_lstg.gz' % part)
+
+        # lookup
+        dump(lookup.reindex(index=indices),
+            PARTS_DIR + '%s/lookup.gz' % part)

@@ -1,6 +1,5 @@
 import sys
 from compress_pickle import load, dump
-from sklearn.utils.extmath import cartesian
 from datetime import datetime as dt
 import numpy as np, pandas as pd
 from constants import *

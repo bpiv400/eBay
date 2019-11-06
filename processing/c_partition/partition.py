@@ -36,10 +36,3 @@ if __name__ == "__main__":
     # partition by seller
     partitions = partition_lstgs(slrs)
     dump(partitions, PARTS_DIR + 'partitions.gz')
-
-    # save lookup file
-    lstgs = lstgs[['meta', 'start_date', 'end_time', \
-        'start_price', 'decline_price', 'accept_price']]
-    for part, idx in partitions.items():
-        lookup = lstgs.reindex(index=idx)
-        dump(lookup, PARTS_DIR + '%s/lookup.gz' % part)
