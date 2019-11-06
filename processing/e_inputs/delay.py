@@ -64,17 +64,19 @@ def process_inputs(part, role):
     turns = get_sorted_turns(y)
     y = y.reindex(index=turns.index)
 
-    # time features
-    z_start = load(getPath(['z', 'start']))
-    z_role = load(getPath(['z', role]))
-    x_time = parse_time_feats_delay(role, y.index, z_start, z_role)
-
     # fixed features
     x_lstg = load(getPath(['x', 'lstg']))
     x_thread = load(getPath(['x', 'thread']))
     x_offer = load(getPath(['x', 'offer']))
+    tf_raw = load(getPath(['tf', 'delay', 'raw', role]))
     x_fixed = parse_fixed_feats_delay(
-    	y.index, x_lstg, x_thread, x_offer)
+        y.index, x_lstg, x_thread, x_offer, tf_raw)
+
+    # time features
+    z_role = load(getPath(['z', role]))
+    x_time = parse_time_feats_delay(role, y.index, z_start, z_role)
+
+    
 
     return {'y': y.astype('int8', copy=False),
             'turns': turns.astype('uint16', copy=False),

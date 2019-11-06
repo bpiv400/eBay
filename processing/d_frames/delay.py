@@ -64,37 +64,34 @@ if __name__ == "__main__":
     part = PARTITIONS[num]
     idx, path = get_partition(part)
 
-    # load events
-    events = load_frames('events')[['clock', 'censored']].reindex(
-        index=idx, level='lstg')
-    censored = events.censored
+    # # load events
+    # events = load_frames('events')[['clock', 'censored']].reindex(
+    #     index=idx, level='lstg')
+    # censored = events.censored
 
-    # calculate delay
-    clock = events.clock.unstack()
-    delay = pd.DataFrame(index=clock.index)
-    for i in range(2, 8):
-        delay[i] = clock[i] - clock[i-1]
-        delay.loc[delay[i] == 0, i] = np.nan  # remove auto responses
-    delay = delay.rename_axis('index', axis=1).stack().astype('int64')
+    # # calculate delay
+    # clock = events.clock.unstack()
+    # delay = pd.DataFrame(index=clock.index)
+    # for i in range(2, 8):
+    #     delay[i] = clock[i] - clock[i-1]
+    #     delay.loc[delay[i] == 0, i] = np.nan  # remove auto responses
+    # delay = delay.rename_axis('index', axis=1).stack().astype('int64')
 
-    # inputs for differenced time features
-    lookup = load(PARTS_DIR + '%s/lookup.gz' % part)
-    tf = load_frames('tf_lstg_delay_diff').reindex(
-        index=idx, level='lstg').drop('index', axis=1)
-    start_time = events.clock.rename('start_time').groupby(
-        ['lstg', 'thread']).shift().dropna().astype('int64')
+    # # inputs for differenced time features
+    # lookup = load(PARTS_DIR + '%s/lookup.gz' % part)
+    # tf = load_frames('tf_lstg_delay_diff').reindex(
+    #     index=idx, level='lstg').drop('index', axis=1)
+    # start_time = events.clock.rename('start_time').groupby(
+    #     ['lstg', 'thread']).shift().dropna().astype('int64')
+
+    # # calculate role-specific features and save
+    # for role in ['byr', 'slr']:
+    #     dump(get_y_delay(delay, censored, role), 
+    #         path('y_delay_' + role))
+    #     dump(get_delay_time_feats(tf, start_time, role), 
+    #         path('tf_delay_diff_' + role))
 
     # raw time features
     tf0 = load_frames('tf_lstg_delay_raw').reindex(index=idx, 
-        level='lstg').groupby(['lstg', 'thread']).shift().dropna()
-
-    # calculate features and save
-    for role in ['byr', 'slr']:
-        dump(get_y_delay(delay, censored, role), 
-            path('y_delay_' + role))
-        dump(get_delay_time_feats(tf, start_time, role), 
-            path('tf_delay_diff_' + role))
-        dump(tf0[tf0.index.isin(IDX[role], level='index')],
-            path('tf_delay_raw_' + role))
-
-
+        level='lstg')
+    dump(tf0, 'tf_delay_raw')
