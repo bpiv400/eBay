@@ -47,7 +47,8 @@ if __name__ == '__main__':
 	T = T.reset_index().drop('thread', axis=1).set_index('byr')
 
 	# join with category
-	T = T.join(L['cat'], on='lstg').drop('lstg', axis=1).squeeze()
+	T = T.join(L.reset_index(drop=True).set_index('lstg'), 
+		on='lstg')['cat']
 
 	# run buyer model
 	print('Training buyer embeddings')

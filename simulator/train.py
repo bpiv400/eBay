@@ -22,6 +22,7 @@ def run_loop(model, simulator, data, isTraining=False):
     lnL = 0
     for batch in batches:
         lnL += simulator.run_batch(batch, isTraining)
+        print(lnL)
 
     return lnL
 

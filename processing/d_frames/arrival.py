@@ -79,7 +79,7 @@ if __name__ == "__main__":
     x_thread = get_x_thread(threads)
     dump(x_thread, path('x_thread'))
 
-    # # time feats
+    # time feats
     print('tf_arrival')
     tf_arrival = get_arrival_time_feats(lookup, tf)
     dump(tf_arrival, path('tf_arrival'))

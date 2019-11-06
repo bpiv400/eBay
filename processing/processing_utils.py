@@ -15,7 +15,8 @@ def load_frames(name):
     path = lambda num: FEATS_DIR + '%s_%s.gz' % (num, name)
     # loop and append
     output = []
-    for i in range(1,N_CHUNKS+1):
+    n = CHUNKS_CAT if name == 'cat' else CHUNKS_SLR
+    for i in range(1,n+1):
         output.append(load(path(i)))
     output = pd.concat(output).sort_index()
     return output

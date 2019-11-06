@@ -7,8 +7,8 @@ SLR_PREFIX = 'slr'
 BYR_PREFIX = 'byr'
 
 # number of chunks for preprocessing
-N_CHUNKS = 835
-N_META = 35
+CHUNKS_SLR = 835
+CHUNKS_CAT = 35
 
 # for partitioning
 SEED = 123456
@@ -40,7 +40,7 @@ W2V_PATH = lambda x: '%s/clean/w2v_%s.gz' %(PREFIX, x)
 PARTITIONS = ['train_models', 'train_rl', 'test']
 
 # number of time feats
-NUM_TFEATS = 9
+NUM_TFEATS = 13
 
 # minimum number of listings that define a category
 MIN_COUNT = 1000
@@ -54,7 +54,7 @@ MAX_DELAY = {
 	BYR_PREFIX: 14 * 24 * 3600
 }
 
-# intervals for checking byr and offer arrivals
+# intervals for checking offer arrivals
 INTERVAL = {
 	SLR_PREFIX: 30 * 60,
 	BYR_PREFIX: 30 * 60

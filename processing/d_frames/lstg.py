@@ -63,13 +63,7 @@ def get_w2v(lstgs, role):
     # read in vectors
     w2v = load(W2V_PATH(role))
     # hierarchical join
-    df = pd.DataFrame(np.nan, index=lstgs.index, columns=w2v.columns)
-    for level in ['product', 'leaf', 'meta']:
-        mask = np.isnan(df[role + '0'])
-        idx = mask[mask].index
-        cat = lstgs[level].rename('category').reindex(index=idx).to_frame()
-        df[mask] = cat.join(w2v, on='category').drop('category', axis=1)
-    return df
+    return lstgs[['cat']].join(w2v, on='cat').drop('cat', axis=1)
 
 
 if __name__ == "__main__":
@@ -83,12 +77,14 @@ if __name__ == "__main__":
     x_lstg = get_x_lstg(lstgs)
 
     # add slr and byr embeddings
-    lstgs = categories_to_string(lstgs)
+    cat = lstgs[['cat']]
     for role in ['byr', 'slr']:
-        w2v = get_w2v(lstgs, role)
-        x_lstg = x_lstg.join(w2v)
+        w2v = load(W2V_PATH(role))
+        cat = cat.join(w2v, on='cat')
+    x_lstg = x_lstg.join(cat.drop('cat', axis=1))
 
-    ##### add categorical features
+    # add slr features
+    slr_feats = load_frames('slr')
 
     # perform pca
     x_lstg = do_pca(x_lstg)

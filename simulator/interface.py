@@ -1,7 +1,6 @@
 import sys
 import numpy as np, pandas as pd
 import torch
-from torch.nn.utils import rnn
 from torch.utils.data import Dataset, Sampler
 from compress_pickle import load
 from constants import *
@@ -85,7 +84,7 @@ class Sample(Sampler):
 
         # for test, create batch of samples of same length
         else:
-            self.batches = dataset.d['groups']
+            self.batches = np.array_split(dataset.d['groups'], 1000)
 
     def __iter__(self):
         """
@@ -135,7 +134,7 @@ def collateRNN(batch):
     x_fixed = torch.stack(x_fixed).float()
     x_time = torch.stack(x_time, dim=0).float()
     idx = torch.tensor(idx)
-
+    
     # output is dictionary of tensors
     return {'y': y, 
             'turns': turns,
