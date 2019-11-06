@@ -94,4 +94,4 @@ if __name__ == "__main__":
     # raw time features
     tf0 = load_frames('tf_lstg_delay_raw').reindex(index=idx, 
         level='lstg')
-    dump(tf0, 'tf_delay_raw')
+    dump(tf0, path('tf_delay_raw'))
