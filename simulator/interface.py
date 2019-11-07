@@ -18,6 +18,8 @@ class Inputs(Dataset):
         self.model = model
         self.role = model.split('_')[1]
         self.isRecurrent = 'turns' in self.d
+        if 'tf' in self.d:
+            self.num_tfeats = len(self.d['tf'].columns)
 
 
     def __getitem__(self, idx):
@@ -33,7 +35,9 @@ class Inputs(Dataset):
         turns = self.d['turns'][idx]
 
         # x_time
-        if self.model in ['arrival', 'delay_byr', 'delay_slr']:
+        if 'x_time' in self.d:
+            x_time = self.d['x_time'][idx,:,:]
+        else:
             # number of time steps
             n = self.d['turns'][0]
 
@@ -41,7 +45,7 @@ class Inputs(Dataset):
             start = self.d['idx_clock'][idx]
             if self.model == arrival:
                 idx_clock = start + np.array(range(n), dtype='uint16')
-            else:
+            else:   # delay models
                 interval = int(INTERVAL[self.role] / 60) # interval in minutes
                 idx_clock = start + interval * np.array(
                     range(n), dtype='uint16')
@@ -54,13 +58,14 @@ class Inputs(Dataset):
                 x_tf = self.d['tf'][idx].reindex(
                     index=range(n), fill_value=0).to_numpy()
             else:
-                x_tf = np.zeros((n, NUM_TFEATS), dtype='float32')
+                x_tf = np.zeros((n, self.num_tfeats), dtype='float32')
+
+            # for delay models, add marker for duration to expiration
+            duration = np.array(range(n), dtype='float32')
+            x_tf = np.concatenate((x_tf, duration), axis=1)
 
             # time feats: first clock feats, then time-varying feats
             x_time = np.concatenate((x_clock, x_tf), axis=1)
-
-        else:
-            x_time = self.d['x_time'][idx,:,:]
         
         return y, turns, x_fixed, x_time, idx
 

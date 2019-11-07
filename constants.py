@@ -35,9 +35,6 @@ W2V_PATH = lambda x: '%s/clean/w2v_%s.gz' %(PREFIX, x)
 # partitions
 PARTITIONS = ['train_models', 'train_rl', 'test']
 
-# number of time feats
-NUM_TFEATS = 13
-
 # minimum number of listings that define a category
 MIN_COUNT = 1000
 

@@ -12,20 +12,18 @@ def process_inputs(part):
 	getPath = lambda names: '%s/partitions/%s/%s.gz' % \
 		(PREFIX, part, '_'.join(names))
 
+	# load thread features
+	x_thread = load(getPath(['x', 'thread']))
+
 	# outcome
-	y = load(getPath(['x', 'thread'])) * HIST_QUANTILES
+	y = x_thread['byr_hist'] * HIST_QUANTILES
 
 	# initialize fixed features with listing variables
 	x_fixed = load(getPath(['x', 'lstg'])).reindex(
 		index=y.index, level='lstg')
 
-	# load offer dataframe
-	offers = load(getPath(['x', 'offer'])).xs(1, level='index')
-
-	# add calendar variables
-	toAdd = ['holiday', 'years', 'hour_of_day'] + \
-		[c for c in offers.columns if 'dow' in c]
-	x_fixed = x_fixed.join(offers[toAdd])
+	# add thread variables
+	x_fixed = x_fixed.join(x_thread.drop('byr_hist', axis=1))
 
 	# add time feats at arrival
 	tf = load(getPath(['tf', 'role', 'raw'])).xs(1, level='index')
