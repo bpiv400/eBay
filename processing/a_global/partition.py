@@ -28,7 +28,7 @@ if __name__ == "__main__":
     L = load(CLEAN_DIR + 'listings.pkl')
 
     # drop invalid listings
-    L = L[(L.flag == 0) & (L.toDrop == 0), 'slr']
+    L = L.loc[(L.flag == 0) & (L.toDrop == 0), 'slr']
     
     # partition by seller
     partitions = partition_lstgs(L)
