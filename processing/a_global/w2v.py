@@ -36,7 +36,7 @@ if __name__ == '__main__':
 		print('Preparing seller embeddings')
 		L = load(CLEAN_DIR + 'listings.pkl').sort_values(
 			['slr', 'start_date', 'lstg'])[['slr', 'cat']]
-		L = L.reset_index().set_index('slr').squeeze()
+		L = L.reset_index().set_index('slr').drop('lstg', axis=1).squeeze()
 
 		# run seller model
 		print('Training seller embeddings')
