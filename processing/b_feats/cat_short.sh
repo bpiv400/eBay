@@ -1,7 +1,7 @@
 #!/bin/bash
-#$ -t 1-7627
+#$ -t 1-514
 #$ -q short.q
-#$ -l m_mem_free=8G
+#$ -l m_mem_free=12G
 #$ -N feats_cat
 #$ -j y
 #$ -o logs/
