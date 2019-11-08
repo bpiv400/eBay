@@ -44,7 +44,7 @@ def process_inputs(part, role):
     x_lstg = cat_x_lstg(getPath)
     x_thread = load(getPath(['x', 'thread']))
     x_offer = load(getPath(['x', 'offer']))
-    tf_raw = load(getPath(['tf', 'delay', 'raw']))
+    tf_raw = load(getPath(['tf', 'role', 'raw']))
     clock = load(getPath(['clock']))
 
     # initialize fixed features
@@ -53,7 +53,7 @@ def process_inputs(part, role):
     # turn indicators
     x_fixed = add_turn_indicators(x_fixed)
 
-    # add weeks since thread start
+    # add days since thread start
     thread_start = clock.xs(1, level='index')
     sec = clock - thread_start.reindex(index=clock.index)
     sec = sec.groupby(['lstg', 'thread']).shift().dropna().astype('int64')
