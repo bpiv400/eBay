@@ -76,18 +76,6 @@ if __name__ == "__main__":
     part = PARTITIONS[num]
     idx, path = get_partition(part)
 
-    # differenced time features
-    print('tf_role_diff')
-    tf_role_diff = load_frames('tf_con').reindex(
-        index=idx, level='lstg')
-    dump(tf_role_diff, path('tf_role_diff'))
-
-    # raw time features
-    print('tf_role_raw')
-    tf_role_raw = load_frames('tf_delay_raw').reindex(
-        index=idx, level='lstg')
-    dump(tf_role_raw, path('tf_role_raw'))
-
     # load other data
     lookup = load(PARTS_DIR + '%s/lookup.gz' % part)
     events = load_frames('events').reindex(index=idx, level='lstg')
