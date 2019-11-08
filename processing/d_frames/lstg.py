@@ -90,6 +90,5 @@ if __name__ == "__main__":
 
     # save by partition
     for part, indices in partitions.items():
-        # x_lstg
         dump(x_lstg.reindex(index=indices), 
             PARTS_DIR + '%s/x_lstg.gz' % part)
