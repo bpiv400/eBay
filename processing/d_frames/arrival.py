@@ -63,7 +63,7 @@ if __name__ == "__main__":
     lookup = load(PARTS_DIR + '%s/lookup.gz' % part)
     threads = load(CLEAN_DIR + 'threads.pkl').reindex(
         index=idx, level='lstg')
-    tf = load_frames('tf_lstg_arrival').reindex(
+    tf = load_frames('tf_arrival').reindex(
         index=idx, level='lstg')
 
     # time feats

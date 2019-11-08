@@ -41,7 +41,7 @@ if __name__ == '__main__':
 		# run seller model
 		print('Training seller embeddings')
 		df_slr = run_model(L, 'slr')
-		dump(df_slr, FEATS_DIR + 'w2v_slr.gz')
+		dump(df_slr, W2V_DIR + 'slr.gz')
 
 	# buyer data
 	if num == 2:
@@ -57,4 +57,4 @@ if __name__ == '__main__':
 		# run buyer model
 		print('Training buyer embeddings')
 		df_byr = run_model(T, 'byr')
-		dump(df_byr, FEATS_DIR + 'w2v_byr.gz')
+		dump(df_byr, W2V_DIR + 'byr.gz')

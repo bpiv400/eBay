@@ -19,7 +19,7 @@ if __name__ == "__main__":
 
 	# load data
 	lookup = load(PARTS_DIR + '%s/lookup.gz' % part)
-	threads = load(CLEAN_DIR + 'threads.gz').reindex(
+	threads = load(CLEAN_DIR + 'threads.pkl').reindex(
 		index=idx, level='lstg')
 
 	# initialize x_thread with calendar features
