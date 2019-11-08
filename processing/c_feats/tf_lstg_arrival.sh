@@ -6,4 +6,4 @@
 #$ -j y
 #$ -o logs/
 
-python repo/processing/b_feats/tf_lstg.py --num "$SGE_TASK_ID" --arrival
+python repo/processing/c_feats/tf_lstg.py --num "$SGE_TASK_ID" --arrival
