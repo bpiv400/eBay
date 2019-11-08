@@ -1,24 +1,9 @@
 import sys, argparse
 from compress_pickle import load, dump
 import numpy as np, pandas as pd
-from sklearn.decomposition import PCA
-from sklearn.preprocessing import StandardScaler
 from constants import *
 from utils import *
 from processing.processing_utils import *
-
-
-# scales variables and performs PCA
-def do_pca(df, pre):
-    # standardize variables
-    vals = StandardScaler().fit_transform(df)
-    # PCA
-    N = len(df.columns)
-    pca = PCA(n_components=N, svd_solver='full')
-    components = pca.fit_transform(vals)
-    # return dataframe
-    return pd.DataFrame(components, index=df.index, 
-        columns=['%s%d' % (pre, i) for i in range(N)])
 
 
 # returns booleans for whether offer is round and ends in nines
@@ -57,38 +42,20 @@ def get_x_lstg(L):
 
 
 if __name__ == "__main__":
+    # partition number from command line
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--num', action='store', type=int, required=True)
+    num = parser.parse_args().num-1
+
+    # partition
+    part = PARTITIONS[num]
+    idx, path = get_partition(part)
+
     # listing features
-    L = load(CLEAN_DIR + 'listings.pkl')
-    L = L.loc[(L.flag == 0) & (L.toDrop == 0)]
-    L = L.drop(['slr', 'meta', 'end_time', 'flag', 'toDrop', \
-        'arrival_rate'], axis=1)
-    cat = L[['cat']]
-    idx = L.index
+    L = load(CLEAN_DIR + 'listings.pkl').reindex(index=idx)
 
     # initialize listing features
     x_lstg = get_x_lstg(L)
-    del L
 
-    # pca on other dataframes
-    for pre in ['w2v', 'slr', 'cat']:
-        print(pre)
-        # embeddings
-        if pre == 'w2v':        
-            for role in ['byr', 'slr']:
-                w2v = load(W2V_DIR + '%s.gz' % role)
-                cat = cat.join(w2v, on='cat')
-            var = cat.drop('cat', axis=1)
-        # slr and cat feats
-        else:
-            var = load_frames(pre).reindex(
-                index=idx, fill_value=0)
-        # pca and append
-        var = do_pca(var, pre)
-        x_lstg = x_lstg.join(var)
-        del var
-
-    # save by partition
-    partitions = load(PARTS_DIR + 'partitions.gz')
-    for part, indices in partitions.items():
-        dump(x_lstg.reindex(index=indices), 
-            PARTS_DIR + '%s/x_lstg.gz' % part)
+    # save
+    dump(x_lstg, path('x_lstg'))

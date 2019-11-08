@@ -71,7 +71,7 @@ if __name__ == "__main__":
     tf_arrival = get_arrival_time_feats(lookup, tf)
     dump(tf_arrival, path('tf_arrival'))
 
-    # # outcomes for arrival model
+    # outcomes for arrival model
     print('Creating arrival model outcome variables')
     y_arrival = get_y_arrival(lookup, threads)
     dump(y_arrival, path('y_arrival'))

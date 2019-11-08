@@ -18,7 +18,7 @@ def get_delay(clock):
         elif i in [3, 5]:   # ignore byr arrival and last turn
             delay[i] /= MAX_DELAY['byr']
         # no delays should be greater than 1
-        assert delay.max().max() <= 1
+        delay.loc[delay[i] > 1, i] = 1
     return delay.rename_axis('index', axis=1).stack()
 
 
