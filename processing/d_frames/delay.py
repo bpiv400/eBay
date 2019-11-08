@@ -90,8 +90,3 @@ if __name__ == "__main__":
             path('y_delay_' + role))
         dump(get_delay_time_feats(tf, start_time, role), 
             path('tf_delay_diff_' + role))
-
-    # raw time features
-    tf0 = load_frames('tf_delay_raw').reindex(index=idx, 
-        level='lstg')
-    dump(tf0, path('tf_delay_raw'))

@@ -60,6 +60,18 @@ def get_partition(part):
     return idx, path
 
 
+# concatenate x_lstg, x_w2v, x_slr, x_cat
+def cat_x_lstg(path):
+    '''
+    path: a function that takes a list of strings to be concatenated with
+        underscores and returns the path to the file. Example:
+        - path(['x', 'lstg']) might return 
+            'data/inputs/partitions/train_models/x_lstg.gz'
+    '''
+    l = [load(path(['x', x])) for x in ['lstg', 'w2v', 'slr', 'cat']]
+    return pd.concat(l, axis=1)
+
+
 # appends turn indicator variables to offer matrix
 def add_turn_indicators(df):
     '''
