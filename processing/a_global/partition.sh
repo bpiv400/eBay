@@ -5,4 +5,4 @@
 #$ -j y
 #$ -o logs/
 
-python repo/processing/c_partition/partition.py
+python repo/processing/a_global/partition.py

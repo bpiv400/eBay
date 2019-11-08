@@ -305,10 +305,28 @@ replace accept = 0 if flag & accept & reject
 
 save dta/temp2c, replace
 
-* add expired rejects on 7th index
+* add expired rejects when buyer does not return
+
+by lstg thread: g byte check = !accept & _n == _N & mod(index,2) == 0
+expand 2*check, gen(copy)
+drop check
+
+replace index = index + 1 if copy
+replace reject = 1 if copy
+replace message = . if copy
 
 sort lstg thread index
-by lstg thread: g byte check = _n == _N & index == 6 & !accept
+by lstg thread: replace clock = min(end_time, ///
+	clock[_n-1] + 14 * 24 * 3600 * 1000) if copy & index < 7
+by lstg thread: replace clock = min(end_time, ///
+	clock[_n-1] + 2 * 24 * 3600 * 1000) if copy & index == 7
+by lstg thread: replace price = price[_n-2] if copy
+drop copy
+
+* add expired rejects when listing sells on different thread
+
+by lstg thread: g byte check = !accept & _n == _N & ///
+	mod(index,2) == 1 & price != price[_n-2]
 expand 2*check, gen(censored)
 drop check
 
@@ -317,62 +335,10 @@ replace reject = 1 if censored
 replace message = . if censored
 
 sort lstg thread index
-by lstg thread: replace clock = min(end_time, ///
-	clock[_n-1] + 2 * 24 * 3600 * 1000) if censored
-by lstg thread: replace price = price[_n-2] if censored
+by lstg thread: replace clock = end_time if censored
+by lstg thread: replace price = price[_n-2] if censored & index > 2
+by lstg thread: replace price = start_price if censored & index == 2
 
-* add expired rejects when buyer does not return
-
-by lstg thread: g byte check = !accept & _n == _N & ///
-	mod(index,2) == 0 & index < 6
-expand 2*check, gen(copy)
-drop check
-
-replace index = index + 1 if copy
-replace reject = 1 if copy
-replace message = . if copy
-
-sort lstg thread index
-by lstg thread: replace clock = min(end_time, ///
-	clock[_n-1] + 14 * 24 * 3600 * 1000) if copy
-by lstg thread: replace price = price[_n-2] if copy
-	
-replace censored = 1 if copy
-drop copy
-
-* add expired rejects when listing sells on different thread
-
-by lstg thread: g byte check = !accept & _n == _N & ///
-	mod(index,2) == 1 & price != price[_n-2]
-expand 2*check, gen(copy)
-drop check
-
-replace index = index + 1 if copy
-replace reject = 1 if copy
-replace message = . if copy
-
-sort lstg thread index
-by lstg thread: replace clock = end_time if copy
-by lstg thread: replace price = price[_n-2] if copy & index > 2
-by lstg thread: replace price = start_price if copy & index == 2
-
-replace censored = 1 if copy
-drop copy
-
-* mark last seller reject on bin date as censored
-/*
-g int temp = dofc(end_time) if bin
-by lstg, sort: egen int bindate = min(temp)
-drop temp
-
-g double temp = clock ///
-	if reject & mod(index, 2) == 0 & bindate != .
-by lstg, sort: egen double lastclock = max(temp)
-drop temp
-
-replace censored = 1 if bindate != . & reject ///
-	& dofc(lastclock) == bindate & clock >= lastclock
-*/
 * save temp
 
 save dta/temp2d, replace
@@ -390,7 +356,7 @@ order newid, a(thread)
 drop new thread_start thread
 rename newid thread
 
-* flag weird behavior
+* flag weird behavior with prices
 
 replace flag = 1 if sale_price != start_price & bin
 replace flag = 1 if sale_price != price & accept
@@ -425,11 +391,17 @@ format %tc *_time
 format %9.0f clock
 replace clock = (clock - start_time) / 1000
 
+* flag byr bin offers after more than a two-week delay
+
+by lstg thread: g long diff = clock - clock[_n-1]
+replace flag = 1 if diff != . & diff > 14 * 24 * 3600
+drop diff
+
 * save temp
 
 save dta/temp3, replace
 
-* delete activity after 0 concession from buyer
+* delete thread activity after 0 concession from buyer
 
 sort lstg thread index
 by lstg thread: g byte check = (index == 3 | index == 5) & price == price[_n-2]

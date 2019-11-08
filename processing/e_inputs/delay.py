@@ -6,11 +6,7 @@ from utils import *
 from processing.processing_utils import *
 
 
-def parse_fixed_feats_delay(idx, role, x_lstg, x_thread, x_offer, tf_raw):
-    # lstg and byr attributes
-    x_fixed = pd.DataFrame(index=idx).join(x_lstg).join(x_thread)
-	# turn indicators
-    x_fixed = add_turn_indicators(x_fixed)
+def add_past_offers(role, x_fixed, x_offer, tf_raw):
     # last 2 offers
     df = x_offer.join(tf_raw.reindex(
         index=x_offer.index, fill_value=0))
@@ -44,13 +40,27 @@ def process_inputs(part, role):
     turns = get_sorted_turns(y)
     y = y.reindex(index=turns.index)
 
-    # fixed features
+    # load dataframes
     x_lstg = load(getPath(['x', 'lstg']))
     x_thread = load(getPath(['x', 'thread']))
     x_offer = load(getPath(['x', 'offer']))
     tf_raw = load(getPath(['tf', 'delay', 'raw']))
-    x_fixed = parse_fixed_feats_delay(
-        turns.index, role, x_lstg, x_thread, x_offer, tf_raw)
+    clock = load(getPath(['clock']))
+
+    # initialize fixed features
+    x_fixed = pd.DataFrame(index=y.index).join(x_lstg).join(x_thread)
+
+    # turn indicators
+    x_fixed = add_turn_indicators(x_fixed)
+
+    # add weeks since thread start
+    thread_start = clock.xs(1, level='index')
+    sec = clock - thread_start.reindex(index=clock.index)
+    sec = sec.groupby(['lstg', 'thread']).shift().dropna().astype('int64')
+    x_fixed.loc[:, 'days_since_thread'] = sec / (3600 * 24)
+
+    # add last two offers
+    x_fixed = add_past_offers(role, x_fixed, x_offer, tf_raw)
 
     # clock features by minute
     N = pd.to_timedelta(

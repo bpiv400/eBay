@@ -60,7 +60,7 @@ class Inputs(Dataset):
             else:
                 x_tf = np.zeros((n, self.num_tfeats), dtype='float32')
 
-            # for delay models, add marker for duration to expiration
+            # add marker for duration to expiration
             duration = np.array(range(n), dtype='float32')
             x_tf = np.concatenate((x_tf, duration), axis=1)
 

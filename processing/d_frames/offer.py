@@ -17,8 +17,8 @@ def get_delay(clock):
             delay[i] /= MAX_DELAY['slr']
         elif i in [3, 5]:   # ignore byr arrival and last turn
             delay[i] /= MAX_DELAY['byr']
-        # censor delays at MAX_DELAY
-        delay.loc[delay[i] > 1, i] = 1
+        # no delays should be greater than 1
+        assert delay.max().max() <= 1
     return delay.rename_axis('index', axis=1).stack()
 
 
@@ -57,8 +57,7 @@ def get_x_offer(lookup, events):
     # delay features
     df['delay'] = get_delay(clock)
     df['auto'] = df.delay == 0
-    df['exp'] = (df.delay == 1) | events.censored.reindex(
-        df.index, fill_value=False)
+    df['exp'] = df.delay == 1
     # clock features
     clock = clock.rename_axis('index', axis=1).stack().rename(
         'clock').astype(np.int64)

@@ -6,12 +6,18 @@ import numpy as np
 SLR_PREFIX = 'slr'
 BYR_PREFIX = 'byr'
 
+# vocabulary size for embeddings
+VOCAB_SIZE = 32
+
+# create new chunk once number of listings exceeds CUTOFF
+CUTOFF = 1e5
+
 # for partitioning
 SEED = 123456
 SHARES = {'train_models': 1/3, 'train_rl': 1/3}
 
 # count concessions within this range as 1/2
-TOL_HALF = 0.02 
+TOL_HALF = 0.02
 
 # optimization parameters
 MBSIZE = 32 * 3
@@ -30,7 +36,6 @@ CHUNKS_DIR = '%s/chunks/' % PREFIX
 FEATS_DIR = '%s/feats/' % PREFIX
 PARTS_DIR = '%s/partitions/' % PREFIX
 PCTILE_DIR = '%s/pctile/' % PREFIX
-W2V_PATH = lambda x: '%s/clean/w2v_%s.gz' %(PREFIX, x)
 
 # partitions
 PARTITIONS = ['train_models', 'train_rl', 'test']

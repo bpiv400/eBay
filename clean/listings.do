@@ -95,6 +95,12 @@ replace accept_price = start_price if accept_price > start_price
 
 replace bin_rev = 1 if bo == 0 & sale_price != start_price
 
+* feedback variables
+
+replace fdbk_score = 0 if fdbk_score == .
+replace fdbk_pstv = fdbk_pstv / 100
+replace fdbk_pstv = 1 if fdbk_pstv == .
+
 * save
 
 drop ct? ref_price?

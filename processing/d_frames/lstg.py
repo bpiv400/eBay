@@ -65,18 +65,14 @@ if __name__ == "__main__":
     idx = np.sort(np.concatenate(list(partitions.values())))
 
     # listing features
-    lstgs = load(CLEAN_DIR + 'listings.gz').drop(
+    lstgs = load(CLEAN_DIR + 'listings.pkl').drop(
         ['title', 'flag'], axis=1).reindex(index=idx)
     x_lstg = get_x_lstg(lstgs)
 
-    # split lstgs
-    lookup = lstgs[['start_date', 'end_time', \
-        'start_price', 'decline_price', 'accept_price']]
-    cat = lstgs[['cat']]
-
     # embeddings
+    cat = lstgs[['cat']]
     for role in ['byr', 'slr']:
-        w2v = load(W2V_PATH(role))
+        w2v = load(FEATS_DIR + 'w2v_%s.gz' % role)
         cat = cat.join(w2v, on='cat')
     x_w2v = cat.drop('cat', axis=1)
 
@@ -97,7 +93,3 @@ if __name__ == "__main__":
         # x_lstg
         dump(x_lstg.reindex(index=indices), 
             PARTS_DIR + '%s/x_lstg.gz' % part)
-
-        # lookup
-        dump(lookup.reindex(index=indices),
-            PARTS_DIR + '%s/lookup.gz' % part)
