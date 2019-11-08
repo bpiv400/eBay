@@ -49,4 +49,4 @@ if __name__ == "__main__":
 	# save by partition
 	for part, indices in partitions.items():
 		dump(var.reindex(index=indices), 
-			PARTS_DIR + '%s/x_%s.gz' % name)
+			PARTS_DIR + '%s/x_%s.gz' % (part, name))
