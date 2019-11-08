@@ -24,10 +24,14 @@ class TimeFeatures:
             - slr best: the highest seller total concession in other threads, defined as 1-offer/start_price
             - slr offers open: number of open, unanswered slr offers in other open threads.
             - slr best open: the highest unanswered seller concession among open seller offers.
+            - slr offers recent: the number of seller offers in the last 48 hours
+            - slr best recent: the best slr offer in the last 48 hours
             - byr offers: number of buyer offers in other threads, excluding rejects.
             - byr best: the highest buyer total concession in other threads, defined as offr/start_price
             - byr offers open: number of open, unanswered byr offers in other open threads.
             - byr best open: the highest unanswered buyer total concession among open buyer offers.
+            - byr offers recent: the best buyer offer in the last 48 hours
+            - byr best recent: the best buyer offer in the last 48 hours
             - thread count: number of historic threads
         Attributes:
             offers)
@@ -133,7 +137,11 @@ class TimeFeatures:
             self.feats[feat_name].push(thread_id=thread_id)
         if offer['type'] in feat_name:
             if 'best' not in feat_name:
-                self.feats[feat_name].increment(thread_id=thread_id)
+                if 'recent' in feat_name:
+                    self.feats[feat_name].push(time=offer['time'],
+                                               thread_id=thread_id)
+                else:
+                    self.feats[feat_name].increment(thread_id=thread_id)
             else:
                 args = {
                     'value': offer['price'],
@@ -661,6 +669,9 @@ class ExpirationHeap:
         :raises: RuntimeError if no entry with thread_id exists
         :raises: RuntimeError if time is earlier than the current time
         """
+        if thread_id not in self:
+            self.push(time=time, thread_id=thread_id, value=value)
+            return False
         if self.feat_heap.promote(thread_id=thread_id, value=value):
             self.time_heap.demote(thread_id=thread_id, value=time)
             if thread_id in self.backups:

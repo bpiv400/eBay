@@ -1,6 +1,7 @@
 from pandas.tseries.holiday import USFederalHolidayCalendar as Calendar
 import torch
 import numpy as np
+from platform import platform
 
 # strings for referencing quantities related to buyer and seller models
 SLR_PREFIX = 'slr'
@@ -30,7 +31,10 @@ NUM_WORKERS = 7 if torch.cuda.is_available() else 0
 DROPOUT = 0.5
 
 # paths and directories
-PREFIX = '/data/eBay' if torch.cuda.is_available() else 'data'
+if torch.cuda.is_available() and 'Windows' not in platform():
+	PREFIX = '/data/eBay'
+else:
+	PREFIX = 'data'
 CLEAN_DIR = '%s/clean/' % PREFIX
 CHUNKS_DIR = '%s/chunks/' % PREFIX
 FEATS_DIR = '%s/feats/' % PREFIX
@@ -72,7 +76,7 @@ HIST_QUANTILES = 10
 MODELS = ['arrival','hist', 'delay_byr', 'delay_slr', 'con_byr', 'con_slr']
 
 # organizing hierarchy
-LEVELS = ['slr', 'meta', 'leaf', 'cndtn', 'lstg']
+LEVELS = ['slr', 'cat', 'cndtn', 'lstg']
 
 # for lstg feature construction
 ASIS_FEATS = ['store', 'slr_us', 'fast', 'slr_bos', 'slr_lstgs', \
@@ -115,3 +119,6 @@ BATCH_TIMINGS_LIST = [  # list of batch timing names
 EPOCH_TIME = 'epoch_time'
 
 MODEL_DIR = 'output fake'
+
+
+
