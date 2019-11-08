@@ -4,9 +4,9 @@ import numpy as np, pandas as pd
 from constants import *
 
 
-def partition_lstgs(L):
+def partition_lstgs(s):
     # series of index slr and value lstg
-    slrs = L.reset_index().sort_values(
+    slrs = s.reset_index().sort_values(
         by=['slr','lstg']).set_index('slr').squeeze()
     # randomly order sellers
     u = np.unique(slrs.index.values)
@@ -28,10 +28,10 @@ if __name__ == "__main__":
     L = load(CLEAN_DIR + 'listings.pkl')
 
     # drop invalid listings
-    L = L.loc[(L.flag == 0) & (L.toDrop == 0), 'slr']
+    L = L.loc[(L.flag == 0) & (L.toDrop == 0)]
     
     # partition by seller
-    partitions = partition_lstgs(L)
+    partitions = partition_lstgs(L.slr)
     dump(partitions, PARTS_DIR + 'partitions.gz')
 
     # lookup files
