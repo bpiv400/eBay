@@ -35,11 +35,13 @@ if torch.cuda.is_available() and 'Windows' not in platform():
 	PREFIX = '/data/eBay'
 else:
 	PREFIX = 'data'
+
 CLEAN_DIR = '%s/clean/' % PREFIX
 CHUNKS_DIR = '%s/chunks/' % PREFIX
 FEATS_DIR = '%s/feats/' % PREFIX
 PARTS_DIR = '%s/partitions/' % PREFIX
 PCTILE_DIR = '%s/pctile/' % PREFIX
+W2V_DIR = '%s/w2v/' % PREFIX
 
 # partitions
 PARTITIONS = ['train_models', 'train_rl', 'test']
@@ -80,7 +82,7 @@ LEVELS = ['slr', 'cat', 'cndtn', 'lstg']
 
 # for lstg feature construction
 ASIS_FEATS = ['store', 'slr_us', 'fast', 'slr_bos', 'slr_lstgs', \
-	'fdbk_score', 'fdbk_pstv']
+	'fdbk_score', 'fdbk_pstv', 'start_price_pctile']
 
 # indices for byr and slr offers
 IDX = {
