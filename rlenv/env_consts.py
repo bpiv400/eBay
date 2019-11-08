@@ -12,16 +12,24 @@ BYR_BEST = 'byr_best'
 SLR_BEST_OPEN = 'slr_best_open'
 BYR_BEST_OPEN = 'byr_best_open'
 THREAD_COUNT = 'thread_count'
+SLR_OFFERS_RECENT = 'slr_offers_recent'
+BYR_OFFERS_RECENT = 'byr_offers_recent'
+SLR_BEST_RECENT = 'slr_best_recent'
+BYR_BEST_RECENT = 'byr_best_recent'
 
 TIME_FEATS = [
     SLR_OFFERS,
     SLR_BEST,
     SLR_OFFERS_OPEN,
     SLR_BEST_OPEN,
+    SLR_OFFERS_RECENT,
+    SLR_BEST_RECENT,
     BYR_OFFERS,
     BYR_BEST,
     BYR_OFFERS_OPEN,
     BYR_BEST_OPEN,
+    BYR_OFFERS_RECENT,
+    BYR_BEST_RECENT,
     THREAD_COUNT
 ]
 

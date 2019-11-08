@@ -6,4 +6,4 @@
 #$ -j y
 #$ -o logs/
 
-python repo/processing/2_feats/meta.py --num "$SGE_TASK_ID"
+python repo/processing/2_feats/category.py --num "$SGE_TASK_ID"
