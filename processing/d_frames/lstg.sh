@@ -6,4 +6,4 @@
 #$ -j y
 #$ -o logs/
 
-python repo/processing/d_frames/lstg.py
+python repo/processing/d_frames/lstg.py --num "$SGE_TASK_ID"
