@@ -49,7 +49,7 @@ def prep_quantiles(df, l, featname, new=False):
             other_turn = df.index.get_level_values('index').isin([2, 4, 6])
         # removing the other turn from the distribution
         df.loc[other_turn, 'delay'] = np.NaN
-        # removing auto rejects from the distribution
+        # removing expiration rejects from the distribution
         auto_rej = df['delay'] == 1
         df.loc[auto_rej, 'delay'] = np.NaN
         quant_vector = quant_vector_index(df, l, 'delay', new=new)
@@ -419,9 +419,6 @@ def get_cat_delay(events, levels):
     events.loc[events['censored'], 'delay'] = np.NaN
     for i in range(len(levels)):
         curr_levels = levels[: i + 1]
-        events['lstg_counter'] = events['lstg_id'].groupby(by=curr_levels).transform(
-            lambda x: x.factorize()[0].astype(np.int64)
-        )
         tf = tf.join(fast_quantiles(events, curr_levels, 'slr_delay'))
         tf = tf.join(fast_quantiles(events, curr_levels, 'byr_delay'))
         tf = tf.join(get_expire_perc(events, curr_levels, byr=False))
@@ -520,8 +517,10 @@ def create_events(L, T, O, levels):
     events = add_start_end(offers, L, levels)
     # add features for later use
     events['byr'] = events.index.isin(IDX['byr'], level='index')
-    events = events.join(L[['flag', 'start_price', 'arrival_rate',
-                            'start_price_pctile']])
+    lstg_cols = ['flag', 'start_price', 'arrival_rate', 'start_price_pctile']
+    if 'toDrop' in L.columns:
+        lstg_cols.append('toDrop')
+    events = events.join(L[lstg_cols])
     return events
 
 

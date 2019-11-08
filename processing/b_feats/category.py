@@ -2,37 +2,7 @@ import argparse
 from compress_pickle import dump, load
 from datetime import datetime as dt
 import processing.b_feats.util as util
-from constants import FEATS_DIR, CHUNKS_DIR, LEVELS
-
-
-def get_multi_lstgs(L):
-    df = L[LEVELS[:-1] + ['start_date', 'end_time']].set_index(
-        LEVELS[:-1], append=True).reorder_levels(LEVELS).sort_index()
-    # start time
-    df['start_date'] *= 24 * 3600
-    df = df.rename(lambda x: x.split('_')[0], axis=1)
-    # find multi-listings
-    df = df.sort_values(df.index.names[:-1] + ['start'])
-    maxend = df.end.groupby(df.index.names[:-1]).cummax()
-    maxend = maxend.groupby(df.index.names[:-1]).shift(1)
-    overlap = df.start <= maxend
-    return overlap.groupby(df.index.names).max()
-
-
-def clean_events(events, L):
-    # identify multi-listings
-    ismulti = get_multi_lstgs(L)
-    ismulti.index = ismulti.index.droplevel(level=['cat', 'cndtn'])
-    # drop multi-listings
-    events = events[~ismulti.reindex(index=events.index)]
-    # limit index to ['lstg', 'thread', 'index']
-    events = events.reset_index('slr', drop=True).sort_index()
-    # 30-day burn in
-    events = events.join(L['start_date'])
-    events = events[events.start_date >= 30].drop('start_date', axis=1)
-    # drop listings in which prices have changed
-    events = events[events.flag == 0].drop('flag', axis=1)
-    return events
+from constants import FEATS_DIR, CHUNKS_DIR
 
 
 def main():
@@ -48,7 +18,7 @@ def main():
         levels = ['cat', 'cndtn']
     else:
         print('making slr features')
-        chunk_name = ''
+        chunk_name = 'slr'
         levels = ['slr']
 
     # load data
@@ -71,12 +41,16 @@ def main():
     if args.slr:
         # drop flagged lstgs
         print('Restricting observations...')
-        events = clean_events(events, L)
+        not_drop = (~events.toDrop.astype(bool) &
+                    ~events.flag.astype(bool)).astype(bool)
+        events = events.loc[not_drop, :]
 
+        # TODO: ETAN TO DROP LATER IN PIPELINE
         # split off listing events
-        idx = events.reset_index('thread', drop=True).xs(
-            0, level='index').index
-        tf = tf.reindex(index=idx)
+        # lstgs = events.index.get_level_values('lstg')
+        # tf = tf.loc[lstgs, :]
+
+        # drop
         events = events.drop(0, level='thread')
         # save events
         dump(events, '{}{}_events.gz'.format(FEATS_DIR, args.num))
