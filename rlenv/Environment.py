@@ -41,7 +41,18 @@ class Environment:
         input.h5: h5py file containing a dataset called 'slrs' 1-d np array containing all slr ids
         and a 2-dimensional np.array of lstg features for each slr in datasets named after the slrs
     Attributes:
-        fix shit
+        experiment_id: int giving the id of the current experiment
+        input_file: connection to hdf5 file containing x_lstg features for all models
+        lstg_count: number of lstgs in the x_lstg file
+        params: dictionary containing parameters of the experiment:
+            RELIST_COUNT:
+            SIM_COUNT: number of times environment should simulator each lstg
+            model in MODELS: integer giving the experiment of id for each model to be used in simulator
+        thread_counter: integer that provides unique identifier for each thread
+            (incremented after the creation of each new thread)
+        lstgs: array of integers giving all lstgs that the environment will simulate (index in X_LSTG_FILE)
+        x_lstg_slice: slice of x_lstg
+
     Public functions:
         fix
     Private functions:

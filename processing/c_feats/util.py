@@ -1,5 +1,5 @@
 from constants import *
-from processing.b_feats.time_funcs import *
+from processing.c_feats.time_funcs import *
 
 
 def prep_tf(events):

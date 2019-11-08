@@ -3,7 +3,7 @@ import numpy as np
 from copy import deepcopy
 import pandas as pd
 from rlenv.time_triggers import *
-from processing.b_feats.util import get_all_cat_feats
+from processing.c_feats.util import get_all_cat_feats
 from constants import MAX_DELAY
 
 
