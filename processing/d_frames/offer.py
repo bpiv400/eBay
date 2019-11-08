@@ -18,7 +18,7 @@ def get_delay(clock):
         elif i in [3, 5]:   # ignore byr arrival and last turn
             delay[i] /= MAX_DELAY['byr']
         # no delays should be greater than 1
-        assert delay.max().max() <= 1
+        delay.loc[delay[i] > 1, i] = 1
     return delay.rename_axis('index', axis=1).stack()
 
 
@@ -75,18 +75,6 @@ if __name__ == "__main__":
     # partition
     part = PARTITIONS[num]
     idx, path = get_partition(part)
-
-    # differenced time features
-    print('tf_role_diff')
-    tf_role_diff = load_frames('tf_lstg_con').reindex(
-        index=idx, level='lstg')
-    dump(tf_role_diff, path('tf_role_diff'))
-
-    # raw time features
-    print('tf_role_raw')
-    tf_role_raw = load_frames('tf_lstg_delay_raw').reindex(
-        index=idx, level='lstg')
-    dump(tf_role_raw, path('tf_role_raw'))
 
     # load other data
     lookup = load(PARTS_DIR + '%s/lookup.gz' % part)

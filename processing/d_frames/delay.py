@@ -79,7 +79,7 @@ if __name__ == "__main__":
 
     # inputs for differenced time features
     lookup = load(PARTS_DIR + '%s/lookup.gz' % part)
-    tf = load_frames('tf_lstg_delay_diff').reindex(
+    tf = load_frames('tf_delay_diff').reindex(
         index=idx, level='lstg').drop('index', axis=1)
     start_time = events.clock.rename('start_time').groupby(
         ['lstg', 'thread']).shift().dropna().astype('int64')
@@ -92,6 +92,6 @@ if __name__ == "__main__":
             path('tf_delay_diff_' + role))
 
     # raw time features
-    tf0 = load_frames('tf_lstg_delay_raw').reindex(index=idx, 
+    tf0 = load_frames('tf_delay_raw').reindex(index=idx, 
         level='lstg')
     dump(tf0, path('tf_delay_raw'))

@@ -35,7 +35,7 @@ if __name__ == "__main__":
     dump(partitions, PARTS_DIR + 'partitions.gz')
 
     # lookup files
-    lookup = L[['meta', 'start_date', 'end_time', \
+    lookup = L[['meta', 'cat', 'start_date', 'end_time', \
         'start_price', 'decline_price', 'accept_price']]
     for part, idx in partitions.items():
         dump(lookup.reindex(index=idx),
