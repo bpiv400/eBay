@@ -5,4 +5,4 @@
 #$ -j y
 #$ -o logs/
 
-python repo/processing/b_chunk/chunk.py
+python repo/processing/b_chunk/chunk.py --num "$SGE_TASK_ID"
