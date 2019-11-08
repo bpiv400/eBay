@@ -5,4 +5,4 @@
 #$ -j y
 #$ -o logs/
 
-python repo/processing/a_chunk/chunk.py
+python repo/processing/b_chunk/chunk.py

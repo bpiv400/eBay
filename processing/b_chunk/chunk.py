@@ -16,11 +16,11 @@ if __name__ == '__main__':
     num = parser.parse_args().num
 
     # read in data frames
-	L = load(CLEAN_DIR + 'listings.pkl')
-	T = load(CLEAN_DIR + 'threads.pkl')
-	O = load(CLEAN_DIR + 'offers.pkl')
+    L = load(CLEAN_DIR + 'listings.pkl')
+    T = load(CLEAN_DIR + 'threads.pkl')
+    O = load(CLEAN_DIR + 'offers.pkl')
 
-	# slr features
+    # slr features
     if num == 1:
     	chunk('slr', L, T, O)
 
@@ -29,4 +29,4 @@ if __name__ == '__main__':
     	L = L[LVARS]
     	T = T[TVARS]
     	O = O[OVARS]
-		chunk('cat', L, T, O)
+    	chunk('cat', L, T, O)

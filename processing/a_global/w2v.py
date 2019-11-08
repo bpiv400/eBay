@@ -27,11 +27,11 @@ def run_model(s, prefix):
 
 if __name__ == '__main__':
 	# parse parameters
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--num', action='store', type=int, required=True)
-    num = parser.parse_args().num
+	parser = argparse.ArgumentParser()
+	parser.add_argument('--num', action='store', type=int, required=True)
+	num = parser.parse_args().num
 
-    # seller data
+	# seller data
 	if num == 1:
 		print('Preparing seller embeddings')
 		L = load(CLEAN_DIR + 'listings.pkl').sort_values(
