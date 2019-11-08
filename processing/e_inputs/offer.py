@@ -69,7 +69,7 @@ def process_inputs(part, outcome, role):
 		(PREFIX, part, '_'.join(names))
 
 	# load dataframes
-	x_lstg = load(getPath(['x', 'lstg']))
+	x_lstg = cat_x_lstg(getPath)
 	x_thread = load(getPath(['x', 'thread']))
 	x_offer = load(getPath(['x', 'offer']))
 	tf = load(getPath(['tf', 'role', 'diff'])).reindex(

@@ -20,7 +20,7 @@ def process_inputs(part):
     y = y.reindex(index=turns.index)
 
     # fixed features
-    x_fixed = load(getPath(['x', 'lstg'])).reindex(index=turns.index)
+    x_fixed = cat_x_lstg(getPath).reindex(index=turns.index)
 
     # clock features
     N = pd.to_timedelta(pd.to_datetime(END) - pd.to_datetime(START))

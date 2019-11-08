@@ -33,12 +33,14 @@ if __name__ == "__main__":
 
 	# load data
 	if num == 1:
-		name = 'x_w2v'
-		cat = load(CLEAN_DIR + 'listings.pkl')[['cat']].reindex(index=idx)
-		for role in ['byr', 'slr']:
-			w2v = load(W2V_DIR + '%s.gz' % role)
-			cat = cat.join(w2v, on='cat')
-		var = cat.drop('cat', axis=1)
+		name = 'w2v'
+		s = load(CLEAN_DIR + 'listings.pkl')[['cat']].reindex(index=idx)
+		byr = load(W2V_DIR + 'byr.gz').reindex(
+			index=s.values.squeeze(), fill_value=0)
+		slr = load(W2V_DIR + 'slr.gz').reindex(
+			index=s.values.squeeze(), fill_value=0)
+		var = pd.concat([byr, slr], axis=1)
+		var.set_index(s.index, inplace=True)
 	else:
 		name = 'slr' if num == 2 else 'cat'
 		var = load_frames(name).reindex(index=idx, fill_value=0)

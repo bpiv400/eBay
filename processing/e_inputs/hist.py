@@ -19,8 +19,7 @@ def process_inputs(part):
 	y = x_thread['byr_hist'] * HIST_QUANTILES
 
 	# initialize fixed features with listing variables
-	x_fixed = load(getPath(['x', 'lstg'])).reindex(
-		index=y.index, level='lstg')
+	x_fixed = cat_x_lstg(getPath).reindex(index=y.index, level='lstg')
 
 	# add thread variables
 	x_fixed = x_fixed.join(x_thread.drop('byr_hist', axis=1))

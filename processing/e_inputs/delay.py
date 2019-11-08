@@ -41,7 +41,7 @@ def process_inputs(part, role):
     y = y.reindex(index=turns.index)
 
     # load dataframes
-    x_lstg = load(getPath(['x', 'lstg']))
+    x_lstg = cat_x_lstg(getPath)
     x_thread = load(getPath(['x', 'thread']))
     x_offer = load(getPath(['x', 'offer']))
     tf_raw = load(getPath(['tf', 'delay', 'raw']))
