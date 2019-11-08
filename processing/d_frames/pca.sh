@@ -1,7 +1,7 @@
 #!/bin/bash
 #$ -q all.q
 #$ -t 1-3
-#$ -l m_mem_free=150G
+#$ -l m_mem_free=180G
 #$ -N frames_pca
 #$ -j y
 #$ -o logs/

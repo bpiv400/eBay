@@ -34,7 +34,7 @@ if __name__ == "__main__":
 	# load data
 	if num == 1:
 		name = 'x_w2v'
-		cat = load(PARTS_DIR + 'lookup.gz')[['cat']]
+		cat = load(CLEAN_DIR + 'listings.pkl')[['cat']].reindex(index=idx)
 		for role in ['byr', 'slr']:
 			w2v = load(W2V_DIR + '%s.gz' % role)
 			cat = cat.join(w2v, on='cat')
