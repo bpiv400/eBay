@@ -35,12 +35,12 @@ def train_model(simulator, train, test, outfile):
         # training loop
         run_loop(model, simulator, train, isTraining=True)
 
-        # training duration
-        dur = np.round((dt.now() - t0).seconds)
-
         # calculate log-likelihood on training and test
         lnL_train = run_loop(model, simulator, train)
         lnL_test = run_loop(model, simulator, test)
+
+        # epoch duration
+        dur = np.round((dt.now() - t0).seconds)
 
         # write to file
         f = open(outfile, 'a')
@@ -79,10 +79,17 @@ if __name__ == '__main__':
     train = Inputs('train_models', model)
     test = Inputs('train_rl', model)
 
+    # before training, calculate log-likelihood on training and test
+    t0 = dt.now()
+    lnL0_train = run_loop(model, simulator, train)
+    lnL0_test = run_loop(model, simulator, test)
+    dur = np.round((dt.now() - t0).seconds)
+
     # create outfile
     outfile = 'outputs/cluster/%s_%d.csv' % (model, paramsid)
     f = open(outfile, 'w')
     f.write('epoch,seconds,lnL_train,lnL_holdout\n')
+    f.write('%d,%d,%.4f,%.4f\n' % (0, dur, lnL0_train, lnL0_test))
     f.close()
 
     # train model

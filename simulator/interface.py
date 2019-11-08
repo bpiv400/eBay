@@ -61,7 +61,7 @@ class Inputs(Dataset):
                 x_tf = np.zeros((n, self.num_tfeats), dtype='float32')
 
             # add marker for duration to expiration
-            duration = np.array(range(n), dtype='float32')
+            duration = np.array(range(n) / n, dtype='float32')
             x_tf = np.concatenate((x_tf, duration), axis=1)
 
             # time feats: first clock feats, then time-varying feats
