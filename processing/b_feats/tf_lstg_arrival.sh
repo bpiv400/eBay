@@ -2,7 +2,7 @@
 #$ -t 1-835
 #$ -q short.q
 #$ -l m_mem_free=10G
-#$ -N tf_lstg
+#$ -N tf_lstg_arrival
 #$ -j y
 #$ -o logs/
 
