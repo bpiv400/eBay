@@ -348,7 +348,7 @@ def add_deltas_index(deltas, events):
 
 
 def output_path(model, num):
-    gz_path = '{}{}_tf_lstg_{}.gz'.format(FEATS_DIR, num, model)
+    gz_path = '{}{}_tf_{}.gz'.format(FEATS_DIR, num, model)
     return gz_path
 
 
@@ -365,6 +365,9 @@ def main():
     print('Loading data')
     print(FEATS_DIR + '%d_events.gz' % num)
     events = load(FEATS_DIR + '%d_events.gz' % num)
+    if 'slr' in events.index.names:
+        events = events.droplevel('slr')
+    events = events.sort_index()
 
     # create lstg-level time-valued features
     print('Creating lstg-level time-valued features')
