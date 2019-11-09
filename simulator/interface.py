@@ -16,7 +16,6 @@ class Inputs(Dataset):
 
         # save parameters to self
         self.model = model
-        self.role = model.split('_')[1]
         self.isRecurrent = 'turns' in self.d
         if 'tf' in self.d:
             self.num_tfeats = len(self.d['tf'].columns)
@@ -46,7 +45,8 @@ class Inputs(Dataset):
             if self.model == arrival:
                 idx_clock = start + np.array(range(n), dtype='uint16')
             else:   # delay models
-                interval = int(INTERVAL[self.role] / 60) # interval in minutes
+                role = self.model.split('_')[1]
+                interval = int(INTERVAL[role] / 60) # interval in minutes
                 idx_clock = start + interval * np.array(
                     range(n), dtype='uint16')
 
