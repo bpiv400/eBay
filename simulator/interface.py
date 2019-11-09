@@ -141,7 +141,7 @@ def collateRNN(batch):
     # convert to tensor, pack if needed
     y = torch.from_numpy(np.asarray(y))
     turns = torch.from_numpy(np.asarray(
-        turns, dtype='int64'))
+        turns, dtype='int64')).long()
     x_fixed = torch.stack(x_fixed).float()
     x_time = torch.stack(x_time, dim=0).float()
     idx = torch.tensor(idx)
