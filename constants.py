@@ -44,7 +44,7 @@ PCTILE_DIR = '%s/pctile/' % PREFIX
 W2V_DIR = '%s/w2v/' % PREFIX
 
 SUMMARY_DIR = 'outputs/summary/'
-MODELS_DIR = 'outputs/models/'
+MODEL_DIR = 'outputs/models/'
 
 # partitions
 PARTITIONS = ['train_models', 'train_rl', 'test']
