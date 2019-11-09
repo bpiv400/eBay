@@ -2,9 +2,9 @@ import sys
 import torch, torch.optim as optim
 from torch.nn.utils import rnn
 import numpy as np
-from constants import *
 from loss import *
 from nets import *
+from constants import *
 
 
 # constructs model-specific neural network.
