@@ -31,13 +31,13 @@ class FeedForward(nn.Module):
                 nn.Linear(params['hidden'], params['hidden']))
         else:
             self.seq.append(
-                nn.Linear(params['hidden'], sizes['out']))
+                nn.Linear(params['hidden'], sizes['out'])).squeeze()
 
 
     def forward(self, x):
         for _, m in enumerate(self.seq):
             x = m(x)
-        return x.squeeze()
+        return x
 
 
     def simulate(self, x):
