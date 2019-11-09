@@ -3,14 +3,14 @@ import torch
 import numpy as np, pandas as pd
 from datetime import datetime as dt
 from torch.utils.data import DataLoader
-from simulator.interface import *
-from simulator.simulator import Simulator
+from interface import *
+from simulator import Simulator
 from constants import *
 
 EPOCHS = 1000
 
 
-def run_loop(model, simulator, data, isTraining=False):
+def run_loop(simulator, data, isTraining=False):
     # collate function
     f = collateRNN if data.isRecurrent else collateFF
 
@@ -27,25 +27,29 @@ def run_loop(model, simulator, data, isTraining=False):
     return lnL
 
 
-def train_model(simulator, train, test, outfile):
+def train_model(simulator, train, test, stub):
     # loop over epochs, record log-likelihood
     for i in range(EPOCHS):
         t0 = dt.now()
 
         # training loop
-        run_loop(model, simulator, train, isTraining=True)
+        run_loop(simulator, train, isTraining=True)
 
         # calculate log-likelihood on training and test
-        lnL_train = run_loop(model, simulator, train)
-        lnL_test = run_loop(model, simulator, test)
+        lnL_train = run_loop(simulator, train)
+        lnL_test = run_loop(simulator, test)
 
         # epoch duration
         dur = np.round((dt.now() - t0).seconds)
 
-        # write to file
-        f = open(outfile, 'a')
+        # write statistics to file
+        f = open(SUMMARY_DIR + '%s.csv' % stub, 'a')
         f.write('%d,%d,%.4f,%.4f\n' % (i+1, dur, lnL_train, lnL_test))
         f.close()
+
+        # save model
+        torch.save(simulator.net.state_dict(), 
+            MODEL_DIR + '%s_%s.pt' % (model, paramsid))
 
 
 if __name__ == '__main__':
@@ -58,6 +62,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     model = args.model
     paramsid = args.id
+    stub = '%s_%d' % (model, paramsid)
 
     # load model sizes
     print('Loading parameters')
@@ -81,21 +86,16 @@ if __name__ == '__main__':
 
     # before training, calculate log-likelihood on training and test
     t0 = dt.now()
-    lnL0_train = run_loop(model, simulator, train)
-    lnL0_test = run_loop(model, simulator, test)
+    lnL0_train = run_loop(simulator, train)
+    lnL0_test = run_loop(simulator, test)
     dur = np.round((dt.now() - t0).seconds)
 
     # create outfile
-    outfile = 'outputs/cluster/%s_%d.csv' % (model, paramsid)
-    f = open(outfile, 'w')
+    f = open(SUMMARY_DIR + '%s.csv' % stub, 'w')
     f.write('epoch,seconds,lnL_train,lnL_holdout\n')
     f.write('%d,%d,%.4f,%.4f\n' % (0, dur, lnL0_train, lnL0_test))
     f.close()
 
     # train model
-    train_model(simulator, train, test, outfile)
-
-    # save model
-    torch.save(simulator.net.state_dict(), 
-        MODEL_DIR + '%s_%s.pt' % (model, paramsid))
+    train_model(simulator, train, test, stub)
     
