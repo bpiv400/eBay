@@ -3,8 +3,8 @@ import torch
 import numpy as np, pandas as pd
 from datetime import datetime as dt
 from torch.utils.data import DataLoader
-from interface import *
-from simulator import Simulator
+from simulator.interface import *
+from simulator.simulator import Simulator
 from constants import *
 
 EPOCHS = 1000
@@ -22,7 +22,6 @@ def run_loop(simulator, data, isTraining=False):
     lnL = 0
     for batch in batches:
         lnL += simulator.run_batch(batch, isTraining)
-        print(lnL)
 
     return lnL
 
