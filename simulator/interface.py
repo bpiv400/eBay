@@ -3,7 +3,7 @@ import numpy as np, pandas as pd
 import torch
 from torch.utils.data import Dataset, Sampler
 from compress_pickle import load
-from constants import *
+from repo.constants import *
 
 
 # defines a dataset that extends torch.utils.data.Dataset
@@ -14,11 +14,19 @@ class Inputs(Dataset):
         # inputs
         self.d = load('%s/inputs/%s/%s.gz' % (PREFIX, part, model))
 
-        # save parameters to self
+        # number of examples
+        self.N = np.shape(self.d['x_fixed'])[0]
         self.model = model
         self.isRecurrent = 'turns' in self.d
+
+        # number of labels
+        if self.isRecurrent:
+            self.N_labels = np.sum(self.d['turns'])
+        else:
+            self.N_labels = self.N
+
         if 'tf' in self.d:
-            self.num_tfeats = len(self.d['tf'].columns)
+            self.N_tfeats = len(self.d['tf'].columns)
 
 
     def __getitem__(self, idx):
@@ -58,7 +66,7 @@ class Inputs(Dataset):
                 x_tf = self.d['tf'][idx].reindex(
                     index=range(n), fill_value=0).to_numpy()
             else:
-                x_tf = np.zeros((n, self.num_tfeats), dtype='float32')
+                x_tf = np.zeros((n, self.N_tfeats), dtype='float32')
 
             # add marker for duration to expiration
             duration = np.array(range(n) / n, dtype='float32')
@@ -77,25 +85,23 @@ class Inputs(Dataset):
 # defines a sampler that extends torch.utils.data.Sampler
 class Sample(Sampler):
 
-    def __init__(self, dataset, isTraining):
+    def __init__(self, data, isTraining):
         """
-        dataset: instance of Inputs
+        data: instance of Inputs
         isTraining: chop into minibatches if True
         """
         super().__init__(None)
 
-        # for training, shuffle and chop into minibatches
-        if isTraining:
-            self.batches = []
-            for v in dataset.d['groups']:
+        # chop into minibatches; shuffle for training
+        self.batches = []
+        for v in data.d['groups']:
+            if isTraining:
                 np.random.shuffle(v)
-                self.batches += np.array_split(v, 1 + len(v) // MBSIZE)
-            # shuffle training batches
+            self.batches += np.array_split(v, 1 + len(v) // MBSIZE)
+        # shuffle training batches
+        if isTraining:
             np.random.shuffle(self.batches)
 
-        # for test, create batch of samples of same length
-        else:
-            self.batches = np.array_split(dataset.d['groups'], 1000)
 
     def __iter__(self):
         """
@@ -132,14 +138,14 @@ def collateRNN(batch):
 
     # sorts the batch list in decreasing order of turns
     for b in batch:
-        y.append(b[0])
+        y.append(torch.from_numpy(b[0]))
         turns.append(b[1])
         x_fixed.append(torch.from_numpy(b[2]))
         x_time.append(torch.from_numpy(b[3]))
         idx.append(b[4])
 
     # convert to tensor, pack if needed
-    y = torch.from_numpy(np.asarray(y))
+    y = torch.stack(y)
     turns = torch.from_numpy(np.asarray(
         turns, dtype='int64')).long()
     x_fixed = torch.stack(x_fixed).float()

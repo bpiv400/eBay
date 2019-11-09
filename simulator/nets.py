@@ -37,11 +37,11 @@ class FeedForward(nn.Module):
     def forward(self, x):
         for _, m in enumerate(self.seq):
             x = m(x)
-        return x
+        return x.squeeze()
 
 
     def simulate(self, x):
-        return self.forward(x).squeeze()
+        return self.forward(x)
 
 
 class RNN(nn.Module):
@@ -83,10 +83,11 @@ class RNN(nn.Module):
 
         # output layer: split if turns == 4 (i.e., con_byr model)
         if self.steps == 4:
-            return self.output(theta[:,:self.steps-1,:]), \
+            return self.output(theta[:,:self.steps-1,:]).squeeze(), \
                 self.output4(theta[:,self.steps-1,:]).squeeze()
         else:
-            return self.output(theta)   # (batch_size, seq_len, N_out)
+            # (batch_size, seq_len, N_out)
+            return self.output(theta).squeeze()   
 
 
 class LSTM(nn.Module):

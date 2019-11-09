@@ -3,9 +3,9 @@ import torch
 import numpy as np, pandas as pd
 from datetime import datetime as dt
 from torch.utils.data import DataLoader
-from simulator.interface import *
-from simulator.simulator import Simulator
-from constants import *
+from repo.simulator.interface import *
+from repo.simulator.simulator import Simulator
+from repo.constants import *
 
 EPOCHS = 1000
 
@@ -16,14 +16,16 @@ def run_loop(simulator, data, isTraining=False):
 
     # load batches
     batches = DataLoader(data, batch_sampler=Sample(data, isTraining),
-        collate_fn=f, num_workers=NUM_WORKERS, pin_memory=True)
+        collate_fn=f, num_workers=0, pin_memory=True)
 
     # loop over batches, calculate log-likelihood
     lnL = 0
-    for batch in batches:
+    for b, batch in enumerate(batches):
+        if (b+1) % 100 == 0:
+            print('\tBatch %d of %d' % (b+1, len(batches)))
         lnL += simulator.run_batch(batch, isTraining)
 
-    return lnL
+    return lnL / data.N_labels
 
 
 def train_model(simulator, train, test, stub):
@@ -32,10 +34,13 @@ def train_model(simulator, train, test, stub):
         t0 = dt.now()
 
         # training loop
+        print('Training epoch %d:' % i)
         run_loop(simulator, train, isTraining=True)
 
         # calculate log-likelihood on training and test
+        print('Validating on train:')
         lnL_train = run_loop(simulator, train)
+        print('Validating on holdout:')
         lnL_test = run_loop(simulator, test)
 
         # epoch duration
@@ -48,7 +53,7 @@ def train_model(simulator, train, test, stub):
 
         # save model
         torch.save(simulator.net.state_dict(), 
-            MODEL_DIR + '%s_%s.pt' % (model, paramsid))
+            MODEL_DIR + '%s.net' % stub)
 
 
 if __name__ == '__main__':
@@ -79,20 +84,17 @@ if __name__ == '__main__':
         device='cuda' if torch.cuda.is_available() else 'cpu')
     print(simulator.net)
 
-    # create datasets
+    # create datasets and calculate initial log-likelihood
     train = Inputs('train_models', model)
-    test = Inputs('train_rl', model)
-
-    # before training, calculate log-likelihood on training and test
-    t0 = dt.now()
     lnL0_train = run_loop(simulator, train)
+
+    test = Inputs('train_rl', model)
     lnL0_test = run_loop(simulator, test)
-    dur = np.round((dt.now() - t0).seconds)
 
     # create outfile
     f = open(SUMMARY_DIR + '%s.csv' % stub, 'w')
     f.write('epoch,seconds,lnL_train,lnL_holdout\n')
-    f.write('%d,%d,%.4f,%.4f\n' % (0, dur, lnL0_train, lnL0_test))
+    f.write('%d,%d,%.4f,%.4f\n' % (0, 0, lnL0_train, lnL0_test))
     f.close()
 
     # train model

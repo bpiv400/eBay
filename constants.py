@@ -21,7 +21,7 @@ SHARES = {'train_models': 1/3, 'train_rl': 1/3}
 TOL_HALF = 0.02
 
 # optimization parameters
-MBSIZE = 32 * 3
+MBSIZE = 1024
 UPDATES = 5e6
 EPOCHS = 5
 LR = 1e-4
@@ -123,8 +123,3 @@ BATCH_TIMINGS_LIST = [  # list of batch timing names
 ]
 
 EPOCH_TIME = 'epoch_time'
-
-MODEL_DIR = 'output fake'
-
-
-
