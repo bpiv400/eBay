@@ -71,7 +71,7 @@ def process_inputs(part, role):
     x_clock = extract_clock_feats(clock).join(clock).set_index('clock')
 
     # index of first x_clock for each y
-    start = x_offer.clock.groupby(['lstg', 'thread']).shift().reindex(
+    start = clock.groupby(['lstg', 'thread']).shift().reindex(
         index=turns.index)
     idx_clock = (start // 60).astype('int64')
 
