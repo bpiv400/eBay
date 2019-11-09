@@ -38,6 +38,7 @@ def process_inputs(part, role):
 
     # sort by number of turns
     turns = get_sorted_turns(y)
+    turns = turns[turns > 0]
     y = y.reindex(index=turns.index)
 
     # load dataframes
