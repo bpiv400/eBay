@@ -3,7 +3,7 @@ import numpy as np, pandas as pd
 import torch
 from torch.utils.data import Dataset, Sampler
 from compress_pickle import load
-from repo.constants import *
+from constants import *
 
 
 # defines a dataset that extends torch.utils.data.Dataset
@@ -26,7 +26,9 @@ class Inputs(Dataset):
             self.N_labels = self.N
 
         if 'tf' in self.d:
-            self.N_tfeats = len(self.d['tf'].columns)
+            for val in self.d['tf'].values():
+                self.N_tfeats = len(val.columns)
+                break
 
 
     def __getitem__(self, idx):
@@ -50,7 +52,7 @@ class Inputs(Dataset):
 
             # index of first timestamp
             start = self.d['idx_clock'][idx]
-            if self.model == arrival:
+            if self.model == 'arrival':
                 idx_clock = start + np.array(range(n), dtype='uint16')
             else:   # delay models
                 role = self.model.split('_')[1]

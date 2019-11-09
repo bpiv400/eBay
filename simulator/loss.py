@@ -4,6 +4,13 @@ import torch
 def logit_loss(theta, y):
 	p = torch.sigmoid(theta)	# predicted probability
 	ll = y * torch.log(p) + (1-y) * torch.log(1 - p)
+
+	print(p[0,:])
+	print(y[0])
+	print(ll[0,:])
+	exit()
+
+
 	return -torch.sum(ll)
 
 

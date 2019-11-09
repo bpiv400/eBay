@@ -3,7 +3,7 @@ from compress_pickle import load, dump
 import numpy as np, pandas as pd
 from constants import *
 from utils import *
-from processing.processing_utils import *
+from processing_utils import *
 
 
 # loads data and calls helper functions to construct training inputs

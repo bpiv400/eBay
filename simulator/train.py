@@ -3,9 +3,9 @@ import torch
 import numpy as np, pandas as pd
 from datetime import datetime as dt
 from torch.utils.data import DataLoader
-from repo.simulator.interface import *
-from repo.simulator.simulator import Simulator
-from repo.constants import *
+from interface import *
+from simulator import Simulator
+from constants import *
 
 EPOCHS = 1000
 
