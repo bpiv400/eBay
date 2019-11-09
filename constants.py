@@ -76,7 +76,8 @@ INTERVAL_COUNTS = {
 HIST_QUANTILES = 10
 
 # model names
-MODELS = ['arrival','hist', 'delay_byr', 'delay_slr', 'con_byr', 'con_slr']
+MODELS = ['arrival','hist', 'delay_byr', 'delay_slr', 'con_byr', 'con_slr', \
+	'msg_byr', 'msg_slr']
 
 # organizing hierarchy
 LEVELS = ['slr', 'cat', 'cndtn', 'lstg']
