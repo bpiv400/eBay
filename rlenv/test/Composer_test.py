@@ -1,6 +1,5 @@
 import pytest
-from constants import SLR_PREFIX, BYR_PREFIX
-from rlenv.Composer import Composer
+from composer.Composer import Composer
 from rlenv.env_consts import *
 from rlenv.env_utils import *
 

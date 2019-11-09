@@ -40,6 +40,7 @@ CLEAN_DIR = '%s/clean/' % PREFIX
 CHUNKS_DIR = '%s/chunks/' % PREFIX
 FEATS_DIR = '%s/feats/' % PREFIX
 PARTS_DIR = '%s/partitions/' % PREFIX
+REWARDS_DIR = '%s/rewards/' % PREFIX
 PCTILE_DIR = '%s/pctile/' % PREFIX
 W2V_DIR = '%s/w2v/' % PREFIX
 

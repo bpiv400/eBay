@@ -1,7 +1,7 @@
 import pytest
 import torch
-from rlenv.TimeFeatures import TimeFeatures
-import rlenv.time_triggers as time_triggers
+from time.TimeFeatures import TimeFeatures
+import time.time_triggers as time_triggers
 from rlenv.env_consts import TIME_FEATS, THREAD_COUNT, EXPIRATION
 
 

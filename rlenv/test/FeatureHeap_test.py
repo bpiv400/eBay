@@ -1,4 +1,4 @@
-from TimeFeatures import FeatureHeap, HeapEntry
+from time.TimeFeatures import FeatureHeap, HeapEntry
 import pytest
 
 

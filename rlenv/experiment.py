@@ -1,6 +1,3 @@
-import heapq
-from Environment import Environment
-
 def main():
     """
     Filler main method for testing

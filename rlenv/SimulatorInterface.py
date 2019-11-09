@@ -3,8 +3,8 @@ from torch.distributions.bernoulli import Bernoulli
 from torch.distributions.poisson import Poisson
 import pandas as pd
 import utils
-from rlenv.model_names import *
-from rlenv.Composer import Composer
+from models.model_names import *
+from composer.Composer import Composer
 from rlenv import env_consts
 from simulator.nets import FeedForward, RNN, LSTM
 from constants import TOL_HALF, SLR_PREFIX, BYR_PREFIX

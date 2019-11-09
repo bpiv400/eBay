@@ -1,4 +1,4 @@
-from rlenv.TimeFeatures import SmallHeap, HeapEntry
+from time.TimeFeatures import SmallHeap
 import pytest
 
 
