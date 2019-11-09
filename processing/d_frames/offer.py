@@ -56,7 +56,7 @@ def get_x_offer(lookup, events):
     clock = clock.join(events.clock.unstack())
     # delay features
     df['delay'] = get_delay(clock)
-    df['auto'] = df.delay == 0
+    df['auto'] = (df.delay == 0) & df.index.isin(IDX['slr'], level='index')
     df['exp'] = df.delay == 1
     # clock features
     clock = clock.rename_axis('index', axis=1).stack().rename(
@@ -78,7 +78,8 @@ if __name__ == "__main__":
 
     # load other data
     lookup = load(PARTS_DIR + '%s/lookup.gz' % part)
-    events = load_frames('events').reindex(index=idx, level='lstg')
+    events = load_frames('events').reset_index(
+        'slr', drop=True).reindex(index=idx, level='lstg')
 
     # offer features
     print('x_offer')

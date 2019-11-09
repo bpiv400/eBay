@@ -14,12 +14,21 @@ class Inputs(Dataset):
         # inputs
         self.d = load('%s/inputs/%s/%s.gz' % (PREFIX, part, model))
 
-        # save parameters to self
+        # number of examples
+        self.N = np.shape(self.d['x_fixed'])[0]
         self.model = model
-        self.role = model.split('_')[1]
         self.isRecurrent = 'turns' in self.d
+
+        # number of labels
+        if self.isRecurrent:
+            self.N_labels = np.sum(self.d['turns'])
+        else:
+            self.N_labels = self.N
+
         if 'tf' in self.d:
-            self.num_tfeats = len(self.d['tf'].columns)
+            for val in self.d['tf'].values():
+                self.N_tfeats = len(val.columns)
+                break
 
 
     def __getitem__(self, idx):
@@ -43,10 +52,11 @@ class Inputs(Dataset):
 
             # index of first timestamp
             start = self.d['idx_clock'][idx]
-            if self.model == arrival:
+            if self.model == 'arrival':
                 idx_clock = start + np.array(range(n), dtype='uint16')
             else:   # delay models
-                interval = int(INTERVAL[self.role] / 60) # interval in minutes
+                role = self.model.split('_')[1]
+                interval = int(INTERVAL[role] / 60) # interval in minutes
                 idx_clock = start + interval * np.array(
                     range(n), dtype='uint16')
 
@@ -58,11 +68,12 @@ class Inputs(Dataset):
                 x_tf = self.d['tf'][idx].reindex(
                     index=range(n), fill_value=0).to_numpy()
             else:
-                x_tf = np.zeros((n, self.num_tfeats), dtype='float32')
+                x_tf = np.zeros((n, self.N_tfeats), dtype='float32')
 
             # add marker for duration to expiration
-            duration = np.array(range(n), dtype='float32')
-            x_tf = np.concatenate((x_tf, duration), axis=1)
+            duration = np.array(range(n) / n, dtype='float32')
+            x_tf = np.concatenate((x_tf, 
+                np.expand_dims(duration, axis=1)), axis=1)
 
             # time feats: first clock feats, then time-varying feats
             x_time = np.concatenate((x_clock, x_tf), axis=1)
@@ -77,25 +88,23 @@ class Inputs(Dataset):
 # defines a sampler that extends torch.utils.data.Sampler
 class Sample(Sampler):
 
-    def __init__(self, dataset, isTraining):
+    def __init__(self, data, isTraining):
         """
-        dataset: instance of Inputs
+        data: instance of Inputs
         isTraining: chop into minibatches if True
         """
         super().__init__(None)
 
-        # for training, shuffle and chop into minibatches
-        if isTraining:
-            self.batches = []
-            for v in dataset.d['groups']:
+        # chop into minibatches; shuffle for training
+        self.batches = []
+        for v in data.d['groups']:
+            if isTraining:
                 np.random.shuffle(v)
-                self.batches += np.array_split(v, 1 + len(v) // MBSIZE)
-            # shuffle training batches
+            self.batches += np.array_split(v, 1 + len(v) // MBSIZE)
+        # shuffle training batches
+        if isTraining:
             np.random.shuffle(self.batches)
 
-        # for test, create batch of samples of same length
-        else:
-            self.batches = np.array_split(dataset.d['groups'], 1000)
 
     def __iter__(self):
         """
@@ -132,16 +141,16 @@ def collateRNN(batch):
 
     # sorts the batch list in decreasing order of turns
     for b in batch:
-        y.append(b[0])
+        y.append(torch.from_numpy(b[0]))
         turns.append(b[1])
         x_fixed.append(torch.from_numpy(b[2]))
         x_time.append(torch.from_numpy(b[3]))
         idx.append(b[4])
 
     # convert to tensor, pack if needed
-    y = torch.from_numpy(np.asarray(y))
+    y = torch.stack(y)
     turns = torch.from_numpy(np.asarray(
-        turns, dtype='int64'))
+        turns, dtype='int64')).long()
     x_fixed = torch.stack(x_fixed).float()
     x_time = torch.stack(x_time, dim=0).float()
     idx = torch.tensor(idx)

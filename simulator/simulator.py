@@ -2,9 +2,9 @@ import sys
 import torch, torch.optim as optim
 from torch.nn.utils import rnn
 import numpy as np
+from loss import *
+from nets import *
 from constants import *
-from simulator.loss import *
-from simulator.nets import *
 
 
 # constructs model-specific neural network.
@@ -91,8 +91,6 @@ class Simulator:
         # move to gpu
         if self.device != 'cpu':
             data = {k: v.to(self.device) for k, v in data.items()}
-            #print(torch.cuda.memory_allocated())
-            #print(torch.cuda.memory_cached())
 
         if self.isRecurrent:
             data['x_time'] = rnn.pack_padded_sequence(

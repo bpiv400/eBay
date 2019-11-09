@@ -45,7 +45,7 @@ def get_y(x_offer, outcome, role):
 	# subset to relevant observations
 	if outcome == 'con':
 		# drop zero delay and expired offers
-		mask = (x_offer.delay > 0) & ~x_offer.exp
+		mask = ~x_offer.auto & ~x_offer.exp
 	elif outcome == 'msg':
 		# drop accepts and rejects
 		mask = (x_offer.con > 0) & (x_offer.con < 1)

@@ -117,7 +117,7 @@ def get_featnames(d):
     featnames = {'x_fixed': list(d['x_fixed'].columns)}
     if 'x_clock' in d:
         featnames['x_time'] = \
-            list(d['x_clock'].columns) + list(d['tf'].columns)
+            list(d['x_clock'].columns) + list(d['tf'].columns) + ['duration']
     if 'x_time' in d:
         featnames['x_time'] = list(d['x_time'].columns)
     return featnames
@@ -132,7 +132,7 @@ def get_sizes(d):
         'fixed': len(d['x_fixed'].columns)}
     if 'x_clock' in d:
         sizes['steps'] = len(d['y'].columns)
-        sizes['time'] = len(d['x_clock'].columns) + len(d['tf'].columns)
+        sizes['time'] = len(d['x_clock'].columns) + len(d['tf'].columns) + 1
     if 'x_time' in d:
         sizes['steps'] = len(d['y'].columns)
         sizes['time'] = len(d['x_time'].columns)

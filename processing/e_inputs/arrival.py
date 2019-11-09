@@ -1,4 +1,4 @@
-import sys, pickle, os, h5py
+import sys, pickle, os
 from compress_pickle import load, dump
 import numpy as np, pandas as pd
 from constants import *

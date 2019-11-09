@@ -21,7 +21,7 @@ SHARES = {'train_models': 1/3, 'train_rl': 1/3}
 TOL_HALF = 0.02
 
 # optimization parameters
-MBSIZE = 32 * 3
+MBSIZE = 1024
 UPDATES = 5e6
 EPOCHS = 5
 LR = 1e-4
@@ -43,6 +43,9 @@ PARTS_DIR = '%s/partitions/' % PREFIX
 REWARDS_DIR = '%s/rewards/' % PREFIX
 PCTILE_DIR = '%s/pctile/' % PREFIX
 W2V_DIR = '%s/w2v/' % PREFIX
+
+SUMMARY_DIR = 'outputs/summary/'
+MODEL_DIR = 'outputs/models/'
 
 # partitions
 PARTITIONS = ['train_models', 'train_rl', 'test']
@@ -76,7 +79,8 @@ INTERVAL_COUNTS = {
 HIST_QUANTILES = 10
 
 # model names
-MODELS = ['arrival','hist', 'delay_byr', 'delay_slr', 'con_byr', 'con_slr']
+MODELS = ['arrival','hist', 'delay_byr', 'delay_slr', 'con_byr', 'con_slr', \
+	'msg_byr', 'msg_slr']
 
 # organizing hierarchy
 LEVELS = ['slr', 'cat', 'cndtn', 'lstg']
@@ -120,8 +124,3 @@ BATCH_TIMINGS_LIST = [  # list of batch timing names
 ]
 
 EPOCH_TIME = 'epoch_time'
-
-MODEL_DIR = 'output fake'
-
-
-

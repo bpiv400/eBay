@@ -1,4 +1,4 @@
-import sys, pickle, os, h5py
+import sys, pickle, os
 from compress_pickle import load, dump
 import numpy as np, pandas as pd
 from constants import *
@@ -11,9 +11,9 @@ def add_past_offers(role, x_fixed, x_offer, tf_raw):
     df = x_offer.join(tf_raw.reindex(
         index=x_offer.index, fill_value=0))
     offer1 = df.groupby(['lstg', 'thread']).shift(
-        periods=1).reindex(index=idx)
+        periods=1).reindex(index=x_fixed.index)
     offer2 = df.groupby(['lstg', 'thread']).shift(
-        periods=2).reindex(index=idx)
+        periods=2).reindex(index=x_fixed.index)
     # drop constant features
     if role == 'byr':
         offer2 = offer2.drop(['auto', 'exp', 'reject'], axis=1)
@@ -38,13 +38,14 @@ def process_inputs(part, role):
 
     # sort by number of turns
     turns = get_sorted_turns(y)
+    turns = turns[turns > 0]
     y = y.reindex(index=turns.index)
 
     # load dataframes
     x_lstg = cat_x_lstg(getPath)
     x_thread = load(getPath(['x', 'thread']))
     x_offer = load(getPath(['x', 'offer']))
-    tf_raw = load(getPath(['tf', 'delay', 'raw']))
+    tf_raw = load(getPath(['tf', 'role', 'raw']))
     clock = load(getPath(['clock']))
 
     # initialize fixed features
@@ -53,7 +54,7 @@ def process_inputs(part, role):
     # turn indicators
     x_fixed = add_turn_indicators(x_fixed)
 
-    # add weeks since thread start
+    # add days since thread start
     thread_start = clock.xs(1, level='index')
     sec = clock - thread_start.reindex(index=clock.index)
     sec = sec.groupby(['lstg', 'thread']).shift().dropna().astype('int64')
@@ -66,12 +67,12 @@ def process_inputs(part, role):
     N = pd.to_timedelta(
         pd.to_datetime('2016-12-31 23:59:59') - pd.to_datetime(START))
     N = int((N.total_seconds()+1) / 60)
-    clock = pd.to_datetime(range(N), unit='m', origin=START)
-    clock = pd.Series(clock, name='clock')
-    x_clock = extract_clock_feats(clock).join(clock).set_index('clock')
+    minute = pd.to_datetime(range(N), unit='m', origin=START)
+    minute = pd.Series(minute, name='clock')
+    x_clock = extract_clock_feats(minute).join(minute).set_index('clock')
 
     # index of first x_clock for each y
-    start = x_offer.clock.groupby(['lstg', 'thread']).shift().reindex(
+    start = clock.groupby(['lstg', 'thread']).shift().reindex(
         index=turns.index)
     idx_clock = (start // 60).astype('int64')
 
