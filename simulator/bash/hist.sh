@@ -1,6 +1,6 @@
 #!/bin/bash
 #$ -q all.q
-#$ -l m_mem_free=30G
+#$ -l m_mem_free=100G
 #$ -t 1-28
 #$ -N hist
 #$ -o logs/

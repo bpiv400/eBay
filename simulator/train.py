@@ -94,4 +94,8 @@ if __name__ == '__main__':
 
     # train model
     train_model(simulator, train, test, outfile)
+
+    # save model
+    torch.save(simulator.net.state_dict(), 
+        MODEL_DIR + '%s_%s.pt' % (model, paramsid))
     

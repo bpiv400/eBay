@@ -11,9 +11,9 @@ def add_past_offers(role, x_fixed, x_offer, tf_raw):
     df = x_offer.join(tf_raw.reindex(
         index=x_offer.index, fill_value=0))
     offer1 = df.groupby(['lstg', 'thread']).shift(
-        periods=1).reindex(index=idx)
+        periods=1).reindex(index=x_fixed.index)
     offer2 = df.groupby(['lstg', 'thread']).shift(
-        periods=2).reindex(index=idx)
+        periods=2).reindex(index=x_fixed.index)
     # drop constant features
     if role == 'byr':
         offer2 = offer2.drop(['auto', 'exp', 'reject'], axis=1)
