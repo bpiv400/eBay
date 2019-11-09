@@ -66,9 +66,9 @@ def process_inputs(part, role):
     N = pd.to_timedelta(
         pd.to_datetime('2016-12-31 23:59:59') - pd.to_datetime(START))
     N = int((N.total_seconds()+1) / 60)
-    clock = pd.to_datetime(range(N), unit='m', origin=START)
-    clock = pd.Series(clock, name='clock')
-    x_clock = extract_clock_feats(clock).join(clock).set_index('clock')
+    minute = pd.to_datetime(range(N), unit='m', origin=START)
+    minute = pd.Series(minute, name='clock')
+    x_clock = extract_clock_feats(minute).join(minute).set_index('clock')
 
     # index of first x_clock for each y
     start = clock.groupby(['lstg', 'thread']).shift().reindex(
