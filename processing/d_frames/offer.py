@@ -78,7 +78,8 @@ if __name__ == "__main__":
 
     # load other data
     lookup = load(PARTS_DIR + '%s/lookup.gz' % part)
-    events = load_frames('events').reindex(index=idx, level='lstg')
+    events = load_frames('events').reset_index(
+        'slr', drop=True).reindex(index=idx, level='lstg')
 
     # offer features
     print('x_offer')
