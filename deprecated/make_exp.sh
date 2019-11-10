@@ -5,5 +5,5 @@ cd $1
 mkdir "b0"
 mkdir "b1"
 mkdir "b2"
-cd ~/eBay/models/exps
+cd ~/eBay/interface/exps
 mkdir $1

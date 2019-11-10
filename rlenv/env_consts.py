@@ -72,8 +72,7 @@ EXPIRATION = 48 * 60 * 60
 # map names
 LSTG_MAP = 'lstg'
 CLOCK_MAP = 'clock'
-BYR_ATTR_MAP = 'byr_attr'
-BYR_US_MAP = 'byr_us'
+DUR_MAP = 'duration'
 BYR_HIST_MAP = 'byr_hist'
 OUTCOMES_MAP = 'outcomes'
 SIZE = 'size'

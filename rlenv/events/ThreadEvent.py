@@ -8,7 +8,7 @@ from events.Event import Event
 class ThreadEvent(Event):
     """
     Attributes:
-        hidden: dictionary containing hidden states for all buyer and seller decision models
+        hidden: dictionary containing hidden states for all buyer and seller decision interface
         sources: dictionary containing all input maps generated during previous turns
         byr: boolean giving whether this is a buyer turn
         thread_id: integer giving the thread id
@@ -20,7 +20,7 @@ class ThreadEvent(Event):
         Constructor
         :param priority: integer giving the time of the event
         :param thread_id: integer giving the thread id
-        :param hidden: dictionary containing hidden states for all buyer and seller decision models
+        :param hidden: dictionary containing hidden states for all buyer and seller decision interface
         :param: turn: gives the turn number
         :param sources: dictionary containing all input maps generated during previous turns
         """

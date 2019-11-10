@@ -1,12 +1,12 @@
 #TODO: Move all of this into env_consts
 
-# arrival models
+# arrival interface
 from constants import SLR_PREFIX, BYR_PREFIX
 
 NUM_OFFERS = 'arrival'
 BYR_HIST = 'hist'
 
-# offer models
+# offer interface
 CON = 'cn'
 DELAY = 'delay'
 MSG = 'msg'
@@ -15,13 +15,14 @@ MSG = 'msg'
 ARRIVAL_PREFIX = 'arrival'
 
 # model sets
-FEED_FORWARD = [DAYS, SEC]
-ARRIVAL = FEED_FORWARD
-RECURRENT = [DELAY, CON]
-LSTM_MODELS = [DAYS, '{}_{}'.format(SLR_PREFIX, DELAY), '{}_{}'.format(BYR_PREFIX, DELAY)]
-OFFER_NO_PREFIXES = [model for model in RECURRENT if model != DAYS]
+FEED_FORWARD = [BYR_HIST]
+ARRIVAL = [NUM_OFFERS, BYR_HIST]
+RECURRENT = [NUM_OFFERS, CON, DELAY, MSG]
+LSTM_MODELS = [NUM_OFFERS, '{}_{}'.format(SLR_PREFIX, DELAY),
+               '{}_{}'.format(BYR_PREFIX, DELAY)]
+OFFER_NO_PREFIXES = [model for model in RECURRENT if model != NUM_OFFERS]
 MODELS_NO_PREFIXES = RECURRENT + FEED_FORWARD
 OFFER = ['{}_{}'.format(SLR_PREFIX, model) for model in OFFER_NO_PREFIXES] + \
         ['{}_{}'.format(BYR_PREFIX, model) for model in OFFER_NO_PREFIXES]
-MODELS = OFFER + FEED_FORWARD
+MODELS = OFFER + ARRIVAL
 

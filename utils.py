@@ -49,10 +49,10 @@ def get_clock_feats(time, start_days, arrival=False, delay=False):
     """
     Gets clock features as np.array given the time
 
-    For arrival models, gives outputs in order of ARRIVAL_CLOCK_FEATS
-    For offer models, gives outputs in order of
+    For arrival interface, gives outputs in order of ARRIVAL_CLOCK_FEATS
+    For offer interface, gives outputs in order of
 
-    Will need to add argument to include minutes for other models
+    Will need to add argument to include minutes for other interface
 
     TODO: When days is added to delay, this will need to be changed
 

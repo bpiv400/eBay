@@ -3,7 +3,7 @@ import torch
 import numpy as np
 from platform import platform
 
-# strings for referencing quantities related to buyer and seller models
+# strings for referencing quantities related to buyer and seller interface
 SLR_PREFIX = 'slr'
 BYR_PREFIX = 'byr'
 ARRIVAL_PREFIX = 'arrival'
@@ -44,9 +44,9 @@ PARTS_DIR = '%s/partitions/' % PREFIX
 REWARDS_DIR = '%s/rewards/' % PREFIX
 PCTILE_DIR = '%s/pctile/' % PREFIX
 W2V_DIR = '%s/w2v/' % PREFIX
-
+INPUT_DIR = '%s/inputs/' % PREFIX
 SUMMARY_DIR = 'outputs/summary/'
-MODEL_DIR = 'outputs/models/'
+MODEL_DIR = 'outputs/interface/'
 
 # partitions
 PARTITIONS = ['train_models', 'train_rl', 'test']
@@ -104,24 +104,7 @@ HOLIDAYS = Calendar().holidays(start=START, end=END)
 # quantiles of accept_norm distribution
 QUANTILES = [0.25, 0.5, 0.75, 1]
 
-# timings related constants
-FF_TIMINGS_LOG_DIR = 'data/logs/ff_timings/'
-BATCH_TIMES = 'batch_time'
-FULL_BATCH = 'full_batch'  # full batch time
-DL_TIME = 'data_loader'  # time for moving to device
-MOVE_TIME = 'move'  # time for moving to device
-LOSS_TIME = 'loss'  # time for computing the loss
-FORWARD_TIME = 'forward'  # time for forward pass of model
-BACKWARD_TIME = 'backward'  # time for backproping loss
-LIKELIHOOD = 'likelihood'   # log likelihood
-
-BATCH_TIMINGS_LIST = [  # list of batch timing names
-	FULL_BATCH,
-	DL_TIME,
-	MOVE_TIME,
-	LOSS_TIME,
-	FORWARD_TIME,
-	BACKWARD_TIME
-]
 
 EPOCH_TIME = 'epoch_time'
+
+ARRIVAL_PERIODS = 31 * 24

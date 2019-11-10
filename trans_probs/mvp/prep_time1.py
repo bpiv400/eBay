@@ -29,7 +29,7 @@ def get_resp_offr(turn):
 def get_resp_time(turn):
     '''
     Description: Determines the name of the response column given the name of the last observed turn
-    for time models
+    for time interface
     '''
     turn_num = turn[1]
     turn_type = turn[0]

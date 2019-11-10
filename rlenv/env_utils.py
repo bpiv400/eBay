@@ -2,9 +2,8 @@
 Utility functions for use in objects related to the RL environment
 """
 import utils
-from constants import SLR_PREFIX, BYR_PREFIX, ARRIVAL_PREFIX
-from rlenv.env_consts import MODEL_DIR
-from rlenv.models.model_names import FEED_FORWARD, LSTM_MODELS
+from constants import SLR_PREFIX, BYR_PREFIX, ARRIVAL_PREFIX, INPUT_DIR
+from rlenv.interface.model_names import FEED_FORWARD, LSTM_MODELS
 from simulator.nets import FeedForward, LSTM, RNN
 
 
@@ -26,8 +25,11 @@ def model_str(model_name, byr=False):
 
 
 def load_featnames(model_type, model_name):
-    dir_path = '{}/{}/{}/'.format(MODEL_DIR, model_type, model_name)
-    featnames_path = '{}featnames.pkl'.format(dir_path)
+    if model_type == ARRIVAL_PREFIX:
+        path_suffix = model_name
+    else:
+        path_suffix = '{}_{}'.format(model_type, model_name)
+    featnames_path = '{}featnames/{}.pkl'.format(INPUT_DIR, path_suffix)
     featnames_dict = utils.unpickle(featnames_path)
     return featnames_dict
 
@@ -35,7 +37,7 @@ def load_featnames(model_type, model_name):
 def get_model_class(model_name):
     """
     Returns the class of the given model
-    TODO: Update to accommodate new days and secs models
+    TODO: Update to accommodate new days and secs interface
 
     :param model_name: str giving the name of the model
     :return: simulator.nets.RNN, simulator.nets.LSTM, or
@@ -54,7 +56,7 @@ def get_model_dir(model_name):
     """
     Helper method that returns the path to a model's directory, given
     the name of that model
-    TODO: Update to accommodate new days and secs models
+    TODO: Update to accommodate new days and secs interface
 
     :param model_name: str naming model (following naming conventions in rlenv/model_names.py)
     :return: str

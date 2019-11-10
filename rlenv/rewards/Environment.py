@@ -20,7 +20,7 @@ from events.event_types import *
 from env_utils import *
 from constants import INTERVAL_COUNTS, INTERVAL
 from SimulatorInterface import SimulatorInterface
-import models.model_names as model_names
+import interface.model_names as model_names
 
 
 # TODO: Redo documentation when all is said and done
@@ -38,7 +38,7 @@ class Environment:
         and a 2-dimensional np.array of lstg features for each slr in datasets named after the slrs
     Attributes:
         experiment_id: int giving the id of the current experiment
-        input_file: connection to hdf5 file containing x_lstg features for all models
+        input_file: connection to hdf5 file containing x_lstg features for all interface
         lstg_count: number of lstgs in the x_lstg file
 
         thread_counter: integer that provides unique identifier for each thread
@@ -560,7 +560,7 @@ class Environment:
     def _add_attr_sources(sources, byr_us=None, byr_hist=None):
         """
         Adds byr_us and byr_hist maps to the sources dictionary
-        for some set of arrival models
+        for some set of arrival interface
 
         :param sources: dictionary containing tensors that will be used to construct
         input

@@ -32,11 +32,11 @@ class Inputs(Dataset):
 
 
     def __getitem__(self, idx):
-        # all models index y and x_fixed using idx
+        # all interface index y and x_fixed using idx
         y = self.d['y'][idx]
         x_fixed = self.d['x_fixed'][idx,:]
 
-        # feed-forward models
+        # feed-forward interface
         if not self.isRecurrent:
             return y, x_fixed, idx
 
@@ -54,7 +54,7 @@ class Inputs(Dataset):
             start = self.d['idx_clock'][idx]
             if self.model == 'arrival':
                 idx_clock = start + np.array(range(n), dtype='uint16')
-            else:   # delay models
+            else:   # delay interface
                 role = self.model.split('_')[1]
                 interval = int(INTERVAL[role] / 60) # interval in minutes
                 idx_clock = start + interval * np.array(

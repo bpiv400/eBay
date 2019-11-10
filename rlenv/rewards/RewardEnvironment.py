@@ -9,7 +9,7 @@ from rlenv.events.FirstOffer import FirstOffer
 
 class RewardEnvironment:
     def __init__(self, **kwargs):
-        # environment models
+        # environment interface
         self.buyer = kwargs['buyer']
         self.seller = kwargs['seller']
         self.arrival = kwargs['arrival']

@@ -204,18 +204,18 @@ if __name__ == '__main__':
     sys.stdout.flush()
     print('Pickling')
     sys.stdout.flush()
-    torch.save(net.state_dict(), 'models/exps/%s/model_%s.pth.tar' %
+    torch.save(net.state_dict(), 'interface/exps/%s/model_%s.pth.tar' %
                (exp_name, turn))
 
-    loss_pickle = open('models/exps/%s/loss_%s.pickle' %
+    loss_pickle = open('interface/exps/%s/loss_%s.pickle' %
                        (exp_name, turn), 'wb')
     pickle.dump(loss_hist, loss_pickle)
     loss_pickle.close()
 
     class_series.to_csv(
-        'models/exps/%s/class_series_%s.csv' % (exp_name, turn))
+        'interface/exps/%s/class_series_%s.csv' % (exp_name, turn))
 
-    feat_dict_pick = open('models/exps/%s/featdict_%s.pickle' %
+    feat_dict_pick = open('interface/exps/%s/featdict_%s.pickle' %
                           (exp_name, turn), 'wb')
     pickle.dump(colix, feat_dict_pick)
     feat_dict_pick.close()

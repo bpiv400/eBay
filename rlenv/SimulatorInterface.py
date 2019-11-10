@@ -3,7 +3,7 @@ from torch.distributions.bernoulli import Bernoulli
 from torch.distributions.poisson import Poisson
 import pandas as pd
 import utils
-from models.model_names import *
+from interface.model_names import *
 from composer.Composer import Composer
 from rlenv import env_consts
 from simulator.nets import FeedForward, RNN, LSTM
@@ -13,7 +13,7 @@ from constants import TOL_HALF, SLR_PREFIX, BYR_PREFIX
 class SimulatorInterface:
     def __init__(self, params):
         """
-        Use rl experiment params to initialize models
+        Use rl experiment params to initialize interface
 
         :param params:
         """
@@ -74,7 +74,7 @@ class SimulatorInterface:
 
     def offer_indicator(self, model_name, sources=None, hidden=None, sample=True):
         """
-        Computes outputs of recurrent offer models that produce an indicator for some event
+        Computes outputs of recurrent offer interface that produce an indicator for some event
         (round, msg, nines, accept, reject, delay)
 
         :param model_name: str giving name of the target model (see model_names.MODELS for
