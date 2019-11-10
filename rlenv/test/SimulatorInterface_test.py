@@ -5,8 +5,8 @@ import torch.nn.functional as F
 import pandas as pd
 from rlenv.SimulatorInterface import SimulatorInterface
 from rlenv.env_consts import EXPERIMENT_PATH, MODEL_DIR
-from rlenv.model_names import (MODELS, OFFER_NO_PREFIXES,
-                               ARRIVAL, ARRIVAL_PREFIX, OFFER, DELAY, DAYS, FEED_FORWARD)
+from models.model_names import (MODELS, OFFER_NO_PREFIXES,
+                                ARRIVAL, ARRIVAL_PREFIX, OFFER, DELAY, DAYS, FEED_FORWARD)
 from constants import SLR_PREFIX, BYR_PREFIX
 from simulator.nets import LSTM, RNN, FeedForward
 

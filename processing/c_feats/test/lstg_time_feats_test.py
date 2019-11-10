@@ -1,10 +1,9 @@
 import pytest
 import pandas as pd
-import numpy as np
 import torch
 from processing.c_feats.tf_lstg import get_lstg_time_feats
-from rlenv.TimeFeatures import TimeFeatures
-from rlenv.time_triggers import *
+from time.TimeFeatures import TimeFeatures
+from time.time_triggers import *
 from rlenv.env_consts import EXPIRATION
 
 
@@ -62,6 +61,7 @@ def update(events, timefeats, trigger_type=None, thread_id=None, offer=None, lst
         timefeats.update_features(trigger_type=trigger_type,
                                   thread_id=thread_id, offer=offer)
     return events
+
 
 
 def add_event(df, trigger_type=None, offer=None, thread_id=None, lstg=0):

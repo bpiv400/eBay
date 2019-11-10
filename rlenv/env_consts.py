@@ -50,11 +50,10 @@ PARTITION = 'train_rl'
 DATA_DIR = '{}{}/'.format(PARTS_DIR, PARTITION)
 X_LSTG_FILENAME = '{}{}.hdf5'.format(DATA_DIR, X_LSTG)
 COMPOSER_DIR = '{}composer/'.format(MODEL_DIR)
-EXPERIMENT_PATH = 'repo/rlenv/experiments.csv'
+REWARD_EXPERIMENT_PATH = 'repo/rlenv/rewards/experiments.csv'
 FEATNAMES_FILENAME = 'featnames.pkl'
 SIZES_FILENAME = 'sizes.pkl'
 LOOKUP_FILENAME = 'lookup.gz'
-LOOKUP_COLS_FILENAME = '{}lookup_cols.pkl'.format(DATA_DIR)
 
 
 # clock feats
@@ -65,8 +64,9 @@ OFFER_CLOCK_FEATS = DAYS_CLOCK_FEATS + ['minutes']
 DELAY_CLOCK_FEATS = [feat for feat in OFFER_CLOCK_FEATS if feat != 'days']
 
 # temporal constants
-MONTH = 30 * 24 * 3600
+MONTH = 31 * 24 * 3600
 DAY = 24 * 3600
+HOUR = 3600
 EXPIRATION = 48 * 60 * 60
 
 # map names
@@ -105,7 +105,6 @@ TIME = 'time'
 
 # parameter names
 SIM_COUNT = 'n'
-RELIST_COUNT = 'lstg_dur'
 
 # fee constants
 ANCHOR_STORE_INSERT = .03

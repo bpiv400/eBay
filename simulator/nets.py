@@ -124,6 +124,9 @@ class LSTM(nn.Module):
         # output layer: (batch_size, seq_len, N_output)
         return self.output(theta).squeeze()
 
+    def init(self, x_fixed=None):
+        hidden = (self.h0(x_fixed), self.c0(x_fixed))
+        return hidden
 
     def simulate(self, x_time, x_fixed=None, hidden=None):
         """
