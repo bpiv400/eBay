@@ -1,6 +1,7 @@
 import sys
 import numpy as np, pandas as pd
 import torch
+from datetime import datetime as dt
 from torch.utils.data import Dataset, Sampler
 from compress_pickle import load
 from constants import *
@@ -19,19 +20,34 @@ class Inputs(Dataset):
         self.model = model
         self.isRecurrent = 'turns' in self.d
 
-        # number of labels
+        # number of labels, for normalizing loss
         if self.isRecurrent:
             self.N_labels = np.sum(self.d['turns'])
         else:
             self.N_labels = self.N
 
+        # for arrival and delay models
         if 'tf' in self.d:
+            # number of time steps
+            self.n = self.d['turns'][0]
+            # interval for clock features
+            role = model.split('_')[-1]
+            interval = int(INTERVAL[role] / 60) # interval in minutes
+            self.counter = interval * np.array(range(self.n), dtype='uint16')
+            # period / max periods
+            self.duration = np.expand_dims(
+                np.array(range(self.n) / self.n, dtype='float32'), axis=1)
+            # number of time features
             for val in self.d['tf'].values():
-                self.N_tfeats = len(val.columns)
+                N_tfeats = len(val.columns)
                 break
+            # empty time feats
+            self.tf0 = np.zeros((self.n, N_tfeats), dtype='float32')
 
 
     def __getitem__(self, idx):
+        t0 = dt.now()
+
         # all models index y and x_fixed using idx
         y = self.d['y'][idx]
         x_fixed = self.d['x_fixed'][idx,:]
@@ -47,18 +63,8 @@ class Inputs(Dataset):
         if 'x_time' in self.d:
             x_time = self.d['x_time'][idx,:,:]
         else:
-            # number of time steps
-            n = self.d['turns'][0]
-
-            # index of first timestamp
-            start = self.d['idx_clock'][idx]
-            if self.model == 'arrival':
-                idx_clock = start + np.array(range(n), dtype='uint16')
-            else:   # delay models
-                role = self.model.split('_')[1]
-                interval = int(INTERVAL[role] / 60) # interval in minutes
-                idx_clock = start + interval * np.array(
-                    range(n), dtype='uint16')
+            # indices of timestamps
+            idx_clock = self.d['idx_clock'][idx] + self.counter
 
             # clock features
             x_clock = self.d['x_clock'][idx_clock].astype('float32')
@@ -66,17 +72,14 @@ class Inputs(Dataset):
             # fill in missing time feats with zeros
             if idx in self.d['tf']:
                 x_tf = self.d['tf'][idx].reindex(
-                    index=range(n), fill_value=0).to_numpy()
+                    index=range(self.n), fill_value=0).to_numpy()
             else:
-                x_tf = np.zeros((n, self.N_tfeats), dtype='float32')
-
-            # add marker for duration to expiration
-            duration = np.array(range(n) / n, dtype='float32')
-            x_tf = np.concatenate((x_tf, 
-                np.expand_dims(duration, axis=1)), axis=1)
+                x_tf = self.tf0
 
             # time feats: first clock feats, then time-varying feats
-            x_time = np.concatenate((x_clock, x_tf), axis=1)
+            x_time = np.concatenate((x_clock, x_tf, self.duration), axis=1)
+
+        print('\tfetch time: %d sec' % (dt.now() - t0).seconds)
         
         return y, turns, x_fixed, x_time, idx
 
