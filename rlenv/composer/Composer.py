@@ -1,14 +1,13 @@
 import os
 import pickle
-
+from compress_pickle import load
 import constants
 import pandas as pd
-import h5py
 import numpy as np
 from rlenv.env_consts import *
 from utils import unpickle
 from rlenv.interface import model_names
-
+from rlenv.env_utils import load_featnames
 
 class Composer:
     """
@@ -55,8 +54,7 @@ class Composer:
         :return: dictionary of maps for all interface
         """
         output = dict()
-        x_lstg = h5py.File(X_LSTG_FILENAME, 'r')[X_LSTG]
-        x_lstg_size = x_lstg.shape[1]
+        x_lstg_size = len(load('{}train_rl/1.gz'.format(constants.REWARDS_DIR))['x_lstg'].columns)
         fixed = torch.arange(x_lstg_size).long()
 
         for model_name in model_names.MODELS:
@@ -105,8 +103,8 @@ class Composer:
             last_time = ['{}_last'.format(feat) for feat in TIME_FEATS]
             maps[L_TIME_MAP] = Composer._build_simple_map(last_time, featnames)
             maps[TURN_IND_MAP] = Composer._build_simple_map(indicators, featnames)
-        if model_name != model_names.DAYS:
-            maps[BYR_ATTR_MAP] = Composer._build_simple_map(BYR_ATTRS, featnames)
+        if model_name is not in model_names.ARRIVAL:
+            maps[BYR_HIST_MAP] = Composer._build_simple_map(BYR_HIST, featnames)
         return maps
 
     @staticmethod
@@ -220,19 +218,16 @@ class Composer:
         :return: dictionary containing two entries, one for all time step input maps
         and one for fixed feature input maps
         """
-        if model_name == model_names.DAYS:
+        if model_name in model_names.ARRIVAL:
             model_type = model_names.ARRIVAL_PREFIX
-            subdir = model_name
         elif constants.SLR_PREFIX in model_name:
             model_type = constants.SLR_PREFIX
-            subdir = model_name.replace('{}_'.format(constants.SLR_PREFIX), '')
+            model_name = model_name.replace('{}_'.format(constants.SLR_PREFIX), '')
         else:
             model_type = constants.BYR_PREFIX
-            subdir = model_name.replace('{}_'.format(constants.BYR_PREFIX), '')
+            model_name = model_name.replace('{}_'.format(constants.BYR_PREFIX), '')
 
-        featnames_path = '{}/{}/{}/{}'.format(MODEL_DIR, model_type,
-                                              subdir, FEATNAMES_FILENAME)
-        featnames = unpickle(featnames_path)
+        featnames = load_featnames(model_type, model_name)
         fixed_maps = Composer._build_fixed(model_name, fixed, featnames['x_fixed'])
         time_maps = Composer._build_time(model_name, featnames['x_time'])
         sizes_path = '{}/{}/{}/{}'.format(MODEL_DIR, model_type,
