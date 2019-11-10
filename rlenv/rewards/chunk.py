@@ -6,7 +6,7 @@ import argparse
 from compress_pickle import dump, load
 from processing.processing_utils import cat_x_lstg
 from constants import PARTS_DIR, REWARDS_DIR, PARTITIONS
-from rlenv.env_consts import LOOKUP_COLS_FILENAME, LOOKUP_FILENAME
+from rlenv.env_consts import LOOKUP_FILENAME
 
 NUM_CHUNKS = 512
 

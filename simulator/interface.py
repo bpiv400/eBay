@@ -61,7 +61,6 @@ class Inputs(Dataset):
         if 'x_time' in self.d:
             x_time = self.d['x_time'][idx,:,:]
         else:
-<<<<<<< HEAD
             # number of time steps
             n = self.d['turns'][0]
 
@@ -74,10 +73,6 @@ class Inputs(Dataset):
                 interval = int(INTERVAL[role] / 60) # interval in minutes
                 idx_clock = start + interval * np.array(
                     range(n), dtype='uint16')
-=======
-            # indices of timestamps
-            idx_clock = self.d['idx_clock'][idx] + self.counter
->>>>>>> ad1194649f1d96a6063759f08c1ae8fc37d99982
 
             # clock features
             x_clock = self.d['x_clock'][idx_clock].astype('float32')
@@ -95,7 +90,6 @@ class Inputs(Dataset):
         print('\tfetch time: %d sec' % (dt.now() - t0).seconds)
         
         return y, turns, x_fixed, x_time, idx
-
 
     def __len__(self):
         return self.N
