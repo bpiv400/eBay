@@ -43,7 +43,7 @@ class EventQueue:
             event = heapq.heappop(self.queue)
         return event
 
-    def clear(self):
+    def reset(self):
         self.queue = []
 
     def empty(self):

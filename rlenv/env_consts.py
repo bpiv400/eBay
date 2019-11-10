@@ -64,8 +64,9 @@ OFFER_CLOCK_FEATS = DAYS_CLOCK_FEATS + ['minutes']
 DELAY_CLOCK_FEATS = [feat for feat in OFFER_CLOCK_FEATS if feat != 'days']
 
 # temporal constants
-MONTH = 30 * 24 * 3600
+MONTH = 31 * 24 * 3600
 DAY = 24 * 3600
+HOUR = 3600
 EXPIRATION = 48 * 60 * 60
 
 # map names

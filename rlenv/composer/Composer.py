@@ -15,8 +15,8 @@ class Composer:
     Class for composing inputs to models from various input streams
 
     """
-    def __init__(self, params, rebuild=False):
-        composer_path = '{}{}.pkl'.format(COMPOSER_DIR, params['composer'])
+    def __init__(self, composer_id, rebuild=False):
+        composer_path = '{}{}.pkl'.format(COMPOSER_DIR, composer_id)
         if not os.path.exists(composer_path) or rebuild:
             self.maps = Composer.build()
             pickle.dump(self.maps, open(composer_path, 'wb'))
@@ -412,6 +412,14 @@ class Composer:
                 print('sourced map: {}'.format(sources[map_name]))
                 raise RuntimeError()
         return x
+
+    def build_arrival_init(self, x_lstg):
+        sources = {
+            LSTG_MAP: x_lstg
+        }
+        x_fixed = Composer._build_input_vector(self.maps[model_names.NUM_OFFERS],
+                                               sources, size=1)
+        return x_fixed
 
     def build_input_vector(self, model_name, sources=None, fixed=False, recurrent=False, size=1):
         """

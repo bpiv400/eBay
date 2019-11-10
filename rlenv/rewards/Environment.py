@@ -516,55 +516,6 @@ class Environment:
         period_count = periods + last_interval / period_len
         return period_count / max_periods
 
-    def _process_arrival(self, event):
-        """
-        Updates queue with results of an Arrival Event
-
-        :param event: Event corresponding to current event
-        :return: boolean indicating whether the lstg has ended
-        """
-        if self._lstg_expiration(event):
-            return True
-
-        sources = self._make_base_sources(event, arrival=True, delay=False)
-        num_byrs, hidden_days = self.interface.days(sources=sources,
-                                                    hidden=event.hidden_days)
-
-        if num_byrs > 0:
-            loc = self.interface.loc(sources=sources, num_byrs=num_byrs)
-            hist = self.interface.hist(sources=sources, byr_us=loc)
-            self._add_attr_sources(sources, byr_hist=hist, byr_us=loc)
-            sec = self.interface.sec(sources=sources, num_byrs=num_byrs)
-            bin = self.interface.bin(sources=sources, num_byrs=num_byrs)
-            # place each into the queue
-            for i in range(num_byrs):
-                byr_attr = torch.zeros(2).float()
-                byr_attr[0] = loc[i]
-                byr_attr[1] = hist[i]
-                priority = event.priority + int(sec[i] * DAY)
-                self.thread_counter += 1
-                offer_event = FirstOffer(priority, byr_attr=byr_attr,
-                                         thread_id=self.thread_counter, bin=bin[i])
-                self.queue.push(offer_event)
-        # Add arrival check
-        priority = event.priority + DAY
-        arrive = Arrival(priority=priority, hidden_days=hidden_days)
-        self.queue.push(arrive)
-        return False
-
-    def _lstg_expiration(self, event):
-        """
-        Checks whether the lstg has expired by the time of the event
-        If so, record the reward as negative insertion fees
-        :param event: rlenv.Event subclass
-        :return: boolean
-        """
-        if event.priority >= self.end_time:
-            profit = -1 * self._insertion_fees(event.priority)
-            self.sales[self.curr_lstg].append(False, profit, event.priority)
-            return True
-        else:
-            return False
 
     def _insertion_fees(self, time):
         """
@@ -578,21 +529,6 @@ class Environment:
         periods = min(periods, self.params[RELIST_COUNT])
         fees = periods * ANCHOR_STORE_INSERT
         return fees
-
-    def _make_base_sources(self, time, arrival=True, delay=False):
-        """
-        Constructs the sources dictonary for the days model
-
-        :param time: time of the arrival event
-        :return: dict containing LST_MAP, TIME_MAP, CLOCK_MAP
-        """
-        sources = dict()
-        start_days = self.lookup[self.lookup_dict['start_days']]
-        sources[CLOCK_MAP] = utils.get_clock_feats(time, start_days, arrival=arrival,
-                                                   delay=delay)
-        sources[LSTG_MAP] = self.x_lstg_slice
-        sources[TIME_MAP] = self.time_feats.get_feats(time=time)
-        return sources
 
     def _make_sources(self, event):
         """

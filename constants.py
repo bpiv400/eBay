@@ -6,6 +6,7 @@ from platform import platform
 # strings for referencing quantities related to buyer and seller models
 SLR_PREFIX = 'slr'
 BYR_PREFIX = 'byr'
+ARRIVAL_PREFIX = 'arrival'
 
 # vocabulary size for embeddings
 VOCAB_SIZE = 32

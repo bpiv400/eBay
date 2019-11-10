@@ -2,8 +2,10 @@
 Utility functions for use in objects related to the RL environment
 """
 import utils
-from constants import SLR_PREFIX, BYR_PREFIX
+from constants import SLR_PREFIX, BYR_PREFIX, ARRIVAL_PREFIX
 from rlenv.env_consts import MODEL_DIR
+from rlenv.models.model_names import FEED_FORWARD, LSTM_MODELS
+from simulator.nets import FeedForward, LSTM, RNN
 
 
 def model_str(model_name, byr=False):
@@ -28,3 +30,59 @@ def load_featnames(model_type, model_name):
     featnames_path = '{}featnames.pkl'.format(dir_path)
     featnames_dict = utils.unpickle(featnames_path)
     return featnames_dict
+
+
+def get_model_class(model_name):
+    """
+    Returns the class of the given model
+    TODO: Update to accommodate new days and secs models
+
+    :param model_name: str giving the name of the model
+    :return: simulator.nets.RNN, simulator.nets.LSTM, or
+    simulator.nets.FeedForward
+    """
+    if model_name in FEED_FORWARD:
+        mod_type = FeedForward
+    elif model_name in LSTM_MODELS:
+        mod_type = LSTM
+    else:
+        mod_type = RNN
+    return mod_type
+
+
+def get_model_dir(model_name):
+    """
+    Helper method that returns the path to a model's directory, given
+    the name of that model
+    TODO: Update to accommodate new days and secs models
+
+    :param model_name: str naming model (following naming conventions in rlenv/model_names.py)
+    :return: str
+    """
+    # get pathing names
+    if SLR_PREFIX in model_name:
+        model_type = SLR_PREFIX
+        model_name = model_name.replace('{}_'.format(SLR_PREFIX), '')
+    elif BYR_PREFIX in model_name:
+        model_type = BYR_PREFIX
+        model_name = model_name.replace('{}_'.format(BYR_PREFIX), '')
+    else:
+        model_type = ARRIVAL_PREFIX
+
+    model_dir = '{}/{}/{}/'.format(MODEL_DIR, model_type, model_name)
+    return model_dir
+
+
+def get_model_input_paths(model_dir, exp):
+    """
+    Helper method that returns the paths to files related to some model, given
+    that model's path and experiment number
+
+    :param model_dir: string giving path to model directory
+    :param exp: int giving integer number of the experiment
+    :return: 3-tuple of params path, sizes path, model path
+    """
+    params_path = '{}params.csv'.format(model_dir)
+    sizes_path = '{}sizes.pkl'.format(model_dir)
+    model_path = '{}{}.pt'.format(model_dir, exp)
+    return params_path, sizes_path, model_path

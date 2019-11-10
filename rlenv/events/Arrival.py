@@ -14,12 +14,12 @@ class Arrival(Event):
         hidden_days: tensor giving the hidden state of the arrival days model
         turn: integer giving that the current turn is turn 1
     """
-    def __init__(self, priority, hidden_days=None):
+    def __init__(self, priority, sources):
         """
         Constructor
 
         :param priority: integer time of the event
-        :param hidden_days: hidden state of the recurrent arrival days model
         """
         super(Arrival, self).__init__(ARRIVAL, priority=int(priority), thread_id=None)
-        self.hidden_days = hidden_days
+        self.sources = sources
+

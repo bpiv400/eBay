@@ -3,7 +3,7 @@
 # arrival models
 from constants import SLR_PREFIX, BYR_PREFIX
 
-NUM_OFFERS = 'num_offers'
+NUM_OFFERS = 'arrival'
 BYR_HIST = 'hist'
 
 # offer models

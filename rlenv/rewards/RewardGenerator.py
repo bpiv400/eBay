@@ -7,9 +7,10 @@ import pandas as pd
 from rlenv.env_consts import REWARD_EXPERIMENT_PATH, SIM_COUNT
 from rlenv.models.model_names import DELAY, CON, MSG, BYR_HIST, NUM_OFFERS
 from rlenv.models.bargainers import *
-from rlenv.models.ArrivalModel import ArrivalModel
+from rlenv.models.ArrivalInterface import ArrivalInterface
 from rlenv.env_utils import model_str
 from rlenv.rewards.RewardEnvironment import RewardEnvironment
+from rlenv.composer.Composer import Composer
 
 
 class RewardGenerator:
@@ -27,14 +28,18 @@ class RewardGenerator:
         self.lookup = input_dict['lookup']
         self.exp_id = exp_id
         self.params = self._load_params()
+        composer = Composer(self.params['composer'])
         self.buyer = BuyerModel(msg=self.params[model_str(MSG, byr=True)],
                                 con=self.params[model_str(CON, byr=True)],
-                                delay=self.params[model_str(DELAY, byr=True)])
+                                delay=self.params[model_str(DELAY, byr=True)],
+                                composer=composer)
         self.seller = SellerModel(msg=self.params[model_str(MSG, byr=False)],
                                   con=self.params[model_str(CON, byr=False)],
-                                  delay=self.params[model_str(DELAY, byr=False)])
-        self.arrival = ArrivalModel(byr_hist=self.params[BYR_HIST],
-                                    num_offers=self.params[NUM_OFFERS])
+                                  delay=self.params[model_str(DELAY, byr=False)],
+                                  composer=composer)
+        self.arrival = ArrivalInterface(byr_hist=self.params[BYR_HIST],
+                                        num_offers=self.params[NUM_OFFERS],
+                                        composer=composer)
 
     def _load_params(self):
         """

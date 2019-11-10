@@ -57,6 +57,9 @@ class TimeFeatures:
         """
         super(TimeFeatures, self).__init__()
         self.feats = dict()
+        self.reset()
+
+    def reset(self):
         for feat in consts.TIME_FEATS:
             self.feats[feat] = TimeFeatures._initialize_feature(feat)
 
