@@ -52,6 +52,8 @@ def process_inputs(part, role):
     x_offer = load(getPath(['x', 'offer']))
     tf_raw = load(getPath(['tf', 'role', 'raw']))
     clock = load(getPath(['clock']))
+    lstg_start = load(getPath(['lookup'])).start_date.astype(
+        'int64') * 24 * 3600
 
     # initialize fixed features
     x_fixed = pd.DataFrame(index=y.index).join(x_lstg).join(
@@ -66,11 +68,6 @@ def process_inputs(part, role):
     sec = sec.groupby(['lstg', 'thread']).shift().dropna().astype('int64')
     x_fixed.loc[:, 'days_since_thread'] = sec / (3600 * 24)
 
-    # add normalized periods remaining
-    #elapsed = 
-    #remaining = MAX_DAYS * 24 * 3600 - elapsed
-    #x_fixed.loc[:, 'intervals']
-
     # add last two offers
     x_fixed = add_past_offers(role, x_fixed, x_offer, tf_raw)
 
@@ -83,9 +80,17 @@ def process_inputs(part, role):
     x_clock = extract_clock_feats(minute).join(minute).set_index('clock')
 
     # index of first x_clock for each y
-    start = clock.groupby(['lstg', 'thread']).shift().reindex(
-        index=turns.index)
-    idx_clock = (start // 60).astype('int64')
+    delay_start = clock.groupby(['lstg', 'thread']).shift().reindex(
+        index=turns.index).astype('int64')
+    idx_clock = delay_start // 60
+
+    # normalized periods remaining at start of delay period
+    remaining = MAX_DAYS * 24 * 3600 - (delay_start - lstg_start)
+    remaining.loc[remaining.index.isin([2, 4, 6, 7], level='index')] /= \
+        MAX_DELAY['slr']
+    remaining.loc[remaining.index.isin([3, 5], level='index')] /= \
+        MAX_DELAY['byr']
+    remaining = np.minimum(remaining, 1)
 
     # time features
     tf = load(getPath(['tf', 'delay', 'diff', role]))
@@ -95,6 +100,7 @@ def process_inputs(part, role):
             'x_fixed': x_fixed.astype('float32', copy=False), 
             'x_clock': x_clock.astype('uint16', copy=False),
             'idx_clock': idx_clock.astype('int64', copy=False),
+            'remaining': remaining.astype('float32', copy=False),
             'tf': tf.astype('float32', copy=False)}
 
 

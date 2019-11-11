@@ -65,9 +65,9 @@ MAX_DELAY = {
 
 # intervals for checking offer arrivals
 INTERVAL = {
-	'arrival': 60 * 60,
-	SLR_PREFIX: 5 * 60,
-	BYR_PREFIX: 30 * 60
+	'arrival': 6 * 60 * 60,
+	SLR_PREFIX: 15 * 60,
+	BYR_PREFIX: 90 * 60
 }
 
 INTERVAL_COUNTS = {

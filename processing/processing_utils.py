@@ -166,7 +166,7 @@ def convert_to_numpy(d):
         d['x_time'] = np.concatenate(arrays, axis=2)
 
     # convert y and x_fixed to numpy directly
-    for k in ['y', 'turns', 'x_fixed', 'idx_clock', 'x_clock']:
+    for k in ['y', 'turns', 'x_fixed', 'idx_clock', 'x_clock', 'remaining']:
         if k in d:
             d[k] = d[k].to_numpy()
 

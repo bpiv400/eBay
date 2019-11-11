@@ -33,7 +33,8 @@ class Inputs(Dataset):
             # interval for clock features
             role = model.split('_')[-1]
             interval = int(INTERVAL[role] / 60) # interval in minutes
-            self.counter = interval * np.array(range(self.n), dtype='uint16')
+            self.counter = interval * np.array(
+                range(self.n), dtype='uint16')
             # period / max periods
             self.duration = np.expand_dims(
                 np.array(range(self.n) / self.n, dtype='float32'), axis=1)
@@ -76,6 +77,11 @@ class Inputs(Dataset):
 
             # time feats: first clock feats, then time-varying feats
             x_time = np.concatenate((x_clock, x_tf, self.duration), axis=1)
+
+        # for delay models, add (normalized) periods remaining
+        if 'remaining' in self.d:
+            remaining = self.d['remaining'][idx] - self.duration
+            x_time = np.concatenate((x_time, remaining), axis=1)
 
         return y, turns, x_fixed, x_time, idx
 
