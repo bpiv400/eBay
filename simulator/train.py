@@ -84,17 +84,13 @@ if __name__ == '__main__':
         device='cuda' if torch.cuda.is_available() else 'cpu')
     print(simulator.net)
 
-    # create datasets and calculate initial log-likelihood
+    # create datasets
     train = Inputs('train_models', model)
-    lnL0_train = run_loop(simulator, train)
-
     test = Inputs('train_rl', model)
-    lnL0_test = run_loop(simulator, test)
 
     # create outfile
     f = open(SUMMARY_DIR + '%s.csv' % stub, 'w')
     f.write('epoch,seconds,lnL_train,lnL_holdout\n')
-    f.write('%d,%d,%.4f,%.4f\n' % (0, 0, lnL0_train, lnL0_test))
     f.close()
 
     # train model
