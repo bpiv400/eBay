@@ -76,7 +76,7 @@ class Inputs(Dataset):
 
             # time feats: first clock feats, then time-varying feats
             x_time = np.concatenate((x_clock, x_tf, self.duration), axis=1)
-        
+
         return y, turns, x_fixed, x_time, idx
 
 

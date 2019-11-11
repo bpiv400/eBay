@@ -7,13 +7,18 @@ from processing.processing_utils import *
 
 
 def add_past_offers(role, x_fixed, x_offer, tf_raw):
-    # last 2 offers
+    # combine offer dataframe and time feats
     df = x_offer.join(tf_raw.reindex(
         index=x_offer.index, fill_value=0))
+    # last 2 offers
     offer1 = df.groupby(['lstg', 'thread']).shift(
         periods=1).reindex(index=x_fixed.index)
     offer2 = df.groupby(['lstg', 'thread']).shift(
         periods=2).reindex(index=x_fixed.index)
+    # drop clock feats from offer1
+    toDrop = ['holiday', 'minute_of_day'] + \
+                [x for x in offer1.columns if 'dow' in x]
+    offer1 = offer1.drop(toDrop , axis=1)
     # drop constant features
     if role == 'byr':
         offer2 = offer2.drop(['auto', 'exp', 'reject'], axis=1)
@@ -49,7 +54,8 @@ def process_inputs(part, role):
     clock = load(getPath(['clock']))
 
     # initialize fixed features
-    x_fixed = pd.DataFrame(index=y.index).join(x_lstg).join(x_thread)
+    x_fixed = pd.DataFrame(index=y.index).join(x_lstg).join(
+        x_thread['byr_hist'])
 
     # turn indicators
     x_fixed = add_turn_indicators(x_fixed)

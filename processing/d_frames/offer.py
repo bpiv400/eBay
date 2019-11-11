@@ -39,23 +39,25 @@ def get_x_offer(lookup, events):
         'index', axis=1)
     # initialize output dataframe
     df = pd.DataFrame(index=offers.stack().index).sort_index()
-    # concession
-    df['con'] = get_con(offers)
-    df['reject'] = df['con'] == 0
-    df['split'] = np.abs(df['con'] - 0.5) < TOL_HALF
-    # total concession
-    df['norm'] = (events['price'] / lookup['start_price']).reindex(
-        index=df.index, fill_value=0)
-    df.loc[df.index.isin(IDX['slr'], level='index'), 'norm'] = \
-        1 - df['norm']
-    # message indicator
-    df['msg'] = events['message'].reindex(
-        index=df.index, fill_value=False)
     # clock variable
     clock = 24 * 3600 * lookup.start_date.rename(0).to_frame()
     clock = clock.join(events.clock.unstack())
     # delay features
     df['delay'] = get_delay(clock)
+    # concession
+    df['con'] = get_con(offers)
+    # total concession
+    df['norm'] = (events['price'] / lookup['start_price']).reindex(
+        index=df.index, fill_value=0)
+    df.loc[df.index.isin(IDX['slr'], level='index'), 'norm'] = \
+        1 - df['norm']
+    # indicator for split
+    df['split'] = np.abs(df['con'] - 0.5) < TOL_HALF
+    # message indicator
+    df['msg'] = events['message'].reindex(
+        index=df.index, fill_value=False)
+    # reject auto and exp are last
+    df['reject'] = df['con'] == 0
     df['auto'] = (df.delay == 0) & df.index.isin(IDX['slr'], level='index')
     df['exp'] = df.delay == 1
     # clock features
