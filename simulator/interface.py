@@ -61,7 +61,6 @@ class Inputs(Dataset):
         if 'x_time' in self.d:
             x_time = self.d['x_time'][idx,:,:]
         else:
-            
             # indices of timestamps
             idx_clock = self.d['idx_clock'][idx] + self.counter
 
