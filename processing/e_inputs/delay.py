@@ -86,7 +86,11 @@ def process_inputs(part, role):
 
     # normalized periods remaining at start of delay period
     remaining = MAX_DAYS * 24 * 3600 - (delay_start - lstg_start)
-    remaining /= len(y.columns)
+    remaining.loc[remaining.index.isin([2, 4, 6, 7], level='index')] /= \
+        INTERVAL['slr']
+    remaining.loc[remaining.index.isin([3, 5], level='index')] /= \
+        INTERVAL['byr']
+    remaining /= len(y.columns) # normalize by total number of intervals
     remaining = np.minimum(remaining, 1)
 
     # time features
