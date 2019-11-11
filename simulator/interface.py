@@ -46,11 +46,11 @@ class Inputs(Dataset):
 
 
     def __getitem__(self, idx):
-        # all interface index y and x_fixed using idx
+        # all models index y and x_fixed using idx
         y = self.d['y'][idx]
         x_fixed = self.d['x_fixed'][idx,:]
 
-        # feed-forward interface
+        # feed-forward models
         if not self.isRecurrent:
             return y, x_fixed, idx
 
@@ -61,18 +61,9 @@ class Inputs(Dataset):
         if 'x_time' in self.d:
             x_time = self.d['x_time'][idx,:,:]
         else:
-            # number of time steps
-            n = self.d['turns'][0]
-
-            # index of first timestamp
-            start = self.d['idx_clock'][idx]
-            if self.model == 'arrival':
-                idx_clock = start + np.array(range(n), dtype='uint16')
-            else:   # delay interface
-                role = self.model.split('_')[1]
-                interval = int(INTERVAL[role] / 60) # interval in minutes
-                idx_clock = start + interval * np.array(
-                    range(n), dtype='uint16')
+            
+            # indices of timestamps
+            idx_clock = self.d['idx_clock'][idx] + self.counter
 
             # clock features
             x_clock = self.d['x_clock'][idx_clock].astype('float32')
@@ -86,10 +77,9 @@ class Inputs(Dataset):
 
             # time feats: first clock feats, then time-varying feats
             x_time = np.concatenate((x_clock, x_tf, self.duration), axis=1)
-
-        print('\tfetch time: %d sec' % (dt.now() - t0).seconds)
         
         return y, turns, x_fixed, x_time, idx
+
 
     def __len__(self):
         return self.N
