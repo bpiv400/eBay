@@ -10,16 +10,21 @@ from processing.processing_utils import *
 
 # delay
 def get_delay(clock):
+    # initialize output dataframes in wide format
+    days = pd.DataFrame(0., index=clock.index, columns=clock.columns)
     delay = pd.DataFrame(0., index=clock.index, columns=clock.columns)
     for i in range(2, 8):
-        delay[i] = clock[i] - clock[i-1]
+        days[i] = clock[i] - clock[i-1]
         if i in [2, 4, 6, 7]: # byr has 2 days for last turn
-            delay[i] /= MAX_DELAY['slr']
+            days[i] = np.minimum(days[i], MAX_DELAY['slr'])
+            delay[i] = days[i] / MAX_DELAY['slr']
         elif i in [3, 5]:   # ignore byr arrival and last turn
-            delay[i] /= MAX_DELAY['byr']
-        # no delays should be greater than 1
-        delay.loc[delay[i] > 1, i] = 1
-    return delay.rename_axis('index', axis=1).stack()
+            days[i] = np.minimum(days[i], MAX_DELAY['byr'])
+            delay[i] = days[i] / MAX_DELAY['byr']
+    # reshape from wide to long
+    days = days.rename_axis('index', axis=1).stack() / (24 * 3600)
+    delay = delay.rename_axis('index', axis=1).stack()
+    return days, delay
 
 
 # concession
@@ -43,7 +48,12 @@ def get_x_offer(lookup, events):
     clock = 24 * 3600 * lookup.start_date.rename(0).to_frame()
     clock = clock.join(events.clock.unstack())
     # delay features
-    df['delay'] = get_delay(clock)
+    df['days'], df['delay'] = get_delay(clock)
+    # clock features
+    clock = clock.rename_axis('index', axis=1).stack().rename(
+        'clock').astype(np.int64)
+    clock = pd.to_datetime(clock, unit='s', origin=START)
+    df = df.join(extract_clock_feats(clock))
     # concession
     df['con'] = get_con(offers)
     # total concession
@@ -60,11 +70,7 @@ def get_x_offer(lookup, events):
     df['reject'] = df['con'] == 0
     df['auto'] = (df.delay == 0) & df.index.isin(IDX['slr'], level='index')
     df['exp'] = df.delay == 1
-    # clock features
-    clock = clock.rename_axis('index', axis=1).stack().rename(
-        'clock').astype(np.int64)
-    clock = pd.to_datetime(clock, unit='s', origin=START)
-    df = df.join(extract_clock_feats(clock))
+    
     return df
 
 

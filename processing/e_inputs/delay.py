@@ -55,7 +55,7 @@ def process_inputs(part, role):
 
     # initialize fixed features
     x_fixed = pd.DataFrame(index=y.index).join(x_lstg).join(
-        x_thread['byr_hist'])
+        x_thread[['byr_hist', 'months_since_lstg']])
 
     # turn indicators
     x_fixed = add_turn_indicators(x_fixed)
@@ -65,6 +65,11 @@ def process_inputs(part, role):
     sec = clock - thread_start.reindex(index=clock.index)
     sec = sec.groupby(['lstg', 'thread']).shift().dropna().astype('int64')
     x_fixed.loc[:, 'days_since_thread'] = sec / (3600 * 24)
+
+    # add normalized periods remaining
+    #elapsed = 
+    #remaining = MAX_DAYS * 24 * 3600 - elapsed
+    #x_fixed.loc[:, 'intervals']
 
     # add last two offers
     x_fixed = add_past_offers(role, x_fixed, x_offer, tf_raw)
