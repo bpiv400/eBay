@@ -93,8 +93,6 @@ class Simulator:
         if self.device != 'cpu':
             data = {k: v.to(self.device) for k, v in data.items()}
 
-        t0 = dt.now()
-
         if self.isRecurrent:
             data['x_time'] = rnn.pack_padded_sequence(
                 data['x_time'], data['turns'], batch_first=True)
@@ -106,8 +104,6 @@ class Simulator:
         if isTraining:
             loss.backward()
             self.optimizer.step()
-
-        print('\tgpu time: %d sec' % (dt.now() - t0).seconds)
 
         # return log-likelihood
         return -loss.item()
