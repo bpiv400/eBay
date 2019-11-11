@@ -1,8 +1,8 @@
 import sys
 import os
-sys.path.append(os.path.abspath('repo/rnn/models.py'))
+sys.path.append(os.path.abspath('repo/rnn/interface.py'))
 
-from models import *
+from interface import *
 import torch
 import torch.autograd as autograd
 import torch.nn as nn
@@ -62,7 +62,7 @@ def get_resp_time(turn):
     '''
     Description: Determines the name of the response column given the
     name of the last observed turn
-    for time models
+    for time interface
     '''
     turn_num = turn[1]
     turn_type = turn[0]

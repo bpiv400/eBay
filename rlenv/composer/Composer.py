@@ -1,18 +1,17 @@
 import os
 import pickle
-
+from compress_pickle import load
 import constants
 import pandas as pd
-import h5py
 import numpy as np
 from rlenv.env_consts import *
 from utils import unpickle
-from models import model_names
-
+from rlenv.interface import model_names
+from rlenv.env_utils import load_featnames
 
 class Composer:
     """
-    Class for composing inputs to models from various input streams
+    Class for composing inputs to interface from various input streams
 
     """
     def __init__(self, composer_id, rebuild=False):
@@ -27,21 +26,21 @@ class Composer:
     def build():
         """
         Creates a dictionary containing tensors that map indices from various data
-        sources to the input tensors for all the simulator's models
+        sources to the input tensors for all the simulator's interface
 
         The dictionary contains 1 entry for each model (18 entries total).
         Each entry is itself a dictionary.
 
-        Dictionaries corresponding  to feed forward models contain only one entry:
+        Dictionaries corresponding  to feed forward interface contain only one entry:
         'fixed'. This entry maps to a dictionary containing all of the
         source -> input vector index maps required to compose the the input vector
-        for FF models.
+        for FF interface.
 
-        Dictionaries for recurrent models also contain a 'fixed' entry, which contains a
+        Dictionaries for recurrent interface also contain a 'fixed' entry, which contains a
         dictionary of maps used to compose the input vector to the hidden state initialization
         modules
 
-        Dictionaries for recurrent models additionally contain a 'time' entry, which
+        Dictionaries for recurrent interface additionally contain a 'time' entry, which
         contains a dictionary of maps used to compose the input vector at each timestep
 
         There are two types of index maps: 1-dimensional "simple" maps and 2-dimensional
@@ -52,11 +51,10 @@ class Composer:
         Pair maps are used in cases where only some of the source vector's elements are
         included in the input vector. A pair map x maps elements from x[i, 0] in
         the source to x[i, 1] in the input
-        :return: dictionary of maps for all models
+        :return: dictionary of maps for all interface
         """
         output = dict()
-        x_lstg = h5py.File(X_LSTG_FILENAME, 'r')[X_LSTG]
-        x_lstg_size = x_lstg.shape[1]
+        x_lstg_size = len(load('{}train_rl/1.gz'.format(constants.REWARDS_DIR))['x_lstg'].columns)
         fixed = torch.arange(x_lstg_size).long()
 
         for model_name in model_names.MODELS:
@@ -105,8 +103,8 @@ class Composer:
             last_time = ['{}_last'.format(feat) for feat in TIME_FEATS]
             maps[L_TIME_MAP] = Composer._build_simple_map(last_time, featnames)
             maps[TURN_IND_MAP] = Composer._build_simple_map(indicators, featnames)
-        if model_name != model_names.DAYS:
-            maps[BYR_ATTR_MAP] = Composer._build_simple_map(BYR_ATTRS, featnames)
+        if model_name is not in model_names.ARRIVAL:
+            maps[BYR_HIST_MAP] = Composer._build_simple_map(BYR_HIST, featnames)
         return maps
 
     @staticmethod
@@ -154,7 +152,7 @@ class Composer:
     @staticmethod
     def _build_time(model_name, featnames):
         """
-        Creates input maps for recurrent models' time step input vectors
+        Creates input maps for recurrent interface' time step input vectors
 
         :param model_name: str giving the name of the focal model (see model_names.py)
         "from" gives the index number of each feature in the lstg tensor used in environment
@@ -169,7 +167,7 @@ class Composer:
         time_maps[CLOCK_MAP] = Composer._build_clock_map(model_name, featnames)
         if model_name != model_names.DAYS:
             time_maps[TIME_MAP] = Composer._build_simple_map(TIME_FEATS, featnames)
-        # all models except delay and days
+        # all interface except delay and days
         if model_names.DELAY in model_name:
             time_maps[PERIODS_MAP] = torch.tensor([featnames.loc['period', 'to']])
             time_maps[PERIODS_MAP] = time_maps[PERIODS_MAP].long()
@@ -211,7 +209,7 @@ class Composer:
     @staticmethod
     def _build_recurrent(model_name, fixed):
         """
-        Creates all input maps for recurrent models (see build() for details)
+        Creates all input maps for recurrent interface (see build() for details)
 
         :param model_name: str giving the name of the focal model (see model_names.py)
         "from" gives the index number of each feature in the lstg tensor used in environment
@@ -220,19 +218,16 @@ class Composer:
         :return: dictionary containing two entries, one for all time step input maps
         and one for fixed feature input maps
         """
-        if model_name == model_names.DAYS:
+        if model_name in model_names.ARRIVAL:
             model_type = model_names.ARRIVAL_PREFIX
-            subdir = model_name
         elif constants.SLR_PREFIX in model_name:
             model_type = constants.SLR_PREFIX
-            subdir = model_name.replace('{}_'.format(constants.SLR_PREFIX), '')
+            model_name = model_name.replace('{}_'.format(constants.SLR_PREFIX), '')
         else:
             model_type = constants.BYR_PREFIX
-            subdir = model_name.replace('{}_'.format(constants.BYR_PREFIX), '')
+            model_name = model_name.replace('{}_'.format(constants.BYR_PREFIX), '')
 
-        featnames_path = '{}/{}/{}/{}'.format(MODEL_DIR, model_type,
-                                              subdir, FEATNAMES_FILENAME)
-        featnames = unpickle(featnames_path)
+        featnames = load_featnames(model_type, model_name)
         fixed_maps = Composer._build_fixed(model_name, fixed, featnames['x_fixed'])
         time_maps = Composer._build_time(model_name, featnames['x_time'])
         sizes_path = '{}/{}/{}/{}'.format(MODEL_DIR, model_type,

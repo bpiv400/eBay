@@ -29,12 +29,12 @@ def process_inputs(part, model, outcome):
 		d['x_fixed'] = x_lstg
 		d['x_days'] = parse_time_feats_days(d)
 
-    # other arrival models are all feed-forward
+    # other arrival interface are all feed-forward
 	elif model == 'arrival':
 		d['x_fixed'] = parse_fixed_feats_arrival(
 			outcome, x_lstg, x_thread, x_offer)
 
-    # byr and slr models are all recurrent
+    # byr and slr interface are all recurrent
 	elif outcome == 'delay':
 		d['x_fixed'] = parse_fixed_feats_delay(
 		    model, x_lstg, x_thread, x_offer)

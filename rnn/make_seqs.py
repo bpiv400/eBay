@@ -1026,7 +1026,7 @@ def main():
     # drop unnamed columns if they exist
     drop_unnamed(df)
     #! NOTE: FOR THE TIME BEING DROP b3 offers since the seller cannot
-    #! respond and we are presently only training models to predict
+    #! respond and we are presently only training interface to predict
     #! seller responses to buyer offers
     #! CAVEAT: predictions made for b3 may help the model generalize for
     #! its earlier seller predictions--therefore, in certain experiments,

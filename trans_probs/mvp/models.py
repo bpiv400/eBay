@@ -17,7 +17,7 @@ import os
 def get_model_class(exp_name):
     '''
     Description: Uses experiment name to grab the associated model
-    from the models module and aliases it as net
+    from the interface module and aliases it as net
     Input: string giving experiment name
     Output: class of model to be trained
     '''

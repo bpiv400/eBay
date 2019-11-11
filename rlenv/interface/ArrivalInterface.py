@@ -1,12 +1,12 @@
 import torch
 from torch.distributions.poisson import Poisson
-from rlenv.models.ModelInterface import ModelInterface
-from models.model_names import BYR_HIST, NUM_OFFERS
+from rlenv.interface.ModelInterface import ModelInterface
+from interface.model_names import BYR_HIST, NUM_OFFERS
 
 
 class ArrivalInterface(ModelInterface):
     def __init__(self, byr_hist=0, num_offers=0, composer=0):
-        # Load models
+        # Load interface
         super(ArrivalInterface, self).__init__(composer)
         self.num_offers = ArrivalInterface._load_model(BYR_HIST, byr_hist)
         self.byr_hist = ArrivalInterface._load_model(NUM_OFFERS, num_offers)

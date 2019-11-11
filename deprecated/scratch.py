@@ -16,7 +16,7 @@
                 self.omega = torch.as_tensor(vals,
                     dtype=torch.float).detach()
             else:
-                print('Cannot reset training data for EM models.')
+                print('Cannot reset training data for EM interface.')
 
 
 def train_long_model(simulator, x_fixed, data):
@@ -139,7 +139,7 @@ if __name__ == '__main__':
     pickle.dump(output, open(prefix + '.pkl', 'wb'))
 
 
-# nested fixed features for arrival models
+# nested fixed features for arrival interface
     for z in ARRIVAL_MODELS:
         v = y['arrival'][z]
         if z != 'days':

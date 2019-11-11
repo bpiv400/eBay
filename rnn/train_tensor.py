@@ -1,10 +1,10 @@
 import sys
 import os
-sys.path.append(os.path.abspath('repo/rnn/models.py'))
+sys.path.append(os.path.abspath('repo/rnn/interface.py'))
 
 from models_tensor import *
 from hooks_tensor import *
-from models import *
+from interface import *
 import tensorflow as tf
 import numpy as np
 import pandas as pd
@@ -60,7 +60,7 @@ def get_resp_time(turn):
     '''
     Description: Determines the name of the response column given the
     name of the last observed turn
-    for time models
+    for time interface
     '''
     turn_num = turn[1]
     turn_type = turn[0]
