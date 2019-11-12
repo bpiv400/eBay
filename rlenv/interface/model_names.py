@@ -7,7 +7,7 @@ NUM_OFFERS = 'arrival'
 BYR_HIST = 'hist'
 
 # offer interface
-CON = 'cn'
+CON = 'con'
 DELAY = 'delay'
 MSG = 'msg'
 

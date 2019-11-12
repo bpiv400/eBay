@@ -32,7 +32,7 @@ class RewardEnvironment:
         self.time_feats.reset()
         self.arrival.init(self.x_lstg)
         self.thread_counter = 0
-        sources = Sources(arrival=True, start_date=self.lookup['start_date'], x_lstg=self.x_lstg)
+        sources = Sources(num_offers=True, start_date=self.lookup['start_date'], x_lstg=self.x_lstg)
         self.queue.push(Arrival(self.lookup['start_date'], sources))
 
     def run(self):
@@ -99,7 +99,7 @@ class RewardEnvironment:
         # expiration
         if self._lstg_expiration(event):
             return True
-        sources = Sources(arrival=False, start_date=self.lookup['start_date'])
+        sources = Sources(num_offers=False, start_date=self.lookup['start_date'])
         sources.init_offer()
 
         hidden = self._make_hidden()
