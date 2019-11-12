@@ -51,8 +51,11 @@ if __name__ == "__main__":
     overlap = L.start.astype('int64') * 24 * 3600 <= maxend
     ismulti = overlap.groupby(ORDER + ['lstg']).max()
 
+    # length of listing in days
+    days = (L.end_time // (24 * 3600)) - L.start_date + 1
+
     # drop invalid listings
-    L = L.loc[(L.flag == 0) & (L.toDrop == 0)]
+    L = L.loc[(L.flag == 0) & ~ismulti & (days <= MAX_DAYS)]
     
     # partition by seller
     partitions = partition_lstgs(L.slr)

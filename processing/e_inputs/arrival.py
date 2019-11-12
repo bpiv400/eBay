@@ -23,10 +23,11 @@ def process_inputs(part):
     # fixed features
     x_fixed = cat_x_lstg(getPath).reindex(index=turns.index)
 
-    # clock features
-    N = pd.to_timedelta(pd.to_datetime(END) - pd.to_datetime(START))
-    N = int((N.total_seconds()+1) / 3600)
-    clock = pd.to_datetime(range(N+30*24), unit='h', origin=START)
+    # clock features by interval
+    N = pd.to_timedelta(
+        pd.to_datetime('2016-12-31 23:59:59') - pd.to_datetime(START))
+    N = int((N.total_seconds()+1) / INTERVAL['arrival'])
+    clock = pd.to_datetime(range(N), unit='h', origin=START)
     clock = pd.Series(clock, name='clock')
     x_clock = extract_clock_feats(clock).join(clock).set_index('clock')
 
