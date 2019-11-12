@@ -29,7 +29,7 @@ class Inputs(Dataset):
         # for arrival and delay models
         if 'tf' in self.d:
             # number of time steps
-            self.n = self.d['turns'][0]
+            self.n = np.shape(self.d['y'])[1]
             # interval for clock features
             role = model.split('_')[-1]
             interval = int(INTERVAL[role] / 60) # interval in minutes

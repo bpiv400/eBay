@@ -59,6 +59,7 @@ MAX_DAYS = 31
 
 # maximal delay times
 MAX_DELAY = {
+	'arrival': MAX_DAYS * 24 * 3600,
 	SLR_PREFIX: 2 * 24 * 3600,
 	BYR_PREFIX: 14 * 24 * 3600
 }
@@ -71,6 +72,7 @@ INTERVAL = {
 }
 
 INTERVAL_COUNTS = {
+	'arrival': int(MAX_DELAY['arrival'] / INTERVAL['arrival']),
 	SLR_PREFIX: int(MAX_DELAY[SLR_PREFIX] / INTERVAL[SLR_PREFIX]),
 	BYR_PREFIX: int(MAX_DELAY[BYR_PREFIX] / INTERVAL[BYR_PREFIX]),
 	'{}_7'.format(BYR_PREFIX): \
