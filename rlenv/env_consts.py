@@ -33,7 +33,7 @@ TIME_FEATS = [
 ]
 
 # outcomes
-BYR_OUTCOMES = ['delay', 'days', 'con', 'norm', 'split', 'msg']
+BYR_OUTCOMES = ['days', 'delay', 'con', 'norm', 'split', 'msg']
 SLR_OUTCOMES = BYR_OUTCOMES + ['reject', 'auto', 'exp']
 
 
@@ -58,8 +58,8 @@ LOOKUP = 'lookup'
 # filenames
 PARTITION = 'train_rl'
 DATA_DIR = '{}{}/'.format(PARTS_DIR, PARTITION)
-X_LSTG_FILENAME = '{}{}.hdf5'.format(DATA_DIR, X_LSTG)
 COMPOSER_DIR = '{}composer/'.format(INPUT_DIR)
+X_LSTG_COLS_PATH = '{}{}.pkl'.format(COMPOSER_DIR, X_LSTG)
 REWARD_EXPERIMENT_PATH = 'repo/rlenv/rewards/experiments.csv'
 LOOKUP_FILENAME = 'lookup.gz'
 
