@@ -4,6 +4,7 @@ import numpy as np, pandas as pd
 from constants import *
 from utils import *
 from processing.processing_utils import *
+from processing.e_inputs.inputs import Inputs
 
 
 def get_x_time(x_offer, outcome, role):

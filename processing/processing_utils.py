@@ -98,6 +98,15 @@ def extract_clock_feats(clock):
     return df
 
 
+def create_x_clock():
+    N = pd.to_timedelta(
+        pd.to_datetime('2016-12-31 23:59:59') - pd.to_datetime(START))
+    N = int((N.total_seconds()+1) / 60) # total number of minutes
+    minute = pd.to_datetime(range(N), unit='m', origin=START)
+    minute = pd.Series(minute, name='clock')
+    return extract_clock_feats(minute).join(minute).set_index('clock')
+
+
 # count number of time steps in each observations
 def get_sorted_turns(y):
     '''
@@ -185,7 +194,7 @@ def convert_to_numpy(d):
         d['x_time'] = np.concatenate(arrays, axis=2)
 
     # convert y and x_fixed to numpy directly
-    for k in ['y', 'turns', 'x_fixed', 'idx_clock', 'x_clock', 'remaining']:
+    for k in ['y', 'turns', 'x_fixed', 'idx_clock', 'remaining']:
         if k in d:
             d[k] = d[k].to_numpy()
 
@@ -204,8 +213,7 @@ def create_small(d):
     small = {}
 
     # first index
-    for k in ['y', 'turns', 'x_fixed', 'idx_clock', 'x_clock', \
-        'remaining', 'x_time']:
+    for k in ['y', 'turns', 'x_fixed', 'idx_clock', 'remaining', 'x_time']:
         if k in d:
             small[k] = d[k][:N_SMALL]
 

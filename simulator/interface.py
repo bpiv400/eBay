@@ -31,12 +31,9 @@ class Inputs(Dataset):
             # number of time steps
             self.n = np.shape(self.d['y'])[1]
             # counter for expanding clock features
-            self.counter = np.array(range(self.n), dtype='uint16')
-            # for delay models, multiply counter by minutes in interval
-            if 'delay' in self.model:
-                role = model.split('_')[-1]
-                interval = int(INTERVAL[role] / 60) # interval in minutes
-                self.counter *= interval
+            role = model.split('_')[-1]
+            interval = int(INTERVAL[role] / 60) # interval in minutes
+            self.counter = interval * np.array(range(self.n), dtype='uint16')
             # period / max periods
             self.duration = np.expand_dims(
                 np.array(range(self.n), dtype='float32') / self.n, axis=1)

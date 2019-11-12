@@ -4,6 +4,7 @@ import numpy as np, pandas as pd
 from constants import *
 from utils import *
 from processing.processing_utils import *
+from processing.e_inputs.inputs import Inputs
 
 
 # loads data and calls helper functions to construct training inputs

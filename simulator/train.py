@@ -1,6 +1,7 @@
 import sys, os, pickle, argparse
 import torch
 import numpy as np, pandas as pd
+from compress_pickle import load
 from datetime import datetime as dt
 from torch.utils.data import DataLoader
 from interface import Sample, collateFF, collateRNN
@@ -85,11 +86,11 @@ if __name__ == '__main__':
     print(simulator.net)
 
     # load datasets
-    train = load('%s/inputs/train_models/%s.gz' % (PREFIX, model))
-    train = load('%s/inputs/train_rl/%s.gz' % (PREFIX, model))
+    #train = load('%s/inputs/train_models/%s.gz' % (PREFIX, model))
+    #train = load('%s/inputs/train_rl/%s.gz' % (PREFIX, model))
 
-    #train = Inputs('train_models', model)
-    #test = Inputs('train_rl', model)
+    train = Inputs('train_models', model)
+    test = Inputs('train_rl', model)
 
     # create outfile
     f = open(SUMMARY_DIR + '%s.csv' % stub, 'w')

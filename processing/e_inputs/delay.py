@@ -4,6 +4,7 @@ import numpy as np, pandas as pd
 from constants import *
 from utils import *
 from processing.processing_utils import *
+from processing.e_inputs.inputs import Inputs
 
 
 def add_past_offers(role, x_fixed, x_offer, tf_raw):
@@ -72,12 +73,7 @@ def process_inputs(part, role):
     x_fixed = add_past_offers(role, x_fixed, x_offer, tf_raw)
 
     # clock features by minute
-    N = pd.to_timedelta(
-        pd.to_datetime('2016-12-31 23:59:59') - pd.to_datetime(START))
-    N = int((N.total_seconds()+1) / 60)
-    minute = pd.to_datetime(range(N), unit='m', origin=START)
-    minute = pd.Series(minute, name='clock')
-    x_clock = extract_clock_feats(minute).join(minute).set_index('clock')
+    x_clock = create_x_clock()
 
     # index of first x_clock for each y
     delay_start = clock.groupby(['lstg', 'thread']).shift().reindex(
@@ -98,7 +94,7 @@ def process_inputs(part, role):
     return {'y': y.astype('int8', copy=False),
             'turns': turns.astype('uint16', copy=False),
             'x_fixed': x_fixed.astype('float32', copy=False), 
-            'x_clock': x_clock.astype('uint16', copy=False),
+            'x_clock': x_clock.astype('float32', copy=False),
             'idx_clock': idx_clock.astype('int64', copy=False),
             'remaining': remaining.astype('float32', copy=False),
             'tf': tf.astype('float32', copy=False)}
