@@ -55,7 +55,7 @@ class Simulator:
         # feed-forward
         if not self.isRecurrent:
             y = data['y']
-            theta = self.net(data['x_fixed'])
+            theta = self.net(data['x_fixed']).squeeze()
 
         # use mask for recurrent
         else:

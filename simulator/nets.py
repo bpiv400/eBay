@@ -31,7 +31,7 @@ class FeedForward(nn.Module):
                 nn.Linear(params['hidden'], params['hidden']))
         else:
             self.seq.append(
-                nn.Linear(params['hidden'], sizes['out'])).squeeze()
+                nn.Linear(params['hidden'], sizes['out']))
 
 
     def forward(self, x):

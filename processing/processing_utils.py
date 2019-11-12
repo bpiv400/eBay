@@ -143,6 +143,21 @@ def get_sizes(d):
     return sizes
 
 
+# helper function to construct groups of equal number of turns
+def create_groups(d):
+    '''
+    d: dictionary with numpy arrays.
+    '''
+
+    # save list of arrays of indices with same number of turns
+    if 'turns' in d:
+        return [np.nonzero(d['turns'] == n)[0] \
+                        for n in np.unique(d['turns'])]
+
+    # for feed-forward nets, create single vector of indices
+    return [np.array(range(np.shape(d['x_fixed'])[0]))]
+
+
 # converts dictionary of dataframes to dictionary of numpy arrays
 def convert_to_numpy(d):
     '''
@@ -174,13 +189,34 @@ def convert_to_numpy(d):
         if k in d:
             d[k] = d[k].to_numpy()
 
-    # save list of arrays of indices with same number of turns
-    if 'turns' in d:
-        d['groups'] = [np.nonzero(d['turns'] == n)[0] \
-                        for n in np.unique(d['turns'])]
-
-    # for feed-forward nets, create single vector of indices
-    else:
-        d['groups'] = [np.array(range(np.shape(d['x_fixed'])[0]))]
+    # get groups for sampling
+    d['groups'] = create_groups(d)
 
     return d
+
+
+# restricts data to first N_SMALL observations
+def create_small(d):
+    '''
+    d: dictionary with numpy arrays.
+    '''
+    
+    small = {}
+
+    # first index
+    for k in ['y', 'turns', 'x_fixed', 'idx_clock', 'x_clock', \
+        'remaining', 'x_time']:
+        if k in d:
+            small[k] = d[k][:N_SMALL]
+
+    # time features dictionary
+    if 'tf' in d:
+        small['tf'] = {}
+        for i in range(N_SMALL):
+            if i in d['tf']:
+                small['tf'][i] = d['tf'][i]
+
+    # get groups for sampling
+    small['groups'] = create_groups(small)
+
+    return small

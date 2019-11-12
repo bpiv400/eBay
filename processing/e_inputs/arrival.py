@@ -4,6 +4,7 @@ import numpy as np, pandas as pd
 from constants import *
 from utils import *
 from processing.processing_utils import *
+from processing.e_inputs.inputs import Inputs
 
 
 # loads data and calls helper functions to construct training inputs
@@ -66,6 +67,14 @@ if __name__ == '__main__':
         pickle.dump(get_sizes(d),
             open('%s/inputs/sizes/arrival.pkl' % PREFIX, 'wb'))
 
-    # save dictionary of numpy arrays
-    dump(convert_to_numpy(d), 
-        '%s/inputs/%s/arrival.gz' % (PREFIX, part))
+    # create dictionary of numpy arrays
+    d = convert_to_numpy(d)
+
+    # save as dataset
+    dump(Inputs(d), '%s/inputs/%s/arrival.gz' % (PREFIX, part))
+
+    # save small dataset
+    if part == 'train_models':
+        small = create_small(d)
+        dump(Inputs(small), '%s/inputs/small/arrival.gz' % PREFIX)
+    
