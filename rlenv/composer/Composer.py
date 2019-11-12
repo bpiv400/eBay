@@ -18,10 +18,12 @@ class Composer:
     def __init__(self, params, rebuild=False):
         composer_path = '{}{}.pkl'.format(COMPOSER_DIR, params['composer'])
         if not os.path.exists(composer_path) or rebuild:
-            self.maps = Composer.build()
+            self.maps, self.x_lstg_cols = Composer.build()
             pickle.dump(self.maps, open(composer_path, 'wb'))
+            pickle.dump(self.x_lstg_cols, open(X_LSTG_COLS_PATH, 'wb'))
         else:
             self.maps = unpickle(composer_path)
+            self.x_lstg_cols = unpickle(X_LSTG_COLS_PATH)
 
     @staticmethod
     def build():
@@ -64,7 +66,7 @@ class Composer:
                 output[model_name] = Composer._build_ff(model_name, fixed)
             else:
                 output[model_name] = Composer._build_recurrent(model_name, fixed)
-        return output
+        return output, x_lstg_cols
 
     @staticmethod
     def _add_fixed_delay_maps(maps, featnames, byr=False):
@@ -229,6 +231,7 @@ class Composer:
         # add duration to delay and num offers
         if model_names.CON in model_name or model_names.MSG in model_name:
             Composer.add_time_offer_maps(time_maps, featnames, byr=constants.BYR_PREFIX in model_name)
+            print(time_maps[OUTCOMES_MAP])
         else:
             time_maps[DUR_MAP] = Composer._build_simple_map(DURATION, featnames)
             # add interval remaining to delay
@@ -304,6 +307,7 @@ class Composer:
         featnames = featnames['x_fixed']
         maps = Composer._build_fixed(full_name, fixed, featnames)
         maps = {FIXED: maps}
+        maps[FIXED][SIZE] = torch.tensor(sizes[FIXED])
         Composer._check_maps(full_name, maps)
         return maps
 
@@ -375,6 +379,9 @@ class Composer:
                     x[:, curr_map] = sources[map_name]
                 else:
                     x[:, curr_map[:, 1]] = sources[map_name][curr_map[:, 0]]
+                if map_name == OUTCOMES_MAP:
+                    print(curr_map)
+                    print(curr_map.shape)
             except RuntimeError as e:
                 print('NAME')
                 print(e)
@@ -389,8 +396,8 @@ class Composer:
         sources = {
             LSTG_MAP: x_lstg
         }
-        x_fixed = Composer._build_input_vector(self.maps[model_names.NUM_OFFERS],
-                                               sources, size=1)
+        x_fixed = Composer._build_input_vector(self.maps[model_names.NUM_OFFERS][FIXED],
+                                               sources, 1)
         return x_fixed
 
     def build_input_vector(self, model_name, sources=None, fixed=False, recurrent=False, size=1):
@@ -418,27 +425,6 @@ class Composer:
             x_fixed = None
         return x_fixed, x_time
 
-    def build_hist_input(self, sources=None, us=False, foreign=False):
-        """
-        Returns input tensor for the history model -- requires special logic
-        to only compute model outputs for the 2 possible sets of inputs (byr_us = 0 or 1)
-        rather than redundantly for each buyer with the same params
-
-        :param sources: dictionary containing tensors from the environment that contain
-        features the model expects in the input
-        :param us: boolean for whether at least one buyer is from the us
-        :param foreign: boolean for whether at least one buyer is not from the us
-        :return: 2-dimensional tensor containing model inputs for foreign buyers in the first
-        row and model inputs for us buyers in the second row
-        """
-        if us and foreign:
-            sources[BYR_US_MAP] = torch.tensor([[0], [1]]).float()
-            size = 2
-        else:
-            sources[BYR_US_MAP] = (1 if us else 0)
-            size = 1
-        x_fixed = Composer._build_input_vector(self.maps[model_names.HIST][FIXED], sources, size)
-        return x_fixed
 
 
 

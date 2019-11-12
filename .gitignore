@@ -2,6 +2,7 @@
 notebooks/.ipynb_checkpoints/
 __pycache__/
 *.py[cod]
+*.pc
 .idea/
 .ipynb_checkpoints/
 .env
