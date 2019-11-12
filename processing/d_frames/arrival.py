@@ -11,12 +11,12 @@ def get_arrival_time_feats(lookup, tf):
     # add period to tf_arrival
     tf = tf.reset_index('clock')
     tf = tf.join((lookup.start_date * 24 * 3600).rename('start_time'))
-    tf['period'] = (tf.clock - tf.start_time) // 3600
+    tf['period'] = (tf.clock - tf.start_time) // INTERVAL['arrival']
     tf = tf.drop(['clock', 'start_time'], axis=1)
     # increment period by 1; time feats are up to t-1
     tf['period'] += 1
     # drop periods beyond censoring threshold
-    tf = tf[tf.period < MAX_DAYS * 24]
+    tf = tf[tf.period < INTERVAL_COUNTS['arrival']]
     # sum count features by period and return
     return tf.groupby(['lstg', 'period']).sum()
 
@@ -26,13 +26,13 @@ def get_y_arrival(lookup, threads):
     t0 = lookup.start_date * 24 * 3600
     diff = pd.to_timedelta(threads.start_time - t0, unit='s')
     end = pd.to_timedelta(lookup.end_time - t0, unit='s')
-    # convert to hours
-    diff = (diff.dt.total_seconds() // 3600).astype('uint16')
-    end = (end.dt.total_seconds() // 3600).astype('uint16')
+    # convert to intervals
+    diff = (diff.dt.total_seconds() // INTERVAL['arrival']).astype('uint16')
+    end = (end.dt.total_seconds() // INTERVAL['arrival']).astype('uint16')
     # censor to first 31 days
-    diff = diff.loc[diff < MAX_DAYS * 24]
-    end.loc[end >= MAX_DAYS * 24] = MAX_DAYS * 24 - 1
-    # count of arrivals by hour
+    diff = diff.loc[diff < INTERVAL_COUNTS['arrival']]
+    end.loc[end >= INTERVAL_COUNTS['arrival']] = INTERVAL_COUNTS['arrival'] - 1
+    # count of arrivals by interval
     hours = diff.rename('period').to_frame().assign(count=1)
     arrivals = hours.groupby(['lstg', 'period']).sum()
     arrivals = arrivals.squeeze().astype('int8')
