@@ -7,7 +7,7 @@ from interface import *
 from simulator import Simulator
 from constants import *
 
-EPOCHS = 100
+EPOCHS = 1
 
 
 def run_loop(simulator, data, isTraining=False):
@@ -37,6 +37,10 @@ def train_model(simulator, train, test, stub):
         print('Training epoch %d:' % i)
         run_loop(simulator, train, isTraining=True)
 
+        # save model
+        torch.save(simulator.net.state_dict(), 
+            MODEL_DIR + '%s.net' % stub)
+
         # calculate log-likelihood on training and test
         print('Validating on train:')
         lnL_train = run_loop(simulator, train)
@@ -50,10 +54,6 @@ def train_model(simulator, train, test, stub):
         f = open(SUMMARY_DIR + '%s.csv' % stub, 'a')
         f.write('%d,%d,%.4f,%.4f\n' % (i+1, dur, lnL_train, lnL_test))
         f.close()
-
-        # save model
-        torch.save(simulator.net.state_dict(), 
-            MODEL_DIR + '%s.net' % stub)
 
 
 if __name__ == '__main__':
