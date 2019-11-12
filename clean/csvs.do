@@ -37,17 +37,6 @@ replace flag = 0 if flag == .
 replace flag = 1 if bin_rev
 drop bin_rev
 
-* mark listings that last longer than 31 days
-
-g byte toDrop = end_date - start_date > 30
-
-* mark multi-listings
-
-by slr meta leaf product title cndtn start_date, sort: ///
-	egen int count = sum(1)
-replace toDrop = 1 if count > 1
-drop title count
-
 * shipping
 
 g byte fast = ship_fast != -1

@@ -4,6 +4,9 @@ import numpy as np, pandas as pd
 from constants import *
 
 
+ORDER = ['slr', 'cat', 'title', 'cndtn']
+
+
 def partition_lstgs(s):
     # series of index slr and value lstg
     slrs = s.reset_index().sort_values(
@@ -23,9 +26,30 @@ def partition_lstgs(s):
     return d
 
 
+# def get_multi_lstgs(L):
+#     df = L[LEVELS[:-1] + ['start_date', 'end_time']].set_index(
+#         LEVELS[:-1], append=True).reorder_levels(LEVELS).sort_index()
+#     # start time
+#     df['start_date'] *= 24 * 3600
+#     df = df.rename(lambda x: x.split('_')[0], axis=1)
+#     # find multi-listings
+#     df = df.sort_values(df.index.names[:-1] + ['start'])
+#     maxend = df.end.groupby(df.index.names[:-1]).cummax()
+#     maxend = maxend.groupby(df.index.names[:-1]).shift(1)
+#     overlap = df.start <= maxend
+#     return overlap.groupby(df.index.names).max()
+
+
 if __name__ == "__main__":
     # load listings
     L = load(CLEAN_DIR + 'listings.pkl')
+
+    # find multi-listings
+    L = L.sort_values(ORDER + ['start'])
+    maxend = L.end.groupby(ORDER).cummax()
+    maxend = maxend.groupby(ORDER).shift(1)
+    overlap = L.start.astype('int64') * 24 * 3600 <= maxend
+    ismulti = overlap.groupby(ORDER + ['lstg']).max()
 
     # drop invalid listings
     L = L.loc[(L.flag == 0) & (L.toDrop == 0)]

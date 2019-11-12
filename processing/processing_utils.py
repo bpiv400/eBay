@@ -118,6 +118,8 @@ def get_featnames(d):
     if 'x_clock' in d:
         featnames['x_time'] = \
             list(d['x_clock'].columns) + list(d['tf'].columns) + ['duration']
+    if 'remaining' in d:
+        featnames['x_time'] += ['remaining']
     if 'x_time' in d:
         featnames['x_time'] = list(d['x_time'].columns)
     return featnames
@@ -133,6 +135,8 @@ def get_sizes(d):
     if 'x_clock' in d:
         sizes['steps'] = len(d['y'].columns)
         sizes['time'] = len(d['x_clock'].columns) + len(d['tf'].columns) + 1
+    if 'remaining' in d:
+        sizes['time'] += 1
     if 'x_time' in d:
         sizes['steps'] = len(d['y'].columns)
         sizes['time'] = len(d['x_time'].columns)
@@ -166,7 +170,7 @@ def convert_to_numpy(d):
         d['x_time'] = np.concatenate(arrays, axis=2)
 
     # convert y and x_fixed to numpy directly
-    for k in ['y', 'turns', 'x_fixed', 'idx_clock', 'x_clock']:
+    for k in ['y', 'turns', 'x_fixed', 'idx_clock', 'x_clock', 'remaining']:
         if k in d:
             d[k] = d[k].to_numpy()
 

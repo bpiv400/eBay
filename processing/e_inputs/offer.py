@@ -85,7 +85,8 @@ def process_inputs(part, outcome, role):
 
 	# fixed features
 	x_fixed = x_lstg.reindex(
-		index=turns.index, level='lstg').join(x_thread)
+		index=turns.index, level='lstg').join(
+		x_thread[['byr_hist', 'months_since_lstg']])
 
 	# time features
 	x_time = get_x_time(x_offer, outcome, role)

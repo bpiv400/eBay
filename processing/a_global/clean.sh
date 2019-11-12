@@ -1,5 +1,5 @@
 #!/bin/bash
-#$ -l m_mem_free=75G
+#$ -l m_mem_free=125G
 #$ -N clean
 #$ -j y
 #$ -o logs/

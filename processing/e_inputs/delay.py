@@ -7,13 +7,18 @@ from processing.processing_utils import *
 
 
 def add_past_offers(role, x_fixed, x_offer, tf_raw):
-    # last 2 offers
+    # combine offer dataframe and time feats
     df = x_offer.join(tf_raw.reindex(
         index=x_offer.index, fill_value=0))
+    # last 2 offers
     offer1 = df.groupby(['lstg', 'thread']).shift(
         periods=1).reindex(index=x_fixed.index)
     offer2 = df.groupby(['lstg', 'thread']).shift(
         periods=2).reindex(index=x_fixed.index)
+    # drop clock feats from offer1
+    toDrop = ['holiday', 'minute_of_day'] + \
+                [x for x in offer1.columns if 'dow' in x]
+    offer1 = offer1.drop(toDrop , axis=1)
     # drop constant features
     if role == 'byr':
         offer2 = offer2.drop(['auto', 'exp', 'reject'], axis=1)
@@ -47,9 +52,12 @@ def process_inputs(part, role):
     x_offer = load(getPath(['x', 'offer']))
     tf_raw = load(getPath(['tf', 'role', 'raw']))
     clock = load(getPath(['clock']))
+    lstg_start = load(getPath(['lookup'])).start_date.astype(
+        'int64') * 24 * 3600
 
     # initialize fixed features
-    x_fixed = pd.DataFrame(index=y.index).join(x_lstg).join(x_thread)
+    x_fixed = pd.DataFrame(index=y.index).join(x_lstg).join(
+        x_thread[['byr_hist', 'months_since_lstg']])
 
     # turn indicators
     x_fixed = add_turn_indicators(x_fixed)
@@ -72,9 +80,17 @@ def process_inputs(part, role):
     x_clock = extract_clock_feats(minute).join(minute).set_index('clock')
 
     # index of first x_clock for each y
-    start = clock.groupby(['lstg', 'thread']).shift().reindex(
-        index=turns.index)
-    idx_clock = (start // 60).astype('int64')
+    delay_start = clock.groupby(['lstg', 'thread']).shift().reindex(
+        index=turns.index).astype('int64')
+    idx_clock = delay_start // 60
+
+    # normalized periods remaining at start of delay period
+    remaining = MAX_DAYS * 24 * 3600 - (delay_start - lstg_start)
+    remaining.loc[remaining.index.isin([2, 4, 6, 7], level='index')] /= \
+        MAX_DELAY['slr']
+    remaining.loc[remaining.index.isin([3, 5], level='index')] /= \
+        MAX_DELAY['byr']
+    remaining = np.minimum(remaining, 1)
 
     # time features
     tf = load(getPath(['tf', 'delay', 'diff', role]))
@@ -84,6 +100,7 @@ def process_inputs(part, role):
             'x_fixed': x_fixed.astype('float32', copy=False), 
             'x_clock': x_clock.astype('uint16', copy=False),
             'idx_clock': idx_clock.astype('int64', copy=False),
+            'remaining': remaining.astype('float32', copy=False),
             'tf': tf.astype('float32', copy=False)}
 
 

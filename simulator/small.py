@@ -7,7 +7,7 @@ from interface import *
 from simulator import Simulator
 from constants import *
 
-EPOCHS = 1
+EPOCHS = 100
 
 
 def run_loop(simulator, data, isTraining=False):
@@ -20,15 +20,18 @@ def run_loop(simulator, data, isTraining=False):
 
     # loop over batches, calculate log-likelihood
     lnL = 0
+    t0 = dt.now()
     for b, batch in enumerate(batches):
-        if (b+1) % 100 == 0:
-            print('\tBatch %d of %d' % (b+1, len(batches)))
+        t1 = dt.now()
         lnL += simulator.run_batch(batch, isTraining)
+        print('gpu time: %d microseconds' % (dt.now() - t1).microseconds)
+        print('total time: %d microseconds' % (dt.now() - t0).microseconds)
+        t0 = dt.now()
 
     return lnL / data.N_labels
 
 
-def train_model(simulator, train, test, stub):
+def train_model(simulator, train):
     # loop over epochs, record log-likelihood
     for i in range(EPOCHS):
         t0 = dt.now()
@@ -37,23 +40,8 @@ def train_model(simulator, train, test, stub):
         print('Training epoch %d:' % i)
         run_loop(simulator, train, isTraining=True)
 
-        # save model
-        torch.save(simulator.net.state_dict(), 
-            MODEL_DIR + '%s.net' % stub)
-
-        # calculate log-likelihood on training and test
-        print('Validating on train:')
-        lnL_train = run_loop(simulator, train)
-        print('Validating on holdout:')
-        lnL_test = run_loop(simulator, test)
-
         # epoch duration
         dur = np.round((dt.now() - t0).seconds)
-
-        # write statistics to file
-        f = open(SUMMARY_DIR + '%s.csv' % stub, 'a')
-        f.write('%d,%d,%.4f,%.4f\n' % (i+1, dur, lnL_train, lnL_test))
-        f.close()
 
 
 if __name__ == '__main__':
@@ -62,11 +50,8 @@ if __name__ == '__main__':
         description='Model of environment for bargaining AI.')
     parser.add_argument('--model', type=str, 
         help='One of arrival, delay_byr, delay_slr, con_byr, con_slr.')
-    parser.add_argument('--id', type=int, help='Experiment ID.')
     args = parser.parse_args()
     model = args.model
-    paramsid = args.id
-    stub = '%s_%d' % (model, paramsid)
 
     # load model sizes
     print('Loading parameters')
@@ -75,8 +60,7 @@ if __name__ == '__main__':
     print(sizes)
 
     # load neural net parameters
-    params = pd.read_csv('%s/inputs/params.csv' % PREFIX, 
-        index_col=0).loc[paramsid].to_dict()
+    params = {'layers': 2, 'hidden': 32}
     print(params)
     
     # initialize neural net
@@ -84,15 +68,8 @@ if __name__ == '__main__':
         device='cuda' if torch.cuda.is_available() else 'cpu')
     print(simulator.net)
 
-    # create datasets
-    train = Inputs('train_models', model)
-    test = Inputs('train_rl', model)
-
-    # create outfile
-    f = open(SUMMARY_DIR + '%s.csv' % stub, 'w')
-    f.write('epoch,seconds,lnL_train,lnL_holdout\n')
-    f.close()
+    # load data
+    train = Inputs('small', model)
 
     # train model
-    train_model(simulator, train, test, stub)
-    
+    train_model(simulator, train)

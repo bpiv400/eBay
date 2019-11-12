@@ -5,6 +5,46 @@ from datetime import datetime as dt
 from constants import *
 
 
+OTYPES = {'lstg': 'int64',
+		  'thread': 'int64',
+		  'index': 'uint8',
+		  'clock': 'int64', 
+		  'price': 'float64', 
+		  'accept': bool,
+		  'reject': bool,
+		  'censored': bool,
+		  'message': bool}
+
+TTYPES = {'lstg': 'int64',
+		  'thread': 'int64',
+		  'byr': 'int64',
+		  'byr_hist': 'int64',
+		  'start_time': 'int64',
+		  'bin': bool,
+		  'byr_us': bool}
+
+LTYPES = {'lstg': 'int64',
+		  'slr': 'int64',
+		  'meta': 'uint8',
+		  'cat': str,
+		  'title': 'int64',
+		  'cndtn': 'uint8',
+		  'start_date': 'uint16',
+		  'end_time': 'int64',
+		  'fdbk_score': 'int64',
+		  'fdbk_pstv': 'int64',
+		  'start_price': 'float64',
+		  'photos': 'uint8',
+		  'slr_lstgs': 'int64',
+		  'slr_bos': 'int64',
+		  'decline_price': 'float64',
+		  'accept_price': 'float64',
+		  'store': bool,
+		  'slr_us': bool,
+		  'flag': bool,
+		  'fast': bool}
+
+
 # creates series of percentiles indexed by column variable
 def get_pctiles(s):
 	N = len(s.index)
@@ -26,8 +66,12 @@ seconds = lambda t: t.hour*3600 + t.minute*60 + t.second
 
 if __name__ == '__main__':
 	# load offers and threads
-	O = load(CLEAN_DIR + 'offers.pkl')
-	T = load(CLEAN_DIR + 'threads.pkl')
+	O = pd.read_csv(CLEAN_DIR + 'offers.csv', dtype=OTYPES).set_index(
+		['lstg', 'thread', 'index'])
+	T = pd.read_csv(CLEAN_DIR + 'threads.csv', dtype=TTYPES).set_index(
+		['lstg', 'thread'])
+	L = pd.read_csv(CLEAN_DIR + 'listings.csv', dtype=LTYPES).set_index(
+		'lstg')
 
 	# convert arrivals to seconds
 	s = pd.to_datetime(T.start_time, origin=START, unit='s')
@@ -105,9 +149,6 @@ if __name__ == '__main__':
 	dump(O, CLEAN_DIR + 'offers.pkl')
 	dump(T, CLEAN_DIR + 'threads.pkl')
 	del O, T
-
-	# load listings
-	L = load(CLEAN_DIR + 'listings.pkl')
 
 	# update listing end time
 	L.loc[end_time.index, 'end_time'] = end_time
