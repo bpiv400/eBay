@@ -3,7 +3,7 @@ Utility functions for use in objects related to the RL environment
 """
 import utils
 from constants import SLR_PREFIX, BYR_PREFIX, ARRIVAL_PREFIX, INPUT_DIR
-from rlenv.interface.model_names import FEED_FORWARD, LSTM_MODELS
+from rlenv.interface.model_names import FEED_FORWARD, LSTM_MODELS, ARRIVAL
 from simulator.nets import FeedForward, LSTM, RNN
 
 
@@ -24,12 +24,42 @@ def model_str(model_name, byr=False):
     return name
 
 
+def get_model_type(full_name):
+    if full_name in ARRIVAL:
+        model_type = ARRIVAL_PREFIX
+    elif SLR_PREFIX in full_name:
+        model_type = SLR_PREFIX
+    else:
+        model_type = BYR_PREFIX
+    return model_type
+
+
+def get_model_name(full_name):
+    if full_name in ARRIVAL:
+        model_name = full_name
+    elif SLR_PREFIX in full_name:
+        model_name = full_name.replace('{}_'.format(SLR_PREFIX), '')
+    else:
+        model_name = full_name.replace('{}_'.format(BYR_PREFIX), '')
+    return model_name
+
+
 def load_featnames(model_type, model_name):
     if model_type == ARRIVAL_PREFIX:
         path_suffix = model_name
     else:
-        path_suffix = '{}_{}'.format(model_type, model_name)
+        path_suffix = '{}_{}'.format(model_name, model_type)
     featnames_path = '{}featnames/{}.pkl'.format(INPUT_DIR, path_suffix)
+    featnames_dict = utils.unpickle(featnames_path)
+    return featnames_dict
+
+
+def load_sizes(model_type, model_name):
+    if model_type == ARRIVAL_PREFIX:
+        path_suffix = model_name
+    else:
+        path_suffix = '{}_{}'.format(model_name, model_type)
+    featnames_path = '{}sizes/{}.pkl'.format(INPUT_DIR, path_suffix)
     featnames_dict = utils.unpickle(featnames_path)
     return featnames_dict
 
@@ -50,6 +80,12 @@ def get_model_class(model_name):
     else:
         mod_type = RNN
     return mod_type
+
+
+def get_featnames_sizes(full_name=None, model_type=None, model_name=None):
+    if full_name is not None:
+        model_type, model_name = get_model_type(full_name), get_model_name(full_name)
+    return load_featnames(model_type, model_name), load_sizes(model_type, model_name)
 
 
 def get_model_dir(model_name):

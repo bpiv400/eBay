@@ -6,11 +6,11 @@ import utils
 INCREMENTER = torch.tensor([1]).float()
 
 class Sources:
-    def __init__(self, arrival=False, start_date=0, x_lstg=None):
-        self.arrival = arrival
+    def __init__(self, num_offers=False, start_date=0, x_lstg=None):
+        self.num_offers = num_offers
         self.start_date = start_date
         self.period = torch.tensor([-1]).float()
-        if arrival:
+        if num_offers:
             self.max_periods = torch.tensor([ARRIVAL_PERIODS]).float()
         self.source_dict = {
             LSTG_MAP: x_lstg,
@@ -24,7 +24,7 @@ class Sources:
         self.period = self.period + INCREMENTER
         self.source_dict[DUR_MAP] = self.period / self.max_periods
         self.source_dict[CLOCK_MAP] = utils.get_clock_feats(time, self.start_date,
-                                                            arrival=self.arrival,
+                                                            arrival=self.num_offers,
                                                             delay=False)
         self.source_dict[DIFFS_MAP] = time_feats - TIME_FEATS
 

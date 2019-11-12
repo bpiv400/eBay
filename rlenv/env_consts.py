@@ -1,5 +1,4 @@
-from utils import unpickle
-from constants import MODEL_DIR, PARTS_DIR
+from constants import INPUT_DIR, PARTS_DIR
 import torch
 
 # time feats
@@ -34,12 +33,23 @@ TIME_FEATS = [
 ]
 
 # outcomes
-SLR_OUTCOMES = ['delay', 'con', 'norm', 'split', 'round', 'nines', 'msg', 'auto', 'reject', 'exp']
-BYR_OUTCOMES = ['delay', 'con', 'norm', 'split', 'round', 'nines', 'msg']
+BYR_OUTCOMES = ['delay', 'days', 'con', 'norm', 'split', 'msg']
+SLR_OUTCOMES = BYR_OUTCOMES + ['reject', 'auto', 'exp']
+
 
 # turn indices
 SLR_TURN_INDS = ['t1', 't2']
 BYR_TURN_INDS = SLR_TURN_INDS + ['t3']
+
+# clock feats
+CLOCK_FEATS = ['holiday', 'dow0', 'dow1', 'dow2', 'dow3', 'dow4', 'dow5', 'minute_of_day']
+MONTHS_SINCE_LSTG = 'months_since_lstg'
+DAYS_SINCE_THREAD = 'days_since_thread'
+DURATION = 'duration'
+INT_REMAINING = 'remaining'
+
+# hist feature
+BYR_HIST = 'byr_hist'
 
 # dataset dictionary keys
 X_LSTG = 'x_lstg'
@@ -49,19 +59,9 @@ LOOKUP = 'lookup'
 PARTITION = 'train_rl'
 DATA_DIR = '{}{}/'.format(PARTS_DIR, PARTITION)
 X_LSTG_FILENAME = '{}{}.hdf5'.format(DATA_DIR, X_LSTG)
-COMPOSER_DIR = '{}composer/'.format(MODEL_DIR)
+COMPOSER_DIR = '{}composer/'.format(INPUT_DIR)
 REWARD_EXPERIMENT_PATH = 'repo/rlenv/rewards/experiments.csv'
-FEATNAMES_FILENAME = 'featnames.pkl'
-SIZES_FILENAME = 'sizes.pkl'
 LOOKUP_FILENAME = 'lookup.gz'
-
-
-# clock feats
-DAYS_CLOCK_FEATS = ['days', 'holiday', 'dow0', 'dow1', 'dow2', 'dow3', 'dow4', 'dow5']
-FF_CLOCK_FEATS = ['focal_{}'.format(feat) for feat in DAYS_CLOCK_FEATS]
-OFFER_CLOCK_FEATS = DAYS_CLOCK_FEATS + ['minutes']
-# remove when Etan adds days to delay model cock
-DELAY_CLOCK_FEATS = [feat for feat in OFFER_CLOCK_FEATS if feat != 'days']
 
 # temporal constants
 MONTH = 31 * 24 * 3600
@@ -69,13 +69,12 @@ DAY = 24 * 3600
 HOUR = 3600
 EXPIRATION = 48 * 60 * 60
 
-# map names
+# base map names
 LSTG_MAP = 'lstg'
-CLOCK_MAP = 'clock'
-DUR_MAP = 'duration'
 BYR_HIST_MAP = 'byr_hist'
+# curr turn maps
 OUTCOMES_MAP = 'outcomes'
-SIZE = 'size'
+CLOCK_MAP = 'clock'
 TIME_MAP = 'time'
 TURN_IND_MAP = 'turn_inds'
 DIFFS_MAP = 'diffs'
@@ -88,16 +87,21 @@ O_DIFFS_MAP = 'other_diffs'
 L_CLOCK_MAP = 'last_clock'
 L_OUTCOMES_MAP = 'last_outcomes'
 L_TIME_MAP = 'last_time'
+# misc time maps
+INT_REMAIN_MAP = 'intervals'
+DUR_MAP = 'duration'
+MONTHS_LSTG_MAP = 'months_lstg'
+DAYS_THREAD_MAP = 'days_thread'
+# SIZE map
+SIZE = 'size'
 
 # zero vectors
 # TODO: check whether there are similar outcome vectors
 ZERO_SLR_OUTCOMES = torch.zeros(len(SLR_OUTCOMES))
 ZERO_SLR_OUTCOMES[[7, 8]] = 1
 
-# remove when Etan adds days to delay model cock
-DELAY_CLOCK_ZEROS = torch.zeros(len(DELAY_CLOCK_FEATS))
+CLOCK_ZEROS = torch.zeros(len(CLOCK_FEATS))
 
-BYR_ATTRS = ['byr_us', 'byr_hist']
 FIXED = 'fixed'
 TIME = 'time'
 
@@ -111,7 +115,7 @@ ANCHOR_STORE_INSERT = .03
 AUTO_REJ_OUTCOMES = torch.zeros(len(SLR_OUTCOMES))
 AUTO_REJ_OUTCOMES[[7, 8]] = 1  # automatic, rejected
 EXP_REJ_OUTCOMES = torch.zeros(len(SLR_OUTCOMES))
-EXP_REJ_OUTCOMES[[0, 8, 9]] = 1  # full delay, rejected, expired
+EXP_REJ_OUTCOMES[[0, 8]] = 1  # full delay, rejected, expired
 
 # lookup column names
 LSTG = 'lstg'

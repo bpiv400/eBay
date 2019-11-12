@@ -3,7 +3,7 @@ Script for updating the indices files that Composer uses to
 populate the model input tensors
 """
 
-from composer.Composer import Composer
+from rlenv.composer.Composer import Composer
 
 
 def main():
