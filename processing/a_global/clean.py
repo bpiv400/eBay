@@ -1,5 +1,4 @@
-import sys
-from compress_pickle import load, dump
+import sys, pickle
 import pandas as pd, numpy as np
 from datetime import datetime as dt
 from constants import *
@@ -146,8 +145,8 @@ if __name__ == '__main__':
 	O.loc[idx, 'censored'] = True
 
 	# save offers and threads
-	dump(O, CLEAN_DIR + 'offers.pkl')
-	dump(T, CLEAN_DIR + 'threads.pkl')
+	pickle.dump(O, open(CLEAN_DIR + 'offers.pkl', 'wb'))
+	pickle.dump(T, open(CLEAN_DIR + 'threads.pkl', 'wb'))
 	del O, T
 
 	# update listing end time
@@ -173,4 +172,4 @@ if __name__ == '__main__':
 			dump(toSave, '%s/pctile/%s.gz' % (PREFIX, feat))
 
 	# save listings
-	dump(L, CLEAN_DIR + 'listings.pkl')
+	pickle.dump(L, open(CLEAN_DIR + 'listings.pkl', 'wb'))
