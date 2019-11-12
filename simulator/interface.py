@@ -37,7 +37,7 @@ class Inputs(Dataset):
                 range(self.n), dtype='uint16')
             # period / max periods
             self.duration = np.expand_dims(
-                np.array(range(self.n) / self.n, dtype='float32'), axis=1)
+                np.array(range(self.n), dtype='float32') / self.n, axis=1)
             # number of time features
             for val in self.d['tf'].values():
                 N_tfeats = len(val.columns)

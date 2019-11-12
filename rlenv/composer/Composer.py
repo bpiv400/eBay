@@ -7,15 +7,16 @@ import numpy as np
 from rlenv.env_consts import *
 from utils import unpickle
 from rlenv.interface import model_names
-from rlenv.env_utils import load_featnames
+from rlenv.env_utils import get_featnames_sizes
+
 
 class Composer:
     """
     Class for composing inputs to interface from various input streams
 
     """
-    def __init__(self, composer_id, rebuild=False):
-        composer_path = '{}{}.pkl'.format(COMPOSER_DIR, composer_id)
+    def __init__(self, params, rebuild=False):
+        composer_path = '{}{}.pkl'.format(COMPOSER_DIR, params['composer'])
         if not os.path.exists(composer_path) or rebuild:
             self.maps = Composer.build()
             pickle.dump(self.maps, open(composer_path, 'wb'))
@@ -54,8 +55,9 @@ class Composer:
         :return: dictionary of maps for all interface
         """
         output = dict()
-        x_lstg_size = len(load('{}train_rl/1.gz'.format(constants.REWARDS_DIR))['x_lstg'].columns)
-        fixed = torch.arange(x_lstg_size).long()
+        x_lstg_cols = load('{}train_rl/1.gz'.format(constants.REWARDS_DIR))['x_lstg'].columns
+        pos = np.arange(len(x_lstg_cols))
+        fixed = pd.DataFrame(data={'from': pos}, index=x_lstg_cols)
 
         for model_name in model_names.MODELS:
             if model_name in model_names.FEED_FORWARD:
@@ -63,6 +65,51 @@ class Composer:
             else:
                 output[model_name] = Composer._build_recurrent(model_name, fixed)
         return output
+
+    @staticmethod
+    def _add_fixed_delay_maps(maps, featnames, byr=False):
+        """
+        Adds maps for feature sets that don't appear in any x_fixed inputs
+        other than the delay models
+
+        :param maps: dictionary for x_fixed maps
+        :param featnames: dataframe where index give feature names in featnames file
+        and 'to' column gives indices of features in input vector
+        :param byr: boolean for
+        :return:
+        """
+        if not byr:
+            other_outcomes = ['{}_other'.format(feat) for feat in BYR_OUTCOMES]
+            last_outcomes = ['{}_last'.format(feat) for feat in SLR_OUTCOMES]
+            indicators = SLR_TURN_INDS
+        else:
+            other_outcomes = ['{}_other'.format(feat) for feat in SLR_OUTCOMES]
+            last_outcomes = ['{}_last'.format(feat) for feat in BYR_OUTCOMES]
+            indicators = BYR_TURN_INDS
+        # past turn outcomes
+        maps[O_OUTCOMES_MAP] = Composer._build_simple_map(other_outcomes, featnames)
+        maps[L_OUTCOMES_MAP] = Composer._build_simple_map(last_outcomes, featnames)
+        # indicators
+        maps[TURN_IND_MAP] = Composer._build_pair_map(indicators, featnames)
+        # last clock
+        last_clock = ['{}_last'.format(feat) for feat in CLOCK_FEATS]
+        maps[L_CLOCK_MAP] = Composer._build_simple_map(last_clock, featnames)
+        # past turn outcomes
+        other_time = ['{}_other'.format(feat) for feat in TIME_FEATS]
+        maps[O_TIME_MAP] = Composer._build_simple_map(other_time, featnames)
+        last_time = ['{}_last'.format(feat) for feat in TIME_FEATS]
+        maps[L_TIME_MAP] = Composer._build_simple_map(last_time, featnames)
+        # days since thread
+        maps[DAYS_THREAD_MAP] = Composer._build_simple_map(DAYS_SINCE_THREAD, featnames)
+
+    @staticmethod
+    def _add_fixed_hist_maps(maps, featnames):
+        # months since lstg
+        maps[MONTHS_LSTG_MAP] = Composer._build_simple_map(MONTHS_SINCE_LSTG, featnames)
+        # time feats raw
+        maps[TIME_MAP] = Composer._build_simple_map(TIME_FEATS, featnames)
+        # clock
+        maps[CLOCK_MAP] = Composer._build_simple_map(CLOCK_FEATS, featnames)
 
     @staticmethod
     def _build_fixed(model_name, fixed, featnames):
@@ -84,27 +131,14 @@ class Composer:
             SIZE: torch.tensor(len(featnames)).long()
         }
         if model_names.DELAY in model_name:
-            if constants.SLR_PREFIX in model_name:
-                other_outcomes = ['{}_other'.format(feat) for feat in BYR_OUTCOMES]
-                last_outcomes = ['{}_last'.format(feat) for feat in SLR_OUTCOMES]
-                indicators = SLR_TURN_INDS
-            else:
-                other_outcomes = ['{}_other'.format(feat) for feat in SLR_OUTCOMES]
-                last_outcomes = ['{}_last'.format(feat) for feat in BYR_OUTCOMES]
-                indicators = BYR_TURN_INDS
-            maps[O_OUTCOMES_MAP] = Composer._build_simple_map(other_outcomes, featnames)
-            maps[L_OUTCOMES_MAP] = Composer._build_simple_map(last_outcomes, featnames)
-            other_clock = ['{}_other'.format(feat) for feat in OFFER_CLOCK_FEATS]
-            maps[O_CLOCK_MAP] = Composer._build_simple_map(other_clock, featnames)
-            last_clock = ['{}_last'.format(feat) for feat in OFFER_CLOCK_FEATS]
-            maps[L_CLOCK_MAP] = Composer._build_simple_map(last_clock, featnames)
-            other_time = ['{}_other'.format(feat) for feat in TIME_FEATS]
-            maps[O_TIME_MAP] = Composer._build_simple_map(other_time, featnames)
-            last_time = ['{}_last'.format(feat) for feat in TIME_FEATS]
-            maps[L_TIME_MAP] = Composer._build_simple_map(last_time, featnames)
-            maps[TURN_IND_MAP] = Composer._build_simple_map(indicators, featnames)
-        if model_name is not in model_names.ARRIVAL:
+            Composer._add_fixed_delay_maps(maps, featnames,
+                                           byr=constants.BYR_PREFIX in model_name)
+        if model_name == model_names.BYR_HIST:
+            Composer._add_fixed_hist_maps(maps, featnames)
+        if model_name not in model_names.ARRIVAL:
             maps[BYR_HIST_MAP] = Composer._build_simple_map(BYR_HIST, featnames)
+        if model_name != model_names.NUM_OFFERS:
+            maps[MONTHS_LSTG_MAP] = Composer._build_simple_map(MONTHS_SINCE_LSTG, featnames)
         return maps
 
     @staticmethod
@@ -140,6 +174,8 @@ class Composer:
         x[i] gives the position of targ_feats[i] in the input vector
         :raises: AssertionError if a feature in targ_feats isn't found in featnames
         """
+        if isinstance(targ_feats, str):
+            targ_feats = [targ_feats]
         matches = featnames.loc[featnames.index.isin(targ_feats), 'to']
         matches = matches.reindex(targ_feats, axis='index', copy=True)
         matches = matches.to_numpy().astype(int)
@@ -148,6 +184,30 @@ class Composer:
         assert matches.unique().numel() == matches.numel()
         assert matches.min() >= 0
         return matches
+
+    @staticmethod
+    def add_time_offer_maps(maps, featnames, byr=False):
+        if not byr:
+            outcomes = SLR_OUTCOMES
+            other_outcomes = ['{}_other'.format(feat) for feat in BYR_OUTCOMES]
+            last_outcomes = ['{}_last'.format(feat) for feat in SLR_OUTCOMES]
+            indicators = SLR_TURN_INDS
+        else:
+            outcomes = BYR_OUTCOMES
+            other_outcomes = ['{}_other'.format(feat) for feat in SLR_OUTCOMES]
+            last_outcomes = ['{}_last'.format(feat) for feat in BYR_OUTCOMES]
+            indicators = BYR_TURN_INDS
+        # other clock, other outcomes, other diffs
+        other_clock = ['{}_other'.format(feat) for feat in CLOCK_FEATS]
+        other_diffs = ['{}_other'.format(feat) for feat in TIME_FEATS]
+        maps[O_CLOCK_MAP] = Composer._build_simple_map(other_clock, featnames)
+        maps[O_OUTCOMES_MAP] = Composer._build_simple_map(other_outcomes, featnames)
+        maps[O_DIFFS_MAP] = Composer._build_simple_map(other_diffs, featnames)
+        # turn indicators
+        maps[TURN_IND_MAP] = Composer._build_simple_map(indicators, featnames)
+        # pair maps for outcomes and last outcomes
+        maps[OUTCOMES_MAP] = Composer._build_pair_map(outcomes, featnames)
+        maps[L_OUTCOMES_MAP] = Composer._build_pair_map(last_outcomes, featnames)
 
     @staticmethod
     def _build_time(model_name, featnames):
@@ -162,82 +222,42 @@ class Composer:
         """
         featnames = pd.DataFrame(data={'to': np.arange(len(featnames))}, index=featnames)
         time_maps = dict()
-        # simple maps where all elements from the source vector are included in
-        # the model's input
-        time_maps[CLOCK_MAP] = Composer._build_clock_map(model_name, featnames)
-        if model_name != model_names.DAYS:
-            time_maps[TIME_MAP] = Composer._build_simple_map(TIME_FEATS, featnames)
-        # all interface except delay and days
-        if model_names.DELAY in model_name:
-            time_maps[PERIODS_MAP] = torch.tensor([featnames.loc['period', 'to']])
-            time_maps[PERIODS_MAP] = time_maps[PERIODS_MAP].long()
-        elif model_name != model_names.DAYS:
-            if constants.SLR_PREFIX in model_name:
-                outcomes = SLR_OUTCOMES
-                other_outcomes = ['{}_other'.format(feat) for feat in BYR_OUTCOMES]
-                last_outcomes = ['{}_last'.format(feat) for feat in SLR_OUTCOMES]
-                indicators = SLR_TURN_INDS
-            else:
-                outcomes = BYR_OUTCOMES
-                other_outcomes = ['{}_other'.format(feat) for feat in SLR_OUTCOMES]
-                last_outcomes = ['{}_last'.format(feat) for feat in BYR_OUTCOMES]
-                indicators = BYR_TURN_INDS
-
-            # other clock
-            other_clock = ['{}_other'.format(feat) for feat in OFFER_CLOCK_FEATS]
-            time_maps[O_CLOCK_MAP] = Composer._build_simple_map(other_clock, featnames)
-            # other time
-            other_time = ['{}_other'.format(feat) for feat in TIME_FEATS]
-            time_maps[O_TIME_MAP] = Composer._build_simple_map(other_time, featnames)
-            # diffs
-            diffs = ['{}_diff'.format(feat) for feat in TIME_FEATS]
-            time_maps[DIFFS_MAP] = Composer._build_simple_map(diffs, featnames)
-            # other diffs
-            other_diffs = ['{}_other'.format(feat) for feat in diffs]
-            time_maps[O_DIFFS_MAP] = Composer._build_simple_map(other_diffs, featnames)
-            # other outcomes
-            time_maps[O_OUTCOMES_MAP] = Composer._build_simple_map(other_outcomes, featnames)
-            time_maps[TURN_IND_MAP] = Composer._build_simple_map(indicators, featnames)
-
-            # pair maps where only some of the elements from the source vector may be
-            # included in the model's input
-            time_maps[OUTCOMES_MAP] = Composer._build_pair_map(outcomes, featnames)
-            time_maps[L_OUTCOMES_MAP] = Composer._build_pair_map(last_outcomes, featnames)
-            # add turn indicator map
+        # add clock features, time feats diffs to all x_time
+        time_maps[CLOCK_MAP] = Composer._build_simple_map(CLOCK_FEATS, featnames)
+        diffs = TIME_FEATS.copy()
+        time_maps[DIFFS_MAP] = Composer._build_simple_map(diffs, featnames)
+        # add duration to delay and num offers
+        if model_names.CON in model_name or model_names.MSG in model_name:
+            Composer.add_time_offer_maps(time_maps, featnames, byr=constants.BYR_PREFIX in model_name)
+        else:
+            time_maps[DUR_MAP] = Composer._build_simple_map(DURATION, featnames)
+            # add interval remaining to delay
+            if model_names.DELAY in model_name:
+                time_maps[INT_REMAIN_MAP] = Composer._build_simple_map(INT_REMAINING, featnames)
         return time_maps
 
     @staticmethod
-    def _build_recurrent(model_name, fixed):
+    def _build_recurrent(full_name, fixed):
         """
         Creates all input maps for recurrent interface (see build() for details)
 
-        :param model_name: str giving the name of the focal model (see model_names.py)
-        "from" gives the index number of each feature in the lstg tensor used in environment
+        :param full: str giving the name of the focal model (see model_names.py)
         :param fixed: dataFrame that maps feature names to their location in
         the lstg tensor used in the environment
+        "from" gives the index number of each feature in the x_lstg tensor used in environment
         :return: dictionary containing two entries, one for all time step input maps
         and one for fixed feature input maps
         """
-        if model_name in model_names.ARRIVAL:
-            model_type = model_names.ARRIVAL_PREFIX
-        elif constants.SLR_PREFIX in model_name:
-            model_type = constants.SLR_PREFIX
-            model_name = model_name.replace('{}_'.format(constants.SLR_PREFIX), '')
-        else:
-            model_type = constants.BYR_PREFIX
-            model_name = model_name.replace('{}_'.format(constants.BYR_PREFIX), '')
-
-        featnames = load_featnames(model_type, model_name)
-        fixed_maps = Composer._build_fixed(model_name, fixed, featnames['x_fixed'])
-        time_maps = Composer._build_time(model_name, featnames['x_time'])
-        sizes_path = '{}/{}/{}/{}'.format(MODEL_DIR, model_type,
-                                          subdir, SIZES_FILENAME)
-        sizes = unpickle(sizes_path)
+        print('building {}...'.format(full_name))
+        featnames, sizes = get_featnames_sizes(full_name=full_name)
+        # build maps
+        fixed_maps = Composer._build_fixed(full_name, fixed, featnames['x_fixed'])
+        time_maps = Composer._build_time(full_name, featnames['x_time'])
         # check both maps for correctness
         maps = {FIXED: fixed_maps, TIME: time_maps}
         maps[FIXED][SIZE] = torch.tensor(sizes[FIXED])
         maps[TIME][SIZE] = torch.tensor(sizes[TIME])
-        Composer._check_maps(model_name, maps)
+        Composer._check_maps(full_name, maps)
         return maps
 
     @staticmethod
@@ -258,76 +278,33 @@ class Composer:
         """
         fixed_map = fixed.merge(featnames, how='inner',
                                 left_index=True, right_index=True)
+        # ensure the map is ordered by input and contains all fixed features
+        assert len(fixed_map.index) == len(fixed.index)
+        from_inds = fixed_map['from'].values
+        assert np.all(np.equal(from_inds, np.arange(len(from_inds))))
         fixed_map = fixed_map.to_numpy().astype(int)
+        fixed_map = fixed_map[:, 1]
         fixed_map = torch.from_numpy(fixed_map).long()
         return fixed_map
 
     @staticmethod
-    def _build_clock_map(model_name, featnames):
-        """
-        Creates simple map for a given model's clock features
-
-        :param model_name: str giving the name of the focal model (see model_names.py)
-        :param featnames: pd.DataFrame index containing names of all the features in
-        the current model's fixed feature input vector in order
-        :return: 1-dimensional tensor
-        """
-        if model_name in model_names.FEED_FORWARD:
-            clock_feats = FF_CLOCK_FEATS
-        elif model_name == model_names.DAYS:
-            clock_feats = DAYS_CLOCK_FEATS
-        elif model_names.DELAY in model_name:
-            clock_feats = DELAY_CLOCK_FEATS
-        else:
-            clock_feats = OFFER_CLOCK_FEATS
-        clock_map = Composer._build_simple_map(clock_feats, featnames)
-        return clock_map
-
-    @staticmethod
-    def _build_ff(model_name, fixed):
+    def _build_ff(full_name, fixed):
         """
         Creates input maps for feed forward networks
 
-        :param model_name: str giving the name of the focal model (see model_names.py)
+        :param full_name: str giving the name of the focal model (see model_names.py)
         "from" gives the index number of each feature in the lstg tensor used in environment
         :param fixed: dataFrame that maps feature names to their location in
         the lstg tensor used in the environment
         :return: dictionary containing input maps under the 'fixed' index --
         see build() for details
         """
-        featnames_path = '{}/arrival/{}/{}'.format(MODEL_DIR, model_name,
-                                                   FEATNAMES_FILENAME)
-        size_path = '{}/arrival/{}/{}'.format(MODEL_DIR, model_name,
-                                              SIZES_FILENAME)
-        sizes = unpickle(size_path)
-        input_featnames = unpickle(featnames_path)['x_fixed']
-        input_featnames = pd.DataFrame(data={'to': np.arange(len(input_featnames))},
-                                       index=input_featnames)
-        fixed_map = Composer._build_lstg_map(fixed, input_featnames)
-        clock_map = Composer._build_clock_map(model_name, input_featnames)
-        assert clock_map.numel() == len(FF_CLOCK_FEATS)
-        maps = {
-            LSTG_MAP: fixed_map,
-            CLOCK_MAP: clock_map,
-            SIZE: torch.tensor(sizes[FIXED]).long()
-        }
-        if model_name == model_names.LOC:
-            assert clock_map.numel() + fixed_map.shape[0] == len(input_featnames)
-        else:
-            loc_map = input_featnames.loc[input_featnames.index == 'byr_us', 'to']
-            loc_map = torch.tensor(loc_map.to_numpy().astype(int)).long()
-            maps[BYR_US_MAP] = loc_map
-            if model_name == model_names.HIST:
-                assert clock_map.numel() + fixed_map.shape[0] + 1 == len(input_featnames)
-            elif model_name == model_names.BIN or model_name == model_names.SEC:
-                hist_map = input_featnames.loc[input_featnames.index == 'byr_hist', 'to']
-                hist_map = torch.tensor(hist_map.to_numpy().astype(int)).long()
-                assert clock_map.numel() + fixed_map.shape[0] + 2 == len(input_featnames)
-                maps[BYR_HIST_MAP] = hist_map
-            else:
-                raise RuntimeError('Invalid model name. See model_names.py')
+        print('building {}...'.format(full_name))
+        featnames, sizes = get_featnames_sizes(full_name=full_name)
+        featnames = featnames['x_fixed']
+        maps = Composer._build_fixed(full_name, fixed, featnames)
         maps = {FIXED: maps}
-        Composer._check_maps(model_name, maps)
+        Composer._check_maps(full_name, maps)
         return maps
 
     @staticmethod
