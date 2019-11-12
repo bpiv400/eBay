@@ -1,5 +1,4 @@
-from utils import unpickle
-from constants import MODEL_DIR, PARTS_DIR
+from constants import INPUT_DIR, PARTS_DIR
 import torch
 
 # time feats
@@ -60,7 +59,7 @@ LOOKUP = 'lookup'
 PARTITION = 'train_rl'
 DATA_DIR = '{}{}/'.format(PARTS_DIR, PARTITION)
 X_LSTG_FILENAME = '{}{}.hdf5'.format(DATA_DIR, X_LSTG)
-COMPOSER_DIR = '{}composer/'.format(MODEL_DIR)
+COMPOSER_DIR = '{}composer/'.format(INPUT_DIR)
 REWARD_EXPERIMENT_PATH = 'repo/rlenv/rewards/experiments.csv'
 LOOKUP_FILENAME = 'lookup.gz'
 

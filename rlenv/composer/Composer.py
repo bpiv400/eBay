@@ -15,8 +15,8 @@ class Composer:
     Class for composing inputs to interface from various input streams
 
     """
-    def __init__(self, composer_id, rebuild=False):
-        composer_path = '{}{}.pkl'.format(COMPOSER_DIR, composer_id)
+    def __init__(self, params, rebuild=False):
+        composer_path = '{}{}.pkl'.format(COMPOSER_DIR, params['composer'])
         if not os.path.exists(composer_path) or rebuild:
             self.maps = Composer.build()
             pickle.dump(self.maps, open(composer_path, 'wb'))
@@ -198,7 +198,7 @@ class Composer:
             last_outcomes = ['{}_last'.format(feat) for feat in BYR_OUTCOMES]
             indicators = BYR_TURN_INDS
         # other clock, other outcomes, other diffs
-        other_clock = ['{}_other'.format(feat) for feat in CLOCK_MAP]
+        other_clock = ['{}_other'.format(feat) for feat in CLOCK_FEATS]
         other_diffs = ['{}_other'.format(feat) for feat in TIME_FEATS]
         maps[O_CLOCK_MAP] = Composer._build_simple_map(other_clock, featnames)
         maps[O_OUTCOMES_MAP] = Composer._build_simple_map(other_outcomes, featnames)
@@ -248,6 +248,7 @@ class Composer:
         :return: dictionary containing two entries, one for all time step input maps
         and one for fixed feature input maps
         """
+        print('building {}...'.format(full_name))
         featnames, sizes = get_featnames_sizes(full_name=full_name)
         # build maps
         fixed_maps = Composer._build_fixed(full_name, fixed, featnames['x_fixed'])
@@ -298,9 +299,10 @@ class Composer:
         :return: dictionary containing input maps under the 'fixed' index --
         see build() for details
         """
+        print('building {}...'.format(full_name))
         featnames, sizes = get_featnames_sizes(full_name=full_name)
         featnames = featnames['x_fixed']
-        maps = Composer._build_fixed(full_name, fixed, featnames['x_fixed'])
+        maps = Composer._build_fixed(full_name, fixed, featnames)
         maps = {FIXED: maps}
         Composer._check_maps(full_name, maps)
         return maps
