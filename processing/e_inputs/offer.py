@@ -124,3 +124,14 @@ if __name__ == '__main__':
 	# save dictionary of numpy arrays
 	dump(convert_to_numpy(d), 
 		'%s/inputs/%s/%s.gz' % (PREFIX, part, model))
+
+	# create dictionary of numpy arrays
+    d = convert_to_numpy(d)
+
+    # save as dataset
+    dump(Inputs(d), '%s/inputs/%s/%s.gz' % (PREFIX, part, model))
+
+    # save small dataset
+    if part == 'train_models':
+        small = create_small(d)
+        dump(Inputs(small), '%s/inputs/small/%s.gz' % (PREFIX, model))

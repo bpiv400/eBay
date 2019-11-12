@@ -53,6 +53,13 @@ if __name__ == '__main__':
 		pickle.dump(get_sizes(d), 
 			open('%s/inputs/sizes/hist.pkl' % PREFIX, 'wb'))
 
-	# save dictionary of numpy arrays
-	dump(convert_to_numpy(d), 
-		'%s/inputs/%s/hist.gz' % (PREFIX, part))
+	# create dictionary of numpy arrays
+    d = convert_to_numpy(d)
+
+    # save as dataset
+    dump(Inputs(d), '%s/inputs/%s/hist.gz' % (PREFIX, part))
+
+    # save small dataset
+    if part == 'train_models':
+        small = create_small(d)
+        dump(Inputs(small), '%s/inputs/small/hist.gz' % PREFIX)

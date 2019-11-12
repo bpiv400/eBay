@@ -3,7 +3,7 @@ import torch
 import numpy as np, pandas as pd
 from datetime import datetime as dt
 from torch.utils.data import DataLoader
-from interface import *
+from interface import Sample, collateFF, collateRNN
 from simulator import Simulator
 from constants import *
 
@@ -84,9 +84,12 @@ if __name__ == '__main__':
         device='cuda' if torch.cuda.is_available() else 'cpu')
     print(simulator.net)
 
-    # create datasets
-    train = Inputs('train_models', model)
-    test = Inputs('train_rl', model)
+    # load datasets
+    train = load('%s/inputs/train_models/%s.gz' % (PREFIX, model))
+    train = load('%s/inputs/train_rl/%s.gz' % (PREFIX, model))
+
+    #train = Inputs('train_models', model)
+    #test = Inputs('train_rl', model)
 
     # create outfile
     f = open(SUMMARY_DIR + '%s.csv' % stub, 'w')

@@ -86,6 +86,9 @@ HIST_QUANTILES = 10
 MODELS = ['arrival','hist', 'delay_byr', 'delay_slr', 'con_byr', 'con_slr', \
 	'msg_byr', 'msg_slr']
 
+# number of observations in small dataset
+N_SMALL = 100000
+
 # organizing hierarchy
 LEVELS = ['slr', 'cat', 'cndtn', 'lstg']
 
