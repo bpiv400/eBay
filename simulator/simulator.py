@@ -3,10 +3,10 @@ import torch, torch.optim as optim
 from torch.nn.utils import rnn
 from datetime import datetime as dt
 import numpy as np
-from loss import *
-from nets import *
+from simulator.loss import *
+from simulator.nets import *
 from constants import *
-
+from utils import add_out_to_sizes
 
 # constructs model-specific neural network.
 class Simulator:
@@ -28,16 +28,12 @@ class Simulator:
         # size of theta and loss function
         if model in ['hist', 'con_byr', 'con_slr']:
             self.loss = cross_entropy_loss
-            if model == 'hist':
-                sizes['out'] = HIST_QUANTILES
-            else:
-                sizes['out'] = 101
         else:
-            sizes['out'] = 1
             if model == 'arrival':
                 self.loss = poisson_loss
             else:
                 self.loss = logit_loss
+        add_out_to_sizes(model, sizes)
 
         # neural net(s)
         if not self.isRecurrent:
@@ -49,7 +45,6 @@ class Simulator:
 
         # optimizer
         self.optimizer = optim.Adam(self.net.parameters(), lr=LR)
-
 
     def evaluate_loss(self, data):
         # feed-forward

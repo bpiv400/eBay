@@ -1,17 +1,15 @@
 import torch
 from torch.distributions.poisson import Poisson
-from rlenv.interface.ModelInterface import ModelInterface
 from interface.model_names import BYR_HIST, NUM_OFFERS
-from rlenv.env_utils import proper_squeeze, categorical_sample
-from constants import ARRIVAL_PREFIX
+from rlenv.env_utils import proper_squeeze, categorical_sample, load_model
 
 
 class ArrivalInterface:
     def __init__(self, byr_hist=0, num_offers=0, composer=None):
         # Load interface
         self.composer = composer
-        self.num_offers = load_model(ARRIVAL_PREFIX, BYR_HIST, byr_hist)
-        self.byr_hist = load_model(ARRIVAL_PREFIX, NUM_OFFERS, num_offers)
+        self.num_offers = load_model(BYR_HIST, byr_hist)
+        self.byr_hist = load_model(NUM_OFFERS, num_offers)
         self.hidden = None
 
     @staticmethod

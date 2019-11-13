@@ -76,8 +76,7 @@ class SimulatedBuyer(SimulatedActor):
         else:
             con = SimulatedActor._sample_bernoulli(params)
         split = get_split(con)
-        norm = (1 - sources[O_OUTCOMES_MAP][2]) * con + \
-               sources[L_OUTCOMES_MAP][2] * (1 - con)
+        norm = (1 - sources[O_OUTCOMES_MAP][2]) * con + sources[L_OUTCOMES_MAP][2] * (1 - con)
         return torch.tensor([con, norm, split, 0]).float()
 
     def sample_msg(self, params, outcomes):

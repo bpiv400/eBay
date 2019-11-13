@@ -9,7 +9,7 @@ import numpy as np
 from rlenv.env_consts import *
 from utils import unpickle
 from rlenv.interface import model_names
-from rlenv.env_utils import get_featnames_sizes
+from rlenv.env_utils import load_featnames, load_sizes
 
 
 class Composer:
@@ -64,7 +64,7 @@ class Composer:
         fixed = pd.DataFrame(data={'from': pos}, index=x_lstg_cols)
 
         for model_name in model_names.MODELS:
-            if model_name in model_names.FEED_FORWARD:
+            if model_name == BYR_HIST:
                 output[model_name] = Composer._build_ff(model_name, fixed)
             else:
                 output[model_name] = Composer._build_recurrent(model_name, fixed)
@@ -254,7 +254,7 @@ class Composer:
         and one for fixed feature input maps
         """
         print('building {}...'.format(full_name))
-        featnames, sizes = get_featnames_sizes(full_name=full_name)
+        featnames, sizes = load_featnames(full_name), load_sizes(full_name)
         # build maps
         fixed_maps = Composer._build_fixed(full_name, fixed, featnames['x_fixed'])
         time_maps = Composer._build_time(full_name, featnames['x_time'])

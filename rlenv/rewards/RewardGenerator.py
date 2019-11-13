@@ -5,10 +5,10 @@ from compress_pickle import load
 import torch
 import pandas as pd
 from rlenv.env_consts import REWARD_EXPERIMENT_PATH, SIM_COUNT
-from rlenv.interface.model_names import DELAY, CON, MSG, BYR_HIST, NUM_OFFERS
+from rlenv.interface.model_names import BYR_HIST, NUM_OFFERS
 from rlenv.interface.bargainers import *
 from rlenv.interface.ArrivalInterface import ArrivalInterface
-from rlenv.env_utils import model_str
+from rlenv.interface.model_names import model_str
 from rlenv.rewards.RewardEnvironment import RewardEnvironment
 from rlenv.composer.Composer import Composer
 

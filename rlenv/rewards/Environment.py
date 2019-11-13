@@ -9,11 +9,9 @@ import math
 import constants
 import h5py
 import numpy as np
+from rlenv.interface.model_names import model_str
 from rlenv.composer.maps import *
-from events.Arrival import Arrival
 from events.ThreadEvent import ThreadEvent
-from events.EventQueue import EventQueue
-from time.TimeFeatures import TimeFeatures
 from rlenv.time import time_triggers
 from env_consts import *
 from events.event_types import *
@@ -239,6 +237,7 @@ class Environment:
 
         :param event:
         :param byr:
+        :return:
         :return:
         """
 

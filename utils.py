@@ -3,7 +3,7 @@ from compress_pickle import load
 import pandas as pd
 import torch
 from rlenv.env_consts import DAY
-from constants import PARTS_DIR, HOLIDAYS, START
+from constants import PARTS_DIR, HOLIDAYS, HIST_QUANTILES
 
 
 # concatenates listing features into single dataframe
@@ -26,6 +26,16 @@ def extract_day_feats(clock):
     for i in range(6):
         df['dow' + str(i)] = clock.dt.dayofweek == i
     return df
+
+
+def add_out_to_sizes(model, sizes):
+    if model in ['hist', 'con_byr', 'con_slr']:
+        if model == 'hist':
+            sizes['out'] = HIST_QUANTILES
+        else:
+            sizes['out'] = 101
+    else:
+        sizes['out'] = 1
 
 
 def unpickle(file):
