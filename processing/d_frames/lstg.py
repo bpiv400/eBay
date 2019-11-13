@@ -18,7 +18,9 @@ def do_rounding(offer):
 
 def get_x_lstg(L):
     # initialize output dataframe with as-is features
-    df = L[ASIS_FEATS + ['start_date']]
+    df = L[ASIS_FEATS]
+    # normalize start_date to years
+    df['start_years'] = L['start_date'] / 365
     # photos divided by 12, and binary indicator
     df['photos'] = L['photos'] / 12
     df['has_photos'] = L['photos'] > 0

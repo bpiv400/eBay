@@ -67,7 +67,7 @@ def get_x_offer(lookup, events):
     df['msg'] = events['message'].reindex(
         index=df.index, fill_value=False)
     # reject auto and exp are last
-    df['reject'] = df['con'] == 0
+    df['reject'] = (df['con'] == 0) & df.index.isin(range(1, 8), level='index')
     df['auto'] = (df.delay == 0) & df.index.isin(IDX['slr'], level='index')
     df['exp'] = df.delay == 1
     

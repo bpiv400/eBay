@@ -145,8 +145,10 @@ if __name__ == '__main__':
 	O.loc[idx, 'censored'] = True
 
 	# save offers and threads
-	pickle.dump(O, open(CLEAN_DIR + 'offers.pkl', 'wb'))
-	pickle.dump(T, open(CLEAN_DIR + 'threads.pkl', 'wb'))
+	pickle.dump(O, open(CLEAN_DIR + 'offers.pkl', 'wb'),
+		protocol=4)
+	pickle.dump(T, open(CLEAN_DIR + 'threads.pkl', 'wb'),
+		protocol=4)
 	del O, T
 
 	# update listing end time
@@ -172,4 +174,5 @@ if __name__ == '__main__':
 			dump(toSave, '%s/pctile/%s.gz' % (PREFIX, feat))
 
 	# save listings
-	pickle.dump(L, open(CLEAN_DIR + 'listings.pkl', 'wb'))
+	pickle.dump(L, open(CLEAN_DIR + 'listings.pkl', 'wb'), 
+		protocol=4)
