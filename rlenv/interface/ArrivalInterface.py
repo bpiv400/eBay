@@ -2,14 +2,16 @@ import torch
 from torch.distributions.poisson import Poisson
 from rlenv.interface.ModelInterface import ModelInterface
 from interface.model_names import BYR_HIST, NUM_OFFERS
+from rlenv.env_utils import proper_squeeze, categorical_sample
+from constants import ARRIVAL_PREFIX
 
 
-class ArrivalInterface(ModelInterface):
-    def __init__(self, byr_hist=0, num_offers=0, composer=0):
+class ArrivalInterface:
+    def __init__(self, byr_hist=0, num_offers=0, composer=None):
         # Load interface
-        super(ArrivalInterface, self).__init__(composer)
-        self.num_offers = ArrivalInterface._load_model(BYR_HIST, byr_hist)
-        self.byr_hist = ArrivalInterface._load_model(NUM_OFFERS, num_offers)
+        self.composer = composer
+        self.num_offers = load_model(ARRIVAL_PREFIX, BYR_HIST, byr_hist)
+        self.byr_hist = load_model(ARRIVAL_PREFIX, NUM_OFFERS, num_offers)
         self.hidden = None
 
     @staticmethod
@@ -23,36 +25,27 @@ class ArrivalInterface(ModelInterface):
         """
         params = torch.exp(params)
         dist = Poisson(params)
-        sample = dist.sample()
+        sample = dist.sample((1, ))
         return sample
 
     def init(self, x_lstg):
         x_fixed = self.composer.build_arrival_init(x_lstg)
         self.hidden = self.num_offers.init(x_fixed)
 
-    def step(self, sources=None):
-        num_offers = self._get_num_offers(sources=sources)
-        if num_offers > 0:
-            hist = self._get_hist(sources=sources, num_offers=num_offers)
-        else:
-            hist = None
-        return hist, num_offers
-
-    def _get_num_offers(self, sources=None):
+    def num_offers(self, sources=None):
         _, x_time = self.composer.build_input_vector(NUM_OFFERS, sources=sources,
                                                      fixed=False, recurrent=True,
                                                      size=1)
         params, self.hidden = self.num_offers.simulate(x_time, hidden=self.hidden)
-        params = ArrivalInterface.proper_squeeze(params)
         sample = ArrivalInterface._poisson_sample(params)
-        return sample
+        return proper_squeeze(sample)
 
-    def _get_hist(self, sources=None, num_offers=None):
+    def hist(self, sources=None):
         x_fixed, _ = self.composer.build_input_vector(model_name=BYR_HIST, sources=sources,
                                                       fixed=True, recurrent=False, size=1)
         params = self.byr_hist.simulate(x_fixed)
-        hist = ModelInterface._categorical_sample(params, num_offers)
-        hist = hist.float() / 10
+        hist = categorical_sample(params, 1)
+        hist = hist / 10
         return hist
 
 

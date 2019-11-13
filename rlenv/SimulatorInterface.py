@@ -1,3 +1,4 @@
+import composer.maps
 import torch
 from torch.distributions.bernoulli import Bernoulli
 from torch.distributions.poisson import Poisson
@@ -64,12 +65,12 @@ class SimulatorInterface:
         split = 1 if abs(.5 - cn) < TOL_HALF else 0
         # slr norm
         if SLR_PREFIX in model_name:
-            norm = 1 - cn * sources[env_consts.O_OUTCOMES_MAP][2] - \
-                   (1 - sources[env_consts.L_OUTCOMES_MAP][2]) * (1 - cn)
+            norm = 1 - cn * sources[composer.maps.O_OUTCOMES_MAP][2] - \
+                   (1 - sources[composer.maps.L_OUTCOMES_MAP][2]) * (1 - cn)
         # byr norm
         else:
-            norm = (1 - sources[env_consts.O_OUTCOMES_MAP][2]) * cn + \
-                sources[env_consts.L_OUTCOMES_MAP][2] * (1 - cn)
+            norm = (1 - sources[composer.maps.O_OUTCOMES_MAP][2]) * cn + \
+                   sources[composer.maps.L_OUTCOMES_MAP][2] * (1 - cn)
         return cn, norm, split, hidden
 
     def offer_indicator(self, model_name, sources=None, hidden=None, sample=True):

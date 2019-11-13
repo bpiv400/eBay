@@ -1,11 +1,14 @@
 import numpy as np
 from rlenv.time.TimeFeatures import TimeFeatures
 from rlenv.events.EventQueue import EventQueue
-from rlenv.env_consts import MONTH, HOUR
+from rlenv.env_consts import MONTH
+from rlenv.env_utils import get_clock_feats
 from rlenv.events.Arrival import Arrival
-from events.event_types import *
+from rlenv.events import event_types
 from rlenv.Sources import Sources
 from rlenv.events.FirstOffer import FirstOffer
+from constants import INTERVAL
+
 
 class RewardEnvironment:
     def __init__(self, **kwargs):
@@ -32,7 +35,7 @@ class RewardEnvironment:
         self.time_feats.reset()
         self.arrival.init(self.x_lstg)
         self.thread_counter = 0
-        sources = Sources(num_offers=True, start_date=self.lookup['start_date'], x_lstg=self.x_lstg)
+        sources = Sources(num_offers=True)
         self.queue.push(Arrival(self.lookup['start_date'], sources))
 
     def run(self):
@@ -48,17 +51,17 @@ class RewardEnvironment:
         return self.outcome
 
     def _process_event(self, event):
-        if event.type == ARRIVAL:
+        if event.type == event_types.ARRIVAL:
             return self._process_arrival(event)
-        elif event.type == FIRST_OFFER:
+        elif event.type == event_types.FIRST_OFFER:
             return self._process_first_offer(event)
-        elif event.type == BUYER_OFFER:
+        elif event.type == event_types.BUYER_OFFER:
             return self._process_offer(event, byr=True)
-        elif event.type == SELLER_OFFER:
+        elif event.type == event_types.SELLER_OFFER:
             return self._process_offer(event, byr=False)
-        elif event.type == BUYER_DELAY:
+        elif event.type == event_types.BUYER_DELAY:
             return self._process_delay(event, byr=True)
-        elif event.type == SELLER_DELAY:
+        elif event.type == event_types.SELLER_DELAY:
             return self._process_delay(event, byr=False)
 
     def _process_arrival(self, event):
@@ -72,20 +75,17 @@ class RewardEnvironment:
             return True
 
         event.sources.update_arrival(time_feats=self.time_feats.get_feats(time=event.priority),
-                                     time=event.priority)
-        num_byrs, byr_hist = self.arrival.step(event.sources())
-
+                                     clock_feats=get_clock_feats(event.priority))
+        num_byrs = self.arrival.step(event.sources())
         if num_byrs > 0:
             # place each into the queue
             for i in range(num_byrs):
-                curr_hist = byr_hist[i]
-                priority = event.priority + np.random.randint(0, HOUR)
+                priority = event.priority + np.random.randint(0, INTERVAL['arrival'])
                 self.thread_counter += 1
-                offer_event = FirstOffer(priority, hist=curr_hist,
-                                         thread_id=self.thread_counter)
+                offer_event = FirstOffer(priority, thread_id=self.thread_counter)
                 self.queue.push(offer_event)
         # Add arrival check
-        event.priority = event.priority + HOUR
+        event.priority = event.priority + INTERVAL['arrival']
         self.queue.push(event)
         return False
 
@@ -99,10 +99,12 @@ class RewardEnvironment:
         # expiration
         if self._lstg_expiration(event):
             return True
-        sources = Sources(num_offers=False, start_date=self.lookup['start_date'])
-        sources.init_offer()
-
-        hidden = self._make_hidden()
+        sources = Sources(num_offers=False, x_lstg=self.x_lstg, start_date=self.lookup['start_date'])
+        sources.prepare_hist()
+        hist = self.arrival.hist(sources())
+        sources.init_offer(hist=hist)
+        buyer = SimulatedBuyer(model=self.buyer)
+        outcomes = buyer.make_offer(sources())
         event.sources = sources
         event.hidden = hidden
         return self._process_offer(event, byr=True)

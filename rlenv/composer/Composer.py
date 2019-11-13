@@ -1,5 +1,7 @@
 import os
 import pickle
+
+from rlenv.composer.maps import *
 from compress_pickle import load
 import constants
 import pandas as pd
@@ -400,7 +402,7 @@ class Composer:
                                                sources, 1)
         return x_fixed
 
-    def build_input_vector(self, model_name, sources=None, fixed=False, recurrent=False, size=1):
+    def build_input_vector(self, model_name, sources=None, fixed=False, recurrent=False):
         """
         Public method that composes input vectors (x_time and x_fixed) from tensors in the
         environment
@@ -415,12 +417,12 @@ class Composer:
         x_fixed = None
         """
         if recurrent:
-            x_time = Composer._build_input_vector(self.maps[model_name][TIME], sources, size)
+            x_time = Composer._build_input_vector(self.maps[model_name][TIME], sources, 1)
             x_time = x_time.unsqueeze(0)
         else:
             x_time = None
         if fixed:
-            x_fixed = Composer._build_input_vector(self.maps[model_name][FIXED], sources, size)
+            x_fixed = Composer._build_input_vector(self.maps[model_name][FIXED], sources, 1)
         else:
             x_fixed = None
         return x_fixed, x_time

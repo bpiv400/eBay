@@ -87,7 +87,19 @@ class RNN(nn.Module):
                 self.output4(theta[:,self.steps-1,:]).squeeze()
         else:
             # (batch_size, seq_len, N_out)
-            return self.output(theta).squeeze()   
+            return self.output(theta).squeeze()
+
+    def simulate(self, x_time, x_fixed=None, hidden=None, turn=0):
+        if hidden is None:
+            theta, hidden = self.rnn(x_time, (self.h0(x_fixed), self.c0(x_fixed)))
+        else:
+            theta, hidden = self.rnn(x_time, hidden)
+        if turn == 7:
+            out = self.output4(theta)
+        else:
+            out = self.output(theta)
+        # output layer: (seq_len, batch_size, N_out)
+        return out, hidden
 
 
 class LSTM(nn.Module):

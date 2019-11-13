@@ -35,7 +35,10 @@ TIME_FEATS = [
 # outcomes
 BYR_OUTCOMES = ['days', 'delay', 'con', 'norm', 'split', 'msg']
 SLR_OUTCOMES = BYR_OUTCOMES + ['reject', 'auto', 'exp']
-
+REJ_POS = SLR_OUTCOMES.index('reject')
+AUTO_POS = SLR_OUTCOMES.index('auto')
+AUTO_REJ_LSTG = torch.tensor([1, 1]).float()
+NORM_POS = 4
 
 # turn indices
 SLR_TURN_INDS = ['t1', 't2']
@@ -62,6 +65,7 @@ COMPOSER_DIR = '{}composer/'.format(INPUT_DIR)
 X_LSTG_COLS_PATH = '{}{}.pkl'.format(COMPOSER_DIR, X_LSTG)
 REWARD_EXPERIMENT_PATH = 'repo/rlenv/rewards/experiments.csv'
 LOOKUP_FILENAME = 'lookup.gz'
+PARAMS_PATH = '{}params.csv'.format(INPUT_DIR)
 
 # temporal constants
 MONTH = 31 * 24 * 3600
@@ -69,31 +73,6 @@ DAY = 24 * 3600
 HOUR = 3600
 EXPIRATION = 48 * 60 * 60
 
-# base map names
-LSTG_MAP = 'lstg'
-BYR_HIST_MAP = 'byr_hist'
-# curr turn maps
-OUTCOMES_MAP = 'outcomes'
-CLOCK_MAP = 'clock'
-TIME_MAP = 'time'
-TURN_IND_MAP = 'turn_inds'
-DIFFS_MAP = 'diffs'
-# other turn maps
-O_CLOCK_MAP = 'other_clock'
-O_OUTCOMES_MAP = 'other_outcomes'
-O_TIME_MAP = 'other_time'
-O_DIFFS_MAP = 'other_diffs'
-# last turn maps
-L_CLOCK_MAP = 'last_clock'
-L_OUTCOMES_MAP = 'last_outcomes'
-L_TIME_MAP = 'last_time'
-# misc time maps
-INT_REMAIN_MAP = 'intervals'
-DUR_MAP = 'duration'
-MONTHS_LSTG_MAP = 'months_lstg'
-DAYS_THREAD_MAP = 'days_thread'
-# SIZE map
-SIZE = 'size'
 
 # zero vectors
 # TODO: check whether there are similar outcome vectors

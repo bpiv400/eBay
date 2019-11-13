@@ -62,6 +62,7 @@ class RewardGenerator:
                                             lookup=lookup)
             for i in range(self.params[SIM_COUNT]):
                 environment.reset()
+                # TODO Add event tracker
                 sale, price, time = environment.run()
 
 
