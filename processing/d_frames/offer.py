@@ -70,7 +70,6 @@ def get_x_offer(lookup, events):
     df['reject'] = (df['con'] == 0) & df.index.isin(range(1, 8), level='index')
     df['auto'] = (df.delay == 0) & df.index.isin(IDX['slr'], level='index')
     df['exp'] = df.delay == 1
-    
     return df
 
 
