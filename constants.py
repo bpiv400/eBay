@@ -22,13 +22,12 @@ SHARES = {'train_models': 1/3, 'train_rl': 1/3}
 TOL_HALF = 0.02
 
 # optimization parameters
-MBSIZE = 1024
-UPDATES = 5e6
-EPOCHS = 5
 LR = 1e-4
-NUM_WORKERS = 7 if torch.cuda.is_available() else 0
+NUM_WORKERS = 6 if torch.cuda.is_available() else 0
 
-# dropout rate
+# network parameters
+LAYERS = 8
+HIDDEN = 1024
 DROPOUT = 0.5
 
 # paths and directories

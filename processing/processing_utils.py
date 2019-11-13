@@ -203,7 +203,7 @@ def convert_to_numpy(d):
         d['x_time'] = np.concatenate(arrays, axis=2)
 
     # convert y and x_fixed to numpy directly
-    for k in ['y', 'turns', 'x_fixed', 'idx_clock', 'remaining']:
+    for k in ['y', 'turns', 'x_fixed', 'x_clock', 'idx_clock', 'remaining']:
         if k in d:
             d[k] = d[k].to_numpy()
 
@@ -222,7 +222,7 @@ def create_small(d):
     small = {}
 
     # first index
-    for k in ['y', 'turns', 'x_fixed', 'idx_clock', 'remaining', 'x_time']:
+    for k in ['y', 'turns', 'x_fixed', 'idx_clock', 'x_clock', 'remaining', 'x_time']:
         if k in d:
             small[k] = d[k][:N_SMALL]
 

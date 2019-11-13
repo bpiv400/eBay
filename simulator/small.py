@@ -3,45 +3,46 @@ import torch
 import numpy as np, pandas as pd
 from datetime import datetime as dt
 from torch.utils.data import DataLoader
-from interface import *
-from simulator import Simulator
+from simulator.interface import *
+from simulator.simulator import Simulator
 from constants import *
 
-EPOCHS = 100
+
+def run_loop(simulator, data, f, mbsize):
+    # sampler
+    sampler = Sample(data, mbsize, False)
+    # load batches
+    batches = DataLoader(data, batch_sampler=sampler,
+        collate_fn=f, num_workers=NUM_WORKERS, pin_memory=True)
+    # loop over batches, calculate log-likelihood
+    for batch in batches:
+        simulator.run_batch(batch, True)
 
 
-def run_loop(simulator, data, isTraining=False):
+def find_mbsize(simulator, data):
     # collate function
     f = collateRNN if data.isRecurrent else collateFF
 
-    # load batches
-    batches = DataLoader(data, batch_sampler=Sample(data, isTraining),
-        collate_fn=f, num_workers=NUM_WORKERS, pin_memory=True)
-
-    # loop over batches, calculate log-likelihood
-    lnL = 0
-    t0 = dt.now()
-    for b, batch in enumerate(batches):
-        t1 = dt.now()
-        lnL += simulator.run_batch(batch, isTraining)
-        print('gpu time: %d microseconds' % (dt.now() - t1).microseconds)
-        print('total time: %d microseconds' % (dt.now() - t0).microseconds)
+    # initialize mbsize
+    mbsize = 128
+    last = np.inf
+    while True:
+        # run loop and print total time
         t0 = dt.now()
+        run_loop(simulator, data, f, mbsize)
+        total_time = (dt.now() - t0).total_seconds()
+        print('Minibatch size %d: %d sec' % (mbsize, total_time))
+        # break if total time exceeds last run
+        if total_time > last:
+            break
+        # increment mbsize
+        mbsize *= 2
+        # set last time to total_time
+        last = total_time
 
-    return lnL / data.N_labels
+# return mbsize from previous run
+return int(mbsize / 2)
 
-
-def train_model(simulator, train):
-    # loop over epochs, record log-likelihood
-    for i in range(EPOCHS):
-        t0 = dt.now()
-
-        # training loop
-        print('Training epoch %d:' % i)
-        run_loop(simulator, train, isTraining=True)
-
-        # epoch duration
-        dur = np.round((dt.now() - t0).seconds)
 
 
 if __name__ == '__main__':
@@ -49,7 +50,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description='Model of environment for bargaining AI.')
     parser.add_argument('--model', type=str, 
-        help='One of arrival, delay_byr, delay_slr, con_byr, con_slr.')
+        help='Name of model (e.g., delay_byr)')
     args = parser.parse_args()
     model = args.model
 
@@ -60,7 +61,7 @@ if __name__ == '__main__':
     print(sizes)
 
     # load neural net parameters
-    params = {'layers': 2, 'hidden': 32}
+    params = {'layers': LAYERS, 'hidden': HIDDEN}
     print(params)
     
     # initialize neural net
@@ -69,7 +70,7 @@ if __name__ == '__main__':
     print(simulator.net)
 
     # load data
-    train = Inputs('small', model)
+    data = load('%s/inputs/small/%s.gz' % (PREFIX, model))
 
     # train model
-    train_model(simulator, train)
+    mbsize = find_mbsize(simulator, data)

@@ -3,8 +3,8 @@ import torch, torch.optim as optim
 from torch.nn.utils import rnn
 from datetime import datetime as dt
 import numpy as np
-from loss import *
-from nets import *
+from simulator.loss import *
+from simulator.nets import *
 from constants import *
 
 
@@ -94,6 +94,7 @@ class Simulator:
 
         # calculate loss
         loss = self.evaluate_loss(data)
+        del data
 
         # step down gradients
         if isTraining:

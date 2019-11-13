@@ -4,29 +4,38 @@ import numpy as np, pandas as pd
 from compress_pickle import load
 from datetime import datetime as dt
 from torch.utils.data import DataLoader
-from interface import *
-from simulator import Simulator
+from simulator.interface import *
+from simulator.simulator import Simulator
 from constants import *
 
 EPOCHS = 1
+MBSIZE = 2048
 
 
 def run_loop(simulator, data, isTraining=False):
     # collate function
     f = collateRNN if data.isRecurrent else collateFF
 
+    # sampler
+    sampler = Sample(data, MBSIZE, isTraining)
+
     # load batches
-    batches = DataLoader(data, batch_sampler=Sample(data, isTraining),
+    batches = DataLoader(data, batch_sampler=sampler,
         collate_fn=f, num_workers=NUM_WORKERS, pin_memory=True)
 
     # loop over batches, calculate log-likelihood
-    lnL = 0
+    lnL, gpu_time, total_time = 0., 0., 0.
+    t0 = dt.now()
     for b, batch in enumerate(batches):
-        if (b+1) % 100 == 0:
-            print('\tBatch %d of %d' % (b+1, len(batches)))
+        if b % 100 == 0:
+            print(lnL)
+        t1 = dt.now()
         lnL += simulator.run_batch(batch, isTraining)
+        gpu_time += (dt.now() - t1).total_seconds()
 
-    return lnL / data.N_labels
+    total_time = (dt.now() - t0).total_seconds()
+
+    return lnL / data.N_labels, gpu_time, total_time
 
 
 def train_model(simulator, train, test, stub):
@@ -79,18 +88,15 @@ if __name__ == '__main__':
     params = pd.read_csv('%s/inputs/params.csv' % PREFIX, 
         index_col=0).loc[paramsid].to_dict()
     print(params)
-    
+
     # initialize neural net
     simulator = Simulator(model, params, sizes, 
         device='cuda' if torch.cuda.is_available() else 'cpu')
     print(simulator.net)
 
     # load datasets
-    #train = load('%s/inputs/train_models/%s.gz' % (PREFIX, model))
-    #train = load('%s/inputs/train_rl/%s.gz' % (PREFIX, model))
-
-    train = Inputs('train_models', model)
-    test = Inputs('train_rl', model)
+    train = load('%s/inputs/train_models/%s.gz' % (PREFIX, model))
+    test = load('%s/inputs/train_rl/%s.gz' % (PREFIX, model))
 
     # create outfile
     f = open(SUMMARY_DIR + '%s.csv' % stub, 'w')
