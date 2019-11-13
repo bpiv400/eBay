@@ -28,12 +28,7 @@ class Simulator:
         # size of theta and loss function
         if model in ['hist', 'con_byr', 'con_slr']:
             self.loss = cross_entropy_loss
-            if model == 'hist':
-                sizes['out'] = HIST_QUANTILES
-            else:
-                sizes['out'] = 101
         else:
-            sizes['out'] = 1
             if model == 'arrival':
                 self.loss = poisson_loss
             else:

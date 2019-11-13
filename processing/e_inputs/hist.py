@@ -51,7 +51,7 @@ if __name__ == '__main__':
 		pickle.dump(get_featnames(d), 
 			open('%s/inputs/featnames/hist.pkl' % PREFIX, 'wb'))
 
-		pickle.dump(get_sizes(d), 
+		pickle.dump(get_sizes(d, 'hist'), 
 			open('%s/inputs/sizes/hist.pkl' % PREFIX, 'wb'))
 
 	# create dictionary of numpy arrays

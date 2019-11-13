@@ -135,9 +135,11 @@ def get_featnames(d):
 
 
 # returns dictionary of input sizes
-def get_sizes(d):
+def get_sizes(d, model):
     '''
     d: dictionary with dataframes.
+    model: one of 'arrival', 'hist', 'delay_slr', 'delay_byr', 'con_byr', 
+        'con_slr', 'msg_byr', 'msg_slr'
     '''
     sizes = {'N': len(d['y'].index), 
         'fixed': len(d['x_fixed'].columns)}
@@ -149,6 +151,13 @@ def get_sizes(d):
     if 'x_time' in d:
         sizes['steps'] = len(d['y'].columns)
         sizes['time'] = len(d['x_time'].columns)
+    # output size is based on model
+    if model == 'hist':
+        sizes['out'] = HIST_QUANTILES
+    elif 'con' in model:
+        sizes['out'] = 101
+    else:
+        sizes['out'] = 1
     return sizes
 
 

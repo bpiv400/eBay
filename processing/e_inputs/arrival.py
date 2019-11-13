@@ -60,7 +60,7 @@ if __name__ == '__main__':
     if part == 'train_models':
         pickle.dump(get_featnames(d),
             open('%s/inputs/featnames/arrival.pkl' % PREFIX, 'wb'))
-        pickle.dump(get_sizes(d),
+        pickle.dump(get_sizes(d, 'arrival'),
             open('%s/inputs/sizes/arrival.pkl' % PREFIX, 'wb'))
 
     # create dictionary of numpy arrays
