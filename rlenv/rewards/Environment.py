@@ -17,7 +17,6 @@ from env_consts import *
 from events.event_types import *
 from env_utils import *
 from constants import INTERVAL_COUNTS, INTERVAL
-from SimulatorInterface import SimulatorInterface
 import interface.model_names as model_names
 
 
