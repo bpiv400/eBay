@@ -126,10 +126,10 @@ if __name__ == '__main__':
     d = convert_to_numpy(d)
 
     # save as dataset
-    dump(Inputs(d), '%s/inputs/%s/delay_%s.gz' % (PREFIX, part, role))
+    dump(Inputs(d, model), '%s/inputs/%s/delay_%s.gz' % (PREFIX, part, role))
 
     # save small dataset
     if part == 'train_models':
         small = create_small(d)
-        dump(Inputs(small), 
+        dump(Inputs(small, model), 
             '%s/inputs/small/delay_%s.gz' % (PREFIX, role))

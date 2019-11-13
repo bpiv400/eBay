@@ -122,17 +122,13 @@ if __name__ == '__main__':
 		pickle.dump(get_sizes(d), 
 			open('%s/inputs/sizes/%s.pkl' % (PREFIX, model), 'wb'))
 
-	# save dictionary of numpy arrays
-	dump(convert_to_numpy(d), 
-		'%s/inputs/%s/%s.gz' % (PREFIX, part, model))
-
 	# create dictionary of numpy arrays
 	d = convert_to_numpy(d)
 
 	# save as dataset
-	dump(Inputs(d), '%s/inputs/%s/%s.gz' % (PREFIX, part, model))
+	dump(Inputs(d, model), '%s/inputs/%s/%s.gz' % (PREFIX, part, model))
 
 	# save small dataset
 	if part == 'train_models':
 		small = create_small(d)
-		dump(Inputs(small), '%s/inputs/small/%s.gz' % (PREFIX, model))
+		dump(Inputs(small, model), '%s/inputs/small/%s.gz' % (PREFIX, model))

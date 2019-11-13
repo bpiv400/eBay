@@ -41,7 +41,7 @@ if __name__ == '__main__':
 
 	# partition and outcome
 	part = PARTITIONS[num]
-	print('%s/arrival' % part)
+	print('%s/hist' % part)
 
 	# input dataframes, output processed dataframes
 	d = process_inputs(part)
@@ -55,12 +55,12 @@ if __name__ == '__main__':
 			open('%s/inputs/sizes/hist.pkl' % PREFIX, 'wb'))
 
 	# create dictionary of numpy arrays
-    d = convert_to_numpy(d)
+	d = convert_to_numpy(d)
 
-    # save as dataset
-    dump(Inputs(d), '%s/inputs/%s/hist.gz' % (PREFIX, part))
+	# save as dataset
+	dump(Inputs(d, 'hist'), '%s/inputs/%s/hist.gz' % (PREFIX, part))
 
-    # save small dataset
-    if part == 'train_models':
-        small = create_small(d)
-        dump(Inputs(small), '%s/inputs/small/hist.gz' % PREFIX)
+	# save small dataset
+	if part == 'train_models':
+		small = create_small(d)
+		dump(Inputs(small, 'hist'), '%s/inputs/small/hist.gz' % PREFIX)
