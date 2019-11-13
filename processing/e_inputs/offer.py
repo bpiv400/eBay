@@ -127,12 +127,12 @@ if __name__ == '__main__':
 		'%s/inputs/%s/%s.gz' % (PREFIX, part, model))
 
 	# create dictionary of numpy arrays
-    d = convert_to_numpy(d)
+	d = convert_to_numpy(d)
 
-    # save as dataset
-    dump(Inputs(d), '%s/inputs/%s/%s.gz' % (PREFIX, part, model))
+	# save as dataset
+	dump(Inputs(d), '%s/inputs/%s/%s.gz' % (PREFIX, part, model))
 
-    # save small dataset
-    if part == 'train_models':
-        small = create_small(d)
-        dump(Inputs(small), '%s/inputs/small/%s.gz' % (PREFIX, model))
+	# save small dataset
+	if part == 'train_models':
+		small = create_small(d)
+		dump(Inputs(small), '%s/inputs/small/%s.gz' % (PREFIX, model))
