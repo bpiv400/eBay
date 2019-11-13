@@ -64,7 +64,7 @@ class Composer:
         fixed = pd.DataFrame(data={'from': pos}, index=x_lstg_cols)
 
         for model_name in model_names.MODELS:
-            if model_name == BYR_HIST:
+            if model_name == model_names.BYR_HIST:
                 output[model_name] = Composer._build_ff(model_name, fixed)
             else:
                 output[model_name] = Composer._build_recurrent(model_name, fixed)
@@ -305,7 +305,7 @@ class Composer:
         see build() for details
         """
         print('building {}...'.format(full_name))
-        featnames, sizes = get_featnames_sizes(full_name=full_name)
+        featnames, sizes = load_featnames(full_name), load_sizes(full_name)
         featnames = featnames['x_fixed']
         maps = Composer._build_fixed(full_name, fixed, featnames)
         maps = {FIXED: maps}
