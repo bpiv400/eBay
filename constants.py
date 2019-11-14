@@ -23,7 +23,6 @@ TOL_HALF = 0.02
 
 # optimization parameters
 EPOCHS = 100
-MBSIZE = 128
 NUM_WORKERS = 4 if torch.cuda.is_available() else 0
 
 # paths and directories

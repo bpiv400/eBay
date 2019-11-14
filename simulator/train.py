@@ -14,7 +14,7 @@ def run_loop(simulator, data, isTraining=False):
     f = collateRNN if data.isRecurrent else collateFF
 
     # sampler
-    sampler = Sample(data, isTraining)
+    sampler = Sample(data, simulator.mbsize, isTraining)
 
     # load batches
     batches = DataLoader(data, batch_sampler=sampler,

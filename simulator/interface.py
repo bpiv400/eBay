@@ -10,9 +10,10 @@ from constants import *
 # defines a sampler that extends torch.utils.data.Sampler
 class Sample(Sampler):
 
-    def __init__(self, data, isTraining):
+    def __init__(self, data, mbsize, isTraining):
         """
         data: instance of Inputs
+        mbsize: scalar minibatch size
         isTraining: chop into minibatches if True
         """
         super().__init__(None)
@@ -22,7 +23,7 @@ class Sample(Sampler):
         for v in data.d['groups']:
             if isTraining:
                 np.random.shuffle(v)
-            self.batches += np.array_split(v, 1 + len(v) // MBSIZE)
+            self.batches += np.array_split(v, 1 + len(v) // mbsize)
         # shuffle training batches
         if isTraining:
             np.random.shuffle(self.batches)

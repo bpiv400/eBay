@@ -13,19 +13,22 @@ def run_loop(simulator, data):
     # collate function
     f = collateRNN if data.isRecurrent else collateFF
     # sampler
-    sampler = Sample(data, False)
+    sampler = Sample(data, simulator.mbsize, False)
     # load batches
     batches = DataLoader(data, batch_sampler=sampler,
         collate_fn=f, num_workers=NUM_WORKERS, pin_memory=True)
     # loop over batches, calculate log-likelihood
-    print(len(batches))
+    print('%d batches.' % len(batches))
     t0 = dt.now()
+    lnL, gpu_time, total_time = 0.0, 0.0, 0.0
     for batch in batches:
         t1 = dt.now()
-        simulator.run_batch(batch, True)
-        print('GPU time: %.4fsec' % (dt.now() - t1).total_seconds())
-        print('Total time: %.4fsec' % (dt.now() - t0).total_seconds())
+        lnL += simulator.run_batch(batch, True)
+        gpu_time += (dt.now() - t1).total_seconds() 
+        total_time += (dt.now() - t0).total_seconds()
         t0 = dt.now()
+
+    return lnL / data.N_labels, gpu_time, total_time
 
 
 if __name__ == '__main__':
@@ -58,4 +61,9 @@ if __name__ == '__main__':
     data = load('%s/inputs/small/%s.gz' % (PREFIX, model))
 
     # time epoch
-    run_loop(simulator, data)
+    lnL, gpu_time, total_time = run_loop(simulator, data)
+
+    # print
+    print('lnL: %.4f' % lnL)
+    print('GPU time: %d seconds' % int(gpu_time))
+    print('Total time: %d seconds' % int(total_time))

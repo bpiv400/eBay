@@ -221,6 +221,10 @@ def create_small(d):
     
     small = {}
 
+    # x_clock in full
+    if 'x_clock' in d:
+        small['x_clock'] = d['x_clock']
+
     # first index
     for k in ['y', 'turns', 'x_fixed', 'idx_clock', 'remaining', 'x_time']:
         if k in d:

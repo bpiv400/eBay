@@ -25,6 +25,7 @@ class Simulator:
         self.device = device
         self.isRecurrent = model != 'hist'
         self.c = params['c']
+        self.mbsize = params['mbsize']
 
         # size of theta and loss function
         if model in ['hist', 'con_byr', 'con_slr']:
