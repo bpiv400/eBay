@@ -1,11 +1,12 @@
 import torch
-from rlenv.env_consts import (TIME_FEATS, BYR_OUTCOMES, SLR_OUTCOMES, AUTO_POS,
-                              REJ_POS, AUTO_REJ_LSTG)
+from rlenv.env_consts import (TIME_FEATS, BYR_OUTCOMES, SLR_OUTCOMES, AUTO_POS, NORM_POS,
+                              REJ_POS, AUTO_REJ_LSTG, DAYS_POS, DELAY_POS, CON_POS)
 from rlenv.composer.maps import *
 from constants import ARRIVAL_PERIODS
 from rlenv.env_utils import get_clock_feats
 
 INCREMENTER = torch.tensor([1]).float()
+
 
 class Sources:
     def __init__(self, num_offers=False, x_lstg=None, start_date=None):
@@ -54,6 +55,17 @@ class Sources:
         self.source_dict[O_OUTCOMES_MAP] = Sources._init_lstg_outcomes()
         # day, days outcomes to 0
         self.source_dict[OUTCOMES_MAP] = Sources._init_first_outcomes()
+
+    def update_offer(self, outcomes=None):
+        outcomes[[DAYS_POS, DELAY_POS]] = self.source_dict[OUTCOMES_MAP][[DAYS_POS, DELAY_POS]]
+        self.source_dict[OUTCOMES_MAP] = outcomes
+        return outcomes[NORM_POS]
+
+    def is_sale(self):
+        return self.source_dict[OUTCOMES_MAP][CON_POS] == 1
+
+    def is_rej(self):
+        return self.source_dict[OUTCOMES_MAP][CON_POS] == 0
 
     @staticmethod
     def _init_inds():

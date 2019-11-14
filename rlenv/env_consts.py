@@ -38,7 +38,11 @@ SLR_OUTCOMES = BYR_OUTCOMES + ['reject', 'auto', 'exp']
 REJ_POS = SLR_OUTCOMES.index('reject')
 AUTO_POS = SLR_OUTCOMES.index('auto')
 AUTO_REJ_LSTG = torch.tensor([1, 1]).float()
-NORM_POS = 4
+NORM_POS = SLR_OUTCOMES.index('norm')
+CON_POS = SLR_OUTCOMES.index('con')
+MSG_POS = SLR_OUTCOMES.index('msg')
+DAYS_POS = SLR_OUTCOMES.index('days')
+DELAY_POS = SLR_OUTCOMES.index('delay')
 
 # turn indices
 SLR_TURN_INDS = ['t1', 't2']
