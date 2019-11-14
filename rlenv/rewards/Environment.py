@@ -446,19 +446,6 @@ class Environment:
         return period_count / max_periods
 
 
-    def _insertion_fees(self, time):
-        """
-        Returns the insertion fees the seller paid to lst an item up to the
-        time of event.priority
-        :param time: int giving the time of the sale
-        :return: Float
-        """
-        dur = time - self.lookup[self.lookup_dict['start_days']] * DAY
-        periods = math.ceil(dur / MONTH)
-        periods = min(periods, self.params[RELIST_COUNT])
-        fees = periods * ANCHOR_STORE_INSERT
-        return fees
-
     def _make_sources(self, event):
         """
         Creates a source dictionary for the first offer in a thread
@@ -511,7 +498,7 @@ class Environment:
         :return: None
         """
         if sale_price is None:
-            sale_price = norm * self.lookup[self.lookup_dict['start']]
+            sale_price = norm * self.lookup[START_PRICE]
         insertion_fees = self._insertion_fees(time)
         value_fee = self._value_fee(sale_price)
         net = sale_price - insertion_fees - value_fee

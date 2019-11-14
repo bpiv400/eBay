@@ -43,6 +43,7 @@ CON_POS = SLR_OUTCOMES.index('con')
 MSG_POS = SLR_OUTCOMES.index('msg')
 DAYS_POS = SLR_OUTCOMES.index('days')
 DELAY_POS = SLR_OUTCOMES.index('delay')
+SPLIT_POS = SLR_OUTCOMES.index('split')
 
 # turn indices
 SLR_TURN_INDS = ['t1', 't2']

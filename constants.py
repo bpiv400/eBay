@@ -75,8 +75,6 @@ INTERVAL_COUNTS = {
 	'arrival': int(MAX_DELAY['arrival'] / INTERVAL['arrival']),
 	SLR_PREFIX: int(MAX_DELAY[SLR_PREFIX] / INTERVAL[SLR_PREFIX]),
 	BYR_PREFIX: int(MAX_DELAY[BYR_PREFIX] / INTERVAL[BYR_PREFIX]),
-	'{}_7'.format(BYR_PREFIX): \
-		int(MAX_DELAY[SLR_PREFIX] / INTERVAL[BYR_PREFIX])
 }
 
 # quantiles of byr_hist distribution

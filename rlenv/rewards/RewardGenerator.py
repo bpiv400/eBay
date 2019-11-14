@@ -62,8 +62,3 @@ class RewardGenerator:
                 environment.reset()
                 # TODO Add event tracker
                 sale, price, time = environment.run()
-
-
-
-
-

@@ -9,7 +9,7 @@ from constants import (INPUT_DIR, START,
                        HOLIDAYS, TOL_HALF, MODEL_DIR)
 from rlenv.interface.model_names import FEED_FORWARD, LSTM_MODELS
 from simulator.nets import FeedForward, LSTM, RNN
-from rlenv.env_consts import PARAMS_PATH
+from rlenv.env_consts import PARAMS_PATH, META_6, META_7, DAY, MONTH
 
 
 def load_featnames(full_name):
@@ -116,3 +116,27 @@ def load_model(full_name, model_exp):
     # print('failed for {}'.format(err_name))
     # return None
 
+
+def get_value_fee(price, meta):
+    """
+    Computes the value fee. For now, just set to 10%
+    of sale price, pending refinement decisions
+
+    # TODO: What did we decide about shipping?
+
+    :param price: price of sale
+    :param meta: integer giving meta category
+    :return: float
+    """
+    rate = .09
+    if meta in META_7:
+        rate = .07
+    elif meta in META_6:
+        rate = .06
+    return rate * price
+
+
+def time_delta(start, end, unit=DAY):
+    diff = (end - start) / unit
+    diff = torch.tensor([diff]).float()
+    return diff
