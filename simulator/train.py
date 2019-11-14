@@ -4,12 +4,9 @@ import numpy as np, pandas as pd
 from compress_pickle import load
 from datetime import datetime as dt
 from torch.utils.data import DataLoader
-from simulator.interface import *
-from simulator.simulator import Simulator
+from interface import *
+from simulator import Simulator
 from constants import *
-
-EPOCHS = 1
-MBSIZE = 2048
 
 
 def run_loop(simulator, data, isTraining=False):
@@ -17,25 +14,18 @@ def run_loop(simulator, data, isTraining=False):
     f = collateRNN if data.isRecurrent else collateFF
 
     # sampler
-    sampler = Sample(data, MBSIZE, isTraining)
+    sampler = Sample(data, isTraining)
 
     # load batches
     batches = DataLoader(data, batch_sampler=sampler,
         collate_fn=f, num_workers=NUM_WORKERS, pin_memory=True)
 
     # loop over batches, calculate log-likelihood
-    lnL, gpu_time, total_time = 0., 0., 0.
-    t0 = dt.now()
-    for b, batch in enumerate(batches):
-        if b % 100 == 0:
-            print(lnL)
-        t1 = dt.now()
+    lnL = 0
+    for batch in batches:
         lnL += simulator.run_batch(batch, isTraining)
-        gpu_time += (dt.now() - t1).total_seconds()
 
-    total_time = (dt.now() - t0).total_seconds()
-
-    return lnL / data.N_labels, gpu_time, total_time
+    return lnL / data.N_labels
 
 
 def train_model(simulator, train, test, stub):
@@ -44,17 +34,15 @@ def train_model(simulator, train, test, stub):
         t0 = dt.now()
 
         # training loop
-        print('Training epoch %d:' % i)
-        run_loop(simulator, train, isTraining=True)
+        print('Training epoch %d:' % (i+1))
+        lnL_train = run_loop(simulator, train, isTraining=True)
 
-        # save model
-        torch.save(simulator.net.state_dict(), 
-            MODEL_DIR + '%s.net' % stub)
+        # # save model
+        # torch.save(simulator.net.state_dict(), 
+        #     MODEL_DIR + '%s.net' % stub)
 
-        # calculate log-likelihood on training and test
-        print('Validating on train:')
-        lnL_train = run_loop(simulator, train)
-        print('Validating on holdout:')
+        # calculate log-likelihood on validation set
+        print('\tValidating on holdout.')
         lnL_test = run_loop(simulator, test)
 
         # epoch duration
@@ -77,6 +65,7 @@ if __name__ == '__main__':
     model = args.model
     paramsid = args.id
     stub = '%s_%d' % (model, paramsid)
+    print(stub)
 
     # load model sizes
     print('Loading parameters')
@@ -84,7 +73,7 @@ if __name__ == '__main__':
         open('%s/inputs/sizes/%s.pkl' % (PREFIX, model), 'rb'))
     print(sizes)
 
-    # load neural net parameters
+    # load experiment parameters
     params = pd.read_csv('%s/inputs/params.csv' % PREFIX, 
         index_col=0).loc[paramsid].to_dict()
     print(params)
@@ -105,4 +94,3 @@ if __name__ == '__main__':
 
     # train model
     train_model(simulator, train, test, stub)
-    

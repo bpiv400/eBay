@@ -1,48 +1,31 @@
-import sys, os, pickle, argparse
+import sys, os, argparse
 import torch
 import numpy as np, pandas as pd
 from datetime import datetime as dt
+from compress_pickle import load
 from torch.utils.data import DataLoader
-from simulator.interface import *
-from simulator.simulator import Simulator
+from interface import *
+from simulator import Simulator
 from constants import *
 
 
-def run_loop(simulator, data, f, mbsize):
+def run_loop(simulator, data):
+    # collate function
+    f = collateRNN if data.isRecurrent else collateFF
     # sampler
-    sampler = Sample(data, mbsize, False)
+    sampler = Sample(data, False)
     # load batches
     batches = DataLoader(data, batch_sampler=sampler,
         collate_fn=f, num_workers=NUM_WORKERS, pin_memory=True)
     # loop over batches, calculate log-likelihood
+    print(len(batches))
+    t0 = dt.now()
     for batch in batches:
+        t1 = dt.now()
         simulator.run_batch(batch, True)
-
-
-def find_mbsize(simulator, data):
-    # collate function
-    f = collateRNN if data.isRecurrent else collateFF
-
-    # initialize mbsize
-    mbsize = 128
-    last = np.inf
-    while True:
-        # run loop and print total time
+        print('GPU time: %.4fsec' % (dt.now() - t1).total_seconds())
+        print('Total time: %.4fsec' % (dt.now() - t0).total_seconds())
         t0 = dt.now()
-        run_loop(simulator, data, f, mbsize)
-        total_time = (dt.now() - t0).total_seconds()
-        print('Minibatch size %d: %d sec' % (mbsize, total_time))
-        # break if total time exceeds last run
-        if total_time > last:
-            break
-        # increment mbsize
-        mbsize *= 2
-        # set last time to total_time
-        last = total_time
-
-# return mbsize from previous run
-return int(mbsize / 2)
-
 
 
 if __name__ == '__main__':
@@ -50,20 +33,22 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description='Model of environment for bargaining AI.')
     parser.add_argument('--model', type=str, 
-        help='Name of model (e.g., delay_byr)')
+        help='One of arrival, delay_byr, delay_slr, con_byr, con_slr.')
+    parser.add_argument('--id', type=int, help='Experiment ID.')
     args = parser.parse_args()
     model = args.model
+    paramsid = args.id
 
     # load model sizes
     print('Loading parameters')
-    sizes = pickle.load(
-        open('%s/inputs/sizes/%s.pkl' % (PREFIX, model), 'rb'))
+    sizes = load('%s/inputs/sizes/%s.pkl' % (PREFIX, model))
     print(sizes)
 
-    # load neural net parameters
-    params = {'layers': LAYERS, 'hidden': HIDDEN}
+    # load experiment parameters
+    params = pd.read_csv('%s/inputs/params.csv' % PREFIX, 
+        index_col=0).loc[paramsid].to_dict()
     print(params)
-    
+
     # initialize neural net
     simulator = Simulator(model, params, sizes, 
         device='cuda' if torch.cuda.is_available() else 'cpu')
@@ -72,5 +57,5 @@ if __name__ == '__main__':
     # load data
     data = load('%s/inputs/small/%s.gz' % (PREFIX, model))
 
-    # train model
-    mbsize = find_mbsize(simulator, data)
+    # time epoch
+    run_loop(simulator, data)

@@ -22,9 +22,14 @@ SHARES = {'train_models': 1/3, 'train_rl': 1/3}
 TOL_HALF = 0.02
 
 # optimization parameters
-EPOCHS = 100
-MBSIZE = 128
-NUM_WORKERS = 4 if torch.cuda.is_available() else 0
+MBSIZE = 256
+LR = 1e-4
+NUM_WORKERS = 6 if torch.cuda.is_available() else 0
+
+# network parameters
+LAYERS = 8
+HIDDEN = 1024
+DROPOUT = 0.5
 
 # paths and directories
 if torch.cuda.is_available() and 'Windows' not in platform():

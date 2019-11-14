@@ -222,7 +222,7 @@ def create_small(d):
     small = {}
 
     # first index
-    for k in ['y', 'turns', 'x_fixed', 'idx_clock', 'x_clock', 'remaining', 'x_time']:
+    for k in ['y', 'turns', 'x_fixed', 'idx_clock', 'remaining', 'x_time']:
         if k in d:
             small[k] = d[k][:N_SMALL]
 

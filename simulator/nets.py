@@ -20,7 +20,7 @@ class FeedForward(nn.Module):
 
         # intermediate layers
         for i in range(params['layers']-1):
-            self.seq.append(nn.Dropout(p=DROPOUT))
+            self.seq.append(nn.Dropout(p=params['dropout'] / 10))
             self.seq.append(
                 nn.Linear(params['hidden'], params['hidden']))
             self.seq.append(f)
@@ -62,7 +62,7 @@ class RNN(nn.Module):
                             hidden_size=int(params['hidden']),
                             num_layers=self.layers,
                             batch_first=True,
-                            dropout=DROPOUT)
+                            dropout=params['dropout'] / 10)
 
         # output layer
         self.output = nn.Linear(params['hidden'], sizes['out'])
