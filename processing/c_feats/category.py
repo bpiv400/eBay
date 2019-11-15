@@ -37,25 +37,6 @@ def main():
     end = dt.now()
     print('minutes: {}'.format((end - start).seconds // 60))
 
-    # clean slr features
-    if args.slr:
-        # drop flagged lstgs
-        print('Restricting observations...')
-        not_drop = (~events.toDrop.astype(bool) &
-                    ~events.flag.astype(bool)).astype(bool)
-        events = events.loc[not_drop, :]
-
-        # TODO: ETAN TO DROP LATER IN PIPELINE
-        # split off listing events
-        # lstgs = events.index.get_level_values('lstg')
-        # tf = tf.loc[lstgs, :]
-
-        # drop
-        events = events.drop(0, level='thread')
-        # save events
-        dump(events, '{}{}_events.gz'.format(FEATS_DIR, args.num))
-        chunk_name = 'slr'
-
     print('Saving...')
     dump(tf, '{}{}_{}.gz'.format(FEATS_DIR, args.num, chunk_name))
 

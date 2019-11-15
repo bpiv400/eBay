@@ -141,6 +141,10 @@ by lstg thread: replace clock = clock[_n-1] + 1000 * seconds[_n-1] ///
 drop if clock == .	
 drop seconds
 
+* merge in start_price from listings
+
+merge m:1 lstg using dta/listings, nogen keep(3) keepus(start_price)
+
 * clean prices
 
 sort lstg thread index
@@ -152,6 +156,7 @@ by lstg thread: g byte accept = status[_n-1] == 1 | status[_n-1] == 9
 replace price = start_price if price == . & index == 2 & reject
 by lstg thread: replace price = price[_n-1] if price == . & accept
 by lstg thread: replace price = price[_n-2] if price == . & reject
+drop start_price
 
 * save temp
 
@@ -165,7 +170,7 @@ by lstg thread: g byte auto = status[_n-1] == 6 | status[_n-1] == 9
 by lstg thread: replace auto = 1 if mod(index,2) == 0 & reject & ///
 	start_price == price & (sec <= 0 | sec[_n+1] < 0)
 by lstg thread: replace clock = clock[_n-1] if auto
-drop auto
+drop auto type status
 
 * clean (pre-)instantaneous buyer offers
 
@@ -218,7 +223,6 @@ expand 2*check, gen(bin)
 drop check
 replace bin = 1 if thread == .
 
-replace status = 9 if bin
 replace price = start_price if bin
 replace message = . if bin
 replace reject = 0 if bin
@@ -229,7 +233,6 @@ replace byr_us_thread = byr_us if bin
 drop byr byr_us
 rename *_thread *
 
-replace type = . if bin
 replace thread = . if bin
 replace index = . if bin
 replace byr_hist = . if bin
@@ -243,14 +246,11 @@ drop count
 
 * new bins
 
-replace type = 0 if bin
 replace thread = 0 if bin
 replace index = 1 if bin
 replace clock = end_time if bin
 
 * bins in threads
-
-replace type = 1 if index == .
 
 gsort lstg byr -thread
 by lstg byr: replace thread = thread[_n-1] if index == .
@@ -275,7 +275,7 @@ by lstg thread index: keep if _n == _N
 
 save dta/temp2b, replace
 
-* recode accepts
+* recode accepts and rejects
 
 sort lstg thread index
 by lstg thread: replace accept = price == price[_n-1] | bin
@@ -302,6 +302,15 @@ sort lstg thread index
 by lstg thread: drop if _n == _N & mod(index,2) == 1 & ///
 	index < 7 & reject & (clock - clock[_n-1]) / 1000 == 172800
 	
+* delete thread activity after byr reject
+
+sort lstg thread index
+by lstg thread: g byte check = (index == 3 | index == 5) & reject
+g byte temp = index if check
+by lstg thread: egen byte temp2 = min(temp)
+drop if index > temp2
+drop check temp*
+	
 * multiple accepts
 
 by lstg, sort: egen byte accepts = sum(accept)
@@ -314,8 +323,21 @@ replace accept = 0 if flag & accept & reject
 
 save dta/temp2c, replace
 
+* delete activity after 31 days
+
+merge m:1 lstg using dta/listings, nogen keep(3) keepus(*_date)
+format clock %tc
+
+replace end_date = start_date + 30 if end_date > start_date + 30
+g double new_end_time = ///
+	clock(string(end_date, "%td") + " 23:59:59", "DMYhms")
+replace end_time = new_end_time if end_time > new_end_time
+drop new_end_time *_date
+drop if clock > end_time
+
 * add expired rejects when buyer does not return
 
+sort lstg thread index
 by lstg thread: g byte check = !accept & _n == _N & mod(index,2) == 0
 expand 2*check, gen(copy)
 drop check
@@ -330,27 +352,28 @@ by lstg thread: replace clock = min(end_time, ///
 by lstg thread: replace clock = min(end_time, ///
 	clock[_n-1] + 2 * 24 * 3600 * 1000) if copy & index == 7
 by lstg thread: replace price = price[_n-2] if copy
+
+g byte censored = copy & clock == end_time
 drop copy
 
-* add expired rejects when listing sells on different thread
+* add expired rejects when listing ends or sells on different thread
 
 by lstg thread: g byte check = !accept & _n == _N & ///
 	mod(index,2) == 1 & price != price[_n-2]
-expand 2*check, gen(censored)
+expand 2*check, gen(copy)
 drop check
 
-replace index = index + 1 if censored
-replace reject = 1 if censored
-replace message = . if censored
+replace index = index + 1 if copy
+replace reject = 1 if copy
+replace message = . if copy
 
 sort lstg thread index
-by lstg thread: replace clock = end_time if censored
-by lstg thread: replace price = price[_n-2] if censored & index > 2
-by lstg thread: replace price = start_price if censored & index == 2
+by lstg thread: replace clock = end_time if copy
+by lstg thread: replace price = price[_n-2] if copy & index > 2
+by lstg thread: replace price = start_price if copy & index == 2
 
-* save temp
-
-save dta/temp2d, replace
+replace censored = 1 if copy
+drop copy
 
 * renumber threads
 
@@ -364,6 +387,10 @@ by lstg: g int newid = sum(new)
 order newid, a(thread)
 drop new thread_start thread
 rename newid thread
+
+* save temp
+
+save dta/temp2d, replace
 
 * flag weird behavior with prices
 
@@ -391,60 +418,52 @@ by lstg thread: replace flag = 1 if _n < _N & ///
 by lstg thread: replace flag = 1 if _n < _N & ///
 	price <= decline_price & mod(index,2) == 1 & ///
 	(clock != clock[_n+1] | !reject[_n+1])
+by lstg thread: replace flag = 1 if _n < _N & ///
+	price < accept_price & price > decline_price & ///
+	clock == clock[_n+1]
 drop accept_price decline_price
-
-* start time
-
-by lstg thread: egen double start_time = min(clock)
-format %tc *_time
-format %9.0f clock
-replace clock = (clock - start_time) / 1000
 
 * flag byr bin offers after more than a two-week delay
 
-by lstg thread: g long diff = clock - clock[_n-1]
-replace flag = 1 if diff != . & diff > 14 * 24 * 3600
-drop diff
-
-* save temp
-
-save dta/temp3, replace
-
-* delete thread activity after 0 concession from buyer
-
 sort lstg thread index
-by lstg thread: g byte check = (index == 3 | index == 5) & price == price[_n-2]
-g byte temp = index if check
-by lstg thread: egen byte temp2 = min(temp)
-drop if index > temp2
-drop check temp*
+by lstg thread: g long diff = (clock - clock[_n-1]) / 1000
+replace flag = 1 if diff != . & diff > 14 * 24 * 3600
+replace flag = 1 if index == 7 & diff != . & diff > 2 * 24 * 3600
+drop diff
 
 * fill in missing variables
 
-replace message = 0 if message == .
-
+by lstg thread: egen double start_time = min(clock)
 foreach x in byr slr {
 	sort `x' start_time lstg thread index
 	by `x': replace `x'_hist = `x'_hist[_n-1] if `x'_hist == . & _n > 1
 	replace `x'_hist = 0 if `x'_hist == .
 }
-drop slr type status
+drop slr start_time
+
+replace message = 0 if message == .
+
+* throw out bins from non-unique listings
+
+merge m:1 lstg using dta/listings, nogen keep(3) keepus(unique)
+keep if unique
+drop unique
 
 * save temp
 
-save dta/temp3a, replace
+save dta/temp3, replace
 
 * save offers
 
 sort lstg thread index
 order lstg thread index clock price accept reject censored message ///
-	bin flag byr* start_time end_time
+	bin flag byr* end_time
 savesome lstg-message using dta/offers, replace
 
 * save threads
 
 collapse (max) bin (max) flag (max) byr_us, ///
-	by(lstg thread byr byr_hist *_time)
+	by(lstg thread byr byr_hist end_time)
 	
 replace byr_hist = byr_hist - (1-bin)
 

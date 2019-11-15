@@ -65,8 +65,8 @@ if __name__ == "__main__":
     idx, path = get_partition(part)
 
     # load events
-    events = load_frames('events')[['clock', 'censored']].reset_index(
-        'slr', drop=True).reindex(index=idx, level='lstg')
+    events = load(CLEAN_DIR + 'offers.pkl')[['clock', 'censored']].reindex(
+        index=idx, level='lstg')
     censored = events.censored
 
     # calculate delay

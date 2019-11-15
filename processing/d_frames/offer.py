@@ -16,11 +16,11 @@ def get_delay(clock):
     for i in range(2, 8):
         days[i] = clock[i] - clock[i-1]
         if i in [2, 4, 6, 7]: # byr has 2 days for last turn
-            days[i] = np.minimum(days[i], MAX_DELAY['slr'])
             delay[i] = days[i] / MAX_DELAY['slr']
         elif i in [3, 5]:   # ignore byr arrival and last turn
-            days[i] = np.minimum(days[i], MAX_DELAY['byr'])
             delay[i] = days[i] / MAX_DELAY['byr']
+    # no delay larger than 1
+    assert delay.max().max() <= 1
     # reshape from wide to long
     days = days.rename_axis('index', axis=1).stack() / (24 * 3600)
     delay = delay.rename_axis('index', axis=1).stack()
@@ -69,7 +69,8 @@ def get_x_offer(lookup, events):
     # reject auto and exp are last
     df['reject'] = (df['con'] == 0) & df.index.isin(range(1, 8), level='index')
     df['auto'] = (df.delay == 0) & df.index.isin(IDX['slr'], level='index')
-    df['exp'] = df.delay == 1
+    df['exp'] = (df.delay == 1) | events['censored'].reindex(
+        index=df.index, fill_value=False)
     return df
 
 
@@ -85,8 +86,7 @@ if __name__ == "__main__":
 
     # load other data
     lookup = load(PARTS_DIR + '%s/lookup.gz' % part)
-    events = load_frames('events').reset_index(
-        'slr', drop=True).reindex(index=idx, level='lstg')
+    events = load(CLEAN_DIR + 'offers.pkl').reindex(index=idx, level='lstg')
 
     # offer features
     print('x_offer')

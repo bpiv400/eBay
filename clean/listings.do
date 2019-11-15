@@ -120,9 +120,16 @@ by cat, sort: egen long count = sum(unique)
 replace cat = "m" + string(meta) if count < 1000
 drop count
 
+* feedback score as int
+
+g long temp = round(fdbk_score * fdbk_pstv)
+order temp, a(fdbk_score)
+drop fdbk_pstv
+rename temp fdbk_pstv
+
 * save
 
 drop ct? ref_price?
-order lstg cat slr meta leaf product title cndtn start_date end relisted
+order lstg slr cat meta leaf product title cndtn start_date end relisted
 sort lstg
 save dta/listings, replace

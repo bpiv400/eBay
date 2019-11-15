@@ -362,17 +362,23 @@ def main():
     arrival = args.arrival
 
     # load data
-    print('Loading data')
-    print(FEATS_DIR + '%d_events.gz' % num)
-    events = load(FEATS_DIR + '%d_events.gz' % num)
-    if 'slr' in events.index.names:
-        events = events.droplevel('slr')
-    events = events.sort_index()
+    print('Loading data: %d' % num)
+    d = load('{}slr{}.gz'.format(CHUNKS_DIR, args.num))
+    L, events = [d[k] for k in ['listings', 'offers']]
+    events = events.join(L[['start_price', 'flag']]).sort_index()
+
+    # drop flagged listings
+    events = events.loc[~events.flag, :]
+    events = events.drop('flag', axis=1)
+
+    # add variables to events
+    events['byr'] = events.index.isin(IDX['byr'], level='index')
+    events['norm'] = events.price / events.start_price
+    events.loc[~events['byr'], 'norm'] = 1 - events['norm']
+    events = events.drop('start_price', axis=1)
 
     # create lstg-level time-valued features
     print('Creating lstg-level time-valued features')
-    events['norm'] = events.price / events.start_price
-    events.loc[~events['byr'], 'norm'] = 1 - events['norm']
     if not arrival:
         tf_lstg_focal = get_lstg_time_feats(events, full=False)
         print('preparing concession output...')
@@ -396,7 +402,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-    # save
-

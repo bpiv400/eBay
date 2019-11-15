@@ -499,12 +499,7 @@ def add_start_end(offers, L, levels):
 
 
 def init_offers(L, T, O, levels):
-    offers = O.join(T[['start_time', 'byr_hist']])
-    for c in ['accept', 'reject', 'censored', 'message']:
-        if c in offers:
-            offers[c] = offers[c].astype(np.bool)
-    offers['clock'] += offers['start_time']
-    offers.drop('start_time', axis=1, inplace=True)
+    offers = O.join(T['byr_hist'])
     offers = offers.join(L[levels])
     offers = expand_index(offers, levels)
     return offers
@@ -518,8 +513,6 @@ def create_events(L, T, O, levels):
     # add features for later use
     events['byr'] = events.index.isin(IDX['byr'], level='index')
     lstg_cols = ['flag', 'start_price', 'arrival_rate', 'start_price_pctile']
-    if 'toDrop' in L.columns:
-        lstg_cols.append('toDrop')
     events = events.join(L[lstg_cols])
     return events
 

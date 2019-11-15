@@ -54,7 +54,7 @@ def get_partition(part):
     '''
     part: one of 'train_models', 'train_rl', 'test'
     '''
-    partitions = load(PARTS_DIR + 'partitions.gz')
+    partitions = load(PARTS_DIR + 'partitions.pkl')
     idx = partitions[part]
     path = lambda name: PARTS_DIR + '%s/%s.gz' % (part, name)
     return idx, path

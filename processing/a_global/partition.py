@@ -25,10 +25,11 @@ def partition_lstgs(s):
 
 if __name__ == "__main__":
     # load listings
-    L = pd.read_csv(CLEAN_DIR + 'listings.csv', index_col=0)
+    L = pd.read_csv(CLEAN_DIR + 'listings.csv', 
+        dtype=LTYPES).set_index('lstg')
 
     # drop flagged listings
-    L = L.loc[L.flag == 0]
+    L = L.loc[~L.flag]
     L = L.drop('flag', axis=1)
     
     # partition by seller
