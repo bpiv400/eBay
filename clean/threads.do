@@ -6,7 +6,16 @@ rename anon_* *
 rename *_id *
 rename offr_* *
 rename any_mssg message
+rename item lstg
 drop src_cre_dt fdbk_*
+
+* restrict to unique lstgs
+
+merge m:1 lstg using dta/listings, nogen keep(3) keepus(unique)
+keep if unique
+drop unique
+	
+* clean clock
 
 g double clock = clock(src_cre_date,"DMYhms")
 g long seconds = (clock(response_time,"DMYhms") - clock) / 1000 ///
@@ -14,73 +23,79 @@ g long seconds = (clock(response_time,"DMYhms") - clock) / 1000 ///
 drop src_cre_date response_time	
 format clock %tc
 
-sort slr item byr thread clock
-by slr item byr thread: replace seconds = ///
+sort slr lstg byr thread clock
+by slr lstg byr thread: replace seconds = ///
 	(clock[_n+1] - clock) / 1000 if status == 7
+	
+* replace missing messages
 
 replace message = 0 if message == .
 
+* save temp
+
+save dta/temp0, replace	
+
 * double entries
 
-collapse (min) *_hist, by(slr item byr thread clock seconds ///
+collapse (min) *_hist, by(slr lstg byr thread clock seconds ///
 	type status price message byr_us)
 	
 * double entries with different responses (keep first)
 	
-sort slr item byr thread clock type price seconds
-by slr item byr thread clock type price: keep if _n == 1
+sort slr lstg byr thread clock type price seconds
+by slr lstg byr thread clock type price: keep if _n == 1
 
 * coterminous offers by same buyer on same thread (keep max)
 
-sort slr item byr thread clock type price
-by slr item byr thread clock type: keep if _n == _N
+sort slr lstg byr thread clock type price
+by slr lstg byr thread clock type: keep if _n == _N
 
 * double threads with identical beginning (keep longer)
 
-by slr item byr thread, sort: egen byte length = sum(1)
-by slr item byr, sort: egen byte maxlength = max(length)
+by slr lstg byr thread, sort: egen byte length = sum(1)
+by slr lstg byr, sort: egen byte maxlength = max(length)
 keep if length == maxlength
 drop *length
 
 * double threads with identical attributes
 
-collapse (min) thread (min) seconds, by(slr item byr clock ///
+collapse (min) thread (min) seconds, by(slr lstg byr clock ///
 	type status price message byr_us *_hist)
 	
 * double threads with identical beginning (keep first response)
 
-sort slr item byr clock seconds
-by slr item byr clock: drop if _n > 1
+sort slr lstg byr clock seconds
+by slr lstg byr clock: drop if _n > 1
 
 * double threads one second apart (keep first)
 
-sort slr item byr price clock
-by slr item byr price: drop if clock - clock[_n-1] == 1000 ///
+sort slr lstg byr price clock
+by slr lstg byr price: drop if clock - clock[_n-1] == 1000 ///
 	& thread != thread[_n-1]
 	
 * double entries one second apart (keep first)
 
-sort slr item byr thread type status price clock
-by slr item byr thread type status price: ///
+sort slr lstg byr thread type status price clock
+by slr lstg byr thread type status price: ///
 	drop if clock - clock[_n-1] == 1000
 	
-* make variables thread-specific
+* make byr_us thread-specific
 
-by slr item byr thread, sort: egen temp = max(byr_us)
+by slr lstg byr thread, sort: egen temp = max(byr_us)
 replace byr_us = temp
 drop temp
 
 foreach var of varlist ???_hist {
-	by slr item byr thread, sort: egen temp = min(`var')
+	by slr lstg byr thread, sort: egen temp = min(`var')
 	replace `var' = temp
 	drop temp
 }
 	
 * offer index
 
-sort slr item byr thread clock
-by slr item byr thread: g byte index = 1 if _n == 1
-by slr item byr thread: replace index = index[_n-1] + ///
+sort slr lstg byr thread clock
+by slr lstg byr thread: g byte index = 1 if _n == 1
+by slr lstg byr thread: replace index = index[_n-1] + ///
 	1 * (type == 2 & type[_n-1] == 0) + ///
 	1 * (type == 1 & type[_n-1] == 2) + ///
 	1 * (type == 2 & type[_n-1] == 1) + ///
@@ -88,12 +103,6 @@ by slr item byr thread: replace index = index[_n-1] + ///
 	2 * (type == 0 & type[_n-1] == 1) + ///
 	2 * (type == 0 & type[_n-1] == 0) if _n > 1
 drop slr
-	
-* merge in listing information
-
-rename item lstg
-merge m:1 lstg using dta/listings, nogen keep(3) ///
-	keepus(start_price accept_price decline_price)
 
 * new thread id
 

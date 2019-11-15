@@ -25,19 +25,11 @@ def partition_lstgs(s):
 
 if __name__ == "__main__":
     # load listings
-    L = load(CLEAN_DIR + 'listings.pkl')
+    L = pd.read_csv(CLEAN_DIR + 'listings.csv', index_col=0)
 
-    # find multi-listings
-    ismulti = L[['cat', 'title', 'cndtn']].groupby(
-        ['cat', 'title']).count().squeeze().rename('ismulti') > 1
-    L = L.join(ismulti, on=ismulti.index.names)
-
-    # length of listing in days
-    L['days'] = (L.end_time // (24 * 3600)) - L.start_date + 1
-
-    # drop invalid listings
-    L = L.loc[~L.flag & ~L.ismulti & (L.days <= MAX_DAYS)]
-    L = L.drop(['flag', 'title', 'ismulti', 'days'], axis=1)
+    # drop flagged listings
+    L = L.loc[L.flag == 0]
+    L = L.drop('flag', axis=1)
     
     # partition by seller
     partitions = partition_lstgs(L.slr)

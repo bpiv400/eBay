@@ -3,19 +3,19 @@ from sklearn.utils.extmath import cartesian
 import sys
 from constants import *
 
+MBSIZE = 128
+LAYERS = 8
 HIDDEN = 1000
-COLS = ['layers', 'hidden', 'dropout', 'c', 'b2', 'lr', 'mbsize']
+COLS = ['mbsize', 'layers', 'hidden', 'dropout', 'c', 'b2', 'lr']
 
-# values of max-norm constraint
-layers = [2, 4, 8]
+# hyperparameter values
 dropout = [4, 5, 6]
 c = [2, 3, 4, 5]
 lr = [-4, -3, -2, -1]
 b2 = [-4, -3, -2]
-mbsize = [128, 256, 512]
 
 # create params file
-M = cartesian([layers, [HIDDEN], dropout, c, b2, lr, mbsize])
+M = cartesian([[MBSIZE], [LAYERS], [HIDDEN], dropout, c, b2, lr])
 idx = pd.Index(range(1, len(M)+1), name='id')
 df = pd.DataFrame(M, index=idx, columns=COLS)
 df.to_csv('%s/inputs/params.csv' % PREFIX)
