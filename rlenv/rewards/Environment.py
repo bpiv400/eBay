@@ -9,17 +9,14 @@ import math
 import constants
 import h5py
 import numpy as np
-from events.Arrival import Arrival
-from events.FirstOffer import FirstOffer
+from rlenv.interface.model_names import model_str
+from rlenv.composer.maps import *
 from events.ThreadEvent import ThreadEvent
-from events.EventQueue import EventQueue
-from time.TimeFeatures import TimeFeatures
-from time import time_triggers
+from rlenv.time import time_triggers
 from env_consts import *
 from events.event_types import *
 from env_utils import *
 from constants import INTERVAL_COUNTS, INTERVAL
-from SimulatorInterface import SimulatorInterface
 import interface.model_names as model_names
 
 
@@ -79,75 +76,6 @@ class Environment:
         # interface data
         self.interface = SimulatorInterface(params=self.params)
 
-
-    def _initialize_lstg(self, index):
-        """
-        Sets up a lstg for the environment after the initial creation of the environment
-        or after the lstg sells
-
-        :param index: index of the lstg in the lstg slice object
-        :return: NA
-        """
-        self.x_lstg = self.x_lstg_slice[index, :]
-        self.lookup = self.lookup_slice[index, :]
-        start_time = self.lookup[self.lookup_dict[START_DAY]]
-        self.queue = EventQueue()
-        self.queue.push(Arrival(start_time))
-        self.time_feats = TimeFeatures()
-        self.end_time = start_time + MONTH * self.params[RELIST_COUNT]
-
-    def prepare_simulation(self, indices):
-        """
-        Initializes a priority queue for each lstg in lstgs
-        Function should be called by master node when environment is first
-        created
-
-        :param indices: list of lstg indices in h5df file
-        :return: NA
-        """
-        # type cast to list to ensure lstg_slice is 2 dimensional
-        if type(indices) == int:
-            indices = [indices]
-        self.lstgs = indices
-        if max(indices) >= self.lstg_count:
-            raise RuntimeError("lstg {} invalid".format(max(indices)))
-        self.x_lstg_slice = self.input_file[X_LSTG][self.lstgs, :]
-        self.lookup_slice = self.input_file[LOOKUP][self.lstgs, :]
-        self.x_lstg_slice = torch.from_numpy(self.x_lstg_slice).float()
-        for idx in indices:
-            self.sales[idx] = []
-        self.input_file.close()
-
-    def _simulate_market(self):
-        """
-        Runs a simulation of the ebay market for all lstgs in self.lstgs until
-        sale or expiration after 12 listings (1 listing and 11 automatic re-listings)
-
-        :return: Accumulates sale price and sale time in self.rewards
-        """
-        for i, lstg in enumerate(self.lstgs):
-            self._initialize_lstg(i)
-            self._simulate_lstg()
-
-    def _simulate_lstg(self):
-        """
-        Runs a simulation of a single lstg until sale or expiration
-        :return: NA
-        """
-        complete = False
-        while not complete:
-            complete = self._process_event(self.queue.pop())
-
-    def simulate(self):
-        """
-        Runs self.params[SIM_COUNT] simulations of the ebay market and accumuates
-        rewards and times sold for each
-
-        :param lstgs:
-        :return:
-        """
-        for _ in range(self.params[SIM_COUNT]):
-            self._simulate_market()
 
     def _process_event(self, event):
         if event.type == ARRIVAL:
@@ -308,6 +236,7 @@ class Environment:
 
         :param event:
         :param byr:
+        :return:
         :return:
         """
 
@@ -517,19 +446,6 @@ class Environment:
         return period_count / max_periods
 
 
-    def _insertion_fees(self, time):
-        """
-        Returns the insertion fees the seller paid to lst an item up to the
-        time of event.priority
-        :param time: int giving the time of the sale
-        :return: Float
-        """
-        dur = time - self.lookup[self.lookup_dict['start_days']] * DAY
-        periods = math.ceil(dur / MONTH)
-        periods = min(periods, self.params[RELIST_COUNT])
-        fees = periods * ANCHOR_STORE_INSERT
-        return fees
-
     def _make_sources(self, event):
         """
         Creates a source dictionary for the first offer in a thread
@@ -582,7 +498,7 @@ class Environment:
         :return: None
         """
         if sale_price is None:
-            sale_price = norm * self.lookup[self.lookup_dict['start']]
+            sale_price = norm * self.lookup[START_PRICE]
         insertion_fees = self._insertion_fees(time)
         value_fee = self._value_fee(sale_price)
         net = sale_price - insertion_fees - value_fee
