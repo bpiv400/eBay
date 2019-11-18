@@ -1,6 +1,6 @@
 import torch
-from events.Event import Event
-from events.event_types import ARRIVAL
+from rlenv.events.Event import Event
+from rlenv.events.event_types import ARRIVAL
 from constants import INTERVAL_COUNTS
 from rlenv.interface.model_names import ARRIVAL_PREFIX
 

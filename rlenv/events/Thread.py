@@ -2,8 +2,8 @@
 class for encapsulating data and methods related to the first buyer offer
 """
 import torch
-from events.Event import Event
-from events import event_types
+from rlenv.events.Event import Event
+from rlenv.events import event_types
 from constants import (SLR_PREFIX, BYR_PREFIX, INTERVAL_COUNTS,
                        INTERVAL, MAX_DELAY, MAX_DAYS)
 from rlenv.env_utils import time_delta

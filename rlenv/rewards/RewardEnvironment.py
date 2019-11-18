@@ -7,7 +7,7 @@ from rlenv.env_consts import (MONTH, START_DAY, ACC_PRICE, META,
 from rlenv.env_utils import get_clock_feats, get_value_fee, time_delta
 from rlenv.events.Arrival import Arrival
 from rlenv.events import event_types
-from rlenv.ThreadSources import ThreadSources, ArrivalSources
+from rlenv.sources import ThreadSources, ArrivalSources
 from rlenv.events.Thread import Thread
 from constants import INTERVAL, BYR_PREFIX
 from rlenv.simulators import SimulatedSeller, SimulatedBuyer
