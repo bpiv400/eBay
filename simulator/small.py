@@ -37,7 +37,7 @@ if __name__ == '__main__':
         description='Model of environment for bargaining AI.')
     parser.add_argument('--num', type=int, help='Index of MODELS.')
     args = parser.parse_args()
-    model = MODELS[args.model-1]
+    model = MODELS[args.num-1]
 
     # use same parameters for all models
     paramsid = 1
