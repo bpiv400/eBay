@@ -8,6 +8,7 @@ from simulator.nets import *
 from constants import *
 from utils import add_out_to_sizes
 
+
 # constructs model-specific neural network.
 class Simulator:
 

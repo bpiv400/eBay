@@ -4,8 +4,8 @@ import numpy as np, pandas as pd
 from compress_pickle import load
 from datetime import datetime as dt
 from torch.utils.data import DataLoader
-from interface import *
-from simulator import Simulator
+from simulator.interface import *
+from simulator.model import Simulator
 from constants import *
 
 
