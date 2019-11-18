@@ -25,7 +25,9 @@ def main():
     print('Loading data...')
     d = load('{}{}{}.gz'.format(CHUNKS_DIR, chunk_name, args.num))
     L, T, O = [d[k] for k in ['listings', 'threads', 'offers']]
-
+    print(L.columns)
+    print(T.columns)
+    print(O.columns)
     # set levels for hierarchical time feats
     print('Creating offer events...')
     events = util.create_events(L, T, O, levels)
