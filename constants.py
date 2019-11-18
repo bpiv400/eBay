@@ -29,12 +29,8 @@ MBSIZE_VALIDATION = 2500
 # paths and directories
 if 'Ubuntu' in platform():
 	PREFIX = '/data/eBay'
-elif 'centos' in platform():
-	PREFIX = '~/weka/eBay/data'
-elif 'windows' in platform():
+else:
 	PREFIX = 'data'
-elif 'redhat' in platform():
-	PREFIX = '~/Dropbox/eBay/data'
 
 CLEAN_DIR = '%s/clean/' % PREFIX
 CHUNKS_DIR = '%s/chunks/' % PREFIX
