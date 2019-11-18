@@ -4,6 +4,44 @@ from datetime import datetime as dt
 import numpy as np, pandas as pd
 from constants import *
 
+# data types for csv read
+OTYPES = {'lstg': 'int64',
+          'thread': 'int64',
+          'index': 'uint8',
+          'clock': 'int64', 
+          'price': 'float64', 
+          'accept': bool,
+          'reject': bool,
+          'censored': bool,
+          'message': bool}
+
+TTYPES = {'lstg': 'int64',
+          'thread': 'int64',
+          'byr': 'int64',
+          'byr_hist': 'int64',
+          'bin': bool,
+          'byr_us': bool}
+
+LTYPES = {'lstg': 'int64',
+          'slr': 'int64',
+          'meta': 'uint8',
+          'cat': str,
+          'cndtn': 'uint8',
+          'start_date': 'uint16',
+          'end_time': 'int64',
+          'fdbk_score': 'int64',
+          'fdbk_pstv': 'int64',
+          'start_price': 'float64',
+          'photos': 'uint8',
+          'slr_lstgs': 'int64',
+          'slr_bos': 'int64',
+          'decline_price': 'float64',
+          'accept_price': 'float64',
+          'store': bool,
+          'slr_us': bool,
+          'flag': bool,
+          'fast': bool}
+
 
 # split into chunks and save
 def chunk(group, L, T, O):

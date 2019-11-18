@@ -22,8 +22,9 @@ SHARES = {'train_models': 1/3, 'train_rl': 1/3}
 TOL_HALF = 0.02
 
 # optimization parameters
-EPOCHS = 100
+EPOCHS = 25
 NUM_WORKERS = 4 if torch.cuda.is_available() else 0
+MBSIZE_VALIDATION = 2500
 
 # paths and directories
 if torch.cuda.is_available() and 'Windows' not in platform():
@@ -50,23 +51,24 @@ MIN_COUNT = 1000
 
 # delete activity after lstg is open MAX_DAYS
 MAX_DAYS = 31
+ARRIVAL_PERIODS = MAX_DAYS * 24
 
 # maximal delay times
 MAX_DELAY = {
-	'arrival': MAX_DAYS * 24 * 3600,
+	ARRIVAL_PREFIX: MAX_DAYS * 24 * 3600,
 	SLR_PREFIX: 2 * 24 * 3600,
 	BYR_PREFIX: 14 * 24 * 3600
 }
 
 # intervals for checking offer arrivals
 INTERVAL = {
-	'arrival': 4 * 60 * 60,
+	ARRIVAL_PREFIX: 4 * 60 * 60,
 	SLR_PREFIX: 15 * 60,
 	BYR_PREFIX: 90 * 60
 }
 
 INTERVAL_COUNTS = {
-	'arrival': int(MAX_DELAY['arrival'] / INTERVAL['arrival']),
+	ARRIVAL_PREFIX: int(MAX_DELAY[ARRIVAL_PREFIX] / INTERVAL[ARRIVAL_PREFIX]),
 	SLR_PREFIX: int(MAX_DELAY[SLR_PREFIX] / INTERVAL[SLR_PREFIX]),
 	BYR_PREFIX: int(MAX_DELAY[BYR_PREFIX] / INTERVAL[BYR_PREFIX]),
 	'{}_7'.format(BYR_PREFIX): \
@@ -106,44 +108,3 @@ QUANTILES = [0.25, 0.5, 0.75, 1]
 
 
 EPOCH_TIME = 'epoch_time'
-
-ARRIVAL_PERIODS = 31 * 24
-
-
-# data types for csv read
-OTYPES = {'lstg': 'int64',
-		  'thread': 'int64',
-		  'index': 'uint8',
-		  'clock': 'int64', 
-		  'price': 'float64', 
-		  'accept': bool,
-		  'reject': bool,
-		  'censored': bool,
-		  'message': bool}
-
-TTYPES = {'lstg': 'int64',
-		  'thread': 'int64',
-		  'byr': 'int64',
-		  'byr_hist': 'int64',
-		  'bin': bool,
-		  'byr_us': bool}
-
-LTYPES = {'lstg': 'int64',
-		  'slr': 'int64',
-		  'meta': 'uint8',
-		  'cat': str,
-		  'cndtn': 'uint8',
-		  'start_date': 'uint16',
-		  'end_time': 'int64',
-		  'fdbk_score': 'int64',
-		  'fdbk_pstv': 'int64',
-		  'start_price': 'float64',
-		  'photos': 'uint8',
-		  'slr_lstgs': 'int64',
-		  'slr_bos': 'int64',
-		  'decline_price': 'float64',
-		  'accept_price': 'float64',
-		  'store': bool,
-		  'slr_us': bool,
-		  'flag': bool,
-		  'fast': bool}

@@ -13,8 +13,11 @@ def run_loop(simulator, data, isTraining=False):
     # collate function
     f = collateRNN if data.isRecurrent else collateFF
 
+    # minibatch size
+    mbsize = simulator.mbsize if isTraining else MBSIZE_VALIDATION
+
     # sampler
-    sampler = Sample(data, simulator.mbsize, isTraining)
+    sampler = Sample(data, mbsize, isTraining)
 
     # load batches
     batches = DataLoader(data, batch_sampler=sampler,
@@ -37,9 +40,9 @@ def train_model(simulator, train, test, stub):
         print('Training epoch %d:' % (i+1))
         lnL_train = run_loop(simulator, train, isTraining=True)
 
-        # # save model
-        # torch.save(simulator.net.state_dict(), 
-        #     MODEL_DIR + '%s.net' % stub)
+        # save model
+        torch.save(simulator.net.state_dict(), 
+            MODEL_DIR + '%s.net' % stub)
 
         # calculate log-likelihood on validation set
         print('\tValidating on holdout.')

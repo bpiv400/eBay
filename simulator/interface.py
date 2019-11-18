@@ -23,7 +23,7 @@ class Sample(Sampler):
         for v in data.d['groups']:
             if isTraining:
                 np.random.shuffle(v)
-            self.batches += np.array_split(v, 1 + len(v) // mbsize)
+            self.batches += np.array_split(v, len(v) // mbsize)
         # shuffle training batches
         if isTraining:
             np.random.shuffle(self.batches)
