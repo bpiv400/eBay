@@ -27,14 +27,12 @@ NUM_WORKERS = 4 if torch.cuda.is_available() else 0
 MBSIZE_VALIDATION = 4000
 
 # paths and directories
-print(platform())
 if 'Ubuntu' in platform():
 	PREFIX = '/data/eBay'
 elif 'centos' in platform():
 	PREFIX = '/home/opim/etangr/weka/eBay'
 else:
 	PREFIX = 'data'
-print(PREFIX)
 
 CLEAN_DIR = '%s/clean/' % PREFIX
 CHUNKS_DIR = '%s/chunks/' % PREFIX

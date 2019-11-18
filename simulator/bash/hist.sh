@@ -1,5 +1,4 @@
 #!/bin/bash
-#$ -pe openmp 2
 #$ -t 1-144
 #$ -N hist
 #$ -o logs/
