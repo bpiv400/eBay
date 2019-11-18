@@ -1,6 +1,5 @@
-import torch, torch.nn as nn
-from torch.nn.utils import rnn
-from constants import *
+import torch.nn as nn
+from constants import DROPOUT
 
 MAX = 1.0
 
@@ -27,18 +26,14 @@ class FeedForward(nn.Module):
 
         # output layer
         if toRNN:
-            self.seq.append(
-                nn.Linear(params['hidden'], params['hidden']))
+            self.seq.append(nn.Linear(params['hidden'], params['hidden']))
         else:
-            self.seq.append(
-                nn.Linear(params['hidden'], sizes['out']))
-
+            self.seq.append(nn.Linear(params['hidden'], sizes['out']))
 
     def forward(self, x):
         for _, m in enumerate(self.seq):
             x = m(x)
         return x
-
 
     def simulate(self, x):
         return self.forward(x)
@@ -59,10 +54,10 @@ class RNN(nn.Module):
 
         # rnn layer
         self.rnn = nn.RNN(input_size=sizes['time'],
-                            hidden_size=int(params['hidden']),
-                            num_layers=self.layers,
-                            batch_first=True,
-                            dropout=params['dropout'] / 10)
+                          hidden_size=int(params['hidden']),
+                          num_layers=self.layers,
+                          batch_first=True,
+                          dropout=params['dropout'] / 10)
 
         # output layer
         self.output = nn.Linear(params['hidden'], sizes['out'])
@@ -70,7 +65,6 @@ class RNN(nn.Module):
         # for last byr turn
         if self.steps == 4:
             self.output4 = nn.Linear(params['hidden'], 1)
-
 
     # output discrete weights and parameters of continuous components
     def forward(self, x_fixed, x_time):
@@ -87,7 +81,19 @@ class RNN(nn.Module):
                 self.output4(theta[:,self.steps-1,:]).squeeze()
         else:
             # (batch_size, seq_len, N_out)
-            return self.output(theta).squeeze()   
+            return self.output(theta).squeeze()
+
+    def simulate(self, x_time, x_fixed=None, hidden=None, turn=0):
+        if hidden is None:
+            theta, hidden = self.rnn(x_time, (self.h0(x_fixed), self.c0(x_fixed)))
+        else:
+            theta, hidden = self.rnn(x_time, hidden)
+        if turn == 7:
+            out = self.output4(theta)
+        else:
+            out = self.output(theta)
+        # output layer: (seq_len, batch_size, N_out)
+        return out, hidden
 
 
 class LSTM(nn.Module):
@@ -110,7 +116,6 @@ class LSTM(nn.Module):
 
         # output layer
         self.output = nn.Linear(params['hidden'], sizes['out'])
-
 
     # output discrete weights and parameters of continuous components
     def forward(self, x_fixed, x_time):

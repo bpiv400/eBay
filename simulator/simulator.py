@@ -3,10 +3,10 @@ import torch, torch.optim as optim
 from torch.nn.utils import rnn
 from datetime import datetime as dt
 import numpy as np
-from loss import *
-from nets import *
+from simulator.loss import *
+from simulator.nets import *
 from constants import *
-
+from utils import add_out_to_sizes
 
 # constructs model-specific neural network.
 class Simulator:
@@ -35,6 +35,7 @@ class Simulator:
                 self.loss = poisson_loss
             else:
                 self.loss = logit_loss
+        add_out_to_sizes(model, sizes)
 
         # neural net(s)
         if not self.isRecurrent:
@@ -48,7 +49,6 @@ class Simulator:
         self.optimizer = optim.Adam(self.net.parameters(), 
             betas=(0.9, 1-math.pow(10, params['b2'])),
             lr=math.pow(10, params['lr']))
-
 
     def evaluate_loss(self, d):
         # feed-forward
@@ -79,14 +79,12 @@ class Simulator:
         # calculate loss
         return self.loss(theta, y)
 
-
     def apply_max_norm_constraint(self, eps=1e-8):
         for name, param in self.net.named_parameters():
             if 'bias' not in name and 'output' not in name:
                 norm = param.norm(2, dim=1, keepdim=True)
                 desired = torch.clamp(norm, 0, self.c)
                 param = param * desired / (eps + norm)
-
 
     def run_batch(self, d, isTraining):
         # train / eval mode

@@ -1,5 +1,7 @@
 import os
 import pickle
+
+from rlenv.composer.maps import *
 from compress_pickle import load
 import constants
 import pandas as pd
@@ -7,7 +9,7 @@ import numpy as np
 from rlenv.env_consts import *
 from utils import unpickle
 from rlenv.interface import model_names
-from rlenv.env_utils import get_featnames_sizes
+from rlenv.env_utils import load_featnames, load_sizes
 
 
 class Composer:
@@ -62,7 +64,7 @@ class Composer:
         fixed = pd.DataFrame(data={'from': pos}, index=x_lstg_cols)
 
         for model_name in model_names.MODELS:
-            if model_name in model_names.FEED_FORWARD:
+            if model_name == model_names.BYR_HIST:
                 output[model_name] = Composer._build_ff(model_name, fixed)
             else:
                 output[model_name] = Composer._build_recurrent(model_name, fixed)
@@ -252,7 +254,7 @@ class Composer:
         and one for fixed feature input maps
         """
         print('building {}...'.format(full_name))
-        featnames, sizes = get_featnames_sizes(full_name=full_name)
+        featnames, sizes = load_featnames(full_name), load_sizes(full_name)
         # build maps
         fixed_maps = Composer._build_fixed(full_name, fixed, featnames['x_fixed'])
         time_maps = Composer._build_time(full_name, featnames['x_time'])
@@ -303,7 +305,7 @@ class Composer:
         see build() for details
         """
         print('building {}...'.format(full_name))
-        featnames, sizes = get_featnames_sizes(full_name=full_name)
+        featnames, sizes = load_featnames(full_name), load_sizes(full_name)
         featnames = featnames['x_fixed']
         maps = Composer._build_fixed(full_name, fixed, featnames)
         maps = {FIXED: maps}
@@ -400,7 +402,7 @@ class Composer:
                                                sources, 1)
         return x_fixed
 
-    def build_input_vector(self, model_name, sources=None, fixed=False, recurrent=False, size=1):
+    def build_input_vector(self, model_name, sources=None, fixed=False, recurrent=False):
         """
         Public method that composes input vectors (x_time and x_fixed) from tensors in the
         environment
@@ -415,12 +417,12 @@ class Composer:
         x_fixed = None
         """
         if recurrent:
-            x_time = Composer._build_input_vector(self.maps[model_name][TIME], sources, size)
+            x_time = Composer._build_input_vector(self.maps[model_name][TIME], sources, 1)
             x_time = x_time.unsqueeze(0)
         else:
             x_time = None
         if fixed:
-            x_fixed = Composer._build_input_vector(self.maps[model_name][FIXED], sources, size)
+            x_fixed = Composer._build_input_vector(self.maps[model_name][FIXED], sources, 1)
         else:
             x_fixed = None
         return x_fixed, x_time

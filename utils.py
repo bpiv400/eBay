@@ -1,11 +1,9 @@
-import argparse, os
 import pickle
-from compress_pickle import load, dump
-from datetime import datetime as dt
-import numpy as np
+from compress_pickle import load
 import pandas as pd
 import torch
-from constants import *
+from rlenv.env_consts import DAY
+from constants import PARTS_DIR, HOLIDAYS, HIST_QUANTILES
 
 
 # concatenates listing features into single dataframe
@@ -21,21 +19,6 @@ def cat_x_lstg(part):
     return x_lstg
 
 
-def get_day_inds(time):
-    """
-    Returns 7 indicator clock features (holiday, dow0, ..., dow5)
-
-    :param time: current time in seconds
-    :return:
-    """
-    clock = pd.to_datetime(time, unit='s', origin=START)
-    out = torch.zeros(8).float()
-    out[0] = clock.isin(HOLIDAYS)
-    if clock.dayofweek < 6:
-        out[clock.dayofweek + 1] = 1
-    return out
-
-
 # returns dataframe with US holiday and day-of-week indicators
 def extract_day_feats(clock):
     df = pd.DataFrame(index=clock.index)
@@ -45,46 +28,14 @@ def extract_day_feats(clock):
     return df
 
 
-def get_clock_feats(time, start_days, arrival=False, delay=False):
-    """
-    Gets clock features as np.array given the time
-
-    For arrival interface, gives outputs in order of ARRIVAL_CLOCK_FEATS
-    For offer interface, gives outputs in order of
-
-    Will need to add argument to include minutes for other interface
-
-    TODO: When days is added to delay, this will need to be changed
-
-    :param time: int giving time in seconds
-    :param start_days: int giving the day on which the lstg started
-    :param arrival: boolean for whether this is an arrival model
-    :param delay: boolean for whether this is for a delay model
-    :return: NA
-    """
-    start_time = pd.to_datetime(start_days, unit='d', origin=START)
-    if arrival:
-        out = torch.zeros(8, dtype=torch.float64)
-        min_ind = None
-    elif not delay:
-        out = torch.zeros(9, dtype=torch.float64)
-        min_ind = 8
+def add_out_to_sizes(model, sizes):
+    if model in ['hist', 'con_byr', 'con_slr']:
+        if model == 'hist':
+            sizes['out'] = HIST_QUANTILES
+        else:
+            sizes['out'] = 101
     else:
-        out = torch.zeros(8, dtype=torch.float64)
-        min_ind = 7
-    clock = pd.to_datetime(time, unit='s', origin=START)
-
-    if not delay:
-        focal_days = (clock - start_time).days
-        out[0] = focal_days
-        hol_ind = 1
-    else:
-        hol_ind = 0
-
-    out[hol_ind:(hol_ind + 7)] = get_day_inds(time)
-    if not arrival:
-        out[min_ind] = (clock - clock.replace(minute=0, hour=0, second=0)) / dt.timedelta(minutes=1)
-    return out
+        sizes['out'] = 1
 
 
 def unpickle(file):
