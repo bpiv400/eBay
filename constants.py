@@ -29,6 +29,8 @@ MBSIZE_VALIDATION = 2500
 # paths and directories
 if 'Ubuntu' in platform():
 	PREFIX = '/data/eBay'
+elif 'centos' in platform():
+	PREFIX = '~/weka/eBay/data'
 else:
 	PREFIX = 'data'
 
