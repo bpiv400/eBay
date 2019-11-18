@@ -21,10 +21,10 @@ def get_arrival_time_feats(lookup, tf):
     return tf.groupby(['lstg', 'period']).sum()
 
 
-def get_y_arrival(lookup, threads):
+def get_y_arrival(lookup, thread_start):
     # time_stamps
     t0 = lookup.start_date * 24 * 3600
-    diff = pd.to_timedelta(threads.start_time - t0, unit='s')
+    diff = pd.to_timedelta(thread_start - t0, unit='s')
     end = pd.to_timedelta(lookup.end_time - t0, unit='s')
     # convert to intervals
     diff = (diff.dt.total_seconds() // INTERVAL['arrival']).astype('uint16')
@@ -61,8 +61,8 @@ if __name__ == "__main__":
 
     # load data
     lookup = load(PARTS_DIR + '%s/lookup.gz' % part)
-    threads = load(CLEAN_DIR + 'threads.pkl').reindex(
-        index=idx, level='lstg')
+    thread_start = load(CLEAN_DIR + 'offers.pkl').reindex(
+        index=idx, level='lstg').clock.xs(1, level='index')
     tf = load_frames('tf_arrival').reindex(
         index=idx, level='lstg')
 
@@ -73,5 +73,5 @@ if __name__ == "__main__":
 
     # outcomes for arrival model
     print('Creating arrival model outcome variables')
-    y_arrival = get_y_arrival(lookup, threads)
+    y_arrival = get_y_arrival(lookup, thread_start)
     dump(y_arrival, path('y_arrival'))

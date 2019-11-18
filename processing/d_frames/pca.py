@@ -28,7 +28,7 @@ if __name__ == "__main__":
 	num = parser.parse_args().num
 
 	# load partitions and concatenate indices
-	partitions = load(PARTS_DIR + 'partitions.gz')
+	partitions = load(PARTS_DIR + 'partitions.pkl')
 	idx = np.sort(np.concatenate(list(partitions.values())))
 
 	# load data

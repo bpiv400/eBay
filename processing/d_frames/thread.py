@@ -21,14 +21,17 @@ if __name__ == "__main__":
 	lookup = load(PARTS_DIR + '%s/lookup.gz' % part)
 	threads = load(CLEAN_DIR + 'threads.pkl').reindex(
 		index=idx, level='lstg')
+	events = load(CLEAN_DIR + 'offers.pkl').reindex(
+		index=idx, level='lstg')
 
 	# initialize x_thread with calendar features
-	clock = pd.to_datetime(threads['start_time'], unit='s', origin=START)
+	thread_start = events.clock.xs(1, level='index')
+	clock = pd.to_datetime(thread_start, unit='s', origin=START)
 	x_thread = extract_clock_feats(clock)
 
 	# add months since lstg start
 	lstg_start = lookup['start_date'] * 24 * 3600
-	months = (threads['start_time'] - lstg_start) / (3600 * 24 * MAX_DAYS)
+	months = (thread_start - lstg_start) / (3600 * 24 * MAX_DAYS)
 	x_thread.loc[:, 'months_since_lstg'] = months
 
 	# add buyer history deciles
