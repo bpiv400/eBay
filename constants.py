@@ -24,14 +24,14 @@ TOL_HALF = 0.02
 # optimization parameters
 EPOCHS = 25
 NUM_WORKERS = 4 if torch.cuda.is_available() else 0
-MBSIZE_VALIDATION = 2500
+MBSIZE_VALIDATION = 4000
 
 # paths and directories
 print(platform())
 if 'Ubuntu' in platform():
 	PREFIX = '/data/eBay'
 elif 'centos' in platform():
-	PREFIX = '~/weka/eBay/data'
+	PREFIX = '/home/opim/etangr/weka/eBay'
 else:
 	PREFIX = 'data'
 print(PREFIX)

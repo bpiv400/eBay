@@ -46,7 +46,8 @@ def train_model(simulator, train, test, stub):
 
         # calculate log-likelihood on validation set
         print('\tValidating on holdout.')
-        lnL_test = run_loop(simulator, test)
+        with torch.no_grad():
+            lnL_test = run_loop(simulator, test)
 
         # epoch duration
         dur = np.round((dt.now() - t0).seconds)

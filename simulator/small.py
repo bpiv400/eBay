@@ -13,7 +13,7 @@ def run_loop(simulator, data):
     # collate function
     f = collateRNN if data.isRecurrent else collateFF
     # sampler
-    sampler = Sample(data, simulator.mbsize, False)
+    sampler = Sample(data, MBSIZE_VALIDATION, False)
     # load batches
     batches = DataLoader(data, batch_sampler=sampler,
         collate_fn=f, num_workers=NUM_WORKERS, pin_memory=True)
@@ -23,7 +23,8 @@ def run_loop(simulator, data):
     lnL, gpu_time, total_time = 0.0, 0.0, 0.0
     for batch in batches:
         t1 = dt.now()
-        lnL += simulator.run_batch(batch, True)
+        with torch.no_grad():
+            lnL += simulator.run_batch(batch, False)
         gpu_time += (dt.now() - t1).total_seconds() 
         total_time += (dt.now() - t0).total_seconds()
         t0 = dt.now()
