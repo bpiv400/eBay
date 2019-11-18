@@ -24,7 +24,9 @@ def run_loop(simulator, data):
     for batch in batches:
         t1 = dt.now()
         lnL += simulator.run_batch(batch, True)
-        gpu_time += (dt.now() - t1).total_seconds() 
+        gpu_delta = (dt.now() - t1).total_seconds()
+        print('%9.4f seconds' % gpu_delta)
+        gpu_time += gpu_delta 
         total_time += (dt.now() - t0).total_seconds()
         t0 = dt.now()
 
