@@ -1,5 +1,6 @@
 #!/bin/bash
-#$ -pe openmp 2#$ -l m_mem_free=30G
+#$ -pe openmp 2
+#$ -l m_mem_free=30G
 #$ -t 1-144
 #$ -N hist
 #$ -o logs/
