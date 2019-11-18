@@ -27,9 +27,9 @@ def create_bash(model, T):
 	f.write('#$ -l m_mem_free=30G\n')
 	f.write('#$ -t 1-%d\n' % T)
 	f.write('#$ -N %s\n' % model)
-	f.write('#$ -o logs/\n')
+	f.write('#$ -o ~/logs/\n')
 	f.write('#$ -j y\n\n')
-	f.write('python weka/eBay/repo/simulator/train.py --model %s --id "$SGE_TASK_ID"'
+	f.write('python ~/weka/eBay/repo/simulator/train.py --model %s --id "$SGE_TASK_ID"'
 		% model)
 	f.close()
 
