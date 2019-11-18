@@ -13,7 +13,7 @@ def run_loop(simulator, data):
     # collate function
     f = collateRNN if data.isRecurrent else collateFF
     # sampler
-    sampler = Sample(data, MBSIZE_VALIDATION, False)
+    sampler = Sample(data, simulator.mbsize, False)
     # load batches
     batches = DataLoader(data, batch_sampler=sampler,
         collate_fn=f, num_workers=NUM_WORKERS, pin_memory=True)
@@ -23,8 +23,7 @@ def run_loop(simulator, data):
     lnL, gpu_time, total_time = 0.0, 0.0, 0.0
     for batch in batches:
         t1 = dt.now()
-        with torch.no_grad():
-            lnL += simulator.run_batch(batch, False)
+        lnL += simulator.run_batch(batch, True)
         gpu_time += (dt.now() - t1).total_seconds() 
         total_time += (dt.now() - t0).total_seconds()
         t0 = dt.now()
@@ -36,12 +35,12 @@ if __name__ == '__main__':
     # extract parameters from command line
     parser = argparse.ArgumentParser(
         description='Model of environment for bargaining AI.')
-    parser.add_argument('--model', type=str, 
-        help='One of arrival, delay_byr, delay_slr, con_byr, con_slr.')
-    parser.add_argument('--id', type=int, help='Experiment ID.')
+    parser.add_argument('--num', type=int, help='Index of MODELS.')
     args = parser.parse_args()
-    model = args.model
-    paramsid = args.id
+    model = MODELS[args.model-1]
+
+    # use same parameters for all models
+    paramsid = 1
 
     # load model sizes
     print('Loading parameters')
