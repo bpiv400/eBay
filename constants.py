@@ -31,7 +31,7 @@ if 'Ubuntu' in platform():
 	PREFIX = '/data/eBay'
 elif 'centos' in platform():
 	PREFIX = '~/weka/eBay/data'
-elif 'windows' in platform():
+elif 'Windows' in platform():
 	PREFIX = 'data'
 elif 'redhat' in platform():
 	PREFIX = '~/Dropbox/eBay/data'

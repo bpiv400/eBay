@@ -7,8 +7,8 @@ from rlenv.env_consts import (MONTH, START_DAY, ACC_PRICE, META,
 from rlenv.env_utils import get_clock_feats, get_value_fee, time_delta
 from rlenv.events.Arrival import Arrival
 from rlenv.events import event_types
-from rlenv.Sources import Sources
-from rlenv.events.FirstOffer import Thread
+from rlenv.ThreadSources import ThreadSources, ArrivalSources
+from rlenv.events.Thread import Thread
 from constants import INTERVAL, BYR_PREFIX
 from rlenv.simulators import SimulatedSeller, SimulatedBuyer
 
@@ -43,7 +43,7 @@ class RewardEnvironment:
         self.time_feats.reset()
         self.arrival.init(self.x_lstg)
         self.thread_counter = 0
-        sources = Sources(num_offers=True)
+        sources = ArrivalSources()
         self.queue.push(Arrival(self.lookup[START_DAY], sources))
 
     def run(self):
@@ -56,6 +56,7 @@ class RewardEnvironment:
         complete = False
         while not complete:
             complete = self._process_event(self.queue.pop())
+
         return self.outcome
 
     def _process_event(self, event):
@@ -67,7 +68,9 @@ class RewardEnvironment:
         elif event.type == event_types.OFFER:
             return self._process_offer(event)
         elif event.type == event_types.DELAY:
-            return self._process_delay(event, byr=True)
+            return self._process_delay(event)
+        elif event.type == event_types.SLR_EXPIRE:
+            return self._process_slr_expire(event)
         else:
             raise NotImplementedError()
 
@@ -106,7 +109,7 @@ class RewardEnvironment:
         :return:
         """
         # expiration
-        sources = Sources(num_offers=False, x_lstg=self.x_lstg, start_date=self.lookup[START_DAY])
+        sources = ThreadSources(x_lstg=self.x_lstg, start_date=self.lookup[START_DAY])
         months_since_lstg = time_delta(self.lookup[START_DAY], event.priority, unit=MONTH)
         time_feats = self.time_feats.get_feats(time=event.priority,thread_id=event.thread_id)
         sources.prepare_hist(time_feats=time_feats, clock_feats=get_clock_feats(event.priority),
@@ -133,6 +136,11 @@ class RewardEnvironment:
         # check whether the lstg has expired and close the thread if so
         if self._lstg_expiration(event):
             return True
+        if event.turn != 1:
+            time_feats = self.time_feats.get_feats(thread_id=event.thread_id,
+                                                   time=event.priority)
+            clock_feats = get_clock_feats(event.priority)
+            event.init_offer(time_feats=time_feats, clock_feats=clock_feats)
         byr_turn = event.turn % 2 == 1
         # generate the offer outcomes
         if byr_turn:
@@ -202,7 +210,7 @@ class RewardEnvironment:
         self.time_feats.update_features(trigger_type=time_triggers.OFFER,
                                         thread_id=event.thread_id, offer=offer)
         event.change_turn()
-        offer = event.auto_rej()
+        offer = event.rej(expire=False)
         self.time_feats.update_features(trigger_type=time_triggers.SLR_REJECTION,
                                         thread_id=event.thread_id, offer=offer)
         self._init_delay(event)
@@ -217,9 +225,43 @@ class RewardEnvironment:
             return True
         elif event.thread_expired():
             if event.turn % 2 == 0:
-                self._process_slr_expire(event)
+                delay_dur = event.spi
+                event.prepare_offer(delay_dur)
+                event.type = event_types.SLR_EXPIRE
+                self.queue.push(event)
             else:
-                
+                self._process_byr_expire(event)
+            return False
+        time_feats = self.time_feats.get_feats(thread_id=event.thread_id,
+                                               time=event.priority)
+        clock_feats = get_clock_feats(event.priority)
+        make_offer = event.delay(clock_feats=clock_feats, time_feats=time_feats)
+        if make_offer == 1:
+            delay_dur = np.random.randint(0, event.spi)
+            event.prepare_offer(delay_dur)
+        else:
+            event.priority += event.spi
+        self.queue.push(event)
+        return False
+
+    def _process_byr_expire(self, event):
+        self.time_feats.update_features(trigger_type=time_triggers.BYR_REJECTION,
+                                        thread_id=event.thread_id)
+
+    def _process_slr_expire(self, event):
+        if self._lstg_expiration(event):
+            return True
+        # update sources with new time and clock features
+        time_feats = self.time_feats.get_feats(thread_id=event.thread_id,
+                                               time=event.priority)
+        clock_feats = get_clock_feats(event.priority)
+        event.init_offer(time_feats=time_feats, clock_feats=clock_feats)
+        offer = event.rej(expire=True)
+        self.time_feats.update_features(trigger_type=time_triggers.SLR_REJECTION,
+                                        thread_id=event.thread_id,
+                                        offer=offer)
+        self._init_delay(event)
+        return False
 
 
 

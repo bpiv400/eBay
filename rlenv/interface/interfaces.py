@@ -45,6 +45,13 @@ class PlayerInterface:
                                                    turn=turn)
         return params, hidden
 
+    def init_delay(self, sources=None):
+        x_fixed, _ = self.composer.build_input_vector(self.delay_model_name,
+                                                      sources=sources,
+                                                      recurrent=False, fixed=True)
+        hidden = self.delay_model.init(x_fixed=x_fixed)
+        return hidden
+
 
 class ArrivalInterface:
     def __init__(self, byr_hist=0, num_offers=0, composer=None):
@@ -70,7 +77,7 @@ class ArrivalInterface:
 
     def init(self, x_lstg):
         x_fixed = self.composer.build_arrival_init(x_lstg)
-        self.hidden = self.num_offers.init(x_fixed)
+        self.hidden = self.num_offers.init(x_fixed=x_fixed)
 
     def num_offers(self, sources=None):
         _, x_time = self.composer.build_input_vector(NUM_OFFERS, sources=sources,

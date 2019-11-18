@@ -1,5 +1,8 @@
+import torch
 from events.Event import Event
 from events.event_types import ARRIVAL
+from constants import INTERVAL_COUNTS
+from rlenv.interface.model_names import ARRIVAL_PREFIX
 
 
 class Arrival(Event):
@@ -9,10 +12,6 @@ class Arrival(Event):
 
     Attributes:
         priority: inherited from Event
-        ids: dictionary containing ids for the Event
-        type: string giving the type of the event
-        hidden_days: tensor giving the hidden state of the arrival days model
-        turn: integer giving that the current turn is turn 1
     """
     def __init__(self, priority, sources):
         """
@@ -22,4 +21,12 @@ class Arrival(Event):
         """
         super(Arrival, self).__init__(ARRIVAL, priority=int(priority), thread_id=None)
         self.sources = sources
+        self.interval = 0
 
+    def update_arrival(self, clock_feats=None, time_feats=None):
+        duration = torch.tensor(self.interval / INTERVAL_COUNTS[ARRIVAL_PREFIX])
+        duration = duration.float()
+        self.sources.update_arrival(clock_feats=clock_feats,
+                                    time_feats=time_feats,
+                                    duration=duration)
+        self.interval += 1
