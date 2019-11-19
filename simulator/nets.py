@@ -7,8 +7,7 @@ class FeedForward(nn.Module):
         super(FeedForward, self).__init__()
 
         # activation function
-        f = nn.ReLU()
-        #f = nn.Hardtanh(max_val=MAX)
+        f = nn.Tanh()
 
         # initial layer
         self.seq = nn.ModuleList(

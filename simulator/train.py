@@ -31,7 +31,7 @@ def run_loop(simulator, data, isTraining=False):
     return lnL / data.N_labels
 
 
-def train_model(simulator, train, test, stub):
+def train_model(simulator, train, test, filename):
     # loop over epochs, record log-likelihood
     for i in range(EPOCHS):
         t0 = dt.now()
@@ -39,10 +39,6 @@ def train_model(simulator, train, test, stub):
         # training loop
         print('Training epoch %d:' % (i+1))
         lnL_train = run_loop(simulator, train, isTraining=True)
-
-        # save model
-        torch.save(simulator.net.state_dict(), 
-            MODEL_DIR + '%s.net' % stub)
 
         # calculate log-likelihood on validation set
         print('\tValidating on holdout.')
@@ -53,7 +49,7 @@ def train_model(simulator, train, test, stub):
         dur = np.round((dt.now() - t0).seconds)
 
         # write statistics to file
-        f = open(SUMMARY_DIR + '%s.csv' % stub, 'a')
+        f = open(filename, 'a')
         f.write('%d,%d,%.4f,%.4f\n' % (i+1, dur, lnL_train, lnL_test))
         f.close()
 
@@ -68,8 +64,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     model = args.model
     paramsid = args.id
-    stub = '%s_%d' % (model, paramsid)
-    print(stub)
+    print('%s: %d' % (model, paramsid))
 
     # load model sizes
     print('Loading parameters')
@@ -92,9 +87,10 @@ if __name__ == '__main__':
     test = load('%s/inputs/train_rl/%s.gz' % (PREFIX, model))
 
     # create outfile
-    f = open(SUMMARY_DIR + '%s.csv' % stub, 'w')
+    filename = SUMMARY_DIR + '%s/%d.csv' % (model, paramsid)
+    f = open(filename, 'w')
     f.write('epoch,seconds,lnL_train,lnL_holdout\n')
     f.close()
 
     # train model
-    train_model(simulator, train, test, stub)
+    train_model(simulator, train, test, filename)

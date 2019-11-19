@@ -85,6 +85,7 @@ class Simulator:
                 desired = torch.clamp(norm, 0, self.c)
                 param = param * desired / (eps + norm)
 
+
     def run_batch(self, d, isTraining):
         # train / eval mode
         self.net.train(isTraining)

@@ -2,6 +2,7 @@ from pandas.tseries.holiday import USFederalHolidayCalendar as Calendar
 import torch
 import numpy as np
 from platform import platform
+import multiprocessing as mp
 
 # strings for referencing quantities related to buyer and seller interface
 SLR_PREFIX = 'slr'
@@ -22,8 +23,8 @@ SHARES = {'train_models': 1/3, 'train_rl': 1/3}
 TOL_HALF = 0.02
 
 # optimization parameters
-EPOCHS = 10
-NUM_WORKERS = 4 if torch.cuda.is_available() else 0
+EPOCHS = 25
+NUM_WORKERS = mp.cpu_count() if torch.cuda.is_available() else 0
 MBSIZE_VALIDATION = 4000
 
 # paths and directories

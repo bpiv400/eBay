@@ -1,5 +1,5 @@
 #!/bin/bash
-#$ -t 1-144
+#$ -t 1-48
 #$ -N con_byr
 #$ -o logs/
 #$ -j y

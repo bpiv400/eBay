@@ -1,5 +1,5 @@
 #!/bin/bash
-#$ -t 1-144
+#$ -t 1-48
 #$ -N arrival
 #$ -o logs/
 #$ -j y

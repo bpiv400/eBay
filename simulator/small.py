@@ -25,8 +25,9 @@ def run_loop(simulator, data):
         t1 = dt.now()
         lnL += simulator.run_batch(batch, True)
         gpu_delta = (dt.now() - t1).total_seconds()
-        print('%9.4f seconds' % gpu_delta)
-        gpu_time += gpu_delta 
+        print('%.4f seconds' % gpu_delta)
+        print(lnL)
+        gpu_time += gpu_delta
         total_time += (dt.now() - t0).total_seconds()
         t0 = dt.now()
 
@@ -37,12 +38,12 @@ if __name__ == '__main__':
     # extract parameters from command line
     parser = argparse.ArgumentParser(
         description='Model of environment for bargaining AI.')
-    parser.add_argument('--num', type=int, help='Index of MODELS.')
+    parser.add_argument('--model', type=str, 
+        help='One of arrival, delay_byr, delay_slr, con_byr, con_slr.')
+    parser.add_argument('--id', type=int, help='Experiment ID.')
     args = parser.parse_args()
-    model = MODELS[args.num-1]
-
-    # use same parameters for all models
-    paramsid = 1
+    model = args.model
+    paramsid = args.id
 
     # load model sizes
     print('Loading parameters')
