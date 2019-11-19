@@ -18,11 +18,11 @@ b2 = [-4, -3, -2]
 M = cartesian([[MBSIZE], [LAYERS], [HIDDEN], [DROPOUT], c, b2, lr])
 idx = pd.Index(range(1, len(M)+1), name='id')
 df = pd.DataFrame(M, index=idx, columns=COLS)
-df.to_csv('%s/inputs/params.csv' % PREFIX)
+df.to_csv('~/weka/eBay/inputs/params.csv')
 
 # function to construct bash file
 def create_bash(model, T):
-	f = open('repo/simulator/bash/%s.sh' % model, 'w')
+	f = open('bash/%s.sh' % model, 'w')
 	f.write('#!/bin/bash\n')
 	#f.write('#$ -pe openmp 2\n')
 	f.write('#$ -t 1-%d\n' % T)
