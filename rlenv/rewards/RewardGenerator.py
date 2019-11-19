@@ -23,13 +23,13 @@ class RewardGenerator:
     def __init__(self, dir, num, exp_id):
         super(RewardGenerator, self).__init__()
         self.dir = dir
-        self.num = num
+        self.num = int(num)
         input_dict = load('{}{}.gz'.format(self.dir, self.num))
         self.x_lstg = input_dict['x_lstg']
         self.lookup = input_dict['lookup']
-        self.exp_id = exp_id
+        self.exp_id = int(exp_id)
         self.params = self._load_params()
-        composer = Composer(self.params['composer'])
+        composer = Composer(self.params)
         self.buyer = PlayerInterface(msg=self.params[model_str(MSG, byr=True)],
                                      con=self.params[model_str(CON, byr=True)],
                                      delay=self.params[model_str(DELAY, byr=True)],

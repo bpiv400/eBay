@@ -33,6 +33,8 @@ elif 'centos' in platform():
 	PREFIX = '~/weka/eBay/data'
 elif 'Windows' in platform():
 	PREFIX = 'data'
+else:
+	PREFIX = '~/weka/eBay/data'
 
 CLEAN_DIR = '%s/clean/' % PREFIX
 CHUNKS_DIR = '%s/chunks/' % PREFIX

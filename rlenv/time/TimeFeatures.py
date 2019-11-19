@@ -12,7 +12,7 @@ import math
 from collections import deque, Counter
 import numpy as np
 import torch
-import time.time_triggers as time_triggers
+import rlenv.time.time_triggers as time_triggers
 import rlenv.env_consts as consts
 
 

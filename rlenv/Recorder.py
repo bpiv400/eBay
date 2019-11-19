@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 from compress_pickle import dump
-from env_consts import START_DAY, INTERACT
+from rlenv.env_consts import START_DAY, INTERACT
 
 SIM = 'sim'
 INDEX = 'index'
