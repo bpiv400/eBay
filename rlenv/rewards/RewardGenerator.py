@@ -4,7 +4,7 @@
 from compress_pickle import load
 import torch
 import pandas as pd
-from rlenv.env_consts import REWARD_EXPERIMENT_PATH, SIM_COUNT
+from rlenv.env_consts import REWARD_EXPERIMENT_PATH, SIM_COUNT, INTERACT, START_PRICE, START_DAY
 from rlenv.interface.interfaces import PlayerInterface, ArrivalInterface
 from rlenv.interface.model_names import model_str, BYR_HIST, CON, MSG, DELAY, NUM_OFFERS
 from rlenv.rewards.RewardEnvironment import RewardEnvironment
@@ -62,9 +62,16 @@ class RewardGenerator:
             environment = RewardEnvironment(buyer=self.buyer, seller=self.seller,
                                             arrival=self.arrival, x_lstg=x_lstg,
                                             lookup=lookup, recorder=recorder)
+            if INTERACT:
+                print('Lstg: {}  | Start time: {}  | Start price: {}'.format(lstg,
+                                                                             lookup[START_DAY],
+                                                                             lookup[START_PRICE]))
             for i in range(self.params[SIM_COUNT]):
                 environment.reset()
                 # TODO Add event tracker
                 sale, reward, time = environment.run()
+                if INTERACT:
+                    print('Simulation {} concluded'.format(recorder.sim))
                 recorder.add_sale(sale, reward, time)
+
             recorder.dump(self.dir)

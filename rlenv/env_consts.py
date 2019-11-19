@@ -1,6 +1,8 @@
 from constants import INPUT_DIR, PARTS_DIR
 import torch
 
+INTERACT = True
+
 # time feats
 SLR_OFFERS = 'slr_offers'
 BYR_OFFERS = 'byr_offers'

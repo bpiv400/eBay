@@ -2,7 +2,7 @@ import numpy as np
 from rlenv.time.TimeFeatures import TimeFeatures
 from rlenv.time import time_triggers
 from rlenv.events.EventQueue import EventQueue
-from rlenv.env_consts import (MONTH, START_DAY, ACC_PRICE, META,
+from rlenv.env_consts import (MONTH, START_DAY, ACC_PRICE, META, INTERACT,
                               DEC_PRICE, START_PRICE, ANCHOR_STORE_INSERT)
 from rlenv.env_utils import get_clock_feats, get_value_fee, time_delta
 from rlenv.events.Arrival import Arrival
@@ -49,6 +49,8 @@ class RewardEnvironment:
         self.thread_counter = 0
         sources = ArrivalSources()
         self.queue.push(Arrival(self.lookup[START_DAY], sources))
+        if INTERACT:
+            print('Initializing Simulation {}'.format(self.recorder.sim))
 
     def run(self):
         """
@@ -59,8 +61,9 @@ class RewardEnvironment:
         """
         complete = False
         while not complete:
+            if INTERACT:
+                input('Press Enter to continue...')
             complete = self._process_event(self.queue.pop())
-
         return self.outcome
 
     def _process_event(self, event):
@@ -72,8 +75,6 @@ class RewardEnvironment:
             return self._process_offer(event)
         elif event.type == event_types.DELAY:
             return self._process_delay(event)
-        elif event.type == event_types.SLR_EXPIRE:
-            return self._process_slr_expire(event)
         else:
             raise NotImplementedError()
 
@@ -90,6 +91,9 @@ class RewardEnvironment:
         event.sources.update_arrival(time_feats=self.time_feats.get_feats(time=event.priority),
                                      clock_feats=get_clock_feats(event.priority))
         num_byrs = self.arrival.step(event.sources())
+        if INTERACT:
+            print('Arrival Interval Start: {}'.format(event.priority))
+            print('Number of arrivals: {}'.format(num_byrs))
         if num_byrs > 0:
             # place each into the queue
             for i in range(num_byrs):
@@ -118,6 +122,8 @@ class RewardEnvironment:
         sources.prepare_hist(time_feats=time_feats, clock_feats=get_clock_feats(event.priority),
                              months_since_lstg=months_since_lstg)
         hist = self.arrival.hist(sources())
+        if INTERACT:
+            print('Thread {} initiated | Buyer hist: {}'.format(event.thread_id, hist))
         event.init_thread(sources=sources, hist=hist)
         self.recorder.start_thread(thread_id=event.thread_id, byr_hist=hist)
         return self._process_offer(event)
@@ -131,6 +137,8 @@ class RewardEnvironment:
         """
         if event.priority >= self.end_time:
             self.outcome = (False, 0, MONTH)
+            if INTERACT:
+                print('Lstg expired')
             return True
         else:
             return False
@@ -230,10 +238,7 @@ class RewardEnvironment:
             return True
         elif event.thread_expired():
             if event.turn % 2 == 0:
-                delay_dur = event.spi
-                event.prepare_offer(delay_dur)
-                event.type = event_types.SLR_EXPIRE
-                self.queue.push(event)
+                self._process_slr_expire(event)
             else:
                 self._process_byr_expire(event)
             return False
@@ -241,6 +246,14 @@ class RewardEnvironment:
                                                time=event.priority)
         clock_feats = get_clock_feats(event.priority)
         make_offer = event.delay(clock_feats=clock_feats, time_feats=time_feats)
+        if INTERACT:
+            print('Thread: {} | Offer: {} | clock: {}'.format(event.thread_id,
+                                                              event.turn, event.priority))
+            actor = 'Seller' if event.turn % 2 == 0 else 'Buyer'
+            if make_offer == 1:
+                print('{} will make an offer in the upcoming interval'.format(actor))
+            else:
+                print('{} will not make an offer in the upcoming interval'.format(actor))
         if make_offer == 1:
             delay_dur = np.random.randint(0, event.spi)
             event.prepare_offer(delay_dur)
@@ -256,8 +269,7 @@ class RewardEnvironment:
                                         thread_id=event.thread_id)
 
     def _process_slr_expire(self, event):
-        if self._lstg_expiration(event):
-            return True
+        event.prepare_offer(0)
         # update sources with new time and clock features
         time_feats = self.time_feats.get_feats(thread_id=event.thread_id,
                                                time=event.priority)

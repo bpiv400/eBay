@@ -145,11 +145,19 @@ class Thread(Event):
         self.sources.init_offer(time_feats=time_feats, clock_feats=clock_feats)
 
     def summary(self):
-        con, norm, msg = self.sources.summary()
+        con, norm, msg, split = self.sources.summary()
         if self.turn % 2 == 0:
             norm = 100 - norm
-        return norm
+        return con, norm, msg, split
+
+    def delay_outcomes(self):
+        return self.sources.get_delay_outcomes()
+
+    def slr_outcomes(self):
+        return self.sources.get_slr_outcomes()
+
 
     def byr_expire(self):
         self.priority += self.spi
-        self.sources.byr_expire()
+        days = self.max_delay / DAY
+        self.sources.byr_expire(days=days)

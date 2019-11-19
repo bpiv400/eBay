@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 from compress_pickle import dump
-from env_consts import START_DAY
+from env_consts import START_DAY, INTERACT
 
 SIM = 'sim'
 INDEX = 'index'
@@ -50,15 +50,46 @@ class Recorder:
         self.offers[INDEX].append(event.turn)
         self.offers[THREAD].append(event.thread_id)
         self.offers[CLOCK].append(event.priority)
-        con, norm, msg = event.summary()
+        con, norm, msg, split = event.summary()
         self.offers[CON].append(con)
         self.offers[NORM].append(norm)
         self.offers[MESSAGE].append(msg)
+        days, delay = event.delay_outcomes()
+
+        if INTERACT:
+            if con == 0:
+                if delay == 1:
+                    otype = 'expiration rejection'
+                elif delay == 0:
+                    otype = 'automatic rejection'
+                else:
+                    otype = 'standard rejection'
+            elif con == 1:
+                if delay == 0:
+                    otype = 'automatic acceptance'
+                else:
+                    otype = 'standard acceptance'
+            else:
+                otype = 'standard offer'
+            print('Thread: {} | Offer: {} | clock: {}'.format(event.thread_id,
+                                                              event.turn, event.priority))
+            print('Days: {}, Delay: {}').format()
+            print('Offer type: {}'.format(otype))
+            print('Concession: {} | start price norm: {} | split: {} | message: {}'.format(
+                con, norm, split, msg))
+            if event.turn % 2 == 0:
+                auto, exp, rej = event.slr_outcomes()
+                print('Auto: {} | Exp: {} | Reject: {}'.format(auto, exp, rej))
 
     def add_sale(self, sale, reward, dur):
         self.sales[SALE].append(sale)
         self.sales[REWARD].append(reward)
         self.sales[DUR].append(dur)
+        if INTERACT:
+            if sale:
+                print('Item sold w/ reward: {}'.format(reward))
+            else:
+                print('Item did not sell')
 
     def dump(self, base_dir):
         # convert all three dictionaries to dataframes
@@ -81,8 +112,8 @@ class Recorder:
         self.sales[SALE] = self.sales[SALE].astype(bool)
         self.sales[REWARD] = self.sales[REWARD].astype(np.float32)
 
-        records_path = '{}records/{}.gz'.format(dir, self.lstg)
-        rewards_path = '{}rewards/{}.gz'.format(dir, self.lstg)
+        records_path = '{}records/{}.gz'.format(base_dir, self.lstg)
+        rewards_path = '{}rewards/{}.gz'.format(base_dir, self.lstg)
         records = {
             'offers': self.offers,
             'threads': self.threads

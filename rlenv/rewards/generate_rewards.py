@@ -17,8 +17,8 @@ def main():
     exp = args.id
     if part not in PARTITIONS:
         raise RuntimeError('part must be one of: {}'.format(PARTITIONS))
-    dir = '{}{}/'.format(REWARDS_DIR, part)
-    generator = RewardGenerator(dir, num, exp)
+    base_dir = '{}{}/'.format(REWARDS_DIR, part)
+    generator = RewardGenerator(base_dir, num, exp)
     generator.generate()
 
 

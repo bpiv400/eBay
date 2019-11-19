@@ -1,7 +1,8 @@
 import math
 import torch
 from rlenv.env_consts import (TIME_FEATS, BYR_OUTCOMES, SLR_OUTCOMES, NORM_POS,
-                              DAYS_POS, DELAY_POS, CON_POS, MSG_POS)
+                              DAYS_POS, DELAY_POS, CON_POS, MSG_POS, AUTO_POS,
+                              REJ_POS, EXPIRE_POS, SPLIT_POS)
 from rlenv.composer.maps import *
 from rlenv.env_utils import get_clock_feats
 
@@ -92,9 +93,10 @@ class ThreadSources(Sources):
         self.source_dict[OUTCOMES_MAP][[DAYS_POS, DELAY_POS]] = input_vec
         self.delay_prev_time = None
 
-    def byr_expire(self):
+    def byr_expire(self, days=None):
         self.source_dict[OUTCOMES_MAP][NORM_POS] = self.source_dict[L_OUTCOMES_MAP][NORM_POS]
-        self.source_dict[OUTCOMES_MAP][CON_POS, MSG_POS] = 0
+        self.source_dict[OUTCOMES_MAP][[CON_POS, MSG_POS]] = 0
+        self.source_dict[OUTCOMES_MAP][[DELAY_POS, DAYS_POS]] = torch.tensor([1, days]).float()
 
     def is_sale(self):
         return self.source_dict[OUTCOMES_MAP][CON_POS] == 1
@@ -107,7 +109,19 @@ class ThreadSources(Sources):
         norm = self.source_dict[OUTCOMES_MAP][NORM_POS] * 100
         norm = round(norm)
         msg = self.source_dict[OUTCOMES_MAP][MSG_POS] == 1
-        return con, norm, msg
+        split = self.source_dict[OUTCOMES_MAP][SPLIT_POS]
+        return con, norm, msg, split
+
+    def get_delay_outcomes(self):
+        days = self.source_dict[OUTCOMES_MAP][DAYS_POS]
+        delay = self.source_dict[OUTCOMES_MAP][DELAY_POS]
+        return days, delay
+
+    def get_slr_outcomes(self):
+        auto = self.source_dict[OUTCOMES_MAP][AUTO_POS]
+        rej = self.source_dict[OUTCOMES_MAP][REJ_POS]
+        exp = self.source_dict[OUTCOMES_MAP][EXPIRE_POS]
+        return auto, exp, rej
 
     @staticmethod
     def _init_pre_lstg_outcomes():
@@ -150,9 +164,3 @@ class ArrivalSources(Sources):
         self.source_dict[CLOCK_MAP] = clock_feats
         self.source_dict[DIFFS_MAP] = time_feats - self.source_dict[TIME_MAP]
         self.source_dict[TIME_MAP] = time_feats
-
-
-
-
-
-
