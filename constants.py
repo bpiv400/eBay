@@ -31,7 +31,7 @@ MBSIZE_VALIDATION = 4000
 if 'Ubuntu' in platform():
 	PREFIX = '/data/eBay'
 elif 'centos' in platform():
-	PREFIX = '/home/open/etangr/weka/eBay'
+	PREFIX = '/home/opim/etangr/weka/eBay'
 elif 'Windows' in platform():
 	PREFIX = 'data'
 else:
