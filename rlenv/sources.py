@@ -1,8 +1,7 @@
 import math
-
 import torch
 from rlenv.env_consts import (TIME_FEATS, BYR_OUTCOMES, SLR_OUTCOMES, NORM_POS,
-                              DAYS_POS, DELAY_POS, CON_POS)
+                              DAYS_POS, DELAY_POS, CON_POS, MSG_POS)
 from rlenv.composer.maps import *
 from rlenv.env_utils import get_clock_feats
 
@@ -93,11 +92,22 @@ class ThreadSources(Sources):
         self.source_dict[OUTCOMES_MAP][[DAYS_POS, DELAY_POS]] = input_vec
         self.delay_prev_time = None
 
+    def byr_expire(self):
+        self.source_dict[OUTCOMES_MAP][NORM_POS] = self.source_dict[L_OUTCOMES_MAP][NORM_POS]
+        self.source_dict[OUTCOMES_MAP][CON_POS, MSG_POS] = 0
+
     def is_sale(self):
         return self.source_dict[OUTCOMES_MAP][CON_POS] == 1
 
     def is_rej(self):
         return self.source_dict[OUTCOMES_MAP][CON_POS] == 0
+
+    def summary(self):
+        con = int(self.source_dict[OUTCOMES_MAP][CON_POS] * 100)
+        norm = self.source_dict[OUTCOMES_MAP][NORM_POS] * 100
+        norm = round(norm)
+        msg = self.source_dict[OUTCOMES_MAP][MSG_POS] == 1
+        return con, norm, msg
 
     @staticmethod
     def _init_pre_lstg_outcomes():

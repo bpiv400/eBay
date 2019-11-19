@@ -14,10 +14,11 @@ def main():
     args = parser.parse_args()
     part = args.part
     num = args.num
+    exp = args.id
     if part not in PARTITIONS:
         raise RuntimeError('part must be one of: {}'.format(PARTITIONS))
-    path = '{}{}/x_lstg_{}.gz'.format(REWARDS_DIR, part, num)
-    generator = RewardGenerator(path, num)
+    dir = '{}{}/'.format(REWARDS_DIR, part)
+    generator = RewardGenerator(dir, num, exp)
     generator.generate()
 
 

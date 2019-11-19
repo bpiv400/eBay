@@ -63,7 +63,6 @@ def update(events, timefeats, trigger_type=None, thread_id=None, offer=None, lst
     return events
 
 
-
 def add_event(df, trigger_type=None, offer=None, thread_id=None, lstg=0):
     """
     Adds an event to an events dataframe using the same dictionary of offer features

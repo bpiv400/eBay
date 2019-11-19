@@ -19,7 +19,7 @@ class Thread(Event):
     """
     def __init__(self, priority, thread_id=None, buyer=None, seller=None):
         super(Thread, self).__init__(event_type=event_types.FIRST_OFFER,
-                                     priority=priority, thread_id=thread_id)
+                                     priority=priority)
         # participants
         self.buyer = buyer
         self.seller = seller
@@ -27,6 +27,7 @@ class Thread(Event):
         # sources object
         self.sources = None  # initialized later in init_thread
         self.turn = 1
+        self.thread_id = thread_id
         # delay
         self.interval = 0
         self.max_interval = None  # max number of intervals
@@ -142,3 +143,13 @@ class Thread(Event):
 
     def init_offer(self, time_feats=None, clock_feats=None):
         self.sources.init_offer(time_feats=time_feats, clock_feats=clock_feats)
+
+    def summary(self):
+        con, norm, msg = self.sources.summary()
+        if self.turn % 2 == 0:
+            norm = 100 - norm
+        return norm
+
+    def byr_expire(self):
+        self.priority += self.spi
+        self.sources.byr_expire()

@@ -38,9 +38,13 @@ class RewardEnvironment:
         self.outcome = None
         self.thread_counter = 0
 
+        # recorder
+        self.recorder = kwargs['recorder']
+
     def reset(self):
         self.queue.reset()
         self.time_feats.reset()
+        self.recorder.reset()
         self.arrival.init(self.x_lstg)
         self.thread_counter = 0
         sources = ArrivalSources()
@@ -60,7 +64,6 @@ class RewardEnvironment:
         return self.outcome
 
     def _process_event(self, event):
-        # TODO SIMPLIFY AND ADD EVENT TRACKER
         if event.type == event_types.ARRIVAL:
             return self._process_arrival(event)
         elif event.type == event_types.FIRST_OFFER:
@@ -116,6 +119,7 @@ class RewardEnvironment:
                              months_since_lstg=months_since_lstg)
         hist = self.arrival.hist(sources())
         event.init_thread(sources=sources, hist=hist)
+        self.recorder.start_thread(thread_id=event.thread_id, byr_hist=hist)
         return self._process_offer(event)
 
     def _lstg_expiration(self, event):
@@ -147,6 +151,7 @@ class RewardEnvironment:
             offer = event.buyer_offer()
         else:
             offer = event.seller_offer()
+        self.recorder.add_offer(event)
         # check whether the offer is an acceptance
         if event.is_sale():
             self._process_sale(offer)
@@ -154,7 +159,7 @@ class RewardEnvironment:
         # otherwise check whether the offer is a rejection
         elif event.is_rej():
             if byr_turn:
-                self._process_byr_rej(event, offer)
+                self._process_byr_rej(event)
                 return False
             else:
                 self._process_slr_rej(event, offer)
@@ -196,8 +201,7 @@ class RewardEnvironment:
         dur = offer['time'] - self.lookup[START_DAY]
         self.outcomes = (True, net, dur)
 
-    def _process_byr_rej(self, event, offer):
-        # TODO add event tracking logic
+    def _process_byr_rej(self, event):
         self.time_feats.update_features(trigger_type=time_triggers.BYR_REJECTION,
                                         thread_id=event.thread_id)
 
@@ -211,6 +215,7 @@ class RewardEnvironment:
                                         thread_id=event.thread_id, offer=offer)
         event.change_turn()
         offer = event.rej(expire=False)
+        self.recorder.add_offer(event)
         self.time_feats.update_features(trigger_type=time_triggers.SLR_REJECTION,
                                         thread_id=event.thread_id, offer=offer)
         self._init_delay(event)
@@ -245,6 +250,8 @@ class RewardEnvironment:
         return False
 
     def _process_byr_expire(self, event):
+        event.byr_expire()
+        self.recorder.add_offer(event)
         self.time_feats.update_features(trigger_type=time_triggers.BYR_REJECTION,
                                         thread_id=event.thread_id)
 
@@ -257,6 +264,7 @@ class RewardEnvironment:
         clock_feats = get_clock_feats(event.priority)
         event.init_offer(time_feats=time_feats, clock_feats=clock_feats)
         offer = event.rej(expire=True)
+        self.recorder.add_offer(event)
         self.time_feats.update_features(trigger_type=time_triggers.SLR_REJECTION,
                                         thread_id=event.thread_id,
                                         offer=offer)

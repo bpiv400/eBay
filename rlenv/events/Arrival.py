@@ -19,7 +19,7 @@ class Arrival(Event):
 
         :param priority: integer time of the event
         """
-        super(Arrival, self).__init__(ARRIVAL, priority=int(priority), thread_id=None)
+        super(Arrival, self).__init__(ARRIVAL, priority=int(priority))
         self.sources = sources
         self.interval = 0
 
