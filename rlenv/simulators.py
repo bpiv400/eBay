@@ -3,8 +3,8 @@ from torch.distributions.bernoulli import Bernoulli
 import torch
 from rlenv.env_utils import proper_squeeze, categorical_sample, get_split
 from rlenv.composer.maps import O_OUTCOMES_MAP, L_OUTCOMES_MAP
-from rlenv.env_consts import (NORM_POS, CON_POS, MSG_POS, REJ_POS, DAYS_POS, DELAY_POS,
-                              SLR_OUTCOMES, SPLIT_POS, BYR_OUTCOMES)
+from rlenv.env_consts import (NORM_POS, CON_POS, MSG_POS, REJ_POS, EXPIRE_POS,
+                              SLR_OUTCOMES, SPLIT_POS, BYR_OUTCOMES, AUTO_POS)
 
 
 class SimulatedActor:
@@ -31,7 +31,13 @@ class SimulatedActor:
         return outcomes
 
     def delay(self, sources=None):
-        pass
+        params, self.delay_hidden = self.model.delay(sources=sources,
+                                                     hidden=self.delay_hidden)
+        make_offer = SimulatedActor._sample_bernoulli(params)
+        return make_offer
+
+    def init_delay(self, sources):
+        self.delay_hidden = self.model.init_delay(sources=sources)
 
     def sample_con(self, params, turn=0, sources=None):
         raise NotImplementedError()
@@ -46,10 +52,8 @@ class SimulatedActor:
 
 
 class SimulatedSeller(SimulatedActor):
-    def __init__(self, model=None, rej_price=0, accept_price=0):
+    def __init__(self, model=None):
         super(SimulatedSeller, self).__init__(model=model)
-        self.rej_price = rej_price
-        self.accept_price = accept_price
 
     def sample_con(self, params, turn=0, sources=None):
         outcomes = torch.zeros(len(SLR_OUTCOMES)).float()
@@ -69,12 +73,18 @@ class SimulatedSeller(SimulatedActor):
         if outcomes[REJ_POS] != 1:
             outcomes[MSG_POS] = SimulatedActor._sample_bernoulli(params)
 
-    def auto_rej(self, sources, turn):
+    def rej(self, sources, turn, expire=False):
         _, self.con_hidden = self.model.con(sources=sources, hidden=self.con_hidden,
                                             turn=turn)
         _, self.msg_hidden = self.model.msg(sources=sources, hidden=self.msg_hidden,
                                             turn=turn)
-        outcomes = sources[L_OUTCOMES_MAP].clone()
+        outcomes = torch.zeros(len(SLR_OUTCOMES)).float()
+        outcomes[REJ_POS] = 1
+        outcomes[NORM_POS] = sources[L_OUTCOMES_MAP][NORM_POS]
+        if not expire:
+            outcomes[AUTO_POS] = 1
+        else:
+            outcomes[EXPIRE_POS] = 1
         return outcomes
 
 

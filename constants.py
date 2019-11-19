@@ -31,15 +31,15 @@ MBSIZE_VALIDATION = 4000
 if 'Ubuntu' in platform():
 	PREFIX = '/data/eBay'
 elif 'centos' in platform():
-	PREFIX = '/home/opim/etangr/weka/eBay'
-else:
+	PREFIX = '~/weka/eBay/data'
+elif 'Windows' in platform():
 	PREFIX = 'data'
 
 CLEAN_DIR = '%s/clean/' % PREFIX
 CHUNKS_DIR = '%s/chunks/' % PREFIX
 FEATS_DIR = '%s/feats/' % PREFIX
 PARTS_DIR = '%s/partitions/' % PREFIX
-REWARDS_DIR = '%s/rewards/' % PREFIX
+REWARDS_DIR = '%s/simulator/' % PREFIX
 PCTILE_DIR = '%s/pctile/' % PREFIX
 W2V_DIR = '%s/w2v/' % PREFIX
 INPUT_DIR = '%s/inputs/' % PREFIX

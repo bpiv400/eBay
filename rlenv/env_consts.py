@@ -1,6 +1,8 @@
 from constants import INPUT_DIR, PARTS_DIR
 import torch
 
+INTERACT = True
+
 # time feats
 SLR_OFFERS = 'slr_offers'
 BYR_OFFERS = 'byr_offers'
@@ -37,7 +39,7 @@ BYR_OUTCOMES = ['days', 'delay', 'con', 'norm', 'split', 'msg']
 SLR_OUTCOMES = BYR_OUTCOMES + ['reject', 'auto', 'exp']
 REJ_POS = SLR_OUTCOMES.index('reject')
 AUTO_POS = SLR_OUTCOMES.index('auto')
-AUTO_REJ_LSTG = torch.tensor([1, 1]).float()
+EXPIRE_POS = SLR_OUTCOMES.index('exp')
 NORM_POS = SLR_OUTCOMES.index('norm')
 CON_POS = SLR_OUTCOMES.index('con')
 MSG_POS = SLR_OUTCOMES.index('msg')
