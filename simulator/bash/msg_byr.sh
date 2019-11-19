@@ -1,5 +1,4 @@
 #!/bin/bash
-#$ -l m_mem_free=30G
 #$ -t 1-144
 #$ -N msg_byr
 #$ -o logs/

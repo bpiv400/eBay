@@ -22,9 +22,9 @@ SHARES = {'train_models': 1/3, 'train_rl': 1/3}
 TOL_HALF = 0.02
 
 # optimization parameters
-EPOCHS = 25
+EPOCHS = 10
 NUM_WORKERS = 4 if torch.cuda.is_available() else 0
-MBSIZE_VALIDATION = 2500
+MBSIZE_VALIDATION = 4000
 
 # paths and directories
 if 'Ubuntu' in platform():
@@ -33,8 +33,6 @@ elif 'centos' in platform():
 	PREFIX = '~/weka/eBay/data'
 elif 'Windows' in platform():
 	PREFIX = 'data'
-elif 'redhat' in platform():
-	PREFIX = '~/Dropbox/eBay/data'
 
 CLEAN_DIR = '%s/clean/' % PREFIX
 CHUNKS_DIR = '%s/chunks/' % PREFIX
@@ -81,7 +79,7 @@ INTERVAL_COUNTS = {
 HIST_QUANTILES = 10
 
 # model names
-MODELS = ['arrival','hist', 'delay_byr', 'delay_slr', 'con_byr', 'con_slr', \
+MODELS = ['arrival', 'hist', 'delay_byr', 'delay_slr', 'con_byr', 'con_slr', \
 	'msg_byr', 'msg_slr']
 
 # number of observations in small dataset

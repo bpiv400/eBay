@@ -4,8 +4,8 @@ import numpy as np, pandas as pd
 from compress_pickle import load
 from datetime import datetime as dt
 from torch.utils.data import DataLoader
-from interface import *
-from simulator import Simulator
+from simulator.interface import *
+from simulator.model import Simulator
 from constants import *
 
 
@@ -46,7 +46,8 @@ def train_model(simulator, train, test, stub):
 
         # calculate log-likelihood on validation set
         print('\tValidating on holdout.')
-        lnL_test = run_loop(simulator, test)
+        with torch.no_grad():
+            lnL_test = run_loop(simulator, test)
 
         # epoch duration
         dur = np.round((dt.now() - t0).seconds)

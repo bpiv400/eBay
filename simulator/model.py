@@ -6,7 +6,7 @@ import numpy as np
 from simulator.loss import *
 from simulator.nets import *
 from constants import *
-from utils import add_out_to_sizes
+
 
 # constructs model-specific neural network.
 class Simulator:
@@ -35,7 +35,6 @@ class Simulator:
                 self.loss = poisson_loss
             else:
                 self.loss = logit_loss
-        add_out_to_sizes(model, sizes)
 
         # neural net(s)
         if not self.isRecurrent:

@@ -1,7 +1,4 @@
 import torch.nn as nn
-from constants import DROPOUT
-
-MAX = 1.0
 
 
 class FeedForward(nn.Module):
