@@ -108,7 +108,7 @@ def load_model(full_name, model_exp):
     # loading model
     model_class = get_model_class(full_name)
     net = model_class(params, sizes)  # type: torch.nn.Module
-    net.load_state_dict(torch.load(model_path))
+    net.load_state_dict(torch.load(model_path, map_location='cpu'))
     return net
     # except (RuntimeError, FileNotFoundError) as e:
     # print(e)
