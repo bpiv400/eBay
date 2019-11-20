@@ -6,7 +6,7 @@ from constants import *
 MBSIZE = 128
 LAYERS = 8
 HIDDEN = 1000
-DROPOUT = 0.5
+DROPOUT = 5
 COLS = ['mbsize', 'layers', 'hidden', 'dropout', 'c', 'b2', 'lr']
 
 # hyperparameter values
