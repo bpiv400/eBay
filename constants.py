@@ -26,12 +26,14 @@ EPOCHS = 10
 NUM_WORKERS = 4 if torch.cuda.is_available() else 0
 MBSIZE_VALIDATION = 4000
 
+REWARDS = True
+
 # paths and directories
 if 'Ubuntu' in platform():
 	PREFIX = '/data/eBay'
 elif 'centos' in platform():
 	PREFIX = '~/weka/eBay/data'
-elif 'Windows' in platform():
+elif 'Windows' in platform() or REWARDS:
 	PREFIX = 'data'
 else:
 	PREFIX = '~/weka/eBay/data'
