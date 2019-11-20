@@ -82,7 +82,8 @@ class RNN(nn.Module):
 
     def simulate(self, x_time, x_fixed=None, hidden=None, turn=0):
         if hidden is None:
-            theta, hidden = self.rnn(x_time, (self.h0(x_fixed), self.c0(x_fixed)))
+            x_fixed = x_fixed.repeat(self.layers, 1, 1)
+            theta, hidden = self.rnn(x_time, self.h0(x_fixed))
         else:
             theta, hidden = self.rnn(x_time, hidden)
         if turn == 7:
@@ -127,6 +128,7 @@ class LSTM(nn.Module):
         return self.output(theta).squeeze()
 
     def init(self, x_fixed=None):
+        x_fixed.unsqueeze(dim=0)
         hidden = (self.h0(x_fixed), self.c0(x_fixed))
         return hidden
 
@@ -139,6 +141,7 @@ class LSTM(nn.Module):
         :return:
         """
         if hidden is None:
+            x_fixed.unsqueeze(dim=0).repeat(self.layers, 1, 1)
             theta, hidden = self.rnn(x_time, (self.h0(x_fixed), self.c0(x_fixed)))
         else:
             theta, hidden = self.rnn(x_time, hidden)

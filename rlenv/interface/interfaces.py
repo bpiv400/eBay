@@ -36,13 +36,12 @@ class PlayerInterface:
                                                  turn=turn)
         return params, hidden
 
-    def delay(self, sources=None, hidden=None, turn=0):
+    def delay(self, sources=None, hidden=None):
         fixed = hidden is None
-        x_fixed, x_time = self.composer.build_input_vector(self.msg_model_name,
+        x_fixed, x_time = self.composer.build_input_vector(self.delay_model_name,
                                                            sources=sources,
                                                            recurrent=True, fixed=fixed)
-        params, hidden = self.delay_model.simulate(x_time, x_fixed=x_fixed, hidden=hidden,
-                                                   turn=turn)
+        params, hidden = self.delay_model.simulate(x_time, x_fixed=x_fixed, hidden=hidden)
         return params, hidden
 
     def init_delay(self, sources=None):
@@ -57,8 +56,8 @@ class ArrivalInterface:
     def __init__(self, byr_hist=0, num_offers=0, composer=None):
         # Load interface
         self.composer = composer
-        self.num_offers = load_model(BYR_HIST, byr_hist)
-        self.byr_hist = load_model(NUM_OFFERS, num_offers)
+        self.hist_model = load_model(BYR_HIST, byr_hist)
+        self.num_offers_model = load_model(NUM_OFFERS, num_offers)
         self.hidden = None
 
     @staticmethod
@@ -77,20 +76,19 @@ class ArrivalInterface:
 
     def init(self, x_lstg):
         x_fixed = self.composer.build_arrival_init(x_lstg)
-        self.hidden = self.num_offers.init(x_fixed=x_fixed)
+        self.hidden = self.num_offers_model.init(x_fixed=x_fixed)
 
     def num_offers(self, sources=None):
         _, x_time = self.composer.build_input_vector(NUM_OFFERS, sources=sources,
-                                                     fixed=False, recurrent=True,
-                                                     size=1)
-        params, self.hidden = self.num_offers.simulate(x_time, hidden=self.hidden)
+                                                     fixed=False, recurrent=True)
+        params, self.hidden = self.num_offers_model.simulate(x_time, hidden=self.hidden)
         sample = ArrivalInterface._poisson_sample(params)
         return proper_squeeze(sample)
 
     def hist(self, sources=None):
         x_fixed, _ = self.composer.build_input_vector(model_name=BYR_HIST, sources=sources,
-                                                      fixed=True, recurrent=False, size=1)
-        params = self.byr_hist.simulate(x_fixed)
+                                                      fixed=True, recurrent=False)
+        params = self.hist_model.simulate(x_fixed)
         hist = categorical_sample(params, 1)
         hist = hist / 10
         return hist

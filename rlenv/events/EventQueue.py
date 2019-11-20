@@ -46,6 +46,7 @@ class EventQueue:
     def reset(self):
         self.queue = []
 
+    @property
     def empty(self):
         """
         Gives whether the queue is empty

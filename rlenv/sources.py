@@ -9,7 +9,7 @@ from rlenv.env_utils import get_clock_feats
 
 class Sources:
     def __init__(self):
-        self.source_dict = None
+        self.source_dict = dict()
 
     def __call__(self):
         return self.source_dict
@@ -29,15 +29,17 @@ class ThreadSources(Sources):
         self.source_dict[CLOCK_MAP] = clock_feats
         self.source_dict[TIME_MAP] = time_feats
 
-    def init_thread(self, hist=None, time_feats=None):
-        # time features updated to exclude focal thread
-        self.source_dict[TIME_MAP] = time_feats
+    def init_thread(self, hist=None):
+        # (time features and clock_feats already set during prepare_hist)
         # add byr history
         self.source_dict[BYR_HIST_MAP] = hist
-        # other clock features initialized to lstg start date
-        self.source_dict[O_CLOCK_MAP] = get_clock_feats(self.start_date)
+        # (other clock features initialized already initialized to lstg start date)
         # differences initialized to raw time features because all features were 0 at lstg start
         self.source_dict[DIFFS_MAP] = self.source_dict[TIME_MAP].clone()
+        # time features at lstg start are 0
+        self.source_dict[O_TIME_MAP] = torch.zeros(len(TIME_FEATS))
+        # time features at turn -1 are 0
+        self.source_dict[L_TIME_MAP] = torch.zeros(len(TIME_FEATS))
         # differences between turn 0 and -1 are 0
         self.source_dict[O_DIFFS_MAP] = torch.zeros(len(TIME_FEATS))
         # initial turn indices to buyer indices and activate turn 1
@@ -77,7 +79,10 @@ class ThreadSources(Sources):
 
     def update_delay(self, time_feats=None, remaining=None, duration=None,
                      clock_feats=None):
-        self.source_dict[DIFFS_MAP] = time_feats - self.delay_prev_time
+        if self.delay_prev_time is None:
+            self.source_dict[DIFFS_MAP] = torch.zeros(len(TIME_FEATS)).float()
+        else:
+            self.source_dict[DIFFS_MAP] = time_feats - self.delay_prev_time
         self.delay_prev_time = time_feats
         self.source_dict[INT_REMAIN_MAP] = remaining
         self.source_dict[DUR_MAP] = duration
@@ -107,7 +112,7 @@ class ThreadSources(Sources):
     def summary(self):
         con = int(self.source_dict[OUTCOMES_MAP][CON_POS] * 100)
         norm = self.source_dict[OUTCOMES_MAP][NORM_POS] * 100
-        norm = round(norm)
+        norm = norm.round()
         msg = self.source_dict[OUTCOMES_MAP][MSG_POS] == 1
         split = self.source_dict[OUTCOMES_MAP][SPLIT_POS]
         return con, norm, msg, split
@@ -148,8 +153,8 @@ class ThreadSources(Sources):
         else:
             num_turns = 3
         vec = torch.zeros(num_turns).float()
-        if turn < 5:
-            ind = math.floor(turn / 2)
+        if turn <= 5:
+            ind = math.floor((turn - 1) / 2)
             vec[ind] = 1
         return vec
 
@@ -157,7 +162,7 @@ class ThreadSources(Sources):
 class ArrivalSources(Sources):
     def __init__(self):
         super(ArrivalSources, self).__init__()
-        self.source_dict[DIFFS_MAP] = torch.zeros(len(TIME_FEATS)).float()
+        self.source_dict[TIME_MAP] = torch.zeros(len(TIME_FEATS)).float()
 
     def update_arrival(self, time_feats=None, clock_feats=None, duration=None):
         self.source_dict[DUR_MAP] = duration
