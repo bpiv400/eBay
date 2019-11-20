@@ -5,5 +5,6 @@
 #$ -N reward_test
 #$ -j n
 #$ -o logs/
+#$ -e error/
 
  python repo/rlenv/rewards/generate_rewards.py --num "$SGE_TASK_ID" --id 1 --part train_rl
