@@ -100,18 +100,22 @@ class SimulatedBuyer(SimulatedActor):
             if turn == 1:
                 sample = torch.zeros(1)
                 while sample == 0:
+                    # print('sampling concession')
                     sample = dist.sample((1, ))
                 con = proper_squeeze(sample.float() / 100)
+                # print('concession: {}'.format(con))
             else:
                 con = proper_squeeze(dist.sample((1, )).float())
+                con = con / 100
         else:
             con = SimulatedActor._sample_bernoulli(params)
         sample_msg = (con != 0 and con != 1)
         if sample_msg:
             outcomes[SPLIT_POS] = get_split(con)
-            outcomes[CON_POS] = con
+        outcomes[CON_POS] = con
         outcomes[NORM_POS] = (1 - sources[O_OUTCOMES_MAP][NORM_POS]) * con + \
                              sources[L_OUTCOMES_MAP][NORM_POS] * (1 - con)
+        # print('Norm associated with concession: {}'.format(outcomes[NORM_POS]))
         return outcomes, sample_msg
 
     def sample_msg(self, params, outcomes):

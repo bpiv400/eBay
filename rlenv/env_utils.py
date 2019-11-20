@@ -53,7 +53,7 @@ def get_clock_feats(time):
     :param time: int giving time in seconds since START
     :return: NA
     """
-    out = torch.zeros(8, dtype=torch.float64)
+    out = torch.zeros(8).float()
     clock = pd.to_datetime(time, unit='s', origin=START)
     # holidays
     out[0] = int(str(clock.date()) in HOLIDAYS)
@@ -106,10 +106,9 @@ def load_model(full_name, model_exp):
     params = load_params(model_exp)
     model_path = '{}{}_{}.net'.format(MODEL_DIR, full_name, model_exp)
     # loading model
-    print('fullname: {}'.format(full_name))
     model_class = get_model_class(full_name)
     net = model_class(params, sizes)  # type: torch.nn.Module
-    net.load_state_dict(torch.load(model_path))
+    net.load_state_dict(torch.load(model_path, map_location='cpu'))
     return net
     # except (RuntimeError, FileNotFoundError) as e:
     # print(e)

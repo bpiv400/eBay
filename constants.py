@@ -27,15 +27,17 @@ EPOCHS = 25
 NUM_WORKERS = mp.cpu_count() if torch.cuda.is_available() else 0
 MBSIZE_VALIDATION = 4000
 
+REWARDS = True
+
 # paths and directories
 if 'Ubuntu' in platform():
-	PREFIX = '/data/eBay'
+    PREFIX = '/data/eBay'
 elif 'centos' in platform():
-	PREFIX = '/home/opim/etangr/weka/eBay'
-elif 'Windows' in platform():
-	PREFIX = 'data'
+    PREFIX = '/home/opim/etangr/weka/eBay'
+elif 'Windows' in platform() or REWARDS:
+    PREFIX = 'data'
 else:
-	PREFIX = 'data'
+    PREFIX = '~/weka/eBay/data'
 
 CLEAN_DIR = '%s/clean/' % PREFIX
 CHUNKS_DIR = '%s/chunks/' % PREFIX
@@ -60,30 +62,30 @@ ARRIVAL_PERIODS = MAX_DAYS * 24
 
 # maximal delay times
 MAX_DELAY = {
-	ARRIVAL_PREFIX: MAX_DAYS * 24 * 3600,
-	SLR_PREFIX: 2 * 24 * 3600,
-	BYR_PREFIX: 14 * 24 * 3600
+    ARRIVAL_PREFIX: MAX_DAYS * 24 * 3600,
+    SLR_PREFIX: 2 * 24 * 3600,
+    BYR_PREFIX: 14 * 24 * 3600
 }
 
 # intervals for checking offer arrivals
 INTERVAL = {
-	ARRIVAL_PREFIX: 4 * 60 * 60,
-	SLR_PREFIX: 15 * 60,
-	BYR_PREFIX: 90 * 60
+    ARRIVAL_PREFIX: 4 * 60 * 60,
+    SLR_PREFIX: 15 * 60,
+    BYR_PREFIX: 90 * 60
 }
 
 INTERVAL_COUNTS = {
-	ARRIVAL_PREFIX: int(MAX_DELAY[ARRIVAL_PREFIX] / INTERVAL[ARRIVAL_PREFIX]),
-	SLR_PREFIX: int(MAX_DELAY[SLR_PREFIX] / INTERVAL[SLR_PREFIX]),
-	BYR_PREFIX: int(MAX_DELAY[BYR_PREFIX] / INTERVAL[BYR_PREFIX]),
+    ARRIVAL_PREFIX: int(MAX_DELAY[ARRIVAL_PREFIX] / INTERVAL[ARRIVAL_PREFIX]),
+    SLR_PREFIX: int(MAX_DELAY[SLR_PREFIX] / INTERVAL[SLR_PREFIX]),
+    BYR_PREFIX: int(MAX_DELAY[BYR_PREFIX] / INTERVAL[BYR_PREFIX]),
 }
 
 # quantiles of byr_hist distribution
 HIST_QUANTILES = 10
 
 # model names
-MODELS = ['arrival', 'hist', 'delay_byr', 'delay_slr', 'con_byr', 'con_slr', \
-	'msg_byr', 'msg_slr']
+MODELS = ['arrival', 'hist', 'delay_byr', 'delay_slr', 'con_byr', 'con_slr',
+          'msg_byr', 'msg_slr']
 
 # number of observations in small dataset
 N_SMALL = 100000
@@ -92,13 +94,13 @@ N_SMALL = 100000
 LEVELS = ['slr', 'cat', 'cndtn', 'lstg']
 
 # for lstg feature construction
-ASIS_FEATS = ['store', 'slr_us', 'fast', 'slr_bos', 'slr_lstgs', \
-	'fdbk_score', 'fdbk_pstv', 'start_price_pctile']
+ASIS_FEATS = ['store', 'slr_us', 'fast', 'slr_bos', 'slr_lstgs',
+              'fdbk_score', 'fdbk_pstv', 'start_price_pctile']
 
 # indices for byr and slr offers
 IDX = {
-	BYR_PREFIX: [1, 3, 5, 7],
-	SLR_PREFIX: [2, 4, 6]
+    BYR_PREFIX: [1, 3, 5, 7],
+    SLR_PREFIX: [2, 4, 6]
 }
 
 # date range and holidays

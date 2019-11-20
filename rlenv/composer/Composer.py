@@ -371,7 +371,7 @@ class Composer:
         :param batch_size: number of examples in the batch
         :return: batch_size x maps[SIZE] tensor to be passed to a simulator model
         """
-        x = torch.zeros(batch_size, maps[SIZE])
+        x = torch.zeros(batch_size, maps[SIZE]).float()
         # other features
         for map_name, curr_map in maps.items():
             try:
@@ -381,16 +381,14 @@ class Composer:
                     x[:, curr_map] = sources[map_name]
                 else:
                     x[:, curr_map[:, 1]] = sources[map_name][curr_map[:, 0]]
-                if map_name == OUTCOMES_MAP:
-                    print(curr_map)
-                    print(curr_map.shape)
             except RuntimeError as e:
                 print('NAME')
                 print(e)
                 print(map_name)
-                print('stored map: {}'.format(curr_map))
-                print('stored map size: {}'.format(curr_map.shape))
-                print('sourced map: {}'.format(sources[map_name]))
+                print('stored map: {}'.format(curr_map.dtype))
+                print('stored map size: {}'.format(curr_map.dtype))
+                print('sourced map: {}'.format(sources[map_name].dtype))
+                print('x: {}'.format(x.dtype))
                 raise RuntimeError()
         return x
 
@@ -400,7 +398,7 @@ class Composer:
         }
         x_fixed = Composer._build_input_vector(self.maps[model_names.NUM_OFFERS][FIXED],
                                                sources, 1)
-        return x_fixed
+        return x_fixed.unsqueeze(0)
 
     def build_input_vector(self, model_name, sources=None, fixed=False, recurrent=False):
         """
@@ -423,14 +421,8 @@ class Composer:
             x_time = None
         if fixed:
             x_fixed = Composer._build_input_vector(self.maps[model_name][FIXED], sources, 1)
+            if model_name != model_names.BYR_HIST:
+                x_fixed = x_fixed.unsqueeze(0)
         else:
             x_fixed = None
         return x_fixed, x_time
-
-
-
-
-
-
-
-

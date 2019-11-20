@@ -1,7 +1,8 @@
 from constants import INPUT_DIR, PARTS_DIR
 import torch
 
-INTERACT = True
+INTERACT = False
+VERBOSE = True
 
 # time feats
 SLR_OFFERS = 'slr_offers'
