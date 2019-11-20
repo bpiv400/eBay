@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 from compress_pickle import dump
-from env_consts import START_DAY, INTERACT
+from rlenv.env_consts import START_DAY, VERBOSE, START_PRICE
 
 SIM = 'sim'
 INDEX = 'index'
@@ -25,6 +25,7 @@ class Recorder:
         self.lstg = lstg
         self.start_time = lookup[START_DAY]
         self.sim = -1
+        self.start_price = lookup[START_PRICE]
         self.offers = dict()
         self.threads = dict()
         self.sales = dict()
@@ -55,16 +56,16 @@ class Recorder:
         self.offers[NORM].append(norm)
         self.offers[MESSAGE].append(msg)
         days, delay = event.delay_outcomes()
-
-        if INTERACT:
+        byr = event.turn % 2 != 0
+        if VERBOSE:
             if con == 0:
-                if delay == 1:
+                if delay == 1 and not byr:
                     otype = 'expiration rejection'
-                elif delay == 0:
+                elif delay == 0 and not byr:
                     otype = 'automatic rejection'
                 else:
                     otype = 'standard rejection'
-            elif con == 1:
+            elif con == 100:
                 if delay == 0:
                     otype = 'automatic acceptance'
                 else:
@@ -73,10 +74,10 @@ class Recorder:
                 otype = 'standard offer'
             print('Thread: {} | Offer: {} | clock: {}'.format(event.thread_id,
                                                               event.turn, event.priority))
-            print('Days: {}, Delay: {}').format()
+            print('Days: {}, Delay: {}'.format(days, delay))
             print('Offer type: {}'.format(otype))
-            print('Concession: {} | start price norm: {} | split: {} | message: {}'.format(
-                con, norm, split, msg))
+            print('Concession: {} | normalized offer: {} | raw offer : {} | split: {} | message: {}'.format(
+                con, norm, (norm * self.start_price / 100), split, msg))
             if event.turn % 2 == 0:
                 auto, exp, rej = event.slr_outcomes()
                 print('Auto: {} | Exp: {} | Reject: {}'.format(auto, exp, rej))
@@ -85,7 +86,8 @@ class Recorder:
         self.sales[SALE].append(sale)
         self.sales[REWARD].append(reward)
         self.sales[DUR].append(dur)
-        if INTERACT:
+        self.sales[SIM].append(self.sim)
+        if VERBOSE:
             if sale:
                 print('Item sold w/ reward: {}'.format(reward))
             else:
@@ -93,9 +95,9 @@ class Recorder:
 
     def dump(self, base_dir):
         # convert all three dictionaries to dataframes
-        self.sales = pd.from_dict(self.sales)
-        self.offers = pd.from_dict(self.offers)
-        self.threads = pd.from_dict(self.threads)
+        self.sales = pd.DataFrame.from_dict(self.sales)
+        self.offers = pd.DataFrame.from_dict(self.offers)
+        self.threads = pd.DataFrame.from_dict(self.threads)
         # maximally compress offers datatypes
         self.offers[CLOCK] = self.offers[CLOCK].astype(np.int32)
         self.offers[CON] = self.offers[CON].astype(np.uint8)

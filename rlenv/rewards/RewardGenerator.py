@@ -4,7 +4,9 @@
 from compress_pickle import load
 import torch
 import pandas as pd
-from rlenv.env_consts import REWARD_EXPERIMENT_PATH, SIM_COUNT, INTERACT, START_PRICE, START_DAY
+import numpy as np
+from rlenv.env_consts import (REWARD_EXPERIMENT_PATH, SIM_COUNT, VERBOSE,
+                              START_PRICE, START_DAY, ACC_PRICE, DEC_PRICE)
 from rlenv.interface.interfaces import PlayerInterface, ArrivalInterface
 from rlenv.interface.model_names import model_str, BYR_HIST, CON, MSG, DELAY, NUM_OFFERS
 from rlenv.rewards.RewardEnvironment import RewardEnvironment
@@ -23,13 +25,13 @@ class RewardGenerator:
     def __init__(self, dir, num, exp_id):
         super(RewardGenerator, self).__init__()
         self.dir = dir
-        self.num = num
+        self.num = int(num)
         input_dict = load('{}{}.gz'.format(self.dir, self.num))
         self.x_lstg = input_dict['x_lstg']
         self.lookup = input_dict['lookup']
-        self.exp_id = exp_id
+        self.exp_id = int(exp_id)
         self.params = self._load_params()
-        composer = Composer(self.params['composer'])
+        composer = Composer(self.params)
         self.buyer = PlayerInterface(msg=self.params[model_str(MSG, byr=True)],
                                      con=self.params[model_str(CON, byr=True)],
                                      delay=self.params[model_str(DELAY, byr=True)],
@@ -56,21 +58,26 @@ class RewardGenerator:
 
     def generate(self):
         for lstg in self.x_lstg.index:
-            x_lstg = torch.from_numpy(self.x_lstg.loc[lstg, :]).float()
+            x_lstg = self.x_lstg.loc[lstg, :].astype(np.float32)
+            x_lstg = torch.from_numpy(x_lstg.values).float()
             lookup = self.lookup.loc[lstg, :]
             recorder = Recorder(lstg=lstg, lookup=lookup)
             environment = RewardEnvironment(buyer=self.buyer, seller=self.seller,
                                             arrival=self.arrival, x_lstg=x_lstg,
                                             lookup=lookup, recorder=recorder)
-            if INTERACT:
-                print('Lstg: {}  | Start time: {}  | Start price: {}'.format(lstg,
-                                                                             lookup[START_DAY],
-                                                                             lookup[START_PRICE]))
+            if VERBOSE:
+                header = 'Lstg: {}  | Start time: {}  | Start price: {}'.format(lstg,
+                                                                                lookup[START_DAY],
+                                                                                lookup[START_PRICE])
+                header = '{} | auto reject: {} | auto accept: {}'.format(header, lookup[DEC_PRICE],
+                                                                         lookup[ACC_PRICE])
+                print(header)
+
             for i in range(self.params[SIM_COUNT]):
                 environment.reset()
                 # TODO Add event tracker
                 sale, reward, time = environment.run()
-                if INTERACT:
+                if VERBOSE:
                     print('Simulation {} concluded'.format(recorder.sim))
                 recorder.add_sale(sale, reward, time)
 

@@ -2,11 +2,13 @@
 Generates rewards for a chunk of the lstgs in a partition
 """
 import argparse
+import torch
 from constants import PARTITIONS, REWARDS_DIR
 from rlenv.rewards.RewardGenerator import RewardGenerator
 
 
 def main():
+    torch.set_default_dtype(torch.float32)
     parser = argparse.ArgumentParser()
     parser.add_argument('--num', required=True, help='chunk number')
     parser.add_argument('--part', required=True, help='partition name')

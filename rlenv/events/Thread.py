@@ -40,7 +40,7 @@ class Thread(Event):
         self.sources.init_thread(hist=hist)
 
     def buyer_offer(self):
-        outcomes = self.buyer(sources=self.sources(), turn=self.turn)
+        outcomes = self.buyer.make_offer(sources=self.sources(), turn=self.turn)
         norm = self.sources.update_offer(outcomes)
         return {
             'price': norm,
@@ -49,7 +49,7 @@ class Thread(Event):
         }
 
     def seller_offer(self):
-        outcomes = self.seller(sources=self.sources(), turn=self.turn)
+        outcomes = self.seller.make_offer(sources=self.sources(), turn=self.turn)
         norm = self.sources.update_offer(outcomes)
         return {
             'price': norm,
@@ -59,7 +59,7 @@ class Thread(Event):
 
     def change_turn(self):
         self.turn += 1
-        self.sources.change_turn()
+        self.sources.change_turn(self.turn)
 
     def init_delay(self, lstg_start):
         # update object to contain relevant delay attributes
@@ -74,7 +74,7 @@ class Thread(Event):
         self.interval = 0
         self.type = event_types.DELAY
         # add delay features
-        months_since_lstg = time_delta(self.sources.start_date, self.priority, unit=MONTH)
+        months_since_lstg = time_delta(lstg_start, self.priority, unit=MONTH)
         days_since_thread = time_delta(self.thread_start, self.priority, unit=DAY)
         self.sources.init_delay(months_since_lstg=months_since_lstg,
                                 days_since_thread=days_since_thread)
