@@ -6,5 +6,5 @@
 #$ -j y
 #$ -o logs/
 
-python repo/processing/c_feats/category.py --num "$SGE_TASK_ID" --id 1 --part train_rl
+python repo/processing/c_feats/category.py --num "$SGE_TASK_ID"
 
