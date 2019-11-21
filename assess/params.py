@@ -8,7 +8,7 @@ from constants import *
 MODEL = 'msg_slr'
 
 # directory
-folder = SUMMARY_DIR + MODEL
+folder = SUMMARY_DIR + MODEL + '/old1'
 
 # load params file
 params = pd.read_csv('%s/params.csv' % folder, 

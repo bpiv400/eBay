@@ -101,9 +101,35 @@ replace fdbk_score = 0 if fdbk_score == .
 replace fdbk_pstv = fdbk_pstv / 100
 replace fdbk_pstv = 1 if fdbk_pstv == .
 
+* title occurs only once?
+
+by title, sort: egen int temp = sum(1)
+g byte unique = temp == 1
+drop temp
+
+* create single category
+
+replace product = . if product == 547957
+by product, sort: egen long count = sum(unique)
+
+g cat = "p" + string(product) if count >= 1000 & product != .
+replace cat = "l" + string(leaf) if cat == ""
+drop count
+
+by cat, sort: egen long count = sum(unique)
+replace cat = "m" + string(meta) if count < 1000
+drop count
+
+* feedback score as int
+
+g long temp = round(fdbk_score * fdbk_pstv)
+order temp, a(fdbk_score)
+drop fdbk_pstv
+rename temp fdbk_pstv
+
 * save
 
 drop ct? ref_price?
-order lstg slr meta leaf product title cndtn start end relisted
+order lstg slr cat meta leaf product title cndtn start_date end relisted
 sort lstg
 save dta/listings, replace

@@ -18,7 +18,7 @@ b2 = [-4, -3, -2]
 M = cartesian([[MBSIZE], [LAYERS], [HIDDEN], [DROPOUT], c, b2, lr])
 idx = pd.Index(range(1, len(M)+1), name='id')
 df = pd.DataFrame(M, index=idx, columns=COLS)
-df.to_csv('~/weka/eBay/inputs/params.csv')
+df.to_csv('%s/inputs/params.csv' % PREFIX)
 
 # function to construct bash file
 def create_bash(model, T):

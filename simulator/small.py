@@ -9,29 +9,39 @@ from simulator.model import Simulator
 from constants import *
 
 
-def run_loop(simulator, data):
+def run_loop(simulator, data, isTraining):
     # collate function
     f = collateRNN if data.isRecurrent else collateFF
+
     # sampler
-    sampler = Sample(data, simulator.mbsize, False)
+    sampler = Sample(data, simulator.mbsize, isTraining)
+
     # load batches
     batches = DataLoader(data, batch_sampler=sampler,
         collate_fn=f, num_workers=NUM_WORKERS, pin_memory=True)
+
     # loop over batches, calculate log-likelihood
-    print('%d batches.' % len(batches))
-    t0 = dt.now()
-    lnL, gpu_time, total_time = 0.0, 0.0, 0.0
+    lnL, gpu_time = 0.0, 0.0
     for batch in batches:
         t1 = dt.now()
-        lnL += simulator.run_batch(batch, True)
-        gpu_delta = (dt.now() - t1).total_seconds()
-        print('%.4f seconds' % gpu_delta)
-        print(lnL)
-        gpu_time += gpu_delta
-        total_time += (dt.now() - t0).total_seconds()
+        lnL += simulator.run_batch(batch, isTraining)
+        gpu_time += (dt.now() - t1).total_seconds()
+
+    return lnL / data.N_labels, gpu_time
+
+
+def train_model(simulator, data):
+    # loop over epochs, record log-likelihood
+    for i in range(EPOCHS):
         t0 = dt.now()
 
-    return lnL / data.N_labels, gpu_time, total_time
+        # training loop
+        print('Epoch %d' % (i+1))
+        t0 = dt.now()
+        lnL, gpu_time = run_loop(simulator, data, True)
+        print('GPU time: %d seconds' % gpu_time)
+        print('Total time: %d seconds' % (dt.now() - t0).seconds)
+        print('lnL: %9.4f' % lnL)
 
 
 if __name__ == '__main__':
@@ -53,6 +63,10 @@ if __name__ == '__main__':
     # load experiment parameters
     params = pd.read_csv('%s/inputs/params.csv' % PREFIX, 
         index_col=0).loc[paramsid].to_dict()
+
+    params['dropout'] = 0
+    params['lr'] = 0.00001
+
     print(params)
 
     # initialize neural net
@@ -61,12 +75,7 @@ if __name__ == '__main__':
     print(simulator.net)
 
     # load data
-    data = load('%s/inputs/small/%s.gz' % (PREFIX, model))
+    data = load('%s/inputs/train_models/%s.gz' % (PREFIX, model))
 
     # time epoch
-    lnL, gpu_time, total_time = run_loop(simulator, data)
-
-    # print
-    print('lnL: %.4f' % lnL)
-    print('GPU time: %d seconds' % int(gpu_time))
-    print('Total time: %d seconds' % int(total_time))
+    train_model(simulator, data)

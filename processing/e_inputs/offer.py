@@ -60,7 +60,9 @@ def get_y(x_offer, outcome, role):
 		s.loc[(s > 0) & (s < 1)] = 1
 		s = np.round(s)
 	# convert to byte and unstack
-	return s.astype('int8').unstack(fill_value=-1)
+	df = s.astype('int8').unstack(fill_value=-1)
+	# sort columns and return
+	return df.reindex(sorted(df.columns), axis=1)
 
 
 # loads data and calls helper functions to construct training inputs
