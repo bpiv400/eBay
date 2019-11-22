@@ -10,9 +10,8 @@ from processing.processing_utils import *
 def get_arrival_time_feats(lstg_start, tf):
     # add period to tf_arrival
     tf = tf.reset_index('clock')
-    tf = tf.join(lstg_start.rename('start_time'))
-    tf['period'] = (tf.clock - tf.start_time) // INTERVAL['arrival']
-    tf = tf.drop(['clock', 'start_time'], axis=1)
+    tf['period'] = (tf.clock - lstg_start) // INTERVAL['arrival']
+    tf = tf.drop('clock', axis=1)
     # increment period by 1; time feats are up to t-1
     tf['period'] += 1
     # drop periods beyond censoring threshold
