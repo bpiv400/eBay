@@ -74,9 +74,6 @@ if __name__ == '__main__':
     # load experiment parameters
     params = pd.read_csv('%s/inputs/params.csv' % PREFIX, 
         index_col=0).loc[paramsid].to_dict()
-
-    params['layers'] = 2
-
     print(params)
 
     # initialize neural net
