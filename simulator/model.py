@@ -40,12 +40,10 @@ class Simulator:
                 reduction='sum')
 
         # neural net(s)
-        if model == 'hist':
-            self.net = FeedForward(params, sizes).to(self.device)
-        elif ('delay' in model) or (model == 'arrival'):
+        if ('delay' in model) or (model == 'arrival'):
             self.net = LSTM(params, sizes).to(self.device)
         else:
-            self.net = RNN(params, sizes).to(self.device)          
+            self.net = FeedForward(params, sizes).to(self.device)     
 
 
     def evaluate_loss(self, d):
@@ -53,7 +51,25 @@ class Simulator:
         if 'x_time' not in d:
             y = d['y']
             theta = self.net(d['x_fixed']).squeeze()
-            return self.loss(theta, y)
+
+            # for con_byr, split by turn and calculate loss separately
+            if self.model == 'con_byr':
+                # observation is on buyer's 4th turn if all three turn indicators are 0
+                t4 = np.sum(d['x_fixed'][:,-3:], axis=0) == 0
+
+
+                theta0 = theta[0][mask[:,:3]]
+                y0 = d['y'][:,:3][mask[:,:3]]
+                loss0 = self.loss[0](theta0, y0)
+
+                theta1 = theta[1][mask[:,3]]
+                y1 = d['y'][:,3][mask[:,3]]
+                loss1 = self.loss[1](theta1, y1)
+
+                return loss0 + loss1
+            else:
+                
+                return self.loss(theta, y)
 
         # use mask for recurrent
         mask = d['y'] > -1
@@ -61,22 +77,12 @@ class Simulator:
         # prediction from recurrent net
         theta = self.net(d['x_fixed'], d['x_time'])
 
-        # single loss function
-        if self.model != 'con_byr':
-            theta = theta[mask]
-            y = d['y'][mask]
-            return self.loss(theta, y)
+        # apply mask and calculate loss
+        theta = theta[mask]
+        y = d['y'][mask]
+        return self.loss(theta, y)
 
-        # for con_byr, split by turn and calculate loss separately
-        theta0 = theta[0][mask[:,:3]]
-        y0 = d['y'][:,:3][mask[:,:3]]
-        loss0 = self.loss[0](theta0, y0)
-
-        theta1 = theta[1][mask[:,3]]
-        y1 = d['y'][:,3][mask[:,3]]
-        loss1 = self.loss[1](theta1, y1)
-
-        return loss0 + loss1
+        
 
 
     def apply_max_norm_constraint(self, eps=1e-8):

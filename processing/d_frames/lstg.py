@@ -20,22 +20,22 @@ def get_x_lstg(L):
     # initialize output dataframe with as-is features
     df = L[ASIS_FEATS]
     # normalize start_date to years
-    df['start_years'] = L['start_date'] / 365
+    df['start_years'] = L.start_date / 365
     # photos divided by 12, and binary indicator
-    df['photos'] = L['photos'] / 12
-    df['has_photos'] = L['photos'] > 0
+    df['photos'] = L.photos / 12
+    df['has_photos'] = L.photos > 0
     # slr feedback
-    df['fdbk_100'] = df['fdbk_pstv'] == 1
+    df['fdbk_100'] = df.fdbk_pstv == 1
     # prices
-    df['decline'] = L['decline_price'] / L['start_price']
-    df['accept'] = L['accept_price'] / L['start_price']
+    df['decline'] = L.decline_price / L.start_price
+    df['accept'] = L.accept_price / L.start_price
     for z in ['start', 'decline', 'accept']:
-        df['is_round'], df['is_nines'] = do_rounding(L[z + '_price'])
-    df['has_decline'] = df['decline'] > 0
-    df['has_accept'] = df['accept'] < 1
-    df['auto_dist'] = df['accept'] - df['decline']
+        df[z + '_is_round'], df[z + '_is_nines'] = do_rounding(L[z + '_price'])
+    df['has_decline'] = df.decline > 0
+    df['has_accept'] = df.accept < 1
+    df['auto_dist'] = df.accept - df.decline
     # condition
-    s = L['cndtn']
+    s = L.cndtn
     df['new'] = s == 1
     df['used'] = s == 7
     df['refurb'] = s.isin([2, 3, 4, 5, 6])

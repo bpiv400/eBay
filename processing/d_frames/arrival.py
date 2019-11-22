@@ -7,10 +7,10 @@ from utils import *
 from processing.processing_utils import *
 
 
-def get_arrival_time_feats(lookup, tf):
+def get_arrival_time_feats(lstg_start, tf):
     # add period to tf_arrival
     tf = tf.reset_index('clock')
-    tf = tf.join((lookup.start_date * 24 * 3600).rename('start_time'))
+    tf = tf.join(lstg_start.rename('start_time'))
     tf['period'] = (tf.clock - tf.start_time) // INTERVAL['arrival']
     tf = tf.drop(['clock', 'start_time'], axis=1)
     # increment period by 1; time feats are up to t-1
@@ -21,11 +21,10 @@ def get_arrival_time_feats(lookup, tf):
     return tf.groupby(['lstg', 'period']).sum()
 
 
-def get_y_arrival(lookup, thread_start):
+def get_y_arrival(lstg_start, lstg_end, thread_start):
     # time_stamps
-    t0 = lookup.start_date * 24 * 3600
-    diff = pd.to_timedelta(thread_start - t0, unit='s')
-    end = pd.to_timedelta(lookup.end_time - t0, unit='s')
+    diff = pd.to_timedelta(thread_start - lstg_start, unit='s')
+    end = pd.to_timedelta(lstg_end - lstg_start, unit='s')
     # convert to intervals
     diff = (diff.dt.total_seconds() // INTERVAL['arrival']).astype('uint16')
     end = (end.dt.total_seconds() // INTERVAL['arrival']).astype('uint16')
@@ -61,6 +60,7 @@ if __name__ == "__main__":
 
     # load data
     lookup = load(PARTS_DIR + '%s/lookup.gz' % part)
+    lstg_start = lookup.start_date.astype('int64') * 24 * 3600
     thread_start = load(CLEAN_DIR + 'offers.pkl').reindex(
         index=idx, level='lstg').clock.xs(1, level='index')
     tf = load_frames('tf_arrival').reindex(
@@ -68,10 +68,10 @@ if __name__ == "__main__":
 
     # time feats
     print('tf_arrival')
-    tf_arrival = get_arrival_time_feats(lookup, tf)
+    tf_arrival = get_arrival_time_feats(lstg_start, tf)
     dump(tf_arrival, path('tf_arrival'))
 
     # outcomes for arrival model
     print('Creating arrival model outcome variables')
-    y_arrival = get_y_arrival(lookup, thread_start)
+    y_arrival = get_y_arrival(lstg_start, lookup.end_time, thread_start)
     dump(y_arrival, path('y_arrival'))

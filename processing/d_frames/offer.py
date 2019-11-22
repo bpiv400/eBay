@@ -62,7 +62,7 @@ def get_x_offer(lookup, events):
     df.loc[df.index.isin(IDX['slr'], level='index'), 'norm'] = \
         1 - df['norm']
     # indicator for split
-    df['split'] = np.abs(df['con'] - 0.5) < TOL_HALF
+    df['split'] = np.abs(0.5 - np.around(df['con'], decimals=2)) < TOL_HALF
     # message indicator
     df['msg'] = events['message'].reindex(
         index=df.index, fill_value=False)

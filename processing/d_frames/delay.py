@@ -78,7 +78,6 @@ if __name__ == "__main__":
     delay = delay.rename_axis('index', axis=1).stack().astype('int64')
 
     # inputs for differenced time features
-    lookup = load(PARTS_DIR + '%s/lookup.gz' % part)
     tf = load_frames('tf_delay_diff').reindex(
         index=idx, level='lstg').drop('index', axis=1)
     start_time = events.clock.rename('start_time').groupby(

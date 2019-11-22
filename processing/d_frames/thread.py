@@ -30,14 +30,15 @@ if __name__ == "__main__":
 	x_thread = extract_clock_feats(clock)
 
 	# add months since lstg start
-	lstg_start = lookup['start_date'] * 24 * 3600
+	lstg_start = lookup['start_date'].astype('int64') * 24 * 3600
 	months = (thread_start - lstg_start) / (3600 * 24 * MAX_DAYS)
+	assert months.max() < 1
 	x_thread.loc[:, 'months_since_lstg'] = months
 
 	# add buyer history deciles
 	hist = threads['byr_hist']
-	hist.loc[:, hist == 1] -= 1e-16
 	hist = np.floor(HIST_QUANTILES * hist) / HIST_QUANTILES
+	assert hist.max() < 1
 	x_thread.loc[:, 'byr_hist'] = hist
 
 	# save

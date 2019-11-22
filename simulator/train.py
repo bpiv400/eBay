@@ -74,6 +74,9 @@ if __name__ == '__main__':
     # load experiment parameters
     params = pd.read_csv('%s/inputs/params.csv' % PREFIX, 
         index_col=0).loc[paramsid].to_dict()
+
+    params['dropout'] = 0
+
     print(params)
 
     # initialize neural net
@@ -91,12 +94,6 @@ if __name__ == '__main__':
     # load datasets
     train = load('%s/inputs/train_models/%s.gz' % (PREFIX, model))
     test = load('%s/inputs/train_rl/%s.gz' % (PREFIX, model))
-
-    # for part in ['train', 'test']:
-    #     d = globals()[part].d
-    #     for x in ['x_fixed', 'x_time']:
-    #         d[x] = np.minimum(d[x], 1)
-    #         d[x] = np.maximum(d[x], -1)
 
     # create outfile
     filename = SUMMARY_DIR + '%s/%d.csv' % (model, paramsid)
