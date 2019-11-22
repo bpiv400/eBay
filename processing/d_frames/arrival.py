@@ -10,6 +10,7 @@ from processing.processing_utils import *
 def get_arrival_time_feats(lstg_start, tf):
     # add period to tf_arrival
     tf = tf.reset_index('clock')
+    lstg_start = lstg_start.reindex(index=tf.index)
     tf['period'] = (tf.clock - lstg_start) // INTERVAL['arrival']
     tf = tf.drop('clock', axis=1)
     # increment period by 1; time feats are up to t-1
