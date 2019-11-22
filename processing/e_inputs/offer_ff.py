@@ -107,7 +107,7 @@ if __name__ == '__main__':
 	part = PARTITIONS[num // 4]
 	outcome = 'con' if num % 2 else 'msg'
 	role = 'slr' if (num // 2) % 2 else 'byr'
-	model = '%s_%s' % (outcome, role)
+	model = '%s_%s_ff' % (outcome, role)
 	print('%s/%s' % (part, model))
 
 	# input dataframes, output processed dataframes
