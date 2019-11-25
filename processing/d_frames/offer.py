@@ -44,9 +44,7 @@ def get_x_offer(lookup, events, tf):
     # delay features
     df['days'], df['delay'] = get_delay(events.clock.unstack())
     # clock features
-    clock = clock.rename_axis('index', axis=1).stack().rename(
-        'clock').astype(np.int64)
-    clock = pd.to_datetime(clock, unit='s', origin=START)
+    clock = pd.to_datetime(events.clock, unit='s', origin=START)
     df = df.join(extract_clock_feats(clock))
     # differenced time feats
     df = df.join(tf.reindex(index=df.index, fill_value=0))
