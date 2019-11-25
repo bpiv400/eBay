@@ -9,25 +9,22 @@ from simulator.model import Simulator
 from constants import *
 
 
-def run_loop(simulator, optimizer, data, isTraining=False):
+def run_loop(simulator, data, optimizer=None):
+    # training or validation
+    isTraining = optimizer is not None
     # collate function
     f = collateRNN if data.isRecurrent else collateFF
-
     # minibatch size
     mbsize = simulator.mbsize if isTraining else MBSIZE_VALIDATION
-
     # sampler
     sampler = Sample(data, mbsize, isTraining)
-
     # load batches
     batches = DataLoader(data, batch_sampler=sampler,
         collate_fn=f, num_workers=NUM_WORKERS, pin_memory=True)
-
     # loop over batches, calculate log-likelihood
     lnL = 0
     for batch in batches:
-        lnL += simulator.run_batch(batch, optimizer, isTraining)
-
+        lnL += simulator.run_batch(batch, optimizer)
     return lnL / data.N_labels
 
 
@@ -38,12 +35,12 @@ def train_model(simulator, optimizer, train, test, filename):
 
         # training loop
         print('Training epoch %d:' % (i+1))
-        lnL_train = run_loop(simulator, optimizer, train, isTraining=True)
+        lnL_train = run_loop(simulator, train, optimizer)
 
         # calculate log-likelihood on validation set
         print('\tValidating on holdout.')
         with torch.no_grad():
-            lnL_test = run_loop(simulator, optimizer, test)
+            lnL_test = run_loop(simulator, test)
 
         # epoch duration
         dur = np.round((dt.now() - t0).seconds)
@@ -72,11 +69,8 @@ if __name__ == '__main__':
     print(sizes)
 
     # load experiment parameters
-    params = pd.read_csv('%s/inputs/params.csv' % PREFIX, 
+    params = pd.read_csv('outputs/params.csv', 
         index_col=0).loc[paramsid].to_dict()
-
-    params['dropout'] = 0
-
     print(params)
 
     # initialize neural net

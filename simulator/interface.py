@@ -49,7 +49,7 @@ def collateFF(batch):
         idx.append(b[2])
 
     # convert to tensor
-    y = torch.from_numpy(np.asarray(y)).float()
+    y = torch.from_numpy(np.asarray(y))
     x_fixed = torch.stack(x_fixed).float()
     idx = torch.tensor(idx)
 

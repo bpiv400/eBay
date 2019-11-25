@@ -27,9 +27,8 @@ def process_inputs(part):
     x_clock = create_x_clock()
 
     # index of first x_clock for each y
-    lstg_start = load(getPath(['lookup']))['start_date'].reindex(
-        index=turns.index).astype('int64')
-    idx_clock = lstg_start * 24 * 60
+    idx_clock = load(getPath(['lookup']))['start_date'].reindex(
+        index=turns.index).astype('int64') * 24 * 60
 
     # time features
     tf = load(getPath(['tf', 'arrival'])).reindex(

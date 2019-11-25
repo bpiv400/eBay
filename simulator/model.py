@@ -55,21 +55,21 @@ class Simulator:
             # for con_byr, split by turn and calculate loss separately
             if self.model == 'con_byr':
                 # observation is on buyer's 4th turn if all three turn indicators are 0
-                t4 = np.sum(d['x_fixed'][:,-3:], axis=0) == 0
+                t4 = torch.sum(d['x_fixed'][:,-3:], dim=1) == 0
 
+                # loss for first 3 turns
+                loss = self.loss[0](theta[~t4,:], y[~t4].long())
 
-                theta0 = theta[0][mask[:,:3]]
-                y0 = d['y'][:,:3][mask[:,:3]]
-                loss0 = self.loss[0](theta0, y0)
+                # loss for last turn: use accept probability only
+                if torch.sum(t4).item() > 0:
+                    loss += self.loss[1](theta[t4,-1], (y[t4] == 100).float())
 
-                theta1 = theta[1][mask[:,3]]
-                y1 = d['y'][:,3][mask[:,3]]
-                loss1 = self.loss[1](theta1, y1)
-
-                return loss0 + loss1
+                return loss
             else:
-                
-                return self.loss(theta, y)
+                if self.loss.__str__() == 'BCEWithLogitsLoss()':
+                    return self.loss(theta, y.float())
+                else:
+                    return self.loss(theta, y.long())
 
         # use mask for recurrent
         mask = d['y'] > -1
@@ -82,8 +82,6 @@ class Simulator:
         y = d['y'][mask]
         return self.loss(theta, y)
 
-        
-
 
     def apply_max_norm_constraint(self, eps=1e-8):
         for name, param in self.net.named_parameters():
@@ -93,8 +91,9 @@ class Simulator:
                 param = param * desired / (eps + norm)
 
 
-    def run_batch(self, d, optimizer, isTraining):
+    def run_batch(self, d, optimizer=None):
         # train / eval mode
+        isTraining = optimizer is not None
         self.net.train(isTraining)
 
         # zero gradient
@@ -118,7 +117,7 @@ class Simulator:
         if isTraining:
             loss.backward()
             optimizer.step()
-            #self.apply_max_norm_constraint()
+            self.apply_max_norm_constraint()
 
         # return log-likelihood
         return -loss.item()

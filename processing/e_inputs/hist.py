@@ -15,19 +15,18 @@ def process_inputs(part):
 
 	# load thread features
 	x_thread = load(getPath(['x', 'thread']))
+	x_offer = load(getPath(['x', 'offer'])).xs(1, level='index').drop(
+		['days', 'delay', 'con', 'norm', 'split', 'msg', 'reject', 'auto', 'exp'], axis=1)
+	x_thread = x_thread.join(x_offer)
 
 	# outcome
-	y = x_thread['byr_hist'] * HIST_QUANTILES
+	y = x_thread['byr_hist']
 
 	# initialize fixed features with listing variables
 	x_fixed = cat_x_lstg(getPath).reindex(index=y.index, level='lstg')
 
 	# add thread variables
 	x_fixed = x_fixed.join(x_thread.drop('byr_hist', axis=1))
-
-	# add time feats at arrival
-	tf = load(getPath(['tf', 'role', 'raw'])).xs(1, level='index')
-	x_fixed = x_fixed.join(tf.reindex(index=x_fixed.index, fill_value=0))
 
 	return {'y': y.astype('uint8', copy=False), 
             'x_fixed': x_fixed.astype('float32', copy=False)}

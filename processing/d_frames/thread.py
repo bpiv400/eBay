@@ -24,22 +24,19 @@ if __name__ == "__main__":
 	events = load(CLEAN_DIR + 'offers.pkl').reindex(
 		index=idx, level='lstg')
 
-	# initialize x_thread with calendar features
+	# months since lstg start
 	thread_start = events.clock.xs(1, level='index')
-	clock = pd.to_datetime(thread_start, unit='s', origin=START)
-	x_thread = extract_clock_feats(clock)
-
-	# add months since lstg start
-	lstg_start = lookup['start_date'].astype('int64') * 24 * 3600
+	lstg_start = lookup.start_date.astype('int64') * 24 * 3600
 	months = (thread_start - lstg_start) / (3600 * 24 * MAX_DAYS)
+	months = months.rename('months_since_lstg')
 	assert months.max() < 1
-	x_thread.loc[:, 'months_since_lstg'] = months
 
-	# add buyer history deciles
-	hist = threads['byr_hist']
-	hist = np.floor(HIST_QUANTILES * hist) / HIST_QUANTILES
-	assert hist.max() < 1
-	x_thread.loc[:, 'byr_hist'] = hist
+	# buyer history deciles
+	hist = np.floor(HIST_QUANTILES * threads.byr_hist).astype('int8')
+	assert hist.max() == 9
+
+	# create dataframe
+	x_thread = pd.concat([months, hist], axis=1)
 
 	# save
 	dump(x_thread, path('x_thread'))

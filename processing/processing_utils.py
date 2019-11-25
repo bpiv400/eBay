@@ -106,7 +106,7 @@ def cat_x_lstg(path):
         - path(['x', 'lstg']) might return 
             'data/inputs/partitions/train_models/x_lstg.gz'
     '''
-    l = [load(path(['x', x])) for x in ['lstg', 'w2v', 'slr', 'cat']]
+    l = [load(path(['x', x])) for x in ['w2v', 'slr', 'cat', 'lstg']]
     return pd.concat(l, axis=1)
 
 
@@ -167,8 +167,6 @@ def get_featnames(d):
             list(d['x_clock'].columns) + list(d['tf'].columns) + ['duration']
     if 'remaining' in d:
         featnames['x_time'] += ['remaining']
-    if 'x_time' in d:
-        featnames['x_time'] = list(d['x_time'].columns)
     return featnames
 
 
@@ -186,9 +184,6 @@ def get_sizes(d, model):
         sizes['time'] = len(d['x_clock'].columns) + len(d['tf'].columns) + 1
     if 'remaining' in d:
         sizes['time'] += 1
-    if 'x_time' in d:
-        sizes['steps'] = len(d['y'].columns)
-        sizes['time'] = len(d['x_time'].columns)
     # output size is based on model
     if model == 'hist':
         sizes['out'] = HIST_QUANTILES
@@ -231,15 +226,6 @@ def convert_to_numpy(d):
                 continue
         d['tf'] = tf_dict
 
-    # reshape columns of x_time and convert
-    if 'x_time' in d:
-        arrays = []
-        for c in d['x_time'].columns:
-            array = d['x_time'][c].astype('float32').unstack().reindex(
-                index=d['y'].index).to_numpy()
-            arrays.append(np.expand_dims(array, axis=2))
-        d['x_time'] = np.concatenate(arrays, axis=2)
-
     # convert y and x_fixed to numpy directly
     for k in ['y', 'turns', 'x_fixed', 'x_clock', 'idx_clock', 'remaining']:
         if k in d:
@@ -264,7 +250,7 @@ def create_small(d):
         small['x_clock'] = d['x_clock']
 
     # first index
-    for k in ['y', 'turns', 'x_fixed', 'idx_clock', 'remaining', 'x_time']:
+    for k in ['y', 'turns', 'x_fixed', 'idx_clock', 'remaining']:
         if k in d:
             small[k] = d[k][:N_SMALL]
 

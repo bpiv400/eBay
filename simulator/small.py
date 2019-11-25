@@ -61,11 +61,8 @@ if __name__ == '__main__':
     print(sizes)
 
     # load experiment parameters
-    params = pd.read_csv('%s/inputs/params.csv' % PREFIX, 
+    params = pd.read_csv('outputs/params.csv', 
         index_col=0).loc[paramsid].to_dict()
-
-    params['dropout'] = 0
-
     print(params)
 
     # initialize neural net
@@ -85,3 +82,7 @@ if __name__ == '__main__':
 
     # time epoch
     train_model(simulator, optimizer, data)
+
+    # save model
+    torch.save(simulator.net.state_dict(), 
+        MODEL_DIR + '%s_%d.net' % (model, paramsid))

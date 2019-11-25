@@ -28,49 +28,41 @@ def get_delay(clock):
 
 
 # concession
-def get_con(offers):
+def get_con(offers, start_price):
     con = pd.DataFrame(index=offers.index)
     con[0] = 0
-    con[1] = offers[1] / offers[0]
-    for i in range(2, 8):
+    con[1] = offers[1] / start_price
+    con[2] = (offers[2] - start_price) / (offers[1] - start_price)
+    for i in range(3, 8):
         con[i] = (offers[i] - offers[i-2]) / (offers[i-1] - offers[i-2])
     return con.stack()
 
 
-def get_x_offer(lookup, events):
-    # vector of offers
-    offers = events.price.unstack().join(lookup.start_price)
-    offers = offers.rename({'start_price': 0}, axis=1).rename_axis(
-        'index', axis=1)
+def get_x_offer(lookup, events, tf):
     # initialize output dataframe
-    df = pd.DataFrame(index=offers.stack().index).sort_index()
-    # clock variable
-    clock = 24 * 3600 * lookup.start_date.rename(0).to_frame()
-    clock = clock.join(events.clock.unstack())
+    df = pd.DataFrame(index=events.index).sort_index()
     # delay features
-    df['days'], df['delay'] = get_delay(clock)
+    df['days'], df['delay'] = get_delay(events.clock.unstack())
     # clock features
     clock = clock.rename_axis('index', axis=1).stack().rename(
         'clock').astype(np.int64)
     clock = pd.to_datetime(clock, unit='s', origin=START)
     df = df.join(extract_clock_feats(clock))
+    # differenced time feats
+    df = df.join(tf.reindex(index=df.index, fill_value=0))
     # concession
-    df['con'] = get_con(offers)
+    df['con'] = get_con(events.price.unstack(), lookup.start_price)
     # total concession
-    df['norm'] = (events['price'] / lookup['start_price']).reindex(
-        index=df.index, fill_value=0)
-    df.loc[df.index.isin(IDX['slr'], level='index'), 'norm'] = \
-        1 - df['norm']
+    df['norm'] = events.price / lookup.start_price
+    df.loc[df.index.isin(IDX['slr'], level='index'), 'norm'] = 1 - df.norm
     # indicator for split
     df['split'] = np.abs(0.5 - np.around(df['con'], decimals=2)) < TOL_HALF
     # message indicator
-    df['msg'] = events['message'].reindex(
-        index=df.index, fill_value=False)
+    df['msg'] = events.message
     # reject auto and exp are last
-    df['reject'] = (df['con'] == 0) & df.index.isin(range(1, 8), level='index')
+    df['reject'] = df.con == 0
     df['auto'] = (df.delay == 0) & df.index.isin(IDX['slr'], level='index')
-    df['exp'] = (df.delay == 1) | events['censored'].reindex(
-        index=df.index, fill_value=False)
+    df['exp'] = (df.delay == 1) | events.censored
     return df
 
 
@@ -87,10 +79,11 @@ if __name__ == "__main__":
     # load other data
     lookup = load(PARTS_DIR + '%s/lookup.gz' % part)
     events = load(CLEAN_DIR + 'offers.pkl').reindex(index=idx, level='lstg')
+    tf = load_frames('tf_con').reindex(index=idx, level='lstg')
 
     # offer features
     print('x_offer')
-    x_offer = get_x_offer(lookup, events)
+    x_offer = get_x_offer(lookup, events, tf)
     dump(x_offer, path('x_offer'))
 
     # offer timestamps
