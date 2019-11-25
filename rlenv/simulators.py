@@ -10,23 +10,16 @@ from rlenv.env_consts import (NORM_POS, CON_POS, MSG_POS, REJ_POS, EXPIRE_POS,
 class SimulatedActor:
     def __init__(self, model=None):
         self.delay_hidden = None
-        self.con_hidden = None
-        self.msg_hidden = None
         self.model = model
 
     def make_offer(self, sources=None, turn=1):
-        params, self.con_hidden = self.model.con(sources=sources, hidden=self.con_hidden,
-                                                 turn=turn)
+        params = self.model.con(sources=sources, turn=turn)
         outcomes, sample_msg = self.sample_con(params, sources=sources, turn=turn)
-        if turn != 7:
-            params, self.msg_hidden = self.model.msg(sources=sources, hidden=self.msg_hidden,
-                                                     turn=turn)
-        else:
-            params = None
         # don't draw msg if there's an acceptance or rejection
-        if not sample_msg or turn == 7:
+        if not sample_msg:
             return outcomes
         else:
+            params = self.model.msg(sources=sources, turn=turn)
             self.sample_msg(params, outcomes)
         return outcomes
 

@@ -45,6 +45,7 @@ PARTS_DIR = '%s/partitions/' % PREFIX
 REWARDS_DIR = '%s/simulator/' % PREFIX
 PCTILE_DIR = '%s/pctile/' % PREFIX
 W2V_DIR = '%s/w2v/' % PREFIX
+OUTPUT_DIR = 'outputs/'
 INPUT_DIR = '%s/inputs/' % PREFIX
 SUMMARY_DIR = 'outputs/summary/'
 MODEL_DIR = 'outputs/models/'
