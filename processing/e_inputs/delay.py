@@ -7,30 +7,36 @@ from processing.processing_utils import *
 from processing.e_inputs.inputs import Inputs
 
 
-def add_past_offers(role, x_fixed, x_offer, tf_raw):
-    # combine offer dataframe and time feats
-    df = x_offer.join(tf_raw.reindex(
-        index=x_offer.index, fill_value=0))
-    # last 2 offers
-    offer1 = df.groupby(['lstg', 'thread']).shift(
-        periods=1).reindex(index=x_fixed.index)
-    offer2 = df.groupby(['lstg', 'thread']).shift(
-        periods=2).reindex(index=x_fixed.index)
-    # drop clock feats from offer1
-    toDrop = ['holiday', 'minute_of_day'] + \
-                [x for x in offer1.columns if 'dow' in x]
-    offer1 = offer1.drop(toDrop , axis=1)
-    # drop constant features
-    if role == 'byr':
-        offer2 = offer2.drop(['auto', 'exp', 'reject'], axis=1)
-    elif role == 'slr':
-        offer1 = offer1.drop(['auto', 'exp', 'reject'], axis=1)
-    # append to x_fixed
-    x_fixed = x_fixed.join(offer1.rename(
-        lambda x: x + '_other', axis=1))
-    x_fixed = x_fixed.join(offer2.rename(
-        lambda x: x + '_last', axis=1))
-    return x_fixed
+def get_x_fixed(idx, x_lstg, x_thread, x_offer, role):
+    # reindex to listings in y
+    x_fixed = x_lstg.reindex(index=idx, level='lstg')
+    # join with thread features
+    x_fixed = x_fixed.join(x_thread.months_since_lstg)
+    x_fixed = x_fixed.join(x_thread.byr_hist.astype('float32') / 10)
+    # merged offer and time feats, excluding index 0
+    threads = idx.droplevel(level='index').unique()
+    df = pd.DataFrame(index=threads).join(x_offer)
+    # add in offers, excluding final turn
+    for i in range(1, max(IDX[role])):
+        print(i)
+        # get features at index i
+        offer = df.xs(i, level='index').reindex(index=idx)
+        # if turn 1, drop days and delay
+        if i == 1:
+            offer = offer.drop(['days', 'delay'], axis=1)
+        else:
+            # set features to 0 if turn i in future
+            future = i >= offer.index.get_level_values(level='index')
+            offer.loc[future, df.dtypes == 'bool'] = False
+            offer.loc[future, df.dtypes != 'bool'] = 0
+        # if buyer turn, drop auto, exp, reject
+        if i in IDX['byr']:
+            offer = offer.drop(['auto', 'exp', 'reject'], axis=1)
+        # add turn number to feat names and add to x_fixed
+        x_fixed = x_fixed.join(
+            offer.rename(lambda x: x + '_%d' % i, axis=1))
+    # add turn indicators and return
+    return add_turn_indicators(x_fixed)
 
 
 # loads data and calls helper functions to construct training inputs
@@ -51,26 +57,12 @@ def process_inputs(part, role):
     x_lstg = cat_x_lstg(getPath)
     x_thread = load(getPath(['x', 'thread']))
     x_offer = load(getPath(['x', 'offer']))
-    tf_raw = load(getPath(['tf', 'role', 'raw']))
     clock = load(getPath(['clock']))
     lstg_start = load(getPath(['lookup'])).start_date.astype(
         'int64') * 24 * 3600
 
     # initialize fixed features
-    x_fixed = pd.DataFrame(index=y.index).join(x_lstg).join(
-        x_thread[['byr_hist', 'months_since_lstg']])
-
-    # turn indicators
-    x_fixed = add_turn_indicators(x_fixed)
-
-    # add days since thread start
-    thread_start = clock.xs(1, level='index')
-    sec = clock - thread_start.reindex(index=clock.index)
-    sec = sec.groupby(['lstg', 'thread']).shift().dropna().astype('int64')
-    x_fixed.loc[:, 'days_since_thread'] = sec / (3600 * 24)
-
-    # add last two offers
-    x_fixed = add_past_offers(role, x_fixed, x_offer, tf_raw)
+    x_fixed = get_x_fixed(y.index, x_lstg, x_thread, x_offer, role)
 
     # clock features by minute
     x_clock = create_x_clock()

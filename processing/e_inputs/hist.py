@@ -16,8 +16,8 @@ def process_inputs(part):
 	# load thread features
 	x_thread = load(getPath(['x', 'thread']))
 	x_offer = load(getPath(['x', 'offer'])).xs(1, level='index').drop(
-		['days', 'delay', 'con', 'norm', 'split', 'msg', 'reject', 'auto', 'exp'], axis=1)
-	x_thread = x_thread.join(x_offer)
+		['days', 'delay', 'con', 'norm', 'split', 'msg', 'reject', \
+		'auto', 'exp'], axis=1)
 
 	# outcome
 	y = x_thread['byr_hist']
@@ -26,7 +26,8 @@ def process_inputs(part):
 	x_fixed = cat_x_lstg(getPath).reindex(index=y.index, level='lstg')
 
 	# add thread variables
-	x_fixed = x_fixed.join(x_thread.drop('byr_hist', axis=1))
+	x_fixed = x_fixed.join(x_thread.months_since_lstg)
+	x_fixed = x_fixed.join(x_offer)
 
 	return {'y': y.astype('uint8', copy=False), 
             'x_fixed': x_fixed.astype('float32', copy=False)}

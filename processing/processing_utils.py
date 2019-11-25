@@ -177,8 +177,16 @@ def get_sizes(d, model):
     model: one of 'arrival', 'hist', 'delay_slr', 'delay_byr', 'con_byr', 
         'con_slr', 'msg_byr', 'msg_slr'
     '''
-    sizes = {'N': len(d['y'].index), 
-        'fixed': len(d['x_fixed'].columns)}
+    # initialize with number of observations
+    sizes = {'N': len(d['y'].index)}
+    # count components of x_fixed
+    counts = []
+    for name in ['w2v', 'slr', 'cat']:
+        cols = [c for c in d['x_fixed'].columns \
+                if c.startswith(name) and '_' not in c]
+        counts.append(len(cols))
+    counts.append(len(d['x_fixed'].columns) - sum(counts))
+    sizes['fixed'] = counts
     if 'x_clock' in d:
         sizes['steps'] = len(d['y'].columns)
         sizes['time'] = len(d['x_clock'].columns) + len(d['tf'].columns) + 1
