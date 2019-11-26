@@ -161,12 +161,19 @@ def get_featnames(d):
     '''
     d: dictionary with dataframes.
     '''
-    featnames = {'x_fixed': list(d['x_fixed'].columns)}
+
+    # initialize with components of x
+    featnames = {k: list(v.columns) for k, v in d['x'].items()}
+
+    # for arrival and delay models
     if 'x_clock' in d:
         featnames['x_time'] = \
             list(d['x_clock'].columns) + list(d['tf'].columns) + ['duration']
-    if 'remaining' in d:
-        featnames['x_time'] += ['remaining']
+
+        # for delay models
+        if 'remaining' in d:
+            featnames['x_time'] += ['remaining']
+
     return featnames
 
 
@@ -179,19 +186,19 @@ def get_sizes(d, model):
     '''
     # initialize with number of observations
     sizes = {'N': len(d['y'].index)}
-    # count components of x_fixed
-    counts = []
-    for name in ['w2v', 'slr', 'cat']:
-        cols = [c for c in d['x_fixed'].columns \
-                if c.startswith(name) and '_' not in c]
-        counts.append(len(cols))
-    counts.append(len(d['x_fixed'].columns) - sum(counts))
-    sizes['fixed'] = counts
+
+    # count components of x
+    sizes['x'] = {k: len(v.columns) for k, v in d['x'].items()}
+
+    # arrival and delay models
     if 'x_clock' in d:
         sizes['steps'] = len(d['y'].columns)
         sizes['time'] = len(d['x_clock'].columns) + len(d['tf'].columns) + 1
-    if 'remaining' in d:
-        sizes['time'] += 1
+
+        # delay models
+        if 'remaining' in d:
+            sizes['time'] += 1
+
     # output size is based on model
     if model == 'hist':
         sizes['out'] = HIST_QUANTILES
@@ -199,6 +206,7 @@ def get_sizes(d, model):
         sizes['out'] = 101
     else:
         sizes['out'] = 1
+
     return sizes
 
 
@@ -214,7 +222,7 @@ def create_groups(d):
                         for n in np.unique(d['turns'])]
 
     # for feed-forward nets, create single vector of indices
-    return [np.array(range(np.shape(d['x_fixed'])[0]))]
+    return [np.array(range(np.shape(d['x']['lstg'])[0]))]
 
 
 # converts dictionary of dataframes to dictionary of numpy arrays
@@ -222,6 +230,10 @@ def convert_to_numpy(d):
     '''
     d: dictionary with dataframes.
     '''
+
+    # loop through x
+    for k, v in d['x'].items():
+        d['x'][k] = v.to_numpy()
 
     # convert time features to dictionary
     if 'tf' in d:
@@ -235,7 +247,7 @@ def convert_to_numpy(d):
         d['tf'] = tf_dict
 
     # convert y and x_fixed to numpy directly
-    for k in ['y', 'turns', 'x_fixed', 'x_clock', 'idx_clock', 'remaining']:
+    for k in ['y', 'turns', 'x_clock', 'idx_clock', 'remaining']:
         if k in d:
             d[k] = d[k].to_numpy()
 
@@ -253,14 +265,19 @@ def create_small(d):
     
     small = {}
 
+    # first N_SMALL indices
+    for k in ['y', 'turns', 'idx_clock', 'remaining']:
+        if k in d:
+            small[k] = d[k][:N_SMALL]
+
+    # loop through x
+    small['x'] = {}
+    for k, v in d['x'].items():
+        small['x'][k] = d['x'][k][:N_SMALL]
+
     # x_clock in full
     if 'x_clock' in d:
         small['x_clock'] = d['x_clock']
-
-    # first index
-    for k in ['y', 'turns', 'x_fixed', 'idx_clock', 'remaining']:
-        if k in d:
-            small[k] = d[k][:N_SMALL]
 
     # time features dictionary
     if 'tf' in d:

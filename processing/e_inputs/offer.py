@@ -7,13 +7,10 @@ from processing.processing_utils import *
 from processing.e_inputs.inputs import Inputs
 
 
-def get_x_fixed(idx, x_lstg, x_thread, x_offer, outcome, role):
-	# reindex to listings in y
-	x_fixed = x_lstg.reindex(index=idx, level='lstg')
-	# join with thread features
-	x_fixed = x_fixed.join(x_thread.months_since_lstg)
-	x_fixed = x_fixed.join(x_thread.byr_hist.astype('float32') / 10)
-	# merged offer and time feats, excluding index 0
+def get_x_time(idx, x_offer, outcome, role):
+	# initialize output
+	x_time = pd.DataFrame(index=idx)
+	# reindex offers to threads of interest
 	threads = idx.droplevel(level='index').unique()
 	df = pd.DataFrame(index=threads).join(x_offer)
 	# add in offers
@@ -44,10 +41,11 @@ def get_x_fixed(idx, x_lstg, x_thread, x_offer, outcome, role):
 			if outcome == 'con':
 				offer = offer.drop(['con', 'norm', 'split'], axis=1)
 		# add turn number to feat names and add to x_fixed
-		x_fixed = x_fixed.join(
-			offer.rename(lambda x: x + '_%d' % i, axis=1))
+		x_time = x_time.join(offer.rename(lambda x: x + '_%d' % i, axis=1))
 	# add turn indicators and return
 	return add_turn_indicators(x_fixed)
+
+
 
 
 def get_y(x_offer, outcome, role):
@@ -84,12 +82,21 @@ def process_inputs(part, outcome, role):
 
 	# outcome
 	y = get_y(x_offer, outcome, role)
+	idx = y.index
+
+	# initialize dictionary of input features
+	
 
 	# fixed features
-	x_fixed = get_x_fixed(y.index, x_lstg, x_thread, x_offer, outcome, role)
+	x_fixed = x_lstg.reindex(index=idx, level='lstg')
+	x_fixed = x_fixed.join(x_thread.months_since_lstg)
+	x_fixed = x_fixed.join(x_thread.byr_hist.astype('float32') / 10)
+
+	# offer features
+	x_time = get_x_time(idx, x_offer, outcome, role)
 
 	return {'y': y.astype('int8', copy=False), 
-			'x_fixed': x_fixed.astype('float32', copy=False)}
+			'x_fixed': x_fixed.astype('float32', copy=False),}
 
 
 if __name__ == '__main__':

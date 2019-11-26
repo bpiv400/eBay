@@ -21,16 +21,19 @@ def process_inputs(part):
 
 	# outcome
 	y = x_thread['byr_hist']
+	idx = y.index
 
-	# initialize fixed features with listing variables
-	x_fixed = cat_x_lstg(getPath).reindex(index=y.index, level='lstg')
+	# input features
+	x = {}
+	for name in ['w2v', 'slr', 'cat', 'lstg']:
+		x[name] = load(getPath(['x', name])).reindex(
+			index=idx, level='lstg')
+		# add thread feats to listing feats
+		if name == 'lstg':
+			x[name] = x[name].join(x_thread.months_since_lstg).join(x_offer)
+		x[name] = x[name].astype('float32', copy=False)
 
-	# add thread variables
-	x_fixed = x_fixed.join(x_thread.months_since_lstg)
-	x_fixed = x_fixed.join(x_offer)
-
-	return {'y': y.astype('uint8', copy=False), 
-            'x_fixed': x_fixed.astype('float32', copy=False)}
+	return {'y': y.astype('uint8', copy=False), x}
 
 
 if __name__ == '__main__':

@@ -9,12 +9,18 @@ from simulator.model import Simulator
 from constants import *
 
 
-def run_loop(simulator, optimizer, data, isTraining):
+def run_loop(simulator, data, optimizer=None):
+    # training or validation
+    isTraining = optimizer is not None
+
     # collate function
     f = collateRNN if data.isRecurrent else collateFF
 
+    # minibatch size
+    mbsize = simulator.mbsize if isTraining else MBSIZE_VALIDATION
+
     # sampler
-    sampler = Sample(data, simulator.mbsize, isTraining)
+    sampler = Sample(data, mbsize, isTraining)
 
     # load batches
     batches = DataLoader(data, batch_sampler=sampler,
@@ -24,7 +30,7 @@ def run_loop(simulator, optimizer, data, isTraining):
     lnL, gpu_time = 0.0, 0.0
     for batch in batches:
         t1 = dt.now()
-        lnL += simulator.run_batch(batch, optimizer, isTraining)
+        lnL += simulator.run_batch(batch, optimizer)
         gpu_time += (dt.now() - t1).total_seconds()
 
     return lnL / data.N_labels, gpu_time
@@ -38,7 +44,7 @@ def train_model(simulator, optimizer, data):
         # training loop
         print('Epoch %d' % (i+1))
         t0 = dt.now()
-        lnL, gpu_time = run_loop(simulator, optimizer, data, True)
+        lnL, gpu_time = run_loop(simulator, data, optimizer)
         print('GPU time: %d seconds' % gpu_time)
         print('Total time: %d seconds' % (dt.now() - t0).seconds)
         print('lnL: %9.4f' % lnL)
@@ -83,6 +89,6 @@ if __name__ == '__main__':
     # time epoch
     train_model(simulator, optimizer, data)
 
-    # save model
-    torch.save(simulator.net.state_dict(), 
-        MODEL_DIR + '%s_%d.net' % (model, paramsid))
+    # # save model
+    # torch.save(simulator.net.state_dict(), 
+    #     MODEL_DIR + '%s_%d.net' % (model, paramsid))

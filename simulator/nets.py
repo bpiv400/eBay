@@ -1,4 +1,4 @@
-import torch.nn as nn
+import torch, torch.nn as nn
 
 
 class FeedForward(nn.Module):
@@ -6,19 +6,23 @@ class FeedForward(nn.Module):
         # super constructor
         super(FeedForward, self).__init__()
 
+        # save sizes of x_fixed to self
+        self.k = sizes['fixed']
+
         # activation function
-        f = nn.ReLU()
+        self.f = nn.ReLU()
 
         # initial layer
-        self.seq = nn.ModuleList(
-            [nn.Linear(sizes['fixed'], params['hidden']), f])
+        self.embedding = nn.ModuleList([nn.Linear(n, n) for n in sizes['fixed']])
 
         # intermediate layers
+        self.seq = nn.ModuleList(
+            [nn.Linear(sum(sizes['fixed']), params['hidden']), self.f])
         for i in range(params['layers']-1):
             self.seq.append(nn.Dropout(p=params['dropout'] / 10))
             self.seq.append(
                 nn.Linear(params['hidden'], params['hidden']))
-            self.seq.append(f)
+            self.seq.append(self.f)
 
         # output layer
         if toRNN:
@@ -27,6 +31,22 @@ class FeedForward(nn.Module):
             self.seq.append(nn.Linear(params['hidden'], sizes['out']))
 
     def forward(self, x):
+        # check that input has same number of columns as in sizes
+        if x.size()[-1] != sum(self.k):
+            print('Input has %d feats; expecting %d feats.' \
+                % (x.size()[-1], sum(self.k)))
+
+        # separate embeddings for input feature components
+        last, l = 0, []
+        for i in range(len(self.k)):
+            module = self.embedding[i](x[:,last:last+self.k[i]])
+            l.append(module)
+            last = last + self.k[i]
+
+        # concatenate and activate
+        x = self.f(torch.cat(l, dim=1))
+
+        # fully connected layers with dropout
         for _, m in enumerate(self.seq):
             x = m(x)
         return x
