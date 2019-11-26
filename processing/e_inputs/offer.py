@@ -50,9 +50,6 @@ def get_offer_vec(x, featnames):
 
 
 def get_y(x_offer, outcome, role):
-	# delay
-	if outcome == 'delay':
-		return load(getPath(['y', 'delay', role]))
 	# subset to relevant observations
 	if outcome == 'con':
 		# drop zero delay and expired offers
@@ -83,7 +80,10 @@ def process_inputs(part, outcome, role):
 	x_offer = load(getPath(['x', 'offer']))
 
 	# outcome
-	y = get_y(x_offer, outcome, role)
+	if outcome == 'delay':
+		y = load(getPath(['y', 'delay', role]))
+	else:
+		y = get_y(x_offer, outcome, role)
 	idx = y.index
 
 	# initialize dictionary of input features
