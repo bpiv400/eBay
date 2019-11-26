@@ -4,7 +4,7 @@ import numpy as np, pandas as pd
 from datetime import datetime as dt
 from compress_pickle import load
 from torch.utils.data import DataLoader
-from simulator.interface import *
+from simulator.interface import Inputs, Sample, collateFF, collateRNN
 from simulator.model import Simulator
 from constants import *
 
@@ -84,7 +84,7 @@ if __name__ == '__main__':
     print(optimizer)
 
     # load data
-    data = load('%s/inputs/small/%s.gz' % (PREFIX, model))
+    data = Inputs('small', model)
 
     # time epoch
     train_model(simulator, optimizer, data)

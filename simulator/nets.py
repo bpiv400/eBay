@@ -7,13 +7,13 @@ class FeedForward(nn.Module):
         super(FeedForward, self).__init__()
 
         # save sizes of x_fixed to self
-        self.k = sizes['fixed']
+        self.k = sizes['x']
 
         # activation function
         self.f = nn.ReLU()
 
         # initial layer
-        self.embedding = nn.ModuleList([nn.Linear(n, n) for n in sizes['fixed']])
+        self.embedding = nn.ModuleDict({k: nn.Linear(v, v) for k, v in self.k})
 
         # intermediate layers
         self.seq = nn.ModuleList(

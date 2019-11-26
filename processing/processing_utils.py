@@ -2,6 +2,7 @@ import sys, os
 from compress_pickle import load, dump
 from datetime import datetime as dt
 import numpy as np, pandas as pd
+from collections import OrderedDict
 from constants import *
 
 # data types for csv read
@@ -119,7 +120,7 @@ def init_x(path, idx):
             'data/inputs/partitions/train_models/x_lstg.gz'
     idx: index of lstg ids or multi-index with lstg
     '''
-    x = {}
+    x = OrderedDict()
     for name in ['w2v', 'slr', 'cat', 'lstg']:
         x[name] = load(path(['x', name])).reindex(
             index=idx, level='lstg')
@@ -199,11 +200,13 @@ def get_sizes(d, model):
     model: one of 'arrival', 'hist', 'delay_slr', 'delay_byr', 'con_byr', 
         'con_slr', 'msg_byr', 'msg_slr'
     '''
-    # initialize with number of observations
+    # number of observations
     sizes = {'N': len(d['y'].index)}
 
     # count components of x
-    sizes['x'] = {k: len(v.columns) for k, v in d['x'].items()}
+    sizes['x'] = OrderedDict()
+    for k, v in d['x'].items():
+        sizes['x'][k] = len(v.columns)
 
     # arrival and delay models
     if 'x_clock' in d:

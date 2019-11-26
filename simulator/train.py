@@ -4,7 +4,7 @@ import numpy as np, pandas as pd
 from compress_pickle import load
 from datetime import datetime as dt
 from torch.utils.data import DataLoader
-from simulator.interface import Sample, collateFF, collateRNN
+from simulator.interface import Inputs, Sample, collateFF, collateRNN
 from simulator.model import Simulator
 from constants import *
 
@@ -86,8 +86,8 @@ if __name__ == '__main__':
     print(optimizer)
 
     # load datasets
-    train = load('%s/inputs/train_models/%s.gz' % (PREFIX, model))
-    test = load('%s/inputs/train_rl/%s.gz' % (PREFIX, model))
+    train = Inputs('train_models', model)
+    test = Inputs('train_rl', model)
 
     # create outfile
     filename = SUMMARY_DIR + '%s/%d.csv' % (model, paramsid)

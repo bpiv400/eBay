@@ -10,10 +10,10 @@ from constants import *
 # defines a dataset that extends torch.utils.data.Dataset
 class Inputs(Dataset):
 
-    def __init__(self, d, model):
+    def __init__(self, part, model):
 
         # save data and parameters to self
-        self.d = d
+        self.d = load('%s/inputs/%s/%s.gz' % (PREFIX, part, model))
         self.model = model
         self.isRecurrent = 'turns' in self.d
 

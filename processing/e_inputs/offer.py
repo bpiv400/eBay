@@ -111,7 +111,7 @@ def process_inputs(part, outcome, role):
 	x['price'] = pd.concat([price_feats, x['price']], axis=1)
 	
 	return {'y': y.astype('uint8', copy=False), 
-			'x': {k: v.astype('float32', copy=False) for k, v in x.items()}
+			'x': {k: v.astype('float32', copy=False) for k, v in x.items()}}
 
 
 if __name__ == '__main__':
