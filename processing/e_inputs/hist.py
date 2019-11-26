@@ -33,7 +33,7 @@ def process_inputs(part):
 			x[name] = x[name].join(x_thread.months_since_lstg).join(x_offer)
 		x[name] = x[name].astype('float32', copy=False)
 
-	return {'y': y.astype('uint8', copy=False), x}
+	return {'y': y.astype('uint8', copy=False), 'x': x}
 
 
 if __name__ == '__main__':
