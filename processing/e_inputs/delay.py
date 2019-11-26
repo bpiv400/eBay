@@ -47,28 +47,37 @@ def process_inputs(part, role):
     # outcome
     y = load(getPath(['y', 'delay', role]))
 
-    # sort by number of turns
+    # sorted number of turns
     turns = get_sorted_turns(y)
     turns = turns[turns > 0]
-    y = y.reindex(index=turns.index)
+    idx = turns.index
 
-    # load dataframes
-    x_lstg = cat_x_lstg(getPath)
+    # re-sort descending by number of turns
+    y = y.reindex(index=idx)
+
+    # initialize dictionary of input features
+    x = init_x(getPath, idx)
+
+    # add thread features and turn indicators to listing features
     x_thread = load(getPath(['x', 'thread']))
-    x_offer = load(getPath(['x', 'offer']))
-    clock = load(getPath(['clock']))
-    lstg_start = load(getPath(['lookup'])).start_date.astype(
-        'int64') * 24 * 3600
+    x['lstg'] = x['lstg'].join(x_thread.months_since_lstg)
+    x['lstg'] = x['lstg'].join(x_thread.byr_hist.astype('float32') / 10)
+    x['lstg'] = add_turn_indicators(x['lstg'])
 
     # initialize fixed features
-    x_fixed = get_x_fixed(y.index, x_lstg, x_thread, x_offer, role)
+    x_fixed = get_x_fixed(idx, x_lstg, x_thread, x_offer, role)
 
     # clock features by minute
     x_clock = create_x_clock()
 
+    # load dataframes
+    clock = 
+    lstg_start = load(getPath(['lookup'])).start_date.astype(
+        'int64') * 24 * 3600
+
     # index of first x_clock for each y
-    delay_start = clock.groupby(['lstg', 'thread']).shift().reindex(
-        index=turns.index).astype('int64')
+    delay_start = load(getPath(['clock'])).groupby(
+        ['lstg', 'thread']).shift().reindex(index=idx).astype('int64')
     idx_clock = delay_start // 60
 
     # normalized periods remaining at start of delay period
