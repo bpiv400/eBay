@@ -4,7 +4,6 @@ import numpy as np, pandas as pd
 from constants import *
 from utils import *
 from processing.processing_utils import *
-from processing.e_inputs.inputs import Inputs
 
 
 # loads data and calls helper functions to construct training inputs
@@ -66,10 +65,9 @@ if __name__ == '__main__':
     d = convert_to_numpy(d)
 
     # save as dataset
-    dump(Inputs(d, 'arrival'), '%s/inputs/%s/arrival.gz' % (PREFIX, part))
+    dump(d, '%s/inputs/%s/arrival.gz' % (PREFIX, part))
 
     # save small dataset
     if part == 'train_models':
-        small = create_small(d)
-        dump(Inputs(small, 'arrival'), '%s/inputs/small/arrival.gz' % PREFIX)
+        dump(create_small(d), '%s/inputs/small/arrival.gz' % PREFIX)
     

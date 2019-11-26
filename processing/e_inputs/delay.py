@@ -4,7 +4,6 @@ import numpy as np, pandas as pd
 from constants import *
 from utils import *
 from processing.processing_utils import *
-from processing.e_inputs.inputs import Inputs
 
 
 def get_x_fixed(idx, x_lstg, x_thread, x_offer, role):
@@ -118,10 +117,8 @@ if __name__ == '__main__':
     d = convert_to_numpy(d)
 
     # save as dataset
-    dump(Inputs(d, model), '%s/inputs/%s/delay_%s.gz' % (PREFIX, part, role))
+    dump(d, '%s/inputs/%s/delay_%s.gz' % (PREFIX, part, role))
 
     # save small dataset
     if part == 'train_models':
-        small = create_small(d)
-        dump(Inputs(small, model), 
-            '%s/inputs/small/delay_%s.gz' % (PREFIX, role))
+        dump(create_small(d), '%s/inputs/small/delay_%s.gz' % (PREFIX, role))

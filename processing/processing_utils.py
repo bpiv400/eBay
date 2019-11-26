@@ -42,6 +42,18 @@ LTYPES = {'lstg': 'int64',
           'flag': bool,
           'fast': bool}
 
+# groupings of offer variables for embeddings
+OFFER_GROUPS = {'clock': ['days', 'delay', 'holiday', 'dow0', 'dow1', \
+                          'dow2', 'dow3', 'dow4', 'dow5', 'minute_of_day', \
+                          'auto', 'exp'],
+                'price': ['con', 'norm', 'split', 'reject'],
+                'msg': ['msg'],
+                'slr_best': ['slr_best', 'slr_best_open', 'slr_best_recent'],
+                'byr_best': ['byr_best', 'byr_best_open', 'byr_best_recent'],
+                'counts': ['slr_offers', 'slr_offers_open', 'slr_offers_recent', \
+                           'byr_offers', 'byr_offers_open', 'byr_offers_recent', \
+                           'thread_count']}
+
 
 # split into chunks and save
 def chunk(group, L, T, O):
@@ -98,16 +110,20 @@ def get_partition(part):
     return idx, path
 
 
-# concatenate x_lstg, x_w2v, x_slr, x_cat
-def cat_x_lstg(path):
+# initializes a dictionary of input features
+def init_x(path, idx):
     '''
     path: a function that takes a list of strings to be concatenated with
         underscores and returns the path to the file. Example:
         - path(['x', 'lstg']) might return 
             'data/inputs/partitions/train_models/x_lstg.gz'
+    idx: index of lstg ids or multi-index with lstg
     '''
-    l = [load(path(['x', x])) for x in ['w2v', 'slr', 'cat', 'lstg']]
-    return pd.concat(l, axis=1)
+    x = {}
+    for name in ['w2v', 'slr', 'cat', 'lstg']:
+        x[name] = load(path(['x', name])).reindex(
+            index=idx, level='lstg')
+    return x
 
 
 # appends turn indicator variables to offer matrix
@@ -118,10 +134,9 @@ def add_turn_indicators(df):
     indices = np.unique(df.index.get_level_values('index'))
     for i in range(len(indices)-1):
         ind = indices[i]
-        featname = 't' + str((ind+1) // 2)
+        featname = 't%d' % ((ind+1) // 2)
         df[featname] = df.index.isin([ind], level='index')
     return df
-
 
 # creates features from timestapes
 def extract_clock_feats(clock):

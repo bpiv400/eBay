@@ -27,13 +27,12 @@ def get_x_lstg(L):
     # slr feedback
     df['fdbk_100'] = df.fdbk_pstv == 1
     # prices
-    df['decline'] = L.decline_price / L.start_price
-    df['accept'] = L.accept_price / L.start_price
+    df['auto_decline'] = L.decline_price / L.start_price
+    df['auto_accept'] = L.accept_price / L.start_price
     for z in ['start', 'decline', 'accept']:
         df[z + '_is_round'], df[z + '_is_nines'] = do_rounding(L[z + '_price'])
-    df['has_decline'] = df.decline > 0
-    df['has_accept'] = df.accept < 1
-    df['auto_dist'] = df.accept - df.decline
+    df['has_decline'] = df.auto_decline > 0
+    df['has_accept'] = df.auto_accept < 1
     # condition
     s = L.cndtn
     df['new'] = s == 1

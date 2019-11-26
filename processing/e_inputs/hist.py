@@ -4,7 +4,6 @@ import numpy as np, pandas as pd
 from constants import *
 from utils import *
 from processing.processing_utils import *
-from processing.e_inputs.inputs import Inputs
 
 
 # loads data and calls helper functions to construct training inputs
@@ -23,17 +22,12 @@ def process_inputs(part):
 	y = x_thread['byr_hist']
 	idx = y.index
 
-	# input features
-	x = {}
-	for name in ['w2v', 'slr', 'cat', 'lstg']:
-		x[name] = load(getPath(['x', name])).reindex(
-			index=idx, level='lstg')
-		# add thread feats to listing feats
-		if name == 'lstg':
-			x[name] = x[name].join(x_thread.months_since_lstg).join(x_offer)
-		x[name] = x[name].astype('float32', copy=False)
+	# initialize dictionary of input features
+	x = init_x(getPath, idx)
+	x['lstg'] = x['lstg'].join(x_thread.months_since_lstg).join(x_offer)
 
-	return {'y': y.astype('uint8', copy=False), 'x': x}
+	return {'y': y.astype('uint8', copy=False), 
+			'x': {k: v.astype('float32', copy=False) for k, v in x.items()}
 
 
 if __name__ == '__main__':
@@ -61,9 +55,8 @@ if __name__ == '__main__':
 	d = convert_to_numpy(d)
 
 	# save as dataset
-	dump(Inputs(d, 'hist'), '%s/inputs/%s/hist.gz' % (PREFIX, part))
+	dump(d, '%s/inputs/%s/hist.gz' % (PREFIX, part))
 
 	# save small dataset
 	if part == 'train_models':
-		small = create_small(d)
-		dump(Inputs(small, 'hist'), '%s/inputs/small/hist.gz' % PREFIX)
+		dump(create_small(d), '%s/inputs/small/hist.gz' % PREFIX)

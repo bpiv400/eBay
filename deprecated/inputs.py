@@ -1,117 +1,88 @@
-import sys, pickle
-from compress_pickle import load, dump
+import sys
 import numpy as np, pandas as pd
-
-sys.path.append('repo/processing/4_inputs/')
-from parsing_funcs import *
-
-
-# loads data and calls helper functions to construct training inputs
-def process_inputs(part, model, outcome):
-	# initialize output dictionary and size dictionary
-	d = {}
-
-	# path name function
-	getPath = lambda names: '%s/%s/%s.gz' % (PARTS_DIR, part, '_'.join(names))
-
-	# outcome
-	d['y'] = load(getPath(['y', model, outcome]))
-
-	# fixed features
-	x_lstg = cat_x_lstg(part)
-
-    # other input variables
-	x_thread = load(getPath(['x', 'thread']))
-	x_offer = load(getPath(['x', 'offer']))
-
-    # days model
-	if outcome == 'days':
-		d['x_fixed'] = x_lstg
-		d['x_days'] = parse_time_feats_days(d)
-
-    # other arrival interface are all feed-forward
-	elif model == 'arrival':
-		d['x_fixed'] = parse_fixed_feats_arrival(
-			outcome, x_lstg, x_thread, x_offer)
-
-    # byr and slr interface are all recurrent
-	elif outcome == 'delay':
-		d['x_fixed'] = parse_fixed_feats_delay(
-		    model, x_lstg, x_thread, x_offer)
-
-		z_start = load(getPath(['z', 'start']))
-		z_role = load(getPath(['z', model]))
-		d['x_time'] = parse_time_feats_delay(
-		    model, d['y'].index, z_start, z_role)
-	else:
-		d['x_fixed'] = parse_fixed_feats_role(x_lstg, x_thread)
-		d['x_time'] = parse_time_feats_role(model, outcome, x_offer)
-
-    # dictionary of feature names
-	featnames = {k: v.columns for k, v in d.items() if k.startswith('x')}
-
-	return convert_to_arrays(d), featnames
+import torch
+from datetime import datetime as dt
+from torch.utils.data import Dataset
+from constants import *
 
 
-def get_sizes(model, outcome, data):
-    sizes = {}
+# defines a dataset that extends torch.utils.data.Dataset
+class Inputs(Dataset):
 
-    # fixed inputs
-    sizes['fixed'] = data['x_fixed'].size()[-1]
-    if outcome == 'days':
-    	sizes['fixed'] += data['x_days'].size()[-1]
+    def __init__(self, d, model):
 
-    # output parameters
-    if outcome in ['sec', 'con']:
-        sizes['out'] = 3
-    elif outcome in ['days', 'hist']:
-        sizes['out'] = 2
-    else:
-        sizes['out'] = 1
+        # save data and parameters to self
+        self.d = d
+        self.model = model
+        self.isRecurrent = 'turns' in self.d
 
-    # RNN parameters
-    if model != 'arrival':
-        sizes['steps'] = data['y'].size()[0]
-        sizes['time'] = data['x_time'].size()[-1]
+        # number of examples
+        self.N = np.shape(self.d['x_fixed'])[0]
+        
+        # number of labels, for normalizing loss
+        if self.isRecurrent:
+            self.N_labels = np.sum(self.d['turns'])
+        else:
+            self.N_labels = self.N
 
-    return sizes
-
-
-if __name__ == '__main__':
-	# extract model and outcome from int
-	parser = argparse.ArgumentParser(
-		description='Model of environment for bargaining AI.')
-	parser.add_argument('--num', type=int, help='Model ID.')
-	num = parser.parse_args().num-1
-	modelid = num % len(MODEL_DIRS)
-	partid = num // len(MODEL_DIRS)
-
-	# partition, model and outcome
-	part = PARTITIONS[partid]
-	path = part + '/' + MODEL_DIRS[modelid]
-
-	path = MODEL_DIRS[]
-	print(path)
-	model, outcome, _ = path.split('/')
-
-	# loop over partitions
-	for partition in ['train_models', 'train_rl', 'test']:
-		print('\t%s' % partition)
-
-		# input dataframes, output tensors
-		tensors, featnames = process_inputs(partition, model, outcome)
-
-		# save tensors to pickle
-		dump(tensors, MODEL_DIR + path + partition + '.gz')
-
-		# save sizes and featnames once
-		if partition == 'test':
-			# save featnames
-			pickle.dump(featnames, 
-				open(MODEL_DIR +  path + 'featnames.pkl', 'wb'))
-
-			# get data size parameters and save
-			pickle.dump(get_sizes(model, outcome, tensors), 
-				open(MODEL_DIR +  path + 'sizes.pkl', 'wb'))
+        # for arrival and delay models
+        if 'tf' in self.d:
+            # number of time steps
+            self.n = np.shape(self.d['y'])[1]
+            # counter for expanding clock features
+            role = model.split('_')[-1]
+            interval = int(INTERVAL[role] / 60) # interval in minutes
+            self.counter = interval * np.array(range(self.n), dtype='uint16')
+            # period / max periods
+            self.duration = np.expand_dims(
+                np.array(range(self.n), dtype='float32') / self.n, axis=1)
+            # number of time features
+            for val in self.d['tf'].values():
+                N_tfeats = len(val.columns)
+                break
+            # empty time feats
+            self.tf0 = np.zeros((self.n, N_tfeats), dtype='float32')
 
 
+    def __getitem__(self, idx):
+        # all models index y and x_fixed using idx
+        y = self.d['y'][idx]
+        x_fixed = self.d['x_fixed'][idx,:]
+
+        # feed-forward models
+        if not self.isRecurrent:
+            return y, x_fixed, idx
+
+        # number of turns
+        turns = self.d['turns'][idx]
+
+        # x_time
+        if 'x_time' in self.d:
+            x_time = self.d['x_time'][idx,:,:]
+        else:
+            # indices of timestamps
+            idx_clock = self.d['idx_clock'][idx] + self.counter
+
+            # clock features
+            x_clock = self.d['x_clock'][idx_clock].astype('float32')
+
+            # fill in missing time feats with zeros
+            if idx in self.d['tf']:
+                x_tf = self.d['tf'][idx].reindex(
+                    index=range(self.n), fill_value=0).to_numpy()
+            else:
+                x_tf = self.tf0
+
+            # time feats: first clock feats, then time-varying feats
+            x_time = np.concatenate((x_clock, x_tf, self.duration), axis=1)
+
+        # for delay models, add (normalized) periods remaining
+        if 'remaining' in self.d:
+            remaining = self.d['remaining'][idx] - self.duration
+            x_time = np.concatenate((x_time, remaining), axis=1)
+
+        return y, turns, x_fixed, x_time, idx
+
+
+    def __len__(self):
+        return self.N
