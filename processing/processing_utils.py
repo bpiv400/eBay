@@ -187,7 +187,7 @@ def sort_by_turns(y):
     # sort by number of turns, descending
     turns = turns.sort_values(ascending=False, kind='mergesort')
     # sort y by turns
-    return y.reindex(index=turns)
+    return y.reindex(index=turns.index)
 
 
 # returns dictionary of feature names for each 'x' dataframe in d
