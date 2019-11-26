@@ -1,6 +1,6 @@
 #!/bin/bash
-#$ -t 1-12
-#$ -l m_mem_free=50G
+#$ -t 1-18
+#$ -l m_mem_free=75G
 #$ -N offer
 #$ -j y
 #$ -o logs/

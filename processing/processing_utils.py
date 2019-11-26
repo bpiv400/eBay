@@ -269,7 +269,7 @@ def convert_to_numpy(d):
 
     # loop through x
     for k, v in d['x'].items():
-        d['x'][k] = v.to_numpy()
+        d['x'][k] = v.astype('float32', copy=False).to_numpy()
 
     # convert time features to dictionary
     if 'tf' in d:

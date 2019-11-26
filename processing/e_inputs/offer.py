@@ -117,9 +117,37 @@ def process_inputs(part, outcome, role):
 
 	# add price feats to x['price']
 	x['price'] = pd.concat([price_feats, x['price']], axis=1)
-	
-	return {'y': y.astype('uint8', copy=False), 
-			'x': {k: v.astype('float32', copy=False) for k, v in x.items()}}
+
+	# if not delay model, return
+	if outcome in ['con', 'msg']:
+		return {'y': y.astype('uint8', copy=False), 'x': x}
+
+	# clock features by minute
+    x_clock = create_x_clock()
+
+    # index of first x_clock for each y
+    delay_start = load(getPath(['clock'])).groupby(
+        ['lstg', 'thread']).shift().reindex(index=idx).astype('int64')
+    idx_clock = delay_start // 60
+
+    # normalized periods remaining at start of delay period
+    lstg_start = load(getPath(['lookup'])).start_date.astype(
+        'int64') * 24 * 3600
+    remaining = MAX_DAYS * 24 * 3600 - (delay_start - lstg_start)
+    remaining.loc[remaining.index.isin([2, 4, 6, 7], level='index')] /= \
+        MAX_DELAY['slr']
+    remaining.loc[remaining.index.isin([3, 5], level='index')] /= \
+        MAX_DELAY['byr']
+    remaining = np.minimum(remaining, 1)
+
+    # time features
+    tf = load(getPath(['tf', 'delay', 'diff', role]))
+
+    return {'y': y.astype('int8', copy=False), 'x': x,
+            'x_clock': x_clock.astype('float32', copy=False),
+            'idx_clock': idx_clock.astype('int64', copy=False),
+            'remaining': remaining.astype('float32', copy=False),
+            'tf': tf.astype('float32', copy=False)}
 
 
 if __name__ == '__main__':
@@ -129,9 +157,9 @@ if __name__ == '__main__':
 	num = parser.parse_args().num-1
 
 	# partition and role
-	part = PARTITIONS[num // 4]
-	outcome = 'con' if num % 2 else 'msg'
-	role = 'slr' if (num // 2) % 2 else 'byr'
+	part = PARTITIONS[num // 6]
+	outcome = ['delay', 'con', 'msg'][num % 3]
+	role = 'slr' if (num // 3) % 2 else 'byr'
 	model = '%s_%s' % (outcome, role)
 	print('%s/%s' % (part, model))
 
