@@ -13,8 +13,8 @@ def clean_offer(offer, i, outcome, role):
 	# set features to 0 if i exceeds index
 	else:
 		future = i > offer.index.get_level_values(level='index')
-		offer.loc[future, df.dtypes == 'bool'] = False
-		offer.loc[future, df.dtypes != 'bool'] = 0
+		offer.loc[future, offer.dtypes == 'bool'] = False
+		offer.loc[future, offer.dtypes != 'bool'] = 0
 	# for current turn, set feats to 0
 	curr = i == offer.index.get_level_values(level='index')
 	offer.loc[curr, 'msg'] = False
