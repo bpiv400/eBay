@@ -19,8 +19,8 @@ def clean_offer(offer, i, outcome, role):
 	curr = i == offer.index.get_level_values(level='index')
 	if outcome == 'delay':
 		offer.loc[curr, df.dtypes == 'bool'] = False
-        offer.loc[curr, df.dtypes != 'bool'] = 0
-    else:
+		offer.loc[curr, df.dtypes != 'bool'] = 0
+	else:
 		offer.loc[curr, 'msg'] = False
 		if outcome == 'con':
 			offer.loc[curr, ['con', 'norm']] = 0
@@ -123,31 +123,31 @@ def process_inputs(part, outcome, role):
 		return {'y': y.astype('uint8', copy=False), 'x': x}
 
 	# clock features by minute
-    x_clock = create_x_clock()
+	x_clock = create_x_clock()
 
-    # index of first x_clock for each y
-    delay_start = load(getPath(['clock'])).groupby(
-        ['lstg', 'thread']).shift().reindex(index=idx).astype('int64')
-    idx_clock = delay_start // 60
+	# index of first x_clock for each y
+	delay_start = load(getPath(['clock'])).groupby(
+		['lstg', 'thread']).shift().reindex(index=idx).astype('int64')
+	idx_clock = delay_start // 60
 
-    # normalized periods remaining at start of delay period
-    lstg_start = load(getPath(['lookup'])).start_date.astype(
-        'int64') * 24 * 3600
-    remaining = MAX_DAYS * 24 * 3600 - (delay_start - lstg_start)
-    remaining.loc[remaining.index.isin([2, 4, 6, 7], level='index')] /= \
-        MAX_DELAY['slr']
-    remaining.loc[remaining.index.isin([3, 5], level='index')] /= \
-        MAX_DELAY['byr']
-    remaining = np.minimum(remaining, 1)
+	# normalized periods remaining at start of delay period
+	lstg_start = load(getPath(['lookup'])).start_date.astype(
+		'int64') * 24 * 3600
+	remaining = MAX_DAYS * 24 * 3600 - (delay_start - lstg_start)
+	remaining.loc[remaining.index.isin([2, 4, 6, 7], level='index')] /= \
+		MAX_DELAY['slr']
+	remaining.loc[remaining.index.isin([3, 5], level='index')] /= \
+		MAX_DELAY['byr']
+	remaining = np.minimum(remaining, 1)
 
-    # time features
-    tf = load(getPath(['tf', 'delay', 'diff', role]))
+	# time features
+	tf = load(getPath(['tf', 'delay', 'diff', role]))
 
-    return {'y': y.astype('int8', copy=False), 'x': x,
-            'x_clock': x_clock.astype('float32', copy=False),
-            'idx_clock': idx_clock.astype('int64', copy=False),
-            'remaining': remaining.astype('float32', copy=False),
-            'tf': tf.astype('float32', copy=False)}
+	return {'y': y.astype('int8', copy=False), 'x': x,
+			'x_clock': x_clock.astype('float32', copy=False),
+			'idx_clock': idx_clock.astype('int64', copy=False),
+			'remaining': remaining.astype('float32', copy=False),
+			'tf': tf.astype('float32', copy=False)}
 
 
 if __name__ == '__main__':
