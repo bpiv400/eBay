@@ -18,8 +18,8 @@ def clean_offer(offer, i, outcome, role):
 	# for current turn, set feats to 0
 	curr = i == offer.index.get_level_values(level='index')
 	if outcome == 'delay':
-		offer.loc[curr, df.dtypes == 'bool'] = False
-		offer.loc[curr, df.dtypes != 'bool'] = 0
+		offer.loc[curr, offer.dtypes == 'bool'] = False
+		offer.loc[curr, offer.dtypes != 'bool'] = 0
 	else:
 		offer.loc[curr, 'msg'] = False
 		if outcome == 'con':
