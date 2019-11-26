@@ -19,8 +19,8 @@ def process_inputs(part):
     turns = get_sorted_turns(y)
     y = y.reindex(index=turns.index)
 
-    # fixed features
-    x_fixed = cat_x_lstg(getPath).reindex(index=turns.index)
+    # initialize dictionary of input features
+    x = init_x(getPath, turns.index)
 
     # clock features by minute
     x_clock = create_x_clock()
@@ -35,7 +35,7 @@ def process_inputs(part):
 
     return {'y': y.astype('int8', copy=False),
             'turns': turns.astype('uint16', copy=False),
-            'x_fixed': x_fixed.astype('float32', copy=False), 
+            'x': {k: v.astype('float32', copy=False) for k, v in x.items()}, 
             'x_clock': x_clock.astype('float32', copy=False),
             'idx_clock': idx_clock.astype('int64', copy=False),
             'tf': tf.astype('float32', copy=False)}

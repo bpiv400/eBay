@@ -6,18 +6,24 @@ class FeedForward(nn.Module):
         # super constructor
         super(FeedForward, self).__init__()
 
-        # save sizes of x_fixed to self
+        # save dictionary of input feat sizes
         self.k = sizes['x']
 
         # activation function
         self.f = nn.ReLU()
 
-        # initial layer
-        self.embedding = nn.ModuleDict({k: nn.Linear(v, v) for k, v in self.k})
+        # embeddings layer(s)
+        d = {}
+        for k, v in self.k.items():
+            l = []
+            for i in range(2):
+                l += [nn.Linear(v, v), self.f]
+            d[k] = nn.ModuleList(l)
+        self.embedding = nn.ModuleDict(d)
 
         # intermediate layers
         self.seq = nn.ModuleList(
-            [nn.Linear(sum(sizes['fixed']), params['hidden']), self.f])
+            [nn.Linear(sum(self.k.values()), params['hidden']), self.f])
         for i in range(params['layers']-1):
             self.seq.append(nn.Dropout(p=params['dropout'] / 10))
             self.seq.append(
@@ -31,23 +37,22 @@ class FeedForward(nn.Module):
             self.seq.append(nn.Linear(params['hidden'], sizes['out']))
 
     def forward(self, x):
-        # check that input has same number of columns as in sizes
-        if x.size()[-1] != sum(self.k):
-            print('Input has %d feats; expecting %d feats.' \
-                % (x.size()[-1], sum(self.k)))
-
+        '''
+        x: OrderedDict() with same keys as self.k
+        '''
         # separate embeddings for input feature components
-        last, l = 0, []
-        for i in range(len(self.k)):
-            module = self.embedding[i](x[:,last:last+self.k[i]])
-            l.append(module)
-            last = last + self.k[i]
+        l = []
+        for key in self.k.keys():
+            x_k = x[key]
+            for m in self.embedding[key]:
+                x_k = m(x_k)
+            l.append(x_k)
 
-        # concatenate and activate
-        x = self.f(torch.cat(l, dim=1))
+        # concatenate
+        x = torch.cat(l, dim=1)
 
         # fully connected layers with dropout
-        for _, m in enumerate(self.seq):
+        for m in self.seq:
             x = m(x)
         return x
 

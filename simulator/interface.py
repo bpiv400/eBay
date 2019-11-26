@@ -18,7 +18,7 @@ class Inputs(Dataset):
         self.isRecurrent = 'turns' in self.d
 
         # number of examples
-        self.N = np.shape(self.d['x_fixed'])[0]
+        self.N = np.shape(self.d['y'])[0]
         
         # number of labels, for normalizing loss
         if self.isRecurrent:
@@ -46,36 +46,34 @@ class Inputs(Dataset):
 
 
     def __getitem__(self, idx):
-        # all models index y and x_fixed using idx
+        # all models index y using idx
         y = self.d['y'][idx]
-        x_fixed = self.d['x_fixed'][idx,:]
+
+        # index in dictionary
+        x = {k: v[idx, :] for k, v in self.d['x'].items()}
 
         # feed-forward models
         if not self.isRecurrent:
-            return y, x_fixed, idx
+            return y, x, idx
 
         # number of turns
         turns = self.d['turns'][idx]
 
-        # x_time
-        if 'x_time' in self.d:
-            x_time = self.d['x_time'][idx,:,:]
+        # indices of timestamps
+        idx_clock = self.d['idx_clock'][idx] + self.counter
+
+        # clock features
+        x_clock = self.d['x_clock'][idx_clock].astype('float32')
+
+        # fill in missing time feats with zeros
+        if idx in self.d['tf']:
+            x_tf = self.d['tf'][idx].reindex(
+                index=range(self.n), fill_value=0).to_numpy()
         else:
-            # indices of timestamps
-            idx_clock = self.d['idx_clock'][idx] + self.counter
+            x_tf = self.tf0
 
-            # clock features
-            x_clock = self.d['x_clock'][idx_clock].astype('float32')
-
-            # fill in missing time feats with zeros
-            if idx in self.d['tf']:
-                x_tf = self.d['tf'][idx].reindex(
-                    index=range(self.n), fill_value=0).to_numpy()
-            else:
-                x_tf = self.tf0
-
-            # time feats: first clock feats, then time-varying feats
-            x_time = np.concatenate((x_clock, x_tf, self.duration), axis=1)
+        # time feats: first clock feats, then time-varying feats
+        x_time = np.concatenate((x_clock, x_tf, self.duration), axis=1)
 
         # for delay models, add (normalized) periods remaining
         if 'remaining' in self.d:
@@ -124,19 +122,23 @@ class Sample(Sampler):
 
 # collate function for feedforward networks
 def collateFF(batch):
-    y, x_fixed, idx = [], [], []
+    y, x, idx = [], {}, []
     for b in batch:
         y.append(b[0])
-        x_fixed.append(torch.from_numpy(b[1]))
+        for k, v in b[1].items():
+            if k in x:
+                x[k].append(torch.from_numpy(v))
+            else:
+                x[k] = [torch.from_numpy(v)]
         idx.append(b[2])
 
     # convert to tensor
     y = torch.from_numpy(np.asarray(y))
-    x_fixed = torch.stack(x_fixed).float()
+    x = {k: torch.stack(v).float() for k, v in x.items()}
     idx = torch.tensor(idx)
 
     # output is dictionary of tensors
-    return {'y': y, 'x_fixed': x_fixed}
+    return {'y': y, 'x': x}
 
 
 # collate function for recurrent networks

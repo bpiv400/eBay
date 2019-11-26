@@ -50,12 +50,12 @@ class Simulator:
         # feed-forward
         if 'x_time' not in d:
             y = d['y']
-            theta = self.net(d['x_fixed']).squeeze()
+            theta = self.net(d['x']).squeeze()
 
             # for con_byr, split by turn and calculate loss separately
             if self.model == 'con_byr':
                 # observation is on buyer's 4th turn if all three turn indicators are 0
-                t4 = torch.sum(d['x_fixed'][:,-3:], dim=1) == 0
+                t4 = torch.sum(d['x']['lstg'][:,-3:], dim=1) == 0
 
                 # loss for first 3 turns
                 loss = self.loss[0](theta[~t4,:], y[~t4].long())
@@ -102,7 +102,11 @@ class Simulator:
 
         # move to gpu
         if self.device != 'cpu':
-            d = {k: v.to(self.device) for k, v in d.items()}
+            for key, val in d.items():
+                if key == 'x':
+                    d[key] = {k: v.to(self.device) for k, v in val.items()}
+                else:
+                    d[key] = val.to(self.device)
 
         # pack x_time
         if 'x_time' in d:
@@ -111,7 +115,6 @@ class Simulator:
 
         # calculate loss
         loss = self.evaluate_loss(d)
-        del d
 
         # step down gradients
         if isTraining:

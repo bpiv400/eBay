@@ -86,6 +86,7 @@ def process_inputs(part, outcome, role):
 	x_thread = load(getPath(['x', 'thread']))
 	x['lstg'] = x['lstg'].join(x_thread.months_since_lstg)
 	x['lstg'] = x['lstg'].join(x_thread.byr_hist.astype('float32') / 10)
+	x['lstg'] = add_turn_indicators(x['lstg'])
 
 	# save price features for later
 	price_feats = x['lstg'][['start_price_pctile', 'auto_decline', 'auto_accept']]
