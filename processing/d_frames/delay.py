@@ -51,7 +51,8 @@ def get_y_delay(delay, censored, role):
     # replace censored observations with -1
     for i in range(INTERVAL_COUNTS[role]):
         df[i] -= (i >= v).astype('int8')
-    return df
+    # sort by turns and return
+    return sort_by_turns(df)
 
 
 if __name__ == "__main__":

@@ -45,7 +45,8 @@ def get_y_arrival(lstg_start, lstg_end, thread_start):
             index=end.index, fill_value=0)
         value -= (end < i).astype('int8')
         df[i] = value
-    return df
+    # sort by turns and return
+    return sort_by_turns(df)
 
 
 if __name__ == "__main__":

@@ -122,8 +122,11 @@ def init_x(path, idx):
     '''
     x = OrderedDict()
     for name in ['w2v', 'slr', 'cat', 'lstg']:
-        x[name] = load(path(['x', name])).reindex(
-            index=idx, level='lstg')
+        x[name] = load(path(['x', name]))
+        if len(idx.names) == 1:
+            x[name] = x[name].reindex(index=idx)
+        else:
+            x[name] = x[name].reindex(index=idx, level='lstg')
     return x
 
 
@@ -170,6 +173,21 @@ def get_sorted_turns(y):
     '''
     turns = (y > -1).sum(axis=1)
     return turns.sort_values(ascending=False, kind='mergesort')
+
+
+# sorts y by the number of non-missing (i.e., -1) values in each row
+def sort_by_turns(y):
+    '''
+    y: dataframe in which -1 entries should be ignored.
+    '''
+    # number of turns
+    turns = (y > -1).sum(axis=1)
+    # remove rows with 0 turns
+    turns = turns[turns > 0]
+    # sort by number of turns, descending
+    turns = turns.sort_values(ascending=False, kind='mergesort')
+    # sort y by turns
+    return y.reindex(index=turns)
 
 
 # returns dictionary of feature names for each 'x' dataframe in d

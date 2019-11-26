@@ -17,10 +17,14 @@ def clean_offer(offer, i, outcome, role):
 		offer.loc[future, offer.dtypes != 'bool'] = 0
 	# for current turn, set feats to 0
 	curr = i == offer.index.get_level_values(level='index')
-	offer.loc[curr, 'msg'] = False
-	if outcome == 'con':
-		offer.loc[curr, ['con', 'norm']] = 0
-		offer.loc[curr, ['split', 'auto', 'exp', 'reject']] = False
+	if outcome == 'delay':
+		offer.loc[curr, df.dtypes == 'bool'] = False
+        offer.loc[curr, df.dtypes != 'bool'] = 0
+    else:
+		offer.loc[curr, 'msg'] = False
+		if outcome == 'con':
+			offer.loc[curr, ['con', 'norm']] = 0
+			offer.loc[curr, ['split', 'auto', 'exp', 'reject']] = False
 	# if buyer turn or last turn, drop auto, exp, reject
 	if (i in IDX['byr']) or (i == max(IDX[role])):
 		offer = offer.drop(['auto', 'exp', 'reject'], axis=1)
@@ -46,6 +50,9 @@ def get_offer_vec(x, featnames):
 
 
 def get_y(x_offer, outcome, role):
+	# delay
+	if outcome == 'delay':
+		return load(getPath(['y', 'delay', role]))
 	# subset to relevant observations
 	if outcome == 'con':
 		# drop zero delay and expired offers

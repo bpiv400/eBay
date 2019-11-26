@@ -70,17 +70,14 @@ def process_inputs(part, role):
     # clock features by minute
     x_clock = create_x_clock()
 
-    # load dataframes
-    clock = 
-    lstg_start = load(getPath(['lookup'])).start_date.astype(
-        'int64') * 24 * 3600
-
     # index of first x_clock for each y
     delay_start = load(getPath(['clock'])).groupby(
         ['lstg', 'thread']).shift().reindex(index=idx).astype('int64')
     idx_clock = delay_start // 60
 
     # normalized periods remaining at start of delay period
+    lstg_start = load(getPath(['lookup'])).start_date.astype(
+        'int64') * 24 * 3600
     remaining = MAX_DAYS * 24 * 3600 - (delay_start - lstg_start)
     remaining.loc[remaining.index.isin([2, 4, 6, 7], level='index')] /= \
         MAX_DELAY['slr']
