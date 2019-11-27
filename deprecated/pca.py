@@ -1,68 +1,54 @@
-import sys
+import sys, argparse
 from compress_pickle import load, dump
+import numpy as np, pandas as pd
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
-import numpy as np, pandas as pd
-
-sys.path.append('repo/')
 from constants import *
 from utils import *
-
-sys.path.append('repo/processing/')
-from processing_utils import *
+from processing.processing_utils import *
 
 
-# partitions dataframe on lstg using partitions dictionary
-def partition_frame(partitions, df, name):
-    for part, idx in partitions.items():
-        if len(df.index.names) == 1:
-            toSave = df.reindex(index=idx)
-        else:
-            toSave = df.reindex(index=idx, level='lstg')
-        dump(toSave, PARTS_DIR + part + '/' + name + '.gz')
-
-
-# scales variables, does PCA, keeps components with 95% of variance
-def do_pca(df):
+# scales variables and performs PCA
+def do_pca(df, pre):
     # standardize variables
     vals = StandardScaler().fit_transform(df)
     # PCA
     N = len(df.columns)
     pca = PCA(n_components=N, svd_solver='full')
     components = pca.fit_transform(vals)
-    # select number of components
-    shares = np.var(components, axis=0) / N
-    keep = 1
-    while np.sum(shares[:keep]) < PCA_CUTOFF:
-        keep += 1
     # return dataframe
-    return pd.DataFrame(components[:,:keep], index=df.index, 
-        columns=['c' + str(i) for i in range(1,keep+1)])
+    return pd.DataFrame(components, index=df.index, 
+        columns=['%s%d' % (pre, i) for i in range(N)])
 
 
 if __name__ == "__main__":
-    # parse parameters
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--num', action='store', type=int, required=True)
-    num = parser.parse_args().num
+	# 1 for w2v, 2 for slr, 3 for cat
+	parser = argparse.ArgumentParser()
+	parser.add_argument('--num', action='store', type=int, required=True)
+	num = parser.parse_args().num
 
-    # load partitions
-    partitions = load(PARTS_DIR + 'partitions.gz')
+	# load partitions and concatenate indices
+	partitions = load(PARTS_DIR + 'partitions.pkl')
+	idx = np.sort(np.concatenate(list(partitions.values())))
 
-    # do pca on time-valued features
-    if num == 1:
-        # slr
-        print('slr time-valued features')
-        tf_slr = load_frames('tf_slr')
-        tf_slr = do_pca(tf_slr)
-        partition_frame(partitions, tf_slr, 'x_slr')
-    elif num == 2:
-        # meta
-        print('meta time-valued features')
-        idx = np.sort(np.concatenate(list(partitions.values())))
-        tf_meta = []
-        for i in range(N_META):
-            tf_meta.append(load(FEATS_DIR + 'm' + str(i) + '_tf_meta.gz'))
-        tf_meta = pd.concat(tf_meta).reindex(index=idx)
-        tf_meta = do_pca(tf_meta)
-        partition_frame(partitions, tf_meta, 'x_meta')
+	# load data
+	if num == 1:
+		name = 'w2v'
+		s = load(CLEAN_DIR + 'listings.pkl')[['cat']].reindex(index=idx)
+		byr = load(W2V_DIR + 'byr.gz').reindex(
+			index=s.values.squeeze(), fill_value=0)
+		slr = load(W2V_DIR + 'slr.gz').reindex(
+			index=s.values.squeeze(), fill_value=0)
+		var = pd.concat([byr, slr], axis=1)
+		var.set_index(s.index, inplace=True)
+	else:
+		name = 'slr' if num == 2 else 'cat'
+		var = load_frames(name).reindex(index=idx, fill_value=0)
+
+	# pca
+	var = do_pca(var, name)
+
+	# save by partition
+	for part, indices in partitions.items():
+		dump(var.reindex(index=indices), 
+			PARTS_DIR + '%s/x_%s.gz' % (part, name))
