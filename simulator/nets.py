@@ -82,9 +82,10 @@ class LSTM(nn.Module):
         self.output = nn.Linear(params['hidden'], sizes['out'])
 
     # output discrete weights and parameters of continuous components
-    def forward(self, x_fixed, x_time):
-        x_fixed = x_fixed.unsqueeze(dim=0)
-        theta, _ = self.rnn(x_time, (self.h0(x_fixed), self.c0(x_fixed)))
+    def forward(self, x, x_time):
+        hidden = (self.h0(x).unsqueeze(dim=0), 
+            self.c0(x).unsqueeze(dim=0))
+        theta, _ = self.rnn(x_time, hidden)
 
         # pad
         theta, _ = nn.utils.rnn.pad_packed_sequence(

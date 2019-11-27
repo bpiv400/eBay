@@ -242,9 +242,9 @@ def create_groups(d):
     '''
 
     # save list of arrays of indices with same number of turns
-    if 'turns' in d:
-        return [np.nonzero(d['turns'] == n)[0] \
-                        for n in np.unique(d['turns'])]
+    if np.shape(d['y'])[-1] > 1:
+        turns = np.sum(d['y'] > -1, axis=1)
+        return [np.nonzero(turns == n)[0] for n in np.unique(turns)]
 
     # for feed-forward nets, create single vector of indices
     return [np.array(range(np.shape(d['x']['lstg'])[0]))]
@@ -290,15 +290,25 @@ def create_small(d):
     
     small = {}
 
-    # first N_SMALL indices
+    # randomly select N_SMALL indices
+    v = np.arange(np.shape(d['y'])[0])
+    np.random.shuffle(v)
+    idx = v[:N_SMALL]
+
+    # sort indices by turns
+    y = d['y'][idx]
+    turns = np.sum(y > -1, axis=1)
+    idx = idx[np.argsort(-turns)]
+
+    # directly subsample
     for k in ['y', 'idx_clock', 'remaining']:
         if k in d:
-            small[k] = d[k][:N_SMALL]
+            small[k] = d[k][idx]
 
     # loop through x
     small['x'] = {}
     for k, v in d['x'].items():
-        small['x'][k] = d['x'][k][:N_SMALL]
+        small['x'][k] = d['x'][k][idx]
 
     # x_clock in full
     if 'x_clock' in d:
@@ -307,7 +317,7 @@ def create_small(d):
     # time features dictionary
     if 'tf' in d:
         small['tf'] = {}
-        for i in range(N_SMALL):
+        for i in idx:
             if i in d['tf']:
                 small['tf'][i] = d['tf'][i]
 

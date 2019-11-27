@@ -80,8 +80,7 @@ if __name__ == '__main__':
     print(simulator.loss)
 
     # initialize optimizer
-    optimizer = optim.Adam(simulator.net.parameters(), 
-        betas=(0.9, 1-math.pow(10, params['b2'])),
+    optimizer = optim.Adam(simulator.net.parameters(),
         lr=math.pow(10, params['lr']))
     print(optimizer)
 

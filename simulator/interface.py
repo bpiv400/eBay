@@ -15,14 +15,14 @@ class Inputs(Dataset):
         # save data and parameters to self
         self.d = load('%s/inputs/%s/%s.gz' % (PREFIX, part, model))
         self.model = model
-        self.isRecurrent = 'turns' in self.d
+        self.isRecurrent = np.shape(self.d['y'])[-1] > 1
 
         # number of examples
         self.N = np.shape(self.d['y'])[0]
         
         # number of labels, for normalizing loss
         if self.isRecurrent:
-            self.N_labels = np.sum(self.d['turns'])
+            self.N_labels = np.sum(self.d['y'] > -1)
         else:
             self.N_labels = self.N
 
@@ -30,17 +30,21 @@ class Inputs(Dataset):
         if 'tf' in self.d:
             # number of time steps
             self.n = np.shape(self.d['y'])[1]
+
             # counter for expanding clock features
             role = model.split('_')[-1]
             interval = int(INTERVAL[role] / 60) # interval in minutes
             self.counter = interval * np.array(range(self.n), dtype='uint16')
+
             # period / max periods
             self.duration = np.expand_dims(
                 np.array(range(self.n), dtype='float32') / self.n, axis=1)
+
             # number of time features
             for val in self.d['tf'].values():
                 N_tfeats = len(val.columns)
                 break
+                
             # empty time feats
             self.tf0 = np.zeros((self.n, N_tfeats), dtype='float32')
 
@@ -54,10 +58,7 @@ class Inputs(Dataset):
 
         # feed-forward models
         if not self.isRecurrent:
-            return y, x, idx
-
-        # number of turns
-        turns = self.d['turns'][idx]
+            return y, x
 
         # indices of timestamps
         idx_clock = self.d['idx_clock'][idx] + self.counter
@@ -80,7 +81,7 @@ class Inputs(Dataset):
             remaining = self.d['remaining'][idx] - self.duration
             x_time = np.concatenate((x_time, remaining), axis=1)
 
-        return y, turns, x_fixed, x_time, idx
+        return y, x, x_time
 
 
     def __len__(self):
@@ -122,7 +123,7 @@ class Sample(Sampler):
 
 # collate function for feedforward networks
 def collateFF(batch):
-    y, x, idx = [], {}, []
+    y, x = [], {}
     for b in batch:
         y.append(b[0])
         for k, v in b[1].items():
@@ -130,12 +131,10 @@ def collateFF(batch):
                 x[k].append(torch.from_numpy(v))
             else:
                 x[k] = [torch.from_numpy(v)]
-        idx.append(b[2])
 
     # convert to tensor
     y = torch.from_numpy(np.asarray(y))
     x = {k: torch.stack(v).float() for k, v in x.items()}
-    idx = torch.tensor(idx)
 
     # output is dictionary of tensors
     return {'y': y, 'x': x}
@@ -144,26 +143,26 @@ def collateFF(batch):
 # collate function for recurrent networks
 def collateRNN(batch):
     # initialize output
-    y, turns, x_fixed, x_time, idx = [], [], [], [], []
+    y, x, x_time = [], {}, []
 
     # sorts the batch list in decreasing order of turns
     for b in batch:
         y.append(torch.from_numpy(b[0]))
-        turns.append(b[1])
-        x_fixed.append(torch.from_numpy(b[2]))
-        x_time.append(torch.from_numpy(b[3]))
-        idx.append(b[4])
+        for k, v in b[1].items():
+            if k in x:
+                x[k].append(torch.from_numpy(v))
+            else:
+                x[k] = [torch.from_numpy(v)]
+        x_time.append(torch.from_numpy(b[2]))
 
     # convert to tensor, pack if needed
     y = torch.stack(y).float()
-    turns = torch.from_numpy(np.asarray(
-        turns, dtype='int64')).long()
-    x_fixed = torch.stack(x_fixed).float()
+    turns = torch.sum(y > -1, dim=1).long()
+    x = {k: torch.stack(v).float() for k, v in x.items()}
     x_time = torch.stack(x_time, dim=0).float()
-    idx = torch.tensor(idx)
     
     # output is dictionary of tensors
     return {'y': y, 
             'turns': turns,
-            'x_fixed': x_fixed, 
+            'x': x, 
             'x_time': x_time}

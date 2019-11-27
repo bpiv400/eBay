@@ -75,7 +75,7 @@ class Simulator:
         mask = d['y'] > -1
 
         # prediction from recurrent net
-        theta = self.net(d['x_fixed'], d['x_time'])
+        theta = self.net(d['x'], d['x_time'])
 
         # apply mask and calculate loss
         theta = theta[mask]

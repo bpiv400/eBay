@@ -55,8 +55,26 @@ if __name__ == "__main__":
     # listing features
     L = load(CLEAN_DIR + 'listings.pkl').reindex(index=idx)
 
-    # initialize listing features
+    # listing features
+    print('Listing features')
     x_lstg = get_x_lstg(L)
-
-    # save
     dump(x_lstg, path('x_lstg'))
+
+    # slr features
+    print('Seller features')
+    slr = load_frames('slr').reindex(index=idx, fill_value=0)
+    dump(x_slr, path('x_slr'))
+
+    # cat features
+    print('Cat features')
+    cat = load_frames('cat').reindex(index=idx, fill_value=0)
+    dump(x_cat, path('x_cat'))
+
+    # word2vec features
+    print('Word2Vec features')
+    s = load(CLEAN_DIR + 'listings.pkl')[['cat']].reindex(index=idx)
+    for role in ['byr', 'slr']:
+        w2v = load(W2V_DIR + '%s.gz' % role).reindex(
+            index=s.values.squeeze(), fill_value=0)
+        w2v.set_index(s.index, inplace=True)
+        dump(w2v, path('x_w2v_%s' % role))
