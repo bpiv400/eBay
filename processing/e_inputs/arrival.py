@@ -14,27 +14,23 @@ def process_inputs(part):
 
     # outcome
     y = load(getPath(['y', 'arrival']))
-
-    # sort by number of turns
-    turns = get_sorted_turns(y)
-    y = y.reindex(index=turns.index)
+    idx = y.index
 
     # initialize dictionary of input features
-    x = init_x(getPath, turns.index)
+    x = init_x(getPath, idx)
 
     # clock features by minute
     x_clock = create_x_clock()
 
     # index of first x_clock for each y
     idx_clock = load(getPath(['lookup']))['start_date'].reindex(
-        index=turns.index).astype('int64') * 24 * 60
+        index=idx).astype('int64') * 24 * 60
 
     # time features
     tf = load(getPath(['tf', 'arrival'])).reindex(
-        index=turns.index, level='lstg')
+        index=idx, level='lstg')
 
     return {'y': y.astype('int8', copy=False),
-            'turns': turns.astype('uint16', copy=False),
             'x': {k: v.astype('float32', copy=False) for k, v in x.items()}, 
             'x_clock': x_clock.astype('float32', copy=False),
             'idx_clock': idx_clock.astype('int64', copy=False),

@@ -274,16 +274,16 @@ def convert_to_numpy(d):
     # convert time features to dictionary
     if 'tf' in d:
         tf_dict = {}
-        for i in range(len(d['turns'].index)):
+        for i in range(len(d['y'].index)):
             try:
                 tf_dict[i] = d['tf'].xs(
-                    d['turns'].index[i], level='lstg')
+                    d['y'].index[i], level='lstg')
             except:
                 continue
         d['tf'] = tf_dict
 
     # convert y and x_fixed to numpy directly
-    for k in ['y', 'turns', 'x_clock', 'idx_clock', 'remaining']:
+    for k in ['y', 'x_clock', 'idx_clock', 'remaining']:
         if k in d:
             d[k] = d[k].to_numpy()
 
@@ -302,7 +302,7 @@ def create_small(d):
     small = {}
 
     # first N_SMALL indices
-    for k in ['y', 'turns', 'idx_clock', 'remaining']:
+    for k in ['y', 'idx_clock', 'remaining']:
         if k in d:
             small[k] = d[k][:N_SMALL]
 
