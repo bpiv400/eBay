@@ -164,17 +164,6 @@ def create_x_clock():
     return extract_clock_feats(minute).join(minute).set_index('clock')
 
 
-# count number of time steps in each observations
-def get_sorted_turns(y):
-    '''
-    y: dataframe of outcomes
-        - columns are time steps
-        - missing outcomes are coded -1
-    '''
-    turns = (y > -1).sum(axis=1)
-    return turns.sort_values(ascending=False, kind='mergesort')
-
-
 # sorts y by the number of non-missing (i.e., -1) values in each row
 def sort_by_turns(y):
     '''

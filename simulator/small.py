@@ -89,6 +89,6 @@ if __name__ == '__main__':
     # time epoch
     train_model(simulator, optimizer, data)
 
-    # # save model
-    # torch.save(simulator.net.state_dict(), 
-    #     MODEL_DIR + '%s_%d.net' % (model, paramsid))
+    # save model
+    torch.save(simulator.net.state_dict(), 
+        MODEL_DIR + '%s_%d.net' % (model, paramsid))
