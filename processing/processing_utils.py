@@ -154,7 +154,10 @@ def get_featnames(d):
     '''
 
     # initialize with components of x
-    featnames = {k: list(v.columns) for k, v in d['x'].items()}
+    featnames = {}
+    featnames['x'] = OrderedDict()
+    for k, v in d['x'].items():
+        featnames['x'][k] = list(v.columns)
 
     # for arrival and delay models
     if 'x_clock' in d:
