@@ -15,7 +15,7 @@ class Inputs(Dataset):
         # save data and parameters to self
         self.d = load('%s/inputs/%s/%s.gz' % (PREFIX, part, model))
         self.model = model
-        self.isRecurrent = np.shape(self.d['y'])[-1] > 1
+        self.isRecurrent = len(np.shape(self.d['y'])) > 1
 
         # number of examples
         self.N = np.shape(self.d['y'])[0]

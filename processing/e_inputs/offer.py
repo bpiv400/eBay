@@ -6,6 +6,19 @@ from utils import *
 from processing.processing_utils import *
 
 
+# appends turn indicator variables to offer matrix
+def add_turn_indicators(df):
+    '''
+    df: dataframe with index ['lstg', 'thread', 'index'].
+    '''
+    indices = np.unique(df.index.get_level_values('index'))
+    for i in range(len(indices)-1):
+        ind = indices[i]
+        featname = 't%d' % ((ind+1) // 2)
+        df[featname] = df.index.isin([ind], level='index')
+    return df
+
+# deletes irrelevant feats and sets unseen feats to 0
 def clean_offer(offer, i, outcome, role):
 	# if turn 1, drop days and delay
 	if i == 1:
@@ -36,6 +49,7 @@ def clean_offer(offer, i, outcome, role):
 	return offer
 
 
+# concatenates offer features across turns
 def get_offer_vec(x, featnames):
 	feats = []
 	# loop over features and turns
@@ -49,6 +63,7 @@ def get_offer_vec(x, featnames):
 	return add_turn_indicators(pd.concat(feats, axis=1))
 
 
+# returns either a series of msg indicators or concession indices
 def get_y(x_offer, outcome, role):
 	# subset to relevant observations
 	if outcome == 'con':
@@ -108,6 +123,8 @@ def process_inputs(part, outcome, role):
 		offer = df.xs(i, level='index').reindex(index=idx)
 		# clean
 		offer = clean_offer(offer, i, outcome, role)
+		# add turn indicators
+		offer = add_turn_indicators(offer)
 		# append with price features
 		x['offer%d' % i] = pd.concat([price_feats, offer], axis=1)
 

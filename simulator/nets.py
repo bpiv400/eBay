@@ -17,17 +17,21 @@ class FeedForward(nn.Module):
         for k, v in self.k.items():
             l = []
             for i in range(2):
-                l += [nn.Linear(v, v), self.f]
+                l += [nn.Linear(v, v), nn.BatchNorm1d(v), self.f]
             d[k] = nn.ModuleList(l)
         self.embedding = nn.ModuleDict(d)
 
-        # intermediate layers
+        # intermediate layer
         self.seq = nn.ModuleList(
-            [nn.Linear(sum(self.k.values()), params['hidden']), self.f])
+            [nn.Linear(sum(self.k.values()), params['hidden']), 
+             nn.BatchNorm1d(params['hidden']), self.f])
+
+        # fully connected network
         for i in range(params['layers']-1):
             self.seq.append(nn.Dropout(p=params['dropout'] / 10))
             self.seq.append(
                 nn.Linear(params['hidden'], params['hidden']))
+            self.seq.append(nn.BatchNorm1d(params['hidden']))
             self.seq.append(self.f)
 
         # output layer

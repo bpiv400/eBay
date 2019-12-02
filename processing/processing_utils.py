@@ -45,9 +45,8 @@ LTYPES = {'lstg': 'int64',
 
 # groupings of offer variables for embeddings
 OFFER_GROUPS = {'clock': ['days', 'delay', 'holiday', 'dow0', 'dow1', \
-                          'dow2', 'dow3', 'dow4', 'dow5', 'minute_of_day', \
-                          'auto', 'exp'],
-                'price': ['con', 'norm', 'split', 'reject'],
+                          'dow2', 'dow3', 'dow4', 'dow5', 'minute_of_day', 'exp'],
+                'price': ['con', 'norm', 'split', 'reject', 'auto'],
                 'msg': ['msg'],
                 'slr_best': ['slr_best', 'slr_best_open', 'slr_best_recent'],
                 'byr_best': ['byr_best', 'byr_best_open', 'byr_best_recent'],
@@ -121,26 +120,14 @@ def init_x(path, idx):
     idx: index of lstg ids or multi-index with lstg
     '''
     x = OrderedDict()
-    for name in ['w2v', 'slr', 'cat', 'lstg']:
+    for name in ['w2v_byr', 'w2v_slr', 'slr', 'cat', 'lstg']:
         x[name] = load(path(['x', name]))
         if len(idx.names) == 1:
             x[name] = x[name].reindex(index=idx)
         else:
             x[name] = x[name].reindex(index=idx, level='lstg')
     return x
-
-
-# appends turn indicator variables to offer matrix
-def add_turn_indicators(df):
-    '''
-    df: dataframe with index ['lstg', 'thread', 'index'].
-    '''
-    indices = np.unique(df.index.get_level_values('index'))
-    for i in range(len(indices)-1):
-        ind = indices[i]
-        featname = 't%d' % ((ind+1) // 2)
-        df[featname] = df.index.isin([ind], level='index')
-    return df
+    
 
 # creates features from timestapes
 def extract_clock_feats(clock):

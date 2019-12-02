@@ -18,7 +18,8 @@ def do_rounding(offer):
 
 def get_x_lstg(L):
     # initialize output dataframe with as-is features
-    df = L[ASIS_FEATS]
+    df = L[['store', 'slr_us', 'fast', 'slr_bos', 'slr_lstgs', \
+            'fdbk_score', 'fdbk_pstv', 'start_price_pctile']]
     # normalize start_date to years
     df['start_years'] = L.start_date / 365
     # photos divided by 12, and binary indicator
@@ -57,24 +58,28 @@ if __name__ == "__main__":
 
     # listing features
     print('Listing features')
-    x_lstg = get_x_lstg(L)
-    dump(x_lstg, path('x_lstg'))
+    df = get_x_lstg(L)
+
+    # word2vec features
+    print('Word2Vec features')
+    for role in ['byr', 'slr']:
+        w2v = load(W2V_DIR + '%s.gz' % role).reindex(
+            index=L[['cat']].values.squeeze(), fill_value=0)
+        w2v.set_index(L.index, inplace=True)
+        df = df.join(w2v)
+    del L, w2v
 
     # slr features
     print('Seller features')
     slr = load_frames('slr').reindex(index=idx, fill_value=0)
-    dump(x_slr, path('x_slr'))
+    df = df.join(slr)
+    del slr
 
     # cat features
-    print('Cat features')
+    print('Categorical features')
     cat = load_frames('cat').reindex(index=idx, fill_value=0)
-    dump(x_cat, path('x_cat'))
+    df = df.join(cat)
 
-    # word2vec features
-    print('Word2Vec features')
-    s = load(CLEAN_DIR + 'listings.pkl')[['cat']].reindex(index=idx)
-    for role in ['byr', 'slr']:
-        w2v = load(W2V_DIR + '%s.gz' % role).reindex(
-            index=s.values.squeeze(), fill_value=0)
-        w2v.set_index(s.index, inplace=True)
-        dump(w2v, path('x_w2v_%s' % role))
+    # dump
+    dump(df, path('x_lstg'))
+    

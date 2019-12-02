@@ -22,7 +22,6 @@ class Simulator:
         # save parameters from inputs
         self.model = model
         self.device = device
-        self.c = params['c']
         self.mbsize = params['mbsize']
 
         # sloss function
@@ -83,14 +82,6 @@ class Simulator:
         return self.loss(theta, y)
 
 
-    def apply_max_norm_constraint(self, eps=1e-8):
-        for name, param in self.net.named_parameters():
-            if 'bias' not in name and 'output' not in name:
-                norm = param.norm(2, dim=1, keepdim=True)
-                desired = torch.clamp(norm, 0, self.c)
-                param = param * desired / (eps + norm)
-
-
     def run_batch(self, d, optimizer=None):
         # train / eval mode
         isTraining = optimizer is not None
@@ -120,7 +111,6 @@ class Simulator:
         if isTraining:
             loss.backward()
             optimizer.step()
-            self.apply_max_norm_constraint()
 
         # return log-likelihood
         return -loss.item()

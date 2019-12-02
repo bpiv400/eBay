@@ -4,6 +4,7 @@ import numpy as np, pandas as pd
 from datetime import datetime as dt
 from compress_pickle import load
 from torch.utils.data import DataLoader
+from torch.utils.tensorboard import SummaryWriter
 from simulator.interface import Inputs, Sample, collateFF, collateRNN
 from simulator.model import Simulator
 from constants import *
@@ -37,6 +38,9 @@ def run_loop(simulator, data, optimizer=None):
 
 
 def train_model(simulator, optimizer, data):
+    # initialize event logger
+    writer = SummaryWriter(LOG_DIR + 'test')
+
     # loop over epochs, record log-likelihood
     for i in range(EPOCHS):
         t0 = dt.now()
@@ -45,9 +49,17 @@ def train_model(simulator, optimizer, data):
         print('Epoch %d' % (i+1))
         t0 = dt.now()
         lnL, gpu_time = run_loop(simulator, data, optimizer)
+        total_time = (dt.now() - t0).total_seconds()
+
+        # summarize loop
         print('GPU time: %d seconds' % gpu_time)
-        print('Total time: %d seconds' % (dt.now() - t0).seconds)
+        print('Total time: %d seconds' % total_time)
         print('lnL: %9.4f' % lnL)
+
+        # tensorboard logging
+        info = {'lnL_train': lnL, 'gpu_time': gpu_time, 'total_time': total_time}
+        for k, v in info.items():
+            writer.add_scalar(k, v, i+1)
 
 
 if __name__ == '__main__':
@@ -88,6 +100,6 @@ if __name__ == '__main__':
     # time epoch
     train_model(simulator, optimizer, data)
 
-    # save model
-    torch.save(simulator.net.state_dict(), 
-        MODEL_DIR + '%s_%d.net' % (model, paramsid))
+    # # save model
+    # torch.save(simulator.net.state_dict(), 
+    #     MODEL_DIR + '%s_%d.net' % (model, paramsid))

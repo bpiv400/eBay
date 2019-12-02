@@ -47,6 +47,7 @@ W2V_DIR = '%s/w2v/' % PREFIX
 INPUT_DIR = '%s/inputs/' % PREFIX
 SUMMARY_DIR = 'outputs/summary/'
 MODEL_DIR = 'outputs/models/'
+LOG_DIR = 'outputs/logs/'
 
 # partitions
 PARTITIONS = ['train_models', 'train_rl', 'test']
@@ -91,10 +92,6 @@ N_SMALL = 100000
 
 # organizing hierarchy
 LEVELS = ['slr', 'cat', 'cndtn', 'lstg']
-
-# for lstg feature construction
-ASIS_FEATS = ['store', 'slr_us', 'fast', 'slr_bos', 'slr_lstgs', \
-	'fdbk_score', 'fdbk_pstv', 'start_price_pctile']
 
 # indices for byr and slr offers
 IDX = {
