@@ -132,5 +132,11 @@ def test_get_split():
     assert get_split(f) == 0
 
 
+def test_load_model():
+    for model in model_names.MODELS:
+        load_model(model, 1)
 
 
+def test_time_delta():
+    assert time_delta(15, 15 + DAY, unit=DAY) == 1
+    assert time_delta(15, 15 + MONTH, unit=MONTH) == 1
