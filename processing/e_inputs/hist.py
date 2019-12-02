@@ -12,18 +12,21 @@ def process_inputs(part):
 	getPath = lambda names: '%s/partitions/%s/%s.gz' % \
 		(PREFIX, part, '_'.join(names))
 
-	# load thread features
+	# load listing and thread features
+	x_lstg = load(getPath(['x', 'lstg']))
 	x_thread = load(getPath(['x', 'thread']))
+
+	# load offer features, restrict and append _1
 	x_offer = load(getPath(['x', 'offer'])).xs(1, level='index').drop(
 		['days', 'delay', 'con', 'norm', 'split', 'msg', 'reject', \
-		'auto', 'exp'], axis=1)
+		'auto', 'exp'], axis=1).rename(lambda x: x + '_1', axis=1)
 
 	# outcome
 	y = x_thread['byr_hist']
 	idx = y.index
 
 	# initialize dictionary of input features
-	x = init_x(getPath, idx)
+	x = {}
 	x['lstg'] = x['lstg'].join(x_thread.months_since_lstg).join(x_offer)
 
 	return {'y': y.astype('uint8', copy=False), 
