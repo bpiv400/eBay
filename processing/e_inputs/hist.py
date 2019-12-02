@@ -27,7 +27,7 @@ def process_inputs(part):
 
 	# initialize dictionary of input features
 	x = {}
-	x['lstg'] = x['lstg'].join(x_thread.months_since_lstg).join(x_offer)
+	x['lstg'] = x_lstg.join(x_thread.months_since_lstg).join(x_offer)
 
 	return {'y': y.astype('uint8', copy=False), 
 			'x': {k: v.astype('float32', copy=False) for k, v in x.items()}}
