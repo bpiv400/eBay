@@ -28,13 +28,11 @@ NUM_WORKERS = mp.cpu_count() if torch.cuda.is_available() else 0
 MBSIZE_VALIDATION = 2000
 
 # paths and directories
-if 'Ubuntu' in platform():
+if 'Ubuntu' in platform():		# Etan's box
 	PREFIX = '/data/eBay'
-elif 'centos' in platform():
-	PREFIX = '/home/opim/etangr/weka/eBay'
-elif 'Windows' in platform():
+elif 'Windows' in platform():	# Barry's laptop
 	PREFIX = 'data'
-else:
+else:							# cluster / AWS
 	PREFIX = '/home/opim/etangr/weka/eBay'
 
 CLEAN_DIR = '%s/clean/' % PREFIX

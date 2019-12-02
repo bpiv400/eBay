@@ -108,25 +108,6 @@ def get_partition(part):
     idx = partitions[part]
     path = lambda name: PARTS_DIR + '%s/%s.gz' % (part, name)
     return idx, path
-
-
-# initializes a dictionary of input features
-def init_x(path, idx):
-    '''
-    path: a function that takes a list of strings to be concatenated with
-        underscores and returns the path to the file. Example:
-        - path(['x', 'lstg']) might return 
-            'data/inputs/partitions/train_models/x_lstg.gz'
-    idx: index of lstg ids or multi-index with lstg
-    '''
-    x = OrderedDict()
-    for name in ['w2v_byr', 'w2v_slr', 'slr', 'cat', 'lstg']:
-        x[name] = load(path(['x', name]))
-        if len(idx.names) == 1:
-            x[name] = x[name].reindex(index=idx)
-        else:
-            x[name] = x[name].reindex(index=idx, level='lstg')
-    return x
     
 
 # creates features from timestapes
