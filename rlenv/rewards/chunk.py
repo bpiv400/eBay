@@ -22,7 +22,7 @@ def main():
     part = parser.parse_args().part
     if part not in PARTITIONS:
         raise RuntimeError('part must be one of: {}'.format(PARTITIONS))
-    x_lstg = load('{}{}/x_lstg.gz'.format(PARTS_DIR, part)
+    x_lstg = load('{}{}/x_lstg.gz'.format(PARTS_DIR, part))
     lookup = load('{}{}/{}'.format(PARTS_DIR, part, LOOKUP_FILENAME))
     assert (lookup.index == x_lstg.index).all()
     total_lstgs = len(x_lstg)
