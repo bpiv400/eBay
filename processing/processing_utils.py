@@ -213,7 +213,7 @@ def create_groups(d):
     '''
 
     # save list of arrays of indices with same number of turns
-    if np.shape(d['y'])[-1] > 1:
+    if len(np.shape(d['y'])) > 1:
         turns = np.sum(d['y'] > -1, axis=1)
         return [np.nonzero(turns == n)[0] for n in np.unique(turns)]
 
