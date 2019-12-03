@@ -268,8 +268,9 @@ def create_small(d):
 
     # sort indices by turns
     y = d['y'][idx]
-    turns = np.sum(y > -1, axis=1)
-    idx = idx[np.argsort(-turns)]
+    if len(np.shape(y)) > 1:
+        turns = np.sum(y > -1, axis=1)
+        idx = idx[np.argsort(-turns)]
 
     # directly subsample
     for k in ['y', 'idx_clock', 'remaining']:

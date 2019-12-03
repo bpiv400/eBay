@@ -37,10 +37,7 @@ def run_loop(simulator, data, optimizer=None):
     return lnL / data.N_labels, gpu_time
 
 
-def train_model(simulator, optimizer, data):
-    # initialize event logger
-    writer = SummaryWriter(LOG_DIR + 'test')
-
+def train_model(simulator, optimizer, data, writer):
     # loop over epochs, record log-likelihood
     for i in range(EPOCHS):
         t0 = dt.now()
@@ -97,9 +94,12 @@ if __name__ == '__main__':
     # load data
     data = Inputs('small', model)
 
-    # time epoch
-    train_model(simulator, optimizer, data)
+    # initialize event logger
+    writer = SummaryWriter(LOG_DIR + '%s_%d' % (model, paramsid))
 
-    # # save model
-    # torch.save(simulator.net.state_dict(), 
-    #     MODEL_DIR + '%s_%d.net' % (model, paramsid))
+    # time epoch
+    train_model(simulator, optimizer, data, writer)
+
+    # save model
+    torch.save(simulator.net.state_dict(), 
+        MODEL_DIR + '%s_%d.net' % (model, paramsid))
