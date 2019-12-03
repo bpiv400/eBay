@@ -102,7 +102,7 @@ def process_inputs(part, outcome, role):
 	idx = y.index
 
 	# initialize dictionary of input features
-	x = init_x(getPath, idx)
+	x = {'lstg': load(getPath(['x', 'lstg']))}
 
 	# add thread features and turn indicators to listing features
 	x_thread = load(getPath(['x', 'thread']))
