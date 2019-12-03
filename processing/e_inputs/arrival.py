@@ -17,7 +17,7 @@ def process_inputs(part):
     idx = y.index
 
     # initialize dictionary of input features
-    x = init_x(getPath, idx)
+    x = {'lstg': load(getPath(['x', 'lstg']))}
 
     # clock features by minute
     x_clock = create_x_clock()
