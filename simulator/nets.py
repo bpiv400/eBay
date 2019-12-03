@@ -1,44 +1,22 @@
 import torch, torch.nn as nn
 
 
-class FeedForward(nn.Module):
-    def __init__(self, params, sizes, toRNN=False):
+class Embedding(nn.Module):
+    def __init__(self, sizes, f):
         # super constructor
-        super(FeedForward, self).__init__()
+        super(Embedding, self).__init__()
 
         # save dictionary of input feat sizes
         self.k = sizes['x']
-
-        # activation function
-        self.f = nn.ReLU()
 
         # embeddings layer(s)
         d = {}
         for k, v in self.k.items():
             l = []
             for i in range(2):
-                l += [nn.Linear(v, v), nn.BatchNorm1d(v), self.f]
+                l += [nn.Linear(v, v), nn.BatchNorm1d(v), f]
             d[k] = nn.ModuleList(l)
         self.embedding = nn.ModuleDict(d)
-
-        # intermediate layer
-        self.seq = nn.ModuleList(
-            [nn.Linear(sum(self.k.values()), params['hidden']), 
-             nn.BatchNorm1d(params['hidden']), self.f])
-
-        # fully connected network
-        for i in range(params['layers']-1):
-            self.seq.append(nn.Dropout(p=params['dropout'] / 10))
-            self.seq.append(
-                nn.Linear(params['hidden'], params['hidden']))
-            self.seq.append(nn.BatchNorm1d(params['hidden']))
-            self.seq.append(self.f)
-
-        # output layer
-        if toRNN:
-            self.seq.append(nn.Linear(params['hidden'], params['hidden']))
-        else:
-            self.seq.append(nn.Linear(params['hidden'], sizes['out']))
 
     def forward(self, x):
         '''
@@ -52,16 +30,65 @@ class FeedForward(nn.Module):
                 x_k = m(x_k)
             l.append(x_k)
 
-        # concatenate
-        x = torch.cat(l, dim=1)
+        # concatenate and return
+        return torch.cat(l, dim=1)
 
-        # fully connected layers with dropout
+
+class FullyConnected(nn.Module):
+    def __init__(self, params, sizes, f, toRNN=False):
+        # super constructor
+        super(FullyConnected, self).__init__()
+
+        # intermediate layer
+        self.seq = nn.ModuleList(
+            [nn.Linear(sum(sizes['x'].values()), params['hidden']), 
+             nn.BatchNorm1d(params['hidden']), f])
+
+        # fully connected network
+        for i in range(params['layers']-1):
+            self.seq.append(nn.Dropout(p=params['dropout'] / 10))
+            self.seq.append(
+                nn.Linear(params['hidden'], params['hidden']))
+            self.seq.append(nn.BatchNorm1d(params['hidden']))
+            self.seq.append(f)
+
+        # output layer
+        if toRNN:
+            self.seq.append(nn.Linear(params['hidden'], params['hidden']))
+        else:
+            self.seq.append(nn.Linear(params['hidden'], sizes['out']))
+
+    def forward(self, x):
         for m in self.seq:
             x = m(x)
         return x
 
-    def simulate(self, x):
-        return self.forward(x)
+
+class FeedForward(nn.Module):
+    def __init__(self, params, sizes, device, toRNN=False):
+        # super constructor
+        super(FeedForward, self).__init__()
+
+        # save device to self
+        self.device = device
+
+        # activation function
+        f = nn.ReLU()
+
+        # embedding on CPU
+        self.nn0 = Embedding(sizes, f)
+
+        # fully connected net on GPU
+        self.nn1 = FullyConnected(params, sizes, f, toRNN).to(device)
+
+    def forward(self, x):
+        '''
+        x: OrderedDict() with same keys as self.k
+        '''
+        # embedding on CPU, then move to GPU
+        x = self.nn0(x).to(self.device)
+        # fully connected on GPU
+        return self.nn1(x)
 
 
 class LSTM(nn.Module):

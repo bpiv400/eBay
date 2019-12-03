@@ -95,7 +95,7 @@ if __name__ == '__main__':
     data = Inputs('small', model)
 
     # call training wrapper with tensorboard writer
-    writer = SummaryWriter(LOG_DIR + '%s_%d' % (model, paramsid))
+    writer = SummaryWriter(LOG_DIR + '%s/%d' % (model, paramsid))
     train_model(simulator, optimizer, data, writer)
     writer.close()
 

@@ -40,15 +40,15 @@ class Simulator:
 
         # neural net(s)
         if ('delay' in model) or (model == 'arrival'):
-            self.net = LSTM(params, sizes).to(self.device)
+            self.net = LSTM(params, sizes, device)
         else:
-            self.net = FeedForward(params, sizes).to(self.device)     
+            self.net = FeedForward(params, sizes, device)    
 
 
     def evaluate_loss(self, d):
         # feed-forward
         if 'x_time' not in d:
-            y = d['y']
+            y = d['y'].to(self.device)
             theta = self.net(d['x']).squeeze()
 
             # for con_byr, split by turn and calculate loss separately
@@ -78,7 +78,7 @@ class Simulator:
 
         # apply mask and calculate loss
         theta = theta[mask]
-        y = d['y'][mask]
+        y = d['y'][mask].to(self.device)
         return self.loss(theta, y)
 
 
@@ -90,14 +90,6 @@ class Simulator:
         # zero gradient
         if isTraining:
             optimizer.zero_grad()
-
-        # move to gpu
-        if self.device != 'cpu':
-            for key, val in d.items():
-                if key == 'x':
-                    d[key] = {k: v.to(self.device) for k, v in val.items()}
-                else:
-                    d[key] = val.to(self.device)
 
         # pack x_time
         if 'x_time' in d:

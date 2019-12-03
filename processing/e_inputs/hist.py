@@ -1,4 +1,4 @@
-import sys, pickle, os, argparse
+import sys, pickle, os, argparse, re
 from compress_pickle import load, dump
 import numpy as np, pandas as pd
 from constants import *
@@ -12,26 +12,23 @@ def process_inputs(part):
 	getPath = lambda names: '%s/partitions/%s/%s.gz' % \
 		(PREFIX, part, '_'.join(names))
 
-	# load listing and thread features
-	x_lstg = load(getPath(['x', 'lstg']))
-	x_thread = load(getPath(['x', 'thread']))
-
-	# load offer features, restrict and append _1
-	x_offer = load(getPath(['x', 'offer'])).xs(1, level='index').drop(
-		['days', 'delay', 'con', 'norm', 'split', 'msg', 'reject', \
-		'auto', 'exp'], axis=1).rename(lambda x: x + '_1', axis=1)
+	# thread features
+	x_offer = load(getPath(['x', 'offer'])).xs(1, level='index')
+	x_offer = x_offer.drop(['days', 'delay', 'con', 'norm', 'split', \
+		'msg', 'reject', 'auto', 'exp'], axis=1)
+	x_offer = x_offer.rename(lambda x: x + '_1', axis=1)
+	x_thread = load(getPath(['x', 'thread'])).join(x_offer)
 
 	# outcome
 	y = x_thread['byr_hist']
 	idx = y.index
+	x_thread.drop('byr_hist', axis=1, inplace=True)
 
-	# initialize dictionary of input features
-	x = {}
-	x['lstg'] = load(getPath(['x', 'lstg'])).reindex(
-		index=idx, level='lstg')
+	# initialize input features
+	x = init_x(getPath, idx)
 
-	# add thread variables
-	x['lstg'] = x_lstg.join(x_thread.months_since_lstg).join(x_offer)
+	# add thread variables as component
+	x['thread'] = x_thread
 
 	return {'y': y.astype('uint8', copy=False), 
 			'x': {k: v.astype('float32', copy=False) for k, v in x.items()}}

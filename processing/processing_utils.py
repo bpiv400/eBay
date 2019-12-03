@@ -297,3 +297,55 @@ def create_small(d):
     small['groups'] = create_groups(small)
 
     return small
+
+
+# loads x_lstg and splits into dictionary of components
+def init_x(getPath, idx):
+    # read in x_lstg
+    df = load(getPath(['x', 'lstg'])).reindex(
+        index=idx, level='lstg')
+    
+    # wrapper to split columns based on function
+    getCols = lambda f: [c for c in df.columns if f(c)]
+
+    # initialize dictionary of input features
+    x = {}
+
+    # features of listing
+    x['lstg'] = df[['fast', 'start_price_pctile', 'start_years', \
+                    'photos', 'has_photos', 'auto_decline', 'auto_accept', \
+                    'start_is_round', 'start_is_nines', 'decline_is_round', \
+                    'decline_is_nines', 'accept_is_round', 'accept_is_nines', \
+                    'has_decline', 'has_accept', 'new', 'used', 'refurb', 'wear']]
+
+    # word2vec features, separately by role
+    x['w2v_byr'] = df[getCols(lambda c: re.match(r'^byr[0-9]', c))]
+    x['w2v_slr'] = df[getCols(lambda c: re.match(r'^slr[0-9]', c))]
+
+    # slr features
+    x['slr'] = df[['start_price_pctile', 'store', 'fdbk_score', 'fdbk_pstv', 'fdbk_100'] \
+                    + getCols(lambda c: c.startswith('slr_'))]
+
+    # byr features
+    x['byr'] = df[getCols(lambda c: 'byr_' in c)]
+
+    # features of category
+    x['cat'] = df[['start_price_pctile'] \
+                    + getCols(lambda c: c.startswith('cat_'))]
+
+    # features of category-condition
+    x['cndtn'] = df[['start_price_pctile', 'new', 'used', 'refurb', 'wear'] \
+                    + getCols(lambda c: c.startswith('cndtn_'))]
+
+    # count features
+    x['counts'] = df[getCols(lambda c: 'lstgs' in c or 'threads' in c \
+        or 'offers' in c or 'arrival_rate' in c)]
+
+    # clock features
+    x['clock'] = df[getCols(lambda c: 'delay' in c or 'expire' in c)]
+
+    # price features
+    x['price'] = df[getCols(lambda c: 'accept_norm' in c \
+        or 'start_price' in c or 'first_offer' in c or 'accepts' in c or 'bin' in c)]
+    
+    return x
