@@ -48,17 +48,25 @@ for i in range(7):
     ALL_TIME_FEATS[i + 1] = ['{}_{}'.format(feat, i + 1) for feat in TIME_FEATS]
 
 # outcomes
-BYR_OUTCOMES = ['days', 'delay', 'con', 'norm', 'split', 'msg']
-SLR_OUTCOMES = BYR_OUTCOMES + ['reject', 'auto', 'exp']
-REJ_POS = SLR_OUTCOMES.index('reject')
-AUTO_POS = SLR_OUTCOMES.index('auto')
-EXPIRE_POS = SLR_OUTCOMES.index('exp')
-NORM_POS = SLR_OUTCOMES.index('norm')
-CON_POS = SLR_OUTCOMES.index('con')
-MSG_POS = SLR_OUTCOMES.index('msg')
-DAYS_POS = SLR_OUTCOMES.index('days')
-DELAY_POS = SLR_OUTCOMES.index('delay')
-SPLIT_POS = SLR_OUTCOMES.index('split')
+DAYS = 'days'
+DELAY = 'delay'
+CON = 'con'
+NORM = 'norm'
+SPLIT = 'split'
+MSG = 'msg'
+REJECT = 'reject'
+AUTO = 'auto'
+EXP = 'exp'
+
+BYR_OUTCOMES = [
+    DAYS,
+    DELAY,
+    CON,
+    NORM,
+    SPLIT,
+    MSG,
+]
+SLR_OUTCOMES = BYR_OUTCOMES + [REJECT, AUTO, EXP]
 
 # turn indices
 SLR_TURN_INDS = ['t1', 't2']

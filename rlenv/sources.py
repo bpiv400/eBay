@@ -86,7 +86,8 @@ class ThreadSources(Sources):
         self.source_dict[CLOCK_MAP] = clock_feats
         self.source_dict[DIFFS_MAP] = time_feats - self.source_dict[O_TIME_MAP]
 
-    def prepare_offer(self, days=None, delay=None):
+    def prepare_offer(self, days=None, delay=None, turn=1):
+        days_index = DAYS
         input_vec = torch.tensor([days, delay]).float()
         self.source_dict[OUTCOMES_MAP][[DAYS_POS, DELAY_POS]] = input_vec
         self.delay_prev_time = None
