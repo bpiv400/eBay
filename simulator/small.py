@@ -94,11 +94,10 @@ if __name__ == '__main__':
     # load data
     data = Inputs('small', model)
 
-    # initialize event logger
+    # call training wrapper with tensorboard writer
     writer = SummaryWriter(LOG_DIR + '%s_%d' % (model, paramsid))
-
-    # time epoch
     train_model(simulator, optimizer, data, writer)
+    writer.close()
 
     # save model
     torch.save(simulator.net.state_dict(), 

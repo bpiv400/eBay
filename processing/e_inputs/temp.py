@@ -14,8 +14,8 @@ if __name__ == '__main__':
 	num = parser.parse_args().num-1
 	name = MODELS[num]
 
-	d = load(PREFIX + 'inputs/train_models/%s.gz' % name)
+	d = load('%s/inputs/train_models/%s.gz' % (PREFIX, name))
 
 	small = create_small(d)
 
-	dump(small, PREFIX + 'inputs/small/%s.gz' % name)
+	dump(small, '%s/inputs/small/%s.gz' % (PREFIX, name))
