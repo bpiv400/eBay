@@ -1,3 +1,4 @@
+import os
 from pandas.tseries.holiday import USFederalHolidayCalendar as Calendar
 import torch
 import numpy as np
@@ -26,7 +27,7 @@ EPOCHS = 10
 NUM_WORKERS = 4 if torch.cuda.is_available() else 0
 MBSIZE_VALIDATION = 4000
 
-REWARDS = True
+REWARDS = False
 
 # paths and directories
 if 'Ubuntu' in platform():
@@ -36,13 +37,13 @@ elif 'centos' in platform():
 elif 'Windows' in platform() or REWARDS:
 	PREFIX = 'data'
 else:
-	PREFIX = '~/weka/eBay/data'
+	PREFIX = os.path.expanduser('~/weka/eBay')
 
 CLEAN_DIR = '%s/clean/' % PREFIX
 CHUNKS_DIR = '%s/chunks/' % PREFIX
 FEATS_DIR = '%s/feats/' % PREFIX
 PARTS_DIR = '%s/partitions/' % PREFIX
-REWARDS_DIR = '%s/simulator/' % PREFIX
+REWARDS_DIR = '%s/rewardGenerator/' % PREFIX
 PCTILE_DIR = '%s/pctile/' % PREFIX
 W2V_DIR = '%s/w2v/' % PREFIX
 OUTPUT_DIR = '%s/outputs/' % PREFIX
