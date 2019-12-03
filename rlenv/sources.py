@@ -1,12 +1,12 @@
 import math
-import torch
+import numpy as np
 import pandas as pd
-from rlenv.env_consts import (TIME_FEATS, BYR_OUTCOMES, SLR_OUTCOMES, NORM_POS,
-                              DAYS_POS, DELAY_POS, CON_POS, MSG_POS, AUTO_POS,
-                              REJ_POS, EXPIRE_POS, SPLIT_POS, ALL_TIME_FEATS,
-                              ALL_CLOCK_FEATS, BYR_HIST)
+from rlenv.env_consts import (TIME_FEATS, ALL_TIME_FEATS,
+                              ALL_CLOCK_FEATS, BYR_HIST, DAYS, DELAY, ALL_OUTCOMES,
+                              NORM, TURN_FEATS, MONTHS_SINCE_LSTG, CLOCK_FEATS,
+                              DURATION, INT_REMAINING, CON, MSG, SPLIT, EXP, REJECT, AUTO)
 from rlenv.composer.maps import *
-from rlenv.env_utils import get_clock_feats
+from rlenv.env_utils import featname
 
 
 class Sources:
@@ -28,138 +28,110 @@ class ThreadSources(Sources):
         self.source_dict[TURN_IND_MAP] = pd.Series(0.0, index=composer.feat_sets[TURN_IND_MAP])
         self.source_dict[THREAD_MAP] = pd.Series(0.0, index=composer.feat_sets[THREAD_MAP])
         self.delay_prev_time = None
+        self.offer_prev_time = None
 
     def prepare_hist(self, time_feats=None, clock_feats=None, months_since_lstg=None):
         self.source_dict[THREAD_MAP][MONTHS_LSTG_MAP] = months_since_lstg
         self.source_dict[THREAD_MAP][ALL_CLOCK_FEATS[1]] = clock_feats
         self.source_dict[THREAD_MAP][ALL_TIME_FEATS[1]] = time_feats
+        self.offer_prev_time = time_feats
 
     def init_thread(self, hist=None):
         # (time features and clock_feats already set during prepare_hist)
         # add byr history
         self.source_dict[THREAD_MAP][BYR_HIST] = hist
-        # (other clock features initialized already initialized to lstg start date)
-        # differences initialized to raw time features because all features were 0 at lstg start
-        self.source_dict[DIFFS_MAP] = self.source_dict[TIME_MAP].clone()
         # initial turn indices to buyer indices and activate turn 1
         self.source_dict[TURN_IND_MAP]['t1'] = 1
 
-    def update_offer(self, outcomes=None):
-        outcomes[[DAYS_POS, DELAY_POS]] = self.source_dict[OUTCOMES_MAP][[DAYS_POS, DELAY_POS]]
-        self.source_dict[OUTCOMES_MAP] = outcomes
-        return outcomes[NORM_POS]
+    def update_offer(self, outcomes=None, turn=None):
+        outcomes[featname(DAYS, turn)] = self.source_dict[THREAD_MAP][featname(DAYS, turn)]
+        outcomes[featname(DELAY, turn)] = self.source_dict[THREAD_MAP][featname(DELAY, turn)]
+        self.source_dict[ALL_OUTCOMES[turn]] = outcomes
+        return outcomes[featname(NORM, turn)]
 
     def change_turn(self, turn):
-        # push other sources
-        self.source_dict[L_TIME_MAP] = self.source_dict[O_TIME_MAP]
-        self.source_dict[L_CLOCK_MAP] = self.source_dict[O_CLOCK_MAP]
-        self.source_dict[L_OUTCOMES_MAP] = self.source_dict[O_OUTCOMES_MAP]
-        # push current sources
-        self.source_dict[O_TIME_MAP] = self.source_dict[TIME_MAP]
-        self.source_dict[O_OUTCOMES_MAP] = self.source_dict[OUTCOMES_MAP]
-        self.source_dict[O_CLOCK_MAP] = self.source_dict[CLOCK_MAP]
-        self.source_dict[O_DIFFS_MAP] = self.source_dict[DIFFS_MAP]
         # turn indicator
         self.source_dict[TURN_IND_MAP] = ThreadSources._turn_inds(turn)
-        # new outcomes
-        self.source_dict[OUTCOMES_MAP] = ThreadSources._init_outcomes(turn)
 
-    def init_delay(self, months_since_lstg=None, days_since_thread=None,
-                   time_feats=None):
-        self.source_dict[MONTHS_LSTG_MAP] = months_since_lstg
-        self.source_dict[DAYS_THREAD_MAP] = days_since_thread
-        self.delay_prev_time = time_feats
+    def init_delay(self, months_since_lstg=None):
+        # TODO: Note, we've assumed months_since_lstg is in the fixed features rather than the time features
+        self.source_dict[THREAD_MAP][MONTHS_SINCE_LSTG] = months_since_lstg
 
     def update_delay(self, time_feats=None, remaining=None, duration=None,
                      clock_feats=None):
         if self.delay_prev_time is None:
-            self.source_dict[DIFFS_MAP] = torch.zeros(len(TIME_FEATS)).float()
+            time_diff = np.zeros(len(TIME_FEATS))
         else:
-            self.source_dict[DIFFS_MAP] = time_feats - self.delay_prev_time
+            time_diff = time_feats - self.delay_prev_time
+        self.source_dict[X_TIME_MAP][TIME_FEATS] = time_diff
         self.delay_prev_time = time_feats
-        self.source_dict[INT_REMAIN_MAP] = remaining
-        self.source_dict[DUR_MAP] = duration
-        self.source_dict[CLOCK_MAP] = clock_feats
+        self.source_dict[X_TIME_MAP][INT_REMAINING] = remaining
+        self.source_dict[X_TIME_MAP][DURATION] = duration
+        self.source_dict[X_TIME_MAP][CLOCK_FEATS] = clock_feats
 
-    def init_offer(self, time_feats=None, clock_feats=None):
-        self.source_dict[TIME_MAP] = time_feats
-        self.source_dict[CLOCK_MAP] = clock_feats
-        self.source_dict[DIFFS_MAP] = time_feats - self.source_dict[O_TIME_MAP]
+    def init_offer(self, time_feats=None, clock_feats=None, turn=None):
+        # NOTE : Not called on turn 1
+        time_diff = time_feats - self.delay_prev_time
+        self.offer_prev_time = time_feats
+        self.source_dict[THREAD_MAP][ALL_CLOCK_FEATS[turn]] = clock_feats
+        self.source_dict[THREAD_MAP][ALL_TIME_FEATS[turn]] = time_diff
 
-    def prepare_offer(self, days=None, delay=None, turn=1):
-        days_index = DAYS
-        input_vec = torch.tensor([days, delay]).float()
-        self.source_dict[OUTCOMES_MAP][[DAYS_POS, DELAY_POS]] = input_vec
+    def prepare_offer(self, days=None, delay=None, turn=None):
+        self.source_dict[THREAD_MAP][featname(DAYS, turn)] = days
+        self.source_dict[THREAD_MAP][featname(DELAY, turn)] = delay
         self.delay_prev_time = None
 
-    def byr_expire(self, days=None):
-        self.source_dict[OUTCOMES_MAP][NORM_POS] = self.source_dict[L_OUTCOMES_MAP][NORM_POS]
-        self.source_dict[OUTCOMES_MAP][[CON_POS, MSG_POS]] = 0
-        self.source_dict[OUTCOMES_MAP][[DELAY_POS, DAYS_POS]] = torch.tensor([1, days]).float()
+    def byr_expire(self, days=None, turn=None):
+        if turn == 1:
+            prev_norm = 0.0
+        else:
+            prev_norm = self.source_dict[THREAD_MAP][featname(NORM, turn - 2)]
+        # updating outcomes
+        self.source_dict[THREAD_MAP][featname(NORM, turn)] = prev_norm
+        self.source_dict[THREAD_MAP][featname(DAYS, turn)] = days
+        self.source_dict[THREAD_MAP][featname(DELAY, turn)] = 1
 
-    def is_sale(self):
-        return self.source_dict[OUTCOMES_MAP][CON_POS] == 1
+    def is_sale(self, turn):
+        return self.source_dict[THREAD_MAP][featname(CON, turn)] == 1
 
-    def is_rej(self):
-        return self.source_dict[OUTCOMES_MAP][CON_POS] == 0
+    def is_rej(self, turn):
+        return self.source_dict[THREAD_MAP][featname(CON, turn)] == 0
 
-    def summary(self):
-        con = int(self.source_dict[OUTCOMES_MAP][CON_POS] * 100)
-        norm = self.source_dict[OUTCOMES_MAP][NORM_POS] * 100
+    def summary(self, turn):
+        con = int(self.source_dict[THREAD_MAP][featname(CON, turn)] * 100)
+        norm = self.source_dict[THREAD_MAP][featname(NORM, turn)] * 100
         norm = norm.round()
-        msg = self.source_dict[OUTCOMES_MAP][MSG_POS] == 1
-        split = self.source_dict[OUTCOMES_MAP][SPLIT_POS]
+        msg = self.source_dict[THREAD_MAP][MSG] == 1
+        split = self.source_dict[THREAD_MAP][SPLIT]
         return con, norm, msg, split
 
-    def get_delay_outcomes(self):
-        days = self.source_dict[OUTCOMES_MAP][DAYS_POS]
-        delay = self.source_dict[OUTCOMES_MAP][DELAY_POS]
+    def get_delay_outcomes(self, turn):
+        days = self.source_dict[THREAD_MAP][featname(DAYS, turn)]
+        delay = self.source_dict[THREAD_MAP][featname(DELAY, turn)]
         return days, delay
 
-    def get_slr_outcomes(self):
-        auto = self.source_dict[OUTCOMES_MAP][AUTO_POS]
-        rej = self.source_dict[OUTCOMES_MAP][REJ_POS]
-        exp = self.source_dict[OUTCOMES_MAP][EXPIRE_POS]
+    def get_slr_outcomes(self, turn):
+        auto = self.source_dict[THREAD_MAP][featname(AUTO, turn)]
+        rej = self.source_dict[THREAD_MAP][featname(REJECT, turn)]
+        exp = self.source_dict[THREAD_MAP][featname(EXP, turn)]
         return auto, exp, rej
 
     @staticmethod
-    def _init_pre_lstg_outcomes():
-        outcomes = torch.zeros(len(BYR_OUTCOMES)).float()
-        return outcomes
-
-    @staticmethod
-    def _init_lstg_outcomes():
-        outcomes = torch.zeros(len(SLR_OUTCOMES)).float()
-        return outcomes
-
-    @staticmethod
-    def _init_outcomes(turn):
-        if turn % 2 == 0:
-            outcomes = torch.zeros(len(SLR_OUTCOMES)).float()
-        else:
-            outcomes = torch.zeros(len(BYR_OUTCOMES)).float()
-        return outcomes
-
-    @staticmethod
     def _turn_inds(turn):
-        if turn % 2 == 0:
-            num_turns = 2
-        else:
-            num_turns = 3
-        vec = torch.zeros(num_turns).float()
+        vec = pd.Series(0.0, index=TURN_FEATS)
         if turn <= 5:
-            ind = math.floor((turn - 1) / 2)
-            vec[ind] = 1
+            ind = math.ceil((turn / 2))
+            vec['t{}'.format(ind)] = 1
         return vec
 
 
 class ArrivalSources(Sources):
-    def __init__(self):
-        super(ArrivalSources, self).__init__()
-        self.source_dict[TIME_MAP] = torch.zeros(len(TIME_FEATS)).float()
+    def __init__(self, x_lstg=None, composer=None):
+        super(ArrivalSources, self).__init__(x_lstg=x_lstg, composer=composer)
+        self.prev_time = np.zeros(len(TIME_FEATS))
 
     def update_arrival(self, time_feats=None, clock_feats=None, duration=None):
-        self.source_dict[DUR_MAP] = duration
-        self.source_dict[CLOCK_MAP] = clock_feats
-        self.source_dict[DIFFS_MAP] = time_feats - self.source_dict[TIME_MAP]
-        self.source_dict[TIME_MAP] = time_feats
+        self.source_dict[X_TIME_MAP][DURATION] = duration
+        self.source_dict[X_TIME_MAP][CLOCK_FEATS] = clock_feats
+        self.source_dict[X_TIME_MAP][TIME_FEATS] = time_feats - self.prev_time
+        self.prev_time = time_feats

@@ -1,2 +1,2 @@
-﻿id,arrival,hist,msg_byr,msg_slr,con_slr,con_byr,delay_byr,delay_slr,n,composer,RLPARAMS
-1,1,1,1,1,1,1,1,1,5,1,NOPARAMSYET
+﻿id,n,composer,RLPARAMS
+1,5,1,NOPARAMSYET

@@ -6,7 +6,7 @@ from rlenv.interface.model_names import (model_str, CON, MSG, DELAY,
 
 
 class PlayerInterface:
-    def __init__(self, msg=0, con=0, delay=0, composer=None, byr=False):
+    def __init__(self, composer=None, byr=False):
         #composer
         self.composer = composer
         #store names for each
@@ -14,33 +14,28 @@ class PlayerInterface:
         self.msg_model_name = model_str(MSG, byr=byr)
         self.delay_model_name = model_str(DELAY, byr=byr)
         # load models
-        self.msg_model = load_model(self.msg_model_name, msg)
-        self.con_model = load_model(self.con_model_name, con)
-        self.delay_model = load_model(self.delay_model_name, delay)
+        self.msg_model = load_model(self.msg_model_name)
+        self.con_model = load_model(self.con_model_name)
+        self.delay_model = load_model(self.delay_model_name)
 
-    def con(self, sources=None, hidden=None, turn=0):
-        fixed = hidden is None
+    def con(self, sources=None, turn=0):
         x_fixed, x_time = self.composer.build_input_vector(self.con_model_name,
                                                            sources=sources,
-                                                           recurrent=True, fixed=fixed)
-        params, hidden = self.con_model.simulate(x_time, x_fixed=x_fixed, hidden=hidden,
-                                                 turn=turn)
-        return params, hidden
+                                                           fixed=True)
+        params = self.con_model.simulate(x_time, x_fixed=x_fixed, turn=turn)
+        return params
 
-    def msg(self, sources=None, hidden=None, turn=0):
-        fixed = hidden is None
+    def msg(self, sources=None, turn=0):
         x_fixed, x_time = self.composer.build_input_vector(self.msg_model_name,
                                                            sources=sources,
-                                                           recurrent=True, fixed=fixed)
-        params, hidden = self.msg_model.simulate(x_time, x_fixed=x_fixed, hidden=hidden,
-                                                 turn=turn)
-        return params, hidden
+                                                           fixed=True)
+        params = self.msg_model.simulate(x_time, x_fixed=x_fixed, turn=turn)
+        return params
 
     def delay(self, sources=None, hidden=None):
-        fixed = hidden is None
         x_fixed, x_time = self.composer.build_input_vector(self.delay_model_name,
                                                            sources=sources,
-                                                           recurrent=True, fixed=fixed)
+                                                           recurrent=True, fixed=False)
         params, hidden = self.delay_model.simulate(x_time, x_fixed=x_fixed, hidden=hidden)
         return params, hidden
 
@@ -53,11 +48,11 @@ class PlayerInterface:
 
 
 class ArrivalInterface:
-    def __init__(self, byr_hist=0, num_offers=0, composer=None):
+    def __init__(self, composer=None):
         # Load interface
         self.composer = composer
-        self.hist_model = load_model(BYR_HIST, byr_hist)
-        self.num_offers_model = load_model(NUM_OFFERS, num_offers)
+        self.hist_model = load_model(BYR_HIST)
+        self.num_offers_model = load_model(NUM_OFFERS)
         self.hidden = None
 
     @staticmethod
@@ -83,7 +78,7 @@ class ArrivalInterface:
                                                      fixed=False, recurrent=True)
         params, self.hidden = self.num_offers_model.simulate(x_time, hidden=self.hidden)
         sample = ArrivalInterface._poisson_sample(params)
-        return proper_squeeze(sample)
+        return proper_squeeze(sample).numpy()
 
     def hist(self, sources=None):
         x_fixed, _ = self.composer.build_input_vector(model_name=BYR_HIST, sources=sources,

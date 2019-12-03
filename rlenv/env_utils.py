@@ -2,6 +2,7 @@
 Utility functions for use in objects related to the RL environment
 """
 import torch
+import numpy as np
 import pandas as pd
 import utils
 from torch.distributions.categorical import Categorical
@@ -22,6 +23,10 @@ def load_sizes(full_name):
     featnames_path = '{}sizes/{}.pkl'.format(INPUT_DIR, full_name)
     featnames_dict = utils.unpickle(featnames_path)
     return featnames_dict
+
+
+def featname(feat, turn):
+    return '{}_{}'.format(feat, turn)
 
 
 def get_model_class(full_name):
@@ -48,7 +53,7 @@ def get_clock_feats(time):
     for holiday, the second through seventh give indicators for the day of week, and the 8th
     gives the time of day as a fraction of seconds since minute
     """
-    out = torch.zeros(8).float()
+    out = np.zeros(8)
     clock = pd.to_datetime(time, unit='s', origin=START)
     # holidays
     out[0] = int(str(clock.date()) in HOLIDAYS)
@@ -75,7 +80,7 @@ def proper_squeeze(tensor):
 
 def categorical_sample(params, n):
     cat = Categorical(logits=params)
-    return proper_squeeze(cat.sample(sample_shape=(n, )).float())
+    return proper_squeeze(cat.sample(sample_shape=(n, )).float()).numpy()
 
 
 def get_split(con):
@@ -84,32 +89,25 @@ def get_split(con):
     return output
 
 
-def load_params(model_exp):
-    df = pd.read_csv(PARAMS_PATH, index_col='id')
-    params = df.loc[model_exp].to_dict()
-    return params
+def load_params():
+    return utils.unpickle(PARAMS_PATH)
 
 
-def load_model(full_name, model_exp):
+def load_model(full_name):
     """
     Initialize pytorch network for some model
 
     :param full_name: full name of the model
-    :param model_exp: experiment number for the model
     :return: PyTorch Module
     """
     sizes = load_sizes(full_name)
-    params = load_params(model_exp)
-    model_path = '{}{}_{}.net'.format(MODEL_DIR, full_name, model_exp)
+    params = load_params()
+    model_path = '{}{}.net'.format(MODEL_DIR, full_name)
     # loading model
     model_class = get_model_class(full_name)
     net = model_class(params, sizes)  # type: torch.nn.Module
     net.load_state_dict(torch.load(model_path, map_location='cpu'))
     return net
-    # except (RuntimeError, FileNotFoundError) as e:
-    # print(e)
-    # print('failed for {}'.format(err_name))
-    # return None
 
 
 def get_value_fee(price, meta):

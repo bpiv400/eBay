@@ -1,4 +1,4 @@
-from constants import INPUT_DIR, PARTS_DIR
+from constants import INPUT_DIR, PARTS_DIR, OUTPUT_DIR
 import torch
 
 INTERACT = False
@@ -41,12 +41,6 @@ CLOCK_FEATS = ['holiday', 'dow0', 'dow1', 'dow2', 'dow3', 'dow4', 'dow5', 'minut
 # turn feats
 TURN_FEATS = ['t1', 't2', 't3']
 
-ALL_CLOCK_FEATS = dict()
-ALL_TIME_FEATS = dict()
-for i in range(7):
-    ALL_CLOCK_FEATS[i + 1] = ['{}_{}'.format(feat, i + 1) for feat in CLOCK_FEATS]
-    ALL_TIME_FEATS[i + 1] = ['{}_{}'.format(feat, i + 1) for feat in TIME_FEATS]
-
 # outcomes
 DAYS = 'days'
 DELAY = 'delay'
@@ -67,6 +61,19 @@ BYR_OUTCOMES = [
     MSG,
 ]
 SLR_OUTCOMES = BYR_OUTCOMES + [REJECT, AUTO, EXP]
+
+ALL_CLOCK_FEATS = dict()
+ALL_TIME_FEATS = dict()
+ALL_OUTCOMES = dict()
+for i in range(7):
+    ALL_CLOCK_FEATS[i + 1] = ['{}_{}'.format(feat, i + 1) for feat in CLOCK_FEATS]
+    ALL_TIME_FEATS[i + 1] = ['{}_{}'.format(feat, i + 1) for feat in TIME_FEATS]
+    if i % 2 == 1:
+        ALL_OUTCOMES[i + 1] = ['{}_{}'.format(feat, i + 1) for feat in BYR_OUTCOMES]
+    else:
+        ALL_OUTCOMES[i + 1] = ['{}_{}'.format(feat, i + 1) for feat in SLR_OUTCOMES]
+
+
 
 # turn indices
 SLR_TURN_INDS = ['t1', 't2']
@@ -92,7 +99,7 @@ COMPOSER_DIR = '{}composer/'.format(INPUT_DIR)
 X_LSTG_COLS_PATH = '{}{}.pkl'.format(COMPOSER_DIR, X_LSTG)
 REWARD_EXPERIMENT_PATH = 'repo/rlenv/rewards/experiments.csv'
 LOOKUP_FILENAME = 'lookup.gz'
-PARAMS_PATH = '{}params.csv'.format(INPUT_DIR)
+PARAMS_PATH = '{}params.pkl'.format(OUTPUT_DIR)
 
 # temporal constants
 MONTH = 31 * 24 * 3600

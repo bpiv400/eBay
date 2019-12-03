@@ -14,21 +14,27 @@ CON = 'con'
 REWARD = 'reward'
 DUR = 'duration'
 SALE = 'sale'
+LSTG = 'lstg'
 
-OFFER_COLS = [SIM, INDEX, THREAD, CLOCK, CON, NORM, MESSAGE]
-THREAD_COLS = [SIM, THREAD, BYR_HIST]
-SALE_COLS = [SIM, SALE, DUR, REWARD]
+OFFER_COLS = [SIM, INDEX, THREAD, CLOCK, CON, NORM, MESSAGE, LSTG]
+THREAD_COLS = [SIM, THREAD, BYR_HIST, LSTG]
+SALE_COLS = [SIM, SALE, DUR, REWARD, LSTG]
 
 
 class Recorder:
-    def __init__(self, lstg, lookup):
-        self.lstg = lstg
-        self.start_time = lookup[START_DAY]
-        self.sim = -1
-        self.start_price = lookup[START_PRICE]
+    def __init__(self, chunk=None):
+        self.chunk = chunk
+
+        # tracker dictionaries
         self.offers = dict()
         self.threads = dict()
         self.sales = dict()
+
+        # lstg feats
+        self.lstg = None
+        self.start_time = None
+        self.sim = None
+        self.start_price = None
 
         for col in OFFER_COLS:
             self.offers[col] = list()
@@ -37,16 +43,25 @@ class Recorder:
         for col in SALE_COLS:
             self.sales[col] = list()
 
+    def update_lstg(self, lookup=None, lstg=None):
+        self.lstg = lstg
+        self.start_time = lookup[START_DAY]
+        self.sim = -1
+        self.start_price = lookup[START_PRICE]
+
     def start_thread(self, thread_id=None, byr_hist=None):
         byr_hist = int(10 * byr_hist)
+        self.threads[LSTG].append(self.lstg)
         self.threads[SIM].append(self.sim)
         self.threads[THREAD].append(thread_id)
         self.threads[BYR_HIST].append(byr_hist)
 
-    def reset(self):
+    # probably need to change this
+    def reset_sim(self):
         self.sim += 1
 
     def add_offer(self, event):
+        self.offers[LSTG].append(self.lstg)
         self.offers[SIM].append(self.sim)
         self.offers[INDEX].append(event.turn)
         self.offers[THREAD].append(event.thread_id)
@@ -83,6 +98,7 @@ class Recorder:
                 print('Auto: {} | Exp: {} | Reject: {}'.format(auto, exp, rej))
 
     def add_sale(self, sale, reward, dur):
+        self.sales[LSTG].append(self.lstg)
         self.sales[SALE].append(sale)
         self.sales[REWARD].append(reward)
         self.sales[DUR].append(dur)
@@ -99,6 +115,7 @@ class Recorder:
         self.offers = pd.DataFrame.from_dict(self.offers)
         self.threads = pd.DataFrame.from_dict(self.threads)
         # maximally compress offers datatypes
+        self.offers[LSTG] = self.offers[LSTG].astype(np.int32)
         self.offers[CLOCK] = self.offers[CLOCK].astype(np.int32)
         self.offers[CON] = self.offers[CON].astype(np.uint8)
         self.offers[NORM] = self.offers[NORM].astype(np.uint8)
@@ -114,11 +131,14 @@ class Recorder:
         self.sales[SALE] = self.sales[SALE].astype(bool)
         self.sales[REWARD] = self.sales[REWARD].astype(np.float32)
 
-        records_path = '{}records/{}.gz'.format(base_dir, self.lstg)
-        rewards_path = '{}rewards/{}.gz'.format(base_dir, self.lstg)
+        records_path = '{}records/{}.gz'.format(base_dir, self.chunk)
+        rewards_path = '{}rewards/{}.gz'.format(base_dir, self.chunk)
         records = {
             'offers': self.offers,
             'threads': self.threads
         }
         dump(records, records_path)
         dump(self.sales, rewards_path)
+        self.sales = dict()
+        self.offers = dict()
+        self.threads = dict()

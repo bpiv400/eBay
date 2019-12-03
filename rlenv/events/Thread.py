@@ -23,7 +23,6 @@ class Thread(Event):
         # participants
         self.buyer = buyer
         self.seller = seller
-        self.thread_start = priority
         # sources object
         self.sources = None  # initialized later in init_thread
         self.turn = 1
@@ -50,7 +49,7 @@ class Thread(Event):
 
     def seller_offer(self):
         outcomes = self.seller.make_offer(sources=self.sources(), turn=self.turn)
-        norm = self.sources.update_offer(outcomes)
+        norm = self.sources.update_offer(outcomes=outcomes, turn=self.turn)
         return {
             'price': norm,
             'type': SLR_PREFIX,
@@ -75,9 +74,7 @@ class Thread(Event):
         self.type = event_types.DELAY
         # add delay features
         months_since_lstg = time_delta(lstg_start, self.priority, unit=MONTH)
-        days_since_thread = time_delta(self.thread_start, self.priority, unit=DAY)
-        self.sources.init_delay(months_since_lstg=months_since_lstg,
-                                days_since_thread=days_since_thread)
+        self.sources.init_delay(months_since_lstg=months_since_lstg)
         # update hidden state
         if self.turn % 2 == 0:
             self.spi = INTERVAL[SLR_PREFIX]
@@ -96,8 +93,7 @@ class Thread(Event):
         duration = self.interval / self.max_interval
         remaining = self.init_remaining - duration
         self.sources.update_delay(time_feats=time_feats, clock_feats=clock_feats,
-                                  duration=torch.tensor(duration).float(),
-                                  remaining=torch.tensor(remaining).float())
+                                  duration=duration, remaining=remaining)
         # generate delay
         if self.turn % 2 == 0:
             make_offer = self.seller.delay(self.sources())
@@ -112,7 +108,7 @@ class Thread(Event):
         delay_dur = self.spi * self.interval + add_delay
         delay = delay_dur / self.max_delay
         days = delay_dur / DAY
-        self.sources.prepare_offer(days=days, delay=delay)
+        self.sources.prepare_offer(days=days, delay=delay, turn=self.turn)
         # reset delay markers
         self.interval = 0
         self.max_interval = None
@@ -127,14 +123,14 @@ class Thread(Event):
         return self.interval >= self.max_interval
 
     def is_sale(self):
-        return self.sources.is_sale()
+        return self.sources.is_sale(self.turn)
 
     def is_rej(self):
-        return self.sources.is_rej()
+        return self.sources.is_rej(self.turn)
 
-    def rej(self, expire=False):
-        outcomes = self.seller.rej(self.sources(), self.turn, expire=expire)
-        norm = self.sources.update_offer(outcomes)
+    def slr_rej(self, expire=False):
+        outcomes = self.seller.slr_rej(self.sources(), self.turn, expire=expire)
+        norm = self.sources.update_offer(outcomes=outcomes, turn=self.turn)
         return {
             'price': norm,
             'type': SLR_PREFIX,
@@ -145,19 +141,18 @@ class Thread(Event):
         self.sources.init_offer(time_feats=time_feats, clock_feats=clock_feats)
 
     def summary(self):
-        con, norm, msg, split = self.sources.summary()
+        con, norm, msg, split = self.sources.summary(self.turn)
         if self.turn % 2 == 0:
             norm = 100 - norm
         return con, norm, msg, split
 
     def delay_outcomes(self):
-        return self.sources.get_delay_outcomes()
+        return self.sources.get_delay_outcomes(self.turn)
 
     def slr_outcomes(self):
-        return self.sources.get_slr_outcomes()
-
+        return self.sources.get_slr_outcomes(self.turn)
 
     def byr_expire(self):
         self.priority += self.spi
         days = self.max_delay / DAY
-        self.sources.byr_expire(days=days)
+        self.sources.byr_expire(days=days, turn=self.turn)

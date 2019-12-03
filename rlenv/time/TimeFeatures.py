@@ -84,9 +84,9 @@ class TimeFeatures:
 
         :param thread_id: current thread id if any. If none, return the lstg level features
         :param time: integer giving current time
-        :return: tensor of time-valued features in the order given by env_consts.TIME_FEATURES
+        :return: np.array of time-valued features in the order given by env_consts.TIME_FEATURES
         """
-        x = torch.zeros(len(consts.TIME_FEATS)).float()
+        x = np.zeros(len(consts.TIME_FEATS))
         for i, feat in enumerate(consts.TIME_FEATS):
             x[i] = self._get_feat(thread_id=thread_id, feat=feat, time=time)
         return x
