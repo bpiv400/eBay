@@ -11,21 +11,6 @@ from rlenv.env_consts import LOOKUP_FILENAME
 NUM_CHUNKS = 512
 
 
-def path_func(part):
-    """
-    Creates function to generate paths to x_lstg components
-
-    :return: function
-    """
-    prefix = '{}{}/'.format(PARTS_DIR, part)
-
-    def part_path(comps):
-        output = '{}{}_{}.gz'.format(prefix, comps[0], comps[1])
-        return output
-
-    return part_path
-
-
 def main():
     """
     Chunks the given partition
@@ -37,7 +22,7 @@ def main():
     part = parser.parse_args().part
     if part not in PARTITIONS:
         raise RuntimeError('part must be one of: {}'.format(PARTITIONS))
-    x_lstg = cat_x_lstg(path_func(part))
+    x_lstg = load('{}{}/x_lstg.gz'.format(PARTS_DIR, part)
     lookup = load('{}{}/{}'.format(PARTS_DIR, part, LOOKUP_FILENAME))
     assert (lookup.index == x_lstg.index).all()
     total_lstgs = len(x_lstg)
@@ -52,7 +37,7 @@ def main():
         # store chunk
         curr_df = x_lstg.iloc[start:end, :]
         curr_lookup = lookup.iloc[start:end, :]
-        path = '{}{}/{}.gz'.format(REWARDS_DIR, part, (i + 1))
+        path = '{}{}/chunks/{}.gz'.format(REWARDS_DIR, part, (i + 1))
         curr_dict = {
             'lookup': curr_lookup,
             'x_lstg': curr_df
