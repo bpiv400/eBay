@@ -27,6 +27,10 @@ def process_inputs(part):
 
 	# initialize dictionary of input features
 	x = {}
+	x['lstg'] = load(getPath(['x', 'lstg'])).reindex(
+		index=idx, level='lstg')
+
+	# add thread variables
 	x['lstg'] = x_lstg.join(x_thread.months_since_lstg).join(x_offer)
 
 	return {'y': y.astype('uint8', copy=False), 
