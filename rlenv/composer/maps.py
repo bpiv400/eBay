@@ -1,11 +1,11 @@
 # base map names
-LSTG_MAP = 'lstg'
+
+# may delete
 BYR_HIST_MAP = 'byr_hist'
 # curr turn maps
 OUTCOMES_MAP = 'outcomes'
 CLOCK_MAP = 'clock'
 TIME_MAP = 'time'
-TURN_IND_MAP = 'turn_inds'
 DIFFS_MAP = 'diffs'
 # other turn maps
 O_CLOCK_MAP = 'other_clock'
@@ -23,3 +23,9 @@ MONTHS_LSTG_MAP = 'months_lstg'
 DAYS_THREAD_MAP = 'days_thread'
 # SIZE map
 SIZE = 'size'
+
+# new maps
+LSTG_MAP = 'lstg'
+THREAD_MAP = 'thread'
+TURN_IND_MAP = 'turns'
+X_TIME_MAP = 'x_time'

@@ -1,15 +1,20 @@
 import math
 import torch
+import pandas as pd
 from rlenv.env_consts import (TIME_FEATS, BYR_OUTCOMES, SLR_OUTCOMES, NORM_POS,
                               DAYS_POS, DELAY_POS, CON_POS, MSG_POS, AUTO_POS,
-                              REJ_POS, EXPIRE_POS, SPLIT_POS)
+                              REJ_POS, EXPIRE_POS, SPLIT_POS, ALL_TIME_FEATS,
+                              ALL_CLOCK_FEATS, BYR_HIST)
 from rlenv.composer.maps import *
 from rlenv.env_utils import get_clock_feats
 
 
 class Sources:
-    def __init__(self):
-        self.source_dict = dict()
+    def __init__(self, x_lstg=None, composer=None):
+        self.source_dict = {
+            LSTG_MAP: x_lstg,
+            X_TIME_MAP: pd.Series(0.0, index=composer.feat_sets[X_TIME_MAP])
+        }
 
     def __call__(self):
         return self.source_dict
@@ -17,39 +22,27 @@ class Sources:
 
 # TODO SPLIT SOURCES INTO TWO CLASSES
 class ThreadSources(Sources):
-    def __init__(self, x_lstg=None, start_date=None):
-        super(ThreadSources, self).__init__()
+    def __init__(self, x_lstg=None, composer=None):
+        super(ThreadSources, self).__init__(x_lstg=x_lstg, composer=composer)
         # other clock features initialized to lstg start date
-        self.source_dict[O_CLOCK_MAP] = get_clock_feats(start_date)
-        self.source_dict[LSTG_MAP] = x_lstg
+        self.source_dict[TURN_IND_MAP] = pd.Series(0.0, index=composer.feat_sets[TURN_IND_MAP])
+        self.source_dict[THREAD_MAP] = pd.Series(0.0, index=composer.feat_sets[THREAD_MAP])
         self.delay_prev_time = None
 
     def prepare_hist(self, time_feats=None, clock_feats=None, months_since_lstg=None):
-        self.source_dict[MONTHS_LSTG_MAP] = months_since_lstg
-        self.source_dict[CLOCK_MAP] = clock_feats
-        self.source_dict[TIME_MAP] = time_feats
+        self.source_dict[THREAD_MAP][MONTHS_LSTG_MAP] = months_since_lstg
+        self.source_dict[THREAD_MAP][ALL_CLOCK_FEATS[1]] = clock_feats
+        self.source_dict[THREAD_MAP][ALL_TIME_FEATS[1]] = time_feats
 
     def init_thread(self, hist=None):
         # (time features and clock_feats already set during prepare_hist)
         # add byr history
-        self.source_dict[BYR_HIST_MAP] = hist
+        self.source_dict[THREAD_MAP][BYR_HIST] = hist
         # (other clock features initialized already initialized to lstg start date)
         # differences initialized to raw time features because all features were 0 at lstg start
         self.source_dict[DIFFS_MAP] = self.source_dict[TIME_MAP].clone()
-        # time features at lstg start are 0
-        self.source_dict[O_TIME_MAP] = torch.zeros(len(TIME_FEATS))
-        # time features at turn -1 are 0
-        self.source_dict[L_TIME_MAP] = torch.zeros(len(TIME_FEATS))
-        # differences between turn 0 and -1 are 0
-        self.source_dict[O_DIFFS_MAP] = torch.zeros(len(TIME_FEATS))
         # initial turn indices to buyer indices and activate turn 1
-        self.source_dict[TURN_IND_MAP] = ThreadSources._turn_inds(1)
-        # initialize last outcomes to all 0's
-        self.source_dict[L_OUTCOMES_MAP] = ThreadSources._init_pre_lstg_outcomes()
-        # initialize last outcome to have all 0's except auto and rej
-        self.source_dict[O_OUTCOMES_MAP] = ThreadSources._init_lstg_outcomes()
-        # day, days outcomes to 0
-        self.source_dict[OUTCOMES_MAP] = ThreadSources._init_outcomes(1)
+        self.source_dict[TURN_IND_MAP]['t1'] = 1
 
     def update_offer(self, outcomes=None):
         outcomes[[DAYS_POS, DELAY_POS]] = self.source_dict[OUTCOMES_MAP][[DAYS_POS, DELAY_POS]]

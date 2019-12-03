@@ -35,6 +35,18 @@ TIME_FEATS = [
     THREAD_COUNT
 ]
 
+# clock feats
+CLOCK_FEATS = ['holiday', 'dow0', 'dow1', 'dow2', 'dow3', 'dow4', 'dow5', 'minute_of_day']
+
+# turn feats
+TURN_FEATS = ['t1', 't2', 't3']
+
+ALL_CLOCK_FEATS = dict()
+ALL_TIME_FEATS = dict()
+for i in range(7):
+    ALL_CLOCK_FEATS[i + 1] = ['{}_{}'.format(feat, i + 1) for feat in CLOCK_FEATS]
+    ALL_TIME_FEATS[i + 1] = ['{}_{}'.format(feat, i + 1) for feat in TIME_FEATS]
+
 # outcomes
 BYR_OUTCOMES = ['days', 'delay', 'con', 'norm', 'split', 'msg']
 SLR_OUTCOMES = BYR_OUTCOMES + ['reject', 'auto', 'exp']
@@ -52,8 +64,7 @@ SPLIT_POS = SLR_OUTCOMES.index('split')
 SLR_TURN_INDS = ['t1', 't2']
 BYR_TURN_INDS = SLR_TURN_INDS + ['t3']
 
-# clock feats
-CLOCK_FEATS = ['holiday', 'dow0', 'dow1', 'dow2', 'dow3', 'dow4', 'dow5', 'minute_of_day']
+
 MONTHS_SINCE_LSTG = 'months_since_lstg'
 DAYS_SINCE_THREAD = 'days_since_thread'
 DURATION = 'duration'
