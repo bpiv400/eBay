@@ -56,9 +56,9 @@ def get_offer_vec(x, featnames):
 	for name in featnames:
 		for i in range(1, max(IDX[role])+1):
 			key = 'offer%d' % i
-			if name in x[key]:
-				newname = '%s_%d' % (name, i)
-				feats.append(x[key][name].rename(newname))
+			newname = '%s_%d' % (name, i)
+			if newname in x[key].columns:
+				feats.append(x[key][newname])
 	# concatenate and add turn indicators
 	return add_turn_indicators(pd.concat(feats, axis=1))
 
@@ -102,18 +102,20 @@ def process_inputs(part, outcome, role):
 	idx = y.index
 
 	# initialize dictionary of input features
-	x = {}
-	x['lstg'] = load(getPath(['x', 'lstg'])).reindex(
-		index=idx, level='lstg')
+	x = init_x(getPath, idx)
 
 	# add thread features and turn indicators to listing features
 	x_thread = load(getPath(['x', 'thread']))
-	x['lstg'] = x['lstg'].join(x_thread.months_since_lstg)
-	x['lstg'] = x['lstg'].join(x_thread.byr_hist.astype('float32') / 10)
+	x_thread.loc[:, 'byr_hist'] = x_thread.byr_hist.astype('float32') / 10
+	x['lstg'] = x['lstg'].join(x_thread)
 	x['lstg'] = add_turn_indicators(x['lstg'])
 
+	# add byr history to x['byr']
+	x['byr'] = x['byr'].join(x_thread.byr_hist)
+
 	# save price features for later
-	price_feats = x['lstg'][['start_price_pctile', 'auto_decline', 'auto_accept']]
+	price_feats = x['lstg'][['start_price_pctile'] + \
+		[c for c in x['lstg'].columns if 'accept' in c or 'decline' in c]]
 
 	# dataframe of offer features for relevant threads
 	threads = idx.droplevel(level='index').unique()
@@ -125,14 +127,20 @@ def process_inputs(part, outcome, role):
 		offer = df.xs(i, level='index').reindex(index=idx)
 		# clean
 		offer = clean_offer(offer, i, outcome, role)
-		# add turn indicators
-		offer = add_turn_indicators(offer)
-		# append with price features
+		# add turn number to featname
+		offer = offer.rename(lambda x: x + '_%d' % i, axis=1)
+		# append with price features 
 		x['offer%d' % i] = pd.concat([price_feats, offer], axis=1)
+		# add turn indicators
+		x['offer%d' % i] = add_turn_indicators(x['offer%d' % i])
 
 	# offer type features with turn indicators
 	for k, v in OFFER_GROUPS.items():
-		x[k] = get_offer_vec(x, v)
+		vec = get_offer_vec(x, v)
+		if k in x:
+			x[k] = x[k],join(vec)
+		else:
+			x[k] = vec
 
 	# add price feats to x['price']
 	x['price'] = pd.concat([price_feats, x['price']], axis=1)

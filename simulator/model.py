@@ -10,19 +10,15 @@ from constants import *
 # constructs model-specific neural network.
 class Simulator:
 
-    def __init__(self, model, params, sizes, device='cpu'):
+    def __init__(self, model, sizes):
         '''
         model: one of 'arrival', 'hist', 'delay_byr', 'delay_slr',
             'con_byr', 'con_slr'
-        params: dictionary of neural net parameters
         sizes: dictionary of data sizes
-        device: either 'cpu' or 'gpu'
         '''
 
         # save parameters from inputs
         self.model = model
-        self.device = device
-        self.mbsize = params['mbsize']
 
         # sloss function
         if model in ['hist', 'con_slr']:
@@ -40,15 +36,15 @@ class Simulator:
 
         # neural net(s)
         if ('delay' in model) or (model == 'arrival'):
-            self.net = LSTM(params, sizes, device)
+            self.net = LSTM(sizes)
         else:
-            self.net = FeedForward(params, sizes, device)    
+            self.net = FeedForward(sizes)    
 
 
     def evaluate_loss(self, d):
         # feed-forward
         if 'x_time' not in d:
-            y = d['y'].to(self.device)
+            y = d['y'].to(DEVICE)
             theta = self.net(d['x']).squeeze()
 
             # for con_byr, split by turn and calculate loss separately
@@ -78,7 +74,7 @@ class Simulator:
 
         # apply mask and calculate loss
         theta = theta[mask]
-        y = d['y'][mask].to(self.device)
+        y = d['y'][mask].to(DEVICE)
         return self.loss(theta, y)
 
 

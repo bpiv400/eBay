@@ -23,9 +23,17 @@ SHARES = {'train_models': 1/3, 'train_rl': 1/3}
 TOL_HALF = 0.02
 
 # optimization parameters
-EPOCHS = 10
-NUM_WORKERS = 8 if torch.cuda.is_available() else 0
-MBSIZE_VALIDATION = 2000
+K = 2	# stop training after K epochs without improvement
+NUM_WORKERS = 4 if torch.cuda.is_available() else 0
+MBSIZE = {True: 128, False: 2000}
+
+# neural net parameters
+LAYERS = 8
+HIDDEN = 1024
+DROPOUT = 0.5
+
+# use gpu if available
+DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 # paths and directories
 if 'Ubuntu' in platform():		# Etan's box

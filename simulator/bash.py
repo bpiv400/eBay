@@ -7,15 +7,13 @@ MBSIZE = 128
 LAYERS = 8
 HIDDEN = 1000
 DROPOUT = 5
-COLS = ['mbsize', 'layers', 'hidden', 'dropout', 'c', 'b2', 'lr']
+COLS = ['mbsize', 'layers', 'hidden', 'dropout', 'lr']
 
 # hyperparameter values
-c = [2, 3, 4, 5]
 lr = [-5, -4, -3, -2]
-b2 = [-4, -3, -2]
 
 # create params file
-M = cartesian([[MBSIZE], [LAYERS], [HIDDEN], [DROPOUT], c, b2, lr])
+M = cartesian([[MBSIZE], [LAYERS], [HIDDEN], [DROPOUT], lr])
 idx = pd.Index(range(1, len(M)+1), name='id')
 df = pd.DataFrame(M, index=idx, columns=COLS)
 df.to_csv('%s/inputs/params.csv' % PREFIX)

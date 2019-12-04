@@ -1,4 +1,4 @@
-import sys, os
+import sys, os, re
 from compress_pickle import load, dump
 from datetime import datetime as dt
 import numpy as np, pandas as pd
@@ -44,15 +44,18 @@ LTYPES = {'lstg': 'int64',
           'fast': bool}
 
 # groupings of offer variables for embeddings
-OFFER_GROUPS = {'clock': ['days', 'delay', 'holiday', 'dow0', 'dow1', \
+OFFER_GROUPS = {'arrival': ['thread_count'],
+                'clock': ['slr_offers', 'slr_offers_open', 'slr_offers_recent', \
+                          'byr_offers', 'byr_offers_open', 'byr_offers_recent', \
+                          'days', 'delay', 'holiday', 'dow0', 'dow1', \
                           'dow2', 'dow3', 'dow4', 'dow5', 'minute_of_day', 'exp'],
-                'price': ['con', 'norm', 'split', 'reject', 'auto'],
-                'msg': ['msg'],
-                'slr_best': ['slr_best', 'slr_best_open', 'slr_best_recent'],
-                'byr_best': ['byr_best', 'byr_best_open', 'byr_best_recent'],
-                'counts': ['slr_offers', 'slr_offers_open', 'slr_offers_recent', \
-                           'byr_offers', 'byr_offers_open', 'byr_offers_recent', \
-                           'thread_count']}
+                'price': ['slr_offers', 'slr_offers_open', 'slr_offers_recent', \
+                          'byr_offers', 'byr_offers_open', 'byr_offers_recent', \
+                          'slr_best', 'slr_best_open', 'slr_best_recent', \
+                          'byr_best', 'byr_best_open', 'byr_best_recent', \
+                          'con', 'norm', 'split', 'reject', 'auto'],
+                'msg': ['slr_offers', 'slr_offers_open', 'slr_offers_recent', \
+                        'byr_offers', 'byr_offers_open', 'byr_offers_recent', 'msg']}
 
 
 # split into chunks and save
@@ -302,9 +305,14 @@ def create_small(d):
 # loads x_lstg and splits into dictionary of components
 def init_x(getPath, idx):
     # read in x_lstg
-    df = load(getPath(['x', 'lstg'])).reindex(
-        index=idx, level='lstg')
-    
+    df = load(getPath(['x', 'lstg']))
+
+    # reindex
+    if len(idx.names) == 1:
+        df = df.reindex(index=idx)
+    else:
+        df = df.reindex(index=idx, level='lstg')
+
     # wrapper to split columns based on function
     getCols = lambda f: [c for c in df.columns if f(c)]
 
@@ -337,15 +345,14 @@ def init_x(getPath, idx):
     x['cndtn'] = df[['start_price_pctile', 'new', 'used', 'refurb', 'wear'] \
                     + getCols(lambda c: c.startswith('cndtn_'))]
 
-    # count features
-    x['counts'] = df[getCols(lambda c: 'lstgs' in c or 'threads' in c \
-        or 'offers' in c or 'arrival_rate' in c)]
+    # arrival rates
+    x['arrival'] = df[getCols(lambda c: 'threads' in c or 'arrival_rate' in c)]
 
     # clock features
-    x['clock'] = df[getCols(lambda c: 'delay' in c or 'expire' in c)]
+    x['clock'] = df[getCols(lambda c: 'offers' in c or 'delay' in c or 'expire' in c)]
 
     # price features
-    x['price'] = df[getCols(lambda c: 'accept_norm' in c \
-        or 'start_price' in c or 'first_offer' in c or 'accepts' in c or 'bin' in c)]
+    x['price'] = df[getCols(lambda c: 'start_price' in c or 'decline' in c or 'accept' in c \
+        or 'offers' in c or 'first_offer' in c or 'bin' in c or 'is_round' in c or 'is_nines' in c)]
     
     return x

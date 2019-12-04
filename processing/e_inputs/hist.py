@@ -1,4 +1,4 @@
-import sys, pickle, os, argparse, re
+import sys, pickle, os, argparse
 from compress_pickle import load, dump
 import numpy as np, pandas as pd
 from constants import *

@@ -1,4 +1,5 @@
 import torch, torch.nn as nn
+from constants import *
 
 
 class Embedding(nn.Module):
@@ -35,28 +36,27 @@ class Embedding(nn.Module):
 
 
 class FullyConnected(nn.Module):
-    def __init__(self, params, sizes, f, toRNN=False):
+    def __init__(self, sizes, f, toRNN=False):
         # super constructor
         super(FullyConnected, self).__init__()
 
         # intermediate layer
         self.seq = nn.ModuleList(
-            [nn.Linear(sum(sizes['x'].values()), params['hidden']), 
-             nn.BatchNorm1d(params['hidden']), f])
+            [nn.Linear(sum(sizes['x'].values()), HIDDEN), 
+             nn.BatchNorm1d(HIDDEN), f])
 
         # fully connected network
-        for i in range(params['layers']-1):
-            self.seq.append(nn.Dropout(p=params['dropout'] / 10))
-            self.seq.append(
-                nn.Linear(params['hidden'], params['hidden']))
-            self.seq.append(nn.BatchNorm1d(params['hidden']))
+        for i in range(LAYERS-1):
+            self.seq.append(nn.Dropout(p=DROPOUT))
+            self.seq.append(nn.Linear(HIDDEN, HIDDEN))
+            self.seq.append(nn.BatchNorm1d(HIDDEN))
             self.seq.append(f)
 
         # output layer
         if toRNN:
-            self.seq.append(nn.Linear(params['hidden'], params['hidden']))
+            self.seq.append(nn.Linear(HIDDEN, HIDDEN))
         else:
-            self.seq.append(nn.Linear(params['hidden'], sizes['out']))
+            self.seq.append(nn.Linear(HIDDEN, sizes['out']))
 
     def forward(self, x):
         for m in self.seq:
@@ -65,12 +65,9 @@ class FullyConnected(nn.Module):
 
 
 class FeedForward(nn.Module):
-    def __init__(self, params, sizes, device, toRNN=False):
+    def __init__(self, sizes, toRNN=False):
         # super constructor
         super(FeedForward, self).__init__()
-
-        # save device to self
-        self.device = device
 
         # activation function
         f = nn.ReLU()
@@ -79,20 +76,20 @@ class FeedForward(nn.Module):
         self.nn0 = Embedding(sizes, f)
 
         # fully connected net on GPU
-        self.nn1 = FullyConnected(params, sizes, f, toRNN).to(device)
+        self.nn1 = FullyConnected(sizes, f, toRNN).to(DEVICE)
 
     def forward(self, x):
         '''
         x: OrderedDict() with same keys as self.k
         '''
         # embedding on CPU, then move to GPU
-        x = self.nn0(x).to(self.device)
+        x = self.nn0(x).to(DEVICE)
         # fully connected on GPU
         return self.nn1(x)
 
 
 class LSTM(nn.Module):
-    def __init__(self, params, sizes):
+    def __init__(self, sizes):
 
         # super constructor
         super(LSTM, self).__init__()
@@ -101,22 +98,25 @@ class LSTM(nn.Module):
         self.steps = sizes['steps']
 
         # initial hidden nodes
-        self.h0 = FeedForward(params, sizes, toRNN=True)
-        self.c0 = FeedForward(params, sizes, toRNN=True)
+        self.h0 = FeedForward(sizes, toRNN=True)
+        self.c0 = FeedForward(sizes, toRNN=True)
 
         # rnn layer
         self.rnn = nn.LSTM(input_size=sizes['time'],
-                           hidden_size=int(params['hidden']),
+                           hidden_size=HIDDEN,
                            batch_first=True)
 
         # output layer
-        self.output = nn.Linear(params['hidden'], sizes['out'])
+        self.output = nn.Linear(HIDDEN, sizes['out'])
 
     # output discrete weights and parameters of continuous components
     def forward(self, x, x_time):
+        # initialize hidden state
         hidden = (self.h0(x).unsqueeze(dim=0), 
             self.c0(x).unsqueeze(dim=0))
-        theta, _ = self.rnn(x_time, hidden)
+
+        # update hidden state recurrently
+        theta, _ = self.rnn(x_time.to(DEVICE), hidden)
 
         # pad
         theta, _ = nn.utils.rnn.pad_packed_sequence(
@@ -125,12 +125,12 @@ class LSTM(nn.Module):
         # output layer: (batch_size, seq_len, N_output)
         return self.output(theta).squeeze()
 
-    def init(self, x_fixed=None):
-        x_fixed.unsqueeze(dim=0)
-        hidden = (self.h0(x_fixed), self.c0(x_fixed))
+    def init(self, x=None):
+        x.unsqueeze(dim=0)
+        hidden = (self.h0(x), self.c0(x))
         return hidden
 
-    def simulate(self, x_time, x_fixed=None, hidden=None):
+    def simulate(self, x_time, x=None, hidden=None):
         """
 
         :param x_time:
@@ -139,8 +139,8 @@ class LSTM(nn.Module):
         :return:
         """
         if hidden is None:
-            x_fixed.unsqueeze(dim=0).repeat(self.layers, 1, 1)
-            theta, hidden = self.rnn(x_time, (self.h0(x_fixed), self.c0(x_fixed)))
+            x.unsqueeze(dim=0).repeat(self.layers, 1, 1)
+            theta, hidden = self.rnn(x_time, (self.h0(x), self.c0(x)))
         else:
             theta, hidden = self.rnn(x_time, hidden)
 
