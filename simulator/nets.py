@@ -60,9 +60,6 @@ class FeedForward(nn.Module):
             x = m(x)
         return x
 
-    def simulate(self, x):
-        return self.forward(x)
-
 
 class LSTM(nn.Module):
     def __init__(self, params, sizes):
@@ -98,24 +95,21 @@ class LSTM(nn.Module):
         # output layer: (batch_size, seq_len, N_output)
         return self.output(theta).squeeze()
 
-    def init(self, x_fixed=None):
-        x_fixed.unsqueeze(dim=0)
-        hidden = (self.h0(x_fixed), self.c0(x_fixed))
+    def init(self, x=None):
+        hidden = (self.h0(x).unsqueeze(dim=0), self.c0(x).unsqueeze(dim=0))
         return hidden
 
-    def simulate(self, x_time, x_fixed=None, hidden=None):
+    def step(self, x_time=None, hidden=None, x=None):
         """
 
         :param x_time:
-        :param x_fixed:
+        :param x:
         :param hidden:
         :return:
         """
         if hidden is None:
-            x_fixed.unsqueeze(dim=0).repeat(self.layers, 1, 1)
-            theta, hidden = self.rnn(x_time, (self.h0(x_fixed), self.c0(x_fixed)))
-        else:
-            theta, hidden = self.rnn(x_time, hidden)
+            hidden = self.init(x=x)
+        theta, hidden = self.rnn(x_time, hidden)
 
         # output layer: (seq_len, batch_size, N_out)
         return self.output(theta), hidden

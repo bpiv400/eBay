@@ -45,9 +45,9 @@ class RewardEnvironment:
         self.queue.reset()
         self.time_feats.reset()
         self.recorder.reset_sim()
-        self.arrival.init(self.x_lstg)
         self.thread_counter = 0
         sources = ArrivalSources(x_lstg=self.x_lstg, composer=self.arrival.composer)
+        self.arrival.init(sources=sources())
         self.queue.push(Arrival(self.lookup[START_DAY], sources))
         if VERBOSE:
             print('Initializing Simulation {}'.format(self.recorder.sim))

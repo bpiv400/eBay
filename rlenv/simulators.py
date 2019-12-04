@@ -13,13 +13,13 @@ class SimulatedActor:
         self.model = model
 
     def make_offer(self, sources=None, turn=None):
-        params = self.model.con(sources=sources, turn=turn)
+        params = self.model.con(sources=sources)
         outcomes, sample_msg = self.sample_con(params, sources=sources, turn=turn)
         # don't draw msg if there's an acceptance or rejection
         if not sample_msg:
             return outcomes
         else:
-            params = self.model.msg(sources=sources, turn=turn)
+            params = self.model.msg(sources=sources)
             self.sample_msg(params, outcomes, turn)
         return outcomes
 
@@ -96,20 +96,19 @@ class SimulatedBuyer(SimulatedActor):
     def sample_con(self, params, turn=None, sources=None):
         # resample until non reject on turn 1
         outcomes = pd.Series(0.0, index=ALL_OUTCOMES[turn])
-        if turn != 7:
-            dist = Categorical(logits=params)
-            if turn == 1:
-                sample = torch.zeros(1)
-                while sample == 0:
-                    # print('sampling concession')
-                    sample = dist.sample((1, ))
-                con = proper_squeeze(sample.float() / 100).numpy()
-                # print('concession: {}'.format(con))
-            else:
-                con = proper_squeeze(dist.sample((1, )).float()).numpy()
-                con = con / 100
+        dist = Categorical(logits=params)
+        if turn == 1:
+            sample = torch.zeros(1)
+            while sample == 0:
+                # print('sampling concession')
+                sample = dist.sample((1, ))
+            con = proper_squeeze(sample.float() / 100).numpy()
+            # print('concession: {}'.format(con))
         else:
-            con = SimulatedActor._sample_bernoulli(params)
+            con = proper_squeeze(dist.sample((1, )).float()).numpy()
+            con = con / 100
+            if turn == 7 and con != 1:  # On the last turn, recast all buckets to 0 except accept
+                con = 0
         sample_msg = (con != 0 and con != 1)
         if sample_msg:
             outcomes[featname(SPLIT, turn)] = get_split(con)

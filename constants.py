@@ -1,7 +1,6 @@
 import os
 from pandas.tseries.holiday import USFederalHolidayCalendar as Calendar
 import torch
-import numpy as np
 from platform import platform
 
 # strings for referencing quantities related to buyer and seller interface
