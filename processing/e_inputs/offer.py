@@ -138,12 +138,9 @@ def process_inputs(part, outcome, role):
 	for k, v in OFFER_GROUPS.items():
 		vec = get_offer_vec(x, v)
 		if k in x:
-			x[k] = x[k],join(vec)
+			x[k] = x[k].join(vec)
 		else:
 			x[k] = vec
-
-	# add price feats to x['price']
-	x['price'] = pd.concat([price_feats, x['price']], axis=1)
 
 	# if not delay model, return
 	if outcome in ['con', 'msg']:
