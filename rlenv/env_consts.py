@@ -42,7 +42,7 @@ CLOCK_FEATS = ['holiday', 'dow0', 'dow1', 'dow2', 'dow3', 'dow4', 'dow5', 'minut
 TURN_FEATS = ['t1', 't2', 't3']
 
 # outcomes
-DAYS = 'days'
+# DAYS = 'days'
 DELAY = 'delay'
 CON = 'con'
 NORM = 'norm'
@@ -53,7 +53,7 @@ AUTO = 'auto'
 EXP = 'exp'
 
 BYR_OUTCOMES = [
-    DAYS,
+    # DAYS,
     DELAY,
     CON,
     NORM,

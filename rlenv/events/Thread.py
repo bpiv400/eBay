@@ -107,8 +107,9 @@ class Thread(Event):
         # update outcomes
         delay_dur = self.spi * self.interval + add_delay
         delay = delay_dur / self.max_delay
-        days = delay_dur / DAY
-        self.sources.prepare_offer(days=days, delay=delay, turn=self.turn)
+        # days = delay_dur / DAY
+        # TODO: Remove days if we don't keep it
+        self.sources.prepare_offer(days=None, delay=delay, turn=self.turn)
         # reset delay markers
         self.interval = 0
         self.max_interval = None

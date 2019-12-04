@@ -52,8 +52,7 @@ class ThreadSources(Sources):
                 print(feat)
         print(self.source_dict[THREAD_MAP].index)
         print(self.source_dict[THREAD_MAP][featname(DAYS, turn)])
-
-        outcomes[featname(DAYS, turn)] = self.source_dict[THREAD_MAP][featname(DAYS, turn)]
+        # outcomes[featname(DAYS, turn)] = self.source_dict[THREAD_MAP][featname(DAYS, turn)]
         outcomes[featname(DELAY, turn)] = self.source_dict[THREAD_MAP][featname(DELAY, turn)]
         self.source_dict[ALL_OUTCOMES[turn]] = outcomes
         return outcomes[featname(NORM, turn)]
@@ -86,7 +85,8 @@ class ThreadSources(Sources):
         self.source_dict[THREAD_MAP][ALL_TIME_FEATS[turn]] = time_diff
 
     def prepare_offer(self, days=None, delay=None, turn=None):
-        self.source_dict[THREAD_MAP][featname(DAYS, turn)] = days
+        # TODO: Remove days if we don't keep it
+        # self.source_dict[THREAD_MAP][featname(DAYS, turn)] = days
         self.source_dict[THREAD_MAP][featname(DELAY, turn)] = delay
         self.delay_prev_time = None
 
