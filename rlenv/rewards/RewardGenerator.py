@@ -51,7 +51,6 @@ class RewardGenerator:
     def generate(self):
         for lstg in self.x_lstg.index:
             x_lstg = self.x_lstg.loc[lstg, :].astype(np.float32)
-            x_lstg = torch.from_numpy(x_lstg.values).float()
             lookup = self.lookup.loc[lstg, :]
             self.recorder.update_lstg(lookup=lookup, lstg=lstg)
             environment = RewardEnvironment(buyer=self.buyer, seller=self.seller,
