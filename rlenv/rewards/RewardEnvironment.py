@@ -96,7 +96,7 @@ class RewardEnvironment:
             print('Number of arrivals: {}'.format(num_byrs))
         if num_byrs > 0:
             # place each into the queue
-            for i in range(num_byrs.long()):
+            for i in range(num_byrs[0].astype(int)):
                 priority = event.priority + np.random.randint(0, INTERVAL['arrival'])
                 self.thread_counter += 1
                 offer_event = Thread(priority, thread_id=self.thread_counter,

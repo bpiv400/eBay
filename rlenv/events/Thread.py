@@ -40,7 +40,7 @@ class Thread(Event):
 
     def buyer_offer(self):
         outcomes = self.buyer.make_offer(sources=self.sources(), turn=self.turn)
-        norm = self.sources.update_offer(outcomes)
+        norm = self.sources.update_offer(outcomes=outcomes, turn=self.turn)
         return {
             'price': norm,
             'type': BYR_PREFIX,

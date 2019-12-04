@@ -31,7 +31,7 @@ class ThreadSources(Sources):
         self.offer_prev_time = None
 
     def prepare_hist(self, time_feats=None, clock_feats=None, months_since_lstg=None):
-        self.source_dict[THREAD_MAP][MONTHS_LSTG_MAP] = months_since_lstg
+        self.source_dict[THREAD_MAP][MONTHS_SINCE_LSTG] = months_since_lstg
         self.source_dict[THREAD_MAP][ALL_CLOCK_FEATS[1]] = clock_feats
         self.source_dict[THREAD_MAP][ALL_TIME_FEATS[1]] = time_feats
         self.offer_prev_time = time_feats
@@ -44,6 +44,15 @@ class ThreadSources(Sources):
         self.source_dict[TURN_IND_MAP]['t1'] = 1
 
     def update_offer(self, outcomes=None, turn=None):
+        print('outcomes')
+        print(outcomes[featname(DAYS, turn)])
+        print('source')
+        for feat in self.source_dict[THREAD_MAP].index:
+            if '_1' in feat:
+                print(feat)
+        print(self.source_dict[THREAD_MAP].index)
+        print(self.source_dict[THREAD_MAP][featname(DAYS, turn)])
+
         outcomes[featname(DAYS, turn)] = self.source_dict[THREAD_MAP][featname(DAYS, turn)]
         outcomes[featname(DELAY, turn)] = self.source_dict[THREAD_MAP][featname(DELAY, turn)]
         self.source_dict[ALL_OUTCOMES[turn]] = outcomes

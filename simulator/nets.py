@@ -109,7 +109,6 @@ class LSTM(nn.Module):
         """
         if hidden is None:
             hidden = self.init(x=x)
-        theta, hidden = self.rnn(x_time, hidden)
-
+        theta, hidden = self.rnn(x_time.unsqueeze(0), hidden)
         # output layer: (seq_len, batch_size, N_out)
         return self.output(theta), hidden

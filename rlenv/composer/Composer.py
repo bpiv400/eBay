@@ -238,8 +238,9 @@ class Composer:
                                                                 self.sizes[model_name]['x_time'],
                                                                 sources)
         if fixed:
-            fixed_maps = self.maps['x']
-            fixed_sizes = self.sizes['x']
+            input_dict['x'] = dict()
+            fixed_maps = self.maps[model_name]['x']
+            fixed_sizes = self.sizes[model_name]['x']
             for input_set in fixed_maps.keys():
                 input_dict['x'][input_set] = Composer._build_input_vector(fixed_maps[input_set],
                                                                           fixed_sizes[input_set],

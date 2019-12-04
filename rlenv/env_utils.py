@@ -111,6 +111,9 @@ def load_model(full_name):
     net = model_class(params, sizes)  # type: torch.nn.Module
     print('state dict...')
     net.load_state_dict(torch.load(model_path, map_location='cpu'))
+    for param in net.parameters(recurse=True):
+        param.requires_grad = False
+    net.eval()
     return net
 
 
