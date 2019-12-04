@@ -1,4 +1,5 @@
 from constants import BYR_PREFIX, SLR_PREFIX
+from rlenv.env_consts import MONTH
 from rlenv.env_utils import *
 import rlenv.interface.model_names as model_names
 import pytest
@@ -32,21 +33,6 @@ def test_model_collections():
     assert model_names.NUM_OFFERS in model_names.LSTM_MODELS
 
 
-def test_load_featnames_sizes():
-    for model in model_names.MODELS:
-        featnames = load_featnames(model)
-        assert 'x_fixed' in featnames
-        if model in model_names.RECURRENT:
-            assert 'x_time' in featnames
-        sizes = load_sizes(model)
-        assert 'fixed' in sizes
-        assert 'out' in sizes
-        assert len(featnames['x_fixed']) == sizes['fixed']
-        if model in model_names.RECURRENT:
-            assert 'time' in sizes
-            assert len(featnames['x_time']) == sizes['time']
-
-
 def test_get_model_class():
     for name in model_names.MODELS:
         curr_class = get_model_class(name)
@@ -62,25 +48,25 @@ def test_get_clock_feats():
     assert a[0] == 1
     day_before = christmas_morn - 24 * 60 * 60
     a = get_clock_feats(day_before)
-    assert a[0] == 0
+    assert a[0] == pytest.approx(0)
     for i in range(7):
         curr_day = day_before + i * 24 * 60 * 60
         a = get_clock_feats(curr_day)
         if i < 6:
-            assert a[i + 1] == 1
-            assert a[1:7].sum() == 1
+            assert a[i + 1] == pytest.approx(1)
+            assert a[1:7].sum() == pytest.approx(1)
         else:
-            assert a[1:7].sum() == 0
-    assert a[7] == 0
+            assert a[1:7].sum() == pytest.approx(0)
+    assert a[7] == pytest.approx(0)
     curr_day = day_before + 12 * 60 * 60
     a = get_clock_feats(curr_day)
-    assert a[7] == 0.5
+    assert a[7] == pytest.approx(0.5)
     curr_day = curr_day + 30 * 60
     a = get_clock_feats(curr_day)
-    assert a[7] == (.5 + 30 * 60 / DAY)
+    assert a[7] == pytest.approx(.5 + 30 * 60 / DAY)
     curr_day = curr_day + 30
     a = get_clock_feats(curr_day)
-    assert a[7] == (.5 + 30 * 60 / DAY + 30 / DAY)
+    assert a[7] == pytest.approx(.5 + 30 * 60 / DAY + 30 / DAY)
 
 
 def test_proper_squeeze():
@@ -107,7 +93,7 @@ def test_categorical_sample():
     outcomes[2] = 0
     for _ in range(10000):
         samp = categorical_sample(params, 1)
-        samp = int(samp.item())
+        samp = int(samp)
         outcomes[samp] += 1
     for i in outcomes:
         print('{}: {}'.format(i, outcomes[i]))
@@ -118,12 +104,12 @@ def test_categorical_sample():
 
 
 def test_get_split():
-    a = torch.tensor([.49]).float()
-    b = torch.tensor([.48]).float()
-    c = torch.tensor([.51]).float()
-    d = torch.tensor([.52]).float()
-    e = torch.tensor([.5]).float()
-    f = torch.tensor([.2]).float()
+    a = torch.tensor([.49]).numpy()
+    b = torch.tensor([.48]).numpy()
+    c = torch.tensor([.51]).numpy()
+    d = torch.tensor([.52]).numpy()
+    e = torch.tensor([.5]).numpy()
+    f = torch.tensor([.2]).numpy()
     assert get_split(a) == 1
     assert get_split(b) == 0
     assert get_split(c) == 1
@@ -134,9 +120,9 @@ def test_get_split():
 
 def test_load_model():
     for model in model_names.MODELS:
-        load_model(model, 1)
+        print(model)
+        load_model(model)
 
 
 def test_time_delta():
-    assert time_delta(15, 15 + DAY, unit=DAY) == 1
     assert time_delta(15, 15 + MONTH, unit=MONTH) == 1

@@ -22,7 +22,7 @@ class Composer:
         composer_path = '{}{}.pkl'.format(COMPOSER_DIR, params['composer'])
         if not os.path.exists(composer_path) or rebuild:
             self.maps, self.sizes, self.feat_sets = Composer.build()
-            pickle.dump((self.maps, self.sizes, self.feat_sets), open(composer_path, 'rb'))
+            pickle.dump((self.maps, self.sizes, self.feat_sets), open(composer_path, 'wb'))
         else:
             self.maps, self.sizes, self.feat_sets = unpickle(composer_path)
 
@@ -76,40 +76,40 @@ class Composer:
                         print('intersection: {}'.format(new_int))
                         print('')
                         prev_int = prev_int.union(new_int)
+                        raise RuntimeError("unexpected intersection between maps")
         # exclude turn indicators
-        for feat in TURN_FEATS:
-            if feat in thread_cols:
-                thread_cols.remove(feat)
-            if feat in x_time_cols:
-                x_time_cols.remove(feat)
-        # exclude features from x_lstg
-        for feat in x_lstg_cols:
-            if feat in thread_cols:
-                thread_cols.remove(feat)
-            if feat in x_time_cols:
-                x_time_cols.remove(feat)
+        for feat_set in [x_lstg_cols, TURN_FEATS]:
+            for feat in feat_set:
+                if feat in thread_cols:
+                    thread_cols.remove(feat)
+                if feat in x_time_cols:
+                    x_time_cols.remove(feat)
         # check that x_time and thread cols are mutually exlcusive
-        print('intersection: {}'.format(x_time_cols.intersection(thread_cols)))
+        if len(x_time_cols.intersection(thread_cols)) > 0:
+            print('intersection: {}'.format(x_time_cols.intersection(thread_cols)))
         assert len(x_time_cols.intersection(thread_cols)) == 0
         return thread_cols, x_time_cols
 
     @staticmethod
     def _build_model_maps(model, feat_sets):
-        print(model)
+        # print(model)
         maps = dict()
         featnames = fix_featnames(load_featnames(model))
         sizes = load_sizes(model)
+        # temporary fix
+        if 'time' in sizes:
+            sizes['x_time'] = sizes['time']
+            del sizes['time']
         # create input set for x_time
         if 'x_time' in featnames:
             input_set = featnames['x_time']
-            print('x_time')
             maps['x_time'] = Composer._build_set_maps(input_set, feat_sets,
                                                       size=sizes['x_time'])
             # ensure only features from x_time contribute to the x_time map
             assert len(maps['x_time']) == 1
         maps['x'] = dict()
         for set_name, input_set in featnames['x'].items():
-            print(set_name)
+            # print(set_name)
             maps['x'][set_name] = Composer._build_set_maps(input_set, feat_sets,
                                                            size=sizes['x'][set_name])
         clipped_sizes = {
@@ -163,7 +163,7 @@ class Composer:
         """
         total = len(input_set)
         indices = list()
-        print('num maps: {}'.format(len(maps)))
+        # print('num maps: {}'.format(len(maps)))
         map_feats = list()
         for map_name, input_map in maps.items():
             assert isinstance(input_map, pd.Series)
@@ -171,14 +171,13 @@ class Composer:
             map_feats = map_feats + list(input_map.index)
 
         # TODO: DEBUGGING
+        # print(total)
+        # print(len(indices))
+        # input_feats = set(list(input_set.index))
+        # map_feats = set(map_feats)
+        # print('in input not in maps: {}'.format(input_feats.difference(map_feats)))
+        ############################
         assert len(map_feats) == len(indices)
-        print(total)
-        print(len(indices))
-        input_feats = set(list(input_set.index))
-        print(input_feats)
-        map_feats = set(map_feats)
-        print('in input not in maps: {}'.format(input_feats.difference(map_feats)))
-
         assert len(indices) == total
         assert min(indices) == 0
         assert max(indices) == (total - 1)

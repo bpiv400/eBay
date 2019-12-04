@@ -18,11 +18,10 @@ def fix_featnames(featnames):
             turn_num = int(set_name[-1:])
             new_feats = list()
             for feat in feat_set:
-                if feat not in NO_SUFFIX:
+                if feat not in NO_SUFFIX and not (feat[-1:].isdigit() and feat[-2:-1] == '_'):
                     new_feats.append('{}_{}'.format(feat, turn_num))
                 else:
                     new_feats.append(feat)
-            print(new_feats)
             featnames['x'][set_name] = new_feats
     return featnames
 

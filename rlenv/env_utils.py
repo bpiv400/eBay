@@ -100,12 +100,16 @@ def load_model(full_name):
     :param full_name: full name of the model
     :return: PyTorch Module
     """
+    print('sizes...')
     sizes = load_sizes(full_name)
+    print('params...')
     params = load_params()
     model_path = '{}{}.net'.format(MODEL_DIR, full_name)
     # loading model
     model_class = get_model_class(full_name)
+    print('initializing...')
     net = model_class(params, sizes)  # type: torch.nn.Module
+    print('state dict...')
     net.load_state_dict(torch.load(model_path, map_location='cpu'))
     return net
 
@@ -131,5 +135,5 @@ def get_value_fee(price, meta):
 
 def time_delta(start, end, unit=DAY):
     diff = (end - start) / unit
-    diff = torch.tensor([diff]).float()
+    diff = np.array([diff], dtype=np.float32)
     return diff
