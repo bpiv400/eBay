@@ -2,7 +2,7 @@ import math
 import numpy as np
 import pandas as pd
 from rlenv.env_consts import (TIME_FEATS, ALL_TIME_FEATS,
-                              ALL_CLOCK_FEATS, BYR_HIST, DELAY, ALL_OUTCOMES,
+                              ALL_CLOCK_FEATS, BYR_HIST, DAYS, DELAY, ALL_OUTCOMES,
                               NORM, TURN_FEATS, MONTHS_SINCE_LSTG, CLOCK_FEATS,
                               DURATION, INT_REMAINING, CON, MSG, SPLIT, EXP, REJECT, AUTO)
 from rlenv.composer.maps import *
@@ -44,6 +44,14 @@ class ThreadSources(Sources):
         self.source_dict[TURN_IND_MAP]['t1'] = 1
 
     def update_offer(self, outcomes=None, turn=None):
+        print('outcomes')
+        print(outcomes[featname(DAYS, turn)])
+        print('source')
+        for feat in self.source_dict[THREAD_MAP].index:
+            if '_1' in feat:
+                print(feat)
+        print(self.source_dict[THREAD_MAP].index)
+        print(self.source_dict[THREAD_MAP][featname(DAYS, turn)])
         # outcomes[featname(DAYS, turn)] = self.source_dict[THREAD_MAP][featname(DAYS, turn)]
         outcomes[featname(DELAY, turn)] = self.source_dict[THREAD_MAP][featname(DELAY, turn)]
         self.source_dict[ALL_OUTCOMES[turn]] = outcomes
