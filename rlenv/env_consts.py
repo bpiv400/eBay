@@ -42,7 +42,6 @@ CLOCK_FEATS = ['holiday', 'dow0', 'dow1', 'dow2', 'dow3', 'dow4', 'dow5', 'minut
 TURN_FEATS = ['t1', 't2', 't3']
 
 # outcomes
-# DAYS = 'days'
 DELAY = 'delay'
 CON = 'con'
 NORM = 'norm'
@@ -72,8 +71,6 @@ for i in range(7):
         ALL_OUTCOMES[i + 1] = ['{}_{}'.format(feat, i + 1) for feat in BYR_OUTCOMES]
     else:
         ALL_OUTCOMES[i + 1] = ['{}_{}'.format(feat, i + 1) for feat in SLR_OUTCOMES]
-
-
 
 # turn indices
 SLR_TURN_INDS = ['t1', 't2']
@@ -107,14 +104,6 @@ DAY = 24 * 3600
 HOUR = 3600
 EXPIRATION = 48 * 60 * 60
 
-
-# zero vectors
-# TODO: check whether there are similar outcome vectors
-ZERO_SLR_OUTCOMES = torch.zeros(len(SLR_OUTCOMES))
-ZERO_SLR_OUTCOMES[[7, 8]] = 1
-
-CLOCK_ZEROS = torch.zeros(len(CLOCK_FEATS))
-
 FIXED = 'fixed'
 TIME = 'time'
 
@@ -123,12 +112,6 @@ SIM_COUNT = 'n'
 
 # fee constants
 ANCHOR_STORE_INSERT = .03
-
-# reject outcomes
-AUTO_REJ_OUTCOMES = torch.zeros(len(SLR_OUTCOMES))
-AUTO_REJ_OUTCOMES[[7, 8]] = 1  # automatic, rejected
-EXP_REJ_OUTCOMES = torch.zeros(len(SLR_OUTCOMES))
-EXP_REJ_OUTCOMES[[0, 8]] = 1  # full delay, rejected, expired
 
 # lookup column names
 LSTG = 'lstg'
