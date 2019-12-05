@@ -5,7 +5,7 @@ from compress_pickle import load
 from datetime import datetime as dt
 from torch.utils.tensorboard import SummaryWriter
 from scipy.optimize import minimize_scalar
-from simulator.interface import Inputs
+from simulator.interface import Inputs, run_loop
 from simulator.model import Simulator
 from constants import *
 
