@@ -192,11 +192,11 @@ def get_sizes(d, model):
     # arrival and delay models
     if 'x_clock' in d:
         sizes['steps'] = len(d['y'].columns)
-        sizes['time'] = len(d['x_clock'].columns) + len(d['tf'].columns) + 1
+        sizes['x_time'] = len(d['x_clock'].columns) + len(d['tf'].columns) + 1
 
         # delay models
         if 'remaining' in d:
-            sizes['time'] += 1
+            sizes['x_time'] += 1
 
     # output size is based on model
     if model == 'hist':

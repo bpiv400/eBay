@@ -1,10 +1,35 @@
 import sys
 import numpy as np, pandas as pd
 import torch
+from torch.nn.utils import rnn
 from datetime import datetime as dt
-from torch.utils.data import Dataset, Sampler
+from torch.utils.data import DataLoader, Dataset, Sampler
 from compress_pickle import load
 from constants import *
+
+
+# helper function to run a loop of the model
+def run_loop(simulator, data, optimizer=None):
+    # training or validation
+    isTraining = optimizer is not None
+
+    # collate function
+    f = collateRNN if data.isRecurrent else collateFF
+
+    # sampler
+    sampler = Sample(data, isTraining)
+
+    # load batches
+    batches = DataLoader(data, batch_sampler=sampler,
+        collate_fn=f, num_workers=NUM_WORKERS, pin_memory=True)
+
+    # loop over batches, calculate log-likelihood
+    lnL = 0.0
+    for batch in batches:
+        lnL += simulator.run_batch(batch, optimizer)
+
+    return lnL / data.N_labels
+
 
 
 # defines a dataset that extends torch.utils.data.Dataset
@@ -160,9 +185,9 @@ def collateRNN(batch):
     turns = torch.sum(y > -1, dim=1).long()
     x = {k: torch.stack(v).float() for k, v in x.items()}
     x_time = torch.stack(x_time, dim=0).float()
+    x_time = rnn.pack_padded_sequence(x_time, turns, batch_first=True)
     
     # output is dictionary of tensors
     return {'y': y, 
-            'turns': turns,
             'x': x, 
             'x_time': x_time}

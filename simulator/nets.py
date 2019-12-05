@@ -23,6 +23,9 @@ class Embedding(nn.Module):
         '''
         x: OrderedDict() with same keys as self.k
         '''
+        # ensure that keys of x and self.k are of the same length
+        assert len(x.keys()) == len(self.k.keys())
+
         # separate embeddings for input feature components
         l = []
         for key in self.k.keys():
@@ -104,10 +107,10 @@ class LSTM(nn.Module):
         # rnn layer
         self.rnn = nn.LSTM(input_size=sizes['time'],
                            hidden_size=HIDDEN,
-                           batch_first=True)
+                           batch_first=True).to(DEVICE)
 
         # output layer
-        self.output = nn.Linear(HIDDEN, sizes['out'])
+        self.output = nn.Linear(HIDDEN, sizes['out']).to(DEVICE)
 
     # output discrete weights and parameters of continuous components
     def forward(self, x, x_time):
@@ -126,9 +129,8 @@ class LSTM(nn.Module):
         return self.output(theta).squeeze()
 
     def init(self, x=None):
-        x.unsqueeze(dim=0)
-        hidden = (self.h0(x), self.c0(x))
-        return hidden
+        return (self.h0(x).unsqueeze(dim=0), 
+            self.c0(x).unsqueeze(dim=0))
 
     def simulate(self, x_time, x=None, hidden=None):
         """

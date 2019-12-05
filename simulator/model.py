@@ -1,8 +1,5 @@
 import sys
 import torch
-from torch.nn.utils import rnn
-from datetime import datetime as dt
-import numpy as np
 from simulator.nets import *
 from constants import *
 
@@ -41,41 +38,31 @@ class Simulator:
             self.net = FeedForward(sizes)    
 
 
-    def evaluate_loss(self, d):
-        # feed-forward
-        if 'x_time' not in d:
-            y = d['y'].to(DEVICE)
-            theta = self.net(d['x']).squeeze()
+    def evaluate_ff_loss(self, d):
+        # prediction from model
+        theta = self.net(d['x']).squeeze()
 
-            # for con_byr, split by turn and calculate loss separately
-            if self.model == 'con_byr':
-                # observation is on buyer's 4th turn if all three turn indicators are 0
-                t4 = torch.sum(d['x']['lstg'][:,-3:], dim=1) == 0
+        # put outcome on gpu
+        y = d['y'].to(DEVICE)
 
-                # loss for first 3 turns
-                loss = self.loss[0](theta[~t4,:], y[~t4].long())
+        # for con_byr, split by turn and calculate loss separately
+        if self.model == 'con_byr':
+            # observation is on buyer's 4th turn if all three turn indicators are 0
+            t4 = torch.sum(d['x']['lstg'][:,-3:], dim=1) == 0
 
-                # loss for last turn: use accept probability only
-                if torch.sum(t4).item() > 0:
-                    loss += self.loss[1](theta[t4,-1], (y[t4] == 100).float())
+            # loss for first 3 turns
+            loss = self.loss[0](theta[~t4,:], y[~t4].long())
 
-                return loss
-            else:
-                if self.loss.__str__() == 'BCEWithLogitsLoss()':
-                    return self.loss(theta, y.float())
-                else:
-                    return self.loss(theta, y.long())
+            # loss for last turn: use accept probability only
+            if torch.sum(t4).item() > 0:
+                loss += self.loss[1](theta[t4,-1], (y[t4] == 100).float())
 
-        # use mask for recurrent
-        mask = d['y'] > -1
+            return loss
 
-        # prediction from recurrent net
-        theta = self.net(d['x'], d['x_time'])
+        if self.loss.__str__() == 'BCEWithLogitsLoss()':
+            return self.loss(theta, y.float())
 
-        # apply mask and calculate loss
-        theta = theta[mask]
-        y = d['y'][mask].to(DEVICE)
-        return self.loss(theta, y)
+        return self.loss(theta, y.long())
 
 
     def run_batch(self, d, optimizer=None):
@@ -87,13 +74,13 @@ class Simulator:
         if isTraining:
             optimizer.zero_grad()
 
-        # pack x_time
+        # prediction from model and loss for recurrent models
         if 'x_time' in d:
-            d['x_time'] = rnn.pack_padded_sequence(
-                d['x_time'], d['turns'], batch_first=True)
-
-        # calculate loss
-        loss = self.evaluate_loss(d)
+            theta = self.net(d['x'], d['x_time'])
+            mask = d['y'] > -1
+            loss = self.loss(theta[mask], d['y'][mask].to(DEVICE))
+        else:
+            loss = self.evaluate_ff_loss(d)
 
         # step down gradients
         if isTraining:
