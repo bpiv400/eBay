@@ -31,19 +31,19 @@ class Simulator:
             self.loss = torch.nn.BCEWithLogitsLoss(
                 reduction='sum')
 
-        # neural net(s)
+        # embedding net
+        self.embedding = Embedding(sizes)
+
+        # subsequent neural net(s)
         if ('delay' in model) or (model == 'arrival'):
-            self.net = LSTM(sizes)
+            self.net = LSTM(sizes).to(DEVICE)
         else:
-            self.net = FeedForward(sizes)    
+            self.net = FullyConnected(sizes).to(DEVICE)    
 
 
     def evaluate_ff_loss(self, d):
         # prediction from model
         theta = self.net(d['x']).squeeze()
-
-        # put outcome on gpu
-        y = d['y'].to(DEVICE)
 
         # for con_byr, split by turn and calculate loss separately
         if self.model == 'con_byr':
@@ -51,18 +51,18 @@ class Simulator:
             t4 = torch.sum(d['x']['lstg'][:,-3:], dim=1) == 0
 
             # loss for first 3 turns
-            loss = self.loss[0](theta[~t4,:], y[~t4].long())
+            loss = self.loss[0](theta[~t4,:], d['y'][~t4].long())
 
             # loss for last turn: use accept probability only
             if torch.sum(t4).item() > 0:
-                loss += self.loss[1](theta[t4,-1], (y[t4] == 100).float())
+                loss += self.loss[1](theta[t4,-1], (d['y'][t4] == 100).float())
 
             return loss
 
         if self.loss.__str__() == 'BCEWithLogitsLoss()':
-            return self.loss(theta, y.float())
+            return self.loss(theta, d['y'].float())
 
-        return self.loss(theta, y.long())
+        return self.loss(theta, d['y'].long())
 
 
     def run_batch(self, d, optimizer=None):
@@ -78,7 +78,7 @@ class Simulator:
         if 'x_time' in d:
             theta = self.net(d['x'], d['x_time'])
             mask = d['y'] > -1
-            loss = self.loss(theta[mask], d['y'][mask].to(DEVICE))
+            loss = self.loss(theta[mask], d['y'][mask])
         else:
             loss = self.evaluate_ff_loss(d)
 

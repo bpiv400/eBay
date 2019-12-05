@@ -3,12 +3,15 @@ from constants import *
 
 
 class Embedding(nn.Module):
-    def __init__(self, sizes, f):
+    def __init__(self, sizes):
         # super constructor
         super(Embedding, self).__init__()
 
         # save dictionary of input feat sizes
         self.k = sizes['x']
+
+        # activation function
+        f = nn.ReLU()
 
         # embeddings layer(s)
         d = {}
@@ -39,9 +42,12 @@ class Embedding(nn.Module):
 
 
 class FullyConnected(nn.Module):
-    def __init__(self, sizes, f, toRNN=False):
+    def __init__(self, sizes, toRNN=False):
         # super constructor
         super(FullyConnected, self).__init__()
+
+        # activation function
+        f = nn.ReLU()
 
         # intermediate layer
         self.seq = nn.ModuleList(
@@ -67,30 +73,6 @@ class FullyConnected(nn.Module):
         return x
 
 
-class FeedForward(nn.Module):
-    def __init__(self, sizes, toRNN=False):
-        # super constructor
-        super(FeedForward, self).__init__()
-
-        # activation function
-        f = nn.ReLU()
-
-        # embedding on CPU
-        self.nn0 = Embedding(sizes, f)
-
-        # fully connected net on GPU
-        self.nn1 = FullyConnected(sizes, f, toRNN).to(DEVICE)
-
-    def forward(self, x):
-        '''
-        x: OrderedDict() with same keys as self.k
-        '''
-        # embedding on CPU, then move to GPU
-        x = self.nn0(x).to(DEVICE)
-        # fully connected on GPU
-        return self.nn1(x)
-
-
 class LSTM(nn.Module):
     def __init__(self, sizes):
 
@@ -101,16 +83,16 @@ class LSTM(nn.Module):
         self.steps = sizes['steps']
 
         # initial hidden nodes
-        self.h0 = FeedForward(sizes, toRNN=True)
-        self.c0 = FeedForward(sizes, toRNN=True)
+        self.h0 = FullyConnected(sizes, toRNN=True)
+        self.c0 = FullyConnected(sizes, toRNN=True)
 
         # rnn layer
         self.rnn = nn.LSTM(input_size=sizes['x_time'],
                            hidden_size=HIDDEN,
-                           batch_first=True).to(DEVICE)
+                           batch_first=True)
 
         # output layer
-        self.output = nn.Linear(HIDDEN, sizes['out']).to(DEVICE)
+        self.output = nn.Linear(HIDDEN, sizes['out'])
 
     # output discrete weights and parameters of continuous components
     def forward(self, x, x_time):
@@ -119,7 +101,7 @@ class LSTM(nn.Module):
             self.c0(x).unsqueeze(dim=0))
 
         # update hidden state recurrently
-        theta, _ = self.rnn(x_time.to(DEVICE), hidden)
+        theta, _ = self.rnn(x_time, hidden)
 
         # pad
         theta, _ = nn.utils.rnn.pad_packed_sequence(
