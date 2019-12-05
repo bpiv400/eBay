@@ -1,5 +1,3 @@
-import sys
-import torch
 from simulator.nets import *
 from constants import *
 
@@ -37,7 +35,6 @@ class Simulator:
         else:
             self.net = FeedForward(sizes)    
 
-
     def evaluate_ff_loss(self, d):
         # prediction from model
         theta = self.net(d['x']).squeeze()
@@ -64,7 +61,6 @@ class Simulator:
 
         return self.loss(theta, y.long())
 
-
     def run_batch(self, d, optimizer=None):
         # train / eval mode
         isTraining = optimizer is not None
@@ -73,7 +69,6 @@ class Simulator:
         # zero gradient
         if isTraining:
             optimizer.zero_grad()
-
         # prediction from model and loss for recurrent models
         if 'x_time' in d:
             theta = self.net(d['x'], d['x_time'])
@@ -81,7 +76,6 @@ class Simulator:
             loss = self.loss(theta[mask], d['y'][mask].to(DEVICE))
         else:
             loss = self.evaluate_ff_loss(d)
-
         # step down gradients
         if isTraining:
             loss.backward()

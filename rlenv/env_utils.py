@@ -2,14 +2,15 @@
 Utility functions for use in objects related to the RL environment
 """
 import torch
+import numpy as np
 import pandas as pd
 import utils
 from torch.distributions.categorical import Categorical
 from constants import (INPUT_DIR, START,
                        HOLIDAYS, TOL_HALF, MODEL_DIR)
-from rlenv.interface.model_names import FEED_FORWARD, LSTM_MODELS
-from simulator.nets import FeedForward, LSTM, RNN
-from rlenv.env_consts import PARAMS_PATH, META_6, META_7, DAY, MONTH
+from rlenv.interface.model_names import LSTM_MODELS
+from simulator.nets import FeedForward, LSTM
+from rlenv.env_consts import PARAMS_PATH, META_6, META_7, DAY
 
 
 def load_featnames(full_name):
@@ -24,6 +25,10 @@ def load_sizes(full_name):
     return featnames_dict
 
 
+def featname(feat, turn):
+    return '{}_{}'.format(feat, turn)
+
+
 def get_model_class(full_name):
     """
     Returns the class of the given model
@@ -32,28 +37,23 @@ def get_model_class(full_name):
     :return: simulator.nets.RNN, simulator.nets.LSTM, or
     simulator.nets.FeedForward
     """
-    if full_name in FEED_FORWARD:
-        mod_type = FeedForward
-    elif full_name in LSTM_MODELS:
+    if full_name in LSTM_MODELS:
         mod_type = LSTM
     else:
-        mod_type = RNN
+        mod_type = FeedForward
     return mod_type
 
 
 def get_clock_feats(time):
     """
-    Gets clock features as np.array given the time
-
-    For arrival interface, gives outputs in order of ARRIVAL_CLOCK_FEATS
-    For offer interface, gives outputs in order of
-
-    Will need to add argument to include minutes for other interface
+    Gets clock features as np.array given the time relative to START (in seconds since)
 
     :param time: int giving time in seconds since START
-    :return: NA
+    :return: torch.FloatTensor containing 8 elements, where the first element is an indicator
+    for holiday, the second through seventh give indicators for the day of week, and the 8th
+    gives the time of day as a fraction of seconds since minute
     """
-    out = torch.zeros(8).float()
+    out = np.zeros(8)
     clock = pd.to_datetime(time, unit='s', origin=START)
     # holidays
     out[0] = int(str(clock.date()) in HOLIDAYS)
@@ -80,40 +80,51 @@ def proper_squeeze(tensor):
 
 def categorical_sample(params, n):
     cat = Categorical(logits=params)
-    return cat.sample(sample_shape=(n, )).float()
+    return proper_squeeze(cat.sample(sample_shape=(n, )).float()).numpy()
 
 
 def get_split(con):
-    output = 1 if abs(.5 - con) < TOL_HALF else 0
+    con = con * 100
+    output = 1 if abs(50 - con) < (TOL_HALF * 100) else 0
     return output
 
 
-def load_params(model_exp):
-    df = pd.read_csv(PARAMS_PATH, index_col='id')
-    params = df.loc[model_exp].to_dict()
-    return params
+def chunk_dir(part_dir, chunk_num, records=False, rewards=False):
+    if records:
+        insert = 'records'
+    elif rewards:
+        insert = 'rewards'
+    else:
+        insert = 'chunks'
+    return '{}{}/{}/'.format(part_dir, insert, chunk_num)
 
 
-def load_model(full_name, model_exp):
+def load_params():
+    return utils.unpickle(PARAMS_PATH)
+
+
+def load_model(full_name):
     """
     Initialize pytorch network for some model
 
     :param full_name: full name of the model
-    :param model_exp: experiment number for the model
     :return: PyTorch Module
     """
+    print('sizes...')
     sizes = load_sizes(full_name)
-    params = load_params(model_exp)
-    model_path = '{}{}_{}.net'.format(MODEL_DIR, full_name, model_exp)
+    print('params...')
+    params = load_params()
+    model_path = '{}{}.net'.format(MODEL_DIR, full_name)
     # loading model
     model_class = get_model_class(full_name)
+    print('initializing...')
     net = model_class(params, sizes)  # type: torch.nn.Module
+    print('state dict...')
     net.load_state_dict(torch.load(model_path, map_location='cpu'))
+    for param in net.parameters(recurse=True):
+        param.requires_grad = False
+    net.eval()
     return net
-    # except (RuntimeError, FileNotFoundError) as e:
-    # print(e)
-    # print('failed for {}'.format(err_name))
-    # return None
 
 
 def get_value_fee(price, meta):
@@ -137,5 +148,5 @@ def get_value_fee(price, meta):
 
 def time_delta(start, end, unit=DAY):
     diff = (end - start) / unit
-    diff = torch.tensor([diff]).float()
+    diff = np.array([diff], dtype=np.float32)
     return diff

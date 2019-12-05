@@ -1,14 +1,17 @@
 """
 
 """
+import os
+import sys
+import shutil
+from datetime import datetime
 from compress_pickle import load
-import torch
 import pandas as pd
 import numpy as np
 from rlenv.env_consts import (REWARD_EXPERIMENT_PATH, SIM_COUNT, VERBOSE,
                               START_PRICE, START_DAY, ACC_PRICE, DEC_PRICE)
+from rlenv.env_utils import chunk_dir
 from rlenv.interface.interfaces import PlayerInterface, ArrivalInterface
-from rlenv.interface.model_names import model_str, BYR_HIST, CON, MSG, DELAY, NUM_OFFERS
 from rlenv.rewards.RewardEnvironment import RewardEnvironment
 from rlenv.composer.Composer import Composer
 from rlenv.Recorder import Recorder
@@ -22,27 +25,37 @@ class RewardGenerator:
             SIM_COUNT: number of times environment should simulator each lstg
             model in MODELS: integer giving the experiment of id for each model to be used in simulator
     """
-    def __init__(self, dir, num, exp_id):
+    def __init__(self, direct, num, exp_id):
         super(RewardGenerator, self).__init__()
-        self.dir = dir
-        self.num = int(num)
-        input_dict = load('{}{}.gz'.format(self.dir, self.num))
+        self.dir = direct
+        self.chunk = int(num)
+        input_dict = load('{}chunks/{}.gz'.format(self.dir, self.chunk))
         self.x_lstg = input_dict['x_lstg']
         self.lookup = input_dict['lookup']
         self.exp_id = int(exp_id)
         self.params = self._load_params()
+        self.recorder = Recorder(chunk=self.chunk)
         composer = Composer(self.params)
-        self.buyer = PlayerInterface(msg=self.params[model_str(MSG, byr=True)],
-                                     con=self.params[model_str(CON, byr=True)],
-                                     delay=self.params[model_str(DELAY, byr=True)],
-                                     composer=composer, byr=True)
-        self.seller = PlayerInterface(msg=self.params[model_str(MSG, byr=False)],
-                                      con=self.params[model_str(CON, byr=False)],
-                                      delay=self.params[model_str(DELAY, byr=False)],
-                                      composer=composer, byr=False)
-        self.arrival = ArrivalInterface(byr_hist=self.params[BYR_HIST],
-                                        num_offers=self.params[NUM_OFFERS],
-                                        composer=composer)
+        self.buyer = PlayerInterface(composer=composer, byr=True)
+        self.seller = PlayerInterface(composer=composer, byr=False)
+        self.arrival = ArrivalInterface(composer=composer)
+
+        # delete previous directories for rewards and records
+        self._prepare_records()
+        self.recorder_count = 1
+        self.start = datetime.now()
+
+    def _prepare_records(self):
+        records_path = chunk_dir(self.dir, self.chunk, records=True)
+        rewards_path = chunk_dir(self.dir, self.chunk, rewards=True)
+        RewardGenerator.remake_dir(records_path)
+        RewardGenerator.remake_dir(rewards_path)
+
+    @staticmethod
+    def remake_dir(path):
+        if os.path.isdir(path):
+            shutil.rmtree(path)
+            os.mkdir(path)
 
     def _load_params(self):
         """
@@ -59,12 +72,11 @@ class RewardGenerator:
     def generate(self):
         for lstg in self.x_lstg.index:
             x_lstg = self.x_lstg.loc[lstg, :].astype(np.float32)
-            x_lstg = torch.from_numpy(x_lstg.values).float()
             lookup = self.lookup.loc[lstg, :]
-            recorder = Recorder(lstg=lstg, lookup=lookup)
+            self.recorder.update_lstg(lookup=lookup, lstg=lstg)
             environment = RewardEnvironment(buyer=self.buyer, seller=self.seller,
                                             arrival=self.arrival, x_lstg=x_lstg,
-                                            lookup=lookup, recorder=recorder)
+                                            lookup=lookup, recorder=self.recorder)
             if VERBOSE:
                 header = 'Lstg: {}  | Start time: {}  | Start price: {}'.format(lstg,
                                                                                 lookup[START_DAY],
@@ -78,7 +90,17 @@ class RewardGenerator:
                 # TODO Add event tracker
                 sale, reward, time = environment.run()
                 if VERBOSE:
-                    print('Simulation {} concluded'.format(recorder.sim))
-                recorder.add_sale(sale, reward, time)
+                    print('Simulation {} concluded'.format(self.recorder.sim))
+                self.recorder.add_sale(sale, reward, time)
+            if sys.getsizeof(self.recorder) > 1e9:
+                self.recorder.dump(self.dir, self.recorder_count)
+                self.recorder = Recorder(chunk=self.chunk)
+                self.recorder_count += 1
+        self.recorder.dump(self.dir)
+        end_time = datetime.now()
+        total_time = end_time - self.start
+        total_time = total_time.total_seconds() / 3600
+        print('hours: {}'.format(total_time))
 
-            recorder.dump(self.dir)
+
+

@@ -1,7 +1,8 @@
 import pytest
 import torch
-from time.TimeFeatures import TimeFeatures
-import time.time_triggers as time_triggers
+import numpy as np
+from rlenv.time.TimeFeatures import TimeFeatures
+import rlenv.time.time_triggers as time_triggers
 from rlenv.env_consts import TIME_FEATS, THREAD_COUNT, EXPIRATION
 
 
@@ -29,10 +30,13 @@ def compare(actual, exp):
     """
     Approximate equality between expected tensor and actual tensor
 
-    :param actual: 1 dimensional torch.tensor
+    :param actual: 1 dimensional np.array
     :param exp: 1 dimensional torch.tensor
     :return: NA
     """
+    if len(actual.shape) == 0:
+        actual = np.array([actual])
+    actual = torch.from_numpy(actual).float()
     assert torch.all(torch.lt(torch.abs(torch.add(actual, -exp)), 1e-6))
 
 
@@ -64,7 +68,7 @@ def test_first_byr_offer(lstgs, init_timefeats):
                               })
     next = timefeats.get_feats(thread1, 5)
     exp = torch.zeros(len(TIME_FEATS)).float()
-    assert torch.all(torch.lt(torch.abs(torch.add(next, -exp)), 1e-6))
+    compare(next, exp)
 
     next = timefeats.get_feats(thread2, 6)
     exp = torch.tensor([0, 0, 0, 0, 0, 0, 1, .2, 1, .2, 1, .2, 1]).float()
