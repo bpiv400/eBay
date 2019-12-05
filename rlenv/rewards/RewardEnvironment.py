@@ -246,14 +246,9 @@ class RewardEnvironment:
                                                time=event.priority)
         clock_feats = get_clock_feats(event.priority)
         make_offer = event.delay(clock_feats=clock_feats, time_feats=time_feats)
-        if VERBOSE:
-            print('Thread: {} | Offer: {} | clock: {}'.format(event.thread_id,
-                                                              event.turn, event.priority))
+        if VERBOSE and make_offer == 1:
             actor = 'Seller' if event.turn % 2 == 0 else 'Buyer'
-            if make_offer == 1:
-                print('{} will make an offer in the upcoming interval'.format(actor))
-            else:
-                print('{} will not make an offer in the upcoming interval'.format(actor))
+            print('{} will make an offer in the upcoming interval'.format(actor))
         if make_offer == 1:
             delay_dur = np.random.randint(0, event.spi)
             event.prepare_offer(delay_dur)

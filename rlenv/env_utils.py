@@ -89,6 +89,16 @@ def get_split(con):
     return output
 
 
+def chunk_dir(part_dir, chunk_num, records=False, rewards=False):
+    if records:
+        insert = 'records'
+    elif rewards:
+        insert = 'rewards'
+    else:
+        insert = 'chunks'
+    return '{}{}/{}/'.format(part_dir, insert, chunk_num)
+
+
 def load_params():
     return utils.unpickle(PARAMS_PATH)
 

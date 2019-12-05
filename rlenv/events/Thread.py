@@ -129,7 +129,7 @@ class Thread(Event):
         return self.sources.is_rej(self.turn)
 
     def slr_rej(self, expire=False):
-        outcomes = self.seller.slr_rej(self.sources(), self.turn, expire=expire)
+        outcomes = self.seller.rej(self.sources(), self.turn, expire=expire)
         norm = self.sources.update_offer(outcomes=outcomes, turn=self.turn)
         return {
             'price': norm,
@@ -138,7 +138,7 @@ class Thread(Event):
         }
 
     def init_offer(self, time_feats=None, clock_feats=None):
-        self.sources.init_offer(time_feats=time_feats, clock_feats=clock_feats)
+        self.sources.init_offer(time_feats=time_feats, clock_feats=clock_feats, turn=self.turn)
 
     def summary(self):
         con, norm, msg, split = self.sources.summary(self.turn)

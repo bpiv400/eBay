@@ -2,7 +2,7 @@
 Class that encapsulates data related to an individual event
 in a slr queue
 """
-import random
+from random import random
 
 
 class Event:
@@ -30,7 +30,7 @@ class Event:
         Throws RuntimeError if both have the same lstg and same time
         """
         if self.priority == other.priority:
-            raise RuntimeError("Two events for one lstg executed at same time")
+            return random() >= .5
         else:
             return self.priority < other.priority
 

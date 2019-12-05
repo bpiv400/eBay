@@ -44,18 +44,18 @@ class ThreadSources(Sources):
         self.source_dict[TURN_IND_MAP]['t1'] = 1
 
     def update_offer(self, outcomes=None, turn=None):
-        print('outcomes')
-        print(outcomes[featname(DAYS, turn)])
-        print('source')
-        for feat in self.source_dict[THREAD_MAP].index:
-            if '_1' in feat:
-                print(feat)
-        print(self.source_dict[THREAD_MAP].index)
-        print(self.source_dict[THREAD_MAP][featname(DAYS, turn)])
+        outcome_names = ALL_OUTCOMES[turn].copy()
+        if turn > 1:
+            outcomes[featname(DAYS, turn)] = self.source_dict[THREAD_MAP][featname(DAYS, turn)]
+            outcomes[featname(DELAY, turn)] = self.source_dict[THREAD_MAP][featname(DELAY, turn)]
+        # remove deterministic outcomes
+        if turn == 1:
+            outcome_names.remove(featname(DAYS, turn))
+            outcome_names.remove(featname(DELAY, turn))
+        elif turn == 7:
+            outcome_names.remove(featname(MSG, turn))
 
-        outcomes[featname(DAYS, turn)] = self.source_dict[THREAD_MAP][featname(DAYS, turn)]
-        outcomes[featname(DELAY, turn)] = self.source_dict[THREAD_MAP][featname(DELAY, turn)]
-        self.source_dict[ALL_OUTCOMES[turn]] = outcomes
+        self.source_dict[THREAD_MAP][outcome_names] = outcomes[outcome_names]
         return outcomes[featname(NORM, turn)]
 
     def change_turn(self, turn):
@@ -80,7 +80,7 @@ class ThreadSources(Sources):
 
     def init_offer(self, time_feats=None, clock_feats=None, turn=None):
         # NOTE : Not called on turn 1
-        time_diff = time_feats - self.delay_prev_time
+        time_diff = time_feats - self.offer_prev_time
         self.offer_prev_time = time_feats
         self.source_dict[THREAD_MAP][ALL_CLOCK_FEATS[turn]] = clock_feats
         self.source_dict[THREAD_MAP][ALL_TIME_FEATS[turn]] = time_diff
@@ -110,8 +110,11 @@ class ThreadSources(Sources):
         con = int(self.source_dict[THREAD_MAP][featname(CON, turn)] * 100)
         norm = self.source_dict[THREAD_MAP][featname(NORM, turn)] * 100
         norm = norm.round()
-        msg = self.source_dict[THREAD_MAP][MSG] == 1
-        split = self.source_dict[THREAD_MAP][SPLIT]
+        if turn != 7:
+            msg = self.source_dict[THREAD_MAP][featname(MSG, turn)] == 1
+        else:
+            msg = False
+        split = self.source_dict[THREAD_MAP][featname(SPLIT, turn)] == 1
         return con, norm, msg, split
 
     def get_delay_outcomes(self, turn):

@@ -43,6 +43,17 @@ class Composer:
             TURN_IND_MAP: TURN_FEATS,
             X_TIME_MAP: x_time_cols,
         }
+        #################################
+        # debugging to check turn 7
+        feats7 = list()
+        for feat in feat_sets[THREAD_MAP]:
+            if '_7' in feat:
+                feats7.append(feat)
+        total7 = ALL_CLOCK_FEATS[7] + ALL_OUTCOMES[7] + ALL_TIME_FEATS[7]
+        total7 = set(total7)
+        feats7 = set(feats7)
+        print('missing in 7: {}'.format(total7.difference(feats7)))
+        #################################
         Composer._check_feat_sets(feat_sets)
         for model in model_names.MODELS:
             maps[model], sizes[model] = Composer._build_model_maps(model, feat_sets)

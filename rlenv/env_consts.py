@@ -68,7 +68,7 @@ ALL_OUTCOMES = dict()
 for i in range(7):
     ALL_CLOCK_FEATS[i + 1] = ['{}_{}'.format(feat, i + 1) for feat in CLOCK_FEATS]
     ALL_TIME_FEATS[i + 1] = ['{}_{}'.format(feat, i + 1) for feat in TIME_FEATS]
-    if i % 2 == 1:
+    if (i + 1) % 2 == 1:
         ALL_OUTCOMES[i + 1] = ['{}_{}'.format(feat, i + 1) for feat in BYR_OUTCOMES]
     else:
         ALL_OUTCOMES[i + 1] = ['{}_{}'.format(feat, i + 1) for feat in SLR_OUTCOMES]

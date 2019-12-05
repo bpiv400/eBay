@@ -2,6 +2,8 @@ import pandas as pd
 import numpy as np
 from compress_pickle import dump
 from rlenv.env_consts import START_DAY, VERBOSE, START_PRICE
+from rlenv.env_utils import chunk_dir
+
 
 SIM = 'sim'
 INDEX = 'index'
@@ -70,7 +72,10 @@ class Recorder:
         self.offers[CON].append(con)
         self.offers[NORM].append(norm)
         self.offers[MESSAGE].append(msg)
-        days, delay = event.delay_outcomes()
+        if event.turn > 1:
+            days, delay = event.delay_outcomes()
+        else:
+            days, delay = 0, 0
         byr = event.turn % 2 != 0
         if VERBOSE:
             if con == 0:
@@ -89,7 +94,8 @@ class Recorder:
                 otype = 'standard offer'
             print('Thread: {} | Offer: {} | clock: {}'.format(event.thread_id,
                                                               event.turn, event.priority))
-            print('Days: {}, Delay: {}'.format(days, delay))
+            if event.turn > 1:
+                print('Days: {}, Delay: {}'.format(days, delay))
             print('Offer type: {}'.format(otype))
             print('Concession: {} | normalized offer: {} | raw offer : {} | split: {} | message: {}'.format(
                 con, norm, (norm * self.start_price / 100), split, msg))
@@ -109,7 +115,7 @@ class Recorder:
             else:
                 print('Item did not sell')
 
-    def dump(self, base_dir):
+    def dump(self, base_dir, recorder_count):
         # convert all three dictionaries to dataframes
         self.sales = pd.DataFrame.from_dict(self.sales)
         self.offers = pd.DataFrame.from_dict(self.offers)
@@ -126,13 +132,18 @@ class Recorder:
                 frame[col] = frame[col].astype(np.uint16)
         # maximally compress threads dataframe
         self.threads[BYR_HIST] = self.threads[BYR_HIST].astype(np.uint8)
+        self.threads[LSTG] = self.threads[LSTG].astype(np.int32)
+
         # maximally compress  sales
         self.sales[DUR] = self.sales[DUR].astype(np.int32)
         self.sales[SALE] = self.sales[SALE].astype(bool)
         self.sales[REWARD] = self.sales[REWARD].astype(np.float32)
+        self.sales[LSTG] = self.sales[LSTG].astype(np.int32)
 
-        records_path = '{}records/{}.gz'.format(base_dir, self.chunk)
-        rewards_path = '{}rewards/{}.gz'.format(base_dir, self.chunk)
+        records_path = '{}{}.gz'.format(chunk_dir(base_dir, self.chunk, records=True),
+                                        recorder_count)
+        rewards_path = '{}{}.gz'.format(chunk_dir(base_dir, self.chunk, rewards=True),
+                                        recorder_count)
         records = {
             'offers': self.offers,
             'threads': self.threads
