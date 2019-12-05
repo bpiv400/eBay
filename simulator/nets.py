@@ -1,4 +1,4 @@
-import torch, torch.nn as nn
+import torch.nn as nn
 from constants import *
 
 
@@ -23,9 +23,9 @@ class Embedding(nn.Module):
         self.embedding = nn.ModuleDict(d)
 
     def forward(self, x):
-        '''
+        """
         x: OrderedDict() with same keys as self.k
-        '''
+        """
         # ensure that keys of x and self.k are of the same length
         assert len(x.keys()) == len(self.k.keys())
 
@@ -68,6 +68,10 @@ class FullyConnected(nn.Module):
             self.seq.append(nn.Linear(HIDDEN, sizes['out']))
 
     def forward(self, x):
+        """
+        x: OrderedDict() with same keys as self.k
+        """
+        # separate embeddings for input feature components
         for m in self.seq:
             x = m(x)
         return x
@@ -97,8 +101,7 @@ class LSTM(nn.Module):
     # output discrete weights and parameters of continuous components
     def forward(self, x, x_time):
         # initialize hidden state
-        hidden = (self.h0(x).unsqueeze(dim=0), 
-            self.c0(x).unsqueeze(dim=0))
+        hidden = (self.h0(x).unsqueeze(dim=0), self.c0(x).unsqueeze(dim=0))
 
         # update hidden state recurrently
         theta, _ = self.rnn(x_time, hidden)
@@ -111,22 +114,20 @@ class LSTM(nn.Module):
         return self.output(theta).squeeze()
 
     def init(self, x=None):
-        return (self.h0(x).unsqueeze(dim=0), 
-            self.c0(x).unsqueeze(dim=0))
+        hidden = (self.h0(x).unsqueeze(dim=0), self.c0(x).unsqueeze(dim=0))
+        return hidden
 
-    def simulate(self, x_time, x=None, hidden=None):
+    def step(self, x_time=None, hidden=None, x=None):
         """
+        Executes 1 step of the recurrent network
 
         :param x_time:
-        :param x_fixed:
+        :param x:
         :param hidden:
         :return:
         """
         if hidden is None:
-            x.unsqueeze(dim=0).repeat(self.layers, 1, 1)
-            theta, hidden = self.rnn(x_time, (self.h0(x), self.c0(x)))
-        else:
-            theta, hidden = self.rnn(x_time, hidden)
-
+            hidden = self.init(x=x)
+        theta, hidden = self.rnn(x_time.unsqueeze(0), hidden)
         # output layer: (seq_len, batch_size, N_out)
         return self.output(theta), hidden

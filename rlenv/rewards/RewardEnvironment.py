@@ -44,10 +44,10 @@ class RewardEnvironment:
     def reset(self):
         self.queue.reset()
         self.time_feats.reset()
-        self.recorder.reset()
-        self.arrival.init(self.x_lstg)
+        self.recorder.reset_sim()
         self.thread_counter = 0
-        sources = ArrivalSources()
+        sources = ArrivalSources(x_lstg=self.x_lstg, composer=self.arrival.composer)
+        self.arrival.init(sources=sources())
         self.queue.push(Arrival(self.lookup[START_DAY], sources))
         if VERBOSE:
             print('Initializing Simulation {}'.format(self.recorder.sim))
@@ -96,7 +96,7 @@ class RewardEnvironment:
             print('Number of arrivals: {}'.format(num_byrs))
         if num_byrs > 0:
             # place each into the queue
-            for i in range(num_byrs.long()):
+            for i in range(num_byrs[0].astype(int)):
                 priority = event.priority + np.random.randint(0, INTERVAL['arrival'])
                 self.thread_counter += 1
                 offer_event = Thread(priority, thread_id=self.thread_counter,
@@ -116,7 +116,7 @@ class RewardEnvironment:
         :return:
         """
         # expiration
-        sources = ThreadSources(x_lstg=self.x_lstg, start_date=self.lookup[START_DAY])
+        sources = ThreadSources(x_lstg=self.x_lstg, composer=self.arrival.composer)
         months_since_lstg = time_delta(self.lookup[START_DAY], event.priority, unit=MONTH)
         time_feats = self.time_feats.get_feats(time=event.priority,thread_id=event.thread_id)
         sources.prepare_hist(time_feats=time_feats, clock_feats=get_clock_feats(event.priority),
@@ -222,7 +222,7 @@ class RewardEnvironment:
         self.time_feats.update_features(trigger_type=time_triggers.OFFER,
                                         thread_id=event.thread_id, offer=offer)
         event.change_turn()
-        offer = event.rej(expire=False)
+        offer = event.slr_rej(expire=False)
         self.recorder.add_offer(event)
         self.time_feats.update_features(trigger_type=time_triggers.SLR_REJECTION,
                                         thread_id=event.thread_id, offer=offer)
@@ -246,14 +246,9 @@ class RewardEnvironment:
                                                time=event.priority)
         clock_feats = get_clock_feats(event.priority)
         make_offer = event.delay(clock_feats=clock_feats, time_feats=time_feats)
-        if VERBOSE:
-            print('Thread: {} | Offer: {} | clock: {}'.format(event.thread_id,
-                                                              event.turn, event.priority))
+        if VERBOSE and make_offer == 1:
             actor = 'Seller' if event.turn % 2 == 0 else 'Buyer'
-            if make_offer == 1:
-                print('{} will make an offer in the upcoming interval'.format(actor))
-            else:
-                print('{} will not make an offer in the upcoming interval'.format(actor))
+            print('{} will make an offer in the upcoming interval'.format(actor))
         if make_offer == 1:
             delay_dur = np.random.randint(0, event.spi)
             event.prepare_offer(delay_dur)
@@ -275,7 +270,7 @@ class RewardEnvironment:
                                                time=event.priority)
         clock_feats = get_clock_feats(event.priority)
         event.init_offer(time_feats=time_feats, clock_feats=clock_feats)
-        offer = event.rej(expire=True)
+        offer = event.slr_rej(expire=True)
         self.recorder.add_offer(event)
         self.time_feats.update_features(trigger_type=time_triggers.SLR_REJECTION,
                                         thread_id=event.thread_id,

@@ -1,4 +1,4 @@
-from constants import INPUT_DIR, PARTS_DIR
+from constants import INPUT_DIR, PARTS_DIR, OUTPUT_DIR
 import torch
 
 INTERACT = False
@@ -35,25 +35,51 @@ TIME_FEATS = [
     THREAD_COUNT
 ]
 
+# clock feats
+CLOCK_FEATS = ['holiday', 'dow0', 'dow1', 'dow2', 'dow3', 'dow4', 'dow5', 'minute_of_day']
+
+# turn feats
+TURN_FEATS = ['t1', 't2', 't3']
+
 # outcomes
-BYR_OUTCOMES = ['days', 'delay', 'con', 'norm', 'split', 'msg']
-SLR_OUTCOMES = BYR_OUTCOMES + ['reject', 'auto', 'exp']
-REJ_POS = SLR_OUTCOMES.index('reject')
-AUTO_POS = SLR_OUTCOMES.index('auto')
-EXPIRE_POS = SLR_OUTCOMES.index('exp')
-NORM_POS = SLR_OUTCOMES.index('norm')
-CON_POS = SLR_OUTCOMES.index('con')
-MSG_POS = SLR_OUTCOMES.index('msg')
-DAYS_POS = SLR_OUTCOMES.index('days')
-DELAY_POS = SLR_OUTCOMES.index('delay')
-SPLIT_POS = SLR_OUTCOMES.index('split')
+DAYS = 'days'
+DELAY = 'delay'
+CON = 'con'
+NORM = 'norm'
+SPLIT = 'split'
+MSG = 'msg'
+REJECT = 'reject'
+AUTO = 'auto'
+EXP = 'exp'
+
+BYR_OUTCOMES = [
+    DAYS,
+    DELAY,
+    CON,
+    NORM,
+    SPLIT,
+    MSG,
+]
+SLR_OUTCOMES = BYR_OUTCOMES + [REJECT, AUTO, EXP]
+
+ALL_CLOCK_FEATS = dict()
+ALL_TIME_FEATS = dict()
+ALL_OUTCOMES = dict()
+for i in range(7):
+    ALL_CLOCK_FEATS[i + 1] = ['{}_{}'.format(feat, i + 1) for feat in CLOCK_FEATS]
+    ALL_TIME_FEATS[i + 1] = ['{}_{}'.format(feat, i + 1) for feat in TIME_FEATS]
+    if (i + 1) % 2 == 1:
+        ALL_OUTCOMES[i + 1] = ['{}_{}'.format(feat, i + 1) for feat in BYR_OUTCOMES]
+    else:
+        ALL_OUTCOMES[i + 1] = ['{}_{}'.format(feat, i + 1) for feat in SLR_OUTCOMES]
+
+
 
 # turn indices
 SLR_TURN_INDS = ['t1', 't2']
 BYR_TURN_INDS = SLR_TURN_INDS + ['t3']
 
-# clock feats
-CLOCK_FEATS = ['holiday', 'dow0', 'dow1', 'dow2', 'dow3', 'dow4', 'dow5', 'minute_of_day']
+
 MONTHS_SINCE_LSTG = 'months_since_lstg'
 DAYS_SINCE_THREAD = 'days_since_thread'
 DURATION = 'duration'
@@ -73,7 +99,7 @@ COMPOSER_DIR = '{}composer/'.format(INPUT_DIR)
 X_LSTG_COLS_PATH = '{}{}.pkl'.format(COMPOSER_DIR, X_LSTG)
 REWARD_EXPERIMENT_PATH = 'repo/rlenv/rewards/experiments.csv'
 LOOKUP_FILENAME = 'lookup.gz'
-PARAMS_PATH = '{}params.csv'.format(INPUT_DIR)
+PARAMS_PATH = '{}params.pkl'.format(OUTPUT_DIR)
 
 # temporal constants
 MONTH = 31 * 24 * 3600

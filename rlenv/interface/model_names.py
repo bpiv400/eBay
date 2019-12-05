@@ -14,11 +14,6 @@ MSG = 'msg'
 # prefixes
 ARRIVAL_PREFIX = 'arrival'
 
-# model sets
-FEED_FORWARD = [BYR_HIST]
-ARRIVAL = [NUM_OFFERS, BYR_HIST]
-RECURRENT = [NUM_OFFERS, CON, DELAY, MSG]
-
 
 def model_str(model_name, byr=False):
     """
@@ -39,10 +34,13 @@ def model_str(model_name, byr=False):
     return name
 
 
+# model sets
+ARRIVAL = [NUM_OFFERS, BYR_HIST]
 LSTM_MODELS = [NUM_OFFERS, model_str(DELAY, byr=False), model_str(DELAY, byr=True)]
-OFFER_NO_PREFIXES = [model for model in RECURRENT if model != NUM_OFFERS]
-MODELS_NO_PREFIXES = RECURRENT + FEED_FORWARD
+RECURRENT = LSTM_MODELS
+OFFER_NO_PREFIXES = [CON, MSG, DELAY]
 OFFER = [model_str(model, byr=False) for model in OFFER_NO_PREFIXES] + \
         [model_str(model, byr=True) for model in OFFER_NO_PREFIXES]
+FEED_FORWARD = [model for model in OFFER if model not in RECURRENT]
+FEED_FORWARD.append(BYR_HIST)
 MODELS = OFFER + ARRIVAL
-
