@@ -105,7 +105,7 @@ class LSTM(nn.Module):
         self.c0 = FeedForward(sizes, toRNN=True)
 
         # rnn layer
-        self.rnn = nn.LSTM(input_size=sizes['time'],
+        self.rnn = nn.LSTM(input_size=sizes['x_time'],
                            hidden_size=HIDDEN,
                            batch_first=True).to(DEVICE)
 
