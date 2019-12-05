@@ -99,7 +99,6 @@ COMPOSER_DIR = '{}composer/'.format(INPUT_DIR)
 X_LSTG_COLS_PATH = '{}{}.pkl'.format(COMPOSER_DIR, X_LSTG)
 REWARD_EXPERIMENT_PATH = 'repo/rlenv/rewards/experiments.csv'
 LOOKUP_FILENAME = 'lookup.gz'
-PARAMS_PATH = '{}params.pkl'.format(OUTPUT_DIR)
 
 # temporal constants
 MONTH = 31 * 24 * 3600

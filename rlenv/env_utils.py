@@ -10,7 +10,7 @@ from constants import (INPUT_DIR, START,
                        HOLIDAYS, TOL_HALF, MODEL_DIR)
 from rlenv.interface.model_names import LSTM_MODELS
 from simulator.nets import FeedForward, LSTM
-from rlenv.env_consts import PARAMS_PATH, META_6, META_7, DAY
+from rlenv.env_consts import META_6, META_7, DAY
 
 
 def load_featnames(full_name):
@@ -99,10 +99,6 @@ def chunk_dir(part_dir, chunk_num, records=False, rewards=False):
     return '{}{}/{}/'.format(part_dir, insert, chunk_num)
 
 
-def load_params():
-    return utils.unpickle(PARAMS_PATH)
-
-
 def load_model(full_name):
     """
     Initialize pytorch network for some model
@@ -113,12 +109,11 @@ def load_model(full_name):
     print('sizes...')
     sizes = load_sizes(full_name)
     print('params...')
-    params = load_params()
     model_path = '{}{}.net'.format(MODEL_DIR, full_name)
     # loading model
     model_class = get_model_class(full_name)
     print('initializing...')
-    net = model_class(params, sizes)  # type: torch.nn.Module
+    net = model_class(sizes)  # type: torch.nn.Module
     print('state dict...')
     net.load_state_dict(torch.load(model_path, map_location='cpu'))
     for param in net.parameters(recurse=True):
