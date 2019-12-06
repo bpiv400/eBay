@@ -35,7 +35,7 @@ def train_model(log10_lr, simulator, train, test):
     while c < K:
         print('Epoch %d' % epoch)
 
-        # training loop
+        # train loop
         t0 = dt.now()
         lnL_train = run_loop(simulator, train, optimizer)
         sec_train = (dt.now() - t0).total_seconds()

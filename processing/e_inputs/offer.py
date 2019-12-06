@@ -85,7 +85,7 @@ def get_y(x_offer, outcome, role):
 	return s.astype('int8').sort_index()
 
 
-# loads data and calls helper functions to construct training inputs
+# loads data and calls helper functions to construct train inputs
 def process_inputs(part, outcome, role):
 	# path name function
 	getPath = lambda names: '%s/partitions/%s/%s.gz' % \

@@ -12,7 +12,7 @@ def train_model(simulator, optimizer, data):
     for epoch in range(1, 6):
         print('Epoch %d' % epoch)
 
-        # training loop
+        # train loop
         t0 = dt.now()
         lnL = run_loop(simulator, data, optimizer)
         sec = (dt.now() - t0).total_seconds()

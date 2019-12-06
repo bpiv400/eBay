@@ -10,7 +10,7 @@ from constants import *
 
 # helper function to run a loop of the model
 def run_loop(simulator, data, optimizer=None):
-    # training or validation
+    # train or validation
     isTraining = optimizer is not None
 
     # collate function
@@ -123,14 +123,14 @@ class Sample(Sampler):
         """
         super().__init__(None)
 
-        # chop into minibatches; shuffle for training
+        # chop into minibatches; shuffle for train
         self.batches = []
         for v in data.d['groups']:
             if isTraining:
                 np.random.shuffle(v)
             self.batches += np.array_split(v, 
                 1 + len(v) // MBSIZE[isTraining])
-        # shuffle training batches
+        # shuffle train batches
         if isTraining:
             np.random.shuffle(self.batches)
 
