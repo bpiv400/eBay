@@ -257,3 +257,10 @@ class Composer:
                                                                           fixed_sizes[input_set],
                                                                           sources)
         return input_dict
+
+    @property
+    def feat_counts(self):
+        counts = dict()
+        for set_name, feats in self.feat_sets.items():
+            counts[set_name] = len(feats)
+        return counts

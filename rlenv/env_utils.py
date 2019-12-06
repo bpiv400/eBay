@@ -90,6 +90,7 @@ def get_split(con):
 
 
 def chunk_dir(part_dir, chunk_num, records=False, rewards=False):
+    if not records and not rewards:
     if records:
         insert = 'records'
     elif rewards:

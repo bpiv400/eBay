@@ -1,5 +1,4 @@
-from constants import INPUT_DIR, PARTS_DIR, OUTPUT_DIR
-import torch
+from constants import INPUT_DIR
 
 INTERACT = False
 VERBOSE = True
@@ -81,7 +80,6 @@ BYR_TURN_INDS = SLR_TURN_INDS + ['t3']
 
 
 MONTHS_SINCE_LSTG = 'months_since_lstg'
-DAYS_SINCE_THREAD = 'days_since_thread'
 DURATION = 'duration'
 INT_REMAINING = 'remaining'
 
@@ -93,10 +91,7 @@ X_LSTG = 'x_lstg'
 LOOKUP = 'lookup'
 
 # filenames
-PARTITION = 'train_rl'
-DATA_DIR = '{}{}/'.format(PARTS_DIR, PARTITION)
 COMPOSER_DIR = '{}composer/'.format(INPUT_DIR)
-X_LSTG_COLS_PATH = '{}{}.pkl'.format(COMPOSER_DIR, X_LSTG)
 REWARD_EXPERIMENT_PATH = 'repo/rlenv/rewards/experiments.csv'
 LOOKUP_FILENAME = 'lookup.gz'
 
@@ -106,28 +101,11 @@ DAY = 24 * 3600
 HOUR = 3600
 EXPIRATION = 48 * 60 * 60
 
-
-# zero vectors
-# TODO: check whether there are similar outcome vectors
-ZERO_SLR_OUTCOMES = torch.zeros(len(SLR_OUTCOMES))
-ZERO_SLR_OUTCOMES[[7, 8]] = 1
-
-CLOCK_ZEROS = torch.zeros(len(CLOCK_FEATS))
-
-FIXED = 'fixed'
-TIME = 'time'
-
 # parameter names
 SIM_COUNT = 'n'
 
 # fee constants
 ANCHOR_STORE_INSERT = .03
-
-# reject outcomes
-AUTO_REJ_OUTCOMES = torch.zeros(len(SLR_OUTCOMES))
-AUTO_REJ_OUTCOMES[[7, 8]] = 1  # automatic, rejected
-EXP_REJ_OUTCOMES = torch.zeros(len(SLR_OUTCOMES))
-EXP_REJ_OUTCOMES[[0, 8]] = 1  # full delay, rejected, expired
 
 # lookup column names
 LSTG = 'lstg'
@@ -142,3 +120,7 @@ ACC_PRICE = 'accept_price'
 # meta categories with sale fees != .09 * price
 META_7 = [21, 10]
 META_6 = [32, 14, 11, 7, 28]
+
+SELLER_HORIZON = 100
+
+NUM_CHUNKS = 512
