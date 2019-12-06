@@ -1,37 +1,30 @@
 import numpy as np
-from rlenv.time.TimeFeatures import TimeFeatures
 from rlenv.time import time_triggers
-from rlenv.events.EventQueue import EventQueue
 from rlenv.env_consts import (MONTH, START_DAY, ACC_PRICE, META, INTERACT, VERBOSE,
                               DEC_PRICE, START_PRICE, ANCHOR_STORE_INSERT)
 from rlenv.env_utils import get_clock_feats, get_value_fee, time_delta
-from rlenv.events.Arrival import Arrival
 from rlenv.events import event_types
-from rlenv.sources import ThreadSources, ArrivalSources
+from rlenv.sources import ThreadSources
 from rlenv.events.Thread import Thread
 from constants import INTERVAL, BYR_PREFIX
 from rlenv.simulators import SimulatedSeller, SimulatedBuyer
-
+from rlenv.environments.EbayEnvironment import EbayEnvironment
 
 ACC_IND = 0
 REJ_IND = 1
 OFF_IND = 2
 
 
-class RewardEnvironment:
+class RewardEnvironment(EbayEnvironment):
     def __init__(self, **kwargs):
+        super(RewardEnvironment, self).__init__(kwargs['arrival'])
         # environment interface
         self.buyer = kwargs['buyer']
         self.seller = kwargs['seller']
-        self.arrival = kwargs['arrival']
 
         # features
         self.x_lstg = kwargs['x_lstg']
         self.lookup = kwargs['lookup']
-        self.time_feats = TimeFeatures()
-
-        # queue
-        self.queue = EventQueue()
 
         # end time
         self.end_time = self.lookup[START_DAY] + MONTH
@@ -42,13 +35,8 @@ class RewardEnvironment:
         self.recorder = kwargs['recorder']
 
     def reset(self):
-        self.queue.reset()
-        self.time_feats.reset()
+        super(RewardEnvironment, self).reset()
         self.recorder.reset_sim()
-        self.thread_counter = 0
-        sources = ArrivalSources(x_lstg=self.x_lstg, composer=self.arrival.composer)
-        self.arrival.init(sources=sources())
-        self.queue.push(Arrival(self.lookup[START_DAY], sources))
         if VERBOSE:
             print('Initializing Simulation {}'.format(self.recorder.sim))
 
