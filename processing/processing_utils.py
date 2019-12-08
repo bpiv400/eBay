@@ -43,20 +43,6 @@ LTYPES = {'lstg': 'int64',
           'flag': bool,
           'fast': bool}
 
-# groupings of offer variables for embeddings
-OFFER_GROUPS = {'arrival': ['thread_count'],
-                'clock': ['slr_offers', 'slr_offers_open', 'slr_offers_recent', \
-                          'byr_offers', 'byr_offers_open', 'byr_offers_recent', \
-                          'days', 'delay', 'holiday', 'dow0', 'dow1', \
-                          'dow2', 'dow3', 'dow4', 'dow5', 'minute_of_day', 'exp'],
-                'price': ['slr_offers', 'slr_offers_open', 'slr_offers_recent', \
-                          'byr_offers', 'byr_offers_open', 'byr_offers_recent', \
-                          'slr_best', 'slr_best_open', 'slr_best_recent', \
-                          'byr_best', 'byr_best_open', 'byr_best_recent', \
-                          'con', 'norm', 'split', 'reject', 'auto'],
-                'msg': ['slr_offers', 'slr_offers_open', 'slr_offers_recent', \
-                        'byr_offers', 'byr_offers_open', 'byr_offers_recent', 'msg']}
-
 
 # split into chunks and save
 def chunk(group, L, T, O):

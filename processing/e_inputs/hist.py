@@ -27,8 +27,8 @@ def process_inputs(part):
 	# initialize input features
 	x = init_x(getPath, idx)
 
-	# add thread variables as component
-	x['thread'] = x_thread
+	# add thread variables to x['lstg']
+	x['lstg'] = x['lstg'].join(x_thread)
 
 	return {'y': y.astype('uint8', copy=False), 
 			'x': {k: v.astype('float32', copy=False) for k, v in x.items()}}

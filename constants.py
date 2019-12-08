@@ -118,8 +118,7 @@ QUANTILES = [0.25, 0.5, 0.75, 1]
 # groups for embedding layers
 EMBEDDING_GROUPS = {'w2v': ['w2v_slr', 'w2v_byr'],
 					'other': ['cat', 'cndtn', 'slr'],
-					'components': ['clock', 'price', 'msg'],
-					'focal': ['lstg', 'arrival', 'byr', 'thread']}
+					'focal': ['lstg'] + ['offer%d' % i for i in range(1,8)]}
 
 
 EPOCH_TIME = 'epoch_time'
