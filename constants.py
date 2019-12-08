@@ -57,6 +57,8 @@ SUMMARY_DIR = '%ssummary/' % OUTPUT_DIR
 MODEL_DIR = '%smodels/' % OUTPUT_DIR
 LOG_DIR = '%slogs/' % OUTPUT_DIR
 EXPS_DIR = '%sexps/' % OUTPUT_DIR
+REINFORCE_DIR = '%s/reinforce' % PREFIX
+REINFORCE_INPUT_DIR = '%s/input' % REINFORCE_DIR
 
 # partitions
 PARTITIONS = ['train_models', 'train_rl', 'test']

@@ -94,6 +94,7 @@ LOOKUP = 'lookup'
 COMPOSER_DIR = '{}composer/'.format(INPUT_DIR)
 REWARD_EXPERIMENT_PATH = 'repo/rlenv/rewards/experiments.csv'
 LOOKUP_FILENAME = 'lookup.gz'
+X_LSTG_FILENAME = 'x_lstg.gz'
 
 # temporal constants
 MONTH = 31 * 24 * 3600
