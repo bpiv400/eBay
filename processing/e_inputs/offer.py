@@ -49,20 +49,6 @@ def clean_offer(offer, i, outcome, role):
 	return offer
 
 
-# concatenates offer features across turns
-def get_offer_vec(x, featnames):
-	feats = []
-	# loop over features and turns
-	for name in featnames:
-		for i in range(1, max(IDX[role])+1):
-			key = 'offer%d' % i
-			newname = '%s_%d' % (name, i)
-			if newname in x[key].columns:
-				feats.append(x[key][newname])
-	# concatenate and add turn indicators
-	return add_turn_indicators(pd.concat(feats, axis=1))
-
-
 # returns either a series of msg indicators or concession indices
 def get_y(x_offer, outcome, role):
 	# subset to relevant observations
@@ -108,7 +94,6 @@ def process_inputs(part, outcome, role):
 	x_thread = load(getPath(['x', 'thread']))
 	x_thread.loc[:, 'byr_hist'] = x_thread.byr_hist.astype('float32') / 10
 	x['lstg'] = x['lstg'].join(x_thread)
-	x['lstg'] = add_turn_indicators(x['lstg'])
 
 	# dataframe of offer features for relevant threads
 	threads = idx.droplevel(level='index').unique()
