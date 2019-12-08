@@ -5,15 +5,17 @@ from constants import *
 # constructs model-specific neural network.
 class Simulator:
 
-    def __init__(self, model, sizes):
+    def __init__(self, model, sizes, device='cuda'):
         '''
         model: one of 'arrival', 'hist', 'delay_byr', 'delay_slr',
             'con_byr', 'con_slr'
         sizes: dictionary of data sizes
+        device: either 'cuda' or 'cpu'
         '''
 
         # save parameters from inputs
         self.model = model
+        self.device = device
 
         # sloss function
         if model in ['hist', 'con_slr']:
@@ -29,55 +31,45 @@ class Simulator:
             self.loss = torch.nn.BCEWithLogitsLoss(
                 reduction='sum')
 
-        # embedding net
-        self.embedding = Embedding(sizes)
-
         # subsequent neural net(s)
         if ('delay' in model) or (model == 'arrival'):
-            self.net = LSTM(sizes).to(DEVICE)
+            self.net = LSTM(sizes).to(device)
         else:
-            self.net = FullyConnected(sizes).to(DEVICE)    
+            self.net = FeedForward(sizes).to(device) 
 
-    def evaluate_ff_loss(self, d):
-        # prediction from model
-        theta = self.net(d['x']).squeeze()
-
-        # for con_byr, split by turn and calculate loss separately
-        if self.model == 'con_byr':
-            # observation is on buyer's 4th turn if all three turn indicators are 0
-            t4 = torch.sum(d['x']['lstg'][:,-3:], dim=1) == 0
-
-            # loss for first 3 turns
-            loss = self.loss[0](theta[~t4,:], d['y'][~t4].long())
-
-            # loss for last turn: use accept probability only
-            if torch.sum(t4).item() > 0:
-                loss += self.loss[1](theta[t4,-1], (d['y'][t4] == 100).float())
-
-            return loss
-
-        if self.loss.__str__() == 'BCEWithLogitsLoss()':
-            return self.loss(theta, d['y'].float())
-
-        return self.loss(theta, d['y'].long())
 
     def run_batch(self, d, optimizer=None):
         # train / eval mode
         isTraining = optimizer is not None
         self.net.train(isTraining)
 
-        # zero gradient
-        if isTraining:
-            optimizer.zero_grad()
         # prediction from model and loss for recurrent models
         if 'x_time' in d:
             theta = self.net(d['x'], d['x_time'])
             mask = d['y'] > -1
             loss = self.loss(theta[mask], d['y'][mask])
         else:
-            loss = self.evaluate_ff_loss(d)
+            theta = self.net(d['x']).squeeze()
+
+            if self.model == 'con_byr':
+                 # observation is on buyer's 4th turn if all three turn indicators are 0
+                t4 = torch.sum(d['x']['lstg'][:,-3:], dim=1) == 0
+
+                # loss for first 3 turns
+                loss = self.loss[0](theta[~t4,:], d['y'][~t4].long())
+
+                # loss for last turn: use accept probability only
+                if torch.sum(t4).item() > 0:
+                    loss += self.loss[1](theta[t4,-1], 
+                        (d['y'][t4] == 100).float())
+
+            else:
+                loss = self.loss(theta, 
+                    d['y'].float() if 'msg' in self.model else d['y'])
+
         # step down gradients
         if isTraining:
+            optimizer.zero_grad()
             loss.backward()
             optimizer.step()
 

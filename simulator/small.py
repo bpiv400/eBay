@@ -25,10 +25,9 @@ def train_model(simulator, optimizer, data):
 
 if __name__ == '__main__':
     # extract parameters from command line
-    parser = argparse.ArgumentParser(
-        description='Model of environment for bargaining AI.')
+    parser = argparse.ArgumentParser(description='Training development.')
     parser.add_argument('--model', type=str, 
-        help='One of arrival, delay_byr, delay_slr, con_byr, con_slr.')
+        help='One of arrival, hist, [delay/con/msg]_[byr/slr].')
     args = parser.parse_args()
     model = args.model
 
@@ -43,7 +42,20 @@ if __name__ == '__main__':
     print(simulator.loss)
 
     # initialize optimizer with default learning rate
-    optimizer = optim.Adam(simulator.net.parameters())
+    if (model == 'arrival') or ('delay' in model):
+        optimizer = optim.Adam([
+            {'params': simulator.net.h0.nn0.parameters()},
+            {'params': simulator.net.h0.nn1.parameters()},
+            {'params': simulator.net.h0.nn2.parameters()},
+            {'params': simulator.net.c0.nn0.parameters()},
+            {'params': simulator.net.c0.nn1.parameters()},
+            {'params': simulator.net.c0.nn2.parameters()},
+            {'params': simulator.net.rnn.parameters()}])
+    else:
+        optimizer = optim.Adam([
+            {'params': simulator.net.nn0.parameters()},
+            {'params': simulator.net.nn1.parameters()},
+            {'params': simulator.net.nn2.parameters()}])
     print(optimizer)
 
     # load data

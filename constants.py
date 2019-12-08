@@ -28,8 +28,9 @@ MBSIZE = {True: 128, False: 2000}
 
 # neural net parameters
 LAYERS = 8
-HIDDEN = 1024
+HIDDEN = 2048
 DROPOUT = 0.5
+F = torch.nn.ReLU()
 
 # use gpu if available
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -113,6 +114,12 @@ HOLIDAYS = Calendar().holidays(start=START, end=END)
 
 # quantiles of accept_norm distribution
 QUANTILES = [0.25, 0.5, 0.75, 1]
+
+# groups for embedding layers
+EMBEDDING_GROUPS = {'w2v': ['w2v_slr', 'w2v_byr'],
+					'other': ['cat', 'cndtn', 'slr'],
+					'components': ['clock', 'price', 'msg'],
+					'focal': ['lstg', 'arrival', 'byr', 'thread']}
 
 
 EPOCH_TIME = 'epoch_time'

@@ -8,30 +8,6 @@ from compress_pickle import load
 from constants import *
 
 
-# helper function to run a loop of the model
-def run_loop(simulator, data, optimizer=None):
-    # training or validation
-    isTraining = optimizer is not None
-
-    # collate function
-    f = collateRNN if data.isRecurrent else collateFF
-
-    # sampler
-    sampler = Sample(data, isTraining)
-
-    # load batches
-    batches = DataLoader(data, batch_sampler=sampler,
-        collate_fn=f, num_workers=NUM_WORKERS, pin_memory=True)
-
-    # loop over batches, calculate log-likelihood
-    lnL = 0.0
-    for batch in batches:
-        lnL += simulator.run_batch(batch, optimizer)
-
-    return lnL / data.N_labels
-
-
-
 # defines a dataset that extends torch.utils.data.Dataset
 class Inputs(Dataset):
 
@@ -146,6 +122,33 @@ class Sample(Sampler):
         return len(self.batches)
 
 
+# helper function to run a loop of the model
+def run_loop(simulator, data, optimizer=None):
+    # training or validation
+    isTraining = optimizer is not None
+
+    # collate function
+    f = collateRNN if data.isRecurrent else collateFF
+
+    # sampler
+    sampler = Sample(data, isTraining)
+
+    # load batches
+    batches = DataLoader(data, batch_sampler=sampler,
+        collate_fn=f, num_workers=NUM_WORKERS, pin_memory=True)
+
+    # loop over batches, calculate log-likelihood
+    lnL = 0.0
+    for b in batches:
+        b['x'] = {k: v.to(simulator.device) for k, v in b['x'].items()}
+        b['y'] = b['y'].to(simulator.device)
+        if 'x_time' in b:
+            b['x_time'] = b['x_time'].to(simulator.device)
+        lnL += simulator.run_batch(b, optimizer)
+
+    return lnL / data.N_labels
+
+
 # collate function for feedforward networks
 def collateFF(batch):
     y, x = [], {}
@@ -157,8 +160,8 @@ def collateFF(batch):
             else:
                 x[k] = [torch.from_numpy(v)]
 
-    # convert to tensor
-    y = torch.from_numpy(np.asarray(y))
+    # convert to (single) tensors
+    y = torch.from_numpy(np.asarray(y)).long()
     x = {k: torch.stack(v).float() for k, v in x.items()}
 
     # output is dictionary of tensors
@@ -186,8 +189,6 @@ def collateRNN(batch):
     x = {k: torch.stack(v).float() for k, v in x.items()}
     x_time = torch.stack(x_time, dim=0).float()
     x_time = rnn.pack_padded_sequence(x_time, turns, batch_first=True)
-    
+
     # output is dictionary of tensors
-    return {'y': y, 
-            'x': x, 
-            'x_time': x_time}
+    return {'y': y, 'x': x, 'x_time': x_time}

@@ -331,28 +331,14 @@ def init_x(getPath, idx):
     x['w2v_slr'] = df[getCols(lambda c: re.match(r'^slr[0-9]', c))]
 
     # slr features
-    x['slr'] = df[['start_price_pctile', 'store', 'fdbk_score', 'fdbk_pstv', 'fdbk_100'] \
+    x['slr'] = df[['store', 'fdbk_score', 'fdbk_pstv', 'fdbk_100'] \
                     + getCols(lambda c: c.startswith('slr_'))]
 
-    # byr features
-    x['byr'] = df[getCols(lambda c: 'byr_' in c)]
-
     # features of category
-    x['cat'] = df[['start_price_pctile'] \
-                    + getCols(lambda c: c.startswith('cat_'))]
+    x['cat'] = df[getCols(lambda c: c.startswith('cat_'))]
 
     # features of category-condition
-    x['cndtn'] = df[['start_price_pctile', 'new', 'used', 'refurb', 'wear'] \
+    x['cndtn'] = df[['new', 'used', 'refurb', 'wear'] \
                     + getCols(lambda c: c.startswith('cndtn_'))]
 
-    # arrival rates
-    x['arrival'] = df[getCols(lambda c: 'threads' in c or 'arrival_rate' in c)]
-
-    # clock features
-    x['clock'] = df[getCols(lambda c: 'offers' in c or 'delay' in c or 'expire' in c)]
-
-    # price features
-    x['price'] = df[getCols(lambda c: 'start_price' in c or 'decline' in c or 'accept' in c \
-        or 'offers' in c or 'first_offer' in c or 'bin' in c or 'is_round' in c or 'is_nines' in c)]
-    
     return x

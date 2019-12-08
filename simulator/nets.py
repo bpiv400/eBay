@@ -1,94 +1,150 @@
 import torch.nn as nn
+from collections import OrderedDict
 from constants import *
 
 
-class Embedding(nn.Module):
-    def __init__(self, sizes):
-        # super constructor
-        super(Embedding, self).__init__()
+class Layer(nn.Module):
+    def __init__(self, N_in, N_out, dropout=False):
+        super(Layer, self).__init__()
 
-        # save dictionary of input feat sizes
-        self.k = sizes['x']
-
-        # activation function
-        f = nn.ReLU()
-
-        # embeddings layer(s)
-        d = {}
-        for k, v in self.k.items():
-            l = []
-            for i in range(2):
-                l += [nn.Linear(v, v), nn.BatchNorm1d(v), f]
-            d[k] = nn.ModuleList(l)
-        self.embedding = nn.ModuleDict(d)
-
-    def forward(self, x):
-        """
-        x: OrderedDict() with same keys as self.k
-        """
-        # ensure that keys of x and self.k are of the same length
-        assert len(x.keys()) == len(self.k.keys())
-
-        # separate embeddings for input feature components
-        l = []
-        for key in self.k.keys():
-            x_k = x[key]
-            for m in self.embedding[key]:
-                x_k = m(x_k)
-            l.append(x_k)
-
-        # concatenate and return
-        return torch.cat(l, dim=1)
-
-
-class FullyConnected(nn.Module):
-    def __init__(self, sizes, toRNN=False):
-        # super constructor
-        super(FullyConnected, self).__init__()
-
-        # activation function
-        f = nn.ReLU()
-
-        # intermediate layer
+        # sequence of modules
         self.seq = nn.ModuleList(
-            [nn.Linear(sum(sizes['x'].values()), HIDDEN), 
-             nn.BatchNorm1d(HIDDEN), f])
+            [nn.Linear(N_in, N_out), nn.BatchNorm1d(N_out), F])
 
-        # fully connected network
-        for i in range(LAYERS-1):
+        # add dropout
+        if dropout:
             self.seq.append(nn.Dropout(p=DROPOUT))
-            self.seq.append(nn.Linear(HIDDEN, HIDDEN))
-            self.seq.append(nn.BatchNorm1d(HIDDEN))
-            self.seq.append(f)
-
-        # output layer
-        if toRNN:
-            self.seq.append(nn.Linear(HIDDEN, HIDDEN))
-        else:
-            self.seq.append(nn.Linear(HIDDEN, sizes['out']))
 
     def forward(self, x):
-        """
-        x: OrderedDict() with same keys as self.k
-        """
-        # separate embeddings for input feature components
         for m in self.seq:
             x = m(x)
         return x
 
 
+class Embedding(nn.Module):
+    def __init__(self, counts):
+        super(Embedding, self).__init__()
+
+        # first layer: N to N
+        self.layer1 = nn.ModuleDict()
+        for k, v in counts.items():
+            self.layer1[k] = Layer(v, v)
+
+        # second layer: concatenation
+        N = sum(counts.values())
+        self.layer2 = Layer(N, N)
+
+    def forward(self, x):
+        """
+        x: OrderedDict() with a superset of the keys in self.k
+        """
+        # first layer
+        l = []
+        for k, m in self.layer1.items():
+            l.append(m(x[k]))
+
+        # concatenate
+        x = torch.cat(l, dim=1)
+
+        # pass through second embedding
+        return self.layer2(x)
+
+
+class Cartesian(nn.Module):
+    def __init__(self, counts):
+        '''
+        counts: OrderedDict of input sizes
+        f: activation function (e.g., nn.ReLU())
+        '''
+        super(Cartesian, self).__init__()
+
+        # create all pairwise comparisons
+        keys = list(counts.keys())
+        d, k = OrderedDict(), len(keys)
+        for i in range(k-1):
+            for j in range(i+1,k):
+                N = counts[keys[i]] + counts[keys[j]]
+                newkey = '-'.join([keys[i], keys[j]])
+                d[newkey] = Layer(N, N)
+        self.pairs = nn.ModuleDict(d)
+
+    def forward(self, x):
+        '''
+        x: dictionary with outputs from separate Embeddings
+        '''
+        l = []
+        for key, m in self.pairs.items():
+            key1, key2 = key.split('-')
+            z = torch.cat((x[key1], x[key2]), axis=1)
+            l.append(m(z))
+
+        return torch.cat(l, axis=1)
+
+
+class FullyConnected(nn.Module):
+    def __init__(self, N_in, N_out):
+        super(FullyConnected, self).__init__()
+
+        # intermediate layer
+        self.seq = nn.ModuleList([Layer(N_in, HIDDEN, dropout=True)])
+
+        # fully connected network
+        for i in range(LAYERS-1):
+            self.seq.append(
+                Layer(HIDDEN, HIDDEN, dropout=(i < LAYERS-2)))
+
+        # output layer
+        self.seq.append(nn.Linear(HIDDEN, N_out))
+
+    def forward(self, x):
+        for m in self.seq:
+            x = m(x)
+        return x
+
+
+class FeedForward(nn.Module):
+    def __init__(self, sizes, toRNN=False):
+        super(FeedForward, self).__init__()
+
+        # embedding
+        d = OrderedDict()
+        for name, group in EMBEDDING_GROUPS.items():
+            counts = {k: v for k, v in sizes['x'].items() if k in group}
+            d[name] = Embedding(counts)
+        self.nn0 = nn.ModuleDict(d)
+
+        # cartesian
+        counts = OrderedDict()
+        for name, group in EMBEDDING_GROUPS.items():
+            counts[name] = sum(
+                [v for k, v in sizes['x'].items() if k in group])
+        self.nn1 = Cartesian(counts)
+
+        # fully connected
+        N_in = sum(counts.values()) * (len(counts) - 1)
+        N_out = HIDDEN if toRNN else sizes['out']
+        self.nn2 = FullyConnected(N_in, N_out)
+
+    def forward(self, x):
+        # separate embeddings
+        d = OrderedDict()
+        for name, group in EMBEDDING_GROUPS.items():
+            d[name] = self.nn0[name](x)
+        
+        # cartesian, then fully connected
+        return self.nn2(self.nn1(d))
+
+
 class LSTM(nn.Module):
     def __init__(self, sizes):
-
-        # super constructor
         super(LSTM, self).__init__()
 
         # save parameters to self
         self.steps = sizes['steps']
 
         # initial hidden nodes
-        self.h0 = FullyConnected(sizes, toRNN=True)
-        self.c0 = FullyConnected(sizes, toRNN=True)
+        self.h0 = FeedForward(sizes, toRNN=True)
+        self.c0 = FeedForward(sizes, toRNN=True)
 
         # rnn layer
         self.rnn = nn.LSTM(input_size=sizes['x_time'],

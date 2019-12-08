@@ -47,7 +47,6 @@ def train_model(log10_lr, simulator, train, test):
             lnL_test = run_loop(simulator, test)
             sec_test = (dt.now() - t0).total_seconds()
 
-
         # summarize loop
         print('\tTraining time: %d seconds' % sec_train)
         print('\tValidation time: %d seconds' % sec_test)
