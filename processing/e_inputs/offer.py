@@ -108,7 +108,7 @@ def process_inputs(part, outcome, role):
 		# add turn number to featname
 		offer = offer.rename(lambda x: x + '_%d' % i, axis=1)
 		# add turn indicators
-		x['offer%d' % i] = add_turn_indicators(x['offer%d' % i])
+		x['offer%d' % i] = add_turn_indicators(offer)
 
 	# if not delay model, return
 	if outcome in ['con', 'msg']:

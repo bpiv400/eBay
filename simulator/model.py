@@ -53,7 +53,7 @@ class Simulator:
 
             if self.model == 'con_byr':
                  # observation is on buyer's 4th turn if all three turn indicators are 0
-                t4 = torch.sum(d['x']['lstg'][:,-3:], dim=1) == 0
+                t4 = torch.sum(d['x']['offer1'][:,-3:], dim=1) == 0
 
                 # loss for first 3 turns
                 loss = self.loss[0](theta[~t4,:], d['y'][~t4].long())
