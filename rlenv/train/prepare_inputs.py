@@ -37,8 +37,9 @@ def main():
     x_lstg = load('{}{}/{}'.format(PARTS_DIR, part, X_LSTG_FILENAME))
     assert rewards.index.isin(lookup.index).all()
     assert rewards.index.isin(x_lstg.index).all()
-    x_lstg = x_lstg.loc[rewards.index]
-    lookup = lookup.loc[rewards.index]
+    x_lstg = x_lstg.loc[rewards.index, :]
+    lookup = lookup.loc[rewards.index, :]
+    lookup = lookup.drop(columns=['cat'])
     # sort x_lstg and lookup
 
     # add rewards to lookup
@@ -48,6 +49,7 @@ def main():
 
 
 def store_inputs(x_lstg, lookup, path):
+    lookup = lookup.reset_index(drop=False)
     lookup_cols = [col.encode('utf-8') for col in list(lookup.columns)]
     f = h5py.File(path)
     lookup_vals = lookup.values.astype(np.float32)

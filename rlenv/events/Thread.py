@@ -17,12 +17,12 @@ class Thread(Event):
 
         ids: identifier dictionary
     """
-    def __init__(self, priority, thread_id=None, buyer=None, seller=None):
+    def __init__(self, priority=None, thread_id=None):
         super(Thread, self).__init__(event_type=event_types.FIRST_OFFER,
                                      priority=priority)
         # participants
-        self.buyer = buyer
-        self.seller = seller
+        self.buyer = None
+        self.seller = None
         # sources object
         self.sources = None  # initialized later in init_thread
         self.turn = 1

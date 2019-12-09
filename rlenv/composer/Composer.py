@@ -264,3 +264,7 @@ class Composer:
         for set_name, feats in self.feat_sets.items():
             counts[set_name] = len(feats)
         return counts
+
+    @property
+    def x_lstg(self):
+        return self.feat_sets[LSTG_MAP]
