@@ -6,5 +6,9 @@ ARRIVAL = 'ARRIVAL'
 
 # thread level
 FIRST_OFFER = 'FIRST_OFFER' # first byer offer
-DELAY = 'delay'
-OFFER = 'offer'
+SELLER_DELAY = 'seller_delay'
+BUYER_DELAY = 'buyer_delay'
+
+# types of offers
+BUYER_OFFER = 'buyer_offer'
+SELLER_OFFER = 'seller_offer'

@@ -1,13 +1,11 @@
 import numpy as np
 from rlenv.time import time_triggers
-from rlenv.env_consts import (MONTH, START_DAY, ACC_PRICE, META, INTERACT, VERBOSE,
+from rlenv.env_consts import (MONTH, START_DAY, ACC_PRICE, META, VERBOSE,
                               DEC_PRICE, START_PRICE, ANCHOR_STORE_INSERT)
-from rlenv.env_utils import get_clock_feats, get_value_fee, time_delta
-from rlenv.events import event_types
-from rlenv.sources import ThreadSources
-from rlenv.events.Thread import Thread
-from constants import INTERVAL, BYR_PREFIX
+from rlenv.env_utils import get_clock_feats, get_value_fee
+from constants import BYR_PREFIX
 from rlenv.simulators import SimulatedSeller, SimulatedBuyer
+from rlenv.events.RewardThread import RewardThread
 from rlenv.environments.EbayEnvironment import EbayEnvironment
 
 ACC_IND = 0
@@ -47,89 +45,16 @@ class RewardEnvironment(EbayEnvironment):
         :return: a 3-tuple of (bool, float, int) giving whether the listing sells,
         the amount it sells for if it sells, and the amount of time it took to sell
         """
-        complete = False
-        while not complete:
-            complete = self._process_event(self.queue.pop())
+        super(RewardEnvironment, self).run()
         return self.outcome
 
-    def _process_event(self, event):
-        if INTERACT and event.type != event_types.ARRIVAL:
-            input('Press Enter to continue...')
-        if event.type == event_types.ARRIVAL:
-            return self._process_arrival(event)
-        elif event.type == event_types.FIRST_OFFER:
-            return self._process_first_offer(event)
-        elif event.type == event_types.OFFER:
-            return self._process_offer(event)
-        elif event.type == event_types.DELAY:
-            return self._process_delay(event)
-        else:
-            raise NotImplementedError()
-
-    def _process_arrival(self, event):
-        """
-        Updates queue with results of an Arrival Event
-
-        :param event: Event corresponding to current event
-        :return: boolean indicating whether the lstg has ended
-        """
-        if self._lstg_expiration(event):
-            return True
-
-        event.update_arrival(time_feats=self.time_feats.get_feats(time=event.priority),
-                             clock_feats=get_clock_feats(event.priority))
-        num_byrs = self.arrival.num_offers(event.sources())
-        if VERBOSE and num_byrs > 0:
-            print('Arrival Interval Start: {}'.format(event.priority))
-            print('Number of arrivals: {}'.format(num_byrs))
-        if num_byrs > 0:
-            # place each into the queue
-            for i in range(num_byrs[0].astype(int)):
-                priority = event.priority + np.random.randint(0, INTERVAL['arrival'])
-                self.thread_counter += 1
-                offer_event = Thread(priority, thread_id=self.thread_counter,
-                                     buyer=SimulatedBuyer(model=self.buyer),
-                                     seller=SimulatedSeller(model=self.seller))
-                self.queue.push(offer_event)
-        # Add arrival check
-        event.priority = event.priority + INTERVAL['arrival']
-        self.queue.push(event)
+    def _check_complete(self, event):
         return False
 
     def _process_first_offer(self, event):
-        """
-        Processes the buyer's first offer in a thread
-
-        :param event:
-        :return:
-        """
-        # expiration
-        sources = ThreadSources(x_lstg=self.x_lstg, composer=self.arrival.composer)
-        months_since_lstg = time_delta(self.lookup[START_DAY], event.priority, unit=MONTH)
-        time_feats = self.time_feats.get_feats(time=event.priority,thread_id=event.thread_id)
-        sources.prepare_hist(time_feats=time_feats, clock_feats=get_clock_feats(event.priority),
-                             months_since_lstg=months_since_lstg)
-        hist = self.arrival.hist(sources())
-        if VERBOSE:
-            print('Thread {} initiated | Buyer hist: {}'.format(event.thread_id, hist))
-        event.init_thread(sources=sources, hist=hist)
+        hist = super(RewardEnvironment, self)._process_first_offer(event)
         self.recorder.start_thread(thread_id=event.thread_id, byr_hist=hist)
-        return self._process_offer(event)
-
-    def _lstg_expiration(self, event):
-        """
-        Checks whether the lstg has expired by the time of the event
-        If so, record the reward as negative insertion fees
-        :param event: rlenv.Event subclass
-        :return: boolean
-        """
-        if event.priority >= self.end_time:
-            self.outcome = (False, 0, MONTH)
-            if VERBOSE:
-                print('Lstg expired')
-            return True
-        else:
-            return False
+        return self._process_byr_offer(event)
 
     def _process_offer(self, event):
         # TODO: ADD event tracking logic throughout
@@ -265,6 +190,11 @@ class RewardEnvironment(EbayEnvironment):
                                         offer=offer)
         self._init_delay(event)
         return False
+
+    def make_thread(self, priority):
+        return RewardThread(priority=priority, thread_id=self.thread_counter,
+                      buyer=SimulatedBuyer(model=self.buyer),
+                      seller=SimulatedSeller(model=self.seller))
 
 
 
