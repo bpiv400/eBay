@@ -5,11 +5,12 @@ from constants import *
 # constructs model-specific neural network.
 class Simulator:
 
-    def __init__(self, model, sizes, device='cuda'):
+    def __init__(self, model, sizes, dropout, device='cuda'):
         '''
         model: one of 'arrival', 'hist', 'delay_byr', 'delay_slr',
             'con_byr', 'con_slr'
         sizes: dictionary of data sizes
+        dropout: dropout rates for [embedding, fully-connected]
         device: either 'cuda' or 'cpu'
         '''
 
@@ -33,9 +34,9 @@ class Simulator:
 
         # subsequent neural net(s)
         if ('delay' in model) or (model == 'arrival'):
-            self.net = LSTM(sizes).to(device)
+            self.net = LSTM(sizes, dropout).to(device)
         else:
-            self.net = FeedForward(sizes).to(device) 
+            self.net = FeedForward(sizes, dropout).to(device) 
 
 
     def run_batch(self, d, optimizer=None):

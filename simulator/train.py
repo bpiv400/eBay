@@ -15,24 +15,32 @@ def weight_reset(m):
         m.reset_parameters()
 
 
-def train_model(log10_lr, simulator, train, test):
+def train_model(log10_lr, folder, simulator, train, test):
     # reset model weights
     simulator.net.apply(weight_reset)
+
+    # parameter initialization
+    epoch, best = 1, -np.inf
+
+    # folder and round number
+    
+    if os.path.isdir(folder):
+        i = len([f for f in os.listdir(folder) if os.path.isfolder(f)]) + 1
+    else:
+        i = 1
+    print('Round %d' % i)
 
     # initialize optimizer with given learning rate
     lr = math.pow(10, log10_lr)
     optimizer = optim.Adam(simulator.net.parameters(), lr=lr)
     print(optimizer)
 
-    # parameter initialization
-    epoch, c, best = 1, 0, -np.inf
-
-    # initialize tensorboard writer
-    writer = SummaryWriter(LOG_DIR + '%s/exp%d' % (model, i))
-    writer.add_scalar('lr', lr, epoch)
+    # initialize tensorboard writer  
+    writer = SummaryWriter('%s/exp%d' % (folder, i))
+    writer.add_scalar('lr', lr, i)
 
     # loop over epochs, record log-likelihood
-    while c < K:
+    while True:
         print('Epoch %d' % epoch)
 
         # training loop
@@ -41,7 +49,6 @@ def train_model(log10_lr, simulator, train, test):
         sec_train = (dt.now() - t0).total_seconds()
 
         # calculate log-likelihood on validation set
-        print('\tValidating on holdout.')
         with torch.no_grad():
             t0 = dt.now()
             lnL_test = run_loop(simulator, test)
@@ -54,20 +61,18 @@ def train_model(log10_lr, simulator, train, test):
         print('\tlnL_test: %9.4f' % lnL_test)
 
         # tensorboard logging
-        info = {'lnL_train': lnL_train, 'lnL_test': lnL_test, 
-                'sec_train': sec_train, 'sec_test': sec_test}
+        info = {'lnL_train': lnL_train, 'lnL_test': lnL_test}
         for k, v in info.items():
             writer.add_scalar(k, v, epoch)
 
-        # update stopping parameters
-        epoch += 1
-        if lnL > best:
-            c = 0
-            best = lnL
+        # stop if training loss worsens
+        if lnL_train > best:
+            best = lnL_train
         else:
-            c += 1
+            return -lnL_train
 
-    return -lnL_train
+        # increment epoch
+        epoch += 1
 
 
 if __name__ == '__main__':
@@ -85,13 +90,16 @@ if __name__ == '__main__':
     print(sizes)
 
     # initialize neural net
-    simulator = Simulator(model, sizes)
+    simulator = Simulator(model, sizes, DROPOUT)
     print(simulator.net)
     print(simulator.loss)
 
     # load datasets
     train = Inputs('train_models', model)
     test = Inputs('train_rl', model)
+
+    # empty tensorboard folder
+    folder = '%s/%s' % (LOG_DIR, model)
 
     # optimize learning rate
     optimize_lr = lambda x: train_model(x, simulator, train, test)

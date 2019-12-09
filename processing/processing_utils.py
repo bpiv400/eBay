@@ -317,14 +317,12 @@ def init_x(getPath, idx):
     x['w2v_slr'] = df[getCols(lambda c: re.match(r'^slr[0-9]', c))]
 
     # slr features
-    x['slr'] = df[['store', 'fdbk_score', 'fdbk_pstv', 'fdbk_100'] \
-                    + getCols(lambda c: c.startswith('slr_'))]
+    x['slr'] = df[getCols(lambda c: c.startswith('slr_'))]
 
     # features of category
     x['cat'] = df[getCols(lambda c: c.startswith('cat_'))]
 
     # features of category-condition
-    x['cndtn'] = df[['new', 'used', 'refurb', 'wear'] \
-                    + getCols(lambda c: c.startswith('cndtn_'))]
+    x['cndtn'] = df[getCols(lambda c: c.startswith('cndtn_'))]
 
     return x

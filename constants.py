@@ -22,19 +22,17 @@ SHARES = {'train_models': 1/3, 'train_rl': 1/3}
 TOL_HALF = 0.02
 
 # optimization parameters
-K = 1	# stop training after K epochs without improvement
 NUM_WORKERS = 8 if torch.cuda.is_available() else 0
 MBSIZE = {True: 128, False: 2000}
 
 # neural net parameters
 LAYERS = 8
-HIDDEN = 2048
+HIDDEN = 1024
 DROPOUT = 0.5
 F = torch.nn.ReLU()
 
 # use gpu if available
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
-
 
 # paths and directories
 if 'Ubuntu' in platform():		# Etan's box
@@ -92,8 +90,10 @@ INTERVAL_COUNTS = {
 HIST_QUANTILES = 10
 
 # model names
-MODELS = ['arrival', 'hist', 'delay_byr', 'delay_slr', 'con_byr', 'con_slr', \
-	'msg_byr', 'msg_slr']
+MODELS = ['arrival', 'hist', \
+		  'delay_byr', 'delay_slr', \
+		  'con_byr', 'con_slr', \
+		  'msg_byr', 'msg_slr']
 
 # number of observations in small dataset
 N_SMALL = 100000
@@ -116,9 +116,8 @@ HOLIDAYS = Calendar().holidays(start=START, end=END)
 QUANTILES = [0.25, 0.5, 0.75, 1]
 
 # groups for embedding layers
-EMBEDDING_GROUPS = {'w2v': ['w2v_slr', 'w2v_byr'],
-					'other': ['cat', 'cndtn', 'slr'],
-					'focal': ['lstg'] + ['offer%d' % i for i in range(1,8)]}
+EMBEDDING_GROUPS = {'w2v': ['lstg', 'w2v_slr', 'w2v_byr'],
+					'other': ['lstg', 'cat', 'cndtn', 'slr']}
 
 
 EPOCH_TIME = 'epoch_time'

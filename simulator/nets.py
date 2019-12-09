@@ -4,7 +4,12 @@ from constants import *
 
 
 class Layer(nn.Module):
-    def __init__(self, N_in, N_out, dropout=False):
+    def __init__(self, N_in, N_out, dropout=0):
+        '''
+        N_in: scalar number of input weights
+        N_out: scalar number of output weights
+        dropout: scalar dropout rate
+        '''
         super(Layer, self).__init__()
 
         # sequence of modules
@@ -12,10 +17,13 @@ class Layer(nn.Module):
             [nn.Linear(N_in, N_out), nn.BatchNorm1d(N_out), F])
 
         # add dropout
-        if dropout:
-            self.seq.append(nn.Dropout(p=DROPOUT))
+        if dropout > 0:
+            self.seq.append(nn.Dropout(p=dropout))
 
     def forward(self, x):
+        '''
+        x: tensor of shape [mbsize, N_in]
+        '''
         for m in self.seq:
             x = m(x)
         return x
@@ -23,6 +31,9 @@ class Layer(nn.Module):
 
 class Embedding(nn.Module):
     def __init__(self, counts):
+        '''
+        sizes: dictionary of scalar input sizes; sizes['x'] is an OrderedDict
+        '''
         super(Embedding, self).__init__()
 
         # first layer: N to N
@@ -35,9 +46,9 @@ class Embedding(nn.Module):
         self.layer2 = Layer(N, N)
 
     def forward(self, x):
-        """
+        '''
         x: OrderedDict() with a superset of the keys in self.k
-        """
+        '''
         # first layer
         l = []
         for k, m in self.layer1.items():
@@ -50,101 +61,90 @@ class Embedding(nn.Module):
         return self.layer2(x)
 
 
-class Cartesian(nn.Module):
-    def __init__(self, counts):
-        '''
-        counts: OrderedDict of input sizes
-        f: activation function (e.g., nn.ReLU())
-        '''
-        super(Cartesian, self).__init__()
-
-        # create all pairwise comparisons
-        keys = list(counts.keys())
-        d, k = OrderedDict(), len(keys)
-        for i in range(k-1):
-            for j in range(i+1,k):
-                N = counts[keys[i]] + counts[keys[j]]
-                newkey = '-'.join([keys[i], keys[j]])
-                d[newkey] = Layer(N, N)
-        self.pairs = nn.ModuleDict(d)
-
-    def forward(self, x):
-        '''
-        x: dictionary with outputs from separate Embeddings
-        '''
-        l = []
-        for key, m in self.pairs.items():
-            key1, key2 = key.split('-')
-            z = torch.cat((x[key1], x[key2]), axis=1)
-            l.append(m(z))
-
-        return torch.cat(l, axis=1)
-
-
 class FullyConnected(nn.Module):
-    def __init__(self, N_in, N_out):
+    def __init__(self, N_in, N_out, dropout):
+        '''
+        sizes: dictionary of scalar input sizes; sizes['x'] is an OrderedDict
+        N_in: scalar number of input weights
+        N_out: scalar number of output parameters
+        dropout: scalar dropout rate for fully-connected
+        '''
         super(FullyConnected, self).__init__()
 
         # intermediate layer
-        self.seq = nn.ModuleList([Layer(N_in, HIDDEN, dropout=True)])
+        self.seq = nn.ModuleList([Layer(N_in, HIDDEN, dropout)])
 
         # fully connected network
-        for i in range(LAYERS-1):
-            self.seq.append(
-                Layer(HIDDEN, HIDDEN, dropout=(i < LAYERS-2)))
+        for i in range(LAYERS-2):
+            self.seq.append(Layer(HIDDEN, HIDDEN, dropout))
+
+        # last layer has no dropout
+        self.seq.append(Layer(HIDDEN, HIDDEN, 0))
 
         # output layer
         self.seq.append(nn.Linear(HIDDEN, N_out))
 
     def forward(self, x):
+        '''
+        x: tensor of shape [mbsize, N_in]
+        '''
         for m in self.seq:
             x = m(x)
         return x
 
 
 class FeedForward(nn.Module):
-    def __init__(self, sizes, toRNN=False):
+    def __init__(self, sizes, dropout, toRNN=False):
+        '''
+        sizes: dictionary of scalar input sizes; sizes['x'] is an OrderedDict
+        dropout: scalar dropout rate for fully-connected
+        toRNN: True if FeedForward initialized hidden state of recurrent network
+        '''
         super(FeedForward, self).__init__()
 
-        # embedding
-        d = OrderedDict()
-        for name, group in EMBEDDING_GROUPS.items():
+        # expand embeddings for offer models
+        groups = EMBEDDING_GROUPS
+        if 'offer1' in sizes['x']:
+            groups['offer'] = ['lstg'] \
+                + [k for k in sizes['x'].keys() if 'offer' in k]
+
+        # embeddings
+        d, total = OrderedDict(), 0
+        for name, group in groups.items():
             counts = {k: v for k, v in sizes['x'].items() if k in group}
             d[name] = Embedding(counts)
+            total += sum(counts.values())
         self.nn0 = nn.ModuleDict(d)
 
-        # cartesian
-        counts = OrderedDict()
-        for name, group in EMBEDDING_GROUPS.items():
-            counts[name] = sum(
-                [v for k, v in sizes['x'].items() if k in group])
-        self.nn1 = Cartesian(counts)
-
         # fully connected
-        N_in = sum(counts.values()) * (len(counts) - 1)
-        N_out = HIDDEN if toRNN else sizes['out']
-        self.nn2 = FullyConnected(N_in, N_out)
+        N_in = sum(counts.values())
+        self.nn1 = FullyConnected(total, 
+            HIDDEN if toRNN else sizes['out'], dropout)
 
     def forward(self, x):
-        # separate embeddings
-        d = OrderedDict()
-        for name, group in EMBEDDING_GROUPS.items():
-            d[name] = self.nn0[name](x)
-        
-        # cartesian, then fully connected
-        return self.nn2(self.nn1(d))
+        '''
+        x: OrderedDict()
+        '''
+        l = []
+        for k in self.nn0.keys():
+            l.append(self.nn0[k](x))
+        return self.nn1(torch.cat(l, dim=1))
 
 
 class LSTM(nn.Module):
-    def __init__(self, sizes):
+    def __init__(self, sizes, dropout):
+        '''
+        sizes: dictionary of scalar input sizes; sizes['x'] is an OrderedDict
+        dropout: scalar dropout rate for fully-connected
+        '''
         super(LSTM, self).__init__()
 
         # save parameters to self
         self.steps = sizes['steps']
 
         # initial hidden nodes
-        self.h0 = FeedForward(sizes, toRNN=True)
-        self.c0 = FeedForward(sizes, toRNN=True)
+        self.h0 = FeedForward(sizes, dropout, toRNN=True)
+        self.c0 = FeedForward(sizes, dropout, toRNN=True)
 
         # rnn layer
         self.rnn = nn.LSTM(input_size=sizes['x_time'],
@@ -154,8 +154,11 @@ class LSTM(nn.Module):
         # output layer
         self.output = nn.Linear(HIDDEN, sizes['out'])
 
-    # output discrete weights and parameters of continuous components
     def forward(self, x, x_time):
+        '''
+        x: OrderedDict()
+        x_time: tensor of shape [mbsize, sizes['steps'], sizes['x_time']]
+        '''
         # initialize hidden state
         hidden = (self.h0(x).unsqueeze(dim=0), self.c0(x).unsqueeze(dim=0))
 

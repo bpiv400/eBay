@@ -37,25 +37,24 @@ if __name__ == '__main__':
     print(sizes)
 
     # initialize neural net
-    simulator = Simulator(model, sizes)
+    simulator = Simulator(model, sizes, DROPOUT)
     print(simulator.net)
     print(simulator.loss)
 
     # initialize optimizer with default learning rate
+    lr = [1e-3, 1e-3, 1e-2]
+
     if (model == 'arrival') or ('delay' in model):
         optimizer = optim.Adam([
-            {'params': simulator.net.h0.nn0.parameters()},
-            {'params': simulator.net.h0.nn1.parameters()},
-            {'params': simulator.net.h0.nn2.parameters()},
-            {'params': simulator.net.c0.nn0.parameters()},
-            {'params': simulator.net.c0.nn1.parameters()},
-            {'params': simulator.net.c0.nn2.parameters()},
-            {'params': simulator.net.rnn.parameters()}])
+            {'params': simulator.net.h0.nn0.parameters(), 'lr': lr[0]},
+            {'params': simulator.net.h0.nn1.parameters(), 'lr': lr[1]},
+            {'params': simulator.net.c0.nn0.parameters(), 'lr': lr[0]},
+            {'params': simulator.net.c0.nn1.parameters(), 'lr': lr[1]},
+            {'params': simulator.net.rnn.parameters(), 'lr': lr[2]}])
     else:
         optimizer = optim.Adam([
-            {'params': simulator.net.nn0.parameters()},
-            {'params': simulator.net.nn1.parameters()},
-            {'params': simulator.net.nn2.parameters()}])
+            {'params': simulator.net.nn0.parameters(), 'lr': lr[0]},
+            {'params': simulator.net.nn1.parameters(), 'lr': lr[1]}])
     print(optimizer)
 
     # load data
