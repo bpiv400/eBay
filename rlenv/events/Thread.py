@@ -40,7 +40,7 @@ class Thread(Event):
         self.sources = sources
         self.sources.init_thread(hist=hist)
 
-    def buyer_offer(self):
+    def buyer_offer(self, *args):
         outcomes = self.buyer.make_offer(sources=self.sources(), turn=self.turn)
         norm = self.sources.update_offer(outcomes=outcomes, turn=self.turn)
         return {
@@ -49,7 +49,7 @@ class Thread(Event):
             'time': self.priority
         }
 
-    def seller_offer(self):
+    def seller_offer(self, *args):
         outcomes = self.seller.make_offer(sources=self.sources(), turn=self.turn)
         norm = self.sources.update_offer(outcomes=outcomes, turn=self.turn)
         return {
