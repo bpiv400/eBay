@@ -54,15 +54,16 @@ class SellerEnvironment(EbayEnvironment, Env):
 
     def step(self, action):
         # update
-        
+        self._last_event.seller_offer(action)
         self.queue.push(self._last_event)
         self._last_event = None
         return self.run()
 
-    def _process_slr_offer(self, event):
-        if self._prepare_offer(event):
+    def _process_slr_delay(self, event):
+        if self._lstg_expiration(event):
             return True
         else:
+            # need to store remaining
             self._last_event = event
             event.init_delay()
 

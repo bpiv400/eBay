@@ -11,12 +11,20 @@ class SellerThread(Thread):
     def init_delay(self, lstg_start):
         self._init_delay_sources(lstg_start)
         if self.turn % 2 == 0:
-            self.type = event_types.SELLER_OFFER
+            self.type = event_types.SELLER_DELAY
             self.sources.init_remaining(self.init_remaining)
         else:
             self.type = event_types.BUYER_DELAY
             self._init_delay_hidden()
 
+    def seller_offer(self, *args):
+        """
+        Update sources with the result of a seller offer and return an offer dictionary
 
-    def seller_offer(self):
-        raise NotImplementedError()
+        :param args: tuple containing action
+        :return:
+        """
+        if len(args) == 0:
+            raise RuntimeError()
+        action = args[0]
+        self.sources.agent_offer(action)
