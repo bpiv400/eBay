@@ -2,7 +2,7 @@ import pandas as pd
 from torch.distributions.categorical import Categorical
 from torch.distributions.bernoulli import Bernoulli
 import torch
-from rlenv.env_utils import proper_squeeze, categorical_sample, get_split, featname
+from rlenv.env_utils import proper_squeeze, categorical_sample, get_split, featname, prev_norm, last_norm
 from rlenv.env_consts import ALL_OUTCOMES, REJECT, NORM, CON, SPLIT, MSG, AUTO, EXP
 from rlenv.composer.maps import THREAD_MAP
 
@@ -43,14 +43,6 @@ class SimulatedActor:
         dist = Bernoulli(logits=params)
         return proper_squeeze(dist.sample((1, ))).numpy()
 
-    @staticmethod
-    def prev_norm(sources, turn):
-        if turn <= 2:
-            prev_norm = 0.0
-        else:
-            prev_norm = sources[THREAD_MAP][featname(NORM, turn - 2)]
-        return prev_norm
-
 
 class SimulatedSeller(SimulatedActor):
     def __init__(self, model=None):
@@ -61,7 +53,7 @@ class SimulatedSeller(SimulatedActor):
         con = (categorical_sample(params, 1) / 100)
         sample_msg = (con != 0 and con != 1)
         # compute previous seller norm or set to 0 if this is the first turn
-        prev_slr_norm = SimulatedSeller.prev_norm(sources, turn)
+        prev_slr_norm = last_norm(sources, turn)
         # handle rejection case
         if con == 0:
             outcomes[featname(REJECT, turn)] = 1
@@ -77,11 +69,12 @@ class SimulatedSeller(SimulatedActor):
     def sample_msg(self, params, outcomes, turn):
         outcomes[featname(MSG, turn)] = SimulatedActor._sample_bernoulli(params)
 
+    #TODO: Move to utils or similar
     @staticmethod
     def rej(sources, turn, expire=False):
         outcomes = pd.Series(0.0, index=ALL_OUTCOMES[turn])
         outcomes[featname(REJECT, turn)] = 1
-        outcomes[featname(NORM, turn)] = SimulatedSeller.prev_norm(sources, turn)
+        outcomes[featname(NORM, turn)] = last_norm(sources, turn)
         if not expire:
             outcomes[featname(AUTO, turn)] = 1
         else:
