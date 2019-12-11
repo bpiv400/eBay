@@ -27,4 +27,4 @@ class SellerThread(Thread):
         if len(args) == 0:
             raise RuntimeError()
         action = args[0]
-        self.sources.agent_offer(action)
+        norm = self.sources.agent_offer(action, self.turn)

@@ -9,8 +9,9 @@ from torch.distributions.categorical import Categorical
 from constants import (INPUT_DIR, START,
                        HOLIDAYS, TOL_HALF, MODEL_DIR)
 from rlenv.interface.model_names import LSTM_MODELS
+from rlenv.composer.maps import THREAD_MAP
 from simulator.nets import FeedForward, LSTM
-from rlenv.env_consts import META_6, META_7, DAY
+from rlenv.env_consts import META_6, META_7, DAY, NORM
 
 
 def load_featnames(full_name):
@@ -87,6 +88,14 @@ def get_split(con):
     con = con * 100
     output = 1 if abs(50 - con) < (TOL_HALF * 100) else 0
     return output
+
+
+def last_norm(sources, turn):
+    if turn <= 2:
+        prev_norm = 0.0
+    else:
+        prev_norm = sources[THREAD_MAP][featname(NORM, turn - 2)]
+    return prev_norm
 
 
 def chunk_dir(part_dir, chunk_num, records=False, rewards=False):
