@@ -19,15 +19,21 @@ class Composer:
 
     """
     def __init__(self, params, rebuild=False):
-        composer_path = '{}{}.pkl'.format(COMPOSER_DIR, params['composer'])
+        composer_path = '{}composer.pkl'.format(COMPOSER_DIR)
         if not os.path.exists(composer_path) or rebuild:
-            self.maps, self.sizes, self.feat_sets = Composer.build()
+            self.maps, self.sizes, self.feat_sets = Composer.build_models()
             pickle.dump((self.maps, self.sizes, self.feat_sets), open(composer_path, 'wb'))
+            if 'agent' in params and params['agent'] is not None:
+                self.maps['agent'] = Composer.build_agent()
         else:
             self.maps, self.sizes, self.feat_sets = unpickle(composer_path)
 
     @staticmethod
-    def build():
+    def build_agent(params):
+        raise NotImplementedError()
+
+    @staticmethod
+    def build_models():
         """
         creates a dictionary mapping
         """

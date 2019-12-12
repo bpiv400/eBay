@@ -1,23 +1,17 @@
 """
 class for encapsulating data and methods related to the first buyer offer
 """
-import numpy as np
 from rlenv.events.Event import Event
 from rlenv.events import event_types
-from rlenv.simulators import SimulatedSeller
-from rlenv.composer.maps import *
 from constants import (SLR_PREFIX, BYR_PREFIX, INTERVAL_COUNTS,
                        INTERVAL, MAX_DELAY, MAX_DAYS)
-from rlenv.env_utils import time_delta
-from rlenv.env_consts import (MONTH, DAY, OBS_SPACE, INT_REMAINING)
+from rlenv.env_utils import time_delta, slr_rej
+from rlenv.env_consts import (MONTH, DAY, INT_REMAINING)
 
 
 class Thread(Event):
     """
     Attributes:
-        hidden: representation of buyer and seller hidden states (dictionary containing 'byr', 'slr')
-
-        ids: identifier dictionary
     """
     def __init__(self, priority=None, thread_id=None):
         super(Thread, self).__init__(event_type=event_types.FIRST_OFFER,
@@ -120,7 +114,10 @@ class Thread(Event):
         self.spi = None
         self.init_remaining = None
         # change event type
-        self.type = event_types.OFFER
+        if self.turn % 2 == 0:
+            self.type = event_types.SELLER_OFFER
+        else:
+            self.type = event_types.BUYER_OFFER
         self.priority += add_delay
 
     def thread_expired(self):
@@ -133,7 +130,7 @@ class Thread(Event):
         return self.sources.is_rej(self.turn)
 
     def slr_rej(self, expire=False):
-        outcomes = SimulatedSeller.rej(self.sources(), self.turn, expire=expire)
+        outcomes = slr_rej(self.sources(), self.turn, expire=expire)
         norm = self.sources.update_offer(outcomes=outcomes, turn=self.turn)
         return {
             'price': norm,
@@ -162,9 +159,11 @@ class Thread(Event):
         self.sources.byr_expire(days=days, turn=self.turn)
 
     def get_obs(self):
-        srcs = self.sources()
-        return OBS_SPACE(LSTG_MAP=srcs[LSTG_MAP].values,
-                         THREAD_MAP=srcs[THREAD_MAP].values,
-                         TURN_IND_MAP=srcs[TURN_IND_MAP].values.astype(np.int),
-                         X_TIME_MAP=srcs[X_TIME_MAP][INT_REMAINING])
+        raise NotImplementedError()
+        # srcs = self.sources()
+        # maybe move to composer or sources
+        # return OBS_SPACE(LSTG_MAP=srcs[LSTG_MAP].values,
+        #                 THREAD_MAP=srcs[THREAD_MAP].values,
+        #                 TURN_IND_MAP=srcs[TURN_IND_MAP].values.astype(np.int),
+        #                 X_TIME_MAP=srcs[X_TIME_MAP][INT_REMAINING])
 
