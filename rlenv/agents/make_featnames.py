@@ -39,6 +39,7 @@ GROUPS = {
     W2V_BYR: 'w2v_byr',
     CAT: 'cat',
     CNDTN: 'cndtn',
+    SLR: 'slr'
 }
 
 
@@ -52,9 +53,6 @@ def parse_lstg_feats(lstg_ser, feats):
             lstg_ser.remove(shorthand)
             for feat in feats['x'][group_name]:
                 lstg_ser.append(feat)
-    if SLR in lstg_ser:
-        for feat in tf:
-            lstg_ser.append('slr_{}'.format(feat))
     return lstg_ser
 
 

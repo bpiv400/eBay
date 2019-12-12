@@ -6,12 +6,12 @@ import numpy as np
 import pandas as pd
 import utils
 from torch.distributions.categorical import Categorical
-from constants import (INPUT_DIR, START,
-                       HOLIDAYS, TOL_HALF, MODEL_DIR)
+from constants import (INPUT_DIR, START, HOLIDAYS, TOL_HALF, MODEL_DIR)
 from rlenv.interface.model_names import LSTM_MODELS
 from rlenv.composer.maps import THREAD_MAP
 from simulator.nets import FeedForward, LSTM
-from rlenv.env_consts import META_6, META_7, DAY, NORM
+from rlenv.env_consts import (META_6, META_7, DAY, NORM, ALL_OUTCOMES,
+                              AUTO, REJECT, EXP)
 
 
 def load_featnames(full_name):
@@ -154,3 +154,14 @@ def time_delta(start, end, unit=DAY):
     diff = (end - start) / unit
     diff = np.array([diff], dtype=np.float32)
     return diff
+
+
+def slr_rej(sources, turn, expire=False):
+    outcomes = pd.Series(0.0, index=ALL_OUTCOMES[turn])
+    outcomes[featname(REJECT, turn)] = 1
+    outcomes[featname(NORM, turn)] = last_norm(sources, turn)
+    if not expire:
+        outcomes[featname(AUTO, turn)] = 1
+    else:
+        outcomes[featname(EXP, turn)] = 1
+    return outcomes

@@ -69,18 +69,6 @@ class SimulatedSeller(SimulatedActor):
     def sample_msg(self, params, outcomes, turn):
         outcomes[featname(MSG, turn)] = SimulatedActor._sample_bernoulli(params)
 
-    #TODO: Move to utils or similar
-    @staticmethod
-    def rej(sources, turn, expire=False):
-        outcomes = pd.Series(0.0, index=ALL_OUTCOMES[turn])
-        outcomes[featname(REJECT, turn)] = 1
-        outcomes[featname(NORM, turn)] = last_norm(sources, turn)
-        if not expire:
-            outcomes[featname(AUTO, turn)] = 1
-        else:
-            outcomes[featname(EXP, turn)] = 1
-        return outcomes
-
 
 class SimulatedBuyer(SimulatedActor):
     def __init__(self, model=None):
