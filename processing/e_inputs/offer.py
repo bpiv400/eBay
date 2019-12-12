@@ -148,7 +148,8 @@ if __name__ == '__main__':
 	parser.add_argument('--part', type=str)
 	parser.add_argument('--outcome', type=str)
 	parser.add_argument('--role', type=str)
-	part, outcome, role = parser.part, parser.outcome, parser.role
+	args = parser.parse_args()
+	part, outcome, role = args.part, args.outcome, args.role
 	model = '%s_%s' % (outcome, role)
 	print('%s/%s' % (part, model))
 

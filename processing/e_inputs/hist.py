@@ -38,7 +38,7 @@ if __name__ == '__main__':
 	# extract model and outcome from int
 	parser = argparse.ArgumentParser()
 	parser.add_argument('--part', type=str)
-	part = parser.part
+	part = parser.parse_args().part
 	print('%s/hist' % part)
 
 	# input dataframes, output processed dataframes
