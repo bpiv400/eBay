@@ -11,7 +11,6 @@ then
 elif [ "$SGE_TASK_ID" == 2 ]
 then
 	python repo/processing/e_inputs/hist.py --part train_rl
-then
 elif [ "$SGE_TASK_ID" == 3 ]
 then
 	python repo/processing/e_inputs/offer.py --part train_rl --outcome delay --role byr
