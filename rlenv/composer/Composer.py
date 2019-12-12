@@ -10,8 +10,6 @@ from constants import REWARDS_DIR
 from utils import unpickle
 from rlenv.interface import model_names
 from rlenv.env_utils import load_featnames, load_sizes
-from rlenv.composer.fix_featnames import fix_featnames
-
 
 class Composer:
     """
@@ -24,9 +22,10 @@ class Composer:
             self.maps, self.sizes, self.feat_sets = Composer.build_models()
             pickle.dump((self.maps, self.sizes, self.feat_sets), open(composer_path, 'wb'))
             if 'agent' in params and params['agent'] is not None:
-                self.maps['agent'] = Composer.build_agent()
+                self.maps['agent'] = Composer.build_agent(params)
         else:
             self.maps, self.sizes, self.feat_sets = unpickle(composer_path)
+            #TODO: Add agent loading code here
 
     @staticmethod
     def build_agent(params):
@@ -78,7 +77,6 @@ class Composer:
             curr_feats = load_featnames(mod)
 
             # TODO: HAVE ETAN USE PROPER FEATNAMES
-            curr_feats = fix_featnames(curr_feats)
             ##############################################
 
             for feat_type, feat_set in curr_feats['x'].items():
@@ -109,9 +107,10 @@ class Composer:
 
     @staticmethod
     def _build_model_maps(model, feat_sets):
-        # print(model)
+        print(model)
         maps = dict()
-        featnames = fix_featnames(load_featnames(model))
+        featnames = load_featnames(model)
+        print('len: {}'.format(len(featnames['x']['lstg'])))
         sizes = load_sizes(model)
         # temporary fix
         if 'time' in sizes:
@@ -120,13 +119,13 @@ class Composer:
         # create input set for x_time
         if 'x_time' in featnames:
             input_set = featnames['x_time']
-            maps['x_time'] = Composer._build_set_maps(input_set, feat_sets,
-                                                      size=sizes['x_time'])
+            print('x time')
+            maps['x_time'] = Composer._build_set_maps(input_set, feat_sets, size=sizes['x_time'])
             # ensure only features from x_time contribute to the x_time map
             assert len(maps['x_time']) == 1
         maps['x'] = dict()
         for set_name, input_set in featnames['x'].items():
-            # print(set_name)
+            print(set_name)
             maps['x'][set_name] = Composer._build_set_maps(input_set, feat_sets,
                                                            size=sizes['x'][set_name])
         clipped_sizes = {
@@ -139,6 +138,7 @@ class Composer:
     @staticmethod
     def _build_set_maps(input_set, feat_sets, size=None):
         output = dict()
+        print('input set: {}'.format(len(input_set)))
         input_set = pd.DataFrame(data={'out':np.arange(len(input_set))},
                                  index=input_set)
         for set_name, feat_list in feat_sets.items():
@@ -199,6 +199,13 @@ class Composer:
         assert min(indices) == 0
         assert max(indices) == (total - 1)
         assert len(indices) == len(set(indices))
+        print('index length: {}'.format(len(indices)))
+        print('size: {}'.format(size))
+        ## error checking
+        input_feats = set(list(input_set.index))
+        print(len(input_set))
+        map_feats = set(map_feats)
+        print('missing from maps: {}'.format(input_feats.difference(map_feats)))
         assert len(indices) == size
 
     @staticmethod
