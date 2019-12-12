@@ -1,6 +1,4 @@
-from collections import namedtuple
 from constants import INPUT_DIR
-from rlenv.composer.maps import *
 
 INTERACT = False
 VERBOSE = True
@@ -95,6 +93,7 @@ LOOKUP = 'lookup'
 # filenames
 COMPOSER_DIR = '{}composer/'.format(INPUT_DIR)
 REWARD_EXPERIMENT_PATH = 'repo/rlenv/rewards/experiments.csv'
+AGENT_FEATS_FILENAME = 'agent_feats.xlsx'
 LOOKUP_FILENAME = 'lookup.gz'
 X_LSTG_FILENAME = 'x_lstg.gz'
 
@@ -133,6 +132,5 @@ ENV_LSTG_COUNT = 1000
 ACTION_SPACE_NAME = 'NegotiationActionSpace'
 OBS_SPACE_NAME = 'NegotiationObsSpace'
 
-ACTION_SPACE = namedtuple(ACTION_SPACE_NAME, [CON, DELAY, MSG])
-OBS_SPACE = namedtuple(OBS_SPACE_NAME, [LSTG_MAP, THREAD_MAP,
-                                        TURN_IND_MAP, X_TIME_MAP])
+# agents
+INFO_AGENTS = ['byr', 'slr0', 'slr1']

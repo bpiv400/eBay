@@ -1,7 +1,7 @@
+from collections import namedtuple
 import pandas as pd
 import numpy as np
 from rlpyt.envs.base import Env
-from rlpyt.spaces.int_box import IntBox
 from rlpyt.spaces.composite import Composite
 from rlpyt.spaces.float_box import FloatBox
 from rlenv.environments.EbayEnvironment import EbayEnvironment
@@ -9,26 +9,27 @@ from rlenv.composer.maps import THREAD_MAP, LSTG_MAP, TURN_IND_MAP
 from rlenv.events import event_types
 from rlenv.events.SellerThread import SellerThread
 from rlenv.env_consts import (SELLER_HORIZON, LOOKUP, X_LSTG, START_DAY, MONTH,
-                              OBS_SPACE, ACTION_SPACE)
+                              CON, DELAY, ACTION_SPACE_NAME, OBS_SPACE_NAME)
 from rlenv.simulators import SimulatedBuyer
 from rlenv.spaces.ConSpace import ConSpace
 
 
 class SellerEnvironment(EbayEnvironment, Env):
-    def __init__(self, **kwargs):
-        super(SellerEnvironment, self).__init__(arrival=kwargs['arrival'])
+    def __init__(self, params):
+        super(SellerEnvironment, self).__init__(arrival=params['arrival'])
         # attributes for getting lstg data
-        self._file = kwargs['file']
+        self._file = params['file']
         self._num_lstgs = len(self._file[LOOKUP])
         self._lookup_cols = self._file[LOOKUP].attrs['cols']
         self._lookup_cols = [col.decode('utf-8') for col in self._lookup_cols]
         self._lookup_slice, self._x_lstg_slice = None, None
         self._ix = -1
         # action and observation spaces
+        self.agent_delay = params['delay']
         self._action_space = self._define_action_space()
         self._observation_space = self._define_observation_space()
         # buyer model
-        self.buyer = kwargs['buyer']
+        self.buyer = params['buyer']
 
         # features for interacting with the agent
         self._last_event = None
@@ -92,15 +93,20 @@ class SellerEnvironment(EbayEnvironment, Env):
     def horizon(self):
         return SELLER_HORIZON
 
-    @staticmethod
-    def _define_action_space():
-        msg = IntBox(0, 2, shape=(1, ), null_value=0)
-        delay = FloatBox([0.0], [1.0], null_value=0)
+    def _define_action_space(self):
+        # message not included because agent can't write a msg
         con = ConSpace()
-        return Composite([con, delay, msg], ACTION_SPACE)
+        if self.agent_delay:
+            nt = namedtuple(ACTION_SPACE_NAME, [CON, DELAY])
+            delay = FloatBox([0.0], [1.0], null_value=0)
+            return Composite([con, delay], nt)
+        else:
+            nt = namedtuple(ACTION_SPACE_NAME, [CON])
+            return Composite([con], nt)
 
     def _define_observation_space(self):
         feat_counts = self.arrival.composer.feat_counts
+        nt = namedtuple(OBS_SPACE_NAME, [LSTG_MAP, THREAD_MAP, TURN_IND_MAP, ])
         lstg = FloatBox(0, 100, shape=(len(feat_counts[LSTG_MAP]),))
         thread = FloatBox(0, 100, shape=(len(feat_counts[THREAD_MAP]),))
         turn = FloatBox(0, 100, shape=(len(feat_counts[TURN_IND_MAP]),))
