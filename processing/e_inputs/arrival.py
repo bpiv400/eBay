@@ -40,11 +40,8 @@ def process_inputs(part):
 if __name__ == '__main__':
     # extract model and outcome from int
     parser = argparse.ArgumentParser()
-    parser.add_argument('--num', type=int)
-    num = parser.parse_args().num-1
-
-    # partition and outcome
-    part = PARTITIONS[num]
+    parser.add_argument('--part', type=part)
+    part = parser.part
     print('%s/arrival' % part)
 
     # input dataframes, output processed dataframes

@@ -143,15 +143,12 @@ def process_inputs(part, outcome, role):
 
 
 if __name__ == '__main__':
-	# extract model from int
+	# extract parameters from command line
 	parser = argparse.ArgumentParser()
-	parser.add_argument('--num', type=int)
-	num = parser.parse_args().num-1
-
-	# partition and role
-	part = PARTITIONS[num // 6]
-	outcome = ['delay', 'con', 'msg'][num % 3]
-	role = 'slr' if (num // 3) % 2 else 'byr'
+	parser.add_argument('--part', type=str)
+	parser.add_argument('--outcome', type=str)
+	parser.add_argument('--role', type=str)
+	part, outcome, role = parser.part, parser.outcome, parser.role
 	model = '%s_%s' % (outcome, role)
 	print('%s/%s' % (part, model))
 
