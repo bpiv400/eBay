@@ -294,12 +294,21 @@ def init_x(getPath, idx):
     x = {}
 
     # load and reindex
-    for name in ['lstg', 'w2v_byr', 'w2v_slr', 'slr', 'cat', 'cndtn']:
+    for name in ['lstg', 'w2v_byr', 'w2v_slr', 'slr', 'cat']:
+        # load dataframe
         df = load(getPath(['x', name]))
+
+        # index by idx
         if len(idx.names) == 1:
             df = df.reindex(index=idx)
         else:
             df = df.reindex(index=idx, level='lstg')
-        x[name] = df
+
+        # split cat into cat and cndtn
+        if name == 'cat':
+            for group in ['cat', 'cndtn']:
+                x[group] = df[[c for c in df.columns if c.startswith(group)]]
+        else:
+            x[name] = df
 
     return x
