@@ -123,7 +123,7 @@ class Sample(Sampler):
 
 
 # helper function to run a loop of the model
-def run_loop(simulator, data, optimizer=None):
+def run_loop(simulator, data, kl=0.0, optimizer=None):
     # training or validation
     isTraining = optimizer is not None
 
@@ -138,15 +138,22 @@ def run_loop(simulator, data, optimizer=None):
         collate_fn=f, num_workers=NUM_WORKERS, pin_memory=True)
 
     # loop over batches, calculate log-likelihood
-    lnL = 0.0
+    loss = 0.0
     for b in batches:
+        # multiplicative factor for regularization term in minibatch
+        factor = kl * torch.sum(b['y'] > -1).float() / data.N_labels
+        
+        # move to device
+        factor = factor.to(simulator.device)
         b['x'] = {k: v.to(simulator.device) for k, v in b['x'].items()}
         b['y'] = b['y'].to(simulator.device)
         if 'x_time' in b:
             b['x_time'] = b['x_time'].to(simulator.device)
-        lnL += simulator.run_batch(b, optimizer)
 
-    return lnL / data.N_labels
+        # add minibatch loss
+        loss += simulator.run_batch(b, factor, optimizer)
+
+    return loss
 
 
 # collate function for feedforward networks

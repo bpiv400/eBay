@@ -16,7 +16,7 @@ CUTOFF = 1e5
 
 # for partitioning
 SEED = 123456
-SHARES = {'train_models': 1/3, 'train_rl': 1/3}
+SHARES = {'train_models': 0.6, 'train_rl': 0.2}
 
 # count concessions within this range as 1/2
 TOL_HALF = 0.02
@@ -24,11 +24,16 @@ TOL_HALF = 0.02
 # optimization parameters
 NUM_WORKERS = 8 if torch.cuda.is_available() else 0
 MBSIZE = {True: 128, False: 2000}
+FTOL = 0.995
+
+# for pretraining
+KL_INT = 0.05	# grid spacing for KL reg coefficient
+EPOCHS = int(1 / KL_INT) + 1
 
 # neural net parameters
-LAYERS = 8
+LAYERS_EMBEDDING = 2
+LAYERS_FULL = 8
 HIDDEN = 1024
-DROPOUT = 0.5
 F = torch.nn.ReLU()
 
 # use gpu if available
@@ -54,6 +59,7 @@ INPUT_DIR = '%s/inputs/' % PREFIX
 SUMMARY_DIR = '%ssummary/' % OUTPUT_DIR
 MODEL_DIR = '%smodels/' % OUTPUT_DIR
 LOG_DIR = '%slogs/' % OUTPUT_DIR
+EXPS_DIR = '%sexps/' % OUTPUT_DIR
 
 # partitions
 PARTITIONS = ['train_models', 'train_rl', 'test']

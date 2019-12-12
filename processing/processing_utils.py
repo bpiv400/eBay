@@ -306,18 +306,20 @@ def init_x(getPath, idx):
     x = {}
 
     # features of listing
-    x['lstg'] = df[['fast', 'start_price_pctile', 'start_years', \
+    x['lstg'] = df[['store', 'fast', 'start_price_pctile', 'start_years', \
                     'photos', 'has_photos', 'auto_decline', 'auto_accept', \
                     'start_is_round', 'start_is_nines', 'decline_is_round', \
                     'decline_is_nines', 'accept_is_round', 'accept_is_nines', \
-                    'has_decline', 'has_accept', 'new', 'used', 'refurb', 'wear']]
+                    'has_decline', 'has_accept', 'fdbk_pstv', 'fdbk_score', \
+                    'fdbk_100', 'slr_bos_total', 'slr_lstgs_total', \
+                    'new', 'used', 'refurb', 'wear']]
 
     # word2vec features, separately by role
     x['w2v_byr'] = df[getCols(lambda c: re.match(r'^byr[0-9]', c))]
     x['w2v_slr'] = df[getCols(lambda c: re.match(r'^slr[0-9]', c))]
 
     # slr features
-    x['slr'] = df[getCols(lambda c: c.startswith('slr_'))]
+    x['slr'] = df[getCols(lambda c: c.startswith('slr_') if c not in x['lstg'])]
 
     # features of category
     x['cat'] = df[getCols(lambda c: c.startswith('cat_'))]

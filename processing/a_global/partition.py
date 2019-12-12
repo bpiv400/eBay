@@ -2,7 +2,6 @@ import sys, random
 from compress_pickle import load, dump
 import numpy as np, pandas as pd
 from constants import *
-from processing.processing_utils import *
 
 
 def partition_lstgs(s):
@@ -29,8 +28,8 @@ if __name__ == "__main__":
     L = pd.read_csv(CLEAN_DIR + 'listings.csv', 
         dtype=LTYPES).set_index('lstg')
 
-    # drop flagged listings
-    L = L.loc[~L.flag]
+    # drop flagged listings and listings with high start prices
+    L = L.loc[~L.flag & (L.start_price <= 1000)]
     L = L.drop('flag', axis=1)
     
     # partition by seller

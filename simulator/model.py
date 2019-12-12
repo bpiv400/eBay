@@ -5,12 +5,11 @@ from constants import *
 # constructs model-specific neural network.
 class Simulator:
 
-    def __init__(self, model, sizes, dropout, device='cuda'):
+    def __init__(self, model, sizes, device='cuda'):
         '''
         model: one of 'arrival', 'hist', 'delay_byr', 'delay_slr',
             'con_byr', 'con_slr'
         sizes: dictionary of data sizes
-        dropout: dropout rates for [embedding, fully-connected]
         device: either 'cuda' or 'cpu'
         '''
 
@@ -34,12 +33,20 @@ class Simulator:
 
         # subsequent neural net(s)
         if ('delay' in model) or (model == 'arrival'):
-            self.net = LSTM(sizes, dropout).to(device)
+            self.net = LSTM(sizes).to(device)
         else:
-            self.net = FeedForward(sizes, dropout).to(device) 
+            self.net = FeedForward(sizes).to(device)
 
 
-    def run_batch(self, d, optimizer=None):
+    def get_penalty(self):
+        penalty = torch.tensor(0.0, device=self.device)
+        for m in self.net.modules():
+            if hasattr(m, 'kl_reg'):
+                penalty += m.kl_reg()
+        return penalty
+
+
+    def run_batch(self, d, factor, optimizer=None):
         # train / eval mode
         isTraining = optimizer is not None
         self.net.train(isTraining)
@@ -53,7 +60,7 @@ class Simulator:
             theta = self.net(d['x']).squeeze()
 
             if self.model == 'con_byr':
-                 # observation is on buyer's 4th turn if all three turn indicators are 0
+                # observation is on buyer's 4th turn if all three turn indicators are 0
                 t4 = torch.sum(d['x']['offer1'][:,-3:], dim=1) == 0
 
                 # loss for first 3 turns
@@ -68,12 +75,17 @@ class Simulator:
                 loss = self.loss(theta, 
                     d['y'].float() if 'msg' in self.model else d['y'])
 
-        # step down gradients
+        # add in KL divergence and step down gradients
         if isTraining:
+            # calculate kl divergence penalty and shrink
+            if factor > 0:
+                loss = loss + factor * self.get_penalty()
+
+            # step down gradients
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
 
         # return log-likelihood
-        return -loss.item()
+        return loss.item()
 

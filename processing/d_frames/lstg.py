@@ -61,7 +61,9 @@ if __name__ == "__main__":
 
     # listing features
     print('Listing features')
-    df = get_x_lstg(L)
+    lstg = get_x_lstg(L)
+    dump(lstg, path('x_lstg'))
+    del lstg
 
     # word2vec features
     print('Word2Vec features')
@@ -69,20 +71,16 @@ if __name__ == "__main__":
         w2v = load(W2V_DIR + '%s.gz' % role).reindex(
             index=L[['cat']].values.squeeze(), fill_value=0)
         w2v.set_index(L.index, inplace=True)
-        df = df.join(w2v)
+        dump(w2v, path('x_w2v_' + role))
     del L, w2v
 
     # slr features
     print('Seller features')
     slr = load_frames('slr').reindex(index=idx, fill_value=0)
-    df = df.join(slr)
+    dump(slr, path('x_slr'))
     del slr
 
     # cat features
     print('Categorical features')
     cat = load_frames('cat').reindex(index=idx, fill_value=0)
-    df = df.join(cat)
-
-    # dump
-    dump(df, path('x_lstg'))
-    
+    dump(cat, path('x_cat'))
