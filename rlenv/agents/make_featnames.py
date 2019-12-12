@@ -12,7 +12,7 @@ from copy import deepcopy
 from pickle import dump
 import pandas as pd
 from rlenv.env_consts import AGENT_FEATS_FILENAME
-from constants import FEATS_DIR
+from constants import FEATNAMES_DIR
 from rlenv.env_utils import load_featnames
 
 # constants
@@ -37,13 +37,13 @@ SLR = 'slr_[featname]'
 GROUPS = {
     W2V_SLR: 'w2v_slr',
     W2V_BYR: 'w2v_byr',
-    SLR: 'slr',
     CAT: 'cat',
     CNDTN: 'cndtn',
 }
 
 
 def parse_lstg_feats(lstg_ser, feats):
+    tf = [feat[4:] for feat in feats['x']['cat']]
     lstg_ser = ser2list(lstg_ser)
     for shorthand, group_name in GROUPS.items():
         if shorthand not in lstg_ser:
@@ -52,6 +52,9 @@ def parse_lstg_feats(lstg_ser, feats):
             lstg_ser.remove(shorthand)
             for feat in feats['x'][group_name]:
                 lstg_ser.append(feat)
+    if SLR in lstg_ser:
+        for feat in tf:
+            lstg_ser.append('slr_{}'.format(feat))
     return lstg_ser
 
 
@@ -110,6 +113,7 @@ def parse_feats(df, agent, feats):
     featnames['x']['curr'] = curr
     # add previous time/clock features
     prev = ser2list(df[PREV_COL])
+    prev = ['{}_prev'.format(feat) for feat in prev]
     featnames['x']['prev'] = prev
     delay_featnames = prune_for_delay(deepcopy(featnames['x']), byr=byr)
     return featnames, delay_featnames
@@ -121,10 +125,11 @@ def prune_for_delay(agent_feats, byr=False):
     else:
         targ_turn = 6
     targ_feats = ['{}_{}'.format(feat, targ_turn) for feat in ['days', 'delay']]
+    print(targ_feats)
     for set_name in agent_feats.keys():
         for feat in targ_feats:
             if feat in agent_feats[set_name]:
-                agent_feats.remove(feat)
+                agent_feats[set_name].remove(feat)
     return {'x': agent_feats}
 
 
@@ -159,14 +164,14 @@ def check_foreign(agent_feats, model_feats, byr=False):
 
 def store_featnames(feat_sets):
     for agent, (featnames, delay_featnames) in feat_sets.items():
-        no_delay_path = '{}{}'.format(FEATS_DIR, agent)
-        delay_path = '{}_d'.format(no_delay_path)
-        dump(featnames, no_delay_path)
-        dump(delay_featnames, delay_path)
+        no_delay_path = '{}{}.pkl'.format(FEATNAMES_DIR, agent)
+        delay_path = '{}{}_d.pkl'.format(FEATNAMES_DIR, agent)
+        dump(featnames, open(no_delay_path, 'wb'))
+        dump(delay_featnames, open(delay_path, 'wb'))
 
 
 def main():
-    path = '{}{}'.format(FEATS_DIR, AGENT_FEATS_FILENAME)
+    path = '{}{}'.format(FEATNAMES_DIR, AGENT_FEATS_FILENAME)
     f = pd.ExcelFile(path, None)
     content = pd.read_excel(f, None)
     con_byr = load_featnames('con_byr')
@@ -177,3 +182,7 @@ def main():
             featnames = parse_feats(page, agent, deepcopy(con_byr))
             feat_sets[agent] = featnames
     store_featnames(feat_sets)
+
+
+if __name__ == '__main__':
+    main()

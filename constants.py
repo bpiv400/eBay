@@ -52,6 +52,7 @@ PCTILE_DIR = '%s/pctile/' % PREFIX
 W2V_DIR = '%s/w2v/' % PREFIX
 OUTPUT_DIR = '%s/outputs/' % PREFIX
 INPUT_DIR = '%s/inputs/' % PREFIX
+FEATNAMES_DIR = '%sfeatnames/' % INPUT_DIR
 SUMMARY_DIR = '%ssummary/' % OUTPUT_DIR
 MODEL_DIR = '%smodels/' % OUTPUT_DIR
 LOG_DIR = '%slogs/' % OUTPUT_DIR
