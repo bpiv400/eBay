@@ -1,5 +1,4 @@
-import sys
-import argparse, random
+import sys, argparse
 from compress_pickle import load, dump
 from datetime import datetime as dt
 import numpy as np, pandas as pd
@@ -27,15 +26,39 @@ def get_delay(clock):
     return days, delay
 
 
+# round concession to nearest percentage point
+def round_con(con):
+    '''
+    con: series of unrounded concessions
+    '''
+    rounded = np.round(con, decimals=2)
+    rounded.loc[(rounded == 1) & (con < 1)] = 0.99
+    rounded.loc[(rounded == 0) & (con > 0)] = 0.01
+    return rounded
+
+
 # concession
 def get_con(offers, start_price):
     con = pd.DataFrame(index=offers.index)
-    con[0] = 0
     con[1] = offers[1] / start_price
     con[2] = (offers[2] - start_price) / (offers[1] - start_price)
     for i in range(3, 8):
         con[i] = (offers[i] - offers[i-2]) / (offers[i-1] - offers[i-2])
-    return con.stack()
+    return round_con(con.rename_axis('index', axis=1).stack())
+
+
+# calculate normalized concession from rounded concessions
+def get_norm(con):
+    con = con.unstack()
+    norm = pd.DataFrame(index=con.index, columns=con.columns)
+    norm[1] = con[1]
+    norm[2] = con[2] * (1-norm[1])
+    for i in range(3, 8):
+        if i in IDX['byr']:
+            norm[i] = con[i] * (1-norm[i-1]) + (1-con[i]) * norm[i-2]
+        elif i in IDX['byr']:
+            norm[i] = 1 - con[i] * norm[i-1] - (1-con[i]) * (1-norm[i-2])
+    return norm.rename_axis('index', axis=1).stack().astype('float64')
 
 
 def get_x_offer(lookup, events, tf):
@@ -51,10 +74,9 @@ def get_x_offer(lookup, events, tf):
     # concession
     df['con'] = get_con(events.price.unstack(), lookup.start_price)
     # total concession
-    df['norm'] = events.price / lookup.start_price
-    df.loc[df.index.isin(IDX['slr'], level='index'), 'norm'] = 1 - df.norm
+    df['norm'] = get_norm(df.con)
     # indicator for split
-    df['split'] = np.abs(0.5 - np.around(df['con'], decimals=2)) < TOL_HALF
+    df['split'] = (df.con >= 0.49) & (df.con <= 0.51)
     # message indicator
     df['msg'] = events.message
     # reject auto and exp are last

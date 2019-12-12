@@ -4,6 +4,7 @@ import numpy as np, pandas as pd
 from constants import *
 from processing.processing_utils import LTYPES
 
+
 def partition_lstgs(s):
     # series of index slr and value lstg
     slrs = s.reset_index().sort_values(
