@@ -290,41 +290,16 @@ def create_small(d):
 
 # loads x_lstg and splits into dictionary of components
 def init_x(getPath, idx):
-    # read in x_lstg
-    df = load(getPath(['x', 'lstg']))
-
-    # reindex
-    if len(idx.names) == 1:
-        df = df.reindex(index=idx)
-    else:
-        df = df.reindex(index=idx, level='lstg')
-
-    # wrapper to split columns based on function
-    getCols = lambda f: [c for c in df.columns if f(c)]
-
     # initialize dictionary of input features
     x = {}
 
-    # features of listing
-    x['lstg'] = df[['store', 'fast', 'start_price_pctile', 'start_years', \
-                    'photos', 'has_photos', 'auto_decline', 'auto_accept', \
-                    'start_is_round', 'start_is_nines', 'decline_is_round', \
-                    'decline_is_nines', 'accept_is_round', 'accept_is_nines', \
-                    'has_decline', 'has_accept', 'fdbk_pstv', 'fdbk_score', \
-                    'fdbk_100', 'slr_bos_total', 'slr_lstgs_total', \
-                    'new', 'used', 'refurb', 'wear']]
-
-    # word2vec features, separately by role
-    x['w2v_byr'] = df[getCols(lambda c: re.match(r'^byr[0-9]', c))]
-    x['w2v_slr'] = df[getCols(lambda c: re.match(r'^slr[0-9]', c))]
-
-    # slr features
-    x['slr'] = df[getCols(lambda c: c.startswith('slr_') if c not in x['lstg'])]
-
-    # features of category
-    x['cat'] = df[getCols(lambda c: c.startswith('cat_'))]
-
-    # features of category-condition
-    x['cndtn'] = df[getCols(lambda c: c.startswith('cndtn_'))]
+    # load and reindex
+    for name in ['lstg', 'w2v_byr', 'w2v_slr', 'slr', 'cat', 'cndtn']:
+        df = load(getPath(['x', name]))
+        if len(idx.names) == 1:
+            df = df.reindex(index=idx)
+        else:
+            df = df.reindex(index=idx, level='lstg')
+        x[name] = df
 
     return x
