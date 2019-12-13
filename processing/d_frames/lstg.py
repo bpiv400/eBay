@@ -73,14 +73,3 @@ if __name__ == "__main__":
         w2v.set_index(L.index, inplace=True)
         dump(w2v, path('x_w2v_' + role))
     del L, w2v
-
-    # slr features
-    print('Seller features')
-    slr = load_frames('slr').reindex(index=idx, fill_value=0)
-    dump(slr, path('x_slr'))
-    del slr
-
-    # cat features
-    print('Categorical features')
-    cat = load_frames('cat').reindex(index=idx, fill_value=0)
-    dump(cat, path('x_cat'))

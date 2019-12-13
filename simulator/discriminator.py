@@ -4,8 +4,7 @@ from constants import *
 
 # constructs a neural network to discriminate between real and fake threads
 class Disciminator:
-
-    def __init__(self, sizes, gamma=0.0, device='cuda'):
+    def __init__(self, sizes, dropout=True, device='cuda'):
         '''
         sizes: dictionary of data sizes
         gamma: scalar coefficient on regularization term
@@ -13,11 +12,20 @@ class Disciminator:
         '''
 
         # save parameters from inputs
-        self.gamma = gamma
         self.device = device
+        self.dropout = dropout
 
-        # subsequent neural net(s)
-        self.net = FeedForward(sizes, dropout=gamma > 0).to(device)
+        # initialize gamma to 0
+        self.gamma = 0.0
+
+        # feed-forward neural net
+        self.net = FeedForward(sizes, dropout=dropout).to(device)
+
+
+     def set_gamma(self, gamma):
+        if (gamma > 0) and not self.dropout:
+            error('Gamma cannot be non-zero without dropout layers.')
+        self.gamma = gamma
 
 
     def get_penalty(self, factor=1):

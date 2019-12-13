@@ -5,7 +5,7 @@ from constants import *
 # constructs model-specific neural network.
 class Simulator:
 
-    def __init__(self, model, sizes, gamma=0.0, device='cuda'):
+    def __init__(self, model, sizes, dropout=True, device='cuda'):
         '''
         model: one of 'arrival', 'hist', 'delay_byr', 'delay_slr',
             'con_byr', 'con_slr'
@@ -16,8 +16,11 @@ class Simulator:
 
         # save parameters from inputs
         self.model = model
-        self.gamma = gamma
         self.device = device
+        self.dropout = dropout
+
+        # initialize gamma to 0
+        self.gamma = 0.0
 
         # loss function
         if model in ['hist', 'con_slr']:
@@ -35,9 +38,15 @@ class Simulator:
 
         # subsequent neural net(s)
         if ('delay' in model) or (model == 'arrival'):
-            self.net = LSTM(sizes, dropout=gamma > 0).to(device)
+            self.net = LSTM(sizes, dropout=dropout).to(device)
         else:
-            self.net = FeedForward(sizes, dropout=gamma > 0).to(device)
+            self.net = FeedForward(sizes, dropout=dropout).to(device)
+
+
+    def set_gamma(self, gamma):
+        if (gamma > 0) and not self.dropout:
+            error('Gamma cannot be non-zero without dropout layers.')
+        self.gamma = gamma
 
 
     def get_penalty(self, factor=1):

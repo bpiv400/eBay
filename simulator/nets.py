@@ -19,7 +19,6 @@ class VariationalDropout(nn.Module):
     def forward(self, x):
         # additive N(0, alpha * x^2) noise
         if self.training:
-            #self.log_alpha.data = torch.clamp(self.log_alpha.data, max=MAX_LOG_ALPHA)
             sigma = torch.sqrt(torch.exp(self.log_alpha)) * torch.abs(x)
             eps = torch.normal(torch.zeros_like(x), torch.ones_like(x))
             return x + sigma * eps

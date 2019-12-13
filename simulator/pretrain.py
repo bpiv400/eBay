@@ -22,8 +22,8 @@ if __name__ == '__main__':
     sizes = load('%s/inputs/sizes/%s.pkl' % (PREFIX, model))
     print(sizes)
 
-    # initialize neural net and loss function
-    simulator = Simulator(model, sizes)
+    # initialize neural net without dropout
+    simulator = Simulator(model, sizes, dropout=False)
 
     # initialize optimizer
     optimizer = optim.Adam(simulator.net.parameters())
@@ -37,7 +37,7 @@ if __name__ == '__main__':
     train = Inputs('train_models', model)
 
     # training without variational dropout
-    epoch, last = 0, -np.inf
+    epoch, last = 0, np.inf
     while True:
         print('Epoch %d' % epoch)
 
@@ -45,7 +45,9 @@ if __name__ == '__main__':
         t0 = dt.now()
         loss = run_loop(simulator, train, optimizer)
         print('\tloss: %d' % loss)
-        print('\tlnL: %1.4f' % -loss / train.N_labels)         
+
+        lnL = -loss / train.N_labels
+        print('\tlnL: %1.4f' % lnL)         
 
         sec = (dt.now() - t0).total_seconds()
         print('\ttime: %d sec' % sec)
@@ -59,5 +61,5 @@ if __name__ == '__main__':
             break
 
         # increment epochs and update last
-        epochs += 1
+        epoch += 1
         last = loss

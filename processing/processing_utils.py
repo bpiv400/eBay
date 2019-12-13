@@ -294,7 +294,7 @@ def init_x(getPath, idx):
     x = {}
 
     # load and reindex
-    for name in ['lstg', 'w2v_byr', 'w2v_slr', 'slr', 'cat']:
+    for name in ['lstg', 'w2v_byr', 'w2v_slr', 'slr', 'cat', 'cndtn']:
         # load dataframe
         df = load(getPath(['x', name]))
 
@@ -304,11 +304,7 @@ def init_x(getPath, idx):
         else:
             df = df.reindex(index=idx, level='lstg')
 
-        # split cat into cat and cndtn
-        if name == 'cat':
-            for group in ['cat', 'cndtn']:
-                x[group] = df[[c for c in df.columns if c.startswith(group)]]
-        else:
-            x[name] = df
+        # put in x
+        x[name] = df
 
     return x
