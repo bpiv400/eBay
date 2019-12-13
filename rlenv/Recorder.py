@@ -1,10 +1,11 @@
 import pandas as pd
 import numpy as np
 from compress_pickle import dump
-from rlenv.env_consts import START_DAY, VERBOSE, START_PRICE
-from rlenv.env_utils import chunk_dir
+from rlenv.env_consts import START_DAY, VERBOSE, START_PRICE, ANCHOR_STORE_INSERT, META
+from rlenv.env_utils import chunk_dir, get_cut
+from rlenv.ValueCalculator import ValueCalculator
 
-
+# TODO: MOVE?
 SIM = 'sim'
 INDEX = 'index'
 THREAD = 'thread'
@@ -38,6 +39,9 @@ class Recorder:
         self.sim = None
         self.start_price = None
 
+        # value compute params
+        self.calculator = ValueCalculator()
+
         for col in OFFER_COLS:
             self.offers[col] = list()
         for col in THREAD_COLS:
@@ -50,6 +54,14 @@ class Recorder:
         self.start_time = lookup[START_DAY]
         self.sim = -1
         self.start_price = lookup[START_PRICE]
+        self.sale_ix = len(self.sales[LSTG])
+        self.cut = get_cut(lookup[META])
+
+    def compute_value(self):
+        """
+
+        :return:
+        """
 
     def start_thread(self, thread_id=None, byr_hist=None):
         byr_hist = int(10 * byr_hist)
