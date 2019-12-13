@@ -3,7 +3,7 @@ from compress_pickle import load
 import pandas as pd
 import torch
 from rlenv.env_consts import DAY
-from constants import PARTS_DIR, HOLIDAYS, HIST_QUANTILES
+from constants import PARTS_DIR, HOLIDAYS
 
 
 def extract_day_feats(clock):

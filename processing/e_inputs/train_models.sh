@@ -1,6 +1,6 @@
 #!/bin/bash
 #$ -t 1-8
-#$ -l m_mem_free=60G
+#$ -l m_mem_free=75G
 #$ -N e_train_models
 #$ -j y
 #$ -o logs/

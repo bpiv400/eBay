@@ -6,18 +6,6 @@ from utils import *
 from processing.processing_utils import *
 
 
-# appends turn indicator variables to offer matrix
-def add_turn_indicators(df):
-    '''
-    df: dataframe with index ['lstg', 'thread', 'index'].
-    '''
-    indices = np.unique(df.index.get_level_values('index'))
-    for i in range(len(indices)-1):
-        ind = indices[i]
-        featname = 't%d' % ((ind+1) // 2)
-        df[featname] = df.index.isin([ind], level='index')
-    return df
-
 # deletes irrelevant feats and sets unseen feats to 0
 def clean_offer(offer, i, outcome, role):
 	# if turn 1, drop days and delay
@@ -79,6 +67,7 @@ def process_inputs(part, outcome, role):
 
 	# load dataframes
 	x_offer = load(getPath(['x', 'offer']))
+	x_thread = load(getPath(['x', 'thread']))
 
 	# outcome
 	if outcome == 'delay':
@@ -91,7 +80,6 @@ def process_inputs(part, outcome, role):
 	x = init_x(part, idx)
 
 	# add thread features and turn indicators to listing features
-	x_thread = load(getPath(['x', 'thread']))
 	x_thread.loc[:, 'byr_hist'] = x_thread.byr_hist.astype('float32') / 10
 	x['lstg'] = x['lstg'].join(x_thread)
 

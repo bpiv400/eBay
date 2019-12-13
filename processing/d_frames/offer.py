@@ -56,7 +56,7 @@ def get_norm(con):
     for i in range(3, 8):
         if i in IDX['byr']:
             norm[i] = con[i] * (1-norm[i-1]) + (1-con[i]) * norm[i-2]
-        elif i in IDX['byr']:
+        elif i in IDX['slr']:
             norm[i] = 1 - con[i] * norm[i-1] - (1-con[i]) * (1-norm[i-2])
     return norm.rename_axis('index', axis=1).stack().astype('float64')
 
