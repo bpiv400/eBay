@@ -87,17 +87,29 @@ class RewardGenerator:
             index = index[start_ix:]
             return index
 
+    def setup_env(self, lstg):
+        # setup new lstg
+        x_lstg = self.x_lstg.loc[lstg, :].astype(np.float32)
+        lookup = self.lookup.loc[lstg, :]
+        # if there's a checkpoint and this is the first lstg
+        if self.checkpoint_contents is not None:
+            # grab the value calculator and reset checkpoint
+            val_calc = self.checkpoint_contents['val_calc']
+            self.checkpoint_contents = None
+        else:
+            # otherwise seed the recorder with a new lstg and make a new value calculator
+            self.recorder.update_lstg(lookup=lookup, lstg=lstg)
+            val_calc = ValueCalculator(self.params[VAL_SE_TOL], lookup)
+        environment = RewardEnvironment(buyer=self.buyer, seller=self.seller,
+                                        arrival=self.arrival, x_lstg=x_lstg,
+                                        lookup=lookup, recorder=self.recorder)
+        return environment, val_calc, lookup
+
     def generate(self):
         remaining_lstgs = self._get_lstgs()
+        time_up = False
         for lstg in remaining_lstgs:
-            # setup new lstg
-            x_lstg = self.x_lstg.loc[lstg, :].astype(np.float32)
-            lookup = self.lookup.loc[lstg, :]
-            self.recorder.update_lstg(lookup=lookup, lstg=lstg)
-            environment = RewardEnvironment(buyer=self.buyer, seller=self.seller,
-                                            arrival=self.arrival, x_lstg=x_lstg,
-                                            lookup=lookup, recorder=self.recorder)
-            val_calc = ValueCalculator(self.params[VAL_SE_TOL], lookup)
+            environment, val_calc, lookup = self.setup_env(lstg)
             # simulate lstg
             RewardGenerator.header(lstg, lookup)
             time_up = self.simulate_lstg(environment, val_calc)
@@ -107,12 +119,19 @@ class RewardGenerator:
             else:
                 self.recorder.add_val(val_calc.mean)
                 self.tidy_recorder()
+        if not time_up:
+            self.recorder.dump(self.dir, self.recorder_count)
+            self.delete_checkpoint()
+            self.report_time()
 
-        self.recorder.dump(self.dir, self.recorder_count)
-        end_time = datetime.now()
-        total_time = end_time - self.start
-        total_time = total_time.total_seconds() / 3600
-        print('hours: {}'.format(total_time))
+    def report_time(self):
+        curr_clock = (datetime.now() - self.start).total_seconds() / 3600
+        print('hours: {}'.format(self.checkpoint_count * 4 + curr_clock))
+
+    def delete_checkpoint(self):
+        path = '{}chunks/{}_check.gz'.format(self.dir, self.chunk)
+        if os.path.isfile(path):
+            os.remove(path)
 
     def store_checkpoint(self, lstg, val_calc):
         self.checkpoint_count += 1
@@ -142,7 +161,7 @@ class RewardGenerator:
     def check_time(self):
         curr = datetime.now()
         tot = (curr - self.start).total_seconds() / 3600
-        return tot > 3.85
+        return tot > 3.90
 
     def update_stop(self, val_calc):
         counter = val_calc.exp_count
