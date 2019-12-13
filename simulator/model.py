@@ -5,19 +5,21 @@ from constants import *
 # constructs model-specific neural network.
 class Simulator:
 
-    def __init__(self, model, sizes, device='cuda'):
+    def __init__(self, model, sizes, gamma=0.0, device='cuda'):
         '''
         model: one of 'arrival', 'hist', 'delay_byr', 'delay_slr',
             'con_byr', 'con_slr'
         sizes: dictionary of data sizes
+        gamma: scalar coefficient on regularization term
         device: either 'cuda' or 'cpu'
         '''
 
         # save parameters from inputs
         self.model = model
+        self.gamma = gamma
         self.device = device
 
-        # sloss function
+        # loss function
         if model in ['hist', 'con_slr']:
             self.loss = torch.nn.CrossEntropyLoss(
                 reduction='sum')
@@ -33,17 +35,28 @@ class Simulator:
 
         # subsequent neural net(s)
         if ('delay' in model) or (model == 'arrival'):
-            self.net = LSTM(sizes).to(device)
+            self.net = LSTM(sizes, dropout=gamma > 0).to(device)
         else:
-            self.net = FeedForward(sizes).to(device)
+            self.net = FeedForward(sizes, dropout=gamma > 0).to(device)
 
 
-    def get_penalty(self):
+    def get_penalty(self, factor=1):
         penalty = torch.tensor(0.0, device=self.device)
         for m in self.net.modules():
             if hasattr(m, 'kl_reg'):
                 penalty += m.kl_reg()
-        return penalty
+        return self.gamma * factor * penalty
+
+
+    def get_alpha_stats(self, threshold=9):
+        above, total, largest = 0.0, 0.0, 0.0
+        for m in self.net.modules():
+            if hasattr(m, 'log_alpha'):
+                alpha = torch.exp(m.log_alpha)
+                largest = max(largest, torch.max(alpha).item())
+                total += alpha.size()[0]
+                above += torch.sum(alpha > threshold).item()
+        return above / total, largest
 
 
     def run_batch(self, d, factor, optimizer=None):
@@ -77,9 +90,9 @@ class Simulator:
 
         # add in KL divergence and step down gradients
         if isTraining:
-            # calculate kl divergence penalty and shrink
-            if factor > 0:
-                loss = loss + factor * self.get_penalty()
+            # add in regularization penalty
+            if self.gamma > 0:
+                loss = loss + self.get_penalty(factor)
 
             # step down gradients
             optimizer.zero_grad()

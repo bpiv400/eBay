@@ -8,21 +8,6 @@ from simulator.model import Simulator
 from constants import *
 
 
-def train_model(simulator, optimizer, data):
-    # loop over epochs, record log-likelihood
-    for epoch in range(1, 6):
-        print('Epoch %d' % epoch)
-
-        # training loop
-        t0 = dt.now()
-        loss = run_loop(simulator, data, optimizer)
-        sec = (dt.now() - t0).total_seconds()
-
-        # summarize loop
-        print('\tElapsed time: %d seconds' % sec)
-        print('\tLoss: %9.4f' % loss)
-
-
 if __name__ == '__main__':
     # extract parameters from command line
     parser = argparse.ArgumentParser(description='Training development.')
@@ -37,7 +22,7 @@ if __name__ == '__main__':
     print(sizes)
 
     # initialize neural net
-    simulator = Simulator(model, sizes)
+    simulator = Simulator(model, sizes, gamma=1.0)
     print(simulator.net)
     print(simulator.loss)
 
@@ -46,7 +31,34 @@ if __name__ == '__main__':
     print(optimizer)
 
     # load data
-    data = Inputs('small', model)
+    train = Inputs('small', model)
+    test = Inputs('train_rl', model)
 
-    # train model
-    train_model(simulator, optimizer, data)
+    # training
+    for i in range(30):
+        print('Epoch %d' % epoch)
+
+        # training
+        t0 = dt.now()
+        loss = run_loop(simulator, train, optimizer)
+        print('\tloss: %d' % loss)
+
+        print('\tpenalty: %d' % simulator.get_penalty())
+
+        share, largest = simulator.get_alpha_stats()
+        print('\tlargest: %2.2f' % largest)
+        print('\tshare: %2.2f' % share)
+
+        for name in ['train', 'test']:
+            data = globals()[name]
+            with torch.no_grad():
+                loss = run_loop(simulator, data)
+                lnL = -loss / data.N_labels
+                print('\t%s: %1.4f' % (name, lnL))
+
+        sec = (dt.now() - t0).total_seconds()
+        print('\ttime: %d sec' % sec)
+
+    # save model
+    torch.save(simulator.net.state_dict(),
+        MODEL_DIR + 'small/%s.net' % model)

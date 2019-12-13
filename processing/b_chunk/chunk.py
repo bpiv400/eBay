@@ -7,7 +7,7 @@ from processing.processing_utils import *
 LVARS = ['cat', 'cndtn', 'start_date', 'end_time', \
     'start_price', 'start_price_pctile', 'arrival_rate', 'flag']
 TVARS = ['byr_hist', 'bin']
-OVARS = ['clock', 'price', 'accept', 'reject', 'censored']
+OVARS = ['clock', 'price', 'accept', 'reject', 'censored', 'message']
 
 
 if __name__ == '__main__':

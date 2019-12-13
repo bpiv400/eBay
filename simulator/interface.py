@@ -123,7 +123,7 @@ class Sample(Sampler):
 
 
 # helper function to run a loop of the model
-def run_loop(simulator, data, kl=0.0, optimizer=None):
+def run_loop(simulator, data, optimizer=None):
     # training or validation
     isTraining = optimizer is not None
 
@@ -141,10 +141,12 @@ def run_loop(simulator, data, kl=0.0, optimizer=None):
     loss = 0.0
     for b in batches:
         # multiplicative factor for regularization term in minibatch
-        factor = kl * torch.sum(b['y'] > -1).float() / data.N_labels
+        if 'turns' in b:
+            factor = float(torch.sum(b['turns']).item()) / data.N_labels
+        else:
+            factor = float(b['y'].size()[0]) / data.N_labels
         
         # move to device
-        factor = factor.to(simulator.device)
         b['x'] = {k: v.to(simulator.device) for k, v in b['x'].items()}
         b['y'] = b['y'].to(simulator.device)
         if 'x_time' in b:

@@ -36,15 +36,28 @@ if __name__ == '__main__':
     # load datasets
     train = Inputs('train_models', model)
 
-    # training
-    for i in range(EPOCHS):
-        kl = KL_INT * i
+    # training without variational dropout
+    epoch, last = 0, -np.inf
+    while True:
+        print('Epoch %d' % epoch)
 
+        # training
         t0 = dt.now()
-        loss = run_loop(simulator, train, kl, optimizer)
+        loss = run_loop(simulator, train, optimizer)
+        print('\tloss: %d' % loss)
+        print('\tlnL: %1.4f' % -loss / train.N_labels)         
+
         sec = (dt.now() - t0).total_seconds()
-        print('\tEpoch %d: %9.0f (%d sec)' % (i, loss, sec))
+        print('\ttime: %d sec' % sec)
 
         # save model
         torch.save(simulator.net.state_dict(),
-            MODEL_DIR + '%s/%d_pre.net' % (model, i))
+            MODEL_DIR + 'pretrain/%s.net' % model)
+
+        # stopping condition
+        if loss > last * FTOL:
+            break
+
+        # increment epochs and update last
+        epochs += 1
+        last = loss

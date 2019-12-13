@@ -3,56 +3,32 @@ from collections import OrderedDict
 from constants import *
 
 
-class LinearSVDO(nn.Module):
-    def __init__(self, N_in, N_out):
-        super(LinearSVDO, self).__init__()
-        self.N_in = N_in
-        self.N_out = N_out
-
-        self.W = nn.Parameter(torch.Tensor(N_out, N_in))
-        self.log_sigma2 = nn.Parameter(torch.Tensor(N_out, N_in))
-        self.bias = nn.Parameter(torch.Tensor(N_out))
-        self.log_alpha = torch.Tensor(N_out, N_in)
-        self.reset_parameters()
-
-    def update_log_alpha(self):
-        self.log_alpha = self.log_sigma2 - 2 * torch.log(torch.abs(self.W) + 1e-8)
-        self.log_alpha = torch.clamp(self.log_alpha, -10, 10)
-
-    def reset_parameters(self):
-        self.bias.data.zero_()
-        self.W.data.normal_(0, 0.02)
-        self.log_sigma2.data.fill_(-10)
-        self.update_log_alpha()    
+class VariationalDropout(nn.Module):
+    def __init__(self, N):
+        super(VariationalDropout, self).__init__()
         
-    def forward(self, x):
-        # transformation without adding Gaussian noise
-        mu = x.matmul(self.W.t()) + self.bias
-
-        # add Gaussian noise
-        if self.training:
-            sigma2 = (x * x).matmul(torch.exp(self.log_sigma2).t()) + 1e-8
-            eps = torch.normal(torch.zeros_like(mu), torch.ones_like(mu))
-            return mu + torch.sqrt(sigma2) * eps
-    
-        return mu
+        self.log_alpha = nn.Parameter(torch.Tensor(N))
+        self.log_alpha.data.fill_(-3)
         
     def kl_reg(self):
-        # update log_alpha
-        self.update_log_alpha()
-
         # calculate KL divergence
         kl = 0.63576 * (torch.sigmoid(1.8732 + 1.48695 * self.log_alpha) - 1) \
             - 0.5 * torch.log1p(torch.exp(-self.log_alpha))
         return -torch.sum(kl)
-
-    def extra_repr(self):
-        return 'in_features={}, out_features={}, bias={}'.format(
-            self.N_in, self.N_out, self.bias is not None)
+    
+    def forward(self, x):
+        # additive N(0, alpha * x^2) noise
+        if self.training:
+            #self.log_alpha.data = torch.clamp(self.log_alpha.data, max=MAX_LOG_ALPHA)
+            sigma = torch.sqrt(torch.exp(self.log_alpha)) * torch.abs(x)
+            eps = torch.normal(torch.zeros_like(x), torch.ones_like(x))
+            return x + sigma * eps
+        else:
+            return x
 
 
 class Layer(nn.Module):
-    def __init__(self, N_in, N_out):
+    def __init__(self, N_in, N_out, dropout=True):
         '''
         N_in: scalar number of input weights
         N_out: scalar number of output weights
@@ -60,8 +36,12 @@ class Layer(nn.Module):
         super(Layer, self).__init__()
 
         # one layer is a weight matrix, batch normalization and activation
-        self.layer = nn.Sequential(
-            LinearSVDO(N_in, N_out), nn.BatchNorm1d(N_out), F)
+        if dropout:
+            self.layer = nn.Sequential(nn.Linear(N_in, N_out), 
+                nn.BatchNorm1d(N_out), VariationalDropout(N_out), F)
+        else:
+            self.layer = nn.Sequential(nn.Linear(N_in, N_out), 
+                nn.BatchNorm1d(N_out), F)
 
     def forward(self, x):
         '''
@@ -73,7 +53,7 @@ class Layer(nn.Module):
 
 
 class Stack(nn.Module):
-    def __init__(self, N, layers=1):
+    def __init__(self, N, layers=1, dropout=True):
         '''
         N: scalar number of input and output weights
         layers: scalar number of layers to stack
@@ -82,7 +62,7 @@ class Stack(nn.Module):
 
         # sequence of modules
         self.stack = nn.ModuleList(
-            [Layer(N, N) for _ in range(layers)])
+            [Layer(N, N, dropout=dropout) for _ in range(layers)])
         
     def forward(self, x):
         '''
@@ -103,12 +83,11 @@ class Embedding(nn.Module):
         # first stack of layers: N to N
         self.layer1 = nn.ModuleDict()
         for k, v in counts.items():
-            self.layer1[k] = nn.Sequential(nn.BatchNorm1d(v),
-                Stack(v, layers=LAYERS_EMBEDDING))
+            self.layer1[k] = Stack(v, layers=LAYERS_EMBEDDING, dropout=False)
 
         # second layer: concatenation
         N = sum(counts.values())
-        self.layer2 = Stack(N, layers=LAYERS_EMBEDDING)
+        self.layer2 = Stack(N, layers=LAYERS_EMBEDDING, dropout=False)
 
     def forward(self, x):
         '''
@@ -127,7 +106,7 @@ class Embedding(nn.Module):
 
 
 class FullyConnected(nn.Module):
-    def __init__(self, N_in, N_out):
+    def __init__(self, N_in, N_out, dropout):
         '''
         sizes: dictionary of scalar input sizes; sizes['x'] is an OrderedDict
         N_in: scalar number of input weights
@@ -136,16 +115,16 @@ class FullyConnected(nn.Module):
         super(FullyConnected, self).__init__()
 
         # intermediate layer
-        self.seq = nn.ModuleList([Layer(N_in, HIDDEN)])
+        self.seq = nn.ModuleList([Layer(N_in, HIDDEN, dropout=dropout)])
 
         # fully connected network
-        self.seq.append(Stack(HIDDEN, layers=LAYERS_FULL-2))
+        self.seq.append(Stack(HIDDEN, layers=LAYERS_FULL-2, dropout=dropout))
 
         # last layer has no dropout
-        self.seq.append(Stack(HIDDEN))
+        self.seq.append(Stack(HIDDEN, dropout=False))
 
         # output layer
-        self.seq.append(LinearSVDO(HIDDEN, N_out))
+        self.seq.append(nn.Linear(HIDDEN, N_out))
 
     def forward(self, x):
         '''
@@ -157,9 +136,10 @@ class FullyConnected(nn.Module):
 
 
 class FeedForward(nn.Module):
-    def __init__(self, sizes, toRNN=False):
+    def __init__(self, sizes, dropout=True, toRNN=False):
         '''
         sizes: dictionary of scalar input sizes; sizes['x'] is an OrderedDict
+        dropout: True if using dropout for fully-connected layers
         toRNN: True if FeedForward initialized hidden state of recurrent network
         '''
         super(FeedForward, self).__init__()
@@ -181,7 +161,7 @@ class FeedForward(nn.Module):
         # fully connected
         N_in = sum(counts.values())
         self.nn1 = FullyConnected(total, 
-            HIDDEN if toRNN else sizes['out'])
+            HIDDEN if toRNN else sizes['out'], dropout)
 
     def forward(self, x):
         '''
@@ -194,9 +174,10 @@ class FeedForward(nn.Module):
 
 
 class LSTM(nn.Module):
-    def __init__(self, sizes):
+    def __init__(self, sizes, dropout=True):
         '''
         sizes: dictionary of scalar input sizes; sizes['x'] is an OrderedDict
+        dropout: True if using dropout for fully-connected layers
         '''
         super(LSTM, self).__init__()
 
@@ -204,8 +185,8 @@ class LSTM(nn.Module):
         self.steps = sizes['steps']
 
         # initial hidden nodes
-        self.h0 = FeedForward(sizes, toRNN=True)
-        self.c0 = FeedForward(sizes, toRNN=True)
+        self.h0 = FeedForward(sizes, dropout, toRNN=True)
+        self.c0 = FeedForward(sizes, dropout, toRNN=True)
 
         # rnn layer
         self.rnn = nn.LSTM(input_size=sizes['x_time'],

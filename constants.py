@@ -1,4 +1,4 @@
-import os
+import os, math
 from pandas.tseries.holiday import USFederalHolidayCalendar as Calendar
 import torch
 from platform import platform
@@ -25,10 +25,6 @@ TOL_HALF = 0.02
 NUM_WORKERS = 8 if torch.cuda.is_available() else 0
 MBSIZE = {True: 128, False: 2000}
 FTOL = 0.995
-
-# for pretraining
-KL_INT = 0.05	# grid spacing for KL reg coefficient
-EPOCHS = int(1 / KL_INT) + 1
 
 # neural net parameters
 LAYERS_EMBEDDING = 2

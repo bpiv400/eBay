@@ -19,7 +19,7 @@ def train_model(simulator, optimizer, writer, train, test, paramsid):
 
         # training loop
         t0 = dt.now()
-        output['loss'] = run_loop(simulator, train, kl, optimizer)
+        output['loss'] = run_loop(simulator, train, optimizer)
         output['penalty'] = simulator.get_penalty().item()
         output['sec_train'] = (dt.now() - t0).total_seconds()
 
