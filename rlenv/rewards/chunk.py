@@ -3,9 +3,18 @@ Chunks a partition into NUM_CHUNKS pieces for reward generation
 
 """
 import argparse
+import pandas as pd
 from compress_pickle import dump, load
 from constants import PARTS_DIR, REWARDS_DIR, PARTITIONS
 from rlenv.env_consts import LOOKUP_FILENAME, NUM_CHUNKS
+import utils
+
+
+def init_x(part):
+    x = utils.init_x(part, None)
+    x = [frame for _, frame in x.items()]
+    x = pd.concat(x, axis=1)
+    return x
 
 
 def main():
@@ -19,7 +28,7 @@ def main():
     part = parser.parse_args().part
     if part not in PARTITIONS:
         raise RuntimeError('part must be one of: {}'.format(PARTITIONS))
-    x_lstg = load('{}{}/x_lstg.gz'.format(PARTS_DIR, part))
+    x_lstg = init_x(part)
     lookup = load('{}{}/{}'.format(PARTS_DIR, part, LOOKUP_FILENAME))
     assert (lookup.index == x_lstg.index).all()
     total_lstgs = len(x_lstg)

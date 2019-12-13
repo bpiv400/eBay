@@ -22,10 +22,6 @@ SHARES = {'train_models': 0.6, 'train_rl': 0.2}
 TOL_HALF = 0.02
 
 # optimization parameters
-<<<<<<< HEAD
-=======
-K = 1	# stop train after K epochs without improvement
->>>>>>> 5b8b01fde2574001ea011427a3e38657fbcc090b
 NUM_WORKERS = 8 if torch.cuda.is_available() else 0
 MBSIZE = {True: 128, False: 2000}
 FTOL = 0.995

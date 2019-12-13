@@ -42,11 +42,12 @@ def init_x(part, idx):
         # load dataframe
         df = load(PARTS_DIR + '%s/x_%s.gz' % (part, name))
 
-        # index by idx
-        if len(idx.names) == 1:
-            df = df.reindex(index=idx)
-        else:
-            df = df.reindex(index=idx, level='lstg')
+        if idx is not None:
+            # index by idx
+            if len(idx.names) == 1:
+                df = df.reindex(index=idx)
+            else:
+                df = df.reindex(index=idx, level='lstg')
 
         # put in x
         x[name] = df
