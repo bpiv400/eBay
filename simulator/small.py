@@ -32,29 +32,15 @@ if __name__ == '__main__':
 
     # load data
     train = Inputs('small', model)
-    test = Inputs('train_rl', model)
 
     # training
-    for i in range(30):
+    for i in range(1):
         print('Epoch %d' % epoch)
 
         # training
         t0 = dt.now()
         loss = run_loop(simulator, train, optimizer)
         print('\tloss: %d' % loss)
-
-        print('\tpenalty: %d' % simulator.get_penalty())
-
-        share, largest = simulator.get_alpha_stats()
-        print('\tlargest: %2.2f' % largest)
-        print('\tshare: %2.2f' % share)
-
-        for name in ['train', 'test']:
-            data = globals()[name]
-            with torch.no_grad():
-                loss = run_loop(simulator, data)
-                lnL = -loss / data.N_labels
-                print('\t%s: %1.4f' % (name, lnL))
 
         sec = (dt.now() - t0).total_seconds()
         print('\ttime: %d sec' % sec)

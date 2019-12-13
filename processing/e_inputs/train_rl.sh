@@ -1,7 +1,7 @@
 #!/bin/bash
 #$ -t 1-8
-#$ -l m_mem_free=40G
-#$ -N inputs_train_rl
+#$ -l m_mem_free=20G
+#$ -N e_train_rl
 #$ -j y
 #$ -o logs/
 

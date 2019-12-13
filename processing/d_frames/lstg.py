@@ -72,4 +72,3 @@ if __name__ == "__main__":
             index=L[['cat']].values.squeeze(), fill_value=0)
         w2v.set_index(L.index, inplace=True)
         dump(w2v, path('x_w2v_' + role))
-    del L, w2v

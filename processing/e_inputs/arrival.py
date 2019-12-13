@@ -9,15 +9,15 @@ from processing.processing_utils import *
 # loads data and calls helper functions to construct training inputs
 def process_inputs(part):
     # path name function
-    getPath = lambda names: '%s/partitions/%s/%s.gz' % \
-        (PREFIX, part, '_'.join(names))
+    getPath = lambda names: PARTS_DIR + '%s/%s.gz' % \
+        (part, '_'.join(names))
 
     # outcome
     y = load(getPath(['y', 'arrival']))
     idx = y.index
 
     # initialize dictionary of input features
-    x = init_x(getPath, idx)
+    x = init_x(part, idx)
 
     # clock features by minute
     x_clock = create_x_clock()

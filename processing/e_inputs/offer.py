@@ -74,8 +74,8 @@ def get_y(x_offer, outcome, role):
 # loads data and calls helper functions to construct training inputs
 def process_inputs(part, outcome, role):
 	# path name function
-	getPath = lambda names: '%s/partitions/%s/%s.gz' % \
-		(PREFIX, part, '_'.join(names))
+	getPath = lambda names: PARTS_DIR + '%s/%s.gz' % \
+		(part, '_'.join(names))
 
 	# load dataframes
 	x_offer = load(getPath(['x', 'offer']))
@@ -88,7 +88,7 @@ def process_inputs(part, outcome, role):
 	idx = y.index
 
 	# initialize dictionary of input features
-	x = init_x(getPath, idx)
+	x = init_x(part, idx)
 
 	# add thread features and turn indicators to listing features
 	x_thread = load(getPath(['x', 'thread']))

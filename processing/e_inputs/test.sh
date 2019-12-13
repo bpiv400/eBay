@@ -1,7 +1,7 @@
 #!/bin/bash
 #$ -t 1-8
-#$ -l m_mem_free=40G
-#$ -N inputs_test
+#$ -l m_mem_free=20G
+#$ -N e_test
 #$ -j y
 #$ -o logs/
 

@@ -42,7 +42,7 @@ class Trainer:
         print('Iteration %d: gamma of %1.2f' % (self.iter, gamma))
 
         # training loop
-        epoch, last = 0, -np.inf
+        epoch, last = 0, np.inf
         while True:
             print('\tEpoch %d' % epoch)
             output = {}
@@ -57,11 +57,11 @@ class Trainer:
 
             # calculate log-likelihood on training and validation sets
             with torch.no_grad():
-                loss = run_loop(self.simulator, self.train)
-                output['lnL_train'] = -loss / self.train.N_labels
+                loss_train = run_loop(self.simulator, self.train)
+                output['lnL_train'] = -loss_train / self.train.N_labels
 
-                loss = run_loop(self.simulator, self.test)
-                output['lnL_test'] = -loss / self.test.N_labels
+                loss_test = run_loop(self.simulator, self.test)
+                output['lnL_test'] = -loss_test / self.test.N_labels
 
             # save output to tensorboard writer and print to console
             for k, v in output.items():
@@ -71,11 +71,11 @@ class Trainer:
                 elif 'lnL' in k:
                     print('\t\t%s: %1.4f' % (k, v))
                 else:
-                    print('\t\t%s: %2.1f' % (k, v))
+                    print('\t\t%s: %2.2f' % (k, v))
             print('\t\ttime: %d sec' % (dt.now() - t0).total_seconds())
 
             # stopping condition: validation loss worsens
-            if loss > FTOL * last:
+            if output['loss'] > FTOL * last:
                 self.iter += 1
                 writer.close()
                 return output['lnL_test']
@@ -87,7 +87,7 @@ class Trainer:
 
             # increment epochs and update last
             epoch += 1
-            last = loss
+            last = output['loss']
 
 
 if __name__ == '__main__':

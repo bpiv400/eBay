@@ -9,8 +9,8 @@ from processing.processing_utils import *
 # loads data and calls helper functions to construct training inputs
 def process_inputs(part):
 	# path name function
-	getPath = lambda names: '%s/partitions/%s/%s.gz' % \
-		(PREFIX, part, '_'.join(names))
+	getPath = lambda names: PARTS_DIR + '%s/%s.gz' % \
+		(part, '_'.join(names))
 
 	# thread features
 	x_offer = load(getPath(['x', 'offer'])).xs(1, level='index')
@@ -25,7 +25,7 @@ def process_inputs(part):
 	x_thread.drop('byr_hist', axis=1, inplace=True)
 
 	# initialize input features
-	x = init_x(getPath, idx)
+	x = init_x(part, idx)
 
 	# add thread variables to x['lstg']
 	x['lstg'] = x['lstg'].join(x_thread)

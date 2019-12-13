@@ -286,25 +286,3 @@ def create_small(d):
     small['groups'] = create_groups(small)
 
     return small
-
-
-# loads x_lstg and splits into dictionary of components
-def init_x(getPath, idx):
-    # initialize dictionary of input features
-    x = {}
-
-    # load and reindex
-    for name in ['lstg', 'w2v_byr', 'w2v_slr', 'slr', 'cat', 'cndtn']:
-        # load dataframe
-        df = load(getPath(['x', name]))
-
-        # index by idx
-        if len(idx.names) == 1:
-            df = df.reindex(index=idx)
-        else:
-            df = df.reindex(index=idx, level='lstg')
-
-        # put in x
-        x[name] = df
-
-    return x

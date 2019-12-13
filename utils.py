@@ -6,36 +6,17 @@ from rlenv.env_consts import DAY
 from constants import PARTS_DIR, HOLIDAYS, HIST_QUANTILES
 
 
-# concatenates listing features into single dataframe
-def cat_x_lstg(part):
-    """
-    part: one of 'test', 'train_models', 'train_rl'
-    """
-    prefix = PARTS_DIR + part + '/' + 'x_'
-    x_lstg = load(prefix + 'lstg.gz')
-    for s in ['slr', 'meta', 'w2v']:
-        filename = prefix + s + '.gz'
-        x_lstg = x_lstg.join(load(filename), rsuffix=s)
-    return x_lstg
-
-
-# returns dataframe with US holiday and day-of-week indicators
 def extract_day_feats(clock):
+    """
+    Returns dataframe with US holiday and day-of-week indicators
+    :param clock: pandas series of timestamps
+    :return: dataframe with holiday and day of week indicators
+    """
     df = pd.DataFrame(index=clock.index)
     df['holiday'] = clock.dt.date.astype('datetime64').isin(HOLIDAYS)
     for i in range(6):
         df['dow' + str(i)] = clock.dt.dayofweek == i
     return df
-
-
-def add_out_to_sizes(model, sizes):
-    if model in ['hist', 'con_byr', 'con_slr']:
-        if model == 'hist':
-            sizes['out'] = HIST_QUANTILES
-        else:
-            sizes['out'] = 101
-    else:
-        sizes['out'] = 1
 
 
 def unpickle(file):
@@ -45,3 +26,29 @@ def unpickle(file):
     :return: contents of file
     """
     return pickle.load(open(file, "rb"))
+
+
+def init_x(part, idx):
+    """
+    Initializes dictionary of input components
+    :param part: string name of partition (e.g., 'train_rl')
+    :param idx: index of lstg ids
+    :return: dictionary of pandas dataframes
+    """
+    x = {}
+
+    # load and reindex
+    for name in ['lstg', 'w2v_byr', 'w2v_slr', 'slr', 'cat', 'cndtn']:
+        # load dataframe
+        df = load(PARTS_DIR + '%s/x_%s.gz' % (part, name))
+
+        # index by idx
+        if len(idx.names) == 1:
+            df = df.reindex(index=idx)
+        else:
+            df = df.reindex(index=idx, level='lstg')
+
+        # put in x
+        x[name] = df
+
+    return x
