@@ -159,7 +159,8 @@ class Thread(Event):
         self.sources.byr_expire(days=days, turn=self.turn)
 
     def get_obs(self):
-        raise NotImplementedError()
+        pass
+        # raise NotImplementedError()
         # srcs = self.sources()
         # maybe move to composer or sources
         # return OBS_SPACE(LSTG_MAP=srcs[LSTG_MAP].values,

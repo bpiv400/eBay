@@ -92,10 +92,17 @@ def get_split(con):
 
 def last_norm(sources, turn):
     if turn <= 2:
-        prev_norm = 0.0
+        out = 0.0
     else:
-        prev_norm = sources[THREAD_MAP][featname(NORM, turn - 2)]
-    return prev_norm
+        out = sources[THREAD_MAP][featname(NORM, turn - 2)]
+    return out
+
+def prev_norm(sources, turn):
+    if turn == 1:
+        out = 0.0
+    else:
+        out = sources[THREAD_MAP][featname(NORM, turn-1)]
+    return out
 
 
 def chunk_dir(part_dir, chunk_num, records=False, rewards=False):
