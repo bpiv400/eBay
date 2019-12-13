@@ -11,6 +11,7 @@ from utils import unpickle
 from rlenv.interface import model_names
 from rlenv.env_utils import load_featnames, load_sizes
 
+
 class Composer:
     """
     Class for composing inputs to interface from various input streams
@@ -28,7 +29,7 @@ class Composer:
             #TODO: Add agent loading code here
 
     @staticmethod
-    def build_agent(params):
+    def build_agents(params):
         raise NotImplementedError()
 
     @staticmethod
