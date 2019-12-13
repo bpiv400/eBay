@@ -1,27 +1,28 @@
 import pandas as pd
 import numpy as np
 from compress_pickle import dump
-from rlenv.env_consts import START_DAY, VERBOSE, START_PRICE, ANCHOR_STORE_INSERT, META
+from rlenv.env_consts import START_DAY, VERBOSE, START_PRICE, PRICE
 from rlenv.env_utils import chunk_dir, get_cut
 from rlenv.ValueCalculator import ValueCalculator
 
 # TODO: MOVE?
 SIM = 'sim'
 INDEX = 'index'
+VAL = 'val'
 THREAD = 'thread'
 CLOCK = 'clock'
 BYR_HIST = 'byr_hist'
 NORM = 'norm'
 MESSAGE = 'message'
 CON = 'con'
-REWARD = 'reward'
 DUR = 'duration'
 SALE = 'sale'
 LSTG = 'lstg'
+SE = 'SE'
 
 OFFER_COLS = [SIM, INDEX, THREAD, CLOCK, CON, NORM, MESSAGE, LSTG]
 THREAD_COLS = [SIM, THREAD, BYR_HIST, LSTG]
-SALE_COLS = [SIM, SALE, DUR, REWARD, LSTG]
+VAL_COLS = [LSTG, VAL, SE]
 
 
 class Recorder:
@@ -31,7 +32,7 @@ class Recorder:
         # tracker dictionaries
         self.offers = dict()
         self.threads = dict()
-        self.sales = dict()
+        self.values = dict()
 
         # lstg feats
         self.lstg = None
@@ -39,14 +40,11 @@ class Recorder:
         self.sim = None
         self.start_price = None
 
-        # value compute params
-        self.calculator = ValueCalculator()
-
         for col in OFFER_COLS:
             self.offers[col] = list()
         for col in THREAD_COLS:
             self.threads[col] = list()
-        for col in SALE_COLS:
+        for col in VAL_COLS:
             self.sales[col] = list()
 
     def update_lstg(self, lookup=None, lstg=None):
@@ -54,14 +52,6 @@ class Recorder:
         self.start_time = lookup[START_DAY]
         self.sim = -1
         self.start_price = lookup[START_PRICE]
-        self.sale_ix = len(self.sales[LSTG])
-        self.cut = get_cut(lookup[META])
-
-    def compute_value(self):
-        """
-
-        :return:
-        """
 
     def start_thread(self, thread_id=None, byr_hist=None):
         byr_hist = int(10 * byr_hist)
@@ -115,17 +105,12 @@ class Recorder:
                 auto, exp, rej = event.slr_outcomes()
                 print('Auto: {} | Exp: {} | Reject: {}'.format(auto, exp, rej))
 
-    def add_sale(self, sale, reward, dur):
+    def add_sale(self):
+        raise RuntimeError("not implemented -- make sure add sale adds the offer")
+
+    def add_val(self, val):
         self.sales[LSTG].append(self.lstg)
-        self.sales[SALE].append(sale)
-        self.sales[REWARD].append(reward)
-        self.sales[DUR].append(dur)
-        self.sales[SIM].append(self.sim)
-        if VERBOSE:
-            if sale:
-                print('Item sold w/ reward: {}'.format(reward))
-            else:
-                print('Item did not sell')
+        self.sales[VAL].append(val)
 
     def dump(self, base_dir, recorder_count):
         # convert all three dictionaries to dataframes

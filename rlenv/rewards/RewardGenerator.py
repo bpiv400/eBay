@@ -5,11 +5,13 @@ import os
 import sys
 import shutil
 from datetime import datetime
-from compress_pickle import load
+from compress_pickle import load, dump
 import pandas as pd
 import numpy as np
-from rlenv.env_consts import (REWARD_EXPERIMENT_PATH, SIM_COUNT, VERBOSE,
-                              START_PRICE, START_DAY, ACC_PRICE, DEC_PRICE)
+from rlenv.ValueCalculator import ValueCalculator
+from rlenv.env_consts import (REWARD_EXPERIMENT_PATH, VAL_SE_TOL, VERBOSE,
+                              START_PRICE, START_DAY, ACC_PRICE, DEC_PRICE,
+                              VAL_SE_CHECK)
 from rlenv.env_utils import chunk_dir
 from rlenv.interface.interfaces import PlayerInterface, ArrivalInterface
 from rlenv.rewards.RewardEnvironment import RewardEnvironment
@@ -25,8 +27,7 @@ class RewardGenerator:
             SIM_COUNT: number of times environment should simulator each lstg
             model in MODELS: integer giving the experiment of id for each model to be used in simulator
     """
-    def __init__(self, direct, num, exp_id):
-        super(RewardGenerator, self).__init__()
+    def __init__(self, direct=None, num=None, exp_id=None):
         self.dir = direct
         self.chunk = int(num)
         input_dict = load('{}chunks/{}.gz'.format(self.dir, self.chunk))
@@ -40,10 +41,17 @@ class RewardGenerator:
         self.seller = PlayerInterface(composer=composer, byr=False)
         self.arrival = ArrivalInterface(composer=composer)
 
-        # delete previous directories for rewards and records
-        self._prepare_records()
+        # defaults
+        self.checkpoint_contents = None
+        self.checkpoint_count = 0
         self.recorder_count = 1
         self.start = datetime.now()
+        # load checkpoint if there is one
+        self.has_checkpoint = self._has_checkpoint()
+
+        # delete previous directories for rewards and records
+        if not self.has_checkpoint:
+            self._prepare_records()
 
     def _prepare_records(self):
         records_path = chunk_dir(self.dir, self.chunk, records=True)
@@ -69,38 +77,123 @@ class RewardGenerator:
         params = params.loc[self.exp_id, :].to_dict()
         return params
 
+    def _get_lstgs(self):
+        if not self.has_checkpoint:
+            return self.x_lstg.index
+        else:
+            start_lstg = self.checkpoint_contents['lstg']
+            index = list(self.x_lstg.index)
+            start_ix = index.index(start_lstg)
+            index = index[start_ix:]
+            return index
+
     def generate(self):
-        for lstg in self.x_lstg.index:
+        remaining_lstgs = self._get_lstgs()
+        for lstg in remaining_lstgs:
+            # setup new lstg
             x_lstg = self.x_lstg.loc[lstg, :].astype(np.float32)
             lookup = self.lookup.loc[lstg, :]
             self.recorder.update_lstg(lookup=lookup, lstg=lstg)
             environment = RewardEnvironment(buyer=self.buyer, seller=self.seller,
                                             arrival=self.arrival, x_lstg=x_lstg,
                                             lookup=lookup, recorder=self.recorder)
-            if VERBOSE:
-                header = 'Lstg: {}  | Start time: {}  | Start price: {}'.format(lstg,
-                                                                                lookup[START_DAY],
-                                                                                lookup[START_PRICE])
-                header = '{} | auto reject: {} | auto accept: {}'.format(header, lookup[DEC_PRICE],
-                                                                         lookup[ACC_PRICE])
-                print(header)
+            val_calc = ValueCalculator(self.params[VAL_SE_TOL], lookup)
+            # simulate lstg
+            RewardGenerator.header(lstg, lookup)
+            time_up = self.simulate_lstg(environment, val_calc)
+            if time_up:
+                self.store_checkpoint(lstg, val_calc)
+                break
+            else:
+                self.recorder.add_val(val_calc.mean)
+                self.tidy_recorder()
 
-            for i in range(self.params[SIM_COUNT]):
-                environment.reset()
-                # TODO Add event tracker
-                outcome = environment.run()
-                if VERBOSE:
-                    print('Simulation {} concluded'.format(self.recorder.sim))
-                self.recorder.add_sale(sale, reward, time)
-            if sys.getsizeof(self.recorder) > 1e9:
-                self.recorder.dump(self.dir, self.recorder_count)
-                self.recorder = Recorder(chunk=self.chunk)
-                self.recorder_count += 1
-        self.recorder.dump(self.dir)
+        self.recorder.dump(self.dir, self.recorder_count)
         end_time = datetime.now()
         total_time = end_time - self.start
         total_time = total_time.total_seconds() / 3600
         print('hours: {}'.format(total_time))
+
+    def store_checkpoint(self, lstg, val_calc):
+        self.checkpoint_count += 1
+        contents = {
+            'lstg': lstg,
+            'val_calc': val_calc,
+            'recorder': self.recorder,
+            'recorder_count': self.recorder_count,
+            'checkpoint_count': self.checkpoint_count,
+            'time': datetime.now()
+        }
+        path = '{}chunks/{}_check.gz'.format(self.dir, self.chunk)
+        dump(contents, path)
+
+    def simulate_lstg(self, environment, val_calc):
+        # stopping criterion
+        stop, time_up = False, False
+        while not stop and not time_up:
+            environment.reset()
+            sale, price, dur = environment.run()
+            self.print_sim()
+            val_calc.add_outcome(sale, price)
+            stop = self.update_stop(val_calc)
+            time_up = self.check_time()
+        return time_up
+
+    def check_time(self):
+        curr = datetime.now()
+        tot = (curr - self.start).total_seconds() / 3600
+        return tot > 3.85
+
+    def update_stop(self, val_calc):
+        counter = val_calc.exp_count
+        if val_calc.has_sales and counter % self.params[VAL_SE_CHECK] == 0:
+            return val_calc.stabilized
+        else:
+            if not val_calc.has_sales:
+                print('Trials: {}  - NO SALES'.format(counter))
+            else:
+                stable = val_calc.trials_until_stable
+                print('Trials: {} - Predicted additional trials: {}'.format(counter, stable))
+            return False
+
+    # check whether we should check value
+    def print_sim(self):
+        if VERBOSE:
+            print('Simulation {} concluded'.format(self.recorder.sim))
+
+    def tidy_recorder(self):
+        if sys.getsizeof(self.recorder) > 1e9:
+            self.recorder.dump(self.dir, self.recorder_count)
+            self.recorder = Recorder(chunk=self.chunk)
+            self.recorder_count += 1
+
+    def _has_checkpoint(self):
+        path = '{}chunks/{}_check.gz'.format(self.dir, self.chunk)
+        has = os.path.isfile(path)
+        if has:
+            self.checkpoint_contents = load(path)
+            time = self.checkpoint_contents['time']
+            since = (time - datetime.now()) / 3600
+            if since > 24:
+                self.checkpoint_contents = None
+                return False
+            else:
+                self.checkpoint_count = self.checkpoint_contents['checkpoint_count']
+                self.recorder_count = self.checkpoint_contents['recorder_count']
+                self.recorder = self.checkpoint_contents['recorder']
+                return True
+        else:
+            return False
+
+    @staticmethod
+    def header(lstg, lookup):
+        if VERBOSE:
+            header = 'Lstg: {}  | Start time: {}  | Start price: {}'.format(lstg,
+                                                                            lookup[START_DAY],
+                                                                            lookup[START_PRICE])
+            header = '{} | auto reject: {} | auto accept: {}'.format(header, lookup[DEC_PRICE],
+                                                                     lookup[ACC_PRICE])
+            print(header)
 
 
 
