@@ -134,3 +134,8 @@ OBS_SPACE_NAME = 'NegotiationObsSpace'
 
 # agents
 INFO_AGENTS = ['byr', 'slr0', 'slr1']
+
+# outcome tuple names
+SALE = 'sale'
+DUR = 'dur'
+PRICE = 'price'

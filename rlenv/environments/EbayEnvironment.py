@@ -9,7 +9,7 @@ from rlenv.sources import ThreadSources
 from rlenv.time import time_triggers
 from rlenv.env_consts import (START_DAY, INTERACT, VERBOSE, MONTH,
                               META, ANCHOR_STORE_INSERT, ACC_PRICE,
-                              DEC_PRICE, START_PRICE)
+                              DEC_PRICE, START_PRICE, SALE, PRICE, DUR)
 from rlenv.env_utils import get_clock_feats, time_delta, get_value_fee
 from constants import INTERVAL, BYR_PREFIX
 
@@ -19,7 +19,7 @@ OFF_IND = 2
 
 
 class EbayEnvironment:
-    Outcome = namedtuple('outcome', ['sale', 'price', 'fees', 'dur'])
+    Outcome = namedtuple('outcome', [SALE, PRICE, DUR])
 
     def __init__(self, arrival):
         # arrival process interface
@@ -128,12 +128,8 @@ class EbayEnvironment:
         else:
             start_norm = 1 - offer['price']
         sale_price = start_norm * self.lookup[START_PRICE]
-        insertion_fees = ANCHOR_STORE_INSERT
-        value_fee = get_value_fee(sale_price, self.lookup[META])
         dur = offer['time'] - self.lookup[START_DAY]
-        fees = insertion_fees + value_fee
-        self.outcome = self.Outcome(sale=True, price=sale_price,
-                                    dur=dur, fees=fees)
+        self.outcome = self.Outcome(True, sale_price, dur)
 
     def _process_slr_offer(self, event):
         return self._process_offer(event)
@@ -257,8 +253,7 @@ class EbayEnvironment:
         :return: boolean
         """
         if event.priority >= self.end_time:
-            self.outcome = self.Outcome(sale=False, dur=MONTH,
-                                        fees=ANCHOR_STORE_INSERT, price=0)
+            self.outcome = self.Outcome(False, 0, MONTH)
             if VERBOSE:
                 print('Lstg expired')
             return True

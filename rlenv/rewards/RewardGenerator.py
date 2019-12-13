@@ -88,7 +88,7 @@ class RewardGenerator:
             for i in range(self.params[SIM_COUNT]):
                 environment.reset()
                 # TODO Add event tracker
-                sale, reward, time = environment.run()
+                outcome = environment.run()
                 if VERBOSE:
                     print('Simulation {} concluded'.format(self.recorder.sim))
                 self.recorder.add_sale(sale, reward, time)
@@ -101,6 +101,7 @@ class RewardGenerator:
         total_time = end_time - self.start
         total_time = total_time.total_seconds() / 3600
         print('hours: {}'.format(total_time))
+
 
 
 

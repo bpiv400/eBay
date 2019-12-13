@@ -97,6 +97,7 @@ def last_norm(sources, turn):
         out = sources[THREAD_MAP][featname(NORM, turn - 2)]
     return out
 
+
 def prev_norm(sources, turn):
     if turn == 1:
         out = 0.0
@@ -138,14 +139,11 @@ def load_model(full_name):
     return net
 
 
-def get_value_fee(price, meta):
+def get_cut(meta):
     """
     Computes the value fee. For now, just set to 10%
     of sale price, pending refinement decisions
 
-    # TODO: What did we decide about shipping?
-
-    :param price: price of sale
     :param meta: integer giving meta category
     :return: float
     """
@@ -154,7 +152,7 @@ def get_value_fee(price, meta):
         rate = .07
     elif meta in META_6:
         rate = .06
-    return rate * price
+    return rate
 
 
 def time_delta(start, end, unit=DAY):
