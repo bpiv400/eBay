@@ -56,13 +56,10 @@ def get_y_delay(delay, censored, role):
 
 
 if __name__ == "__main__":
-    # partition number from command line
+    # parameter(s) from command line
     parser = argparse.ArgumentParser()
-    parser.add_argument('--num', action='store', type=int, required=True)
-    num = parser.parse_args().num-1
-
-    # partition
-    part = PARTITIONS[num]
+    parser.add_argument('--part', action='store', type=str, required=True)
+    part = parser.parse_args().part
     idx, path = get_partition(part)
 
     # load events
