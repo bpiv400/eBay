@@ -103,9 +103,6 @@ DAY = 24 * 3600
 HOUR = 3600
 EXPIRATION = 48 * 60 * 60
 
-# parameter names
-SIM_COUNT = 'n'
-
 # fee constants
 ANCHOR_STORE_INSERT = .03
 
@@ -139,3 +136,7 @@ INFO_AGENTS = ['byr', 'slr0', 'slr1']
 SALE = 'sale'
 DUR = 'dur'
 PRICE = 'price'
+# param names
+VAL_SE_TOL = 'val_se_tol'
+VAL_SE_CHECK = 'val_se_check'
+AGENT = 'agent'
