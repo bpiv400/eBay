@@ -7,7 +7,6 @@ from torch.utils.data import DataLoader, Dataset, Sampler
 from compress_pickle import load
 from constants import *
 
-
 # defines a dataset that extends torch.utils.data.Dataset
 class Inputs(Dataset):
 
