@@ -11,7 +11,7 @@ import numpy as np
 from rlenv.ValueCalculator import ValueCalculator
 from rlenv.env_consts import (REWARD_EXPERIMENT_PATH, VAL_SE_TOL, VERBOSE,
                               START_PRICE, START_DAY, ACC_PRICE, DEC_PRICE,
-                              VAL_SE_CHECK)
+                              VAL_SE_CHECK, GEN_VALUES, SIM_COUNT)
 from rlenv.env_utils import chunk_dir
 from rlenv.interface.interfaces import PlayerInterface, ArrivalInterface
 from rlenv.rewards.RewardEnvironment import RewardEnvironment
@@ -46,6 +46,11 @@ class RewardGenerator:
         self.checkpoint_count = 0
         self.recorder_count = 1
         self.start = datetime.now()
+
+        # counter
+        self.gen_values = self.params[GEN_VALUES]
+        self.n = self.params[SIM_COUNT]
+
         # load checkpoint if there is one
         self.has_checkpoint = self._has_checkpoint()
 
@@ -112,7 +117,7 @@ class RewardGenerator:
             environment, val_calc, lookup = self.setup_env(lstg)
             # simulate lstg
             RewardGenerator.header(lstg, lookup)
-            time_up = self.simulate_lstg(environment, val_calc)
+            time_up = self.simulate_lstg_loop(environment, val_calc)
             if time_up:
                 self.store_checkpoint(lstg, val_calc)
                 break
@@ -146,16 +151,34 @@ class RewardGenerator:
         path = '{}chunks/{}_check.gz'.format(self.dir, self.chunk)
         dump(contents, path)
 
+    def simulate_lstg_loop(self, environment, val_calc):
+        if self.gen_values:
+            return self.value_loop(environment, val_calc)
+        else:
+            return self.discrim_loop(environment, val_calc)
+
+    def discrim_loop(self, environment, val_calc):
+        time_up = False
+        for count in range(val_calc.exp_count, self.n):
+            time_up = self.simulate_lstg(environment, val_calc)
+            if time_up:
+                break
+        return time_up
+
     def simulate_lstg(self, environment, val_calc):
+        environment.reset()
+        sale, price, dur = environment.run()
+        self.print_sim()
+        val_calc.add_outcome(sale, price)
+        time_up = self.check_time()
+        return time_up
+
+    def value_loop(self, environment, val_calc):
         # stopping criterion
         stop, time_up = False, False
         while not stop and not time_up:
-            environment.reset()
-            sale, price, dur = environment.run()
-            self.print_sim()
-            val_calc.add_outcome(sale, price)
+            time_up = self.simulate_lstg(environment, val_calc)
             stop = self.update_stop(val_calc)
-            time_up = self.check_time()
         return time_up
 
     def check_time(self):
