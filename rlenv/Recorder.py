@@ -184,8 +184,9 @@ class Recorder:
             frames = [self.threads, self.offers, self.sales]
         self.compress_common_cols([LSTG], frames, [np.int32])
         # maximally compress threads dataframe
-        records_path = '{}{}.gz'.format(chunk_dir(base_dir, self.chunk, records=True),
-                                        recorder_count)
+        chunk_path = chunk_dir(base_dir, self.chunk, records=True,
+                               discrim=not self.record_values)
+        records_path = '{}{}.gz'.format(chunk_path, recorder_count)
         records = {
             'offers': self.offers,
             'threads': self.threads,
@@ -193,8 +194,7 @@ class Recorder:
         }
         dump(records, records_path)
         if self.record_values:
-            rewards_path = '{}{}.gz'.format(chunk_dir(base_dir, self.chunk, rewards=True),
-                                            recorder_count)
+            rewards_path = '{}{}.gz'.format(chunk_dir(base_dir, self.chunk, rewards=True), recorder_count)
             dump(self.values, rewards_path)
         self.reset_recorders()
 

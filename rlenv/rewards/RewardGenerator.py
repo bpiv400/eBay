@@ -59,16 +59,17 @@ class RewardGenerator:
             self._prepare_records()
 
     def _prepare_records(self):
-        records_path = chunk_dir(self.dir, self.chunk, records=True)
-        rewards_path = chunk_dir(self.dir, self.chunk, rewards=True)
+        records_path = chunk_dir(self.dir, self.chunk, records=True,
+                                 discrim=not self.gen_values)
         RewardGenerator.remake_dir(records_path)
+        rewards_path = chunk_dir(self.dir, self.chunk, rewards=True)
         RewardGenerator.remake_dir(rewards_path)
 
     @staticmethod
     def remake_dir(path):
         if os.path.isdir(path):
             shutil.rmtree(path)
-            os.mkdir(path)
+        os.mkdir(path)
 
     def _load_params(self):
         """
@@ -80,6 +81,12 @@ class RewardGenerator:
         params = pd.read_csv(REWARD_EXPERIMENT_PATH)
         params.set_index('id', drop=True, inplace=True)
         params = params.loc[self.exp_id, :].to_dict()
+        params[VAL_SE_TOL] = float(params[VAL_SE_TOL])
+        params[VAL_SE_CHECK] = int(params[VAL_SE_CHECK])
+        params[SIM_COUNT] = int(params[SIM_COUNT])
+        params[GEN_VALUES] = bool(params[GEN_VALUES])
+        print('params')
+        print(params)
         return params
 
     def _get_lstgs(self):
