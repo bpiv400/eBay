@@ -115,19 +115,24 @@ class RewardGenerator:
         time_up = False
         for lstg in remaining_lstgs:
             environment, val_calc, lookup = self.setup_env(lstg)
-            # simulate lstg
+            # simulate lstg necessary number of times
             RewardGenerator.header(lstg, lookup)
             time_up = self.simulate_lstg_loop(environment, val_calc)
+            # store a checkpoint if the job is about to be killed
             if time_up:
                 self.store_checkpoint(lstg, val_calc)
                 break
             else:
-                self.recorder.add_val(val_calc.mean)
+                if self.gen_values:
+                    self.recorder.add_val(val_calc.mean)
                 self.tidy_recorder()
         if not time_up:
-            self.recorder.dump(self.dir, self.recorder_count)
-            self.delete_checkpoint()
-            self.report_time()
+            self.close()
+
+    def close(self):
+        self.recorder.dump(self.dir, self.recorder_count)
+        self.delete_checkpoint()
+        self.report_time()
 
     def report_time(self):
         curr_clock = (datetime.now() - self.start).total_seconds() / 3600
@@ -159,10 +164,8 @@ class RewardGenerator:
 
     def discrim_loop(self, environment, val_calc):
         time_up = False
-        for count in range(val_calc.exp_count, self.n):
+        while val_calc.exp_count < self.n and not time_up:
             time_up = self.simulate_lstg(environment, val_calc)
-            if time_up:
-                break
         return time_up
 
     def simulate_lstg(self, environment, val_calc):
