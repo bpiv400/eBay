@@ -84,7 +84,7 @@ class RewardGenerator:
         params[VAL_SE_TOL] = float(params[VAL_SE_TOL])
         params[VAL_SE_CHECK] = int(params[VAL_SE_CHECK])
         params[SIM_COUNT] = int(params[SIM_COUNT])
-        params[GEN_VALUES] = bool(params[GEN_VALUES])
+        params[GEN_VALUES] = (params[GEN_VALUES] == 'TRUE')
         print('params')
         print(params)
         return params

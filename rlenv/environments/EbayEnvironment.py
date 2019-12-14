@@ -7,10 +7,9 @@ from rlenv.events import event_types
 from rlenv.sources import ArrivalSources
 from rlenv.sources import ThreadSources
 from rlenv.time import time_triggers
-from rlenv.env_consts import (START_DAY, INTERACT, VERBOSE, MONTH,
-                              META, ANCHOR_STORE_INSERT, ACC_PRICE,
+from rlenv.env_consts import (START_DAY, INTERACT, VERBOSE, MONTH, ACC_PRICE,
                               DEC_PRICE, START_PRICE, SALE, PRICE, DUR)
-from rlenv.env_utils import get_clock_feats, time_delta, get_value_fee
+from rlenv.env_utils import get_clock_feats, time_delta
 from constants import INTERVAL, BYR_PREFIX
 
 ACC_IND = 0
