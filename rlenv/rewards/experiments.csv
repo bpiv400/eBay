@@ -1,2 +1,2 @@
-﻿id,n,composer,RLPARAMS
-1,5,1,NOPARAMSYET
+﻿id,val_se_tol,val_se_check,values,sim_count,agent,delay
+1,0.5,25,FALSE,5,,
