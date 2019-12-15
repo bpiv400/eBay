@@ -136,19 +136,6 @@ def sort_by_turns(y):
     return y.reindex(index=turns.index)
 
 
-# appends turn indicator variables to offer matrix
-def add_turn_indicators(df):
-    '''
-    df: dataframe with index ['lstg', 'thread', 'index'].
-    '''
-    indices = np.unique(df.index.get_level_values('index'))
-    for i in range(len(indices)-1):
-        ind = indices[i]
-        featname = 't%d' % ((ind+1) // 2)
-        df[featname] = df.index.isin([ind], level='index')
-    return df
-
-
 # returns dictionary of feature names for each 'x' dataframe in d
 def get_featnames(d):
     '''

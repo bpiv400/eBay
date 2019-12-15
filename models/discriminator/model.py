@@ -48,17 +48,17 @@ class Disciminator:
         return above / total, largest
 
 
-    def run_batch(self, d0, d1, factor, optimizer=None):
+    def run_batch(self, d, factor, optimizer=None):
         # train / eval mode
         isTraining = optimizer is not None
         self.net.train(isTraining)
 
-        # predictions from model
-        t0 = torch.exp(self.net(d0).squeeze())
-        t1 = torch.exp(self.net(d1).squeeze())
+        # predicted probability of fake
+        theta = torch.exp(self.net(d).squeeze())
+        pfake = torch.sigmoid(theta)
 
-        # loss: predicted probability of fake
-        loss = torch.sum(t1 / (t0 + t1))
+        # loss: 1 if guess is wrong
+        loss = torch.sum(d['y'] != (pfake > 0.5)).float()
 
         # add in KL divergence and step down gradients
         if isTraining:

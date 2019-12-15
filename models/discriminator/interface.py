@@ -8,16 +8,17 @@ from compress_pickle import load
 from constants import *
 
 
-# defines a dataset that extends torch.utils.data.Dataset
 class Inputs(Dataset):
-    def __init__(self, part):
-
-        # save data and parameters to self
-        self.d = load('%s/inputs/%s/discriminator%s.gz' % (PREFIX, part))
-        self.model = model
+    def __init__(self, part, model):
+        """
+        Defines a dataset for the discriminator
+        :param part: one of ['train_models', 'train_rl', 'test']
+        :param model: one of ['listings', 'threads']
+        """
+        self.d = load('%s/inputs/%s/%s.gz' % (PREFIX, part, model))
 
         # number of examples
-        self.N = np.shape(self.d['lstg'])[0]
+        self.N = np.shape(self.real['lstg'])[0]
 
 
     def __getitem__(self, idx):

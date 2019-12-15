@@ -6,6 +6,20 @@ from utils import *
 from processing.processing_utils import *
 
 
+def add_turn_indicators(df):
+    '''
+    Appends turn indicator variables to offer matrix
+    :param df: dataframe with index ['lstg', 'thread', 'index'].
+    :return: dataframe with turn indicators appended
+    '''
+    indices = np.unique(df.index.get_level_values('index'))
+    for i in range(len(indices)-1):
+        ind = indices[i]
+        featname = 't%d' % ((ind+1) // 2)
+        df[featname] = df.index.isin([ind], level='index')
+    return df
+
+
 # deletes irrelevant feats and sets unseen feats to 0
 def clean_offer(offer, i, outcome, role):
 	# if turn 1, drop days and delay

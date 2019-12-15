@@ -28,7 +28,7 @@ def unpickle(file):
     return pickle.load(open(file, "rb"))
 
 
-def init_x(part, idx):
+def init_x(part, idx=None):
     """
     Initializes dictionary of input components
     :param part: string name of partition (e.g., 'train_rl')
@@ -43,10 +43,11 @@ def init_x(part, idx):
         df = load(PARTS_DIR + '%s/x_%s.gz' % (part, name))
 
         # index by idx
-        if len(idx.names) == 1:
-            df = df.reindex(index=idx)
-        else:
-            df = df.reindex(index=idx, level='lstg')
+        if idx is not None:
+            if len(idx.names) == 1:
+                df = df.reindex(index=idx)
+            else:
+                df = df.reindex(index=idx, level='lstg')
 
         # put in x
         x[name] = df

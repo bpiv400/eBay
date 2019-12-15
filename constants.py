@@ -25,9 +25,11 @@ TOL_HALF = 0.02
 NUM_WORKERS = 8 if torch.cuda.is_available() else 0
 MBSIZE = {True: 128, False: 2000}
 FTOL = 0.995
+LOGLR0 = -3
+LOGLR1 = -6
 
 # neural net parameters
-LAYERS_EMBEDDING = 2
+LAYERS_EMBEDDING = 4
 LAYERS_FULL = 8
 HIDDEN = 1024
 F = torch.nn.ReLU()
