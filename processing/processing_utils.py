@@ -216,8 +216,8 @@ def convert_to_numpy(d):
     d: dictionary with dataframes.
     '''
 
-    # pandas index
-    d['index'] = y.index
+    # save pandas index
+    d['index'] = d['y'].index
 
     # loop through x
     for k, v in d['x'].items():
