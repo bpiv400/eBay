@@ -36,6 +36,7 @@ class Recorder:
         self.values = None
         self.threads = None
         self.sales = None
+        self.reset_recorders()
 
         # lstg feats
         self.lstg = None

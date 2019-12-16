@@ -9,7 +9,7 @@ from torch.distributions.categorical import Categorical
 from constants import (INPUT_DIR, START, HOLIDAYS, TOL_HALF, MODEL_DIR)
 from rlenv.interface.model_names import LSTM_MODELS
 from rlenv.composer.maps import THREAD_MAP
-from simulator.nets import FeedForward, LSTM
+from models.nets import FeedForward, LSTM
 from rlenv.env_consts import (META_6, META_7, DAY, NORM, ALL_OUTCOMES,
                               AUTO, REJECT, EXP)
 
@@ -136,7 +136,8 @@ def load_model(full_name):
     net = model_class(sizes, dropout=False)  # type: torch.nn.Module
     print('path: {}'.format(model_path))
     state_dict = torch.load(model_path, map_location='cpu')
-    print(len(state_dict.keys()))
+    print("h0.nn0.offer.layer1.lstg.stack.0.layer.0.weight" in state_dict)
+    print("h0.nn0.offer.layer1.lstg.stack.0.layer.0.weight" in net.state_dict().keys())
     net.load_state_dict(state_dict)
     for param in net.parameters(recurse=True):
         param.requires_grad = False

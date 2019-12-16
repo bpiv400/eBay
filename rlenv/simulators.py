@@ -94,8 +94,8 @@ class SimulatedBuyer(SimulatedActor):
         if sample_msg:
             outcomes[featname(SPLIT, turn)] = get_split(con)
         outcomes[featname(CON, turn)] = con
-        prev_slr_norm = SimulatedBuyer.prev_slr_norm(sources, turn)
-        prev_byr_norm = SimulatedBuyer.prev_norm(sources, turn)
+        prev_slr_norm = prev_norm(sources, turn)
+        prev_byr_norm = last_norm(sources, turn)
         norm = (1 - prev_slr_norm) * con + prev_byr_norm * (1 - con)
         outcomes[featname(NORM, turn)] = norm
         return outcomes, sample_msg

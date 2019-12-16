@@ -1,6 +1,6 @@
 import os
 import pickle
-
+import torch
 from rlenv.composer.maps import *
 from compress_pickle import load
 import pandas as pd

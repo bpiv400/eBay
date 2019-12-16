@@ -1,3 +1,4 @@
+from copy import deepcopy
 import torch, torch.nn as nn
 from collections import OrderedDict
 from constants import *
@@ -112,7 +113,9 @@ class FullyConnected(nn.Module):
         N_out: scalar number of output parameters
         '''
         super(FullyConnected, self).__init__()
-
+        print(HIDDEN)
+        print(LAYERS_FULL)
+        print(LAYERS_EMBEDDING)
         # intermediate layer
         self.seq = nn.ModuleList([Layer(N_in, HIDDEN, dropout=dropout)])
 
@@ -144,10 +147,13 @@ class FeedForward(nn.Module):
         super(FeedForward, self).__init__()
 
         # expand embeddings for offer models
-        groups = EMBEDDING_GROUPS
+        groups = deepcopy(EMBEDDING_GROUPS)
         if 'offer1' in sizes['x']:
+            print('offer')
             groups['offer'] = ['lstg'] \
                 + [k for k in sizes['x'].keys() if 'offer' in k]
+        else:
+            print('no offer')
 
         # embeddings
         d, total = OrderedDict(), 0
@@ -155,6 +161,7 @@ class FeedForward(nn.Module):
             counts = {k: v for k, v in sizes['x'].items() if k in group}
             d[name] = Embedding(counts)
             total += sum(counts.values())
+        print(d.keys())
         self.nn0 = nn.ModuleDict(d)
 
         # fully connected
