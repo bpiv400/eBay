@@ -24,11 +24,38 @@ class RewardGenerator:
     """
     Attributes:
         exp_id: int giving the id of the current experiment
-        params: dictionary containing parameters of the experiment:
-            SIM_COUNT: number of times environment should simulator each lstg
-            model in MODELS: integer giving the experiment of id for each model to be used in simulator
+        params: dictionary containing parameters of the experiment from rewardGenerator/experiments.csv:
+            SIM_COUNT: number of times environment should simulator each lstg if we are generating discrim outputs
+            VAL_SE_TOL: maximum value standard error tolerance
+            VAL_SE_CHECK: The number of trials after which the standard error estimate is updated
+            GEN_VALUES: boolean giving whether the environment is generating value estimates
+        x_lstg: pd.Dataframe containing the x_lstg (x_w2v, x_slr, x_cat, x_cndtn, etc...) for each listing
+        lookup: pd.Dataframe containing features of each listing used to control environment behavior and outputs
+            (e.g. list price, auto reject price, auto accept price, meta category, etc..)
+        recorder: Recorder object that stores environment outputs (e.g. discriminator features,
+            events df, etc...)
+        buyer: PlayerInterface containing buyer models
+        seller: PlayerInterface containing seller models
+        arrival: ArrivalInterface containing arrival and hist models
+        checkpoint_contents: the dictionary that the generated loaded from a checkpoint file
+        checkpoint_count: The number of checkpoints saved for this chunk so far
+        recorder_count: The number of recorders stored for this chunk, including the current one
+        that hasn't been saved yet
+        start: time that the current iteration of RewardGenerator began
+        has_checkpoint: whether a recent checkpoint file has been created for this environment
+    Public Functions:
+        generate: generates values or discriminator inputs based on the lstgs in the current chunk
+    Static Methods:
+        remake_dir: deletes and regenerates a given directory
+        header: prints a header giving basic info for a lstg
     """
     def __init__(self, direct=None, num=None, exp_id=None):
+        """
+        Constructor
+        :param direct: string giving path to directory for current partition in rewardGenerator
+        :param num: int giving the chunk number
+        :param exp_id: int giving the experiment number
+        """
         self.dir = direct
         self.chunk = int(num)
         input_dict = load('{}chunks/{}.gz'.format(self.dir, self.chunk))
@@ -42,17 +69,11 @@ class RewardGenerator:
         self.seller = PlayerInterface(composer=composer, byr=False)
         self.arrival = ArrivalInterface(composer=composer)
 
-        # defaults
+        # checkpoint params
         self.checkpoint_contents = None
         self.checkpoint_count = 0
         self.recorder_count = 1
         self.start = datetime.now()
-
-        # counter
-        self.gen_values = self.params[GEN_VALUES]
-        self.n = self.params[SIM_COUNT]
-
-        # load checkpoint if there is one
         self.has_checkpoint = self._has_checkpoint()
 
         # delete previous directories for rewards and records
@@ -60,23 +81,19 @@ class RewardGenerator:
             self._prepare_records()
 
     def _prepare_records(self):
+        """
+        Clears existing value and record directories for this chunk
+        """
         records_path = chunk_dir(self.dir, self.chunk, records=True,
-                                 discrim=not self.gen_values)
-        RewardGenerator.remake_dir(records_path)
+                                 discrim=not self.params[GEN_VALUES])
+        self._remake_dir(records_path)
         rewards_path = chunk_dir(self.dir, self.chunk, rewards=True)
-        RewardGenerator.remake_dir(rewards_path)
-
-    @staticmethod
-    def remake_dir(path):
-        if os.path.isdir(path):
-            shutil.rmtree(path)
-        os.mkdir(path)
+        self._remake_dir(rewards_path)
 
     def _load_params(self):
         """
         Loads dictionary of parameters associated with the current experiment
         from experiments spreadsheet
-
         :return: dictionary containing parameter values
         """
         params = pd.read_csv(REWARD_EXPERIMENT_PATH)
@@ -92,6 +109,12 @@ class RewardGenerator:
         return params
 
     def _get_lstgs(self):
+        """
+        Generates list of listings in the current chunk that haven't had outputs generated
+        yet. If there is a checkpoint file, the list contains all lstgs that weren't
+        simulated to completion in the previous iterations of RewardGenerator
+        :return: list
+        """
         if not self.has_checkpoint:
             return self.x_lstg.index
         else:
@@ -101,7 +124,13 @@ class RewardGenerator:
             index = index[start_ix:]
             return index
 
-    def setup_env(self, lstg):
+    def _setup_env(self, lstg):
+        """
+        Generates the environment, lookup series, and value calculator required to
+        simulate the given listing
+        :param lstg: int giving a lstg id
+        :return: 3-tuple containing RewardEnvironment, ValueCalculator, pd.Series
+        """
         # setup new lstg
         x_lstg = self.x_lstg.loc[lstg, :].astype(np.float32)
         lookup = self.lookup.loc[lstg, :]
@@ -120,41 +149,61 @@ class RewardGenerator:
         return environment, val_calc, lookup
 
     def generate(self):
+        """
+        Simulates all lstgs in chunk according to experiment parameters
+        """
         remaining_lstgs = self._get_lstgs()
         time_up = False
         for lstg in remaining_lstgs:
-            environment, val_calc, lookup = self.setup_env(lstg)
+            environment, val_calc, lookup = self._setup_env(lstg)
             # simulate lstg necessary number of times
             RewardGenerator.header(lstg, lookup)
             print('simulate lstg loop')
-            print(self.gen_values)
-            time_up = self.simulate_lstg_loop(environment, val_calc)
+            print(self.params[GEN_VALUES])
+            time_up = self._simulate_lstg_loop(environment, val_calc)
             # store a checkpoint if the job is about to be killed
             if time_up:
-                self.store_checkpoint(lstg, val_calc)
+                self._store_checkpoint(lstg, val_calc)
                 break
             else:
-                if self.gen_values:
+                if self.params[GEN_VALUES]:
                     self.recorder.add_val(val_calc.mean)
-                self.tidy_recorder()
+                self._tidy_recorder()
         if not time_up:
-            self.close()
+            self._close()
 
-    def close(self):
+    def _close(self):
+        """
+        Dumps the latest recorder and deletes the latest checkpoint (if it exists),
+        after all lstgs in the chunk have been simulated
+        """
         self.recorder.dump(self.dir, self.recorder_count)
-        self.delete_checkpoint()
-        self.report_time()
+        self._delete_checkpoint()
+        self._report_time()
 
-    def report_time(self):
+    def _report_time(self):
+        """
+        Prints the total amount of time spent simulating all lstgs in the chunk
+        """
         curr_clock = (datetime.now() - self.start).total_seconds() / 3600
         print('hours: {}'.format(self.checkpoint_count * 4 + curr_clock))
 
-    def delete_checkpoint(self):
+    def _delete_checkpoint(self):
+        """
+        Deletes the existing checkpoint
+        """
         path = '{}chunks/{}_check.gz'.format(self.dir, self.chunk)
         if os.path.isfile(path):
             os.remove(path)
 
-    def store_checkpoint(self, lstg, val_calc):
+    def _store_checkpoint(self, lstg, val_calc):
+        """
+        Creates a checkpoint for the current progress of the RewardGenerator,
+        so the job can be killed and restarted in the short queue
+        :param lstg: int giving lstg id
+        :param val_calc: ValueCalculator
+        :return: None
+        """
         self.checkpoint_count += 1
         contents = {
             'lstg': lstg,
@@ -167,37 +216,65 @@ class RewardGenerator:
         path = '{}chunks/{}_check.gz'.format(self.dir, self.chunk)
         dump(contents, path)
 
-    def simulate_lstg_loop(self, environment, val_calc):
-        if self.gen_values:
+    def _simulate_lstg_loop(self, environment, val_calc):
+        """
+        Simulates a particular lstg the requisite number of times
+        :param environment: RewardEnvironment initiated for current lstg
+        :param val_calc: ValueCalculator
+        :return: Boolean indicating whether the RewardGenerator job has run out of time
+        """
+        if self.params[GEN_VALUES]:
             print('gen values')
-            return self.value_loop(environment, val_calc)
+            return self._value_loop(environment, val_calc)
         else:
-            return self.discrim_loop(environment, val_calc)
+            return self._discrim_loop(environment, val_calc)
 
-    def discrim_loop(self, environment, val_calc):
+    def _discrim_loop(self, environment, val_calc):
+        """
+        Simulates a particular listing a given number of times and stores
+        outputs required to train discrimator
+        :param environment: RewardEnvironment
+        :param val_calc: ValueCalculator
+        :return: Boolean indicating whether the job has run out of queue time
+        """
         time_up = False
-        while val_calc.exp_count < self.n and not time_up:
-            time_up = self.simulate_lstg(environment, val_calc)
+        while val_calc.exp_count < self.params[SIM_COUNT] and not time_up:
+            time_up = self._simulate_lstg(environment, val_calc)
         return time_up
 
-    def simulate_lstg(self, environment, val_calc):
+    def _simulate_lstg(self, environment, val_calc):
+        """
+        Simulates a particular listing once
+        :param environment: RewardEnvironment
+        :param val_calc: ValueCalculator
+        :return: Boolean indicating whether the job has run out of queue time
+        """
         environment.reset()
         sale, price, dur = environment.run()
-        self.print_sim()
+        self._print_sim()
         val_calc.add_outcome(sale, price)
-        time_up = self.check_time()
+        time_up = self._check_time()
         return time_up
 
-    def value_loop(self, environment, val_calc):
-        # stopping criterion
+    def _value_loop(self, environment, val_calc):
+        """
+        Simulates a particular listing until the value estimate se is beneath the given tolerance
+        :param environment: RewardEnvironment
+        :param val_calc: ValueCalculator
+        :return: Boolean indicating whether the job has run out of queue time
+        """
         stop, time_up = False, False
         while not stop and not time_up:
-            time_up = self.simulate_lstg(environment, val_calc)
-            stop = self.update_stop(val_calc)
-            self.print_value(val_calc)
+            time_up = self._simulate_lstg(environment, val_calc)
+            stop = self._update_stop(val_calc)
+            self._print_value(val_calc)
         return time_up
 
-    def print_value(self, val_calc):
+    def _print_value(self, val_calc):
+        """
+        Prints information about the most recent value calculation
+        :param val_calc: ValueCalculator
+        """
         if val_calc.exp_count % self.params[VAL_SE_CHECK] == 0:
             print('Trial: {}'.format(val_calc.exp_count))
             if len(val_calc.sales) == 0:
@@ -213,30 +290,51 @@ class RewardGenerator:
                                                                            val_calc.mean_se))
                 print('Predicted trials remaining: {}'.format(val_calc.trials_until_stable))
 
-    def check_time(self):
+    def _check_time(self):
+        """
+        Checks whether the generator has been running for almost 4 hours
+        :return: Boolean indicating almost 4 hours has passed
+        """
         curr = datetime.now()
         tot = (curr - self.start).total_seconds() / 3600
         return tot > 3.90
 
-    def update_stop(self, val_calc):
+    def _update_stop(self, val_calc):
+        """
+        Checks whether a the generator may stop simulating a particular lstg
+        based on whether the value estimate has stabilized
+        :param val_calc: ValueCalculator
+        :return: Boolean indicating whether to stop
+        """
         counter = val_calc.exp_count
         if val_calc.has_sales and counter % self.params[VAL_SE_CHECK] == 0:
             return val_calc.stabilized
         else:
             return False
 
-    # check whether we should check value
-    def print_sim(self):
+    def _print_sim(self):
+        """
+        Prints that the simulation has concluded if verbose
+        """
         if VERBOSE:
             print('Simulation {} concluded'.format(self.recorder.sim))
 
-    def tidy_recorder(self):
+    def _tidy_recorder(self):
+        """
+        Dumps the recorder and increments the recorder count if it
+        contains at least a gig of data
+        """
         if sys.getsizeof(self.recorder) > 1e9:
             self.recorder.dump(self.dir, self.recorder_count)
             self.recorder = Recorder(chunk=self.chunk)
             self.recorder_count += 1
 
     def _has_checkpoint(self):
+        """
+        Checks whether there's a recent checkpoint for the current chunk.
+        Loads the checkpoint if one exists
+        :returns: Indicator giving whether there's a recent checkpoint
+        """
         path = '{}chunks/{}_check.gz'.format(self.dir, self.chunk)
         has = os.path.isfile(path)
         if has:
@@ -256,6 +354,12 @@ class RewardGenerator:
 
     @staticmethod
     def header(lstg, lookup):
+        """
+        Prints header giving basic info about the current lstg
+        :param lstg: int giving lstg id
+        :param lookup: pd.Series containing metadata about the lstg
+        :return:
+        """
         header = 'Lstg: {}  | Start time: {}  | Start price: {}'.format(lstg,
                                                                         lookup[START_DAY],
                                                                         lookup[START_PRICE])
@@ -263,6 +367,12 @@ class RewardGenerator:
                                                                  lookup[ACC_PRICE])
         print(header)
 
-
-
-
+    @staticmethod
+    def _remake_dir(path):
+        """
+        Deletes and re-creates the given directory
+        :param path: path to some directory
+        """
+        if os.path.isdir(path):
+            shutil.rmtree(path)
+        os.mkdir(path)
