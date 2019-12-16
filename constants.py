@@ -40,7 +40,7 @@ DEVICE = 'cpu'
 if 'Ubuntu' in platform():		# Etan's box
 	PREFIX = '/data/eBay'
 elif 'Windows' in platform():	# Barry's laptop
-	PREFIX = 'data'
+	PREFIX = 'A:/ebay/data'
 else:
 	PREFIX = os.path.expanduser('~/weka/eBay')
 

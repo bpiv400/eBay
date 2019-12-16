@@ -178,6 +178,9 @@ class LSTM(nn.Module):
         sizes: dictionary of scalar input sizes; sizes['x'] is an OrderedDict
         dropout: True if using dropout for fully-connected layers
         '''
+        print(HIDDEN)
+        print(LAYERS_EMBEDDING)
+        print(LAYERS_FULL)
         super(LSTM, self).__init__()
 
         # save parameters to self
