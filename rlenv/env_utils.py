@@ -106,13 +106,16 @@ def prev_norm(sources, turn):
     return out
 
 
-def chunk_dir(part_dir, chunk_num, records=False, rewards=False):
+def chunk_dir(part_dir, chunk_num, records=False, rewards=False, discrim=False):
     if records:
-        insert = 'records'
+        if discrim:
+            insert = 'discrim'
+        else:
+            insert = 'records'
     elif rewards:
         insert = 'rewards'
     else:
-        insert = 'chunks'
+        raise RuntimeError('invalid chunk dir params')
     return '{}{}/{}/'.format(part_dir, insert, chunk_num)
 
 

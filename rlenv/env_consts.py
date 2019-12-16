@@ -136,7 +136,10 @@ INFO_AGENTS = ['byr', 'slr0', 'slr1']
 SALE = 'sale'
 DUR = 'dur'
 PRICE = 'price'
+
 # param names
 VAL_SE_TOL = 'val_se_tol'
 VAL_SE_CHECK = 'val_se_check'
 AGENT = 'agent'
+SIM_COUNT = 'n'
+GEN_VALUES = 'values'
