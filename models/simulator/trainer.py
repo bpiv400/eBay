@@ -53,6 +53,7 @@ class Trainer:
         # initialize tensorboard writer
         writer = SummaryWriter(
             LOG_DIR + '%s/%d' % (self.model, self.iter))
+        writer.add_scalar('gamma', gamma)
 
         # set gamma
         self.simulator.set_gamma(gamma)
