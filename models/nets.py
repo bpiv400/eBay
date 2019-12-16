@@ -149,7 +149,6 @@ class FeedForward(nn.Module):
         # expand embeddings for offer models
         groups = deepcopy(EMBEDDING_GROUPS)
         if 'offer1' in sizes['x']:
-            print('offer')
             groups['offer'] = ['lstg'] \
                 + [k for k in sizes['x'].keys() if 'offer' in k]
         else:
@@ -161,7 +160,6 @@ class FeedForward(nn.Module):
             counts = {k: v for k, v in sizes['x'].items() if k in group}
             d[name] = Embedding(counts)
             total += sum(counts.values())
-        print(d.keys())
         self.nn0 = nn.ModuleDict(d)
 
         # fully connected

@@ -1,7 +1,7 @@
 from constants import INPUT_DIR
 
 INTERACT = False
-VERBOSE = True
+VERBOSE = False
 
 # time feats
 SLR_OFFERS = 'slr_offers'

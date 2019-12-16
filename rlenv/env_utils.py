@@ -134,10 +134,7 @@ def load_model(full_name):
         model_path = 'data/outputs/arrival.net'
     model_class = get_model_class(full_name)
     net = model_class(sizes, dropout=False)  # type: torch.nn.Module
-    print('path: {}'.format(model_path))
     state_dict = torch.load(model_path, map_location='cpu')
-    print("h0.nn0.offer.layer1.lstg.stack.0.layer.0.weight" in state_dict)
-    print("h0.nn0.offer.layer1.lstg.stack.0.layer.0.weight" in net.state_dict().keys())
     net.load_state_dict(state_dict)
     for param in net.parameters(recurse=True):
         param.requires_grad = False

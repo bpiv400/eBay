@@ -5,6 +5,7 @@ import os
 import sys
 import shutil
 from datetime import datetime
+from statistics import mean
 from compress_pickle import load, dump
 import pandas as pd
 import numpy as np
@@ -84,7 +85,8 @@ class RewardGenerator:
         params[VAL_SE_TOL] = float(params[VAL_SE_TOL])
         params[VAL_SE_CHECK] = int(params[VAL_SE_CHECK])
         params[SIM_COUNT] = int(params[SIM_COUNT])
-        params[GEN_VALUES] = (params[GEN_VALUES] == 'TRUE')
+        print(params[GEN_VALUES])
+        print(type(params[GEN_VALUES]))
         print('params')
         print(params)
         return params
@@ -124,6 +126,8 @@ class RewardGenerator:
             environment, val_calc, lookup = self.setup_env(lstg)
             # simulate lstg necessary number of times
             RewardGenerator.header(lstg, lookup)
+            print('simulate lstg loop')
+            print(self.gen_values)
             time_up = self.simulate_lstg_loop(environment, val_calc)
             # store a checkpoint if the job is about to be killed
             if time_up:
@@ -165,6 +169,7 @@ class RewardGenerator:
 
     def simulate_lstg_loop(self, environment, val_calc):
         if self.gen_values:
+            print('gen values')
             return self.value_loop(environment, val_calc)
         else:
             return self.discrim_loop(environment, val_calc)
@@ -189,7 +194,24 @@ class RewardGenerator:
         while not stop and not time_up:
             time_up = self.simulate_lstg(environment, val_calc)
             stop = self.update_stop(val_calc)
+            self.print_value(val_calc)
         return time_up
+
+    def print_value(self, val_calc):
+        if val_calc.exp_count % self.params[VAL_SE_CHECK] == 0:
+            print('Trial: {}'.format(val_calc.exp_count))
+            if len(val_calc.sales) == 0:
+                print('No Sales')
+            elif len(val_calc.sales) == 1:
+                print('Only 1 sale')
+            else:
+                print('cut: {}'.format(val_calc.cut))
+                print('rate of no sale: {}'.format(val_calc.p))
+                print('sale count: {} | price mean: {}'.format(len(val_calc.sales),
+                                                               mean(val_calc.sales)))
+                print('mean of value: {} | mean standard error: {}'.format(val_calc.mean,
+                                                                           val_calc.mean_se))
+                print('Predicted trials remaining: {}'.format(val_calc.trials_until_stable))
 
     def check_time(self):
         curr = datetime.now()
@@ -201,11 +223,6 @@ class RewardGenerator:
         if val_calc.has_sales and counter % self.params[VAL_SE_CHECK] == 0:
             return val_calc.stabilized
         else:
-            if not val_calc.has_sales:
-                print('Trials: {}  - NO SALES'.format(counter))
-            else:
-                stable = val_calc.trials_until_stable
-                print('Trials: {} - Predicted additional trials: {}'.format(counter, stable))
             return False
 
     # check whether we should check value
@@ -239,13 +256,12 @@ class RewardGenerator:
 
     @staticmethod
     def header(lstg, lookup):
-        if VERBOSE:
-            header = 'Lstg: {}  | Start time: {}  | Start price: {}'.format(lstg,
-                                                                            lookup[START_DAY],
-                                                                            lookup[START_PRICE])
-            header = '{} | auto reject: {} | auto accept: {}'.format(header, lookup[DEC_PRICE],
-                                                                     lookup[ACC_PRICE])
-            print(header)
+        header = 'Lstg: {}  | Start time: {}  | Start price: {}'.format(lstg,
+                                                                        lookup[START_DAY],
+                                                                        lookup[START_PRICE])
+        header = '{} | auto reject: {} | auto accept: {}'.format(header, lookup[DEC_PRICE],
+                                                                 lookup[ACC_PRICE])
+        print(header)
 
 
 
