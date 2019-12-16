@@ -6,7 +6,6 @@ from constants import *
 def create_bash(model):
 	f = open('bash/%s.sh' % model, 'w')
 	f.write('#!/bin/bash\n')
-	f.write('#$ -pe openmp 3\n')
 	f.write('#$ -N train_%s\n' % model)
 	f.write('#$ -o logs/\n')
 	f.write('#$ -j y\n\n')
