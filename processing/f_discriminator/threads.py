@@ -38,8 +38,11 @@ def clean_offer(offer, i, outcome, role):
 
 # loads data and calls helper functions to construct training inputs
 def process_inputs(part, outcome, role):
-	# thread indices
+	# load dataframes
 	x_thread = load(PARTS_DIR + '%s/x_thread.gz' % part)
+	x_offer = load(PARTS_DIR + '%s/x_offer.gz' % part)
+
+	# thread indices
 	idx = x_thread.index
 
 	# initialize dictionary of input features
@@ -49,16 +52,19 @@ def process_inputs(part, outcome, role):
 	x_thread.loc[:, 'byr_hist'] = x_thread.byr_hist.astype('float32') / 10
 	x['lstg'] = x['lstg'].join(x_thread)
 
+	# turn indicators
+	s = x_offer.reset_index('index')['index']
+	s = 
+
 	# offer features
-	df = load(PARTS_DIR + '%s/x_offer.gz' % part)
-	df = df.unstack(fill_value=0)
+	df = x_offer.unstack(fill_value=0)
 	for i in range(1, 8):
 		offer = df.xs(i, axis=1, level='index')
-		x['offer' + str(i)] = offer.loc[:, offer.std() > 0]
+		offer = offer.loc[:, offer.std() > 0]
+		x['offer' + str(i)] = offer.join(turn_exists)
 
 
-	# final turn indicator
-	s = df.reset_index('index')['index']
+	
 
 	# turn features
 	for i in range(1, 8):

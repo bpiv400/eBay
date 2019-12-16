@@ -34,7 +34,7 @@ if __name__ == '__main__':
     # find optimal gamma
     wrapper = lambda x: trainer.train_model(x)
     result = minimize_scalar(wrapper, 
-        method='Bounded', bounds=(0,2), options={'xatol': 0.1})
+        method='Bounded', bounds=(0,1), options={'xatol': 0.05})
 
     # save result
     dump(result, EXPS_DIR + '%s.pkl' % model)

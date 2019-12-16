@@ -21,19 +21,20 @@ class Trainer:
         print(self.simulator.net)
 
         # attributes to be initialized later
+        self.simulator = None
         self.loglr = None
         self.optimizer = None
 
 
     def init_training(self):
-        # after pretraining, use dropout
-        if self.iter == 1:
-            self.simulator = Simulator(
-                self.model, self.sizes, dropout=True)
+        # new instance of model
+        self.simulator = Simulator(self.model, self.sizes, 
+            dropout=self.iter > 0)  # after pretraining, use dropout
+        if self.iter <= 1:
             print(self.simulator.net)
 
         # reset model parameters to pretrained parameters
-        if self.iter >= 1:
+        if self.iter > 0:
             path = MODEL_DIR + '%s/0.net' % self.model
             self.simulator.net.load_state_dict(
                 torch.load(path), strict=False)
