@@ -16,10 +16,6 @@ class Trainer:
         self.test = test
         self.iter = 0
 
-        # simulator
-        self.simulator = Simulator(model, sizes, dropout=False)
-        print(self.simulator.net)
-
         # attributes to be initialized later
         self.simulator = None
         self.loglr = None
