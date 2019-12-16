@@ -69,6 +69,13 @@ class Simulator:
         return above / total, largest
 
 
+    def simulate(self, d):
+        self.net.train(False)
+        if 'x_time' in d:
+            return self.net(d['x'], d['x_time'])
+        else:
+            return self.net(d['x'])
+
     def run_batch(self, d, factor, optimizer=None):
         # train / eval mode
         isTraining = optimizer is not None

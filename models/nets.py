@@ -144,7 +144,7 @@ class FeedForward(nn.Module):
         super(FeedForward, self).__init__()
 
         # expand embeddings for offer models
-        groups = EMBEDDING_GROUPS
+        groups = EMBEDDING_GROUPS.copy()
         if 'offer1' in sizes['x']:
             groups['offer'] = ['lstg'] \
                 + [k for k in sizes['x'].keys() if 'offer' in k]

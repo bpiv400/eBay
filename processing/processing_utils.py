@@ -216,6 +216,9 @@ def convert_to_numpy(d):
     d: dictionary with dataframes.
     '''
 
+    # pandas index
+    d['index'] = y.index
+
     # loop through x
     for k, v in d['x'].items():
         d['x'][k] = v.astype('float32', copy=False).to_numpy()

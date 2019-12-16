@@ -158,6 +158,32 @@ def run_loop(simulator, data, optimizer=None):
     return loss
 
 
+# helper function for predicting outcome
+def predict_theta(simulator, data):
+    # collate function
+    f = collateRNN if data.isRecurrent else collateFF
+
+    # sampler
+    sampler = Sample(data, False)
+
+    # load batches
+    batches = DataLoader(data, batch_sampler=sampler,
+        collate_fn=f, num_workers=NUM_WORKERS, pin_memory=True)
+    
+    # predict theta
+    theta = []
+    for b in batches:
+        # move to device
+        b['x'] = {k: v.to(simulator.device) for k, v in b['x'].items()}
+        b['y'] = b['y'].to(simulator.device)
+        if 'x_time' in b:
+            b['x_time'] = b['x_time'].to(simulator.device)
+
+        theta.append(simulator.simulate(b))
+
+    return torch.cat(theta)
+
+
 # collate function for feedforward networks
 def collateFF(batch):
     y, x = [], {}
