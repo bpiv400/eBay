@@ -61,6 +61,7 @@ EXPS_DIR = '%sexps/' % OUTPUT_DIR
 
 # partitions
 PARTITIONS = ['train_models', 'train_rl', 'test']
+EVAL_PART = 'train_rl'	# partition to use for model evaluation
 
 # minimum number of listings that define a category
 MIN_COUNT = 1000

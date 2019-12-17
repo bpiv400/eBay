@@ -72,9 +72,9 @@ class Simulator:
     def simulate(self, d):
         self.net.train(False)
         if 'x_time' in d:
-            return self.net(d['x'], d['x_time'])
+            return self.net(d['x'], d['x_time']).to('cpu')
         else:
-            return self.net(d['x'])
+            return self.net(d['x']).to('cpu')
 
     def run_batch(self, d, factor, optimizer=None):
         # train / eval mode

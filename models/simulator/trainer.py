@@ -14,7 +14,13 @@ class Trainer:
         self.sizes = sizes
         self.train = train
         self.test = test
-        self.iter = 0
+
+        # start with pretrained model if it exists
+        self.pretrained_path = MODEL_DIR + '%s/0.net' % model
+        if os.path.isfile(self.pretrained_path):
+            self.iter = 1
+        else:
+            self.iter = 0
 
         # attributes to be initialized later
         self.simulator = None
@@ -31,9 +37,8 @@ class Trainer:
 
         # reset model parameters to pretrained parameters
         if self.iter > 0:
-            path = MODEL_DIR + '%s/0.net' % self.model
             self.simulator.net.load_state_dict(
-                torch.load(path), strict=False)
+                torch.load(self.pretrained_path), strict=False)
 
         # initialize learning rate and optimizer
         self.loglr = LOGLR0
