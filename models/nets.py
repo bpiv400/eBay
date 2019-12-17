@@ -37,10 +37,10 @@ class Layer(nn.Module):
         # one layer is a weight matrix, batch normalization and activation
         if dropout:
             self.layer = nn.Sequential(nn.Linear(N_in, N_out), 
-                nn.BatchNorm1d(N_out), F, VariationalDropout(N_out))
+                nn.BatchNorm1d(N_out, affine=False), F, VariationalDropout(N_out))
         else:
             self.layer = nn.Sequential(nn.Linear(N_in, N_out), 
-                nn.BatchNorm1d(N_out), F)
+                nn.BatchNorm1d(N_out, affine=False), F)
 
     def forward(self, x):
         '''

@@ -22,8 +22,7 @@ if __name__ == '__main__':
     print(sizes)
 
     # initialize neural net
-    simulator = Simulator(model, sizes, dropout=True)
-    simulator.set_gamma(1)
+    simulator = Simulator(model, sizes, dropout=False)
     print(simulator.net)
     print(simulator.loss)
 
@@ -35,7 +34,7 @@ if __name__ == '__main__':
     train = Inputs('small', model)
 
     # training
-    for epoch in range(1):
+    for epoch in range(10):
         print('Epoch %d' % epoch)
 
         # training
@@ -43,15 +42,9 @@ if __name__ == '__main__':
         loss = run_loop(simulator, train, optimizer)
         print('\tloss: %d' % loss)
 
-        print('\tpenalty: %d' % simulator.get_penalty().item())
-
-        share, largest = simulator.get_alpha_stats()
-        print('\tshare: %1.3f' % share)
-        print('\tlargest: %d' % largest)
-
         sec = (dt.now() - t0).total_seconds()
         print('\ttime: %d sec' % sec)
 
-    # save model
-    torch.save(simulator.net.state_dict(),
-        MODEL_DIR + 'small/%s.net' % model)
+    # # save model
+    # torch.save(simulator.net.state_dict(),
+    #     MODEL_DIR + 'small/%s.net' % model)

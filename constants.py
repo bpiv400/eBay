@@ -32,7 +32,7 @@ LOGLR1 = -6
 LAYERS_EMBEDDING = 4
 LAYERS_FULL = 8
 HIDDEN = 1024
-F = torch.nn.ReLU()
+F = torch.nn.ReLU(inplace=True)
 
 # use gpu if available
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
