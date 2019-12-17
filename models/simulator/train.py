@@ -22,14 +22,15 @@ if __name__ == '__main__':
     print(sizes)
 
     # load datasets
-    train = Inputs('train_models', model)
+    train = Inputs('small', model)
     test = Inputs('train_rl', model)
 
     # initialize trainer object
     trainer = Trainer(model, sizes, train, test)
 
     # pretraining
-    trainer.train_model()
+    if trainer.iter == 0:
+        trainer.train_model()
     
     # find optimal gamma
     wrapper = lambda x: trainer.train_model(x)
