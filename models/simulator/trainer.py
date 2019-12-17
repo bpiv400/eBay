@@ -54,11 +54,12 @@ class Trainer:
         # initialize tensorboard writer
         writer = SummaryWriter(
             LOG_DIR + '%s/%d' % (self.model, self.iter))
-        writer.add_scalar('gamma', gamma)
-
+        
         # set gamma
-        self.simulator.set_gamma(gamma)
-        print('Iteration %d: gamma of %1.2f' % (self.iter, gamma))
+        if gamma > 0:
+            self.simulator.set_gamma(gamma)
+            writer.add_scalar('gamma', gamma)
+            print('Iteration %d: gamma of %1.2f' % (self.iter, gamma))
 
         # training loop
         epoch, last = 0, np.inf
@@ -97,7 +98,7 @@ class Trainer:
             print('\t\ttime: %d sec' % (dt.now() - t0).total_seconds())
 
             # reduce learning rate until convergence
-            if output['loss'] > FTOL * last:
+            if output['loss'] >= last:
                 if self.loglr == LOGLR1:
                     # save model
                     path = MODEL_DIR + '%s/%d.net' % (self.model, self.iter)
@@ -110,7 +111,7 @@ class Trainer:
                     # return loss on holdout set 
                     return loss_test
                 else:
-                    self.loglr -= 1
+                    self.loglr -= LOGLR_INC
                     for param_group in self.optimizer.param_groups:
                         param_group['lr'] = math.pow(10, self.loglr)
 

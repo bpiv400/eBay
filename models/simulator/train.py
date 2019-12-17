@@ -13,8 +13,9 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description='Model of environment for bargaining AI.')
     parser.add_argument('--model', type=str)
+    parser.add_argument('--dropout', action='store_true', default=False)
     args = parser.parse_args()
-    model = args.model
+    model, dropout = args.model, args.dropout
 
     # load model sizes
     print('Loading parameters')
@@ -32,11 +33,10 @@ if __name__ == '__main__':
     if trainer.iter == 0:
         trainer.train_model()
     
-    # find optimal gamma
-    wrapper = lambda x: trainer.train_model(x)
-    result = minimize_scalar(wrapper, 
-        method='Bounded', bounds=(0,10), options={'xatol': 0.5})
-
-    # save result
-    dump(result, EXPS_DIR + '%s.pkl' % model)
+    # find optimal regularization coefficient
+    if dropout:
+        wrapper = lambda x: trainer.train_model(x)
+        result = minimize_scalar(wrapper, 
+            method='Bounded', bounds=(0,10), options={'xatol': 0.5})
+        dump(result, EXPS_DIR + '%s.pkl' % model)
     

@@ -24,9 +24,9 @@ TOL_HALF = 0.02
 # optimization parameters
 NUM_WORKERS = 8 if torch.cuda.is_available() else 0
 MBSIZE = {True: 128, False: 2000}
-FTOL = 0.995
 LOGLR0 = -3
 LOGLR1 = -6
+LOGLR_INC = 0.5
 
 # neural net parameters
 LAYERS_EMBEDDING = 4
