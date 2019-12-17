@@ -22,7 +22,6 @@ def load_featnames(full_name):
 
 def load_sizes(full_name):
     featnames_path = '{}sizes/{}.pkl'.format(INPUT_DIR, full_name)
-    print(featnames_path)
     featnames_dict = utils.unpickle(featnames_path)
     return featnames_dict
 

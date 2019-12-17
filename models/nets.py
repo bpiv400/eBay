@@ -113,9 +113,6 @@ class FullyConnected(nn.Module):
         N_out: scalar number of output parameters
         '''
         super(FullyConnected, self).__init__()
-        print(HIDDEN)
-        print(LAYERS_FULL)
-        print(LAYERS_EMBEDDING)
         # intermediate layer
         self.seq = nn.ModuleList([Layer(N_in, HIDDEN, dropout=dropout)])
 
@@ -151,8 +148,6 @@ class FeedForward(nn.Module):
         if 'offer1' in sizes['x']:
             groups['offer'] = ['lstg'] \
                 + [k for k in sizes['x'].keys() if 'offer' in k]
-        else:
-            print('no offer')
 
         # embeddings
         d, total = OrderedDict(), 0

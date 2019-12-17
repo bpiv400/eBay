@@ -41,17 +41,6 @@ class Composer:
             TURN_IND_MAP: TURN_FEATS,
             X_TIME_MAP: x_time_cols,
         }
-        #################################
-        # debugging to check turn 7
-        feats7 = list()
-        for feat in feat_sets[THREAD_MAP]:
-            if '_7' in feat:
-                feats7.append(feat)
-        total7 = ALL_CLOCK_FEATS[7] + ALL_OUTCOMES[7] + ALL_TIME_FEATS[7]
-        total7 = set(total7)
-        feats7 = set(feats7)
-        print('missing in 7: {}'.format(total7.difference(feats7)))
-        #################################
         Composer._check_feat_sets(feat_sets)
         for model in model_names.MODELS:
             maps[model], sizes[model] = Composer._build_model_maps(model, feat_sets)
@@ -68,23 +57,9 @@ class Composer:
         prev_int = set()
         for mod in model_names.MODELS:
             curr_feats = load_featnames(mod)
-
-            # TODO: HAVE ETAN USE PROPER FEATNAMES
-            ##############################################
-
             for feat_type, feat_set in curr_feats['x'].items():
                 [thread_cols.add(feat) for feat in feat_set]
-                # debugging
-                if len(x_time_cols.intersection(thread_cols)) > 0:
-                    curr_int = x_time_cols.intersection(thread_cols)
-                    new_int = curr_int.difference(prev_int)
-                    if len(new_int) > 0:
-                        print('model: {}'.format(mod))
-                        print('feat set: {}'.format(feat_type))
-                        print('intersection: {}'.format(new_int))
-                        print('')
-                        prev_int = prev_int.union(new_int)
-                        raise RuntimeError("unexpected intersection between maps")
+                Composer.check_exclusive(x_time_cols, thread_cols, mod)
         # exclude turn indicators
         for feat_set in [x_lstg_cols, TURN_FEATS]:
             for feat in feat_set:
@@ -93,10 +68,17 @@ class Composer:
                 if feat in x_time_cols:
                     x_time_cols.remove(feat)
         # check that x_time and thread cols are mutually exlcusive
-        if len(x_time_cols.intersection(thread_cols)) > 0:
-            print('intersection: {}'.format(x_time_cols.intersection(thread_cols)))
+        Composer.check_exclusive(x_time_cols, thread_cols, None)
         assert len(x_time_cols.intersection(thread_cols)) == 0
         return thread_cols, x_time_cols
+
+    @staticmethod
+    def check_exclusive(x, y, model_name):
+        if len(x.intersection(y)) > 0:
+            if model_name is not None:
+                print('model: {}'.format(model_name))
+            print('intersection: {}'.format(x.intersection(y)))
+            raise RuntimeError('time cols and thread cols not mutually exclusive')
 
     @staticmethod
     def _build_model_maps(model, feat_sets):
@@ -173,27 +155,16 @@ class Composer:
         """
         total = len(input_set)
         indices = list()
-        # print('num maps: {}'.format(len(maps)))
         map_feats = list()
         for map_name, input_map in maps.items():
             assert isinstance(input_map, pd.Series)
             indices = indices + list(input_map.values)
             map_feats = map_feats + list(input_map.index)
-
-        # TODO: DEBUGGING
-        # print(total)
-        # print(len(indices))
-        # input_feats = set(list(input_set.index))
-        # map_feats = set(map_feats)
-        # print('in input not in maps: {}'.format(input_feats.difference(map_feats)))
-        ############################
         assert len(map_feats) == len(indices)
         assert len(indices) == total
         assert min(indices) == 0
         assert max(indices) == (total - 1)
         assert len(indices) == len(set(indices))
-        print('index length: {}'.format(len(indices)))
-        print('size: {}'.format(size))
         ## error checking
         input_feats = set(list(input_set.index))
         print(len(input_set))
@@ -226,13 +197,7 @@ class Composer:
             try:
                 x[0, curr_map] = torch.from_numpy(sources[map_name][curr_map.index].values).float()
             except RuntimeError as e:
-                print('NAME')
-                print(e)
-                print(map_name)
-                print('stored map: {}'.format(curr_map.dtype))
-                print('stored map size: {}'.format(curr_map.dtype))
-                print('sourced map: {}'.format(sources[map_name].dtype))
-                print('x: {}'.format(x.dtype))
+                Composer.catch_input_error(e, curr_map, sources, map_name)
                 raise RuntimeError()
         return x
 
@@ -275,6 +240,16 @@ class Composer:
     def x_lstg(self):
         return self.feat_sets[LSTG_MAP]
 
+    @staticmethod
+    def catch_input_error(e, curr_map, sources, map_name):
+        print('NAME')
+        print(e)
+        print(map_name)
+        print('stored map: {}'.format(curr_map.dtype))
+        print('stored map size: {}'.format(curr_map.dtype))
+        print('sourced map: {}'.format(sources[map_name].dtype))
+        print('x: {}'.format(x.dtype))
 
 class AgentComposer(Composer):
     def __init__(self, params, rebuild=False):
+        pass
