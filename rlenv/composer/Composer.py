@@ -276,5 +276,3 @@ class Composer:
         return self.feat_sets[LSTG_MAP]
 
 
-class AgentComposer(Composer):
-    def __init__(self, params, rebuild=False):
