@@ -1,3 +1,4 @@
+import math
 import numpy as np
 from rlenv.env_utils import get_cut
 from rlenv.env_consts import META, ANCHOR_STORE_INSERT
@@ -31,7 +32,7 @@ class ValueCalculator:
     def var(self):
         if len(self.sales) == 0:
             raise RuntimeError("No sales, value undefined")
-        return (1 - self.cut) ^ 2 * np.var(self.sales)
+        return math.pow((1 - self.cut), 2) * np.var(self.sales)
 
     @property
     def std(self):
@@ -39,7 +40,7 @@ class ValueCalculator:
 
     @property
     def mean_se(self):
-        return (1 - self.cut) * self.std / np.sqrt(len(self.sales))
+        return self.std / np.sqrt(len(self.sales))
 
     @property
     def has_sales(self):
@@ -47,17 +48,25 @@ class ValueCalculator:
 
     @property
     def stabilized(self):
-        if not self.has_sales:
+        if len(self.sales) < 5:
             return False
         else:
             return self.mean_se < self.val_se_tol
 
     @property
+    def p(self):
+        rate_sale = len(self.sales) / self.exp_count
+        return 1 - rate_sale
+
+    @property
     def trials_until_stable(self):
         if not self.has_sales:
             raise RuntimeError("No sales")
+        elif len(self.sales) < 5:
+            return 10
         else:
-            min_sales = self.var / self.val_se_tol ^ 2
+            min_sales = self.var / math.pow(self.val_se_tol, 2)
             diff = min_sales - len(self.sales)
+            print('diff: {}'.format(diff))
             p_sale = len(self.sales) / self.exp_count
             return diff / p_sale

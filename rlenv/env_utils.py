@@ -9,7 +9,7 @@ from torch.distributions.categorical import Categorical
 from constants import (INPUT_DIR, START, HOLIDAYS, TOL_HALF, MODEL_DIR)
 from rlenv.interface.model_names import LSTM_MODELS
 from rlenv.composer.maps import THREAD_MAP
-from simulator.nets import FeedForward, LSTM
+from models.nets import FeedForward, LSTM
 from rlenv.env_consts import (META_6, META_7, DAY, NORM, ALL_OUTCOMES,
                               AUTO, REJECT, EXP)
 
@@ -22,6 +22,7 @@ def load_featnames(full_name):
 
 def load_sizes(full_name):
     featnames_path = '{}sizes/{}.pkl'.format(INPUT_DIR, full_name)
+    print(featnames_path)
     featnames_dict = utils.unpickle(featnames_path)
     return featnames_dict
 
@@ -126,16 +127,15 @@ def load_model(full_name):
     :param full_name: full name of the model
     :return: PyTorch Module
     """
-    print('sizes...')
     sizes = load_sizes(full_name)
-    print('params...')
-    model_path = '{}{}.net'.format(MODEL_DIR, full_name)
-    # loading model
+    if full_name != 'arrival':
+        model_path = '{}{}.net'.format(MODEL_DIR, full_name)
+    else:
+        model_path = 'data/outputs/arrival.net'
     model_class = get_model_class(full_name)
-    print('initializing...')
-    net = model_class(sizes)  # type: torch.nn.Module
-    print('state dict...')
-    net.load_state_dict(torch.load(model_path, map_location='cpu'))
+    net = model_class(sizes, dropout=False)  # type: torch.nn.Module
+    state_dict = torch.load(model_path, map_location='cpu')
+    net.load_state_dict(state_dict)
     for param in net.parameters(recurse=True):
         param.requires_grad = False
     net.eval()
