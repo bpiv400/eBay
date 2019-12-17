@@ -2,12 +2,14 @@
 Chunks a partition into NUM_CHUNKS pieces for reward generation
 
 """
+import os
 import argparse
 import pandas as pd
+import numpy as np
 from compress_pickle import dump, load
-from constants import PARTS_DIR, ENV_SIM_DIR, PARTITIONS
-from rlenv.env_consts import LOOKUP_FILENAME, NUM_CHUNKS
-from rlenv.env_utils import get_env_sim_dir, get_env_sim_subdir
+from constants import PARTS_DIR, PARTITIONS
+from rlenv.env_consts import LOOKUP_FILENAME, NUM_CHUNKS, START_PRICE
+from rlenv.env_utils import get_env_sim_subdir
 import utils
 
 
@@ -24,8 +26,18 @@ def make_dirs(part):
     :param str part: one of PARTITIONS
     :return: None
     """
-    get_env_sim_subdir()
+    chunks = get_env_sim_subdir(part, chunks=True)
+    values = get_env_sim_subdir(part, values=True)
+    discrim = get_env_sim_subdir(part, discrim=True)
+    for direct in [chunks, values, discrim]:
+        if not os.path.isdir(direct):
+            os.mkdir(direct)
 
+
+def sort_inputs(x_lstg, lookup):
+    x_lstg = x_lstg.sort_values(by=START_PRICE)
+    lookup = lookup.reindex(x_lstg.index)
+    return x_lstg, lookup
 
 
 def main():
@@ -39,23 +51,27 @@ def main():
     part = parser.parse_args().part
     if part not in PARTITIONS:
         raise RuntimeError('part must be one of: {}'.format(PARTITIONS))
+    # load inputs
     x_lstg = init_x(part)
     lookup = load('{}{}/{}'.format(PARTS_DIR, part, LOOKUP_FILENAME))
+    # make directories partition and components if they don't exist
     make_dirs(part)
+    # error checking and sorting
     assert (lookup.index == x_lstg.index).all()
+    x_lstg, lookup = sort_inputs(x_lstg, lookup)
+    # iteration prep
     total_lstgs = len(x_lstg)
-    per_chunk = int(total_lstgs / NUM_CHUNKS)
+    indices = np.arange(0, total_lstgs, step=NUM_CHUNKS)
+    chunk_dir = get_env_sim_subdir(part, chunks=True)
     # create chunks
     for i in range(NUM_CHUNKS):
-        start = i * per_chunk
-        if i != NUM_CHUNKS - 1:
-            end = (i + 1) * per_chunk
-        else:
-            end = total_lstgs
-        # store chunk
-        curr_df = x_lstg.iloc[start:end, :]
-        curr_lookup = lookup.iloc[start:end, :]
-        path = '{}{}/chunks/{}.gz'.format(ENV_SIM_DIR, part, (i + 1))
+        indices = indices + 1
+        if indices[-1] >= total_lstgs:
+            indices = indices[:-1]
+        curr_df = x_lstg.iloc[indices, :]
+        curr_lookup = lookup.iloc[indices, :]
+        path = '{}{}.gz'.format(chunk_dir, (i + 1))
+        # store output
         curr_dict = {
             'lookup': curr_lookup,
             'x_lstg': curr_df

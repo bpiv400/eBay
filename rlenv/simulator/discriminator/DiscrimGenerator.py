@@ -25,4 +25,4 @@ class DiscrimGenerator(Generator):
 
     @property
     def records_path(self):
-        return get_chunk_dir(self.  dir, self.chunk, discrim=True)
+        return get_chunk_dir(self.dir, self.chunk, discrim=True)
