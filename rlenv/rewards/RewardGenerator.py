@@ -1,5 +1,5 @@
 """
-
+Generates values or discriminator inputs for a chunk of lstgs
 """
 import os
 import sys
@@ -75,6 +75,7 @@ class RewardGenerator:
         self.recorder_count = 1
         self.start = datetime.now()
         self.has_checkpoint = self._has_checkpoint()
+        print('checkpoint: {}'.format(self.has_checkpoint))
 
         # delete previous directories for rewards and records
         if not self.has_checkpoint:
@@ -340,7 +341,7 @@ class RewardGenerator:
         if has:
             self.checkpoint_contents = load(path)
             time = self.checkpoint_contents['time']
-            since = (time - datetime.now()) / 3600
+            since = (time - datetime.now()).total_seconds() / 3600
             if since > 24:
                 self.checkpoint_contents = None
                 return False
