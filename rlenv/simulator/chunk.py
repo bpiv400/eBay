@@ -14,6 +14,11 @@ import utils
 
 
 def init_x(part):
+    """
+    Combines components of x_lstg into a dataframe
+    :param part: string giving partition
+    :return: pd.DataFrame
+    """
     x = utils.init_x(part, None)
     x = [frame for _, frame in x.items()]
     x = pd.concat(x, axis=1)
@@ -35,8 +40,15 @@ def make_dirs(part):
 
 
 def sort_inputs(x_lstg, lookup):
-    x_lstg = x_lstg.sort_values(by=START_PRICE)
-    lookup = lookup.reindex(x_lstg.index)
+    """
+    Sorts lookup in ascending order of start price and
+    aligns x_lstg to match
+    :param pd.DataFrame x_lstg:
+    :param pd.DataFrame lookup:
+    :returns: 2-tuple of x_lstg, lookup
+    """
+    lookup = lookup.sort_values(by=START_PRICE)
+    x_lstg = x_lstg.reindex(lookup.index)
     return x_lstg, lookup
 
 
