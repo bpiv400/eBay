@@ -250,6 +250,7 @@ class Composer:
         print('sourced map: {}'.format(sources[map_name].dtype))
         print('x: {}'.format(x.dtype))
 
+
 class AgentComposer(Composer):
     def __init__(self, params, rebuild=False):
         pass

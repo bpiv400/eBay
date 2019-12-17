@@ -127,10 +127,7 @@ def load_model(full_name):
     :return: PyTorch Module
     """
     sizes = load_sizes(full_name)
-    if full_name != 'arrival':
-        model_path = '{}{}.net'.format(MODEL_DIR, full_name)
-    else:
-        model_path = 'data/outputs/arrival.net'
+    model_path = '{}{}.net'.format(MODEL_DIR, full_name)
     model_class = get_model_class(full_name)
     net = model_class(sizes, dropout=False)  # type: torch.nn.Module
     state_dict = torch.load(model_path, map_location='cpu')

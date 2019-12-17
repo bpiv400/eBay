@@ -1,8 +1,8 @@
 #!/bin/bash
-#$ -t 1-512
+#$ -t 1-300
 #$ -q short.q
 #$ -l m_mem_free=8G
-#$ -N reward_test
+#$ -N feats_slr
 #$ -j y
 #$ -o logs/
 
