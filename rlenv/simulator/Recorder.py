@@ -1,13 +1,13 @@
+from statistics import mean
 import pandas as pd
 import numpy as np
 from compress_pickle import dump
 from rlenv.env_consts import START_DAY, VERBOSE, START_PRICE
-from rlenv.env_utils import chunk_dir
 
 # TODO: MOVE?
 SIM = 'sim'
 INDEX = 'index'
-VAL = 'val'
+VAL = 'value'
 THREAD = 'thread'
 CLOCK = 'clock'
 BYR_HIST = 'byr_hist'
@@ -19,16 +19,20 @@ SALE = 'sale'
 LSTG = 'lstg'
 SE = 'se'
 PRICE = 'price'
+SALE_MEAN = 'price_mean'
+SALE_COUNT = 'sale_count'
+TRIALS = 'trials'
+CUT = 'cut'
 
 OFFER_COLS = [SIM, INDEX, THREAD, CLOCK, CON, NORM, MESSAGE, LSTG]
 THREAD_COLS = [SIM, THREAD, BYR_HIST, LSTG]
 SALE_COLS = [SIM, SALE, DUR, PRICE, LSTG]
-VAL_COLS = [LSTG, VAL, SE]
+VAL_COLS = [LSTG, VAL, SE, SALE_MEAN, SALE_COUNT, TRIALS, CUT]
 
 
 class Recorder:
-    def __init__(self, chunk=None, record_values=False):
-        self.chunk = chunk
+    def __init__(self, records_path, record_values=False):
+        self.records_path = records_path
         self.record_values = record_values
 
         # tracker dictionaries
@@ -70,7 +74,6 @@ class Recorder:
         self.threads[THREAD].append(thread_id)
         self.threads[BYR_HIST].append(byr_hist)
 
-    # probably need to change this
     def reset_sim(self):
         self.sim += 1
 
@@ -132,9 +135,20 @@ class Recorder:
             else:
                 print('Item did not sell')
 
-    def add_val(self, val):
+    def add_val(self, val_calc):
+        """
+        Records statistics related to the value of the current lstg
+        :param val_calc: value calculator object for current lstg
+        :type val_calc: rlenv.ValueCalculator.ValueCalculator
+        :return: None
+        """
         self.values[LSTG].append(self.lstg)
-        self.values[VAL].append(val)
+        self.values[VAL].append(val_calc.mean)
+        self.values[SE].append(val_calc.mean_se)
+        self.values[TRIALS].append(val_calc.exp_count)
+        self.values[SALE_MEAN].append(mean(val_calc.sales))
+        self.values[CUT].append(val_calc.cut)
+        self.values[SALE_COUNT].append(len(val_calc.sales))
 
     def compress_offers(self):
         self.offers[CLOCK] = self.offers[CLOCK].astype(np.int32)
@@ -155,6 +169,9 @@ class Recorder:
         if self.record_values:
             self.values[VAL] = self.values[VAL].astype(np.float32)
             self.values[SE] = self.values[SE].astype(np.float32)
+            self.values[SALE_COUNT] = self.values[SALE_COUNT].astype(np.uint16)
+            self.values[TRIALS] = self.values[TRIALS].astype(np.uint16)
+            self.values[CUT] = self.values[CUT].astype(np.float32)
 
     @staticmethod
     def compress_common_cols(cols, frames, dtypes):
@@ -162,14 +179,7 @@ class Recorder:
             for frame in frames:
                 frame[col] = frame[col].astype(dtypes[i])
 
-    def dump(self, base_dir, recorder_count):
-        # convert all three dictionaries to dataframes
-        self.sales = pd.DataFrame.from_dict(self.sales)
-        self.offers = pd.DataFrame.from_dict(self.offers)
-        self.threads = pd.DataFrame.from_dict(self.threads)
-        if self.record_values:
-            self.values = pd.DataFrame.from_dict(self.values)
-
+    def compress_records(self):
         # maximally compress offers datatypes
         self.compress_offers()
         self.compress_sales()
@@ -184,18 +194,28 @@ class Recorder:
         else:
             frames = [self.threads, self.offers, self.sales]
         self.compress_common_cols([LSTG], frames, [np.int32])
-        # maximally compress threads dataframe
-        chunk_path = chunk_dir(base_dir, self.chunk, records=True,
-                               discrim=not self.record_values)
-        records_path = '{}{}.gz'.format(chunk_path, recorder_count)
+
+    def dump(self, recorder_count):
+        # convert all three dictionaries to dataframes
+        self.sales = pd.DataFrame.from_dict(self.sales)
+        self.offers = pd.DataFrame.from_dict(self.offers)
+        self.threads = pd.DataFrame.from_dict(self.threads)
+        if self.record_values:
+            self.values = pd.DataFrame.from_dict(self.values)
+
+        #compress
+        self.compress_records()
+
+        records_path = '{}{}_records.gz'.format(self.records_path, recorder_count)
         records = {
             'offers': self.offers,
             'threads': self.threads,
             'sales': self.sales
         }
         dump(records, records_path)
+
         if self.record_values:
-            rewards_path = '{}{}.gz'.format(chunk_dir(base_dir, self.chunk, rewards=True), recorder_count)
-            dump(self.values, rewards_path)
+            values_path = '{}{}_vals.gz'.format(self.records_path, recorder_count)
+            dump(self.values, values_path)
         self.reset_recorders()
 

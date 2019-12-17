@@ -6,7 +6,7 @@ from compress_pickle import load
 import pandas as pd
 import numpy as np
 from rlenv.env_consts import *
-from constants import REWARDS_DIR
+from constants import ENV_SIM_DIR
 from utils import unpickle
 from rlenv.interface import model_names
 from rlenv.env_utils import load_featnames, load_sizes
@@ -31,7 +31,7 @@ class Composer:
         """
         maps = dict()
         sizes = dict()
-        x_lstg_path = '{}train_rl/chunks/1.gz'.format(REWARDS_DIR)
+        x_lstg_path = '{}train_rl/chunks/1.gz'.format(ENV_SIM_DIR)
         x_lstg_cols = list(load(x_lstg_path)['x_lstg'].columns)
         thread_cols, x_time_cols = Composer._get_cols(x_lstg_cols)
         thread_cols, x_time_cols = list(thread_cols), list(x_time_cols)

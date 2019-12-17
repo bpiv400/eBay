@@ -1,15 +1,12 @@
-import numpy as np
-from rlenv.time import time_triggers
-from rlenv.env_consts import (MONTH, START_DAY, ACC_PRICE, VERBOSE)
-from rlenv.env_utils import get_clock_feats
+from rlenv.env_consts import (MONTH, START_DAY, VERBOSE)
 from rlenv.simulators import SimulatedSeller, SimulatedBuyer
 from rlenv.events.RewardThread import RewardThread
 from rlenv.environments.EbayEnvironment import EbayEnvironment
 
 
-class RewardEnvironment(EbayEnvironment):
+class SimulatorEnvironment(EbayEnvironment):
     def __init__(self, **kwargs):
-        super(RewardEnvironment, self).__init__(kwargs['arrival'])
+        super(SimulatorEnvironment, self).__init__(kwargs['arrival'])
         # environment interface
         self.buyer = kwargs['buyer']
         self.seller = kwargs['seller']
@@ -26,7 +23,7 @@ class RewardEnvironment(EbayEnvironment):
         self.recorder = kwargs['recorder']
 
     def reset(self):
-        super(RewardEnvironment, self).reset()
+        super(SimulatorEnvironment, self).reset()
         self.recorder.reset_sim()
         if VERBOSE:
             print('Initializing Simulation {}'.format(self.recorder.sim))
@@ -38,7 +35,7 @@ class RewardEnvironment(EbayEnvironment):
         :return: a 3-tuple of (bool, float, int) giving whether the listing sells,
         the amount it sells for if it sells, and the amount of time it took to sell
         """
-        super(RewardEnvironment, self).run()
+        super(SimulatorEnvironment, self).run()
         return self.outcome
 
     def _record(self, event, start_thread=False, byr_hist=None):

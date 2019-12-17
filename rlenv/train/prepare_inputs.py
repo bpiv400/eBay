@@ -4,8 +4,8 @@ import h5py
 import numpy as np
 from compress_pickle import load
 import pandas as pd
-from constants import PARTITIONS, REWARDS_DIR, PARTS_DIR, REINFORCE_INPUT_DIR
-from rlenv.Recorder import LSTG, REWARD
+from constants import PARTITIONS, ENV_SIM_DIR, PARTS_DIR, REINFORCE_INPUT_DIR
+from simulator.Recorder import LSTG, REWARD
 from rlenv.env_consts import X_LSTG_FILENAME, LOOKUP_FILENAME, X_LSTG, LOOKUP
 
 
@@ -29,7 +29,7 @@ def main():
     parser.add_argument('--part', required=True,
                         help='partition to chunk: {}'.format(PARTITIONS))
     part = parser.parse_args().part
-    base_dir = '{}{}/'.format(REWARDS_DIR, part)
+    base_dir = '{}{}/'.format(ENV_SIM_DIR, part)
     reward_dir = '{}rewards'.format(base_dir)
     chunks = [path for path in os.listdir(reward_dir) if os.path.isdir(path)]
     rewards = accumulate_rewards(reward_dir, chunks)
@@ -42,7 +42,7 @@ def main():
     lookup = lookup.drop(columns=['cat'])
     # sort x_lstg and lookup
 
-    # add rewards to lookup
+    # add simulator to lookup
     lookup['reward'] = rewards
     path = '{}{}.gz'.format(REINFORCE_INPUT_DIR, part)
     store_inputs(x_lstg, lookup, path)

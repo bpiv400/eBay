@@ -6,12 +6,14 @@ import numpy as np
 import pandas as pd
 import utils
 from torch.distributions.categorical import Categorical
-from constants import (INPUT_DIR, START, HOLIDAYS, TOL_HALF, MODEL_DIR)
+from constants import (INPUT_DIR, START, HOLIDAYS, TOL_HALF,
+                       MODEL_DIR, ENV_SIM_DIR)
 from rlenv.interface.model_names import LSTM_MODELS
 from rlenv.composer.maps import THREAD_MAP
 from models.nets import FeedForward, LSTM
 from rlenv.env_consts import (META_6, META_7, DAY, NORM, ALL_OUTCOMES,
-                              AUTO, REJECT, EXP)
+                              AUTO, REJECT, EXP, SIM_CHUNKS_DIR,
+                              SIM_VALS_DIR, SIM_DISCRIM_DIR)
 
 
 def load_featnames(full_name):
@@ -106,17 +108,16 @@ def prev_norm(sources, turn):
     return out
 
 
-def chunk_dir(part_dir, chunk_num, records=False, rewards=False, discrim=False):
-    if records:
-        if discrim:
-            insert = 'discrim'
-        else:
-            insert = 'records'
-    elif rewards:
-        insert = 'rewards'
+def get_chunk_dir(part_dir, chunk_num, discrim=False):
+    """
+    Gets the path to the data directory containing output files
+    for the given environment simulation chunk
+    """
+    if discrim:
+        subdir = get_env_sim_subdir(base_dir=part_dir, discrim=True)
     else:
-        raise RuntimeError('invalid chunk dir params')
-    return '{}{}/{}/'.format(part_dir, insert, chunk_num)
+        subdir = get_env_sim_subdir(base_dir=part_dir, values=True)
+    return '{}{}/'.format(subdir, chunk_num)
 
 
 def load_model(full_name):
@@ -169,3 +170,38 @@ def slr_rej(sources, turn, expire=False):
     else:
         outcomes[featname(EXP, turn)] = 1
     return outcomes
+
+
+def get_checkpoint_path(part_dir, chunk_num, discrim=False):
+    """
+    Returns path to checkpoint file for the given chunk
+    and environment simulation (discrim or values)
+    """
+    if discrim:
+        insert = 'discrim'
+    else:
+        insert = 'val'
+    return '{}chunks/{}_check_{}.gz'.format(part_dir, chunk_num, insert)
+
+
+def get_env_sim_dir(part):
+    return '{}{}/'.format(ENV_SIM_DIR, part)
+
+
+def get_env_sim_subdir(part=None, base_dir=None,
+                       chunks=False, values=False, discrim=False):
+    """
+    Returns the path to a chosen data subdirectory of the current
+    environment simulation
+    """
+    if part is not None:
+        base_dir = get_env_sim_dir(part)
+    if chunks:
+        subdir = SIM_CHUNKS_DIR
+    elif values:
+        subdir = SIM_VALS_DIR
+    elif discrim:
+        subdir = SIM_DISCRIM_DIR
+    else:
+        raise RuntimeError("No subdir specified")
+    return '{}{}'.format(base_dir, subdir)

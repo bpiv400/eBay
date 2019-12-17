@@ -92,10 +92,12 @@ LOOKUP = 'lookup'
 
 # filenames
 COMPOSER_DIR = '{}composer/'.format(INPUT_DIR)
-REWARD_EXPERIMENT_PATH = 'repo/rlenv/rewards/experiments.csv'
 AGENT_FEATS_FILENAME = 'agent_feats.xlsx'
 LOOKUP_FILENAME = 'lookup.gz'
 X_LSTG_FILENAME = 'x_lstg.gz'
+SIM_CHUNKS_DIR = 'chunks'
+SIM_VALS_DIR = 'vals'
+SIM_DISCRIM_DIR = 'discrim'
 
 # temporal constants
 MONTH = 31 * 24 * 3600
@@ -138,8 +140,6 @@ DUR = 'dur'
 PRICE = 'price'
 
 # param names
-VAL_SE_TOL = 'val_se_tol'
-VAL_SE_CHECK = 'val_se_check'
-AGENT = 'agent'
-SIM_COUNT = 'n'
-GEN_VALUES = 'values'
+VAL_SE_TOL = 1.25
+VAL_SE_CHECK = 50
+SIM_COUNT = 5
