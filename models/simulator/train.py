@@ -22,7 +22,7 @@ if __name__ == '__main__':
     print(sizes)
 
     # load datasets
-    train = Inputs('small', model)
+    train = Inputs('train_models', model)
     test = Inputs('train_rl', model)
 
     # initialize trainer object
