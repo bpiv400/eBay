@@ -96,6 +96,7 @@ def process_inputs(part, outcome, role):
 	# add thread features and turn indicators to listing features
 	x_thread.loc[:, 'byr_hist'] = x_thread.byr_hist.astype('float32') / 10
 	x['lstg'] = x['lstg'].join(x_thread)
+	x['lstg'] = add_turn_indicators(x['lstg'])
 
 	# dataframe of offer features for relevant threads
 	threads = idx.droplevel(level='index').unique()
