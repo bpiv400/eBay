@@ -5,7 +5,7 @@ import os
 import sys
 import shutil
 from datetime import datetime
-from statistics import mean
+from statistics import mean, variance
 from compress_pickle import load, dump
 import pandas as pd
 import numpy as np
@@ -285,8 +285,10 @@ class RewardGenerator:
             else:
                 print('cut: {}'.format(val_calc.cut))
                 print('rate of no sale: {}'.format(val_calc.p))
-                print('sale count: {} | price mean: {}'.format(len(val_calc.sales),
-                                                               mean(val_calc.sales)))
+                price_header = 'sale count: {} | price mean: {}'.format(len(val_calc.sales),
+                                                                        mean(val_calc.sales))
+                price_header = '{} | price var: {}'.format(price_header, variance(val_calc.sales))
+                print(price_header)
                 print('mean of value: {} | mean standard error: {}'.format(val_calc.mean,
                                                                            val_calc.mean_se))
                 print('Predicted trials remaining: {}'.format(val_calc.trials_until_stable))
