@@ -205,3 +205,11 @@ def get_env_sim_subdir(part=None, base_dir=None, chunks=False,
     else:
         raise RuntimeError("No subdir specified")
     return '{}{}/'.format(base_dir, subdir)
+
+
+def get_done_file(record_dir, num):
+    """
+    Generates path to the done file for the given records path and
+    chunk number
+    """
+    return '{}done_{}.txt'.format(record_dir, num)

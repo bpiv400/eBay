@@ -2,11 +2,18 @@
 Generates simulator for a chunk of the lstgs in a partition
 """
 import argparse
+import os
 import torch
 from constants import PARTITIONS
-from rlenv.env_utils import get_env_sim_dir
+from rlenv.env_utils import get_env_sim_dir, get_env_sim_subdir, get_done_file
 from rlenv.simulator.values.ValueGenerator import ValueGenerator
 from rlenv.simulator.discrim.DiscrimGenerator import DiscrimGenerator
+
+
+def chunk_done(part, num, values):
+    records_dir = get_env_sim_subdir(part, values=values, discrim=not values)
+    path = get_done_file(records_dir, num)
+    return os.path.isfile(path)
 
 
 def main():
@@ -26,6 +33,10 @@ def main():
     if part not in PARTITIONS:
         raise RuntimeError('part must be one of: {}'.format(PARTITIONS))
     base_dir = get_env_sim_dir(part)
+
+    if chunk_done(part, num, values):
+        print('{} already done'.format(num))
+        exit(0)
 
     if values:
         gen_class = ValueGenerator

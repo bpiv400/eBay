@@ -2,14 +2,13 @@ import argparse
 import os
 from constants import PARTITIONS
 from rlenv.env_consts import NUM_CHUNKS
-from rlenv.env_utils import get_env_sim_subdir
+from rlenv.env_utils import get_env_sim_subdir, get_done_file
 
 
 def check_done(part, values):
     subdir = get_env_sim_subdir(part, values=values, discrim=not values)
     for chunk in range(NUM_CHUNKS):
-        chunk_path = '{}done_{}.txt'.format(subdir, chunk + 1)
-        print(chunk_path)
+        chunk_path = get_done_file(subdir, chunk + 1)
         if not os.path.isfile(chunk_path):
             exit(0)
     print('got through all')

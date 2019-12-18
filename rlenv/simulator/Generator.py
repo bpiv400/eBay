@@ -140,6 +140,11 @@ class Generator:
         self.recorder.dump(self.dir, self.recorder_count)
         self._delete_checkpoint()
         self._report_time()
+        self._generate_done()
+
+    def _generate_done(self):
+        path = '{}done_{}.txt'.format(self.records_path, self.chunk)
+        open(path, 'a').close()
 
     def _report_time(self):
         """
