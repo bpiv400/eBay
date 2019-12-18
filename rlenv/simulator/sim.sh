@@ -38,6 +38,8 @@ then
 elif [ "$SIM_TYPE" = "discrim" ]
 then
     SIM_ARG="";
+    echo "Discrim"
+    echo "${SIM_ARG}"
 else
     broken
 fi

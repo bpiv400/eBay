@@ -21,6 +21,8 @@ def main():
                         help='flag for whether to check value creation')
     parser.add_argument('--part', type=str, help='one of {}'.format(PARTITIONS))
     args = parser.parse_args()
+    print('part: {}'.format(args.part))
+    print('vals: {}'.format(args.values))
     if args.part not in PARTITIONS:
         raise RuntimeError()
     check_done(args.part, args.values)
