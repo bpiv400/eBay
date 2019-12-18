@@ -42,7 +42,7 @@ else
     broken
 fi
 
-if [ ! python repo/rlenv/simulator/check_done.py --part ${PART} ${SIM_ARG} ]
+if ! python repo/rlenv/simulator/check_done.py --part "${PART}" "${SIM_ARG}"
 then
     echo "The simulation has already been completed."
     echo "Please delete the files in ${PART}/done/${SIM_TYPE}/ and re-run this script"
