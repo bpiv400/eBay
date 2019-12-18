@@ -10,8 +10,10 @@ def check_done(part, values):
     subdir = get_env_sim_subdir(part, values=values, discrim=not values)
     for chunk in range(NUM_CHUNKS):
         chunk_path = '{}done_{}.txt'.format(subdir, chunk + 1)
+        print(chunk_path)
         if not os.path.isfile(chunk_path):
             exit(0)
+    print('got through all')
     exit(1)
 
 
