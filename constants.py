@@ -22,7 +22,7 @@ SHARES = {'train_models': 0.6, 'train_rl': 0.2}
 TOL_HALF = 0.02
 
 # optimization parameters
-NUM_WORKERS = 8 if torch.cuda.is_available() else 0
+NUM_WORKERS = 2 if torch.cuda.is_available() else 0
 MBSIZE = {True: 128, False: 2000}
 LOGLR0 = -3
 LOGLR1 = -6
