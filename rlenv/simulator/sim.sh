@@ -1,5 +1,6 @@
 type_passed=false
 part_passed=false
+SCRIPT_PATH=repo/rlenv/simulator/check_done.py
 
 broken () {
     echo "-t and -p must be given as an argument. Use -h for more information"
@@ -13,6 +14,12 @@ usage () {
     echo - e"\t -t: type of simulation -- one of [val, discrim]";
     echo -e "\t -p: partition of data -- one of [train_rl, train_models, test]";
     exit;
+}
+
+sim_done () {
+  echo "The simulation has already been completed."
+  echo "Please delete the done files in ${PART}/${SIM_TYPE}/ and re-run this script"
+  exit;
 }
 
 while getopts t:hp: option
@@ -34,17 +41,16 @@ fi
 # get argument value from 
 if [ "$SIM_TYPE" = "val" ]
 then
-    SIM_ARG="--values";
+    if ! python "${SCRIPT_PATH}" --part "${PART}" --values
+    then
+      sim_done
+    fi
 elif [ "$SIM_TYPE" = "discrim" ]
 then
-    SIM_ARG="";
+    if ! python "${SCRIPT_PATH}" --part "${PART}"
+    then
+      sim_done
+    fi
 else
     broken
 fi
-
-if ! python repo/rlenv/simulator/check_done.py --part "${PART}" "${SIM_ARG}"
-then
-    echo "The simulation has already been completed."
-    echo "Please delete the files in ${PART}/done/${SIM_TYPE}/ and re-run this script"
-fi
-
