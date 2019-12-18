@@ -100,7 +100,7 @@ class Trainer:
             torch.save(self.model.net.state_dict(), model_path)
 
             # reduce learning rate until convergence
-            if output['loss'] >= last:
+            if output['loss'] > FTOL * last:
                 if self.loglr == LOGLR1:
                     self.iter += 1
                     writer.close()

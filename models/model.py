@@ -13,6 +13,7 @@ class Model:
         :param dropout: True if using dropout.
         :param device: either 'cuda' or 'cpu'
         '''
+        self.name = name
         self.dropout = dropout
         self.device = device
 
@@ -26,7 +27,7 @@ class Model:
         if name in ['hist', 'con_slr', 'con_byr']:
             self.loss = nn.CrossEntropyLoss(reduction='sum')
         elif name == 'arrival':
-            self.loss = nn.PoissonNLLLoss(log_input=True, reduction='sum')
+            self.loss = nn.PoissonNLLLoss(log_input=False, reduction='sum')
         else:
             self.loss = nn.BCEWithLogitsLoss(reduction='sum')
 
@@ -64,35 +65,48 @@ class Model:
 
 
     def get_loss(self, theta, y):
-        # recurrent models
-        if self.isRecurrent:
-            mask = y > -1
-            return self.loss(theta[mask], y[mask])
-
-        # feed-forward models
+        # binary cross entropy requires float
         if str(self.loss) == "BCEWithLogitsLoss()":
             y = y.float()
 
+        # recurrent models
+        if self.isRecurrent:
+            mask = y > -1
+            theta = theta[mask]
+            y = y[mask]
+
+        # zero-inflated poisson for arrival model
+        if self.name == 'arrival':
+            pi = torch.sigmoid(theta[:,0])
+            lamb = torch.exp(theta[:,1])
+
+            pi0 = pi[y == 0]
+            loss0 = -torch.sum(torch.log(pi0 + (1-pi0) * torch.exp(-lamb[y == 0])))
+            loss1 = -torch.sum(torch.log(1-pi[y > 0]))
+            loss2 = self.loss(lamb[y > 0], y[y > 0])
+
+            return loss0 + loss1 + loss2
+
+        # feed-forward models
         return self.loss(theta, y)
-
-
-    def simulate(self, d):
-        if 'x_time' in d:
-            return self.net(d['x'], d['x_time']).squeeze()
-        else:
-            return self.net(d['x']).squeeze()
 
 
     def move_to_device(self, b):
         '''
-        Helper function to move batch to device.
-        :param b: batch of (dictionary of) tensors.
+        :param b: batch as a dictionary.
+        :return: batch as a dictionary with components on self.device.
         '''
-        b['x'] = {k: v.to(self.device) for k, v in b['x'].items()}
-        b['y'] = b['y'].to(self.device)
-        if 'x_time' in b:
-            b['x_time'] = b['x_time'].to(self.device)
-        return b
+        if self.device != 'cpu':
+            b['x'] = {k: v.to(self.device) for k, v in b['x'].items()}
+            b['y'] = b['y'].to(self.device)
+            if 'x_time' in b:
+                b['x_time'] = b['x_time'].to(self.device)
+
+
+    def simulate(self, d):
+        if self.isRecurrent:
+            return self.net(d['x'], d['x_time']).squeeze()
+        return self.net(d['x']).squeeze()
 
 
     def run_batch(self, b, optimizer):
@@ -139,7 +153,10 @@ class Model:
         # loop over batches, calculate log-likelihood
         loss = 0.0
         for b in batches:
+            # move to device
             self.move_to_device(b)
+
+            # increment log-likelihood
             loss += self.run_batch(b, optimizer)
 
         return loss

@@ -175,8 +175,8 @@ class FeedForward(nn.Module):
 class LSTM(nn.Module):
     def __init__(self, sizes, dropout=True):
         '''
-        sizes: dictionary of scalar input sizes; sizes['x'] is an OrderedDict
-        dropout: True if using dropout for fully-connected layers
+        :param sizes: dictionary of scalar input sizes; sizes['x'] is an OrderedDict
+        :param dropout: True if using dropout for fully-connected layers
         '''
         super(LSTM, self).__init__()
 
@@ -197,11 +197,13 @@ class LSTM(nn.Module):
 
     def forward(self, x, x_time):
         '''
-        x: OrderedDict()
-        x_time: tensor of shape [mbsize, sizes['steps'], sizes['x_time']]
+        :param d: dictionary with entries:
+            x: OrderedDict()
+            x_time: tensor of shape [mbsize, sizes['steps'], sizes['x_time']]
         '''
         # initialize hidden state
-        hidden = (self.h0(x).unsqueeze(dim=0), self.c0(x).unsqueeze(dim=0))
+        hidden = (self.h0(x).unsqueeze(dim=0), 
+            self.c0(x).unsqueeze(dim=0))
 
         # update hidden state recurrently
         theta, _ = self.rnn(x_time, hidden)
@@ -214,8 +216,8 @@ class LSTM(nn.Module):
         return self.output(theta).squeeze()
 
     def init(self, x=None):
-        hidden = (self.h0(x).unsqueeze(dim=0), self.c0(x).unsqueeze(dim=0))
-        return hidden
+        return (self.h0(x).unsqueeze(dim=0), 
+            self.c0(x).unsqueeze(dim=0))
 
     def step(self, x_time=None, hidden=None, x=None):
         """

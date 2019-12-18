@@ -42,10 +42,9 @@ if __name__ == '__main__':
 	# add in arrivals
 	x['arrivals'] = pd.concat([counts_obs, counts_sim], axis=0)
 
-	# y=1 indicates simulated
-	y = pd.Series(False, index=x['arrivals'].index, dtype=bool)
-	y.iloc[N:] = True
-	assert y.mean() == 0.5
+	# y=True indicates observed
+	y = pd.Series(True, index=x['arrivals'].index, dtype=bool)
+	y.iloc[N:] = False
 
 	# combine into single dictionary
 	d = {'y': y.astype('int8', inplace=True), 'x': x}
