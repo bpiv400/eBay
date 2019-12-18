@@ -1,9 +1,9 @@
 from statistics import mean, variance
-
-from ValueCalculator import ValueCalculator
-from env_consts import VAL_SE_CHECK
-from env_utils import get_checkpoint_path, get_chunk_dir
-from simulator.Generator import Generator
+from rlenv.env_consts import VAL_SE_CHECK
+from rlenv.env_utils import get_checkpoint_path, get_chunk_dir
+from rlenv.simulator.Generator import Generator
+from rlenv.simulator.values.ValueCalculator import ValueCalculator
+from rlenv.simulator.values.ValueRecorder import ValueRecorder
 
 
 class ValueGenerator(Generator):
@@ -11,6 +11,7 @@ class ValueGenerator(Generator):
         super(ValueGenerator, self).__init__(direct=direct, num=num)
         # noinspection PyTypeChecker
         self.val_calc = None  # type: ValueCalculator
+        self.recorder = ValueRecorder(self.records_path)
 
     def setup_env(self, lstg, lookup):
         """

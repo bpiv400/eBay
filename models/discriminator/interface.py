@@ -13,7 +13,7 @@ class Inputs(Dataset):
     def __init__(self, part):
 
         # save data and parameters to self
-        self.d = load('%s/inputs/%s/discriminator%s.gz' % (PREFIX, part))
+        self.d = load('%s/inputs/%s/discrim%s.gz' % (PREFIX, part))
         self.model = model
 
         # number of examples

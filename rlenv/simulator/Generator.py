@@ -1,5 +1,5 @@
 """
-Generates values or discriminator inputs for a chunk of lstgs
+Generates values or discrim inputs for a chunk of lstgs
 """
 import os
 import sys
@@ -21,7 +21,7 @@ class Generator:
         x_lstg: pd.Dataframe containing the x_lstg (x_w2v, x_slr, x_cat, x_cndtn, etc...) for each listing
         lookup: pd.Dataframe containing features of each listing used to control environment behavior and outputs
             (e.g. list price, auto reject price, auto accept price, meta category, etc..)
-        recorder: Recorder object that stores environment outputs (e.g. discriminator features,
+        recorder: Recorder object that stores environment outputs (e.g. discrim features,
             events df, etc...)
         buyer: PlayerInterface containing buyer models
         seller: PlayerInterface containing seller models
@@ -33,7 +33,7 @@ class Generator:
         start: time that the current iteration of RewardGenerator began
         has_checkpoint: whether a recent checkpoint file has been created for this environment
     Public Functions:
-        generate: generates values or discriminator inputs based on the lstgs in the current chunk
+        generate: generates values or discrim inputs based on the lstgs in the current chunk
     Static Methods:
         remake_dir: deletes and regenerates a given directory
         header: prints a header giving basic info for a lstg
@@ -49,7 +49,7 @@ class Generator:
         input_dict = load('{}chunks/{}.gz'.format(self.dir, self.chunk))
         self.x_lstg = input_dict['x_lstg']
         self.lookup = input_dict['lookup']
-        self.recorder = Recorder(self.records_path)
+        self.recorder = None
         composer = Composer(rebuild=False)
         self.buyer = PlayerInterface(composer=composer, byr=True)
         self.seller = PlayerInterface(composer=composer, byr=False)

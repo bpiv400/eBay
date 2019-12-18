@@ -38,11 +38,12 @@ class SimulatorEnvironment(EbayEnvironment):
         super(SimulatorEnvironment, self).run()
         return self.outcome
 
-    def _record(self, event, start_thread=False, byr_hist=None):
-        if not start_thread:
+    def _record(self, event, byr_hist=None):
+        if byr_hist is None:
             self.recorder.add_offer(event)
         else:
-            self.recorder.start_thread(thread_id=event.thread_id, byr_hist=byr_hist)
+            self.recorder.start_thread(thread_id=event.thread_id, byr_hist=byr_hist,
+                                       time=event.priority)
 
     def _check_complete(self, event):
         return False

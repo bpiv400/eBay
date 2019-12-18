@@ -76,7 +76,7 @@ class EbayEnvironment:
         else:
             raise NotImplementedError()
 
-    def _record(self, event, start_thread=None, byr_hist=None):
+    def _record(self, event, byr_hist=None):
         raise NotImplementedError()
 
     def _process_byr_offer(self, event):
@@ -127,8 +127,7 @@ class EbayEnvironment:
         else:
             start_norm = 1 - offer['price']
         sale_price = start_norm * self.lookup[START_PRICE]
-        dur = offer['time'] - self.lookup[START_DAY]
-        self.outcome = self.Outcome(True, sale_price, dur)
+        self.outcome = self.Outcome(True, sale_price, offer['time'])
 
     def _process_slr_offer(self, event):
         return self._process_offer(event)
@@ -156,7 +155,7 @@ class EbayEnvironment:
         if VERBOSE:
             print('Thread {} initiated | Buyer hist: {}'.format(event.thread_id, hist))
         event.init_thread(sources=sources, hist=hist)
-        self._record(event, start_thread=True, byr_hist=hist)
+        self._record(event, byr_hist=hist)
         return self._process_byr_offer(event)
 
     def _prepare_offer(self, event):

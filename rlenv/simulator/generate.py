@@ -6,7 +6,7 @@ import torch
 from constants import PARTITIONS
 from rlenv.env_utils import get_env_sim_dir
 from rlenv.simulator.values.ValueGenerator import ValueGenerator
-from rlenv.simulator.discriminator.DiscrimGenerator import DiscrimGenerator
+from rlenv.simulator.discrim.DiscrimGenerator import DiscrimGenerator
 
 
 def main():

@@ -1,11 +1,13 @@
-from env_consts import SIM_COUNT
-from env_utils import get_checkpoint_path, get_chunk_dir
-from simulator.Generator import Generator
+from rlenv.env_consts import SIM_COUNT
+from rlenv.env_utils import get_checkpoint_path, get_chunk_dir
+from rlenv.simulator.Generator import Generator
+from rlenv.simulator.discrim.DiscrimRecorder import DiscrimRecorder
 
 
 class DiscrimGenerator(Generator):
     def __init__(self, direct=None, num=None):
         super(DiscrimGenerator, self).__init__(direct=direct, num=num)
+        self.recorder = DiscrimRecorder(self.records_path)
 
     def simulate_lstg_loop(self, environment):
         """
