@@ -3,7 +3,7 @@ part_passed=false
 SCRIPT_PATH=repo/rlenv/simulator/check_done.py
 
 broken () {
-    echo "-t and -p must be given as an argument. Use -h for more information"
+    echo "[-t] or [-p] forgotten or invalid. Use [-h] for more information"
     exit 1;
 }
 
@@ -18,7 +18,7 @@ usage () {
 
 sim_done () {
   echo "The simulation has already been completed."
-  echo "Please delete the done files in ${PART}/${SIM_TYPE}/ and re-run this script"
+  echo "Please run rm done_* in ${PART}/${SIM_TYPE}/, then re-run this script to run the simulation"
   exit;
 }
 
