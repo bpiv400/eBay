@@ -3,35 +3,35 @@ import torch, torch.optim as optim
 import numpy as np, pandas as pd
 from datetime import datetime as dt
 from compress_pickle import load
-from models.simulator.interface import Inputs, run_loop
-from models.simulator.model import Simulator
+from models.inputs import eBayDataset
+from models.model import Model
 from constants import *
 
 
 if __name__ == '__main__':
     # extract parameters from command line
-    parser = argparse.ArgumentParser(description='Training development.')
-    parser.add_argument('--model', type=str, 
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--name', type=str, 
         help='One of arrival, hist, [delay/con/msg]_[byr/slr].')
     args = parser.parse_args()
-    model = args.model
+    name = args.name
 
     # load model sizes
     print('Loading parameters')
-    sizes = load('%s/inputs/sizes/%s.pkl' % (PREFIX, model))
+    sizes = load('%s/inputs/sizes/%s.pkl' % (PREFIX, name))
     print(sizes)
 
     # initialize neural net
-    simulator = Simulator(model, sizes, dropout=False)
-    print(simulator.net)
-    print(simulator.loss)
+    model = Model(name, sizes)
+    print(model.net)
+    print(model.loss)
 
     # initialize optimizer with default learning rate
-    optimizer = optim.Adam(simulator.net.parameters())
+    optimizer = optim.Adam(model.net.parameters())
     print(optimizer)
 
     # load data
-    train = Inputs('small', model)
+    train = eBayDataset('small', name)
 
     # training
     for epoch in range(10):
@@ -39,12 +39,12 @@ if __name__ == '__main__':
 
         # training
         t0 = dt.now()
-        loss = run_loop(simulator, train, optimizer)
+        loss = model.run_loop(train, optimizer)
         print('\tloss: %d' % loss)
 
         sec = (dt.now() - t0).total_seconds()
         print('\ttime: %d sec' % sec)
 
     # # save model
-    # torch.save(simulator.net.state_dict(),
-    #     MODEL_DIR + 'small/%s.net' % model)
+    # torch.save(model.net.state_dict(),
+    #     MODEL_DIR + 'small/%s.net' % name)

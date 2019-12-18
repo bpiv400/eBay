@@ -195,24 +195,9 @@ def get_sizes(d, model):
     return sizes
 
 
-# helper function to construct groups of equal number of turns
-def create_groups(d):
-    '''
-    d: dictionary with numpy arrays.
-    '''
-
-    # save list of arrays of indices with same number of turns
-    if len(np.shape(d['y'])) > 1:
-        turns = np.sum(d['y'] > -1, axis=1)
-        return [np.nonzero(turns == n)[0] for n in np.unique(turns)]
-
-    # for feed-forward nets, create single vector of indices
-    return [np.array(range(np.shape(d['x']['lstg'])[0]))]
-
-
-# converts dictionary of dataframes to dictionary of numpy arrays
 def convert_to_numpy(d):
     '''
+    Converts dictionary of dataframes to dictionary of numpy arrays.
     d: dictionary with dataframes.
     '''
 
@@ -240,7 +225,10 @@ def convert_to_numpy(d):
             d[k] = d[k].to_numpy()
 
     # get groups for sampling
-    d['groups'] = create_groups(d)
+    if len(np.shape(d['y'])) > 1:
+        turns = np.sum(d['y'] > -1, axis=1)
+        d['groups'] = [np.nonzero(turns == n)[0] \
+            for n in np.unique(turns)]
 
     return d
 
@@ -264,6 +252,10 @@ def create_small(d):
         turns = np.sum(y > -1, axis=1)
         idx = idx[np.argsort(-turns)]
 
+        # groups for sampling
+        small['groups'] = [np.nonzero(turns == n)[0] \
+            for n in np.unique(turns)]
+
     # directly subsample
     for k in ['y', 'idx_clock', 'remaining']:
         if k in d:
@@ -284,8 +276,5 @@ def create_small(d):
         for i in idx:
             if i in d['tf']:
                 small['tf'][i] = d['tf'][i]
-
-    # get groups for sampling
-    small['groups'] = create_groups(small)
 
     return small

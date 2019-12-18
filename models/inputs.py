@@ -3,23 +3,29 @@ import numpy as np, pandas as pd
 import torch
 from torch.nn.utils import rnn
 from datetime import datetime as dt
-from torch.utils.data import DataLoader, Dataset, Sampler
+from torch.utils.data import Dataset
 from compress_pickle import load
 from constants import *
 
 
-# defines a dataset that extends torch.utils.data.Dataset
-class Inputs(Dataset):
-
-    def __init__(self, part, model):
-
-        # save data and parameters to self
-        self.d = load('%s/inputs/%s/%s.gz' % (PREFIX, part, model))
-        self.model = model
-        self.isRecurrent = len(np.shape(self.d['y'])) > 1
+class eBayDataset(Dataset):
+    def __init__(self, part, name):
+        '''
+        Defines a dataset that extends torch.utils.data.Dataset
+        :param part: string partition name (e.g., train_models).
+        :param name: string model name, either 'listings' or 'threads'.
+        '''
+        self.d = load('%s/inputs/%s/%s.gz' % (PREFIX, part, name))
 
         # number of examples
         self.N = np.shape(self.d['y'])[0]
+
+        # create single group if groups do not exist
+        if 'groups' not in self.d:
+            self.d['groups'] = [np.array(range(self.N))]
+
+        # recurrent or feed-forward
+        self.isRecurrent = len(np.shape(self.d['y'])) > 1
         
         # number of labels, for normalizing loss
         if self.isRecurrent:
@@ -27,13 +33,16 @@ class Inputs(Dataset):
         else:
             self.N_labels = self.N
 
+        # collate function
+        self.collate = collateRNN if self.isRecurrent else collateFF
+
         # for arrival and delay models
         if 'tf' in self.d:
             # number of time steps
             self.n = np.shape(self.d['y'])[1]
 
             # counter for expanding clock features
-            role = model.split('_')[-1]
+            role = name.split('_')[-1]
             interval = int(INTERVAL[role] / 60) # interval in minutes
             self.counter = interval * np.array(range(self.n), dtype='uint16')
 
@@ -51,10 +60,12 @@ class Inputs(Dataset):
 
 
     def __getitem__(self, idx):
-        # all models index y using idx
+        '''
+        Returns a tuple of data components for example.
+        :param idx: index of example.
+        :return: tuple of data components at index idx.
+        '''
         y = self.d['y'][idx]
-
-        # index in dictionary
         x = {k: v[idx, :] for k, v in self.d['x'].items()}
 
         # feed-forward models
@@ -89,103 +100,12 @@ class Inputs(Dataset):
         return self.N
 
 
-# defines a sampler that extends torch.utils.data.Sampler
-class Sample(Sampler):
-
-    def __init__(self, data, isTraining):
-        """
-        data: instance of Inputs
-        isTraining: chop into minibatches if True
-        """
-        super().__init__(None)
-
-        # chop into minibatches; shuffle for training
-        self.batches = []
-        for v in data.d['groups']:
-            if isTraining:
-                np.random.shuffle(v)
-            self.batches += np.array_split(v, 
-                1 + len(v) // MBSIZE[isTraining])
-        # shuffle training batches
-        if isTraining:
-            np.random.shuffle(self.batches)
-
-
-    def __iter__(self):
-        """
-        Iterate over batches defined in intialization
-        """
-        for batch in self.batches:
-            yield batch
-
-    def __len__(self):
-        return len(self.batches)
-
-
-# helper function to run a loop of the model
-def run_loop(simulator, data, optimizer=None):
-    # training or validation
-    isTraining = optimizer is not None
-
-    # collate function
-    f = collateRNN if data.isRecurrent else collateFF
-
-    # sampler
-    sampler = Sample(data, isTraining)
-
-    # load batches
-    batches = DataLoader(data, batch_sampler=sampler,
-        collate_fn=f, num_workers=NUM_WORKERS, pin_memory=True)
-
-    # loop over batches, calculate log-likelihood
-    loss = 0.0
-    for b in batches:
-        # multiplicative factor for regularization term in minibatch
-        if 'turns' in b:
-            factor = float(torch.sum(b['turns']).item()) / data.N_labels
-        else:
-            factor = float(b['y'].size()[0]) / data.N_labels
-        
-        # move to device
-        b['x'] = {k: v.to(simulator.device) for k, v in b['x'].items()}
-        b['y'] = b['y'].to(simulator.device)
-        if 'x_time' in b:
-            b['x_time'] = b['x_time'].to(simulator.device)
-
-        # add minibatch loss
-        loss += simulator.run_batch(b, factor, optimizer)
-
-    return loss
-
-
-# helper function for predicting outcome
-def predict_theta(simulator, data):
-    # collate function
-    f = collateRNN if data.isRecurrent else collateFF
-
-    # sampler
-    sampler = Sample(data, False)
-
-    # load batches
-    batches = DataLoader(data, batch_sampler=sampler,
-        collate_fn=f, num_workers=NUM_WORKERS, pin_memory=True)
-    
-    # predict theta
-    theta = []
-    for b in batches:
-        # move to device
-        b['x'] = {k: v.to(simulator.device) for k, v in b['x'].items()}
-        b['y'] = b['y'].to(simulator.device)
-        if 'x_time' in b:
-            b['x_time'] = b['x_time'].to(simulator.device)
-
-        theta.append(simulator.simulate(b))
-
-    return torch.cat(theta)
-
-
-# collate function for feedforward networks
 def collateFF(batch):
+    '''
+    Converts examples to tensors for a feed-forward network.
+    :param batch: list of (dictionary of) numpy arrays.
+    :return: dictionary of (dictionary of) tensors.
+    '''
     y, x = [], {}
     for b in batch:
         y.append(b[0])
@@ -203,9 +123,12 @@ def collateFF(batch):
     return {'y': y, 'x': x}
 
 
-# collate function for recurrent networks
 def collateRNN(batch):
-    # initialize output
+    '''
+    Converts examples to tensors for a recurrent network.
+    :param batch: list of (dictionary of) numpy arrays.
+    :return: dictionary of (dictionary of) tensors.
+    '''
     y, x, x_time = [], {}, []
 
     # sorts the batch list in decreasing order of turns
