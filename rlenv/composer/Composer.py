@@ -16,11 +16,12 @@ class Composer:
     """
     Class for composing inputs to interface from various input streams
     """
-    def __init__(self, params, rebuild=False):
+    def __init__(self, rebuild=False):
         composer_path = '{}composer.pkl'.format(COMPOSER_DIR)
         if not os.path.exists(composer_path) or rebuild:
-            self.maps, self.sizes, self.feat_sets = Composer.build_models()
-            pickle.dump((self.maps, self.sizes, self.feat_sets), open(composer_path, 'wb'))
+            composer_contents = Composer.build_models()
+            self.maps, self.sizes, self.feat_sets = composer_contents
+            pickle.dump(composer_contents, open(composer_path, 'wb'))
         else:
             self.maps, self.sizes, self.feat_sets = unpickle(composer_path)
 
@@ -197,7 +198,7 @@ class Composer:
             try:
                 x[0, curr_map] = torch.from_numpy(sources[map_name][curr_map.index].values).float()
             except RuntimeError as e:
-                Composer.catch_input_error(e, curr_map, sources, map_name)
+                Composer.catch_input_error(e, x, curr_map, sources, map_name)
                 raise RuntimeError()
         return x
 
@@ -241,7 +242,7 @@ class Composer:
         return self.feat_sets[LSTG_MAP]
 
     @staticmethod
-    def catch_input_error(e, curr_map, sources, map_name):
+    def catch_input_error(e, x, curr_map, sources, map_name):
         print('NAME')
         print(e)
         print(map_name)

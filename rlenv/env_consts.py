@@ -140,6 +140,7 @@ DUR = 'dur'
 PRICE = 'price'
 
 # param names
-VAL_SE_TOL = 1.25
 VAL_SE_CHECK = 50
 SIM_COUNT = 5
+SE_TOLS = [.5, .75, 1.0, 1.25]
+SE_RELAX_WIDTH = 10000

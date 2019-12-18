@@ -1,23 +1,30 @@
 import math
 import numpy as np
 from rlenv.env_utils import get_cut
-from rlenv.env_consts import META, ANCHOR_STORE_INSERT
+from rlenv.env_consts import META, ANCHOR_STORE_INSERT, SE_TOLS, SE_RELAX_WIDTH
 
 
 class ValueCalculator:
-    def __init__(self, tol, lookup):
+    def __init__(self, lookup):
         self.sale_sum = 0
         self.exp_count = 0
         self.cut = 0
         self.sales = []
         self.cut = get_cut(lookup[META])
-        self.val_se_tol = tol
+        self.se_tol = SE_TOLS[0]
+        self.tol_counter = 1
 
     def add_outcome(self, sale, price):
         if sale:
             self.sale_sum += price
             self.sales.append(price)
         self.exp_count += 1
+        self.update_tol()
+
+    def update_tol(self):
+        if self.exp_count % SE_RELAX_WIDTH == 0 and self.tol_counter != len(SE_TOLS):
+            self.se_tol = SE_TOLS[self.tol_counter]
+            self.tol_counter += 1
 
     @property
     def mean(self):
@@ -51,7 +58,7 @@ class ValueCalculator:
         if len(self.sales) < 5:
             return False
         else:
-            return self.mean_se < self.val_se_tol
+            return self.mean_se < self.se_tol
 
     @property
     def p(self):

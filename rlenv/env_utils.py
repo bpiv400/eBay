@@ -188,8 +188,8 @@ def get_env_sim_dir(part):
     return '{}{}/'.format(ENV_SIM_DIR, part)
 
 
-def get_env_sim_subdir(part=None, base_dir=None,
-                       chunks=False, values=False, discrim=False):
+def get_env_sim_subdir(part=None, base_dir=None, chunks=False,
+                       values=False, discrim=False):
     """
     Returns the path to a chosen data subdirectory of the current
     environment simulation
