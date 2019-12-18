@@ -39,8 +39,13 @@ class SimulatorEnvironment(EbayEnvironment):
         return self.outcome
 
     def _record(self, event, byr_hist=None):
+        """
+        Add record of offer or thread to Recorder
+        :param rlenv.events.ThreadSources event: event containing most recent offer
+        """
         if byr_hist is None:
-            self.recorder.add_offer(event)
+            time_feats = event.sources.offer_prev_time
+            self.recorder.add_offer(event, time_feats=time_feats)
         else:
             self.recorder.start_thread(thread_id=event.thread_id, byr_hist=byr_hist,
                                        time=event.priority)

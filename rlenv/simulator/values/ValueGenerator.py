@@ -1,5 +1,5 @@
 from statistics import mean, variance
-from rlenv.env_consts import VAL_SE_CHECK
+from rlenv.env_consts import VAL_SE_CHECK, MIN_SALES
 from rlenv.env_utils import get_checkpoint_path, get_chunk_dir
 from rlenv.simulator.Generator import Generator
 from rlenv.simulator.values.ValueCalculator import ValueCalculator
@@ -38,10 +38,10 @@ class ValueGenerator(Generator):
             (sale, price, dur), time_up = self.simulate_lstg(environment)
             self.val_calc.add_outcome(sale, price)
             stop = self._update_stop()
-            self._print_value()
+            self._print_value(stop)
         return time_up
 
-    def _print_value(self):
+    def _print_value(self, stop):
         """
         Prints information about the most recent value calculation
         """
@@ -49,10 +49,10 @@ class ValueGenerator(Generator):
             print('Trial: {}'.format(self.val_calc.exp_count))
             if len(self.val_calc.sales) == 0:
                 print('No Sales')
-            elif len(self.val_calc.sales) == 1:
-                print('Only 1 sale')
+            elif len(self.val_calc.sales) < MIN_SALES:
+                print('fewer than min sales ({} / {})'.format(len(self.val_calc.sales), MIN_SALES))
             else:
-                print('cut: {}'.format(self.val_calc.cut))
+                print('cut: {} | tol: {}'.format(self.val_calc.cut, self.val_calc.se_tol))
                 print('rate of no sale: {}'.format(self.val_calc.p))
                 price_header = 'sale count: {} | price mean: {}'.format(len(self.val_calc.sales),
                                                                         mean(self.val_calc.sales))
@@ -60,7 +60,10 @@ class ValueGenerator(Generator):
                 print(price_header)
                 print('mean of value: {} | mean standard error: {}'.format(self.val_calc.mean,
                                                                            self.val_calc.mean_se))
-                print('Predicted trials remaining: {}'.format(self.val_calc.trials_until_stable))
+                if stop:
+                    print('Estimation stabilized')
+                else:
+                    print('Predicted trials remaining: {}'.format(self.val_calc.trials_until_stable))
 
     def make_checkpoint(self, lstg):
         contents = super(ValueGenerator, self).make_checkpoint(lstg)

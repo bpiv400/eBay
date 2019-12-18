@@ -1,10 +1,11 @@
 from statistics import mean
+import numpy as np
 from rlenv.simulator.Recorder import *
 
 
 class ValueRecorder(Recorder):
     def __init__(self, record_path):
-        super(Recorder, self).__init__(record_path)
+        super( ).__init__(record_path)
         self.values = []
 
     def start_thread(self, thread_id=None, time=None, byr_hist=None):

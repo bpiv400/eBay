@@ -1,7 +1,7 @@
 from constants import INPUT_DIR
 
 INTERACT = False
-VERBOSE = True
+VERBOSE = False
 
 # time feats
 SLR_OFFERS = 'slr_offers'
@@ -141,6 +141,7 @@ PRICE = 'price'
 
 # param names
 VAL_SE_CHECK = 50
+MIN_SALES = 20
 SIM_COUNT = 5
 SE_TOLS = [.5, .75, 1.0, 1.25]
 SE_RELAX_WIDTH = 10000

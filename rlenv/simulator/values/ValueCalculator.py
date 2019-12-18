@@ -1,7 +1,7 @@
 import math
 import numpy as np
 from rlenv.env_utils import get_cut
-from rlenv.env_consts import META, ANCHOR_STORE_INSERT, SE_TOLS, SE_RELAX_WIDTH
+from rlenv.env_consts import META, ANCHOR_STORE_INSERT, SE_TOLS, SE_RELAX_WIDTH, MIN_SALES
 
 
 class ValueCalculator:
@@ -55,7 +55,7 @@ class ValueCalculator:
 
     @property
     def stabilized(self):
-        if len(self.sales) < 5:
+        if len(self.sales) < MIN_SALES:
             return False
         else:
             return self.mean_se < self.se_tol
@@ -69,11 +69,9 @@ class ValueCalculator:
     def trials_until_stable(self):
         if not self.has_sales:
             raise RuntimeError("No sales")
-        elif len(self.sales) < 5:
-            return 10
         else:
-            min_sales = self.var / math.pow(self.val_se_tol, 2)
+            min_sales = self.var / math.pow(self.se_tol, 2)
             diff = min_sales - len(self.sales)
             print('diff: {}'.format(diff))
             p_sale = len(self.sales) / self.exp_count
-            return diff / p_sale
+            return int(diff / p_sale)

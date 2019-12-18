@@ -12,8 +12,6 @@ from rlenv.env_consts import (VERBOSE, START_PRICE, START_DAY,
 from rlenv.interface.interfaces import PlayerInterface, ArrivalInterface
 from rlenv.environments.SimulatorEnvironment import SimulatorEnvironment
 from rlenv.composer.Composer import Composer
-from simulator.Recorder import Recorder
-
 
 class Generator:
     """
