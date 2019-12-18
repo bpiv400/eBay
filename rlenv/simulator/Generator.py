@@ -13,6 +13,7 @@ from rlenv.interface.interfaces import PlayerInterface, ArrivalInterface
 from rlenv.environments.SimulatorEnvironment import SimulatorEnvironment
 from rlenv.composer.Composer import Composer
 
+
 class Generator:
     """
     Attributes:
@@ -44,7 +45,9 @@ class Generator:
         """
         self.dir = direct
         self.chunk = int(num)
-        input_dict = load('{}chunks/{}.gz'.format(self.dir, self.chunk))
+        input_path = '{}chunks/{}.gz'.format(self.dir, self.chunk)
+        input_dict = load(input_path)
+        print('input: {}'.format(input_path))
         self.x_lstg = input_dict['x_lstg']
         self.lookup = input_dict['lookup']
         self.recorder = None

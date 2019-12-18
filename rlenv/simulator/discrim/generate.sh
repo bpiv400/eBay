@@ -6,4 +6,4 @@
 #$ -j y
 #$ -o logs/
 
-python repo/rlenv/simulator/generate.py --num "$SGE_TASK_ID" --id 1 --part train_rl
+python repo/rlenv/simulator/generate.py --num "$SGE_TASK_ID" --part "$1"

@@ -6,6 +6,7 @@ import os
 import torch
 from constants import PARTITIONS
 from rlenv.env_utils import get_env_sim_dir, get_env_sim_subdir, get_done_file
+from rlenv.env_consts import NUM_CHUNKS
 from rlenv.simulator.values.ValueGenerator import ValueGenerator
 from rlenv.simulator.discrim.DiscrimGenerator import DiscrimGenerator
 
@@ -19,8 +20,8 @@ def chunk_done(part, num, values):
 def main():
     torch.set_default_dtype(torch.float32)
     parser = argparse.ArgumentParser()
-    parser.add_argument('--num', required=True, help='chunk number')
-    parser.add_argument('--part', required=True, help='partition name')
+    parser.add_argument('--num', required=True, type=int, help='chunk number')
+    parser.add_argument('--part', required=True, type=str, help='partition name')
     value_help = 'flag for whether to estimate values (generates discrim inputs'
     value_help = '{} if not)'.format(value_help)
     parser.add_argument('--values', action='store_true', help=value_help)
@@ -28,6 +29,8 @@ def main():
     args = parser.parse_args()
     part = args.part
     num = args.num
+    num = (num % NUM_CHUNKS)
+    num = NUM_CHUNKS if num == 0 else num
     values = args.values
 
     if part not in PARTITIONS:

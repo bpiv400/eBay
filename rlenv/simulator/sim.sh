@@ -8,7 +8,7 @@ broken () {
 }
 
 usage () {
-    echo "This script runs the market simulation to generate value estimates or discriminator inputs"
+    echo "Description: Runs the market simulation to generate value estimates or discriminator inputs"
     echo -e "\n"
     echo "Arguments:"
     echo - e"\t -t: type of simulation -- one of [val, discrim]";
@@ -45,12 +45,15 @@ then
     then
       sim_done
     fi
+    qsub repo/rlenv/values/generate.sh "${PART}"
+
 elif [ "$SIM_TYPE" = "discrim" ]
 then
     if ! python "${SCRIPT_PATH}" --part "${PART}"
     then
       sim_done
     fi
+    qsub repo/rlenv/discrim/generate.sh "${PART}"
 else
     broken
 fi
