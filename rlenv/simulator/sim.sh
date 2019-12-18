@@ -8,9 +8,10 @@ broken () {
 
 usage () {
     echo "This script runs the market simulation to generate value estimates or discriminator inputs"
+    echo -e "\n"
     echo "Arguments:"
-    echo "\t -t: type of simulation -- one of [val, discrim]";
-    echo "\t -p: partition of data -- one of [train_rl, train_models, test]"
+    echo - e"\t -t: type of simulation -- one of [val, discrim]";
+    echo -e "\t -p: partition of data -- one of [train_rl, train_models, test]";
     exit;
 }
 
