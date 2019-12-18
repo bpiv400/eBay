@@ -4,7 +4,6 @@ from constants import PARTITIONS
 from rlenv.env_consts import NUM_CHUNKS
 from rlenv.env_utils import get_env_sim_subdir
 
-NUM_CHUNKS = 3
 
 def check_done(part, values):
     subdir = get_env_sim_subdir(part, values=values, discrim=not values)
