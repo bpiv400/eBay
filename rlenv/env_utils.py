@@ -204,4 +204,4 @@ def get_env_sim_subdir(part=None, base_dir=None, chunks=False,
         subdir = SIM_DISCRIM_DIR
     else:
         raise RuntimeError("No subdir specified")
-    return '{}{}'.format(base_dir, subdir)
+    return '{}{}/'.format(base_dir, subdir)
