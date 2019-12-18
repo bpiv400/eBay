@@ -42,7 +42,7 @@ if 'Ubuntu' in platform():		# Etan's box
 elif 'Windows' in platform():	# Barry's laptop
 	PREFIX = 'A:/ebay/data'
 else:
-	PREFIX = os.path.expanduser('~/weka/eBay/frozen')
+	PREFIX = os.path.expanduser('~/weka/eBay')
 
 CLEAN_DIR = '%s/clean/' % PREFIX
 CHUNKS_DIR = '%s/chunks/' % PREFIX

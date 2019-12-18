@@ -15,7 +15,7 @@ usage () {
     exit;
 }
 
-while getopts t:h option
+while getopts t:hp: option
 do
     case "${option}" in
         t) SIM_TYPE=${OPTARG}; type_passed=true;;
@@ -28,7 +28,7 @@ done
 
 if [ "$type_passed" = false ] || [ "$part_passed" = false ] 
 then
-    broken()
+    broken
 fi
 
 # get argument value from 
@@ -39,10 +39,10 @@ elif [ "$SIM_TYPE" = "discrim" ]
 then
     SIM_ARG="";
 else
-    broken()
+    broken
 fi
 
-if [! repo/rlenv/simulator/check_done.py --part ${PART} $SIM_ARG ]
+if [ ! python repo/rlenv/simulator/check_done.py --part ${PART} ${SIM_ARG} ]
 then
     echo "The simulation has already been completed."
     echo "Please delete the files in ${PART}/done/${SIM_TYPE}/ and re-run this script"
