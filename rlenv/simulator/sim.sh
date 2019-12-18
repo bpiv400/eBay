@@ -1,4 +1,5 @@
 type_passed=false
+part_passed=false
 
 broken () {
     echo "-t and -p must be given as an argument. Use -h for more information"
@@ -17,14 +18,14 @@ while getopts t:h option
 do
 case "${option}"
 in
-t) SIM_TYPE=${OPTARG}; ;;
-p) PART
+t) SIM_TYPE=${OPTARG}; type_passed=true;;
+p) PART=${OPTARG}; part_passed=true;;
 h) usage; exit;;
-:) echo "Missing option argument for -$OPTARG. Use -h for usage instructions" >&2; exit 1;s;
+:) echo "Missing option argument for -$OPTARG. Use -h for usage instructions" >&2; exit 1;;
 *) echo "Unimplemented option: -$OPTARG" >&2; exit 1;;
 
 
-if [ ! $type_passed ] || [ ! $part_passed ] 
+if [ "$type_passed" = false ] || [ "$part_passed" = false ] 
 then
     broken()
 fi
