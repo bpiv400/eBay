@@ -7,6 +7,7 @@ import shutil
 from datetime import datetime
 from compress_pickle import load, dump
 from pympler import muppy, summary
+from pympler.garbagegraph import GarbageGraph, start_debug_garbage
 import gc
 import numpy as np
 from rlenv.env_consts import (VERBOSE, START_PRICE, START_DAY,
@@ -45,6 +46,7 @@ class Generator:
         :param direct: string giving path to directory for current partition in rewardGenerator
         :param num: int giving the chunk number
         """
+        start_debug_garbage()
         self.dir = direct
         self.chunk = int(num)
         input_path = '{}chunks/{}.gz'.format(self.dir, self.chunk)
@@ -140,10 +142,12 @@ class Generator:
             time_up = self.simulate_lstg_loop(environment)
             # store a checkpoint if the job is about to be killed
             if time_up:
+                self._memory_dump()
                 self.store_checkpoint(lstg)
                 break
             else:
                 self._tidy_recorder()
+
         if not time_up:
             self._close()
 
@@ -222,7 +226,7 @@ class Generator:
         """
         curr = datetime.now()
         tot = (curr - self.start).total_seconds() / 3600
-        return tot > 3.90
+        return tot > .25
 
     def _print_sim(self):
         """
@@ -240,6 +244,15 @@ class Generator:
             self.recorder.dump(self.recorder_count)
             self.recorder = self.make_recorder()
             self.recorder_count += 1
+
+    @staticmethod
+    def _memory_dump():
+        print("FULL MEMORY DUMP")
+        all_objects = muppy.get_objects()
+        sum1 = summary.summarize(all_objects)
+        summary.print_(sum1)
+        gb = GarbageGraph(reduce=True)
+        gb.render('garbage.eps')
 
     def _has_checkpoint(self):
         """
