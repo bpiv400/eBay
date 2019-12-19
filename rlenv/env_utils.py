@@ -2,8 +2,10 @@
 Utility functions for use in objects related to the RL environment
 """
 import torch
+import os
 import numpy as np
 import pandas as pd
+from compress_pickle import load
 import utils
 from torch.distributions.categorical import Categorical
 from constants import (INPUT_DIR, START, HOLIDAYS, TOL_HALF,
@@ -213,3 +215,33 @@ def get_done_file(record_dir, num):
     chunk number
     """
     return '{}done_{}.txt'.format(record_dir, num)
+
+
+def load_output_chunk(directory, c):
+    subdir = '{}{}/'.format(directory, c)
+    pieces = os.listdir(subdir)
+    print(subdir)
+    print(pieces)
+    pieces = [piece for piece in pieces if '.gz' in piece]
+    output_list = list()
+    for piece in pieces:
+        piece_path = '{}{}'.format(subdir, piece)
+        output_list.append(load(piece_path))
+    return output_list
+
+
+def load_sim_outputs(part, values=False):
+    directory = get_env_sim_subdir(part=part, values=values, discrim=not values)
+    chunks = [path for path in os.listdir(directory) if path.isnumeric()]
+    output_list = list()
+    for chunk in chunks:
+        output_list = output_list + load_output_chunk(directory, chunk)
+    if values:
+        output = {'values': pd.concat(output_list, axis=1)}
+    else:
+        output = dict()
+        for dataset in ['offers', 'threads', 'sales']:
+            output[dataset] = [piece[dataset] for piece in output_list]
+            output[dataset] = pd.concat(output[dataset], axis=1)
+    return output
+
