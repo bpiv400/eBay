@@ -189,6 +189,8 @@ def get_sizes(d, model):
         sizes['out'] = HIST_QUANTILES
     elif 'con' in model:
         sizes['out'] = 101
+    elif model == 'arrival':
+        sizes['out'] = 2
     else:
         sizes['out'] = 1
 

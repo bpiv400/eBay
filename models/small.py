@@ -19,10 +19,6 @@ if __name__ == '__main__':
     # load model sizes
     print('Loading parameters')
     sizes = load('%s/inputs/sizes/%s.pkl' % (PREFIX, name))
-
-    if name == 'arrival':
-        sizes['out'] = 2
-
     print(sizes)
 
     # initialize neural net
