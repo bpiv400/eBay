@@ -123,6 +123,7 @@ class Generator:
             # simulate lstg necessary number of times
             Generator.header(lstg, lookup)
             print('simulate lstg loop')
+            sys.stdout.flush()
             time_up = self.simulate_lstg_loop(environment)
             # store a checkpoint if the job is about to be killed
             if time_up:
