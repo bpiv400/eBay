@@ -7,7 +7,7 @@ from rlenv.simulator.discrim.DiscrimRecorder import DiscrimRecorder
 class DiscrimGenerator(Generator):
     def __init__(self, direct=None, num=None):
         super(DiscrimGenerator, self).__init__(direct=direct, num=num)
-        self.recorder = DiscrimRecorder(self.records_path)
+        self.recorder = self.make_recorder()
 
     def simulate_lstg_loop(self, environment):
         """
@@ -19,7 +19,11 @@ class DiscrimGenerator(Generator):
         time_up = False
         while self.recorder.sim < SIM_COUNT - 1 and not time_up:
             _, time_up = self.simulate_lstg(environment)
+        self.mem_check()
         return time_up
+
+    def make_recorder(self):
+        return DiscrimRecorder(self.records_path)
 
     @property
     def checkpoint_path(self):

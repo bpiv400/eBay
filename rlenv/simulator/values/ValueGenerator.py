@@ -1,5 +1,5 @@
 from statistics import mean, variance
-from rlenv.env_consts import VAL_SE_CHECK, MIN_SALES
+from rlenv.env_consts import VAL_SE_CHECK, MIN_SALES, SILENT
 from rlenv.env_utils import get_checkpoint_path, get_chunk_dir
 from rlenv.simulator.Generator import Generator
 from rlenv.simulator.values.ValueCalculator import ValueCalculator
@@ -11,7 +11,7 @@ class ValueGenerator(Generator):
         super(ValueGenerator, self).__init__(direct=direct, num=num)
         # noinspection PyTypeChecker
         self.val_calc = None  # type: ValueCalculator
-        self.recorder = ValueRecorder(self.records_path)
+        self.recorder = self.make_recorder()
 
     def setup_env(self, lstg, lookup):
         """
@@ -39,13 +39,15 @@ class ValueGenerator(Generator):
             self.val_calc.add_outcome(sale, price)
             stop = self._update_stop()
             self._print_value(stop)
+            if self.val_calc.exp_count % 100 == 0:
+                self.mem_check()
         return time_up
 
     def _print_value(self, stop):
         """
         Prints information about the most recent value calculation
         """
-        if self.val_calc.exp_count % VAL_SE_CHECK == 0:
+        if self.val_calc.exp_count % VAL_SE_CHECK == 0 and not SILENT:
             print('Trial: {}'.format(self.val_calc.exp_count))
             if len(self.val_calc.sales) == 0:
                 print('No Sales')
@@ -69,6 +71,9 @@ class ValueGenerator(Generator):
         contents = super(ValueGenerator, self).make_checkpoint(lstg)
         contents['val_calc'] = self.val_calc
         return contents
+
+    def make_recorder(self):
+        return ValueRecorder(self.records_path)
 
     def _update_stop(self):
         """
