@@ -2,15 +2,20 @@
 Utility functions for use in objects related to the RL environment
 """
 import torch
+import os
 import numpy as np
 import pandas as pd
+from compress_pickle import load
 import utils
 from torch.distributions.categorical import Categorical
-from constants import (INPUT_DIR, START,
-                       HOLIDAYS, TOL_HALF, MODEL_DIR)
+from constants import (INPUT_DIR, START, HOLIDAYS, TOL_HALF,
+                       MODEL_DIR, ENV_SIM_DIR)
 from rlenv.interface.model_names import LSTM_MODELS
-from simulator.nets import FeedForward, LSTM
-from rlenv.env_consts import PARAMS_PATH, META_6, META_7, DAY
+from rlenv.composer.maps import THREAD_MAP
+from models.nets import FeedForward, LSTM
+from rlenv.env_consts import (META_6, META_7, DAY, NORM, ALL_OUTCOMES,
+                              AUTO, REJECT, EXP, SIM_CHUNKS_DIR,
+                              SIM_VALS_DIR, SIM_DISCRIM_DIR)
 
 
 def load_featnames(full_name):
@@ -89,18 +94,32 @@ def get_split(con):
     return output
 
 
-def chunk_dir(part_dir, chunk_num, records=False, rewards=False):
-    if records:
-        insert = 'records'
-    elif rewards:
-        insert = 'rewards'
+def last_norm(sources, turn):
+    if turn <= 2:
+        out = 0.0
     else:
-        insert = 'chunks'
-    return '{}{}/{}/'.format(part_dir, insert, chunk_num)
+        out = sources[THREAD_MAP][featname(NORM, turn - 2)]
+    return out
 
 
-def load_params():
-    return utils.unpickle(PARAMS_PATH)
+def prev_norm(sources, turn):
+    if turn == 1:
+        out = 0.0
+    else:
+        out = sources[THREAD_MAP][featname(NORM, turn-1)]
+    return out
+
+
+def get_chunk_dir(part_dir, chunk_num, discrim=False):
+    """
+    Gets the path to the data directory containing output files
+    for the given environment simulation chunk
+    """
+    if discrim:
+        subdir = get_env_sim_subdir(base_dir=part_dir, discrim=True)
+    else:
+        subdir = get_env_sim_subdir(base_dir=part_dir, values=True)
+    return '{}{}/'.format(subdir, chunk_num)
 
 
 def load_model(full_name):
@@ -110,31 +129,23 @@ def load_model(full_name):
     :param full_name: full name of the model
     :return: PyTorch Module
     """
-    print('sizes...')
     sizes = load_sizes(full_name)
-    print('params...')
-    params = load_params()
     model_path = '{}{}.net'.format(MODEL_DIR, full_name)
-    # loading model
     model_class = get_model_class(full_name)
-    print('initializing...')
-    net = model_class(params, sizes)  # type: torch.nn.Module
-    print('state dict...')
-    net.load_state_dict(torch.load(model_path, map_location='cpu'))
+    net = model_class(sizes, dropout=False)  # type: torch.nn.Module
+    state_dict = torch.load(model_path, map_location='cpu')
+    net.load_state_dict(state_dict)
     for param in net.parameters(recurse=True):
         param.requires_grad = False
     net.eval()
     return net
 
 
-def get_value_fee(price, meta):
+def get_cut(meta):
     """
     Computes the value fee. For now, just set to 10%
     of sale price, pending refinement decisions
 
-    # TODO: What did we decide about shipping?
-
-    :param price: price of sale
     :param meta: integer giving meta category
     :return: float
     """
@@ -143,10 +154,94 @@ def get_value_fee(price, meta):
         rate = .07
     elif meta in META_6:
         rate = .06
-    return rate * price
+    return rate
 
 
 def time_delta(start, end, unit=DAY):
     diff = (end - start) / unit
     diff = np.array([diff], dtype=np.float32)
     return diff
+
+
+def slr_rej(sources, turn, expire=False):
+    outcomes = pd.Series(0.0, index=ALL_OUTCOMES[turn])
+    outcomes[featname(REJECT, turn)] = 1
+    outcomes[featname(NORM, turn)] = last_norm(sources, turn)
+    if not expire:
+        outcomes[featname(AUTO, turn)] = 1
+    else:
+        outcomes[featname(EXP, turn)] = 1
+    return outcomes
+
+
+def get_checkpoint_path(part_dir, chunk_num, discrim=False):
+    """
+    Returns path to checkpoint file for the given chunk
+    and environment simulation (discrim or values)
+    """
+    if discrim:
+        insert = 'discrim'
+    else:
+        insert = 'val'
+    return '{}chunks/{}_check_{}.gz'.format(part_dir, chunk_num, insert)
+
+
+def get_env_sim_dir(part):
+    return '{}{}/'.format(ENV_SIM_DIR, part)
+
+
+def get_env_sim_subdir(part=None, base_dir=None, chunks=False,
+                       values=False, discrim=False):
+    """
+    Returns the path to a chosen data subdirectory of the current
+    environment simulation
+    """
+    if part is not None:
+        base_dir = get_env_sim_dir(part)
+    if chunks:
+        subdir = SIM_CHUNKS_DIR
+    elif values:
+        subdir = SIM_VALS_DIR
+    elif discrim:
+        subdir = SIM_DISCRIM_DIR
+    else:
+        raise RuntimeError("No subdir specified")
+    return '{}{}/'.format(base_dir, subdir)
+
+
+def get_done_file(record_dir, num):
+    """
+    Generates path to the done file for the given records path and
+    chunk number
+    """
+    return '{}done_{}.txt'.format(record_dir, num)
+
+
+def load_output_chunk(directory, c):
+    subdir = '{}{}/'.format(directory, c)
+    pieces = os.listdir(subdir)
+    print(subdir)
+    print(pieces)
+    pieces = [piece for piece in pieces if '.gz' in piece]
+    output_list = list()
+    for piece in pieces:
+        piece_path = '{}{}'.format(subdir, piece)
+        output_list.append(load(piece_path))
+    return output_list
+
+
+def load_sim_outputs(part, values=False):
+    directory = get_env_sim_subdir(part=part, values=values, discrim=not values)
+    chunks = [path for path in os.listdir(directory) if path.isnumeric()]
+    output_list = list()
+    for chunk in chunks:
+        output_list = output_list + load_output_chunk(directory, chunk)
+    if values:
+        output = {'values': pd.concat(output_list, axis=1)}
+    else:
+        output = dict()
+        for dataset in ['offers', 'threads', 'sales']:
+            output[dataset] = [piece[dataset] for piece in output_list]
+            output[dataset] = pd.concat(output[dataset], axis=1)
+    return output
+

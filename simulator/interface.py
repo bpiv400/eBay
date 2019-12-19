@@ -7,7 +7,6 @@ from torch.utils.data import DataLoader, Dataset, Sampler
 from compress_pickle import load
 from constants import *
 
-
 # defines a dataset that extends torch.utils.data.Dataset
 class Inputs(Dataset):
 
@@ -48,7 +47,6 @@ class Inputs(Dataset):
                 
             # empty time feats
             self.tf0 = np.zeros((self.n, N_tfeats), dtype='float32')
-
 
     def __getitem__(self, idx):
         # all models index y using idx
@@ -99,14 +97,14 @@ class Sample(Sampler):
         """
         super().__init__(None)
 
-        # chop into minibatches; shuffle for training
+        # chop into minibatches; shuffle for train
         self.batches = []
         for v in data.d['groups']:
             if isTraining:
                 np.random.shuffle(v)
             self.batches += np.array_split(v, 
                 1 + len(v) // MBSIZE[isTraining])
-        # shuffle training batches
+        # shuffle train batches
         if isTraining:
             np.random.shuffle(self.batches)
 

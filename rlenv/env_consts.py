@@ -1,8 +1,8 @@
-from constants import INPUT_DIR, PARTS_DIR, OUTPUT_DIR
-import torch
+from constants import INPUT_DIR
 
 INTERACT = False
-VERBOSE = True
+VERBOSE = False  # verbose has higher priority than silent
+SILENT = True  # output nothing
 
 # time feats
 SLR_OFFERS = 'slr_offers'
@@ -81,7 +81,6 @@ BYR_TURN_INDS = SLR_TURN_INDS + ['t3']
 
 
 MONTHS_SINCE_LSTG = 'months_since_lstg'
-DAYS_SINCE_THREAD = 'days_since_thread'
 DURATION = 'duration'
 INT_REMAINING = 'remaining'
 
@@ -93,13 +92,13 @@ X_LSTG = 'x_lstg'
 LOOKUP = 'lookup'
 
 # filenames
-PARTITION = 'train_rl'
-DATA_DIR = '{}{}/'.format(PARTS_DIR, PARTITION)
 COMPOSER_DIR = '{}composer/'.format(INPUT_DIR)
-X_LSTG_COLS_PATH = '{}{}.pkl'.format(COMPOSER_DIR, X_LSTG)
-REWARD_EXPERIMENT_PATH = 'repo/rlenv/rewards/experiments.csv'
+AGENT_FEATS_FILENAME = 'agent_feats.xlsx'
 LOOKUP_FILENAME = 'lookup.gz'
-PARAMS_PATH = '{}params.pkl'.format(OUTPUT_DIR)
+X_LSTG_FILENAME = 'x_lstg.gz'
+SIM_CHUNKS_DIR = 'chunks'
+SIM_VALS_DIR = 'vals'
+SIM_DISCRIM_DIR = 'discrim'
 
 # temporal constants
 MONTH = 31 * 24 * 3600
@@ -107,28 +106,8 @@ DAY = 24 * 3600
 HOUR = 3600
 EXPIRATION = 48 * 60 * 60
 
-
-# zero vectors
-# TODO: check whether there are similar outcome vectors
-ZERO_SLR_OUTCOMES = torch.zeros(len(SLR_OUTCOMES))
-ZERO_SLR_OUTCOMES[[7, 8]] = 1
-
-CLOCK_ZEROS = torch.zeros(len(CLOCK_FEATS))
-
-FIXED = 'fixed'
-TIME = 'time'
-
-# parameter names
-SIM_COUNT = 'n'
-
 # fee constants
 ANCHOR_STORE_INSERT = .03
-
-# reject outcomes
-AUTO_REJ_OUTCOMES = torch.zeros(len(SLR_OUTCOMES))
-AUTO_REJ_OUTCOMES[[7, 8]] = 1  # automatic, rejected
-EXP_REJ_OUTCOMES = torch.zeros(len(SLR_OUTCOMES))
-EXP_REJ_OUTCOMES[[0, 8]] = 1  # full delay, rejected, expired
 
 # lookup column names
 LSTG = 'lstg'
@@ -143,3 +122,28 @@ ACC_PRICE = 'accept_price'
 # meta categories with sale fees != .09 * price
 META_7 = [21, 10]
 META_6 = [32, 14, 11, 7, 28]
+
+NUM_CHUNKS = 512
+
+SELLER_HORIZON = 100
+ENV_LSTG_COUNT = 1000
+
+# space names
+ACTION_SPACE_NAME = 'NegotiationActionSpace'
+OBS_SPACE_NAME = 'NegotiationObsSpace'
+
+# agents
+INFO_AGENTS = ['byr', 'slr0', 'slr1']
+
+# outcome tuple names
+SALE = 'sale'
+DUR = 'dur'
+PRICE = 'price'
+
+# param names
+VAL_SE_CHECK = 50
+MIN_SALES = 20
+SIM_COUNT = 100
+SE_TOLS = [.5, .75, 1.0, 1.25]
+SE_RELAX_WIDTH = 10000
+MAX_RECORDER_SIZE = 2e9

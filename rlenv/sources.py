@@ -100,6 +100,9 @@ class ThreadSources(Sources):
         self.source_dict[THREAD_MAP][featname(DAYS, turn)] = days
         self.source_dict[THREAD_MAP][featname(DELAY, turn)] = 1
 
+    def init_remaining(self, remaining):
+        self.source_dict[X_TIME_MAP][INT_REMAINING] = remaining
+
     def is_sale(self, turn):
         return self.source_dict[THREAD_MAP][featname(CON, turn)] == 1
 
@@ -147,3 +150,5 @@ class ArrivalSources(Sources):
         self.source_dict[X_TIME_MAP][CLOCK_FEATS] = clock_feats
         self.source_dict[X_TIME_MAP][TIME_FEATS] = time_feats - self.prev_time
         self.prev_time = time_feats
+
+

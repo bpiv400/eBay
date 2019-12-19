@@ -67,8 +67,9 @@ def prep_quantiles(df, l, featname, new=False):
 
 def get_perc(df, l, num, denom, name=None):
     df = df.copy()
-    df[num] = df[num].astype(int)
-    df[denom] = df[denom].astype(int)
+    if 'msg_rate' not in name:
+        df[num] = df[num].astype(int)
+        df[denom] = df[denom].astype(int)
     level_group = df[[num, denom]].groupby(by=l).sum()
     lstg_group = df[[num, denom]].groupby(by=l + ['lstg']).sum()
     num_level = level_group[num]
@@ -290,7 +291,7 @@ def get_all_cat_feats(events, levels):
     # helper features
     df = make_helper_feats(events)
     tf = None
-    for i in range(1, 8):
+    for i in range(1, 9):
         temp = get_cat_feat(df, levels=levels, feat_ind=i)
         if i == 1:
             tf = temp
@@ -315,8 +316,40 @@ def get_cat_feat(events, levels=None, feat_ind=None):
         return get_cat_byr_hist(df, levels)
     elif feat_ind == 7:
         return get_cat_arrival(df, levels)
+    elif feat_ind == 8:
+        return get_cat_msg_rate(df, levels)
     else:
         raise NotImplementedError('feature index must be between 1 and 7')
+
+
+def get_msg_rate(events, levels, turn):
+    events = events[['message']].copy()
+    other_turns = ~events.index.get_level_values('index').isin([turn])
+    events.loc[other_turns, 'message'] = np.NaN
+
+    events['is_turn'] = (~events.message.isna())
+    events.loc[:, 'is_turn'] = events['is_turn'].astype(bool)
+    events.loc[:, 'is_turn'] = events['is_turn'].astype(int)
+    print(events.dtypes)
+    name = 'msg_rate_{}'.format(turn)
+    msg_rate = get_perc(events, levels, 'message', 'is_turn', name)
+    return msg_rate
+
+
+def get_cat_msg_rate(events, levels):
+    tf = prep_tf(events)
+    print(tf.index.names)
+    print(events.index.names)
+    print(events.columns)
+    print(events[['message']].dtypes)
+    for i in range(len(levels)):
+        curr_levels = levels[: i+1]
+        for turn in range(1, 7):
+            tf = tf.join(get_msg_rate(events.copy(), curr_levels, turn))
+    print(tf.min())
+    print(tf.max())
+    print(tf.mean())
+    return tf
 
 
 def get_cat_lstg_counts(events, levels):

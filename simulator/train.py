@@ -40,13 +40,11 @@ class Trainer:
         # set gamma
         self.simulator.set_gamma(gamma)
         print('Iteration %d: gamma of %1.2f' % (self.iter, gamma))
-
         # training loop
         epoch, last = 0, np.inf
         while True:
             print('\tEpoch %d' % epoch)
             output = {}
-
             # train model
             t0 = dt.now()
             output['loss'] = run_loop(

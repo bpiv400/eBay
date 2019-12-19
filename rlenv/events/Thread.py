@@ -1,28 +1,24 @@
 """
 class for encapsulating data and methods related to the first buyer offer
 """
-import torch
 from rlenv.events.Event import Event
 from rlenv.events import event_types
 from constants import (SLR_PREFIX, BYR_PREFIX, INTERVAL_COUNTS,
                        INTERVAL, MAX_DELAY, MAX_DAYS)
-from rlenv.env_utils import time_delta
-from rlenv.env_consts import MONTH, DAY
+from rlenv.env_utils import time_delta, slr_rej
+from rlenv.env_consts import (MONTH, DAY, INT_REMAINING)
 
 
 class Thread(Event):
     """
     Attributes:
-        hidden: representation of buyer and seller hidden states (dictionary containing 'byr', 'slr')
-
-        ids: identifier dictionary
     """
-    def __init__(self, priority, thread_id=None, buyer=None, seller=None):
+    def __init__(self, priority=None, thread_id=None):
         super(Thread, self).__init__(event_type=event_types.FIRST_OFFER,
                                      priority=priority)
         # participants
-        self.buyer = buyer
-        self.seller = seller
+        self.buyer = None
+        self.seller = None
         # sources object
         self.sources = None  # initialized later in init_thread
         self.turn = 1
@@ -38,7 +34,7 @@ class Thread(Event):
         self.sources = sources
         self.sources.init_thread(hist=hist)
 
-    def buyer_offer(self):
+    def buyer_offer(self, *args):
         outcomes = self.buyer.make_offer(sources=self.sources(), turn=self.turn)
         norm = self.sources.update_offer(outcomes=outcomes, turn=self.turn)
         return {
@@ -47,7 +43,7 @@ class Thread(Event):
             'time': self.priority
         }
 
-    def seller_offer(self):
+    def seller_offer(self, *args):
         outcomes = self.seller.make_offer(sources=self.sources(), turn=self.turn)
         norm = self.sources.update_offer(outcomes=outcomes, turn=self.turn)
         return {
@@ -60,28 +56,30 @@ class Thread(Event):
         self.turn += 1
         self.sources.change_turn(self.turn)
 
-    def init_delay(self, lstg_start):
-        # update object to contain relevant delay attributes
-        if self.turn % 2 == 0 or self.turn == 7:
-            self.max_interval = INTERVAL_COUNTS[SLR_PREFIX]
-            self.max_delay = MAX_DELAY[SLR_PREFIX]
-        else:
-            self.max_interval = INTERVAL_COUNTS[BYR_PREFIX]
-            self.max_delay = MAX_DELAY[BYR_PREFIX]
-        # create init remaining
-        self._init_remaining(lstg_start, self.max_delay)
-        self.interval = 0
-        self.type = event_types.DELAY
-        # add delay features
-        months_since_lstg = time_delta(lstg_start, self.priority, unit=MONTH)
-        self.sources.init_delay(months_since_lstg=months_since_lstg)
-        # update hidden state
+    def _init_delay_hidden(self):
         if self.turn % 2 == 0:
             self.spi = INTERVAL[SLR_PREFIX]
             self.seller.init_delay(self.sources())
         else:
             self.spi = INTERVAL[BYR_PREFIX]
             self.buyer.init_delay(self.sources())
+
+    def _init_delay_sources(self, lstg_start):
+        # update object to contain relevant delay attributes
+        if self.turn % 2 == 0 or self.turn == 7:
+            self.max_interval = INTERVAL_COUNTS[SLR_PREFIX]
+            self.max_delay = MAX_DELAY[SLR_PREFIX]
+            self.spi = INTERVAL[SLR_PREFIX]
+        else:
+            self.max_interval = INTERVAL_COUNTS[BYR_PREFIX]
+            self.max_delay = MAX_DELAY[BYR_PREFIX]
+            self.spi = INTERVAL[BYR_PREFIX]
+        # create init remaining
+        self._init_remaining(lstg_start, self.max_delay)
+        self.interval = 0
+        # add delay features
+        months_since_lstg = time_delta(lstg_start, self.priority, unit=MONTH)
+        self.sources.init_delay(months_since_lstg=months_since_lstg)
 
     def _init_remaining(self, lstg_start, max_delay):
         self.init_remaining = (MAX_DAYS + lstg_start) - self.priority
@@ -116,7 +114,10 @@ class Thread(Event):
         self.spi = None
         self.init_remaining = None
         # change event type
-        self.type = event_types.OFFER
+        if self.turn % 2 == 0:
+            self.type = event_types.SELLER_OFFER
+        else:
+            self.type = event_types.BUYER_OFFER
         self.priority += add_delay
 
     def thread_expired(self):
@@ -129,7 +130,7 @@ class Thread(Event):
         return self.sources.is_rej(self.turn)
 
     def slr_rej(self, expire=False):
-        outcomes = self.seller.rej(self.sources(), self.turn, expire=expire)
+        outcomes = slr_rej(self.sources(), self.turn, expire=expire)
         norm = self.sources.update_offer(outcomes=outcomes, turn=self.turn)
         return {
             'price': norm,
@@ -156,3 +157,14 @@ class Thread(Event):
         self.priority += self.spi
         days = self.max_delay / DAY
         self.sources.byr_expire(days=days, turn=self.turn)
+
+    def get_obs(self):
+        pass
+        # raise NotImplementedError()
+        # srcs = self.sources()
+        # maybe move to composer or sources
+        # return OBS_SPACE(LSTG_MAP=srcs[LSTG_MAP].values,
+        #                 THREAD_MAP=srcs[THREAD_MAP].values,
+        #                 TURN_IND_MAP=srcs[TURN_IND_MAP].values.astype(np.int),
+        #                 X_TIME_MAP=srcs[X_TIME_MAP][INT_REMAINING])
+

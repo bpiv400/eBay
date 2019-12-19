@@ -1,3 +1,4 @@
+from copy import deepcopy
 import torch, torch.nn as nn
 from collections import OrderedDict
 from constants import *
@@ -112,7 +113,6 @@ class FullyConnected(nn.Module):
         N_out: scalar number of output parameters
         '''
         super(FullyConnected, self).__init__()
-
         # intermediate layer
         self.seq = nn.ModuleList([Layer(N_in, HIDDEN, dropout=dropout)])
 

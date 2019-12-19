@@ -5,4 +5,4 @@
 #$ -j y
 #$ -o logs/
 
-python repo/rlenv/rewards/chunk.py --part train_rl
+python repo/rlenv/simulator/chunk.py --part train_rl
