@@ -6,9 +6,11 @@ import sys
 import shutil
 from datetime import datetime
 from compress_pickle import load, dump
+from pympler import muppy, summary
+import gc
 import numpy as np
 from rlenv.env_consts import (VERBOSE, START_PRICE, START_DAY,
-                              ACC_PRICE, DEC_PRICE)
+                              ACC_PRICE, DEC_PRICE, SILENT, MAX_RECORDER_SIZE)
 from rlenv.interface.interfaces import PlayerInterface, ArrivalInterface
 from rlenv.environments.SimulatorEnvironment import SimulatorEnvironment
 from rlenv.composer.Composer import Composer
@@ -47,7 +49,6 @@ class Generator:
         self.chunk = int(num)
         input_path = '{}chunks/{}.gz'.format(self.dir, self.chunk)
         input_dict = load(input_path)
-        print('input: {}'.format(input_path))
         self.x_lstg = input_dict['x_lstg']
         self.lookup = input_dict['lookup']
         self.recorder = None
@@ -62,12 +63,16 @@ class Generator:
         self.recorder_count = 1
         self.start = datetime.now()
         self.has_checkpoint = self._has_checkpoint()
-        print('checkpoint: {}'.format(self.has_checkpoint))
-        print('checkpoint count: {}'.format(self.checkpoint_count))
+        if not SILENT:
+            print('checkpoint: {}'.format(self.has_checkpoint))
+            print('checkpoint count: {}'.format(self.checkpoint_count))
 
         # delete previous directories for simulator and records
         if not self.has_checkpoint:
             self._prepare_records()
+
+        # memory debugging
+        self.prev_mem = summary.summarize(muppy.get_objects())
 
     def _prepare_records(self):
         """
@@ -90,6 +95,13 @@ class Generator:
             start_ix = index.index(start_lstg)
             index = index[start_ix:]
             return index
+
+    def mem_check(self):
+        gc.collect()
+        curr_mem = summary.summarize(muppy.get_objects())
+        diff = summary.get_diff(self.prev_mem, curr_mem)
+        self.prev_mem = curr_mem
+        print(diff)
 
     def setup_env(self, lstg, lookup):
         """
@@ -122,8 +134,6 @@ class Generator:
             environment = self.setup_env(lstg, lookup)
             # simulate lstg necessary number of times
             Generator.header(lstg, lookup)
-            print('simulate lstg loop')
-            sys.stdout.flush()
             time_up = self.simulate_lstg_loop(environment)
             # store a checkpoint if the job is about to be killed
             if time_up:
@@ -223,9 +233,9 @@ class Generator:
         Dumps the recorder and increments the recorder count if it
         contains at least a gig of data
         """
-        if sys.getsizeof(self.recorder) > 1e9:
+        if sys.getsizeof(self.recorder) > MAX_RECORDER_SIZE:
             self.recorder.dump(self.recorder_count)
-            self.recorder = Recorder(self.records_path)
+            self.recorder = self.make_recorder()
             self.recorder_count += 1
 
     def _has_checkpoint(self):
@@ -259,6 +269,9 @@ class Generator:
     def records_path(self):
         raise NotImplementedError()
 
+    def make_recorder(self):
+        raise NotImplementedError()
+
     @staticmethod
     def header(lstg, lookup):
         """
@@ -267,12 +280,13 @@ class Generator:
         :param lookup: pd.Series containing metadata about the lstg
         :return:
         """
-        header = 'Lstg: {}  | Start time: {}  | Start price: {}'.format(lstg,
-                                                                        lookup[START_DAY],
-                                                                        lookup[START_PRICE])
-        header = '{} | auto reject: {} | auto accept: {}'.format(header, lookup[DEC_PRICE],
-                                                                 lookup[ACC_PRICE])
-        print(header)
+        if not SILENT:
+            header = 'Lstg: {}  | Start time: {}  | Start price: {}'.format(lstg,
+                                                                            lookup[START_DAY],
+                                                                            lookup[START_PRICE])
+            header = '{} | auto reject: {} | auto accept: {}'.format(header, lookup[DEC_PRICE],
+                                                                     lookup[ACC_PRICE])
+            print(header)
 
     @staticmethod
     def _remake_dir(path):
