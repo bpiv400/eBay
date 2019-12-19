@@ -24,7 +24,7 @@ TOL_HALF = 0.02
 # optimization parameters
 NUM_WORKERS = 0
 MBSIZE = {True: 128, False: 2000}
-LOGLR0 = -2
+LOGLR0 = -2.5
 LOGLR1 = -6
 LOGLR_INC = 0.5
 FTOL = 0.999
