@@ -101,7 +101,8 @@ class Generator:
         curr_mem = summary.summarize(muppy.get_objects())
         diff = summary.get_diff(self.prev_mem, curr_mem)
         self.prev_mem = curr_mem
-        print(diff)
+        summary.print_(diff)
+        sys.stdout.flush()
 
     def setup_env(self, lstg, lookup):
         """
