@@ -8,7 +8,6 @@ class ValueCalculator:
     def __init__(self, lookup):
         self.sale_sum = 0
         self.exp_count = 0
-        self.cut = 0
         self.sales = []
         self.cut = get_cut(lookup[META])
         self.se_tol = SE_TOLS[0]

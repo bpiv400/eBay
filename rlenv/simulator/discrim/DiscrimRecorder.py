@@ -7,14 +7,12 @@ class DiscrimRecorder(Recorder):
         super(DiscrimRecorder, self).__init__(records_path)
         # tracker dictionaries
         self.offers = []
-        self.values = []
         self.threads = []
         self.sales = []
 
     def reset_recorders(self):
         self.offers = []
         self.threads = []
-        self.values = []
         self.sales = []
 
     @staticmethod

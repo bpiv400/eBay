@@ -47,16 +47,13 @@ class EbayEnvironment:
         self.queue.push(Arrival(self.lookup[START_DAY], sources))
 
     def run(self):
-        complete = False
-        lstg_complete = None
-        while not complete:
+        while True:
             event = self.queue.pop()
             lstg_complete = self._process_event(event)
-            if not lstg_complete:
-                complete = self._check_complete(event)
-            else:
-                complete = True
-        return lstg_complete
+            if lstg_complete:
+                return True
+            if self._check_complete(event):
+                return False
 
     def _process_event(self, event):
         if INTERACT and event.type != event_types.ARRIVAL:

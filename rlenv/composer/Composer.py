@@ -88,10 +88,6 @@ class Composer:
         featnames = load_featnames(model)
         print('len: {}'.format(len(featnames['x']['lstg'])))
         sizes = load_sizes(model)
-        # temporary fix
-        if 'time' in sizes:
-            sizes['x_time'] = sizes['time']
-            del sizes['time']
         # create input set for x_time
         if 'x_time' in featnames:
             input_set = featnames['x_time']
