@@ -125,10 +125,7 @@ class Model:
         # add in regularization penalty and step down gradients
         if isTraining:
             if self.gamma > 0:
-                if 'turns' in b:
-                    factor = float(torch.sum(b['turns']).item()) / data.N_labels
-                else:
-                    factor = float(b['y'].size()[0]) / data.N_labels
+                factor = float(torch.sum(b['y'] > -1)) / data.N_labels
                 loss = loss + self.get_penalty(factor)
 
             optimizer.zero_grad()
@@ -150,10 +147,7 @@ class Model:
         # loop over batches, calculate log-likelihood
         loss = 0.0
         for b in batches:
-            # move to device
             self.move_to_device(b)
-
-            # increment log-likelihood
             loss += self.run_batch(b, optimizer)
 
         return loss
