@@ -53,6 +53,7 @@ class Generator:
         input_dict = load(input_path)
         self.x_lstg = input_dict['x_lstg']
         self.lookup = input_dict['lookup']
+        self.lookup[START_DAY] = self.lookup[START_DAY].astype(np.int64) * 3600 * 24
         self.recorder = None
         composer = Composer(rebuild=False)
         self.buyer = PlayerInterface(composer=composer, byr=True)
@@ -106,6 +107,7 @@ class Generator:
         print('new summary')
         print('')
         summary.print_(diff)
+        print('generator size: {}'.format(sys.getsizeof(self)))
         sys.stdout.flush()
 
     def setup_env(self, lstg, lookup):

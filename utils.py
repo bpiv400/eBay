@@ -41,14 +41,8 @@ def init_x(part, idx=None):
     for name in ['lstg', 'w2v_byr', 'w2v_slr', 'slr', 'cat', 'cndtn']:
         # load dataframe
         df = load(PARTS_DIR + '%s/x_%s.gz' % (part, name))
-
-<<<<<<< HEAD
         # index by idx
         if idx is not None:
-=======
-        if idx is not None:
-            # index by idx
->>>>>>> rlpyt
             if len(idx.names) == 1:
                 df = df.reindex(index=idx)
             else:

@@ -37,13 +37,11 @@ class Model:
         else:
             self.net = FeedForward(sizes, dropout=dropout).to(device)
 
-
     def set_gamma(self, gamma):
         if gamma > 0:
             if not self.dropout:
                 error('Gamma cannot be positive without dropout layers.')
             self.gamma = gamma
-
 
     def get_penalty(self, factor=1):
         penalty = torch.tensor(0.0, device=self.device)
@@ -51,7 +49,6 @@ class Model:
             if hasattr(m, 'kl_reg'):
                 penalty += m.kl_reg()
         return self.gamma * factor * penalty
-
 
     def get_alpha_stats(self, threshold=9):
         above, total, largest = 0.0, 0.0, 0.0
