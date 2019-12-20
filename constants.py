@@ -30,7 +30,8 @@ LOGLR_INC = 0.5
 FTOL = 0.999
 
 # neural net parameters
-LAYERS_EMBEDDING = 4
+LAYERS_EMBEDDING = 2  # TODO: SWITCH TO 4 when merged with master
+AFFINE = True  # TODO: SWITCH TO FALSE when merged with master
 LAYERS_FULL = 8
 HIDDEN = 1024
 F = torch.nn.ReLU(inplace=True)
