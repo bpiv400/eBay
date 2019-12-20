@@ -25,8 +25,10 @@ def main():
     parser.add_argument('--part', required=True, type=str, help='partition name')
     parser.add_argument('--values', action='store_true', 
         help='for value estimation; otherwise discriminator input')
+    parser.add_argument('--verbose', action='store_true',
+        help='print event detail')
     args = parser.parse_args()
-    num, part, values = args.num, args.part, args.values
+    num, part, values, verbose = args.num, args.part, args.values, args.verbose
     print('{} {}: {}'.format(part, num, 'values' if values else 'discrim'))
 
     # num is modulus NUM_CHUNKS
@@ -42,7 +44,7 @@ def main():
 
     # create generator
     gen_class = ValueGenerator if values else DiscrimGenerator
-    generator = gen_class(get_env_sim_dir(part), num)
+    generator = gen_class(get_env_sim_dir(part), num, verbose)
     generator.generate()
 
 

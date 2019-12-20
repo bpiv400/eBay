@@ -1,11 +1,6 @@
 import math
-import numpy as np
-import pandas as pd
-from rlenv.env_consts import (TIME_FEATS, ALL_TIME_FEATS,
-                              ALL_CLOCK_FEATS, BYR_HIST, DAYS, DELAY, ALL_OUTCOMES,
-                              NORM, TURN_FEATS, MONTHS_SINCE_LSTG, CLOCK_FEATS,
-                              DURATION, INT_REMAINING, CON, MSG, SPLIT, EXP, REJECT, AUTO)
-from rlenv.composer.maps import *
+import numpy as np, pandas as pd
+from rlenv.env_consts import *
 from rlenv.env_utils import featname
 
 

@@ -7,7 +7,7 @@ from rlenv.events import event_types
 from rlenv.sources import ArrivalSources
 from rlenv.sources import ThreadSources
 from rlenv.time import time_triggers
-from rlenv.env_consts import (START_TIME, INTERACT, VERBOSE, MONTH, ACC_PRICE,
+from rlenv.env_consts import (START_TIME, INTERACT, MONTH, ACC_PRICE,
                               DEC_PRICE, START_PRICE, SALE, PRICE, DUR)
 from rlenv.env_utils import get_clock_feats, time_delta
 from constants import INTERVAL, BYR_PREFIX
@@ -20,9 +20,10 @@ OFF_IND = 2
 class EbayEnvironment:
     Outcome = namedtuple('outcome', [SALE, PRICE, DUR])
 
-    def __init__(self, arrival):
+    def __init__(self, arrival, verbose):
         # arrival process interface
         self.arrival = arrival
+        self.verbose = verbose
 
         # features
         self.x_lstg = None
@@ -149,7 +150,7 @@ class EbayEnvironment:
         sources.prepare_hist(time_feats=time_feats, clock_feats=get_clock_feats(event.priority),
                              months_since_lstg=months_since_lstg)
         hist = self.arrival.hist(sources())
-        if VERBOSE:
+        if self.verbose:
             print('Thread {} initiated | Buyer hist: {}'.format(event.thread_id, hist))
         event.init_thread(sources=sources, hist=hist)
         self._record(event, byr_hist=hist)
@@ -178,7 +179,7 @@ class EbayEnvironment:
         event.update_arrival(time_feats=self.time_feats.get_feats(time=event.priority),
                              clock_feats=get_clock_feats(event.priority))
         num_byrs = self.arrival.num_offers(event.sources())
-        if VERBOSE and num_byrs > 0:
+        if self.verbose and num_byrs > 0:
             print('Arrival Interval Start: {}'.format(event.priority))
             print('Number of arrivals: {}'.format(num_byrs))
         if num_byrs > 0:
@@ -226,7 +227,7 @@ class EbayEnvironment:
                                                time=event.priority)
         clock_feats = get_clock_feats(event.priority)
         make_offer = event.delay(clock_feats=clock_feats, time_feats=time_feats)
-        if VERBOSE and make_offer == 1:
+        if self.verbose and make_offer == 1:
             actor = 'Seller' if event.turn % 2 == 0 else 'Buyer'
             print('{} will make an offer in the upcoming interval'.format(actor))
         if make_offer == 1:
@@ -249,7 +250,7 @@ class EbayEnvironment:
         """
         if event.priority >= self.end_time:
             self.outcome = self.Outcome(False, 0, MONTH)
-            if VERBOSE:
+            if self.verbose:
                 print('Lstg expired')
             return True
         else:

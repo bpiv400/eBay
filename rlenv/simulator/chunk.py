@@ -21,7 +21,7 @@ def main():
     lookup = load('{}{}/{}'.format(PARTS_DIR, part, LOOKUP_FILENAME))
 
     # sort and subset
-    lookup = lookup.sort_values(by=START_PRICE)
+    lookup = lookup.drop('cat', axis=1).sort_values(by=START_PRICE)
     x_lstg = pd.concat([df.reindex(index=lookup.index) \
         for df in x_lstg.values()], axis=1)
     assert x_lstg.isna().sum().sum() == 0
@@ -40,11 +40,12 @@ def main():
 
     # create chunks
     for i in range(NUM_CHUNKS):
-        print(i+1)
+        if (i+1) % 1000 == 0:
+            print('Chunk {} of {}'.format(i+1, NUM_CHUNKS))
         # create chunk and save
         d = {'lookup': lookup.iloc[idx, :], 
              'x_lstg': x_lstg.iloc[idx, :]}
-        dump(d, '{}{}.gz'.format(chunk_dir, (i + 1)))
+        dump(d, '{}{}.gz'.format(chunk_dir, i+1))
         # increment indices
         idx = idx + 1
         if idx[-1] >= len(x_lstg):

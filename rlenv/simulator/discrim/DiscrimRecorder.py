@@ -3,8 +3,8 @@ from rlenv.simulator.Recorder import *
 
 
 class DiscrimRecorder(Recorder):
-    def __init__(self, records_path):
-        super(DiscrimRecorder, self).__init__(records_path)
+    def __init__(self, records_path, verbose):
+        super(DiscrimRecorder, self).__init__(records_path, verbose)
         self.reset_recorders()
 
     def reset_recorders(self):

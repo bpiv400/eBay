@@ -11,11 +11,10 @@ from torch.distributions.categorical import Categorical
 from constants import (INPUT_DIR, START, HOLIDAYS, TOL_HALF,
                        MODEL_DIR, ENV_SIM_DIR)
 from rlenv.interface.model_names import LSTM_MODELS
-from rlenv.composer.maps import THREAD_MAP
 from models.nets import FeedForward, LSTM
 from rlenv.env_consts import (META_6, META_7, DAY, NORM, ALL_OUTCOMES,
                               AUTO, REJECT, EXP, SIM_CHUNKS_DIR,
-                              SIM_VALS_DIR, SIM_DISCRIM_DIR)
+                              SIM_VALS_DIR, SIM_DISCRIM_DIR, THREAD_MAP)
 
 
 def load_featnames(name):

@@ -1,6 +1,6 @@
 import pandas as pd
 from compress_pickle import dump
-from rlenv.env_consts import START_TIME, VERBOSE, START_PRICE, TIME_FEATS
+from rlenv.env_consts import START_TIME, START_PRICE, TIME_FEATS
 # TODO: MOVE?
 SIM = 'sim'
 INDEX = 'index'
@@ -29,8 +29,9 @@ VAL_COLS = [LSTG, VAL, SE, SALE_MEAN, SALE_COUNT, TRIALS, CUT]
 
 
 class Recorder:
-    def __init__(self, records_path):
+    def __init__(self, records_path, verbose):
         self.records_path = records_path
+        self.verbose = verbose
         self.sim = -1
         self.lstg = 0
         self.start_time = None
@@ -46,7 +47,6 @@ class Recorder:
         self.start_time = lookup[START_TIME]
         self.sim = -1
         self.start_price = lookup[START_PRICE]
-        print(self.start_price)
 
     def reset_sim(self):
         self.sim += 1
@@ -63,7 +63,7 @@ class Recorder:
         """
         Prints data about the offer if verbose
         """
-        if VERBOSE:
+        if self.verbose:
             con, norm, msg, split = summary
             if event.turn > 1:
                 days, delay = event.delay_outcomes()
@@ -108,9 +108,9 @@ class Recorder:
     @staticmethod
     def print_sale(sale, price, dur):
         """
-        Print info about the given sale data if VERBOSE
+        Print info about the given sale data if self.verbose
         """
-        if VERBOSE:
+        if self.verbose:
             if sale:
                 print('Item sold for: {} in {} seconds'.format(price, dur))
             else:

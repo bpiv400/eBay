@@ -1,4 +1,4 @@
-from rlenv.env_consts import (MONTH, START_TIME, VERBOSE)
+from rlenv.env_consts import (MONTH, START_TIME)
 from rlenv.simulators import SimulatedSeller, SimulatedBuyer
 from rlenv.events.RewardThread import RewardThread
 from rlenv.environments.EbayEnvironment import EbayEnvironment
@@ -6,7 +6,8 @@ from rlenv.environments.EbayEnvironment import EbayEnvironment
 
 class SimulatorEnvironment(EbayEnvironment):
     def __init__(self, **kwargs):
-        super(SimulatorEnvironment, self).__init__(kwargs['arrival'])
+        super(SimulatorEnvironment, self).__init__(
+            kwargs['arrival'], kwargs['verbose'])
         # environment interface
         self.buyer = kwargs['buyer']
         self.seller = kwargs['seller']
@@ -25,8 +26,8 @@ class SimulatorEnvironment(EbayEnvironment):
     def reset(self):
         super(SimulatorEnvironment, self).reset()
         self.recorder.reset_sim()
-        if VERBOSE:
-            print('Initializing Simulation {}'.format(self.recorder.sim))
+        if self.verbose:
+            print('Simulation {}'.format(self.recorder.sim))
 
     def run(self):
         """

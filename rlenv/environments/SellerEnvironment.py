@@ -5,18 +5,19 @@ from rlpyt.envs.base import Env
 from rlpyt.spaces.composite import Composite
 from rlpyt.spaces.float_box import FloatBox
 from rlenv.environments.EbayEnvironment import EbayEnvironment
-from rlenv.composer.maps import THREAD_MAP, LSTG_MAP, TURN_IND_MAP
 from rlenv.events import event_types
 from rlenv.events.SellerThread import SellerThread
 from rlenv.env_consts import (SELLER_HORIZON, LOOKUP, X_LSTG, START_TIME, MONTH,
-                              CON, DELAY, ACTION_SPACE_NAME, OBS_SPACE_NAME)
+                              CON, DELAY, ACTION_SPACE_NAME, OBS_SPACE_NAME,
+                              THREAD_MAP, LSTG_MAP, TURN_IND_MAP)
 from rlenv.simulators import SimulatedBuyer
 from rlenv.spaces.ConSpace import ConSpace
 
 
 class SellerEnvironment(EbayEnvironment, Env):
     def __init__(self, params):
-        super(SellerEnvironment, self).__init__(arrival=params['arrival'])
+        super(SellerEnvironment, self).__init__(
+            arrival=params['arrival'], verbose=params['verbose'])
         # attributes for getting lstg data
         self._file = params['file']
         self._num_lstgs = len(self._file[LOOKUP])

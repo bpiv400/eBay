@@ -1,10 +1,7 @@
 import os
-import pickle
 import torch
-from rlenv.composer.maps import *
 from compress_pickle import load
-import pandas as pd
-import numpy as np
+import numpy as np, pandas as pd
 from rlenv.env_consts import *
 from constants import ENV_SIM_DIR
 from utils import unpickle
@@ -16,14 +13,8 @@ class Composer:
     """
     Class for composing inputs to interface from various input streams
     """
-    def __init__(self, rebuild=False):
-        composer_path = '{}composer.pkl'.format(COMPOSER_DIR)
-        if not os.path.exists(composer_path) or rebuild:
-            composer_contents = Composer.build_models()
-            self.maps, self.sizes, self.feat_sets = composer_contents
-            pickle.dump(composer_contents, open(composer_path, 'wb'))
-        else:
-            self.maps, self.sizes, self.feat_sets = unpickle(composer_path)
+    def __init__(self):
+        self.maps, self.sizes, self.feat_sets = Composer.build_models()
 
     @staticmethod
     def build_models():
@@ -83,21 +74,21 @@ class Composer:
 
     @staticmethod
     def _build_model_maps(model, feat_sets):
-        print(model)
+        #print(model)
         maps = dict()
         featnames = load_featnames(model)
-        print('len: {}'.format(len(featnames['x']['lstg'])))
+        #print('len: {}'.format(len(featnames['x']['lstg'])))
         sizes = load_sizes(model)
         # create input set for x_time
         if 'x_time' in featnames:
             input_set = featnames['x_time']
-            print('x time')
+            #print('x_time')
             maps['x_time'] = Composer._build_set_maps(input_set, feat_sets, size=sizes['x_time'])
             # ensure only features from x_time contribute to the x_time map
             assert len(maps['x_time']) == 1
         maps['x'] = dict()
         for set_name, input_set in featnames['x'].items():
-            print(set_name)
+            #print(set_name)
             maps['x'][set_name] = Composer._build_set_maps(input_set, feat_sets,
                                                            size=sizes['x'][set_name])
         clipped_sizes = {
@@ -110,7 +101,7 @@ class Composer:
     @staticmethod
     def _build_set_maps(input_set, feat_sets, size=None):
         output = dict()
-        print('input set: {}'.format(len(input_set)))
+        #print('input set: {}'.format(len(input_set)))
         input_set = pd.DataFrame(data={'out':np.arange(len(input_set))},
                                  index=input_set)
         for set_name, feat_list in feat_sets.items():
@@ -164,10 +155,11 @@ class Composer:
         assert len(indices) == len(set(indices))
         ## error checking
         input_feats = set(list(input_set.index))
-        print(len(input_set))
+        #print(len(input_set))
         map_feats = set(map_feats)
-        print('missing from maps: {}'.format(input_feats.difference(map_feats)))
+        #print('missing from maps: {}'.format(input_feats.difference(map_feats)))
         assert len(indices) == size
+        assert input_feats == map_feats
 
     @staticmethod
     def _check_feat_sets(feat_sets):

@@ -1,8 +1,6 @@
-from constants import INPUT_DIR
+from constants import INPUT_DIR, MAX_DAYS
 
 INTERACT = False
-VERBOSE = True  # verbose has higher priority than silent
-SILENT = False  # output nothing
 
 # time feats
 SLR_OFFERS = 'slr_offers'
@@ -34,6 +32,13 @@ TIME_FEATS = [
     BYR_BEST_RECENT,
     THREAD_COUNT
 ]
+
+# composer maps
+SIZE = 'size'
+LSTG_MAP = 'lstg'
+THREAD_MAP = 'thread'
+TURN_IND_MAP = 'turns'
+X_TIME_MAP = 'x_time'
 
 # clock feats
 CLOCK_FEATS = ['holiday', 'dow0', 'dow1', 'dow2', 'dow3', 'dow4', 'dow5', 'minute_of_day']
@@ -101,7 +106,7 @@ SIM_VALS_DIR = 'vals'
 SIM_DISCRIM_DIR = 'discrim'
 
 # temporal constants
-MONTH = 31 * 24 * 3600
+MONTH = MAX_DAYS * 24 * 3600
 DAY = 24 * 3600
 HOUR = 3600
 EXPIRATION = 48 * 60 * 60
@@ -123,7 +128,7 @@ ACC_PRICE = 'accept_price'
 META_7 = [21, 10]
 META_6 = [32, 14, 11, 7, 28]
 
-NUM_CHUNKS = 512
+NUM_CHUNKS = 100000
 
 SELLER_HORIZON = 100
 ENV_LSTG_COUNT = 1000
