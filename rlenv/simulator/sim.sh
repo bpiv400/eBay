@@ -53,7 +53,7 @@ then
     then
       sim_done
     fi
-    qsub repo/rlenv/simulate/discrim/generate.sh "${PART}"
+    qsub repo/rlenv/simulator/discrim/generate.sh "${PART}"
 else
     broken
 fi
