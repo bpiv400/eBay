@@ -86,8 +86,4 @@ class DiscrimRecorder(Recorder):
         self.threads = self.record2frame(self.threads, THREAD_COLS)
 
     def construct_output(self):
-        records = {
-            'offers': self.offers,
-            'threads': self.threads,
-        }
-        return records
+        return {'offers': self.offers, 'threads': self.threads}

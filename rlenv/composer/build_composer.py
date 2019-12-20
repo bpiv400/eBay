@@ -11,7 +11,7 @@ def main():
     Main method
     :return: NA
     """
-    Composer({'composer': 1}, rebuild=True)
+    Composer(rebuild=True)
 
 
 if __name__ == '__main__':

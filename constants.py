@@ -35,10 +35,6 @@ LAYERS_FULL = 8
 HIDDEN = 1024
 F = torch.nn.ReLU(inplace=True)
 
-# use gpu if available
-# DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
-DEVICE = 'cpu'
-
 # paths and directories
 if 'Ubuntu' in platform():		# Etan's box
 	PREFIX = '/data/eBay'

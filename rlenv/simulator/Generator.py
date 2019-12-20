@@ -5,7 +5,7 @@ import os, sys, shutil
 from datetime import datetime
 from compress_pickle import load, dump
 import numpy as np
-from rlenv.env_consts import (VERBOSE, START_PRICE, START_DAY,
+from rlenv.env_consts import (VERBOSE, START_PRICE, START_TIME,
                               ACC_PRICE, DEC_PRICE, SILENT, MAX_RECORDER_SIZE)
 from rlenv.interface.interfaces import PlayerInterface, ArrivalInterface
 from rlenv.environments.SimulatorEnvironment import SimulatorEnvironment
@@ -197,7 +197,6 @@ class Generator:
         outcome = environment.run()
         self._print_sim()
         time_up = self._check_time()
-        self.recorder.add_sale(*outcome)
         return outcome, time_up
 
     def _check_time(self):

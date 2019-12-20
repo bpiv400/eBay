@@ -1,7 +1,7 @@
 from constants import INPUT_DIR
 
 INTERACT = False
-VERBOSE = False  # verbose has higher priority than silent
+VERBOSE = True  # verbose has higher priority than silent
 SILENT = True  # output nothing
 
 # time feats
@@ -143,7 +143,7 @@ PRICE = 'price'
 # param names
 VAL_SE_CHECK = 50
 MIN_SALES = 20
-SIM_COUNT = 100
+SIM_COUNT = 1
 SE_TOLS = [.5, .75, 1.0, 1.25]
 SE_RELAX_WIDTH = 10000
 MAX_RECORDER_SIZE = 2e9

@@ -1,9 +1,8 @@
-import pickle
+import pickle, argparse
 from compress_pickle import load
 import pandas as pd
 import torch
-from rlenv.env_consts import DAY
-from constants import PARTS_DIR, HOLIDAYS
+from constants import PARTS_DIR, HOLIDAYS, PARTITIONS
 
 
 def extract_day_feats(clock):
@@ -52,3 +51,16 @@ def init_x(part, idx=None):
         x[name] = df
 
     return x
+
+
+def input_partition():
+    """
+    Parses command line input for partition name.
+    :return part: string partition name.
+    """
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--part', required=True, type=str, help='partition name')
+    part = parser.parse_args().part
+    if part not in PARTITIONS:
+        raise RuntimeError('part must be one of: {}'.format(PARTITIONS))
+    return part

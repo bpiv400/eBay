@@ -19,7 +19,6 @@ class DiscrimGenerator(Generator):
         time_up = False
         while self.recorder.sim < SIM_COUNT - 1 and not time_up:
             _, time_up = self.simulate_lstg(environment)
-        self.mem_check()
         return time_up
 
     def make_recorder(self):

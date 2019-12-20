@@ -2,8 +2,9 @@ import sys, pickle, os, argparse
 from compress_pickle import load, dump
 import numpy as np, pandas as pd
 from constants import *
-from utils import *
-from processing.processing_utils import *
+from utils import init_x
+from processing.processing_utils import create_x_clock, convert_to_numpy, \
+    get_featnames, get_sizes, create_small
 
 
 def add_turn_indicators(df):

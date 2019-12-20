@@ -1,36 +1,32 @@
 """
 Chunks a partition into NUM_CHUNKS pieces for reward generation
-
 """
 import os
-import argparse
-import pandas as pd
-import numpy as np
+import numpy as np, pandas as pd
 from compress_pickle import dump, load
 from constants import PARTS_DIR, PARTITIONS
 from rlenv.env_consts import LOOKUP_FILENAME, NUM_CHUNKS, START_PRICE
 from rlenv.env_utils import get_env_sim_subdir
-import utils
+from utils import init_x, input_partition
 
 
-def init_x(part):
+def main():
     """
-    Combines components of x_lstg into a dataframe
-    :param part: string giving partition
-    :return: pd.DataFrame
+    Chunks the given partition
     """
-    x = utils.init_x(part, None)
-    x = [frame for _, frame in x.items()]
-    x = pd.concat(x, axis=1)
-    return x
+    part = input_partition()
 
+    # load inputs
+    x_lstg = init_x(part)
+    lookup = load('{}{}/{}'.format(PARTS_DIR, part, LOOKUP_FILENAME))
 
-def make_dirs(part):
-    """
-    Create subdirectories for this partition of the environment simulation
-    :param str part: one of PARTITIONS
-    :return: None
-    """
+    # sort and subset
+    lookup = lookup.sort_values(by=START_PRICE)
+    x_lstg = pd.concat([df.reindex(index=lookup.index) \
+        for df in x_lstg.values()], axis=1)
+    assert x_lstg.isna().sum().sum() == 0
+
+    # make directories partition and components if they don't exist
     chunks = get_env_sim_subdir(part, chunks=True)
     values = get_env_sim_subdir(part, values=True)
     discrim = get_env_sim_subdir(part, discrim=True)
@@ -38,57 +34,21 @@ def make_dirs(part):
         if not os.path.isdir(direct):
             os.mkdir(direct)
 
-
-def sort_inputs(x_lstg, lookup):
-    """
-    Sorts lookup in ascending order of start price and
-    aligns x_lstg to match
-    :param pd.DataFrame x_lstg:
-    :param pd.DataFrame lookup:
-    :returns: 2-tuple of x_lstg, lookup
-    """
-    lookup = lookup.sort_values(by=START_PRICE)
-    x_lstg = x_lstg.reindex(lookup.index)
-    return x_lstg, lookup
-
-
-def main():
-    """
-    Chunks the given partition
-    """
-    # prep
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--part', required=True,
-                        help='partition to chunk: {}'.format(PARTITIONS))
-    part = parser.parse_args().part
-    if part not in PARTITIONS:
-        raise RuntimeError('part must be one of: {}'.format(PARTITIONS))
-    # load inputs
-    x_lstg = init_x(part)
-    lookup = load('{}{}/{}'.format(PARTS_DIR, part, LOOKUP_FILENAME))
-    # make directories partition and components if they don't exist
-    make_dirs(part)
-    # error checking and sorting
-    assert (lookup.index == x_lstg.index).all()
-    x_lstg, lookup = sort_inputs(x_lstg, lookup)
     # iteration prep
-    total_lstgs = len(x_lstg)
-    indices = np.arange(0, total_lstgs, step=NUM_CHUNKS)
+    idx = np.arange(0, len(x_lstg), step=NUM_CHUNKS)
     chunk_dir = get_env_sim_subdir(part, chunks=True)
+
     # create chunks
     for i in range(NUM_CHUNKS):
-        indices = indices + 1
-        if indices[-1] >= total_lstgs:
-            indices = indices[:-1]
-        curr_df = x_lstg.iloc[indices, :]
-        curr_lookup = lookup.iloc[indices, :]
-        path = '{}{}.gz'.format(chunk_dir, (i + 1))
-        # store output
-        curr_dict = {
-            'lookup': curr_lookup,
-            'x_lstg': curr_df
-        }
-        dump(curr_dict, path)
+        print(i+1)
+        # create chunk and save
+        d = {'lookup': lookup.iloc[idx, :], 
+             'x_lstg': x_lstg.iloc[idx, :]}
+        dump(d, '{}{}.gz'.format(chunk_dir, (i + 1)))
+        # increment indices
+        idx = idx + 1
+        if idx[-1] >= len(x_lstg):
+            idx = idx[:-1]
 
 
 if __name__ == '__main__':

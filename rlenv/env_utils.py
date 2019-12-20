@@ -18,16 +18,14 @@ from rlenv.env_consts import (META_6, META_7, DAY, NORM, ALL_OUTCOMES,
                               SIM_VALS_DIR, SIM_DISCRIM_DIR)
 
 
-def load_featnames(full_name):
-    featnames_path = '{}featnames/{}.pkl'.format(INPUT_DIR, full_name)
-    featnames_dict = utils.unpickle(featnames_path)
-    return featnames_dict
+def load_featnames(name):
+    path = '{}featnames/{}.pkl'.format(INPUT_DIR, name)
+    return utils.unpickle(path)
 
 
-def load_sizes(full_name):
-    featnames_path = '{}sizes/{}.pkl'.format(INPUT_DIR, full_name)
-    featnames_dict = utils.unpickle(featnames_path)
-    return featnames_dict
+def load_sizes(name):
+    path = '{}sizes/{}.pkl'.format(INPUT_DIR, name)
+    return utils.unpickle(path)
 
 
 def featname(feat, turn):

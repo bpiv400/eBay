@@ -8,7 +8,7 @@ from rlenv.environments.EbayEnvironment import EbayEnvironment
 from rlenv.composer.maps import THREAD_MAP, LSTG_MAP, TURN_IND_MAP
 from rlenv.events import event_types
 from rlenv.events.SellerThread import SellerThread
-from rlenv.env_consts import (SELLER_HORIZON, LOOKUP, X_LSTG, START_DAY, MONTH,
+from rlenv.env_consts import (SELLER_HORIZON, LOOKUP, X_LSTG, START_TIME, MONTH,
                               CON, DELAY, ACTION_SPACE_NAME, OBS_SPACE_NAME)
 from rlenv.simulators import SimulatedBuyer
 from rlenv.spaces.ConSpace import ConSpace
@@ -78,7 +78,7 @@ class SellerEnvironment(EbayEnvironment, Env):
                                 index=self.arrival.composer.x_lstg)
         self.lookup = pd.Series(self._lookup_slice[self._ix, :], index=self._lookup_cols)
         self._ix += 1
-        self.end_time = self.lookup[START_DAY] + MONTH
+        self.end_time = self.lookup[START_TIME] + MONTH
 
     def _draw_lstgs(self):
         ids = np.random.randint(self._num_lstgs)

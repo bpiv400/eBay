@@ -2,8 +2,8 @@ import sys, pickle, os, argparse
 from compress_pickle import load, dump
 import numpy as np, pandas as pd
 from constants import *
-from utils import *
-from processing.processing_utils import *
+from utils import input_partition, init_x
+from processing.processing_utils import convert_to_numpy, get_featnames, get_sizes, create_small
 
 
 # loads data and calls helper functions to construct train inputs
@@ -35,10 +35,8 @@ def process_inputs(part):
 
 
 if __name__ == '__main__':
-	# extract model and outcome from int
-	parser = argparse.ArgumentParser()
-	parser.add_argument('--part', type=str)
-	part = parser.parse_args().part
+	# partition name from command line
+	part = input_partition()
 	print('%s/hist' % part)
 
 	# input dataframes, output processed dataframes

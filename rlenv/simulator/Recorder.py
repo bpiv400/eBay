@@ -1,6 +1,6 @@
 import pandas as pd
 from compress_pickle import dump
-from rlenv.env_consts import START_DAY, VERBOSE, START_PRICE, TIME_FEATS
+from rlenv.env_consts import START_TIME, VERBOSE, START_PRICE, TIME_FEATS
 # TODO: MOVE?
 SIM = 'sim'
 INDEX = 'index'
@@ -43,7 +43,7 @@ class Recorder:
         :param int lstg: listing id
         """
         self.lstg = lstg
-        self.start_time = lookup[START_DAY]
+        self.start_time = lookup[START_TIME]
         self.sim = -1
         self.start_price = lookup[START_PRICE]
 

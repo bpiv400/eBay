@@ -1,4 +1,4 @@
-from rlenv.env_consts import (MONTH, START_DAY, VERBOSE)
+from rlenv.env_consts import (MONTH, START_TIME, VERBOSE)
 from rlenv.simulators import SimulatedSeller, SimulatedBuyer
 from rlenv.events.RewardThread import RewardThread
 from rlenv.environments.EbayEnvironment import EbayEnvironment
@@ -16,7 +16,7 @@ class SimulatorEnvironment(EbayEnvironment):
         self.lookup = kwargs['lookup']
 
         # end time
-        self.end_time = self.lookup[START_DAY] + MONTH
+        self.end_time = self.lookup[START_TIME] + MONTH
         self.thread_counter = 0
 
         # recorder

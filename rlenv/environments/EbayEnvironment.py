@@ -7,7 +7,7 @@ from rlenv.events import event_types
 from rlenv.sources import ArrivalSources
 from rlenv.sources import ThreadSources
 from rlenv.time import time_triggers
-from rlenv.env_consts import (START_DAY, INTERACT, VERBOSE, MONTH, ACC_PRICE,
+from rlenv.env_consts import (START_TIME, INTERACT, VERBOSE, MONTH, ACC_PRICE,
                               DEC_PRICE, START_PRICE, SALE, PRICE, DUR)
 from rlenv.env_utils import get_clock_feats, time_delta
 from constants import INTERVAL, BYR_PREFIX
@@ -44,7 +44,7 @@ class EbayEnvironment:
         self.thread_counter = 0
         sources = ArrivalSources(x_lstg=self.x_lstg, composer=self.arrival.composer)
         self.arrival.init(sources=sources())
-        self.queue.push(Arrival(self.lookup[START_DAY], sources))
+        self.queue.push(Arrival(self.lookup[START_TIME], sources))
 
     def run(self):
         while True:
@@ -144,7 +144,7 @@ class EbayEnvironment:
         """
         # expiration
         sources = ThreadSources(x_lstg=self.x_lstg, composer=self.arrival.composer)
-        months_since_lstg = time_delta(self.lookup[START_DAY], event.priority, unit=MONTH)
+        months_since_lstg = time_delta(self.lookup[START_TIME], event.priority, unit=MONTH)
         time_feats = self.time_feats.get_feats(time=event.priority, thread_id=event.thread_id)
         sources.prepare_hist(time_feats=time_feats, clock_feats=get_clock_feats(event.priority),
                              months_since_lstg=months_since_lstg)
@@ -289,6 +289,6 @@ class EbayEnvironment:
 
     def _init_delay(self, event):
         event.change_turn()
-        event.init_delay(self.lookup[START_DAY])
+        event.init_delay(self.lookup[START_TIME])
         self.queue.push(event)
 

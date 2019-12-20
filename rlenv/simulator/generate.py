@@ -27,14 +27,13 @@ def main():
         help='for value estimation; otherwise discriminator input')
     args = parser.parse_args()
     num, part, values = args.num, args.part, args.values
+    print('{} {}: {}'.format(part, num, 'values' if values else 'discrim'))
 
     # num is modulus NUM_CHUNKS
-    num = (num % NUM_CHUNKS)
-    num = NUM_CHUNKS if num == 0 else num
+    num = ((num-1) % NUM_CHUNKS) + 1
 
     if part not in PARTITIONS:
         raise RuntimeError('part must be one of: {}'.format(PARTITIONS))
-    base_dir = get_env_sim_dir(part)
 
     # check whether chunk is finished processing
     if chunk_done(part, num, values):
@@ -43,7 +42,7 @@ def main():
 
     # create generator
     gen_class = ValueGenerator if values else DiscrimGenerator
-    generator = gen_class(base_dir, num)
+    generator = gen_class(get_env_sim_dir(part), num)
     generator.generate()
 
 

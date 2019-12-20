@@ -1,10 +1,10 @@
-import sys, argparse
+import sys
 from compress_pickle import load, dump
 from datetime import datetime as dt
 import numpy as np, pandas as pd
 from constants import *
-from utils import *
-from processing.processing_utils import *
+from utils import input_partition
+from processing.processing_utils import extract_clock_feats, load_frames, get_partition
 
 
 # delay
@@ -87,10 +87,8 @@ def get_x_offer(start_price, events, tf):
 
 
 if __name__ == "__main__":
-    # parameter(s) from command line
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--part', action='store', type=str, required=True)
-    part = parser.parse_args().part
+    # partition and corresponding indices
+    part = input_partition()
     idx, path = get_partition(part)
 
     # load other data
