@@ -1,5 +1,6 @@
 """
-Generates simulator for a chunk of the lstgs in a partition
+Runs a simulation for the given partition and chunk of lstgs to generate
+value estimations or discriminator inputs
 """
 import argparse
 import os
@@ -12,40 +13,52 @@ from rlenv.simulator.discrim.DiscrimGenerator import DiscrimGenerator
 
 
 def chunk_done(part, num, values):
+    """
+    checks whether the intended outputs of the simulation have already been
+    generated
+    :param str part: partition in PARTITIONS
+    :param int num: chunk number
+    :param bool values: whether this is a value simulation
+    :return: bool
+    """
     records_dir = get_env_sim_subdir(part, values=values, discrim=not values)
     path = get_done_file(records_dir, num)
     return os.path.isfile(path)
 
 
 def main():
+    value_help = 'flag for whether to estimate values (generates discrim inputs'
+    value_help = '{} if not)'.format(value_help)
     torch.set_default_dtype(torch.float32)
+
+    # arguments
     parser = argparse.ArgumentParser()
     parser.add_argument('--num', required=True, type=int, help='chunk number')
     parser.add_argument('--part', required=True, type=str, help='partition name')
-    value_help = 'flag for whether to estimate values (generates discrim inputs'
-    value_help = '{} if not)'.format(value_help)
     parser.add_argument('--values', action='store_true', help=value_help)
 
+    # argument processing
     args = parser.parse_args()
     part = args.part
     num = args.num
     num = (num % NUM_CHUNKS)
     num = NUM_CHUNKS if num == 0 else num
     values = args.values
-
+    # error checking
     if part not in PARTITIONS:
         raise RuntimeError('part must be one of: {}'.format(PARTITIONS))
-    base_dir = get_env_sim_dir(part)
 
+    # exit script if chunk has been generated
     if chunk_done(part, num, values):
         print('{} already done'.format(num))
         exit(0)
 
+    # create value generate and generate outputs
+    base_dir = get_env_sim_dir(part)
     if values:
-        gen_class = ValueGenerator
+        generator = ValueGenerator(base_dir, num)
     else:
-        gen_class = DiscrimGenerator
-    generator = gen_class(base_dir, num)
+        generator = DiscrimGenerator(base_dir, num)
     generator.generate()
 
 
