@@ -1,5 +1,10 @@
 """
 Generates values or discrim inputs for a chunk of lstgs
+
+If a checkpoint file for the current simulation, we load it and pick up where we left off.
+Otherwise, starts from scratch with the first listing in the file
+
+Lots of memory dumping code while I try to find leak
 """
 import os
 import sys
@@ -10,88 +15,68 @@ from pympler import muppy, summary
 from pympler.garbagegraph import GarbageGraph, start_debug_garbage
 import gc
 import numpy as np
-from rlenv.env_consts import (VERBOSE, START_PRICE, START_DAY,
+from rlenv.env_consts import (VERBOSE, START_PRICE, START_DAY, RECORDER_DUMP_WIDTH,
                               ACC_PRICE, DEC_PRICE, SILENT, MAX_RECORDER_SIZE)
+from rlenv.env_utils import load_chunk, get_done_file
 from rlenv.interface.interfaces import PlayerInterface, ArrivalInterface
 from rlenv.environments.SimulatorEnvironment import SimulatorEnvironment
 from rlenv.composer.Composer import Composer
 
 
 class Generator:
-    """
-    Attributes:
-        x_lstg: pd.Dataframe containing the x_lstg (x_w2v, x_slr, x_cat, x_cndtn, etc...) for each listing
-        lookup: pd.Dataframe containing features of each listing used to control environment behavior and outputs
-            (e.g. list price, auto reject price, auto accept price, meta category, etc..)
-        recorder: Recorder object that stores environment outputs (e.g. discrim features,
-            events df, etc...)
-        buyer: PlayerInterface containing buyer models
-        seller: PlayerInterface containing seller models
-        arrival: ArrivalInterface containing arrival and hist models
-        checkpoint_contents: the dictionary that the generated loaded from a checkpoint file
-        checkpoint_count: The number of checkpoints saved for this chunk so far
-        recorder_count: The number of recorders stored for this chunk, including the current one
-        that hasn't been saved yet
-        start: time that the current iteration of RewardGenerator began
-        has_checkpoint: whether a recent checkpoint file has been created for this environment
-    Public Functions:
-        generate: generates values or discrim inputs based on the lstgs in the current chunk
-    Static Methods:
-        remake_dir: deletes and regenerates a given directory
-        header: prints a header giving basic info for a lstg
-    """
     def __init__(self, direct=None, num=None):
         """
         Constructor
-        :param direct: string giving path to directory for current partition in rewardGenerator
-        :param num: int giving the chunk number
+        :param direct: base directory for current partition
+        :param int num:  chunk number
         """
         start_debug_garbage()
+        self.start = datetime.now()
         self.dir = direct
         self.chunk = int(num)
-        input_path = '{}chunks/{}.gz'.format(self.dir, self.chunk)
-        input_dict = load(input_path)
-        self.x_lstg = input_dict['x_lstg']
-        self.lookup = input_dict['lookup']
-        self.lookup[START_DAY] = self.lookup[START_DAY].astype(np.int64) * 3600 * 24
-        self.recorder = None
+
+        # load inputs
+        self.x_lstg, self.lookup = load_chunk(self.dir, num)
+
+        # interfaces for the models
         composer = Composer(rebuild=False)
         self.buyer = PlayerInterface(composer=composer, byr=True)
         self.seller = PlayerInterface(composer=composer, byr=False)
         self.arrival = ArrivalInterface(composer=composer)
 
-        # checkpoint params
-        self.checkpoint_contents = None
-        self.checkpoint_count = 0
-        self.recorder_count = 1
-        self.start = datetime.now()
-        self.has_checkpoint = self._has_checkpoint()
+        # checkpoint params -- default to no checkpoint
+        self.checkpoint_contents = self._load_checkpoint()
+        if self.checkpoint_contents is not None:
+            self.checkpoint_count = self.checkpoint_contents['checkpoint_count']
+            self.recorder_count = self.checkpoint_contents['recorder_count']
+            self.recorder = self.checkpoint_contents['recorder']
+        else:
+            self.checkpoint_count = 0
+            self.recorder_count = 1
+            self.recorder = None
+
         if not SILENT:
-            print('checkpoint: {}'.format(self.has_checkpoint))
+            print('checkpoint: {}'.format(self.checkpoint_contents is not None))
             print('checkpoint count: {}'.format(self.checkpoint_count))
 
         # delete previous directories for simulator and records
-        if not self.has_checkpoint:
-            self._prepare_records()
-
+        if self.checkpoint_contents is None:
+            self._remake_dir(self.records_path)
         # memory debugging
         self.prev_mem = summary.summarize(muppy.get_objects())
-
-    def _prepare_records(self):
-        """
-        Clears existing value and record directories for this chunk
-        """
-        self._remake_dir(self.records_path)
 
     def _get_lstgs(self):
         """
         Generates list of listings in the current chunk that haven't had outputs generated
-        yet. If there is a checkpoint file, the list contains all lstgs that weren't
-        simulated to completion in the previous iterations of RewardGenerator
+        yet.
+
+        If there is a checkpoint file, the list contains all lstgs that weren't
+        simulated to completion in the previous iterations of Generator. Otherwise,
+        return all lstgs
         :return: list
         """
-        if not self.has_checkpoint:
-            return self.x_lstg.index
+        if self.checkpoint_contents is None:
+            return list(self.x_lstg.index)
         else:
             start_lstg = self.checkpoint_contents['lstg']
             index = list(self.x_lstg.index)
@@ -100,6 +85,9 @@ class Generator:
             return index
 
     def mem_check(self):
+        """
+        Runs garbage collection and prints information about the program memory
+        """
         gc.collect()
         curr_mem = summary.summarize(muppy.get_objects())
         diff = summary.get_diff(self.prev_mem, curr_mem)
@@ -112,11 +100,10 @@ class Generator:
 
     def setup_env(self, lstg, lookup):
         """
-        Generates the environment required to
-        simulate the given listing
+        Generates the environment required to simulate the given listing
         :param lstg: int giving a lstg id
-        :param pandas.Series lookup: metadata about lstg
-        :return: RewardEnvironment
+        :param pd.Series lookup: metadata about lstg
+        :return: SimulatorEnvironment
         """
         # setup new lstg
         x_lstg = self.x_lstg.loc[lstg, :].astype(np.float32)
@@ -124,7 +111,7 @@ class Generator:
                                            arrival=self.arrival, x_lstg=x_lstg,
                                            lookup=lookup, recorder=self.recorder)
         if self.checkpoint_contents is None:
-            # seed the recorder with a new lstg and make a new value calculator
+            # seed the recorder with a new lstg if not loading from a checkpoint
             self.recorder.update_lstg(lookup=lookup, lstg=lstg)
         else:
             self.checkpoint_contents = None
@@ -164,7 +151,7 @@ class Generator:
         self._generate_done()
 
     def _generate_done(self):
-        path = '{}done_{}.txt'.format(self.records_path, self.chunk)
+        path = get_done_file(self.records_path, self.chunk)
         open(path, 'a').close()
 
     def _report_time(self):
@@ -187,7 +174,6 @@ class Generator:
         Creates a checkpoint for the current progress of the RewardGenerator,
         so the job can be killed and restarted in the short queue
         :param lstg: int giving lstg id
-        :return: None
         """
         self.checkpoint_count += 1
         contents = self.make_checkpoint(lstg)
@@ -195,15 +181,26 @@ class Generator:
         dump(contents, path)
 
     def simulate_lstg_loop(self, environment):
+        """
+        Abstract method: simulates a listing until time runs out or until
+        stop condition is met
+        :param environment: SimulatorEnvironment
+        :return: bool giving whether time has run out
+        """
         raise NotImplementedError()
 
     def make_checkpoint(self, lstg):
+        """
+        Generates a checkpoint for this simulation containing
+        the lstg, current recorder, recorder counter, checkpoint counter
+        :param int lstg: lstg id
+        :return: dict
+        """
         contents = {
             'lstg': lstg,
             'recorder': self.recorder,
             'recorder_count': self.recorder_count,
             'checkpoint_count': self.checkpoint_count,
-            'time': datetime.now()
         }
         return contents
 
@@ -223,8 +220,8 @@ class Generator:
 
     def _check_time(self):
         """
-        Checks whether the generator has been running for almost 4 hours
-        :return: Boolean indicating almost 4 hours has passed
+        Checks whether the generator has been running for max tim
+        :return: bool
         """
         curr = datetime.now()
         tot = (curr - self.start).total_seconds() / 3600
@@ -240,15 +237,19 @@ class Generator:
     def _tidy_recorder(self):
         """
         Dumps the recorder and increments the recorder count if it
-        contains at least a gig of data
+        contains some minimum amount of data
         """
-        if sys.getsizeof(self.recorder) > MAX_RECORDER_SIZE:
-            self.recorder.dump(self.recorder_count)
-            self.recorder = self.make_recorder()
-            self.recorder_count += 1
+        if len(self.recorder) % RECORDER_DUMP_WIDTH == 0:
+            if sys.getsizeof(self.recorder) > MAX_RECORDER_SIZE:
+                self.recorder.dump(self.recorder_count)
+                self.recorder = self.make_recorder()
+                self.recorder_count += 1
 
     @staticmethod
     def _memory_dump():
+        """
+        Prints memory summary and builds garbage reference cycle graph
+        """
         print("FULL MEMORY DUMP")
         all_objects = muppy.get_objects()
         sum1 = summary.summarize(all_objects)
@@ -256,38 +257,39 @@ class Generator:
         gb = GarbageGraph(reduce=True)
         gb.render('garbage.eps')
 
-    def _has_checkpoint(self):
+    def _load_checkpoint(self):
         """
         Checks whether there's a recent checkpoint for the current chunk.
         Loads the checkpoint if one exists
-        :returns: Indicator giving whether there's a recent checkpoint
+        :return dict of checkpoint_contents
         """
         path = self.checkpoint_path
-
         if os.path.isfile(self.checkpoint_path):
-            self.checkpoint_contents = load(path)
-            time = self.checkpoint_contents['time']
-            since = (time - datetime.now()).total_seconds() / 3600
-            if since > 24:
-                self.checkpoint_contents = None
-                return False
-            else:
-                self.checkpoint_count = self.checkpoint_contents['checkpoint_count']
-                self.recorder_count = self.checkpoint_contents['recorder_count']
-                self.recorder = self.checkpoint_contents['recorder']
-                return True
+            return load(path)
         else:
-            return False
+            return None
 
     @property
     def checkpoint_path(self):
+        """
+        Gets path to the checkpoint file for this simulation chunk
+        :return: str
+        """
         raise NotImplementedError()
 
     @property
     def records_path(self):
+        """
+        Returns path to the output directory for this simulation chunk
+        :return: str
+        """
         raise NotImplementedError()
 
     def make_recorder(self):
+        """
+        Abstract method that creates a recorder for the Generator
+        :return: rlenv.simulator.Recorder
+        """
         raise NotImplementedError()
 
     @staticmethod
@@ -296,7 +298,6 @@ class Generator:
         Prints header giving basic info about the current lstg
         :param lstg: int giving lstg id
         :param lookup: pd.Series containing metadata about the lstg
-        :return:
         """
         if not SILENT:
             header = 'Lstg: {}  | Start time: {}  | Start price: {}'.format(lstg,

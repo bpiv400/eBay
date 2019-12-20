@@ -7,6 +7,17 @@ INTERACT = False
 VERBOSE = False  # verbose has higher priority than silent
 SILENT = False  # output nothing
 
+# environment simulator param names
+NUM_CHUNKS = 512
+VAL_SE_CHECK = 50  # how many trials should pass between computations of standard error
+MIN_SALES = 20  # minimum number of sales before value estimate can be considered stable
+# list of values that will be used as standard error maximums
+SE_TOLS = [.5, .75, 1.0, 1.25]  # SE[i] is max for trail i * SE_RELAX_WIDTH,... (i + 1) * RELAX_WIDTH - 1
+SE_RELAX_WIDTH = 10000  # number of trials that passes between standard error maximum relaxations
+SIM_COUNT = 100  # number of times each lstg should be simulated when generating discrim inputs
+MAX_RECORDER_SIZE = 2e9  # maximum size of recorder object in bytes before dumping output
+RECORDER_DUMP_WIDTH = 1000  # interval of trials at which we measure the size of the recorder
+
 # time feats
 SLR_OFFERS = 'slr_offers'
 BYR_OFFERS = 'byr_offers'
@@ -124,16 +135,6 @@ ACC_PRICE = 'accept_price'
 # meta categories with sale fees != .09 * price
 META_7 = [21, 10]
 META_6 = [32, 14, 11, 7, 28]
-
-# environment simulator param names
-NUM_CHUNKS = 512
-VAL_SE_CHECK = 50  # how many trials should pass between computations of standard error
-MIN_SALES = 20  # minimum number of sales before value estimate can be considered stable
-# list of values that will be used as standard error maximums
-SE_TOLS = [.5, .75, 1.0, 1.25]  # SE[i] is max for trail i * SE_RELAX_WIDTH,... (i + 1) * RELAX_WIDTH - 1
-SE_RELAX_WIDTH = 10000  # number of trials that passes between standard error maximum relaxations
-SIM_COUNT = 100  # number of times each lstg should be simulated when generating discrim inputs
-MAX_RECORDER_SIZE = 2e9 # maximum size of recorder object in bytes before dumping output
 
 # space names
 ACTION_SPACE_NAME = 'NegotiationActionSpace'
