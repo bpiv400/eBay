@@ -141,11 +141,17 @@ def collateRNN(batch):
                 x[k] = [torch.from_numpy(v)]
         x_time.append(torch.from_numpy(b[2]))
 
-    # convert to tensor, pack if needed
+    # convert to tensor
     y = torch.stack(y).float()
     turns = torch.sum(y > -1, dim=1).long()
     x = {k: torch.stack(v).float() for k, v in x.items()}
     x_time = torch.stack(x_time, dim=0).float()
+
+    # slice off censored observations
+    y = y[:,:turns[0]]
+    x_time = x_time[:,:turns[0],:]
+
+    # pack for recurrent network
     x_time = rnn.pack_padded_sequence(x_time, turns, batch_first=True)
 
     # output is dictionary of tensors

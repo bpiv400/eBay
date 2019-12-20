@@ -23,8 +23,7 @@ if __name__ == "__main__":
 
 	# months since lstg start
 	thread_start = events.clock.xs(1, level='index')
-	lstg_start = lookup.start_date.astype('int64') * 24 * 3600
-	months = (thread_start - lstg_start) / (3600 * 24 * MAX_DAYS)
+	months = (thread_start - lookup.start_time) / (3600 * 24 * MAX_DAYS)
 	months = months.rename('months_since_lstg')
 	assert months.max() < 1
 

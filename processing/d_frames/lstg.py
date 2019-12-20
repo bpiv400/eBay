@@ -19,12 +19,12 @@ def do_rounding(offer):
 def get_x_lstg(L):
     # initialize output dataframe with as-is features
     df = L[['store', 'slr_us', 'fast', 'slr_bos', 'slr_lstgs', \
-            'fdbk_score', 'fdbk_pstv', 'start_price_pctile']]
+            'fdbk_score', 'fdbk_pstv', 'start_price_pctile']].copy()
     # rename slr_bos and slr_lstgs
     df.rename({'slr_bos': 'slr_bos_total', 
         'slr_lstgs': 'slr_lstgs_total'}, axis=1, inplace=True)
     # normalize start_date to years
-    df['start_years'] = L.start_date / 365
+    df['start_years'] = L.start_time / (365 * 24 * 3600)
     # photos divided by 12, and binary indicator
     df['photos'] = L.photos / 12
     df['has_photos'] = L.photos > 0

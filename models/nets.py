@@ -38,7 +38,8 @@ class Layer(nn.Module):
         # one layer is a weight matrix, batch normalization and activation
         if dropout:
             self.layer = nn.Sequential(nn.Linear(N_in, N_out), 
-                nn.BatchNorm1d(N_out, affine=False), F, VariationalDropout(N_out))
+                nn.BatchNorm1d(N_out, affine=False), F, 
+                VariationalDropout(N_out))
         else:
             self.layer = nn.Sequential(nn.Linear(N_in, N_out), 
                 nn.BatchNorm1d(N_out, affine=False), F)
@@ -180,9 +181,6 @@ class LSTM(nn.Module):
         '''
         super(LSTM, self).__init__()
 
-        # save parameters to self
-        self.steps = sizes['steps']
-
         # initial hidden nodes
         self.h0 = FeedForward(sizes, dropout, toRNN=True)
         self.c0 = FeedForward(sizes, dropout, toRNN=True)
@@ -210,7 +208,8 @@ class LSTM(nn.Module):
 
         # pad
         theta, _ = nn.utils.rnn.pad_packed_sequence(
-            theta, total_length=self.steps, batch_first=True)
+            theta, total_length=len(x_time.batch_sizes), 
+            batch_first=True)
 
         # output layer: (batch_size, seq_len, N_output)
         return self.output(theta).squeeze()

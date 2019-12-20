@@ -58,7 +58,6 @@ if __name__ == "__main__":
 
     # load data
     lookup = load(PARTS_DIR + '%s/lookup.gz' % part)
-    lstg_start = lookup.start_date.astype('int64') * 24 * 3600
     thread_start = load(CLEAN_DIR + 'offers.pkl').reindex(
         index=idx, level='lstg').clock.xs(1, level='index')
     tf = load_frames('tf_arrival').reindex(
@@ -66,10 +65,10 @@ if __name__ == "__main__":
 
     # time feats
     print('tf_arrival')
-    tf_arrival = get_arrival_time_feats(lstg_start, tf)
+    tf_arrival = get_arrival_time_feats(lookup.start_time, tf)
     dump(tf_arrival, path('tf_arrival'))
 
     # outcomes for arrival model
     print('Creating arrival model outcome variables')
-    y_arrival = get_y_arrival(lstg_start, lookup.end_time, thread_start)
+    y_arrival = get_y_arrival(lookup.start_time, lookup.end_time, thread_start)
     dump(y_arrival, path('y_arrival'))

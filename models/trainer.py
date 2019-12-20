@@ -26,29 +26,10 @@ class Trainer:
         self.loglr = None
         self.optimizer = None
 
-
-    def init_training(self):
-        # new instance of model
-        self.model = Model(self.name, self.sizes, 
-            dropout=self.iter > 0)  # after pretraining, use dropout
-        if self.iter <= 1:
-            print(self.model.net)
-
-        # reset model parameters to pretrained parameters
-        if self.iter > 0:
-            self.model.net.load_state_dict(
-                torch.load(self.pretrained_path), strict=False)
-
-        # initialize learning rate and optimizer
-        self.loglr = LOGLR0
-        self.optimizer = optim.Adam(self.model.net.parameters(),
-            lr=math.pow(10, self.loglr))
-        print(self.optimizer)
-
     
     def train_model(self, gamma=0):
         # reset model parameters to pretrained values and create optimizer
-        self.init_training()
+        self._init_training()
 
         # initialize tensorboard writer
         writer = SummaryWriter(
@@ -113,3 +94,22 @@ class Trainer:
             # increment epochs and update last
             epoch += 1
             last = output['loss']
+
+
+    def _init_training(self):
+        # new instance of model
+        self.model = Model(self.name, self.sizes, 
+            dropout=self.iter > 0)  # after pretraining, use dropout
+        if self.iter <= 1:
+            print(self.model.net)
+
+        # reset model parameters to pretrained parameters
+        if self.iter > 0:
+            self.model.net.load_state_dict(
+                torch.load(self.pretrained_path), strict=False)
+
+        # initialize learning rate and optimizer
+        self.loglr = LOGLR0
+        self.optimizer = optim.Adam(self.model.net.parameters(),
+            lr=math.pow(10, self.loglr))
+        print(self.optimizer)

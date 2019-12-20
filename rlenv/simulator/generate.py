@@ -1,8 +1,7 @@
 """
 Generates simulator for a chunk of the lstgs in a partition
 """
-import argparse
-import os
+import os, argparse
 import torch
 from constants import PARTITIONS
 from rlenv.env_utils import get_env_sim_dir, get_env_sim_subdir, get_done_file
@@ -19,32 +18,31 @@ def chunk_done(part, num, values):
 
 def main():
     torch.set_default_dtype(torch.float32)
+
+    # parse arguments
     parser = argparse.ArgumentParser()
     parser.add_argument('--num', required=True, type=int, help='chunk number')
     parser.add_argument('--part', required=True, type=str, help='partition name')
-    value_help = 'flag for whether to estimate values (generates discrim inputs'
-    value_help = '{} if not)'.format(value_help)
-    parser.add_argument('--values', action='store_true', help=value_help)
-
+    parser.add_argument('--values', action='store_true', 
+        help='for value estimation; otherwise discriminator input')
     args = parser.parse_args()
-    part = args.part
-    num = args.num
+    num, part, values = args.num, args.part, args.values
+
+    # num is modulus NUM_CHUNKS
     num = (num % NUM_CHUNKS)
     num = NUM_CHUNKS if num == 0 else num
-    values = args.values
 
     if part not in PARTITIONS:
         raise RuntimeError('part must be one of: {}'.format(PARTITIONS))
     base_dir = get_env_sim_dir(part)
 
+    # check whether chunk is finished processing
     if chunk_done(part, num, values):
         print('{} already done'.format(num))
         exit(0)
 
-    if values:
-        gen_class = ValueGenerator
-    else:
-        gen_class = DiscrimGenerator
+    # create generator
+    gen_class = ValueGenerator if values else DiscrimGenerator
     generator = gen_class(base_dir, num)
     generator.generate()
 

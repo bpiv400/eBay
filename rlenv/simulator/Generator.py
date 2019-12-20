@@ -1,14 +1,9 @@
 """
 Generates values or discrim inputs for a chunk of lstgs
 """
-import os
-import sys
-import shutil
+import os, sys, shutil
 from datetime import datetime
 from compress_pickle import load, dump
-from pympler import muppy, summary
-from pympler.garbagegraph import GarbageGraph, start_debug_garbage
-import gc
 import numpy as np
 from rlenv.env_consts import (VERBOSE, START_PRICE, START_DAY,
                               ACC_PRICE, DEC_PRICE, SILENT, MAX_RECORDER_SIZE)
@@ -46,14 +41,11 @@ class Generator:
         :param direct: string giving path to directory for current partition in rewardGenerator
         :param num: int giving the chunk number
         """
-        start_debug_garbage()
         self.dir = direct
         self.chunk = int(num)
-        input_path = '{}chunks/{}.gz'.format(self.dir, self.chunk)
-        input_dict = load(input_path)
-        self.x_lstg = input_dict['x_lstg']
-        self.lookup = input_dict['lookup']
-        self.lookup[START_DAY] = self.lookup[START_DAY].astype(np.int64) * 3600 * 24
+        d = load('{}chunks/{}.gz'.format(self.dir, self.chunk))
+        self.x_lstg = d['x_lstg']
+        self.lookup = d['lookup']
         self.recorder = None
         composer = Composer(rebuild=False)
         self.buyer = PlayerInterface(composer=composer, byr=True)
@@ -74,8 +66,6 @@ class Generator:
         if not self.has_checkpoint:
             self._prepare_records()
 
-        # memory debugging
-        self.prev_mem = summary.summarize(muppy.get_objects())
 
     def _prepare_records(self):
         """
@@ -99,16 +89,6 @@ class Generator:
             index = index[start_ix:]
             return index
 
-    def mem_check(self):
-        gc.collect()
-        curr_mem = summary.summarize(muppy.get_objects())
-        diff = summary.get_diff(self.prev_mem, curr_mem)
-        self.prev_mem = curr_mem
-        print('new summary')
-        print('')
-        summary.print_(diff)
-        print('generator size: {}'.format(sys.getsizeof(self)))
-        sys.stdout.flush()
 
     def setup_env(self, lstg, lookup):
         """
@@ -144,7 +124,6 @@ class Generator:
             time_up = self.simulate_lstg_loop(environment)
             # store a checkpoint if the job is about to be killed
             if time_up:
-                self._memory_dump()
                 self.store_checkpoint(lstg)
                 break
             else:
@@ -247,14 +226,6 @@ class Generator:
             self.recorder = self.make_recorder()
             self.recorder_count += 1
 
-    @staticmethod
-    def _memory_dump():
-        print("FULL MEMORY DUMP")
-        all_objects = muppy.get_objects()
-        sum1 = summary.summarize(all_objects)
-        summary.print_(sum1)
-        gb = GarbageGraph(reduce=True)
-        gb.render('garbage.eps')
 
     def _has_checkpoint(self):
         """
@@ -300,7 +271,7 @@ class Generator:
         """
         if not SILENT:
             header = 'Lstg: {}  | Start time: {}  | Start price: {}'.format(lstg,
-                                                                            lookup[START_DAY],
+                                                                            lookup[START_TIME],
                                                                             lookup[START_PRICE])
             header = '{} | auto reject: {} | auto accept: {}'.format(header, lookup[DEC_PRICE],
                                                                      lookup[ACC_PRICE])

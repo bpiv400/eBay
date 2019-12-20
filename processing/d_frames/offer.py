@@ -61,7 +61,7 @@ def get_norm(con):
     return norm.rename_axis('index', axis=1).stack().astype('float64')
 
 
-def get_x_offer(lookup, events, tf):
+def get_x_offer(start_price, events, tf):
     # initialize output dataframe
     df = pd.DataFrame(index=events.index).sort_index()
     # delay features
@@ -72,7 +72,7 @@ def get_x_offer(lookup, events, tf):
     # differenced time feats
     df = df.join(tf.reindex(index=df.index, fill_value=0))
     # concession
-    df['con'] = get_con(events.price.unstack(), lookup.start_price)
+    df['con'] = get_con(events.price.unstack(), start_price)
     # total concession
     df['norm'] = get_norm(df.con)
     # indicator for split
@@ -94,13 +94,13 @@ if __name__ == "__main__":
     idx, path = get_partition(part)
 
     # load other data
-    lookup = load(PARTS_DIR + '%s/lookup.gz' % part)
+    start_price = load(PARTS_DIR + '%s/lookup.gz' % part).start_price
     events = load(CLEAN_DIR + 'offers.pkl').reindex(index=idx, level='lstg')
     tf = load_frames('tf_con').reindex(index=idx, level='lstg')
 
     # offer features
     print('x_offer')
-    x_offer = get_x_offer(lookup, events, tf)
+    x_offer = get_x_offer(start_price, events, tf)
     dump(x_offer, path('x_offer'))
 
     # offer timestamps

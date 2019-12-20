@@ -6,7 +6,12 @@ from utils import *
 from processing.processing_utils import *
 
 
-def get_arrival_counts(lstg):
+def get_arrival_counts(part):
+	d = load('%s/envSimulator/%s/discrim/1/1.gz' % (PREFIX, part))
+	thread_start = d['threads'].set_index(
+		['lstg', 'sim', 'thread']).clock.sort_index()
+
+
 	return None
 
 
@@ -34,7 +39,7 @@ if __name__ == '__main__':
 		index=x['lstg'].index).clip(lower=0)
 
 	# construct corresponding dataframe of simulated counts
-	counts_sim = get_sim_counts(counts_obs)
+	counts_sim = get_sim_counts(part)
 
 	# repeat entries in x
 	x = {k: pd.concat([v, v], axis=0) for k, v in x.items()}

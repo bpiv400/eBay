@@ -39,7 +39,10 @@ if __name__ == "__main__":
 
     # lookup files
     lookup = L[['meta', 'cat', 'start_date', 'end_time', \
-        'start_price', 'decline_price', 'accept_price']]
+        'start_price', 'decline_price', 'accept_price']].copy()
+    del L
+    lookup.loc[:, 'start_date'] = lookup.start_date.astype('int64') * 24 * 3600
+    lookup.rename({'start_date': 'start_time'}, axis=1, inplace=True)
     for part, idx in partitions.items():
         dump(lookup.reindex(index=idx),
                 PARTS_DIR + '%s/lookup.gz' % part)
