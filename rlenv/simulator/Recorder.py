@@ -46,6 +46,7 @@ class Recorder:
         self.start_time = lookup[START_TIME]
         self.sim = -1
         self.start_price = lookup[START_PRICE]
+        print(self.start_price)
 
     def reset_sim(self):
         self.sim += 1
@@ -102,8 +103,7 @@ class Recorder:
         :param [str] cols:
         :return: pd.DataFrame with columns given by cols
         """
-        record = pd.DataFrame(data=record, columns=cols)
-        return record
+        return pd.DataFrame(data=record, columns=cols)
 
     @staticmethod
     def print_sale(sale, price, dur):

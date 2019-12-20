@@ -45,7 +45,7 @@ then
     then
       sim_done
     fi
-    qsub repo/rlenv/values/generate.sh "${PART}"
+    qsub repo/rlenv/simulator/values/generate.sh "${PART}"
 
 elif [ "$SIM_TYPE" = "discrim" ]
 then
@@ -53,7 +53,7 @@ then
     then
       sim_done
     fi
-    qsub repo/rlenv/discrim/generate.sh "${PART}"
+    qsub repo/rlenv/simulate/discrim/generate.sh "${PART}"
 else
     broken
 fi

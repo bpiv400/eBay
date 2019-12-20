@@ -2,7 +2,7 @@ from constants import INPUT_DIR
 
 INTERACT = False
 VERBOSE = True  # verbose has higher priority than silent
-SILENT = True  # output nothing
+SILENT = False  # output nothing
 
 # time feats
 SLR_OFFERS = 'slr_offers'
