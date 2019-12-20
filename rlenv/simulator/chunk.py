@@ -1,6 +1,6 @@
 """
-Chunks a partition into NUM_CHUNKS pieces for reward generation
-
+Chunks a partition into NUM_CHUNKS pieces for value estimation
+or generating discrim inputs
 """
 import os
 import argparse
@@ -8,7 +8,8 @@ import pandas as pd
 import numpy as np
 from compress_pickle import dump, load
 from constants import PARTS_DIR, PARTITIONS
-from rlenv.env_consts import LOOKUP_FILENAME, NUM_CHUNKS, START_PRICE
+from rlenv.env_consts import (LOOKUP_FILENAME, NUM_CHUNKS, START_PRICE,
+                              LOOKUP, X_LSTG)
 from rlenv.env_utils import get_env_sim_subdir
 import utils
 
@@ -16,7 +17,7 @@ import utils
 def init_x(part):
     """
     Combines components of x_lstg into a dataframe
-    :param part: string giving partition
+    :param str part: partition in PARTITIONS
     :return: pd.DataFrame
     """
     x = utils.init_x(part, None)
@@ -29,7 +30,6 @@ def make_dirs(part):
     """
     Create subdirectories for this partition of the environment simulation
     :param str part: one of PARTITIONS
-    :return: None
     """
     chunks = get_env_sim_subdir(part, chunks=True)
     values = get_env_sim_subdir(part, values=True)
@@ -45,7 +45,7 @@ def sort_inputs(x_lstg, lookup):
     aligns x_lstg to match
     :param pd.DataFrame x_lstg:
     :param pd.DataFrame lookup:
-    :returns: 2-tuple of x_lstg, lookup
+    :returns: (pd.DataFrame of x_lstg, pd.DataFrame of lookup)
     """
     lookup = lookup.sort_values(by=START_PRICE)
     x_lstg = x_lstg.reindex(lookup.index)
@@ -55,6 +55,7 @@ def sort_inputs(x_lstg, lookup):
 def main():
     """
     Chunks the given partition
+    :raises RuntimeError if lookup and x_lstg don't contain the same lstgs
     """
     # prep
     parser = argparse.ArgumentParser()
@@ -85,8 +86,8 @@ def main():
         path = '{}{}.gz'.format(chunk_dir, (i + 1))
         # store output
         curr_dict = {
-            'lookup': curr_lookup,
-            'x_lstg': curr_df
+            LOOKUP: curr_lookup,
+            X_LSTG: curr_df
         }
         dump(curr_dict, path)
 
