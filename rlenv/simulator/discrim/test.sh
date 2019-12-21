@@ -1,7 +1,7 @@
 #!/bin/bash
 #$ -t 1-1000
 #$ -q short.q
-#$ -l m_mem_free=4G
+#$ -l m_mem_free=8G
 #$ -N test
 #$ -j y
 #$ -o logs/discrim/
