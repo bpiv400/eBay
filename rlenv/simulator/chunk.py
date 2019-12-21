@@ -40,7 +40,7 @@ def main():
 
     # create chunks
     for i in range(NUM_CHUNKS):
-        if (i+1) % 1000 == 0:
+        if (i+1) % 100 == 0:
             print('Chunk {} of {}'.format(i+1, NUM_CHUNKS))
         # create chunk and save
         d = {'lookup': lookup.iloc[idx, :], 
