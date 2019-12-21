@@ -1,5 +1,5 @@
 #!/bin/bash
-#$ -t 1-100000
+#$ -t 1-1000
 #$ -q short.q
 #$ -l m_mem_free=4G
 #$ -N train_rl
