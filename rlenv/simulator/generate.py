@@ -29,13 +29,12 @@ def main():
         help='print event detail')
     args = parser.parse_args()
     num, part, values, verbose = args.num, args.part, args.values, args.verbose
-    print('{} {}: {}'.format(part, num, 'values' if values else 'discrim'))
-
-    # num is modulus NUM_CHUNKS
-    num = ((num-1) % NUM_CHUNKS) + 1
-
     if part not in PARTITIONS:
         raise RuntimeError('part must be one of: {}'.format(PARTITIONS))
+    print('{} {}: {}'.format(part, num, 'values' if values else 'discrim'))
+    
+    # num is modulus NUM_CHUNKS
+    num = ((num-1) % NUM_CHUNKS) + 1
 
     # check whether chunk is finished processing
     if chunk_done(part, num, values):

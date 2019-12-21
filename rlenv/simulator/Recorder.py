@@ -21,10 +21,8 @@ SALE_COUNT = 'sale_count'
 TRIALS = 'trials'
 CUT = 'cut'
 
-OFFER_COLS = [LSTG, SIM, THREAD, INDEX, CLOCK, CON, NORM, MESSAGE]
-OFFER_COLS = OFFER_COLS + TIME_FEATS
+OFFER_COLS = [LSTG, SIM, THREAD, INDEX, CLOCK, CON, MESSAGE] + TIME_FEATS
 THREAD_COLS = [LSTG, SIM, THREAD, BYR_HIST, CLOCK]
-SALE_COLS = [LSTG, SIM, SALE, DUR, PRICE]
 VAL_COLS = [LSTG, VAL, SE, SALE_MEAN, SALE_COUNT, TRIALS, CUT]
 
 
@@ -37,7 +35,7 @@ class Recorder:
         self.start_time = None
         self.start_price = None
 
-    def update_lstg(self, lookup=None, lstg=None):
+    def update_lstg(self, lookup, lstg):
         """
         Resets lstg that the recorder is tracking data about
         :param pd.Series lookup: lstg meta data
@@ -51,13 +49,8 @@ class Recorder:
     def reset_sim(self):
         self.sim += 1
 
-    def dump(self, recorder_count):
-        self.records2frames()
-        self.compress_frames()
-        output_path = '{}{}.gz'.format(self.records_path, recorder_count)
-        output = self.construct_output()
-        dump(output, output_path)
-        self.reset_recorders()
+    def dump(self):
+        raise NotImplementedError()
 
     def print_offer(self, event, summary):
         """

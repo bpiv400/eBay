@@ -30,7 +30,7 @@ class DiscrimGenerator(Generator):
                 self._simulate_lstg(environment)
 
         # save the recorder
-        self.recorder.dump(self.dir, self.recorder_count)
+        self.recorder.dump()
 
 
     def _simulate_lstg(self, environment):
@@ -48,4 +48,4 @@ class DiscrimGenerator(Generator):
 
     @property
     def records_path(self):
-        return get_chunk_dir(self.dir, self.chunk, discrim=True)
+        return '{}discrim/{}.gz'.format(self.dir, self.chunk)

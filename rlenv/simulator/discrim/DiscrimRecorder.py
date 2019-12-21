@@ -12,6 +12,12 @@ class DiscrimRecorder(Recorder):
         self.offers = []
         self.threads = []
 
+    def dump(self):
+        self.records2frames()
+        self.compress_frames()
+        dump(self.construct_output(), self.records_path)
+        self.reset_recorders()
+
     @staticmethod
     def init_dict(cols):
         curr_dict = dict()
@@ -58,6 +64,9 @@ class DiscrimRecorder(Recorder):
         offers[CON] = offers[CON].astype(np.uint8)
         offers[MESSAGE] = offers[MESSAGE].astype(bool)
         offers[INDEX] = offers[INDEX].astype(np.uint8)
+        for name in TIME_FEATS:
+            if 'offers' in name or 'count' in name:
+                offers[name] = offers[name].astype(np.uint8)
         return offers
 
     @staticmethod
@@ -79,6 +88,10 @@ class DiscrimRecorder(Recorder):
         self.compress_common_cols([LSTG, SIM, THREAD], 
                                   [self.threads, self.offers],
                                   [np.int32, np.uint16, np.uint16])
+        self.offers.set_index(
+            ['lstg', 'sim', 'thread', 'index'], inplace=True)
+        self.threads.set_index(
+            ['lstg', 'sim', 'thread'], inplace=True)
 
     def records2frames(self):
         # convert all three dictionaries to dataframes
@@ -86,4 +99,5 @@ class DiscrimRecorder(Recorder):
         self.threads = self.record2frame(self.threads, THREAD_COLS)
 
     def construct_output(self):
-        return {'offers': self.offers, 'threads': self.threads}
+        return {'offers': self.offers.sort_index(), 
+                'threads': self.threads.sort_index()}

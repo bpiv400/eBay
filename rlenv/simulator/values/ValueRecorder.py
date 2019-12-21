@@ -30,6 +30,14 @@ class ValueRecorder(Recorder):
     def reset_recorders(self):
         self.values = []
 
+    def dump(self, recorder_count):
+        self.records2frames()
+        self.compress_frames()
+        output_path = '{}{}.gz'.format(self.records_path, recorder_count)
+        output = self.construct_output()
+        dump(output, output_path)
+        self.reset_recorders()
+
     def add_val(self, val_calc):
         """
         Records statistics related to the value of the current lstg
