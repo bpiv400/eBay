@@ -161,11 +161,11 @@ def get_featnames(d):
 
 
 # returns dictionary of input sizes
-def get_sizes(d, model):
+def get_sizes(d, model=''):
     '''
-    d: dictionary with dataframes.
-    model: one of 'arrival', 'hist', 'delay_slr', 'delay_byr', 'con_byr', 
-        'con_slr', 'msg_byr', 'msg_slr'
+    :param d: dictionary with dataframes.
+    :param model: string name of model.
+    :return: dictionary of size parameters.
     '''
     # number of observations
     sizes = {'N': len(d['y'].index)}
@@ -201,9 +201,6 @@ def convert_to_numpy(d):
     d: dictionary with dataframes.
     '''
 
-    # save pandas index
-    d['index'] = d['y'].index
-
     # loop through x
     for k, v in d['x'].items():
         d['x'][k] = v.astype('float32', copy=False).to_numpy()
@@ -220,8 +217,8 @@ def convert_to_numpy(d):
         d['tf'] = tf_dict
 
     # convert y and x_fixed to numpy directly
-    for k in ['y', 'x_clock', 'idx_clock', 'remaining']:
-        if k in d:
+    for k in d.keys():
+        if k not in ['tf', 'x']:
             d[k] = d[k].to_numpy()
 
     # get groups for sampling
@@ -257,8 +254,8 @@ def create_small(d):
             for n in np.unique(turns)]
 
     # directly subsample
-    for k in ['y', 'idx_clock', 'remaining']:
-        if k in d:
+    for k in d.keys():
+        if k not in ['x', 'tf', 'groups', 'x_clock']:
             small[k] = d[k][idx]
 
     # loop through x

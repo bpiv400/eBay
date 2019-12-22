@@ -104,6 +104,9 @@ MODELS = ['arrival', 'hist', \
 # number of observations in small dataset
 N_SMALL = 100000
 
+# number of chunks for environment simulation
+SIM_CHUNKS = 1000
+
 # organizing hierarchy
 LEVELS = ['slr', 'cat', 'cndtn', 'lstg']
 

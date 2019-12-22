@@ -5,9 +5,10 @@ import os
 import numpy as np, pandas as pd
 from compress_pickle import dump, load
 from constants import PARTS_DIR, PARTITIONS
-from rlenv.env_consts import LOOKUP_FILENAME, NUM_CHUNKS, START_PRICE
+from rlenv.env_consts import LOOKUP_FILENAME, START_PRICE
 from rlenv.env_utils import get_env_sim_subdir
 from utils import init_x, input_partition
+from constants import SIM_CHUNKS
 
 
 def main():

@@ -13,28 +13,41 @@ class eBayDataset(Dataset):
         '''
         Defines a dataset that extends torch.utils.data.Dataset
         :param part: string partition name (e.g., train_models).
-        :param name: string model name, either 'listings' or 'threads'.
+        :param name: string model name.
         '''
-        self.d = load('%s/inputs/%s/%s.gz' % (PREFIX, part, name))
+        self.d = load('{}/inputs/{}/{}.gz'.format(PREFIX, part, name))
 
-        # number of examples
-        self.N = np.shape(self.d['y'])[0]
+        # number of examples and labels
+        self.N_examples = np.shape(self.d['y'])[0]
+        self.N_labels = np.sum(self.d['y'] > -1)
 
         # create single group if groups do not exist
         if 'groups' not in self.d:
-            self.d['groups'] = [np.array(range(self.N))]
+            self.d['groups'] = [np.array(range(self.N_examples))]
 
         # recurrent or feed-forward
         self.isRecurrent = len(np.shape(self.d['y'])) > 1
-        
-        # number of labels, for normalizing loss
-        if self.isRecurrent:
-            self.N_labels = np.sum(self.d['y'] > -1)
-        else:
-            self.N_labels = self.N
 
         # collate function
         self.collate = collateRNN if self.isRecurrent else collateFF
+
+
+    def __getitem__(self, idx):
+        '''
+        Returns a tuple of data components for example.
+        :param idx: index of example.
+        :return: tuple of data components at index idx.
+        '''
+        raise NotImplementedError()
+        
+
+    def __len__(self):
+        return self.N_examples
+
+
+class ModelDataset(eBayDataset):
+    def __init__(self, part, name):
+        super(ModelDataset, self).__init__(part, name)
 
         # for arrival and delay models
         if 'tf' in self.d:
@@ -60,11 +73,7 @@ class eBayDataset(Dataset):
 
 
     def __getitem__(self, idx):
-        '''
-        Returns a tuple of data components for example.
-        :param idx: index of example.
-        :return: tuple of data components at index idx.
-        '''
+        # y and x are indexed directly
         y = self.d['y'][idx]
         x = {k: v[idx, :] for k, v in self.d['x'].items()}
 
@@ -96,8 +105,20 @@ class eBayDataset(Dataset):
         return y, x, x_time
 
 
-    def __len__(self):
-        return self.N
+def DiscrimDataset(eBayDataset):
+    def __init__(self, part, name):
+        super(ModelDataset, self).__init__(part, name)
+
+
+    def __getitem__(self, idx):
+        # y is indexed directly
+        y = self.d['y'][idx]
+
+        # components of x are indexed using idx_x
+        idx_x = self.d['idx_x'][idx]
+        x = {k: v[idx_x] for k, v in x.items()}
+
+        return y, x
 
 
 def collateFF(batch):
