@@ -3,7 +3,7 @@
 #$ -l m_mem_free=25G
 #$ -N e_train_rl
 #$ -j y
-#$ -o logs/
+#$ -o logs/processing
 
 if [ "$SGE_TASK_ID" == 1 ]
 then

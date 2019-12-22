@@ -48,10 +48,12 @@ def process_inputs(part):
 	y_obs = pd.Series(1, index=idx, dtype='int8')
 	y_sim = pd.Series(0, index=idx, dtype='int8')
 	y = pd.concat([y_obs, y_sim], axis=0)
-	assert np.all(x_other.index == y.index)
 
-	# create listing features and ensure indices are correct
+	# create listing features
 	x = init_x(part)
+
+	# ensure indices are correct
+	assert np.all(x_other.index == y.index)
 	assert all([np.all(v.index == idx) for v in x.values()])
 
 	# index of x
@@ -74,7 +76,7 @@ if __name__ == '__main__':
     d = process_inputs(part)
 
 	# save featnames and sizes
-	if part == 'train_models':
+	if part == 'train_rl':
 		pickle.dump(get_featnames(d), 
 			open('%s/inputs/featnames/listings.pkl' % PREFIX, 'wb'))
 
