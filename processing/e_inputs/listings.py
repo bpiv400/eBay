@@ -42,7 +42,7 @@ def process_inputs(part):
 	sim_counts = get_sim_counts(lstg_start)
 
 	# other inputs
-	x_other = pd.concat([obs_counts, sim_counts], axis=0)
+	x_arrival = pd.concat([obs_counts, sim_counts], axis=0)
 
 	# y=True indicates observed
 	y_obs = pd.Series(1, index=idx, dtype='int8')
@@ -62,7 +62,7 @@ def process_inputs(part):
 
 	# combine into single dictionary
 	return {'y': y.astype('int8', inplace=True), 'x': x,
-			'x_other': x_other, 'x_idx': x_idx}
+			'x_arrival': x_arrival, 'x_idx': x_idx}
 
 
 if __name__ == '__main__':

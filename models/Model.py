@@ -1,6 +1,6 @@
 import torch, torch.nn as nn
 from models.nets import FeedForward, LSTM
-from models.sample import get_batches
+from models.Sample import get_batches
 from constants import *
 
 

@@ -3,7 +3,7 @@ import torch, torch.optim as optim
 import numpy as np
 from datetime import datetime as dt
 from torch.utils.tensorboard import SummaryWriter
-from models.model import Model
+from models.Model import Model
 from constants import *
 
 

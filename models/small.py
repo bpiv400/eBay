@@ -3,18 +3,17 @@ import torch, torch.optim as optim
 import numpy as np, pandas as pd
 from datetime import datetime as dt
 from compress_pickle import load
-from models.inputs import eBayDataset
-from models.model import Model
+from models.datasets.ModelDataset import ModelDataset
+from models.datasets.DiscrimDataset import DiscrimDataset
+from models.Model import Model
 from constants import *
 
 
 if __name__ == '__main__':
     # extract parameters from command line
     parser = argparse.ArgumentParser()
-    parser.add_argument('--name', type=str, 
-        help='One of arrival, hist, [delay/con/msg]_[byr/slr].')
-    args = parser.parse_args()
-    name = args.name
+    parser.add_argument('--name', type=str, help='model name')
+    name = parser.parse_args().name
 
     # load model sizes
     print('Loading parameters')
@@ -31,7 +30,10 @@ if __name__ == '__main__':
     print(optimizer)
 
     # load data
-    train = eBayDataset('small', name)
+    if name in ['listings', 'threads']:
+        train = DiscrimDataset('train_rl', name)
+    else:
+        train = ModelDataset('small', name)
 
     # training
     for epoch in range(10):

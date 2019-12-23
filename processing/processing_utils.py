@@ -148,6 +148,10 @@ def get_featnames(d):
     for k, v in d['x'].items():
         featnames['x'][k] = list(v.columns)
 
+    # discriminator inputs
+    if 'x_arrival' in d:
+        featnames['x']['arrival'] = list(d['x_arrival'].columns)
+
     # for arrival and delay models
     if 'x_clock' in d:
         featnames['x_time'] = \
@@ -174,6 +178,10 @@ def get_sizes(d, model=''):
     sizes['x'] = OrderedDict()
     for k, v in d['x'].items():
         sizes['x'][k] = len(v.columns)
+
+    # discriminator inputs
+    if 'x_arrival' in d:
+        sizes['x']['arrival'] = len(d['x_arrival'].columns)
 
     # arrival and delay models
     if 'x_clock' in d:

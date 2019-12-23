@@ -2,7 +2,8 @@ import sys, os, argparse
 import numpy as np
 from compress_pickle import load, dump
 from scipy.optimize import minimize_scalar
-from models.inputs import eBayDataset
+from models.datasets.ModelDataset import ModelDataset
+from models.datasets.DiscrimDataset import DiscrimDataset
 from models.trainer import Trainer
 from constants import *
 
