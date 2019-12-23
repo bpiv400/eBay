@@ -53,7 +53,7 @@ def process_inputs(part):
 	x = init_x(part)
 
 	# ensure indices are correct
-	assert np.all(x_other.index == y.index)
+	assert np.all(x_arrival.index == y.index)
 	assert all([np.all(v.index == idx) for v in x.values()])
 
 	# index of x
