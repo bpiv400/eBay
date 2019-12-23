@@ -24,7 +24,7 @@ def get_x_lstg(L):
     df.rename({'slr_bos': 'slr_bos_total', 
         'slr_lstgs': 'slr_lstgs_total'}, axis=1, inplace=True)
     # normalize start_date to years
-    df['start_years'] = L.start_time / (365 * 24 * 3600)
+    df['start_years'] = L.start_date / 365
     # photos divided by 12, and binary indicator
     df['photos'] = L.photos / 12
     df['has_photos'] = L.photos > 0
@@ -68,6 +68,7 @@ if __name__ == "__main__":
             index=L[['cat']].values.squeeze(), fill_value=0)
         w2v.set_index(L.index, inplace=True)
         x['w2v_{}'.format(role)] = w2v
+    del L
 
     # slr features
     print('Seller features')
