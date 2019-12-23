@@ -23,3 +23,4 @@ then
 elif [ "$SGE_TASK_ID" == 6 ]
 then
 	python repo/processing/e_inputs/threads.py --part test
+fi
