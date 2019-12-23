@@ -32,7 +32,7 @@ def main():
         raise RuntimeError('part must be one of: {}'.format(PARTITIONS))
     print('{} {}: {}'.format(part, num, 'values' if values else 'discrim'))
     
-    # num is modulus NUM_CHUNKS
+    # num is modulus SIM_CHUNKS
     num = ((num-1) % SIM_CHUNKS) + 1
 
     # check whether chunk is finished processing

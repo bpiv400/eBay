@@ -13,8 +13,8 @@ class DiscrimDataset(eBayDataset):
         y = self.d['y'][idx]
 
         # components of x are indexed using idx_x
-        idx_x = self.d['idx_x'][idx]
-        x = {k: v[idx_x,:] for k, v in x.items()}
+        x_idx = self.d['x_idx'][idx]
+        x = {k: v[x_idx,:] for k, v in self.d['x'].items()}
 
         # add directly indexed components to x
         if 'x_arrival' in self.d:

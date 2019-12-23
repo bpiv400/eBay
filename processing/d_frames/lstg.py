@@ -51,14 +51,15 @@ if __name__ == "__main__":
     part = input_partition()
     idx, path = get_partition(part)
 
+    # initialize output dictionary
+    x = {}
+
     # listing features
     L = load(CLEAN_DIR + 'listings.pkl').reindex(index=idx)
 
     # listing features
     print('Listing features')
-    lstg = get_x_lstg(L)
-    dump(lstg, path('x_lstg'))
-    del lstg
+    x['lstg'] = get_x_lstg(L)
 
     # word2vec features
     print('Word2Vec features')
@@ -66,4 +67,17 @@ if __name__ == "__main__":
         w2v = load(W2V_DIR + '%s.gz' % role).reindex(
             index=L[['cat']].values.squeeze(), fill_value=0)
         w2v.set_index(L.index, inplace=True)
-        dump(w2v, path('x_w2v_' + role))
+        x['w2v_{}'.format(role)] = w2v
+
+    # slr features
+    print('Seller features')
+    x['slr'] = load_frames('slr').reindex(index=idx, fill_value=0)
+
+    # cat and cndtn features
+    print('Categorical features')
+    df = load_frames('cat').reindex(index=idx, fill_value=0)
+    for name in ['cat', 'cndtn']:
+        x[name] = df[[c for c in df.columns if c.startswith(name + '_')]]
+
+    # save dictionary
+    dump(x, path('x'))

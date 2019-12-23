@@ -209,7 +209,7 @@ def convert_to_numpy(d):
     d: dictionary with dataframes.
     '''
 
-    # loop through x
+    # loop through x, convert to numpy
     for k, v in d['x'].items():
         d['x'][k] = v.astype('float32', copy=False).to_numpy()
 
@@ -224,7 +224,7 @@ def convert_to_numpy(d):
                 continue
         d['tf'] = tf_dict
 
-    # convert y and x_fixed to numpy directly
+    # convert components to numpy directly
     for k in d.keys():
         if k not in ['tf', 'x']:
             d[k] = d[k].to_numpy()

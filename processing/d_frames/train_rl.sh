@@ -1,5 +1,5 @@
 #!/bin/bash
-#$ -t 1-6
+#$ -t 1-5
 #$ -l m_mem_free=75G
 #$ -N d_train_rl
 #$ -j y
@@ -10,17 +10,14 @@ then
 	python repo/processing/d_frames/lstg.py --part train_rl
 elif [ "$SGE_TASK_ID" == 2 ]
 then
-	python repo/processing/d_frames/cat.py --part train_rl
+	python repo/processing/d_frames/thread.py --part train_rl
 elif [ "$SGE_TASK_ID" == 3 ]
 then
-	python repo/processing/d_frames/thread.py --part train_rl
+	python repo/processing/d_frames/arrival.py --part train_rl
 elif [ "$SGE_TASK_ID" == 4 ]
 then
-	python repo/processing/d_frames/arrival.py --part train_rl
-elif [ "$SGE_TASK_ID" == 5 ]
-then
 	python repo/processing/d_frames/delay.py --part train_rl
-elif [ "$SGE_TASK_ID" == 6 ]
+elif [ "$SGE_TASK_ID" == 5 ]
 then
 	python repo/processing/d_frames/offer.py --part train_rl
 fi
