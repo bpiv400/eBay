@@ -1,5 +1,5 @@
 """
-Chunks a partition into NUM_CHUNKS pieces for reward generation
+Chunks a partition into SIM_CHUNKS pieces for reward generation
 """
 import os
 import numpy as np, pandas as pd
@@ -36,13 +36,13 @@ def main():
             os.mkdir(direct)
 
     # iteration prep
-    idx = np.arange(0, len(x_lstg), step=NUM_CHUNKS)
+    idx = np.arange(0, len(x_lstg), step=SIM_CHUNKS)
     chunk_dir = get_env_sim_subdir(part, chunks=True)
 
     # create chunks
-    for i in range(NUM_CHUNKS):
+    for i in range(SIM_CHUNKS):
         if (i+1) % 100 == 0:
-            print('Chunk {} of {}'.format(i+1, NUM_CHUNKS))
+            print('Chunk {} of {}'.format(i+1, SIM_CHUNKS))
         # create chunk and save
         d = {'lookup': lookup.iloc[idx, :], 
              'x_lstg': x_lstg.iloc[idx, :]}
