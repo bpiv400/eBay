@@ -1,6 +1,6 @@
 #!/bin/bash
 #$ -t 1-10
-#$ -l m_mem_free=25G
+#$ -l m_mem_free=30G
 #$ -N e_train_rl
 #$ -j y
 #$ -o logs/processing
