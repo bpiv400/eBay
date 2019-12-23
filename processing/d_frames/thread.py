@@ -23,7 +23,7 @@ if __name__ == "__main__":
 	assert months.max() < 1
 
 	# buyer history deciles
-	hist = np.floor(HIST_QUANTILES * threads.byr_hist).astype('int8')
+	hist = np.floor(HIST_QUANTILES * byr_hist).astype('int8')
 	assert hist.max() == 9
 
 	# create dataframe

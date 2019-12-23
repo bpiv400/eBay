@@ -1,4 +1,3 @@
-import sys, pickle, os, argparse
 from compress_pickle import load, dump
 import numpy as np, pandas as pd
 from constants import *
@@ -73,14 +72,12 @@ if __name__ == '__main__':
 
 	# save featnames and sizes
 	if part == 'train_rl':
-		pickle.dump(get_featnames(d), 
-			open('%s/inputs/featnames/listings.pkl' % PREFIX, 'wb'))
+		dump(get_featnames(d), '{}/inputs/featnames/listings.pkl'.format(PREFIX))
 
-		pickle.dump(get_sizes(d), 
-			open('%s/inputs/sizes/listings.pkl' % PREFIX, 'wb'))
+		dump(get_sizes(d), '{}/inputs/sizes/listings.pkl'.format(PREFIX))
 
 	# create dictionary of numpy arrays
 	d = convert_to_numpy(d)
 
 	# save as dataset
-	dump(d, '%s/inputs/%s/listings.gz' % (PREFIX, part))
+	dump(d, '{}/inputs/{}/listings.gz'.format(PREFIX, part))
