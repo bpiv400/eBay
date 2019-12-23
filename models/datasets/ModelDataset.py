@@ -5,7 +5,7 @@ from constants import *
 
 class ModelDataset(eBayDataset):
     def __init__(self, part, name):
-        super(ModelDataset, self).__init__(part, name)
+        super().__init__(part, name)
 
         # for arrival and delay models
         if 'tf' in self.d:

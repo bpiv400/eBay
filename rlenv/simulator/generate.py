@@ -3,9 +3,8 @@ Generates simulator for a chunk of the lstgs in a partition
 """
 import os, argparse
 import torch
-from constants import PARTITIONS
+from constants import PARTITIONS, SIM_CHUNKS
 from rlenv.env_utils import get_env_sim_dir, get_env_sim_subdir, get_done_file
-from rlenv.env_consts import NUM_CHUNKS
 from rlenv.simulator.values.ValueGenerator import ValueGenerator
 from rlenv.simulator.discrim.DiscrimGenerator import DiscrimGenerator
 
@@ -34,7 +33,7 @@ def main():
     print('{} {}: {}'.format(part, num, 'values' if values else 'discrim'))
     
     # num is modulus NUM_CHUNKS
-    num = ((num-1) % NUM_CHUNKS) + 1
+    num = ((num-1) % SIM_CHUNKS) + 1
 
     # check whether chunk is finished processing
     if chunk_done(part, num, values):

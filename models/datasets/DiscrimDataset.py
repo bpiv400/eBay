@@ -3,9 +3,9 @@ from models.datasets.eBayDataset import eBayDataset
 from constants import *
 
 
-def DiscrimDataset(eBayDataset):
+class DiscrimDataset(eBayDataset):
     def __init__(self, part, name):
-        super(ModelDataset, self).__init__(part, name)
+        super().__init__(part, name)
 
 
     def __getitem__(self, idx):
