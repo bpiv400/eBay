@@ -15,8 +15,8 @@ class Trainer:
         self.test = test
 
         # start with pretrained model if it exists
-        self.pretrained_path = MODEL_DIR + '%s/0.net' % name
-        if os.path.isfile(self.pretrained_path):
+        self.model_dir = '{}{}'.format(MODEL_DIR, name)
+        if os.path.isfile('{}/0.net'.format(self.model_dir)):
             self.iter = 1
         else:
             self.iter = 0
@@ -32,17 +32,13 @@ class Trainer:
         self._init_training()
 
         # initialize tensorboard writer
-        writer = SummaryWriter(
-            LOG_DIR + '%s/%d' % (self.name, self.iter))
+        writer = SummaryWriter('{}{}/{}'.format(LOG_DIR, self.name, self.iter))
         
         # set gamma
         if gamma > 0:
             self.model.set_gamma(gamma)
             writer.add_scalar('gamma', gamma)
-            print('Iteration %d: gamma of %1.2f' % (self.iter, gamma))
-
-        # model path
-        model_path = MODEL_DIR + '%s/%d.net' % (self.name, self.iter)
+            print('Iteration {}: gamma of {}'.format(self.iter, gamma))
 
         # training loop
         epoch, last = 0, np.inf
@@ -71,14 +67,12 @@ class Trainer:
             # save output to tensorboard writer and print to console
             for k, v in output.items():
                 writer.add_scalar(k, v, epoch)
-                if k in ['loss', 'penalty', 'largest']:
-                    print('\t\t%s: %d' % (k, v))
-                else:
-                    print('\t\t%s: %1.4f' % (k, v))
-            print('\t\ttime: %d sec' % (dt.now() - t0).total_seconds())
+                print('\t\t{}: {}'.format(k, v))
+            print('\t\ttime: {} sec'.format(dt.now() - t0).total_seconds())
 
             # save model
-            torch.save(self.model.net.state_dict(), model_path)
+            torch.save(self.model.net.state_dict(), 
+                '{}/{}.net'.format(self.model_dir, self.iter))
 
             # reduce learning rate until convergence
             if output['loss'] > FTOL * last:

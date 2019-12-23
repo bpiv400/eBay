@@ -12,9 +12,6 @@ from constants import SIM_CHUNKS
 
 
 def main():
-    """
-    Chunks the given partition
-    """
     part = input_partition()
 
     # load inputs

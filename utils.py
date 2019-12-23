@@ -27,14 +27,30 @@ def unpickle(file):
     return pickle.load(open(file, "rb"))
 
 
-def input_partition():
+def input_partition(store_true=None):
     """
     Parses command line input for partition name.
     :return part: string partition name.
     """
     parser = argparse.ArgumentParser()
+
+    # partition
     parser.add_argument('--part', required=True, type=str, help='partition name')
-    part = parser.parse_args().part
-    if part not in PARTITIONS:
+
+    # optional boolean arguments
+    if store_true is not None:
+        parser.add_argument('--{}'.format(store_true), 
+            action='store_true', default=False)
+
+    # parse arguments
+    args = parser.parse_args()
+
+    # error checking
+    if args.part not in PARTITIONS:
         raise RuntimeError('part must be one of: {}'.format(PARTITIONS))
-    return part
+
+    # return tuple if multiple arguuments
+    if store_true is None:
+        return args.part
+    else:
+        return args

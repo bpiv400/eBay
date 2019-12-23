@@ -5,6 +5,7 @@ from scipy.optimize import minimize_scalar
 from models.datasets.ModelDataset import ModelDataset
 from models.datasets.DiscrimDataset import DiscrimDataset
 from models.trainer import Trainer
+from utils import input_partition
 from constants import *
 
 
@@ -17,15 +18,17 @@ if __name__ == '__main__':
     name, dropout = args.name, args.dropout
 
     # load model sizes
-    print('Loading parameters')
-    sizes = load('%s/inputs/sizes/%s.pkl' % (PREFIX, name))
-    print(sizes)
+    sizes = load('{}/inputs/sizes/{}.pkl'.format(PREFIX, name))
+    print('Parameters: {}'.format(sizes))
 
     # load datasets
-    train = eBayDataset('train_models', name)
-    test = eBayDataset('train_rl', name)
+    print('Loading training data')
+    train = ModelDataset('train_models', name)
+    print('Loading validation data')
+    test = ModelDataset('train_rl', name)
 
     # initialize trainer object
+    print('Training model')
     trainer = Trainer(name, sizes, train, test)
 
     # pretraining

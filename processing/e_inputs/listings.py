@@ -13,18 +13,15 @@ def get_sim_counts(lstg_start):
 		sim = load(ENV_SIM_DIR + '{}/discrim/{}.gz'.format(part, i))
 		l.append(sim['threads'].clock.xs(0, level='sim'))
 	thread_start = pd.concat(l, axis=0)
-
 	# convert to period in range(INTERVAL['arrival'])
 	diff = (thread_start - lstg_start.reindex(
 		index=thread_start.index, level='lstg'))
 	period = (diff // INTERVAL['arrival']).rename('period')
-
 	# count arrivals and fill in zeros
 	counts = period.to_frame().assign(count=1).set_index(
 		'period', append=True).groupby(['lstg', 'period']).sum().squeeze()
 	counts = counts.unstack(fill_value=0).rename_axis(
 		'', axis=1).reindex(index=lstg_start.index, fill_value=0)
-
 	return counts
 
 
@@ -43,7 +40,7 @@ def process_inputs(part):
 	sim_counts = get_sim_counts(lstg_start)
 
 	# other inputs
-	x_arrival = pd.concat([obs_counts, sim_counts], axis=0)
+	x_arrival = pd.concat([obs_counts, sim_counts], axis=0, copy=False)
 
 	# y=True indicates observed
 	y_obs = pd.Series(1, index=idx, dtype='int8')

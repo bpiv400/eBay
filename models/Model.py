@@ -1,4 +1,5 @@
 import torch, torch.nn as nn
+from torch.distributions.negative_binomial import NegativeBinomial as nb
 from models.nets import FeedForward, LSTM
 from models.Sample import get_batches
 from constants import *
@@ -27,7 +28,7 @@ class Model:
         if name in ['hist', 'con_slr', 'con_byr']:
             self.loss = nn.CrossEntropyLoss(reduction='sum')
         elif name == 'arrival':
-            self.loss = nn.PoissonNLLLoss(log_input=True, reduction='sum')
+            self.loss = self._NegativeBinomialNLLLoss
         else:
             self.loss = nn.BCEWithLogitsLoss(reduction='sum')
 
@@ -153,3 +154,13 @@ class Model:
             optimizer.step()
 
         return loss.item()
+
+
+    def _NegativeBinomialNLLLoss(self, theta, y):
+        r = torch.exp(torch.index_select(theta, 
+            dim=-1, index=torch.tensor(0, device=self.device))).squeeze()
+        p = torch.sigmoid(torch.index_select(theta, 
+            dim=-1, index=torch.tensor(1, device=self.device))).squeeze()
+
+        # return negative log-likelihood
+        return -torch.sum(nb(r, probs=p).log_prob(y))
