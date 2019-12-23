@@ -7,8 +7,8 @@ from processing.processing_utils import get_partition
 
 if __name__ == "__main__":
 	# data partition
-    part = input_partition()
-    idx, path = get_partition(part)
+	part = input_partition()
+	idx, path = get_partition(part)
 
 	# load data
 	lstg_start = load('{}{}/lookup.gz'.format(PARTS_DIR, part)).start_time
