@@ -27,32 +27,6 @@ def unpickle(file):
     return pickle.load(open(file, "rb"))
 
 
-def init_x(part, idx=None):
-    """
-    Initializes dictionary of input components
-    :param part: string name of partition (e.g., 'train_rl')
-    :param idx: index of lstg ids
-    :return: dictionary of pandas dataframes
-    """
-    x = {}
-
-    # load and reindex
-    for name in ['lstg', 'w2v_byr', 'w2v_slr', 'slr', 'cat', 'cndtn']:
-        # load dataframe
-        df = load(PARTS_DIR + '%s/x_%s.gz' % (part, name))
-        # index by idx
-        if idx is not None:
-            if len(idx.names) == 1:
-                df = df.reindex(index=idx)
-            else:
-                df = df.reindex(index=idx, level='lstg')
-
-        # put in x
-        x[name] = df
-
-    return x
-
-
 def input_partition():
     """
     Parses command line input for partition name.

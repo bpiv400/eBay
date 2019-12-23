@@ -2,7 +2,6 @@ import sys, pickle, os, argparse
 from compress_pickle import load, dump
 import numpy as np, pandas as pd
 from constants import *
-from utils import init_x
 from processing.processing_utils import create_x_clock, convert_to_numpy, \
     get_featnames, get_sizes, create_small
 
@@ -76,23 +75,22 @@ def get_y(x_offer, outcome, role):
 
 # loads data and calls helper functions to construct train inputs
 def process_inputs(part, outcome, role):
-	# path name function
-	getPath = lambda names: PARTS_DIR + '%s/%s.gz' % \
-		(part, '_'.join(names))
+	# function to load file
+	load_file = lambda x: load('{}{}/{}.gz'.format(PARTS_DIR, part, x))
 
 	# load dataframes
-	x_offer = load(getPath(['x', 'offer']))
-	x_thread = load(getPath(['x', 'thread']))
+	x_offer = load_file('x_offer')
+	x_thread = load_file('x_thread')
 
 	# outcome
 	if outcome == 'delay':
-		y = load(getPath(['y', 'delay', role]))
+		y = load_file('y_delay_{}'.format(role))
 	else:
 		y = get_y(x_offer, outcome, role)
 	idx = y.index
 
 	# initialize dictionary of input features
-	x = init_x(part, idx)
+	x = load_file('x_lstg').reindex(index=idx, level='lstg')
 
 	# add thread features and turn indicators to listing features
 	x_thread.loc[:, 'byr_hist'] = x_thread.byr_hist.astype('float32') / 10
@@ -122,12 +120,12 @@ def process_inputs(part, outcome, role):
 	x_clock = create_x_clock()
 
 	# index of first x_clock for each y
-	delay_start = load(getPath(['clock'])).groupby(
+	delay_start = load_file('clock').groupby(
 		['lstg', 'thread']).shift().reindex(index=idx).astype('int64')
 	idx_clock = delay_start // 60
 
 	# normalized periods remaining at start of delay period
-	lstg_start = load(getPath(['lookup'])).start_time
+	lstg_start = load_file('lookup').start_time
 	remaining = MAX_DAYS * 24 * 3600 - (delay_start - lstg_start)
 	remaining.loc[remaining.index.isin([2, 4, 6, 7], level='index')] /= \
 		MAX_DELAY['slr']
@@ -136,7 +134,7 @@ def process_inputs(part, outcome, role):
 	remaining = np.minimum(remaining, 1)
 
 	# time features
-	tf = load(getPath(['tf', 'delay', 'diff', role]))
+	tf = load_file('tf_delay_diff_{}'.format(role))
 
 	return {'y': y.astype('int8', copy=False), 'x': x,
 			'x_clock': x_clock.astype('float32', copy=False),

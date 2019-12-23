@@ -2,33 +2,31 @@ import sys, pickle, os, argparse
 from compress_pickle import load, dump
 import numpy as np, pandas as pd
 from constants import *
-from utils import input_partition, init_x
+from utils import input_partition
 from processing.processing_utils import create_x_clock, convert_to_numpy, \
     get_featnames, get_sizes, create_small
 
 
 # loads data and calls helper functions to construct train inputs
 def process_inputs(part):
-    # path name function
-    getPath = lambda names: PARTS_DIR + '%s/%s.gz' % \
-        (part, '_'.join(names))
+    # function to load file
+    load_file = lambda x: load('{}{}/{}.gz'.format(PARTS_DIR, part, x))
 
     # outcome
-    y = load(getPath(['y', 'arrival']))
+    y = load_file('y_arrival')
     idx = y.index
 
     # initialize dictionary of input features
-    x = init_x(part, idx)
+    x = load_file('x_lstg').reindex(index=idx)
 
     # clock features by minute
     x_clock = create_x_clock()
 
     # index of first x_clock for each y
-    idx_clock = load(getPath(['lookup'])).start_time.reindex(index=idx)
+    idx_clock = load_file('lookup').start_time.reindex(index=idx)
 
     # time features
-    tf = load(getPath(['tf', 'arrival'])).reindex(
-        index=idx, level='lstg')
+    tf = load_file('tf_arrival').reindex(index=idx, level='lstg')
 
     return {'y': y.astype('int8', copy=False),
             'x': {k: v.astype('float32', copy=False) for k, v in x.items()}, 

@@ -81,4 +81,4 @@ if __name__ == "__main__":
         x[name] = df[[c for c in df.columns if c.startswith(name + '_')]]
 
     # save dictionary
-    dump(x, path('x'))
+    dump(x, path('x_lstg'))

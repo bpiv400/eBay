@@ -1,4 +1,5 @@
 import numpy as np, pandas as pd
+from compress_pickle import load
 from models.datasets.eBayDataset import eBayDataset
 from constants import *
 
@@ -6,6 +7,8 @@ from constants import *
 class DiscrimDataset(eBayDataset):
     def __init__(self, part, name):
         super().__init__(part, name)
+        # load lstg features
+        self.d['x'] = load('{}{}/x_lstg.gz'.format(PARTS_DIR, part))
 
 
     def __getitem__(self, idx):

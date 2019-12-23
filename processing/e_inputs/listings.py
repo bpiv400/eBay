@@ -2,7 +2,7 @@ import sys, pickle, os, argparse
 from compress_pickle import load, dump
 import numpy as np, pandas as pd
 from constants import *
-from utils import *
+from utils import input_partition
 from processing.processing_utils import *
 
 
@@ -30,13 +30,15 @@ def get_sim_counts(lstg_start):
 
 
 def process_inputs(part):
+	# function to load file
+    load_file = lambda x: load('{}{}/{}.gz'.format(PARTS_DIR, part, x))
+
 	# listing start time
-	lstg_start = load('{}{}/lookup.gz'.format(PARTS_DIR, part)).start_time
+	lstg_start = load_file('lookup').start_time
 	idx = lstg_start.index
 
-	# load dataframe of real counts
-	obs_counts = load('{}{}/y_arrival.gz'.format(PARTS_DIR, part)).reindex(
-		index=idx).clip(lower=0)	# swap -1s for 0s
+	# load dataframe of real counts and swap -1s for 0s
+	obs_counts = load_file('y_arrival').reindex(index=idx).clip(lower=0)
 
 	# construct corresponding dataframe of simulated counts
 	sim_counts = get_sim_counts(lstg_start)
@@ -49,28 +51,22 @@ def process_inputs(part):
 	y_sim = pd.Series(0, index=idx, dtype='int8')
 	y = pd.concat([y_obs, y_sim], axis=0)
 
-	# create listing features
-	x = init_x(part)
-
 	# ensure indices are correct
 	assert np.all(x_arrival.index == y.index)
-	assert all([np.all(v.index == idx) for v in x.values()])
 
 	# index of x
 	s = pd.Series(range(len(idx)), index=idx)
 	x_idx = pd.concat([s, s], axis=0)
 
 	# combine into single dictionary
-	return {'y': y.astype('int8', inplace=True), 'x': x,
-			'x_arrival': x_arrival, 'x_idx': x_idx}
+	return {'y': y.astype('int8', inplace=True),
+			'x_arrival': x_arrival, 
+			'x_idx': x_idx}
 
 
 if __name__ == '__main__':
-	# extract parameters from command line
-	parser = argparse.ArgumentParser()
-	parser.add_argument('--part', type=str)
-	args = parser.parse_args()
-	part = args.part
+	# extract partition from command line
+	part = input_partition()
 
 	# input dataframes, output processed dataframes
 	d = process_inputs(part)
