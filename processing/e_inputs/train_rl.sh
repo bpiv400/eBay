@@ -1,5 +1,5 @@
 #!/bin/bash
-#$ -t 1-10
+#$ -t 1-8
 #$ -l m_mem_free=30G
 #$ -N e_train_rl
 #$ -j y
@@ -29,10 +29,4 @@ then
 elif [ "$SGE_TASK_ID" == 8 ]
 then
 	python repo/processing/e_inputs/offer.py --part train_rl --outcome msg --role slr
-elif [ "$SGE_TASK_ID" == 9 ]
-then
-	python repo/processing/e_inputs/listings.py --part train_rl
-elif [ "$SGE_TASK_ID" == 10 ]
-then
-	python repo/processing/e_inputs/threads.py --part train_rl
 fi
