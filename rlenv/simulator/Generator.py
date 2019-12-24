@@ -5,8 +5,7 @@ import os, sys, shutil
 from datetime import datetime
 from compress_pickle import load, dump
 import numpy as np
-from rlenv.env_consts import (START_PRICE, START_TIME, ACC_PRICE, 
-    DEC_PRICE, MAX_RECORDER_SIZE)
+from rlenv.env_consts import START_PRICE, START_TIME, ACC_PRICE, DEC_PRICE
 from rlenv.interface.interfaces import PlayerInterface, ArrivalInterface
 from rlenv.environments.SimulatorEnvironment import SimulatorEnvironment
 from rlenv.Composer import Composer

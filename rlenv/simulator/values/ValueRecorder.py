@@ -8,27 +8,36 @@ class ValueRecorder(Recorder):
         super( ).__init__(record_path, verbose)
         self.values = []
 
+
     def start_thread(self, thread_id=None, time=None, byr_hist=None):
         pass
 
+
     def add_offer(self, event, time_feats):
-        if VERBOSE:
+        if self.verbose:
             self.print_offer(event, event.summary())
 
-    def add_sale(self, sale, price, dur):
-        self.print_sale(sale, price, dur)
 
     def records2frames(self):
         self.values = self.record2frame(self.values, VAL_COLS)
 
+
     def construct_output(self):
         return self.values
 
+
     def compress_frames(self):
-        self.values = self.compress_values(self.values)
+        for col in [SALE_MEAN, VAL, SE, CUT]:
+            self.values[col] = self.values[col].astype(np.float32)
+        self.values[LSTG] = self.values[LSTG].astype(np.int32)
+        self.values[SALE_COUNT] = self.values[SALE_COUNT].astype(np.int32)
+        self.values[TRIALS] = self.values[TRIALS].astype(np.uint16)
+        self.values.set_index('lstg', inplace=True)
+
 
     def reset_recorders(self):
         self.values = []
+
 
     def dump(self, recorder_count):
         self.records2frames()
@@ -38,33 +47,20 @@ class ValueRecorder(Recorder):
         dump(output, output_path)
         self.reset_recorders()
 
+
     def add_val(self, val_calc):
         """
         Records statistics related to the value of the current lstg
-        :param val_calc: value calculator object for current lstg
-        :type val_calc: rlenv.ValueCalculator.ValueCalculator
+        :param val_calc: rlenv.ValueCalculator.ValueCalculator object for current lstg
         """
-        # reorder if VAL_COLS changes
+        # VAL_COLS = [LSTG, VAL, SE, AVG_PRICE, NUM_SALES, P_SALE, CUT]
         row = [
             self.lstg,
-            val_calc.mean,
-            val_calc.mean_se,
-            mean(val_calc.sales),
-            len(val_calc.sales),
-            val_calc.exp_count,
+            val_calc.value,
+            val_calc.se,
+            val_calc.mean_x,
+            val_calc.num_sales,
+            val_calc.p_sale,
             val_calc.cut
         ]
         self.values.append(row)
-
-    @staticmethod
-    def compress_values(values):
-        """
-        Compresses values dataframe
-        """
-        for col in [SALE_MEAN, VAL, SE, CUT]:
-            values[col] = values[col].astype(np.float32)
-        values[LSTG] = values[LSTG].astype(np.int32)
-        values[SALE_COUNT] = values[SALE_COUNT].astype(np.int32)
-        values[TRIALS] = values[TRIALS].astype(np.uint16)
-        return values
-

@@ -69,8 +69,6 @@ if __name__ == '__main__':
 
 	# save featnames and sizes
 	if part == 'train_rl':
-		dump(get_featnames(d), '{}/inputs/featnames/listings.pkl'.format(PREFIX))
-
 		dump(get_sizes(d), '{}/inputs/sizes/listings.pkl'.format(PREFIX))
 
 	# create dictionary of numpy arrays

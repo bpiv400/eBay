@@ -148,10 +148,6 @@ def get_featnames(d):
     for k, v in d['x'].items():
         featnames['x'][k] = list(v.columns)
 
-    # discriminator inputs
-    if 'x_arrival' in d:
-        featnames['x']['arrival'] = list(d['x_arrival'].columns)
-
     # for arrival and delay models
     if 'x_clock' in d:
         featnames['x_time'] = \
@@ -176,8 +172,11 @@ def get_sizes(d, model=''):
 
     # count components of x
     sizes['x'] = OrderedDict()
-    for k, v in d['x'].items():
-        sizes['x'][k] = len(v.columns)
+    if 'x' in d:
+        for k, v in d['x'].items():
+            sizes['x'][k] = len(v.columns)
+    else:
+        
 
     # discriminator inputs
     if 'x_arrival' in d:
@@ -197,6 +196,8 @@ def get_sizes(d, model=''):
         sizes['out'] = HIST_QUANTILES
     elif 'con' in model:
         sizes['out'] = 101
+    elif model == 'arrival':
+        sizes['out'] = 2
     else:
         sizes['out'] = 1
 

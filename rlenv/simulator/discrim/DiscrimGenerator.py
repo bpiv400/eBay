@@ -1,4 +1,3 @@
-from rlenv.env_consts import SIM_COUNT
 from rlenv.env_utils import get_chunk_dir
 from rlenv.simulator.Generator import Generator
 from rlenv.simulator.discrim.DiscrimRecorder import DiscrimRecorder
@@ -25,9 +24,8 @@ class DiscrimGenerator(Generator):
             # update listing in recorder
             self.recorder.update_lstg(lookup=lookup, lstg=lstg)
 
-            # simulate lstg necessary number of times
-            for _ in range(SIM_COUNT):
-                self._simulate_lstg(environment)
+            # simulate lstg once
+            self._simulate_lstg(environment)
 
         # save the recorder
         self.recorder.dump()
@@ -41,8 +39,6 @@ class DiscrimGenerator(Generator):
         """
         environment.reset()
         outcome = environment.run()
-        if self.verbose:
-            print('Simulation {} concluded'.format(self.recorder.sim))
         return outcome
 
 

@@ -24,7 +24,10 @@ def load_featnames(name):
 
 def load_sizes(name):
     path = '{}sizes/{}.pkl'.format(INPUT_DIR, name)
-    return utils.unpickle(path)
+    sizes = utils.unpickle(path)
+    if name == 'arrival':
+        sizes['out'] = 1
+    return sizes
 
 
 def featname(feat, turn):

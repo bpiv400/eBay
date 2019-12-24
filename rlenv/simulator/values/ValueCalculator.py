@@ -1,76 +1,87 @@
 import math
 import numpy as np
 from rlenv.env_utils import get_cut
-from rlenv.env_consts import META, ANCHOR_STORE_INSERT, SE_TOLS, SE_RELAX_WIDTH, MIN_SALES
+from rlenv.env_consts import META, LISTING_FEE, SE_TOL, MIN_SALES
 
 
 class ValueCalculator:
     def __init__(self, lookup):
-        self.sale_sum = 0
-        self.exp_count = 0
-        self.sales = []
+        self.x_sum = 0.0
+        self.x2_sum = 0.0
+        self.T_sum = 0
+        self.T2_sum = 0
+        self.xT_sum = 0.0
+        self.num_sales = 0
         self.cut = get_cut(lookup[META])
-        self.se_tol = SE_TOLS[0]
-        self.tol_counter = 1
 
-    def add_outcome(self, sale, price):
-        if sale:
-            self.sale_sum += price
-            self.sales.append(price)
-        self.exp_count += 1
-        self.update_tol()
 
-    def update_tol(self):
-        if self.exp_count % SE_RELAX_WIDTH == 0 and self.tol_counter != len(SE_TOLS):
-            self.se_tol = SE_TOLS[self.tol_counter]
-            self.tol_counter += 1
+    def add_outcome(self, price, T):
+        self.x_sum += price
+        self.x2_sum += math.pow(price, 2)
+        self.T_sum += T
+        self.T2_sum += math.pow(T, 2)
+        self.xT_sum += price * T
+        self.num_sales += 1
 
     @property
-    def mean(self):
-        if len(self.sales) == 0:
+    def mean_x(self):
+        return self.x_sum / self.num_sales
+
+    @property
+    def var_x(self):
+        return self.x2_sum / self.num_sales - math.pow(self.mean_x, 2)
+
+    @property
+    def mean_T(self):
+        return self.T_sum / self.num_sales
+
+    @property
+    def var_T(self):
+        return self.T2_sum / self.num_sales - math.pow(self.mean_T, 2)
+
+    @property
+    def cov_xT(self):
+        return self.xT_sum / self.num_sales - self.mean_x * self.mean_T
+    
+    @property
+    def value(self):
+        if self.num_sales == 0:
             raise RuntimeError("No sales, value undefined")
-        # rate of no sale
-        p = 1 - len(self.sales) / self.exp_count
-        avg = self.sale_sum / len(self.sales)
-        return (1 - self.cut) * avg - ANCHOR_STORE_INSERT / (1 - p)
+        proceeds = (1-self.cut) * self.mean_x
+        fees = LISTING_FEE * self.mean_T
+        return proceeds - fees
 
     @property
     def var(self):
-        if len(self.sales) == 0:
+        if self.num_sales == 0:
             raise RuntimeError("No sales, value undefined")
-        return math.pow((1 - self.cut), 2) * np.var(self.sales)
+
+        return math.pow(1-self.cut, 2) * self.var_x \
+            + math.pow(LISTING_FEE, 2) * self.var_T \
+            - 2 * (1-self.cut) * LISTING_FEE * self.cov_xT
 
     @property
     def std(self):
         return np.sqrt(self.var)
 
     @property
-    def mean_se(self):
-        return self.std / np.sqrt(len(self.sales))
-
-    @property
-    def has_sales(self):
-        return len(self.sales) > 0
+    def se(self):
+        return self.std / np.sqrt(self.num_sales)
 
     @property
     def stabilized(self):
-        if len(self.sales) < MIN_SALES:
-            return False
-        else:
-            return self.mean_se < self.se_tol
+        return self.num_sales >= MIN_SALES and self.se < SE_TOL
 
     @property
-    def p(self):
-        rate_sale = len(self.sales) / self.exp_count
-        return 1 - rate_sale
+    def p_sale(self):
+        return 1 / self.mean_T
 
     @property
     def trials_until_stable(self):
-        if not self.has_sales:
+        if self.num_sales == 0:
             raise RuntimeError("No sales")
         else:
-            min_sales = self.var / math.pow(self.se_tol, 2)
-            diff = min_sales - len(self.sales)
+            min_sales = self.var / math.pow(SE_TOL, 2)
+            diff = min_sales - self.num_sales
             print('diff: {}'.format(diff))
-            p_sale = len(self.sales) / self.exp_count
-            return int(diff / p_sale)
+            return int(diff / self.p_sale)

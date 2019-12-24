@@ -1,5 +1,7 @@
+import os, shutil
 from statistics import mean, variance
-from rlenv.env_consts import VAL_SE_CHECK, MIN_SALES
+from datetime import datetime as dt
+from rlenv.env_consts import MIN_SALES
 from rlenv.env_utils import get_checkpoint_path, get_chunk_dir
 from rlenv.simulator.Generator import Generator
 from rlenv.simulator.values.ValueCalculator import ValueCalculator
@@ -25,7 +27,7 @@ class ValueGenerator(Generator):
         self.checkpoint_contents = None
         self.checkpoint_count = 0
         self.recorder_count = 1
-        self.start = datetime.now()
+        self.start = dt.now()
         self.has_checkpoint = self._has_checkpoint()
         if self.verbose:
             print('checkpoint: {}'.format(self.has_checkpoint))
@@ -40,8 +42,7 @@ class ValueGenerator(Generator):
         """
         Simulates all lstgs in chunk according to experiment parameters
         """
-        lstgs = self._get_lstgs()
-        for lstg in lstgs:
+        for lstg in self._get_lstgs():
             # index lookup dataframe
             lookup = self.lookup.loc[lstg, :]
 
@@ -56,67 +57,76 @@ class ValueGenerator(Generator):
                 self.val_calc = self.checkpoint_contents['val_calc']
                 self.checkpoint_contents = None
 
-            # simulate lstg necessary number of times
-            stop, time_up = False, False
-            while not stop and not time_up:
-                (sale, price, dur), time_up = self._simulate_lstg(environment)
-                self.val_calc.add_outcome(sale, price)
-                stop = self._update_stop()
-                self._print_value(stop)
+            # simulate lstg until a stopping criterion is satisfied
+            time_up = False
+            while not self.val_calc.stabilized and not self._is_time_up():
+                price, T = self._simulate_lstg(environment)
+                self.val_calc.add_outcome(price, T)
+                if self.verbose:
+                    self._print_value()
+
+            # save results to value calculator
+            self.recorder.add_val(self.val_calc)
+            exit()
 
             # store a checkpoint if the job is about to be killed
             if time_up:
                 self.checkpoint_count += 1
                 dump(self._make_checkpoint(lstg), self.checkpoint_path)
                 break
-            else:
-                self._tidy_recorder()
 
         # clean up
         if not time_up:
-            self.recorder.dump(self.dir, self.recorder_count)
+            self.recorder.dump(self.recorder_count)
             self._delete_checkpoint()
             self._generate_done()
 
 
+    def _get_lstgs(self):
+        """
+        Generates list of listings in the current chunk that haven't had outputs generated
+        yet. If there is a checkpoint file, the list contains all lstgs that weren't
+        simulated to completion in the previous iterations of RewardGenerator
+        :return: list
+        """
+        if not self.has_checkpoint:
+            return self.x_lstg.index
+        else:
+            start_lstg = self.checkpoint_contents['lstg']
+            index = list(self.x_lstg.index)
+            start_ix = index.index(start_lstg)
+            index = index[start_ix:]
+            return index
+
+
     def _simulate_lstg(self, environment):
         """
-        Simulates a particular listing once
+        Simulates a particular listing until it sells
         :param environment: RewardEnvironment
         :return: 2-tuple containing outcome tuple and boolean indicating whether the job
         has run out of queue time
         """
-        environment.reset()
-        outcome = environment.run()
-        if self.verbose:
-            print('Simulation {} concluded'.format(self.recorder.sim))
-        time_up = self._check_time()
-        return outcome, time_up
+        T = 1
+        while True:
+            environment.reset()
+            sale, price, _ = environment.run()
+            if sale:
+                return price, T
+            T += 1
 
 
-    def _print_value(self, stop):
+    def _print_value(self):
         """
         Prints information about the most recent value calculation
         """
-        if self.verbose and self.val_calc.exp_count % VAL_SE_CHECK == 0:
-            print('Trial: {}'.format(self.val_calc.exp_count))
-            if len(self.val_calc.sales) == 0:
-                print('No Sales')
-            elif len(self.val_calc.sales) < MIN_SALES:
-                print('fewer than min sales ({} / {})'.format(len(self.val_calc.sales), MIN_SALES))
-            else:
-                print('cut: {} | tol: {}'.format(self.val_calc.cut, self.val_calc.se_tol))
-                print('rate of no sale: {}'.format(self.val_calc.p))
-                price_header = 'sale count: {} | price mean: {}'.format(len(self.val_calc.sales),
-                                                                        mean(self.val_calc.sales))
-                price_header = '{} | price var: {}'.format(price_header, variance(self.val_calc.sales))
-                print(price_header)
-                print('mean of value: {} | mean standard error: {}'.format(self.val_calc.mean,
-                                                                           self.val_calc.mean_se))
-                if stop:
-                    print('Estimation stabilized')
-                else:
-                    print('Predicted trials remaining: {}'.format(self.val_calc.trials_until_stable))
+        print('Sale #{0:d}'.format(self.val_calc.num_sales))
+        if self.val_calc.num_sales == 0:
+            print('No Sales')
+        else:
+            print('sale rate: {0:.2f} | avg sale price: {1:.2f}'.format(
+                self.val_calc.p_sale, self.val_calc.mean_x))
+            print('value: {0:.2f} | se: {1:.2f}'.format(
+                self.val_calc.value, self.val_calc.se))
 
 
     def _make_checkpoint(self, lstg):
@@ -125,7 +135,7 @@ class ValueGenerator(Generator):
             'recorder': self.recorder,
             'recorder_count': self.recorder_count,
             'checkpoint_count': self.checkpoint_count,
-            'time': datetime.now(),
+            'time': dt.now(),
             'val_calc': self.val_calc
         }
         return contents
@@ -140,8 +150,7 @@ class ValueGenerator(Generator):
         based on whether the value estimate has stabilized
         :return: Boolean indicating whether to stop
         """
-        counter = self.val_calc.exp_count
-        if self.val_calc.has_sales and counter % VAL_SE_CHECK == 0:
+        if self.val_calc.has_sales:
             return self.val_calc.stabilized
         else:
             return False
@@ -165,7 +174,7 @@ class ValueGenerator(Generator):
         if os.path.isfile(self.checkpoint_path):
             self.checkpoint_contents = load(path)
             time = self.checkpoint_contents['time']
-            since = (time - datetime.now()).total_seconds() / 3600
+            since = (time - dt.now()).total_seconds() / 3600
             if since > 24:
                 self.checkpoint_contents = None
                 return False
@@ -195,27 +204,15 @@ class ValueGenerator(Generator):
             shutil.rmtree(path)
         os.mkdir(path)
 
-    def _check_time(self):
+    def _is_time_up(self):
         """
         Checks whether the generator has been running for almost 4 hours
         :return: Boolean indicating almost 4 hours has passed
         """
-        curr = datetime.now()
-        tot = (curr - self.start).total_seconds() / 3600
+        tot = (dt.now() - self.start).total_seconds() / 3600
         return tot > .25
 
 
     def _generate_done(self):
         path = '{}done_{}.txt'.format(self.records_path, self.chunk)
         open(path, 'a').close()
-
-
-    def _tidy_recorder(self):
-        """
-        Dumps the recorder and increments the recorder count if it
-        contains at least a gig of data
-        """
-        if sys.getsizeof(self.recorder) > MAX_RECORDER_SIZE:
-            self.recorder.dump(self.recorder_count)
-            self.recorder = self._make_recorder()
-            self.recorder_count += 1

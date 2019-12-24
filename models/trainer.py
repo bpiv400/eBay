@@ -1,7 +1,6 @@
 import sys, os, math
 import torch, torch.optim as optim
 import numpy as np
-from datetime import datetime as dt
 from torch.utils.tensorboard import SummaryWriter
 from models.Model import Model
 from constants import *
@@ -47,7 +46,6 @@ class Trainer:
             output = {'loglr': self.loglr}
 
             # train model
-            t0 = dt.now()
             output['loss'] = self.model.run_loop(self.train, self.optimizer)
 
             # regularization stats
@@ -64,11 +62,9 @@ class Trainer:
                 loss_test = self.model.run_loop(self.test)
                 output['lnL_test'] = -loss_test / self.test.N_labels
 
-            # save output to tensorboard writer and print to console
+            # save output to tensorboard writer
             for k, v in output.items():
                 writer.add_scalar(k, v, epoch)
-                print('\t\t{}: {}'.format(k, v))
-            print('\t\ttime: {} sec'.format(dt.now() - t0).total_seconds())
 
             # save model
             torch.save(self.model.net.state_dict(), 

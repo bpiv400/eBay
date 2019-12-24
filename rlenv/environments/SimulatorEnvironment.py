@@ -8,20 +8,18 @@ class SimulatorEnvironment(EbayEnvironment):
     def __init__(self, **kwargs):
         super(SimulatorEnvironment, self).__init__(
             kwargs['arrival'], kwargs['verbose'])
-        # environment interface
+
+        # save parameters to self
         self.buyer = kwargs['buyer']
         self.seller = kwargs['seller']
-
-        # features
         self.x_lstg = kwargs['x_lstg']
         self.lookup = kwargs['lookup']
+        self.recorder = kwargs['recorder']
 
         # end time
         self.end_time = self.lookup[START_TIME] + MONTH
         self.thread_counter = 0
-
-        # recorder
-        self.recorder = kwargs['recorder']
+        
 
     def reset(self):
         super(SimulatorEnvironment, self).reset()

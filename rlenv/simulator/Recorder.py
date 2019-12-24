@@ -1,8 +1,8 @@
 import pandas as pd
 from compress_pickle import dump
 from rlenv.env_consts import START_TIME, START_PRICE, TIME_FEATS
-# TODO: MOVE?
-SIM = 'sim'
+
+# variable names
 INDEX = 'index'
 VAL = 'value'
 THREAD = 'thread'
@@ -16,24 +16,29 @@ SALE = 'sale'
 LSTG = 'lstg'
 SE = 'se'
 PRICE = 'price'
-SALE_MEAN = 'price_mean'
-SALE_COUNT = 'sale_count'
-TRIALS = 'trials'
+AVG_PRICE = 'avg_price'
+NUM_SALES = 'num_sales'
+P_SALE = 'p_sale'
 CUT = 'cut'
 
-OFFER_COLS = [LSTG, SIM, THREAD, INDEX, CLOCK, CON, MESSAGE] + TIME_FEATS
-THREAD_COLS = [LSTG, SIM, THREAD, BYR_HIST, CLOCK]
-VAL_COLS = [LSTG, VAL, SE, SALE_MEAN, SALE_COUNT, TRIALS, CUT]
+# for discriminator
+OFFER_COLS = [LSTG, THREAD, INDEX, CLOCK, CON, MESSAGE] + TIME_FEATS
+THREAD_COLS = [LSTG, THREAD, BYR_HIST, CLOCK]
+
+# for values
+VAL_COLS = [LSTG, VAL, SE, AVG_PRICE, NUM_SALES, P_SALE, CUT]
 
 
 class Recorder:
     def __init__(self, records_path, verbose):
         self.records_path = records_path
         self.verbose = verbose
-        self.sim = -1
-        self.lstg = 0
+
+        self.lstg = None
         self.start_time = None
         self.start_price = None
+        self.sim = None
+
 
     def update_lstg(self, lookup, lstg):
         """
@@ -42,15 +47,18 @@ class Recorder:
         :param int lstg: listing id
         """
         self.lstg = lstg
-        self.start_time = lookup[START_TIME]
         self.sim = -1
+        self.start_time = lookup[START_TIME]
         self.start_price = lookup[START_PRICE]
+
 
     def reset_sim(self):
         self.sim += 1
 
+
     def dump(self):
         raise NotImplementedError()
+
 
     def print_offer(self, event, summary):
         """
@@ -88,15 +96,6 @@ class Recorder:
                 auto, exp, rej = event.slr_outcomes()
                 print('Auto: {} | Exp: {} | Reject: {}'.format(auto, exp, rej))
 
-    @staticmethod
-    def record2frame(record, cols):
-        """
-        Converts the given list of lists into a dataframe with the given column names
-        :param [[numeric]] record:
-        :param [str] cols:
-        :return: pd.DataFrame with columns given by cols
-        """
-        return pd.DataFrame(data=record, columns=cols)
 
     @staticmethod
     def print_sale(sale, price, dur):
@@ -109,23 +108,37 @@ class Recorder:
             else:
                 print('Item did not sell')
 
+
+    @staticmethod
+    def record2frame(record, cols):
+        """
+        Converts the given list of lists into a dataframe with the given column names
+        :param [[numeric]] record:
+        :param [str] cols:
+        :return: pd.DataFrame with columns given by cols
+        """
+        return pd.DataFrame(data=record, columns=cols)
+
+
     def start_thread(self, thread_id=None, time=None, byr_hist=None):
         raise NotImplementedError()
+
 
     def add_offer(self, event, time_feats):
         raise NotImplementedError()
 
-    def add_sale(self, sale, price, dur):
-        raise NotImplementedError()
 
     def records2frames(self):
         raise NotImplementedError()
 
+
     def construct_output(self):
         raise NotImplementedError()
 
+
     def compress_frames(self):
         raise NotImplementedError()
+
 
     def reset_recorders(self):
         raise NotImplementedError()
