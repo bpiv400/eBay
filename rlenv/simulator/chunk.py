@@ -15,7 +15,7 @@ def main():
     part = input_partition()
 
     # load inputs
-    x_lstg = load('{}{}/x_lstg.gz')
+    x_lstg = load('{}{}/x_lstg.gz'.format(PARTS_DIR, part))
     lookup = load('{}{}/{}'.format(PARTS_DIR, part, LOOKUP_FILENAME))
 
     # sort and subset
