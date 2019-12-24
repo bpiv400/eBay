@@ -2,8 +2,8 @@ import sys, os, argparse
 import numpy as np
 from compress_pickle import load, dump
 from scipy.optimize import minimize_scalar
-from models.datasets.ModelDataset import ModelDataset
-from models.datasets.DiscrimDataset import DiscrimDataset
+from models.FeedForwardDataset import FeedForwardDataset
+from models.RecurrentDataset import RecurrentDataset
 from models.trainer import Trainer
 from utils import input_partition
 from constants import *
@@ -22,10 +22,11 @@ if __name__ == '__main__':
     print('Parameters: {}'.format(sizes))
 
     # load datasets
+    dataset = RecurrentDataset if 'x_time' in sizes else FeedForwardDataset
     print('Loading training data')
-    train = ModelDataset('train_models', name)
+    train = dataset('train_models', name)
     print('Loading validation data')
-    test = ModelDataset('train_rl', name)
+    test = dataset('train_rl', name)
 
     # initialize trainer object
     print('Training model')

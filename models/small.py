@@ -3,8 +3,8 @@ import torch, torch.optim as optim
 import numpy as np, pandas as pd
 from datetime import datetime as dt
 from compress_pickle import load
-from models.datasets.ModelDataset import ModelDataset
-from models.datasets.DiscrimDataset import DiscrimDataset
+from models.FeedForwardDataset import FeedForwardDataset
+from models.RecurrentDataset import RecurrentDataset
 from models.Model import Model
 from constants import *
 
@@ -30,10 +30,9 @@ if __name__ == '__main__':
     print(optimizer)
 
     # load data
-    if name in ['listings', 'threads']:
-        train = DiscrimDataset('train_rl', name)
-    else:
-        train = ModelDataset('small', name)
+    dataset = RecurrentDataset if 'x_time' in sizes else FeedForwardDataset
+    train_dir = 'train_rl' if name in ['listings', 'threads'] else 'small'
+    train = dataset(train_dir, name)
 
     # training
     for epoch in range(10):
