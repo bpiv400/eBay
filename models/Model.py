@@ -156,11 +156,11 @@ class Model:
         return loss.item()
 
 
-    def _NegativeBinomialNLLLoss(self, theta, y):
-        r = torch.exp(torch.index_select(theta, 
-            dim=-1, index=torch.tensor(0, device=self.device))).squeeze()
-        p = torch.sigmoid(torch.index_select(theta, 
-            dim=-1, index=torch.tensor(1, device=self.device))).squeeze()
+    def _NegativeBinomialNLLLoss(self, theta, y, eps=1e-8):
+        r = torch.exp(torch.index_select(theta, dim=-1, 
+            index=torch.tensor(0, device=self.device))).squeeze()
+        p = torch.sigmoid(torch.index_select(theta, dim=-1, 
+            index=torch.tensor(1, device=self.device))).squeeze()
 
         # return negative log-likelihood
-        return -torch.sum(nb(r, probs=p).log_prob(y))
+        return -torch.sum(nb(r + eps, probs=p).log_prob(y))
