@@ -3,7 +3,7 @@ from compress_pickle import load, dump
 import numpy as np, pandas as pd
 from constants import *
 from utils import input_partition
-from processing.processing_utils import convert_to_numpy, get_featnames, get_sizes, create_small
+from processing.processing_utils import *
 
 
 # loads data and calls helper functions to construct train inputs
@@ -40,7 +40,7 @@ if __name__ == '__main__':
 	print('%s/hist' % part)
 
 	# input dataframes, output processed dataframes
-	d = process_inputs(load_file)
+	d = process_inputs(part)
 
 	# save featnames and sizes
 	if part == 'train_models':
