@@ -1,6 +1,6 @@
 #!/bin/bash
 #$ -t 1-5
-#$ -l m_mem_free=75G
+#$ -l m_mem_free=25G
 #$ -N d_test_rl
 #$ -j y
 #$ -o logs/processing/

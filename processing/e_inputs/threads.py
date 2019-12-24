@@ -38,6 +38,11 @@ def clean_offer(offer, i, outcome, role):
 
 # loads data and calls helper functions to construct training inputs
 def process_inputs(part, outcome, role):
+	# function to load file
+	load_file = lambda x: load('{}{}/{}.gz'.format(PARTS_DIR, part, x))
+
+
+
 	# load dataframes
 	x_thread = load(PARTS_DIR + '%s/x_thread.gz' % part)
 	x_offer = load(PARTS_DIR + '%s/x_offer.gz' % part)
@@ -77,34 +82,29 @@ def process_inputs(part, outcome, role):
 		# add turn indicators
 		x['offer%d' % i] = add_final_turn_indicators(offer)
 
-	# return feature dictionary
-	return x
+	# combine into single dictionary
+	return {'y': y.astype('int8', inplace=True), 
+			'x': {k: v.astype('float32', copy=False) for k, v in x.items()}}
 
 
 if __name__ == '__main__':
-	# extract parameters from command line
-	parser = argparse.ArgumentParser()
-	parser.add_argument('--part', type=str)
-	args = parser.parse_args()
-	part = args.part
+	# extract partition from command line
+	part = input_partition()
 
 	# input dataframes, output processed dataframes
 	d = process_inputs(part)
 
-	# save featnames and sizes
-	if part == 'train_models':
-		pickle.dump(get_featnames(d), 
-			open('%s/inputs/featnames/threads.pkl' % PREFIX, 'wb'))
+	# save sizes
+	if part == 'train_rl':
+		dump(get_sizes(d), '{}/inputs/sizes/threads.pkl'.format(PREFIX))
 
-		pickle.dump(get_sizes(d, model), 
-			open('%s/inputs/sizes/threads.pkl' % PREFIX, 'wb'))
-
-	# create dictionary of numpy arrays
+	# convert to dictionary of numpy arrays
 	d = convert_to_numpy(d)
 
-	# save as dataset
-	dump(d, '%s/inputs/%s/threads.gz' % (PREFIX, part))
+	# save
+	dump(d, '{}/inputs/{}/threads.gz'.format(PREFIX, part))
 
-	# save small dataset
-	if part == 'train_models':
-		dump(create_small(d), '%s/inputs/small/threads.gz' % PREFIX)
+	# small arrays
+	if part == 'train_rl':
+        dump(create_small(d), '{}/inputs/small/threads.gz'.format(PREFIX))
+
