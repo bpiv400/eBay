@@ -1,5 +1,5 @@
 #!/bin/bash
-#$ -t 1-6
+#$ -t 1-8
 #$ -l m_mem_free=125G
 #$ -N e_discrim
 #$ -j y
@@ -19,8 +19,14 @@ then
 	python repo/processing/e_inputs/threads.py --part train_rl
 elif [ "$SGE_TASK_ID" == 5 ]
 then
-	python repo/processing/e_inputs/listings.py --part test
+	python repo/processing/e_inputs/listings.py --part test_rl
 elif [ "$SGE_TASK_ID" == 6 ]
+then
+	python repo/processing/e_inputs/threads.py --part test_rl
+elif [ "$SGE_TASK_ID" == 7 ]
+then
+	python repo/processing/e_inputs/listings.py --part test
+elif [ "$SGE_TASK_ID" == 8 ]
 then
 	python repo/processing/e_inputs/threads.py --part test
 fi

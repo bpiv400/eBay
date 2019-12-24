@@ -171,16 +171,9 @@ def get_sizes(d, model=''):
     sizes = {'N': len(d['y'].index)}
 
     # count components of x
-    sizes['x'] = OrderedDict()
-    if 'x' in d:
-        for k, v in d['x'].items():
-            sizes['x'][k] = len(v.columns)
-    else:
-        
-
-    # discriminator inputs
-    if 'x_arrival' in d:
-        sizes['x']['arrival'] = len(d['x_arrival'].columns)
+    sizes['x'] = {}
+    for k, v in d['x'].items():
+        sizes['x'][k] = len(v.columns)
 
     # arrival and delay models
     if 'x_clock' in d:
@@ -239,10 +232,10 @@ def convert_to_numpy(d):
     return d
 
 
-# restricts data to first N_SMALL observations
 def create_small(d):
     '''
-    d: dictionary with numpy arrays.
+    Restricts data to first N_SMALL observations
+    :param d: dictionary with numpy arrays.
     '''
     
     small = {}

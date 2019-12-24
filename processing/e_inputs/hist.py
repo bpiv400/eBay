@@ -24,7 +24,8 @@ def process_inputs(part):
 	x_thread.drop('byr_hist', axis=1, inplace=True)
 
 	# initialize input features
-	x = load_file('x_lstg').reindex(index=idx, level='lstg')
+	x = load_file('x_lstg')
+    x = {k: v.reindex(index=idx, level='lstg') for k, v in x.items()}
 
 	# add thread variables to x['lstg']
 	x['lstg'] = x['lstg'].join(x_thread)

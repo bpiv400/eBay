@@ -16,7 +16,7 @@ CUTOFF = 1e5
 
 # for partitioning
 SEED = 123456
-SHARES = {'train_models': 0.6, 'train_rl': 0.2}
+SHARES = {'train_models': 0.6, 'train_rl': 0.16, 'test_rl': 0.04}
 
 # count concessions within this range as 1/2
 TOL_HALF = 0.02
@@ -61,7 +61,7 @@ REINFORCE_DIR = '%s/reinforce' % PREFIX
 REINFORCE_INPUT_DIR = '%s/input' % REINFORCE_DIR
 
 # partitions
-PARTITIONS = ['train_models', 'train_rl', 'test']
+PARTITIONS = ['train_models', 'train_rl', 'test_rl', 'test']
 EVAL_PART = 'train_rl'	# partition to use for model evaluation
 
 # minimum number of listings that define a category

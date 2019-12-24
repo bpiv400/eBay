@@ -17,7 +17,8 @@ def process_inputs(part):
     idx = y.index
 
     # initialize dictionary of input features
-    x = load_file('x_lstg').reindex(index=idx)
+    x = load_file('x_lstg')
+    x = {k: v.reindex(index=idx) for k, v in x.items()}
 
     # clock features by minute
     x_clock = create_x_clock()

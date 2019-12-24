@@ -90,7 +90,8 @@ def process_inputs(part, outcome, role):
 	idx = y.index
 
 	# initialize dictionary of input features
-	x = load_file('x_lstg').reindex(index=idx, level='lstg')
+	x = load_file('x_lstg')
+    x = {k: v.reindex(index=idx, level='lstg') for k, v in x.items()}
 
 	# add thread features and turn indicators to listing features
 	x_thread.loc[:, 'byr_hist'] = x_thread.byr_hist.astype('float32') / 10

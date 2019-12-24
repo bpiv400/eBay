@@ -14,12 +14,11 @@ class Model:
         :param dropout: True if using dropout.
         :param device: either 'cuda' or 'cpu'
         '''
-        self.name = name
         self.dropout = dropout
         self.device = device
 
         # recurrent models
-        self.isRecurrent = (name == 'arrival') or ('delay' in name)
+        self.isRecurrent = 'x_time' in sizes
 
         # initialize gamma to 0
         self.gamma = 0.0
