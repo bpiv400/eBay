@@ -87,6 +87,7 @@ class ArrivalInterface:
                                                       fixed=False, recurrent=True)
         params, self.hidden = self.num_offers_model.step(x_time=input_dict['x_time'],
                                                          hidden=self.hidden)
+        params = params.squeeze()
         if len(params) == 1:
             sample = ArrivalInterface._poisson_sample(params)
         elif len(params) == 2:
