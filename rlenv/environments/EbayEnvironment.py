@@ -190,7 +190,7 @@ class EbayEnvironment:
                 offer_event = self.make_thread(priority)
                 self.queue.push(offer_event)
         # Add arrival check
-        event.priority = event.priority + INTERVAL['arrival']
+        event.priority += INTERVAL['arrival']
         self.queue.push(event)
         return False
 

@@ -1,5 +1,6 @@
 import torch
-from torch.distributions import Poisson
+from torch.distributions.poisson import Poisson
+from torch.distributions.negative_binomial import NegativeBinomial
 from rlenv.env_utils import load_model, proper_squeeze, categorical_sample
 from rlenv.interface.model_names import (model_str, CON, MSG, DELAY,
                                          BYR_HIST, NUM_OFFERS)
@@ -63,10 +64,18 @@ class ArrivalInterface:
         :param params: 1-dimensional torch.tensor output by a poisson model
         :return: torch.LongTensor containing 1 element drawn from poisson
         """
-        params = torch.exp(params)
-        dist = Poisson(params)
-        sample = dist.sample((1, ))
-        return sample
+        return Poisson(torch.exp(params)).sample((1, ))
+
+    @staticmethod
+    def _negative_binomial_sample(params):
+        """
+        Draws a sample from a negative binomial distribution parameterized
+        by the input tensor.
+        :param params: 2-length torch.tensor model output
+        :return: torch.LongTensor containing one sample
+        """
+        return NegativeBinomial(torch.exp(params[0]) + 1e-8,
+            probs=torch.sigmoid(params[1])).sample((1, ))
 
     def init(self, sources=None):
         input_dict = self.composer.build_input_vector(NUM_OFFERS, sources=sources,
@@ -78,7 +87,10 @@ class ArrivalInterface:
                                                       fixed=False, recurrent=True)
         params, self.hidden = self.num_offers_model.step(x_time=input_dict['x_time'],
                                                          hidden=self.hidden)
-        sample = ArrivalInterface._poisson_sample(params)
+        if len(params) == 1:
+            sample = ArrivalInterface._poisson_sample(params)
+        elif len(params) == 2:
+            sample = ArrivalInterface._negative_binomial_sample(params)
         return proper_squeeze(sample).numpy()
 
     def hist(self, sources=None):
