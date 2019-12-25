@@ -40,7 +40,7 @@ class Generator:
         self.lookup = d['lookup']
         self.recorder = None
 
-        composer = Composer()
+        composer = Composer(self.x_lstg.columns)
         self.buyer = PlayerInterface(composer=composer, byr=True)
         self.seller = PlayerInterface(composer=composer, byr=False)
         self.arrival = ArrivalInterface(composer=composer)

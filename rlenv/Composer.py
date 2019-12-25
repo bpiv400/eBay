@@ -13,18 +13,18 @@ class Composer:
     """
     Class for composing inputs to interface from various input streams
     """
-    def __init__(self):
-        self.maps, self.sizes, self.feat_sets = Composer.build_models()
+    def __init__(self, cols):
+        self.maps, self.sizes, self.feat_sets = \
+            Composer.build_models(cols)
 
     @staticmethod
-    def build_models():
+    def build_models(cols):
         """
         creates a dictionary mapping
         """
         maps = dict()
         sizes = dict()
-        x_lstg_path = '{}train_rl/chunks/1.gz'.format(ENV_SIM_DIR)
-        x_lstg_cols = list(load(x_lstg_path)['x_lstg'].columns)
+        x_lstg_cols = list(cols)
         thread_cols, x_time_cols = Composer._get_cols(x_lstg_cols)
         thread_cols, x_time_cols = list(thread_cols), list(x_time_cols)
         feat_sets = {

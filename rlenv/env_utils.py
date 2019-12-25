@@ -6,7 +6,7 @@ import os
 import numpy as np
 import pandas as pd
 from compress_pickle import load
-import utils
+from utils import unpickle
 from torch.distributions.categorical import Categorical
 from constants import (INPUT_DIR, START, HOLIDAYS, TOL_HALF,
                        MODEL_DIR, ENV_SIM_DIR)
@@ -19,12 +19,12 @@ from rlenv.env_consts import (META_6, META_7, DAY, NORM, ALL_OUTCOMES,
 
 def load_featnames(name):
     path = '{}featnames/{}.pkl'.format(INPUT_DIR, name)
-    return utils.unpickle(path)
+    return unpickle(path)
 
 
 def load_sizes(name):
     path = '{}sizes/{}.pkl'.format(INPUT_DIR, name)
-    return utils.unpickle(path)
+    return unpickle(path)
 
 
 def featname(feat, turn):
@@ -39,11 +39,7 @@ def get_model_class(full_name):
     :return: simulator.nets.RNN, simulator.nets.LSTM, or
     simulator.nets.FeedForward
     """
-    if full_name in LSTM_MODELS:
-        mod_type = LSTM
-    else:
-        mod_type = FeedForward
-    return mod_type
+    return LSTM if full_name in LSTM_MODELS else FeedForward
 
 
 def get_clock_feats(time):
