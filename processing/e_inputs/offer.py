@@ -72,36 +72,36 @@ def get_delay_time_feats(tf, start_time, role):
 def get_y_delay(events, role):
 	# construct delay
 	clock = events.clock.unstack()
-    delay = pd.DataFrame(index=clock.index)
-    for i in range(2, 8):
-        delay[i] = clock[i] - clock[i-1]
-        delay.loc[delay[i] == 0, i] = np.nan  # remove auto responses
-    delay = delay.rename_axis('index', axis=1).stack().astype('int64')
-    # restrict to role indices
-    s = delay[delay.index.isin(IDX[role], level='index')]
-    c = events.censored.reindex(index=s.index)
-    # expirations
-    exp = s >= MAX_DELAY[role]
-    if role == 'byr':
-        exp.loc[exp.index.isin([7], level='index')] = s >= MAX_DELAY['slr']
-    # interval of offer arrivals and censoring
-    arrival = (s[~exp & ~c] / INTERVAL[role]).astype('uint16').rename('arrival')
-    cens = (s[~exp & c] / INTERVAL[role]).astype('uint16').rename('cens')
-    # initialize output dataframe with arrivals
-    df = arrival.to_frame().assign(count=1).set_index(
-        'arrival', append=True).squeeze().unstack(
-        fill_value=0).reindex(index=s.index, fill_value=0)
-    # vector of censoring thresholds
-    v = (arrival+1).append(cens, verify_integrity=True).reindex(
-        s.index, fill_value=INTERVAL_COUNTS[role])
-    if role == 'byr':
-        mask = v.index.isin([7], level='index') & (v > INTERVAL_COUNTS['byr_7'])
-        v.loc[mask] = INTERVAL_COUNTS['byr_7']
-    # replace censored observations with -1
-    for i in range(INTERVAL_COUNTS[role]):
-        df[i] -= (i >= v).astype('int8')
-    # sort by turns and return
-    return sort_by_turns(df)
+	delay = pd.DataFrame(index=clock.index)
+	for i in range(2, 8):
+		delay[i] = clock[i] - clock[i-1]
+		delay.loc[delay[i] == 0, i] = np.nan  # remove auto responses
+	delay = delay.rename_axis('index', axis=1).stack().astype('int64')
+	# restrict to role indices
+	s = delay[delay.index.isin(IDX[role], level='index')]
+	c = events.censored.reindex(index=s.index)
+	# expirations
+	exp = s >= MAX_DELAY[role]
+	if role == 'byr':
+		exp.loc[exp.index.isin([7], level='index')] = s >= MAX_DELAY['slr']
+	# interval of offer arrivals and censoring
+	arrival = (s[~exp & ~c] / INTERVAL[role]).astype('uint16').rename('arrival')
+	cens = (s[~exp & c] / INTERVAL[role]).astype('uint16').rename('cens')
+	# initialize output dataframe with arrivals
+	df = arrival.to_frame().assign(count=1).set_index(
+		'arrival', append=True).squeeze().unstack(
+		fill_value=0).reindex(index=s.index, fill_value=0)
+	# vector of censoring thresholds
+	v = (arrival+1).append(cens, verify_integrity=True).reindex(
+		s.index, fill_value=INTERVAL_COUNTS[role])
+	if role == 'byr':
+		mask = v.index.isin([7], level='index') & (v > INTERVAL_COUNTS['byr_7'])
+		v.loc[mask] = INTERVAL_COUNTS['byr_7']
+	# replace censored observations with -1
+	for i in range(INTERVAL_COUNTS[role]):
+		df[i] -= (i >= v).astype('int8')
+	# sort by turns and return
+	return sort_by_turns(df)
 
 
 def get_y_con(x_offer, role):
@@ -136,7 +136,7 @@ def process_inputs(part, outcome, role):
 	# outcome
 	if outcome == 'delay':
 		events = load(CLEAN_DIR + 'offers.pkl')[['clock', 'censored']].reindex(
-        	index=x_offer.index, level='lstg')
+			index=x_offer.index, level='lstg')
 		y = get_y_delay(events, role)
 	elif outcome == 'con':
 		y = get_y_con(x_offer, role)
@@ -189,7 +189,7 @@ def process_inputs(part, outcome, role):
 	# time features
 	tf_delay = load_file('tf_delay')
 	start_time = events.clock.rename('start_time').groupby(
-        ['lstg', 'thread']).shift().dropna().astype('int64')
+		['lstg', 'thread']).shift().dropna().astype('int64')
 	tf = get_delay_time_feats(tf, start_time, role)
 
 
