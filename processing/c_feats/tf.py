@@ -386,7 +386,7 @@ def main():
         assert not con_feats.isna().any().any()
         assert not delay_feats.isna().any().any()
         dump(delay_feats, output_path('delay_diff', num))
-        dump(con_feats, output_path('con', num))
+        dump(con_feats, output_path('offer', num))
     else:
         tf_lstg_full = get_lstg_time_feats(events, full=True)
         print('preparing arrival output...')

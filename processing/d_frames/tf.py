@@ -21,6 +21,6 @@ if __name__ == "__main__":
 	dump(tf_delay, path('tf_delay'))
 
 	# offer time feats
-	tf_offer = load(frames('tf_con')).reindex(
+	tf_offer = load_frames('tf_offer').reindex(
 		index=idx, level='lstg')
 	dump(tf_offer, path('tf_offer'))
