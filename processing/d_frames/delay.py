@@ -74,7 +74,7 @@ if __name__ == "__main__":
     delay = delay.rename_axis('index', axis=1).stack().astype('int64')
 
     # inputs for differenced time features
-    tf = load_frames('tf_delay_diff').reindex(
+    tf = load_frames('tf_delay').reindex(
         index=idx, level='lstg').drop('index', axis=1)
     start_time = events.clock.rename('start_time').groupby(
         ['lstg', 'thread']).shift().dropna().astype('int64')
@@ -84,4 +84,4 @@ if __name__ == "__main__":
         dump(get_y_delay(delay, censored, role), 
             path('y_delay_' + role))
         dump(get_delay_time_feats(tf, start_time, role), 
-            path('tf_delay_diff_' + role))
+            path('tf_delay_' + role))

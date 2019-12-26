@@ -135,7 +135,7 @@ def process_inputs(part, outcome, role):
 	remaining = np.minimum(remaining, 1)
 
 	# time features
-	tf = load_file('tf_delay_diff_{}'.format(role))
+	tf = load_file('tf_delay_{}'.format(role))
 
 	return {'y': y.astype('int8', copy=False), 'x': x,
 			'x_clock': x_clock.astype('float32', copy=False),

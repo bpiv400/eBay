@@ -308,14 +308,12 @@ def con_time_feats(tf_lstg, events):
 
 
 def delay_time_feats(tf_lstg, events):
-    # compute raw features at each turn
     tf_lstg = tf_lstg.copy()
-    raw = subset_to_turns(tf_lstg, events.copy())
     # compute timestep differences
     deltas = get_diffs(tf_lstg.groupby(['lstg', 'thread']), tf_lstg, remove_zeros=False)
     deltas = add_deltas_index(deltas, events.copy())
     deltas = drop_zeros(deltas)
-    return raw, deltas
+    return deltas
 
 
 def add_deltas_index(deltas, events):
@@ -384,13 +382,10 @@ def main():
         print('preparing concession output...')
         con_feats = con_time_feats(tf_lstg_focal, events)
         print('preparing delay output...')
-        # dump([tf_lstg_focal, events], 'data/temp/delay.gz')
-        raw_delay_feats, diff_delay_feats = delay_time_feats(tf_lstg_focal, events)
+        delay_feats = delay_time_feats(tf_lstg_focal, events)
         assert not con_feats.isna().any().any()
-        assert not raw_delay_feats.isna().any().any()
-        assert not diff_delay_feats.isna().any().any()
-        dump(diff_delay_feats, output_path('delay_diff', num))
-        dump(raw_delay_feats, output_path('delay_raw', num))
+        assert not delay_feats.isna().any().any()
+        dump(delay_feats, output_path('delay_diff', num))
         dump(con_feats, output_path('con', num))
     else:
         tf_lstg_full = get_lstg_time_feats(events, full=True)
