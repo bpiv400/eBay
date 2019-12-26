@@ -1,8 +1,9 @@
 #!/bin/bash
-#$ -t 1-514
+#$ -t 1-185
 #$ -q short.q
 #$ -l m_mem_free=12G
-#$ -N feats_cat
+#$ -N c_cat
 #$ -j y
-#$ -o logs/
+#$ -o logs/processing/
+
 python repo/processing/c_feats/category.py --num "$SGE_TASK_ID"

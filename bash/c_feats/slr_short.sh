@@ -1,10 +1,10 @@
 #!/bin/bash
-#$ -t 1-300
+#$ -t 1-281
 #$ -q short.q
 #$ -l m_mem_free=8G
-#$ -N feats_slr
+#$ -N c_slr
 #$ -j y
-#$ -o logs/
+#$ -o logs/processing/
 
 python repo/processing/c_feats/category.py --num "$SGE_TASK_ID" --slr
 

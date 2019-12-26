@@ -24,10 +24,10 @@ TOL_HALF = 0.02
 # optimization parameters
 NUM_WORKERS = 0
 MBSIZE = {True: 128, False: 2000}
-LOGLR0 = -2.5
+LOGLR0 = -3
 LOGLR1 = -6
 LOGLR_INC = 0.5
-FTOL = 0.999
+FTOL = 0.995
 
 # neural net parameters
 LAYERS_EMBEDDING = 4
@@ -69,7 +69,6 @@ MIN_COUNT = 1000
 
 # delete activity after lstg is open MAX_DAYS
 MAX_DAYS = 31
-ARRIVAL_PERIODS = MAX_DAYS * 24
 
 # maximal delay times
 MAX_DELAY = {

@@ -1,5 +1,6 @@
 import math
 import numpy as np, pandas as pd
+from datetime import datetime as dt
 from rlenv.env_consts import *
 from rlenv.env_utils import featname
 
@@ -15,7 +16,6 @@ class Sources:
         return self.source_dict
 
 
-# TODO SPLIT SOURCES INTO TWO CLASSES
 class ThreadSources(Sources):
     def __init__(self, x_lstg=None, composer=None):
         super(ThreadSources, self).__init__(x_lstg=x_lstg, composer=composer)
@@ -145,5 +145,3 @@ class ArrivalSources(Sources):
         self.source_dict[X_TIME_MAP][CLOCK_FEATS] = clock_feats
         self.source_dict[X_TIME_MAP][TIME_FEATS] = time_feats - self.prev_time
         self.prev_time = time_feats
-
-

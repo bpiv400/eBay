@@ -1,4 +1,4 @@
-import sys, random
+import sys
 from compress_pickle import load, dump
 import numpy as np, pandas as pd
 from constants import *
@@ -11,7 +11,7 @@ def partition_lstgs(s):
         by=['slr','lstg']).set_index('slr').squeeze()
     # randomly order sellers
     u = np.unique(slrs.index.values)
-    random.seed(SEED)   # set seed
+    np.random.seed(SEED)   # set seed
     np.random.shuffle(u)
     # partition listings into dictionary
     d = {}
@@ -38,7 +38,7 @@ if __name__ == "__main__":
     dump(partitions, PARTS_DIR + 'partitions.pkl')
 
     # lookup files
-    lookup = L[['meta', 'cat', 'start_date', 'end_time', \
+    lookup = L[['meta', 'cat', 'start_date', \
         'start_price', 'decline_price', 'accept_price']].copy()
     del L
     lookup.loc[:, 'start_date'] = lookup.start_date.astype('int64') * 24 * 3600

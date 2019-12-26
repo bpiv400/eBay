@@ -21,11 +21,10 @@ class Arrival(Event):
         """
         super(Arrival, self).__init__(ARRIVAL, priority=int(priority))
         self.sources = sources
-        self.interval = 0
+        self.interval = torch.tensor(0.0)
 
     def update_arrival(self, clock_feats=None, time_feats=None):
-        duration = torch.tensor(self.interval / INTERVAL_COUNTS[ARRIVAL_PREFIX])
-        duration = duration.float()
+        duration = self.interval / INTERVAL_COUNTS[ARRIVAL_PREFIX]
         self.sources.update_arrival(clock_feats=clock_feats,
                                     time_feats=time_feats,
                                     duration=duration)

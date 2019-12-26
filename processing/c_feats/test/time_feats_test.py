@@ -1,7 +1,7 @@
 import pytest
 import pandas as pd
 import torch
-from processing.c_feats.tf_lstg import get_lstg_time_feats
+from processing.c_feats.tf import get_lstg_time_feats
 from time.TimeFeatures import TimeFeatures
 from time.time_triggers import *
 from rlenv.env_consts import EXPIRATION
@@ -14,8 +14,8 @@ ACCEPTANCE = 'acceptance' # time trigger for df not needed for environment
 
 
 def compare_all(events, exp, time_checks, lstg=0):
-    events = get_lstg_time_feats(events, full=True)
-    act = [events.loc[(lstg, idx[1])].values for idx in time_checks]
+    events = get_lstg_time_feats(events)
+    act = [events.loc[(lstg, idx[0], idx[1])].values for idx in time_checks]
     for curr_act, curr_exp, idx in zip(act, exp, time_checks):
         print('')
         print('thread : {}, time: {}'.format(idx[0], idx[1]))
@@ -38,7 +38,7 @@ def compare(actual, exp):
 
 
 def get_exp_feats(idx, timefeats, exp, time_checks):
-    new_feats = timefeats.get_feats(thread_id=None, time=idx[1])
+    new_feats = timefeats.get_feats(thread_id=idx[0], time=idx[1])
     exp.append(new_feats)
     time_checks.append(idx)
 
@@ -127,51 +127,51 @@ def test_interwoven_byr_rejection(timefeats):
     }
     events = add_event(None, trigger_type=OFFER, thread_id=1, offer=offer)
     timefeats.update_features(trigger_type=OFFER, thread_id=1, offer=offer)
-    t1_o1 = timefeats.get_feats(thread_id=None, time=4)
-    t2_o1 = timefeats.get_feats(thread_id=None, time=4)
+    t1_o1 = timefeats.get_feats(thread_id=1, time=4)
+    t2_o1 = timefeats.get_feats(thread_id=2, time=4)
     offer['price'] = .65
     offer['time'] = 6
     events = add_event(events, trigger_type=OFFER, thread_id=2, offer=offer)
     timefeats.update_features(trigger_type=OFFER, thread_id=2, offer=offer)
-    t1_o2 = timefeats.get_feats(thread_id=None, time=6)
-    t2_o2 = timefeats.get_feats(thread_id=None, time=6)
+    t1_o2 = timefeats.get_feats(thread_id=1, time=6)
+    t2_o2 = timefeats.get_feats(thread_id=2, time=6)
     offer['price'] = .9
     offer['time'] = 8
     offer['type'] = 'slr'
     events = add_event(events, trigger_type=OFFER, thread_id=2, offer=offer)
     timefeats.update_features(trigger_type=OFFER, thread_id=2, offer=offer)
-    t1_o3 = timefeats.get_feats(thread_id=None, time=8)
-    t2_o3 = timefeats.get_feats(thread_id=None, time=8)
+    t1_o3 = timefeats.get_feats(thread_id=1, time=8)
+    t2_o3 = timefeats.get_feats(thread_id=2, time=8)
     offer['price'] = .85
     offer['time'] = 9
     events = add_event(events, trigger_type=OFFER, thread_id=1, offer=offer)
     timefeats.update_features(trigger_type=OFFER, thread_id=1, offer=offer)
-    t1_o4 = timefeats.get_feats(thread_id=None, time=9)
-    t2_o4 = timefeats.get_feats(thread_id=None, time=9)
+    t1_o4 = timefeats.get_feats(thread_id=1, time=9)
+    t2_o4 = timefeats.get_feats(thread_id=2, time=9)
     # rejection
     offer['price'] = .65
     offer['time'] = 10
     offer['type'] = 'byr'
     events = add_event(events, trigger_type=BYR_REJECTION, thread_id=2, offer=offer)
     timefeats.update_features(trigger_type=BYR_REJECTION, thread_id=2)
-    t1_o5 = timefeats.get_feats(thread_id=None, time=10)
+    t1_o5 = timefeats.get_feats(thread_id=1, time=10)
     offer['time'] = 11
     offer['price'] = .5
     events = add_event(events, trigger_type=BYR_REJECTION, thread_id=1, offer=offer)
     print('')
     print(events)
-    act = get_lstg_time_feats(events, full=True)
+    act = get_lstg_time_feats(events)
     print(act.loc[:, ['byr_offers_open', 'byr_best_open', 'byr_best', 'byr_offers']])
     print(act.loc[:, ['slr_offers_open', 'slr_best_open', 'slr_best', 'slr_offers']])
-    compare(act.loc[(0, 4)].values, t1_o1)
-    compare(act.loc[(0, 4)].values, t2_o1)
-    compare(act.loc[(0, 6)].values, t1_o2)
-    compare(act.loc[(0, 6)].values, t2_o2)
-    compare(act.loc[(0, 8)].values, t2_o3)
-    compare(act.loc[(0, 8)].values, t1_o3)
-    compare(act.loc[(0, 9)].values, t2_o4)
-    compare(act.loc[(0, 9)].values, t1_o4)
-    compare(act.loc[(0, 10)].values, t1_o5)
+    compare(act.loc[(0, 1, 4)].values, t1_o1)
+    compare(act.loc[(0, 2, 4)].values, t2_o1)
+    compare(act.loc[(0, 1, 6)].values, t1_o2)
+    compare(act.loc[(0, 2, 6)].values, t2_o2)
+    compare(act.loc[(0, 2, 8)].values, t2_o3)
+    compare(act.loc[(0, 1, 8)].values, t1_o3)
+    compare(act.loc[(0, 2, 9)].values, t2_o4)
+    compare(act.loc[(0, 1, 9)].values, t1_o4)
+    compare(act.loc[(0, 1, 10)].values, t1_o5)
 
 
 def test_two_lstgs_interwoven_two_threads(timefeats):

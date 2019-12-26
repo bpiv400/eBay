@@ -1,6 +1,7 @@
 import sys, pickle
 import pandas as pd, numpy as np
 from datetime import datetime as dt
+from compress_pickle import dump
 from constants import *
 from processing.processing_utils import *
 
@@ -24,9 +25,8 @@ def get_pctiles(s):
 T = pd.read_csv(CLEAN_DIR + 'threads.csv', dtype=TTYPES).set_index(
 	['lstg', 'thread'])
 T.loc[:, 'byr_hist'], toSave = get_pctiles(T['byr_hist'])
-pickle.dump(toSave, open('%s/pctile/byr_hist.pkl' % PREFIX, 'wb'))
-pickle.dump(T, open(CLEAN_DIR + 'threads.pkl', 'wb'),
-	protocol=4)
+dump(toSave, '%s/pctile/byr_hist.pkl' % PREFIX)
+dump(T, CLEAN_DIR + 'threads.pkl')
 
 # load offers
 O = pd.read_csv(CLEAN_DIR + 'offers.csv', dtype=OTYPES).set_index(
@@ -52,7 +52,7 @@ pctile = pctile.sort_index().rename('pctile')
 cdf = pctile.rename('x').reset_index().set_index('x').squeeze()
 
 # calculate censoring second
-last = O.clock.groupby(['lstg', 'thread']).max()
+last = O.loc[~O.censored, 'clock'].groupby(['lstg', 'thread']).max()
 last = last.loc[~toReplace]
 last = last.groupby('lstg').max()
 last = pd.to_datetime(last, origin=START, unit='s')
@@ -61,16 +61,18 @@ last = last.reindex(index=missing.index, level='lstg').dropna()
 # restrict censoring seconds to same day as bin with missing time
 sameDate = pd.to_datetime(last.dt.date) == missing.reindex(last.index)
 lower = seconds(last.dt).loc[sameDate].rename('lower')
-lower = lower.loc[lower < 3600 * 24 - 1]
-tau = lower.to_frame().join(pctile, on='lower')['pctile']
-tau = tau.reindex(index=missing.index, fill_value=0)
+
+# make end time one second after last observed same day offer before BIN
+lower += 1
+lower.loc[lower == 3600 * 24] -= 1
 
 # uniform random
 rand = pd.Series(np.random.rand(len(missing.index)), 
 	index=missing.index, name='x')
 
 # amend rand for censored observations
-rand = tau + (1-tau) * rand
+tau = lower.to_frame().join(pctile, on='lower')['pctile']
+rand.loc[tau.index] = tau
 
 # read off of cdf
 newsec = cdf.reindex(index=rand, method='ffill').values
@@ -92,8 +94,7 @@ idx = df[df['clock'] > df['end_time']].index
 O.loc[idx, 'clock'] = df.loc[idx, 'end_time']
 
 # save offers and threads
-pickle.dump(O, open(CLEAN_DIR + 'offers.pkl', 'wb'),
-	protocol=4)
+dump(O, CLEAN_DIR + 'offers.pkl')
 del O, T
 
 # load listings
@@ -121,9 +122,7 @@ for feat in ['fdbk_score', 'slr_lstgs', 'slr_bos', 'arrival_rate']:
 	print(feat)
 	L.loc[:, feat], toSave = get_pctiles(L[feat])
 	if feat != 'arrival_rate':
-		pickle.dump(toSave, 
-			open('%s/pctile/%s.pkl' % (PREFIX, feat), 'wb'))
+		dump(toSave, '{}/pctile/{}.pkl'.format(PREFIX, feat))
 
 # save listings
-pickle.dump(L, open(CLEAN_DIR + 'listings.pkl', 'wb'), 
-	protocol=4)
+dump(L, CLEAN_DIR + 'listings.pkl')

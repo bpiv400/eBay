@@ -7,13 +7,40 @@ from processing.processing_utils import create_x_clock, convert_to_numpy, \
     get_featnames, get_sizes, create_small
 
 
+def get_y_arrival(lstg_start, lstg_end, thread_start):
+    # time_stamps
+    diff = pd.to_timedelta(thread_start - lstg_start, unit='s')
+    end = pd.to_timedelta(lstg_end - lstg_start, unit='s')
+    # convert to intervals
+    diff = (diff.dt.total_seconds() // INTERVAL['arrival']).astype('int64')
+    end = (end.dt.total_seconds() // INTERVAL['arrival']).astype('int64')
+    # count of arrivals by interval
+    arrivals = diff.rename('period').to_frame().assign(count=1).groupby(
+        ['lstg', 'period']).sum().squeeze().astype('int8')
+    # initialize output dataframe
+    N = np.max(end)+1
+    df = pd.DataFrame(0, index=end.index, dtype='int8',
+        columns=range(N))
+    # fill in arrivals and censored times
+    for i in range(N):
+        value = arrivals.xs(i, level='period').reindex(
+            index=end.index, fill_value=0)
+        value -= (end < i).astype('int8')
+        df[i] = value
+    # sort by turns and return
+    return sort_by_turns(df)
+
+
 # loads data and calls helper functions to construct train inputs
 def process_inputs(part):
     # function to load file
     load_file = lambda x: load('{}{}/{}.gz'.format(PARTS_DIR, part, x))
 
     # outcome
-    y = load_file('y_arrival')
+    lstg_start = load_file('lookup').start_time
+    , lstg_end = lookup.start_time, lookup.end_time
+    thread_start = load_file('clock').xs(1, level='index')
+    y = get_y_arrival(lstg_start, lstg_end, thread_start)
     idx = y.index
 
     # initialize dictionary of input features

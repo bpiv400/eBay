@@ -10,21 +10,21 @@ def get_sim_counts(lstg_start):
 	l = []
 	for i in range(1, SIM_CHUNKS+1):
 		# get thread start times from first simulation
-		sim = load(ENV_SIM_DIR + '{}/discrim/{}.gz'.format(part, i))
-		l.append(sim['threads'].clock.xs(0, level='sim'))
+		try:
+			sim = load(ENV_SIM_DIR + '{}/discrim/{}.gz'.format(part, i))
+			l.append(sim['threads'].clock)
+		except:
+			continue
 	thread_start = pd.concat(l, axis=0)
-
 	# convert to period in range(INTERVAL['arrival'])
 	diff = (thread_start - lstg_start.reindex(
 		index=thread_start.index, level='lstg'))
 	period = (diff // INTERVAL['arrival']).rename('period')
-
 	# count arrivals and fill in zeros
 	counts = period.to_frame().assign(count=1).set_index(
 		'period', append=True).groupby(['lstg', 'period']).sum().squeeze()
 	counts = counts.unstack(fill_value=0).rename_axis(
 		'', axis=1).reindex(index=lstg_start.index, fill_value=0)
-
 	return counts
 
 

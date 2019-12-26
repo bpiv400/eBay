@@ -5,16 +5,18 @@ import torch
 import os
 import numpy as np
 import pandas as pd
+from datetime import datetime as dt
 from compress_pickle import load
 from utils import unpickle
 from torch.distributions.categorical import Categorical
-from constants import (INPUT_DIR, START, HOLIDAYS, TOL_HALF,
+from constants import (INPUT_DIR, START, TOL_HALF,
                        MODEL_DIR, ENV_SIM_DIR)
 from rlenv.interface.model_names import LSTM_MODELS
 from models.nets import FeedForward, LSTM
 from rlenv.env_consts import (META_6, META_7, DAY, NORM, ALL_OUTCOMES,
                               AUTO, REJECT, EXP, SIM_CHUNKS_DIR,
-                              SIM_VALS_DIR, SIM_DISCRIM_DIR, THREAD_MAP)
+                              SIM_VALS_DIR, SIM_DISCRIM_DIR, THREAD_MAP,
+                              DATE_LOOKUP)
 
 
 def load_featnames(name):
@@ -47,19 +49,14 @@ def get_clock_feats(time):
     Gets clock features as np.array given the time relative to START (in seconds since)
 
     :param time: int giving time in seconds since START
-    :return: torch.FloatTensor containing 8 elements, where the first element is an indicator
-    for holiday, the second through seventh give indicators for the day of week, and the 8th
-    gives the time of day as a fraction of seconds since minute
+    :return: numpy array containing 8 elements, where index 0 is an indicator
+    for holiday, indices 2-6 give indicators for the day of week, and index 7
+    gives the time of day as a fraction of the day since midnight.
     """
-    out = np.zeros(8)
-    clock = pd.to_datetime(time, unit='s', origin=START)
-    # holidays
-    out[0] = int(str(clock.date()) in HOLIDAYS)
-    # dow number
-    if clock.dayofweek < 6:
-        out[clock.dayofweek + 1] = 1
-    # minutes of day
-    out[7] = (clock.hour * 60 * 60 + clock.minute * 60 + clock.second) / DAY
+    # holiday and day of week indicators
+    out = DATE_LOOKUP[time // DAY]
+    # minute of day
+    out[7] = (time % DAY) / DAY
     return out
 
 

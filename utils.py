@@ -1,8 +1,23 @@
 import pickle, argparse
 from compress_pickle import load
-import pandas as pd
-import torch
-from constants import PARTS_DIR, HOLIDAYS, PARTITIONS
+import numpy as np, pandas as pd
+from datetime import datetime as dt
+from constants import PARTS_DIR, HOLIDAYS, PARTITIONS, START, END, MAX_DAYS
+
+
+def init_date_lookup():
+    start = pd.to_datetime(START)
+    end = pd.to_datetime(END) + pd.to_timedelta(MAX_DAYS, unit='D')
+
+    d = {}
+    for date in pd.date_range(start.date(), end.date()): 
+        row = np.zeros(8)
+        row[0] = str(date.date()) in HOLIDAYS
+        for i in range(6):
+            row[i+1] = date.dayofweek == i
+        d[(date - start).days] = row
+
+    return d
 
 
 def extract_day_feats(clock):

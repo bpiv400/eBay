@@ -1,4 +1,5 @@
 from constants import INPUT_DIR, MAX_DAYS
+from utils import init_date_lookup
 
 INTERACT = False
 
@@ -127,6 +128,9 @@ ACC_PRICE = 'accept_price'
 # meta categories with sale fees != .09 * price
 META_7 = [21, 10]
 META_6 = [32, 14, 11, 7, 28]
+
+# holidays and days of week
+DATE_LOOKUP = init_date_lookup()
 
 
 SELLER_HORIZON = 100

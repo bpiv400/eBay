@@ -1,5 +1,6 @@
 from collections import namedtuple
 import numpy as np
+from datetime import datetime as dt
 from rlenv.time.TimeFeatures import TimeFeatures
 from rlenv.events.EventQueue import EventQueue
 from rlenv.events.Arrival import Arrival
@@ -176,13 +177,15 @@ class EbayEnvironment:
         if self._lstg_expiration(event):
             return True
 
-        event.update_arrival(time_feats=self.time_feats.get_feats(time=event.priority),
-                             clock_feats=get_clock_feats(event.priority))
+        clock_feats = get_clock_feats(event.priority)
+        time_feats = self.time_feats.get_feats(time=event.priority)
+        event.update_arrival(time_feats=time_feats,
+                             clock_feats=clock_feats)
         num_byrs = self.arrival.num_offers(event.sources())
-        if self.verbose and num_byrs > 0:
-            print('Arrival Interval Start: {}'.format(event.priority))
-            print('Number of arrivals: {}'.format(num_byrs))
         if num_byrs > 0:
+            if self.verbose:
+                print('Arrival Interval Start: {}'.format(event.priority))
+                print('Number of arrivals: {}'.format(num_byrs))
             # place each into the queue
             for i in range(num_byrs[0].astype(int)):
                 priority = event.priority + np.random.randint(0, INTERVAL['arrival'])
@@ -202,10 +205,10 @@ class EbayEnvironment:
 
     def _process_slr_expire(self, event):
         event.prepare_offer(0)
-        # update sources with new time and clock features
+        # update sources with new clock and features
+        clock_feats = get_clock_feats(event.priority)
         time_feats = self.time_feats.get_feats(thread_id=event.thread_id,
                                                time=event.priority)
-        clock_feats = get_clock_feats(event.priority)
         event.init_offer(time_feats=time_feats, clock_feats=clock_feats)
         offer = event.slr_rej(expire=True)
         self._record(event)
