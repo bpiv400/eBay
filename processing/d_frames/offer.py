@@ -3,8 +3,8 @@ from compress_pickle import load, dump
 from datetime import datetime as dt
 import numpy as np, pandas as pd
 from constants import *
-from utils import input_partition
-from processing.processing_utils import extract_clock_feats, load_frames, get_partition
+from utils import input_partition, extract_clock_feats
+from processing.processing_utils import load_frames, get_partition
 
 
 # delay

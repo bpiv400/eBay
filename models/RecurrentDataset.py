@@ -4,6 +4,7 @@ from torch.nn.utils import rnn
 from torch.utils.data import Dataset
 from compress_pickle import load
 from constants import *
+from utils import extract_clock_feats
 
 
 class RecurrentDataset(Dataset):
@@ -15,28 +16,28 @@ class RecurrentDataset(Dataset):
         '''
         self.d = load('{}/inputs/{}/{}.gz'.format(PREFIX, part, name))
 
+        # add x_clock to dictionary
+        self.d['x_clock'] = load('{}/inputs/universal/x_clock.gz'.format(PREFIX))
+
         # number of examples and labels
         self.N_examples = np.shape(self.d['y'])[0]
         self.N_labels = np.sum(self.d['y'] > -1)
 
         # number of time steps
-        self.T = np.shape(self.d['y'])[1]
+        role = name.split('_')[-1]
+        self.T = INTERVAL_COUNTS[role]
 
         # counter for expanding clock features
-        role = name.split('_')[-1]
-        interval = int(INTERVAL[role] / 60) # interval in minutes
-        self.counter = interval * np.array(range(self.T), dtype='uint16')
+        self.counter = INTERVAL[role] * np.array(range(self.T))
 
         # period / max periods
         self.duration = np.expand_dims(
             np.array(range(self.T), dtype='float32') / self.T, axis=1)
 
-        # number of time features
+        # empty time feats
         for val in self.d['tf'].values():
             N_tfeats = len(val.columns)
             break
-            
-        # empty time feats
         self.tf0 = np.zeros((self.T, N_tfeats), dtype='float32')
 
 
@@ -54,7 +55,7 @@ class RecurrentDataset(Dataset):
         idx_clock = self.d['idx_clock'][idx] + self.counter
 
         # clock features
-        x_clock = self.d['x_clock'][idx_clock].astype('float32')
+        x_clock = self.d['x_clock'][idx_clock]
 
         # fill in missing time feats with zeros
         if idx in self.d['tf']:

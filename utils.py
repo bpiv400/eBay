@@ -33,6 +33,20 @@ def extract_day_feats(clock):
     return df
 
 
+def extract_clock_feats(clock):
+    '''
+    Creates clock features from timestamps.
+    :param clock: pandas series of timestamps.
+    :return: pandas dataframe of holiday and day of week indicators, and minute of day.
+    '''
+    df = extract_day_feats(clock)
+
+    # add in seconds of day
+    seconds_since_midnight = clock.dt.hour * 60 + clock.dt.minute + clock.dt.second
+    df['second_of_day'] = (seconds_since_midnight / (24 * 3600)).astype('float32')
+    return df
+
+
 def unpickle(file):
     """
     Unpickles a .pkl file encoded with Python 3

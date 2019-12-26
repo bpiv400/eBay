@@ -97,28 +97,6 @@ def get_partition(part):
     idx = partitions[part]
     path = lambda name: PARTS_DIR + '%s/%s.gz' % (part, name)
     return idx, path
-    
-
-# creates features from timestapes
-def extract_clock_feats(clock):
-    '''
-    clock: pandas series of timestamps.
-    '''
-    df = pd.DataFrame(index=clock.index)
-    df['holiday'] = clock.dt.date.astype('datetime64').isin(HOLIDAYS)
-    for i in range(6):
-        df['dow' + str(i)] = clock.dt.dayofweek == i
-    df['minute_of_day'] = (clock.dt.hour * 60 + clock.dt.minute) / (24 * 60)
-    return df
-
-
-def create_x_clock():
-    N = pd.to_timedelta(
-        pd.to_datetime('2016-12-31 23:59:59') - pd.to_datetime(START))
-    N = int((N.total_seconds()+1) / 60) # total number of minutes
-    minute = pd.to_datetime(range(N), unit='m', origin=START)
-    minute = pd.Series(minute, name='clock')
-    return extract_clock_feats(minute).join(minute).set_index('clock')
 
 
 # sorts y by the number of non-missing (i.e., -1) values in each row
@@ -161,10 +139,10 @@ def get_featnames(d):
 
 
 # returns dictionary of input sizes
-def get_sizes(d, model=''):
+def get_sizes(d, name=''):
     '''
     :param d: dictionary with dataframes.
-    :param model: string name of model.
+    :param name: string name of model.
     :return: dictionary of size parameters.
     '''
     # number of observations
@@ -176,20 +154,20 @@ def get_sizes(d, model=''):
         sizes['x'][k] = len(v.columns)
 
     # arrival and delay models
-    if 'x_clock' in d:
+    if 'tf' in d:
         sizes['steps'] = len(d['y'].columns)
-        sizes['x_time'] = len(d['x_clock'].columns) + len(d['tf'].columns) + 1
+        sizes['x_time'] = len(d['tf'].columns) + 9
 
         # delay models
         if 'remaining' in d:
             sizes['x_time'] += 1
 
     # output size is based on model
-    if model == 'hist':
+    if name == 'hist':
         sizes['out'] = HIST_QUANTILES
-    elif 'con' in model:
+    elif 'con' in name:
         sizes['out'] = 101
-    elif model == 'arrival':
+    elif name == 'arrival':
         sizes['out'] = 2
     else:
         sizes['out'] = 1
@@ -257,17 +235,13 @@ def create_small(d):
 
     # directly subsample
     for k in d.keys():
-        if k not in ['x', 'tf', 'groups', 'x_clock']:
+        if k not in ['x', 'tf', 'groups']:
             small[k] = d[k][idx]
 
     # loop through x
     small['x'] = {}
     for k, v in d['x'].items():
         small['x'][k] = d['x'][k][idx]
-
-    # x_clock in full
-    if 'x_clock' in d:
-        small['x_clock'] = d['x_clock']
 
     # time features dictionary
     if 'tf' in d:
@@ -277,3 +251,20 @@ def create_small(d):
                 small['tf'][i] = d['tf'][i]
 
     return small
+
+
+# save featnames and sizes
+def save_files(d, part, name):
+    if part == 'train_models':
+        dump(get_featnames(d), '{}/inputs/featnames/{}.pkl'.format(PREFIX, name))
+        dump(get_sizes(d, name), '{}/inputs/sizes/{}.pkl'.format(PREFIX, name))
+
+    # create dictionary of numpy arrays
+    d = convert_to_numpy(d)
+
+    # save as dataset
+    dump(d, '{}/inputs/{}/{}.gz'.format(PREFIX, part, name))
+
+    # save small dataset
+    if part == 'train_models':
+        dump(create_small(d), '{}/inputs/small/{}.gz'.format(PREFIX, name))

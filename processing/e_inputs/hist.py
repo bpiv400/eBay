@@ -3,7 +3,7 @@ from compress_pickle import load, dump
 import numpy as np, pandas as pd
 from constants import *
 from utils import input_partition
-from processing.processing_utils import *
+from processing.processing_utils import split_files
 
 
 # loads data and calls helper functions to construct train inputs
@@ -42,20 +42,5 @@ if __name__ == '__main__':
 	# input dataframes, output processed dataframes
 	d = process_inputs(part)
 
-	# save featnames and sizes
-	if part == 'train_models':
-		pickle.dump(get_featnames(d), 
-			open('%s/inputs/featnames/hist.pkl' % PREFIX, 'wb'))
-
-		pickle.dump(get_sizes(d, 'hist'), 
-			open('%s/inputs/sizes/hist.pkl' % PREFIX, 'wb'))
-
-	# create dictionary of numpy arrays
-	d = convert_to_numpy(d)
-
-	# save as dataset
-	dump(d, '%s/inputs/%s/hist.gz' % (PREFIX, part))
-
-	# save small dataset
-	if part == 'train_models':
-		dump(create_small(d), '%s/inputs/small/hist.gz' % PREFIX)
+	# save various output files
+	save_files(d, part, 'hist')

@@ -3,8 +3,7 @@ from compress_pickle import load, dump
 import numpy as np, pandas as pd
 from constants import *
 from utils import input_partition
-from processing.processing_utils import create_x_clock, convert_to_numpy, \
-    get_featnames, get_sizes, create_small
+from processing.processing_utils import load_frames, split_files
 
 
 def get_y_arrival(lstg_start, lstg_end, thread_start):
@@ -34,6 +33,20 @@ def get_y_arrival(lstg_start, lstg_end, thread_start):
     return sort_by_turns(df)
 
 
+def get_arrival_time_feats(lstg_start, tf):
+    # add period to tf_arrival
+    tf = tf.reset_index('clock')
+    lstg_start = lstg_start.reindex(index=tf.index)
+    tf['period'] = (tf.clock - lstg_start) // INTERVAL['arrival']
+    tf = tf.drop('clock', axis=1)
+    # increment period by 1; time feats are up to t-1
+    tf['period'] += 1
+    # drop periods beyond censoring threshold
+    tf = tf[tf.period < INTERVAL_COUNTS['arrival']]
+    # sum count features by period and return
+    return tf.groupby(['lstg', 'period']).sum()
+
+
 # loads data and calls helper functions to construct train inputs
 def process_inputs(part):
     # function to load file
@@ -51,18 +64,16 @@ def process_inputs(part):
     x = load_file('x_lstg')
     x = {k: v.reindex(index=idx) for k, v in x.items()}
 
-    # clock features by minute
-    x_clock = create_x_clock()
-
     # index of first x_clock for each y
-    idx_clock = load_file('lookup').start_time.reindex(index=idx)
+    idx_clock = lstg_start.reindex(index=idx)
 
     # time features
-    tf = load_file('tf_arrival').reindex(index=idx, level='lstg')
+    tf_arrival = load_file('tf_arrival')
+    tf = get_arrival_time_feats(lstg_start, tf_arrival).reindex(
+        index=idx, level='lstg')
 
     return {'y': y.astype('int8', copy=False),
             'x': {k: v.astype('float32', copy=False) for k, v in x.items()}, 
-            'x_clock': x_clock.astype('float32', copy=False),
             'idx_clock': idx_clock.astype('int64', copy=False),
             'tf': tf.astype('float32', copy=False)}
 
@@ -75,20 +86,6 @@ if __name__ == '__main__':
     # input dataframes, output processed dataframes
     d = process_inputs(part)
 
-    # save featnames and sizes
-    if part == 'train_models':
-        pickle.dump(get_featnames(d),
-            open('%s/inputs/featnames/arrival.pkl' % PREFIX, 'wb'))
-        pickle.dump(get_sizes(d, 'arrival'),
-            open('%s/inputs/sizes/arrival.pkl' % PREFIX, 'wb'))
-
-    # create dictionary of numpy arrays
-    d = convert_to_numpy(d)
-
-    # save as dataset
-    dump(d, '%s/inputs/%s/arrival.gz' % (PREFIX, part))
-
-    # save small dataset
-    if part == 'train_models':
-        dump(create_small(d), '%s/inputs/small/arrival.gz' % PREFIX)
+    # save various output files
+    save_files(d, part, 'arrival')
     

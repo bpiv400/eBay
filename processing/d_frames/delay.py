@@ -63,7 +63,6 @@ if __name__ == "__main__":
     # load events
     events = load(CLEAN_DIR + 'offers.pkl')[['clock', 'censored']].reindex(
         index=idx, level='lstg')
-    censored = events.censored
 
     # calculate delay
     clock = events.clock.unstack()
@@ -81,7 +80,7 @@ if __name__ == "__main__":
 
     # calculate role-specific features and save
     for role in ['byr', 'slr']:
-        dump(get_y_delay(delay, censored, role), 
+        dump(get_y_delay(delay, events.censored, role), 
             path('y_delay_' + role))
         dump(get_delay_time_feats(tf, start_time, role), 
             path('tf_delay_' + role))
