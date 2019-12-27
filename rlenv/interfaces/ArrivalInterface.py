@@ -1,6 +1,6 @@
 import torch, numpy as np
 from datetime import datetime as dt
-from scipy.stats import poisson
+from torch.distributions.poisson import Poisson
 from rlenv.env_utils import load_model, proper_squeeze, categorical_sample
 from rlenv.env_consts import BYR_HIST_MODEL, NUM_OFFERS_MODEL
 
@@ -21,9 +21,9 @@ class ArrivalInterface:
         the input tensor according to documentation in ebay/documents
 
         :param params: 1-dimensional torch.tensor output by a poisson model
-        :return: torch.LongTensor containing 1 element drawn from poisson
+        :return: weakly positive int.
         """
-        return poisson.rvs(np.exp(lnmean))
+        return int(Poisson(torch.exp(lnmean)).sample((1,)).squeeze())
 
 
     def init(self, sources=None):
@@ -37,7 +37,7 @@ class ArrivalInterface:
         lnmean, self.hidden = self.num_offers_model.step(x_time=input_dict['x_time'],
                                                          hidden=self.hidden)
         
-        return ArrivalInterface._poisson_sample(lnmean.squeeze().numpy())
+        return ArrivalInterface._poisson_sample(lnmean.squeeze())
 
 
     def hist(self, sources=None):
