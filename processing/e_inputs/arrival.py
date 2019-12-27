@@ -91,7 +91,7 @@ def process_inputs(part):
 
     # arrival couns
     thread_start = load_file('clock').xs(1, level='index')
-    y = get_y_arrival(lstg_start, thread_start, periods)
+    y = get_y(lstg_start, thread_start, periods)
 
     # initialize dictionary of input features
     x = load_file('x_lstg')
