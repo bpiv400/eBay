@@ -327,7 +327,7 @@ def save_files(d, part, name):
     d = convert_to_numpy(d)
 
     # save as dataset
-    dump(d, INPUTS_DIR + '{}/{}.gz'.format(part, name))
+    dump(d, INPUT_DIR + '{}/{}.gz'.format(part, name))
 
     # save small dataset
     if part == 'train_models':
