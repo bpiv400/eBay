@@ -4,18 +4,15 @@ from datetime import datetime as dt
 from rlenv.time.TimeFeatures import TimeFeatures
 from rlenv.events.EventQueue import EventQueue
 from rlenv.events.Arrival import Arrival
-from rlenv.events import event_types
 from rlenv.sources import ArrivalSources
 from rlenv.sources import ThreadSources
 from rlenv.time import time_triggers
-from rlenv.env_consts import (START_TIME, INTERACT, MONTH, ACC_PRICE,
-                              DEC_PRICE, START_PRICE, SALE, PRICE, DUR)
-from rlenv.env_utils import get_clock_feats, time_delta
-from constants import INTERVAL, BYR_PREFIX
-
-ACC_IND = 0
-REJ_IND = 1
-OFF_IND = 2
+from rlenv.env_consts import INTERACT, SALE, PRICE, DUR, ACC_IND, \
+    REJ_IND, OFF_IND, ARRIVAL, FIRST_OFFER, BUYER_OFFER, SELLER_OFFER, \
+    BUYER_DELAY, SELLER_DELAY
+from rlenv.env_utils import time_delta, get_clock_feats
+from constants import INTERVAL, BYR_PREFIX, MONTH
+from featnames import START_TIME, ACC_PRICE, DEC_PRICE, START_PRICE
 
 
 class EbayEnvironment:
@@ -58,19 +55,19 @@ class EbayEnvironment:
                 return False
 
     def _process_event(self, event):
-        if INTERACT and event.type != event_types.ARRIVAL:
+        if INTERACT and event.type != ARRIVAL:
             input('Press Enter to continue...')
-        if event.type == event_types.ARRIVAL:
+        if event.type == ARRIVAL:
             return self._process_arrival(event)
-        elif event.type == event_types.FIRST_OFFER:
+        elif event.type == FIRST_OFFER:
             return self._process_first_offer(event)
-        elif event.type == event_types.BUYER_OFFER:
+        elif event.type == BUYER_OFFER:
             return self._process_byr_offer(event)
-        elif event.type == event_types.SELLER_OFFER:
+        elif event.type == SELLER_OFFER:
             return self._process_slr_offer(event)
-        elif event.type == event_types.BUYER_DELAY:
+        elif event.type == BUYER_DELAY:
             return self._process_byr_delay(event)
-        elif event.type == event_types.SELLER_DELAY:
+        elif event.type == SELLER_DELAY:
             return self._process_slr_delay(event)
         else:
             raise NotImplementedError()
@@ -177,17 +174,19 @@ class EbayEnvironment:
         if self._lstg_expiration(event):
             return True
 
+        # update sources with clock and time feats
         clock_feats = get_clock_feats(event.priority)
         time_feats = self.time_feats.get_feats(time=event.priority)
-        event.update_arrival(time_feats=time_feats,
-                             clock_feats=clock_feats)
+        event.update_arrival(time_feats=time_feats, clock_feats=clock_feats)
+
+        # call model, simulate number of buyers
         num_byrs = self.arrival.num_offers(event.sources())
         if num_byrs > 0:
             if self.verbose:
                 print('Arrival Interval Start: {}'.format(event.priority))
                 print('Number of arrivals: {}'.format(num_byrs))
             # place each into the queue
-            for i in range(num_byrs[0].astype(int)):
+            for i in range(num_byrs):
                 priority = event.priority + np.random.randint(0, INTERVAL['arrival'])
                 self.thread_counter += 1
                 offer_event = self.make_thread(priority)

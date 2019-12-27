@@ -1,8 +1,8 @@
 from compress_pickle import load, dump
 import numpy as np, pandas as pd
 from constants import *
-from utils import input_partition
 from processing.processing_utils import *
+from processing.processing_consts import *
 
 
 def get_sim_counts(lstg_start):

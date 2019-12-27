@@ -1,10 +1,9 @@
-import sys
 from compress_pickle import load, dump
-from datetime import datetime as dt
 import numpy as np, pandas as pd
 from constants import *
-from utils import input_partition, extract_clock_feats
-from processing.processing_utils import load_frames, get_partition
+from processing.processing_utils import input_partition, \
+    get_partition, load_frames, extract_clock_feats
+from processing.processing_consts import *
 
 
 # delay
@@ -26,10 +25,11 @@ def get_delay(clock):
     return days, delay
 
 
-# round concession to nearest percentage point
 def round_con(con):
     '''
-    con: series of unrounded concessions
+    Round concession to nearest percentage point.
+    :param con: pandas series of unrounded concessions.
+    :return: pandas series of rounded concessions.
     '''
     rounded = np.round(con, decimals=2)
     rounded.loc[(rounded == 1) & (con < 1)] = 0.99

@@ -1,7 +1,8 @@
-from rlenv.env_consts import (MONTH, START_TIME)
 from rlenv.simulators import SimulatedSeller, SimulatedBuyer
 from rlenv.events.RewardThread import RewardThread
 from rlenv.environments.EbayEnvironment import EbayEnvironment
+from constants import MONTH
+from featnames import START_TIME
 
 
 class SimulatorEnvironment(EbayEnvironment):

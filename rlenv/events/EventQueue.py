@@ -1,13 +1,10 @@
-"""
-Class for encapsulating event queue functionality
-"""
 import heapq
-
-# TODO Document
 
 
 class EventQueue:
     """
+    Class for encapsulating event queue functionality.
+
     Attributes:
         queue: list containing events
     Public Methods:

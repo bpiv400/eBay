@@ -1,5 +1,5 @@
 from rlenv.events.Thread import Thread
-from rlenv.events import event_types
+from rlenv.env_consts import SELLER_DELAY, BUYER_DELAY
 
 
 class RewardThread(Thread):
@@ -11,7 +11,7 @@ class RewardThread(Thread):
     def init_delay(self, lstg_start):
         self._init_delay_sources(lstg_start)
         if self.turn % 2 == 0:
-            self.type = event_types.SELLER_DELAY
+            self.type = SELLER_DELAY
         else:
-            self.type = event_types.BUYER_DELAY
+            self.type = BUYER_DELAY
         self._init_delay_hidden()

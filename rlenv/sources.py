@@ -3,6 +3,7 @@ import numpy as np, pandas as pd
 from datetime import datetime as dt
 from rlenv.env_consts import *
 from rlenv.env_utils import featname
+from featnames import *
 
 
 class Sources:
@@ -139,9 +140,9 @@ class ArrivalSources(Sources):
     def __init__(self, x_lstg=None, composer=None):
         super(ArrivalSources, self).__init__(x_lstg=x_lstg, composer=composer)
         self.prev_time = np.zeros(len(TIME_FEATS))
+        self.source_dict[X_TIME_MAP] = np.zeros(len(TIME_FEATS))
 
     def update_arrival(self, time_feats=None, clock_feats=None, duration=None):
-        self.source_dict[X_TIME_MAP][DURATION] = duration
-        self.source_dict[X_TIME_MAP][CLOCK_FEATS] = clock_feats
-        self.source_dict[X_TIME_MAP][TIME_FEATS] = time_feats - self.prev_time
+        self.source_dict[X_TIME_MAP] = np.concatenate(
+            (clock_feats, time_feats - self.prev_time, np.array((duration,))))
         self.prev_time = time_feats

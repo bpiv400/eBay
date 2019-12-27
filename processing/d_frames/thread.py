@@ -1,8 +1,8 @@
 from compress_pickle import load, dump
 import numpy as np, pandas as pd
 from constants import HIST_QUANTILES, PARTS_DIR, CLEAN_DIR, MAX_DAYS
-from utils import input_partition
-from processing.processing_utils import get_partition
+from processing.processing_utils import input_partition, get_partition
+from processing.processing_consts import *
 
 
 if __name__ == "__main__":

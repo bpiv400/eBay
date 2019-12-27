@@ -1,5 +1,5 @@
-import numpy as np
-import pandas as pd
+import numpy as np, pandas as pd
+from processing.processing_consts import *
 
 
 # cumulative number of offers made by role

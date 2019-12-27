@@ -7,26 +7,22 @@ import numpy as np
 import pandas as pd
 from datetime import datetime as dt
 from compress_pickle import load
-from utils import unpickle
 from torch.distributions.categorical import Categorical
 from constants import (INPUT_DIR, START, TOL_HALF,
-                       MODEL_DIR, ENV_SIM_DIR)
-from rlenv.interface.model_names import LSTM_MODELS
-from models.nets import FeedForward, LSTM
-from rlenv.env_consts import (META_6, META_7, DAY, NORM, ALL_OUTCOMES,
-                              AUTO, REJECT, EXP, SIM_CHUNKS_DIR,
-                              SIM_VALS_DIR, SIM_DISCRIM_DIR, THREAD_MAP,
-                              DATE_LOOKUP)
+                       MODEL_DIR, ENV_SIM_DIR, DAY, BYR_PREFIX, SLR_PREFIX)
+from model.nets import FeedForward, LSTM
+from rlenv.env_consts import (META_6, META_7, SIM_CHUNKS_DIR, SIM_VALS_DIR,
+                              SIM_DISCRIM_DIR, THREAD_MAP, DATE_FEATS, 
+                              ARRIVAL_MODELS, LSTM_MODELS)
+from featnames import NORM, ALL_OUTCOMES, AUTO, REJECT, EXP
 
 
 def load_featnames(name):
-    path = '{}featnames/{}.pkl'.format(INPUT_DIR, name)
-    return unpickle(path)
+    return load(INPUT_DIR + 'featnames/{}.pkl'.format(name))
 
 
 def load_sizes(name):
-    path = '{}sizes/{}.pkl'.format(INPUT_DIR, name)
-    return unpickle(path)
+    return load(INPUT_DIR + 'sizes/{}.pkl'.format(name))
 
 
 def featname(feat, turn):
@@ -44,6 +40,25 @@ def get_model_class(full_name):
     return LSTM if full_name in LSTM_MODELS else FeedForward
 
 
+def model_str(model_name, byr=False):
+    """
+    returns the string giving the name of an offer model
+    model (used to refer to the model in SimulatorInterface
+     and Composer
+
+    :param model_name: str giving base name
+    :param byr: boolean indicating whether this is a buyer model
+    :return:
+    """
+    if model_name in ARRIVAL_MODELS:
+        return model_name
+    if not byr:
+        name = '{}_{}'.format(model_name, SLR_PREFIX)
+    else:
+        name = '{}_{}'.format(model_name, BYR_PREFIX)
+    return name
+
+
 def get_clock_feats(time):
     """
     Gets clock features as np.array given the time relative to START (in seconds since)
@@ -54,10 +69,13 @@ def get_clock_feats(time):
     gives the time of day as a fraction of the day since midnight.
     """
     # holiday and day of week indicators
-    out = DATE_LOOKUP[time // DAY]
-    # minute of day
-    out[7] = (time % DAY) / DAY
-    return out
+    date_feats = DATE_FEATS[time // DAY]
+
+    # second of day, as fraction
+    second_of_day = (time % DAY) / DAY
+
+    # concatenate
+    return np.append(date_feats, second_of_day)
 
 
 def proper_squeeze(tensor):

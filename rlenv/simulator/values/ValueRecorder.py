@@ -1,4 +1,3 @@
-from statistics import mean
 import numpy as np
 from rlenv.simulator.Recorder import *
 

@@ -1,18 +1,16 @@
-"""
-Generates values or discrim inputs for a chunk of lstgs
-"""
 import os, sys, shutil
-from datetime import datetime
 from compress_pickle import load, dump
 import numpy as np
-from rlenv.env_consts import START_PRICE, START_TIME, ACC_PRICE, DEC_PRICE
-from rlenv.interface.interfaces import PlayerInterface, ArrivalInterface
+from rlenv.interfaces.PlayerInterface import PlayerInterface
+from rlenv.interfaces.ArrivalInterface import ArrivalInterface
 from rlenv.environments.SimulatorEnvironment import SimulatorEnvironment
 from rlenv.Composer import Composer
+from featnames import START_PRICE, START_TIME, ACC_PRICE, DEC_PRICE
 
 
 class Generator:
     """
+    Generates values or discrim inputs for a chunk of lstgs.
     Attributes:
         x_lstg: pd.Dataframe containing the x_lstg (x_w2v, x_slr, x_cat, x_cndtn, etc...) for each listing
         lookup: pd.Dataframe containing features of each listing used to control environment behavior and outputs

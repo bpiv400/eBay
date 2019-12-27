@@ -2,6 +2,7 @@ import argparse
 from compress_pickle import dump, load
 from processing.c_feats.util import *
 from constants import *
+from processing.processing_consts import *
 
 
 def thread_count(subset, full=False):
@@ -346,8 +347,7 @@ def add_deltas_index(deltas, events):
 
 
 def output_path(model, num):
-    gz_path = '{}{}_tf_{}.gz'.format(FEATS_DIR, num, model)
-    return gz_path
+    return FEATS_DIR + '{}_tf_{}.gz'.format(num, model)
 
 
 def main():
@@ -356,8 +356,7 @@ def main():
     parser.add_argument('--num', action='store', type=int, required=True)
     parser.add_argument('--arrival', action='store_true', default=False)
     args = parser.parse_args()
-    num = args.num
-    arrival = args.arrival
+    num, arrival = args.num, args.arrival
 
     # load data
     print('Loading data: %d' % num)

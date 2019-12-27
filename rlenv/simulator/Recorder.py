@@ -1,6 +1,6 @@
 import pandas as pd
 from compress_pickle import dump
-from rlenv.env_consts import START_TIME, START_PRICE, TIME_FEATS
+from featnames import START_TIME, START_PRICE, TIME_FEATS
 
 # variable names
 INDEX = 'index'

@@ -2,7 +2,7 @@ import argparse
 from compress_pickle import dump, load
 from datetime import datetime as dt
 import processing.c_feats.util as util
-from constants import FEATS_DIR, CHUNKS_DIR
+from processing.processing_consts import *
 
 
 def main():

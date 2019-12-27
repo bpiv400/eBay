@@ -2,11 +2,12 @@
 class for encapsulating data and methods related to the first buyer offer
 """
 from rlenv.events.Event import Event
-from rlenv.events import event_types
-from constants import (SLR_PREFIX, BYR_PREFIX, INTERVAL_COUNTS,
-                       INTERVAL, MAX_DELAY, MAX_DAYS)
+from rlenv.env_consts import FIRST_OFFER, BUYER_OFFER, SELLER_OFFER
+from constants import (MONTH, DAY, SLR_PREFIX, BYR_PREFIX, 
+                       INTERVAL_COUNTS, INTERVAL, MAX_DELAY, MAX_DAYS)
 from rlenv.env_utils import time_delta, slr_rej
-from rlenv.env_consts import (MONTH, DAY, INT_REMAINING)
+from featnames import INT_REMAINING
+
 
 
 class Thread(Event):
@@ -14,7 +15,7 @@ class Thread(Event):
     Attributes:
     """
     def __init__(self, priority=None, thread_id=None):
-        super(Thread, self).__init__(event_type=event_types.FIRST_OFFER,
+        super(Thread, self).__init__(event_type=FIRST_OFFER,
                                      priority=priority)
         # participants
         self.buyer = None
@@ -115,9 +116,9 @@ class Thread(Event):
         self.init_remaining = None
         # change event type
         if self.turn % 2 == 0:
-            self.type = event_types.SELLER_OFFER
+            self.type = SELLER_OFFER
         else:
-            self.type = event_types.BUYER_OFFER
+            self.type = BUYER_OFFER
         self.priority += add_delay
 
     def thread_expired(self):

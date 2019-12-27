@@ -3,11 +3,7 @@ from compress_pickle import dump, load
 import pandas as pd, numpy as np
 from constants import *
 from processing.processing_utils import *
-
-LVARS = ['cat', 'cndtn', 'start_date', 'end_time', \
-    'start_price', 'start_price_pctile', 'arrival_rate', 'flag']
-TVARS = ['byr_hist', 'bin']
-OVARS = ['clock', 'price', 'accept', 'reject', 'censored', 'message']
+from processing.processing_consts import *
 
 
 if __name__ == '__main__':

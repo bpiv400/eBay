@@ -2,8 +2,8 @@ import sys, pickle, os, argparse
 from compress_pickle import load, dump
 import numpy as np, pandas as pd
 from constants import *
-from utils import *
 from processing.processing_utils import *
+from processing.processing_consts import *
 
 
 # deletes irrelevant feats and sets unseen feats to 0

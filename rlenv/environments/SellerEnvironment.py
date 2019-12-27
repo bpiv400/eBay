@@ -7,11 +7,13 @@ from rlpyt.spaces.float_box import FloatBox
 from rlenv.environments.EbayEnvironment import EbayEnvironment
 from rlenv.events import event_types
 from rlenv.events.SellerThread import SellerThread
-from rlenv.env_consts import (SELLER_HORIZON, LOOKUP, X_LSTG, START_TIME, MONTH,
-                              CON, DELAY, ACTION_SPACE_NAME, OBS_SPACE_NAME,
+from rlenv.env_consts import (SELLER_HORIZON, LOOKUP, X_LSTG, 
+                              ACTION_SPACE_NAME, OBS_SPACE_NAME,
                               THREAD_MAP, LSTG_MAP, TURN_IND_MAP)
 from rlenv.simulators import SimulatedBuyer
 from rlenv.spaces.ConSpace import ConSpace
+from featnames import START_TIME, CON, DELAY
+from constants import MONTH
 
 
 class SellerEnvironment(EbayEnvironment, Env):

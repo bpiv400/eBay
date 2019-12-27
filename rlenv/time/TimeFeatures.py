@@ -13,7 +13,8 @@ from collections import deque, Counter
 import numpy as np
 import torch
 import rlenv.time.time_triggers as time_triggers
-import rlenv.env_consts as consts
+from featnames import TIME_FEATS, THREAD_COUNT
+from constants import EXPIRATION
 
 
 class TimeFeatures:
@@ -39,7 +40,7 @@ class TimeFeatures:
             structures that calculate individual features
         Public functions:
             get_feats: returns a tensor representing current time valued features, ordered like
-            rlenv.env_consts.TIME_FEATS
+            TIME_FEATS
             update_features: dispatches helper update function to update all time features relevant to
             a given event (buyer offer, seller offer, buyer rejection, or seller rejection)
         Private functions:
@@ -60,7 +61,7 @@ class TimeFeatures:
         self.reset()
 
     def reset(self):
-        for feat in consts.TIME_FEATS:
+        for feat in TIME_FEATS:
             self.feats[feat] = TimeFeatures._initialize_feature(feat)
 
     def _get_feat(self, thread_id=None, feat=None, time=0):
@@ -84,10 +85,10 @@ class TimeFeatures:
 
         :param thread_id: current thread id if any. If none, return the lstg level features
         :param time: integer giving current time
-        :return: np.array of time-valued features in the order given by env_consts.TIME_FEATURES
+        :return: np.array of time-valued features in the order given by TIME_FEATURES
         """
-        x = np.zeros(len(consts.TIME_FEATS))
-        for i, feat in enumerate(consts.TIME_FEATS):
+        x = np.zeros(len(TIME_FEATS))
+        for i, feat in enumerate(TIME_FEATS):
             x[i] = self._get_feat(thread_id=thread_id, feat=feat, time=time)
         return x
 
@@ -98,17 +99,17 @@ class TimeFeatures:
         :param feat: name of the feature
         :return: Object encapsulating feature
         """
-        if feat == consts.THREAD_COUNT:
+        if feat == THREAD_COUNT:
             return ThreadSet()
         if 'best' not in feat:
             if 'recent' in feat:  # will be ignored for the timebeing
-                return ExpirationQueue(expiration=consts.EXPIRATION)
+                return ExpirationQueue(expiration=EXPIRATION)
             else:
                 return FeatureCounter(feat)
         else:
             if 'recent' in feat:  # will be ignored for the timebeing
                 return ExpirationHeap(min_heap=False,
-                                      expiration=consts.EXPIRATION)
+                                      expiration=EXPIRATION)
             else:
                 return FeatureHeap(min_heap=False)
 
@@ -136,7 +137,7 @@ class TimeFeatures:
         :param thread_id: id of the current thread where there's been an offer
         :return: NA
         """
-        if feat_name == consts.THREAD_COUNT:
+        if feat_name == THREAD_COUNT:
             self.feats[feat_name].push(thread_id=thread_id)
         if offer['type'] in feat_name:
             if 'best' not in feat_name:
@@ -204,7 +205,7 @@ class TimeFeatures:
             feature_function = self._update_slr_rejection
         else:
             raise NotImplementedError()
-        for feat in consts.TIME_FEATS:
+        for feat in TIME_FEATS:
             feature_function(feat_name=feat, offer=offer, thread_id=thread_id)
 
 

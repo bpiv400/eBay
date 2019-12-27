@@ -1,7 +1,8 @@
 import math
 import numpy as np
 from rlenv.env_utils import get_cut
-from rlenv.env_consts import META, LISTING_FEE, SE_TOL, MIN_SALES
+from rlenv.env_consts import LISTING_FEE, SE_TOL, MIN_SALES
+from featnames import META
 
 
 class ValueCalculator:

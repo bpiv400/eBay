@@ -3,6 +3,7 @@ import numpy as np, pandas as pd
 from compress_pickle import load, dump
 from gensim.models import Word2Vec
 from constants import *
+from processing.processing_consts import *
 
 
 def run_model(s):

@@ -3,45 +3,9 @@ from compress_pickle import load, dump
 from datetime import datetime as dt
 import numpy as np, pandas as pd
 from collections import OrderedDict
+from processing.processing_consts import *
 from constants import *
-
-# data types for csv read
-OTYPES = {'lstg': 'int64',
-          'thread': 'int64',
-          'index': 'uint8',
-          'clock': 'int64', 
-          'price': 'float64', 
-          'accept': bool,
-          'reject': bool,
-          'censored': bool,
-          'message': bool}
-
-TTYPES = {'lstg': 'int64',
-          'thread': 'int64',
-          'byr': 'int64',
-          'byr_hist': 'int64',
-          'bin': bool,
-          'byr_us': bool}
-
-LTYPES = {'lstg': 'int64',
-          'slr': 'int64',
-          'meta': 'uint8',
-          'cat': str,
-          'cndtn': 'uint8',
-          'start_date': 'uint16',
-          'end_time': 'int64',
-          'fdbk_score': 'int64',
-          'fdbk_pstv': 'int64',
-          'start_price': 'float64',
-          'photos': 'uint8',
-          'slr_lstgs': 'int64',
-          'slr_bos': 'int64',
-          'decline_price': 'float64',
-          'accept_price': 'float64',
-          'store': bool,
-          'slr_us': bool,
-          'flag': bool,
-          'fast': bool}
+from featnames import *
 
 
 # split into chunks and save
@@ -72,6 +36,34 @@ def chunk(group, L, T, O):
             num += 1
 
 
+def extract_day_feats(clock):
+    """
+    Returns dataframe with US holiday and day-of-week indicators
+    :param clock: pandas series of timestamps
+    :return: dataframe with holiday and day of week indicators
+    """
+    df = pd.DataFrame(index=clock.index)
+    df['holiday'] = clock.dt.date.astype('datetime64').isin(HOLIDAYS)
+    for i in range(6):
+        df['dow' + str(i)] = clock.dt.dayofweek == i
+    return df
+
+
+def extract_clock_feats(clock):
+    '''
+    Creates clock features from timestamps.
+    :param clock: pandas series of timestamps.
+    :return: pandas dataframe of holiday and day of week indicators, and minute of day.
+    '''
+    df = extract_day_feats(clock)
+
+    # add in seconds of day
+    seconds_since_midnight = clock.dt.hour * 60 + clock.dt.minute + clock.dt.second
+    df['second_of_day'] = (seconds_since_midnight / (24 * 3600)).astype('float32')
+
+    return df
+
+
 # loads processed chunk files
 def load_frames(name):
     '''
@@ -99,25 +91,106 @@ def get_partition(part):
     return idx, path
 
 
-# sorts y by the number of non-missing (i.e., -1) values in each row
-def sort_by_turns(y):
-    '''
-    y: dataframe in which -1 entries should be ignored.
-    '''
-    # number of turns
-    turns = (y > -1).sum(axis=1)
-    # remove rows with 0 turns
-    turns = turns[turns > 0]
-    # sort by number of turns, descending
-    turns = turns.sort_values(ascending=False, kind='mergesort')
-    # sort y by turns
-    return y.reindex(index=turns.index)
+def input_partition():
+    """
+    Parses command line input for partition name.
+    :return part: string partition name.
+    """
+    parser = argparse.ArgumentParser()
+
+    # partition
+    parser.add_argument('--part', required=True, type=str, help='partition name')
+    part = parser.parse_args().part
+
+    # error checking
+    if part not in PARTITIONS:
+        raise RuntimeError('part must be one of: {}'.format(PARTITIONS))
+
+    return part
 
 
-# returns dictionary of feature names for each 'x' dataframe in d
-def get_featnames(d):
+def add_turn_indicators(df):
     '''
-    d: dictionary with dataframes.
+    Appends turn indicator variables to offer matrix
+    :param df: dataframe with index ['lstg', 'thread', 'index'].
+    :return: dataframe with turn indicators appended
+    '''
+    indices = np.unique(df.index.get_level_values('index'))
+    for i in range(len(indices)-1):
+        ind = indices[i]
+        featname = 't%d' % ((ind+1) // 2)
+        df[featname] = df.index.isin([ind], level='index')
+    return df
+
+
+# deletes irrelevant feats and sets unseen feats to 0
+def clean_offer(offer, i, outcome, role):
+    # if turn 1, drop days and delay
+    if i == 1:
+        offer = offer.drop(['days', 'delay'], axis=1)
+    # set features to 0 if i exceeds index
+    else:
+        future = i > offer.index.get_level_values(level='index')
+        offer.loc[future, offer.dtypes == 'bool'] = False
+        offer.loc[future, offer.dtypes != 'bool'] = 0
+    # for current turn, set feats to 0
+    curr = i == offer.index.get_level_values(level='index')
+    if outcome == 'delay':
+        offer.loc[curr, offer.dtypes == 'bool'] = False
+        offer.loc[curr, offer.dtypes != 'bool'] = 0
+    else:
+        offer.loc[curr, 'msg'] = False
+        if outcome == 'con':
+            offer.loc[curr, ['con', 'norm']] = 0
+            offer.loc[curr, ['split', 'auto', 'exp', 'reject']] = False
+    # if buyer turn or last turn, drop auto, exp, reject
+    if (i in IDX['byr']) or (i == max(IDX[role])):
+        offer = offer.drop(['auto', 'exp', 'reject'], axis=1)
+    # on last turn, drop msg (and concession features)
+    if i == max(IDX[role]):
+        offer = offer.drop('msg', axis=1)
+        if outcome == 'con':
+            offer = offer.drop(['con', 'norm', 'split'], axis=1)
+    return offer
+
+
+def get_x_offer(load_file, idx, outcome=None, role=None):
+    # thread and offer features
+    x_offer = load_file('x_offer')
+    x_thread = load_file('x_thread')
+
+    # initialize dictionary of input features
+    x = load_file('x_lstg')
+    x = {k: v.reindex(index=idx, level='lstg') for k, v in x.items()}
+
+    # add thread features and turn indicators to listing features
+    x_thread.loc[:, 'byr_hist'] = x_thread.byr_hist.astype('float32') / 10
+    x['lstg'] = x['lstg'].join(x_thread)
+    x['lstg'] = add_turn_indicators(x['lstg'])
+
+    # dataframe of offer features for relevant threads
+    threads = idx.droplevel(level='index').unique()
+    df = pd.DataFrame(index=threads).join(x_offer)
+
+    # turn features
+    for i in range(1, max(IDX[role])+1):
+        # offer features at turn i
+        offer = df.xs(i, level='index').reindex(index=idx)
+        # clean
+        offer = clean_offer(offer, i, outcome, role)
+        # add turn number to featname
+        offer = offer.rename(lambda x: x + '_%d' % i, axis=1)
+        # add turn indicators
+        x['offer%d' % i] = add_turn_indicators(offer)
+
+    return x
+
+
+def save_featnames(d, name):
+    '''
+    Creates dictionary of input feature names.
+    :param d: dictionary with dataframes.
+    :param name: string name of model.
     '''
 
     # initialize with components of x
@@ -127,26 +200,32 @@ def get_featnames(d):
         featnames['x'][k] = list(v.columns)
 
     # for arrival and delay models
-    if 'x_clock' in d:
+    if 'periods' in d:
         featnames['x_time'] = \
-            list(d['x_clock'].columns) + list(d['tf'].columns) + ['duration']
+            CLOCK_FEATS + TIME_FEATS + [DURATION]
+
+        # check that time feats match names
+        for v in d['tf'].values():
+            tfnames = list(v.columns)
+            break
+        assert tfnames == TIME_FEATS
 
         # for delay models
         if 'remaining' in d:
-            featnames['x_time'] += ['remaining']
+            featnames['x_time'] += [INT_REMAINING]
+            assert INT_REMAINING == 'remaining'
 
-    return featnames
+    # save dictionary
+    dump(featnames, INPUT_DIR + 'featnames/{}.pkl'.format(name))
 
 
-# returns dictionary of input sizes
-def get_sizes(d, name=''):
+def save_sizes(d, name):
     '''
+    Creates dictionary of input sizes.
     :param d: dictionary with dataframes.
     :param name: string name of model.
-    :return: dictionary of size parameters.
     '''
-    # number of observations
-    sizes = {'N': len(d['y'].index)}
+    sizes = {}
 
     # count components of x
     sizes['x'] = {}
@@ -167,75 +246,65 @@ def get_sizes(d, name=''):
         sizes['out'] = HIST_QUANTILES
     elif 'con' in name:
         sizes['out'] = 101
-    elif name == 'arrival':
-        sizes['out'] = 2
     else:
         sizes['out'] = 1
 
-    return sizes
+    # save dictionary
+    dump(sizes, INPUT_DIR + 'sizes/{}.pkl'.format(name))
 
 
 def convert_to_numpy(d):
     '''
     Converts dictionary of dataframes to dictionary of numpy arrays.
-    d: dictionary with dataframes.
+    :param d: dictionary with (dictionaries of) dataframes.
+    :return: dictionary with numpy arrays (and dictionaries of dataframes).
     '''
 
     # loop through x, convert to numpy
     for k, v in d['x'].items():
-        d['x'][k] = v.astype('float32', copy=False).to_numpy()
-
-    # convert time features to dictionary
-    if 'tf' in d:
-        tf_dict = {}
-        for i in range(len(d['y'].index)):
-            try:
-                tf_dict[i] = d['tf'].xs(
-                    d['y'].index[i], level='lstg')
-            except:
-                continue
-        d['tf'] = tf_dict
+        d['x'][k] = v.to_numpy()
 
     # convert components to numpy directly
     for k in d.keys():
-        if k not in ['tf', 'x']:
+        if k not in ['y', 'x', 'tf']:
             d[k] = d[k].to_numpy()
-
-    # get groups for sampling
-    if len(np.shape(d['y'])) > 1:
-        turns = np.sum(d['y'] > -1, axis=1)
-        d['groups'] = [np.nonzero(turns == n)[0] \
-            for n in np.unique(turns)]
 
     return d
 
 
-def create_small(d):
+def save_small(d, name):
     '''
     Restricts data to first N_SMALL observations
     :param d: dictionary with numpy arrays.
+    :param name: string name of model.
     '''
     
     small = {}
 
     # randomly select N_SMALL indices
-    v = np.arange(np.shape(d['y'])[0])
+    v = np.arange(np.shape(d['x']['lstg'])[0])
     np.random.shuffle(v)
     idx = v[:N_SMALL]
 
-    # sort indices by turns
-    y = d['y'][idx]
-    if len(np.shape(y)) > 1:
-        turns = np.sum(y > -1, axis=1)
-        idx = idx[np.argsort(-turns)]
+    # recurrent models
+    if 'periods' in d:
+        idx = idx[np.argsort(-d['periods'])]
+        small['periods'] = d['periods'][idx]
 
-        # groups for sampling
-        small['groups'] = [np.nonzero(turns == n)[0] \
-            for n in np.unique(turns)]
+        small['y'], small['tf'] = {}, {}
+        for i in idx:
+            if i in d['y']:
+                small['y'][i] = d['y'][i]
+            if i in d['tf']:
+                small['tf'][i] = d['tf'][i]
+
+    # feed forward
+    else:
+        y = d['y'][idx]
 
     # directly subsample
     for k in d.keys():
-        if k not in ['x', 'tf', 'groups']:
+        if k not in ['y', 'x', 'tf']:
             small[k] = d[k][idx]
 
     # loop through x
@@ -243,28 +312,22 @@ def create_small(d):
     for k, v in d['x'].items():
         small['x'][k] = d['x'][k][idx]
 
-    # time features dictionary
-    if 'tf' in d:
-        small['tf'] = {}
-        for i in idx:
-            if i in d['tf']:
-                small['tf'][i] = d['tf'][i]
-
-    return small
+    # save dictionary
+    dump(small, INPUT_DIR + 'small/{}.gz'.format(name))
 
 
 # save featnames and sizes
 def save_files(d, part, name):
     if part == 'train_models':
-        dump(get_featnames(d), '{}/inputs/featnames/{}.pkl'.format(PREFIX, name))
-        dump(get_sizes(d, name), '{}/inputs/sizes/{}.pkl'.format(PREFIX, name))
+        save_featnames(d, name)
+        save_sizes(d, name)
 
     # create dictionary of numpy arrays
     d = convert_to_numpy(d)
 
     # save as dataset
-    dump(d, '{}/inputs/{}/{}.gz'.format(PREFIX, part, name))
+    dump(d, INPUTS_DIR + '{}/{}.gz'.format(part, name))
 
     # save small dataset
     if part == 'train_models':
-        dump(create_small(d), '{}/inputs/small/{}.gz'.format(PREFIX, name))
+        save_small(d, name)

@@ -1,13 +1,9 @@
-"""
-Class that encapsulates data related to an individual event
-in a slr queue
-"""
 from random import random
 
 
 class Event:
     """
-    Event gives information relating to an individual event
+    Event gives information relating to an individual event.
 
     attributes:
         type: string giving the type of event

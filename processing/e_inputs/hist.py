@@ -2,8 +2,8 @@ import sys, pickle, os, argparse
 from compress_pickle import load, dump
 import numpy as np, pandas as pd
 from constants import *
-from utils import input_partition
-from processing.processing_utils import save_files
+from processing.processing_utils import input_partition, save_files
+from processing.processing_consts import *
 
 
 # loads data and calls helper functions to construct train inputs
@@ -30,8 +30,7 @@ def process_inputs(part):
 	# add thread variables to x['lstg']
 	x['lstg'] = x['lstg'].join(x_thread)
 
-	return {'y': y.astype('uint8', copy=False), 
-			'x': {k: v.astype('float32', copy=False) for k, v in x.items()}}
+	return {'y': y, 'x': x}
 
 
 if __name__ == '__main__':

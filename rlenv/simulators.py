@@ -4,7 +4,8 @@ from torch.distributions.categorical import Categorical
 from torch.distributions.bernoulli import Bernoulli
 import torch
 from rlenv.env_utils import proper_squeeze, categorical_sample, get_split, featname, prev_norm, last_norm
-from rlenv.env_consts import ALL_OUTCOMES, REJECT, NORM, CON, SPLIT, MSG, AUTO, EXP, THREAD_MAP
+from rlenv.env_consts import THREAD_MAP
+from featnames import *
 
 
 class SimulatedActor:

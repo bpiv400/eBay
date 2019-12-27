@@ -1,5 +1,4 @@
 import os, shutil
-from statistics import mean, variance
 from datetime import datetime as dt
 from rlenv.env_consts import MIN_SALES
 from rlenv.env_utils import get_checkpoint_path, get_chunk_dir
@@ -59,15 +58,15 @@ class ValueGenerator(Generator):
 
             # simulate lstg until a stopping criterion is satisfied
             time_up = False
-            while not self.val_calc.stabilized and not self._is_time_up():
+            while not self.val_calc.stabilized and not time_up:
                 price, T = self._simulate_lstg(environment)
                 self.val_calc.add_outcome(price, T)
                 if self.verbose:
                     self._print_value()
+                time_up = self._is_time_up()
 
             # save results to value calculator
             self.recorder.add_val(self.val_calc)
-            exit()
 
             # store a checkpoint if the job is about to be killed
             if time_up:
@@ -75,7 +74,7 @@ class ValueGenerator(Generator):
                 dump(self._make_checkpoint(lstg), self.checkpoint_path)
                 break
 
-        # clean up
+        # clean up and save
         if not time_up:
             self.recorder.dump(self.recorder_count)
             self._delete_checkpoint()

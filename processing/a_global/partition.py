@@ -2,7 +2,7 @@ import sys
 from compress_pickle import load, dump
 import numpy as np, pandas as pd
 from constants import *
-from processing.processing_utils import LTYPES
+from processing.processing_consts import *
 
 
 def partition_lstgs(s):

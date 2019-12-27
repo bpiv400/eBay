@@ -3,10 +3,9 @@ import torch
 from compress_pickle import load
 import numpy as np, pandas as pd
 from rlenv.env_consts import *
-from constants import ENV_SIM_DIR
-from utils import unpickle
-from rlenv.interface import model_names
 from rlenv.env_utils import load_featnames, load_sizes
+from constants import ENV_SIM_DIR
+from featnames import TURN_FEATS
 
 
 class Composer:
@@ -34,7 +33,7 @@ class Composer:
             X_TIME_MAP: x_time_cols,
         }
         Composer._check_feat_sets(feat_sets)
-        for model in model_names.MODELS:
+        for model in MODELS:
             maps[model], sizes[model] = Composer._build_model_maps(model, feat_sets)
         return maps, sizes, feat_sets
 
@@ -42,12 +41,12 @@ class Composer:
     def _get_cols(x_lstg_cols):
         thread_cols, x_time_cols = set(), set()
         # iterate over all models accumulating thread features and x_time features
-        for mod in model_names.MODELS:
+        for mod in MODELS:
             curr_feats = load_featnames(mod)
             if 'x_time' in curr_feats:
                 [x_time_cols.add(feat) for feat in curr_feats['x_time']]
         prev_int = set()
-        for mod in model_names.MODELS:
+        for mod in MODELS:
             curr_feats = load_featnames(mod)
             for feat_type, feat_set in curr_feats['x'].items():
                 [thread_cols.add(feat) for feat in feat_set]
@@ -195,7 +194,7 @@ class Composer:
         Public method that composes input vectors (x_time and x_fixed) from tensors in the
         environment
 
-        :param model_name: str giving the name of the focal model (see model_names.py)
+        :param model_name: str giving the name of the focal model
         :param sources: dictionary containing tensors from the environment that contain
         features the model expects in the input
         :param fixed: boolean for whether x_fixed needs to be compute
@@ -205,17 +204,23 @@ class Composer:
         """
         input_dict = dict()
         if recurrent:
-            input_dict['x_time'] = Composer._build_input_vector(self.maps[model_name]['x_time'],
-                                                                self.sizes[model_name]['x_time'],
-                                                                sources)
+            if model_name == 'arrival':
+                input_dict['x_time'] = torch.from_numpy(
+                    sources[X_TIME_MAP]).float().unsqueeze(dim=0)
+            else:
+                input_dict['x_time'] = Composer._build_input_vector(
+                    self.maps[model_name]['x_time'], 
+                    self.sizes[model_name]['x_time'],
+                    sources)
         if fixed:
             input_dict['x'] = dict()
             fixed_maps = self.maps[model_name]['x']
             fixed_sizes = self.sizes[model_name]['x']
             for input_set in fixed_maps.keys():
-                input_dict['x'][input_set] = Composer._build_input_vector(fixed_maps[input_set],
-                                                                          fixed_sizes[input_set],
-                                                                          sources)
+                input_dict['x'][input_set] = Composer._build_input_vector(
+                    fixed_maps[input_set],
+                    fixed_sizes[input_set],
+                    sources)
         return input_dict
 
     @property

@@ -1,8 +1,6 @@
-from compress_pickle import load, dump
+from compress_pickle import dump
 import numpy as np, pandas as pd
-from constants import PARTS_DIR, CLEAN_DIR, MAX_DAYS
-from utils import input_partition
-from processing.processing_utils import get_partition, load_frames
+from processing.processing_utils import input_partition, get_partition, load_frames
 
 
 if __name__ == "__main__":

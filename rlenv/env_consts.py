@@ -1,97 +1,8 @@
-from constants import INPUT_DIR, MAX_DAYS
-from utils import init_date_lookup
+from compress_pickle import load
+from constants import INPUT_DIR, ARRIVAL_PREFIX, SLR_PREFIX, BYR_PREFIX
+from featnames import CON, DELAY, MSG
 
 INTERACT = False
-
-# time feats
-SLR_OFFERS = 'slr_offers'
-BYR_OFFERS = 'byr_offers'
-SLR_OFFERS_OPEN = 'slr_offers_open'
-BYR_OFFERS_OPEN = 'byr_offers_open'
-SLR_BEST = 'slr_best'
-BYR_BEST = 'byr_best'
-SLR_BEST_OPEN = 'slr_best_open'
-BYR_BEST_OPEN = 'byr_best_open'
-THREAD_COUNT = 'thread_count'
-SLR_OFFERS_RECENT = 'slr_offers_recent'
-BYR_OFFERS_RECENT = 'byr_offers_recent'
-SLR_BEST_RECENT = 'slr_best_recent'
-BYR_BEST_RECENT = 'byr_best_recent'
-
-TIME_FEATS = [
-    SLR_OFFERS,
-    SLR_BEST,
-    SLR_OFFERS_OPEN,
-    SLR_BEST_OPEN,
-    SLR_OFFERS_RECENT,
-    SLR_BEST_RECENT,
-    BYR_OFFERS,
-    BYR_BEST,
-    BYR_OFFERS_OPEN,
-    BYR_BEST_OPEN,
-    BYR_OFFERS_RECENT,
-    BYR_BEST_RECENT,
-    THREAD_COUNT
-]
-
-# composer maps
-SIZE = 'size'
-LSTG_MAP = 'lstg'
-THREAD_MAP = 'thread'
-TURN_IND_MAP = 'turns'
-X_TIME_MAP = 'x_time'
-
-# clock feats
-CLOCK_FEATS = ['holiday', 'dow0', 'dow1', 'dow2', 'dow3', 'dow4', 'dow5', 'minute_of_day']
-
-# turn feats
-TURN_FEATS = ['t1', 't2', 't3']
-
-# outcomes
-DAYS = 'days'
-DELAY = 'delay'
-CON = 'con'
-NORM = 'norm'
-SPLIT = 'split'
-MSG = 'msg'
-REJECT = 'reject'
-AUTO = 'auto'
-EXP = 'exp'
-
-BYR_OUTCOMES = [
-    DAYS,
-    DELAY,
-    CON,
-    NORM,
-    SPLIT,
-    MSG,
-]
-SLR_OUTCOMES = BYR_OUTCOMES + [REJECT, AUTO, EXP]
-
-ALL_CLOCK_FEATS = dict()
-ALL_TIME_FEATS = dict()
-ALL_OUTCOMES = dict()
-for i in range(7):
-    ALL_CLOCK_FEATS[i + 1] = ['{}_{}'.format(feat, i + 1) for feat in CLOCK_FEATS]
-    ALL_TIME_FEATS[i + 1] = ['{}_{}'.format(feat, i + 1) for feat in TIME_FEATS]
-    if (i + 1) % 2 == 1:
-        ALL_OUTCOMES[i + 1] = ['{}_{}'.format(feat, i + 1) for feat in BYR_OUTCOMES]
-    else:
-        ALL_OUTCOMES[i + 1] = ['{}_{}'.format(feat, i + 1) for feat in SLR_OUTCOMES]
-
-
-
-# turn indices
-SLR_TURN_INDS = ['t1', 't2']
-BYR_TURN_INDS = SLR_TURN_INDS + ['t3']
-
-
-MONTHS_SINCE_LSTG = 'months_since_lstg'
-DURATION = 'duration'
-INT_REMAINING = 'remaining'
-
-# hist feature
-BYR_HIST = 'byr_hist'
 
 # dataset dictionary keys
 X_LSTG = 'x_lstg'
@@ -106,33 +17,17 @@ SIM_CHUNKS_DIR = 'chunks'
 SIM_VALS_DIR = 'vals'
 SIM_DISCRIM_DIR = 'discrim'
 
-# temporal constants
-MONTH = MAX_DAYS * 24 * 3600
-DAY = 24 * 3600
-HOUR = 3600
-EXPIRATION = 48 * 60 * 60
-
 # fee constants
 LISTING_FEE = .03
-
-# lookup column names
-LSTG = 'lstg'
-SLR = 'slr'
-STORE = 'store'
-META = 'meta'
-START_TIME = 'start_time'
-START_PRICE = 'start_price'
-DEC_PRICE = 'decline_price'
-ACC_PRICE = 'accept_price'
 
 # meta categories with sale fees != .09 * price
 META_7 = [21, 10]
 META_6 = [32, 14, 11, 7, 28]
 
-# holidays and days of week
-DATE_LOOKUP = init_date_lookup()
+# holiday and day-of-week indicators, indexed by days since START
+DATE_FEATS = load(INPUT_DIR + 'date_feats.pkl')
 
-
+# various counts
 SELLER_HORIZON = 100
 ENV_LSTG_COUNT = 1000
 
@@ -151,3 +46,42 @@ PRICE = 'price'
 # param names
 MIN_SALES = 20
 SE_TOL = .5
+
+# composer maps
+SIZE = 'size'
+LSTG_MAP = 'lstg'
+THREAD_MAP = 'thread'
+TURN_IND_MAP = 'turns'
+X_TIME_MAP = 'x_time'
+
+# offer response indicators
+ACC_IND = 0
+REJ_IND = 1
+OFF_IND = 2
+
+# lstg level
+ARRIVAL = 'ARRIVAL'
+
+# thread level
+FIRST_OFFER = 'FIRST_OFFER' # first byer offer
+SELLER_DELAY = 'seller_delay'
+BUYER_DELAY = 'buyer_delay'
+
+# offer level
+BUYER_OFFER = 'buyer_offer'
+SELLER_OFFER = 'seller_offer'
+
+# model names
+NUM_OFFERS_MODEL = 'arrival'
+BYR_HIST_MODEL = 'hist'
+
+# model sets
+ARRIVAL_MODELS = [NUM_OFFERS_MODEL, BYR_HIST_MODEL]
+LSTM_MODELS = [NUM_OFFERS_MODEL, '{}_{}'.format(DELAY, SLR_PREFIX), '{}_{}'.format(DELAY, BYR_PREFIX)]
+RECURRENT_MODELS = LSTM_MODELS
+OFFER_NO_PREFIXES = [CON, MSG, DELAY]
+OFFER_MODELS = ['{}_{}'.format(model, SLR_PREFIX) for model in OFFER_NO_PREFIXES] + \
+        ['{}_{}'.format(model, BYR_PREFIX) for model in OFFER_NO_PREFIXES]
+FEED_FORWARD_MODELS = [model for model in OFFER_MODELS if model not in RECURRENT_MODELS]
+FEED_FORWARD_MODELS.append(BYR_HIST_MODEL)
+MODELS = OFFER_MODELS + ARRIVAL_MODELS
