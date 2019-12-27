@@ -200,7 +200,7 @@ class LSTM(nn.Module):
         '''
         :param d: dictionary with entries:
             x: OrderedDict()
-            x_time: tensor of shape [mbsize, sizes['steps'], sizes['x_time']]
+            x_time: tensor of shape [mbsize, INTERVAL_COUNTS[outcome], sizes['x_time']]
         '''
         # initialize hidden state
         hidden = (self.h0(x).unsqueeze(dim=0), 

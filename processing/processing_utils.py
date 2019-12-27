@@ -234,8 +234,9 @@ def save_sizes(d, name):
 
     # arrival and delay models
     if 'tf' in d:
-        sizes['steps'] = len(d['y'].columns)
-        sizes['x_time'] = len(d['tf'].columns) + 9
+        role = name.split('_')[-1]
+        sizes['interval'] = INTERVAL[role]
+        sizes['x_time'] = len(CLOCK_FEATS) + len(TIME_FEATS) + 1
 
         # delay models
         if 'remaining' in d:
