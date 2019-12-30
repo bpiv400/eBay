@@ -16,7 +16,7 @@ class RecurrentDataset(Dataset):
         self.d = load(INPUT_DIR + '{}/{}.gz'.format(part, name))
 
         # save clock feats lookup array to self
-        self.clock_feats = load(INPUT_DIR + 'clock_feats.pkl')
+        self.date_feats = load(INPUT_DIR + 'date_feats.pkl')
 
         # groups for sampling
         self.groups = [np.nonzero(self.d['turns'] == n)[0] \
@@ -70,7 +70,9 @@ class RecurrentDataset(Dataset):
         second = self.d['second'][idx] + self.counter
 
         # clock features
-        clock_feats = self.clock_feats[second]
+        date_feats = self.date_feats[second // DAY]
+        second_of_day = (second % DAY) / DAY
+        clock_feats = np.append(date_feats, second_of_day)
 
         # fill in missing time feats with zeros
         if idx in self.d['tf']:
