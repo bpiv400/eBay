@@ -6,7 +6,7 @@ from compress_pickle import load
 from model.FeedForwardDataset import FeedForwardDataset
 from model.RecurrentDataset import RecurrentDataset
 from model.Model import Model
-from model.consts import *
+from model.model_consts import *
 from constants import *
 
 
@@ -32,8 +32,7 @@ if __name__ == '__main__':
 
     # load data
     dataset = RecurrentDataset if 'x_time' in sizes else FeedForwardDataset
-    train_dir = 'train_rl' if name in ['listings', 'threads'] else 'small'
-    train = dataset(train_dir, name)
+    train = dataset('test_rl', name)
 
     # training
     for epoch in range(10):

@@ -25,24 +25,17 @@ def get_tf(tf, start_time, role):
     return tf.groupby(['lstg', 'thread', 'index', 'period']).sum()
 
 
-def get_y(events, role):
-	# construct delay
-	clock = events.clock.unstack()
-	delay = pd.DataFrame(index=clock.index)
-	for i in range(2, 8):
-		delay[i] = clock[i] - clock[i-1]
-		delay.loc[delay[i] == 0, i] = np.nan  # remove auto responses
-	delay = delay.rename_axis('index', axis=1).stack().astype('int64')
-	# restrict to role indices
-	s = delay[delay.index.isin(IDX[role], level='index')]
-	c = events.censored.reindex(index=s.index)
-	# expirations
-	exp = s >= MAX_DELAY[role]
+def get_y(delay, exp, censored, periods, role):
+	# error checking
+	assert delay.max() <= MAX_DELAY[role]
 	if role == 'byr':
-		exp.loc[exp.index.isin([7], level='index')] = s >= MAX_DELAY['slr']
+		assert delay.xs(7, level='index').max() <= MAX_DELAY['slr']
+
 	# interval of offer arrivals and censoring
-	arrival = (s[~exp & ~c] / INTERVAL[role]).astype('uint16').rename('arrival')
+	arrival = delay[~censored & (delay < MAX_DELAY[role])] // INTERVAL[role]
 	cens = (s[~exp & c] / INTERVAL[role]).astype('uint16').rename('cens')
+
+
 	# initialize output dataframe with arrivals
 	df = arrival.to_frame().assign(count=1).set_index(
 		'arrival', append=True).squeeze().unstack(
@@ -60,6 +53,33 @@ def get_y(events, role):
 	return sort_by_turns(df)
 
 
+def get_periods(delay, role):
+    # convert to interval
+    periods = delay // INTERVAL[role]
+
+    # error checking
+    assert periods.max() <= INTERVAL_COUNTS[role]
+
+    # minimum number of periods is 1
+    periods.loc[periods < INTERVAL_COUNTS[role]] += 1
+
+    # sort and return
+    return periods.sort_values(ascending=False)
+
+
+def get_delay(clock, role):
+	delay = pd.DataFrame(index=clock.index)
+	for i in range(2, 8):
+		delay[i] = clock[i] - clock[i-1]
+		delay.loc[delay[i] == 0, i] = np.nan  # remove auto responses
+
+	# stack
+	delay = delay.rename_axis('index', axis=1).stack().astype('int64')
+
+	# subset bv role and return
+	return delay[delay.index.isin(IDX[role], level='index')]
+
+
 # loads data and calls helper functions to construct train inputs
 def process_inputs(part, role):
 	# function to load file
@@ -67,11 +87,18 @@ def process_inputs(part, role):
 
 	# load dataframes
 	lstg_start = load_file('lookup').start_time
+
+	# delay and censored
 	events = load(CLEAN_DIR + 'offers.pkl')[['clock', 'censored']].reindex(
 		index=lstg_start.index, level='lstg')
+	delay = get_delay(events.clock.unstack(), role)
+	censored = events.censored.reindex(index=delay.index)
+
+	# number of periods
+	periods = get_periods(delay, role)
 
 	# outcome
-	y = get_y(events, role)
+	y = get_y(delay, censored, periods, role)
 	idx = y.index
 
 	# dictionary of input features
@@ -82,15 +109,13 @@ def process_inputs(part, role):
 		['lstg', 'thread']).shift().reindex(index=idx).astype('int64')
 
 	# normalized periods remaining at start of delay period
-	remaining = MAX_DAYS * 24 * 3600 - (seconds - lstg_start)
-	remaining.loc[remaining.index.isin([2, 4, 6, 7], level='index')] /= \
-		MAX_DELAY['slr']
-	remaining.loc[remaining.index.isin([3, 5], level='index')] /= \
-		MAX_DELAY['byr']
+	remaining = MAX_DAYS * DAY - (seconds - lstg_start)
+	remaining.loc[idx.isin([2, 4, 6, 7], level='index')] /= MAX_DELAY['slr']
+	remaining.loc[idx.isin([3, 5], level='index')] /= MAX_DELAY['byr']
 	remaining = np.minimum(remaining, 1)
 
 	# time features
-	tf = get_tf(load_file('tf_delay'), idx_clock, role)
+	tf = get_tf(load_file('tf_delay'), seconds, role)
 
 	return {'y': y, 'periods': periods, 'x': x,
 			'seconds': seconds, 'remaining': remaining, 'tf': tf}

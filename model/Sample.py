@@ -1,6 +1,6 @@
 from torch.utils.data import Sampler, DataLoader
 import numpy as np
-from model.consts import *
+from model.model_consts import *
 
 
 class Sample(Sampler):

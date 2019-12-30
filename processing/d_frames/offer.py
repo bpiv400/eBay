@@ -6,11 +6,19 @@ from processing.processing_utils import input_partition, \
 from processing.processing_consts import *
 
 
-# delay
-def get_delay(clock):
+def get_days_delay(clock):
+    """
+    Calculates time between successive offers.
+    :param clock: dataframe with index ['lstg', 'thread'], 
+        turn numbers as columns, and seconds since START as values
+    :return days: fractional number of days between offers.
+    :return delay: time between offers as share of MAX_DELAY.
+    """
     # initialize output dataframes in wide format
     days = pd.DataFrame(0., index=clock.index, columns=clock.columns)
     delay = pd.DataFrame(0., index=clock.index, columns=clock.columns)
+
+    # for turn 1, days and delay are 0
     for i in range(2, 8):
         days[i] = clock[i] - clock[i-1]
         if i in [2, 4, 6, 7]: # byr has 2 days for last turn
@@ -19,10 +27,13 @@ def get_delay(clock):
             delay[i] = days[i] / MAX_DELAY['byr']
     # no delay larger than 1
     assert delay.max().max() <= 1
+
     # reshape from wide to long
-    days = days.rename_axis('index', axis=1).stack() / (24 * 3600)
+    days = days.rename_axis('index', axis=1).stack() / DAY
     delay = delay.rename_axis('index', axis=1).stack()
+
     return days, delay
+
 
 
 def round_con(con):
@@ -65,7 +76,7 @@ def get_x_offer(start_price, events, tf):
     # initialize output dataframe
     df = pd.DataFrame(index=events.index).sort_index()
     # delay features
-    df['days'], df['delay'] = get_delay(events.clock.unstack())
+    df['days'], df['delay'] = get_days_delay(events.clock.unstack())
     # clock features
     clock = pd.to_datetime(events.clock, unit='s', origin=START)
     df = df.join(extract_clock_feats(clock))

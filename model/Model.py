@@ -2,7 +2,7 @@ import torch, torch.nn as nn
 from torch.distributions.negative_binomial import NegativeBinomial as nb
 from model.nets import FeedForward, LSTM
 from model.Sample import get_batches
-from model.consts import *
+from model.model_consts import *
 from constants import *
 
 

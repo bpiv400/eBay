@@ -12,13 +12,13 @@ def get_periods(lstg_start, lstg_end):
         unit='s').dt.total_seconds().astype('int64')
 
     # convert to interval
-    end_period = end // INTERVAL['arrival']
+    periods = end // INTERVAL['arrival']
 
     # error checking
-    assert end_period.max() < INTERVAL_COUNTS['arrival']
+    assert periods.max() < INTERVAL_COUNTS['arrival']
 
     # sorted number of turns
-    periods = end_period + 1
+    periods += 1
     periods.sort_values(ascending=False, inplace=True)
 
     return periods
