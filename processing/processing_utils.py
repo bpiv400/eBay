@@ -286,7 +286,7 @@ def save_files(d, part, name):
             x = load(PARTS_DIR + '{}/x_lstg.gz'.format(part))
 
             # make sure that indices are correctly ordered
-            for v in d.values():
+            for v in x.values():
                 assert np.all(v.index == d['periods'].index)
 
             # add in featnames and sizes for listing features
