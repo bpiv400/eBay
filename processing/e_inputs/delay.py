@@ -25,11 +25,8 @@ def get_tf(tf, start_time, role):
     return tf.groupby(['lstg', 'thread', 'index', 'period']).sum()
 
 
-def get_y(delay, exp, censored, periods, role):
-	# error checking
-	assert delay.max() <= MAX_DELAY[role]
-	if role == 'byr':
-		assert delay.xs(7, level='index').max() <= MAX_DELAY['slr']
+def get_y(delay, censored, periods, role):
+	
 
 	# interval of offer arrivals and censoring
 	arrival = delay[~censored & (delay < MAX_DELAY[role])] // INTERVAL[role]
@@ -76,8 +73,15 @@ def get_delay(clock, role):
 	# stack
 	delay = delay.rename_axis('index', axis=1).stack().astype('int64')
 
-	# subset bv role and return
-	return delay[delay.index.isin(IDX[role], level='index')]
+	# subset bv role
+	delay = delay[delay.index.isin(IDX[role], level='index')]
+
+	# error checking
+	assert delay.max() <= MAX_DELAY[role]
+	if role == 'byr':
+		assert delay.xs(7, level='index').max() <= MAX_DELAY['slr']
+
+	return delay
 
 
 # loads data and calls helper functions to construct train inputs
@@ -98,18 +102,19 @@ def process_inputs(part, role):
 	periods = get_periods(delay, role)
 
 	# outcome
-	y = get_y(delay, censored, periods, role)
-	idx = y.index
+	y = ~censored & (delay < MAX_DELAY[role])
 
-	# dictionary of input features
-	x = get_x_offer(load_file, idx, outcome='delay', role=role)
+	# initialize dictionary of input features
+    x = load_file('x_lstg')
+    x = {k: v.reindex(index=periods.index, level='lstg') for k, v in x.items()}
 
 	# second since START for each observation
 	seconds = events.clock.groupby(
-		['lstg', 'thread']).shift().reindex(index=idx).astype('int64')
+		['lstg', 'thread']).shift().reindex(index=periods.index).astype('int64')
 
 	# normalized periods remaining at start of delay period
-	remaining = MAX_DAYS * DAY - (seconds - lstg_start)
+	diff = seconds - lstg_start.reindex(index=periods.index)
+	remaining = MAX_DAYS * DAY - diff
 	remaining.loc[idx.isin([2, 4, 6, 7], level='index')] /= MAX_DELAY['slr']
 	remaining.loc[idx.isin([3, 5], level='index')] /= MAX_DELAY['byr']
 	remaining = np.minimum(remaining, 1)

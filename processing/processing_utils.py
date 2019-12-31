@@ -186,7 +186,7 @@ def get_x_offer(load_file, idx, outcome=None, role=None):
     return x
 
 
-def save_featnames(d, name):
+def get_featnames(d, name):
     '''
     Creates dictionary of input feature names.
     :param d: dictionary with dataframes.
@@ -196,8 +196,9 @@ def save_featnames(d, name):
     # initialize with components of x
     featnames = {}
     featnames['x'] = OrderedDict()
-    for k, v in d['x'].items():
-        featnames['x'][k] = list(v.columns)
+    if 'x' in d:
+        for k, v in d['x'].items():
+            featnames['x'][k] = list(v.columns)
 
     # for arrival and delay models
     if 'periods' in d:
@@ -215,11 +216,10 @@ def save_featnames(d, name):
             featnames['x_time'] += [INT_REMAINING]
             assert INT_REMAINING == 'remaining'
 
-    # save dictionary
-    dump(featnames, INPUT_DIR + 'featnames/{}.pkl'.format(name))
+    return featnames
 
 
-def save_sizes(d, name):
+def get_sizes(d, name):
     '''
     Creates dictionary of input sizes.
     :param d: dictionary with dataframes.
@@ -229,8 +229,9 @@ def save_sizes(d, name):
 
     # count components of x
     sizes['x'] = {}
-    for k, v in d['x'].items():
-        sizes['x'][k] = len(v.columns)
+    if 'x' in d:
+        for k, v in d['x'].items():
+            sizes['x'][k] = len(v.columns)
 
     # arrival and delay models
     if 'tf' in d:
@@ -250,8 +251,7 @@ def save_sizes(d, name):
     else:
         sizes['out'] = 1
 
-    # save dictionary
-    dump(sizes, INPUT_DIR + 'sizes/{}.pkl'.format(name))
+    return sizes
 
 
 def convert_to_numpy(d):
@@ -262,73 +262,45 @@ def convert_to_numpy(d):
     '''
 
     # loop through x, convert to numpy
-    for k, v in d['x'].items():
-        d['x'][k] = v.to_numpy()
+    if 'x' in d:
+        for k, v in d['x'].items():
+            d['x'][k] = v.to_numpy()
 
     # convert components to numpy directly
     for k in d.keys():
-        if k not in ['y', 'x', 'tf']:
+        if not isinstance(d[k], dict):
             d[k] = d[k].to_numpy()
 
     return d
 
 
-def save_small(d, name):
-    '''
-    Restricts data to first N_SMALL observations
-    :param d: dictionary with numpy arrays.
-    :param name: string name of model.
-    '''
-    
-    small = {}
-
-    # randomly select N_SMALL indices
-    v = np.arange(np.shape(d['x']['lstg'])[0])
-    np.random.shuffle(v)
-    idx = v[:N_SMALL]
-
-    # recurrent models
-    if 'periods' in d:
-        idx = idx[np.argsort(-d['periods'])]
-        small['periods'] = d['periods'][idx]
-
-        small['y'], small['tf'] = {}, {}
-        for i in idx:
-            if i in d['y']:
-                small['y'][i] = d['y'][i]
-            if i in d['tf']:
-                small['tf'][i] = d['tf'][i]
-
-    # feed forward
-    else:
-        y = d['y'][idx]
-
-    # directly subsample
-    for k in d.keys():
-        if k not in ['y', 'x', 'tf']:
-            small[k] = d[k][idx]
-
-    # loop through x
-    small['x'] = {}
-    for k, v in d['x'].items():
-        small['x'][k] = d['x'][k][idx]
-
-    # save dictionary
-    dump(small, INPUT_DIR + 'small/{}.gz'.format(name))
-
-
 # save featnames and sizes
 def save_files(d, part, name):
+    # featnames and sizes
     if part == 'train_models':
-        save_featnames(d, name)
-        save_sizes(d, name)
+        featnames = get_featnames(d, name)
+        sizes = get_sizes(d, name)
+
+        if name == 'arrival':
+            # load listing features
+            x = load(PARTS_DIR + '{}/x_lstg.gz'.format(part))
+
+            # make sure that indices are correctly ordered
+            for v in d.values():
+                assert np.all(v.index == d['periods'].index)
+
+            # add in featnames and sizes for listing features
+            for k, v in x.items():
+                featnames['x'][k] = list(v.columns)
+                sizes['x'][k] = len(v.columns)
+
+            del x
+        
+        dump(featnames, INPUT_DIR + 'featnames/{}.pkl'.format(name))
+        dump(sizes, INPUT_DIR + 'sizes/{}.pkl'.format(name))
 
     # create dictionary of numpy arrays
     d = convert_to_numpy(d)
 
     # save as dataset
     dump(d, INPUT_DIR + '{}/{}.gz'.format(part, name))
-
-    # save small dataset
-    if part == 'train_models':
-        save_small(d, name)

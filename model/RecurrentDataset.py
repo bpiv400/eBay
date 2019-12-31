@@ -3,7 +3,7 @@ import torch
 from torch.nn.utils import rnn
 from torch.utils.data import Dataset
 from compress_pickle import load
-from constants import INPUT_DIR, INTERVAL, INTERVAL_COUNTS, DAY
+from constants import PARTS_DIR, INPUT_DIR, INTERVAL, INTERVAL_COUNTS, DAY
 
 
 class RecurrentDataset(Dataset):
@@ -134,6 +134,10 @@ class RecurrentDataset(Dataset):
 class ArrivalDataset(RecurrentDataset):
     def __init__(self, part, name):
         super(ArrivalDataset, self).__init__(part, name)
+
+        # load lstg features and convert to to numpy
+        self.d['x'] = load(PARTS_DIR + '{}/x_lstg.gz'.format(part))
+        self.d['x'] = {k: v.numpy() for k, v in self.d['x'].items()}
 
     def _create_y(self, idx, periods):
         # if at least one arrival is observed

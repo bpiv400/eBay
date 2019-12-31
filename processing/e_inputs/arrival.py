@@ -16,10 +16,10 @@ def get_periods(lstg_start, lstg_end):
 
     # error checking
     assert periods.max() < INTERVAL_COUNTS['arrival']
+    assert np.all(periods.index == lstg_start.index)
 
-    # sorted number of turns
+    # minimum number of periods is 1
     periods += 1
-    periods.sort_values(ascending=False, inplace=True)
 
     return periods
 
@@ -93,18 +93,11 @@ def process_inputs(part):
     thread_start = load_file('clock').xs(1, level='index')
     y = get_y(lstg_start, thread_start, periods)
 
-    # initialize dictionary of input features
-    x = load_file('x_lstg')
-    x = {k: v.reindex(index=periods.index) for k, v in x.items()}
-
-    # index of first x_clock for each y
-    seconds = lstg_start.reindex(index=periods.index)
-
     # time features
     tf = get_tf(lstg_start, load_file('tf_arrival'), periods)
 
-    return {'y': y, 'periods': periods, 'x': x, 
-            'seconds': seconds, 'tf': tf}
+    return {'y': y, 'periods': periods,
+            'seconds': lstg_start, 'tf': tf}
 
 
 if __name__ == '__main__':
