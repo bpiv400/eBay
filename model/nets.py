@@ -1,7 +1,6 @@
-from copy import deepcopy
 import torch, torch.nn as nn
 from collections import OrderedDict
-from model.model_consts import *
+from model.model_consts import HIDDEN, LAYERS_EMBEDDING, LAYERS_FULL
 from constants import *
 
 

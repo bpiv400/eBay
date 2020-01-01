@@ -34,10 +34,10 @@ PARTITIONS = ['train_models', 'train_rl', 'test_rl', 'test']
 MAX_DAYS = 31
 
 # temporal constants
-MONTH = MAX_DAYS * 24 * 3600
-DAY = 24 * 3600
 HOUR = 3600
-EXPIRATION = 48 * 60 * 60
+DAY = 24 * HOUR
+MONTH = MAX_DAYS * DAY
+EXPIRATION = 2 * DAY
 
 # maximal delay times
 MAX_DELAY = {
