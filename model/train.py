@@ -3,9 +3,8 @@ import numpy as np
 import torch, torch.optim as optim
 from compress_pickle import load, dump
 from model.Model import Model
-from model.FeedForwardDataset import FeedForwardDataset
-from model.RecurrentDataset import RecurrentDataset
-from model.consts import *
+from model.model_utils import get_dataset
+from model.model_consts import *
 from utils import input_partition
 from constants import *
 
@@ -74,7 +73,7 @@ if __name__ == '__main__':
     print(model.net)
 
     # load datasets
-    dataset = RecurrentDataset if 'x_time' in sizes else FeedForwardDataset
+    dataset = get_dataset(name)
     print('Loading training data')
     train = dataset('train_models', name)
     print('Loading validation data')
@@ -83,7 +82,7 @@ if __name__ == '__main__':
     # experiment number
     expid = 0
     while True:
-        if os.path.isdir('{}{}/{}'.format(LOG_DIR, expid)):
+        if os.path.isdir(LOG_DIR + '{}/{}'.format(name, expid)):
             expid += 1
         else:
             break

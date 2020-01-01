@@ -67,7 +67,7 @@ class RecurrentDataset(Dataset):
         y = self._create_y(idx, periods)
 
         # indices of timestamps
-        seconds = self.d['seconds'][idx] + self.counter
+        seconds = self.d['seconds'][idx] + self.counter[:periods]
 
         # clock features
         date_feats = self.date_feats[seconds // DAY]
@@ -84,7 +84,7 @@ class RecurrentDataset(Dataset):
 
         # time feats: first clock feats, then time-varying feats
         x_time = np.concatenate(
-            (clock_feats, x_tf, self.duration), axis=1)
+            (clock_feats, x_tf, self.duration[:periods]), axis=1)
 
         # for delay models, add (normalized) periods remaining
         if 'remaining' in self.d:
@@ -109,7 +109,7 @@ class RecurrentDataset(Dataset):
         # sorts the batch list in decreasing order of periods
         for b in batch:
             y.append(torch.from_numpy(b[0]))
-            periods.append(torch.from_numpy(b[1]))
+            periods.append(torch.as_tensor(b[1]))
             for k, v in b[2].items():
                 if k in x:
                     x[k].append(torch.from_numpy(v))
@@ -137,7 +137,8 @@ class ArrivalDataset(RecurrentDataset):
 
         # load lstg features and convert to to numpy
         self.d['x'] = load(PARTS_DIR + '{}/x_lstg.gz'.format(part))
-        self.d['x'] = {k: v.numpy() for k, v in self.d['x'].items()}
+        self.d['x'] = {k: v.to_numpy(dtype='float32') \
+            for k, v in self.d['x'].items()}
 
     def _create_y(self, idx, periods):
         # if at least one arrival is observed
