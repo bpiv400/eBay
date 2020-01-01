@@ -88,7 +88,7 @@ class RecurrentDataset(Dataset):
 
         # for delay models, add (normalized) periods remaining
         if 'remaining' in self.d:
-            remaining = self.d['remaining'][idx] - self.duration
+            remaining = self.d['remaining'][idx] - self.duration[:periods]
             x_time = np.concatenate((x_time, remaining), axis=1)
 
         return y, periods, x, x_time

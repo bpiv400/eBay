@@ -5,7 +5,6 @@ from compress_pickle import load, dump
 from model.Model import Model
 from model.model_utils import get_dataset
 from model.model_consts import *
-from utils import input_partition
 from constants import *
 
 
