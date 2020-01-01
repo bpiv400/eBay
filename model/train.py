@@ -64,7 +64,7 @@ if __name__ == '__main__':
     name = parser.parse_args().name
 
     # load model sizes
-    sizes = load('{}/inputs/sizes/{}.pkl'.format(PREFIX, name))
+    sizes = load(INPUT_DIR + 'sizes/{}.pkl'.format(name))
     print('Parameters: {}'.format(sizes))
 
     # initialize model

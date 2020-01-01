@@ -3,4 +3,4 @@
 #$ -o logs/train/
 #$ -j y
 
-python repo/models/train.py --name delay_byr
+python repo/model/train.py --name delay_byr

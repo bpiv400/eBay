@@ -3,4 +3,4 @@
 #$ -o logs/train/
 #$ -j y
 
-python repo/models/train.py --name msg_slr
+python repo/model/train.py --name msg_slr
