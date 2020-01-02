@@ -206,10 +206,7 @@ def get_featnames(d, name):
             CLOCK_FEATS + TIME_FEATS + [DURATION]
 
         # check that time feats match names
-        for v in d['tf'].values():
-            tfnames = list(v.columns)
-            break
-        assert tfnames == TIME_FEATS
+        assert list(d['tf'].columns) == TIME_FEATS
 
         # for delay models
         if 'remaining' in d:
@@ -268,7 +265,7 @@ def convert_to_numpy(d):
 
     # convert components to numpy directly
     for k in d.keys():
-        if not isinstance(d[k], dict):
+        if not isinstance(d[k], dict) and k != 'periods':
             d[k] = d[k].to_numpy()
 
     return d
@@ -281,7 +278,7 @@ def save_files(d, part, name):
         featnames = get_featnames(d, name)
         sizes = get_sizes(d, name)
 
-        if name == 'arrival':
+        if 'periods' in d:
             # load listing features
             x = load(PARTS_DIR + '{}/x_lstg.gz'.format(part))
 
@@ -300,7 +297,8 @@ def save_files(d, part, name):
         dump(sizes, INPUT_DIR + 'sizes/{}.pkl'.format(name))
 
     # create dictionary of numpy arrays
-    d = convert_to_numpy(d)
+    if 'periods' not in d:
+        d = convert_to_numpy(d)
 
     # save as dataset
-    dump(d, INPUT_DIR + '{}/{}.gz'.format(part, name))
+    dump(d, INPUT_DIR + '{}/{}.pkl'.format(part, name))

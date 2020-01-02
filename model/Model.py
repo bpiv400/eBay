@@ -1,4 +1,5 @@
 import torch, torch.nn as nn
+from datetime import datetime as dt
 from torch.distributions.negative_binomial import NegativeBinomial as nb
 from model.nets import FeedForward, LSTM
 from model.Sample import get_batches
@@ -7,11 +8,13 @@ from constants import *
 
 
 class Model:
-    def __init__(self, name, sizes, dropout=False, device='cuda'):
+    def __init__(self, name, sizes, \
+                 batchnorm=True, dropout=False, device='cuda'):
         '''
         Creates a neural net and manages training and validation.
         :param name: string name of model.
         :param sizes: dictionary of data sizes.
+        :param batchnorm: True if using BatchNorm.
         :param dropout: True if using dropout.
         :param device: either 'cuda' or 'cpu'
         '''
@@ -34,9 +37,11 @@ class Model:
 
         # neural net
         if self.isRecurrent:
-            self.net = LSTM(sizes, dropout=dropout).to(device)
+            self.net = LSTM(sizes, 
+                batchnorm=batchnorm, dropout=dropout).to(device)
         else:
-            self.net = FeedForward(sizes, dropout=dropout).to(device)
+            self.net = FeedForward(sizes, 
+                batchnorm=batchnorm, dropout=dropout).to(device)
 
 
     def set_gamma(self, gamma):
@@ -76,9 +81,17 @@ class Model:
 
         # loop over batches, calculate log-likelihood
         loss = 0.0
+        gpu_time = 0.0
+        t0 = dt.now()
         for b in batches:
+            t1 = dt.now()
             self._move_to_device(b)
             loss += self._run_batch(b, optimizer)
+            gpu_time += (dt.now() - t1).total_seconds()
+
+        total_time = (dt.now() - t0).total_seconds()
+        print('\tGPU: {} seconds'.format(gpu_time))
+        print('\tTotal: {} seconds'.format(total_time))
 
         return loss
 

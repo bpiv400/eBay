@@ -3,7 +3,8 @@ import torch, torch.optim as optim
 import numpy as np, pandas as pd
 from datetime import datetime as dt
 from compress_pickle import load
-from model.model_utils import get_dataset
+from model.FeedForwardDataset import FeedForwardDataset
+from model.RecurrentDataset import RecurrentDataset
 from model.Model import Model
 from model.model_consts import *
 from constants import *
@@ -21,7 +22,7 @@ if __name__ == '__main__':
     print(sizes)
 
     # initialize neural net
-    model = Model(name, sizes)
+    model = Model(name, sizes, batchnorm=False, dropout=False)
     print(model.net)
     print(model.loss)
 
@@ -30,8 +31,8 @@ if __name__ == '__main__':
     print(optimizer)
 
     # load data
-    dataset = get_dataset(name)
-    train = dataset('test_rl', name)
+    dataset = RecurrentDataset if 'x_time' in sizes else FeedForwardDataset
+    train = dataset('small', name)
 
     # training
     for epoch in range(10):

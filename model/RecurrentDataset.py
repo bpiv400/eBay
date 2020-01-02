@@ -13,18 +13,21 @@ class RecurrentDataset(Dataset):
         :param part: string partition name (e.g., train_models).
         :param name: string model name.
         '''
-        self.d = load(INPUT_DIR + '{}/{}.gz'.format(part, name))
+        self.d = load(INPUT_DIR + '{}/{}.pkl'.format(part, name))
+
+        # listing features
+        self.x = load(PARTS_DIR + '{}/x_lstg.gz'.format(part))
 
         # save clock feats lookup array to self
         self.date_feats = load(INPUT_DIR + 'date_feats.pkl')
 
         # groups for sampling
-        self.groups = [np.nonzero(self.d['periods'] == n)[0] \
-            for n in np.unique(self.d['periods'])]
+        self.groups = [np.nonzero(self.d['periods'].to_numpy() == n)[0] \
+            for n in self.d['periods'].unique()]
 
         # number of examples and labels
-        self.N_examples = np.shape(self.d['periods'])[0]
-        self.N_labels = np.sum(self.d['periods'])
+        self.N_examples = len(self.d['periods'])
+        self.N_labels = self.d['periods'].sum()
 
         # number of time steps
         role = name.split('_')[-1]
@@ -38,9 +41,7 @@ class RecurrentDataset(Dataset):
             np.array(range(T), dtype='float32') / T, axis=1)
 
         # empty time feats
-        for val in self.d['tf'].values():
-            N_tfeats = len(val.columns)
-            break
+        N_tfeats = len(self.d['tf'].columns)
         self.tf0 = np.zeros((T, N_tfeats), dtype='float32')
 
         # outcome of zeros
@@ -57,17 +58,25 @@ class RecurrentDataset(Dataset):
         :param idx: index of example.
         :return: tuple of data components at index idx.
         '''
+        # convert index to listing(-thread-index)
+        idx = self.d['periods'].index[idx]
+
         # periods is indexed directly
-        periods = self.d['periods'][idx]
+        periods = self.d['periods'].xs(idx)
 
         # components of x are indexed directly
-        x = {k: v[idx, :] for k, v in self.d['x'].items()}
+        x = {k: v.xs(idx).to_numpy(dtype='float32') \
+             for k, v in self.x.items()}
 
         # y gets reindexed
-        y = self._create_y(idx, periods)
+        try:
+            y = self.d['y'].xs(idx).reindex(
+                index=range(periods), fill_value=0).to_numpy()
+        except:
+            y = self.y0.copy()[:periods]
 
         # indices of timestamps
-        seconds = self.d['seconds'][idx] + self.counter[:periods]
+        seconds = self.d['seconds'].xs(idx) + self.counter[:periods]
 
         # clock features
         date_feats = self.date_feats[seconds // DAY]
@@ -76,10 +85,10 @@ class RecurrentDataset(Dataset):
             (date_feats, second_of_day), axis=1)
 
         # fill in missing time feats with zeros
-        if idx in self.d['tf']:
-            x_tf = self.d['tf'][idx].reindex(
+        try:
+            x_tf = self.d['tf'].xs(idx).reindex(
                 index=range(periods), fill_value=0).to_numpy()
-        else:
+        except:
             x_tf = self.tf0.copy()[:periods, :]
 
         # time feats: first clock feats, then time-varying feats
@@ -88,7 +97,7 @@ class RecurrentDataset(Dataset):
 
         # for delay models, add (normalized) periods remaining
         if 'remaining' in self.d:
-            remaining = self.d['remaining'][idx] - self.duration[:periods]
+            remaining = self.d['remaining'].xs(idx) - self.duration[:periods]
             x_time = np.concatenate((x_time, remaining), axis=1)
 
         return y, periods, x, x_time
@@ -129,37 +138,3 @@ class RecurrentDataset(Dataset):
 
         # output is dictionary of tensors
         return {'y': y, 'x': x, 'x_time': x_time}
-
-
-class ArrivalDataset(RecurrentDataset):
-    def __init__(self, part, name):
-        super(ArrivalDataset, self).__init__(part, name)
-
-        # load lstg features and convert to to numpy
-        self.d['x'] = load(PARTS_DIR + '{}/x_lstg.gz'.format(part))
-        self.d['x'] = {k: v.to_numpy(dtype='float32') \
-            for k, v in self.d['x'].items()}
-
-    def _create_y(self, idx, periods):
-        # if at least one arrival is observed
-        if idx in self.d['y']:
-            return self.d['y'][idx].reindex(
-                index=range(periods), fill_value=0).to_numpy()
-        
-        # no arrivals
-        return self.y0.copy()[:periods]
-
-
-class DelayDataset(RecurrentDataset):
-    def __init__(self, part, name):
-        super(ArrivalDataset, self).__init__(part, name)
-
-    def _create_y(self, idx, periods):
-        # initialize periods-length aarry of zeros
-        y = self.y0.copy()[:periods]
-
-        # offer arrives in final period
-        if self.d['y'][idx]:
-            y[periods-1] = 1
-
-        return y

@@ -21,7 +21,7 @@ SHARES = {'train_models': 0.6, 'train_rl': 0.16, 'test_rl': 0.04}
 MIN_COUNT = 1000
 
 # number of observations in small dataset
-N_SMALL = 100000
+N_SMALL = 20000
 
 # organizing hierarchy
 LEVELS = ['slr', 'cat', 'cndtn', 'lstg']

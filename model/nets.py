@@ -28,21 +28,29 @@ class VariationalDropout(nn.Module):
 
 
 class Layer(nn.Module):
-    def __init__(self, N_in, N_out, dropout=True):
+    def __init__(self, N_in, N_out, batchnorm=True, dropout=False):
         '''
         N_in: scalar number of input weights
         N_out: scalar number of output weights
         '''
         super(Layer, self).__init__()
 
+        # activation function
+        f = nn.ReLU(inplace=True)
+
         # one layer is a weight matrix, batch normalization and activation
-        if dropout:
+        if batchnorm and dropout:
             self.layer = nn.Sequential(nn.Linear(N_in, N_out), 
-                nn.BatchNorm1d(N_out, affine=False), nn.ReLU(inplace=True), 
+                nn.BatchNorm1d(N_out, affine=False), f, 
                 VariationalDropout(N_out))
-        else:
+        elif batchnorm and not dropout:
             self.layer = nn.Sequential(nn.Linear(N_in, N_out), 
-                nn.BatchNorm1d(N_out, affine=False), nn.ReLU(inplace=True))
+                nn.BatchNorm1d(N_out, affine=False), f)
+        elif not batchnorm and dropout:
+            self.layer = nn.Sequential(nn.Linear(N_in, N_out), 
+                f, VariationalDropout(N_out))
+        else:
+            self.layer = nn.Sequential(nn.Linear(N_in, N_out), f)
 
     def forward(self, x):
         '''
@@ -54,7 +62,7 @@ class Layer(nn.Module):
 
 
 class Stack(nn.Module):
-    def __init__(self, N, layers=1, dropout=True):
+    def __init__(self, N, layers=1, batchnorm=True, dropout=False):
         '''
         N: scalar number of input and output weights
         layers: scalar number of layers to stack
@@ -63,7 +71,8 @@ class Stack(nn.Module):
 
         # sequence of modules
         self.stack = nn.ModuleList(
-            [Layer(N, N, dropout=dropout) for _ in range(layers)])
+            [Layer(N, N, batchnorm=batchnorm, dropout=dropout) \
+                for _ in range(layers)])
         
     def forward(self, x):
         '''
@@ -75,7 +84,7 @@ class Stack(nn.Module):
 
 
 class Embedding(nn.Module):
-    def __init__(self, counts):
+    def __init__(self, counts, batchnorm=True):
         '''
         sizes: dictionary of scalar input sizes; sizes['x'] is an OrderedDict
         '''
@@ -84,11 +93,13 @@ class Embedding(nn.Module):
         # first stack of layers: N to N
         self.layer1 = nn.ModuleDict()
         for k, v in counts.items():
-            self.layer1[k] = Stack(v, layers=LAYERS_EMBEDDING, dropout=False)
+            self.layer1[k] = Stack(v, layers=LAYERS_EMBEDDING, 
+                batchnorm=batchnorm, dropout=False)
 
         # second layer: concatenation
         N = sum(counts.values())
-        self.layer2 = Stack(N, layers=LAYERS_EMBEDDING, dropout=False)
+        self.layer2 = Stack(N, layers=LAYERS_EMBEDDING, 
+             batchnorm=batchnorm, dropout=False)
 
     def forward(self, x):
         '''
@@ -107,7 +118,7 @@ class Embedding(nn.Module):
 
 
 class FullyConnected(nn.Module):
-    def __init__(self, N_in, N_out, dropout):
+    def __init__(self, N_in, N_out, batchnorm, dropout):
         '''
         sizes: dictionary of scalar input sizes; sizes['x'] is an OrderedDict
         N_in: scalar number of input weights
@@ -115,13 +126,16 @@ class FullyConnected(nn.Module):
         '''
         super(FullyConnected, self).__init__()
         # intermediate layer
-        self.seq = nn.ModuleList([Layer(N_in, HIDDEN, dropout=dropout)])
+        self.seq = nn.ModuleList([Layer(N_in, HIDDEN, 
+            batchnorm=batchnorm, dropout=dropout)])
 
         # fully connected network
-        self.seq.append(Stack(HIDDEN, layers=LAYERS_FULL-2, dropout=dropout))
+        self.seq.append(Stack(HIDDEN, layers=LAYERS_FULL-2, 
+            batchnorm=batchnorm, dropout=dropout))
 
         # last layer has no dropout
-        self.seq.append(Stack(HIDDEN, dropout=False))
+        self.seq.append(
+            Stack(HIDDEN, batchnorm=batchnorm, dropout=False))
 
         # output layer
         self.seq.append(nn.Linear(HIDDEN, N_out))
@@ -136,7 +150,8 @@ class FullyConnected(nn.Module):
 
 
 class FeedForward(nn.Module):
-    def __init__(self, sizes, dropout=True, toRNN=False):
+    def __init__(self, sizes, 
+                 batchnorm=True, dropout=False, toRNN=False):
         '''
         sizes: dictionary of scalar input sizes; sizes['x'] is an OrderedDict
         dropout: True if using dropout for fully-connected layers
@@ -156,14 +171,14 @@ class FeedForward(nn.Module):
         d, total = OrderedDict(), 0
         for name, group in groups.items():
             counts = {k: v for k, v in sizes['x'].items() if k in group}
-            d[name] = Embedding(counts)
+            d[name] = Embedding(counts, batchnorm=batchnorm)
             total += sum(counts.values())
         self.nn0 = nn.ModuleDict(d)
 
         # fully connected
         N_in = sum(counts.values())
         self.nn1 = FullyConnected(total, 
-            HIDDEN if toRNN else sizes['out'], dropout)
+            HIDDEN if toRNN else sizes['out'], batchnorm, dropout)
 
     def forward(self, x):
         '''
@@ -176,7 +191,7 @@ class FeedForward(nn.Module):
 
 
 class LSTM(nn.Module):
-    def __init__(self, sizes, dropout=True):
+    def __init__(self, sizes, batchnorm=True, dropout=False):
         '''
         :param sizes: dictionary of scalar input sizes; sizes['x'] is an OrderedDict
         :param dropout: True if using dropout for fully-connected layers
@@ -184,8 +199,10 @@ class LSTM(nn.Module):
         super(LSTM, self).__init__()
 
         # initial hidden nodes
-        self.h0 = FeedForward(sizes, dropout, toRNN=True)
-        self.c0 = FeedForward(sizes, dropout, toRNN=True)
+        self.h0 = FeedForward(sizes, 
+            batchnorm=batchnorm, dropout=dropout, toRNN=True)
+        self.c0 = FeedForward(sizes, 
+            batchnorm=batchnorm, dropout=dropout, toRNN=True)
 
         # rnn layer
         self.rnn = nn.LSTM(input_size=sizes['x_time'],

@@ -7,6 +7,8 @@ from processing.processing_consts import *
 
 
 def get_periods(lstg_start, lstg_end):
+    print('Counting periods')
+
     # seconds in listing
     end = pd.to_timedelta(lstg_end - lstg_start, 
         unit='s').dt.total_seconds().astype('int64')
@@ -25,6 +27,8 @@ def get_periods(lstg_start, lstg_end):
 
 
 def get_y(lstg_start, thread_start, periods):
+    print('Counting arrivals')
+
     # time_stamps
     diff = pd.to_timedelta(thread_start - lstg_start, 
         unit='s').dt.total_seconds().astype('int64')
@@ -36,20 +40,15 @@ def get_y(lstg_start, thread_start, periods):
     assert diff_period.max() < INTERVAL_COUNTS['arrival']
 
     # count of arrivals by interval
-    arrivals = diff_period.rename('period').to_frame().assign(count=1).groupby(
+    y = diff_period.rename('period').to_frame().assign(count=1).groupby(
         ['lstg', 'period']).sum().squeeze().astype('int8')
-    lstgs = arrivals.index.get_level_values(level='lstg').unique()
-    
-    # create output dictionary
-    y = {}
-    for i, lstg in enumerate(periods.index):
-        if lstg in lstgs:
-            y[i] = arrivals.xs(lstg, level='lstg')
 
     return y
 
 
 def get_tf(lstg_start, tf, periods):
+    print('Collapsing time features')
+
     # convert clock into period
     tf = tf.reset_index('clock')
     tf['period'] = (tf.clock - lstg_start.reindex(index=tf.index)) 
@@ -67,15 +66,8 @@ def get_tf(lstg_start, tf, periods):
 
     # collapse features by period
     tf = tf.groupby(['lstg', 'period']).sum()
-    lstgs = tf.index.get_level_values(level='lstg').unique()
 
-    # return output dictionary
-    tf_dict = {}
-    for i, lstg in enumerate(periods.index):
-        if lstg in lstgs:
-            tf_dict[i] = tf.xs(lstg, level='lstg')
-
-    return tf_dict
+    return tf
 
 
 # loads data and calls helper functions to construct train inputs
@@ -109,5 +101,6 @@ if __name__ == '__main__':
     d = process_inputs(part)
 
     # save various output files
+    print('Saving files')
     save_files(d, part, 'arrival')
     
