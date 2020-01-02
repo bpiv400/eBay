@@ -64,42 +64,30 @@ def get_periods(delay, role):
     return periods.sort_values(ascending=False)
 
 
-def get_delay(clock, role):
-	delay = pd.DataFrame(index=clock.index)
-	for i in range(2, 8):
-		delay[i] = clock[i] - clock[i-1]
-		delay.loc[delay[i] == 0, i] = np.nan  # remove auto responses
+# loads data and calls helper functions to construct train inputs
+def process_inputs(part, role):
+	# function to load file
+	load_file = lambda x: load('{}{}/{}.gz'.format(PARTS_DIR, part, x))
 
-	# stack
-	delay = delay.rename_axis('index', axis=1).stack().astype('int64')
+	# delay in seconds
+	delay = np.round(load_file('x_offer').days * DAY).astype('int64')
 
-	# subset bv role
-	delay = delay[delay.index.isin(IDX[role], level='index')]
+	# subset to relevant turn indices
+	delay = delay[(delay > 0) & delay.index.isin(IDX[role], level='index')]
 
 	# error checking
 	assert delay.max() <= MAX_DELAY[role]
 	if role == 'byr':
 		assert delay.xs(7, level='index').max() <= MAX_DELAY['slr']
 
-	return delay
-
-
-# loads data and calls helper functions to construct train inputs
-def process_inputs(part, role):
-	# function to load file
-	load_file = lambda x: load('{}{}/{}.gz'.format(PARTS_DIR, part, x))
-
-	# load dataframes
-	lstg_start = load_file('lookup').start_time
-
-	# delay and censored
-	events = load(CLEAN_DIR + 'offers.pkl')[['clock', 'censored']].reindex(
-		index=lstg_start.index, level='lstg')
-	delay = get_delay(events.clock.unstack(), role)
-	censored = events.censored.reindex(index=delay.index)
-
 	# number of periods
 	periods = get_periods(delay, role)
+
+	# censored
+	censored = load(CLEAN_DIR + 'offers.pkl').censored.reindex(
+		index=delay.index)
+
+	
 
 	# outcome
 	y = ~censored & (delay < MAX_DELAY[role])
@@ -113,6 +101,7 @@ def process_inputs(part, role):
 		['lstg', 'thread']).shift().reindex(index=periods.index).astype('int64')
 
 	# normalized periods remaining at start of delay period
+	lstg_start = load_file('lookup').start_time
 	diff = seconds - lstg_start.reindex(index=periods.index)
 	remaining = MAX_DAYS * DAY - diff
 	remaining.loc[idx.isin([2, 4, 6, 7], level='index')] /= MAX_DELAY['slr']

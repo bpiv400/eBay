@@ -81,17 +81,9 @@ class Model:
 
         # loop over batches, calculate log-likelihood
         loss = 0.0
-        gpu_time = 0.0
-        t0 = dt.now()
         for b in batches:
-            t1 = dt.now()
             self._move_to_device(b)
             loss += self._run_batch(b, optimizer)
-            gpu_time += (dt.now() - t1).total_seconds()
-
-        total_time = (dt.now() - t0).total_seconds()
-        print('\tGPU: {} seconds'.format(gpu_time))
-        print('\tTotal: {} seconds'.format(total_time))
 
         return loss
 

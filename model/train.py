@@ -1,6 +1,7 @@
 import sys, os, argparse, math
 import numpy as np
 import torch, torch.optim as optim
+from torch.utils.tensorboard import SummaryWriter
 from compress_pickle import load, dump
 from model.Model import Model
 from model.FeedForwardDataset import FeedForwardDataset
