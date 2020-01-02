@@ -10,14 +10,11 @@ from model.model_consts import *
 from constants import *
 
 
-def training_loop(model, train, test, expid):
+def training_loop(model, train, test, writer, model_path):
     # initialize optimizer
     loglr = LOGLR0
     optimizer = optim.Adam(model.net.parameters(), lr=math.pow(10, loglr))
     print(optimizer)
-
-    # initialize tensorboard writer
-    writer = SummaryWriter('{}{}/{}'.format(LOG_DIR, expid))
 
     epoch, last = 0, np.inf
     while True:
@@ -40,8 +37,7 @@ def training_loop(model, train, test, expid):
             writer.add_scalar(k, v, epoch)
 
         # save model
-        torch.save(model.net.state_dict(), 
-            '{}/{}.net'.format(model_dir, expid))
+        torch.save(model.net.state_dict(), model_path)
 
         # reduce learning rate until convergence
         if output['loss'] > FTOL * last:
@@ -88,5 +84,11 @@ if __name__ == '__main__':
         else:
             break
 
+    # initialize tensorboard writer
+    writer = SummaryWriter(LOG_DIR + '{}/{}'.format(name, expid))
+
+    # model path
+    model_path = MODEL_DIR + '{}/{}.net'.format(name, expid)
+
     # training loop
-    training_loop(model, train, test, expid)
+    training_loop(model, train, test, writer, model_path)

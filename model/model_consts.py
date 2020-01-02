@@ -2,8 +2,8 @@ import multiprocessing as mp
 from constants import OUTPUT_DIR
 
 # directories
-LOG_DIR = '%slogs/' % OUTPUT_DIR
-EXPS_DIR = '%sexps/' % OUTPUT_DIR
+LOG_DIR = OUTPUT_DIR + 'logs/'
+MODEL_DIR = OUTPUT_DIR + 'models/'
 
 # optimization parameters
 NUM_WORKERS = mp.cpu_count()

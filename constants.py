@@ -34,7 +34,8 @@ PARTITIONS = ['train_models', 'train_rl', 'test_rl', 'test']
 MAX_DAYS = 31
 
 # temporal constants
-HOUR = 3600
+MINUTE = 60
+HOUR = 60 * MINUTE
 DAY = 24 * HOUR
 MONTH = MAX_DAYS * DAY
 EXPIRATION = 2 * DAY
@@ -48,9 +49,9 @@ MAX_DELAY = {
 
 # intervals for checking offer arrivals
 INTERVAL = {
-	ARRIVAL_PREFIX: 60 * 60,
-	SLR_PREFIX: 15 * 60,
-	BYR_PREFIX: 90 * 60
+	ARRIVAL_PREFIX: HOUR,
+	SLR_PREFIX: 5 * MINUTE,
+	BYR_PREFIX: 30 * MINUTE
 }
 
 INTERVAL_COUNTS = {
