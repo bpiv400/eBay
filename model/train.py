@@ -3,7 +3,8 @@ import numpy as np
 import torch, torch.optim as optim
 from compress_pickle import load, dump
 from model.Model import Model
-from model.model_utils import get_dataset
+from model.FeedForwardDataset import FeedForwardDataset
+from model.RecurrentDataset import RecurrentDataset
 from model.model_consts import *
 from constants import *
 
@@ -68,11 +69,11 @@ if __name__ == '__main__':
     print('Parameters: {}'.format(sizes))
 
     # initialize model
-    model = Model(name, sizes, dropout=False)
+    model = Model(name, sizes, batchnorm=True, dropout=False)
     print(model.net)
 
     # load datasets
-    dataset = get_dataset(name)
+    dataset = RecurrentDataset if 'x_time' in sizes else FeedForwardDataset
     print('Loading training data')
     train = dataset('train_models', name)
     print('Loading validation data')
