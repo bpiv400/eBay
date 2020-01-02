@@ -6,50 +6,16 @@ from processing.processing_utils import get_x_offer, save_files
 from processing.processing_consts import *
 
 
-def get_tf(tf, start_time, role):
-    # subset by role
-    tf = tf[tf.index.isin(IDX[role], level='index')]
-    # add period to tf_arrival
-    tf = tf.reset_index('clock')
-    tf = tf.join(start_time)
-    tf['period'] = (tf.clock - tf.start_time) // INTERVAL[role]
-    tf = tf.drop(['clock', 'start_time'], axis=1)
-    # increment period by 1; time feats are up to t-1
-    tf['period'] += 1
-    # drop periods beyond censoring threshold
-    tf = tf[tf.period < INTERVAL_COUNTS[role]]
-    if role == 'byr':
-        tf = tf[~tf.index.isin([7], level='index') | \
-                (tf.period < INTERVAL_COUNTS['byr_7'])]
-    # sum count features by period and return
-    return tf.groupby(['lstg', 'thread', 'index', 'period']).sum()
+def get_delay(x_offer):
+	# convert to seconds
+	delay = np.round(x_offer.days * DAY).astype('int64')
 
-
-def get_y(x_offer, periods, role):
-	# drop censored observations and expirations
-	y = periods[~x_offer.exp]
-	
-
-	# interval of offer arrivals and censoring
-	arrival = delay[~censored & (delay < MAX_DELAY[role])] // INTERVAL[role]
-	cens = (s[~exp & c] / INTERVAL[role]).astype('uint16').rename('cens')
-
-
-	# initialize output dataframe with arrivals
-	df = arrival.to_frame().assign(count=1).set_index(
-		'arrival', append=True).squeeze().unstack(
-		fill_value=0).reindex(index=s.index, fill_value=0)
-	# vector of censoring thresholds
-	v = (arrival+1).append(cens, verify_integrity=True).reindex(
-		s.index, fill_value=INTERVAL_COUNTS[role])
+	# error checking
+	assert delay.max() <= MAX_DELAY[role]
 	if role == 'byr':
-		mask = v.index.isin([7], level='index') & (v > INTERVAL_COUNTS['byr_7'])
-		v.loc[mask] = INTERVAL_COUNTS['byr_7']
-	# replace censored observations with -1
-	for i in range(INTERVAL_COUNTS[role]):
-		df[i] -= (i >= v).astype('int8')
-	# sort by turns and return
-	return sort_by_turns(df)
+		assert delay.xs(7, level='index').max() <= MAX_DELAY['slr']
+
+	return delay
 
 
 def get_periods(delay, role):
@@ -66,16 +32,26 @@ def get_periods(delay, role):
     return periods
 
 
-def get_delay(x_offer):
-	# convert to seconds
-	delay = np.round(x_offer.days * DAY).astype('int64')
+def get_tf(tf, seconds, role):
+    # subset by role
+    tf = tf[tf.index.isin(IDX[role], level='index')]
 
-	# error checking
-	assert delay.max() <= MAX_DELAY[role]
-	if role == 'byr':
-		assert delay.xs(7, level='index').max() <= MAX_DELAY['slr']
+    # add period to tf_arrival
+    tf = tf.reset_index('clock')
+    tf = tf.join(seconds)
+    tf['period'] = (tf.clock - tf.seconds) // INTERVAL[role]
+    tf = tf.drop(['clock', 'seconds'], axis=1)
 
-	return delay
+    # increment period by 1; time feats are up to t-1
+    tf['period'] += 1
+
+    # drop periods beyond censoring threshold
+    tf = tf[tf.period < INTERVAL_COUNTS[role]]
+    if role == 'byr':
+        tf = tf[~tf.index.isin([7], level='index') | \
+                (tf.period < INTERVAL_COUNTS['byr_7'])]
+    # sum count features by period and return
+    return tf.groupby(['lstg', 'thread', 'index', 'period']).sum()
 
 
 # loads data and calls helper functions to construct train inputs
@@ -100,17 +76,13 @@ def process_inputs(part, role):
 	idx = periods.index
 
 	# outcome
-	y = get_y(x_offer, periods, role)
-
-
-
-	y = periods[~censored & (delay < MAX_DELAY[role])].to_frame().assign(
+	y = periods[~x_offer.exp].to_frame().assign(
 		offer=1).set_index('periods', append=True).squeeze()
 
 	# second since START at beginning of delay period
 	clock = load_file('clock')
 	seconds = clock.groupby(['lstg', 'thread']).shift().reindex(
-		index=idx).astype('int64')
+		index=idx).astype('int64').rename('seconds')
 
 	# normalized periods remaining at start of delay period
 	lstg_start = load_file('lookup').start_time

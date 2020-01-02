@@ -13,10 +13,12 @@ class RecurrentDataset(Dataset):
         :param part: string partition name (e.g., train_models).
         :param name: string model name.
         '''
-        self.d = load(INPUT_DIR + '{}/{}.pkl'.format(part, name))
-
         # listing features
         self.x = load(PARTS_DIR + '{}/x_lstg.gz'.format(part))
+        self.x = {k: v.astype('float32') for k, v in self.x.items()}
+
+        # other inputs
+        self.d = load(INPUT_DIR + '{}/{}.pkl'.format(part, name))
 
         # save clock feats lookup array to self
         self.date_feats = load(INPUT_DIR + 'date_feats.pkl')
@@ -48,10 +50,6 @@ class RecurrentDataset(Dataset):
         self.y0 = np.zeros((T, ), dtype='int8')
 
 
-    def _create_y(self, idx, periods=None):
-        raise NotImplementedError()
-
-
     def __getitem__(self, idx):
         '''
         Returns a tuple of data components for example.
@@ -65,8 +63,7 @@ class RecurrentDataset(Dataset):
         periods = self.d['periods'].xs(idx)
 
         # components of x are indexed directly
-        x = {k: v.xs(idx).to_numpy(dtype='float32') \
-             for k, v in self.x.items()}
+        x = {k: v.xs(idx).to_numpy() for k, v in self.x.items()}
 
         # y gets reindexed
         try:
