@@ -114,5 +114,5 @@ if __name__ == "__main__":
 
     # offer timestamps
     print('clock')
-    dump(events[['clock', 'censored']], path('clock'))
+    dump(events.clock, path('clock'))
  

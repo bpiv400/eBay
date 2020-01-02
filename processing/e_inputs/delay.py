@@ -25,7 +25,9 @@ def get_tf(tf, start_time, role):
     return tf.groupby(['lstg', 'thread', 'index', 'period']).sum()
 
 
-def get_y(delay, censored, periods, role):
+def get_y(x_offer, periods, role):
+	# drop censored observations and expirations
+	y = periods[~x_offer.exp]
 	
 
 	# interval of offer arrivals and censoring
@@ -52,7 +54,7 @@ def get_y(delay, censored, periods, role):
 
 def get_periods(delay, role):
     # convert to interval
-    periods = delay // INTERVAL[role]
+    periods = (delay // INTERVAL[role]).rename('periods')
 
     # error checking
     assert periods.max() <= INTERVAL_COUNTS[role]
@@ -61,7 +63,19 @@ def get_periods(delay, role):
     periods.loc[periods < INTERVAL_COUNTS[role]] += 1
 
     # sort and return
-    return periods.sort_values(ascending=False)
+    return periods
+
+
+def get_delay(x_offer):
+	# convert to seconds
+	delay = np.round(x_offer.days * DAY).astype('int64')
+
+	# error checking
+	assert delay.max() <= MAX_DELAY[role]
+	if role == 'byr':
+		assert delay.xs(7, level='index').max() <= MAX_DELAY['slr']
+
+	return delay
 
 
 # loads data and calls helper functions to construct train inputs
@@ -69,41 +83,39 @@ def process_inputs(part, role):
 	# function to load file
 	load_file = lambda x: load('{}{}/{}.gz'.format(PARTS_DIR, part, x))
 
+	# load features from offer dataframe
+	x_offer = load_file('x_offer')[['days', 'exp']]
+
+	# drop zero delays
+	x_offer = x_offer.loc[x_offer.days > 0]
+
+	# restrict to role
+	x_offer = x_offer.loc[x_offer.index.isin(IDX[role], level='index')]
+
 	# delay in seconds
-	delay = np.round(load_file('x_offer').days * DAY).astype('int64')
-
-	# subset to relevant turn indices
-	delay = delay[(delay > 0) & delay.index.isin(IDX[role], level='index')]
-
-	# error checking
-	assert delay.max() <= MAX_DELAY[role]
-	if role == 'byr':
-		assert delay.xs(7, level='index').max() <= MAX_DELAY['slr']
+	delay = get_delay(x_offer)
 
 	# number of periods
 	periods = get_periods(delay, role)
-
-	# censored
-	censored = load(CLEAN_DIR + 'offers.pkl').censored.reindex(
-		index=delay.index)
-
-	
+	idx = periods.index
 
 	# outcome
-	y = ~censored & (delay < MAX_DELAY[role])
+	y = get_y(x_offer, periods, role)
 
-	# initialize dictionary of input features
-    x = load_file('x_lstg')
-    x = {k: v.reindex(index=periods.index, level='lstg') for k, v in x.items()}
 
-	# second since START for each observation
-	seconds = events.clock.groupby(
-		['lstg', 'thread']).shift().reindex(index=periods.index).astype('int64')
+
+	y = periods[~censored & (delay < MAX_DELAY[role])].to_frame().assign(
+		offer=1).set_index('periods', append=True).squeeze()
+
+	# second since START at beginning of delay period
+	clock = load_file('clock')
+	seconds = clock.groupby(['lstg', 'thread']).shift().reindex(
+		index=idx).astype('int64')
 
 	# normalized periods remaining at start of delay period
 	lstg_start = load_file('lookup').start_time
-	diff = seconds - lstg_start.reindex(index=periods.index)
-	remaining = MAX_DAYS * DAY - diff
+	diff = seconds - lstg_start.reindex(index=idx, level='lstg')
+	remaining = MONTH - diff
 	remaining.loc[idx.isin([2, 4, 6, 7], level='index')] /= MAX_DELAY['slr']
 	remaining.loc[idx.isin([3, 5], level='index')] /= MAX_DELAY['byr']
 	remaining = np.minimum(remaining, 1)
