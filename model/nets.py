@@ -1,5 +1,6 @@
 import torch, torch.nn as nn
 from collections import OrderedDict
+from model.LSTM import LSTM
 from model.model_consts import HIDDEN, LAYERS_EMBEDDING, LAYERS_FULL
 from constants import *
 
@@ -190,7 +191,7 @@ class FeedForward(nn.Module):
         return self.nn1(torch.cat(l, dim=1))
 
 
-class LSTM(nn.Module):
+class Recurrent(nn.Module):
     def __init__(self, sizes, batchnorm=True, dropout=False):
         '''
         :param sizes: dictionary of scalar input sizes; sizes['x'] is an OrderedDict
@@ -205,9 +206,9 @@ class LSTM(nn.Module):
             batchnorm=batchnorm, dropout=dropout, toRNN=True)
 
         # rnn layer
-        self.rnn = nn.LSTM(input_size=sizes['x_time'],
-                           hidden_size=HIDDEN,
-                           batch_first=True)
+        self.rnn = LSTM(input_size=sizes['x_time'],
+                        hidden_size=HIDDEN,
+                        batch_first=True)
 
         # output layer
         self.output = nn.Linear(HIDDEN, sizes['out'])

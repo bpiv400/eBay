@@ -2,7 +2,8 @@ import sys, os, argparse
 from compress_pickle import load, dump
 import numpy as np, pandas as pd
 from constants import *
-from processing.processing_utils import get_x_offer, save_files, load_file
+from processing.processing_utils import get_x_offer, \
+	save_files, load_file, get_tf
 from processing.processing_consts import *
 
 
@@ -32,28 +33,6 @@ def get_periods(delay, role):
     return periods
 
 
-def get_tf(tf, delay_start, role):
-	# subset by role
-    tf = tf[tf.index.isin(IDX[role], level='index')]
-
-    # add period to tf_arrival
-    tf = tf.join(delay_start)
-    tf['period'] = (tf.clock - tf.delay_start) // INTERVAL[role]
-    tf = tf.drop(['clock', 'delay_start'], axis=1)
-
-    # increment period by 1; time feats are up to t-1
-    tf['period'] += 1
-
-    # drop periods beyond censoring threshold
-    tf = tf[tf.period < INTERVAL_COUNTS[role]]
-    if role == 'byr':
-		tf = tf[~tf.index.isin([7], level='index') | \
-		        (tf.period < INTERVAL_COUNTS['byr_7'])]
-
-    # sum count features by period and return
-    return tf.groupby(['lstg', 'thread', 'index', 'period']).sum()
-
-
 # loads data and calls helper functions to construct train inputs
 def process_inputs(part, role):
 	# load features from offer dataframe and restrict observations
@@ -81,7 +60,7 @@ def process_inputs(part, role):
 		index=idx).astype('int64').rename('delay_start')
 
 	# normalized periods remaining at start of delay period
-	lstg_start = load_file('lookup').start_time
+	lstg_start = load_file(part, 'lookup').start_time
 	diff = delay_start - lstg_start.reindex(index=idx, level='lstg')
 	remaining = MONTH - diff
 	remaining.loc[idx.isin([2, 4, 6, 7], level='index')] /= MAX_DELAY['slr']
@@ -89,7 +68,9 @@ def process_inputs(part, role):
 	remaining = np.minimum(remaining, 1)
 
 	# time features
-	tf = get_tf(load_file('tf_delay'), delay_start, role)
+	tf = load_file(part, 'tf_delay')
+    tf = tf[tf.index.isin(IDX[role], level='index')]
+	tf_delay = get_tf(tf, delay_start, role)
 
 	# dictionary of input components
 	return {'periods': periods, 'y': y, 'x': x, 

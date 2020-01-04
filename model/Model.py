@@ -1,7 +1,7 @@
 import torch, torch.nn as nn
 from datetime import datetime as dt
 from torch.distributions.negative_binomial import NegativeBinomial as nb
-from model.nets import FeedForward, LSTM
+from model.nets import FeedForward, Recurrent
 from model.Sample import get_batches
 from model.model_consts import *
 from constants import *
@@ -37,7 +37,7 @@ class Model:
 
         # neural net
         if self.isRecurrent:
-            self.net = LSTM(sizes, 
+            self.net = Recurrent(sizes, 
                 batchnorm=batchnorm, dropout=dropout).to(device)
         else:
             self.net = FeedForward(sizes, 

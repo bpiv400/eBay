@@ -191,6 +191,25 @@ def get_x_offer(part, idx, outcome=None, role=None):
     return x
 
 
+def get_tf(tf, start, role):
+    # add period to tf_arrival
+    tf = tf.join(start.rename('start'))
+    tf['period'] = (tf.clock - tf.start) // INTERVAL[role]
+    tf = tf.drop(['clock', 'start'], axis=1)
+
+    # increment period by 1; time feats are up to t-1
+    tf['period'] += 1
+
+    # drop periods beyond censoring threshold
+    tf = tf[tf.period < INTERVAL_COUNTS[role]]
+    if role == 'byr':
+        tf = tf[~tf.index.isin([7], level='index') | \
+                (tf.period < INTERVAL_COUNTS['byr_7'])]
+
+    # sum count features by period and return
+    return tf.groupby(list(tf.index.names) + ['period']).sum()
+
+
 def save_featnames(d, name):
     '''
     Creates dictionary of input feature names.
