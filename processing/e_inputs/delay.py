@@ -69,7 +69,7 @@ def process_inputs(part, role):
 
 	# time features
 	tf = load_file(part, 'tf_delay')
-    tf = tf[tf.index.isin(IDX[role], level='index')]
+	tf = tf[tf.index.isin(IDX[role], level='index')]
 	tf_delay = get_tf(tf, delay_start, role)
 
 	# dictionary of input components
