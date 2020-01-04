@@ -1,9 +1,8 @@
 import argparse
 from compress_pickle import load, dump
 import numpy as np, pandas as pd
-from collections import OrderedDict
 from processing.processing_consts import N_SMALL
-from constants import INPUT_DIR, PARTS_DIR
+from constants import INPUT_DIR
 
 
 if __name__ == '__main__':
@@ -13,23 +12,15 @@ if __name__ == '__main__':
     name = parser.parse_args().name
 
     # load full dictionary
-    print('Loading data')
-    d = load(INPUT_DIR + 'train_models/{}.pkl'.format(name))
-
-    # recurrent model
-    isRecurrent = 'periods' in d
+    d = load(INPUT_DIR + 'train_models/{}.gz'.format(name))
 
     # initialize dictionary to save
     small = {}
 
     # recurrent models
-    if isRecurrent:
+    if 'periods' in d:
         # randomly sample
-        done = False
-        while not done:
-            small['periods'] = d['periods'].sample(N_SMALL)
-            N = small['periods'].unique()
-            done = np.all([(small['periods'] == n).count() > 1 for n in N])
+        small['periods'] = d['periods'].sample(N_SMALL)
         idx = small['periods'].index
 
         # other elements of d
@@ -41,14 +32,11 @@ if __name__ == '__main__':
                     small[k] = d[k].reindex(index=idx, level='lstg')
 
         # lstg features
-        x = load(PARTS_DIR + 'train_models/x_lstg.gz')
-        x = {k: v.reindex(index=idx) for k, v in x.items()}
-        dump(x, PARTS_DIR + 'small/x_lstg.gz')
+        small['x'] = {k: v.reindex(index=idx) for k, v in d['x'].items()}
  
     # feed forward
     else:
-        N = np.shape(d['periods'])[0] if isRecurrent else np.shape(d['y'])[0]
-        v = np.arange(N)
+        v = np.arange(np.shape(d['y'])[0])
         np.random.shuffle(v)
         idx = v[:N_SMALL]
 

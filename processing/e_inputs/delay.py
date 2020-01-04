@@ -2,7 +2,7 @@ import sys, os, argparse
 from compress_pickle import load, dump
 import numpy as np, pandas as pd
 from constants import *
-from processing.processing_utils import get_x_offer, save_files
+from processing.processing_utils import get_x_offer, save_files, load_file
 from processing.processing_consts import *
 
 
@@ -32,15 +32,14 @@ def get_periods(delay, role):
     return periods
 
 
-def get_tf(tf, seconds, role):
-    # subset by role
+def get_tf(tf, delay_start, role):
+	# subset by role
     tf = tf[tf.index.isin(IDX[role], level='index')]
 
     # add period to tf_arrival
-    tf = tf.reset_index('clock')
-    tf = tf.join(seconds)
-    tf['period'] = (tf.clock - tf.seconds) // INTERVAL[role]
-    tf = tf.drop(['clock', 'seconds'], axis=1)
+    tf = tf.join(delay_start)
+    tf['period'] = (tf.clock - tf.delay_start) // INTERVAL[role]
+    tf = tf.drop(['clock', 'delay_start'], axis=1)
 
     # increment period by 1; time feats are up to t-1
     tf['period'] += 1
@@ -48,24 +47,18 @@ def get_tf(tf, seconds, role):
     # drop periods beyond censoring threshold
     tf = tf[tf.period < INTERVAL_COUNTS[role]]
     if role == 'byr':
-        tf = tf[~tf.index.isin([7], level='index') | \
-                (tf.period < INTERVAL_COUNTS['byr_7'])]
+		tf = tf[~tf.index.isin([7], level='index') | \
+		        (tf.period < INTERVAL_COUNTS['byr_7'])]
+
     # sum count features by period and return
     return tf.groupby(['lstg', 'thread', 'index', 'period']).sum()
 
 
 # loads data and calls helper functions to construct train inputs
 def process_inputs(part, role):
-	# function to load file
-	load_file = lambda x: load('{}{}/{}.gz'.format(PARTS_DIR, part, x))
-
-	# load features from offer dataframe
-	x_offer = load_file('x_offer')[['days', 'exp']]
-
-	# drop zero delays
+	# load features from offer dataframe and restrict observations
+	x_offer = load_file(part, 'x_offer')[['days', 'exp']]
 	x_offer = x_offer.loc[x_offer.days > 0]
-
-	# restrict to role
 	x_offer = x_offer.loc[x_offer.index.isin(IDX[role], level='index')]
 
 	# delay in seconds
@@ -79,24 +72,28 @@ def process_inputs(part, role):
 	y = periods[~x_offer.exp].to_frame().assign(
 		offer=1).set_index('periods', append=True).squeeze()
 
+	# dictionary of input features
+	x = get_x_offer(part, idx, outcome='delay', role=role)
+
 	# second since START at beginning of delay period
-	clock = load_file('clock')
-	seconds = clock.groupby(['lstg', 'thread']).shift().reindex(
-		index=idx).astype('int64').rename('seconds')
+	clock = load_file(part, 'clock')
+	delay_start = clock.groupby(['lstg', 'thread']).shift().reindex(
+		index=idx).astype('int64').rename('delay_start')
 
 	# normalized periods remaining at start of delay period
 	lstg_start = load_file('lookup').start_time
-	diff = seconds - lstg_start.reindex(index=idx, level='lstg')
+	diff = delay_start - lstg_start.reindex(index=idx, level='lstg')
 	remaining = MONTH - diff
 	remaining.loc[idx.isin([2, 4, 6, 7], level='index')] /= MAX_DELAY['slr']
 	remaining.loc[idx.isin([3, 5], level='index')] /= MAX_DELAY['byr']
 	remaining = np.minimum(remaining, 1)
 
 	# time features
-	tf = get_tf(load_file('tf_delay'), seconds, role)
+	tf = get_tf(load_file('tf_delay'), delay_start, role)
 
-	return {'y': y, 'periods': periods, 'x': x,
-			'seconds': seconds, 'remaining': remaining, 'tf': tf}
+	# dictionary of input components
+	return {'periods': periods, 'y': y, 'x': x, 
+			'seconds': delay_start, 'remaining': remaining, 'tf': tf}
 
 
 if __name__ == '__main__':

@@ -80,6 +80,11 @@ def load_frames(name):
     return output
 
 
+# function to load file
+def load_file(part, x):
+    return load(PARTS_DIR + '{}/{}.gz'.format(part, x))
+
+
 # returns partition indices and path to file function
 def get_partition(part):
     '''
@@ -154,13 +159,13 @@ def clean_offer(offer, i, outcome, role):
     return offer
 
 
-def get_x_offer(load_file, idx, outcome=None, role=None):
+def get_x_offer(part, idx, outcome=None, role=None):
     # thread and offer features
-    x_offer = load_file('x_offer')
-    x_thread = load_file('x_thread')
+    x_offer = load_file(part, 'x_offer')
+    x_thread = load_file(part, 'x_thread')
 
     # initialize dictionary of input features
-    x = load_file('x_lstg')
+    x = load_file(part, 'x_lstg')
     x = {k: v.reindex(index=idx, level='lstg') for k, v in x.items()}
 
     # add thread features and turn indicators to listing features
@@ -186,7 +191,7 @@ def get_x_offer(load_file, idx, outcome=None, role=None):
     return x
 
 
-def get_featnames(d, name):
+def save_featnames(d, name):
     '''
     Creates dictionary of input feature names.
     :param d: dictionary with dataframes.
@@ -196,9 +201,8 @@ def get_featnames(d, name):
     # initialize with components of x
     featnames = {}
     featnames['x'] = OrderedDict()
-    if 'x' in d:
-        for k, v in d['x'].items():
-            featnames['x'][k] = list(v.columns)
+    for k, v in d['x'].items():
+        featnames['x'][k] = list(v.columns)
 
     # for arrival and delay models
     if 'periods' in d:
@@ -213,10 +217,10 @@ def get_featnames(d, name):
             featnames['x_time'] += [INT_REMAINING]
             assert INT_REMAINING == 'remaining'
 
-    return featnames
+    dump(featnames, INPUT_DIR + 'featnames/{}.pkl'.format(name))
 
 
-def get_sizes(d, name):
+def save_sizes(d, name):
     '''
     Creates dictionary of input sizes.
     :param d: dictionary with dataframes.
@@ -226,9 +230,8 @@ def get_sizes(d, name):
 
     # count components of x
     sizes['x'] = {}
-    if 'x' in d:
-        for k, v in d['x'].items():
-            sizes['x'][k] = len(v.columns)
+    for k, v in d['x'].items():
+        sizes['x'][k] = len(v.columns)
 
     # arrival and delay models
     if 'tf' in d:
@@ -248,7 +251,7 @@ def get_sizes(d, name):
     else:
         sizes['out'] = 1
 
-    return sizes
+    dump(sizes, INPUT_DIR + 'sizes/{}.pkl'.format(name))
 
 
 def convert_to_numpy(d):
@@ -259,13 +262,12 @@ def convert_to_numpy(d):
     '''
 
     # loop through x, convert to numpy
-    if 'x' in d:
-        for k, v in d['x'].items():
-            d['x'][k] = v.to_numpy()
+    for k, v in d['x'].items():
+        d['x'][k] = v.to_numpy()
 
     # convert components to numpy directly
     for k in d.keys():
-        if not isinstance(d[k], dict) and k != 'periods':
+        if not isinstance(d[k], dict):
             d[k] = d[k].to_numpy()
 
     return d
@@ -275,30 +277,12 @@ def convert_to_numpy(d):
 def save_files(d, part, name):
     # featnames and sizes
     if part == 'train_models':
-        featnames = get_featnames(d, name)
-        sizes = get_sizes(d, name)
-
-        if 'periods' in d:
-            # load listing features
-            x = load(PARTS_DIR + '{}/x_lstg.gz'.format(part))
-
-            # make sure that indices are correctly ordered
-            for v in x.values():
-                assert np.all(v.index == d['periods'].index)
-
-            # add in featnames and sizes for listing features
-            for k, v in x.items():
-                featnames['x'][k] = list(v.columns)
-                sizes['x'][k] = len(v.columns)
-
-            del x
-        
-        dump(featnames, INPUT_DIR + 'featnames/{}.pkl'.format(name))
-        dump(sizes, INPUT_DIR + 'sizes/{}.pkl'.format(name))
+        save_featnames(d, name)
+        save_sizes(d, name)
 
     # create dictionary of numpy arrays
     if 'periods' not in d:
         d = convert_to_numpy(d)
 
     # save as dataset
-    dump(d, INPUT_DIR + '{}/{}.pkl'.format(part, name))
+    dump(d, INPUT_DIR + '{}/{}.gz'.format(part, name))

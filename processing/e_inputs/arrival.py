@@ -2,23 +2,19 @@ import sys, os
 from compress_pickle import load, dump
 import numpy as np, pandas as pd
 from constants import *
-from processing.processing_utils import input_partition, load_frames, save_files
+from processing.processing_utils import input_partition, \
+    load_frames, save_files, load_file
 from processing.processing_consts import *
 
 
 def get_periods(lstg_start, lstg_end):
     print('Counting periods')
 
-    # seconds in listing
-    end = pd.to_timedelta(lstg_end - lstg_start, 
-        unit='s').dt.total_seconds().astype('int64')
-
-    # convert to interval
-    periods = end // INTERVAL['arrival']
+    # intervals in lstg
+    periods = (lstg_end - lstg_start) // INTERVAL['arrival']
 
     # error checking
     assert periods.max() < INTERVAL_COUNTS['arrival']
-    assert np.all(periods.index == lstg_start.index)
 
     # minimum number of periods is 1
     periods += 1
@@ -26,22 +22,18 @@ def get_periods(lstg_start, lstg_end):
     return periods
 
 
-def get_y(lstg_start, thread_start, periods):
+def get_y(lstg_start, thread_start):
     print('Counting arrivals')
-
-    # time_stamps
-    diff = pd.to_timedelta(thread_start - lstg_start, 
-        unit='s').dt.total_seconds().astype('int64')
     
-    # convert to intervals
-    diff_period = diff // INTERVAL['arrival']
+    # intervals until thread
+    thread_periods = (thread_start - lstg_start) // INTERVAL['arrival']
 
     # error checking
-    assert diff_period.max() < INTERVAL_COUNTS['arrival']
+    assert thread_periods.max() < INTERVAL_COUNTS['arrival']
 
     # count of arrivals by interval
-    y = diff_period.rename('period').to_frame().assign(count=1).groupby(
-        ['lstg', 'period']).sum().squeeze().astype('int8')
+    y = thread_periods.rename('period').to_frame().assign(
+        count=1).groupby(['lstg', 'period']).sum().squeeze()
 
     return y
 
@@ -50,7 +42,6 @@ def get_tf(lstg_start, tf, periods):
     print('Collapsing time features')
 
     # convert clock into period
-    tf = tf.reset_index('clock')
     tf['period'] = (tf.clock - lstg_start.reindex(index=tf.index)) 
     tf['period'] //= INTERVAL['arrival']
     tf = tf.drop('clock', axis=1)
@@ -72,23 +63,24 @@ def get_tf(lstg_start, tf, periods):
 
 # loads data and calls helper functions to construct train inputs
 def process_inputs(part):
-    # function to load file
-    load_file = lambda x: load('{}{}/{}.gz'.format(PARTS_DIR, part, x))
-
     # number of periods
-    lstg_start = load_file('lookup').start_time
+    lstg_start = load_file(part, 'lookup').start_time
     lstg_end = load(CLEAN_DIR + 'listings.pkl').end_time.reindex(
         index=lstg_start.index)
     periods = get_periods(lstg_start, lstg_end)
 
-    # arrival couns
-    thread_start = load_file('clock').xs(1, level='index')
-    y = get_y(lstg_start, thread_start, periods)
+    # listing features
+    x = load_file(part, 'x_lstg')
+    x = {k: v.astype('float32') for k, v in x.items()}
+
+    # arrival counts
+    thread_start = load_file(part, 'clock').xs(1, level='index')
+    y = get_y(lstg_start, thread_start)
 
     # time features
-    tf = get_tf(lstg_start, load_file('tf_arrival'), periods)
+    tf = get_tf(lstg_start, load_file(part, 'tf_arrival'), periods)
 
-    return {'y': y, 'periods': periods,
+    return {'periods': periods, 'y': y, 'x': x,
             'seconds': lstg_start, 'tf': tf}
 
 

@@ -2,7 +2,8 @@ import sys
 from compress_pickle import load, dump
 import numpy as np, pandas as pd
 from constants import *
-from processing.processing_utils import input_partition, load_frames, get_partition
+from processing.processing_utils import input_partition, load_frames, \
+    get_partition
 from processing.processing_consts import *
 
 
@@ -59,7 +60,7 @@ if __name__ == "__main__":
 
     # listing features
     print('Listing features')
-    x['lstg'] = get_x_lstg(L)
+    x['lstg'] = get_x_lstg(L).astype('float32')
 
     # word2vec features
     print('Word2Vec features')
@@ -67,16 +68,18 @@ if __name__ == "__main__":
         w2v = load(W2V_DIR + '%s.gz' % role).reindex(
             index=L[['cat']].values.squeeze(), fill_value=0)
         w2v.set_index(L.index, inplace=True)
-        x['w2v_{}'.format(role)] = w2v
+        x['w2v_{}'.format(role)] = w2v.astype('float32')
     del L
 
     # slr features
     print('Seller features')
-    x['slr'] = load_frames('slr').reindex(index=idx, fill_value=0)
+    x['slr'] = load_frames('slr').astype('float32').reindex(
+        index=idx, fill_value=0)
 
     # cat and cndtn features
     print('Categorical features')
-    df = load_frames('cat').reindex(index=idx, fill_value=0)
+    df = load_frames('cat').astype('float32').reindex(
+        index=idx, fill_value=0)
     for name in ['cat', 'cndtn']:
         x[name] = df[[c for c in df.columns if c.startswith(name + '_')]]
 

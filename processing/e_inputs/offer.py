@@ -2,7 +2,7 @@ import sys, os, argparse
 from compress_pickle import load, dump
 import numpy as np, pandas as pd
 from constants import *
-from processing.processing_utils import get_x_offer, save_files
+from processing.processing_utils import get_x_offer, save_files, load_file
 from processing.processing_consts import *
 
 
@@ -28,11 +28,8 @@ def get_y_msg(x_offer, role):
 
 # loads data and calls helper functions to construct train inputs
 def process_inputs(part, outcome, role):
-	# function to load file
-	load_file = lambda x: load('{}{}/{}.gz'.format(PARTS_DIR, part, x))
-
 	# outcome
-	x_offer = load_file('x_offer')
+	x_offer = load_file(part, 'x_offer')
 	if outcome == 'con':
 		y = get_y_con(x_offer, role)
 	elif outcome == 'msg':
@@ -40,7 +37,7 @@ def process_inputs(part, outcome, role):
 	idx = y.index
 
 	# dictionary of input features
-	x = get_x_offer(load_file, idx, outcome=outcome, role=role)
+	x = get_x_offer(part, idx, outcome=outcome, role=role)
 
 	return {'y': y, 'x': x}
 
