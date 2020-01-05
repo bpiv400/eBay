@@ -13,7 +13,7 @@ class LSTM(nn.Module):
                  hidden_size,
                  num_layers=1,
                  dropout=0,
-                 bidirectional=1,
+                 bidirectional=0,
                  batch_first=False,
                  learnable=True):
         super(LSTM, self).__init__()

@@ -20,20 +20,21 @@ if __name__ == '__main__':
     # recurrent models
     if 'periods' in d:
         # randomly sample
-        small['periods'] = d['periods'].sample(N_SMALL)
+        small['periods'] = d['periods'].sample(N_SMALL).sort_index()
         idx = small['periods'].index
-
-        # other elements of d
-        for k, v in d.items():
-            if k != 'periods':
-                if len(d[k].index.names) == 1:
-                    small[k] = d[k].reindex(index=idx)
-                else:
-                    small[k] = d[k].reindex(index=idx, level='lstg')
 
         # lstg features
         small['x'] = {k: v.reindex(index=idx) for k, v in d['x'].items()}
- 
+
+        # outcome and time features in full
+        for k in ['y', 'tf']:
+            small[k] = d[k]
+
+        # other elements of d
+        for k, v in d.items():
+            if k not in ['x', 'periods', 'y', 'tf']:
+                small[k] = d[k].reindex(index=idx)
+
     # feed forward
     else:
         v = np.arange(np.shape(d['y'])[0])
@@ -45,9 +46,9 @@ if __name__ == '__main__':
  
         # directly subsample
         for k in d.keys():
-            if not isinstance(d[k], dict):
+            if k not in ['x']:
                 small[k] = d[k][idx]
  
     # save dictionary
-    dump(small, INPUT_DIR + 'small/{}.pkl'.format(name))
+    dump(small, INPUT_DIR + 'small/{}.gz'.format(name))
  

@@ -42,7 +42,7 @@ class RecurrentDataset(Dataset):
         self.tf0 = np.zeros((T, N_tfeats), dtype='float32')
 
         # outcome of zeros
-        self.y0 = np.zeros((T, ), dtype='int8')
+        self.y0 = np.zeros((T, ), dtype='float32')
 
 
     def __getitem__(self, idx):
@@ -58,12 +58,13 @@ class RecurrentDataset(Dataset):
         periods = self.d['periods'].xs(idx)
 
         # components of x are indexed directly
-        x = {k: v.xs(idx).to_numpy() for k, v in self.d['x'].items()}
+        x = {k: v.xs(idx).to_numpy(dtype=np.float32) \
+             for k, v in self.d['x'].items()}
 
         # y gets reindexed
         try:
             y = self.d['y'].xs(idx).reindex(
-                index=range(periods), fill_value=0).to_numpy()
+                index=range(periods), fill_value=0).to_numpy(dtype='float32')
         except:
             y = self.y0.copy()[:periods]
 
@@ -79,7 +80,7 @@ class RecurrentDataset(Dataset):
         # fill in missing time feats with zeros
         try:
             x_tf = self.d['tf'].xs(idx).reindex(
-                index=range(periods), fill_value=0).to_numpy()
+                index=range(periods), fill_value=0).to_numpy(dtype='float32')
         except:
             x_tf = self.tf0.copy()[:periods, :]
 
@@ -124,9 +125,9 @@ class RecurrentDataset(Dataset):
         x = {k: torch.stack(v).float() for k, v in x.items()}
         x_time = torch.stack(x_time, dim=0).float()
 
-        # pack for recurrent network
-        x_time = rnn.pack_padded_sequence(
-            x_time, periods, batch_first=True)
+        # # pack for recurrent network
+        # x_time = rnn.pack_padded_sequence(
+        #     x_time, periods, batch_first=True)
 
         # output is dictionary of tensors
         return {'y': y, 'x': x, 'x_time': x_time}

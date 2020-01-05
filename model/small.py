@@ -27,7 +27,7 @@ if __name__ == '__main__':
     print(model.loss)
 
     # initialize optimizer with default learning rate
-    optimizer = optim.Adam(model.net.parameters())
+    optimizer = optim.Adam(model.net.parameters(), lr=0.001)
     print(optimizer)
 
     # load data

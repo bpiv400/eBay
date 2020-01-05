@@ -18,7 +18,7 @@ class FeedForwardDataset(Dataset):
         self.N_labels = np.shape(self.d['y'])[0]
 
         # create single group for sampling
-        self.groups = [np.array(range(self.N_examples))]
+        self.groups = [np.array(range(self.N_labels))]
 
 
     def __getitem__(self, idx):
@@ -29,7 +29,7 @@ class FeedForwardDataset(Dataset):
         '''
         # y and x are indexed directly
         y = self.d['y'][idx]
-        x = {k: v[idx,:] for k, v in self.d['x'].items()}
+        x = {k: v[idx,:].astype(np.float32) for k, v in self.d['x'].items()}
 
         return y, x
         

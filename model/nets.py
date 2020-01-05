@@ -1,7 +1,8 @@
 import torch, torch.nn as nn
 from collections import OrderedDict
 from model.LSTM import LSTM
-from model.model_consts import HIDDEN, LAYERS_EMBEDDING, LAYERS_FULL
+from model.model_consts import HIDDEN, LSTM_HIDDEN, \
+    LAYERS_EMBEDDING, LAYERS_FULL
 from constants import *
 
 
@@ -36,22 +37,19 @@ class Layer(nn.Module):
         '''
         super(Layer, self).__init__()
 
-        # activation function
-        f = nn.ReLU(inplace=True)
+        # initialize layer
+        self.layer = nn.ModuleList([nn.Linear(N_in, N_out)])
 
-        # one layer is a weight matrix, batch normalization and activation
-        if batchnorm and dropout:
-            self.layer = nn.Sequential(nn.Linear(N_in, N_out), 
-                nn.BatchNorm1d(N_out, affine=False), f, 
-                VariationalDropout(N_out))
-        elif batchnorm and not dropout:
-            self.layer = nn.Sequential(nn.Linear(N_in, N_out), 
-                nn.BatchNorm1d(N_out, affine=False), f)
-        elif not batchnorm and dropout:
-            self.layer = nn.Sequential(nn.Linear(N_in, N_out), 
-                f, VariationalDropout(N_out))
-        else:
-            self.layer = nn.Sequential(nn.Linear(N_in, N_out), f)
+        # batch normalization
+        if batchnorm:
+            self.layer.append(nn.BatchNorm1d(N_out, affine=True))
+
+        # activation function
+        self.layer.append(nn.ReLU(inplace=True))
+
+        # dropout
+        if dropout:
+            self.layer.append(VariationalDropout(N_out))
 
     def forward(self, x):
         '''
@@ -71,9 +69,10 @@ class Stack(nn.Module):
         super(Stack, self).__init__()
 
         # sequence of modules
-        self.stack = nn.ModuleList(
-            [Layer(N, N, batchnorm=batchnorm, dropout=dropout) \
-                for _ in range(layers)])
+        self.stack = nn.ModuleList([])
+        for _ in range(layers):
+            self.stack.append(Layer(N, N, 
+                batchnorm=batchnorm, dropout=dropout))
         
     def forward(self, x):
         '''
@@ -179,7 +178,7 @@ class FeedForward(nn.Module):
         # fully connected
         N_in = sum(counts.values())
         self.nn1 = FullyConnected(total, 
-            HIDDEN if toRNN else sizes['out'], batchnorm, dropout)
+            LSTM_HIDDEN if toRNN else sizes['out'], batchnorm, dropout)
 
     def forward(self, x):
         '''
@@ -197,7 +196,7 @@ class Recurrent(nn.Module):
         :param sizes: dictionary of scalar input sizes; sizes['x'] is an OrderedDict
         :param dropout: True if using dropout for fully-connected layers
         '''
-        super(LSTM, self).__init__()
+        super(Recurrent, self).__init__()
 
         # initial hidden nodes
         self.h0 = FeedForward(sizes, 
@@ -207,11 +206,11 @@ class Recurrent(nn.Module):
 
         # rnn layer
         self.rnn = LSTM(input_size=sizes['x_time'],
-                        hidden_size=HIDDEN,
+                        hidden_size=LSTM_HIDDEN,
                         batch_first=True)
 
         # output layer
-        self.output = nn.Linear(HIDDEN, sizes['out'])
+        self.output = nn.Linear(LSTM_HIDDEN, sizes['out'])
 
     def forward(self, x, x_time):
         '''
@@ -226,10 +225,10 @@ class Recurrent(nn.Module):
         # update hidden state recurrently
         theta, _ = self.rnn(x_time, hidden)
 
-        # pad
-        theta, _ = nn.utils.rnn.pad_packed_sequence(
-            theta, total_length=len(x_time.batch_sizes), 
-            batch_first=True)
+        # # pad
+        # theta, _ = nn.utils.rnn.pad_packed_sequence(
+        #     theta, total_length=len(x_time.batch_sizes), 
+        #     batch_first=True)
 
         # output layer: (batch_size, seq_len, N_output)
         return self.output(theta).squeeze()
