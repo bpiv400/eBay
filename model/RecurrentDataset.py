@@ -98,36 +98,3 @@ class RecurrentDataset(Dataset):
 
     def __len__(self):
         return self.N_examples
-
-
-    def collate(self, batch):
-        '''
-        Converts examples to tensors for a recurrent network.
-        :param batch: list of (dictionary of) numpy arrays.
-        :return: dictionary of (dictionary of) tensors.
-        '''
-        y, periods, x, x_time = [], [], {}, []
-
-        # sorts the batch list in decreasing order of periods
-        for b in batch:
-            y.append(torch.from_numpy(b[0]))
-            periods.append(torch.as_tensor(b[1]))
-            for k, v in b[2].items():
-                if k in x:
-                    x[k].append(torch.from_numpy(v))
-                else:
-                    x[k] = [torch.from_numpy(v)]
-            x_time.append(torch.from_numpy(b[3]))
-
-        # convert to tensor
-        y = torch.stack(y).float()
-        periods = torch.stack(periods).long()
-        x = {k: torch.stack(v).float() for k, v in x.items()}
-        x_time = torch.stack(x_time, dim=0).float()
-
-        # pack for recurrent network
-        x_time = rnn.pack_padded_sequence(
-            x_time, periods, batch_first=True)
-
-        # output is dictionary of tensors
-        return {'y': y, 'x': x, 'x_time': x_time}

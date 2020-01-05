@@ -86,7 +86,7 @@ if __name__ == "__main__":
         # take natural log of number of listings
         count_cols = [c for c in v.columns if c.endswith('_lstgs')]
         for c in count_cols:
-            x[k][c] = np.log(x[k][c])
+            x[k][c] = np.log(1 + x[k][c])
             x[k].rename({c: c.replace('lstgs', 'ln_lstgs')}, 
                 axis=1, inplace=True)
 
