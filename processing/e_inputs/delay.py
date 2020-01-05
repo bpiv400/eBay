@@ -73,8 +73,12 @@ def process_inputs(part, role):
 	tf_delay = get_tf(tf, delay_start, role)
 
 	# dictionary of input components
-	return {'periods': periods, 'y': y, 'x': x, 
-			'seconds': delay_start, 'remaining': remaining, 'tf': tf}
+	return {'periods': periods, 
+			'y': y, 
+			'x': x, 
+			'seconds': delay_start, 
+			'remaining': remaining, 
+			'tf': tf_delay}
 
 
 if __name__ == '__main__':
