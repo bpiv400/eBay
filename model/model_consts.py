@@ -5,7 +5,7 @@ LOG_DIR = OUTPUT_DIR + 'logs/'
 MODEL_DIR = OUTPUT_DIR + 'models/'
 
 # optimization parameters
-NUM_WORKERS = 2
+NUM_WORKERS = 4
 MBSIZE = {True: 128, False: 2000}
 LOGLR0 = -3
 LOGLR1 = -6
@@ -16,4 +16,4 @@ FTOL = 0.995
 LAYERS_EMBEDDING = 4
 LAYERS_FULL = 8
 HIDDEN = 1024
-LSTM_HIDDEN = 256
+LSTM_HIDDEN = 1024

@@ -82,8 +82,11 @@ class Model:
         # loop over batches, calculate log-likelihood
         loss = 0.0
         for b in batches:
+            t0 = dt.now()
             self._move_to_device(b)
             loss += self._run_batch(b, optimizer)
+            print('{}: {} seconds'.format(
+                b['y'].size()[-1], (dt.now() - t0).total_seconds()))
 
         return loss
 

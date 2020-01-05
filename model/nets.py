@@ -1,6 +1,5 @@
 import torch, torch.nn as nn
 from collections import OrderedDict
-from model.LSTM import LSTM
 from model.model_consts import HIDDEN, LSTM_HIDDEN, \
     LAYERS_EMBEDDING, LAYERS_FULL
 from constants import *
@@ -205,9 +204,9 @@ class Recurrent(nn.Module):
             batchnorm=batchnorm, dropout=dropout, toRNN=True)
 
         # rnn layer
-        self.rnn = LSTM(input_size=sizes['x_time'],
-                        hidden_size=LSTM_HIDDEN,
-                        batch_first=True)
+        self.rnn = nn.LSTM(input_size=sizes['x_time'],
+                           hidden_size=LSTM_HIDDEN,
+                           batch_first=True)
 
         # output layer
         self.output = nn.Linear(LSTM_HIDDEN, sizes['out'])
@@ -225,10 +224,10 @@ class Recurrent(nn.Module):
         # update hidden state recurrently
         theta, _ = self.rnn(x_time, hidden)
 
-        # # pad
-        # theta, _ = nn.utils.rnn.pad_packed_sequence(
-        #     theta, total_length=len(x_time.batch_sizes), 
-        #     batch_first=True)
+        # pad
+        theta, _ = nn.utils.rnn.pad_packed_sequence(
+            theta, total_length=len(x_time.batch_sizes), 
+            batch_first=True)
 
         # output layer: (batch_size, seq_len, N_output)
         return self.output(theta).squeeze()

@@ -5,6 +5,7 @@ import torch.nn.functional as F
 from torch import Tensor
 from torch.nn import Parameter
 from torch.autograd import Variable
+from datetime import datetime as dt
 
 
 class LSTM(nn.Module):
@@ -26,10 +27,11 @@ class LSTM(nn.Module):
         layers = []
         for i in range(num_layers):
             for j in range(self.direction):
-                layer = LayerNormLSTM(input_size*self.direction,
-                                      hidden_size,
-                                      dropout=dropout,
-                                      learnable=learnable)
+                # layer = LayerNormLSTM(input_size*self.direction,
+                #                       hidden_size,
+                #                       dropout=dropout,
+                #                       learnable=learnable)
+                layer = LSTMcell(input_size, hidden_size)
                 layers.append(layer)
             input_size = hidden_size
         self.layers = layers

@@ -70,7 +70,7 @@ def load_frames(name):
     name: one of 'events', 'tf_lstg', 'tf_slr'.
     '''
     # path to file number x
-    path = lambda num: FEATS_DIR + '%s_%s.gz' % (num, name)
+    path = lambda num: FEATS_DIR + '{}_{}.gz'.format(num, name)
     # loop and append
     output = []
     n = len([f for f in os.listdir(FEATS_DIR) if name in f])
