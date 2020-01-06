@@ -35,7 +35,7 @@ class Sample(Sampler):
         return len(self.batches)
 
 
-def collateFF(self, batch):
+def collateFF(batch):
     '''
     Converts examples to tensors for a feed-forward network.
     :param batch: list of (dictionary of) numpy arrays.
@@ -58,7 +58,7 @@ def collateFF(self, batch):
     return {'y': y, 'x': x}
 
 
-def collateRNN(self, batch):
+def collateRNN(batch):
     '''
     Converts examples to tensors for a recurrent network.
     :param batch: list of (dictionary of) numpy arrays.
