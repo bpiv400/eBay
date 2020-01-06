@@ -12,7 +12,7 @@ class FeedForwardDataset(Dataset):
         :param part: string partition name (e.g., train_models).
         :param name: string model name.
         '''
-        self.d = load('{}/inputs/{}/{}.gz'.format(PREFIX, part, name))
+        self.d = load(INPUT_DIR + '{}/{}.gz'.format(part, name))
 
         # number of labels
         self.N_labels = np.shape(self.d['y'])[0]
