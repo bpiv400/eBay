@@ -1,4 +1,3 @@
-from copy import deepcopy
 import torch, torch.nn as nn
 from collections import OrderedDict
 from constants import *
@@ -34,15 +33,14 @@ class Layer(nn.Module):
         N_out: scalar number of output weights
         '''
         super(Layer, self).__init__()
-
         # one layer is a weight matrix, batch normalization and activation
         if dropout:
-            self.layer = nn.Sequential(nn.Linear(N_in, N_out), 
-                nn.BatchNorm1d(N_out, affine=False), F, 
-                VariationalDropout(N_out))
+            self.layer = nn.Sequential(nn.Linear(N_in, N_out),
+                                       nn.BatchNorm1d(N_out, affine=False), F,
+                                       VariationalDropout(N_out))
         else:
             self.layer = nn.Sequential(nn.Linear(N_in, N_out), 
-                nn.BatchNorm1d(N_out, affine=False), F)
+                nn.BatchNorm1d(N_out, affine=AFFINE), F)
 
     def forward(self, x):
         '''

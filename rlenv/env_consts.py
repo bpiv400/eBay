@@ -9,10 +9,11 @@ X_LSTG = 'x_lstg'
 LOOKUP = 'lookup'
 
 # filenames
-COMPOSER_DIR = '{}composer/'.format(INPUT_DIR)
-AGENT_FEATS_FILENAME = 'agent_feats.xlsx'
+COMPOSER_DIR = '{}composer/'.format(INPUT_DIR)  # location of composer
+AGENT_FEATS_FILENAME = 'agent_feats.xlsx'  # location of file containing lists of features for all agents
 LOOKUP_FILENAME = 'lookup.gz'
 X_LSTG_FILENAME = 'x_lstg.gz'
+# partition subdir names
 SIM_CHUNKS_DIR = 'chunks'
 SIM_VALS_DIR = 'vals'
 SIM_DISCRIM_DIR = 'discrim'
@@ -35,7 +36,7 @@ ENV_LSTG_COUNT = 1000
 ACTION_SPACE_NAME = 'NegotiationActionSpace'
 OBS_SPACE_NAME = 'NegotiationObsSpace'
 
-# agents
+# agent names (see AGENTS_FEATS_FILENAME)
 INFO_AGENTS = ['byr', 'slr0', 'slr1']
 
 # outcome tuple names

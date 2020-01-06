@@ -18,21 +18,40 @@ from featnames import NORM, ALL_OUTCOMES, AUTO, REJECT, EXP
 
 
 def load_featnames(name):
+    """
+    Loads featnames dictionary for a model
+    #TODO: extend to include agents
+    :param name: str giving name (e.g. hist, con_byr),
+     see interface/model_names
+    :return: dict
+    """
     return load(INPUT_DIR + 'featnames/{}.pkl'.format(name))
 
 
 def load_sizes(name):
-    return load(INPUT_DIR + 'sizes/{}.pkl'.format(name))
+    """
+        Loads featnames dictionary for a model
+        #TODO: extend to include agents
+        :param name: str giving name (e.g. hist, con_byr),
+         see interface/model_names
+        :return: dict
+        """
+    return load(INPUT_DIR + 'featnames/{}.pkl'.format(name))
 
 
 def featname(feat, turn):
+    """
+    Returns the name of a particular feature for a particular turn
+    :param feat: str giving featname
+    :param turn: int giving turn num
+    :return: str
+    """
     return '{}_{}'.format(feat, turn)
 
 
 def get_model_class(full_name):
     """
     Returns the class of the given model
-
     :param full_name: str giving the name of the model
     :return: simulator.nets.RNN, simulator.nets.LSTM, or
     simulator.nets.FeedForward
@@ -62,7 +81,7 @@ def model_str(model_name, byr=False):
 def get_clock_feats(time):
     """
     Gets clock features as np.array given the time relative to START (in seconds since)
-
+    Order of features in output should reflect env_consts.CLOCK_FEATS
     :param time: int giving time in seconds since START
     :return: numpy array containing 8 elements, where index 0 is an indicator
     for holiday, indices 2-6 give indicators for the day of week, and index 7
@@ -81,7 +100,6 @@ def get_clock_feats(time):
 def proper_squeeze(tensor):
     """
     Squeezes a tensor to 1 rather than 0 dimensions
-
     :param tensor: torch.tensor with only 1 non-singleton dimension
     :return: 1 dimensional tensor
     """
@@ -92,17 +110,34 @@ def proper_squeeze(tensor):
 
 
 def categorical_sample(params, n):
+    """
+    Samples from a categorical distribution
+    :param torch.FloatTensor params: logits of categorical distribution
+    :param int n: number of samples to draw
+    :return: 1 dimensional np.array
+    """
     cat = Categorical(logits=params)
     return proper_squeeze(cat.sample(sample_shape=(n, )).float()).numpy()
 
 
 def get_split(con):
+    """
+    Determines whether concession is close enough to 50 to trigger split feature
+    :param np.float32 con: concession
+    :return: bool
+    """
     con = con * 100
     output = 1 if abs(50 - con) < (TOL_HALF * 100) else 0
     return output
 
 
 def last_norm(sources, turn):
+    """
+    Grabs the value of norm from 2 turns ago
+    :param dict sources: environment sources dictionary
+    :param int turn: current turn
+    :return: np.float32
+    """
     if turn <= 2:
         out = 0.0
     else:
@@ -111,6 +146,12 @@ def last_norm(sources, turn):
 
 
 def prev_norm(sources, turn):
+    """
+    Grabs the value of norm from last turn
+    :param dict sources: environment sources dictionary
+    :param int turn: current turn
+    :return: np.float32
+    """
     if turn == 1:
         out = 0.0
     else:
@@ -122,6 +163,10 @@ def get_chunk_dir(part_dir, chunk_num, discrim=False):
     """
     Gets the path to the data directory containing output files
     for the given environment simulation chunk
+    :param str part_dir: path to the root directory for the current partition
+    :param int chunk_num: chunk id
+    :param bool discrim: whether the experiment is a discriminator experiment
+    :return: str
     """
     if discrim:
         subdir = get_env_sim_subdir(base_dir=part_dir, discrim=True)
@@ -132,10 +177,9 @@ def get_chunk_dir(part_dir, chunk_num, discrim=False):
 
 def load_model(full_name):
     """
-    Initialize pytorch network for some model
-
-    :param full_name: full name of the model
-    :return: PyTorch Module
+    Initialize PyTorch network for some model
+    :param str full_name: full name of the model
+    :return: torch.nn.Module
     """
     sizes = load_sizes(full_name)
     model_path = '{}{}.net'.format(MODEL_DIR, full_name)
@@ -151,9 +195,7 @@ def load_model(full_name):
 
 def get_cut(meta):
     """
-    Computes the value fee. For now, just set to 10%
-    of sale price, pending refinement decisions
-
+    Computes the value fee
     :param meta: integer giving meta category
     :return: float
     """
@@ -166,12 +208,27 @@ def get_cut(meta):
 
 
 def time_delta(start, end, unit=DAY):
+    """
+    Gets time difference between end and start normalized by unit
+    :param int start: start time of an interval
+    :param int end: end time of an interval
+    :param int unit: normalization factor
+    :return: np.FloatArray
+    """
     diff = (end - start) / unit
     diff = np.array([diff], dtype=np.float32)
     return diff
 
 
 def slr_rej(sources, turn, expire=False):
+    """
+    Returns outcome series associated with a slr expiration or slr
+    automatic rejection
+    :param dict sources: environment sources dictionary
+    :param int turn: turn of rejection
+    :param bool expire: whether this is an expiration rej (automatic if not)
+    :return: pd.Series
+    """
     outcomes = pd.Series(0.0, index=ALL_OUTCOMES[turn])
     outcomes[featname(REJECT, turn)] = 1
     outcomes[featname(NORM, turn)] = last_norm(sources, turn)
@@ -186,6 +243,10 @@ def get_checkpoint_path(part_dir, chunk_num, discrim=False):
     """
     Returns path to checkpoint file for the given chunk
     and environment simulation (discrim or values)
+    :param str part_dir: path to root directory of partition
+    :param int chunk_num: chunk id
+    :param bool discrim: whether this is a discrim input sim
+    :return: str
     """
     if discrim:
         insert = 'discrim'
@@ -195,6 +256,11 @@ def get_checkpoint_path(part_dir, chunk_num, discrim=False):
 
 
 def get_env_sim_dir(part):
+    """
+    Gets path to root directory of partition
+    :param str part: partition in PARTITIONS
+    :return: str
+    """
     return '{}{}/'.format(ENV_SIM_DIR, part)
 
 
@@ -202,7 +268,16 @@ def get_env_sim_subdir(part=None, base_dir=None, chunks=False,
                        values=False, discrim=False):
     """
     Returns the path to a chosen data subdirectory of the current
-    environment simulation
+    environment simulation (discrim dir, vals dir, or chunks dir)
+
+    Either give base_dir or part
+    :param str part: partition in PARTITIONS
+    :param str base_dir: path to base dir of partition
+    :param bool chunks: whether to make path to chunk directory
+    :param bool values: whether to make path to value estimates directory
+    :param bool discrim: whether to make path discrim inputs directory
+    :return: str
+    :raises RuntimeError: when subdir type is not set explicitly
     """
     if part is not None:
         base_dir = get_env_sim_dir(part)
@@ -221,11 +296,19 @@ def get_done_file(record_dir, num):
     """
     Generates path to the done file for the given records path and
     chunk number
+    :param str record_dir: path to directory containing outputs for simulation
+    :param int num: chunk number
     """
     return '{}done_{}.txt'.format(record_dir, num)
 
 
 def load_output_chunk(directory, c):
+    """
+    Loads all the simulator output pieces for a chunk
+    :param str directory: path to records directory
+    :param int c: chunk num
+    :return: list containing all output pieces (dicts or dataframes)
+    """
     subdir = '{}{}/'.format(directory, c)
     pieces = os.listdir(subdir)
     print(subdir)
@@ -239,11 +322,18 @@ def load_output_chunk(directory, c):
 
 
 def load_sim_outputs(part, values=False):
+    """
+    Loads all simulator outputs for a value estimation or discrim input sim
+    and concatenates each set of output dataframes into 1 dataframe
+    :param str part: partition in PARTITIONS
+    :param bool values: whether this is a value simulation
+    :return: {str: pd.Dataframe}
+    """
     directory = get_env_sim_subdir(part=part, values=values, discrim=not values)
     chunks = [path for path in os.listdir(directory) if path.isnumeric()]
     output_list = list()
     for chunk in chunks:
-        output_list = output_list + load_output_chunk(directory, chunk)
+        output_list = output_list + load_output_chunk(directory, int(chunk))
     if values:
         output = {'values': pd.concat(output_list, axis=1)}
     else:
@@ -253,3 +343,16 @@ def load_sim_outputs(part, values=False):
             output[dataset] = pd.concat(output[dataset], axis=1)
     return output
 
+
+def load_chunk(base_dir, num):
+    """
+    Loads a simulator chunk containing x_lstg and lookup
+    :param base_dir: base directory of partition
+    :param num: number of chunk
+    :return: (pd.Dataframe giving x_lstg, pd.DataFrame giving lookup)
+    """
+    input_path = '{}chunks/{}.gz'.format(base_dir, num)
+    input_dict = load(input_path)
+    x_lstg = input_dict['x_lstg']
+    lookup = input_dict['lookup']
+    return x_lstg, lookup

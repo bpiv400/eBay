@@ -1,5 +1,12 @@
-import os, sys, shutil
-from compress_pickle import load, dump
+"""
+Generates values or discrim inputs for a chunk of lstgs
+
+If a checkpoint file for the current simulation, we load it and pick up where we left off.
+Otherwise, starts from scratch with the first listing in the file
+
+Lots of memory dumping code while I try to find leak
+"""
+from compress_pickle import load
 import numpy as np
 from rlenv.interfaces.PlayerInterface import PlayerInterface
 from rlenv.interfaces.ArrivalInterface import ArrivalInterface
@@ -9,25 +16,12 @@ from featnames import START_PRICE, START_TIME, ACC_PRICE, DEC_PRICE
 
 
 class Generator:
-    """
-    Generates values or discrim inputs for a chunk of lstgs.
-    Attributes:
-        x_lstg: pd.Dataframe containing the x_lstg (x_w2v, x_slr, x_cat, x_cndtn, etc...) for each listing
-        lookup: pd.Dataframe containing features of each listing used to control environment behavior and outputs
-            (e.g. list price, auto reject price, auto accept price, meta category, etc..)
-        recorder: Recorder object that stores environment outputs (e.g. discrim features,
-            events df, etc...)
-        buyer: PlayerInterface containing buyer models
-        seller: PlayerInterface containing seller models
-        arrival: ArrivalInterface containing arrival and hist models
-    Public Functions:
-        generate: generates values or discrim inputs based on the lstgs in the current chunk
-    """
     def __init__(self, direct, num, verbose=False):
         """
         Constructor
-        :param direct: string giving path to directory for current partition in rewardGenerator
-        :param num: int giving the chunk number
+        :param direct: base directory for current partition
+        :param int num:  chunk number
+        :param verbose: whether to print info about simulator activity
         """
         self.dir = direct
         self.chunk = int(num)
@@ -39,22 +33,20 @@ class Generator:
         self.recorder = None
 
         composer = Composer(self.x_lstg.columns)
+
         self.buyer = PlayerInterface(composer=composer, byr=True)
         self.seller = PlayerInterface(composer=composer, byr=False)
         self.arrival = ArrivalInterface(composer=composer)
 
-
     def generate(self):
         raise NotImplementedError()
 
-
     def _setup_env(self, lstg, lookup):
         """
-        Generates the environment required to
-        simulate the given listing
+        Generates the environment required to simulate the given listing
         :param lstg: int giving a lstg id
-        :param pandas.Series lookup: metadata about lstg
-        :return: RewardEnvironment
+        :param pd.Series lookup: metadata about lstg
+        :return: SimulatorEnvironment
         """
         if self.verbose:
             self.print_lstg_info(lstg, lookup)
@@ -67,12 +59,15 @@ class Generator:
                                     arrival=self.arrival, x_lstg=x_lstg, lookup=lookup,
                                     recorder=self.recorder, verbose=self.verbose)
 
-
     def _simulate_lstg(self):
         raise NotImplementedError()
 
     @property
     def records_path(self):
+        """
+        Returns path to the output directory for this simulation chunk
+        :return: str
+        """
         raise NotImplementedError()
 
     @staticmethod
@@ -81,7 +76,6 @@ class Generator:
         Prints header giving basic info about the current lstg
         :param lstg: int giving lstg id
         :param lookup: pd.Series containing metadata about the lstg
-        :return:
         """
         print('lstg: {} | start_time: {} | start_price: {} | auto_rej: {} | auto_acc: {}'.format(
             lstg, lookup[START_TIME], lookup[START_PRICE], lookup[DEC_PRICE], lookup[ACC_PRICE]))

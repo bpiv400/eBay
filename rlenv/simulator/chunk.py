@@ -1,5 +1,6 @@
 """
-Chunks a partition into SIM_CHUNKS pieces for reward generation
+Chunks a partition into NUM_CHUNKS pieces for value estimation
+or generating discrim inputs
 """
 import os
 import numpy as np, pandas as pd
@@ -14,7 +15,6 @@ from featnames import START_PRICE
 
 def main():
     part = input_partition()
-
     # load inputs
     x_lstg = load('{}{}/x_lstg.gz'.format(PARTS_DIR, part))
     lookup = load('{}{}/{}'.format(PARTS_DIR, part, LOOKUP_FILENAME))
