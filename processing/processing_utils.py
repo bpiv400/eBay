@@ -114,6 +114,13 @@ def input_partition():
     return part
 
 
+def shave_floats(df):
+    for c in df.columns:
+        if df[c].dtype == 'float64':
+            df[c] = df[c].astype('float32')
+    return df
+
+
 def add_turn_indicators(df):
     '''
     Appends turn indicator variables to offer matrix
@@ -129,25 +136,25 @@ def add_turn_indicators(df):
 
 
 # deletes irrelevant feats and sets unseen feats to 0
-def clean_offer(offer, i, outcome, role):
-    # if turn 1, drop days and delay
-    if i == 1:
-        offer = offer.drop(['days', 'delay'], axis=1)
+def clean_offer(offer, i, outcome, role, dtypes):
     # set features to 0 if i exceeds index
-    else:
+    if i > 1:
         future = i > offer.index.get_level_values(level='index')
-        offer.loc[future, offer.dtypes == 'bool'] = False
-        offer.loc[future, offer.dtypes != 'bool'] = 0
+        offer.loc[future, dtypes == 'bool'] = False
+        offer.loc[future, dtypes != 'bool'] = 0
     # for current turn, set feats to 0
     curr = i == offer.index.get_level_values(level='index')
     if outcome == 'delay':
-        offer.loc[curr, offer.dtypes == 'bool'] = False
-        offer.loc[curr, offer.dtypes != 'bool'] = 0
+        offer.loc[curr, dtypes == 'bool'] = False
+        offer.loc[curr, dtypes != 'bool'] = 0
     else:
         offer.loc[curr, 'msg'] = False
         if outcome == 'con':
             offer.loc[curr, ['con', 'norm']] = 0
             offer.loc[curr, ['split', 'auto', 'exp', 'reject']] = False
+    # if turn 1, drop days and delay
+    if i == 1:
+        offer = offer.drop(['days', 'delay'], axis=1)
     # if buyer turn or last turn, drop auto, exp, reject
     if (i in IDX['byr']) or (i == max(IDX[role])):
         offer = offer.drop(['auto', 'exp', 'reject'], axis=1)
@@ -177,14 +184,21 @@ def get_x_offer(part, idx, outcome=None, role=None):
     threads = idx.droplevel(level='index').unique()
     df = pd.DataFrame(index=threads).join(x_offer)
 
+    # step down floats and save data types for later
+    df = shave_floats(df)
+    dtypes = df.dtypes
+
     # turn features
     for i in range(1, max(IDX[role])+1):
         # offer features at turn i
         offer = df.xs(i, level='index').reindex(index=idx)
+
         # clean
-        offer = clean_offer(offer, i, outcome, role)
+        offer = clean_offer(offer, i, outcome, role, dtypes)
+
         # add turn number to featname
         offer = offer.rename(lambda x: x + '_%d' % i, axis=1)
+
         # add turn indicators
         x['offer%d' % i] = add_turn_indicators(offer)
 

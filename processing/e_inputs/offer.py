@@ -6,34 +6,31 @@ from processing.processing_utils import get_x_offer, save_files, load_file
 from processing.processing_consts import *
 
 
-def get_y_con(x_offer, role):
+def get_y_con(x_offer):
 	# drop zero delay and expired offers
 	mask = ~x_offer.auto & ~x_offer.exp
-	s = x_offer.loc[mask, outcome]
-	# subset to role
-	s = s[s.index.isin(IDX[role], level='index')]
-	# convert to byte and return
-	return s.astype('int8').sort_index()
+	# concession is an int from 0 to 100
+	return (x_offer.loc[mask, 'con'] * 100).astype('int8')
 
 
-def get_y_msg(x_offer, role):
+def get_y_msg(x_offer):
 	# drop accepts and rejects
 	mask = (x_offer.con > 0) & (x_offer.con < 1)
-	s = x_offer.loc[mask, outcome]
-	# subset to role
-	s = s[s.index.isin(IDX[role], level='index')]
-	# convert to boolean and return
-	return s.astype(bool).sort_index()
+	return x_offer.loc[mask, 'msg']
 
 
 # loads data and calls helper functions to construct train inputs
 def process_inputs(part, outcome, role):
-	# outcome
+	# load offer data
 	x_offer = load_file(part, 'x_offer')
+
+	# subset by role indices
+	x_offer = x_offer[x_offer.index.isin(IDX[role], level='index')]
+
 	if outcome == 'con':
-		y = get_y_con(x_offer, role)
+		y = get_y_con(x_offer)
 	elif outcome == 'msg':
-		y = get_y_msg(x_offer, role)
+		y = get_y_msg(x_offer)
 	idx = y.index
 
 	# dictionary of input features
