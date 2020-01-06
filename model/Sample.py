@@ -1,5 +1,7 @@
 from torch.utils.data import Sampler, DataLoader
 import numpy as np
+import torch
+from torch.nn.utils import rnn
 from model.model_consts import MBSIZE, NUM_WORKERS_FF, NUM_WORKERS_RNN
 
 

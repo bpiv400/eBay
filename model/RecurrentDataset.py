@@ -1,6 +1,5 @@
 import numpy as np, pandas as pd
 import torch
-from torch.nn.utils import rnn
 from torch.utils.data import Dataset
 from compress_pickle import load
 from constants import PARTS_DIR, INPUT_DIR, INTERVAL, INTERVAL_COUNTS, DAY
