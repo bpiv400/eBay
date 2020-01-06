@@ -296,7 +296,7 @@ def convert_to_numpy(d):
 
     # loop through x, convert to numpy
     for k, v in d['x'].items():
-        d['x'][k] = v.to_numpy()
+        d['x'][k] = v.to_numpy(dtype='float32')
 
     # convert components to numpy directly
     for k in d.keys():
