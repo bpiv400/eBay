@@ -270,6 +270,10 @@ def save_sizes(d, name):
     if 'tf' in d:
         role = name.split('_')[-1]
         sizes['interval'] = INTERVAL[role]
+        sizes['interval_count'] = INTERVAL_COUNTS[role]
+        if role == 'byr':
+            sizes['interval_count_7'] = INTERVAL_COUNTS['byr_7']
+
         sizes['x_time'] = len(CLOCK_FEATS) + len(TIME_FEATS) + 1
 
         # delay models
@@ -296,11 +300,29 @@ def convert_to_numpy(d):
 
     # loop through x, convert to numpy
     for k, v in d['x'].items():
+        assert np.all(v.index == d['periods'].index)
         d['x'][k] = v.to_numpy(dtype='float32')
 
-    # convert components to numpy directly
+    # lists for recurrent components
+    if 'periods' in d:
+        for k in ['y', 'tf']:
+            if k == 'y':
+                s = d['y']
+            else:
+                s = pd.Series(
+                        d['tf'].values.astype('float32').tolist(), 
+                        index=d['tf'].index)
+            indices = s.reset_index(-1).index
+            d[k] = []
+            for idx in d['periods'].index:
+                if idx in indices:
+                    d[k].append(s.xs(idx).to_dict())
+                else:
+                    d[k].append({})
+
+    # convert remaining components to numpy directly
     for k in d.keys():
-        if not isinstance(d[k], dict):
+        if not isinstance(d[k], (list, dict)):
             d[k] = d[k].to_numpy()
 
     return d
@@ -314,8 +336,7 @@ def save_files(d, part, name):
         save_sizes(d, name)
 
     # create dictionary of numpy arrays
-    if 'periods' not in d:
-        d = convert_to_numpy(d)
+    d = convert_to_numpy(d)
 
     # save as dataset
     dump(d, INPUT_DIR + '{}/{}.gz'.format(part, name))

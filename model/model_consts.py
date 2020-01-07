@@ -5,8 +5,8 @@ LOG_DIR = OUTPUT_DIR + 'logs/'
 MODEL_DIR = OUTPUT_DIR + 'models/'
 
 # optimization parameters
-NUM_WORKERS_FF = 0
-NUM_WORKERS_RNN = 2
+NUM_WORKERS_FF = 8
+NUM_WORKERS_RNN = 8
 MBSIZE = {True: 128, False: 2000}
 LOGLR0 = -3
 LOGLR1 = -6
