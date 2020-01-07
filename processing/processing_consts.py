@@ -1,4 +1,4 @@
-from constants import PREFIX
+from constants import PREFIX, HOUR, MINUTE, ARRIVAL_PREFIX, SLR_PREFIX, BYR_PREFIX
 
 # directories
 CLEAN_DIR = '%s/clean/' % PREFIX
@@ -73,3 +73,17 @@ LVARS = ['cat', 'cndtn', 'start_date', 'end_time', \
     'start_price', 'start_price_pctile', 'arrival_rate', 'flag']
 TVARS = ['byr_hist', 'bin']
 OVARS = ['clock', 'price', 'accept', 'reject', 'censored', 'message']
+
+# intervals for checking offer arrivals
+INTERVAL = {
+     ARRIVAL_PREFIX: HOUR,
+     SLR_PREFIX: 5 * MINUTE,
+     BYR_PREFIX: 30 * MINUTE
+}
+
+INTERVAL_COUNTS = {
+     ARRIVAL_PREFIX: int(MAX_DELAY[ARRIVAL_PREFIX] / INTERVAL[ARRIVAL_PREFIX]),
+     SLR_PREFIX: int(MAX_DELAY[SLR_PREFIX] / INTERVAL[SLR_PREFIX]),
+     BYR_PREFIX: int(MAX_DELAY[BYR_PREFIX] / INTERVAL[BYR_PREFIX]),
+     BYR_PREFIX + '_7': int(MAX_DELAY[SLR_PREFIX] / INTERVAL[BYR_PREFIX])
+}

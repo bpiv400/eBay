@@ -49,6 +49,8 @@ MODEL_DIR = '%smodels/' % OUTPUT_DIR
 REINFORCE_DIR = '%s/reinforce' % PREFIX
 REINFORCE_INPUT_DIR = '%s/input' % REINFORCE_DIR
 
+PARAMS_PATH = INPUT_DIR + 'params.pkl'
+
 # partitions
 PARTITIONS = ['train_models', 'train_rl', 'test_rl', 'test']
 
@@ -69,28 +71,8 @@ MAX_DELAY = {
 	BYR_PREFIX: 14 * 24 * 3600
 }
 
-# intervals for checking offer arrivals
-INTERVAL = {
-	ARRIVAL_PREFIX: HOUR,
-	SLR_PREFIX: 5 * MINUTE,
-	BYR_PREFIX: 30 * MINUTE
-}
-
-INTERVAL_COUNTS = {
-	ARRIVAL_PREFIX: int(MAX_DELAY[ARRIVAL_PREFIX] / INTERVAL[ARRIVAL_PREFIX]),
-	SLR_PREFIX: int(MAX_DELAY[SLR_PREFIX] / INTERVAL[SLR_PREFIX]),
-	BYR_PREFIX: int(MAX_DELAY[BYR_PREFIX] / INTERVAL[BYR_PREFIX]),
-	BYR_PREFIX + '_7': int(MAX_DELAY[SLR_PREFIX] / INTERVAL[BYR_PREFIX])
-}
-
 # quantiles of byr_hist distribution
 HIST_QUANTILES = 10
-
-# model names
-MODELS = ['arrival', 'hist', \
-		  'delay_byr', 'delay_slr', \
-		  'con_byr', 'con_slr', \
-		  'msg_byr', 'msg_slr']
 
 # number of chunks for environment simulation
 SIM_CHUNKS = 1000

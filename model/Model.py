@@ -8,17 +8,17 @@ from constants import *
 
 
 class Model:
-    def __init__(self, name, sizes, \
-                 batchnorm=True, dropout=False, device='cuda'):
+    def __init__(self, name, sizes, params, device='cuda'):
         '''
         Creates a neural net and manages training and validation.
         :param name: string name of model.
         :param sizes: dictionary of data sizes.
+        :param params: dictionary of neural net parameters.
         :param batchnorm: True if using BatchNorm.
         :param dropout: True if using dropout.
         :param device: either 'cuda' or 'cpu'
         '''
-        self.dropout = dropout
+        self.dropout = params['dropout']
         self.device = device
 
         # recurrent models
@@ -37,11 +37,9 @@ class Model:
 
         # neural net
         if self.isRecurrent:
-            self.net = Recurrent(sizes, 
-                batchnorm=batchnorm, dropout=dropout).to(device)
+            self.net = Recurrent(sizes, params).to(device)
         else:
-            self.net = FeedForward(sizes, 
-                batchnorm=batchnorm, dropout=dropout).to(device)
+            self.net = FeedForward(sizes, params).to(device)
 
 
     def set_gamma(self, gamma):
@@ -81,12 +79,14 @@ class Model:
 
         # loop over batches, calculate log-likelihood
         loss = 0.0
+        gpu_time = 0.0
         for b in batches:
-            #t0 = dt.now()
+            t0 = dt.now()
             self._move_to_device(b)
             loss += self._run_batch(b, optimizer)
-            #seconds = (dt.now() - t0).total_seconds()
-            #print('{}: {} seconds'.format(b['y'].size()[-1], seconds))
+            gpu_time += (dt.now() - t0).total_seconds()
+
+        print('\t\tGPU time: {} seconds'.format(gpu_time))
 
         return loss
 

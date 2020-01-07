@@ -1,10 +1,9 @@
 import sys, os
 from compress_pickle import load, dump
 import numpy as np, pandas as pd
-from constants import *
 from processing.processing_utils import input_partition, \
     load_frames, save_files, load_file, get_tf
-from processing.processing_consts import *
+from processing.processing_consts import CLEAN_DIR, INTERVAL, INTERVAL_COUNTS
 
 
 def get_periods(lstg_start, lstg_end):
@@ -51,7 +50,7 @@ def process_inputs(part):
 
     # time features
     tf = load_file(part, 'tf_arrival')
-    tf_arrival = get_tf(tf, lstg_start, 'arrival')
+    tf_arrival = get_tf(tf, lstg_start, periods, 'arrival')
 
     return {'periods': periods, 'y': y, 'x': x,
             'seconds': lstg_start, 'tf': tf_arrival}

@@ -7,7 +7,9 @@ from model.FeedForwardDataset import FeedForwardDataset
 from model.RecurrentDataset import RecurrentDataset
 from model.Model import Model
 from model.model_consts import *
-from constants import *
+from constants import INPUT_DIR, PARAMS_PATH
+
+PART = 'test_rl'
 
 
 if __name__ == '__main__':
@@ -18,11 +20,15 @@ if __name__ == '__main__':
 
     # load model sizes
     print('Loading parameters')
-    sizes = load('%s/inputs/sizes/%s.pkl' % (PREFIX, name))
-    print(sizes)
+    sizes = load(INPUT_DIR + 'sizes/{}.pkl'.format(name))
+    print('Sizes: {}'.format(sizes))
+
+    # load parameters
+    params = load(PARAMS_PATH)
+    print('Parameters: {}'.format(params))
 
     # initialize neural net
-    model = Model(name, sizes, batchnorm=False, dropout=False)
+    model = Model(name, sizes, PARAMS)
     print(model.net)
     print(model.loss)
 
@@ -31,20 +37,31 @@ if __name__ == '__main__':
     print(optimizer)
 
     # load data
-    dataset = RecurrentDataset if 'x_time' in sizes else FeedForwardDataset
-    train = dataset('small', name)
+    if 'x_time' in sizes:
+        data = RecurrentDataset(PART, name, sizes)
+    else:
+        data = FeedForwardDataset(PART, name)
 
     # training
-    for epoch in range(10):
-        print('Epoch %d' % epoch)
+    for epoch in range(1):
+        print('Epoch %d:' % epoch)
 
         # training
+        print('\tTraining:')
         t0 = dt.now()
-        loss = model.run_loop(train, optimizer)
-        print('\tloss: %d' % loss)
-
-        sec = (dt.now() - t0).total_seconds()
-        print('\ttime: %d sec' % sec)
+        loss = model.run_loop(data, optimizer)
+        print('\t\tTotal time: {} seconds'.format(
+            (dt.now() - t0).total_seconds()))
+        print('\t\tloss: %d' % loss)
+        
+        # testing
+        print('\tTesting:')
+        t0 = dt.now()
+        with torch.no_grad():
+            loss_test = model.run_loop(data)
+        print('\t\tTotal time: {} seconds'.format(
+            (dt.now() - t0).total_seconds()))
+        print('\t\tloss: %d' % loss_test)
 
     # # save model
     # torch.save(model.net.state_dict(),

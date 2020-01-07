@@ -7,7 +7,7 @@ from model.Model import Model
 from model.FeedForwardDataset import FeedForwardDataset
 from model.RecurrentDataset import RecurrentDataset
 from model.model_consts import *
-from constants import *
+from constants import INPUT_DIR, MODEL_DIR, PARAMS_PATH
 
 
 def training_loop(model, train, test, writer, model_path):
@@ -63,18 +63,24 @@ if __name__ == '__main__':
 
     # load model sizes
     sizes = load(INPUT_DIR + 'sizes/{}.pkl'.format(name))
-    print('Parameters: {}'.format(sizes))
+    print('Sizes: {}'.format(sizes))
+
+    # load parameters
+    params = load(PARAMS_PATH)
+    print('Parameters: {}'.format(params))
 
     # initialize model
-    model = Model(name, sizes, batchnorm=True, dropout=False)
+    model = Model(name, sizes, params)
     print(model.net)
 
     # load datasets
-    dataset = RecurrentDataset if 'x_time' in sizes else FeedForwardDataset
-    print('Loading training data')
-    train = dataset('train_models', name)
-    print('Loading validation data')
-    test = dataset('train_rl', name)
+    print('Loading data')
+    if 'x_time' in sizes:
+        train = RecurrentDataset('train_models', name, sizes)
+        test = RecurrentDataset('train_rl', name, sizes)
+    else:
+        train = FeedForwardDataset('train_models', name)
+        test = FeedForwardDataset('train_rl', name)
 
     # experiment number
     expid = 0

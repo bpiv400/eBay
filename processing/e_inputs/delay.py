@@ -1,10 +1,10 @@
 import sys, os, argparse
 from compress_pickle import load, dump
 import numpy as np, pandas as pd
-from constants import *
 from processing.processing_utils import get_x_offer, \
 	save_files, load_file, get_tf
-from processing.processing_consts import *
+from processing.processing_consts import INTERVAL, INTERVAL_COUNTS, MAX_DELAY
+from constants import DAY, IDX
 
 
 def get_delay(x_offer):
@@ -20,17 +20,33 @@ def get_delay(x_offer):
 
 
 def get_periods(delay, role):
-    # convert to interval
-    periods = (delay // INTERVAL[role]).rename('periods')
+	# convert to interval
+	periods = (delay // INTERVAL[role]).rename('periods')
 
-    # error checking
-    assert periods.max() <= INTERVAL_COUNTS[role]
+	# error checking
+	assert periods.max() <= INTERVAL_COUNTS[role]
 
-    # minimum number of periods is 1
-    periods.loc[periods < INTERVAL_COUNTS[role]] += 1
+	# minimum number of periods is 1
+	periods.loc[periods < INTERVAL_COUNTS[role]] += 1
 
-    # sort and return
-    return periods
+	# sort and return
+	return periods
+
+
+def get_y(delay, exp, role):
+		# subset and convert to interval
+	intervals = (delay[~exp] // INTERVAL[role]).rename('periods')
+
+	# error checking
+	assert intervals.max() < INTERVAL_COUNTS[role]
+	if role == 'byr':
+		assert intervals.xs(7, level='index').max() < INTERVAL_COUNTS['byr_7']
+
+	# count of arrivals by interval
+	y = intervals.rename('period').to_frame().assign(
+		count=1).set_index('period', append=True).squeeze()
+
+	return y
 
 
 # loads data and calls helper functions to construct train inputs
@@ -48,8 +64,7 @@ def process_inputs(part, role):
 	idx = periods.index
 
 	# outcome
-	y = periods[~x_offer.exp].to_frame().assign(
-		offer=1).set_index('periods', append=True).squeeze()
+	y = get_y(delay, x_offer.exp, role)
 
 	# dictionary of input features
 	x = get_x_offer(part, idx, outcome='delay', role=role)
@@ -70,7 +85,7 @@ def process_inputs(part, role):
 	# time features
 	tf = load_file(part, 'tf_delay')
 	tf = tf[tf.index.isin(IDX[role], level='index')]
-	tf_delay = get_tf(tf, delay_start, role)
+	tf_delay = get_tf(tf, delay_start, periods, role)
 
 	# dictionary of input components
 	return {'periods': periods, 

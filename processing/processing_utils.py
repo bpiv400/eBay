@@ -114,6 +114,13 @@ def input_partition():
     return part
 
 
+def shave_floats(df):
+    for c in df.columns:
+        if df[c].dtype == 'float64':
+            df[c] = df[c].astype('float32')
+    return df
+
+
 def add_turn_indicators(df):
     '''
     Appends turn indicator variables to offer matrix
@@ -129,25 +136,25 @@ def add_turn_indicators(df):
 
 
 # deletes irrelevant feats and sets unseen feats to 0
-def clean_offer(offer, i, outcome, role):
-    # if turn 1, drop days and delay
-    if i == 1:
-        offer = offer.drop(['days', 'delay'], axis=1)
+def clean_offer(offer, i, outcome, role, dtypes):
     # set features to 0 if i exceeds index
-    else:
+    if i > 1:
         future = i > offer.index.get_level_values(level='index')
-        offer.loc[future, offer.dtypes == 'bool'] = False
-        offer.loc[future, offer.dtypes != 'bool'] = 0
+        offer.loc[future, dtypes == 'bool'] = False
+        offer.loc[future, dtypes != 'bool'] = 0
     # for current turn, set feats to 0
     curr = i == offer.index.get_level_values(level='index')
     if outcome == 'delay':
-        offer.loc[curr, offer.dtypes == 'bool'] = False
-        offer.loc[curr, offer.dtypes != 'bool'] = 0
+        offer.loc[curr, dtypes == 'bool'] = False
+        offer.loc[curr, dtypes != 'bool'] = 0
     else:
         offer.loc[curr, 'msg'] = False
         if outcome == 'con':
             offer.loc[curr, ['con', 'norm']] = 0
             offer.loc[curr, ['split', 'auto', 'exp', 'reject']] = False
+    # if turn 1, drop days and delay
+    if i == 1:
+        offer = offer.drop(['days', 'delay'], axis=1)
     # if buyer turn or last turn, drop auto, exp, reject
     if (i in IDX['byr']) or (i == max(IDX[role])):
         offer = offer.drop(['auto', 'exp', 'reject'], axis=1)
@@ -177,21 +184,28 @@ def get_x_offer(part, idx, outcome=None, role=None):
     threads = idx.droplevel(level='index').unique()
     df = pd.DataFrame(index=threads).join(x_offer)
 
+    # step down floats and save data types for later
+    df = shave_floats(df)
+    dtypes = df.dtypes
+
     # turn features
     for i in range(1, max(IDX[role])+1):
         # offer features at turn i
         offer = df.xs(i, level='index').reindex(index=idx)
+
         # clean
-        offer = clean_offer(offer, i, outcome, role)
+        offer = clean_offer(offer, i, outcome, role, dtypes)
+
         # add turn number to featname
         offer = offer.rename(lambda x: x + '_%d' % i, axis=1)
+
         # add turn indicators
         x['offer%d' % i] = add_turn_indicators(offer)
 
     return x
 
 
-def get_tf(tf, start, role):
+def get_tf(tf, start, periods, role):
     # add period to tf_arrival
     tf = tf.join(start.rename('start'))
     tf['period'] = (tf.clock - tf.start) // INTERVAL[role]
@@ -201,10 +215,9 @@ def get_tf(tf, start, role):
     tf['period'] += 1
 
     # drop periods beyond censoring threshold
-    tf = tf[tf.period < INTERVAL_COUNTS[role]]
-    if role == 'byr':
-        tf = tf[~tf.index.isin([7], level='index') | \
-                (tf.period < INTERVAL_COUNTS['byr_7'])]
+    tf = tf.join(periods.rename('periods'))
+    tf = tf[tf.period < tf.periods]
+    tf = tf.drop('periods', axis=1)
 
     # sum count features by period and return
     return tf.groupby(list(tf.index.names) + ['period']).sum()
@@ -256,6 +269,10 @@ def save_sizes(d, name):
     if 'tf' in d:
         role = name.split('_')[-1]
         sizes['interval'] = INTERVAL[role]
+        sizes['interval_count'] = INTERVAL_COUNTS[role]
+        if role == 'byr':
+            sizes['interval_count_7'] = INTERVAL_COUNTS['byr_7']
+
         sizes['x_time'] = len(CLOCK_FEATS) + len(TIME_FEATS) + 1
 
         # delay models
@@ -280,14 +297,36 @@ def convert_to_numpy(d):
     :return: dictionary with numpy arrays (and dictionaries of dataframes).
     '''
 
+    # for error checking
+    periods_idx = d['periods'].index
+
     # loop through x, convert to numpy
     for k, v in d['x'].items():
-        d['x'][k] = v.to_numpy()
+        assert np.all(v.index == periods_idx)
+        d['x'][k] = v.to_numpy(dtype='float32')
 
-    # convert components to numpy directly
-    for k in d.keys():
-        if not isinstance(d[k], dict):
-            d[k] = d[k].to_numpy()
+    # lists for recurrent components
+    if 'periods' in d:
+        for k in ['y', 'tf']:
+            if k == 'y':
+                s = d['y']
+            else:
+                s = pd.Series(
+                        d['tf'].values.astype('float32').tolist(), 
+                        index=d['tf'].index)
+            indices = s.reset_index(-1).index
+            d[k] = []
+            for idx in periods_idx:
+                if idx in indices:
+                    d[k].append(s.xs(idx).to_dict())
+                else:
+                    d[k].append({})
+
+    # convert remaining components to numpy directly
+    for k, v in d.items():
+        if not isinstance(v, (list, dict)):
+            assert np.all(v.index == periods_idx)
+            d[k] = v.to_numpy()
 
     return d
 
@@ -300,8 +339,7 @@ def save_files(d, part, name):
         save_sizes(d, name)
 
     # create dictionary of numpy arrays
-    if 'periods' not in d:
-        d = convert_to_numpy(d)
+    d = convert_to_numpy(d)
 
     # save as dataset
     dump(d, INPUT_DIR + '{}/{}.gz'.format(part, name))
