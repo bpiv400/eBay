@@ -1,6 +1,7 @@
 import sys, os, argparse
 from compress_pickle import load, dump
 from processing.processing_utils import save_files
+from constants import INPUT_DIR
 
 
 if __name__ == '__main__':

@@ -20,33 +20,33 @@ def get_delay(x_offer):
 
 
 def get_periods(delay, role):
-    # convert to interval
-    periods = (delay // INTERVAL[role]).rename('periods')
+	# convert to interval
+	periods = (delay // INTERVAL[role]).rename('periods')
 
-    # error checking
-    assert periods.max() <= INTERVAL_COUNTS[role]
+	# error checking
+	assert periods.max() <= INTERVAL_COUNTS[role]
 
-    # minimum number of periods is 1
-    periods.loc[periods < INTERVAL_COUNTS[role]] += 1
+	# minimum number of periods is 1
+	periods.loc[periods < INTERVAL_COUNTS[role]] += 1
 
-    # sort and return
-    return periods
+	# sort and return
+	return periods
 
 
 def get_y(delay, exp, role):
- 	# subset and convert to interval
-    intervals = (delay[~exp] // INTERVAL[role]).rename('periods')
+		# subset and convert to interval
+	intervals = (delay[~exp] // INTERVAL[role]).rename('periods')
 
-    # error checking
-    assert intervals.max() < INTERVAL_COUNTS[role]
-    if role == 'byr':
+	# error checking
+	assert intervals.max() < INTERVAL_COUNTS[role]
+	if role == 'byr':
 		assert intervals.xs(7, level='index').max() < INTERVAL_COUNTS['byr_7']
 
-    # count of arrivals by interval
-    y = intervals.rename('period').to_frame().assign(
-        count=1).set_index('period', append=True).squeeze()
+	# count of arrivals by interval
+	y = intervals.rename('period').to_frame().assign(
+		count=1).set_index('period', append=True).squeeze()
 
-    return y
+	return y
 
 
 # loads data and calls helper functions to construct train inputs
