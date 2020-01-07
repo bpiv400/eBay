@@ -1,10 +1,10 @@
-import sys
+import sys, h5py
 from compress_pickle import load, dump
 import numpy as np, pandas as pd
-from constants import *
 from processing.processing_utils import input_partition, load_frames, \
     get_partition
-from processing.processing_consts import *
+from processing.processing_consts import CLEAN_DIR, W2V_DIR
+from constants import *
 
 
 # returns booleans for whether offer is round and ends in nines
@@ -50,7 +50,7 @@ def get_x_lstg(L):
 if __name__ == "__main__":
     # partition and corresponding indices
     part = input_partition()
-    idx, path = get_partition(part)
+    idx, _ = get_partition(part)
 
     # initialize output dictionary
     x = {}
@@ -81,19 +81,24 @@ if __name__ == "__main__":
     for name in ['cat', 'cndtn']:
         x[name] = df[[c for c in df.columns if c.startswith(name + '_')]]
 
-    # float32s
+    # take natural log of number of listings
     for k, v in x.items():
-        # take natural log of number of listings
         count_cols = [c for c in v.columns if c.endswith('_lstgs')]
         for c in count_cols:
-            x[k][c] = np.log(1 + x[k][c])
+            x[k][c] = x[k][c].apply(np.log1p)
             x[k].rename({c: c.replace('lstgs', 'ln_lstgs')}, 
                 axis=1, inplace=True)
 
-        # scale down floats
-        float_cols = [c for c in v.columns if v[c].dtype == 'float64']
-        for c in float_cols:
-            x[k][c] = x[k][c].astype('float32')
+    # ensure indices are aligned with lookup
+    lookup = load(PARTS_DIR + '{}/lookup.gz'.format(part))
+    for v in x.values():
+        assert np.all(lookup.index == v.index)
 
-    # save dictionary
-    dump(x, path('x_lstg'))
+    # numpy float32
+    for k, v in x.items():
+        x[k] = v.to_numpy(dtype='float32')
+
+    # save hdf5 file
+    with h5py.File(PARTS_DIR + '{}/x_lstg.hdf5'.format(part), 'w') as f:
+        for k, v in x.items():
+            f.create_dataset(k, data=v)

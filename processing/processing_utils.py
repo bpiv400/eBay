@@ -46,6 +46,7 @@ def extract_day_feats(clock):
     df['holiday'] = clock.dt.date.astype('datetime64').isin(HOLIDAYS)
     for i in range(6):
         df['dow' + str(i)] = clock.dt.dayofweek == i
+
     return df
 
 
@@ -60,6 +61,8 @@ def extract_clock_feats(clock):
     # add in seconds of day
     seconds_since_midnight = clock.dt.hour * 60 + clock.dt.minute + clock.dt.second
     df['second_of_day'] = (seconds_since_midnight / (24 * 3600)).astype('float32')
+
+    assert all(df.columns == CLOCK_FEATS)
 
     return df
 

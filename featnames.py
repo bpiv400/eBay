@@ -1,5 +1,5 @@
 # clock feats
-CLOCK_FEATS = ['holiday', 'dow0', 'dow1', 'dow2', 'dow3', 'dow4', 'dow5', 'minute_of_day']
+CLOCK_FEATS = ['holiday', 'dow0', 'dow1', 'dow2', 'dow3', 'dow4', 'dow5', 'second_of_day']
 
 # time feats
 SLR_OFFERS = 'slr_offers'
