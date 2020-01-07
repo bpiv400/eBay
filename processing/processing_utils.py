@@ -205,7 +205,7 @@ def get_x_offer(part, idx, outcome=None, role=None):
     return x
 
 
-def get_tf(tf, start, role):
+def get_tf(tf, start, periods, role):
     # add period to tf_arrival
     tf = tf.join(start.rename('start'))
     tf['period'] = (tf.clock - tf.start) // INTERVAL[role]
@@ -215,10 +215,9 @@ def get_tf(tf, start, role):
     tf['period'] += 1
 
     # drop periods beyond censoring threshold
-    tf = tf[tf.period < INTERVAL_COUNTS[role]]
-    if role == 'byr':
-        tf = tf[~tf.index.isin([7], level='index') | \
-                (tf.period < INTERVAL_COUNTS['byr_7'])]
+    tf = tf.join(periods.rename('periods'))
+    tf = tf[tf.period < tf.periods]
+    tf = tf.drop('periods', axis=1)
 
     # sum count features by period and return
     return tf.groupby(list(tf.index.names) + ['period']).sum()
@@ -298,9 +297,12 @@ def convert_to_numpy(d):
     :return: dictionary with numpy arrays (and dictionaries of dataframes).
     '''
 
+    # for error checking
+    periods_idx = d['periods'].index
+
     # loop through x, convert to numpy
     for k, v in d['x'].items():
-        assert np.all(v.index == d['periods'].index)
+        assert np.all(v.index == periods_idx)
         d['x'][k] = v.to_numpy(dtype='float32')
 
     # lists for recurrent components
@@ -314,16 +316,17 @@ def convert_to_numpy(d):
                         index=d['tf'].index)
             indices = s.reset_index(-1).index
             d[k] = []
-            for idx in d['periods'].index:
+            for idx in periods_idx:
                 if idx in indices:
                     d[k].append(s.xs(idx).to_dict())
                 else:
                     d[k].append({})
 
     # convert remaining components to numpy directly
-    for k in d.keys():
-        if not isinstance(d[k], (list, dict)):
-            d[k] = d[k].to_numpy()
+    for k, v in d.items():
+        if not isinstance(v, (list, dict)):
+            assert np.all(v.index == periods_idx)
+            d[k] = v.to_numpy()
 
     return d
 

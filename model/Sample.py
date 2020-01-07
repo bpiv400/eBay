@@ -2,7 +2,7 @@ from torch.utils.data import Sampler, DataLoader
 import numpy as np
 import torch
 from torch.nn.utils import rnn
-from model.model_consts import MBSIZE, NUM_WORKERS_FF, NUM_WORKERS_RNN
+from model.model_consts import MBSIZE, NUM_WORKERS
 
 
 class Sample(Sampler):
@@ -100,10 +100,9 @@ def get_batches(data, isTraining):
     :param isTraining: chop into minibatches if True.
     :return: iterable batches of examples.
     '''
-    ff = len(data.groups) == 1
-    collate_fn = collateFF if ff else collateRNN
-    num_workers = NUM_WORKERS_FF if ff else NUM_WORKERS_RNN
-    batches = DataLoader(data, collate_fn=collate_fn,
+    batches = DataLoader(data, 
+        collate_fn=collateFF if len(data.groups) == 1 else collateRNN,
         batch_sampler=Sample(data, isTraining),
-        num_workers=num_workers, pin_memory=True)
+        num_workers=NUM_WORKERS, 
+        pin_memory=True)
     return batches

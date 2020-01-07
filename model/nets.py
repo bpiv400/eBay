@@ -1,7 +1,5 @@
 import torch, torch.nn as nn
 from collections import OrderedDict
-from model.model_consts import HIDDEN, LSTM_HIDDEN, \
-    LAYERS_EMBEDDING, LAYERS_FULL
 from constants import *
 
 
@@ -29,10 +27,12 @@ class VariationalDropout(nn.Module):
 
 
 class Layer(nn.Module):
-    def __init__(self, N_in, N_out, batchnorm=True, dropout=False):
+    def __init__(self, N_in, N_out, params):
         '''
-        N_in: scalar number of input weights
-        N_out: scalar number of output weights
+        :param N_in: scalar number of input weights.
+        :param N_out: scalar number of output weights.
+        :param params: dictionary of neural net parameters.
+
         '''
         super(Layer, self).__init__()
 
@@ -40,15 +40,16 @@ class Layer(nn.Module):
         self.layer = nn.ModuleList([nn.Linear(N_in, N_out)])
 
         # batch normalization
-        if batchnorm:
-            self.layer.append(nn.BatchNorm1d(N_out, affine=True))
+        if params['batchnorm']:
+            self.layer.append(nn.BatchNorm1d(N_out, affine=params['affine']))
 
         # activation function
         self.layer.append(nn.ReLU(inplace=True))
 
         # dropout
-        if dropout:
+        if params['dropout']:
             self.layer.append(VariationalDropout(N_out))
+
 
     def forward(self, x):
         '''
@@ -60,18 +61,19 @@ class Layer(nn.Module):
 
 
 class Stack(nn.Module):
-    def __init__(self, N, layers=1, batchnorm=True, dropout=False):
+    def __init__(self, N, params, layers=1):
         '''
-        N: scalar number of input and output weights
-        layers: scalar number of layers to stack
+        :param N: scalar number of input and output weights.
+        :param layers: scalar number of layers to stack.
+        :param params: dictionary of neural net parameters.
         '''
         super(Stack, self).__init__()
 
         # sequence of modules
         self.stack = nn.ModuleList([])
         for _ in range(layers):
-            self.stack.append(Layer(N, N, 
-                batchnorm=batchnorm, dropout=dropout))
+            self.stack.append(Layer(N, N, params))
+
         
     def forward(self, x):
         '''
@@ -83,22 +85,24 @@ class Stack(nn.Module):
 
 
 class Embedding(nn.Module):
-    def __init__(self, counts, batchnorm=True):
+    def __init__(self, counts, params):
         '''
-        sizes: dictionary of scalar input sizes; sizes['x'] is an OrderedDict
+        :param counts: dictionary of scalar input sizes.
+        :param params: dictionary of neural net parameters.
         '''
         super(Embedding, self).__init__()
 
         # first stack of layers: N to N
         self.layer1 = nn.ModuleDict()
         for k, v in counts.items():
-            self.layer1[k] = Stack(v, layers=LAYERS_EMBEDDING, 
-                batchnorm=batchnorm, dropout=False)
+            self.layer1[k] = Stack(v, params,
+                layers=params['layers_embedding'])
 
         # second layer: concatenation
         N = sum(counts.values())
-        self.layer2 = Stack(N, layers=LAYERS_EMBEDDING, 
-             batchnorm=batchnorm, dropout=False)
+        self.layer2 = Stack(N, params,
+            layers=params['layers_embedding'])
+
 
     def forward(self, x):
         '''
@@ -117,27 +121,26 @@ class Embedding(nn.Module):
 
 
 class FullyConnected(nn.Module):
-    def __init__(self, N_in, N_out, batchnorm, dropout):
+    def __init__(self, N_in, N_out, params):
         '''
-        sizes: dictionary of scalar input sizes; sizes['x'] is an OrderedDict
-        N_in: scalar number of input weights
-        N_out: scalar number of output parameters
+        N_in: scalar number of input weights.
+        N_out: scalar number of output parameters.
+        :param params: dictionary of neural net parameters.
         '''
         super(FullyConnected, self).__init__()
         # intermediate layer
-        self.seq = nn.ModuleList([Layer(N_in, HIDDEN, 
-            batchnorm=batchnorm, dropout=dropout)])
+        self.seq = nn.ModuleList([Layer(N_in, params['hidden'], params)])
 
         # fully connected network
-        self.seq.append(Stack(HIDDEN, layers=LAYERS_FULL-2, 
-            batchnorm=batchnorm, dropout=dropout))
+        self.seq.append(Stack(params['hidden'], params,
+            layers=params['layers_full']-2))
 
         # last layer has no dropout
-        self.seq.append(
-            Stack(HIDDEN, batchnorm=batchnorm, dropout=False))
+        self.seq.append(Stack(params['hidden'], params))
 
         # output layer
-        self.seq.append(nn.Linear(HIDDEN, N_out))
+        self.seq.append(nn.Linear(params['hidden'], N_out))
+
 
     def forward(self, x):
         '''
@@ -149,12 +152,11 @@ class FullyConnected(nn.Module):
 
 
 class FeedForward(nn.Module):
-    def __init__(self, sizes, 
-                 batchnorm=True, dropout=False, toRNN=False):
+    def __init__(self, sizes, params, toRNN=False):
         '''
-        sizes: dictionary of scalar input sizes; sizes['x'] is an OrderedDict
-        dropout: True if using dropout for fully-connected layers
-        toRNN: True if FeedForward initialized hidden state of recurrent network
+        :param sizes: dictionary of scalar input sizes; sizes['x'] is an OrderedDict
+        :param params: dictionary of neural net parameters.
+        :param toRNN: True if FeedForward initialized hidden state of recurrent network
         '''
         super(FeedForward, self).__init__()
 
@@ -170,14 +172,14 @@ class FeedForward(nn.Module):
         d, total = OrderedDict(), 0
         for name, group in groups.items():
             counts = {k: v for k, v in sizes['x'].items() if k in group}
-            d[name] = Embedding(counts, batchnorm=batchnorm)
+            d[name] = Embedding(counts, params)
             total += sum(counts.values())
         self.nn0 = nn.ModuleDict(d)
 
         # fully connected
-        N_in = sum(counts.values())
         self.nn1 = FullyConnected(total, 
-            LSTM_HIDDEN if toRNN else sizes['out'], batchnorm, dropout)
+            params['hidden'] if toRNN else sizes['out'], params)
+
 
     def forward(self, x):
         '''
@@ -190,32 +192,30 @@ class FeedForward(nn.Module):
 
 
 class Recurrent(nn.Module):
-    def __init__(self, sizes, batchnorm=True, dropout=False):
+    def __init__(self, sizes, params):
         '''
         :param sizes: dictionary of scalar input sizes; sizes['x'] is an OrderedDict
-        :param dropout: True if using dropout for fully-connected layers
+        :param params: dictionary of neural net parameters.
         '''
         super(Recurrent, self).__init__()
 
         # initial hidden nodes
-        self.h0 = FeedForward(sizes, 
-            batchnorm=batchnorm, dropout=dropout, toRNN=True)
-        self.c0 = FeedForward(sizes, 
-            batchnorm=batchnorm, dropout=dropout, toRNN=True)
+        self.h0 = FeedForward(sizes, params, toRNN=True)
+        self.c0 = FeedForward(sizes, params, toRNN=True)
 
         # rnn layer
         self.rnn = nn.LSTM(input_size=sizes['x_time'],
-                           hidden_size=LSTM_HIDDEN,
+                           hidden_size=params['hidden'],
                            batch_first=True)
 
         # output layer
-        self.output = nn.Linear(LSTM_HIDDEN, sizes['out'])
+        self.output = nn.Linear(params['hidden'], sizes['out'])
+
 
     def forward(self, x, x_time):
         '''
-        :param d: dictionary with entries:
-            x: OrderedDict()
-            x_time: tensor of shape [mbsize, INTERVAL_COUNTS[outcome], sizes['x_time']]
+        :param x: OrderedDict()
+        :param x_time: tensor of shape [mbsize, INTERVAL_COUNTS[outcome], sizes['x_time']]
         '''
         # initialize hidden state
         hidden = (self.h0(x).unsqueeze(dim=0), 
@@ -232,9 +232,11 @@ class Recurrent(nn.Module):
         # output layer: (batch_size, seq_len, N_output)
         return self.output(theta).squeeze()
 
+
     def init(self, x=None):
         return (self.h0(x).unsqueeze(dim=0), 
             self.c0(x).unsqueeze(dim=0))
+
 
     def step(self, x_time=None, hidden=None, x=None):
         """

@@ -1,9 +1,8 @@
 import sys, os, argparse
 from compress_pickle import load, dump
 import numpy as np, pandas as pd
-from constants import *
 from processing.processing_utils import get_x_offer, save_files, load_file
-from processing.processing_consts import *
+from constants import IDX
 
 
 def get_y_con(x_offer):

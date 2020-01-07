@@ -1,10 +1,10 @@
 import sys, os, argparse
 from compress_pickle import load, dump
 import numpy as np, pandas as pd
-from constants import *
 from processing.processing_utils import get_x_offer, \
 	save_files, load_file, get_tf
-from processing.processing_consts import *
+from processing.processing_consts import INTERVAL, INTERVAL_COUNTS, MAX_DELAY
+from constants import DAY, IDX
 
 
 def get_delay(x_offer):
@@ -85,7 +85,7 @@ def process_inputs(part, role):
 	# time features
 	tf = load_file(part, 'tf_delay')
 	tf = tf[tf.index.isin(IDX[role], level='index')]
-	tf_delay = get_tf(tf, delay_start, role)
+	tf_delay = get_tf(tf, delay_start, periods, role)
 
 	# dictionary of input components
 	return {'periods': periods, 
