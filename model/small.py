@@ -28,7 +28,7 @@ if __name__ == '__main__':
     print('Parameters: {}'.format(params))
 
     # initialize neural net
-    model = Model(name, sizes, PARAMS)
+    model = Model(name, sizes, params)
     print(model.net)
     print(model.loss)
 
