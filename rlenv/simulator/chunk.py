@@ -5,7 +5,7 @@ or generating discrim inputs
 import os
 import numpy as np, pandas as pd
 from compress_pickle import dump, load
-from constants import PARTS_DIR, PARTITIONS
+from constants import PARTS_DIR
 from rlenv.env_consts import LOOKUP_FILENAME
 from rlenv.env_utils import get_env_sim_subdir
 from processing.processing_utils import input_partition

@@ -1,4 +1,4 @@
-from compress_pickle import load
+from utils import unpickle
 from constants import INPUT_DIR, ARRIVAL_PREFIX, SLR_PREFIX, BYR_PREFIX
 from featnames import CON, DELAY, MSG
 
@@ -26,7 +26,7 @@ META_7 = [21, 10]
 META_6 = [32, 14, 11, 7, 28]
 
 # holiday and day-of-week indicators, indexed by days since START
-DATE_FEATS = load(INPUT_DIR + 'date_feats.pkl')
+DATE_FEATS = unpickle(INPUT_DIR + 'date_feats.pkl')
 
 # various counts
 SELLER_HORIZON = 100

@@ -182,6 +182,9 @@ class Composer:
         x = torch.zeros(1, size).float()
         # other features
         for map_name, curr_map in maps.items():
+            print('map name: {}'.format(map_name))
+            if map_name == THREAD_MAP:
+                print(curr_map)
             try:
                 x[0, curr_map] = torch.from_numpy(sources[map_name][curr_map.index].values).float()
             except RuntimeError as e:
@@ -202,6 +205,9 @@ class Composer:
         :return: 2-tuple of x_fixed, x_time. If not recurrent, x_time = None. If fixed=False,
         x_fixed = None
         """
+        print('model name: {}'.format(model_name))
+        print('fixed: {}'.format(fixed))
+        print('recurrent: {}'.format(recurrent))
         input_dict = dict()
         if recurrent:
             if model_name == 'arrival':
@@ -217,6 +223,7 @@ class Composer:
             fixed_maps = self.maps[model_name]['x']
             fixed_sizes = self.sizes[model_name]['x']
             for input_set in fixed_maps.keys():
+                print('input set: {}'.format(input_set))
                 input_dict['x'][input_set] = Composer._build_input_vector(
                     fixed_maps[input_set],
                     fixed_sizes[input_set],

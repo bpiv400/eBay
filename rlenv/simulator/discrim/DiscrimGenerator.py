@@ -9,7 +9,6 @@ class DiscrimGenerator(Generator):
         # initialize recorder
         self.recorder = DiscrimRecorder(self.records_path, self.verbose)
 
-
     def generate(self):
         """
         Simulates all lstgs in chunk according to experiment parameters
