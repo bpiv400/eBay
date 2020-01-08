@@ -37,16 +37,19 @@ class FeedForwardDataset(Dataset):
 
         # initialize x from listing-level features
         idx_x = self.d['idx_x'][idx]
-        x = {k: v[idx_x,:] for k, v in self.x.items()}
+        x = {}
+        for k, v in self.x.items():
+            x[k] = v[idx_x, :]
 
         # append thread-level features
         if 'x_thread' in self.d:
             x['lstg'] = np.concatenate(
-                (x['lstg'], self.d['x_thread'][idx]), axis=1)
+                (x['lstg'], self.d['x_thread'][idx].astype('float32')))
 
         # append offer-level features
         if 'x_offer' in self.d:
-            x = x.update(self.d['x_offer'][idx])
+            for k, v in self.d['x_offer'].items():
+                x[k] = v[idx, :]
 
         return y, x
         

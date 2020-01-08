@@ -335,7 +335,7 @@ def convert_to_numpy(d):
     for k, v in d.items():
         if not isinstance(v, (list, dict)):
             assert np.all(v.index == master_idx)
-            d[k] = v.to_numpy()
+            d[k] = v.to_numpy(dtype='float32')
 
     # x_idx is a list
     d['idx_x'] = np.array(d['idx_x'])
