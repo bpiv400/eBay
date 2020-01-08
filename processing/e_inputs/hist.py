@@ -1,9 +1,5 @@
-import sys, pickle, os, argparse
-from compress_pickle import load, dump
 import numpy as np, pandas as pd
-from constants import *
-from processing.processing_utils import input_partition, save_files, load_file
-from processing.processing_consts import *
+from processing.processing_utils import input_partition, save_files, load_file, get_idx_x
 
 
 # loads data and calls helper functions to construct train inputs
@@ -20,14 +16,10 @@ def process_inputs(part):
 	idx = y.index
 	x_thread.drop('byr_hist', axis=1, inplace=True)
 
-	# initialize input features
-	x = load_file(part, 'x_lstg')
-	x = {k: v.reindex(index=idx, level='lstg') for k, v in x.items()}
+	# index of listing features
+	idx_x = get_idx_x(part, idx)
 
-	# add thread variables to x['lstg']
-	x['lstg'] = x['lstg'].join(x_thread)
-
-	return {'y': y, 'x': x}
+	return {'y': y, 'x_thread': x_thread, 'idx_x': idx_x}
 
 
 if __name__ == '__main__':

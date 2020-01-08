@@ -238,11 +238,10 @@ def get_tf(tf, start, periods, role):
     return tf.groupby(list(tf.index.names) + ['period']).sum()
 
 
-def save_featnames(d, name):
+def get_featnames(d):
     '''
     Creates dictionary of input feature names.
     :param d: dictionary with dataframes.
-    :param name: string name of model.
     '''
 
     # initialize with components of x
@@ -268,7 +267,7 @@ def save_featnames(d, name):
             featnames['x_time'] += [INT_REMAINING]
             assert INT_REMAINING == 'remaining'
 
-    dump(featnames, INPUT_DIR + 'featnames/{}.pkl'.format(name))
+    return featnames
 
 
 def save_sizes(featnames, name):
@@ -361,7 +360,11 @@ def convert_to_numpy(d):
 def save_files(d, part, name):
     # featnames and sizes
     if part == 'train_models':
-        save_featnames(d, name)
+        # featnames
+        featnames = get_featnames(d)
+        dump(featnames, INPUT_DIR + 'featnames/{}.pkl'.format(name))
+
+        # sizes
         save_sizes(featnames, name)
 
     # create dictionary of numpy arrays
