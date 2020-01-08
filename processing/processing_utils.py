@@ -314,7 +314,7 @@ def convert_to_numpy(d):
 
     # lists for recurrent components
     if 'periods' in d:
-        periods_idx = d['periods'].index
+        master_idx = d['periods'].index
         for k in ['y', 'tf']:
             if k == 'y':
                 s = d['y']
@@ -324,16 +324,20 @@ def convert_to_numpy(d):
                         index=d['tf'].index)
             indices = s.reset_index(-1).index
             d[k] = []
-            for idx in periods_idx:
+            for idx in master_idx:
                 if idx in indices:
                     d[k].append(s.xs(idx).to_dict())
                 else:
                     d[k].append({})
 
+    # for error checking
+    else:
+        master_idx = d['y'].index
+
     # convert remaining components to numpy directly
     for k, v in d.items():
         if not isinstance(v, (list, dict)):
-            assert np.all(v.index == periods_idx)
+            assert np.all(v.index == master_idx)
             d[k] = v.to_numpy()
 
     return d
