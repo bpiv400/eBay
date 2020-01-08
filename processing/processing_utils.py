@@ -309,9 +309,6 @@ def convert_to_numpy(d):
         for k, v in d['x_offer'].items():
             d['x_offer'][k] = v.to_numpy(dtype='float32')
 
-    # x_idx is a list
-    d['idx_x'] = np.array(d['idx_x'])
-
     # lists for recurrent components
     if 'periods' in d:
         master_idx = d['periods'].index
@@ -339,6 +336,9 @@ def convert_to_numpy(d):
         if not isinstance(v, (list, dict)):
             assert np.all(v.index == master_idx)
             d[k] = v.to_numpy()
+
+    # x_idx is a list
+    d['idx_x'] = np.array(d['idx_x'])
 
     return d
 
