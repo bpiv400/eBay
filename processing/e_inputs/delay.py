@@ -66,8 +66,14 @@ def process_inputs(part, role):
 	# outcome
 	y = get_y(delay, x_offer.exp, role)
 
-	# dictionary of input features
-	x = get_x_offer(part, idx, outcome='delay', role=role)
+	# thread features
+	x_thread = get_x_thread(part, idx)
+
+	# offer features
+	x_offer = get_x_offer(part, idx, outcome=outcome, role=role)
+
+	# index of listing features
+	idx_x = get_idx_x(part, idx)
 
 	# second since START at beginning of delay period
 	clock = load_file(part, 'clock')
@@ -90,7 +96,9 @@ def process_inputs(part, role):
 	# dictionary of input components
 	return {'periods': periods, 
 			'y': y, 
-			'x': x, 
+			'x_thread': x_thread,
+			'x_offer': x_offer,
+			'idx_x': idx_x,
 			'seconds': delay_start, 
 			'remaining': remaining, 
 			'tf': tf_delay}

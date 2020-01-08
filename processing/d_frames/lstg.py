@@ -107,6 +107,6 @@ if __name__ == "__main__":
         x[k] = v.to_numpy(dtype='float32')
 
     # save hdf5 file
-    with h5py.File(PARTS_DIR + '{}/x_lstg.hdf5'.format(part), 'w') as f:
+    with h5py.File(HDF5_DIR + '{}/x_lstg.hdf5'.format(part), 'w') as f:
         for k, v in x.items():
             f.create_dataset(k, data=v)
