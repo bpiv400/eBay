@@ -1,8 +1,10 @@
+import os, h5py
+os.environ["HDF5_USE_FILE_LOCKING"] = "FALSE"
 import numpy as np, pandas as pd
 import torch
 from torch.utils.data import Dataset
 from compress_pickle import load
-from constants import *
+from constants import INPUT_DIR, PARTS_DIR
 
 
 class FeedForwardDataset(Dataset):
@@ -13,6 +15,9 @@ class FeedForwardDataset(Dataset):
         :param name: string model name.
         '''
         self.d = load(INPUT_DIR + '{}/{}.gz'.format(part, name))
+
+        # listing-level features
+        self.x = h5py.File(PARTS_DIR + '{}/x_lstg.hdf5'.format(part), 'r')
 
         # number of labels
         self.N_labels = np.shape(self.d['y'])[0]
@@ -27,9 +32,21 @@ class FeedForwardDataset(Dataset):
         :param idx: index of example.
         :return: tuple of data components at index idx.
         '''
-        # y and x are indexed directly
+        # y is indexed directly
         y = self.d['y'][idx]
-        x = {k: v[idx,:].astype(np.float32) for k, v in self.d['x'].items()}
+
+        # initialize x from listing-level features
+        idx_x = self.d['idx_x'][idx]
+        x = {k: v[idx_x,:] for k, v in self.x.items()}
+
+        # append thread-level features
+        if 'x_thread' in self.d:
+            x['lstg'] = np.concatenate(
+                (x['lstg'], self.d['x_thread'][idx]), axis=1)
+
+        # append offer-level features
+        if 'x_offer' in self.d:
+            x = x.update(self.d['x_offer'][idx])
 
         return y, x
         

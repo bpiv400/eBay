@@ -1,41 +1,51 @@
 import sys, os, argparse
 from compress_pickle import load, dump
 import numpy as np, pandas as pd
-from processing.processing_utils import get_x_offer, save_files, load_file
+from processing.processing_utils import get_x_thread, get_x_offer, \
+	get_idx_x, save_files, load_file
 from constants import IDX
 
 
-def get_y_con(x_offer):
+def get_y_con(df):
 	# drop zero delay and expired offers
-	mask = ~x_offer.auto & ~x_offer.exp
+	mask = ~df.auto & ~df.exp
 	# concession is an int from 0 to 100
-	return (x_offer.loc[mask, 'con'] * 100).astype('int8')
+	return (df.loc[mask, 'con'] * 100).astype('int8')
 
 
-def get_y_msg(x_offer):
+def get_y_msg(df):
 	# drop accepts and rejects
-	mask = (x_offer.con > 0) & (x_offer.con < 1)
-	return x_offer.loc[mask, 'msg']
+	mask = (df.con > 0) & (df.con < 1)
+	return df.loc[mask, 'msg']
 
 
 # loads data and calls helper functions to construct train inputs
 def process_inputs(part, outcome, role):
 	# load offer data
-	x_offer = load_file(part, 'x_offer')
+	df = load_file(part, 'x_offer')
 
 	# subset by role indices
-	x_offer = x_offer[x_offer.index.isin(IDX[role], level='index')]
+	df = df[df.index.isin(IDX[role], level='index')]
 
 	if outcome == 'con':
-		y = get_y_con(x_offer)
+		y = get_y_con(df)
 	elif outcome == 'msg':
-		y = get_y_msg(x_offer)
+		y = get_y_msg(df)
 	idx = y.index
 
-	# dictionary of input features
-	x = get_x_offer(part, idx, outcome=outcome, role=role)
+	# thread features
+	x_thread = get_x_thread(part, idx)
 
-	return {'y': y, 'x': x}
+	# offer features
+	x_offer = get_x_offer(part, idx, outcome=outcome, role=role)
+
+	# index of listing features
+	idx_x = get_idx_x(part, idx)
+
+	return {'y': y, 
+			'x_thread': x_thread, 
+			'x_offer': x_offer, 
+			'idx_x': idx_x}
 
 
 if __name__ == '__main__':

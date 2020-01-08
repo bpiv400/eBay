@@ -1,4 +1,5 @@
 import os, sys, h5py
+os.environ["HDF5_USE_FILE_LOCKING"] = "FALSE"
 from compress_pickle import load, dump
 import numpy as np, pandas as pd
 from processing.processing_utils import input_partition, load_frames, \
@@ -85,7 +86,7 @@ if __name__ == "__main__":
     for k, v in x.items():
         count_cols = [c for c in v.columns if c.endswith('_lstgs')]
         for c in count_cols:
-            x[k][c] = x[k][c].apply(np.log1p)
+            x[k].loc[:, c] = x[k][c].apply(np.log1p)
             x[k].rename({c: c.replace('lstgs', 'ln_lstgs')}, 
                 axis=1, inplace=True)
 
@@ -106,7 +107,6 @@ if __name__ == "__main__":
         x[k] = v.to_numpy(dtype='float32')
 
     # save hdf5 file
-    os.environ["HDF5_USE_FILE_LOCKING"] = "FALSE"
     with h5py.File(PARTS_DIR + '{}/x_lstg.hdf5'.format(part), 'w') as f:
         for k, v in x.items():
             f.create_dataset(k, data=v)

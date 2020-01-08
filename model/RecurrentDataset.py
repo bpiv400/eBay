@@ -1,3 +1,5 @@
+import os, h5py
+os.environ["HDF5_USE_FILE_LOCKING"] = "FALSE"
 import numpy as np
 from torch.utils.data import Dataset
 from compress_pickle import load

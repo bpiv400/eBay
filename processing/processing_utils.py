@@ -2,7 +2,6 @@ import sys, os, argparse
 from compress_pickle import load, dump
 from datetime import datetime as dt
 import numpy as np, pandas as pd
-from collections import OrderedDict
 from processing.processing_consts import *
 from constants import *
 from featnames import *
@@ -117,13 +116,6 @@ def input_partition():
     return part
 
 
-def shave_floats(df):
-    for c in df.columns:
-        if df[c].dtype == 'float64':
-            df[c] = df[c].astype('float32')
-    return df
-
-
 def add_turn_indicators(df):
     '''
     Appends turn indicator variables to offer matrix
@@ -169,26 +161,32 @@ def clean_offer(offer, i, outcome, role, dtypes):
     return offer
 
 
+def get_x_thread(part, idx):
+    # thread features
+    df = load_file(part, 'x_thread')
+
+    # byr_hist as a decimal
+    df.loc[:, 'byr_hist'] = df.byr_hist.astype('float32') / 10
+
+    # reindex to create x_thread
+    x_thread = pd.DataFrame(index=idx).join(df)
+
+    # add turn indicators
+    x_thread = add_turn_indicators(x_thread)
+
+    return x_thread
+
+
 def get_x_offer(part, idx, outcome=None, role=None):
-    # thread and offer features
-    x_offer = load_file(part, 'x_offer')
-    x_thread = load_file(part, 'x_thread')
+    # offer features
+    df = load_file(part, 'x_offer')
 
-    # initialize dictionary of input features
-    x = load_file(part, 'x_lstg')
-    x = {k: v.reindex(index=idx, level='lstg') for k, v in x.items()}
-
-    # add thread features and turn indicators to listing features
-    x_thread.loc[:, 'byr_hist'] = x_thread.byr_hist.astype('float32') / 10
-    x['lstg'] = x['lstg'].join(x_thread)
-    x['lstg'] = add_turn_indicators(x['lstg'])
+    # initialize dictionary of offer features
+    x = {}
 
     # dataframe of offer features for relevant threads
     threads = idx.droplevel(level='index').unique()
-    df = pd.DataFrame(index=threads).join(x_offer)
-
-    # step down floats and save data types for later
-    df = shave_floats(df)
+    df = pd.DataFrame(index=threads).join(df)
     dtypes = df.dtypes
 
     # turn features
@@ -206,6 +204,12 @@ def get_x_offer(part, idx, outcome=None, role=None):
         x['offer%d' % i] = add_turn_indicators(offer)
 
     return x
+
+
+def get_idx_x(part, idx):
+    lstgs_x = load_file(part, 'lookup').index.to_numpy()
+    lstgs_y = idx.get_level_values(level='lstg').to_numpy()
+    return [np.nonzero(lstgs_x == n)[0][0] for n in lstgs_y]
 
 
 def get_tf(tf, start, periods, role):
@@ -235,9 +239,13 @@ def save_featnames(d, name):
 
     # initialize with components of x
     featnames = {}
-    featnames['x'] = OrderedDict()
-    for k, v in d['x'].items():
-        featnames['x'][k] = list(v.columns)
+    featnames['x'] = load(INPUT_DIR + 'featnames/x_lstg.pkl')
+    if 'x_thread' in d:
+        featnames['x']['lstg'] += list(d['x_thread'].columns)
+
+    if 'x_offer' in d:
+        for k, v in d['x_offer'].items():
+            featnames['x'][k] = list(v.columns)
 
     # for arrival and delay models
     if 'periods' in d:
@@ -255,32 +263,28 @@ def save_featnames(d, name):
     dump(featnames, INPUT_DIR + 'featnames/{}.pkl'.format(name))
 
 
-def save_sizes(d, name):
+def save_sizes(featnames, name):
     '''
     Creates dictionary of input sizes.
-    :param d: dictionary with dataframes.
+    :param featnames: dictionary of featnames.
     :param name: string name of model.
     '''
     sizes = {}
 
     # count components of x
     sizes['x'] = {}
-    for k, v in d['x'].items():
-        sizes['x'][k] = len(v.columns)
+    for k, v in featnames['x'].items():
+        sizes['x'][k] = len(v)
 
     # arrival and delay models
-    if 'tf' in d:
+    if 'x_time' in featnames:
         role = name.split('_')[-1]
         sizes['interval'] = INTERVAL[role]
         sizes['interval_count'] = INTERVAL_COUNTS[role]
         if role == 'byr':
             sizes['interval_count_7'] = INTERVAL_COUNTS['byr_7']
 
-        sizes['x_time'] = len(CLOCK_FEATS) + len(TIME_FEATS) + 1
-
-        # delay models
-        if 'remaining' in d:
-            sizes['x_time'] += 1
+        sizes['x_time'] = len(featnames['x_time'])
 
     # output size is based on model
     if name == 'hist':
@@ -300,16 +304,17 @@ def convert_to_numpy(d):
     :return: dictionary with numpy arrays (and dictionaries of dataframes).
     '''
 
-    # for error checking
-    periods_idx = d['periods'].index
+    # loop through x_offer, convert to numpy
+    if 'x_offer' in d:
+        for k, v in d['x'].items():
+            d['x_offer'][k] = v.to_numpy(dtype='float32')
 
-    # loop through x, convert to numpy
-    for k, v in d['x'].items():
-        assert np.all(v.index == periods_idx)
-        d['x'][k] = v.to_numpy(dtype='float32')
+    # x_idx is a list
+    d['idx_x'] = np.array(d['idx_x'])
 
     # lists for recurrent components
     if 'periods' in d:
+        periods_idx = d['periods'].index
         for k in ['y', 'tf']:
             if k == 'y':
                 s = d['y']
@@ -339,7 +344,7 @@ def save_files(d, part, name):
     # featnames and sizes
     if part == 'train_models':
         save_featnames(d, name)
-        save_sizes(d, name)
+        save_sizes(featnames, name)
 
     # create dictionary of numpy arrays
     d = convert_to_numpy(d)
