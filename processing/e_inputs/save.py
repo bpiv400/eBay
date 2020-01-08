@@ -1,4 +1,5 @@
 import sys, os, argparse
+import pandas as pd, numpy as np
 from compress_pickle import load, dump
 from processing.processing_utils import save_files
 from constants import INPUT_DIR
@@ -19,5 +20,8 @@ if __name__ == '__main__':
 	# load
 	d = load(path)
 
+	# convert to numpy
+	d['periods'] = d['periods'].to_numpy()
+
 	# save
-	save_files(d, part, name)
+	dump(d, INPUT_DIR + '{}/{}.gz'.format(part, name))

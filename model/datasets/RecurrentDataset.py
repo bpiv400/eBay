@@ -18,6 +18,7 @@ class RecurrentDataset(eBayDataset):
         self.date_feats = load(INPUT_DIR + 'date_feats.pkl')
 
         # groups for sampling
+        print(self.d['periods'])
         self.groups = [np.nonzero(self.d['periods'] == n)[0] \
             for n in np.unique(self.d['periods'])]
 

@@ -330,6 +330,8 @@ def convert_to_numpy(d):
                     d[k].append({})
 
         # other recurrent components
+        d['periods'] = d['periods'].to_numpy()
+
         assert np.all(d['seconds'].index == master_idx)
         d['seconds'] = d['seconds'].to_numpy()
 
