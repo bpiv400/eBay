@@ -2,7 +2,7 @@ import sys, os
 from compress_pickle import load, dump
 import numpy as np, pandas as pd
 from processing.processing_utils import input_partition, \
-    load_frames, save_files, load_file, get_x_idx, get_tf
+    load_frames, save_files, load_file, get_idx_x, get_tf
 from processing.processing_consts import CLEAN_DIR, INTERVAL, INTERVAL_COUNTS
 
 
