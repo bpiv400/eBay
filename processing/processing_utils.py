@@ -306,7 +306,7 @@ def convert_to_numpy(d):
 
     # loop through x_offer, convert to numpy
     if 'x_offer' in d:
-        for k, v in d['x'].items():
+        for k, v in d['x_offer'].items():
             d['x_offer'][k] = v.to_numpy(dtype='float32')
 
     # x_idx is a list
