@@ -311,22 +311,17 @@ def convert_to_numpy(d):
     :param d: dictionary with (dictionaries of) dataframes.
     :return: dictionary with numpy arrays (and dictionaries of dataframes).
     '''
-
-    # loop through x_offer, convert to numpy
-    if 'x_offer' in d:
-        for k, v in d['x_offer'].items():
-            d['x_offer'][k] = v.to_numpy()
-
-    # lists for recurrent components
+    # for recurrent networks
     if 'periods' in d:
         master_idx = d['periods'].index
+
+        # lists of dictionaries
         for k in ['y', 'tf']:
             if k == 'y':
                 s = d['y']
             else:
-                s = pd.Series(
-                        d['tf'].values.astype('float32').tolist(), 
-                        index=d['tf'].index)
+                l = d['tf'].values.astype('float32').tolist()
+                s = pd.Series(l, index=d['tf'].index)
             indices = s.reset_index(-1).index
             d[k] = []
             for idx in master_idx:
@@ -335,18 +330,29 @@ def convert_to_numpy(d):
                 else:
                     d[k].append({})
 
-    # for error checking
+        # other recurrent components
+        assert np.all(d['seconds'].index == master_idx)
+        d['seconds'] = d['seconds'].to_numpy()
+
+        if 'remaining' in d:
+            assert np.all(d['remaining'].index == master_idx)
+            d['remaining'] = d['remaining'].to_numpy(dtype='float32')
+
+    # feed forward networks
     else:
         master_idx = d['y'].index
+        d['y'] = d['y'].to_numpy()
 
-    # convert remaining components to numpy directly
-    for k, v in d.items():
-        if not isinstance(v, (list, dict)):
+    # loop through x_offer, convert to numpy float32
+    if 'x_offer' in d:
+        for k, v in d['x_offer'].items():
             assert np.all(v.index == master_idx)
-            d[k] = v.to_numpy()
+            d['x_offer'][k] = v.to_numpy(dtype='float32')
 
-    # x_idx is a list
-    d['idx_x'] = np.array(d['idx_x'])
+    # direct conversion to numpy float32
+    if 'x_thread' in d:
+        assert np.all(d['x_thread'].index == master_idx)
+        d['x_thread'] = d['x_thread'].to_numpy(dtype='float32')
 
     return d
 
