@@ -70,7 +70,7 @@ def process_inputs(part, role):
 	x_thread = get_x_thread(part, idx)
 
 	# offer features
-	x_offer = get_x_offer(part, idx, outcome=outcome, role=role)
+	x_offer = get_x_offer(part, idx, outcome='delay', role=role)
 
 	# index of listing features
 	idx_x = get_idx_x(part, idx)
