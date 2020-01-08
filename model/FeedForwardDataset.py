@@ -14,10 +14,12 @@ class FeedForwardDataset(Dataset):
         :param part: string partition name (e.g., train_models).
         :param name: string model name.
         '''
+        # dictionary of inputs
         self.d = load(INPUT_DIR + '{}/{}.gz'.format(part, name))
 
-        # listing-level features
-        self.x = h5py.File(PARTS_DIR + '{}/x_lstg.hdf5'.format(part), 'r')
+        # path to listing-level features
+        self.x = None
+        self.path = PARTS_DIR + '{}/x_lstg.hdf5'.format(part)
 
         # number of labels
         self.N_labels = np.shape(self.d['y'])[0]
@@ -32,17 +34,21 @@ class FeedForwardDataset(Dataset):
         :param idx: index of example.
         :return: tuple of data components at index idx.
         '''
+        # initialize hdf5 file on each subprocess
+        if self.x is None:
+            self.x = h5py.File(self.path, 'r')
+
         # y is indexed directly
         y = self.d['y'][idx]
 
         # initialize x from listing-level features
         idx_x = self.d['idx_x'][idx]
-        x = {k: v[idx_x,:] for k, v in self.x.items()}
+        x = {k: v[idx_x, :] for k, v in self.x.items()}
 
         # append thread-level features
         if 'x_thread' in self.d:
             x['lstg'] = np.concatenate(
-                (x['lstg'], self.d['x_thread'][idx].astype('float32')))
+                (x['lstg'], self.d['x_thread'][idx]))
 
         # append offer-level features
         if 'x_offer' in self.d:
