@@ -1,4 +1,4 @@
-import sys, h5py
+import os, sys, h5py
 from compress_pickle import load, dump
 import numpy as np, pandas as pd
 from processing.processing_utils import input_partition, load_frames, \
@@ -94,11 +94,19 @@ if __name__ == "__main__":
     for v in x.values():
         assert np.all(lookup.index == v.index)
 
+    # featnames
+    if part == 'train_models':
+        featnames = {}
+        for k, v in x.items():
+            featnames[k] = list(v.columns)
+        dump(featnames, INPUT_DIR + 'featnames/x_lstg.pkl')
+
     # numpy float32
     for k, v in x.items():
         x[k] = v.to_numpy(dtype='float32')
 
     # save hdf5 file
+    os.environ["HDF5_USE_FILE_LOCKING"] = "FALSE"
     with h5py.File(PARTS_DIR + '{}/x_lstg.hdf5'.format(part), 'w') as f:
         for k, v in x.items():
             f.create_dataset(k, data=v)
