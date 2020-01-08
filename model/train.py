@@ -4,8 +4,8 @@ import torch, torch.optim as optim
 from torch.utils.tensorboard import SummaryWriter
 from compress_pickle import load, dump
 from model.Model import Model
-from model.FeedForwardDataset import FeedForwardDataset
-from model.RecurrentDataset import RecurrentDataset
+from model.datasets.FeedForwardDataset import FeedForwardDataset
+from model.datasets.RecurrentDataset import RecurrentDataset
 from model.model_consts import *
 from constants import INPUT_DIR, MODEL_DIR, PARAMS_PATH
 

@@ -1,16 +1,15 @@
 import os, h5py
 os.environ["HDF5_USE_FILE_LOCKING"] = "FALSE"
-import numpy as np, pandas as pd
-import torch
+import numpy as np
 from torch.utils.data import Dataset
 from compress_pickle import load
 from constants import INPUT_DIR, HDF5_DIR
 
 
-class FeedForwardDataset(Dataset):
+class eBayDataset(Dataset):
     def __init__(self, part, name):
         '''
-        Defines a dataset that extends torch.utils.data.Dataset
+        Defines a parent class that extends torch.utils.data.Dataset.
         :param part: string partition name (e.g., train_models).
         :param name: string model name.
         '''
@@ -21,25 +20,20 @@ class FeedForwardDataset(Dataset):
         self.x = None
         self.path = HDF5_DIR + '{}/x_lstg.hdf5'.format(part)
 
-        # number of labels
-        self.N_labels = np.shape(self.d['y'])[0]
-
-        # create single group for sampling
-        self.groups = [np.array(range(self.N_labels))]
+        # parameters to be created in children
+        self.N_labels = None
+        self.groups = None
 
 
-    def __getitem__(self, idx):
+    def _construct_x(self, idx):
         '''
-        Returns a tuple of data components for example.
+        Returns a dictionary of grouped input features.
         :param idx: index of example.
-        :return: tuple of data components at index idx.
+        :return: dictionary of grouped input features at index idx.
         '''
         # initialize hdf5 file on each subprocess
         if self.x is None:
             self.x = h5py.File(self.path, 'r')
-
-        # y is indexed directly
-        y = self.d['y'][idx]
 
         # initialize x from listing-level features
         idx_x = self.d['idx_x'][idx]
@@ -55,7 +49,11 @@ class FeedForwardDataset(Dataset):
             for k, v in self.d['x_offer'].items():
                 x[k] = v[idx, :]
 
-        return y, x
+        return x
+
+
+    def __getitem__(self, idx):
+        return NotImplementedError()
         
 
     def __len__(self):

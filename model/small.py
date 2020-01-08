@@ -3,8 +3,8 @@ import torch, torch.optim as optim
 import numpy as np, pandas as pd
 from datetime import datetime as dt
 from compress_pickle import load
-from model.FeedForwardDataset import FeedForwardDataset
-from model.RecurrentDataset import RecurrentDataset
+from model.datasets.FeedForwardDataset import FeedForwardDataset
+from model.datasets.RecurrentDataset import RecurrentDataset
 from model.Model import Model
 from model.model_consts import *
 from constants import INPUT_DIR, PARAMS_PATH

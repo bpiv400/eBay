@@ -1,20 +1,18 @@
-import os, h5py
-os.environ["HDF5_USE_FILE_LOCKING"] = "FALSE"
 import numpy as np
-from torch.utils.data import Dataset
 from compress_pickle import load
+from model.datasets.eBayDataset import eBayDataset
 from constants import INPUT_DIR, DAY
 from featnames import TIME_FEATS
 
 
-class RecurrentDataset(Dataset):
+class RecurrentDataset(eBayDataset):
     def __init__(self, part, name, sizes):
         '''
-        Defines a dataset that extends torch.utils.data.Dataset
+        Defines a child class of eBayDataset for a recurrent network.
         :param part: string partition name (e.g., train_models).
         :param name: string model name.
         '''
-        self.d = load(INPUT_DIR + '{}/{}.gz'.format(part, name))
+        super(RecurrentDataset, self).__init__(part, name)
 
         # save clock feats lookup array to self
         self.date_feats = load(INPUT_DIR + 'date_feats.pkl')
@@ -48,9 +46,11 @@ class RecurrentDataset(Dataset):
         :param idx: index of example.
         :return: tuple of data components at index idx.
         '''
-        # components that are indexed directly
+        # periods is indexed directly
         periods = self.d['periods'][idx]
-        x = {k: v[idx] for k, v in self.d['x'].items()}
+
+        # initialize x from listing-level features
+        x = self._construct_x(idx)
 
         # y gets reindexed
         y = self.y0.copy()[:periods]
@@ -82,7 +82,3 @@ class RecurrentDataset(Dataset):
             x_time = np.concatenate((x_time, remaining), axis=1)
 
         return y, periods, x, x_time
-        
-
-    def __len__(self):
-        return self.N_examples
