@@ -4,7 +4,7 @@ import numpy as np, pandas as pd
 import torch
 from torch.utils.data import Dataset
 from compress_pickle import load
-from constants import INPUT_DIR, PARTS_DIR
+from constants import INPUT_DIR, HDF5_DIR
 
 
 class FeedForwardDataset(Dataset):
@@ -19,7 +19,7 @@ class FeedForwardDataset(Dataset):
 
         # path to listing-level features
         self.x = None
-        self.path = PARTS_DIR + '{}/x_lstg.hdf5'.format(part)
+        self.path = HDF5_DIR + '{}/x_lstg.hdf5'.format(part)
 
         # number of labels
         self.N_labels = np.shape(self.d['y'])[0]

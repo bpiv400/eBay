@@ -13,10 +13,12 @@ TOL_HALF = 0.02
 # paths and directories
 if 'Ubuntu' in platform():		# Etan's box
 	PREFIX = '/data/eBay'
+	HDF5_DIR = os.path.expanduser('~/hdf5/eBay/')
 elif 'Windows' in platform():	# Barry's laptop
 	PREFIX = 'A:/ebay/data'
 else:							# cluster and AWS
 	PREFIX = os.path.expanduser('~/weka/eBay')
+	HDF5_DIR = '%s/partitions/' % PREFIX
 
 PARTS_DIR = '%s/partitions/' % PREFIX
 ENV_SIM_DIR = '%s/envSimulator/' % PREFIX
