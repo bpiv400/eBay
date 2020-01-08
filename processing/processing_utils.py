@@ -130,6 +130,25 @@ def add_turn_indicators(df):
     return df
 
 
+def get_x_thread(part, idx):
+    # thread features
+    df = load_file(part, 'x_thread')
+
+    # byr_hist as a decimal
+    df.loc[:, 'byr_hist'] = df.byr_hist.astype('float32') / 10
+
+    # reindex to create x_thread
+    x_thread = pd.DataFrame(index=idx).join(df)
+
+    # add turn indicators
+    x_thread = add_turn_indicators(x_thread)
+
+    # convert to float32
+    x_thread = x_thread.astype('float32')
+
+    return x_thread
+
+
 # deletes irrelevant feats and sets unseen feats to 0
 def clean_offer(offer, i, outcome, role, dtypes):
     # set features to 0 if i exceeds index
@@ -161,22 +180,6 @@ def clean_offer(offer, i, outcome, role, dtypes):
     return offer
 
 
-def get_x_thread(part, idx):
-    # thread features
-    df = load_file(part, 'x_thread')
-
-    # byr_hist as a decimal
-    df.loc[:, 'byr_hist'] = df.byr_hist.astype('float32') / 10
-
-    # reindex to create x_thread
-    x_thread = pd.DataFrame(index=idx).join(df)
-
-    # add turn indicators
-    x_thread = add_turn_indicators(x_thread)
-
-    return x_thread
-
-
 def get_x_offer(part, idx, outcome=None, role=None):
     # offer features
     df = load_file(part, 'x_offer')
@@ -201,15 +204,20 @@ def get_x_offer(part, idx, outcome=None, role=None):
         offer = offer.rename(lambda x: x + '_%d' % i, axis=1)
 
         # add turn indicators
-        x['offer%d' % i] = add_turn_indicators(offer)
+        offer = add_turn_indicators(offer)
+
+        # convert to float32
+        x['offer%d' % i] = offer.astype('float32')
 
     return x
 
 
 def get_idx_x(part, idx):
-    lstgs_x = load_file(part, 'lookup').index.to_numpy()
-    lstgs_y = idx.get_level_values(level='lstg').to_numpy()
-    return [np.nonzero(lstgs_x == n)[0][0] for n in lstgs_y]
+    lstgs_x = load_file(part, 'lookup').index
+    s = pd.Series(range(len(lstgs_x)), index=lstgs_x, name='idx_x')
+    df = pd.DataFrame(index=idx.get_level_values(level='lstg'))
+    df = df.join(s)
+    return df.squeeze().to_numpy()
 
 
 def get_tf(tf, start, periods, role):
@@ -307,7 +315,7 @@ def convert_to_numpy(d):
     # loop through x_offer, convert to numpy
     if 'x_offer' in d:
         for k, v in d['x_offer'].items():
-            d['x_offer'][k] = v.to_numpy(dtype='float32')
+            d['x_offer'][k] = v.to_numpy()
 
     # lists for recurrent components
     if 'periods' in d:
@@ -335,7 +343,7 @@ def convert_to_numpy(d):
     for k, v in d.items():
         if not isinstance(v, (list, dict)):
             assert np.all(v.index == master_idx)
-            d[k] = v.to_numpy(dtype='float32')
+            d[k] = v.to_numpy()
 
     # x_idx is a list
     d['idx_x'] = np.array(d['idx_x'])

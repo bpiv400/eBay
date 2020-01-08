@@ -37,9 +37,7 @@ class FeedForwardDataset(Dataset):
 
         # initialize x from listing-level features
         idx_x = self.d['idx_x'][idx]
-        x = {}
-        for k, v in self.x.items():
-            x[k] = v[idx_x, :]
+        x = {k: v[idx_x,:] for k, v in self.x.items()}
 
         # append thread-level features
         if 'x_thread' in self.d:
