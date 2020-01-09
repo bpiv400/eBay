@@ -15,7 +15,6 @@ class ValueCalculator:
         self.num_sales = 0
         self.cut = get_cut(lookup[META])
 
-
     def add_outcome(self, price, T):
         self.x_sum += price
         self.x2_sum += math.pow(price, 2)

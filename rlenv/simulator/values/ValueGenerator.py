@@ -1,12 +1,14 @@
 import os, shutil
 from datetime import datetime as dt
 from compress_pickle import dump, load
-from rlenv.env_utils import get_checkpoint_path, get_chunk_dir
+from rlenv.env_utils import get_checkpoint_path
+from rlenv.env_consts import SIM_VALS_DIR
 from rlenv.simulator.Generator import Generator
 from rlenv.simulator.values.ValueCalculator import ValueCalculator
 from rlenv.simulator.values.ValueRecorder import ValueRecorder
 
 BREAK = True
+
 
 class ValueGenerator(Generator):
     """
@@ -26,7 +28,6 @@ class ValueGenerator(Generator):
         # checkpoint params
         self.checkpoint_contents = None
         self.checkpoint_count = 0
-        self.recorder_count = 1
         self.start = dt.now()
         self.has_checkpoint = self._has_checkpoint()
         if self.verbose:
@@ -76,7 +77,7 @@ class ValueGenerator(Generator):
 
         # clean up and save
         if not time_up:
-            self.recorder.dump(self.recorder_count)
+            self.recorder.dump()
             self._delete_checkpoint()
             self._generate_done()
 
@@ -96,7 +97,6 @@ class ValueGenerator(Generator):
             index = index[start_ix:]
             return index
 
-
     def _simulate_lstg(self, environment):
         """
         Simulates a particular listing until it sells
@@ -111,7 +111,6 @@ class ValueGenerator(Generator):
             if sale:
                 return price, T
             T += 1
-
 
     def _print_value(self):
         """
@@ -137,20 +136,8 @@ class ValueGenerator(Generator):
         }
         return contents
 
-
     def _make_recorder(self):
         return ValueRecorder(self.records_path, self.verbose)
-
-    def _update_stop(self):
-        """
-        Checks whether a the generator may stop simulating a particular lstg
-        based on whether the value estimate has stabilized
-        :return: Boolean indicating whether to stop
-        """
-        if self.val_calc.has_sales:
-            return self.val_calc.stabilized
-        else:
-            return False
 
     @property
     def checkpoint_path(self):
@@ -158,7 +145,7 @@ class ValueGenerator(Generator):
 
     @property
     def records_path(self):
-        return get_chunk_dir(self.dir, self.chunk, discrim=False)
+        return '{}{}/{}.gz'.format(self.dir, SIM_VALS_DIR, self.chunk)
 
     def _has_checkpoint(self):
         """

@@ -59,7 +59,7 @@ class Generator:
                                     arrival=self.arrival, x_lstg=x_lstg, lookup=lookup,
                                     recorder=self.recorder, verbose=self.verbose)
 
-    def _simulate_lstg(self):
+    def _simulate_lstg(self, environment):
         raise NotImplementedError()
 
     @property

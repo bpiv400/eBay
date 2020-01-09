@@ -5,21 +5,20 @@ from rlenv.simulator.Recorder import *
 class DiscrimRecorder(Recorder):
     def __init__(self, records_path, verbose):
         super(DiscrimRecorder, self).__init__(records_path, verbose)
+        self.offers = None
+        self.threads = None
         self.reset_recorders()
-
 
     def reset_recorders(self):
         # tracker dictionaries
         self.offers = []
         self.threads = []
 
-
     def dump(self):
         self.records2frames()
         self.compress_frames()
         dump(self.construct_output(), self.records_path)
         self.reset_recorders()
-
 
     def start_thread(self, thread_id=None, byr_hist=None, time=None):
         """
@@ -31,7 +30,6 @@ class DiscrimRecorder(Recorder):
         byr_hist = int(10 * byr_hist)
         row = [self.lstg, thread_id, byr_hist, time]
         self.threads.append(row)
-
 
     def add_offer(self, event, time_feats):
         # change ordering if OFFER_COLS changes
@@ -48,13 +46,11 @@ class DiscrimRecorder(Recorder):
         self.offers.append(row)
         self.print_offer(event, summary)
 
-
     @staticmethod
     def compress_common_cols(cols, frames, dtypes):
         for i, col in enumerate(cols):
             for frame in frames:
                 frame[col] = frame[col].astype(dtypes[i])
-
 
     def compress_frames(self):
         # offers dataframe
@@ -77,12 +73,10 @@ class DiscrimRecorder(Recorder):
         self.threads.set_index(
             ['lstg', 'thread'], inplace=True)
 
-
     def records2frames(self):
         # convert both dictionaries to dataframes
         self.offers = self.record2frame(self.offers, OFFER_COLS)
         self.threads = self.record2frame(self.threads, THREAD_COLS)
-
 
     def construct_output(self):
         return {'offers': self.offers.sort_index(), 

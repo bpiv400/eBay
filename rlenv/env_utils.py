@@ -159,22 +159,6 @@ def prev_norm(sources, turn):
     return out
 
 
-def get_chunk_dir(part_dir, chunk_num, discrim=False):
-    """
-    Gets the path to the data directory containing output files
-    for the given environment simulation chunk
-    :param str part_dir: path to the root directory for the current partition
-    :param int chunk_num: chunk id
-    :param bool discrim: whether the experiment is a discriminator experiment
-    :return: str
-    """
-    if discrim:
-        subdir = get_env_sim_subdir(base_dir=part_dir, discrim=True)
-    else:
-        subdir = get_env_sim_subdir(base_dir=part_dir, values=True)
-    return '{}{}/'.format(subdir, chunk_num)
-
-
 def load_model(full_name):
     """
     Initialize PyTorch network for some model
