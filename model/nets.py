@@ -206,7 +206,7 @@ class Recurrent(nn.Module):
         self.c0 = FeedForward(sizes, params, toRNN=True)
 
         # rnn layer
-        self.rnn = nn.LSTM(input_size=sizes['x_time'],
+        self.rnn = LSTM(input_size=sizes['x_time'],
                         hidden_size=params['hidden'],
                         batch_first=True,
                         affine=params['affine'])
