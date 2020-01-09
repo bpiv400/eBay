@@ -143,9 +143,6 @@ def get_x_thread(part, idx):
     # add turn indicators
     x_thread = add_turn_indicators(x_thread)
 
-    # convert to float32
-    x_thread = x_thread.astype('float32')
-
     return x_thread
 
 
@@ -204,10 +201,7 @@ def get_x_offer(part, idx, outcome=None, role=None):
         offer = offer.rename(lambda x: x + '_%d' % i, axis=1)
 
         # add turn indicators
-        offer = add_turn_indicators(offer)
-
-        # convert to float32
-        x['offer%d' % i] = offer.astype('float32')
+        x['offer%d' % i] = add_turn_indicators(offer)
 
     return x
 
@@ -304,6 +298,18 @@ def save_sizes(featnames, name):
     dump(sizes, INPUT_DIR + 'sizes/{}.pkl'.format(name))
 
 
+def series_to_tuples(s, master_idx):
+    indices = s.reset_index(-1).index
+    out = []
+    for idx in master_idx:
+        if idx in indices:
+            obs = s.xs(idx)
+            out.append(tuple(zip(obs.index, obs)))
+        else:
+            out.append(None)
+    return out
+
+
 def convert_to_numpy(d):
     '''
     Converts dictionary of dataframes to dictionary of numpy arrays.
@@ -317,14 +323,7 @@ def convert_to_numpy(d):
         # time features as list of dictionaries
         l = d['tf'].values.astype('float32').tolist()
         s = pd.Series(l, index=d['tf'].index)
-        indices = s.reset_index(-1).index
-        d['tf'] = []
-        for idx in master_idx:
-            if idx in indices:
-                obs = s.xs(idx)
-                d['tf'].append(tuple(zip(obs.index, obs)))
-            else:
-                d['tf'].append(None)
+        d['tf'] = series_to_tuples(s, master_idx)
 
         # common recurrent components
         d['periods'] = d['periods'].to_numpy()
@@ -342,31 +341,24 @@ def convert_to_numpy(d):
 
         # arrival model: outcome as list of tuples
         else:
-            s = d['y']
-            indices = s.reset_index(-1).index
-            d['y'] = []
-            for idx in master_idx:
-                if idx in indices:
-                    obs = s.xs(idx)
-                    d['y'].append(tuple(zip(obs.index, obs)))
-                else:
-                    d['y'].append(None)
+            d['y'] = series_to_tuples(d['y'], master_idx)
 
     # feed forward networks
     else:
         master_idx = d['y'].index
         d['y'] = d['y'].to_numpy()
 
-    # loop through x_offer, convert to numpy float32
+    # loop through x_offer, convert to list of 1-D numpy arrays
     if 'x_offer' in d:
         for k, v in d['x_offer'].items():
             assert np.all(v.index == master_idx)
-            d['x_offer'][k] = v.to_numpy(dtype='float32')
+            d['x_offer'][k] = [v[c].to_numpy() for c in v.columns]
 
     # direct conversion to numpy float32
     if 'x_thread' in d:
         assert np.all(d['x_thread'].index == master_idx)
-        d['x_thread'] = d['x_thread'].to_numpy(dtype='float32')
+        v = d['x_thread'].copy()
+        d['x_thread'] = [v[c].to_numpy() for c in v.columns]
 
     return d
 
