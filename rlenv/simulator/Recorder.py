@@ -70,7 +70,9 @@ class Recorder:
                 days, delay = event.delay_outcomes()
             else:
                 days, delay = 0, 0
+            print('____ TURN _____ : {}'.format(event.turn))
             byr = event.turn % 2 != 0
+            print('BUYER : {}'.format(byr))
             if con == 0:
                 if delay == 1 and not byr:
                     otype = 'expiration rejection'
