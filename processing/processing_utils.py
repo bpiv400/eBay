@@ -321,7 +321,8 @@ def convert_to_numpy(d):
         d['tf'] = []
         for idx in master_idx:
             if idx in indices:
-                d['tf'].append(s.xs(idx).to_dict())
+                obs = s.xs(idx)
+                d['tf'].append(tuple(zip(obs.index, obs)))
             else:
                 d['tf'].append(None)
 

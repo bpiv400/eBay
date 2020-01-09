@@ -40,23 +40,7 @@ class RecurrentDataset(eBayDataset):
         self.tf0 = np.zeros((T, len(TIME_FEATS)), dtype='float32')
 
 
-    def __getitem__(self, idx):
-        '''
-        Returns a tuple of data components for example.
-        :param idx: index of example.
-        :return: tuple of data components at index idx.
-        '''
-        # periods is indexed directly
-        periods = self.d['periods'][idx]
-
-        # initialize x from listing-level features
-        x = self._construct_x(idx)
-
-        # y gets reindexed
-        y = self.y0.copy()[:periods]
-        for k, v in self.d['y'][idx].items():
-            y[k] = v
-            
+    def _construct_x_time(self, idx, periods):
         # indices of timestamps
         seconds = self.d['seconds'][idx] + self.counter[:periods]
 
@@ -75,6 +59,29 @@ class RecurrentDataset(eBayDataset):
         # time feats: first clock feats, then time-varying feats
         x_time = np.concatenate(
             (clock_feats, x_tf, self.duration[:periods]), axis=1)
+
+        return x_time
+
+
+    def __getitem__(self, idx):
+        '''
+        Returns a tuple of data components for example.
+        :param idx: index of example.
+        :return: tuple of data components at index idx.
+        '''
+        # periods is indexed directly
+        periods = self.d['periods'][idx]
+
+        # initialize x from listing-level features
+        x = self._construct_x(idx)
+
+        # y gets reindexed
+        y = self.y0.copy()[:periods]
+        for k, v in self.d['y'][idx].items():
+            y[k] = v
+            
+        # x_time
+        x_time = self._construct_x_time(idx, periods)
 
         # for delay models, add (normalized) periods remaining
         if 'remaining' in self.d:
