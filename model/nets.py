@@ -208,7 +208,8 @@ class Recurrent(nn.Module):
         # rnn layer
         self.rnn = nn.LSTM(input_size=sizes['x_time'],
                         hidden_size=params['hidden'],
-                        batch_first=True)
+                        batch_first=True,
+                        affine=params['affine'])
 
         # output layer
         self.output = nn.Linear(params['hidden'], sizes['out'])
