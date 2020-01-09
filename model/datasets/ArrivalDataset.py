@@ -33,6 +33,6 @@ class ArrivalDataset(RecurrentDataset):
         if y_i is not None:
             for n in range(len(y_i)):
                 t, v = y_i[n]
-                y[t, :] = v
+                y[t] = v
 
         return y, periods, x, x_time
