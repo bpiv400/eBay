@@ -41,13 +41,14 @@ class eBayDataset(Dataset):
 
         # append thread-level features
         if 'x_thread' in self.d:
-            x['lstg'] = np.concatenate(
-                (x['lstg'], self.d['x_thread'][idx]))
+            l = np.array([a[idx] for a in self.d['x_thread']], 
+                dtype='float32')
+            x['lstg'] = np.concatenate((x['lstg'], l))
 
         # append offer-level features
         if 'x_offer' in self.d:
             for k, v in self.d['x_offer'].items():
-                x[k] = v[idx, :]
+                x[k] = np.array([a[idx] for a in v], dtype='float32')
 
         return x
 

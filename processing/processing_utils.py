@@ -116,6 +116,13 @@ def input_partition():
     return part
 
 
+def shave_floats(df):
+    for c in df.columns:
+        if df[c].dtype == 'float64':
+            df.loc[:, c] = df[c].astype('float32')
+    return df
+
+
 def add_turn_indicators(df):
     '''
     Appends turn indicator variables to offer matrix
@@ -142,6 +149,9 @@ def get_x_thread(part, idx):
 
     # add turn indicators
     x_thread = add_turn_indicators(x_thread)
+
+    # step floats down
+    x_thread = shave_floats(x_thread)
 
     return x_thread
 
@@ -201,7 +211,10 @@ def get_x_offer(part, idx, outcome=None, role=None):
         offer = offer.rename(lambda x: x + '_%d' % i, axis=1)
 
         # add turn indicators
-        x['offer%d' % i] = add_turn_indicators(offer)
+        offer = add_turn_indicators(offer)
+
+        # step down floats
+        x['offer%d' % i] = shave_floats(offer)
 
     return x
 
