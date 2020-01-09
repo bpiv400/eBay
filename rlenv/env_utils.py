@@ -39,6 +39,17 @@ def load_sizes(name):
     return load(INPUT_DIR + 'sizes/{}.pkl'.format(name))
 
 
+def load_params(name):
+    """
+        Loads featnames dictionary for a model
+        #TODO: extend to include agents
+        :param name: str giving name (e.g. hist, con_byr),
+         see interface/model_names
+        :return: dict
+        """
+    return load(INPUT_DIR + 'params/{}.pkl'.format(name))
+
+
 def featname(feat, turn):
     """
     Returns the name of a particular feature for a particular turn
@@ -165,10 +176,10 @@ def load_model(full_name):
     :param str full_name: full name of the model
     :return: torch.nn.Module
     """
-    sizes = load_sizes(full_name)
+    sizes, params = load_sizes(full_name), load_params(full_name)
     model_path = '{}{}.net'.format(MODEL_DIR, full_name)
     model_class = get_model_class(full_name)
-    net = model_class(sizes, dropout=False)  # type: torch.nn.Module
+    net = model_class(sizes, params)  # type: torch.nn.Module
     state_dict = torch.load(model_path, map_location='cpu')
     net.load_state_dict(state_dict)
     for param in net.parameters(recurse=True):
