@@ -5,7 +5,6 @@ import numpy as np
 from compress_pickle import load
 import pandas as pd
 from constants import PARTITIONS, ENV_SIM_DIR, PARTS_DIR, REINFORCE_INPUT_DIR
-from simulator.Recorder import LSTG, REWARD
 from rlenv.env_consts import X_LSTG_FILENAME, LOOKUP_FILENAME, X_LSTG, LOOKUP
 
 

@@ -14,12 +14,6 @@ class DiscrimRecorder(Recorder):
         self.offers = []
         self.threads = []
 
-    def dump(self):
-        self.records2frames()
-        self.compress_frames()
-        dump(self.construct_output(), self.records_path)
-        self.reset_recorders()
-
     def start_thread(self, thread_id=None, byr_hist=None, time=None):
         """
         Records an arrival

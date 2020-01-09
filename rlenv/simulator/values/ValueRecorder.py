@@ -21,22 +21,14 @@ class ValueRecorder(Recorder):
         return self.values
 
     def compress_frames(self):
-        for col in [SALE_MEAN, VAL, SE, CUT]:
+        for col in [AVG_PRICE, VAL, SE, CUT, P_SALE]:
             self.values[col] = self.values[col].astype(np.float32)
         self.values[LSTG] = self.values[LSTG].astype(np.int32)
-        self.values[SALE_COUNT] = self.values[SALE_COUNT].astype(np.int32)
-        self.values[TRIALS] = self.values[TRIALS].astype(np.uint16)
+        self.values[NUM_SALES] = self.values[NUM_SALES].astype(np.int32)
         self.values.set_index('lstg', inplace=True)
 
     def reset_recorders(self):
         self.values = []
-
-    def dump(self):
-        self.records2frames()
-        self.compress_frames()
-        output = self.construct_output()
-        dump(output, self.records_path)
-        self.reset_recorders()
 
     def add_val(self, val_calc):
         """

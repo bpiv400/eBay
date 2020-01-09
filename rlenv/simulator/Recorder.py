@@ -54,7 +54,10 @@ class Recorder:
         self.sim += 1
 
     def dump(self):
-        raise NotImplementedError()
+        self.records2frames()
+        self.compress_frames()
+        dump(self.construct_output(), self.records_path)
+        self.reset_recorders()
 
     def print_offer(self, event, summary):
         """
