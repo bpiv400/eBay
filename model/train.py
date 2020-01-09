@@ -4,13 +4,14 @@ import torch, torch.optim as optim
 from torch.utils.tensorboard import SummaryWriter
 from compress_pickle import load, dump
 from model.Model import Model
-from model.FeedForwardDataset import FeedForwardDataset
-from model.RecurrentDataset import RecurrentDataset
+from model.datasets.FeedForwardDataset import FeedForwardDataset
+from model.datasets.ArrivalDataset import ArrivalDataset
+from model.datasets.DelayDataset import DelayDataset
 from model.model_consts import *
 from constants import INPUT_DIR, MODEL_DIR, PARAMS_PATH
 
 
-def training_loop(model, train, test, writer, model_path):
+def training_loop(model, train, test, writer_path, model_path):
     # initialize optimizer
     loglr = LOGLR0
     optimizer = optim.Adam(model.net.parameters(), lr=math.pow(10, loglr))
@@ -23,14 +24,16 @@ def training_loop(model, train, test, writer, model_path):
 
         # train model
         output['loss'] = model.run_loop(train, optimizer)
+        output['lnL_train'] = -output['loss'] / train.N_labels
 
-        # calculate log-likelihood on training and validation sets
+        # calculate log-likelihood on validation set
         with torch.no_grad():
-            loss_train = model.run_loop(train)
-            output['lnL_train'] = -loss_train / train.N_labels
-
             loss_test = model.run_loop(test)
             output['lnL_test'] = -loss_test / test.N_labels
+
+        # initialize tensorboard writer in first epoch
+        if epoch == 0:
+            writer = SummaryWriter(writer_path)
 
         # save output to tensorboard writer
         for k, v in output.items():
@@ -75,9 +78,12 @@ if __name__ == '__main__':
 
     # load datasets
     print('Loading data')
-    if 'x_time' in sizes:
-        train = RecurrentDataset('train_models', name, sizes)
-        test = RecurrentDataset('train_rl', name, sizes)
+    if name == 'arrival':
+        train = ArrivalDataset('train_models', name, sizes)
+        test = ArrivalDataset('train_rl', name, sizes)
+    elif 'delay' in name:
+        train = DelayDataset('train_models', name, sizes)
+        test = DelayDataset('train_rl', name, sizes)
     else:
         train = FeedForwardDataset('train_models', name)
         test = FeedForwardDataset('train_rl', name)
@@ -90,11 +96,9 @@ if __name__ == '__main__':
         else:
             break
 
-    # initialize tensorboard writer
-    writer = SummaryWriter(LOG_DIR + '{}/{}'.format(name, expid))
-
-    # model path
+    # paths
+    writer_path = LOG_DIR + '{}/{}'.format(name, expid)
     model_path = MODEL_DIR + '{}/{}.net'.format(name, expid)
 
     # training loop
-    training_loop(model, train, test, writer, model_path)
+    training_loop(model, train, test, writer_path, model_path)

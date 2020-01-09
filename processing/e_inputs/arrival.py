@@ -2,7 +2,7 @@ import sys, os
 from compress_pickle import load, dump
 import numpy as np, pandas as pd
 from processing.processing_utils import input_partition, \
-    load_frames, save_files, load_file, get_tf
+    load_frames, save_files, load_file, get_idx_x, get_tf
 from processing.processing_consts import CLEAN_DIR, INTERVAL, INTERVAL_COUNTS
 
 
@@ -40,20 +40,24 @@ def process_inputs(part):
     lstg_end = load(CLEAN_DIR + 'listings.pkl').end_time.reindex(
         index=lstg_start.index)
     periods = get_periods(lstg_start, lstg_end)
-
-    # listing features
-    x = load_file(part, 'x_lstg')
+    idx = periods.index
 
     # arrival counts
     thread_start = load_file(part, 'clock').xs(1, level='index')
     y = get_y(lstg_start, thread_start)
 
+    # index of listing features
+    idx_x = get_idx_x(part, idx)
+
     # time features
     tf = load_file(part, 'tf_arrival')
     tf_arrival = get_tf(tf, lstg_start, periods, 'arrival')
 
-    return {'periods': periods, 'y': y, 'x': x,
-            'seconds': lstg_start, 'tf': tf_arrival}
+    return {'periods': periods, 
+            'y': y, 
+            'idx_x': idx_x,
+            'seconds': lstg_start, 
+            'tf': tf_arrival}
 
 
 if __name__ == '__main__':

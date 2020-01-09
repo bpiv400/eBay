@@ -1,18 +1,19 @@
 import numpy as np
-from torch.utils.data import Dataset
 from compress_pickle import load
+from model.datasets.eBayDataset import eBayDataset
 from constants import INPUT_DIR, DAY
 from featnames import TIME_FEATS
 
 
-class RecurrentDataset(Dataset):
+class RecurrentDataset(eBayDataset):
     def __init__(self, part, name, sizes):
         '''
-        Defines a dataset that extends torch.utils.data.Dataset
+        Defines a child class of eBayDataset for a recurrent network.
         :param part: string partition name (e.g., train_models).
         :param name: string model name.
+        :param sizes: dictionary of size parameters.
         '''
-        self.d = load(INPUT_DIR + '{}/{}.gz'.format(part, name))
+        super(RecurrentDataset, self).__init__(part, name)
 
         # save clock feats lookup array to self
         self.date_feats = load(INPUT_DIR + 'date_feats.pkl')
@@ -40,21 +41,7 @@ class RecurrentDataset(Dataset):
         self.tf0 = np.zeros((T, len(TIME_FEATS)), dtype='float32')
 
 
-    def __getitem__(self, idx):
-        '''
-        Returns a tuple of data components for example.
-        :param idx: index of example.
-        :return: tuple of data components at index idx.
-        '''
-        # components that are indexed directly
-        periods = self.d['periods'][idx]
-        x = {k: v[idx] for k, v in self.d['x'].items()}
-
-        # y gets reindexed
-        y = self.y0.copy()[:periods]
-        for k, v in self.d['y'][idx].items():
-            y[k] = v
-            
+    def _construct_x_time(self, idx, periods):
         # indices of timestamps
         seconds = self.d['seconds'][idx] + self.counter[:periods]
 
@@ -66,21 +53,18 @@ class RecurrentDataset(Dataset):
 
         # fill in missing time feats with zeros
         x_tf = self.tf0.copy()[:periods, :]
-        for k, v in self.d['tf'][idx].items():
-            if k < periods:
-                x_tf[k, :] = v
+        tf_i = self.d['tf'][idx]
+        if tf_i is not None:
+            for n in range(len(tf_i)):
+                t, v = tf_i[n]
+                x_tf[t, :] = v
 
         # time feats: first clock feats, then time-varying feats
         x_time = np.concatenate(
             (clock_feats, x_tf, self.duration[:periods]), axis=1)
 
-        # for delay models, add (normalized) periods remaining
-        if 'remaining' in self.d:
-            remaining = self.d['remaining'][idx] - self.duration[:periods]
-            x_time = np.concatenate((x_time, remaining), axis=1)
+        return x_time
 
-        return y, periods, x, x_time
-        
 
-    def __len__(self):
-        return self.N_examples
+    def __getitem__(self, idx):
+        raise NotImplementedError()

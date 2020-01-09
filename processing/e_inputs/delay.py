@@ -1,10 +1,10 @@
 import sys, os, argparse
 from compress_pickle import load, dump
 import numpy as np, pandas as pd
-from processing.processing_utils import get_x_offer, \
+from processing.processing_utils import get_x_thread, get_x_offer, get_idx_x, \
 	save_files, load_file, get_tf
 from processing.processing_consts import INTERVAL, INTERVAL_COUNTS, MAX_DELAY
-from constants import DAY, IDX
+from constants import DAY, MONTH, IDX
 
 
 def get_delay(x_offer):
@@ -33,22 +33,6 @@ def get_periods(delay, role):
 	return periods
 
 
-def get_y(delay, exp, role):
-		# subset and convert to interval
-	intervals = (delay[~exp] // INTERVAL[role]).rename('periods')
-
-	# error checking
-	assert intervals.max() < INTERVAL_COUNTS[role]
-	if role == 'byr':
-		assert intervals.xs(7, level='index').max() < INTERVAL_COUNTS['byr_7']
-
-	# count of arrivals by interval
-	y = intervals.rename('period').to_frame().assign(
-		count=1).set_index('period', append=True).squeeze()
-
-	return y
-
-
 # loads data and calls helper functions to construct train inputs
 def process_inputs(part, role):
 	# load features from offer dataframe and restrict observations
@@ -64,10 +48,16 @@ def process_inputs(part, role):
 	idx = periods.index
 
 	# outcome
-	y = get_y(delay, x_offer.exp, role)
+	y = ~x_offer.exp
 
-	# dictionary of input features
-	x = get_x_offer(part, idx, outcome='delay', role=role)
+	# thread features
+	x_thread = get_x_thread(part, idx)
+
+	# offer features
+	x_offer = get_x_offer(part, idx, outcome='delay', role=role)
+
+	# index of listing features
+	idx_x = get_idx_x(part, idx)
 
 	# second since START at beginning of delay period
 	clock = load_file(part, 'clock')
@@ -90,7 +80,9 @@ def process_inputs(part, role):
 	# dictionary of input components
 	return {'periods': periods, 
 			'y': y, 
-			'x': x, 
+			'x_thread': x_thread,
+			'x_offer': x_offer,
+			'idx_x': idx_x,
 			'seconds': delay_start, 
 			'remaining': remaining, 
 			'tf': tf_delay}

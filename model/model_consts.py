@@ -9,4 +9,4 @@ MBSIZE = {True: 128, False: 1024}
 LOGLR0 = -3
 LOGLR1 = -6
 LOGLR_INC = 0.5
-FTOL = 0.995
+FTOL = 0.99

@@ -1,18 +1,16 @@
-import numpy as np, pandas as pd
-import torch
+import numpy as np
 from torch.utils.data import Dataset
-from compress_pickle import load
-from constants import *
+from model.datasets.eBayDataset import eBayDataset
 
 
-class FeedForwardDataset(Dataset):
+class FeedForwardDataset(eBayDataset):
     def __init__(self, part, name):
         '''
-        Defines a dataset that extends torch.utils.data.Dataset
+        Defines a child class of eBayDataset for a feed-forward network.
         :param part: string partition name (e.g., train_models).
         :param name: string model name.
         '''
-        self.d = load(INPUT_DIR + '{}/{}.gz'.format(part, name))
+        super(FeedForwardDataset, self).__init__(part, name)
 
         # number of labels
         self.N_labels = np.shape(self.d['y'])[0]
@@ -27,12 +25,10 @@ class FeedForwardDataset(Dataset):
         :param idx: index of example.
         :return: tuple of data components at index idx.
         '''
-        # y and x are indexed directly
+        # y is indexed directly
         y = self.d['y'][idx]
-        x = {k: v[idx,:].astype(np.float32) for k, v in self.d['x'].items()}
+
+        # initialize x from listing-level features
+        x = self._construct_x(idx)
 
         return y, x
-        
-
-    def __len__(self):
-        return self.N_labels

@@ -14,8 +14,6 @@ class Model:
         :param name: string name of model.
         :param sizes: dictionary of data sizes.
         :param params: dictionary of neural net parameters.
-        :param batchnorm: True if using BatchNorm.
-        :param dropout: True if using dropout.
         :param device: either 'cuda' or 'cpu'
         '''
         self.dropout = params['dropout']

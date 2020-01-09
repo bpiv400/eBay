@@ -1,4 +1,4 @@
-from constants import PREFIX, HOUR, MINUTE, ARRIVAL_PREFIX, SLR_PREFIX, BYR_PREFIX
+from constants import PREFIX, HOUR, MINUTE, ARRIVAL_PREFIX, SLR_PREFIX, BYR_PREFIX, MAX_DELAY
 
 # directories
 CLEAN_DIR = '%s/clean/' % PREFIX

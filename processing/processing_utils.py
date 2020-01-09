@@ -2,7 +2,6 @@ import sys, os, argparse
 from compress_pickle import load, dump
 from datetime import datetime as dt
 import numpy as np, pandas as pd
-from collections import OrderedDict
 from processing.processing_consts import *
 from constants import *
 from featnames import *
@@ -46,6 +45,7 @@ def extract_day_feats(clock):
     df['holiday'] = clock.dt.date.astype('datetime64').isin(HOLIDAYS)
     for i in range(6):
         df['dow' + str(i)] = clock.dt.dayofweek == i
+
     return df
 
 
@@ -60,6 +60,8 @@ def extract_clock_feats(clock):
     # add in seconds of day
     seconds_since_midnight = clock.dt.hour * 60 + clock.dt.minute + clock.dt.second
     df['second_of_day'] = (seconds_since_midnight / (24 * 3600)).astype('float32')
+
+    assert all(df.columns == CLOCK_FEATS)
 
     return df
 
@@ -117,7 +119,7 @@ def input_partition():
 def shave_floats(df):
     for c in df.columns:
         if df[c].dtype == 'float64':
-            df[c] = df[c].astype('float32')
+            df.loc[:, c] = df[c].astype('float32')
     return df
 
 
@@ -133,6 +135,25 @@ def add_turn_indicators(df):
         featname = 't%d' % ((ind+1) // 2)
         df[featname] = df.index.isin([ind], level='index')
     return df
+
+
+def get_x_thread(part, idx):
+    # thread features
+    df = load_file(part, 'x_thread')
+
+    # byr_hist as a decimal
+    df.loc[:, 'byr_hist'] = df.byr_hist.astype('float32') / 10
+
+    # reindex to create x_thread
+    x_thread = pd.DataFrame(index=idx).join(df)
+
+    # add turn indicators
+    x_thread = add_turn_indicators(x_thread)
+
+    # step floats down
+    x_thread = shave_floats(x_thread)
+
+    return x_thread
 
 
 # deletes irrelevant feats and sets unseen feats to 0
@@ -167,25 +188,15 @@ def clean_offer(offer, i, outcome, role, dtypes):
 
 
 def get_x_offer(part, idx, outcome=None, role=None):
-    # thread and offer features
-    x_offer = load_file(part, 'x_offer')
-    x_thread = load_file(part, 'x_thread')
+    # offer features
+    df = load_file(part, 'x_offer')
 
-    # initialize dictionary of input features
-    x = load_file(part, 'x_lstg')
-    x = {k: v.reindex(index=idx, level='lstg') for k, v in x.items()}
-
-    # add thread features and turn indicators to listing features
-    x_thread.loc[:, 'byr_hist'] = x_thread.byr_hist.astype('float32') / 10
-    x['lstg'] = x['lstg'].join(x_thread)
-    x['lstg'] = add_turn_indicators(x['lstg'])
+    # initialize dictionary of offer features
+    x = {}
 
     # dataframe of offer features for relevant threads
     threads = idx.droplevel(level='index').unique()
-    df = pd.DataFrame(index=threads).join(x_offer)
-
-    # step down floats and save data types for later
-    df = shave_floats(df)
+    df = pd.DataFrame(index=threads).join(df)
     dtypes = df.dtypes
 
     # turn features
@@ -200,9 +211,20 @@ def get_x_offer(part, idx, outcome=None, role=None):
         offer = offer.rename(lambda x: x + '_%d' % i, axis=1)
 
         # add turn indicators
-        x['offer%d' % i] = add_turn_indicators(offer)
+        offer = add_turn_indicators(offer)
+
+        # step down floats
+        x['offer%d' % i] = shave_floats(offer)
 
     return x
+
+
+def get_idx_x(part, idx):
+    lstgs_x = load_file(part, 'lookup').index
+    s = pd.Series(range(len(lstgs_x)), index=lstgs_x, name='idx_x')
+    df = pd.DataFrame(index=idx.get_level_values(level='lstg'))
+    df = df.join(s)
+    return df.squeeze().to_numpy()
 
 
 def get_tf(tf, start, periods, role):
@@ -223,18 +245,21 @@ def get_tf(tf, start, periods, role):
     return tf.groupby(list(tf.index.names) + ['period']).sum()
 
 
-def save_featnames(d, name):
+def get_featnames(d):
     '''
     Creates dictionary of input feature names.
     :param d: dictionary with dataframes.
-    :param name: string name of model.
     '''
 
     # initialize with components of x
     featnames = {}
-    featnames['x'] = OrderedDict()
-    for k, v in d['x'].items():
-        featnames['x'][k] = list(v.columns)
+    featnames['x'] = load(INPUT_DIR + 'featnames/x_lstg.pkl')
+    if 'x_thread' in d:
+        featnames['x']['lstg'] += list(d['x_thread'].columns)
+
+    if 'x_offer' in d:
+        for k, v in d['x_offer'].items():
+            featnames['x'][k] = list(v.columns)
 
     # for arrival and delay models
     if 'periods' in d:
@@ -249,35 +274,31 @@ def save_featnames(d, name):
             featnames['x_time'] += [INT_REMAINING]
             assert INT_REMAINING == 'remaining'
 
-    dump(featnames, INPUT_DIR + 'featnames/{}.pkl'.format(name))
+    return featnames
 
 
-def save_sizes(d, name):
+def save_sizes(featnames, name):
     '''
     Creates dictionary of input sizes.
-    :param d: dictionary with dataframes.
+    :param featnames: dictionary of featnames.
     :param name: string name of model.
     '''
     sizes = {}
 
     # count components of x
     sizes['x'] = {}
-    for k, v in d['x'].items():
-        sizes['x'][k] = len(v.columns)
+    for k, v in featnames['x'].items():
+        sizes['x'][k] = len(v)
 
     # arrival and delay models
-    if 'tf' in d:
+    if 'x_time' in featnames:
         role = name.split('_')[-1]
         sizes['interval'] = INTERVAL[role]
         sizes['interval_count'] = INTERVAL_COUNTS[role]
         if role == 'byr':
             sizes['interval_count_7'] = INTERVAL_COUNTS['byr_7']
 
-        sizes['x_time'] = len(CLOCK_FEATS) + len(TIME_FEATS) + 1
-
-        # delay models
-        if 'remaining' in d:
-            sizes['x_time'] += 1
+        sizes['x_time'] = len(featnames['x_time'])
 
     # output size is based on model
     if name == 'hist':
@@ -290,43 +311,67 @@ def save_sizes(d, name):
     dump(sizes, INPUT_DIR + 'sizes/{}.pkl'.format(name))
 
 
+def series_to_tuples(s, master_idx):
+    indices = s.reset_index(-1).index
+    out = []
+    for idx in master_idx:
+        if idx in indices:
+            obs = s.xs(idx)
+            out.append(tuple(zip(obs.index, obs)))
+        else:
+            out.append(None)
+    return out
+
+
 def convert_to_numpy(d):
     '''
     Converts dictionary of dataframes to dictionary of numpy arrays.
     :param d: dictionary with (dictionaries of) dataframes.
     :return: dictionary with numpy arrays (and dictionaries of dataframes).
     '''
-
-    # for error checking
-    periods_idx = d['periods'].index
-
-    # loop through x, convert to numpy
-    for k, v in d['x'].items():
-        assert np.all(v.index == periods_idx)
-        d['x'][k] = v.to_numpy(dtype='float32')
-
-    # lists for recurrent components
+    # for recurrent networks
     if 'periods' in d:
-        for k in ['y', 'tf']:
-            if k == 'y':
-                s = d['y']
-            else:
-                s = pd.Series(
-                        d['tf'].values.astype('float32').tolist(), 
-                        index=d['tf'].index)
-            indices = s.reset_index(-1).index
-            d[k] = []
-            for idx in periods_idx:
-                if idx in indices:
-                    d[k].append(s.xs(idx).to_dict())
-                else:
-                    d[k].append({})
+        master_idx = d['periods'].index
 
-    # convert remaining components to numpy directly
-    for k, v in d.items():
-        if not isinstance(v, (list, dict)):
-            assert np.all(v.index == periods_idx)
-            d[k] = v.to_numpy()
+        # time features as list of dictionaries
+        l = d['tf'].values.astype('float32').tolist()
+        s = pd.Series(l, index=d['tf'].index)
+        d['tf'] = series_to_tuples(s, master_idx)
+
+        # common recurrent components
+        d['periods'] = d['periods'].to_numpy()
+
+        assert np.all(d['seconds'].index == master_idx)
+        d['seconds'] = d['seconds'].to_numpy()
+
+        # delay model
+        if 'remaining' in d:
+            assert np.all(d['remaining'].index == master_idx)
+            d['remaining'] = d['remaining'].to_numpy(dtype='float32')
+
+            assert np.all(d['y'].index == master_idx)
+            d['y'] = d['y'].to_numpy()
+
+        # arrival model: outcome as list of tuples
+        else:
+            d['y'] = series_to_tuples(d['y'], master_idx)
+
+    # feed forward networks
+    else:
+        master_idx = d['y'].index
+        d['y'] = d['y'].to_numpy()
+
+    # loop through x_offer, convert to list of 1-D numpy arrays
+    if 'x_offer' in d:
+        for k, v in d['x_offer'].items():
+            assert np.all(v.index == master_idx)
+            d['x_offer'][k] = [v[c].to_numpy() for c in v.columns]
+
+    # direct conversion to numpy float32
+    if 'x_thread' in d:
+        assert np.all(d['x_thread'].index == master_idx)
+        v = d['x_thread'].copy()
+        d['x_thread'] = [v[c].to_numpy() for c in v.columns]
 
     return d
 
@@ -335,8 +380,12 @@ def convert_to_numpy(d):
 def save_files(d, part, name):
     # featnames and sizes
     if part == 'train_models':
-        save_featnames(d, name)
-        save_sizes(d, name)
+        # featnames
+        featnames = get_featnames(d)
+        dump(featnames, INPUT_DIR + 'featnames/{}.pkl'.format(name))
+
+        # sizes
+        save_sizes(featnames, name)
 
     # create dictionary of numpy arrays
     d = convert_to_numpy(d)
