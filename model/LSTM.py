@@ -16,7 +16,7 @@ class LSTM(nn.Module):
                  dropout=0,
                  bidirectional=0,
                  batch_first=False,
-                 learnable=True):
+                 affine=True):
         super(LSTM, self).__init__()
         self.input_size = input_size
         self.hidden_size = hidden_size
@@ -27,11 +27,10 @@ class LSTM(nn.Module):
         layers = []
         for i in range(num_layers):
             for j in range(self.direction):
-                # layer = LayerNormLSTM(input_size*self.direction,
-                #                       hidden_size,
-                #                       dropout=dropout,
-                #                       learnable=learnable)
-                layer = LSTMcell(input_size, hidden_size)
+                layer = LayerNormLSTM(input_size*self.direction,
+                                      hidden_size,
+                                      dropout=dropout,
+                                      affine=affine)
                 layers.append(layer)
             input_size = hidden_size
         self.layers = layers
@@ -94,40 +93,6 @@ class LSTM(nn.Module):
         if self.batch_first:
             x = x.permute(1, 0, 2)
         return x, (h, c)
-
-
-class LayerNorm(nn.Module):
-    """
-    Layer Normalization based on Ba & al.:
-    'Layer Normalization'
-    https://arxiv.org/pdf/1607.06450.pdf
-    """
-
-    def __init__(self, input_size, learnable=True, epsilon=1e-6):
-        super(LayerNorm, self).__init__()
-        self.input_size = input_size
-        self.learnable = learnable
-        self.alpha = Tensor(1, input_size).fill_(1)
-        self.beta = Tensor(1, input_size).fill_(0)
-        self.epsilon = epsilon
-        # Wrap as parameters if necessary
-        W = Parameter if learnable else Variable
-        self.alpha = W(self.alpha)
-        self.beta = W(self.beta)
-        self.reset_parameters()
-
-    def reset_parameters(self):
-        std = 1.0 / math.sqrt(self.input_size)
-        for w in self.parameters():
-            w.data.uniform_(-std, std)
-
-    def forward(self, x):
-        size = x.size()
-        x = x.view(x.size(0), -1)
-        x = (x - torch.mean(x, 1).unsqueeze(1).expand_as(x)) / torch.sqrt(torch.var(x, 1).unsqueeze(1).expand_as(x) + self.epsilon)
-        if self.learnable:
-            x =  self.alpha.expand_as(x) * x + self.beta.expand_as(x)
-        return x.view(size)
 
 
 class LSTMcell(nn.Module):
@@ -208,7 +173,7 @@ class LayerNormLSTM(LSTMcell):
     https://arxiv.org/pdf/1607.06450.pdf
     Special args:
         ln_preact: whether to Layer Normalize the pre-activations.
-        learnable: whether the LN alpha & gamma should be used.
+        affine: whether the LN alpha & gamma should be used.
     """
     def __init__(self,
                  input_size,
@@ -216,18 +181,14 @@ class LayerNormLSTM(LSTMcell):
                  bias=True,
                  dropout=0.0,
                  dropout_method='gal',
-                 ln_preact=True,
-                 learnable=True):
+                 affine=True):
         super(LayerNormLSTM, self).__init__(input_size=input_size,
                                             hidden_size=hidden_size,
                                             bias=bias,
                                             dropout=dropout,
                                             dropout_method=dropout_method)
-        if ln_preact:
-            self.ln_h2h = LayerNorm(4*hidden_size, learnable=learnable)
-            self.ln_i2h = LayerNorm(4*hidden_size, learnable=learnable)
-        self.ln_preact = ln_preact
-        self.ln_cell = LayerNorm(hidden_size, learnable=learnable)
+
+        self.ln_cell = nn.LayerNorm(hidden_size, elementwise_affine=affine)
 
     def forward(self, x, hidden):
         do_dropout = self.training and self.dropout > 0.0
@@ -237,12 +198,7 @@ class LayerNormLSTM(LSTMcell):
         x = x.view(x.size(1), -1)
 
         # Linear mappings
-        i2h = self.i2h(x)
-        h2h = self.h2h(h)
-        if self.ln_preact:
-            i2h = self.ln_i2h(i2h)
-            h2h = self.ln_h2h(h2h)
-        preact = i2h + h2h
+        preact = self.i2h(x) + self.h2h(h)
 
         # activations
         gates = preact[:, :3 * self.hidden_size].sigmoid()

@@ -1,6 +1,7 @@
 import torch, torch.nn as nn
 from collections import OrderedDict
-from constants import *
+from model.LSTM import LSTM
+from constants import EMBEDDING_GROUPS
 
 
 class VariationalDropout(nn.Module):
@@ -41,7 +42,8 @@ class Layer(nn.Module):
 
         # batch normalization
         if params['batchnorm']:
-            self.layer.append(nn.BatchNorm1d(N_out, affine=params['affine']))
+            self.layer.append(
+                nn.BatchNorm1d(N_out, affine=params['affine']))
 
         # activation function
         self.layer.append(nn.ReLU(inplace=True))
@@ -205,8 +207,8 @@ class Recurrent(nn.Module):
 
         # rnn layer
         self.rnn = nn.LSTM(input_size=sizes['x_time'],
-                           hidden_size=params['hidden'],
-                           batch_first=True)
+                        hidden_size=params['hidden'],
+                        batch_first=True)
 
         # output layer
         self.output = nn.Linear(params['hidden'], sizes['out'])
@@ -224,10 +226,10 @@ class Recurrent(nn.Module):
         # update hidden state recurrently
         theta, _ = self.rnn(x_time, hidden)
 
-        # pad
-        theta, _ = nn.utils.rnn.pad_packed_sequence(
-            theta, total_length=len(x_time.batch_sizes), 
-            batch_first=True)
+        # # pad
+        # theta, _ = nn.utils.rnn.pad_packed_sequence(
+        #     theta, total_length=len(x_time.batch_sizes), 
+        #     batch_first=True)
 
         # output layer: (batch_size, seq_len, N_output)
         return self.output(theta).squeeze()
