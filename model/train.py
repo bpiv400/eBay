@@ -23,9 +23,9 @@ def training_loop(model, train, test, writer, model_path):
 
         # train model
         output['loss'] = model.run_loop(train, optimizer)
-        output['lnL_train'] = -loss / train.N_labels
+        output['lnL_train'] = -output['loss'] / train.N_labels
 
-        # calculate log-likelihood on training and validation sets
+        # calculate log-likelihood on validation set
         with torch.no_grad():
             loss_test = model.run_loop(test)
             output['lnL_test'] = -loss_test / test.N_labels

@@ -319,6 +319,7 @@ def convert_to_numpy(d):
             if k == 'y':
                 s = d['y']
             else:
+                # convert time features to series with list for values
                 l = d['tf'].values.astype('float32').tolist()
                 s = pd.Series(l, index=d['tf'].index)
             indices = s.reset_index(-1).index
