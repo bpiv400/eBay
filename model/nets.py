@@ -181,7 +181,6 @@ class FeedForward(nn.Module):
         self.nn1 = FullyConnected(total, 
             params['hidden'] if toRNN else sizes['out'], params)
 
-
     def forward(self, x):
         '''
         x: OrderedDict()

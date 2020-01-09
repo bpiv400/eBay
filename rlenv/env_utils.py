@@ -22,7 +22,7 @@ def load_featnames(name):
     Loads featnames dictionary for a model
     #TODO: extend to include agents
     :param name: str giving name (e.g. hist, con_byr),
-     see interface/model_names
+     see env_consts.py for model names
     :return: dict
     """
     return load(INPUT_DIR + 'featnames/{}.pkl'.format(name))
@@ -33,21 +33,19 @@ def load_sizes(name):
         Loads featnames dictionary for a model
         #TODO: extend to include agents
         :param name: str giving name (e.g. hist, con_byr),
-         see interface/model_names
+         see env_consts.py for model names
         :return: dict
         """
     return load(INPUT_DIR + 'sizes/{}.pkl'.format(name))
 
 
-def load_params(name):
+def load_params():
     """
         Loads featnames dictionary for a model
         #TODO: extend to include agents
-        :param name: str giving name (e.g. hist, con_byr),
-         see interface/model_names
         :return: dict
         """
-    return load(INPUT_DIR + 'params/{}.pkl'.format(name))
+    return load(INPUT_DIR + 'params.pkl')
 
 
 def featname(feat, turn):
@@ -176,7 +174,7 @@ def load_model(full_name):
     :param str full_name: full name of the model
     :return: torch.nn.Module
     """
-    sizes, params = load_sizes(full_name), load_params(full_name)
+    sizes, params = load_sizes(full_name), load_params()
     model_path = '{}{}.net'.format(MODEL_DIR, full_name)
     model_class = get_model_class(full_name)
     net = model_class(sizes, params)  # type: torch.nn.Module
