@@ -11,6 +11,7 @@ class RecurrentDataset(eBayDataset):
         Defines a child class of eBayDataset for a recurrent network.
         :param part: string partition name (e.g., train_models).
         :param name: string model name.
+        :param sizes: dictionary of size parameters.
         '''
         super(RecurrentDataset, self).__init__(part, name)
 
@@ -52,9 +53,11 @@ class RecurrentDataset(eBayDataset):
 
         # fill in missing time feats with zeros
         x_tf = self.tf0.copy()[:periods, :]
-        for k, v in self.d['tf'][idx].items():
-            if k < periods:
-                x_tf[k, :] = v
+        tf_i = self.d['tf'][idx]
+        if tf_i is not None:
+            for n in range(len(tf_i)):
+                t, v = tf_i[n]
+                x_tf[t, :] = v
 
         # time feats: first clock feats, then time-varying feats
         x_time = np.concatenate(
@@ -64,28 +67,4 @@ class RecurrentDataset(eBayDataset):
 
 
     def __getitem__(self, idx):
-        '''
-        Returns a tuple of data components for example.
-        :param idx: index of example.
-        :return: tuple of data components at index idx.
-        '''
-        # periods is indexed directly
-        periods = self.d['periods'][idx]
-
-        # initialize x from listing-level features
-        x = self._construct_x(idx)
-
-        # y gets reindexed
-        y = self.y0.copy()[:periods]
-        for k, v in self.d['y'][idx].items():
-            y[k] = v
-            
-        # x_time
-        x_time = self._construct_x_time(idx, periods)
-
-        # for delay models, add (normalized) periods remaining
-        if 'remaining' in self.d:
-            remaining = self.d['remaining'][idx] - self.duration[:periods]
-            x_time = np.concatenate((x_time, remaining), axis=1)
-
-        return y, periods, x, x_time
+        raise NotImplementedError()
