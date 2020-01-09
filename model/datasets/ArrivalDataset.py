@@ -29,6 +29,15 @@ class ArrivalDataset(RecurrentDataset):
 
         # non-zero arrivals get added to vector of zeros
         y = self.y0.copy()[:periods]
+        y_i = self.d['y'][idx]
+        if y_i is not None:
+            for n in range(len(y_i)):
+                t, v = y_i[n]
+                y[t, :] = v
+
+
+        d = self.d['y'][idx]
+        if d is not None:
         for k, v in self.d['y'][idx].items():
             y[k] = v
 
