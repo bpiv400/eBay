@@ -3,6 +3,7 @@ import numpy as np, pandas as pd
 from rlenv.env_consts import *
 from rlenv.env_utils import load_featnames, load_sizes, model_str
 from featnames import TURN_FEATS
+from constants import ARRIVAL_PREFIX
 
 
 class Composer:
@@ -193,12 +194,12 @@ class Composer:
         intervals = {
             BYR_PREFIX: self.sizes[model_str(DELAY, byr=True)][INTERVAL],
             SLR_PREFIX: self.sizes[model_str(DELAY, byr=False)][INTERVAL],
-            ARRIVAL: self.sizes[NUM_OFFERS_MODEL][INTERVAL]
+            ARRIVAL_PREFIX: self.sizes[NUM_OFFERS_MODEL][INTERVAL]
         }
         interval_counts = {
             BYR_PREFIX: self.sizes[model_str(DELAY, byr=True)][INTERVAL_COUNT],
             SLR_PREFIX: self.sizes[model_str(DELAY, byr=False)][INTERVAL_COUNT],
-            ARRIVAL: self.sizes[NUM_OFFERS_MODEL][INTERVAL_COUNT],
+            ARRIVAL_PREFIX: self.sizes[NUM_OFFERS_MODEL][INTERVAL_COUNT],
             '{}_{}'.format(BYR_PREFIX, 7): self.sizes[model_str(DELAY, byr=True)]['{}_{}'.format(INTERVAL_COUNT, 7)]
         }
         return {

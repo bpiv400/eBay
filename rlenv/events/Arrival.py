@@ -1,7 +1,7 @@
 import torch
 from rlenv.events.Event import Event
-from rlenv.env_consts import ARRIVAL
-from constants import INTERVAL_COUNTS, ARRIVAL_PREFIX
+from rlenv.env_consts import ARRIVAL, INTERVAL_COUNT
+from constants import ARRIVAL_PREFIX
 
 
 class Arrival(Event):
@@ -12,7 +12,7 @@ class Arrival(Event):
     Attributes:
         priority: inherited from Event
     """
-    def __init__(self, priority, sources):
+    def __init__(self, priority=None, sources=None, interval_attrs=None):
         """
         Constructor
 
@@ -21,9 +21,10 @@ class Arrival(Event):
         super(Arrival, self).__init__(ARRIVAL, priority=int(priority))
         self.sources = sources
         self.interval = torch.tensor(0.0)
+        self.interval_attrs = interval_attrs
 
     def update_arrival(self, clock_feats=None, time_feats=None):
-        duration = self.interval / INTERVAL_COUNTS[ARRIVAL_PREFIX]
+        duration = self.interval / self.interval_attrs[INTERVAL_COUNT][ARRIVAL_PREFIX]
         self.sources.update_arrival(clock_feats=clock_feats,
                                     time_feats=time_feats,
                                     duration=duration)
