@@ -33,22 +33,6 @@ def get_periods(delay, role):
 	return periods
 
 
-def get_y(delay, exp, role):
-		# subset and convert to interval
-	intervals = (delay[~exp] // INTERVAL[role]).rename('periods')
-
-	# error checking
-	assert intervals.max() < INTERVAL_COUNTS[role]
-	if role == 'byr':
-		assert intervals.xs(7, level='index').max() < INTERVAL_COUNTS['byr_7']
-
-	# count of arrivals by interval
-	y = intervals.rename('period').to_frame().assign(
-		count=1).set_index('period', append=True).squeeze()
-
-	return y
-
-
 # loads data and calls helper functions to construct train inputs
 def process_inputs(part, role):
 	# load features from offer dataframe and restrict observations
@@ -64,7 +48,7 @@ def process_inputs(part, role):
 	idx = periods.index
 
 	# outcome
-	y = get_y(delay, x_offer.exp, role)
+	y = ~x_offer.exp
 
 	# thread features
 	x_thread = get_x_thread(part, idx)

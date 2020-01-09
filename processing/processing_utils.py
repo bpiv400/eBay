@@ -314,31 +314,42 @@ def convert_to_numpy(d):
     if 'periods' in d:
         master_idx = d['periods'].index
 
-        # lists of dictionaries
-        for k in ['y', 'tf']:
-            if k == 'y':
-                s = d['y']
+        # time features as list of dictionaries
+        l = d['tf'].values.astype('float32').tolist()
+        s = pd.Series(l, index=d['tf'].index)
+        indices = s.reset_index(-1).index
+        d['tf'] = []
+        for idx in master_idx:
+            if idx in indices:
+                d['tf'].append(s.xs(idx).to_dict())
             else:
-                # convert time features to series with list for values
-                l = d['tf'].values.astype('float32').tolist()
-                s = pd.Series(l, index=d['tf'].index)
-            indices = s.reset_index(-1).index
-            d[k] = []
-            for idx in master_idx:
-                if idx in indices:
-                    d[k].append(s.xs(idx).to_dict())
-                else:
-                    d[k].append({})
+                d['tf'].append(None)
 
-        # other recurrent components
+        # common recurrent components
         d['periods'] = d['periods'].to_numpy()
 
         assert np.all(d['seconds'].index == master_idx)
         d['seconds'] = d['seconds'].to_numpy()
 
+        # delay model
         if 'remaining' in d:
             assert np.all(d['remaining'].index == master_idx)
             d['remaining'] = d['remaining'].to_numpy(dtype='float32')
+
+            assert np.all(d['y'].index == master_idx)
+            d['y'] = d['y'].to_numpy()
+
+        # arrival model: outcome as list of tuples
+        else:
+            s = d['y']
+            indices = s.reset_index(-1).index
+            d['y'] = []
+            for idx in master_idx:
+                if idx in indices:
+                    obs = s.xs(idx)
+                    d['y'].append(tuple(zip(obs.index, obs)))
+                else:
+                    d['y'].append(None)
 
     # feed forward networks
     else:
