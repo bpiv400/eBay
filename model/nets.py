@@ -35,7 +35,6 @@ class Layer(nn.Module):
 
         '''
         super(Layer, self).__init__()
-
         # initialize layer
         self.layer = nn.ModuleList([nn.Linear(N_in, N_out)])
 

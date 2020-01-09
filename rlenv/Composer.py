@@ -1,11 +1,9 @@
-import os
 import torch
-from compress_pickle import load
 import numpy as np, pandas as pd
 from rlenv.env_consts import *
-from rlenv.env_utils import load_featnames, load_sizes
-from constants import ENV_SIM_DIR
+from rlenv.env_utils import load_featnames, load_sizes, model_str
 from featnames import TURN_FEATS
+from constants import ARRIVAL_PREFIX
 
 
 class Composer:
@@ -24,13 +22,11 @@ class Composer:
         maps = dict()
         sizes = dict()
         x_lstg_cols = list(cols)
-        thread_cols, x_time_cols = Composer._get_cols(x_lstg_cols)
-        thread_cols, x_time_cols = list(thread_cols), list(x_time_cols)
+        thread_cols = Composer._get_cols(x_lstg_cols)
         feat_sets = {
             THREAD_MAP: thread_cols,
             LSTG_MAP: x_lstg_cols,
             TURN_IND_MAP: TURN_FEATS,
-            X_TIME_MAP: x_time_cols,
         }
         Composer._check_feat_sets(feat_sets)
         for model in MODELS:
@@ -39,29 +35,17 @@ class Composer:
 
     @staticmethod
     def _get_cols(x_lstg_cols):
-        thread_cols, x_time_cols = set(), set()
-        # iterate over all models accumulating thread features and x_time features
-        for mod in MODELS:
-            curr_feats = load_featnames(mod)
-            if 'x_time' in curr_feats:
-                [x_time_cols.add(feat) for feat in curr_feats['x_time']]
-        prev_int = set()
+        thread_cols = set()
         for mod in MODELS:
             curr_feats = load_featnames(mod)
             for feat_type, feat_set in curr_feats['x'].items():
                 [thread_cols.add(feat) for feat in feat_set]
-                Composer.check_exclusive(x_time_cols, thread_cols, mod)
-        # exclude turn indicators
+        # exclude turn indicators and consts from thread cols
         for feat_set in [x_lstg_cols, TURN_FEATS]:
             for feat in feat_set:
                 if feat in thread_cols:
                     thread_cols.remove(feat)
-                if feat in x_time_cols:
-                    x_time_cols.remove(feat)
-        # check that x_time and thread cols are mutually exlcusive
-        Composer.check_exclusive(x_time_cols, thread_cols, None)
-        assert len(x_time_cols.intersection(thread_cols)) == 0
-        return thread_cols, x_time_cols
+        return list(thread_cols)
 
     @staticmethod
     def check_exclusive(x, y, model_name):
@@ -73,28 +57,13 @@ class Composer:
 
     @staticmethod
     def _build_model_maps(model, feat_sets):
-        #print(model)
         maps = dict()
         featnames = load_featnames(model)
-        #print('len: {}'.format(len(featnames['x']['lstg'])))
         sizes = load_sizes(model)
-        # create input set for x_time
-        if 'x_time' in featnames:
-            input_set = featnames['x_time']
-            #print('x_time')
-            maps['x_time'] = Composer._build_set_maps(input_set, feat_sets, size=sizes['x_time'])
-            # ensure only features from x_time contribute to the x_time map
-            assert len(maps['x_time']) == 1
-        maps['x'] = dict()
         for set_name, input_set in featnames['x'].items():
-            #print(set_name)
-            maps['x'][set_name] = Composer._build_set_maps(input_set, feat_sets,
-                                                           size=sizes['x'][set_name])
-        clipped_sizes = {
-            'x': sizes['x'],
-        }
-        if 'x_time' in featnames:
-            clipped_sizes['x_time'] = sizes['x_time']
+            maps[set_name] = Composer._build_set_maps(input_set, feat_sets, size=sizes['x'][set_name])
+        clipped_sizes = sizes.copy()
+        del clipped_sizes['out']
         return maps, clipped_sizes
 
     @staticmethod
@@ -152,11 +121,11 @@ class Composer:
         assert min(indices) == 0
         assert max(indices) == (total - 1)
         assert len(indices) == len(set(indices))
-        ## error checking
+        # error checking
         input_feats = set(list(input_set.index))
-        #print(len(input_set))
+        # print(len(input_set))
         map_feats = set(map_feats)
-        #print('missing from maps: {}'.format(input_feats.difference(map_feats)))
+        # print('missing from maps: {}'.format(input_feats.difference(map_feats)))
         assert len(indices) == size
         assert input_feats == map_feats
 
@@ -169,7 +138,7 @@ class Composer:
                 feat_map[feat] = True
 
     @staticmethod
-    def _build_input_vector(maps, size, sources):
+    def _build_fixed_input(maps, size, sources):
         """
         Helper method that composes a model's input vector given a dictionaries of
         the relevant input maps and  sources
@@ -189,6 +158,10 @@ class Composer:
                 raise RuntimeError()
         return x
 
+    @staticmethod
+    def _build_recurrent_input(source_vector):
+        return torch.from_numpy(source_vector).float().unsqueeze(dim=0)
+
     def build_input_vector(self, model_name, sources=None, fixed=False, recurrent=False):
         """
         Public method that composes input vectors (x_time and x_fixed) from tensors in the
@@ -204,24 +177,35 @@ class Composer:
         """
         input_dict = dict()
         if recurrent:
-            if model_name == 'arrival':
-                input_dict['x_time'] = torch.from_numpy(
-                    sources[X_TIME_MAP]).float().unsqueeze(dim=0)
-            else:
-                input_dict['x_time'] = Composer._build_input_vector(
-                    self.maps[model_name]['x_time'], 
-                    self.sizes[model_name]['x_time'],
-                    sources)
+            input_dict['x_time'] = Composer._build_recurrent_input(sources[X_TIME_MAP])
         if fixed:
             input_dict['x'] = dict()
-            fixed_maps = self.maps[model_name]['x']
-            fixed_sizes = self.sizes[model_name]['x']
+            fixed_maps = self.maps[model_name]  # dict
+            fixed_sizes = self.sizes[model_name]['x']  # dict
             for input_set in fixed_maps.keys():
-                input_dict['x'][input_set] = Composer._build_input_vector(
+                input_dict['x'][input_set] = Composer._build_fixed_input(
                     fixed_maps[input_set],
                     fixed_sizes[input_set],
                     sources)
         return input_dict
+
+    @property
+    def interval_attrs(self):
+        intervals = {
+            BYR_PREFIX: self.sizes[model_str(DELAY, byr=True)][INTERVAL],
+            SLR_PREFIX: self.sizes[model_str(DELAY, byr=False)][INTERVAL],
+            ARRIVAL_PREFIX: self.sizes[NUM_OFFERS_MODEL][INTERVAL]
+        }
+        interval_counts = {
+            BYR_PREFIX: self.sizes[model_str(DELAY, byr=True)][INTERVAL_COUNT],
+            SLR_PREFIX: self.sizes[model_str(DELAY, byr=False)][INTERVAL_COUNT],
+            ARRIVAL_PREFIX: self.sizes[NUM_OFFERS_MODEL][INTERVAL_COUNT],
+            '{}_{}'.format(BYR_PREFIX, 7): self.sizes[model_str(DELAY, byr=True)]['{}_{}'.format(INTERVAL_COUNT, 7)]
+        }
+        return {
+            INTERVAL: intervals,
+            INTERVAL_COUNT: interval_counts
+        }
 
     @property
     def feat_counts(self):

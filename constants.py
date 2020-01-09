@@ -10,33 +10,13 @@ ARRIVAL_PREFIX = 'arrival'
 # count concessions within this range as 1/2
 TOL_HALF = 0.02
 
-<<<<<<< HEAD
-=======
-# optimization parameters
-NUM_WORKERS = 0
-MBSIZE = {True: 128, False: 2000}
-LOGLR0 = -2
-LOGLR1 = -6
-LOGLR_INC = 0.5
-FTOL = 0.999
-
-# neural net parameters
-LAYERS_EMBEDDING = 2  # TODO: SWITCH TO 4 when merged with master
-AFFINE = True  # TODO: SWITCH TO FALSE when merged with master
-LAYERS_FULL = 8
-HIDDEN = 1024
-F = torch.nn.ReLU(inplace=True)
-
-# use gpu if available
-# DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
-DEVICE = 'cpu'
-
->>>>>>> 4c8faa5ca03afd9cf975776b93eaea6998d8cba9
 # paths and directories
 if 'Ubuntu' in platform():		# Etan's box
 	PREFIX = '/data/eBay'
-elif 'Windows' in platform():	# Barry's laptop
+elif 'Windows' in platform() and 'A:' in os.getcwd():  # Barry's pc
 	PREFIX = 'A:/ebay/data'
+elif 'Windows' in platform() and 'C:' in os.getcwd():  # Barry's laptop
+	PREFIX = os.path.expanduser('~/ebay')
 else:							# cluster and AWS
 	PREFIX = os.path.expanduser('~/weka/eBay')
 
@@ -68,6 +48,7 @@ EXPIRATION = 2 * DAY
 MAX_DELAY = {
 	ARRIVAL_PREFIX: MAX_DAYS * 24 * 3600,
 	SLR_PREFIX: 2 * 24 * 3600,
+	'{}_{}'.format(BYR_PREFIX, 7): 2 * 24 * 3600,
 	BYR_PREFIX: 14 * 24 * 3600
 }
 

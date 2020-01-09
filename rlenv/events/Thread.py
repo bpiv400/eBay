@@ -2,19 +2,16 @@
 class for encapsulating data and methods related to the first buyer offer
 """
 from rlenv.events.Event import Event
-from rlenv.env_consts import FIRST_OFFER, BUYER_OFFER, SELLER_OFFER
-from constants import (MONTH, DAY, SLR_PREFIX, BYR_PREFIX, 
-                       INTERVAL_COUNTS, INTERVAL, MAX_DELAY, MAX_DAYS)
+from rlenv.env_consts import FIRST_OFFER, BUYER_OFFER, SELLER_OFFER, INTERVAL_COUNT, INTERVAL
+from constants import (MONTH, DAY, SLR_PREFIX, BYR_PREFIX, MAX_DELAY, MAX_DAYS)
 from rlenv.env_utils import time_delta, slr_rej
-from featnames import INT_REMAINING
-
 
 
 class Thread(Event):
     """
     Attributes:
     """
-    def __init__(self, priority=None, thread_id=None):
+    def __init__(self, priority=None, thread_id=None, interval_attrs=None):
         super(Thread, self).__init__(event_type=FIRST_OFFER,
                                      priority=priority)
         # participants
@@ -25,6 +22,7 @@ class Thread(Event):
         self.turn = 1
         self.thread_id = thread_id
         # delay
+        self.interval_attrs = interval_attrs
         self.interval = 0
         self.max_interval = None  # max number of intervals
         self.max_delay = None # max length of delay
@@ -59,22 +57,21 @@ class Thread(Event):
 
     def _init_delay_hidden(self):
         if self.turn % 2 == 0:
-            self.spi = INTERVAL[SLR_PREFIX]
             self.seller.init_delay(self.sources())
         else:
-            self.spi = INTERVAL[BYR_PREFIX]
             self.buyer.init_delay(self.sources())
 
     def _init_delay_sources(self, lstg_start):
         # update object to contain relevant delay attributes
-        if self.turn % 2 == 0 or self.turn == 7:
-            self.max_interval = INTERVAL_COUNTS[SLR_PREFIX]
-            self.max_delay = MAX_DELAY[SLR_PREFIX]
-            self.spi = INTERVAL[SLR_PREFIX]
+        if self.turn % 2 == 0:
+            delay_type = SLR_PREFIX
+        elif self.turn == 7:
+            delay_type = '{}_{}'.format(BYR_PREFIX, 7)
         else:
-            self.max_interval = INTERVAL_COUNTS[BYR_PREFIX]
-            self.max_delay = MAX_DELAY[BYR_PREFIX]
-            self.spi = INTERVAL[BYR_PREFIX]
+            delay_type = BYR_PREFIX
+        self.max_interval = self.interval_attrs[INTERVAL_COUNT][delay_type]
+        self.max_delay = MAX_DELAY[delay_type]
+        self.spi = self.interval_attrs[INTERVAL][delay_type]
         # create init remaining
         self._init_remaining(lstg_start, self.max_delay)
         self.interval = 0
@@ -157,7 +154,7 @@ class Thread(Event):
     def byr_expire(self):
         self.priority += self.spi
         days = self.max_delay / DAY
-        self.sources.byr_expire(days=days, turn=self.turn)
+        self.sources.byr_expire(days=days, turn=self.turn) # TODO: what is this
 
     def get_obs(self):
         pass

@@ -1,4 +1,4 @@
-from rlenv.env_utils import get_chunk_dir
+from rlenv.env_consts import SIM_DISCRIM_DIR
 from rlenv.simulator.Generator import Generator
 from rlenv.simulator.discrim.DiscrimRecorder import DiscrimRecorder
 
@@ -8,7 +8,6 @@ class DiscrimGenerator(Generator):
         super(DiscrimGenerator, self).__init__(direct, num, verbose)
         # initialize recorder
         self.recorder = DiscrimRecorder(self.records_path, self.verbose)
-
 
     def generate(self):
         """
@@ -30,7 +29,6 @@ class DiscrimGenerator(Generator):
         # save the recorder
         self.recorder.dump()
 
-
     def _simulate_lstg(self, environment):
         """
         Simulates a particular listing once
@@ -41,7 +39,6 @@ class DiscrimGenerator(Generator):
         outcome = environment.run()
         return outcome
 
-
     @property
     def records_path(self):
-        return '{}discrim/{}.gz'.format(self.dir, self.chunk)
+        return '{}{}/{}.gz'.format(self.dir, SIM_DISCRIM_DIR, self.chunk)

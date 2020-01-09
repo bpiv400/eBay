@@ -4,26 +4,21 @@ from rlenv.simulator.Recorder import *
 
 class ValueRecorder(Recorder):
     def __init__(self, record_path, verbose):
-        super( ).__init__(record_path, verbose)
+        super().__init__(record_path, verbose)
         self.values = []
-
 
     def start_thread(self, thread_id=None, time=None, byr_hist=None):
         pass
-
 
     def add_offer(self, event, time_feats):
         if self.verbose:
             self.print_offer(event, event.summary())
 
-
     def records2frames(self):
         self.values = self.record2frame(self.values, VAL_COLS)
 
-
     def construct_output(self):
         return self.values
-
 
     def compress_frames(self):
         for col in [SALE_MEAN, VAL, SE, CUT]:
@@ -33,19 +28,15 @@ class ValueRecorder(Recorder):
         self.values[TRIALS] = self.values[TRIALS].astype(np.uint16)
         self.values.set_index('lstg', inplace=True)
 
-
     def reset_recorders(self):
         self.values = []
 
-
-    def dump(self, recorder_count):
+    def dump(self):
         self.records2frames()
         self.compress_frames()
-        output_path = '{}{}.gz'.format(self.records_path, recorder_count)
         output = self.construct_output()
-        dump(output, output_path)
+        dump(output, self.records_path)
         self.reset_recorders()
-
 
     def add_val(self, val_calc):
         """

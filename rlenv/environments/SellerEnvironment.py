@@ -117,7 +117,7 @@ class SellerEnvironment(EbayEnvironment, Env):
         return Composite([lstg, thread, turn, remain], OBS_SPACE)
 
     def make_thread(self, priority):
-        return SellerThread(priority=priority, thread_id=self.thread_counter,
+        return SellerThread(priority=priority, thread_id=self.thread_counter, interval_attrs=self.interval_attrs,
                             buyer=SimulatedBuyer(model=self.buyer))
 
     def _get_obs(self):

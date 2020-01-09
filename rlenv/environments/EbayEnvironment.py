@@ -1,6 +1,5 @@
 from collections import namedtuple
 import numpy as np
-from datetime import datetime as dt
 from rlenv.time.TimeFeatures import TimeFeatures
 from rlenv.events.EventQueue import EventQueue
 from rlenv.events.Arrival import Arrival
@@ -9,9 +8,9 @@ from rlenv.sources import ThreadSources
 from rlenv.time import time_triggers
 from rlenv.env_consts import INTERACT, SALE, PRICE, DUR, ACC_IND, \
     REJ_IND, OFF_IND, ARRIVAL, FIRST_OFFER, BUYER_OFFER, SELLER_OFFER, \
-    BUYER_DELAY, SELLER_DELAY
+    BUYER_DELAY, SELLER_DELAY, INTERVAL
 from rlenv.env_utils import time_delta, get_clock_feats
-from constants import INTERVAL, BYR_PREFIX, MONTH
+from constants import BYR_PREFIX, MONTH, ARRIVAL_PREFIX
 from featnames import START_TIME, ACC_PRICE, DEC_PRICE, START_PRICE
 
 
@@ -36,14 +35,18 @@ class EbayEnvironment:
         self.thread_counter = 0
         self.outcome = None
 
+        # interval data
+        self.interval_attrs = self.arrival.composer.interval_attrs
+
     def reset(self):
         self.queue.reset()
         self.time_feats.reset()
         self.outcome = None
         self.thread_counter = 0
-        sources = ArrivalSources(x_lstg=self.x_lstg, composer=self.arrival.composer)
+        sources = ArrivalSources(x_lstg=self.x_lstg)
         self.arrival.init(sources=sources())
-        self.queue.push(Arrival(self.lookup[START_TIME], sources))
+        event = Arrival(priority=self.lookup[START_TIME], sources=sources, interval_attrs=self.interval_attrs)
+        self.queue.push(event)
 
     def run(self):
         while True:
@@ -187,12 +190,12 @@ class EbayEnvironment:
                 print('Number of arrivals: {}'.format(num_byrs))
             # place each into the queue
             for i in range(num_byrs):
-                priority = event.priority + np.random.randint(0, INTERVAL['arrival'])
+                priority = event.priority + np.random.randint(0, self.interval_attrs[INTERVAL][ARRIVAL_PREFIX])
                 self.thread_counter += 1
                 offer_event = self.make_thread(priority)
                 self.queue.push(offer_event)
         # Add arrival check
-        event.priority += INTERVAL['arrival']
+        event.priority += self.interval_attrs[INTERVAL][ARRIVAL_PREFIX]
         self.queue.push(event)
         return False
 

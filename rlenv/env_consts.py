@@ -1,5 +1,5 @@
-from compress_pickle import load
-from constants import INPUT_DIR, ARRIVAL_PREFIX, SLR_PREFIX, BYR_PREFIX
+from utils import unpickle
+from constants import INPUT_DIR, SLR_PREFIX, BYR_PREFIX
 from featnames import CON, DELAY, MSG
 
 INTERACT = False
@@ -7,6 +7,8 @@ INTERACT = False
 # dataset dictionary keys
 X_LSTG = 'x_lstg'
 LOOKUP = 'lookup'
+INTERVAL = 'interval'
+INTERVAL_COUNT = 'interval_count'
 
 # filenames
 COMPOSER_DIR = '{}composer/'.format(INPUT_DIR)  # location of composer
@@ -26,7 +28,7 @@ META_7 = [21, 10]
 META_6 = [32, 14, 11, 7, 28]
 
 # holiday and day-of-week indicators, indexed by days since START
-DATE_FEATS = load(INPUT_DIR + 'date_feats.pkl')
+DATE_FEATS = unpickle(INPUT_DIR + 'date_feats.pkl')
 
 # various counts
 SELLER_HORIZON = 100

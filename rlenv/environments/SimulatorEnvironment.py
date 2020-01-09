@@ -20,7 +20,6 @@ class SimulatorEnvironment(EbayEnvironment):
         # end time
         self.end_time = self.lookup[START_TIME] + MONTH
         self.thread_counter = 0
-        
 
     def reset(self):
         super(SimulatorEnvironment, self).reset()
@@ -54,9 +53,8 @@ class SimulatorEnvironment(EbayEnvironment):
         return False
 
     def make_thread(self, priority):
-        return RewardThread(priority=priority, thread_id=self.thread_counter,
-                            buyer=SimulatedBuyer(model=self.buyer),
-                            seller=SimulatedSeller(model=self.seller))
+        return RewardThread(priority=priority, thread_id=self.thread_counter, interval_attrs=self.interval_attrs,
+                            buyer=SimulatedBuyer(model=self.buyer), seller=SimulatedSeller(model=self.seller))
 
 
 

@@ -10,7 +10,7 @@ from compress_pickle import load
 from torch.distributions.categorical import Categorical
 from constants import (INPUT_DIR, START, TOL_HALF,
                        MODEL_DIR, ENV_SIM_DIR, DAY, BYR_PREFIX, SLR_PREFIX)
-from model.nets import FeedForward, LSTM
+from model.nets import FeedForward, Recurrent
 from rlenv.env_consts import (META_6, META_7, SIM_CHUNKS_DIR, SIM_VALS_DIR,
                               SIM_DISCRIM_DIR, THREAD_MAP, DATE_FEATS, 
                               ARRIVAL_MODELS, LSTM_MODELS)
@@ -36,7 +36,7 @@ def load_sizes(name):
          see interface/model_names
         :return: dict
         """
-    return load(INPUT_DIR + 'featnames/{}.pkl'.format(name))
+    return load(INPUT_DIR + 'sizes/{}.pkl'.format(name))
 
 
 def featname(feat, turn):
@@ -56,7 +56,7 @@ def get_model_class(full_name):
     :return: simulator.nets.RNN, simulator.nets.LSTM, or
     simulator.nets.FeedForward
     """
-    return LSTM if full_name in LSTM_MODELS else FeedForward
+    return Recurrent if full_name in LSTM_MODELS else FeedForward
 
 
 def model_str(model_name, byr=False):
@@ -157,22 +157,6 @@ def prev_norm(sources, turn):
     else:
         out = sources[THREAD_MAP][featname(NORM, turn-1)]
     return out
-
-
-def get_chunk_dir(part_dir, chunk_num, discrim=False):
-    """
-    Gets the path to the data directory containing output files
-    for the given environment simulation chunk
-    :param str part_dir: path to the root directory for the current partition
-    :param int chunk_num: chunk id
-    :param bool discrim: whether the experiment is a discriminator experiment
-    :return: str
-    """
-    if discrim:
-        subdir = get_env_sim_subdir(base_dir=part_dir, discrim=True)
-    else:
-        subdir = get_env_sim_subdir(base_dir=part_dir, values=True)
-    return '{}{}/'.format(subdir, chunk_num)
 
 
 def load_model(full_name):

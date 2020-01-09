@@ -1,43 +1,42 @@
-from constants import BYR_PREFIX, SLR_PREFIX
-from rlenv.env_consts import MONTH
 from rlenv.env_utils import *
-import rlenv.interface.model_names as model_names
+import rlenv.env_consts as model_names
+from model.nets import Recurrent, FeedForward
 import pytest
 
 
 def test_model_collections():
     assert len(model_names.ARRIVAL) == 2
-    assert model_names.BYR_HIST in model_names.ARRIVAL
-    assert model_names.NUM_OFFERS in model_names.ARRIVAL
+    assert model_names.BYR_HIST_MODEL in model_names.ARRIVAL
+    assert model_names.NUM_OFFERS_MODEL in model_names.ARRIVAL
     assert len(model_names.OFFER_NO_PREFIXES) == 3
-    assert len(model_names.OFFER) == 6
-    assert len([model for model in model_names.OFFER if model_names.MSG in model]) == 2
-    assert len([model for model in model_names.OFFER if model_names.DELAY in model]) == 2
-    assert len([model for model in model_names.OFFER if model_names.CON in model]) == 2
-    assert len([model for model in model_names.OFFER if SLR_PREFIX in model]) == 3
-    assert len([model for model in model_names.OFFER if BYR_PREFIX in model]) == 3
-    assert len(model_names.FEED_FORWARD) == 5
-    assert len([model for model in model_names.FEED_FORWARD if model_names.CON in model]) == 2
-    assert len([model for model in model_names.FEED_FORWARD if model_names.MSG in model]) == 2
-    assert len([model for model in model_names.FEED_FORWARD if SLR_PREFIX in model]) == 2
-    assert len([model for model in model_names.FEED_FORWARD if BYR_PREFIX in model]) == 2
-    assert model_names.BYR_HIST in model_names.FEED_FORWARD
-    assert len(model_names.RECURRENT) == 3
-    assert len([model for model in model_names.RECURRENT if SLR_PREFIX in model]) == 1
-    assert len([model for model in model_names.RECURRENT if BYR_PREFIX in model]) == 1
-    assert model_names.NUM_OFFERS in model_names.RECURRENT
-    assert len([model for model in model_names.RECURRENT if model_names.DELAY in model]) == 2
+    assert len(model_names.OFFER_MODELS) == 6
+    assert len([model for model in model_names.OFFER_MODELS if model_names.MSG in model]) == 2
+    assert len([model for model in model_names.OFFER_MODELS if model_names.DELAY in model]) == 2
+    assert len([model for model in model_names.OFFER_MODELS if model_names.CON in model]) == 2
+    assert len([model for model in model_names.OFFER_MODELS if SLR_PREFIX in model]) == 3
+    assert len([model for model in model_names.OFFER_MODELS if BYR_PREFIX in model]) == 3
+    assert len(model_names.FEED_FORWARD_MODELS) == 5
+    assert len([model for model in model_names.FEED_FORWARD_MODELS if model_names.CON in model]) == 2
+    assert len([model for model in model_names.FEED_FORWARD_MODELS if model_names.MSG in model]) == 2
+    assert len([model for model in model_names.FEED_FORWARD_MODELS if SLR_PREFIX in model]) == 2
+    assert len([model for model in model_names.FEED_FORWARD_MODELS if BYR_PREFIX in model]) == 2
+    assert model_names.BYR_HIST_MODEL in model_names.FEED_FORWARD_MODELS
+    assert len(model_names.RECURRENT_MODELS) == 3
+    assert len([model for model in model_names.RECURRENT_MODELS if SLR_PREFIX in model]) == 1
+    assert len([model for model in model_names.RECURRENT_MODELS if BYR_PREFIX in model]) == 1
+    assert model_names.NUM_OFFERS_MODEL in model_names.RECURRENT_MODELS
+    assert len([model for model in model_names.RECURRENT_MODELS if model_names.DELAY in model]) == 2
     assert len([model for model in model_names.LSTM_MODELS if SLR_PREFIX in model]) == 1
     assert len([model for model in model_names.LSTM_MODELS if BYR_PREFIX in model]) == 1
     assert len([model for model in model_names.LSTM_MODELS if model_names.DELAY in model]) == 2
-    assert model_names.NUM_OFFERS in model_names.LSTM_MODELS
+    assert model_names.NUM_OFFERS_MODEL in model_names.LSTM_MODELS
 
 
 def test_get_model_class():
     for name in model_names.MODELS:
         curr_class = get_model_class(name)
         if name == 'delay_byr' or name == 'delay_slr' or name == 'arrival':
-            assert curr_class == LSTM
+            assert curr_class == Recurrent
         else:
             assert curr_class == FeedForward
 
@@ -122,7 +121,3 @@ def test_load_model():
     for model in model_names.MODELS:
         print(model)
         load_model(model)
-
-
-def test_time_delta():
-    assert time_delta(15, 15 + MONTH, unit=MONTH) == 1

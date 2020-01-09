@@ -39,7 +39,6 @@ class Recorder:
         self.start_price = None
         self.sim = None
 
-
     def update_lstg(self, lookup, lstg):
         """
         Resets lstg that the recorder is tracking data about
@@ -51,14 +50,11 @@ class Recorder:
         self.start_time = lookup[START_TIME]
         self.start_price = lookup[START_PRICE]
 
-
     def reset_sim(self):
         self.sim += 1
 
-
     def dump(self):
         raise NotImplementedError()
-
 
     def print_offer(self, event, summary):
         """
@@ -79,7 +75,7 @@ class Recorder:
                 else:
                     otype = 'standard rejection'
             elif con == 100:
-                if delay == 0:
+                if delay == 0 and not byr:
                     otype = 'automatic acceptance'
                 else:
                     otype = 'standard acceptance'
@@ -96,9 +92,7 @@ class Recorder:
                 auto, exp, rej = event.slr_outcomes()
                 print('Auto: {} | Exp: {} | Reject: {}'.format(auto, exp, rej))
 
-
-    @staticmethod
-    def print_sale(sale, price, dur):
+    def print_sale(self, sale, price, dur):
         """
         Print info about the given sale data if self.verbose
         """
@@ -107,7 +101,6 @@ class Recorder:
                 print('Item sold for: {} in {} seconds'.format(price, dur))
             else:
                 print('Item did not sell')
-
 
     @staticmethod
     def record2frame(record, cols):
@@ -119,26 +112,20 @@ class Recorder:
         """
         return pd.DataFrame(data=record, columns=cols)
 
-
     def start_thread(self, thread_id=None, time=None, byr_hist=None):
         raise NotImplementedError()
-
 
     def add_offer(self, event, time_feats):
         raise NotImplementedError()
 
-
     def records2frames(self):
         raise NotImplementedError()
-
 
     def construct_output(self):
         raise NotImplementedError()
 
-
     def compress_frames(self):
         raise NotImplementedError()
-
 
     def reset_recorders(self):
         raise NotImplementedError()
