@@ -35,10 +35,4 @@ class ArrivalDataset(RecurrentDataset):
                 t, v = y_i[n]
                 y[t, :] = v
 
-
-        d = self.d['y'][idx]
-        if d is not None:
-        for k, v in self.d['y'][idx].items():
-            y[k] = v
-
         return y, periods, x, x_time
