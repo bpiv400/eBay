@@ -1,11 +1,12 @@
 import os, shutil
 from datetime import datetime as dt
-from rlenv.env_consts import MIN_SALES
+from compress_pickle import dump, load
 from rlenv.env_utils import get_checkpoint_path, get_chunk_dir
 from rlenv.simulator.Generator import Generator
 from rlenv.simulator.values.ValueCalculator import ValueCalculator
 from rlenv.simulator.values.ValueRecorder import ValueRecorder
 
+BREAK = True
 
 class ValueGenerator(Generator):
     """
@@ -36,11 +37,11 @@ class ValueGenerator(Generator):
         if not self.has_checkpoint:
             self._remake_dir(self.records_path)
 
-
     def generate(self):
         """
         Simulates all lstgs in chunk according to experiment parameters
         """
+        time_up = False
         for lstg in self._get_lstgs():
             # index lookup dataframe
             lookup = self.lookup.loc[lstg, :]
@@ -57,7 +58,6 @@ class ValueGenerator(Generator):
                 self.checkpoint_contents = None
 
             # simulate lstg until a stopping criterion is satisfied
-            time_up = False
             while not self.val_calc.stabilized and not time_up:
                 price, T = self._simulate_lstg(environment)
                 self.val_calc.add_outcome(price, T)
@@ -79,7 +79,6 @@ class ValueGenerator(Generator):
             self.recorder.dump(self.recorder_count)
             self._delete_checkpoint()
             self._generate_done()
-
 
     def _get_lstgs(self):
         """
@@ -126,7 +125,6 @@ class ValueGenerator(Generator):
                 self.val_calc.p_sale, self.val_calc.mean_x))
             print('value: {0:.2f} | se: {1:.2f}'.format(
                 self.val_calc.value, self.val_calc.se))
-
 
     def _make_checkpoint(self, lstg):
         contents = {
@@ -210,7 +208,6 @@ class ValueGenerator(Generator):
         """
         tot = (dt.now() - self.start).total_seconds() / 3600
         return tot > .25
-
 
     def _generate_done(self):
         path = '{}done_{}.txt'.format(self.records_path, self.chunk)

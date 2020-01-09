@@ -7,10 +7,10 @@ from featnames import *
 
 
 class Sources:
-    def __init__(self, x_lstg=None, composer=None):
+    def __init__(self, x_lstg=None):
         self.source_dict = {
             LSTG_MAP: x_lstg,
-            X_TIME_MAP: pd.Series(0.0, index=composer.feat_sets[X_TIME_MAP])
+            X_TIME_MAP: None
         }
 
     def __call__(self):
@@ -19,7 +19,7 @@ class Sources:
 
 class ThreadSources(Sources):
     def __init__(self, x_lstg=None, composer=None):
-        super(ThreadSources, self).__init__(x_lstg=x_lstg, composer=composer)
+        super(ThreadSources, self).__init__(x_lstg=x_lstg)
         # other clock features initialized to lstg start date
         self.source_dict[TURN_IND_MAP] = pd.Series(0.0, index=composer.feat_sets[TURN_IND_MAP])
         self.source_dict[THREAD_MAP] = pd.Series(0.0, index=composer.feat_sets[THREAD_MAP])
@@ -68,11 +68,8 @@ class ThreadSources(Sources):
             time_diff = np.zeros(len(TIME_FEATS))
         else:
             time_diff = time_feats - self.delay_prev_time
-        self.source_dict[X_TIME_MAP][TIME_FEATS] = time_diff
+        self.source_dict[X_TIME_MAP] = np.concatenate((clock_feats, time_diff, np.array([duration, remaining])))
         self.delay_prev_time = time_feats
-        self.source_dict[X_TIME_MAP][INT_REMAINING] = remaining
-        self.source_dict[X_TIME_MAP][DURATION] = duration
-        self.source_dict[X_TIME_MAP][CLOCK_FEATS] = clock_feats
 
     def init_offer(self, time_feats=None, clock_feats=None, turn=None):
         # NOTE : Not called on turn 1
@@ -137,10 +134,10 @@ class ThreadSources(Sources):
 
 
 class ArrivalSources(Sources):
-    def __init__(self, x_lstg=None, composer=None):
-        super(ArrivalSources, self).__init__(x_lstg=x_lstg, composer=composer)
+    def __init__(self, x_lstg=None):
+        super(ArrivalSources, self).__init__(x_lstg=x_lstg)
         self.prev_time = np.zeros(len(TIME_FEATS))
-        self.source_dict[X_TIME_MAP] = np.zeros(len(TIME_FEATS))
+        self.source_dict[X_TIME_MAP] = None
 
     def update_arrival(self, time_feats=None, clock_feats=None, duration=None):
         self.source_dict[X_TIME_MAP] = np.concatenate(
