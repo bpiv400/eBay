@@ -11,7 +11,7 @@ from model.model_consts import *
 from constants import INPUT_DIR, MODEL_DIR, PARAMS_PATH
 
 
-def training_loop(model, train, test, writer, model_path):
+def training_loop(model, train, test, writer_path, model_path):
     # initialize optimizer
     loglr = LOGLR0
     optimizer = optim.Adam(model.net.parameters(), lr=math.pow(10, loglr))
@@ -30,6 +30,10 @@ def training_loop(model, train, test, writer, model_path):
         with torch.no_grad():
             loss_test = model.run_loop(test)
             output['lnL_test'] = -loss_test / test.N_labels
+
+        # initialize tensorboard writer in first epoch
+        if epoch == 0:
+            writer = SummaryWriter(writer_path)
 
         # save output to tensorboard writer
         for k, v in output.items():
@@ -92,11 +96,9 @@ if __name__ == '__main__':
         else:
             break
 
-    # initialize tensorboard writer
-    writer = SummaryWriter(LOG_DIR + '{}/{}'.format(name, expid))
-
-    # model path
+    # paths
+    writer_path = LOG_DIR + '{}/{}'.format(name, expid)
     model_path = MODEL_DIR + '{}/{}.net'.format(name, expid)
 
     # training loop
-    training_loop(model, train, test, writer, model_path)
+    training_loop(model, train, test, writer_path, model_path)
