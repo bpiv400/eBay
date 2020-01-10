@@ -64,7 +64,7 @@ def process_inputs(part):
 		index=idx, name='isSim')
 
 	# index of listing features
-    idx_x = get_idx_x(part, idx)
+	idx_x = get_idx_x(part, idx)
 
 	# combine into single dictionary
 	return {'y': y, 'x_arrival': x_arrival, 'idx_x': idx_x}
