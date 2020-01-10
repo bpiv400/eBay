@@ -15,7 +15,9 @@ def process_inputs(part):
 	# outcome
 	y = x_thread['byr_hist']
 	idx = y.index
-	x_thread.drop('byr_hist', axis=1, inplace=True)
+
+	# thread features
+	x_thread = x_thread.drop('byr_hist', axis=1).astype('float32')
 
 	# index of listing features
 	idx_x = get_idx_x(part, idx)
