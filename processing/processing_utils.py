@@ -116,6 +116,20 @@ def input_partition():
     return part
 
 
+def get_y_arrival(lstg_start, thread_start):
+    # intervals until thread
+    thread_periods = (thread_start - lstg_start) // INTERVAL['arrival']
+
+    # error checking
+    assert thread_periods.max() < INTERVAL_COUNTS['arrival']
+
+    # count of arrivals by interval
+    y = thread_periods.rename('period').to_frame().assign(
+        count=1).groupby(['lstg', 'period']).sum().squeeze()
+
+    return y
+
+
 def shave_floats(df):
     for c in df.columns:
         if df[c].dtype == 'float64':
@@ -223,8 +237,9 @@ def get_idx_x(part, idx):
     lstgs_x = load_file(part, 'lookup').index
     s = pd.Series(range(len(lstgs_x)), index=lstgs_x, name='idx_x')
     df = pd.DataFrame(index=idx.get_level_values(level='lstg'))
-    df = df.join(s)
-    return df.squeeze().to_numpy()
+    idx_x = df.join(s, on='lstg', sort=False).squeeze()
+    assert all(lstgs_x[idx_x.values] == idx_x.index)
+    return idx_x.to_numpy()
 
 
 def get_tf(tf, start, periods, role):
@@ -273,6 +288,11 @@ def get_featnames(d):
         if 'remaining' in d:
             featnames['x_time'] += [INT_REMAINING]
             assert INT_REMAINING == 'remaining'
+
+    # for discriminator models
+    if 'x_arrival' in d:
+        featnames['x']['arrival'] = \
+            ['arrival{}'.format(i) for i in range(INTERVAL['arrival'])]
 
     return featnames
 
@@ -361,6 +381,10 @@ def convert_to_numpy(d):
         master_idx = d['y'].index
         d['y'] = d['y'].to_numpy()
 
+        # for discriminator models
+        if 'x_arrival' in d:
+            d['x_arrival'] = series_to_tuples(d['x_arrival'], master_idx)
+
     # loop through x_offer, convert to list of 1-D numpy arrays
     if 'x_offer' in d:
         for k, v in d['x_offer'].items():
@@ -382,7 +406,10 @@ def save_files(d, part, name):
     if part == 'train_models':
         # featnames
         featnames = get_featnames(d)
-        dump(featnames, INPUT_DIR + 'featnames/{}.pkl'.format(name))
+
+        # do not save featnames for discriminator input
+        if name not in ['listings', 'threads']:
+            dump(featnames, INPUT_DIR + 'featnames/{}.pkl'.format(name))
 
         # sizes
         save_sizes(featnames, name)
