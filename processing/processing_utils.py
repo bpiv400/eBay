@@ -406,10 +406,7 @@ def save_files(d, part, name):
     if part == 'train_models':
         # featnames
         featnames = get_featnames(d)
-
-        # do not save featnames for discriminator input
-        if name not in ['listings', 'threads']:
-            dump(featnames, INPUT_DIR + 'featnames/{}.pkl'.format(name))
+        dump(featnames, INPUT_DIR + 'featnames/{}.pkl'.format(name))
 
         # sizes
         save_sizes(featnames, name)

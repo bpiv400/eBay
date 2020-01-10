@@ -78,4 +78,4 @@ if __name__ == '__main__':
 	d = process_inputs(part)
 
 	# save various output files
-	save_files(d, part, name)
+	save_files(d, part, 'listings')
