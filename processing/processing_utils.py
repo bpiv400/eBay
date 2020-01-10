@@ -131,6 +131,13 @@ def get_arrival(lstg_start, thread_start):
     return y
 
 
+def get_first_index(idx_target, idx_master):
+    s = pd.Series(range(len(idx_target)), index=idx_target, name='first')
+    s = s.groupby(s.index.names[:-1]).first()
+    s = s.reindex(idx_master, fill_value=-1)
+    return s
+
+
 def periods_to_string(idx_target, idx_master):
     # create series with (string) period as values
     s = pd.DataFrame(index=idx_target).reset_index('period').squeeze().astype(str)
@@ -142,6 +149,18 @@ def periods_to_string(idx_target, idx_master):
     s = s.reindex(index=idx_master, fill_value='')
 
     return s.astype('S')
+
+
+def reshape_indices(idx_target, idx_master):
+    # call helper functions
+    periods = periods_to_string(idx_target, idx_master)
+    indices = get_first_index(idx_target, idx_master)
+
+    # error checking
+    assert all(periods[indices == -1] == ''.encode('ascii'))
+    assert all(indices[periods == ''.encode('ascii')] == -1)
+
+    return periods, indices
 
 
 def add_turn_indicators(df):
@@ -237,13 +256,6 @@ def get_x_offer(part, idx, outcome=None, role=None):
     return x
 
 
-def get_first_index(idx_target, idx_master):
-    s = pd.Series(range(len(idx_target)), index=idx_target, name='first')
-    s = s.groupby(s.index.names[:-1]).first()
-    s = s.reindex(idx_master, fill_value=-1)
-    return s
-
-
 def get_idx_x(part, idx):
     # create series with lstgs in x as index
     lstgs_x = load_file(part, 'lookup').index
@@ -277,10 +289,11 @@ def get_tf(tf, start, periods, role):
     return tf.groupby(list(tf.index.names) + ['period']).sum()
 
 
-def get_featnames(d):
+def get_featnames(d, name):
     '''
     Creates dictionary of input feature names.
     :param d: dictionary with dataframes.
+    :param name: string name of model.
     '''
 
     # initialize with components of x
@@ -307,9 +320,9 @@ def get_featnames(d):
             assert INT_REMAINING == 'remaining'
 
     # for discriminator models
-    if 'x_arrival' in d:
-        featnames['x']['arrival'] = \
-            ['arrival{}'.format(i) for i in range(INTERVAL_COUNTS['arrival'])]
+    if name == 'listings':
+        featnames['x']['arrival'] = ['arrival{}'.format(i) \
+            for i in range(INTERVAL_COUNTS[ARRIVAL_PREFIX])]
 
     return featnames
 
@@ -340,11 +353,11 @@ def save_sizes(d, featnames, name):
         role = name.split('_')[-1]
         sizes['interval'] = INTERVAL[role]
         sizes['interval_count'] = INTERVAL_COUNTS[role]
-        if role == 'byr':
-            sizes['interval_count_7'] = INTERVAL_COUNTS['byr_7']
+        if role == BYR_PREFIX:
+            sizes['interval_count_7'] = INTERVAL_COUNTS[BYR_PREFIX + '_7']
 
         sizes['x_time'] = len(featnames['x_time'])
-
+ 
     # output size is based on model
     if name == 'hist':
         sizes['out'] = HIST_QUANTILES
@@ -392,7 +405,7 @@ def save_files(d, part, name):
     # featnames and sizes
     if part == 'train_models':
         # featnames
-        featnames = get_featnames(d)
+        featnames = get_featnames(d, name)
         dump(featnames, INPUT_DIR + 'featnames/{}.pkl'.format(name))
 
         # sizes

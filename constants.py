@@ -23,7 +23,7 @@ else:							# cluster and AWS
 if 'Ubuntu' in platform():
 	HDF5_DIR = os.path.expanduser('~/hdf5/eBay/')
 else:
-	HDF5_DIR = '%s/partitions/' % PREFIX
+	HDF5_DIR = '%s/hdf5/' % PREFIX
 
 PARTS_DIR = '%s/partitions/' % PREFIX
 ENV_SIM_DIR = '%s/envSimulator/' % PREFIX

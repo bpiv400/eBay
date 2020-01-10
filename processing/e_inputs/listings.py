@@ -2,7 +2,8 @@ from compress_pickle import load, dump
 import numpy as np, pandas as pd
 from constants import *
 from processing.processing_utils import get_x_thread, get_x_offer, \
-	get_idx_x, save_files, load_file, get_y_arrival, input_partition
+	get_idx_x, save_files, load_file, get_arrival, input_partition, \
+	reshape_indices
 from processing.processing_consts import *
 
 
@@ -24,10 +25,10 @@ def get_counts_sim(lstg_start):
 	period = (diff // INTERVAL['arrival']).rename('period')
 
 	# count arrivals and fill in zeros
-	counts = period.to_frame().assign(count=1).groupby(
+	counts_sim = period.to_frame().assign(count=1).groupby(
 		['lstg', 'period']).sum().squeeze()
 
-	return counts
+	return counts_sim
 
 
 def add_sim_to_index(df, isSim):
@@ -36,12 +37,17 @@ def add_sim_to_index(df, isSim):
 
 
 def process_inputs(part):
-	# listing start time
+	# start times
 	lstg_start = load_file(part, 'lookup').start_time
+	thread_start = load_file(part, 'clock').xs(1, level='index')
+
+	# construct complete index
+	idx = pd.MultiIndex.from_product(
+			[lstg_start.index, [True, False]], 
+			names=['lstg', 'sim'])
 
 	# observed arrival counts
-	thread_start = load_file(part, 'clock').xs(1, level='index')
-	counts_obs = get_y_arrival(lstg_start, thread_start)
+	counts_obs = get_arrival(lstg_start, thread_start)
 
 	# construct corresponding dataframe of simulated counts
 	counts_sim = get_counts_sim(lstg_start)
@@ -51,28 +57,31 @@ def process_inputs(part):
 	counts_sim = add_sim_to_index(counts_sim, True)
 
 	# other inputs
-	x_arrival = pd.concat([counts_obs, counts_sim], 
+	arrival = pd.concat([counts_obs, counts_sim], 
 		axis=0, copy=False).sort_index()
 
-	# construct complete index
-	idx = pd.MultiIndex.from_product(
-			[lstg_start.index, [True, False]], 
-			names=['lstg', 'sim'])
+	# periods and arrival indices with index idx
+	arrival_periods, idx_arrival = reshape_indices(arrival.index, idx)
 
 	# y=True indicates simulated
 	y = pd.Series(idx.get_level_values(level='sim'), 
-		index=idx, name='isSim')
+		index=idx, name='isSim').astype('bool')
 
 	# index of listing features
 	idx_x = get_idx_x(part, idx)
 
 	# combine into single dictionary
-	return {'y': y, 'x_arrival': x_arrival, 'idx_x': idx_x}
+	return {'y': y, 
+			'arrival': arrival,
+			'arrival_periods': arrival_periods,
+			'idx_arrival': idx_arrival,
+			'idx_x': idx_x}
 
 
 if __name__ == '__main__':
 	# extract partition from command line
 	part = input_partition()
+	print('%s/listings' % part)
 
 	# input dataframes, output processed dataframes
 	d = process_inputs(part)

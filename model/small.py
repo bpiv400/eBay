@@ -6,6 +6,7 @@ from compress_pickle import load
 from model.datasets.FeedForwardDataset import FeedForwardDataset
 from model.datasets.ArrivalDataset import ArrivalDataset
 from model.datasets.DelayDataset import DelayDataset
+from model.datasets.ListingsDataset import ListingsDataset
 from model.Model import Model
 from model.model_consts import *
 from constants import INPUT_DIR, PARAMS_PATH
@@ -42,6 +43,8 @@ if __name__ == '__main__':
         data = ArrivalDataset(PART, name, sizes)
     elif 'delay' in name:
         data = DelayDataset(PART, name, sizes)
+    elif name == 'listings':
+        data = ListingsDataset(PART, name, sizes)
     else:
         data = FeedForwardDataset(PART, name, sizes)
 

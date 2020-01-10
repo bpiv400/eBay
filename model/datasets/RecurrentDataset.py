@@ -43,17 +43,6 @@ class RecurrentDataset(eBayDataset):
         self.tf0 = np.zeros((T, len(TIME_FEATS)), dtype='float32')
 
 
-    def _fill_array(self, a, stub, idx):
-        idx_array = self.d['idx_' + stub][idx]
-        if idx_array > -1:
-            l = self.d[stub + '_periods'][idx].decode("utf-8").split('/')
-            for p in l:
-                assert p != ''
-                a[int(p)] = self.d[stub][idx_array]
-                idx_array += 1
-        return a
-
-
     def _construct_x_time(self, idx, periods):
         # indices of timestamps
         seconds = self.d['seconds'][idx] + self.counter[:periods]

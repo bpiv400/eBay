@@ -2,7 +2,7 @@ import sys, os, argparse
 from compress_pickle import load, dump
 import numpy as np, pandas as pd
 from processing.processing_utils import get_x_thread, get_x_offer, get_idx_x, \
-	save_files, load_file, get_tf, periods_to_string, get_first_index
+	save_files, load_file, get_tf, reshape_indices
 from processing.processing_consts import INTERVAL, INTERVAL_COUNTS, MAX_DELAY
 from constants import DAY, MONTH, IDX
 
@@ -77,15 +77,8 @@ def process_inputs(part, role):
 	tf = tf[tf.index.isin(IDX[role], level='index')]
 	tf_delay = get_tf(tf, delay_start, periods, role)
 
-	# periods in which non-zero time features are observed
-	tf_periods = periods_to_string(tf_delay.index, idx)
-
-	# first index of time features for each lstg
-	idx_tf = get_first_index(tf_delay.index, idx)
-
-	# error checking
-	assert all(tf_periods[idx_tf == -1] == ''.encode('ascii'))
-	assert all(idx_tf[tf_periods == ''.encode('ascii')] == -1)
+	# periods and tf indices with index idx
+    tf_periods, idx_tf = reshape_indices(tf_arrival.index, idx)
 
 	# dictionary of input components
 	return {'periods': periods, 

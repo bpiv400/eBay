@@ -1,8 +1,8 @@
 import sys, os
 from compress_pickle import load, dump
 import numpy as np, pandas as pd
-from processing.processing_utils import input_partition, periods_to_string, \
-    load_frames, save_files, load_file, get_arrival, get_idx_x, get_first_index, get_tf
+from processing.processing_utils import input_partition, reshape_indices, \
+    load_frames, save_files, load_file, get_arrival, get_idx_x, get_tf
 from processing.processing_consts import CLEAN_DIR, INTERVAL, INTERVAL_COUNTS
 
 
@@ -32,15 +32,8 @@ def process_inputs(part):
     thread_start = load_file(part, 'clock').xs(1, level='index')
     arrival = get_arrival(lstg_start, thread_start)
 
-    # periods in which arrivals are observed
-    arrival_periods = periods_to_string(arrival.index, idx)
-
-    # first index of arrivals for each lstg
-    idx_arrival = get_first_index(arrival.index, idx)
-
-    # error checking
-    assert all(arrival_periods[idx_arrival == -1] == ''.encode('ascii'))
-    assert all(idx_arrival[arrival_periods == ''.encode('ascii')] == -1)
+    # periods and arrival indices with index idx
+    arrival_periods, idx_arrival = reshape_indices(arrival.index, idx)
 
     # index of listing features
     idx_x = get_idx_x(part, idx)
@@ -49,15 +42,8 @@ def process_inputs(part):
     tf = load_file(part, 'tf_arrival')
     tf_arrival = get_tf(tf, lstg_start, periods, 'arrival')
 
-    # periods in which non-zero time features are observed
-    tf_periods = periods_to_string(tf_arrival.index, idx)
-
-    # first index of time features for each lstg
-    idx_tf = get_first_index(tf_arrival.index, idx)
-
-    # error checking
-    assert all(tf_periods[idx_tf == -1] == ''.encode('ascii'))
-    assert all(idx_tf[tf_periods == ''.encode('ascii')] == -1)
+    # periods and tf indices with index idx
+    tf_periods, idx_tf = reshape_indices(tf_arrival.index, idx)
 
     return {'periods': periods, 
             'arrival': arrival, 

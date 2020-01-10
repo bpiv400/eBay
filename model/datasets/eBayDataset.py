@@ -39,6 +39,24 @@ class eBayDataset(Dataset):
         self.d = h5py.File(self.d_path, 'r')
 
 
+    def _fill_array(self, a, stub, idx):
+        '''
+        Creates a semi-sparse numpy array by occasionally replacing zeros with values.
+        :param a: numpy array of zeros.
+        :param stub: string such that d has keys [stub, stub + '_periods', 'idx_' + stub]
+        :param idx: int observation index.
+        :return: semi-sparse numpy array.
+        '''
+        idx_array = self.d['idx_' + stub][idx]
+        if idx_array > -1:
+            l = self.d[stub + '_periods'][idx].decode("utf-8").split('/')
+            for p in l:
+                assert p != ''
+                a[int(p)] = self.d[stub][idx_array]
+                idx_array += 1
+        return a
+
+
     def _construct_x(self, idx):
         '''
         Returns a dictionary of grouped input features.
