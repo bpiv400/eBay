@@ -1,6 +1,6 @@
 import numpy as np, pandas as pd
 from processing.processing_utils import input_partition, save_files, \
-	load_file, shave_floats, get_idx_x
+	load_file, get_idx_x
 
 
 # loads data and calls helper functions to construct train inputs
@@ -16,9 +16,6 @@ def process_inputs(part):
 	y = x_thread['byr_hist']
 	idx = y.index
 	x_thread.drop('byr_hist', axis=1, inplace=True)
-
-	# shave floats
-	x_thread = shave_floats(x_thread)
 
 	# index of listing features
 	idx_x = get_idx_x(part, idx)
