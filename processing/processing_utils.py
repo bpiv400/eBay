@@ -1,4 +1,5 @@
-import sys, os, argparse
+import sys, os, argparse, h5py
+os.environ["HDF5_USE_FILE_LOCKING"] = "FALSE"
 from compress_pickle import load, dump
 from datetime import datetime as dt
 import numpy as np, pandas as pd
@@ -116,7 +117,7 @@ def input_partition():
     return part
 
 
-def get_y_arrival(lstg_start, thread_start):
+def get_arrival(lstg_start, thread_start):
     # intervals until thread
     thread_periods = (thread_start - lstg_start) // INTERVAL['arrival']
 
@@ -130,11 +131,17 @@ def get_y_arrival(lstg_start, thread_start):
     return y
 
 
-def shave_floats(df):
-    for c in df.columns:
-        if df[c].dtype == 'float64':
-            df.loc[:, c] = df[c].astype('float32')
-    return df
+def periods_to_string(idx_target, idx_master):
+    # create series with (string) period as values
+    s = pd.DataFrame(index=idx_target).reset_index('period').squeeze().astype(str)
+
+    # collapse to '/'-connected strings
+    s = s.groupby(s.index.names).agg(lambda x: '/'.join(x.tolist()))
+
+    # expand to master index
+    s = s.reindex(index=idx_master, fill_value='')
+
+    return s.astype('S')
 
 
 def add_turn_indicators(df):
@@ -164,10 +171,7 @@ def get_x_thread(part, idx):
     # add turn indicators
     x_thread = add_turn_indicators(x_thread)
 
-    # step floats down
-    x_thread = shave_floats(x_thread)
-
-    return x_thread
+    return x_thread.astype('float32')
 
 
 # deletes irrelevant feats and sets unseen feats to 0
@@ -227,19 +231,32 @@ def get_x_offer(part, idx, outcome=None, role=None):
         # add turn indicators
         offer = add_turn_indicators(offer)
 
-        # step down floats
-        x['offer%d' % i] = shave_floats(offer)
+        # float32s
+        x['offer%d' % i] = offer.astype('float32')
 
     return x
 
 
+def get_first_index(idx_target, idx_master):
+    s = pd.Series(range(len(idx_target)), index=idx_target, name='first')
+    s = s.groupby(s.index.names[:-1]).first()
+    s = s.reindex(idx_master, fill_value=-1)
+    return s
+
+
 def get_idx_x(part, idx):
+    # create series with lstgs in x as index
     lstgs_x = load_file(part, 'lookup').index
     s = pd.Series(range(len(lstgs_x)), index=lstgs_x, name='idx_x')
-    df = pd.DataFrame(index=idx.get_level_values(level='lstg'))
+
+    # merge target indices with master indices
+    df = pd.DataFrame(index=idx)
     idx_x = df.join(s, on='lstg', sort=False).squeeze()
-    assert all(lstgs_x[idx_x.values] == idx_x.index)
-    return idx_x.to_numpy()
+
+    # error checking
+    assert all(lstgs_x[idx_x.values] == idx_x.index.get_level_values(level='lstg'))
+
+    return idx_x
 
 
 def get_tf(tf, start, periods, role):
@@ -292,18 +309,26 @@ def get_featnames(d):
     # for discriminator models
     if 'x_arrival' in d:
         featnames['x']['arrival'] = \
-            ['arrival{}'.format(i) for i in range(INTERVAL['arrival'])]
+            ['arrival{}'.format(i) for i in range(INTERVAL_COUNTS['arrival'])]
 
     return featnames
 
 
-def save_sizes(featnames, name):
+def save_sizes(d, featnames, name):
     '''
     Creates dictionary of input sizes.
+    :param d: dictionary of inputs.
     :param featnames: dictionary of featnames.
     :param name: string name of model.
     '''
     sizes = {}
+
+    # counts of examples (and labels)
+    if 'periods' in d:
+        sizes['N_examples'] = len(d['periods'])
+        sizes['N_labels'] = d['periods'].sum()
+    else:
+        sizes['N_labels'] = len(d['y'])
 
     # count components of x
     sizes['x'] = {}
@@ -331,74 +356,36 @@ def save_sizes(featnames, name):
     dump(sizes, INPUT_DIR + 'sizes/{}.pkl'.format(name))
 
 
-def series_to_tuples(s, master_idx):
-    indices = s.reset_index(-1).index
-    out = []
-    for idx in master_idx:
-        if idx in indices:
-            obs = s.xs(idx)
-            out.append(tuple(zip(obs.index, obs)))
-        else:
-            out.append(None)
-    return out
-
-
 def convert_to_numpy(d):
     '''
     Converts dictionary of dataframes to dictionary of numpy arrays.
     :param d: dictionary with (dictionaries of) dataframes.
     :return: dictionary with numpy arrays (and dictionaries of dataframes).
     '''
-    # for recurrent networks
+    # for error checking
     if 'periods' in d:
         master_idx = d['periods'].index
-
-        # time features as list of dictionaries
-        l = d['tf'].values.astype('float32').tolist()
-        s = pd.Series(l, index=d['tf'].index)
-        d['tf'] = series_to_tuples(s, master_idx)
-
-        # common recurrent components
-        d['periods'] = d['periods'].to_numpy()
-
-        assert np.all(d['seconds'].index == master_idx)
-        d['seconds'] = d['seconds'].to_numpy()
-
-        # delay model
-        if 'remaining' in d:
-            assert np.all(d['remaining'].index == master_idx)
-            d['remaining'] = d['remaining'].to_numpy(dtype='float32')
-
-            assert np.all(d['y'].index == master_idx)
-            d['y'] = d['y'].to_numpy()
-
-        # arrival model: outcome as list of tuples
-        else:
-            d['y'] = series_to_tuples(d['y'], master_idx)
-
-    # feed forward networks
     else:
         master_idx = d['y'].index
-        d['y'] = d['y'].to_numpy()
 
-        # for discriminator models
-        if 'x_arrival' in d:
-            d['x_arrival'] = series_to_tuples(d['x_arrival'], master_idx)
+    # error checking
+    for k in d.keys():
+        if 'periods' in k or 'idx' in k or k in ['y', 'seconds', 'x_thread', 'remaining']:
+            assert np.all(d[k].index == master_idx)
 
-    # loop through x_offer, convert to list of 1-D numpy arrays
+    # convert dataframes to numpy
+    for k, v in d.items():
+        if not isinstance(v, dict):
+            d[k] = v.to_numpy()
+
+    # loop through x_offer, error checking and convert to numpy
     if 'x_offer' in d:
-        for k, v in d['x_offer'].items():
+        x_offer = d.pop('x_offer')
+        for k, v in x_offer.items():
             assert np.all(v.index == master_idx)
-            d['x_offer'][k] = [v[c].to_numpy() for c in v.columns]
-
-    # direct conversion to numpy float32
-    if 'x_thread' in d:
-        assert np.all(d['x_thread'].index == master_idx)
-        v = d['x_thread'].copy()
-        d['x_thread'] = [v[c].to_numpy() for c in v.columns]
+            d[k] = v.to_numpy()
 
     return d
-
 
 # save featnames and sizes
 def save_files(d, part, name):
@@ -409,10 +396,17 @@ def save_files(d, part, name):
         dump(featnames, INPUT_DIR + 'featnames/{}.pkl'.format(name))
 
         # sizes
-        save_sizes(featnames, name)
+        save_sizes(d, featnames, name)
 
     # create dictionary of numpy arrays
     d = convert_to_numpy(d)
 
-    # save as dataset
-    dump(d, INPUT_DIR + '{}/{}.gz'.format(part, name))
+    # for recurrent models, save periods separately
+    if 'periods' in d:
+        periods = d.pop('periods')
+        dump(periods, INPUT_DIR + '{}/{}.gz'.format(part, name))
+
+    # save hdf5 file
+    with h5py.File(HDF5_DIR + '{}/{}.hdf5'.format(part, name), 'w') as f:
+        for k, v in d.items():
+            f.create_dataset(k, data=v)

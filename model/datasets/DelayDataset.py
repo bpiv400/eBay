@@ -19,8 +19,12 @@ class DelayDataset(RecurrentDataset):
         :param idx: index of example.
         :return: tuple of data components at index idx.
         '''
+        # initialize subprocess with hdf5 files
+        if self.x is None:
+            self._init_subprocess()
+
         # periods is indexed directly
-        periods = self.d['periods'][idx]
+        periods = self.periods[idx]
 
         # last index is 1 if offer arrives
         y = self.y0.copy()[:periods]

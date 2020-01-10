@@ -43,19 +43,19 @@ if __name__ == '__main__':
     elif 'delay' in name:
         data = DelayDataset(PART, name, sizes)
     else:
-        data = FeedForwardDataset(PART, name)
+        data = FeedForwardDataset(PART, name, sizes)
 
     # training
     for epoch in range(1):
         print('Epoch %d:' % epoch)
 
-        # training
-        print('\tTraining:')
-        t0 = dt.now()
-        loss = model.run_loop(data, optimizer)
-        print('\t\tTotal time: {} seconds'.format(
-            (dt.now() - t0).total_seconds()))
-        print('\t\tloss: %d' % loss)
+        # # training
+        # print('\tTraining:')
+        # t0 = dt.now()
+        # loss = model.run_loop(data, optimizer)
+        # print('\t\tTotal time: {} seconds'.format(
+        #     (dt.now() - t0).total_seconds()))
+        # print('\t\tloss: %d' % loss)
         
         # testing
         print('\tTesting:')
@@ -65,7 +65,3 @@ if __name__ == '__main__':
         print('\t\tTotal time: {} seconds'.format(
             (dt.now() - t0).total_seconds()))
         print('\t\tloss: %d' % loss_test)
-
-    # # save model
-    # torch.save(model.net.state_dict(),
-    #     MODEL_DIR + 'small/%s.net' % name)

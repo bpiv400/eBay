@@ -51,7 +51,7 @@ def get_x_lstg(L):
 if __name__ == "__main__":
     # partition and corresponding indices
     part = input_partition()
-    idx, _ = get_partition(part)
+    idx, path = get_partition(part)
 
     # initialize output dictionary
     x = {}
@@ -110,3 +110,6 @@ if __name__ == "__main__":
     with h5py.File(HDF5_DIR + '{}/x_lstg.hdf5'.format(part), 'w') as f:
         for k, v in x.items():
             f.create_dataset(k, data=v)
+
+    # save as gz
+    dump(x, path('x_lstg'))

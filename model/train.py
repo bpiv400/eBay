@@ -85,8 +85,8 @@ if __name__ == '__main__':
         train = DelayDataset('train_models', name, sizes)
         test = DelayDataset('train_rl', name, sizes)
     else:
-        train = FeedForwardDataset('train_models', name)
-        test = FeedForwardDataset('train_rl', name)
+        train = FeedForwardDataset('train_models', name, sizes)
+        test = FeedForwardDataset('train_rl', name, sizes)
 
     # experiment number
     expid = 0

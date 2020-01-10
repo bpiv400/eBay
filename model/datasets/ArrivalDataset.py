@@ -18,8 +18,12 @@ class ArrivalDataset(RecurrentDataset):
         :param idx: index of example.
         :return: tuple of data components at index idx.
         '''
+        # initialize subprocess with hdf5 files
+        if self.x is None:
+            self._init_subprocess()
+
         # periods is indexed directly
-        periods = self.d['periods'][idx]
+        periods = self.periods[idx]
 
         # initialize x from listing-level features
         x = self._construct_x(idx)
@@ -29,10 +33,6 @@ class ArrivalDataset(RecurrentDataset):
 
         # non-zero arrivals get added to vector of zeros
         y = self.y0.copy()[:periods]
-        y_i = self.d['y'][idx]
-        if y_i is not None:
-            for n in range(len(y_i)):
-                t, v = y_i[n]
-                y[t] = v
-
+        y = self._fill_array(y, 'arrival', idx)
+        
         return y, periods, x, x_time

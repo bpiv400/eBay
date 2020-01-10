@@ -93,7 +93,7 @@ def collateRNN(batch):
     return {'y': y, 'x': x, 'x_time': x_time}
 
 
-def get_batches(data, isTraining):
+def get_batches(data, isRecurrent=False, isTraining=False):
     '''
     Creates a Dataloader object.
     :param data: Inputs object.
@@ -101,7 +101,7 @@ def get_batches(data, isTraining):
     :return: iterable batches of examples.
     '''
     batches = DataLoader(data, 
-        collate_fn=collateFF if len(data.groups) == 1 else collateRNN,
+        collate_fn=collateRNN if isRecurrent else collateFF,
         batch_sampler=Sample(data, isTraining),
         num_workers=NUM_WORKERS, 
         pin_memory=True)

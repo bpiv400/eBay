@@ -73,7 +73,9 @@ class Model:
         :param optimizer: instance of torch.optim.
         :return: scalar loss.
         '''
-        batches = get_batches(data, optimizer is not None)
+        batches = get_batches(data, 
+            isRecurrent=self.isRecurrent,
+            isTraining=optimizer is not None)
 
         # loop over batches, calculate log-likelihood
         loss = 0.0
@@ -96,7 +98,9 @@ class Model:
         :return: tensor of model output.
         '''
         self.net.train(False)
-        batches = get_batches(data, False)
+        batches = get_batches(data, 
+            isRecurrent=self.isRecurrent, 
+            isTraining=False)
         
         # predict theta
         theta = []

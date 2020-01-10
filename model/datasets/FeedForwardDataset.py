@@ -4,18 +4,15 @@ from model.datasets.eBayDataset import eBayDataset
 
 
 class FeedForwardDataset(eBayDataset):
-    def __init__(self, part, name):
+    def __init__(self, part, name, sizes):
         '''
         Defines a child class of eBayDataset for a feed-forward network.
         :param part: string partition name (e.g., train_models).
         :param name: string model name.
         '''
-        super(FeedForwardDataset, self).__init__(part, name)
+        super(FeedForwardDataset, self).__init__(part, name, sizes)
 
-        # number of labels
-        self.N_labels = np.shape(self.d['y'])[0]
-
-        # create single group for sampling
+        # groups for sampling
         self.groups = [np.array(range(self.N_labels))]
 
 
@@ -25,6 +22,10 @@ class FeedForwardDataset(eBayDataset):
         :param idx: index of example.
         :return: tuple of data components at index idx.
         '''
+        # initialize subprocess with hdf5 files
+        if self.x is None:
+            self._init_subprocess()
+
         # y is indexed directly
         y = self.d['y'][idx]
 

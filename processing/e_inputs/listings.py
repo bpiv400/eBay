@@ -52,7 +52,7 @@ def process_inputs(part):
 
 	# other inputs
 	x_arrival = pd.concat([counts_obs, counts_sim], 
-		axis=0, copy=False)
+		axis=0, copy=False).sort_index()
 
 	# construct complete index
 	idx = pd.MultiIndex.from_product(
