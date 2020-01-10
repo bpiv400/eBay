@@ -2,7 +2,7 @@ from compress_pickle import load, dump
 import numpy as np, pandas as pd
 from constants import *
 from processing.processing_utils import get_x_thread, get_x_offer, \
-	get_idx_x, save_files, load_file, get_y_arrival
+	get_idx_x, save_files, load_file, get_y_arrival, input_partition
 from processing.processing_consts import *
 
 
