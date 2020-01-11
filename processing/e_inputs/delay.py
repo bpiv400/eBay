@@ -78,7 +78,7 @@ def process_inputs(part, role):
 	tf_delay = get_tf(tf, delay_start, periods, role)
 
 	# periods and tf indices with index idx
-    tf_periods, idx_tf = reshape_indices(tf_arrival.index, idx)
+	tf_periods, idx_tf = reshape_indices(tf_arrival.index, idx)
 
 	# dictionary of input components
 	return {'periods': periods, 
