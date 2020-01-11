@@ -36,7 +36,7 @@ class ArrivalInterface:
                                                       fixed=False, recurrent=True)
         lnmean, self.hidden = self.num_offers_model.step(x_time=input_dict['x_time'],
                                                          hidden=self.hidden)
-        
+
         return ArrivalInterface._poisson_sample(lnmean.squeeze())
 
 
