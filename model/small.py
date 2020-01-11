@@ -6,6 +6,7 @@ from compress_pickle import load
 from model.datasets.FeedForwardDataset import FeedForwardDataset
 from model.datasets.ArrivalDataset import ArrivalDataset
 from model.datasets.DelayDataset import DelayDataset
+from model.datasets.ListingsDataset import ListingsDataset
 from model.Model import Model
 from model.model_consts import *
 from constants import INPUT_DIR, PARAMS_PATH
@@ -42,8 +43,10 @@ if __name__ == '__main__':
         data = ArrivalDataset(PART, name, sizes)
     elif 'delay' in name:
         data = DelayDataset(PART, name, sizes)
+    elif name == 'listings':
+        data = ListingsDataset(PART, name, sizes)
     else:
-        data = FeedForwardDataset(PART, name)
+        data = FeedForwardDataset(PART, name, sizes)
 
     # training
     for epoch in range(1):
@@ -65,7 +68,3 @@ if __name__ == '__main__':
         print('\t\tTotal time: {} seconds'.format(
             (dt.now() - t0).total_seconds()))
         print('\t\tloss: %d' % loss_test)
-
-    # # save model
-    # torch.save(model.net.state_dict(),
-    #     MODEL_DIR + 'small/%s.net' % name)

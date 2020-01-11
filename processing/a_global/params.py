@@ -7,7 +7,10 @@ PARAMS = {'layers_embedding': 4,
 		  'hidden': 1024,
 		  'batchnorm': True,
 		  'dropout': False,
-		  'affine': True}
+		  'layernorm': False,
+		  'dropout_lstm': 0.5,
+		  'affine': True,
+		  'hidden_lstm': 256}
 
 # save dictionary of neural net parameters
 dump(PARAMS, PARAMS_PATH)

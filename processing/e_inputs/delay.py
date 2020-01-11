@@ -2,7 +2,7 @@ import sys, os, argparse
 from compress_pickle import load, dump
 import numpy as np, pandas as pd
 from processing.processing_utils import get_x_thread, get_x_offer, get_idx_x, \
-	save_files, load_file, get_tf
+	save_files, load_file, get_tf, reshape_indices
 from processing.processing_consts import INTERVAL, INTERVAL_COUNTS, MAX_DELAY
 from constants import DAY, MONTH, IDX
 
@@ -77,6 +77,9 @@ def process_inputs(part, role):
 	tf = tf[tf.index.isin(IDX[role], level='index')]
 	tf_delay = get_tf(tf, delay_start, periods, role)
 
+	# periods and tf indices with index idx
+	tf_periods, idx_tf = reshape_indices(tf_delay.index, idx)
+
 	# dictionary of input components
 	return {'periods': periods, 
 			'y': y, 
@@ -85,7 +88,9 @@ def process_inputs(part, role):
 			'idx_x': idx_x,
 			'seconds': delay_start, 
 			'remaining': remaining, 
-			'tf': tf_delay}
+			'tf': tf_delay,
+            'tf_periods': tf_periods,
+            'idx_tf': idx_tf}
 
 
 if __name__ == '__main__':

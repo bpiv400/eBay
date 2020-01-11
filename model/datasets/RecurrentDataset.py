@@ -13,18 +13,20 @@ class RecurrentDataset(eBayDataset):
         :param name: string model name.
         :param sizes: dictionary of size parameters.
         '''
-        super(RecurrentDataset, self).__init__(part, name)
+        super(RecurrentDataset, self).__init__(part, name, sizes)
+
+        # number of examples
+        self.N_examples = sizes['N_examples']
+
+        # load number of periods
+        self.periods = load(INPUT_DIR + '{}/{}.gz'.format(part, name))
+
+        # groups for sampling
+        self.groups = [np.nonzero(self.periods == n)[0] \
+            for n in np.unique(self.periods)]
 
         # save clock feats lookup array to self
         self.date_feats = load(INPUT_DIR + 'date_feats.pkl')
-
-        # groups for sampling
-        self.groups = [np.nonzero(self.d['periods'] == n)[0] \
-            for n in np.unique(self.d['periods'])]
-
-        # number of examples and labels
-        self.N_examples = len(self.d['periods'])
-        self.N_labels = np.sum(self.d['periods'])
 
         # maximum number of time steps
         T = sizes['interval_count']
@@ -53,11 +55,7 @@ class RecurrentDataset(eBayDataset):
 
         # fill in missing time feats with zeros
         x_tf = self.tf0.copy()[:periods, :]
-        tf_i = self.d['tf'][idx]
-        if tf_i is not None:
-            for n in range(len(tf_i)):
-                t, v = tf_i[n]
-                x_tf[t, :] = v
+        x_tf = self._fill_array(x_tf, 'tf', idx)
 
         # time feats: first clock feats, then time-varying feats
         x_time = np.concatenate(

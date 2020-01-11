@@ -1,8 +1,8 @@
 import sys, os
 from compress_pickle import load, dump
 import numpy as np, pandas as pd
-from processing.processing_utils import input_partition, \
-    load_frames, save_files, load_file, get_idx_x, get_tf
+from processing.processing_utils import input_partition, reshape_indices, \
+    load_frames, save_files, load_file, get_arrival, get_idx_x, get_tf
 from processing.processing_consts import CLEAN_DIR, INTERVAL, INTERVAL_COUNTS
 
 
@@ -19,20 +19,6 @@ def get_periods(lstg_start, lstg_end):
     return periods
 
 
-def get_y(lstg_start, thread_start):
-    # intervals until thread
-    thread_periods = (thread_start - lstg_start) // INTERVAL['arrival']
-
-    # error checking
-    assert thread_periods.max() < INTERVAL_COUNTS['arrival']
-
-    # count of arrivals by interval
-    y = thread_periods.rename('period').to_frame().assign(
-        count=1).groupby(['lstg', 'period']).sum().squeeze()
-
-    return y
-
-
 # loads data and calls helper functions to construct train inputs
 def process_inputs(part):
     # number of periods
@@ -44,7 +30,10 @@ def process_inputs(part):
 
     # arrival counts
     thread_start = load_file(part, 'clock').xs(1, level='index')
-    y = get_y(lstg_start, thread_start)
+    arrival = get_arrival(lstg_start, thread_start)
+
+    # periods and arrival indices with index idx
+    arrival_periods, idx_arrival = reshape_indices(arrival.index, idx)
 
     # index of listing features
     idx_x = get_idx_x(part, idx)
@@ -53,11 +42,18 @@ def process_inputs(part):
     tf = load_file(part, 'tf_arrival')
     tf_arrival = get_tf(tf, lstg_start, periods, 'arrival')
 
+    # periods and tf indices with index idx
+    tf_periods, idx_tf = reshape_indices(tf_arrival.index, idx)
+
     return {'periods': periods, 
-            'y': y, 
+            'arrival': arrival, 
+            'arrival_periods': arrival_periods,
+            'idx_arrival': idx_arrival,
             'idx_x': idx_x,
             'seconds': lstg_start, 
-            'tf': tf_arrival}
+            'tf': tf_arrival,
+            'tf_periods': tf_periods,
+            'idx_tf': idx_tf}
 
 
 if __name__ == '__main__':
