@@ -193,6 +193,7 @@ class Composer:
     def interval_attrs(self):
         intervals = {
             BYR_PREFIX: self.sizes[model_str(DELAY, byr=True)][INTERVAL],
+            '{}_{}'.format(BYR_PREFIX, 7): self.sizes[model_str(DELAY, byr=True)][INTERVAL],
             SLR_PREFIX: self.sizes[model_str(DELAY, byr=False)][INTERVAL],
             ARRIVAL_PREFIX: self.sizes[NUM_OFFERS_MODEL][INTERVAL]
         }

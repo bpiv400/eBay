@@ -175,6 +175,12 @@ def load_model(full_name):
     :return: torch.nn.Module
     """
     sizes, params = load_sizes(full_name), load_params()
+
+    if full_name == 'arrival':
+        params['dropout_lstm'] = 0.0
+        params['hidden_lstm'] = 1024
+        params['layernorm'] = True
+
     model_path = '{}{}.net'.format(MODEL_DIR, full_name)
     model_class = get_model_class(full_name)
     net = model_class(sizes, params)  # type: torch.nn.Module
