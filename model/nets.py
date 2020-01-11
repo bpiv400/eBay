@@ -179,7 +179,7 @@ class FeedForward(nn.Module):
 
         # fully connected
         self.nn1 = FullyConnected(total, 
-            params['hidden'] if toRNN else sizes['out'], params)
+            params['hidden_lstm'] if toRNN else sizes['out'], params)
 
 
     def forward(self, x):
@@ -206,12 +206,14 @@ class Recurrent(nn.Module):
 
         # rnn layer
         self.rnn = LSTM(input_size=sizes['x_time'],
-                        hidden_size=params['hidden'],
+                        hidden_size=params['hidden_lstm'],
                         batch_first=True,
+                        dropout=params['dropout_lstm'],
+                        layernorm=params['layernorm'],
                         affine=params['affine'])
 
         # output layer
-        self.output = nn.Linear(params['hidden'], sizes['out'])
+        self.output = nn.Linear(params['hidden_lstm'], sizes['out'])
 
 
     def forward(self, x, x_time):

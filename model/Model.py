@@ -16,7 +16,8 @@ class Model:
         :param params: dictionary of neural net parameters.
         :param device: either 'cuda' or 'cpu'
         '''
-        self.dropout = params['dropout']
+        self.dropoutFF = params['dropout']
+        self.dropoutLSTM = params['dropout_lstm'] > 0
         self.device = device
 
         # recurrent models
@@ -42,7 +43,7 @@ class Model:
 
     def set_gamma(self, gamma):
         if gamma > 0:
-            if not self.dropout:
+            if not self.dropoutFF:
                 error('Gamma cannot be positive without dropout layers.')
             self.gamma = gamma
 
@@ -145,6 +146,10 @@ class Model:
         :return: scalar loss.
         '''
         isTraining = optimizer is not None  # train / eval mode
+
+        # dropout mask for LSTM
+        if isTraining and self.isRecurrent and self.dropoutLSTM:
+            self.net.rnn.sample_mask(self.device)
 
         # call forward on model
         self.net.train(isTraining)

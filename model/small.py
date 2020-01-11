@@ -52,13 +52,13 @@ if __name__ == '__main__':
     for epoch in range(1):
         print('Epoch %d:' % epoch)
 
-        # # training
-        # print('\tTraining:')
-        # t0 = dt.now()
-        # loss = model.run_loop(data, optimizer)
-        # print('\t\tTotal time: {} seconds'.format(
-        #     (dt.now() - t0).total_seconds()))
-        # print('\t\tloss: %d' % loss)
+        # training
+        print('\tTraining:')
+        t0 = dt.now()
+        loss = model.run_loop(data, optimizer)
+        print('\t\tTotal time: {} seconds'.format(
+            (dt.now() - t0).total_seconds()))
+        print('\t\tloss: %d' % loss)
         
         # testing
         print('\tTesting:')

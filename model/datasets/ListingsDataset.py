@@ -9,7 +9,7 @@ class ListingsDataset(FeedForwardDataset):
         :param part: string partition name (e.g., train_models).
         :param name: string model name.
         '''
-        super(FeedForwardDataset, self).__init__(part, name, sizes)
+        super(ListingsDataset, self).__init__(part, name, sizes)
 
         # array of zeros for arrivals embedding
         self.arrival0 = np.zeros((sizes['x']['arrival'], ), dtype='float32')
