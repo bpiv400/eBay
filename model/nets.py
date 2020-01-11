@@ -2,6 +2,7 @@ import torch, torch.nn as nn
 from collections import OrderedDict
 from model.LSTM import LSTM
 from constants import EMBEDDING_GROUPS
+from datetime import datetime as dt
 
 
 class VariationalDropout(nn.Module):
@@ -228,11 +229,6 @@ class Recurrent(nn.Module):
         # update hidden state recurrently
         theta, _ = self.rnn(x_time, hidden)
 
-        # # pad
-        # theta, _ = nn.utils.rnn.pad_packed_sequence(
-        #     theta, total_length=len(x_time.batch_sizes), 
-        #     batch_first=True)
-
         # output layer: (batch_size, seq_len, N_output)
         return self.output(theta).squeeze()
 
@@ -254,5 +250,6 @@ class Recurrent(nn.Module):
         if hidden is None:
             hidden = self.init(x=x)
         theta, hidden = self.rnn(x_time.unsqueeze(0), hidden)
+
         # output layer: (seq_len, batch_size, N_out)
         return self.output(theta), hidden

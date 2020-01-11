@@ -107,6 +107,7 @@ class LSTM(nn.Module):
         c = torch.cat(new_cs, 0)
         if self.batch_first:
             x = x.permute(1, 0, 2)
+
         return x, (h, c)
 
 
@@ -195,4 +196,5 @@ class LSTMcell(nn.Module):
 
         h_t = h_t.view(1, h_t.size(0), -1)
         c_t = c_t.view(1, c_t.size(0), -1)
+
         return h_t, (h_t, c_t)
