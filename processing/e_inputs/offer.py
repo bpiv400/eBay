@@ -21,12 +21,12 @@ def get_y_msg(df):
 
 # loads data and calls helper functions to construct train inputs
 def process_inputs(part, outcome, role):
-	# load offer data
-	df = load_file(part, 'x_offer')
+	# load dataframes
+	offers = load_file(part, 'x_offer')
+	threads = load_file(part, 'x_thread')
 
-	# subset by role indices
-	df = df[df.index.isin(IDX[role], level='index')]
-
+	# outcome and master index
+	df = offers[offers.index.isin(IDX[role], level='index')]
 	if outcome == 'con':
 		y = get_y_con(df)
 	elif outcome == 'msg':
@@ -34,10 +34,10 @@ def process_inputs(part, outcome, role):
 	idx = y.index
 
 	# thread features
-	x_thread = get_x_thread(part, idx)
+	x_thread = get_x_thread(threads, idx)
 
 	# offer features
-	x_offer = get_x_offer(part, idx, outcome=outcome, role=role)
+	x_offer = get_x_offer(offers, idx, outcome=outcome, role=role)
 
 	# index of listing features
 	idx_x = get_idx_x(part, idx)

@@ -15,11 +15,12 @@ class RecurrentDataset(eBayDataset):
         '''
         super(RecurrentDataset, self).__init__(part, name, sizes)
 
-        # number of examples
-        self.N_examples = sizes['N_examples']
-
         # load number of periods
         self.periods = load(INPUT_DIR + '{}/{}.gz'.format(part, name))
+
+        # number of labels and examples
+        self.N_labels = np.sum(self.periods)
+        self.N_examples = len(self.periods)
 
         # groups for sampling
         self.groups = [np.nonzero(self.periods == n)[0] \
@@ -66,3 +67,7 @@ class RecurrentDataset(eBayDataset):
 
     def __getitem__(self, idx):
         raise NotImplementedError()
+
+
+    def __len__(self):
+        return self.N_examples

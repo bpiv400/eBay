@@ -2,38 +2,8 @@ from compress_pickle import load, dump
 import numpy as np, pandas as pd
 from constants import *
 from processing.processing_utils import input_partition, \
-    get_partition, load_frames, extract_clock_feats
+    get_partition, load_frames, extract_clock_feats, get_days_delay, get_norm
 from processing.processing_consts import *
-
-
-def get_days_delay(clock):
-    """
-    Calculates time between successive offers.
-    :param clock: dataframe with index ['lstg', 'thread'], 
-        turn numbers as columns, and seconds since START as values
-    :return days: fractional number of days between offers.
-    :return delay: time between offers as share of MAX_DELAY.
-    """
-    # initialize output dataframes in wide format
-    days = pd.DataFrame(0., index=clock.index, columns=clock.columns)
-    delay = pd.DataFrame(0., index=clock.index, columns=clock.columns)
-
-    # for turn 1, days and delay are 0
-    for i in range(2, 8):
-        days[i] = clock[i] - clock[i-1]
-        if i in [2, 4, 6, 7]: # byr has 2 days for last turn
-            delay[i] = days[i] / MAX_DELAY['slr']
-        elif i in [3, 5]:   # ignore byr arrival and last turn
-            delay[i] = days[i] / MAX_DELAY['byr']
-    # no delay larger than 1
-    assert delay.max().max() <= 1
-
-    # reshape from wide to long
-    days = days.rename_axis('index', axis=1).stack() / DAY
-    delay = delay.rename_axis('index', axis=1).stack()
-
-    return days, delay
-
 
 
 def round_con(con):
@@ -56,20 +26,6 @@ def get_con(offers, start_price):
     for i in range(3, 8):
         con[i] = (offers[i] - offers[i-2]) / (offers[i-1] - offers[i-2])
     return round_con(con.rename_axis('index', axis=1).stack())
-
-
-# calculate normalized concession from rounded concessions
-def get_norm(con):
-    con = con.unstack()
-    norm = pd.DataFrame(index=con.index, columns=con.columns)
-    norm[1] = con[1]
-    norm[2] = con[2] * (1-norm[1])
-    for i in range(3, 8):
-        if i in IDX['byr']:
-            norm[i] = con[i] * (1-norm[i-1]) + (1-con[i]) * norm[i-2]
-        elif i in IDX['slr']:
-            norm[i] = 1 - con[i] * norm[i-1] - (1-con[i]) * (1-norm[i-2])
-    return norm.rename_axis('index', axis=1).stack().astype('float64')
 
 
 def get_x_offer(start_price, events, tf):

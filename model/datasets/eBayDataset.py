@@ -17,9 +17,6 @@ class eBayDataset(Dataset):
         self.x_path = HDF5_DIR + '{}/x_lstg.hdf5'.format(part)
         self.d_path = HDF5_DIR + '{}/{}.hdf5'.format(part, name)
 
-        # number of labels
-        self.N_labels = sizes['N_labels']
-
         # offer groups for embedding
         self.offer_keys = [k for k in sizes['x'] if k.startswith('offer')]
 
@@ -84,4 +81,4 @@ class eBayDataset(Dataset):
         
 
     def __len__(self):
-        return self.N_labels
+        return NotImplementedError()

@@ -50,7 +50,7 @@ class DiscrimRecorder(Recorder):
         # offers dataframe
         self.offers[INDEX] = self.offers[INDEX].astype(np.uint8)
         self.offers[CON] = self.offers[CON].astype(np.uint8)
-        self.offers[MESSAGE] = self.offers[MESSAGE].astype(bool)
+        self.offers[MSG] = self.offers[MSG].astype(bool)
         for name in TIME_FEATS:
             if 'offers' in name or 'count' in name:
                 self.offers[name] = self.offers[name].astype(np.uint8)

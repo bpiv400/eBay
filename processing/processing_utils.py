@@ -117,6 +117,53 @@ def input_partition():
     return part
 
 
+def get_days_delay(clock):
+    """
+    Calculates time between successive offers.
+    :param clock: dataframe with index ['lstg', 'thread'], 
+        turn numbers as columns, and seconds since START as values
+    :return days: fractional number of days between offers.
+    :return delay: time between offers as share of MAX_DELAY.
+    """
+    # initialize output dataframes in wide format
+    days = pd.DataFrame(0., index=clock.index, columns=clock.columns)
+    delay = pd.DataFrame(0., index=clock.index, columns=clock.columns)
+
+    # for turn 1, days and delay are 0
+    for i in range(2, 8):
+        days[i] = clock[i] - clock[i-1]
+        if i in [2, 4, 6, 7]: # byr has 2 days for last turn
+            delay[i] = days[i] / MAX_DELAY['slr']
+        elif i in [3, 5]:   # ignore byr arrival and last turn
+            delay[i] = days[i] / MAX_DELAY['byr']
+    # no delay larger than 1
+    assert delay.max().max() <= 1
+
+    # reshape from wide to long
+    days = days.rename_axis('index', axis=1).stack() / DAY
+    delay = delay.rename_axis('index', axis=1).stack()
+
+    return days, delay
+
+
+def get_norm(con):
+    '''
+    Calculate normalized concession from rounded concessions.
+    :param con: pandas series of rounded concessions.
+    :return: pandas series of normalized concessions.
+    '''
+    con = con.unstack()
+    norm = pd.DataFrame(index=con.index, columns=con.columns)
+    norm[1] = con[1]
+    norm[2] = con[2] * (1-norm[1])
+    for i in range(3, 8):
+        if i in IDX['byr']:
+            norm[i] = con[i] * (1-norm[i-1]) + (1-con[i]) * norm[i-2]
+        elif i in IDX['slr']:
+            norm[i] = 1 - con[i] * norm[i-1] - (1-con[i]) * (1-norm[i-2])
+    return norm.rename_axis('index', axis=1).stack().astype('float64')
+
+
 def get_arrival(lstg_start, thread_start):
     # intervals until thread
     thread_periods = (thread_start - lstg_start) // INTERVAL['arrival']
@@ -177,15 +224,14 @@ def add_turn_indicators(df):
     return df
 
 
-def get_x_thread(part, idx):
-    # thread features
-    df = load_file(part, 'x_thread')
+def get_x_thread(threads, idx):
+    x_thread = threads.copy()
 
     # byr_hist as a decimal
-    df.loc[:, 'byr_hist'] = df.byr_hist.astype('float32') / 10
+    x_thread.loc[:, 'byr_hist'] = x_thread.byr_hist.astype('float32') / 10
 
     # reindex to create x_thread
-    x_thread = pd.DataFrame(index=idx).join(df)
+    x_thread = pd.DataFrame(index=idx).join(x_thread)
 
     # add turn indicators
     x_thread = add_turn_indicators(x_thread)
@@ -224,22 +270,19 @@ def clean_offer(offer, i, outcome, role, dtypes):
     return offer
 
 
-def get_x_offer(part, idx, outcome=None, role=None):
-    # offer features
-    df = load_file(part, 'x_offer')
-
+def get_x_offer(offers, idx, outcome=None, role=None):
     # initialize dictionary of offer features
     x = {}
 
     # dataframe of offer features for relevant threads
     threads = idx.droplevel(level='index').unique()
-    df = pd.DataFrame(index=threads).join(df)
-    dtypes = df.dtypes
+    offers = pd.DataFrame(index=threads).join(offers)
+    dtypes = offers.dtypes
 
     # turn features
     for i in range(1, max(IDX[role])+1):
         # offer features at turn i
-        offer = df.xs(i, level='index').reindex(index=idx)
+        offer = offers.xs(i, level='index').reindex(index=idx)
 
         # clean
         offer = clean_offer(offer, i, outcome, role, dtypes)
@@ -418,6 +461,9 @@ def save_files(d, part, name):
     if 'periods' in d:
         periods = d.pop('periods')
         dump(periods, INPUT_DIR + '{}/{}.gz'.format(part, name))
+    elif 'y' in d:
+        y = d.pop('y')
+        dump(y, INPUT_DIR + '{}/{}.gz'.format(part, name))
 
     # save hdf5 file
     with h5py.File(HDF5_DIR + '{}/{}.hdf5'.format(part, name), 'w') as f:
