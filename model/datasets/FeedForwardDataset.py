@@ -1,5 +1,7 @@
 import numpy as np
+from compress_pickle import load
 from model.datasets.eBayDataset import eBayDataset
+from constants import INPUT_DIR
 
 
 class FeedForwardDataset(eBayDataset):
