@@ -370,21 +370,13 @@ def get_featnames(d, name):
     return featnames
 
 
-def save_sizes(d, featnames, name):
+def save_sizes(featnames, name):
     '''
     Creates dictionary of input sizes.
-    :param d: dictionary of inputs.
     :param featnames: dictionary of featnames.
     :param name: string name of model.
     '''
     sizes = {}
-
-    # counts of examples (and labels)
-    if 'periods' in d:
-        sizes['N_examples'] = len(d['periods'])
-        sizes['N_labels'] = d['periods'].sum()
-    else:
-        sizes['N_labels'] = len(d['y'])
 
     # count components of x
     sizes['x'] = {}
@@ -452,7 +444,7 @@ def save_files(d, part, name):
         dump(featnames, INPUT_DIR + 'featnames/{}.pkl'.format(name))
 
         # sizes
-        save_sizes(d, featnames, name)
+        save_sizes(featnames, name)
 
     # create dictionary of numpy arrays
     d = convert_to_numpy(d)
