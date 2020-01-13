@@ -178,7 +178,8 @@ def load_model(full_name):
     model_path = '{}{}.net'.format(MODEL_DIR, full_name)
     model_class = get_model_class(full_name)
     net = model_class(sizes, params)  # type: torch.nn.Module
-    net.load_state_dict(torch.load(model_path))
+    state_dict = torch.load(model_path, map_location=torch.device('cpu'))
+    net.load_state_dict(state_dict)
     for param in net.parameters(recurse=True):
         param.requires_grad = False
     net.eval()
