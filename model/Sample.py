@@ -14,16 +14,14 @@ class Sample(Sampler):
         '''
         super().__init__(None)
 
-        # chop into minibatches; shuffle for training
-        self.batches = []
-        for v in data.groups:
-            if isTraining:
-                np.random.shuffle(v)
-            self.batches += np.array_split(v, 
-                1 + len(v) // MBSIZE[isTraining])
-        # shuffle training batches
+        # create vector of indices
+        v = np.array(range(len(data)))
         if isTraining:
-            np.random.shuffle(self.batches)
+            np.random.shuffle(v)
+
+        # chop into minibatches
+        self.batches = np.array_split(v, 
+            1 + len(v) // MBSIZE[isTraining])
 
 
     def __iter__(self):
@@ -37,7 +35,7 @@ class Sample(Sampler):
         return len(self.batches)
 
 
-def collateFF(batch):
+def collate(batch):
     '''
     Converts examples to tensors for a feed-forward network.
     :param batch: list of (dictionary of) numpy arrays.
@@ -60,45 +58,14 @@ def collateFF(batch):
     return {'y': y, 'x': x}
 
 
-def collateRNN(batch):
-    '''
-    Converts examples to tensors for a recurrent network.
-    :param batch: list of (dictionary of) numpy arrays.
-    :return: dictionary of (dictionary of) tensors.
-    '''
-    y, periods, x, x_time = [], [], {}, []
-
-    # sorts the batch list in decreasing order of periods
-    for b in batch:
-        y.append(torch.from_numpy(b[0]))
-        periods.append(torch.as_tensor(b[1]))
-        for k, v in b[2].items():
-            if k in x:
-                x[k].append(torch.from_numpy(v))
-            else:
-                x[k] = [torch.from_numpy(v)]
-        x_time.append(torch.from_numpy(b[3]))
-
-    # convert to tensor
-    y = torch.stack(y).float()
-    periods = torch.stack(periods).long()
-    x = {k: torch.stack(v).float() for k, v in x.items()}
-    x_time = torch.stack(x_time, dim=0).float()
-
-    # output is dictionary of tensors
-    return {'y': y, 'x': x, 'x_time': x_time}
-
-
-def get_batches(data, isRecurrent=False, isTraining=False):
+def get_batches(data, isTraining=False):
     '''
     Creates a Dataloader object.
     :param data: Inputs object.
     :param isTraining: chop into minibatches if True.
     :return: iterable batches of examples.
     '''
-    batches = DataLoader(data, 
-        collate_fn=collateRNN if isRecurrent else collateFF,
+    batches = DataLoader(data, collate_fn=collate,
         batch_sampler=Sample(data, isTraining),
-        num_workers=NUM_WORKERS, 
-        pin_memory=True)
+        num_workers=NUM_WORKERS, pin_memory=True)
     return batches

@@ -3,10 +3,7 @@ import torch, torch.optim as optim
 import numpy as np, pandas as pd
 from datetime import datetime as dt
 from compress_pickle import load
-from model.datasets.FeedForwardDataset import FeedForwardDataset
-from model.datasets.ArrivalDataset import ArrivalDataset
-from model.datasets.DelayDataset import DelayDataset
-from model.datasets.ListingsDataset import ListingsDataset
+from model.datasets.eBayDataset import eBayDataset
 from model.Model import Model
 from model.model_consts import *
 from constants import INPUT_DIR, PARAMS_PATH
@@ -39,14 +36,7 @@ if __name__ == '__main__':
     print(optimizer)
 
     # load data
-    if name == 'arrival':
-        data = ArrivalDataset(PART, name, sizes)
-    elif 'delay' in name:
-        data = DelayDataset(PART, name, sizes)
-    elif name == 'listings':
-        data = ListingsDataset(PART, name, sizes)
-    else:
-        data = FeedForwardDataset(PART, name, sizes)
+    data = eBayDataset(PART, name, sizes)
 
     # training
     for epoch in range(1):

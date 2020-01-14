@@ -46,7 +46,6 @@ def extract_day_feats(clock):
     df['holiday'] = clock.dt.date.astype('datetime64').isin(HOLIDAYS)
     for i in range(6):
         df['dow' + str(i)] = clock.dt.dayofweek == i
-
     return df
 
 
@@ -57,13 +56,10 @@ def extract_clock_feats(clock):
     :return: pandas dataframe of holiday and day of week indicators, and minute of day.
     '''
     df = extract_day_feats(clock)
-
     # add in seconds of day
-    seconds_since_midnight = clock.dt.hour * 60 + clock.dt.minute + clock.dt.second
-    df['second_of_day'] = (seconds_since_midnight / (24 * 3600)).astype('float32')
-
+    seconds_since_midnight = clock.dt.hour * HOUR + clock.dt.minute * MINUTE + clock.dt.second
+    df['second_of_day'] = (seconds_since_midnight / DAY).astype('float32')
     assert all(df.columns == CLOCK_FEATS)
-
     return df
 
 
@@ -342,15 +338,18 @@ def get_featnames(d, name):
     # initialize with components of x
     featnames = {}
     featnames['x'] = load(INPUT_DIR + 'featnames/x_lstg.pkl')
+
+    # thread features
     if 'x_thread' in d:
         featnames['x']['lstg'] += list(d['x_thread'].columns)
 
+    # offer features
     if 'x_offer' in d:
         for k, v in d['x_offer'].items():
             featnames['x'][k] = list(v.columns)
 
-    # for arrival and delay models
-    if 'periods' in d:
+    # recurrent models
+    if 'delay' in name:
         featnames['x_time'] = \
             CLOCK_FEATS + TIME_FEATS + [DURATION]
 
@@ -383,18 +382,18 @@ def save_sizes(featnames, name):
     for k, v in featnames['x'].items():
         sizes['x'][k] = len(v)
 
-    # arrival and delay models
-    if 'x_time' in featnames:
+    # recurrent models
+    if (name == 'arrival') or ('delay' in name):
         role = name.split('_')[-1]
         sizes['interval'] = INTERVAL[role]
         sizes['interval_count'] = INTERVAL_COUNTS[role]
         if role == BYR_PREFIX:
             sizes['interval_count_7'] = INTERVAL_COUNTS[BYR_PREFIX + '_7']
 
-        sizes['x_time'] = len(featnames['x_time'])
- 
     # output size is based on model
-    if name == 'hist':
+    if name == 'arrival':
+        sizes['out'] = INTERVAL_COUNTS[ARRIVAL_PREFIX] + 1
+    elif name == 'hist':
         sizes['out'] = HIST_QUANTILES
     elif 'con' in name:
         sizes['out'] = 101
@@ -418,7 +417,7 @@ def convert_to_numpy(d):
 
     # error checking
     for k in d.keys():
-        if 'periods' in k or 'idx' in k or k in ['y', 'seconds', 'x_thread', 'remaining']:
+        if k in ['idx_x', 'x_thread']:
             assert np.all(d[k].index == master_idx)
 
     # convert dataframes to numpy
@@ -449,15 +448,5 @@ def save_files(d, part, name):
     # create dictionary of numpy arrays
     d = convert_to_numpy(d)
 
-    # for recurrent models, save periods separately
-    if 'periods' in d:
-        periods = d.pop('periods')
-        dump(periods, INPUT_DIR + '{}/{}.gz'.format(part, name))
-    elif 'y' in d:
-        y = d.pop('y')
-        dump(y, INPUT_DIR + '{}/{}.gz'.format(part, name))
-
-    # save hdf5 file
-    with h5py.File(HDF5_DIR + '{}/{}.hdf5'.format(part, name), 'w') as f:
-        for k, v in d.items():
-            f.create_dataset(k, data=v)
+    # save
+    dump(d, INPUT_DIR + '{}/{}.gz'.format(part, name))

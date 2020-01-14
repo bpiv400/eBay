@@ -26,7 +26,7 @@ class RecurrentDataset(eBayDataset):
         self.groups = [np.nonzero(self.periods == n)[0] \
             for n in np.unique(self.periods)]
 
-        # save clock feats lookup array to self
+        # save date feats lookup array to self
         self.date_feats = load(INPUT_DIR + 'date_feats.pkl')
 
         # maximum number of time steps

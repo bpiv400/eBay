@@ -13,19 +13,17 @@ class eBayDataset(Dataset):
         :param part: string partition name (e.g., train_models).
         :param name: string model name.
         '''
-        # paths to hdf5 files
-        self.x_path = HDF5_DIR + '{}/x_lstg.hdf5'.format(part)
-        self.d_path = HDF5_DIR + '{}/{}.hdf5'.format(part, name)
+        self.d = load(INPUT_DIR + '{}/{}.gz'.format(part, name))
 
+        # number of labels
+        self.N = len(self.d['y'])
+
+        # listings file
+        self.x = None
+        self.x_path = HDF5_DIR + '{}/x_lstg.hdf5'.format(part)
+        
         # offer groups for embedding
         self.offer_keys = [k for k in sizes['x'] if k.startswith('offer')]
-
-        # to be loaded in subprocess
-        self.x = None
-        self.d = None
-
-        # groups for sampling to be created in children
-        self.groups = None
 
 
     def _init_subprocess(self):
@@ -33,25 +31,6 @@ class eBayDataset(Dataset):
         To be called in in first __getitem__ call in each subprocess. Loads HDF5 files.
         '''
         self.x = h5py.File(self.x_path, 'r')
-        self.d = h5py.File(self.d_path, 'r')
-
-
-    def _fill_array(self, a, stub, idx):
-        '''
-        Creates a semi-sparse numpy array by occasionally replacing zeros with values.
-        :param a: numpy array of zeros.
-        :param stub: string such that d has keys [stub, stub + '_periods', 'idx_' + stub]
-        :param idx: int observation index.
-        :return: semi-sparse numpy array.
-        '''
-        idx_array = self.d['idx_' + stub][idx]
-        if idx_array > -1:
-            l = self.d[stub + '_periods'][idx].decode("utf-8").split('/')
-            for p in l:
-                assert p != ''
-                a[int(p)] = self.d[stub][idx_array]
-                idx_array += 1
-        return a
 
 
     def _construct_x(self, idx):
@@ -77,8 +56,23 @@ class eBayDataset(Dataset):
 
 
     def __getitem__(self, idx):
-        return NotImplementedError()
+        '''
+        Returns a tuple of data components for example.
+        :param idx: index of example.
+        :return: tuple of data components at index idx.
+        '''
+        # initialize subprocess with hdf5 files
+        if self.x is None:
+            self._init_subprocess()
+
+        # y is indexed directly
+        y = self.d['y'][idx]
+
+        # initialize x from listing-level features
+        x = self._construct_x(idx)
+
+        return y, x
         
 
     def __len__(self):
-        return NotImplementedError()
+        return self.N
