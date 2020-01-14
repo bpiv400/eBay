@@ -7,16 +7,16 @@ from constants import EMBEDDING_GROUPS
 class VariationalDropout(nn.Module):
     def __init__(self, N):
         super(VariationalDropout, self).__init__()
-        
+
         self.log_alpha = nn.Parameter(torch.Tensor(N))
         self.log_alpha.data.fill_(-3)
-        
+
     def kl_reg(self):
         # calculate KL divergence
         kl = 0.63576 * (torch.sigmoid(1.8732 + 1.48695 * self.log_alpha) - 1) \
             - 0.5 * torch.log1p(torch.exp(-self.log_alpha))
         return -torch.sum(kl)
-    
+
     def forward(self, x):
         # additive N(0, alpha * x^2) noise
         if self.training:
@@ -75,7 +75,7 @@ class Stack(nn.Module):
         for _ in range(layers):
             self.stack.append(Layer(N, N, params))
 
-        
+
     def forward(self, x):
         '''
         x: tensor of shape [mbsize, N_in]
@@ -178,8 +178,9 @@ class FeedForward(nn.Module):
         self.nn0 = nn.ModuleDict(d)
 
         # fully connected
-        self.nn1 = FullyConnected(total, 
-            params['hidden'] if toRNN else sizes['out'], params)
+        self.nn1 = FullyConnected(total,
+                                  params['hidden_lstm'] if toRNN else sizes['out'],
+                                  params)
 
     def forward(self, x):
         '''
@@ -198,19 +199,18 @@ class Recurrent(nn.Module):
         :param params: dictionary of neural net parameters.
         '''
         super(Recurrent, self).__init__()
-
         # initial hidden nodes
         self.h0 = FeedForward(sizes, params, toRNN=True)
         self.c0 = FeedForward(sizes, params, toRNN=True)
-
         # rnn layer
         self.rnn = LSTM(input_size=sizes['x_time'],
-                        hidden_size=params['hidden'],
+                        hidden_size=params['hidden_lstm'],
                         batch_first=True,
+                        dropout=params['dropout_lstm'],
+                        layernorm=params['layernorm'],
                         affine=params['affine'])
-
         # output layer
-        self.output = nn.Linear(params['hidden'], sizes['out'])
+        self.output = nn.Linear(params['hidden_lstm'], sizes['out'])
 
 
     def forward(self, x, x_time):
@@ -219,7 +219,7 @@ class Recurrent(nn.Module):
         :param x_time: tensor of shape [mbsize, INTERVAL_COUNTS[outcome], sizes['x_time']]
         '''
         # initialize hidden state
-        hidden = (self.h0(x).unsqueeze(dim=0), 
+        hidden = (self.h0(x).unsqueeze(dim=0),
             self.c0(x).unsqueeze(dim=0))
 
         # update hidden state recurrently
@@ -227,7 +227,7 @@ class Recurrent(nn.Module):
 
         # # pad
         # theta, _ = nn.utils.rnn.pad_packed_sequence(
-        #     theta, total_length=len(x_time.batch_sizes), 
+        #     theta, total_length=len(x_time.batch_sizes),
         #     batch_first=True)
 
         # output layer: (batch_size, seq_len, N_output)
@@ -235,7 +235,7 @@ class Recurrent(nn.Module):
 
 
     def init(self, x=None):
-        return (self.h0(x).unsqueeze(dim=0), 
+        return (self.h0(x).unsqueeze(dim=0),
             self.c0(x).unsqueeze(dim=0))
 
 
