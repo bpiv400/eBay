@@ -48,7 +48,7 @@ def get_interarrival_times(clock):
     return y
 
 
-def process_tf(tf, clock):
+def process_tf(tf, clock, idx):
     # put clock in index
     tf = tf.set_index('clock', append=True)
 
@@ -111,7 +111,7 @@ def process_inputs(part):
     idx_x = get_idx_x(part, idx)
 
     # reconstruct raw time features
-    tf = process_tf(load_file(part, 'tf_arrival'), clock)
+    tf = process_tf(load_file(part, 'tf_arrival'), clock, idx)
 
     # features to append to x_lstg
     x_thread = get_x_thread_feats(clock, idx, lstg_start, tf)
