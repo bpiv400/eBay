@@ -378,14 +378,17 @@ def main():
     print('Creating lstg-level time-valued features')
     if not arrival:
         tf_lstg_focal = get_lstg_time_feats(events, full=False)
+
         print('preparing concession output...')
         con_feats = con_time_feats(tf_lstg_focal, events)
-        print('preparing delay output...')
-        delay_feats = delay_time_feats(tf_lstg_focal, events)
         assert not con_feats.isna().any().any()
-        assert not delay_feats.isna().any().any()
-        dump(delay_feats, output_path('delay_diff', num))
         dump(con_feats, output_path('offer', num))
+
+        # print('preparing delay output...')
+        # delay_feats = delay_time_feats(tf_lstg_focal, events)
+        # assert not delay_feats.isna().any().any()
+        # dump(delay_feats, output_path('delay_diff', num))
+        
     else:
         tf_lstg_full = get_lstg_time_feats(events, full=True)
         print('preparing arrival output...')

@@ -1,14 +1,14 @@
 import numpy as np, pandas as pd
 from processing.processing_utils import input_partition, save_files, \
 	load_file, get_idx_x
+from featnames import CLOCK_FEATS, TIME_FEATS
 
 
 # loads data and calls helper functions to construct train inputs
 def process_inputs(part):
 	# thread features
 	x_offer = load_file(part, 'x_offer').xs(1, level='index')
-	x_offer = x_offer.drop(['days', 'delay', 'con', 'norm', 'split', \
-		'msg', 'reject', 'auto', 'exp'], axis=1)
+	x_offer = x_offer[CLOCK_FEATS + TIME_FEATS]
 	x_offer = x_offer.rename(lambda x: x + '_1', axis=1)
 	x_thread = load_file(part, 'x_thread').join(x_offer)
 

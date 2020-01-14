@@ -3,12 +3,14 @@ from compress_pickle import load, dump
 import numpy as np, pandas as pd
 from processing.processing_utils import get_x_thread, get_x_offer, \
 	get_idx_x, save_files, load_file
-from constants import IDX
+from processing.processing_consts import MAX_DELAY, INTERVAL
+from constants import IDX, DAY, BYR_PREFIX, SLR_PREFIX
 
 
 def get_y_con(df):
 	# drop zero delay and expired offers
 	mask = ~df.auto & ~df.exp
+
 	# concession is an int from 0 to 100
 	return (df.loc[mask, 'con'] * 100).astype('int8')
 
@@ -17,6 +19,24 @@ def get_y_msg(df):
 	# drop accepts and rejects
 	mask = (df.con > 0) & (df.con < 1)
 	return df.loc[mask, 'msg']
+
+
+def get_y_delay(df, role):
+	# convert to seconds
+	delay = np.round(df.days * DAY).astype('int64')
+
+	# error checking
+	assert delay.max() <= MAX_DELAY[role]
+	if role == BYR_PREFIX:
+		assert delay.xs(7, level='index').max() <= MAX_DELAY[SLR_PREFIX]
+
+	# replace censored delays with negative seconds from end
+	delay.loc[df.exp] -= MAX_DELAY[role] + 1
+
+	# convert to periods
+	delay //= INTERVAL[role]
+
+	return delay
 
 
 # loads data and calls helper functions to construct train inputs
@@ -31,6 +51,8 @@ def process_inputs(part, outcome, role):
 		y = get_y_con(df)
 	elif outcome == 'msg':
 		y = get_y_msg(df)
+	elif outcome == 'delay':
+		y = get_y_delay(df, role)
 	idx = y.index
 
 	# thread features
