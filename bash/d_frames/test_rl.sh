@@ -1,5 +1,5 @@
 #!/bin/bash
-#$ -t 1-4
+#$ -t 1-3
 #$ -l m_mem_free=75G
 #$ -N d_test_rl
 #$ -j y
@@ -14,7 +14,4 @@ then
 elif [ "$SGE_TASK_ID" == 3 ]
 then
 	python repo/processing/d_frames/offer.py --part test_rl
-elif [ "$SGE_TASK_ID" == 4 ]
-then
-	python repo/processing/d_frames/tf.py --part test_rl
 fi

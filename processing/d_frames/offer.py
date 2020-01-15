@@ -61,7 +61,7 @@ if __name__ == "__main__":
     # load other data
     start_price = load(PARTS_DIR + '%s/lookup.gz' % part).start_price
     events = load(CLEAN_DIR + 'offers.pkl').reindex(index=idx, level='lstg')
-    tf = load_frames('tf_con').reindex(index=idx, level='lstg')
+    tf = load_frames('tf_offer').reindex(index=idx, level='lstg')
 
     # offer features
     print('x_offer')
