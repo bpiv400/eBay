@@ -64,6 +64,7 @@ def process_inputs(part, outcome, role):
 
 	# add time remaining to x_thread
 	if outcome == 'delay':
+		clock = load_file(part, 'clock')
 		delay_start = clock.groupby(['lstg', 'thread']).shift().reindex(
 			index=idx).astype('int64')
 		lstg_end = load(CLEAN_DIR + 'listings.pkl').end_time.reindex(
