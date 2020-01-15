@@ -65,11 +65,11 @@ def process_inputs(part, outcome, role):
 	# add time remaining to x_thread
 	if outcome == 'delay':
 		delay_start = clock.groupby(['lstg', 'thread']).shift().reindex(
-            index=idx).astype('int64')
-        lstg_end = load(CLEAN_DIR + 'listings.pkl').end_time.reindex(
-            index=idx, level='lstg')
-        x_thread[REMAINING] = np.minimum(1,
-            (lstg_end - delay_start) / MAX_DELAY[role])
+			index=idx).astype('int64')
+		lstg_end = load(CLEAN_DIR + 'listings.pkl').end_time.reindex(
+			index=idx, level='lstg')
+		x_thread[REMAINING] = np.minimum(1,
+			(lstg_end - delay_start) / MAX_DELAY[role])
 
 	# offer features
 	x_offer = get_x_offer(offers, idx, outcome=outcome, role=role)
