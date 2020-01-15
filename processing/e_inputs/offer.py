@@ -5,7 +5,7 @@ from processing.processing_utils import get_x_thread, get_x_offer, \
 	get_idx_x, save_files, load_file
 from processing.processing_consts import MAX_DELAY, INTERVAL, CLEAN_DIR
 from constants import IDX, DAY, BYR_PREFIX, SLR_PREFIX, ARRIVAL_PREFIX
-from featnames import CON, MSG, AUTO, EXP, DAYS, REMAINING
+from featnames import CON, MSG, AUTO, EXP, DAYS, INT_REMAINING
 
 
 def get_y_con(df):
@@ -68,7 +68,7 @@ def process_inputs(part, outcome, role):
 			index=idx).astype('int64')
 		lstg_end = load(CLEAN_DIR + 'listings.pkl').end_time.reindex(
 			index=idx, level='lstg')
-		x_thread[REMAINING] = np.minimum(1,
+		x_thread[INT_REMAINING] = np.minimum(1,
 			(lstg_end - delay_start) / MAX_DELAY[role])
 
 	# offer features
