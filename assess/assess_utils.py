@@ -1,36 +1,39 @@
 import sys, os
 import numpy as np, pandas as pd, torch
 from compress_pickle import load
-from models.simulator.interface import Inputs, predict_theta
-from models.simulator.model import Simulator
-from constants import *
+from model.datasets.eBayDataset import eBayDataset
+from model.Model import Model
+from processing.processing_consts import PARAMS_PATH
+from constants import INPUT_DIR, MODEL_DIR
 
 
-def get_role_outcomes(model):
+def get_predictions(part, name):
 	# create model
-	sizes = load('%s/inputs/sizes/%s.pkl' % (PREFIX, model))
-	simulator = Simulator(model, sizes, dropout=False)
-	simulator.net.load_state_dict(
-		torch.load(MODEL_DIR + '%s/0.net' % model))
+	sizes = load(INPUT_DIR + 'sizes/{}.pkl'.format(name))
+	params = load(PARAMS_PATH)
+	model = Model(name, sizes, params)
+	model_path = MODEL_DIR + 'small/{}.net'.format(name)
+	state_dict = torch.load(model_path)
+	model.net.load_state_dict(state_dict)
 
 	# make predictions for each example
-	data = Inputs(EVAL_PART, model)
+	data = eBayDataset(part, name, sizes)
 	with torch.no_grad():
-		theta = predict_theta(simulator, data)
+		theta = model.predict_theta(data)
+
+	return theta
+
+
+def get_role_outcomes(name):
+	# predictions from model
+	theta = get_predictions('test_rl', name)
 
 	# convert to distribution
-	if outcome in ['con', 'hist']:
+	if outcome == 'msg':
+		p_hat = torch.sigmoid(theta)
+	else:
 		p_hat = torch.exp(
 			torch.nn.functional.log_softmax(theta, dim=1))
-	elif outcome in ['delay', 'msg']:
-		p_hat = torch.sigmoid(theta)
-	elif outcome == 'arrival':
-		poisson = torch.distributions.poisson.Poisson(
-			torch.exp(theta))
-		p_hat = torch.zeros(theta.size()[0], 12)
-		for k in range(11):
-			p_hat[:,k] = torch.exp(poisson.log_prob(k))
-		p_hat[:,11] = 1 - torch.sum(p_hat[:,:11], dim=1)
 
 	# put in series or dataframe
 	k = p_hat.size()[1]
@@ -47,18 +50,14 @@ def get_role_outcomes(model):
 
 
 def get_outcomes(outcome):
-	if outcome in ['con', 'msg']:
+	if outcome in ['delay', 'con', 'msg']:
 		# outcomes by role
 		y_byr, p_hat_byr = get_outcomes('%s_byr' % outcome)
 		y_slr, p_hat_slr = get_outcomes('%s_slr' % outcome)
 
 		# combine
-		y = pd.concat([y_byr, y_slr], dim=0).sort_index()
-		p_hat = pd.concat([p_hat_byr, p_hat_slr], dim=0).sort_index()
-
-	# placeholder for delay models
-	elif outcome == 'delay':
-		return None
+		y = pd.concat([y_byr, y_slr], dim=0)
+		p_hat = pd.concat([p_hat_byr, p_hat_slr], dim=0)
 
 	# no roles for arrival and hist models
 	else:

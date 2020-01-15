@@ -386,8 +386,7 @@ def save_sizes(featnames, name):
             sizes['interval_count_7'] = INTERVAL_COUNTS[BYR_PREFIX + '_7']
 
         # output size
-        outcome = name.split('_')[0]
-        sizes['out'] = INTERVAL_COUNTS[outcome] + 1
+        sizes['out'] = INTERVAL_COUNTS[role] + 1
 
     elif name == 'hist':
         sizes['out'] = HIST_QUANTILES
@@ -405,30 +404,36 @@ def convert_to_numpy(d):
     :param d: dictionary with (dictionaries of) dataframes.
     :return: dictionary with numpy arrays (and dictionaries of dataframes).
     '''
-    # for error checking
-    if 'periods' in d:
-        master_idx = d['periods'].index
-    else:
-        master_idx = d['y'].index
-
-    # error checking
-    for k in d.keys():
-        if k in ['idx_x', 'x_thread']:
-            assert np.all(d[k].index == master_idx)
-
-    # convert dataframes to numpy
-    for k, v in d.items():
-        if not isinstance(v, dict):
-            d[k] = v.to_numpy()
-
-    # loop through x_offer, error checking and convert to numpy
+    # put offer components directly in d
     if 'x_offer' in d:
         x_offer = d.pop('x_offer')
         for k, v in x_offer.items():
-            assert np.all(v.index == master_idx)
-            d[k] = v.to_numpy()
+            d[k] = v
 
-    return d
+    # index for error checking
+    idx = d['y'].index
+
+    # error check and convert dataframes to numpy
+    for k, v in d.items():
+        assert np.all(v.index == idx)
+        d[k] = v.to_numpy()
+
+    return d, idx
+
+
+def save_small(d, idx, name):
+    # randomly select indices
+    v = np.arange(np.shape(d['y'])[0])
+    np.random.shuffle(v)
+    idx_small = v[:N_SMALL]
+
+    # subset and save data
+    small = {k: v[idx_small] for k, v in d.items()}
+    dump(small, INPUT_DIR + 'small/{}.gz'.format(name))
+
+    # subset and save index
+    dump(idx[idx_small], INDEX_DIR + 'small/{}.gz'.format(name))
+
 
 # save featnames and sizes
 def save_files(d, part, name):
@@ -442,7 +447,14 @@ def save_files(d, part, name):
         save_sizes(featnames, name)
 
     # create dictionary of numpy arrays
-    d = convert_to_numpy(d)
+    d, idx = convert_to_numpy(d)
 
-    # save
+    # save data
     dump(d, INPUT_DIR + '{}/{}.gz'.format(part, name))
+
+    # save index
+    dump(idx, INDEX_DIR + '{}/{}.gz'.format(part, name))
+
+    # save subset
+    if part == 'train_models':
+        save_small(d, idx, name)

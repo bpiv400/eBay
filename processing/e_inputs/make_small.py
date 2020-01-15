@@ -14,41 +14,14 @@ if __name__ == '__main__':
     # load full dictionary
     d = load(INPUT_DIR + 'train_models/{}.gz'.format(name))
 
-    # initialize dictionary to save
-    small = {}
+    # randomly select indices
+    v = np.arange(np.shape(d['y'])[0])
+    np.random.shuffle(v)
+    idx = v[:N_SMALL]
 
-    # recurrent models
-    if 'periods' in d:
-        # randomly sample
-        small['periods'] = d['periods'].sample(N_SMALL).sort_index()
-        idx = small['periods'].index
+    # create dictionary
+    small = {k: v[idx] for k, v in d.items()}
 
-        # lstg features
-        small['x'] = {k: v.reindex(index=idx) for k, v in d['x'].items()}
-
-        # outcome and time features in full
-        for k in ['y', 'tf']:
-            small[k] = d[k]
-
-        # other elements of d
-        for k, v in d.items():
-            if k not in ['x', 'periods', 'y', 'tf']:
-                small[k] = d[k].reindex(index=idx)
-
-    # feed forward
-    else:
-        v = np.arange(np.shape(d['y'])[0])
-        np.random.shuffle(v)
-        idx = v[:N_SMALL]
-
-        # listing features
-        small['x'] = {k: v[idx, :] for k, v in d['x'].items()}
- 
-        # directly subsample
-        for k in d.keys():
-            if k not in ['x']:
-                small[k] = d[k][idx]
- 
     # save dictionary
     dump(small, INPUT_DIR + 'small/{}.gz'.format(name))
  

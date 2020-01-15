@@ -28,18 +28,10 @@ class Model:
         elif 'msg' in name:
             self.loss = nn.BCEWithLogitsLoss(reduction='sum')
         else:
-            self.loss = self._ArrivalTimeLoss
+            self.loss = self._TimeLoss
 
         # neural net
         self.net = FeedForward(sizes, params).to(device)
-
-
-    def set_gamma(self, gamma):
-        if self.dropout == 0:
-            error('Gamma cannot be set without dropout.')
-        if gamma < 0:
-            error('Gamma cannot be negative')
-        self.gamma = gamma
 
 
     def get_penalty(self, factor=1):
@@ -59,14 +51,6 @@ class Model:
                 total += alpha.size()[0]
                 above += torch.sum(alpha > threshold).item()
         return above / total, largest
-
-
-    def set_smoothing(self, smoothing):
-        if self.loss.__name__ != '_ArrivalTimeLoss':
-            error('Smoothing hyperparameter only valid for arrival and delay models.')
-        if smoothing < 0:
-            error('Smoothing hyperparameter cannot be negative.')
-        self.smoothing = smoothing
 
 
     def run_loop(self, data, optimizer=None):
@@ -158,8 +142,7 @@ class Model:
         return loss.item()
 
 
-    @staticmethod
-    def _ArrivalTimeLoss(theta, y):
+    def _TimeLoss(self, theta, y):
         # class probabilities
         lnp = nn.functional.log_softmax(theta, dim=-1)
 

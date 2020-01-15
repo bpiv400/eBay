@@ -29,6 +29,7 @@ PARTS_DIR = '%s/partitions/' % PREFIX
 ENV_SIM_DIR = '%s/envSimulator/' % PREFIX
 OUTPUT_DIR = '%s/outputs/' % PREFIX
 INPUT_DIR = '%s/inputs/' % PREFIX
+INDEX_DIR = '%s/index/' % PREFIX
 FEATNAMES_DIR = '%sfeatnames/' % INPUT_DIR
 MODEL_DIR = '%smodels/' % OUTPUT_DIR
 REINFORCE_DIR = '%s/reinforce' % PREFIX

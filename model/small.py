@@ -6,9 +6,7 @@ from compress_pickle import load
 from model.datasets.eBayDataset import eBayDataset
 from model.Model import Model
 from model.model_consts import *
-from constants import INPUT_DIR, PARAMS_PATH
-
-PART = 'test_rl'
+from constants import INPUT_DIR, PARAMS_PATH, MODEL_DIR
 
 
 if __name__ == '__main__':
@@ -36,10 +34,14 @@ if __name__ == '__main__':
     print(optimizer)
 
     # load data
-    data = eBayDataset(PART, name, sizes)
+    data = eBayDataset('small', name, sizes)
+
+    # smoothing parameters
+    if (name == 'arrival') or ('delay' in name):
+        model.smoothing = 100
 
     # training
-    for epoch in range(1):
+    for epoch in range(10):
         print('Epoch %d:' % epoch)
 
         # training
@@ -50,11 +52,15 @@ if __name__ == '__main__':
             (dt.now() - t0).total_seconds()))
         print('\t\tloss: %d' % loss)
         
-        # testing
-        print('\tTesting:')
-        t0 = dt.now()
-        with torch.no_grad():
-            loss_test = model.run_loop(data)
-        print('\t\tTotal time: {} seconds'.format(
-            (dt.now() - t0).total_seconds()))
-        print('\t\tloss: %d' % loss_test)
+        # # testing
+        # print('\tTesting:')
+        # t0 = dt.now()
+        # with torch.no_grad():
+        #     loss_test = model.run_loop(data)
+        # print('\t\tTotal time: {} seconds'.format(
+        #     (dt.now() - t0).total_seconds()))
+        # print('\t\tloss: %d' % loss_test)
+
+    # save model
+    torch.save(model.net.state_dict(), 
+        MODEL_DIR + 'small/{}.net'.format(name))

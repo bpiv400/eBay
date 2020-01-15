@@ -20,7 +20,10 @@ class eBayDataset(Dataset):
 
         # listings file
         self.x = None
-        self.x_path = HDF5_DIR + '{}/x_lstg.hdf5'.format(part)
+        if part == 'small':
+            self.x_path = HDF5_DIR + 'train_models/x_lstg.hdf5'
+        else:
+            self.x_path = HDF5_DIR + '{}/x_lstg.hdf5'.format(part)
         
         # offer groups for embedding
         self.offer_keys = [k for k in sizes['x'] if k.startswith('offer')]
