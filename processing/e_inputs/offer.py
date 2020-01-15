@@ -3,9 +3,9 @@ from compress_pickle import load, dump
 import numpy as np, pandas as pd
 from processing.processing_utils import get_x_thread, get_x_offer, \
 	get_idx_x, save_files, load_file
-from processing.processing_consts import MAX_DELAY, INTERVAL
+from processing.processing_consts import MAX_DELAY, INTERVAL, CLEAN_DIR
 from constants import IDX, DAY, BYR_PREFIX, SLR_PREFIX, ARRIVAL_PREFIX
-from featnames import CON, MSG, AUTO, EXP, DAYS
+from featnames import CON, MSG, AUTO, EXP, DAYS, REMAINING
 
 
 def get_y_con(df):
@@ -61,6 +61,15 @@ def process_inputs(part, outcome, role):
 
 	# thread features
 	x_thread = get_x_thread(threads, idx)
+
+	# add time remaining to x_thread
+	if outcome == 'delay':
+		delay_start = clock.groupby(['lstg', 'thread']).shift().reindex(
+            index=idx).astype('int64')
+        lstg_end = load(CLEAN_DIR + 'listings.pkl').end_time.reindex(
+            index=idx, level='lstg')
+        x_thread[REMAINING] = np.minimum(1,
+            (lstg_end - delay_start) / MAX_DELAY[role])
 
 	# offer features
 	x_offer = get_x_offer(offers, idx, outcome=outcome, role=role)

@@ -48,7 +48,7 @@ def get_interarrival_times(clock):
     return y
 
 
-def get_x_thread_feats(clock, idx, lstg_start, tf):
+def get_x_thread_feats(clock, idx, lstg_start):
     # seconds since START at beginning of arrival window
     seconds = clock.groupby('lstg').shift().dropna().astype(
         'int64').reindex(index=idx)
