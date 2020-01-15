@@ -268,12 +268,12 @@ def drop_zeros(diff):
     diff = diff.loc[nonzeros, :]
     return diff
 
-def arrival_time_feats(tf_lstg):
+def arrival_time_feats(tf_lstg, events):
     df = tf_lstg.copy()
     # sort and group
     df = df.sort_index(level='clock')
-    diff = get_diffs(df.groupby('lstg'), df)
-    return diff
+    #diff = get_diffs(df.groupby('lstg'), df)
+    return df
 
 
 def prepare_index_join(tf, events):

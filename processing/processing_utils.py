@@ -348,19 +348,6 @@ def get_featnames(d, name):
         for k, v in d['x_offer'].items():
             featnames['x'][k] = list(v.columns)
 
-    # recurrent models
-    if 'delay' in name:
-        featnames['x_time'] = \
-            CLOCK_FEATS + TIME_FEATS + [DURATION]
-
-        # check that time feats match names
-        assert list(d['tf'].columns) == TIME_FEATS
-
-        # for delay models
-        if 'remaining' in d:
-            featnames['x_time'] += [INT_REMAINING]
-            assert INT_REMAINING == 'remaining'
-
     # for discriminator models
     if name == 'listings':
         featnames['x']['arrival'] = ['arrival{}'.format(i) \

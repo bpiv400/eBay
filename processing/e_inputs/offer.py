@@ -3,27 +3,31 @@ from compress_pickle import load, dump
 import numpy as np, pandas as pd
 from processing.processing_utils import get_x_thread, get_x_offer, \
 	get_idx_x, save_files, load_file
-from processing.processing_consts import MAX_DELAY, INTERVAL
-from constants import IDX, DAY, BYR_PREFIX, SLR_PREFIX
+from processing.processing_consts import MAX_DELAY, INTERVAL, CLEAN_DIR
+from constants import IDX, DAY, BYR_PREFIX, SLR_PREFIX, ARRIVAL_PREFIX
+from featnames import CON, MSG, AUTO, EXP, DAYS, INT_REMAINING
 
 
 def get_y_con(df):
 	# drop zero delay and expired offers
-	mask = ~df.auto & ~df.exp
+	mask = ~df[AUTO] & ~df[EXP]
 
 	# concession is an int from 0 to 100
-	return (df.loc[mask, 'con'] * 100).astype('int8')
+	return (df.loc[mask, CON] * 100).astype('int8')
 
 
 def get_y_msg(df):
 	# drop accepts and rejects
-	mask = (df.con > 0) & (df.con < 1)
-	return df.loc[mask, 'msg']
+	mask = (df[CON] > 0) & (df[CON] < 1)
+	return df.loc[mask, MSG]
 
 
 def get_y_delay(df, role):
 	# convert to seconds
-	delay = np.round(df.days * DAY).astype('int64')
+	delay = np.round(df[DAYS] * DAY).astype('int64')
+
+	# drop zero delays
+	delay = delay[delay > 0]
 
 	# error checking
 	assert delay.max() <= MAX_DELAY[role]
@@ -31,7 +35,7 @@ def get_y_delay(df, role):
 		assert delay.xs(7, level='index').max() <= MAX_DELAY[SLR_PREFIX]
 
 	# replace censored delays with negative seconds from end
-	delay.loc[df.exp] -= MAX_DELAY[role] + 1
+	delay.loc[df[EXP]] -= MAX_DELAY[role] + 1
 
 	# convert to periods
 	delay //= INTERVAL[role]
@@ -44,6 +48,7 @@ def process_inputs(part, outcome, role):
 	# load dataframes
 	offers = load_file(part, 'x_offer')
 	threads = load_file(part, 'x_thread')
+	clock = load_file(part, 'clock')
 
 	# outcome and master index
 	df = offers[offers.index.isin(IDX[role], level='index')]
