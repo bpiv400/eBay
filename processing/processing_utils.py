@@ -383,10 +383,13 @@ def convert_to_numpy(d):
     # index for error checking
     idx = d['y'].index
 
-    # error check and convert dataframes to numpy
-    for k, v in d.items():
+    # convert outcome to numpy
+    d['y'] = d['y'].to_numpy()
+
+    # error check and convert input dataframes to numpy
+    for k, v in d['x'].items():
         assert np.all(v.index == idx)
-        d[k] = v.to_numpy()
+        d['x'][k] = v.to_numpy()
 
     return d, idx
 
@@ -397,8 +400,13 @@ def save_small(d, name):
     np.random.shuffle(v)
     idx_small = v[:N_SMALL]
 
-    # subset and save data
-    small = {k: v[idx_small] for k, v in d.items()}
+    # outcome
+    small = {'y': d['y'][idx_small]}
+
+    # inputs
+    small['x'] = {k: v[idx_small, :] for k, v in d['x'].items()}
+
+    # save
     dump(small, INPUT_DIR + 'small/{}.gz'.format(name))
 
 
@@ -407,7 +415,7 @@ def save_files(d, part, name):
     # featnames and sizes
     if part == 'train_models':
         # featnames
-        featnames = {k: list(v.columns) for k, v in d.items()}
+        featnames = {k: list(v.columns) for k, v in d['x'].items()}
         dump(featnames, INPUT_DIR + 'featnames/{}.pkl'.format(name))
 
         # sizes
