@@ -8,21 +8,6 @@ from constants import PARTITIONS, ENV_SIM_DIR, PARTS_DIR, REINFORCE_INPUT_DIR
 from rlenv.env_consts import X_LSTG_FILENAME, LOOKUP_FILENAME, X_LSTG, LOOKUP
 
 
-def accumulate_rewards(reward_dir, chunks):
-    rewards = []
-    for chunk in chunks:
-        chunk_dir = '{}/{}/'.format(reward_dir, chunk)
-        pieces = os.listdir(chunk_dir)
-        for piece in pieces:
-            piece_path = '{}{}.gz'.format(chunk_dir, piece)
-            curr_rewards = load(piece_path)
-            rewards.append(curr_rewards)
-    rewards = pd.concat(rewards, ignore_index=True)
-    rewards = rewards[[LSTG, REWARD]].groupby(LSTG).mean()
-    assert isinstance(rewards, pd.Series)
-    return rewards
-
-
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--part', required=True,
