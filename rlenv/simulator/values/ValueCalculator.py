@@ -30,7 +30,8 @@ class ValueCalculator:
 
     @property
     def var_x(self):
-        return self.x2_sum / self.num_sales - math.pow(self.mean_x, 2)
+        var = self.x2_sum / self.num_sales - math.pow(self.mean_x, 2)
+        return max(0.0, var)
 
     @property
     def mean_T(self):
@@ -38,7 +39,8 @@ class ValueCalculator:
 
     @property
     def var_T(self):
-        return self.T2_sum / self.num_sales - math.pow(self.mean_T, 2)
+        var = self.T2_sum / self.num_sales - math.pow(self.mean_T, 2)
+        return max(0.0, var)
 
     @property
     def cov_xT(self):
@@ -67,7 +69,6 @@ class ValueCalculator:
 
     @property
     def se(self):
-        self.check_nan()
         return self.std / np.sqrt(self.num_sales)
 
     @property
@@ -87,18 +88,3 @@ class ValueCalculator:
             diff = min_sales - self.num_sales
             print('diff: {}'.format(diff))
             return int(diff / self.p_sale)
-
-    def check_nan(self):
-        curr_se = self.std / np.sqrt(self.num_sales)
-        if np.isnan(curr_se):
-            print('num sales: {}'.format(self.num_sales))
-            print('std: {}'.format(self.std))
-            print('var: {}'.format(self.var))
-            print('var x: {}'.format(self.var_x))
-            print('var T: {}'.format(self.var_T))
-            print('cov: {}'.format(self.cov_xT))
-            print('exp (x^2): {}'.format(self.x2_sum / self.num_sales))
-            print('(exp x) ^2: {}'.format(math.pow(self.mean_x, 2)))
-            print('x sum: {}'.format(self.x_sum))
-            print('x2 sum: {}'.format(self.x2_sum))
-            raise RuntimeWarning('We have a nan!s')
