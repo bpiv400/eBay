@@ -60,6 +60,9 @@ MAX_DELAY = {
 # quantiles of byr_hist distribution
 HIST_QUANTILES = 10
 
+# multiplier for concession
+CON_MULTIPLIER = 100
+
 # number of chunks for environment simulation
 SIM_CHUNKS = 1000
 

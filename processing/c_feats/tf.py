@@ -272,8 +272,8 @@ def arrival_time_feats(tf_lstg, events):
     df = tf_lstg.copy()
     # sort and group
     df = df.sort_index(level='clock')
-    #diff = get_diffs(df.groupby('lstg'), df)
-    return df
+    diff = get_diffs(df.groupby('lstg'), df)
+    return diff
 
 
 def prepare_index_join(tf, events):

@@ -56,11 +56,19 @@ def extract_clock_feats(clock):
     :return: pandas dataframe of holiday and day of week indicators, and minute of day.
     '''
     df = extract_day_feats(clock)
-    # add in seconds of day
-    seconds_since_midnight = clock.dt.hour * HOUR + clock.dt.minute * MINUTE + clock.dt.second
-    df['second_of_day'] = (seconds_since_midnight / DAY).astype('float32')
+    # add in time of day
+    sec_norm = (clock.dt.hour * HOUR + clock.dt.minute * MINUTE + clock.dt.second) / DAY
+    df['time_of_day'] = np.sin(sec_norm * np.pi)
+    df['afternoon'] = sec_norm >= 0.5
     assert all(df.columns == CLOCK_FEATS)
     return df
+
+
+def get_months_since_lstg(lstg_start, thread_start):
+    months = (thread_start - lstg_start) / MAX_DELAY[ARRIVAL_PREFIX]
+    months = months.rename('months_since_lstg')
+    assert months.max() < 1
+    return months
 
 
 # loads processed chunk files
@@ -369,7 +377,7 @@ def save_sizes(featnames, name):
     for k, v in featnames['x'].items():
         sizes['x'][k] = len(v)
 
-    # recurrent models
+    # save interval and interval counts
     if (name == 'arrival') or ('delay' in name):
         role = name.split('_')[-1]
         sizes['interval'] = INTERVAL[role]
@@ -377,13 +385,14 @@ def save_sizes(featnames, name):
         if role == BYR_PREFIX:
             sizes['interval_count_7'] = INTERVAL_COUNTS[BYR_PREFIX + '_7']
 
-    # output size is based on model
-    if name == 'arrival':
-        sizes['out'] = INTERVAL_COUNTS[ARRIVAL_PREFIX] + 1
+        # output size
+        outcome = name.split('_')[0]
+        sizes['out'] = INTERVAL_COUNTS[outcome] + 1
+
     elif name == 'hist':
         sizes['out'] = HIST_QUANTILES
     elif 'con' in name:
-        sizes['out'] = 101
+        sizes['out'] = CON_MULTIPLIER + 1
     else:
         sizes['out'] = 1
 

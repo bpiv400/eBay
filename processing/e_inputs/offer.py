@@ -3,9 +3,9 @@ from compress_pickle import load, dump
 import numpy as np, pandas as pd
 from processing.processing_utils import get_x_thread, get_x_offer, \
 	get_idx_x, save_files, load_file
-from processing.processing_consts import MAX_DELAY, INTERVAL, CLEAN_DIR
+from processing.processing_consts import MAX_DELAY, INTERVAL
 from constants import IDX, DAY, BYR_PREFIX, SLR_PREFIX, ARRIVAL_PREFIX
-from featnames import CON, MSG, AUTO, EXP, DAYS, INT_REMAINING
+from featnames import CON, MSG, AUTO, EXP, DAYS
 
 
 def get_y_con(df):
@@ -48,7 +48,6 @@ def process_inputs(part, outcome, role):
 	# load dataframes
 	offers = load_file(part, 'x_offer')
 	threads = load_file(part, 'x_thread')
-	clock = load_file(part, 'clock')
 
 	# outcome and master index
 	df = offers[offers.index.isin(IDX[role], level='index')]

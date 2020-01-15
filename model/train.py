@@ -75,6 +75,7 @@ if __name__ == '__main__':
     # initialize model
     model = Model(name, sizes, params)
     print(model.net)
+    print(model.loss.__name__)
 
     # load datasets
     print('Loading data')

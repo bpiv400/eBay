@@ -18,8 +18,9 @@ class Model:
         self.dropout = params['dropout']
         self.device = device
 
-        # initialize gamma to 0
+        # initialize regularization terms to 0
         self.gamma = 0.0
+        self.smoothing = 0.0
 
         # loss function
         if name in ['hist', 'con_slr', 'con_byr']:
@@ -34,10 +35,11 @@ class Model:
 
 
     def set_gamma(self, gamma):
-        if gamma > 0:
-            if not self.dropout:
-                error('Gamma cannot be positive without dropout layers.')
-            self.gamma = gamma
+        if self.dropout == 0:
+            error('Gamma cannot be set without dropout.')
+        if gamma < 0:
+            error('Gamma cannot be negative')
+        self.gamma = gamma
 
 
     def get_penalty(self, factor=1):
@@ -57,6 +59,14 @@ class Model:
                 total += alpha.size()[0]
                 above += torch.sum(alpha > threshold).item()
         return above / total, largest
+
+
+    def set_smoothing(self, smoothing):
+        if self.loss.__name__ != '_ArrivalTimeLoss':
+            error('Smoothing hyperparameter only valid for arrival and delay models.')
+        if smoothing < 0:
+            error('Smoothing hyperparameter cannot be negative.')
+        self.smoothing = smoothing
 
 
     def run_loop(self, data, optimizer=None):
@@ -164,4 +174,12 @@ class Model:
         for i in range(p_cens.size()[0]):
             lnL += torch.log(torch.sum(p_cens[i, y_cens[i]:]))
 
-        return -lnL
+        # penalty for jumps between classes
+        if self.smoothing > 0.0:
+            p = torch.exp(lnp)[:, :-1]  # ignore last index (expiration)
+            jumps = p[:, 1:] - p[:, :-1]
+            penalty = self.smoothing * torch.sum(jumps ** 2)
+        else:
+            penalty = 0
+
+        return -lnL + penalty

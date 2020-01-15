@@ -1,7 +1,7 @@
 from compress_pickle import load, dump
 import numpy as np, pandas as pd
-from constants import HIST_QUANTILES, PARTS_DIR, CLEAN_DIR, MAX_DAYS
-from processing.processing_utils import input_partition, get_partition
+from constants import HIST_QUANTILES, PARTS_DIR, CLEAN_DIR
+from processing.processing_utils import input_partition, get_partition, get_months_since_lstg
 from processing.processing_consts import *
 
 
@@ -18,9 +18,7 @@ if __name__ == "__main__":
 		index=idx, level='lstg').byr_hist
 
 	# months since lstg start
-	months = (thread_start - lstg_start) / (3600 * 24 * MAX_DAYS)
-	months = months.rename('months_since_lstg')
-	assert months.max() < 1
+	months = get_months_since_lstg(lstg_start, thread_start)
 
 	# buyer history deciles
 	hist = np.floor(HIST_QUANTILES * byr_hist).astype('int8')

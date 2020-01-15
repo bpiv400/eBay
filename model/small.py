@@ -29,7 +29,7 @@ if __name__ == '__main__':
     # initialize neural net
     model = Model(name, sizes, params)
     print(model.net)
-    print(model.loss)
+    print(model.loss.__name__)
 
     # initialize optimizer with default learning rate
     optimizer = optim.Adam(model.net.parameters(), lr=0.001)
