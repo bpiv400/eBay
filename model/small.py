@@ -34,7 +34,7 @@ if __name__ == '__main__':
     print(optimizer)
 
     # load data
-    data = eBayDataset('small', name, sizes)
+    data = eBayDataset('small', name)
 
     # smoothing parameters
     if (name == 'arrival') or ('delay' in name):

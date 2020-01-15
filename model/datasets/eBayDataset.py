@@ -7,7 +7,7 @@ from constants import INPUT_DIR, HDF5_DIR
 
 
 class eBayDataset(Dataset):
-    def __init__(self, part, name, sizes):
+    def __init__(self, part, name):
         '''
         Defines a parent class that extends torch.utils.data.Dataset.
         :param part: string partition name (e.g., train_models).
@@ -26,7 +26,7 @@ class eBayDataset(Dataset):
             self.x_path = HDF5_DIR + '{}/x_lstg.hdf5'.format(part)
         
         # offer groups for embedding
-        self.offer_keys = [k for k in sizes['x'] if k.startswith('offer')]
+        self.offer_keys = [k for k in self.d.keys() if k.startswith('offer')]
 
 
     def _init_subprocess(self):

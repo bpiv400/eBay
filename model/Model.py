@@ -92,7 +92,7 @@ class Model:
             self._move_to_device(b)
             theta.append(self.net(b['x']))
 
-        return torch.cat(theta)
+        return torch.cat(theta).to('cpu')
 
 
     def _get_loss(self, theta, y):

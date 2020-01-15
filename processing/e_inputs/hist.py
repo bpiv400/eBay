@@ -1,6 +1,6 @@
 import numpy as np, pandas as pd
 from processing.processing_utils import input_partition, save_files, \
-	load_file, get_idx_x
+	load_file, init_x
 from featnames import CLOCK_FEATS, TIME_FEATS
 
 
@@ -16,13 +16,14 @@ def process_inputs(part):
 	y = x_thread['byr_hist']
 	idx = y.index
 
-	# thread features
+	# listing features
+	x = init_x(part, idx)
+
+	# add thread features to x['lstg']
 	x_thread = x_thread.drop('byr_hist', axis=1).astype('float32')
+	x['lstg'] = pd.concat([x['lstg'], x_thread], axis=1) 
 
-	# index of listing features
-	idx_x = get_idx_x(part, idx)
-
-	return {'y': y, 'x_thread': x_thread, 'idx_x': idx_x}
+	return {'y': y, 'x': x}
 
 
 if __name__ == '__main__':

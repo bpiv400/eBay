@@ -1,10 +1,10 @@
 import sys, os
-import numpy as np, pandas as pd, torch
+import numpy as np, pandas as pd
+import torch, torch.nn.functional as F
 from compress_pickle import load
 from model.datasets.eBayDataset import eBayDataset
 from model.Model import Model
-from processing.processing_consts import PARAMS_PATH
-from constants import INPUT_DIR, MODEL_DIR
+from constants import INPUT_DIR, MODEL_DIR, INDEX_DIR, PARAMS_PATH
 
 
 def get_predictions(part, name):
@@ -17,7 +17,7 @@ def get_predictions(part, name):
 	model.net.load_state_dict(state_dict)
 
 	# make predictions for each example
-	data = eBayDataset(part, name, sizes)
+	data = eBayDataset(part, name)
 	with torch.no_grad():
 		theta = model.predict_theta(data)
 
@@ -26,14 +26,20 @@ def get_predictions(part, name):
 
 def get_role_outcomes(name):
 	# predictions from model
-	theta = get_predictions('test_rl', name)
+	theta = get_predictions('small', name)
+
+	# pandas index
+	idx = load(INDEX_DIR + '{}/{}.gz'.format(part, name))
 
 	# convert to distribution
 	if outcome == 'msg':
 		p_hat = torch.sigmoid(theta)
+		p_hat = pd.Series(p_hat.numpy(), index=idx)
 	else:
 		p_hat = torch.exp(
-			torch.nn.functional.log_softmax(theta, dim=1))
+			torch.nn.functional.log_softmax(theta, dim=-1))
+		p_hat = pd.DataFrame(p_hat.numpy(), index=idx, cols=range())
+
 
 	# put in series or dataframe
 	k = p_hat.size()[1]

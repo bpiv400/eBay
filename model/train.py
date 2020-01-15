@@ -4,9 +4,7 @@ import torch, torch.optim as optim
 from torch.utils.tensorboard import SummaryWriter
 from compress_pickle import load, dump
 from model.Model import Model
-from model.datasets.FeedForwardDataset import FeedForwardDataset
-from model.datasets.ArrivalDataset import ArrivalDataset
-from model.datasets.DelayDataset import DelayDataset
+from model.datasets.eBayDataset import eBayDataset
 from model.model_consts import *
 from constants import INPUT_DIR, MODEL_DIR, PARAMS_PATH
 
@@ -79,15 +77,8 @@ if __name__ == '__main__':
 
     # load datasets
     print('Loading data')
-    if name == 'arrival':
-        train = ArrivalDataset('train_models', name, sizes)
-        test = ArrivalDataset('train_rl', name, sizes)
-    elif 'delay' in name:
-        train = DelayDataset('train_models', name, sizes)
-        test = DelayDataset('train_rl', name, sizes)
-    else:
-        train = FeedForwardDataset('train_models', name, sizes)
-        test = FeedForwardDataset('train_rl', name, sizes)
+    train = eBayDataset('train_models', name)
+    test = eBayDataset('train_rl', name)
 
     # experiment number
     expid = 0

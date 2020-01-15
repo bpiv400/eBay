@@ -2,7 +2,7 @@ import sys, os, argparse
 from compress_pickle import load, dump
 import numpy as np, pandas as pd
 from processing.processing_utils import get_x_thread, get_x_offer, \
-	get_idx_x, save_files, load_file
+	init_x, save_files, load_file
 from processing.processing_consts import MAX_DELAY, INTERVAL, CLEAN_DIR
 from constants import IDX, DAY, BYR_PREFIX, SLR_PREFIX, ARRIVAL_PREFIX
 from featnames import CON, MSG, AUTO, EXP, DAYS, INT_REMAINING
@@ -59,11 +59,13 @@ def process_inputs(part, outcome, role):
 		y = get_y_delay(df, role)
 	idx = y.index
 
+	# listing features
+	x = init_x(part, idx)
+
 	# thread features
 	x_thread = get_x_thread(threads, idx)
 
-	# add time remaining to x_thread
-	if outcome == 'delay':
+	if outcome == 'delay':	# add time remaining to x_thread
 		clock = load_file(part, 'clock')
 		delay_start = clock.groupby(['lstg', 'thread']).shift().reindex(
 			index=idx).astype('int64')
@@ -72,16 +74,12 @@ def process_inputs(part, outcome, role):
 		x_thread[INT_REMAINING] = np.minimum(1,
 			(lstg_end - delay_start) / MAX_DELAY[role])
 
+	x['lstg'] = pd.concat([x['lstg'], x_thread], axis=1) 
+
 	# offer features
-	x_offer = get_x_offer(offers, idx, outcome=outcome, role=role)
+	x.update(get_x_offer(offers, idx, outcome=outcome, role=role))
 
-	# index of listing features
-	idx_x = get_idx_x(part, idx)
-
-	return {'y': y, 
-			'x_thread': x_thread, 
-			'x_offer': x_offer, 
-			'idx_x': idx_x}
+	return {'y': y, 'x': x}
 
 
 if __name__ == '__main__':

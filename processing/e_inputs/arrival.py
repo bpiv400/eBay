@@ -2,7 +2,8 @@ import sys, os
 from compress_pickle import load
 import numpy as np, pandas as pd
 from processing.processing_utils import input_partition, \
-    load_frames, save_files, load_file, get_idx_x, extract_clock_feats, get_months_since_lstg
+    load_frames, save_files, load_file, init_x, \
+    extract_clock_feats, get_months_since_lstg
 from processing.processing_consts import CLEAN_DIR, INTERVAL
 from constants import MAX_DELAY, ARRIVAL_PREFIX, START
 from featnames import THREAD_COUNT
@@ -85,15 +86,14 @@ def process_inputs(part):
     y = get_interarrival_times(clock)
     idx = y.index
 
-    # index of listing features
-    idx_x = get_idx_x(part, idx)
+    # listing features
+    x = init_x(part, idx)
 
-    # features to append to x_lstg
+    # add thread features to x['lstg']
     x_thread = get_x_thread_feats(clock, idx, lstg_start)
+    x['lstg'] = pd.concat([x['lstg'], x_thread], axis=1) 
 
-    return {'y': y,
-            'idx_x': idx_x,
-            'x_thread': x_thread}
+    return {'y': y, 'x': x}
 
 
 if __name__ == '__main__':

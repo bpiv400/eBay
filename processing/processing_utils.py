@@ -303,6 +303,12 @@ def get_x_offer(offers, idx, outcome=None, role=None):
     return x
 
 
+def init_x(part, idx):
+    x = load_file(part, 'x_lstg')
+    x = {k: v.reindex(index=idx, level='lstg') for k, v in x.items()}
+    return x
+
+
 def get_idx_x(part, idx):
     # create series with lstgs in x as index
     lstgs_x = load_file(part, 'lookup').index
@@ -336,34 +342,6 @@ def get_tf(tf, start, periods, role):
     return tf.groupby(list(tf.index.names) + ['period']).sum()
 
 
-def get_featnames(d, name):
-    '''
-    Creates dictionary of input feature names.
-    :param d: dictionary with dataframes.
-    :param name: string name of model.
-    '''
-
-    # initialize with components of x
-    featnames = {}
-    featnames['x'] = load(INPUT_DIR + 'featnames/x_lstg.pkl')
-
-    # thread features
-    if 'x_thread' in d:
-        featnames['x']['lstg'] += list(d['x_thread'].columns)
-
-    # offer features
-    if 'x_offer' in d:
-        for k, v in d['x_offer'].items():
-            featnames['x'][k] = list(v.columns)
-
-    # for discriminator models
-    if name == 'listings':
-        featnames['x']['arrival'] = ['arrival{}'.format(i) \
-            for i in range(INTERVAL_COUNTS[ARRIVAL_PREFIX])]
-
-    return featnames
-
-
 def save_sizes(featnames, name):
     '''
     Creates dictionary of input sizes.
@@ -373,9 +351,7 @@ def save_sizes(featnames, name):
     sizes = {}
 
     # count components of x
-    sizes['x'] = {}
-    for k, v in featnames['x'].items():
-        sizes['x'][k] = len(v)
+    sizes['x'] = {k: len(v) for k, v in featnames.items()}
 
     # save interval and interval counts
     if (name == 'arrival') or ('delay' in name):
@@ -404,12 +380,6 @@ def convert_to_numpy(d):
     :param d: dictionary with (dictionaries of) dataframes.
     :return: dictionary with numpy arrays (and dictionaries of dataframes).
     '''
-    # put offer components directly in d
-    if 'x_offer' in d:
-        x_offer = d.pop('x_offer')
-        for k, v in x_offer.items():
-            d[k] = v
-
     # index for error checking
     idx = d['y'].index
 
@@ -421,7 +391,7 @@ def convert_to_numpy(d):
     return d, idx
 
 
-def save_small(d, idx, name):
+def save_small(d, name):
     # randomly select indices
     v = np.arange(np.shape(d['y'])[0])
     np.random.shuffle(v)
@@ -431,16 +401,13 @@ def save_small(d, idx, name):
     small = {k: v[idx_small] for k, v in d.items()}
     dump(small, INPUT_DIR + 'small/{}.gz'.format(name))
 
-    # subset and save index
-    dump(idx[idx_small], INDEX_DIR + 'small/{}.gz'.format(name))
-
 
 # save featnames and sizes
 def save_files(d, part, name):
     # featnames and sizes
     if part == 'train_models':
         # featnames
-        featnames = get_featnames(d, name)
+        featnames = {k: list(v.columns) for k, v in d.items()}
         dump(featnames, INPUT_DIR + 'featnames/{}.pkl'.format(name))
 
         # sizes
@@ -457,4 +424,4 @@ def save_files(d, part, name):
 
     # save subset
     if part == 'train_models':
-        save_small(d, idx, name)
+        save_small(d, name)
