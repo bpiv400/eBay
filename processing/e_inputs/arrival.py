@@ -58,8 +58,8 @@ def get_x_thread_feats(clock, idx, lstg_start):
         pd.to_datetime(seconds, unit='s', origin=START))
 
     # thread count
-    thread_count = seconds.reset_index('thread').drop(
-        'clock', axis=1).squeeze() - 1
+    thread_count = pd.Series(seconds.index.get_level_values(level='thread')-1,
+        index=seconds.index, name=THREAD_COUNT)
 
     # months since lstg start
     months_since_lstg = get_months_since_lstg(lstg_start, seconds)
