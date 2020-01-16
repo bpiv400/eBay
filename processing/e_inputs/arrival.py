@@ -5,8 +5,8 @@ from processing.processing_utils import input_partition, \
     load_frames, save_files, load_file, init_x, \
     extract_clock_feats, get_months_since_lstg
 from processing.processing_consts import CLEAN_DIR, INTERVAL
-from constants import MAX_DELAY, ARRIVAL_PREFIX, START
-from featnames import THREAD_COUNT
+from constants import MAX_DELAY, ARRIVAL_PREFIX, START, MONTH
+from featnames import THREAD_COUNT, MONTHS_SINCE_LAST
 
 
 def get_arrival_times(lstg_start, lstg_end, thread_start):
@@ -42,32 +42,40 @@ def get_interarrival_times(clock):
     # drop interarrivals after BINs
     y = diff[diff > 0]
     censored = censored.reindex(index=y.index)
+    diff = diff.reindex(index=y.index)
     # replace censored interarrival times with negative seconds from end
     y.loc[censored] -= MAX_DELAY[ARRIVAL_PREFIX]
     # convert y to periods
     y //= INTERVAL[ARRIVAL_PREFIX]
-    return y
+    return y, diff
 
 
-def get_x_thread_feats(clock, idx, lstg_start):
+def get_x_thread_feats(clock, idx, lstg_start, diff):
     # seconds since START at beginning of arrival window
     seconds = clock.groupby('lstg').shift().dropna().astype(
         'int64').reindex(index=idx)
 
-    # date features
+    # clock features
     clock_feats = extract_clock_feats(
         pd.to_datetime(seconds, unit='s', origin=START))
 
-    # thread count
+    # thread count so far
     thread_count = pd.Series(seconds.index.get_level_values(level='thread')-1,
         index=seconds.index, name=THREAD_COUNT)
 
     # months since lstg start
     months_since_lstg = get_months_since_lstg(lstg_start, seconds)
 
+    # months since last arrival
+    months_since_last = diff.groupby('lstg').shift().fillna(0).rename(
+        MONTHS_SINCE_LAST) / MONTH
+
     # concatenate into dataframe
     x_thread = pd.concat(
-        [clock_feats, thread_count, months_since_lstg], axis=1)
+        [clock_feats,
+        months_since_lstg,
+        months_since_last,
+        thread_count], axis=1)
 
     return x_thread.astype('float32')
 
@@ -83,14 +91,14 @@ def process_inputs(part):
     clock = get_arrival_times(lstg_start, lstg_end, thread_start)
 
     # interarrival times
-    y = get_interarrival_times(clock)
+    y, diff = get_interarrival_times(clock)
     idx = y.index
 
     # listing features
     x = init_x(part, idx)
 
     # add thread features to x['lstg']
-    x_thread = get_x_thread_feats(clock, idx, lstg_start)
+    x_thread = get_x_thread_feats(clock, idx, lstg_start, diff)
     x['lstg'] = pd.concat([x['lstg'], x_thread], axis=1) 
 
     return {'y': y, 'x': x}

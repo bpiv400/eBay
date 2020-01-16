@@ -7,7 +7,7 @@ from model.Model import Model
 from constants import INPUT_DIR, MODEL_DIR, INDEX_DIR, PARAMS_PATH
 
 
-def get_role_outcomes(name):
+def get_role_outcomes(part, name):
 	# create model
 	sizes = load(INPUT_DIR + 'sizes/{}.pkl'.format(name))
 	params = load(PARAMS_PATH)

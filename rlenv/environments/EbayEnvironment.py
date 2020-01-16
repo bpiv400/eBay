@@ -177,26 +177,29 @@ class EbayEnvironment:
         if self._lstg_expiration(event):
             return True
 
-        # update sources with clock and time feats
+        # update sources with clock feats
         clock_feats = get_clock_feats(event.priority)
-        time_feats = self.time_feats.get_feats(time=event.priority)
-        event.update_arrival(time_feats=time_feats, clock_feats=clock_feats)
+        event.update_arrival(clock_feats=clock_feats, thread_count=self.thread_counter)
 
-        # call model, simulate number of buyers
-        num_byrs = self.arrival.num_offers(event.sources())
-        if num_byrs > 0:
-            if self.verbose:
-                print('Arrival Interval Start: {}'.format(event.priority))
-                print('Number of arrivals: {}'.format(num_byrs))
-            # place each into the queue
-            for i in range(num_byrs):
-                priority = event.priority + np.random.randint(0, self.interval_attrs[INTERVAL][ARRIVAL_PREFIX])
-                self.thread_counter += 1
-                offer_event = self.make_thread(priority)
-                self.queue.push(offer_event)
-        # Add arrival check
-        event.priority += self.interval_attrs[INTERVAL][ARRIVAL_PREFIX]
+        # call model, get waiting time
+        intervals = self.arrival.arrival_interval(event.sources())
+        seconds = int((intervals + np.random.uniform()) * event.spi)
+
+        # print to console
+        if self.verbose:
+            print('Arrival intervals / seconds: {} / {}'.format(intervals, seconds))
+
+        # insert offer in queue
+        event.priority += seconds
+        offer_event = self.make_thread(event.priority)
+        self.queue.push(offer_event)
+
+        # add arrival check
         self.queue.push(event)
+
+        # increment thread counter
+        self.thread_counter += 1
+
         return False
 
     def _process_byr_expire(self, event):
@@ -228,19 +231,25 @@ class EbayEnvironment:
             else:
                 self._process_byr_expire(event)
             return False
+
+        # time and clock feats
         time_feats = self.time_feats.get_feats(thread_id=event.thread_id,
                                                time=event.priority)
         clock_feats = get_clock_feats(event.priority)
-        make_offer = event.delay(clock_feats=clock_feats, time_feats=time_feats)
+
+        # call model, get waiting time
+        intervals = event.delay(clock_feats=clock_feats, time_feats=time_feats)
+        seconds = int((intervals + np.random.uniform()) * event.spi)
+
+        # print to console
         if self.verbose and make_offer == 1:
             actor = 'Seller' if event.turn % 2 == 0 else 'Buyer'
-            print('{} will make an offer in the upcoming interval'.format(actor))
-        if make_offer == 1:
-            delay_dur = np.random.randint(0, event.spi)
-            event.prepare_offer(delay_dur)
-        else:
-            event.priority += event.spi
-        self.queue.push(event)
+            print('{} will make an offer in {} intervals / {} seconds'.format(
+                actor, intervals, seconds))
+
+        # insert offer in queue
+        event.prepare_offer(seconds)
+
         return False
 
     def _check_complete(self, event):

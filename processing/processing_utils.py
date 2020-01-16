@@ -65,7 +65,7 @@ def extract_clock_feats(clock):
 
 
 def get_months_since_lstg(lstg_start, thread_start):
-    months = (thread_start - lstg_start) / MAX_DELAY[ARRIVAL_PREFIX]
+    months = (thread_start - lstg_start) / MONTH
     months = months.rename('months_since_lstg')
     assert months.max() < 1
     return months

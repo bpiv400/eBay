@@ -74,6 +74,7 @@ BYR_TURN_INDS = SLR_TURN_INDS + ['t3']
 # thread features
 BYR_HIST = 'byr_hist'
 MONTHS_SINCE_LSTG = 'months_since_lstg'
+MONTHS_SINCE_LAST = 'months_since_last'
 
 # lookup column names
 LSTG = 'lstg'

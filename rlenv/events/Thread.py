@@ -17,21 +17,22 @@ class Thread(Event):
         # participants
         self.buyer = None
         self.seller = None
+
         # sources object
         self.sources = None  # initialized later in init_thread
         self.turn = 1
         self.thread_id = thread_id
+
         # delay
         self.interval_attrs = interval_attrs
-        self.interval = 0
-        self.max_interval = None  # max number of intervals
         self.max_delay = None # max length of delay
         self.spi = None  # seconds per interval
-        self.init_remaining = None  # initial periods remaining
+
 
     def init_thread(self, sources=None, hist=None):
         self.sources = sources
         self.sources.init_thread(hist=hist)
+
 
     def buyer_offer(self, *args):
         outcomes = self.buyer.make_offer(sources=self.sources(), turn=self.turn)
@@ -42,6 +43,7 @@ class Thread(Event):
             'time': self.priority
         }
 
+
     def seller_offer(self, *args):
         outcomes = self.seller.make_offer(sources=self.sources(), turn=self.turn)
         norm = self.sources.update_offer(outcomes=outcomes, turn=self.turn)
@@ -51,15 +53,18 @@ class Thread(Event):
             'time': self.priority
         }
 
+
     def change_turn(self):
         self.turn += 1
         self.sources.change_turn(self.turn)
+
 
     def _init_delay_hidden(self):
         if self.turn % 2 == 0:
             self.seller.init_delay(self.sources())
         else:
             self.buyer.init_delay(self.sources())
+            
 
     def _init_delay_sources(self, lstg_start):
         # update object to contain relevant delay attributes

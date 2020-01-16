@@ -138,7 +138,7 @@ class Composer:
                 feat_map[feat] = True
 
     @staticmethod
-    def _build_fixed_input(maps, size, sources):
+    def _build_input(maps, size, sources):
         """
         Helper method that composes a model's input vector given a dictionaries of
         the relevant input maps and  sources
@@ -146,48 +146,35 @@ class Composer:
         :param maps: dictionary containing input maps
         :param sources: dictionary containing tensors from the environment that contain
         features the model expects in the input
-        :return: batch_size x maps[SIZE] tensor to be passed to a simulator model
+        :return t: (batch_size x maps[SIZE]) tensor to be passed to a simulator model
         """
-        x = torch.zeros(1, size).float()
+        t = torch.zeros(1, size).float()
         # other features
         for map_name, curr_map in maps.items():
             try:
-                x[0, curr_map] = torch.from_numpy(sources[map_name][curr_map.index].values).float()
+                t[0, curr_map] = torch.from_numpy(sources[map_name][curr_map.index].values).float()
             except RuntimeError as e:
-                Composer.catch_input_error(e, x, curr_map, sources, map_name)
+                Composer.catch_input_error(e, t, curr_map, sources, map_name)
                 raise RuntimeError()
-        return x
+        return t
 
-    @staticmethod
-    def _build_recurrent_input(source_vector):
-        return torch.from_numpy(source_vector).float().unsqueeze(dim=0)
-
-    def build_input_vector(self, model_name, sources=None, fixed=False, recurrent=False):
+    def build_input_vector(self, name, sources=None):
         """
         Public method that composes input vectors (x_time and x_fixed) from tensors in the
         environment
 
-        :param model_name: str giving the name of the focal model
+        :param name: str giving the name of the focal model
         :param sources: dictionary containing tensors from the environment that contain
         features the model expects in the input
-        :param fixed: boolean for whether x_fixed needs to be compute
-        :param recurrent: boolean for whether the target model is recurrent
-        :return: 2-tuple of x_fixed, x_time. If not recurrent, x_time = None. If fixed=False,
-        x_fixed = None
+        :return x: dictionary of input features
         """
-        input_dict = dict()
-        if recurrent:
-            input_dict['x_time'] = Composer._build_recurrent_input(sources[X_TIME_MAP])
-        if fixed:
-            input_dict['x'] = dict()
-            fixed_maps = self.maps[model_name]  # dict
-            fixed_sizes = self.sizes[model_name]['x']  # dict
-            for input_set in fixed_maps.keys():
-                input_dict['x'][input_set] = Composer._build_fixed_input(
-                    fixed_maps[input_set],
-                    fixed_sizes[input_set],
-                    sources)
-        return input_dict
+        x = dict()
+        fixed_maps = self.maps[name]  # dict
+        fixed_sizes = self.sizes[name]['x']  # dict
+        for input_set in fixed_maps.keys():
+            x[input_set] = Composer._build_input(
+                fixed_maps[input_set], fixed_sizes[input_set], sources)
+        return x
 
     @property
     def interval_attrs(self):
@@ -195,12 +182,12 @@ class Composer:
             BYR_PREFIX: self.sizes[model_str(DELAY, byr=True)][INTERVAL],
             '{}_{}'.format(BYR_PREFIX, 7): self.sizes[model_str(DELAY, byr=True)][INTERVAL],
             SLR_PREFIX: self.sizes[model_str(DELAY, byr=False)][INTERVAL],
-            ARRIVAL_PREFIX: self.sizes[NUM_OFFERS_MODEL][INTERVAL]
+            ARRIVAL_PREFIX: self.sizes[ARRIVAL_MODEL][INTERVAL]
         }
         interval_counts = {
             BYR_PREFIX: self.sizes[model_str(DELAY, byr=True)][INTERVAL_COUNT],
             SLR_PREFIX: self.sizes[model_str(DELAY, byr=False)][INTERVAL_COUNT],
-            ARRIVAL_PREFIX: self.sizes[NUM_OFFERS_MODEL][INTERVAL_COUNT],
+            ARRIVAL_PREFIX: self.sizes[ARRIVAL_MODEL][INTERVAL_COUNT],
             '{}_{}'.format(BYR_PREFIX, 7): self.sizes[model_str(DELAY, byr=True)]['{}_{}'.format(INTERVAL_COUNT, 7)]
         }
         return {
@@ -220,14 +207,14 @@ class Composer:
         return self.feat_sets[LSTG_MAP]
 
     @staticmethod
-    def catch_input_error(e, x, curr_map, sources, map_name):
+    def catch_input_error(e, t, curr_map, sources, map_name):
         print('NAME')
         print(e)
         print(map_name)
         print('stored map: {}'.format(curr_map.dtype))
         print('stored map size: {}'.format(curr_map.dtype))
         print('sourced map: {}'.format(sources[map_name].dtype))
-        print('x: {}'.format(x.dtype))
+        print('t: {}'.format(t.dtype))
 
 
 class AgentComposer(Composer):
