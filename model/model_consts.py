@@ -4,7 +4,7 @@ from constants import OUTPUT_DIR
 LOG_DIR = OUTPUT_DIR + 'logs/'
 
 # optimization parameters
-NUM_WORKERS = 8
+NUM_WORKERS = 1
 MBSIZE = {True: 128, False: 2048}
 LOGLR0 = -3
 LOGLR1 = -6
