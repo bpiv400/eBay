@@ -1,6 +1,6 @@
 #!/bin/bash
 #$ -t 1-8
-#$ -l m_mem_free=40G
+#$ -l m_mem_free=30G
 #$ -N e_test
 #$ -j y
 #$ -o logs/processing

@@ -36,9 +36,9 @@ if __name__ == '__main__':
     # load data
     data = eBayDataset('small', name)
 
-    # smoothing parameters
-    if (name == 'arrival') or ('delay' in name):
-        model.smoothing = 100
+    # # smoothing parameters
+    # if (name == 'arrival') or ('delay' in name):
+    #     model.smoothing = 100
 
     # training
     for epoch in range(10):
@@ -52,14 +52,14 @@ if __name__ == '__main__':
             (dt.now() - t0).total_seconds()))
         print('\t\tloss: %d' % loss)
         
-        # # testing
-        # print('\tTesting:')
-        # t0 = dt.now()
-        # with torch.no_grad():
-        #     loss_test = model.run_loop(data)
-        # print('\t\tTotal time: {} seconds'.format(
-        #     (dt.now() - t0).total_seconds()))
-        # print('\t\tloss: %d' % loss_test)
+        # testing
+        print('\tTesting:')
+        t0 = dt.now()
+        with torch.no_grad():
+            loss_test = model.run_loop(data)
+        print('\t\tTotal time: {} seconds'.format(
+            (dt.now() - t0).total_seconds()))
+        print('\t\tloss: %d' % loss_test)
 
     # save model
     torch.save(model.net.state_dict(), 

@@ -305,7 +305,7 @@ def get_x_offer(offers, idx, outcome=None, role=None):
 
 def init_x(part, idx):
     x = load_file(part, 'x_lstg')
-    x = {k: v.reindex(index=idx, level='lstg') for k, v in x.items()}
+    x = {k: v.reindex(index=idx, level='lstg').astype('float32') for k, v in x.items()}
     return x
 
 

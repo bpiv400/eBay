@@ -36,8 +36,7 @@ def get_role_outcomes(name):
 		p_hat = torch.sigmoid(theta)
 		p_hat = pd.Series(p_hat.numpy(), index=idx)
 	else:
-		p_hat = torch.exp(
-			torch.nn.functional.log_softmax(theta, dim=-1))
+		p_hat = torch.exp(F.log_softmax(theta, dim=-1))
 		p_hat = pd.DataFrame(p_hat.numpy(), index=idx, cols=range())
 
 
