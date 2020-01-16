@@ -72,7 +72,7 @@ class Model:
             loss += self._run_batch(b, optimizer)
             gpu_time += (dt.now() - t0).total_seconds()
 
-        print('\t\tGPU time: {} seconds'.format(gpu_time))
+        print('\t\tGPU time: {0:.1f} seconds'.format(gpu_time))
 
         return loss
 
@@ -90,9 +90,9 @@ class Model:
         theta = []
         for b in batches:
             self._move_to_device(b)
-            theta.append(self.net(b['x']))
+            theta.append(self.net(b['x']).to('cpu'))
 
-        return torch.cat(theta).to('cpu')
+        return torch.cat(theta)
 
 
     def _get_loss(self, theta, y):
@@ -158,7 +158,7 @@ class Model:
             lnL += torch.log(torch.sum(p_cens[i, y_cens[i]:]))
 
         # penalty for jumps between classes
-        if self.smoothing > 0.0:
+        if self.net.training and self.smoothing > 0.0:
             p = torch.exp(lnp)[:, :-1]  # ignore last index (expiration)
             jumps = p[:, 1:] - p[:, :-1]
             penalty = self.smoothing * torch.sum(jumps ** 2)

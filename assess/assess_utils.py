@@ -7,12 +7,12 @@ from model.Model import Model
 from constants import INPUT_DIR, MODEL_DIR, INDEX_DIR, PARAMS_PATH
 
 
-def get_predictions(part, name):
+def get_role_outcomes(name):
 	# create model
 	sizes = load(INPUT_DIR + 'sizes/{}.pkl'.format(name))
 	params = load(PARAMS_PATH)
 	model = Model(name, sizes, params)
-	model_path = MODEL_DIR + 'small/{}.net'.format(name)
+	model_path = MODEL_DIR + '{}.net'.format(name)
 	state_dict = torch.load(model_path)
 	model.net.load_state_dict(state_dict)
 
@@ -20,13 +20,6 @@ def get_predictions(part, name):
 	data = eBayDataset(part, name)
 	with torch.no_grad():
 		theta = model.predict_theta(data)
-
-	return theta
-
-
-def get_role_outcomes(name):
-	# predictions from model
-	theta = get_predictions('small', name)
 
 	# pandas index
 	idx = load(INDEX_DIR + '{}/{}.gz'.format(part, name))
@@ -37,19 +30,11 @@ def get_role_outcomes(name):
 		p_hat = pd.Series(p_hat.numpy(), index=idx)
 	else:
 		p_hat = torch.exp(F.log_softmax(theta, dim=-1))
-		p_hat = pd.DataFrame(p_hat.numpy(), index=idx, cols=range())
-
-
-	# put in series or dataframe
-	k = p_hat.size()[1]
-	if k == 1:
-		p_hat = pd.Series(p_hat.numpy(), index=d['index']) 
-	else:
-		p_hat = pd.DataFrame(p_hat.numpy(), index=d['index'], 
-			columns=range(k))
+		p_hat = pd.DataFrame(p_hat.numpy(), 
+			index=idx, columns=range(p_hat.size()[1]))
 
 	# observed outcomes
-	y = pd.Series(data.d['y'], index=d['index'])
+	y = pd.Series(data.d['y'], index=idx)
 
 	return y, p_hat
 

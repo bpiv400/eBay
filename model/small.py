@@ -34,32 +34,35 @@ if __name__ == '__main__':
     print(optimizer)
 
     # load data
-    data = eBayDataset('small', name)
+    train = eBayDataset('small', name)
+    test = eBayDataset('test_rl', name)
 
-    # # smoothing parameters
-    # if (name == 'arrival') or ('delay' in name):
-    #     model.smoothing = 100
+    # smoothing parameters
+    if (name == 'arrival') or ('delay' in name):
+        model.smoothing = 0
 
     # training
-    for epoch in range(10):
+    for epoch in range(5):
         print('Epoch %d:' % epoch)
 
         # training
         print('\tTraining:')
         t0 = dt.now()
-        loss = model.run_loop(data, optimizer)
-        print('\t\tTotal time: {} seconds'.format(
+        loss = model.run_loop(train, optimizer)
+        print('\t\tTotal time: {0:.1f} seconds'.format(
             (dt.now() - t0).total_seconds()))
-        print('\t\tloss: %d' % loss)
+        print('\t\tloss: {0:.0f}'.format(loss))
         
         # testing
         print('\tTesting:')
         t0 = dt.now()
         with torch.no_grad():
-            loss_test = model.run_loop(data)
-        print('\t\tTotal time: {} seconds'.format(
+            lnL_train = -model.run_loop(train) / train.N
+            lnL_test = -model.run_loop(test) / test.N
+        print('\t\tTotal time: {0:.1f} seconds'.format(
             (dt.now() - t0).total_seconds()))
-        print('\t\tloss: %d' % loss_test)
+        print('\t\tlnL_train: {0:.4f}'.format(lnL_train))
+        print('\t\tlnL_test: {0:.4f}'.format(lnL_test))
 
     # save model
     torch.save(model.net.state_dict(), 

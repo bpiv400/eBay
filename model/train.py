@@ -75,6 +75,10 @@ if __name__ == '__main__':
     print(model.net)
     print(model.loss.__name__)
 
+    # smoothing parameters
+    if (name == 'arrival') or ('delay' in name):
+        model.smoothing = 1000
+
     # load datasets
     print('Loading data')
     train = eBayDataset('train_models', name)
