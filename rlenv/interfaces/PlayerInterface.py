@@ -19,7 +19,7 @@ class PlayerInterface:
         self._msg_model_name = model_str(MSG, byr=byr)
         self._delay_model_name = model_str(DELAY, byr=byr)
 
-        self.msg_model = load_model(self.msg_model)
+        self.msg_model = load_model(self._msg_model_name)
         self.con_model = load_model(self._con_model_name)
         self.delay_model = load_model(self._delay_model_name)
 
@@ -48,8 +48,7 @@ class PlayerInterface:
         return delay
 
     def _sample_msg(self, sources=None, outcomes=None, turn=0):
-        input_dict = self.composer.build_input_dict(self._msg_model_name, recurrent=False,
-                                                    sources=sources, fixed=True)
+        input_dict = self.composer.build_input_dict(self._msg_model_name,sources=sources)
         params = self.msg_model(input_dict)
         outcomes[featname(MSG, turn)] = sample_bernoulli(params)
 
@@ -117,7 +116,7 @@ class SellerInterface(PlayerInterface):
         return super().make_offer(sources=sources, turn=turn)
 
     def _sample_con(self, params=None, turn=None, sources=None):
-        con = (sample_categorical(params, 1) / 100)
+        con = (sample_categorical(params) / 100)
         # break out into separate util function
         outcomes, sample_msg = update_slr_outcomes(con=con, sources=sources, turn=turn)
         return outcomes, sample_msg

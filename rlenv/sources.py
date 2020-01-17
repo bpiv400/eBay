@@ -74,7 +74,7 @@ class ThreadSources(Sources):
         self.source_dict[THREAD_MAP][featname(NORM, turn)] = norm
 
     def init_remaining(self, remaining):
-        self.source_dict[X_TIME_MAP][INT_REMAINING] = remaining
+        self.source_dict[THREAD_MAP][INT_REMAINING] = remaining
 
     def is_sale(self, turn):
         return self.source_dict[THREAD_MAP][featname(CON, turn)] == 1

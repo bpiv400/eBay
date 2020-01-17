@@ -94,7 +94,9 @@ class Thread(Event):
         else:
             index = self.buyer.delay(self.sources())
         seconds = int((index + np.random.uniform()) * self.spi)
-        return min(seconds, self.max_delay)
+        seconds = min(seconds, self.max_delay)
+        print('seconds delayed: {}'.format(seconds))
+        return seconds
 
     def prepare_offer(self, seconds):
         # update outcomes
@@ -131,7 +133,7 @@ class Thread(Event):
         norm = self.sources.update_offer(outcomes=outcomes, turn=self.turn)
         offer_params = {
             'price': norm,
-            'type': SLR_PREFIX,
+            'player': SLR_PREFIX,
             'time': self.priority,
             'thread_id': self.thread_id
         }

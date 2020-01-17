@@ -101,7 +101,7 @@ def get_clock_feats(time):
     afternoon = sec_norm >= 0.5
 
     # concatenate
-    return np.append(date_feats, time_of_day, afternoon)
+    return np.append(date_feats, [time_of_day, afternoon])
 
 
 def proper_squeeze(tensor):
@@ -391,6 +391,7 @@ def update_byr_outcomes(con=None, delay=None, sources=None, turn=0):
     prev_byr_norm = last_norm(sources, turn)
     norm = (1 - prev_slr_norm) * con + prev_byr_norm * (1 - con)
     outcomes[featname(NORM, turn)] = norm
+    return outcomes, sample_msg
     # TODO FIGURE OUT DELAY SHIT LATER IN A SEPARATE FUNCTION
 
 

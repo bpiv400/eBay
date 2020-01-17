@@ -44,10 +44,11 @@ class SimulatorEnvironment(EbayEnvironment):
         """
         if byr_hist is None:
             if not censored:
-                time_feats = self.time_feats.get_feats(thread_id=event.thread_id)
+                time_feats = self.time_feats.get_feats(thread_id=event.thread_id,
+                                                       time=event.priority)
             else:
                 time_feats = np.zeros(len(TIME_FEATS))
-            self.recorder.add_offer(event, time_feats=time_feats, censored=censored)
+            self.recorder.add_offer(event=event, time_feats=time_feats, censored=censored)
         else:
             self.recorder.start_thread(thread_id=event.thread_id, byr_hist=byr_hist,
                                        time=event.priority)
