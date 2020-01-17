@@ -228,6 +228,7 @@ class TimeFeatures:
         offer = Offer(params=offer, rej=rej)
         self.update_features(offer=offer)
 
+
 # noinspection DuplicatedCode
 class FeatureHeap:
     """

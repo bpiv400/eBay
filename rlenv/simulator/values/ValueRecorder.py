@@ -10,7 +10,7 @@ class ValueRecorder(Recorder):
     def start_thread(self, thread_id=None, time=None, byr_hist=None):
         pass
 
-    def add_offer(self, event, time_feats):
+    def add_offer(self, event, time_feats=None, censored=False):
         if self.verbose:
             self.print_offer(event, event.summary())
 

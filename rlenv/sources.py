@@ -2,7 +2,7 @@ import math
 import numpy as np, pandas as pd
 from datetime import datetime as dt
 from rlenv.env_consts import *
-from rlenv.env_utils import featname
+from rlenv.env_utils import featname, last_norm
 from featnames import *
 
 
@@ -69,15 +69,9 @@ class ThreadSources(Sources):
         self.source_dict[THREAD_MAP][featname(DELAY, turn)] = delay
         self.delay_prev_time = None
 
-    def byr_expire(self, days=None, turn=None):
-        if turn == 1:
-            prev_norm = 0.0
-        else:
-            prev_norm = self.source_dict[THREAD_MAP][featname(NORM, turn - 2)]
-        # updating outcomes
-        self.source_dict[THREAD_MAP][featname(NORM, turn)] = prev_norm
-        self.source_dict[THREAD_MAP][featname(DAYS, turn)] = days
-        self.source_dict[THREAD_MAP][featname(DELAY, turn)] = 1
+    def byr_expire(self, turn=None):
+        norm = last_norm(self(), turn=turn)
+        self.source_dict[THREAD_MAP][featname(NORM, turn)] = norm
 
     def init_remaining(self, remaining):
         self.source_dict[X_TIME_MAP][INT_REMAINING] = remaining
@@ -87,6 +81,9 @@ class ThreadSources(Sources):
 
     def is_rej(self, turn):
         return self.source_dict[THREAD_MAP][featname(CON, turn)] == 0
+
+    def is_expire(self, turn):
+        return self.source_dict[THREAD_MAP][featname(DELAY, turn)] == 1
 
     def summary(self, turn):
         con = int(self.source_dict[THREAD_MAP][featname(CON, turn)] * 100)

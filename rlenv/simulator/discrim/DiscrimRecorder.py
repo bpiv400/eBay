@@ -25,7 +25,7 @@ class DiscrimRecorder(Recorder):
         row = [self.lstg, thread_id, byr_hist, time]
         self.threads.append(row)
 
-    def add_offer(self, event, time_feats):
+    def add_offer(self, event=None, time_feats=None, censored=False):
         # change ordering if OFFER_COLS changes
         summary = event.summary()
         con, _, msg, _ = summary
@@ -34,7 +34,8 @@ class DiscrimRecorder(Recorder):
                event.turn,
                event.priority,
                con,
-               msg
+               msg,
+               censored
                ]
         row += list(time_feats)
         self.offers.append(row)

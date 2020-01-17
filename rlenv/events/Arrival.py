@@ -31,7 +31,6 @@ class Arrival(Event):
 
     def inter_arrival(self):
         seconds = self.interface.inter_arrival(self.sources())
-        self.priority += seconds
         return seconds
 
 

@@ -1,7 +1,8 @@
+import numpy as np
 from rlenv.events.RewardThread import RewardThread
 from rlenv.environments.EbayEnvironment import EbayEnvironment
 from constants import MONTH
-from featnames import START_TIME
+from featnames import START_TIME, TIME_FEATS
 
 
 class SimulatorEnvironment(EbayEnvironment):
@@ -36,14 +37,17 @@ class SimulatorEnvironment(EbayEnvironment):
         super(SimulatorEnvironment, self).run()
         return self.outcome
 
-    def _record(self, event, byr_hist=None):
+    def _record(self, event, byr_hist=None, censored=False):
         """
         Add record of offer or thread to Recorder
         :param rlenv.events.ThreadSources event: event containing most recent offer
         """
         if byr_hist is None:
-            time_feats = event.sources.offer_prev_time
-            self.recorder.add_offer(event, time_feats=time_feats)
+            if not censored:
+                time_feats = self.time_feats.get_feats(thread_id=event.thread_id)
+            else:
+                time_feats = np.zeros(len(TIME_FEATS))
+            self.recorder.add_offer(event, time_feats=time_feats, censored=censored)
         else:
             self.recorder.start_thread(thread_id=event.thread_id, byr_hist=byr_hist,
                                        time=event.priority)

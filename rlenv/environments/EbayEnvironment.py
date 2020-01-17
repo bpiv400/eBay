@@ -75,7 +75,7 @@ class EbayEnvironment:
         else:
             raise NotImplementedError()
 
-    def _record(self, event, byr_hist=None):
+    def _record(self, event, byr_hist=None, censored=False):
         raise NotImplementedError()
 
     def _process_byr_offer(self, event):
@@ -92,7 +92,7 @@ class EbayEnvironment:
             offer = event.buyer_offer()
         else:
             offer = event.seller_offer()
-        self._record(event)
+        self._record(event, censored=False)
         # check whether the offer is an acceptance
         if event.is_sale():
             self._process_sale(offer)
@@ -119,12 +119,13 @@ class EbayEnvironment:
             return False
 
     def _process_sale(self, offer):
-        if offer['type'] == BYR_PREFIX:
-            start_norm = offer['price']
+        if offer.player == BYR_PREFIX:
+            start_norm = offer.price
         else:
-            start_norm = 1 - offer['price']
+            start_norm = 1 - offer.price
         sale_price = start_norm * self.lookup[START_PRICE]
-        self.outcome = self.Outcome(True, sale_price, offer['time'])
+        self.outcome = self.Outcome(True, sale_price, offer.time)
+        self.empty_queue()
 
     def _process_slr_offer(self, event):
         return self._process_offer(event)
@@ -154,8 +155,17 @@ class EbayEnvironment:
         return self._process_byr_offer(event)
 
     def _prepare_offer(self, event):
+        # check whether the lstg expired, censoring this offer
         if self._lstg_expiration(event):
             return True
+        # otherwise check whether this offer corresponds to an expiration rej
+        if event.thread_expired():
+            if event.turn % 2 == 0:
+                self._process_slr_expire(event)
+            else:
+                self._process_byr_expire(event)
+            return False
+        # if offer not expired and thread still active, prepare this turn's inputs
         if event.turn != 1:
             time_feats = self.time_feats.get_feats(thread_id=event.thread_id,
                                                    time=event.priority)
@@ -179,6 +189,7 @@ class EbayEnvironment:
 
         # call model to sample inter arrival time and update arrival check priority
         seconds = event.inter_arrival()
+        event.priority = min(event.priority + seconds, self.end_time)
 
         # if a buyer arrives, create a thread at the arrival time
         if event.priority < self.end_time:
@@ -189,7 +200,7 @@ class EbayEnvironment:
 
     def _process_byr_expire(self, event):
         event.byr_expire()
-        self._record(event)
+        self._record(event, censored=False)
         offer_params = {
             'thread_id': event.thread_id,
             'time': event.priority,
@@ -198,38 +209,22 @@ class EbayEnvironment:
         self.time_feats.update_features(offer=Offer(params=offer_params, rej=True))
 
     def _process_slr_expire(self, event):
-        event.prepare_offer(0)
         # update sources with new clock and features
         clock_feats = get_clock_feats(event.priority)
         time_feats = self.time_feats.get_feats(thread_id=event.thread_id,
                                                time=event.priority)
         event.init_offer(time_feats=time_feats, clock_feats=clock_feats)
         offer = event.slr_rej(expire=True)
-        self._record(event)
+        self._record(event, censored=False)
         self.time_feats.update_features(offer=offer)
         self._init_delay(event)
         return False
 
     def _process_delay(self, event):
         # no need to check expiration since this must occur at the same time as the previous offer
-        index, delay = event.delay()
-        if event.thread_expired(index=index, delay=delay, lstg_start=self.lookup[START_TIME]):
-            if event.turn % 2 == 0:
-                self._process_slr_expire(event)
-            else:
-                self._process_byr_expire(event)
-            return False
-
-        if self.verbose and make_offer == 1:
-            actor = 'Seller' if event.turn % 2 == 0 else 'Buyer'
-            print('{} will make an offer in the upcoming interval'.format(actor))
-        if make_offer == 1:
-            delay_dur = np.random.randint(0, event.spi)
-            event.prepare_offer(delay_dur)
-        else:
-            event.priority += event.spi
+        seconds = event.delay()
+        event.prepare_offer(seconds)
         self.queue.push(event)
-        return False
 
     def _check_complete(self, event):
         raise NotImplementedError()
@@ -243,11 +238,20 @@ class EbayEnvironment:
         """
         if event.priority >= self.end_time:
             self.outcome = self.Outcome(False, 0, MONTH)
+            self.queue.push(event)
+            self.empty_queue()
             if self.verbose:
                 print('Lstg expired')
             return True
         else:
             return False
+
+    def empty_queue(self):
+        while not self.queue.empty:
+            event = self.queue.pop()
+            if not isinstance(event, Arrival):
+                event.priority = min(event.priority, self.end_time)
+                self._record(event=event)
 
     def make_thread(self, priority):
         raise NotImplementedError()
@@ -279,6 +283,7 @@ class EbayEnvironment:
 
     def _process_slr_auto_acc(self, event):
         offer = event.slr_auto_acc()
+        self._record(event, censored=False)
         self._process_sale(offer)
 
     def _init_delay(self, event):

@@ -1,6 +1,7 @@
 """
 class for encapsulating data and methods related to the first buyer offer
 """
+import numpy as np
 from rlenv.events.Event import Event
 from rlenv.env_consts import (FIRST_OFFER, BUYER_OFFER, SELLER_OFFER,
                               INTERVAL_COUNT, INTERVAL, BUYER_DELAY, SELLER_DELAY)
@@ -24,8 +25,6 @@ class Thread(Event):
         self.thread_id = thread_id
         # delay
         self.interval_attrs = interval_attrs
-        self.interval = 0
-        self.max_interval = None  # max number of intervals
         self.max_delay = None # max length of delay
         self.spi = None  # seconds per interval
         self.remaining = None  # initial periods remaining
@@ -33,6 +32,12 @@ class Thread(Event):
     def init_thread(self, sources=None, hist=None):
         self.sources = sources
         self.sources.init_thread(hist=hist)
+
+    def thread_expired(self):
+        if self.turn == 1:
+            return False
+        else:
+            return self.sources.is_expire(self.turn)
 
     def offer(self, interface=None, player_type=None):
         outcomes = interface.make_offer(sources=self.sources(), turn=self.turn)
@@ -70,7 +75,6 @@ class Thread(Event):
             delay_type = '{}_{}'.format(BYR_PREFIX, 7)
         else:
             delay_type = BYR_PREFIX
-        self.max_interval = self.interval_attrs[INTERVAL_COUNT][delay_type]
         self.max_delay = MAX_DELAY[delay_type]
         self.spi = self.interval_attrs[INTERVAL][delay_type]
         # create remaining
@@ -86,31 +90,23 @@ class Thread(Event):
         # add new features
         # generate delay
         if self.turn % 2 == 0:
-            make_offer = self.seller.delay(self.sources())
+            index = self.seller.delay(self.sources())
         else:
-            make_offer = self.buyer.delay(self.sources())
-        if make_offer == 0:
-            self.interval += 1
-        return make_offer
+            index = self.buyer.delay(self.sources())
+        seconds = int((index + np.random.uniform()) * self.spi)
+        return min(seconds, self.max_delay)
 
-    def prepare_offer(self, add_delay):
+    def prepare_offer(self, seconds):
         # update outcomes
-        delay_dur = self.spi * self.interval + add_delay
-        delay = delay_dur / self.max_delay
-        days = delay_dur / DAY
+        delay = seconds / self.max_delay
+        days = seconds / DAY
         self.sources.prepare_offer(days=days, delay=delay, turn=self.turn)
-        # reset delay markers
-        self.interval = 0
-        self.max_interval = None
-        self.max_delay = None
-        self.spi = None
-        self.remaining = None
         # change event type
         if self.turn % 2 == 0:
             self.type = SELLER_OFFER
         else:
             self.type = BUYER_OFFER
-        self.priority += add_delay
+        self.priority += seconds
 
     def is_sale(self):
         return self.sources.is_sale(self.turn)
@@ -157,9 +153,7 @@ class Thread(Event):
         return self.sources.get_slr_outcomes(self.turn)
 
     def byr_expire(self):
-        self.priority += self.spi
-        days = self.max_delay / DAY
-        self.sources.byr_expire(days=days, turn=self.turn) # TODO: what is this
+        self.sources.byr_expire(turn=self.turn)
 
     def get_obs(self):
         pass

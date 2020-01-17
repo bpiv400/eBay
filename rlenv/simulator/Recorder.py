@@ -118,7 +118,7 @@ class Recorder:
     def start_thread(self, thread_id=None, time=None, byr_hist=None):
         raise NotImplementedError()
 
-    def add_offer(self, event, time_feats):
+    def add_offer(self, event, time_feats=None, censored=False):
         raise NotImplementedError()
 
     def records2frames(self):
