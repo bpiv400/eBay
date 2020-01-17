@@ -67,7 +67,7 @@ class Trainer:
 
 		# train for one epoch with hyperparameters set to 0
 		self.pretrained_path = MODEL_DIR + '{}/pretrained.net'.format(name)
-		if not os.isfile(self.pretrained_path):
+		if not os.path.isfile(self.pretrained_path):
 			self._run_epoch(0)
 			torch.save(self.model.net.state_dict(), self.pretrained_path)
 
