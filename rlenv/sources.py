@@ -57,19 +57,6 @@ class ThreadSources(Sources):
         # turn indicator
         self.source_dict[TURN_IND_MAP] = ThreadSources._turn_inds(turn)
 
-    def init_delay(self, months_since_lstg=None):
-        # TODO: Note, we've assumed months_since_lstg is in the fixed features rather than the time features
-        self.source_dict[THREAD_MAP][MONTHS_SINCE_LSTG] = months_since_lstg
-
-    def update_delay(self, time_feats=None, remaining=None, duration=None,
-                     clock_feats=None):
-        if self.delay_prev_time is None:
-            time_diff = np.zeros(len(TIME_FEATS))
-        else:
-            time_diff = time_feats - self.delay_prev_time
-        self.source_dict[X_TIME_MAP] = np.concatenate((clock_feats, time_diff, np.array([duration, remaining])))
-        self.delay_prev_time = time_feats
-
     def init_offer(self, time_feats=None, clock_feats=None, turn=None):
         # NOTE : Not called on turn 1
         time_diff = time_feats - self.offer_prev_time

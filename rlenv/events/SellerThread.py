@@ -1,5 +1,4 @@
 from rlenv.events.Thread import Thread
-from rlenv.env_consts import SELLER_DELAY, BUYER_DELAY
 
 
 class SellerThread(Thread):
@@ -7,14 +6,6 @@ class SellerThread(Thread):
         super(SellerThread, self).__init__(priority=priority, thread_id=thread_id, interval_attrs=interval_attrs)
         self.buyer = buyer
         self.seller = None
-
-    def init_delay(self, lstg_start):
-        self._init_delay_sources(lstg_start)
-        if self.turn % 2 == 0:
-            self.type = SELLER_DELAY
-        else:
-            self.type = BUYER_DELAY
-            self._init_delay_hidden()
 
     def seller_offer(self, *args):
         """

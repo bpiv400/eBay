@@ -2,9 +2,10 @@
 class for encapsulating data and methods related to the first buyer offer
 """
 from rlenv.events.Event import Event
-from rlenv.env_consts import FIRST_OFFER, BUYER_OFFER, SELLER_OFFER, INTERVAL_COUNT, INTERVAL
-from constants import (MONTH, DAY, SLR_PREFIX, BYR_PREFIX, MAX_DELAY, MAX_DAYS)
-from rlenv.env_utils import time_delta, slr_rej, slr_auto_acc
+from rlenv.env_consts import (FIRST_OFFER, BUYER_OFFER, SELLER_OFFER,
+                              INTERVAL_COUNT, INTERVAL, BUYER_DELAY, SELLER_DELAY)
+from constants import (DAY, SLR_PREFIX, BYR_PREFIX, MAX_DELAY, MAX_DAYS)
+from rlenv.env_utils import slr_rej, slr_auto_acc
 
 
 class Thread(Event):
@@ -27,7 +28,7 @@ class Thread(Event):
         self.max_interval = None  # max number of intervals
         self.max_delay = None # max length of delay
         self.spi = None  # seconds per interval
-        self.init_remaining = None  # initial periods remaining
+        self.remaining = None  # initial periods remaining
 
     def init_thread(self, sources=None, hist=None):
         self.sources = sources
@@ -51,17 +52,18 @@ class Thread(Event):
             'time': self.priority
         }
 
+    def init_delay(self, lstg_start):
+        if self.turn % 2 == 0:
+            self.type = SELLER_DELAY
+        else:
+            self.type = BUYER_DELAY
+        self._init_delay_params(lstg_start)
+
     def change_turn(self):
         self.turn += 1
         self.sources.change_turn(self.turn)
 
-    def _init_delay_hidden(self):
-        if self.turn % 2 == 0:
-            self.seller.init_delay(self.sources())
-        else:
-            self.buyer.init_delay(self.sources())
-
-    def _init_delay_sources(self, lstg_start):
+    def _init_delay_params(self, lstg_start):
         # update object to contain relevant delay attributes
         if self.turn % 2 == 0:
             delay_type = SLR_PREFIX
@@ -72,24 +74,17 @@ class Thread(Event):
         self.max_interval = self.interval_attrs[INTERVAL_COUNT][delay_type]
         self.max_delay = MAX_DELAY[delay_type]
         self.spi = self.interval_attrs[INTERVAL][delay_type]
-        # create init remaining
+        # create remaining
         self._init_remaining(lstg_start, self.max_delay)
-        self.interval = 0
-        # add delay features
-        months_since_lstg = time_delta(lstg_start, self.priority, unit=MONTH)
-        self.sources.init_delay(months_since_lstg=months_since_lstg)
+        self.sources.init_remaining(remaining=self.remaining)
 
     def _init_remaining(self, lstg_start, max_delay):
-        self.init_remaining = (MAX_DAYS + lstg_start) - self.priority
-        self.init_remaining = self.init_remaining / max_delay
-        self.init_remaining = min(self.init_remaining, 1)
+        self.remaining = (MAX_DAYS + lstg_start) - self.priority
+        self.remaining = self.remaining / max_delay
+        self.remaining = min(self.remaining, 1)
 
-    def delay(self, time_feats=None, clock_feats=None):
+    def delay(self):
         # add new features
-        duration = self.interval / self.max_interval
-        remaining = self.init_remaining - duration
-        self.sources.update_delay(time_feats=time_feats, clock_feats=clock_feats,
-                                  duration=duration, remaining=remaining)
         # generate delay
         if self.turn % 2 == 0:
             make_offer = self.seller.delay(self.sources())
@@ -117,9 +112,6 @@ class Thread(Event):
         else:
             self.type = BUYER_OFFER
         self.priority += add_delay
-
-    def thread_expired(self):
-        return self.interval >= self.max_interval
 
     def is_sale(self):
         return self.sources.is_sale(self.turn)

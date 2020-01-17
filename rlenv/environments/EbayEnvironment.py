@@ -216,18 +216,15 @@ class EbayEnvironment:
         return False
 
     def _process_delay(self, event):
-        if self._lstg_expiration(event):
-            return True
-        elif event.thread_expired():
+        # no need to check expiration since this must occur at the same time as the previous offer
+        index, delay = event.delay()
+        if event.thread_expired(index=index, delay=delay, lstg_start=self.lookup[START_TIME]):
             if event.turn % 2 == 0:
                 self._process_slr_expire(event)
             else:
                 self._process_byr_expire(event)
             return False
-        time_feats = self.time_feats.get_feats(thread_id=event.thread_id,
-                                               time=event.priority)
-        clock_feats = get_clock_feats(event.priority)
-        make_offer = event.delay(clock_feats=clock_feats, time_feats=time_feats)
+
         if self.verbose and make_offer == 1:
             actor = 'Seller' if event.turn % 2 == 0 else 'Buyer'
             print('{} will make an offer in the upcoming interval'.format(actor))
