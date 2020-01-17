@@ -1,17 +1,18 @@
 from collections import namedtuple
 import numpy as np
+from constants import BYR_PREFIX, MONTH
+from featnames import START_TIME, ACC_PRICE, DEC_PRICE, START_PRICE
+from rlenv.Heap import Heap
 from rlenv.time.TimeFeatures import TimeFeatures
-from rlenv.events.EventQueue import EventQueue
+from rlenv.time.Offer import Offer
+from rlenv.events.Event import Event
 from rlenv.events.Arrival import Arrival
 from rlenv.sources import ArrivalSources
 from rlenv.sources import ThreadSources
-from rlenv.time import time_triggers
 from rlenv.env_consts import INTERACT, SALE, PRICE, DUR, ACC_IND, \
     REJ_IND, OFF_IND, ARRIVAL, FIRST_OFFER, BUYER_OFFER, SELLER_OFFER, \
-    BUYER_DELAY, SELLER_DELAY, INTERVAL
+    BUYER_DELAY, SELLER_DELAY
 from rlenv.env_utils import time_delta, get_clock_feats
-from constants import BYR_PREFIX, MONTH, ARRIVAL_PREFIX
-from featnames import START_TIME, ACC_PRICE, DEC_PRICE, START_PRICE
 
 
 class EbayEnvironment:
@@ -28,7 +29,7 @@ class EbayEnvironment:
 
         self.time_feats = TimeFeatures()
         # queue
-        self.queue = EventQueue()
+        self.queue = Heap(entry_type=Event)
 
         # end time
         self.end_time = None
@@ -113,9 +114,7 @@ class EbayEnvironment:
                 elif auto == REJ_IND:
                     self._process_slr_auto_rej(event, offer)
                     return False
-            self.time_feats.update_features(trigger_type=time_triggers.OFFER,
-                                            thread_id=event.thread_id,
-                                            offer=offer)
+            self.time_feats.update_features(offer=offer)
             self._init_delay(event)
             return False
 
@@ -184,16 +183,19 @@ class EbayEnvironment:
         # if a buyer arrives, create a thread at the arrival time
         if event.priority < self.end_time:
             self.thread_counter += 1
-            offer_event = self.make_thread(event.priority)
-            self.queue.push(offer_event)
+            self.queue.push(self.make_thread(event.priority))
         self.queue.push(event)
         return False
 
     def _process_byr_expire(self, event):
         event.byr_expire()
         self._record(event)
-        self.time_feats.update_features(trigger_type=time_triggers.BYR_REJECTION,
-                                        thread_id=event.thread_id)
+        offer_params = {
+            'thread_id': event.thread_id,
+            'time': event.priority,
+            'player': BYR_PREFIX
+        }
+        self.time_feats.update_features(offer=Offer(params=offer_params, rej=True))
 
     def _process_slr_expire(self, event):
         event.prepare_offer(0)
@@ -204,8 +206,7 @@ class EbayEnvironment:
         event.init_offer(time_feats=time_feats, clock_feats=clock_feats)
         offer = event.slr_rej(expire=True)
         self._record(event)
-        self.time_feats.update_features(trigger_type=time_triggers.SLR_REJECTION,
-                                        thread_id=event.thread_id, offer=offer)
+        self.time_feats.update_features(offer=offer)
         self._init_delay(event)
         return False
 
@@ -261,23 +262,19 @@ class EbayEnvironment:
         else:
             return ACC_IND
 
-    def _process_byr_rej(self, event):
-        self.time_feats.update_features(trigger_type=time_triggers.BYR_REJECTION,
-                                        thread_id=event.thread_id)
+    def _process_byr_rej(self, offer):
+        self.time_feats.update_features(offer=offer)
 
     def _process_slr_rej(self, event, offer):
-        self.time_feats.update_features(trigger_type=time_triggers.SLR_REJECTION,
-                                        thread_id=event.thread_id, offer=offer)
+        self.time_feats.update_features(offer=offer)
         self._init_delay(event)
 
     def _process_slr_auto_rej(self, event, offer):
-        self.time_feats.update_features(trigger_type=time_triggers.OFFER,
-                                        thread_id=event.thread_id, offer=offer)
+        self.time_feats.update_features(offer=offer)
         event.change_turn()
         offer = event.slr_rej(expire=False)
         self._record(event)
-        self.time_feats.update_features(trigger_type=time_triggers.SLR_REJECTION,
-                                        thread_id=event.thread_id, offer=offer)
+        self.time_feats.update_features(offer=offer)
         self._init_delay(event)
 
     def _process_slr_auto_acc(self, event):

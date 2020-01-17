@@ -6,7 +6,7 @@ from rlenv.env_consts import (FIRST_OFFER, BUYER_OFFER, SELLER_OFFER,
                               INTERVAL_COUNT, INTERVAL, BUYER_DELAY, SELLER_DELAY)
 from constants import (DAY, SLR_PREFIX, BYR_PREFIX, MAX_DELAY, MAX_DAYS)
 from rlenv.env_utils import slr_rej, slr_auto_acc
-
+from rlenv.time.Offer import Offer
 
 class Thread(Event):
     """
@@ -34,23 +34,22 @@ class Thread(Event):
         self.sources = sources
         self.sources.init_thread(hist=hist)
 
-    def buyer_offer(self, *args):
-        outcomes = self.buyer.make_offer(sources=self.sources(), turn=self.turn)
+    def offer(self, interface=None, player_type=None):
+        outcomes = interface.make_offer(sources=self.sources(), turn=self.turn)
         norm = self.sources.update_offer(outcomes=outcomes, turn=self.turn)
-        return {
+        offer_params = {
             'price': norm,
-            'type': BYR_PREFIX,
-            'time': self.priority
+            'player': player_type,
+            'time': self.priority,
+            'thread_id': self.thread_id
         }
+        return Offer(params=offer_params, rej=self.is_rej())
+
+    def buyer_offer(self, *args):
+        return self.offer(interface=self.buyer, player_type=BYR_PREFIX)
 
     def seller_offer(self, *args):
-        outcomes = self.seller.make_offer(sources=self.sources(), turn=self.turn)
-        norm = self.sources.update_offer(outcomes=outcomes, turn=self.turn)
-        return {
-            'price': norm,
-            'type': SLR_PREFIX,
-            'time': self.priority
-        }
+        return self.offer(interface=self.seller, player_type=SLR_PREFIX)
 
     def init_delay(self, lstg_start):
         if self.turn % 2 == 0:
@@ -105,7 +104,7 @@ class Thread(Event):
         self.max_interval = None
         self.max_delay = None
         self.spi = None
-        self.init_remaining = None
+        self.remaining = None
         # change event type
         if self.turn % 2 == 0:
             self.type = SELLER_OFFER
@@ -122,21 +121,25 @@ class Thread(Event):
     def slr_rej(self, expire=False):
         outcomes = slr_rej(self.sources(), self.turn, expire=expire)
         norm = self.sources.update_offer(outcomes=outcomes, turn=self.turn)
-        return {
+        offer_params = {
             'price': norm,
-            'type': SLR_PREFIX,
-            'time': self.priority
+            'player': SLR_PREFIX,
+            'time': self.priority,
+            'thread_id': self.thread_id
         }
+        return Offer(params=offer_params, rej=True)
 
     def slr_auto_acc(self):
         self.change_turn()
         outcomes = slr_auto_acc(self.sources(), self.turn)
         norm = self.sources.update_offer(outcomes=outcomes, turn=self.turn)
-        return {
+        offer_params = {
             'price': norm,
             'type': SLR_PREFIX,
-            'time': self.priority
+            'time': self.priority,
+            'thread_id': self.thread_id
         }
+        return Offer(params=offer_params, rej=False)
 
     def init_offer(self, time_feats=None, clock_feats=None):
         self.sources.init_offer(time_feats=time_feats, clock_feats=clock_feats, turn=self.turn)

@@ -3,7 +3,7 @@ import pandas as pd
 import torch
 from processing.c_feats.tf import get_lstg_time_feats
 from time.TimeFeatures import TimeFeatures
-from time.time_triggers import *
+from time.offer_types import *
 from rlenv.env_consts import EXPIRATION
 
 

@@ -11,10 +11,12 @@ TODO:
 import math
 from collections import deque, Counter
 import numpy as np
-import torch
-import rlenv.time.time_triggers as time_triggers
 from featnames import TIME_FEATS, THREAD_COUNT
 from constants import EXPIRATION
+from rlenv.Heap import Heap
+from rlenv.env_consts import BYR_PREFIX
+from rlenv.time.Offer import Offer
+from rlenv.time.offer_types import BYR_REJECTION, SLR_REJECTION, OFFER
 
 
 class TimeFeatures:
@@ -58,11 +60,16 @@ class TimeFeatures:
         """
         super(TimeFeatures, self).__init__()
         self.feats = dict()
+        self.offer_heap = Heap()
         self.reset()
+
+    def update_later(self, offer=None):
+        self.offer_heap.push(offer)
 
     def reset(self):
         for feat in TIME_FEATS:
             self.feats[feat] = TimeFeatures._initialize_feature(feat)
+        self.offer_heap.reset()
 
     def _get_feat(self, thread_id=None, feat=None, time=0):
         """
@@ -114,50 +121,48 @@ class TimeFeatures:
                 return FeatureHeap(min_heap=False)
 
     # noinspection PyUnusedLocal
-    def _update_thread_close(self, feat_name=None, offer=None, thread_id=None):
+    def _update_thread_close(self, feat_name=None, offer=None):
         """
         Updates time features to reflect the thread for the given event closing
 
         :param offer: dictionary giving parameters of the offer
         :param feat_name: string giving name of time valued feature
-        :param thread_id: id of the current thread
         :return: NA
         """
         if 'recent' not in feat_name:  # always true for the time being
             if 'open' in feat_name:
-                self.feats[feat_name].remove(thread_id=thread_id)
+                self.feats[feat_name].remove(thread_id=offer.thread_id)
 
-    def _update_offer(self, feat_name=None, offer=None, thread_id=None):
+    def _update_offer(self, feat_name=None, offer=None):
         """
         Updates value of feature after buyer or seller concession offer (not acceptance
         or rejection)
 
         :param offer: dictionary giving parameters of the offer
         :param feat_name: string giving name of time valued feature
-        :param thread_id: id of the current thread where there's been an offer
         :return: NA
         """
         if feat_name == THREAD_COUNT:
-            self.feats[feat_name].push(thread_id=thread_id)
-        if offer['type'] in feat_name:
+            self.feats[feat_name].push(thread_id=offer.thread_id)
+        if offer.player in feat_name:
             if 'best' not in feat_name:
                 if 'recent' in feat_name:
-                    self.feats[feat_name].push(time=offer['time'],
-                                               thread_id=thread_id)
+                    self.feats[feat_name].push(time=offer.time,
+                                               thread_id=offer.thread_id)
                 else:
-                    self.feats[feat_name].increment(thread_id=thread_id)
+                    self.feats[feat_name].increment(thread_id=offer.thread_id)
             else:
                 args = {
-                    'value': offer['price'],
-                    'thread_id': thread_id
+                    'value': offer.price,
+                    'thread_id': offer.thread_id
                 }
                 if 'recent' in feat_name:  # ignored for time being
-                    args['time'] = offer['time']
+                    args['time'] = offer.time
                 self.feats[feat_name].promote(**args)
         elif 'open' in feat_name and 'recent' not in feat_name:  # temporary do not consider recent features
-            self.feats[feat_name].remove(thread_id=thread_id)
+            self.feats[feat_name].remove(thread_id=offer.thread_id)
 
-    def _update_slr_rejection(self, feat_name=None, offer=None, thread_id=None):
+    def _update_slr_rejection(self, feat_name=None, offer=None):
         """
         Updates time valued features with the result of slr rejection at turn 2 or 4
         - Increments number of open slr offers
@@ -168,46 +173,60 @@ class TimeFeatures:
 
         :param offer: dictionary giving parameters of the offer
         :param feat_name: string giving name of time valued feature
-        :param thread_id: id of the current thread where there's been an offer
         :return: NA
         """
-        if offer['type'] in feat_name:
+        if offer.player in feat_name:
             if 'best' not in feat_name and 'open' in feat_name:
-                self.feats[feat_name].increment(thread_id=thread_id)
+                self.feats[feat_name].increment(thread_id=offer.thread_id)
             # will never update slr best since it's the same as previous value
             elif 'open' in feat_name:
                 args = {
-                    'value': offer['price'],
-                    'thread_id': thread_id
+                    'value': offer.price,
+                    'thread_id': offer.thread_id
                 }
                 if 'recent' in feat_name:  # ignored for time being
-                    args['time'] = offer['time']
+                    args['time'] = offer.time
                 self.feats[feat_name].promote(**args)
         elif 'open' in feat_name and 'recent' not in feat_name:
             # temporary do not consider recent features
-            self.feats[feat_name].remove(thread_id=thread_id)
+            self.feats[feat_name].remove(thread_id=offer.thread_id)
 
-    def update_features(self, trigger_type=None, thread_id=None, offer=None):
+    def update_features(self, offer=None):
         """
         Updates the time valued features after some type of event
 
         :param offer: dictionary containing time of offer (time),
          count of offer in the thread (count), and price (price)
-        :param thread_id: id of the current thread where there's been an offer
-        :param trigger_type: string defining event type
         :return: NA
         """
-        if trigger_type == time_triggers.OFFER:
+        # updates the time features with all offers that were stored
+        # for the future but occur before the current offer
+        if not self.offer_heap.empty:
+            while self.offer_heap.peek() < offer:
+                self.update_features(offer=self.offer_heap.pop())
+        # condition update behavior on offer type
+        if offer.otype == OFFER:
             feature_function = self._update_offer
-        elif trigger_type == time_triggers.BYR_REJECTION:
+        elif offer.otype == BYR_REJECTION:
             feature_function = self._update_thread_close
-        elif trigger_type == time_triggers.SLR_REJECTION:
+        elif offer.otype == SLR_REJECTION:
             feature_function = self._update_slr_rejection
         else:
             raise NotImplementedError()
         for feat in TIME_FEATS:
-            feature_function(feat_name=feat, offer=offer, thread_id=thread_id)
+            feature_function(feat_name=feat, offer=offer)
 
+    def update_features_old(self, trigger_type=None, thread_id=None, offer=None):
+        if trigger_type == BYR_REJECTION:
+            offer['player'] = BYR_PREFIX
+            offer['thread_id'] = thread_id
+        else:
+            offer['player'] = offer['type']
+            del offer['type']
+        offer['thread_id'] = thread_id
+        rej = trigger_type == BYR_REJECTION or trigger_type == SLR_REJECTION
+        offer = Offer(params=offer, rej=rej)
+        self.update_features(offer=offer)
 
 # noinspection DuplicatedCode
 class FeatureHeap:

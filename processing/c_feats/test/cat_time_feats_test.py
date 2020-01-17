@@ -1,7 +1,7 @@
 import numpy as np
 from copy import deepcopy
 import pandas as pd
-from time.time_triggers import *
+from time.offer_types import *
 from processing.c_feats.util import get_all_cat_feats
 from constants import MAX_DELAY
 

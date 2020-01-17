@@ -1,7 +1,7 @@
 import heapq
 
 
-class EventQueue:
+class Heap:
     """
     Class for encapsulating event queue functionality.
 
@@ -12,21 +12,23 @@ class EventQueue:
         pop: pop the Event with the minimum priority off the heap
         empty: gives whether the heap is empty
     """
-    def __init__(self):
+    def __init__(self, entry_type=None):
         """
         Initialize queue (empty or from seed)
         """
+        self.entry_type = entry_type
         self.queue = []
 
-    def push(self, event):
+    def push(self, entry):
         """
         Adds an event to the appropriate location in the heap
         (Event implements __lt__ to enable sorting as necessary)
 
-        :param event: instance of rlenv.Event
+        :param entry: instance of self.event_type
         :return: None
         """
-        heapq.heappush(self.queue, event)
+        assert isinstance(entry, self.entry_type)
+        heapq.heappush(self.queue, entry)
 
     def pop(self):
         """
@@ -37,8 +39,10 @@ class EventQueue:
         if self.empty:
             raise RuntimeError('Cant remove from empty queue')
         else:
-            event = heapq.heappop(self.queue)
-        return event
+            return heapq.heappop(self.queue)
+
+    def peek(self):
+        return self.queue[0]
 
     def reset(self):
         self.queue = []
