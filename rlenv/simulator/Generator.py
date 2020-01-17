@@ -8,7 +8,7 @@ Lots of memory dumping code while I try to find leak
 """
 from compress_pickle import load
 import numpy as np
-from rlenv.interfaces.PlayerInterface import PlayerInterface
+from rlenv.interfaces.PlayerInterface import BuyerInterface, SellerInterface
 from rlenv.interfaces.ArrivalInterface import ArrivalInterface
 from rlenv.environments.SimulatorEnvironment import SimulatorEnvironment
 from rlenv.Composer import Composer
@@ -34,8 +34,8 @@ class Generator:
 
         composer = Composer(self.x_lstg.columns)
 
-        self.buyer = PlayerInterface(composer=composer, byr=True)
-        self.seller = PlayerInterface(composer=composer, byr=False)
+        self.buyer = BuyerInterface(composer=composer)
+        self.seller = SellerInterface(composer=composer, full=True)
         self.arrival = ArrivalInterface(composer=composer)
 
     def generate(self):
