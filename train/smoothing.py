@@ -1,59 +1,8 @@
-import sys, os, argparse, math
+import sys, os, argparse
 import numpy as np
-import torch, torch.optim as optim
-from torch.utils.tensorboard import SummaryWriter
-from compress_pickle import load, dump
-from model.Model import Model
-from model.datasets.eBayDataset import eBayDataset
-from model.model_consts import *
-from constants import INPUT_DIR, MODEL_DIR, PARAMS_PATH
-
-
-def training_loop(model, train, test, writer_path, model_path):
-    # initialize optimizer
-    loglr = LOGLR0
-    optimizer = optim.Adam(model.net.parameters(), lr=math.pow(10, loglr))
-    print(optimizer)
-
-    epoch, last = 0, np.inf
-    while True:
-        print('\tEpoch %d' % epoch)
-        output = {'loglr': loglr}
-
-        # train model
-        output['loss'] = model.run_loop(train, optimizer)
-        output['lnL_train'] = -output['loss'] / train.N
-
-        # calculate log-likelihood on validation set
-        with torch.no_grad():
-            loss_test = model.run_loop(test)
-            output['lnL_test'] = -loss_test / test.N
-
-        # initialize tensorboard writer in first epoch
-        if epoch == 0:
-            writer = SummaryWriter(writer_path)
-
-        # save output to tensorboard writer
-        for k, v in output.items():
-            writer.add_scalar(k, v, epoch)
-
-        # save model
-        torch.save(model.net.state_dict(), model_path)
-
-        # reduce learning rate until convergence
-        if output['loss'] > FTOL * last:
-            if loglr == LOGLR1:
-                break
-            else:
-                loglr -= LOGLR_INC
-                for param_group in optimizer.param_groups:
-                    param_group['lr'] = math.pow(10, loglr)
-
-        # increment epochs and update last
-        epoch += 1
-        last = output['loss']
-
-    writer.close()
+from datetime import datetime as dt
+from scipy.optimize import minimize_scalar
+from train.Trainer import Trainer
 
 
 if __name__ == '__main__':
@@ -62,39 +11,14 @@ if __name__ == '__main__':
     parser.add_argument('--name', type=str, required=True)
     name = parser.parse_args().name
 
-    # load model sizes
-    sizes = load(INPUT_DIR + 'sizes/{}.pkl'.format(name))
-    print('Sizes: {}'.format(sizes))
-
-    # load parameters
-    params = load(PARAMS_PATH)
-    print('Parameters: {}'.format(params))
-
-    # initialize model
-    model = Model(name, sizes, params)
-    print(model.net)
-    print(model.loss.__name__)
-
-    # smoothing parameters
-    if (name == 'arrival') or ('delay' in name):
-        model.smoothing = 1000
-
-    # load datasets
-    print('Loading data')
-    train = eBayDataset('train_models', name)
-    test = eBayDataset('train_rl', name)
-
     # experiment number
-    expid = 0
-    while True:
-        if os.path.isdir(LOG_DIR + '{}/{}'.format(name, expid)):
-            expid += 1
-        else:
-            break
+    expid = dt.now().strftime('%y%m%d-%H%M')
 
-    # paths
-    writer_path = LOG_DIR + '{}/{}'.format(name, expid)
-    model_path = MODEL_DIR + '{}/{}.net'.format(name, expid)
+    # initialize trainer
+    trainer = Trainer(name, 'small', 'test_rl', expid)
 
-    # training loop
-    training_loop(model, train, test, writer_path, model_path)
+    # wrapper function
+    loss = lambda logx: -trainer.train_model(smoothing=10 ** logx)
+
+    result = minimize_scalar(loss, 
+        method='bounded', bounds=(0, 4), xatol=0.1)

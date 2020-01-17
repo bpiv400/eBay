@@ -3,4 +3,4 @@
 #$ -o logs/train/
 #$ -j y
 
-python repo/model/train.py --name delay_slr
+python repo/train/smoothing.py --name delay_slr
