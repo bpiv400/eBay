@@ -50,7 +50,7 @@ class PlayerInterface:
     def _sample_msg(self, sources=None, outcomes=None, turn=0):
         input_dict = self.composer.build_input_vector(self._msg_model_name, recurrent=False,
                                                       sources=sources, fixed=True)
-        params = self.msg_model(input_dict['x'])
+        params = self.msg_model(input_dict)
         outcomes[featname(MSG, turn)] = sample_bernoulli(params)
 
     def _sample_con(self, params=None, sources=None, turn=None):

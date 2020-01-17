@@ -8,6 +8,7 @@ import pandas as pd
 from compress_pickle import load
 from torch.distributions.categorical import Categorical
 from torch.distributions.bernoulli import Bernoulli
+from torch.distributions.poisson import Poisson
 from constants import (INPUT_DIR, TOL_HALF,
                        MODEL_DIR, ENV_SIM_DIR, DAY, BYR_PREFIX, SLR_PREFIX)
 from model.nets import FeedForward
@@ -122,6 +123,9 @@ def sample_bernoulli(params):
     dist = Bernoulli(logits=params)
     return proper_squeeze(dist.sample((1, ))).numpy()
 
+
+def sample_poisson(lnmean):
+    return int(Poisson(torch.exp(lnmean)).sample((1,)).squeeze())
 
 def get_split(con):
     """
