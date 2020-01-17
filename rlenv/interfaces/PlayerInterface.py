@@ -4,7 +4,7 @@ from torch.distributions.categorical import Categorical
 from rlenv.env_utils import (load_model, model_str, featname, proper_squeeze,
                              sample_categorical, sample_bernoulli,
                              update_byr_outcomes, update_slr_outcomes)
-from rlenv.env_consts import INTERVAL, BYR_PREFIX, SLR_PREFIX
+from rlenv.env_consts import BYR_PREFIX, SLR_PREFIX
 from featnames import *
 
 
@@ -44,7 +44,7 @@ class PlayerInterface:
         input_dict = self.composer.build_input_dict(self._delay_model_name, sources=sources)
         params = self.delay_model(input_dict)
         delay = sample_categorical(params)
-        delay = delay * self.composer.interval_attrs[INTERVAL][BYR_PREFIX if self.byr else SLR_PREFIX]
+        delay = delay * self.composer.intervals[BYR_PREFIX if self.byr else SLR_PREFIX]
         return delay
 
     def _sample_msg(self, sources=None, outcomes=None, turn=0):

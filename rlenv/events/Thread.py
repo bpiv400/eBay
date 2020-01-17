@@ -3,17 +3,17 @@ class for encapsulating data and methods related to the first buyer offer
 """
 import numpy as np
 from rlenv.events.Event import Event
-from rlenv.env_consts import (FIRST_OFFER, BUYER_OFFER, SELLER_OFFER,
-                              INTERVAL_COUNT, INTERVAL, BUYER_DELAY, SELLER_DELAY)
+from rlenv.env_consts import (FIRST_OFFER, BUYER_OFFER, SELLER_OFFER, BUYER_DELAY, SELLER_DELAY)
 from constants import (DAY, SLR_PREFIX, BYR_PREFIX, MAX_DELAY, MAX_DAYS)
 from rlenv.env_utils import slr_rej, slr_auto_acc
 from rlenv.time.Offer import Offer
+
 
 class Thread(Event):
     """
     Attributes:
     """
-    def __init__(self, priority=None, thread_id=None, interval_attrs=None):
+    def __init__(self, priority=None, thread_id=None, intervals=None):
         super(Thread, self).__init__(event_type=FIRST_OFFER,
                                      priority=priority)
         # participants
@@ -24,7 +24,7 @@ class Thread(Event):
         self.turn = 1
         self.thread_id = thread_id
         # delay
-        self.interval_attrs = interval_attrs
+        self.intervals = intervals
         self.max_delay = None # max length of delay
         self.spi = None  # seconds per interval
         self.remaining = None  # initial periods remaining
@@ -76,7 +76,7 @@ class Thread(Event):
         else:
             delay_type = BYR_PREFIX
         self.max_delay = MAX_DELAY[delay_type]
-        self.spi = self.interval_attrs[INTERVAL][delay_type]
+        self.spi = self.intervals[delay_type]
         # create remaining
         self._init_remaining(lstg_start, self.max_delay)
         self.sources.init_remaining(remaining=self.remaining)

@@ -13,6 +13,7 @@ class Composer:
     def __init__(self, cols):
         self.maps, self.sizes, self.feat_sets = \
             Composer.build_models(cols)
+        self.intervals = self.make_intervals()
 
     @staticmethod
     def build_models(cols):
@@ -43,7 +44,7 @@ class Composer:
         thread_cols = set()
         for mod in MODELS:
             curr_feats = load_featnames(mod)
-            for feat_type, feat_set in curr_feats['x'].items():
+            for feat_type, feat_set in curr_feats.items():
                 [thread_cols.add(feat) for feat in feat_set]
         # exclude turn indicators and consts from thread cols
         for feat_set in [x_lstg_cols, TURN_FEATS]:
@@ -65,10 +66,9 @@ class Composer:
         maps = dict()
         featnames = load_featnames(model)
         sizes = load_sizes(model)
-        for set_name, input_set in featnames['x'].items():
+        for set_name, input_set in featnames.items():
             maps[set_name] = Composer._build_set_maps(input_set, feat_sets, size=sizes['x'][set_name])
         clipped_sizes = sizes.copy()
-        del clipped_sizes['out']
         return maps, clipped_sizes
 
     @staticmethod
@@ -182,25 +182,14 @@ class Composer:
                 fixed_maps[input_set], fixed_sizes[input_set], sources)
         return input_dict
 
-    @property
-    def interval_attrs(self):
-        intervals = {
+    def make_intervals(self):
+        ints = {
             BYR_PREFIX: self.sizes[model_str(DELAY, byr=True)][INTERVAL],
             '{}_{}'.format(BYR_PREFIX, 7): self.sizes[model_str(DELAY, byr=True)][INTERVAL],
             SLR_PREFIX: self.sizes[model_str(DELAY, byr=False)][INTERVAL],
             ARRIVAL_PREFIX: self.sizes[ARRIVAL_MODEL][INTERVAL]
         }
-        t7_int_count = self.sizes[model_str(DELAY, byr=True)]['{}_{}'.format(INTERVAL_COUNT, 7)]
-        interval_counts = {
-            BYR_PREFIX: self.sizes[model_str(DELAY, byr=True)][INTERVAL_COUNT],
-            SLR_PREFIX: self.sizes[model_str(DELAY, byr=False)][INTERVAL_COUNT],
-            ARRIVAL_PREFIX: self.sizes[ARRIVAL_MODEL][INTERVAL_COUNT],
-            '{}_{}'.format(BYR_PREFIX, 7): t7_int_count
-        }
-        return {
-            INTERVAL: intervals,
-            INTERVAL_COUNT: interval_counts
-        }
+        return ints
 
     @property
     def feat_counts(self):

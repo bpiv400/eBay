@@ -1,7 +1,7 @@
 import numpy as np
 from constants import ARRIVAL_PREFIX
 from rlenv.env_utils import load_model, sample_categorical
-from rlenv.env_consts import BYR_HIST_MODEL, ARRIVAL_MODEL, INTERVAL
+from rlenv.env_consts import BYR_HIST_MODEL, ARRIVAL_MODEL
 
 
 class ArrivalInterface:
@@ -22,5 +22,5 @@ class ArrivalInterface:
         input_dict = self.composer.build_input_dict(ARRIVAL_MODEL, sources=sources)
         params = self.arrival_model(input_dict)
         intervals = sample_categorical(params)
-        width = self.composer.interval_attrs[INTERVAL][ARRIVAL_PREFIX]
+        width = self.composer.intervals[ARRIVAL_PREFIX]
         return int((intervals + np.random.uniform()) * width)

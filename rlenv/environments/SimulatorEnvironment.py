@@ -56,8 +56,8 @@ class SimulatorEnvironment(EbayEnvironment):
         return False
 
     def make_thread(self, priority):
-        return RewardThread(priority=priority, thread_id=self.thread_counter, interval_attrs=self.interval_attrs,
-                            buyer=self.buyer, seller=self.seller)
+        return RewardThread(priority=priority, thread_id=self.thread_counter,
+                            intervals=self.intervals, buyer=self.buyer, seller=self.seller)
 
 
 

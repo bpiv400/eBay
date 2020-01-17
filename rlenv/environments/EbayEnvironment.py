@@ -37,7 +37,7 @@ class EbayEnvironment:
         self.outcome = None
 
         # interval data
-        self.interval_attrs = self.arrival.composer.interval_attrs
+        self.intervals = self.arrival.composer.intervals
 
     def reset(self):
         self.queue.reset()
