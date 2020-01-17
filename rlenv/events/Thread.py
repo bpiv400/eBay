@@ -95,7 +95,8 @@ class Thread(Event):
             index = self.buyer.delay(self.sources())
         seconds = int((index + np.random.uniform()) * self.spi)
         seconds = min(seconds, self.max_delay)
-        print('seconds delayed: {}'.format(seconds))
+        if seconds != self.max_delay:
+            print('less than max')
         return seconds
 
     def prepare_offer(self, seconds):

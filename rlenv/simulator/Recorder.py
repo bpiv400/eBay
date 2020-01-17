@@ -20,9 +20,10 @@ AVG_PRICE = 'avg_price'
 NUM_SALES = 'num_sales'
 P_SALE = 'p_sale'
 CUT = 'cut'
+CENSOR = 'censored'
 
 # for discriminator
-OFFER_COLS = [LSTG, THREAD, INDEX, CLOCK, CON, MESSAGE] + TIME_FEATS
+OFFER_COLS = [LSTG, THREAD, INDEX, CLOCK, CON, MESSAGE, CENSOR] + TIME_FEATS
 THREAD_COLS = [LSTG, THREAD, BYR_HIST, CLOCK]
 
 # for values
