@@ -7,16 +7,16 @@ from datetime import datetime as dt
 class VariationalDropout(nn.Module):
     def __init__(self, N):
         super(VariationalDropout, self).__init__()
-        
+
         self.log_alpha = nn.Parameter(torch.Tensor(N))
         self.log_alpha.data.fill_(-3)
-        
+
     def kl_reg(self):
         # calculate KL divergence
         kl = 0.63576 * (torch.sigmoid(1.8732 + 1.48695 * self.log_alpha) - 1) \
             - 0.5 * torch.log1p(torch.exp(-self.log_alpha))
         return -torch.sum(kl)
-    
+
     def forward(self, x):
         # additive N(0, alpha * x^2) noise
         if self.training:
@@ -73,6 +73,7 @@ def stack_layers(N, params, layers=1):
     for _ in range(layers):
         stack.append(Layer(N, N, params))
     return stack
+
 
 
 class Embedding(nn.Module):
@@ -172,6 +173,7 @@ class FeedForward(nn.Module):
         # fully connected
         self.nn1 = FullyConnected(total, sizes['out'], params)
 
+
     def forward(self, x):
         '''
         x: OrderedDict()
@@ -180,3 +182,4 @@ class FeedForward(nn.Module):
         for k in self.nn0.keys():
             l.append(self.nn0[k](x))
         return self.nn1(torch.cat(l, dim=1))
+

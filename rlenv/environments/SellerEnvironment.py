@@ -5,7 +5,6 @@ from rlpyt.envs.base import Env
 from rlpyt.spaces.composite import Composite
 from rlpyt.spaces.float_box import FloatBox
 from rlenv.environments.EbayEnvironment import EbayEnvironment
-from rlenv.events import event_types
 from rlenv.events.SellerThread import SellerThread
 from rlenv.env_consts import (SELLER_HORIZON, LOOKUP, X_LSTG, 
                               ACTION_SPACE_NAME, OBS_SPACE_NAME,

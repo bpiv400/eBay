@@ -16,6 +16,7 @@ class ValueCalculator:
         self.cut = get_cut(lookup[META])
 
     def add_outcome(self, price, T):
+        print('SALE PRICE: {}'.format(price))
         self.x_sum += price
         self.x2_sum += math.pow(price, 2)
         self.T_sum += T
@@ -29,7 +30,8 @@ class ValueCalculator:
 
     @property
     def var_x(self):
-        return self.x2_sum / self.num_sales - math.pow(self.mean_x, 2)
+        var = self.x2_sum / self.num_sales - math.pow(self.mean_x, 2)
+        return max(0.0, var)
 
     @property
     def mean_T(self):
@@ -37,7 +39,8 @@ class ValueCalculator:
 
     @property
     def var_T(self):
-        return self.T2_sum / self.num_sales - math.pow(self.mean_T, 2)
+        var = self.T2_sum / self.num_sales - math.pow(self.mean_T, 2)
+        return max(0.0, var)
 
     @property
     def cov_xT(self):

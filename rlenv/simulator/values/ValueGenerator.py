@@ -24,7 +24,6 @@ class ValueGenerator(Generator):
         super(ValueGenerator, self).__init__(direct, num, verbose)
         self.val_calc = None  # type: ValueCalculator
         self.recorder = self._make_recorder()
-
         # checkpoint params
         self.checkpoint_contents = None
         self.checkpoint_count = 0
@@ -33,10 +32,6 @@ class ValueGenerator(Generator):
         if self.verbose:
             print('checkpoint: {}'.format(self.has_checkpoint))
             print('checkpoint count: {}'.format(self.checkpoint_count))
-
-        # delete previous directories for simulator and records
-        if not self.has_checkpoint:
-            self._remake_dir(self.records_path)
 
     def generate(self):
         """
@@ -79,7 +74,6 @@ class ValueGenerator(Generator):
         if not time_up:
             self.recorder.dump()
             self._delete_checkpoint()
-            self._generate_done()
 
     def _get_lstgs(self):
         """
@@ -178,16 +172,6 @@ class ValueGenerator(Generator):
         if os.path.isfile(path):
             os.remove(path)
 
-    @staticmethod
-    def _remake_dir(path):
-        """
-        Deletes and re-creates the given directory
-        :param path: path to some directory
-        """
-        if os.path.isdir(path):
-            shutil.rmtree(path)
-        os.mkdir(path)
-
     def _is_time_up(self):
         """
         Checks whether the generator has been running for almost 4 hours
@@ -195,7 +179,3 @@ class ValueGenerator(Generator):
         """
         tot = (dt.now() - self.start).total_seconds() / 3600
         return tot > .25
-
-    def _generate_done(self):
-        path = '{}done_{}.txt'.format(self.records_path, self.chunk)
-        open(path, 'a').close()
