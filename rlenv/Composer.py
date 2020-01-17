@@ -138,7 +138,7 @@ class Composer:
                 feat_map[feat] = True
 
     @staticmethod
-    def _build_fixed_input(maps, size, sources):
+    def _build_input_vector(maps, size, sources):
         """
         Helper method that composes a model's input vector given a dictionaries of
         the relevant input maps and  sources
@@ -158,11 +158,7 @@ class Composer:
                 raise RuntimeError()
         return x
 
-    @staticmethod
-    def _build_recurrent_input(source_vector):
-        return torch.from_numpy(source_vector).float().unsqueeze(dim=0)
-
-    def build_input_vector(self, model_name, sources=None, fixed=False, recurrent=False):
+    def build_input_dict(self, model_name, sources=None):
         """
         Public method that composes input vectors (x_time and x_fixed) from tensors in the
         environment
@@ -170,23 +166,15 @@ class Composer:
         :param model_name: str giving the name of the focal model
         :param sources: dictionary containing tensors from the environment that contain
         features the model expects in the input
-        :param fixed: boolean for whether x_fixed needs to be compute
-        :param recurrent: boolean for whether the target model is recurrent
         :return: 2-tuple of x_fixed, x_time. If not recurrent, x_time = None. If fixed=False,
         x_fixed = None
         """
         input_dict = dict()
-        if recurrent:
-            input_dict['x_time'] = Composer._build_recurrent_input(sources[X_TIME_MAP])
-        if fixed:
-            input_dict['x'] = dict()
-            fixed_maps = self.maps[model_name]  # dict
-            fixed_sizes = self.sizes[model_name]['x']  # dict
-            for input_set in fixed_maps.keys():
-                input_dict['x'][input_set] = Composer._build_fixed_input(
-                    fixed_maps[input_set],
-                    fixed_sizes[input_set],
-                    sources)
+        fixed_maps = self.maps[model_name]  # dict
+        fixed_sizes = self.sizes[model_name]['x']  # dict
+        for input_set in fixed_maps.keys():
+            input_dict[input_set] = Composer._build_input_vector(
+                fixed_maps[input_set], fixed_sizes[input_set], sources)
         return input_dict
 
     @property

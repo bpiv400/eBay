@@ -10,12 +10,12 @@ class ArrivalInterface:
         self.num_offers_model = load_model(NUM_OFFERS_MODEL)
 
     def num_offers(self, sources=None):
-        input_dict = self.composer.build_input_vector(NUM_OFFERS_MODEL, sources=sources)
+        input_dict = self.composer.build_input_dict(NUM_OFFERS_MODEL, sources=sources)
         lnmean = self.num_offers_model(input_dict)
         return sample_poisson(lnmean.squeeze())
 
     def hist(self, sources=None):
-        input_dict = self.composer.build_input_vector(BYR_HIST_MODEL, sources=sources)
+        input_dict = self.composer.build_input_dict(BYR_HIST_MODEL, sources=sources)
         params = self.hist_model(input_dict)
         hist = sample_categorical(params)
         hist = hist / 10

@@ -41,15 +41,15 @@ class PlayerInterface:
         return outcomes
 
     def delay(self, sources=None):
-        input_dict = self.composer.build_input_vector(self._delay_model_name, sources=sources)
+        input_dict = self.composer.build_input_dict(self._delay_model_name, sources=sources)
         params = self.delay_model(input_dict)
         delay = sample_categorical(params)
         delay = delay * self.composer.interval_attrs[INTERVAL][BYR_PREFIX if self.byr else SLR_PREFIX]
         return delay
 
     def _sample_msg(self, sources=None, outcomes=None, turn=0):
-        input_dict = self.composer.build_input_vector(self._msg_model_name, recurrent=False,
-                                                      sources=sources, fixed=True)
+        input_dict = self.composer.build_input_dict(self._msg_model_name, recurrent=False,
+                                                    sources=sources, fixed=True)
         params = self.msg_model(input_dict)
         outcomes[featname(MSG, turn)] = sample_bernoulli(params)
 
@@ -57,7 +57,7 @@ class PlayerInterface:
         raise NotImplementedError()
 
     def con(self, sources=None):
-        input_dict = self.composer.build_input_vector(self._con_model_name, sources=sources)
+        input_dict = self.composer.build_input_dict(self._con_model_name, sources=sources)
         params = self.con_model(input_dict)
         return params
 

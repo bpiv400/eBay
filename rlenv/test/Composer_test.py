@@ -108,9 +108,9 @@ def test_num_offers_step(composer):
                                 len(CLOCK_FEATS) + len(TIME_FEATS)).float(),
         DUR_MAP: torch.tensor([len(CLOCK_FEATS) + len(TIME_FEATS)]).float()
     }
-    x_fixed, x_time = composer.build_input_vector(model_names.NUM_OFFERS,
-                                                  sources=sources, fixed=True,
-                                                  recurrent=True)
+    x_fixed, x_time = composer.build_input_dict(model_names.NUM_OFFERS,
+                                                sources=sources, fixed=True,
+                                                recurrent=True)
     assert torch.all(torch.eq(torch.arange(len(fixed_feats)).float(), x_fixed))
     assert torch.all(torch.eq(torch.arange(len(time_feats)).float(), x_time))
 
@@ -132,9 +132,9 @@ def test_hist_fixed(composer):
     start = end
     end += len(TIME_FEATS)
     sources[TIME_MAP] = torch.arange(start, end).float()
-    x_fixed, _ = composer.build_input_vector(model_names.BYR_HIST,
-                                             sources=sources, fixed=True,
-                                             recurrent=False)
+    x_fixed, _ = composer.build_input_dict(model_names.BYR_HIST,
+                                           sources=sources, fixed=True,
+                                           recurrent=False)
     assert torch.all(torch.eq(targ, x_fixed))
 
 
@@ -143,8 +143,8 @@ def test_byr_con_fixed(composer):
     feats = load_featnames(model_name)['x_fixed']
     targ = torch.arange(len(feats)).float()
     sources = get_offer_fixed(composer)
-    x_fixed, _ = composer.build_input_vector(model_name, sources=sources, fixed=True,
-                                             recurrent=False)
+    x_fixed, _ = composer.build_input_dict(model_name, sources=sources, fixed=True,
+                                           recurrent=False)
     assert torch.all(torch.eq(targ, x_fixed))
 
 
@@ -154,8 +154,8 @@ def test_byr_con_time(composer):
     targ = torch.arange(len(feats)).float()
     sources = byr_early_offer_sources()
     sources[L_OUTCOMES_MAP] = torch.tensor([-1, -1, 53, 54, 55, 56]).float()
-    _, x_time = composer.build_input_vector(model_name, sources=sources, fixed=False,
-                                            recurrent=True)
+    _, x_time = composer.build_input_dict(model_name, sources=sources, fixed=False,
+                                          recurrent=True)
     assert torch.all(torch.eq(targ, x_time))
 
 
@@ -164,8 +164,8 @@ def test_byr_msg_fixed(composer):
     feats = load_featnames(model_name)['x_fixed']
     targ = torch.arange(len(feats)).float()
     sources = get_offer_fixed(composer)
-    x_fixed, _ = composer.build_input_vector(model_name, sources=sources, fixed=True,
-                                             recurrent=False)
+    x_fixed, _ = composer.build_input_dict(model_name, sources=sources, fixed=True,
+                                           recurrent=False)
     assert torch.all(torch.eq(targ, x_fixed))
 
 
@@ -193,8 +193,8 @@ def test_byr_msg_time(composer):
     start = 57
     tot = 60
     sources[TURN_IND_MAP] = torch.arange(start, tot).float()
-    _, x_time = composer.build_input_vector(model_name, sources=sources, fixed=True,
-                                            recurrent=True)
+    _, x_time = composer.build_input_dict(model_name, sources=sources, fixed=True,
+                                          recurrent=True)
     # print(targ[~torch.eq(targ, x_time)[0, 0, :]])
     assert torch.all(torch.eq(targ, x_time))
 
@@ -204,8 +204,8 @@ def test_slr_con_fixed(composer):
     feats = load_featnames(model_name)['x_fixed']
     targ = torch.arange(len(feats)).float()
     sources = get_offer_fixed(composer)
-    x_fixed, _ = composer.build_input_vector(model_name, sources=sources, fixed=True,
-                                             recurrent=False)
+    x_fixed, _ = composer.build_input_dict(model_name, sources=sources, fixed=True,
+                                           recurrent=False)
     assert torch.all(torch.eq(targ, x_fixed))
 
 
@@ -215,8 +215,8 @@ def test_slr_con_time(composer):
     targ = torch.arange(len(feats)).float()
     sources = slr_early_offer_sources()
     sources[L_OUTCOMES_MAP] = torch.tensor([-1, -1, 50, 51, 52, 53, 54, 55, 56]).float()
-    _, x_time = composer.build_input_vector(model_name, sources=sources, fixed=False,
-                                            recurrent=True)
+    _, x_time = composer.build_input_dict(model_name, sources=sources, fixed=False,
+                                          recurrent=True)
     # print(targ[~torch.eq(targ, x_time)[0, 0, :]])
     assert torch.all(torch.eq(targ, x_time))
 
@@ -226,8 +226,8 @@ def test_slr_msg_fixed(composer):
     feats = load_featnames(model_name)['x_fixed']
     targ = torch.arange(len(feats)).float()
     sources = get_offer_fixed(composer)
-    x_fixed, _ = composer.build_input_vector(model_name, sources=sources, fixed=True,
-                                             recurrent=False)
+    x_fixed, _ = composer.build_input_dict(model_name, sources=sources, fixed=True,
+                                           recurrent=False)
     assert torch.all(torch.eq(targ, x_fixed))
 
 
@@ -257,8 +257,8 @@ def test_slr_msg_time(composer):
     start = 57
     tot = 59
     sources[TURN_IND_MAP] = torch.arange(start, tot).float()
-    _, x_time = composer.build_input_vector(model_name, sources=sources, fixed=True,
-                                            recurrent=True)
+    _, x_time = composer.build_input_dict(model_name, sources=sources, fixed=True,
+                                          recurrent=True)
     assert torch.all(torch.eq(targ, x_time))
 
 
@@ -269,8 +269,8 @@ def test_byr_delay_fixed(composer):
     sources = get_offer_fixed(composer)
     add_byr_delay_fixed(sources)
     add_delay_time(sources)
-    x_fixed, _ = composer.build_input_vector(model_name, sources=sources, fixed=True,
-                                             recurrent=True)
+    x_fixed, _ = composer.build_input_dict(model_name, sources=sources, fixed=True,
+                                           recurrent=True)
     assert torch.all(torch.eq(targ, x_fixed))
 
 
@@ -310,8 +310,8 @@ def test_byr_delay_time(composer):
     sources = get_offer_fixed(composer)
     add_byr_delay_fixed(sources)
     add_delay_time(sources)
-    _, x_time = composer.build_input_vector(model_name, sources=sources, fixed=True,
-                                            recurrent=True)
+    _, x_time = composer.build_input_dict(model_name, sources=sources, fixed=True,
+                                          recurrent=True)
     assert torch.all(torch.eq(targ, x_time))
 
 
@@ -322,8 +322,8 @@ def test_slr_delay_fixed(composer):
     sources = get_offer_fixed(composer)
     add_slr_delay_fixed(sources)
     add_delay_time(sources)
-    x_fixed, _ = composer.build_input_vector(model_name, sources=sources, fixed=True,
-                                             recurrent=False)
+    x_fixed, _ = composer.build_input_dict(model_name, sources=sources, fixed=True,
+                                           recurrent=False)
     assert torch.all(torch.eq(targ, x_fixed))
 
 
@@ -334,8 +334,8 @@ def test_slr_delay_time(composer):
     sources = get_offer_fixed(composer)
     add_slr_delay_fixed(sources)
     add_delay_time(sources)
-    _, x_time = composer.build_input_vector(model_name, sources=sources, fixed=False,
-                                            recurrent=True)
+    _, x_time = composer.build_input_dict(model_name, sources=sources, fixed=False,
+                                          recurrent=True)
     assert torch.all(torch.eq(targ, x_time))
 
 
