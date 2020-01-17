@@ -108,7 +108,7 @@ class EbayEnvironment:
             if byr_turn:
                 auto = self._check_slr_autos(offer['price'])
                 if auto == ACC_IND:
-                    self._process_sale(offer)
+                    self._process_slr_auto_acc(event)
                     return True
                 elif auto == REJ_IND:
                     self._process_slr_auto_rej(event, offer)
@@ -288,6 +288,10 @@ class EbayEnvironment:
         self.time_feats.update_features(trigger_type=time_triggers.SLR_REJECTION,
                                         thread_id=event.thread_id, offer=offer)
         self._init_delay(event)
+
+    def _process_slr_auto_acc(self, event):
+        offer = event.slr_auto_acc()
+        self._process_sale(offer)
 
     def _init_delay(self, event):
         event.change_turn()

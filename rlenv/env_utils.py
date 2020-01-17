@@ -240,6 +240,14 @@ def slr_rej(sources, turn, expire=False):
     return outcomes
 
 
+def slr_auto_acc(sources, turn):
+    outcomes = pd.Series(0.0, index=ALL_OUTCOMES[turn])
+    outcomes[featname(CON, turn)] = 1
+    prev_byr_norm = prev_norm(sources, turn)
+    outcomes[featname(NORM, turn)] = 1 - prev_byr_norm
+    return outcomes
+
+
 def get_checkpoint_path(part_dir, chunk_num, discrim=False):
     """
     Returns path to checkpoint file for the given chunk
@@ -413,10 +421,14 @@ def update_slr_outcomes(con=None, delay=None, sources=None, turn=0):
         outcomes[featname(CON, turn)] = con
         outcomes[featname(SPLIT, turn)] = get_split(con)
         prev_byr_norm = sources[THREAD_MAP][featname(NORM, turn - 1)]
-        norm = 1 - con * prev_byr_norm - (1 - prev_slr_norm) * (1 - con)
+        norm = slr_norm(con=con, prev_byr_norm=prev_byr_norm, prev_slr_norm=prev_slr_norm)
         outcomes[featname(NORM, turn)] = norm
 
     # TODO FIGURE OUT DELAY SHIT LATER IN A SEPARATE FUNCTION
 
     return outcomes, sample_msg
 
+
+def slr_norm(con, prev_byr_norm, prev_slr_norm):
+    norm = 1 - con * prev_byr_norm - (1 - prev_slr_norm) * (1 - con)
+    return norm

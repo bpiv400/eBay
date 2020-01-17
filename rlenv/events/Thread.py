@@ -4,7 +4,7 @@ class for encapsulating data and methods related to the first buyer offer
 from rlenv.events.Event import Event
 from rlenv.env_consts import FIRST_OFFER, BUYER_OFFER, SELLER_OFFER, INTERVAL_COUNT, INTERVAL
 from constants import (MONTH, DAY, SLR_PREFIX, BYR_PREFIX, MAX_DELAY, MAX_DAYS)
-from rlenv.env_utils import time_delta, slr_rej
+from rlenv.env_utils import time_delta, slr_rej, slr_auto_acc
 
 
 class Thread(Event):
@@ -129,6 +129,16 @@ class Thread(Event):
 
     def slr_rej(self, expire=False):
         outcomes = slr_rej(self.sources(), self.turn, expire=expire)
+        norm = self.sources.update_offer(outcomes=outcomes, turn=self.turn)
+        return {
+            'price': norm,
+            'type': SLR_PREFIX,
+            'time': self.priority
+        }
+
+    def slr_auto_acc(self):
+        self.change_turn()
+        outcomes = slr_auto_acc(self.sources(), self.turn)
         norm = self.sources.update_offer(outcomes=outcomes, turn=self.turn)
         return {
             'price': norm,
