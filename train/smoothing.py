@@ -73,6 +73,7 @@ if __name__ == '__main__':
     # initialize model
     model = Model(name, sizes, params)
     print(model.net)
+    print(model.loss.__name__)
 
     # smoothing parameters
     if (name == 'arrival') or ('delay' in name):

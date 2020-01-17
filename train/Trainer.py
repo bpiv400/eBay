@@ -63,7 +63,7 @@ class Trainer:
 		# experiment id
 		self.expid = 0
 
-	def train(self, gamma=None, smoothing=None):
+	def train(self, gamma=0, smoothing=0):
 		'''
 		Public method to train model.
 		:param gamma: scalar regularization parameter for variational dropout.
@@ -73,14 +73,8 @@ class Trainer:
 		self.optimizer.reset()
 
 		# save hyperparameters in model
-		if gamma is not None:
-			assert self.model.dropout > 0
-			assert gamma > 0
-			self.model.gamma = gamma
-		if smoothing is not None:
-			assert self.name in ['arrival', 'delay_slr', 'delay_byr']
-			assert smoothing > 0
-			self.model.smoothing = smoothing
+		self.model.gamma = gamma
+		self.model.smoothing = smoothing
 
 	    # initialize writer
 		writer = SummaryWriter(
@@ -120,7 +114,9 @@ class Trainer:
 
     def _run_epoch(self):
 	 	# initialize output with log10 learning rate
-		output = {'loglr': self.optimizer.loglr}
+		output = {'loglr': self.optimizer.loglr,
+				  'gamma': self.model.gamma,
+				  'smoothing': self.model.smoothing}
 
         # train model
         output['loss'] = self.model.run_loop(self.train, self.optimizer)
