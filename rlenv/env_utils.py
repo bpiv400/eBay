@@ -174,6 +174,7 @@ def load_model(full_name):
     :param str full_name: full name of the model
     :return: torch.nn.Module
     """
+    print('loading {}'.format(full_name))
     sizes, params = load_sizes(full_name), load_params()
     model_path = '{}{}.net'.format(MODEL_DIR, full_name)
     model_class = get_model_class(full_name)
