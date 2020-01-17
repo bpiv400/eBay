@@ -16,10 +16,10 @@ if __name__ == '__main__':
     expid = dt.now().strftime('%y%m%d-%H%M')
 
     # initialize trainer
-    trainer = Trainer(name, 'small', 'test_rl', expid)
+    trainer = Trainer(name, 'train_models', 'train_rl', expid)
 
     # wrapper function
     loss = lambda logx: -trainer.train_model(smoothing=10 ** logx)
 
-    result = minimize_scalar(loss, 
-        method='bounded', bounds=(0, 4), xatol=0.1)
+    result = minimize_scalar(loss, method='bounded', bounds=(0, 4), 
+        options={'xatol': 0.1, 'disp': 3})
