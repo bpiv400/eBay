@@ -46,7 +46,6 @@ def extract_day_feats(clock):
     df['holiday'] = clock.dt.date.astype('datetime64').isin(HOLIDAYS)
     for i in range(6):
         df['dow' + str(i)] = clock.dt.dayofweek == i
-
     return df
 
 
@@ -57,14 +56,19 @@ def extract_clock_feats(clock):
     :return: pandas dataframe of holiday and day of week indicators, and minute of day.
     '''
     df = extract_day_feats(clock)
-
-    # add in seconds of day
-    seconds_since_midnight = clock.dt.hour * 60 + clock.dt.minute + clock.dt.second
-    df['second_of_day'] = (seconds_since_midnight / (24 * 3600)).astype('float32')
-
+    # add in time of day
+    sec_norm = (clock.dt.hour * HOUR + clock.dt.minute * MINUTE + clock.dt.second) / DAY
+    df['time_of_day'] = np.sin(sec_norm * np.pi)
+    df['afternoon'] = sec_norm >= 0.5
     assert all(df.columns == CLOCK_FEATS)
-
     return df
+
+
+def get_months_since_lstg(lstg_start, thread_start):
+    months = (thread_start - lstg_start) / MONTH
+    months = months.rename('months_since_lstg')
+    assert months.max() < 1
+    return months
 
 
 # loads processed chunk files
@@ -115,6 +119,53 @@ def input_partition():
         raise RuntimeError('part must be one of: {}'.format(PARTITIONS))
 
     return part
+
+
+def get_days_delay(clock):
+    """
+    Calculates time between successive offers.
+    :param clock: dataframe with index ['lstg', 'thread'], 
+        turn numbers as columns, and seconds since START as values
+    :return days: fractional number of days between offers.
+    :return delay: time between offers as share of MAX_DELAY.
+    """
+    # initialize output dataframes in wide format
+    days = pd.DataFrame(0., index=clock.index, columns=clock.columns)
+    delay = pd.DataFrame(0., index=clock.index, columns=clock.columns)
+
+    # for turn 1, days and delay are 0
+    for i in range(2, 8):
+        days[i] = clock[i] - clock[i-1]
+        if i in [2, 4, 6, 7]: # byr has 2 days for last turn
+            delay[i] = days[i] / MAX_DELAY['slr']
+        elif i in [3, 5]:   # ignore byr arrival and last turn
+            delay[i] = days[i] / MAX_DELAY['byr']
+    # no delay larger than 1
+    assert delay.max().max() <= 1
+
+    # reshape from wide to long
+    days = days.rename_axis('index', axis=1).stack() / DAY
+    delay = delay.rename_axis('index', axis=1).stack()
+
+    return days, delay
+
+
+def get_norm(con):
+    '''
+    Calculate normalized concession from rounded concessions.
+    :param con: pandas series of rounded concessions.
+    :return: pandas series of normalized concessions.
+    '''
+    con = con.unstack()
+    norm = pd.DataFrame(index=con.index, columns=con.columns)
+    norm[1] = con[1]
+    norm[2] = con[2] * (1-norm[1])
+    for i in range(3, 8):
+        if i in IDX['byr']:
+            norm[i] = con[i] * (1-norm[i-1]) + (1-con[i]) * norm[i-2]
+        elif i in IDX['slr']:
+            norm[i] = 1 - con[i] * norm[i-1] - (1-con[i]) * (1-norm[i-2])
+    return norm.rename_axis('index', axis=1).stack().astype('float64')
 
 
 def get_arrival(lstg_start, thread_start):
@@ -177,15 +228,14 @@ def add_turn_indicators(df):
     return df
 
 
-def get_x_thread(part, idx):
-    # thread features
-    df = load_file(part, 'x_thread')
+def get_x_thread(threads, idx):
+    x_thread = threads.copy()
 
     # byr_hist as a decimal
-    df.loc[:, 'byr_hist'] = df.byr_hist.astype('float32') / 10
+    x_thread.loc[:, 'byr_hist'] = x_thread.byr_hist.astype('float32') / 10
 
     # reindex to create x_thread
-    x_thread = pd.DataFrame(index=idx).join(df)
+    x_thread = pd.DataFrame(index=idx).join(x_thread)
 
     # add turn indicators
     x_thread = add_turn_indicators(x_thread)
@@ -224,22 +274,19 @@ def clean_offer(offer, i, outcome, role, dtypes):
     return offer
 
 
-def get_x_offer(part, idx, outcome=None, role=None):
-    # offer features
-    df = load_file(part, 'x_offer')
-
+def get_x_offer(offers, idx, outcome=None, role=None):
     # initialize dictionary of offer features
     x = {}
 
     # dataframe of offer features for relevant threads
     threads = idx.droplevel(level='index').unique()
-    df = pd.DataFrame(index=threads).join(df)
-    dtypes = df.dtypes
+    offers = pd.DataFrame(index=threads).join(offers)
+    dtypes = offers.dtypes
 
     # turn features
     for i in range(1, max(IDX[role])+1):
         # offer features at turn i
-        offer = df.xs(i, level='index').reindex(index=idx)
+        offer = offers.xs(i, level='index').reindex(index=idx)
 
         # clean
         offer = clean_offer(offer, i, outcome, role, dtypes)
@@ -253,6 +300,12 @@ def get_x_offer(part, idx, outcome=None, role=None):
         # float32s
         x['offer%d' % i] = offer.astype('float32')
 
+    return x
+
+
+def init_x(part, idx):
+    x = load_file(part, 'x_lstg')
+    x = {k: v.reindex(index=idx, level='lstg').astype('float32') for k, v in x.items()}
     return x
 
 
@@ -289,80 +342,32 @@ def get_tf(tf, start, periods, role):
     return tf.groupby(list(tf.index.names) + ['period']).sum()
 
 
-def get_featnames(d, name):
-    '''
-    Creates dictionary of input feature names.
-    :param d: dictionary with dataframes.
-    :param name: string name of model.
-    '''
-
-    # initialize with components of x
-    featnames = {}
-    featnames['x'] = load(INPUT_DIR + 'featnames/x_lstg.pkl')
-    if 'x_thread' in d:
-        featnames['x']['lstg'] += list(d['x_thread'].columns)
-
-    if 'x_offer' in d:
-        for k, v in d['x_offer'].items():
-            featnames['x'][k] = list(v.columns)
-
-    # for arrival and delay models
-    if 'periods' in d:
-        featnames['x_time'] = \
-            CLOCK_FEATS + TIME_FEATS + [DURATION]
-
-        # check that time feats match names
-        assert list(d['tf'].columns) == TIME_FEATS
-
-        # for delay models
-        if 'remaining' in d:
-            featnames['x_time'] += [INT_REMAINING]
-            assert INT_REMAINING == 'remaining'
-
-    # for discriminator models
-    if name == 'listings':
-        featnames['x']['arrival'] = ['arrival{}'.format(i) \
-            for i in range(INTERVAL_COUNTS[ARRIVAL_PREFIX])]
-
-    return featnames
-
-
-def save_sizes(d, featnames, name):
+def save_sizes(featnames, name):
     '''
     Creates dictionary of input sizes.
-    :param d: dictionary of inputs.
     :param featnames: dictionary of featnames.
     :param name: string name of model.
     '''
     sizes = {}
 
-    # counts of examples (and labels)
-    if 'periods' in d:
-        sizes['N_examples'] = len(d['periods'])
-        sizes['N_labels'] = d['periods'].sum()
-    else:
-        sizes['N_labels'] = len(d['y'])
-
     # count components of x
-    sizes['x'] = {}
-    for k, v in featnames['x'].items():
-        sizes['x'][k] = len(v)
+    sizes['x'] = {k: len(v) for k, v in featnames.items()}
 
-    # arrival and delay models
-    if 'x_time' in featnames:
+    # save interval and interval counts
+    if (name == 'arrival') or ('delay' in name):
         role = name.split('_')[-1]
         sizes['interval'] = INTERVAL[role]
         sizes['interval_count'] = INTERVAL_COUNTS[role]
         if role == BYR_PREFIX:
             sizes['interval_count_7'] = INTERVAL_COUNTS[BYR_PREFIX + '_7']
 
-        sizes['x_time'] = len(featnames['x_time'])
- 
-    # output size is based on model
-    if name == 'hist':
+        # output size
+        sizes['out'] = INTERVAL_COUNTS[role] + 1
+
+    elif name == 'hist':
         sizes['out'] = HIST_QUANTILES
     elif 'con' in name:
-        sizes['out'] = 101
+        sizes['out'] = CON_MULTIPLIER + 1
     else:
         sizes['out'] = 1
 
@@ -375,51 +380,56 @@ def convert_to_numpy(d):
     :param d: dictionary with (dictionaries of) dataframes.
     :return: dictionary with numpy arrays (and dictionaries of dataframes).
     '''
-    # for error checking
-    if 'periods' in d:
-        master_idx = d['periods'].index
-    else:
-        master_idx = d['y'].index
+    # index for error checking
+    idx = d['y'].index
 
-    # error checking
-    for k in d.keys():
-        if 'periods' in k or 'idx' in k or k in ['y', 'seconds', 'x_thread', 'remaining']:
-            assert np.all(d[k].index == master_idx)
+    # convert outcome to numpy
+    d['y'] = d['y'].to_numpy()
 
-    # convert dataframes to numpy
-    for k, v in d.items():
-        if not isinstance(v, dict):
-            d[k] = v.to_numpy()
+    # error check and convert input dataframes to numpy
+    for k, v in d['x'].items():
+        assert np.all(v.index == idx)
+        d['x'][k] = v.to_numpy()
 
-    # loop through x_offer, error checking and convert to numpy
-    if 'x_offer' in d:
-        x_offer = d.pop('x_offer')
-        for k, v in x_offer.items():
-            assert np.all(v.index == master_idx)
-            d[k] = v.to_numpy()
+    return d, idx
 
-    return d
+
+def save_small(d, name):
+    # randomly select indices
+    v = np.arange(np.shape(d['y'])[0])
+    np.random.shuffle(v)
+    idx_small = v[:N_SMALL]
+
+    # outcome
+    small = {'y': d['y'][idx_small]}
+
+    # inputs
+    small['x'] = {k: v[idx_small, :] for k, v in d['x'].items()}
+
+    # save
+    dump(small, INPUT_DIR + 'small/{}.gz'.format(name))
+
 
 # save featnames and sizes
 def save_files(d, part, name):
     # featnames and sizes
     if part == 'train_models':
         # featnames
-        featnames = get_featnames(d, name)
+        featnames = {k: list(v.columns) for k, v in d['x'].items()}
         dump(featnames, INPUT_DIR + 'featnames/{}.pkl'.format(name))
 
         # sizes
-        save_sizes(d, featnames, name)
+        save_sizes(featnames, name)
 
     # create dictionary of numpy arrays
-    d = convert_to_numpy(d)
+    d, idx = convert_to_numpy(d)
 
-    # for recurrent models, save periods separately
-    if 'periods' in d:
-        periods = d.pop('periods')
-        dump(periods, INPUT_DIR + '{}/{}.gz'.format(part, name))
+    # save data
+    dump(d, INPUT_DIR + '{}/{}.gz'.format(part, name))
 
-    # save hdf5 file
-    with h5py.File(HDF5_DIR + '{}/{}.hdf5'.format(part, name), 'w') as f:
-        for k, v in d.items():
-            f.create_dataset(k, data=v)
+    # save index
+    dump(idx, INDEX_DIR + '{}/{}.gz'.format(part, name))
+
+    # save subset
+    if part == 'train_models':
+        save_small(d, name)

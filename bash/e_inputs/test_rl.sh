@@ -1,6 +1,6 @@
 #!/bin/bash
 #$ -t 1-8
-#$ -l m_mem_free=5G
+#$ -l m_mem_free=6G
 #$ -N e_test_rl
 #$ -j y
 #$ -o logs/processing/
@@ -13,10 +13,10 @@ then
 	python repo/processing/e_inputs/hist.py --part test_rl
 elif [ "$SGE_TASK_ID" == 3 ]
 then
-	python repo/processing/e_inputs/delay.py --part test_rl --role byr
+	python repo/processing/e_inputs/offer.py --part test_rl --outcome delay --role byr
 elif [ "$SGE_TASK_ID" == 4 ]
 then
-	python repo/processing/e_inputs/delay.py --part test_rl --role slr
+	python repo/processing/e_inputs/offer.py --part test_rl --outcome delay --role slr
 elif [ "$SGE_TASK_ID" == 5 ]
 then
 	python repo/processing/e_inputs/offer.py --part test_rl --outcome con --role byr

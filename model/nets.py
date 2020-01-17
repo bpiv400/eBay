@@ -1,6 +1,5 @@
 import torch, torch.nn as nn
 from collections import OrderedDict
-from model.LSTM import LSTM
 from constants import EMBEDDING_GROUPS
 from datetime import datetime as dt
 
@@ -62,28 +61,18 @@ class Layer(nn.Module):
         return x
 
 
-class Stack(nn.Module):
-    def __init__(self, N, params, layers=1):
-        '''
-        :param N: scalar number of input and output weights.
-        :param layers: scalar number of layers to stack.
-        :param params: dictionary of neural net parameters.
-        '''
-        super(Stack, self).__init__()
+def stack_layers(N, params, layers=1):
+    '''
+    :param N: scalar number of input and output weights.
+    :param layers: scalar number of layers to stack.
+    :param params: dictionary of neural net parameters.
+    '''
 
-        # sequence of modules
-        self.stack = nn.ModuleList([])
-        for _ in range(layers):
-            self.stack.append(Layer(N, N, params))
-
-        
-    def forward(self, x):
-        '''
-        x: tensor of shape [mbsize, N_in]
-        '''
-        for m in self.stack:
-            x = m(x)
-        return x
+    # sequence of modules
+    stack = nn.ModuleList([])
+    for _ in range(layers):
+        stack.append(Layer(N, N, params))
+    return stack
 
 
 class Embedding(nn.Module):
@@ -97,12 +86,12 @@ class Embedding(nn.Module):
         # first stack of layers: N to N
         self.layer1 = nn.ModuleDict()
         for k, v in counts.items():
-            self.layer1[k] = Stack(v, params,
+            self.layer1[k] = stack_layers(v, params,
                 layers=params['layers_embedding'])
 
         # second layer: concatenation
         N = sum(counts.values())
-        self.layer2 = Stack(N, params,
+        self.layer2 = stack_layers(N, params,
             layers=params['layers_embedding'])
 
 
@@ -112,14 +101,20 @@ class Embedding(nn.Module):
         '''
         # first layer
         l = []
-        for k, m in self.layer1.items():
-            l.append(m(x[k]))
+        for k, mlist in self.layer1.items():
+            x_k = x[k]
+            for m in mlist:
+                x_k = m(x_k)
+            l.append(x_k)
 
         # concatenate
         x = torch.cat(l, dim=1)
 
         # pass through second embedding
-        return self.layer2(x)
+        for m in self.layer2:
+            x = m(x)
+
+        return x
 
 
 class FullyConnected(nn.Module):
@@ -134,14 +129,11 @@ class FullyConnected(nn.Module):
         self.seq = nn.ModuleList([Layer(N_in, params['hidden'], params)])
 
         # fully connected network
-        self.seq.append(Stack(params['hidden'], params,
-            layers=params['layers_full']-2))
-
-        # last layer has no dropout
-        self.seq.append(Stack(params['hidden'], params))
+        self.seq += stack_layers(params['hidden'], params,
+            layers=params['layers_full']-1)
 
         # output layer
-        self.seq.append(nn.Linear(params['hidden'], N_out))
+        self.seq += [nn.Linear(params['hidden'], N_out)]
 
 
     def forward(self, x):
@@ -154,11 +146,10 @@ class FullyConnected(nn.Module):
 
 
 class FeedForward(nn.Module):
-    def __init__(self, sizes, params, toRNN=False):
+    def __init__(self, sizes, params):
         '''
         :param sizes: dictionary of scalar input sizes; sizes['x'] is an OrderedDict
         :param params: dictionary of neural net parameters.
-        :param toRNN: True if FeedForward initialized hidden state of recurrent network
         '''
         super(FeedForward, self).__init__()
 
@@ -179,8 +170,7 @@ class FeedForward(nn.Module):
         self.nn0 = nn.ModuleDict(d)
 
         # fully connected
-        self.nn1 = FullyConnected(total, 
-            params['hidden_lstm'] if toRNN else sizes['out'], params)
+        self.nn1 = FullyConnected(total, sizes['out'], params)
 
     def forward(self, x):
         '''
@@ -190,65 +180,3 @@ class FeedForward(nn.Module):
         for k in self.nn0.keys():
             l.append(self.nn0[k](x))
         return self.nn1(torch.cat(l, dim=1))
-
-
-class Recurrent(nn.Module):
-    def __init__(self, sizes, params):
-        '''
-        :param sizes: dictionary of scalar input sizes; sizes['x'] is an OrderedDict
-        :param params: dictionary of neural net parameters.
-        '''
-        super(Recurrent, self).__init__()
-
-        # initial hidden nodes
-        self.h0 = FeedForward(sizes, params, toRNN=True)
-        self.c0 = FeedForward(sizes, params, toRNN=True)
-
-        # rnn layer
-        self.rnn = LSTM(input_size=sizes['x_time'],
-                        hidden_size=params['hidden_lstm'],
-                        batch_first=True,
-                        dropout=params['dropout_lstm'],
-                        layernorm=params['layernorm'],
-                        affine=params['affine'])
-
-        # output layer
-        self.output = nn.Linear(params['hidden_lstm'], sizes['out'])
-
-
-    def forward(self, x, x_time):
-        '''
-        :param x: OrderedDict()
-        :param x_time: tensor of shape [mbsize, INTERVAL_COUNTS[outcome], sizes['x_time']]
-        '''
-        # initialize hidden state
-        hidden = (self.h0(x).unsqueeze(dim=0), 
-            self.c0(x).unsqueeze(dim=0))
-
-        # update hidden state recurrently
-        theta, _ = self.rnn(x_time, hidden)
-
-        # output layer: (batch_size, seq_len, N_output)
-        return self.output(theta).squeeze()
-
-
-    def init(self, x=None):
-        return (self.h0(x).unsqueeze(dim=0), 
-            self.c0(x).unsqueeze(dim=0))
-
-
-    def step(self, x_time=None, hidden=None, x=None):
-        """
-        Executes 1 step of the recurrent network
-
-        :param x_time:
-        :param x:
-        :param hidden:
-        :return:
-        """
-        if hidden is None:
-            hidden = self.init(x=x)
-        theta, hidden = self.rnn(x_time.unsqueeze(0), hidden)
-
-        # output layer: (seq_len, batch_size, N_out)
-        return self.output(theta), hidden

@@ -1,90 +1,105 @@
-import sys, pickle, os, argparse
+import sys, os
 from compress_pickle import load, dump
 import numpy as np, pandas as pd
-from constants import *
-from processing.processing_utils import *
-from processing.processing_consts import *
+from processing.processing_utils import input_partition, load_file, save_files, \
+	get_x_thread, get_x_offer, get_idx_x, get_days_delay, get_norm
+from constants import SIM_CHUNKS, ENV_SIM_DIR, MAX_DAYS, DAY, IDX, SLR_PREFIX
 
 
-# deletes irrelevant feats and sets unseen feats to 0
-def clean_offer(offer, i, outcome, role):
-	# if turn 1, drop days and delay
-	if i == 1:
-		offer = offer.drop(['days', 'delay'], axis=1)
-	# set features to 0 if i exceeds index
-	else:
-		future = i > offer.index.get_level_values(level='index')
-		offer.loc[future, offer.dtypes == 'bool'] = False
-		offer.loc[future, offer.dtypes != 'bool'] = 0
-	# for current turn, set feats to 0
-	curr = i == offer.index.get_level_values(level='index')
-	if outcome == 'delay':
-		offer.loc[curr, offer.dtypes == 'bool'] = False
-		offer.loc[curr, offer.dtypes != 'bool'] = 0
-	else:
-		offer.loc[curr, 'msg'] = False
-		if outcome == 'con':
-			offer.loc[curr, ['con', 'norm']] = 0
-			offer.loc[curr, ['split', 'auto', 'exp', 'reject']] = False
-	# if buyer turn or last turn, drop auto, exp, reject
-	if (i in IDX['byr']) or (i == max(IDX[role])):
-		offer = offer.drop(['auto', 'exp', 'reject'], axis=1)
-	# on last turn, drop msg (and concession features)
-	if i == max(IDX[role]):
-		offer = offer.drop('msg', axis=1)
-		if outcome == 'con':
-			offer = offer.drop(['con', 'norm', 'split'], axis=1)
-	return offer
+def concat_sim_chunks(name):
+	'''
+	Loops over simulations, concatenates single dataframe.
+	:param name: either 'threads' or 'offers'
+	:return: sorted dataframe with concatenated data.
+	'''
+	assert name in ['threads', 'offers']
+	df = []
+	for i in range(1, SIM_CHUNKS+1):
+		sim = load(ENV_SIM_DIR + '{}/discrim/{}.gz'.format(part, i))
+		df.append(sim[name])
+	df = pd.concat(df, axis=0).sort_index()
+	return df
+
+
+def get_threads_sim(cols, lstg_start):
+	# concatenate chunks
+	df = concat_sim_chunks('threads')
+
+	# convert clock to months_since_lstg
+	df = df.join(lstg_start)
+	df['months_since_lstg'] = (df.clock - df.start_time) / (MAX_DAYS * DAY)
+	df = df.drop(['clock', 'start_time'], axis=1)
+
+	# reorder columns to match observed
+	df = df[cols]
+
+	return df
+
+
+def get_offers_sim(cols):
+	# concatenate chunks
+	df = concat_sim_chunks('offers')
+
+	# do stuff
+	
+	
+	df['days'], df['delay'] = get_days_delay(df.clock.unstack())
+
+	# concession as a decimal
+	df.loc[:, 'con'] /= 100
+
+	# total concession
+    df['norm'] = get_norm(df.con)
+
+    # indicator for split
+    df['split'] = (df.con >= 0.49) & (df.con <= 0.51)
+
+    # message indicator
+    df = df.rename({'message': 'msg'}, axis=1)
+
+    # reject auto and exp are last
+    df['reject'] = df.con == 0
+    df['auto'] = (df.delay == 0) & df.index.isin(IDX[SLR_PREFIX], level='index')
+    df['exp'] = (df.delay == 1) | events.censored
+
+
+	# reorder columns to match observed
+	df = df[cols]
+
+	return df
+
+
+def construct_components(threads, offers):
+	idx = threads.idx
+
+	# thread features
+	x_thread = get_x_thread(threads, idx)
+
+	# offer features
+	x_offer = get_x_offer(offers, idx, outcome='threads')
+
+	# index of listing features
+	idx_x = get_idx_x(part, idx)
+
+	return x_thread, x_offer, idx_x
+
 
 # loads data and calls helper functions to construct training inputs
 def process_inputs(part, outcome, role):
-	# function to load file
-	load_file = lambda x: load('{}{}/{}.gz'.format(PARTS_DIR, part, x))
+	# construct inputs from data
+	threads_obs = load_file(part, 'x_thread') 
+	offers_obs = load_file(part, 'x_offer')
+	x_thread_obs, x_offer_obs, idx_x_obs = construct_components(threads, offers)
 
+	# construct inputs from simulations
+	lstg_start = load_file(part, 'lookup').start_time
+	threads_sim = get_threads_sim(threads_obs.columns)
+	offers_sim = get_offers_sim(offers_obs.columns)
 
-
-	# load dataframes
-	x_thread = load(PARTS_DIR + '%s/x_thread.gz' % part)
-	x_offer = load(PARTS_DIR + '%s/x_offer.gz' % part)
-
-	# thread indices
-	idx = x_thread.index
-
-	# initialize dictionary of input features
-	x = init_x(part, idx)
-	
-	# add thread features to listing features
-	x_thread.loc[:, 'byr_hist'] = x_thread.byr_hist.astype('float32') / 10
-	x['lstg'] = x['lstg'].join(x_thread)
-
-	# turn indicators
-	s = x_offer.reset_index('index')['index']
-	s = 
-
-	# offer features
-	df = x_offer.unstack(fill_value=0)
-	for i in range(1, 8):
-		offer = df.xs(i, axis=1, level='index')
-		offer = offer.loc[:, offer.std() > 0]
-		x['offer' + str(i)] = offer.join(turn_exists)
-
-
-	
-
-	# turn features
-	for i in range(1, 8):
-		# offer features at turn i
-		offer = df.xs(i, level='index').reindex(index=idx)
-		# clean
-		offer = clean_offer(offer, i, outcome, role)
-		# add turn number to featname
-		offer = offer.rename(lambda x: x + '_%d' % i, axis=1)
-		# add turn indicators
-		x['offer%d' % i] = add_final_turn_indicators(offer)
-
-	# combine into single dictionary
-	return {'y': y.astype('int8', inplace=True), 
-			'x': {k: v.astype('float32', copy=False) for k, v in x.items()}}
+	return {'y': y, 
+			'x_thread': x_thread, 
+			'x_offer': x_offer, 
+			'idx_x': idx_x}
 
 
 if __name__ == '__main__':
@@ -94,17 +109,4 @@ if __name__ == '__main__':
 	# input dataframes, output processed dataframes
 	d = process_inputs(part)
 
-	# save sizes
-	if part == 'train_rl':
-		dump(get_sizes(d), '{}/inputs/sizes/threads.pkl'.format(PREFIX))
-
-	# convert to dictionary of numpy arrays
-	d = convert_to_numpy(d)
-
-	# save
-	dump(d, '{}/inputs/{}/threads.gz'.format(PREFIX, part))
-
-	# small arrays
-	if part == 'train_rl':
-        dump(create_small(d), '{}/inputs/small/threads.gz'.format(PREFIX))
 

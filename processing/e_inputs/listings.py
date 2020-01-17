@@ -11,12 +11,9 @@ def get_counts_sim(lstg_start):
 	# concatenate thread start times
 	l = []
 	for i in range(1, SIM_CHUNKS+1):
-		# get thread start times from first simulation
-		try:
-			sim = load(ENV_SIM_DIR + '{}/discrim/{}.gz'.format(part, i))
-			l.append(sim['threads'].clock)
-		except:
-			continue
+		# get thread start times
+		sim = load(ENV_SIM_DIR + '{}/discrim/{}.gz'.format(part, i))
+		l.append(sim['threads'].clock)
 	thread_start = pd.concat(l, axis=0)
 
 	# convert to period in range(INTERVAL['arrival'])

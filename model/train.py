@@ -4,9 +4,7 @@ import torch, torch.optim as optim
 from torch.utils.tensorboard import SummaryWriter
 from compress_pickle import load, dump
 from model.Model import Model
-from model.datasets.FeedForwardDataset import FeedForwardDataset
-from model.datasets.ArrivalDataset import ArrivalDataset
-from model.datasets.DelayDataset import DelayDataset
+from model.datasets.eBayDataset import eBayDataset
 from model.model_consts import *
 from constants import INPUT_DIR, MODEL_DIR, PARAMS_PATH
 
@@ -24,12 +22,12 @@ def training_loop(model, train, test, writer_path, model_path):
 
         # train model
         output['loss'] = model.run_loop(train, optimizer)
-        output['lnL_train'] = -output['loss'] / train.N_labels
+        output['lnL_train'] = -output['loss'] / train.N
 
         # calculate log-likelihood on validation set
         with torch.no_grad():
             loss_test = model.run_loop(test)
-            output['lnL_test'] = -loss_test / test.N_labels
+            output['lnL_test'] = -loss_test / test.N
 
         # initialize tensorboard writer in first epoch
         if epoch == 0:
@@ -75,18 +73,16 @@ if __name__ == '__main__':
     # initialize model
     model = Model(name, sizes, params)
     print(model.net)
+    print(model.loss.__name__)
+
+    # smoothing parameters
+    if (name == 'arrival') or ('delay' in name):
+        model.smoothing = 1000
 
     # load datasets
     print('Loading data')
-    if name == 'arrival':
-        train = ArrivalDataset('train_models', name, sizes)
-        test = ArrivalDataset('train_rl', name, sizes)
-    elif 'delay' in name:
-        train = DelayDataset('train_models', name, sizes)
-        test = DelayDataset('train_rl', name, sizes)
-    else:
-        train = FeedForwardDataset('train_models', name, sizes)
-        test = FeedForwardDataset('train_rl', name, sizes)
+    train = eBayDataset('train_models', name)
+    test = eBayDataset('train_rl', name)
 
     # experiment number
     expid = 0

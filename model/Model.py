@@ -1,7 +1,6 @@
 import torch, torch.nn as nn
 from datetime import datetime as dt
-from torch.distributions.negative_binomial import NegativeBinomial as nb
-from model.nets import FeedForward, Recurrent
+from model.nets import FeedForward
 from model.Sample import get_batches
 from model.model_consts import *
 from constants import *
@@ -16,36 +15,23 @@ class Model:
         :param params: dictionary of neural net parameters.
         :param device: either 'cuda' or 'cpu'
         '''
-        self.dropoutFF = params['dropout']
-        self.dropoutLSTM = params['dropout_lstm'] > 0
+        self.dropout = params['dropout']
         self.device = device
 
-        # recurrent models
-        self.isRecurrent = 'x_time' in sizes
-
-        # initialize gamma to 0
+        # initialize regularization terms to 0
         self.gamma = 0.0
+        self.smoothing = 0.0
 
         # loss function
         if name in ['hist', 'con_slr', 'con_byr']:
             self.loss = nn.CrossEntropyLoss(reduction='sum')
-        elif name == 'arrival':
-            self.loss = nn.PoissonNLLLoss(reduction='sum')
-        else:
+        elif 'msg' in name:
             self.loss = nn.BCEWithLogitsLoss(reduction='sum')
+        else:
+            self.loss = self._TimeLoss
 
         # neural net
-        if self.isRecurrent:
-            self.net = Recurrent(sizes, params).to(device)
-        else:
-            self.net = FeedForward(sizes, params).to(device)
-
-
-    def set_gamma(self, gamma):
-        if gamma > 0:
-            if not self.dropoutFF:
-                error('Gamma cannot be positive without dropout layers.')
-            self.gamma = gamma
+        self.net = FeedForward(sizes, params).to(device)
 
 
     def get_penalty(self, factor=1):
@@ -75,7 +61,6 @@ class Model:
         :return: scalar loss.
         '''
         batches = get_batches(data, 
-            isRecurrent=self.isRecurrent,
             isTraining=optimizer is not None)
 
         # loop over batches, calculate log-likelihood
@@ -87,7 +72,7 @@ class Model:
             loss += self._run_batch(b, optimizer)
             gpu_time += (dt.now() - t0).total_seconds()
 
-        print('\t\tGPU time: {} seconds'.format(gpu_time))
+        print('\t\tGPU time: {0:.1f} seconds'.format(gpu_time))
 
         return loss
 
@@ -99,15 +84,13 @@ class Model:
         :return: tensor of model output.
         '''
         self.net.train(False)
-        batches = get_batches(data, 
-            isRecurrent=self.isRecurrent, 
-            isTraining=False)
+        batches = get_batches(data, isTraining=False)
         
         # predict theta
         theta = []
         for b in batches:
             self._move_to_device(b)
-            theta.append(self._simulate(b))
+            theta.append(self.net(b['x']).to('cpu'))
 
         return torch.cat(theta)
 
@@ -128,14 +111,6 @@ class Model:
         if self.device != 'cpu':
             b['x'] = {k: v.to(self.device) for k, v in b['x'].items()}
             b['y'] = b['y'].to(self.device)
-            if 'x_time' in b:
-                b['x_time'] = b['x_time'].to(self.device)
-
-
-    def _simulate(self, d):
-        if self.isRecurrent:
-            return self.net(d['x'], d['x_time'])
-        return self.net(d['x'])
 
 
     def _run_batch(self, b, optimizer):
@@ -147,13 +122,9 @@ class Model:
         '''
         isTraining = optimizer is not None  # train / eval mode
 
-        # dropout mask for LSTM
-        if isTraining and self.isRecurrent and self.dropoutLSTM:
-            self.net.rnn.sample_mask(self.device)
-
         # call forward on model
         self.net.train(isTraining)
-        theta = self._simulate(b)
+        theta = self.net(b['x'])
 
         # calculate loss
         loss = self._get_loss(theta, b['y'])
@@ -169,3 +140,29 @@ class Model:
             optimizer.step()
 
         return loss.item()
+
+
+    def _TimeLoss(self, theta, y):
+        # class probabilities
+        lnp = nn.functional.log_softmax(theta, dim=-1)
+
+        # arrivals have positive y
+        arrival = y >= 0
+        lnL = torch.sum(lnp[arrival, y[arrival]])
+
+        # non-arrivals
+        cens = y < 0
+        y_cens = y[cens]
+        p_cens = torch.exp(lnp[cens, :])
+        for i in range(p_cens.size()[0]):
+            lnL += torch.log(torch.sum(p_cens[i, y_cens[i]:]))
+
+        # penalty for jumps between classes
+        if self.net.training and self.smoothing > 0.0:
+            p = torch.exp(lnp)[:, :-1]  # ignore last index (expiration)
+            jumps = p[:, 1:] - p[:, :-1]
+            penalty = self.smoothing * torch.sum(jumps ** 2)
+        else:
+            penalty = 0
+
+        return -lnL + penalty
