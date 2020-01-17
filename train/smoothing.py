@@ -10,6 +10,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--name', type=str, required=True)
     name = parser.parse_args().name
+    assert name in ['arrival', 'delay_byr', 'delay_slr']
 
     # experiment number
     expid = dt.now().strftime('%y%m%d-%H%M')

@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import torch, torch.optim as optim
 from torch.utils.tensorboard import SummaryWriter
@@ -60,6 +61,16 @@ class Trainer:
 		self.train = eBayDataset(train_part, name)
 		self.test = eBayDataset(test_part, name)
 
+		# initialize writer
+		self.writer = SummaryWriter(
+			LOG_DIR + '{}/{}'.format(name, expid))
+
+		# train for one epoch with hyperparameters set to 0
+		self.pretrained_path = MODEL_DIR + '{}/pretrained.net'.format(name)
+		if not os.isfile(self.pretrained_path):
+			self._run_epoch(0)
+			torch.save(self.model.net.state_dict(), self.pretrained_path)
+
 
 	def train_model(self, gamma=0, smoothing=0):
 		'''
@@ -74,26 +85,19 @@ class Trainer:
 		self.model.gamma = gamma
 		self.model.smoothing = smoothing
 
-		# initialize writer
-		writer = SummaryWriter(
-			LOG_DIR + '{}/{}'.format(self.name, self.expid))
-		writer.add_scalar('gamma', gamma)
-		writer.add_scalar('smoothing', smoothing)
+		# load pre-trained model weights
+		self.model.net.load_state_dict(
+			torch.load(self.pretrained_path))
 
 		# training loop
-		epoch, last = 0, np.inf
+		epoch, last = 1, np.inf
 		while True:
 			print('\tEpoch %d' % epoch)
 
 			# run one epoch
-			output = self._run_epoch()
+			output = self._run_epoch(epoch)
 
-			# save output to tensorboard writer
-			for k, v in output.items():
-				writer.add_scalar(k, v, epoch)
-			writer.add_scalar('loglr', self.optimizer.loglr, epoch)
-
-			# save model and clean up
+			# save model
 			torch.save(self.model.net.state_dict(), 
 				MODEL_DIR + '{}/{}.net'.format(self.name, self.expid))
 
@@ -113,9 +117,11 @@ class Trainer:
 		return -output['lnL_test']
 
 
-	def _run_epoch(self):
+	def _run_epoch(self, epoch):
 	 	# initialize output with log10 learning rate
-		output = {'loglr': self.optimizer.loglr}
+		output = {'loglr': self.optimizer.loglr,
+				  'gamma': self.model.gamma,
+				  'smoothing': self.model.smoothing}
 
 		# train model
 		output['loss'] = self.model.run_loop(
@@ -127,7 +133,11 @@ class Trainer:
 			loss_test = self.model.run_loop(self.test)
 			output['lnL_test'] = -loss_test / self.test.N
 
-		return output['loss']
+		# save output to tensorboard writer
+		for k, v in output.items():
+			self.writer.add_scalar(k, v, epoch)
+
+		return output
 
 
 
