@@ -7,7 +7,7 @@ import pytest
 def test_model_collections():
     assert len(model_names.ARRIVAL) == 2
     assert model_names.BYR_HIST_MODEL in model_names.ARRIVAL
-    assert model_names.NUM_OFFERS_MODEL in model_names.ARRIVAL
+    assert model_names.ARRIVAL_MODEL in model_names.ARRIVAL
     assert len(model_names.OFFER_NO_PREFIXES) == 3
     assert len(model_names.OFFER_MODELS) == 6
     assert len([model for model in model_names.OFFER_MODELS if model_names.MSG in model]) == 2
@@ -24,12 +24,12 @@ def test_model_collections():
     assert len(model_names.RECURRENT_MODELS) == 3
     assert len([model for model in model_names.RECURRENT_MODELS if SLR_PREFIX in model]) == 1
     assert len([model for model in model_names.RECURRENT_MODELS if BYR_PREFIX in model]) == 1
-    assert model_names.NUM_OFFERS_MODEL in model_names.RECURRENT_MODELS
+    assert model_names.ARRIVAL_MODEL in model_names.RECURRENT_MODELS
     assert len([model for model in model_names.RECURRENT_MODELS if model_names.DELAY in model]) == 2
     assert len([model for model in model_names.LSTM_MODELS if SLR_PREFIX in model]) == 1
     assert len([model for model in model_names.LSTM_MODELS if BYR_PREFIX in model]) == 1
     assert len([model for model in model_names.LSTM_MODELS if model_names.DELAY in model]) == 2
-    assert model_names.NUM_OFFERS_MODEL in model_names.LSTM_MODELS
+    assert model_names.ARRIVAL_MODEL in model_names.LSTM_MODELS
 
 
 def test_get_model_class():

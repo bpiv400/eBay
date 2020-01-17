@@ -7,10 +7,10 @@ from featnames import *
 
 
 class Sources:
-    def __init__(self, x_lstg=None):
+    def __init__(self, x_lstg=None, composer=None):
         self.source_dict = {
             LSTG_MAP: x_lstg,
-            X_TIME_MAP: None
+            THREAD_MAP: pd.Series(0.0, index=composer.feat_sets[THREAD_MAP])
         }
 
     def __call__(self):
@@ -19,10 +19,9 @@ class Sources:
 
 class ThreadSources(Sources):
     def __init__(self, x_lstg=None, composer=None):
-        super(ThreadSources, self).__init__(x_lstg=x_lstg)
+        super(ThreadSources, self).__init__(x_lstg=x_lstg, composer=composer)
         # other clock features initialized to lstg start date
         self.source_dict[TURN_IND_MAP] = pd.Series(0.0, index=composer.feat_sets[TURN_IND_MAP])
-        self.source_dict[THREAD_MAP] = pd.Series(0.0, index=composer.feat_sets[THREAD_MAP])
         self.delay_prev_time = None
         self.offer_prev_time = None
 
@@ -134,12 +133,11 @@ class ThreadSources(Sources):
 
 
 class ArrivalSources(Sources):
-    def __init__(self, x_lstg=None):
+    def __init__(self, x_lstg=None, composer=None):
         super(ArrivalSources, self).__init__(x_lstg=x_lstg)
         self.prev_time = np.zeros(len(TIME_FEATS))
-        self.source_dict[X_TIME_MAP] = None
 
-    def update_arrival(self, time_feats=None, clock_feats=None, duration=None):
-        self.source_dict[X_TIME_MAP] = np.concatenate(
-            (clock_feats, time_feats - self.prev_time, np.array((duration,))))
+    def update_arrival(self, time_feats=None, clock_feats=None):
+        self.source_dict[THREAD_MAP][TIME_FEATS] = time_feats - self.prev_time
+        self.source_dict[THREAD_MAP][CLOCK_FEATS] = clock_feats
         self.prev_time = time_feats

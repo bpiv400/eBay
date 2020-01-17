@@ -12,7 +12,7 @@ class Arrival(Event):
     Attributes:
         priority: inherited from Event
     """
-    def __init__(self, priority=None, sources=None, interval_attrs=None):
+    def __init__(self, priority=None, sources=None):
         """
         Constructor
 
@@ -20,12 +20,7 @@ class Arrival(Event):
         """
         super(Arrival, self).__init__(ARRIVAL, priority=int(priority))
         self.sources = sources
-        self.interval = torch.tensor(0.0)
-        self.interval_attrs = interval_attrs
 
     def update_arrival(self, clock_feats=None, time_feats=None):
-        duration = self.interval / self.interval_attrs[INTERVAL_COUNT][ARRIVAL_PREFIX]
         self.sources.update_arrival(clock_feats=clock_feats,
-                                    time_feats=time_feats,
-                                    duration=duration)
-        self.interval += 1
+                                    time_feats=time_feats)

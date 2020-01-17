@@ -188,13 +188,13 @@ class Composer:
             BYR_PREFIX: self.sizes[model_str(DELAY, byr=True)][INTERVAL],
             '{}_{}'.format(BYR_PREFIX, 7): self.sizes[model_str(DELAY, byr=True)][INTERVAL],
             SLR_PREFIX: self.sizes[model_str(DELAY, byr=False)][INTERVAL],
-            ARRIVAL_PREFIX: self.sizes[NUM_OFFERS_MODEL][INTERVAL]
+            ARRIVAL_PREFIX: self.sizes[ARRIVAL_MODEL][INTERVAL]
         }
         t7_int_count = self.sizes[model_str(DELAY, byr=True)]['{}_{}'.format(INTERVAL_COUNT, 7)]
         interval_counts = {
             BYR_PREFIX: self.sizes[model_str(DELAY, byr=True)][INTERVAL_COUNT],
             SLR_PREFIX: self.sizes[model_str(DELAY, byr=False)][INTERVAL_COUNT],
-            ARRIVAL_PREFIX: self.sizes[NUM_OFFERS_MODEL][INTERVAL_COUNT],
+            ARRIVAL_PREFIX: self.sizes[ARRIVAL_MODEL][INTERVAL_COUNT],
             '{}_{}'.format(BYR_PREFIX, 7): t7_int_count
         }
         return {

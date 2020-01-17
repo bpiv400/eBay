@@ -43,9 +43,8 @@ class EbayEnvironment:
         self.time_feats.reset()
         self.outcome = None
         self.thread_counter = 0
-        sources = ArrivalSources(x_lstg=self.x_lstg)
-        self.arrival.init(sources=sources())
-        event = Arrival(priority=self.lookup[START_TIME], sources=sources, interval_attrs=self.interval_attrs)
+        sources = ArrivalSources(x_lstg=self.x_lstg, composer=self.arrival.composer)
+        event = Arrival(priority=self.lookup[START_TIME], sources=sources)
         self.queue.push(event)
 
     def run(self):
@@ -182,20 +181,19 @@ class EbayEnvironment:
         time_feats = self.time_feats.get_feats(time=event.priority)
         event.update_arrival(time_feats=time_feats, clock_feats=clock_feats)
 
-        # call model, simulate number of buyers
-        num_byrs = self.arrival.num_offers(event.sources())
-        if num_byrs > 0:
-            if self.verbose:
-                print('Arrival Interval Start: {}'.format(event.priority))
-                print('Number of arrivals: {}'.format(num_byrs))
-            # place each into the queue
-            for i in range(num_byrs):
-                priority = event.priority + np.random.randint(0, self.interval_attrs[INTERVAL][ARRIVAL_PREFIX])
-                self.thread_counter += 1
-                offer_event = self.make_thread(priority)
-                self.queue.push(offer_event)
-        # Add arrival check
-        event.priority += self.interval_attrs[INTERVAL][ARRIVAL_PREFIX]
+        # call model to sample inter arrival time
+        index = self.arrival.next_buyer(event.sources())
+
+        # if a buyer arrives, create a thread at the arrival time
+        if index != 0:
+            inter_arrival = self.arrival.inter_arrival(next_buyer)
+            priority = event.priority + inter_arrival
+            self.thread_counter += 1
+            offer_event = self.make_thread(priority)
+            self.queue.push(offer_event)
+        else:
+            priority = self.end_time
+        event.priority = priority
         self.queue.push(event)
         return False
 
