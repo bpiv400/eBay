@@ -139,8 +139,6 @@ class EbayEnvironment:
     def _process_first_offer(self, event):
         """
         Processes the buyer's first offer in a thread
-
-        :param event:
         :return:
         """
         # expiration
@@ -186,7 +184,7 @@ class EbayEnvironment:
 
         # if a buyer arrives, create a thread at the arrival time
         if index != 0:
-            inter_arrival = self.arrival.inter_arrival(next_buyer)
+            inter_arrival = self.arrival.inter_arrival(index)
             priority = event.priority + inter_arrival
             self.thread_counter += 1
             offer_event = self.make_thread(priority)

@@ -134,10 +134,13 @@ class ThreadSources(Sources):
 
 class ArrivalSources(Sources):
     def __init__(self, x_lstg=None, composer=None):
-        super(ArrivalSources, self).__init__(x_lstg=x_lstg)
+        super(ArrivalSources, self).__init__(x_lstg=x_lstg, composer=composer)
         self.prev_time = np.zeros(len(TIME_FEATS))
 
-    def update_arrival(self, time_feats=None, clock_feats=None):
+    def update_arrival(self, time_feats=None, clock_feats=None, months_since_lstg=None):
+        prev_months_since_lstg = self.source_dict[THREAD_MAP][MONTHS_SINCE_LSTG]
+        months_since_last = months_since_lstg - prev_months_since_lstg
         self.source_dict[THREAD_MAP][TIME_FEATS] = time_feats - self.prev_time
         self.source_dict[THREAD_MAP][CLOCK_FEATS] = clock_feats
+        self.source_dict[THREAD_MAP][MONTHS_SINCE_LAST] = months_since_last
         self.prev_time = time_feats
