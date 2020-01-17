@@ -83,7 +83,7 @@ def test_proper_squeeze():
 
 def test_categorical_sample():
     params = torch.ones(1, 5).float()
-    samp = categorical_sample(params, 1)
+    samp = sample_categorical(params, 1)
     assert len(samp.shape) == 1
     params = torch.ones(1, 3).float()
     outcomes = dict()
@@ -91,7 +91,7 @@ def test_categorical_sample():
     outcomes[1] = 0
     outcomes[2] = 0
     for _ in range(10000):
-        samp = categorical_sample(params, 1)
+        samp = sample_categorical(params, 1)
         samp = int(samp)
         outcomes[samp] += 1
     for i in outcomes:

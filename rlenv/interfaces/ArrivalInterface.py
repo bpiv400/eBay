@@ -1,7 +1,7 @@
 import torch, numpy as np
 from datetime import datetime as dt
 from torch.distributions.poisson import Poisson
-from rlenv.env_utils import load_model, proper_squeeze, categorical_sample
+from rlenv.env_utils import load_model, proper_squeeze, sample_categorical
 from rlenv.env_consts import BYR_HIST_MODEL, NUM_OFFERS_MODEL
 
 
@@ -44,6 +44,6 @@ class ArrivalInterface:
         input_dict = self.composer.build_input_vector(model_name=BYR_HIST_MODEL, sources=sources,
                                                       fixed=True, recurrent=False)
         params = self.hist_model(input_dict['x'])
-        hist = categorical_sample(params, 1)
+        hist = sample_categorical(params, 1)
         hist = hist / 10
         return hist

@@ -5,16 +5,16 @@ import torch
 import os
 import numpy as np
 import pandas as pd
-from datetime import datetime as dt
 from compress_pickle import load
 from torch.distributions.categorical import Categorical
-from constants import (INPUT_DIR, START, TOL_HALF,
+from torch.distributions.bernoulli import Bernoulli
+from constants import (INPUT_DIR, TOL_HALF,
                        MODEL_DIR, ENV_SIM_DIR, DAY, BYR_PREFIX, SLR_PREFIX)
-from model.nets import FeedForward, Recurrent
+from model.nets import FeedForward
 from rlenv.env_consts import (META_6, META_7, SIM_CHUNKS_DIR, SIM_VALS_DIR,
                               SIM_DISCRIM_DIR, THREAD_MAP, DATE_FEATS, 
-                              ARRIVAL_MODELS, LSTM_MODELS)
-from featnames import NORM, ALL_OUTCOMES, AUTO, REJECT, EXP
+                              ARRIVAL_MODELS)
+from featnames import *
 
 
 def load_featnames(name):
@@ -56,16 +56,6 @@ def featname(feat, turn):
     :return: str
     """
     return '{}_{}'.format(feat, turn)
-
-
-def get_model_class(full_name):
-    """
-    Returns the class of the given model
-    :param full_name: str giving the name of the model
-    :return: simulator.nets.RNN, simulator.nets.LSTM, or
-    simulator.nets.FeedForward
-    """
-    return Recurrent if full_name in LSTM_MODELS else FeedForward
 
 
 def model_str(model_name, byr=False):
@@ -118,15 +108,19 @@ def proper_squeeze(tensor):
     return tensor
 
 
-def categorical_sample(params, n):
+def sample_categorical(params):
     """
     Samples from a categorical distribution
     :param torch.FloatTensor params: logits of categorical distribution
-    :param int n: number of samples to draw
     :return: 1 dimensional np.array
     """
     cat = Categorical(logits=params)
-    return proper_squeeze(cat.sample(sample_shape=(n, )).float()).numpy()
+    return proper_squeeze(cat.sample(sample_shape=(1, )).float()).numpy()
+
+
+def sample_bernoulli(params):
+    dist = Bernoulli(logits=params)
+    return proper_squeeze(dist.sample((1, ))).numpy()
 
 
 def get_split(con):
@@ -350,3 +344,66 @@ def load_chunk(base_dir, num):
     x_lstg = input_dict['x_lstg']
     lookup = input_dict['lookup']
     return x_lstg, lookup
+
+
+def update_byr_outcomes(con=None, delay=None, sources=None, turn=0):
+    """
+    Creates a new seller outcome vector given the concession and optionally
+    given the delay (in cases where Agent predicts con and delay)
+    :param np.float con: concession
+    :param np.int delay: selected delay
+    :param Sources sources: sources object
+    :param int turn: turn number
+    :return: (outcome series, sample message boolean)
+    """
+    outcomes = pd.Series(0.0, index=ALL_OUTCOMES[turn])
+    # don't sample a msg if the delay is given since this means an agent
+    # selects delay
+    if delay is not None:
+        sample_msg = False
+    else:
+        sample_msg = (con != 0 and con != 1)
+    if sample_msg:
+        outcomes[featname(SPLIT, turn)] = get_split(con)
+    outcomes[featname(CON, turn)] = con
+    prev_slr_norm = prev_norm(sources, turn)
+    prev_byr_norm = last_norm(sources, turn)
+    norm = (1 - prev_slr_norm) * con + prev_byr_norm * (1 - con)
+    outcomes[featname(NORM, turn)] = norm
+    # TODO FIGURE OUT DELAY SHIT LATER IN A SEPARATE FUNCTION
+
+
+def update_slr_outcomes(con=None, delay=None, sources=None, turn=0):
+    """
+    Creates a new seller outcome vector given the concession and optionally
+    given the delay (in cases where Agent predicts con and delay)
+    :param np.float con: concession
+    :param np.int delay: selected delay
+    :param Sources sources: sources object
+    :param int turn: turn number
+    :return: (outcome series, sample message boolean)
+    """
+    outcomes = pd.Series(0.0, index=ALL_OUTCOMES[turn])
+    # don't sample a msg if the delay is given since this means an agent
+    # selects delay
+    if delay is not None:
+        sample_msg = False
+    else:
+        sample_msg = (con != 0 and con != 1)
+    # compute previous seller norm or set to 0 if this is the first turn
+    prev_slr_norm = last_norm(sources, turn)
+    # handle rejection case
+    if con == 0:
+        outcomes[featname(REJECT, turn)] = 1
+        outcomes[featname(NORM, turn)] = prev_slr_norm
+    else:
+        outcomes[featname(CON, turn)] = con
+        outcomes[featname(SPLIT, turn)] = get_split(con)
+        prev_byr_norm = sources[THREAD_MAP][featname(NORM, turn - 1)]
+        norm = 1 - con * prev_byr_norm - (1 - prev_slr_norm) * (1 - con)
+        outcomes[featname(NORM, turn)] = norm
+
+    # TODO FIGURE OUT DELAY SHIT LATER IN A SEPARATE FUNCTION
+
+    return outcomes, sample_msg
+
