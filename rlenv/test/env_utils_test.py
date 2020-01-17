@@ -1,6 +1,6 @@
 from rlenv.env_utils import *
 import rlenv.env_consts as model_names
-from model.nets import Recurrent, FeedForward
+from model.nets import FeedForward
 import pytest
 
 

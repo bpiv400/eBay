@@ -177,8 +177,9 @@ def load_model(full_name):
     sizes, params = load_sizes(full_name), load_params()
     model_path = '{}{}.net'.format(MODEL_DIR, full_name)
     net = FeedForward(sizes, params)  # type: torch.nn.Module
-    state_dict = torch.load(model_path, map_location='cpu')
-    net.load_state_dict(state_dict)
+    if full_name != 'arrival' and full_name != 'msg_byr':
+        state_dict = torch.load(model_path, map_location='cpu')
+        net.load_state_dict(state_dict)
     for param in net.parameters(recurse=True):
         param.requires_grad = False
     net.eval()
