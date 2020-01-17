@@ -35,6 +35,11 @@ class Composer:
 
     @staticmethod
     def _get_cols(x_lstg_cols):
+        """
+        Creates lists of thread features and turn indicator features
+        :param x_lstg_cols: list of x_lstg cols
+        :return:
+        """
         thread_cols = set()
         for mod in MODELS:
             curr_feats = load_featnames(mod)

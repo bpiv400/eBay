@@ -127,6 +127,7 @@ def sample_bernoulli(params):
 def sample_poisson(lnmean):
     return int(Poisson(torch.exp(lnmean)).sample((1,)).squeeze())
 
+
 def get_split(con):
     """
     Determines whether concession is close enough to 50 to trigger split feature
@@ -175,8 +176,7 @@ def load_model(full_name):
     print('loading {}'.format(full_name))
     sizes, params = load_sizes(full_name), load_params()
     model_path = '{}{}.net'.format(MODEL_DIR, full_name)
-    model_class = get_model_class(full_name)
-    net = model_class(sizes, params)  # type: torch.nn.Module
+    net = FeedForward(sizes, params)  # type: torch.nn.Module
     state_dict = torch.load(model_path, map_location='cpu')
     net.load_state_dict(state_dict)
     for param in net.parameters(recurse=True):
