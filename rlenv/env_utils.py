@@ -84,17 +84,24 @@ def get_clock_feats(time):
     Order of features in output should reflect env_consts.CLOCK_FEATS
     :param time: int giving time in seconds since START
     :return: numpy array containing 8 elements, where index 0 is an indicator
-    for holiday, indices 2-6 give indicators for the day of week, and index 7
-    gives the time of day as a fraction of the day since midnight.
+    for holiday, indices 2-6 give indicators for the day of week, index 7
+    gives the sine transformation of the time of day as a fraction of the day since midnight,
+    and index 8 is an indicator for whether the time is in the afternoon.
     """
     # holiday and day of week indicators
     date_feats = DATE_FEATS[time // DAY]
 
     # second of day, as fraction
-    second_of_day = (time % DAY) / DAY
+    sec_norm = (time % DAY) / DAY
+
+    # sine transformation
+    time_of_day = np.sin(sec_norm * np.pi)
+
+    # afternoon indicator
+    afternoon = sec_norm >= 0.5
 
     # concatenate
-    return np.append(date_feats, second_of_day)
+    return np.append(date_feats, time_of_day, afternoon)
 
 
 def proper_squeeze(tensor):
