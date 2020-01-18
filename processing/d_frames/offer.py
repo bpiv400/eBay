@@ -1,9 +1,10 @@
 from compress_pickle import load, dump
 import numpy as np, pandas as pd
-from constants import *
 from processing.processing_utils import input_partition, \
-    get_partition, load_frames, extract_clock_feats, get_days_delay, get_norm
-from processing.processing_consts import *
+    extract_clock_feats, get_days_delay, get_norm
+from processing.d_frames.frames_utils import get_partition, load_frames
+from processing.processing_consts import PARTS_DIR, CLEAN_DIR
+from constants import START
 
 
 def round_con(con):
@@ -53,7 +54,7 @@ def get_x_offer(start_price, events, tf):
     return df
 
 
-if __name__ == "__main__":
+def main():
     # partition and corresponding indices
     part = input_partition()
     idx, path = get_partition(part)
@@ -72,3 +73,6 @@ if __name__ == "__main__":
     print('clock')
     dump(events.clock, path('clock'))
  
+
+ if __name__ == "__main__":
+    main()

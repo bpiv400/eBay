@@ -65,10 +65,13 @@ class Trainer:
 		self.writer = SummaryWriter(
 			LOG_DIR + '{}/{}'.format(name, expid))
 
+		# universal epoch
+		self.epoch = 0
+
 		# train for one epoch with hyperparameters set to 0
 		self.pretrained_path = MODEL_DIR + '{}/pretrained.net'.format(name)
 		if not os.path.isfile(self.pretrained_path):
-			self._run_epoch(0)
+			self._run_epoch()
 			torch.save(self.model.net.state_dict(), self.pretrained_path)
 
 
@@ -90,12 +93,10 @@ class Trainer:
 			torch.load(self.pretrained_path))
 
 		# training loop
-		epoch, last = 1, np.inf
+		last = np.inf
 		while True:
-			print('\tEpoch %d' % epoch)
-
 			# run one epoch
-			output = self._run_epoch(epoch)
+			output = self._run_epoch()
 
 			# save model
 			torch.save(self.model.net.state_dict(), 
@@ -111,13 +112,14 @@ class Trainer:
 
 			# update last, increment epoch
 			last = output['loss']
-			epoch += 1
+			self.epoch += 1
 
-		writer.close()
 		return -output['lnL_test']
 
 
-	def _run_epoch(self, epoch):
+	def _run_epoch(self):
+		print('\tEpoch %d' % self.epoch)
+
 	 	# initialize output with log10 learning rate
 		output = {'loglr': self.optimizer.loglr,
 				  'gamma': self.model.gamma,
@@ -135,7 +137,7 @@ class Trainer:
 
 		# save output to tensorboard writer
 		for k, v in output.items():
-			self.writer.add_scalar(k, v, epoch)
+			self.writer.add_scalar(k, v, self.epoch)
 
 		return output
 

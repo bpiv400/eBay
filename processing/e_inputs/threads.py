@@ -1,9 +1,9 @@
 import sys, os
 from compress_pickle import load, dump
 import numpy as np, pandas as pd
-from processing.processing_utils import input_partition, load_file, save_files, \
-	get_x_thread, get_x_offer, get_idx_x, get_days_delay, get_norm
-from constants import SIM_CHUNKS, ENV_SIM_DIR, MAX_DAYS, DAY, IDX, SLR_PREFIX
+from processing.processing_utils import input_partition, get_days_delay, get_norm
+from processing.e_inputs.inputs_utils import load_file, get_x_thread, get_x_offer, init_x
+from constants import SIM_CHUNKS, ENV_SIM_DIR, MONTH, IDX, SLR_PREFIX
 
 
 def concat_sim_chunks(name):
@@ -27,7 +27,7 @@ def get_threads_sim(cols, lstg_start):
 
 	# convert clock to months_since_lstg
 	df = df.join(lstg_start)
-	df['months_since_lstg'] = (df.clock - df.start_time) / (MAX_DAYS * DAY)
+	df['months_since_lstg'] = (df.clock - df.start_time) / MONTH
 	df = df.drop(['clock', 'start_time'], axis=1)
 
 	# reorder columns to match observed
@@ -69,44 +69,57 @@ def get_offers_sim(cols):
 	return df
 
 
-def construct_components(threads, offers):
-	idx = threads.idx
+def construct_x(part, threads, offers):
+	# master index
+	idx = threads.index
+
+	x = init_x(part, idx)
 
 	# thread features
-	x_thread = get_x_thread(threads, idx)
+	x['lstg'] = pd.concat([x['lstg'], get_x_thread(threads, idx)], axis=1)
 
 	# offer features
-	x_offer = get_x_offer(offers, idx, outcome='threads')
+	x.update(get_x_offer(offers))
 
-	# index of listing features
-	idx_x = get_idx_x(part, idx)
-
-	return x_thread, x_offer, idx_x
+	return x
 
 
 # loads data and calls helper functions to construct training inputs
-def process_inputs(part, outcome, role):
-	# construct inputs from data
-	threads_obs = load_file(part, 'x_thread') 
-	offers_obs = load_file(part, 'x_offer')
-	x_thread_obs, x_offer_obs, idx_x_obs = construct_components(threads, offers)
+def process_inputs(part, obs=None):
+	
+	if obs:
+		
 
 	# construct inputs from simulations
 	lstg_start = load_file(part, 'lookup').start_time
 	threads_sim = get_threads_sim(threads_obs.columns)
 	offers_sim = get_offers_sim(offers_obs.columns)
 
-	return {'y': y, 
-			'x_thread': x_thread, 
-			'x_offer': x_offer, 
-			'idx_x': idx_x}
+	x = construct_x(part, )
+
+	return x
+
+
+def process_obs(part):
+	# load inputs from data
+		threads = load_file(part, 'x_thread') 
+		offers = load_file(part, 'x_offer')
+
+
+def main():
+	# extract partition from command line
+	part = input_partition()
+	print('%s/threads' % part)
+
+	# observed data
+	x_obs = process_obs(part)
+
+	# simulated data
+	x_sim = process_sim(part, x_obs)
+
+	# save data
+	save_discrim_files(part, 'threads', x_obs, x_sim)
 
 
 if __name__ == '__main__':
-	# extract partition from command line
-	part = input_partition()
-
-	# input dataframes, output processed dataframes
-	d = process_inputs(part)
-
-
+	main()
