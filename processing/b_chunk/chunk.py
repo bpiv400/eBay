@@ -1,9 +1,35 @@
 import sys, argparse
 from compress_pickle import dump, load
 import pandas as pd, numpy as np
-from constants import *
-from processing.processing_utils import *
-from processing.processing_consts import *
+from processing.processing_consts import CUTOFF, CLEAN_DIR, CHUNKS_DIR, LVARS, TVARS, OVARS
+
+
+# split into chunks and save
+def chunk(group, L, T, O):
+    S = L[group].reset_index().set_index(group).squeeze()
+    counts = S.groupby(S.index.name).count()
+    groups = []
+    total = 0
+    num = 1
+    for i in range(len(counts)):
+        groups.append(counts.index[i])
+        total += counts.iloc[i]
+        if (i == len(counts)-1) or (total >= CUTOFF):
+            # find correspinding listings
+            idx = S.loc[groups]
+            # create chunks
+            L_i = L.reindex(index=idx)
+            T_i = T.reindex(index=idx, level='lstg')
+            O_i = O.reindex(index=idx, level='lstg')
+            # save
+            chunk = {'listings': L_i, 'threads': T_i, 'offers': O_i}
+            path = CHUNKS_DIR + '%s%d.gz' % (group, num)
+            dump(chunk, path)
+            # reinitialize
+            groups = []
+            total = 0
+            # increment
+            num += 1
 
 
 if __name__ == '__main__':

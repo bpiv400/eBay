@@ -75,7 +75,6 @@ def stack_layers(N, params, layers=1):
     return stack
 
 
-
 class Embedding(nn.Module):
     def __init__(self, counts, params):
         '''
@@ -182,4 +181,3 @@ class FeedForward(nn.Module):
         for k in self.nn0.keys():
             l.append(self.nn0[k](x))
         return self.nn1(torch.cat(l, dim=1))
-

@@ -19,10 +19,12 @@ class Thread(Event):
         # participants
         self.buyer = None
         self.seller = None
+
         # sources object
         self.sources = None  # initialized later in init_thread
         self.turn = 1
         self.thread_id = thread_id
+
         # delay
         self.intervals = intervals
         self.max_delay = None # max length of delay
@@ -53,6 +55,7 @@ class Thread(Event):
     def buyer_offer(self, *args):
         return self.offer(interface=self.buyer, player_type=BYR_PREFIX)
 
+
     def seller_offer(self, *args):
         return self.offer(interface=self.seller, player_type=SLR_PREFIX)
 
@@ -62,6 +65,7 @@ class Thread(Event):
         else:
             self.type = BUYER_DELAY
         self._init_delay_params(lstg_start)
+
 
     def change_turn(self):
         self.turn += 1

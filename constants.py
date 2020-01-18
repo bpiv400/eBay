@@ -29,6 +29,7 @@ PARTS_DIR = '%s/partitions/' % PREFIX
 ENV_SIM_DIR = '%s/envSimulator/' % PREFIX
 OUTPUT_DIR = '%s/outputs/' % PREFIX
 INPUT_DIR = '%s/inputs/' % PREFIX
+INDEX_DIR = '%s/index/' % PREFIX
 FEATNAMES_DIR = '%sfeatnames/' % INPUT_DIR
 MODEL_DIR = '%smodels/' % OUTPUT_DIR
 REINFORCE_DIR = '%s/reinforce' % PREFIX
@@ -57,8 +58,14 @@ MAX_DELAY = {
 	BYR_PREFIX: 14 * 24 * 3600
 }
 
+# concessions that denote an (almost) even split
+SPLIT_PCTS = [.49, .50, .51]
+
 # quantiles of byr_hist distribution
 HIST_QUANTILES = 10
+
+# multiplier for concession
+CON_MULTIPLIER = 100
 
 # number of chunks for environment simulation
 SIM_CHUNKS = 1000

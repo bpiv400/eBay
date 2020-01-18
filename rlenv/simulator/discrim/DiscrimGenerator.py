@@ -1,6 +1,7 @@
 from rlenv.env_consts import SIM_DISCRIM_DIR
 from rlenv.simulator.Generator import Generator
 from rlenv.simulator.discrim.DiscrimRecorder import DiscrimRecorder
+from datetime import datetime as dt
 
 
 class DiscrimGenerator(Generator):
@@ -13,7 +14,9 @@ class DiscrimGenerator(Generator):
         """
         Simulates all lstgs in chunk according to experiment parameters
         """
-        for lstg in self.x_lstg.index:
+        print('Total listings: {}'.format(len(self.x_lstg)))
+        t0 = dt.now()
+        for i, lstg in enumerate(self.x_lstg.index):
             # index lookup dataframe
             lookup = self.lookup.loc[lstg, :]
 
@@ -25,6 +28,10 @@ class DiscrimGenerator(Generator):
 
             # simulate lstg once
             self._simulate_lstg(environment)
+
+            if (i % 10) == 0:
+                print('Avg time per listing: {} seconds'.format(
+                    (dt.now() - t0).total_seconds() / (i+1)))
 
         # save the recorder
         self.recorder.dump()

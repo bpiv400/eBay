@@ -1,9 +1,8 @@
-import os, sys, h5py
-os.environ["HDF5_USE_FILE_LOCKING"] = "FALSE"
+import os, sys
 from compress_pickle import load, dump
 import numpy as np, pandas as pd
-from processing.processing_utils import input_partition, load_frames, \
-    get_partition
+from processing.processing_utils import input_partition
+from processing.d_frames.frames_utils import get_partition, load_frames
 from processing.processing_consts import CLEAN_DIR, W2V_DIR
 from constants import *
 
@@ -48,7 +47,7 @@ def get_x_lstg(L):
     return df
 
 
-if __name__ == "__main__":
+def main():
     # partition and corresponding indices
     part = input_partition()
     idx, path = get_partition(part)
@@ -106,10 +105,9 @@ if __name__ == "__main__":
     for k, v in x.items():
         x[k] = v.to_numpy(dtype='float32')
 
-    # save hdf5 file
-    with h5py.File(HDF5_DIR + '{}/x_lstg.hdf5'.format(part), 'w') as f:
-        for k, v in x.items():
-            f.create_dataset(k, data=v)
-
     # save as gz
     dump(x, path('x_lstg'))
+
+
+if __name__ == "__main__":
+    main()

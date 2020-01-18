@@ -1,11 +1,13 @@
 from compress_pickle import load, dump
 import numpy as np, pandas as pd
 from constants import HIST_QUANTILES, PARTS_DIR, CLEAN_DIR
-from processing.processing_utils import input_partition, get_partition, get_months_since_lstg
-from processing.processing_consts import *
+from processing.processing_utils import input_partition, get_months_since_lstg
+from processing.d_frames.frames_utils import get_partition
+from processing.processing_consts import CLEAN_DIR, PARTS_DIR
+from featnames import BYR_HIST
 
 
-if __name__ == "__main__":
+def main():
 	# data partition
 	part = input_partition()
 	idx, path = get_partition(part)
@@ -15,7 +17,7 @@ if __name__ == "__main__":
 	thread_start = load('{}offers.pkl'.format(CLEAN_DIR)).reindex(
 		index=idx, level='lstg').clock.xs(1, level='index')
 	byr_hist = load('{}threads.pkl'.format(CLEAN_DIR)).reindex(
-		index=idx, level='lstg').byr_hist
+		index=idx, level='lstg')[BYR_HIST]
 
 	# months since lstg start
 	months = get_months_since_lstg(lstg_start, thread_start)
@@ -29,3 +31,7 @@ if __name__ == "__main__":
 
 	# save
 	dump(x_thread, path('x_thread'))
+
+
+if __name__ == "__main__":
+	main()

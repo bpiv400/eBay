@@ -3,4 +3,4 @@
 #$ -o logs/train/
 #$ -j y
 
-python repo/model/train.py --name delay_byr
+python repo/train/train_model.py --name delay_byr --smoothing

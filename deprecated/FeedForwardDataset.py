@@ -1,5 +1,7 @@
 import numpy as np
+from compress_pickle import load
 from model.datasets.eBayDataset import eBayDataset
+from constants import INPUT_DIR
 
 
 class FeedForwardDataset(eBayDataset):
@@ -10,6 +12,12 @@ class FeedForwardDataset(eBayDataset):
         :param name: string model name.
         '''
         super(FeedForwardDataset, self).__init__(part, name, sizes)
+
+        # load outcome into memory
+        self.y = load(INPUT_DIR + '{}/{}.gz'.format(part, name))
+
+        # number of labels
+        self.N_labels = len(self.y)
 
         # groups for sampling
         self.groups = [np.array(range(self.N_labels))]
@@ -26,9 +34,13 @@ class FeedForwardDataset(eBayDataset):
             self._init_subprocess()
 
         # y is indexed directly
-        y = self.d['y'][idx]
+        y = self.y[idx]
 
         # initialize x from listing-level features
         x = self._construct_x(idx)
 
         return y, x
+
+
+    def __len__(self):
+        return self.N_labels

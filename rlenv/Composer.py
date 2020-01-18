@@ -151,15 +151,15 @@ class Composer:
         :param maps: dictionary containing input maps
         :param sources: dictionary containing tensors from the environment that contain
         features the model expects in the input
-        :return: batch_size x maps[SIZE] tensor to be passed to a simulator model
+        :return t: (batch_size x maps[SIZE]) tensor to be passed to a simulator model
         """
-        x = torch.zeros(1, size).float()
+        t = torch.zeros(1, size).float()
         # other features
         for map_name, curr_map in maps.items():
             try:
-                x[0, curr_map] = torch.from_numpy(sources[map_name][curr_map.index].values).float()
+                t[0, curr_map] = torch.from_numpy(sources[map_name][curr_map.index].values).float()
             except RuntimeError as e:
-                Composer.catch_input_error(e, x, curr_map, sources, map_name)
+                Composer.catch_input_error(e, t, curr_map, sources, map_name)
                 raise RuntimeError()
         return x
 
@@ -168,7 +168,7 @@ class Composer:
         Public method that composes input vectors (x_time and x_fixed) from tensors in the
         environment
 
-        :param model_name: str giving the name of the focal model
+        :param name: str giving the name of the focal model
         :param sources: dictionary containing tensors from the environment that contain
         features the model expects in the input
         :return: 2-tuple of x_fixed, x_time. If not recurrent, x_time = None. If fixed=False,
@@ -203,14 +203,14 @@ class Composer:
         return self.feat_sets[LSTG_MAP]
 
     @staticmethod
-    def catch_input_error(e, x, curr_map, sources, map_name):
+    def catch_input_error(e, t, curr_map, sources, map_name):
         print('NAME')
         print(e)
         print(map_name)
         print('stored map: {}'.format(curr_map.dtype))
         print('stored map size: {}'.format(curr_map.dtype))
         print('sourced map: {}'.format(sources[map_name].dtype))
-        print('x: {}'.format(x.dtype))
+        print('t: {}'.format(t.dtype))
 
 
 class AgentComposer(Composer):

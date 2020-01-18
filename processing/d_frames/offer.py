@@ -1,9 +1,12 @@
 from compress_pickle import load, dump
 import numpy as np, pandas as pd
-from constants import *
 from processing.processing_utils import input_partition, \
-    get_partition, load_frames, extract_clock_feats, get_days_delay, get_norm
-from processing.processing_consts import *
+    extract_clock_feats, get_days_delay, get_norm, is_split
+from processing.d_frames.frames_utils import get_partition, load_frames
+from processing.processing_consts import PARTS_DIR, CLEAN_DIR
+from constants import START
+from featnames import DAYS, DELAY, CON, NORM, SPLIT, MSG, REJECT, AUTO, EXP
+>>>>>>> discrim
 
 
 def round_con(con):
@@ -32,28 +35,28 @@ def get_x_offer(start_price, events, tf):
     # initialize output dataframe
     df = pd.DataFrame(index=events.index).sort_index()
     # delay features
-    df['days'], df['delay'] = get_days_delay(events.clock.unstack())
+    df[DAYS], df[DELAY] = get_days_delay(events.clock.unstack())
     # clock features
     clock = pd.to_datetime(events.clock, unit='s', origin=START)
     df = df.join(extract_clock_feats(clock))
     # differenced time feats
     df = df.join(tf.reindex(index=df.index, fill_value=0))
     # concession
-    df['con'] = get_con(events.price.unstack(), start_price)
+    df[CON] = get_con(events.price.unstack(), start_price)
     # total concession
-    df['norm'] = get_norm(df.con)
+    df[NORM] = get_norm(df[CON])
     # indicator for split
-    df['split'] = (df.con >= 0.49) & (df.con <= 0.51)
+    df[SPLIT] = is_split(df[CON])
     # message indicator
-    df['msg'] = events.message
+    df[MSG] = events.message
     # reject auto and exp are last
-    df['reject'] = df.con == 0
-    df['auto'] = (df.delay == 0) & df.index.isin(IDX['slr'], level='index')
-    df['exp'] = (df.delay == 1) | events.censored
+    df[REJECT] = df[CON] == 0
+    df[AUTO] = (df[DELAY] == 0) & df.index.isin(IDX['slr'], level='index')
+    df[EXP] = (df[DELAY] == 1) | events.censored
     return df
 
 
-if __name__ == "__main__":
+def main():
     # partition and corresponding indices
     part = input_partition()
     idx, path = get_partition(part)
@@ -72,3 +75,6 @@ if __name__ == "__main__":
     print('clock')
     dump(events.clock, path('clock'))
  
+
+ if __name__ == "__main__":
+    main()

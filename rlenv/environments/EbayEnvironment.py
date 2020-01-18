@@ -181,7 +181,7 @@ class EbayEnvironment:
         if self._lstg_expiration(event):
             return True
 
-        # update sources with clock and time feats
+        # update sources with clock feats
         clock_feats = get_clock_feats(event.priority)
         event.update_arrival(thread_count=self.thread_counter, clock_feats=clock_feats)
 
@@ -193,7 +193,12 @@ class EbayEnvironment:
         if event.priority < self.end_time:
             self.thread_counter += 1
             self.queue.push(self.make_thread(event.priority))
+
         self.queue.push(event)
+
+        # increment thread counter
+        self.thread_counter += 1
+
         return False
 
     def _process_byr_expire(self, event):
