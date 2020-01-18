@@ -79,11 +79,14 @@ class BuyerInterface(PlayerInterface):
                 sample = dist.sample((1,))
             con = proper_squeeze(sample.float() / 100).numpy()
             # print('concession: {}'.format(con))
+        elif turn == 7:
+            sample = dist.sample((1,))
+            while (sample > 0) and (sample < 1):
+                sample = dist.sample((1,))
+            con = proper_squeeze(sample.float() / 100).numpy()
         else:
             con = proper_squeeze(dist.sample((1,)).float()).numpy()
             con = con / 100
-            if turn == 7 and con != 1:  # On the last turn, recast all buckets to 0 except accept
-                con = 0
         outcomes, sample_msg = update_byr_outcomes(con=con, sources=sources, turn=turn)
         return outcomes, sample_msg
 

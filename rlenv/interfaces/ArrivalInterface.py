@@ -1,4 +1,4 @@
-import numpy as np
+import numpy as np, torch
 from constants import ARRIVAL_PREFIX
 from rlenv.env_utils import load_model, sample_categorical
 from rlenv.env_consts import BYR_HIST_MODEL, ARRIVAL_MODEL

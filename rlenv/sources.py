@@ -10,7 +10,7 @@ class Sources:
     def __init__(self, x_lstg=None, composer=None):
         self.source_dict = {
             LSTG_MAP: x_lstg,
-            THREAD_MAP: pd.Series(0.0, index=composer.feat_sets[THREAD_MAP])
+            THREAD_MAP: pd.Series(0.0, index=composer.feat_sets[THREAD_MAP], dtype='float32')
         }
 
     def __call__(self):
@@ -121,8 +121,9 @@ class ArrivalSources(Sources):
         super(ArrivalSources, self).__init__(x_lstg=x_lstg, composer=composer)
 
     def update_arrival(self, clock_feats=None, months_since_lstg=None, thread_count=None):
-        prev_months_since_lstg = self.source_dict[THREAD_MAP][MONTHS_SINCE_LSTG]
-        months_since_last = months_since_lstg - prev_months_since_lstg
+        #prev_months_since_lstg = self.source_dict[THREAD_MAP][MONTHS_SINCE_LSTG]
+        #months_since_last = months_since_lstg - prev_months_since_lstg
         self.source_dict[THREAD_MAP][THREAD_COUNT] = thread_count
         self.source_dict[THREAD_MAP][CLOCK_FEATS] = clock_feats
-        self.source_dict[THREAD_MAP][MONTHS_SINCE_LAST] = months_since_last
+        self.source_dict[THREAD_MAP][MONTHS_SINCE_LSTG] = months_since_lstg
+        #self.source_dict[THREAD_MAP][MONTHS_SINCE_LAST] = months_since_last

@@ -153,11 +153,11 @@ class Composer:
         features the model expects in the input
         :return t: (batch_size x maps[SIZE]) tensor to be passed to a simulator model
         """
-        t = torch.zeros(1, size).float()
+        x = torch.zeros(1, size).float()
         # other features
         for map_name, curr_map in maps.items():
             try:
-                t[0, curr_map] = torch.from_numpy(sources[map_name][curr_map.index].values).float()
+                x[0, curr_map] = torch.from_numpy(sources[map_name][curr_map.index].values).float()
             except RuntimeError as e:
                 Composer.catch_input_error(e, t, curr_map, sources, map_name)
                 raise RuntimeError()

@@ -193,12 +193,7 @@ class EbayEnvironment:
         if event.priority < self.end_time:
             self.thread_counter += 1
             self.queue.push(self.make_thread(event.priority))
-
         self.queue.push(event)
-
-        # increment thread counter
-        self.thread_counter += 1
-
         return False
 
     def _process_byr_expire(self, event):
