@@ -105,6 +105,11 @@ def get_x_offer(offers, idx=None, outcome=None, role=None):
 		if outcome is not None:
 			offer = set_zero_feats(offer, i, outcome)
 
+		# set censored time feats to zero
+		if outcome is None and (i > 1):
+			censored = (offer[EXP] == 1) & (offer[DELAY] < 1)
+			offer.loc[censored, TIME_FEATS] = 0.0
+
 		# drop irrelevant features
 		offer = drop_offer_feats(offer, i, outcome, role)
 
@@ -115,15 +120,10 @@ def get_x_offer(offers, idx=None, outcome=None, role=None):
 		if outcome is not None:
 			offer = add_turn_indicators(offer)
 
-		# set censored time feats to zero
-		if outcome is None and (i > 1):
-			censored = (offer[EXP] == 1) & (offer[DELAY] < 1)
-			offer.loc[censored, TIME_FEATS] = 0.0
-
 		# put in dictionary
-		x_offer['offer%d' % i] = offer
+		x_offer['offer%d' % i] = offer.astype('float32')
 
-	return x_offer.astype('float32')
+	return x_offer
 
 
 def init_x(part, idx):

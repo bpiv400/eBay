@@ -102,3 +102,22 @@ def get_norm(con):
         elif i in IDX['slr']:
             norm[i] = 1 - df[i] * norm[i-1] - (1-df[i]) * (1-norm[i-2])
     return norm.rename_axis('index', axis=1).stack().astype('float64')
+
+
+def is_split(con):
+    '''
+    Boolean for whether concession is (close to) an even split.
+    :param con: scalar or Series of concessions.
+    :return: boolean or Series of booleans.
+    '''
+    t = type(con)._name__
+    if t == 'float':
+        return con in SPLIT_PCTS
+
+    assert 'float' in con.dtype
+    if t == 'Series':
+        return con.apply(lambda x: x in SPLIT_PCTS)
+
+    if t == 'ndarray':
+        return np.apply_along_axis(
+            lambda x: x in SPLIT_PCTS, 0, con)

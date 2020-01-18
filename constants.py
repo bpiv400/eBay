@@ -58,6 +58,9 @@ MAX_DELAY = {
 	BYR_PREFIX: 14 * 24 * 3600
 }
 
+# concessions that denote an (almost) even split
+SPLIT_PCTS = [.49, .50, .51]
+
 # quantiles of byr_hist distribution
 HIST_QUANTILES = 10
 
