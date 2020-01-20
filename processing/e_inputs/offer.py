@@ -46,6 +46,27 @@ def get_y_delay(df, role):
 	return delay
 
 
+def calculate_remaining(part, idx, role):
+	# load timestamps
+	lstg_start = load_file(part, 'lookup').start_time.reindex(
+			index=idx, level='lstg')
+	delay_start = load_file(part, 'clock').groupby(
+		['lstg', 'thread']).shift().reindex(index=idx).astype('int64')
+
+	# maximal delay
+	max_delay = pd.Series(MAX_DELAY[role], index=idx)
+	max_delay.loc[max_delay.index.isin([7], level='index')] = \
+		MAX_DELAY[BYR_PREFIX + '_7']
+
+	# remaining calculation
+	remaining = get_remaining(lstg_start, delay_start, max_delay)
+
+	# error checking
+	assert np.all(remaining > 0) and np.all(remaining <= 1)
+
+	return remaining
+
+
 def check_zero(offer, cols):
 	for c in cols:
 		assert offer[c].max() == 0
@@ -75,11 +96,7 @@ def process_inputs(part, outcome, role):
 	x_thread = get_x_thread(threads, idx)
 
 	if outcome == 'delay':	# add time remaining to x_thread
-		delay_start = load_file(part, 'clock').groupby(
-			['lstg', 'thread']).shift().reindex(index=idx).astype('int64')
-		lstg_start = load_file(part, 'lookup').start_time
-		x_thread[INT_REMAINING] = \
-			get_remaining(lstg_start, delay_start, MAX_DELAY[role])
+		x_thread[INT_REMAINING] = calculate_remaining(part, idx, role)
 
 	x['lstg'] = pd.concat([x['lstg'], x_thread], axis=1) 
 
@@ -88,7 +105,6 @@ def process_inputs(part, outcome, role):
 
 	# error checking
 	for i in range(1, max(IDX[role])+1):
-
 		# offer features at turn i
 		offer = x['offer' + str(i)]
 		# error checking

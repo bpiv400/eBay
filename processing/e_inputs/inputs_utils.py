@@ -5,6 +5,7 @@ import numpy as np, pandas as pd
 from processing.processing_consts import *
 from constants import *
 from featnames import *
+from utils import get_months_since_lstg
 
 
 # function to load file
@@ -174,16 +175,16 @@ def get_x_thread_arrival(clock, idx, lstg_start, diff):
 
 	# months since lstg start
 	months_since_lstg = get_months_since_lstg(lstg_start, seconds)
+	assert (months_since_lstg.max() < 1) & (months_since_lstg.min() >= 0)
 
 	# months since last arrival
 	months_since_last = diff.groupby('lstg').shift().fillna(0) / MONTH
-	months_since_last = months_since_last.rename(MONTHS_SINCE_LAST)
 
 	# concatenate into dataframe
 	x_thread = pd.concat(
 		[clock_feats,
-		months_since_lstg,
-		months_since_last,
+		months_since_lstg.rename(MONTHS_SINCE_LSTG),
+		months_since_last.rename(MONTHS_SINCE_LAST),
 		thread_count], axis=1)
 
 	return x_thread.astype('float32')

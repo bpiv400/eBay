@@ -1,5 +1,9 @@
 # clock feats
-CLOCK_FEATS = ['holiday', 'dow0', 'dow1', 'dow2', 'dow3', 'dow4', 'dow5', 'time_of_day', 'afternoon']
+HOLIDAY = 'holiday'
+DOW_PREFIX = 'dow'
+TIME_OF_DAY = 'time_of_day'
+AFTERNOON = 'afternoon'
+CLOCK_FEATS = [HOLIDAY] + [DOW_PREFIX + str(i) for i in range(6)] + [TIME_OF_DAY, AFTERNOON]
 
 # time feats
 SLR_OFFERS = 'slr_offers'
