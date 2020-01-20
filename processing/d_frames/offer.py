@@ -65,7 +65,7 @@ def main():
     # partition and corresponding indices
     part = input_partition()
     idx, path = get_partition(part)
-    print('{}/x_offer.gz'.format(part))
+    print('{}/x_offer'.format(part))
 
     # load other data
     start_price = load(PARTS_DIR + '%s/lookup.gz' % part).start_price

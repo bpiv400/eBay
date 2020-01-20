@@ -51,7 +51,7 @@ def main():
     # partition and corresponding indices
     part = input_partition()
     idx, path = get_partition(part)
-    print('{}/x_lstg.gz'.format(part))
+    print('{}/x_lstg'.format(part))
 
     # initialize output dictionary
     x = {}
