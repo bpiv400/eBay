@@ -1,7 +1,6 @@
 import torch, torch.nn as nn
 from collections import OrderedDict
 from constants import EMBEDDING_GROUPS
-from datetime import datetime as dt
 
 
 class VariationalDropout(nn.Module):
@@ -158,8 +157,6 @@ class FeedForward(nn.Module):
         if 'offer1' in sizes['x']:
             groups['offer'] = ['lstg'] \
                 + [k for k in sizes['x'].keys() if 'offer' in k]
-        elif 'arrival' in sizes['x']:
-            groups['arrival'] = ['lstg', 'arrival']
 
         # embeddings
         d, total = OrderedDict(), 0

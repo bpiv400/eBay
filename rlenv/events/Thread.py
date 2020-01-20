@@ -4,7 +4,7 @@ class for encapsulating data and methods related to the first buyer offer
 import numpy as np
 from rlenv.events.Event import Event
 from rlenv.env_consts import (FIRST_OFFER, BUYER_OFFER, SELLER_OFFER, BUYER_DELAY, SELLER_DELAY)
-from constants import (DAY, SLR_PREFIX, BYR_PREFIX, MAX_DELAY, MAX_DAYS)
+from constants import (DAY, MONTH, SLR_PREFIX, BYR_PREFIX, MAX_DELAY, MAX_DAYS)
 from rlenv.env_utils import slr_rej, slr_auto_acc
 from rlenv.time.Offer import Offer
 
@@ -29,7 +29,6 @@ class Thread(Event):
         self.intervals = intervals
         self.max_delay = None # max length of delay
         self.spi = None  # seconds per interval
-        self.remaining = None  # initial periods remaining
 
     def init_thread(self, sources=None, hist=None):
         self.sources = sources
@@ -82,13 +81,9 @@ class Thread(Event):
         self.max_delay = MAX_DELAY[delay_type]
         self.spi = self.intervals[delay_type]
         # create remaining
-        self._init_remaining(lstg_start, self.max_delay)
-        self.sources.init_remaining(remaining=self.remaining)
-
-    def _init_remaining(self, lstg_start, max_delay):
-        self.remaining = (MAX_DAYS + lstg_start) - self.priority
-        self.remaining = self.remaining / max_delay
-        self.remaining = min(self.remaining, 1)
+        remaining = get_remaining(
+            lstg_start, self.priority, self.max_delay)
+        self.sources.init_remaining(remaining=remaining)
 
     def delay(self):
         # add new features
@@ -99,8 +94,6 @@ class Thread(Event):
             index = self.buyer.delay(self.sources())
         seconds = int((index + np.random.uniform()) * self.spi)
         seconds = min(seconds, self.max_delay)
-        if seconds != self.max_delay:
-            print('less than max')
         return seconds
 
     def prepare_offer(self, seconds):

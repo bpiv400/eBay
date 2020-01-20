@@ -47,7 +47,7 @@ def set_zero_feats(offer, i, outcome):
 	# turn number
 	turn = offer.index.get_level_values(level='index')
 
-	# set features to 0 if i exceeds index
+	# all features are zero for future turns
 	if i > 1:
 		offer.loc[i > turn, :] = 0.0
 
@@ -59,25 +59,6 @@ def set_zero_feats(offer, i, outcome):
 		offer.loc[curr, MSG] = 0.0
 		if outcome == CON:
 			offer.loc[curr, [CON, NORM, SPLIT, AUTO, EXP, REJECT]] = 0.0
-
-	return offer
-
-
-# deletes irrelevant feats
-def drop_offer_feats(offer, i, outcome, role):
-	# if turn 1, drop days and delay
-	if i == 1:
-		offer = offer.drop([DAYS, DELAY], axis=1)
-
-	# if buyer turn or last turn, drop auto, exp, reject
-	if (i in IDX[BYR_PREFIX]) or (i == max(IDX[role])):
-		offer = offer.drop([AUTO, EXP, REJECT], axis=1)
-
-	# on last turn, drop msg (and concession features)
-	if i == max(IDX[role]):
-		offer = offer.drop(MSG, axis=1)
-		if outcome == CON:
-			offer = offer.drop([CON, NORM, SPLIT], axis=1)
 
 	return offer
 
@@ -101,24 +82,16 @@ def get_x_offer(offers, idx=None, outcome=None, role=None):
 		offer = offers.xs(i, level='index').reindex(
 			index=idx).astype('float32')
 
-		# set unseen feats to 0
+		# set unseen feats to 0 and add turn indicators
 		if outcome is not None:
 			offer = set_zero_feats(offer, i, outcome)
+			offer = add_turn_indicators(offer)
 
 		# set censored time feats to zero
-		if outcome is None and (i > 1):
-			censored = (offer[EXP] == 1) & (offer[DELAY] < 1)
-			offer.loc[censored, TIME_FEATS] = 0.0
-
-		# drop irrelevant features
-		offer = drop_offer_feats(offer, i, outcome, role)
-
-		# add turn number to featname
-		offer = offer.rename(lambda x: x + '_%d' % i, axis=1)
-
-		# add turn indicators
-		if outcome is not None:
-			offer = add_turn_indicators(offer)
+		else:
+			if i > 1:
+				censored = (offer[EXP] == 1) & (offer[DELAY] < 1)
+				offer.loc[censored, TIME_FEATS] = 0.0
 
 		# put in dictionary
 		x_offer['offer%d' % i] = offer.astype('float32')
@@ -234,20 +207,38 @@ def process_arrival_inputs(part, lstg_start, lstg_end, thread_start):
 	return {'y': y, 'x': x}
 
 
-def get_featnames(x):
-	return {k: list(v.columns) for k, v in x.items()}
+def save_featnames(x, name):
+	'''
+	Creates dictionary of input feature names.
+	:param x: dictionary of input dataframes.
+	:param name: string name of model.
+	'''
+	# initialize featnames dictionary
+	featnames = {k: list(v.columns) for k, v in x.items() if 'offer' not in k}
+
+	# for delay, con, and msg models
+	if 'offer1' in x:
+		# check that all offer groupings have same organization
+		for k in x.keys():
+			if 'offer' in k:
+				assert all(x[k].columns == x['offer1'].columns)
+
+		# one vector of featnames for offer groupings
+		featnames['offer'] = list(x['offer1'].columns)
+
+	dump(featnames, INPUT_DIR + 'featnames/{}.pkl'.format(name))
 
 
-def save_sizes(featnames, name):
+def save_sizes(x, name):
 	'''
 	Creates dictionary of input sizes.
-	:param featnames: dictionary of featnames.
+	:param x: dictionary of input dataframes.
 	:param name: string name of model.
 	'''
 	sizes = {}
 
 	# count components of x
-	sizes['x'] = {k: len(v) for k, v in featnames.items()}
+	sizes['x'] = {k: len(v.columns) for k, v in x.items()}
 
 	# save interval and interval counts
 	if (name == 'arrival') or ('delay' in name):
@@ -273,11 +264,11 @@ def save_sizes(featnames, name):
 def convert_x_to_numpy(x, idx):
 	'''
 	Converts dictionary of dataframes to dictionary of numpy arrays.
-	:param d: dictionary of dataframes.
+	:param x: dictionary of input dataframes.
 	:param idx: pandas index for error checking indices.
 	:return: dictionary of numpy arrays.
 	'''
-	for k, v in d['x'].items():
+	for k, v in x.items():
 		assert np.all(v.index == idx)
 		x[k] = v.to_numpy()
 
@@ -303,13 +294,9 @@ def save_small(d, name):
 # save featnames and sizes
 def save_files(d, part, name):
 	# featnames and sizes
-	if part == 'train_models':
-		# featnames
-		featnames = get_featnames(d['x'])
-		dump(featnames, INPUT_DIR + 'featnames/{}.pkl'.format(name))
-
-		# sizes
-		save_sizes(featnames, name)
+	if part == 'test_rl':
+		save_featnames(d['x'], name)
+		save_sizes(d['x'], name)
 
 	# pandas index
 	idx = d['y'].index

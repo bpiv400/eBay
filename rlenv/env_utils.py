@@ -45,7 +45,7 @@ def load_params():
         #TODO: extend to include agents
         :return: dict
         """
-    return load(INPUT_DIR + 'params.pkl')
+    return load(MODEL_DIR + 'params.pkl')
 
 
 def featname(feat, turn):
