@@ -38,7 +38,12 @@ REINFORCE_INPUT_DIR = '%s/input' % REINFORCE_DIR
 PARAMS_PATH = INPUT_DIR + 'params.pkl'
 
 # partitions
-PARTITIONS = ['train_models', 'train_rl', 'test_rl', 'test']
+TRAIN_MODELS = 'train_models'
+TRAIN_RL = 'train_rl'
+VALIDATION = 'test_rl'
+TEST = 'test'
+PARTITIONS = [TRAIN_MODELS, TRAIN_RL, VALIDATION, TEST]
+SMALL = 'small'
 
 # delete activity after lstg is open MAX_DAYS
 MAX_DAYS = 31

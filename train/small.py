@@ -1,5 +1,6 @@
 import sys, os, argparse
 from train.Trainer import Trainer
+from constants import SMALL, VALIDATION
 
 
 if __name__ == '__main__':
@@ -9,7 +10,7 @@ if __name__ == '__main__':
     name = parser.parse_args().name
 
     # initialize trainer
-    trainer = Trainer(name, 'small', 'test_rl')
+    trainer = Trainer(name, SMALL, VALIDATION)
 
     # training
     trainer.train_model(gamma=1)
