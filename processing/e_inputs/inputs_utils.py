@@ -5,6 +5,7 @@ import numpy as np, pandas as pd
 from processing.processing_consts import *
 from constants import *
 from featnames import *
+from processing.processing_utils import collect_date_clock_feats
 from utils import get_months_since_lstg
 
 
@@ -166,8 +167,7 @@ def get_x_thread_arrival(clock, idx, lstg_start, diff):
 		'int64').reindex(index=idx)
 
 	# clock features
-	clock_feats = extract_clock_feats(
-	    pd.to_datetime(seconds, unit='s', origin=START))
+	clock_feats = collect_date_clock_feats(seconds)
 
 	# thread count so far
 	thread_count = pd.Series(seconds.index.get_level_values(level='thread')-1,
