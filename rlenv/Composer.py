@@ -2,7 +2,7 @@ import torch
 import numpy as np, pandas as pd
 from rlenv.env_consts import *
 from rlenv.env_utils import load_featnames, load_sizes, model_str
-from featnames import TURN_FEATS
+from featnames import OUTCOME_FEATS, CLOCK_FEATS, TIME_FEATS, BYR_TURN_INDS, SLR_TURN_INDS
 from constants import ARRIVAL_PREFIX
 
 
@@ -13,7 +13,7 @@ class Composer:
     def __init__(self, cols):
         self.lstg_sets = Composer.build_lstg_sets(cols)
         self.intervals = self.make_intervals()
-        self.offer_feats = 
+        self.offer_feats = Composer.build_offer_feats()
 
     @staticmethod
     def build_lstg_sets(x_lstg_cols):
@@ -30,6 +30,21 @@ class Composer:
         for model in MODELS:
             Composer.verify_lstg_sets_shared(model, x_lstg_cols, featnames)
         return featnames
+
+    @staticmethod
+    def build_offer_feats():
+        shared_feats = CLOCK_FEATS + TIME_FEATS + OUTCOME_FEATS
+        for model in OFFER_MODELS:
+            if SLR_PREFIX in model:
+                turn_feats = SLR_TURN_INDS
+            else:
+                turn_feats = BYR_TURN_INDS
+            full_feats = shared_feats + turn_feats
+            model_feats = load_featnames(model)['offer']
+            assert len(full_feats) == len(model_feats)
+            for exp_feat, model_feat in zip(full_feats, model_feats):
+                assert exp_feat == model_feat
+        return shared_feats
 
     @staticmethod
     def verify_lstg_sets_shared(model, x_lstg_cols, featnames):

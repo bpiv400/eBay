@@ -53,7 +53,7 @@ SE_TOL = .5
 SIZE = 'size'
 LSTG_MAP = 'lstg'
 THREAD_MAP = 'thread'
-TURN_IND_MAP= 'turns'
+TURN_IND_MAP = 'turns'
 X_TIME_MAP = 'x_time'
 
 # offer response indicators

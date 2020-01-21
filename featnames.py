@@ -1,5 +1,9 @@
 # clock feats
-CLOCK_FEATS = ['holiday', 'dow0', 'dow1', 'dow2', 'dow3', 'dow4', 'dow5', 'time_of_day', 'afternoon']
+HOLIDAY = 'holiday'
+DOW_PREFIX = 'dow'
+TIME_OF_DAY = 'time_of_day'
+AFTERNOON = 'afternoon'
+CLOCK_FEATS = [HOLIDAY] + [DOW_PREFIX + str(i) for i in range(6)] + [TIME_OF_DAY, AFTERNOON]
 
 # time feats
 SLR_OFFERS = 'slr_offers'
@@ -45,26 +49,7 @@ REJECT = 'reject'
 AUTO = 'auto'
 EXP = 'exp'
 
-BYR_OUTCOMES = [
-    DAYS,
-    DELAY,
-    CON,
-    NORM,
-    SPLIT,
-    MSG,
-]
-SLR_OUTCOMES = BYR_OUTCOMES + [REJECT, AUTO, EXP]
-
-ALL_CLOCK_FEATS = dict()
-ALL_TIME_FEATS = dict()
-ALL_OUTCOMES = dict()
-for i in range(7):
-    ALL_CLOCK_FEATS[i + 1] = ['{}_{}'.format(feat, i + 1) for feat in CLOCK_FEATS]
-    ALL_TIME_FEATS[i + 1] = ['{}_{}'.format(feat, i + 1) for feat in TIME_FEATS]
-    if (i + 1) % 2 == 1:
-        ALL_OUTCOMES[i + 1] = ['{}_{}'.format(feat, i + 1) for feat in BYR_OUTCOMES]
-    else:
-        ALL_OUTCOMES[i + 1] = ['{}_{}'.format(feat, i + 1) for feat in SLR_OUTCOMES]
+OUTCOME_FEATS = [DAYS, DELAY, AUTO, EXP, CON, REJECT, NORM, SPLIT, MSG]
 
 # turn indices
 TURN_FEATS = ['t1', 't2', 't3']
