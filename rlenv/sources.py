@@ -36,7 +36,7 @@ class ThreadSources(Sources):
         self.source_dict[BYR_HIST] = hist
         del self.source_dict[INIT_CLOCK]
         del self.source_dict[INIT_TIME]
-        
+
 
 
     def update_offer(self, outcomes=None, turn=None):

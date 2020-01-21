@@ -1,7 +1,7 @@
 import torch
 import numpy as np, pandas as pd
 from rlenv.env_consts import *
-from rlenv.env_utils import load_featnames, model_str
+from rlenv.env_utils import load_featnames, model_str, load_sizes
 from featnames import OUTCOME_FEATS, CLOCK_FEATS, TIME_FEATS, BYR_TURN_INDS, SLR_TURN_INDS
 from constants import ARRIVAL_PREFIX
 
@@ -14,7 +14,15 @@ class Composer:
         self.lstg_sets = Composer.build_lstg_sets(cols)
         self.intervals = self.make_intervals()
         self.offer_feats = Composer.build_offer_feats()
+        self.sizes = Composer.make_sizes()
         # TODO
+
+    @staticmethod
+    def make_sizes():
+        output = dict()
+        for model in MODELS:
+            output[model] = load_sizes(model)
+        return output
 
     @staticmethod
     def build_lstg_sets(x_lstg_cols):
@@ -29,7 +37,16 @@ class Composer:
         featnames = load_featnames(ARRIVAL_MODEL)
         featnames[LSTG_MAP] = [feat for feat in featnames[LSTG_MAP] if feat in x_lstg_cols]
         for model in MODELS:
+            # verify all x_lstg based sets contain the same features in the same order
             Composer.verify_lstg_sets_shared(model, x_lstg_cols, featnames)
+            if model in OFFER_MODELS and DELAY not in model:
+                Composer.verify_offer_append(model, featnames[LSTG_MAP])
+            elif model in OFFER_MODELS:
+                Composer.verify_delay_append(model, featnames[LSTG_MAP])
+            elif model == ARRIVAL_MODEL:
+                Composer.verify_arrival_append(featnames[LSTG_MAP])
+            else:
+                Composer.verify_hist_append(featnames[LSTG_MAP])
         return featnames
 
     @staticmethod
@@ -156,6 +173,22 @@ class Composer:
         print('stored map size: {}'.format(curr_map.dtype))
         print('sourced map: {}'.format(sources[map_name].dtype))
         print('t: {}'.format(t.dtype))
+
+    @staticmethod
+    def verify_offer_append(model, shared_feats):
+        raise NotImplementedError()
+
+    @staticmethod
+    def verify_delay_append(model, shared_feats):
+        raise NotImplementedError()
+
+    @staticmethod
+    def verify_arrival_append(shared_feats):
+        raise NotImplementedError()
+
+    @staticmethod
+    def verify_hist_append(shared_feats):
+        raise NotImplementedError()
 
 
 class AgentComposer(Composer):
