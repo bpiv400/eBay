@@ -103,15 +103,15 @@ def process_inputs(part, outcome, role):
 
 	# error checking
 	for i in range(1, max(IDX[role])+1):
-		# offer features at turn i
-		offer = x['offer' + str(i)]
-		# error checking
-		if i == 1:
-			check_zero(offer, [DAYS, DELAY])
-		if i % 2 == 1:
-			check_zero(offer, [AUTO, EXP, REJECT])
-		if i == 7:
-			check_zero(offer, [MSG])
+		k = 'offer' + str(i)
+		if k in x:
+			# error checking
+			if i == 1:
+				check_zero(x[k], [DAYS, DELAY])
+			if i % 2 == 1:
+				check_zero(x[k], [AUTO, EXP, REJECT])
+			if i == 7:
+				check_zero(x[k], [MSG])
 
 	return {'y': y, 'x': x}
 

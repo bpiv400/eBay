@@ -232,7 +232,7 @@ def save_featnames(x, name):
 				assert all(list(x[k].columns) == OUTCOME_FEATS)
 
 		# one vector of featnames for offer groupings
-		featnames['offer'] = list(x['offer1'].columns)
+		featnames['offer'] = OUTCOME_FEATS
 
 	dump(featnames, INPUT_DIR + 'featnames/{}.pkl'.format(name))
 
