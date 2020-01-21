@@ -1,6 +1,6 @@
 #$ -t 1-1000
 #$ -l m_mem_free=6G
-#$ -N chunk
+#$ -N discrim_generator
 #$ -j y
 #$ -o logs/
 
