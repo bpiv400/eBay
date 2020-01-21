@@ -7,36 +7,37 @@ from featnames import *
 
 
 class Sources:
-    def __init__(self, x_lstg=None, composer=None):
-        self.source_dict = {
-            LSTG_MAP: x_lstg,
-            THREAD_MAP: pd.Series(0.0, index=composer.feat_sets[THREAD_MAP])
-        }
+    def __init__(self, x_lstg=None):
+        self.source_dict = x_lstg
+        self.source_dict[MONTHS_SINCE_LSTG] = 0.0
 
     def __call__(self):
         return self.source_dict
 
 
 class ThreadSources(Sources):
-    def __init__(self, x_lstg=None, composer=None):
-        super(ThreadSources, self).__init__(x_lstg=x_lstg, composer=composer)
+    def __init__(self, x_lstg=None):
+        super(ThreadSources, self).__init__(x_lstg=x_lstg)
         # other clock features initialized to lstg start date
-        self.source_dict[TURN_IND_MAP] = pd.Series(0.0, index=composer.feat_sets[TURN_IND_MAP])
-        self.delay_prev_time = None
+        self.source_dict[TURN_IND_MAP] = ThreadSources._turn_inds(1)
+        self.source_dict[INT_REMAINING] = 0.0
+        self.source_dict[BYR_HIST] = 0.0
         self.offer_prev_time = None
 
     def prepare_hist(self, time_feats=None, clock_feats=None, months_since_lstg=None):
-        self.source_dict[THREAD_MAP][MONTHS_SINCE_LSTG] = months_since_lstg
-        self.source_dict[THREAD_MAP][ALL_CLOCK_FEATS[1]] = clock_feats
-        self.source_dict[THREAD_MAP][ALL_TIME_FEATS[1]] = time_feats
+        self.source_dict[MONTHS_SINCE_LSTG] = months_since_lstg
+        self.source_dict[INIT_CLOCK] = clock_feats
+        self.source_dict[INIT_TIME] = time_feats
         self.offer_prev_time = time_feats
 
     def init_thread(self, hist=None):
         # (time features and clock_feats already set during prepare_hist)
         # add byr history
-        self.source_dict[THREAD_MAP][BYR_HIST] = hist
-        # initial turn indices to buyer indices and activate turn 1
-        self.source_dict[TURN_IND_MAP]['t1'] = 1
+        self.source_dict[BYR_HIST] = hist
+        del self.source_dict[INIT_CLOCK]
+        del self.source_dict[INIT_TIME]
+        
+
 
     def update_offer(self, outcomes=None, turn=None):
         outcome_names = ALL_OUTCOMES[turn].copy()
@@ -109,10 +110,13 @@ class ThreadSources(Sources):
 
     @staticmethod
     def _turn_inds(turn):
-        vec = pd.Series(0.0, index=TURN_FEATS)
+        if turn % 2 == 0:
+            vec = np.zeros((2, ), dtype=np.float)
+        else:
+            vec = np.zeros((3, ), dtype=np.float)
         if turn <= 5:
-            ind = math.ceil((turn / 2))
-            vec['t{}'.format(ind)] = 1
+            ind = math.floor((turn - 1) / 2)
+            vec[ind] = 1
         return vec
 
 

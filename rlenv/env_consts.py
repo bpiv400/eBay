@@ -52,9 +52,9 @@ SE_TOL = .5
 # composer maps
 SIZE = 'size'
 LSTG_MAP = 'lstg'
-THREAD_MAP = 'thread'
 TURN_IND_MAP = 'turns'
-X_TIME_MAP = 'x_time'
+INIT_CLOCK = 'init_clock'
+INIT_TIME = 'init_time'
 
 # offer response indicators
 ACC_IND = 0
