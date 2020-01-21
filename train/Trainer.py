@@ -191,9 +191,9 @@ class Trainer:
 			gpu_time += (dt.now() - t1).total_seconds()
 
 		# print timers
-		prefix = 'Training' if isTraining else 'Validation'
-		print('\t{} GPU time: {0:.1f} seconds'.format(prefix, gpu_time))
-		print('\t{} Total time: {0:.1f} seconds'.format(prefix, 
+		prefix = 'training' if isTraining else 'validation'
+		print('\t{0:s} GPU time: {1:.1f} seconds'.format(prefix, gpu_time))
+		print('\tTotal {0:s} time: {1:.1f} seconds'.format(prefix, 
 			(dt.now() - t0).total_seconds()))
 
 		return loss
