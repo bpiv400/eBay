@@ -10,6 +10,10 @@ class eBayDataset(Dataset):
         :param part: string partition name (e.g., train_models).
         :param name: string model name.
         '''
+        # save name to self
+        self.name = name
+
+        # dictionary of inputs        
         self.d = load(INPUT_DIR + '{}/{}.gz'.format(part, name))
 
         # number of labels

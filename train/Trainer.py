@@ -37,12 +37,12 @@ class Trainer:
 		self.gamma = None
 
 		# load model sizes
-		sizes = load(INPUT_DIR + 'sizes/{}.pkl'.format(name))
-		print('Sizes: {}'.format(sizes))
+		self.sizes = load(INPUT_DIR + 'sizes/{}.pkl'.format(name))
+		print('Sizes: {}'.format(self.sizes))
 
 		# load parameters
-		params = load(PARAMS_PATH)
-		print('Parameters: {}'.format(params))
+		self.params = load(PARAMS_PATH)
+		print('Parameters: {}'.format(self.params))
 
 		# loss function
 		if name in ['hist', 'con_slr', 'con_byr']:
@@ -51,10 +51,6 @@ class Trainer:
 			self.loss = nn.BCEWithLogitsLoss(reduction='sum')
 		else:
 			self.loss = TimeLoss
-
-		# neural net
-		self.net = FeedForward(sizes, params).to(device)
-		print(self.net)
 
 		# load datasets
 		self.train = eBayDataset(train_part, name)
@@ -69,11 +65,29 @@ class Trainer:
 			# train with penalty hyperparameter set to 0
 			self.pretrained_path = MODEL_DIR + '{}/pretrained.net'.format(name)
 			if not os.path.isfile(self.pretrained_path):
-				self.train_model(gamma=0)
-				torch.save(self.net.state_dict(), self.pretrained_path)
+				self._pretrain()
+
+		# neural net with dropout
+		self.net = FeedForward(
+			self.sizes, self.params, dropout=True).to(self.device)
+		print(self.net)
 
 
-	def train_model(self, gamma=0.0):
+	def _pretrain(self):
+		# neural net without dropout
+		self.net = FeedForward(
+			self.sizes, self.params, dropout=False).to(self.device)
+		print(self.net)
+
+		# train for one epoch
+		print('Pretraining:')
+		self._run_epoch(Optimizer(self.net.parameters()), epoch=0)
+
+		# save pretrained model
+		torch.save(self.net.state_dict(), self.pretrained_path)
+
+
+	def train_model(self, gamma=None):
 		'''
 		Public method to train model.
 		:param gamma: scalar regularization parameter for variational dropout.
@@ -89,15 +103,16 @@ class Trainer:
 		self.gamma = gamma
 
 		# load pre-trained model weights
-		if gamma > 0 and self.expid is not None:
+		if self.net.dropout and self.expid is not None:
 			self.net.load_state_dict(
-				torch.load(self.pretrained_path))
+				torch.load(self.pretrained_path), strict=False)
 
 		# training loop
 		last = np.inf
 		while True:
 			# run one epoch
-			output = self._run_epoch(optimizer, epoch)
+			print('Epoch {}'.format(epoch))
+			output = self._run_epoch(optimizer, epoch=epoch)
 
 			# save model
 			if self.expid is not None:
@@ -118,12 +133,9 @@ class Trainer:
 		return -output['lnL_test']
 
 
-	def _run_epoch(self, optimizer, epoch):
-		print('\tEpoch %d' % epoch)
-
+	def _run_epoch(self, optimizer, epoch=None):
 	 	# initialize output with log10 learning rate
-		output = {'loglr': optimizer.loglr,
-				  'gamma': self.gamma}
+		output = {'loglr': optimizer.loglr}
 
 		# train model
 		output['loss'] = self._run_loop(
@@ -131,7 +143,9 @@ class Trainer:
 		output['lnL_train'] = -output['loss'] / self.train.N
 
 		# variational dropout stats
-		output['share'], output['largest'] = self._get_alpha_stats()
+		if self.net.dropout:
+			output['gamma'] = self.gamma
+			output['share'], output['largest'] = self._get_alpha_stats()
 
 		# calculate log-likelihood on validation set
 		with torch.no_grad():
@@ -142,7 +156,7 @@ class Trainer:
 
 		# save output to tensorboard writer
 		for k, v in output.items():
-			print('\t\t{}: {}'.format(k, v))
+			print('\t{}: {}'.format(k, v))
 			if self.expid is not None:
 				self.writer.add_scalar(k, v, epoch)
 
@@ -156,8 +170,8 @@ class Trainer:
 		:param optimizer: instance of torch.optim.
 		:return: scalar loss.
 		'''
-		batches = get_batches(data, 
-		    isTraining=optimizer is not None)
+		isTraining = optimizer is not None
+		batches = get_batches(data, isTraining=isTraining)
 
 		# loop over batches, calculate log-likelihood
 		loss = 0.0
@@ -177,8 +191,9 @@ class Trainer:
 			gpu_time += (dt.now() - t1).total_seconds()
 
 		# print timers
-		print('\t\tGPU time: {0:.1f} seconds'.format(gpu_time))
-		print('\t\tTotal time: {0:.1f} seconds'.format(
+		prefix = 'Training' if isTraining else 'Validation'
+		print('\t{} GPU time: {0:.1f} seconds'.format(prefix, gpu_time))
+		print('\t{} Total time: {0:.1f} seconds'.format(prefix, 
 			(dt.now() - t0).total_seconds()))
 
 		return loss
@@ -206,10 +221,9 @@ class Trainer:
 
 		# add in regularization penalty and step down gradients
 		if isTraining:
-			if self.gamma > 0:
+			if self.net.dropout:
 				penalty = self._get_penalty()
 				loss = loss + penalty * len(b['y'])
-				print(penalty / loss.item())
 
 			optimizer.zero_grad()
 			loss.backward()

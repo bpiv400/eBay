@@ -3,4 +3,4 @@
 #$ -o logs/train/
 #$ -j y
 
-python repo/train/train_model.py --name arrival --smoothing
+python repo/train/train_model.py --name arrival

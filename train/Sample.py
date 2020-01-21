@@ -66,5 +66,5 @@ def get_batches(data, isTraining=False):
     '''
     batches = DataLoader(data, collate_fn=collate,
         batch_sampler=Sample(data, isTraining),
-        num_workers=NUM_WORKERS, pin_memory=True)
+        num_workers=NUM_WORKERS[data.name], pin_memory=True)
     return batches
