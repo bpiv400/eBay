@@ -1,7 +1,7 @@
 import torch
 import numpy as np, pandas as pd
 from rlenv.env_consts import *
-from rlenv.env_utils import load_featnames, load_sizes, model_str
+from rlenv.env_utils import load_featnames, model_str
 from featnames import OUTCOME_FEATS, CLOCK_FEATS, TIME_FEATS, BYR_TURN_INDS, SLR_TURN_INDS
 from constants import ARRIVAL_PREFIX
 
@@ -14,6 +14,7 @@ class Composer:
         self.lstg_sets = Composer.build_lstg_sets(cols)
         self.intervals = self.make_intervals()
         self.offer_feats = Composer.build_offer_feats()
+        # TODO
 
     @staticmethod
     def build_lstg_sets(x_lstg_cols):
@@ -85,87 +86,6 @@ class Composer:
         for grouping_name, feats in self.lstg_sets.items():
             input_dict[grouping_name] = x_lstg.loc[feats].values
         return input_dict
-
-    @staticmethod
-    def _build_model_maps(model, feat_sets):
-        maps = dict()
-        featnames = load_featnames(model)
-        sizes = load_sizes(model)
-        for set_name, input_set in featnames.items():
-            maps[set_name] = Composer._build_set_maps(input_set, feat_sets, size=sizes['x'][set_name])
-        clipped_sizes = sizes.copy()
-        return maps, clipped_sizes
-
-    @staticmethod
-    def _build_set_maps(input_set, feat_sets, size=None):
-        output = dict()
-        #print('input set: {}'.format(len(input_set)))
-        input_set = pd.DataFrame(data={'out':np.arange(len(input_set))},
-                                 index=input_set)
-        for set_name, feat_list in feat_sets.items():
-            if input_set.index.isin(feat_list).any():
-                output[set_name] = Composer._build_pair_map(input_set, feat_list)
-        Composer._check_set_maps(output, input_set, size)
-        return output
-
-    @staticmethod
-    def _build_pair_map(input_set, feat_list):
-        """
-        Builds paired feature maps for targ_feats under the assumption
-        the features are stored in Event objects in tensors with
-        the same order as targ_feats (see build() for description of paired feature map)
-
-        :param input_set:
-        :param feat_list:
-        :return:
-        """
-        input_set = input_set.copy()
-        input_set = input_set.loc[input_set.index.isin(feat_list), 'out']
-        return input_set
-
-    @staticmethod
-    def _check_set_maps(maps, input_set, size):
-        """
-        Performs sanity checks to ensure that input maps aren't clearly
-        incorrect:
-        - Each map is a Series
-        -Each feature maps to a distinct index in the input vectors
-        -All indices in the input vector have at least 1 source
-        index mapping to them
-        -The size of the input maps in sum equals the size of the input
-        vector
-
-        :param input_set:
-        :param maps: dictionary output by Composer._build_ff or Composer._build_recurrent
-        :raises AssertionError: when maps are not valid
-        """
-        total = len(input_set)
-        indices = list()
-        map_feats = list()
-        for map_name, input_map in maps.items():
-            assert isinstance(input_map, pd.Series)
-            indices = indices + list(input_map.values)
-            map_feats = map_feats + list(input_map.index)
-        assert len(map_feats) == len(indices)
-        assert len(indices) == total
-        assert min(indices) == 0
-        assert max(indices) == (total - 1)
-        assert len(indices) == len(set(indices))
-        # error checking
-        input_feats = set(list(input_set.index))
-        # print(len(input_set))
-        map_feats = set(map_feats)
-        # print('missing from maps: {}'.format(input_feats.difference(map_feats)))
-        assert len(indices) == size
-        assert input_feats == map_feats
-
-    @staticmethod
-    def _check_feat_sets(feat_sets):
-        feat_map = dict()
-        for _, feat_list in feat_sets.items():
-            for feat in feat_list:
-                assert feat not in feat_map
-                feat_map[feat] = True
 
     @staticmethod
     def _build_input_vector(maps, size, sources):
