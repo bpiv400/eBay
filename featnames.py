@@ -49,6 +49,8 @@ REJECT = 'reject'
 AUTO = 'auto'
 EXP = 'exp'
 
+OUTCOME_FEATS = [DAYS, DELAY, AUTO, EXP, CON, REJECT, NORM, SPLIT, MSG]
+
 BYR_OUTCOMES = [
     DAYS,
     DELAY,
