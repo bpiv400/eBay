@@ -11,55 +11,65 @@ class Composer:
     Class for composing inputs to interface from various input streams
     """
     def __init__(self, cols):
-        self.maps, self.sizes, self.feat_sets = \
-            Composer.build_models(cols)
+        self.lstg_sets = Composer.build_lstg_sets(cols)
         self.intervals = self.make_intervals()
+        self.offer_feats = 
 
     @staticmethod
-    def build_models(cols):
+    def build_lstg_sets(x_lstg_cols):
         """
-        creates a dictionary mapping
+        Constructs a dictionary containing the input groups constructed
+        from the features in x_lstg
+
+        :param x_lstg_cols: pd.Index containing names of features in x_lstg
+        :return: dict
         """
-        maps = dict()
-        sizes = dict()
-        x_lstg_cols = list(cols)
-        thread_cols = Composer._get_cols(x_lstg_cols)
-        feat_sets = {
-            THREAD_MAP: thread_cols,
-            LSTG_MAP: x_lstg_cols,
-            TURN_IND_MAP: TURN_FEATS,
-        }
-        Composer._check_feat_sets(feat_sets)
+        x_lstg_cols = list(x_lstg_cols)
+        featnames = load_featnames(ARRIVAL_MODEL)
+        featnames[LSTG_MAP] = [feat for feat in featnames[LSTG_MAP] if feat in x_lstg_cols]
         for model in MODELS:
-            maps[model], sizes[model] = Composer._build_model_maps(model, feat_sets)
-        return maps, sizes, feat_sets
+            Composer.verify_lstg_sets_shared(model, x_lstg_cols, featnames)
+        return featnames
 
     @staticmethod
-    def _get_cols(x_lstg_cols):
+    def verify_lstg_sets_shared(model, x_lstg_cols, featnames):
         """
-        Creates lists of thread features and turn indicator features
-        :param x_lstg_cols: list of x_lstg cols
-        :return:
+        Ensures that all the input groupings that contain features from x_lstg
+        have a common ordering
+        :param str model: model name
+        :param [str] x_lstg_cols: list of featnames in x_lstg
+        :param dict featnames: dictionary containing all x_lstg groupings
+        :return: None
         """
-        thread_cols = set()
-        for mod in MODELS:
-            curr_feats = load_featnames(mod)
-            for feat_type, feat_set in curr_feats.items():
-                [thread_cols.add(feat) for feat in feat_set]
-        # exclude turn indicators and consts from thread cols
-        for feat_set in [x_lstg_cols, TURN_FEATS]:
-            for feat in feat_set:
-                if feat in thread_cols:
-                    thread_cols.remove(feat)
-        return list(thread_cols)
+        model_featnames = load_featnames(model)
+        missing_idx = list()
+        # check that all features in LSTG not in x_lstg are appended to the end of LSTG
+        for feat in model_featnames[LSTG_MAP]:
+            if feat not in x_lstg_cols:
+                missing_idx.append(model_featnames[LSTG_MAP].index(feat))
+        missing_idx_min = min(missing_idx)
+        assert missing_idx_min == len(featnames[LSTG_MAP])
+        # remove those missing features
+        model_featnames[LSTG_MAP] = [feat for feat in model_featnames[LSTG_MAP] if feat in x_lstg_cols]
+        # iterate over all x_lstg features based and check that have same elements in the same order
+        for grouping_name, lstg_feats in featnames.items():
+            model_grouping = model_featnames[grouping_name]
+            assert len(model_grouping) == len(lstg_feats)
+            for model_feat, lstg_feat in zip(model_grouping, lstg_feats):
+                assert model_feat == lstg_feat
+                assert model_feat in x_lstg_cols
 
-    @staticmethod
-    def check_exclusive(x, y, model_name):
-        if len(x.intersection(y)) > 0:
-            if model_name is not None:
-                print('model: {}'.format(model_name))
-            print('intersection: {}'.format(x.intersection(y)))
-            raise RuntimeError('time cols and thread cols not mutually exclusive')
+    def decompose_x_lstg(self, x_lstg):
+        """
+        Breaks x_lstg series into separate numpy vectors based on self.lstg_sets that
+        serves as basis of
+        :param pd.Series x_lstg: fixed feature values
+        :return: dict
+        """
+        input_dict = dict()
+        for grouping_name, feats in self.lstg_sets.items():
+            input_dict[grouping_name] = x_lstg.loc[feats].values
+        return input_dict
 
     @staticmethod
     def _build_model_maps(model, feat_sets):
