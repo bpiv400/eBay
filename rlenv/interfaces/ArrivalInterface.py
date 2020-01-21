@@ -8,8 +8,8 @@ class ArrivalInterface:
     def __init__(self, composer=None):
         # Load interface
         self.composer = composer
-        self.hist_model = load_model(BYR_HIST_MODEL)
         self.arrival_model = load_model(ARRIVAL_MODEL)
+        self.hist_model = load_model(BYR_HIST_MODEL)
 
     def hist(self, sources=None):
         input_dict = self.composer.build_input_dict(BYR_HIST_MODEL, sources=sources)

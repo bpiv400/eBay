@@ -1,8 +1,8 @@
 import sys, os, argparse
 from compress_pickle import load, dump
 import numpy as np, pandas as pd
-from processing.processing_utils import get_x_thread, get_x_offer, \
-	init_x, save_files, load_file
+from processing.e_inputs.inputs_utils import load_file, get_x_thread, \
+	get_x_offer, init_x, save_files
 from processing.processing_consts import MAX_DELAY, INTERVAL, CLEAN_DIR
 from constants import IDX, DAY, BYR_PREFIX, SLR_PREFIX, ARRIVAL_PREFIX
 from featnames import CON, MSG, AUTO, EXP, DAYS, INT_REMAINING
@@ -82,7 +82,7 @@ def process_inputs(part, outcome, role):
 	return {'y': y, 'x': x}
 
 
-if __name__ == '__main__':
+def main():
 	# extract parameters from command line
 	parser = argparse.ArgumentParser()
 	parser.add_argument('--part', type=str)
@@ -98,3 +98,7 @@ if __name__ == '__main__':
 
 	# save various output files
 	save_files(d, part, name)
+
+
+if __name__ == '__main__':
+	main()

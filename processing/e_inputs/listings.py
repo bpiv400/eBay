@@ -1,87 +1,95 @@
-from compress_pickle import load, dump
+from compress_pickle import load
 import numpy as np, pandas as pd
-from constants import *
-from processing.processing_utils import get_x_thread, get_x_offer, \
-	get_idx_x, save_files, load_file, get_arrival, input_partition, \
-	reshape_indices
-from processing.processing_consts import *
+from processing.processing_utils import input_partition, 
+from processing.e_inputs.inputs_utils import load_file, \
+	process_arrival_inputs, save_discrim_files
+from constants import SIM_CHUNKS, ENV_SIM_DIR, MONTH
 
 
-def get_counts_sim(lstg_start):
-	# concatenate thread start times
-	l = []
+def process_lstg_end(lstg_start, lstg_end):
+	# remove thread and index from lstg_end index
+	lstg_end = lstg_end.reset_index(['thread', 'index'], drop=True)
+	assert not lstg_end.index.duplicated().max()
+
+	# fill in missing lstg end times with expirations
+	lstg_end = lstg_end.reindex(index=lstg_start.index, fill_value=-1)
+	lstg_end.loc[lstg_end == -1] = lstg_start + MONTH - 1
+
+	return lstg_end
+
+
+def get_sim_times(lstg_start):
+	# collect times from simulation files
+	lstg_end, thread_start = [], []
 	for i in range(1, SIM_CHUNKS+1):
-		# get thread start times
 		sim = load(ENV_SIM_DIR + '{}/discrim/{}.gz'.format(part, i))
-		l.append(sim['threads'].clock)
-	thread_start = pd.concat(l, axis=0)
+		offers, threads = [sim[k] for k in ['offers', 'threads']]
+		lstg_end.append(offers.loc[offers.con == 100, 'clock'])
+		thread_start.append(threads.clock)
 
-	# convert to period in range(INTERVAL['arrival'])
-	diff = (thread_start - lstg_start.reindex(
-		index=thread_start.index, level='lstg'))
-	period = (diff // INTERVAL['arrival']).rename('period')
+	# concatenate into single series
+	lstg_end = pd.concat(lstg_end, axis=0).sort_index()
+	thread_start = pd.concat(thread_start, axis=0).sort_index()
 
-	# count arrivals and fill in zeros
-	counts_sim = period.to_frame().assign(count=1).groupby(
-		['lstg', 'period']).sum().squeeze()
+	# shorten index and fill-in expirations
+	lstg_end = process_lstg_end(lstg_start, lstg_end)
 
-	return counts_sim
-
-
-def add_sim_to_index(df, isSim):
-	return df.reset_index().assign(sim=isSim).set_index(
-		['lstg', 'sim', 'period']).squeeze()
+	return lstg_end, thread_start
 
 
-def process_inputs(part):
-	# start times
+def get_obs_times(lstg_start):
+	# offer timestamps
+	clock = load_file(part, 'clock')
+
+	# listing end time
+	sale = load_file(part, 'x_offer').con == 1
+	lstg_end = clock[sale]
+	lstg_end = process_lstg_end(lstg_start, lstg_end)
+
+	# thread start time
+	thread_start = clock.xs(1, level='index')
+
+	return lstg_end, thread_start
+
+
+def process_inputs(part, obs=None):
+	# listing start time
 	lstg_start = load_file(part, 'lookup').start_time
-	thread_start = load_file(part, 'clock').xs(1, level='index')
 
-	# construct complete index
-	idx = pd.MultiIndex.from_product(
-			[lstg_start.index, [True, False]], 
-			names=['lstg', 'sim'])
+	# listing end time and thread start time
+	if obs:
+		lstg_end, thread_start = get_obs_times(part)
+	else:
+		lstg_end, thread_start = get_sim_times(part)
 
-	# observed arrival counts
-	counts_obs = get_arrival(lstg_start, thread_start)
+	# dictionary of y and x
+	d = process_arrival_inputs(part, lstg_start, lstg_end, thread_start)
 
-	# construct corresponding dataframe of simulated counts
-	counts_sim = get_counts_sim(lstg_start)
+	# split into arrival indicator and period number
+	arrival = np.array((d['y'] >= 0,), dtype='float32')
+	period = np.array((d['y'],), dtype='float32')
+	period[period < 0] += INTERVAL_COUNTS[ARRIVAL_PREFIX] + 1
 
-	# add 'sim' to counts index
-	counts_obs = add_sim_to_index(counts_obs, False)
-	counts_sim = add_sim_to_index(counts_sim, True)
+	# put in x['lstg']
+	d['x']['lstg'] = np.concatenate((d['x']['lstg'], arrival, period), axis=1)
 
-	# other inputs
-	arrival = pd.concat([counts_obs, counts_sim], 
-		axis=0, copy=False).sort_index()
-
-	# periods and arrival indices with index idx
-	arrival_periods, idx_arrival = reshape_indices(arrival.index, idx)
-
-	# y=True indicates simulated
-	y = pd.Series(idx.get_level_values(level='sim'), 
-		index=idx, name='isSim').astype('bool')
-
-	# index of listing features
-	idx_x = get_idx_x(part, idx)
-
-	# combine into single dictionary
-	return {'y': y, 
-			'arrival': arrival,
-			'arrival_periods': arrival_periods,
-			'idx_arrival': idx_arrival,
-			'idx_x': idx_x}
+	return d['x']
 
 
-if __name__ == '__main__':
+def main():
 	# extract partition from command line
 	part = input_partition()
 	print('%s/listings' % part)
 
-	# input dataframes, output processed dataframes
-	d = process_inputs(part)
+	# observed data
+	x_obs = process_inputs(part, obs=True)
 
-	# save various output files
-	save_files(d, part, 'listings')
+	# simulated data
+	x_sim = process_inputs(part, obs=False)
+
+	# save data
+	save_discrim_files(part, 'listings', x_obs, x_sim)
+
+
+if __name__ == '__main__':
+	main()

@@ -120,7 +120,3 @@ class SellerInterface(PlayerInterface):
         # break out into separate util function
         outcomes, sample_msg = update_slr_outcomes(con=con, sources=sources, turn=turn)
         return outcomes, sample_msg
-
-
-
-

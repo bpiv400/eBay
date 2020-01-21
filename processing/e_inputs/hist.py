@@ -1,6 +1,6 @@
 import numpy as np, pandas as pd
-from processing.processing_utils import input_partition, save_files, \
-	load_file, init_x
+from processing.processing_utils import input_partition
+from processing.e_inputs.inputs_utils import load_file, save_files, init_x
 from featnames import CLOCK_FEATS, TIME_FEATS
 
 
@@ -26,7 +26,7 @@ def process_inputs(part):
 	return {'y': y, 'x': x}
 
 
-if __name__ == '__main__':
+def main():
 	# partition name from command line
 	part = input_partition()
 	print('%s/hist' % part)
@@ -36,3 +36,7 @@ if __name__ == '__main__':
 
 	# save various output files
 	save_files(d, part, 'hist')
+
+
+if __name__ == '__main__':
+	main()

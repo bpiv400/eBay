@@ -1,21 +1,13 @@
 import pandas as pd
 from compress_pickle import dump
-from featnames import START_TIME, START_PRICE, TIME_FEATS
+from featnames import START_TIME, START_PRICE, TIME_FEATS, MSG, CON, LSTG, BYR_HIST
 
 # variable names
 INDEX = 'index'
 VAL = 'value'
 THREAD = 'thread'
 CLOCK = 'clock'
-BYR_HIST = 'byr_hist'
-NORM = 'norm'
-MESSAGE = 'message'
-CON = 'con'
-DUR = 'duration'
-SALE = 'sale'
-LSTG = 'lstg'
 SE = 'se'
-PRICE = 'price'
 AVG_PRICE = 'avg_price'
 NUM_SALES = 'num_sales'
 P_SALE = 'p_sale'
