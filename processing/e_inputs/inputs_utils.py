@@ -78,8 +78,13 @@ def get_x_offer(offers, idx=None, outcome=None, role=None):
 		threads = idx.droplevel(level='index').unique()
 		offers = pd.DataFrame(index=threads).join(offers)
 
+	# last turn to include
+	last = max(IDX[role])
+	if outcome == 'delay':
+		last -= 1
+
 	# turn features
-	for i in range(1, max(IDX[role])+1):
+	for i in range(1, last+1):
 		# offer features at turn i
 		offer = offers.xs(i, level='index').reindex(
 			index=idx).astype('float32')

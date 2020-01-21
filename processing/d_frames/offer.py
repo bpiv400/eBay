@@ -18,6 +18,8 @@ def round_con(con):
     rounded = np.round(con, decimals=2)
     rounded.loc[(rounded == 1) & (con < 1)] = 0.99
     rounded.loc[(rounded == 0) & (con > 0)] = 0.01
+    # exception handling
+    rounded.loc[(con == 0) & con.index.isin([1], level='index')] = 0.01
     return rounded
 
 
