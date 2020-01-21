@@ -80,8 +80,10 @@ def get_x_offer(offers, idx=None, outcome=None, role=None):
 
 	# last turn to include
 	last = max(IDX[role])
-	if outcome == 'delay':
+	if outcome == DELAY:
 		last -= 1
+	if (outcome == MSG) & (role == BYR_PREFIX):
+		last -= 2
 
 	# turn features
 	for i in range(1, last+1):
