@@ -1,71 +1,7 @@
 from rlenv.env_utils import *
 import rlenv.env_consts as model_names
-from model.nets import FeedForward
-import pytest
-
-
-def test_model_collections():
-    assert len(model_names.ARRIVAL) == 2
-    assert model_names.BYR_HIST_MODEL in model_names.ARRIVAL
-    assert model_names.ARRIVAL_MODEL in model_names.ARRIVAL
-    assert len(model_names.OFFER_NO_PREFIXES) == 3
-    assert len(model_names.OFFER_MODELS) == 6
-    assert len([model for model in model_names.OFFER_MODELS if model_names.MSG in model]) == 2
-    assert len([model for model in model_names.OFFER_MODELS if model_names.DELAY in model]) == 2
-    assert len([model for model in model_names.OFFER_MODELS if model_names.CON in model]) == 2
-    assert len([model for model in model_names.OFFER_MODELS if SLR_PREFIX in model]) == 3
-    assert len([model for model in model_names.OFFER_MODELS if BYR_PREFIX in model]) == 3
-    assert len(model_names.FEED_FORWARD_MODELS) == 5
-    assert len([model for model in model_names.FEED_FORWARD_MODELS if model_names.CON in model]) == 2
-    assert len([model for model in model_names.FEED_FORWARD_MODELS if model_names.MSG in model]) == 2
-    assert len([model for model in model_names.FEED_FORWARD_MODELS if SLR_PREFIX in model]) == 2
-    assert len([model for model in model_names.FEED_FORWARD_MODELS if BYR_PREFIX in model]) == 2
-    assert model_names.BYR_HIST_MODEL in model_names.FEED_FORWARD_MODELS
-    assert len(model_names.RECURRENT_MODELS) == 3
-    assert len([model for model in model_names.RECURRENT_MODELS if SLR_PREFIX in model]) == 1
-    assert len([model for model in model_names.RECURRENT_MODELS if BYR_PREFIX in model]) == 1
-    assert model_names.ARRIVAL_MODEL in model_names.RECURRENT_MODELS
-    assert len([model for model in model_names.RECURRENT_MODELS if model_names.DELAY in model]) == 2
-    assert len([model for model in model_names.LSTM_MODELS if SLR_PREFIX in model]) == 1
-    assert len([model for model in model_names.LSTM_MODELS if BYR_PREFIX in model]) == 1
-    assert len([model for model in model_names.LSTM_MODELS if model_names.DELAY in model]) == 2
-    assert model_names.ARRIVAL_MODEL in model_names.LSTM_MODELS
-
-
-def test_get_model_class():
-    for name in model_names.MODELS:
-        curr_class = get_model_class(name)
-        if name == 'delay_byr' or name == 'delay_slr' or name == 'arrival':
-            assert curr_class == Recurrent
-        else:
-            assert curr_class == FeedForward
-
-
-def test_get_clock_feats():
-    christmas_morn = 17884800
-    a = get_clock_feats(christmas_morn)
-    assert a[0] == 1
-    day_before = christmas_morn - 24 * 60 * 60
-    a = get_clock_feats(day_before)
-    assert a[0] == pytest.approx(0)
-    for i in range(7):
-        curr_day = day_before + i * 24 * 60 * 60
-        a = get_clock_feats(curr_day)
-        if i < 6:
-            assert a[i + 1] == pytest.approx(1)
-            assert a[1:7].sum() == pytest.approx(1)
-        else:
-            assert a[1:7].sum() == pytest.approx(0)
-    assert a[7] == pytest.approx(0)
-    curr_day = day_before + 12 * 60 * 60
-    a = get_clock_feats(curr_day)
-    assert a[7] == pytest.approx(0.5)
-    curr_day = curr_day + 30 * 60
-    a = get_clock_feats(curr_day)
-    assert a[7] == pytest.approx(.5 + 30 * 60 / DAY)
-    curr_day = curr_day + 30
-    a = get_clock_feats(curr_day)
-    assert a[7] == pytest.approx(.5 + 30 * 60 / DAY + 30 / DAY)
+from constants import ENV_SIM_DIR
+from rlenv.Composer import Composer
 
 
 def test_proper_squeeze():
@@ -121,3 +57,9 @@ def test_load_model():
     for model in model_names.MODELS:
         print(model)
         load_model(model)
+
+
+def test_create_composer():
+    d = load('{}{}/chunks/{}.gz'.format(ENV_SIM_DIR, 'train_rl', 1))
+    x_lstg = d['x_lstg']
+    Composer(x_lstg.columns)

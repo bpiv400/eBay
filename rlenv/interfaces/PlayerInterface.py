@@ -52,7 +52,7 @@ class PlayerInterface:
         params = self.msg_model(input_dict)
         outcomes[featname(MSG, turn)] = sample_bernoulli(params)
 
-    def _sample_con(self, params=None, sources=None, turn=None):
+    def _sample_con(self, params=None, sources=None, turn=0):
         raise NotImplementedError()
 
     def con(self, sources=None):

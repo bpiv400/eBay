@@ -53,8 +53,8 @@ SE_TOL = .5
 SIZE = 'size'
 LSTG_MAP = 'lstg'
 TURN_IND_MAP = 'turns'
-INIT_CLOCK = 'init_clock'
-INIT_TIME = 'init_time'
+CLOCK_MAP = 'clock'
+TIME_MAP = 'time'
 
 # offer response indicators
 ACC_IND = 0

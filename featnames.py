@@ -52,9 +52,14 @@ EXP = 'exp'
 OUTCOME_FEATS = [DAYS, DELAY, AUTO, EXP, CON, REJECT, NORM, SPLIT, MSG]
 
 # turn indices
-TURN_FEATS = ['t1', 't2', 't3']
-SLR_TURN_INDS = ['t1', 't2']
-BYR_TURN_INDS = SLR_TURN_INDS + ['t3']
+TURN_FEATS = {
+    'con_byr': ['t1', 't3', 't5'],
+    'con_slr': ['t2', 't4'],
+    'delay_byr':['t3', 't5'],
+    'delay_slr': ['t2', 't4'],
+    'msg_byr': ['t1', 't3'],
+    'msg_slr': ['t2', 't4']
+}
 
 # thread features
 BYR_HIST = 'byr_hist'

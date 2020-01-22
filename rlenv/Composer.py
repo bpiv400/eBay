@@ -1,9 +1,10 @@
+import math
 import torch
 import numpy as np, pandas as pd
 from rlenv.env_consts import *
 from rlenv.env_utils import load_featnames, model_str, load_sizes
 from featnames import (OUTCOME_FEATS, CLOCK_FEATS, TIME_FEATS,
-                       BYR_TURN_INDS, SLR_TURN_INDS, MONTHS_SINCE_LSTG,
+                       TURN_FEATS, MONTHS_SINCE_LSTG,
                        BYR_HIST, INT_REMAINING, MONTHS_SINCE_LAST,
                        THREAD_COUNT)
 from constants import ARRIVAL_PREFIX
@@ -17,6 +18,7 @@ class Composer:
         self.lstg_sets = Composer.build_lstg_sets(cols)
         self.intervals = self.make_intervals()
         self.offer_feats = Composer.build_offer_feats()
+        self.turn_inds = None
         self.sizes = Composer.make_sizes()
         # TODO
 
@@ -56,10 +58,7 @@ class Composer:
     def build_offer_feats():
         shared_feats = CLOCK_FEATS + TIME_FEATS + OUTCOME_FEATS
         for model in OFFER_MODELS:
-            if SLR_PREFIX in model:
-                turn_feats = SLR_TURN_INDS
-            else:
-                turn_feats = BYR_TURN_INDS
+            turn_feats = TURN_FEATS[model]
             full_feats = shared_feats + turn_feats
             model_feats = load_featnames(model)['offer']
             assert len(full_feats) == len(model_feats)
@@ -107,44 +106,27 @@ class Composer:
             input_dict[grouping_name] = x_lstg.loc[feats].values
         return input_dict
 
-    @staticmethod
-    def _build_input_vector(maps, size, sources):
-        """
-        Helper method that composes a model's input vector given a dictionaries of
-        the relevant input maps and  sources
-
-        :param maps: dictionary containing input maps
-        :param sources: dictionary containing tensors from the environment that contain
-        features the model expects in the input
-        :return t: (batch_size x maps[SIZE]) tensor to be passed to a simulator model
-        """
-        t = torch.zeros(1, size).float()
-        # other features
-        for map_name, curr_map in maps.items():
-            try:
-                t[0, curr_map] = torch.from_numpy(sources[map_name][curr_map.index].values).float()
-            except RuntimeError as e:
-                Composer.catch_input_error(e, t, curr_map, sources, map_name)
-                raise RuntimeError()
-        return x
-
-    def build_input_dict(self, model_name, sources=None):
+    def build_input_dict(self, model_name, sources=None, turn=0):
         """
         Public method that composes input vectors (x_time and x_fixed) from tensors in the
         environment
 
-        :param name: str giving the name of the focal model
+        :param model_name: str giving the name of the focal model
         :param sources: dictionary containing tensors from the environment that contain
         features the model expects in the input
-        :return: 2-tuple of x_fixed, x_time. If not recurrent, x_time = None. If fixed=False,
-        x_fixed = None
+        :param turn: turn number
+        :return: dict
         """
         input_dict = dict()
-        fixed_maps = self.maps[model_name]  # dict
         fixed_sizes = self.sizes[model_name]['x']  # dict
-        for input_set in fixed_maps.keys():
-            input_dict[input_set] = Composer._build_input_vector(
-                fixed_maps[input_set], fixed_sizes[input_set], sources)
+        self._update_turn_inds(model_name, turn)
+        for input_set in fixed_sizes.keys():
+            if input_set == LSTG_MAP:
+                input_dict[input_set] = self._build_lstg_vector(model_name, sources=sources)
+            elif 'offer' == input_set[:-1]:
+                input_dict[input_set] = self._build_offer_vector(sources[input_set])
+            else:
+                input_dict[input_set] = torch.from_numpy(sources[input_set]).float().unsqueeze(0)
         return input_dict
 
     def make_intervals(self):
@@ -156,26 +138,38 @@ class Composer:
         }
         return ints
 
-    @property
-    def feat_counts(self):
-        counts = dict()
-        for set_name, feats in self.feat_sets.items():
-            counts[set_name] = len(feats)
-        return counts
+    def _build_offer_vector(self, offer_vector):
+        full_vector = np.concatenate(offer_vector, self.turn_inds)
+        return torch.from_numpy(full_vector).unsqueeze(0)
 
-    @property
-    def x_lstg(self):
-        return self.feat_sets[LSTG_MAP]
+    def _build_lstg_vector(self, model_name, sources=None):
+        if model_name == ARRIVAL_MODEL:
+            solo_feats = np.array([sources[MONTHS_SINCE_LSTG], sources[MONTHS_SINCE_LAST],
+                                   sources[THREAD_COUNT]])
+            lstg = np.concatenate([sources[LSTG_MAP], sources[CLOCK_MAP], solo_feats])
+        elif model_name == BYR_HIST_MODEL:
+            lstg = np.concatenate([sources[LSTG_MAP], np.array(sources[MONTHS_SINCE_LSTG]),
+                                   sources[CLOCK_MAP], sources[TIME_MAP]])
+        elif DELAY in model_name:
+            solo_feats = np.array([sources[MONTHS_SINCE_LSTG], sources[BYR_HIST]])
+            lstg = np.concatenate([sources[LSTG_MAP], solo_feats, self.turn_inds,
+                                   np.array([sources[INT_REMAINING]])])
+        else:
+            solo_feats = np.array([sources[MONTHS_SINCE_LSTG], sources[BYR_HIST]])
+            lstg = np.concatenate([sources[LSTG_MAP], solo_feats, self.turn_inds])
+        return torch.from_numpy(lstg).float().unsqueeze(0)
 
-    @staticmethod
-    def catch_input_error(e, t, curr_map, sources, map_name):
-        print('NAME')
-        print(e)
-        print(map_name)
-        print('stored map: {}'.format(curr_map.dtype))
-        print('stored map size: {}'.format(curr_map.dtype))
-        print('sourced map: {}'.format(sources[map_name].dtype))
-        print('t: {}'.format(t.dtype))
+    def _update_turn_inds(self, model_name, turn):
+        if model_name == 'con_byr':
+            inds = np.zeros(3)
+        else:
+            inds = np.zeros(2)
+        active = math.floor((turn - 1) / 2)
+        if model_name == 'delay_byr':
+            active = active - 1
+        if active < inds.shape[0]:
+            inds[active] = 1
+        self.turn_inds = inds
 
     @staticmethod
     def remove_shared_feats(model_feats, shared_feats):
@@ -193,12 +187,13 @@ class Composer:
         model_feats = Composer.remove_shared_feats(model_feats, shared_feats)
         assert model_feats[0] == MONTHS_SINCE_LSTG
         assert model_feats[1] == BYR_HIST
-        if SLR_PREFIX in model:
-            turn_inds = SLR_TURN_INDS
-        else:
-            turn_inds = BYR_TURN_INDS
+        turn_inds = TURN_FEATS[model]
+        print(model_feats[2:])
+        print(turn_inds)
         assert len(model_feats[2:]) == len(turn_inds)
-        for model_feat, turn_feat in zip(model_feats, turn_inds):
+        for model_feat, turn_feat in zip(model_feats[2:], turn_inds):
+            print(model_feat)
+            print(turn_feat)
             assert model_feat == turn_feat
 
     @staticmethod
@@ -207,10 +202,7 @@ class Composer:
         model_feats = Composer.remove_shared_feats(model_feats, shared_feats)
         assert model_feats[0] == MONTHS_SINCE_LSTG
         assert model_feats[1] == BYR_HIST
-        if SLR_PREFIX in model:
-            turn_inds = SLR_TURN_INDS
-        else:
-            turn_inds = BYR_TURN_INDS
+        turn_inds = TURN_FEATS[model]
         Composer.verify_sequence(model_feats, turn_inds, 2)
         assert model_feats[-1] == INT_REMAINING
 

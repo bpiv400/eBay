@@ -13,8 +13,7 @@ from constants import (INPUT_DIR, TOL_HALF,
                        MODEL_DIR, ENV_SIM_DIR, DAY, BYR_PREFIX, SLR_PREFIX)
 from model.nets import FeedForward
 from rlenv.env_consts import (META_6, META_7, SIM_CHUNKS_DIR, SIM_VALS_DIR,
-                              SIM_DISCRIM_DIR, THREAD_MAP, DATE_FEATS, 
-                              ARRIVAL_MODELS)
+                              SIM_DISCRIM_DIR, DATE_FEATS, ARRIVAL_MODELS)
 from featnames import *
 
 
