@@ -199,38 +199,37 @@ def time_delta(start, end, unit=DAY):
     :param int start: start time of an interval
     :param int end: end time of an interval
     :param int unit: normalization factor
-    :return: np.FloatArray
+    :return: np.array
     """
     diff = (end - start) / unit
     diff = np.array([diff], dtype=np.float32)
     return diff
 
 
-def slr_rej(sources, turn, expire=False):
+def slr_rej_outcomes(sources, turn):
     """
     Returns outcome series associated with a slr expiration or slr
     automatic rejection
     :param dict sources: environment sources dictionary
     :param int turn: turn of rejection
-    :param bool expire: whether this is an expiration rej (automatic if not)
-    :return: pd.Series
+    :return: np.array
     """
-    outcomes = pd.Series(0.0, index=ALL_OUTCOMES[turn])
-    outcomes[featname(REJECT, turn)] = 1
-    outcomes[featname(NORM, turn)] = last_norm(sources, turn)
-    if not expire:
-        outcomes[featname(AUTO, turn)] = 1
-    else:
-        outcomes[featname(EXP, turn)] = 1
-    return outcomes
+    norm = last_norm(sources=sources, turn=turn)
+    return np.array([0.0, 1.0, norm, 0.0, 0.0], dtype=np.float32)
 
 
-def slr_auto_acc(sources, turn):
-    outcomes = pd.Series(0.0, index=ALL_OUTCOMES[turn])
-    outcomes[featname(CON, turn)] = 1
-    prev_byr_norm = prev_norm(sources, turn)
-    outcomes[featname(NORM, turn)] = 1 - prev_byr_norm
-    return outcomes
+def slr_auto_acc_outcomes(sources, turn):
+    """
+    Returns offer outcomes (including msg) associated with a slr
+    auto acceptance -- ordered according to OFFER_FEATS
+    :param sources: source dict
+    :param turn: turn number
+    :return: np.array
+    """
+    con = 1.0
+    prev_byr_norm = prev_norm(sources=sources, turn=turn)
+    norm = 1.0 - prev_byr_norm
+    return np.array([con, 0.0, norm, 0.0, 0.0], dtype=np.float32)
 
 
 def get_checkpoint_path(part_dir, chunk_num, discrim=False):

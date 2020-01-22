@@ -150,7 +150,7 @@ class EbayEnvironment:
         :return:
         """
         # expiration
-        sources = ThreadSources(x_lstg=self.x_lstg, composer=self.arrival.composer)
+        sources = ThreadSources(x_lstg=self.x_lstg)
         months_since_lstg = time_delta(self.lookup[START_TIME], event.priority, unit=MONTH)
         time_feats = self.time_feats.get_feats(time=event.priority, thread_id=event.thread_id)
         sources.prepare_hist(time_feats=time_feats, clock_feats=get_clock_feats(event.priority),
@@ -217,7 +217,7 @@ class EbayEnvironment:
         time_feats = self.time_feats.get_feats(thread_id=event.thread_id,
                                                time=event.priority)
         event.init_offer(time_feats=time_feats, clock_feats=clock_feats)
-        offer = event.slr_rej(expire=True)
+        offer = event.slr_expire_rej()
         self._record(event, censored=False)
         self.time_feats.update_features(offer=offer)
         self._init_delay(event)
@@ -279,7 +279,7 @@ class EbayEnvironment:
     def _process_slr_auto_rej(self, event, offer):
         self.time_feats.update_features(offer=offer)
         event.change_turn()
-        offer = event.slr_rej(expire=False)
+        offer = event.slr_auto_rej()
         self._record(event)
         self.time_feats.update_features(offer=offer)
         self._init_delay(event)
