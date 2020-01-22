@@ -105,7 +105,7 @@ class Composer:
             input_dict[grouping_name] = x_lstg.loc[feats].values
         return input_dict
 
-    def build_input_dict(self, model_name, sources=None, turn=0):
+    def build_input_dict(self, model_name, sources=None, turn=None):
         """
         Public method that composes input vectors (x_time and x_fixed) from tensors in the
         environment
@@ -118,7 +118,8 @@ class Composer:
         """
         input_dict = dict()
         fixed_sizes = self.sizes[model_name]['x']  # dict
-        self._update_turn_inds(model_name, turn)
+        if turn is not None:
+            self._update_turn_inds(model_name, turn)
         for input_set in fixed_sizes.keys():
             if input_set == LSTG_MAP:
                 input_dict[input_set] = self._build_lstg_vector(model_name, sources=sources)
