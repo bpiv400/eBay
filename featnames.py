@@ -73,9 +73,12 @@ for i in range(7):
         ALL_OUTCOMES[i + 1] = ['{}_{}'.format(feat, i + 1) for feat in SLR_OUTCOMES]
 
 # turn indices
-TURN_FEATS = ['t1', 't2', 't3']
-SLR_TURN_INDS = ['t1', 't2']
-BYR_TURN_INDS = SLR_TURN_INDS + ['t3']
+TURN_FEATS = {'delay_byr': ['t3', 't5'],
+              'con_byr': ['t1', 't3', 't5'],
+              'msg_byr': ['t1', 't3'],
+              'delay_slr': ['t2', 't4'],
+              'con_slr': ['t2', 't4'],
+              'msg_slr': ['t2', 't4']}
 
 # thread features
 BYR_HIST = 'byr_hist'
