@@ -2,7 +2,7 @@ import math
 import torch
 import numpy as np, pandas as pd
 from rlenv.env_consts import *
-from rlenv.env_utils import load_featnames, model_str, load_sizes, offer_name
+from rlenv.env_utils import load_featnames, model_str, load_sizes
 from featnames import (OUTCOME_FEATS, CLOCK_FEATS, TIME_FEATS,
                        TURN_FEATS, MONTHS_SINCE_LSTG, BYR_HIST,
                        INT_REMAINING, MONTHS_SINCE_LAST, THREAD_COUNT)
@@ -149,7 +149,7 @@ class Composer:
             lstg = np.concatenate([sources[LSTG_MAP], sources[CLOCK_MAP], solo_feats])
         elif model_name == BYR_HIST_MODEL:
             lstg = np.concatenate([sources[LSTG_MAP], np.array(sources[MONTHS_SINCE_LSTG]),
-                                   sources[offer_name(1)][CLOCK_START_IND:TIME_END_IND]])
+                                   sources[OFFER_MAPS[1]][CLOCK_START_IND:TIME_END_IND]])
         elif DELAY in model_name:
             solo_feats = np.array([sources[MONTHS_SINCE_LSTG], sources[BYR_HIST]])
             lstg = np.concatenate([sources[LSTG_MAP], solo_feats, self.turn_inds,
