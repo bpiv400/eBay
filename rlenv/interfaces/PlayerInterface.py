@@ -44,7 +44,6 @@ class PlayerInterface:
         input_dict = self.composer.build_input_dict(self._delay_model_name, sources=sources)
         params = self.delay_model(input_dict)
         delay = sample_categorical(params)
-        delay = delay * self.composer.intervals[BYR_PREFIX if self.byr else SLR_PREFIX]
         return delay
 
     def _sample_msg(self, sources=None, outcomes=None, turn=0):

@@ -101,15 +101,18 @@ class ThreadSources(Sources):
         rej = self.source_dict[offer_map][REJECT_IND]
         exp = self.source_dict[offer_map][EXP_IND]
         return auto, exp, rej
-    
+
 
 class ArrivalSources(Sources):
-    def __init__(self, x_lstg=None, composer=None):
-        super(ArrivalSources, self).__init__(x_lstg=x_lstg, composer=composer)
+    def __init__(self, x_lstg=None):
+        super(ArrivalSources, self).__init__(x_lstg=x_lstg)
+        self.source_dict[MONTHS_SINCE_LAST] = 0.0
+        self.source_dict[THREAD_COUNT] = 0.0
 
     def update_arrival(self, clock_feats=None, months_since_lstg=None, thread_count=None):
-        prev_months_since_lstg = self.source_dict[THREAD_MAP][MONTHS_SINCE_LSTG]
+        prev_months_since_lstg = self.source_dict[MONTHS_SINCE_LSTG]
         months_since_last = months_since_lstg - prev_months_since_lstg
-        self.source_dict[THREAD_MAP][THREAD_COUNT] = thread_count
-        self.source_dict[THREAD_MAP][CLOCK_FEATS] = clock_feats
-        self.source_dict[THREAD_MAP][MONTHS_SINCE_LAST] = months_since_last
+        self.source_dict[THREAD_COUNT] = thread_count
+        self.source_dict[CLOCK_MAP] = clock_feats
+        self.source_dict[MONTHS_SINCE_LSTG] = months_since_lstg
+        self.source_dict[MONTHS_SINCE_LAST] = months_since_last
