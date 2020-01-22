@@ -229,7 +229,7 @@ def save_featnames(x, name):
 		# check that all offer groupings have same organization
 		for k in x.keys():
 			if 'offer' in k:
-				assert all(list(x[k].columns) == OUTCOME_FEATS)
+				assert list(x[k].columns) == OUTCOME_FEATS
 
 		# one vector of featnames for offer groupings
 		featnames['offer'] = OUTCOME_FEATS

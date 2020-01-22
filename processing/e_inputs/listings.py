@@ -3,7 +3,8 @@ import numpy as np, pandas as pd
 from processing.processing_utils import input_partition, 
 from processing.e_inputs.inputs_utils import load_file, \
 	process_arrival_inputs, save_discrim_files
-from constants import SIM_CHUNKS, ENV_SIM_DIR, MONTH
+from processing.processing_consts import INTERVAL_COUNTS
+from constants import SIM_CHUNKS, ENV_SIM_DIR, MONTH, ARRIVAL_PREFIX
 
 
 def process_lstg_end(lstg_start, lstg_end):
@@ -65,13 +66,20 @@ def process_inputs(part, obs=None):
 	# dictionary of y and x
 	d = process_arrival_inputs(part, lstg_start, lstg_end, thread_start)
 
-	# split into arrival indicator and period number
-	arrival = np.array((d['y'] >= 0,), dtype='float32')
-	period = np.array((d['y'],), dtype='float32')
-	period[period < 0] += INTERVAL_COUNTS[ARRIVAL_PREFIX] + 1
+	# restrict to first interarrival period
+	d['y'] = d['y'].xs(1, level='thread')
+	d['x'] = {k: v.xs(1, level='thread') for k, v in d['x'].items()}
 
-	# put in x['lstg']
-	d['x']['lstg'] = np.concatenate((d['x']['lstg'], arrival, period), axis=1)
+	# split into arrival indicator and period number
+	arrival = pd.Series(d['y'] >= 0, 
+		index=d['y'].index, name='arrival', dtype='float32')
+	period = pd.Series(d['y'], 
+		index=d['y'].index, name='period', dtype='float32')
+	period[period < 0] += INTERVAL_COUNTS[ARRIVAL_PREFIX] + 1
+	period /= INTERVAL_COUNTS[ARRIVAL_PREFIX]
+
+	# put y in x['lstg']
+	d['x']['lstg'] = pd.concat([d['x']['lstg'], arrival, period], axis=1)
 
 	return d['x']
 
