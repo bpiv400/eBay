@@ -1,15 +1,11 @@
 from torch import optim
-from train.train_consts import LOGLR0, LOGLR1, LOGLR_INC
+from train.train_consts import LOGLR1, LOGLR_INC
 
 
 class Optimizer:
-	def __init__(self, params):
-		self.optimizer = optim.Adam(params)
-		self.loglr = None
-		self.reset()
-
-	def reset(self):
-		self._set_loglr(LOGLR0)
+	def __init__(self, params, loglr):
+		self.loglr = loglr
+		self.optimizer = optim.Adam(params, lr=10 ** loglr)
 
 	def step(self):
 		self._set_loglr(self.loglr - LOGLR_INC)

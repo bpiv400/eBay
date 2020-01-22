@@ -159,7 +159,7 @@ def load_model(full_name):
     print('loading {}'.format(full_name))
     sizes, params = load_sizes(full_name), load_params()
     model_path = '{}{}.net'.format(MODEL_DIR, full_name)
-    net = FeedForward(sizes, params)  # type: torch.nn.Module
+    net = FeedForward(sizes, params, dropout=False)  # type: torch.nn.Module
     state_dict = torch.load(model_path, map_location=torch.device('cpu'))
     net.load_state_dict(state_dict)
     for param in net.parameters(recurse=True):

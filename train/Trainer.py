@@ -5,8 +5,9 @@ import torch.nn as nn
 from datetime import datetime as dt
 from torch.utils.tensorboard import SummaryWriter
 from compress_pickle import load
+from torch import optim
 from train.eBayDataset import eBayDataset
-from train.train_consts import FTOL, LOG_DIR
+from train.train_consts import FTOL, LOG_DIR, LOGLR0
 from train.Model import Model
 from train.Sample import get_batches
 from train.Optimizer import Optimizer
@@ -53,21 +54,8 @@ class Trainer:
 		self.writer = None
 		
 		# pretrain with penalty hyperparameter set to 0
-		if not os.path.isfile(self.pretrained_path):
-			self._pretrain()
-
-
-	def _pretrain(self):
-		# neural net without dropout
-		self.model = Model(self.name, gamma=0, device=self.device)
-		print(self.model.net)
-
-		# train without dropout until convergence
-		print('Pretraining:')
-		self.train_model()
-
-		# save pretrained model
-		torch.save(self.model.net.state_dict(), self.pretrained_path)
+		if not os.path.isdir(self.pretrained_path):
+			self.train_model()
 
 
 	def train_model(self, gamma=0):
@@ -75,40 +63,42 @@ class Trainer:
 		Public method to train model.
 		:param gamma: scalar regularization parameter for variational dropout.
 		'''
-		# epoch number
-		epoch = 0
-
-		# initialize model
-		self.model = Model(self.name, gamma=gamma, device=self.device)
-		print(self.model.net)
-
-		# load pre-trained model weights
-		if self.model.dropout:
-			self.model.net.load_state_dict(
-				torch.load(self.pretrained_path), strict=False)
-
-		# initialize optimizer
-		optimizer = Optimizer(self.model.net.parameters())
-		print(optimizer.optimizer)
+		# experiment id
+		expid = dt.now().strftime('%y%m%d-%H%M')
 
 		# initialize writer
 		if not self.dev:
-			expid = dt.now().strftime('%y%m%d-%H%M')
-			self.writer = SummaryWriter(
+			writer = SummaryWriter(
 				LOG_DIR + '{}/{}'.format(self.name, expid))
+		else:
+			writer = None
+
+		# tune initial learning rate
+		loglr, model = self._tune_loglr(writer=writer, gamma=gamma)
+		print(model.net)
+
+		# path to save model
+		if model.dropout:
+			model_path = MODEL_DIR + '{}/{}.net'.format(self.name, expid)
+		else:
+			model_path = self.pretrained_path
+
+		# initialize optimizer
+		optimizer = Optimizer(model.net.parameters(), loglr=loglr)
+		print(optimizer.optimizer)
 
 		# training loop
-		last = np.inf
+		epoch, last = 1, np.inf
 		while True:
 			# run one epoch
 			print('Epoch {}'.format(epoch))
-			output = self._run_epoch(optimizer, epoch=epoch)
+			output = self._run_epoch(model, optimizer, 
+				writer=writer, epoch=epoch)
 
 			# save model
 			if not self.dev:
-				torch.save(self.model.net.state_dict(), 
-					MODEL_DIR + '{}/{}.net'.format(self.name, expid))
-
+				torch.save(model.net.state_dict(), model_path)
+					
 			# reduce learning rate until convergence
 			if output['loss'] > FTOL * last:
 				if optimizer.check():
@@ -123,38 +113,21 @@ class Trainer:
 		return -output['lnL_test']
 
 
-	def _run_epoch(self, optimizer, epoch=None):
+	def _run_epoch(self, model, optimizer, writer=None, epoch=None):
 	 	# initialize output with log10 learning rate
 		output = {'loglr': optimizer.loglr}
 
 		# train model
 		output['loss'] = self._run_loop(
-			self.train, optimizer.optimizer)
-		output['lnL_train'] = -output['loss'] / self.train.N
+			self.train, model, optimizer.optimizer)
 
-		# variational dropout stats
-		if self.model.dropout:
-			output['gamma'] = self.model.gamma
-			output['std_alpha'], output['max_alpha'] = \
-				self.model.get_alpha_stats()
-
-		# calculate log-likelihood on validation set
-		with torch.no_grad():
-			loss_train = self._run_loop(self.train)
-			output['lnL_train'] = -loss_train / self.train.N
-			loss_test = self._run_loop(self.test)
-			output['lnL_test'] = -loss_test / self.test.N
-
-		# save output to tensorboard writer
-		for k, v in output.items():
-			print('\t{}: {}'.format(k, v))
-			if self.writer is not None:
-				self.writer.add_scalar(k, v, epoch)
+		# collect remaining output and print
+		output = self._collect_output(model, writer, output, epoch=epoch)
 
 		return output
 
 
-	def _run_loop(self, data, optimizer=None):
+	def _run_loop(self, data, model, optimizer=None):
 		'''
 		Calculates loss on epoch, steps down gradients if training.
 		:param data: Inputs object.
@@ -176,7 +149,7 @@ class Trainer:
 			b['y'] = b['y'].to(self.device)
 
 			# increment loss
-			loss += self._run_batch(b, optimizer)
+			loss += self._run_batch(b, model, optimizer)
 
 			# increment gpu time
 			gpu_time += (dt.now() - t1).total_seconds()
@@ -190,7 +163,7 @@ class Trainer:
 		return loss
 
 
-	def _run_batch(self, b, optimizer):
+	def _run_batch(self, b, model, optimizer):
 		'''
 		Loops over examples in batch, calculates loss.
 		:param b: batch of examples from DataLoader.
@@ -200,8 +173,8 @@ class Trainer:
 		isTraining = optimizer is not None  # train / eval mode
 
 		# call forward on model
-		self.model.net.train(isTraining)
-		theta = self.model.net(b['x'])
+		model.net.train(isTraining)
+		theta = model.net(b['x'])
 
 		# binary cross entropy requires float
 		if str(self.loss) == "BCEWithLogitsLoss()":
@@ -212,8 +185,8 @@ class Trainer:
 
 		# add in regularization penalty and step down gradients
 		if isTraining:
-			if self.model.dropout:
-				penalty = self.model.get_penalty()
+			if model.dropout:
+				penalty = model.get_penalty()
 				factor = len(b['y']) / len(self.train)
 				#print(loss.item(), penalty * factor)
 				loss = loss + penalty * factor
@@ -223,3 +196,71 @@ class Trainer:
 			optimizer.step()
 
 		return loss.item()
+
+
+	def _tune_loglr(self, writer=None, gamma=0):
+		models, loss = [], []
+		for loglr in LOGLR0:
+			# initialize model and optimizer
+			models.append(self._initialize_model(gamma))
+			optimizer = optim.Adam(models[-1].net.parameters(), 
+				lr=10 ** loglr)
+
+			# print model
+			if len(models) == 1:
+				print(models[-1].net)
+				print('Tuning with loglr of {}'.format(loglr))
+
+			# run model for one epoch
+			loss.append(self._run_loop(self.train, models[-1], optimizer))
+			print('\tloss: {}'.format(loss[-1]))
+
+		# best learning rate and model
+		idx = np.argmin(loss)
+		loglr = LOGLR0[idx]
+		model = models[idx]
+
+		# initialize output with log10 learning rate
+		output = {'loglr': loglr, 'loss': loss[idx]}
+
+		# collect remaining output and print
+		print('Epoch 0')
+		self._collect_output(model, writer, output)
+
+		# return loglr of smallest loss and corresponding model
+		return loglr, model
+
+
+	def _initialize_model(self, gamma=0):
+		# uninitialized weights
+		model = Model(self.name, gamma=gamma, device=self.device)
+
+		# load model weights from pretrained model
+		if model.dropout:
+			model.net.load_state_dict(
+				torch.load(self.pretrained_path), strict=False)
+
+		return model
+
+
+	def _collect_output(self, model, writer, output, epoch=0):
+		# variational dropout stats
+		if model.dropout:
+			output['gamma'] = model.gamma
+			output['std_alpha'], output['max_alpha'] = \
+				model.get_alpha_stats()
+
+		# calculate log-likelihood on validation set
+		with torch.no_grad():
+			loss_train = self._run_loop(self.train, model)
+			output['lnL_train'] = -loss_train / self.train.N
+			loss_test = self._run_loop(self.test, model)
+			output['lnL_test'] = -loss_test / self.test.N
+
+		# save output to tensorboard writer
+		for k, v in output.items():
+			print('\t{}: {}'.format(k, v))
+			if writer is not None:
+				writer.add_scalar(k, v, epoch)
+
+		return output

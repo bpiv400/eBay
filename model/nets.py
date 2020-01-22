@@ -23,12 +23,12 @@ class Layer(nn.Module):
             self.layer.append(
                 nn.BatchNorm1d(N_out, affine=affine))
 
-        # activation function
-        self.layer.append(nn.ReLU(inplace=True))
-
         # variational dropout
         if dropout:
             self.layer.append(VariationalDropout(N_out))
+
+        # activation function
+        self.layer.append(nn.ReLU(inplace=True))
 
 
     def forward(self, x):
