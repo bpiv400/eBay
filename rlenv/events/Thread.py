@@ -43,7 +43,7 @@ class Thread(Event):
 
     def offer(self, interface=None, player_type=None):
         outcomes = interface.make_offer(sources=self.sources(), turn=self.turn)
-        norm = self.sources.update_offer(outcomes=outcomes, turn=self.turn)
+        norm = self.sources.update_offer(offer_outcomes=outcomes, turn=self.turn)
         offer_params = {
             'price': norm,
             'player': player_type,
@@ -123,7 +123,7 @@ class Thread(Event):
 
     def slr_rej(self, expire=False):
         outcomes = slr_rej(self.sources(), self.turn, expire=expire)
-        norm = self.sources.update_offer(outcomes=outcomes, turn=self.turn)
+        norm = self.sources.update_offer(offer_outcomes=outcomes, turn=self.turn)
         offer_params = {
             'price': norm,
             'player': SLR_PREFIX,
@@ -135,7 +135,7 @@ class Thread(Event):
     def slr_auto_acc(self):
         self.change_turn()
         outcomes = slr_auto_acc(self.sources(), self.turn)
-        norm = self.sources.update_offer(outcomes=outcomes, turn=self.turn)
+        norm = self.sources.update_offer(offer_outcomes=outcomes, turn=self.turn)
         offer_params = {
             'price': norm,
             'player': SLR_PREFIX,

@@ -2,11 +2,10 @@ import math
 import torch
 import numpy as np, pandas as pd
 from rlenv.env_consts import *
-from rlenv.env_utils import load_featnames, model_str, load_sizes
+from rlenv.env_utils import load_featnames, model_str, load_sizes, offer_name
 from featnames import (OUTCOME_FEATS, CLOCK_FEATS, TIME_FEATS,
-                       TURN_FEATS, MONTHS_SINCE_LSTG,
-                       BYR_HIST, INT_REMAINING, MONTHS_SINCE_LAST,
-                       THREAD_COUNT)
+                       TURN_FEATS, MONTHS_SINCE_LSTG, BYR_HIST,
+                       INT_REMAINING, MONTHS_SINCE_LAST, THREAD_COUNT)
 from constants import ARRIVAL_PREFIX
 
 
@@ -17,7 +16,7 @@ class Composer:
     def __init__(self, cols):
         self.lstg_sets = Composer.build_lstg_sets(cols)
         self.intervals = self.make_intervals()
-        self.offer_feats = Composer.build_offer_feats()
+        self.offer_feats = Composer.build_offer_feats()  ## TODO: not sure I need this
         self.turn_inds = None
         self.sizes = Composer.make_sizes()
         # TODO
@@ -149,7 +148,7 @@ class Composer:
             lstg = np.concatenate([sources[LSTG_MAP], sources[CLOCK_MAP], solo_feats])
         elif model_name == BYR_HIST_MODEL:
             lstg = np.concatenate([sources[LSTG_MAP], np.array(sources[MONTHS_SINCE_LSTG]),
-                                   sources[CLOCK_MAP], sources[TIME_MAP]])
+                                   sources[offer_name(1)][CLOCK_START_IND:TIME_END_IND]])
         elif DELAY in model_name:
             solo_feats = np.array([sources[MONTHS_SINCE_LSTG], sources[BYR_HIST]])
             lstg = np.concatenate([sources[LSTG_MAP], solo_feats, self.turn_inds,

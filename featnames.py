@@ -51,6 +51,9 @@ EXP = 'exp'
 
 OUTCOME_FEATS = [DAYS, DELAY, AUTO, EXP, CON, REJECT, NORM, SPLIT, MSG]
 
+ALL_OFFER_FEATS = CLOCK_FEATS + TIME_FEATS + OUTCOME_FEATS
+
+
 # turn indices
 TURN_FEATS = {
     'con_byr': ['t1', 't3', 't5'],

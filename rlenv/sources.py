@@ -1,6 +1,5 @@
 import math
-import numpy as np, pandas as pd
-from datetime import datetime as dt
+import numpy as np
 from rlenv.env_consts import *
 from rlenv.env_utils import featname, last_norm
 from featnames import *
@@ -22,103 +21,87 @@ class ThreadSources(Sources):
         self.source_dict[TURN_IND_MAP] = ThreadSources._turn_inds(1)
         self.source_dict[INT_REMAINING] = 0.0
         self.source_dict[BYR_HIST] = 0.0
+        for i in range(1, 8):
+            self.source_dict[OFFER_MAPS[i]] = np.zeros(len(ALL_OFFER_FEATS),
+                                                       dtype=np.float)
         self.offer_prev_time = None
 
     def prepare_hist(self, time_feats=None, clock_feats=None, months_since_lstg=None):
         self.source_dict[MONTHS_SINCE_LSTG] = months_since_lstg
-        self.source_dict[INIT_CLOCK] = clock_feats
-        self.source_dict[INIT_TIME] = time_feats
+        offer_map = OFFER_MAPS[1]
+        self.source_dict[offer_map][CLOCK_START_IND:CLOCK_END_IND] = clock_feats
+        self.source_dict[offer_map][TIME_START_IND:TIME_END_IND] = time_feats
         self.offer_prev_time = time_feats
 
     def init_thread(self, hist=None):
         # (time features and clock_feats already set during prepare_hist)
         # add byr history
         self.source_dict[BYR_HIST] = hist
-        del self.source_dict[INIT_CLOCK]
-        del self.source_dict[INIT_TIME]
 
-
-
-    def update_offer(self, outcomes=None, turn=None):
-        outcome_names = ALL_OUTCOMES[turn].copy()
-        if turn > 1:
-            outcomes[featname(DAYS, turn)] = self.source_dict[THREAD_MAP][featname(DAYS, turn)]
-            outcomes[featname(DELAY, turn)] = self.source_dict[THREAD_MAP][featname(DELAY, turn)]
-        # remove deterministic outcomes
-        if turn == 1:
-            outcome_names.remove(featname(DAYS, turn))
-            outcome_names.remove(featname(DELAY, turn))
-        elif turn == 7:
-            outcome_names.remove(featname(MSG, turn))
-
-        self.source_dict[THREAD_MAP][outcome_names] = outcomes[outcome_names]
-        return outcomes[featname(NORM, turn)]
-
-    def change_turn(self, turn):
-        # turn indicator
-        self.source_dict[TURN_IND_MAP] = ThreadSources._turn_inds(turn)
+    def update_offer(self, offer_outcomes=None, turn=None):
+        offer_map = OFFER_MAPS[turn]
+        self.source_dict[offer_map][CON_START_IND] = offer_outcomes
+        return self.source_dict[offer_map][NORM_IND]
 
     def init_offer(self, time_feats=None, clock_feats=None, turn=None):
         # NOTE : Not called on turn 1
         time_diff = time_feats - self.offer_prev_time
+        offer_map = OFFER_MAPS[turn]
         self.offer_prev_time = time_feats
-        self.source_dict[THREAD_MAP][ALL_CLOCK_FEATS[turn]] = clock_feats
-        self.source_dict[THREAD_MAP][ALL_TIME_FEATS[turn]] = time_diff
+        feats = np.concatenate([clock_feats, time_diff])
+        self.source_dict[offer_map][CLOCK_START_IND:TIME_END_IND] = feats
 
-    def prepare_offer(self, days=None, delay=None, turn=None):
-        self.source_dict[THREAD_MAP][featname(DAYS, turn)] = days
-        self.source_dict[THREAD_MAP][featname(DELAY, turn)] = delay
-        self.delay_prev_time = None
+    def prepare_offer(self, delay_outcomes=None, turn=None):
+        offer_map = OFFER_MAPS[turn]
+        self.source_dict[offer_map][DELAY_START_IND:DELAY_END_IND] = delay_outcomes
 
     def byr_expire(self, turn=None):
         norm = last_norm(self(), turn=turn)
-        self.source_dict[THREAD_MAP][featname(NORM, turn)] = norm
+        offer_map = OFFER_MAPS[turn]
+        self.source_dict[offer_map][NORM_IND] = norm
 
     def init_remaining(self, remaining):
-        self.source_dict[THREAD_MAP][INT_REMAINING] = remaining
+        self.source_dict[INT_REMAINING] = remaining
 
     def is_sale(self, turn):
-        return self.source_dict[THREAD_MAP][featname(CON, turn)] == 1
+        offer_map = OFFER_MAPS[turn]
+        return self.source_dict[offer_map][CON_IND] == 1
 
     def is_rej(self, turn):
-        return self.source_dict[THREAD_MAP][featname(CON, turn)] == 0
+        offer_map = OFFER_MAPS[turn]
+        return self.source_dict[offer_map][CON_IND] == 0
 
     def is_expire(self, turn):
-        return self.source_dict[THREAD_MAP][featname(DELAY, turn)] == 1
+        offer_map = OFFER_MAPS[turn]
+        return self.source_dict[offer_map][DELAY_IND] == 1
 
     def summary(self, turn):
-        con = int(self.source_dict[THREAD_MAP][featname(CON, turn)] * 100)
-        norm = self.source_dict[THREAD_MAP][featname(NORM, turn)] * 100
+        # TODO: could index once and pass resulting vector to output
+        # would require update of recorders
+        offer_map = OFFER_MAPS[turn]
+        con = int(self.source_dict[offer_map][featname(CON, turn)] * 100)
+        norm = self.source_dict[offer_map][featname(NORM, turn)] * 100
         norm = norm.round()
-        if turn != 7:
-            msg = self.source_dict[THREAD_MAP][featname(MSG, turn)] == 1
-        else:
-            msg = False
-        split = self.source_dict[THREAD_MAP][featname(SPLIT, turn)] == 1
+        msg = self.source_dict[offer_map][featname(MSG, turn)] == 1
+
+        split = self.source_dict[offer_map][featname(SPLIT, turn)] == 1
         return con, norm, msg, split
 
     def get_delay_outcomes(self, turn):
-        days = self.source_dict[THREAD_MAP][featname(DAYS, turn)]
-        delay = self.source_dict[THREAD_MAP][featname(DELAY, turn)]
+        # see update in sources.summary for slight efficiency improvement
+        offer_map = OFFER_MAPS[turn]
+        days = self.source_dict[offer_map][DAYS_IND]
+        delay = self.source_dict[offer_map][DELAY_IND]
         return days, delay
 
     def get_slr_outcomes(self, turn):
-        auto = self.source_dict[THREAD_MAP][featname(AUTO, turn)]
-        rej = self.source_dict[THREAD_MAP][featname(REJECT, turn)]
-        exp = self.source_dict[THREAD_MAP][featname(EXP, turn)]
+        # see update in sources.summary for slight efficiency improvement
+        offer_map = OFFER_MAPS[turn]
+        auto = self.source_dict[offer_map][AUTO_IND]
+        rej = self.source_dict[offer_map][REJECT_IND]
+        exp = self.source_dict[offer_map][EXP_IND]
         return auto, exp, rej
-
-    @staticmethod
-    def _turn_inds(turn):
-        if turn % 2 == 0:
-            vec = np.zeros((2, ), dtype=np.float)
-        else:
-            vec = np.zeros((3, ), dtype=np.float)
-        if turn <= 5:
-            ind = math.floor((turn - 1) / 2)
-            vec[ind] = 1
-        return vec
-
+    
 
 class ArrivalSources(Sources):
     def __init__(self, x_lstg=None, composer=None):
