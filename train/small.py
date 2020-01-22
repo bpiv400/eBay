@@ -10,7 +10,7 @@ if __name__ == '__main__':
     name = parser.parse_args().name
 
     # initialize trainer
-    trainer = Trainer(name, SMALL, VALIDATION)
+    trainer = Trainer(name, SMALL, VALIDATION, dev=True)
 
     # training
     trainer.train_model(gamma=1)

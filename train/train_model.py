@@ -12,15 +12,15 @@ if __name__ == '__main__':
     parser.add_argument('--name', type=str, required=True)
     name = parser.parse_args().name
 
-    # experiment number
-    expid = dt.now().strftime('%y%m%d-%H%M')
-
     # initialize trainer
     train_part = TRAIN_RL if name in ['listings', 'threads'] else TRAIN_MODELS
-    trainer = Trainer(name, train_part, VALIDATION, expid)
+    trainer = Trainer(name, train_part, VALIDATION)
 
-    # use univariate optimizer to find regularization hyperparameter
-    loss = lambda logx: -trainer.train_model(gamma=10 ** logx)
-    result = minimize_scalar(loss, method='bounded', bounds=(1, 4), 
-        options={'xatol': 0.1, 'disp': 3})
-    print(result)
+    # estimate with gamma=1
+    trainer.train_model(gamma=1)
+
+    # # use univariate optimizer to find regularization hyperparameter
+    # loss = lambda logx: -trainer.train_model(gamma=10 ** logx)
+    # result = minimize_scalar(loss, method='bounded', bounds=(1, 4), 
+    #     options={'xatol': 0.1, 'disp': 3})
+    # print(result)

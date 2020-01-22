@@ -5,13 +5,13 @@ import torch.nn as nn
 from datetime import datetime as dt
 from torch.utils.tensorboard import SummaryWriter
 from compress_pickle import load
-from model.nets import FeedForward
 from train.eBayDataset import eBayDataset
 from train.train_consts import FTOL, LOG_DIR
+from train.Model import Model
 from train.Sample import get_batches
 from train.Optimizer import Optimizer
 from train.TimeLoss import TimeLoss
-from constants import INPUT_DIR, MODEL_DIR, PARAMS_PATH
+from constants import MODEL_DIR
 
 
 class Trainer:
@@ -21,28 +21,24 @@ class Trainer:
 	Public methods:
 		* train: trains the initialized model under given parameters.
 	'''
-	def __init__(self, name, train_part, test_part, expid=None, device='cuda'):
+	def __init__(self, name, train_part, test_part, dev=False, device='cuda'):
 		'''
 		:param name: string model name.
 		:param train_part: string partition name for training data.
 		:param test_part: string partition name for holdout data.
-		:param expid: string id of experiment for log and model filenames.
+		:param dev: True for development.
 		'''
 		# save parameters to self
 		self.name = name
-		self.expid = expid
+		self.dev = dev
 		self.device = device
 
-		# regularization hyperparameter to be set in training
-		self.gamma = None
+		# path to pretrained model
+		self.pretrained_path = MODEL_DIR + '{}/pretrained.net'.format(name)
 
-		# load model sizes
-		self.sizes = load(INPUT_DIR + 'sizes/{}.pkl'.format(name))
-		print('Sizes: {}'.format(self.sizes))
-
-		# load parameters
-		self.params = load(PARAMS_PATH)
-		print('Parameters: {}'.format(self.params))
+		# load datasets
+		self.train = eBayDataset(train_part, name)
+		self.test = eBayDataset(test_part, name)
 
 		# loss function
 		if name in ['hist', 'con_slr', 'con_byr']:
@@ -52,42 +48,29 @@ class Trainer:
 		else:
 			self.loss = TimeLoss
 
-		# load datasets
-		self.train = eBayDataset(train_part, name)
-		self.test = eBayDataset(test_part, name)
-
-		# set expid to None for development
-		if self.expid is not None:
-			# initialize writer
-			self.writer = SummaryWriter(
-				LOG_DIR + '{}/{}'.format(name, expid))
-
-			# train with penalty hyperparameter set to 0
-			self.pretrained_path = MODEL_DIR + '{}/pretrained.net'.format(name)
-			if not os.path.isfile(self.pretrained_path):
-				self._pretrain()
-
-		# neural net with dropout
-		self.net = FeedForward(
-			self.sizes, self.params, dropout=True).to(self.device)
-		print(self.net)
+		# model and writer to be initialized in training loop
+		self.model = None
+		self.writer = None
+		
+		# pretrain with penalty hyperparameter set to 0
+		if not os.path.isfile(self.pretrained_path):
+			self._pretrain()
 
 
 	def _pretrain(self):
 		# neural net without dropout
-		self.net = FeedForward(
-			self.sizes, self.params, dropout=False).to(self.device)
-		print(self.net)
+		self.model = Model(self.name, gamma=0, device=self.device)
+		print(self.model.net)
 
-		# train for one epoch
+		# train without dropout until convergence
 		print('Pretraining:')
-		self._run_epoch(Optimizer(self.net.parameters()), epoch=0)
+		self.train_model()
 
 		# save pretrained model
-		torch.save(self.net.state_dict(), self.pretrained_path)
+		torch.save(self.model.net.state_dict(), self.pretrained_path)
 
 
-	def train_model(self, gamma=None):
+	def train_model(self, gamma=0):
 		'''
 		Public method to train model.
 		:param gamma: scalar regularization parameter for variational dropout.
@@ -95,17 +78,24 @@ class Trainer:
 		# epoch number
 		epoch = 0
 
-		# initialize optimizer
-		optimizer = Optimizer(self.net.parameters())
-		print(optimizer.optimizer)
-
-		# save regularization hyperparameter
-		self.gamma = gamma
+		# initialize model
+		self.model = Model(self.name, gamma=gamma, device=self.device)
+		print(self.model.net)
 
 		# load pre-trained model weights
-		if self.net.dropout and self.expid is not None:
-			self.net.load_state_dict(
+		if self.model.dropout:
+			self.model.net.load_state_dict(
 				torch.load(self.pretrained_path), strict=False)
+
+		# initialize optimizer
+		optimizer = Optimizer(self.model.net.parameters())
+		print(optimizer.optimizer)
+
+		# initialize writer
+		if not self.dev:
+			expid = dt.now().strftime('%y%m%d-%H%M')
+			self.writer = SummaryWriter(
+				LOG_DIR + '{}/{}'.format(self.name, expid))
 
 		# training loop
 		last = np.inf
@@ -115,9 +105,9 @@ class Trainer:
 			output = self._run_epoch(optimizer, epoch=epoch)
 
 			# save model
-			if self.expid is not None:
+			if not self.dev:
 				torch.save(self.net.state_dict(), 
-					MODEL_DIR + '{}/{}.net'.format(self.name, self.expid))
+					MODEL_DIR + '{}/{}.net'.format(self.name, expid))
 
 			# reduce learning rate until convergence
 			if output['loss'] > FTOL * last:
@@ -143,9 +133,10 @@ class Trainer:
 		output['lnL_train'] = -output['loss'] / self.train.N
 
 		# variational dropout stats
-		if self.net.dropout:
-			output['gamma'] = self.gamma
-			output['share'], output['largest'] = self._get_alpha_stats()
+		if self.model.dropout:
+			output['gamma'] = self.model.gamma
+			output['std_alpha'], output['max_alpha'] = \
+				self.model.get_alpha_stats()
 
 		# calculate log-likelihood on validation set
 		with torch.no_grad():
@@ -157,7 +148,7 @@ class Trainer:
 		# save output to tensorboard writer
 		for k, v in output.items():
 			print('\t{}: {}'.format(k, v))
-			if self.expid is not None:
+			if self.writer is not None:
 				self.writer.add_scalar(k, v, epoch)
 
 		return output
@@ -193,7 +184,7 @@ class Trainer:
 		# print timers
 		prefix = 'training' if isTraining else 'validation'
 		print('\t{0:s} GPU time: {1:.1f} seconds'.format(prefix, gpu_time))
-		print('\tTotal {0:s} time: {1:.1f} seconds'.format(prefix, 
+		print('\ttotal {0:s} time: {1:.1f} seconds'.format(prefix, 
 			(dt.now() - t0).total_seconds()))
 
 		return loss
@@ -209,8 +200,8 @@ class Trainer:
 		isTraining = optimizer is not None  # train / eval mode
 
 		# call forward on model
-		self.net.train(isTraining)
-		theta = self.net(b['x'])
+		self.model.net.train(isTraining)
+		theta = self.model.net(b['x'])
 
 		# binary cross entropy requires float
 		if str(self.loss) == "BCEWithLogitsLoss()":
@@ -221,31 +212,14 @@ class Trainer:
 
 		# add in regularization penalty and step down gradients
 		if isTraining:
-			if self.net.dropout:
-				penalty = self._get_penalty()
-				loss = loss + penalty * len(b['y'])
+			if self.model.dropout:
+				penalty = self.model.get_penalty()
+				factor = len(b['y']) / len(self.train)
+				#print(loss.item(), penalty * factor)
+				loss = loss + penalty * factor
 
 			optimizer.zero_grad()
 			loss.backward()
 			optimizer.step()
 
 		return loss.item()
-
-
-	def _get_penalty(self):
-		penalty = 0.0
-		for m in self.net.modules():
-			if hasattr(m, 'kl_reg'):
-				penalty += m.kl_reg().item()
-		return self.gamma * penalty / len(self.train)
-
-
-	def _get_alpha_stats(self, threshold=9):
-		above, total, largest = 0.0, 0.0, 0.0
-		for m in self.net.modules():
-			if hasattr(m, 'log_alpha'):
-				alpha = torch.exp(m.log_alpha)
-				largest = max(largest, torch.max(alpha).item())
-				total += alpha.size()[0]
-				above += torch.sum(alpha > threshold).item()
-		return above / total, largest
