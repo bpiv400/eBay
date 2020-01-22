@@ -2,7 +2,10 @@ import torch
 import numpy as np, pandas as pd
 from rlenv.env_consts import *
 from rlenv.env_utils import load_featnames, model_str, load_sizes
-from featnames import OUTCOME_FEATS, CLOCK_FEATS, TIME_FEATS, BYR_TURN_INDS, SLR_TURN_INDS
+from featnames import (OUTCOME_FEATS, CLOCK_FEATS, TIME_FEATS,
+                       BYR_TURN_INDS, SLR_TURN_INDS, MONTHS_SINCE_LSTG,
+                       BYR_HIST, INT_REMAINING, MONTHS_SINCE_LAST,
+                       THREAD_COUNT)
 from constants import ARRIVAL_PREFIX
 
 
@@ -175,20 +178,59 @@ class Composer:
         print('t: {}'.format(t.dtype))
 
     @staticmethod
+    def remove_shared_feats(model_feats, shared_feats):
+        return model_feats[len(shared_feats):]
+
+    @staticmethod
+    def verify_sequence(model_feats, seq_feats, start_idx):
+        subset = model_feats[start_idx:(len(seq_feats) + start_idx)]
+        for model_feat, seq_feat in zip(subset, seq_feats):
+            assert model_feat == seq_feat
+
+    @staticmethod
     def verify_offer_append(model, shared_feats):
-        raise NotImplementedError()
+        model_feats = load_featnames(model)[LSTG_MAP]
+        model_feats = Composer.remove_shared_feats(model_feats, shared_feats)
+        assert model_feats[0] == MONTHS_SINCE_LSTG
+        assert model_feats[1] == BYR_HIST
+        if SLR_PREFIX in model:
+            turn_inds = SLR_TURN_INDS
+        else:
+            turn_inds = BYR_TURN_INDS
+        assert len(model_feats[2:]) == len(turn_inds)
+        for model_feat, turn_feat in zip(model_feats, turn_inds):
+            assert model_feat == turn_feat
 
     @staticmethod
     def verify_delay_append(model, shared_feats):
-        raise NotImplementedError()
+        model_feats = load_featnames(model)[LSTG_MAP]
+        model_feats = Composer.remove_shared_feats(model_feats, shared_feats)
+        assert model_feats[0] == MONTHS_SINCE_LSTG
+        assert model_feats[1] == BYR_HIST
+        if SLR_PREFIX in model:
+            turn_inds = SLR_TURN_INDS
+        else:
+            turn_inds = BYR_TURN_INDS
+        Composer.verify_sequence(model_feats, turn_inds, 2)
+        assert model_feats[-1] == INT_REMAINING
 
     @staticmethod
     def verify_arrival_append(shared_feats):
-        raise NotImplementedError()
+        model_feats = load_featnames(ARRIVAL_MODEL)[LSTG_MAP]
+        model_feats = Composer.remove_shared_feats(model_feats, shared_feats)
+        Composer.verify_sequence(model_feats, CLOCK_FEATS, 0)
+        next_ind = len(CLOCK_FEATS)
+        assert model_feats[next_ind] == MONTHS_SINCE_LSTG
+        assert model_feats[next_ind + 1] == MONTHS_SINCE_LAST
+        assert model_feats[next_ind + 2] == THREAD_COUNT
 
     @staticmethod
     def verify_hist_append(shared_feats):
-        raise NotImplementedError()
+        model_feats = load_featnames(BYR_HIST_MODEL)[LSTG_MAP]
+        model_feats = Composer.remove_shared_feats(model_feats, shared_feats)
+        assert model_feats[0] == MONTHS_SINCE_LSTG
+        Composer.verify_sequence(model_feats, CLOCK_FEATS, 1)
+        Composer.verify_sequence(model_feats, TIME_FEATS, 1 + len(CLOCK_FEATS))
 
 
 class AgentComposer(Composer):
