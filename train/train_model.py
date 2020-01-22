@@ -20,7 +20,7 @@ if __name__ == '__main__':
     trainer.train_model(gamma=1)
 
     # # use univariate optimizer to find regularization hyperparameter
-    # loss = lambda logx: -trainer.train_model(gamma=10 ** logx)
-    # result = minimize_scalar(loss, method='bounded', bounds=(1, 4), 
+    # loss = lambda g: -trainer.train_model(gamma=g)
+    # result = minimize_scalar(loss, method='bounded', bounds=(0, 1), 
     #     options={'xatol': 0.1, 'disp': 3})
     # print(result)

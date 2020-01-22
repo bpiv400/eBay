@@ -106,7 +106,7 @@ class Trainer:
 
 			# save model
 			if not self.dev:
-				torch.save(self.net.state_dict(), 
+				torch.save(self.model.net.state_dict(), 
 					MODEL_DIR + '{}/{}.net'.format(self.name, expid))
 
 			# reduce learning rate until convergence
