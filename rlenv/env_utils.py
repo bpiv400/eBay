@@ -12,8 +12,8 @@ from torch.distributions.poisson import Poisson
 from constants import (INPUT_DIR, TOL_HALF,
                        MODEL_DIR, ENV_SIM_DIR, DAY, BYR_PREFIX, SLR_PREFIX)
 from model.nets import FeedForward
-from rlenv.env_consts import (META_6, META_7, SIM_CHUNKS_DIR, SIM_VALS_DIR,
-                              SIM_DISCRIM_DIR, DATE_FEATS, ARRIVAL_MODELS)
+from rlenv.env_consts import (META_6, META_7, SIM_CHUNKS_DIR, SIM_VALS_DIR, OFFER_MAPS,
+                              SIM_DISCRIM_DIR, DATE_FEATS, ARRIVAL_MODELS, NORM_IND)
 from featnames import *
 
 
@@ -46,16 +46,6 @@ def load_params():
         :return: dict
         """
     return load(INPUT_DIR + 'params.pkl')
-
-
-def featname(feat, turn):
-    """
-    Returns the name of a particular feature for a particular turn
-    :param feat: str giving featname
-    :param turn: int giving turn num
-    :return: str
-    """
-    return '{}_{}'.format(feat, turn)
 
 
 def model_str(model_name, byr=False):
@@ -130,10 +120,6 @@ def sample_bernoulli(params):
     return proper_squeeze(dist.sample((1, ))).numpy()
 
 
-def sample_poisson(lnmean):
-    return int(Poisson(torch.exp(lnmean)).sample((1,)).squeeze())
-
-
 def get_split(con):
     """
     Determines whether concession is close enough to 50 to trigger split feature
@@ -145,7 +131,7 @@ def get_split(con):
     return output
 
 
-def last_norm(sources, turn):
+def last_norm(sources=None, turn=0):
     """
     Grabs the value of norm from 2 turns ago
     :param dict sources: environment sources dictionary
@@ -155,11 +141,12 @@ def last_norm(sources, turn):
     if turn <= 2:
         out = 0.0
     else:
-        out = sources[THREAD_MAP][featname(NORM, turn - 2)]
+        offer_map = OFFER_MAPS[turn - 2]
+        out = sources[offer_map][NORM_IND]
     return out
 
 
-def prev_norm(sources, turn):
+def prev_norm(sources=None, turn=0):
     """
     Grabs the value of norm from last turn
     :param dict sources: environment sources dictionary
@@ -169,7 +156,8 @@ def prev_norm(sources, turn):
     if turn == 1:
         out = 0.0
     else:
-        out = sources[THREAD_MAP][featname(NORM, turn-1)]
+        offer_map = OFFER_MAPS[turn - 1]
+        out = sources[offer_map][NORM_IND]
     return out
 
 
@@ -364,69 +352,77 @@ def load_chunk(base_dir, num):
     return x_lstg, lookup
 
 
-def update_byr_outcomes(con=None, delay=None, sources=None, turn=0):
+def get_delay_outcomes(seconds=0, max_delay=0, turn=0):
     """
-    Creates a new seller outcome vector given the concession and optionally
-    given the delay (in cases where Agent predicts con and delay)
-    :param np.float con: concession
-    :param np.int delay: selected delay
-    :param Sources sources: sources object
-    :param int turn: turn number
-    :return: (outcome series, sample message boolean)
+    Generates all features
+    :param seconds: number of seconds delayed
+    :param max_delay: max possible duration of delay
+    :param turn: turn number
+    :return: np.array
     """
-    outcomes = pd.Series(0.0, index=ALL_OUTCOMES[turn])
-    # don't sample a msg if the delay is given since this means an agent
-    # selects delay
-    if delay is not None:
-        sample_msg = False
-    else:
-        sample_msg = (con != 0 and con != 1)
-    if sample_msg:
-        outcomes[featname(SPLIT, turn)] = get_split(con)
-    outcomes[featname(CON, turn)] = con
-    prev_slr_norm = prev_norm(sources, turn)
-    prev_byr_norm = last_norm(sources, turn)
-    norm = (1 - prev_slr_norm) * con + prev_byr_norm * (1 - con)
-    outcomes[featname(NORM, turn)] = norm
-    return outcomes, sample_msg
-    # TODO FIGURE OUT DELAY SHIT LATER IN A SEPARATE FUNCTION
+    delay = get_delay(seconds, max_delay)
+    days = get_days(seconds)
+    exp = get_exp(delay, turn)
+    auto = get_auto(delay, turn)
+    return np.array([days, delay, auto, exp], dtype=np.float)
 
 
-def update_slr_outcomes(con=None, delay=None, sources=None, turn=0):
-    """
-    Creates a new seller outcome vector given the concession and optionally
-    given the delay (in cases where Agent predicts con and delay)
-    :param np.float con: concession
-    :param np.int delay: selected delay
-    :param Sources sources: sources object
-    :param int turn: turn number
-    :return: (outcome series, sample message boolean)
-    """
-    outcomes = pd.Series(0.0, index=ALL_OUTCOMES[turn])
-    # don't sample a msg if the delay is given since this means an agent
-    # selects delay
-    if delay is not None:
-        sample_msg = False
+def get_delay(seconds, max_delay):
+    return seconds / max_delay
+
+
+def get_days(seconds):
+    return seconds / DAY
+
+
+def get_exp(delay, turn):
+    if turn % 2 == 0:
+        exp = delay == 1
     else:
-        sample_msg = (con != 0 and con != 1)
-    # compute previous seller norm or set to 0 if this is the first turn
-    prev_slr_norm = last_norm(sources, turn)
-    # handle rejection case
-    if con == 0:
-        outcomes[featname(REJECT, turn)] = 1
-        outcomes[featname(NORM, turn)] = prev_slr_norm
+        exp = 0
+    return exp
+
+
+def get_auto(delay, turn):
+    if turn % 2 == 0:
+        auto = delay == 0
     else:
-        outcomes[featname(CON, turn)] = con
-        outcomes[featname(SPLIT, turn)] = get_split(con)
-        prev_byr_norm = sources[THREAD_MAP][featname(NORM, turn - 1)]
+        auto = 0
+    return auto
+
+
+def get_con_outcomes(con=None, sources=None, turn=0):
+    """
+    Returns vector giving con and features downstream from it in order given by
+    OUTCOME_FEATS -- Doesn't include msg
+    :param con: con
+    :param sources: source dictionary
+    :param turn: turn number
+    :return:
+    """
+    reject = get_reject(con)
+    if turn % 2 == 0:
+        prev_byr_norm = prev_norm(sources=sources, turn=turn)
+        prev_slr_norm = last_norm(sources=sources, turn=turn)
         norm = slr_norm(con=con, prev_byr_norm=prev_byr_norm, prev_slr_norm=prev_slr_norm)
-        outcomes[featname(NORM, turn)] = norm
+    else:
+        prev_byr_norm = last_norm(sources=sources, turn=turn)
+        prev_slr_norm = prev_norm(sources=sources, turn=turn)
+        norm = byr_norm(con=con, prev_byr_norm=prev_byr_norm, prev_slr_norm=prev_slr_norm)
+    split = get_split(con)
+    return np.array([con, reject, norm, split], dtype=np.float)
 
-    # TODO FIGURE OUT DELAY SHIT LATER IN A SEPARATE FUNCTION
 
-    return outcomes, sample_msg
+def get_reject(con):
+    return con == 0
 
 
-def slr_norm(con, prev_byr_norm, prev_slr_norm):
+def slr_norm(con=None, prev_byr_norm=None, prev_slr_norm=None):
     norm = 1 - con * prev_byr_norm - (1 - prev_slr_norm) * (1 - con)
     return norm
+
+
+def byr_norm(con=None, prev_byr_norm=None, prev_slr_norm=None):
+    norm = (1 - prev_slr_norm) * con + prev_byr_norm * (1 - con)
+    return norm
+

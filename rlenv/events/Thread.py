@@ -5,7 +5,7 @@ import numpy as np
 from rlenv.events.Event import Event
 from rlenv.env_consts import (FIRST_OFFER, BUYER_OFFER, SELLER_OFFER, BUYER_DELAY, SELLER_DELAY)
 from constants import (DAY, SLR_PREFIX, BYR_PREFIX, MAX_DELAY, MONTH)
-from rlenv.env_utils import slr_rej, slr_auto_acc
+from rlenv.env_utils import slr_rej, slr_auto_acc, get_delay_outcomes, get_con_outcomes
 from rlenv.time.Offer import Offer
 
 
@@ -43,6 +43,7 @@ class Thread(Event):
 
     def offer(self, interface=None, player_type=None):
         outcomes = interface.make_offer(sources=self.sources(), turn=self.turn)
+
         norm = self.sources.update_offer(offer_outcomes=outcomes, turn=self.turn)
         offer_params = {
             'price': norm,
@@ -66,10 +67,8 @@ class Thread(Event):
             self.type = BUYER_DELAY
         self._init_delay_params(lstg_start)
 
-
     def change_turn(self):
         self.turn += 1
-        self.sources.change_turn(self.turn)
 
     def _init_delay_params(self, lstg_start):
         # update object to contain relevant delay attributes
@@ -83,31 +82,29 @@ class Thread(Event):
         self.spi = self.intervals[delay_type]
         # create remaining
         self._init_remaining(lstg_start, self.max_delay)
-        self.sources.init_remaining(remaining=self.remaining)
 
     def _init_remaining(self, lstg_start, max_delay):
         self.remaining = (MONTH + lstg_start) - self.priority
         self.remaining = self.remaining / max_delay
         self.remaining = min(self.remaining, 1)
+        self.sources.init_remaining(remaining=self.remaining)
 
     def delay(self):
         # add new features
         # generate delay
         if self.turn % 2 == 0:
-            index = self.seller.delay(self.sources())
+            index = self.seller.delay(self.sources(), turn=self.turn)
         else:
-            index = self.buyer.delay(self.sources())
+            index = self.buyer.delay(self.sources(), turn=self.turn)
         seconds = int((index + np.random.uniform()) * self.spi)
         seconds = min(seconds, self.max_delay)
-        if seconds != self.max_delay:
-            print('less than max')
         return seconds
 
     def prepare_offer(self, seconds):
         # update outcomes
-        delay = seconds / self.max_delay
-        days = seconds / DAY
-        self.sources.prepare_offer(days=days, delay=delay, turn=self.turn)
+        delay_outcomes = get_delay_outcomes(seconds=seconds, max_delay=self.max_delay,
+                                            turn=self.turn)
+        self.sources.prepare_offer(delay_outcomes=delay_outcomes, turn=self.turn)
         # change event type
         if self.turn % 2 == 0:
             self.type = SELLER_OFFER

@@ -44,7 +44,7 @@ class EbayEnvironment:
         self.time_feats.reset()
         self.outcome = None
         self.thread_counter = 0
-        sources = ArrivalSources(x_lstg=self.x_lstg, composer=self.arrival.composer)
+        sources = ArrivalSources(x_lstg=self.x_lstg)
         event = Arrival(priority=self.lookup[START_TIME], sources=sources, interface=self.arrival)
         self.queue.push(event)
 

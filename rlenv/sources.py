@@ -18,7 +18,6 @@ class ThreadSources(Sources):
     def __init__(self, x_lstg=None):
         super(ThreadSources, self).__init__(x_lstg=x_lstg)
         # other clock features initialized to lstg start date
-        self.source_dict[TURN_IND_MAP] = ThreadSources._turn_inds(1)
         self.source_dict[INT_REMAINING] = 0.0
         self.source_dict[BYR_HIST] = 0.0
         for i in range(1, 8):
@@ -40,7 +39,7 @@ class ThreadSources(Sources):
 
     def update_offer(self, offer_outcomes=None, turn=None):
         offer_map = OFFER_MAPS[turn]
-        self.source_dict[offer_map][CON_START_IND] = offer_outcomes
+        self.source_dict[offer_map][CON_START_IND:] = offer_outcomes
         return self.source_dict[offer_map][NORM_IND]
 
     def init_offer(self, time_feats=None, clock_feats=None, turn=None):
