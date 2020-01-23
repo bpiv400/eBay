@@ -1,6 +1,6 @@
 from compress_pickle import load
 import numpy as np, pandas as pd
-from processing.processing_utils import input_partition, 
+from processing.processing_utils import input_partition
 from processing.e_inputs.inputs_utils import load_file, \
 	process_arrival_inputs, save_discrim_files
 from processing.processing_consts import INTERVAL_COUNTS
@@ -19,7 +19,7 @@ def process_lstg_end(lstg_start, lstg_end):
 	return lstg_end
 
 
-def get_sim_times(lstg_start):
+def get_sim_times(part, lstg_start):
 	# collect times from simulation files
 	lstg_end, thread_start = [], []
 	for i in range(1, SIM_CHUNKS+1):
@@ -38,7 +38,7 @@ def get_sim_times(lstg_start):
 	return lstg_end, thread_start
 
 
-def get_obs_times(lstg_start):
+def get_obs_times(part, lstg_start):
 	# offer timestamps
 	clock = load_file(part, 'clock')
 
@@ -59,9 +59,9 @@ def process_inputs(part, obs=None):
 
 	# listing end time and thread start time
 	if obs:
-		lstg_end, thread_start = get_obs_times(part)
+		lstg_end, thread_start = get_obs_times(part, lstg_start)
 	else:
-		lstg_end, thread_start = get_sim_times(part)
+		lstg_end, thread_start = get_sim_times(part, lstg_start)
 
 	# dictionary of y and x
 	d = process_arrival_inputs(part, lstg_start, lstg_end, thread_start)

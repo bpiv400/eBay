@@ -40,15 +40,6 @@ def load_sizes(name):
     return load(INPUT_DIR + 'sizes/{}.pkl'.format(name))
 
 
-def load_params():
-    """
-        Loads featnames dictionary for a model
-        #TODO: extend to include agents
-        :return: dict
-        """
-    return load(MODEL_DIR + 'params.pkl')
-
-
 def featname(feat, turn):
     """
     Returns the name of a particular feature for a particular turn
@@ -157,14 +148,28 @@ def load_model(full_name):
     :return: torch.nn.Module
     """
     print('loading {}'.format(full_name))
-    sizes, params = load_sizes(full_name), load_params()
+
+    # create neural network
+    sizes = load_sizes(full_name)
+    net = FeedForward(sizes, dropout=False)  # type: torch.nn.Module
+
+    # read in model parameters
     model_path = '{}{}.net'.format(MODEL_DIR, full_name)
-    net = FeedForward(sizes, params, dropout=False)  # type: torch.nn.Module
     state_dict = torch.load(model_path, map_location=torch.device('cpu'))
+
+    # delete dropout parameters
+    for param_tensor in state_dict:
+        if 'lnalpha' in param_tensor.__name__:
+            del param_tensor
+
+    # load parameters into model
     net.load_state_dict(state_dict)
+
+    # eval mode
     for param in net.parameters(recurse=True):
         param.requires_grad = False
     net.eval()
+
     return net
 
 

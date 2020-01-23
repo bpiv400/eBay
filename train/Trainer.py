@@ -7,10 +7,9 @@ from torch.utils.tensorboard import SummaryWriter
 from compress_pickle import load
 from torch import optim
 from train.eBayDataset import eBayDataset
-from train.train_consts import FTOL, LOG_DIR, LOGLR0
+from train.train_consts import FTOL, LOG_DIR, LNLR0, LNLR1, LNLR_FACTOR
 from train.Model import Model
 from train.Sample import get_batches
-from train.Optimizer import Optimizer
 from train.TimeLoss import TimeLoss
 from constants import MODEL_DIR
 
@@ -48,13 +47,10 @@ class Trainer:
 			self.loss = nn.BCEWithLogitsLoss(reduction='sum')
 		else:
 			self.loss = TimeLoss
-
-		# model and writer to be initialized in training loop
-		self.model = None
-		self.writer = None
 		
 		# pretrain with penalty hyperparameter set to 0
-		if not os.path.isdir(self.pretrained_path):
+		if not os.path.isfile(self.pretrained_path):
+			print('Pretraining')
 			self.train_model()
 
 
@@ -74,8 +70,7 @@ class Trainer:
 			writer = None
 
 		# tune initial learning rate
-		loglr, model = self._tune_loglr(writer=writer, gamma=gamma)
-		print(model.net)
+		lnlr, model = self._tune_lr(writer=writer, gamma=gamma)
 
 		# path to save model
 		if model.dropout:
@@ -83,9 +78,11 @@ class Trainer:
 		else:
 			model_path = self.pretrained_path
 
-		# initialize optimizer
-		optimizer = Optimizer(model.net.parameters(), loglr=loglr)
-		print(optimizer.optimizer)
+		# initialize optimizer and scheduler
+		optimizer = optim.Adam(model.net.parameters(), lr=np.exp(lnlr))
+		scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 
+			mode='min', factor=np.exp(LNLR_FACTOR), patience=0, threshold=FTOL)
+		print(optimizer)
 
 		# training loop
 		epoch, last = 1, np.inf
@@ -99,12 +96,12 @@ class Trainer:
 			if not self.dev:
 				torch.save(model.net.state_dict(), model_path)
 					
-			# reduce learning rate until convergence
-			if output['loss'] > FTOL * last:
-				if optimizer.check():
-					break
-				else:
-					optimizer.step()
+			# reduce learning rate if loss has not meaningfully improved
+			scheduler.step(output['loss'])
+
+			# stop training if learning rate is sufficiently small
+			if self._get_lnlr(optimizer) < LNLR1:
+				break
 
 			# update last, increment epoch
 			last = output['loss']
@@ -113,13 +110,18 @@ class Trainer:
 		return -output['lnL_test']
 
 
+	@staticmethod
+	def _get_lnlr(optimizer):
+		for param_group in optimizer.param_groups:
+			return np.log(param_group['lr'])
+
+
 	def _run_epoch(self, model, optimizer, writer=None, epoch=None):
 	 	# initialize output with log10 learning rate
-		output = {'loglr': optimizer.loglr}
+		output = {'lnlr': self._get_lnlr(optimizer)}
 
 		# train model
-		output['loss'] = self._run_loop(
-			self.train, model, optimizer.optimizer)
+		output['loss'] = self._run_loop(self.train, model, optimizer)
 
 		# collect remaining output and print
 		output = self._collect_output(model, writer, output, epoch=epoch)
@@ -198,18 +200,17 @@ class Trainer:
 		return loss.item()
 
 
-	def _tune_loglr(self, writer=None, gamma=0):
+	def _tune_lr(self, writer=None, gamma=0):
 		models, loss = [], []
-		for loglr in LOGLR0:
+		for lnlr in LNLR0:
 			# initialize model and optimizer
 			models.append(self._initialize_model(gamma))
-			optimizer = optim.Adam(models[-1].net.parameters(), 
-				lr=10 ** loglr)
+			optimizer = optim.Adam(models[-1].net.parameters(), lr=np.exp(lnlr))
 
-			# print model
+			# print to console
 			if len(models) == 1:
 				print(models[-1].net)
-				print('Tuning with loglr of {}'.format(loglr))
+			print('Tuning with lnlr of {}'.format(lnlr))
 
 			# run model for one epoch
 			loss.append(self._run_loop(self.train, models[-1], optimizer))
@@ -217,18 +218,18 @@ class Trainer:
 
 		# best learning rate and model
 		idx = np.argmin(loss)
-		loglr = LOGLR0[idx]
+		lnlr = LNLR0[idx]
 		model = models[idx]
 
 		# initialize output with log10 learning rate
-		output = {'loglr': loglr, 'loss': loss[idx]}
+		output = {'lnlr': lnlr, 'loss': loss[idx]}
 
 		# collect remaining output and print
 		print('Epoch 0')
 		self._collect_output(model, writer, output)
 
-		# return loglr of smallest loss and corresponding model
-		return loglr, model
+		# return lnlr of smallest loss and corresponding model
+		return lnlr, model
 
 
 	def _initialize_model(self, gamma=0):
@@ -247,8 +248,6 @@ class Trainer:
 		# variational dropout stats
 		if model.dropout:
 			output['gamma'] = model.gamma
-			output['std_alpha'], output['max_alpha'] = \
-				model.get_alpha_stats()
 
 		# calculate log-likelihood on validation set
 		with torch.no_grad():
@@ -262,5 +261,9 @@ class Trainer:
 			print('\t{}: {}'.format(k, v))
 			if writer is not None:
 				writer.add_scalar(k, v, epoch)
+
+		# histogram of lnalpha
+		if model.dropout and writer is not None:
+			writer.add_histogram('lnalpha', model.lnalpha, epoch)
 
 		return output

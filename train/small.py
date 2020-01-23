@@ -3,14 +3,20 @@ from train.Trainer import Trainer
 from constants import SMALL, VALIDATION
 
 
-if __name__ == '__main__':
+def main():
     # extract parameters from command line
     parser = argparse.ArgumentParser()
     parser.add_argument('--name', type=str, help='model name')
-    name = parser.parse_args().name
+    parser.add_argument('--gamma', type=float, default=1)
+    args = parser.parse_args()
+    name, gamma = args.name, args.gamma
 
     # initialize trainer
     trainer = Trainer(name, SMALL, VALIDATION, dev=True)
 
     # training
-    trainer.train_model(gamma=1)
+    trainer.train_model(gamma=gamma)
+
+
+if __name__ == '__main__':
+	main()

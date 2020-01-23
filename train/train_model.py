@@ -6,7 +6,7 @@ from train.Trainer import Trainer
 from constants import TRAIN_RL, TRAIN_MODELS, VALIDATION
 
 
-if __name__ == '__main__':
+def main():
     # extract parameters from command line
     parser = argparse.ArgumentParser()
     parser.add_argument('--name', type=str, required=True)
@@ -24,3 +24,7 @@ if __name__ == '__main__':
     # result = minimize_scalar(loss, method='bounded', bounds=(0, 1), 
     #     options={'xatol': 0.1, 'disp': 3})
     # print(result)
+
+
+if __name__ == '__main__':
+    main()

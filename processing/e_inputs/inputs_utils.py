@@ -329,13 +329,9 @@ def save_files(d, part, name):
 
 def save_discrim_files(part, name, x_obs, x_sim):
 	# featnames and sizes
-	if part == 'train_rl':
-		# featnames
-		featnames = get_featnames(x_obs)
-		dump(featnames, INPUT_DIR + 'featnames/{}.pkl'.format(name))
-
-		# sizes
-		save_sizes(featnames, name)
+	if part == 'test_rl':
+		save_featnames(x_obs, name)
+		save_sizes(x_obs, name)
 
 	# indices
 	idx_obs = x_obs['lstg'].index
@@ -351,14 +347,14 @@ def save_discrim_files(part, name, x_obs, x_sim):
 	d = {'y': np.concatenate((y_obs, y_sim), axis=0)}
 
 	# join input variables
-	assert all(x_obs.keys() == x_sim.keys())
+	assert x_obs.keys() == x_sim.keys()
 	d['x'] = {k: np.concatenate((x_obs[k], x_sim[k]), axis=0) for k in x_obs.keys()}
 
 	# save inputs
 	dump(d, INPUT_DIR + '{}/listings.gz'.format(part))
 
 	# save joined index
-	idx_joined = pd.concat([idx_obs, idx_sim], axis=0)
+	idx_joined = idx_obs.union(idx_sim, sort=False)
 	dump(idx_joined, INDEX_DIR + '{}/listings.gz'.format(part))
 
 	# save subset
