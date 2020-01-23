@@ -1,7 +1,6 @@
-import math
 import numpy as np
 from rlenv.env_consts import *
-from rlenv.env_utils import featname, last_norm
+from rlenv.env_utils import last_norm
 from featnames import *
 
 
@@ -51,6 +50,7 @@ class ThreadSources(Sources):
         self.source_dict[offer_map][CLOCK_START_IND:TIME_END_IND] = feats
 
     def prepare_offer(self, delay_outcomes=None, turn=None):
+
         offer_map = OFFER_MAPS[turn]
         self.source_dict[offer_map][DELAY_START_IND:DELAY_END_IND] = delay_outcomes
 
@@ -78,12 +78,12 @@ class ThreadSources(Sources):
         # TODO: could index once and pass resulting vector to output
         # would require update of recorders
         offer_map = OFFER_MAPS[turn]
-        con = int(self.source_dict[offer_map][featname(CON, turn)] * 100)
-        norm = self.source_dict[offer_map][featname(NORM, turn)] * 100
+        con = int(self.source_dict[offer_map][CON_IND] * 100)
+        norm = self.source_dict[offer_map][NORM_IND] * 100
         norm = norm.round()
-        msg = self.source_dict[offer_map][featname(MSG, turn)] == 1
+        msg = self.source_dict[offer_map][MSG_IND] == 1
 
-        split = self.source_dict[offer_map][featname(SPLIT, turn)] == 1
+        split = self.source_dict[offer_map][SPLIT_IND] == 1
         return con, norm, msg, split
 
     def get_delay_outcomes(self, turn):

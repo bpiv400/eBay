@@ -45,7 +45,7 @@ def load_params():
         #TODO: extend to include agents
         :return: dict
         """
-    return load(INPUT_DIR + 'params.pkl')
+    return load(MODEL_DIR + 'params.pkl')
 
 
 def model_str(model_name, byr=False):
@@ -203,7 +203,7 @@ def time_delta(start, end, unit=DAY):
     """
     diff = (end - start) / unit
     diff = np.array([diff], dtype=np.float32)
-    return diff
+    return diff[0]
 
 
 def slr_rej_outcomes(sources, turn):
