@@ -189,7 +189,6 @@ class Composer:
 
     @staticmethod
     def verify_offer_append(model, shared_feats):
-        print('model: {}'.format(model))
         model_feats = load_featnames(model)[LSTG_MAP]
         model_feats = Composer.remove_shared_feats(model_feats, shared_feats)
         assert model_feats[0] == MONTHS_SINCE_LSTG
@@ -233,7 +232,6 @@ class Composer:
         # TODO: CLIP
         if model_feats[1] == 'holiday_1':
             model_feats[1:] = [featname[:-2] for featname in model_feats[1:]]
-        print(model_feats)
         Composer.verify_sequence(model_feats, CLOCK_FEATS, 1)
         Composer.verify_sequence(model_feats, TIME_FEATS, 1 + len(CLOCK_FEATS))
 
