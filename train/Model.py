@@ -44,7 +44,7 @@ class Model:
 	def lnalpha(self):
 		lnalpha = []
 		for m in self.net.modules():
-			if hasattr(m, 'lnalpha'):
-				lnalpha.append(m.lnalpha.detach().cpu().numpy())
+			if hasattr(m, 'log_alpha'):
+				lnalpha.append(m.log_alpha.detach().cpu().numpy())
 		return np.concatenate(lnalpha)
 	

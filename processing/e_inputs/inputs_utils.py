@@ -37,7 +37,7 @@ def get_x_thread(threads, idx):
 	x_thread = pd.DataFrame(index=idx).join(x_thread)
 
 	# add turn indicators
-	if 'index' in threads.index.names:
+	if 'index' in idx.names:
 		x_thread = add_turn_indicators(x_thread)
 
 	return x_thread.astype('float32')
@@ -64,18 +64,20 @@ def set_zero_feats(offer, i, outcome):
 	return offer
 
 
-def get_x_offer(offers, idx=None, outcome=None, role=None):
+def get_x_offer(offers, idx, outcome=None, role=None):
 	# initialize dictionary of offer features
 	x_offer = {}
 
 	# for threads set role to byr
-	if idx is None and outcome is None and role is None:
+	if outcome is None and role is None:
 		role = BYR_PREFIX
 
 	# dataframe of offer features for relevant threads
-	if idx is not None:
+	if 'index' in idx.names:
 		threads = idx.droplevel(level='index').unique()
-		offers = pd.DataFrame(index=threads).join(offers)
+	else:
+		threads = idx
+	offers = pd.DataFrame(index=threads).join(offers)
 
 	# last turn to include
 	last = max(IDX[role])
@@ -88,7 +90,7 @@ def get_x_offer(offers, idx=None, outcome=None, role=None):
 	for i in range(1, last+1):
 		# offer features at turn i
 		offer = offers.xs(i, level='index').reindex(
-			index=idx).astype('float32')
+			index=idx, fill_value=0).astype('float32')
 
 		# set unseen feats to 0 and add turn indicators
 		if outcome is not None:
@@ -337,6 +339,10 @@ def save_discrim_files(part, name, x_obs, x_sim):
 	idx_obs = x_obs['lstg'].index
 	idx_sim = x_sim['lstg'].index
 
+	# save joined index
+	idx_joined = idx_obs.union(idx_sim, sort=False)
+	dump(idx_joined, INDEX_DIR + '{}/listings.gz'.format(part))
+
 	# create dictionary of numpy arrays
 	x_obs = convert_x_to_numpy(x_obs, idx_obs)
 	x_sim = convert_x_to_numpy(x_sim, idx_sim)
@@ -353,10 +359,9 @@ def save_discrim_files(part, name, x_obs, x_sim):
 	# save inputs
 	dump(d, INPUT_DIR + '{}/listings.gz'.format(part))
 
-	# save joined index
-	idx_joined = idx_obs.union(idx_sim, sort=False)
-	dump(idx_joined, INDEX_DIR + '{}/listings.gz'.format(part))
-
-	# save subset
+	# save small
 	if part == 'train_rl':
-		save_small(d, 'listings')
+		save_small_discrim()
+
+
+

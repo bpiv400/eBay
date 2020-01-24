@@ -36,21 +36,21 @@ class Trainer:
 		# path to pretrained model
 		self.pretrained_path = MODEL_DIR + '{}/pretrained.net'.format(name)
 
-		# load datasets
-		self.train = eBayDataset(train_part, name)
-		self.test = eBayDataset(test_part, name)
-
 		# loss function
 		if name in ['hist', 'con_slr', 'con_byr']:
 			self.loss = nn.CrossEntropyLoss(reduction='sum')
-		elif 'msg' in name:
+		elif name in ['msg_byr', 'msg_slr', 'listings', 'threads']:
 			self.loss = nn.BCEWithLogitsLoss(reduction='sum')
 		else:
 			self.loss = TimeLoss
+		print(self.loss)
+
+		# load datasets
+		self.train = eBayDataset(train_part, name)
+		self.test = eBayDataset(test_part, name)
 		
 		# pretrain with penalty hyperparameter set to 0
 		if not os.path.isfile(self.pretrained_path):
-			print('Pretraining')
 			self.train_model()
 
 
