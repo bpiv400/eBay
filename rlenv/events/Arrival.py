@@ -3,6 +3,7 @@ from rlenv.events.Event import Event
 from rlenv.env_consts import ARRIVAL
 from rlenv.env_utils import time_delta
 from rlenv.interfaces.ArrivalInterface import ArrivalInterface
+from utils import get_months_since_lstg
 
 
 class Arrival(Event):
@@ -25,7 +26,7 @@ class Arrival(Event):
         self.interface = interface  # type: ArrivalInterface
 
     def update_arrival(self, clock_feats=None, thread_count=None):
-        months_since_lstg = time_delta(self.start, self.priority, unit=MONTH)
+        months_since_lstg = get_months_since_lstg(lstg_start=self.start, start=self.priority)
         self.sources.update_arrival(clock_feats=clock_feats, thread_count=thread_count,
                                     months_since_lstg=months_since_lstg)
 

@@ -10,7 +10,7 @@ from torch.distributions.categorical import Categorical
 from torch.distributions.bernoulli import Bernoulli
 from constants import (INPUT_DIR, TOL_HALF,
                        MODEL_DIR, ENV_SIM_DIR, DAY, BYR_PREFIX, SLR_PREFIX)
-from model.nets import FeedForward
+from nets.FeedForward import FeedForward
 from rlenv.env_consts import (META_6, META_7, SIM_CHUNKS_DIR, SIM_VALS_DIR, OFFER_MAPS,
                               SIM_DISCRIM_DIR, DATE_FEATS, ARRIVAL_MODELS, NORM_IND)
 from featnames import *
@@ -149,9 +149,9 @@ def load_model(full_name):
     state_dict = torch.load(model_path, map_location=torch.device('cpu'))
 
     # delete dropout parameters
-    for param_tensor in state_dict:
-        if 'log_alpha' in param_tensor.__name__:
-            del param_tensor
+    for k in state_dict.keys():
+        if 'log_alpha' in k:
+            del state_dict[k]
 
     # load parameters into model
     net.load_state_dict(state_dict)

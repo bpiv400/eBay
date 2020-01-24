@@ -13,6 +13,7 @@ from rlenv.env_consts import INTERACT, SALE, PRICE, DUR, ACC_IND, \
     REJ_IND, OFF_IND, ARRIVAL, FIRST_OFFER, BUYER_OFFER, SELLER_OFFER, \
     BUYER_DELAY, SELLER_DELAY
 from rlenv.env_utils import time_delta, get_clock_feats
+from utils import get_months_since_lstg
 
 
 class EbayEnvironment:
@@ -183,10 +184,7 @@ class EbayEnvironment:
 
         # update sources with clock feats
         clock_feats = get_clock_feats(event.priority)
-        months_since_lstg = get_months_since_lstg(
-            lstg_start=self.lookup[START_TIME], start=event.priority)
-        event.update_arrival(thread_count=self.thread_counter, 
-            clock_feats=clock_feats, months_since_lstg=months_since_lstg)
+        event.update_arrival(thread_count=self.thread_counter, clock_feats=clock_feats)
 
         # call model to sample inter arrival time and update arrival check priority
         seconds = event.inter_arrival()
