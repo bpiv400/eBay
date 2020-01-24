@@ -1,8 +1,11 @@
+import math
 import torch
 import numpy as np, pandas as pd
 from rlenv.env_consts import *
-from rlenv.env_utils import load_featnames, load_sizes, model_str
-from featnames import TURN_FEATS
+from rlenv.env_utils import load_featnames, model_str, load_sizes
+from featnames import (OUTCOME_FEATS, CLOCK_FEATS, TIME_FEATS,
+                       TURN_FEATS, MONTHS_SINCE_LSTG, BYR_HIST,
+                       INT_REMAINING, MONTHS_SINCE_LAST, THREAD_COUNT)
 from constants import ARRIVAL_PREFIX
 
 
@@ -11,175 +14,120 @@ class Composer:
     Class for composing inputs to interface from various input streams
     """
     def __init__(self, cols):
-        self.maps, self.sizes, self.feat_sets = \
-            Composer.build_models(cols)
+        self.lstg_sets = Composer.build_lstg_sets(cols)
+        self.sizes = Composer.make_sizes()
         self.intervals = self.make_intervals()
+        self.offer_feats = Composer.build_offer_feats()  ## TODO: not sure I need this
+        self.turn_inds = None
+
+        # TODO
 
     @staticmethod
-    def build_models(cols):
-        """
-        creates a dictionary mapping
-        """
-        maps = dict()
-        sizes = dict()
-        x_lstg_cols = list(cols)
-        thread_cols = Composer._get_cols(x_lstg_cols)
-        feat_sets = {
-            THREAD_MAP: thread_cols,
-            LSTG_MAP: x_lstg_cols,
-            TURN_IND_MAP: TURN_FEATS,
-        }
-        Composer._check_feat_sets(feat_sets)
-        for model in MODELS:
-            maps[model], sizes[model] = Composer._build_model_maps(model, feat_sets)
-        return maps, sizes, feat_sets
-
-    @staticmethod
-    def _get_cols(x_lstg_cols):
-        """
-        Creates lists of thread features and turn indicator features
-        :param x_lstg_cols: list of x_lstg cols
-        :return:
-        """
-        thread_cols = set()
-        for mod in MODELS:
-            curr_feats = load_featnames(mod)
-            for feat_type, feat_set in curr_feats.items():
-                [thread_cols.add(feat) for feat in feat_set]
-        # exclude turn indicators and consts from thread cols
-        for feat_set in [x_lstg_cols, TURN_FEATS]:
-            for feat in feat_set:
-                if feat in thread_cols:
-                    thread_cols.remove(feat)
-        return list(thread_cols)
-
-    @staticmethod
-    def check_exclusive(x, y, model_name):
-        if len(x.intersection(y)) > 0:
-            if model_name is not None:
-                print('model: {}'.format(model_name))
-            print('intersection: {}'.format(x.intersection(y)))
-            raise RuntimeError('time cols and thread cols not mutually exclusive')
-
-    @staticmethod
-    def _build_model_maps(model, feat_sets):
-        maps = dict()
-        featnames = load_featnames(model)
-        sizes = load_sizes(model)
-        for set_name, input_set in featnames.items():
-            maps[set_name] = Composer._build_set_maps(input_set, feat_sets, size=sizes['x'][set_name])
-        clipped_sizes = sizes.copy()
-        return maps, clipped_sizes
-
-    @staticmethod
-    def _build_set_maps(input_set, feat_sets, size=None):
+    def make_sizes():
         output = dict()
-        #print('input set: {}'.format(len(input_set)))
-        input_set = pd.DataFrame(data={'out':np.arange(len(input_set))},
-                                 index=input_set)
-        for set_name, feat_list in feat_sets.items():
-            if input_set.index.isin(feat_list).any():
-                output[set_name] = Composer._build_pair_map(input_set, feat_list)
-        Composer._check_set_maps(output, input_set, size)
+        for model in MODELS:
+            output[model] = load_sizes(model)
         return output
 
     @staticmethod
-    def _build_pair_map(input_set, feat_list):
+    def build_lstg_sets(x_lstg_cols):
         """
-        Builds paired feature maps for targ_feats under the assumption
-        the features are stored in Event objects in tensors with
-        the same order as targ_feats (see build() for description of paired feature map)
+        Constructs a dictionary containing the input groups constructed
+        from the features in x_lstg
 
-        :param input_set:
-        :param feat_list:
-        :return:
+        :param x_lstg_cols: pd.Index containing names of features in x_lstg
+        :return: dict
         """
-        input_set = input_set.copy()
-        input_set = input_set.loc[input_set.index.isin(feat_list), 'out']
-        return input_set
+        x_lstg_cols = list(x_lstg_cols)
+        featnames = load_featnames(ARRIVAL_MODEL)
+        featnames[LSTG_MAP] = [feat for feat in featnames[LSTG_MAP] if feat in x_lstg_cols]
+        for model in MODELS:
+            # verify all x_lstg based sets contain the same features in the same order
+            Composer.verify_lstg_sets_shared(model, x_lstg_cols, featnames)
+            if model in OFFER_MODELS and DELAY not in model:
+                Composer.verify_offer_append(model, featnames[LSTG_MAP])
+            elif model in OFFER_MODELS:
+                Composer.verify_delay_append(model, featnames[LSTG_MAP])
+            elif model == ARRIVAL_MODEL:
+                Composer.verify_arrival_append(featnames[LSTG_MAP])
+            else:
+                Composer.verify_hist_append(featnames[LSTG_MAP])
+        return featnames
 
     @staticmethod
-    def _check_set_maps(maps, input_set, size):
-        """
-        Performs sanity checks to ensure that input maps aren't clearly
-        incorrect:
-        - Each map is a Series
-        -Each feature maps to a distinct index in the input vectors
-        -All indices in the input vector have at least 1 source
-        index mapping to them
-        -The size of the input maps in sum equals the size of the input
-        vector
-
-        :param input_set:
-        :param maps: dictionary output by Composer._build_ff or Composer._build_recurrent
-        :raises AssertionError: when maps are not valid
-        """
-        total = len(input_set)
-        indices = list()
-        map_feats = list()
-        for map_name, input_map in maps.items():
-            assert isinstance(input_map, pd.Series)
-            indices = indices + list(input_map.values)
-            map_feats = map_feats + list(input_map.index)
-        assert len(map_feats) == len(indices)
-        assert len(indices) == total
-        assert min(indices) == 0
-        assert max(indices) == (total - 1)
-        assert len(indices) == len(set(indices))
-        # error checking
-        input_feats = set(list(input_set.index))
-        # print(len(input_set))
-        map_feats = set(map_feats)
-        # print('missing from maps: {}'.format(input_feats.difference(map_feats)))
-        assert len(indices) == size
-        assert input_feats == map_feats
+    def build_offer_feats():
+        shared_feats = CLOCK_FEATS + TIME_FEATS + OUTCOME_FEATS
+        for model in OFFER_MODELS:
+            turn_feats = TURN_FEATS[model]
+            full_feats = shared_feats + turn_feats
+            model_feats = load_featnames(model)['offer']
+            assert len(full_feats) == len(model_feats)
+            for exp_feat, model_feat in zip(full_feats, model_feats):
+                assert exp_feat == model_feat
+        return shared_feats
 
     @staticmethod
-    def _check_feat_sets(feat_sets):
-        feat_map = dict()
-        for _, feat_list in feat_sets.items():
-            for feat in feat_list:
-                assert feat not in feat_map
-                feat_map[feat] = True
-
-    @staticmethod
-    def _build_input_vector(maps, size, sources):
+    def verify_lstg_sets_shared(model, x_lstg_cols, featnames):
         """
-        Helper method that composes a model's input vector given a dictionaries of
-        the relevant input maps and  sources
-
-        :param maps: dictionary containing input maps
-        :param sources: dictionary containing tensors from the environment that contain
-        features the model expects in the input
-        :return t: (batch_size x maps[SIZE]) tensor to be passed to a simulator model
+        Ensures that all the input groupings that contain features from x_lstg
+        have a common ordering
+        :param str model: model name
+        :param [str] x_lstg_cols: list of featnames in x_lstg
+        :param dict featnames: dictionary containing all x_lstg groupings
+        :return: None
         """
-        x = torch.zeros(1, size).float()
-        # other features
-        for map_name, curr_map in maps.items():
-            try:
-                x[0, curr_map] = torch.from_numpy(sources[map_name][curr_map.index].values).float()
-            except RuntimeError as e:
-                Composer.catch_input_error(e, t, curr_map, sources, map_name)
-                raise RuntimeError()
-        return x
+        model_featnames = load_featnames(model)
+        missing_idx = list()
+        # check that all features in LSTG not in x_lstg are appended to the end of LSTG
+        for feat in model_featnames[LSTG_MAP]:
+            if feat not in x_lstg_cols:
+                missing_idx.append(model_featnames[LSTG_MAP].index(feat))
+        missing_idx_min = min(missing_idx)
+        assert missing_idx_min == len(featnames[LSTG_MAP])
+        # remove those missing features
+        model_featnames[LSTG_MAP] = [feat for feat in model_featnames[LSTG_MAP] if feat in x_lstg_cols]
+        # iterate over all x_lstg features based and check that have same elements in the same order
+        for grouping_name, lstg_feats in featnames.items():
+            model_grouping = model_featnames[grouping_name]
+            assert len(model_grouping) == len(lstg_feats)
+            for model_feat, lstg_feat in zip(model_grouping, lstg_feats):
+                assert model_feat == lstg_feat
+                assert model_feat in x_lstg_cols
 
-    def build_input_dict(self, model_name, sources=None):
+    def decompose_x_lstg(self, x_lstg):
+        """
+        Breaks x_lstg series into separate numpy vectors based on self.lstg_sets that
+        serves as basis of
+        :param pd.Series x_lstg: fixed feature values
+        :return: dict
+        """
+        input_dict = dict()
+        for grouping_name, feats in self.lstg_sets.items():
+            input_dict[grouping_name] = x_lstg.loc[feats].values.astype(np.float32)
+        return input_dict
+
+    def build_input_dict(self, model_name, sources=None, turn=None):
         """
         Public method that composes input vectors (x_time and x_fixed) from tensors in the
         environment
 
-        :param name: str giving the name of the focal model
+        :param model_name: str giving the name of the focal model
         :param sources: dictionary containing tensors from the environment that contain
         features the model expects in the input
-        :return: 2-tuple of x_fixed, x_time. If not recurrent, x_time = None. If fixed=False,
-        x_fixed = None
+        :param turn: turn number
+        :return: dict
         """
         input_dict = dict()
-        fixed_maps = self.maps[model_name]  # dict
         fixed_sizes = self.sizes[model_name]['x']  # dict
-        for input_set in fixed_maps.keys():
-            input_dict[input_set] = Composer._build_input_vector(
-                fixed_maps[input_set], fixed_sizes[input_set], sources)
+        if turn is not None:
+            self._update_turn_inds(model_name, turn)
+        for input_set in fixed_sizes.keys():
+            if input_set == LSTG_MAP:
+                input_dict[input_set] = self._build_lstg_vector(model_name, sources=sources)
+            elif 'offer' == input_set[:-1]:
+                input_dict[input_set] = self._build_offer_vector(sources[input_set])
+            else:
+                input_dict[input_set] = torch.from_numpy(sources[input_set]).float().unsqueeze(0)
         return input_dict
 
     def make_intervals(self):
@@ -191,26 +139,101 @@ class Composer:
         }
         return ints
 
-    @property
-    def feat_counts(self):
-        counts = dict()
-        for set_name, feats in self.feat_sets.items():
-            counts[set_name] = len(feats)
-        return counts
-
-    @property
-    def x_lstg(self):
-        return self.feat_sets[LSTG_MAP]
+    def _build_offer_vector(self, offer_vector):
+        full_vector = np.concatenate([offer_vector, self.turn_inds])
+        return torch.from_numpy(full_vector).unsqueeze(0).float()
 
     @staticmethod
-    def catch_input_error(e, t, curr_map, sources, map_name):
-        print('NAME')
-        print(e)
-        print(map_name)
-        print('stored map: {}'.format(curr_map.dtype))
-        print('stored map size: {}'.format(curr_map.dtype))
-        print('sourced map: {}'.format(sources[map_name].dtype))
-        print('t: {}'.format(t.dtype))
+    def _build_lstg_vector(model_name, sources=None):
+        if model_name == ARRIVAL_MODEL:
+            solo_feats = np.array([sources[MONTHS_SINCE_LSTG], sources[MONTHS_SINCE_LAST],
+                                   sources[THREAD_COUNT]])
+            lstg = np.concatenate([sources[LSTG_MAP], sources[CLOCK_MAP], solo_feats])
+        elif model_name == BYR_HIST_MODEL:
+            lstg = np.concatenate([sources[LSTG_MAP], np.array([sources[MONTHS_SINCE_LSTG]]),
+                                   sources[OFFER_MAPS[1]][CLOCK_START_IND:TIME_END_IND]])
+        elif DELAY in model_name:
+            # TODO: Add back when turn indicators return
+            solo_feats = np.array([sources[MONTHS_SINCE_LSTG], sources[BYR_HIST]])
+            lstg = np.concatenate([sources[LSTG_MAP], solo_feats,  # self.turn_inds,
+                                   np.array([sources[INT_REMAINING]])])
+        else:
+            # TODO: Add back when turn indicators return
+            solo_feats = np.array([sources[MONTHS_SINCE_LSTG], sources[BYR_HIST]])
+            lstg = np.concatenate([sources[LSTG_MAP], solo_feats  # , self.turn_inds
+                                   ])
+        lstg = lstg.astype(np.float32)
+        return torch.from_numpy(lstg).float().unsqueeze(0)
+
+    def _update_turn_inds(self, model_name, turn):
+        if model_name == 'con_byr':
+            inds = np.zeros(3)
+        else:
+            inds = np.zeros(2)
+        active = math.floor((turn - 1) / 2)
+        if model_name == 'delay_byr':
+            active = active - 1
+        if active < inds.shape[0]:
+            inds[active] = 1
+        self.turn_inds = inds
+
+    @staticmethod
+    def remove_shared_feats(model_feats, shared_feats):
+        return model_feats[len(shared_feats):]
+
+    @staticmethod
+    def verify_sequence(model_feats, seq_feats, start_idx):
+        subset = model_feats[start_idx:(len(seq_feats) + start_idx)]
+        for model_feat, seq_feat in zip(subset, seq_feats):
+            assert model_feat == seq_feat
+
+    @staticmethod
+    def verify_offer_append(model, shared_feats):
+        model_feats = load_featnames(model)[LSTG_MAP]
+        model_feats = Composer.remove_shared_feats(model_feats, shared_feats)
+        assert model_feats[0] == MONTHS_SINCE_LSTG
+        assert model_feats[1] == BYR_HIST
+        # TODO: Uncomment when adding indicators later
+        # turn_inds = TURN_FEATS[model]
+        # print(model_feats[2:])
+        # print(turn_inds)
+        # assert len(model_feats[2:]) == len(turn_inds)
+        # for model_feat, turn_feat in zip(model_feats[2:], turn_inds):
+        #     print(model_feat)
+        #     print(turn_feat)
+        #     assert model_feat == turn_feat
+
+    @staticmethod
+    def verify_delay_append(model, shared_feats):
+        model_feats = load_featnames(model)[LSTG_MAP]
+        model_feats = Composer.remove_shared_feats(model_feats, shared_feats)
+        assert model_feats[0] == MONTHS_SINCE_LSTG
+        assert model_feats[1] == BYR_HIST
+        # TODO: Add back when indicators return
+        # turn_inds = TURN_FEATS[model]
+        # Composer.verify_sequence(model_feats, turn_inds, 2)
+        assert model_feats[-1] == INT_REMAINING
+
+    @staticmethod
+    def verify_arrival_append(shared_feats):
+        model_feats = load_featnames(ARRIVAL_MODEL)[LSTG_MAP]
+        model_feats = Composer.remove_shared_feats(model_feats, shared_feats)
+        Composer.verify_sequence(model_feats, CLOCK_FEATS, 0)
+        next_ind = len(CLOCK_FEATS)
+        assert model_feats[next_ind] == MONTHS_SINCE_LSTG
+        assert model_feats[next_ind + 1] == MONTHS_SINCE_LAST
+        assert model_feats[next_ind + 2] == THREAD_COUNT
+
+    @staticmethod
+    def verify_hist_append(shared_feats):
+        model_feats = load_featnames(BYR_HIST_MODEL)[LSTG_MAP]
+        model_feats = Composer.remove_shared_feats(model_feats, shared_feats)
+        assert model_feats[0] == MONTHS_SINCE_LSTG
+        # TODO: CLIP
+        if model_feats[1] == 'holiday_1':
+            model_feats[1:] = [featname[:-2] for featname in model_feats[1:]]
+        Composer.verify_sequence(model_feats, CLOCK_FEATS, 1)
+        Composer.verify_sequence(model_feats, TIME_FEATS, 1 + len(CLOCK_FEATS))
 
 
 class AgentComposer(Composer):

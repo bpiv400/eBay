@@ -4,9 +4,10 @@ class for encapsulating data and methods related to the first buyer offer
 import numpy as np
 from rlenv.events.Event import Event
 from rlenv.env_consts import (FIRST_OFFER, BUYER_OFFER, SELLER_OFFER, BUYER_DELAY, SELLER_DELAY)
-from constants import (DAY, MONTH, SLR_PREFIX, BYR_PREFIX, MAX_DELAY, MAX_DAYS)
-from rlenv.env_utils import slr_rej, slr_auto_acc
+from constants import (DAY, SLR_PREFIX, BYR_PREFIX, MAX_DELAY, MONTH)
+from rlenv.env_utils import slr_rej_outcomes, slr_auto_acc_outcomes, get_delay_outcomes
 from rlenv.time.Offer import Offer
+from utils import get_remaining
 
 
 class Thread(Event):
@@ -41,8 +42,8 @@ class Thread(Event):
             return self.sources.is_expire(self.turn)
 
     def offer(self, interface=None, player_type=None):
-        outcomes = interface.make_offer(sources=self.sources(), turn=self.turn)
-        norm = self.sources.update_offer(outcomes=outcomes, turn=self.turn)
+        offer_outcomes = interface.make_offer(sources=self.sources(), turn=self.turn)
+        norm = self.sources.update_offer(offer_outcomes=offer_outcomes, turn=self.turn)
         offer_params = {
             'price': norm,
             'player': player_type,
@@ -54,7 +55,6 @@ class Thread(Event):
     def buyer_offer(self, *args):
         return self.offer(interface=self.buyer, player_type=BYR_PREFIX)
 
-
     def seller_offer(self, *args):
         return self.offer(interface=self.seller, player_type=SLR_PREFIX)
 
@@ -65,10 +65,8 @@ class Thread(Event):
             self.type = BUYER_DELAY
         self._init_delay_params(lstg_start)
 
-
     def change_turn(self):
         self.turn += 1
-        self.sources.change_turn(self.turn)
 
     def _init_delay_params(self, lstg_start):
         # update object to contain relevant delay attributes
@@ -89,18 +87,18 @@ class Thread(Event):
         # add new features
         # generate delay
         if self.turn % 2 == 0:
-            index = self.seller.delay(self.sources())
+            index = self.seller.delay(self.sources(), turn=self.turn)
         else:
-            index = self.buyer.delay(self.sources())
+            index = self.buyer.delay(self.sources(), turn=self.turn)
         seconds = int((index + np.random.uniform()) * self.spi)
         seconds = min(seconds, self.max_delay)
         return seconds
 
     def prepare_offer(self, seconds):
         # update outcomes
-        delay = seconds / self.max_delay
-        days = seconds / DAY
-        self.sources.prepare_offer(days=days, delay=delay, turn=self.turn)
+        delay_outcomes = get_delay_outcomes(seconds=seconds, max_delay=self.max_delay,
+                                            turn=self.turn)
+        self.sources.prepare_offer(delay_outcomes=delay_outcomes, turn=self.turn)
         # change event type
         if self.turn % 2 == 0:
             self.type = SELLER_OFFER
@@ -114,9 +112,17 @@ class Thread(Event):
     def is_rej(self):
         return self.sources.is_rej(self.turn)
 
-    def slr_rej(self, expire=False):
-        outcomes = slr_rej(self.sources(), self.turn, expire=expire)
-        norm = self.sources.update_offer(outcomes=outcomes, turn=self.turn)
+    def slr_expire_rej(self):
+        return self.slr_rej()
+
+    def slr_auto_rej(self):
+        delay_outcomes = np.array([0.0, 0.0, 1.0, 0.0], dtype=np.float)
+        self.sources.prepare_offer(delay_outcomes=delay_outcomes, turn=self.turn)
+        return self.slr_rej()
+
+    def slr_rej(self):
+        offer_outcomes = slr_rej_outcomes(self.sources(), self.turn)
+        norm = self.sources.update_offer(offer_outcomes=offer_outcomes, turn=self.turn)
         offer_params = {
             'price': norm,
             'player': SLR_PREFIX,
@@ -127,8 +133,10 @@ class Thread(Event):
 
     def slr_auto_acc(self):
         self.change_turn()
-        outcomes = slr_auto_acc(self.sources(), self.turn)
-        norm = self.sources.update_offer(outcomes=outcomes, turn=self.turn)
+        delay_outcomes = np.array([0.0, 0.0, 1.0, 0.0], dtype=np.float)
+        self.sources.prepare_offer(delay_outcomes=delay_outcomes, turn=self.turn)
+        outcomes = slr_auto_acc_outcomes(self.sources(), self.turn)
+        norm = self.sources.update_offer(offer_outcomes=outcomes, turn=self.turn)
         offer_params = {
             'price': norm,
             'player': SLR_PREFIX,

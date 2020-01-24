@@ -50,35 +50,17 @@ AUTO = 'auto'
 EXP = 'exp'
 
 OUTCOME_FEATS = [DAYS, DELAY, AUTO, EXP, CON, REJECT, NORM, SPLIT, MSG]
-
-BYR_OUTCOMES = [
-    DAYS,
-    DELAY,
-    CON,
-    NORM,
-    SPLIT,
-    MSG,
-]
-SLR_OUTCOMES = BYR_OUTCOMES + [REJECT, AUTO, EXP]
-
-ALL_CLOCK_FEATS = dict()
-ALL_TIME_FEATS = dict()
-ALL_OUTCOMES = dict()
-for i in range(7):
-    ALL_CLOCK_FEATS[i + 1] = ['{}_{}'.format(feat, i + 1) for feat in CLOCK_FEATS]
-    ALL_TIME_FEATS[i + 1] = ['{}_{}'.format(feat, i + 1) for feat in TIME_FEATS]
-    if (i + 1) % 2 == 1:
-        ALL_OUTCOMES[i + 1] = ['{}_{}'.format(feat, i + 1) for feat in BYR_OUTCOMES]
-    else:
-        ALL_OUTCOMES[i + 1] = ['{}_{}'.format(feat, i + 1) for feat in SLR_OUTCOMES]
+ALL_OFFER_FEATS = CLOCK_FEATS + TIME_FEATS + OUTCOME_FEATS
 
 # turn indices
-TURN_FEATS = {'delay_byr': ['t3', 't5'],
-              'con_byr': ['t1', 't3', 't5'],
-              'msg_byr': ['t1', 't3'],
-              'delay_slr': ['t2', 't4'],
-              'con_slr': ['t2', 't4'],
-              'msg_slr': ['t2', 't4']}
+TURN_FEATS = {
+    'con_byr': ['t1', 't3', 't5'],
+    'con_slr': ['t2', 't4'],
+    'delay_byr':['t3', 't5'],
+    'delay_slr': ['t2', 't4'],
+    'msg_byr': ['t1', 't3'],
+    'msg_slr': ['t2', 't4']
+}
 
 # thread features
 BYR_HIST = 'byr_hist'

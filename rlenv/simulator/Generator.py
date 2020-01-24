@@ -32,11 +32,11 @@ class Generator:
         self.lookup = d['lookup']
         self.recorder = None
 
-        composer = Composer(self.x_lstg.columns)
+        self.composer = Composer(self.x_lstg.columns)
 
-        self.buyer = BuyerInterface(composer=composer)
-        self.seller = SellerInterface(composer=composer, full=True)
-        self.arrival = ArrivalInterface(composer=composer)
+        self.buyer = BuyerInterface(composer=self.composer)
+        self.seller = SellerInterface(composer=self.composer, full=True)
+        self.arrival = ArrivalInterface(composer=self.composer)
 
     def generate(self):
         raise NotImplementedError()
@@ -53,7 +53,7 @@ class Generator:
 
         # index x_lstg
         x_lstg = self.x_lstg.loc[lstg, :].astype(np.float32)
-
+        x_lstg = self.composer.decompose_x_lstg(x_lstg)
         # create and return environment
         return SimulatorEnvironment(buyer=self.buyer, seller=self.seller,
                                     arrival=self.arrival, x_lstg=x_lstg, lookup=lookup,

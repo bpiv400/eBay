@@ -29,7 +29,7 @@ class DiscrimGenerator(Generator):
             # simulate lstg once
             self._simulate_lstg(environment)
 
-            if (i % 10) == 0:
+            if (i % 10) == 0 and i != 0:
                 print('Avg time per listing: {} seconds'.format(
                     (dt.now() - t0).total_seconds() / (i+1)))
 

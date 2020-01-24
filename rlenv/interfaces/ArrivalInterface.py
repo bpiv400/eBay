@@ -12,14 +12,14 @@ class ArrivalInterface:
         self.hist_model = load_model(BYR_HIST_MODEL)
 
     def hist(self, sources=None):
-        input_dict = self.composer.build_input_dict(BYR_HIST_MODEL, sources=sources)
+        input_dict = self.composer.build_input_dict(BYR_HIST_MODEL, sources=sources, turn=None)
         params = self.hist_model(input_dict)
         hist = sample_categorical(params)
         hist = hist / 10
         return hist
 
     def inter_arrival(self, sources=None):
-        input_dict = self.composer.build_input_dict(ARRIVAL_MODEL, sources=sources)
+        input_dict = self.composer.build_input_dict(ARRIVAL_MODEL, sources=sources, turn=None)
         params = self.arrival_model(input_dict)
         intervals = sample_categorical(params)
         width = self.composer.intervals[ARRIVAL_PREFIX]

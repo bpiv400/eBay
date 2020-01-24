@@ -44,7 +44,7 @@ class EbayEnvironment:
         self.time_feats.reset()
         self.outcome = None
         self.thread_counter = 0
-        sources = ArrivalSources(x_lstg=self.x_lstg, composer=self.arrival.composer)
+        sources = ArrivalSources(x_lstg=self.x_lstg)
         event = Arrival(priority=self.lookup[START_TIME], sources=sources, interface=self.arrival)
         self.queue.push(event)
 
@@ -150,8 +150,8 @@ class EbayEnvironment:
         :return:
         """
         # expiration
-        sources = ThreadSources(x_lstg=self.x_lstg, composer=self.arrival.composer)
-        months_since_lstg = time_delta(self.lookup[START_TIME], event.priority, unit=MONTH)
+        sources = ThreadSources(x_lstg=self.x_lstg)
+        months_since_lstg = get_months_since_lstg(lstg_start=self.lookup[START_TIME], start=event.priority)
         time_feats = self.time_feats.get_feats(time=event.priority, thread_id=event.thread_id)
         sources.prepare_hist(time_feats=time_feats, clock_feats=get_clock_feats(event.priority),
                              months_since_lstg=months_since_lstg)
@@ -183,7 +183,10 @@ class EbayEnvironment:
 
         # update sources with clock feats
         clock_feats = get_clock_feats(event.priority)
-        event.update_arrival(thread_count=self.thread_counter, clock_feats=clock_feats)
+        months_since_lstg = get_months_since_lstg(
+            lstg_start=self.lookup[START_TIME], start=event.priority)
+        event.update_arrival(thread_count=self.thread_counter, 
+            clock_feats=clock_feats, months_since_lstg=months_since_lstg)
 
         # call model to sample inter arrival time and update arrival check priority
         seconds = event.inter_arrival()
@@ -212,7 +215,7 @@ class EbayEnvironment:
         time_feats = self.time_feats.get_feats(thread_id=event.thread_id,
                                                time=event.priority)
         event.init_offer(time_feats=time_feats, clock_feats=clock_feats)
-        offer = event.slr_rej(expire=True)
+        offer = event.slr_expire_rej()
         self._record(event, censored=False)
         self.time_feats.update_features(offer=offer)
         self._init_delay(event)
@@ -274,7 +277,7 @@ class EbayEnvironment:
     def _process_slr_auto_rej(self, event, offer):
         self.time_feats.update_features(offer=offer)
         event.change_turn()
-        offer = event.slr_rej(expire=False)
+        offer = event.slr_auto_rej()
         self._record(event)
         self.time_feats.update_features(offer=offer)
         self._init_delay(event)

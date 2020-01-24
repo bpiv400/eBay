@@ -46,7 +46,7 @@ def is_split(con):
     return con in SPLIT_PCTS
 
 
-def get_months_since_lstg(lstg_start, start):
+def get_months_since_lstg(lstg_start=None, start=None):
     '''
     Float number of months between inputs.
     :param lstg_start: seconds from START to lstg start.
@@ -56,7 +56,7 @@ def get_months_since_lstg(lstg_start, start):
     return (start - lstg_start) / MONTH
 
 
-def slr_norm(con, prev_byr_norm, prev_slr_norm):
+def slr_norm(con=None, prev_byr_norm=None, prev_slr_norm=None):
     '''
     Normalized offer for seller turn.
     :param con: current concession, between 0 and 1.
@@ -67,7 +67,7 @@ def slr_norm(con, prev_byr_norm, prev_slr_norm):
     return 1 - con * prev_byr_norm - (1 - prev_slr_norm) * (1 - con)
 
 
-def byr_norm(con, prev_byr_norm, prev_slr_norm):
+def byr_norm(con=None, prev_byr_norm=None, prev_slr_norm=None):
     '''
     Normalized offer for buyer turn.
     :param con: current concession, between 0 and 1.
