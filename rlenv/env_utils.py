@@ -149,9 +149,9 @@ def load_model(full_name):
     state_dict = torch.load(model_path, map_location=torch.device('cpu'))
 
     # delete dropout parameters
-    for k in state_dict.keys():
-        if 'log_alpha' in k:
-            del state_dict[k]
+    drop = [k for k in state_dict.keys() if 'log_alpha' in k]
+    for k in drop:
+        del state_dict[k]
 
     # load parameters into model
     net.load_state_dict(state_dict)
