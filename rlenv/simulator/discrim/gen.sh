@@ -1,5 +1,5 @@
 #$ -t 1-1000
-#$ -l m_mem_free=6G
+#$ -l m_mem_free=4G
 #$ -N discrim_generator
 #$ -j y
 #$ -o logs/
