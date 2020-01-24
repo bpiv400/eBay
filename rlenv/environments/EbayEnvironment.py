@@ -52,11 +52,12 @@ class EbayEnvironment:
     def run(self):
         while True:
             event = self.queue.pop()
-            lstg_complete = self._process_event(event)
-            if lstg_complete:
-                return True
-            if self._check_complete(event):
-                return False
+            if self._is_agent_turn(event):
+                return event, False
+            else:
+                lstg_complete = self._process_event(event)
+                if lstg_complete:
+                    return event, True
 
     def _process_event(self, event):
         if INTERACT and event.type != ARRIVAL:
@@ -84,8 +85,8 @@ class EbayEnvironment:
 
     def _process_offer(self, event):
         # check whether the lstg expired, censoring this offer
-        if self._lstg_expiration(event):
-            return True
+        if self._is_lstg_expired(event):
+            return self._process_lstg_expiration(event)
         # otherwise check whether this offer corresponds to an expiration rej
         if event.thread_expired():
             if event.turn % 2 == 0:
@@ -179,8 +180,8 @@ class EbayEnvironment:
         :param event: Event corresponding to current event
         :return: boolean indicating whether the lstg has ended
         """
-        if self._lstg_expiration(event):
-            return True
+        if self._is_lstg_expired(event):
+            return self._process_lstg_expiration(event)
 
         # update sources with clock feats
         clock_feats = get_clock_feats(event.priority)
@@ -225,25 +226,25 @@ class EbayEnvironment:
         event.prepare_offer(seconds)
         self.queue.push(event)
 
-    def _check_complete(self, event):
+    def _is_agent_turn(self, event):
         raise NotImplementedError()
 
-    def _lstg_expiration(self, event):
+    def _is_lstg_expired(self, event):
+        return event.priority >= self.end_time
+
+    def _process_lstg_expiration(self, event):
         """
         Checks whether the lstg has expired by the time of the event
         If so, record the reward as negative insertion fees
         :param event: rlenv.Event subclass
         :return: boolean
         """
-        if event.priority >= self.end_time:
-            self.outcome = self.Outcome(False, 0, MONTH)
-            self.queue.push(event)
-            self.empty_queue()
-            if self.verbose:
-                print('Lstg expired')
-            return True
-        else:
-            return False
+        self.outcome = self.Outcome(False, 0, MONTH)
+        self.queue.push(event)
+        self.empty_queue()
+        if self.verbose:
+            print('Lstg expired')
+        return True
 
     def empty_queue(self):
         while not self.queue.empty:

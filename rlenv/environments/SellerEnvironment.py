@@ -6,13 +6,16 @@ from rlpyt.spaces.composite import Composite
 from rlpyt.spaces.float_box import FloatBox
 from rlenv.environments.EbayEnvironment import EbayEnvironment
 from rlenv.events.SellerThread import SellerThread
-from rlenv.env_consts import (SELLER_HORIZON, LOOKUP, X_LSTG, 
-                              ACTION_SPACE_NAME, OBS_SPACE_NAME, LSTG_MAP, TURN_IND_MAP)
+from rlenv.env_consts import (SELLER_HORIZON, LOOKUP, X_LSTG, SELLER_OFFER,
+                              ACTION_SPACE_NAME, OBS_SPACE_NAME,
+                              LSTG_MAP, TURN_IND_MAP, ENV_LSTG_COUNT)
+from rlenv.env_utils import get_con_outcomes
 from rlenv.spaces.ConSpace import ConSpace
 from featnames import START_TIME, CON, DELAY
 from constants import MONTH
 
 
+#TODO Add types
 class SellerEnvironment(EbayEnvironment, Env):
     def __init__(self, params):
         super(SellerEnvironment, self).__init__(
@@ -25,48 +28,59 @@ class SellerEnvironment(EbayEnvironment, Env):
         self._lookup_slice, self._x_lstg_slice = None, None
         self._ix = -1
         # action and observation spaces
-        self.agent_delay = params['delay']
         self._action_space = self._define_action_space()
         self._observation_space = self._define_observation_space()
-        # buyer model
+        # model interfaces and composer
+        self._composer = params['composer']
+        self.seller = params['seller']
         self.buyer = params['buyer']
-
-        # features for interacting with the agent
-        self._last_event = None
+        self._last_event = None  # type: SellerThread
 
     def reset(self):
-        self._reset_lstg()
-        super(SellerEnvironment, self).reset()
-        lstg_complete = super(SellerEnvironment, self).run()
-        if lstg_complete:
-            return self.reset()
-        else:
-            return self._get_obs()
+        while True:
+            self._reset_lstg()
+            super().reset()
+            event, lstg_complete = super().run()
+            if not lstg_complete:
+                self._last_event = event
+                return self._composer.get_obs(event)
 
-    def _check_complete(self, event):
-        if event.type == event_types.SELLER_DELAY:
-            return True
+    def _is_agent_turn(self, event):
+        """
+        Checks whether the agent should take a turn
+        :param rlenv.events.Thread.Thread event:
+        :return: bool
+        """
+        # ToDo: If this is an expiration, I can't return true
+        # because the RL shouldn't actually take a turn in this case
+        if event.type == SELLER_OFFER:
+            if self._is_lstg_expired(event):
+                return False
+            elif event.thread_expired():
+                return False
+            else:
+                return True
         else:
             return False
 
     def run(self):
-        lstg_complete = super(SellerEnvironment, self).run()
-        return self._get_obs(), self._get_reward(), lstg_complete, self._get_info()
+        event, lstg_complete = super(SellerEnvironment, self).run()
+        obs = self._composer.get_obs(event.sources())
+        self._last_event = event
+        return obs, self._get_reward(), lstg_complete, self._get_info()
 
     def step(self, action):
-        # update
-        self._last_event.seller_offer(action)
+        """
+        Process float giving concession
+        :param action: float returned from agent
+        :return:
+        """
+        offer_outcomes = get_con_outcomes(con=action, sources=self._last_event.sources(),
+                                          turn=self._last_event.turn)
+        self._last_event.update_offer(offer_outcomes=offer_outcomes)
         self.queue.push(self._last_event)
         self._last_event = None
         return self.run()
-
-    def _process_slr_delay(self, event):
-        if self._lstg_expiration(event):
-            return True
-        else:
-            # need to store remaining
-            self._last_event = event
-            event.init_delay()
 
     def _reset_lstg(self):
         """
@@ -75,13 +89,13 @@ class SellerEnvironment(EbayEnvironment, Env):
         if self._ix == -1 or self._ix == self._num_lstgs:
             self._draw_lstgs()
         self.x_lstg = pd.Series(self._x_lstg_slice[self._ix, :],
-                                index=self.arrival.composer.x_lstg)
+                                index=self._composer.x_lstg)
         self.lookup = pd.Series(self._lookup_slice[self._ix, :], index=self._lookup_cols)
         self._ix += 1
         self.end_time = self.lookup[START_TIME] + MONTH
 
     def _draw_lstgs(self):
-        ids = np.random.randint(self._num_lstgs)
+        ids = np.random.randint(0, self._num_lstgs, ENV_LSTG_COUNT)
         self._lookup_slice = self._file[LOOKUP][ids, :]
         self._x_lstg_slice = self._file[X_LSTG][ids, :]
         self._ix = 0
@@ -114,8 +128,8 @@ class SellerEnvironment(EbayEnvironment, Env):
         return Composite([lstg, thread, turn, remain], OBS_SPACE)
 
     def make_thread(self, priority):
-        return SellerThread(priority=priority, thread_id=self.thread_counter, interval_attrs=self.interval_attrs,
-                            buyer=SimulatedBuyer(model=self.buyer))
+        return SellerThread(priority=priority, thread_id=self.thread_counter,
+                            intervals=self.intervals)
 
     def _get_obs(self):
         return self._last_event.get_obs()

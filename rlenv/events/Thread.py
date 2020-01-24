@@ -17,9 +17,6 @@ class Thread(Event):
     def __init__(self, priority=None, thread_id=None, intervals=None):
         super(Thread, self).__init__(event_type=FIRST_OFFER,
                                      priority=priority)
-        # participants
-        self.buyer = None
-        self.seller = None
 
         # sources object
         self.sources = None  # initialized later in init_thread
@@ -41,22 +38,15 @@ class Thread(Event):
         else:
             return self.sources.is_expire(self.turn)
 
-    def offer(self, interface=None, player_type=None):
-        offer_outcomes = interface.make_offer(sources=self.sources(), turn=self.turn)
+    def update_offer(self, offer_outcomes=None):
         norm = self.sources.update_offer(offer_outcomes=offer_outcomes, turn=self.turn)
         offer_params = {
             'price': norm,
-            'player': player_type,
+            'player': SLR_PREFIX if self.turn % 2 == 0 else BYR_PREFIX,
             'time': self.priority,
             'thread_id': self.thread_id
         }
         return Offer(params=offer_params, rej=self.is_rej())
-
-    def buyer_offer(self, *args):
-        return self.offer(interface=self.buyer, player_type=BYR_PREFIX)
-
-    def seller_offer(self, *args):
-        return self.offer(interface=self.seller, player_type=SLR_PREFIX)
 
     def init_delay(self, lstg_start):
         if self.turn % 2 == 0:

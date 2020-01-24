@@ -30,9 +30,6 @@ META_6 = [32, 14, 11, 7, 28]
 # holiday and day-of-week indicators, indexed by days since START
 DATE_FEATS = unpickle(INPUT_DIR + 'date_feats.pkl')
 
-# various counts
-SELLER_HORIZON = 100
-ENV_LSTG_COUNT = 1000
 
 # space names
 ACTION_SPACE_NAME = 'NegotiationActionSpace'
@@ -110,3 +107,10 @@ DAYS_IND = ALL_OFFER_FEATS.index(DAYS)
 AUTO_IND = ALL_OFFER_FEATS.index(AUTO)
 REJECT_IND = ALL_OFFER_FEATS.index(REJECT)
 EXP_IND = ALL_OFFER_FEATS.index(EXP)
+
+
+# Reinforcement learning environment parameters
+
+# various counts
+SELLER_HORIZON = 100
+ENV_LSTG_COUNT = 1000

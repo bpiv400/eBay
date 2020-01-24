@@ -53,7 +53,7 @@ class SimulatorEnvironment(EbayEnvironment):
             self.recorder.start_thread(thread_id=event.thread_id, byr_hist=byr_hist,
                                        time=event.priority)
 
-    def _check_complete(self, event):
+    def _is_agent_turn(self, event):
         return False
 
     def make_thread(self, priority):
