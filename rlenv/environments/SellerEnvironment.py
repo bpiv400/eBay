@@ -5,7 +5,6 @@ from rlpyt.envs.base import Env
 from rlpyt.spaces.composite import Composite
 from rlpyt.spaces.float_box import FloatBox
 from rlenv.environments.EbayEnvironment import EbayEnvironment
-from rlenv.events.SellerThread import SellerThread
 from rlenv.env_consts import (SELLER_HORIZON, LOOKUP, X_LSTG, OFFER_EVENT,
                               ACTION_SPACE_NAME, OBS_SPACE_NAME,
                               LSTG_MAP, TURN_IND_MAP, ENV_LSTG_COUNT)
@@ -124,10 +123,6 @@ class SellerEnvironment(EbayEnvironment, Env):
         turn = FloatBox(0, 100, shape=(len(feat_counts[TURN_IND_MAP]),))
         remain = FloatBox(0, 1, shape=(1, ))
         return Composite([lstg, thread, turn, remain], OBS_SPACE)
-
-    def make_thread(self, priority):
-        return SellerThread(priority=priority, thread_id=self.thread_counter,
-                            intervals=self.intervals)
 
     def _agent_tuple(self, lstg_complete):
         obs = self._composer.get_obs(self._last_event.sources())

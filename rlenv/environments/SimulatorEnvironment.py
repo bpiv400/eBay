@@ -52,9 +52,5 @@ class SimulatorEnvironment(EbayEnvironment):
     def _is_agent_turn(self, event):
         return False
 
-    def make_thread(self, priority):
-        return Thread(priority=priority, thread_id=self.thread_counter,
-                      intervals=self.intervals)
-
 
 

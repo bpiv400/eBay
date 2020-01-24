@@ -1,5 +1,4 @@
 from collections import namedtuple
-import numpy as np
 from constants import BYR_PREFIX, MONTH
 from featnames import START_TIME, ACC_PRICE, DEC_PRICE, START_PRICE
 from rlenv.Heap import Heap
@@ -9,6 +8,7 @@ from rlenv.events.Event import Event
 from rlenv.events.Arrival import Arrival
 from rlenv.sources import ArrivalSources
 from rlenv.sources import ThreadSources
+from rlenv.events.Thread import Thread
 from rlenv.env_consts import (INTERACT, SALE, PRICE, DUR, ACC_IND,
                               REJ_IND, OFF_IND, ARRIVAL, FIRST_OFFER,
                               OFFER_EVENT, DELAY_EVENT)
@@ -247,7 +247,8 @@ class EbayEnvironment:
                 self._record(event=event, censored=True)
 
     def make_thread(self, priority):
-        raise NotImplementedError()
+        return Thread(priority=priority, thread_id=self.thread_counter,
+                      intervals=self.intervals)
 
     def _check_slr_autos(self, norm):
         """ """
