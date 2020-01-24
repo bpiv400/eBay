@@ -17,10 +17,7 @@ class Composer:
         self.lstg_sets = Composer.build_lstg_sets(cols)
         self.sizes = Composer.make_sizes()
         self.intervals = self.make_intervals()
-        self.offer_feats = Composer.build_offer_feats()  ## TODO: not sure I need this
         self.turn_inds = None
-
-        # TODO
 
     @staticmethod
     def make_sizes():
