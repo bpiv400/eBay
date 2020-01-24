@@ -9,20 +9,22 @@ from rlenv.events.Event import Event
 from rlenv.events.Arrival import Arrival
 from rlenv.sources import ArrivalSources
 from rlenv.sources import ThreadSources
-from rlenv.env_consts import INTERACT, SALE, PRICE, DUR, ACC_IND, \
-    REJ_IND, OFF_IND, ARRIVAL, FIRST_OFFER, BUYER_OFFER, SELLER_OFFER, \
-    BUYER_DELAY, SELLER_DELAY
-from rlenv.env_utils import time_delta, get_clock_feats
+from rlenv.env_consts import (INTERACT, SALE, PRICE, DUR, ACC_IND,
+                              REJ_IND, OFF_IND, ARRIVAL, FIRST_OFFER,
+                              OFFER_EVENT, DELAY_EVENT)
+from rlenv.env_utils import get_clock_feats
 from utils import get_months_since_lstg
 
 
 class EbayEnvironment:
     Outcome = namedtuple('outcome', [SALE, PRICE, DUR])
 
-    def __init__(self, arrival, verbose):
-        # arrival process interface
-        self.arrival = arrival
-        self.verbose = verbose
+    def __init__(self, params):
+        # interfaces
+        self.arrival = params['arrival']
+        self.buyer = params['buyer']
+        self.seller = params['seller']
+        self.verbose = params['verbose']
 
         # features
         self.x_lstg = None
@@ -66,42 +68,39 @@ class EbayEnvironment:
             return self._process_arrival(event)
         elif event.type == FIRST_OFFER:
             return self._process_first_offer(event)
-        elif event.type == BUYER_OFFER:
-            return self._process_byr_offer(event)
-        elif event.type == SELLER_OFFER:
-            return self._process_slr_offer(event)
-        elif event.type == BUYER_DELAY:
-            return self._process_byr_delay(event)
-        elif event.type == SELLER_DELAY:
-            return self._process_slr_delay(event)
+        elif event.type == OFFER_EVENT:
+            return self._process_offer(event)
+        elif event.type == DELAY_EVENT:
+            return self._process_delay(event)
         else:
             raise NotImplementedError()
 
     def _record(self, event, byr_hist=None, censored=False):
         raise NotImplementedError()
 
-    def _process_byr_offer(self, event):
-        return self._process_offer(event)
-
     def _process_offer(self, event):
         # check whether the lstg expired, censoring this offer
         if self._is_lstg_expired(event):
             return self._process_lstg_expiration(event)
         # otherwise check whether this offer corresponds to an expiration rej
+        slr_offer = event.turn % 2 == 0
         if event.thread_expired():
-            if event.turn % 2 == 0:
+            if slr_offer:
                 self._process_slr_expire(event)
             else:
                 self._process_byr_expire(event)
             return False
         # otherwise updates thread features
         self._prepare_offer(event)
-        byr_turn = event.turn % 2 == 1
-        # generate the offer outcomes
-        if byr_turn:
-            offer = event.buyer_offer()
+        if slr_offer:
+            offer_outcomes = self.seller.make_offer(sources=event.sources(), turn=event.turn)
         else:
-            offer = event.seller_offer()
+            offer_outcomes = self.buyer.make_offer(sources=event.sources(), turn=event.turn)
+        offer = event.update_offer(offer_outcomes=offer_outcomes)
+        return self._process_post_offer(event, offer)
+
+    def _process_post_offer(self, event, offer):
+        slr_offer = event.turn % 2 == 0
         self._record(event, censored=False)
         # check whether the offer is an acceptance
         if event.is_sale():
@@ -109,14 +108,14 @@ class EbayEnvironment:
             return True
         # otherwise check whether the offer is a rejection
         elif event.is_rej():
-            if byr_turn:
-                self._process_byr_rej(offer)
-                return False
-            else:
+            if slr_offer:
                 self._process_slr_rej(event, offer)
                 return False
+            else:
+                self._process_byr_rej(offer)
+                return False
         else:
-            if byr_turn:
+            if not slr_offer:
                 auto = self._check_slr_autos(offer.price)
                 if auto == ACC_IND:
                     self._process_slr_auto_acc(event)
@@ -137,15 +136,6 @@ class EbayEnvironment:
         self.outcome = self.Outcome(True, sale_price, offer.time)
         self.empty_queue()
 
-    def _process_slr_offer(self, event):
-        return self._process_offer(event)
-
-    def _process_byr_delay(self, event):
-        return self._process_delay(event)
-
-    def _process_slr_delay(self, event):
-        return self._process_delay(event)
-
     def _process_first_offer(self, event):
         """
         Processes the buyer's first offer in a thread
@@ -162,7 +152,7 @@ class EbayEnvironment:
             print('Thread {} initiated | Buyer hist: {}'.format(event.thread_id, hist))
         event.init_thread(sources=sources, hist=hist)
         self._record(event, byr_hist=hist)
-        return self._process_byr_offer(event)
+        return self._process_offer(event)
 
     def _prepare_offer(self, event):
         # if offer not expired and thread still active, prepare this turn's inputs
@@ -222,8 +212,11 @@ class EbayEnvironment:
 
     def _process_delay(self, event):
         # no need to check expiration since this must occur at the same time as the previous offer
-        seconds = event.delay()
-        event.prepare_offer(seconds)
+        if event.turn % 2 == 0:
+            index = self.seller.delay(event.sources(), turn=event.turn)
+        else:
+            index = self.buyer.delay(event.sources(), turn=event.turn)
+        event.prepare_offer(index)
         self.queue.push(event)
 
     def _is_agent_turn(self, event):

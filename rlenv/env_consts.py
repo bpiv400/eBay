@@ -67,12 +67,8 @@ ARRIVAL = 'ARRIVAL'
 
 # thread level
 FIRST_OFFER = 'FIRST_OFFER' # first byer offer
-SELLER_DELAY = 'seller_delay'
-BUYER_DELAY = 'buyer_delay'
-
-# offer level
-BUYER_OFFER = 'buyer_offer'
-SELLER_OFFER = 'seller_offer'
+OFFER_EVENT = 'OFFER'
+DELAY_EVENT = 'DELAY'
 
 # model names
 ARRIVAL_MODEL = 'arrival'

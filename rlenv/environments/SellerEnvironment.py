@@ -6,7 +6,7 @@ from rlpyt.spaces.composite import Composite
 from rlpyt.spaces.float_box import FloatBox
 from rlenv.environments.EbayEnvironment import EbayEnvironment
 from rlenv.events.SellerThread import SellerThread
-from rlenv.env_consts import (SELLER_HORIZON, LOOKUP, X_LSTG, SELLER_OFFER,
+from rlenv.env_consts import (SELLER_HORIZON, LOOKUP, X_LSTG, OFFER_EVENT,
                               ACTION_SPACE_NAME, OBS_SPACE_NAME,
                               LSTG_MAP, TURN_IND_MAP, ENV_LSTG_COUNT)
 from rlenv.env_utils import get_con_outcomes
@@ -15,7 +15,6 @@ from featnames import START_TIME, CON, DELAY
 from constants import MONTH
 
 
-#TODO Add types
 class SellerEnvironment(EbayEnvironment, Env):
     def __init__(self, params):
         super(SellerEnvironment, self).__init__(
@@ -51,9 +50,7 @@ class SellerEnvironment(EbayEnvironment, Env):
         :param rlenv.events.Thread.Thread event:
         :return: bool
         """
-        # ToDo: If this is an expiration, I can't return true
-        # because the RL shouldn't actually take a turn in this case
-        if event.type == SELLER_OFFER:
+        if event.type == OFFER_EVENT and event.turn % 2 == 0:
             if self._is_lstg_expired(event):
                 return False
             elif event.thread_expired():
@@ -65,9 +62,8 @@ class SellerEnvironment(EbayEnvironment, Env):
 
     def run(self):
         event, lstg_complete = super(SellerEnvironment, self).run()
-        obs = self._composer.get_obs(event.sources())
         self._last_event = event
-        return obs, self._get_reward(), lstg_complete, self._get_info()
+        return self._agent_tuple(lstg_complete)
 
     def step(self, action):
         """
@@ -77,8 +73,10 @@ class SellerEnvironment(EbayEnvironment, Env):
         """
         offer_outcomes = get_con_outcomes(con=action, sources=self._last_event.sources(),
                                           turn=self._last_event.turn)
-        self._last_event.update_offer(offer_outcomes=offer_outcomes)
-        self.queue.push(self._last_event)
+        offer = self._last_event.update_offer(offer_outcomes=offer_outcomes)
+        lstg_complete = self._process_post_offer(self._last_event, offer)
+        if lstg_complete:
+            return self._agent_tuple(lstg_complete)
         self._last_event = None
         return self.run()
 
@@ -101,7 +99,7 @@ class SellerEnvironment(EbayEnvironment, Env):
         self._ix = 0
 
     def _record(self, event, start_thread=None, byr_hist=None):
-        pass
+        raise NotImplementedError("Double check method signature")
 
     @property
     def horizon(self):
@@ -131,14 +129,15 @@ class SellerEnvironment(EbayEnvironment, Env):
         return SellerThread(priority=priority, thread_id=self.thread_counter,
                             intervals=self.intervals)
 
-    def _get_obs(self):
-        return self._last_event.get_obs()
+    def _agent_tuple(self, lstg_complete):
+        obs = self._composer.get_obs(self._last_event.sources())
+        return obs, self._get_reward(), lstg_complete, self._get_info()
 
     def _get_reward(self):
         raise NotImplementedError("After Etan discussion")
 
     def _get_info(self):
-        return None
+        raise NotImplementedError("")
 
 
 
