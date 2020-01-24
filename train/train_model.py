@@ -3,31 +3,28 @@ import numpy as np
 from datetime import datetime as dt
 from scipy.optimize import minimize_scalar
 from train.Trainer import Trainer
+from constants import TRAIN_RL, TRAIN_MODELS, VALIDATION
 
 
-if __name__ == '__main__':
+def main():
     # extract parameters from command line
     parser = argparse.ArgumentParser()
     parser.add_argument('--name', type=str, required=True)
-    parser.add_argument('--smoothing', action='store_true')
-    args = parser.parse_args()
-    name, smoothing = args.name, args.smoothing
-
-    # experiment number
-    expid = dt.now().strftime('%y%m%d-%H%M')
+    name = parser.parse_args().name
 
     # initialize trainer
-    train_part = 'train_rl' if name in ['listings', 'threads'] else 'train_models'
-    trainer = Trainer(name, train_part, 'test_rl', expid)
+    train_part = TRAIN_RL if name in ['listings', 'threads'] else TRAIN_MODELS
+    trainer = Trainer(name, train_part, VALIDATION)
 
-    # use univariate optimizer to find smoothing hyperparameter
-    if smoothing:
-        assert name in ['arrival', 'delay_byr', 'delay_slr']
-        loss = lambda logx: -trainer.train_model(smoothing=10 ** logx)
-        result = minimize_scalar(loss, method='bounded', bounds=(1, 4), 
-            options={'xatol': 0.1, 'disp': 3})
-        print(result)
+    # estimate with gamma=1
+    trainer.train_model(gamma=1)
 
-    # run training loop once with default of smoothing=0
-    else:
-        trainer.train_model()
+    # # use univariate optimizer to find regularization hyperparameter
+    # loss = lambda g: -trainer.train_model(gamma=g)
+    # result = minimize_scalar(loss, method='bounded', bounds=(0, 1), 
+    #     options={'xatol': 0.1, 'disp': 3})
+    # print(result)
+
+
+if __name__ == '__main__':
+    main()

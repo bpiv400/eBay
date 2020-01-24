@@ -1,42 +1,36 @@
 import argparse
 import numpy as np, pandas as pd
-from constants import MINUTE, HOUR, DAY, MONTH, HOLIDAYS, PARTITIONS, MAX_DELAY, IDX
-from featnames import CLOCK_FEATS, MONTHS_SINCE_LSTG
+from utils import extract_clock_feats
+from constants import MINUTE, HOUR, DAY, MONTH, HOLIDAYS, PARTITIONS, MAX_DELAY, \
+    IDX, BYR_PREFIX, SLR_PREFIX, START
+from featnames import HOLIDAY, DOW_PREFIX, TIME_OF_DAY, AFTERNOON, CLOCK_FEATS, MONTHS_SINCE_LSTG
+from utils import slr_norm, byr_norm
 
 
-def extract_day_feats(clock):
-    """
-    Returns dataframe with US holiday and day-of-week indicators
-    :param clock: pandas series of timestamps
-    :return: dataframe with holiday and day of week indicators
-    """
-    df = pd.DataFrame(index=clock.index)
-    df['holiday'] = clock.dt.date.astype('datetime64').isin(HOLIDAYS)
-    for i in range(6):
-        df['dow' + str(i)] = clock.dt.dayofweek == i
-    return df
-
-
-def extract_clock_feats(clock):
+def extract_day_feats(seconds):
     '''
     Creates clock features from timestamps.
-    :param clock: pandas series of timestamps.
-    :return: pandas dataframe of holiday and day of week indicators, and minute of day.
+    :param seconds: seconds since START.
+    :return: tuple of time_of_day sine transform and afternoon indicator.
     '''
-    df = extract_day_feats(clock)
-    # add in time of day
-    sec_norm = (clock.dt.hour * HOUR + clock.dt.minute * MINUTE + clock.dt.second) / DAY
-    df['time_of_day'] = np.sin(sec_norm * np.pi)
-    df['afternoon'] = sec_norm >= 0.5
-    assert all(df.columns == CLOCK_FEATS)
+    clock = pd.to_datetime(seconds, unit='s', origin=START)
+    df = pd.DataFrame(index=clock.index)
+    df[HOLIDAY] = clock.dt.date.astype('datetime64').isin(HOLIDAYS)
+    for i in range(6):
+        df[DOW_PREFIX + str(i)] = clock.dt.dayofweek == i
     return df
 
 
-def get_months_since_lstg(lstg_start, thread_start):
-    months = (thread_start - lstg_start) / MONTH
-    months = months.rename(MONTHS_SINCE_LSTG)
-    assert months.max() < 1
-    return months
+def collect_date_clock_feats(seconds):
+    '''
+    Combines date and clock features.
+    :param seconds: seconds since START.
+    :return: dataframe of date and clock features.
+    '''
+    df = extract_day_feats(seconds)
+    df[TIME_OF_DAY], df[AFTERNOON] = extract_clock_feats(seconds)
+    assert all(df.columns == CLOCK_FEATS)
+    return df
 
 
 def input_partition():
@@ -73,9 +67,9 @@ def get_days_delay(clock):
     for i in range(2, 8):
         days[i] = clock[i] - clock[i-1]
         if i in [2, 4, 6, 7]: # byr has 2 days for last turn
-            delay[i] = days[i] / MAX_DELAY['slr']
+            delay[i] = days[i] / MAX_DELAY[SLR_PREFIX]
         elif i in [3, 5]:   # ignore byr arrival and last turn
-            delay[i] = days[i] / MAX_DELAY['byr']
+            delay[i] = days[i] / MAX_DELAY[BYR_PREFIX]
     # no delay larger than 1
     assert delay.max().max() <= 1
 
@@ -97,27 +91,12 @@ def get_norm(con):
     norm[1] = df[1]
     norm[2] = df[2] * (1-norm[1])
     for i in range(3, 8):
-        if i in IDX['byr']:
-            norm[i] = df[i] * (1-norm[i-1]) + (1-df[i]) * norm[i-2]
-        elif i in IDX['slr']:
-            norm[i] = 1 - df[i] * norm[i-1] - (1-df[i]) * (1-norm[i-2])
+        if i in IDX[BYR_PREFIX]:
+            norm[i] = byr_norm(con=df[i], 
+                prev_byr_norm=norm[i-2],
+                prev_slr_norm=norm[i-1])
+        elif i in IDX[SLR_PREFIX]:
+            norm[i] = slr_norm(con=df[i],
+                prev_byr_norm=norm[i-1],
+                prev_slr_norm=norm[i-2])
     return norm.rename_axis('index', axis=1).stack().astype('float64')
-
-
-def is_split(con):
-    '''
-    Boolean for whether concession is (close to) an even split.
-    :param con: scalar or Series of concessions.
-    :return: boolean or Series of booleans.
-    '''
-    t = type(con)._name__
-    if t == 'float':
-        return con in SPLIT_PCTS
-
-    assert 'float' in con.dtype
-    if t == 'Series':
-        return con.apply(lambda x: x in SPLIT_PCTS)
-
-    if t == 'ndarray':
-        return np.apply_along_axis(
-            lambda x: x in SPLIT_PCTS, 0, con)

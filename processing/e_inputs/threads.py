@@ -1,13 +1,14 @@
 import sys, os
 from compress_pickle import load, dump
 import numpy as np, pandas as pd
-from processing.processing_utils import input_partition, get_days_delay, get_norm, is_split
+from processing.processing_utils import input_partition, get_days_delay, get_norm
 from processing.e_inputs.inputs_utils import load_file, get_x_thread, get_x_offer, init_x
+from utils import is_split
 from constants import SIM_CHUNKS, ENV_SIM_DIR, MONTH, IDX, SLR_PREFIX
 from featnames import CON, DAYS, DELAY, EXP, AUTO, REJECT, MONTHS_SINCE_LSTG
 
 
-def get_offers_sim(df, offer_cols):
+def process_offers_sim(df, offer_cols):
 	# do stuff
 	
 	
@@ -32,7 +33,7 @@ def get_offers_sim(df, offer_cols):
 
 	return df
 
-def get_threads_sim(df, thread_cols, lstg_start):
+def process_threads_sim(df, thread_cols, lstg_start):
 	# convert clock to months_since_lstg
 	df = df.join(lstg_start)
 	df[MONTHS_SINCE_LSTG] = (df.clock - df.start_time) / MONTH
@@ -75,12 +76,16 @@ def process_sim(part, thread_cols, offer_cols):
 def construct_x(part, threads, offers):
 	# master index
 	idx = threads.index
+
 	# initialize input dictionary with lstg features
 	x = init_x(part, idx)
+
 	# add thread features to x['lstg']
 	x['lstg'] = pd.concat([x['lstg'], get_x_thread(threads, idx)], axis=1)
+
 	# offer features
-	x.update(get_x_offer(offers))
+	x.update(get_x_offer(offers, idx))
+	
 	return x
 
 

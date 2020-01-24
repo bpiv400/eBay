@@ -1,50 +1,6 @@
-import pickle, argparse
-from compress_pickle import load
-import numpy as np, pandas as pd
-from datetime import datetime as dt
-from constants import PARTS_DIR, HOLIDAYS, PARTITIONS, START, END, MAX_DAYS
-
-
-def init_date_lookup():
-    start = pd.to_datetime(START)
-    end = pd.to_datetime(END) + pd.to_timedelta(MAX_DAYS, unit='D')
-
-    d = {}
-    for date in pd.date_range(start.date(), end.date()): 
-        row = np.zeros(8)
-        row[0] = str(date.date()) in HOLIDAYS
-        for i in range(6):
-            row[i+1] = date.dayofweek == i
-        d[(date - start).days] = row
-
-    return d
-
-
-def extract_day_feats(clock):
-    """
-    Returns dataframe with US holiday and day-of-week indicators
-    :param clock: pandas series of timestamps
-    :return: dataframe with holiday and day of week indicators
-    """
-    df = pd.DataFrame(index=clock.index)
-    df['holiday'] = clock.dt.date.astype('datetime64').isin(HOLIDAYS)
-    for i in range(6):
-        df['dow' + str(i)] = clock.dt.dayofweek == i
-    return df
-
-
-def extract_clock_feats(clock):
-    '''
-    Creates clock features from timestamps.
-    :param clock: pandas series of timestamps.
-    :return: pandas dataframe of holiday and day of week indicators, and minute of day.
-    '''
-    df = extract_day_feats(clock)
-
-    # add in seconds of day
-    seconds_since_midnight = clock.dt.hour * 60 + clock.dt.minute + clock.dt.second
-    df['second_of_day'] = (seconds_since_midnight / (24 * 3600)).astype('float32')
-    return df
+import pickle
+import numpy as np
+from constants import MAX_DELAY, ARRIVAL_PREFIX, DAY, MONTH, SPLIT_PCTS
 
 
 def unpickle(file):
@@ -56,30 +12,67 @@ def unpickle(file):
     return pickle.load(open(file, "rb"))
 
 
-def input_partition(store_true=None):
-    """
-    Parses command line input for partition name.
-    :return part: string partition name.
-    """
-    parser = argparse.ArgumentParser()
+def get_remaining(lstg_start, delay_start, max_delay):
+    '''
+    Calculates number of delay intervals remaining in lstg.
+    :param lstg_start: seconds from START to start of lstg.
+    :param delay_start: seconds from START to beginning of delay window.
+    :param max_delay: length of delay period.
+    '''
+    remaining = lstg_start + MAX_DELAY[ARRIVAL_PREFIX] - delay_start
+    remaining /= max_delay
+    remaining = np.minimum(1, remaining)
+    return remaining
 
-    # partition
-    parser.add_argument('--part', required=True, type=str, help='partition name')
 
-    # optional boolean arguments
-    if store_true is not None:
-        parser.add_argument('--{}'.format(store_true), 
-            action='store_true', default=False)
+def extract_clock_feats(seconds):
+    '''
+    Creates clock features from timestamps.
+    :param seconds: seconds since START.
+    :return: tuple of time_of_day sine transform and afternoon indicator.
+    '''
+    sec_norm = (seconds % DAY) / DAY
+    time_of_day = np.sin(sec_norm * np.pi)
+    afternoon = sec_norm >= 0.5
+    return time_of_day, afternoon
 
-    # parse arguments
-    args = parser.parse_args()
 
-    # error checking
-    if args.part not in PARTITIONS:
-        raise RuntimeError('part must be one of: {}'.format(PARTITIONS))
+def is_split(con):
+    '''
+    Boolean for whether concession is (close to) an even split.
+    :param con: scalar or Series of concessions.
+    :return: boolean or Series of booleans.
+    '''
+    return con in SPLIT_PCTS
 
-    # return tuple if multiple arguuments
-    if store_true is None:
-        return args.part
-    else:
-        return args
+
+def get_months_since_lstg(lstg_start, start):
+    '''
+    Float number of months between inputs.
+    :param lstg_start: seconds from START to lstg start.
+    :param start: seconds from START to focal event.
+    :return: number of months between lstg_start and start.
+    '''
+    return (start - lstg_start) / MONTH
+
+
+def slr_norm(con, prev_byr_norm, prev_slr_norm):
+    '''
+    Normalized offer for seller turn.
+    :param con: current concession, between 0 and 1.
+    :param prev_byr_norm: normalized concession from one turn ago.
+    :param prev_slr_norm: normalized concession from two turns ago.
+    :return: normalized distance of current offer from start_price to 0.
+    '''
+    return 1 - con * prev_byr_norm - (1 - prev_slr_norm) * (1 - con)
+
+
+def byr_norm(con, prev_byr_norm, prev_slr_norm):
+    '''
+    Normalized offer for buyer turn.
+    :param con: current concession, between 0 and 1.
+    :param prev_byr_norm: normalized concession from two turns ago.
+    :param prev_slr_norm: normalized concession from one turn ago.
+    :return: normalized distance of current offer from 0 to start_price.
+    '''
+    return (1 - prev_slr_norm) * con + prev_byr_norm * (1 - con)

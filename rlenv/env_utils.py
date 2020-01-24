@@ -15,6 +15,7 @@ from rlenv.env_consts import (META_6, META_7, SIM_CHUNKS_DIR, SIM_VALS_DIR,
                               SIM_DISCRIM_DIR, THREAD_MAP, DATE_FEATS, 
                               ARRIVAL_MODELS)
 from featnames import *
+from utils import extract_clock_feats, is_split, slr_norm, byr_norm
 
 
 def load_featnames(name):
@@ -37,15 +38,6 @@ def load_sizes(name):
         :return: dict
         """
     return load(INPUT_DIR + 'sizes/{}.pkl'.format(name))
-
-
-def load_params():
-    """
-        Loads featnames dictionary for a model
-        #TODO: extend to include agents
-        :return: dict
-        """
-    return load(INPUT_DIR + 'params.pkl')
 
 
 def featname(feat, turn):
@@ -90,17 +82,8 @@ def get_clock_feats(time):
     # holiday and day of week indicators
     date_feats = DATE_FEATS[time // DAY]
 
-    # second of day, as fraction
-    sec_norm = (time % DAY) / DAY
-
-    # sine transformation
-    time_of_day = np.sin(sec_norm * np.pi)
-
-    # afternoon indicator
-    afternoon = sec_norm >= 0.5
-
     # concatenate
-    return np.append(date_feats, [time_of_day, afternoon]).astype('float32')
+    return np.append(date_feats, extract_clock_feats(time)).astype('float32')
 
 
 def proper_squeeze(tensor):
@@ -128,17 +111,6 @@ def sample_categorical(params):
 def sample_bernoulli(params):
     dist = Bernoulli(logits=params)
     return proper_squeeze(dist.sample((1, ))).numpy()
-
-
-def get_split(con):
-    """
-    Determines whether concession is close enough to 50 to trigger split feature
-    :param np.float32 con: concession
-    :return: bool
-    """
-    con = con * 100
-    output = 1 if abs(50 - con) < (TOL_HALF * 100) else 0
-    return output
 
 
 def last_norm(sources, turn):
@@ -176,14 +148,28 @@ def load_model(full_name):
     :return: torch.nn.Module
     """
     print('loading {}'.format(full_name))
-    sizes, params = load_sizes(full_name), load_params()
+
+    # create neural network
+    sizes = load_sizes(full_name)
+    net = FeedForward(sizes, dropout=False)  # type: torch.nn.Module
+
+    # read in model parameters
     model_path = '{}{}.net'.format(MODEL_DIR, full_name)
-    net = FeedForward(sizes, params)  # type: torch.nn.Module
     state_dict = torch.load(model_path, map_location=torch.device('cpu'))
+
+    # delete dropout parameters
+    for param_tensor in state_dict:
+        if 'lnalpha' in param_tensor.__name__:
+            del param_tensor
+
+    # load parameters into model
     net.load_state_dict(state_dict)
+
+    # eval mode
     for param in net.parameters(recurse=True):
         param.requires_grad = False
     net.eval()
+
     return net
 
 
@@ -370,7 +356,7 @@ def update_byr_outcomes(con=None, delay=None, sources=None, turn=0):
     :param int turn: turn number
     :return: (outcome series, sample message boolean)
     """
-    outcomes = pd.Series(0.0, index=ALL_OUTCOMES[turn])
+    outcomes = pd.Series(0.0, index=ALL_OUTCOMES[turn], dtype='float32')
     # don't sample a msg if the delay is given since this means an agent
     # selects delay
     if delay is not None:
@@ -378,14 +364,13 @@ def update_byr_outcomes(con=None, delay=None, sources=None, turn=0):
     else:
         sample_msg = (con != 0 and con != 1)
     if sample_msg:
-        outcomes[featname(SPLIT, turn)] = get_split(con)
+        outcomes[featname(SPLIT, turn)] = is_split(con)
     outcomes[featname(CON, turn)] = con
-    prev_slr_norm = prev_norm(sources, turn)
-    prev_byr_norm = last_norm(sources, turn)
-    norm = (1 - prev_slr_norm) * con + prev_byr_norm * (1 - con)
+    norm = byr_norm(con=con, 
+        prev_byr_norm=last_norm(sources, turn),
+        prev_slr_norm=prev_norm(sources, turn))
     outcomes[featname(NORM, turn)] = norm
     return outcomes, sample_msg
-    # TODO FIGURE OUT DELAY SHIT LATER IN A SEPARATE FUNCTION
 
 
 def update_slr_outcomes(con=None, delay=None, sources=None, turn=0):
@@ -398,31 +383,23 @@ def update_slr_outcomes(con=None, delay=None, sources=None, turn=0):
     :param int turn: turn number
     :return: (outcome series, sample message boolean)
     """
-    outcomes = pd.Series(0.0, index=ALL_OUTCOMES[turn])
+    outcomes = pd.Series(0.0, index=ALL_OUTCOMES[turn], dtype='float32')
     # don't sample a msg if the delay is given since this means an agent
     # selects delay
     if delay is not None:
         sample_msg = False
     else:
         sample_msg = (con != 0 and con != 1)
-    # compute previous seller norm or set to 0 if this is the first turn
-    prev_slr_norm = last_norm(sources, turn)
     # handle rejection case
     if con == 0:
         outcomes[featname(REJECT, turn)] = 1
-        outcomes[featname(NORM, turn)] = prev_slr_norm
+        outcomes[featname(NORM, turn)] = last_norm(sources, turn)
     else:
         outcomes[featname(CON, turn)] = con
-        outcomes[featname(SPLIT, turn)] = get_split(con)
-        prev_byr_norm = sources[THREAD_MAP][featname(NORM, turn - 1)]
-        norm = slr_norm(con=con, prev_byr_norm=prev_byr_norm, prev_slr_norm=prev_slr_norm)
+        outcomes[featname(SPLIT, turn)] = is_split(con)
+        norm = slr_norm(con=con, 
+            prev_byr_norm=sources[THREAD_MAP][featname(NORM, turn - 1)], 
+            prev_slr_norm=last_norm(sources, turn))
         outcomes[featname(NORM, turn)] = norm
 
-    # TODO FIGURE OUT DELAY SHIT LATER IN A SEPARATE FUNCTION
-
     return outcomes, sample_msg
-
-
-def slr_norm(con, prev_byr_norm, prev_slr_norm):
-    norm = 1 - con * prev_byr_norm - (1 - prev_slr_norm) * (1 - con)
-    return norm

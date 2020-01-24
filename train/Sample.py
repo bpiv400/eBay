@@ -1,8 +1,7 @@
-from torch.utils.data import Sampler, DataLoader
 import numpy as np
 import torch
-from torch.nn.utils import rnn
-from model.model_consts import MBSIZE, NUM_WORKERS
+from torch.utils.data import Sampler, DataLoader
+from train.train_consts import MBSIZE, NUM_WORKERS
 
 
 class Sample(Sampler):
@@ -67,5 +66,5 @@ def get_batches(data, isTraining=False):
     '''
     batches = DataLoader(data, collate_fn=collate,
         batch_sampler=Sample(data, isTraining),
-        num_workers=NUM_WORKERS, pin_memory=True)
+        num_workers=NUM_WORKERS[data.name], pin_memory=True)
     return batches

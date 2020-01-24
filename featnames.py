@@ -1,5 +1,9 @@
 # clock feats
-CLOCK_FEATS = ['holiday', 'dow0', 'dow1', 'dow2', 'dow3', 'dow4', 'dow5', 'time_of_day', 'afternoon']
+HOLIDAY = 'holiday'
+DOW_PREFIX = 'dow'
+TIME_OF_DAY = 'time_of_day'
+AFTERNOON = 'afternoon'
+CLOCK_FEATS = [HOLIDAY] + [DOW_PREFIX + str(i) for i in range(6)] + [TIME_OF_DAY, AFTERNOON]
 
 # time feats
 SLR_OFFERS = 'slr_offers'
@@ -45,6 +49,8 @@ REJECT = 'reject'
 AUTO = 'auto'
 EXP = 'exp'
 
+OUTCOME_FEATS = [DAYS, DELAY, AUTO, EXP, CON, REJECT, NORM, SPLIT, MSG]
+
 BYR_OUTCOMES = [
     DAYS,
     DELAY,
@@ -67,9 +73,12 @@ for i in range(7):
         ALL_OUTCOMES[i + 1] = ['{}_{}'.format(feat, i + 1) for feat in SLR_OUTCOMES]
 
 # turn indices
-TURN_FEATS = ['t1', 't2', 't3']
-SLR_TURN_INDS = ['t1', 't2']
-BYR_TURN_INDS = SLR_TURN_INDS + ['t3']
+TURN_FEATS = {'delay_byr': ['t3', 't5'],
+              'con_byr': ['t1', 't3', 't5'],
+              'msg_byr': ['t1', 't3'],
+              'delay_slr': ['t2', 't4'],
+              'con_slr': ['t2', 't4'],
+              'msg_slr': ['t2', 't4']}
 
 # thread features
 BYR_HIST = 'byr_hist'

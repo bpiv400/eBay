@@ -1,7 +1,8 @@
 import os
 from compress_pickle import load
 import numpy as np, pandas as pd
-from processing.processing_consts import FEATS_DIR, PARTS_DIR
+from processing.processing_consts import FEATS_DIR
+from constants import PARTS_DIR
 
 
 # loads processed chunk files

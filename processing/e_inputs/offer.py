@@ -5,7 +5,8 @@ from processing.e_inputs.inputs_utils import load_file, get_x_thread, \
 	get_x_offer, init_x, save_files
 from processing.processing_consts import MAX_DELAY, INTERVAL, CLEAN_DIR
 from constants import IDX, DAY, BYR_PREFIX, SLR_PREFIX, ARRIVAL_PREFIX
-from featnames import CON, MSG, AUTO, EXP, DAYS, INT_REMAINING
+from featnames import CON, MSG, AUTO, EXP, REJECT, DAYS, DELAY, INT_REMAINING
+from utils import get_remaining
 
 
 def get_y_con(df):
@@ -43,6 +44,33 @@ def get_y_delay(df, role):
 	return delay
 
 
+def calculate_remaining(part, idx, role):
+	# load timestamps
+	lstg_start = load_file(part, 'lookup').start_time.reindex(
+			index=idx, level='lstg')
+	delay_start = load_file(part, 'clock').groupby(
+		['lstg', 'thread']).shift().reindex(index=idx).astype('int64')
+
+	# maximal delay
+	max_delay = pd.Series(MAX_DELAY[role], index=idx)
+	max_delay.loc[max_delay.index.isin([7], level='index')] = \
+		MAX_DELAY[BYR_PREFIX + '_7']
+
+	# remaining calculation
+	remaining = get_remaining(lstg_start, delay_start, max_delay)
+
+	# error checking
+	assert np.all(remaining > 0) and np.all(remaining <= 1)
+
+	return remaining
+
+
+def check_zero(offer, cols):
+	for c in cols:
+		assert offer[c].max() == 0
+		assert offer[c].min() == 0
+
+
 # loads data and calls helper functions to construct train inputs
 def process_inputs(part, outcome, role):
 	# load dataframes
@@ -66,18 +94,24 @@ def process_inputs(part, outcome, role):
 	x_thread = get_x_thread(threads, idx)
 
 	if outcome == 'delay':	# add time remaining to x_thread
-		clock = load_file(part, 'clock')
-		delay_start = clock.groupby(['lstg', 'thread']).shift().reindex(
-			index=idx).astype('int64')
-		lstg_end = load(CLEAN_DIR + 'listings.pkl').end_time.reindex(
-			index=idx, level='lstg')
-		x_thread[INT_REMAINING] = np.minimum(1,
-			(lstg_end - delay_start) / MAX_DELAY[role])
+		x_thread[INT_REMAINING] = calculate_remaining(part, idx, role)
 
 	x['lstg'] = pd.concat([x['lstg'], x_thread], axis=1) 
 
 	# offer features
 	x.update(get_x_offer(offers, idx, outcome=outcome, role=role))
+
+	# error checking
+	for i in range(1, max(IDX[role])+1):
+		k = 'offer' + str(i)
+		if k in x:
+			# error checking
+			if i == 1:
+				check_zero(x[k], [DAYS, DELAY])
+			if i % 2 == 1:
+				check_zero(x[k], [AUTO, EXP, REJECT])
+			if i == 7:
+				check_zero(x[k], [MSG])
 
 	return {'y': y, 'x': x}
 
