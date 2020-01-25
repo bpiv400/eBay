@@ -1,6 +1,9 @@
 import pickle
+import torch
 import numpy as np
-from constants import MAX_DELAY, ARRIVAL_PREFIX, DAY, MONTH, SPLIT_PCTS
+from compress_pickle import load
+from nets.FeedForward import FeedForward
+from constants import MAX_DELAY, ARRIVAL_PREFIX, DAY, MONTH, SPLIT_PCTS, INPUT_DIR, MODEL_DIR
 
 
 def unpickle(file):
@@ -76,3 +79,46 @@ def byr_norm(con=None, prev_byr_norm=None, prev_slr_norm=None):
     :return: normalized distance of current offer from 0 to start_price.
     '''
     return (1 - prev_slr_norm) * con + prev_byr_norm * (1 - con)
+
+
+def load_sizes(name):
+    """
+        Loads featnames dictionary for a model
+        #TODO: extend to include agents
+        :param name: str giving name (e.g. hist, con_byr),
+         see env_consts.py for model names
+        :return: dict
+        """
+    return load(INPUT_DIR + 'sizes/{}.pkl'.format(name))
+
+
+def load_model(name):
+    """
+    Initialize PyTorch network for some model
+    :param str name: full name of the model
+    :return: torch.nn.Module
+    """
+    print('loading {}'.format(name))
+
+    # create neural network
+    sizes = load_sizes(name)
+    net = FeedForward(sizes, dropout=False)  # type: torch.nn.Module
+
+    # read in model parameters
+    model_path = '{}{}.net'.format(MODEL_DIR, name)
+    state_dict = torch.load(model_path, map_location=torch.device('cpu'))
+
+    # delete dropout parameters
+    drop = [k for k in state_dict.keys() if 'log_alpha' in k]
+    for k in drop:
+        del state_dict[k]
+
+    # load parameters into model
+    net.load_state_dict(state_dict)
+
+    # eval mode
+    for param in net.parameters(recurse=True):
+        param.requires_grad = False
+    net.eval()
+
+    return net

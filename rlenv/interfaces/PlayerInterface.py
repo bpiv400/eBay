@@ -1,9 +1,10 @@
 import numpy as np
 import torch
 from torch.distributions.categorical import Categorical
-from rlenv.env_utils import (load_model, model_str, proper_squeeze,
+from rlenv.env_utils import (model_str, proper_squeeze,
                              sample_categorical, sample_bernoulli, get_con_outcomes)
 from featnames import *
+from utils import load_model
 
 
 class PlayerInterface:

@@ -10,7 +10,6 @@ from torch.distributions.categorical import Categorical
 from torch.distributions.bernoulli import Bernoulli
 from constants import (INPUT_DIR, TOL_HALF,
                        MODEL_DIR, ENV_SIM_DIR, DAY, BYR_PREFIX, SLR_PREFIX)
-from nets.FeedForward import FeedForward
 from rlenv.env_consts import (META_6, META_7, SIM_CHUNKS_DIR, SIM_VALS_DIR, OFFER_MAPS,
                               SIM_DISCRIM_DIR, DATE_FEATS, ARRIVAL_MODELS, NORM_IND)
 from featnames import *
@@ -26,17 +25,6 @@ def load_featnames(name):
     :return: dict
     """
     return load(INPUT_DIR + 'featnames/{}.pkl'.format(name))
-
-
-def load_sizes(name):
-    """
-        Loads featnames dictionary for a model
-        #TODO: extend to include agents
-        :param name: str giving name (e.g. hist, con_byr),
-         see env_consts.py for model names
-        :return: dict
-        """
-    return load(INPUT_DIR + 'sizes/{}.pkl'.format(name))
 
 
 def model_str(model_name, byr=False):
@@ -130,38 +118,6 @@ def prev_norm(sources=None, turn=0):
         offer_map = OFFER_MAPS[turn - 1]
         out = sources[offer_map][NORM_IND]
     return out
-
-
-def load_model(full_name):
-    """
-    Initialize PyTorch network for some model
-    :param str full_name: full name of the model
-    :return: torch.nn.Module
-    """
-    print('loading {}'.format(full_name))
-
-    # create neural network
-    sizes = load_sizes(full_name)
-    net = FeedForward(sizes, dropout=False)  # type: torch.nn.Module
-
-    # read in model parameters
-    model_path = '{}{}.net'.format(MODEL_DIR, full_name)
-    state_dict = torch.load(model_path, map_location=torch.device('cpu'))
-
-    # delete dropout parameters
-    drop = [k for k in state_dict.keys() if 'log_alpha' in k]
-    for k in drop:
-        del state_dict[k]
-
-    # load parameters into model
-    net.load_state_dict(state_dict)
-
-    # eval mode
-    for param in net.parameters(recurse=True):
-        param.requires_grad = False
-    net.eval()
-
-    return net
 
 
 def get_cut(meta):
