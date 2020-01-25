@@ -30,7 +30,7 @@ class eBayDataset(Dataset):
         y = self.d['y'][idx]
 
         # index components of input dictionary
-        x = {k: v[idx, :].astype('float32') for k, v in self.d['x'].items()}
+        x = {k: v[idx, :] for k, v in self.d['x'].items()}
 
         return y, x
         

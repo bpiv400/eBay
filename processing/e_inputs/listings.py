@@ -59,12 +59,11 @@ def process_inputs(part, obs=None):
 	d['y'] = d['y'].xs(1, level='thread')
 	d['x'] = {k: v.xs(1, level='thread') for k, v in d['x'].items()}
 	# split into arrival indicator and period number
-	arrival = pd.Series(d['y'] >= 0, 
+	arrival = pd.Series(d['y'] < INTERVAL_COUNTS[ARRIVAL_PREFIX], 
 		index=d['y'].index, name='arrival', dtype='float32')
 	period = pd.Series(d['y'], 
 		index=d['y'].index, name='period', dtype='float32')
-	period[period < 0] += INTERVAL_COUNTS[ARRIVAL_PREFIX] + 1
-	period /= INTERVAL_COUNTS[ARRIVAL_PREFIX]
+	period /= INTERVAL_COUNTS[ARRIVAL_PREFIX]	# redefine on [0,1]
 	# put y in x['lstg']
 	d['x']['lstg'] = pd.concat([d['x']['lstg'], arrival, period], axis=1)
 	return d['x']

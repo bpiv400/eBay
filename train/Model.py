@@ -4,6 +4,7 @@ import numpy as np
 from compress_pickle import load
 from nets.FeedForward import FeedForward
 from constants import INPUT_DIR
+from utils import load_sizes
 
 
 class Model:
@@ -17,7 +18,7 @@ class Model:
 		self.dropout = gamma > 0
 
 		# load model sizes
-		sizes = load(INPUT_DIR + 'sizes/{}.pkl'.format(name))
+		sizes = load_sizes(name)
 
 		# neural net
 		self.net = FeedForward(sizes, dropout=self.dropout).to(device)

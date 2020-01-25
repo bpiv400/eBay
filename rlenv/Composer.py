@@ -2,12 +2,12 @@ import math
 import torch
 import numpy as np, pandas as pd
 from rlenv.env_consts import *
-from rlenv.env_utils import load_featnames, model_str
+from rlenv.env_utils import model_str
 from featnames import (OUTCOME_FEATS, CLOCK_FEATS, TIME_FEATS,
                        TURN_FEATS, MONTHS_SINCE_LSTG, BYR_HIST,
                        INT_REMAINING, MONTHS_SINCE_LAST, THREAD_COUNT)
 from constants import ARRIVAL_PREFIX
-from utils import load_sizes
+from utils import load_sizes, load_featnames
 
 
 class Composer:

@@ -92,13 +92,25 @@ def load_sizes(name):
     return load(INPUT_DIR + 'sizes/{}.pkl'.format(name))
 
 
+def load_featnames(name):
+    """
+    Loads featnames dictionary for a model
+    #TODO: extend to include agents
+    :param name: str giving name (e.g. hist, con_byr),
+     see env_consts.py for model names
+    :return: dict
+    """
+    return load(INPUT_DIR + 'featnames/{}.pkl'.format(name))
+
+
+
 def load_model(name):
     """
     Initialize PyTorch network for some model
     :param str name: full name of the model
     :return: torch.nn.Module
     """
-    print('loading {}'.format(name))
+    print('Loading {} model'.format(name))
 
     # create neural network
     sizes = load_sizes(name)

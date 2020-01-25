@@ -1,7 +1,7 @@
 #!/bin/bash
 #$ -t 1-8
 #$ -N train
-#$ -o logs/
+#$ -o logs/train/
 #$ -j y
 
 if [ "$SGE_TASK_ID" == 1 ]

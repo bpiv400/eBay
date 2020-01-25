@@ -16,17 +16,6 @@ from featnames import *
 from utils import extract_clock_feats, is_split, slr_norm, byr_norm
 
 
-def load_featnames(name):
-    """
-    Loads featnames dictionary for a model
-    #TODO: extend to include agents
-    :param name: str giving name (e.g. hist, con_byr),
-     see env_consts.py for model names
-    :return: dict
-    """
-    return load(INPUT_DIR + 'featnames/{}.pkl'.format(name))
-
-
 def model_str(model_name, byr=False):
     """
     returns the string giving the name of an offer model
