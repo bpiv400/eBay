@@ -55,8 +55,8 @@ class AgentEnvironment(EbayEnvironment, Env):
         """
         if self._ix == -1 or self._ix == self._num_lstgs:
             self._draw_lstgs()
-        self.x_lstg = pd.Series(self._x_lstg_slice[self._ix, :],
-                                index=self._composer.x_lstg)
+        self.x_lstg = pd.Series(self._x_lstg_slice[self._ix, :], index=self._composer.x_lstg_cols)
+        self.x_lstg = self._composer.decompose_x_lstg(self.x_lstg)
         self.lookup = pd.Series(self._lookup_slice[self._ix, :], index=self._lookup_cols)
         self._ix += 1
         self.end_time = self.lookup[START_TIME] + MONTH

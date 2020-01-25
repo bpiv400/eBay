@@ -242,6 +242,7 @@ class AgentComposer(Composer):
         self.delay = agent_params['delay']
         self.sizes['agent'] = self._build_agent_sizes()
         self.obs_space_class = namedtuple(OBS_SPACE_NAME, list(self.agent_sizes.keys()))
+        self.x_lstg_cols = list(cols)
 
     def _build_agent_sizes(self):
         sizes = OrderedDict()
