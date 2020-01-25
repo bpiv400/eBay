@@ -255,9 +255,42 @@ class AgentComposer(Composer):
                 sizes[set_name] = self._build_lstg_sizes(feats)
         return sizes
 
+    def _update_turn_inds(self, model_name, turn):
+        if model_name == 'agent':
+            if self.slr:
+                inds = np.zeros(2)
+            else:
+                inds = np.zeros(3)
+            active = math.floor((turn - 1) / 2)
+            if active < inds.shape[0]:
+                inds[active] = 1
+            self.turn_inds = inds
+        else:
+            super()._update_turn_inds(model_name, turn)
+
+    def get_obs(self, sources=None, turn=None):
+        obs_dict = dict()
+        self._update_turn_inds('agent', turn)
+        for set_name in self.agent_sizes.keys():
+            if set_name == LSTG_MAP:
+                # TODO: Update when we know whether to include remaining (i.e. mimic delay or offer)
+                obs_dict[set_name] = self._build_lstg_vector('agent', sources=sources).squeeze()
+            elif set_name[:-1] == 'offer':
+                obs_dict[set_name] = self._build_agent_offer_vector(offer_vector=sources[set_name])
+            else:
+                obs_dict[set_name] = torch.from_numpy(sources[set_name]).float()
+            return self.obs_space_class(**obs_dict)
+
+    def _build_agent_offer_vector(self, offer_vector=None):
+        if not self.slr or self.idx == 1:
+            clock_feats = offer_vector[CLOCK_START_IND:CLOCK_END_IND]
+            outcome_feats = offer_vector[DELAY_START_IND:]
+            offer_vector = np.concatenate([clock_feats, outcome_feats])
+        return super()._build_offer_vector(offer_vector=offer_vector).squeeze()
+
     def _build_offer_sizes(self):
         if not self.slr or self.idx == 1:
-            base = len(OUTCOME_FEATS) + len(CLOCK_FEATS)
+            base = len(CLOCK_FEATS) + len(OUTCOME_FEATS)
         else:
             base = len(ALL_OFFER_FEATS)
         # add turn indicators

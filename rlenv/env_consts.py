@@ -35,9 +35,6 @@ DATE_FEATS = unpickle(INPUT_DIR + 'date_feats.pkl')
 ACTION_SPACE_NAME = 'NegotiationActionSpace'
 OBS_SPACE_NAME = 'NegotiationObsSpace'
 
-# agent names (see AGENTS_FEATS_FILENAME)
-INFO_AGENTS = ['byr', 'slr0', 'slr1']
-
 # outcome tuple names
 SALE = 'sale'
 DUR = 'dur'
