@@ -3,7 +3,8 @@ from compress_pickle import load, dump
 import numpy as np, pandas as pd
 from processing.e_inputs.inputs_utils import load_file, get_x_thread, \
 	get_x_offer, init_x, save_files
-from processing.processing_consts import MAX_DELAY, INTERVAL, CLEAN_DIR
+from processing.processing_consts import MAX_DELAY, INTERVAL, \
+	INTERVAL_COUNTS, CLEAN_DIR
 from constants import IDX, DAY, BYR_PREFIX, SLR_PREFIX, ARRIVAL_PREFIX
 from featnames import CON, MSG, AUTO, EXP, REJECT, DAYS, DELAY, INT_REMAINING
 from utils import get_remaining
@@ -35,11 +36,11 @@ def get_y_delay(df, role):
 	if role == BYR_PREFIX:
 		assert delay.xs(7, level='index').max() <= MAX_DELAY[SLR_PREFIX]
 
-	# replace censored delays with negative seconds from end
-	delay.loc[df[EXP]] -= MAX_DELAY[role] + 1
-
 	# convert to periods
 	delay //= INTERVAL[role]
+
+	# replace censored delays with last index
+	delay.loc[df[EXP]] = INTERVAL_COUNTS[role]
 
 	return delay
 

@@ -21,11 +21,18 @@ y = y.xs(1, level='thread')
 x = {k: v.xs(1, level='thread') for k, v in x.items()}
 
 # create model
-net = load_model(NAME)
+net = load_model(NAME).to('cuda')
 
 # x to torch
 x = {k: torch.tensor(v.values).float() for k, v in x.items()}
 
-# predictions
-theta = net(x)
+# batches
+v = np.array([i for i in range(len(y))])
+batches = np.array_split(v, 1 + len(v) // 2048)
 
+# probability of no arrival
+p0 = np.array([], dtype='float32')
+for b in batches:
+	x_b = {k: v[b, :].to('cuda') for k, v in x.items()}
+	p = torch.exp(torch.nn.functional.log_softmax(net(x_b), dim=1))
+	p0 = np.append(p0, p[:, -1].cpu().numpy())
