@@ -43,14 +43,7 @@ class SellerEnvironment(AgentEnvironment):
 
     def _define_action_space(self):
         # message not included because agent can't write a msg
-        con = ConSpace()
-        if self.agent_delay:
-            nt = namedtuple(ACTION_SPACE_NAME, [CON, DELAY])
-            delay = FloatBox([0.0], [1.0], null_value=0)
-            return Composite([con, delay], nt)
-        else:
-            nt = namedtuple(ACTION_SPACE_NAME, [CON])
-            return Composite([con], nt)
+        return ConSpace()
 
     def _get_reward(self):
         raise NotImplementedError("After Etan discussion")
