@@ -24,10 +24,11 @@ class AgentEnvironment(EbayEnvironment, Env):
 
         # model interfaces and composer
         self._composer = params['composer']  # type: AgentComposer
-        self._last_event = None  # type: Thread
+        self.last_event = None  # type: Thread
         # action and observation spaces
         self._action_space = self._define_action_space()
         self._observation_space = self._define_observation_space()
+        self.eat = 'eat'
 
     def reset(self):
         while True:
@@ -35,12 +36,12 @@ class AgentEnvironment(EbayEnvironment, Env):
             super().reset()
             event, lstg_complete = super().run()
             if not lstg_complete:
-                self._last_event = event
+                self.last_event = event
                 return self._composer.get_obs(event)
 
     def run(self):
         event, lstg_complete = super().run()
-        self._last_event = event
+        self.last_event = event
         return self._agent_tuple(lstg_complete)
 
     def _define_observation_space(self):
@@ -67,7 +68,7 @@ class AgentEnvironment(EbayEnvironment, Env):
         self._ix = 0
 
     def _agent_tuple(self, lstg_complete):
-        obs = self._composer.get_obs(self._last_event.sources())
+        obs = self._composer.get_obs(self.last_event.sources())
         return obs, self._get_reward(), lstg_complete, self._get_info()
 
     def _get_reward(self):

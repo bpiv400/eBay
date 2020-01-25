@@ -1,9 +1,8 @@
 from collections import namedtuple
 from rlenv.environments import AgentEnvironment
-from rlenv.env_consts import OFFER_EVENT,  ACTION_SPACE_NAME
+from rlenv.env_consts import OFFER_EVENT
 from rlenv.env_utils import get_con_outcomes
 from rlenv.spaces.ConSpace import ConSpace
-from featnames import CON
 
 
 class SellerEnvironment(AgentEnvironment):
@@ -32,13 +31,13 @@ class SellerEnvironment(AgentEnvironment):
         :param action: float returned from agent
         :return:
         """
-        offer_outcomes = get_con_outcomes(con=action, sources=self._last_event.sources(),
-                                          turn=self._last_event.turn)
-        offer = self._last_event.update_offer(offer_outcomes=offer_outcomes)
-        lstg_complete = self._process_post_offer(self._last_event, offer)
+        offer_outcomes = get_con_outcomes(con=action, sources=self.last_event.sources(),
+                                          turn=self.last_event.turn)
+        offer = self.last_event.update_offer(offer_outcomes=offer_outcomes)
+        lstg_complete = self._process_post_offer(self.last_event, offer)
         if lstg_complete:
             return self._agent_tuple(lstg_complete)
-        self._last_event = None
+        self.last_event = None
         return self.run()
 
     def _define_action_space(self):
