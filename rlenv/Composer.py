@@ -234,5 +234,44 @@ class Composer:
 
 
 class AgentComposer(Composer):
-    def __init__(self, params, rebuild=False):
-        pass
+    def __init__(self, cols=None, agent_params=None):
+        super().__init__(cols)
+        self.slr = agent_params['slr']
+        self.idx = agent_params['feat_id']
+        self.delay = agent_params['delay']
+        self.sizes['agent'] = self._build_agent_sizes()
+
+    def _build_agent_sizes(self):
+        sizes = dict()
+        num_turns = 6 if self.slr else 7
+        for j in range(1, num_turns + 1):
+            sizes['offer{}'.format(j)] = self._build_offer_sizes()
+        for set_name, feats in self.lstg_sets.items():
+            if set_name != LSTG_MAP:
+                sizes[set_name] = len(feats)
+            else:
+                sizes[set_name] = self._build_lstg_sizes(feats)
+        return sizes
+
+    def _build_offer_sizes(self):
+        if not self.slr or self.idx == 1:
+            base = len(OUTCOME_FEATS) + len(CLOCK_FEATS)
+        else:
+            base = len(ALL_OFFER_FEATS)
+        # add turn indicators
+        if self.slr:
+            return base + 2
+        else:
+            return base + 3
+
+    def _build_lstg_sizes(self, shared_feats):
+        # add 2 to shared features for months_since_lstg + byr_hist
+        base = len(shared_feats) + 2
+        # turn indicates
+        base = base + 2 if self.slr else base + 3
+        return base
+
+    @property
+    def agent_sizes(self):
+        return self.sizes['agent']
+

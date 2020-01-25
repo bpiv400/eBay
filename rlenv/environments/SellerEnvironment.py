@@ -1,6 +1,7 @@
 from collections import namedtuple
 import pandas as pd
 import numpy as np
+from rlenv.Composer import AgentComposer
 from rlpyt.envs.base import Env
 from rlpyt.spaces.composite import Composite
 from rlpyt.spaces.float_box import FloatBox
@@ -29,7 +30,7 @@ class SellerEnvironment(EbayEnvironment, Env):
         self._action_space = self._define_action_space()
         self._observation_space = self._define_observation_space()
         # model interfaces and composer
-        self._composer = params['composer']
+        self._composer = params['composer']  # type: AgentComposer
         self.seller = params['seller']
         self.buyer = params['buyer']
         self._last_event = None  # type: SellerThread
@@ -116,7 +117,7 @@ class SellerEnvironment(EbayEnvironment, Env):
             return Composite([con], nt)
 
     def _define_observation_space(self):
-        feat_counts = self.arrival.composer.feat_counts
+        self._composer.agent_sizes(self._agent_name)
         nt = namedtuple(OBS_SPACE_NAME, [LSTG_MAP, THREAD_MAP, TURN_IND_MAP, ])
         lstg = FloatBox(0, 100, shape=(len(feat_counts[LSTG_MAP]),))
         thread = FloatBox(0, 100, shape=(len(feat_counts[THREAD_MAP]),))
