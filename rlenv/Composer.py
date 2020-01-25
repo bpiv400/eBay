@@ -1,4 +1,5 @@
 import math
+from collections import OrderedDict, namedtuple
 import torch
 import numpy as np, pandas as pd
 from rlenv.env_consts import *
@@ -240,9 +241,10 @@ class AgentComposer(Composer):
         self.idx = agent_params['feat_id']
         self.delay = agent_params['delay']
         self.sizes['agent'] = self._build_agent_sizes()
+        self.obs_space_class = namedtuple(OBS_SPACE_NAME, list(self.agent_sizes.keys()))
 
     def _build_agent_sizes(self):
-        sizes = dict()
+        sizes = OrderedDict()
         num_turns = 6 if self.slr else 7
         for j in range(1, num_turns + 1):
             sizes['offer{}'.format(j)] = self._build_offer_sizes()

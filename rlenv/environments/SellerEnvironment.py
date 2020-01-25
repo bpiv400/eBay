@@ -28,12 +28,12 @@ class SellerEnvironment(EbayEnvironment, Env):
         self._ix = -1
         # action and observation spaces
         self._action_space = self._define_action_space()
-        self._observation_space = self._define_observation_space()
+        self._observation_space = self._define_observation_space
         # model interfaces and composer
         self._composer = params['composer']  # type: AgentComposer
         self.seller = params['seller']
         self.buyer = params['buyer']
-        self._last_event = None  # type: SellerThread
+        self._last_event = None  # type: Thread
 
     def reset(self):
         while True:
@@ -117,13 +117,9 @@ class SellerEnvironment(EbayEnvironment, Env):
             return Composite([con], nt)
 
     def _define_observation_space(self):
-        self._composer.agent_sizes(self._agent_name)
-        nt = namedtuple(OBS_SPACE_NAME, [LSTG_MAP, THREAD_MAP, TURN_IND_MAP, ])
-        lstg = FloatBox(0, 100, shape=(len(feat_counts[LSTG_MAP]),))
-        thread = FloatBox(0, 100, shape=(len(feat_counts[THREAD_MAP]),))
-        turn = FloatBox(0, 100, shape=(len(feat_counts[TURN_IND_MAP]),))
-        remain = FloatBox(0, 1, shape=(1, ))
-        return Composite([lstg, thread, turn, remain], OBS_SPACE)
+        sizes = self._composer.agent_sizes
+        boxes = [FloatBox(-1000, 1000, shape=len(size)) for size in sizes.values()]
+        return Composite(boxes, self._composer.obs_space_class)
 
     def _agent_tuple(self, lstg_complete):
         obs = self._composer.get_obs(self._last_event.sources())
