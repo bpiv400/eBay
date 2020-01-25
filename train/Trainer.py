@@ -10,7 +10,6 @@ from train.eBayDataset import eBayDataset
 from train.train_consts import FTOL, LOG_DIR, LNLR0, LNLR1, LNLR_FACTOR
 from train.Model import Model
 from train.Sample import get_batches
-from train.TimeLoss import TimeLoss
 from constants import MODEL_DIR
 
 
@@ -37,12 +36,10 @@ class Trainer:
 		self.pretrained_path = MODEL_DIR + '{}/pretrained.net'.format(name)
 
 		# loss function
-		if name in ['hist', 'con_slr', 'con_byr']:
-			self.loss = nn.CrossEntropyLoss(reduction='sum')
-		elif name in ['msg_byr', 'msg_slr', 'listings', 'threads']:
+		if name in ['msg_byr', 'msg_slr', 'listings', 'threads']:
 			self.loss = nn.BCEWithLogitsLoss(reduction='sum')
 		else:
-			self.loss = TimeLoss
+			self.loss = nn.CrossEntropyLoss(reduction='sum')
 		print(self.loss)
 
 		# load datasets

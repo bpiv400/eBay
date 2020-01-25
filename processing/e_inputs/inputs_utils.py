@@ -160,11 +160,11 @@ def get_interarrival_period(clock):
 	censored = censored.reindex(index=y.index)
 	diff = diff.reindex(index=y.index)
 
-	# replace censored interarrival times with negative seconds from end
-	y.loc[censored] -= MAX_DELAY[ARRIVAL_PREFIX]
-
 	# convert y to periods
 	y //= INTERVAL[ARRIVAL_PREFIX]
+
+	# replace censored interarrival times with last interval
+	y.loc[censored] = INTERVAL_COUNTS[ARRIVAL_PREFIX]
 
 	return y, diff
 
