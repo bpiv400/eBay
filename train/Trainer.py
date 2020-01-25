@@ -75,6 +75,10 @@ class Trainer:
 		else:
 			model_path = self.pretrained_path
 
+		# save model
+		if not self.dev:
+			torch.save(model.net.state_dict(), model_path)
+
 		# initialize optimizer and scheduler
 		optimizer = optim.Adam(model.net.parameters(), lr=np.exp(lnlr))
 		scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 
