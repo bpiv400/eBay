@@ -38,7 +38,9 @@ class ValueGenerator(Generator):
         Simulates all lstgs in chunk according to experiment parameters
         """
         time_up = False
-        for lstg in self._get_lstgs():
+        remaining_lstgs = self._get_lstgs()
+        last_perc = 0.0
+        for i, lstg in enumerate(remaining_lstgs):
             # index lookup dataframe
             lookup = self.lookup.loc[lstg, :]
 
@@ -63,6 +65,11 @@ class ValueGenerator(Generator):
 
             # save results to value calculator
             self.recorder.add_val(self.val_calc)
+
+            perc = i / len(remaining_lstgs)
+            if perc >= (last_perc + 0.01):
+                print('Completed {}% of listings'.format(perc * 100))
+                last_perc += .01
 
             # store a checkpoint if the job is about to be killed
             if time_up:
