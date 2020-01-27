@@ -3,4 +3,4 @@
 #$ -j y
 #$ -o logs/
 
-python repo/rlenv/simulator/generate.py --vals --part "$1" --num "$2"
+python repo/rlenv/simulator/generate.py --values --part "$1" --num "$2"
