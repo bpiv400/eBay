@@ -41,26 +41,23 @@ def main():
 	# function
 	if 'msg' in name:
 		f = binary_lnL
-	elif 'con' in name or (name == 'hist'):
-		f = categorical_lnL
 	else:
-		raise NotImplementedError()	# arrival and delay outcomes
+		f = categorical_lnL
 
 	# load data
 	d = load(INPUT_DIR + '{}/{}.gz'.format(part, name))
 	y = d['y']
+
+	# simple baserate
+	print('Simple baserate: {0:1.4f}'.format(f(y)))
 
 	if 'delay' in name or 'con' in name or 'msg' in name:
 		featnames = load(INPUT_DIR + 'featnames/{}.pkl'.format(name))['offer']
 		idx = [featnames.index(k) for k in TURN_FEATS[name]]
 		turns = d['x']['offer1'][:, idx].astype(bool)
 
-	# simple baserate
-	print('Simple baserate: {0:1.4f}'.format(f(y)))
-
-	# by turn
-	if 'delay' in name or 'con' in name or 'msg' in name:
-		print('Turn-specific baserates: {0:1.4f}'.format(by_turn(y, turns, f)))
+		print('Turn-specific baserates: {0:1.4f}'.format
+			(by_turn(y, turns, f)))
 
 
 if __name__ == '__main__':

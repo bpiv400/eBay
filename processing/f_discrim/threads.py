@@ -1,8 +1,8 @@
 import sys, os
 from compress_pickle import load, dump
 import numpy as np, pandas as pd
-from processing.processing_utils import input_partition, get_days_delay, get_norm
-from processing.e_inputs.inputs_utils import load_file, get_x_thread, get_x_offer, init_x
+from processing.processing_utils import input_partition, load_file, \
+	get_days_delay, get_norm, get_x_thread, get_x_offer, init_x
 from utils import is_split
 from constants import SIM_CHUNKS, ENV_SIM_DIR, MONTH, IDX, SLR_PREFIX
 from featnames import CON, DAYS, DELAY, EXP, AUTO, REJECT, MONTHS_SINCE_LSTG

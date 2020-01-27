@@ -1,10 +1,10 @@
 import sys, os, argparse
 from compress_pickle import load, dump
 import numpy as np, pandas as pd
-from processing.e_inputs.inputs_utils import load_file, get_x_thread, \
-	get_x_offer, init_x, save_files
 from processing.processing_consts import MAX_DELAY, INTERVAL, \
 	INTERVAL_COUNTS, CLEAN_DIR
+from processing.processing_utils import load_file, get_x_thread, \
+	get_x_offer, init_x, save_files
 from constants import IDX, DAY, BYR_PREFIX, SLR_PREFIX, ARRIVAL_PREFIX
 from featnames import CON, MSG, AUTO, EXP, REJECT, DAYS, DELAY, INT_REMAINING
 from utils import get_remaining

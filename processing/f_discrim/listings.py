@@ -1,36 +1,9 @@
 from compress_pickle import load
 import numpy as np, pandas as pd
-from processing.processing_utils import input_partition
-from processing.e_inputs.inputs_utils import load_file, \
-	process_arrival_inputs, save_discrim_files
+from processing.processing_utils import input_partition, load_file, process_arrival_inputs
+from processing.f_discrim.discrim_utils import save_discrim_files, get_sim_times
 from processing.processing_consts import INTERVAL_COUNTS
-from constants import SIM_CHUNKS, ENV_SIM_DIR, MONTH, ARRIVAL_PREFIX
-
-
-def process_lstg_end(lstg_start, lstg_end):
-	# remove thread and index from lstg_end index
-	lstg_end = lstg_end.reset_index(['thread', 'index'], drop=True)
-	assert not lstg_end.index.duplicated().max()
-	# fill in missing lstg end times with expirations
-	lstg_end = lstg_end.reindex(index=lstg_start.index, fill_value=-1)
-	lstg_end.loc[lstg_end == -1] = lstg_start + MONTH - 1
-	return lstg_end
-
-
-def get_sim_times(part, lstg_start):
-	# collect times from simulation files
-	lstg_end, thread_start = [], []
-	for i in range(1, SIM_CHUNKS+1):
-		sim = load(ENV_SIM_DIR + '{}/discrim/{}.gz'.format(part, i))
-		offers, threads = [sim[k] for k in ['offers', 'threads']]
-		lstg_end.append(offers.loc[offers.con == 100, 'clock'])
-		thread_start.append(threads.clock)
-	# concatenate into single series
-	lstg_end = pd.concat(lstg_end, axis=0).sort_index()
-	thread_start = pd.concat(thread_start, axis=0).sort_index()
-	# shorten index and fill-in expirations
-	lstg_end = process_lstg_end(lstg_start, lstg_end)
-	return lstg_end, thread_start
+from constants import ARRIVAL_PREFIX
 
 
 def get_obs_times(part, lstg_start):

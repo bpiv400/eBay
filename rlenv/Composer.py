@@ -144,8 +144,7 @@ class Composer:
         full_vector = np.concatenate([offer_vector, self.turn_inds])
         return torch.from_numpy(full_vector).unsqueeze(0).float()
 
-    @staticmethod
-    def _build_lstg_vector(model_name, sources=None):
+    def _build_lstg_vector(self, model_name, sources=None):
         if model_name == ARRIVAL_MODEL:
             solo_feats = np.array([sources[MONTHS_SINCE_LSTG], sources[MONTHS_SINCE_LAST],
                                    sources[THREAD_COUNT]])
@@ -156,13 +155,12 @@ class Composer:
         elif DELAY in model_name:
             # TODO: Add back when turn indicators return
             solo_feats = np.array([sources[MONTHS_SINCE_LSTG], sources[BYR_HIST]])
-            lstg = np.concatenate([sources[LSTG_MAP], solo_feats,  # self.turn_inds,
+            lstg = np.concatenate([sources[LSTG_MAP], solo_feats, self.turn_inds,
                                    np.array([sources[INT_REMAINING]])])
         else:
             # TODO: Add back when turn indicators return
             solo_feats = np.array([sources[MONTHS_SINCE_LSTG], sources[BYR_HIST]])
-            lstg = np.concatenate([sources[LSTG_MAP], solo_feats  # , self.turn_inds
-                                   ])
+            lstg = np.concatenate([sources[LSTG_MAP], solo_feats, self.turn_inds])
         lstg = lstg.astype(np.float32)
         return torch.from_numpy(lstg).float().unsqueeze(0)
 
@@ -194,15 +192,14 @@ class Composer:
         model_feats = Composer.remove_shared_feats(model_feats, shared_feats)
         assert model_feats[0] == MONTHS_SINCE_LSTG
         assert model_feats[1] == BYR_HIST
-        # TODO: Uncomment when adding indicators later
-        # turn_inds = TURN_FEATS[model]
-        # print(model_feats[2:])
-        # print(turn_inds)
-        # assert len(model_feats[2:]) == len(turn_inds)
-        # for model_feat, turn_feat in zip(model_feats[2:], turn_inds):
-        #     print(model_feat)
-        #     print(turn_feat)
-        #     assert model_feat == turn_feat
+        turn_inds = TURN_FEATS[model]
+        #print(model_feats[2:])
+        #print(turn_inds)
+        assert len(model_feats[2:]) == len(turn_inds)
+        for model_feat, turn_feat in zip(model_feats[2:], turn_inds):
+            #print(model_feat)
+            #print(turn_feat)
+            assert model_feat == turn_feat
 
     @staticmethod
     def verify_delay_append(model, shared_feats):
@@ -210,9 +207,8 @@ class Composer:
         model_feats = Composer.remove_shared_feats(model_feats, shared_feats)
         assert model_feats[0] == MONTHS_SINCE_LSTG
         assert model_feats[1] == BYR_HIST
-        # TODO: Add back when indicators return
-        # turn_inds = TURN_FEATS[model]
-        # Composer.verify_sequence(model_feats, turn_inds, 2)
+        turn_inds = TURN_FEATS[model]
+        Composer.verify_sequence(model_feats, turn_inds, 2)
         assert model_feats[-1] == INT_REMAINING
 
     @staticmethod

@@ -1,6 +1,6 @@
 from compress_pickle import load
-from processing.processing_utils import input_partition
-from processing.e_inputs.inputs_utils import load_file, save_files, process_arrival_inputs
+from processing.processing_utils import input_partition, load_file, \
+    process_arrival_inputs, save_files
 from processing.processing_consts import CLEAN_DIR
 
 
