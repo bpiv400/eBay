@@ -1,4 +1,5 @@
-import os, shutil
+import os
+import sys
 from datetime import datetime as dt
 from compress_pickle import dump, load
 from rlenv.env_utils import get_checkpoint_path
@@ -70,7 +71,7 @@ class ValueGenerator(Generator):
             if perc >= (last_perc + 0.01):
                 print('Completed {}% of listings'.format(perc * 100))
                 last_perc += .01
-
+                sys.stdout.dump()
             # store a checkpoint if the job is about to be killed
             if time_up:
                 self.checkpoint_count += 1
