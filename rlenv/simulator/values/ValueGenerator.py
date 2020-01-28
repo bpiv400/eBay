@@ -39,6 +39,8 @@ class ValueGenerator(Generator):
         time_up = False
         remaining_lstgs = self._get_lstgs()
         last_perc = 0.0
+        # progress bar crap
+        last_checkin = dt.now()
         for i, lstg in enumerate(remaining_lstgs):
             # index lookup dataframe
             lookup = self.lookup.loc[lstg, :]
@@ -65,11 +67,17 @@ class ValueGenerator(Generator):
             # save results to value calculator
             self.recorder.add_val(self.val_calc)
 
+            # progress bar crap
             perc = i / len(remaining_lstgs)
             if perc >= (last_perc + 0.01):
                 print('Completed {}% of listings'.format(round(perc * 100)))
                 last_perc += .01
                 sys.stdout.flush()
+            tot = (dt.now() - last_checkin).total_seconds() / 60
+            if tot > 15:
+                print('{} more minutes passed'.format(tot))
+                last_checkin = dt.now()
+
             # store a checkpoint if the job is about to be killed
             if time_up:
                 self.checkpoint_count += 1
@@ -78,6 +86,9 @@ class ValueGenerator(Generator):
 
         # clean up and save
         if not time_up:
+            total_time = (dt.now() - self.start) / 3600
+            print('TOTAL TIME: {} hours'.format(total_time))
+            sys.stdout.flush()
             self.recorder.dump()
             self._delete_checkpoint()
 

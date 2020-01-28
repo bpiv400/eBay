@@ -31,11 +31,7 @@ META_6 = [32, 14, 11, 7, 28]
 DATE_FEATS = unpickle(INPUT_DIR + 'date_feats.pkl')
 
 # number of hours the val generation job may run before termination
-VAL_TIME_LIMIT = 3.75
-
-# space names
-ACTION_SPACE_NAME = 'NegotiationActionSpace'
-OBS_SPACE_NAME = 'NegotiationObsSpace'
+VAL_TIME_LIMIT = 48
 
 # outcome tuple names
 SALE = 'sale'
@@ -106,6 +102,10 @@ EXP_IND = ALL_OFFER_FEATS.index(EXP)
 
 # Reinforcement learning environment parameters
 
-# various counts
+# space names
+ACTION_SPACE_NAME = 'NegotiationActionSpace'
+OBS_SPACE_NAME = 'NegotiationObsSpace'
+
+# env hyper params
 SELLER_HORIZON = 100
 ENV_LSTG_COUNT = 1000
