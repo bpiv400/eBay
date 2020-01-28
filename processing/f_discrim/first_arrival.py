@@ -9,46 +9,51 @@ from utils import load_model, load_featnames
 from constants import VALIDATION, ENV_SIM_DIR, SIM_CHUNKS, INPUT_DIR, INDEX_DIR
 
 
-def get_sim_hist():
+def get_sim_hist(thread):
 	y_sim = []
 	for i in range(1, SIM_CHUNKS+1):
 		sim = load(ENV_SIM_DIR + '{}/discrim/{}.gz'.format(VALIDATION, i))
-		s = sim['threads'].byr_hist.xs(1, level='thread')
+		s = sim['threads'].byr_hist
+		if thread is not None:
+			s = s.xs(thread, level='thread')
 		y_sim.append(s)
-
 	return pd.concat(y_sim, axis=0).values
 
 
-def get_sim_con():
+def get_sim_con(thread, index):
 	y_sim = []
 	for i in range(1, SIM_CHUNKS+1):
 		sim = load(ENV_SIM_DIR + '{}/discrim/{}.gz'.format(VALIDATION, i))
-		s = sim['offers'].con.xs(1, level='thread').xs(1, level='index')
+		s = sim['offers'].con
+		if thread is not None:
+			s = s.xs(thread, level='thread')
+		if index is not None:
+			s = s.xs(index, level='index')
 		y_sim.append(s)
-
 	return pd.concat(y_sim, axis=0).values
 
 
-def get_sim_outcomes(name):
+def get_sim_outcomes(name, thread, index):
 	if name == 'arrival':
 		lstg_start = load_file(VALIDATION, 'lookup').start_time
 		lstg_end, thread_start = get_sim_times(VALIDATION, lstg_start)
 		clock = get_arrival_times(lstg_start, lstg_end, thread_start)
 		y_sim, _ = get_interarrival_period(clock)
-		y_sim = y_sim.xs(1, level='thread')
+		if thread is not None:
+			y_sim = y_sim.xs(thread, level='thread')
 		return y_sim
 
 	if name == 'hist':
-		return get_sim_hist()
+		return get_sim_hist(thread)
 
 	if name == 'con_byr':
-		return get_sim_con()
+		return get_sim_con(thread, index)
 
 
-def compare_data_model(name):
+def compare_data_model(name, thread, index):
 	# simulations
 	print('Loading simulated outcomes')
-	y_sim = get_sim_outcomes(name)
+	y_sim = get_sim_outcomes(name, thread, index)
 
 	# load data
 	print('Loading data')
@@ -65,18 +70,15 @@ def compare_data_model(name):
 		x[k] = pd.DataFrame(v, index=idx, 
 			columns=featnames['offer' if 'offer' in k else k])
 
-	# drop turn indicators from x['lstg']
-	cols = [c for c in x['lstg'].columns if c.startswith('t') and len(c) == 2]
-	x['lstg'].drop(cols, axis=1, inplace=True)
+	# restrict to offer index
+	if index is not None:
+		y = y.xs(index, level='index')
+		x = {k: v.xs(index, level='index') for k, v in x.items()}
 
-	# restrict to first offer
-	if 'index' in y.index.names:
-		y = y.xs(1, level='index')
-		x = {k: v.xs(1, level='index') for k, v in x.items()}
-
-	# restrict to first thread
-	y = y.xs(1, level='thread')
-	x = {k: v.xs(1, level='thread') for k, v in x.items()}
+	# restrict to thread
+	if thread is not None:
+		y = y.xs(thread, level='thread')
+		x = {k: v.xs(thread, level='thread') for k, v in x.items()}
 
 	# x to numpy
 	x = {k: v.values for k, v in x.items()}
@@ -120,11 +122,20 @@ def main():
 	# extract model name from command line
 	parser = argparse.ArgumentParser()
 	parser.add_argument('--name', required=True, type=str)
-	name = parser.parse_args().name
+	parser.add_argument('--thread', required=False, type=int)
+	parser.add_argument('--index', required=False, type=int)
+	args = parser.parse_args()
+	name, thread, index = args.name, args.thread, args.index
+
+	# error checking inputs
 	assert name in ['arrival', 'hist', 'con_byr']
+	if name in ['arrival', 'hist']:
+		assert index is None
 
 	print('Model: {}'.format(name))
-	compare_data_model(name)
+	print('Thread: {}'.format(thread))
+	print('Index: {}'.format(index))
+	compare_data_model(name, thread, index)
 
 
 if __name__ == '__main__':

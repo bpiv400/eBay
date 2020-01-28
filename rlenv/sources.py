@@ -2,11 +2,12 @@ import numpy as np
 from rlenv.env_consts import *
 from rlenv.env_utils import last_norm
 from featnames import *
+from copy import deepcopy
 
 
 class Sources:
     def __init__(self, x_lstg=None):
-        self.source_dict = x_lstg
+        self.source_dict = deepcopy(x_lstg)
         self.source_dict[MONTHS_SINCE_LSTG] = 0.0
 
     def __call__(self):
@@ -115,3 +116,5 @@ class ArrivalSources(Sources):
         self.source_dict[CLOCK_MAP] = clock_feats
         self.source_dict[MONTHS_SINCE_LSTG] = months_since_lstg
         self.source_dict[MONTHS_SINCE_LAST] = months_since_last
+        print(self.source_dict[MONTHS_SINCE_LSTG])
+        print(self.source_dict[MONTHS_SINCE_LAST])
