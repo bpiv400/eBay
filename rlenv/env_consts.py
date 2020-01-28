@@ -30,6 +30,8 @@ META_6 = [32, 14, 11, 7, 28]
 # holiday and day-of-week indicators, indexed by days since START
 DATE_FEATS = unpickle(INPUT_DIR + 'date_feats.pkl')
 
+# number of hours the val generation job may run before termination
+VAL_TIME_LIMIT = 3.75
 
 # space names
 ACTION_SPACE_NAME = 'NegotiationActionSpace'

@@ -3,12 +3,10 @@ import sys
 from datetime import datetime as dt
 from compress_pickle import dump, load
 from rlenv.env_utils import get_checkpoint_path
-from rlenv.env_consts import SIM_VALS_DIR
+from rlenv.env_consts import SIM_VALS_DIR, VAL_TIME_LIMIT
 from rlenv.simulator.Generator import Generator
 from rlenv.simulator.values.ValueCalculator import ValueCalculator
 from rlenv.simulator.values.ValueRecorder import ValueRecorder
-
-BREAK = True
 
 
 class ValueGenerator(Generator):
@@ -186,4 +184,4 @@ class ValueGenerator(Generator):
         :return: Boolean indicating almost 4 hours has passed
         """
         tot = (dt.now() - self.start).total_seconds() / 3600
-        return tot > .25
+        return tot > VAL_TIME_LIMIT
