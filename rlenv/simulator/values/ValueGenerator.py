@@ -14,8 +14,6 @@ class ValueGenerator(Generator):
     Uninherited attributes:
         checkpoint_contents: the dictionary that the generated loaded from a checkpoint file
         checkpoint_count: The number of checkpoints saved for this chunk so far
-        recorder_count: The number of recorders stored for this chunk, including the current one
-        that hasn't been saved yet
         start: time that the current iteration of RewardGenerator began
         has_checkpoint: whether a recent checkpoint file has been created for this environment
     """
@@ -140,7 +138,6 @@ class ValueGenerator(Generator):
         contents = {
             'lstg': lstg,
             'recorder': self.recorder,
-            'recorder_count': self.recorder_count,
             'checkpoint_count': self.checkpoint_count,
             'time': dt.now(),
             'val_calc': self.val_calc
@@ -175,7 +172,6 @@ class ValueGenerator(Generator):
                 return False
             else:
                 self.checkpoint_count = self.checkpoint_contents['checkpoint_count']
-                self.recorder_count = self.checkpoint_contents['recorder_count']
                 self.recorder = self.checkpoint_contents['recorder']
                 return True
         else:
