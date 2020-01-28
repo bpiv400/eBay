@@ -69,9 +69,9 @@ class ValueGenerator(Generator):
 
             perc = i / len(remaining_lstgs)
             if perc >= (last_perc + 0.01):
-                print('Completed {}% of listings'.format(perc * 100))
+                print('Completed {}% of listings'.format(round(perc * 100)))
                 last_perc += .01
-                sys.stdout.dump()
+                sys.stdout.flush()
             # store a checkpoint if the job is about to be killed
             if time_up:
                 self.checkpoint_count += 1
