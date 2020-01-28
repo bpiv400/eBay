@@ -188,12 +188,8 @@ class Composer:
         assert model_feats[0] == MONTHS_SINCE_LSTG
         assert model_feats[1] == BYR_HIST
         turn_inds = TURN_FEATS[model]
-        print(model_feats[2:])
-        print(turn_inds)
         assert len(model_feats[2:]) == len(turn_inds)
         for model_feat, turn_feat in zip(model_feats[2:], turn_inds):
-            print(model_feat)
-            print(turn_feat)
             assert model_feat == turn_feat
 
     @staticmethod

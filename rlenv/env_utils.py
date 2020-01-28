@@ -138,7 +138,6 @@ def load_model(full_name):
     :param str full_name: full name of the model
     :return: torch.nn.Module
     """
-    print('loading {}'.format(full_name))
 
     # create neural network
     sizes = load_sizes(full_name)
