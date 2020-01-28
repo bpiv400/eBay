@@ -116,5 +116,3 @@ class ArrivalSources(Sources):
         self.source_dict[CLOCK_MAP] = clock_feats
         self.source_dict[MONTHS_SINCE_LSTG] = months_since_lstg
         self.source_dict[MONTHS_SINCE_LAST] = months_since_last
-        print(self.source_dict[MONTHS_SINCE_LSTG])
-        print(self.source_dict[MONTHS_SINCE_LAST])
