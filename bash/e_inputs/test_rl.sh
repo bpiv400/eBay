@@ -1,5 +1,5 @@
 #!/bin/bash
-#$ -t 1-10
+#$ -t 1-9
 #$ -l m_mem_free=10G
 #$ -N e_test_rl
 #$ -j y
@@ -31,8 +31,5 @@ then
 	python repo/processing/e_inputs/offer.py --part test_rl --outcome msg --role slr
 elif [ "$SGE_TASK_ID" == 9 ]
 then
-	python repo/processing/e_inputs/listings.py --part test_rl
-elif [ "$SGE_TASK_ID" == 10 ]
-then
-	python repo/processing/e_inputs/threads.py --part test_rl
+	python repo/processing/e_inputs/offer.py --part test_rl --outcome con --role byr --drop7
 fi
