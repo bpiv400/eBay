@@ -92,7 +92,11 @@ class EbayEnvironment:
             return False
         # otherwise updates thread features
         self._prepare_offer(event)
-        con = self.get_con(event=event)
+        # TODO: Deprecate after merge
+        if slr_offer:
+            offer_outcomes = self.seller.make_offer(sources=event.sources(), turn=event.turn)
+        else:
+            offer_outcomes = self.buyer.make_offer(sources=event.sources(), turn=event.turn)
         offer = event.update_offer(offer_outcomes=offer_outcomes)
         return self._process_post_offer(event, offer)
 
