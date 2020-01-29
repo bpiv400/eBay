@@ -1,5 +1,5 @@
 #!/bin/bash
-#$ -t 1-8
+#$ -t 1-9
 #$ -N train
 #$ -o logs/train/
 #$ -j y
@@ -28,4 +28,7 @@ then
 elif [ "$SGE_TASK_ID" == 8 ]
 then
 	python repo/train/train_model.py --name msg_slr
+elif [ "$SGE_TASK_ID" == 9 ]
+then
+	python repo/train/train_model.py --name con_byr_no7
 fi

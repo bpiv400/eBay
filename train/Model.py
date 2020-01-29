@@ -10,7 +10,6 @@ from utils import load_sizes
 class Model:
 	def __init__(self, name, gamma=0, device='cuda'):
 		# save parameters to self
-		self.name = name
 		self.gamma = gamma
 		self.device = device
 		
