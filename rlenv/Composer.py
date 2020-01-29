@@ -153,7 +153,6 @@ class Composer:
             lstg = np.concatenate([sources[LSTG_MAP], np.array([sources[MONTHS_SINCE_LSTG]]),
                                    sources[OFFER_MAPS[1]][CLOCK_START_IND:TIME_END_IND]])
         elif DELAY in model_name:
-            # TODO: Add back when turn indicators return
             solo_feats = np.array([sources[MONTHS_SINCE_LSTG], sources[BYR_HIST]])
             lstg = np.concatenate([sources[LSTG_MAP], solo_feats, self.turn_inds,
                                    np.array([sources[INT_REMAINING]])])
