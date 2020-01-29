@@ -1,6 +1,6 @@
 import argparse
 import numpy as np, pandas as pd
-from compress_pickle import load
+from compress_pickle import load, dump
 from utils import slr_norm, byr_norm, get_months_since_lstg, extract_clock_feats
 from processing.processing_consts import *
 from constants import *

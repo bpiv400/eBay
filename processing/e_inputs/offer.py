@@ -123,13 +123,21 @@ def main():
 	parser.add_argument('--part', type=str)
 	parser.add_argument('--outcome', type=str)
 	parser.add_argument('--role', type=str)
+	parser.add_argument('--drop7', action='store_true')
 	args = parser.parse_args()
-	part, outcome, role = args.part, args.outcome, args.role
+	part, outcome, role, drop7 = args.part, args.outcome, args.role, args.drop7
 	name = '%s_%s' % (outcome, role)
 	print('%s/%s' % (part, name))
 
 	# input dataframes, output processed dataframes
 	d = process_inputs(part, outcome, role)
+
+	# drop turn 7
+	if drop7:
+		assert name == 'con_byr'
+		name += '_no7'
+		d['y'] = d['y'].drop(7, level='index')
+		d['x'] = {k: v.reindex(index=d['y'].index) for k, v in d['x'].items()}
 
 	# save various output files
 	save_files(d, part, name)
