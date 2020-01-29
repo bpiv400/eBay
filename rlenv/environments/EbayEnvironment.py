@@ -92,10 +92,7 @@ class EbayEnvironment:
             return False
         # otherwise updates thread features
         self._prepare_offer(event)
-        if slr_offer:
-            offer_outcomes = self.seller.make_offer(sources=event.sources(), turn=event.turn)
-        else:
-            offer_outcomes = self.buyer.make_offer(sources=event.sources(), turn=event.turn)
+        con = self.get_con(event=event)
         offer = event.update_offer(offer_outcomes=offer_outcomes)
         return self._process_post_offer(event, offer)
 
@@ -284,4 +281,18 @@ class EbayEnvironment:
         event.change_turn()
         event.init_delay(self.lookup[START_TIME])
         self.queue.push(event)
+
+    def get_con(self, event=None):
+        if event.turn % 2 == 0:
+            con = self.seller.con(sources=event.sources(), turn=event.turn)
+        else:
+            con = self.buyer.con(sources=event.sources(), turn=event.turn)
+        return con
+
+    def get_msg(self, event=None):
+        if event.turn % 2 == 0:
+            msg = self.seller.con(sources=event.sources(), turn=event.turn)
+        else:
+            msg = self.buyer.con(sources=event.sources(), turn=event.turn)
+        return msg
 

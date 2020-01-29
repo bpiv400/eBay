@@ -8,3 +8,7 @@ class TestEnvironment(EbayEnvironment):
 
     def _record(self, event, byr_hist=None, censored=None):
         pass
+
+    def get_con(self, event=None):
+        con = self.lstg_log.get_con(event)
+        return con
