@@ -30,16 +30,8 @@ META_6 = [32, 14, 11, 7, 28]
 # holiday and day-of-week indicators, indexed by days since START
 DATE_FEATS = unpickle(INPUT_DIR + 'date_feats.pkl')
 
-# various counts
-SELLER_HORIZON = 100
-ENV_LSTG_COUNT = 1000
-
-# space names
-ACTION_SPACE_NAME = 'NegotiationActionSpace'
-OBS_SPACE_NAME = 'NegotiationObsSpace'
-
-# agent names (see AGENTS_FEATS_FILENAME)
-INFO_AGENTS = ['byr', 'slr0', 'slr1']
+# number of hours the val generation job may run before termination
+VAL_TIME_LIMIT = 48
 
 # outcome tuple names
 SALE = 'sale'
@@ -70,12 +62,8 @@ ARRIVAL = 'ARRIVAL'
 
 # thread level
 FIRST_OFFER = 'FIRST_OFFER' # first byer offer
-SELLER_DELAY = 'seller_delay'
-BUYER_DELAY = 'buyer_delay'
-
-# offer level
-BUYER_OFFER = 'buyer_offer'
-SELLER_OFFER = 'seller_offer'
+OFFER_EVENT = 'OFFER'
+DELAY_EVENT = 'DELAY'
 
 # model names
 ARRIVAL_MODEL = 'arrival'
@@ -110,3 +98,14 @@ DAYS_IND = ALL_OFFER_FEATS.index(DAYS)
 AUTO_IND = ALL_OFFER_FEATS.index(AUTO)
 REJECT_IND = ALL_OFFER_FEATS.index(REJECT)
 EXP_IND = ALL_OFFER_FEATS.index(EXP)
+
+
+# Reinforcement learning environment parameters
+
+# space names
+ACTION_SPACE_NAME = 'NegotiationActionSpace'
+OBS_SPACE_NAME = 'NegotiationObsSpace'
+
+# env hyper params
+SELLER_HORIZON = 100
+ENV_LSTG_COUNT = 1000

@@ -1,5 +1,5 @@
 import numpy as np
-from rlenv.events.RewardThread import RewardThread
+from rlenv.events.Thread import Thread
 from rlenv.environments.EbayEnvironment import EbayEnvironment
 from constants import MONTH
 from featnames import START_TIME, TIME_FEATS
@@ -7,12 +7,8 @@ from featnames import START_TIME, TIME_FEATS
 
 class SimulatorEnvironment(EbayEnvironment):
     def __init__(self, **kwargs):
-        super(SimulatorEnvironment, self).__init__(
-            kwargs['arrival'], kwargs['verbose'])
+        super(SimulatorEnvironment, self).__init__(kwargs)
 
-        # save parameters to self
-        self.buyer = kwargs['buyer']
-        self.seller = kwargs['seller']
         self.x_lstg = kwargs['x_lstg']
         self.lookup = kwargs['lookup']
         self.recorder = kwargs['recorder']
@@ -53,12 +49,8 @@ class SimulatorEnvironment(EbayEnvironment):
             self.recorder.start_thread(thread_id=event.thread_id, byr_hist=byr_hist,
                                        time=event.priority)
 
-    def _check_complete(self, event):
+    def _is_agent_turn(self, event):
         return False
-
-    def make_thread(self, priority):
-        return RewardThread(priority=priority, thread_id=self.thread_counter,
-                            intervals=self.intervals, buyer=self.buyer, seller=self.seller)
 
 
 

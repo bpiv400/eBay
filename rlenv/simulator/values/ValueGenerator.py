@@ -1,13 +1,12 @@
-import os, shutil
+import os
+import sys
 from datetime import datetime as dt
 from compress_pickle import dump, load
 from rlenv.env_utils import get_checkpoint_path
-from rlenv.env_consts import SIM_VALS_DIR
+from rlenv.env_consts import SIM_VALS_DIR, VAL_TIME_LIMIT
 from rlenv.simulator.Generator import Generator
 from rlenv.simulator.values.ValueCalculator import ValueCalculator
 from rlenv.simulator.values.ValueRecorder import ValueRecorder
-
-BREAK = True
 
 
 class ValueGenerator(Generator):
@@ -15,8 +14,6 @@ class ValueGenerator(Generator):
     Uninherited attributes:
         checkpoint_contents: the dictionary that the generated loaded from a checkpoint file
         checkpoint_count: The number of checkpoints saved for this chunk so far
-        recorder_count: The number of recorders stored for this chunk, including the current one
-        that hasn't been saved yet
         start: time that the current iteration of RewardGenerator began
         has_checkpoint: whether a recent checkpoint file has been created for this environment
     """
@@ -38,7 +35,11 @@ class ValueGenerator(Generator):
         Simulates all lstgs in chunk according to experiment parameters
         """
         time_up = False
-        for lstg in self._get_lstgs():
+        remaining_lstgs = self._get_lstgs()
+        last_perc = 0.0
+        # progress bar crap
+        last_checkin = dt.now()
+        for i, lstg in enumerate(remaining_lstgs):
             # index lookup dataframe
             lookup = self.lookup.loc[lstg, :]
 
@@ -64,6 +65,17 @@ class ValueGenerator(Generator):
             # save results to value calculator
             self.recorder.add_val(self.val_calc)
 
+            # progress bar crap
+            perc = i / len(remaining_lstgs)
+            if perc >= (last_perc + 0.01):
+                print('Completed {}% of listings'.format(round(perc * 100)))
+                last_perc += .01
+                sys.stdout.flush()
+            tot = (dt.now() - last_checkin).total_seconds() / 60
+            if tot > 15:
+                print('{} more minutes passed'.format(tot))
+                last_checkin = dt.now()
+
             # store a checkpoint if the job is about to be killed
             if time_up:
                 self.checkpoint_count += 1
@@ -72,6 +84,9 @@ class ValueGenerator(Generator):
 
         # clean up and save
         if not time_up:
+            total_time = (dt.now() - self.start) / 3600
+            print('TOTAL TIME: {} hours'.format(total_time))
+            sys.stdout.flush()
             self.recorder.dump()
             self._delete_checkpoint()
 
@@ -123,7 +138,6 @@ class ValueGenerator(Generator):
         contents = {
             'lstg': lstg,
             'recorder': self.recorder,
-            'recorder_count': self.recorder_count,
             'checkpoint_count': self.checkpoint_count,
             'time': dt.now(),
             'val_calc': self.val_calc
@@ -158,7 +172,6 @@ class ValueGenerator(Generator):
                 return False
             else:
                 self.checkpoint_count = self.checkpoint_contents['checkpoint_count']
-                self.recorder_count = self.checkpoint_contents['recorder_count']
                 self.recorder = self.checkpoint_contents['recorder']
                 return True
         else:
@@ -178,4 +191,4 @@ class ValueGenerator(Generator):
         :return: Boolean indicating almost 4 hours has passed
         """
         tot = (dt.now() - self.start).total_seconds() / 3600
-        return tot > .25
+        return tot > VAL_TIME_LIMIT

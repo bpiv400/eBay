@@ -22,8 +22,19 @@ class PlayerInterface:
         self.con_model = load_model(self._con_model_name)
         self.delay_model = load_model(self._delay_model_name)
 
+    def con(self, sources=None, turn=None):
+        """
+        :param sources: Sources
+        :param turn: current turn number
+        :return: np.array
+        """
+        params = self.con(sources=sources, turn=turn)
+        con = self._sample_con(params=params, turn=turn)
+        return con
+
     def make_offer(self, sources=None, turn=None):
         """
+        # TODO: Deprecate and remove usages
         Returns updated turn outcome pd.Series with result of a message
         and delay sampled from relevant models
         :param sources: Sources

@@ -1,4 +1,5 @@
 import math
+from collections import OrderedDict, namedtuple
 import torch
 import numpy as np, pandas as pd
 from rlenv.env_consts import *
@@ -154,7 +155,6 @@ class Composer:
             lstg = np.concatenate([sources[LSTG_MAP], solo_feats, self.turn_inds,
                                    np.array([sources[INT_REMAINING]])])
         else:
-            # TODO: Add back when turn indicators return
             solo_feats = np.array([sources[MONTHS_SINCE_LSTG], sources[BYR_HIST]])
             lstg = np.concatenate([sources[LSTG_MAP], solo_feats, self.turn_inds])
         lstg = lstg.astype(np.float32)
@@ -189,12 +189,8 @@ class Composer:
         assert model_feats[0] == MONTHS_SINCE_LSTG
         assert model_feats[1] == BYR_HIST
         turn_inds = TURN_FEATS[model]
-        #print(model_feats[2:])
-        #print(turn_inds)
         assert len(model_feats[2:]) == len(turn_inds)
         for model_feat, turn_feat in zip(model_feats[2:], turn_inds):
-            #print(model_feat)
-            #print(turn_feat)
             assert model_feat == turn_feat
 
     @staticmethod
@@ -230,5 +226,79 @@ class Composer:
 
 
 class AgentComposer(Composer):
-    def __init__(self, params, rebuild=False):
-        pass
+    def __init__(self, cols=None, agent_params=None):
+        super().__init__(cols)
+        self.slr = agent_params['slr']
+        self.idx = agent_params['feat_id']
+        self.delay = agent_params['delay']
+        self.sizes['agent'] = self._build_agent_sizes()
+        self.obs_space_class = namedtuple(OBS_SPACE_NAME, list(self.agent_sizes.keys()))
+        self.x_lstg_cols = list(cols)
+
+    def _build_agent_sizes(self):
+        sizes = OrderedDict()
+        num_turns = 6 if self.slr else 7
+        for j in range(1, num_turns + 1):
+            sizes['offer{}'.format(j)] = self._build_offer_sizes()
+        for set_name, feats in self.lstg_sets.items():
+            if set_name != LSTG_MAP:
+                sizes[set_name] = len(feats)
+            else:
+                sizes[set_name] = self._build_lstg_sizes(feats)
+        return sizes
+
+    def _update_turn_inds(self, model_name, turn):
+        if model_name == 'agent':
+            if self.slr:
+                inds = np.zeros(2)
+            else:
+                inds = np.zeros(3)
+            active = math.floor((turn - 1) / 2)
+            if active < inds.shape[0]:
+                inds[active] = 1
+            self.turn_inds = inds
+        else:
+            super()._update_turn_inds(model_name, turn)
+
+    def get_obs(self, sources=None, turn=None):
+        obs_dict = dict()
+        self._update_turn_inds('agent', turn)
+        for set_name in self.agent_sizes.keys():
+            if set_name == LSTG_MAP:
+                # TODO: Update when we know whether to include remaining (i.e. mimic delay or offer)
+                obs_dict[set_name] = self._build_lstg_vector('agent', sources=sources).squeeze()
+            elif set_name[:-1] == 'offer':
+                obs_dict[set_name] = self._build_agent_offer_vector(offer_vector=sources[set_name])
+            else:
+                obs_dict[set_name] = torch.from_numpy(sources[set_name]).float()
+            return self.obs_space_class(**obs_dict)
+
+    def _build_agent_offer_vector(self, offer_vector=None):
+        if not self.slr or self.idx == 1:
+            clock_feats = offer_vector[CLOCK_START_IND:CLOCK_END_IND]
+            outcome_feats = offer_vector[DELAY_START_IND:]
+            offer_vector = np.concatenate([clock_feats, outcome_feats])
+        return super()._build_offer_vector(offer_vector=offer_vector).squeeze()
+
+    def _build_offer_sizes(self):
+        if not self.slr or self.idx == 1:
+            base = len(CLOCK_FEATS) + len(OUTCOME_FEATS)
+        else:
+            base = len(ALL_OFFER_FEATS)
+        # add turn indicators
+        if self.slr:
+            return base + 2
+        else:
+            return base + 3
+
+    def _build_lstg_sizes(self, shared_feats):
+        # add 2 to shared features for months_since_lstg + byr_hist
+        base = len(shared_feats) + 2
+        # turn indicates
+        base = base + 2 if self.slr else base + 3
+        return base
+
+    @property
+    def agent_sizes(self):
+        return self.sizes['agent']
+

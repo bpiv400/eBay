@@ -5,23 +5,20 @@ value estimations or discriminator inputs
 import os, argparse
 import torch
 from constants import PARTITIONS, SIM_CHUNKS
-from rlenv.env_utils import get_env_sim_dir, get_env_sim_subdir, get_done_file
+from rlenv.env_utils import get_env_sim_dir
 from rlenv.simulator.values.ValueGenerator import ValueGenerator
 from rlenv.simulator.discrim.DiscrimGenerator import DiscrimGenerator
 
 
-def chunk_done(part, num, values):
+def chunk_done(generator):
     """
     checks whether the intended outputs of the simulation have already been
     generated
-    :param str part: partition in PARTITIONS
-    :param int num: chunk number
-    :param bool values: whether this is a value simulation
+    :param ValueGenerator generator: generator object for the chunk / exp type
     :return: bool
     """
-    records_dir = get_env_sim_subdir(part, values=values, discrim=not values)
-    path = get_done_file(records_dir, num)
-    return os.path.isfile(path)
+    records_path = generator.records_path
+    return os.path.isfile(records_path)
 
 
 def main():
@@ -44,12 +41,13 @@ def main():
     num = ((num-1) % SIM_CHUNKS) + 1
 
     # check whether chunk is finished processing
-    if chunk_done(part, num, values):
-        print('{} already done'.format(num))
-        exit(0)
+
     # create generator
     gen_class = ValueGenerator if values else DiscrimGenerator
     generator = gen_class(get_env_sim_dir(part), num, verbose)
+    if values and chunk_done(generator):
+        print('{} already done'.format(num))
+        exit(0)
     generator.generate()
 
 

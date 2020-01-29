@@ -215,16 +215,6 @@ def get_env_sim_subdir(part=None, base_dir=None, chunks=False,
     return '{}{}/'.format(base_dir, subdir)
 
 
-def get_done_file(record_dir, num):
-    """
-    Generates path to the done file for the given records path and
-    chunk number
-    :param str record_dir: path to directory containing outputs for simulation
-    :param int num: chunk number
-    """
-    return '{}done_{}.txt'.format(record_dir, num)
-
-
 def load_output_chunk(directory, c):
     """
     Loads all the simulator output pieces for a chunk
