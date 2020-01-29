@@ -310,6 +310,16 @@ def get_auto(delay, turn):
     return auto
 
 
+def load_featnames(name):
+    """
+    Loads featnames dictionary for a model
+    :param name: str giving name (e.g. hist, con_byr),
+     see env_consts.py for model names
+    :return: dict
+    """
+    return load(INPUT_DIR + 'featnames/{}.pkl'.format(name))
+
+
 def get_con_outcomes(con=None, sources=None, turn=0):
     """
     Returns vector giving con and features downstream from it in order given by

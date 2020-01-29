@@ -6,13 +6,13 @@ Otherwise, starts from scratch with the first listing in the file
 
 Lots of memory dumping code while I try to find leak
 """
-from compress_pickle import load
 import numpy as np
+from featnames import START_PRICE, START_TIME, ACC_PRICE, DEC_PRICE
+from rlenv.env_utils import load_chunk
 from rlenv.interfaces.PlayerInterface import BuyerInterface, SellerInterface
 from rlenv.interfaces.ArrivalInterface import ArrivalInterface
 from rlenv.environments.SimulatorEnvironment import SimulatorEnvironment
 from rlenv.Composer import Composer
-from featnames import START_PRICE, START_TIME, ACC_PRICE, DEC_PRICE
 
 
 class Generator:
@@ -26,10 +26,7 @@ class Generator:
         self.dir = direct
         self.chunk = int(num)
         self.verbose = verbose
-
-        d = load('{}chunks/{}.gz'.format(self.dir, self.chunk))
-        self.x_lstg = d['x_lstg']
-        self.lookup = d['lookup']
+        self.x_lstg, self.lookup = load_chunk(base_dir=self.dir, num=self.chunk)
         self.recorder = None
 
         self.composer = Composer(self.x_lstg.columns)
