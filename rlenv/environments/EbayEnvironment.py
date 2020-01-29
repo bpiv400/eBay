@@ -19,7 +19,7 @@ from utils import get_months_since_lstg
 class EbayEnvironment:
     Outcome = namedtuple('outcome', [SALE, PRICE, DUR])
 
-    def __init__(self, params):
+    def __init__(self, params=None):
         # interfaces
         self.arrival = params['arrival']
         self.buyer = params['buyer']
