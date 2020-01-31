@@ -54,7 +54,7 @@ class EbayEnvironment:
     def run(self):
         while True:
             event = self.queue.pop()
-            if self._is_agent_turn(event):
+            if self.is_agent_turn(event):
                 return event, False
             else:
                 lstg_complete = self._process_event(event)
@@ -75,7 +75,7 @@ class EbayEnvironment:
         else:
             raise NotImplementedError()
 
-    def _record(self, event, byr_hist=None, censored=False):
+    def record(self, event, byr_hist=None, censored=False):
         raise NotImplementedError()
 
     def _process_offer(self, event):
@@ -102,7 +102,7 @@ class EbayEnvironment:
 
     def _process_post_offer(self, event, offer):
         slr_offer = event.turn % 2 == 0
-        self._record(event, censored=False)
+        self.record(event, censored=False)
         # check whether the offer is an acceptance
         if event.is_sale():
             self._process_sale(offer)
@@ -152,7 +152,7 @@ class EbayEnvironment:
         if self.verbose:
             print('Thread {} initiated | Buyer hist: {}'.format(event.thread_id, hist))
         event.init_thread(sources=sources, hist=hist)
-        self._record(event, byr_hist=hist)
+        self.record(event, byr_hist=hist)
         return self._process_offer(event)
 
     def _prepare_offer(self, event):
@@ -191,7 +191,7 @@ class EbayEnvironment:
 
     def _process_byr_expire(self, event):
         event.byr_expire()
-        self._record(event, censored=False)
+        self.record(event, censored=False)
         offer_params = {
             'thread_id': event.thread_id,
             'time': event.priority,
@@ -206,7 +206,7 @@ class EbayEnvironment:
                                                time=event.priority)
         event.init_offer(time_feats=time_feats, clock_feats=clock_feats)
         offer = event.slr_expire_rej()
-        self._record(event, censored=False)
+        self.record(event, censored=False)
         self.time_feats.update_features(offer=offer)
         self._init_delay(event)
         return False
@@ -220,7 +220,7 @@ class EbayEnvironment:
         event.prepare_offer(index)
         self.queue.push(event)
 
-    def _is_agent_turn(self, event):
+    def is_agent_turn(self, event):
         raise NotImplementedError()
 
     def _is_lstg_expired(self, event):
@@ -245,7 +245,7 @@ class EbayEnvironment:
             event = self.queue.pop()
             if not isinstance(event, Arrival) and event.type != FIRST_OFFER:
                 event.priority = min(event.priority, self.end_time)
-                self._record(event=event, censored=True)
+                self.record(event=event, censored=True)
 
     def make_thread(self, priority):
         return Thread(priority=priority, thread_id=self.thread_counter,
@@ -272,13 +272,13 @@ class EbayEnvironment:
         self.time_feats.update_features(offer=offer)
         event.change_turn()
         offer = event.slr_auto_rej()
-        self._record(event)
+        self.record(event)
         self.time_feats.update_features(offer=offer)
         self._init_delay(event)
 
     def _process_slr_auto_acc(self, event):
         offer = event.slr_auto_acc()
-        self._record(event, censored=False)
+        self.record(event, censored=False)
         self._process_sale(offer)
 
     def _init_delay(self, event):

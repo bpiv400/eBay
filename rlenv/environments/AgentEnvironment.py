@@ -90,10 +90,10 @@ class AgentEnvironment(EbayEnvironment, Env):
         """
         raise NotImplementedError()
 
-    def _record(self, event, start_thread=None, byr_hist=None):
+    def record(self, event, start_thread=None, byr_hist=None):
         raise NotImplementedError("Double check method signature")
 
-    def _is_agent_turn(self, event):
+    def is_agent_turn(self, event):
         raise NotImplementedError()
 
     def _define_action_space(self):

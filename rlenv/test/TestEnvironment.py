@@ -1,12 +1,13 @@
-from rlenv.environments.EbayEnvironment import EbayEnvironment
+from rlenv.environments.SimulatorEnvironment import SimulatorEnvironment
 
 
-class TestEnvironment(EbayEnvironment):
-    def __init__(self, params=None):
-        super().__init__(params=params)
-        self.lstg_log = params['log']
+class TestEnvironment(SimulatorEnvironment):
+    def __init__(self, **kwargs):
+        super().__init__(kwargs)
+        self.lstg_log = kwargs['log']
 
-    def _record(self, event, byr_hist=None, censored=None):
+    def record(self, event, byr_hist=None, censored=None):
+        """Record nothing"""
         pass
 
     def get_con(self, event=None):

@@ -44,7 +44,7 @@ class ValueGenerator(Generator):
             lookup = self.lookup.loc[lstg, :]
 
             # create environment
-            environment = self._setup_env(lstg, lookup)
+            environment = self.setup_env(lstg, lookup)
 
             # grab or initialize value calculator and if necessary, seed recorder
             if self.checkpoint_contents is None:
@@ -56,7 +56,7 @@ class ValueGenerator(Generator):
 
             # simulate lstg until a stopping criterion is satisfied
             while not self.val_calc.stabilized and not time_up:
-                price, T = self._simulate_lstg(environment)
+                price, T = self.simulate_lstg(environment)
                 self.val_calc.add_outcome(price, T)
                 if self.verbose:
                     self._print_value()
@@ -106,7 +106,7 @@ class ValueGenerator(Generator):
             index = index[start_ix:]
             return index
 
-    def _simulate_lstg(self, environment):
+    def simulate_lstg(self, environment):
         """
         Simulates a particular listing until it sells
         :param environment: RewardEnvironment
