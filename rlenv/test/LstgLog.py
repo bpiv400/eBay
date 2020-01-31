@@ -1,7 +1,8 @@
 import pandas as pd
+import torch
 from featnames import START_TIME, MONTHS_SINCE_LSTG, BYR_HIST
 from rlenv.test.ThreadLog import ThreadLog
-from rlenv.env_consts import MODELS, ARRIVAL_MODEL
+from rlenv.env_consts import MODELS, ARRIVAL_MODEL, BYR_HIST_MODEL
 from constants import MONTH
 
 class LstgLog:
@@ -26,24 +27,54 @@ class LstgLog:
     def generate_arrival_logs(self, params):
         arrival_logs = dict()
         if params['x_thread'] is None:
-            return arrival_logs
+            censored = self.generate_censored_arrival(params=params, thread_id=1)
+            arrival_logs[1] = censored
         else:
             for i in range(1, len(params['x_thread'].index) + 1):
                 curr_arrival = self.generate_arrival_log(params=params,
-                                                         thread_count=i)
+                                                         thread_id=i)
                 arrival_logs[i] = curr_arrival
-        return arrival_logs
 
-    def generate_arrival_log(self, params=None, thread_count=None):
-        time = params['x_thread'].loc[thread_count, MONTHS_SINCE_LSTG] * MONTH
+            if not self.check_bin(params=params, thread_id=i):
+                censored = self.generate_censored_arrival(params=params, thread_id=i+1)
+
+    def add_censored_arrival(self, params=None, thread_id=None):
+        check_time = self.arrival_check_time(params=params, thread_id=thread_id)
+        full_arrival_inputs = params['inputs'][ARRIVAL_MODEL]
+        arrival_inputs = self.populate_thread_inputs(full_inputs=full_arrival_inputs,
+                                                     thread_id=thread_id)
+        time = self.lookup[START_TIME] + MONTH
+        return ArrivalLog(check_time=check_time, arrival_inputs=arrival_inputs)
+
+    def arrival_check_time(self, params=None, thread_id=None):
+        if thread_id == 1:
+            check_time = self.lookup[START_TIME]
+        else:
+            check_time = int(params['x_thread'].loc[thread_id - 1, MONTHS_SINCE_LSTG] * MONTH)
+        return check_time
+
+    def generate_arrival_log(self, params=None, thread_id=None):
+        check_time = self.arrival_check_time(params=params, thread_id=thread_id)
+        time = int(params['x_thread'].loc[thread_id, MONTHS_SINCE_LSTG] * MONTH)
         time += self.lookup[START_TIME]
-        hist = params['x_thread'].loc[thread_count, BYR_HIST]
-        full_inputs = params['inputs'][ARRIVAL_MODEL]
-        inputs = dict()
-        for feat_set, feat_df in full_inputs.items():
-            curr_set = full_inputs[feat_set].loc[thread_count, :]
-            curr_set
+        hist = params['x_thread'].loc[thread_id, BYR_HIST]
+        full_arrival_inputs = params['inputs'][ARRIVAL_MODEL]
+        full_hist_inputs = params['inputs'][BYR_HIST_MODEL]
+        arrival_inputs = self.populate_thread_inputs(full_inputs=full_arrival_inputs,
+                                                     thread_id=thread_id)
+        hist_inputs = self.populate_thread_inputs(full_inputs=full_hist_inputs,
+                                                  thread_id=thread_id)
+        return ArrivalLog(hist=hist, time=time, arrival_inputs=arrival_inputs,
+                          hist_inputs=hist_inputs, check_time=check_time)
 
+    @staticmethod
+    def populate_thread_inputs(full_inputs=None, thread_id=None):
+        inputs = dict()
+        for feat_set_name, feat_df in full_inputs.items():
+            curr_set = full_inputs[feat_set_name].loc[thread_id, :]
+            curr_set = torch.from_numpy(curr_set.values).float().unsqueeze(0)
+            inputs[feat_set_name] = curr_set
+        return inputs
 
 
     def generate_thread_log(self, thread=None):
@@ -60,6 +91,11 @@ class LstgLog:
         :return: np.float
         """
         con = self.threads[event.thread_id].get_con(event=event, x_lstg=self.x_lstg)
+
+    @staticmethod
+    def check_bin(params=None, thread_id=None):
+        first_offer = params['x_offer'].xs(thread_id, level='thread', drop_level=True).loc[1, :]
+        return first_offer == 1
 
     @staticmethod
     def subset_params(params=None):
