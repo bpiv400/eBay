@@ -346,7 +346,7 @@ def get_reject(con):
     return con == 0
 
 
-def compare_hist(model=None, stored_inputs=None, env_inputs=None):
+def compare_input_dicts(model=None, stored_inputs=None, env_inputs=None):
     assert len(stored_inputs) == len(env_inputs)
     for feat_set_name, stored_feats in stored_inputs.items():
         env_feats = env_inputs[feat_set_name]
@@ -365,3 +365,16 @@ def compare_hist(model=None, stored_inputs=None, env_inputs=None):
                 print('stored value = {} | env value = {}'.format(stored_feats[0, feat_index],
                                                                   env_feats[0, feat_index]))
             raise RuntimeError("Environment inputs diverged from true inputs")
+
+
+def need_msg(con):
+    return con != 0 and con != 1
+
+
+def populate_test_model_inputs(full_inputs=None, value=None):
+    inputs = dict()
+    for feat_set_name, feat_df in full_inputs.items():
+        curr_set = full_inputs[feat_set_name].loc[value, :]
+        curr_set = torch.from_numpy(curr_set.values).float().unsqueeze(0)
+        inputs[feat_set_name] = curr_set
+    return inputs

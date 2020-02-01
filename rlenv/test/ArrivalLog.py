@@ -12,11 +12,14 @@ class ArrivalLog:
         self.hist = hist
         self.check_time = check_time
 
-    def compare_arrival(self, check_time=None, input_dict=None):
+    def get_arrival(self, check_time=None, input_dict=None):
         assert check_time == self.check_time
         compare_input_dicts(model=ARRIVAL_MODEL, stored_inputs=self.arrival_inputs, env_inputs=input_dict)
         return self.time - self.check_time
 
-    def compare_hist(self, input_dict=None):
-
+    def get_hist(self, check_time=None, input_dict=None):
+        if self.censored:
+            raise RuntimeError("Checking history for censored arrival event")
+        assert check_time == self.time
+        compare_input_dicts(model=BYR_HIST_MODEL, stored_inputs=self.hist_inputs, env_inputs=input_dict)
         return self.hist
