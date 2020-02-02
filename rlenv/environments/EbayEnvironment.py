@@ -12,7 +12,8 @@ from rlenv.sources import ThreadSources
 from rlenv.events.Thread import Thread
 from rlenv.env_consts import (INTERACT, SALE, PRICE, DUR, ACC_IND,
                               REJ_IND, OFF_IND, ARRIVAL, FIRST_OFFER,
-                              OFFER_EVENT, DELAY_EVENT, ARRIVAL_MODEL)
+                              OFFER_EVENT, DELAY_EVENT, ARRIVAL_MODEL,
+                              BYR_HIST_MODEL)
 from rlenv.env_utils import get_clock_feats
 from utils import get_months_since_lstg
 
@@ -150,7 +151,8 @@ class EbayEnvironment:
         time_feats = self.time_feats.get_feats(time=event.priority, thread_id=event.thread_id)
         sources.prepare_hist(time_feats=time_feats, clock_feats=get_clock_feats(event.priority),
                              months_since_lstg=months_since_lstg)
-        hist = self.arrival.hist(sources())
+        input_dict = self.composer.build_input_dict(BYR_HIST_MODEL, sources=sources(), turn=None)
+        hist = self.get_hist(input_dict=input_dict, time=event.priority, thread_id=event.thread_id)
         if self.verbose:
             print('Thread {} initiated | Buyer hist: {}'.format(event.thread_id, hist))
         event.init_thread(sources=sources, hist=hist)
@@ -307,3 +309,6 @@ class EbayEnvironment:
         intervals = self.arrival.inter_arrival(input_dict)
         width = self.intervals[ARRIVAL_PREFIX]
         return int((intervals + np.random.uniform()) * width)
+
+    def get_hist(self, input_dict=None, time=None, thread_id=None):
+        return self.arrival.hist(input_dict=input_dict)

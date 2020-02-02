@@ -9,8 +9,7 @@ class ArrivalInterface:
         self.arrival_model = load_model(ARRIVAL_MODEL)
         self.hist_model = load_model(BYR_HIST_MODEL)
 
-    def hist(self, sources=None):
-        input_dict = self.composer.build_input_dict(BYR_HIST_MODEL, sources=sources, turn=None)
+    def hist(self, input_dict=None):
         params = self.hist_model(input_dict)
         hist = sample_categorical(params)
         hist = hist / 10
