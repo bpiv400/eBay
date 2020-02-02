@@ -21,9 +21,7 @@ class AgentEnvironment(EbayEnvironment, Env):
         self._lookup_cols = [col.decode('utf-8') for col in self._lookup_cols]
         self._lookup_slice, self._x_lstg_slice = None, None
         self._ix = -1
-
-        # model interfaces and composer
-        self._composer = params['composer']  # type: AgentComposer
+        
         self.last_event = None  # type: Thread
         # action and observation spaces
         self._action_space = self._define_action_space()
@@ -36,8 +34,8 @@ class AgentEnvironment(EbayEnvironment, Env):
             event, lstg_complete = super().run()
             if not lstg_complete:
                 self.last_event = event
-                return self._composer.get_obs(sources=event.sources(),
-                                              turn=event.turn)
+                return self.composer.get_obs(sources=event.sources(),
+                                             turn=event.turn)
 
     def run(self):
         event, lstg_complete = super().run()
@@ -45,9 +43,9 @@ class AgentEnvironment(EbayEnvironment, Env):
         return self._agent_tuple(lstg_complete)
 
     def _define_observation_space(self):
-        sizes = self._composer.agent_sizes
+        sizes = self.composer.agent_sizes
         boxes = [FloatBox(-1000, 1000, shape=len(size)) for size in sizes.values()]
-        return Composite(boxes, self._composer.obs_space_class)
+        return Composite(boxes, self.composer.obs_space_class)
 
     def _reset_lstg(self):
         """
@@ -55,8 +53,8 @@ class AgentEnvironment(EbayEnvironment, Env):
         """
         if self._ix == -1 or self._ix == self._num_lstgs:
             self._draw_lstgs()
-        self.x_lstg = pd.Series(self._x_lstg_slice[self._ix, :], index=self._composer.x_lstg_cols)
-        self.x_lstg = self._composer.decompose_x_lstg(self.x_lstg)
+        self.x_lstg = pd.Series(self._x_lstg_slice[self._ix, :], index=self.composer.x_lstg_cols)
+        self.x_lstg = self.composer.decompose_x_lstg(self.x_lstg)
         self.lookup = pd.Series(self._lookup_slice[self._ix, :], index=self._lookup_cols)
         self._ix += 1
         self.end_time = self.lookup[START_TIME] + MONTH
@@ -68,7 +66,7 @@ class AgentEnvironment(EbayEnvironment, Env):
         self._ix = 0
 
     def _agent_tuple(self, lstg_complete):
-        obs = self._composer.get_obs(sources=self.last_event.sources(),
+        obs = self.composer.get_obs(sources=self.last_event.sources(),
                                      turn=self.last_event.turn)
         return obs, self._get_reward(), lstg_complete, self._get_info()
 

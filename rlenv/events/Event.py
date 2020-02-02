@@ -1,4 +1,4 @@
-from random import random
+from rlenv.env_consts import ARRIVAL
 
 
 class Event:
@@ -26,7 +26,10 @@ class Event:
         Throws RuntimeError if both have the same lstg and same time
         """
         if self.priority == other.priority:
-            return random() >= .5
+            if self.type == ARRIVAL:
+                return True
+            else:
+                return False
         else:
             return self.priority < other.priority
 

@@ -1,5 +1,6 @@
+import numpy as np
 from collections import namedtuple
-from constants import BYR_PREFIX, MONTH
+from constants import BYR_PREFIX, MONTH, ARRIVAL_PREFIX
 from featnames import START_TIME, ACC_PRICE, DEC_PRICE, START_PRICE
 from rlenv.Heap import Heap
 from rlenv.time.TimeFeatures import TimeFeatures
@@ -11,7 +12,7 @@ from rlenv.sources import ThreadSources
 from rlenv.events.Thread import Thread
 from rlenv.env_consts import (INTERACT, SALE, PRICE, DUR, ACC_IND,
                               REJ_IND, OFF_IND, ARRIVAL, FIRST_OFFER,
-                              OFFER_EVENT, DELAY_EVENT)
+                              OFFER_EVENT, DELAY_EVENT, ARRIVAL_MODEL)
 from rlenv.env_utils import get_clock_feats
 from utils import get_months_since_lstg
 
@@ -36,19 +37,20 @@ class EbayEnvironment:
 
         # end time
         self.end_time = None
-        self.thread_counter = 0
+        self.thread_counter = 1
         self.outcome = None
 
         # interval data
-        self.intervals = self.arrival.composer.intervals
+        self.composer = params['composer']
+        self.intervals = self.composer.intervals
 
     def reset(self):
         self.queue.reset()
         self.time_feats.reset()
         self.outcome = None
-        self.thread_counter = 0
+        self.thread_counter = 1
         sources = ArrivalSources(x_lstg=self.x_lstg)
-        event = Arrival(priority=self.lookup[START_TIME], sources=sources, interface=self.arrival)
+        event = Arrival(priority=self.lookup[START_TIME], sources=sources)
         self.queue.push(event)
 
     def run(self):
@@ -65,23 +67,23 @@ class EbayEnvironment:
         if INTERACT and event.type != ARRIVAL:
             input('Press Enter to continue...')
         if event.type == ARRIVAL:
-            return self._process_arrival(event)
+            return self.process_arrival(event)
         elif event.type == FIRST_OFFER:
-            return self._process_first_offer(event)
+            return self.process_first_offer(event)
         elif event.type == OFFER_EVENT:
-            return self._process_offer(event)
+            return self.process_offer(event)
         elif event.type == DELAY_EVENT:
-            return self._process_delay(event)
+            return self.process_delay(event)
         else:
             raise NotImplementedError()
 
     def record(self, event, byr_hist=None, censored=False):
         raise NotImplementedError()
 
-    def _process_offer(self, event):
+    def process_offer(self, event):
         # check whether the lstg expired, censoring this offer
-        if self._is_lstg_expired(event):
-            return self._process_lstg_expiration(event)
+        if self.is_lstg_expired(event):
+            return self.process_lstg_expiration(event)
         # otherwise check whether this offer corresponds to an expiration rej
         slr_offer = event.turn % 2 == 0
         if event.thread_expired():
@@ -137,7 +139,7 @@ class EbayEnvironment:
         self.outcome = self.Outcome(True, sale_price, offer.time)
         self.empty_queue()
 
-    def _process_first_offer(self, event):
+    def process_first_offer(self, event):
         """
         Processes the buyer's first offer in a thread
         :return:
@@ -153,7 +155,7 @@ class EbayEnvironment:
             print('Thread {} initiated | Buyer hist: {}'.format(event.thread_id, hist))
         event.init_thread(sources=sources, hist=hist)
         self.record(event, byr_hist=hist)
-        return self._process_offer(event)
+        return self.process_offer(event)
 
     def _prepare_offer(self, event):
         # if offer not expired and thread still active, prepare this turn's inputs
@@ -164,22 +166,23 @@ class EbayEnvironment:
             event.init_offer(time_feats=time_feats, clock_feats=clock_feats)
         return False
 
-    def _process_arrival(self, event):
+    def process_arrival(self, event):
         """
         Updates queue with results of an Arrival Event
 
         :param event: Event corresponding to current event
         :return: boolean indicating whether the lstg has ended
         """
-        if self._is_lstg_expired(event):
-            return self._process_lstg_expiration(event)
+        if self.is_lstg_expired(event):
+            return self.process_lstg_expiration(event)
 
         # update sources with clock feats
         clock_feats = get_clock_feats(event.priority)
         event.update_arrival(thread_count=self.thread_counter, clock_feats=clock_feats)
 
         # call model to sample inter arrival time and update arrival check priority
-        seconds = event.inter_arrival()
+        input_dict = self.composer.build_input_dict(ARRIVAL_MODEL, sources=event.sources(), turn=None)
+        seconds = self.get_inter_arrival(time=event.priority, input_dict=input_dict)
         event.priority = min(event.priority + seconds, self.end_time)
 
         # if a buyer arrives, create a thread at the arrival time
@@ -211,7 +214,7 @@ class EbayEnvironment:
         self._init_delay(event)
         return False
 
-    def _process_delay(self, event):
+    def process_delay(self, event):
         # no need to check expiration since this must occur at the same time as the previous offer
         if event.turn % 2 == 0:
             index = self.seller.delay(event.sources(), turn=event.turn)
@@ -223,10 +226,10 @@ class EbayEnvironment:
     def is_agent_turn(self, event):
         raise NotImplementedError()
 
-    def _is_lstg_expired(self, event):
+    def is_lstg_expired(self, event):
         return event.priority >= self.end_time
 
-    def _process_lstg_expiration(self, event):
+    def process_lstg_expiration(self, event):
         """
         Checks whether the lstg has expired by the time of the event
         If so, record the reward as negative insertion fees
@@ -300,3 +303,7 @@ class EbayEnvironment:
             msg = self.buyer.con(sources=event.sources(), turn=event.turn)
         return msg
 
+    def get_inter_arrival(self, input_dict=None, time=None):
+        intervals = self.arrival.inter_arrival(input_dict)
+        width = self.intervals[ARRIVAL_PREFIX]
+        return int((intervals + np.random.uniform()) * width)
