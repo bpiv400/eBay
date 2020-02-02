@@ -1,6 +1,7 @@
-from constants import MAX_DELAY
+from constants import MAX_DELAY, MONTH
+from featnames import MSG, CON, DELAY, EXP
 from rlenv.env_utils import compare_input_dicts, model_str
-from rlenv.env_consts import MSG, CON, DELAY, SLR_PREFIX, BYR_PREFIX
+from rlenv.env_consts import SLR_PREFIX, BYR_PREFIX
 
 
 class TurnLog:
@@ -10,7 +11,8 @@ class TurnLog:
         self.con = outcomes[CON]
         self.msg = outcomes[MSG]
         self.delay = outcomes[DELAY]
-
+        self.censored = outcomes[EXP] and outcomes[DELAY] < 1
+        # turn
         self.turn = turn
         # model names
         self.msg_model_name = model_str(MSG, byr=self.byr)
@@ -23,6 +25,10 @@ class TurnLog:
         # timings
         self.delay_time = delay_time
         self.offer_time = self._init_offer_time()
+
+    @property
+    def is_censored(self):
+        return self.offer_time is None
 
     def get_con(self, check_time=None, input_dict=None):
         if self.con_inputs is None:
@@ -38,7 +44,10 @@ class TurnLog:
         assert check_time == self.delay_time
         compare_input_dicts(model=self.delay_model_name, stored_inputs=self.delay_inputs,
                             env_inputs=input_dict)
-        return self.offer_time - self.delay_time
+        if self.is_censored:
+            return MONTH
+        else:
+            self.offer_time - self.delay_time
 
     def get_msg(self, check_time=None, input_dict=None):
         if self.msg_inputs is None:
@@ -59,5 +68,5 @@ class TurnLog:
             delay_type = '{}_{}'.format(BYR_PREFIX, 7)
         else:
             delay_type = BYR_PREFIX
-        delay = int(MAX_DELAY[delay_type] * self.outcomes[DELAY])
+        delay = int(MAX_DELAY[delay_type] * self.delay)
         return self.delay_time + delay

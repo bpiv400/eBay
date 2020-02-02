@@ -10,6 +10,18 @@ class ThreadLog:
         uncensored_turns = self.uncensored(params=params)
         for turn in range(1, uncensored_turns + 1):
             self.turns[turn] = self.generate_turn_log(params=params, turn=turn)
+        if self.has_censored(params=params):
+            censored = self.generate_censored_turn_log(params=params, turn=uncensored_turns + 1)
+            self.turns[uncensored_turns + 1] = censored
+
+    def generate_censored_turn_log(self, params=None, turn=None):
+        outcomes = params['x_offer'].loc[turn, :]
+        outcomes = outcomes[[OUTCOME_FEATS]]
+        byr = turn % 2 != 0
+        model = model_str(DELAY, byr=byr)
+        delay_inputs = populate_test_model_inputs(full_inputs=params['inputs'][model])
+        delay_time = self.delay_time(turn=turn)
+        return TurnLog(outcomes=outcomes, delay_inputs=delay_inputs, delay_time=delay_time, turn=turn)
 
     def generate_turn_log(self, params=None, turn=None):
         outcomes = params['x_offer'].loc[turn, :]
@@ -46,9 +58,15 @@ class ThreadLog:
         return delay_time
 
     @staticmethod
-    def uncensored(params=None):
+    def has_censored(params=None):
         num_offers = len(params['x_offer'].index)
         last_censored = params['x_offer'].loc[num_offers, 'censored']
+        return last_censored
+
+    @staticmethod
+    def uncensored(params=None):
+        num_offers = len(params['x_offer'].index)
+        last_censored = ThreadLog.has_censored(params=params)
         if not last_censored:
             return num_offers
         else:

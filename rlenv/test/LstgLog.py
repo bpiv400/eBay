@@ -20,8 +20,6 @@ class LstgLog:
         params = LstgLog.subset_params(params)
         self.arrivals = self.generate_arrival_logs(params)
         self.threads = self.generate_thread_logs(params)
-        self.x_lstg = None # TODO: Create a dictionary containing all the x_lstg components that are common
-        # among all models / turns (e.g. all but x_lstg)
 
     @property
     def has_arrivals(self):
@@ -32,6 +30,7 @@ class LstgLog:
         for thread_id, arrival_log in self.arrivals.items():
             if not arrival_log.censored:
                 thread_logs[thread_id] = self.generate_thread_log(thread_id=thread_id, params=params)
+        return thread_logs
 
     def generate_arrival_logs(self, params):
         arrival_logs = dict()
@@ -105,7 +104,10 @@ class LstgLog:
         :return: int
         """
         delay = self.threads[thread_id].get_delay(turn=turn, time=time, input_dict=input_dict)
-        return delay
+        if delay == MONTH:
+            return self.lookup[START_TIME] + MONTH - time
+        else:
+            return delay
 
     @staticmethod
     def check_bin(params=None, thread_id=None):
