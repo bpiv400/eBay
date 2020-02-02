@@ -44,7 +44,7 @@ class ValueGenerator(Generator):
             lookup = self.lookup.loc[lstg, :]
 
             # create environment
-            environment = self.setup_env(lstg, lookup)
+            environment = self.setup_env(lstg=lstg, lookup=lookup)
 
             # grab or initialize value calculator and if necessary, seed recorder
             if self.checkpoint_contents is None:

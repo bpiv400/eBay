@@ -38,7 +38,7 @@ class Generator:
     def generate(self):
         raise NotImplementedError()
 
-    def setup_env(self, lstg, lookup):
+    def setup_env(self, lstg=None, lookup=None, log=None):
         """
         Generates the environment required to simulate the given listing
         :param lstg: int giving a lstg id
@@ -52,9 +52,9 @@ class Generator:
         x_lstg = self.x_lstg.loc[lstg, :].astype(np.float32)
         x_lstg = self.composer.decompose_x_lstg(x_lstg)
         # create and return environment
-        return self.create_env(x_lstg=x_lstg, lookup=lookup)
+        return self.create_env(x_lstg=x_lstg, lookup=lookup, log=log)
 
-    def create_env(self, x_lstg=None, lookup=None):
+    def create_env(self, x_lstg=None, lookup=None, log=None):
         return SimulatorEnvironment(buyer=self.buyer, seller=self.seller,
                                     arrival=self.arrival, x_lstg=x_lstg,
                                     lookup=lookup, recorder=self.recorder,

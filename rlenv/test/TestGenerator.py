@@ -10,7 +10,6 @@ class TestGenerator(Generator):
         super().__init__(direct, num, verbose)
         chunk_dir = get_env_sim_subdir(base_dir=direct, chunks=True)
         self.test_data = load('{}{}_test.gz'.format(chunk_dir, num))
-        self.log = None
 
     def generate(self):
         for i, lstg in enumerate(self.x_lstg.index):
@@ -18,21 +17,18 @@ class TestGenerator(Generator):
             lookup = self.lookup.loc[lstg, :]
 
             # create environment
-            environment = self.setup_env(lstg, lookup)
+            params = {
+                'lstg': lstg,
+                'inputs': self.test_data['inputs'],
+                'x_thread': self.test_data['x_thread'],
+                'x_offer': self.test_data['x_offer'],
+                'lookup': lookup
+            }
+            log = LstgLog(params=params)
+            environment = self.setup_env(lstg=lstg, lookup=lookup, log=log)
 
             # simulate lstg once
             self.simulate_lstg(environment)
-
-    def setup_env(self, lstg, lookup):
-        params = {
-            'lstg': lstg,
-            'inputs': self.test_data['inputs'],
-            'x_thread': self.test_data['x_thread'],
-            'x_offer': self.test_data['x_offer'],
-            'lookup': lookup
-        }
-        self.log = LstgLog(params=params)
-        return super().setup_env(lstg=lstg, lookup=lookup)
 
     def simulate_lstg(self, environment):
         """
@@ -44,11 +40,11 @@ class TestGenerator(Generator):
         outcome = environment.run()
         return outcome
 
-    def create_env(self, x_lstg=None, lookup=None):
+    def create_env(self, x_lstg=None, lookup=None, log=None):
         return TestEnvironment(buyer=self.buyer, seller=self.seller,
                                arrival=self.arrival, x_lstg=x_lstg,
                                lookup=lookup, verbose=self.verbose,
-                               log=self.log)
+                               log=log)
 
     @property
     def records_path(self):
