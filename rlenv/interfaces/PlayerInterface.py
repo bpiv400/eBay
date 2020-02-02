@@ -1,4 +1,3 @@
-import numpy as np
 import torch
 from torch.distributions.categorical import Categorical
 from rlenv.env_utils import (model_str, proper_squeeze,
@@ -8,9 +7,8 @@ from utils import load_model
 
 
 class PlayerInterface:
-    def __init__(self, composer=None, byr=False):
+    def __init__(self, byr=False):
         # store args
-        self.composer = composer
         self.byr = byr
 
         # store names for each
@@ -50,11 +48,8 @@ class PlayerInterface:
 
 
 class BuyerInterface(PlayerInterface):
-    def __init__(self, composer=None):
-        """
-        :param composer: rlenv/Composer.Composer
-        """
-        super().__init__(composer=composer, byr=True)
+    def __init__(self):
+        super().__init__(byr=True)
 
     def sample_con(self, params=None, turn=None):
         dist = Categorical(logits=params)
@@ -77,13 +72,12 @@ class BuyerInterface(PlayerInterface):
 
 
 class SellerInterface(PlayerInterface):
-    def __init__(self, composer=None, full=True):
+    def __init__(self, full=True):
         """
-        :param composer: rlenv/Composer.Composer
         :param full: whether to initialize con and msg models
         (Do not if there is a Seller Agent)
         """
-        super().__init__(composer=composer, byr=False)
+        super().__init__(byr=False)
         self.full = full
         # throw out con and msg models if there's an agent
         if not full:
@@ -104,7 +98,6 @@ class SellerInterface(PlayerInterface):
         """
         Generate a concession if concession model defined
         :param input_dict: dict
-        :param turn: current turn number
         :return: np.float
         """
         self._check_full()

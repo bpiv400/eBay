@@ -44,7 +44,7 @@ class TestGenerator(Generator):
         return TestEnvironment(buyer=self.buyer, seller=self.seller,
                                arrival=self.arrival, x_lstg=x_lstg,
                                lookup=lookup, verbose=self.verbose,
-                               log=log)
+                               log=log, composer=self.composer)
 
     @property
     def records_path(self):

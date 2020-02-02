@@ -29,11 +29,11 @@ class Generator:
         self.x_lstg, self.lookup = load_chunk(base_dir=self.dir, num=self.chunk)
         self.recorder = None
 
+        # model interfaces and input composer
         self.composer = Composer(self.x_lstg.columns)
-
-        self.buyer = BuyerInterface(composer=self.composer)
-        self.seller = SellerInterface(composer=self.composer, full=True)
-        self.arrival = ArrivalInterface(composer=self.composer)
+        self.buyer = BuyerInterface()
+        self.seller = SellerInterface(full=True)
+        self.arrival = ArrivalInterface()
 
     def generate(self):
         raise NotImplementedError()
@@ -43,7 +43,8 @@ class Generator:
         Generates the environment required to simulate the given listing
         :param lstg: int giving a lstg id
         :param pd.Series lookup: metadata about lstg
-        :return: SimulatorEnvironment
+        :param log: optional LstgLog passed if testing environment
+        :return: SimulatorEnvironment or subclass
         """
         if self.verbose:
             self.print_lstg_info(lstg, lookup)
@@ -58,7 +59,7 @@ class Generator:
         return SimulatorEnvironment(buyer=self.buyer, seller=self.seller,
                                     arrival=self.arrival, x_lstg=x_lstg,
                                     lookup=lookup, recorder=self.recorder,
-                                    verbose=self.verbose)
+                                    verbose=self.verbose, composer=self.composer)
 
     def simulate_lstg(self, environment):
         raise NotImplementedError()
