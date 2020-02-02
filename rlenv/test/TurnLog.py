@@ -1,7 +1,6 @@
 from constants import MAX_DELAY, MONTH
 from featnames import MSG, CON, DELAY, EXP
-from rlenv.env_utils import compare_input_dicts, model_str
-from rlenv.env_consts import SLR_PREFIX, BYR_PREFIX
+from rlenv.env_utils import compare_input_dicts, model_str, get_delay_type
 
 
 class TurnLog:
@@ -62,11 +61,6 @@ class TurnLog:
         return self.turn % 2 != 0
 
     def _init_offer_time(self):
-        if self.turn % 2 == 0:
-            delay_type = SLR_PREFIX
-        elif self.turn == 7:
-            delay_type = '{}_{}'.format(BYR_PREFIX, 7)
-        else:
-            delay_type = BYR_PREFIX
+        delay_type = get_delay_type(self.turn)
         delay = int(MAX_DELAY[delay_type] * self.delay)
         return self.delay_time + delay

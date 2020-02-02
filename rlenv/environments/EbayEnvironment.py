@@ -1,7 +1,7 @@
 import numpy as np
 from collections import namedtuple
-from constants import BYR_PREFIX, MONTH, ARRIVAL_PREFIX
-from featnames import START_TIME, ACC_PRICE, DEC_PRICE, START_PRICE
+from constants import BYR_PREFIX, MONTH, ARRIVAL_PREFIX, MAX_DELAY
+from featnames import START_TIME, ACC_PRICE, DEC_PRICE, START_PRICE, DELAY
 from rlenv.Heap import Heap
 from rlenv.time.TimeFeatures import TimeFeatures
 from rlenv.time.Offer import Offer
@@ -14,7 +14,7 @@ from rlenv.env_consts import (INTERACT, SALE, PRICE, DUR, ACC_IND,
                               REJ_IND, OFF_IND, ARRIVAL, FIRST_OFFER,
                               OFFER_EVENT, DELAY_EVENT, ARRIVAL_MODEL,
                               BYR_HIST_MODEL)
-from rlenv.env_utils import get_clock_feats, get_con_outcomes, need_msg
+from rlenv.env_utils import get_clock_feats, get_con_outcomes, need_msg, model_str
 from utils import get_months_since_lstg
 
 
@@ -38,7 +38,7 @@ class EbayEnvironment:
 
         # end time
         self.end_time = None
-        self.thread_counter = 1
+        self.thread_counter = 0
         self.outcome = None
 
         # interval data
@@ -49,7 +49,7 @@ class EbayEnvironment:
         self.queue.reset()
         self.time_feats.reset()
         self.outcome = None
-        self.thread_counter = 1
+        self.thread_counter = 0
         sources = ArrivalSources(x_lstg=self.x_lstg)
         event = Arrival(priority=self.lookup[START_TIME], sources=sources)
         self.queue.push(event)
@@ -141,16 +141,19 @@ class EbayEnvironment:
         Processes the buyer's first offer in a thread
         :return:
         """
-        # expiration
+        # prepare sources and features
         sources = ThreadSources(x_lstg=self.x_lstg)
         months_since_lstg = get_months_since_lstg(lstg_start=self.lookup[START_TIME], start=event.priority)
         time_feats = self.time_feats.get_feats(time=event.priority, thread_id=event.thread_id)
         sources.prepare_hist(time_feats=time_feats, clock_feats=get_clock_feats(event.priority),
                              months_since_lstg=months_since_lstg)
+        # sample history
         input_dict = self.composer.build_input_dict(BYR_HIST_MODEL, sources=sources(), turn=None)
         hist = self.get_hist(input_dict=input_dict, time=event.priority, thread_id=event.thread_id)
+        # print
         if self.verbose:
             print('Thread {} initiated | Buyer hist: {}'.format(event.thread_id, hist))
+        # update features with history
         event.init_thread(sources=sources, hist=hist)
         self.record(event, byr_hist=hist)
         return self.process_offer(event)
@@ -179,7 +182,8 @@ class EbayEnvironment:
         event.update_arrival(thread_count=self.thread_counter, clock_feats=clock_feats)
 
         # call model to sample inter arrival time and update arrival check priority
-        input_dict = self.composer.build_input_dict(ARRIVAL_MODEL, sources=event.sources(), turn=None)
+        input_dict = self.composer.build_input_dict(ARRIVAL_MODEL,
+                                                    sources=event.sources(), turn=None)
         seconds = self.get_inter_arrival(time=event.priority, input_dict=input_dict)
         event.priority = min(event.priority + seconds, self.end_time)
 
@@ -214,12 +218,13 @@ class EbayEnvironment:
 
     def process_delay(self, event):
         # no need to check expiration since this must occur at the same time as the previous offer
-        if event.turn % 2 == 0:
-            index = self.seller.delay(event.sources(), turn=event.turn)
-        else:
-            index = self.buyer.delay(event.sources(), turn=event.turn)
-        event.prepare_offer(index)
+        model_name = model_str(DELAY, byr=event.turn % 2 != 0)
+        input_dict = self.composer(model_name, turn=event.turn, sources=event.sources())
+        delay_seconds = self.get_delay(input_dict=input_dict, turn=event.turn, thread_id=event.thread_id,
+                                       time=event.priority, delay_type=event.delay_type)
+        event.update_delay(seconds=delay_seconds)
         self.queue.push(event)
+        return False
 
     def is_agent_turn(self, event):
         raise NotImplementedError()
@@ -249,8 +254,7 @@ class EbayEnvironment:
                 self.record(event=event, censored=True)
 
     def make_thread(self, priority):
-        return Thread(priority=priority, thread_id=self.thread_counter,
-                      intervals=self.intervals)
+        return Thread(priority=priority, thread_id=self.thread_counter)
 
     def _check_slr_autos(self, norm):
         """ """
@@ -328,3 +332,13 @@ class EbayEnvironment:
                                thread_id=event.thread_id)
             event.update_msg(msg=msg)
         return offer
+
+    def get_delay(self, input_dict=None, turn=None, thread_id=None,
+                  time=None, delay_type=None):
+        if turn % 2 == 0:
+            index = self.seller.delay(input_dict=input_dict)
+        else:
+            index = self.buyer.delay(input_dict=input_dict)
+        seconds = int((index + np.random.uniform()) * self.intervals[delay_type])
+        seconds = min(seconds, MAX_DELAY[delay_type])
+        return seconds

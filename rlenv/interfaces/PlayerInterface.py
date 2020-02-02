@@ -32,9 +32,7 @@ class PlayerInterface:
         con = self.sample_con(params=params, turn=turn)
         return con
 
-    def delay(self, sources=None, turn=0):
-        input_dict = self.composer.build_input_dict(self.delay_model_name, sources=sources,
-                                                    turn=turn)
+    def delay(self, input_dict=None):
         params = self.delay_model(input_dict)
         delay = sample_categorical(params)
         return delay

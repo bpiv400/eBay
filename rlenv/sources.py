@@ -54,7 +54,7 @@ class ThreadSources(Sources):
         feats = np.concatenate([clock_feats, time_diff])
         self.source_dict[offer_map][CLOCK_START_IND:TIME_END_IND] = feats
 
-    def prepare_offer(self, delay_outcomes=None, turn=None):
+    def update_delay(self, delay_outcomes=None, turn=None):
 
         offer_map = OFFER_MAPS[turn]
         self.source_dict[offer_map][DELAY_START_IND:DELAY_END_IND] = delay_outcomes

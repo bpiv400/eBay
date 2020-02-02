@@ -376,3 +376,12 @@ def populate_test_model_inputs(full_inputs=None, value=None):
         curr_set = torch.from_numpy(curr_set.values).float().unsqueeze(0)
         inputs[feat_set_name] = curr_set
     return inputs
+
+
+def get_delay_type(turn):
+    if turn % 2 == 0:
+        return SLR_PREFIX
+    elif turn == 7:
+        return '{}_{}'.format(BYR_PREFIX, 7)
+    else:
+        return BYR_PREFIX

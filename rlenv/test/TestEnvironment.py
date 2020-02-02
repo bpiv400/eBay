@@ -16,10 +16,19 @@ class TestEnvironment(SimulatorEnvironment):
                                                thread_id=self.thread_counter)
 
     def get_hist(self, input_dict=None, time=None, thread_id=None):
-        return self.lstg_log.get_hist(thread_id=thread_id, time=time, input_dict=input_dict)
+        return self.lstg_log.get_hist(thread_id=thread_id, time=time,
+                                      input_dict=input_dict)
 
     def get_con(self, input_dict=None, time=None, thread_id=None, turn=None):
-        return self.lstg_log.get_con(input_dict=input_dict, thread_id=thread_id, time=time, turn=turn)
+        return self.lstg_log.get_con(input_dict=input_dict, thread_id=thread_id,
+                                     time=time, turn=turn)
 
     def get_msg(self, input_dict=None, time=None, thread_id=None, turn=None):
-        return self.lstg_log.get_msg(input_dict=input_dict, thread_id=thread_id, time=time, turn=turn)
+        return self.lstg_log.get_msg(input_dict=input_dict, thread_id=thread_id,
+                                     time=time, turn=turn)
+
+    def get_delay(self, input_dict=None, turn=None, thread_id=None,
+                  time=None, delay_type=None):
+        return self.lstg_log.get_delay(thread_id=thread_id, turn=turn,
+                                       input_dict=input_dict, time=time)
+
