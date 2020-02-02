@@ -55,7 +55,7 @@ class LstgLog:
         arrival_inputs = populate_test_model_inputs(full_inputs=full_arrival_inputs,
                                                     value=thread_id)
         time = self.lookup[START_TIME] + MONTH
-        return ArrivalLog(check_time=check_time, arrival_inputs=arrival_inputs)
+        return ArrivalLog(check_time=check_time, arrival_inputs=arrival_inputs, time=time)
 
     def arrival_check_time(self, params=None, thread_id=None):
         if thread_id == 1:
@@ -108,6 +108,12 @@ class LstgLog:
             return self.lookup[START_TIME] + MONTH - time
         else:
             return delay
+
+    def get_inter_arrival(self, thread_id=None, input_dict=None, time=None):
+        return self.arrivals[thread_id].get_inter_arrival(check_time=time, input_dict=input_dict)
+
+    def get_hist(self, thread_id=None, input_dict=None, time=None):
+        return self.arrivals[thread_id].get_hist(check_time=time, input_dict=input_dict)
 
     @staticmethod
     def check_bin(params=None, thread_id=None):

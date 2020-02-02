@@ -12,7 +12,7 @@ class ArrivalLog:
         self.hist = hist
         self.check_time = check_time
 
-    def get_arrival(self, check_time=None, input_dict=None):
+    def get_inter_arrival(self, check_time=None, input_dict=None):
         assert check_time == self.check_time
         compare_input_dicts(model=ARRIVAL_MODEL, stored_inputs=self.arrival_inputs, env_inputs=input_dict)
         return self.time - self.check_time
