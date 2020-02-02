@@ -8,11 +8,9 @@ import pandas as pd
 from compress_pickle import load
 from torch.distributions.categorical import Categorical
 from torch.distributions.bernoulli import Bernoulli
-from constants import (INPUT_DIR, TOL_HALF,
-                       MODEL_DIR, ENV_SIM_DIR, DAY, BYR_PREFIX, SLR_PREFIX)
+from constants import (INPUT_DIR, ENV_SIM_DIR, DAY, BYR_PREFIX, SLR_PREFIX)
 from rlenv.env_consts import (META_6, META_7, SIM_CHUNKS_DIR, SIM_VALS_DIR, OFFER_MAPS,
                               SIM_DISCRIM_DIR, DATE_FEATS, ARRIVAL_MODELS, NORM_IND)
-from featnames import *
 from utils import extract_clock_feats, is_split, slr_norm, byr_norm
 
 
@@ -145,7 +143,7 @@ def slr_rej_outcomes(sources, turn):
     :return: np.array
     """
     norm = last_norm(sources=sources, turn=turn)
-    return np.array([0.0, 1.0, norm, 0.0, 0.0], dtype=np.float32)
+    return np.array([0.0, 1.0, norm, 0.0], dtype=np.float32)
 
 
 def slr_auto_acc_outcomes(sources, turn):
@@ -159,7 +157,7 @@ def slr_auto_acc_outcomes(sources, turn):
     con = 1.0
     prev_byr_norm = prev_norm(sources=sources, turn=turn)
     norm = 1.0 - prev_byr_norm
-    return np.array([con, 0.0, norm, 0.0, 0.0], dtype=np.float32)
+    return np.array([con, 0.0, norm, 0.0], dtype=np.float32)
 
 
 def get_checkpoint_path(part_dir, chunk_num, discrim=False):

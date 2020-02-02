@@ -2,6 +2,7 @@
 class for encapsulating data and methods related to the first buyer offer
 """
 import numpy as np
+from rlenv.sources import ThreadSources
 from rlenv.events.Event import Event
 from rlenv.env_consts import (FIRST_OFFER, DELAY_EVENT, OFFER_EVENT)
 from constants import (SLR_PREFIX, BYR_PREFIX, MAX_DELAY)
@@ -19,7 +20,7 @@ class Thread(Event):
                                      priority=priority)
 
         # sources object
-        self.sources = None  # initialized later in init_thread
+        self.sources = None  # type: ThreadSources
         self.turn = 1
         self.thread_id = thread_id
 
@@ -38,8 +39,8 @@ class Thread(Event):
         else:
             return self.sources.is_expire(self.turn)
 
-    def update_offer(self, offer_outcomes=None):
-        norm = self.sources.update_offer(offer_outcomes=offer_outcomes, turn=self.turn)
+    def update_con_outcomes(self, con_outcomes=None):
+        norm = self.sources.update_con_outcomes(con_outcomes=con_outcomes, turn=self.turn)
         offer_params = {
             'price': norm,
             'player': SLR_PREFIX if self.turn % 2 == 0 else BYR_PREFIX,
@@ -47,6 +48,9 @@ class Thread(Event):
             'thread_id': self.thread_id
         }
         return Offer(params=offer_params, rej=self.is_rej())
+
+    def update_msg(self, msg=None):
+        self.sources.update_msg(msg=msg, turn=self.turn)
 
     def init_delay(self, lstg_start):
         self.type = DELAY_EVENT
@@ -96,8 +100,8 @@ class Thread(Event):
         return self.slr_rej()
 
     def slr_rej(self):
-        offer_outcomes = slr_rej_outcomes(self.sources(), self.turn)
-        norm = self.sources.update_offer(offer_outcomes=offer_outcomes, turn=self.turn)
+        con_outcomes = slr_rej_outcomes(self.sources(), self.turn)
+        norm = self.sources.update_con_outcomes(con_outcomes=con_outcomes, turn=self.turn)
         offer_params = {
             'price': norm,
             'player': SLR_PREFIX,
@@ -111,7 +115,7 @@ class Thread(Event):
         delay_outcomes = np.array([0.0, 0.0, 1.0, 0.0], dtype=np.float)
         self.sources.prepare_offer(delay_outcomes=delay_outcomes, turn=self.turn)
         outcomes = slr_auto_acc_outcomes(self.sources(), self.turn)
-        norm = self.sources.update_offer(offer_outcomes=outcomes, turn=self.turn)
+        norm = self.sources.update_con_outcomes(con_outcomes=outcomes, turn=self.turn)
         offer_params = {
             'price': norm,
             'player': SLR_PREFIX,

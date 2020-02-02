@@ -11,13 +11,15 @@ class TestEnvironment(SimulatorEnvironment):
         """Record nothing"""
         pass
 
-    def get_con(self, event=None):
-        con = self.lstg_log.get_con(event)
-        return con
-
     def get_inter_arrival(self, input_dict=None, time=None):
         return self.lstg_log.get_inter_arrival(input_dict=input_dict, time=time,
                                                thread_id=self.thread_counter)
 
     def get_hist(self, input_dict=None, time=None, thread_id=None):
         return self.lstg_log.get_hist(thread_id=thread_id, time=time, input_dict=input_dict)
+
+    def get_con(self, input_dict=None, time=None, thread_id=None, turn=None):
+        return self.lstg_log.get_con(input_dict=input_dict, thread_id=thread_id, time=time, turn=turn)
+
+    def get_msg(self, input_dict=None, time=None, thread_id=None, turn=None):
+        return self.lstg_log.get_msg(input_dict=input_dict, thread_id=thread_id, time=time, turn=turn)

@@ -12,8 +12,7 @@ class LstgLog:
 
     def __init__(self, params=None):
         """
-        # TODO: Update
-        :param params: A format decided upon by Etan and I in meeting
+        :param params: dict
         """
         self.lstg = params['lstg']
         self.lookup = params['lookup']
@@ -94,10 +93,13 @@ class LstgLog:
 
     def get_msg(self, thread_id=None, turn=None, input_dict=None, time=None):
         """
-        :return: bool
+        :return: np.float
         """
         msg = self.threads[thread_id].get_delay(turn=turn, time=time, input_dict=input_dict)
-        return msg
+        if msg:
+            return 1.0
+        else:
+            return 0.0
 
     def get_delay(self, thread_id=None, turn=None, input_dict=None, time=None):
         """

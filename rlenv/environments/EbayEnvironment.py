@@ -14,7 +14,7 @@ from rlenv.env_consts import (INTERACT, SALE, PRICE, DUR, ACC_IND,
                               REJ_IND, OFF_IND, ARRIVAL, FIRST_OFFER,
                               OFFER_EVENT, DELAY_EVENT, ARRIVAL_MODEL,
                               BYR_HIST_MODEL)
-from rlenv.env_utils import get_clock_feats
+from rlenv.env_utils import get_clock_feats, get_con_outcomes, need_msg
 from utils import get_months_since_lstg
 
 
@@ -60,11 +60,11 @@ class EbayEnvironment:
             if self.is_agent_turn(event):
                 return event, False
             else:
-                lstg_complete = self._process_event(event)
+                lstg_complete = self.process_event(event)
                 if lstg_complete:
                     return event, True
 
-    def _process_event(self, event):
+    def process_event(self, event):
         if INTERACT and event.type != ARRIVAL:
             input('Press Enter to continue...')
         if event.type == ARRIVAL:
@@ -89,21 +89,19 @@ class EbayEnvironment:
         slr_offer = event.turn % 2 == 0
         if event.thread_expired():
             if slr_offer:
-                self._process_slr_expire(event)
+                self.process_slr_expire(event)
             else:
-                self._process_byr_expire(event)
+                self.process_byr_expire(event)
             return False
         # otherwise updates thread features
-        self._prepare_offer(event)
-        # TODO: Deprecate after merge
-        if slr_offer:
-            offer_outcomes = self.seller.make_offer(sources=event.sources(), turn=event.turn)
-        else:
-            offer_outcomes = self.buyer.make_offer(sources=event.sources(), turn=event.turn)
-        offer = event.update_offer(offer_outcomes=offer_outcomes)
-        return self._process_post_offer(event, offer)
+        self.prepare_offer(event)
+        # generate concession
+        offer = self.get_offer_outcomes(event, slr=slr_offer)
+        # TODO: Deprecate
+        ### end deprecation
+        return self.process_post_offer(event, offer)
 
-    def _process_post_offer(self, event, offer):
+    def process_post_offer(self, event, offer):
         slr_offer = event.turn % 2 == 0
         self.record(event, censored=False)
         # check whether the offer is an acceptance
@@ -159,7 +157,7 @@ class EbayEnvironment:
         self.record(event, byr_hist=hist)
         return self.process_offer(event)
 
-    def _prepare_offer(self, event):
+    def prepare_offer(self, event):
         # if offer not expired and thread still active, prepare this turn's inputs
         if event.turn != 1:
             time_feats = self.time_feats.get_feats(thread_id=event.thread_id,
@@ -194,7 +192,7 @@ class EbayEnvironment:
         self.queue.push(event)
         return False
 
-    def _process_byr_expire(self, event):
+    def process_byr_expire(self, event):
         event.byr_expire()
         self.record(event, censored=False)
         offer_params = {
@@ -204,7 +202,7 @@ class EbayEnvironment:
         }
         self.time_feats.update_features(offer=Offer(params=offer_params, rej=True))
 
-    def _process_slr_expire(self, event):
+    def process_slr_expire(self, event):
         # update sources with new clock and features
         clock_feats = get_clock_feats(event.priority)
         time_feats = self.time_feats.get_feats(thread_id=event.thread_id,
@@ -291,18 +289,18 @@ class EbayEnvironment:
         event.init_delay(self.lookup[START_TIME])
         self.queue.push(event)
 
-    def get_con(self, event=None):
-        if event.turn % 2 == 0:
-            con = self.seller.con(sources=event.sources(), turn=event.turn)
+    def get_con(self, input_dict=None, time=None, thread_id=None, turn=None):
+        if turn % 2 == 0:
+            con = self.seller.con(input_dict=input_dict, turn=turn)
         else:
-            con = self.buyer.con(sources=event.sources(), turn=event.turn)
+            con = self.buyer.con(input_dict=input_dict, turn=turn)
         return con
 
-    def get_msg(self, event=None):
-        if event.turn % 2 == 0:
-            msg = self.seller.con(sources=event.sources(), turn=event.turn)
+    def get_msg(self, input_dict=None, time=None, turn=None, thread_id=None):
+        if turn % 2 == 0:
+            msg = self.seller.msg(input_dict=input_dict, turn=turn)
         else:
-            msg = self.buyer.con(sources=event.sources(), turn=event.turn)
+            msg = self.buyer.msg(input_dict=input_dict, turn=turn)
         return msg
 
     def get_inter_arrival(self, input_dict=None, time=None):
@@ -312,3 +310,23 @@ class EbayEnvironment:
 
     def get_hist(self, input_dict=None, time=None, thread_id=None):
         return self.arrival.hist(input_dict=input_dict)
+
+    def get_offer_outcomes(self, event, slr=False):
+        # sample concession
+        model_name = self.seller.con_model_name if slr else self.buyer.con_model_name
+        input_dict = self.composer.build_input_dict(model_name, sources=event.sources(),
+                                                    turn=event.turn)
+        con = self.get_con(input_dict=input_dict, time=event.priority, turn=event.turn,
+                           thread_id=event.thread_id)
+        con_outcomes = get_con_outcomes(con=con, sources=event.sources(), turn=event.turn)
+        # update features
+        offer = event.update_con_outcomes(con_outcomes=con_outcomes)
+        # sample msg if necessary
+        if need_msg(con):
+            model_name = self.seller.msg_model_name if slr else self.buyer.msg_model_name
+            input_dict = self.composer.build_input_dict(model_name, sources=event.sources(),
+                                                        turn=event.turn)
+            msg = self.get_msg(input_dict=input_dict, time=event.priority, turn=event.turn,
+                               thread_id=event.thread_id)
+            event.update_msg(msg=msg)
+        return offer

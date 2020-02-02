@@ -37,10 +37,14 @@ class ThreadSources(Sources):
         # add byr history
         self.source_dict[BYR_HIST] = hist
 
-    def update_offer(self, offer_outcomes=None, turn=None):
+    def update_con_outcomes(self, con_outcomes=None, turn=None):
         offer_map = OFFER_MAPS[turn]
-        self.source_dict[offer_map][CON_START_IND:] = offer_outcomes
+        self.source_dict[offer_map][CON_START_IND:MSG_IND] = con_outcomes
         return self.source_dict[offer_map][NORM_IND]
+
+    def update_msg(self, msg=None, turn=None):
+        offer_map = OFFER_MAPS[turn]
+        self.source_dict[offer_map][CON_START_IND:MSG_IND] = msg
 
     def init_offer(self, time_feats=None, clock_feats=None, turn=None):
         # NOTE : Not called on turn 1
