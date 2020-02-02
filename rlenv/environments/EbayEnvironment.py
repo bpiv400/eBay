@@ -95,10 +95,8 @@ class EbayEnvironment:
             return False
         # otherwise updates thread features
         self.prepare_offer(event)
-        # generate concession
+        # generate concession and msg if necessary
         offer = self.get_offer_outcomes(event, slr=slr_offer)
-        # TODO: Deprecate
-        ### end deprecation
         return self.process_post_offer(event, offer)
 
     def process_post_offer(self, event, offer):
@@ -298,9 +296,9 @@ class EbayEnvironment:
 
     def get_msg(self, input_dict=None, time=None, turn=None, thread_id=None):
         if turn % 2 == 0:
-            msg = self.seller.msg(input_dict=input_dict, turn=turn)
+            msg = self.seller.msg(input_dict=input_dict)
         else:
-            msg = self.buyer.msg(input_dict=input_dict, turn=turn)
+            msg = self.buyer.msg(input_dict=input_dict)
         return msg
 
     def get_inter_arrival(self, input_dict=None, time=None):
