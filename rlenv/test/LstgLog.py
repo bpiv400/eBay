@@ -95,14 +95,14 @@ class LstgLog:
 
     def get_msg(self, thread_id=None, turn=None, input_dict=None, time=None):
         """
-        :return: np.float
+        :return: bool
         """
         msg = self.threads[thread_id].get_delay(turn=turn, time=time, input_dict=input_dict)
         return msg
 
     def get_delay(self, thread_id=None, turn=None, input_dict=None, time=None):
         """
-        :return: np.float
+        :return: int
         """
         delay = self.threads[thread_id].get_delay(turn=turn, time=time, input_dict=input_dict)
         return delay

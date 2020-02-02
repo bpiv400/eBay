@@ -1,8 +1,7 @@
-from constants import MAX_DELAY
-from featnames import OUTCOME_FEATS, CON, REJECT, EXP, AUTO, MSG, DELAY
+from featnames import OUTCOME_FEATS, CON, EXP, AUTO, MSG, DELAY
 from rlenv.env_utils import populate_test_model_inputs, model_str, need_msg
-from rlenv.env_consts import SLR_PREFIX, BYR_PREFIX
 from rlenv.test.TurnLog import TurnLog
+
 
 class ThreadLog:
     def __init__(self, params=None, arrival_time=None):
@@ -57,14 +56,14 @@ class ThreadLog:
                 raise RuntimeError("Initial buyer offer should never be censored")
             return num_offers - 1
 
-    def get_con(self, event=None):
-        con = self.turns[event.turn].get_con(event=event)
+    def get_con(self, time=None, turn=None, input_dict=None):
+        return self.turns[turn].get_con(check_time=time, input_dict=input_dict)
 
-    def get_msg(self, event=None):
-        msg = self.turns[event.turn].get_msg(event=event)
+    def get_msg(self, time=None, turn=None, input_dict=None):
+        return self.turns[turn].get_msg(check_time=time, input_dict=input_dict)
 
-    def get_delay(self, inpu):
-        delay =
+    def get_delay(self, time=None, turn=None, input_dict=None):
+        return self.turns[turn].get_delay(check_time=time, input_dict=input_dict)
 
 
 

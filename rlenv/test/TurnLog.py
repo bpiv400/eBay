@@ -7,7 +7,10 @@ class TurnLog:
     def __init__(self, outcomes=None, turn=None, con_inputs=None, delay_inputs=None,
                  msg_inputs=None, delay_time=None):
         # outcomes
-        self.outcomes = outcomes
+        self.con = outcomes[CON]
+        self.msg = outcomes[MSG]
+        self.delay = outcomes[DELAY]
+
         self.turn = turn
         # model names
         self.msg_model_name = model_str(MSG, byr=self.byr)
@@ -25,12 +28,25 @@ class TurnLog:
         if self.con_inputs is None:
             raise RuntimeError("Environment unexpectedly queried concession model")
         assert check_time == self.offer_time
-        compare_input_dicts()
+        compare_input_dicts(model=self.con_model_name, stored_inputs=self.con_inputs,
+                            env_inputs=input_dict)
+        return self.con
 
     def get_delay(self, check_time=None, input_dict=None):
         if self.delay_inputs is None:
             raise RuntimeError("Environment unexpectedly queried delay model")
         assert check_time == self.delay_time
+        compare_input_dicts(model=self.delay_model_name, stored_inputs=self.delay_inputs,
+                            env_inputs=input_dict)
+        return self.offer_time - self.delay_time
+
+    def get_msg(self, check_time=None, input_dict=None):
+        if self.msg_inputs is None:
+            raise RuntimeError("Environment unexpectedly queried delay model")
+        assert check_time == self.offer_time
+        compare_input_dicts(model=self.delay_model_name, stored_inputs=self.msg_inputs,
+                            env_inputs=input_dict)
+        return self.msg
 
     @property
     def byr(self):
