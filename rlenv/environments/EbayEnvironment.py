@@ -38,7 +38,7 @@ class EbayEnvironment:
 
         # end time
         self.end_time = None
-        self.thread_counter = 0
+        self.thread_counter = 1
         self.outcome = None
 
         # interval data
@@ -49,7 +49,7 @@ class EbayEnvironment:
         self.queue.reset()
         self.time_feats.reset()
         self.outcome = None
-        self.thread_counter = 0
+        self.thread_counter = 1
         sources = ArrivalSources(x_lstg=self.x_lstg)
         event = Arrival(priority=self.lookup[START_TIME], sources=sources)
         self.queue.push(event)
@@ -179,7 +179,8 @@ class EbayEnvironment:
 
         # update sources with clock feats
         clock_feats = get_clock_feats(event.priority)
-        event.update_arrival(thread_count=self.thread_counter, clock_feats=clock_feats)
+        event.update_arrival(thread_count=self.thread_counter - 1,
+                             clock_feats=clock_feats)
 
         # call model to sample inter arrival time and update arrival check priority
         input_dict = self.composer.build_input_dict(ARRIVAL_MODEL,
@@ -189,8 +190,8 @@ class EbayEnvironment:
 
         # if a buyer arrives, create a thread at the arrival time
         if event.priority < self.end_time:
-            self.thread_counter += 1
             self.queue.push(self.make_thread(event.priority))
+            self.thread_counter += 1
         self.queue.push(event)
         return False
 

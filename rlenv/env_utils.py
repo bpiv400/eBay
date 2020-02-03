@@ -348,17 +348,18 @@ def compare_input_dicts(model=None, stored_inputs=None, env_inputs=None):
     assert len(stored_inputs) == len(env_inputs)
     for feat_set_name, stored_feats in stored_inputs.items():
         env_feats = env_inputs[feat_set_name]
-        feat_eq = torch.lt(torch.abs(torch.add(stored_feats, env_feats)), 1e-12)
+        feat_eq = torch.lt(torch.abs(torch.add(-stored_feats, env_feats)), 1e-8)
         if not torch.all(feat_eq):
             print('Model input inequality found for {} in {}'.format(model, feat_set_name))
             feat_eq = (~feat_eq.numpy())[0, :]
-            feat_eq = np.nonzero(feat_eq)
+            feat_eq = np.nonzero(feat_eq)[0]
             featnames = load_featnames(model)
             if 'offer' in feat_set_name:
                 featnames = featnames['offer']
             else:
                 featnames = featnames[feat_set_name]
             for feat_index in feat_eq:
+                print(feat_index)
                 print('-- INCONSISTENCY IN {} --'.format(featnames[feat_index]))
                 print('stored value = {} | env value = {}'.format(stored_feats[0, feat_index],
                                                                   env_feats[0, feat_index]))
@@ -372,8 +373,7 @@ def need_msg(con):
 def populate_test_model_inputs(full_inputs=None, value=None):
     inputs = dict()
     for feat_set_name, feat_df in full_inputs.items():
-        print(value)
-
+        # print(value)
         curr_set = full_inputs[feat_set_name].loc[value, :]
         curr_set = torch.from_numpy(curr_set.values).float().unsqueeze(0)
         inputs[feat_set_name] = curr_set

@@ -10,6 +10,7 @@ class TestGenerator(Generator):
     def __init__(self, direct, num, verbose=False):
         super().__init__(direct, num, verbose)
         chunk_dir = get_env_sim_subdir(base_dir=direct, chunks=True)
+        print('Loading test inputs...')
         self.test_data = load('{}{}_test.gz'.format(chunk_dir, num))
         self.recorder = DiscrimRecorder("", self.verbose)
 
