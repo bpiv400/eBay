@@ -63,8 +63,8 @@ def main():
     args = parser.parse_args()
     base_dir = get_env_sim_dir(args.part)
     print('Loading chunk...')
-    chunk = load_chunk(base_dir=base_dir, num=args.num)
-    lstgs = chunk['lookup'].index
+    _, lookup = load_chunk(base_dir=base_dir, num=args.num)
+    lstgs = lookup.index
     print('Loading model inputs...')
     model_inputs = load_all_inputs(part=args.part, lstgs=lstgs)
     print('Loading x offer and x_thread...')
