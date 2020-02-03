@@ -7,6 +7,7 @@ import torch
 from constants import PARTITIONS, SIM_CHUNKS
 from rlenv.env_utils import get_env_sim_dir
 from rlenv.simulator.values.ValueGenerator import ValueGenerator
+from rlenv.test.TestGenerator import TestGenerator
 from rlenv.simulator.discrim.DiscrimGenerator import DiscrimGenerator
 
 
@@ -21,6 +22,15 @@ def chunk_done(generator):
     return os.path.isfile(records_path)
 
 
+def get_gen_class(values=False, test=False):
+    if values:
+        return ValueGenerator
+    elif test:
+        return TestGenerator
+    else:
+        return DiscrimGenerator
+
+
 def main():
     torch.set_default_dtype(torch.float32)
     # parse arguments
@@ -29,6 +39,7 @@ def main():
     parser.add_argument('--part', required=True, type=str, help='partition name')
     parser.add_argument('--values', action='store_true',
                         help='for value estimation; otherwise discriminator input')
+    parser.add_argument('--test', action='store_true')
     parser.add_argument('--verbose', action='store_true',
                         help='print event detail')
     args = parser.parse_args()
@@ -43,7 +54,7 @@ def main():
     # check whether chunk is finished processing
 
     # create generator
-    gen_class = ValueGenerator if values else DiscrimGenerator
+    gen_class = get_gen_class(values=values, test=args.test)
     generator = gen_class(get_env_sim_dir(part), num, verbose)
     if values and chunk_done(generator):
         print('{} already done'.format(num))

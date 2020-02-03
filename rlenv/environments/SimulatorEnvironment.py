@@ -15,7 +15,6 @@ class SimulatorEnvironment(EbayEnvironment):
 
         # end time
         self.end_time = self.lookup[START_TIME] + MONTH
-        self.thread_counter = 0
 
     def reset(self):
         super(SimulatorEnvironment, self).reset()
@@ -33,10 +32,10 @@ class SimulatorEnvironment(EbayEnvironment):
         super(SimulatorEnvironment, self).run()
         return self.outcome
 
-    def _record(self, event, byr_hist=None, censored=False):
+    def record(self, event, byr_hist=None, censored=False):
         """
         Add record of offer or thread to Recorder
-        :param rlenv.events.ThreadSources event: event containing most recent offer
+        :param rlenv.events.Thread.Thread event: event containing most recent offer
         """
         if byr_hist is None:
             if not censored:
@@ -49,7 +48,7 @@ class SimulatorEnvironment(EbayEnvironment):
             self.recorder.start_thread(thread_id=event.thread_id, byr_hist=byr_hist,
                                        time=event.priority)
 
-    def _is_agent_turn(self, event):
+    def is_agent_turn(self, event):
         return False
 
 

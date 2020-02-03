@@ -31,9 +31,9 @@ class SellerEnvironment(AgentEnvironment):
         :param action: float returned from agent
         :return:
         """
-        offer_outcomes = get_con_outcomes(con=action, sources=self.last_event.sources(),
-                                          turn=self.last_event.turn)
-        offer = self.last_event.update_offer(offer_outcomes=offer_outcomes)
+        con_outcomes = get_con_outcomes(con=action, sources=self.last_event.sources(),
+                                        turn=self.last_event.turn)
+        offer = self.last_event.update_con_outcomes(con_outcomes=con_outcomes)
         lstg_complete = self._process_post_offer(self.last_event, offer)
         if lstg_complete:
             return self._agent_tuple(lstg_complete)

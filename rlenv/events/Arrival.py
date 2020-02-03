@@ -14,7 +14,7 @@ class Arrival(Event):
     Attributes:
         priority: inherited from Event
     """
-    def __init__(self, priority=None, sources=None, interface=None):
+    def __init__(self, priority=None, sources=None):
         """
         Constructor
 
@@ -23,7 +23,6 @@ class Arrival(Event):
         super(Arrival, self).__init__(ARRIVAL, priority=int(priority))
         self.sources = sources
         self.start = priority
-        self.interface = interface  # type: ArrivalInterface
 
     def update_arrival(self, clock_feats=None, thread_count=None):
         months_since_lstg = get_months_since_lstg(lstg_start=self.start, start=self.priority)

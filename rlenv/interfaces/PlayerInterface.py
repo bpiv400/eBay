@@ -1,89 +1,57 @@
-import numpy as np
 import torch
 from torch.distributions.categorical import Categorical
 from rlenv.env_utils import (model_str, proper_squeeze,
-                             sample_categorical, sample_bernoulli, get_con_outcomes)
+                             sample_categorical, sample_bernoulli)
 from featnames import *
 from utils import load_model
 
 
 class PlayerInterface:
-    def __init__(self, composer=None, byr=False):
+    def __init__(self, byr=False):
         # store args
-        self.composer = composer
         self.byr = byr
 
         # store names for each
-        self._con_model_name = model_str(CON, byr=byr)
-        self._msg_model_name = model_str(MSG, byr=byr)
-        self._delay_model_name = model_str(DELAY, byr=byr)
+        self.con_model_name = model_str(CON, byr=byr)
+        self.msg_model_name = model_str(MSG, byr=byr)
+        self.delay_model_name = model_str(DELAY, byr=byr)
 
-        self.msg_model = load_model(self._msg_model_name)
-        self.con_model = load_model(self._con_model_name)
-        self.delay_model = load_model(self._delay_model_name)
+        self.msg_model = load_model(self.msg_model_name)
+        self.con_model = load_model(self.con_model_name)
+        self.delay_model = load_model(self.delay_model_name)
 
-    def con(self, sources=None, turn=None):
+    def con(self, input_dict=None, turn=None):
         """
-        :param sources: Sources
+        :param input_dict: dict
         :param turn: current turn number
-        :return: np.array
+        :return: np.float
         """
-        params = self.con(sources=sources, turn=turn)
-        con = self._sample_con(params=params, turn=turn)
+        params = self.con_model(input_dict)
+        con = self.sample_con(params=params, turn=turn)
         return con
 
-    def make_offer(self, sources=None, turn=None):
-        """
-        # TODO: Deprecate and remove usages
-        Returns updated turn outcome pd.Series with result of a message
-        and delay sampled from relevant models
-        :param sources: Sources
-        :param turn: current turn number
-        :return: np.array
-        """
-        params = self.con(sources=sources, turn=turn)
-        con = self._sample_con(params=params, turn=turn)
-        con_outcomes = get_con_outcomes(con=con, sources=sources, turn=turn)
-        # don't draw msg if there's an acceptance or rejection
-        if not self._need_msg(con):
-            msg = 0.0
-        else:
-            msg = self._sample_msg(sources=sources, turn=turn)
-        return np.append(con_outcomes, msg)
-
-    def delay(self, sources=None, turn=0):
-        input_dict = self.composer.build_input_dict(self._delay_model_name, sources=sources,
-                                                    turn=turn)
+    def delay(self, input_dict=None):
         params = self.delay_model(input_dict)
         delay = sample_categorical(params)
         return delay
 
-    def _sample_msg(self, sources=None, turn=0):
-        input_dict = self.composer.build_input_dict(self._msg_model_name,sources=sources, turn=turn)
+    def msg(self, input_dict=None):
         params = self.msg_model(input_dict)
         return sample_bernoulli(params)
-
-    def con(self, sources=None, turn=0):
-        input_dict = self.composer.build_input_dict(self._con_model_name, sources=sources, turn=turn)
-        params = self.con_model(input_dict)
-        return params
 
     @staticmethod
     def _need_msg(con):
         return con != 0 and con != 1
 
-    def _sample_con(self, params=None, turn=0):
+    def sample_con(self, params=None, turn=0):
         raise NotImplementedError()
 
 
 class BuyerInterface(PlayerInterface):
-    def __init__(self, composer=None):
-        """
-        :param composer: rlenv/Composer.Composer
-        """
-        super().__init__(composer=composer, byr=True)
+    def __init__(self):
+        super().__init__(byr=True)
 
-    def _sample_con(self, params=None, turn=None):
+    def sample_con(self, params=None, turn=None):
         dist = Categorical(logits=params)
         if turn == 1:
             sample = torch.zeros(1)
@@ -104,32 +72,42 @@ class BuyerInterface(PlayerInterface):
 
 
 class SellerInterface(PlayerInterface):
-    def __init__(self, composer=None, full=True):
+    def __init__(self, full=True):
         """
-        :param composer: rlenv/Composer.Composer
         :param full: whether to initialize con and msg models
         (Do not if there is a Seller Agent)
         """
-        super().__init__(composer=composer, byr=False)
+        super().__init__(byr=False)
         self.full = full
         # throw out con and msg models if there's an agent
         if not full:
             self.con_model = None
             self.msg_model = None
 
-    def make_offer(self, sources=None, turn=None):
+    def con(self, input_dict=None, turn=None):
         """
-        Returns updated turn outcome pd.Series with result of a message
-        and delay sampled from relevant models
-        :param sources: Sources
+        Generate a concession if concession model defined
+        :param input_dict: dict
         :param turn: current turn number
-        :return: pd.Series
+        :return: np.float
         """
+        self._check_full()
+        return super().con(input_dict=input_dict, turn=turn)
+
+    def msg(self, input_dict=None):
+        """
+        Generate a concession if concession model defined
+        :param input_dict: dict
+        :return: np.float
+        """
+        self._check_full()
+        return super().msg(input_dict=input_dict)
+
+    def sample_con(self, params=None, turn=None):
+        con = (sample_categorical(params) / 100)
+        return con
+
+    def _check_full(self):
         if not self.full:
             raise NotImplementedError('Make offer cannot be called' +
                                       'since con/msg models not initalized')
-        return super().make_offer(sources=sources, turn=turn)
-
-    def _sample_con(self, params=None, turn=None):
-        con = (sample_categorical(params) / 100)
-        return con

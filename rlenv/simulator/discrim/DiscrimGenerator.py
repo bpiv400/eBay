@@ -21,13 +21,13 @@ class DiscrimGenerator(Generator):
             lookup = self.lookup.loc[lstg, :]
 
             # create environment
-            environment = self._setup_env(lstg, lookup)
+            environment = self.setup_env(lstg=lstg, lookup=lookup)
 
             # update listing in recorder
             self.recorder.update_lstg(lookup=lookup, lstg=lstg)
 
             # simulate lstg once
-            self._simulate_lstg(environment)
+            self.simulate_lstg(environment)
 
             if (i % 10) == 0 and i != 0:
                 print('Avg time per listing: {} seconds'.format(
@@ -36,7 +36,7 @@ class DiscrimGenerator(Generator):
         # save the recorder
         self.recorder.dump()
 
-    def _simulate_lstg(self, environment):
+    def simulate_lstg(self, environment):
         """
         Simulates a particular listing once
         :param environment: RewardEnvironment

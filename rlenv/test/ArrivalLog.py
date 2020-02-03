@@ -1,0 +1,30 @@
+from rlenv.env_utils import compare_input_dicts
+from rlenv.env_consts import ARRIVAL_MODEL, BYR_HIST_MODEL
+
+
+class ArrivalLog:
+
+    def __init__(self, hist=None, time=None, arrival_inputs=None, hist_inputs=None, check_time=None):
+        self.censored = hist is None
+        self.time = time
+        self.arrival_inputs = arrival_inputs
+        self.hist_inputs = hist_inputs
+        self.hist = hist
+        self.check_time = check_time
+
+    def get_inter_arrival(self, check_time=None, input_dict=None):
+        print('is censored: {}'.format(self.censored))
+        print('env time: {}'.format(check_time))
+        print('stored check time: {}'.format(self.check_time))
+        assert check_time == self.check_time
+        compare_input_dicts(model=ARRIVAL_MODEL, stored_inputs=self.arrival_inputs, env_inputs=input_dict)
+        inter_arrival = self.time - self.check_time
+        print('arrival time: {}'.format(self.time))
+        return int(inter_arrival)
+
+    def get_hist(self, check_time=None, input_dict=None):
+        if self.censored:
+            raise RuntimeError("Checking history for censored arrival event")
+        assert check_time == self.time
+        compare_input_dicts(model=BYR_HIST_MODEL, stored_inputs=self.hist_inputs, env_inputs=input_dict)
+        return self.hist

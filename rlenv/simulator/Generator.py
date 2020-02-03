@@ -6,13 +6,13 @@ Otherwise, starts from scratch with the first listing in the file
 
 Lots of memory dumping code while I try to find leak
 """
-from compress_pickle import load
 import numpy as np
+from featnames import START_PRICE, START_TIME, ACC_PRICE, DEC_PRICE
+from rlenv.env_utils import load_chunk
 from rlenv.interfaces.PlayerInterface import BuyerInterface, SellerInterface
 from rlenv.interfaces.ArrivalInterface import ArrivalInterface
 from rlenv.environments.SimulatorEnvironment import SimulatorEnvironment
 from rlenv.Composer import Composer
-from featnames import START_PRICE, START_TIME, ACC_PRICE, DEC_PRICE
 
 
 class Generator:
@@ -26,27 +26,25 @@ class Generator:
         self.dir = direct
         self.chunk = int(num)
         self.verbose = verbose
-
-        d = load('{}chunks/{}.gz'.format(self.dir, self.chunk))
-        self.x_lstg = d['x_lstg']
-        self.lookup = d['lookup']
+        self.x_lstg, self.lookup = load_chunk(base_dir=self.dir, num=self.chunk)
         self.recorder = None
 
+        # model interfaces and input composer
         self.composer = Composer(self.x_lstg.columns)
-
-        self.buyer = BuyerInterface(composer=self.composer)
-        self.seller = SellerInterface(composer=self.composer, full=True)
-        self.arrival = ArrivalInterface(composer=self.composer)
+        self.buyer = BuyerInterface()
+        self.seller = SellerInterface(full=True)
+        self.arrival = ArrivalInterface()
 
     def generate(self):
         raise NotImplementedError()
 
-    def _setup_env(self, lstg, lookup):
+    def setup_env(self, lstg=None, lookup=None, log=None):
         """
         Generates the environment required to simulate the given listing
         :param lstg: int giving a lstg id
         :param pd.Series lookup: metadata about lstg
-        :return: SimulatorEnvironment
+        :param log: optional LstgLog passed if testing environment
+        :return: SimulatorEnvironment or subclass
         """
         if self.verbose:
             self.print_lstg_info(lstg, lookup)
@@ -55,11 +53,15 @@ class Generator:
         x_lstg = self.x_lstg.loc[lstg, :].astype(np.float32)
         x_lstg = self.composer.decompose_x_lstg(x_lstg)
         # create and return environment
-        return SimulatorEnvironment(buyer=self.buyer, seller=self.seller,
-                                    arrival=self.arrival, x_lstg=x_lstg, lookup=lookup,
-                                    recorder=self.recorder, verbose=self.verbose)
+        return self.create_env(x_lstg=x_lstg, lookup=lookup, log=log)
 
-    def _simulate_lstg(self, environment):
+    def create_env(self, x_lstg=None, lookup=None, log=None):
+        return SimulatorEnvironment(buyer=self.buyer, seller=self.seller,
+                                    arrival=self.arrival, x_lstg=x_lstg,
+                                    lookup=lookup, recorder=self.recorder,
+                                    verbose=self.verbose, composer=self.composer)
+
+    def simulate_lstg(self, environment):
         raise NotImplementedError()
 
     @property

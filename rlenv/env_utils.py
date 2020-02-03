@@ -8,11 +8,9 @@ import pandas as pd
 from compress_pickle import load
 from torch.distributions.categorical import Categorical
 from torch.distributions.bernoulli import Bernoulli
-from constants import (INPUT_DIR, TOL_HALF,
-                       MODEL_DIR, ENV_SIM_DIR, DAY, BYR_PREFIX, SLR_PREFIX)
+from constants import (INPUT_DIR, ENV_SIM_DIR, DAY, BYR_PREFIX, SLR_PREFIX)
 from rlenv.env_consts import (META_6, META_7, SIM_CHUNKS_DIR, SIM_VALS_DIR, OFFER_MAPS,
                               SIM_DISCRIM_DIR, DATE_FEATS, ARRIVAL_MODELS, NORM_IND)
-from featnames import *
 from utils import extract_clock_feats, is_split, slr_norm, byr_norm
 
 
@@ -145,7 +143,7 @@ def slr_rej_outcomes(sources, turn):
     :return: np.array
     """
     norm = last_norm(sources=sources, turn=turn)
-    return np.array([0.0, 1.0, norm, 0.0, 0.0], dtype=np.float32)
+    return np.array([0.0, 1.0, norm, 0.0], dtype=np.float32)
 
 
 def slr_auto_acc_outcomes(sources, turn):
@@ -159,7 +157,7 @@ def slr_auto_acc_outcomes(sources, turn):
     con = 1.0
     prev_byr_norm = prev_norm(sources=sources, turn=turn)
     norm = 1.0 - prev_byr_norm
-    return np.array([con, 0.0, norm, 0.0, 0.0], dtype=np.float32)
+    return np.array([con, 0.0, norm, 0.0], dtype=np.float32)
 
 
 def get_checkpoint_path(part_dir, chunk_num, discrim=False):
@@ -310,6 +308,16 @@ def get_auto(delay, turn):
     return auto
 
 
+def load_featnames(name):
+    """
+    Loads featnames dictionary for a model
+    :param name: str giving name (e.g. hist, con_byr),
+     see env_consts.py for model names
+    :return: dict
+    """
+    return load(INPUT_DIR + 'featnames/{}.pkl'.format(name))
+
+
 def get_con_outcomes(con=None, sources=None, turn=0):
     """
     Returns vector giving con and features downstream from it in order given by
@@ -334,3 +342,50 @@ def get_con_outcomes(con=None, sources=None, turn=0):
 
 def get_reject(con):
     return con == 0
+
+
+def compare_input_dicts(model=None, stored_inputs=None, env_inputs=None):
+    assert len(stored_inputs) == len(env_inputs)
+    for feat_set_name, stored_feats in stored_inputs.items():
+        env_feats = env_inputs[feat_set_name]
+        feat_eq = torch.lt(torch.abs(torch.add(-stored_feats, env_feats)), 1e-8)
+        if not torch.all(feat_eq):
+            print('Model input inequality found for {} in {}'.format(model, feat_set_name))
+            feat_eq = (~feat_eq.numpy())[0, :]
+            feat_eq = np.nonzero(feat_eq)[0]
+            featnames = load_featnames(model)
+            if 'offer' in feat_set_name:
+                featnames = featnames['offer']
+            else:
+                featnames = featnames[feat_set_name]
+            for feat_index in feat_eq:
+                print('-- INCONSISTENCY IN {} --'.format(featnames[feat_index]))
+                print('stored value = {} | env value = {}'.format(stored_feats[0, feat_index],
+                                                                  env_feats[0, feat_index]))
+            raise RuntimeError("Environment inputs diverged from true inputs")
+
+
+def need_msg(con):
+    return con != 0 and con != 1
+
+
+def populate_test_model_inputs(full_inputs=None, value=None):
+    inputs = dict()
+    for feat_set_name, feat_df in full_inputs.items():
+        # print(value)
+        curr_set = full_inputs[feat_set_name].loc[value, :]
+        curr_set = curr_set.values
+        curr_set = torch.from_numpy(curr_set).float()
+        if len(curr_set.shape) == 1:
+            curr_set = curr_set.unsqueeze(0)
+        inputs[feat_set_name] = curr_set
+    return inputs
+
+
+def get_delay_type(turn):
+    if turn % 2 == 0:
+        return SLR_PREFIX
+    elif turn == 7:
+        return '{}_{}'.format(BYR_PREFIX, 7)
+    else:
+        return BYR_PREFIX
