@@ -351,8 +351,6 @@ def compare_input_dicts(model=None, stored_inputs=None, env_inputs=None):
         feat_eq = torch.lt(torch.abs(torch.add(-stored_feats, env_feats)), 1e-8)
         if not torch.all(feat_eq):
             print('Model input inequality found for {} in {}'.format(model, feat_set_name))
-            print('stored type: {}'.format(type(stored_feats)))
-            print(stored_feats.shape)
             feat_eq = (~feat_eq.numpy())[0, :]
             feat_eq = np.nonzero(feat_eq)[0]
             featnames = load_featnames(model)
