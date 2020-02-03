@@ -2,6 +2,7 @@ from compress_pickle import load
 from rlenv.simulator.Generator import Generator
 from rlenv.test.LstgLog import LstgLog
 from rlenv.test.TestEnvironment import TestEnvironment
+from rlenv.simulator.discrim.DiscrimRecorder import DiscrimRecorder
 from rlenv.env_utils import get_env_sim_subdir
 
 
@@ -10,6 +11,7 @@ class TestGenerator(Generator):
         super().__init__(direct, num, verbose)
         chunk_dir = get_env_sim_subdir(base_dir=direct, chunks=True)
         self.test_data = load('{}{}_test.gz'.format(chunk_dir, num))
+        self.recorder = DiscrimRecorder("", self.verbose)
 
     def generate(self):
         for i, lstg in enumerate(self.x_lstg.index):
@@ -24,8 +26,13 @@ class TestGenerator(Generator):
                 'x_offer': self.test_data['x_offer'],
                 'lookup': lookup
             }
+            print('Generating lstg log...')
             log = LstgLog(params=params)
+            print('Log constructed')
             environment = self.setup_env(lstg=lstg, lookup=lookup, log=log)
+
+            # update listing in recorder
+            self.recorder.update_lstg(lookup=lookup, lstg=lstg)
 
             # simulate lstg once
             self.simulate_lstg(environment)
@@ -44,7 +51,8 @@ class TestGenerator(Generator):
         return TestEnvironment(buyer=self.buyer, seller=self.seller,
                                arrival=self.arrival, x_lstg=x_lstg,
                                lookup=lookup, verbose=self.verbose,
-                               log=log, composer=self.composer)
+                               log=log, composer=self.composer,
+                               recorder=self.recorder)
 
     @property
     def records_path(self):

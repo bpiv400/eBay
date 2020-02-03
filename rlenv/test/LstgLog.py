@@ -14,6 +14,7 @@ class LstgLog:
         :param params: dict
         """
         self.lstg = params['lstg']
+        print(self.lstg)
         self.lookup = params['lookup']
         params = LstgLog.subset_params(params)
         self.arrivals = self.generate_arrival_logs(params)
@@ -50,6 +51,7 @@ class LstgLog:
     def generate_censored_arrival(self, params=None, thread_id=None):
         check_time = self.arrival_check_time(params=params, thread_id=thread_id)
         full_arrival_inputs = params['inputs'][ARRIVAL_MODEL]
+        # print(full_arrival_inputs)
         arrival_inputs = populate_test_model_inputs(full_inputs=full_arrival_inputs,
                                                     value=thread_id)
         time = self.lookup[START_TIME] + MONTH
@@ -130,6 +132,7 @@ class LstgLog:
                                               lstg=params['lstg'])
         params['inputs'] = LstgLog.subset_inputs(input_data=params['inputs'], models=MODELS,
                                                  level='lstg', value=params['lstg'])
+        print(params['inputs']['arrival']['lstg'])
         return params
 
     @staticmethod
@@ -165,12 +168,12 @@ class LstgLog:
                     else:
                         curr_index = None
                     index_is_cached = True
-                if curr_index is None:
+                if curr_index is not None:
                     subset = feats_df.loc[curr_index, :]
                     subset.index = subset.index.droplevel(level=level)
                 else:
                     subset = None
                 inputs[model][input_group] = subset
-        return input_data
+        return inputs
 
 
