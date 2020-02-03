@@ -174,6 +174,7 @@ class EbayEnvironment:
         :param event: Event corresponding to current event
         :return: boolean indicating whether the lstg has ended
         """
+        print('processing arrival')
         if self.is_lstg_expired(event):
             return self.process_lstg_expiration(event)
 

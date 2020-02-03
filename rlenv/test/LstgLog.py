@@ -14,7 +14,7 @@ class LstgLog:
         :param params: dict
         """
         self.lstg = params['lstg']
-        # print(self.lstg)
+        print(self.lstg)
         self.lookup = params['lookup']
         params = LstgLog.subset_params(params)
         self.arrivals = self.generate_arrival_logs(params)
@@ -28,6 +28,7 @@ class LstgLog:
         thread_logs = dict()
         for thread_id, arrival_log in self.arrivals.items():
             if not arrival_log.censored:
+                print('Thread id: {}'.format(thread_id))
                 thread_logs[thread_id] = self.generate_thread_log(thread_id=thread_id, params=params)
         return thread_logs
 
@@ -46,6 +47,8 @@ class LstgLog:
             if not self.check_bin(params=params, thread_id=num_arrivals):
                 censored = self.generate_censored_arrival(params=params, thread_id=num_arrivals + 1)
                 arrival_logs[num_arrivals + 1] = censored
+            else:
+                print('has bin')
         return arrival_logs
 
     def generate_censored_arrival(self, params=None, thread_id=None):
@@ -62,13 +65,14 @@ class LstgLog:
             check_time = self.lookup[START_TIME]
         else:
             check_time = int(params['x_thread'].loc[thread_id - 1, MONTHS_SINCE_LSTG] * MONTH)
+            check_time += self.lookup[START_TIME]
         return check_time
 
     def generate_arrival_log(self, params=None, thread_id=None):
         check_time = self.arrival_check_time(params=params, thread_id=thread_id)
         time = int(params['x_thread'].loc[thread_id, MONTHS_SINCE_LSTG] * MONTH)
         time += self.lookup[START_TIME]
-        hist = params['x_thread'].loc[thread_id, BYR_HIST]
+        hist = params['x_thread'].loc[thread_id, BYR_HIST] / 10
         full_arrival_inputs = params['inputs'][ARRIVAL_MODEL]
         full_hist_inputs = params['inputs'][BYR_HIST_MODEL]
         arrival_inputs = populate_test_model_inputs(full_inputs=full_arrival_inputs,
@@ -83,7 +87,7 @@ class LstgLog:
         thread_params['x_offer'] = params['x_offer'].xs(thread_id, level='thread', drop_level=True)
         thread_params['inputs'] = LstgLog.subset_inputs(models=OFFER_MODELS, input_data=params['inputs'],
                                                         value=thread_id, level='thread')
-        return ThreadLog(params=params, arrival_time=self.arrivals[thread_id])
+        return ThreadLog(params=thread_params, arrival_time=self.arrivals[thread_id].time)
 
     def get_con(self, thread_id=None, turn=None, input_dict=None, time=None):
         """
@@ -96,7 +100,7 @@ class LstgLog:
         """
         :return: np.float
         """
-        msg = self.threads[thread_id].get_delay(turn=turn, time=time, input_dict=input_dict)
+        msg = self.threads[thread_id].get_msg(turn=turn, time=time, input_dict=input_dict)
         if msg:
             return 1.0
         else:
@@ -162,7 +166,7 @@ class LstgLog:
             curr_index = None
             for input_group, feats_df in input_data[model].items():
                 if not index_is_cached:
-                    if value in feats_df.index.unique(level=level):
+                    if feats_df is not None and value in feats_df.index.unique(level=level):
                         full_lstgs = feats_df.index.get_level_values(level)
                         curr_index = full_lstgs == value
                     else:

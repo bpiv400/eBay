@@ -27,9 +27,9 @@ class Event:
         """
         if self.priority == other.priority:
             if self.type == ARRIVAL:
-                return True
-            else:
                 return False
+            else:
+                return True
         else:
             return self.priority < other.priority
 

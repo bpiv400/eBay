@@ -24,25 +24,27 @@ class ThreadLog:
         return TurnLog(outcomes=outcomes, delay_inputs=delay_inputs, delay_time=delay_time, turn=turn)
 
     def generate_turn_log(self, params=None, turn=None):
-        outcomes = params['x_offer'].loc[turn, :]
-        outcomes = outcomes[[OUTCOME_FEATS]]
+        print('Turn: {}'.format(turn))
+        outcomes = params['x_offer'].loc[turn, :].squeeze()
+        outcomes = outcomes[OUTCOME_FEATS]
         byr = turn % 2 != 0
+        # print(outcomes)
         # concession inputs if necessary
         if not outcomes[AUTO] and not outcomes[EXP]:
             model = model_str(CON, byr=byr)
-            con_inputs = populate_test_model_inputs(full_inputs=params['inputs'][model])
+            con_inputs = populate_test_model_inputs(full_inputs=params['inputs'][model], value=turn)
         else:
             con_inputs = None
         # msg inputs if necessary
         if need_msg(outcomes[CON]):
             model = model_str(MSG, byr=byr)
-            msg_inputs = populate_test_model_inputs(full_inputs=params['inputs'][model])
+            msg_inputs = populate_test_model_inputs(full_inputs=params['inputs'][model], value=turn)
         else:
             msg_inputs = None
         # delay inputs if necessary
         if turn != 1 and not outcomes[AUTO]:
             model = model_str(DELAY, byr=byr)
-            delay_inputs = populate_test_model_inputs(full_inputs=params['inputs'][model])
+            delay_inputs = populate_test_model_inputs(full_inputs=params['inputs'][model], value=turn)
         else:
             delay_inputs = None
         delay_time = self.delay_time(turn=turn)
@@ -60,7 +62,9 @@ class ThreadLog:
     @staticmethod
     def has_censored(params=None):
         num_offers = len(params['x_offer'].index)
-        last_censored = params['x_offer'].loc[num_offers, 'censored']
+        print('num offers: {}'.format(num_offers))
+        last_censored = params['x_offer'].loc[num_offers, :].squeeze()
+        last_censored = last_censored['censored']
         return last_censored
 
     @staticmethod

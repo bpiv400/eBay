@@ -351,6 +351,8 @@ def compare_input_dicts(model=None, stored_inputs=None, env_inputs=None):
         feat_eq = torch.lt(torch.abs(torch.add(-stored_feats, env_feats)), 1e-8)
         if not torch.all(feat_eq):
             print('Model input inequality found for {} in {}'.format(model, feat_set_name))
+            print('stored type: {}'.format(type(stored_feats)))
+            print(stored_feats.shape)
             feat_eq = (~feat_eq.numpy())[0, :]
             feat_eq = np.nonzero(feat_eq)[0]
             featnames = load_featnames(model)
@@ -359,7 +361,6 @@ def compare_input_dicts(model=None, stored_inputs=None, env_inputs=None):
             else:
                 featnames = featnames[feat_set_name]
             for feat_index in feat_eq:
-                print(feat_index)
                 print('-- INCONSISTENCY IN {} --'.format(featnames[feat_index]))
                 print('stored value = {} | env value = {}'.format(stored_feats[0, feat_index],
                                                                   env_feats[0, feat_index]))
@@ -375,7 +376,10 @@ def populate_test_model_inputs(full_inputs=None, value=None):
     for feat_set_name, feat_df in full_inputs.items():
         # print(value)
         curr_set = full_inputs[feat_set_name].loc[value, :]
-        curr_set = torch.from_numpy(curr_set.values).float().unsqueeze(0)
+        curr_set = curr_set.values
+        curr_set = torch.from_numpy(curr_set).float()
+        if len(curr_set.shape) == 1:
+            curr_set = curr_set.unsqueeze(0)
         inputs[feat_set_name] = curr_set
     return inputs
 
