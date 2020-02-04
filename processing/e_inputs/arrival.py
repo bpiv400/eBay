@@ -10,8 +10,8 @@ def main():
     print('%s/arrival' % part)
 
     # load timestamps
-    lstg_end = load(CLEAN_DIR + 'listings.pkl').end_time.reindex(
-        index=lstg_start.index)
+    lstgs = load_file(part, 'lookup').index
+    lstg_end = load(CLEAN_DIR + 'listings.pkl').end_time.reindex(index=lstgs)
     thread_start = load_file(part, 'clock').xs(1, level='index')
 
     # input dataframes, output processed dataframes

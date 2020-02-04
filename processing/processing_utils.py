@@ -314,11 +314,11 @@ def process_arrival_inputs(part, lstg_end, thread_start):
 
 
 def save_featnames(x, name):
-    '''
+    """
     Creates dictionary of input feature names.
     :param x: dictionary of input dataframes.
     :param name: string name of model.
-    '''
+    """
     # initialize featnames dictionary
     featnames = {k: list(v.columns) for k, v in x.items() if 'offer' not in k}
 
@@ -338,29 +338,31 @@ def save_featnames(x, name):
 
 
 def save_sizes(x, name):
-    '''
+    """
     Creates dictionary of input sizes.
     :param x: dictionary of input dataframes.
     :param name: string name of model.
-    '''
-    sizes = {}
+    """
+    sizes = dict()
 
     # count components of x
     sizes['x'] = {k: len(v.columns) for k, v in x.items()}
 
     # save interval and interval counts
+    role = name.split('_')[-1]
     if (name == 'arrival') or ('delay' in name):
-        role = name.split('_')[-1]
         sizes['interval'] = INTERVAL[role]
         sizes['interval_count'] = INTERVAL_COUNTS[role]
         if role == BYR_PREFIX:
             sizes['interval_count_7'] = INTERVAL_COUNTS[BYR_PREFIX + '_7']
 
-        # output size
-        sizes['out'] = INTERVAL_COUNTS[role] + 1
-
+    # length of model output vector
+    if name == 'arrival':
+        sizes['out'] = INTERVAL_COUNTS[ARRIVAL_PREFIX]
     elif name == 'hist':
         sizes['out'] = HIST_QUANTILES
+    elif 'delay' in name:
+        sizes['out'] = INTERVAL_COUNTS[role] + 1
     elif 'con' in name:
         sizes['out'] = CON_MULTIPLIER + 1
     else:
@@ -370,12 +372,12 @@ def save_sizes(x, name):
 
 
 def convert_x_to_numpy(x, idx):
-    '''
+    """
     Converts dictionary of dataframes to dictionary of numpy arrays.
     :param x: dictionary of input dataframes.
     :param idx: pandas index for error checking indices.
     :return: dictionary of numpy arrays.
-    '''
+    """
     for k, v in x.items():
         assert np.all(v.index == idx)
         x[k] = v.to_numpy()
@@ -390,7 +392,8 @@ def save_small(d, name):
     idx_small = v[:N_SMALL]
 
     # outcome
-    small = {'y': d['y'][idx_small]}
+    small = dict()
+    small['y'] = d['y'][idx_small]
 
     # inputs
     small['x'] = {k: v[idx_small, :] for k, v in d['x'].items()}
