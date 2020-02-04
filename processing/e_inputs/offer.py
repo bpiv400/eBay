@@ -1,11 +1,10 @@
-import sys, os, argparse
-from compress_pickle import load, dump
-import numpy as np, pandas as pd
-from processing.processing_consts import MAX_DELAY, INTERVAL, \
-	INTERVAL_COUNTS, CLEAN_DIR
+import argparse
+import numpy as np
+import pandas as pd
+from processing.processing_consts import MAX_DELAY, INTERVAL, INTERVAL_COUNTS
 from processing.processing_utils import load_file, get_x_thread, \
 	get_x_offer, init_x, save_files
-from constants import IDX, DAY, BYR_PREFIX, SLR_PREFIX, ARRIVAL_PREFIX
+from constants import IDX, DAY, BYR_PREFIX, SLR_PREFIX, PARTITIONS
 from featnames import CON, MSG, AUTO, EXP, REJECT, DAYS, DELAY, INT_REMAINING
 from utils import get_remaining
 
@@ -39,8 +38,8 @@ def get_y_delay(df, role):
 	# convert to periods
 	delay //= INTERVAL[role]
 
-	# replace censored delays with last index
-	delay.loc[df[EXP]] = INTERVAL_COUNTS[role]
+	# replace censored delays with negative index
+	delay.loc[df[EXP]] -= INTERVAL_COUNTS[role] + 1
 
 	return delay
 
@@ -84,7 +83,7 @@ def process_inputs(part, outcome, role):
 		y = get_y_con(df)
 	elif outcome == 'msg':
 		y = get_y_msg(df)
-	elif outcome == 'delay':
+	else:
 		y = get_y_delay(df, role)
 	idx = y.index
 
@@ -94,7 +93,8 @@ def process_inputs(part, outcome, role):
 	# thread features
 	x_thread = get_x_thread(threads, idx)
 
-	if outcome == 'delay':	# add time remaining to x_thread
+	# add time remaining to x_thread
+	if outcome == 'delay':
 		x_thread[INT_REMAINING] = calculate_remaining(part, idx, role)
 
 	x['lstg'] = pd.concat([x['lstg'], x_thread], axis=1) 
@@ -123,21 +123,16 @@ def main():
 	parser.add_argument('--part', type=str)
 	parser.add_argument('--outcome', type=str)
 	parser.add_argument('--role', type=str)
-	parser.add_argument('--drop7', action='store_true')
 	args = parser.parse_args()
-	part, outcome, role, drop7 = args.part, args.outcome, args.role, args.drop7
+	part, outcome, role = args.part, args.outcome, args.role
+	assert part in PARTITIONS
+	assert outcome in [DELAY, CON, MSG]
+	assert role in [BYR_PREFIX, SLR_PREFIX]
 	name = '%s_%s' % (outcome, role)
 	print('%s/%s' % (part, name))
 
 	# input dataframes, output processed dataframes
 	d = process_inputs(part, outcome, role)
-
-	# drop turn 7
-	if drop7:
-		assert name == 'con_byr'
-		name += '_no7'
-		d['y'] = d['y'].drop(7, level='index')
-		d['x'] = {k: v.reindex(index=d['y'].index) for k, v in d['x'].items()}
 
 	# save various output files
 	save_files(d, part, name)

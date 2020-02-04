@@ -372,10 +372,8 @@ def main():
     # buyer turn indicator
     events['byr'] = events.index.isin(IDX['byr'], level='index')
 
-    # create rounded concession variable
-    con = get_con(events.price.unstack(), L.start_price)
-
     # add normalized offer to events
+    con = get_con(events.price.unstack(), L.start_price)
     events['norm'] = get_norm(con)
 
     # create lstg-level time-valued features

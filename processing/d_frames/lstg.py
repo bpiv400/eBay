@@ -1,7 +1,7 @@
 import os, sys
 from compress_pickle import load, dump
 import numpy as np, pandas as pd
-from processing.processing_utils import input_partition
+from processing.processing_utils import input_partition, extract_day_feats
 from processing.d_frames.frames_utils import get_partition, load_frames
 from processing.processing_consts import CLEAN_DIR, W2V_DIR
 from constants import *
@@ -26,6 +26,9 @@ def get_x_lstg(L):
         'slr_lstgs': 'slr_lstgs_total'}, axis=1, inplace=True)
     # normalize start_date to years
     df['start_years'] = L.start_date / 365
+    # date features
+    date_feats = extract_day_feats(L.start_date * DAY)
+    df = df.join(date_feats.rename(lambda x: 'start_' + x, axis=1))
     # photos divided by 12, and binary indicator
     df['photos'] = L.photos / 12
     df['has_photos'] = L.photos > 0

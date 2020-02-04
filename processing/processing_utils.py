@@ -289,49 +289,26 @@ def get_interarrival_period(clock):
     return y, diff
 
 
-def get_x_thread_arrival(clock, idx, lstg_start, diff):
-    # seconds since START at beginning of arrival window
-    seconds = clock.groupby('lstg').shift().dropna().astype(
-        'int64').reindex(index=idx)
+def process_arrival_inputs(part, lstg_end, thread_start):
+    # listing start time
+    lstg_start = load_file(part, 'lookup').start_time
 
-    # clock features
-    clock_feats = collect_date_clock_feats(seconds)
+    # counts of arrivals by interval
+    arrivals = (thread_start - lstg_start) // INTERVAL[ARRIVAL_PREFIX]
+    arrivals = arrivals.rename('period').to_frame().assign(
+        count=1).groupby(['lstg', 'period']).sum().squeeze()
+    y = arrivals.astype('int8').unstack(fill_value=0)
 
-    # thread count so far
-    thread_count = pd.Series(seconds.index.get_level_values(level='thread')-1,
-        index=seconds.index, name=THREAD_COUNT)
+    # add in lstgs without arrivals
+    y = y.reindex(index=lstg_start.index, fill_value=0)
 
-    # months since lstg start
-    months_since_lstg = get_months_since_lstg(lstg_start, seconds)
-    assert (months_since_lstg.max() < 1) & (months_since_lstg.min() >= 0)
-
-    # months since last arrival
-    months_since_last = diff.groupby('lstg').shift().fillna(0) / MONTH
-
-    # concatenate into dataframe
-    x_thread = pd.concat(
-        [clock_feats,
-        months_since_lstg.rename(MONTHS_SINCE_LSTG),
-        months_since_last.rename(MONTHS_SINCE_LAST),
-        thread_count], axis=1)
-
-    return x_thread.astype('float32')
-
-
-def process_arrival_inputs(part, lstg_start, lstg_end, thread_start):
-    # arrival times
-    clock = get_arrival_times(lstg_start, lstg_end, thread_start)
-
-    # interarrival times
-    y, diff = get_interarrival_period(clock)
-    idx = y.index
+    # censor after listing end
+    end = (lstg_end - lstg_start) // INTERVAL[ARRIVAL_PREFIX] + 1
+    for i in range(1, INTERVAL_COUNTS[ARRIVAL_PREFIX]):
+        y[i] -= (i >= end).astype('int8')
 
     # listing features
-    x = init_x(part, idx)
-
-    # add thread features to x['lstg']
-    x_thread = get_x_thread_arrival(clock, idx, lstg_start, diff)
-    x['lstg'] = pd.concat([x['lstg'], x_thread], axis=1) 
+    x = init_x(part, y.index)
 
     return {'y': y, 'x': x}
 

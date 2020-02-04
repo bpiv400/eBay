@@ -2,7 +2,7 @@ import torch
 from torch.nn.functional import log_softmax
 
 
-def TimeLoss(theta, y):
+def time_loss(theta, y):
 	# class probabilities
 	lnp = log_softmax(theta, dim=-1)
 
