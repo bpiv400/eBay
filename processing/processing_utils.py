@@ -1,7 +1,8 @@
 import argparse
-import numpy as np, pandas as pd
+import numpy as np
+import pandas as pd
 from compress_pickle import load, dump
-from utils import slr_norm, byr_norm, get_months_since_lstg, extract_clock_feats
+from utils import slr_norm, byr_norm, extract_clock_feats
 from processing.processing_consts import *
 from constants import *
 from featnames import *
@@ -13,11 +14,11 @@ def load_file(part, x):
 
 
 def extract_day_feats(seconds):
-    '''
+    """
     Creates clock features from timestamps.
     :param seconds: seconds since START.
     :return: tuple of time_of_day sine transform and afternoon indicator.
-    '''
+    """
     clock = pd.to_datetime(seconds, unit='s', origin=START)
     df = pd.DataFrame(index=clock.index)
     df[HOLIDAY] = clock.dt.date.astype('datetime64').isin(HOLIDAYS)
@@ -27,14 +28,14 @@ def extract_day_feats(seconds):
 
 
 def collect_date_clock_feats(seconds):
-    '''
+    """
     Combines date and clock features.
     :param seconds: seconds since START.
     :return: dataframe of date and clock features.
-    '''
+    """
     df = extract_day_feats(seconds)
     df[TIME_OF_DAY], df[AFTERNOON] = extract_clock_feats(seconds)
-    assert all(df.columns == CLOCK_FEATS)
+    assert all(list(df.columns) == CLOCK_FEATS)
     return df
 
 
@@ -70,10 +71,10 @@ def get_days_delay(clock):
 
     # for turn 1, days and delay are 0
     for i in range(2, 8):
-        days[i] = clock[i] - clock[i-1]
-        if i in [2, 4, 6, 7]: # byr has 2 days for last turn
+        days[i] = clock[i] - clock[i - 1]
+        if i in [2, 4, 6, 7]:  # byr has 2 days for last turn
             delay[i] = days[i] / MAX_DELAY[SLR_PREFIX]
-        elif i in [3, 5]:   # ignore byr arrival and last turn
+        elif i in [3, 5]:  # ignore byr arrival and last turn
             delay[i] = days[i] / MAX_DELAY[BYR_PREFIX]
     # no delay larger than 1
     assert delay.max().max() <= 1
@@ -86,11 +87,11 @@ def get_days_delay(clock):
 
 
 def round_con(con):
-    '''
+    """
     Round concession to nearest percentage point.
     :param con: pandas series of unrounded concessions.
     :return: pandas series of rounded concessions.
-    '''
+    """
     rounded = np.round(con, decimals=2)
     rounded.loc[(rounded == 1) & (con < 1)] = 0.99
     rounded.loc[(rounded == 0) & (con > 0)] = 0.01
@@ -104,40 +105,40 @@ def get_con(offers, start_price):
     con[1] = offers[1] / start_price
     con[2] = (offers[2] - start_price) / (offers[1] - start_price)
     for i in range(3, 8):
-        con[i] = (offers[i] - offers[i-2]) / (offers[i-1] - offers[i-2])
+        con[i] = (offers[i] - offers[i - 2]) / (offers[i - 1] - offers[i - 2])
     return round_con(con.rename_axis('index', axis=1).stack())
 
 
 def get_norm(con):
-    '''
+    """
     Calculate normalized concession from rounded concessions.
     :param con: pandas series of rounded concessions.
     :return: pandas series of normalized concessions.
-    '''
+    """
     df = con.unstack()
     norm = pd.DataFrame(index=df.index, columns=df.columns)
     norm[1] = df[1]
-    norm[2] = df[2] * (1-norm[1])
+    norm[2] = df[2] * (1 - norm[1])
     for i in range(3, 8):
         if i in IDX[BYR_PREFIX]:
-            norm[i] = byr_norm(con=df[i], 
-                prev_byr_norm=norm[i-2],
-                prev_slr_norm=norm[i-1])
+            norm[i] = byr_norm(con=df[i],
+                               prev_byr_norm=norm[i - 2],
+                               prev_slr_norm=norm[i - 1])
         elif i in IDX[SLR_PREFIX]:
             norm[i] = slr_norm(con=df[i],
-                prev_byr_norm=norm[i-1],
-                prev_slr_norm=norm[i-2])
+                               prev_byr_norm=norm[i - 1],
+                               prev_slr_norm=norm[i - 2])
     return norm.rename_axis('index', axis=1).stack().astype('float64')
 
 
 def add_turn_indicators(df):
-    '''
+    """
     Appends turn indicator variables to offer matrix
     :param df: dataframe with index ['lstg', 'thread', 'index'].
     :return: dataframe with turn indicators appended
-    '''
+    """
     indices = np.sort(np.unique(df.index.get_level_values('index')))
-    for i in range(len(indices)-1):
+    for i in range(len(indices) - 1):
         ind = indices[i]
         df['t{}'.format(ind)] = df.index.isin([ind], level='index')
     return df
@@ -203,7 +204,7 @@ def get_x_offer(offers, idx, outcome=None, role=None):
         last -= 2
 
     # turn features
-    for i in range(1, last+1):
+    for i in range(1, last + 1):
         # offer features at turn i
         offer = offers.xs(i, level='index').reindex(
             index=idx, fill_value=0).astype('float32')
@@ -231,64 +232,6 @@ def init_x(part, idx):
     return x
 
 
-def get_arrival_times(lstg_start, lstg_end, thread_start):
-    # thread 0: start of listing
-    s0 = lstg_start.to_frame().assign(thread=0).set_index(
-        'thread', append=True).squeeze()
-
-    # threads 1 to N: real threads
-    threads = thread_start.reset_index('thread').drop(
-        'clock', axis=1).squeeze().groupby('lstg').max().reindex(
-        index=lstg_start.index, fill_value=0)
-
-    # thread N+1: end of lstg
-    s1 = lstg_end.to_frame().assign(thread=threads+1).set_index(
-        'thread', append=True).squeeze()
-
-    # concatenate and sort into single series
-    clock = pd.concat([s0, thread_start, s1], axis=0).sort_index()
-
-    # thread to int
-    idx = clock.index
-    clock.index.set_levels(idx.levels[-1].astype('int16'), level=-1, inplace=True)
-
-    return clock.rename('clock')
-
-
-def get_interarrival_period(clock):
-    # calculate interarrival times in seconds
-    df = clock.unstack()
-    diff = pd.DataFrame(0.0, index=df.index, columns=df.columns[1:])
-    for i in diff.columns:
-        diff[i] = df[i] - df[i-1]
-
-    # restack
-    diff = diff.rename_axis(clock.index.names[-1], axis=1).stack()
-
-    # original datatype
-    diff = diff.astype(clock.dtype)
-
-    # indicator for whether observation is last in lstg
-    thread = pd.Series(diff.index.get_level_values(level='thread'),
-        index=diff.index)
-    last_thread = thread.groupby('lstg').max().reindex(
-        index=thread.index, level='lstg')
-    censored = thread == last_thread
-
-    # drop interarrivals after BINs
-    y = diff[diff > 0]
-    censored = censored.reindex(index=y.index)
-    diff = diff.reindex(index=y.index)
-
-    # convert y to periods
-    y //= INTERVAL[ARRIVAL_PREFIX]
-
-    # replace censored interarrival times with last interval
-    y.loc[censored] = INTERVAL_COUNTS[ARRIVAL_PREFIX]
-
-    return y, diff
-
-
 def process_arrival_inputs(part, lstg_end, thread_start):
     # listing start time
     lstg_start = load_file(part, 'lookup').start_time
@@ -296,16 +239,21 @@ def process_arrival_inputs(part, lstg_end, thread_start):
     # counts of arrivals by interval
     arrivals = (thread_start - lstg_start) // INTERVAL[ARRIVAL_PREFIX]
     arrivals = arrivals.rename('period').to_frame().assign(
-        count=1).groupby(['lstg', 'period']).sum().squeeze()
-    y = arrivals.astype('int8').unstack(fill_value=0)
+        count=1).groupby(['lstg', 'period']).sum().squeeze().astype('int8')
 
-    # add in lstgs without arrivals
-    y = y.reindex(index=lstg_start.index, fill_value=0)
-
-    # censor after listing end
+    # period after lstg end, for censoring
     end = (lstg_end - lstg_start) // INTERVAL[ARRIVAL_PREFIX] + 1
-    for i in range(1, INTERVAL_COUNTS[ARRIVAL_PREFIX]):
-        y[i] -= (i >= end).astype('int8')
+
+    # initialize outcome dataframe
+    y = pd.DataFrame(dtype='int8', index=lstg_start.index)
+
+    # add in arrivals and censored periods
+    for i in range(INTERVAL_COUNTS[ARRIVAL_PREFIX]):
+        print(i)
+        y[i] = arrivals.xs(i, level='period').reindex(
+            index=lstg_start.index, fill_value=0)
+        if i > 0:
+            y[i] -= (i >= end).astype('int8')
 
     # listing features
     x = init_x(part, y.index)
@@ -330,7 +278,7 @@ def save_featnames(x, name):
         for k in x.keys():
             if 'offer' in k:
                 assert list(x[k].columns) == feats
-                    
+
         # one vector of featnames for offer groupings
         featnames['offer'] = feats
 
