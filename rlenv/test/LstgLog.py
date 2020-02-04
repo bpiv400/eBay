@@ -110,6 +110,7 @@ class LstgLog:
         """
         :return: int
         """
+        print('processing delay')
         delay = self.threads[thread_id].get_delay(turn=turn, time=time, input_dict=input_dict)
         if delay == MONTH:
             return self.lookup[START_TIME] + MONTH - time

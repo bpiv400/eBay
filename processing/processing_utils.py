@@ -85,6 +85,29 @@ def get_days_delay(clock):
     return days, delay
 
 
+def round_con(con):
+    '''
+    Round concession to nearest percentage point.
+    :param con: pandas series of unrounded concessions.
+    :return: pandas series of rounded concessions.
+    '''
+    rounded = np.round(con, decimals=2)
+    rounded.loc[(rounded == 1) & (con < 1)] = 0.99
+    rounded.loc[(rounded == 0) & (con > 0)] = 0.01
+    # exception handling
+    rounded.loc[(con == 0) & con.index.isin([1], level='index')] = 0.01
+    return rounded
+
+
+def get_con(offers, start_price):
+    con = pd.DataFrame(index=offers.index)
+    con[1] = offers[1] / start_price
+    con[2] = (offers[2] - start_price) / (offers[1] - start_price)
+    for i in range(3, 8):
+        con[i] = (offers[i] - offers[i-2]) / (offers[i-1] - offers[i-2])
+    return round_con(con.rename_axis('index', axis=1).stack())
+
+
 def get_norm(con):
     '''
     Calculate normalized concession from rounded concessions.

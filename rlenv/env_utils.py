@@ -348,7 +348,7 @@ def compare_input_dicts(model=None, stored_inputs=None, env_inputs=None):
     assert len(stored_inputs) == len(env_inputs)
     for feat_set_name, stored_feats in stored_inputs.items():
         env_feats = env_inputs[feat_set_name]
-        feat_eq = torch.lt(torch.abs(torch.add(-stored_feats, env_feats)), 1e-8)
+        feat_eq = torch.lt(torch.abs(torch.add(-stored_feats, env_feats)), 1e-6)
         if not torch.all(feat_eq):
             print('Model input inequality found for {} in {}'.format(model, feat_set_name))
             feat_eq = (~feat_eq.numpy())[0, :]

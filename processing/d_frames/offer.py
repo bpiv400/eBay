@@ -1,35 +1,12 @@
 from compress_pickle import load, dump
 import numpy as np, pandas as pd
 from processing.processing_utils import input_partition, \
-    collect_date_clock_feats, get_days_delay, get_norm
+    collect_date_clock_feats, get_days_delay, get_norm, get_con
 from processing.d_frames.frames_utils import get_partition, load_frames
 from processing.processing_consts import CLEAN_DIR
 from constants import START, PARTS_DIR, SLR_PREFIX, IDX
 from featnames import DAYS, DELAY, CON, NORM, SPLIT, MSG, REJECT, AUTO, EXP
 from utils import is_split
-
-
-def round_con(con):
-    '''
-    Round concession to nearest percentage point.
-    :param con: pandas series of unrounded concessions.
-    :return: pandas series of rounded concessions.
-    '''
-    rounded = np.round(con, decimals=2)
-    rounded.loc[(rounded == 1) & (con < 1)] = 0.99
-    rounded.loc[(rounded == 0) & (con > 0)] = 0.01
-    # exception handling
-    rounded.loc[(con == 0) & con.index.isin([1], level='index')] = 0.01
-    return rounded
-
-
-def get_con(offers, start_price):
-    con = pd.DataFrame(index=offers.index)
-    con[1] = offers[1] / start_price
-    con[2] = (offers[2] - start_price) / (offers[1] - start_price)
-    for i in range(3, 8):
-        con[i] = (offers[i] - offers[i-2]) / (offers[i-1] - offers[i-2])
-    return round_con(con.rename_axis('index', axis=1).stack())
 
 
 def get_x_offer(start_price, events, tf):

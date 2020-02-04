@@ -16,10 +16,10 @@ class ThreadLog:
 
     def generate_censored_turn_log(self, params=None, turn=None):
         outcomes = params['x_offer'].loc[turn, :]
-        outcomes = outcomes[[OUTCOME_FEATS]]
+        outcomes = outcomes[OUTCOME_FEATS]
         byr = turn % 2 != 0
         model = model_str(DELAY, byr=byr)
-        delay_inputs = populate_test_model_inputs(full_inputs=params['inputs'][model])
+        delay_inputs = populate_test_model_inputs(full_inputs=params['inputs'][model], value=turn)
         delay_time = self.delay_time(turn=turn)
         return TurnLog(outcomes=outcomes, delay_inputs=delay_inputs, delay_time=delay_time, turn=turn)
 

@@ -1,6 +1,7 @@
 import argparse
 from compress_pickle import dump, load
 from processing.c_feats.util import *
+from processing.processing_utils import get_con, get_norm
 from constants import *
 from processing.processing_consts import *
 
@@ -362,17 +363,20 @@ def main():
     print('Loading data: %d' % num)
     d = load('{}slr{}.gz'.format(CHUNKS_DIR, args.num))
     L, events = [d[k] for k in ['listings', 'offers']]
-    events = events.join(L[['start_price', 'flag']]).sort_index()
-
+    
     # drop flagged listings
+    events = events.join(L.flag).sort_index()
     events = events.loc[~events.flag, :]
     events = events.drop('flag', axis=1)
 
-    # add variables to events
+    # buyer turn indicator
     events['byr'] = events.index.isin(IDX['byr'], level='index')
-    events['norm'] = events.price / events.start_price
-    events.loc[~events['byr'], 'norm'] = 1 - events['norm']
-    events = events.drop('start_price', axis=1)
+
+    # create rounded concession variable
+    con = get_con(events.price.unstack(), L.start_price)
+
+    # add normalized offer to events
+    events['norm'] = get_norm(con)
 
     # create lstg-level time-valued features
     print('Creating lstg-level time-valued features')

@@ -115,6 +115,7 @@ class EbayEnvironment:
                 self._process_byr_rej(offer)
                 return False
         else:
+            print('hello')
             if not slr_offer:
                 auto = self._check_slr_autos(offer.price)
                 if auto == ACC_IND:

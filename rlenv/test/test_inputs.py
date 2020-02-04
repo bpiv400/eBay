@@ -20,16 +20,17 @@ def load_all_inputs(part=None, lstgs=None):
 
 
 def load_model_inputs(model=None, input_dir=None, index_dir=None, lstgs=None):
-    input_path = '{}{}'.format(input_dir, model)
-    index_path = '{}{}'.format(index_dir, model)
+    input_path = '{}{}.gz'.format(input_dir, model)
+    index_path = '{}{}.gz'.format(index_dir, model)
     index = load(index_path)
     featnames = load_featnames(model)
     inputs = load(input_path)['x']
     contains = None
     for feat_set_name in list(inputs.keys()):
+        cols = featnames['offer'] if 'offer' in feat_set_name else featnames[feat_set_name]
         inputs_df = pd.DataFrame(data=inputs[feat_set_name],
                                  index=index,
-                                 columns=featnames[feat_set_name])
+                                 columns=cols)
         if contains is None:
             full_lstgs = inputs_df.index.get_level_values('lstg')
             contains = full_lstgs.isin(lstgs)
