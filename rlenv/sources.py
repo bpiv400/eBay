@@ -44,7 +44,7 @@ class ThreadSources(Sources):
 
     def update_msg(self, msg=None, turn=None):
         offer_map = OFFER_MAPS[turn]
-        self.source_dict[offer_map][CON_START_IND:MSG_IND] = msg
+        self.source_dict[offer_map][MSG_IND] = msg
 
     def init_offer(self, time_feats=None, clock_feats=None, turn=None):
         # NOTE : Not called on turn 1
@@ -55,7 +55,6 @@ class ThreadSources(Sources):
         self.source_dict[offer_map][CLOCK_START_IND:TIME_END_IND] = feats
 
     def update_delay(self, delay_outcomes=None, turn=None):
-
         offer_map = OFFER_MAPS[turn]
         self.source_dict[offer_map][DELAY_START_IND:DELAY_END_IND] = delay_outcomes
 

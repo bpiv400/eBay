@@ -2,7 +2,7 @@ import argparse
 import numpy as np
 import pandas as pd
 from compress_pickle import load, dump
-from utils import slr_norm, byr_norm, extract_clock_feats
+from utils import slr_norm, byr_norm, extract_clock_feats, get_months_since_lstg
 from processing.processing_consts import *
 from constants import *
 from featnames import *
@@ -232,31 +232,110 @@ def init_x(part, idx):
     return x
 
 
+def get_arrival_times(lstg_start, lstg_end, thread_start):
+    # thread 0: start of listing
+    s0 = lstg_start.to_frame().assign(thread=0).set_index(
+        'thread', append=True).squeeze()
+
+    # threads 1 to N: real threads
+    threads = thread_start.reset_index('thread').drop(
+        'clock', axis=1).squeeze().groupby('lstg').max().reindex(
+        index=lstg_start.index, fill_value=0)
+
+    # thread N+1: end of lstg
+    s1 = lstg_end.to_frame().assign(thread=threads + 1).set_index(
+        'thread', append=True).squeeze()
+
+    # concatenate and sort into single series
+    clock = pd.concat([s0, thread_start, s1], axis=0).sort_index()
+
+    # thread to int
+    idx = clock.index
+    clock.index.set_levels(idx.levels[-1].astype('int16'), level=-1, inplace=True)
+
+    return clock.rename('clock')
+
+
+def get_interarrival_period(clock):
+    # calculate interarrival times in seconds
+    df = clock.unstack()
+    diff = pd.DataFrame(0.0, index=df.index, columns=df.columns[1:])
+    for i in diff.columns:
+        diff[i] = df[i] - df[i - 1]
+
+    # restack
+    diff = diff.rename_axis(clock.index.names[-1], axis=1).stack()
+
+    # original datatype
+    diff = diff.astype(clock.dtype)
+
+    # indicator for whether observation is last in lstg
+    thread = pd.Series(diff.index.get_level_values(level='thread'),
+                       index=diff.index)
+    last_thread = thread.groupby('lstg').max().reindex(
+        index=thread.index, level='lstg')
+    censored = thread == last_thread
+
+    # drop interarrivals after BINs
+    y = diff[diff > 0]
+    censored = censored.reindex(index=y.index)
+    diff = diff.reindex(index=y.index)
+
+    # convert y to periods
+    y //= INTERVAL[ARRIVAL_PREFIX]
+
+    # replace censored interarrival times with last interval
+    y.loc[censored] = INTERVAL_COUNTS[ARRIVAL_PREFIX]
+
+    return y, diff
+
+
+def get_x_thread_arrival(clock, idx, lstg_start, diff):
+    # seconds since START at beginning of arrival window
+    seconds = clock.groupby('lstg').shift().dropna().astype(
+        'int64').reindex(index=idx)
+
+    # clock features
+    clock_feats = collect_date_clock_feats(seconds)
+
+    # thread count so far
+    thread_count = pd.Series(seconds.index.get_level_values(level='thread') - 1,
+                             index=seconds.index, name=THREAD_COUNT)
+
+    # months since lstg start
+    months_since_lstg = get_months_since_lstg(lstg_start, seconds)
+    assert (months_since_lstg.max() < 1) & (months_since_lstg.min() >= 0)
+
+    # months since last arrival
+    months_since_last = diff.groupby('lstg').shift().fillna(0) / MONTH
+
+    # concatenate into dataframe
+    x_thread = pd.concat(
+        [clock_feats,
+         months_since_lstg.rename(MONTHS_SINCE_LSTG),
+         months_since_last.rename(MONTHS_SINCE_LAST),
+         thread_count], axis=1)
+
+    return x_thread.astype('float32')
+
+
 def process_arrival_inputs(part, lstg_end, thread_start):
     # listing start time
     lstg_start = load_file(part, 'lookup').start_time
 
-    # counts of arrivals by interval
-    arrivals = (thread_start - lstg_start) // INTERVAL[ARRIVAL_PREFIX]
-    arrivals = arrivals.rename('period').to_frame().assign(
-        count=1).groupby(['lstg', 'period']).sum().squeeze().astype('int8')
+    # arrival times
+    clock = get_arrival_times(lstg_start, lstg_end, thread_start)
 
-    # period after lstg end, for censoring
-    end = (lstg_end - lstg_start) // INTERVAL[ARRIVAL_PREFIX] + 1
-
-    # initialize outcome dataframe
-    y = pd.DataFrame(dtype='int8', index=lstg_start.index)
-
-    # add in arrivals and censored periods
-    for i in range(INTERVAL_COUNTS[ARRIVAL_PREFIX]):
-        print(i)
-        y[i] = arrivals.xs(i, level='period').reindex(
-            index=lstg_start.index, fill_value=0)
-        if i > 0:
-            y[i] -= (i >= end).astype('int8')
+    # interarrival times
+    y, diff = get_interarrival_period(clock)
+    idx = y.index
 
     # listing features
-    x = init_x(part, y.index)
+    x = init_x(part, idx)
+
+    # add thread features to x['lstg']
+    x_thread = get_x_thread_arrival(clock, idx, lstg_start, diff)
+    x['lstg'] = pd.concat([x['lstg'], x_thread], axis=1)
 
     return {'y': y, 'x': x}
 

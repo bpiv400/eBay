@@ -115,7 +115,6 @@ class EbayEnvironment:
                 self._process_byr_rej(offer)
                 return False
         else:
-            print('hello')
             if not slr_offer:
                 auto = self._check_slr_autos(offer.price)
                 if auto == ACC_IND:
@@ -222,9 +221,14 @@ class EbayEnvironment:
     def process_delay(self, event):
         # no need to check expiration since this must occur at the same time as the previous offer
         model_name = model_str(DELAY, byr=event.turn % 2 != 0)
-        input_dict = self.composer(model_name, turn=event.turn, sources=event.sources())
+        input_dict = self.composer.build_input_dict(model_name, sources=event.sources(),
+                                                    turn=event.turn)
         delay_seconds = self.get_delay(input_dict=input_dict, turn=event.turn, thread_id=event.thread_id,
                                        time=event.priority, delay_type=event.delay_type)
+        # Test environment returns None when delay model is mistakenly called
+        if delay_seconds is None:
+            print("No delay returned; exiting listing.")
+            return True
         event.update_delay(seconds=delay_seconds)
         self.queue.push(event)
         return False
@@ -262,7 +266,7 @@ class EbayEnvironment:
     def _check_slr_autos(self, norm):
         """ """
         if norm < self.lookup[ACC_PRICE] / self.lookup[START_PRICE]:
-            if norm < self.lookup[DEC_PRICE] / self.lookup[START_PRICE]:
+            if norm <= self.lookup[DEC_PRICE] / self.lookup[START_PRICE]:
                 return REJ_IND
             else:
                 return OFF_IND
@@ -279,7 +283,10 @@ class EbayEnvironment:
     def _process_slr_auto_rej(self, event, offer):
         self.time_feats.update_features(offer=offer)
         event.change_turn()
-        offer = event.slr_auto_rej()
+        clock_feats = get_clock_feats(event.priority)
+        time_feats = self.time_feats.get_feats(thread_id=event.thread_id,
+                                               time=event.priority)
+        offer = event.slr_auto_rej(time_feats=time_feats, clock_feats=clock_feats)
         self.record(event)
         self.time_feats.update_features(offer=offer)
         self._init_delay(event)

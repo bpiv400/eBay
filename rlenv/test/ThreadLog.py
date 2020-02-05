@@ -85,6 +85,10 @@ class ThreadLog:
         return self.turns[turn].get_msg(check_time=time, input_dict=input_dict)
 
     def get_delay(self, time=None, turn=None, input_dict=None):
+        if turn not in self.turns:
+            print("Environment unexpectedly queried delay model.")
+            input("Exiting listing. Press Enter to continue...")
+            return None
         return self.turns[turn].get_delay(check_time=time, input_dict=input_dict)
 
 

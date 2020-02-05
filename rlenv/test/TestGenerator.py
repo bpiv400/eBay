@@ -15,7 +15,7 @@ class TestGenerator(Generator):
         self.recorder = DiscrimRecorder("", self.verbose)
 
     def generate(self):
-        for i, lstg in enumerate(self.x_lstg.index):
+        for i, lstg in enumerate(self.lookup.index):
             # index lookup dataframe
             lookup = self.lookup.loc[lstg, :]
 
@@ -27,7 +27,7 @@ class TestGenerator(Generator):
                 'x_offer': self.test_data['x_offer'],
                 'lookup': lookup
             }
-            print('Generating lstg log...')
+            print('Generating lstg log for {}...'.format(lstg))
             log = LstgLog(params=params)
             print('Log constructed')
             environment = self.setup_env(lstg=lstg, lookup=lookup, log=log)

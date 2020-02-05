@@ -28,7 +28,7 @@ collapse (max) flag, by(lstg end_time)
 
 merge 1:1 lstg using dta/listings, nogen
 keep if unique
-drop byr* views wtchrs bo sale_price relisted leaf product title unique
+drop byr* views wtchrs bo sale_price leaf product title unique
 
 order flag, last
 replace flag = 0 if flag == .

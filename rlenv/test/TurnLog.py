@@ -27,7 +27,7 @@ class TurnLog:
 
     @property
     def is_censored(self):
-        return self.offer_time is None
+        return self.censored
 
     def get_con(self, check_time=None, input_dict=None):
         if self.con_inputs is None:
@@ -39,14 +39,22 @@ class TurnLog:
 
     def get_delay(self, check_time=None, input_dict=None):
         if self.delay_inputs is None:
-            raise RuntimeError("Environment unexpectedly queried delay model")
-        assert check_time == self.delay_time
-        compare_input_dicts(model=self.delay_model_name, stored_inputs=self.delay_inputs,
+            print("Environment unexpectedly queried delay model.")
+            input("Exiting listing. Press Enter to continue...")
+            return None
+        if check_time != self.delay_time:
+            print('-- INCONSISTENCY IN delay time --')
+            print('stored value = {} | env value = {}'.format(
+                self.delay_time, check_time))
+            input("Exiting listing. Press Enter to continue...")
+            return None
+        compare_input_dicts(model=self.delay_model_name, 
+                            stored_inputs=self.delay_inputs,
                             env_inputs=input_dict)
         if self.is_censored:
             return MONTH
         else:
-            self.offer_time - self.delay_time
+            return int(self.offer_time - self.delay_time)
 
     def get_msg(self, check_time=None, input_dict=None):
         if self.msg_inputs is None:

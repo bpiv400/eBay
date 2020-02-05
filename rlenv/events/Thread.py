@@ -21,7 +21,7 @@ class Thread(Event):
                                      priority=priority)
 
         # sources object
-        self.sources = None  # type: ThreadSources
+        self.sources = None
         self.turn = 1
         self.thread_id = thread_id
 
@@ -29,7 +29,7 @@ class Thread(Event):
         self.max_delay = None
 
     def init_thread(self, sources=None, hist=None):
-        self.sources = sources
+        self.sources = sources  # type: ThreadSources
         self.sources.init_thread(hist=hist)
 
     def thread_expired(self):
@@ -85,7 +85,8 @@ class Thread(Event):
     def slr_expire_rej(self):
         return self.slr_rej()
 
-    def slr_auto_rej(self):
+    def slr_auto_rej(self, time_feats=None, clock_feats=None):
+        self.init_offer(time_feats=time_feats, clock_feats=clock_feats)
         delay_outcomes = np.array([0.0, 0.0, 1.0, 0.0], dtype=np.float)
         self.sources.update_delay(delay_outcomes=delay_outcomes, turn=self.turn)
         return self.slr_rej()

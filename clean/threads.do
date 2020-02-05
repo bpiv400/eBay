@@ -289,12 +289,23 @@ by lstg: egen double accept_time = min(temp)
 replace end_time = min(end_time, accept_time)
 drop temp accept_time
 
-* delete offers in lstg after accept
+* delete offers in thread after accept
 
 g byte temp = index if accept
 by lstg thread: egen byte idx = min(temp)
-drop if clock > end_time | index > idx
+drop if index > idx
 drop temp idx
+
+* delete offers after time of first accept
+
+drop if clock > end_time
+
+* delete offers in other threads at or after time of first accept
+
+g byte temp = thread if accept
+by lstg: egen byte accept_thread = min(temp)
+drop if clock == end_time & thread != accept_thread
+drop temp accept_thread
 
 * delete reject when buyer does not return
 
@@ -310,18 +321,6 @@ g byte temp = index if check
 by lstg thread: egen byte temp2 = min(temp)
 drop if index > temp2
 drop check temp*
-	
-* multiple accepts
-
-by lstg, sort: egen byte accepts = sum(accept)
-g byte flag = accepts > 1
-drop accepts
-
-replace accept = 0 if flag & accept & reject
-	
-* save temp
-
-save dta/temp2c, replace
 
 * delete activity after 31 days
 
@@ -334,6 +333,10 @@ g double new_end_time = ///
 replace end_time = new_end_time if end_time > new_end_time
 drop new_end_time *_date
 drop if clock > end_time
+	
+* save temp
+
+save dta/temp2c, replace
 
 * add expired rejects when buyer does not return
 
@@ -393,6 +396,8 @@ rename newid thread
 save dta/temp2d, replace
 
 * flag weird behavior with prices
+
+g byte flag = 0
 
 replace flag = 1 if sale_price != start_price & bin
 replace flag = 1 if sale_price != price & accept

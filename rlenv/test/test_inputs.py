@@ -76,7 +76,7 @@ def main():
         'x_offer': x_offer
     }
     subdir = get_env_sim_subdir(base_dir=base_dir, chunks=True)
-    path = '{}1_test.gz'.format(subdir)
+    path = '{}{}_test.gz'.format(subdir, args.num)
     dump(output, path)
 
 

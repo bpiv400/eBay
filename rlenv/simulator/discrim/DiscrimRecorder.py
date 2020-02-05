@@ -37,7 +37,6 @@ class DiscrimRecorder(Recorder):
                msg,
                censored
                ]
-        print(row)
         row += list(time_feats)
         self.offers.append(row)
         self.print_offer(event, summary)

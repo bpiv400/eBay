@@ -1,5 +1,5 @@
 import pandas as pd
-from featnames import START_TIME, MONTHS_SINCE_LSTG, BYR_HIST, CON
+from featnames import START_TIME, MONTHS_SINCE_LSTG, BYR_HIST, CON, AUTO
 from constants import MONTH
 from rlenv.env_consts import MODELS, ARRIVAL_MODEL, BYR_HIST_MODEL, OFFER_MODELS
 from rlenv.env_utils import populate_test_model_inputs
@@ -14,7 +14,6 @@ class LstgLog:
         :param params: dict
         """
         self.lstg = params['lstg']
-        print(self.lstg)
         self.lookup = params['lookup']
         params = LstgLog.subset_params(params)
         self.arrivals = self.generate_arrival_logs(params)
@@ -125,8 +124,12 @@ class LstgLog:
 
     @staticmethod
     def check_bin(params=None, thread_id=None):
-        first_offer = params['x_offer'].xs(thread_id, level='thread', drop_level=True).loc[1, :]
-        return first_offer[CON] == 1
+        thread1 = params['x_offer'].xs(thread_id, level='thread')
+        if len(thread1.index) == 1:
+            assert thread1.loc[1, CON] == 1
+            return True
+        elif len(thread1.index) == 2:
+            return thread1.loc[2, AUTO] and (thread1.loc[2, CON] == 1)
 
     @staticmethod
     def subset_params(params=None):

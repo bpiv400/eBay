@@ -59,7 +59,6 @@ class BuyerInterface(PlayerInterface):
                 # print('sampling concession')
                 sample = dist.sample((1,))
             con = proper_squeeze(sample.float() / 100).numpy()
-            # print('concession: {}'.format(con))
         elif turn == 7:
             sample = dist.sample((1,))
             while (sample > 0) and (sample < 100):
