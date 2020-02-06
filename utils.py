@@ -20,7 +20,7 @@ def unpickle(file):
             f = pickle.load(open(file, "rb"))
         except FileNotFoundError:
             time.sleep(random.random())
-    return
+    return f
 
 
 def get_remaining(lstg_start, delay_start, max_delay):
