@@ -99,7 +99,6 @@ def round_con(con):
 
 
 def get_con(offers, start_price):
-
     # compute concessions
     con = pd.DataFrame(index=offers.index)
     con[1] = offers[1] / start_price
@@ -111,7 +110,7 @@ def get_con(offers, start_price):
     con = con.rename_axis('index', axis=1).stack()
 
     # round concessions
-    rouneded = get_con(con)
+    rounded = get_con(con)
 
     # exception handling
     rounded.loc[(con == 0) & con.index.isin([1], level='index')] = 0.01

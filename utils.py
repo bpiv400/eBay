@@ -14,13 +14,7 @@ def unpickle(file):
     :param file: str giving path to file
     :return: contents of file
     """
-    f = None
-    while f is None:
-        try:
-            f = pickle.load(open(file, "rb"))
-        except FileNotFoundError:
-            time.sleep(random.random())
-    return f
+    return pickle.load(open(file, "rb"))
 
 
 def get_remaining(lstg_start, delay_start, max_delay):

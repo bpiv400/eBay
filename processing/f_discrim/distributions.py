@@ -20,21 +20,21 @@ def get_sim_hist(thread):
 	return pd.concat(y_sim, axis=0).values
 
 
-def get_sim_con(thread, index):
+def get_sim_offer(thread, index):
 	y_sim = []
 	for i in range(1, SIM_CHUNKS+1):
 		sim = load(ENV_SIM_DIR + '{}/discrim/{}.gz'.format(VALIDATION, i))
-		s = sim['offers'].con
+		df = sim['offers']
 		if thread is not None:
-			s = s.xs(thread, level='thread')
+			df = df.xs(thread, level='thread')
 		if index is not None:
-			s = s.xs(index, level='index')
-		y_sim.append(s)
-	return pd.concat(y_sim, axis=0).values
+			df = df.xs(index, level='index')
+		y_sim.append(df)
+	return pd.concat(y_sim, axis=0)
 
 
-def get_sim_outcomes(name, thread, index):
-	if name == 'arrival':
+def get_sim_outcome(outcome, thread, index):
+	if outcome == 'arrival':
 		lstg_start = load_file(VALIDATION, 'lookup').start_time
 		lstg_end, thread_start = get_sim_times(VALIDATION, lstg_start)
 		clock = get_arrival_times(lstg_start, lstg_end, thread_start)
@@ -43,20 +43,13 @@ def get_sim_outcomes(name, thread, index):
 			y_sim = y_sim.xs(thread, level='thread')
 		return y_sim
 
-	if name == 'hist':
+	if outcome == 'hist':
 		return get_sim_hist(thread)
 
-	if name == 'con_byr':
-		return get_sim_con(thread, index)
+	return get_sim_offer(thread, index)[outcome].values
 
 
-def compare_data_model(name, thread, index):
-	# simulations
-	print('Loading simulated outcomes')
-	y_sim = get_sim_outcomes(name, thread, index)
-
-	# load data
-	print('Loading data')
+def import_data(name, thread, index):
 	d = load(INPUT_DIR + '{}/{}.gz'.format(VALIDATION, name))
 	idx = load(INDEX_DIR + '{}/{}.gz'.format(VALIDATION, name))
 	featnames = load_featnames(name)
@@ -83,6 +76,10 @@ def compare_data_model(name, thread, index):
 	# x to numpy
 	x = {k: v.values for k, v in x.items()}
 
+	return y, x
+
+
+def get_model_prediction(x, name):
 	# create dataset
 	data = PartialDataset(x)
 
@@ -92,50 +89,86 @@ def compare_data_model(name, thread, index):
 	# multinomial
 	print('Generating predictions from model')
 	batches = get_batches(data)
-	p = None
+	a = np.array([])
 	for b in batches:
 		x_b = {k: v.to('cuda') for k, v in b.items()}
 		theta = net(x_b)
-		p_b = torch.exp(F.log_softmax(theta, dim=1)).cpu().numpy()
-		if p is None:
-			p = p_b
+		a = np.append(a, torch.exp(F.log_softmax(theta, dim=1)).cpu().numpy(), axis=0)
+
+	return a
+
+
+def get_obs_outcome(outcome, thread, index):
+	if outcome in ['arrival', 'hist']:
+		y, x = import_data(outcome, thread, index)
+		p = get_model_prediction(x, outcome)
+	else:
+		if index % 2 == 0:
+			name = outcome + '_slr'
+			y, x = import_data(name, thread, index)
+			p = get_model_prediction(x, name)
+		elif index % 2 == 1:
+			name = outcome + '_byr'
+			y, x = import_data(name, thread, index)
+			p = get_model_prediction(x, name)
 		else:
-			p = np.append(p, p_b, axis=0)
+			y = []
+			p = np.array([])
+			for role in ['byr', 'slr']:
+				name = outcome + '_' + role
+				y_role, x_role = import_data(name, thread, index)
+				y.append(y_role)
+				p = np.append(p, get_model_prediction(x_role, name), axis=0)
+			y = pd.concat(y, axis=1).sort_index()
 
 	# take average
 	p = p.mean(axis=0)
 	assert y.max() + 1 == len(p)
 
+	return y, p
+
+
+def compare_data_model(outcome, thread, index):
+	# simulations
+	print('Loading simulated outcomes')
+	y_sim = get_sim_outcome(outcome, thread, index)
+
+	# load data
+	print('Loading data')
+	y_obs, p = get_obs_outcome(outcome, thread, index)
+
 	# print number of observations
 	print('-----------------')
 	print('Observations: {} in data/model, {} in sim'.format(
-		len(y), len(y_sim)))
+		len(y_obs), len(y_sim)))
 	
 	# print comparison
 	print('interval: data | model | sim:')
 	for i in range(len(p)):
 		print('{:3.0f}: {:2.2%} | {:2.2%} | {:2.2%}'.format(
-			i, (y == i).mean(), p[i], (y_sim == i).mean()))
+			i, (y_obs == i).mean(), p[i], (y_sim == i).mean()))
 
 
 def main():
-	# extract model name from command line
+	# extract model outcome from command line
 	parser = argparse.ArgumentParser()
-	parser.add_argument('--name', required=True, type=str)
+	parser.add_argument('--outcome', required=True, type=str)
 	parser.add_argument('--thread', required=False, type=int)
 	parser.add_argument('--index', required=False, type=int)
 	args = parser.parse_args()
-	name, thread, index = args.name, args.thread, args.index
+	outcome, thread, index = args.outcome, args.thread, args.index
 
 	# error checking inputs
-	assert name in ['arrival', 'hist', 'con_byr']
-	if name in ['arrival', 'hist']:
+	assert outcome in ['arrival', 'hist', 'delay', 'con', 'msg']
+	if outcome in ['arrival', 'hist']:
 		assert index is None
+	if outcome == 'delay':
+		raise NotImplementedError()
 
-	print('Model: {}'.format(name))
+	print('Outcome: {}'.format(outcome))
 	print('Thread: {}'.format(thread))
 	print('Index: {}'.format(index))
-	compare_data_model(name, thread, index)
+	compare_data_model(outcome, thread, index)
 
 
 if __name__ == '__main__':

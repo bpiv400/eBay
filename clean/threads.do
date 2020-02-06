@@ -428,6 +428,8 @@ by lstg thread: replace flag = 1 if _n < _N & ///
 	clock == clock[_n+1]
 drop accept_price decline_price
 
+replace flag = 1 if price == 0 & index == 1
+
 * flag byr bin offers after more than a two-week delay
 
 sort lstg thread index
@@ -448,7 +450,7 @@ drop slr start_time
 
 replace message = 0 if message == .
 
-* throw out bins from non-unique listings
+* throw out threads from non-unique listings
 
 merge m:1 lstg using dta/listings, nogen keep(3) keepus(unique)
 keep if unique

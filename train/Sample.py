@@ -5,23 +5,21 @@ from train.train_consts import MBSIZE, NUM_WORKERS
 
 
 class Sample(Sampler):
-    def __init__(self, data, isTraining):
-        '''
+    def __init__(self, data, is_training):
+        """
         Defines a sampler that extends torch.utils.data.Sampler.
         :param data: Inputs object.
-        :param isTraining: chop into minibatches if True.
-        '''
+        :param is_training: chop into minibatches if True.
+        """
         super().__init__(None)
 
         # create vector of indices
         v = np.array(range(len(data)))
-        if isTraining:
+        if is_training:
             np.random.shuffle(v)
 
         # chop into minibatches
-        self.batches = np.array_split(v, 
-            1 + len(v) // MBSIZE[isTraining])
-
+        self.batches = np.array_split(v, 1 + len(v) // MBSIZE[is_training])
 
     def __iter__(self):
         """
@@ -35,11 +33,11 @@ class Sample(Sampler):
 
 
 def collate(batch):
-    '''
+    """
     Converts examples to tensors for a feed-forward network.
     :param batch: list of (dictionary of) numpy arrays.
     :return: dictionary of (dictionary of) tensors.
-    '''
+    """
     y, x = [], {}
     for b in batch:
         y.append(b[0])
@@ -57,14 +55,15 @@ def collate(batch):
     return {'y': y, 'x': x}
 
 
-def get_batches(data, isTraining=False):
-    '''
+def get_batches(data, is_training=False):
+    """
     Creates a Dataloader object.
     :param data: Inputs object.
-    :param isTraining: chop into minibatches if True.
+    :param is_training: chop into minibatches if True.
     :return: iterable batches of examples.
-    '''
+    """
     batches = DataLoader(data, collate_fn=collate,
-        batch_sampler=Sample(data, isTraining),
-        num_workers=NUM_WORKERS[data.name], pin_memory=True)
+                         batch_sampler=Sample(data, is_training),
+                         num_workers=NUM_WORKERS[data.name],
+                         pin_memory=True)
     return batches
