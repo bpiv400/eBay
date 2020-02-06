@@ -29,6 +29,7 @@ def get_y_delay(df, role):
 
     # drop zero delays
     delay = delay[delay > 0]
+    df = df.reindex(index=delay.index)
 
     # error checking
     assert delay.max() <= MAX_DELAY[role]
@@ -38,8 +39,12 @@ def get_y_delay(df, role):
     # convert to periods
     delay //= INTERVAL[role]
 
+    # replace expired delays with last index
+    assert np.all(df.loc[df.delay == 1, EXP])
+    delay.loc[delay == INTERVAL_COUNTS[role]] = -1
+
     # replace censored delays with negative index
-    delay.loc[df[EXP]] -= INTERVAL_COUNTS[role] + 1
+    delay.loc[df[EXP] & (df[DELAY] < 1)] -= INTERVAL_COUNTS[role]
 
     return delay
 

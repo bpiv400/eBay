@@ -329,6 +329,8 @@ class EbayEnvironment:
                                                     turn=event.turn)
         con = self.get_con(input_dict=input_dict, time=event.priority, turn=event.turn,
                            thread_id=event.thread_id)
+        if event.turn == 1:
+            assert con > 0
         con_outcomes = get_con_outcomes(con=con, sources=event.sources(), turn=event.turn)
         # update features
         offer = event.update_con_outcomes(con_outcomes=con_outcomes)

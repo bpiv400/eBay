@@ -80,15 +80,11 @@ class ThreadSources(Sources):
 
     def summary(self, turn):
         # TODO: could index once and pass resulting vector to output
-        # would require update of recorders
+        # TODO: would require update of recorders
         offer_map = OFFER_MAPS[turn]
-        con = int(self.source_dict[offer_map][CON_IND] * 100)
-        norm = self.source_dict[offer_map][NORM_IND] * 100
-        norm = norm.round()
+        con = int(np.round(self.source_dict[offer_map][CON_IND] * 100))
         msg = self.source_dict[offer_map][MSG_IND] == 1
-
-        split = self.source_dict[offer_map][SPLIT_IND] == 1
-        return con, norm, msg, split
+        return con, msg
 
     def get_delay_outcomes(self, turn):
         # see update in sources.summary for slight efficiency improvement

@@ -15,16 +15,16 @@ def by_turn(y, turns, f):
 	return lnL / len(y)
 
 
-def binary_lnL(y):
+def binary_log_likelihood(y):
 	p = y.mean()
 	return p * np.log(p) + (1-p) * np.log(1-p)
 
 
-def categorical_lnL(y):
+def categorical_log_likelihood(y):
 	values = np.unique(y)
 	p = np.zeros(len(values))
 	for i, val in enumerate(values):
-		p[i] = (y == val).mean()
+		p[i] = np.mean(y == val)
 	assert np.abs(p.sum() - 1) <= 2 * sys.float_info.epsilon
 	return np.sum(p * np.log(p))
 
@@ -40,9 +40,9 @@ def main():
 
 	# function
 	if 'msg' in name:
-		f = binary_lnL
+		f = binary_log_likelihood
 	else:
-		f = categorical_lnL
+		f = categorical_log_likelihood
 
 	# load data
 	d = load(INPUT_DIR + '{}/{}.gz'.format(part, name))
@@ -56,9 +56,9 @@ def main():
 		idx = [featnames.index(k) for k in TURN_FEATS[name]]
 		turns = d['x']['offer1'][:, idx].astype(bool)
 
-		print('Turn-specific baserates: {0:1.4f}'.format
-			(by_turn(y, turns, f)))
+		print('Turn-specific baserates: {0:1.4f}'.format(
+			by_turn(y, turns, f)))
 
 
 if __name__ == '__main__':
-    main()
+	main()

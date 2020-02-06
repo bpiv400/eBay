@@ -95,18 +95,28 @@ def round_con(con):
     rounded = np.round(con, decimals=2)
     rounded.loc[(rounded == 1) & (con < 1)] = 0.99
     rounded.loc[(rounded == 0) & (con > 0)] = 0.01
-    # exception handling
-    rounded.loc[(con == 0) & con.index.isin([1], level='index')] = 0.01
     return rounded
 
 
 def get_con(offers, start_price):
+
+    # compute concessions
     con = pd.DataFrame(index=offers.index)
     con[1] = offers[1] / start_price
     con[2] = (offers[2] - start_price) / (offers[1] - start_price)
     for i in range(3, 8):
         con[i] = (offers[i] - offers[i - 2]) / (offers[i - 1] - offers[i - 2])
-    return round_con(con.rename_axis('index', axis=1).stack())
+
+    # stack into series
+    con = con.rename_axis('index', axis=1).stack()
+
+    # round concessions
+    rouneded = get_con(con)
+
+    # exception handling
+    rounded.loc[(con == 0) & con.index.isin([1], level='index')] = 0.01
+
+    return rounded
 
 
 def get_norm(con):
@@ -232,9 +242,9 @@ def init_x(part, idx):
     return x
 
 
-def get_arrival_times(lstg_start, lstg_end, thread_start):
+def get_arrival_times(lstg_start, thread_start, lstg_end=None):
     # thread 0: start of listing
-    s0 = lstg_start.to_frame().assign(thread=0).set_index(
+    s = lstg_start.to_frame().assign(thread=0).set_index(
         'thread', append=True).squeeze()
 
     # threads 1 to N: real threads
@@ -243,101 +253,19 @@ def get_arrival_times(lstg_start, lstg_end, thread_start):
         index=lstg_start.index, fill_value=0)
 
     # thread N+1: end of lstg
-    s1 = lstg_end.to_frame().assign(thread=threads + 1).set_index(
-        'thread', append=True).squeeze()
+    if lstg_end is not None:
+        s1 = lstg_end.to_frame().assign(thread=threads + 1).set_index(
+            'thread', append=True).squeeze()
+        s = pd.concat([s, s1], axis=0)
 
     # concatenate and sort into single series
-    clock = pd.concat([s0, thread_start, s1], axis=0).sort_index()
+    clock = pd.concat([s, thread_start], axis=0).sort_index()
 
     # thread to int
     idx = clock.index
     clock.index.set_levels(idx.levels[-1].astype('int16'), level=-1, inplace=True)
 
     return clock.rename('clock')
-
-
-def get_interarrival_period(clock):
-    # calculate interarrival times in seconds
-    df = clock.unstack()
-    diff = pd.DataFrame(0.0, index=df.index, columns=df.columns[1:])
-    for i in diff.columns:
-        diff[i] = df[i] - df[i - 1]
-
-    # restack
-    diff = diff.rename_axis(clock.index.names[-1], axis=1).stack()
-
-    # original datatype
-    diff = diff.astype(clock.dtype)
-
-    # indicator for whether observation is last in lstg
-    thread = pd.Series(diff.index.get_level_values(level='thread'),
-                       index=diff.index)
-    last_thread = thread.groupby('lstg').max().reindex(
-        index=thread.index, level='lstg')
-    censored = thread == last_thread
-
-    # drop interarrivals after BINs
-    y = diff[diff > 0]
-    censored = censored.reindex(index=y.index)
-    diff = diff.reindex(index=y.index)
-
-    # convert y to periods
-    y //= INTERVAL[ARRIVAL_PREFIX]
-
-    # replace censored interarrival times with last interval
-    y.loc[censored] = INTERVAL_COUNTS[ARRIVAL_PREFIX]
-
-    return y, diff
-
-
-def get_x_thread_arrival(clock, idx, lstg_start, diff):
-    # seconds since START at beginning of arrival window
-    seconds = clock.groupby('lstg').shift().dropna().astype(
-        'int64').reindex(index=idx)
-
-    # clock features
-    clock_feats = collect_date_clock_feats(seconds)
-
-    # thread count so far
-    thread_count = pd.Series(seconds.index.get_level_values(level='thread') - 1,
-                             index=seconds.index, name=THREAD_COUNT)
-
-    # months since lstg start
-    months_since_lstg = get_months_since_lstg(lstg_start, seconds)
-    assert (months_since_lstg.max() < 1) & (months_since_lstg.min() >= 0)
-
-    # months since last arrival
-    months_since_last = diff.groupby('lstg').shift().fillna(0) / MONTH
-
-    # concatenate into dataframe
-    x_thread = pd.concat(
-        [clock_feats,
-         months_since_lstg.rename(MONTHS_SINCE_LSTG),
-         months_since_last.rename(MONTHS_SINCE_LAST),
-         thread_count], axis=1)
-
-    return x_thread.astype('float32')
-
-
-def process_arrival_inputs(part, lstg_end, thread_start):
-    # listing start time
-    lstg_start = load_file(part, 'lookup').start_time
-
-    # arrival times
-    clock = get_arrival_times(lstg_start, lstg_end, thread_start)
-
-    # interarrival times
-    y, diff = get_interarrival_period(clock)
-    idx = y.index
-
-    # listing features
-    x = init_x(part, idx)
-
-    # add thread features to x['lstg']
-    x_thread = get_x_thread_arrival(clock, idx, lstg_start, diff)
-    x['lstg'] = pd.concat([x['lstg'], x_thread], axis=1)
-
-    return {'y': y, 'x': x}
 
 
 def save_featnames(x, name):
@@ -385,7 +313,7 @@ def save_sizes(x, name):
 
     # length of model output vector
     if name == 'arrival':
-        sizes['out'] = INTERVAL_COUNTS[ARRIVAL_PREFIX]
+        sizes['out'] = INTERVAL_COUNTS[ARRIVAL_PREFIX] + 1
     elif name == 'hist':
         sizes['out'] = HIST_QUANTILES
     elif 'delay' in name:

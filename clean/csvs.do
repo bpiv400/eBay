@@ -22,18 +22,29 @@ export delim using clean/offers.csv, dataf replace
 
 *** listings
 
-use dta/threads, clear
+use dta/offers, clear
 
-collapse (max) flag, by(lstg end_time)
+collapse (sum) accept, by(lstg thread)
+
+merge 1:1 lstg thread using dta/threads, nogen keepus(flag end_time)
+
+collapse (max) flag (sum) accept, by(lstg end_time)
 
 merge 1:1 lstg using dta/listings, nogen
 keep if unique
 drop byr* views wtchrs bo sale_price leaf product title unique
 
+* flag listings in which start_price has changed
+
 order flag, last
 replace flag = 0 if flag == .
 replace flag = 1 if bin_rev
 drop bin_rev
+
+* flag listings that expired without sale in fewer than 31 days
+
+replace flag = 1 if !accept & end_date - start_date < 30
+drop accept
 
 * shipping
 

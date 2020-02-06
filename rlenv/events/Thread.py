@@ -120,10 +120,7 @@ class Thread(Event):
         self.sources.init_offer(time_feats=time_feats, clock_feats=clock_feats, turn=self.turn)
 
     def summary(self):
-        con, norm, msg, split = self.sources.summary(self.turn)
-        if self.turn % 2 == 0:
-            norm = 100 - norm
-        return con, norm, msg, split
+        return self.sources.summary(self.turn)
 
     def delay_outcomes(self):
         return self.sources.get_delay_outcomes(self.turn)

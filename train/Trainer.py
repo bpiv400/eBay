@@ -39,12 +39,10 @@ class Trainer:
         # loss function
         if name in ['msg_byr', 'msg_slr', 'listings', 'threads']:
             self.loss = nn.BCEWithLogitsLoss(reduction='sum')
-        elif 'con' in name:
+        elif 'con' in name or name == 'first_arrival':
             self.loss = nn.CrossEntropyLoss(reduction='sum')
-        elif 'delay' in name:
+        else:
             self.loss = time_loss
-        elif name == 'arrival':
-            self.loss = nn.PoissonNLLLoss(reduction='sum')
         print(self.loss)
 
         # load datasets

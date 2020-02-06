@@ -28,7 +28,9 @@ class DiscrimRecorder(Recorder):
     def add_offer(self, event=None, time_feats=None, censored=False):
         # change ordering if OFFER_COLS changes
         summary = event.summary()
-        con, _, msg, _ = summary
+        con, msg = summary
+        if event.turn == 1:
+            assert con > 0
         row = [self.lstg,
                event.thread_id,
                event.turn,
@@ -66,6 +68,7 @@ class DiscrimRecorder(Recorder):
                                   [np.int32, np.uint16, np.int32])
         self.offers.set_index(
             ['lstg', 'thread', 'index'], inplace=True)
+        assert np.all(self.offers.xs(1, level='index')[CON] > 0)
         self.threads.set_index(
             ['lstg', 'thread'], inplace=True)
 

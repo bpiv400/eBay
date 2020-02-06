@@ -67,8 +67,8 @@ def compare_data_model(name, thread, index):
 	# reconstruct x
 	x = {}
 	for k, v in d['x'].items():
-		x[k] = pd.DataFrame(v, index=idx, 
-			columns=featnames['offer' if 'offer' in k else k])
+		cols = featnames['offer' if 'offer' in k else k]
+		x[k] = pd.DataFrame(v, index=idx, columns=cols)
 
 	# restrict to offer index
 	if index is not None:
