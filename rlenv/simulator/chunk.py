@@ -3,7 +3,8 @@ Chunks a partition into NUM_CHUNKS pieces for value estimation
 or generating discrim inputs
 """
 import os
-import numpy as np, pandas as pd
+import numpy as np
+import pandas as pd
 from compress_pickle import dump, load
 from constants import PARTS_DIR
 from rlenv.env_consts import LOOKUP_FILENAME
@@ -21,8 +22,9 @@ def main():
 
     # sort and subset
     lookup = lookup.drop('cat', axis=1).sort_values(by=START_PRICE)
-    x_lstg = pd.concat([df.reindex(index=lookup.index) \
-        for df in x_lstg.values()], axis=1)
+    x_lstg = pd.concat(
+        [df.reindex(index=lookup.index) for df in x_lstg.values()],
+        axis=1)
     assert x_lstg.isna().sum().sum() == 0
 
     # make directories partition and components if they don't exist

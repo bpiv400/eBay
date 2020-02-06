@@ -35,7 +35,7 @@ def collect_date_clock_feats(seconds):
     """
     df = extract_day_feats(seconds)
     df[TIME_OF_DAY], df[AFTERNOON] = extract_clock_feats(seconds)
-    assert all(list(df.columns) == CLOCK_FEATS)
+    assert list(df.columns) == CLOCK_FEATS
     return df
 
 

@@ -1,7 +1,8 @@
 import math
 from collections import OrderedDict, namedtuple
 import torch
-import numpy as np, pandas as pd
+import numpy as np
+import pandas as pd
 from rlenv.env_consts import *
 from rlenv.env_utils import model_str
 from featnames import (OUTCOME_FEATS, CLOCK_FEATS, TIME_FEATS,
