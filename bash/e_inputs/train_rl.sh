@@ -7,7 +7,7 @@
 
 if [ "$SGE_TASK_ID" == 1 ]
 then
-	python repo/processing/e_inputs/arrival.py --part train_rl
+	python repo/processing/e_inputs/first_arrival.py --part train_rl
 elif [ "$SGE_TASK_ID" == 2 ]
 then
 	python repo/processing/e_inputs/interarrival.py --part train_rl
