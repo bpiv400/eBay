@@ -4,14 +4,14 @@ from constants import OUTPUT_DIR
 LOG_DIR = OUTPUT_DIR + 'logs/'
 
 # optimization parameters
-NUM_WORKERS = {'first_arrival': 2, 
-			   'interarrival': 3, 
+NUM_WORKERS = {'first_arrival': 5, 
+			   'interarrival': 8, 
 			   'hist': 8,
 			   'delay_byr': 8, 
 			   'delay_slr': 4,
 			   'con_byr': 4, 
 			   'con_slr': 6, 
-			   'msg_byr': 6, 
+			   'msg_byr': 7, 
 			   'msg_slr': 8,
 			   'listings': 8, 
 			   'threads': 8}
