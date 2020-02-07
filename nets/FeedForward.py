@@ -16,12 +16,7 @@ class FeedForward(nn.Module):
         self.dropout = dropout
 
         # expand embeddings
-        groups = EMBEDDING_GROUPS.copy()
-        if 'slr' not in sizes['x']:
-            groups['other'].remove('slr')
-        if 'offer1' in sizes['x']:
-            groups['offer'] = ['lstg'] \
-                + [k for k in sizes['x'].keys() if 'offer' in k]
+        groups = create_groupings(sizes)
 
         # embeddings
         d, total = OrderedDict(), 0
@@ -43,3 +38,16 @@ class FeedForward(nn.Module):
         for k in self.nn0.keys():
             l.append(self.nn0[k](x))
         return self.nn1(torch.cat(l, dim=1))
+
+
+def create_groupings(sizes):
+    groups = dict()
+    groups['w2v'] = ['lstg', 'w2v_slr', 'w2v_byr']
+    if 'slr' in sizes['x']:
+        groups['other'] = ['lstg', 'cat', 'cndtn', 'slr']
+    else:
+        groups['other'] = ['lstg', 'cat', 'cndtn']
+    if 'offer1' in sizes['x']:
+        groups['offer'] = ['lstg'] \
+            + [k for k in sizes['x'].keys() if 'offer' in k]
+    return groups

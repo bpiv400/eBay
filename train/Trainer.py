@@ -185,12 +185,6 @@ class Trainer:
         if str(self.loss) == "BCEWithLogitsLoss()":
             b['y'] = b['y'].float()
 
-        # arrival model requires masking censored observations
-        if self.name == 'arrival':
-            mask = b['y'] > -1
-            theta = theta[:, mask]
-            b['y'] = b['y'][:, mask]
-
         # calculate loss
         loss = self.loss(theta, b['y'].squeeze())
 

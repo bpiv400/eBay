@@ -320,7 +320,7 @@ def save_sizes(x, name):
             sizes['interval_count_7'] = INTERVAL_COUNTS[BYR_PREFIX + '_7']
 
     # length of model output vector
-    if name == 'arrival':
+    if 'arrival' in name:
         sizes['out'] = INTERVAL_COUNTS[ARRIVAL_PREFIX] + 1
     elif name == 'hist':
         sizes['out'] = HIST_QUANTILES
