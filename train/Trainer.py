@@ -213,7 +213,7 @@ class Trainer:
         for lnlr in LNLR0:
             # initialize model and optimizer
             models.append(self._initialize_model(gamma))
-            optimizer = optim.Adam(models[-1].net.parameters(), lr=np.exp(lnlr))
+            optimizer = Adam(models[-1].net.parameters(), lr=np.exp(lnlr))
 
             # print to console
             if len(models) == 1:
