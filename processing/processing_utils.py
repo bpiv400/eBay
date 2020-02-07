@@ -239,9 +239,11 @@ def get_x_offer(offers, idx, outcome=None, role=None):
     return x_offer
 
 
-def init_x(part, idx):
+def init_x(part, idx, drop_slr=False):
     x = load_file(part, 'x_lstg')
     x = {k: v.reindex(index=idx, level='lstg').astype('float32') for k, v in x.items()}
+    if drop_slr:
+        del x['slr']
     return x
 
 

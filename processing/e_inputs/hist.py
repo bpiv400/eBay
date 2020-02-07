@@ -15,7 +15,7 @@ def process_inputs(part):
 	idx = y.index
 
 	# listing features
-	x = init_x(part, idx)
+	x = init_x(part, idx, drop_slr=True)
 
 	# add thread features to x['lstg']
 	x_thread = x_thread.drop('byr_hist', axis=1).astype('float32')

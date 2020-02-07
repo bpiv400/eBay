@@ -93,11 +93,7 @@ def process_inputs(part, outcome, role):
     idx = y.index
 
     # listing features
-    x = init_x(part, idx)
-
-    # drop seller features in buyer model
-    if role == 'byr':
-        del x['slr']
+    x = init_x(part, idx, drop_slr=(role == BYR_PREFIX))
 
     # thread features
     x_thread = get_x_thread(threads, idx)

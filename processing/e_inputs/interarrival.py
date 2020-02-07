@@ -88,7 +88,7 @@ def process_inputs(part):
     idx = y.index
 
     # listing features
-    x = init_x(part, idx)
+    x = init_x(part, idx, drop_slr=True)
 
     # add thread features to x['lstg']
     x_thread = get_x_thread_arrival(clock, idx, lstg_start, diff)
