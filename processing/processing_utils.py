@@ -282,7 +282,10 @@ def save_featnames(x, name):
 
     # for delay, con, and msg models
     if 'offer1' in x:
-        feats = CLOCK_FEATS + TIME_FEATS + OUTCOME_FEATS + TURN_FEATS[name]
+        if BYR_PREFIX in name:
+            feats = CLOCK_FEATS + OUTCOME_FEATS + TURN_FEATS[name]
+        else:
+            feats = CLOCK_FEATS + TIME_FEATS + OUTCOME_FEATS + TURN_FEATS[name]
 
         # check that all offer groupings have same organization
         for k in x.keys():

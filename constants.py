@@ -20,11 +20,6 @@ elif 'Windows' in platform() and 'C:' in os.getcwd():  # Barry's laptop
 else:							# cluster and AWS
 	PREFIX = os.path.expanduser('~/weka/eBay')
 
-if 'Ubuntu' in platform():
-	HDF5_DIR = os.path.expanduser('~/hdf5/eBay/')
-else:
-	HDF5_DIR = '%s/hdf5/' % PREFIX
-
 PARTS_DIR = '%s/partitions/' % PREFIX
 ENV_SIM_DIR = '%s/envSimulator/' % PREFIX
 OUTPUT_DIR = '%s/outputs/' % PREFIX

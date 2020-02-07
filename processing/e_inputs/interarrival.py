@@ -100,7 +100,7 @@ def process_inputs(part):
 def main():
     # partition name from command line
     part = input_partition()
-    print('%s/arrival' % part)
+    print('%s/interarrival' % part)
 
     # create input dictionary
     d = process_inputs(part)

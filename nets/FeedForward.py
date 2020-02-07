@@ -17,6 +17,8 @@ class FeedForward(nn.Module):
 
         # expand embeddings
         groups = EMBEDDING_GROUPS.copy()
+        if 'slr' not in sizes['x']:
+            groups['other'].remove('slr')
         if 'offer1' in sizes['x']:
             groups['offer'] = ['lstg'] \
                 + [k for k in sizes['x'].keys() if 'offer' in k]
