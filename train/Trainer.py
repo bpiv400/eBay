@@ -140,8 +140,8 @@ class Trainer:
         :param optimizer: instance of torch.optim.
         :return: scalar loss.
         """
-        isTraining = optimizer is not None
-        batches = get_batches(data, isTraining=isTraining)
+        is_training = optimizer is not None
+        batches = get_batches(data, is_training=is_training)
 
         # loop over batches, calculate log-likelihood
         loss = 0.0
@@ -161,7 +161,7 @@ class Trainer:
             gpu_time += (dt.now() - t1).total_seconds()
 
         # print timers
-        prefix = 'training' if isTraining else 'validation'
+        prefix = 'training' if is_training else 'validation'
         print('\t{0:s} GPU time: {1:.1f} seconds'.format(prefix, gpu_time))
         print('\ttotal {0:s} time: {1:.1f} seconds'.format(prefix,
                                                            (dt.now() - t0).total_seconds()))
@@ -175,10 +175,10 @@ class Trainer:
         :param optimizer: instance of torch.optim.
         :return: scalar loss.
         """
-        isTraining = optimizer is not None  # train / eval mode
+        is_training = optimizer is not None  # train / eval mode
 
         # call forward on model
-        model.net.train(isTraining)
+        model.net.train(is_training)
         theta = model.net(b['x']).squeeze()
 
         # binary cross entropy requires float
@@ -195,7 +195,7 @@ class Trainer:
         loss = self.loss(theta, b['y'].squeeze())
 
         # add in regularization penalty and step down gradients
-        if isTraining:
+        if is_training:
             if model.dropout:
                 penalty = model.get_penalty()
                 factor = len(b['y']) / len(self.train)
