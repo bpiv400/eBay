@@ -101,17 +101,6 @@ def main():
     for v in x.values():
         assert np.all(lookup.index == v.index)
 
-    # featnames
-    if part == 'train_models':
-        featnames = {}
-        for k, v in x.items():
-            featnames[k] = list(v.columns)
-        dump(featnames, INPUT_DIR + 'featnames/x_lstg.pkl')
-
-    # numpy float32
-    for k, v in x.items():
-        x[k] = v.to_numpy(dtype='float32')
-
     # save as gz
     dump(x, path('x_lstg'))
 

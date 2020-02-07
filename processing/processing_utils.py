@@ -223,6 +223,10 @@ def get_x_offer(offers, idx, outcome=None, role=None):
             offer = set_zero_feats(offer, i, outcome)
             offer = add_turn_indicators(offer)
 
+        # drop time feats from buyer models
+            if role == BYR_PREFIX:
+                offer = offer.drop(TIME_FEATS, axis=1)
+
         # set censored time feats to zero
         else:
             if i > 1:

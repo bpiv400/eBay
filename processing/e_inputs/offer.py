@@ -40,7 +40,7 @@ def get_y_delay(df, role):
     delay //= INTERVAL[role]
 
     # replace expired delays with last index
-    assert np.all(df.loc[df.delay == 1, EXP])
+    assert np.all(df.loc[df[DELAY] == 1, EXP])
     delay.loc[delay == INTERVAL_COUNTS[role]] = -1
 
     # replace censored delays with negative index
@@ -95,11 +95,15 @@ def process_inputs(part, outcome, role):
     # listing features
     x = init_x(part, idx)
 
+    # drop seller features in buyer model
+    if role == 'byr':
+        del x['slr']
+
     # thread features
     x_thread = get_x_thread(threads, idx)
 
     # add time remaining to x_thread
-    if outcome == 'delay':
+    if outcome == DELAY:
         x_thread[INT_REMAINING] = calculate_remaining(part, idx, role)
 
     x['lstg'] = pd.concat([x['lstg'], x_thread], axis=1)
