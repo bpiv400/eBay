@@ -9,10 +9,9 @@ import rlenv.time.offer_types as time_triggers
 
 @pytest.fixture
 def lstgs():
-    thread1 = 10
-    thread2 = 11
-    thread3 = 12
-    lstg1 = thread1, thread2, thread3
+    thread1 = 1
+    thread2 = 2
+    lstg1 = thread1, thread2
     return lstg1
 
 

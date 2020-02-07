@@ -84,7 +84,8 @@ class ThreadSources(Sources):
         offer_map = OFFER_MAPS[turn]
         con = int(np.round(self.source_dict[offer_map][CON_IND] * 100))
         msg = self.source_dict[offer_map][MSG_IND] == 1
-        return con, msg
+        norm = self.source_dict[offer_map][NORM_IND]
+        return con, norm, msg
 
     def get_delay_outcomes(self, turn):
         # see update in sources.summary for slight efficiency improvement

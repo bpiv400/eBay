@@ -18,7 +18,6 @@ class TestEnvironment(SimulatorEnvironment):
     def get_con(self, input_dict=None, time=None, thread_id=None, turn=None):
         con = self.lstg_log.get_con(input_dict=input_dict, thread_id=thread_id,
                                     time=time, turn=turn)
-        print('con: {}'.format(con))
         return con
 
     def get_msg(self, input_dict=None, time=None, thread_id=None, turn=None):

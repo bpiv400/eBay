@@ -13,13 +13,9 @@ class ArrivalLog:
         self.check_time = check_time
 
     def get_inter_arrival(self, check_time=None, input_dict=None):
-        print('is censored: {}'.format(self.censored))
-        print('env time: {}'.format(check_time))
-        print('stored check time: {}'.format(self.check_time))
         assert check_time == self.check_time
         compare_input_dicts(model=ARRIVAL_MODEL, stored_inputs=self.arrival_inputs, env_inputs=input_dict)
         inter_arrival = self.time - self.check_time
-        print('arrival time: {}'.format(self.time))
         return int(inter_arrival)
 
     def get_hist(self, check_time=None, input_dict=None):

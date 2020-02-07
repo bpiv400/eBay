@@ -17,7 +17,7 @@ class ValueGenerator(Generator):
         start: time that the current iteration of RewardGenerator began
         has_checkpoint: whether a recent checkpoint file has been created for this environment
     """
-    def __init__(self, direct, num, verbose=False):
+    def __init__(self, direct, num, verbose=False, start=None):
         super(ValueGenerator, self).__init__(direct, num, verbose)
         self.val_calc = None  # type: ValueCalculator
         self.recorder = self._make_recorder()
