@@ -34,8 +34,8 @@ then
 	python repo/processing/e_inputs/offer.py --part test_rl --outcome msg --role slr
 elif [ "$SGE_TASK_ID" == 10 ]
 then
-	python repo/processing/e_inputs/listings.py --part train_rl
+	python repo/processing/e_inputs/listings.py --part test_rl
 elif [ "$SGE_TASK_ID" == 11 ]
 then
-	python repo/processing/e_inputs/threads.py --part train_rl
+	python repo/processing/e_inputs/threads.py --part test_rl
 fi

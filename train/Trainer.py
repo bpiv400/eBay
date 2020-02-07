@@ -123,7 +123,7 @@ class Trainer:
     def _run_epoch(self, model, optimizer, writer=None, epoch=None):
         # initialize output with log10 learning rate
         output = dict()
-        output['lnlr]] = self._get_lnlr(optimizer)
+        output['lnlr'] = self._get_lnlr(optimizer)
 
         # train model
         output['loss'] = self._run_loop(self.train, model, optimizer)
