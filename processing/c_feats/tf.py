@@ -192,6 +192,7 @@ def add_lstg_time_feats(subset, role, is_open, full=False):
     df, index_names = prepare_feat(subset)
     if is_open:
         open_counter = open_offers(df, ['lstg', 'thread'], role)
+        print(open_counter)
         assert (open_counter.max() == 1) & (open_counter.min() == 0)
         df.loc[open_counter == 0, 'norm'] = 0.0
         if role == 'slr':

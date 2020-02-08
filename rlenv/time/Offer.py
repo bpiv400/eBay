@@ -4,7 +4,7 @@ from rlenv.time.offer_types import BYR_REJECTION, SLR_REJECTION, OFFER
 
 
 class Offer:
-    def __init__(self, params=None, rej=None):
+    def __init__(self, params=None, rej=False, accept=False):
         # set offer type
         if rej and params['player'] == BYR_PREFIX:
             self.otype = BYR_REJECTION
@@ -14,6 +14,8 @@ class Offer:
             self.otype = OFFER
         # store params and make sure it contains necessary features
         self.params = params
+        self.accept = accept
+        self.reject = rej
         assert 'time' in self.params
         assert 'thread_id' in self.params
 
@@ -24,6 +26,13 @@ class Offer:
     @property
     def time(self):
         return self.params['time']
+
+    @property
+    def censored(self):
+        if 'censored' not in self.params:
+            return False
+        else:
+            return self.params['censored']
 
     @property
     def thread_id(self):

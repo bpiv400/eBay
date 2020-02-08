@@ -1,7 +1,8 @@
+import pandas as pd
 import numpy as np
 from collections import namedtuple
 from constants import BYR_PREFIX, MONTH, ARRIVAL_PREFIX, MAX_DELAY
-from featnames import START_TIME, ACC_PRICE, DEC_PRICE, START_PRICE, DELAY
+from featnames import START_TIME, ACC_PRICE, DEC_PRICE, START_PRICE, DELAY, TIME_FEATS
 from rlenv.Heap import Heap
 from rlenv.time.TimeFeatures import TimeFeatures
 from rlenv.time.Offer import Offer
@@ -129,6 +130,7 @@ class EbayEnvironment:
                 elif auto == REJ_IND:
                     self._process_slr_auto_rej(event, offer)
                     return False
+            print('updated time features after standard offer')
             self.time_feats.update_features(offer=offer)
             self._init_delay(event)
             return False
@@ -169,6 +171,8 @@ class EbayEnvironment:
         if event.turn != 1:
             time_feats = self.time_feats.get_feats(thread_id=event.thread_id,
                                                    time=event.priority)
+            print('raw time feats')
+            print(pd.Series(data=time_feats, index=TIME_FEATS))
             clock_feats = get_clock_feats(event.priority)
             event.init_offer(time_feats=time_feats, clock_feats=clock_feats)
         return False
@@ -230,6 +234,7 @@ class EbayEnvironment:
                                                     turn=event.turn)
         delay_seconds = self.get_delay(input_dict=input_dict, turn=event.turn, thread_id=event.thread_id,
                                        time=event.priority, delay_type=event.delay_type)
+        print('delay seconds: {}'.format(delay_seconds))
         # Test environment returns None when delay model is mistakenly called
         if delay_seconds is None:
             print("No delay returned; exiting listing.")

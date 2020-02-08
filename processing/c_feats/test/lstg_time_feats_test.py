@@ -1,117 +1,16 @@
 import pytest
-import pandas as pd
-import torch
 from processing.c_feats.tf import get_lstg_time_feats
-from time.TimeFeatures import TimeFeatures
-from time.offer_types import *
-from rlenv.env_consts import EXPIRATION
+from processing.c_feats.test.test_utils import (compare_all,
+                                                get_exp_feats,
+                                                update)
+from rlenv.time.TimeFeatures import TimeFeatures
+from rlenv.time.offer_types import *
 
 
 # consts
 COLS = ['accept', 'clock', 'reject', 'byr',
         'start_price', 'norm', 'price', 'censored', 'message']
 ACCEPTANCE = 'acceptance' # time trigger for df not needed for environment
-
-
-def compare_all(events, exp, time_checks, lstg=0):
-    events = get_lstg_time_feats(events, full=True)
-    act = [events.loc[(lstg, idx[1])].values for idx in time_checks]
-    for curr_act, curr_exp, idx in zip(act, exp, time_checks):
-        print('')
-        print('thread : {}, time: {}'.format(idx[0], idx[1]))
-        compare(curr_act, curr_exp)
-
-
-def compare(actual, exp):
-    """
-    Approximate equality between expected tensor and actual tensor
-
-    :param actual: 1 dimensional torch.tensor
-    :param exp: 1 dimensional torch.tensor
-    :return: NA
-    """
-    if not isinstance(actual, torch.Tensor):
-        actual = torch.from_numpy(actual).float()
-    if not isinstance(exp, torch.Tensor):
-        exp = torch.from_numpy(exp).float()
-    assert torch.all(torch.lt(torch.abs(torch.add(actual, -exp)), 1e-6))
-
-
-def get_exp_feats(idx, timefeats, exp, time_checks):
-    new_feats = timefeats.get_feats(thread_id=None, time=idx[1])
-    exp.append(new_feats)
-    time_checks.append(idx)
-
-
-def update(events, timefeats, trigger_type=None, thread_id=None, offer=None, lstg=0):
-    """
-    Updates events DataFrame and TimeFeatures object with the same event
-    :param events: pd.DataFrame containing events
-    :param timefeats: instance of rlenv.TimeFeatures.TimeFeatures
-    :param thread_id: int giving thread id
-    :param offer: dictionary containing parameters of offer
-    :param trigger_type: str defined in rlenv.time_triggers giving type of event
-    :return: updated events df
-    """
-    events = add_event(events, trigger_type=trigger_type, thread_id=thread_id, offer=offer,
-                       lstg=lstg)
-    if trigger_type == ACCEPTANCE:
-        return events
-    if timefeats is not None:
-        timefeats.update_features(trigger_type=trigger_type,
-                                  thread_id=thread_id, offer=offer)
-    return events
-
-
-def add_event(df, trigger_type=None, offer=None, thread_id=None, lstg=0):
-    """
-    Adds an event to an events dataframe using the same dictionary of offer features
-    as that TimeFeatures.update_feat
-    :param df: dataframe containing events up to this point
-    :param trigger_type: str defined in rlenv.time_triggers
-    :param thread_id: int giving the id of the thread
-    :param offer: dictionary containing price (norm), time, type (str indicating 'byr' or 'slr', thread_id
-    :return: updated dataframe
-    """
-    offer = offer.copy()
-    if df is None:
-        df = pd.DataFrame(columns=COLS)
-        df.index = pd.MultiIndex(levels=[[], [], []],
-                                 codes=[[], [], []],
-                                 names=['lstg', 'thread', 'index'])
-    if lstg in df.index.levels[0]:
-        last_index = df.xs(lstg, level='lstg', drop_level=True)
-        if (lstg, thread_id, 1) in df.index:
-            last_index = last_index.xs(thread_id, level='thread',
-                                       drop_level=True).reset_index()['index'].max() + 1
-        else:
-            last_index = 1
-    else:
-        last_index = 1
-    offer_index = pd.MultiIndex.from_tuples([(lstg, thread_id, last_index)],
-                                            names=['lstg', 'thread', 'index'])
-
-    # repurpose offer dictionary
-    offer['start_price'] = 0
-    offer['clock'] = offer['time']
-    del offer['time']
-    offer['byr'] = offer['type'] == 'byr'
-    offer['accept'] = trigger_type == ACCEPTANCE
-    offer['reject'] = trigger_type == BYR_REJECTION or trigger_type == SLR_REJECTION
-    offer['norm'] = offer['price']
-    for col in ['price', 'censored', 'message']:
-        offer[col] = 0
-    del offer['type']
-    keys = list(offer.keys())
-    keys.sort()
-    cols = COLS.copy()
-    cols.sort()
-    assert len(keys) == len(cols)
-    assert all([key == col for key, col in zip(keys, cols)])
-
-    offer_df = pd.DataFrame(data=offer, index=offer_index)
-    df = df.append(offer_df, verify_integrity=True, sort=True)
-    return df
 
 
 @pytest.fixture()
