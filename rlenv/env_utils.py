@@ -374,7 +374,10 @@ def populate_test_model_inputs(full_inputs=None, value=None):
     inputs = dict()
     for feat_set_name, feat_df in full_inputs.items():
         # print(value)
-        curr_set = full_inputs[feat_set_name].loc[value, :]
+        if value is not None:
+            curr_set = full_inputs[feat_set_name].loc[value, :]
+        else:
+            curr_set = full_inputs[feat_set_name]
         curr_set = curr_set.values
         curr_set = torch.from_numpy(curr_set).float()
         if len(curr_set.shape) == 1:
