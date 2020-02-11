@@ -1,5 +1,6 @@
 from compress_pickle import load
 import pandas as pd
+import numpy as np
 from processing.processing_utils import input_partition, load_file, \
     collect_date_clock_feats, get_arrival_times, get_months_since_lstg, \
     init_x, save_files
@@ -11,7 +12,7 @@ from featnames import THREAD_COUNT, MONTHS_SINCE_LAST, MONTHS_SINCE_LSTG
 def get_interarrival_period(clock):
     # calculate interarrival times in seconds
     df = clock.unstack()
-    diff = pd.DataFrame(0.0, index=df.index, columns=df.columns[2:])
+    diff = pd.DataFrame(0.0, index=df.index, columns=df.columns[1:])
     for i in diff.columns:
         diff[i] = df[i] - df[i - 1]
 
@@ -29,11 +30,9 @@ def get_interarrival_period(clock):
     censored = thread == last_thread
 
     # drop interarrivals after BINs
-    y = diff[diff > 0]
-
-    # reindex censored and diff
+    diff = diff[diff > 0]
+    y = diff[diff.index.get_level_values(level='thread') > 1]
     censored = censored.reindex(index=y.index)
-    diff = diff.reindex(index=y.index)
 
     # convert y to periods
     y //= INTERVAL[ARRIVAL_PREFIX]
@@ -61,7 +60,8 @@ def get_x_thread_arrival(clock, idx, lstg_start, diff):
     assert (months_since_lstg.max() < 1) & (months_since_lstg.min() >= 0)
 
     # months since last arrival
-    months_since_last = diff.groupby('lstg').shift().fillna(0) / MONTH
+    months_since_last = diff.groupby('lstg').shift().dropna() / MONTH
+    assert np.all(months_since_last.index == idx)
 
     # concatenate into dataframe
     x_thread = pd.concat(
