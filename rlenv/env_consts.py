@@ -1,7 +1,8 @@
 from utils import unpickle
 from constants import INPUT_DIR, SLR_PREFIX, BYR_PREFIX
 from featnames import (CON, DELAY, MSG, ALL_OFFER_FEATS, CLOCK_FEATS,
-                       TIME_FEATS, DAYS, EXP, NORM, SPLIT, AUTO, REJECT)
+                       TIME_FEATS, DAYS, EXP, NORM, SPLIT, AUTO, REJECT,
+                       THREAD_COUNT)
 
 INTERACT = False
 
@@ -99,6 +100,7 @@ DAYS_IND = ALL_OFFER_FEATS.index(DAYS)
 AUTO_IND = ALL_OFFER_FEATS.index(AUTO)
 REJECT_IND = ALL_OFFER_FEATS.index(REJECT)
 EXP_IND = ALL_OFFER_FEATS.index(EXP)
+THREAD_COUNT_IND = ALL_OFFER_FEATS.index(THREAD_COUNT)
 
 
 # Reinforcement learning environment parameters

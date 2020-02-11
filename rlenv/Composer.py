@@ -163,10 +163,11 @@ class Composer:
             # append nothing
             lstg = sources[LSTG_MAP]
         elif model_name == BYR_HIST_MODEL:
+            solo_feats = np.array([sources[MONTHS_SINCE_LSTG],
+                                   sources[OFFER_MAPS[1][THREAD_COUNT_IND]]])
             lstg = np.concatenate([sources[LSTG_MAP],
                                    sources[OFFER_MAPS[1]][CLOCK_START_IND:TIME_END_IND],
-                                   np.array([sources[MONTHS_SINCE_LSTG],
-                                             sources[THREAD_COUNT]])])
+                                   solo_feats])
         elif DELAY in model_name:
             solo_feats = np.array([sources[MONTHS_SINCE_LSTG], sources[BYR_HIST]])
             lstg = np.concatenate([sources[LSTG_MAP], solo_feats, self.turn_inds,
