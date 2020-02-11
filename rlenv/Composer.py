@@ -17,8 +17,8 @@ class Composer:
     Class for composing inputs to interface from various input streams
     """
     def __init__(self, cols):
-        self.lstg_sets = Composer.build_lstg_sets(cols)
         self.sizes = Composer.make_sizes()
+        self.lstg_sets = Composer.build_lstg_sets(cols)
         self.intervals = self.make_intervals()
         self.turn_inds = None
 
@@ -39,17 +39,19 @@ class Composer:
         :return: dict
         """
         x_lstg_cols = list(x_lstg_cols)
-        featnames = load_featnames(ARRIVAL_MODEL)
+        featnames = load_featnames(FIRST_ARRIVAL_MODEL)
         featnames[LSTG_MAP] = [feat for feat in featnames[LSTG_MAP] if feat in x_lstg_cols]
         for model in MODELS:
             # verify all x_lstg based sets contain the same features in the same order
-            Composer.verify_lstg_sets_shared(model, x_lstg_cols, featnames)
+            Composer.verify_lstg_sets_shared(model, x_lstg_cols, featnames.copy())
             if model in OFFER_MODELS and DELAY not in model:
                 Composer.verify_offer_append(model, featnames[LSTG_MAP])
             elif model in OFFER_MODELS:
                 Composer.verify_delay_append(model, featnames[LSTG_MAP])
-            elif model == ARRIVAL_MODEL:
-                Composer.verify_arrival_append(featnames[LSTG_MAP])
+            elif model == FIRST_ARRIVAL_MODEL:
+                Composer.verify_first_arrival_append(featnames[LSTG_MAP])
+            elif model == INTERARRIVAL_MODEL:
+                Composer.verify_interarrival_append(featnames[LSTG_MAP])
             else:
                 Composer.verify_hist_append(featnames[LSTG_MAP])
         return featnames
@@ -87,6 +89,8 @@ class Composer:
         # remove those missing features
         model_featnames[LSTG_MAP] = [feat for feat in model_featnames[LSTG_MAP] if feat in x_lstg_cols]
         # iterate over all x_lstg features based and check that have same elements in the same order
+        if SLR_PREFIX not in model:
+            del featnames[SLR_PREFIX]
         for grouping_name, lstg_feats in featnames.items():
             model_grouping = model_featnames[grouping_name]
             assert len(model_grouping) == len(lstg_feats)
@@ -121,13 +125,15 @@ class Composer:
         fixed_sizes = self.sizes[model_name]['x']  # dict
         if turn is not None:
             self._update_turn_inds(model_name, turn)
-        for input_set in fixed_sizes.keys():
+        for input_set, size in fixed_sizes.items():
             if input_set == LSTG_MAP:
                 input_dict[input_set] = self._build_lstg_vector(model_name, sources=sources)
             elif 'offer' == input_set[:-1]:
-                input_dict[input_set] = self._build_offer_vector(sources[input_set])
+                input_dict[input_set] = self._build_offer_vector(offer_vector=sources[input_set],
+                                                                 byr=model_name[-3:] == BYR_PREFIX)
             else:
                 input_dict[input_set] = torch.from_numpy(sources[input_set]).float().unsqueeze(0)
+            assert input_dict[input_set].shape[1] == size
         return input_dict
 
     def make_intervals(self):
@@ -135,22 +141,32 @@ class Composer:
             BYR_PREFIX: self.sizes[model_str(DELAY, byr=True)][INTERVAL],
             '{}_{}'.format(BYR_PREFIX, 7): self.sizes[model_str(DELAY, byr=True)][INTERVAL],
             SLR_PREFIX: self.sizes[model_str(DELAY, byr=False)][INTERVAL],
-            ARRIVAL_PREFIX: self.sizes[ARRIVAL_MODEL][INTERVAL]
+            ARRIVAL_PREFIX: self.sizes[FIRST_ARRIVAL_MODEL][INTERVAL]
         }
         return ints
 
-    def _build_offer_vector(self, offer_vector):
-        full_vector = np.concatenate([offer_vector, self.turn_inds])
+    def _build_offer_vector(self, offer_vector, byr=False):
+        if not byr:
+            full_vector = np.concatenate([offer_vector, self.turn_inds])
+        else:
+            full_vector = np.concatenate([offer_vector[:TIME_START_IND],
+                                          offer_vector[TIME_END_IND:],
+                                          self.turn_inds])
         return torch.from_numpy(full_vector).unsqueeze(0).float()
 
     def _build_lstg_vector(self, model_name, sources=None):
-        if model_name == ARRIVAL_MODEL:
+        if model_name == INTERARRIVAL_MODEL:
             solo_feats = np.array([sources[MONTHS_SINCE_LSTG], sources[MONTHS_SINCE_LAST],
                                    sources[THREAD_COUNT]])
             lstg = np.concatenate([sources[LSTG_MAP], sources[CLOCK_MAP], solo_feats])
+        elif model_name == FIRST_ARRIVAL_MODEL:
+            # append nothing
+            lstg = sources[LSTG_MAP]
         elif model_name == BYR_HIST_MODEL:
-            lstg = np.concatenate([sources[LSTG_MAP], np.array([sources[MONTHS_SINCE_LSTG]]),
-                                   sources[OFFER_MAPS[1]][CLOCK_START_IND:TIME_END_IND]])
+            lstg = np.concatenate([sources[LSTG_MAP],
+                                   sources[OFFER_MAPS[1]][CLOCK_START_IND:TIME_END_IND],
+                                   np.array([sources[MONTHS_SINCE_LSTG],
+                                             sources[THREAD_COUNT]])])
         elif DELAY in model_name:
             solo_feats = np.array([sources[MONTHS_SINCE_LSTG], sources[BYR_HIST]])
             lstg = np.concatenate([sources[LSTG_MAP], solo_feats, self.turn_inds,
@@ -205,8 +221,8 @@ class Composer:
         assert model_feats[-1] == INT_REMAINING
 
     @staticmethod
-    def verify_arrival_append(shared_feats):
-        model_feats = load_featnames(ARRIVAL_MODEL)[LSTG_MAP]
+    def verify_interarrival_append(shared_feats):
+        model_feats = load_featnames(INTERARRIVAL_MODEL)[LSTG_MAP]
         model_feats = Composer.remove_shared_feats(model_feats, shared_feats)
         Composer.verify_sequence(model_feats, CLOCK_FEATS, 0)
         next_ind = len(CLOCK_FEATS)
@@ -215,15 +231,18 @@ class Composer:
         assert model_feats[next_ind + 2] == THREAD_COUNT
 
     @staticmethod
+    def verify_first_arrival_append(shared_feats):
+        model_feats = load_featnames(FIRST_ARRIVAL_MODEL)[LSTG_MAP]
+        model_feats = Composer.remove_shared_feats(model_feats, shared_feats)
+        assert len(model_feats) == 0
+
+    @staticmethod
     def verify_hist_append(shared_feats):
         model_feats = load_featnames(BYR_HIST_MODEL)[LSTG_MAP]
         model_feats = Composer.remove_shared_feats(model_feats, shared_feats)
-        assert model_feats[0] == MONTHS_SINCE_LSTG
-        # TODO: CLIP
-        if model_feats[1] == 'holiday_1':
-            model_feats[1:] = [featname[:-2] for featname in model_feats[1:]]
-        Composer.verify_sequence(model_feats, CLOCK_FEATS, 1)
-        Composer.verify_sequence(model_feats, TIME_FEATS, 1 + len(CLOCK_FEATS))
+        Composer.verify_sequence(model_feats, CLOCK_FEATS, 0)
+        assert model_feats[len(CLOCK_FEATS)] == MONTHS_SINCE_LSTG
+        assert model_feats[len(CLOCK_FEATS) + 1] == THREAD_COUNT
 
 
 class AgentComposer(Composer):

@@ -66,11 +66,12 @@ OFFER_EVENT = 'OFFER'
 DELAY_EVENT = 'DELAY'
 
 # model names
-ARRIVAL_MODEL = 'arrival'
+FIRST_ARRIVAL_MODEL = 'first_arrival'
+INTERARRIVAL_MODEL = 'interarrival'
 BYR_HIST_MODEL = 'hist'
 
 # model sets
-ARRIVAL_MODELS = [ARRIVAL_MODEL, BYR_HIST_MODEL]
+ARRIVAL_MODELS = [FIRST_ARRIVAL_MODEL, INTERARRIVAL_MODEL, BYR_HIST_MODEL]
 OFFER_NO_PREFIXES = [CON, MSG, DELAY]
 OFFER_MODELS = ['{}_{}'.format(model, SLR_PREFIX) for model in OFFER_NO_PREFIXES] + \
         ['{}_{}'.format(model, BYR_PREFIX) for model in OFFER_NO_PREFIXES]
