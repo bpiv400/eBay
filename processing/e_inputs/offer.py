@@ -17,9 +17,13 @@ def get_y_con(df):
     return (df.loc[mask, CON] * 100).astype('int8')
 
 
-def get_y_msg(df):
-    # drop accepts and rejects
-    mask = (df[CON] > 0) & (df[CON] < 1)
+def get_y_msg(df, role):
+    # for buyers, drop accepts and rejects
+    if role == BYR_PREFIX:
+        mask = (df[CON] > 0) & (df[CON] < 1)
+    # for sellers, drop accepts, expires, and auto responses
+    else:
+        mask = ~df[EXP] & ~df[AUTO] & (df[CON] < 1)
     return df.loc[mask, MSG]
 
 
@@ -87,7 +91,7 @@ def process_inputs(part, outcome, role):
     if outcome == 'con':
         y = get_y_con(df)
     elif outcome == 'msg':
-        y = get_y_msg(df)
+        y = get_y_msg(df, role)
     else:
         y = get_y_delay(df, role)
     idx = y.index

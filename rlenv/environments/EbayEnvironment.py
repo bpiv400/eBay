@@ -347,7 +347,7 @@ class EbayEnvironment:
         # update features
         offer = event.update_con_outcomes(con_outcomes=con_outcomes)
         # sample msg if necessary
-        if need_msg(con):
+        if need_msg(con, slr):
             model_name = self.seller.msg_model_name if slr else self.buyer.msg_model_name
             input_dict = self.composer.build_input_dict(model_name, sources=event.sources(),
                                                         turn=event.turn)

@@ -366,8 +366,11 @@ def compare_input_dicts(model=None, stored_inputs=None, env_inputs=None):
             # raise RuntimeError("Environment inputs diverged from true inputs")
 
 
-def need_msg(con):
-    return con != 0 and con != 1
+def need_msg(con, slr):
+    if not slr:
+        return 0 < con < 1
+    else:
+        return con < 1
 
 
 def populate_test_model_inputs(full_inputs=None, value=None):
