@@ -313,7 +313,7 @@ def save_sizes(x, name):
 
     # save interval and interval counts
     role = name.split('_')[-1]
-    if (name == 'arrival') or ('delay' in name):
+    if ('arrival' in name) or ('delay' in name):
         sizes['interval'] = INTERVAL[role]
         sizes['interval_count'] = INTERVAL_COUNTS[role]
         if role == BYR_PREFIX:
