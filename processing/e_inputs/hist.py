@@ -9,7 +9,7 @@ def process_inputs(part):
 	# thread features
 	x_offer = load_file(part, 'x_offer').xs(1, level='index')
 	x_thread = x_offer[CLOCK_FEATS].join(load_file(part, 'x_thread'))
-	x_thread[THREAD_COUNT] = x_thread.index.get_level_values(level='thread')
+	x_thread[THREAD_COUNT] = x_thread.index.get_level_values(level='thread') - 1
 
 	# outcome
 	y = x_thread['byr_hist']
