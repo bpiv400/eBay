@@ -41,6 +41,7 @@ class Composer:
         x_lstg_cols = list(x_lstg_cols)
         featnames = load_featnames(FIRST_ARRIVAL_MODEL)
         featnames[LSTG_MAP] = [feat for feat in featnames[LSTG_MAP] if feat in x_lstg_cols]
+        featnames[SLR_PREFIX] = load_featnames(model_str(CON, byr=False))[SLR_PREFIX]
         for model in MODELS:
             # verify all x_lstg based sets contain the same features in the same order
             Composer.verify_lstg_sets_shared(model, x_lstg_cols, featnames.copy())
@@ -84,8 +85,9 @@ class Composer:
         for feat in model_featnames[LSTG_MAP]:
             if feat not in x_lstg_cols:
                 missing_idx.append(model_featnames[LSTG_MAP].index(feat))
-        missing_idx_min = min(missing_idx)
-        assert missing_idx_min == len(featnames[LSTG_MAP])
+        if len(missing_idx) != 0:
+            missing_idx_min = min(missing_idx)
+            assert missing_idx_min == len(featnames[LSTG_MAP])
         # remove those missing features
         model_featnames[LSTG_MAP] = [feat for feat in model_featnames[LSTG_MAP] if feat in x_lstg_cols]
         # iterate over all x_lstg features based and check that have same elements in the same order
@@ -133,7 +135,9 @@ class Composer:
                                                                  byr=model_name[-3:] == BYR_PREFIX)
             else:
                 input_dict[input_set] = torch.from_numpy(sources[input_set]).float().unsqueeze(0)
+            # TODO: Consider removing assert statements
             assert input_dict[input_set].shape[1] == size
+            assert ~torch.isnan(input_dict[input_set]).all()
         return input_dict
 
     def make_intervals(self):
@@ -164,10 +168,11 @@ class Composer:
             lstg = sources[LSTG_MAP]
         elif model_name == BYR_HIST_MODEL:
             solo_feats = np.array([sources[MONTHS_SINCE_LSTG],
-                                   sources[OFFER_MAPS[1][THREAD_COUNT_IND]]])
+                                   sources[OFFER_MAPS[1]][THREAD_COUNT_IND]])
             lstg = np.concatenate([sources[LSTG_MAP],
-                                   sources[OFFER_MAPS[1]][CLOCK_START_IND:TIME_END_IND],
+                                   sources[OFFER_MAPS[1]][CLOCK_START_IND:CLOCK_END_IND],
                                    solo_feats])
+
         elif DELAY in model_name:
             solo_feats = np.array([sources[MONTHS_SINCE_LSTG], sources[BYR_HIST]])
             lstg = np.concatenate([sources[LSTG_MAP], solo_feats, self.turn_inds,

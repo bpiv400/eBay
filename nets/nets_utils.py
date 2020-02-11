@@ -65,7 +65,6 @@ class Embedding(nn.Module):
         N = sum(counts.values())
         self.layer2 = stack_layers(N, layers=LAYERS_EMBEDDING)
 
-
     def forward(self, x):
         '''
         x: OrderedDict() with a superset of the keys in self.k

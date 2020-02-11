@@ -172,8 +172,8 @@ class EbayEnvironment:
         if event.turn != 1:
             time_feats = self.time_feats.get_feats(thread_id=event.thread_id,
                                                    time=event.priority)
-            print('raw time feats')
-            print(pd.Series(data=time_feats, index=TIME_FEATS))
+            # print('raw time feats')
+            # print(pd.Series(data=time_feats, index=TIME_FEATS))
             clock_feats = get_clock_feats(event.priority)
             event.init_offer(time_feats=time_feats, clock_feats=clock_feats)
         return False

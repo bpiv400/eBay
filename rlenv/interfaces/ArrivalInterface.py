@@ -1,5 +1,5 @@
 from rlenv.env_utils import sample_categorical
-from rlenv.env_consts import (BYR_HIST_MODEL, FIRST_self.start_time,
+from rlenv.env_consts import (BYR_HIST_MODEL, FIRST_ARRIVAL_MODEL,
                               INTERARRIVAL_MODEL)
 from utils import load_model
 
@@ -18,15 +18,15 @@ class ArrivalInterface:
         return hist
 
     def first_arrival(self, input_dict=None):
-        model = self.interarrival_model
+        model = self.first_arrival_model
         return self.arrival(model=model, input_dict=input_dict)
 
     def inter_arrival(self, input_dict=None):
-        model = self.first_arrival_model
+        model = self.interarrival_model
         return self.arrival(model=model, input_dict=input_dict)
 
     @staticmethod
     def arrival(model=None, input_dict=None):
-        params = model(input_dict)
+        params = model(input_dict).squeeze()
         intervals = sample_categorical(params)
         return intervals
