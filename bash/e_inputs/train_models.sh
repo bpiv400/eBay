@@ -10,7 +10,7 @@ then
 	python repo/processing/e_inputs/first_arrival.py --part train_models
 elif [ "$SGE_TASK_ID" == 2 ]
 then
-	python repo/processing/e_inputs/interarrival.py --part train_models
+	python repo/processing/e_inputs/next_arrival.py --part train_models
 elif [ "$SGE_TASK_ID" == 3 ]
 then
 	python repo/processing/e_inputs/hist.py --part train_models

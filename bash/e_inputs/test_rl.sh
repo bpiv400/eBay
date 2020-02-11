@@ -10,7 +10,7 @@ then
 	python repo/processing/e_inputs/first_arrival.py --part test_rl
 elif [ "$SGE_TASK_ID" == 2 ]
 then
-	python repo/processing/e_inputs/interarrival.py --part test_rl
+	python repo/processing/e_inputs/next_arrival.py --part test_rl
 elif [ "$SGE_TASK_ID" == 3 ]
 then
 	python repo/processing/e_inputs/hist.py --part test_rl
