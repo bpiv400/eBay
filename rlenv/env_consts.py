@@ -68,7 +68,7 @@ DELAY_EVENT = 'DELAY'
 
 # model names
 FIRST_ARRIVAL_MODEL = 'first_arrival'
-INTERARRIVAL_MODEL = 'interarrival'
+INTERARRIVAL_MODEL = 'next_arrival'
 BYR_HIST_MODEL = 'hist'
 
 # model sets
