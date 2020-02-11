@@ -1,5 +1,5 @@
 from rlenv.env_utils import sample_categorical
-from rlenv.env_consts import (BYR_HIST_MODEL, FIRST_ARRIVAL_MODEL,
+from rlenv.env_consts import (BYR_HIST_MODEL, FIRST_self.start_time,
                               INTERARRIVAL_MODEL)
 from utils import load_model
 
