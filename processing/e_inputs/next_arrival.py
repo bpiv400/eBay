@@ -100,13 +100,13 @@ def process_inputs(part):
 def main():
     # partition name from command line
     part = input_partition()
-    print('%s/interarrival' % part)
+    print('%s/next_arrival' % part)
 
     # create input dictionary
     d = process_inputs(part)
 
     # save various output files
-    save_files(d, part, 'interarrival')
+    save_files(d, part, 'next_arrival')
 
 
 if __name__ == '__main__':
