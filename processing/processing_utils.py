@@ -110,7 +110,7 @@ def get_con(offers, start_price):
     con = con.rename_axis('index', axis=1).stack()
 
     # round concessions
-    rounded = get_con(con)
+    rounded = round_con(con)
 
     # exception handling
     rounded.loc[(con == 0) & con.index.isin([1], level='index')] = 0.01

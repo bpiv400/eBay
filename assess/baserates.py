@@ -1,4 +1,5 @@
-import sys, argparse
+import sys
+import argparse
 from compress_pickle import load
 import numpy as np
 from constants import INPUT_DIR
@@ -41,8 +42,10 @@ def main():
 	# function
 	if 'msg' in name:
 		f = binary_log_likelihood
-	else:
+	elif name in ['first_arrival', 'hist', 'con_byr', 'con_slr']:
 		f = categorical_log_likelihood
+	else:
+		raise NotImplementedError()
 
 	# load data
 	d = load(INPUT_DIR + '{}/{}.gz'.format(part, name))
