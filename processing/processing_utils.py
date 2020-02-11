@@ -109,11 +109,11 @@ def get_con(offers, start_price):
     # stack into series
     con = con.rename_axis('index', axis=1).stack()
 
+    # first buyer concession should be greater than 0
+    assert con.loc[con.index.isin([1], level='index')].min() > 0
+
     # round concessions
     rounded = round_con(con)
-
-    # exception handling
-    rounded.loc[(con == 0) & con.index.isin([1], level='index')] = 0.01
 
     return rounded
 

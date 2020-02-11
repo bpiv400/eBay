@@ -219,7 +219,7 @@ class Trainer:
             print('\tloss: {}'.format(loss[-1]))
 
         # best learning rate and model
-        idx = np.argmin(loss)
+        idx = int(np.argmin(loss))
         lnlr = LNLR0[idx]
         model = models[idx]
 

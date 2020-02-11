@@ -22,7 +22,6 @@ class Model:
 		# neural net
 		self.net = FeedForward(sizes, dropout=self.dropout).to(device)
 
-
 	def get_penalty(self):
 		if self.gamma == 0:
 			return 0
@@ -33,12 +32,9 @@ class Model:
 				penalty += m.kl_reg().item()
 		return self.gamma * penalty
 
-
-
 	def get_lnalpha_stats(self):
 		lnalpha = self.lnalpha
 		return np.std(lnalpha), np.max(lnalpha)
-
 
 	@property
 	def lnalpha(self):
@@ -47,4 +43,3 @@ class Model:
 			if hasattr(m, 'log_alpha'):
 				lnalpha.append(m.log_alpha.detach().cpu().numpy())
 		return np.concatenate(lnalpha)
-	

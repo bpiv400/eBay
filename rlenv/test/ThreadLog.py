@@ -36,7 +36,7 @@ class ThreadLog:
         else:
             con_inputs = None
         # msg inputs if necessary
-        if need_msg(outcomes[CON]):
+        if not outcomes[AUTO] and not outcomes[EXP] and need_msg(outcomes[CON], slr=not byr):
             model = model_str(MSG, byr=byr)
             msg_inputs = populate_test_model_inputs(full_inputs=params['inputs'][model], value=turn)
         else:
@@ -49,7 +49,7 @@ class ThreadLog:
             delay_inputs = None
         delay_time = self.delay_time(turn=turn)
         turn_log = TurnLog(outcomes=outcomes, delay_inputs=delay_inputs, con_inputs=con_inputs,
-                       msg_inputs=msg_inputs, delay_time=delay_time, turn=turn)
+                           msg_inputs=msg_inputs, delay_time=delay_time, turn=turn)
         print('Turn: {} at time: {}'.format(turn, turn_log.offer_time))
         return turn_log
 

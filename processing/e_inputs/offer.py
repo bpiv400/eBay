@@ -88,9 +88,9 @@ def process_inputs(part, outcome, role):
 
     # outcome and master index
     df = offers[offers.index.isin(IDX[role], level='index')]
-    if outcome == 'con':
+    if outcome == CON:
         y = get_y_con(df)
-    elif outcome == 'msg':
+    elif outcome == MSG:
         y = get_y_msg(df, role)
     else:
         y = get_y_delay(df, role)
