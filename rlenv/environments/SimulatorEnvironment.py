@@ -14,7 +14,8 @@ class SimulatorEnvironment(EbayEnvironment):
         self.recorder = kwargs['recorder']
 
         # end time
-        self.end_time = self.lookup[START_TIME] + MONTH
+        self.start_time = self.lookup[START_TIME]
+        self.end_time = self.start_time + MONTH
 
     def reset(self):
         super(SimulatorEnvironment, self).reset()

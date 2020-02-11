@@ -7,7 +7,7 @@ class TestEnvironment(SimulatorEnvironment):
         super().__init__(**kwargs)
         self.lstg_log = kwargs['log']  # type: LstgLog
 
-    def get_inter_arrival(self, input_dict=None, time=None):
+    def get_arrival(self, input_dict=None, time=None):
         return self.lstg_log.get_inter_arrival(input_dict=input_dict, time=time,
                                                thread_id=self.thread_counter)
 

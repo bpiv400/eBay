@@ -13,8 +13,8 @@ from rlenv.sources import ThreadSources
 from rlenv.events.Thread import Thread
 from rlenv.env_consts import (INTERACT, SALE, PRICE, DUR, ACC_IND,
                               REJ_IND, OFF_IND, ARRIVAL, FIRST_OFFER,
-                              OFFER_EVENT, DELAY_EVENT, ARRIVAL_MODEL,
-                              BYR_HIST_MODEL)
+                              OFFER_EVENT, DELAY_EVENT, FIRST_ARRIVAL_MODEL,
+                              BYR_HIST_MODEL, INTERARRIVAL_MODEL)
 from rlenv.env_utils import get_clock_feats, get_con_outcomes, need_msg, model_str
 from utils import get_months_since_lstg
 
@@ -39,6 +39,7 @@ class EbayEnvironment:
 
         # end time
         self.end_time = None
+        self.start_time = None
         self.thread_counter = 1
         self.outcome = None
 
@@ -52,7 +53,7 @@ class EbayEnvironment:
         self.outcome = None
         self.thread_counter = 1
         sources = ArrivalSources(x_lstg=self.x_lstg)
-        event = Arrival(priority=self.lookup[START_TIME], sources=sources)
+        event = Arrival(priority=self.start_time, sources=sources)
         self.queue.push(event)
 
     def run(self):
@@ -151,7 +152,7 @@ class EbayEnvironment:
         """
         # prepare sources and features
         sources = ThreadSources(x_lstg=self.x_lstg)
-        months_since_lstg = get_months_since_lstg(lstg_start=self.lookup[START_TIME], start=event.priority)
+        months_since_lstg = get_months_since_lstg(lstg_start=self.start_time, start=event.priority)
         time_feats = self.time_feats.get_feats(time=event.priority, thread_id=event.thread_id)
         sources.prepare_hist(time_feats=time_feats, clock_feats=get_clock_feats(event.priority),
                              months_since_lstg=months_since_lstg)
@@ -193,9 +194,8 @@ class EbayEnvironment:
                              clock_feats=clock_feats)
 
         # call model to sample inter arrival time and update arrival check priority
-        input_dict = self.composer.build_input_dict(ARRIVAL_MODEL,
-                                                    sources=event.sources(), turn=None)
-        seconds = self.get_inter_arrival(time=event.priority, input_dict=input_dict)
+        input_dict = self._get_arrival_input_dict(event=event)
+        seconds = self.get_arrival(time=event.priority, input_dict=input_dict)
         event.priority = min(event.priority + seconds, self.end_time)
 
         # if a buyer arrives, create a thread at the arrival time
@@ -308,7 +308,7 @@ class EbayEnvironment:
 
     def _init_delay(self, event):
         event.change_turn()
-        event.init_delay(self.lookup[START_TIME])
+        event.init_delay(self.start_time)
         self.queue.push(event)
 
     def get_con(self, input_dict=None, time=None, thread_id=None, turn=None):
@@ -325,8 +325,11 @@ class EbayEnvironment:
             msg = self.buyer.msg(input_dict=input_dict)
         return msg
 
-    def get_inter_arrival(self, input_dict=None, time=None):
-        intervals = self.arrival.inter_arrival(input_dict)
+    def get_arrival(self, input_dict=None, time=None):
+        if time == self.start_time:
+            intervals = self.arrival.first_arrival(input_dict)
+        else:
+            intervals = self.arrival.inter_arrival(input_dict)
         width = self.intervals[ARRIVAL_PREFIX]
         return int((intervals + np.random.uniform()) * width)
 
@@ -362,3 +365,13 @@ class EbayEnvironment:
         seconds = int((index + np.random.uniform()) * self.intervals[delay_type])
         seconds = min(seconds, MAX_DELAY[delay_type])
         return seconds
+
+    def _get_arrival_input_dict(self, event=None):
+        if event.priority == self.start_time:
+            model_name = FIRST_ARRIVAL_MODEL
+        else:
+            model_name = INTERARRIVAL_MODEL
+        input_dict = self.composer.build_input_dict(model_name,
+                                                    sources=event.sources(),
+                                                    turn=None)
+        return input_dict
