@@ -28,7 +28,7 @@ class DiscrimRecorder(Recorder):
     def add_offer(self, event=None, time_feats=None, censored=False):
         # change ordering if OFFER_COLS changes
         summary = event.summary()
-        con, msg = summary
+        con, norm, msg = summary
         if event.turn == 1:
             assert con > 0
         row = [self.lstg,

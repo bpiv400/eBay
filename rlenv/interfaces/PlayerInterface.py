@@ -26,17 +26,17 @@ class PlayerInterface:
         :param turn: current turn number
         :return: np.float
         """
-        params = self.con_model(input_dict)
+        params = self.con_model(input_dict).squeeze()
         con = self.sample_con(params=params, turn=turn)
         return con
 
     def delay(self, input_dict=None):
-        params = self.delay_model(input_dict)
+        params = self.delay_model(input_dict).squeeze()
         delay = sample_categorical(params)
         return delay
 
     def msg(self, input_dict=None):
-        params = self.msg_model(input_dict)
+        params = self.msg_model(input_dict).squeeze()
         return sample_bernoulli(params)
 
     @staticmethod

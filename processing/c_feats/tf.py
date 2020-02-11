@@ -64,9 +64,9 @@ def full_recent(max_offers=None, offer_counter=None):
 
 def prepare_counters(df, role):
     if role == 'byr':
-        offer_counter = df.byr & ~df.reject
+        offer_counter = df.byr & ~df.reject & ~df.censored
     else:
-        offer_counter = ~df.byr & ~df.reject
+        offer_counter = ~df.byr & ~df.reject & ~df.censored
     thread_counter = offer_counter.reset_index('thread').thread.groupby('lstg').max()
     offer_counter = offer_counter.unstack(level='thread')
     thread_counter = thread_counter.reindex(index=offer_counter.index, level='lstg')
@@ -184,6 +184,7 @@ def prepare_feat(subset):
     df.byr = df.byr.astype(bool)
     df.reject = df.reject.astype(bool)
     df.accept = df.accept.astype(bool)
+    df.censored = df.censored.astype(bool)
     index_names = [ind for ind in df.index.names if ind != 'index']
     return df, index_names
 
@@ -192,6 +193,7 @@ def add_lstg_time_feats(subset, role, is_open, full=False):
     df, index_names = prepare_feat(subset)
     if is_open:
         open_counter = open_offers(df, ['lstg', 'thread'], role)
+        print(open_counter)
         assert (open_counter.max() == 1) & (open_counter.min() == 0)
         df.loc[open_counter == 0, 'norm'] = 0.0
         if role == 'slr':
@@ -202,6 +204,7 @@ def add_lstg_time_feats(subset, role, is_open, full=False):
             df.loc[df.byr, 'norm'] = np.nan
         elif role == 'byr':
             df.loc[~df.byr, 'norm'] = np.nan
+    df.loc[df.censored, 'norm'] = np.nan
     # use max value for thread events at same clock time
     max_offers = df.norm.groupby(df.index.names).max()
     # unstack by thread and fill with last value

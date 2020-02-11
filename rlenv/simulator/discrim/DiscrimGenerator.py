@@ -5,7 +5,7 @@ from datetime import datetime as dt
 
 
 class DiscrimGenerator(Generator):
-    def __init__(self, direct, num, verbose=False):
+    def __init__(self, direct, num, verbose=False, start=None):
         super(DiscrimGenerator, self).__init__(direct, num, verbose)
         # initialize recorder
         self.recorder = DiscrimRecorder(self.records_path, self.verbose)

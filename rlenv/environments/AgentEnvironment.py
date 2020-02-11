@@ -57,7 +57,8 @@ class AgentEnvironment(EbayEnvironment, Env):
         self.x_lstg = self.composer.decompose_x_lstg(self.x_lstg)
         self.lookup = pd.Series(self._lookup_slice[self._ix, :], index=self._lookup_cols)
         self._ix += 1
-        self.end_time = self.lookup[START_TIME] + MONTH
+        self.start_time = self.lookup[START_TIME]
+        self.end_time = self.start_time + MONTH
 
     def _draw_lstgs(self):
         ids = np.random.randint(0, self._num_lstgs, ENV_LSTG_COUNT)

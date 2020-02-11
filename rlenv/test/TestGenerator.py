@@ -7,15 +7,21 @@ from rlenv.env_utils import get_env_sim_subdir
 
 
 class TestGenerator(Generator):
-    def __init__(self, direct, num, verbose=False):
+    def __init__(self, direct, num, verbose=False, start=None):
         super().__init__(direct, num, verbose)
+        self.start = start
         chunk_dir = get_env_sim_subdir(base_dir=direct, chunks=True)
         print('Loading test inputs...')
         self.test_data = load('{}{}_test.gz'.format(chunk_dir, num))
         self.recorder = DiscrimRecorder("", self.verbose)
 
     def generate(self):
-        for i, lstg in enumerate(self.lookup.index):
+        if self.start is not None:
+            start_index = list(self.lookup.index).index(self.start)
+            lstgs = self.lookup.index[start_index:]
+        else:
+            lstgs = self.lookup.index
+        for i, lstg in enumerate(lstgs):
             # index lookup dataframe
             lookup = self.lookup.loc[lstg, :]
 

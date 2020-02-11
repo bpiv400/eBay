@@ -15,6 +15,7 @@ class ThreadLog:
             self.turns[uncensored_turns + 1] = censored
 
     def generate_censored_turn_log(self, params=None, turn=None):
+        print('Turn: {}'.format(turn))
         outcomes = params['x_offer'].loc[turn, :]
         outcomes = outcomes[OUTCOME_FEATS]
         byr = turn % 2 != 0
@@ -24,7 +25,6 @@ class ThreadLog:
         return TurnLog(outcomes=outcomes, delay_inputs=delay_inputs, delay_time=delay_time, turn=turn)
 
     def generate_turn_log(self, params=None, turn=None):
-        print('Turn: {}'.format(turn))
         outcomes = params['x_offer'].loc[turn, :].squeeze()
         outcomes = outcomes[OUTCOME_FEATS]
         byr = turn % 2 != 0
@@ -48,8 +48,10 @@ class ThreadLog:
         else:
             delay_inputs = None
         delay_time = self.delay_time(turn=turn)
-        return TurnLog(outcomes=outcomes, delay_inputs=delay_inputs, con_inputs=con_inputs,
+        turn_log = TurnLog(outcomes=outcomes, delay_inputs=delay_inputs, con_inputs=con_inputs,
                        msg_inputs=msg_inputs, delay_time=delay_time, turn=turn)
+        print('Turn: {} at time: {}'.format(turn, turn_log.offer_time))
+        return turn_log
 
     def delay_time(self, turn=None):
         # delay time
@@ -62,7 +64,6 @@ class ThreadLog:
     @staticmethod
     def has_censored(params=None):
         num_offers = len(params['x_offer'].index)
-        print('num offers: {}'.format(num_offers))
         last_censored = params['x_offer'].loc[num_offers, :].squeeze()
         last_censored = last_censored['censored']
         return last_censored

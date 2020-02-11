@@ -57,7 +57,7 @@ class Recorder:
         Prints data about the offer if verbose
         """
         if self.verbose:
-            con, msg = summary
+            con, norm, msg = summary
             if event.turn > 1:
                 days, delay = event.delay_outcomes()
             else:
@@ -82,10 +82,7 @@ class Recorder:
             if event.turn > 1:
                 print('Days: {}, Delay: {}'.format(days, delay))
             print('Offer type: {}'.format(otype))
-            print('Concession: {} | message: {}'.format(con, msg))
-            if event.turn % 2 == 0:
-                auto, exp, rej = event.slr_outcomes()
-                print('Auto: {} | Exp: {} | Reject: {}'.format(auto, exp, rej))
+            print('Concession: {} | norm: {} | message: {}'.format(con, norm, msg))
 
     def print_sale(self, sale, price, dur):
         """

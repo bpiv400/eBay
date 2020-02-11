@@ -1,25 +1,28 @@
 from rlenv.env_utils import compare_input_dicts
-from rlenv.env_consts import ARRIVAL_MODEL, BYR_HIST_MODEL
+from rlenv.env_consts import (FIRST_ARRIVAL_MODEL,
+                              BYR_HIST_MODEL, INTERARRIVAL_MODEL)
 
 
 class ArrivalLog:
 
-    def __init__(self, hist=None, time=None, arrival_inputs=None, hist_inputs=None, check_time=None):
+    def __init__(self, hist=None, time=None, arrival_inputs=None, hist_inputs=None,
+                 check_time=None, first_arrival=False):
         self.censored = hist is None
         self.time = time
+        self.first_arrival = first_arrival
         self.arrival_inputs = arrival_inputs
         self.hist_inputs = hist_inputs
         self.hist = hist
         self.check_time = check_time
 
     def get_inter_arrival(self, check_time=None, input_dict=None):
-        print('is censored: {}'.format(self.censored))
-        print('env time: {}'.format(check_time))
-        print('stored check time: {}'.format(self.check_time))
         assert check_time == self.check_time
-        compare_input_dicts(model=ARRIVAL_MODEL, stored_inputs=self.arrival_inputs, env_inputs=input_dict)
+        if self.first_arrival:
+            model = FIRST_ARRIVAL_MODEL
+        else:
+            model = INTERARRIVAL_MODEL
+        compare_input_dicts(model=model, stored_inputs=self.arrival_inputs, env_inputs=input_dict)
         inter_arrival = self.time - self.check_time
-        print('arrival time: {}'.format(self.time))
         return int(inter_arrival)
 
     def get_hist(self, check_time=None, input_dict=None):

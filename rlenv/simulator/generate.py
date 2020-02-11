@@ -42,6 +42,8 @@ def main():
     parser.add_argument('--test', action='store_true')
     parser.add_argument('--verbose', action='store_true',
                         help='print event detail')
+    parser.add_argument('--thread', required=False, type=int)
+
     args = parser.parse_args()
     num, part, values, verbose = args.num, args.part, args.values, args.verbose
     if part not in PARTITIONS:
@@ -55,7 +57,7 @@ def main():
 
     # create generator
     gen_class = get_gen_class(values=values, test=args.test)
-    generator = gen_class(get_env_sim_dir(part), num, verbose)
+    generator = gen_class(get_env_sim_dir(part), num, verbose=verbose, start=args.thread)
     if values and chunk_done(generator):
         print('{} already done'.format(num))
         exit(0)

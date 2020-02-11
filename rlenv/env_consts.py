@@ -1,7 +1,8 @@
 from utils import unpickle
 from constants import INPUT_DIR, SLR_PREFIX, BYR_PREFIX
 from featnames import (CON, DELAY, MSG, ALL_OFFER_FEATS, CLOCK_FEATS,
-                       TIME_FEATS, DAYS, EXP, NORM, SPLIT, AUTO, REJECT)
+                       TIME_FEATS, DAYS, EXP, NORM, SPLIT, AUTO, REJECT,
+                       THREAD_COUNT)
 
 INTERACT = False
 
@@ -66,11 +67,12 @@ OFFER_EVENT = 'OFFER'
 DELAY_EVENT = 'DELAY'
 
 # model names
-ARRIVAL_MODEL = 'arrival'
+FIRST_ARRIVAL_MODEL = 'first_arrival'
+INTERARRIVAL_MODEL = 'interarrival'
 BYR_HIST_MODEL = 'hist'
 
 # model sets
-ARRIVAL_MODELS = [ARRIVAL_MODEL, BYR_HIST_MODEL]
+ARRIVAL_MODELS = [FIRST_ARRIVAL_MODEL, INTERARRIVAL_MODEL, BYR_HIST_MODEL]
 OFFER_NO_PREFIXES = [CON, MSG, DELAY]
 OFFER_MODELS = ['{}_{}'.format(model, SLR_PREFIX) for model in OFFER_NO_PREFIXES] + \
         ['{}_{}'.format(model, BYR_PREFIX) for model in OFFER_NO_PREFIXES]
@@ -98,6 +100,7 @@ DAYS_IND = ALL_OFFER_FEATS.index(DAYS)
 AUTO_IND = ALL_OFFER_FEATS.index(AUTO)
 REJECT_IND = ALL_OFFER_FEATS.index(REJECT)
 EXP_IND = ALL_OFFER_FEATS.index(EXP)
+THREAD_COUNT_IND = ALL_OFFER_FEATS.index(THREAD_COUNT)
 
 
 # Reinforcement learning environment parameters

@@ -126,8 +126,10 @@ def load_model(name):
     for k in drop:
         del state_dict[k]
 
-    # load parameters into model
-    net.load_state_dict(state_dict)
+    # TODO: Remove to test delay slr model
+    if name != 'delay_slr':
+        # load parameters into model
+        net.load_state_dict(state_dict)
 
     # eval mode
     for param in net.parameters(recurse=True):

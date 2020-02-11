@@ -1,7 +1,8 @@
 import pandas as pd
 from featnames import START_TIME, MONTHS_SINCE_LSTG, BYR_HIST, CON, AUTO
 from constants import MONTH
-from rlenv.env_consts import MODELS, ARRIVAL_MODEL, BYR_HIST_MODEL, OFFER_MODELS
+from rlenv.env_consts import (MODELS, FIRST_ARRIVAL_MODEL, BYR_HIST_MODEL,
+                              OFFER_MODELS, INTERARRIVAL_MODEL)
 from rlenv.env_utils import populate_test_model_inputs
 from rlenv.test.ArrivalLog import ArrivalLog
 from rlenv.test.ThreadLog import ThreadLog
@@ -51,8 +52,12 @@ class LstgLog:
         return arrival_logs
 
     def generate_censored_arrival(self, params=None, thread_id=None):
+        if thread_id == 1:
+            model = FIRST_ARRIVAL_MODEL
+        else:
+            model = INTERARRIVAL_MODEL
         check_time = self.arrival_check_time(params=params, thread_id=thread_id)
-        full_arrival_inputs = params['inputs'][ARRIVAL_MODEL]
+        full_arrival_inputs = params['inputs'][model]
         # print(full_arrival_inputs)
         arrival_inputs = populate_test_model_inputs(full_inputs=full_arrival_inputs,
                                                     value=thread_id)
@@ -68,11 +73,15 @@ class LstgLog:
         return check_time
 
     def generate_arrival_log(self, params=None, thread_id=None):
+        if thread_id == 1:
+            model = FIRST_ARRIVAL_MODEL
+        else:
+            model = INTERARRIVAL_MODEL
         check_time = self.arrival_check_time(params=params, thread_id=thread_id)
         time = int(params['x_thread'].loc[thread_id, MONTHS_SINCE_LSTG] * MONTH)
         time += self.lookup[START_TIME]
         hist = params['x_thread'].loc[thread_id, BYR_HIST] / 10
-        full_arrival_inputs = params['inputs'][ARRIVAL_MODEL]
+        full_arrival_inputs = params['inputs'][model]
         full_hist_inputs = params['inputs'][BYR_HIST_MODEL]
         arrival_inputs = populate_test_model_inputs(full_inputs=full_arrival_inputs,
                                                     value=thread_id)
@@ -109,7 +118,6 @@ class LstgLog:
         """
         :return: int
         """
-        print('processing delay')
         delay = self.threads[thread_id].get_delay(turn=turn, time=time, input_dict=input_dict)
         if delay == MONTH:
             return self.lookup[START_TIME] + MONTH - time
