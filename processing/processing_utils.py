@@ -247,6 +247,40 @@ def init_x(part, idx, drop_slr=False):
     return x
 
 
+def get_interarrival_period(clock):
+    # calculate interarrival times in seconds
+    df = clock.unstack()
+    diff = pd.DataFrame(0.0, index=df.index, columns=df.columns[1:])
+    for i in diff.columns:
+        diff[i] = df[i] - df[i - 1]
+
+    # restack
+    diff = diff.rename_axis(clock.index.names[-1], axis=1).stack()
+
+    # original datatype
+    diff = diff.astype(clock.dtype)
+
+    # indicator for whether observation is last in lstg
+    thread = pd.Series(diff.index.get_level_values(level='thread'),
+                       index=diff.index)
+    last_thread = thread.groupby('lstg').max().reindex(
+        index=thread.index, level='lstg')
+    censored = thread == last_thread
+
+    # drop interarrivals after BINs
+    diff = diff[diff > 0]
+    y = diff[diff.index.get_level_values(level='thread') > 1]
+    censored = censored.reindex(index=y.index)
+
+    # convert y to periods
+    y //= INTERVAL[ARRIVAL_PREFIX]
+
+    # replace censored interarrival times negative count of censored buckets
+    y.loc[censored] -= INTERVAL_COUNTS[ARRIVAL_PREFIX]
+
+    return y, diff
+
+
 def get_arrival_times(lstg_start, thread_start, lstg_end=None):
     # thread 0: start of listing
     s = lstg_start.to_frame().assign(thread=0).set_index(

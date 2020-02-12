@@ -1,10 +1,10 @@
-import sys, os, argparse
+import argparse
 import torch
-import torch.nn.functional as F
-import numpy as np, pandas as pd
+import numpy as np
+import pandas as pd
 from compress_pickle import load
 from processing.f_discrim.discrim_utils import get_batches, PartialDataset, get_sim_times
-from processing.processing_utils import load_file, get_arrival_times
+from processing.processing_utils import load_file, get_arrival_times, get_interarrival_period
 from utils import load_model, load_featnames
 from constants import VALIDATION, ENV_SIM_DIR, SIM_CHUNKS, INPUT_DIR, INDEX_DIR
 
@@ -93,7 +93,8 @@ def get_model_prediction(x, name):
 	for b in batches:
 		x_b = {k: v.to('cuda') for k, v in b.items()}
 		theta = net(x_b)
-		a = np.append(a, torch.exp(F.log_softmax(theta, dim=1)).cpu().numpy(), axis=0)
+		probs = torch.exp(torch.nn.functional.log_softmax(theta, dim=1))
+		a = np.append(a, probs.cpu().numpy(), axis=0)
 
 	return a
 

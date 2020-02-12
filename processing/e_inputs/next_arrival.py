@@ -2,45 +2,11 @@ from compress_pickle import load
 import pandas as pd
 import numpy as np
 from processing.processing_utils import input_partition, load_file, \
-    collect_date_clock_feats, get_arrival_times, get_months_since_lstg, \
-    init_x, save_files
-from processing.processing_consts import CLEAN_DIR, INTERVAL, INTERVAL_COUNTS
-from constants import ARRIVAL_PREFIX, MONTH
+    collect_date_clock_feats, get_arrival_times, get_interarrival_period, \
+    get_months_since_lstg, init_x, save_files
+from processing.processing_consts import CLEAN_DIR
+from constants import  MONTH
 from featnames import THREAD_COUNT, MONTHS_SINCE_LAST, MONTHS_SINCE_LSTG
-
-
-def get_interarrival_period(clock):
-    # calculate interarrival times in seconds
-    df = clock.unstack()
-    diff = pd.DataFrame(0.0, index=df.index, columns=df.columns[1:])
-    for i in diff.columns:
-        diff[i] = df[i] - df[i - 1]
-
-    # restack
-    diff = diff.rename_axis(clock.index.names[-1], axis=1).stack()
-
-    # original datatype
-    diff = diff.astype(clock.dtype)
-
-    # indicator for whether observation is last in lstg
-    thread = pd.Series(diff.index.get_level_values(level='thread'),
-                       index=diff.index)
-    last_thread = thread.groupby('lstg').max().reindex(
-        index=thread.index, level='lstg')
-    censored = thread == last_thread
-
-    # drop interarrivals after BINs
-    diff = diff[diff > 0]
-    y = diff[diff.index.get_level_values(level='thread') > 1]
-    censored = censored.reindex(index=y.index)
-
-    # convert y to periods
-    y //= INTERVAL[ARRIVAL_PREFIX]
-
-    # replace censored interarrival times negative count of censored buckets
-    y.loc[censored] -= INTERVAL_COUNTS[ARRIVAL_PREFIX]
-
-    return y, diff
 
 
 def get_x_thread_arrival(clock, idx, lstg_start, diff):
