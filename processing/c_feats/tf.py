@@ -197,11 +197,7 @@ def add_lstg_time_feats(subset, role, is_open, full=False):
         assert (open_counter.max() <= 1) & (open_counter.min() == 0)
         df.loc[open_counter == 0, 'norm'] = 0.0
         if role == 'slr':
-            print('open counter')
-            print(open_counter)
             open_counter = open_counter.unstack(level='thread').groupby('lstg').ffill()
-            print('open counter after transform')
-            print(open_counter)
     else:
         open_counter = None
         if role == 'slr':

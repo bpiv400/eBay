@@ -51,15 +51,9 @@ def open_offers(df, levels, role):
     if role == 'slr':
         start = ~df.byr & ~df.accept & (index > 0) & ~df.censored
         end = df.byr & (index > 1) & ~df.censored
-        print('start')
-        print(start)
-        print('end')
-        print(end)
     elif role == 'byr':
         start = df.byr & ~df.reject & ~df.accept
         end = ~df.byr & (index > 1) & ~df.censored
-        # print(start)
-        # print(end)
     # open - closed
     s = start.astype(np.int64) - end.astype(np.int64)
     # cumulative sum by levels grouping
