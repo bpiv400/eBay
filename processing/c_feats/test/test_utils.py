@@ -13,9 +13,9 @@ def compare_all(events, exp, time_checks, lstg=0):
     act = [events.loc[(lstg, idx[0], idx[1])] for idx in time_checks]
     for curr_act, curr_exp, idx in zip(act, exp, time_checks):
         print('thread : {}, time: {}'.format(idx[0], idx[1]))
-        print('curr act')
+        print('curr processing feats')
         print(curr_act)
-        print('curr exp')
+        print('curr time feats')
         print(curr_exp)
         compare(curr_act.values, curr_exp)
 

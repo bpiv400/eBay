@@ -13,7 +13,8 @@ def thread_count(subset, full=False):
     thread_counter.index = df.index
     total_threads = thread_counter.reset_index('thread').thread.groupby('lstg').max()
     thread_counter = thread_counter.unstack('thread')
-    total_threads = total_threads.reindex(index=thread_counter.index, level='lstg')
+    total_threads = total_threads.reindex(index=thread_counter.index,
+                                          level='lstg')
     if full:
         counts = thread_counter.sum(axis=1)
         counts = counts.groupby('lstg').cumsum()
@@ -193,11 +194,14 @@ def add_lstg_time_feats(subset, role, is_open, full=False):
     df, index_names = prepare_feat(subset)
     if is_open:
         open_counter = open_offers(df, ['lstg', 'thread'], role)
-        print(open_counter)
-        assert (open_counter.max() == 1) & (open_counter.min() == 0)
+        assert (open_counter.max() <= 1) & (open_counter.min() == 0)
         df.loc[open_counter == 0, 'norm'] = 0.0
         if role == 'slr':
+            print('open counter')
+            print(open_counter)
             open_counter = open_counter.unstack(level='thread').groupby('lstg').ffill()
+            print('open counter after transform')
+            print(open_counter)
     else:
         open_counter = None
         if role == 'slr':
