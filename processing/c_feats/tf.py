@@ -354,19 +354,10 @@ def output_path(model, num):
     return FEATS_DIR + '{}_tf_{}.gz'.format(num, model)
 
 
-def main():
-    # parse parameters
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--num', action='store', type=int, required=True)
-    parser.add_argument('--arrival', action='store_true', default=False)
-    args = parser.parse_args()
-    num, arrival = args.num, args.arrival
-
-    # load data
-    print('Loading data: %d' % num)
-    d = load('{}slr{}.gz'.format(CHUNKS_DIR, args.num))
+def prepare_events(num):
+    d = load('{}slr{}.gz'.format(CHUNKS_DIR, num))
     L, events = [d[k] for k in ['listings', 'offers']]
-    
+
     # drop flagged listings
     events = events.join(L.flag).sort_index()
     events = events.loc[~events.flag, :]
@@ -378,6 +369,20 @@ def main():
     # add normalized offer to events
     con = get_con(events.price.unstack(), L.start_price)
     events['norm'] = get_norm(con)
+    return events
+
+
+def main():
+    # parse parameters
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--num', action='store', type=int, required=True)
+    parser.add_argument('--arrival', action='store_true', default=False)
+    args = parser.parse_args()
+    num, arrival = args.num, args.arrival
+
+    # load data
+    print('Loading data: %d' % num)
+    events = prepare_events(args.num)
 
     # create lstg-level time-valued features
     print('Creating lstg-level time-valued features')
