@@ -1,22 +1,22 @@
-from collections import namedtuple
-from rlenv.environments import AgentEnvironment
-from rlenv.env_consts import OFFER_EVENT
-from rlenv.env_utils import get_con_outcomes
+from featnames import META
+from rlenv.environments.AgentEnvironment import AgentEnvironment
+from rlenv.env_consts import OFFER_EVENT, LISTING_FEE
+from rlenv.env_utils import get_con_outcomes, get_cut
 from rlenv.spaces.ConSpace import ConSpace
 
 
 class SellerEnvironment(AgentEnvironment):
     def __init__(self, params):
-        super().__init__(params)
+        super(AgentEnvironment, self).__init__(params)
 
-    def _is_agent_turn(self, event):
+    def is_agent_turn(self, event):
         """
         Checks whether the agent should take a turn
         :param rlenv.events.Thread.Thread event:
         :return: bool
         """
         if event.type == OFFER_EVENT and event.turn % 2 == 0:
-            if self._is_lstg_expired(event):
+            if self.is_lstg_expired(event):
                 return False
             elif event.thread_expired():
                 return False
@@ -31,25 +31,33 @@ class SellerEnvironment(AgentEnvironment):
         :param action: float returned from agent
         :return:
         """
-        con_outcomes = get_con_outcomes(con=action, sources=self.last_event.sources(),
+        con_outcomes = get_con_outcomes(con=action,
+                                        sources=self.last_event.sources(),
                                         turn=self.last_event.turn)
         offer = self.last_event.update_con_outcomes(con_outcomes=con_outcomes)
-        lstg_complete = self._process_post_offer(self.last_event, offer)
+        lstg_complete = super().process_post_offer(self.last_event, offer)
         if lstg_complete:
-            return self._agent_tuple(lstg_complete)
+            return super().agent_tuple(lstg_complete)
         self.last_event = None
         return self.run()
 
-    def _define_action_space(self):
+    def define_action_space(self):
         # message not included because agent can't write a msg
         return ConSpace()
 
-    def _get_reward(self):
-        raise NotImplementedError("After Etan discussion")
+    def get_reward(self):
+        if not self.last_event.is_sale():
+            return 0.0
+        else:
+            slr_gross = self.outcome[1] * (1 - get_cut(self.lookup[META]))
+            return slr_gross - LISTING_FEE
 
     def _get_info(self):
         raise NotImplementedError("")
 
+    @property
+    def horizon(self):
+        return 100
 
 
 

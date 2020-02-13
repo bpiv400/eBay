@@ -6,7 +6,6 @@ from rlpyt.spaces.float_box import FloatBox
 from featnames import START_TIME
 from constants import MONTH
 from rlenv.env_consts import (LOOKUP, X_LSTG, ENV_LSTG_COUNT)
-from rlenv.Composer import AgentComposer
 from rlenv.environments.EbayEnvironment import EbayEnvironment
 
 
@@ -24,7 +23,7 @@ class AgentEnvironment(EbayEnvironment, Env):
         
         self.last_event = None  # type: Thread
         # action and observation spaces
-        self._action_space = self._define_action_space()
+        self._action_space = self.define_action_space()
         self._observation_space = self._define_observation_space()
 
     def reset(self):
@@ -40,7 +39,7 @@ class AgentEnvironment(EbayEnvironment, Env):
     def run(self):
         event, lstg_complete = super().run()
         self.last_event = event
-        return self._agent_tuple(lstg_complete)
+        return self.agent_tuple(lstg_complete)
 
     def _define_observation_space(self):
         sizes = self.composer.agent_sizes
@@ -66,16 +65,16 @@ class AgentEnvironment(EbayEnvironment, Env):
         self._x_lstg_slice = self._file[X_LSTG][ids, :]
         self._ix = 0
 
-    def _agent_tuple(self, lstg_complete):
+    def agent_tuple(self, lstg_complete):
         obs = self.composer.get_obs(sources=self.last_event.sources(),
-                                     turn=self.last_event.turn)
-        return obs, self._get_reward(), lstg_complete, self._get_info()
+                                    turn=self.last_event.turn)
+        return obs, self.get_reward(), lstg_complete, self._get_info()
 
-    def _get_reward(self):
-        raise NotImplementedError("After Etan discussion")
+    def get_reward(self):
+        raise NotImplementedError("")
 
     def _get_info(self):
-        raise NotImplementedError("")
+        return None
 
     @property
     def horizon(self):
@@ -89,13 +88,14 @@ class AgentEnvironment(EbayEnvironment, Env):
         """
         raise NotImplementedError()
 
+    # TODO: May update
     def record(self, event, start_thread=None, byr_hist=None):
-        raise NotImplementedError("Double check method signature")
+        pass
 
     def is_agent_turn(self, event):
         raise NotImplementedError()
 
-    def _define_action_space(self):
+    def define_action_space(self):
         raise NotImplementedError()
 
 

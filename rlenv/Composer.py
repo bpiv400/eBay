@@ -267,10 +267,11 @@ class AgentComposer(Composer):
         for j in range(1, num_turns + 1):
             sizes['offer{}'.format(j)] = self._build_offer_sizes()
         for set_name, feats in self.lstg_sets.items():
-            if set_name != LSTG_MAP:
-                sizes[set_name] = len(feats)
-            else:
-                sizes[set_name] = self._build_lstg_sizes(feats)
+            if set_name != SLR_PREFIX:
+                if set_name != LSTG_MAP:
+                    sizes[set_name] = len(feats)
+                else:
+                    sizes[set_name] = self._build_lstg_sizes(feats)
         return sizes
 
     def _update_turn_inds(self, model_name, turn):

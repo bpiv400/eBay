@@ -3,7 +3,6 @@ import os
 import h5py
 import numpy as np
 from compress_pickle import load
-import pandas as pd
 from constants import PARTITIONS, ENV_SIM_DIR, PARTS_DIR, REINFORCE_INPUT_DIR
 from rlenv.env_consts import X_LSTG_FILENAME, LOOKUP_FILENAME, X_LSTG, LOOKUP
 
@@ -16,18 +15,8 @@ def main():
     base_dir = '{}{}/'.format(ENV_SIM_DIR, part)
     reward_dir = '{}rewards'.format(base_dir)
     chunks = [path for path in os.listdir(reward_dir) if os.path.isdir(path)]
-    rewards = accumulate_rewards(reward_dir, chunks)
     lookup = load('{}{}/{}'.format(PARTS_DIR, part, LOOKUP_FILENAME))
     x_lstg = load('{}{}/{}'.format(PARTS_DIR, part, X_LSTG_FILENAME))
-    assert rewards.index.isin(lookup.index).all()
-    assert rewards.index.isin(x_lstg.index).all()
-    x_lstg = x_lstg.loc[rewards.index, :]
-    lookup = lookup.loc[rewards.index, :]
-    lookup = lookup.drop(columns=['cat'])
-    # sort x_lstg and lookup
-
-    # add simulator to lookup
-    lookup['reward'] = rewards
     path = '{}{}.gz'.format(REINFORCE_INPUT_DIR, part)
     store_inputs(x_lstg, lookup, path)
 
