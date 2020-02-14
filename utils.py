@@ -1,6 +1,7 @@
 import pickle
 import time
 import random
+import pandas as pd
 import torch
 import numpy as np
 from compress_pickle import load
@@ -137,3 +138,10 @@ def load_model(name):
     net.eval()
 
     return net
+
+
+def align_x_lstg_lookup(x_lstg, lookup):
+    x_lstg = pd.concat([df.reindex(index=lookup.index) for df in x_lstg.values()],
+                       axis=1)
+    return x_lstg
+
