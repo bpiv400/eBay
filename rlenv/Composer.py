@@ -267,7 +267,7 @@ class AgentComposer(Composer):
         for j in range(1, num_turns + 1):
             sizes['offer{}'.format(j)] = self._build_offer_sizes()
         for set_name, feats in self.lstg_sets.items():
-            if set_name != SLR_PREFIX:
+            if set_name != SLR_PREFIX or not self.slr:
                 if set_name != LSTG_MAP:
                     sizes[set_name] = len(feats)
                 else:
