@@ -1,10 +1,10 @@
 import argparse
-import os
 import h5py
 import numpy as np
 from compress_pickle import load
-from constants import PARTITIONS, ENV_SIM_DIR, PARTS_DIR, REINFORCE_INPUT_DIR
+from constants import PARTITIONS, PARTS_DIR
 from rlenv.env_consts import X_LSTG_FILENAME, LOOKUP_FILENAME, X_LSTG, LOOKUP
+from agent.agent_utils import slr_input_path
 
 
 def main():
@@ -12,12 +12,9 @@ def main():
     parser.add_argument('--part', required=True,
                         help='partition to chunk: {}'.format(PARTITIONS))
     part = parser.parse_args().part
-    base_dir = '{}{}/'.format(ENV_SIM_DIR, part)
-    reward_dir = '{}rewards'.format(base_dir)
-    chunks = [path for path in os.listdir(reward_dir) if os.path.isdir(path)]
     lookup = load('{}{}/{}'.format(PARTS_DIR, part, LOOKUP_FILENAME))
     x_lstg = load('{}{}/{}'.format(PARTS_DIR, part, X_LSTG_FILENAME))
-    path = '{}{}.gz'.format(REINFORCE_INPUT_DIR, part)
+    path = slr_input_path(part=part)
     store_inputs(x_lstg, lookup, path)
 
 

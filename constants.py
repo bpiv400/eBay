@@ -27,8 +27,7 @@ INPUT_DIR = '%s/inputs/' % PREFIX
 INDEX_DIR = '%s/index/' % PREFIX
 FEATNAMES_DIR = '%sfeatnames/' % INPUT_DIR
 MODEL_DIR = '%smodels/' % OUTPUT_DIR
-REINFORCE_DIR = '%s/reinforce' % PREFIX
-REINFORCE_INPUT_DIR = '%s/input' % REINFORCE_DIR
+REINFORCE_DIR = '%s/agent/' % PREFIX
 
 PARAMS_PATH = INPUT_DIR + 'params.pkl'
 

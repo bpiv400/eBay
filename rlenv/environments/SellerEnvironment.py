@@ -2,7 +2,7 @@ from featnames import META
 from rlenv.environments.AgentEnvironment import AgentEnvironment
 from rlenv.env_consts import OFFER_EVENT, LISTING_FEE
 from rlenv.env_utils import get_con_outcomes, get_cut
-from rlenv.spaces.ConSpace import ConSpace
+from agent.spaces.ConSpace import ConSpace
 
 
 class SellerEnvironment(AgentEnvironment):
