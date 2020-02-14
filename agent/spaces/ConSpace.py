@@ -1,16 +1,31 @@
 import numpy as np
-from rlpyt.spaces.int_box import IntBox
+from rlpyt.spaces.base import Space
+from agent.agent_utils import get_con_set
 
 
-class ConSpace(IntBox):
-    def __init__(self):
-        super(ConSpace, self).__init__(0, 101, shape=1, null_value=0)
+class ConSpace(Space):
+    def __init__(self, con_type=None):
+        self.con_type = con_type
+        self.con_set = get_con_set(con_type)
         self.dtype = np.float32
+        self._null_value = 0.0
+        self.shape = (1, )
 
     def sample(self):
-        i = super(ConSpace, self).sample()
-        i = i / 100
-        return i
+        index = np.random.randint(0, self.con_set.size, 1)[0]
+        return self.con_set[index]
+
+    def null_value(self):
+        return self._null_value
+
+    @property
+    def bounds(self):
+        return 0.0, 1.0
+
+    @property
+    def n(self):
+        """Number of elements in the space"""
+        return self.con_set.size
 
     def __repr__(self):
-        return "ConSpace({0.0, 0.01, 0.02, ..., 1.0})"
+        return "ConSpace({})".format(self.con_set)
