@@ -1,8 +1,7 @@
-import pandas as pd
 import numpy as np
 from collections import namedtuple
 from constants import BYR_PREFIX, MONTH, ARRIVAL_PREFIX, MAX_DELAY
-from featnames import START_TIME, ACC_PRICE, DEC_PRICE, START_PRICE, DELAY, TIME_FEATS
+from featnames import ACC_PRICE, DEC_PRICE, START_PRICE, DELAY
 from rlenv.Heap import Heap
 from rlenv.time.TimeFeatures import TimeFeatures
 from rlenv.time.Offer import Offer
