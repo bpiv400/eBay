@@ -6,8 +6,8 @@ from agent.spaces.ConSpace import ConSpace
 
 
 class SellerEnvironment(AgentEnvironment):
-    def __init__(self, params):
-        super(AgentEnvironment, self).__init__(params)
+    def __init__(self, **kwargs):
+        super(AgentEnvironment, self).__init__(**kwargs)
 
     def is_agent_turn(self, event):
         """
@@ -31,7 +31,8 @@ class SellerEnvironment(AgentEnvironment):
         :param action: float returned from agent
         :return:
         """
-        con_outcomes = get_con_outcomes(con=action,
+        con = self.con_from_action(action)
+        con_outcomes = get_con_outcomes(con=con,
                                         sources=self.last_event.sources(),
                                         turn=self.last_event.turn)
         offer = self.last_event.update_con_outcomes(con_outcomes=con_outcomes)
@@ -41,9 +42,12 @@ class SellerEnvironment(AgentEnvironment):
         self.last_event = None
         return self.run()
 
-    def define_action_space(self):
+    def con_from_action(self, action=None):
+        return self.con_set[action]
+
+    def define_action_space(self, con_set=None):
         # message not included because agent can't write a msg
-        return ConSpace()
+        return ConSpace(con_set=con_set)
 
     def get_reward(self):
         if not self.last_event.is_sale():

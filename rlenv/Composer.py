@@ -3,13 +3,14 @@ from collections import OrderedDict, namedtuple
 import torch
 import numpy as np
 import pandas as pd
-from rlenv.env_consts import *
-from rlenv.env_utils import model_str
-from featnames import (OUTCOME_FEATS, CLOCK_FEATS, TIME_FEATS,
-                       TURN_FEATS, MONTHS_SINCE_LSTG, BYR_HIST,
-                       INT_REMAINING, MONTHS_SINCE_LAST, THREAD_COUNT)
+from featnames import (OUTCOME_FEATS, TURN_FEATS,
+                       MONTHS_SINCE_LSTG, BYR_HIST,
+                       INT_REMAINING, MONTHS_SINCE_LAST)
 from constants import ARRIVAL_PREFIX
 from utils import load_sizes, load_featnames
+from rlenv.env_consts import *
+from rlenv.env_utils import model_str
+from agent.agent_consts import FEAT_ID
 
 
 class Composer:

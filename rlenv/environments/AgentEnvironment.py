@@ -1,3 +1,5 @@
+import os
+import h5py
 import pandas as pd
 import numpy as np
 from rlpyt.envs.base import Env
@@ -7,14 +9,17 @@ from featnames import START_TIME
 from constants import MONTH
 from rlenv.env_consts import (LOOKUP, X_LSTG, ENV_LSTG_COUNT)
 from rlenv.environments.EbayEnvironment import EbayEnvironment
+from agent.agent_utils import get_con_set
+from agent.agent_consts import CON_TYPE
 
 
 class AgentEnvironment(EbayEnvironment, Env):
 
-    def __init__(self, params):
-        super().__init__(params)
+    def __init__(self, **kwargs):
+        super().__init__(kwargs)
         # attributes for getting lstg data
-        self._file = params['file']
+        self._filename = kwargs['filename']
+        self._file = self.open_input_file()
         self._num_lstgs = len(self._file[LOOKUP])
         self._lookup_cols = self._file[LOOKUP].attrs['cols']
         self._lookup_cols = [col.decode('utf-8') for col in self._lookup_cols]
@@ -23,8 +28,14 @@ class AgentEnvironment(EbayEnvironment, Env):
         
         self.last_event = None  # type: Thread
         # action and observation spaces
-        self._action_space = self.define_action_space()
-        self._observation_space = self._define_observation_space()
+        self.con_set = get_con_set(kwargs[CON_TYPE])
+        self._action_space = self.define_action_space(con_set=self.con_set)
+        self._observation_space = self.define_observation_space()
+
+    def open_input_file(self):
+        os.environ["HDF5_USE_FILE_LOCKING"] = "FALSE"
+        f = h5py.File(self._filename, "r")
+        return f
 
     def reset(self):
         while True:
@@ -41,7 +52,7 @@ class AgentEnvironment(EbayEnvironment, Env):
         self.last_event = event
         return self.agent_tuple(lstg_complete)
 
-    def _define_observation_space(self):
+    def define_observation_space(self):
         sizes = self.composer.agent_sizes
         boxes = [FloatBox(-1000, 1000, shape=len(size)) for size in sizes.values()]
         return Composite(boxes, self.composer.obs_space_class)
@@ -70,6 +81,9 @@ class AgentEnvironment(EbayEnvironment, Env):
                                     turn=self.last_event.turn)
         return obs, self.get_reward(), lstg_complete, self._get_info()
 
+    def con_from_action(self, action=None):
+        raise NotImplementedError("")
+
     def get_reward(self):
         raise NotImplementedError("")
 
@@ -95,7 +109,7 @@ class AgentEnvironment(EbayEnvironment, Env):
     def is_agent_turn(self, event):
         raise NotImplementedError()
 
-    def define_action_space(self):
+    def define_action_space(self, con_set=None):
         raise NotImplementedError()
 
 
