@@ -4,11 +4,14 @@ INPUT_DIR = "input"
 TRAIN_SEED = 10
 
 
+# hyperparameter name constants
 # concession set constants
 CON_TYPE = 'con_type'
 FULL_CON = 'full'
 QUARTILES = 'quart'
 HALF = 'half'
+# feat id
+FEAT_ID = "feat_id"
 
 
 # batch size hyperparameters

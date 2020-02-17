@@ -254,12 +254,13 @@ class Composer:
 class AgentComposer(Composer):
     def __init__(self, cols=None, agent_params=None):
         super().__init__(cols)
-        self.slr = agent_params['slr']
-        self.idx = agent_params['feat_id']
-        self.delay = agent_params['delay']
+        self.slr = agent_params[SLR_PREFIX]
+        self.idx = agent_params[FEAT_ID]
+        self.delay = agent_params[DELAY]
+
         self.sizes['agent'] = self._build_agent_sizes()
-        self.obs_space_class = namedtuple(OBS_SPACE_NAME, list(self.agent_sizes.keys()))
-        self.x_lstg_cols = list(cols)
+        self.obs_space_class = namedtuple(OBS_SPACE_NAME,
+                                          list(self.agent_sizes.keys()))
 
     def _build_agent_sizes(self):
         sizes = OrderedDict()
