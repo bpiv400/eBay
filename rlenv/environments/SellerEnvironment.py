@@ -7,7 +7,7 @@ from agent.spaces.ConSpace import ConSpace
 
 class SellerEnvironment(AgentEnvironment):
     def __init__(self, **kwargs):
-        super(AgentEnvironment, self).__init__(**kwargs)
+        super(SellerEnvironment, self).__init__(**kwargs)
 
     def is_agent_turn(self, event):
         """
@@ -57,7 +57,7 @@ class SellerEnvironment(AgentEnvironment):
             return slr_gross - LISTING_FEE
 
     def _get_info(self):
-        raise NotImplementedError("")
+        return None
 
     @property
     def horizon(self):

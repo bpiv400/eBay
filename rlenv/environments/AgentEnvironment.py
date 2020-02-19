@@ -9,8 +9,8 @@ from featnames import START_TIME
 from constants import MONTH
 from rlenv.env_consts import (LOOKUP, X_LSTG, ENV_LSTG_COUNT)
 from rlenv.environments.EbayEnvironment import EbayEnvironment
+from rlenv.simulator.Recorder import Recorder
 from agent.agent_utils import get_con_set
-from agent.agent_consts import CON_TYPE
 
 
 class AgentEnvironment(EbayEnvironment, Env):
@@ -54,7 +54,7 @@ class AgentEnvironment(EbayEnvironment, Env):
 
     def define_observation_space(self):
         sizes = self.composer.agent_sizes['x']
-        boxes = [FloatBox(-1000, 1000, shape=len(size)) for size in sizes.values()]
+        boxes = [FloatBox(-1000, 1000, shape=size) for size in sizes.values()]
         return Composite(boxes, self.composer.obs_space_class)
 
     def _reset_lstg(self):
@@ -71,9 +71,15 @@ class AgentEnvironment(EbayEnvironment, Env):
         self.end_time = self.start_time + MONTH
 
     def _draw_lstgs(self):
-        ids = np.random.randint(0, self._num_lstgs, ENV_LSTG_COUNT)
-        self._lookup_slice = self._file[LOOKUP][ids, :]
-        self._x_lstg_slice = self._file[X_LSTG][ids, :]
+        ids = np.random.choice(self._num_lstgs, ENV_LSTG_COUNT,
+                               replace=False)
+        reordering = np.argsort(ids)
+        sorted_ids = ids[reordering]
+        unsorted_ids = np.argsort(reordering)
+        self._lookup_slice = self._file[LOOKUP][sorted_ids, :]
+        self._x_lstg_slice = self._file[X_LSTG][sorted_ids, :]
+        self._lookup_slice = self._lookup_slice[unsorted_ids, :]
+        self._x_lstg_slice = self._x_lstg_slice[unsorted_ids, :]
         self._ix = 0
 
     def agent_tuple(self, lstg_complete):
@@ -103,8 +109,9 @@ class AgentEnvironment(EbayEnvironment, Env):
         raise NotImplementedError()
 
     # TODO: May update
-    def record(self, event, start_thread=None, byr_hist=None):
-        pass
+    def record(self, event, byr_hist=None, censored=False):
+        if not censored and byr_hist is not None:
+            Recorder.print_offer(event)
 
     def is_agent_turn(self, event):
         raise NotImplementedError()

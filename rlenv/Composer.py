@@ -262,8 +262,10 @@ class AgentComposer(Composer):
         self.con_type = agent_params[CON_TYPE]
 
         self.sizes['agent'] = self._build_agent_sizes()
+        print(self.sizes['agent']['x'].keys())
         self.obs_space_class = namedtuple(OBS_SPACE_NAME,
-                                          list(self.agent_sizes.keys()))
+                                          list(self.agent_sizes['x'].keys()))
+        self.x_lstg_cols = list(cols)
 
     def _build_agent_sizes(self):
         sizes = OrderedDict()
@@ -307,7 +309,7 @@ class AgentComposer(Composer):
                 obs_dict[set_name] = self._build_agent_offer_vector(offer_vector=sources[set_name])
             else:
                 obs_dict[set_name] = torch.from_numpy(sources[set_name]).float()
-            return self.obs_space_class(**obs_dict)
+        return self.obs_space_class(**obs_dict)
 
     def _build_agent_offer_vector(self, offer_vector=None):
         if not self.slr or self.idx == 1:

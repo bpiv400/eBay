@@ -94,3 +94,7 @@ def main():
                          n_steps=TOTAL_STEPS)
     # not sure if this is right
     runner.train()
+
+
+if __name__ == '__main__':
+    main()
