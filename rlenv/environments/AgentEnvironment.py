@@ -16,7 +16,7 @@ from agent.agent_consts import CON_TYPE
 class AgentEnvironment(EbayEnvironment, Env):
 
     def __init__(self, **kwargs):
-        super().__init__(kwargs)
+        super().__init__(params=kwargs)
         # attributes for getting lstg data
         self._filename = kwargs['filename']
         self._file = self.open_input_file()

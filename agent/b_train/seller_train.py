@@ -20,7 +20,7 @@ from rlenv.interfaces.ArrivalInterface import ArrivalInterface
 from rlenv.environments.SellerEnvironment import SellerEnvironment
 
 
-def make_agent(agent_params, env_params):
+def make_agent(env_params=None):
     model_kwargs = {
         'sizes': env_params['composer'].agent_sizes
     }
@@ -28,12 +28,12 @@ def make_agent(agent_params, env_params):
                               model_kwargs=model_kwargs)
 
 
-def make_algo(params):
+def make_algo(env_params=None):
     return PPO(minibatches=PPO_MINIBATCHES,
                epochs=PPO_EPOCHS)
 
 
-def make_sampler(agent_params, env_params):
+def make_sampler(env_params=None):
     return SerialSampler(
         EnvCls=SellerEnvironment,
         env_kwargs=env_params,
@@ -82,13 +82,14 @@ def main():
         'buyer': BuyerInterface()
     }
 
-
-    agent = make_agent(agent_params, env_params)
-    algo = make_algo(params)
-    sampler = make_sampler(params)
+    agent = make_agent(env_params=env_params)
+    algo = make_algo(env_params=env_params)
+    sampler = make_sampler(env_params)
 
     runner = MinibatchRl(log_traj_window=100,
                          algo=algo,
                          agent=agent,
                          sampler=sampler,
                          n_steps=TOTAL_STEPS)
+    # not sure if this is right
+    runner.train()
