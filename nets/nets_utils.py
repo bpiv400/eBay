@@ -55,7 +55,10 @@ class Embedding(nn.Module):
         :param counts: dictionary of scalar input sizes.
         '''
         super(Embedding, self).__init__()
-
+        if len(counts) == 0:
+            raise RuntimeError("Embedding must take input" +
+                               "from at least 1 group")
+        
         # first stack of layers: N to N
         self.layer1 = nn.ModuleDict()
         for k, v in counts.items():
@@ -78,7 +81,7 @@ class Embedding(nn.Module):
             l.append(x_k)
 
         # concatenate
-        x = torch.cat(l, dim=1)
+        x = torch.cat(l, dim=x_k.dim() - 1)
 
         # pass through second embedding
         for m in self.layer2:

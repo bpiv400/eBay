@@ -28,7 +28,7 @@ class AgentEnvironment(EbayEnvironment, Env):
         
         self.last_event = None  # type: Thread
         # action and observation spaces
-        self.con_set = get_con_set(kwargs[CON_TYPE])
+        self.con_set = get_con_set(self.composer.con_type)
         self._action_space = self.define_action_space(con_set=self.con_set)
         self._observation_space = self.define_observation_space()
 
@@ -53,7 +53,7 @@ class AgentEnvironment(EbayEnvironment, Env):
         return self.agent_tuple(lstg_complete)
 
     def define_observation_space(self):
-        sizes = self.composer.agent_sizes
+        sizes = self.composer.agent_sizes['x']
         boxes = [FloatBox(-1000, 1000, shape=len(size)) for size in sizes.values()]
         return Composite(boxes, self.composer.obs_space_class)
 

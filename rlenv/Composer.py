@@ -10,7 +10,8 @@ from constants import ARRIVAL_PREFIX
 from utils import load_sizes, load_featnames
 from rlenv.env_consts import *
 from rlenv.env_utils import model_str
-from agent.agent_consts import FEAT_ID
+from agent.agent_consts import FEAT_ID, CON_TYPE
+from agent.agent_utils import get_con_set
 
 
 class Composer:
@@ -258,6 +259,7 @@ class AgentComposer(Composer):
         self.slr = agent_params[SLR_PREFIX]
         self.idx = agent_params[FEAT_ID]
         self.delay = agent_params[DELAY]
+        self.con_type = agent_params[CON_TYPE]
 
         self.sizes['agent'] = self._build_agent_sizes()
         self.obs_space_class = namedtuple(OBS_SPACE_NAME,
@@ -274,6 +276,11 @@ class AgentComposer(Composer):
                     sizes[set_name] = len(feats)
                 else:
                     sizes[set_name] = self._build_lstg_sizes(feats)
+        sizes = {
+            'x': sizes.copy()
+        }
+        if not self.delay:
+            sizes['out'] = get_con_set(self.con_type).size
         return sizes
 
     def _update_turn_inds(self, model_name, turn):
@@ -292,7 +299,7 @@ class AgentComposer(Composer):
     def get_obs(self, sources=None, turn=None):
         obs_dict = dict()
         self._update_turn_inds('agent', turn)
-        for set_name in self.agent_sizes.keys():
+        for set_name in self.agent_sizes['x'].keys():
             if set_name == LSTG_MAP:
                 # TODO: Update when we know whether to include remaining (i.e. mimic delay or offer)
                 obs_dict[set_name] = self._build_lstg_vector('agent', sources=sources).squeeze()

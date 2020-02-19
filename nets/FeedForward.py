@@ -1,7 +1,6 @@
 import torch, torch.nn as nn
 from collections import OrderedDict
 from nets.nets_utils import FullyConnected, Embedding
-from constants import EMBEDDING_GROUPS
 
 
 class FeedForward(nn.Module):
@@ -18,13 +17,7 @@ class FeedForward(nn.Module):
         # expand embeddings
         groups = create_groupings(sizes)
 
-        # embeddings
-        d, total = OrderedDict(), 0
-        for name, group in groups.items():
-            counts = {k: v for k, v in sizes['x'].items() if k in group}
-            d[name] = Embedding(counts)
-            total += sum(counts.values())
-        self.nn0 = nn.ModuleDict(d)
+        self.nn0, total = create_embedding_layers(groups=groups, sizes=sizes)
 
         # fully connected
         self.nn1 = FullyConnected(total, sizes['out'], dropout=dropout)
@@ -51,3 +44,13 @@ def create_groupings(sizes):
         groups['offer'] = ['lstg'] \
             + [k for k in sizes['x'].keys() if 'offer' in k]
     return groups
+
+
+def create_embedding_layers(groups=None, sizes=None):
+    # embeddings
+    d, total = OrderedDict(), 0
+    for name, group in groups.items():
+        counts = {k: v for k, v in sizes['x'].items() if k in group}
+        d[name] = Embedding(counts)
+        total += sum(counts.values())
+    return nn.ModuleDict(d), total

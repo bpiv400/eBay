@@ -11,7 +11,7 @@ from agent.agent_consts import (BATCH_T, BATCH_B, CON_TYPE,
                                 TOTAL_STEPS, PPO_MINIBATCHES,
                                 PPO_EPOCHS, FEAT_ID)
 from agent.agent_utils import slr_input_path
-from agent.models.PgAgentModel import PgAgentModel
+from agent.models.PgCategoricalAgentModel import PgCategoricalAgentModel
 from rlenv.env_consts import SLR_PREFIX
 from rlenv.env_utils import get_env_sim_dir, load_chunk
 from rlenv.Composer import AgentComposer
@@ -22,9 +22,10 @@ from rlenv.environments.SellerEnvironment import SellerEnvironment
 
 def make_agent(env_params=None):
     model_kwargs = {
-        'sizes': env_params['composer'].agent_sizes
+        'sizes': env_params['composer'].agent_sizes,
+        'delay': env_params['composer'].delay,
     }
-    return CategoricalPgAgent(ModelCls=PgAgentModel,
+    return CategoricalPgAgent(ModelCls=PgCategoricalAgentModel,
                               model_kwargs=model_kwargs)
 
 
