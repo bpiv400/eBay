@@ -31,7 +31,7 @@ class PgCategoricalAgentModel(nn.Module):
         self.nn1_value = FullyConnected(total, sizes['out'], dropout=False,
                                         batch_norm=False)
         # action probability output layer
-        self.nn0_action = FullyConnected(total, sizes['out'], dropout=False,
+        self.nn1_action = FullyConnected(total, sizes['out'], dropout=False,
                                          batch_norm=False)
 
     def forward(self, observation, prev_action, prev_reward):
