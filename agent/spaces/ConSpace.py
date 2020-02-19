@@ -11,7 +11,7 @@ class ConSpace(Space):
 
     def sample(self):
         index = np.random.randint(0, self.con_set.size)
-        return index
+        return np.array(index)
 
     def null_value(self):
         return np.array(self._null_value, dtype=np.int32)

@@ -1,10 +1,10 @@
 import torch, torch.nn as nn
 from nets.VariationalDropout import VariationalDropout
-from nets.nets_consts import AFFINE, BATCHNORM, LAYERS_EMBEDDING, LAYERS_FULL, HIDDEN
+from nets.nets_consts import AFFINE, LAYERS_EMBEDDING, LAYERS_FULL, HIDDEN
 
 
 class Layer(nn.Module):
-    def __init__(self, N_in, N_out, dropout=False):
+    def __init__(self, N_in, N_out, dropout=False, batch_norm=False):
         '''
         :param N_in: scalar number of input weights.
         :param N_out: scalar number of output weights.
@@ -15,7 +15,7 @@ class Layer(nn.Module):
         self.layer = nn.ModuleList([nn.Linear(N_in, N_out)])
 
         # batch normalization
-        if BATCHNORM:
+        if batch_norm:
             self.layer.append(
                 nn.BatchNorm1d(N_out, affine=AFFINE))
 
@@ -26,7 +26,6 @@ class Layer(nn.Module):
         # activation function
         self.layer.append(nn.ReLU(inplace=True))
 
-
     def forward(self, x):
         '''
         x: tensor of shape [mbsize, N_in]
@@ -36,7 +35,7 @@ class Layer(nn.Module):
         return x
 
 
-def stack_layers(N, layers=1, dropout=False):
+def stack_layers(N, layers=1, dropout=False, batch_norm=False):
     '''
     :param N: scalar number of input and output weights.
     :param layers: scalar number of layers to stack.
@@ -45,12 +44,13 @@ def stack_layers(N, layers=1, dropout=False):
     # sequence of modules
     stack = nn.ModuleList([])
     for _ in range(layers):
-        stack.append(Layer(N, N, dropout=dropout))
+        stack.append(Layer(N, N, dropout=dropout,
+                           batch_norm=batch_norm))
     return stack
 
 
 class Embedding(nn.Module):
-    def __init__(self, counts):
+    def __init__(self, counts, batch_norm=False):
         '''
         :param counts: dictionary of scalar input sizes.
         '''
@@ -62,11 +62,13 @@ class Embedding(nn.Module):
         # first stack of layers: N to N
         self.layer1 = nn.ModuleDict()
         for k, v in counts.items():
-            self.layer1[k] = stack_layers(v, layers=LAYERS_EMBEDDING)
+            self.layer1[k] = stack_layers(v, layers=LAYERS_EMBEDDING,
+                                          batch_norm=batch_norm)
 
         # second layer: concatenation
         N = sum(counts.values())
-        self.layer2 = stack_layers(N, layers=LAYERS_EMBEDDING)
+        self.layer2 = stack_layers(N, layers=LAYERS_EMBEDDING,
+                                   batch_norm=batch_norm)
 
     def forward(self, x):
         '''
@@ -91,18 +93,21 @@ class Embedding(nn.Module):
 
 
 class FullyConnected(nn.Module):
-    def __init__(self, N_in, N_out, dropout=True):
+    def __init__(self, N_in, N_out, dropout=True, batch_norm=False):
         '''
         N_in: scalar number of input weights.
         N_out: scalar number of output parameters.
         '''
         super(FullyConnected, self).__init__()
         # intermediate layer
-        self.seq = nn.ModuleList([Layer(N_in, HIDDEN, dropout=dropout)])
+        self.seq = nn.ModuleList([Layer(N_in, HIDDEN, dropout=dropout,
+                                        batch_norm=batch_norm)])
 
         # fully connected network
         self.seq += stack_layers(HIDDEN,
-            layers=LAYERS_FULL-1, dropout=dropout)
+                                 layers=LAYERS_FULL-1,
+                                 dropout=dropout,
+                                 batch_norm=batch_norm)
 
         # output layer
         self.seq += [nn.Linear(HIDDEN, N_out)]

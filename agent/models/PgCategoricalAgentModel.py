@@ -28,17 +28,17 @@ class PgCategoricalAgentModel(nn.Module):
         self.nn0, total = create_embedding_layers(groups=groups, sizes=sizes)
 
         # value output layer
-        self.nn1_value = FullyConnected(total, sizes['out'], dropout=False)
+        self.nn1_value = FullyConnected(total, sizes['out'], dropout=False,
+                                        batch_norm=False)
         # action probability output layer
-        self.nn0_action = FullyConnected(total, sizes['out'], dropout=False)
+        self.nn0_action = FullyConnected(total, sizes['out'], dropout=False,
+                                         batch_norm=False)
 
-    def forward(self, x):
+    def forward(self, observation, prev_action, prev_reward):
         """
-
-        :param namedarraytuple x:
         :return: tuple of pi, v
         """
-        x = x._asdict()
+        x = observation._asdict()
         l = []
         for k in self.nn0.keys():
             l.append(self.nn0[k](x))

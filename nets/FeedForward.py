@@ -1,5 +1,6 @@
 import torch, torch.nn as nn
 from collections import OrderedDict
+from nets.nets_consts import BATCHNORM
 from nets.nets_utils import FullyConnected, Embedding
 
 
@@ -17,11 +18,13 @@ class FeedForward(nn.Module):
         # expand embeddings
         groups = create_groupings(sizes)
 
-        self.nn0, total = create_embedding_layers(groups=groups, sizes=sizes)
+        self.nn0, total = create_embedding_layers(groups=groups,
+                                                  sizes=sizes,
+                                                  batch_norm=BATCHNORM)
 
         # fully connected
-        self.nn1 = FullyConnected(total, sizes['out'], dropout=dropout)
-
+        self.nn1 = FullyConnected(total, sizes['out'], dropout=dropout,
+                                  batch_norm=BATCHNORM)
 
     def forward(self, x):
         '''
@@ -46,11 +49,11 @@ def create_groupings(sizes):
     return groups
 
 
-def create_embedding_layers(groups=None, sizes=None):
+def create_embedding_layers(groups=None, sizes=None, batch_norm=False):
     # embeddings
     d, total = OrderedDict(), 0
     for name, group in groups.items():
         counts = {k: v for k, v in sizes['x'].items() if k in group}
-        d[name] = Embedding(counts)
+        d[name] = Embedding(counts, batch_norm=batch_norm)
         total += sum(counts.values())
     return nn.ModuleDict(d), total
