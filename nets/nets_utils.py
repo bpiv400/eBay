@@ -58,7 +58,7 @@ class Embedding(nn.Module):
         if len(counts) == 0:
             raise RuntimeError("Embedding must take input" +
                                "from at least 1 group")
-        
+
         # first stack of layers: N to N
         self.layer1 = nn.ModuleDict()
         for k, v in counts.items():

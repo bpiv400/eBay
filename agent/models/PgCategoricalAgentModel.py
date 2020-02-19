@@ -1,7 +1,6 @@
 import torch
 import torch.nn as nn
 from torch.nn.functional import softmax
-from rlpyt.utils.collections import namedarraytuple
 from nets.FeedForward import create_embedding_layers, create_groupings
 from nets.nets_utils import FullyConnected
 
