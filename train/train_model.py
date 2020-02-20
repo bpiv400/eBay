@@ -17,7 +17,7 @@ def main():
     trainer = Trainer(name, train_part, VALIDATION)
 
     # estimate with gamma=1
-    trainer.train_model(gamma=1)
+    # trainer.train_model(gamma=1)
 
     # # use univariate optimizer to find regularization hyperparameter
     # loss = lambda g: -trainer.train_model(gamma=g)

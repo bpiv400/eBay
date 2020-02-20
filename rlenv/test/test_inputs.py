@@ -2,6 +2,7 @@ import argparse
 import pandas as pd
 from compress_pickle import load, dump
 from constants import INPUT_DIR, INDEX_DIR, PARTS_DIR
+from processing.processing_consts import CLEAN_DIR
 from rlenv.env_consts import MODELS
 from rlenv.env_utils import (get_env_sim_subdir, load_featnames,
                              get_env_sim_dir, load_chunk)
@@ -56,27 +57,59 @@ def subset_lstgs(df=None, lstgs=None):
     return df
 
 
+def lstgs_without_duplicated_timestamps(lstgs=None):
+    # load timestamps
+    offers = load(CLEAN_DIR + 'offers.pkl').reindex(index=lstgs, level='lstg')
+
+    # remove censored offers
+    clock = offers.loc[~offers.censored, 'clock']
+
+    # remove duplicate timestamps within thread
+    toDrop = clock.groupby(['lstg', 'thread']).apply(lambda x: x.duplicated())
+    clock = clock[~toDrop]
+
+    # flag listings with duplicate timestamps across threads
+    flag = clock.groupby('lstg').apply(lambda x: x.duplicated())
+    flag = flag.groupby('lstg').max()
+
+    # drop flagged listgins
+    lstgs = lstgs.drop(flag[flag].index)
+    return lstgs
+
+
 def main():
     # parse arguments
     parser = argparse.ArgumentParser()
     parser.add_argument('--num', required=True, type=int, help='chunk number')
     parser.add_argument('--part', required=True, type=str, help='partition name')
     args = parser.parse_args()
-    base_dir = get_env_sim_dir(args.part)
+    part, num = args.part, args.num
+
+    # path
+    base_dir = get_env_sim_dir(part)
+
+    # index of listings
     print('Loading chunk...')
-    _, lookup = load_chunk(base_dir=base_dir, num=args.num)
-    lstgs = lookup.index
+    _, lookup = load_chunk(base_dir=base_dir, num=num)
+    lstgs = lstgs_without_duplicated_timestamps(
+        lstgs=lookup.sort_index().index)
+
+    # model inputs
     print('Loading model inputs...')
-    model_inputs = load_all_inputs(part=args.part, lstgs=lstgs)
+    model_inputs = load_all_inputs(part=part, lstgs=lstgs)
+
+    # other components
     print('Loading x offer and x_thread...')
-    x_thread, x_offer = load_outcomes(part=args.part, lstgs=lstgs)
+    x_thread, x_offer = load_outcomes(part=part, lstgs=lstgs)
+
+    # save output
     output = {
         'inputs': model_inputs,
         'x_thread': x_thread,
         'x_offer': x_offer
     }
     subdir = get_env_sim_subdir(base_dir=base_dir, chunks=True)
-    path = '{}{}_test.gz'.format(subdir, args.num)
+    path = '{}{}_test.gz'.format(subdir, num)
     dump(output, path)
 
 

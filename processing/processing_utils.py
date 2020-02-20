@@ -316,7 +316,7 @@ def save_featnames(x, name):
     # initialize featnames dictionary
     featnames = {k: list(v.columns) for k, v in x.items() if 'offer' not in k}
 
-    # for delay, con, and msg models
+    # for offer models
     if 'offer1' in x:
         if BYR_PREFIX in name:
             feats = CLOCK_FEATS + OUTCOME_FEATS + TURN_FEATS[name]

@@ -29,7 +29,6 @@ class FeedForward(nn.Module):
         # fully connected
         self.nn1 = FullyConnected(total, sizes['out'], dropout=dropout)
 
-
     def forward(self, x):
         '''
         x: OrderedDict()

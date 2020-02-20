@@ -37,7 +37,7 @@ class Trainer:
         self.pretrained_path = MODEL_DIR + '{}/pretrained.net'.format(name)
 
         # loss function
-        if name in ['msg_byr', 'msg_slr', 'listings', 'threads']:
+        if 'msg' in name or name in ['listings', 'threads']:
             self.loss = nn.BCEWithLogitsLoss(reduction='sum')
         elif 'con' in name or name == 'first_arrival':
             self.loss = nn.CrossEntropyLoss(reduction='sum')

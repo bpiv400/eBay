@@ -73,7 +73,6 @@ def main():
             index=L[['cat']].values.squeeze(), fill_value=0)
         w2v.set_index(L.index, inplace=True)
         x['w2v_{}'.format(role)] = w2v
-    
 
     # slr features
     print('Seller features')
@@ -94,7 +93,7 @@ def main():
         for c in count_cols:
             x[k].loc[:, c] = x[k][c].apply(np.log1p)
             x[k].rename({c: c.replace('lstgs', 'ln_lstgs')}, 
-                axis=1, inplace=True)
+                        axis=1, inplace=True)
 
     # ensure indices are aligned with lookup
     lookup = load(PARTS_DIR + '{}/lookup.gz'.format(part))
