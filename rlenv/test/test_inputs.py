@@ -91,8 +91,8 @@ def main():
     # index of listings
     print('Loading chunk...')
     _, lookup = load_chunk(base_dir=base_dir, num=num)
-    lstgs = lstgs_without_duplicated_timestamps(
-        lstgs=lookup.sort_index().index)
+    # lstgs = lstgs_without_duplicated_timestamps(
+    #     lstgs=lookup.sort_index().index)
 
     # model inputs
     print('Loading model inputs...')
