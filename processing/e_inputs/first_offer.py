@@ -1,5 +1,4 @@
 import argparse
-import numpy as np
 import pandas as pd
 from processing.processing_utils import load_file, get_x_thread, \
     init_x, save_files
@@ -17,8 +16,9 @@ def process_inputs(part, outcome):
     df = offers.xs(1, level='index')
     assert all(~df[AUTO]) and all(~df[EXP])
     if outcome == CON:
+        assert df[CON].min() > 0
         y = (df[CON] * 100).astype('int8')
-    elif outcome == MSG:
+    else:
         y = df.loc[df[CON] < 1, MSG]
     idx = y.index
 

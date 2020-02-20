@@ -54,12 +54,11 @@ ALL_OFFER_FEATS = CLOCK_FEATS + TIME_FEATS + OUTCOME_FEATS
 
 # turn indices
 TURN_FEATS = {
-    'con_byr': ['t1', 't3', 't5'],
-    'con_byr_no7': ['t1', 't3', 't5'],
+    'con_byr': ['t3', 't5'],
     'con_slr': ['t2', 't4'],
-    'delay_byr':['t3', 't5'],
+    'delay_byr': ['t3', 't5'],
     'delay_slr': ['t2', 't4'],
-    'msg_byr': ['t1', 't3'],
+    'msg_byr': ['t3'],
     'msg_slr': ['t2', 't4']
 }
 

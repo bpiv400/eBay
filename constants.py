@@ -11,14 +11,14 @@ ARRIVAL_PREFIX = 'arrival'
 TOL_HALF = 0.02
 
 # paths and directories
-if 'Ubuntu' in platform():		# Etan's box
-	PREFIX = '/data/eBay'
+if 'Ubuntu' in platform():  # Etan's box
+    PREFIX = '/data/eBay'
 elif 'Windows' in platform() and 'A:' in os.getcwd():  # Barry's pc
-	PREFIX = 'A:/ebay'
+    PREFIX = 'A:/ebay'
 elif 'Windows' in platform() and 'C:' in os.getcwd():  # Barry's laptop
-	PREFIX = os.path.expanduser('~/ebay')
-else:							# cluster and AWS
-	PREFIX = os.path.expanduser('~/weka/eBay')
+    PREFIX = os.path.expanduser('~/ebay')
+else:  # cluster and AWS
+    PREFIX = os.path.expanduser('~/weka/eBay')
 
 PARTS_DIR = '%s/partitions/' % PREFIX
 ENV_SIM_DIR = '%s/envSimulator/' % PREFIX
@@ -52,10 +52,10 @@ EXPIRATION = 2 * DAY
 
 # maximal delay times
 MAX_DELAY = {
-	ARRIVAL_PREFIX: MAX_DAYS * 24 * 3600,
-	SLR_PREFIX: 2 * 24 * 3600,
-	'{}_{}'.format(BYR_PREFIX, 7): 2 * 24 * 3600,
-	BYR_PREFIX: 14 * 24 * 3600
+    ARRIVAL_PREFIX: MAX_DAYS * 24 * 3600,
+    SLR_PREFIX: 2 * 24 * 3600,
+    '{}_{}'.format(BYR_PREFIX, 7): 2 * 24 * 3600,
+    BYR_PREFIX: 14 * 24 * 3600
 }
 
 # concessions that denote an (almost) even split
@@ -72,8 +72,8 @@ SIM_CHUNKS = 1000
 
 # indices for byr and slr offers
 IDX = {
-	BYR_PREFIX: [1, 3, 5, 7],
-	SLR_PREFIX: [2, 4, 6]
+    BYR_PREFIX: [1, 3, 5, 7],
+    SLR_PREFIX: [2, 4, 6]
 }
 
 # date range and holidays
@@ -83,4 +83,4 @@ HOLIDAYS = Calendar().holidays(start=START, end=END)
 
 # groups for embedding layers
 EMBEDDING_GROUPS = {'w2v': ['lstg', 'w2v_slr', 'w2v_byr'],
-					'other': ['lstg', 'cat', 'cndtn', 'slr']}
+                    'other': ['lstg', 'cat', 'cndtn', 'slr']}
