@@ -88,6 +88,9 @@ def process_inputs(part, outcome, role):
 
     # outcome and master index
     df = offers[offers.index.isin(IDX[role], level='index')]
+    if role == BYR_PREFIX:
+        df = df.drop(1, level='index')
+        
     if outcome == CON:
         y = get_y_con(df)
     elif outcome == MSG:
