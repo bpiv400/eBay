@@ -8,7 +8,7 @@ from featnames import CON, MSG, AUTO, EXP
 
 
 # loads data and calls helper functions to construct train inputs
-def process_inputs(part, outcome, role):
+def process_inputs(part, outcome):
     # load dataframes
     offers = load_file(part, 'x_offer')
     threads = load_file(part, 'x_thread')
@@ -45,7 +45,7 @@ def main():
     print('%s/%s' % (part, name))
 
     # input dataframes, output processed dataframes
-    d = process_inputs(part, outcome, role)
+    d = process_inputs(part, outcome)
 
     # save various output files
     save_files(d, part, name)
