@@ -5,7 +5,7 @@ LOG_DIR = OUTPUT_DIR + 'logs/'
 
 # optimization parameters
 NUM_WORKERS = {'first_arrival': 5,
-               'interarrival': 8,
+               'next_arrival': 8,
                'hist': 8,
                'first_con': 5,
                'first_msg': 6,
