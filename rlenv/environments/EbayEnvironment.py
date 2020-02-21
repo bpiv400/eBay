@@ -104,10 +104,13 @@ class EbayEnvironment:
         self.prepare_offer(event)
         # generate concession and msg if necessary
         offer = self.get_offer_outcomes(event, slr=slr_offer)
+        # print(str(offer))
         return self.process_post_offer(event, offer)
 
     def process_post_offer(self, event, offer):
         slr_offer = event.turn % 2 == 0
+        # print('summary right before record')
+        # print(event.summary())
         self.record(event, censored=False)
         # check whether the offer is an acceptance
         if event.is_sale():
@@ -233,10 +236,10 @@ class EbayEnvironment:
                                                     turn=event.turn)
         delay_seconds = self.get_delay(input_dict=input_dict, turn=event.turn, thread_id=event.thread_id,
                                        time=event.priority, delay_type=event.delay_type)
-        print('delay seconds: {}'.format(delay_seconds))
+        # print('delay seconds: {}'.format(delay_seconds))
         # Test environment returns None when delay model is mistakenly called
         if delay_seconds is None:
-            print("No delay returned; exiting listing.")
+            # print("No delay returned; exiting listing.")
             return True
         event.update_delay(seconds=delay_seconds)
         self.queue.push(event)
@@ -353,6 +356,8 @@ class EbayEnvironment:
             msg = self.get_msg(input_dict=input_dict, time=event.priority, turn=event.turn,
                                thread_id=event.thread_id)
             event.update_msg(msg=msg)
+        # print('summary right before get offer outcomes returns')
+        # print(event.summary())
         return offer
 
     def get_delay(self, input_dict=None, turn=None, thread_id=None,

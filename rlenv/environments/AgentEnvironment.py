@@ -98,8 +98,11 @@ class AgentEnvironment(EbayEnvironment, Env):
 
     # TODO: May update
     def record(self, event, byr_hist=None, censored=False):
-        if not censored and byr_hist is not None:
-            Recorder.print_offer(event)
+        if not censored and byr_hist is None:
+            # print('summary in record')
+            # print(event.summary())
+            if self.verbose:
+                Recorder.print_offer(event)
 
     def is_agent_turn(self, event):
         raise NotImplementedError()

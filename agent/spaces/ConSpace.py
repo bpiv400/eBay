@@ -5,7 +5,7 @@ from rlpyt.spaces.base import Space
 class ConSpace(Space):
     def __init__(self, con_set=None):
         self.con_set = con_set
-        self.dtype = np.int32
+        self.dtype = np.int64
         self._null_value = 0
         self.shape = ()
 
@@ -14,7 +14,7 @@ class ConSpace(Space):
         return np.array(index)
 
     def null_value(self):
-        return np.array(self._null_value, dtype=np.int32)
+        return np.array(self._null_value, dtype=np.int64)
 
     @property
     def bounds(self):

@@ -16,11 +16,14 @@ FEAT_ID = "feat_id"
 
 # batch size hyperparameters
 # for now, expecting no multiprocessing
-TOTAL_STEPS = 1000000000
-NUM_BATCHES = 1000000
+TOTAL_STEPS = 1000
+NUM_BATCHES = 10
 BATCH_T = int(TOTAL_STEPS / NUM_BATCHES)
-STEPS_PER_ENV = 100
+print("T: {}".format(BATCH_T))
+STEPS_PER_ENV = 10
 BATCH_B = int(BATCH_T / STEPS_PER_ENV)
+print("B: {}".format(BATCH_B))
+print(BATCH_B)
 
 # PPO hyperparameters
 PPO_MINIBATCHES = 4

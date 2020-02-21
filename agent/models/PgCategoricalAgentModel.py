@@ -28,7 +28,7 @@ class PgCategoricalAgentModel(nn.Module):
         self.nn0, total = create_embedding_layers(groups=groups, sizes=sizes)
 
         # value output layer
-        self.nn1_value = FullyConnected(total, sizes['out'], dropout=False,
+        self.nn1_value = FullyConnected(total, 1, dropout=False,
                                         batch_norm=False)
         # action probability output layer
         self.nn1_action = FullyConnected(total, sizes['out'], dropout=False,
@@ -47,4 +47,4 @@ class PgCategoricalAgentModel(nn.Module):
         logits = self.nn1_action(embedded)
         # apply softmax
         pi = softmax(logits, dim=logits.dim() - 1)
-        return pi, v
+        return pi, v.squeeze()
