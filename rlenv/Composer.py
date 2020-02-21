@@ -3,7 +3,7 @@ from collections import OrderedDict, namedtuple
 import torch
 import numpy as np
 import pandas as pd
-from featnames import (OUTCOME_FEATS, TURN_FEATS,
+from featnames import (OUTCOME_FEATS, TURN_FEATS, RELISTED,
                        MONTHS_SINCE_LSTG, BYR_HIST,
                        INT_REMAINING, MONTHS_SINCE_LAST)
 from constants import ARRIVAL_PREFIX
@@ -20,7 +20,7 @@ class Composer:
     """
     def __init__(self, cols):
         self.sizes = Composer.make_sizes()
-        self.lstg_sets = Composer.build_lstg_sets(cols)
+        self.lstg_sets = self.build_lstg_sets(cols)
         self.intervals = self.make_intervals()
         self.turn_inds = None
 
@@ -256,6 +256,9 @@ class Composer:
 class AgentComposer(Composer):
     def __init__(self, cols=None, agent_params=None):
         super().__init__(cols)
+        self.relist_index = self.lstg_sets[LSTG_MAP].index(RELISTED)
+
+        # parameters
         self.slr = agent_params[SLR_PREFIX]
         self.idx = agent_params[FEAT_ID]
         self.delay = agent_params[DELAY]
@@ -335,6 +338,10 @@ class AgentComposer(Composer):
         # turn indicates
         base = base + 2 if self.slr else base + 3
         return base
+
+    def relist(self, x_lstg):
+        x_lstg[LSTG_MAP][self.relist_index] = 1.0
+        return x_lstg
 
     @property
     def agent_sizes(self):

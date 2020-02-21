@@ -78,3 +78,7 @@ START_TIME = 'start_time'
 START_PRICE = 'start_price'
 DEC_PRICE = 'decline_price'
 ACC_PRICE = 'accept_price'
+
+
+# lstg feats
+RELISTED = 'relisted'

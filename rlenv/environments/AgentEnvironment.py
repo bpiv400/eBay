@@ -25,6 +25,7 @@ class AgentEnvironment(EbayEnvironment, Env):
         self._lookup_cols = [col.decode('utf-8') for col in self._lookup_cols]
         self._lookup_slice, self._x_lstg_slice = None, None
         self._ix = -1
+        self.relist_count = 0
         
         self.last_event = None  # type: Thread
         # action and observation spaces
@@ -37,27 +38,12 @@ class AgentEnvironment(EbayEnvironment, Env):
         f = h5py.File(self._filename, "r")
         return f
 
-    def reset(self):
-        while True:
-            self._reset_lstg()
-            super().reset()
-            event, lstg_complete = super().run()
-            if not lstg_complete:
-                self.last_event = event
-                return self.composer.get_obs(sources=event.sources(),
-                                             turn=event.turn)
-
-    def run(self):
-        event, lstg_complete = super().run()
-        self.last_event = event
-        return self.agent_tuple(lstg_complete)
-
     def define_observation_space(self):
         sizes = self.composer.agent_sizes['x']
         boxes = [FloatBox(-1000, 1000, shape=size) for size in sizes.values()]
         return Composite(boxes, self.composer.obs_space_class)
 
-    def _reset_lstg(self):
+    def reset_lstg(self):
         """
         Sample a new lstg from the file and set lookup and x_lstg series
         """
@@ -69,6 +55,7 @@ class AgentEnvironment(EbayEnvironment, Env):
         self._ix += 1
         self.start_time = self.lookup[START_TIME]
         self.end_time = self.start_time + MONTH
+        self.relist_count = 0
 
     def _draw_lstgs(self):
         ids = np.random.choice(self._num_lstgs, ENV_LSTG_COUNT,
@@ -82,19 +69,20 @@ class AgentEnvironment(EbayEnvironment, Env):
         self._x_lstg_slice = self._x_lstg_slice[unsorted_ids, :]
         self._ix = 0
 
-    def agent_tuple(self, lstg_complete):
+    def agent_tuple(self, lstg_complete=None, agent_sale=None):
         obs = self.composer.get_obs(sources=self.last_event.sources(),
                                     turn=self.last_event.turn)
-        return obs, self.get_reward(), lstg_complete, self._get_info()
+        return (obs, self.get_reward(), lstg_complete,
+                self.get_info(agent_sale=agent_sale, lstg_complete=lstg_complete))
 
     def con_from_action(self, action=None):
-        raise NotImplementedError("")
+        raise NotImplementedError()
 
     def get_reward(self):
-        raise NotImplementedError("")
+        raise NotImplementedError()
 
-    def _get_info(self):
-        return None
+    def get_info(self, agent_sale=False, lstg_complete=False):
+        return NotImplementedError()
 
     @property
     def horizon(self):

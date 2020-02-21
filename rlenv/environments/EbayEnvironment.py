@@ -69,18 +69,18 @@ class EbayEnvironment:
         if INTERACT and event.type != ARRIVAL:
             input('Press Enter to continue...')
         if event.type == ARRIVAL:
-            print('processing arrival')
+            # print('processing arrival')
             return self.process_arrival(event)
         elif event.type == FIRST_OFFER:
-            print('processing first offer for thread {} for turn 1'.format(event.thread_id))
+            # print('processing first offer for thread {} for turn 1'.format(event.thread_id))
             return self.process_first_offer(event)
         elif event.type == OFFER_EVENT:
-            print('processing offer for thread {} for turn {}'.format(event.thread_id,
-                                                                      event.turn))
+            # print('processing offer for thread {} for turn {}'.format(event.thread_id,
+            #                                                           event.turn))
             return self.process_offer(event)
         elif event.type == DELAY_EVENT:
-            print('processing delay for thread {} for turn {}'.format(event.thread_id,
-                                                                      event.turn))
+            # print('processing delay for thread {} for turn {}'.format(event.thread_id,
+            #                                                           event.turn))
             return self.process_delay(event)
         else:
             raise NotImplementedError()
@@ -130,7 +130,7 @@ class EbayEnvironment:
                 elif auto == REJ_IND:
                     self._process_slr_auto_rej(event, offer)
                     return False
-            print('updated time features after standard offer')
+            # print('updated time features after standard offer')
             self.time_feats.update_features(offer=offer)
             self._init_delay(event)
             return False

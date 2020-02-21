@@ -41,7 +41,6 @@ def make_sampler(env_params=None):
         batch_B=BATCH_B,
         batch_T=BATCH_T,
         max_decorrelation_steps=0,
-        TrajInfoCls=None,
         CollectorCls=CpuResetCollector,
         eval_n_envs=1,
         eval_CollectorCls=SerialEvalCollector,
