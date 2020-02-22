@@ -12,7 +12,6 @@ from utils import get_remaining
 def get_y_con(df):
     # drop zero delay and expired offers
     mask = ~df[AUTO] & ~df[EXP]
-
     # concession is an int from 0 to 100
     return (df.loc[mask, CON] * 100).astype('int8')
 

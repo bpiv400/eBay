@@ -358,9 +358,9 @@ def save_sizes(x, name):
         sizes['out'] = INTERVAL_COUNTS[ARRIVAL_PREFIX] + 1
     elif name == 'hist':
         sizes['out'] = HIST_QUANTILES
-    elif 'delay' in name:
+    elif DELAY in name:
         sizes['out'] = INTERVAL_COUNTS[role] + 1
-    elif 'con' in name:
+    elif CON in name:
         sizes['out'] = CON_MULTIPLIER + 1
     else:
         sizes['out'] = 1
@@ -399,12 +399,36 @@ def save_small(d, name):
     dump(small, INPUT_DIR + 'small/{}.gz'.format(name))
 
 
+def get_baserates(y, name):
+    if MSG in name:
+        # probability of y == 1
+        s = y.groupby('index').transform('mean')
+
+        return s.to_numpy()
+
+    if CON in name:
+        # probability of each concession value
+        df = pd.DataFrame(0.0, index=y.index, columns=range(CON_MULTIPLIER + 1))
+        for i in range(CON_MULTIPLIER + 1):
+            df[i] = y.groupby('index').transform(lambda x: (x == i).mean())
+
+        # convert to series of lists
+        s = pd.Series(df.values.tolist(), index=df.index)
+
+        return s.to_numpy()
+
+    raise NotImplementedError()
+
+
 # save featnames and sizes
 def save_files(d, part, name):
     # featnames and sizes
     if part == 'test_rl':
         save_featnames(d['x'], name)
         save_sizes(d['x'], name)
+
+    # baserates
+    d['baserates'] = get_baserates(d, name)
 
     # pandas index
     idx = d['y'].index

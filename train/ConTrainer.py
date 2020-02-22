@@ -43,7 +43,7 @@ class Trainer:
         # turn-specific baserates
         assert name in ['first_con', 'con_slr']     # add con_byr later
         if name == 'first_con':
-            
+
 
     def train_model(self, gamma=0):
         """
