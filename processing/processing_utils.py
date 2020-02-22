@@ -392,6 +392,9 @@ def save_small(d, name):
     small = dict()
     small['y'] = d['y'][idx_small]
 
+    # baserates
+    small['baserates'] = d['baserates'][idx_small]
+
     # inputs
     small['x'] = {k: v[idx_small, :] for k, v in d['x'].items()}
 
