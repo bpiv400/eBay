@@ -1,4 +1,3 @@
-import os
 import numpy as np
 import torch
 import torch.nn as nn
@@ -33,25 +32,18 @@ class Trainer:
         self.dev = dev
         self.device = device
 
-        # path to pretrained model
-        self.pretrained_path = MODEL_DIR + '{}/pretrained.net'.format(name)
-
         # loss function
-        if 'msg' in name or name in ['listings', 'threads']:
-            self.loss = nn.BCEWithLogitsLoss(reduction='sum')
-        elif 'con' in name or name == 'first_arrival':
-            self.loss = nn.CrossEntropyLoss(reduction='sum')
-        else:
-            self.loss = time_loss
+        self.loss = nn.CrossEntropyLoss(reduction='sum')
         print(self.loss)
 
         # load datasets
         self.train = eBayDataset(train_part, name)
         self.test = eBayDataset(test_part, name)
 
-        # pretrain with penalty hyperparameter set to 0
-        if not os.path.isfile(self.pretrained_path):
-            self.train_model()
+        # turn-specific baserates
+        assert name in ['first_con', 'con_slr']     # add con_byr later
+        if name == 'first_con':
+            
 
     def train_model(self, gamma=0):
         """
@@ -72,10 +64,7 @@ class Trainer:
         lnlr, model = self._tune_lr(writer=writer, gamma=gamma)
 
         # path to save model
-        if model.dropout:
-            model_path = MODEL_DIR + '{}/{}.net'.format(self.name, expid)
-        else:
-            model_path = self.pretrained_path
+        model_path = MODEL_DIR + '{}/{}.net'.format(self.name, expid)
 
         # save model
         if not self.dev:
@@ -181,16 +170,12 @@ class Trainer:
         model.net.train(is_training)
         theta = model.net(b['x']).squeeze()
 
-        # binary cross entropy requires float
-        if str(self.loss) == "BCEWithLogitsLoss()":
-            b['y'] = b['y'].float()
-
         # calculate loss
         loss = self.loss(theta, b['y'].squeeze())
 
         # add in regularization penalty and step down gradients
         if is_training:
-            if model.dropout:
+            if model.penalized:
                 penalty = model.get_penalty()
                 factor = len(b['y']) / len(self.train)
                 # print(loss.item(), penalty * factor)
@@ -245,10 +230,6 @@ class Trainer:
         return model
 
     def _collect_output(self, model, writer, output, epoch=0):
-        # variational dropout stats
-        if model.dropout:
-            output['gamma'] = model.gamma
-
         # calculate log-likelihood on validation set
         with torch.no_grad():
             loss_train = self._run_loop(self.train, model)
@@ -261,9 +242,5 @@ class Trainer:
             print('\t{}: {}'.format(k, v))
             if writer is not None:
                 writer.add_scalar(k, v, epoch)
-
-        # histogram of lnalpha
-        if model.dropout and writer is not None:
-            writer.add_histogram('lnalpha', model.lnalpha, epoch)
 
         return output

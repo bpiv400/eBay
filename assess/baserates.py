@@ -42,7 +42,7 @@ def main():
 	# function
 	if 'msg' in name:
 		f = binary_log_likelihood
-	elif name in ['first_arrival', 'hist', 'con_byr', 'con_slr']:
+	elif name in ['first_arrival', 'hist', 'first_con', 'con_byr', 'con_slr']:
 		f = categorical_log_likelihood
 	else:
 		raise NotImplementedError()
@@ -54,7 +54,7 @@ def main():
 	# simple baserate
 	print('Simple baserate: {0:1.4f}'.format(f(y)))
 
-	if 'delay' in name or 'con' in name or 'msg' in name:
+	if 'byr' in name or 'slr' in name:
 		featnames = load(INPUT_DIR + 'featnames/{}.pkl'.format(name))['offer']
 		idx = [featnames.index(k) for k in TURN_FEATS[name]]
 		turns = d['x']['offer1'][:, idx].astype(bool)

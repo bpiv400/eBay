@@ -5,11 +5,11 @@ from constants import EMBEDDING_GROUPS
 
 
 class FeedForward(nn.Module):
-    def __init__(self, sizes, dropout=True):
-        '''
+    def __init__(self, sizes, dropout=False):
+        """
         :param sizes: dictionary of scalar input sizes; sizes['x'] is an OrderedDict
         :param dropout: boolean for Variational dropout in FullyConnected.
-        '''
+        """
         super(FeedForward, self).__init__()
 
         # save dropout boolean to self
@@ -30,13 +30,13 @@ class FeedForward(nn.Module):
         self.nn1 = FullyConnected(total, sizes['out'], dropout=dropout)
 
     def forward(self, x):
-        '''
+        """
         x: OrderedDict()
-        '''
-        l = []
+        """
+        elements = []
         for k in self.nn0.keys():
-            l.append(self.nn0[k](x))
-        return self.nn1(torch.cat(l, dim=1))
+            elements.append(self.nn0[k](x))
+        return self.nn1(torch.cat(elements, dim=1))
 
 
 def create_groupings(sizes):
