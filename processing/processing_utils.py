@@ -415,10 +415,7 @@ def get_baserates(y, name):
         for i in range(CON_MULTIPLIER + 1):
             df[i] = y.groupby('index').transform(lambda x: (x == i).mean())
 
-        # convert to series of lists
-        s = pd.Series(df.values.tolist(), index=df.index)
-
-        return s.to_numpy()
+        return df.to_numpy()
 
     raise NotImplementedError()
 
@@ -431,7 +428,7 @@ def save_files(d, part, name):
         save_sizes(d['x'], name)
 
     # baserates
-    d['baserates'] = get_baserates(d['y'], name)
+    d['p'] = get_baserates(d['y'], name)
 
     # pandas index
     idx = d['y'].index

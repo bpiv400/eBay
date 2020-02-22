@@ -1,6 +1,6 @@
 import numpy as np
 import torch
-import torch.nn as nn
+from torch.nn.functional import log_softmax
 from datetime import datetime as dt
 from torch.utils.tensorboard import SummaryWriter
 from torch.optim import Adam, lr_scheduler
@@ -8,7 +8,6 @@ from train.eBayDataset import eBayDataset
 from train.train_consts import FTOL, LOG_DIR, LNLR0, LNLR1, LNLR_FACTOR
 from train.Model import Model
 from train.Sample import get_batches
-from train.loss import time_loss, taylor_softmax_loss
 from constants import MODEL_DIR
 
 
@@ -26,24 +25,16 @@ class Trainer:
         :param train_part: string partition name for training data.
         :param test_part: string partition name for holdout data.
         :param dev: True for development.
+        :param device: 'cuda' or 'cpu'.
         """
         # save parameters to self
         self.name = name
         self.dev = dev
         self.device = device
 
-        # loss function
-        self.loss = nn.CrossEntropyLoss(reduction='sum')
-        print(self.loss)
-
         # load datasets
         self.train = eBayDataset(train_part, name)
         self.test = eBayDataset(test_part, name)
-
-        # turn-specific baserates
-        assert name in ['first_con', 'con_slr']     # add con_byr later
-        if name == 'first_con':
-
 
     def train_model(self, gamma=0):
         """
@@ -142,6 +133,7 @@ class Trainer:
             # move to device
             b['x'] = {k: v.to(self.device) for k, v in b['x'].items()}
             b['y'] = b['y'].to(self.device)
+            b['p'] = b['p'].to(self.device)
 
             # increment loss
             loss += self._run_batch(b, model, optimizer)
@@ -154,6 +146,17 @@ class Trainer:
         print('\t{0:s} GPU time: {1:.1f} seconds'.format(prefix, gpu_time))
         print('\ttotal {0:s} time: {1:.1f} seconds'.format(prefix,
                                                            (dt.now() - t0).total_seconds()))
+
+        return loss
+
+    def _loss(self, theta, y, p0, is_training=False):
+        lnp = torch.take(log_softmax(theta, dim=-1), y)
+        loss = -torch.sum(lnp)
+
+        if is_training:
+            p = torch.exp(lnp)
+            kl = torch.sum(p * (lnp - torch.log(p0)), dim=-1)
+            loss += torch.sum(self.gamma * kl)
 
         return loss
 
@@ -171,7 +174,7 @@ class Trainer:
         theta = model.net(b['x']).squeeze()
 
         # calculate loss
-        loss = self.loss(theta, b['y'].squeeze())
+        loss = self._loss(theta, b['y'].squeeze(), b['baserates'], is_training)
 
         # add in regularization penalty and step down gradients
         if is_training:

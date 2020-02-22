@@ -5,11 +5,11 @@ from constants import INPUT_DIR
 
 class eBayDataset(Dataset):
     def __init__(self, part, name):
-        '''
+        """
         Defines a parent class that extends torch.utils.data.Dataset.
         :param part: string partition name (e.g., train_models).
         :param name: string model name.
-        '''
+        """
         # save name to self
         self.name = name
 
@@ -19,21 +19,22 @@ class eBayDataset(Dataset):
         # number of labels
         self.N = len(self.d['y'])
 
-
     def __getitem__(self, idx):
-        '''
+        """
         Returns a tuple of data components for example.
         :param idx: index of example.
         :return: tuple of data components at index idx.
-        '''
+        """
         # y is indexed directly
         y = self.d['y'][idx]
 
         # index components of input dictionary
         x = {k: v[idx, :] for k, v in self.d['x'].items()}
 
-        return y, x
-        
+        # p is indexed directly
+        p = self.d['p'][idx]
+
+        return y, x, p
 
     def __len__(self):
         return self.N

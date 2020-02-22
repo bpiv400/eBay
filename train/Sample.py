@@ -38,7 +38,7 @@ def collate(batch):
     :param batch: list of (dictionary of) numpy arrays.
     :return: dictionary of (dictionary of) tensors.
     """
-    y, x = [], {}
+    y, x, p = [], {}, []
     for b in batch:
         y.append(b[0])
         for k, v in b[1].items():
@@ -46,13 +46,15 @@ def collate(batch):
                 x[k].append(torch.from_numpy(v))
             else:
                 x[k] = [torch.from_numpy(v)]
+        p.append(torch.from_numpy(b[2]))
 
     # convert to (single) tensors
     y = torch.from_numpy(np.asarray(y)).long()
     x = {k: torch.stack(v).float() for k, v in x.items()}
+    p = torch.stack(p).float()
 
     # output is dictionary of tensors
-    return {'y': y, 'x': x}
+    return {'y': y, 'x': x, 'p': p}
 
 
 def get_batches(data, is_training=False):
