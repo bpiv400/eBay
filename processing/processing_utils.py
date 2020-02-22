@@ -428,7 +428,7 @@ def save_files(d, part, name):
         save_sizes(d['x'], name)
 
     # baserates
-    d['baserates'] = get_baserates(d, name)
+    d['baserates'] = get_baserates(d['y'], name)
 
     # pandas index
     idx = d['y'].index
