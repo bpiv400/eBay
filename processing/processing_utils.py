@@ -393,7 +393,9 @@ def save_small(d, name):
     small['y'] = d['y'][idx_small]
 
     # baserates
-    small['baserates'] = d['baserates'][idx_small]
+    small['lnp'] = d['lnp']
+    if 'idx_lnp' in d:
+        small['idx_lnp'] = d['idx_lnp'][idx_small]
 
     # inputs
     small['x'] = {k: v[idx_small, :] for k, v in d['x'].items()}
@@ -402,33 +404,23 @@ def save_small(d, name):
     dump(small, INPUT_DIR + 'small/{}.gz'.format(name))
 
 
-def get_baserates(y, name):
-    if MSG in name:
-        # probability of y == 1
-        if 'index' in y.index.names:
-            p = y.groupby('index').mean().to_dict()
-        else:
-            p = y.mean()
-        return p
-
-    if CON in name:
-        # probability of each concession value by turn
-        p = dict()
-        if 'index' in y.index.names:
-            for turn in y.index.unique(level='index'):
-                p[turn] = np.zeros(CON_MULTIPLIER + 1, dtype='float32')
-                s = y.xs(turn, level='index')
-                den = len(s) + CON_MULTIPLIER + 1
-                for i in range(CON_MULTIPLIER + 1):
-                    p[turn][i] = (1 + (s == i).sum()) / den
-        else:
-            p = np.zeros(CON_MULTIPLIER + 1, dtype='float32')
-            den = len(y) + CON_MULTIPLIER + 1
+def get_baserates(y):
+    # probability of each concession value by turn
+    p = dict()
+    if 'index' in y.index.names:
+        for turn in y.index.unique(level='index'):
+            p[turn] = np.zeros(CON_MULTIPLIER + 1, dtype='float32')
+            s = y.xs(turn, level='index')
+            den = len(s) + CON_MULTIPLIER + 1
             for i in range(CON_MULTIPLIER + 1):
-                p[i] = (1 + (y == i).sum()) / den
-        return p
+                p[turn][i] = (1 + (s == i).sum()) / den
+    else:
+        p = np.zeros(CON_MULTIPLIER + 1, dtype='float32')
+        den = len(y) + CON_MULTIPLIER + 1
+        for i in range(CON_MULTIPLIER + 1):
+            p[i] = (1 + (y == i).sum()) / den
 
-    raise NotImplementedError()
+    return np.log(p)
 
 
 # save featnames and sizes
@@ -439,11 +431,13 @@ def save_files(d, part, name):
         save_sizes(d['x'], name)
 
     # baserates
-    d['p'] = get_baserates(d['y'], name)
+    if name in ['first_con', 'con_slr']:
+        d['lnp'] = get_baserates(d['y'], name)
 
-    # turn index for baserates
-    if 'index' in d['y'].index.names:
-        d['p_idx'] = d['y'].index.get_level_values(level='index').to_numpy()
+        # turn index for baserates
+        if 'index' in d['y'].index.names:
+            d['idx_lnp'] = d['y'].index.get_level_values(
+                level='index').to_numpy()
 
     # pandas index
     idx = d['y'].index

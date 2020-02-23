@@ -1,5 +1,5 @@
 import argparse
-from train.Trainer import Trainer
+from train.ConTrainer import Trainer
 from constants import SMALL, VALIDATION
 
 
@@ -14,8 +14,8 @@ def main():
     # initialize trainer
     trainer = Trainer(name, SMALL, VALIDATION, dev=True)
 
-    # # training
-    # trainer.train_model(gamma=gamma)
+    # training
+    trainer.train_model(gamma=gamma)
 
 
 if __name__ == '__main__':

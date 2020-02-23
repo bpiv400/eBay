@@ -3,7 +3,7 @@ from compress_pickle import load
 from constants import INPUT_DIR
 
 
-class eBayDataset(Dataset):
+class ConDataset(Dataset):
     def __init__(self, part, name):
         """
         Defines a parent class that extends torch.utils.data.Dataset.
@@ -31,7 +31,14 @@ class eBayDataset(Dataset):
         # index components of input dictionary
         x = {k: v[idx, :] for k, v in self.d['x'].items()}
 
-        return y, x
+        # lnp is indexed using idx_lnp, if it exists
+        if 'p_idx' in self.d:
+            p_idx = self.d['p_idx'][idx]
+            p = self.d['p'][p_idx]
+        else:
+            p = self.d['p']
+
+        return y, x, p
 
     def __len__(self):
         return self.N
@@ -43,7 +50,7 @@ class eBayDataset(Dataset):
         :param batch: list of (dictionary of) numpy arrays.
         :return: dictionary of (dictionary of) tensors.
         """
-        y, x = [], {}
+        y, x, p = [], {}, []
         for b in batch:
             y.append(b[0])
             for k, v in b[1].items():
@@ -51,10 +58,12 @@ class eBayDataset(Dataset):
                     x[k].append(torch.from_numpy(v))
                 else:
                     x[k] = [torch.from_numpy(v)]
+            p.append(torch.from_numpy(b[2]))
 
         # convert to (single) tensors
         y = torch.from_numpy(np.asarray(y)).long()
         x = {k: torch.stack(v).float() for k, v in x.items()}
+        p = torch.stack(p).float()
 
         # output is dictionary of tensors
-        return {'y': y, 'x': x}
+        return {'y': y, 'x': x, 'p': p}
