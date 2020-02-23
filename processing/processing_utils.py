@@ -432,7 +432,7 @@ def save_files(d, part, name):
 
     # baserates
     if name in ['first_con', 'con_slr']:
-        d['lnp'] = get_baserates(d['y'], name)
+        d['lnp'] = get_baserates(d['y'])
 
         # turn index for baserates
         if 'index' in d['y'].index.names:
