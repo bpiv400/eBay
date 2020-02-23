@@ -405,17 +405,28 @@ def save_small(d, name):
 def get_baserates(y, name):
     if MSG in name:
         # probability of y == 1
-        s = y.groupby('index').transform('mean')
-
-        return s.to_numpy()
+        if 'index' in y.index.names:
+            p = y.groupby('index').mean().to_dict()
+        else:
+            p = y.mean()
+        return p
 
     if CON in name:
-        # probability of each concession value
-        df = pd.DataFrame(0.0, index=y.index, columns=range(CON_MULTIPLIER + 1))
-        for i in range(CON_MULTIPLIER + 1):
-            df[i] = y.groupby('index').transform(lambda x: (x == i).mean())
-
-        return df.to_numpy()
+        # probability of each concession value by turn
+        p = dict()
+        if 'index' in y.index.names:
+            for turn in y.index.unique(level='index'):
+                p[turn] = np.zeros(CON_MULTIPLIER + 1, dtype='float32')
+                s = y.xs(turn, level='index')
+                den = len(s) + CON_MULTIPLIER + 1
+                for i in range(CON_MULTIPLIER + 1):
+                    p[turn][i] = (1 + (s == i).sum()) / den
+        else:
+            p = np.zeros(CON_MULTIPLIER + 1, dtype='float32')
+            den = len(y) + CON_MULTIPLIER + 1
+            for i in range(CON_MULTIPLIER + 1):
+                p[i] = (1 + (y == i).sum()) / den
+        return p
 
     raise NotImplementedError()
 
@@ -429,6 +440,10 @@ def save_files(d, part, name):
 
     # baserates
     d['p'] = get_baserates(d['y'], name)
+
+    # turn index for baserates
+    if 'index' in d['y'].index.names:
+        d['p_idx'] = d['y'].index.get_level_values(level='index').to_numpy()
 
     # pandas index
     idx = d['y'].index
