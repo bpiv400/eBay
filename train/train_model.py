@@ -1,6 +1,7 @@
 import argparse
-from scipy.optimize import minimize_scalar
+import numpy as np
 from train.ConTrainer import Trainer
+from train.train_consts import GRID_FTOL, GRID_INC
 from constants import TRAIN_RL, TRAIN_MODELS, VALIDATION
 
 
@@ -14,13 +15,18 @@ def main():
     train_part = TRAIN_RL if name in ['listings', 'threads'] else TRAIN_MODELS
     trainer = Trainer(name, train_part, VALIDATION)
 
-    # use univariate optimizer to find regularization hyperparameter
-    loss = lambda g: trainer.train_model(gamma=g)
-    result = minimize_scalar(loss,
-                             method='bounded',
-                             bounds=(0, 1),
-                             options={'xatol': 0.1, 'disp': 3})
-    print(result)
+    # use grid search to find regularization hyperparameter
+    gamma, best = 0, np.inf
+    while True:
+        loss = trainer.train_model(gamma=gamma)
+
+        # stop if loss is worse than best
+        if loss > best:
+            break
+
+        # reset best and increment gamma
+        best = loss
+        gamma += GRID_INC
 
 
 if __name__ == '__main__':

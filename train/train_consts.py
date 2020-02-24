@@ -14,3 +14,6 @@ LNLR0 = [-5, -6, -7]  # initial learning rates to search over
 LNLR1 = -12  # stop training when log learning rate is lower than this
 LNLR_FACTOR = -1  # decrease log learning rate by this factor when training slows
 FTOL = 1e-2  # decrease learning rate when relative improvement in loss is less than this
+
+# grid search parameters
+GRID_INC = 0.05
