@@ -1,23 +1,19 @@
-from torch.utils.data import Dataset
+import torch
+import numpy as np
 from compress_pickle import load
+from train.EBayDataset import EBayDataset
 from constants import INPUT_DIR
 
 
-class ConDataset(Dataset):
+class ConDataset(EBayDataset):
     def __init__(self, part, name):
         """
         Defines a parent class that extends torch.utils.data.Dataset.
         :param part: string partition name (e.g., train_models).
         :param name: string model name.
         """
-        # save name to self
-        self.name = name
-
-        # dictionary of inputs        
-        self.d = load(INPUT_DIR + '{}/{}.gz'.format(part, name))
-
-        # number of labels
-        self.N = len(self.d['y'])
+        assert 'con' in name
+        super().__init__(part, name)
 
     def __getitem__(self, idx):
         """
@@ -32,16 +28,13 @@ class ConDataset(Dataset):
         x = {k: v[idx, :] for k, v in self.d['x'].items()}
 
         # lnp is indexed using idx_lnp, if it exists
-        if 'p_idx' in self.d:
-            p_idx = self.d['p_idx'][idx]
-            p = self.d['p'][p_idx]
+        if 'idx_lnp' in self.d:
+            idx_lnp = self.d['idx_lnp'][idx]
+            lnp = self.d['lnp'][idx_lnp]
         else:
-            p = self.d['p']
+            lnp = self.d['lnp']
 
-        return y, x, p
-
-    def __len__(self):
-        return self.N
+        return y, x, lnp
 
     @staticmethod
     def collate(batch):
@@ -50,7 +43,7 @@ class ConDataset(Dataset):
         :param batch: list of (dictionary of) numpy arrays.
         :return: dictionary of (dictionary of) tensors.
         """
-        y, x, p = [], {}, []
+        y, x, lnp = [], {}, []
         for b in batch:
             y.append(b[0])
             for k, v in b[1].items():
@@ -58,12 +51,12 @@ class ConDataset(Dataset):
                     x[k].append(torch.from_numpy(v))
                 else:
                     x[k] = [torch.from_numpy(v)]
-            p.append(torch.from_numpy(b[2]))
+            lnp.append(torch.from_numpy(b[2]))
 
         # convert to (single) tensors
         y = torch.from_numpy(np.asarray(y)).long()
         x = {k: torch.stack(v).float() for k, v in x.items()}
-        p = torch.stack(p).float()
+        lnp = torch.stack(lnp).float()
 
         # output is dictionary of tensors
-        return {'y': y, 'x': x, 'p': p}
+        return {'y': y, 'x': x, 'lnp': lnp}

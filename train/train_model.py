@@ -1,6 +1,6 @@
 import argparse
 from scipy.optimize import minimize_scalar
-from train.Trainer import Trainer
+from train.ConTrainer import Trainer
 from constants import TRAIN_RL, TRAIN_MODELS, VALIDATION
 
 
@@ -14,14 +14,11 @@ def main():
     train_part = TRAIN_RL if name in ['listings', 'threads'] else TRAIN_MODELS
     trainer = Trainer(name, train_part, VALIDATION)
 
-    # estimate with gamma=1
-    # trainer.train_model(gamma=1)
-
-    # # use univariate optimizer to find regularization hyperparameter
-    # loss = lambda g: -trainer.train_model(gamma=g)
-    # result = minimize_scalar(loss, method='bounded', bounds=(0, 1), 
-    #     options={'xatol': 0.1, 'disp': 3})
-    # print(result)
+    # use univariate optimizer to find regularization hyperparameter
+    loss = lambda g: trainer.train_model(gamma=g)
+    result = minimize_scalar(loss, method='bounded', bounds=(0, 2), 
+        options={'xatol': 0.1, 'disp': 3})
+    print(result)
 
 
 if __name__ == '__main__':

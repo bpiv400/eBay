@@ -393,9 +393,9 @@ def save_small(d, name):
     small['y'] = d['y'][idx_small]
 
     # baserates
-    small['lnp'] = d['lnp']
-    if 'idx_lnp' in d:
-        small['idx_lnp'] = d['idx_lnp'][idx_small]
+    small['p'] = d['p']
+    if 'idx_p' in d:
+        small['idx_p'] = d['idx_p'][idx_small]
 
     # inputs
     small['x'] = {k: v[idx_small, :] for k, v in d['x'].items()}
@@ -406,23 +406,22 @@ def save_small(d, name):
 
 def get_con_baserates(s):
     p = np.zeros(CON_MULTIPLIER + 1, dtype='float32')
-    den = len(s) + CON_MULTIPLIER + 1
     for i in range(CON_MULTIPLIER + 1):
-        p[i] = (1 + (s == i).sum()) / den
-    return np.log(p)
+        p[i] = (s == i).mean()
+    return p
 
 
 def get_baserates(y):
     # probability of each concession value by turn
     if 'index' in y.index.names:
-        lnp = dict()
+        p = dict()
         for turn in y.index.unique(level='index'):
             s = y.xs(turn, level='index')
-            lnp[turn] = get_con_baserates(s)
+            p[turn] = get_con_baserates(s)
     else:
-        lnp = get_con_baserates(y)
+        p = get_con_baserates(y)
 
-    return lnp
+    return p
 
 
 # save featnames and sizes
@@ -434,11 +433,11 @@ def save_files(d, part, name):
 
     # baserates
     if name in ['first_con', 'con_slr']:
-        d['lnp'] = get_baserates(d['y'])
+        d['p'] = get_baserates(d['y'])
 
         # turn index for baserates
         if 'index' in d['y'].index.names:
-            d['idx_lnp'] = d['y'].index.get_level_values(
+            d['idx_p'] = d['y'].index.get_level_values(
                 level='index').to_numpy()
 
     # pandas index

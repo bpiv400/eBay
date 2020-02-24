@@ -3,7 +3,7 @@ from compress_pickle import load
 from constants import INPUT_DIR
 
 
-class eBayDataset(Dataset):
+class EBayDataset(Dataset):
     def __init__(self, part, name):
         """
         Defines a parent class that extends torch.utils.data.Dataset.

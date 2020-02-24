@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 import torch.nn as nn
-from torch.nn.functional import log_softmax
+from torch.nn.functional import log_softmax, nll_loss
 from datetime import datetime as dt
 from torch.utils.tensorboard import SummaryWriter
 from torch.optim import Adam, lr_scheduler
@@ -148,7 +148,8 @@ class Trainer:
             # move to device
             b['x'] = {k: v.to(self.device) for k, v in b['x'].items()}
             b['y'] = b['y'].to(self.device)
-            b['p'] = b['p'].to(self.device)
+            if 'lnp' in b:
+                b['lnp'] = b['lnp'].to(self.device)
 
             # increment loss
             loss += self._run_batch(b, net, optimizer)
@@ -180,13 +181,13 @@ class Trainer:
 
         # calculate loss
         lnp = log_softmax(theta, dim=-1)
-        loss = -torch.sum(torch.take(lnp, b['y'].squeeze()))
+        loss = nll_loss(lnp, b['y'], reduction='sum')
 
         # add in regularization penalty and step down gradients
         if is_training:
             if self.gamma > 0:
                 p = torch.exp(lnp)
-                kl = torch.sum(p * (lnp - torch.log(b['p'])), dim=-1)
+                kl = torch.sum(p * (lnp - b['lnp']), dim=-1)
                 loss += torch.sum(self.gamma * kl)
 
             optimizer.zero_grad()
