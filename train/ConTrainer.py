@@ -219,7 +219,7 @@ class Trainer:
         net = nets[idx]
  
         # initialize output with log10 learning rate
-        output = {'lnlr': lnlr, 'loss': loss[idx]}
+        output = {'lnlr': lnlr, 'loss': loss[idx], 'gamma': self.gamma}
  
         # collect remaining output and print
         print('Epoch 0')
