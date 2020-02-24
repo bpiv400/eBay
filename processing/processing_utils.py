@@ -319,9 +319,11 @@ def save_featnames(x, name):
     # for offer models
     if 'offer1' in x:
         if BYR_PREFIX in name:
-            feats = CLOCK_FEATS + OUTCOME_FEATS + TURN_FEATS[name]
+            feats = CLOCK_FEATS + OUTCOME_FEATS
         else:
-            feats = CLOCK_FEATS + TIME_FEATS + OUTCOME_FEATS + TURN_FEATS[name]
+            feats = CLOCK_FEATS + TIME_FEATS + OUTCOME_FEATS
+        if BYR_PREFIX in name or SLR_PREFIX in name or 'first' in name:
+            feats += TURN_FEATS[name]
 
         # check that all offer groupings have same organization
         for k in x.keys():
