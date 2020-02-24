@@ -5,18 +5,8 @@ LOG_DIR = OUTPUT_DIR + 'logs/'
 
 # optimization parameters
 NUM_WORKERS = {'first_arrival': 5,
-               'next_arrival': 8,
-               'hist': 8,
-               'first_con': 8,
-               'first_msg': 8,
-               'delay_byr': 8,
                'delay_slr': 5,
-               'con_byr': 8,
-               'con_slr': 6,
-               'msg_byr': 8,
-               'msg_slr': 8,
-               'listings': 8,
-               'threads': 8}
+               'con_slr': 6}
 MBSIZE = {True: 128, False: 2048}  # True for training, False for validation
 
 # learning rate parameters

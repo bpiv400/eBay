@@ -1,6 +1,6 @@
 #!/bin/bash
 #$ -t 1-6
-#$ -l m_mem_free=10G
+#$ -l m_mem_free=50G
 #$ -N e_msg
 #$ -j y
 #$ -o logs/processing/

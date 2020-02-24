@@ -1,6 +1,6 @@
 #!/bin/bash
 #$ -t 2-7
-#$ -l m_mem_free=10G
+#$ -l m_mem_free=50G
 #$ -N e_delay
 #$ -j y
 #$ -o logs/processing/
