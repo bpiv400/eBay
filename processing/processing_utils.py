@@ -404,23 +404,25 @@ def save_small(d, name):
     dump(small, INPUT_DIR + 'small/{}.gz'.format(name))
 
 
+def get_con_baserates(s):
+    p = np.zeros(CON_MULTIPLIER + 1, dtype='float32')
+    den = len(s) + CON_MULTIPLIER + 1
+    for i in range(CON_MULTIPLIER + 1):
+        p[i] = (1 + (s == i).sum()) / den
+    return np.log(p)
+
+
 def get_baserates(y):
     # probability of each concession value by turn
-    p = dict()
     if 'index' in y.index.names:
+        lnp = dict()
         for turn in y.index.unique(level='index'):
-            p[turn] = np.zeros(CON_MULTIPLIER + 1, dtype='float32')
             s = y.xs(turn, level='index')
-            den = len(s) + CON_MULTIPLIER + 1
-            for i in range(CON_MULTIPLIER + 1):
-                p[turn][i] = (1 + (s == i).sum()) / den
+            lnp[turn] = get_con_baserates(s)
     else:
-        p = np.zeros(CON_MULTIPLIER + 1, dtype='float32')
-        den = len(y) + CON_MULTIPLIER + 1
-        for i in range(CON_MULTIPLIER + 1):
-            p[i] = (1 + (y == i).sum()) / den
+        lnp = get_con_baserates(y)
 
-    return np.log(p)
+    return lnp
 
 
 # save featnames and sizes
