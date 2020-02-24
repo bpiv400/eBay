@@ -318,7 +318,7 @@ def save_featnames(x, name):
 
     # for offer models
     if 'offer1' in x:
-        if BYR_PREFIX in name:
+        if BYR_PREFIX in name or int(name[-1]) in IDX[BYR_PREFIX]:
             feats = CLOCK_FEATS + OUTCOME_FEATS
         else:
             feats = CLOCK_FEATS + TIME_FEATS + OUTCOME_FEATS

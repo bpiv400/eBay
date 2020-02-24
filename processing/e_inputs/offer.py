@@ -18,8 +18,6 @@ def get_x_offer(offers, idx, outcome, role, turn):
     # last turn to include
     if outcome == DELAY:
         last = turn - 1
-    elif outcome == CON and turn == 1:
-        last = 0
     else:
         last = turn
     # turn features
