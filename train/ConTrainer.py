@@ -45,7 +45,7 @@ class Trainer:
         self.train = ConDataset(train_part, name)
         self.test = ConDataset(test_part, name)
 
-    def train_model(self, gamma=0):
+    def train_model(self, gamma=0.0):
         """
         Public method to train model.
         :param gamma: scalar regularization parameter for variational dropout.

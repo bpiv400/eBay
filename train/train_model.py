@@ -1,8 +1,9 @@
 import argparse
-import numpy as np
+from scipy.optimize import minimize_scalar
 from train.ConTrainer import Trainer
-from train.train_consts import GRID_INC
+from train.train_consts import GAMMA_TOL, GAMMA_MAX
 from constants import TRAIN_RL, TRAIN_MODELS, VALIDATION
+from featnames import CON
 
 
 def main():
@@ -16,17 +17,14 @@ def main():
     trainer = Trainer(name, train_part, VALIDATION)
 
     # use grid search to find regularization hyperparameter
-    gamma, best = GRID_INC, np.inf
-    while True:
-        loss = trainer.train_model(gamma=gamma)
-
-        # stop if loss is worse than best
-        if loss > best:
-            break
-
-        # reset best and increment gamma
-        best = loss
-        gamma += GRID_INC
+    if name in [CON + str(i) for i in range(1, 7)]:
+        result = minimize_scalar(lambda g: trainer.train_model(gamma=g),
+                                 method='bounded',
+                                 bounds=(0, GAMMA_MAX),
+                                 options={'xatol': GAMMA_TOL, 'disp': 3})
+        print(result)
+    else:
+        trainer.train_model(gamma=0)
 
 
 if __name__ == '__main__':
