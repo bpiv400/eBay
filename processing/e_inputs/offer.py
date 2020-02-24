@@ -174,7 +174,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--part', type=str)
     parser.add_argument('--outcome', type=str)
-    parser.add_argument('--turn', type=str)
+    parser.add_argument('--turn', type=int)
     args = parser.parse_args()
     part, outcome, turn = args.part, args.outcome, args.turn
 
