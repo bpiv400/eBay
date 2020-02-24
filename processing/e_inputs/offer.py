@@ -189,8 +189,8 @@ def main():
         assert turn in range(1, 8)
 
     # model name
-    name = '%s%s'.format(outcome, turn)
-    print('%s/%s'.format(part, name))
+    name = '{}{}'.format(outcome, turn)
+    print('{}/{}'.format(part, name))
 
     # input dataframes, output processed dataframes
     d = process_inputs(part, outcome, turn)
