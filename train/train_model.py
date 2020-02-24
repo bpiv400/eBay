@@ -16,7 +16,7 @@ def main():
     trainer = Trainer(name, train_part, VALIDATION)
 
     # use grid search to find regularization hyperparameter
-    gamma, best = 0, np.inf
+    gamma, best = GRID_INC, np.inf
     while True:
         loss = trainer.train_model(gamma=gamma)
 
