@@ -148,8 +148,8 @@ class Trainer:
             # move to device
             b['x'] = {k: v.to(self.device) for k, v in b['x'].items()}
             b['y'] = b['y'].to(self.device)
-            if 'lnp' in b:
-                b['lnp'] = b['lnp'].to(self.device)
+            if 'p' in b:
+                b['p'] = b['p'].to(self.device)
 
             # increment loss
             loss += self._run_batch(b, net, optimizer)
@@ -180,14 +180,13 @@ class Trainer:
         theta = net(b['x']).squeeze()
 
         # calculate loss
-        lnp = log_softmax(theta, dim=-1)
-        loss = nll_loss(lnp, b['y'], reduction='sum')
+        lnq = log_softmax(theta, dim=-1)
+        loss = nll_loss(lnq, b['y'], reduction='sum')
 
         # add in regularization penalty and step down gradients
         if is_training:
             if self.gamma > 0:
-                p = torch.exp(lnp)
-                kl = torch.sum(p * (lnp - b['lnp']), dim=-1)
+                kl = torch.sum(b['p'] * (torch.log(b['p']) - lnq), dim=-1)
                 loss += torch.sum(self.gamma * kl)
 
             optimizer.zero_grad()

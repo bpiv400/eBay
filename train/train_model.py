@@ -16,7 +16,7 @@ def main():
 
     # use univariate optimizer to find regularization hyperparameter
     loss = lambda g: trainer.train_model(gamma=g)
-    result = minimize_scalar(loss, method='bounded', bounds=(0, 2), 
+    result = minimize_scalar(loss, method='bounded', bounds=(0, 1), 
         options={'xatol': 0.1, 'disp': 3})
     print(result)
 

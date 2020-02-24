@@ -28,13 +28,13 @@ class ConDataset(EBayDataset):
         x = {k: v[idx, :] for k, v in self.d['x'].items()}
 
         # lnp is indexed using idx_lnp, if it exists
-        if 'idx_lnp' in self.d:
-            idx_lnp = self.d['idx_lnp'][idx]
-            lnp = self.d['lnp'][idx_lnp]
+        if 'idx_p' in self.d:
+            idx_p = self.d['idx_p'][idx]
+            p = self.d['p'][idx_p]
         else:
-            lnp = self.d['lnp']
+            p = self.d['p']
 
-        return y, x, lnp
+        return y, x, p
 
     @staticmethod
     def collate(batch):
@@ -43,7 +43,7 @@ class ConDataset(EBayDataset):
         :param batch: list of (dictionary of) numpy arrays.
         :return: dictionary of (dictionary of) tensors.
         """
-        y, x, lnp = [], {}, []
+        y, x, p = [], {}, []
         for b in batch:
             y.append(b[0])
             for k, v in b[1].items():
@@ -51,12 +51,12 @@ class ConDataset(EBayDataset):
                     x[k].append(torch.from_numpy(v))
                 else:
                     x[k] = [torch.from_numpy(v)]
-            lnp.append(torch.from_numpy(b[2]))
+            p.append(torch.from_numpy(b[2]))
 
         # convert to (single) tensors
         y = torch.from_numpy(np.asarray(y)).long()
         x = {k: torch.stack(v).float() for k, v in x.items()}
-        lnp = torch.stack(lnp).float()
+        p = torch.stack(lnp).float()
 
         # output is dictionary of tensors
-        return {'y': y, 'x': x, 'lnp': lnp}
+        return {'y': y, 'x': x, 'p': p}
