@@ -432,7 +432,7 @@ def save_files(d, part, name):
         save_sizes(d['x'], name)
 
     # baserates
-    if name in ['first_con', 'con_slr']:
+    if CON in name:
         d['p'] = get_baserates(d['y'])
 
         # turn index for baserates
