@@ -1,7 +1,7 @@
 import argparse
 import numpy as np
 from train.ConTrainer import Trainer
-from train.train_consts import GRID_FTOL, GRID_INC
+from train.train_consts import GRID_INC
 from constants import TRAIN_RL, TRAIN_MODELS, VALIDATION
 
 
