@@ -56,7 +56,7 @@ class ConDataset(EBayDataset):
         # convert to (single) tensors
         y = torch.from_numpy(np.asarray(y)).long()
         x = {k: torch.stack(v).float() for k, v in x.items()}
-        p = torch.stack(lnp).float()
+        p = torch.stack(p).float()
 
         # output is dictionary of tensors
         return {'y': y, 'x': x, 'p': p}
