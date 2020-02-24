@@ -99,7 +99,7 @@ class SellerEnvironment(AgentEnvironment):
             return 0.0
         else:
             slr_gross = self.outcome[1] * (1 - get_cut(self.lookup[META]))
-            return slr_gross - LISTING_FEE
+            return slr_gross - (LISTING_FEE * (self.relist_count + 1))
 
     def get_info(self, agent_sale=False, lstg_complete=False):
         # initialize vars
