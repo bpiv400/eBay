@@ -47,7 +47,7 @@ class AgentEnvironment(EbayEnvironment, Env):
         """
         Sample a new lstg from the file and set lookup and x_lstg series
         """
-        if self._ix == -1 or self._ix == self._num_lstgs:
+        if self._ix == -1 or self._ix == ENV_LSTG_COUNT:
             self._draw_lstgs()
         self.x_lstg = pd.Series(self._x_lstg_slice[self._ix, :], index=self.composer.x_lstg_cols)
         self.x_lstg = self.composer.decompose_x_lstg(self.x_lstg)
