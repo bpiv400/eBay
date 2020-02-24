@@ -185,8 +185,10 @@ class Trainer:
 
         # add in regularization penalty and step down gradients
         if is_training:
-            if self.gamma > 0:
-                kl = torch.sum(b['p'] * (torch.log(b['p']) - lnq), dim=-1)
+            if self.gamma > 0:                
+                kl = b['p'] * (torch.log(b['p']) - lnq)
+                kl[b['p'] == 0] = 0
+                kl = torch.sum(kl, dim=-1)
                 loss += torch.sum(self.gamma * kl)
 
             optimizer.zero_grad()
