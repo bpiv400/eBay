@@ -362,7 +362,7 @@ def save_sizes(x, name):
         sizes['out'] = HIST_QUANTILES
     elif DELAY in name:
         sizes['out'] = INTERVAL_COUNTS[role] + 1
-    elif CON in name:
+    elif name in [CON + str(i) for i in range(1, 7)]:
         sizes['out'] = CON_MULTIPLIER + 1
     else:
         sizes['out'] = 1
