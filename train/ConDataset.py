@@ -26,12 +26,8 @@ class ConDataset(EBayDataset):
         # index components of input dictionary
         x = {k: v[idx, :] for k, v in self.d['x'].items()}
 
-        # lnp is indexed using idx_lnp, if it exists
-        if 'idx_p' in self.d:
-            idx_p = self.d['idx_p'][idx]
-            p = self.d['p'][idx_p]
-        else:
-            p = self.d['p']
+        # p is indexed directly
+        p = self.d['p']
 
         return y, x, p
 
