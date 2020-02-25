@@ -43,9 +43,8 @@ class Trainer:
         print(self.sizes)
 
         # load datasets
-        dataset = ConDataset if self.sizes['out'] > 1 else EBayDataset
-        self.train = dataset(train_part, name)
-        self.test = dataset(test_part, name)
+        self.train = ConDataset(train_part, name)
+        self.test = ConDataset(test_part, name)
 
     def train_model(self, gamma=0.0):
         """
@@ -179,15 +178,17 @@ class Trainer:
 
         # call forward on model
         net.train(is_training)
-        theta = net(b['x']).squeeze()
+        theta = net(b['x'])
 
         # calculate loss
+        if theta.size()[1] == 1:
+            theta = torch.cat((torch.zeros_like(theta), theta), dim=1)
         lnq = log_softmax(theta, dim=-1)
         loss = nll_loss(lnq, b['y'], reduction='sum')
 
         # add in regularization penalty and step down gradients
         if is_training:
-            if self.gamma > 0:                
+            if self.gamma > 0:
                 kl = b['p'] * (torch.log(b['p']) - lnq)
                 kl[b['p'] == 0] = 0
                 kl = torch.sum(kl, dim=-1)

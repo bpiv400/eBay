@@ -1,4 +1,5 @@
-from constants import PREFIX, HOUR, MINUTE, ARRIVAL_PREFIX, SLR_PREFIX, BYR_PREFIX, MAX_DELAY
+from constants import PREFIX, HOUR, MINUTE, ARRIVAL_PREFIX, SLR_PREFIX, BYR_PREFIX, \
+    MAX_DELAY, HIST_QUANTILES, CON_MULTIPLIER
 
 # directories
 CLEAN_DIR = '%s/clean/' % PREFIX
@@ -69,8 +70,8 @@ LTYPES = {'lstg': 'int64',
 
 
 # features for chunks
-LVARS = ['cat', 'cndtn', 'start_date', 'end_time', \
-    'start_price', 'start_price_pctile', 'arrival_rate', 'flag']
+LVARS = ['cat', 'cndtn', 'start_date', 'end_time',
+         'start_price', 'start_price_pctile', 'arrival_rate', 'flag']
 TVARS = ['byr_hist', 'bin']
 OVARS = ['clock', 'price', 'accept', 'reject', 'censored', 'message']
 
@@ -85,5 +86,29 @@ INTERVAL_COUNTS = {
      ARRIVAL_PREFIX: int(MAX_DELAY[ARRIVAL_PREFIX] / INTERVAL[ARRIVAL_PREFIX]),
      SLR_PREFIX: int(MAX_DELAY[SLR_PREFIX] / INTERVAL[SLR_PREFIX]),
      BYR_PREFIX: int(MAX_DELAY[BYR_PREFIX] / INTERVAL[BYR_PREFIX]),
-     BYR_PREFIX + '_7': int(MAX_DELAY[SLR_PREFIX] / INTERVAL[BYR_PREFIX])
+     BYR_PREFIX + '_7': int(MAX_DELAY[SLR_PREFIX] / INTERVAL[SLR_PREFIX])
 }
+
+# size of model output
+NUM_OUT = {'first_arrival': INTERVAL_COUNTS[ARRIVAL_PREFIX] + 1,
+           'next_arrival':  INTERVAL_COUNTS[ARRIVAL_PREFIX] + 1,
+           'hist': HIST_QUANTILES,
+           'delay2': INTERVAL_COUNTS[SLR_PREFIX] + 1,
+           'delay3': INTERVAL_COUNTS[BYR_PREFIX] + 1,
+           'delay4': INTERVAL_COUNTS[SLR_PREFIX] + 1,
+           'delay5': INTERVAL_COUNTS[BYR_PREFIX] + 1,
+           'delay6': INTERVAL_COUNTS[SLR_PREFIX] + 1,
+           'delay7': INTERVAL_COUNTS[BYR_PREFIX + '_7'] + 1,
+           'con1': CON_MULTIPLIER + 1,
+           'con2': CON_MULTIPLIER + 1,
+           'con3': CON_MULTIPLIER + 1,
+           'con4': CON_MULTIPLIER + 1,
+           'con5': CON_MULTIPLIER + 1,
+           'con6': CON_MULTIPLIER + 1,
+           'con7': 1,
+           'msg1': 1,
+           'msg2': 1,
+           'msg3': 1,
+           'msg4': 1,
+           'msg5': 1,
+           'msg6': 1}
