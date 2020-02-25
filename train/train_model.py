@@ -17,14 +17,11 @@ def main():
     trainer = Trainer(name, train_part, VALIDATION)
 
     # use grid search to find regularization hyperparameter
-    if name in [CON + str(i) for i in range(1, 7)]:
-        result = minimize_scalar(lambda g: trainer.train_model(gamma=g),
-                                 method='bounded',
-                                 bounds=(0, GAMMA_MAX),
-                                 options={'xatol': GAMMA_TOL, 'disp': 3})
-        print(result)
-    else:
-        trainer.train_model(gamma=0)
+    result = minimize_scalar(lambda g: trainer.train_model(gamma=g),
+                             method='bounded',
+                             bounds=(0, GAMMA_MAX),
+                             options={'xatol': GAMMA_TOL, 'disp': 3})
+    print(result)
 
 
 if __name__ == '__main__':
