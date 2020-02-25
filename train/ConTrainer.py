@@ -5,6 +5,7 @@ from torch.nn.functional import log_softmax, nll_loss
 from datetime import datetime as dt
 from torch.utils.tensorboard import SummaryWriter
 from torch.optim import Adam, lr_scheduler
+from train.EBayDataset import EBayDataset
 from train.ConDataset import ConDataset
 from train.train_consts import FTOL, LOG_DIR, LNLR0, LNLR1, LNLR_FACTOR
 from nets.FeedForward import FeedForward
@@ -42,8 +43,9 @@ class Trainer:
         print(self.sizes)
 
         # load datasets
-        self.train = ConDataset(train_part, name)
-        self.test = ConDataset(test_part, name)
+        dataset = ConDataset if self.sizes['out'] > 1 else EBayDataset
+        self.train = dataset(train_part, name)
+        self.test = dataset(test_part, name)
 
     def train_model(self, gamma=0.0):
         """

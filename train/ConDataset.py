@@ -12,7 +12,6 @@ class ConDataset(EBayDataset):
         :param part: string partition name (e.g., train_models).
         :param name: string model name.
         """
-        assert 'con' in name
         super().__init__(part, name)
 
     def __getitem__(self, idx):
