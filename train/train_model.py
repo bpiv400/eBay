@@ -1,7 +1,7 @@
 import argparse
 from scipy.optimize import minimize_scalar
 from train.ConTrainer import Trainer
-from train.train_consts import GAMMA_TOL, GAMMA_MAX, GAMMA_MULTIPLER
+from train.train_consts import GAMMA_TOL, GAMMA_MAX, GAMMA_MULTIPLIER
 from constants import TRAIN_RL, TRAIN_MODELS, VALIDATION
 from featnames import CON
 
@@ -19,8 +19,8 @@ def main():
     # use grid search to find regularization hyperparameter
     result = minimize_scalar(lambda g: trainer.train_model(gamma=g),
                              method='bounded',
-                             bounds=(0, GAMMA_MAX * GAMMA_MULTIPLER[name]),
-                             options={'xatol': GAMMA_TOL * GAMMA_MULTIPLER[name], 
+                             bounds=(0, GAMMA_MAX * GAMMA_MULTIPLIER[name]),
+                             options={'xatol': GAMMA_TOL * GAMMA_MULTIPLIER[name], 
                                       'disp': 3})
     print(result)
 
