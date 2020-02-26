@@ -5,6 +5,7 @@ from rlpyt.agents.pg.categorical import CategoricalPgAgent
 from rlpyt.samplers.serial.sampler import SerialSampler
 from rlpyt.samplers.parallel.cpu.collectors import CpuResetCollector
 from rlpyt.samplers.serial.sampler import SerialEvalCollector
+from rlpyt.utils.logging.context import logger_context
 from featnames import DELAY
 from constants import VALIDATION
 from agent.agent_consts import (BATCH_T, BATCH_B, CON_TYPE,
@@ -61,9 +62,9 @@ def main():
     ###########################################
 
     args = parser.parse_args()
-
+    feat_id = 0
     agent_params = {
-        FEAT_ID: 0,
+        FEAT_ID: feat_id,
         SLR_PREFIX: True,
         CON_TYPE: args.con,
         DELAY: delay
@@ -90,9 +91,29 @@ def main():
                          algo=algo,
                          agent=agent,
                          sampler=sampler,
-                         n_steps=TOTAL_STEPS)
+                         n_steps=TOTAL_STEPS,
+                         log_interval_steps=100)
     # not sure if this is right
-    runner.train()
+    # log parameters (agent hyperparameters, algorithm parameters
+    log_params = {
+        CON_TYPE: args.con,
+        FEAT_ID: feat_id,
+        SLR_PREFIX: True,
+        DELAY: False,
+        'steps': TOTAL_STEPS,
+        'ppo_minibatches': PPO_MINIBATCHES,
+        'ppo_epochs': PPO_EPOCHS,
+        'batch_B': BATCH_B,
+        'batch_T': BATCH_T,
+    }
+    # trying to understand logging
+    print('min itr learn: {}'.format(runner.min_itr_learn))
+    print('log interval steps: {}'.format(runner.log_interval_steps))
+    print('n steps: {}'.format(runner.n_steps))
+
+    with logger_context(log_dir='slr', name='debug',
+                        run_ID='con', log_params=log_params, snapshot_mode='last'):
+        runner.train()
 
 
 if __name__ == '__main__':
