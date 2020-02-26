@@ -39,4 +39,4 @@ GAMMA_MULTIPLIER = {'first_arrival': 1,
 		            'msg3': 1,
 		            'msg4': 1,
 		            'msg5': 1,
-		            'msg6': 2}
+		            'msg6': 3}
