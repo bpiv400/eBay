@@ -18,3 +18,25 @@ FTOL = 1e-2  # decrease learning rate when relative improvement in loss is less 
 # grid search parameters
 GAMMA_TOL = 0.01
 GAMMA_MAX = 0.1
+GAMMA_MULTIPLIER = {'first_arrival': 1,
+		            'next_arrival':  1,
+		            'hist': 1,
+		            'delay2': 1,
+		            'delay3': 1,
+		            'delay4': 1,
+		            'delay5': 1,
+		            'delay6': 1,
+		            'delay7': 1,
+		            'con1': 1,
+		            'con2': 1,
+		            'con3': 1,
+		            'con4': 1,
+		            'con5': 1,
+		            'con6': 1,
+		            'con7': 1,
+		            'msg1': 1,
+		            'msg2': 1,
+		            'msg3': 1,
+		            'msg4': 1,
+		            'msg5': 1,
+		            'msg6': 2}
