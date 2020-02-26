@@ -153,7 +153,8 @@ class Trainer:
             # move to device
             b['x'] = {k: v.to(self.device) for k, v in b['x'].items()}
             b['y'] = b['y'].to(self.device)
-            b['p'] = b['p'].to(self.device)
+            if 'p' in b:
+                b['p'] = b['p'].to(self.device)
 
             # increment loss
             loss += self._run_batch(b, net, optimizer)

@@ -1,4 +1,6 @@
+import torch
 from torch.utils.data import Dataset
+import numpy as np
 from compress_pickle import load
 from constants import INPUT_DIR
 
