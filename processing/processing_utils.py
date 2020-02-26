@@ -386,7 +386,8 @@ def save_small(d, name):
     small['y'] = d['y'][idx_small]
 
     # baserates
-    small['p'] = d['p']
+    if 'p' in d:
+        small['p'] = d['p']
 
     # inputs
     small['x'] = {k: v[idx_small, :] for k, v in d['x'].items()}
@@ -414,7 +415,8 @@ def save_files(d, part, name):
         save_sizes(d['x'], name)
 
     # baserates
-    d['p'] = get_baserates(d['y'], name)
+    if CON in name or MSG in name:
+        d['p'] = get_baserates(d['y'], name)
 
     # pandas index
     idx = d['y'].index

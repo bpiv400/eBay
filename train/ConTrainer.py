@@ -35,6 +35,9 @@ class Trainer:
         self.dev = dev
         self.device = device
 
+        # boolean for time loss
+        self.is_delay = 'delay' in name or name == 'next_arrival'
+
         # penalization factor to be set later
         self.gamma = None
 
@@ -43,8 +46,9 @@ class Trainer:
         print(self.sizes)
 
         # load datasets
-        self.train = ConDataset(train_part, name)
-        self.test = ConDataset(test_part, name)
+        dataset = EBayDataset if self.is_delay else ConDataset
+        self.train = dataset(train_part, name)
+        self.test = dataset(test_part, name)
 
     def train_model(self, gamma=0.0):
         """
@@ -165,6 +169,21 @@ class Trainer:
 
         return loss
 
+    @staticmethod
+    def _time_loss(lnq, y):
+        # arrivals have positive y
+        arrival = y >= 0
+        lnL = torch.sum(lnq[arrival, y[arrival]])
+
+        # non-arrivals
+        cens = y < 0
+        y_cens = y[cens]
+        q_cens = torch.exp(lnq[cens, :])
+        for i in range(q_cens.size()[0]):
+            lnL += torch.log(torch.sum(q_cens[i, y_cens[i]:]))
+
+        return -lnL
+
     def _run_batch(self, b, net, optimizer):
         """
         Loops over examples in batch, calculates loss.
@@ -179,11 +198,16 @@ class Trainer:
         net.train(is_training)
         theta = net(b['x'])
 
-        # calculate loss
+        # softmax
         if theta.size()[1] == 1:
             theta = torch.cat((torch.zeros_like(theta), theta), dim=1)
         lnq = log_softmax(theta, dim=-1)
-        loss = nll_loss(lnq, b['y'], reduction='sum')
+
+        # calculate loss
+        if self.is_delay:
+            loss = self._time_loss(lnq, b['y'])
+        else:
+            loss = nll_loss(lnq, b['y'], reduction='sum')
 
         # add in regularization penalty and step down gradients
         if is_training:
