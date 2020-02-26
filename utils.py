@@ -24,7 +24,7 @@ def get_remaining(lstg_start, delay_start, max_delay):
     :param delay_start: seconds from START to beginning of delay window.
     :param max_delay: length of delay period.
     """
-    remaining = lstg_start + MAX_DELAY[ARRIVAL_PREFIX] - delay_start
+    remaining = lstg_start + MAX_DELAY[1] - delay_start
     remaining /= max_delay
     remaining = np.minimum(1, remaining)
     return remaining

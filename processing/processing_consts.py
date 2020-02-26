@@ -1,5 +1,4 @@
-from constants import PREFIX, HOUR, MINUTE, ARRIVAL_PREFIX, SLR_PREFIX, BYR_PREFIX, \
-    MAX_DELAY, HIST_QUANTILES, CON_MULTIPLIER
+from constants import PREFIX, HOUR, MINUTE, MAX_DELAY, HIST_QUANTILES, CON_MULTIPLIER
 
 # directories
 CLEAN_DIR = '%s/clean/' % PREFIX
@@ -76,29 +75,26 @@ TVARS = ['byr_hist', 'bin']
 OVARS = ['clock', 'price', 'accept', 'reject', 'censored', 'message']
 
 # intervals for checking offer arrivals
-INTERVAL = {
-     ARRIVAL_PREFIX: HOUR,
-     SLR_PREFIX: 5 * MINUTE,
-     BYR_PREFIX: 30 * MINUTE
-}
+INTERVAL = {1: HOUR,
+            2: 5 * MINUTE,
+            3: 30 * MINUTE,
+            4: 5 * MINUTE,
+            5: 30 * MINUTE,
+            6: 5 * MINUTE,
+            7: 5 * MINUTE}
 
-INTERVAL_COUNTS = {
-     ARRIVAL_PREFIX: int(MAX_DELAY[ARRIVAL_PREFIX] / INTERVAL[ARRIVAL_PREFIX]),
-     SLR_PREFIX: int(MAX_DELAY[SLR_PREFIX] / INTERVAL[SLR_PREFIX]),
-     BYR_PREFIX: int(MAX_DELAY[BYR_PREFIX] / INTERVAL[BYR_PREFIX]),
-     BYR_PREFIX + '_7': int(MAX_DELAY[SLR_PREFIX] / INTERVAL[SLR_PREFIX])
-}
+INTERVAL_COUNTS = {i: int(MAX_DELAY[i] / INTERVAL[i]) for i in INTERVAL.keys()}
 
 # size of model output
-NUM_OUT = {'first_arrival': INTERVAL_COUNTS[ARRIVAL_PREFIX] + 1,
-           'next_arrival':  INTERVAL_COUNTS[ARRIVAL_PREFIX] + 1,
+NUM_OUT = {'first_arrival': INTERVAL_COUNTS[1] + 1,
+           'next_arrival':  INTERVAL_COUNTS[1] + 1,
            'hist': HIST_QUANTILES,
-           'delay2': INTERVAL_COUNTS[SLR_PREFIX] + 1,
-           'delay3': INTERVAL_COUNTS[BYR_PREFIX] + 1,
-           'delay4': INTERVAL_COUNTS[SLR_PREFIX] + 1,
-           'delay5': INTERVAL_COUNTS[BYR_PREFIX] + 1,
-           'delay6': INTERVAL_COUNTS[SLR_PREFIX] + 1,
-           'delay7': INTERVAL_COUNTS[BYR_PREFIX + '_7'] + 1,
+           'delay2': INTERVAL_COUNTS[2] + 1,
+           'delay3': INTERVAL_COUNTS[3] + 1,
+           'delay4': INTERVAL_COUNTS[4] + 1,
+           'delay5': INTERVAL_COUNTS[5] + 1,
+           'delay6': INTERVAL_COUNTS[6] + 1,
+           'delay7': INTERVAL_COUNTS[7] + 1,
            'con1': CON_MULTIPLIER + 1,
            'con2': CON_MULTIPLIER + 1,
            'con3': CON_MULTIPLIER + 1,

@@ -72,10 +72,7 @@ def get_days_delay(clock):
     # for turn 1, days and delay are 0
     for i in range(2, 8):
         days[i] = clock[i] - clock[i - 1]
-        if i in [2, 4, 6, 7]:  # byr has 2 days for last turn
-            delay[i] = days[i] / MAX_DELAY[SLR_PREFIX]
-        elif i in [3, 5]:  # ignore byr arrival and last turn
-            delay[i] = days[i] / MAX_DELAY[BYR_PREFIX]
+        delay[i] = days[i] / MAX_DELAY[i]
     # no delay larger than 1
     assert delay.max().max() <= 1
 
@@ -273,10 +270,10 @@ def get_interarrival_period(clock):
     censored = censored.reindex(index=y.index)
 
     # convert y to periods
-    y //= INTERVAL[ARRIVAL_PREFIX]
+    y //= INTERVAL[1]
 
     # replace censored interarrival times negative count of censored buckets
-    y.loc[censored] -= INTERVAL_COUNTS[ARRIVAL_PREFIX]
+    y.loc[censored] -= INTERVAL_COUNTS[1]
 
     return y, diff
 
@@ -348,12 +345,13 @@ def save_sizes(x, name):
     sizes['x'] = {k: len(v.columns) for k, v in x.items()}
 
     # save interval and interval counts
-    role = name.split('_')[-1]
-    if ('arrival' in name) or ('delay' in name):
-        sizes['interval'] = INTERVAL[role]
-        sizes['interval_count'] = INTERVAL_COUNTS[role]
-        if role == BYR_PREFIX:
-            sizes['interval_count_7'] = INTERVAL_COUNTS[BYR_PREFIX + '_7']
+    if 'arrival' in name:
+        sizes['interval'] = INTERVAL[1]
+        sizes['interval_count'] = INTERVAL_COUNTS[1]
+    elif name.startswith('delay'):
+        turn = int(name[-1])
+        sizes['interval'] = INTERVAL[turn]
+        sizes['interval_count'] = INTERVAL_COUNTS[turn]
 
     # length of model output vector
     sizes['out'] = NUM_OUT[name]

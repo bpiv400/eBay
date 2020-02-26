@@ -51,12 +51,13 @@ MONTH = MAX_DAYS * DAY
 EXPIRATION = 2 * DAY
 
 # maximal delay times
-MAX_DELAY = {
-    ARRIVAL_PREFIX: MAX_DAYS * 24 * 3600,
-    SLR_PREFIX: 2 * 24 * 3600,
-    '{}_{}'.format(BYR_PREFIX, 7): 2 * 24 * 3600,
-    BYR_PREFIX: 14 * 24 * 3600
-}
+MAX_DELAY = {1: MONTH,
+             2: 2 * DAY,
+             3: 14 * DAY,
+             4: 2 * DAY,
+             5: 14 * DAY,
+             6: 2 * DAY,
+             7: 2 * DAY}
 
 # concessions that denote an (almost) even split
 SPLIT_PCTS = [.49, .50, .51]

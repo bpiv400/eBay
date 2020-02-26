@@ -1,10 +1,10 @@
 import argparse
 import numpy as np
 import pandas as pd
-from processing.processing_consts import MAX_DELAY, INTERVAL, INTERVAL_COUNTS
+from processing.processing_consts import INTERVAL, INTERVAL_COUNTS
 from processing.processing_utils import load_file, get_x_thread, \
     init_x, save_files
-from constants import IDX, DAY, BYR_PREFIX, SLR_PREFIX, PARTITIONS
+from constants import IDX, DAY, MAX_DELAY, BYR_PREFIX, SLR_PREFIX, PARTITIONS
 from featnames import CON, NORM, SPLIT, MSG, AUTO, EXP, REJECT, DAYS, DELAY, \
     INT_REMAINING, TIME_FEATS
 from utils import get_remaining
@@ -61,46 +61,34 @@ def get_y_msg(df, role):
     return df.loc[mask, MSG]
 
 
-def get_y_delay(df, role):
+def get_y_delay(df, turn):
     # convert to seconds
     delay = np.round(df[DAYS] * DAY).astype('int64')
-
     # drop zero delays
     delay = delay[delay > 0]
     df = df.reindex(index=delay.index)
-
     # error checking
-    assert delay.max() <= MAX_DELAY[role]
-    if role == BYR_PREFIX:
-        assert delay.xs(7, level='index').max() <= MAX_DELAY[SLR_PREFIX]
-
+    assert delay.max() <= MAX_DELAY[turn]
     # convert to periods
-    delay //= INTERVAL[role]
-
+    delay //= INTERVAL[turn]
     # replace expired delays with last index
     assert np.all(df.loc[df[DELAY] == 1, EXP])
-    delay.loc[delay == INTERVAL_COUNTS[role]] = -1
-
+    delay.loc[delay == INTERVAL_COUNTS[turn]] = -1
     # replace censored delays with negative index
-    delay.loc[df[EXP] & (df[DELAY] < 1)] -= INTERVAL_COUNTS[role]
-
+    delay.loc[df[EXP] & (df[DELAY] < 1)] -= INTERVAL_COUNTS[turn]
     return delay
 
 
-def calculate_remaining(part, idx, role):
+def calculate_remaining(part, idx, turn):
     # load timestamps
     lstg_start = load_file(part, 'lookup').start_time.reindex(
         index=idx, level='lstg')
     delay_start = load_file(part, 'clock').groupby(
-        ['lstg', 'thread']).shift().reindex(index=idx).astype('int64')
-
-    # maximal delay
-    max_delay = pd.Series(MAX_DELAY[role], index=idx)
-    max_delay.loc[max_delay.index.isin([7], level='index')] = \
-        MAX_DELAY[BYR_PREFIX + '_7']
+        ['lstg', 'thread']).shift().dropna().astype('int64')
+    delay_start = delay_start.xs(turn, level='index').reindex(index=idx)
 
     # remaining calculation
-    remaining = get_remaining(lstg_start, delay_start, max_delay)
+    remaining = get_remaining(lstg_start, delay_start, MAX_DELAY[turn])
 
     # error checking
     assert np.all(remaining > 0) and np.all(remaining <= 1)
@@ -132,7 +120,7 @@ def process_inputs(part, outcome, turn):
     elif outcome == MSG:
         y = get_y_msg(df, role)
     else:
-        y = get_y_delay(df, role)
+        y = get_y_delay(df, turn)
     idx = y.index
 
     # listing features
@@ -143,7 +131,7 @@ def process_inputs(part, outcome, turn):
 
     # add time remaining to x_thread
     if outcome == DELAY:
-        x_thread[INT_REMAINING] = calculate_remaining(part, idx, role)
+        x_thread[INT_REMAINING] = calculate_remaining(part, idx, turn)
 
     x['lstg'] = pd.concat([x['lstg'], x_thread], axis=1)
 
