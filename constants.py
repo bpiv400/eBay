@@ -1,6 +1,7 @@
 import os
 from pandas.tseries.holiday import USFederalHolidayCalendar as Calendar
 from platform import platform
+from featnames import DELAY, CON, MSG
 
 # strings for referencing quantities related to buyer and seller interface
 SLR_PREFIX = 'slr'
