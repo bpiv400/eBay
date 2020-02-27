@@ -54,3 +54,8 @@ class Offer:
         else:
             return self.time < other.time
 
+    def __str__(self):
+        rep = 'price: {} | time: {} | player: {}'.format(self.price, self.time, self.player)
+        return rep
+
+

@@ -1,5 +1,4 @@
 import numpy as np
-from rlenv.events.Thread import Thread
 from rlenv.environments.EbayEnvironment import EbayEnvironment
 from constants import MONTH
 from featnames import START_TIME, TIME_FEATS

@@ -12,7 +12,7 @@ class ValueRecorder(Recorder):
 
     def add_offer(self, event, time_feats=None, censored=False):
         if self.verbose:
-            self.print_offer(event, event.summary())
+            self.print_offer(event)
 
     def records2frames(self):
         self.values = self.record2frame(self.values, VAL_COLS)

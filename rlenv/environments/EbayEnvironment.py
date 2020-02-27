@@ -1,8 +1,7 @@
-import pandas as pd
 import numpy as np
 from collections import namedtuple
 from constants import BYR_PREFIX, MONTH, ARRIVAL_PREFIX, MAX_DELAY
-from featnames import START_TIME, ACC_PRICE, DEC_PRICE, START_PRICE, DELAY, TIME_FEATS
+from featnames import ACC_PRICE, DEC_PRICE, START_PRICE, DELAY
 from rlenv.Heap import Heap
 from rlenv.time.TimeFeatures import TimeFeatures
 from rlenv.time.Offer import Offer
@@ -70,18 +69,18 @@ class EbayEnvironment:
         if INTERACT and event.type != ARRIVAL:
             input('Press Enter to continue...')
         if event.type == ARRIVAL:
-            print('processing arrival')
+            # print('processing arrival')
             return self.process_arrival(event)
         elif event.type == FIRST_OFFER:
-            print('processing first offer for thread {} for turn 1'.format(event.thread_id))
+            # print('processing first offer for thread {} for turn 1'.format(event.thread_id))
             return self.process_first_offer(event)
         elif event.type == OFFER_EVENT:
-            print('processing offer for thread {} for turn {}'.format(event.thread_id,
-                                                                      event.turn))
+            # print('processing offer for thread {} for turn {}'.format(event.thread_id,
+            #                                                           event.turn))
             return self.process_offer(event)
         elif event.type == DELAY_EVENT:
-            print('processing delay for thread {} for turn {}'.format(event.thread_id,
-                                                                      event.turn))
+            # print('processing delay for thread {} for turn {}'.format(event.thread_id,
+            #                                                           event.turn))
             return self.process_delay(event)
         else:
             raise NotImplementedError()
@@ -105,10 +104,13 @@ class EbayEnvironment:
         self.prepare_offer(event)
         # generate concession and msg if necessary
         offer = self.get_offer_outcomes(event, slr=slr_offer)
+        # print(str(offer))
         return self.process_post_offer(event, offer)
 
     def process_post_offer(self, event, offer):
         slr_offer = event.turn % 2 == 0
+        # print('summary right before record')
+        # print(event.summary())
         self.record(event, censored=False)
         # check whether the offer is an acceptance
         if event.is_sale():
@@ -131,7 +133,7 @@ class EbayEnvironment:
                 elif auto == REJ_IND:
                     self._process_slr_auto_rej(event, offer)
                     return False
-            print('updated time features after standard offer')
+            # print('updated time features after standard offer')
             self.time_feats.update_features(offer=offer)
             self._init_delay(event)
             return False
@@ -234,10 +236,10 @@ class EbayEnvironment:
                                                     turn=event.turn)
         delay_seconds = self.get_delay(input_dict=input_dict, turn=event.turn, thread_id=event.thread_id,
                                        time=event.priority, delay_type=event.delay_type)
-        print('delay seconds: {}'.format(delay_seconds))
+        # print('delay seconds: {}'.format(delay_seconds))
         # Test environment returns None when delay model is mistakenly called
         if delay_seconds is None:
-            print("No delay returned; exiting listing.")
+            # print("No delay returned; exiting listing.")
             return True
         event.update_delay(seconds=delay_seconds)
         self.queue.push(event)
@@ -354,6 +356,8 @@ class EbayEnvironment:
             msg = self.get_msg(input_dict=input_dict, time=event.priority, turn=event.turn,
                                thread_id=event.thread_id)
             event.update_msg(msg=msg)
+        # print('summary right before get offer outcomes returns')
+        # print(event.summary())
         return offer
 
     def get_delay(self, input_dict=None, turn=None, thread_id=None,

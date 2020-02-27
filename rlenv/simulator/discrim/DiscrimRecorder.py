@@ -41,7 +41,8 @@ class DiscrimRecorder(Recorder):
                ]
         row += list(time_feats)
         self.offers.append(row)
-        self.print_offer(event, summary)
+        if self.verbose:
+            self.print_offer(event)
 
     @staticmethod
     def compress_common_cols(cols, frames, dtypes):

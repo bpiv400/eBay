@@ -52,37 +52,37 @@ class Recorder:
         dump(self.construct_output(), self.records_path)
         self.reset_recorders()
 
-    def print_offer(self, event, summary):
+    @staticmethod
+    def print_offer(event):
         """
         Prints data about the offer if verbose
-        """
-        if self.verbose:
-            con, norm, msg = summary
-            if event.turn > 1:
-                days, delay = event.delay_outcomes()
+    """
+        con, norm, msg = event.summary()
+        if event.turn > 1:
+            days, delay = event.delay_outcomes()
+        else:
+            days, delay = 0, 0
+        byr = event.turn % 2 != 0
+        if con == 0:
+            if delay == 1 and not byr:
+                otype = 'expiration rejection'
+            elif delay == 0 and not byr:
+                otype = 'automatic rejection'
             else:
-                days, delay = 0, 0
-            byr = event.turn % 2 != 0
-            if con == 0:
-                if delay == 1 and not byr:
-                    otype = 'expiration rejection'
-                elif delay == 0 and not byr:
-                    otype = 'automatic rejection'
-                else:
-                    otype = 'standard rejection'
-            elif con == 100:
-                if delay == 0 and not byr:
-                    otype = 'automatic acceptance'
-                else:
-                    otype = 'standard acceptance'
+                otype = 'standard rejection'
+        elif con == 100:
+            if delay == 0 and not byr:
+                otype = 'automatic acceptance'
             else:
-                otype = 'standard offer'
-            print('Thread: {} | Offer: {} | clock: {}'.format(event.thread_id,
-                                                              event.turn, event.priority))
-            if event.turn > 1:
-                print('Days: {}, Delay: {}'.format(days, delay))
-            print('Offer type: {}'.format(otype))
-            print('Concession: {} | norm: {} | message: {}'.format(con, norm, msg))
+                otype = 'standard acceptance'
+        else:
+            otype = 'standard offer'
+        print('Thread: {} | Offer: {} | clock: {}'.format(event.thread_id,
+                                                          event.turn, event.priority))
+        if event.turn > 1:
+            print('Days: {}, Delay: {}'.format(days, delay))
+        print('Offer type: {}'.format(otype))
+        print('Concession: {} | norm: {} | message: {}'.format(con, norm, msg))
 
     def print_sale(self, sale, price, dur):
         """
