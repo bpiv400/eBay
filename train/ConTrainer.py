@@ -185,6 +185,18 @@ class Trainer:
 
         return -lnL
 
+    @staticmethod
+    def _get_entropy(lnq):
+        h = -torch.sum(torch.exp(lnq) * lnq, dim=-1)
+        return h
+
+    @staticmethod
+    def _get_kl(lnq, p):
+        kl = p * (torch.log(p) - lnq)
+        kl[p == 0] = 0
+        kl = torch.sum(kl, dim=-1)
+        return kl
+
     def _run_batch(self, b, net, optimizer):
         """
         Loops over examples in batch, calculates loss.
@@ -213,10 +225,11 @@ class Trainer:
         # add in regularization penalty and step down gradients
         if is_training:
             if self.gamma > 0:
-                kl = b['p'] * (torch.log(b['p']) - lnq)
-                kl[b['p'] == 0] = 0
-                kl = torch.sum(kl, dim=-1)
-                loss += torch.sum(self.gamma * kl)
+                if self.is_delay:
+                    penalty = self._get_entropy(lnq)
+                else:
+                    penalty = self._get_kl(lnq, b['p'])
+                loss += torch.sum(self.gamma * penalty)
 
             optimizer.zero_grad()
             loss.backward()

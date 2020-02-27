@@ -1,14 +1,12 @@
-import argparse
 import torch
 import numpy as np
 import pandas as pd
 from compress_pickle import load
-from processing.f_discrim.discrim_utils import get_batches, PartialDataset, get_sim_times
-from processing.processing_utils import load_file, get_arrival_times, get_interarrival_period
+from processing.f_discrim.discrim_utils import get_batches, PartialDataset
 from utils import load_model, load_featnames
-from constants import VALIDATION, ENV_SIM_DIR, SIM_CHUNKS, INPUT_DIR, INDEX_DIR
+from constants import VALIDATION, INPUT_DIR, INDEX_DIR
 
-NAME = 'first_con'
+NAME = 'delay7'
 
 
 def import_data():
@@ -39,21 +37,29 @@ def get_model_prediction(x):
 	for b in batches:
 		x_b = {k: v.to('cuda') for k, v in b.items()}
 		theta = net(x_b)
-		probs = torch.exp(torch.nn.functional.log_softmax(theta, dim=1))
+		lnp = torch.nn.functional.log_softmax(theta, dim=1)
 		a1.append(theta.cpu().numpy())
-		a2.append(probs.cpu().numpy())
-	return np.concatenate(a1), np.concatenate(a1)
+		a2.append(lnp.cpu().numpy())
+	return np.concatenate(a1), np.concatenate(a2)
 
 
-def get_log_likelihood(y, p):
-	lnL = []
-	for i in range(len(y)):
-		lnL.append(np.log(p[i, y.iloc[i]]))
-	return np.array(lnL)
-
+def get_log_likelihood(y, lnp):
+	# initialize output
+	lnL = pd.Series(0.0, index=y.index)
+	# arrivals
+	arrival = y >= 0
+	lnL[arrival] = lnp[arrival, y[arrival]]
+	# non-arrivals
+	cens = y < 0
+	if np.sum(cens) > 0:
+		y_cens = y[cens]
+		p_cens = np.exp(lnp[cens, :])
+		for i in range(len(y_cens)):
+			lnL.loc[y_cens.index[i]] = np.log(np.sum(p_cens[i, y_cens.iloc[i]:]))
+	return lnL
 
 
 y, x = import_data()
-theta, p = get_model_prediction(x)
-lnL = get_log_likelihood(y, p)
+theta, lnp = get_model_prediction(x)
+lnL = get_log_likelihood(y, lnp)
 

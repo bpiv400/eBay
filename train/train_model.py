@@ -26,7 +26,7 @@ def main():
                                  bounds=(0, GAMMA_MAX * multiplier),
                                  options={'xatol': GAMMA_TOL * multiplier, 
                                           'disp': 3})
-    print(result)
+        print(result)
 
 
 if __name__ == '__main__':
