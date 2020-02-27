@@ -12,7 +12,9 @@ for model in MODELS:
 	lnL_test = dict()
 	for run, d in em.Runs().items():
 		if len(d['scalars']) > 0:
-			lnL_test[run] = em.Scalars(run, 'lnL_test')[-1].value
+			res = em.Scalars(run, 'lnL_test')
+			if len(res) > 6:  # restrict to runs with more than 6 epochs
+				lnL_test[run] = em.Scalars(run, 'lnL_test')[-1].value
 
 	idx = np.argmax(list(lnL_test.values()))
 	best = list(lnL_test.keys())[idx]
