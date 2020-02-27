@@ -1,3 +1,4 @@
+import argparse
 import torch
 import numpy as np
 import pandas as pd
@@ -6,13 +7,12 @@ from processing.f_discrim.discrim_utils import get_batches, PartialDataset
 from utils import load_model, load_featnames
 from constants import VALIDATION, INPUT_DIR, INDEX_DIR
 
-NAME = 'delay7'
 
-
-def import_data():
-	d = load(INPUT_DIR + '{}/{}.gz'.format(VALIDATION, NAME))
-	idx = load(INDEX_DIR + '{}/{}.gz'.format(VALIDATION, NAME))
-	featnames = load_featnames(NAME)
+def import_data(name):
+	print('Loading data')
+	d = load(INPUT_DIR + '{}/{}.gz'.format(VALIDATION, name))
+	idx = load(INDEX_DIR + '{}/{}.gz'.format(VALIDATION, name))
+	featnames = load_featnames(name)
 	# reconstruct y
 	y = pd.Series(d['y'], index=idx)
 	# reconstruct x
@@ -22,25 +22,23 @@ def import_data():
 		x[k] = pd.DataFrame(v, index=idx, columns=cols)
 	# x to numpy
 	x = {k: v.values for k, v in x.items()}
-	return y, x
-
-
-def get_model_prediction(x):
 	# create dataset
 	data = PartialDataset(x)
-	# create model
-	net = load_model(NAME).to('cuda')
-	# multinomial
-	print('Generating predictions from model')
+	return y.astype('int64'), data
+
+
+def get_model_prediction(data, net):
+	print('predictions from model')
 	batches = get_batches(data)
-	a1, a2 = [], []
+	a = []
 	for b in batches:
 		x_b = {k: v.to('cuda') for k, v in b.items()}
 		theta = net(x_b)
+		if theta.size()[1] == 1:
+			theta = torch.cat((torch.zeros_like(theta), theta), dim=1)
 		lnp = torch.nn.functional.log_softmax(theta, dim=1)
-		a1.append(theta.cpu().numpy())
-		a2.append(lnp.cpu().numpy())
-	return np.concatenate(a1), np.concatenate(a2)
+		a.append(lnp.cpu().numpy())
+	return np.concatenate(a)
 
 
 def get_log_likelihood(y, lnp):
@@ -59,7 +57,28 @@ def get_log_likelihood(y, lnp):
 	return lnL
 
 
-y, x = import_data()
-theta, lnp = get_model_prediction(x)
-lnL = get_log_likelihood(y, lnp)
+def main():
+	# extract parameters from command line
+	parser = argparse.ArgumentParser()
+	parser.add_argument('--name', type=str, help='model name')
+	name = parser.parse_args().name
 
+	# load model
+	net = load_model(name).to('cuda')
+
+	# import data
+	y, data = import_data(name)
+
+	# model predictions and log-likelihood
+	lnp = get_model_prediction(data, net)
+	lnL = get_log_likelihood(y, lnp)
+
+	# summary statistics
+	print('Mean log-likelihood: {}'.format(np.mean(lnL)))
+	print('Worst log-likelihood: {}'.format(np.min(lnL)))
+	for i in [-10, -20, -30]:
+		print('Share below {}: {}'.format(i, np.mean(lnL < i)))
+
+
+if __name__ == '__main__':
+	main()
