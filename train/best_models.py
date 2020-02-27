@@ -1,7 +1,7 @@
 from shutil import copyfile
 from tensorboard.backend.event_processing.event_multiplexer import EventMultiplexer
 import numpy as np
-from processing.processing_utils import LOG_DIR
+from processing.processing_consts import LOG_DIR
 from constants import MODEL_DIR, MODELS
 
 

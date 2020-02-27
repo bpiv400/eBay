@@ -1,7 +1,6 @@
 import torch, torch.nn as nn
 from collections import OrderedDict
 from nets.nets_utils import FullyConnected, Embedding
-from constants import EMBEDDING_GROUPS
 
 
 class FeedForward(nn.Module):
