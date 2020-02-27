@@ -17,5 +17,7 @@ for model in MODELS:
 	idx = np.argmax(list(lnL_test.values()))
 	best = list(lnL_test.keys())[idx]
 
+	# copy best performing model into parent directory
+	print('{}: {}'.format(model, best))
 	copyfile(MODEL_DIR + '{}/{}.net'.format(model, best),
 			 MODEL_DIR + '{}.net'.format(model))
