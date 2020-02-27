@@ -82,6 +82,14 @@ START = '2012-06-01 00:00:00'
 END = '2013-05-31 23:59:59'
 HOLIDAYS = Calendar().holidays(start=START, end=END)
 
-# groups for embedding layers
-EMBEDDING_GROUPS = {'w2v': ['lstg', 'w2v_slr', 'w2v_byr'],
-                    'other': ['lstg', 'cat', 'cndtn', 'slr']}
+# model names
+FIRST_ARRIVAL_MODEL = 'first_arrival'
+INTERARRIVAL_MODEL = 'next_arrival'
+BYR_HIST_MODEL = 'hist'
+
+# model sets
+ARRIVAL_MODELS = [FIRST_ARRIVAL_MODEL, INTERARRIVAL_MODEL, BYR_HIST_MODEL]
+DELAY_MODELS = ['{}{}'.format(DELAY, i) for i in range(2, 8)]
+CON_MODELS = ['{}{}'.format(CON, i) for i in range(1, 8)]
+MSG_MODELS = ['{}{}'.format(MSG, i) for i in range(1, 7)]
+MODELS = ARRIVAL_MODELS + DELAY_MODELS + CON_MODELS + MSG_MODELS
