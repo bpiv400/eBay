@@ -1,6 +1,6 @@
 import numpy as np
 from collections import namedtuple
-from constants import BYR_PREFIX, MONTH, ARRIVAL_PREFIX, MAX_DELAY
+from constants import BYR_PREFIX, MONTH, MAX_DELAY
 from featnames import ACC_PRICE, DEC_PRICE, START_PRICE, DELAY
 from rlenv.Heap import Heap
 from rlenv.time.TimeFeatures import TimeFeatures
@@ -231,15 +231,15 @@ class EbayEnvironment:
 
     def process_delay(self, event):
         # no need to check expiration since this must occur at the same time as the previous offer
-        model_name = model_str(DELAY, byr=event.turn % 2 != 0)
+        model_name = model_str(DELAY, turn=event.turn)
         input_dict = self.composer.build_input_dict(model_name, sources=event.sources(),
                                                     turn=event.turn)
         delay_seconds = self.get_delay(input_dict=input_dict, turn=event.turn, thread_id=event.thread_id,
-                                       time=event.priority, delay_type=event.delay_type)
+                                       time=event.priority)
         # print('delay seconds: {}'.format(delay_seconds))
         # Test environment returns None when delay model is mistakenly called
         if delay_seconds is None:
-            # print("No delay returned; exiting listing.")
+            # print("No delay returned; exiting listing.")s
             return True
         event.update_delay(seconds=delay_seconds)
         self.queue.push(event)
@@ -332,7 +332,7 @@ class EbayEnvironment:
             intervals = self.arrival.first_arrival(input_dict)
         else:
             intervals = self.arrival.inter_arrival(input_dict)
-        width = self.intervals[ARRIVAL_PREFIX]
+        width = self.intervals[1]
         return int((intervals + np.random.uniform()) * width)
 
     def get_hist(self, input_dict=None, time=None, thread_id=None):
@@ -360,14 +360,13 @@ class EbayEnvironment:
         # print(event.summary())
         return offer
 
-    def get_delay(self, input_dict=None, turn=None, thread_id=None,
-                  time=None, delay_type=None):
+    def get_delay(self, input_dict=None, turn=None, thread_id=None, time=None):
         if turn % 2 == 0:
             index = self.seller.delay(input_dict=input_dict, turn=turn)
         else:
             index = self.buyer.delay(input_dict=input_dict, turn=turn)
-        seconds = int((index + np.random.uniform()) * self.intervals[delay_type])
-        seconds = min(seconds, MAX_DELAY[delay_type])
+        seconds = int((index + np.random.uniform()) * self.intervals[turn])
+        seconds = min(seconds, MAX_DELAY[turn])
         return seconds
 
     def _get_arrival_input_dict(self, event=None):

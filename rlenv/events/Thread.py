@@ -24,8 +24,6 @@ class Thread(Event):
         self.sources = None
         self.turn = 1
         self.thread_id = thread_id
-
-        self.delay_type = SLR_PREFIX
         self.max_delay = None
 
     def init_thread(self, sources=None, hist=None):
@@ -60,8 +58,7 @@ class Thread(Event):
 
     def _init_delay_params(self, lstg_start):
         # update object to contain relevant delay attributes
-        delay_type = get_delay_type(self.turn)
-        self.max_delay = MAX_DELAY[delay_type]
+        self.max_delay = MAX_DELAY[self.turn]
         # create remaining
         remaining = get_remaining(
             lstg_start, self.priority, self.max_delay)

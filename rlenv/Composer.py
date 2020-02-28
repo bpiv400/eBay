@@ -143,12 +143,12 @@ class Composer:
         return input_dict
 
     def make_intervals(self):
-        ints = {
-            BYR_PREFIX: self.sizes[model_str(DELAY, byr=True)][INTERVAL],
-            '{}_{}'.format(BYR_PREFIX, 7): self.sizes[model_str(DELAY, byr=True)][INTERVAL],
-            SLR_PREFIX: self.sizes[model_str(DELAY, byr=False)][INTERVAL],
-            ARRIVAL_PREFIX: self.sizes[FIRST_ARRIVAL_MODEL][INTERVAL]
-        }
+        ints = dict()
+        for i in range(1, 8):
+            if i == 1:
+                ints[i] = self.sizes[FIRST_ARRIVAL_MODEL][INTERVAL]
+            else:
+                ints[i] = self.sizes[model_str(DELAY, turn=i)][INTERVAL]
         return ints
 
     def _build_offer_vector(self, offer_vector, byr=False):

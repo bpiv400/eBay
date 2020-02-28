@@ -23,8 +23,9 @@ class PlayerInterface:
         else:
             turns = [2, 4, 6]
         for turn in turns:
-            self.delay_models[turn] = load_model(model_str(DELAY, turn=turn))
             self.con_models[turn] = load_model(model_str(CON, turn=turn))
+            if turn != 1:
+                self.delay_models[turn] = load_model(model_str(DELAY, turn=turn))
             if turn != 7:
                 self.msg_models[turn] = load_model(model_str(MSG, turn=turn))
 
