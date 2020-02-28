@@ -7,7 +7,7 @@ from rlenv.events.Event import Event
 from rlenv.env_consts import (FIRST_OFFER, DELAY_EVENT, OFFER_EVENT)
 from constants import (SLR_PREFIX, BYR_PREFIX, MAX_DELAY)
 from rlenv.env_utils import (slr_rej_outcomes, slr_auto_acc_outcomes,
-                             get_delay_outcomes, get_delay_type)
+                             get_delay_outcomes)
 from rlenv.time.Offer import Offer
 from utils import get_remaining
 

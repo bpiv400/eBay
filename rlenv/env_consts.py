@@ -1,5 +1,5 @@
 from utils import unpickle
-from constants import INPUT_DIR, SLR_PREFIX, BYR_PREFIX
+from constants import INPUT_DIR
 from featnames import (CON, DELAY, MSG, ALL_OFFER_FEATS, CLOCK_FEATS,
                        TIME_FEATS, DAYS, EXP, NORM, SPLIT, AUTO, REJECT,
                        THREAD_COUNT)
@@ -70,14 +70,6 @@ DELAY_EVENT = 'DELAY'
 FIRST_ARRIVAL_MODEL = 'first_arrival'
 INTERARRIVAL_MODEL = 'next_arrival'
 BYR_HIST_MODEL = 'hist'
-
-# model sets
-ARRIVAL_MODELS = [FIRST_ARRIVAL_MODEL, INTERARRIVAL_MODEL, BYR_HIST_MODEL]
-OFFER_NO_PREFIXES = [CON, MSG, DELAY]
-OFFER_MODELS = ['{}_{}'.format(model, SLR_PREFIX) for model in OFFER_NO_PREFIXES] + \
-        ['{}_{}'.format(model, BYR_PREFIX) for model in OFFER_NO_PREFIXES]
-MODELS = OFFER_MODELS + ARRIVAL_MODELS
-
 
 # useful indices in offer feats
 CLOCK_START_IND = 0

@@ -3,7 +3,7 @@ Utility functions for use in objects related to the RL environment
 """
 import torch
 import os
-import numpy as nps
+import numpy as np
 import pandas as pd
 from compress_pickle import load
 from torch.distributions.categorical import Categorical

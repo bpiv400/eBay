@@ -3,10 +3,10 @@ from collections import OrderedDict, namedtuple
 import torch
 import numpy as np
 import pandas as pd
+from constants import MODELS, OFFER_MODELS, SLR_PREFIX
 from featnames import (OUTCOME_FEATS, TURN_FEATS, RELISTED,
                        MONTHS_SINCE_LSTG, BYR_HIST,
                        INT_REMAINING, MONTHS_SINCE_LAST)
-from constants import ARRIVAL_PREFIX
 from utils import load_sizes, load_featnames
 from rlenv.env_consts import *
 from rlenv.env_utils import model_str
@@ -43,14 +43,16 @@ class Composer:
         x_lstg_cols = list(x_lstg_cols)
         featnames = load_featnames(FIRST_ARRIVAL_MODEL)
         featnames[LSTG_MAP] = [feat for feat in featnames[LSTG_MAP] if feat in x_lstg_cols]
-        featnames[SLR_PREFIX] = load_featnames(model_str(CON, byr=False))[SLR_PREFIX]
+        featnames[SLR_PREFIX] = load_featnames(model_str(CON, turn=2))[SLR_PREFIX]
         for model in MODELS:
             # verify all x_lstg based sets contain the same features in the same order
             Composer.verify_lstg_sets_shared(model, x_lstg_cols, featnames.copy())
-            if model in OFFER_MODELS and DELAY not in model:
-                Composer.verify_offer_append(model, featnames[LSTG_MAP])
-            elif model in OFFER_MODELS:
-                Composer.verify_delay_append(model, featnames[LSTG_MAP])
+            if model in OFFER_MODELS:
+                Composer.verify_offer_feats(model)
+                if DELAY not in model:
+                    Composer.verify_offer_append(model, featnames[LSTG_MAP])
+                else:
+                    Composer.verify_delay_append(model, featnames[LSTG_MAP])
             elif model == FIRST_ARRIVAL_MODEL:
                 Composer.verify_first_arrival_append(featnames[LSTG_MAP])
             elif model == INTERARRIVAL_MODEL:
@@ -60,7 +62,7 @@ class Composer:
         return featnames
 
     @staticmethod
-    def build_offer_feats():
+    def verify_offer_feats(model):
         shared_feats = CLOCK_FEATS + TIME_FEATS + OUTCOME_FEATS
         for model in OFFER_MODELS:
             turn_feats = TURN_FEATS[model]
