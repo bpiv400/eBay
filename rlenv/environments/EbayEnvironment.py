@@ -10,8 +10,8 @@ from rlenv.events.Arrival import Arrival
 from rlenv.sources import ArrivalSources
 from rlenv.sources import ThreadSources
 from rlenv.events.Thread import Thread
-from rlenv.env_consts import (INTERACT, SALE, PRICE, DUR, ACC_IND,
-                              REJ_IND, OFF_IND, ARRIVAL, FIRST_OFFER,
+from rlenv.env_consts import (INTERACT, SALE, PRICE, DUR, ACC_IND, CON,
+                              REJ_IND, OFF_IND, ARRIVAL, FIRST_OFFER, MSG,
                               OFFER_EVENT, DELAY_EVENT, FIRST_ARRIVAL_MODEL,
                               BYR_HIST_MODEL, INTERARRIVAL_MODEL)
 from rlenv.env_utils import get_clock_feats, get_con_outcomes, need_msg, model_str
@@ -322,9 +322,9 @@ class EbayEnvironment:
 
     def get_msg(self, input_dict=None, time=None, turn=None, thread_id=None):
         if turn % 2 == 0:
-            msg = self.seller.msg(input_dict=input_dict)
+            msg = self.seller.msg(input_dict=input_dict, turn=turn)
         else:
-            msg = self.buyer.msg(input_dict=input_dict)
+            msg = self.buyer.msg(input_dict=input_dict, turn=turn)
         return msg
 
     def get_arrival(self, input_dict=None, time=None):
@@ -340,7 +340,7 @@ class EbayEnvironment:
 
     def get_offer_outcomes(self, event, slr=False):
         # sample concession
-        model_name = self.seller.con_model_name if slr else self.buyer.con_model_name
+        model_name = model_str(CON, turn=event.turn)
         input_dict = self.composer.build_input_dict(model_name, sources=event.sources(),
                                                     turn=event.turn)
         con = self.get_con(input_dict=input_dict, time=event.priority, turn=event.turn,
@@ -350,7 +350,7 @@ class EbayEnvironment:
         offer = event.update_con_outcomes(con_outcomes=con_outcomes)
         # sample msg if necessary
         if need_msg(con, slr):
-            model_name = self.seller.msg_model_name if slr else self.buyer.msg_model_name
+            model_name = model_str(MSG, turn=event.turn)
             input_dict = self.composer.build_input_dict(model_name, sources=event.sources(),
                                                         turn=event.turn)
             msg = self.get_msg(input_dict=input_dict, time=event.priority, turn=event.turn,
@@ -363,9 +363,9 @@ class EbayEnvironment:
     def get_delay(self, input_dict=None, turn=None, thread_id=None,
                   time=None, delay_type=None):
         if turn % 2 == 0:
-            index = self.seller.delay(input_dict=input_dict)
+            index = self.seller.delay(input_dict=input_dict, turn=turn)
         else:
-            index = self.buyer.delay(input_dict=input_dict)
+            index = self.buyer.delay(input_dict=input_dict, turn=turn)
         seconds = int((index + np.random.uniform()) * self.intervals[delay_type])
         seconds = min(seconds, MAX_DELAY[delay_type])
         return seconds
