@@ -14,23 +14,20 @@ from rlenv.env_consts import (META_6, META_7, SIM_CHUNKS_DIR, SIM_VALS_DIR, OFFE
 from utils import extract_clock_feats, is_split, slr_norm, byr_norm
 
 
-def model_str(model_name, byr=False):
+def model_str(model_name, turn=None):
     """
     returns the string giving the name of an offer model
     model (used to refer to the model in SimulatorInterface
      and Composer
 
     :param model_name: str giving base name
-    :param byr: boolean indicating whether this is a buyer model
+    :param turn: int giving the turn associated with the model
     :return:
     """
     if model_name in ARRIVAL_MODELS:
         return model_name
-    if not byr:
-        name = '{}_{}'.format(model_name, SLR_PREFIX)
     else:
-        name = '{}_{}'.format(model_name, BYR_PREFIX)
-    return name
+        return '{}{}'.format(model_name, turn)
 
 
 def get_clock_feats(time):
