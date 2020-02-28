@@ -156,7 +156,6 @@ by lstg thread: g byte accept = status[_n-1] == 1 | status[_n-1] == 9
 replace price = start_price if price == . & index == 2 & reject
 by lstg thread: replace price = price[_n-1] if price == . & accept
 by lstg thread: replace price = price[_n-2] if price == . & reject
-drop start_price
 
 * save temp
 
@@ -207,8 +206,11 @@ save dta/temp2a, replace
 
 rename (byr byr_us) =_thread
 merge m:1 lstg using dta/listings, nogen update ///
-	keepus(slr byr byr_us end_date bo *_price)
+	keepus(slr byr byr_us end_date bo *_price unique)
 keep if thread != . | bo == 0
+
+keep if unique
+drop unique
 
 g double end_time = ///
 	clock(string(end_date, "%td") + " 23:59:59", "DMYhms")
@@ -248,28 +250,56 @@ drop count
 
 replace thread = 0 if bin
 replace index = 1 if bin
-replace clock = end_time if bin
 
-* bins in threads
+* bins in threads: thread number and byr experience
 
 gsort lstg byr -thread
 by lstg byr: replace thread = thread[_n-1] if index == .
 by lstg byr: replace byr_hist = byr_hist[_n-1] if index == .
 
-by lstg: egen double last_clock = max(clock)
-replace last_clock = max(last_clock, end_time + 1000 * (1 - 24 * 3600))
-replace clock = last_clock + runiform() * (end_time - last_clock) ///
-	if index == .
-drop last_clock
+* bins in threads: during buyer turn
 
 sort lstg thread index
 by lstg thread: replace index = index[_n-1] + 1 ///
 	if index == . & mod(index[_n-1],2) == 0
-by lstg thread: replace index = index[_n-1] ///
-	if index == . & mod(index[_n-1],2) == 1
+	
+* bins in threads: during seller turn	
+	
+by lstg thread: replace clock = clock[_n-1] if index == .
+by lstg thread: replace index = index[_n-1] if index == .
 
 sort lstg thread index, stable
 by lstg thread index: keep if _n == _N
+
+* assume same-day non-expired reject on another thread is time of bin
+
+g byte temp = thread if clock == .
+by lstg: egen byte binthread = max(temp)
+drop temp
+
+g double temp = clock if thread != binthread
+by lstg: egen double maxclock = max(temp)
+drop temp binthread
+
+by lstg thread: g byte exp = (clock - clock[_n-1]) / 1000 == 172800
+g byte temp = reject & !exp if clock == maxclock
+by lstg: egen byte check = max(temp)
+drop temp exp
+
+by lstg: egen double temp = max(clock)
+replace check = 0 if temp > maxclock
+drop temp
+
+replace clock = maxclock if clock == . & dofc(maxclock) == dofc(end_time) & check
+replace clock = end_time if clock == . & thread == 0
+drop maxclock check
+
+* bins in thread: randomly fill in missing clocks
+
+by lstg: egen double last_clock = max(clock)
+replace last_clock = max(last_clock, end_time + 1000 * (1 - 24 * 3600))
+replace clock = last_clock + runiform() * (end_time - last_clock) if clock == .
+drop last_clock
 
 * save temp
 

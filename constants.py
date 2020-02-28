@@ -1,6 +1,7 @@
 import os
 from pandas.tseries.holiday import USFederalHolidayCalendar as Calendar
 from platform import platform
+from featnames import DELAY, CON, MSG
 
 # strings for referencing quantities related to buyer and seller interface
 SLR_PREFIX = 'slr'
@@ -11,14 +12,14 @@ ARRIVAL_PREFIX = 'arrival'
 TOL_HALF = 0.02
 
 # paths and directories
-if 'Ubuntu' in platform():		# Etan's box
-	PREFIX = '/data/eBay'
+if 'Ubuntu' in platform():  # Etan's box
+    PREFIX = '/data/eBay'
 elif 'Windows' in platform() and 'A:' in os.getcwd():  # Barry's pc
-	PREFIX = 'A:/ebay'
+    PREFIX = 'A:/ebay'
 elif 'Windows' in platform() and 'C:' in os.getcwd():  # Barry's laptop
-	PREFIX = os.path.expanduser('~/ebay')
-else:							# cluster and AWS
-	PREFIX = os.path.expanduser('~/weka/eBay')
+    PREFIX = os.path.expanduser('~/ebay')
+else:  # cluster and AWS
+    PREFIX = os.path.expanduser('~/weka/eBay')
 
 PARTS_DIR = '%s/partitions/' % PREFIX
 ENV_SIM_DIR = '%s/envSimulator/' % PREFIX
@@ -27,8 +28,7 @@ INPUT_DIR = '%s/inputs/' % PREFIX
 INDEX_DIR = '%s/index/' % PREFIX
 FEATNAMES_DIR = '%sfeatnames/' % INPUT_DIR
 MODEL_DIR = '%smodels/' % OUTPUT_DIR
-REINFORCE_DIR = '%s/reinforce' % PREFIX
-REINFORCE_INPUT_DIR = '%s/input' % REINFORCE_DIR
+REINFORCE_DIR = '%s/agent/' % PREFIX
 
 PARAMS_PATH = INPUT_DIR + 'params.pkl'
 
@@ -51,12 +51,13 @@ MONTH = MAX_DAYS * DAY
 EXPIRATION = 2 * DAY
 
 # maximal delay times
-MAX_DELAY = {
-	ARRIVAL_PREFIX: MAX_DAYS * 24 * 3600,
-	SLR_PREFIX: 2 * 24 * 3600,
-	'{}_{}'.format(BYR_PREFIX, 7): 2 * 24 * 3600,
-	BYR_PREFIX: 14 * 24 * 3600
-}
+MAX_DELAY = {1: MONTH,
+             2: 2 * DAY,
+             3: 14 * DAY,
+             4: 2 * DAY,
+             5: 14 * DAY,
+             6: 2 * DAY,
+             7: 2 * DAY}
 
 # concessions that denote an (almost) even split
 SPLIT_PCTS = [.49, .50, .51]
@@ -72,8 +73,8 @@ SIM_CHUNKS = 1000
 
 # indices for byr and slr offers
 IDX = {
-	BYR_PREFIX: [1, 3, 5, 7],
-	SLR_PREFIX: [2, 4, 6]
+    BYR_PREFIX: [1, 3, 5, 7],
+    SLR_PREFIX: [2, 4, 6]
 }
 
 # date range and holidays
@@ -81,6 +82,14 @@ START = '2012-06-01 00:00:00'
 END = '2013-05-31 23:59:59'
 HOLIDAYS = Calendar().holidays(start=START, end=END)
 
-# groups for embedding layers
-EMBEDDING_GROUPS = {'w2v': ['lstg', 'w2v_slr', 'w2v_byr'],
-					'other': ['lstg', 'cat', 'cndtn', 'slr']}
+# model names
+FIRST_ARRIVAL_MODEL = 'first_arrival'
+INTERARRIVAL_MODEL = 'next_arrival'
+BYR_HIST_MODEL = 'hist'
+
+# model sets
+ARRIVAL_MODELS = [FIRST_ARRIVAL_MODEL, INTERARRIVAL_MODEL, BYR_HIST_MODEL]
+DELAY_MODELS = ['{}{}'.format(DELAY, i) for i in range(2, 8)]
+CON_MODELS = ['{}{}'.format(CON, i) for i in range(1, 8)]
+MSG_MODELS = ['{}{}'.format(MSG, i) for i in range(1, 7)]
+MODELS = ARRIVAL_MODELS + DELAY_MODELS + CON_MODELS + MSG_MODELS

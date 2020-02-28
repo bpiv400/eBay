@@ -6,3 +6,6 @@ rclone sync ~/weka/eBay/outputs/models dropbox:ebay/data/outputs/models --max-de
 # grab specific chunks from train rl
 rclone copy ~/weka/eBay/envSimulator/test_rl/chunks/1.gz dropbox:ebay/data/envSimulator/test_rl/chunks
 rclone copy ~/weka/eBay/envSimulator/test_rl/chunks/1_test.gz dropbox:ebay/data/envSimulator/test_rl/chunks
+
+# agent input files
+rclone copy ~/weka/eBay/agent/test_rl/input/slr.hdf5 dropbox:ebay/data/agent/test_rl/input

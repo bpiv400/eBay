@@ -40,6 +40,8 @@ class ThreadSources(Sources):
     def update_con_outcomes(self, con_outcomes=None, turn=None):
         offer_map = OFFER_MAPS[turn]
         self.source_dict[offer_map][CON_START_IND:MSG_IND] = con_outcomes
+        # print('summary after update')
+        # print(self.summary(turn=turn))
         return self.source_dict[offer_map][NORM_IND]
 
     def update_msg(self, msg=None, turn=None):
@@ -82,6 +84,11 @@ class ThreadSources(Sources):
         # TODO: could index once and pass resulting vector to output
         # TODO: would require update of recorders
         offer_map = OFFER_MAPS[turn]
+        # print('summary')
+        # print(turn)
+        # print('con ind: {}'.format(CON_IND))
+        # print(self.source_dict[offer_map])
+        # print(self.source_dict[offer_map][CON_IND])
         con = int(np.round(self.source_dict[offer_map][CON_IND] * 100))
         msg = self.source_dict[offer_map][MSG_IND] == 1
         norm = self.source_dict[offer_map][NORM_IND]

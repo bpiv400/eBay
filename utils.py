@@ -1,6 +1,7 @@
 import pickle
 import time
 import random
+import pandas as pd
 import torch
 import numpy as np
 from compress_pickle import load
@@ -24,7 +25,7 @@ def get_remaining(lstg_start, delay_start, max_delay):
     :param delay_start: seconds from START to beginning of delay window.
     :param max_delay: length of delay period.
     """
-    remaining = lstg_start + MAX_DELAY[ARRIVAL_PREFIX] - delay_start
+    remaining = lstg_start + MAX_DELAY[1] - delay_start
     remaining /= max_delay
     remaining = np.minimum(1, remaining)
     return remaining
@@ -137,3 +138,10 @@ def load_model(name):
     net.eval()
 
     return net
+
+
+def align_x_lstg_lookup(x_lstg, lookup):
+    x_lstg = pd.concat([df.reindex(index=lookup.index) for df in x_lstg.values()],
+                       axis=1)
+    return x_lstg
+

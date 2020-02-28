@@ -72,10 +72,7 @@ def get_days_delay(clock):
     # for turn 1, days and delay are 0
     for i in range(2, 8):
         days[i] = clock[i] - clock[i - 1]
-        if i in [2, 4, 6, 7]:  # byr has 2 days for last turn
-            delay[i] = days[i] / MAX_DELAY[SLR_PREFIX]
-        elif i in [3, 5]:  # ignore byr arrival and last turn
-            delay[i] = days[i] / MAX_DELAY[BYR_PREFIX]
+        delay[i] = days[i] / MAX_DELAY[i]
     # no delay larger than 1
     assert delay.max().max() <= 1
 
@@ -273,10 +270,10 @@ def get_interarrival_period(clock):
     censored = censored.reindex(index=y.index)
 
     # convert y to periods
-    y //= INTERVAL[ARRIVAL_PREFIX]
+    y //= INTERVAL[1]
 
     # replace censored interarrival times negative count of censored buckets
-    y.loc[censored] -= INTERVAL_COUNTS[ARRIVAL_PREFIX]
+    y.loc[censored] -= INTERVAL_COUNTS[1]
 
     return y, diff
 
@@ -316,12 +313,14 @@ def save_featnames(x, name):
     # initialize featnames dictionary
     featnames = {k: list(v.columns) for k, v in x.items() if 'offer' not in k}
 
-    # for delay, con, and msg models
+    # for offer models
     if 'offer1' in x:
-        if BYR_PREFIX in name:
-            feats = CLOCK_FEATS + OUTCOME_FEATS + TURN_FEATS[name]
+        if BYR_PREFIX in name or int(name[-1]) in IDX[BYR_PREFIX]:
+            feats = CLOCK_FEATS + OUTCOME_FEATS
         else:
-            feats = CLOCK_FEATS + TIME_FEATS + OUTCOME_FEATS + TURN_FEATS[name]
+            feats = CLOCK_FEATS + TIME_FEATS + OUTCOME_FEATS
+        if BYR_PREFIX in name or SLR_PREFIX in name or 'first' in name:
+            feats += TURN_FEATS[name]
 
         # check that all offer groupings have same organization
         for k in x.keys():
@@ -346,24 +345,16 @@ def save_sizes(x, name):
     sizes['x'] = {k: len(v.columns) for k, v in x.items()}
 
     # save interval and interval counts
-    role = name.split('_')[-1]
-    if ('arrival' in name) or ('delay' in name):
-        sizes['interval'] = INTERVAL[role]
-        sizes['interval_count'] = INTERVAL_COUNTS[role]
-        if role == BYR_PREFIX:
-            sizes['interval_count_7'] = INTERVAL_COUNTS[BYR_PREFIX + '_7']
+    if 'arrival' in name:
+        sizes['interval'] = INTERVAL[1]
+        sizes['interval_count'] = INTERVAL_COUNTS[1]
+    elif name.startswith('delay'):
+        turn = int(name[-1])
+        sizes['interval'] = INTERVAL[turn]
+        sizes['interval_count'] = INTERVAL_COUNTS[turn]
 
     # length of model output vector
-    if 'arrival' in name:
-        sizes['out'] = INTERVAL_COUNTS[ARRIVAL_PREFIX] + 1
-    elif name == 'hist':
-        sizes['out'] = HIST_QUANTILES
-    elif 'delay' in name:
-        sizes['out'] = INTERVAL_COUNTS[role] + 1
-    elif 'con' in name:
-        sizes['out'] = CON_MULTIPLIER + 1
-    else:
-        sizes['out'] = 1
+    sizes['out'] = NUM_OUT[name]
 
     dump(sizes, INPUT_DIR + 'sizes/{}.pkl'.format(name))
 
@@ -392,11 +383,26 @@ def save_small(d, name):
     small = dict()
     small['y'] = d['y'][idx_small]
 
+    # baserates
+    if 'p' in d:
+        small['p'] = d['p']
+
     # inputs
     small['x'] = {k: v[idx_small, :] for k, v in d['x'].items()}
 
     # save
     dump(small, INPUT_DIR + 'small/{}.gz'.format(name))
+
+
+def get_baserates(y, name):
+    intervals = NUM_OUT[name]
+    if intervals == 1:
+        intervals += 1
+    assert intervals > y.max()
+    p = np.zeros(intervals, dtype='float64')
+    for i in range(intervals):
+        p[i] = (y == i).mean()
+    return p
 
 
 # save featnames and sizes
@@ -405,6 +411,10 @@ def save_files(d, part, name):
     if part == 'test_rl':
         save_featnames(d['x'], name)
         save_sizes(d['x'], name)
+
+    # baserates
+    if CON in name or MSG in name:
+        d['p'] = get_baserates(d['y'], name)
 
     # pandas index
     idx = d['y'].index

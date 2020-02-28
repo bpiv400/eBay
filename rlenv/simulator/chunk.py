@@ -4,14 +4,13 @@ or generating discrim inputs
 """
 import os
 import numpy as np
-import pandas as pd
 from compress_pickle import dump, load
-from constants import PARTS_DIR
+from constants import PARTS_DIR, SIM_CHUNKS
+from featnames import START_PRICE
+from utils import align_x_lstg_lookup
 from rlenv.env_consts import LOOKUP_FILENAME
 from rlenv.env_utils import get_env_sim_subdir
 from processing.processing_utils import input_partition
-from constants import SIM_CHUNKS
-from featnames import START_PRICE
 
 
 def main():
@@ -22,9 +21,7 @@ def main():
 
     # sort and subset
     lookup = lookup.drop('cat', axis=1).sort_values(by=START_PRICE)
-    x_lstg = pd.concat(
-        [df.reindex(index=lookup.index) for df in x_lstg.values()],
-        axis=1)
+    x_lstg = align_x_lstg_lookup(x_lstg, lookup)
     assert x_lstg.isna().sum().sum() == 0
 
     # make directories partition and components if they don't exist

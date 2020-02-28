@@ -12,8 +12,7 @@ class PartialDataset(Dataset):
     def __init__(self, x):
         """
         Defines a parent class that extends torch.utils.data.Dataset.
-        :param part: string partition name (e.g., train_models).
-        :param name: string model name.
+        :param x: dictionary of numpy arrays of input data.
         """
         # save name to self
         self.x = x

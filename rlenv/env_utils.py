@@ -376,7 +376,6 @@ def need_msg(con, slr=None):
 def populate_test_model_inputs(full_inputs=None, value=None):
     inputs = dict()
     for feat_set_name, feat_df in full_inputs.items():
-        # print(value)
         if value is not None:
             curr_set = full_inputs[feat_set_name].loc[value, :]
         else:

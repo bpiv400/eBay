@@ -1,9 +1,9 @@
-import sys, os, argparse
-import numpy as np
-from datetime import datetime as dt
+import argparse
 from scipy.optimize import minimize_scalar
-from train.Trainer import Trainer
+from train.ConTrainer import Trainer
+from train.train_consts import GAMMA_TOL, GAMMA_MAX, GAMMA_MULTIPLIER
 from constants import TRAIN_RL, TRAIN_MODELS, VALIDATION
+from featnames import CON
 
 
 def main():
@@ -16,14 +16,17 @@ def main():
     train_part = TRAIN_RL if name in ['listings', 'threads'] else TRAIN_MODELS
     trainer = Trainer(name, train_part, VALIDATION)
 
-    # estimate with gamma=1
-    trainer.train_model(gamma=1)
-
-    # # use univariate optimizer to find regularization hyperparameter
-    # loss = lambda g: -trainer.train_model(gamma=g)
-    # result = minimize_scalar(loss, method='bounded', bounds=(0, 1), 
-    #     options={'xatol': 0.1, 'disp': 3})
-    # print(result)
+    # use grid search to find regularization hyperparameter
+    multiplier = GAMMA_MULTIPLIER[name]
+    if multiplier == 0:
+        trainer.train_model(gamma=0)
+    else:
+        result = minimize_scalar(lambda g: trainer.train_model(gamma=g),
+                                 method='bounded',
+                                 bounds=(0, GAMMA_MAX * multiplier),
+                                 options={'xatol': GAMMA_TOL * multiplier, 
+                                          'disp': 3})
+        print(result)
 
 
 if __name__ == '__main__':

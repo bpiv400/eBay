@@ -3,13 +3,15 @@ from collections import OrderedDict, namedtuple
 import torch
 import numpy as np
 import pandas as pd
-from rlenv.env_consts import *
-from rlenv.env_utils import model_str
-from featnames import (OUTCOME_FEATS, CLOCK_FEATS, TIME_FEATS,
-                       TURN_FEATS, MONTHS_SINCE_LSTG, BYR_HIST,
-                       INT_REMAINING, MONTHS_SINCE_LAST, THREAD_COUNT)
+from featnames import (OUTCOME_FEATS, TURN_FEATS, RELISTED,
+                       MONTHS_SINCE_LSTG, BYR_HIST,
+                       INT_REMAINING, MONTHS_SINCE_LAST)
 from constants import ARRIVAL_PREFIX
 from utils import load_sizes, load_featnames
+from rlenv.env_consts import *
+from rlenv.env_utils import model_str
+from agent.agent_consts import FEAT_ID, CON_TYPE
+from agent.agent_utils import get_con_set
 
 
 class Composer:
@@ -18,7 +20,7 @@ class Composer:
     """
     def __init__(self, cols):
         self.sizes = Composer.make_sizes()
-        self.lstg_sets = Composer.build_lstg_sets(cols)
+        self.lstg_sets = self.build_lstg_sets(cols)
         self.intervals = self.make_intervals()
         self.turn_inds = None
 
@@ -254,11 +256,18 @@ class Composer:
 class AgentComposer(Composer):
     def __init__(self, cols=None, agent_params=None):
         super().__init__(cols)
-        self.slr = agent_params['slr']
-        self.idx = agent_params['feat_id']
-        self.delay = agent_params['delay']
+        self.relist_index = self.lstg_sets[LSTG_MAP].index(RELISTED)
+
+        # parameters
+        self.slr = agent_params[SLR_PREFIX]
+        self.idx = agent_params[FEAT_ID]
+        self.delay = agent_params[DELAY]
+        self.con_type = agent_params[CON_TYPE]
+
         self.sizes['agent'] = self._build_agent_sizes()
-        self.obs_space_class = namedtuple(OBS_SPACE_NAME, list(self.agent_sizes.keys()))
+        print(self.sizes['agent']['x'].keys())
+        self.obs_space_class = namedtuple(OBS_SPACE_NAME,
+                                          list(self.agent_sizes['x'].keys()))
         self.x_lstg_cols = list(cols)
 
     def _build_agent_sizes(self):
@@ -267,10 +276,16 @@ class AgentComposer(Composer):
         for j in range(1, num_turns + 1):
             sizes['offer{}'.format(j)] = self._build_offer_sizes()
         for set_name, feats in self.lstg_sets.items():
-            if set_name != LSTG_MAP:
-                sizes[set_name] = len(feats)
-            else:
-                sizes[set_name] = self._build_lstg_sizes(feats)
+            if set_name != SLR_PREFIX or not self.slr:
+                if set_name != LSTG_MAP:
+                    sizes[set_name] = len(feats)
+                else:
+                    sizes[set_name] = self._build_lstg_sizes(feats)
+        sizes = {
+            'x': sizes.copy()
+        }
+        if not self.delay:
+            sizes['out'] = get_con_set(self.con_type).size
         return sizes
 
     def _update_turn_inds(self, model_name, turn):
@@ -289,7 +304,7 @@ class AgentComposer(Composer):
     def get_obs(self, sources=None, turn=None):
         obs_dict = dict()
         self._update_turn_inds('agent', turn)
-        for set_name in self.agent_sizes.keys():
+        for set_name in self.agent_sizes['x'].keys():
             if set_name == LSTG_MAP:
                 # TODO: Update when we know whether to include remaining (i.e. mimic delay or offer)
                 obs_dict[set_name] = self._build_lstg_vector('agent', sources=sources).squeeze()
@@ -297,7 +312,7 @@ class AgentComposer(Composer):
                 obs_dict[set_name] = self._build_agent_offer_vector(offer_vector=sources[set_name])
             else:
                 obs_dict[set_name] = torch.from_numpy(sources[set_name]).float()
-            return self.obs_space_class(**obs_dict)
+        return self.obs_space_class(**obs_dict)
 
     def _build_agent_offer_vector(self, offer_vector=None):
         if not self.slr or self.idx == 1:
@@ -323,6 +338,14 @@ class AgentComposer(Composer):
         # turn indicates
         base = base + 2 if self.slr else base + 3
         return base
+
+    def relist(self, x_lstg=None, first_lstg=False):
+        if first_lstg:
+            val = 0.0
+        else:
+            val = 1.0
+        x_lstg[LSTG_MAP][self.relist_index] = val
+        return x_lstg
 
     @property
     def agent_sizes(self):

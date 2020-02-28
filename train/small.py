@@ -1,5 +1,5 @@
-import sys, os, argparse
-from train.Trainer import Trainer
+import argparse
+from train.ConTrainer import Trainer
 from constants import SMALL, VALIDATION
 
 
@@ -19,4 +19,4 @@ def main():
 
 
 if __name__ == '__main__':
-	main()
+    main()

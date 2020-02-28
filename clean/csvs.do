@@ -55,8 +55,7 @@ drop ship_*
 
 order end_time, a(start_date)
 replace end_date = start_date + 30 if end_date > start_date + 30
-replace end_time = clock(string(end_date + 1, "%td"), "DMY") - 1000 ////
-	if end_time == .
+replace end_time = clock(string(end_date + 1, "%td"), "DMY") - 1000 if end_time == .
 drop end_date
 
 format start_date end_time %9.0f

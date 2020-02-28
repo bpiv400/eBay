@@ -16,8 +16,8 @@ def process_inputs(part):
     diff = clock[1] - clock[0]
 
     # interarrival time in periods
-    y = diff // INTERVAL[ARRIVAL_PREFIX]
-    y[y.isna()] = INTERVAL_COUNTS[ARRIVAL_PREFIX]
+    y = diff // INTERVAL[1]
+    y[y.isna()] = INTERVAL_COUNTS[1]
     y = y.astype('int64')
     idx = y.index
 

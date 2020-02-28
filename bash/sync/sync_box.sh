@@ -6,3 +6,7 @@ rclone sync dropbox:ebay/data/outputs/models outputs/models --max-depth=1
 # grab specific chunks
 rclone copy dropbox:ebay/data/envSimulator/test_rl/chunks/1.gz envSimulator/test_rl/chunks
 rclone copy dropbox:ebay/data/envSimulator/test_rl/chunks/1_test.gz envSimulator/test_rl/chunks
+
+# agent files
+rclone copy dropbox:ebay/data/agent/test_rl/input/slr.hdf5 agent/test_rl/input
+
