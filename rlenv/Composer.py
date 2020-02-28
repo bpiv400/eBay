@@ -4,7 +4,7 @@ import torch
 import numpy as np
 import pandas as pd
 from constants import MODELS, OFFER_MODELS, SLR_PREFIX
-from featnames import (OUTCOME_FEATS, TURN_FEATS, RELISTED,
+from featnames import (OUTCOME_FEATS, RELISTED,
                        MONTHS_SINCE_LSTG, BYR_HIST,
                        INT_REMAINING, MONTHS_SINCE_LAST)
 from utils import load_sizes, load_featnames
@@ -63,15 +63,15 @@ class Composer:
 
     @staticmethod
     def verify_offer_feats(model):
-        shared_feats = CLOCK_FEATS + TIME_FEATS + OUTCOME_FEATS
-        for model in OFFER_MODELS:
-            turn_feats = TURN_FEATS[model]
-            full_feats = shared_feats + turn_feats
-            model_feats = load_featnames(model)['offer']
-            assert len(full_feats) == len(model_feats)
-            for exp_feat, model_feat in zip(full_feats, model_feats):
-                assert exp_feat == model_feat
-        return shared_feats
+        turn = int(model[-1])
+        if turn % 2 == 0:
+            assumed_feats = CLOCK_FEATS + TIME_FEATS + OUTCOME_FEATS
+        else:
+            assumed_feats = CLOCK_FEATS + OUTCOME_FEATS
+        model_feats = load_featnames(model)['offer']
+        assert len(model_feats) == len(assumed_feats)
+        for exp_feat, model_feat in zip(assumed_feats, model_feats):
+            assert exp_feat == model_feat
 
     @staticmethod
     def verify_lstg_sets_shared(model, x_lstg_cols, featnames):
@@ -129,19 +129,14 @@ class Composer:
         """
         input_dict = dict()
         fixed_sizes = self.sizes[model_name]['x']  # dict
-        if turn is not None:
-            self._update_turn_inds(model_name, turn)
         for input_set, size in fixed_sizes.items():
             if input_set == LSTG_MAP:
                 input_dict[input_set] = self._build_lstg_vector(model_name, sources=sources)
             elif 'offer' == input_set[:-1]:
                 input_dict[input_set] = self._build_offer_vector(offer_vector=sources[input_set],
-                                                                 byr=model_name[-3:] == BYR_PREFIX)
+                                                                 byr=turn % 2 != 0)
             else:
                 input_dict[input_set] = torch.from_numpy(sources[input_set]).float().unsqueeze(0)
-            # TODO: Consider removing assert statements
-            assert input_dict[input_set].shape[1] == size
-            assert ~torch.isnan(input_dict[input_set]).all()
         return input_dict
 
     def make_intervals(self):
@@ -155,14 +150,14 @@ class Composer:
 
     def _build_offer_vector(self, offer_vector, byr=False):
         if not byr:
-            full_vector = np.concatenate([offer_vector, self.turn_inds])
+            full_vector = offer_vector
         else:
             full_vector = np.concatenate([offer_vector[:TIME_START_IND],
-                                          offer_vector[TIME_END_IND:],
-                                          self.turn_inds])
+                                          offer_vector[TIME_END_IND:]])
         return torch.from_numpy(full_vector).unsqueeze(0).float()
 
-    def _build_lstg_vector(self, model_name, sources=None):
+    @staticmethod
+    def _build_lstg_vector(model_name, sources=None):
         if model_name == INTERARRIVAL_MODEL:
             solo_feats = np.array([sources[MONTHS_SINCE_LSTG], sources[MONTHS_SINCE_LAST],
                                    sources[THREAD_COUNT]])
@@ -178,26 +173,14 @@ class Composer:
                                    solo_feats])
 
         elif DELAY in model_name:
-            solo_feats = np.array([sources[MONTHS_SINCE_LSTG], sources[BYR_HIST]])
-            lstg = np.concatenate([sources[LSTG_MAP], solo_feats, self.turn_inds,
-                                   np.array([sources[INT_REMAINING]])])
+            solo_feats = np.array([sources[MONTHS_SINCE_LSTG], sources[BYR_HIST],
+                                   sources[INT_REMAINING]])
+            lstg = np.concatenate([sources[LSTG_MAP], solo_feats])
         else:
             solo_feats = np.array([sources[MONTHS_SINCE_LSTG], sources[BYR_HIST]])
-            lstg = np.concatenate([sources[LSTG_MAP], solo_feats, self.turn_inds])
+            lstg = np.concatenate([sources[LSTG_MAP], solo_feats])
         lstg = lstg.astype(np.float32)
         return torch.from_numpy(lstg).float().unsqueeze(0)
-
-    def _update_turn_inds(self, model_name, turn):
-        if model_name == 'con_byr':
-            inds = np.zeros(3)
-        else:
-            inds = np.zeros(2)
-        active = math.floor((turn - 1) / 2)
-        if model_name == 'delay_byr':
-            active = active - 1
-        if active < inds.shape[0]:
-            inds[active] = 1
-        self.turn_inds = inds
 
     @staticmethod
     def remove_shared_feats(model_feats, shared_feats):
@@ -215,10 +198,7 @@ class Composer:
         model_feats = Composer.remove_shared_feats(model_feats, shared_feats)
         assert model_feats[0] == MONTHS_SINCE_LSTG
         assert model_feats[1] == BYR_HIST
-        turn_inds = TURN_FEATS[model]
-        assert len(model_feats[2:]) == len(turn_inds)
-        for model_feat, turn_feat in zip(model_feats[2:], turn_inds):
-            assert model_feat == turn_feat
+        assert len(model_feats) == 2
 
     @staticmethod
     def verify_delay_append(model, shared_feats):
@@ -226,9 +206,8 @@ class Composer:
         model_feats = Composer.remove_shared_feats(model_feats, shared_feats)
         assert model_feats[0] == MONTHS_SINCE_LSTG
         assert model_feats[1] == BYR_HIST
-        turn_inds = TURN_FEATS[model]
-        Composer.verify_sequence(model_feats, turn_inds, 2)
-        assert model_feats[-1] == INT_REMAINING
+        assert model_feats[2] == INT_REMAINING
+        assert len(model_feats) == 3
 
     @staticmethod
     def verify_interarrival_append(shared_feats):
@@ -290,22 +269,19 @@ class AgentComposer(Composer):
             sizes['out'] = get_con_set(self.con_type).size
         return sizes
 
-    def _update_turn_inds(self, model_name, turn):
-        if model_name == 'agent':
-            if self.slr:
-                inds = np.zeros(2)
-            else:
-                inds = np.zeros(3)
-            active = math.floor((turn - 1) / 2)
-            if active < inds.shape[0]:
-                inds[active] = 1
-            self.turn_inds = inds
+    def _update_turn_inds(self, turn):
+        if self.slr:
+            inds = np.zeros(2)
         else:
-            super()._update_turn_inds(model_name, turn)
+            inds = np.zeros(3)
+        active = math.floor((turn - 1) / 2)
+        if active < inds.shape[0]:
+            inds[active] = 1
+        self.turn_inds = inds
 
     def get_obs(self, sources=None, turn=None):
         obs_dict = dict()
-        self._update_turn_inds('agent', turn)
+        self._update_turn_inds(turn)
         for set_name in self.agent_sizes['x'].keys():
             if set_name == LSTG_MAP:
                 # TODO: Update when we know whether to include remaining (i.e. mimic delay or offer)
@@ -317,11 +293,12 @@ class AgentComposer(Composer):
         return self.obs_space_class(**obs_dict)
 
     def _build_agent_offer_vector(self, offer_vector=None):
-        if not self.slr or self.idx == 1:
-            clock_feats = offer_vector[CLOCK_START_IND:CLOCK_END_IND]
-            outcome_feats = offer_vector[DELAY_START_IND:]
-            offer_vector = np.concatenate([clock_feats, outcome_feats])
-        return super()._build_offer_vector(offer_vector=offer_vector).squeeze()
+        if self.slr and self.idx == 0:
+            full_vector = offer_vector
+        else:
+            full_vector = np.concatenate([offer_vector[:TIME_START_IND],
+                                          offer_vector[TIME_END_IND:]])
+        return torch.from_numpy(full_vector).unsqueeze(0).float()
 
     def _build_offer_sizes(self):
         if not self.slr or self.idx == 1:
