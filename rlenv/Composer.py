@@ -72,6 +72,12 @@ class Composer:
         assert len(model_feats) == len(assumed_feats)
         for exp_feat, model_feat in zip(assumed_feats, model_feats):
             assert exp_feat == model_feat
+        model_sizes = load_sizes(model)
+        for j in range(1, 8):
+            if j <= turn:
+                assert 'offer{}'.format(j) in model_sizes['x']
+            else:
+                assert 'offer{}'.format(j) not in model_sizes['x']
 
     @staticmethod
     def verify_lstg_sets_shared(model, x_lstg_cols, featnames):
