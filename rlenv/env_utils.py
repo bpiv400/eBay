@@ -8,9 +8,9 @@ import pandas as pd
 from compress_pickle import load
 from torch.distributions.categorical import Categorical
 from torch.distributions.bernoulli import Bernoulli
-from constants import (INPUT_DIR, ENV_SIM_DIR, DAY)
+from constants import (INPUT_DIR, ENV_SIM_DIR, DAY, ARRIVAL_MODELS)
 from rlenv.env_consts import (META_6, META_7, SIM_CHUNKS_DIR, SIM_VALS_DIR, OFFER_MAPS,
-                              SIM_DISCRIM_DIR, DATE_FEATS, ARRIVAL_MODELS, NORM_IND)
+                              SIM_DISCRIM_DIR, DATE_FEATS, NORM_IND)
 from utils import extract_clock_feats, is_split, slr_norm, byr_norm
 
 
