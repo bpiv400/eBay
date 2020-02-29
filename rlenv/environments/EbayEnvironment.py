@@ -1,6 +1,7 @@
 import numpy as np
 from collections import namedtuple
-from constants import BYR_PREFIX, MONTH, MAX_DELAY
+from constants import (BYR_PREFIX, MONTH, MAX_DELAY, FIRST_ARRIVAL_MODEL,
+                       BYR_HIST_MODEL, INTERARRIVAL_MODEL)
 from featnames import ACC_PRICE, DEC_PRICE, START_PRICE, DELAY
 from rlenv.Heap import Heap
 from rlenv.time.TimeFeatures import TimeFeatures
@@ -12,8 +13,7 @@ from rlenv.sources import ThreadSources
 from rlenv.events.Thread import Thread
 from rlenv.env_consts import (INTERACT, SALE, PRICE, DUR, ACC_IND, CON,
                               REJ_IND, OFF_IND, ARRIVAL, FIRST_OFFER, MSG,
-                              OFFER_EVENT, DELAY_EVENT, FIRST_ARRIVAL_MODEL,
-                              BYR_HIST_MODEL, INTERARRIVAL_MODEL)
+                              OFFER_EVENT, DELAY_EVENT)
 from rlenv.env_utils import get_clock_feats, get_con_outcomes, need_msg, model_str
 from utils import get_months_since_lstg
 

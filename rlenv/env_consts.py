@@ -66,11 +66,6 @@ FIRST_OFFER = 'FIRST_OFFER' # first byer offer
 OFFER_EVENT = 'OFFER'
 DELAY_EVENT = 'DELAY'
 
-# model names
-FIRST_ARRIVAL_MODEL = 'first_arrival'
-INTERARRIVAL_MODEL = 'next_arrival'
-BYR_HIST_MODEL = 'hist'
-
 # useful indices in offer feats
 CLOCK_START_IND = 0
 CLOCK_END_IND = len(CLOCK_FEATS)

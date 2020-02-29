@@ -3,7 +3,8 @@ from collections import OrderedDict, namedtuple
 import torch
 import numpy as np
 import pandas as pd
-from constants import MODELS, OFFER_MODELS, SLR_PREFIX
+from constants import (MODELS, OFFER_MODELS, SLR_PREFIX, FIRST_ARRIVAL_MODEL,
+                       INTERARRIVAL_MODEL, BYR_HIST_MODEL)
 from featnames import (OUTCOME_FEATS, RELISTED,
                        MONTHS_SINCE_LSTG, BYR_HIST,
                        INT_REMAINING, MONTHS_SINCE_LAST)
@@ -74,7 +75,7 @@ class Composer:
             assert exp_feat == model_feat
         model_sizes = load_sizes(model)
         for j in range(1, 8):
-            if j <= turn:
+            if j < turn or (j == turn and DELAY not in model):
                 assert 'offer{}'.format(j) in model_sizes['x']
             else:
                 assert 'offer{}'.format(j) not in model_sizes['x']

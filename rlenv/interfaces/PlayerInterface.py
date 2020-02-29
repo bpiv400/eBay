@@ -1,5 +1,6 @@
 import torch
 from torch.distributions.categorical import Categorical
+from torch.distributions.bernoulli import Bernoulli
 from rlenv.env_utils import (model_str, proper_squeeze,
                              sample_categorical, sample_bernoulli)
 from featnames import *
@@ -61,7 +62,10 @@ class BuyerInterface(PlayerInterface):
         super().__init__(byr=True)
 
     def sample_con(self, params=None, turn=None):
-        dist = Categorical(logits=params)
+        if turn != 7:
+            dist = Categorical(logits=params)
+        else:
+            dist = Bernoulli(logits=params)
         if turn == 1:
             sample = torch.zeros(1)
             while sample == 0:
@@ -70,9 +74,7 @@ class BuyerInterface(PlayerInterface):
             con = proper_squeeze(sample.float() / 100).numpy()
         elif turn == 7:
             sample = dist.sample((1,))
-            while (sample > 0) and (sample < 100):
-                sample = dist.sample((1,))
-            con = proper_squeeze(sample.float() / 100).numpy()
+            con = proper_squeeze(sample.float()).numpy()
         else:
             con = proper_squeeze(dist.sample((1,)).float()).numpy()
             con = con / 100
