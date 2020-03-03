@@ -13,7 +13,7 @@ from agent.agent_consts import (BATCH_T, BATCH_B, CON_TYPE,
                                 PPO_EPOCHS, FEAT_ID)
 from agent.agent_utils import slr_input_path
 from agent.models.PgCategoricalAgentModel import PgCategoricalAgentModel
-from rlenv.env_consts import SLR_PREFIX
+from constants import SLR_PREFIX
 from rlenv.env_utils import get_env_sim_dir, load_chunk
 from rlenv.Composer import AgentComposer
 from rlenv.interfaces.PlayerInterface import BuyerInterface, SellerInterface

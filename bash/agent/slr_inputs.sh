@@ -10,7 +10,7 @@ if [ "$SGE_TASK_ID" == 1 ]
 then
 	python repo/agent/a_inputs/seller_inputs.py --part train_rl
 elif [ "$SGE_TASK_ID" == 2 ]
-thend
+then
 	python repo/agent/a_inputs/seller_inputs.py --part test_rl
 elif [ "$SGE_TASK_ID" == 3 ]
 then
