@@ -23,7 +23,6 @@ class Composer:
         self.sizes = Composer.make_sizes()
         self.lstg_sets = self.build_lstg_sets(cols)
         self.intervals = self.make_intervals()
-        self.turn_inds = None
 
     @staticmethod
     def make_sizes():
@@ -253,10 +252,10 @@ class AgentComposer(Composer):
         self.con_type = agent_params[CON_TYPE]
 
         self.sizes['agent'] = self._build_agent_sizes()
-        print(self.sizes['agent']['x'].keys())
         self.obs_space_class = namedtuple(OBS_SPACE_NAME,
                                           list(self.agent_sizes['x'].keys()))
         self.x_lstg_cols = list(cols)
+        self.turn_inds = None
 
     def _build_agent_sizes(self):
         sizes = OrderedDict()
@@ -278,9 +277,9 @@ class AgentComposer(Composer):
 
     def _update_turn_inds(self, turn):
         if self.slr:
-            inds = np.zeros(2)
+            inds = np.zeros(2, dtype=np.float32)
         else:
-            inds = np.zeros(3)
+            inds = np.zeros(3, dtype=np.float32)
         active = math.floor((turn - 1) / 2)
         if active < inds.shape[0]:
             inds[active] = 1
@@ -292,12 +291,19 @@ class AgentComposer(Composer):
         for set_name in self.agent_sizes['x'].keys():
             if set_name == LSTG_MAP:
                 # TODO: Update when we know whether to include remaining (i.e. mimic delay or offer)
-                obs_dict[set_name] = self._build_lstg_vector('agent', sources=sources).squeeze()
+                obs_dict[set_name] = self._build_agent_lstg_vector(sources=sources)
             elif set_name[:-1] == 'offer':
                 obs_dict[set_name] = self._build_agent_offer_vector(offer_vector=sources[set_name])
             else:
                 obs_dict[set_name] = torch.from_numpy(sources[set_name]).float()
         return self.obs_space_class(**obs_dict)
+
+    def _build_agent_lstg_vector(self, sources=None):
+        solo_feats = np.array([sources[MONTHS_SINCE_LSTG], sources[BYR_HIST]])
+        lstg = np.concatenate([sources[LSTG_MAP], solo_feats, self.turn_inds])
+        lstg = lstg.astype(np.float32)
+        lstg = torch.from_numpy(lstg).squeeze().float()
+        return lstg
 
     def _build_agent_offer_vector(self, offer_vector=None):
         if self.slr and self.idx == 0:
@@ -305,7 +311,9 @@ class AgentComposer(Composer):
         else:
             full_vector = np.concatenate([offer_vector[:TIME_START_IND],
                                           offer_vector[TIME_END_IND:]])
-        return torch.from_numpy(full_vector).unsqueeze(0).float()
+        full_vector = np.concatenate([full_vector, self.turn_inds])
+        full_vector = torch.from_numpy(full_vector).squeeze().float()
+        return full_vector
 
     def _build_offer_sizes(self):
         if not self.slr or self.idx == 1:
