@@ -69,18 +69,18 @@ class EbayEnvironment:
         if INTERACT and event.type != ARRIVAL:
             input('Press Enter to continue...')
         if event.type == ARRIVAL:
-            # print('processing arrival')
+            print('processing arrival')
             return self.process_arrival(event)
         elif event.type == FIRST_OFFER:
-            # print('processing first offer for thread {} for turn 1'.format(event.thread_id))
+            print('processing first offer for thread {} for turn 1'.format(event.thread_id))
             return self.process_first_offer(event)
         elif event.type == OFFER_EVENT:
-            # print('processing offer for thread {} for turn {}'.format(event.thread_id,
-            #                                                           event.turn))
+            print('processing offer for thread {} for turn {}'.format(event.thread_id,
+                                                                      event.turn))
             return self.process_offer(event)
         elif event.type == DELAY_EVENT:
-            # print('processing delay for thread {} for turn {}'.format(event.thread_id,
-            #                                                           event.turn))
+            print('processing delay for thread {} for turn {}'.format(event.thread_id,
+                                                                      event.turn))
             return self.process_delay(event)
         else:
             raise NotImplementedError()
@@ -126,6 +126,7 @@ class EbayEnvironment:
                 return False
         else:
             if not slr_offer:
+                print('price: {}'.format(offer.price))
                 auto = self._check_slr_autos(offer.price)
                 if auto == ACC_IND:
                     self._process_slr_auto_acc(event)
@@ -277,6 +278,7 @@ class EbayEnvironment:
 
     def _check_slr_autos(self, norm):
         """ """
+        print('accept price: {}'.format(self.lookup[ACC_PRICE] / self.lookup[START_PRICE]))
         if norm < self.lookup[ACC_PRICE] / self.lookup[START_PRICE]:
             if norm < self.lookup[DEC_PRICE] / self.lookup[START_PRICE]:
                 return REJ_IND

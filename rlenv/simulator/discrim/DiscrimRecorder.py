@@ -42,6 +42,8 @@ class DiscrimRecorder(Recorder):
         row += list(time_feats)
         self.offers.append(row)
         if self.verbose:
+            if censored:
+                print('censored')
             self.print_offer(event)
 
     @staticmethod
