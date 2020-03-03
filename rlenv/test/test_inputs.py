@@ -1,9 +1,8 @@
 import argparse
 import pandas as pd
 from compress_pickle import load, dump
-from constants import INPUT_DIR, INDEX_DIR, PARTS_DIR
+from constants import INPUT_DIR, INDEX_DIR, PARTS_DIR, MODELS
 from processing.processing_consts import CLEAN_DIR
-from rlenv.env_consts import MODELS
 from rlenv.env_utils import (get_env_sim_subdir, load_featnames,
                              get_env_sim_dir, load_chunk)
 

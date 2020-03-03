@@ -1,5 +1,6 @@
 import torch
 from torch.distributions.categorical import Categorical
+from torch.distributions.bernoulli import Bernoulli
 from rlenv.env_utils import (model_str, proper_squeeze,
                              sample_categorical, sample_bernoulli)
 from featnames import *
@@ -11,14 +12,23 @@ class PlayerInterface:
         # store args
         self.byr = byr
 
-        # store names for each
-        self.con_model_name = model_str(CON, byr=byr)
-        self.msg_model_name = model_str(MSG, byr=byr)
-        self.delay_model_name = model_str(DELAY, byr=byr)
+        self.con_models = dict()
+        self.msg_models = dict()
+        self.delay_models = dict()
 
-        self.msg_model = load_model(self.msg_model_name)
-        self.con_model = load_model(self.con_model_name)
-        self.delay_model = load_model(self.delay_model_name)
+        self.load_models()
+
+    def load_models(self):
+        if self.byr:
+            turns = [1, 3, 5, 7]
+        else:
+            turns = [2, 4, 6]
+        for turn in turns:
+            self.con_models[turn] = load_model(model_str(CON, turn=turn))
+            if turn != 1:
+                self.delay_models[turn] = load_model(model_str(DELAY, turn=turn))
+            if turn != 7:
+                self.msg_models[turn] = load_model(model_str(MSG, turn=turn))
 
     def con(self, input_dict=None, turn=None):
         """
@@ -26,17 +36,17 @@ class PlayerInterface:
         :param turn: current turn number
         :return: np.float
         """
-        params = self.con_model(input_dict).squeeze()
+        params = self.con_models[turn](input_dict).squeeze()
         con = self.sample_con(params=params, turn=turn)
         return con
 
-    def delay(self, input_dict=None):
-        params = self.delay_model(input_dict).squeeze()
+    def delay(self, input_dict=None, turn=None):
+        params = self.delay_models[turn](input_dict).squeeze()
         delay = sample_categorical(params)
         return delay
 
-    def msg(self, input_dict=None):
-        params = self.msg_model(input_dict).squeeze()
+    def msg(self, input_dict=None, turn=None):
+        params = self.msg_models[turn](input_dict).squeeze()
         return sample_bernoulli(params)
 
     @staticmethod
@@ -52,7 +62,10 @@ class BuyerInterface(PlayerInterface):
         super().__init__(byr=True)
 
     def sample_con(self, params=None, turn=None):
-        dist = Categorical(logits=params)
+        if turn != 7:
+            dist = Categorical(logits=params)
+        else:
+            dist = Bernoulli(logits=params)
         if turn == 1:
             sample = torch.zeros(1)
             while sample == 0:
@@ -61,9 +74,7 @@ class BuyerInterface(PlayerInterface):
             con = proper_squeeze(sample.float() / 100).numpy()
         elif turn == 7:
             sample = dist.sample((1,))
-            while (sample > 0) and (sample < 100):
-                sample = dist.sample((1,))
-            con = proper_squeeze(sample.float() / 100).numpy()
+            con = proper_squeeze(sample.float()).numpy()
         else:
             con = proper_squeeze(dist.sample((1,)).float()).numpy()
             con = con / 100
@@ -80,8 +91,8 @@ class SellerInterface(PlayerInterface):
         self.full = full
         # throw out con and msg models if there's an agent
         if not full:
-            self.con_model = None
-            self.msg_model = None
+            self.con_models = None
+            self.msg_models = None
 
     def con(self, input_dict=None, turn=None):
         """
@@ -93,14 +104,13 @@ class SellerInterface(PlayerInterface):
         self._check_full()
         return super().con(input_dict=input_dict, turn=turn)
 
-    def msg(self, input_dict=None):
+    def msg(self, input_dict=None, turn=None):
         """
-        Generate a concession if concession model defined
-        :param input_dict: dict
+        Generate a msg if msg model defined
         :return: np.float
         """
         self._check_full()
-        return super().msg(input_dict=input_dict)
+        return super().msg(input_dict=input_dict, turn=turn)
 
     def sample_con(self, params=None, turn=None):
         con = (sample_categorical(params) / 100)

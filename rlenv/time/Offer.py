@@ -1,5 +1,5 @@
 from random import random
-from rlenv.env_consts import BYR_PREFIX, SLR_PREFIX
+from constants import BYR_PREFIX, SLR_PREFIX
 from rlenv.time.offer_types import BYR_REJECTION, SLR_REJECTION, OFFER
 
 

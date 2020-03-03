@@ -1,8 +1,7 @@
 import pandas as pd
 from featnames import START_TIME, MONTHS_SINCE_LSTG, BYR_HIST, CON, AUTO
-from constants import MONTH
-from rlenv.env_consts import (MODELS, FIRST_ARRIVAL_MODEL, BYR_HIST_MODEL,
-                              OFFER_MODELS, INTERARRIVAL_MODEL)
+from constants import (MONTH, MODELS, FIRST_ARRIVAL_MODEL,
+                       BYR_HIST_MODEL, INTERARRIVAL_MODEL)
 from rlenv.env_utils import populate_test_model_inputs
 from rlenv.test.ArrivalLog import ArrivalLog
 from rlenv.test.ThreadLog import ThreadLog
