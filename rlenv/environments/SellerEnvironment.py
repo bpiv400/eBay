@@ -45,9 +45,9 @@ class SellerEnvironment(AgentEnvironment):
     # restructure
     def reset(self):
         self.reset_lstg()
-        super().reset()
+        super().reset()  # calls EBayEnvironment.reset()
         while True:
-            event, lstg_complete = super().run()
+            event, lstg_complete = super().run()  # calls EBayEnvironment.run()
             # if the lstg isn't complete that means it's time to sample an agent action
             if not lstg_complete:
                 self.last_event = event

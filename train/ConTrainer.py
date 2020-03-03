@@ -46,7 +46,8 @@ class Trainer:
         print(self.sizes)
 
         # load datasets
-        dataset = EBayDataset if self.is_delay else ConDataset
+        #dataset = EBayDataset if self.is_delay else ConDataset
+        dataset = EBayDataset
         self.train = dataset(train_part, name)
         self.test = dataset(test_part, name)
 
@@ -153,8 +154,8 @@ class Trainer:
             # move to device
             b['x'] = {k: v.to(self.device) for k, v in b['x'].items()}
             b['y'] = b['y'].to(self.device)
-            if 'p' in b:
-                b['p'] = b['p'].to(self.device)
+            # if 'p' in b:
+            #     b['p'] = b['p'].to(self.device)
 
             # increment loss
             loss += self._run_batch(b, net, optimizer)
@@ -228,7 +229,8 @@ class Trainer:
                 if self.is_delay:
                     penalty = self._get_entropy(lnq)
                 else:
-                    penalty = self._get_kl(lnq, b['p'])
+                    #penalty = self._get_kl(lnq, b['p'])
+                    penalty = self._get_entropy(lnq)
                 loss += torch.sum(self.gamma * penalty)
 
             optimizer.zero_grad()
