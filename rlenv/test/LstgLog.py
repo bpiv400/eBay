@@ -1,6 +1,6 @@
 import pandas as pd
 from featnames import START_TIME, MONTHS_SINCE_LSTG, BYR_HIST, CON, AUTO
-from constants import (MONTH, MODELS, FIRST_ARRIVAL_MODEL,
+from constants import (MONTH, MODELS, FIRST_ARRIVAL_MODEL, OFFER_MODELS,
                        BYR_HIST_MODEL, INTERARRIVAL_MODEL)
 from rlenv.env_utils import populate_test_model_inputs
 from rlenv.test.ArrivalLog import ArrivalLog
@@ -87,6 +87,7 @@ class LstgLog:
         hist = params['x_thread'].loc[thread_id, BYR_HIST] / 10
         full_arrival_inputs = params['inputs'][model]
         full_hist_inputs = params['inputs'][BYR_HIST_MODEL]
+        print('value: {}'.format(value))
         arrival_inputs = populate_test_model_inputs(full_inputs=full_arrival_inputs,
                                                     value=value)
         hist_inputs = populate_test_model_inputs(full_inputs=full_hist_inputs,
@@ -182,16 +183,29 @@ class LstgLog:
             index_is_cached = False
             curr_index = None
             for input_group, feats_df in input_data[model].items():
+                if feats_df is not None:
+                    multi_index = isinstance(feats_df.index, pd.MultiIndex)
+                else:
+                    multi_index = False
                 if not index_is_cached:
-                    if feats_df is not None and value in feats_df.index.unique(level=level):
-                        full_lstgs = feats_df.index.get_level_values(level)
+                    if multi_index:
+                        contains_value = feats_df is not None and\
+                                         (value in feats_df.index.unique(level=level))
+                    else:
+                        contains_value = feats_df is not None and\
+                                         (value in feats_df.index)
+                    if contains_value:
+                        if multi_index:
+                            full_lstgs = feats_df.index.get_level_values(level)
+                        else:
+                            full_lstgs = feats_df.index
                         curr_index = full_lstgs == value
                     else:
                         curr_index = None
                     index_is_cached = True
                 if curr_index is not None:
                     subset = feats_df.loc[curr_index, :]
-                    if len(subset.index.names) > 1:
+                    if multi_index:
                         subset.index = subset.index.droplevel(level=level)
                 else:
                     subset = None

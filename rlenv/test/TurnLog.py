@@ -14,9 +14,9 @@ class TurnLog:
         # turn
         self.turn = turn
         # model names
-        self.msg_model_name = model_str(MSG, byr=self.byr)
-        self.con_model_name = model_str(CON, byr=self.byr)
-        self.delay_model_name = model_str(DELAY, byr=self.byr)
+        self.msg_model_name = model_str(MSG, turn=turn)
+        self.con_model_name = model_str(CON, turn=turn)
+        self.delay_model_name = model_str(DELAY, turn=turn)
         # model inputs
         self.con_inputs = con_inputs
         self.delay_inputs = delay_inputs
@@ -69,6 +69,5 @@ class TurnLog:
         return self.turn % 2 != 0
 
     def _init_offer_time(self):
-        delay_type = get_delay_type(self.turn)
-        delay = int(MAX_DELAY[delay_type] * self.delay)
+        delay = int(MAX_DELAY[self.turn] * self.delay)
         return self.delay_time + delay

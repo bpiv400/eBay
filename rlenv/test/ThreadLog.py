@@ -15,42 +15,43 @@ class ThreadLog:
             self.turns[uncensored_turns + 1] = censored
 
     def generate_censored_turn_log(self, params=None, turn=None):
-        print('Turn: {}'.format(turn))
         outcomes = params['x_offer'].loc[turn, :]
         outcomes = outcomes[OUTCOME_FEATS]
-        byr = turn % 2 != 0
-        model = model_str(DELAY, byr=byr)
-        delay_inputs = populate_test_model_inputs(full_inputs=params['inputs'][model], value=turn)
+        model = model_str(DELAY, turn=turn)
+        delay_inputs = populate_test_model_inputs(full_inputs=params['inputs'][model])
         delay_time = self.delay_time(turn=turn)
         return TurnLog(outcomes=outcomes, delay_inputs=delay_inputs, delay_time=delay_time, turn=turn)
 
     def generate_turn_log(self, params=None, turn=None):
         outcomes = params['x_offer'].loc[turn, :].squeeze()
         outcomes = outcomes[OUTCOME_FEATS]
-        byr = turn % 2 != 0
         # print(outcomes)
         # concession inputs if necessary
         if not outcomes[AUTO] and not outcomes[EXP]:
-            model = model_str(CON, byr=byr)
-            con_inputs = populate_test_model_inputs(full_inputs=params['inputs'][model], value=turn)
+            model = model_str(CON, turn=turn)
+            con_inputs = populate_test_model_inputs(full_inputs=params['inputs'][model])
         else:
             con_inputs = None
         # msg inputs if necessary
-        if not outcomes[AUTO] and not outcomes[EXP] and need_msg(outcomes[CON], slr=not byr):
-            model = model_str(MSG, byr=byr)
-            msg_inputs = populate_test_model_inputs(full_inputs=params['inputs'][model], value=turn)
+        if not outcomes[AUTO] and not outcomes[EXP] and need_msg(outcomes[CON], slr=turn % 2 == 0):
+            model = model_str(MSG, turn=turn)
+            msg_inputs = populate_test_model_inputs(full_inputs=params['inputs'][model])
         else:
             msg_inputs = None
         # delay inputs if necessary
         if turn != 1 and not outcomes[AUTO]:
-            model = model_str(DELAY, byr=byr)
-            delay_inputs = populate_test_model_inputs(full_inputs=params['inputs'][model], value=turn)
+            model = model_str(DELAY, turn=turn)
+            if outcomes[DELAY] == 0:
+                # TODO fix if Etan fixes the instant buyer delay processing issue
+                delay_inputs = None
+                print('instant buyer offer')
+            else:
+                delay_inputs = populate_test_model_inputs(full_inputs=params['inputs'][model])
         else:
             delay_inputs = None
         delay_time = self.delay_time(turn=turn)
         turn_log = TurnLog(outcomes=outcomes, delay_inputs=delay_inputs, con_inputs=con_inputs,
                            msg_inputs=msg_inputs, delay_time=delay_time, turn=turn)
-        print('Turn: {} at time: {}'.format(turn, turn_log.offer_time))
         return turn_log
 
     def delay_time(self, turn=None):
