@@ -3,14 +3,16 @@ from rlpyt.runners.minibatch_rl import MinibatchRl
 from rlpyt.algos.pg.ppo import PPO
 from rlpyt.agents.pg.categorical import CategoricalPgAgent
 from rlpyt.samplers.serial.sampler import SerialSampler
+from rlpyt.samplers.parallel.cpu.sampler import CpuSampler
 from rlpyt.samplers.parallel.cpu.collectors import CpuResetCollector
 from rlpyt.samplers.serial.sampler import SerialEvalCollector
+from rlpyt.samplers.parallel.cpu.collectors import CpuEvalCollector
 from rlpyt.utils.logging.context import logger_context
 from featnames import DELAY
 from constants import VALIDATION
 from agent.agent_consts import (BATCH_T, BATCH_B, CON_TYPE,
                                 TOTAL_STEPS, PPO_MINIBATCHES,
-                                PPO_EPOCHS, FEAT_ID)
+                                PPO_EPOCHS, FEAT_ID, LOG_INTERVAL_STEPS)
 from agent.agent_utils import slr_input_path
 from agent.models.PgCategoricalAgentModel import PgCategoricalAgentModel
 from constants import SLR_PREFIX
@@ -35,19 +37,33 @@ def make_algo(env_params=None):
                epochs=PPO_EPOCHS)
 
 
-def make_sampler(env_params=None):
-    return SerialSampler(
-        EnvCls=SellerEnvironment,
-        env_kwargs=env_params,
-        batch_B=BATCH_B,
-        batch_T=BATCH_T,
-        max_decorrelation_steps=0,
-        CollectorCls=CpuResetCollector,
-        eval_n_envs=1,
-        eval_CollectorCls=SerialEvalCollector,
-        eval_env_kwargs=env_params,
-        eval_max_steps=50,
-    )
+def make_sampler(env_params=None, serial=False):
+    if serial:
+        return SerialSampler(
+            EnvCls=SellerEnvironment,
+            env_kwargs=env_params,
+            batch_B=BATCH_B,
+            batch_T=BATCH_T,
+            max_decorrelation_steps=0,
+            CollectorCls=CpuResetCollector,
+            eval_n_envs=1,
+            eval_CollectorCls=SerialEvalCollector,
+            eval_env_kwargs=env_params,
+            eval_max_steps=50,
+        )
+    else:
+        return CpuSampler(
+            EnvCls=SellerEnvironment,
+            env_kwargs=env_params,
+            batch_B=BATCH_B,
+            batch_T=BATCH_T,
+            max_decorrelation_steps=0,
+            CollectorCls=CpuResetCollector,
+            eval_n_envs=1,
+            eval_CollectorCls=CpuEvalCollector,
+            eval_env_kwargs=env_params,
+            eval_max_steps=50,
+        )
 
 
 def main():
@@ -55,6 +71,7 @@ def main():
     parser.add_argument('--part', required=True, type=str)
     parser.add_argument('--con', required=True, type=str)
     parser.add_argument('--verbose', action='store_true')
+    parser.add_argument('--debug', action='store_true')
 
     # TODO: Develop multi-dimensional delay model
     # parser.add_argument('--delay', action='store_true')
@@ -85,14 +102,15 @@ def main():
 
     agent = make_agent(env_params=env_params)
     algo = make_algo(env_params=env_params)
-    sampler = make_sampler(env_params)
+    sampler = make_sampler(env_params=env_params, serial=args.debug)
 
     runner = MinibatchRl(log_traj_window=100,
                          algo=algo,
                          agent=agent,
                          sampler=sampler,
                          n_steps=TOTAL_STEPS,
-                         log_interval_steps=100)
+                         log_interval_steps=LOG_INTERVAL_STEPS,
+                         affinity=dict(workers_cpus=list(range(BATCH_B))))
     # not sure if this is right
     # log parameters (agent hyperparameters, algorithm parameters
     log_params = {
