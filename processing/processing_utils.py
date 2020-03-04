@@ -366,11 +366,13 @@ def save_featnames(x, name):
 
     # for offer models
     if 'offer1' in x:
-        if BYR_PREFIX in name or int(name[-1]) in IDX[BYR_PREFIX]:
+        if BYR_PREFIX in name or (type(name[-1]) is int and int(name[-1]) in IDX[BYR_PREFIX]):
             feats = CLOCK_FEATS + OUTCOME_FEATS
         else:
             feats = CLOCK_FEATS + TIME_FEATS + OUTCOME_FEATS
-        if BYR_PREFIX in name or SLR_PREFIX in name:
+
+        # add turn indicators for RL initializations
+        if name.startswith('init'):
             feats += TURN_FEATS[name]
 
         # check that all offer groupings have same organization
