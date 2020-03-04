@@ -51,8 +51,7 @@ class SellerEnvironment(AgentEnvironment):
             # if the lstg isn't complete that means it's time to sample an agent action
             if not lstg_complete:
                 self.last_event = event
-                return self.composer.get_obs(sources=event.sources(),
-                                             turn=event.turn)
+                return self.get_obs(sources=event.sources(), turn=event.turn)
             # if the lstg is complete
             else:
                 # check whether it's expired -- if so, relist

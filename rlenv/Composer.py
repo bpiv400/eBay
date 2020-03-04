@@ -1,5 +1,5 @@
 import math
-from collections import OrderedDict, namedtuple
+from collections import OrderedDict
 import torch
 import numpy as np
 import pandas as pd
@@ -252,8 +252,6 @@ class AgentComposer(Composer):
         self.con_type = agent_params[CON_TYPE]
 
         self.sizes['agent'] = self._build_agent_sizes()
-        self.obs_space_class = namedtuple(OBS_SPACE_NAME,
-                                          list(self.agent_sizes['x'].keys()))
         self.x_lstg_cols = list(cols)
         self.turn_inds = None
 
@@ -296,7 +294,7 @@ class AgentComposer(Composer):
                 obs_dict[set_name] = self._build_agent_offer_vector(offer_vector=sources[set_name])
             else:
                 obs_dict[set_name] = torch.from_numpy(sources[set_name]).float()
-        return self.obs_space_class(**obs_dict)
+        return obs_dict
 
     def _build_agent_lstg_vector(self, sources=None):
         solo_feats = np.array([sources[MONTHS_SINCE_LSTG], sources[BYR_HIST]])
@@ -344,4 +342,3 @@ class AgentComposer(Composer):
     @property
     def agent_sizes(self):
         return self.sizes['agent']
-
