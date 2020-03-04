@@ -452,9 +452,17 @@ def get_baserates(y, name):
     if intervals == 1:
         intervals += 1
     assert intervals > y.max()
-    p = np.zeros(intervals, dtype='float64')
-    for i in range(intervals):
-        p[i] = (y == i).mean()
+    if 'index' in y.index.names:
+        p = dict()
+        for turn in y.index.unique(level='index'):
+            y_turn = y.xs(turn, level='index')
+            p[turn] = np.zeros(intervals, dtype='float64')
+            for i in range(intervals):
+                p[turn][i] = (y_turn == i).mean()
+    else:
+        p = np.zeros(intervals, dtype='float64')
+        for i in range(intervals):
+            p[i] = (y == i).mean()
     return p
 
 
@@ -468,6 +476,10 @@ def save_files(d, part, name):
     # baserates
     if not 'delay' in name and not name == 'next_arrival':
         d['p'] = get_baserates(d['y'], name)
+
+        if type(d['p']) is dict:
+            d['idx_p'] = d['y'].index.get_level_values(
+                level='index').to_numpy(dtype='int8')
 
     # pandas index
     idx = d['y'].index
