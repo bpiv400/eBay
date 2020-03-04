@@ -19,8 +19,6 @@ def process_inputs(part, role):
 
     # listing features
     x = init_x(part, idx, drop_slr=True)
-    x['lstg'].drop(['auto_decline', 'auto_accept', 'has_decline', 'has_accept'],
-                   axis=1, inplace=True)
 
     # thread features
     x_thread = get_x_thread(threads, idx)
