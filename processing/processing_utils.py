@@ -440,6 +440,9 @@ def save_small(d, name):
     if 'p' in d:
         small['p'] = d['p']
 
+        if 'idx_p' in d:
+            small['idx_p'] = d['idx_p'][idx_small]
+
     # inputs
     small['x'] = {k: v[idx_small, :] for k, v in d['x'].items()}
 
