@@ -6,13 +6,14 @@ from rlenv.env_utils import get_con_outcomes, get_cut
 from agent.spaces.ConSpace import ConSpace
 
 
-class SellerEnvironment(AgentEnvironment):
-    TrajInfo = namedtuple("SellerTraj", ["lstg", "relist_count", "thread",
+SellerTraj = namedtuple("SellerTraj", ["lstg", "relist_count", "thread",
                                         "turn", "byr_time",
                                          "byr_con", "byr_delay", "byr_msg",
                                          "slr_time", "slr_con", "slr_delay"])
-    EmptyInfo = namedtuple("EmptyTraj", ["traj_done"])
+EmptyTraj = namedtuple("EmptyTraj", ["traj_done"])
 
+
+class SellerEnvironment(AgentEnvironment):
     def __init__(self, **kwargs):
         super(SellerEnvironment, self).__init__(**kwargs)
 
@@ -114,7 +115,7 @@ class SellerEnvironment(AgentEnvironment):
                 tuple_dict['slr_time'] = None
                 tuple_dict['slr_delay'] = None
                 tuple_dict['slr_con'] = None
-        return self.EmptyInfo(traj_done=lstg_complete)
+        return EmptyTraj(traj_done=lstg_complete)
 
     @property
     def horizon(self):
