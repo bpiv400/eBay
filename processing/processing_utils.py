@@ -2,7 +2,7 @@ import argparse
 import numpy as np
 import pandas as pd
 from compress_pickle import load, dump
-from utils import slr_norm, byr_norm, extract_clock_feats, get_months_since_lstg
+from utils import slr_norm, byr_norm, extract_clock_feats, get_remaining
 from processing.processing_consts import *
 from constants import *
 from featnames import *
@@ -148,6 +148,31 @@ def add_turn_indicators(df):
         ind = indices[i]
         df['t{}'.format(ind)] = df.index.isin([ind], level='index')
     return df
+
+
+def calculate_remaining(part, idx, turn=None):
+    # load timestamps
+    lstg_start = load_file(part, 'lookup').start_time.reindex(
+        index=idx, level='lstg')
+    delay_start = load_file(part, 'clock').groupby(
+        ['lstg', 'thread']).shift().dropna().astype('int64')
+
+    if turn is None:
+        remaining = pd.Series(np.nan, index=idx)
+        for turn in idx.unique(level='index'):
+            turn_start = delay_start.xs(turn, level='index').reindex(index=idx)
+            mask = idx.get_level_values(level='index') == turn
+            remaining.loc[mask] = get_remaining(
+                lstg_start, turn_start, MAX_DELAY[turn])
+    else:
+        assert 'index' not in idx.names
+        turn_start = delay_start.xs(turn, level='index').reindex(index=idx)
+        remaining = get_remaining(lstg_start, turn_start, MAX_DELAY[turn])
+
+    # error checking
+    assert np.all(remaining > 0) and np.all(remaining <= 1)
+
+    return remaining
 
 
 def get_x_thread(threads, idx):
@@ -304,6 +329,32 @@ def get_arrival_times(lstg_start, thread_start, lstg_end=None):
     return clock.rename('clock')
 
 
+def get_y_con(df):
+    # drop zero delay and expired offers
+    mask = ~df[AUTO] & ~df[EXP]
+    # concession is an int from 0 to 100
+    return (df.loc[mask, CON] * 100).astype('int8')
+
+
+def assert_zero(offer, cols):
+    for c in cols:
+        assert offer[c].max() == 0
+        assert offer[c].min() == 0
+
+
+def check_zero(x):
+    keys = [k for k in x.keys() if k.startswith('offer')]
+    for k in keys:
+        if k in x:
+            i = int(k[-1])
+            if i == 1:
+                assert_zero(x[k], [DAYS, DELAY])
+            if i % 2 == 1:
+                assert_zero(x[k], [AUTO, EXP, REJECT])
+            if i == 7:
+                assert_zero(x[k], [MSG])
+
+
 def save_featnames(x, name):
     """
     Creates dictionary of input feature names.
@@ -319,7 +370,7 @@ def save_featnames(x, name):
             feats = CLOCK_FEATS + OUTCOME_FEATS
         else:
             feats = CLOCK_FEATS + TIME_FEATS + OUTCOME_FEATS
-        if BYR_PREFIX in name or SLR_PREFIX in name or 'first' in name:
+        if BYR_PREFIX in name or SLR_PREFIX in name:
             feats += TURN_FEATS[name]
 
         # check that all offer groupings have same organization

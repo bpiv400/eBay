@@ -3,11 +3,10 @@ import numpy as np
 import pandas as pd
 from processing.processing_consts import INTERVAL, INTERVAL_COUNTS
 from processing.processing_utils import load_file, get_x_thread, \
-    init_x, save_files
+    init_x, save_files, get_y_con, check_zero, calculate_remaining
 from constants import IDX, DAY, MAX_DELAY, BYR_PREFIX, SLR_PREFIX, PARTITIONS
 from featnames import CON, NORM, SPLIT, MSG, AUTO, EXP, REJECT, DAYS, DELAY, \
     INT_REMAINING, TIME_FEATS
-from utils import get_remaining
 
 
 def get_x_offer(offers, idx, outcome, role, turn):
@@ -44,13 +43,6 @@ def get_x_offer(offers, idx, outcome, role, turn):
     return x_offer
 
 
-def get_y_con(df):
-    # drop zero delay and expired offers
-    mask = ~df[AUTO] & ~df[EXP]
-    # concession is an int from 0 to 100
-    return (df.loc[mask, CON] * 100).astype('int8')
-
-
 def get_y_msg(df, role):
     # for buyers, drop accepts and rejects
     if role == BYR_PREFIX:
@@ -77,29 +69,6 @@ def get_y_delay(df, turn):
     # replace censored delays with negative index
     delay.loc[df[EXP] & (df[DELAY] < 1)] -= INTERVAL_COUNTS[turn]
     return delay
-
-
-def calculate_remaining(part, idx, turn):
-    # load timestamps
-    lstg_start = load_file(part, 'lookup').start_time.reindex(
-        index=idx, level='lstg')
-    delay_start = load_file(part, 'clock').groupby(
-        ['lstg', 'thread']).shift().dropna().astype('int64')
-    delay_start = delay_start.xs(turn, level='index').reindex(index=idx)
-
-    # remaining calculation
-    remaining = get_remaining(lstg_start, delay_start, MAX_DELAY[turn])
-
-    # error checking
-    assert np.all(remaining > 0) and np.all(remaining <= 1)
-
-    return remaining
-
-
-def check_zero(offer, cols):
-    for c in cols:
-        assert offer[c].max() == 0
-        assert offer[c].min() == 0
 
 
 # loads data and calls helper functions to construct train inputs
@@ -139,16 +108,7 @@ def process_inputs(part, outcome, turn):
     x.update(get_x_offer(offers, idx, outcome, role, turn))
 
     # error checking
-    for i in range(1, turn + 1):
-        k = 'offer' + str(i)
-        if k in x:
-            # error checking
-            if i == 1:
-                check_zero(x[k], [DAYS, DELAY])
-            if i % 2 == 1:
-                check_zero(x[k], [AUTO, EXP, REJECT])
-            if i == 7:
-                check_zero(x[k], [MSG])
+    check_zero(x)
 
     return {'y': y, 'x': x}
 
