@@ -12,8 +12,11 @@ from rlenv.env_consts import (LOOKUP, X_LSTG, ENV_LSTG_COUNT)
 from rlenv.environments.EbayEnvironment import EbayEnvironment
 from rlenv.simulator.Recorder import Recorder
 from agent.agent_utils import get_con_set
+from agent.agent_consts import seller_groupings
+
 
 SellerObs = namedtuple("SellerObs", seller_groupings)
+
 
 class AgentEnvironment(EbayEnvironment, Env):
 
@@ -46,7 +49,7 @@ class AgentEnvironment(EbayEnvironment, Env):
     def define_observation_space(self):
         sizes = self.composer.agent_sizes['x']
         boxes = [FloatBox(-1000, 1000, shape=size) for size in sizes.values()]
-        return Composite(boxes, self.obs_space_class)
+        return Composite(boxes, SellerObs)
 
     def reset_lstg(self):
         """
@@ -85,7 +88,7 @@ class AgentEnvironment(EbayEnvironment, Env):
 
     def get_obs(self, sources=None, turn=None):
         obs_dict = self.composer.get_obs(sources=sources, turn=turn)
-        return self.obs_space_class(**obs_dict)
+        return SellerObs(**obs_dict)
 
     def con_from_action(self, action=None):
         raise NotImplementedError()

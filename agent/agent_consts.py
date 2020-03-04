@@ -4,6 +4,18 @@ INPUT_DIR = "input"
 TRAIN_SEED = 10
 
 
+# seller input groups
+seller_groupings = [
+    'lstg',
+    'w2v_byr',
+    'w2v_slr',
+    'cat',
+    'cndtn',
+]
+for i in range(1, 7):
+    seller_groupings.append('offer{}'.format(i))
+    del i
+
 # hyperparameter name constants
 # concession set constants
 CON_TYPE = 'con_type'
@@ -11,6 +23,7 @@ FULL_CON = 'full'
 QUARTILES = 'quart'
 HALF = 'half'
 # feat id
+
 FEAT_ID = "feat_id"
 
 
