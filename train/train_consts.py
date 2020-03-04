@@ -5,8 +5,8 @@ LOG_DIR = OUTPUT_DIR + 'logs/'
 
 # optimization parameters
 NUM_WORKERS = {'first_arrival': 5,
-               'delay_slr': 5,
-               'con_slr': 6}
+               'init_byr': 5,
+               'init_slr': 6}
 MBSIZE = {True: 128, False: 2048}  # True for training, False for validation
 
 # learning rate parameters
@@ -39,4 +39,6 @@ GAMMA_MULTIPLIER = {'first_arrival': 0,
                     'msg3': 1,
                     'msg4': 1,
                     'msg5': 1,
-                    'msg6': 3}
+                    'msg6': 3,
+                    'init_slr': 1,
+                    'init_byr': 1}
