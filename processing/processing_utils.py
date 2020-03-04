@@ -440,8 +440,8 @@ def save_small(d, name):
     if 'p' in d:
         small['p'] = d['p']
 
-        if 'idx_p' in d:
-            small['idx_p'] = d['idx_p'][idx_small]
+        if 'turn' in d:
+            small['turn'] = d['turn'][idx_small]
 
     # inputs
     small['x'] = {k: v[idx_small, :] for k, v in d['x'].items()}
@@ -481,7 +481,7 @@ def save_files(d, part, name):
         d['p'] = get_baserates(d['y'], name)
 
         if type(d['p']) is dict:
-            d['idx_p'] = d['y'].index.get_level_values(
+            d['turn'] = d['y'].index.get_level_values(
                 level='index').to_numpy(dtype='int8')
 
     # pandas index

@@ -27,7 +27,11 @@ class ConDataset(EBayDataset):
         x = {k: v[idx, :] for k, v in self.d['x'].items()}
 
         # p is indexed directly
-        p = self.d['p']
+        if type(p) is dict:
+            turn = self.d['turn'][idx]
+            p = self.d['p'][turn]
+        else:
+            p = self.d['p']
 
         return y, x, p
 
