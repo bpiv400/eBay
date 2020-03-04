@@ -466,7 +466,7 @@ def save_files(d, part, name):
         save_sizes(d['x'], name)
 
     # baserates
-    if CON in name or MSG in name:
+    if not 'delay' in name and not name == 'next_arrival':
         d['p'] = get_baserates(d['y'], name)
 
     # pandas index
