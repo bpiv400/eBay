@@ -10,8 +10,8 @@ DISCRIM_MODELS = ['listings', 'threads']
 NUM_WORKERS = {'first_arrival': 5,
                'init_byr': 5,
                'init_slr': 6,
-               'threads': 7,
-               'listings': 7}
+               'listings': 6,
+               'threads': 6}
 MBSIZE = {True: 128, False: 2048}  # True for training, False for validation
 
 # learning rate parameters
