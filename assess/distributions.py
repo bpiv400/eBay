@@ -3,7 +3,7 @@ import torch
 import numpy as np
 import pandas as pd
 from compress_pickle import load
-from processing.f_discrim.discrim_utils import get_batches, PartialDataset, get_sim_times
+from assess.assess_utils import get_batches, PartialDataset, get_sim_times
 from processing.processing_utils import load_file, get_arrival_times, get_interarrival_period
 from utils import load_model, load_featnames
 from constants import VALIDATION, ENV_SIM_DIR, SIM_CHUNKS, INPUT_DIR, INDEX_DIR

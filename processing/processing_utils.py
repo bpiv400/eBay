@@ -191,76 +191,6 @@ def get_x_thread(threads, idx):
     return x_thread.astype('float32')
 
 
-# sets unseen feats to 0
-def set_zero_feats(offer, i, outcome):
-    # turn number
-    turn = offer.index.get_level_values(level='index')
-
-    # all features are zero for future turns
-    if i > 1:
-        offer.loc[i > turn, :] = 0.0
-
-    # for current turn, set feats to 0
-    curr = i == turn
-    if outcome == DELAY:
-        offer.loc[curr, :] = 0.0
-    else:
-        offer.loc[curr, MSG] = 0.0
-        if outcome == CON:
-            offer.loc[curr, [CON, NORM, SPLIT, AUTO, EXP, REJECT]] = 0.0
-
-    return offer
-
-
-def get_x_offer(offers, idx, outcome=None, role=None):
-    # initialize dictionary of offer features
-    x_offer = {}
-
-    # for threads set role to byr
-    if outcome is None and role is None:
-        role = BYR_PREFIX
-
-    # dataframe of offer features for relevant threads
-    if 'index' in idx.names:
-        threads = idx.droplevel(level='index').unique()
-    else:
-        threads = idx
-    offers = pd.DataFrame(index=threads).join(offers)
-
-    # last turn to include
-    last = max(IDX[role])
-    if outcome == DELAY:
-        last -= 1
-    if (outcome == MSG) & (role == BYR_PREFIX):
-        last -= 2
-
-    # turn features
-    for i in range(1, last + 1):
-        # offer features at turn i
-        offer = offers.xs(i, level='index').reindex(
-            index=idx, fill_value=0).astype('float32')
-
-        # set unseen feats to 0 and add turn indicators
-        if outcome is not None:
-            offer = set_zero_feats(offer, i, outcome)
-            offer = add_turn_indicators(offer)
-
-        # drop time feats from buyer models
-            if role == BYR_PREFIX:
-                offer = offer.drop(TIME_FEATS, axis=1)
-
-        # set censored time feats to zero
-        else:
-            if i > 1:
-                censored = (offer[EXP] == 1) & (offer[DELAY] < 1)
-                offer.loc[censored, TIME_FEATS] = 0.0
-
-        # put in dictionary
-        x_offer['offer%d' % i] = offer.astype('float32')
-
-    return x_offer
-
-
 def init_x(part, idx, drop_slr=False):
     x = load_file(part, 'x_lstg')
     x = {k: v.reindex(index=idx, level='lstg').astype('float32') for k, v in x.items()}
@@ -352,7 +282,7 @@ def check_zero(x):
             if i % 2 == 1:
                 assert_zero(x[k], [AUTO, EXP, REJECT])
             if i == 7:
-                assert_zero(x[k], [MSG])
+                assert_zero(x[k], [SPLIT, MSG])
 
 
 def save_featnames(x, name):

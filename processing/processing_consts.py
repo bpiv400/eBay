@@ -110,4 +110,6 @@ NUM_OUT = {'first_arrival': INTERVAL_COUNTS[1] + 1,
            'msg5': 1,
            'msg6': 1,
            'init_slr': CON_MULTIPLIER + 1,
-           'init_byr': CON_MULTIPLIER + 1}
+           'init_byr': CON_MULTIPLIER + 1,
+           'listings': 1,
+           'threads': 1}

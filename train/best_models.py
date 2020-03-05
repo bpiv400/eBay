@@ -4,7 +4,7 @@ import numpy as np
 from processing.processing_consts import LOG_DIR
 from constants import MODEL_DIR, MODELS
 
-for model in MODELS:
+for model in MODELS + ['init_slr']:
     em = EventMultiplexer().AddRunsFromDirectory(LOG_DIR + model)
     em.Reload()
 

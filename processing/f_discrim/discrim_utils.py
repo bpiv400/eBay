@@ -1,92 +1,8 @@
-import torch
 import numpy as np
 import pandas as pd
 from compress_pickle import load, dump
-from torch.utils.data import Sampler, DataLoader, Dataset
-from train.train_consts import MBSIZE
-from processing.processing_utils import save_featnames, save_sizes, convert_x_to_numpy
-from constants import SIM_CHUNKS, ENV_SIM_DIR, MAX_DELAY, ARRIVAL_PREFIX, INDEX_DIR
-
-
-class PartialDataset(Dataset):
-    def __init__(self, x):
-        """
-        Defines a parent class that extends torch.utils.data.Dataset.
-        :param x: dictionary of numpy arrays of input data.
-        """
-        # save name to self
-        self.x = x
-
-        # number of labels
-        self.N = len(self.x['lstg'])
-
-    def __getitem__(self, idx):
-        """
-        Returns a tuple of data components for example.
-        :param idx: index of example.
-        :return: tuple of data components at index idx.
-        """
-        # index components of input dictionary
-        return {k: v[idx, :] for k, v in self.x.items()}
-
-    def __len__(self):
-        return self.N
-
-
-class Sample(Sampler):
-    def __init__(self, data):
-        """
-        Defines a sampler that extends torch.utils.data.Sampler.
-        :param data: Inputs object.
-        """
-        super().__init__(None)
-
-        # create vector of indices
-        v = np.array(range(len(data)))
-
-        # chop into minibatches
-        self.batches = np.array_split(v, 1 + len(v) // (MBSIZE[False] * 15))
-
-    def __iter__(self):
-        """
-        Iterate over batches defined in intialization
-        """
-        for batch in self.batches:
-            yield batch
-
-    def __len__(self):
-        return len(self.batches)
-
-
-def collate(batch):
-    """
-    Converts examples to tensors for a feed-forward network.
-    :param batch: list of (dictionary of) numpy arrays.
-    :return: dictionary of (dictionary of) tensors.
-    """
-    x = {}
-    for b in batch:
-        for k, v in b.items():
-            if k in x:
-                x[k].append(torch.from_numpy(v))
-            else:
-                x[k] = [torch.from_numpy(v)]
-
-    # convert to (single) tensors
-    return {k: torch.stack(v).float() for k, v in x.items()}
-
-
-def get_batches(data):
-    """
-    Creates a Dataloader object.
-    :param data: Inputs object.
-    :return: iterable batches of examples.
-    """
-    batches = DataLoader(data, collate_fn=collate,
-                         batch_sampler=Sample(data),
-                         num_workers=8,
-                         pin_memory=True)
-    return batches
+from processing.processing_utils import save_sizes, convert_x_to_numpy, save_small
+from constants import SIM_CHUNKS, ENV_SIM_DIR, MAX_DELAY, ARRIVAL_PREFIX, INPUT_DIR
 
 
 def process_lstg_end(lstg_start, lstg_end):
@@ -123,16 +39,11 @@ def get_sim_times(part, lstg_start):
 def save_discrim_files(part, name, x_obs, x_sim):
     # featnames and sizes
     if part == 'test_rl':
-        save_featnames(x_obs, name)
         save_sizes(x_obs, name)
 
     # indices
     idx_obs = x_obs['lstg'].index
     idx_sim = x_sim['lstg'].index
-
-    # save joined index
-    idx_joined = idx_obs.union(idx_sim, sort=False)
-    dump(idx_joined, INDEX_DIR + '{}/listings.gz'.format(part))
 
     # create dictionary of numpy arrays
     x_obs = convert_x_to_numpy(x_obs, idx_obs)
@@ -148,8 +59,8 @@ def save_discrim_files(part, name, x_obs, x_sim):
     d['x'] = {k: np.concatenate((x_obs[k], x_sim[k]), axis=0) for k in x_obs.keys()}
 
     # save inputs
-    dump(d, INPUT_DIR + '{}/listings.gz'.format(part))
+    dump(d, INPUT_DIR + '{}/{}.gz'.format(part, name))
 
     # save small
     if part == 'train_rl':
-        save_small_discrim()
+        save_small(d, name)
