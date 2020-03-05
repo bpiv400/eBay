@@ -110,7 +110,7 @@ def main():
                          sampler=sampler,
                          n_steps=TOTAL_STEPS,
                          log_interval_steps=LOG_INTERVAL_STEPS,
-                         affinity=dict(workers_cpus=list(range(BATCH_B))))
+                         affinity=dict(workers_cpus=list(range(4))))
     # not sure if this is right
     # log parameters (agent hyperparameters, algorithm parameters
     log_params = {
