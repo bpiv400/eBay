@@ -263,7 +263,9 @@ class Trainer:
         net = nets[idx]
  
         # initialize output with log10 learning rate
-        output = {'lnlr': lnlr, 'loss': loss[idx], 'gamma': self.gamma}
+        output = {'lnlr': lnlr, 'loss': loss[idx]}
+        if not self.is_discrim:
+            output['gamma'] = self.gamma
  
         # collect remaining output and print
         print('Epoch 0')
