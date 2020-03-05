@@ -1,9 +1,8 @@
 import argparse
 from scipy.optimize import minimize_scalar
-from train.ConTrainer import Trainer
+from train.Trainer import Trainer
 from train.train_consts import GAMMA_TOL, GAMMA_MAX, GAMMA_MULTIPLIER
 from constants import TRAIN_RL, TRAIN_MODELS, VALIDATION
-from featnames import CON
 
 
 def main():

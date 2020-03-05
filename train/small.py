@@ -1,5 +1,5 @@
 import argparse
-from train.ConTrainer import Trainer
+from train.Trainer import Trainer
 from constants import SMALL, VALIDATION
 
 
@@ -7,7 +7,7 @@ def main():
     # extract parameters from command line
     parser = argparse.ArgumentParser()
     parser.add_argument('--name', type=str, help='model name')
-    parser.add_argument('--gamma', type=float, default=1)
+    parser.add_argument('--gamma', type=float, default=0)
     args = parser.parse_args()
     name, gamma = args.name, args.gamma
 

@@ -1,11 +1,9 @@
 import torch
 import numpy as np
-from compress_pickle import load
 from train.EBayDataset import EBayDataset
-from constants import INPUT_DIR
 
 
-class ConDataset(EBayDataset):
+class KLDataset(EBayDataset):
     def __init__(self, part, name):
         """
         Defines a parent class that extends torch.utils.data.Dataset.

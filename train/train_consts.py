@@ -3,10 +3,14 @@ from constants import OUTPUT_DIR
 # directories
 LOG_DIR = OUTPUT_DIR + 'logs/'
 
+# discriminator models
+DISCRIM_MODELS = ['listings', 'threads']
+
 # optimization parameters
 NUM_WORKERS = {'first_arrival': 5,
                'init_byr': 5,
-               'init_slr': 6}
+               'init_slr': 6,
+               'threads': 0}
 MBSIZE = {True: 128, False: 2048}  # True for training, False for validation
 
 # learning rate parameters
@@ -41,6 +45,4 @@ GAMMA_MULTIPLIER = {'first_arrival': 0,
                     'msg5': 1,
                     'msg6': 3,
                     'init_slr': 1,
-                    'init_byr': 1,
-                    'threads': 0,
-                    'listings': 0}
+                    'init_byr': 1}

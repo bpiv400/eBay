@@ -1,16 +1,16 @@
-import os
 import numpy as np
 import torch
-import torch.nn as nn
+from torch.nn.functional import log_softmax, nll_loss
 from datetime import datetime as dt
 from torch.utils.tensorboard import SummaryWriter
 from torch.optim import Adam, lr_scheduler
-from train.eBayDataset import eBayDataset
-from train.train_consts import FTOL, LOG_DIR, LNLR0, LNLR1, LNLR_FACTOR
-from train.Model import Model
+from train.EBayDataset import EBayDataset
+from train.KLDataset import KLDataset
+from train.train_consts import FTOL, LOG_DIR, LNLR0, LNLR1, LNLR_FACTOR, DISCRIM_MODELS
+from nets.FeedForward import FeedForward
 from train.Sample import get_batches
-from train.loss import time_loss, taylor_softmax_loss
 from constants import MODEL_DIR
+from utils import load_sizes
 
 
 class Trainer:
@@ -27,39 +27,43 @@ class Trainer:
         :param train_part: string partition name for training data.
         :param test_part: string partition name for holdout data.
         :param dev: True for development.
+        :param device: 'cuda' or 'cpu'.
         """
         # save parameters to self
         self.name = name
         self.dev = dev
         self.device = device
 
-        # path to pretrained model
-        self.pretrained_path = MODEL_DIR + '{}/pretrained.net'.format(name)
+        # boolean for time loss
+        self.is_delay = 'delay' in name or name == 'next_arrival'
 
-        # loss function
-        if 'msg' in name or name in ['listings', 'threads']:
-            self.loss = nn.BCEWithLogitsLoss(reduction='sum')
-        elif 'con' in name or name == 'first_arrival':
-            self.loss = nn.CrossEntropyLoss(reduction='sum')
-        else:
-            self.loss = time_loss
-        print(self.loss)
+        # boolean for discriminator
+        self.is_discrim = name in DISCRIM_MODELS
+
+        # penalization factor to be set later
+        self.gamma = None
+
+        # load model size parameters
+        self.sizes = load_sizes(name)
+        print(self.sizes)
 
         # load datasets
-        self.train = eBayDataset(train_part, name)
-        self.test = eBayDataset(test_part, name)
+        dataset = EBayDataset if self.is_delay or self.is_discrim else KLDataset
+        self.train = dataset(train_part, name)
+        self.test = dataset(test_part, name)
 
-        # pretrain with penalty hyperparameter set to 0
-        if not os.path.isfile(self.pretrained_path):
-            self.train_model()
-
-    def train_model(self, gamma=0):
+    def train_model(self, gamma=0.0):
         """
         Public method to train model.
         :param gamma: scalar regularization parameter for variational dropout.
         """
         # experiment id
         expid = dt.now().strftime('%y%m%d-%H%M')
+
+        # save gamma to self
+        if self.is_discrim:
+            assert gamma == 0
+        self.gamma = gamma
 
         # initialize writer
         if not self.dev:
@@ -69,20 +73,17 @@ class Trainer:
             writer = None
 
         # tune initial learning rate
-        lnlr, model = self._tune_lr(writer=writer, gamma=gamma)
+        lnlr, net = self._tune_lr(writer)
 
         # path to save model
-        if model.dropout:
-            model_path = MODEL_DIR + '{}/{}.net'.format(self.name, expid)
-        else:
-            model_path = self.pretrained_path
+        model_path = MODEL_DIR + '{}/{}.net'.format(self.name, expid)
 
         # save model
         if not self.dev:
-            torch.save(model.net.state_dict(), model_path)
+            torch.save(net.state_dict(), model_path)
 
         # initialize optimizer and scheduler
-        optimizer = Adam(model.net.parameters(), lr=np.exp(lnlr))
+        optimizer = Adam(net.parameters(), lr=np.exp(lnlr))
         scheduler = lr_scheduler.ReduceLROnPlateau(optimizer,
                                                    mode='min',
                                                    factor=np.exp(LNLR_FACTOR),
@@ -95,12 +96,14 @@ class Trainer:
         while True:
             # run one epoch
             print('Epoch {}'.format(epoch))
-            output = self._run_epoch(model, optimizer,
-                                     writer=writer, epoch=epoch)
+            output = self._run_epoch(net, 
+                                     optimizer=optimizer,
+                                     writer=writer,
+                                     epoch=epoch)
 
             # save model
             if not self.dev:
-                torch.save(model.net.state_dict(), model_path)
+                torch.save(net.state_dict(), model_path)
 
             # reduce learning rate if loss has not meaningfully improved
             scheduler.step(output['loss'])
@@ -120,23 +123,24 @@ class Trainer:
         for param_group in optimizer.param_groups:
             return np.log(param_group['lr'])
 
-    def _run_epoch(self, model, optimizer, writer=None, epoch=None):
+    def _run_epoch(self, net, optimizer=None, writer=None, epoch=None):
         # initialize output with log10 learning rate
         output = dict()
         output['lnlr'] = self._get_lnlr(optimizer)
 
         # train model
-        output['loss'] = self._run_loop(self.train, model, optimizer)
+        output['loss'] = self._run_loop(self.train, net, optimizer)
 
         # collect remaining output and print
-        output = self._collect_output(model, writer, output, epoch=epoch)
+        output = self._collect_output(net, writer, output, epoch=epoch)
 
         return output
 
-    def _run_loop(self, data, model, optimizer=None):
+    def _run_loop(self, data, net, optimizer=None):
         """
         Calculates loss on epoch, steps down gradients if training.
         :param data: Inputs object.
+        :param net: FeedForward instance.
         :param optimizer: instance of torch.optim.
         :return: scalar loss.
         """
@@ -153,9 +157,11 @@ class Trainer:
             # move to device
             b['x'] = {k: v.to(self.device) for k, v in b['x'].items()}
             b['y'] = b['y'].to(self.device)
+            if 'p' in b:
+                b['p'] = b['p'].to(self.device)
 
             # increment loss
-            loss += self._run_batch(b, model, optimizer)
+            loss += self._run_batch(b, net, optimizer)
 
             # increment gpu time
             gpu_time += (dt.now() - t1).total_seconds()
@@ -168,33 +174,66 @@ class Trainer:
 
         return loss
 
-    def _run_batch(self, b, model, optimizer):
+    @staticmethod
+    def _time_loss(lnq, y):
+        # arrivals have positive y
+        arrival = y >= 0
+        lnL = torch.sum(lnq[arrival, y[arrival]])
+
+        # non-arrivals
+        cens = y < 0
+        y_cens = y[cens]
+        q_cens = torch.exp(lnq[cens, :])
+        for i in range(q_cens.size()[0]):
+            lnL += torch.log(torch.sum(q_cens[i, y_cens[i]:]))
+
+        return -lnL
+
+    @staticmethod
+    def _get_entropy(lnq):
+        h = -torch.sum(torch.exp(lnq) * lnq, dim=-1)
+        return h
+
+    @staticmethod
+    def _get_kl(lnq, p):
+        kl = p * (torch.log(p) - lnq)
+        kl[p == 0] = 0
+        kl = torch.sum(kl, dim=-1)
+        return kl
+
+    def _run_batch(self, b, net, optimizer):
         """
         Loops over examples in batch, calculates loss.
         :param b: batch of examples from DataLoader.
+        :param net: FeedForward instance.
         :param optimizer: instance of torch.optim.
         :return: scalar loss.
         """
         is_training = optimizer is not None  # train / eval mode
 
         # call forward on model
-        model.net.train(is_training)
-        theta = model.net(b['x']).squeeze()
+        net.train(is_training)
+        theta = net(b['x'])
 
-        # binary cross entropy requires float
-        if str(self.loss) == "BCEWithLogitsLoss()":
-            b['y'] = b['y'].float()
+        # softmax
+        if theta.size()[1] == 1:
+            theta = torch.cat((torch.zeros_like(theta), theta), dim=1)
+        lnq = log_softmax(theta, dim=-1)
 
         # calculate loss
-        loss = self.loss(theta, b['y'].squeeze())
+        if self.is_delay:
+            loss = self._time_loss(lnq, b['y'])
+        else:
+            loss = nll_loss(lnq, b['y'], reduction='sum')
 
         # add in regularization penalty and step down gradients
         if is_training:
-            if model.dropout:
-                penalty = model.get_penalty()
-                factor = len(b['y']) / len(self.train)
-                # print(loss.item(), penalty * factor)
-                loss = loss + penalty * factor
+            if not self.is_discrim and self.gamma > 0:
+                if self.is_delay:
+                    penalty = self._get_entropy(lnq)
+                else:
+                    penalty = self._get_kl(lnq, b['p'])
+                loss += torch.sum(self.gamma * penalty)
 
             optimizer.zero_grad()
             loss.backward()
@@ -202,58 +241,43 @@ class Trainer:
 
         return loss.item()
 
-    def _tune_lr(self, writer=None, gamma=0):
-        models, loss = [], []
+    def _tune_lr(self, writer=None):
+        nets, loss = [], []
         for lnlr in LNLR0:
             # initialize model and optimizer
-            models.append(self._initialize_model(gamma))
-            optimizer = Adam(models[-1].net.parameters(), lr=np.exp(lnlr))
-
+            nets.append(FeedForward(self.sizes).to(self.device))
+            optimizer = Adam(nets[-1].parameters(), lr=np.exp(lnlr))
+ 
             # print to console
-            if len(models) == 1:
-                print(models[-1].net)
+            if len(nets) == 1:
+                print(nets[-1])
             print('Tuning with lnlr of {}'.format(lnlr))
-
+ 
             # run model for one epoch
-            loss.append(self._run_loop(self.train, models[-1], optimizer))
+            loss.append(self._run_loop(self.train, nets[-1], optimizer))
             print('\tloss: {}'.format(loss[-1]))
-
+ 
         # best learning rate and model
         idx = int(np.argmin(loss))
         lnlr = LNLR0[idx]
-        model = models[idx]
-
+        net = nets[idx]
+ 
         # initialize output with log10 learning rate
-        output = {'lnlr': lnlr, 'loss': loss[idx]}
-
+        output = {'lnlr': lnlr, 'loss': loss[idx], 'gamma': self.gamma}
+ 
         # collect remaining output and print
         print('Epoch 0')
-        self._collect_output(model, writer, output)
-
+        self._collect_output(net, writer, output)
+ 
         # return lnlr of smallest loss and corresponding model
-        return lnlr, model
+        return lnlr, net
 
-    def _initialize_model(self, gamma=0):
-        # uninitialized weights
-        model = Model(self.name, gamma=gamma, device=self.device)
-
-        # load model weights from pretrained model
-        if model.dropout:
-            model.net.load_state_dict(
-                torch.load(self.pretrained_path), strict=False)
-
-        return model
-
-    def _collect_output(self, model, writer, output, epoch=0):
-        # variational dropout stats
-        if model.dropout:
-            output['gamma'] = model.gamma
-
+    def _collect_output(self, net, writer, output, epoch=0):
         # calculate log-likelihood on validation set
         with torch.no_grad():
-            loss_train = self._run_loop(self.train, model)
+            loss_train = self._run_loop(self.train, net)
             output['lnL_train'] = -loss_train / self.train.N
-            loss_test = self._run_loop(self.test, model)
+            loss_test = self._run_loop(self.test, net)
             output['lnL_test'] = -loss_test / self.test.N
 
         # save output to tensorboard writer
@@ -261,9 +285,5 @@ class Trainer:
             print('\t{}: {}'.format(k, v))
             if writer is not None:
                 writer.add_scalar(k, v, epoch)
-
-        # histogram of lnalpha
-        if model.dropout and writer is not None:
-            writer.add_histogram('lnalpha', model.lnalpha, epoch)
 
         return output
