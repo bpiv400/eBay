@@ -1,10 +1,9 @@
-from compress_pickle import load
 import pandas as pd
 from processing.processing_utils import input_partition, load_file, \
 	get_days_delay, get_norm, get_x_thread, init_x, collect_date_clock_feats
-from processing.f_discrim.discrim_utils import save_discrim_files
+from processing.f_discrim.discrim_utils import concat_sim_chunks, save_discrim_files
 from utils import is_split
-from constants import SIM_CHUNKS, ENV_SIM_DIR, MONTH, IDX, SLR_PREFIX
+from constants import MONTH, IDX, SLR_PREFIX
 from featnames import CON, NORM, SPLIT, DAYS, DELAY, EXP, AUTO, REJECT, CENSORED, \
 	MONTHS_SINCE_LSTG, TIME_FEATS, MSG
 
@@ -69,22 +68,6 @@ def process_threads_sim(part, df, thread_cols):
 	# reorder columns to match observed
 	df = df[thread_cols]
 	return df
-
-
-def concat_sim_chunks(part):
-	"""
-	Loops over simulations, concatenates dataframes.
-	:param part: string name of partition.
-	:return: concatentated and sorted threads and offers dataframes.
-	"""
-	threads_sim, offers_sim = [], []
-	for i in range(1, SIM_CHUNKS+1):
-		sim = load(ENV_SIM_DIR + '{}/discrim/{}.gz'.format(part, i))
-		threads_sim.append(sim['threads'])
-		offers_sim.append(sim['offers'])
-	threads_sim = pd.concat(threads_sim, axis=0).sort_index()
-	offers_sim = pd.concat(offers_sim, axis=0).sort_index()
-	return threads_sim, offers_sim
 
 
 def process_sim(part, thread_cols, offer_cols):

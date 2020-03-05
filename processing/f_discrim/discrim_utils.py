@@ -5,6 +5,22 @@ from processing.processing_utils import save_sizes, convert_x_to_numpy, save_sma
 from constants import SIM_CHUNKS, ENV_SIM_DIR, MAX_DELAY, ARRIVAL_PREFIX, INPUT_DIR
 
 
+def concat_sim_chunks(part):
+    """
+    Loops over simulations, concatenates dataframes.
+    :param part: string name of partition.
+    :return: concatentated and sorted threads and offers dataframes.
+    """
+    threads, offers = [], []
+    for i in range(1, SIM_CHUNKS + 1):
+        sim = load(ENV_SIM_DIR + '{}/discrim/{}.gz'.format(part, i))
+        threads.append(sim['threads'])
+        offers.append(sim['offers'])
+    threads = pd.concat(threads, axis=0).sort_index()
+    offers = pd.concat(offers, axis=0).sort_index()
+    return threads, offers
+
+
 def process_lstg_end(lstg_start, lstg_end):
     # remove thread and index from lstg_end index
     lstg_end = lstg_end.reset_index(['thread', 'index'], drop=True)
@@ -20,7 +36,7 @@ def process_lstg_end(lstg_start, lstg_end):
 def get_sim_times(part, lstg_start):
     # collect times from simulation files
     lstg_end, thread_start = [], []
-    for i in range(1, SIM_CHUNKS+1):
+    for i in range(1, SIM_CHUNKS + 1):
         sim = load(ENV_SIM_DIR + '{}/discrim/{}.gz'.format(part, i))
         offers, threads = [sim[k] for k in ['offers', 'threads']]
         lstg_end.append(offers.loc[(offers.con == 100) & ~offers.censored, 'clock'])

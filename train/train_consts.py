@@ -45,4 +45,6 @@ GAMMA_MULTIPLIER = {'first_arrival': 0,
                     'msg5': 1,
                     'msg6': 3,
                     'init_slr': 1,
-                    'init_byr': 1}
+                    'init_byr': 1,
+                    'listings': 0,
+                    'threads': 0}
