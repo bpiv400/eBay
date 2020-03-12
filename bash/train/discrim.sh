@@ -6,8 +6,8 @@
 
 if [ "$SGE_TASK_ID" == 1 ]
 then
-	python repo/train/train_model.py --name listings
+	python repo/train/train_model.py --name listings --dropout
 elif [ "$SGE_TASK_ID" == 2 ]
 then
-	python repo/train/train_model.py --name threads
+	python repo/train/train_model.py --name threads --dropout
 fi
