@@ -6,16 +6,16 @@ from constants import SMALL, VALIDATION
 def main():
     # extract parameters from command line
     parser = argparse.ArgumentParser()
-    parser.add_argument('--name', type=str, help='model name')
+    parser.add_argument('--name', required=True, type=str, help='model name')
     parser.add_argument('--gamma', type=float, default=0)
+    parser.add_argument('--dropout', action='store_true')
     args = parser.parse_args()
-    name, gamma = args.name, args.gamma
 
     # initialize trainer
-    trainer = Trainer(name, SMALL, VALIDATION, dev=True)
+    trainer = Trainer(args.name, SMALL, VALIDATION, dev=True)
 
     # training
-    trainer.train_model(gamma=gamma)
+    trainer.train_model(gamma=args.gamma, dropout=args.dropout)
 
 
 if __name__ == '__main__':

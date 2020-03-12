@@ -3,9 +3,6 @@ from constants import OUTPUT_DIR
 # directories
 LOG_DIR = OUTPUT_DIR + 'logs/'
 
-# discriminator models
-DISCRIM_MODELS = ['listings', 'threads']
-
 # optimization parameters
 NUM_WORKERS = {'first_arrival': 5,
                'init_byr': 5,

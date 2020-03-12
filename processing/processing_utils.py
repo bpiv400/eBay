@@ -351,7 +351,7 @@ def convert_x_to_numpy(x, idx):
     """
     for k, v in x.items():
         assert np.all(v.index == idx)
-        x[k] = v.to_numpy()
+        x[k] = v.to_numpy(dtype='float32')
 
     return x
 

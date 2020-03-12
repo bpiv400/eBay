@@ -24,7 +24,8 @@ class Layer(nn.Module):
 
         # variational dropout
         if dropout:
-            self.layer.append(VariationalDropout(num_out))
+            # self.layer.append(VariationalDropout(num_out))
+            self.layer.append(nn.Dropout(inplace=True))
 
         # activation function
         self.layer.append(nn.ReLU(inplace=True))

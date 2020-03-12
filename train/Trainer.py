@@ -5,11 +5,10 @@ from datetime import datetime as dt
 from torch.utils.tensorboard import SummaryWriter
 from torch.optim import Adam, lr_scheduler
 from train.EBayDataset import EBayDataset
-from train.KLDataset import KLDataset
-from train.train_consts import FTOL, LOG_DIR, LNLR0, LNLR1, LNLR_FACTOR, DISCRIM_MODELS
+from train.train_consts import FTOL, LOG_DIR, LNLR0, LNLR1, LNLR_FACTOR
 from nets.FeedForward import FeedForward
 from train.Sample import get_batches
-from constants import MODEL_DIR
+from constants import MODEL_DIR, DISCRIM_MODELS
 from utils import load_sizes
 
 
@@ -48,14 +47,14 @@ class Trainer:
         print(self.sizes)
 
         # load datasets
-        dataset = EBayDataset if self.is_delay or self.is_discrim else KLDataset
-        self.train = dataset(train_part, name)
-        self.test = dataset(test_part, name)
+        self.train = EBayDataset(train_part, name)
+        self.test = EBayDataset(test_part, name)
 
-    def train_model(self, gamma=0.0):
+    def train_model(self, gamma=0.0, dropout=False):
         """
         Public method to train model.
         :param gamma: scalar regularization parameter for variational dropout.
+        :param dropout: boolean for using dropout.
         """
         # experiment id
         expid = dt.now().strftime('%y%m%d-%H%M')
@@ -67,13 +66,15 @@ class Trainer:
 
         # initialize writer
         if not self.dev:
-            writer = SummaryWriter(
-                LOG_DIR + '{}/{}'.format(self.name, expid))
+            path = LOG_DIR + '{}/{}'.format(self.name, expid)
+            if dropout:
+                path += '_dropout'
+            writer = SummaryWriter(path)
         else:
             writer = None
 
         # tune initial learning rate
-        lnlr, net = self._tune_lr(writer)
+        lnlr, net = self._tune_lr(writer, dropout)
 
         # path to save model
         model_path = MODEL_DIR + '{}/{}.net'.format(self.name, expid)
@@ -155,10 +156,11 @@ class Trainer:
             t1 = dt.now()
 
             # move to device
-            b['x'] = {k: v.to(self.device) for k, v in b['x'].items()}
-            b['y'] = b['y'].to(self.device)
-            if 'p' in b:
-                b['p'] = b['p'].to(self.device)
+            for key, value in b.items():
+                if type(value) is dict:
+                    b[key] = {k: v.to(self.device) for k, v in value.items()}
+                else:
+                    b[key] = value.to(self.device)
 
             # increment loss
             loss += self._run_batch(b, net, optimizer)
@@ -189,17 +191,8 @@ class Trainer:
 
         return -lnL
 
-    @staticmethod
-    def _get_entropy(lnq):
-        h = -torch.sum(torch.exp(lnq) * lnq, dim=-1)
-        return h
-
-    @staticmethod
-    def _get_kl(lnq, p):
-        kl = p * (torch.log(p) - lnq)
-        kl[p == 0] = 0
-        kl = torch.sum(kl, dim=-1)
-        return kl
+    def _get_penalty(self, lnq, b):
+        raise NotImplementedError()
 
     def _run_batch(self, b, net, optimizer):
         """
@@ -229,10 +222,7 @@ class Trainer:
         # add in regularization penalty and step down gradients
         if is_training:
             if not self.is_discrim and self.gamma > 0:
-                if self.is_delay:
-                    penalty = self._get_entropy(lnq)
-                else:
-                    penalty = self._get_kl(lnq, b['p'])
+                penalty = self._get_penalty(lnq, b)
                 loss += torch.sum(self.gamma * penalty)
 
             optimizer.zero_grad()
@@ -241,11 +231,11 @@ class Trainer:
 
         return loss.item()
 
-    def _tune_lr(self, writer=None):
+    def _tune_lr(self, writer=None, dropout=None):
         nets, loss = [], []
         for lnlr in LNLR0:
             # initialize model and optimizer
-            nets.append(FeedForward(self.sizes).to(self.device))
+            nets.append(FeedForward(self.sizes, dropout=dropout).to(self.device))
             optimizer = Adam(nets[-1].parameters(), lr=np.exp(lnlr))
  
             # print to console

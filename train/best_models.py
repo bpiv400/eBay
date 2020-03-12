@@ -2,9 +2,9 @@ from shutil import copyfile
 from tensorboard.backend.event_processing.event_multiplexer import EventMultiplexer
 import numpy as np
 from processing.processing_consts import LOG_DIR
-from constants import MODEL_DIR, MODELS
+from constants import MODEL_DIR, MODELS, DISCRIM_MODELS
 
-for model in MODELS + ['init_slr']:
+for model in MODELS + DISCRIM_MODELS + ['init_slr']:
     em = EventMultiplexer().AddRunsFromDirectory(LOG_DIR + model)
     em.Reload()
 
