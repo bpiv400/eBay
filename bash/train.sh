@@ -1,5 +1,5 @@
 #!/bin/bash
-#$ -t 1-10
+#$ -t 1-5
 #$ -N train
 #$ -o logs/train/
 #$ -j y

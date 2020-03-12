@@ -29,7 +29,7 @@ def main():
     #     print(result)
 
     # train
-    dropout = (args.dropout - 1) / INT_DROPOUT
+    dropout = args.dropout / INT_DROPOUT
     trainer.train_model(dropout=dropout)
 
 
