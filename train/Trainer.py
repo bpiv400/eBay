@@ -58,6 +58,8 @@ class Trainer:
         """
         # experiment id
         expid = dt.now().strftime('%y%m%d-%H%M')
+        if dropout:
+            expid += '_dropout'
 
         # save gamma to self
         if self.is_discrim:
@@ -67,8 +69,6 @@ class Trainer:
         # initialize writer
         if not self.dev:
             path = LOG_DIR + '{}/{}'.format(self.name, expid)
-            if dropout:
-                path += '_dropout'
             writer = SummaryWriter(path)
         else:
             writer = None
