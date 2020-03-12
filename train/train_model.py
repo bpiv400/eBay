@@ -9,14 +9,15 @@ def main():
     # extract parameters from command line
     parser = argparse.ArgumentParser()
     parser.add_argument('--name', type=str, required=True)
-    name = parser.parse_args().name
+    parser.add_argument('--dropout', action='store_true')
+    args = parser.parse_args()
 
     # initialize trainer
-    train_part = TRAIN_RL if name in DISCRIM_MODELS else TRAIN_MODELS
-    trainer = Trainer(name, train_part, VALIDATION)
+    train_part = TRAIN_RL if args.name in DISCRIM_MODELS else TRAIN_MODELS
+    trainer = Trainer(args.name, train_part, VALIDATION)
 
     # # use grid search to find regularization hyperparameter
-    # multiplier = GAMMA_MULTIPLIER[name]
+    # multiplier = GAMMA_MULTIPLIER[args.name]
     # if multiplier == 0:
     #     trainer.train_model(gamma=0, dropout=args.dropout)
     # else:
@@ -28,11 +29,12 @@ def main():
     #     print(result)
 
     # train
-    result = minimize_scalar(lambda p: trainer.train_model(dropout=p),
-                             method='bounded',
-                             bounds=(0, 1),
-                             options={'xatol': 0.05, 'disp': 3})
-    print(result)
+    if args.dropout:
+        result = minimize_scalar(lambda p: trainer.train_model(dropout=p),
+                                 method='bounded',
+                                 bounds=(0, 1),
+                                 options={'xatol': 0.05, 'disp': 3})
+        print(result)
 
 
 if __name__ == '__main__':
