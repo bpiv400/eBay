@@ -36,8 +36,8 @@ class Trainer:
         # boolean for time loss
         self.is_delay = 'delay' in name or name == 'next_arrival'
 
-        # penalization factor to be set later
-        self.gamma = None
+        # dropout rate to be set later
+        self.dropout = None
 
         # load model size parameters
         self.sizes = load_sizes(name)
@@ -47,18 +47,16 @@ class Trainer:
         self.train = EBayDataset(train_part, name)
         self.test = EBayDataset(test_part, name)
 
-    def train_model(self, gamma=0.0, dropout=0.0):
+    def train_model(self, dropout=0.0):
         """
         Public method to train model.
-        :param gamma: scalar regularization parameter for variational dropout.
-        :param dropout: boolean for using dropout.
+        :param dropout: scalar dropout rate.
         """
-        # error check input parameters
-        assert gamma >= 0
+        # error check dropout rate
         assert 1 > dropout >= 0
 
-        # save gamma to self
-        self.gamma = gamma
+        # save dropout to self
+        self.dropout = dropout
 
         # experiment id
         expid = dt.now().strftime('%y%m%d-%H%M')
@@ -71,7 +69,7 @@ class Trainer:
             writer = None
 
         # tune initial learning rate
-        lnlr, net = self._tune_lr(writer, dropout)
+        lnlr, net = self._tune_lr(writer)
 
         # path to save model
         model_path = MODEL_DIR + '{}/{}.net'.format(self.name, expid)
@@ -218,21 +216,17 @@ class Trainer:
 
         # add in regularization penalty and step down gradients
         if is_training:
-            if self.gamma > 0:
-                penalty = self._get_penalty(lnq, b)
-                loss += torch.sum(self.gamma * penalty)
-
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
 
         return loss.item()
 
-    def _tune_lr(self, writer=None, dropout=None):
+    def _tune_lr(self, writer=None):
         nets, loss = [], []
         for lnlr in LNLR0:
             # initialize model and optimizer
-            nets.append(FeedForward(self.sizes, dropout=dropout).to(self.device))
+            nets.append(FeedForward(self.sizes, dropout=self.dropout).to(self.device))
             optimizer = Adam(nets[-1].parameters(), lr=np.exp(lnlr))
  
             # print to console
@@ -250,7 +244,7 @@ class Trainer:
         net = nets[idx]
  
         # initialize output with log10 learning rate
-        output = {'lnlr': lnlr, 'loss': loss[idx], 'gamma': self.gamma}
+        output = {'lnlr': lnlr, 'loss': loss[idx], 'dropout': self.dropout}
  
         # collect remaining output and print
         print('Epoch 0')
