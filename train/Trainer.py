@@ -5,7 +5,7 @@ from datetime import datetime as dt
 from torch.utils.tensorboard import SummaryWriter
 from torch.optim import Adam, lr_scheduler
 from train.EBayDataset import EBayDataset
-from train.train_consts import FTOL, LOG_DIR, LNLR0, LNLR1, LNLR_FACTOR
+from train.train_consts import FTOL, LOG_DIR, LNLR0, LNLR1, LNLR_FACTOR, INT_DROPOUT
 from nets.FeedForward import FeedForward
 from train.Sample import get_batches
 from constants import MODEL_DIR
@@ -52,14 +52,12 @@ class Trainer:
         Public method to train model.
         :param dropout: scalar dropout rate.
         """
-        # error check dropout rate
-        assert 1 > dropout >= 0
-
         # save dropout to self
         self.dropout = dropout
 
         # experiment id
-        expid = dt.now().strftime('%y%m%d-%H%M')
+        dtstr = dt.now().strftime('%y%m%d-%H%M')
+        expid = '{}_{}'.format(dtstr, int(dropout * INT_DROPOUT))
 
         # initialize writer
         if not self.dev:

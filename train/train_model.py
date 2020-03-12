@@ -1,7 +1,7 @@
 import argparse
 from scipy.optimize import minimize_scalar
 from train.Trainer import Trainer
-from train.train_consts import GAMMA_TOL, GAMMA_MAX, GAMMA_MULTIPLIER
+from train.train_consts import GAMMA_TOL, GAMMA_MAX, GAMMA_MULTIPLIER, INT_DROPOUT
 from constants import TRAIN_RL, TRAIN_MODELS, VALIDATION, DISCRIM_MODELS
 
 
@@ -9,7 +9,7 @@ def main():
     # extract parameters from command line
     parser = argparse.ArgumentParser()
     parser.add_argument('--name', type=str, required=True)
-    parser.add_argument('--dropout', action='store_true')
+    parser.add_argument('--dropout', type=int, default=0)
     args = parser.parse_args()
 
     # initialize trainer
@@ -29,12 +29,8 @@ def main():
     #     print(result)
 
     # train
-    if args.dropout:
-        result = minimize_scalar(lambda p: trainer.train_model(dropout=p),
-                                 method='bounded',
-                                 bounds=(0, 1),
-                                 options={'xatol': 0.05, 'disp': 3})
-        print(result)
+    dropout = (args.dropout - 1) / INT_DROPOUT
+    trainer.train_model(dropout=dropout)
 
 
 if __name__ == '__main__':

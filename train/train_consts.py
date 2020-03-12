@@ -17,6 +17,9 @@ LNLR1 = -12  # stop training when log learning rate is lower than this
 LNLR_FACTOR = -1  # decrease log learning rate by this factor when training slows
 FTOL = 1e-2  # decrease learning rate when relative improvement in loss is less than this
 
+# dropout interval
+INT_DROPOUT = 10
+
 # grid search parameters
 GAMMA_TOL = 0.01
 GAMMA_MAX = 0.1
