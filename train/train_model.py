@@ -29,7 +29,11 @@ def main():
     #     print(result)
 
     # train
-    trainer.train_model(dropout=args.dropout)
+    result = minimize_scalar(lambda p: trainer.train_model(dropout=p),
+                             method='bounded',
+                             bounds=(0, 1),
+                             options={'xatol': 0.05, 'disp': 3})
+    print(result)
 
 
 if __name__ == '__main__':

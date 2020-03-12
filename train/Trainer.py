@@ -8,7 +8,7 @@ from train.EBayDataset import EBayDataset
 from train.train_consts import FTOL, LOG_DIR, LNLR0, LNLR1, LNLR_FACTOR
 from nets.FeedForward import FeedForward
 from train.Sample import get_batches
-from constants import MODEL_DIR, DISCRIM_MODELS
+from constants import MODEL_DIR
 from utils import load_sizes
 
 
@@ -36,9 +36,6 @@ class Trainer:
         # boolean for time loss
         self.is_delay = 'delay' in name or name == 'next_arrival'
 
-        # boolean for discriminator
-        self.is_discrim = name in DISCRIM_MODELS
-
         # penalization factor to be set later
         self.gamma = None
 
@@ -50,26 +47,26 @@ class Trainer:
         self.train = EBayDataset(train_part, name)
         self.test = EBayDataset(test_part, name)
 
-    def train_model(self, gamma=0.0, dropout=False):
+    def train_model(self, gamma=0.0, dropout=0.0):
         """
         Public method to train model.
         :param gamma: scalar regularization parameter for variational dropout.
         :param dropout: boolean for using dropout.
         """
-        # experiment id
-        expid = dt.now().strftime('%y%m%d-%H%M')
-        if dropout:
-            expid += '_dropout'
+        # error check input parameters
+        assert gamma >= 0
+        assert 1 > dropout >= 0
 
         # save gamma to self
-        if self.is_discrim:
-            assert gamma == 0
         self.gamma = gamma
+
+        # experiment id
+        expid = dt.now().strftime('%y%m%d-%H%M')
 
         # initialize writer
         if not self.dev:
-            path = LOG_DIR + '{}/{}'.format(self.name, expid)
-            writer = SummaryWriter(path)
+            writer_path = LOG_DIR + '{}/{}'.format(self.name, expid)
+            writer = SummaryWriter(writer_path)
         else:
             writer = None
 
@@ -191,7 +188,7 @@ class Trainer:
 
         return -lnL
 
-    def _get_penalty(self, lnq, b):
+    def _get_penalty(self):
         raise NotImplementedError()
 
     def _run_batch(self, b, net, optimizer):
@@ -207,10 +204,10 @@ class Trainer:
         # call forward on model
         net.train(is_training)
         theta = net(b['x'])
-
-        # softmax
         if theta.size()[1] == 1:
             theta = torch.cat((torch.zeros_like(theta), theta), dim=1)
+
+        # softmax
         lnq = log_softmax(theta, dim=-1)
 
         # calculate loss
@@ -221,7 +218,7 @@ class Trainer:
 
         # add in regularization penalty and step down gradients
         if is_training:
-            if not self.is_discrim and self.gamma > 0:
+            if self.gamma > 0:
                 penalty = self._get_penalty(lnq, b)
                 loss += torch.sum(self.gamma * penalty)
 
@@ -253,9 +250,7 @@ class Trainer:
         net = nets[idx]
  
         # initialize output with log10 learning rate
-        output = {'lnlr': lnlr, 'loss': loss[idx]}
-        if not self.is_discrim:
-            output['gamma'] = self.gamma
+        output = {'lnlr': lnlr, 'loss': loss[idx], 'gamma': self.gamma}
  
         # collect remaining output and print
         print('Epoch 0')

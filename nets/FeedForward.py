@@ -5,10 +5,10 @@ from nets.nets_utils import FullyConnected, create_embedding_layers, create_grou
 
 
 class FeedForward(nn.Module):
-    def __init__(self, sizes, dropout=False):
+    def __init__(self, sizes, dropout=0.0):
         """
         :param sizes: dictionary of scalar input sizes; sizes['x'] is an OrderedDict
-        :param dropout: boolean for Variational dropout in FullyConnected.
+        :param dropout: scalar dropout rate.
         """
         super(FeedForward, self).__init__()
 

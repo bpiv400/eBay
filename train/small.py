@@ -8,7 +8,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--name', required=True, type=str, help='model name')
     parser.add_argument('--gamma', type=float, default=0)
-    parser.add_argument('--dropout', action='store_true')
+    parser.add_argument('--dropout', type=float, default=0)
     args = parser.parse_args()
 
     # initialize trainer

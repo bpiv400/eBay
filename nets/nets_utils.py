@@ -6,11 +6,11 @@ from nets.nets_consts import AFFINE, LAYERS_EMBEDDING, LAYERS_FULL, HIDDEN
 
 
 class Layer(nn.Module):
-    def __init__(self, num_in, num_out, dropout=False, batch_norm=False):
+    def __init__(self, num_in, num_out, dropout=0.0, batch_norm=False):
         """
         :param num_in: scalar number of input weights.
         :param num_out: scalar number of output weights.
-        :param dropout: boolean for including variational dropout in each layer.
+        :param dropout: scalar dropout rate.
         :param batch_norm: boolean for including batch normalization in each layer.
         """
         super(Layer, self).__init__()
@@ -25,7 +25,7 @@ class Layer(nn.Module):
         # variational dropout
         if dropout:
             # self.layer.append(VariationalDropout(num_out))
-            self.layer.append(nn.Dropout(inplace=True))
+            self.layer.append(nn.Dropout(p=dropout, inplace=True))
 
         # activation function
         self.layer.append(nn.ReLU(inplace=True))
@@ -39,11 +39,11 @@ class Layer(nn.Module):
         return x
 
 
-def stack_layers(num, layers=1, dropout=False, batch_norm=False):
+def stack_layers(num, layers=1, dropout=0.0, batch_norm=False):
     """
     :param num: scalar number of input and output weights.
     :param layers: scalar number of layers to stack.
-    :param dropout: boolean for including variational dropout in each layer.
+    :param dropout: scalar dropout rate.
     :param batch_norm: boolean for including batch normalization in each layer.
     """
     # sequence of modules
@@ -99,10 +99,11 @@ class Embedding(nn.Module):
 
 
 class FullyConnected(nn.Module):
-    def __init__(self, num_in, num_out, dropout=True, batch_norm=False):
+    def __init__(self, num_in, num_out, dropout=0.0, batch_norm=False):
         """
         :param num_in: scalar number of input weights.
         :param num_out: scalar number of output parameters.
+        :param dropout: scalar dropout rate.
         :param batch_norm: boolean for including batch normalization in each layer.
         """
         super(FullyConnected, self).__init__()
