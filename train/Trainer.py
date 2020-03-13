@@ -249,7 +249,7 @@ class Trainer:
         # initialize output with log10 learning rate
         output = {'lnlr': lnlr, 'loss': loss[idx]}
         if type(self.dropout) is list:
-            for i in range(len(dropout)):
+            for i in range(len(self.dropout)):
                 output['dropout' + int(i)] = self.dropout[i]
         else:
             output['dropout'] = self.dropout
