@@ -247,7 +247,12 @@ class Trainer:
         net = nets[idx]
  
         # initialize output with log10 learning rate
-        output = {'lnlr': lnlr, 'loss': loss[idx], 'dropout': self.dropout}
+        output = {'lnlr': lnlr, 'loss': loss[idx]}
+        if type(self.dropout) is list:
+            for i in range(len(dropout)):
+                output['dropout' + int(i)] = self.dropout[i]
+        else:
+            output['dropout'] = self.dropout
  
         # collect remaining output and print
         print('Epoch 0')
