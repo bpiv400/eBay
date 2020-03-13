@@ -17,16 +17,13 @@ LNLR1 = -12  # stop training when log learning rate is lower than this
 LNLR_FACTOR = -1  # decrease log learning rate by this factor when training slows
 FTOL = 1e-2  # decrease learning rate when relative improvement in loss is less than this
 
-# dropout interval
+# dropout grid
 INT_DROPOUT = 10
-
-# grid search parameters
-DROPOUT_GRID, c = dict(), 1
-for i in range(1, 8):
-     for j in range(1, i):
-     	if j <= 5:
-          DROPOUT_GRID[c] = [j, i]
-          c += 1
+MAX_DROPOUT = 5
+DROPOUT_GRID = []
+for i in range(0, MAX_DROPOUT):
+     for j in range(i+1, MAX_DROPOUT+1):
+          DROPOUT_GRID.append([i, j])
 
 
 # GAMMA_TOL = 0.01
