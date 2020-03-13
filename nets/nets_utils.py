@@ -55,9 +55,10 @@ def stack_layers(num, layers=1, dropout=0.0, batch_norm=False):
 
 
 class Embedding(nn.Module):
-    def __init__(self, counts, batch_norm=False):
+    def __init__(self, counts, dropout=0.0, batch_norm=False):
         """
         :param counts: dictionary of scalar input sizes.
+        :param dropout: scalar dropout rate.
         :param batch_norm: boolean for including batch normalization in each layer.
         """
         super(Embedding, self).__init__()
@@ -68,12 +69,15 @@ class Embedding(nn.Module):
         # first stack of layers: N to N
         self.layer1 = nn.ModuleDict()
         for k, v in counts.items():
-            self.layer1[k] = stack_layers(v, layers=LAYERS_EMBEDDING,
+            self.layer1[k] = stack_layers(v, 
+                                          layers=LAYERS_EMBEDDING,
                                           batch_norm=batch_norm)
 
         # second layer: concatenation
         num = sum(counts.values())
-        self.layer2 = stack_layers(num, layers=LAYERS_EMBEDDING,
+        self.layer2 = stack_layers(num, 
+                                   layers=LAYERS_EMBEDDING,
+                                   dropout=dropout, 
                                    batch_norm=batch_norm)
 
     def forward(self, x):
@@ -107,6 +111,7 @@ class FullyConnected(nn.Module):
         :param batch_norm: boolean for including batch normalization in each layer.
         """
         super(FullyConnected, self).__init__()
+
         # intermediate layer
         self.seq = nn.ModuleList([Layer(num_in, HIDDEN, dropout=dropout,
                                         batch_norm=batch_norm)])
@@ -142,11 +147,12 @@ def create_groupings(sizes):
     return groups
 
 
-def create_embedding_layers(groups=None, sizes=None, batch_norm=False):
+def create_embedding_layers(groups=None, sizes=None, 
+                            dropout=0.0, batch_norm=False):
     # embeddings
     d, total = OrderedDict(), 0
     for name, group in groups.items():
         counts = {k: v for k, v in sizes['x'].items() if k in group}
-        d[name] = Embedding(counts, batch_norm=batch_norm)
+        d[name] = Embedding(counts, dropout=dropout, batch_norm=batch_norm)
         total += sum(counts.values())
     return nn.ModuleDict(d), total

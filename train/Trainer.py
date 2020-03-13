@@ -57,7 +57,12 @@ class Trainer:
 
         # experiment id
         dtstr = dt.now().strftime('%y%m%d-%H%M')
-        expid = '{}_{}'.format(dtstr, int(dropout * INT_DROPOUT))
+        if type(dropout) is list:
+            assert len(dropout) == 2
+            levels = [int(d * INT_DROPOUT) for d in dropout]
+            expid = '{}_{}_{}'.format(dtstr, levels[0], levels[1])
+        else:
+            expid = '{}_{}'.format(dtstr, int(dropout * INT_DROPOUT))
 
         # initialize writer
         if not self.dev:

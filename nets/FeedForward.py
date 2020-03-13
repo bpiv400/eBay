@@ -8,22 +8,28 @@ class FeedForward(nn.Module):
     def __init__(self, sizes, dropout=0.0):
         """
         :param sizes: dictionary of scalar input sizes; sizes['x'] is an OrderedDict
-        :param dropout: scalar dropout rate.
+        :param dropout: scalar univeral dropout rate or list of dropout rates.
         """
         super(FeedForward, self).__init__()
-
-        # save dropout boolean to self
-        self.dropout = dropout
 
         # expand embeddings
         groups = create_groupings(sizes)
 
+        # break out dropout rates
+        if type(dropout) is list:
+            dropout0, dropout1 = dropout
+        else:
+            dropout0, dropout1 = 0.0, dropout
+
         self.nn0, total = create_embedding_layers(groups=groups,
                                                   sizes=sizes,
+                                                  dropout=dropout0,
                                                   batch_norm=BATCHNORM)
 
         # fully connected
-        self.nn1 = FullyConnected(total, sizes['out'], dropout=dropout,
+        self.nn1 = FullyConnected(total, 
+                                  sizes['out'],
+                                  dropout=dropout1,
                                   batch_norm=BATCHNORM)
 
     def forward(self, x):

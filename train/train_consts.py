@@ -21,31 +21,38 @@ FTOL = 1e-2  # decrease learning rate when relative improvement in loss is less 
 INT_DROPOUT = 10
 
 # grid search parameters
-GAMMA_TOL = 0.01
-GAMMA_MAX = 0.1
-GAMMA_MULTIPLIER = {'first_arrival': 0,
-                    'next_arrival': 0.3,
-                    'hist': 0.3,
-                    'delay2': 0.3,
-                    'delay3': 1,
-                    'delay4': 1,
-                    'delay5': 1,
-                    'delay6': 1,
-                    'delay7': 1,
-                    'con1': 0.01,
-                    'con2': 1,
-                    'con3': 1,
-                    'con4': 1,
-                    'con5': 1,
-                    'con6': 1,
-                    'con7': 1,
-                    'msg1': 0.1,
-                    'msg2': 1,
-                    'msg3': 1,
-                    'msg4': 1,
-                    'msg5': 1,
-                    'msg6': 3,
-                    'init_slr': 1,
-                    'init_byr': 1,
-                    'listings': 0,
-                    'threads': 0}
+DROPOUT_GRID, c = dict(), 1
+for i in range(1, 10):
+     for j in range(0, i):
+          DROPOUT_GRID[c] = [j, i]
+          c += 1
+
+
+# GAMMA_TOL = 0.01
+# GAMMA_MAX = 0.1
+# GAMMA_MULTIPLIER = {'first_arrival': 0,
+#                     'next_arrival': 0.3,
+#                     'hist': 0.3,
+#                     'delay2': 0.3,
+#                     'delay3': 1,
+#                     'delay4': 1,
+#                     'delay5': 1,
+#                     'delay6': 1,
+#                     'delay7': 1,
+#                     'con1': 0.01,
+#                     'con2': 1,
+#                     'con3': 1,
+#                     'con4': 1,
+#                     'con5': 1,
+#                     'con6': 1,
+#                     'con7': 1,
+#                     'msg1': 0.1,
+#                     'msg2': 1,
+#                     'msg3': 1,
+#                     'msg4': 1,
+#                     'msg5': 1,
+#                     'msg6': 3,
+#                     'init_slr': 1,
+#                     'init_byr': 1,
+#                     'listings': 0,
+#                     'threads': 0}
