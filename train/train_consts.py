@@ -23,7 +23,7 @@ INT_DROPOUT = 10
 # grid search parameters
 DROPOUT_GRID, c = dict(), 1
 for i in range(1, 8):
-     for j in range(0, i):
+     for j in range(1, i):
      	if j <= 5:
           DROPOUT_GRID[c] = [j, i]
           c += 1

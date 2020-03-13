@@ -60,9 +60,9 @@ class Trainer:
         if type(dropout) is list:
             assert len(dropout) == 2
             levels = [int(d * INT_DROPOUT) for d in dropout]
-            expid = '{}_{}_{}'.format(dtstr, levels[0], levels[1])
         else:
-            expid = '{}_{}'.format(dtstr, int(dropout * INT_DROPOUT))
+            levels = [0, dropout * INT_DROPOUT]
+        expid = '{}_{}_{}'.format(dtstr, levels[0], levels[1])
 
         # initialize writer
         if not self.dev:
@@ -248,11 +248,6 @@ class Trainer:
  
         # initialize output with log10 learning rate
         output = {'lnlr': lnlr, 'loss': loss[idx]}
-        if type(self.dropout) is list:
-            for i in range(len(self.dropout)):
-                output['dropout' + str(i)] = self.dropout[i]
-        else:
-            output['dropout'] = self.dropout
  
         # collect remaining output and print
         print('Epoch 0')
