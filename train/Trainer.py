@@ -250,7 +250,7 @@ class Trainer:
         output = {'lnlr': lnlr, 'loss': loss[idx]}
         if type(self.dropout) is list:
             for i in range(len(self.dropout)):
-                output['dropout' + int(i)] = self.dropout[i]
+                output['dropout' + str(i)] = self.dropout[i]
         else:
             output['dropout'] = self.dropout
  
