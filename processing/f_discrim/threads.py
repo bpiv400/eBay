@@ -1,9 +1,9 @@
 import pandas as pd
-from processing.processing_utils import input_partition, load_file, \
+from processing.processing_utils import load_file, input_partition, \
 	get_days_delay, get_norm, get_x_thread, init_x, collect_date_clock_feats
 from processing.f_discrim.discrim_utils import concat_sim_chunks, save_discrim_files
 from utils import is_split
-from constants import MONTH, IDX, SLR_PREFIX
+from constants import MONTH, IDX, SLR_PREFIX, TRAIN_RL, VALIDATION
 from featnames import CON, NORM, SPLIT, DAYS, DELAY, EXP, AUTO, REJECT, CENSORED, \
 	MONTHS_SINCE_LSTG, TIME_FEATS, MSG
 
@@ -18,11 +18,9 @@ def get_x_offer(offers, idx):
 		# offer features at turn i
 		offer = offers.xs(i, level='index').reindex(
 			index=idx, fill_value=0).astype('float32')
-		# set censored time feats to zero
-		if i > 1:
-			censored = (offer[EXP] == 1) & (offer[DELAY] < 1)
-			offer.loc[censored, TIME_FEATS] = 0.0
-		# drop time feats that are zero
+		# drop time feats
+		offer.drop(TIME_FEATS, axis=1, inplace=True)
+		# drop feats that are zero
 		if i == 1:
 			for feat in [DAYS, DELAY, REJECT]:
 				assert (offer[feat].min() == 0) and (offer[feat].max() == 0)
@@ -85,7 +83,7 @@ def construct_x(part, threads, offers):
 	# master index
 	idx = threads.index
 	# initialize input dictionary with lstg features
-	x = init_x(part, idx, drop_slr=False)
+	x = init_x(part, idx, drop_slr=True)
 	# add thread features to x['lstg']
 	x['lstg'] = pd.concat([x['lstg'], get_x_thread(threads, idx)], axis=1)
 	# offer features
@@ -104,9 +102,10 @@ def process_obs(part):
 
 
 def main():
-	# extract partition from command line
+	# partiton
 	part = input_partition()
-	print('%s/threads' % part)
+	assert part in [TRAIN_RL, VALIDATION]
+	print('{}/threads'.format(part))
 
 	# observed data
 	x_obs, thread_cols, offer_cols = process_obs(part)
