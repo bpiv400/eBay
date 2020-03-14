@@ -294,7 +294,14 @@ def save_featnames(x, name):
 
     # for offer models
     if 'offer1' in x:
-        if BYR_PREFIX in name or (type(name[-1]) is int and int(name[-1]) in IDX[BYR_PREFIX]):
+        # extract turn
+        if name[:-1] in [DELAY, CON, MSG]:
+            turn = int(name[-1])
+        else:
+            turn = None
+
+        # buyer models do not have time feats
+        if BYR_PREFIX in name or turn in IDX[BYR_PREFIX]:
             feats = CLOCK_FEATS + OUTCOME_FEATS
         else:
             feats = CLOCK_FEATS + TIME_FEATS + OUTCOME_FEATS
