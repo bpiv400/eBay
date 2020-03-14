@@ -19,7 +19,7 @@ def main():
 
 	# initialize listing features
 	idx = load_file(part, 'lookup').index
-	x = init_x(part, idx, drop_slr=False)
+	x = init_x(part, idx, drop_slr=True)
 
 	# observed data
 	idx_obs = load_file(part, 'x_thread').xs(1, level='thread').index
