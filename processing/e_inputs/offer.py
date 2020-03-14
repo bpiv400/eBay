@@ -31,7 +31,7 @@ def get_x_offer(offers, idx, outcome, turn):
             if outcome == CON:
                 offer[[CON, NORM, SPLIT, AUTO, EXP, REJECT]] = 0.0
         # drop time feats from buyer models
-        if role == BYR_PREFIX:
+        if turn in IDX[BYR_PREFIX]:
             offer = offer.drop(TIME_FEATS, axis=1)
         # set censored time feats to zero
         else:
