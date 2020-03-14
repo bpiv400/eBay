@@ -19,7 +19,7 @@ def do_rounding(offer):
 
 def get_x_lstg(L):
     # initialize output dataframe with as-is features
-    df = L[['slr_us', 'fast', 'start_price_pctile']].copy()
+    df = L[['store', 'slr_us', 'fast', 'start_price_pctile']].copy()
     # rounding
     df['start_is_round'], df['start_is_nines'] = do_rounding(L.start_price)
     # normalize start_date to years
@@ -36,8 +36,12 @@ def get_x_lstg(L):
     df['used'] = s == 7
     df['refurb'] = s.isin([2, 3, 4, 5, 6])
     df['wear'] = s.isin([8, 9, 10, 11]) * (s - 7)
-    # last features are: (store, fdbk_score, fdbk_pstv, fdbk_100, relisted)
-    df['store'] = L.store
+    # auto decline/accept prices
+    df['auto_decline'] = L.decline_price / L.start_price
+    df['auto_accept'] = L.accept_price / L.start_price
+    df['has_decline'] = df.auto_decline > 0
+    df['has_accept'] = df.auto_accept < 1
+    # last features are: (fdbk_score, fdbk_pstv, fdbk_100, relisted)
     df['fdbk_score'] = L.fdbk_score
     df['fdbk_pstv'] = L.fdbk_pstv
     df['fdbk_100'] = df.fdbk_pstv == 1
@@ -74,10 +78,6 @@ def main():
     x['slr'] = load_frames('slr').reindex(index=idx, fill_value=0)
     x['slr']['slr_lstgs_total'] = L.slr_lstgs
     x['slr']['slr_bos_total'] = L.slr_bos
-    x['slr']['auto_decline'] = L.decline_price / L.start_price
-    x['slr']['auto_accept'] = L.accept_price / L.start_price
-    x['slr']['has_decline'] = x['slr'].auto_decline > 0
-    x['slr']['has_accept'] = x['slr'].auto_accept < 1
     del L
 
     # cat and cndtn features
