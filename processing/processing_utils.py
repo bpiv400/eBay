@@ -191,11 +191,9 @@ def get_x_thread(threads, idx):
     return x_thread.astype('float32')
 
 
-def init_x(part, idx, drop_slr=False):
+def init_x(part, idx):
     x = load_file(part, 'x_lstg')
     x = {k: v.reindex(index=idx, level='lstg').astype('float32') for k, v in x.items()}
-    if drop_slr:
-        del x['slr']
     return x
 
 

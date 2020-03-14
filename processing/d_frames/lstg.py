@@ -1,6 +1,5 @@
-import os, sys
 from compress_pickle import load, dump
-import numpy as np, pandas as pd
+import numpy as np
 from processing.processing_utils import input_partition, extract_day_feats
 from processing.d_frames.frames_utils import get_partition, load_frames
 from processing.processing_consts import CLEAN_DIR, W2V_DIR

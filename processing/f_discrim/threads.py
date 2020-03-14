@@ -18,8 +18,10 @@ def get_x_offer(offers, idx):
 		# offer features at turn i
 		offer = offers.xs(i, level='index').reindex(
 			index=idx, fill_value=0).astype('float32')
-		# drop time feats
-		offer.drop(TIME_FEATS, axis=1, inplace=True)
+		# set censored time feats to zero
+		if i > 1:
+			censored = (offer[EXP] == 1) & (offer[DELAY] < 1)
+			offer.loc[censored, TIME_FEATS] = 0.0
 		# drop feats that are zero
 		if i == 1:
 			for feat in [DAYS, DELAY, REJECT]:
@@ -83,7 +85,7 @@ def construct_x(part, threads, offers):
 	# master index
 	idx = threads.index
 	# initialize input dictionary with lstg features
-	x = init_x(part, idx, drop_slr=True)
+	x = init_x(part, idx)
 	# add thread features to x['lstg']
 	x['lstg'] = pd.concat([x['lstg'], get_x_thread(threads, idx)], axis=1)
 	# offer features

@@ -6,7 +6,8 @@ LOG_DIR = OUTPUT_DIR + 'logs/'
 # optimization parameters
 NUM_WORKERS = {'first_arrival': 5,
                'init_byr': 5,
-               'init_slr': 6}
+               'init_slr': 6,
+               'threads': 6}
 MBSIZE = {True: 128, False: 2048}  # True for training, False for validation
 
 # learning rate parameters

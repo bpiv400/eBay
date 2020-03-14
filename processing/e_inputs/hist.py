@@ -1,4 +1,3 @@
-import numpy as np
 import pandas as pd
 from processing.processing_utils import input_partition, load_file, save_files, init_x
 from featnames import CLOCK_FEATS, THREAD_COUNT
@@ -17,7 +16,7 @@ def process_inputs(part):
 	x_thread = x_thread.drop('byr_hist', axis=1)
 
 	# listing features
-	x = init_x(part, idx, drop_slr=True)
+	x = init_x(part, idx)
 
 	# add thread features to x['lstg']
 	x['lstg'] = pd.concat([x['lstg'], x_thread.astype('float32')], axis=1) 

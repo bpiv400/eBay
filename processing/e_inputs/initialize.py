@@ -18,7 +18,7 @@ def process_inputs(part, role):
     idx = y.index
 
     # listing features
-    x = init_x(part, idx, drop_slr=True)
+    x = init_x(part, idx)
 
     # thread features
     x_thread = get_x_thread(threads, idx)

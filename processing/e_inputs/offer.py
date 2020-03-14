@@ -4,12 +4,12 @@ import pandas as pd
 from processing.processing_consts import INTERVAL, INTERVAL_COUNTS
 from processing.processing_utils import load_file, get_x_thread, \
     init_x, save_files, get_y_con, check_zero, calculate_remaining
-from constants import IDX, DAY, MAX_DELAY, BYR_PREFIX, SLR_PREFIX, PARTITIONS
+from constants import IDX, DAY, MAX_DELAY, BYR_PREFIX, PARTITIONS
 from featnames import CON, NORM, SPLIT, MSG, AUTO, EXP, REJECT, DAYS, DELAY, \
     INT_REMAINING, TIME_FEATS
 
 
-def get_x_offer(offers, idx, outcome, role, turn):
+def get_x_offer(offers, idx, outcome, turn):
     # initialize dictionary of offer features
     x_offer = {}
     # dataframe of offer features for relevant threads
@@ -43,9 +43,9 @@ def get_x_offer(offers, idx, outcome, role, turn):
     return x_offer
 
 
-def get_y_msg(df, role):
+def get_y_msg(df, turn):
     # for buyers, drop accepts and rejects
-    if role == BYR_PREFIX:
+    if turn in IDX[BYR_PREFIX]:
         mask = (df[CON] > 0) & (df[CON] < 1)
     # for sellers, drop accepts, expires, and auto responses
     else:
@@ -78,22 +78,19 @@ def process_inputs(part, outcome, turn):
     threads = load_file(part, 'x_thread')
     df = offers.xs(turn, level='index')
 
-    # role
-    role = BYR_PREFIX if turn in IDX[BYR_PREFIX] else SLR_PREFIX
-
     # y and master index
     if outcome == CON:
         y = get_y_con(df)
         if turn == 7:
             y = y == 100
     elif outcome == MSG:
-        y = get_y_msg(df, role)
+        y = get_y_msg(df, turn)
     else:
         y = get_y_delay(df, turn)
     idx = y.index
 
     # listing features
-    x = init_x(part, idx, drop_slr=(role == BYR_PREFIX))
+    x = init_x(part, idx)
 
     # thread features
     x_thread = get_x_thread(threads, idx)
@@ -105,7 +102,7 @@ def process_inputs(part, outcome, turn):
     x['lstg'] = pd.concat([x['lstg'], x_thread], axis=1)
 
     # offer features
-    x.update(get_x_offer(offers, idx, outcome, role, turn))
+    x.update(get_x_offer(offers, idx, outcome, turn))
 
     # error checking
     check_zero(x)
