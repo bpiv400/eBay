@@ -72,7 +72,7 @@ class Trainer:
             writer = None
 
         # tune initial learning rate
-        lnlr, net = self._tune_lr(writer)
+        lnlr, net, lnL_test0 = self._tune_lr(writer)
 
         # path to save model
         model_path = MODEL_DIR + '{}/{}.net'.format(self.name, expid)
@@ -109,6 +109,10 @@ class Trainer:
 
             # stop training if learning rate is sufficiently small
             if self._get_lnlr(optimizer) < LNLR1:
+                break
+
+            # stop training if holdout objective hasn't improved in 10 epochs
+            if epoch >= 9 and output['lnL_test'] < lnL_test0:
                 break
 
             # update last, increment epoch
@@ -251,10 +255,10 @@ class Trainer:
  
         # collect remaining output and print
         print('Epoch 0')
-        self._collect_output(net, writer, output)
+        output = self._collect_output(net, writer, output)
  
         # return lnlr of smallest loss and corresponding model
-        return lnlr, net
+        return lnlr, net, output['lnL_test']
 
     def _collect_output(self, net, writer, output, epoch=0):
         # calculate log-likelihood on validation set
