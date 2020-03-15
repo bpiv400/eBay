@@ -4,7 +4,9 @@ from constants import OUTPUT_DIR
 LOG_DIR = OUTPUT_DIR + 'logs/'
 
 # optimization parameters
-NUM_WORKERS = {'first_arrival': 5,
+NUM_WORKERS = {'first_arrival': 4,
+			   'hist': 7,
+			   'con1': 7,
                'init_byr': 5,
                'init_slr': 6,
                'threads': 6}
