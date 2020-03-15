@@ -35,7 +35,7 @@ def main():
     if args.set == 'models':
         group = MODELS
     elif args.set == 'discrim':
-        group = DISCRIM_MODELS:
+        group = DISCRIM_MODELS
     elif args.set == 'init':
         group = ['init_slr']
 
