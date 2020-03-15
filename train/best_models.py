@@ -1,24 +1,59 @@
+import argparse
 from shutil import copyfile
-from tensorboard.backend.event_processing.event_multiplexer import EventMultiplexer
 import numpy as np
+from compress_pickle import dump
+from tensorboard.backend.event_processing.event_multiplexer import EventMultiplexer
 from processing.processing_consts import LOG_DIR
-from constants import MODEL_DIR, MODELS, DISCRIM_MODELS
+from train.train_consts import LNLR1
+from constants import MODEL_DIR, MODELS, DISCRIM_MODELS, OUTPUT_DIR
 
-for model in MODELS + DISCRIM_MODELS + ['init_slr']:
-    em = EventMultiplexer().AddRunsFromDirectory(LOG_DIR + model)
-    em.Reload()
 
-    lnL_test = dict()
+def extract_best_experiment(em):
+    # initialize output dictionary, best marker, and name of run to keep
+    best, lnL, keep = -np.inf, dict(), ''
+    # loop over experiments, save best
     for run, d in em.Runs().items():
-        if len(d['scalars']) > 0:
-            res = em.Scalars(run, 'lnL_test')
-            if len(res) > 6:  # restrict to runs with more than 6 epochs
-                lnL_test[run] = em.Scalars(run, 'lnL_test')[-1].value
+        lnlr1 = em.Scalars(run, 'lnlr')[-1].value
+        lnL_test1 = em.Scalars(run, 'lnL_test')[-1].value
+        if len(d['scalars']) > 0 and lnlr1 == LNLR1:
+            curr = lnL_test1
+            if curr > best:
+                best = curr
+                keep = run
+                for k in ['lnL_test', 'lnL_train']:
+                    lnL[k.split('_')[-1]] = [s.value for s in em.Scalars(run, k)]
+    return lnL, keep
 
-    idx = int(np.argmax(list(lnL_test.values())))
-    best = list(lnL_test.keys())[idx]
 
-    # copy best performing model into parent directory
-    print('{}: {}'.format(model, best))
-    copyfile(MODEL_DIR + '{}/{}.net'.format(model, best),
-             MODEL_DIR + '{}.net'.format(model))
+def main():
+    # extract parameters from command line
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--set', type=str, required=True)
+    args = parser.parse_args()
+
+    # translate to set
+    if args.set == 'models':
+        group = MODELS
+    elif args.set == 'discrim':
+        group = DISCRIM_MODELS:
+    elif args.set == 'init':
+        group = ['init_slr']
+
+    # for each model, choose best experiment
+    for m in group:
+        em = EventMultiplexer().AddRunsFromDirectory(LOG_DIR + m)
+
+        # find best performing experiment
+        lnL, run = extract_best_experiment(em.Reload())      
+
+        # copy best performing model into parent directory
+        print('{}: {}'.format(m, run))
+        copyfile(MODEL_DIR + '{}/{}.net'.format(m, run),
+                 MODEL_DIR + '{}.net'.format(m))
+
+        # save output
+        dump(lnL, OUTPUT_DIR + '{}/{}.pkl'.format('lnL', m))
+
+
+if __name__ == '__main__':
+    main()
