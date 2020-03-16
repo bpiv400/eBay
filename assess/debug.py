@@ -1,37 +1,29 @@
 import argparse
 import torch
+from torch.nn.functional import log_softmax, nll_loss
 import numpy as np
 import pandas as pd
 from compress_pickle import load
+from train.Sample import get_batches
+from train.EBayDataset import EBayDataset
 from utils import load_model, load_featnames
 from constants import VALIDATION, INPUT_DIR, INDEX_DIR, DISCRIM_MODELS
 
 
-def get_model_prediction(x, name):
-	net = load_model(name)
-	x_t = {k: torch.from_numpy(v).float() for k, v in x.items()}
+def get_model_predictions(net, data):
+	# loop over batches
 	print('Predictions from model')
-	theta = net(x_t)
-	return theta
-
-
-def get_log_likelihood(y, theta):
-	# initialize output
-	lnL = np.zeros_like(y, dtype='float64')
-	# log-probabilities
-	if theta.size()[1] == 1:
-		theta = torch.cat((torch.zeros_like(theta), theta), dim=1)
-	lnp = torch.nn.functional.log_softmax(theta, dim=1).numpy()
-	# arrivals
-	arrival = y >= 0
-	lnL[arrival] = lnp[arrival, y[arrival]]
-	# non-arrivals
-	if np.min(y) < 0:
-		p = np.exp(lnp)
-		for i in range(len(y)):
-			if y[i] < 0:
-				lnL[i] = np.log(np.sum(p[i, y[i]:]))
-	return lnL
+	lnL = []
+	batches = get_batches(data)
+	for b in batches:
+		b['x'] = {k: v.to('cuda') for k, v in b['x'].items()}	
+		b['y'] = b['y'].to('cuda')
+		theta = net(b['x'])
+		if theta.size()[1] == 1:
+			theta = torch.cat((torch.zeros_like(theta), theta), dim=1)
+		lnq = log_softmax(theta, dim=-1)
+		lnL.append(-nll_loss(lnq, b['y'], reduction='none').cpu().numpy())
+	return np.exp(np.concatenate(lnL, axis=0))
 
 
 def main():
@@ -40,23 +32,28 @@ def main():
 	parser.add_argument('--name', type=str, help='model name')
 	name = parser.parse_args().name
 
-	# import data
-	print('Loading data')
-	d = load(INPUT_DIR + '{}/{}.gz'.format(VALIDATION, name))
+	# initialize neural net
+	net = load_model(name).to('cuda')
 
-	# model predictions and log-likelihood
-	theta = get_model_prediction(d['x'], name)
-	lnL = get_log_likelihood(d['y'].astype('int64'), theta)
+	# create dataset
+	print('Loading data')
+	data = EBayDataset(VALIDATION, name)
+
+	# model predictions
+	p = get_model_predictions(net, data)
 
 	# for discrim models, report accuracy
 	if name in DISCRIM_MODELS:
-		accuracy = np.mean(d['y'] == (theta.numpy() > 0).squeeze())
-		print('Accuracy: {}'.format(accuracy))
+		print('Accuracy: {}'.format((p > 0.5).mean()))
 
-		# # correct and certain
-		# correct = np.exp(lnL) > 0.99
-		# idx_obs = np.argwhere(correct & d['y'])
-		# idx_sim = np.argwhere(correct & ~d['y'])
+		# correct and certain
+		correct = p > 0.99
+		idx_obs = np.argwhere(correct & data.d['y'])
+		idx_sim = np.argwhere(correct & ~data.d['y'])
+		for k in data.d['x'].keys():
+			obs = data.d['x'][k][idx_obs,:].mean(axis=0)
+			sim = data.d['x'][k][idx_sim,:].mean(axis=0)
+			print('{}: {}'.format(k, obs / sim))
 
 	# for other models, report log-likelihood
 	else:

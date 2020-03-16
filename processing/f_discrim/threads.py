@@ -13,15 +13,17 @@ def get_x_offer(offers, idx):
 	x_offer = {}
 	# dataframe of offer features for relevant threads
 	offers = pd.DataFrame(index=idx).join(offers)
+	# remove time feats
+	offers.drop(TIME_FEATS, axis=1, inplace=True)
 	# turn features
 	for i in range(1, 8):
 		# offer features at turn i
 		offer = offers.xs(i, level='index').reindex(
 			index=idx, fill_value=0).astype('float32')
-		# set censored time feats to zero
-		if i > 1:
-			censored = (offer[EXP] == 1) & (offer[DELAY] < 1)
-			offer.loc[censored, TIME_FEATS] = 0.0
+		# # set censored time feats to zero
+		# if i > 1:
+		# 	censored = (offer[EXP] == 1) & (offer[DELAY] < 1)
+		# 	offer.loc[censored, TIME_FEATS] = 0.0
 		# drop feats that are zero
 		if i == 1:
 			for feat in [DAYS, DELAY, REJECT]:
