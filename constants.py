@@ -32,6 +32,9 @@ REINFORCE_DIR = '%s/agent/' % PREFIX
 
 PARAMS_PATH = INPUT_DIR + 'params.pkl'
 
+PLOT_DIR = '{}/{}/'.format(os.path.expanduser('~/Dropbox/eBay'), 'figures')
+PLOT_DATA_DIR = '{}{}/'.format(PLOT_DIR, 'data')
+
 # partitions
 TRAIN_MODELS = 'train_models'
 TRAIN_RL = 'train_rl'

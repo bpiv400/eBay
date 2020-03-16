@@ -1,37 +1,45 @@
 import sys
 import argparse
-from compress_pickle import load
+from compress_pickle import load, dump
 import numpy as np
-from constants import INPUT_DIR, VALIDATION, CON_MODELS, MSG_MODELS, \
-	FIRST_ARRIVAL_MODEL, BYR_HIST_MODEL, ARRIVAL_PREFIX
-from featnames import CON, MSG
+from processing.processing_consts import NUM_OUT
+from constants import INPUT_DIR, VALIDATION, MODELS, PLOT_DATA_DIR
 
 
-def log_likelihood(p):
+def get_baserate(y, intervals):
+	p = np.zeros(intervals, dtype='float64')
+	for i in range(intervals):
+		p[i] = (y == i).mean()
 	p = p[p > 0]
 	return np.sum(p * np.log(p))
 
 
 def main():
-	# extract parameters from command line
-	parser = argparse.ArgumentParser()
-	parser.add_argument('--outcome', type=str)
-	outcome = parser.parse_args().outcome
-	assert outcome in [ARRIVAL_PREFIX, CON, MSG]
+	# initialize output dataframe
+	lnL0, lnL_bar = dict(), dict()
 
-	# function
-	if outcome == MSG:
-		names = MSG_MODELS
-	elif outcome == CON:
-		names = CON_MODELS
-	else:
-		names = [FIRST_ARRIVAL_MODEL, BYR_HIST_MODEL]
+	# calculate initialization value and baserate for each model
+	for m in MODELS:
+		if 'delay' not in m and m != 'next_arrival':
+			print(m)
 
-	# load data
-	
-	for name in names:
-		p = load(INPUT_DIR + '{}/{}.gz'.format(VALIDATION, name))['p']
-		print('{0}: {1:1.4f}'.format(name, log_likelihood(p)))
+			# number of intervals
+			intervals = NUM_OUT[m]
+			if intervals == 1:
+				intervals += 1
+
+			# initialization value
+			lnL0[m] = np.log(np.ones(intervals, dtype='float64') / intervals)
+
+			# load data
+			y = load(INPUT_DIR + '{}/{}.gz'.format(VALIDATION, m))['y']
+
+			# baserates
+			lnL_bar[m] = get_baserate(y, intervals)
+
+	# save output
+	dump(lnL0, PLOT_DATA_DIR + '{}/{}.pkl'.format('lnL', 'lnL0'))
+	dump(lnL_bar, PLOT_DATA_DIR + '{}/{}.pkl'.format('lnL', 'lnL_bar'))
 
 
 if __name__ == '__main__':

@@ -371,37 +371,11 @@ def save_small(d, name):
     small = dict()
     small['y'] = d['y'][idx_small]
 
-    # baserates
-    if 'p' in d:
-        small['p'] = d['p']
-
-        if 'turn' in d:
-            small['turn'] = d['turn'][idx_small]
-
     # inputs
     small['x'] = {k: v[idx_small, :] for k, v in d['x'].items()}
 
     # save
     dump(small, INPUT_DIR + 'small/{}.gz'.format(name))
-
-
-def get_baserates(y, name):
-    intervals = NUM_OUT[name]
-    if intervals == 1:
-        intervals += 1
-    assert intervals > y.max()
-    if 'index' in y.index.names:
-        p = dict()
-        for turn in y.index.unique(level='index'):
-            y_turn = y.xs(turn, level='index')
-            p[turn] = np.zeros(intervals, dtype='float64')
-            for i in range(intervals):
-                p[turn][i] = (y_turn == i).mean()
-    else:
-        p = np.zeros(intervals, dtype='float64')
-        for i in range(intervals):
-            p[i] = (y == i).mean()
-    return p
 
 
 # save featnames and sizes
@@ -410,14 +384,6 @@ def save_files(d, part, name):
     if part == 'test_rl':
         save_featnames(d['x'], name)
         save_sizes(d['x'], name)
-
-    # baserates
-    if not 'delay' in name and not name == 'next_arrival':
-        d['p'] = get_baserates(d['y'], name)
-
-        if type(d['p']) is dict:
-            d['turn'] = d['y'].index.get_level_values(
-                level='index').to_numpy(dtype='int8')
 
     # pandas index
     idx = d['y'].index

@@ -40,19 +40,20 @@ def main():
         group = ['init_slr']
 
     # for each model, choose best experiment
+    lnL = dict()
     for m in group:
         em = EventMultiplexer().AddRunsFromDirectory(LOG_DIR + m)
 
         # find best performing experiment
-        lnL, run = extract_best_experiment(em.Reload())      
+        lnL[m], run = extract_best_experiment(em.Reload())      
 
         # copy best performing model into parent directory
         print('{}: {}'.format(m, run))
         copyfile(MODEL_DIR + '{}/{}.net'.format(m, run),
                  MODEL_DIR + '{}.net'.format(m))
 
-        # save output
-        dump(lnL, PLOT_DATA_DIR + '{}/{}.pkl'.format('lnL', m))
+    # save output
+    dump(lnL, PLOT_DATA_DIR + 'lnL/lnL.pkl')
 
 
 if __name__ == '__main__':
