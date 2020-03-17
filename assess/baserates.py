@@ -16,14 +16,8 @@ def get_counts(y, periods):
     cens = np.array([(y == i).sum() for i in range(-periods, 0)],
                     dtype='float64')
     for i in range(periods):
-        if cens[i] > 0:
-            den = counts[i:].sum().astype('float64')
-            if den == 0:
-                break
-            shares = counts[i:] / den
-            counts[i:] += cens[i] * shares
-            print('{}: ')
-    assert int(counts.sum()) == len(y)
+        counts[i:] += cens[i] / (periods - i)
+    assert (np.abs(counts - len(y)) < 1e-8)
     return counts
 
 
