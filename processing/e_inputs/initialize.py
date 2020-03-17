@@ -86,6 +86,7 @@ def process_inputs(part, role):
 
     # thread features
     x_thread = get_x_thread(threads, idx)
+    x_thread = add_turn_indicators(x_thread)
     x_thread[INT_REMAINING] = calculate_remaining(part, idx)
     x['lstg'] = pd.concat([x['lstg'], x_thread], axis=1)
 

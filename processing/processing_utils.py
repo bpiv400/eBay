@@ -163,6 +163,7 @@ def calculate_remaining(part, idx, turn=None):
 
 
 def get_x_thread(threads, idx):
+    # initialize x_thread as copy
     x_thread = threads.copy()
 
     # byr_hist as a decimal
@@ -170,10 +171,6 @@ def get_x_thread(threads, idx):
 
     # reindex to create x_thread
     x_thread = pd.DataFrame(index=idx).join(x_thread)
-
-    # add turn indicators
-    if 'index' in idx.names:
-        x_thread = add_turn_indicators(x_thread)
 
     return x_thread.astype('float32')
 
