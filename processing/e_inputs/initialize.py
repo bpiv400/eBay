@@ -1,9 +1,22 @@
 import argparse
 import pandas as pd
 from processing.processing_utils import load_file, get_x_thread, \
-    init_x, save_files, get_y_con, check_zero, calculate_remaining, add_turn_indicators
+    init_x, save_files, get_y_con, check_zero, calculate_remaining
 from constants import IDX, BYR_PREFIX, SLR_PREFIX
 from featnames import DELAY, AUTO, EXP, REJECT, CON, NORM, SPLIT, MSG, INT_REMAINING, TIME_FEATS
+
+
+def add_turn_indicators(df):
+    """
+    Appends turn indicator variables to offer matrix
+    :param df: dataframe with index ['lstg', 'thread', 'index'].
+    :return: dataframe with turn indicators appended
+    """
+    indices = np.sort(np.unique(df.index.get_level_values('index')))
+    for i in range(len(indices) - 1):
+        ind = indices[i]
+        df['t{}'.format(ind)] = df.index.isin([ind], level='index')
+    return df
 
 
 # sets unseen feats to 0
@@ -67,8 +80,9 @@ def process_inputs(part, role):
     x = init_x(part, idx)
 
     # remove auto accept/reject features from x['lstg'] for buyer models
-    x['lstg'].drop(['auto_decline', 'auto_accept', 'has_decline', 'has_accept'],
-                   axis=1, inplace=True)
+    if role == BYR_PREFIX:
+        x['lstg'].drop(['auto_decline', 'auto_accept', 'has_decline', 'has_accept'],
+                       axis=1, inplace=True)
 
     # thread features
     x_thread = get_x_thread(threads, idx)
@@ -93,7 +107,7 @@ def main():
     args = parser.parse_args()
     part, role, delay = args.part, args.role, args.delay
     assert role in [BYR_PREFIX, SLR_PREFIX]
-    if delay:
+    if role == 'byr' or delay:
         raise NotImplementedError()
     else:
         name = 'init_{}'.format(role)

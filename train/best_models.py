@@ -28,7 +28,7 @@ def extract_best_experiment(em):
 def main():
     # extract parameters from command line
     parser = argparse.ArgumentParser()
-    parser.add_argument('--set', type=str, required=True)
+    parser.add_argument('--set', type=str, default='models')
     args = parser.parse_args()
 
     # translate to set
@@ -38,6 +38,8 @@ def main():
         group = DISCRIM_MODELS
     elif args.set == 'init':
         group = ['init_slr']
+    else:
+        raise RuntimeError('Invalid set: {}'.format(args.set))
 
     # for each model, choose best experiment
     lnL = dict()

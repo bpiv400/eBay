@@ -5,8 +5,8 @@ LOG_DIR = OUTPUT_DIR + 'logs/'
 
 # optimization parameters
 NUM_WORKERS = {'first_arrival': 4,
-			   'hist': 7,
-			   'con1': 7,
+               'hist': 7,
+               'con1': 7,
                'init_byr': 5,
                'init_slr': 6,
                'threads': 7,
@@ -24,9 +24,8 @@ INT_DROPOUT = 10
 MAX_DROPOUT = 5
 DROPOUT_GRID = []
 for i in range(0, MAX_DROPOUT):
-    for j in range(i+1, MAX_DROPOUT+1):
+    for j in range(i + 1, MAX_DROPOUT + 1):
         DROPOUT_GRID.append([i, j])
-
 
 # GAMMA_TOL = 0.01
 # GAMMA_MAX = 0.1

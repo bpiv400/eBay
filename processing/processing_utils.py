@@ -137,19 +137,6 @@ def get_norm(con):
     return norm.rename_axis('index', axis=1).stack().astype('float64')
 
 
-def add_turn_indicators(df):
-    """
-    Appends turn indicator variables to offer matrix
-    :param df: dataframe with index ['lstg', 'thread', 'index'].
-    :return: dataframe with turn indicators appended
-    """
-    indices = np.sort(np.unique(df.index.get_level_values('index')))
-    for i in range(len(indices) - 1):
-        ind = indices[i]
-        df['t{}'.format(ind)] = df.index.isin([ind], level='index')
-    return df
-
-
 def calculate_remaining(part, idx, turn=None):
     # load timestamps
     lstg_start = load_file(part, 'lookup').start_time.reindex(

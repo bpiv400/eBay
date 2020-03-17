@@ -111,8 +111,8 @@ class Trainer:
             if self._get_lnlr(optimizer) < LNLR1:
                 break
 
-            # stop training if holdout objective hasn't improved in 10 epochs
-            if epoch >= 9 and output['lnL_test'] < lnL_test0:
+            # stop training if holdout objective hasn't improved in 12 epochs
+            if epoch >= 11 and output['lnL_test'] < lnL_test0:
                 break
 
             # update last, increment epoch
