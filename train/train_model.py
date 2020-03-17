@@ -24,7 +24,7 @@ def main():
     trainer = Trainer(args.name, train_part, VALIDATION, dev=args.dev)
 
     # compute dropout
-    dropout = [float(i  / INT_DROPOUT) for i in DROPOUT_GRID[args.dropout-1]]
+    dropout = (float(i / INT_DROPOUT) for i in DROPOUT_GRID[args.dropout-1])
 
     # train model
     trainer.train_model(dropout=dropout)

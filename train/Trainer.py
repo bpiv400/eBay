@@ -47,21 +47,17 @@ class Trainer:
         self.train = EBayDataset(train_part, name)
         self.test = EBayDataset(test_part, name)
 
-    def train_model(self, dropout=0.0):
+    def train_model(self, dropout=(0.0, 0.0)):
         """
         Public method to train model.
-        :param dropout: scalar dropout rate.
+        :param dropout: pair of dropout rates, one for last embedding, one for fully connected.
         """
         # save dropout to self
         self.dropout = dropout
 
         # experiment id
         dtstr = dt.now().strftime('%y%m%d-%H%M')
-        if type(dropout) is list:
-            assert len(dropout) == 2
-            levels = [int(d * INT_DROPOUT) for d in dropout]
-        else:
-            levels = [0, dropout * INT_DROPOUT]
+        levels = [int(d * INT_DROPOUT) for d in dropout]
         expid = '{}_{}_{}'.format(dtstr, levels[0], levels[1])
 
         # initialize writer
@@ -192,9 +188,6 @@ class Trainer:
             lnL += torch.log(torch.sum(q_cens[i, y_cens[i]:]))
 
         return -lnL
-
-    def _get_penalty(self):
-        raise NotImplementedError()
 
     def _run_batch(self, b, net, optimizer):
         """
