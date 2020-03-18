@@ -14,9 +14,9 @@ def get_x_offer(offers, idx, outcome, turn):
     x_offer = {}
     # dataframe of offer features for relevant threads
     offers = pd.DataFrame(index=idx).join(offers)
-    # drop time feats from buyer models
-    if turn in IDX[BYR_PREFIX]:
-        offers.drop(TIME_FEATS, axis=1, inplace=True)
+    # # drop time feats from buyer models
+    # if turn in IDX[BYR_PREFIX]:
+    #     offers.drop(TIME_FEATS, axis=1, inplace=True)
     # last turn to include
     if outcome == DELAY:
         last = turn - 1
@@ -35,7 +35,8 @@ def get_x_offer(offers, idx, outcome, turn):
                 offer[[CON, NORM, SPLIT, AUTO, EXP, REJECT]] = 0.0
         # set censored time feats to zero
         else:
-            if i > 1 and turn in IDX[SLR_PREFIX]:
+            # if i > 1 and turn in IDX[SLR_PREFIX]:
+            if i > 1:
                 censored = (offer[EXP] == 1) & (offer[DELAY] < 1)
                 offer.loc[censored, TIME_FEATS] = 0.0
         # put in dictionary

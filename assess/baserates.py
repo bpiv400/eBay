@@ -10,15 +10,18 @@ def get_baserate(y, periods):
     return np.sum(p * np.log(p))
 
 
-def get_counts(y, periods):
+def get_delay_baserate(y, periods):
     counts = np.array([(y == i).sum() for i in range(periods)],
                       dtype='float64')
     cens = np.array([(y == i).sum() for i in range(-periods, 0)],
                     dtype='float64')
     for i in range(periods):
         counts[i:] += cens[i] / (periods - i)
-    assert (np.abs(counts - len(y)) < 1e-8)
-    return counts
+    assert (np.abs(counts.sum() - len(y)) < 1e-8)
+    p = counts / counts.sum()
+    p_arrival = p[y[y >= 0]]
+    p_cens = np.array([p[i:].sum() for i in y if i < 0])
+    return np.log(np.concatenate([p_arrival, p_cens], axis=0)).mean()
 
 
 def main():
@@ -39,14 +42,12 @@ def main():
 
         if 'delay' in m or m == 'next_arrival':
             # initialization value
-            lnL0_arrival = np.log(np.ones((y >= 0).sum()) / periods)
-            lnL0_cens = np.log(-y[y < 0] / periods)
-            lnL0[m] = np.concatenate([lnL0_arrival, lnL0_cens], axis=0).mean()
+            p_arrival = np.ones((y >= 0).sum()) / periods
+            p_cens = -y[y < 0] / periods
+            lnL0[m] = np.log(np.concatenate([p_arrival, p_cens], axis=0)).mean()
 
             # baserate
-            counts = get_counts(y, periods)
-
-
+            lnL_bar[m] = get_delay_baserate(y, periods)
 
         else:
             # initialization value
