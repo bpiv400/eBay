@@ -3,35 +3,9 @@ from processing.processing_utils import load_file, input_partition, \
     get_days_delay, collect_date_clock_feats, get_norm
 from processing.e_inputs.inputs_utils import get_x_thread, init_x, save_discrim_files
 from utils import is_split, concat_sim_chunks
-from constants import MONTH, IDX, SLR_PREFIX, TRAIN_RL, VALIDATION, TEST, MAX_DELAY, ARRIVAL_PREFIX
+from constants import MONTH, IDX, SLR_PREFIX, TRAIN_RL, VALIDATION, TEST
 from featnames import CON, NORM, SPLIT, DAYS, DELAY, EXP, AUTO, REJECT, CENSORED, \
     MONTHS_SINCE_LSTG, TIME_FEATS, MSG
-
-
-def process_lstg_end(lstg_start, lstg_end):
-    # remove thread and index from lstg_end index
-    lstg_end = lstg_end.reset_index(['thread', 'index'], drop=True)
-    assert not lstg_end.index.duplicated().max()
-
-    # fill in missing lstg end times with expirations
-    lstg_end = lstg_end.reindex(index=lstg_start.index, fill_value=-1)
-    lstg_end.loc[lstg_end == -1] = lstg_start + MAX_DELAY[ARRIVAL_PREFIX] - 1
-
-    return lstg_end
-
-
-def get_sim_times(part, lstg_start):
-    # collect simulated threads and offers
-    threads, offers = concat_sim_chunks(part)
-
-    # extract clock components
-    thread_start = threads.clock
-    lstg_end = offers.loc[(offers.con == 100) & ~offers.censored, 'clock']
-
-    # shorten index and fill-in expirations
-    lstg_end = process_lstg_end(lstg_start, lstg_end)
-
-    return lstg_end, thread_start
 
 
 def get_x_offer(offers, idx):
@@ -39,17 +13,17 @@ def get_x_offer(offers, idx):
     x_offer = {}
     # dataframe of offer features for relevant threads
     offers = pd.DataFrame(index=idx).join(offers)
-    # remove time feats (except thread_count)
-    offers.drop(TIME_FEATS[:-1], axis=1, inplace=True)
+    # # remove time feats (except thread_count)
+    # offers.drop(TIME_FEATS[:-1], axis=1, inplace=True)
     # turn features
     for i in range(1, 8):
         # offer features at turn i
         offer = offers.xs(i, level='index').reindex(
             index=idx, fill_value=0).astype('float32')
-        # # set censored time feats to zero
-        # if i > 1:
-        # 	censored = (offer[EXP] == 1) & (offer[DELAY] < 1)
-        # 	offer.loc[censored, TIME_FEATS] = 0.0
+        # set censored time feats to zero
+        if i > 1:
+            censored = (offer[EXP] == 1) & (offer[DELAY] < 1)
+            offer.loc[censored, :] = 0.0
         # drop feats that are zero
         if i == 1:
             for feat in [DAYS, DELAY, REJECT]:

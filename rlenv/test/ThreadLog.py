@@ -18,8 +18,7 @@ class ThreadLog:
         print('Turn: {}'.format(turn))
         outcomes = params['x_offer'].loc[turn, :]
         outcomes = outcomes[OUTCOME_FEATS]
-        byr = turn % 2 != 0
-        model = model_str(DELAY, byr=byr)
+        model = model_str(DELAY, turn=turn)
         delay_inputs = populate_test_model_inputs(full_inputs=params['inputs'][model], value=turn)
         delay_time = self.delay_time(turn=turn)
         return TurnLog(outcomes=outcomes, delay_inputs=delay_inputs, delay_time=delay_time, turn=turn)
@@ -31,19 +30,19 @@ class ThreadLog:
         # print(outcomes)
         # concession inputs if necessary
         if not outcomes[AUTO] and not outcomes[EXP]:
-            model = model_str(CON, byr=byr)
+            model = model_str(CON, turn=turn)
             con_inputs = populate_test_model_inputs(full_inputs=params['inputs'][model], value=turn)
         else:
             con_inputs = None
         # msg inputs if necessary
         if not outcomes[AUTO] and not outcomes[EXP] and need_msg(outcomes[CON], slr=not byr):
-            model = model_str(MSG, byr=byr)
+            model = model_str(MSG, turn=turn)
             msg_inputs = populate_test_model_inputs(full_inputs=params['inputs'][model], value=turn)
         else:
             msg_inputs = None
         # delay inputs if necessary
         if turn != 1 and not outcomes[AUTO]:
-            model = model_str(DELAY, byr=byr)
+            model = model_str(DELAY, turn=turn)
             delay_inputs = populate_test_model_inputs(full_inputs=params['inputs'][model], value=turn)
         else:
             delay_inputs = None
