@@ -156,12 +156,13 @@ class Composer:
         return ints
 
     def _build_offer_vector(self, offer_vector, byr=False):
-        if not byr:
-            full_vector = offer_vector
-        else:
-            full_vector = np.concatenate([offer_vector[:TIME_START_IND],
-                                          offer_vector[TIME_END_IND:]])
-        return torch.from_numpy(full_vector).unsqueeze(0).float()
+        # if not byr:
+        #     full_vector = offer_vector
+        # else:
+        #     full_vector = np.concatenate([offer_vector[:TIME_START_IND],
+        #                                   offer_vector[TIME_END_IND:]])
+        # return torch.from_numpy(full_vector).unsqueeze(0).float()
+        return torch.from_numpy(offer_vector).unsqueeze(0).float()
 
     @staticmethod
     def _build_lstg_vector(model_name, sources=None):
