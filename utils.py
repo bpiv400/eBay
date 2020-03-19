@@ -4,7 +4,7 @@ import torch
 import numpy as np
 from compress_pickle import load
 from nets.FeedForward import FeedForward
-from constants import MAX_DELAY, DAY, MONTH, SPLIT_PCTS, INPUT_DIR, MODEL_DIR, SIM_CHUNKS, ENV_SIM_DIR
+from constants import MAX_DELAY, DAY, MONTH, SPLIT_PCTS, INPUT_DIR, MODEL_DIR
 
 
 def unpickle(file):
@@ -135,19 +135,3 @@ def align_x_lstg_lookup(x_lstg, lookup):
     x_lstg = pd.concat([df.reindex(index=lookup.index) for df in x_lstg.values()],
                        axis=1)
     return x_lstg
-
-
-def concat_sim_chunks(part):
-    """
-    Loops over simulations, concatenates dataframes.
-    :param part: string name of partition.
-    :return: concatentated and sorted threads and offers dataframes.
-    """
-    threads, offers = [], []
-    for i in range(1, SIM_CHUNKS + 1):
-        sim = load(ENV_SIM_DIR + '{}/discrim/{}.gz'.format(part, i))
-        threads.append(sim['threads'])
-        offers.append(sim['offers'])
-    threads = pd.concat(threads, axis=0).sort_index()
-    offers = pd.concat(offers, axis=0).sort_index()
-    return threads, offers

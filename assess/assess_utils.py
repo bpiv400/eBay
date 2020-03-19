@@ -24,7 +24,7 @@ def get_model_predictions(name, data):
     for b in batches:
         b['x'] = {k: v.to('cuda') for k, v in b['x'].items()}
         b['y'] = b['y'].to('cuda')
-        theta = net(b['x'])
+        theta = net(b['x']).double()
         if theta.size()[1] == 1:
             theta = torch.cat((torch.zeros_like(theta), theta), dim=1)
         lnp.append(log_softmax(theta, dim=-1))

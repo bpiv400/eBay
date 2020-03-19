@@ -3,8 +3,8 @@ import numpy as np
 import pandas as pd
 from processing.processing_consts import INTERVAL, INTERVAL_COUNTS
 from processing.processing_utils import load_file
-from processing.e_inputs.inputs_utils import init_x, save_files, get_y_con, check_zero, \
-    calculate_remaining
+from processing.e_inputs.inputs_utils import init_x, save_files, get_y_con, get_y_msg, \
+    check_zero, calculate_remaining, get_x_thread
 from constants import IDX, DAY, MAX_DELAY, BYR_PREFIX, SLR_PREFIX, PARTITIONS
 from featnames import CON, NORM, SPLIT, MSG, AUTO, EXP, REJECT, DAYS, DELAY, \
     INT_REMAINING, TIME_FEATS
@@ -43,16 +43,6 @@ def get_x_offer(offers, idx, outcome, turn):
         # put in dictionary
         x_offer['offer%d' % i] = offer.astype('float32')
     return x_offer
-
-
-def get_y_msg(df, turn):
-    # for buyers, drop accepts and rejects
-    if turn in IDX[BYR_PREFIX]:
-        mask = (df[CON] > 0) & (df[CON] < 1)
-    # for sellers, drop accepts, expires, and auto responses
-    else:
-        mask = ~df[EXP] & ~df[AUTO] & (df[CON] < 1)
-    return df.loc[mask, MSG]
 
 
 def get_y_delay(df, turn):

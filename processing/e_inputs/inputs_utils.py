@@ -116,7 +116,17 @@ def get_y_con(df):
     # drop zero delay and expired offers
     mask = ~df[AUTO] & ~df[EXP]
     # concession is an int from 0 to 100
-    return (df.loc[mask, CON] * 100).astype('int8')
+    return (df.loc[mask, CON] * CON_MULTIPLIER).astype('int8')
+
+
+def get_y_msg(df, turn):
+    # for buyers, drop accepts and rejects
+    if turn in IDX[BYR_PREFIX]:
+        mask = (df[CON] > 0) & (df[CON] < 1)
+    # for sellers, drop accepts, expires, and auto responses
+    else:
+        mask = ~df[EXP] & ~df[AUTO] & (df[CON] < 1)
+    return df.loc[mask, MSG]
 
 
 def assert_zero(offer, cols):

@@ -2,7 +2,7 @@ import argparse
 import numpy as np
 import pandas as pd
 from compress_pickle import load
-from utils import slr_norm, byr_norm, extract_clock_feats
+from utils import slr_norm, byr_norm, extract_clock_feats, is_split
 from constants import *
 from featnames import *
 
@@ -134,3 +134,61 @@ def get_norm(con):
                                prev_byr_norm=norm[i - 1],
                                prev_slr_norm=norm[i - 2])
     return norm.rename_axis('index', axis=1).stack().astype('float64')
+
+
+def process_sim_offers(df):
+    # clock features
+    df = df.join(collect_date_clock_feats(df.clock))
+    # days and delay
+    df[DAYS], df[DELAY] = get_days_delay(df.clock.unstack())
+    # concession as a decimal
+    df.loc[:, CON] /= 100
+    # indicator for split
+    df[SPLIT] = df[CON].apply(lambda x: is_split(x))
+    # total concession
+    df[NORM] = get_norm(df[CON])
+    # reject auto and exp are last
+    df[REJECT] = df[CON] == 0
+    df[AUTO] = (df[DELAY] == 0) & df.index.isin(IDX[SLR_PREFIX], level='index')
+    df[EXP] = df[DELAY] == 1
+    # reorder columns to match observed
+    df = df.loc[:, ALL_OFFER_FEATS]
+    return df
+
+
+def process_sim_threads(part, df):
+    # convert clock to months_since_lstg
+    df = df.join(load_file(part, 'lookup').start_time)
+    df[MONTHS_SINCE_LSTG] = (df.clock - df.start_time) / MONTH
+    df = df.drop(['clock', 'start_time'], axis=1)
+    # reorder columns to match observed
+    df = df.loc[:, [MONTHS_SINCE_LSTG, BYR_HIST]]
+    return df
+
+
+def concat_sim_chunks(part):
+    """
+    Loops over simulations, concatenates dataframes.
+    :param part: string name of partition.
+    :return: concatentated and sorted threads and offers dataframes.
+    """
+    # collect chunks
+    threads, offers = [], []
+    for i in range(1, SIM_CHUNKS + 1):
+        sim = load(ENV_SIM_DIR + '{}/discrim/{}.gz'.format(part, i))
+        threads.append(sim['threads'])
+        offers.append(sim['offers'])
+
+    # concatenate
+    threads = pd.concat(threads, axis=0).sort_index()
+    offers = pd.concat(offers, axis=0).sort_index()
+
+    # drop censored offers
+    offers = offers.loc[~offers[CENSORED], :]
+    offers.drop(CENSORED, axis=1, inplace=True)
+
+    # conform to observed inputs
+    threads = process_sim_threads(part, threads)
+    offers = process_sim_offers(offers)
+
+    return threads, offers
