@@ -1,29 +1,8 @@
 import argparse
-import torch
-from torch.nn.functional import log_softmax, nll_loss
 import numpy as np
-import pandas as pd
-from compress_pickle import load
-from train.Sample import get_batches
 from train.EBayDataset import EBayDataset
-from utils import load_model, load_featnames
-from constants import VALIDATION, INPUT_DIR, INDEX_DIR, DISCRIM_MODELS
-
-
-def get_model_predictions(net, data):
-	# loop over batches
-	print('Predictions from model')
-	lnL = []
-	batches = get_batches(data)
-	for b in batches:
-		b['x'] = {k: v.to('cuda') for k, v in b['x'].items()}	
-		b['y'] = b['y'].to('cuda')
-		theta = net(b['x'])
-		if theta.size()[1] == 1:
-			theta = torch.cat((torch.zeros_like(theta), theta), dim=1)
-		lnq = log_softmax(theta, dim=-1)
-		lnL.append(-nll_loss(lnq, b['y'], reduction='none').cpu().numpy())
-	return np.exp(np.concatenate(lnL, axis=0))
+from assess.assess_utils import get_model_predictions
+from constants import TEST, DISCRIM_MODELS
 
 
 def main():
@@ -32,15 +11,13 @@ def main():
 	parser.add_argument('--name', type=str, help='model name')
 	name = parser.parse_args().name
 
-	# initialize neural net
-	net = load_model(name).to('cuda')
-
-	# create dataset
+	# initialize dataset
 	print('Loading data')
-	data = EBayDataset(VALIDATION, name)
+	data = EBayDataset(TEST, name)
+	x, y = [data.d[k] for k in ['x', 'y']]
 
 	# model predictions
-	p = get_model_predictions(net, data)
+	p, lnL = get_model_predictions(name, data)
 
 	# for discrim models, report accuracy
 	if name in DISCRIM_MODELS:
@@ -48,11 +25,11 @@ def main():
 
 		# correct and certain
 		correct = p > 0.99
-		idx_obs = np.argwhere(correct & data.d['y'])
-		idx_sim = np.argwhere(correct & ~data.d['y'])
-		for k in data.d['x'].keys():
-			obs = data.d['x'][k][idx_obs,:].mean(axis=0)
-			sim = data.d['x'][k][idx_sim,:].mean(axis=0)
+		idx_obs = np.argwhere(correct & y)
+		idx_sim = np.argwhere(correct & ~y)
+		for k in x.keys():
+			obs = x[k][idx_obs, :].mean(axis=0)
+			sim = x[k][idx_sim, :].mean(axis=0)
 			print('{}: {}'.format(k, obs / sim))
 
 	# for other models, report log-likelihood

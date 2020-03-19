@@ -1,12 +1,10 @@
 import pickle
-import time
-import random
 import pandas as pd
 import torch
 import numpy as np
 from compress_pickle import load
 from nets.FeedForward import FeedForward
-from constants import MAX_DELAY, ARRIVAL_PREFIX, DAY, MONTH, SPLIT_PCTS, INPUT_DIR, MODEL_DIR
+from constants import MAX_DELAY, DAY, MONTH, SPLIT_PCTS, INPUT_DIR, MODEL_DIR, SIM_CHUNKS, ENV_SIM_DIR
 
 
 def unpickle(file):
@@ -116,21 +114,14 @@ def load_model(name):
 
     # create neural network
     sizes = load_sizes(name)
-    net = FeedForward(sizes, dropout=False)  # type: torch.nn.Module
+    net = FeedForward(sizes)  # type: torch.nn.Module
 
     # read in model parameters
     model_path = '{}{}.net'.format(MODEL_DIR, name)
     state_dict = torch.load(model_path, map_location=torch.device('cpu'))
 
-    # delete dropout parameters
-    drop = [k for k in state_dict.keys() if 'log_alpha' in k]
-    for k in drop:
-        del state_dict[k]
-
-    # TODO: Remove to test delay slr model
-    if name != 'delay_slr':
-        # load parameters into model
-        net.load_state_dict(state_dict)
+    # load parameters into model
+    net.load_state_dict(state_dict)
 
     # eval mode
     for param in net.parameters(recurse=True):
@@ -145,3 +136,18 @@ def align_x_lstg_lookup(x_lstg, lookup):
                        axis=1)
     return x_lstg
 
+
+def concat_sim_chunks(part):
+    """
+    Loops over simulations, concatenates dataframes.
+    :param part: string name of partition.
+    :return: concatentated and sorted threads and offers dataframes.
+    """
+    threads, offers = [], []
+    for i in range(1, SIM_CHUNKS + 1):
+        sim = load(ENV_SIM_DIR + '{}/discrim/{}.gz'.format(part, i))
+        threads.append(sim['threads'])
+        offers.append(sim['offers'])
+    threads = pd.concat(threads, axis=0).sort_index()
+    offers = pd.concat(offers, axis=0).sort_index()
+    return threads, offers

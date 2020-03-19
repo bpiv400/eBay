@@ -1,59 +1,37 @@
-from compress_pickle import load
 import numpy as np
-import pandas as pd
 import torch
-from torch.utils.data import Sampler, DataLoader, Dataset
-from train.train_consts import MBSIZE
-from train.EBayDataset import EBayDataset
-from nets.FeedForward import FeedForward
-from constants import INPUT_DIR, MODEL_DIR, INDEX_DIR
+from torch.nn.functional import log_softmax, nll_loss
+from train.Sample import get_batches
+from utils import load_model
 
 
-def get_role_outcomes(part, name):
-    # create model
-    sizes = load(INPUT_DIR + 'sizes/{}.pkl'.format(name))
-    net = FeedForward(sizes)
-    model_path = MODEL_DIR + '{}.net'.format(name)
-    state_dict = torch.load(model_path)
-    net.load_state_dict(state_dict)
+def get_model_predictions(name, data):
+    """
+    Returns predictions from model
+    :param name: string name of model.
+    :param data: corresponding EBayDataset.
+    :return: (p, lnL)
+        - p: Nxk array of probabilities.
+        - lnL: N-length vector of log-likelihoods.
+    """
+    # initialize neural net
+    net = load_model(name).to('cuda')
 
-    # make predictions for each example
-    data = EBayDataset(part, name)
-    with torch.no_grad():
-        theta = net(data)
+    # get predictions from neural net
+    print('Predictions from model')
+    lnp, lnL = [], []
+    batches = get_batches(data)
+    for b in batches:
+        b['x'] = {k: v.to('cuda') for k, v in b['x'].items()}
+        b['y'] = b['y'].to('cuda')
+        theta = net(b['x'])
+        if theta.size()[1] == 1:
+            theta = torch.cat((torch.zeros_like(theta), theta), dim=1)
+        lnp.append(log_softmax(theta, dim=-1))
+        lnL.append(-nll_loss(lnp[-1], b['y'], reduction='none'))
 
-    # pandas index
-    idx = load(INDEX_DIR + '{}/{}.gz'.format(part, name))
+    # concatenate and convert to numpy
+    lnp = torch.cat(lnp).cpu().numpy()
+    lnL = torch.cat(lnL).cpu().numpy()
 
-    # convert to distribution
-    if outcome == 'msg':
-        p_hat = torch.sigmoid(theta)
-        p_hat = pd.Series(p_hat.numpy(), index=idx)
-    else:
-        p_hat = torch.exp(torch.nn.functional.log_softmax(theta, dim=-1))
-        p_hat = pd.DataFrame(p_hat.numpy(),
-                             index=idx,
-                             columns=range(p_hat.size()[1]))
-
-    # observed outcomes
-    y = pd.Series(data.d['y'], index=idx)
-
-    return y, p_hat
-
-
-def get_outcomes(outcome):
-    if outcome in ['delay', 'con', 'msg']:
-        # outcomes by role
-        y_byr, p_hat_byr = get_outcomes('%s_byr' % outcome)
-        y_slr, p_hat_slr = get_outcomes('%s_slr' % outcome)
-
-        # combine
-        y = pd.concat([y_byr, y_slr], dim=0)
-        p_hat = pd.concat([p_hat_byr, p_hat_slr], dim=0)
-
-    # no roles for arrival and hist models
-    else:
-        y, p_hat = get_role_outcomes(outcome)
-
-    # sort and return
-    return y.sort_index(), p_hat.sort_index()
+    return np.exp(lnp), lnL

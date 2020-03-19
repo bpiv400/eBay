@@ -39,7 +39,7 @@ PLOT_DATA_DIR = '{}{}/'.format(PLOT_DIR, 'data')
 TRAIN_MODELS = 'train_models'
 TRAIN_RL = 'train_rl'
 VALIDATION = 'test_rl'
-TEST = 'test'
+TEST = 'test_rl'  # TODO: rename to 'test' when using real test data
 PARTITIONS = [TRAIN_MODELS, TRAIN_RL, VALIDATION, TEST]
 SMALL = 'small'
 
