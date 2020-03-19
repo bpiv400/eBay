@@ -64,11 +64,12 @@ class Composer:
 
     @staticmethod
     def verify_offer_feats(model):
-        turn = int(model[-1])
-        if turn % 2 == 0:
-            assumed_feats = CLOCK_FEATS + TIME_FEATS + OUTCOME_FEATS
-        else:
-            assumed_feats = CLOCK_FEATS + OUTCOME_FEATS
+        # turn = int(model[-1])
+        # if turn % 2 == 0:
+        #     assumed_feats = CLOCK_FEATS + TIME_FEATS + OUTCOME_FEATS
+        # else:
+        #     assumed_feats = CLOCK_FEATS + OUTCOME_FEATS
+        assumed_feats = CLOCK_FEATS + TIME_FEATS + OUTCOME_FEATS
         model_feats = load_featnames(model)['offer']
         assert len(model_feats) == len(assumed_feats)
         for exp_feat, model_feat in zip(assumed_feats, model_feats):
