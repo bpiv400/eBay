@@ -64,7 +64,7 @@ class Composer:
 
     @staticmethod
     def verify_offer_feats(model):
-        # turn = int(model[-1])
+        turn = int(model[-1])
         # if turn % 2 == 0:
         #     assumed_feats = CLOCK_FEATS + TIME_FEATS + OUTCOME_FEATS
         # else:
