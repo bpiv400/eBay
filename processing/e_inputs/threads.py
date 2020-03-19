@@ -39,8 +39,8 @@ def get_x_offer(offers, idx):
     x_offer = {}
     # dataframe of offer features for relevant threads
     offers = pd.DataFrame(index=idx).join(offers)
-    # # remove time feats
-    # offers.drop(TIME_FEATS, axis=1, inplace=True)
+    # remove time feats (except thread_count)
+    offers.drop(TIME_FEATS[:-1], axis=1, inplace=True)
     # turn features
     for i in range(1, 8):
         # offer features at turn i

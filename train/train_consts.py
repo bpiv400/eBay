@@ -9,7 +9,7 @@ NUM_WORKERS = {'first_arrival': 4,
                'con1': 7,
                'init_byr': 5,
                'init_slr': 6,
-               'threads': 7,
+               'threads': 6,
                'listings': 6}
 MBSIZE = {True: 128, False: 2048}  # True for training, False for validation
 
