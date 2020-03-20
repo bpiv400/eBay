@@ -160,7 +160,7 @@ def save_featnames(x, name):
     # for offer models
     if 'offer1' in x:
         # buyer models do not have time feats
-        if name == 'init_byr':
+        if name == 'init_byr' or name[-1] in [str(i) for i in IDX[BYR_PREFIX]]:
             feats = CLOCK_FEATS + OUTCOME_FEATS
         else:
             feats = CLOCK_FEATS + TIME_FEATS + OUTCOME_FEATS
