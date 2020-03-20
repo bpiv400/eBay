@@ -8,8 +8,6 @@ from featnames import SPLIT, DAYS, DELAY, EXP, AUTO, REJECT, TIME_FEATS, MSG
 def get_x_offer(offers, idx):
     # initialize dictionary of offer features
     x_offer = {}
-    # remove time feats
-    offers.drop(TIME_FEATS, axis=1, inplace=True)
     # turn features
     for i in range(1, 8):
         # offer features at turn i

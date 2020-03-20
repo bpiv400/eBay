@@ -136,7 +136,7 @@ def get_norm(con):
     return norm.rename_axis('index', axis=1).stack().astype('float64')
 
 
-def process_sim_offers(df):
+def process_sim_offers(df, keep_tf=True):
     # clock features
     df = df.join(collect_date_clock_feats(df.clock))
     # days and delay
@@ -151,8 +151,19 @@ def process_sim_offers(df):
     df[REJECT] = df[CON] == 0
     df[AUTO] = (df[DELAY] == 0) & df.index.isin(IDX[SLR_PREFIX], level='index')
     df[EXP] = df[DELAY] == 1
-    # reorder columns to match observed
-    df = df.loc[:, ALL_OFFER_FEATS]
+    # difference time feats
+    if keep_tf:
+        tf = df[TIME_FEATS].astype('float64')
+        df.drop(TIME_FEATS, axis=1, inplace=True)
+        for c in TIME_FEATS:
+            wide = tf[c].unstack()
+            first = wide[[1]].stack()
+            diff = wide.diff(axis=1).stack()
+            df[c] = pd.concat([first, diff], axis=0).reindex(
+                index=df.index, fill_value=0.0)
+        df = df.loc[:, CLOCK_FEATS + TIME_FEATS + OUTCOME_FEATS]
+    else:
+        df = df.loc[:, CLOCK_FEATS + OUTCOME_FEATS]
     return df
 
 

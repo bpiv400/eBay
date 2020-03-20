@@ -56,7 +56,7 @@ class Recorder:
     def print_offer(event):
         """
         Prints data about the offer if verbose
-    """
+        """
         con, norm, msg = event.summary()
         if event.turn > 1:
             days, delay = event.delay_outcomes()
