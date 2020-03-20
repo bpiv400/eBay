@@ -34,11 +34,11 @@ def get_x_offer(offers, idx, outcome, turn):
             offer[MSG] = 0
             if outcome == CON:
                 offer[[CON, NORM, SPLIT, AUTO, EXP, REJECT]] = 0.0
-        # set censored time feats to zero
+        # assert that time feats are all zero for censored observations
         else:
             if i > 1 and turn in IDX[SLR_PREFIX]:
                 censored = (offer[EXP] == 1) & (offer[DELAY] < 1)
-                offer.loc[censored, TIME_FEATS] = 0.0
+                assert (offer.loc[censored, TIME_FEATS] == 0.0).all().all()
         # put in dictionary
         x_offer['offer%d' % i] = offer.astype('float32')
     return x_offer
