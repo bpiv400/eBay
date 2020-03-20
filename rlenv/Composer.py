@@ -65,11 +65,10 @@ class Composer:
     @staticmethod
     def verify_offer_feats(model):
         turn = int(model[-1])
-        # if turn % 2 == 0:
-        #     assumed_feats = CLOCK_FEATS + TIME_FEATS + OUTCOME_FEATS
-        # else:
-        #     assumed_feats = CLOCK_FEATS + OUTCOME_FEATS
-        assumed_feats = CLOCK_FEATS + TIME_FEATS + OUTCOME_FEATS
+        if turn % 2 == 0:
+            assumed_feats = CLOCK_FEATS + TIME_FEATS + OUTCOME_FEATS
+        else:
+            assumed_feats = CLOCK_FEATS + OUTCOME_FEATS
         model_feats = load_featnames(model)['offer']
         assert len(model_feats) == len(assumed_feats)
         for exp_feat, model_feat in zip(assumed_feats, model_feats):
@@ -157,13 +156,12 @@ class Composer:
         return ints
 
     def _build_offer_vector(self, offer_vector, byr=False):
-        # if not byr:
-        #     full_vector = offer_vector
-        # else:
-        #     full_vector = np.concatenate([offer_vector[:TIME_START_IND],
-        #                                   offer_vector[TIME_END_IND:]])
-        # return torch.from_numpy(full_vector).unsqueeze(0).float()
-        return torch.from_numpy(offer_vector).unsqueeze(0).float()
+        if not byr:
+            full_vector = offer_vector
+        else:
+            full_vector = np.concatenate([offer_vector[:TIME_START_IND],
+                                          offer_vector[TIME_END_IND:]])
+        return torch.from_numpy(full_vector).unsqueeze(0).float()
 
     @staticmethod
     def _build_lstg_vector(model_name, sources=None):
