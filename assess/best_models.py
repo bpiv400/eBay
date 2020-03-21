@@ -55,7 +55,7 @@ def main():
                  MODEL_DIR + '{}.net'.format(m))
 
     # save output
-    dump(lnL, PLOT_DATA_DIR + 'lnL/lnL.pkl')
+    dump(lnL, PLOT_DATA_DIR + 'lnL.pkl')
 
 
 if __name__ == '__main__':

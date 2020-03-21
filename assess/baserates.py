@@ -57,8 +57,8 @@ def main():
             lnL_bar[m] = get_baserate(y, num_out)
 
     # save output
-    dump(lnL0, PLOT_DATA_DIR + '{}/{}.pkl'.format('lnL', 'lnL0'))
-    dump(lnL_bar, PLOT_DATA_DIR + '{}/{}.pkl'.format('lnL', 'lnL_bar'))
+    dump(lnL0, PLOT_DATA_DIR + '{}.pkl'.format('lnL0'))
+    dump(lnL_bar, PLOT_DATA_DIR + '{}.pkl'.format('lnL_bar'))
 
 
 if __name__ == '__main__':

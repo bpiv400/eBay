@@ -1,11 +1,10 @@
-import argparse
 import numpy as np
 from train.EBayDataset import EBayDataset
 from assess.assess_utils import get_model_predictions
 from processing.e_inputs.inputs_utils import get_y_con, get_y_msg
 from processing.processing_utils import concat_sim_chunks, load_file
 from processing.processing_consts import NUM_OUT
-from constants import TEST
+from constants import TEST, MODELS
 from featnames import BYR_HIST, DELAY, CON, MSG
 
 
@@ -29,22 +28,13 @@ def get_sim_outcome(name, threads, offers):
 	return y_sim
 
 
-def main():
-	# extract model outcome from command line
-	parser = argparse.ArgumentParser()
-	parser.add_argument('--name', required=True, type=str)
-	name = parser.parse_args().name
-
-	# lookup
-	lookup = load_file(TEST, 'lookup')
-
+def get_distributions(name, threads, offers):
 	# number of periods
 	num_out = NUM_OUT[name]
 	if num_out == 1:
 		num_out += 1
 
 	# simulated outcomes
-	threads, offers = concat_sim_chunks(TEST)
 	y_sim = get_sim_outcome(name, threads, offers)
 
 	# average simulated outcome
@@ -59,21 +49,49 @@ def main():
 	p_obs = np.array([(y_obs == i).mean() for i in range(num_out)])
 	assert np.abs(p_obs.sum() - 1) < 1e-8
 
-	# average model prediction
-	p_hat, _ = get_model_predictions(name, data)
-	p_hat = p_hat.mean(axis=0)
-	assert np.abs(p_hat.sum() - 1) < 1e-8
+	return p_obs, p_sim
 
-	# print number of observations
-	print('Observations: {} in data/model, {} in sim'.format(
-		len(y_obs), len(y_sim)))
 
-	# print comparison
-	print('-----------------')
-	print('interval: data | model | sim:')
-	for i in range(len(p_sim)):
-		print('{:3.0f}: {:2.2%} | {:2.2%} | {:2.2%}'.format(
-			i, p_obs[i], p_hat[i], p_sim[i]))
+def num_threads(df, lstgs):
+    s = df.reset_index('thread')['thread'].groupby('lstg').count()
+    s = s.reindex(index=lstgs, fill_value=0)
+    s = s.groupby(s).count() / len(lstgs)
+    return s
+
+
+def num_offers(df):
+    s = df.reset_index('index')['index'].groupby(['lstg', 'thread']).count()
+    s = s.groupby(s).count() / len(s)
+    return s
+
+
+def main():
+	# lookup
+	lookup = load_file(TEST, 'lookup')
+
+	# simualated outcomes
+	threads_sim, offers_sim = concat_sim_chunks(TEST)
+
+	# observed outcomes
+	threads_obs = load_file(TEST, 'x_thread')
+	offers_obs = load_file(TEST, 'x_offer')
+
+	# remove censored offers
+	offers_obs = offers_obs[(offers_obs.delay == 1) | ~offers_obs.exp]
+
+	# number of threads per listing
+	num_threads_obs = num_threads(threads_obs, lookup.index)
+	num_threads_sim = num_threads(threads_sim, lookup.index)
+
+	# number of offers per thread
+	num_offers_obs = num_offers(offers_obs)
+
+
+	# loop over models, get observed and simulated distributions
+	for m in MODELS:
+		p_obs, p_sim = get_distributions(m, threads_sim, offers_sim)
+
+	
 
 
 if __name__ == '__main__':
