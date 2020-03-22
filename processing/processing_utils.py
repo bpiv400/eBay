@@ -159,8 +159,8 @@ def process_sim_offers(df, keep_tf=True):
             wide = tf[c].unstack()
             first = wide[[1]].stack()
             diff = wide.diff(axis=1).stack()
-            df[c] = pd.concat([first, diff], axis=0).reindex(
-                index=df.index, fill_value=0.0)
+            df[c] = pd.concat([first, diff], axis=0).sort_index()
+            assert df[c].isna().sum() == 0
         df = df.loc[:, CLOCK_FEATS + TIME_FEATS + OUTCOME_FEATS]
     else:
         df = df.loc[:, CLOCK_FEATS + OUTCOME_FEATS]
