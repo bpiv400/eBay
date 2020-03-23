@@ -14,7 +14,7 @@ def get_x_offer(offers, idx):
         offer = offers.xs(i, level='index').reindex(
             index=idx, fill_value=0).astype('float32')
         # all time features except thread count
-        offer.drop(TIME_FEATS[-1], axis=1, inplace=True)
+        # offer.drop(TIME_FEATS[-1], axis=1, inplace=True)
         # drop feats that are zero
         if i == 1:
             for feat in [DAYS, DELAY, EXP, REJECT]:
