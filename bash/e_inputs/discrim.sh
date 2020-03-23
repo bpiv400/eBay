@@ -1,5 +1,5 @@
 #!/bin/bash
-#$ -t 1-2
+#$ -t 1-3
 #$ -l m_mem_free=50G
 #$ -N e_discrim
 #$ -j y
@@ -9,6 +9,9 @@ if [ "$SGE_TASK_ID" == 1 ]
 then
 	python repo/processing/e_inputs/listings.py --part "$1"
 elif [ "$SGE_TASK_ID" == 2 ]
+then
+	python repo/processing/e_inputs/threads.py --part "$1" --tf
+elif [ "$SGE_TASK_ID" == 3 ]
 then
 	python repo/processing/e_inputs/threads.py --part "$1"
 fi
