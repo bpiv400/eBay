@@ -57,7 +57,7 @@ def main():
     part, tf = args.part, args.tf
     assert part in [TRAIN_RL, VALIDATION, TEST]
     name = 'threads' if tf else 'threads_no_tf'
-    print('{}/{}}'.format(part, name))
+    print('{}/{}'.format(part, name))
 
     # observed data
     threads_obs = load_file(part, 'x_thread')
