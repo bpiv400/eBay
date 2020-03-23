@@ -99,4 +99,4 @@ OFFER_MODELS = DELAY_MODELS + CON_MODELS + MSG_MODELS
 MODELS = ARRIVAL_MODELS + OFFER_MODELS
 
 # discriminator models
-DISCRIM_MODELS = ['listings', 'threads']
+DISCRIM_MODELS = ['listings', 'threads', 'threads_no_tf']
