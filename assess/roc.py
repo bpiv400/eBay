@@ -10,7 +10,8 @@ def main():
 	d = dict()
 
 	# loop over discriminator models
-	for m in DISCRIM_MODELS:
+	# for m in DISCRIM_MODELS:
+	for m in ['threads']:
 		# initialize dataset
 		print('Loading data')
 		data = EBayDataset(TEST, m)
@@ -38,9 +39,10 @@ def main():
 		tp = d[m].values
 		tp_bar = (tp[1:] + tp[:-1]) / 2
 		auc = (fp_delta * tp_bar).sum()
+		print('{}: {}'.format(m, auc))
 
 	# save dictionary
-	dump(d, PLOT_DATA_DIR + '{}.pkl'.format('roc_discrim'))
+	# dump(d, PLOT_DATA_DIR + '{}.pkl'.format('roc_discrim'))
 
 
 if __name__ == '__main__':

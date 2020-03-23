@@ -22,11 +22,11 @@ def get_x_offer(offers, idx, tf):
             for feat in [DAYS, DELAY, EXP, REJECT]:
                 assert (offer[feat].min() == 0) and (offer[feat].max() == 0)
                 offer.drop(feat, axis=1, inplace=True)
-        elif i % 2 == 1:
+        if i % 2 == 1:
             for feat in [AUTO]:
                 assert (offer[feat].min() == 0) and (offer[feat].max() == 0)
                 offer.drop(feat, axis=1, inplace=True)
-        elif i == 7:
+        if i == 7:
             for feat in [MSG, SPLIT]:
                 assert (offer[feat].min() == 0) and (offer[feat].max() == 0)
                 offer.drop(feat, axis=1, inplace=True)
@@ -41,7 +41,9 @@ def construct_x(part, tf, threads, offers):
     # initialize input dictionary with lstg features
     x = init_x(part, idx)
     # add thread features to x['lstg']
-    x['lstg'] = pd.concat([x['lstg'], get_x_thread(threads, idx)], axis=1)
+    x_thread = get_x_thread(threads, idx)
+    x_thread['thread_count'] = x_thread.index.get_level_values(level='thread')
+    x['lstg'] = pd.concat([x['lstg'], x_thread], axis=1)
     # offer features
     x.update(get_x_offer(offers, idx, tf))
     return x
