@@ -11,7 +11,7 @@ def main():
 
 	# loop over discriminator models
 	# for m in DISCRIM_MODELS:
-	for m in ['threads']:
+	for m in ['threads_no_tf']:
 		# initialize dataset
 		print('Loading data')
 		data = EBayDataset(TEST, m)

@@ -40,16 +40,13 @@ def get_x_thread(threads, idx):
     # byr_hist as a decimal
     x_thread.loc[:, BYR_HIST] = x_thread.byr_hist.astype('float32') / 10
 
+    # thread count, including current thread
+    x_thread[THREAD_COUNT] = x_thread.index.get_level_values(level='thread')
+
     # reindex to create x_thread
     x_thread = pd.DataFrame(index=idx).join(x_thread)
 
     return x_thread.astype('float32')
-
-
-def init_x(part, idx):
-    x = load_file(part, 'x_lstg')
-    x = {k: v.reindex(index=idx, level='lstg').astype('float32') for k, v in x.items()}
-    return x
 
 
 def get_interarrival_period(clock):
@@ -240,7 +237,7 @@ def save_small(d, name):
 # save featnames and sizes
 def save_files(d, part, name):
     # featnames and sizes
-    if part == 'test_rl':
+    if part == VALIDATION:
         save_featnames(d['x'], name)
         save_sizes(d['x'], name)
 
@@ -260,35 +257,5 @@ def save_files(d, part, name):
     dump(idx, INDEX_DIR + '{}/{}.gz'.format(part, name))
 
     # save subset
-    if part == 'train_models':
-        save_small(d, name)
-
-
-def save_discrim_files(part, name, x_obs, x_sim):
-    # featnames and sizes
-    if part == 'test_rl':
-        save_sizes(x_obs, name)
-
-    # indices
-    idx_obs = x_obs['lstg'].index
-    idx_sim = x_sim['lstg'].index
-
-    # create dictionary of numpy arrays
-    x_obs = convert_x_to_numpy(x_obs, idx_obs)
-    x_sim = convert_x_to_numpy(x_sim, idx_sim)
-
-    # y=1 for real data
-    y_obs = np.ones(len(idx_obs), dtype=bool)
-    y_sim = np.zeros(len(idx_sim), dtype=bool)
-    d = {'y': np.concatenate((y_obs, y_sim), axis=0)}
-
-    # join input variables
-    assert x_obs.keys() == x_sim.keys()
-    d['x'] = {k: np.concatenate((x_obs[k], x_sim[k]), axis=0) for k in x_obs.keys()}
-
-    # save inputs
-    dump(d, INPUT_DIR + '{}/{}.gz'.format(part, name))
-
-    # save small
-    if part == 'train_rl':
+    if part == TRAIN_MODELS:
         save_small(d, name)

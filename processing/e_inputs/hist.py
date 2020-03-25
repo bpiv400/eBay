@@ -1,6 +1,5 @@
 import pandas as pd
-from processing.processing_utils import input_partition, load_file
-from processing.e_inputs.inputs_utils import init_x
+from processing.processing_utils import input_partition, load_file, init_x
 from featnames import CLOCK_FEATS, THREAD_COUNT
 
 
