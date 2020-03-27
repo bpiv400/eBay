@@ -5,6 +5,9 @@ from processing.d_frames.frames_utils import get_partition, load_frames
 from processing.processing_consts import CLEAN_DIR, W2V_DIR
 from constants import *
 
+AS_IS_FEATS = ['store', 'slr_us', 'fast', 'slr_lstgs_total', \
+               'slr_bos_total', 'start_price_pctile', 'fdbk_score', 'fdbk_pstv']
+
 
 # returns booleans for whether offer is round and ends in nines
 def do_rounding(offer):
@@ -18,7 +21,9 @@ def do_rounding(offer):
 
 def get_x_lstg(L):
     # initialize output dataframe with as-is features
-    df = L[['store', 'slr_us', 'fast', 'start_price_pctile']].copy()
+    df = L[AS_IS_FEATS].copy()
+    # perfect feedback score
+    df['fdbk_100'] = df.fdbk_pstv == 1
     # rounding
     df['start_is_round'], df['start_is_nines'] = do_rounding(L.start_price)
     # normalize start_date to years
@@ -39,12 +44,7 @@ def get_x_lstg(L):
     df['auto_decline'] = L.decline_price / L.start_price
     df['auto_accept'] = L.accept_price / L.start_price
     df['has_decline'] = df.auto_decline > 0
-    df['has_accept'] = df.auto_accept < 1
-    # last features are: (fdbk_score, fdbk_pstv, fdbk_100, relisted)
-    df['fdbk_score'] = L.fdbk_score
-    df['fdbk_pstv'] = L.fdbk_pstv
-    df['fdbk_100'] = df.fdbk_pstv == 1
-    df['relisted'] = L.relisted
+    df['has_accept'] = df.auto_accept < 1    
     return df
 
 
@@ -70,18 +70,17 @@ def main():
         w2v = load(W2V_DIR + '%s.gz' % role).reindex(
             index=L[['cat']].values.squeeze(), fill_value=0)
         w2v.set_index(L.index, inplace=True)
-        x['w2v_{}'.format(role)] = w2v
+        x['w2v_{}'.format(role)] = w2v.astype('float32')
+    del L
 
     # slr features
     print('Seller features')
-    x['slr'] = load_frames('slr').reindex(index=idx, fill_value=0)
-    x['slr']['slr_lstgs_total'] = L.slr_lstgs
-    x['slr']['slr_bos_total'] = L.slr_bos
-    del L
-
+    x['slr'] = load_frames('slr').reindex(
+        index=idx, fill_value=0).astype('float32')
+    
     # cat and cndtn features
     print('Categorical features')
-    df = load_frames('cat').reindex(index=idx, fill_value=0)
+    df = load_frames('cat').reindex(index=idx, fill_value=0).astype('float32')
     for name in ['cat', 'cndtn']:
         x[name] = df[[c for c in df.columns if c.startswith(name + '_')]]
 
