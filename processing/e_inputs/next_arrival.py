@@ -2,7 +2,8 @@ from compress_pickle import load
 import pandas as pd
 import numpy as np
 from processing.processing_utils import input_partition, load_file, init_x, collect_date_clock_feats
-from processing.e_inputs.inputs_utils import get_interarrival_period, save_files
+from processing.e_inputs.inputs_utils import get_arrival_times, \
+    get_interarrival_period, save_files
 from utils import get_months_since_lstg
 from processing.processing_consts import CLEAN_DIR
 from constants import MONTH
