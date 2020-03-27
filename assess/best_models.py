@@ -15,7 +15,8 @@ def extract_best_experiment(em):
     for run, d in em.Runs().items():
         lnlr1 = em.Scalars(run, 'lnlr')[-1].value
         lnL_test1 = em.Scalars(run, 'lnL_test')[-1].value
-        if len(d['scalars']) > 0 and lnlr1 == LNLR1:
+        # if len(d['scalars']) > 0 and lnlr1 == LNLR1:
+        if len(d['scalars']) > 0:
             curr = lnL_test1
             if curr > best:
                 best = curr
