@@ -5,8 +5,8 @@ from processing.d_frames.frames_utils import get_partition, load_frames
 from processing.processing_consts import CLEAN_DIR, W2V_DIR
 from constants import *
 
-AS_IS_FEATS = ['store', 'slr_us', 'fast', 'slr_lstgs_total', \
-               'slr_bos_total', 'start_price_pctile', 'fdbk_score', 'fdbk_pstv']
+AS_IS_FEATS = ['store', 'slr_us', 'fast', 'slr_lstgs', 'slr_bos', \
+               'start_price_pctile', 'fdbk_score', 'fdbk_pstv']
 
 
 # returns booleans for whether offer is round and ends in nines
@@ -23,7 +23,7 @@ def get_x_lstg(L):
     # initialize output dataframe with as-is features
     df = L[AS_IS_FEATS].copy()
     # perfect feedback score
-    df['fdbk_100'] = df.fdbk_pstv == 1
+    df['fdbk_100'] = L.fdbk_pstv == 1
     # rounding
     df['start_is_round'], df['start_is_nines'] = do_rounding(L.start_price)
     # normalize start_date to years
