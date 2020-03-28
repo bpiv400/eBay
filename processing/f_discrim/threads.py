@@ -1,118 +1,80 @@
-import sys, os
-from compress_pickle import load, dump
-import numpy as np, pandas as pd
-from processing.processing_utils import input_partition, load_file, \
-	get_days_delay, get_norm, get_x_thread, get_x_offer, init_x
-from utils import is_split
-from constants import SIM_CHUNKS, ENV_SIM_DIR, MONTH, IDX, SLR_PREFIX
-from featnames import CON, DAYS, DELAY, EXP, AUTO, REJECT, MONTHS_SINCE_LSTG
+import argparse
+import pandas as pd
+from processing.processing_utils import load_file, init_x, get_x_thread
+from processing.f_discrim.discrim_utils import concat_sim_chunks, save_discrim_files
+from constants import TRAIN_RL, VALIDATION, TEST
+from featnames import SPLIT, DAYS, DELAY, EXP, AUTO, REJECT, TIME_FEATS, MSG
 
 
-def process_offers_sim(df, offer_cols):
-	# do stuff
-	
-	
-	df[DAYS], df[DELAY] = get_days_delay(df.clock.unstack())
-
-	# concession as a decimal
-	df.loc[:, CON] /= 100
-
-	# indicator for split
-    df[SPLIT] = is_split(df[CON])
-
-	# total concession
-    df[NORM] = get_norm(df[CON])
-    
-    # reject auto and exp are last
-    df[REJECT] = df[CON] == 0
-    df[AUTO] = (df[DELAY] == 0) & df.index.isin(IDX[SLR_PREFIX], level='index')
-    df[EXP] = (df[DELAY] == 1) | df[CENSORED]
-
-	# reorder columns to match observed
-	df = df[offer_cols]
-
-	return df
-
-def process_threads_sim(df, thread_cols, lstg_start):
-	# convert clock to months_since_lstg
-	df = df.join(lstg_start)
-	df[MONTHS_SINCE_LSTG] = (df.clock - df.start_time) / MONTH
-	df = df.drop(['clock', 'start_time'], axis=1)
-	# reorder columns to match observed
-	df = df[thread_cols]
-	return df
+def get_x_offer(offers, idx, tf):
+    # initialize dictionary of offer features
+    x_offer = {}
+    # turn features
+    for i in range(1, 8):
+        # offer features at turn i
+        offer = offers.xs(i, level='index').reindex(
+            index=idx, fill_value=0).astype('float32')
+        # drop time feats, if tf parameter is False
+        if not tf:
+            offer.drop(TIME_FEATS, axis=1, inplace=True)
+        # drop feats that are zero
+        if i == 1:
+            for feat in [DAYS, DELAY, EXP, REJECT]:
+                assert (offer[feat].min() == 0) and (offer[feat].max() == 0)
+                offer.drop(feat, axis=1, inplace=True)
+        if i % 2 == 1:
+            for feat in [AUTO]:
+                assert (offer[feat].min() == 0) and (offer[feat].max() == 0)
+                offer.drop(feat, axis=1, inplace=True)
+        if i == 7:
+            for feat in [MSG, SPLIT]:
+                assert (offer[feat].min() == 0) and (offer[feat].max() == 0)
+                offer.drop(feat, axis=1, inplace=True)
+        # put in dictionary
+        x_offer['offer%d' % i] = offer.astype('float32')
+    return x_offer
 
 
-def concat_sim_chunks(part):
-	'''
-	Loops over simulations, concatenates dataframes.
-	:param part: string name of partition.
-	:return: concatentated and sorted threads and offers dataframes.
-	'''
-	threads_sim, offers_sim = [], []
-	for i in range(1, SIM_CHUNKS+1):
-		sim = load(ENV_SIM_DIR + '{}/discrim/{}.gz'.format(part, i))
-		threads_sim.append(sim['threads'])
-		offers_sim.append(sim['offers'])
-	threads_sim = pd.concat(threads_sim, axis=0).sort_index()
-	offers_sim = pd.concat(offers_sim, axis=0).sort_index()
-	return threads_sim, offers_sim
-
-
-def process_sim(part, thread_cols, offer_cols):
-	lstg_start = load_file(part, 'lookup').start_time
-
-	# construct inputs from simulations
-	threads_sim, offers_sim = concat_sim_chunks(part)
-
-	threads_sim = process_threads_sim(threads_sim, thread_cols, lstg_start)
-	offers_sim = process_offers_sim(offers_sim, offer_cols)
-
-	x = construct_x(part, )
-
-	return x
-
-
-def construct_x(part, threads, offers):
-	# master index
-	idx = threads.index
-
-	# initialize input dictionary with lstg features
-	x = init_x(part, idx)
-
-	# add thread features to x['lstg']
-	x['lstg'] = pd.concat([x['lstg'], get_x_thread(threads, idx)], axis=1)
-
-	# offer features
-	x.update(get_x_offer(offers, idx))
-	
-	return x
-
-
-def process_obs(part):
-	# load inputs from data
-	threads_obs = load_file(part, 'x_thread') 
-	offers_obs = load_file(part, 'x_offer')
-	# dictionary of input features
-	x_obs = construct_x(part, threads_obs, offers_obs)
-	# return input features and dataframe columns
-	return x_obs, threads_obs.columns, offers_obs.columns
+def construct_x(part, tf, threads, offers):
+    # master index
+    idx = threads.index
+    # initialize input dictionary with lstg features
+    x = init_x(part, idx)
+    # add thread features to x['lstg']
+    x_thread = get_x_thread(threads, idx)
+    x_thread['thread_count'] = x_thread.index.get_level_values(level='thread')
+    x['lstg'] = pd.concat([x['lstg'], x_thread], axis=1)
+    # offer features
+    x.update(get_x_offer(offers, idx, tf))
+    return x
 
 
 def main():
-	# extract partition from command line
-	part = input_partition()
-	print('%s/threads' % part)
+    # partiton
+    # extract parameters from command line
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--part', type=str)
+    parser.add_argument('--tf', action='store_true')
+    args = parser.parse_args()
+    part, tf = args.part, args.tf
+    assert part in [TRAIN_RL, VALIDATION, TEST]
+    name = 'threads' if tf else 'threads_no_tf'
+    print('{}/{}'.format(part, name))
 
-	# observed data
-	x_obs, thread_cols, offer_cols = process_obs(part)
+    # observed data
+    threads_obs = load_file(part, 'x_thread')
+    offers_obs = load_file(part, 'x_offer')
+    censored = (offers_obs[EXP] == 1) & (offers_obs[DELAY] < 1)
+    offers_obs = offers_obs.loc[~censored, :]
+    x_obs = construct_x(part, tf, threads_obs, offers_obs)
 
-	# simulated data
-	x_sim = process_sim(part, thread_cols, offer_cols)
+    # simulated data
+    threads_sim, offers_sim = concat_sim_chunks(part)
+    x_sim = construct_x(part, tf, threads_sim, offers_sim)
 
-	# save data
-	save_discrim_files(part, 'threads', x_obs, x_sim)
+    # save data
+    save_discrim_files(part, name, x_obs, x_sim)
 
 
 if __name__ == '__main__':
-	main()
+    main()

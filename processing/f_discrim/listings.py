@@ -1,56 +1,34 @@
 import pandas as pd
-from processing.processing_utils import input_partition, load_file, process_arrival_inputs
-from processing.f_discrim.discrim_utils import save_discrim_files, get_sim_times
-from processing.processing_consts import INTERVAL_COUNTS
-from constants import ARRIVAL_PREFIX
+from processing.processing_utils import input_partition, load_file, init_x
+from processing.f_discrim import concat_sim_chunks, save_discrim_files
 
 
-def get_obs_times(part, lstg_start):
-	# offer timestamps
-	clock = load_file(part, 'clock')
-	# listing end time
-	sale = load_file(part, 'x_offer').con == 1
-	lstg_end = clock[sale]
-	lstg_end = process_lstg_end(lstg_start, lstg_end)
-	# thread start time
-	thread_start = clock.xs(1, level='index')
-	return lstg_end, thread_start
-
-
-def process_inputs(part, obs=None):
-	# listing start time
-	lstg_start = load_file(part, 'lookup').start_time
-	# listing end time and thread start time
-	if obs:
-		lstg_end, thread_start = get_obs_times(part, lstg_start)
-	else:
-		lstg_end, thread_start = get_sim_times(part, lstg_start)
-	# dictionary of y and x
-	d = process_arrival_inputs(part, lstg_start, lstg_end, thread_start)
-	# restrict to first interarrival period
-	d['y'] = d['y'].xs(1, level='thread')
-	d['x'] = {k: v.xs(1, level='thread') for k, v in d['x'].items()}
-	# split into arrival indicator and period number
-	arrival = pd.Series(d['y'] < INTERVAL_COUNTS[ARRIVAL_PREFIX], 
-		index=d['y'].index, name='arrival', dtype='float32')
-	period = pd.Series(d['y'], 
-		index=d['y'].index, name='period', dtype='float32')
-	period /= INTERVAL_COUNTS[ARRIVAL_PREFIX]	# redefine on [0,1]
-	# put y in x['lstg']
-	d['x']['lstg'] = pd.concat([d['x']['lstg'], arrival, period], axis=1)
-	return d['x']
+def construct_x(x, idx_thread):
+	d = x.copy()
+	idx = x['lstg'].index
+	has_thread = pd.Series(1.0, index=idx_thread, name='has_thread').reindex(
+		index=idx, fill_value=0.0)
+	d['lstg'] = d['lstg'].join(has_thread)
+	return d
 
 
 def main():
 	# extract partition from command line
 	part = input_partition()
-	print('%s/listings' % part)
+	print('discrim/{}/listings'.format(part))
+
+	# initialize listing features
+	idx = load_file(part, 'lookup').index
+	x = init_x(part, idx)
 
 	# observed data
-	x_obs = process_inputs(part, obs=True)
+	idx_obs = load_file(part, 'x_thread').xs(1, level='thread').index
+	x_obs = construct_x(x, idx_obs)
 
 	# simulated data
-	x_sim = process_inputs(part, obs=False)
+	threads_sim, _ = concat_sim_chunks(part, keep_tf=False)
+	idx_sim = threads_sim.xs(1, level='thread').index
+	x_sim = construct_x(x, idx_sim)
 
 	# save data
 	save_discrim_files(part, 'listings', x_obs, x_sim)

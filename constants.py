@@ -32,11 +32,14 @@ REINFORCE_DIR = '%s/agent/' % PREFIX
 
 PARAMS_PATH = INPUT_DIR + 'params.pkl'
 
+PLOT_DIR = '{}/{}/'.format(os.path.expanduser('~/Dropbox/eBay'), 'figures')
+PLOT_DATA_DIR = '{}{}/'.format(PLOT_DIR, 'data')
+
 # partitions
 TRAIN_MODELS = 'train_models'
 TRAIN_RL = 'train_rl'
 VALIDATION = 'test_rl'
-TEST = 'test'
+TEST = 'test_rl'  # TODO: rename to 'test' when using real test data
 PARTITIONS = [TRAIN_MODELS, TRAIN_RL, VALIDATION, TEST]
 SMALL = 'small'
 
@@ -94,3 +97,6 @@ CON_MODELS = ['{}{}'.format(CON, i) for i in range(1, 8)]
 MSG_MODELS = ['{}{}'.format(MSG, i) for i in range(1, 7)]
 OFFER_MODELS = DELAY_MODELS + CON_MODELS + MSG_MODELS
 MODELS = ARRIVAL_MODELS + OFFER_MODELS
+
+# discriminator models
+DISCRIM_MODELS = ['listings', 'threads', 'threads_no_tf']

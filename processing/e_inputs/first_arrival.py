@@ -1,7 +1,6 @@
-from processing.processing_utils import input_partition, load_file, \
-    get_arrival_times, save_files, init_x
+from processing.processing_utils import input_partition, load_file, init_x
+from processing.e_inputs.inputs_utils import get_arrival_times, save_files
 from processing.processing_consts import INTERVAL, INTERVAL_COUNTS
-from constants import ARRIVAL_PREFIX
 
 
 def process_inputs(part):
@@ -22,7 +21,7 @@ def process_inputs(part):
     idx = y.index
 
     # listing features
-    x = init_x(part, idx, drop_slr=True)
+    x = init_x(part, idx)
 
     return {'y': y, 'x': x}
 

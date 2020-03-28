@@ -1,7 +1,7 @@
 import pandas as pd
 from featnames import START_TIME, MONTHS_SINCE_LSTG, BYR_HIST, CON, AUTO
-from constants import (MONTH, MODELS, FIRST_ARRIVAL_MODEL, OFFER_MODELS,
-                       BYR_HIST_MODEL, INTERARRIVAL_MODEL)
+from constants import (MONTH, MODELS, FIRST_ARRIVAL_MODEL,
+                       BYR_HIST_MODEL, INTERARRIVAL_MODEL, OFFER_MODELS)
 from rlenv.env_utils import populate_test_model_inputs
 from rlenv.test.ArrivalLog import ArrivalLog
 from rlenv.test.ThreadLog import ThreadLog
@@ -151,7 +151,7 @@ class LstgLog:
         params['x_offer'] = LstgLog.subset_df(df=params['x_offer'],
                                               lstg=params['lstg'])
         params['x_thread'] = LstgLog.subset_df(df=params['x_thread'],
-                                              lstg=params['lstg'])
+                                               lstg=params['lstg'])
         params['inputs'] = LstgLog.subset_inputs(input_data=params['inputs'], models=MODELS,
                                                  level='lstg', value=params['lstg'])
         # print(params['inputs']['arrival']['lstg'])
@@ -211,5 +211,3 @@ class LstgLog:
                     subset = None
                 inputs[model][input_group] = subset
         return inputs
-
-

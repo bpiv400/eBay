@@ -2,19 +2,22 @@ import argparse
 import numpy as np
 import pandas as pd
 from processing.processing_consts import INTERVAL, INTERVAL_COUNTS
-from processing.processing_utils import load_file, get_x_thread, \
-    init_x, save_files
+from processing.processing_utils import load_file, init_x
+from processing.e_inputs.inputs_utils import save_files, get_y_con, get_y_msg, \
+    check_zero, calculate_remaining, get_x_thread
 from constants import IDX, DAY, MAX_DELAY, BYR_PREFIX, SLR_PREFIX, PARTITIONS
 from featnames import CON, NORM, SPLIT, MSG, AUTO, EXP, REJECT, DAYS, DELAY, \
     INT_REMAINING, TIME_FEATS
-from utils import get_remaining
 
 
-def get_x_offer(offers, idx, outcome, role, turn):
+def get_x_offer(offers, idx, outcome, turn):
     # initialize dictionary of offer features
     x_offer = {}
     # dataframe of offer features for relevant threads
     offers = pd.DataFrame(index=idx).join(offers)
+    # drop time feats from buyer models
+    if turn in IDX[BYR_PREFIX]:
+        offers.drop(TIME_FEATS, axis=1, inplace=True)
     # last turn to include
     if outcome == DELAY:
         last = turn - 1
@@ -31,34 +34,14 @@ def get_x_offer(offers, idx, outcome, role, turn):
             offer[MSG] = 0
             if outcome == CON:
                 offer[[CON, NORM, SPLIT, AUTO, EXP, REJECT]] = 0.0
-        # drop time feats from buyer models
-        if role == BYR_PREFIX:
-            offer = offer.drop(TIME_FEATS, axis=1)
-        # set censored time feats to zero
+        # assert that time feats are all zero for censored observations
         else:
-            if i > 1:
+            if i > 1 and turn in IDX[SLR_PREFIX]:
                 censored = (offer[EXP] == 1) & (offer[DELAY] < 1)
-                offer.loc[censored, TIME_FEATS] = 0.0
+                assert (offer.loc[censored, TIME_FEATS] == 0.0).all().all()
         # put in dictionary
         x_offer['offer%d' % i] = offer.astype('float32')
     return x_offer
-
-
-def get_y_con(df):
-    # drop zero delay and expired offers
-    mask = ~df[AUTO] & ~df[EXP]
-    # concession is an int from 0 to 100
-    return (df.loc[mask, CON] * 100).astype('int8')
-
-
-def get_y_msg(df, role):
-    # for buyers, drop accepts and rejects
-    if role == BYR_PREFIX:
-        mask = (df[CON] > 0) & (df[CON] < 1)
-    # for sellers, drop accepts, expires, and auto responses
-    else:
-        mask = ~df[EXP] & ~df[AUTO] & (df[CON] < 1)
-    return df.loc[mask, MSG]
 
 
 def get_y_delay(df, turn):
@@ -79,29 +62,6 @@ def get_y_delay(df, turn):
     return delay
 
 
-def calculate_remaining(part, idx, turn):
-    # load timestamps
-    lstg_start = load_file(part, 'lookup').start_time.reindex(
-        index=idx, level='lstg')
-    delay_start = load_file(part, 'clock').groupby(
-        ['lstg', 'thread']).shift().dropna().astype('int64')
-    delay_start = delay_start.xs(turn, level='index').reindex(index=idx)
-
-    # remaining calculation
-    remaining = get_remaining(lstg_start, delay_start, MAX_DELAY[turn])
-
-    # error checking
-    assert np.all(remaining > 0) and np.all(remaining <= 1)
-
-    return remaining
-
-
-def check_zero(offer, cols):
-    for c in cols:
-        assert offer[c].max() == 0
-        assert offer[c].min() == 0
-
-
 # loads data and calls helper functions to construct train inputs
 def process_inputs(part, outcome, turn):
     # load dataframes
@@ -109,22 +69,19 @@ def process_inputs(part, outcome, turn):
     threads = load_file(part, 'x_thread')
     df = offers.xs(turn, level='index')
 
-    # role
-    role = BYR_PREFIX if turn in IDX[BYR_PREFIX] else SLR_PREFIX
-
     # y and master index
     if outcome == CON:
         y = get_y_con(df)
         if turn == 7:
             y = y == 100
     elif outcome == MSG:
-        y = get_y_msg(df, role)
+        y = get_y_msg(df, turn)
     else:
         y = get_y_delay(df, turn)
     idx = y.index
 
     # listing features
-    x = init_x(part, idx, drop_slr=(role == BYR_PREFIX))
+    x = init_x(part, idx)
 
     # thread features
     x_thread = get_x_thread(threads, idx)
@@ -136,19 +93,10 @@ def process_inputs(part, outcome, turn):
     x['lstg'] = pd.concat([x['lstg'], x_thread], axis=1)
 
     # offer features
-    x.update(get_x_offer(offers, idx, outcome, role, turn))
+    x.update(get_x_offer(offers, idx, outcome, turn))
 
     # error checking
-    for i in range(1, turn + 1):
-        k = 'offer' + str(i)
-        if k in x:
-            # error checking
-            if i == 1:
-                check_zero(x[k], [DAYS, DELAY])
-            if i % 2 == 1:
-                check_zero(x[k], [AUTO, EXP, REJECT])
-            if i == 7:
-                check_zero(x[k], [MSG])
+    check_zero(x)
 
     return {'y': y, 'x': x}
 
@@ -162,6 +110,10 @@ def main():
     args = parser.parse_args()
     part, outcome, turn = args.part, args.outcome, args.turn
 
+    # model name
+    name = '{}{}'.format(outcome, turn)
+    print('{}/{}'.format(part, name))
+
     # error checking
     assert part in PARTITIONS
     assert outcome in [DELAY, CON, MSG]
@@ -171,10 +123,6 @@ def main():
         assert turn in range(1, 7)
     else:
         assert turn in range(1, 8)
-
-    # model name
-    name = '{}{}'.format(outcome, turn)
-    print('{}/{}'.format(part, name))
 
     # input dataframes, output processed dataframes
     d = process_inputs(part, outcome, turn)

@@ -1,138 +1,93 @@
-import torch
 import numpy as np
 import pandas as pd
 from compress_pickle import load, dump
-from torch.utils.data import Sampler, DataLoader, Dataset
-from train.train_consts import MBSIZE
-from processing.processing_utils import save_featnames, save_sizes, convert_x_to_numpy
-from constants import SIM_CHUNKS, ENV_SIM_DIR, MAX_DELAY, ARRIVAL_PREFIX, INDEX_DIR
+from processing.e_inputs.inputs_utils import save_sizes, convert_x_to_numpy, save_small
+from processing.processing_utils import load_file, collect_date_clock_feats, \
+    get_days_delay, get_norm
+from utils import is_split
+from constants import TRAIN_RL, VALIDATION, INPUT_DIR, SIM_CHUNKS, ENV_SIM_DIR, \
+    IDX, SLR_PREFIX, MONTH
+from featnames import DAYS, DELAY, CON, SPLIT, NORM, REJECT, AUTO, EXP, CENSORED, \
+    CLOCK_FEATS, TIME_FEATS, OUTCOME_FEATS, MONTHS_SINCE_LSTG, BYR_HIST
 
 
-class PartialDataset(Dataset):
-    def __init__(self, x):
-        """
-        Defines a parent class that extends torch.utils.data.Dataset.
-        :param x: dictionary of numpy arrays of input data.
-        """
-        # save name to self
-        self.x = x
-
-        # number of labels
-        self.N = len(self.x['lstg'])
-
-    def __getitem__(self, idx):
-        """
-        Returns a tuple of data components for example.
-        :param idx: index of example.
-        :return: tuple of data components at index idx.
-        """
-        # index components of input dictionary
-        return {k: v[idx, :] for k, v in self.x.items()}
-
-    def __len__(self):
-        return self.N
-
-
-class Sample(Sampler):
-    def __init__(self, data):
-        """
-        Defines a sampler that extends torch.utils.data.Sampler.
-        :param data: Inputs object.
-        """
-        super().__init__(None)
-
-        # create vector of indices
-        v = np.array(range(len(data)))
-
-        # chop into minibatches
-        self.batches = np.array_split(v, 1 + len(v) // (MBSIZE[False] * 15))
-
-    def __iter__(self):
-        """
-        Iterate over batches defined in intialization
-        """
-        for batch in self.batches:
-            yield batch
-
-    def __len__(self):
-        return len(self.batches)
+def process_sim_offers(df, keep_tf=True):
+    # clock features
+    df = df.join(collect_date_clock_feats(df.clock))
+    # days and delay
+    df[DAYS], df[DELAY] = get_days_delay(df.clock.unstack())
+    # concession as a decimal
+    df.loc[:, CON] /= 100
+    # indicator for split
+    df[SPLIT] = df[CON].apply(lambda x: is_split(x))
+    # total concession
+    df[NORM] = get_norm(df[CON])
+    # reject auto and exp are last
+    df[REJECT] = df[CON] == 0
+    df[AUTO] = (df[DELAY] == 0) & df.index.isin(IDX[SLR_PREFIX], level='index')
+    df[EXP] = df[DELAY] == 1
+    # difference time feats
+    if keep_tf:
+        tf = df[TIME_FEATS].astype('float64')
+        df.drop(TIME_FEATS, axis=1, inplace=True)
+        for c in TIME_FEATS:
+            wide = tf[c].unstack()
+            first = wide[[1]].stack()
+            diff = wide.diff(axis=1).stack()
+            df[c] = pd.concat([first, diff], axis=0).sort_index()
+            assert df[c].isna().sum() == 0
+        df = df.loc[:, CLOCK_FEATS + TIME_FEATS + OUTCOME_FEATS]
+    else:
+        df = df.loc[:, CLOCK_FEATS + OUTCOME_FEATS]
+    return df
 
 
-def collate(batch):
+def process_sim_threads(part, df):
+    # convert clock to months_since_lstg
+    df = df.join(load_file(part, 'lookup').start_time)
+    df[MONTHS_SINCE_LSTG] = (df.clock - df.start_time) / MONTH
+    df = df.drop(['clock', 'start_time'], axis=1)
+    # reorder columns to match observed
+    df = df.loc[:, [MONTHS_SINCE_LSTG, BYR_HIST]]
+    return df
+
+
+def concat_sim_chunks(part):
     """
-    Converts examples to tensors for a feed-forward network.
-    :param batch: list of (dictionary of) numpy arrays.
-    :return: dictionary of (dictionary of) tensors.
+    Loops over simulations, concatenates dataframes.
+    :param part: string name of partition.
+    :return: concatentated and sorted threads and offers dataframes.
     """
-    x = {}
-    for b in batch:
-        for k, v in b.items():
-            if k in x:
-                x[k].append(torch.from_numpy(v))
-            else:
-                x[k] = [torch.from_numpy(v)]
-
-    # convert to (single) tensors
-    return {k: torch.stack(v).float() for k, v in x.items()}
-
-
-def get_batches(data):
-    """
-    Creates a Dataloader object.
-    :param data: Inputs object.
-    :return: iterable batches of examples.
-    """
-    batches = DataLoader(data, collate_fn=collate,
-                         batch_sampler=Sample(data),
-                         num_workers=8,
-                         pin_memory=True)
-    return batches
-
-
-def process_lstg_end(lstg_start, lstg_end):
-    # remove thread and index from lstg_end index
-    lstg_end = lstg_end.reset_index(['thread', 'index'], drop=True)
-    assert not lstg_end.index.duplicated().max()
-
-    # fill in missing lstg end times with expirations
-    lstg_end = lstg_end.reindex(index=lstg_start.index, fill_value=-1)
-    lstg_end.loc[lstg_end == -1] = lstg_start + MAX_DELAY[ARRIVAL_PREFIX] - 1
-
-    return lstg_end
-
-
-def get_sim_times(part, lstg_start):
-    # collect times from simulation files
-    lstg_end, thread_start = [], []
-    for i in range(1, SIM_CHUNKS+1):
+    # collect chunks
+    threads, offers = [], []
+    for i in range(1, SIM_CHUNKS + 1):
         sim = load(ENV_SIM_DIR + '{}/discrim/{}.gz'.format(part, i))
-        offers, threads = [sim[k] for k in ['offers', 'threads']]
-        lstg_end.append(offers.loc[(offers.con == 100) & ~offers.censored, 'clock'])
-        thread_start.append(threads.clock)
+        threads.append(sim['threads'])
+        offers.append(sim['offers'])
 
-    # concatenate into single series
-    lstg_end = pd.concat(lstg_end, axis=0).sort_index()
-    thread_start = pd.concat(thread_start, axis=0).sort_index()
+    # concatenate
+    threads = pd.concat(threads, axis=0).sort_index()
+    offers = pd.concat(offers, axis=0).sort_index()
 
-    # shorten index and fill-in expirations
-    lstg_end = process_lstg_end(lstg_start, lstg_end)
+    # drop censored offers
+    offers = offers.loc[~offers[CENSORED], :]
+    offers.drop(CENSORED, axis=1, inplace=True)
 
-    return lstg_end, thread_start
+    # conform to observed inputs
+    threads = process_sim_threads(part, threads)
+    offers = process_sim_offers(offers)
+
+    return threads, offers
 
 
 def save_discrim_files(part, name, x_obs, x_sim):
     # featnames and sizes
-    if part == 'test_rl':
-        save_featnames(x_obs, name)
+    if part == VALIDATION:
         save_sizes(x_obs, name)
 
     # indices
     idx_obs = x_obs['lstg'].index
     idx_sim = x_sim['lstg'].index
-
-    # save joined index
-    idx_joined = idx_obs.union(idx_sim, sort=False)
-    dump(idx_joined, INDEX_DIR + '{}/listings.gz'.format(part))
 
     # create dictionary of numpy arrays
     x_obs = convert_x_to_numpy(x_obs, idx_obs)
@@ -148,8 +103,8 @@ def save_discrim_files(part, name, x_obs, x_sim):
     d['x'] = {k: np.concatenate((x_obs[k], x_sim[k]), axis=0) for k in x_obs.keys()}
 
     # save inputs
-    dump(d, INPUT_DIR + '{}/listings.gz'.format(part))
+    dump(d, INPUT_DIR + '{}/{}.gz'.format(part, name))
 
     # save small
-    if part == 'train_rl':
-        save_small_discrim()
+    if part == TRAIN_RL:
+        save_small(d, name)

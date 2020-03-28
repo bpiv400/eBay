@@ -5,25 +5,25 @@ from nets.nets_utils import FullyConnected, create_embedding_layers, create_grou
 
 
 class FeedForward(nn.Module):
-    def __init__(self, sizes, dropout=False):
+    def __init__(self, sizes, dropout=(0.0, 0.0)):
         """
         :param sizes: dictionary of scalar input sizes; sizes['x'] is an OrderedDict
-        :param dropout: boolean for Variational dropout in FullyConnected.
+        :param dropout: tuple of dropout rates.
         """
         super(FeedForward, self).__init__()
-
-        # save dropout boolean to self
-        self.dropout = dropout
 
         # expand embeddings
         groups = create_groupings(sizes)
 
         self.nn0, total = create_embedding_layers(groups=groups,
                                                   sizes=sizes,
+                                                  dropout=dropout[0],
                                                   batch_norm=BATCHNORM)
 
         # fully connected
-        self.nn1 = FullyConnected(total, sizes['out'], dropout=dropout,
+        self.nn1 = FullyConnected(total, 
+                                  sizes['out'],
+                                  dropout=dropout[1],
                                   batch_norm=BATCHNORM)
 
     def forward(self, x):

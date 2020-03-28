@@ -1,11 +1,12 @@
 from compress_pickle import load
 import pandas as pd
 import numpy as np
-from processing.processing_utils import input_partition, load_file, \
-    collect_date_clock_feats, get_arrival_times, get_interarrival_period, \
-    get_months_since_lstg, init_x, save_files
+from processing.processing_utils import input_partition, load_file, init_x, collect_date_clock_feats
+from processing.e_inputs.inputs_utils import get_arrival_times, \
+    get_interarrival_period, save_files
+from utils import get_months_since_lstg
 from processing.processing_consts import CLEAN_DIR
-from constants import  MONTH
+from constants import MONTH
 from featnames import THREAD_COUNT, MONTHS_SINCE_LAST, MONTHS_SINCE_LSTG
 
 
@@ -54,7 +55,7 @@ def process_inputs(part):
     idx = y.index
 
     # listing features
-    x = init_x(part, idx, drop_slr=True)
+    x = init_x(part, idx)
 
     # add thread features to x['lstg']
     x_thread = get_x_thread_arrival(clock, idx, lstg_start, diff)

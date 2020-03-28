@@ -5,4 +5,4 @@
 #$ -o logs/test/
 #$ -q short.q
 
-python repo/rlenv/test/test_inputs.py --num "$SGE_TASK_ID" --part test_rl
+python repo/rlenv/test/test_inputs.py --num "$SGE_TASK_ID" --part "$1"

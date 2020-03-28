@@ -48,18 +48,15 @@ MSG = 'msg'
 REJECT = 'reject'
 AUTO = 'auto'
 EXP = 'exp'
+CENSORED = 'censored'
 
 OUTCOME_FEATS = [DAYS, DELAY, AUTO, EXP, CON, REJECT, NORM, SPLIT, MSG]
 ALL_OFFER_FEATS = CLOCK_FEATS + TIME_FEATS + OUTCOME_FEATS
 
 # turn indices
 TURN_FEATS = {
-    'con_byr': ['t3', 't5'],
-    'con_slr': ['t2', 't4'],
-    'delay_byr': ['t3', 't5'],
-    'delay_slr': ['t2', 't4'],
-    'msg_byr': ['t3'],
-    'msg_slr': ['t2', 't4']
+    'init_byr': ['t1', 't3', 't5'],
+    'init_slr': ['t2', 't4']
 }
 
 # thread features
@@ -77,7 +74,6 @@ START_TIME = 'start_time'
 START_PRICE = 'start_price'
 DEC_PRICE = 'decline_price'
 ACC_PRICE = 'accept_price'
-
 
 # lstg feats
 RELISTED = 'relisted'
