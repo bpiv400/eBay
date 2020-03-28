@@ -2,8 +2,6 @@ import pandas as pd
 from processing.processing_utils import input_partition, load_file, init_x
 from processing.f_discrim import concat_sim_chunks, save_discrim_files
 
-NAME = 'listings'
-
 
 def construct_x(x, idx_thread):
 	d = x.copy()
@@ -17,7 +15,7 @@ def construct_x(x, idx_thread):
 def main():
 	# extract partition from command line
 	part = input_partition()
-	print('discrim/{}/{}}'.format(part, NAME))
+	print('discrim/{}/listings'.format(part))
 
 	# initialize listing features
 	idx = load_file(part, 'lookup').index
@@ -33,7 +31,7 @@ def main():
 	x_sim = construct_x(x, idx_sim)
 
 	# save data
-	save_discrim_files(part, NAME, x_obs, x_sim)
+	save_discrim_files(part, 'listings', x_obs, x_sim)
 
 
 if __name__ == '__main__':

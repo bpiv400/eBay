@@ -1,7 +1,7 @@
 import argparse
 import pandas as pd
-from processing.processing_utils import load_file, concat_sim_chunks
-from processing.e_inputs.inputs_utils import get_x_thread, init_x, save_discrim_files
+from processing.processing_utils import load_file, init_x, get_x_thread
+from processing.f_discrim.discrim_utils import concat_sim_chunks, save_discrim_files
 from constants import TRAIN_RL, VALIDATION, TEST
 from featnames import SPLIT, DAYS, DELAY, EXP, AUTO, REJECT, TIME_FEATS, MSG
 

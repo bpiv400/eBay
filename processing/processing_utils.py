@@ -140,3 +140,19 @@ def init_x(part, idx):
     x = load_file(part, 'x_lstg')
     x = {k: v.reindex(index=idx, level='lstg').astype('float32') for k, v in x.items()}
     return x
+
+
+def get_x_thread(threads, idx):
+    # initialize x_thread as copy
+    x_thread = threads.copy()
+
+    # byr_hist as a decimal
+    x_thread.loc[:, BYR_HIST] = x_thread.byr_hist.astype('float32') / 10
+
+    # thread count, including current thread
+    x_thread[THREAD_COUNT] = x_thread.index.get_level_values(level='thread')
+
+    # reindex to create x_thread
+    x_thread = pd.DataFrame(index=idx).join(x_thread)
+
+    return x_thread.astype('float32')
