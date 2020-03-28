@@ -44,7 +44,10 @@ def get_x_lstg(L):
     df['auto_decline'] = L.decline_price / L.start_price
     df['auto_accept'] = L.accept_price / L.start_price
     df['has_decline'] = df.auto_decline > 0
-    df['has_accept'] = df.auto_accept < 1    
+    df['has_accept'] = df.auto_accept < 1 
+    # remove slr prefix
+    df.rename(lambda c: c[4:] if c.startswith('slr_') else c, 
+                        axis=1, inplace=True)   
     return df
 
 
@@ -86,7 +89,7 @@ def main():
 
     # take natural log of number of listings
     for k, v in x.items():
-        count_cols = [c for c in v.columns if c.endswith('_lstgs')]
+        count_cols = [c for c in v.columns if c.endswith('lstgs')]
         for c in count_cols:
             x[k].loc[:, c] = x[k][c].apply(np.log1p)
             x[k].rename({c: c.replace('lstgs', 'ln_lstgs')}, 

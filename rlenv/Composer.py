@@ -102,8 +102,6 @@ class Composer:
         # remove those missing features
         model_featnames[LSTG_MAP] = [feat for feat in model_featnames[LSTG_MAP] if feat in x_lstg_cols]
         # iterate over all x_lstg features based and check that have same elements in the same order
-        if SLR_PREFIX not in model:
-            del featnames[SLR_PREFIX]
         for grouping_name, lstg_feats in featnames.items():
             model_grouping = model_featnames[grouping_name]
             assert len(model_grouping) == len(lstg_feats)
@@ -118,6 +116,7 @@ class Composer:
         :param pd.Series x_lstg: fixed feature values
         :return: dict
         """
+        print(x_lstg)
         input_dict = dict()
         for grouping_name, feats in self.lstg_sets.items():
             input_dict[grouping_name] = x_lstg.loc[feats].values.astype(np.float32)
@@ -180,11 +179,15 @@ class Composer:
                                    solo_feats])
 
         elif DELAY in model_name:
-            solo_feats = np.array([sources[MONTHS_SINCE_LSTG], sources[BYR_HIST],
+            solo_feats = np.array([sources[MONTHS_SINCE_LSTG], 
+                                   sources[BYR_HIST],
+                                   sources[OFFER_MAPS[1]][THREAD_COUNT_IND] + 1,
                                    sources[INT_REMAINING]])
             lstg = np.concatenate([sources[LSTG_MAP], solo_feats])
         else:
-            solo_feats = np.array([sources[MONTHS_SINCE_LSTG], sources[BYR_HIST]])
+            solo_feats = np.array([sources[MONTHS_SINCE_LSTG], 
+                                   sources[BYR_HIST],
+                                   sources[OFFER_MAPS[1]][THREAD_COUNT_IND] + 1])
             lstg = np.concatenate([sources[LSTG_MAP], solo_feats])
         lstg = lstg.astype(np.float32)
         return torch.from_numpy(lstg).float().unsqueeze(0)
@@ -205,7 +208,8 @@ class Composer:
         model_feats = Composer.remove_shared_feats(model_feats, shared_feats)
         assert model_feats[0] == MONTHS_SINCE_LSTG
         assert model_feats[1] == BYR_HIST
-        assert len(model_feats) == 2
+        assert model_feats[2] == THREAD_COUNT
+        assert len(model_feats) == 3
 
     @staticmethod
     def verify_delay_append(model, shared_feats):
@@ -213,8 +217,9 @@ class Composer:
         model_feats = Composer.remove_shared_feats(model_feats, shared_feats)
         assert model_feats[0] == MONTHS_SINCE_LSTG
         assert model_feats[1] == BYR_HIST
-        assert model_feats[2] == INT_REMAINING
-        assert len(model_feats) == 3
+        assert model_feats[2] == THREAD_COUNT
+        assert model_feats[3] == INT_REMAINING
+        assert len(model_feats) == 4
 
     @staticmethod
     def verify_interarrival_append(shared_feats):
