@@ -176,17 +176,12 @@ class Composer:
             lstg = np.concatenate([sources[LSTG_MAP],
                                    sources[OFFER_MAPS[1]][CLOCK_START_IND:CLOCK_END_IND],
                                    solo_feats])
-
-        elif DELAY in model_name:
-            solo_feats = np.array([sources[MONTHS_SINCE_LSTG], 
-                                   sources[BYR_HIST],
-                                   sources[OFFER_MAPS[1]][THREAD_COUNT_IND] + 1,
-                                   sources[INT_REMAINING]])
-            lstg = np.concatenate([sources[LSTG_MAP], solo_feats])
         else:
-            solo_feats = np.array([sources[MONTHS_SINCE_LSTG], 
-                                   sources[BYR_HIST],
-                                   sources[OFFER_MAPS[1]][THREAD_COUNT_IND] + 1])
+            solo_feats = [sources[MONTHS_SINCE_LSTG], 
+                          sources[BYR_HIST],
+                          sources[OFFER_MAPS[1]][THREAD_COUNT_IND] + 1]
+            if DELAY in model_name:
+                solo_feats += [sources[INT_REMAINING]]
             lstg = np.concatenate([sources[LSTG_MAP], solo_feats])
         lstg = lstg.astype(np.float32)
         return torch.from_numpy(lstg).float().unsqueeze(0)
