@@ -116,7 +116,6 @@ class Composer:
         :param pd.Series x_lstg: fixed feature values
         :return: dict
         """
-        print(x_lstg)
         input_dict = dict()
         for grouping_name, feats in self.lstg_sets.items():
             input_dict[grouping_name] = x_lstg.loc[feats].values.astype(np.float32)
