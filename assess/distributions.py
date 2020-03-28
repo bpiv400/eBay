@@ -2,7 +2,8 @@ import numpy as np
 from train.EBayDataset import EBayDataset
 from assess.assess_utils import get_model_predictions
 from processing.e_inputs.inputs_utils import get_y_con, get_y_msg
-from processing.processing_utils import concat_sim_chunks, load_file
+from processing.f_discrim.discrim_utils import concat_sim_chunks
+from processing.processing_utils import load_file
 from processing.processing_consts import NUM_OUT
 from constants import TEST, MODELS
 from featnames import BYR_HIST, DELAY, CON, MSG
@@ -85,6 +86,7 @@ def main():
 
 	# number of offers per thread
 	num_offers_obs = num_offers(offers_obs)
+	num_offers_sim = num_offers(offers_sim)
 
 
 	# loop over models, get observed and simulated distributions
