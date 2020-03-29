@@ -1,11 +1,17 @@
+"""
+Creates hdf5 file containing input (lookup and x_lstg) for training seller rl
+
+By default, uses the train_rl partition
+"""
+
 import os
 import argparse
 import h5py
 import numpy as np
 from compress_pickle import load
 from utils import align_x_lstg_lookup
-from featnames import CAT, START_PRICE, DEC_PRICE, ACC_PRICE
-from constants import PARTITIONS, PARTS_DIR
+from featnames import CAT
+from constants import PARTITIONS, PARTS_DIR, TRAIN_RL
 from rlenv.env_consts import X_LSTG_FILENAME, LOOKUP_FILENAME, X_LSTG, LOOKUP
 from agent.agent_utils import slr_input_path
 
@@ -15,13 +21,13 @@ os.environ["HDF5_USE_FILE_LOCKING"] = "FALSE"
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--part', required=True,
+    parser.add_argument('--part', required=False,
                         help='partition to chunk: {}'.format(PARTITIONS))
     part = parser.parse_args().part
+    if part is None:
+        part = TRAIN_RL
     lookup = load('{}{}/{}'.format(PARTS_DIR, part, LOOKUP_FILENAME))
     lookup = lookup.drop(columns=[CAT])
-    lookup.loc[:, DEC_PRICE] = 0.0
-    lookup.loc[:, ACC_PRICE] = lookup.loc[:, START_PRICE]
     x_lstg = load('{}{}/{}'.format(PARTS_DIR, part, X_LSTG_FILENAME))
     x_lstg = align_x_lstg_lookup(x_lstg, lookup)
     path = slr_input_path(part=part)

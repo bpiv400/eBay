@@ -5,13 +5,13 @@ import numpy as np
 import pandas as pd
 from constants import (MODELS, OFFER_MODELS, SLR_PREFIX, FIRST_ARRIVAL_MODEL,
                        INTERARRIVAL_MODEL, BYR_HIST_MODEL)
-from featnames import (OUTCOME_FEATS, RELISTED,
+from featnames import (OUTCOME_FEATS,
                        MONTHS_SINCE_LSTG, BYR_HIST,
                        INT_REMAINING, MONTHS_SINCE_LAST)
 from utils import load_sizes, load_featnames
 from rlenv.env_consts import *
 from rlenv.env_utils import model_str
-from agent.agent_consts import FEAT_ID, CON_TYPE
+from agent.agent_consts import FEAT_TYPE, CON_TYPE, ALL_FEATS, NO_TIME
 from agent.agent_utils import get_con_set
 
 
@@ -152,7 +152,8 @@ class Composer:
                 ints[i] = self.sizes[model_str(DELAY, turn=i)][INTERVAL]
         return ints
 
-    def _build_offer_vector(self, offer_vector, byr=False):
+    @staticmethod
+    def _build_offer_vector(offer_vector, byr=False):
         if not byr:
             full_vector = offer_vector
         else:
@@ -242,12 +243,10 @@ class Composer:
 class AgentComposer(Composer):
     def __init__(self, cols=None, agent_params=None):
         super().__init__(cols)
-        self.relist_index = self.lstg_sets[LSTG_MAP].index(RELISTED)
-
         # parameters
         self.slr = agent_params[SLR_PREFIX]
-        self.idx = agent_params[FEAT_ID]
         self.delay = agent_params[DELAY]
+        self.feat_type = agent_params[FEAT_TYPE]
         self.con_type = agent_params[CON_TYPE]
 
         self.sizes['agent'] = self._build_agent_sizes()
@@ -303,7 +302,7 @@ class AgentComposer(Composer):
         return lstg
 
     def _build_agent_offer_vector(self, offer_vector=None):
-        if self.slr and self.idx == 0:
+        if self.slr and self.feat_type == ALL_FEATS:
             full_vector = offer_vector
         else:
             full_vector = np.concatenate([offer_vector[:TIME_START_IND],
@@ -313,7 +312,7 @@ class AgentComposer(Composer):
         return full_vector
 
     def _build_offer_sizes(self):
-        if not self.slr or self.idx == 1:
+        if not self.slr or self.feat_type == NO_TIME:
             base = len(CLOCK_FEATS) + len(OUTCOME_FEATS)
         else:
             base = len(ALL_OFFER_FEATS)

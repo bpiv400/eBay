@@ -20,12 +20,13 @@ for i in range(1, 7):
 # concession set constants
 CON_TYPE = 'con_type'
 FULL_CON = 'full'
-QUARTILES = 'quart'
+QUARTILES = 'quartiles'
 HALF = 'half'
+
 # feat id
-
-FEAT_ID = "feat_id"
-
+FEAT_TYPE = "feat_id"
+NO_TIME = "no_time"
+ALL_FEATS = "all"
 
 # batch size hyperparameters
 # for now, expecting no multiprocessing
