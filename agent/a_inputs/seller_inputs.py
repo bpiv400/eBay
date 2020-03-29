@@ -13,7 +13,7 @@ from utils import align_x_lstg_lookup
 from featnames import CAT
 from constants import PARTITIONS, PARTS_DIR, TRAIN_RL
 from rlenv.env_consts import X_LSTG_FILENAME, LOOKUP_FILENAME, X_LSTG, LOOKUP
-from agent.agent_utils import slr_input_path
+from agent.agent_consts import SELLER_TRAIN_INPUT
 
 
 os.environ["HDF5_USE_FILE_LOCKING"] = "FALSE"
@@ -30,8 +30,7 @@ def main():
     lookup = lookup.drop(columns=[CAT])
     x_lstg = load('{}{}/{}'.format(PARTS_DIR, part, X_LSTG_FILENAME))
     x_lstg = align_x_lstg_lookup(x_lstg, lookup)
-    path = slr_input_path(part=part)
-    store_inputs(x_lstg, lookup, path)
+    store_inputs(x_lstg, lookup, SELLER_TRAIN_INPUT)
 
 
 def store_inputs(x_lstg, lookup, path):

@@ -1,7 +1,11 @@
+from constants import REINFORCE_DIR
 
 # sub directory names
-INPUT_DIR = "input"
+TRAIN_DIR = "train"
 TRAIN_SEED = 10
+
+# files
+SELLER_TRAIN_INPUT = "{}/{}/seller.hdf5".format(REINFORCE_DIR, TRAIN_DIR)
 
 
 # seller input groups
@@ -47,5 +51,3 @@ BATCHES_PER_LOG = 2
 TOTAL_STEPS = NUM_BATCHES * BATCH_SIZE
 BATCH_T = int(BATCH_SIZE / BATCH_B)
 LOG_INTERVAL_STEPS = BATCH_SIZE * BATCHES_PER_LOG
-
-

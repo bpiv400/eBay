@@ -13,11 +13,10 @@ from rlpyt.samplers.serial.sampler import SerialEvalCollector
 from rlpyt.samplers.parallel.cpu.collectors import CpuEvalCollector
 from rlpyt.utils.logging.context import logger_context
 from featnames import DELAY
-from constants import VALIDATION, TRAIN_RL
+from constants import VALIDATION
 from agent.agent_consts import (BATCH_T, BATCH_B, CON_TYPE, ALL_FEATS,
                                 TOTAL_STEPS, PPO_MINIBATCHES,
                                 PPO_EPOCHS, FEAT_TYPE, LOG_INTERVAL_STEPS)
-from agent.agent_utils import slr_input_path
 from agent.models.PgCategoricalAgentModel import PgCategoricalAgentModel
 from constants import SLR_PREFIX
 from rlenv.env_utils import get_env_sim_dir, load_chunk
@@ -95,7 +94,7 @@ def main():
     env_params = {
         'composer': composer,
         'verbose': args.verbose,
-        'filename': slr_input_path(TRAIN_RL),
+        'filename': SELLER_TRAIN_INPUT,
         'arrival': ArrivalInterface(),
         'seller': SellerInterface(full=False),
         'buyer': BuyerInterface()

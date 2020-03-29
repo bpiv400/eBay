@@ -1,6 +1,5 @@
 import numpy as np
-from constants import REINFORCE_DIR
-from agent.agent_consts import INPUT_DIR, FULL_CON, QUARTILES, HALF
+from agent.agent_consts import FULL_CON, QUARTILES, HALF
 
 
 def get_con_set(con):
@@ -12,7 +11,3 @@ def get_con_set(con):
         return np.array([0.0, 0.50, 1.0])
     else:
         raise RuntimeError("Invalid concession set type parameter")
-
-
-def slr_input_path(part=None):
-    return '{}/{}/{}/slr.hdf5'.format(REINFORCE_DIR, part, INPUT_DIR)
