@@ -5,7 +5,7 @@ TRAIN_DIR = "train"
 TRAIN_SEED = 10
 
 # files
-SELLER_TRAIN_INPUT = "{}/{}/seller.hdf5".format(REINFORCE_DIR, TRAIN_DIR)
+SELLER_TRAIN_INPUT = "{}{}/seller.hdf5".format(REINFORCE_DIR, TRAIN_DIR)
 
 
 # seller input groups

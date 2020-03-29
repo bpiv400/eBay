@@ -5,4 +5,4 @@
 #$ -j y
 #$ -o logs/
 
-python repo/agent/a_inputs/seller_inputs.py --part train_rl
+python repo/agent/a_inputs/seller_inputs.py
