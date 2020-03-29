@@ -1,10 +1,9 @@
 import math
-from collections import OrderedDict
 import torch
 import numpy as np
 import pandas as pd
-from constants import (MODELS, OFFER_MODELS, SLR_PREFIX, FIRST_ARRIVAL_MODEL,
-                       INTERARRIVAL_MODEL, BYR_HIST_MODEL)
+from constants import (MODELS, OFFER_MODELS, SLR_PREFIX, FIRST_ARRIVAL_MODEL, TURN_FEATS,
+                       INTERARRIVAL_MODEL, BYR_HIST_MODEL, AGENT_SLR, AGENT_BYR)
 from featnames import (OUTCOME_FEATS,
                        MONTHS_SINCE_LSTG, BYR_HIST,
                        INT_REMAINING, MONTHS_SINCE_LAST)
@@ -69,9 +68,7 @@ class Composer:
         else:
             assumed_feats = CLOCK_FEATS + OUTCOME_FEATS
         model_feats = load_featnames(model)['offer']
-        assert len(model_feats) == len(assumed_feats)
-        for exp_feat, model_feat in zip(assumed_feats, model_feats):
-            assert exp_feat == model_feat
+        Composer.verify_all_feats(assumed_feats=assumed_feats, model_feats=model_feats)
         model_sizes = load_sizes(model)
         for j in range(1, 8):
             if j < turn or (j == turn and DELAY not in model):
@@ -206,6 +203,12 @@ class Composer:
         assert len(model_feats) == 3
 
     @staticmethod
+    def verify_all_feats(assumed_feats=None, model_feats=None):
+        assert len(model_feats) == len(assumed_feats)
+        for exp_feat, model_feat in zip(assumed_feats, model_feats):
+            assert exp_feat == model_feat
+
+    @staticmethod
     def verify_delay_append(model, shared_feats):
         model_feats = load_featnames(model)[LSTG_MAP]
         model_feats = Composer.remove_shared_feats(model_feats, shared_feats)
@@ -253,22 +256,15 @@ class AgentComposer(Composer):
         self.x_lstg_cols = list(cols)
         self.turn_inds = None
 
+        # verification
+        self.verify_agent()
+
     def _build_agent_sizes(self):
-        sizes = OrderedDict()
-        num_turns = 6 if self.slr else 7
-        for j in range(1, num_turns + 1):
-            sizes['offer{}'.format(j)] = self._build_offer_sizes()
-        for set_name, feats in self.lstg_sets.items():
-            if set_name != SLR_PREFIX or not self.slr:
-                if set_name != LSTG_MAP:
-                    sizes[set_name] = len(feats)
-                else:
-                    sizes[set_name] = self._build_lstg_sizes(feats)
-        sizes = {
-            'x': sizes.copy()
-        }
-        if not self.delay:
-            sizes['out'] = get_con_set(self.con_type).size
+        if self.slr:
+            sizes = load_sizes(AGENT_SLR)
+        else:
+            sizes = load_sizes(AGENT_BYR)
+        sizes['out'] = len(get_con_set(self.con_type))
         return sizes
 
     def _update_turn_inds(self, turn):
@@ -286,7 +282,6 @@ class AgentComposer(Composer):
         self._update_turn_inds(turn)
         for set_name in self.agent_sizes['x'].keys():
             if set_name == LSTG_MAP:
-                # TODO: Update when we know whether to include remaining (i.e. mimic delay or offer)
                 obs_dict[set_name] = self._build_agent_lstg_vector(sources=sources)
             elif set_name[:-1] == 'offer':
                 obs_dict[set_name] = self._build_agent_offer_vector(offer_vector=sources[set_name])
@@ -295,7 +290,8 @@ class AgentComposer(Composer):
         return obs_dict
 
     def _build_agent_lstg_vector(self, sources=None):
-        solo_feats = np.array([sources[MONTHS_SINCE_LSTG], sources[BYR_HIST]])
+        solo_feats = np.array([sources[MONTHS_SINCE_LSTG], sources[BYR_HIST],
+                               sources[OFFER_MAPS[1]][THREAD_COUNT_IND] + 1])
         lstg = np.concatenate([sources[LSTG_MAP], solo_feats, self.turn_inds])
         lstg = lstg.astype(np.float32)
         lstg = torch.from_numpy(lstg).squeeze().float()
@@ -311,23 +307,37 @@ class AgentComposer(Composer):
         full_vector = torch.from_numpy(full_vector).squeeze().float()
         return full_vector
 
-    def _build_offer_sizes(self):
-        if not self.slr or self.feat_type == NO_TIME:
-            base = len(CLOCK_FEATS) + len(OUTCOME_FEATS)
-        else:
-            base = len(ALL_OFFER_FEATS)
-        # add turn indicators
-        if self.slr:
-            return base + 2
-        else:
-            return base + 3
+    def verify_agent(self):
+        agent_name = AGENT_SLR if self.slr else AGENT_BYR
+        Composer.verify_lstg_sets_shared(agent_name, self.x_lstg_cols, self.lstg_sets.copy())
+        agent_feats = load_featnames(agent_name)
+        lstg_append = Composer.remove_shared_feats(agent_feats[LSTG_MAP], self.lstg_sets[LSTG_MAP])
+        AgentComposer.verify_lstg_append(lstg_append=lstg_append, agent_name=agent_name)
+        offer_feats = agent_feats['offer']
+        AgentComposer.verify_agent_offer(offer_feats=offer_feats, agent_name=agent_name)
 
-    def _build_lstg_sizes(self, shared_feats):
-        # add 2 to shared features for months_since_lstg + byr_hist
-        base = len(shared_feats) + 2
-        # turn indicates
-        base = base + 2 if self.slr else base + 3
-        return base
+    @staticmethod
+    def verify_lstg_append(lstg_append=None, agent_name=None):
+        assert lstg_append[0] == MONTHS_SINCE_LSTG
+        assert lstg_append[1] == BYR_HIST
+        turn_feats = TURN_FEATS[agent_name]
+        Composer.verify_sequence(lstg_append, turn_feats, 2)
+        assert len(lstg_append) == (len(turn_feats) + 2)
+
+    @staticmethod
+    def verify_agent_offer(offer_feats=None, agent_name=None):
+        if agent_name == AGENT_SLR:
+            assumed_feats = CLOCK_FEATS + TIME_FEATS + OUTCOME_FEATS + TURN_FEATS[agent_name]
+        else:
+            assumed_feats = CLOCK_FEATS + OUTCOME_FEATS + TURN_FEATS[agent_name]
+        Composer.verify_all_feats(assumed_feats=assumed_feats, model_feats=offer_feats)
+        last_turn = 6 if SLR_PREFIX in agent_name else 7
+        sizes = load_sizes(agent_name)['x']
+        for i in range(1, 8):
+            if i <= last_turn:
+                assert 'offer{}'.format(i) in sizes
+            else:
+                assert 'offer{}'.format(i) not in sizes
 
     @property
     def agent_sizes(self):

@@ -7,7 +7,6 @@ TRAIN_SEED = 10
 # files
 SELLER_TRAIN_INPUT = "{}{}/seller.hdf5".format(REINFORCE_DIR, TRAIN_DIR)
 
-
 # seller input groups
 seller_groupings = [
     'lstg',

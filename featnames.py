@@ -3,6 +3,7 @@ HOLIDAY = 'holiday'
 DOW_PREFIX = 'dow'
 TIME_OF_DAY = 'time_of_day'
 AFTERNOON = 'afternoon'
+
 CLOCK_FEATS = [HOLIDAY] + [DOW_PREFIX + str(i) for i in range(6)] + [TIME_OF_DAY, AFTERNOON]
 
 # time feats
@@ -53,11 +54,7 @@ CENSORED = 'censored'
 OUTCOME_FEATS = [DAYS, DELAY, AUTO, EXP, CON, REJECT, NORM, SPLIT, MSG]
 ALL_OFFER_FEATS = CLOCK_FEATS + TIME_FEATS + OUTCOME_FEATS
 
-# turn indices
-TURN_FEATS = {
-    'init_byr': ['t1', 't3', 't5'],
-    'init_slr': ['t2', 't4']
-}
+# turn indices relocated to constants to avoid cyclic dependency
 
 # thread features
 BYR_HIST = 'byr_hist'

@@ -85,7 +85,6 @@ def byr_norm(con=None, prev_byr_norm=None, prev_slr_norm=None):
 def load_sizes(name):
     """
     Loads featnames dictionary for a model
-    #TODO: extend to include agents
     :param name: str giving name (e.g. hist, con_byr),
      see env_consts.py for model names
     :return: dict
