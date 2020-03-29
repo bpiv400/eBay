@@ -14,6 +14,8 @@ TOL_HALF = 0.02
 # paths and directories
 if 'Ubuntu' in platform():  # Etan's box
     PREFIX = '/data/eBay'
+elif 'debian' in platform():
+    PREFIX = os.path.expanduser('~/shared/ebay')
 elif 'Windows' in platform() and 'A:' in os.getcwd():  # Barry's pc
     PREFIX = 'A:/ebay'
 elif 'Windows' in platform() and 'C:' in os.getcwd():  # Barry's laptop

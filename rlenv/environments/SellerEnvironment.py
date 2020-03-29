@@ -6,13 +6,14 @@ from rlenv.env_utils import get_con_outcomes, get_cut
 from agent.spaces.ConSpace import ConSpace
 
 
-class SellerEnvironment(AgentEnvironment):
-    TrajInfo = namedtuple("SellerTraj", ["lstg", "relist_count", "thread",
+SellerTraj = namedtuple("SellerTraj", ["lstg", "relist_count", "thread",
                                         "turn", "byr_time",
                                          "byr_con", "byr_delay", "byr_msg",
                                          "slr_time", "slr_con", "slr_delay"])
-    EmptyInfo = namedtuple("EmptyTraj", ["traj_done"])
+EmptyTraj = namedtuple("EmptyTraj", ["traj_done"])
 
+
+class SellerEnvironment(AgentEnvironment):
     def __init__(self, **kwargs):
         super(SellerEnvironment, self).__init__(**kwargs)
 
@@ -51,8 +52,7 @@ class SellerEnvironment(AgentEnvironment):
             # if the lstg isn't complete that means it's time to sample an agent action
             if not lstg_complete:
                 self.last_event = event
-                return self.composer.get_obs(sources=event.sources(),
-                                             turn=event.turn)
+                return self.get_obs(sources=event.sources(), turn=event.turn)
             # if the lstg is complete
             else:
                 # check whether it's expired -- if so, relist
@@ -115,7 +115,7 @@ class SellerEnvironment(AgentEnvironment):
                 tuple_dict['slr_time'] = None
                 tuple_dict['slr_delay'] = None
                 tuple_dict['slr_con'] = None
-        return self.EmptyInfo(traj_done=lstg_complete)
+        return EmptyTraj(traj_done=lstg_complete)
 
     @property
     def horizon(self):
