@@ -66,7 +66,6 @@ class AgentEnvironment(EbayEnvironment, Env):
         self.start_time = self.lookup[START_TIME]
         self.end_time = self.start_time + MONTH
         self.relist_count = 0
-        self.x_lstg = self.composer.relist(x_lstg=self.x_lstg, first_lstg=True)
 
     def _draw_lstgs(self):
         ids = np.random.choice(self._num_lstgs, ENV_LSTG_COUNT,

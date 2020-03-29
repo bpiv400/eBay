@@ -64,8 +64,6 @@ class SellerEnvironment(AgentEnvironment):
                     super().reset()
 
     def relist(self):
-        if self.relist_count == 0:
-            self.x_lstg = self.composer.relist(x_lstg=self.x_lstg, first_lstg=False)
         self.relist_count += 1
         super().reset()
 

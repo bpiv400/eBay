@@ -329,14 +329,6 @@ class AgentComposer(Composer):
         base = base + 2 if self.slr else base + 3
         return base
 
-    def relist(self, x_lstg=None, first_lstg=False):
-        if first_lstg:
-            val = 0.0
-        else:
-            val = 1.0
-        x_lstg[LSTG_MAP][self.relist_index] = val
-        return x_lstg
-
     @property
     def agent_sizes(self):
         return self.sizes['agent']
