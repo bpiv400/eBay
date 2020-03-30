@@ -1,9 +1,8 @@
 import argparse
 import numpy as np
 import pandas as pd
-from processing.processing_utils import load_file, init_x
-from processing.e_inputs.inputs_utils import get_x_thread, save_files, \
-    get_y_con, check_zero
+from processing.processing_utils import load_file, init_x, get_x_thread
+from processing.e_inputs.inputs_utils import save_files, get_y_con, check_zero
 from constants import IDX, MAX_DELAY, BYR_PREFIX, SLR_PREFIX
 from featnames import DELAY, AUTO, EXP, REJECT, CON, NORM, SPLIT, MSG, INT_REMAINING, TIME_FEATS
 from utils import get_remaining
