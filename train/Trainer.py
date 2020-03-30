@@ -36,9 +36,6 @@ class Trainer:
         # boolean for time loss
         self.is_delay = 'delay' in name or name == 'next_arrival'
 
-        # dropout rate to be set later
-        self.dropout = None
-
         # load model size parameters
         self.sizes = load_sizes(name)
         print(self.sizes)
@@ -47,14 +44,11 @@ class Trainer:
         self.train = EBayDataset(train_part, name)
         self.test = EBayDataset(test_part, name)
 
-    def train_model(self, dropout=(0.0, 0.0)):
+    def train_model(self, dropout=(0.0, 0.0), norm='batch'):
         """
         Public method to train model.
         :param dropout: pair of dropout rates, one for last embedding, one for fully connected.
         """
-        # save dropout to self
-        self.dropout = dropout
-
         # experiment id
         dtstr = dt.now().strftime('%y%m%d-%H%M')
         levels = [int(d * INT_DROPOUT) for d in dropout]
@@ -68,7 +62,9 @@ class Trainer:
             writer = None
 
         # tune initial learning rate
-        lnlr, net, lnL_test0 = self._tune_lr(writer)
+        lnlr, net, lnL_test0 = self._tune_lr(writer=writer, 
+                                             dropout=dropout, 
+                                             norm=norm)
 
         # path to save model
         model_path = MODEL_DIR + '{}/{}.net'.format(self.name, expid)
@@ -222,11 +218,11 @@ class Trainer:
 
         return loss.item()
 
-    def _tune_lr(self, writer=None):
+    def _tune_lr(self, writer=None, dropout=None, norm=None):
         nets, loss = [], []
         for lnlr in LNLR0:
             # initialize model and optimizer
-            nets.append(FeedForward(self.sizes, dropout=self.dropout).to(self.device))
+            nets.append(FeedForward(self.sizes, dropout=dropout, norm=norm).to(self.device))
             optimizer = Adam(nets[-1].parameters(), lr=np.exp(lnlr))
  
             # print to console
