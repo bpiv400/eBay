@@ -139,7 +139,7 @@ def main():
     print('%s/%s' % (part, name))
 
     # input dataframes, output processed dataframes
-    d = process_inputs(part, role)
+    d = process_inputs(part, role, delay)
 
     # save various output files
     save_files(d, part, name)
