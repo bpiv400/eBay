@@ -2,6 +2,7 @@ import os
 import h5py
 import pandas as pd
 import numpy as np
+from collections import namedtuple
 from rlpyt.envs.base import Env
 from rlpyt.spaces.composite import Composite
 from rlpyt.spaces.float_box import FloatBox
@@ -11,6 +12,10 @@ from rlenv.env_consts import (LOOKUP, X_LSTG, ENV_LSTG_COUNT)
 from rlenv.environments.EbayEnvironment import EbayEnvironment
 from rlenv.simulator.Recorder import Recorder
 from agent.agent_utils import get_con_set
+from agent.agent_consts import seller_groupings
+
+
+SellerObs = namedtuple("SellerObs", seller_groupings)
 
 
 class AgentEnvironment(EbayEnvironment, Env):
@@ -19,10 +24,10 @@ class AgentEnvironment(EbayEnvironment, Env):
         super().__init__(params=kwargs)
         # attributes for getting lstg data
         self._filename = kwargs['filename']
-        self._file = self.open_input_file()
-        self._num_lstgs = len(self._file[LOOKUP])
-        self._lookup_cols = self._file[LOOKUP].attrs['cols']
-        self._lookup_cols = [col.decode('utf-8') for col in self._lookup_cols]
+        self._file = None
+        self._file_opened = False
+        self._num_lstgs = None
+        self._lookup_cols = None
         self._lookup_slice, self._x_lstg_slice = None, None
         self._ix = -1
         self.relist_count = 0
@@ -35,18 +40,23 @@ class AgentEnvironment(EbayEnvironment, Env):
 
     def open_input_file(self):
         os.environ["HDF5_USE_FILE_LOCKING"] = "FALSE"
-        f = h5py.File(self._filename, "r")
-        return f
+        self._file = h5py.File(self._filename, "r")
+        self._num_lstgs = len(self._file[LOOKUP])
+        self._lookup_cols = self._file[LOOKUP].attrs['cols']
+        self._lookup_cols = [col.decode('utf-8') for col in self._lookup_cols]
+        self._file_opened = True
 
     def define_observation_space(self):
         sizes = self.composer.agent_sizes['x']
         boxes = [FloatBox(-1000, 1000, shape=size) for size in sizes.values()]
-        return Composite(boxes, self.composer.obs_space_class)
+        return Composite(boxes, SellerObs)
 
     def reset_lstg(self):
         """
         Sample a new lstg from the file and set lookup and x_lstg series
         """
+        if not self._file_opened:
+            self.open_input_file()
         if self._ix == -1 or self._ix == ENV_LSTG_COUNT:
             self._draw_lstgs()
         self.x_lstg = pd.Series(self._x_lstg_slice[self._ix, :], index=self.composer.x_lstg_cols)
@@ -71,10 +81,14 @@ class AgentEnvironment(EbayEnvironment, Env):
         self._ix = 0
 
     def agent_tuple(self, lstg_complete=None, agent_sale=None):
-        obs = self.composer.get_obs(sources=self.last_event.sources(),
-                                    turn=self.last_event.turn)
+        obs = self.get_obs(sources=self.last_event.sources(),
+                           turn=self.last_event.turn)
         return (obs, self.get_reward(), lstg_complete,
                 self.get_info(agent_sale=agent_sale, lstg_complete=lstg_complete))
+
+    def get_obs(self, sources=None, turn=None):
+        obs_dict = self.composer.get_obs(sources=sources, turn=turn)
+        return SellerObs(**obs_dict)
 
     def con_from_action(self, action=None):
         raise NotImplementedError()

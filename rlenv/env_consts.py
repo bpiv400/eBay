@@ -94,7 +94,6 @@ THREAD_COUNT_IND = ALL_OFFER_FEATS.index(THREAD_COUNT)
 
 # space names
 ACTION_SPACE_NAME = 'NegotiationActionSpace'
-OBS_SPACE_NAME = 'NegotiationObsSpace'
 
 # env hyper params
 SELLER_HORIZON = 100

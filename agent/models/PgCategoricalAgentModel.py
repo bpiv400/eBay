@@ -47,4 +47,6 @@ class PgCategoricalAgentModel(nn.Module):
         logits = self.nn1_action(embedded)
         # apply softmax
         pi = softmax(logits, dim=logits.dim() - 1)
-        return pi, v.squeeze()
+        pi = pi.squeeze()
+        v = v.squeeze()
+        return pi, v
