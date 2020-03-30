@@ -1,7 +1,6 @@
 import torch
 import torch.nn as nn
 from collections import OrderedDict
-from nets.VariationalDropout import VariationalDropout
 from nets.nets_consts import AFFINE, LAYERS_EMBEDDING, LAYERS_FULL, HIDDEN
 
 
@@ -32,7 +31,6 @@ class Layer(nn.Module):
 
         # variational dropout
         if dropout > 0:
-            # self.layer.append(VariationalDropout(num_out))
             self.layer.append(nn.Dropout(p=dropout, inplace=True))
 
         # activation function

@@ -1,6 +1,5 @@
 import torch
 import torch.nn as nn
-from nets.nets_consts import BATCHNORM
 from nets.nets_utils import FullyConnected, create_embedding_layers, create_groupings
 
 

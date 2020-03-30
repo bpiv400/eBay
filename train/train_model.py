@@ -1,6 +1,6 @@
 import argparse
 from train.Trainer import Trainer
-from train.train_consts import INT_DROPOUT, DROPOUT_GRID
+from train.train_consts import INT_DROPOUT, DROPOUT_GRID, NORM_TYPE
 from constants import SMALL, TRAIN_RL, TRAIN_MODELS, VALIDATION, DISCRIM_MODELS
 
 
@@ -9,13 +9,8 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--name', type=str, required=True)
     parser.add_argument('--dropout', type=int, required=True)
-    parser.add_argument('--norm', type=str)
     parser.add_argument('--dev', action='store_true')
     args = parser.parse_args()
-
-    # error checking normalization
-    if args.norm is not None:
-        assert args.norm in ['batch', 'layer', 'weight']
 
     # partition to train on
     if args.dev:
@@ -31,8 +26,11 @@ def main():
     # compute dropout
     dropout = tuple([float(i / INT_DROPOUT) for i in DROPOUT_GRID[args.dropout-1]])
 
+    # normalization
+    norm = 'batch' if args.name not in NORM_TYPE else NORM_TYPE[args.name]
+
     # train model
-    trainer.train_model(dropout=dropout, norm=args.norm)
+    trainer.train_model(dropout=dropout, norm=norm)
 
 
 if __name__ == '__main__':
