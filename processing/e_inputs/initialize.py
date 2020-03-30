@@ -2,10 +2,32 @@ import argparse
 import numpy as np
 import pandas as pd
 from processing.processing_utils import load_file, init_x
-from processing.e_inputs.inputs_utils import get_x_thread, save_files, get_y_con, \
-    check_zero, calculate_remaining
-from constants import IDX, BYR_PREFIX, SLR_PREFIX
+from processing.e_inputs.inputs_utils import get_x_thread, save_files, \
+    get_y_con, check_zero
+from constants import IDX, MAX_DELAY, BYR_PREFIX, SLR_PREFIX
 from featnames import DELAY, AUTO, EXP, REJECT, CON, NORM, SPLIT, MSG, INT_REMAINING, TIME_FEATS
+from utils import get_remaining
+
+
+def calculate_remaining(part, idx):
+    # load timestamps
+    lstg_start = load_file(part, 'lookup').start_time.reindex(
+        index=idx, level='lstg')
+    delay_start = load_file(part, 'clock').groupby(
+        ['lstg', 'thread']).shift().dropna().astype('int64')
+
+    # remaining is turn-specific
+    remaining = pd.Series(np.nan, index=idx)
+    for turn in idx.unique(level='index'):
+        turn_start = delay_start.xs(turn, level='index').reindex(index=idx)
+        mask = idx.get_level_values(level='index') == turn
+        remaining.loc[mask] = get_remaining(
+            lstg_start, turn_start, MAX_DELAY[turn])
+
+    # error checking
+    assert np.all(remaining > 0) and np.all(remaining <= 1)
+
+    return remaining
 
 
 def add_turn_indicators(df):
@@ -68,7 +90,7 @@ def get_x_offer(offers, idx, role):
 
 
 # loads data and calls helper functions to construct train inputs
-def process_inputs(part, role):
+def process_inputs(part, role, delay):
     # load dataframes
     offers = load_file(part, 'x_offer')
     threads = load_file(part, 'x_thread')
@@ -89,7 +111,8 @@ def process_inputs(part, role):
     # thread features
     x_thread = get_x_thread(threads, idx)
     x_thread = add_turn_indicators(x_thread)
-    x_thread[INT_REMAINING] = calculate_remaining(part, idx)
+    if delay:
+        x_thread[INT_REMAINING] = calculate_remaining(part, idx)
     x['lstg'] = pd.concat([x['lstg'], x_thread], axis=1)
 
     # offer features
