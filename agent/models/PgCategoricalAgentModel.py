@@ -62,18 +62,29 @@ class PgCategoricalAgentModel(nn.Module):
     def forward(self, observation, prev_action, prev_reward):
         """
         :return: tuple of pi, v
-
-        # TODO: FIX FUNCTION
         """
         x = observation._asdict()
         l = []
         for k in self.nn0.keys():
             l.append(self.nn0[k](x))
         embedded = torch.cat(l, dim=l[0].dim() - 1)
-        v = self.nn1_value(embedded)
-        logits = self.nn1_action(embedded)
-        # apply softmax
+
+        # fully connected
+        if PARAM_SHARING:
+            hidden_action = self.nn1(embedded)
+            hidden_value = hidden_action
+        else:
+            hidden_action = self.nn1_action(embedded)
+            hidden_value = self.nn1_value(embedded)
+
+        # value output head
+        v = self.output_value(hidden_value)
+
+        # policy output head
+        logits = self.output_action(hidden_action)
         pi = softmax(logits, dim=logits.dim() - 1)
+
+        # transformations
         pi = pi.squeeze()
         v = v.squeeze()
         return pi, v
