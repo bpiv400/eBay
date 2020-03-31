@@ -11,3 +11,7 @@ def get_con_set(con):
         return np.array([0.0, 0.50, 1.0])
     else:
         raise RuntimeError("Invalid concession set type parameter")
+
+
+def load_init_model(init_dict=None):
+    raise NotImplementedError("")

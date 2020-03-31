@@ -4,6 +4,7 @@ import torch
 import numpy as np
 from compress_pickle import load
 from nets.FeedForward import FeedForward
+from nets.nets_consts import LAYERS_FULL
 from constants import MAX_DELAY, DAY, MONTH, SPLIT_PCTS, INPUT_DIR, MODEL_DIR
 
 
@@ -120,9 +121,11 @@ def load_model(name, verbose=True):
     # read in model parameters
     model_path = '{}{}.net'.format(MODEL_DIR, name)
     state_dict = torch.load(model_path, map_location=torch.device('cpu'))
+    # remove if/when models are retrained
+    state_dict = fully_connected_compat(state_dict)
 
     # load parameters into model
-    net.load_state_dict(state_dict)
+    net.load_state_dict(state_dict, strict=True)
 
     # eval mode
     for param in net.parameters(recurse=True):
@@ -130,6 +133,26 @@ def load_model(name, verbose=True):
     net.eval()
 
     return net
+
+
+def fully_connected_compat(state_dict):
+    """
+    Renames the parameters in a torch state dict generated
+    when output layer lived in FullyConnected to be compatible
+    with separate output layer
+    :param state_dict: dictionary name -> param
+    :return: dict
+    """
+    effected_prefix = 'nn1.seq.{}'.format(LAYERS_FULL)
+    effected_keys = [key for key in state_dict.keys() if effected_prefix in key]
+    if len(effected_keys) == 0:
+        return state_dict
+    for effected_key in effected_keys:
+        effected_suffix = effected_key[len(effected_prefix):]
+        new_key = 'output{}'.format(effected_suffix)
+        state_dict[new_key] = state_dict[effected_key]
+        del state_dict[effected_key]
+    return state_dict
 
 
 def align_x_lstg_lookup(x_lstg, lookup):

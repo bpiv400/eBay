@@ -25,7 +25,7 @@ class FeedForward(nn.Module):
                                   dropout=dropout[1],
                                   norm=norm)
 
-        self.output += [nn.Linear(HIDDEN, sizes['out'])]
+        self.output = nn.Linear(HIDDEN, sizes['out'])
 
     def forward(self, x):
         """
@@ -34,7 +34,8 @@ class FeedForward(nn.Module):
         elements = []
         for k in self.nn0.keys():
             elements.append(self.nn0[k](x))
-        return self.nn1(torch.cat(elements, dim=1))
+        hidden = self.nn1(torch.cat(elements, dim=1))
+        return self.output(hidden)
 
 
 
