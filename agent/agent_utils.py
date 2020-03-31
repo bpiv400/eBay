@@ -27,7 +27,7 @@ def load_init_model(name=None, size=None):
         return state_dict
     new_w = torch.zeros((size, org_w.shape[1]), dtype=org_w.dtype,
                         requires_grad=False)
-    new_b = torch.zeros((size, org_b.shape[1]), dtype=org_b.dtype,
+    new_b = torch.zeros(size, dtype=org_b.dtype,
                         requires_grad=False)
 
     # map rejection onto rejection
@@ -40,7 +40,7 @@ def load_init_model(name=None, size=None):
 
     # group intermediate values
     num_int_values = size - 2
-    org_values_per_int_value = (org_b.shape[0] - 2) / num_int_values
+    org_values_per_int_value = int((org_b.shape[0] - 2) / num_int_values)
     start_idx = 1
     for i in range(1, size - 1):
         stop_idx = (start_idx + org_values_per_int_value)
