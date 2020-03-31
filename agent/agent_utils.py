@@ -17,7 +17,7 @@ def get_con_set(con):
 
 def load_init_model(name=None, size=None):
     state_dict = load_state_dict(name=name)
-    
+
     # fix output layer size
     output_w_name = 'output.weight'
     output_b_name = 'output.bias'
