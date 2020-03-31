@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+from nets.nets_consts import HIDDEN
 from nets.nets_utils import FullyConnected, create_embedding_layers, create_groupings
 
 
@@ -20,10 +21,11 @@ class FeedForward(nn.Module):
                                                   norm=norm)
 
         # fully connected
-        self.nn1 = FullyConnected(total, 
-                                  sizes['out'],
+        self.nn1 = FullyConnected(total,
                                   dropout=dropout[1],
                                   norm=norm)
+
+        self.output += [nn.Linear(HIDDEN, sizes['out'])]
 
     def forward(self, x):
         """

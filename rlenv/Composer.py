@@ -3,7 +3,7 @@ import torch
 import numpy as np
 import pandas as pd
 from constants import (MODELS, OFFER_MODELS, SLR_PREFIX, FIRST_ARRIVAL_MODEL, TURN_FEATS,
-                       INTERARRIVAL_MODEL, BYR_HIST_MODEL, AGENT_SLR, AGENT_BYR)
+                       INTERARRIVAL_MODEL, BYR_HIST_MODEL, SLR_INIT, BYR_INIT)
 from featnames import (OUTCOME_FEATS,
                        MONTHS_SINCE_LSTG, BYR_HIST,
                        INT_REMAINING, MONTHS_SINCE_LAST)
@@ -261,9 +261,9 @@ class AgentComposer(Composer):
 
     def _build_agent_sizes(self):
         if self.slr:
-            sizes = load_sizes(AGENT_SLR)
+            sizes = load_sizes(SLR_INIT)
         else:
-            sizes = load_sizes(AGENT_BYR)
+            sizes = load_sizes(BYR_INIT)
         sizes['out'] = len(get_con_set(self.con_type))
         return sizes
 
@@ -308,7 +308,7 @@ class AgentComposer(Composer):
         return full_vector
 
     def verify_agent(self):
-        agent_name = AGENT_SLR if self.slr else AGENT_BYR
+        agent_name = SLR_INIT if self.slr else BYR_INIT
         Composer.verify_lstg_sets_shared(agent_name, self.x_lstg_cols, self.lstg_sets.copy())
         agent_feats = load_featnames(agent_name)
         lstg_append = Composer.remove_shared_feats(agent_feats[LSTG_MAP], self.lstg_sets[LSTG_MAP])
@@ -326,7 +326,7 @@ class AgentComposer(Composer):
 
     @staticmethod
     def verify_agent_offer(offer_feats=None, agent_name=None):
-        if agent_name == AGENT_SLR:
+        if agent_name == SLR_INIT:
             assumed_feats = CLOCK_FEATS + TIME_FEATS + OUTCOME_FEATS + TURN_FEATS[agent_name]
         else:
             assumed_feats = CLOCK_FEATS + OUTCOME_FEATS + TURN_FEATS[agent_name]

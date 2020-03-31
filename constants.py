@@ -99,13 +99,13 @@ CON_MODELS = ['{}{}'.format(CON, i) for i in range(1, 8)]
 MSG_MODELS = ['{}{}'.format(MSG, i) for i in range(1, 7)]
 OFFER_MODELS = DELAY_MODELS + CON_MODELS + MSG_MODELS
 MODELS = ARRIVAL_MODELS + OFFER_MODELS
-AGENT_SLR = 'init_slr'
-AGENT_BYR = 'init_byr'
+SLR_INIT = 'init_slr'
+BYR_INIT = 'init_byr'
 
 # discriminator models
 DISCRIM_MODELS = ['listings', 'threads', 'threads_no_tf']
 
 TURN_FEATS = {
-    AGENT_BYR: ['t1', 't3', 't5'],
-    AGENT_SLR: ['t2', 't4']
+    BYR_INIT: ['t1', 't3', 't5'],
+    SLR_INIT: ['t2', 't4']
 }

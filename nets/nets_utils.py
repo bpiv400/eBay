@@ -108,10 +108,9 @@ class Embedding(nn.Module):
 
 
 class FullyConnected(nn.Module):
-    def __init__(self, num_in, num_out, dropout=0.0, norm='batch'):
+    def __init__(self, num_in, dropout=0.0, norm='batch'):
         """
         :param num_in: scalar number of input weights.
-        :param num_out: scalar number of output parameters.
         :param dropout: scalar dropout rate.
         :param norm: string type of normalization.
         """
@@ -127,9 +126,6 @@ class FullyConnected(nn.Module):
                                  layers=LAYERS_FULL-1,
                                  dropout=dropout,
                                  norm=norm)
-
-        # output layer
-        self.seq += [nn.Linear(HIDDEN, num_out)]
 
     def forward(self, x):
         """

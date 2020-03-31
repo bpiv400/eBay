@@ -15,7 +15,7 @@ from rlpyt.utils.logging.context import logger_context
 from featnames import DELAY
 from constants import VALIDATION
 from agent.agent_consts import (BATCH_T, BATCH_B, CON_TYPE, ALL_FEATS,
-                                TOTAL_STEPS, PPO_MINIBATCHES,
+                                TOTAL_STEPS, PPO_MINIBATCHES, SELLER_TRAIN_INPUT,
                                 PPO_EPOCHS, FEAT_TYPE, LOG_INTERVAL_STEPS)
 from agent.models.PgCategoricalAgentModel import PgCategoricalAgentModel
 from constants import SLR_PREFIX

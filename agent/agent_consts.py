@@ -31,6 +31,8 @@ FEAT_TYPE = "feat_id"
 NO_TIME = "no_time"
 ALL_FEATS = "all"
 
+PARAM_SHARING = True
+
 # batch size hyperparameters
 # for now, expecting no multiprocessing
 
