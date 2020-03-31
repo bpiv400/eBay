@@ -104,6 +104,19 @@ def load_featnames(name):
     return load(INPUT_DIR + 'featnames/{}.pkl'.format(name))
 
 
+def load_state_dict(name=None):
+    """
+    Loads state dict of a model
+    :param name: string giving name of model (see consts)
+    :return: dict
+    """
+    model_path = '{}{}.net'.format(MODEL_DIR, name)
+    state_dict = torch.load(model_path, map_location=torch.device('cpu'))
+    # TODO: remove if/when models are retrained
+    state_dict = fully_connected_compat(state_dict)
+    return state_dict
+
+
 def load_model(name, verbose=True):
     """
     Initialize PyTorch network for some model
@@ -119,10 +132,7 @@ def load_model(name, verbose=True):
     net = FeedForward(sizes)  # type: torch.nn.Module
 
     # read in model parameters
-    model_path = '{}{}.net'.format(MODEL_DIR, name)
-    state_dict = torch.load(model_path, map_location=torch.device('cpu'))
-    # remove if/when models are retrained
-    state_dict = fully_connected_compat(state_dict)
+    state_dict = load_state_dict(name=name)
 
     # load parameters into model
     net.load_state_dict(state_dict, strict=True)

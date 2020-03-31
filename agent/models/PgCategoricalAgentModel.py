@@ -22,7 +22,7 @@ class PgCategoricalAgentModel(nn.Module):
         """
         super(PgCategoricalAgentModel, self).__init__()
         # load initialization model
-        init_dict = load_init_model(name=init_model)
+        init_dict = load_init_model(name=init_model, size=sizes['out'])
         norm = self.detect_norm(init_dict=init_dict)
         # expand embeddings
         groups = create_groupings(sizes=sizes)
