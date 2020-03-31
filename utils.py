@@ -103,13 +103,15 @@ def load_featnames(name):
     return load(INPUT_DIR + 'featnames/{}.pkl'.format(name))
 
 
-def load_model(name):
+def load_model(name, verbose=True):
     """
     Initialize PyTorch network for some model
     :param str name: full name of the model
+    :param verbose: boolean for printing statements
     :return: torch.nn.Module
     """
-    print('Loading {} model'.format(name))
+    if verbose:
+        print('Loading {} model'.format(name))
 
     # create neural network
     sizes = load_sizes(name)

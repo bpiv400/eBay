@@ -1,30 +1,36 @@
 import torch
 import torch.nn as nn
 from collections import OrderedDict
-from nets.VariationalDropout import VariationalDropout
 from nets.nets_consts import AFFINE, LAYERS_EMBEDDING, LAYERS_FULL, HIDDEN
 
 
 class Layer(nn.Module):
-    def __init__(self, num_in, num_out, dropout=0.0, batch_norm=False):
+    def __init__(self, num_in, num_out, dropout=0.0, norm=None):
         """
         :param num_in: scalar number of input weights.
         :param num_out: scalar number of output weights.
         :param dropout: scalar dropout rate.
-        :param batch_norm: boolean for including batch normalization in each layer.
+        :param norm: string type of normalization.
         """
         super(Layer, self).__init__()
-        # initialize layer
+
+        # initialize module list
         self.layer = nn.ModuleList([nn.Linear(num_in, num_out)])
 
         # batch normalization
-        if batch_norm:
-            self.layer.append(
-                nn.BatchNorm1d(num_out, affine=AFFINE))
+        if norm == 'batch':
+            self.layer.append(nn.BatchNorm1d(num_out, affine=AFFINE))
+
+        # layer normalization
+        elif norm == 'layer':
+            self.layer.append(nn.LayerNorm(num_out, elementwise_affine=AFFINE))
+
+        # weight normalization
+        elif norm == 'weight':
+            self.layer = nn.ModuleList([nn.utils.weight_norm(self.layer[0])])
 
         # variational dropout
-        if dropout:
-            # self.layer.append(VariationalDropout(num_out))
+        if dropout > 0:
             self.layer.append(nn.Dropout(p=dropout, inplace=True))
 
         # activation function
@@ -39,27 +45,26 @@ class Layer(nn.Module):
         return x
 
 
-def stack_layers(num, layers=1, dropout=0.0, batch_norm=False):
+def stack_layers(num, layers=1, dropout=0.0, norm='batch'):
     """
     :param num: scalar number of input and output weights.
     :param layers: scalar number of layers to stack.
     :param dropout: scalar dropout rate.
-    :param batch_norm: boolean for including batch normalization in each layer.
+    :param norm: string type of normalization.
     """
     # sequence of modules
     stack = nn.ModuleList([])
     for _ in range(layers):
-        stack.append(Layer(num, num, dropout=dropout,
-                           batch_norm=batch_norm))
+        stack.append(Layer(num, num, dropout=dropout, norm=norm))
     return stack
 
 
 class Embedding(nn.Module):
-    def __init__(self, counts, dropout=0.0, batch_norm=False):
+    def __init__(self, counts, dropout=0.0, norm='batch'):
         """
         :param counts: dictionary of scalar input sizes.
         :param dropout: scalar dropout rate.
-        :param batch_norm: boolean for including batch normalization in each layer.
+        :param norm: string type of normalization.
         """
         super(Embedding, self).__init__()
         if len(counts) == 0:
@@ -71,14 +76,14 @@ class Embedding(nn.Module):
         for k, v in counts.items():
             self.layer1[k] = stack_layers(v, 
                                           layers=LAYERS_EMBEDDING,
-                                          batch_norm=batch_norm)
+                                          norm=norm)
 
         # second layer: concatenation
         num = sum(counts.values())
         self.layer2 = stack_layers(num, 
                                    layers=LAYERS_EMBEDDING,
                                    dropout=dropout, 
-                                   batch_norm=batch_norm)
+                                   norm=norm)
 
     def forward(self, x):
         """
@@ -103,24 +108,25 @@ class Embedding(nn.Module):
 
 
 class FullyConnected(nn.Module):
-    def __init__(self, num_in, num_out, dropout=0.0, batch_norm=False):
+    def __init__(self, num_in, num_out, dropout=0.0, norm='batch'):
         """
         :param num_in: scalar number of input weights.
         :param num_out: scalar number of output parameters.
         :param dropout: scalar dropout rate.
-        :param batch_norm: boolean for including batch normalization in each layer.
+        :param norm: string type of normalization.
         """
         super(FullyConnected, self).__init__()
 
         # intermediate layer
-        self.seq = nn.ModuleList([Layer(num_in, HIDDEN, dropout=dropout,
-                                        batch_norm=batch_norm)])
+        self.seq = nn.ModuleList([Layer(num_in, HIDDEN, 
+                                        dropout=dropout,
+                                        norm=norm)])
 
         # fully connected network
         self.seq += stack_layers(HIDDEN,
                                  layers=LAYERS_FULL-1,
                                  dropout=dropout,
-                                 batch_norm=batch_norm)
+                                 norm=norm)
 
         # output layer
         self.seq += [nn.Linear(HIDDEN, num_out)]
@@ -148,11 +154,11 @@ def create_groupings(sizes):
 
 
 def create_embedding_layers(groups=None, sizes=None, 
-                            dropout=0.0, batch_norm=False):
+                            dropout=None, norm=None):
     # embeddings
     d, total = OrderedDict(), 0
     for name, group in groups.items():
         counts = {k: v for k, v in sizes['x'].items() if k in group}
-        d[name] = Embedding(counts, dropout=dropout, batch_norm=batch_norm)
+        d[name] = Embedding(counts, dropout=dropout, norm=norm)
         total += sum(counts.values())
     return nn.ModuleDict(d), total

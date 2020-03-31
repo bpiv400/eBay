@@ -4,10 +4,27 @@ import pandas as pd
 from processing.processing_consts import INTERVAL, INTERVAL_COUNTS
 from processing.processing_utils import load_file, init_x
 from processing.e_inputs.inputs_utils import save_files, get_y_con, get_y_msg, \
-    check_zero, calculate_remaining, get_x_thread
+    check_zero, get_x_thread
 from constants import IDX, DAY, MAX_DELAY, BYR_PREFIX, SLR_PREFIX, PARTITIONS
 from featnames import CON, NORM, SPLIT, MSG, AUTO, EXP, REJECT, DAYS, DELAY, \
     INT_REMAINING, TIME_FEATS
+
+
+def calculate_remaining(part, idx, turn):
+    # load timestamps
+    lstg_start = load_file(part, 'lookup').start_time.reindex(
+        index=idx, level='lstg')
+    delay_start = load_file(part, 'clock').groupby(
+        ['lstg', 'thread']).shift().dropna().astype('int64')
+
+    # remaining feature
+    turn_start = delay_start.xs(turn, level='index').reindex(index=idx)
+    remaining = get_remaining(lstg_start, turn_start, MAX_DELAY[turn])
+
+    # error checking
+    assert np.all(remaining > 0) and np.all(remaining <= 1)
+
+    return remaining
 
 
 def get_x_offer(offers, idx, outcome, turn):

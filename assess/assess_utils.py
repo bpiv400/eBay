@@ -15,10 +15,9 @@ def get_model_predictions(name, data):
         - lnL: N-length vector of log-likelihoods.
     """
     # initialize neural net
-    net = load_model(name).to('cuda')
+    net = load_model(name, verbose=False).to('cuda')
 
     # get predictions from neural net
-    print('Predictions from model')
     lnp, lnL = [], []
     batches = get_batches(data)
     for b in batches:

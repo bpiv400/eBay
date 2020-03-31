@@ -2,35 +2,9 @@ import numpy as np
 import pandas as pd
 from compress_pickle import dump
 from processing.processing_utils import load_file
-from utils import get_remaining
 from processing.processing_consts import *
 from constants import *
 from featnames import *
-
-
-def calculate_remaining(part, idx, turn=None):
-    # load timestamps
-    lstg_start = load_file(part, 'lookup').start_time.reindex(
-        index=idx, level='lstg')
-    delay_start = load_file(part, 'clock').groupby(
-        ['lstg', 'thread']).shift().dropna().astype('int64')
-
-    if turn is None:
-        remaining = pd.Series(np.nan, index=idx)
-        for turn in idx.unique(level='index'):
-            turn_start = delay_start.xs(turn, level='index').reindex(index=idx)
-            mask = idx.get_level_values(level='index') == turn
-            remaining.loc[mask] = get_remaining(
-                lstg_start, turn_start, MAX_DELAY[turn])
-    else:
-        assert 'index' not in idx.names
-        turn_start = delay_start.xs(turn, level='index').reindex(index=idx)
-        remaining = get_remaining(lstg_start, turn_start, MAX_DELAY[turn])
-
-    # error checking
-    assert np.all(remaining > 0) and np.all(remaining <= 1)
-
-    return remaining
 
 
 def get_interarrival_period(clock):

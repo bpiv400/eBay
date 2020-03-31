@@ -1,6 +1,6 @@
 import argparse
 from train.Trainer import Trainer
-from train.train_consts import INT_DROPOUT, DROPOUT_GRID
+from train.train_consts import INT_DROPOUT, DROPOUT_GRID, NORM_TYPE
 from constants import SMALL, TRAIN_RL, TRAIN_MODELS, VALIDATION, DISCRIM_MODELS
 
 
@@ -26,8 +26,11 @@ def main():
     # compute dropout
     dropout = tuple([float(i / INT_DROPOUT) for i in DROPOUT_GRID[args.dropout-1]])
 
+    # normalization
+    norm = 'batch' if args.name not in NORM_TYPE else NORM_TYPE[args.name]
+
     # train model
-    trainer.train_model(dropout=dropout)
+    trainer.train_model(dropout=dropout, norm=norm)
 
 
 if __name__ == '__main__':
