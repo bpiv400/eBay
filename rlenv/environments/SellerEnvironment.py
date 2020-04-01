@@ -24,12 +24,7 @@ class SellerEnvironment(AgentEnvironment):
         :return: bool
         """
         if event.type == OFFER_EVENT and event.turn % 2 == 0:
-            if self.is_lstg_expired(event):
-                return False
-            elif event.thread_expired():
-                return False
-            else:
-                return True
+            return not(self.is_lstg_expired(event) or event.thread_expired())
         else:
             return False
 
@@ -56,7 +51,7 @@ class SellerEnvironment(AgentEnvironment):
             # if the lstg is complete
             else:
                 # check whether it's expired -- if so, relist
-                if not self.outcome.sale:
+                if not self.outcome.sale and self.relist_count < 100:
                     self.relist()
                 # otherwise
                 else:

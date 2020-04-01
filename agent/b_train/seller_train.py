@@ -1,7 +1,6 @@
 """
 Train a seller agent that makes concessions, not offers
 """
-
 import argparse
 from rlpyt.runners.minibatch_rl import MinibatchRl
 from rlpyt.algos.pg.ppo import PPO
@@ -13,7 +12,7 @@ from rlpyt.samplers.serial.sampler import SerialEvalCollector
 from rlpyt.samplers.parallel.cpu.collectors import CpuEvalCollector
 from rlpyt.utils.logging.context import logger_context
 from featnames import DELAY
-from constants import VALIDATION
+from constants import VALIDATION, RL_LOG_DIR
 from agent.agent_consts import (BATCH_T, BATCH_B, CON_TYPE, ALL_FEATS,
                                 TOTAL_STEPS, PPO_MINIBATCHES, SELLER_TRAIN_INPUT,
                                 PPO_EPOCHS, FEAT_TYPE, LOG_INTERVAL_STEPS)
@@ -29,7 +28,6 @@ from rlenv.environments.SellerEnvironment import SellerEnvironment
 def make_agent(env_params=None):
     model_kwargs = {
         'sizes': env_params['composer'].agent_sizes,
-        'delay': env_params['composer'].delay,
     }
     return CategoricalPgAgent(ModelCls=PgCategoricalAgentModel,
                               model_kwargs=model_kwargs)
@@ -113,6 +111,7 @@ def main():
                          affinity=dict(workers_cpus=list(range(4))))
     # not sure if this is right
     # log parameters (agent hyperparameters, algorithm parameters
+
     log_params = {
         CON_TYPE: args.con,
         FEAT_TYPE: feat_id,
@@ -124,8 +123,8 @@ def main():
         'batch_B': BATCH_B,
         'batch_T': BATCH_T,
     }
-    with logger_context(log_dir='slr', name='debug',
-                        run_ID='con', log_params=log_params, snapshot_mode='last'):
+    with logger_context(log_dir=RL_LOG_DIR, name='debug', use_summary_writer=True, override_prefix=True,
+                        run_ID='default_params', log_params=log_params, snapshot_mode='last'):
         runner.train()
 
 

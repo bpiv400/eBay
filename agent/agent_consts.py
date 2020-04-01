@@ -14,6 +14,7 @@ seller_groupings = [
     'w2v_slr',
     'cat',
     'cndtn',
+    'slr'
 ]
 for i in range(1, 7):
     seller_groupings.append('offer{}'.format(i))
@@ -45,7 +46,7 @@ PPO_EPOCHS = 4
 NUM_BATCHES = 100
 BATCH_SIZE = 1000
 BATCH_B = 8 # ENVS PER BATCH
-BATCHES_PER_LOG = 2
+BATCHES_PER_LOG = 1
 
 
 # THESE ONES ARE DOWNSTREAM
