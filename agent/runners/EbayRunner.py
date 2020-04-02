@@ -3,6 +3,8 @@ Runner for use with PPO (later EBayPPO)
 """
 
 import time
+from collections import deque
+
 from rlpyt.runners.minibatch_rl import MinibatchRl
 from rlpyt.utils.logging import logger
 
@@ -16,10 +18,6 @@ class EbayRunner(MinibatchRl):
                  affinity=None,
                  batches_per_evaluation=None,
                  batch_size=None):
-        # initialized in super class
-        self.sampler = None
-        self.agent = None
-        self.algo = None
         # initialize logging
         self._opt_infos = None
         self._traj_infos = None
@@ -33,9 +31,12 @@ class EbayRunner(MinibatchRl):
                          seed=seed, affinity=affinity,
                          n_steps=batch_size * batches_per_evaluation,
                          log_interval_steps=batch_size)
+        # re initializing components
+        self.algo = algo
+        self.sampler = sampler
+        self.agent = agent
+        # additional state vars
         self.batches_per_evaluation = batches_per_evaluation
-        # ensure statistics are logged after each batch
-        assert self.log_interval_itrs == 1
         self.itr_ = 0
 
     def update_agent(self, agent):
@@ -46,6 +47,7 @@ class EbayRunner(MinibatchRl):
 
     def train(self):
         n_itr = self.startup()
+        assert self.log_interval_itrs == 1
         assert n_itr == self.batches_per_evaluation
         for itr in range(n_itr):
             logger.set_iteration(itr + self.itr_)
@@ -65,6 +67,9 @@ class EbayRunner(MinibatchRl):
         if self.itr_ == 0:
             self._opt_infos = {k: list() for k in self.algo.opt_info_fields}
         self._last_time = time.time()
+
+    def shutdown(self):
+        self.sampler.shutdown()
 
     def log_diagnostics(self, itr, traj_infos=None, eval_time=0):
         """

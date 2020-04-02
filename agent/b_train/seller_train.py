@@ -6,7 +6,6 @@ import os
 import shutil
 from torch.utils.tensorboard.writer import SummaryWriter
 
-from rlpyt.runners.minibatch_rl import MinibatchRl
 from rlpyt.algos.pg.ppo import PPO
 from rlpyt.agents.pg.categorical import CategoricalPgAgent
 from rlpyt.samplers.serial.sampler import SerialSampler
@@ -20,8 +19,9 @@ from featnames import DELAY
 from constants import VALIDATION, RL_LOG_DIR
 from agent.agent_consts import (BATCH_T, BATCH_B, CON_TYPE, ALL_FEATS,
                                 TOTAL_STEPS, PPO_MINIBATCHES, SELLER_TRAIN_INPUT,
-                                PPO_EPOCHS, FEAT_TYPE, LOG_INTERVAL_STEPS)
+                                PPO_EPOCHS, FEAT_TYPE, BATCH_SIZE)
 from agent.models.PgCategoricalAgentModel import PgCategoricalAgentModel
+from agent.runners.EbayRunner import EbayRunner
 from constants import SLR_PREFIX
 from rlenv.env_utils import get_env_sim_dir, load_chunk
 from rlenv.Composer import AgentComposer
@@ -37,7 +37,7 @@ class RlTrainer:
         self.agent_params = kwargs['agent_params']
         self.run_id = self.generate_run_id() # TODO: Make util function
         self.exp_dir = '{}/run_{}/'.format(RL_LOG_DIR, self.run_id)
-
+        print(self.exp_dir)
         # environment parameters
         self.env_params_train = self.generate_train_params()
         self.logger_params = self.generate_logger_params()
@@ -48,15 +48,15 @@ class RlTrainer:
         self.agent = self.generate_agent()
         self.runner = self.generate_runner()
 
-        self.writer = SummaryWriter(self.exp_dir)
         self.clear_log()
+        self.writer = SummaryWriter(self.exp_dir)
 
     def generate_run_id(self):
-        return "default"
+        return "runner_test"
 
     def clear_log(self):
         if os.path.exists(self.exp_dir):
-            shutil.rmtree(self.exp_dir)
+            shutil.rmtree(self.exp_dir, ignore_errors=True)
 
     def generate_logger_params(self):
         log_params = {
@@ -128,22 +128,22 @@ class RlTrainer:
             )
 
     def generate_runner(self):
-        runner = MinibatchRl(log_traj_window=100,
-                             algo=self.algorithm,
-                             agent=self.agent,
-                             sampler=self.sampler,
-                             n_steps=TOTAL_STEPS,
-                             log_interval_steps=LOG_INTERVAL_STEPS,
-                             affinity=dict(workers_cpus=list(range(4))))
+        runner = EbayRunner(algo=self.algorithm,
+                            agent=self.agent,
+                            sampler=self.sampler,
+                            batches_per_evaluation=1,
+                            batch_size=BATCH_SIZE,
+                            affinity=dict(workers_cpus=list(range(4))))
         return runner
 
     def train(self):
-        with logger_context(log_dir=RL_LOG_DIR, name='debug', use_summary_writer=True,
+        with logger_context(log_dir=RL_LOG_DIR, name='debug', use_summary_writer=False,
                             override_prefix=True, run_ID=self.run_id,
                             log_params=self.logger_params, snapshot_mode='last'):
             logger.set_tf_summary_writer(self.writer)
             for i in range(10):
                 self.runner.train()
+                self.writer.flush()
 
     def validate(self):
         pass
