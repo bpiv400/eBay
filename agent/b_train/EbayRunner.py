@@ -1,3 +1,8 @@
+"""
+Runner for use with PPO (later EBayPPO)
+"""
+
+import time
 from rlpyt.runners.minibatch_rl import MinibatchRl
 from rlpyt.utils.logging import logger
 
@@ -15,11 +20,19 @@ class EbayRunner(MinibatchRl):
         self.sampler = None
         self.agent = None
         self.algo = None
+        # initialize logging
+        self._opt_infos = None
+        self._cum_time = 0
+        self._cum_completed_trajs = 0
+        self._last_update_counter = 0
+        self._last_time = 0
         super().__init__(algo=algo, agent=agent, sampler=sampler,
                          seed=seed, affinity=affinity,
                          n_steps=batch_size * batches_per_evaluation,
                          log_interval_steps=batch_size)
         self.batches_per_evaluation = batches_per_evaluation
+        # ensure statistics are logged after each batch
+        assert self.log_interval_itrs == 1
         self.itr_ = 0
 
     def update_agent(self, agent):
@@ -39,8 +52,51 @@ class EbayRunner(MinibatchRl):
                 self.agent.train_mode(itr)
                 opt_info = self.algo.optimize_agent(itr, samples)
                 self.store_diagnostics(itr, traj_infos, opt_info)
-                if (itr + 1) % self.log_interval_itrs == 0:
-                    self.log_diagnostics(itr)
+                self.log_diagnostics(itr + self.itr_)
 
         self.itr_ += self.batches_per_evaluation
         self.shutdown()
+
+    def initialize_logging(self):
+        if self.itr_ == 0:
+            self._opt_infos = {k: list() for k in self.algo.opt_info_fields}
+        self._last_time = time.time()
+
+    def log_diagnostics(self, itr, traj_infos=None, eval_time=0):
+        """
+        Write diagnostics (including stored ones) to csv via the logger.
+        """
+        # save model if evaluation happens after this batch
+        if (itr + 1) % self.batches_per_evaluation == 0:
+            self.save_itr_snapshot(itr)
+
+        # update cumulative variables
+        new_time = time.time()
+        self._cum_time += (new_time - self._last_time)
+        new_updates = self.algo.update_counter - self._last_update_counter
+        new_samples = (self.sampler.batch_size * self.world_size *
+                       self.log_interval_itrs)
+        updates_per_second = (new_updates / self._cum_time)
+        samples_per_second = (new_samples / self._cum_time)
+
+        # log diagnostics
+        logger.record_tabular('CumTrainTime', self._cum_time)
+        logger.record_tabular('Iteration', itr)
+        logger.record_tabular('CumCompletedTrajs', self._cum_completed_trajs)
+        logger.record_tabular('StepsPerSecond', samples_per_second)
+        logger.record_tabular('UpdatesPerSecond', updates_per_second)
+        self._log_infos(traj_infos)
+        logger.dump_tabular(with_prefix=False)
+
+        self._last_time = new_time
+        self._last_update_counter = self.algo.update_counter
+
+    def store_diagnostics(self, itr, traj_infos, opt_info):
+        """
+        Store any diagnostic information from a training iteration that should
+        be kept for the next logging iteration.
+        """
+        self._cum_completed_trajs += len(traj_infos)
+        for k, v in self._opt_infos.items():
+            new_v = getattr(opt_info, k, [])
+            v.extend(new_v if isinstance(new_v, list) else [new_v])
