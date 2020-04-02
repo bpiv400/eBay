@@ -2,6 +2,8 @@
 Train a seller agent that makes concessions, not offers
 """
 import argparse
+import os
+import shutil
 from rlpyt.runners.minibatch_rl import MinibatchRl
 from rlpyt.algos.pg.ppo import PPO
 from rlpyt.agents.pg.categorical import CategoricalPgAgent
@@ -25,46 +27,123 @@ from rlenv.interfaces.ArrivalInterface import ArrivalInterface
 from rlenv.environments.SellerEnvironment import SellerEnvironment
 
 
-def make_agent(env_params=None):
-    model_kwargs = {
-        'sizes': env_params['composer'].agent_sizes,
-    }
-    return CategoricalPgAgent(ModelCls=PgCategoricalAgentModel,
-                              model_kwargs=model_kwargs)
+class RlTrainer:
+    def __init__(self, **kwargs):
+        self.debug = kwargs['debug']
+        self.verbose = kwargs['verbose']
+        self.agent_params = kwargs['agent_params']
+        self.run_id = self.generate_run_id()
 
+        # environment parameters
+        self.env_params_train = self.generate_train_params()
+        self.logger_params = self.generate_logger_params()
 
-def make_algo(env_params=None):
-    return PPO(minibatches=PPO_MINIBATCHES,
-               epochs=PPO_EPOCHS)
+        # rlpyt components
+        self.algorithm = self.generate_algorithm()
+        self.sampler = self.generate_sampler()
+        self.agent = self.generate_agent()
+        self.runner = self.generate_runner()
 
+        self.clear_log()
 
-def make_sampler(env_params=None, serial=False):
-    if serial:
-        return SerialSampler(
-            EnvCls=SellerEnvironment,
-            env_kwargs=env_params,
-            batch_B=BATCH_B,
-            batch_T=BATCH_T,
-            max_decorrelation_steps=0,
-            CollectorCls=CpuResetCollector,
-            eval_n_envs=1,
-            eval_CollectorCls=SerialEvalCollector,
-            eval_env_kwargs=env_params,
-            eval_max_steps=50,
-        )
-    else:
-        return CpuSampler(
-            EnvCls=SellerEnvironment,
-            env_kwargs=env_params,
-            batch_B=BATCH_B,
-            batch_T=BATCH_T,
-            max_decorrelation_steps=0,
-            CollectorCls=CpuResetCollector,
-            eval_n_envs=1,
-            eval_CollectorCls=CpuEvalCollector,
-            eval_env_kwargs=env_params,
-            eval_max_steps=50,
-        )
+    def generate_run_id(self):
+        return "default"
+
+    def clear_log(self):
+        exp_dir = '{}run_{}/'.format(RL_LOG_DIR, self.run_id)
+        if os.path.exists(exp_dir):
+            shutil.rmtree(exp_dir)
+
+    def generate_logger_params(self):
+        log_params = {
+            CON_TYPE: self.agent_params[CON_TYPE],
+            FEAT_TYPE: self.agent_params[FEAT_TYPE],
+            SLR_PREFIX: True,
+            DELAY: False,
+            'steps': TOTAL_STEPS,
+            'ppo_minibatches': PPO_MINIBATCHES,
+            'ppo_epochs': PPO_EPOCHS,
+            'batch_B': BATCH_B,
+            'batch_T': BATCH_T,
+        }
+        return log_params
+
+    def generate_train_params(self):
+        x_lstg_cols = load_chunk(base_dir=get_env_sim_dir(VALIDATION),
+                                 num=1)[0].columns
+        composer = AgentComposer(cols=x_lstg_cols,
+                                 agent_params=self.agent_params)
+        env_params = {
+            'composer': composer,
+            'verbose': self.verbose,
+            'filename': SELLER_TRAIN_INPUT,
+            'arrival': ArrivalInterface(),
+            'seller': SellerInterface(full=False),
+            'buyer': BuyerInterface()
+        }
+        return env_params
+
+    @staticmethod
+    def generate_algorithm():
+        return PPO(minibatches=PPO_MINIBATCHES,
+                   epochs=PPO_EPOCHS)
+
+    def generate_agent(self):
+        model_kwargs = {
+            'sizes': self.env_params_train['composer'].agent_sizes,
+        }
+        return CategoricalPgAgent(ModelCls=PgCategoricalAgentModel,
+                                  model_kwargs=model_kwargs)
+
+    def generate_sampler(self):
+        if self.debug:
+            return SerialSampler(
+                EnvCls=SellerEnvironment,
+                env_kwargs=self.env_params_train,
+                batch_B=BATCH_B,
+                batch_T=BATCH_T,
+                max_decorrelation_steps=0,
+                CollectorCls=CpuResetCollector,
+                eval_n_envs=0,
+                eval_CollectorCls=SerialEvalCollector,
+                eval_env_kwargs={},
+                eval_max_steps=50,
+            )
+        else:
+            return CpuSampler(
+                EnvCls=SellerEnvironment,
+                env_kwargs=self.env_params_train,
+                batch_B=BATCH_B,
+                batch_T=BATCH_T,
+                max_decorrelation_steps=0,
+                CollectorCls=CpuResetCollector,
+                eval_n_envs=0,
+                eval_CollectorCls=CpuEvalCollector,
+                eval_env_kwargs={},
+                eval_max_steps=50,
+            )
+
+    def generate_runner(self):
+        runner = MinibatchRl(log_traj_window=100,
+                             algo=self.algorithm,
+                             agent=self.agent,
+                             sampler=self.sampler,
+                             n_steps=TOTAL_STEPS,
+                             log_interval_steps=LOG_INTERVAL_STEPS,
+                             affinity=dict(workers_cpus=list(range(4))))
+        return runner
+
+    def train(self):
+        with logger_context(log_dir=RL_LOG_DIR, name='debug', use_summary_writer=True, override_prefix=True,
+                            run_ID=self.run_id, log_params=self.logger_params, snapshot_mode='last'):
+            for i in range(10):
+                self.runner.train()
+
+    def validate(self):
+        pass
+
+    def reduce_lr(self):
+        pass
 
 
 def main():
@@ -73,59 +152,26 @@ def main():
     parser.add_argument('--verbose', action='store_true')
     parser.add_argument('--debug', action='store_true')
 
+    # Add params: entropy coefficient, value coefficient,
+    # epochs per optimization step, minibatches per optimization step,
+    # batch size
+
+    # constants
+    ############################################
     delay = False
     feat_id = ALL_FEATS
     ###########################################
 
     args = parser.parse_args()
-    composer_params = {
+    agent_params = {
         FEAT_TYPE: feat_id,
         SLR_PREFIX: True,
         CON_TYPE: args.con,
         DELAY: delay
     }
-
-    x_lstg_cols = load_chunk(base_dir=get_env_sim_dir(VALIDATION),
-                             num=1)[0].columns
-    composer = AgentComposer(cols=x_lstg_cols, agent_params=composer_params)
-
-    env_params = {
-        'composer': composer,
-        'verbose': args.verbose,
-        'filename': SELLER_TRAIN_INPUT,
-        'arrival': ArrivalInterface(),
-        'seller': SellerInterface(full=False),
-        'buyer': BuyerInterface()
-    }
-
-    agent = make_agent(env_params=env_params)
-    algo = make_algo(env_params=env_params)
-    sampler = make_sampler(env_params=env_params, serial=args.debug)
-
-    runner = MinibatchRl(log_traj_window=100,
-                         algo=algo,
-                         agent=agent,
-                         sampler=sampler,
-                         n_steps=TOTAL_STEPS,
-                         log_interval_steps=LOG_INTERVAL_STEPS,
-                         affinity=dict(workers_cpus=list(range(4))))
-    # not sure if this is right
-    # log parameters (agent hyperparameters, algorithm parameters
-
-    log_params = {
-        CON_TYPE: args.con,
-        FEAT_TYPE: feat_id,
-        SLR_PREFIX: True,
-        DELAY: False,
-        'steps': TOTAL_STEPS,
-        'ppo_minibatches': PPO_MINIBATCHES,
-        'ppo_epochs': PPO_EPOCHS,
-        'batch_B': BATCH_B,
-        'batch_T': BATCH_T,
-    }
-    with logger_context(log_dir=RL_LOG_DIR, name='debug', use_summary_writer=True, override_prefix=True,
-                        run_ID='default_params', log_params=log_params, snapshot_mode='last'):
-        runner.train()
+    trainer = RlTrainer(debug=args.debug, verbose=args.verbose,
+                        agent_params=agent_params)
+    trainer.train()
 
 
 if __name__ == '__main__':
