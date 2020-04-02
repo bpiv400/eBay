@@ -101,7 +101,7 @@ class EbayRunner(MinibatchRl):
         Store any diagnostic information from a training iteration that should
         be kept for the next logging iteration.
         """
-        self._new_completed_trajs += len(traj_infos)
+        self._new_completed_trajs = len(traj_infos)
         self._traj_infos.extend(traj_infos)
         self._cum_completed_trajs += len(traj_infos)
         for k, v in self._opt_infos.items():

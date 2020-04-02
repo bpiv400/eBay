@@ -4,6 +4,8 @@ Train a seller agent that makes concessions, not offers
 import argparse
 import os
 import shutil
+from torch.utils.tensorboard.writer import SummaryWriter
+
 from rlpyt.runners.minibatch_rl import MinibatchRl
 from rlpyt.algos.pg.ppo import PPO
 from rlpyt.agents.pg.categorical import CategoricalPgAgent
@@ -12,6 +14,7 @@ from rlpyt.samplers.parallel.cpu.sampler import CpuSampler
 from rlpyt.samplers.parallel.cpu.collectors import CpuResetCollector
 from rlpyt.samplers.serial.sampler import SerialEvalCollector
 from rlpyt.samplers.parallel.cpu.collectors import CpuEvalCollector
+from rlpyt.utils.logging import logger
 from rlpyt.utils.logging.context import logger_context
 from featnames import DELAY
 from constants import VALIDATION, RL_LOG_DIR
@@ -32,7 +35,8 @@ class RlTrainer:
         self.debug = kwargs['debug']
         self.verbose = kwargs['verbose']
         self.agent_params = kwargs['agent_params']
-        self.run_id = self.generate_run_id()
+        self.run_id = self.generate_run_id() # TODO: Make util function
+        self.exp_dir = '{}/run_{}/'.format(RL_LOG_DIR, self.run_id)
 
         # environment parameters
         self.env_params_train = self.generate_train_params()
@@ -44,15 +48,15 @@ class RlTrainer:
         self.agent = self.generate_agent()
         self.runner = self.generate_runner()
 
+        self.writer = SummaryWriter(self.exp_dir)
         self.clear_log()
 
     def generate_run_id(self):
         return "default"
 
     def clear_log(self):
-        exp_dir = '{}run_{}/'.format(RL_LOG_DIR, self.run_id)
-        if os.path.exists(exp_dir):
-            shutil.rmtree(exp_dir)
+        if os.path.exists(self.exp_dir):
+            shutil.rmtree(self.exp_dir)
 
     def generate_logger_params(self):
         log_params = {
@@ -134,8 +138,10 @@ class RlTrainer:
         return runner
 
     def train(self):
-        with logger_context(log_dir=RL_LOG_DIR, name='debug', use_summary_writer=True, override_prefix=True,
-                            run_ID=self.run_id, log_params=self.logger_params, snapshot_mode='last'):
+        with logger_context(log_dir=RL_LOG_DIR, name='debug', use_summary_writer=True,
+                            override_prefix=True, run_ID=self.run_id,
+                            log_params=self.logger_params, snapshot_mode='last'):
+            logger.set_tf_summary_writer(self.writer)
             for i in range(10):
                 self.runner.train()
 
