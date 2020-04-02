@@ -4,6 +4,7 @@ Train a seller agent that makes concessions, not offers
 import argparse
 import os
 import shutil
+import torch
 from torch.utils.tensorboard.writer import SummaryWriter
 
 from rlpyt.algos.pg.ppo import PPO
@@ -16,13 +17,14 @@ from rlpyt.samplers.parallel.cpu.collectors import CpuEvalCollector
 from rlpyt.utils.logging import logger
 from rlpyt.utils.logging.context import logger_context
 from featnames import DELAY
-from constants import VALIDATION, RL_LOG_DIR
-from agent.agent_consts import (BATCH_T, BATCH_B, CON_TYPE, ALL_FEATS,
+from constants import VALIDATION, RL_LOG_DIR, SLR_INIT, BYR_INIT, SLR_PREFIX
+from agent.agent_consts import (BATCH_T, BATCH_B, CON_TYPE,
+                                ALL_FEATS, AGENT_STATE, OPTIM_STATE,
                                 TOTAL_STEPS, PPO_MINIBATCHES, SELLER_TRAIN_INPUT,
                                 PPO_EPOCHS, FEAT_TYPE, BATCH_SIZE)
+from agent.agent_utils import load_init_model, detect_norm
 from agent.models.PgCategoricalAgentModel import PgCategoricalAgentModel
 from agent.runners.EbayRunner import EbayRunner
-from constants import SLR_PREFIX
 from rlenv.env_utils import get_env_sim_dir, load_chunk
 from rlenv.Composer import AgentComposer
 from rlenv.interfaces.PlayerInterface import BuyerInterface, SellerInterface
@@ -32,13 +34,21 @@ from rlenv.environments.SellerEnvironment import SellerEnvironment
 
 class RlTrainer:
     def __init__(self, **kwargs):
+        # arguments
         self.debug = kwargs['debug']
         self.verbose = kwargs['verbose']
         self.agent_params = kwargs['agent_params']
+
+        # fields
+        self.itr = 0
+        self.norm = None
+        self.checkpoint = self.init_checkpoint()
+
+        # ids
         self.run_id = self.generate_run_id() # TODO: Make util function
         self.exp_dir = '{}/run_{}/'.format(RL_LOG_DIR, self.run_id)
-        print(self.exp_dir)
-        # environment parameters
+
+        # parameters
         self.env_params_train = self.generate_train_params()
         self.logger_params = self.generate_logger_params()
 
@@ -48,8 +58,16 @@ class RlTrainer:
         self.agent = self.generate_agent()
         self.runner = self.generate_runner()
 
+        # logging setup
         self.clear_log()
         self.writer = SummaryWriter(self.exp_dir)
+
+    @staticmethod
+    def init_checkpoint():
+        return {
+             AGENT_STATE: None,
+             OPTIM_STATE: None
+        }
 
     def generate_run_id(self):
         return "runner_test"
@@ -87,17 +105,30 @@ class RlTrainer:
         }
         return env_params
 
-    @staticmethod
-    def generate_algorithm():
+    def generate_algorithm(self):
         return PPO(minibatches=PPO_MINIBATCHES,
-                   epochs=PPO_EPOCHS)
+                   epochs=PPO_EPOCHS,
+                   initial_optim_state_dict=self.checkpoint[OPTIM_STATE])
 
     def generate_agent(self):
         model_kwargs = {
             'sizes': self.env_params_train['composer'].agent_sizes,
         }
+        # load simulator model to initialize policy
+        if self.itr == 0:
+            if self.agent_params[SLR_PREFIX]:
+                init_model = SLR_INIT
+            else:
+                init_model = BYR_INIT
+            init_dict = load_init_model(init_model)
+            self.norm = detect_norm(init_dict)
+            model_kwargs['init_dict'] = init_dict
+        # set norm type
+        model_kwargs['norm'] = self.norm
+
         return CategoricalPgAgent(ModelCls=PgCategoricalAgentModel,
-                                  model_kwargs=model_kwargs)
+                                  model_kwargs=model_kwargs,
+                                  initial_model_state_dict=self.checkpoint[AGENT_STATE])
 
     def generate_sampler(self):
         if self.debug:
@@ -144,9 +175,18 @@ class RlTrainer:
             for i in range(10):
                 self.runner.train()
                 self.writer.flush()
+                self.evaluate()
+                self.update_checkpoint()
+                self.runner.update_agent(self.generate_agent())
+                self.runner.update_algo(self.generate_algorithm())
 
-    def validate(self):
+    def evaluate(self):
         pass
+
+    def update_checkpoint(self):
+        params = torch.load('{}params.pkl'.format(self.exp_dir))
+        self.checkpoint[AGENT_STATE] = params['agent_state_dict']
+        self.checkpoint[OPTIM_STATE] = params['optimizer_state_dict']
 
     def reduce_lr(self):
         pass

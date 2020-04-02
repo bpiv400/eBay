@@ -15,6 +15,19 @@ def get_con_set(con):
         raise RuntimeError("Invalid concession set type parameter")
 
 
+def detect_norm(init_dict=None):
+    found_v, found_g = False, False
+    for param_name in init_dict.keys():
+        if '_v' in param_name:
+            found_v = True
+        elif '_g' in param_name:
+            found_g = True
+    if found_g and found_v:
+        return "weight"
+    else:
+        raise NotImplementedError("Unexpected normalization type")
+
+
 def load_init_model(name=None, size=None):
     state_dict = load_state_dict(name=name)
 
