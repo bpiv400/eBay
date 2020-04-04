@@ -120,7 +120,8 @@ class RlTrainer:
                 init_model = SLR_INIT
             else:
                 init_model = BYR_INIT
-            init_dict = load_init_model(init_model)
+            init_dict = load_init_model(name=init_model,
+                                        size=model_kwargs['sizes']['out'])
             self.norm = detect_norm(init_dict)
             model_kwargs['init_dict'] = init_dict
         # set norm type

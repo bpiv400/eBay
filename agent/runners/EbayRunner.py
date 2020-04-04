@@ -4,7 +4,7 @@ Runner for use with PPO (later EBayPPO)
 
 import time
 from collections import deque
-
+from rlpyt.utils.seed import set_seed, make_seed
 from rlpyt.runners.minibatch_rl import MinibatchRl
 from rlpyt.utils.logging import logger
 
@@ -47,6 +47,7 @@ class EbayRunner(MinibatchRl):
 
     def train(self):
         n_itr = self.startup()
+        set_seed(make_seed())
         assert self.log_interval_itrs == 1
         assert n_itr == self.batches_per_evaluation
         for itr in range(n_itr):
