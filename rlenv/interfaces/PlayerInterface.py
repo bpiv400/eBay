@@ -105,8 +105,8 @@ class SimulatedPlayer(PlayerInterface):
 
 
 class SimulatedBuyer(SimulatedPlayer):
-    def __init__(self):
-        super().__init__(byr=True, full=True)
+    def __init__(self, full=True):
+        super().__init__(byr=True, full=full)
         self.load_models()
 
     def sample_con(self, params=None, turn=None):

@@ -3,23 +3,27 @@ import torch.nn as nn
 from torch.nn.functional import softmax
 from utils import substitute_prefix
 from agent.agent_consts import PARAM_SHARING
+from agent.models.AgentModel import AgentModel
 from nets.nets_utils import (create_embedding_layers, create_groupings,
                              FullyConnected)
 from nets.nets_consts import HIDDEN
 
 
-class PgCategoricalAgentModel(nn.Module):
+class PgCategoricalAgentModel(AgentModel):
     """
     Returns a vector of
     """
-    def __init__(self, init_dict=None, sizes=None, norm=None):
+    def __init__(self, init_dict=None, sizes=None, norm=None,
+                 byr=False, delay=False):
         """
         kwargs:
             sizes: gives all sizes for the model, including size
             of each input grouping 'x' and number of elements in
             output vector 'out'
         """
-        super(PgCategoricalAgentModel, self).__init__()
+        super(PgCategoricalAgentModel, self).__init__(byr=byr,
+                                                      delay=delay,
+                                                      sizes=sizes)
         # expand embeddings
         groups = create_groupings(sizes=sizes)
         # create embedding layers
@@ -42,14 +46,15 @@ class PgCategoricalAgentModel(nn.Module):
         if init_dict is not None:
             self._init_policy(init_dict=init_dict)
 
-    def forward(self, observation, prev_action, prev_reward):
-        """
-        :return: tuple of pi, v
-        """
-        x = observation._asdict()
+    def con(self, input_dict=None):
+        logits, _ = self._forward_dict(input_dict=input_dict)
+        logits = logits.squeeze()
+        return logits
+
+    def _forward_dict(self, input_dict=None):
         l = []
         for k in self.nn0.keys():
-            l.append(self.nn0[k](x))
+            l.append(self.nn0[k](input_dict))
         embedded = torch.cat(l, dim=l[0].dim() - 1)
 
         # fully connected
@@ -65,11 +70,22 @@ class PgCategoricalAgentModel(nn.Module):
 
         # policy output head
         logits = self.output_action(hidden_action)
+
+        return logits, v
+
+    def forward(self, observation, prev_action, prev_reward):
+        """
+        :return: tuple of pi, v
+        """
+        input_dict = observation._asdict()
+        logits, v = self._forward_dict(input_dict=input_dict)
+
         pi = softmax(logits, dim=logits.dim() - 1)
 
         # transformations
         pi = pi.squeeze()
         v = v.squeeze()
+
         return pi, v
 
     def _init_policy(self, init_dict=None):
