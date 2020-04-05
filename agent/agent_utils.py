@@ -28,6 +28,21 @@ def detect_norm(init_dict=None):
         raise NotImplementedError("Unexpected normalization type")
 
 
+def load_agent_params(model=None, run_dir=None):
+    """
+
+    :param torch.nn.Module model:
+    :param string run_dir:
+    :return:
+    """
+    params = torch.load('{}params.pkl'.format(run_dir))
+    state_dict = params['agent_state_dict']
+    model.load_state_dict(state_dict=state_dict, strict=True)
+    for param in model.parameters(recurse=True):
+        param.requires_grad = False
+    model.eval()
+
+
 def load_init_model(name=None, size=None):
     state_dict = load_state_dict(name=name)
 

@@ -9,10 +9,8 @@ Lots of memory dumping code while I try to find leak
 import numpy as np
 from featnames import START_PRICE, START_TIME, ACC_PRICE, DEC_PRICE
 from rlenv.env_utils import load_chunk
-from rlenv.interfaces.PlayerInterface import SimulatedBuyer, SimulatedSeller
 from rlenv.interfaces.ArrivalInterface import ArrivalInterface
 from rlenv.environments.SimulatorEnvironment import SimulatorEnvironment
-from rlenv.Composer import Composer
 
 
 class Generator:
@@ -30,10 +28,19 @@ class Generator:
         self.recorder = None
 
         # model interfaces and input composer
-        self.composer = Composer(self.x_lstg.columns)
-        self.buyer = SimulatedBuyer()
-        self.seller = SimulatedSeller(full=True)
+        self.composer = self.generate_composer()
+        self.buyer = self.generate_buyer()
+        self.seller = self.generate_seller()
         self.arrival = ArrivalInterface()
+
+    def generate_composer(self):
+        raise NotImplementedError()
+
+    def generate_buyer(self):
+        raise NotImplementedError()
+
+    def generate_seller(self):
+        raise NotImplementedError()
 
     def generate(self):
         raise NotImplementedError()

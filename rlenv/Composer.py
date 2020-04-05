@@ -2,8 +2,9 @@ import math
 import torch
 import numpy as np
 import pandas as pd
-from constants import (MODELS, OFFER_MODELS, SLR_PREFIX, FIRST_ARRIVAL_MODEL, TURN_FEATS,
-                       INTERARRIVAL_MODEL, BYR_HIST_MODEL, SLR_INIT, BYR_INIT)
+from constants import (MODELS, OFFER_MODELS, FIRST_ARRIVAL_MODEL, TURN_FEATS,
+                       BYR_PREFIX, SLR_PREFIX, BYR_HIST_MODEL,
+                       SLR_INIT, BYR_INIT, INTERARRIVAL_MODEL)
 from featnames import (OUTCOME_FEATS,
                        MONTHS_SINCE_LSTG, BYR_HIST,
                        INT_REMAINING, MONTHS_SINCE_LAST)
@@ -247,7 +248,7 @@ class AgentComposer(Composer):
     def __init__(self, cols=None, agent_params=None):
         super().__init__(cols)
         # parameters
-        self.slr = agent_params[SLR_PREFIX]
+        self.byr = agent_params[BYR_PREFIX]
         self.delay = agent_params[DELAY]
         self.feat_type = agent_params[FEAT_TYPE]
         self.con_type = agent_params[CON_TYPE]
@@ -260,7 +261,7 @@ class AgentComposer(Composer):
         self.verify_agent()
 
     def _build_agent_sizes(self):
-        if self.slr:
+        if not self.byr:
             sizes = load_sizes(SLR_INIT)
         else:
             sizes = load_sizes(BYR_INIT)
@@ -268,7 +269,7 @@ class AgentComposer(Composer):
         return sizes
 
     def _update_turn_inds(self, turn):
-        if self.slr:
+        if not self.byr:
             inds = np.zeros(2, dtype=np.float32)
         else:
             inds = np.zeros(3, dtype=np.float32)
@@ -298,7 +299,7 @@ class AgentComposer(Composer):
         return lstg
 
     def _build_agent_offer_vector(self, offer_vector=None):
-        if self.slr and self.feat_type == ALL_FEATS:
+        if not self.byr and self.feat_type == ALL_FEATS:
             full_vector = offer_vector
         else:
             full_vector = np.concatenate([offer_vector[:TIME_START_IND],
@@ -308,7 +309,7 @@ class AgentComposer(Composer):
         return full_vector
 
     def verify_agent(self):
-        agent_name = SLR_INIT if self.slr else BYR_INIT
+        agent_name = SLR_INIT if not self.byr else BYR_INIT
         Composer.verify_lstg_sets_shared(agent_name, self.x_lstg_cols, self.lstg_sets.copy())
         agent_feats = load_featnames(agent_name)
         lstg_append = Composer.remove_shared_feats(agent_feats[LSTG_MAP], self.lstg_sets[LSTG_MAP])

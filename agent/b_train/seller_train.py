@@ -19,7 +19,8 @@ from rlpyt.samplers.parallel.cpu.collectors import CpuEvalCollector
 from rlpyt.utils.logging import logger
 from rlpyt.utils.logging.context import logger_context
 from featnames import DELAY
-from constants import VALIDATION, RL_LOG_DIR, SLR_INIT, BYR_INIT, SLR_PREFIX
+from constants import (VALIDATION, RL_LOG_DIR, SLR_INIT, BYR_INIT,
+                       BYR_PREFIX, SLR_PREFIX)
 from agent.agent_consts import (BATCH_T, BATCH_B, CON_TYPE, BATCHES_PER_EVALUATION,
                                 ALL_FEATS, AGENT_STATE, OPTIM_STATE,
                                 TOTAL_STEPS, PPO_MINIBATCHES, SELLER_TRAIN_INPUT,
@@ -50,7 +51,7 @@ class RlTrainer:
 
         # ids
         self.run_id = self.generate_run_id() # TODO: Make util function
-        self.exp_dir = '{}/run_{}/'.format(RL_LOG_DIR, self.run_id)
+        self.run_dir = '{}/run_{}/'.format(self.log_dir, self.run_id)
 
         # parameters
         self.env_params_train = self.generate_train_params()
@@ -64,7 +65,7 @@ class RlTrainer:
 
         # logging setup
         self.clear_log()
-        self.writer = SummaryWriter(self.exp_dir)
+        self.writer = SummaryWriter(self.run_dir)
 
     @staticmethod
     def init_checkpoint():
@@ -77,14 +78,14 @@ class RlTrainer:
         return "runner_test"
 
     def clear_log(self):
-        if os.path.exists(self.exp_dir):
-            shutil.rmtree(self.exp_dir, ignore_errors=True)
+        if os.path.exists(self.run_dir):
+            shutil.rmtree(self.run_dir, ignore_errors=True)
 
     def generate_logger_params(self):
         log_params = {
             CON_TYPE: self.agent_params[CON_TYPE],
             FEAT_TYPE: self.agent_params[FEAT_TYPE],
-            SLR_PREFIX: True,
+            BYR_PREFIX: False,
             DELAY: False,
             'steps': TOTAL_STEPS,
             'ppo_minibatches': PPO_MINIBATCHES,
@@ -114,13 +115,15 @@ class RlTrainer:
                    epochs=PPO_EPOCHS,
                    initial_optim_state_dict=self.checkpoint[OPTIM_STATE])
 
-    def generate_agent(self):
+    def generate_model_kwargs(self):
         model_kwargs = {
             'sizes': self.env_params_train['composer'].agent_sizes,
+            'byr': self.agent_params[BYR_PREFIX],
+            'delay': self.agent_params[DELAY]
         }
         # load simulator model to initialize policy
         if self.itr == 0:
-            if self.agent_params[SLR_PREFIX]:
+            if not self.agent_params[BYR_PREFIX]:
                 init_model = SLR_INIT
             else:
                 init_model = BYR_INIT
@@ -130,9 +133,11 @@ class RlTrainer:
             model_kwargs['init_dict'] = init_dict
         # set norm type
         model_kwargs['norm'] = self.norm
+        return model_kwargs
 
+    def generate_agent(self):
         return CategoricalPgAgent(ModelCls=PgCategoricalAgentModel,
-                                  model_kwargs=model_kwargs,
+                                  model_kwargs=self.generate_model_kwargs(),
                                   initial_model_state_dict=self.checkpoint[AGENT_STATE])
 
     def generate_sampler(self):
@@ -173,8 +178,13 @@ class RlTrainer:
                             affinity=dict(workers_cpus=list(range(4))))
         return runner
 
+    @property
+    def log_dir(self):
+        extension = BYR_PREFIX if self.agent_params[BYR_PREFIX] else SLR_PREFIX
+        return os.path.join(RL_LOG_DIR, extension)
+
     def train(self):
-        with logger_context(log_dir=RL_LOG_DIR, name='debug', use_summary_writer=False,
+        with logger_context(log_dir=self.log_dir, name='debug', use_summary_writer=False,
                             override_prefix=True, run_ID=self.run_id,
                             log_params=self.logger_params, snapshot_mode='last'):
             logger.set_tf_summary_writer(self.writer)
@@ -192,7 +202,7 @@ class RlTrainer:
             pass
 
     def update_checkpoint(self):
-        params = torch.load('{}params.pkl'.format(self.exp_dir))
+        params = torch.load('{}params.pkl'.format(self.run_dir))
         self.checkpoint[AGENT_STATE] = params['agent_state_dict']
         self.checkpoint[OPTIM_STATE] = params['optimizer_state_dict']
 
@@ -226,7 +236,7 @@ def main():
     args = parser.parse_args()
     agent_params = {
         FEAT_TYPE: feat_id,
-        SLR_PREFIX: True,
+        BYR_PREFIX: False,
         CON_TYPE: args.con,
         DELAY: delay
     }
