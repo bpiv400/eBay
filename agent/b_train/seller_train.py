@@ -3,6 +3,8 @@ Train a seller agent that makes concessions, not offers
 """
 import argparse
 import os
+from os.path import isfile, join
+import re
 import shutil
 import torch
 from torch.utils.tensorboard.writer import SummaryWriter
@@ -18,7 +20,7 @@ from rlpyt.utils.logging import logger
 from rlpyt.utils.logging.context import logger_context
 from featnames import DELAY
 from constants import VALIDATION, RL_LOG_DIR, SLR_INIT, BYR_INIT, SLR_PREFIX
-from agent.agent_consts import (BATCH_T, BATCH_B, CON_TYPE,
+from agent.agent_consts import (BATCH_T, BATCH_B, CON_TYPE, BATCHES_PER_EVALUATION,
                                 ALL_FEATS, AGENT_STATE, OPTIM_STATE,
                                 TOTAL_STEPS, PPO_MINIBATCHES, SELLER_TRAIN_INPUT,
                                 PPO_EPOCHS, FEAT_TYPE, BATCH_SIZE)
@@ -27,7 +29,7 @@ from agent.models.PgCategoricalAgentModel import PgCategoricalAgentModel
 from agent.runners.EbayRunner import EbayRunner
 from rlenv.env_utils import get_env_sim_dir, load_chunk
 from rlenv.Composer import AgentComposer
-from rlenv.interfaces.PlayerInterface import BuyerInterface, SellerInterface
+from rlenv.interfaces.PlayerInterface import SimulatedBuyer, SimulatedSeller
 from rlenv.interfaces.ArrivalInterface import ArrivalInterface
 from rlenv.environments.SellerEnvironment import SellerEnvironment
 
@@ -42,6 +44,8 @@ class RlTrainer:
         # fields
         self.itr = 0
         self.norm = None
+        self.evaluation_dir = get_env_sim_dir(VALIDATION)
+        self.evaluation_chunks = self.count_eval_chunks()
         self.checkpoint = self.init_checkpoint()
 
         # ids
@@ -91,7 +95,7 @@ class RlTrainer:
         return log_params
 
     def generate_train_params(self):
-        x_lstg_cols = load_chunk(base_dir=get_env_sim_dir(VALIDATION),
+        x_lstg_cols = load_chunk(base_dir=self.evaluation_dir,
                                  num=1)[0].columns
         composer = AgentComposer(cols=x_lstg_cols,
                                  agent_params=self.agent_params)
@@ -100,8 +104,8 @@ class RlTrainer:
             'verbose': self.verbose,
             'filename': SELLER_TRAIN_INPUT,
             'arrival': ArrivalInterface(),
-            'seller': SellerInterface(full=False),
-            'buyer': BuyerInterface()
+            'seller': SimulatedSeller(full=False),
+            'buyer': SimulatedBuyer()
         }
         return env_params
 
@@ -160,10 +164,11 @@ class RlTrainer:
             )
 
     def generate_runner(self):
+        # TODO: Remove constants as arguments
         runner = EbayRunner(algo=self.algorithm,
                             agent=self.agent,
                             sampler=self.sampler,
-                            batches_per_evaluation=1,
+                            batches_per_evaluation=BATCHES_PER_EVALUATION,
                             batch_size=BATCH_SIZE,
                             affinity=dict(workers_cpus=list(range(4))))
         return runner
@@ -176,13 +181,15 @@ class RlTrainer:
             for i in range(10):
                 self.runner.train()
                 self.writer.flush()
+                self.itr += BATCHES_PER_EVALUATION
                 self.evaluate()
                 self.update_checkpoint()
                 self.runner.update_agent(self.generate_agent())
                 self.runner.update_algo(self.generate_algorithm())
 
     def evaluate(self):
-        pass
+        for i in range(1, self.evaluation_chunks + 1):
+            pass
 
     def update_checkpoint(self):
         params = torch.load('{}params.pkl'.format(self.exp_dir))
@@ -191,6 +198,13 @@ class RlTrainer:
 
     def reduce_lr(self):
         pass
+
+    def count_eval_chunks(self):
+        contents = os.listdir(self.evaluation_dir)
+        contents = [f for f in contents if isfile(join(self.evaluation_dir, f))]
+        pattern = re.compile(r'[0-9]+\.gz')
+        contents = [f for f in contents if re.match(pattern, f)]
+        return len(contents)
 
 
 def main():

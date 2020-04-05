@@ -38,7 +38,7 @@ ALL_FEATS = "all"
 PARAM_SHARING = True
 
 # batch size hyperparameters
-# for now, expecting no multiprocessing
+BATCHES_PER_EVALUATION = 1
 
 # PPO hyperparameters
 PPO_MINIBATCHES = 4
