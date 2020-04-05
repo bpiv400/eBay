@@ -159,7 +159,8 @@ class EbayEnvironment:
         sources.prepare_hist(time_feats=time_feats, clock_feats=get_clock_feats(event.priority),
                              months_since_lstg=months_since_lstg)
         # sample history
-        input_dict = self.composer.build_input_dict(BYR_HIST_MODEL, sources=sources(), turn=None)
+        input_dict = self.composer.build_input_dict(model_name=BYR_HIST_MODEL,
+                                                    sources=sources(), turn=None)
         hist = self.get_hist(input_dict=input_dict, time=event.priority, thread_id=event.thread_id)
         # print
         if self.verbose:
@@ -232,7 +233,7 @@ class EbayEnvironment:
     def process_delay(self, event):
         # no need to check expiration since this must occur at the same time as the previous offer
         model_name = model_str(DELAY, turn=event.turn)
-        input_dict = self.composer.build_input_dict(model_name, sources=event.sources(),
+        input_dict = self.composer.build_input_dict(model_name=model_name, sources=event.sources(),
                                                     turn=event.turn)
         delay_seconds = self.get_delay(input_dict=input_dict, turn=event.turn, thread_id=event.thread_id,
                                        time=event.priority)
@@ -341,7 +342,7 @@ class EbayEnvironment:
     def get_offer_outcomes(self, event, slr=False):
         # sample concession
         model_name = model_str(CON, turn=event.turn)
-        input_dict = self.composer.build_input_dict(model_name, sources=event.sources(),
+        input_dict = self.composer.build_input_dict(model_name=model_name, sources=event.sources(),
                                                     turn=event.turn)
         con = self.get_con(input_dict=input_dict, time=event.priority, turn=event.turn,
                            thread_id=event.thread_id)
@@ -351,7 +352,7 @@ class EbayEnvironment:
         # sample msg if necessary
         if need_msg(con, slr):
             model_name = model_str(MSG, turn=event.turn)
-            input_dict = self.composer.build_input_dict(model_name, sources=event.sources(),
+            input_dict = self.composer.build_input_dict(model_name=model_name, sources=event.sources(),
                                                         turn=event.turn)
             msg = self.get_msg(input_dict=input_dict, time=event.priority, turn=event.turn,
                                thread_id=event.thread_id)
@@ -374,7 +375,7 @@ class EbayEnvironment:
             model_name = FIRST_ARRIVAL_MODEL
         else:
             model_name = INTERARRIVAL_MODEL
-        input_dict = self.composer.build_input_dict(model_name,
+        input_dict = self.composer.build_input_dict(model_name=model_name,
                                                     sources=event.sources(),
                                                     turn=None)
         return input_dict

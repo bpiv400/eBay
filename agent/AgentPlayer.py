@@ -1,5 +1,4 @@
 import torch
-from torch.distributions.categorical import Categorical
 from rlenv.env_utils import sample_categorical
 from rlenv.interfaces.PlayerInterface import (PlayerInterface, SimulatedSeller,
                                               SimulatedBuyer)

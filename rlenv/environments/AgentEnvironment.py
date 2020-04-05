@@ -86,7 +86,8 @@ class AgentEnvironment(EbayEnvironment, Env):
                 self.get_info(agent_sale=agent_sale, lstg_complete=lstg_complete))
 
     def get_obs(self, sources=None, turn=None):
-        obs_dict = self.composer.get_obs(sources=sources, turn=turn)
+        obs_dict = self.composer.build_input_dict(model_name=None,
+                                                  sources=sources, turn=turn)
         return SellerObs(**obs_dict)
 
     def con_from_action(self, action=None):

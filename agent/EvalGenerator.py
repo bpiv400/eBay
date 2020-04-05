@@ -2,6 +2,7 @@ from agent.AgentPlayer import AgentPlayer
 from agent.agent_utils import load_agent_params
 from rlenv.simulator.Generator import Generator
 from rlenv.interfaces.PlayerInterface import SimulatedBuyer, SimulatedSeller
+from rlenv.Composer import AgentComposer
 from rlenv.env_utils import get_env_sim_dir
 from constants import VALIDATION
 
@@ -11,11 +12,14 @@ class EvalGenerator(Generator):
         """
         :param num
         :param verbose
-        :param ModelCls
-        :param exp_id
+        :param model_class
+        :param model_kwargs
+        :param run_dir
+        :param composer
         """
-        self.agent_byr = kwargs['byr']
-        self.delay = kwargs['delay']
+        self._composer = kwargs['composer']  # type: AgentComposer
+        self.agent_byr = self._composer.byr
+        self.delay = self._composer.delay
         self.model_kwargs = kwargs['model_kwargs']
         self.ModelCls = kwargs['model_class']
         self.run_dir = kwargs['run_dir']
@@ -23,7 +27,7 @@ class EvalGenerator(Generator):
                          verbose=kwargs['verbose'])
 
     def generate_composer(self):
-        pass
+        return self._composer
 
     def generate_agent(self):
         model = self.ModelCls(**self.model_kwargs)
@@ -44,7 +48,6 @@ class EvalGenerator(Generator):
         else:
             seller = self.generate_agent()
         return seller
-
 
     def generate(self):
         pass

@@ -278,7 +278,21 @@ class AgentComposer(Composer):
             inds[active] = 1
         self.turn_inds = inds
 
-    def get_obs(self, sources=None, turn=None):
+    def build_input_dict(self, model_name=None, sources=None, turn=None):
+        if model_name is None:
+            return self._build_agent_dict(sources=sources, turn=turn)
+        agent_remainder = 1 if self.byr else 0
+        agent_models = [CON] if not self.delay else [CON, DELAY]
+        if turn % 2 == agent_remainder:
+            base_model = model_name[:-1]
+            if base_model == MSG:
+                return None
+            elif base_model in agent_models:
+                return self._build_agent_dict(sources=sources, turn=turn)
+        return super().build_input_dict(model_name=model_name, sources=sources,
+                                        turn=turn)
+
+    def _build_agent_dict(self, sources=None, turn=None):
         obs_dict = dict()
         self._update_turn_inds(turn)
         for set_name in self.agent_sizes['x'].keys():
