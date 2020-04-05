@@ -16,20 +16,20 @@ def save_fig(name):
 				transparent=True,
 				bbox_inches='tight')
 
+def line_plot(name, x, y, styles, fontsize=16):
+	# y and styles must be of same length
+	assert len(y) == len(styles)
 
-def draw_lines():
-	raise NotImplementedError()
-
-
-def draw_bars():
-	y = [ratio[m] - 1 for m in group]
-	y_pos = np.arange(len(y))
-	name = group[0].split('_')[-1]
-	if name[-1].isdigit():
-		name = name[:-1]
-
+	# overall plot settings
 	plt.clf()
-	fig, ax = plt.subplots()
-	ax.bar(y_pos, y)
-	plt.xticks(y_pos, get_model_names(group))
-	save_fig('likelihood/baserate_{}.png'.format(name))
+
+	# loop over lines to draw
+	for i in range(len(y)):
+		plt.plot(x, y[i], styles[i])
+
+	# axis options
+	plt.xticks(fontsize=fontsize)
+	plt.yticks(fontsize=fontsize)
+
+	# save
+	save_fig(name)
