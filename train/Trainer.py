@@ -5,10 +5,10 @@ from datetime import datetime as dt
 from torch.utils.tensorboard import SummaryWriter
 from torch.optim import Adam, lr_scheduler
 from train.EBayDataset import EBayDataset
-from train.train_consts import FTOL, LOG_DIR, LNLR0, LNLR1, LNLR_FACTOR, INT_DROPOUT
+from train.train_consts import FTOL, LR0, LR1, LR_FACTOR, INT_DROPOUT
 from nets.FeedForward import FeedForward
 from train.Sample import get_batches
-from constants import MODEL_DIR
+from constants import MODEL_DIR, LOG_DIR
 from utils import load_sizes
 
 
@@ -62,9 +62,9 @@ class Trainer:
             writer = None
 
         # tune initial learning rate
-        lnlr, net, lnL_test0 = self._tune_lr(writer=writer, 
-                                             dropout=dropout, 
-                                             norm=norm)
+        lr, net, lnL_test0 = self._tune_lr(writer=writer, 
+                                           dropout=dropout, 
+                                           norm=norm)
 
         # path to save model
         model_path = MODEL_DIR + '{}/{}.net'.format(self.name, expid)
@@ -74,10 +74,10 @@ class Trainer:
             torch.save(net.state_dict(), model_path)
 
         # initialize optimizer and scheduler
-        optimizer = Adam(net.parameters(), lr=np.exp(lnlr))
+        optimizer = Adam(net.parameters(), lr=lr)
         scheduler = lr_scheduler.ReduceLROnPlateau(optimizer,
                                                    mode='min',
-                                                   factor=np.exp(LNLR_FACTOR),
+                                                   factor=LR_FACTOR,
                                                    patience=0,
                                                    threshold=FTOL)
         print(optimizer)
@@ -100,7 +100,7 @@ class Trainer:
             scheduler.step(output['loss'])
 
             # stop training if learning rate is sufficiently small
-            if self._get_lnlr(optimizer) < LNLR1:
+            if self._get_lr(optimizer) < LR1:
                 break
 
             # stop training if holdout objective hasn't improved in 12 epochs
@@ -114,14 +114,14 @@ class Trainer:
         return -output['lnL_test']
 
     @staticmethod
-    def _get_lnlr(optimizer):
+    def _get_lr(optimizer):
         for param_group in optimizer.param_groups:
-            return np.log(param_group['lr'])
+            return param_group['lr']
 
     def _run_epoch(self, net, optimizer=None, writer=None, epoch=None):
         # initialize output with log10 learning rate
         output = dict()
-        output['lnlr'] = self._get_lnlr(optimizer)
+        output['lr'] = self._get_lr(optimizer)
 
         # train model
         output['loss'] = self._run_loop(self.train, net, optimizer)
@@ -220,15 +220,15 @@ class Trainer:
 
     def _tune_lr(self, writer=None, dropout=None, norm=None):
         nets, loss = [], []
-        for lnlr in LNLR0:
+        for lr in LR0:
             # initialize model and optimizer
             nets.append(FeedForward(self.sizes, dropout=dropout, norm=norm).to(self.device))
-            optimizer = Adam(nets[-1].parameters(), lr=np.exp(lnlr))
+            optimizer = Adam(nets[-1].parameters(), lr=lr)
  
             # print to console
             if len(nets) == 1:
                 print(nets[-1])
-            print('Tuning with lnlr of {}'.format(lnlr))
+            print('Tuning with lr of {}'.format(lr))
  
             # run model for one epoch
             loss.append(self._run_loop(self.train, nets[-1], optimizer))
@@ -236,18 +236,18 @@ class Trainer:
  
         # best learning rate and model
         idx = int(np.argmin(loss))
-        lnlr = LNLR0[idx]
+        lr = LR0[idx]
         net = nets[idx]
  
         # initialize output with log10 learning rate
-        output = {'lnlr': lnlr, 'loss': loss[idx]}
+        output = {'lr': lr, 'loss': loss[idx]}
  
         # collect remaining output and print
         print('Epoch 0')
         output = self._collect_output(net, writer, output)
  
-        # return lnlr of smallest loss and corresponding model
-        return lnlr, net, output['lnL_test']
+        # return lr of smallest loss and corresponding model
+        return lr, net, output['lnL_test']
 
     def _collect_output(self, net, writer, output, epoch=0):
         # calculate log-likelihood on validation set

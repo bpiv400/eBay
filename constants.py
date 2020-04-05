@@ -27,13 +27,14 @@ OUTPUT_DIR = '%s/outputs/' % PREFIX
 INPUT_DIR = '%s/inputs/' % PREFIX
 INDEX_DIR = '%s/index/' % PREFIX
 FEATNAMES_DIR = '%sfeatnames/' % INPUT_DIR
+LOG_DIR = OUTPUT_DIR + 'logs/'
 MODEL_DIR = '%smodels/' % OUTPUT_DIR
+PLOT_DIR = '%splots/' % OUTPUT_DIR
 REINFORCE_DIR = '%s/agent/' % PREFIX
 
 PARAMS_PATH = INPUT_DIR + 'params.pkl'
 
-PLOT_DIR = '{}/{}/'.format(os.path.expanduser('~/Dropbox/eBay'), 'figures')
-PLOT_DATA_DIR = '{}{}/'.format(PLOT_DIR, 'data')
+FIGURE_DIR = '{}/{}/'.format(os.path.expanduser('~/Dropbox/eBay'), 'figures')
 
 # partitions
 TRAIN_MODELS = 'train_models'
