@@ -1,6 +1,6 @@
 import pandas as pd
 from processing.processing_utils import input_partition, load_file, init_x
-from processing.f_discrim import concat_sim_chunks, save_discrim_files
+from processing.f_discrim.discrim_utils import concat_sim_chunks, save_discrim_files
 
 
 def construct_x(x, idx_thread):
