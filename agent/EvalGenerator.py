@@ -18,6 +18,7 @@ class EvalGenerator(Generator):
         :param model_kwargs
         :param run_dir
         :param composer
+        :param record
         """
         self._composer = kwargs['composer']  # type: AgentComposer
         self.agent_byr = self._composer.byr
@@ -25,6 +26,7 @@ class EvalGenerator(Generator):
         self.model_kwargs = kwargs['model_kwargs']
         self.ModelCls = kwargs['model_class']
         self.run_dir = kwargs['run_dir']
+        self.record = kwargs['record']
         super().__init__(get_env_sim_dir(VALIDATION), kwargs['num'],
                          verbose=kwargs['verbose'])
         self.recorder = DiscrimRecorder(verbose=self.verbose, records_path=self.records_path,
@@ -67,6 +69,7 @@ class EvalGenerator(Generator):
 
             # simulate lstg until first sale
             rewards.append(self.simulate_lstg(environment))
+        return rewards
 
     def simulate_lstg(self, environment):
         list_count = 1

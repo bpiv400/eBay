@@ -35,7 +35,7 @@ def load_agent_params(model=None, run_dir=None):
     :param string run_dir:
     :return:
     """
-    params = torch.load('{}params.pkl'.format(run_dir))
+    params = torch.load('{}params.pkl'.format(run_dir), map_location=torch.device('cpu'))
     state_dict = params['agent_state_dict']
     model.load_state_dict(state_dict=state_dict, strict=True)
     for param in model.parameters(recurse=True):
