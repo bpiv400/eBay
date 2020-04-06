@@ -2,11 +2,11 @@ from constants import RL_EVAL_DIR
 from featnames import META
 from agent.AgentPlayer import AgentPlayer
 from agent.agent_utils import load_agent_params
+from agent.AgentComposer import AgentComposer
 from rlenv.env_utils import calculate_slr_gross, load_chunk
 from rlenv.simulator.Generator import Generator
 from rlenv.simulator.discrim.DiscrimRecorder import DiscrimRecorder
 from rlenv.interfaces.PlayerInterface import SimulatedBuyer, SimulatedSeller
-from rlenv.Composer import AgentComposer
 
 
 class EvalGenerator(Generator):

@@ -28,10 +28,10 @@ from agent.agent_consts import (BATCH_T, BATCH_B, CON_TYPE, BATCHES_PER_EVALUATI
                                 TOTAL_STEPS, PPO_MINIBATCHES, SELLER_TRAIN_INPUT,
                                 PPO_EPOCHS, FEAT_TYPE, BATCH_SIZE)
 from agent.agent_utils import load_init_model, detect_norm
+from agent.AgentComposer import AgentComposer
 from agent.models.PgCategoricalAgentModel import PgCategoricalAgentModel
 from agent.runners.EbayRunner import EbayRunner
 from rlenv.env_utils import load_chunk
-from rlenv.Composer import AgentComposer
 from rlenv.interfaces.PlayerInterface import SimulatedBuyer, SimulatedSeller
 from rlenv.interfaces.ArrivalInterface import ArrivalInterface
 from rlenv.environments.SellerEnvironment import SellerEnvironment
