@@ -1,3 +1,4 @@
+from compress_pickle import dump
 import numpy as np
 import pandas as pd
 from train.EBayDataset import EBayDataset
