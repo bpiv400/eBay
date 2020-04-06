@@ -5,4 +5,4 @@
 #$ -j y
 #$ -o logs/
 
-python repo/agent/a_inputs/seller_inputs.py
+python repo/agent/a_inputs/train_data_slr.py

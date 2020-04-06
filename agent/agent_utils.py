@@ -49,12 +49,6 @@ def load_agent_params(model=None, run_dir=None):
     model.eval()
 
 
-def align_x_lstg_lookup(x_lstg, lookup):
-    x_lstg = pd.concat([df.reindex(index=lookup.index) for df in x_lstg.values()],
-                       axis=1)
-    return x_lstg
-
-
 def get_batch_unlikely(x_lstg_chunk=None, model=None):
     for key, val in x_lstg_chunk:
         x_lstg_chunk[key] = torch.from_numpy(x_lstg_chunk[key]).float()
@@ -88,7 +82,7 @@ def remove_unlikely_arrival_lstgs(x_lstg=None, lookup=None):
 
     :param pd.DataFrame x_lstg:
     :param pd.DataFrame lookup:
-    :return:
+    :return: (x_lstg, lookup)
     """
     # error checking
     assert x_lstg.index.name == lookup.index.name

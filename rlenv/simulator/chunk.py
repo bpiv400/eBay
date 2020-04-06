@@ -4,12 +4,11 @@ or generating discrim inputs
 """
 import os
 import numpy as np
-from compress_pickle import dump, load
+from compress_pickle import load
 from constants import PARTS_DIR, SIM_CHUNKS
 from featnames import START_PRICE
-from utils import align_x_lstg_lookup
 from rlenv.env_consts import LOOKUP_FILENAME
-from rlenv.env_utils import get_env_sim_subdir
+from rlenv.env_utils import get_env_sim_subdir, align_x_lstg_lookup, dump_chunk
 from processing.processing_utils import input_partition
 
 
@@ -41,9 +40,10 @@ def main():
         if (i+1) % 100 == 0:
             print('Chunk {} of {}'.format(i+1, SIM_CHUNKS))
         # create chunk and save
-        d = {'lookup': lookup.iloc[idx, :], 
-             'x_lstg': x_lstg.iloc[idx, :]}
-        dump(d, '{}{}.gz'.format(chunk_dir, i+1))
+        lookup_chunk = lookup.iloc[idx, :]
+        x_lstg_chunk = x_lstg.iloc[idx, :]
+        path = '{}{}.gz'.format(chunk_dir, i+1)
+        dump_chunk(x_lstg=x_lstg_chunk, lookup=lookup_chunk, path=path)
         # increment indices
         idx = idx + 1
         if idx[-1] >= len(x_lstg):

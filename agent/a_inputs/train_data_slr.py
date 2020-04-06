@@ -3,7 +3,6 @@ Creates hdf5 file containing input (lookup and x_lstg) for training seller rl
 
 By default, uses the train_rl partition
 """
-
 import os
 import argparse
 import h5py
@@ -12,8 +11,9 @@ from compress_pickle import load
 from featnames import CAT
 from constants import PARTITIONS, PARTS_DIR, TRAIN_RL
 from agent.agent_consts import SELLER_TRAIN_INPUT
-from agent.agent_utils import align_x_lstg_lookup
+from agent.agent_utils import remove_unlikely_arrival_lstgs
 from rlenv.env_consts import X_LSTG_FILENAME, LOOKUP_FILENAME, X_LSTG, LOOKUP
+from rlenv.env_utils import align_x_lstg_lookup
 
 
 os.environ["HDF5_USE_FILE_LOCKING"] = "FALSE"
@@ -30,6 +30,7 @@ def main():
     lookup = lookup.drop(columns=[CAT])
     x_lstg = load('{}{}/{}'.format(PARTS_DIR, part, X_LSTG_FILENAME))
     x_lstg = align_x_lstg_lookup(x_lstg=x_lstg, lookup=lookup)
+    x_lstg, lookup = remove_unlikely_arrival_lstgs(x_lstg=x_lstg, lookup=lookup)
     store_inputs(x_lstg, lookup, SELLER_TRAIN_INPUT)
 
 

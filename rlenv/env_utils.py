@@ -5,12 +5,13 @@ import torch
 import os
 import numpy as np
 import pandas as pd
-from compress_pickle import load
+from compress_pickle import load, dump
 from torch.distributions.categorical import Categorical
 from torch.distributions.bernoulli import Bernoulli
 from constants import (INPUT_DIR, ENV_SIM_DIR, DAY, ARRIVAL_MODELS)
 from rlenv.env_consts import (META_6, META_7, SIM_CHUNKS_DIR, SIM_VALS_DIR, OFFER_MAPS,
-                              SIM_DISCRIM_DIR, DATE_FEATS, NORM_IND, LISTING_FEE)
+                              SIM_DISCRIM_DIR, DATE_FEATS, NORM_IND, LISTING_FEE,
+                              LOOKUP, X_LSTG)
 from utils import extract_clock_feats, is_split, slr_norm, byr_norm
 
 
@@ -255,6 +256,20 @@ def load_sim_outputs(part, values=False):
             output[dataset] = [piece[dataset] for piece in output_list]
             output[dataset] = pd.concat(output[dataset], axis=1)
     return output
+
+
+def dump_chunk(x_lstg=None, lookup=None, path=None):
+    d = {
+        X_LSTG: x_lstg,
+        LOOKUP: lookup
+    }
+    dump(d, path)
+
+
+def align_x_lstg_lookup(x_lstg, lookup):
+    x_lstg = pd.concat([df.reindex(index=lookup.index) for df in x_lstg.values()],
+                       axis=1)
+    return x_lstg
 
 
 def load_chunk(base_dir=None, num=None, input_path=None):
