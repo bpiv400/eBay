@@ -1,7 +1,7 @@
 from constants import REINFORCE_DIR
 
-AGENT_STATE = 'agent_state'
-OPTIM_STATE = 'optim_state'
+AGENT_STATE = 'agent_state_dict'
+OPTIM_STATE = 'optimizer_state_dict'
 
 # sub directory names
 TRAIN_DIR = "train"

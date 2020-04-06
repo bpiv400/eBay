@@ -7,6 +7,7 @@ from collections import deque
 from rlpyt.utils.seed import set_seed, make_seed
 from rlpyt.runners.minibatch_rl import MinibatchRl
 from rlpyt.utils.logging import logger
+from rlpyt.utils.logging.logger import _tabular
 
 
 class EbayRunner(MinibatchRl):
@@ -62,6 +63,7 @@ class EbayRunner(MinibatchRl):
 
         self.itr_ += self.batches_per_evaluation
         self.shutdown()
+        return self.itr_
 
     def initialize_logging(self):
         self._traj_infos = deque(maxlen=self.log_traj_window)
@@ -97,8 +99,9 @@ class EbayRunner(MinibatchRl):
         logger.record_tabular('StepsPerSecond', samples_per_second)
         logger.record_tabular('UpdatesPerSecond', updates_per_second)
         self._log_infos(traj_infos)
-        logger.dump_tabular(with_prefix=False)
-
+        # Is not dumping at any point problematic
+        # logger.dump_tabular(with_prefix=False)
+        del _tabular[:]
         self._last_time = new_time
         self._last_update_counter = self.algo.update_counter
 

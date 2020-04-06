@@ -257,14 +257,16 @@ def load_sim_outputs(part, values=False):
     return output
 
 
-def load_chunk(base_dir, num):
+def load_chunk(base_dir=None, num=None, input_path=None):
     """
     Loads a simulator chunk containing x_lstg and lookup
     :param base_dir: base directory of partition
     :param num: number of chunk
+    :param input_path: optional path to the chunk
     :return: (pd.Dataframe giving x_lstg, pd.DataFrame giving lookup)
     """
-    input_path = '{}chunks/{}.gz'.format(base_dir, num)
+    if input_path is None:
+        input_path = '{}chunks/{}.gz'.format(base_dir, num)
     input_dict = load(input_path)
     x_lstg = input_dict['x_lstg']
     lookup = input_dict['lookup']

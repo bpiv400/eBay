@@ -1,8 +1,8 @@
-from constants import VALIDATION
+from constants import RL_EVAL_DIR
 from featnames import META
 from agent.AgentPlayer import AgentPlayer
 from agent.agent_utils import load_agent_params
-from rlenv.env_utils import get_env_sim_dir, calculate_slr_gross
+from rlenv.env_utils import calculate_slr_gross, load_chunk
 from rlenv.simulator.Generator import Generator
 from rlenv.simulator.discrim.DiscrimRecorder import DiscrimRecorder
 from rlenv.interfaces.PlayerInterface import SimulatedBuyer, SimulatedSeller
@@ -12,7 +12,7 @@ from rlenv.Composer import AgentComposer
 class EvalGenerator(Generator):
     def __init__(self, **kwargs):
         """
-        :param num
+        :param itr
         :param verbose
         :param model_class
         :param model_kwargs
@@ -20,6 +20,7 @@ class EvalGenerator(Generator):
         :param composer
         :param record
         """
+        self.itr = kwargs['itr']
         self._composer = kwargs['composer']  # type: AgentComposer
         self.agent_byr = self._composer.byr
         self.delay = self._composer.delay
@@ -27,10 +28,16 @@ class EvalGenerator(Generator):
         self.ModelCls = kwargs['model_class']
         self.run_dir = kwargs['run_dir']
         self.record = kwargs['record']
-        super().__init__(get_env_sim_dir(VALIDATION), kwargs['num'],
+        super().__init__(direct=None,
                          verbose=kwargs['verbose'])
-        self.recorder = DiscrimRecorder(verbose=self.verbose, records_path=self.records_path,
-                                        record_sim=True)
+
+    def load_chunk(self, chunk=None):
+        path = '{}{}.gz'.format(RL_EVAL_DIR, chunk)
+        self.x_lstg, self.lookup = load_chunk(input_path=path)
+
+    def generate_recorder(self):
+        return DiscrimRecorder(verbose=self.verbose, records_path=self.records_path,
+                               record_sim=True)
 
     def generate_composer(self):
         return self._composer
@@ -69,6 +76,10 @@ class EvalGenerator(Generator):
 
             # simulate lstg until first sale
             rewards.append(self.simulate_lstg(environment))
+        if self.record:
+            self.recorder.dump()
+            self.recorder.reset_recorders()
+
         return rewards
 
     def simulate_lstg(self, environment):
@@ -84,4 +95,4 @@ class EvalGenerator(Generator):
 
     @property
     def records_path(self):
-        return '{}{}'.format(self.run_dir, self.chunk)
+        return '{}{}_{}.gz'.format(self.run_dir, self.itr, self.chunk)

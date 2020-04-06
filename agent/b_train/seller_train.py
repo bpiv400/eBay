@@ -3,12 +3,13 @@ Train a seller agent that makes concessions, not offers
 """
 import argparse
 import os
-from os.path import isfile, join
+import time
 import re
 import shutil
+from os.path import isfile, join
 import torch
 from torch.utils.tensorboard.writer import SummaryWriter
-
+from agent.EvalGenerator import EvalGenerator
 from rlpyt.algos.pg.ppo import PPO
 from rlpyt.agents.pg.categorical import CategoricalPgAgent
 from rlpyt.samplers.serial.sampler import SerialSampler
@@ -19,7 +20,7 @@ from rlpyt.samplers.parallel.cpu.collectors import CpuEvalCollector
 from rlpyt.utils.logging import logger
 from rlpyt.utils.logging.context import logger_context
 from featnames import DELAY
-from constants import (VALIDATION, RL_LOG_DIR, SLR_INIT, BYR_INIT,
+from constants import (RL_EVAL_DIR, RL_LOG_DIR, SLR_INIT, BYR_INIT,
                        BYR_PREFIX, SLR_PREFIX)
 from agent.agent_consts import (BATCH_T, BATCH_B, CON_TYPE, BATCHES_PER_EVALUATION,
                                 ALL_FEATS, AGENT_STATE, OPTIM_STATE,
@@ -28,7 +29,7 @@ from agent.agent_consts import (BATCH_T, BATCH_B, CON_TYPE, BATCHES_PER_EVALUATI
 from agent.agent_utils import load_init_model, detect_norm
 from agent.models.PgCategoricalAgentModel import PgCategoricalAgentModel
 from agent.runners.EbayRunner import EbayRunner
-from rlenv.env_utils import get_env_sim_dir, load_chunk
+from rlenv.env_utils import load_chunk
 from rlenv.Composer import AgentComposer
 from rlenv.interfaces.PlayerInterface import SimulatedBuyer, SimulatedSeller
 from rlenv.interfaces.ArrivalInterface import ArrivalInterface
@@ -45,7 +46,6 @@ class RlTrainer:
         # fields
         self.itr = 0
         self.norm = None
-        self.evaluation_dir = get_env_sim_dir(VALIDATION)
         self.evaluation_chunks = self.count_eval_chunks()
         self.checkpoint = self.init_checkpoint()
 
@@ -189,29 +189,66 @@ class RlTrainer:
                             log_params=self.logger_params, snapshot_mode='last'):
             logger.set_tf_summary_writer(self.writer)
             for i in range(10):
-                self.runner.train()
+                self.itr = self.runner.train()
                 self.writer.flush()
-                self.itr += BATCHES_PER_EVALUATION
                 self.evaluate()
                 self.update_checkpoint()
                 self.runner.update_agent(self.generate_agent())
                 self.runner.update_algo(self.generate_algorithm())
 
     def evaluate(self):
-        for i in range(1, self.evaluation_chunks + 1):
-            pass
+        if self.debug:
+            rewards, eval_time = self._serial_evaluate()
+        else:
+            rewards, eval_time = self._parallel_evaluate()
+        self._log_eval(rewards=rewards, eval_time=time)
+
+    def _log_eval(self, rewards=None, eval_time=None):
+        logger.set_iteration(self.itr)
+        logger.record_tabular('evalTime', eval_time)
+        logger.record_tabular_misc_stat('evalReward', rewards)
+
+    def _serial_evaluate(self):
+        start_time = time.time()
+        rewards = list()
+        eval_kwargs = self.generate_eval_kwargs()
+        eval_generator = EvalGenerator(**eval_kwargs)
+        for i in range(10):
+            eval_generator.load_chunk(chunk=i)
+            if not eval_generator.initialized:
+                eval_generator.initialize()
+            chunk_rewards = eval_generator.generate()
+            rewards = rewards + chunk_rewards
+        end_time = time.time()
+        return rewards, end_time - start_time
+
+    def _parallel_evaluate(self):
+        return None, None
+
+    def generate_eval_kwargs(self):
+        args = {
+            'composer': self.env_params_train['composer'],
+            'model_kwargs': self.generate_model_kwargs(),
+            'model_class': PgCategoricalAgentModel,
+            'run_dir': self.run_dir,
+            'record': False,
+            'itr': self.itr,
+            'verbose': self.verbose
+        }
+        return args
 
     def update_checkpoint(self):
         params = torch.load('{}params.pkl'.format(self.run_dir))
-        self.checkpoint[AGENT_STATE] = params['agent_state_dict']
-        self.checkpoint[OPTIM_STATE] = params['optimizer_state_dict']
+        self.checkpoint[AGENT_STATE] = params[AGENT_STATE]
+        self.checkpoint[OPTIM_STATE] = params[OPTIM_STATE]
 
     def reduce_lr(self):
         pass
 
-    def count_eval_chunks(self):
-        contents = os.listdir(self.evaluation_dir)
-        contents = [f for f in contents if isfile(join(self.evaluation_dir, f))]
+    @staticmethod
+    def count_eval_chunks():
+        contents = os.listdir(RL_EVAL_DIR)
+        contents = [f for f in contents if isfile(join(RL_EVAL_DIR, f))]
         pattern = re.compile(r'[0-9]+\.gz')
         contents = [f for f in contents if re.match(pattern, f)]
         return len(contents)
