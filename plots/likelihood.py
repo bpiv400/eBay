@@ -1,7 +1,6 @@
-import argparse
 from compress_pickle import load
 import numpy as np
-from plots.plots_utils import line_plot
+from plots.plots_utils import line_plot, input_fontsize
 from constants import PLOT_DIR, ARRIVAL_MODELS, DELAY_MODELS, CON_MODELS, MSG_MODELS
 
 def get_model_names(models):
@@ -16,9 +15,7 @@ def get_model_names(models):
 
 def main():
 	# extract parameters from command line
-	parser = argparse.ArgumentParser()
-	parser.add_argument('--fontsize', type=int, default=30)
-	args = parser.parse_args()
+	fontsize = input_fontsize()
 
 	# load data
 	lnL = load(PLOT_DIR + '{}.pkl'.format('lnL'))
@@ -37,7 +34,7 @@ def main():
 		name = 'likelihood/{}'.format(k)
 		y = [test, train, np.repeat(np.exp(lnL_bar[k]), N)]
 		styles = ['-k', '--k', '-k']
-		line_plot(name, x, y, styles, fontsize=args.fontsize)
+		line_plot(name, x, y, styles, fontsize=fontsize)
 
 
 if __name__ == '__main__':

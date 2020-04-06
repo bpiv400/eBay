@@ -22,15 +22,14 @@ def get_model_predictions(name, data):
     batches = get_batches(data)
     for b in batches:
         b['x'] = {k: v.to('cuda') for k, v in b['x'].items()}
-        b['y'] = b['y'].to('cuda')
-        theta = net(b['x']).double()
+        theta = net(b['x']).to('cpu').double()
         if theta.size()[1] == 1:
             theta = torch.cat((torch.zeros_like(theta), theta), dim=1)
         lnp.append(log_softmax(theta, dim=-1))
         lnL.append(-nll_loss(lnp[-1], b['y'], reduction='none'))
 
     # concatenate and convert to numpy
-    lnp = torch.cat(lnp).cpu().numpy()
-    lnL = torch.cat(lnL).cpu().numpy()
+    lnp = torch.cat(lnp).numpy()
+    lnL = torch.cat(lnL).numpy()
 
     return np.exp(lnp), lnL

@@ -1,3 +1,4 @@
+import argparse
 from constants import FIGURE_DIR
 
 import matplotlib.pyplot as plt
@@ -16,6 +17,7 @@ def save_fig(name, fontsize=16):
 				transparent=True,
 				bbox_inches='tight')
 
+
 def line_plot(name, x, y, styles, fontsize):
 	# y and styles must be of same length
 	assert len(y) == len(styles)
@@ -29,3 +31,10 @@ def line_plot(name, x, y, styles, fontsize):
 
 	# save
 	save_fig(name, fontsize=fontsize)
+
+
+def input_fontsize():
+	parser = argparse.ArgumentParser()
+	parser.add_argument('--fontsize', type=int, default=20)
+	args = parser.parse_args()
+	return args.fontsize
