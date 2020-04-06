@@ -8,15 +8,15 @@ plt.rc('font', **{'family':'serif',
                   'monospace': ['Computer Modern Typewriter']})
 
 
-def save_fig(name):
-	plt.xticks(fontsize=18)
-	plt.yticks(fontsize=18)
+def save_fig(name, fontsize=16):
+	plt.xticks(fontsize=fontsize)
+	plt.yticks(fontsize=fontsize)
 	plt.savefig(FIGURE_DIR + '{}.png'.format(name), 
 				format='png', 
 				transparent=True,
 				bbox_inches='tight')
 
-def line_plot(name, x, y, styles, fontsize=16):
+def line_plot(name, x, y, styles, fontsize):
 	# y and styles must be of same length
 	assert len(y) == len(styles)
 
@@ -27,9 +27,5 @@ def line_plot(name, x, y, styles, fontsize=16):
 	for i in range(len(y)):
 		plt.plot(x, y[i], styles[i])
 
-	# axis options
-	plt.xticks(fontsize=fontsize)
-	plt.yticks(fontsize=fontsize)
-
 	# save
-	save_fig(name)
+	save_fig(name, fontsize=fontsize)

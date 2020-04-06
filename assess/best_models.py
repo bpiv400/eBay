@@ -3,8 +3,7 @@ from shutil import copyfile
 import numpy as np
 from compress_pickle import dump
 from tensorboard.backend.event_processing.event_multiplexer import EventMultiplexer
-from train.train_consts import LNLR1
-from constants import MODEL_DIR,LOG_DIR, MODELS, DISCRIM_MODELS, PLOT_DATA_DIR
+from constants import MODEL_DIR, LOG_DIR, MODELS, DISCRIM_MODELS, PLOT_DATA_DIR
 
 
 def extract_best_experiment(em):
@@ -12,9 +11,8 @@ def extract_best_experiment(em):
     best, lnL, keep = -np.inf, dict(), ''
     # loop over experiments, save best
     for run, d in em.Runs().items():
-        lnlr1 = em.Scalars(run, 'lnlr')[-1].value
         lnL_test1 = em.Scalars(run, 'lnL_test')[-1].value
-        if len(d['scalars']) > 0 and lnlr1 == LNLR1:
+        if len(d['scalars']) > 0:
             curr = lnL_test1
             if curr > best:
                 best = curr

@@ -16,9 +16,9 @@ def get_model_names(models):
 
 def main():
 	# extract parameters from command line
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--fontsize', type=int, default=30)
-    args = parser.parse_args()
+	parser = argparse.ArgumentParser()
+	parser.add_argument('--fontsize', type=int, default=30)
+	args = parser.parse_args()
 
 	# load data
 	lnL = load(PLOT_DIR + '{}.pkl'.format('lnL'))
