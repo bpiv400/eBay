@@ -4,6 +4,7 @@ from agent.AgentPlayer import AgentPlayer
 from agent.agent_utils import load_agent_params
 from rlenv.env_utils import get_env_sim_dir, calculate_slr_gross
 from rlenv.simulator.Generator import Generator
+from rlenv.simulator.discrim.DiscrimRecorder import DiscrimRecorder
 from rlenv.interfaces.PlayerInterface import SimulatedBuyer, SimulatedSeller
 from rlenv.Composer import AgentComposer
 
@@ -26,6 +27,8 @@ class EvalGenerator(Generator):
         self.run_dir = kwargs['run_dir']
         super().__init__(get_env_sim_dir(VALIDATION), kwargs['num'],
                          verbose=kwargs['verbose'])
+        self.recorder = DiscrimRecorder(verbose=self.verbose, records_path=self.records_path,
+                                        record_sim=True)
 
     def generate_composer(self):
         return self._composer
@@ -66,16 +69,16 @@ class EvalGenerator(Generator):
             rewards.append(self.simulate_lstg(environment))
 
     def simulate_lstg(self, environment):
-        T = 1
+        list_count = 1
         while True:
             environment.reset()
             sale, price, _ = environment.run()
             if sale:
-                return calculate_slr_gross(price=price, list_count=T,
+                return calculate_slr_gross(price=price, list_count=list_count,
                                            meta=environment.lookup[META])
             else:
-                T += 1
+                list_count += 1
 
     @property
     def records_path(self):
-        return None
+        return '{}{}'.format(self.run_dir, self.chunk)

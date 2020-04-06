@@ -3,10 +3,11 @@ from rlenv.simulator.Recorder import *
 
 
 class DiscrimRecorder(Recorder):
-    def __init__(self, records_path, verbose):
+    def __init__(self, records_path=None, verbose=None, record_sim=False):
         super(DiscrimRecorder, self).__init__(records_path, verbose)
         self.offers = None
         self.threads = None
+        self.record_sim = record_sim
         self.reset_recorders()
 
     def reset_recorders(self):
@@ -23,6 +24,8 @@ class DiscrimRecorder(Recorder):
         """
         byr_hist = int(10 * byr_hist)
         row = [self.lstg, thread_id, byr_hist, time]
+        if self.record_sim:
+            row.append(self.sim)
         self.threads.append(row)
 
     def add_offer(self, event=None, time_feats=None, censored=False):
@@ -40,6 +43,8 @@ class DiscrimRecorder(Recorder):
                censored
                ]
         row += list(time_feats)
+        if self.record_sim:
+            row.append(self.sim)
         self.offers.append(row)
         if self.verbose:
             if censored:
@@ -66,20 +71,29 @@ class DiscrimRecorder(Recorder):
         self.threads[BYR_HIST] = self.threads[BYR_HIST].astype(np.uint8)
 
         # common columns in offers and threads dataframes
-        self.compress_common_cols([LSTG, THREAD, CLOCK], 
+        self.compress_common_cols([LSTG, THREAD, CLOCK],
                                   [self.threads, self.offers],
                                   [np.int32, np.uint16, np.int32])
         self.offers.set_index(
             ['lstg', 'thread', 'index'], inplace=True)
-        assert np.all(self.offers.xs(1, level='index')[CON] > 0)
         self.threads.set_index(
             ['lstg', 'thread'], inplace=True)
+        if self.record_sim:
+            self.threads.set_index('sim', inplace=True, append=True)
+            self.offers.set_index('sim', inplace=True, append=True)
+        assert np.all(self.offers.xs(1, level='index')[CON] > 0)
 
     def records2frames(self):
         # convert both dictionaries to dataframes
-        self.offers = self.record2frame(self.offers, OFFER_COLS)
-        self.threads = self.record2frame(self.threads, THREAD_COLS)
+        if self.record_sim:
+            offer_cols = OFFER_COLS + ['sim']
+            thread_cols = THREAD_COLS + ['sim']
+        else:
+            offer_cols = OFFER_COLS
+            thread_cols = THREAD_COLS
+        self.offers = self.record2frame(self.offers, offer_cols)
+        self.threads = self.record2frame(self.threads, thread_cols)
 
     def construct_output(self):
-        return {'offers': self.offers.sort_index(), 
+        return {'offers': self.offers.sort_index(),
                 'threads': self.threads.sort_index()}
