@@ -26,7 +26,7 @@ def main():
 	x_obs = construct_x(x, idx_obs)
 
 	# simulated data
-	threads_sim, _ = concat_sim_chunks(part, keep_tf=False)
+	threads_sim, _ = concat_sim_chunks(part)
 	idx_sim = threads_sim.xs(1, level='thread').index
 	x_sim = construct_x(x, idx_sim)
 
