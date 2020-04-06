@@ -1,12 +1,12 @@
 from compress_pickle import load
-from rlenv.simulator.Generator import Generator
+from rlenv.simulator.Generator import SimulatorGenerator
 from rlenv.test.LstgLog import LstgLog
 from rlenv.test.TestEnvironment import TestEnvironment
 from rlenv.simulator.discrim.DiscrimRecorder import DiscrimRecorder
 from rlenv.env_utils import get_env_sim_subdir
 
 
-class TestGenerator(Generator):
+class TestGenerator(SimulatorGenerator):
     def __init__(self, direct, num, verbose=False, start=None):
         super().__init__(direct, num, verbose)
         self.start = start

@@ -4,12 +4,12 @@ from datetime import datetime as dt
 from compress_pickle import dump, load
 from rlenv.env_utils import get_checkpoint_path
 from rlenv.env_consts import SIM_VALS_DIR, VAL_TIME_LIMIT
-from rlenv.simulator.Generator import Generator
+from rlenv.simulator.Generator import SimulatorGenerator
 from rlenv.simulator.values.ValueCalculator import ValueCalculator
 from rlenv.simulator.values.ValueRecorder import ValueRecorder
 
 
-class ValueGenerator(Generator):
+class ValueGenerator(SimulatorGenerator):
     """
     Uninherited attributes:
         checkpoint_contents: the dictionary that the generated loaded from a checkpoint file

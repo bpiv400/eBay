@@ -10,6 +10,8 @@ import numpy as np
 from featnames import START_PRICE, START_TIME, ACC_PRICE, DEC_PRICE
 from rlenv.env_utils import load_chunk
 from rlenv.interfaces.ArrivalInterface import ArrivalInterface
+from rlenv.interfaces.PlayerInterface import SimulatedSeller, SimulatedBuyer
+from rlenv.Composer import Composer
 from rlenv.environments.SimulatorEnvironment import SimulatorEnvironment
 
 
@@ -88,3 +90,24 @@ class Generator:
         """
         print('lstg: {} | start_time: {} | start_price: {} | auto_rej: {} | auto_acc: {}'.format(
             lstg, lookup[START_TIME], lookup[START_PRICE], lookup[DEC_PRICE], lookup[ACC_PRICE]))
+
+
+class SimulatorGenerator(Generator):
+    def generate_composer(self):
+        return Composer(self.x_lstg.columns)
+
+    def generate_buyer(self):
+        return SimulatedBuyer()
+
+    def generate_seller(self):
+        return SimulatedSeller(full=True)
+
+    def generate(self):
+        raise NotImplementedError()
+
+    def simulate_lstg(self, environment):
+        raise NotImplementedError()
+
+    @property
+    def records_path(self):
+        raise NotImplementedError()

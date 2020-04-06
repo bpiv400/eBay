@@ -1,12 +1,10 @@
 from rlenv.env_consts import SIM_DISCRIM_DIR
-from rlenv.simulator.Generator import Generator
+from rlenv.simulator.Generator import SimulatorGenerator
 from rlenv.simulator.discrim.DiscrimRecorder import DiscrimRecorder
-from rlenv.interfaces.PlayerInterface import SimulatedBuyer, SimulatedSeller
-from rlenv.Composer import Composer
 from datetime import datetime as dt
 
 
-class DiscrimGenerator(Generator):
+class DiscrimGenerator(SimulatorGenerator):
     def __init__(self, direct, num, verbose=False, start=None):
         super(DiscrimGenerator, self).__init__(direct, num, verbose)
         # initialize recorder
@@ -48,15 +46,6 @@ class DiscrimGenerator(Generator):
         environment.reset()
         outcome = environment.run()
         return outcome
-
-    def generate_buyer(self):
-        return SimulatedBuyer()
-
-    def generate_seller(self):
-        return SimulatedSeller(full=True)
-
-    def generate_composer(self):
-        return Composer(self.x_lstg.columns)
 
     @property
     def records_path(self):
