@@ -1,7 +1,7 @@
 from compress_pickle import dump
 from train.EBayDataset import EBayDataset
 from assess.assess_utils import get_model_predictions
-from constants import TEST, DISCRIM_MODELS
+from constants import TEST, DISCRIM_MODELS, PLOT_DIR
 
 
 def main():
@@ -14,6 +14,7 @@ def main():
 		
 		# model predictions
 		p, _ = get_model_predictions(m, data)
+		p = p[:, 1]
 
 		# save predictions
 		dump(p, PLOT_DIR + 'p_{}.pkl'.format(m))
