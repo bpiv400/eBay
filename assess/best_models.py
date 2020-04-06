@@ -3,7 +3,7 @@ from shutil import copyfile
 import numpy as np
 from compress_pickle import dump
 from tensorboard.backend.event_processing.event_multiplexer import EventMultiplexer
-from constants import MODEL_DIR, LOG_DIR, MODELS, DISCRIM_MODELS, PLOT_DATA_DIR
+from constants import MODEL_DIR, LOG_DIR, MODELS, DISCRIM_MODELS, PLOT_DIR
 
 
 def extract_best_experiment(em):
