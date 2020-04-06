@@ -47,11 +47,11 @@ class PgCategoricalAgentModel(AgentModel):
             self._init_policy(init_dict=init_dict)
 
     def con(self, input_dict=None):
-        logits, _ = self._forward_dict(input_dict=input_dict)
+        logits, _ = self._forward_dict(input_dict=input_dict, compute_value=False)
         logits = logits.squeeze()
         return logits
 
-    def _forward_dict(self, input_dict=None):
+    def _forward_dict(self, input_dict=None, compute_value=True):
         l = []
         for k in self.nn0.keys():
             l.append(self.nn0[k](input_dict))
@@ -63,10 +63,16 @@ class PgCategoricalAgentModel(AgentModel):
             hidden_value = hidden_action
         else:
             hidden_action = self.nn1_action(embedded)
-            hidden_value = self.nn1_value(embedded)
+            if compute_value:
+                hidden_value = self.nn1_value(embedded)
+            else:
+                hidden_value = None
 
         # value output head
-        v = self.output_value(hidden_value)
+        if compute_value:
+            v = self.output_value(hidden_value)
+        else:
+            v = None
 
         # policy output head
         logits = self.output_action(hidden_action)
@@ -78,7 +84,8 @@ class PgCategoricalAgentModel(AgentModel):
         :return: tuple of pi, v
         """
         input_dict = observation._asdict()
-        logits, v = self._forward_dict(input_dict=input_dict)
+        logits, v = self._forward_dict(input_dict=input_dict,
+                                       compute_value=True)
 
         pi = softmax(logits, dim=logits.dim() - 1)
 

@@ -18,7 +18,8 @@ class SimulatorEnvironment(EbayEnvironment):
 
     def reset(self):
         super(SimulatorEnvironment, self).reset()
-        self.recorder.reset_sim()
+        if self.recorder is not None:
+            self.recorder.reset_sim()
         if self.verbose:
             print('Simulation {}'.format(self.recorder.sim))
 
@@ -35,6 +36,8 @@ class SimulatorEnvironment(EbayEnvironment):
     def record(self, event, byr_hist=None, censored=False):
         """
         Add record of offer or thread to Recorder
+        :param censored:
+        :param byr_hist:
         :param rlenv.events.Thread.Thread event: event containing most recent offer
         """
         if byr_hist is None:

@@ -1,8 +1,8 @@
 from collections import namedtuple
 from featnames import META, LSTG
 from rlenv.environments.AgentEnvironment import AgentEnvironment
-from rlenv.env_consts import OFFER_EVENT, LISTING_FEE
-from rlenv.env_utils import get_con_outcomes, get_cut
+from rlenv.env_consts import OFFER_EVENT
+from rlenv.env_utils import get_con_outcomes, calculate_slr_gross
 from agent.spaces.ConSpace import ConSpace
 
 
@@ -91,8 +91,10 @@ class SellerEnvironment(AgentEnvironment):
         if not self.last_event.is_sale():
             return 0.0
         else:
-            slr_gross = self.outcome[1] * (1 - get_cut(self.lookup[META]))
-            return slr_gross - (LISTING_FEE * (self.relist_count + 1))
+            slr_gross = calculate_slr_gross(price=self.outcome[1], 
+                                            list_count=self.relist_count + 1,
+                                            meta=self.lookup[META])
+            return slr_gross
 
     def get_info(self, agent_sale=False, lstg_complete=False):
         # initialize vars

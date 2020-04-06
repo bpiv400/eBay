@@ -10,7 +10,7 @@ from torch.distributions.categorical import Categorical
 from torch.distributions.bernoulli import Bernoulli
 from constants import (INPUT_DIR, ENV_SIM_DIR, DAY, ARRIVAL_MODELS)
 from rlenv.env_consts import (META_6, META_7, SIM_CHUNKS_DIR, SIM_VALS_DIR, OFFER_MAPS,
-                              SIM_DISCRIM_DIR, DATE_FEATS, NORM_IND)
+                              SIM_DISCRIM_DIR, DATE_FEATS, NORM_IND, LISTING_FEE)
 from utils import extract_clock_feats, is_split, slr_norm, byr_norm
 
 
@@ -102,6 +102,11 @@ def prev_norm(sources=None, turn=0):
         offer_map = OFFER_MAPS[turn - 1]
         out = sources[offer_map][NORM_IND]
     return out
+
+
+def calculate_slr_gross(price=None, list_count=None, meta=None):
+    slr_gross = price * (1 - get_cut(meta))
+    return slr_gross - (LISTING_FEE * list_count)
 
 
 def get_cut(meta):
