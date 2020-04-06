@@ -16,24 +16,41 @@ from rlenv.environments.SimulatorEnvironment import SimulatorEnvironment
 
 
 class Generator:
-    def __init__(self, direct, num, verbose=False):
+    def __init__(self, direct=None, verbose=False):
         """
         Constructor
         :param direct: base directory for current partition
-        :param int num:  chunk number
         :param verbose: whether to print info about simulator activity
         """
         self.dir = direct
-        self.chunk = int(num)
         self.verbose = verbose
-        self.x_lstg, self.lookup = load_chunk(base_dir=self.dir, num=self.chunk)
-        self.recorder = None
+        self.initialized = False
+
+        # data
+        self.chunk = None
+        self.x_lstg = None
+        self.lookup = None
 
         # model interfaces and input composer
+        self.recorder = None
+        self.composer = None
+        self.seller = None
+        self.buyer = None
+        self.arrival = None
+
+    def initialize(self):
         self.composer = self.generate_composer()
         self.buyer = self.generate_buyer()
         self.seller = self.generate_seller()
         self.arrival = ArrivalInterface()
+        self.recorder = self.generate_recorder()
+        self.initialized = True
+
+    def load_chunk(self, chunk=None):
+        raise NotImplementedError()
+
+    def generate_recorder(self):
+        raise NotImplementedError()
 
     def generate_composer(self):
         raise NotImplementedError()
@@ -101,6 +118,13 @@ class SimulatorGenerator(Generator):
 
     def generate_seller(self):
         return SimulatedSeller(full=True)
+
+    def generate_recorder(self):
+        raise NotImplementedError()
+
+    def load_chunk(self, chunk=None):
+        self.chunk = chunk
+        self.x_lstg, self.lookup = load_chunk(base_dir=self.dir, num=self.chunk)
 
     def generate(self):
         raise NotImplementedError()

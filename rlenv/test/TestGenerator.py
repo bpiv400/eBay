@@ -7,13 +7,19 @@ from rlenv.env_utils import get_env_sim_subdir
 
 
 class TestGenerator(SimulatorGenerator):
-    def __init__(self, direct, num, verbose=False, start=None):
-        super().__init__(direct, num, verbose)
+    def __init__(self, direct=None, verbose=False, start=None):
+        super().__init__(direct=direct, verbose=verbose)
         self.start = start
-        chunk_dir = get_env_sim_subdir(base_dir=direct, chunks=True)
-        print('Loading test inputs...')
-        self.test_data = load('{}{}_test.gz'.format(chunk_dir, num))
-        self.recorder = DiscrimRecorder("", self.verbose)
+        self.test_data = None
+
+    def generate_recorder(self):
+        return DiscrimRecorder(records_path="", verbose=self.verbose)
+
+    def load_chunk(self, chunk=None):
+        super().load_chunk(chunk=chunk)
+        chunk_dir = get_env_sim_subdir(base_dir=self.dir, chunks=True)
+        print('Loading test data...')
+        self.test_data = load('{}{}_test.gz'.format(chunk_dir, self.chunk))
 
     def generate(self):
         if self.start is not None:

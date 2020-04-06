@@ -7,8 +7,9 @@ import torch
 from constants import PARTITIONS, SIM_CHUNKS
 from rlenv.env_utils import get_env_sim_dir
 from rlenv.simulator.values.ValueGenerator import ValueGenerator
-from rlenv.test.TestGenerator import TestGenerator
+from rlenv.simulator.Generator import Generator
 from rlenv.simulator.discrim.DiscrimGenerator import DiscrimGenerator
+from rlenv.test.TestGenerator import TestGenerator
 
 
 def chunk_done(generator):
@@ -57,7 +58,9 @@ def main():
 
     # create generator
     gen_class = get_gen_class(values=values, test=args.test)
-    generator = gen_class(get_env_sim_dir(part), num, verbose=verbose, start=args.thread)
+    generator = gen_class(direct=get_env_sim_dir(part), verbose=verbose, start=args.thread)   # type: Generator
+    generator.load_chunk(chunk=num)
+    generator.initialize()
     if values and chunk_done(generator):
         print('{} already done'.format(num))
         exit(0)

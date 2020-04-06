@@ -5,11 +5,11 @@ from datetime import datetime as dt
 
 
 class DiscrimGenerator(SimulatorGenerator):
-    def __init__(self, direct, num, verbose=False, start=None):
-        super(DiscrimGenerator, self).__init__(direct, num, verbose)
-        # initialize recorder
-        self.recorder = DiscrimRecorder(records_path=self.records_path,
-                                        verbose=self.verbose)
+    def __init__(self, direct=None, verbose=False, start=None):
+        super(DiscrimGenerator, self).__init__(direct=direct, verbose=verbose)
+
+    def generate_recorder(self):
+        return DiscrimRecorder(records_path=self.records_path, verbose=self.verbose)
 
     def generate(self):
         """

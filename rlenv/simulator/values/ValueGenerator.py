@@ -17,14 +17,19 @@ class ValueGenerator(SimulatorGenerator):
         start: time that the current iteration of RewardGenerator began
         has_checkpoint: whether a recent checkpoint file has been created for this environment
     """
-    def __init__(self, direct, num, verbose=False, start=None):
-        super(ValueGenerator, self).__init__(direct, num, verbose)
+    def __init__(self, direct=None, verbose=False, start=None):
+        super(ValueGenerator, self).__init__(direct=direct, verbose=verbose)
         self.val_calc = None  # type: ValueCalculator
-        self.recorder = self._make_recorder()
+
         # checkpoint params
         self.checkpoint_contents = None
         self.checkpoint_count = 0
+        self.has_checkpoint = False
+
         self.start = dt.now()
+
+    def initialize(self):
+        super().initialize()
         self.has_checkpoint = self._has_checkpoint()
         if self.verbose:
             print('checkpoint: {}'.format(self.has_checkpoint))
@@ -144,8 +149,8 @@ class ValueGenerator(SimulatorGenerator):
         }
         return contents
 
-    def _make_recorder(self):
-        return ValueRecorder(self.records_path, self.verbose)
+    def generate_recorder(self):
+        return ValueRecorder(record_path=self.records_path, verbose=self.verbose)
 
     @property
     def checkpoint_path(self):
