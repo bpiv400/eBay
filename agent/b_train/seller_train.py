@@ -7,6 +7,7 @@ import time
 import re
 import shutil
 from os.path import isfile, join
+import multiprocessing as mp
 import torch
 from torch.utils.tensorboard.writer import SummaryWriter
 from agent.EvalGenerator import EvalGenerator
@@ -96,8 +97,8 @@ class RlTrainer:
         return log_params
 
     def generate_train_params(self):
-        x_lstg_cols = load_chunk(base_dir=self.evaluation_dir,
-                                 num=1)[0].columns
+        chunk_path = '{}1.gz'.format(RL_EVAL_DIR)
+        x_lstg_cols = load_chunk(input_path=chunk_path)[0].columns
         composer = AgentComposer(cols=x_lstg_cols,
                                  agent_params=self.agent_params)
         env_params = {

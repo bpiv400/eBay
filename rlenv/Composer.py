@@ -115,7 +115,10 @@ class Composer:
         """
         input_dict = dict()
         for grouping_name, feats in self.lstg_sets.items():
-            input_dict[grouping_name] = x_lstg.loc[feats].values.astype(np.float32)
+            if isinstance(x_lstg, pd.Series):
+                input_dict[grouping_name] = x_lstg.loc[feats].values.astype(np.float32)
+            else:
+                input_dict[grouping_name] = x_lstg.loc[:, feats].values.astype(np.float32)
         return input_dict
 
     def build_input_dict(self, model_name, sources=None, turn=None):

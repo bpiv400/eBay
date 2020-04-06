@@ -9,11 +9,11 @@ import argparse
 import h5py
 import numpy as np
 from compress_pickle import load
-from utils import align_x_lstg_lookup
 from featnames import CAT
 from constants import PARTITIONS, PARTS_DIR, TRAIN_RL
-from rlenv.env_consts import X_LSTG_FILENAME, LOOKUP_FILENAME, X_LSTG, LOOKUP
 from agent.agent_consts import SELLER_TRAIN_INPUT
+from agent.agent_utils import align_x_lstg_lookup
+from rlenv.env_consts import X_LSTG_FILENAME, LOOKUP_FILENAME, X_LSTG, LOOKUP
 
 
 os.environ["HDF5_USE_FILE_LOCKING"] = "FALSE"
@@ -29,7 +29,7 @@ def main():
     lookup = load('{}{}/{}'.format(PARTS_DIR, part, LOOKUP_FILENAME))
     lookup = lookup.drop(columns=[CAT])
     x_lstg = load('{}{}/{}'.format(PARTS_DIR, part, X_LSTG_FILENAME))
-    x_lstg = align_x_lstg_lookup(x_lstg, lookup)
+    x_lstg = align_x_lstg_lookup(x_lstg=x_lstg, lookup=lookup)
     store_inputs(x_lstg, lookup, SELLER_TRAIN_INPUT)
 
 

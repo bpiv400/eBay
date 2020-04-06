@@ -1,5 +1,9 @@
 from constants import REINFORCE_DIR
 
+#  the threshold for likelihood of no arrivals
+# used to drop listings before RL training
+NO_SALE_CUTOFF = .75 ** (1.0 / 12)
+
 AGENT_STATE = 'agent_state_dict'
 OPTIM_STATE = 'optimizer_state_dict'
 
@@ -44,13 +48,11 @@ BATCHES_PER_EVALUATION = 1
 PPO_MINIBATCHES = 4
 PPO_EPOCHS = 4
 
-
 # SET THESE PARAMETERS
 NUM_BATCHES = 1
 BATCH_SIZE = 1000
 BATCH_B = 8 # ENVS PER BATCH
 BATCHES_PER_LOG = 1
-
 
 # THESE ONES ARE DOWNSTREAM
 TOTAL_STEPS = NUM_BATCHES * BATCH_SIZE

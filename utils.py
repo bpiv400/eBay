@@ -174,10 +174,3 @@ def fully_connected_compat(state_dict=None):
     new_prefix = 'output'
     substitute_prefix(old_prefix=old_prefix, new_prefix=new_prefix,
                       state_dict=state_dict)
-
-
-
-def align_x_lstg_lookup(x_lstg, lookup):
-    x_lstg = pd.concat([df.reindex(index=lookup.index) for df in x_lstg.values()],
-                       axis=1)
-    return x_lstg
