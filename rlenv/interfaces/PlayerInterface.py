@@ -13,8 +13,9 @@ class PlayerInterface:
         self.byr = byr
 
     def con(self, input_dict=None, turn=None):
+        print('con sample turn: {}')
         params = self.query_con(input_dict=input_dict, turn=turn)
-        return self.sample_con(params=params)
+        return self.sample_con(params=params, turn=turn)
 
     def msg(self, input_dict=None, turn=None):
         params = self.query_msg(input_dict=input_dict, turn=turn)
@@ -24,13 +25,13 @@ class PlayerInterface:
         params = self.query_delay(input_dict=input_dict, turn=turn)
         return self.sample_delay(params=params)
 
-    def sample_con(self, params=None):
+    def sample_con(self, params=None, turn=None):
         raise NotImplementedError()
 
-    def sample_msg(self, params=None):
+    def sample_msg(self, params=None, turn=None):
         raise NotImplementedError()
 
-    def sample_delay(self, params=None):
+    def sample_delay(self, params=None, turn=None):
         raise NotImplementedError()
 
     def query_con(self, input_dict=None, turn=None):
@@ -82,16 +83,16 @@ class SimulatedPlayer(PlayerInterface):
     def query_msg(self, input_dict=None, turn=None):
         self._check_full()
         params = self.msg_models[turn](input_dict).squeeze()
+        return params
+
+    def sample_msg(self, params=None, turn=None):
         return sample_bernoulli(params)
 
-    def sample_msg(self, params=None):
-        return sample_bernoulli(params)
-
-    def sample_delay(self, params=None):
+    def sample_delay(self, params=None, turn=None):
         delay = sample_categorical(params)
         return delay
 
-    def sample_con(self, params=None, turn=0):
+    def sample_con(self, params=None, turn=None):
         raise NotImplementedError()
 
     @staticmethod

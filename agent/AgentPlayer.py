@@ -18,10 +18,10 @@ class AgentPlayer(PlayerInterface):
             else:
                 self.delay_simulator = SimulatedBuyer(full=False)
 
-    def sample_con(self, params=None):
+    def sample_con(self, params=None, turn=None):
         """
-
         :param torch.FloatTensor params:
+        :param turn: turn number
         :return:
         """
         shape = params.shape[0]
@@ -34,10 +34,10 @@ class AgentPlayer(PlayerInterface):
             con = con_class * 100
         return con / 100
 
-    def sample_msg(self, params=None):
+    def sample_msg(self, params=None, turn=None):
         return 0.0
 
-    def sample_delay(self, params=None):
+    def sample_delay(self, params=None, turn=None):
         return self.delay_simulator.sample_delay(params=params)
 
     def query_con(self, input_dict=None, turn=None):
