@@ -12,13 +12,13 @@ from rlenv.interfaces.PlayerInterface import SimulatedBuyer, SimulatedSeller
 class EvalGenerator(Generator):
     def __init__(self, **kwargs):
         """
-        :param itr
-        :param verbose
-        :param model_class
-        :param model_kwargs
-        :param run_dir
-        :param composer
-        :param record
+        :param itr: number of minibatches of training that have taken place
+        :param verbose: boolean for whether to print information about threads
+        :param model_class: class that inherits agent.models.AgentModel
+        :param model_kwargs: dictionary containing kwargs for model_class
+        :param run_dir: directory where logs and model parameters live
+        :param composer: agent.AgentComposer
+        :param record: boolean for whether recorder should dump thread info
         """
         self.itr = kwargs['itr']
         self._composer = kwargs['composer']  # type: AgentComposer

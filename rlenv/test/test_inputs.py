@@ -107,6 +107,7 @@ def main():
         'x_thread': x_thread,
         'x_offer': x_offer
     }
+    print('Dumping file...')
     subdir = get_env_sim_subdir(base_dir=base_dir, chunks=True)
     path = '{}{}_test.gz'.format(subdir, num)
     dump(output, path)
