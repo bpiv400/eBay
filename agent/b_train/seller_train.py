@@ -6,8 +6,9 @@ import os
 import time
 import re
 import shutil
-from os.path import isfile, join
 import multiprocessing as mp
+import queue
+from os.path import isfile, join
 import torch
 from torch.utils.tensorboard.writer import SummaryWriter
 from agent.EvalGenerator import EvalGenerator
@@ -48,6 +49,7 @@ class RlTrainer:
         self.itr = 0
         self.norm = None
         self.evaluation_chunks = self.count_eval_chunks()
+        self.cpu_count = self.count_cpus()
         self.checkpoint = self.init_checkpoint()
 
         # ids
@@ -75,8 +77,13 @@ class RlTrainer:
              OPTIM_STATE: None
         }
 
+    # TODO: Replace with function that actually parses hyperparameters
     def generate_run_id(self):
         return "runner_test"
+
+    # TODO: Replace with function that actually counts available CPUs
+    def count_cpus(self):
+        return 4
 
     def clear_log(self):
         if os.path.exists(self.run_dir):
@@ -170,7 +177,7 @@ class RlTrainer:
             )
 
     def generate_runner(self):
-        # TODO: Remove constants as arguments
+        # TODO: Remove constants as arguments, load them in runner file itself
         runner = EbayRunner(algo=self.algorithm,
                             agent=self.agent,
                             sampler=self.sampler,
@@ -198,11 +205,13 @@ class RlTrainer:
                 self.runner.update_algo(self.generate_algorithm())
 
     def evaluate(self):
+        start_time = time.time()
         if self.debug:
-            rewards, eval_time = self._serial_evaluate()
+            rewards = self._serial_evaluate()
         else:
-            rewards, eval_time = self._parallel_evaluate()
-        self._log_eval(rewards=rewards, eval_time=time)
+            rewards = self._parallel_evaluate()
+        end_time = time.time()
+        self._log_eval(rewards=rewards, eval_time=end_time - start_time)
 
     def _log_eval(self, rewards=None, eval_time=None):
         logger.set_iteration(self.itr)
@@ -210,21 +219,43 @@ class RlTrainer:
         logger.record_tabular_misc_stat('evalReward', rewards)
 
     def _serial_evaluate(self):
-        start_time = time.time()
         rewards = list()
         eval_kwargs = self.generate_eval_kwargs()
         eval_generator = EvalGenerator(**eval_kwargs)
-        for i in range(10):
-            eval_generator.load_chunk(chunk=i)
-            if not eval_generator.initialized:
-                eval_generator.initialize()
-            chunk_rewards = eval_generator.generate()
+        for i in range(1, self.evaluation_chunks + 1):
+            chunk_rewards = eval_generator.process_chunk(i)
             rewards = rewards + chunk_rewards
-        end_time = time.time()
-        return rewards, end_time - start_time
+        return rewards
 
     def _parallel_evaluate(self):
-        return None, None
+        # setup process inputs
+        reward_queue = mp.Queue()
+        chunk_queue = mp.Queue()
+        [chunk_queue.put(i) for i in range(1, self.evaluation_chunks + 1)]
+        eval_kwargs = self.generate_eval_kwargs()
+
+        # start processes
+        procs = []
+        for i in range(self.cpu_count):
+            keywords = {
+                'chunk_queue': chunk_queue,
+                'reward_queue': reward_queue,
+                'generator_kwargs': eval_kwargs
+            }
+            p = mp.Process(target=perform_eval, kwargs=keywords)
+            procs.append(p)
+            p.start()
+
+        # wait until processes finish
+        for p in procs:
+            p.join()
+
+        # accumulate awards
+        assert reward_queue.qsize() == self.evaluation_chunks
+        rewards = list()
+        while not reward_queue.empty():
+            rewards = rewards + reward_queue.get_nowait()
+        return rewards
 
     def generate_eval_kwargs(self):
         args = {
@@ -253,6 +284,25 @@ class RlTrainer:
         pattern = re.compile(r'[0-9]+\.gz')
         contents = [f for f in contents if re.match(pattern, f)]
         return len(contents)
+
+
+def perform_eval(generator_kwargs=None, chunk_queue=None, reward_queue=None):
+    """
+    Target function of parallel evaluation worker processes, generates
+    rewards for some subset of evaluation chunks
+    :param dict generator_kwargs: dictionary of kwargs for EvalGenerator
+    :param mp.Queue chunk_queue: queue containing chunks that need to be processed
+    :param mp.Queue reward_queue: queue that accumulates calculated rewards
+    """
+    generator = EvalGenerator(**generator_kwargs)
+    while True:
+        try:
+            chunk = chunk_queue.get_nowait()
+        except queue.Empty:
+            break
+        else:
+            rewards = generator.process_chunk(chunk=chunk)
+            reward_queue.put(rewards)
 
 
 def main():

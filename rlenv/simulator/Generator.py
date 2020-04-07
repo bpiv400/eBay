@@ -38,6 +38,12 @@ class Generator:
         self.buyer = None
         self.arrival = None
 
+    def process_chunk(self, chunk=None):
+        self.load_chunk(chunk=chunk)
+        if not self.initialized:
+            self.initialize()
+        return self.generate()
+
     def initialize(self):
         self.composer = self.generate_composer()
         self.buyer = self.generate_buyer()

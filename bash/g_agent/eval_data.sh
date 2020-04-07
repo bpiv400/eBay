@@ -6,4 +6,4 @@
 #$ -j y
 #$ -o logs/
 
-python repo/agent/a_inputs/eval_chunks.py --num "$SGE_TASK_ID"
+python repo/agent/a_inputs/eval_data.py --num "$SGE_TASK_ID"

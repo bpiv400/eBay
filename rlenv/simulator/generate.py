@@ -59,12 +59,10 @@ def main():
     # create generator
     gen_class = get_gen_class(values=values, test=args.test)
     generator = gen_class(direct=get_env_sim_dir(part), verbose=verbose, start=args.thread)   # type: Generator
-    generator.load_chunk(chunk=num)
-    generator.initialize()
-    if values and chunk_done(generator):
+    if values and chunk_done(num):
         print('{} already done'.format(num))
         exit(0)
-    generator.generate()
+    generator.process_chunk(chunk=num)
 
 
 if __name__ == '__main__':
