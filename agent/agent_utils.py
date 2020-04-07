@@ -50,7 +50,7 @@ def load_agent_params(model=None, run_dir=None):
 
 
 def get_batch_unlikely(x_lstg_chunk=None, model=None):
-    for key, val in x_lstg_chunk:
+    for key, val in x_lstg_chunk.items():
         x_lstg_chunk[key] = torch.from_numpy(x_lstg_chunk[key]).float()
     logits = model(x_lstg_chunk)
     pi = softmax(logits, dim=logits.dim() - 1)
@@ -98,7 +98,7 @@ def remove_unlikely_arrival_lstgs(x_lstg=None, lookup=None):
     unlikely_lstgs = list()
     # iterate over chunks
     for i in range(chunks):
-        x_lstg_chunk = chunk_x_lstg(i=i, batch_size=batch_size,
+        x_lstg_chunk = chunk_x_lstg(i=i, batch_size=int(batch_size),
                                     composer=composer, x_lstg=x_lstg)
         unlikely = get_batch_unlikely(x_lstg_chunk=x_lstg_chunk, model=model)
         if unlikely.numel() > 0:
@@ -109,7 +109,7 @@ def remove_unlikely_arrival_lstgs(x_lstg=None, lookup=None):
         unlikely_lstgs = x_lstg.index.values[unlikely_lstgs]
         x_lstg = x_lstg.drop(index=unlikely_lstgs)
         lookup = lookup.drop(index=unlikely_lstgs)
-    print('Dropped: {}% of listings'.format(len(unlikely_lstgs) / org_length))
+    print('Dropped: {} listings ({}%)'.format(len(unlikely_lstgs), len(unlikely_lstgs) / org_length))
     return x_lstg, lookup
 
 
