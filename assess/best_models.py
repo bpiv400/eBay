@@ -1,4 +1,3 @@
-import argparse
 from shutil import copyfile
 import numpy as np
 from compress_pickle import dump
@@ -23,24 +22,9 @@ def extract_best_experiment(em):
 
 
 def main():
-    # extract parameters from command line
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--set', type=str, default='models')
-    args = parser.parse_args()
-
-    # translate to set
-    if args.set == 'models':
-        group = MODELS
-    elif args.set == 'discrim':
-        group = DISCRIM_MODELS
-    elif args.set == 'init':
-        group = ['init_slr']
-    else:
-        raise RuntimeError('Invalid set: {}'.format(args.set))
-
     # for each model, choose best experiment
     lnL = dict()
-    for m in group:
+    for m in MODELS + DISCRIM_MODELS + ['init_slr']:
         em = EventMultiplexer().AddRunsFromDirectory(LOG_DIR + m)
 
         # find best performing experiment

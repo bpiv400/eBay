@@ -1,7 +1,7 @@
 from compress_pickle import load
 import numpy as np
 import pandas as pd
-from plots.plots_utils import input_fontsize, line_plot
+from plots.plots_utils import line_plot, save_fig
 from plots.plots_consts import ROC_PTS
 from constants import INPUT_DIR, PLOT_DIR, TEST, DISCRIM_MODELS
 
@@ -15,12 +15,12 @@ def get_auc(s):
 	return auc
 
 
-def get_roc(p, y):
+def get_roc(p0, p1):
 	s = pd.Series(name='true_positive_rate')
 	for i in range(ROC_PTS + 1):
-		y_hat = p > float(i / ROC_PTS)
-		fp = (~y & y_hat).sum() / (~y).sum()
-		tp = (y & y_hat).sum() / y.sum()
+		tau = float(i / ROC_PTS)
+		fp = (p0 > tau).sum() / len(p0)
+		tp = (p1 > tau).sum() / len(p1)
 		s.loc[fp] = tp
 	# check for doubles
 	assert len(s.index) == len(s.index.unique())
@@ -28,22 +28,26 @@ def get_roc(p, y):
 
 
 def main():
-	# extract parameters from command line
-	fontsize = input_fontsize()
-
 	for m in DISCRIM_MODELS:
-		name = 'p_{}.pkl'.format(m)
+		print(m)
 
 		# load data
-		p = load(PLOT_DIR + name)
-		y = load(INPUT_DIR + '{}/{}.gz'.format(TEST, m))['y']
-		assert len(p) == len(y)
+		p0, p1 = load(PLOT_DIR + 'p_{}.pkl'.format(m))
 
 		# roc
-		s = get_roc(p, y)
+		s = get_roc(p0, p1)
 
 		# roc plot
-		roc_plot(name, s, fontsize)
+		x = s.index
+		y = s.values
+		style = '-k'
+		line_plot(s.index, s.values, style, diagonal=True)
+
+		# save
+		name = 'roc_{}'.format(m)
+		save_fig(name, 
+				 xlabel='False positive rate',
+				 ylabel='True positive rate')
 
 		# auc
 		print('{}: {}'.format(m, get_auc(s)))

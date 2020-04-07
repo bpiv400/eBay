@@ -1,22 +1,10 @@
 from compress_pickle import load
 import numpy as np
-from plots.plots_utils import line_plot, input_fontsize
-from constants import PLOT_DIR, ARRIVAL_MODELS, DELAY_MODELS, CON_MODELS, MSG_MODELS
-
-def get_model_names(models):
-	# replace underscores
-	models = [m.replace('_', '\_') for m in models]
-	if models[0][-1].isdigit():
-		names = [r'$\texttt{%s}_%s$' % (m[:-1], m[-1]) for m in models]
-	else:
-		names = [r'$\texttt{%s}$' % m for m in models]
-	return names
+from plots.plots_utils import line_plot, save_fig
+from constants import PLOT_DIR
 
 
 def main():
-	# extract parameters from command line
-	fontsize = input_fontsize()
-
 	# load data
 	lnL = load(PLOT_DIR + '{}.pkl'.format('lnL'))
 	lnL0 = load(PLOT_DIR + '{}.pkl'.format('lnL0'))
@@ -28,13 +16,16 @@ def main():
 		test = np.exp([v] + lnL[k]['test'])
 		train = np.exp([v] + lnL[k]['train'])
 		N = len(test)
+		
+		# make plot
 		x = range(N)
-
-		# make plot and save
-		name = 'likelihood/{}'.format(k)
 		y = [test, train, np.repeat(np.exp(lnL_bar[k]), N)]
-		styles = ['-k', '--k', '-k']
-		line_plot(name, x, y, styles, fontsize=fontsize)
+		style = ['-k', '--k', '-k']
+		line_plot(x, y, style)
+
+		# save
+		name = 'likelihood_{}'.format(k)
+		save_fig(name)
 
 
 if __name__ == '__main__':
