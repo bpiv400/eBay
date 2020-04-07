@@ -15,10 +15,9 @@ def extract_best_experiment(em):
             curr = lnL_test1
             if curr > best:
                 best = curr
-                keep = run
                 for k in ['lnL_test', 'lnL_train']:
                     lnL[k.split('_')[-1]] = [s.value for s in em.Scalars(run, k)]
-    return lnL, keep
+    return lnL
 
 
 def main():
@@ -28,12 +27,7 @@ def main():
         em = EventMultiplexer().AddRunsFromDirectory(LOG_DIR + m)
 
         # find best performing experiment
-        lnL[m], run = extract_best_experiment(em.Reload())      
-
-        # copy best performing model into parent directory
-        print('{}: {}'.format(m, run))
-        copyfile(MODEL_DIR + '{}/{}.net'.format(m, run),
-                 MODEL_DIR + '{}.net'.format(m))
+        lnL[m] = extract_best_experiment(em.Reload())      
 
     # save output
     dump(lnL, PLOT_DIR + 'lnL.pkl')

@@ -28,8 +28,8 @@ INPUT_DIR = '%s/inputs/' % PREFIX
 INDEX_DIR = '%s/index/' % PREFIX
 FEATNAMES_DIR = '%sfeatnames/' % INPUT_DIR
 LOG_DIR = OUTPUT_DIR + 'logs/'
-MODEL_DIR = '%smodels/' % OUTPUT_DIR
-PLOT_DIR = '%splots/' % OUTPUT_DIR
+MODEL_DIR = OUTPUT_DIR + 'models/'
+PLOT_DIR = OUTPUT_DIR + 'plots/'
 REINFORCE_DIR = '%s/agent/' % PREFIX
 
 PARAMS_PATH = INPUT_DIR + 'params.pkl'

@@ -6,7 +6,6 @@ CHUNKS_DIR = '%s/chunks/' % PREFIX
 FEATS_DIR = '%s/feats/' % PREFIX
 PCTILE_DIR = '%s/pctile/' % PREFIX
 W2V_DIR = '%s/w2v/' % PREFIX
-LOG_DIR = '%s/outputs/logs/' % PREFIX
 
 # vocabulary size for embeddings
 VOCAB_SIZE = 32
