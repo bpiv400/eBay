@@ -54,7 +54,7 @@ def get_batch_unlikely(x_lstg_chunk=None, model=None):
         x_lstg_chunk[key] = torch.from_numpy(x_lstg_chunk[key]).float()
     logits = model(x_lstg_chunk)
     pi = softmax(logits, dim=logits.dim() - 1)
-    pi = pi[:, 0]
+    pi = pi[:, pi.shape[1] - 1]
     unlikely = torch.nonzero(pi > NO_SALE_CUTOFF)
     return unlikely
 
@@ -109,7 +109,9 @@ def remove_unlikely_arrival_lstgs(x_lstg=None, lookup=None):
         unlikely_lstgs = x_lstg.index.values[unlikely_lstgs]
         x_lstg = x_lstg.drop(index=unlikely_lstgs)
         lookup = lookup.drop(index=unlikely_lstgs)
-    print('Dropped: {} listings ({}%)'.format(len(unlikely_lstgs), len(unlikely_lstgs) / org_length))
+    frac_dropped = 100 * len(unlikely_lstgs) / org_length
+    print('Dropped: {} listings ({:0.2f}%)'.format(len(unlikely_lstgs),
+                                                   frac_dropped))
     return x_lstg, lookup
 
 
