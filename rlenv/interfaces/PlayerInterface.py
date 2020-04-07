@@ -13,7 +13,6 @@ class PlayerInterface:
         self.byr = byr
 
     def con(self, input_dict=None, turn=None):
-        print('con sample turn: {}')
         params = self.query_con(input_dict=input_dict, turn=turn)
         return self.sample_con(params=params, turn=turn)
 

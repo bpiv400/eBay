@@ -50,7 +50,7 @@ class AgentComposer(Composer):
             return self._build_agent_dict(sources=sources, turn=turn)
         agent_remainder = 1 if self.byr else 0
         agent_models = [CON] if not self.delay else [CON, DELAY]
-        if turn % 2 == agent_remainder:
+        if turn is not None and turn % 2 == agent_remainder:
             base_model = model_name[:-1]
             if base_model == MSG:
                 return None

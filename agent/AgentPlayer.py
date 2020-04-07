@@ -47,4 +47,5 @@ class AgentPlayer(PlayerInterface):
         return None
 
     def query_delay(self, input_dict=None, turn=None):
-        return self.delay_simulator.query_delay(input_dict=input_dict)
+        return self.delay_simulator.query_delay(input_dict=input_dict,
+                                                turn=turn)

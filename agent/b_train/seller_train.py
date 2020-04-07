@@ -61,9 +61,7 @@ class RlTrainer:
         self.logger_params = self.generate_logger_params()
 
         # rlpyt components
-        self.algorithm = self.generate_algorithm()
         self.sampler = self.generate_sampler()
-        self.agent = self.generate_agent()
         self.runner = self.generate_runner()
 
         # logging setup
@@ -83,7 +81,7 @@ class RlTrainer:
 
     # TODO: Replace with function that actually counts available CPUs
     def count_cpus(self):
-        return 4
+        return 12
 
     def clear_log(self):
         if os.path.exists(self.run_dir):
@@ -121,6 +119,7 @@ class RlTrainer:
     def generate_algorithm(self):
         return PPO(minibatches=PPO_MINIBATCHES,
                    epochs=PPO_EPOCHS,
+                   linear_lr_schedule=False,
                    initial_optim_state_dict=self.checkpoint[OPTIM_STATE])
 
     def generate_model_kwargs(self):
@@ -177,19 +176,20 @@ class RlTrainer:
             )
 
     def generate_runner(self):
-        # TODO: Remove constants as arguments, load them in runner file itself
-        runner = EbayRunner(algo=self.algorithm,
-                            agent=self.agent,
+        affinity = dict(workers_cpus=list(range(self.count_cpus())))
+        # TODO: Remove constants as arguments load them in runner file itself
+        runner = EbayRunner(algo=self.generate_algorithm(),
+                            agent=self.generate_agent(),
                             sampler=self.sampler,
                             batches_per_evaluation=BATCHES_PER_EVALUATION,
                             batch_size=BATCH_SIZE,
-                            affinity=dict(workers_cpus=list(range(4))))
+                            affinity=affinity)
         return runner
 
     @property
     def log_dir(self):
         extension = BYR_PREFIX if self.agent_params[BYR_PREFIX] else SLR_PREFIX
-        return os.path.join(RL_LOG_DIR, extension)
+        return '{}{}/'.format(RL_LOG_DIR, extension)
 
     def train(self):
         with logger_context(log_dir=self.log_dir, name='debug', use_summary_writer=False,
@@ -277,8 +277,9 @@ class RlTrainer:
     def reduce_lr(self):
         pass
 
-    @staticmethod
-    def count_eval_chunks():
+    def count_eval_chunks(self):
+        if self.debug:
+            return 10
         contents = os.listdir(RL_EVAL_DIR)
         contents = [f for f in contents if isfile(join(RL_EVAL_DIR, f))]
         pattern = re.compile(r'[0-9]+\.gz')
