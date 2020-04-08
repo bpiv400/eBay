@@ -2,7 +2,7 @@ from constants import REINFORCE_DIR
 
 #  the threshold for likelihood of no arrivals
 # used to drop listings before RL training
-NO_ARRIVAL_CUTOFF = .75 ** (1.0 / 12)
+NO_ARRIVAL_CUTOFF = .50 ** (1.0 / 12)
 NO_ARRIVAL = 'no_arrival'
 INIT_LR = .001
 

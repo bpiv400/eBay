@@ -51,7 +51,7 @@ class SellerEnvironment(AgentEnvironment):
             # if the lstg is complete
             else:
                 # check whether it's expired -- if so, relist
-                if not self.outcome.sale and self.relist_count < 100:
+                if not self.outcome.sale:
                     self.relist()
                 # otherwise
                 else:

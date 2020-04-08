@@ -49,7 +49,8 @@ class EvalGenerator(Generator):
 
     def generate_agent(self):
         model = self.ModelCls(**self.model_kwargs)
-        load_agent_params(model=model, run_dir=self.run_dir)
+        if self.itr != 0:
+            load_agent_params(model=model, run_dir=self.run_dir)
         agent = AgentPlayer(agent_model=model)
         return agent
 

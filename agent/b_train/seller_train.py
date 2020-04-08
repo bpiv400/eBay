@@ -91,7 +91,7 @@ class RlTrainer:
 
     @staticmethod
     def count_cpus():
-        return mp.cpu_count() / 2
+        return int(mp.cpu_count() / 2)
 
     def clear_log(self):
         if os.path.exists(self.run_dir):
@@ -175,8 +175,7 @@ class RlTrainer:
             )
 
     def generate_runner(self):
-        affinity = dict(workers_cpus=list(range(self.count_cpus())))
-        # TODO: Remove constants as arguments load them in runner file itself
+        affinity = dict(workers_cpus=list(range(self.cpu_count)))
         runner = EbayRunner(algo=self.generate_algorithm(),
                             agent=self.generate_agent(),
                             sampler=self.sampler,
@@ -229,6 +228,7 @@ class RlTrainer:
         eval_kwargs = self.generate_eval_kwargs()
         eval_generator = EvalGenerator(**eval_kwargs)
         for i in range(1, self.evaluation_chunks + 1):
+            print(i)
             chunk_rewards = eval_generator.process_chunk(i)
             rewards = rewards + chunk_rewards
         return rewards
