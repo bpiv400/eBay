@@ -12,7 +12,7 @@ from rlenv.env_consts import (LOOKUP, X_LSTG, ENV_LSTG_COUNT)
 from rlenv.environments.EbayEnvironment import EbayEnvironment
 from rlenv.simulator.Recorder import Recorder
 from agent.agent_utils import get_con_set
-from agent.agent_consts import seller_groupings
+from agent.agent_consts import seller_groupings, NO_ARRIVAL_CUTOFF, NO_ARRIVAL
 
 
 SellerObs = namedtuple("SellerObs", seller_groupings)
@@ -57,7 +57,7 @@ class AgentEnvironment(EbayEnvironment, Env):
         """
         if not self._file_opened:
             self.open_input_file()
-        if self._ix == -1 or self._ix == ENV_LSTG_COUNT:
+        if self._ix == -1 or self._ix == self._lookup_slice.shape[0]:
             self._draw_lstgs()
         self.x_lstg = pd.Series(self._x_lstg_slice[self._ix, :], index=self.composer.x_lstg_cols)
         self.x_lstg = self.composer.decompose_x_lstg(self.x_lstg)
@@ -77,7 +77,14 @@ class AgentEnvironment(EbayEnvironment, Env):
         self._x_lstg_slice = self._file[X_LSTG][sorted_ids, :]
         self._lookup_slice = self._lookup_slice[unsorted_ids, :]
         self._x_lstg_slice = self._x_lstg_slice[unsorted_ids, :]
+        self._drop_unlikely_arrivals()
         self._ix = 0
+
+    def _drop_unlikely_arrivals(self):
+        pi_idx = self._lookup_cols.index(NO_ARRIVAL)
+        keep_bool = self._lookup_slice[:, pi_idx] < NO_ARRIVAL_CUTOFF
+        self._lookup_slice = self._lookup_slice[keep_bool, :]
+        self._x_lstg_slice = self._x_lstg_slice[keep_bool, :]
 
     def agent_tuple(self, lstg_complete=None, agent_sale=None):
         obs = self.get_obs(sources=self.last_event.sources(),

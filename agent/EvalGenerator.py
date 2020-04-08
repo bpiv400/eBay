@@ -2,6 +2,7 @@ from constants import RL_EVAL_DIR
 from featnames import META
 from agent.AgentPlayer import AgentPlayer
 from agent.agent_utils import load_agent_params
+from agent.agent_consts import NO_ARRIVAL, NO_ARRIVAL_CUTOFF
 from agent.AgentComposer import AgentComposer
 from rlenv.env_utils import calculate_slr_gross, load_chunk
 from rlenv.simulator.Generator import Generator
@@ -34,6 +35,10 @@ class EvalGenerator(Generator):
     def load_chunk(self, chunk=None):
         path = '{}{}.gz'.format(RL_EVAL_DIR, chunk)
         self.x_lstg, self.lookup = load_chunk(input_path=path)
+        no_arrival_bool = self.lookup[NO_ARRIVAL] >= NO_ARRIVAL_CUTOFF
+        no_arrival_idx = self.lookup.index[no_arrival_bool]
+        self.x_lstg = self.x_lstg.drop(index=no_arrival_idx)
+        self.lookup = self.lookup.drop(index=no_arrival_idx)
 
     def generate_recorder(self):
         return DiscrimRecorder(verbose=self.verbose, records_path=self.records_path,

@@ -6,7 +6,7 @@ from torch.nn.functional import softmax
 from constants import FIRST_ARRIVAL_MODEL
 from utils import load_state_dict, load_model
 from agent.agent_consts import (FULL_CON, QUARTILES, HALF, NO_ARRIVAL,
-                                AGENT_STATE, NO_SALE_CUTOFF)
+                                AGENT_STATE, NO_ARRIVAL_CUTOFF)
 from rlenv.env_utils import proper_squeeze
 from rlenv.Composer import Composer
 
@@ -61,7 +61,7 @@ def get_no_arrival_likelihood(x_lstg_chunk=None, model=None):
 
 def get_batch_unlikely(x_lstg_chunk=None, model=None):
     pi = get_no_arrival_likelihood(x_lstg_chunk=x_lstg_chunk, model=model)
-    unlikely = torch.nonzero(pi > NO_SALE_CUTOFF)
+    unlikely = torch.nonzero(pi > NO_ARRIVAL_CUTOFF)
     return unlikely
 
 

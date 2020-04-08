@@ -9,6 +9,7 @@ import shutil
 import multiprocessing as mp
 import queue
 from os.path import isfile, join
+import numpy as np
 import torch
 from torch.utils.tensorboard.writer import SummaryWriter
 from agent.EvalGenerator import EvalGenerator
@@ -27,7 +28,7 @@ from constants import (RL_EVAL_DIR, RL_LOG_DIR, SLR_INIT, BYR_INIT,
 from agent.agent_consts import (BATCH_T, BATCH_B, CON_TYPE, BATCHES_PER_EVALUATION,
                                 ALL_FEATS, AGENT_STATE, OPTIM_STATE,
                                 TOTAL_STEPS, PPO_MINIBATCHES, SELLER_TRAIN_INPUT,
-                                PPO_EPOCHS, FEAT_TYPE, BATCH_SIZE)
+                                PPO_EPOCHS, FEAT_TYPE, BATCH_SIZE, INIT_LR)
 from agent.agent_utils import load_init_model, detect_norm
 from agent.AgentComposer import AgentComposer
 from agent.models.PgCategoricalAgentModel import PgCategoricalAgentModel
@@ -36,6 +37,7 @@ from rlenv.env_utils import load_chunk
 from rlenv.interfaces.PlayerInterface import SimulatedBuyer, SimulatedSeller
 from rlenv.interfaces.ArrivalInterface import ArrivalInterface
 from rlenv.environments.SellerEnvironment import SellerEnvironment
+from train.train_consts import FTOL
 
 
 class RlTrainer:
@@ -47,13 +49,15 @@ class RlTrainer:
 
         # fields
         self.itr = 0
+        self.lr = INIT_LR
+        self.eval_scores = list()
         self.norm = None
         self.evaluation_chunks = self.count_eval_chunks()
         self.cpu_count = self.count_cpus()
         self.checkpoint = self.init_checkpoint()
 
         # ids
-        self.run_id = self.generate_run_id() # TODO: Make util function
+        self.run_id = self.generate_run_id()  # TODO: Make util function
         self.run_dir = '{}/run_{}/'.format(self.log_dir, self.run_id)
 
         # parameters
@@ -119,7 +123,7 @@ class RlTrainer:
     def generate_algorithm(self):
         return PPO(minibatches=PPO_MINIBATCHES,
                    epochs=PPO_EPOCHS,
-                   learning_rate=.001,
+                   learning_rate=self.lr,
                    linear_lr_schedule=False,
                    initial_optim_state_dict=self.checkpoint[OPTIM_STATE])
 
@@ -198,12 +202,18 @@ class RlTrainer:
                             log_params=self.logger_params, snapshot_mode='last'):
             logger.set_tf_summary_writer(self.writer)
             for i in range(10):
-                self.itr = self.runner.train()
-                self.writer.flush()
-                self.evaluate()
-                self.update_checkpoint()
-                self.runner.update_agent(self.generate_agent())
-                self.runner.update_algo(self.generate_algorithm())
+                self._train_iteration()
+
+    def _train_iteration(self):
+        eval_score = self.evaluate()
+        if self.lr_update_needed(last_eval=eval_score):
+            self.update_lr()
+        if self.itr != 0:
+            self.runner.update_agent(self.generate_agent())
+            self.runner.update_algo(self.generate_algorithm())
+        self.itr = self.runner.train()
+        self.writer.flush()
+        self.update_checkpoint()
 
     def evaluate(self):
         start_time = time.time()
@@ -213,6 +223,7 @@ class RlTrainer:
             rewards = self._parallel_evaluate()
         end_time = time.time()
         self._log_eval(rewards=rewards, eval_time=end_time - start_time)
+        return np.mean(rewards)
 
     def _log_eval(self, rewards=None, eval_time=None):
         logger.set_iteration(self.itr)
@@ -275,8 +286,19 @@ class RlTrainer:
         self.checkpoint[AGENT_STATE] = params[AGENT_STATE]
         self.checkpoint[OPTIM_STATE] = params[OPTIM_STATE]
 
-    def reduce_lr(self):
-        pass
+    def lr_update_needed(self, last_eval=None):
+        if self.itr == 0:
+            needed = False
+        else:
+            diff = (last_eval - self.eval_scores[-1]) / self.eval_scores[-1]
+            needed = diff < FTOL
+        self.eval_scores.append(last_eval)
+        return needed
+
+    def update_lr(self):
+        self.lr = self.lr / 10
+        assert 'lr' in self.checkpoint[OPTIM_STATE]['param_groups'][0]
+        self.checkpoint[OPTIM_STATE]['param_groups'][0]['lr'] = self.lr
 
     def count_eval_chunks(self):
         if self.debug:
