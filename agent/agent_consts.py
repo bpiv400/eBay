@@ -3,6 +3,7 @@ from constants import REINFORCE_DIR
 #  the threshold for likelihood of no arrivals
 # used to drop listings before RL training
 NO_SALE_CUTOFF = .75 ** (1.0 / 12)
+NO_ARRIVAL = 'no_arrival'
 
 AGENT_STATE = 'agent_state_dict'
 OPTIM_STATE = 'optimizer_state_dict'

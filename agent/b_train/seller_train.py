@@ -119,6 +119,7 @@ class RlTrainer:
     def generate_algorithm(self):
         return PPO(minibatches=PPO_MINIBATCHES,
                    epochs=PPO_EPOCHS,
+                   learning_rate=.001,
                    linear_lr_schedule=False,
                    initial_optim_state_dict=self.checkpoint[OPTIM_STATE])
 

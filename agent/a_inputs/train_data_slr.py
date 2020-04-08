@@ -11,7 +11,8 @@ from compress_pickle import load
 from featnames import CAT
 from constants import PARTITIONS, PARTS_DIR, TRAIN_RL
 from agent.agent_consts import SELLER_TRAIN_INPUT
-from agent.agent_utils import remove_unlikely_arrival_lstgs
+from agent.agent_utils import (remove_unlikely_arrival_lstgs,
+                               add_no_arrival_likelihood)
 from rlenv.env_consts import X_LSTG_FILENAME, LOOKUP_FILENAME, X_LSTG, LOOKUP
 from rlenv.env_utils import align_x_lstg_lookup
 
@@ -23,14 +24,21 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--part', required=False,
                         help='partition to chunk: {}'.format(PARTITIONS))
-    part = parser.parse_args().part
+    parser.add_argument('--remove', action='store_true', default=False)
+    args = parser.parse_args()
+    part = args.part
+    remove = args.remove
     if part is None:
         part = TRAIN_RL
     lookup = load('{}{}/{}'.format(PARTS_DIR, part, LOOKUP_FILENAME))
     lookup = lookup.drop(columns=[CAT])
     x_lstg = load('{}{}/{}'.format(PARTS_DIR, part, X_LSTG_FILENAME))
     x_lstg = align_x_lstg_lookup(x_lstg=x_lstg, lookup=lookup)
-    x_lstg, lookup = remove_unlikely_arrival_lstgs(x_lstg=x_lstg, lookup=lookup)
+    if remove:
+        x_lstg, lookup = remove_unlikely_arrival_lstgs(x_lstg=x_lstg,
+                                                       lookup=lookup)
+    else:
+        lookup = add_no_arrival_likelihood(x_lstg=x_lstg, lookup=lookup)
     store_inputs(x_lstg, lookup, SELLER_TRAIN_INPUT)
 
 
