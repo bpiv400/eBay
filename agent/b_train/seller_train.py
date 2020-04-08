@@ -25,10 +25,9 @@ from rlpyt.utils.logging.context import logger_context
 from featnames import DELAY
 from constants import (RL_EVAL_DIR, RL_LOG_DIR, SLR_INIT, BYR_INIT,
                        BYR_PREFIX, SLR_PREFIX)
-from agent.agent_consts import (BATCH_T, BATCH_B, CON_TYPE, BATCHES_PER_EVALUATION,
-                                ALL_FEATS, AGENT_STATE, OPTIM_STATE,
-                                TOTAL_STEPS, PPO_MINIBATCHES, SELLER_TRAIN_INPUT,
-                                PPO_EPOCHS, FEAT_TYPE, BATCH_SIZE, INIT_LR)
+from agent.agent_consts import (CON_TYPE, ALL_FEATS, AGENT_STATE, OPTIM_STATE,
+                                SELLER_TRAIN_INPUT, FEAT_TYPE, INIT_LR,
+                                QUARTILES)
 from agent.agent_utils import load_init_model, detect_norm
 from agent.AgentComposer import AgentComposer
 from agent.models.PgCategoricalAgentModel import PgCategoricalAgentModel
@@ -47,6 +46,12 @@ class RlTrainer:
         self.verbose = kwargs['verbose']
         self.agent_params = kwargs['agent_params']
 
+        # hyper params
+        self.batch_size = kwargs['batch_size']
+        self.batches_per_evaluation = kwargs['batches_per_evaluation']
+        self.ppo_minibatches = kwargs['ppo_minibatches']
+        self.ppo_epochs = kwargs['ppo_epochs']
+
         # fields
         self.itr = 0
         self.lr = INIT_LR
@@ -62,7 +67,6 @@ class RlTrainer:
 
         # parameters
         self.env_params_train = self.generate_train_params()
-        self.logger_params = self.generate_logger_params()
 
         # rlpyt components
         self.sampler = self.generate_sampler()
@@ -79,31 +83,19 @@ class RlTrainer:
              OPTIM_STATE: None
         }
 
-    # TODO: Replace with function that actually parses hyperparameters
     def generate_run_id(self):
-        return "runner_test"
+        return "bs-{}_bpe-{}_mb-{}_epochs-{}".format(self.batch_size,
+                                                     self.batches_per_evaluation,
+                                                     self.ppo_minibatches,
+                                                     self.ppo_epochs)
 
-    # TODO: Replace with function that actually counts available CPUs
-    def count_cpus(self):
-        return 12
+    @staticmethod
+    def count_cpus():
+        return mp.cpu_count() / 2
 
     def clear_log(self):
         if os.path.exists(self.run_dir):
             shutil.rmtree(self.run_dir, ignore_errors=True)
-
-    def generate_logger_params(self):
-        log_params = {
-            CON_TYPE: self.agent_params[CON_TYPE],
-            FEAT_TYPE: self.agent_params[FEAT_TYPE],
-            BYR_PREFIX: False,
-            DELAY: False,
-            'steps': TOTAL_STEPS,
-            'ppo_minibatches': PPO_MINIBATCHES,
-            'ppo_epochs': PPO_EPOCHS,
-            'batch_B': BATCH_B,
-            'batch_T': BATCH_T,
-        }
-        return log_params
 
     def generate_train_params(self):
         chunk_path = '{}1.gz'.format(RL_EVAL_DIR)
@@ -121,8 +113,8 @@ class RlTrainer:
         return env_params
 
     def generate_algorithm(self):
-        return PPO(minibatches=PPO_MINIBATCHES,
-                   epochs=PPO_EPOCHS,
+        return PPO(minibatches=self.ppo_minibatches,
+                   epochs=self.ppo_epochs,
                    learning_rate=self.lr,
                    linear_lr_schedule=False,
                    initial_optim_state_dict=self.checkpoint[OPTIM_STATE])
@@ -153,12 +145,14 @@ class RlTrainer:
                                   initial_model_state_dict=self.checkpoint[AGENT_STATE])
 
     def generate_sampler(self):
+        batch_b = self.cpu_count * 2
+        batch_t = int(self.batch_size / batch_b)
         if self.debug:
             return SerialSampler(
                 EnvCls=SellerEnvironment,
                 env_kwargs=self.env_params_train,
-                batch_B=BATCH_B,
-                batch_T=BATCH_T,
+                batch_B=batch_b,
+                batch_T=batch_t,
                 max_decorrelation_steps=0,
                 CollectorCls=CpuResetCollector,
                 eval_n_envs=0,
@@ -170,8 +164,8 @@ class RlTrainer:
             return CpuSampler(
                 EnvCls=SellerEnvironment,
                 env_kwargs=self.env_params_train,
-                batch_B=BATCH_B,
-                batch_T=BATCH_T,
+                batch_B=batch_b,
+                batch_T=batch_t,
                 max_decorrelation_steps=0,
                 CollectorCls=CpuResetCollector,
                 eval_n_envs=0,
@@ -186,8 +180,8 @@ class RlTrainer:
         runner = EbayRunner(algo=self.generate_algorithm(),
                             agent=self.generate_agent(),
                             sampler=self.sampler,
-                            batches_per_evaluation=BATCHES_PER_EVALUATION,
-                            batch_size=BATCH_SIZE,
+                            batches_per_evaluation=self.batches_per_evaluation,
+                            batch_size=self.batch_size,
                             affinity=affinity)
         return runner
 
@@ -199,7 +193,7 @@ class RlTrainer:
     def train(self):
         with logger_context(log_dir=self.log_dir, name='debug', use_summary_writer=False,
                             override_prefix=True, run_ID=self.run_id,
-                            log_params=self.logger_params, snapshot_mode='last'):
+                            snapshot_mode='last'):
             logger.set_tf_summary_writer(self.writer)
             for i in range(10):
                 self._train_iteration()
@@ -331,9 +325,14 @@ def perform_eval(generator_kwargs=None, chunk_queue=None, reward_queue=None):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--con', required=True, type=str)
+    # basic arguments
     parser.add_argument('--verbose', action='store_true')
     parser.add_argument('--debug', action='store_true')
+    # experiment parameters
+    parser.add_argument('--batch_size', required=True, type=int)
+    parser.add_argument('--batches_per_evaluation', required=True, type=int)
+    parser.add_argument('--ppo_minibatches', required=True, type=int)
+    parser.add_argument('--ppo_epochs', required=True, type=int)
 
     # Add params: entropy coefficient, value coefficient,
     # epochs per optimization step, minibatches per optimization step,
@@ -343,17 +342,21 @@ def main():
     ############################################
     delay = False
     feat_id = ALL_FEATS
+    con = QUARTILES
     ###########################################
 
     args = parser.parse_args()
     agent_params = {
         FEAT_TYPE: feat_id,
         BYR_PREFIX: False,
-        CON_TYPE: args.con,
+        CON_TYPE: con,
         DELAY: delay
     }
     trainer = RlTrainer(debug=args.debug, verbose=args.verbose,
-                        agent_params=agent_params)
+                        agent_params=agent_params, batch_size=args.batch_size,
+                        batches_per_evaluation=args.batches_per_evaluation,
+                        ppo_epochs=args.ppo_epochs,
+                        ppo_minibatches=args.ppo_minibatches)
     trainer.train()
 
 
