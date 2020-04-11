@@ -85,8 +85,8 @@ def main():
 
     p = dict()
     for m in MODELS:
-        p[m] = {'simulated': get_distribution(m, y_sim),
-                'observed': get_distribution(m, y_obs)}
+        p[m] = {'simulated': get_distribution(m, y_sim[m]),
+                'observed': get_distribution(m, y_obs[m])}
     dump(p, PLOT_DIR + 'distributions.pkl')
 
 
