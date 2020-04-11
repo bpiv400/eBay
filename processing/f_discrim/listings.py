@@ -1,6 +1,7 @@
 import pandas as pd
 from processing.processing_utils import input_partition, load_file, init_x
-from processing.f_discrim.discrim_utils import concat_sim_chunks, save_discrim_files
+from processing.f_discrim.discrim_utils import concat_sim_chunks, \
+	get_obs_outcomes, save_discrim_files
 
 
 def construct_x(x, idx_thread):
@@ -18,16 +19,16 @@ def main():
 	print('discrim/{}/listings'.format(part))
 
 	# initialize listing features
-	idx = load_file(part, 'lookup').index
-	x = init_x(part, idx)
+	lookup, obs = get_obs_outcomes(part)
+	x = init_x(part, lookup.index)
 
 	# observed data
-	idx_obs = load_file(part, 'x_thread').xs(1, level='thread').index
+	idx_obs = obs['thread'].xs(1, level='thread').index
 	x_obs = construct_x(x, idx_obs)
 
 	# simulated data
-	threads_sim, _ = concat_sim_chunks(part)
-	idx_sim = threads_sim.xs(1, level='thread').index
+	sim = concat_sim_chunks(part)
+	idx_sim = sim['threads'].xs(1, level='thread').index
 	x_sim = construct_x(x, idx_sim)
 
 	# save data

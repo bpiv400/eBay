@@ -1,56 +1,50 @@
 import numpy as np
-from train.EBayDataset import EBayDataset
-from assess.assess_utils import get_model_predictions
-from processing.e_inputs.inputs_utils import get_y_con, get_y_msg
-from processing.f_discrim.discrim_utils import concat_sim_chunks
-from processing.processing_utils import load_file
-from processing.processing_consts import NUM_OUT
-from constants import TEST, MODELS
+import pandas as pd
+from compress_pickle import dump
+from assess.assess_utils import get_num_out
+from processing.e_inputs.offer import get_y_delay, get_y_con, get_y_msg
+from processing.e_inputs.first_arrival import get_first_arrival_period
+from processing.e_inputs.next_arrival import get_interarrival_period
+from processing.f_discrim.discrim_utils import concat_sim_chunks, get_obs_outcomes
+from constants import TEST, MODELS, PLOT_DIR, FIRST_ARRIVAL_MODEL, \
+    INTERARRIVAL_MODEL, BYR_HIST_MODEL, OFFER_MODELS
 from featnames import BYR_HIST, DELAY, CON, MSG
 
 
-def get_sim_outcome(name, threads, offers):
-	if name == 'first_arrival':
-		y_sim = None
-	elif name == 'next_arrival':
-		y_sim = None
-	elif name == 'hist':
-		y_sim = threads[BYR_HIST]
-	else:
-		turn = int(name[-1])
-		if name[:-1] == DELAY:
-			y_sim = None
-		elif name[:-1] == CON:
-			y_sim = get_y_con(offers.xs(turn, level='index'))
-		elif name[:-1] == MSG:
-			y_sim = get_y_msg(offers.xs(turn, level='index'), turn)
-		else:
-			raise RuntimeError('Invalid name: {}'.format(name))
-	return y_sim
+def get_offer_outcome(m, offers):
+    turn = int(m[-1])
+    df = offers.xs(turn, level='index')
+    if m[:-1] == DELAY:
+        y = get_y_delay(df, turn)
+    elif m[:-1] == CON:
+        y = get_y_con(df)
+    elif m[:-1] == MSG:
+        y = get_y_msg(df, turn)
+    return y
 
 
-def get_distributions(name, threads, offers):
-	# number of periods
-	num_out = NUM_OUT[name]
-	if num_out == 1:
-		num_out += 1
+def get_outcomes(start_time, d):
+    # collect outcomes in dictionary
+    y = dict()
+    y[FIRST_ARRIVAL_MODEL] = get_first_arrival_period(start_time,
+                                                      d['thread_start'])
+    y[INTERARRIVAL_MODEL] = get_interarrival_period(start_time,
+                                                    d['thread_start'],
+                                                    d['lstg_end'])
+    y[BYR_HIST_MODEL] = d['threads'][BYR_HIST]
+    for m in OFFER_MODELS:
+        y[m] = get_offer_outcome(m, d['offers'])
+    return y
 
-	# simulated outcomes
-	y_sim = get_sim_outcome(name, threads, offers)
 
-	# average simulated outcome
-	p_sim = np.array([(y_sim == i).mean() for i in range(num_out)])
-	assert np.abs(p_sim.sum() - 1) < 1e-8
-
-	# observed outcomes
-	data = EBayDataset(TEST, name)
-	y_obs = data.d['y']
-
-	# average observed outcome
-	p_obs = np.array([(y_obs == i).mean() for i in range(num_out)])
-	assert np.abs(p_obs.sum() - 1) < 1e-8
-
-	return p_obs, p_sim
+def get_distribution(m, y):
+    # number of periods
+    num_out = get_num_out(m)
+    # calculate categorical distribution
+    p = np.array([(y == i).mean() for i in range(num_out)])
+    # make sure p sums to 1
+    assert np.abs(p.sum() - 1) < 1e-8
+    return p
 
 
 def num_threads(df, lstgs):
@@ -67,34 +61,34 @@ def num_offers(df):
 
 
 def main():
-	# lookup
-	lookup = load_file(TEST, 'lookup')
+    # observed outcomes
+    lookup, obs = get_obs_outcomes(TEST, timestamps=True)
 
-	# simualated outcomes
-	threads_sim, offers_sim = concat_sim_chunks(TEST)
+    # simulated outcomes
+    sim = concat_sim_chunks(TEST, lookup=lookup)
 
-	# observed outcomes
-	threads_obs = load_file(TEST, 'x_thread')
-	offers_obs = load_file(TEST, 'x_offer')
+    # number of threads per listing
+    num_threads_obs = num_threads(obs['threads'], lookup.index).rename('obs')
+    num_threads_sim = num_threads(sim['threads'], lookup.index).rename('sim')
+    df_threads = pd.concat([num_threads_obs, num_threads_sim], axis=1)
+    dump(df_threads, PLOT_DIR + 'num_threads.pkl')
 
-	# remove censored offers
-	offers_obs = offers_obs[(offers_obs.delay == 1) | ~offers_obs.exp]
+    # number of offers per thread
+    num_offers_obs = num_offers(obs['offers']).rename('obs')
+    num_offers_sim = num_offers(sim['offers']).rename('sim')
+    df_offers = pd.concat([num_offers_obs, num_offers_sim], axis=1)
+    dump(df_offers, PLOT_DIR + 'num_offers.pkl')
 
-	# number of threads per listing
-	num_threads_obs = num_threads(threads_obs, lookup.index)
-	num_threads_sim = num_threads(threads_sim, lookup.index)
+    # loop over models, get observed and simulated distributions
+    y_sim = get_outcomes(lookup.start_time, sim)
+    y_obs = get_outcomes(lookup.start_time, obs)
 
-	# number of offers per thread
-	num_offers_obs = num_offers(offers_obs)
-	num_offers_sim = num_offers(offers_sim)
-
-
-	# loop over models, get observed and simulated distributions
-	for m in MODELS:
-		p_obs, p_sim = get_distributions(m, threads_sim, offers_sim)
-
-	
+    p = dict()
+    for m in MODELS:
+        p[m] = {'simulated': get_distribution(m, y_sim),
+                'observed': get_distribution(m, y_obs)}
+    dump(p, PLOT_DIR + 'distributions.pkl')
 
 
 if __name__ == '__main__':
-	main()
+    main()

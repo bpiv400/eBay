@@ -28,6 +28,8 @@ def get_roc(p0, p1):
 
 
 def main():
+	# collect roc data
+	x, y = dict(), dict()
 	for m in DISCRIM_MODELS:
 		print(m)
 
@@ -37,20 +39,25 @@ def main():
 		# roc
 		s = get_roc(p0, p1)
 
-		# roc plot
-		x = s.index
-		y = s.values
-		style = '-k'
-		line_plot(s.index, s.values, style, diagonal=True)
-
-		# save
-		name = 'roc_{}'.format(m)
-		save_fig(name, 
-				 xlabel='False positive rate',
-				 ylabel='True positive rate')
-
 		# auc
 		print('{}: {}'.format(m, get_auc(s)))
+
+		# put data in lists
+		x[m] = s.index
+		y[m] = s.values
+
+	# roc plot
+	style = {'listings': '-k', 'threads': '--k'}
+	line_plot(x, y, style, diagonal=True)
+
+	# save
+	save_fig('roc',
+			 legend=True,
+			 xlabel='False positive rate',
+			 ylabel='True positive rate',
+			 square=True)
+
+		
 		
 
 if __name__ == '__main__':

@@ -1,71 +1,85 @@
-import argparse
+import numpy as np
 from plots.plots_consts import GRAY, FONTSIZE
 from constants import FIGURE_DIR
 
 import matplotlib.pyplot as plt
-plt.rc('text', usetex = True)
-plt.rc('text.latex', preamble=r'\usepackage{amsmath}')
-plt.rc('font', **{'family':'serif', 
-			      'serif':['Computer Modern Roman'], 
-                  'monospace': ['Computer Modern Typewriter']})
+# plt.rc('text', usetex=True)
+# plt.rc('text.latex', preamble=r'\usepackage{amsmath}')
+# plt.rc('font', **{'serif': ['Computer Modern Roman'], 
+#                   'monospace': ['Computer Modern Typewriter']})
 
 
-def save_fig(name, xlabel=None, ylabel=None, gridlines=True, square=True):
-	# fontsize
-	fontsize = FONTSIZE[name.split('_')[0]]
+def save_fig(name, legend=False, xlabel=None, ylabel=None, gridlines=True, square=False):
+    # font size
+    fontsize = FONTSIZE[name.split('_')[0]]
 
-	# get axes
-	fig, ax = plt.subplots()
+    # aspect ratio
+    if square:
+        plt.gca().set_aspect(1)
 
-	# square aspect ratio
-	if square:
-		ax.set_aspect('equal')
+    # tick labels
+    plt.xticks(fontsize=fontsize)
+    plt.yticks(fontsize=fontsize)
 
-	# tick size
-	plt.xticks(fontsize=fontsize)
-	plt.yticks(fontsize=fontsize)
+    # legend
+    if legend:
+        plt.legend(loc='lower right', fontsize=fontsize, fancybox=False)
 
-	# axis labels
-	if xlabel is not None:
-		plt.xlabel(xlabel, fontsize=fontsize)
-	if ylabel is not None:
-		plt.ylabel(ylabel, fontsize=fontsize)
-	
-	# grid lines
-	if gridlines:
-		plt.grid(axis='both', 
-				 which='both', 
-				 color=GRAY, 
-				 linestyle='-', 
-				 linewidth=0.5)
+    # axis labels
+    if xlabel is not None:
+        plt.xlabel(xlabel, fontsize=fontsize)
+    if ylabel is not None:
+        plt.ylabel(ylabel, fontsize=fontsize)
 
-	# save
-	plt.savefig(FIGURE_DIR + '{}.png'.format(name), 
-				format='png', 
-				transparent=True,
-				bbox_inches='tight')
+    # grid lines
+    if gridlines:
+        plt.grid(axis='both',
+                 which='both',
+                 color=GRAY,
+                 linestyle='-',
+                 linewidth=0.5)
 
+    # save
+    plt.savefig(FIGURE_DIR + '{}.png'.format(name),
+                format='png',
+                transparent=True,
+                bbox_inches='tight')
 
-def line_plot(x, y, style, diagonal=False):
-	# initialize plot
-	plt.clf()
-
-	# loop over lines to draw
-	if type(y) is list:
-		assert len(y) == len(style)
-		for i in range(len(y)):
-			plt.plot(x, y[i], style[i])
-	else:
-		plt.plot(x, y, style)
-
-	# add 45 degree line
-	if diagonal:
-		endpoints = [x.min(), x.max()]
-		plt.plot(endpoints, endpoints, '--k', linewidth=0.5)
+    # close
+    plt.close()
 
 
-def input_fontsize():
-	parser = argparse.ArgumentParser()
-	parser.add_argument('--fontsize', type=int, default=20)
-	args = parser.parse_args()
-	return args.fontsize
+def line_plot(x, y, style, diagonal=False, square=True):
+    # initialize plot
+    plt.clf()
+
+    # loop over lines to draw
+    if type(y) is dict:
+        if type(x) is dict:
+            assert x.keys() == y.keys()
+            for k in y.keys():
+                plt.plot(x[k], y[k], style[k], label=k)
+        else:
+            for k in y.keys():
+                plt.plot(x, y[k], style[k], label=k)
+    else:
+        plt.plot(x, y, style)
+
+    # add 45 degree line
+    if diagonal:
+        if type(x) is dict:
+            low = np.min([a.min() for a in x.values()])
+            high = np.max([a.max() for a in x.values()])
+        else:
+            low, high = x.min(), x.max()
+        plt.plot([low, high], [low, high], '--k', linewidth=0.5)
+
+
+def overlapped_bar(x, y0, y1, width=1, alpha=.5):
+    assert len(x) == len(y0) == len(y1)
+    num = len(x)
+    indices = np.arange(num)
+
+    # plot bars
+    plt.bar(x, y0, width=width, alpha=alpha, color='white', edgecolor='k')
+    plt.bar(x, y1, width=width, alpha=alpha, color='gray', edgecolor='k')

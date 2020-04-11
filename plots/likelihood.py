@@ -1,32 +1,36 @@
 from compress_pickle import load
 import numpy as np
 from plots.plots_utils import line_plot, save_fig
-from constants import PLOT_DIR
+from constants import PLOT_DIR, MODELS
 
 
 def main():
+	# plot styles
+	style = {'test': '-k', 'train': '--k', 'baserate': '-k'}
+
 	# load data
-	lnL = load(PLOT_DIR + '{}.pkl'.format('lnL'))
-	lnL0 = load(PLOT_DIR + '{}.pkl'.format('lnL0'))
-	lnL_bar = load(PLOT_DIR + '{}.pkl'.format('lnL_bar'))
+	lnl = load(PLOT_DIR + 'lnL.pkl')
 
 	# loop over models, create plot
-	for k, v in lnL0.items():
-		print(k)
-		test = np.exp([v] + lnL[k]['test'])
-		train = np.exp([v] + lnL[k]['train'])
-		N = len(test)
+	for m in MODELS:
+		print(m)
+
+		# line data
+		y = dict()
+		for k in ['test', 'train', 'baserate']:
+			if k in lnl:
+				y[k] = np.exp(lnl[m][k])
+
+		num = len(y['test'])
+		y[k] = np.repeat(y[k], num)
 		
 		# make plot
-		x = range(N)
-		y = [test, train, np.repeat(np.exp(lnL_bar[k]), N)]
-		style = ['-k', '--k', '-k']
-		line_plot(x, y, style)
+		line_plot(range(num), y, style)
 
 		# save
-		name = 'likelihood_{}'.format(k)
+		name = 'likelihood_{}'.format(m)
 		save_fig(name)
 
 
 if __name__ == '__main__':
-    main()
+	main()

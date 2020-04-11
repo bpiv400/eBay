@@ -5,6 +5,7 @@ from processing.e_inputs.inputs_utils import save_sizes, convert_x_to_numpy, sav
 from processing.processing_utils import load_file, collect_date_clock_feats, \
     get_days_delay, get_norm
 from utils import is_split
+from processing.processing_consts import CLEAN_DIR
 from constants import TRAIN_RL, VALIDATION, INPUT_DIR, SIM_CHUNKS, ENV_SIM_DIR, \
     IDX, SLR_PREFIX, MONTH
 from featnames import DAYS, DELAY, CON, SPLIT, NORM, REJECT, AUTO, EXP, CENSORED, \
@@ -52,10 +53,11 @@ def process_sim_threads(part, df):
     return df
 
 
-def concat_sim_chunks(part):
+def concat_sim_chunks(part, lookup=None):
     """
     Loops over simulations, concatenates dataframes.
     :param part: string name of partition.
+    :param lookup: dataframe with index of listings and start_time as col.
     :return: concatentated and sorted threads and offers dataframes.
     """
     # collect chunks
@@ -72,12 +74,47 @@ def concat_sim_chunks(part):
     # drop censored offers
     offers = offers.loc[~offers[CENSORED], :]
     offers.drop(CENSORED, axis=1, inplace=True)
+    clock = offers.clock.copy()
+
+    # initialize output dictionary
+    sim = dict()
 
     # conform to observed inputs
-    threads = process_sim_threads(part, threads)
-    offers = process_sim_offers(offers)
+    sim['threads'] = process_sim_threads(part, threads)
+    sim['offers'] = process_sim_offers(offers)
 
-    return threads, offers
+    # pull out timestamps
+    if lookup is not None:
+        sim['thread_start'] = clock.xs(1, level='index')
+        sale_time = clock[sim['offers'][CON] == 1].reset_index(
+            level=['thread', 'index'], drop=True)
+        lstg_end = sale_time.reindex(index=lookup.index)
+        no_sale = lstg_end[lstg_end.isna()].index
+        lstg_end.loc[no_sale] = lookup.loc[no_sale, 'start_time'] + MONTH - 1
+        sim['lstg_end'] = lstg_end.astype('int64')
+
+    return sim
+
+
+def get_obs_outcomes(part, timestamps=False):
+    # lookup
+    lookup = load_file(part, 'lookup')
+
+    # initialize output dictionary
+    obs = dict()
+
+    # observed outcomes
+    obs['threads'] = load_file(part, 'x_thread')
+    offers = load_file(part, 'x_offer')
+    obs['offers'] = offers[(offers[DELAY] == 1) | ~offers[EXP]]
+
+    # timestamps
+    if timestamps:
+        obs['thread_start'] = load_file(part, 'clock').xs(1, level='index')
+        obs['lstg_end'] = load(CLEAN_DIR + 'listings.pkl').end_time.reindex(
+                               index=lookup.index)
+
+    return lookup, obs
 
 
 def save_discrim_files(part, name, x_obs, x_sim):

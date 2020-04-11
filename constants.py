@@ -99,5 +99,8 @@ MSG_MODELS = ['{}{}'.format(MSG, i) for i in range(1, 7)]
 OFFER_MODELS = DELAY_MODELS + CON_MODELS + MSG_MODELS
 MODELS = ARRIVAL_MODELS + OFFER_MODELS
 
+# censored models
+CENSORED_MODELS = [INTERARRIVAL_MODEL] + DELAY_MODELS
+
 # discriminator models
 DISCRIM_MODELS = ['listings', 'threads']

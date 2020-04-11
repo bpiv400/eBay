@@ -3,6 +3,7 @@ import torch
 from torch.nn.functional import log_softmax, nll_loss
 from train.Sample import get_batches
 from utils import load_model
+from processing.processing_consts import NUM_OUT
 
 
 def get_model_predictions(name, data):
@@ -33,6 +34,10 @@ def get_model_predictions(name, data):
 
     # concatenate and convert to numpy
     lnp = torch.cat(lnp).numpy()
-    lnL = torch.cat(lnL).numpy()
+    lnl = torch.cat(lnL).numpy()
 
-    return np.exp(lnp), lnL
+    return np.exp(lnp), lnl
+
+
+def get_num_out(m):
+    return NUM_OUT[m] if NUM_OUT[m] > 1 else 2

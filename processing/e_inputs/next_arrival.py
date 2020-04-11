@@ -2,12 +2,48 @@ from compress_pickle import load
 import pandas as pd
 import numpy as np
 from processing.processing_utils import input_partition, load_file, init_x, collect_date_clock_feats
-from processing.e_inputs.inputs_utils import get_arrival_times, \
-    get_interarrival_period, save_files
+from processing.e_inputs.inputs_utils import get_arrival_times, save_files
 from utils import get_months_since_lstg
-from processing.processing_consts import CLEAN_DIR
+from processing.processing_consts import CLEAN_DIR, INTERVAL, INTERVAL_COUNTS
 from constants import MONTH
 from featnames import THREAD_COUNT, MONTHS_SINCE_LAST, MONTHS_SINCE_LSTG
+
+
+def get_interarrival_period(lstg_start, thread_start, lstg_end):
+     # arrival times
+    clock = get_arrival_times(lstg_start, thread_start, lstg_end)
+
+    # calculate interarrival times in seconds
+    df = clock.unstack()
+    diff = pd.DataFrame(0.0, index=df.index, columns=df.columns[1:])
+    for i in diff.columns:
+        diff[i] = df[i] - df[i - 1]
+
+    # restack
+    diff = diff.rename_axis(clock.index.names[-1], axis=1).stack()
+
+    # original datatype
+    diff = diff.astype(clock.dtype)
+
+    # indicator for whether observation is last in lstg
+    thread = pd.Series(diff.index.get_level_values(level='thread'),
+                       index=diff.index)
+    last_thread = thread.groupby('lstg').max().reindex(
+        index=thread.index, level='lstg')
+    censored = thread == last_thread
+
+    # drop interarrivals after BINs
+    diff = diff[diff > 0]
+    y = diff[diff.index.get_level_values(level='thread') > 1]
+    censored = censored.reindex(index=y.index)
+
+    # convert y to periods
+    y //= INTERVAL[1]
+
+    # replace censored interarrival times negative count of censored buckets
+    y.loc[censored] -= INTERVAL_COUNTS[1]
+
+    return y, diff
 
 
 def get_x_thread_arrival(clock, idx, lstg_start, diff):
@@ -46,9 +82,6 @@ def process_inputs(part):
     lstg_end = load(CLEAN_DIR + 'listings.pkl').end_time.reindex(
         index=lstg_start.index)
     thread_start = load_file(part, 'clock').xs(1, level='index')
-
-    # arrival times
-    clock = get_arrival_times(lstg_start, thread_start, lstg_end)
 
     # interarrival times
     y, diff = get_interarrival_period(clock)

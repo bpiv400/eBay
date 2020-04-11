@@ -2,12 +2,48 @@ import argparse
 import numpy as np
 import pandas as pd
 from processing.processing_consts import INTERVAL, INTERVAL_COUNTS
-from processing.processing_utils import load_file, init_x
-from processing.e_inputs.inputs_utils import save_files, get_y_con, get_y_msg, \
-    check_zero, get_x_thread
-from constants import IDX, DAY, MAX_DELAY, BYR_PREFIX, SLR_PREFIX, PARTITIONS
+from processing.processing_utils import load_file, init_x, get_x_thread
+from processing.e_inputs.inputs_utils import save_files
+from constants import IDX, DAY, MAX_DELAY, BYR_PREFIX, SLR_PREFIX, \
+    PARTITIONS, CON_MULTIPLIER
 from featnames import CON, NORM, SPLIT, MSG, AUTO, EXP, REJECT, DAYS, DELAY, \
     INT_REMAINING, TIME_FEATS
+
+
+def get_y_con(df):
+    # drop zero delay and expired offers
+    mask = ~df[AUTO] & ~df[EXP]
+    # concession is an int from 0 to 100
+    return (df.loc[mask, CON] * CON_MULTIPLIER).astype('int8')
+
+
+def get_y_msg(df, turn):
+    # for buyers, drop accepts and rejects
+    if turn in IDX[BYR_PREFIX]:
+        mask = (df[CON] > 0) & (df[CON] < 1)
+    # for sellers, drop accepts, expires, and auto responses
+    else:
+        mask = ~df[EXP] & ~df[AUTO] & (df[CON] < 1)
+    return df.loc[mask, MSG]
+
+
+def assert_zero(offer, cols):
+    for c in cols:
+        assert offer[c].max() == 0
+        assert offer[c].min() == 0
+
+
+def check_zero(x):
+    keys = [k for k in x.keys() if k.startswith('offer')]
+    for k in keys:
+        if k in x:
+            i = int(k[-1])
+            if i == 1:
+                assert_zero(x[k], [DAYS, DELAY])
+            if i % 2 == 1:
+                assert_zero(x[k], [AUTO, EXP, REJECT])
+            if i == 7:
+                assert_zero(x[k], [SPLIT, MSG])
 
 
 def calculate_remaining(part, idx, turn):
