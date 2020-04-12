@@ -10,11 +10,15 @@ from featnames import CON, NORM, SPLIT, MSG, AUTO, EXP, REJECT, DAYS, DELAY, \
     INT_REMAINING, TIME_FEATS
 
 
-def get_y_con(df):
+def get_y_con(df, turn):
     # drop zero delay and expired offers
     mask = ~df[AUTO] & ~df[EXP]
     # concession is an int from 0 to 100
-    return (df.loc[mask, CON] * CON_MULTIPLIER).astype('int8')
+    y = (df.loc[mask, CON] * CON_MULTIPLIER).astype('int8')
+    # boolean for accept in turn 7
+    if turn == 7:
+        y = y == 100
+    return y
 
 
 def get_y_msg(df, turn):
@@ -124,9 +128,7 @@ def process_inputs(part, outcome, turn):
 
     # y and master index
     if outcome == CON:
-        y = get_y_con(df)
-        if turn == 7:
-            y = y == 100
+        y = get_y_con(df, turn)
     elif outcome == MSG:
         y = get_y_msg(df, turn)
     else:

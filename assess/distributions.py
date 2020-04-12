@@ -17,7 +17,7 @@ def get_offer_outcome(m, offers):
     if m[:-1] == DELAY:
         y = get_y_delay(df, turn)
     elif m[:-1] == CON:
-        y = get_y_con(df)
+        y = get_y_con(df, turn)
     elif m[:-1] == MSG:
         y = get_y_msg(df, turn)
     return y

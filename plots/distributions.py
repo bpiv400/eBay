@@ -1,7 +1,8 @@
 from compress_pickle import load
 import numpy as np
 from plots.plots_utils import grouped_bar, save_fig
-from constants import PLOT_DIR
+from processing.processing_consts import NUM_OUT
+from constants import PLOT_DIR, MODELS
 
 
 def main():
@@ -10,6 +11,7 @@ def main():
 
     labels = [str(i) for i in num_offers.index]
     y = num_offers.to_dict(orient='list')
+
     grouped_bar(labels, y)
     save_fig('num_offers',
              legend='upper right',
@@ -25,8 +27,8 @@ def main():
 
     labels = [str(i) for i in num_threads.index]
     labels[-1] += '+'
-
     y = num_threads.to_dict(orient='list')
+
     grouped_bar(labels, y)
     save_fig('num_threads',
              legend='upper right',
@@ -34,12 +36,15 @@ def main():
              ylabel='Fraction of listings')
 
     # models with binary outcomes
-    d = load(PLOT_DIR + 'distributions.pkl')
+    p = load(PLOT_DIR + 'distributions.pkl')
 
+    labels = [m for m in MODELS if NUM_OUT[m] == 1]
+    y = dict()
+    for k in ['simulated', 'observed']:
+        y[k] = [y[m][k][-1] for m in labels]
 
-
-# number of threads per listing
-# num_threads = load(PLOT_DIR + 'distributions.pkl')
+    grouped_bar(labels, y)
+    save_fig('')
 
 
 if __name__ == '__main__':
