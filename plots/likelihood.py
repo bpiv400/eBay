@@ -28,8 +28,7 @@ def main():
 		line_plot(range(num), y, style)
 
 		# save
-		name = 'likelihood_{}'.format(m)
-		save_fig(name)
+		save_fig('likelihood_{}'.format(m))
 
 
 if __name__ == '__main__':

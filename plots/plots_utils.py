@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 #                   'monospace': ['Computer Modern Typewriter']})
 
 
-def save_fig(name, legend=False, xlabel=None, ylabel=None, gridlines=True, square=False):
+def save_fig(name, legend=None, xlabel=None, ylabel=None, gridlines=True, square=False):
     # font size
     fontsize = FONTSIZE[name.split('_')[0]]
 
@@ -22,8 +22,8 @@ def save_fig(name, legend=False, xlabel=None, ylabel=None, gridlines=True, squar
     plt.yticks(fontsize=fontsize)
 
     # legend
-    if legend:
-        plt.legend(loc='lower right', fontsize=fontsize, fancybox=False)
+    if legend is not None:
+        plt.legend(loc=legend, fontsize=fontsize, fancybox=False)
 
     # axis labels
     if xlabel is not None:
@@ -50,7 +50,6 @@ def save_fig(name, legend=False, xlabel=None, ylabel=None, gridlines=True, squar
 
 
 def line_plot(x, y, style, diagonal=False, square=True):
-    # initialize plot
     plt.clf()
 
     # loop over lines to draw
@@ -73,6 +72,32 @@ def line_plot(x, y, style, diagonal=False, square=True):
         else:
             low, high = x.min(), x.max()
         plt.plot([low, high], [low, high], '--k', linewidth=0.5)
+
+
+def grouped_bar(labels, y):
+    plt.clf()
+
+    # styles
+    colors = ['k', GRAY]
+
+    # error checking
+    assert type(y) is dict and len(y.keys()) == 2
+
+    # parameters
+    width = 0.35
+    x = np.arange(len(labels))
+    num = len(y.keys())
+
+    # create bars
+    keys = list(y.keys())
+    plt.bar(x - width/num, y[keys[0]], width,
+            label=keys[0], color=colors[0])
+    plt.bar(x + width/num, y[keys[1]], width,
+            label=keys[1], color=colors[1])
+
+    # x labels
+    plt.gca().set_xticks(x)
+    plt.gca().set_xticklabels(labels)
 
 
 def overlapped_bar(x, y0, y1, width=1, alpha=.5):

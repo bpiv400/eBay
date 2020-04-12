@@ -10,7 +10,7 @@ from featnames import THREAD_COUNT, MONTHS_SINCE_LAST, MONTHS_SINCE_LSTG
 
 
 def get_interarrival_period(lstg_start, thread_start, lstg_end):
-     # arrival times
+    # arrival times
     clock = get_arrival_times(lstg_start, thread_start, lstg_end)
 
     # calculate interarrival times in seconds
