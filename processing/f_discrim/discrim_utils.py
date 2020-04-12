@@ -57,10 +57,11 @@ def process_sim_threads(df, start_time):
     return df
 
 
-def concat_sim_chunks(part, drop_censored=True):
+def concat_sim_chunks(part, lookup, drop_censored=True):
     """
     Loops over simulations, concatenates dataframes.
     :param part: string name of partition.
+    :param lookup: dataframe of listing values for part.
     :param drop_censored: True if censored observations are dropped.
     :return: dictionary of dataframes.
     """
@@ -83,15 +84,14 @@ def concat_sim_chunks(part, drop_censored=True):
     sim = dict()
 
     # end of listing
-    start_time = load_file(part, 'lookup').start_time
     sale_time = offers.loc[offers[CON] == 100, 'clock'].reset_index(
         level=['thread', 'index'], drop=True)
-    lstg_end = sale_time.reindex(index=start_time.index, fill_value=-1)
+    lstg_end = sale_time.reindex(index=lookup.index, fill_value=-1)
     no_sale = lstg_end[lstg_end == -1].index
-    lstg_end.loc[no_sale] = start_time[no_sale] + MONTH - 1
+    lstg_end.loc[no_sale] = lookup.loc[no_sale, 'start_time'] + MONTH - 1
 
     # conform to observed inputs
-    sim['threads'] = process_sim_threads(threads, start_time)
+    sim['threads'] = process_sim_threads(threads, lookup.start_time)
     sim['offers'], clock = process_sim_offers(offers, lstg_end)
 
     # timestamps
@@ -101,10 +101,7 @@ def concat_sim_chunks(part, drop_censored=True):
     return sim
 
 
-def get_obs_outcomes(part, timestamps=False, drop_censored=True):
-    # lookup
-    lookup = load_file(part, 'lookup')
-
+def get_obs_outcomes(part, lookup, drop_censored=True):
     # initialize output dictionary
     obs = dict()
 
@@ -117,12 +114,11 @@ def get_obs_outcomes(part, timestamps=False, drop_censored=True):
         obs['offers'] = obs['offers'][keep]
 
     # timestamps
-    if timestamps:
-        obs['thread_start'] = load_file(part, 'clock').xs(1, level='index')
-        obs['lstg_end'] = load(CLEAN_DIR + 'listings.pkl').end_time.reindex(
-                               index=lookup.index)
+    obs['thread_start'] = load_file(part, 'clock').xs(1, level='index')
+    obs['lstg_end'] = load(CLEAN_DIR + 'listings.pkl').end_time.reindex(
+                           index=lookup.index)
 
-    return lookup, obs
+    return obs
 
 
 def save_discrim_files(part, name, x_obs, x_sim):

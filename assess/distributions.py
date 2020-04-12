@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 from compress_pickle import dump
 from assess.assess_utils import get_num_out
+from processing.processing_utils import load_file
 from processing.e_inputs.offer import get_y_delay, get_y_con, get_y_msg
 from processing.e_inputs.first_arrival import get_first_arrival_period
 from processing.e_inputs.next_arrival import get_interarrival_period
@@ -65,15 +66,13 @@ def num_offers(df):
 
 
 def main():
+    lookup = load_file(TEST, 'lookup')
+
     # observed outcomes
-    lookup, obs = get_obs_outcomes(TEST,
-                                   timestamps=True,
-                                   drop_censored=False)
+    obs = get_obs_outcomes(TEST, lookup, drop_censored=False)
 
     # simulated outcomes
-    sim = concat_sim_chunks(TEST,
-                            lookup=lookup,
-                            drop_censored=False)
+    sim = concat_sim_chunks(TEST, lookup, drop_censored=False)
 
     # number of threads per listing
     num_threads_obs = num_threads(obs['threads'], lookup.index)
