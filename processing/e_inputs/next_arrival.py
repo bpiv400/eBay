@@ -9,7 +9,7 @@ from constants import MONTH
 from featnames import THREAD_COUNT, MONTHS_SINCE_LAST, MONTHS_SINCE_LSTG
 
 
-def get_interarrival_period(lstg_start, thread_start, lstg_end):
+def get_interarrival_period(lstg_start, thread_start, lstg_end, drop_censored=False):
     # arrival times
     clock = get_arrival_times(lstg_start, thread_start, lstg_end)
 
@@ -39,6 +39,10 @@ def get_interarrival_period(lstg_start, thread_start, lstg_end):
 
     # convert y to periods
     y //= INTERVAL[1]
+
+    # if ignoring censored obs, return uncensored obs
+    if drop_censored:
+        return y[~censored]
 
     # replace censored interarrival times negative count of censored buckets
     y.loc[censored] -= INTERVAL_COUNTS[1]

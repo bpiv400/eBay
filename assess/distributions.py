@@ -7,8 +7,8 @@ from processing.e_inputs.first_arrival import get_first_arrival_period
 from processing.e_inputs.next_arrival import get_interarrival_period
 from processing.f_discrim.discrim_utils import concat_sim_chunks, get_obs_outcomes
 from constants import TEST, MODELS, PLOT_DIR, FIRST_ARRIVAL_MODEL, \
-    INTERARRIVAL_MODEL, BYR_HIST_MODEL, OFFER_MODELS, CENSORED_MODELS
-from featnames import BYR_HIST, DELAY, CON, MSG
+    INTERARRIVAL_MODEL, BYR_HIST_MODEL, OFFER_MODELS
+from featnames import BYR_HIST, DELAY, CON, MSG, EXP
 
 
 def get_offer_outcome(m, offers):
@@ -16,6 +16,7 @@ def get_offer_outcome(m, offers):
     df = offers.xs(turn, level='index')
     if m[:-1] == DELAY:
         y = get_y_delay(df, turn)
+        # lstg end gets new category
     elif m[:-1] == CON:
         y = get_y_con(df, turn)
     elif m[:-1] == MSG:
@@ -28,15 +29,13 @@ def get_outcomes(start_time, d):
     y = dict()
     y[FIRST_ARRIVAL_MODEL] = get_first_arrival_period(start_time,
                                                       d['thread_start'])
-    y[INTERARRIVAL_MODEL], _ = get_interarrival_period(start_time,
-                                                       d['thread_start'],
-                                                       d['lstg_end'])
+    y[INTERARRIVAL_MODEL] = get_interarrival_period(start_time,
+                                                    d['thread_start'],
+                                                    d['lstg_end'],
+                                                    drop_censored=True)
     y[BYR_HIST_MODEL] = d['threads'][BYR_HIST]
     for m in OFFER_MODELS:
         y[m] = get_offer_outcome(m, d['offers'])
-    # remove censored observations
-    for m in CENSORED_MODELS:
-        y[m] = y[m][y[m] >= 0]
     return y
 
 
@@ -58,6 +57,8 @@ def num_threads(df, lstgs):
 
 
 def num_offers(df):
+    censored = df[EXP] & (df[DELAY] < 1)
+    df = df[~censored]
     s = df.reset_index('index')['index'].groupby(['lstg', 'thread']).count()
     s = s.groupby(s).count() / len(s)
     return s
@@ -65,10 +66,14 @@ def num_offers(df):
 
 def main():
     # observed outcomes
-    lookup, obs = get_obs_outcomes(TEST, timestamps=True)
+    lookup, obs = get_obs_outcomes(TEST,
+                                   timestamps=True,
+                                   drop_censored=False)
 
     # simulated outcomes
-    sim = concat_sim_chunks(TEST, lookup=lookup)
+    sim = concat_sim_chunks(TEST,
+                            lookup=lookup,
+                            drop_censored=False)
 
     # number of threads per listing
     num_threads_obs = num_threads(obs['threads'], lookup.index)

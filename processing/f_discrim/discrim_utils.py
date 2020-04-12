@@ -12,11 +12,15 @@ from featnames import DAYS, DELAY, CON, SPLIT, NORM, REJECT, AUTO, EXP, CENSORED
     CLOCK_FEATS, TIME_FEATS, OUTCOME_FEATS, MONTHS_SINCE_LSTG, BYR_HIST
 
 
-def process_sim_offers(df, keep_tf=True):
+def process_sim_offers(df, lstg_end, keep_tf=True):
+    # censor timestamps
+    clock = df.clock
+    df = df.drop('clock', axis=1)
+    clock = np.minimum(clock, lstg_end.reindex(index=df.index, level='lstg'))
     # clock features
-    df = df.join(collect_date_clock_feats(df.clock))
+    df = df.join(collect_date_clock_feats(clock))
     # days and delay
-    df[DAYS], df[DELAY] = get_days_delay(df.clock.unstack())
+    df[DAYS], df[DELAY] = get_days_delay(clock.unstack())
     # concession as a decimal
     df.loc[:, CON] /= 100
     # indicator for split
@@ -26,7 +30,7 @@ def process_sim_offers(df, keep_tf=True):
     # reject auto and exp are last
     df[REJECT] = df[CON] == 0
     df[AUTO] = (df[DELAY] == 0) & df.index.isin(IDX[SLR_PREFIX], level='index')
-    df[EXP] = df[DELAY] == 1
+    df[EXP] = (df[DELAY] == 1) | df[CENSORED]
     # difference time feats
     if keep_tf:
         tf = df[TIME_FEATS].astype('float64')
@@ -40,12 +44,12 @@ def process_sim_offers(df, keep_tf=True):
         df = df.loc[:, CLOCK_FEATS + TIME_FEATS + OUTCOME_FEATS]
     else:
         df = df.loc[:, CLOCK_FEATS + OUTCOME_FEATS]
-    return df
+    return df, clock
 
 
-def process_sim_threads(part, df):
+def process_sim_threads(df, start_time):
     # convert clock to months_since_lstg
-    df = df.join(load_file(part, 'lookup').start_time)
+    df = df.join(start_time)
     df[MONTHS_SINCE_LSTG] = (df.clock - df.start_time) / MONTH
     df = df.drop(['clock', 'start_time'], axis=1)
     # reorder columns to match observed
@@ -53,12 +57,12 @@ def process_sim_threads(part, df):
     return df
 
 
-def concat_sim_chunks(part, lookup=None):
+def concat_sim_chunks(part, drop_censored=True):
     """
     Loops over simulations, concatenates dataframes.
     :param part: string name of partition.
-    :param lookup: dataframe with index of listings and start_time as col.
-    :return: concatentated and sorted threads and offers dataframes.
+    :param drop_censored: True if censored observations are dropped.
+    :return: dictionary of dataframes.
     """
     # collect chunks
     threads, offers = [], []
@@ -72,31 +76,32 @@ def concat_sim_chunks(part, lookup=None):
     offers = pd.concat(offers, axis=0).sort_index()
 
     # drop censored offers
-    offers = offers.loc[~offers[CENSORED], :]
-    offers.drop(CENSORED, axis=1, inplace=True)
-    clock = offers.clock.copy()
+    if drop_censored:
+        offers = offers.loc[~offers[CENSORED], :]
 
     # initialize output dictionary
     sim = dict()
 
-    # conform to observed inputs
-    sim['threads'] = process_sim_threads(part, threads)
-    sim['offers'] = process_sim_offers(offers)
+    # end of listing
+    start_time = load_file(part, 'lookup').start_time
+    sale_time = offers.loc[offers[CON] == 100, 'clock'].reset_index(
+        level=['thread', 'index'], drop=True)
+    lstg_end = sale_time.reindex(index=start_time.index, fill_value=-1)
+    no_sale = lstg_end[lstg_end == -1].index
+    lstg_end.loc[no_sale] = start_time[no_sale] + MONTH - 1
 
-    # pull out timestamps
-    if lookup is not None:
-        sim['thread_start'] = clock.xs(1, level='index')
-        sale_time = clock[sim['offers'][CON] == 1].reset_index(
-            level=['thread', 'index'], drop=True)
-        lstg_end = sale_time.reindex(index=lookup.index)
-        no_sale = lstg_end[lstg_end.isna()].index
-        lstg_end.loc[no_sale] = lookup.loc[no_sale, 'start_time'] + MONTH - 1
-        sim['lstg_end'] = lstg_end.astype('int64')
+    # conform to observed inputs
+    sim['threads'] = process_sim_threads(threads, start_time)
+    sim['offers'], clock = process_sim_offers(offers, lstg_end)
+
+    # timestamps
+    sim['thread_start'] = clock.xs(1, level='index')
+    sim['lstg_end'] = lstg_end
 
     return sim
 
 
-def get_obs_outcomes(part, timestamps=False):
+def get_obs_outcomes(part, timestamps=False, drop_censored=True):
     # lookup
     lookup = load_file(part, 'lookup')
 
@@ -105,8 +110,11 @@ def get_obs_outcomes(part, timestamps=False):
 
     # observed outcomes
     obs['threads'] = load_file(part, 'x_thread')
-    offers = load_file(part, 'x_offer')
-    obs['offers'] = offers[(offers[DELAY] == 1) | ~offers[EXP]]
+    obs['offers'] = load_file(part, 'x_offer')
+
+    if drop_censored:
+        keep = (obs['offers'][DELAY] == 1) | ~obs['offers'][EXP]
+        obs['offers'] = obs['offers'][keep]
 
     # timestamps
     if timestamps:

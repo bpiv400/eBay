@@ -1,10 +1,10 @@
 import numpy as np
-from plots.plots_consts import GRAY, FONTSIZE
+from plots.plots_consts import FONTSIZE
 from constants import FIGURE_DIR
 
 import matplotlib.pyplot as plt
+plt.rc('text.latex', preamble=r'\usepackage{amsmath}')
 # plt.rc('text', usetex=True)
-# plt.rc('text.latex', preamble=r'\usepackage{amsmath}')
 # plt.rc('font', **{'serif': ['Computer Modern Roman'], 
 #                   'monospace': ['Computer Modern Typewriter']})
 
@@ -35,7 +35,7 @@ def save_fig(name, legend=None, xlabel=None, ylabel=None, gridlines=True, square
     if gridlines:
         plt.grid(axis='both',
                  which='both',
-                 color=GRAY,
+                 color='gray',
                  linestyle='-',
                  linewidth=0.5)
 
@@ -78,7 +78,7 @@ def grouped_bar(labels, y):
     plt.clf()
 
     # styles
-    colors = ['k', GRAY]
+    colors = ['k', 'gray']
 
     # error checking
     assert type(y) is dict and len(y.keys()) == 2
@@ -97,14 +97,23 @@ def grouped_bar(labels, y):
 
     # x labels
     plt.gca().set_xticks(x)
-    plt.gca().set_xticklabels(labels)
+    plt.gca().set_xticklabels(labels, usetex='$' in labels[0])
 
 
-def overlapped_bar(x, y0, y1, width=1, alpha=.5):
-    assert len(x) == len(y0) == len(y1)
-    num = len(x)
-    indices = np.arange(num)
+def overlapping_bar(y, width=1, alpha=.5, ticks=None, labels=None):
+    plt.clf()
+
+    keys = list(y.keys())
+    x = np.arange(len(y[keys[0]]))
 
     # plot bars
-    plt.bar(x, y0, width=width, alpha=alpha, color='white', edgecolor='k')
-    plt.bar(x, y1, width=width, alpha=alpha, color='gray', edgecolor='k')
+    plt.bar(x, y[keys[0]],
+            width=width, alpha=alpha, color='white', edgecolor='k')
+    plt.bar(x, y[keys[1]],
+            width=width, alpha=alpha, color='gray', edgecolor='k')
+
+    # x labels
+    if ticks is not None:
+        plt.gca().set_xticks(ticks)
+        if labels is not None:
+            plt.gca().set_xticklabels(labels)
