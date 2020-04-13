@@ -93,14 +93,9 @@ def main():
                            num_offers_sim.rename('simulated')], axis=1)
     dump(df_offers, PLOT_DIR + 'num_offers.pkl')
 
-    # loop over models, get observed and simulated outcomes
-    y_sim = get_outcome(sim)
-    y_obs = get_outcome(obs)
-
-    # convert to distributions
-    p = dict()
-    for k in ['simulated', ]:
-
+    # loop over models, get observed and simulated distributions
+    p = {'simulated': get_distributions(sim),
+         'observed': get_distributions(obs)}
 
     # save
     dump(p, PLOT_DIR + 'distributions.pkl')
