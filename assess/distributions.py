@@ -1,26 +1,59 @@
+import numpy as np
 import pandas as pd
 from compress_pickle import dump
+from assess.assess_utils import get_num_out
 from processing.processing_utils import load_file
 from processing.f_discrim.discrim_utils import concat_sim_chunks, get_obs_outcomes
-from constants import TEST, PLOT_DIR, OFFER_MODELS, DELAY_MODELS
+from constants import TEST, PLOT_DIR, OFFER_MODELS, DELAY_MODELS, \
+    CON_MODELS, CON_MULTIPLIER
 from featnames import MONTHS_SINCE_LSTG, BYR_HIST, DELAY, EXP
 
 
-def get_outcomes(d):
-    # collect outcomes in dictionary
-    y = dict()
-    # arrival models
-    y['arrivals'] = d['threads'][MONTHS_SINCE_LSTG]
-    y[BYR_HIST] = d['threads'][BYR_HIST]
-    # select offer component for offer models
+def p_multinomial(m, y):
+    # number of periods
+    num_out = get_num_out(m)
+    # calculate categorical distribution
+    x = range(num_out)
+    p = np.array([(y == i).mean() for i in x])
+    pdf = pd.Series(p, index=x, name=y.name)
+    # make sure pdf sums to 1
+    assert np.abs(pdf.sum() - 1) < 1e-8
+    return pdf
+
+
+def get_cdf(y):
+    v = np.sort(y.values)
+    x, counts = np.unique(v, return_counts=True)
+    pdf = counts / len(v)
+    cdf = pd.Series(np.cumsum(pdf), index=x, name=y.name)
+    return cdf
+
+
+def get_distributions(d):
+    p = dict()
+    # arrival times
+    y = d['threads'][MONTHS_SINCE_LSTG]
+    p['arrival'] = get_cdf(y)
+    # buyer history
+    y = d['threads'][BYR_HIST]
+    p[BYR_HIST] = p_multinomial(BYR_HIST, y)
+    # offer models
     for m in OFFER_MODELS:
         outcome, turn = m[:-1], int(m[-1])
-        y[m] = d['offers'].loc[:, outcome].xs(turn, level='index')
+        y = d['offers'].loc[:, outcome].xs(turn, level='index')
+        # use integer concessions for con models
+        if m in CON_MODELS:
+            y = (y * CON_MULTIPLIER).astype('uint8')
         # for delay models, count expirations and censors together
         if m in DELAY_MODELS:
             exp = d['offers'].loc[:, EXP].xs(turn, level='index')
-            y[m][exp] = 1.0
-    return y
+            y[exp] = 1.0
+        # convert to distribution
+        if y.dtype == 'float64':
+            p[m] = get_cdf(y)
+        else:
+            p[m] = p_multinomial(m, y)
+    return p
 
 
 def num_threads(df, lstgs):
@@ -60,12 +93,17 @@ def main():
                            num_offers_sim.rename('simulated')], axis=1)
     dump(df_offers, PLOT_DIR + 'num_offers.pkl')
 
-    # loop over models, get observed and simulated distributions
-    y = {'simulated': get_outcomes(sim),
-         'observed': get_outcomes(obs)}
+    # loop over models, get observed and simulated outcomes
+    y_sim = get_outcome(sim)
+    y_obs = get_outcome(obs)
+
+    # convert to distributions
+    p = dict()
+    for k in ['simulated', ]:
+
 
     # save
-    dump(y, PLOT_DIR + 'outcomes.pkl')
+    dump(p, PLOT_DIR + 'distributions.pkl')
 
 
 if __name__ == '__main__':
