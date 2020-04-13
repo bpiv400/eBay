@@ -1,8 +1,19 @@
 from compress_pickle import load
 import numpy as np
+from assess.assess_utils import get_num_out
 from plots.plots_utils import grouped_bar, overlapping_bar, save_fig
 from processing.processing_consts import NUM_OUT
 from constants import PLOT_DIR, CON_MULTIPLIER, CON_MODELS, MSG_MODELS
+
+
+def get_distribution(m, y):
+    # number of periods
+    num_out = get_num_out(m)
+    # calculate categorical distribution
+    p = np.array([(y == i).mean() for i in range(num_out)])
+    # make sure p sums to 1
+    assert np.abs(p.sum() - 1) < 1e-8
+    return p
 
 
 def main():
