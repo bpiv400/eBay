@@ -14,7 +14,6 @@ from rlenv.simulator.Recorder import Recorder
 from agent.agent_utils import get_con_set
 from agent.agent_consts import seller_groupings, NO_ARRIVAL_CUTOFF, NO_ARRIVAL
 
-
 SellerObs = namedtuple("SellerObs", seller_groupings)
 
 

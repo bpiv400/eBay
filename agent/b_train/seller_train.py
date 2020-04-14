@@ -3,6 +3,7 @@ Train a seller agent that makes concessions, not offers
 """
 import argparse
 import os
+import psutil
 import time
 import re
 import shutil
@@ -58,7 +59,6 @@ class RlTrainer:
         self.eval_scores = list()
         self.norm = None
         self.evaluation_chunks = self.count_eval_chunks()
-        self.cpu_count = self.count_cpus()
         self.checkpoint = self.init_checkpoint()
 
         # ids
@@ -89,9 +89,9 @@ class RlTrainer:
                                                      self.ppo_minibatches,
                                                      self.ppo_epochs)
 
-    @staticmethod
-    def count_cpus():
-        return int(mp.cpu_count() / 2)
+    @property
+    def cpu_count(self):
+        return 18
 
     def clear_log(self):
         if os.path.exists(self.run_dir):
@@ -224,6 +224,7 @@ class RlTrainer:
         logger.record_tabular_misc_stat('evalReward', rewards)
 
     def _serial_evaluate(self):
+        torch.set_num_threads(24)
         rewards = list()
         eval_kwargs = self.generate_eval_kwargs()
         eval_generator = EvalGenerator(**eval_kwargs)
@@ -235,6 +236,7 @@ class RlTrainer:
 
     def _parallel_evaluate(self):
         # setup process inputs
+        torch.set_num_threads(18)
         reward_queue = mp.Queue()
         chunk_queue = mp.Queue()
         [chunk_queue.put(i) for i in range(1, self.evaluation_chunks + 1)]
@@ -242,11 +244,16 @@ class RlTrainer:
 
         # start processes
         procs = []
-        for i in range(self.cpu_count):
+        # TODO: Change name to process count
+        # threads_per_cpu = int(mp.cpu_count() / self.cpu_count)
+        threads_per_cpu = int(18 / self.cpu_count)
+        for i in range(0, 18, threads_per_cpu):
             keywords = {
                 'chunk_queue': chunk_queue,
                 'reward_queue': reward_queue,
-                'generator_kwargs': eval_kwargs
+                'generator_kwargs': eval_kwargs,
+                'cpu': i,
+                'threads_per_cpu': threads_per_cpu
             }
             p = mp.Process(target=perform_eval, kwargs=keywords)
             procs.append(p)
@@ -297,14 +304,16 @@ class RlTrainer:
     def count_eval_chunks(self):
         if self.debug:
             return 10
-        contents = os.listdir(RL_EVAL_DIR)
-        contents = [f for f in contents if isfile(join(RL_EVAL_DIR, f))]
-        pattern = re.compile(r'[0-9]+\.gz')
-        contents = [f for f in contents if re.match(pattern, f)]
-        return len(contents)
+        return self.cpu_count * 3
+        # contents = os.listdir(RL_EVAL_DIR)
+        # contents = [f for f in contents if isfile(join(RL_EVAL_DIR, f))]
+        # pattern = re.compile(r'[0-9]+\.gz')
+        # contents = [f for f in contents if re.match(pattern, f)]
+        # return len(contents)
 
 
-def perform_eval(generator_kwargs=None, chunk_queue=None, reward_queue=None):
+def perform_eval(generator_kwargs=None, chunk_queue=None, reward_queue=None,
+                 cpu=None, threads_per_cpu=None):
     """
     Target function of parallel evaluation worker processes, generates
     rewards for some subset of evaluation chunks
@@ -312,6 +321,11 @@ def perform_eval(generator_kwargs=None, chunk_queue=None, reward_queue=None):
     :param mp.Queue chunk_queue: queue containing chunks that need to be processed
     :param mp.Queue reward_queue: queue that accumulates calculated rewards
     """
+    cpus = list(range(cpu, cpu + threads_per_cpu))
+    print(cpus)
+    p = psutil.Process()
+    p.cpu_affinity(cpus)
+    torch.set_num_threads(len(cpus))
     generator = EvalGenerator(**generator_kwargs)
     while True:
         try:
@@ -319,8 +333,11 @@ def perform_eval(generator_kwargs=None, chunk_queue=None, reward_queue=None):
         except queue.Empty:
             break
         else:
+            print('processing chunk {}...'.format(chunk))
             rewards = generator.process_chunk(chunk=chunk)
+            print('chunk {} done'.format(chunk))
             reward_queue.put(rewards)
+    return True
 
 
 def main():
