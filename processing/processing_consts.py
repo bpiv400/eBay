@@ -1,4 +1,6 @@
-from constants import PREFIX, HOUR, MINUTE, MAX_DELAY, HIST_QUANTILES, CON_MULTIPLIER
+from constants import PREFIX, HOUR, MINUTE, MAX_DELAY, HIST_QUANTILES, \
+    CON_MULTIPLIER, ARRIVAL_MODELS, BYR_HIST_MODEL, DELAY_MODELS, \
+    CON_MODELS, MSG_MODELS, INIT_MODELS, DISCRIM_MODELS
 
 # directories
 CLEAN_DIR = '%s/clean/' % PREFIX
@@ -86,30 +88,14 @@ INTERVAL = {1: HOUR,
 INTERVAL_COUNTS = {i: int(MAX_DELAY[i] / INTERVAL[i]) for i in INTERVAL.keys()}
 
 # size of model output
-NUM_OUT = {'first_arrival': INTERVAL_COUNTS[1] + 1,
-           'next_arrival':  INTERVAL_COUNTS[1] + 1,
-           'hist': HIST_QUANTILES,
-           'delay2': INTERVAL_COUNTS[2] + 1,
-           'delay3': INTERVAL_COUNTS[3] + 1,
-           'delay4': INTERVAL_COUNTS[4] + 1,
-           'delay5': INTERVAL_COUNTS[5] + 1,
-           'delay6': INTERVAL_COUNTS[6] + 1,
-           'delay7': INTERVAL_COUNTS[7] + 1,
-           'con1': CON_MULTIPLIER + 1,
-           'con2': CON_MULTIPLIER + 1,
-           'con3': CON_MULTIPLIER + 1,
-           'con4': CON_MULTIPLIER + 1,
-           'con5': CON_MULTIPLIER + 1,
-           'con6': CON_MULTIPLIER + 1,
-           'con7': 1,
-           'msg1': 1,
-           'msg2': 1,
-           'msg3': 1,
-           'msg4': 1,
-           'msg5': 1,
-           'msg6': 1,
-           'init_slr': CON_MULTIPLIER + 1,
-           'init_byr': CON_MULTIPLIER + 1,
-           'listings': 1,
-           'threads': 1,
-           'threads_no_tf': 1}
+NUM_OUT = dict()
+for m in ARRIVAL_MODELS[:-1]:
+    NUM_OUT[m] = INTERVAL_COUNTS[1] + 1
+NUM_OUT[BYR_HIST_MODEL] = HIST_QUANTILES
+for m in DELAY_MODELS:
+    turn = int(m[-1])
+    NUM_OUT[m] = INTERVAL_COUNTS[turn] + 1
+for m in CON_MODELS[:-1] + INIT_MODELS:
+    NUM_OUT[m] = CON_MULTIPLIER + 1
+for m in [CON_MODELS[-1]] + MSG_MODELS + DISCRIM_MODELS:
+    NUM_OUT[m] = 1

@@ -3,13 +3,15 @@ from plots.plots_consts import FONTSIZE
 from constants import FIGURE_DIR
 
 import matplotlib.pyplot as plt
+plt.style.use('grayscale')
 plt.rc('text.latex', preamble=r'\usepackage{amsmath}')
 # plt.rc('text', usetex=True)
 # plt.rc('font', **{'serif': ['Computer Modern Roman'], 
 #                   'monospace': ['Computer Modern Typewriter']})
 
 
-def save_fig(name, legend=None, xlabel=None, ylabel=None, gridlines=True, square=False):
+def save_fig(name, legend=True, legend_kwargs=None,
+             xlabel=None, ylabel=None, square=False):
     # font size
     fontsize = FONTSIZE[name.split('_')[0]]
 
@@ -22,22 +24,17 @@ def save_fig(name, legend=None, xlabel=None, ylabel=None, gridlines=True, square
     plt.yticks(fontsize=fontsize)
 
     # legend
-    if legend is not None:
-        plt.legend(loc=legend, fontsize=fontsize, fancybox=False)
+    if legend:
+        if legend_kwargs is None:
+            legend_kwargs = dict()
+        plt.legend(**legend_kwargs,
+                   fancybox=False,
+                   frameon=False,
+                   fontsize=fontsize)
 
     # axis labels
-    if xlabel is not None:
-        plt.xlabel(xlabel, fontsize=fontsize)
-    if ylabel is not None:
-        plt.ylabel(ylabel, fontsize=fontsize)
-
-    # grid lines
-    if gridlines:
-        plt.grid(axis='both',
-                 which='both',
-                 color='gray',
-                 linestyle='-',
-                 linewidth=0.5)
+    plt.xlabel(xlabel, fontsize=fontsize)
+    plt.ylabel(ylabel, fontsize=fontsize)
 
     # save
     plt.savefig(FIGURE_DIR + '{}.png'.format(name),
@@ -49,71 +46,70 @@ def save_fig(name, legend=None, xlabel=None, ylabel=None, gridlines=True, square
     plt.close()
 
 
-def line_plot(x, y, style, diagonal=False, square=True):
+def line_plot(df, style=None, ds='steps-post', xlim=None, ylim=None,
+              xticks=None, yticks=None, diagonal=False):
     plt.clf()
 
-    # loop over lines to draw
-    if type(y) is dict:
-        if type(x) is dict:
-            assert x.keys() == y.keys()
-            for k in y.keys():
-                plt.plot(x[k], y[k], style[k], label=k)
-        else:
-            for k in y.keys():
-                plt.plot(x, y[k], style[k], label=k)
-    else:
-        plt.plot(x, y, style)
+    ax = df.plot.line(style=style,
+                      xlim=xlim,
+                      ylim=ylim,
+                      xticks=xticks,
+                      yticks=yticks,
+                      ds=ds)
+
+    # gridlines
+    plt.grid(axis='both',
+             which='both',
+             color='gray',
+             linestyle='-',
+             linewidth=0.5)
 
     # add 45 degree line
     if diagonal:
-        if type(x) is dict:
-            low = np.min([a.min() for a in x.values()])
-            high = np.max([a.max() for a in x.values()])
-        else:
-            low, high = x.min(), x.max()
-        plt.plot([low, high], [low, high], '--k', linewidth=0.5)
+        low, high = df.index.min(), df.index.max()
+        ax.plot([low, high], [low, high], '--k', linewidth=0.5)
 
 
-def grouped_bar(labels, y):
+def training_plot(name, s):
+    line_plot(s, style={'test': '-k', 'train': '--k', 'baserate': '-k'},
+              ds='default')
+    save_fig(name, legend=False)
+
+
+def pdf_plot(name, df, xticks=None, xlabel=None, ylabel=None):
+    line_plot(df, xticks=xticks)
+    save_fig(name, xlabel=xlabel, ylabel=ylabel)
+
+
+def cdf_plot(name, df, xlim=None, xticks=None, xlabel=None, ylabel=None):
+    line_plot(df, xlim=xlim, ylim=[0, 1], xticks=xticks)
+    save_fig(name, xlabel=xlabel, ylabel=ylabel,
+             legend_kwargs={'loc': 'lower right'})
+
+
+def survival_plot(name, df, xlim=None, xticks=None, xlabel=None, ylabel=None):
+    line_plot(df, xlim=xlim, ylim=[0, 1], xticks=xticks)
+    save_fig(name, xlabel=xlabel, ylabel=ylabel,
+             legend_kwargs={'loc': 'upper right'})
+
+
+def bar_plot(df, horizontal=False, stacked=False, rot=0,
+             xlim=None, ylim=None, xticks=None, yticks=None):
     plt.clf()
 
-    # styles
-    colors = ['k', 'gray']
+    # draw bars
+    f = df.plot.barh if horizontal else df.plot.bar
+    ax = f(stacked=stacked, xlim=xlim, ylim=ylim, legend=False, rot=rot)
+    if horizontal:
+        ax.invert_yaxis()
 
-    # error checking
-    assert type(y) is dict and len(y.keys()) == 2
-
-    # parameters
-    width = 0.35
-    x = np.arange(len(labels))
-    num = len(y.keys())
-
-    # create bars
-    keys = list(y.keys())
-    plt.bar(x - width/num, y[keys[0]], width,
-            label=keys[0], color=colors[0])
-    plt.bar(x + width/num, y[keys[1]], width,
-            label=keys[1], color=colors[1])
-
-    # x labels
-    plt.gca().set_xticks(x)
-    plt.gca().set_xticklabels(labels, usetex='$' in labels[0])
+    # ticks
+    if xticks is not None:
+        plt.gca().set_xticks(xticks)
+    if yticks is not None:
+        plt.gca().set_yticks(yticks)
 
 
-def overlapping_bar(y, width=1, alpha=.5, ticks=None, labels=None):
-    plt.clf()
-
-    keys = list(y.keys())
-    x = np.arange(len(y[keys[0]]))
-
-    # plot bars
-    plt.bar(x, y[keys[0]],
-            width=width, alpha=alpha, color='white', edgecolor='k')
-    plt.bar(x, y[keys[1]],
-            width=width, alpha=alpha, color='gray', edgecolor='k')
-
-    # x labels
-    if ticks is not None:
-        plt.gca().set_xticks(ticks)
-        if labels is not None:
-            plt.gca().set_xticklabels(labels)
+def grouped_bar(name, df, horizontal=False, xlabel=None, ylabel=None):
+    bar_plot(df, horizontal=horizontal)
+    save_fig(name, xlabel=xlabel, ylabel=ylabel)

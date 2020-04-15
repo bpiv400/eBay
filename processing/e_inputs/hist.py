@@ -1,7 +1,7 @@
 import pandas as pd
 from processing.e_inputs.inputs_utils import save_files
 from processing.processing_utils import input_partition, load_file, init_x
-from featnames import CLOCK_FEATS, THREAD_COUNT
+from featnames import CLOCK_FEATS, THREAD_COUNT, BYR_HIST
 
 
 # loads data and calls helper functions to construct train inputs
@@ -12,7 +12,7 @@ def process_inputs(part):
 	x_thread[THREAD_COUNT] = x_thread.index.get_level_values(level='thread') - 1
 
 	# outcome
-	y = x_thread['byr_hist']
+	y = x_thread[BYR_HIST]
 	idx = y.index
 	x_thread = x_thread.drop('byr_hist', axis=1)
 
@@ -28,13 +28,13 @@ def process_inputs(part):
 def main():
 	# partition name from command line
 	part = input_partition()
-	print('%s/hist' % part)
+	print('{}/{}'.format(part, BYR_HIST))
 
 	# input dataframes, output processed dataframes
 	d = process_inputs(part)
 
 	# save various output files
-	save_files(d, part, 'hist')
+	save_files(d, part, BYR_HIST)
 
 
 if __name__ == '__main__':

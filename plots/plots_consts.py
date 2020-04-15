@@ -1,5 +1,4 @@
 ROC_PTS = 1000
-FONTSIZE = {'roc': 20,
-            'likelihood': 24,
-            'num': 20,
-            'p': 14}
+FONTSIZE = {'roc': 16,
+            'training': 24,
+            'p': 16}

@@ -1,65 +1,108 @@
 import numpy as np
 import pandas as pd
-from compress_pickle import dump
-from assess.assess_utils import get_num_out
+from compress_pickle import load, dump
 from processing.processing_utils import load_file
+from processing.e_inputs.offer import get_y_msg
 from processing.f_discrim.discrim_utils import concat_sim_chunks, get_obs_outcomes
-from constants import TEST, PLOT_DIR, OFFER_MODELS, DELAY_MODELS, \
-    CON_MODELS, CON_MULTIPLIER
-from featnames import MONTHS_SINCE_LSTG, BYR_HIST, DELAY, EXP
+from assess.assess_consts import MAX_THREADS
+from processing.processing_consts import INTERVAL
+from constants import TEST, PLOT_DIR, BYR_HIST_MODEL, CON_MULTIPLIER, \
+    HIST_QUANTILES, SIM, OBS, ARRIVAL_PREFIX, MAX_DELAY, PCTILE_DIR
+from featnames import MONTHS_SINCE_LSTG, BYR_HIST, DELAY, EXP, CON, MSG
 
 
-def p_multinomial(m, y):
-    # number of periods
-    num_out = get_num_out(m)
-    # calculate categorical distribution
-    x = range(num_out)
-    p = np.array([(y == i).mean() for i in x])
-    pdf = pd.Series(p, index=x, name=y.name)
-    # make sure pdf sums to 1
-    assert np.abs(pdf.sum() - 1) < 1e-8
+def get_pdf(y, intervals, add_last=True):
+    # construct pdf with integer indices
+    v = np.sort((y * intervals).astype('int64').values)
+    x, counts = np.unique(v, return_counts=True)
+    pdf = counts / len(y)
+    pdf = pd.Series(pdf, index=x, name=y.name)
+    # reindex to include every interval
+    idx = range(intervals+1) if add_last else range(intervals)
+    pdf = pdf.reindex(index=idx, fill_value=0.0)
     return pdf
 
 
-def get_cdf(y):
-    v = np.sort(y.values)
-    x, counts = np.unique(v, return_counts=True)
-    pdf = counts / len(v)
-    cdf = pd.Series(np.cumsum(pdf), index=x, name=y.name)
-    return cdf
+def get_cdf(y, intervals, add_last=True):
+    pdf = get_pdf(y, intervals, add_last=add_last)
+    return pdf.cumsum()
+
+
+def get_quantiles(pc, n_quantiles):
+    quantiles = np.arange(0, 1, float(1/n_quantiles))
+    low = [pc[pc >= d].index[0] for d in quantiles]
+    high = [pc[pc < d].index[-1] for d in quantiles[1:]]
+
+    # index of ranges
+    idx = []
+    for i in range(len(quantiles) - 1):
+        if high[i] > low[i]:
+            idx.append('{}-{}'.format(low[i], high[i]))
+        elif high[i] == low[i]:
+            idx.append('{}'.format(low[i]))
+        else:
+            idx.append('NaN')
+
+    # last entry has no explicit upper bound
+    idx.append('{}+'.format(low[-1]))
+
+    return idx
+
+
+def get_arrival_distributions(threads):
+    p = dict()
+
+    # arrival times
+    y = threads[MONTHS_SINCE_LSTG]
+    pdf = get_pdf(y, MAX_DELAY[1], add_last=False).to_frame()
+    pdf['period'] = pdf.index // INTERVAL[1]
+    p[ARRIVAL_PREFIX] = pdf.groupby('period').sum().squeeze()
+
+    # buyer history
+    y = threads[BYR_HIST] / HIST_QUANTILES
+    pdf = get_pdf(y, HIST_QUANTILES, add_last=False)
+    pc = load(PCTILE_DIR + '{}.pkl'.format(BYR_HIST))
+    pdf.index = get_quantiles(pc, HIST_QUANTILES)
+    pdf.drop('NaN', inplace=True)
+    p[BYR_HIST_MODEL] = pdf
+
+    return p
 
 
 def get_distributions(d):
-    p = dict()
-    # arrival times
-    y = d['threads'][MONTHS_SINCE_LSTG]
-    p['arrival'] = get_cdf(y)
-    # buyer history
-    y = d['threads'][BYR_HIST]
-    p[BYR_HIST] = p_multinomial(BYR_HIST, y)
-    # offer models
-    for m in OFFER_MODELS:
-        outcome, turn = m[:-1], int(m[-1])
-        y = d['offers'].loc[:, outcome].xs(turn, level='index')
-        # use integer concessions for con models
-        if m in CON_MODELS:
-            y = (y * CON_MULTIPLIER).astype('uint8')
-        # for delay models, count expirations and censors together
-        if m in DELAY_MODELS:
-            exp = d['offers'].loc[:, EXP].xs(turn, level='index')
-            y[exp] = 1.0
-        # convert to distribution
-        if y.dtype == 'float64':
-            p[m] = get_cdf(y)
-        else:
-            p[m] = p_multinomial(m, y)
+    p = get_arrival_distributions(d['threads'])
+    for turn in range(1, 8):
+        p[turn] = dict()
+        df = d['offers'].xs(turn, level='index')
+
+        # delay
+        if turn > 1:
+            y = df[DELAY].copy()
+            y.loc[df[EXP]] = 1.0  # count expirations and censors together
+            p[turn][DELAY] = get_cdf(y, MAX_DELAY[turn])
+
+        # concession
+        p[turn][CON] = get_cdf(df[CON], CON_MULTIPLIER)
+
+        # message
+        if turn < 7:
+            p[turn][MSG] = get_y_msg(df, turn).mean()
+
     return p
 
 
 def num_threads(df, lstgs):
+    # threads per listing
     s = df.reset_index('thread')['thread'].groupby('lstg').count()
-    s = s.reindex(index=lstgs, fill_value=0)
+    s = s.reindex(index=lstgs, fill_value=0)  # fill in zeros
     s = s.groupby(s).count() / len(lstgs)
+    # censor at MAX_THREADS
+    s.iloc[MAX_THREADS] = s.iloc[MAX_THREADS:].sum(axis=0)
+    s = s[:MAX_THREADS + 1]
+    idx = s.index.astype(str).tolist()
+    idx[-1] += '+'
+    s.index = idx
+    assert np.abs(s.sum() - 1) < 1e-8
     return s
 
 
@@ -78,24 +121,17 @@ def main():
     # simulated outcomes
     sim = concat_sim_chunks(TEST, drop_censored=False)
 
+    # loop over models, get observed and simulated distributions
+    p = {SIM: get_distributions(sim), OBS: get_distributions(obs)}
+
     # number of threads per listing
     lstgs = load_file(TEST, 'lookup').index
-    num_threads_obs = num_threads(obs['threads'], lstgs)
-    num_threads_sim = num_threads(sim['threads'], lstgs)
-    df_threads = pd.concat([num_threads_obs.rename('observed'),
-                            num_threads_sim.rename('simulated')], axis=1)
-    dump(df_threads, PLOT_DIR + 'num_threads.pkl')
+    p[SIM]['threads'] = num_threads(sim['threads'], lstgs)
+    p[OBS]['threads'] = num_threads(obs['threads'], lstgs)
 
     # number of offers per thread
-    num_offers_obs = num_offers(obs['offers'])
-    num_offers_sim = num_offers(sim['offers'])
-    df_offers = pd.concat([num_offers_obs.rename('observed'),
-                           num_offers_sim.rename('simulated')], axis=1)
-    dump(df_offers, PLOT_DIR + 'num_offers.pkl')
-
-    # loop over models, get observed and simulated distributions
-    p = {'simulated': get_distributions(sim),
-         'observed': get_distributions(obs)}
+    p[SIM]['offers'] = num_offers(sim['offers'])
+    p[OBS]['offers'] = num_offers(obs['offers'])
 
     # save
     dump(p, PLOT_DIR + 'distributions.pkl')

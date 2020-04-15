@@ -21,16 +21,17 @@ elif 'Windows' in platform() and 'C:' in os.getcwd():  # Barry's laptop
 else:  # cluster and AWS
     PREFIX = os.path.expanduser('~/weka/eBay')
 
-PARTS_DIR = '%s/partitions/' % PREFIX
-ENV_SIM_DIR = '%s/envSimulator/' % PREFIX
-OUTPUT_DIR = '%s/outputs/' % PREFIX
-INPUT_DIR = '%s/inputs/' % PREFIX
-INDEX_DIR = '%s/index/' % PREFIX
-FEATNAMES_DIR = '%sfeatnames/' % INPUT_DIR
+PARTS_DIR = '{}/partitions/'.format(PREFIX)
+ENV_SIM_DIR = '{}/envSimulator/'.format(PREFIX)
+OUTPUT_DIR = '{}/outputs/'.format(PREFIX)
+INPUT_DIR = '{}/inputs/'.format(PREFIX)
+INDEX_DIR = '{}/index/'.format(PREFIX)
+PCTILE_DIR = '{}/pctile/'.format(PREFIX)
+FEATNAMES_DIR = INPUT_DIR + 'featnames/'
 LOG_DIR = OUTPUT_DIR + 'logs/'
 MODEL_DIR = OUTPUT_DIR + 'models/'
 PLOT_DIR = OUTPUT_DIR + 'plots/'
-REINFORCE_DIR = '%s/agent/' % PREFIX
+REINFORCE_DIR = '{}/agent/'.format(PREFIX)
 
 PARAMS_PATH = INPUT_DIR + 'params.pkl'
 
@@ -104,3 +105,10 @@ CENSORED_MODELS = [INTERARRIVAL_MODEL] + DELAY_MODELS
 
 # discriminator models
 DISCRIM_MODELS = ['listings', 'threads']
+
+# initializations
+INIT_MODELS = ['init_{}'.format(role) for role in [BYR_PREFIX, SLR_PREFIX]]
+
+# outcome types
+SIM = 'simulated'
+OBS = 'observed'
