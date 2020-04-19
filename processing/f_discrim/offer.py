@@ -30,20 +30,18 @@ def construct_x_offer(d, offers, feats, turn):
 def main():
     # extract parameters from command line
     parser = argparse.ArgumentParser()
-    parser.add_argument('--part', type=str)
-    parser.add_argument('--name', type=str)
+    parser.add_argument('--part', type=str, required=True)
+    parser.add_argument('--outcome', type=str, required=True)
+    parser.add_argument('--turn', type=int, required=True)
     args = parser.parse_args()
-    part, m = args.part, args.name
+    part, outcome, turn = args.part, args.outcome, args.turn
+    m = outcome + str(turn)
     name = '{}_discrim'.format(m)
     print('{}/{}'.format(part, name))
 
     # error check parameters
     assert part in [TRAIN_RL, VALIDATION, TEST]
     assert m in OFFER_MODELS
-
-    # outcome and turn
-    outcome = m[:-1]
-    turn = int(m[-1])
 
     # dictionaries of components
     obs = get_obs_outcomes(part)
