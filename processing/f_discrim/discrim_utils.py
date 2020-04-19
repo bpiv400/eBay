@@ -143,8 +143,9 @@ def save_discrim_files(part, name, x_obs, x_sim):
 
 def construct_x_arrival(d, construct_y):
     x = d['x']
-    y = construct_y(d['y']).astype('float32')
-    x['lstg'].loc[:, y.columns] = y
+    y = construct_y(d['y'])
+    for c in y.columns:
+        x['lstg'][c] = y[c].astype('float32')
     assert x['lstg'].isna().sum().sum() == 0
     return x
 
