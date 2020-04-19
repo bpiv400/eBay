@@ -5,7 +5,7 @@ from featnames import BYR_HIST
 
 
 def construct_y(y):
-    return (y / HIST_QUANTILES).rename(BYR_HIST)
+    return (y / HIST_QUANTILES).rename(BYR_HIST).to_frame()
 
 
 def main():
