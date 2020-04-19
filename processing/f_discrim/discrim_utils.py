@@ -1,15 +1,17 @@
 import numpy as np
 import pandas as pd
 from compress_pickle import load, dump
-from processing.e_inputs.inputs_utils import save_sizes, convert_x_to_numpy, save_small
-from processing.processing_utils import load_file, collect_date_clock_feats, \
-    get_days_delay, get_norm
+from processing.e_inputs.inputs_utils import save_sizes, \
+    convert_x_to_numpy, save_small
+from processing.processing_utils import input_partition, load_file, \
+    collect_date_clock_feats, get_days_delay, get_norm, get_obs_outcomes
 from utils import is_split
-from processing.processing_consts import CLEAN_DIR
-from constants import TRAIN_RL, VALIDATION, INPUT_DIR, SIM_CHUNKS, ENV_SIM_DIR, \
-    IDX, SLR_PREFIX, MONTH
-from featnames import DAYS, DELAY, CON, SPLIT, NORM, REJECT, AUTO, EXP, CENSORED, \
-    CLOCK_FEATS, TIME_FEATS, OUTCOME_FEATS, MONTHS_SINCE_LSTG, BYR_HIST
+from constants import TRAIN_RL, VALIDATION, INPUT_DIR, SIM_CHUNKS, \
+    ENV_SIM_DIR, IDX, SLR_PREFIX, MONTH, FIRST_ARRIVAL_MODEL, \
+    INTERARRIVAL_MODEL, ARRIVAL_MODELS
+from featnames import DAYS, DELAY, CON, SPLIT, NORM, REJECT, AUTO, EXP, \
+    CENSORED, CLOCK_FEATS, TIME_FEATS, OUTCOME_FEATS, MONTHS_SINCE_LSTG, \
+    BYR_HIST
 
 
 def process_sim_offers(df, lstg_end, keep_tf=True):
@@ -57,7 +59,7 @@ def process_sim_threads(df, start_time):
     return df
 
 
-def concat_sim_chunks(part, drop_censored=True):
+def concat_sim_chunks(part, drop_censored=False):
     """
     Loops over simulations, concatenates dataframes.
     :param part: string name of partition.
@@ -82,37 +84,34 @@ def concat_sim_chunks(part, drop_censored=True):
     # initialize output dictionary
     sim = dict()
 
-    # start and end of listing
-    lstg_start = load_file(part, 'lookup').start_time
+    # save timestamps
+    sim['clock'] = offers.clock
+    sim['lstg_start'] = load_file(part, 'lookup').start_time
+
+    # end of listing
     sale_time = offers.loc[offers[CON] == 100, 'clock'].reset_index(
         level=['thread', 'index'], drop=True)
-    lstg_end = sale_time.reindex(index=lstg_start.index, fill_value=-1)
-    no_sale = lstg_end[lstg_end == -1].index
-    lstg_end.loc[no_sale] = lstg_start[no_sale] + MONTH - 1
+    sim['lstg_end'] = sale_time.reindex(index=sim['lstg_start'].index,
+                                        fill_value=-1)
+    no_sale = sim['lstg_end'][sim['lstg_end'] == -1].index
+    sim['lstg_end'].loc[no_sale] = sim['lstg_start'][no_sale] + MONTH - 1
 
     # conform to observed inputs
-    sim['threads'] = process_sim_threads(threads, lstg_start)
-    sim['offers'] = process_sim_offers(offers, lstg_end)
+    sim['threads'] = process_sim_threads(threads, sim['lstg_start'])
+    sim['offers'] = process_sim_offers(offers, sim['lstg_end'])
 
     return sim
 
 
-def get_obs_outcomes(part, drop_censored=True):
-    # initialize output dictionary
-    obs = dict()
-
-    # observed outcomes
-    obs['threads'] = load_file(part, 'x_thread')
-    obs['offers'] = load_file(part, 'x_offer')
-
-    if drop_censored:
-        keep = (obs['offers'][DELAY] == 1) | ~obs['offers'][EXP]
-        obs['offers'] = obs['offers'][keep]
-
-    return obs
-
-
 def save_discrim_files(part, name, x_obs, x_sim):
+    """
+    Packages discriminator inputs for training.
+    :param part: string name of partition.
+    :param name: string name of model.
+    :param x_obs: dictionary of observed data.
+    :param x_sim: dictionary of simulated data.
+    :return: None
+    """
     # featnames and sizes
     if part == VALIDATION:
         save_sizes(x_obs, name)
@@ -140,3 +139,41 @@ def save_discrim_files(part, name, x_obs, x_sim):
     # save small
     if part == TRAIN_RL:
         save_small(d, name)
+
+
+def construct_x_arrival(d, construct_y):
+    x = d['x']
+    y = construct_y(d['y']).astype('float32')
+    x['lstg'].loc[:, y.columns] = y
+    assert x['lstg'].isna().sum().sum() == 0
+    return x
+
+
+def create_arrival_discrim_input(m, process_inputs, construct_y):
+    """
+    Creates training inputs for arrival discriminator models.
+    :param m: string name of model.
+    :param process_inputs: function that creates input dictionaries.
+    :param construct_y: function that creates outcome features.
+    :return: None
+    """
+    # partition name from command line
+    part = input_partition()
+    name = '{}_discrim'.format(m)
+    print('{}/{}'.format(part, name))
+
+    # dictionaries of components
+    timestamps = m in [FIRST_ARRIVAL_MODEL, INTERARRIVAL_MODEL]
+    obs = get_obs_outcomes(part, timestamps=timestamps)
+    sim = concat_sim_chunks(part)
+
+    # dictionaries with x and y
+    d_obs = process_inputs(obs, part)
+    d_sim = process_inputs(sim, part)
+
+    # put y into x
+    x_obs = construct_x_arrival(d_obs, construct_y)
+    x_sim = construct_x_arrival(d_sim, construct_y)
+
+    # save various output files
+    save_discrim_files(part, name, x_obs, x_sim)

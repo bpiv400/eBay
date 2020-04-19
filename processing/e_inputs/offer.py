@@ -2,7 +2,8 @@ import argparse
 import numpy as np
 import pandas as pd
 from processing.processing_consts import INTERVAL, INTERVAL_COUNTS
-from processing.processing_utils import load_file, init_x, get_x_thread
+from processing.processing_utils import load_file, init_x, \
+    get_x_thread, get_obs_outcomes
 from processing.e_inputs.inputs_utils import save_files
 from constants import IDX, DAY, MAX_DELAY, BYR_PREFIX, SLR_PREFIX, \
     PARTITIONS, CON_MULTIPLIER
@@ -119,12 +120,9 @@ def get_y_delay(df, turn):
     return delay
 
 
-# loads data and calls helper functions to construct train inputs
-def process_inputs(part, outcome, turn):
-    # load dataframes
-    offers = load_file(part, 'x_offer')
-    threads = load_file(part, 'x_thread')
-    df = offers.xs(turn, level='index')
+def process_inputs(d, part, outcome, turn):
+    # subset to turn
+    df = d['offers'].xs(turn, level='index')
 
     # y and master index
     if outcome == CON:
@@ -139,7 +137,7 @@ def process_inputs(part, outcome, turn):
     x = init_x(part, idx)
 
     # thread features
-    x_thread = get_x_thread(threads, idx)
+    x_thread = get_x_thread(d['threads'], idx)
 
     # add time remaining to x_thread
     if outcome == DELAY:
@@ -148,7 +146,7 @@ def process_inputs(part, outcome, turn):
     x['lstg'] = pd.concat([x['lstg'], x_thread], axis=1)
 
     # offer features
-    x.update(get_x_offer(offers, idx, outcome, turn))
+    x.update(get_x_offer(d['offers'], idx, outcome, turn))
 
     # error checking
     check_zero(x)
@@ -179,8 +177,11 @@ def main():
     else:
         assert turn in range(1, 8)
 
+    # threads and offers
+    obs = get_obs_outcomes(part)
+
     # input dataframes, output processed dataframes
-    d = process_inputs(part, outcome, turn)
+    d = process_inputs(obs, part, outcome, turn)
 
     # save various output files
     save_files(d, part, name)

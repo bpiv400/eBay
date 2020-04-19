@@ -110,5 +110,5 @@ DISCRIM_MODELS = ['listings', 'threads']
 INIT_MODELS = ['init_{}'.format(role) for role in [BYR_PREFIX, SLR_PREFIX]]
 
 # outcome types
-SIM = 'simulated'
-OBS = 'observed'
+SIM = 'simulation'
+OBS = 'data'

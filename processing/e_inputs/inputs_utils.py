@@ -1,25 +1,28 @@
 import numpy as np
 import pandas as pd
 from compress_pickle import dump
-from processing.processing_utils import load_file
-from processing.processing_consts import *
-from constants import *
-from featnames import *
+from processing.processing_consts import NUM_OUT, N_SMALL, INTERVAL, \
+    INTERVAL_COUNTS
+from constants import INPUT_DIR, INDEX_DIR, VALIDATION, TRAIN_MODELS, \
+    IDX, BYR_PREFIX
+from featnames import CLOCK_FEATS, TIME_FEATS, OUTCOME_FEATS, TURN_FEATS
 
 
-def get_arrival_times(lstg_start, thread_start, lstg_end=None):
+def get_arrival_times(d, append_last=False):
     # thread 0: start of listing
-    s = lstg_start.to_frame().assign(thread=0).set_index(
+    s = d['lstg_start'].to_frame().assign(thread=0).set_index(
         'thread', append=True).squeeze()
 
     # threads 1 to N: real threads
+    thread_start = d['clock'].xs(1, level='index')
     threads = thread_start.reset_index('thread').drop(
         'clock', axis=1).squeeze().groupby('lstg').max().reindex(
-        index=lstg_start.index, fill_value=0)
+        index=d['lstg_start'].index, fill_value=0)
 
     # thread N+1: end of lstg
-    if lstg_end is not None:
-        s1 = lstg_end.to_frame().assign(thread=threads + 1).set_index(
+    if append_last:
+        s1 = d['lstg_end'].to_frame().assign(
+            thread=threads + 1).set_index(
             'thread', append=True).squeeze()
         s = pd.concat([s, s1], axis=0)
 
@@ -28,7 +31,8 @@ def get_arrival_times(lstg_start, thread_start, lstg_end=None):
 
     # thread to int
     idx = clock.index
-    clock.index.set_levels(idx.levels[-1].astype('int16'), level=-1, inplace=True)
+    clock.index.set_levels(idx.levels[-1].astype('int16'),
+                           level=-1, inplace=True)
 
     return clock.rename('clock')
 
@@ -86,7 +90,8 @@ def save_sizes(x, name):
         sizes['interval_count'] = INTERVAL_COUNTS[turn]
 
     # length of model output vector
-    sizes['out'] = NUM_OUT[name]
+    m = name.replace('_discrim', '')
+    sizes['out'] = NUM_OUT[m]
 
     dump(sizes, INPUT_DIR + 'sizes/{}.pkl'.format(name))
 

@@ -12,10 +12,10 @@ def main():
 	# loop over models, create plot
 	for m in MODELS:
 		print(m)
-		df = pd.DataFrame.from_dict(np.exp(lnl[m]))
+		df = np.exp(pd.DataFrame.from_dict(lnl[m]))
 		
 		# make plot
-		training_plot('training_{}'.format(m), df)
+		training_plot(m, df)
 
 
 if __name__ == '__main__':

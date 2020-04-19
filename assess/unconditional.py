@@ -1,14 +1,15 @@
 import numpy as np
 import pandas as pd
 from compress_pickle import load, dump
-from processing.processing_utils import load_file
+from processing.processing_utils import load_file, get_obs_outcomes
 from processing.e_inputs.offer import get_y_msg
-from processing.f_discrim.discrim_utils import concat_sim_chunks, get_obs_outcomes
+from processing.f_discrim.discrim_utils import concat_sim_chunks
 from assess.assess_consts import MAX_THREADS
 from processing.processing_consts import INTERVAL
 from constants import TEST, PLOT_DIR, BYR_HIST_MODEL, CON_MULTIPLIER, \
     HIST_QUANTILES, SIM, OBS, ARRIVAL_PREFIX, MAX_DELAY, PCTILE_DIR
-from featnames import MONTHS_SINCE_LSTG, BYR_HIST, DELAY, EXP, CON, MSG
+from featnames import MONTHS_SINCE_LSTG, BYR_HIST, DELAY, EXP, CON, \
+    MSG, REJECT
 
 
 def get_pdf(y, intervals, add_last=True):
@@ -108,33 +109,47 @@ def num_threads(df, lstgs):
 
 def num_offers(df):
     censored = df[EXP] & (df[DELAY] < 1)
-    df = df[~censored]
+    byr_reject = df[REJECT] & df.index.isin([3, 5], level='index')
+    df = df[~censored & ~byr_reject]
     s = df.reset_index('index')['index'].groupby(['lstg', 'thread']).count()
     s = s.groupby(s).count() / len(s)
     return s
 
 
-def main():
-    # observed outcomes
-    obs = get_obs_outcomes(TEST, drop_censored=False)
-
-    # simulated outcomes
-    sim = concat_sim_chunks(TEST, drop_censored=False)
+def create_outputs(obs, sim, idx):
+    p = dict()
 
     # loop over models, get observed and simulated distributions
-    p = {SIM: get_distributions(sim), OBS: get_distributions(obs)}
+    p[SIM] = get_distributions(sim)
+    p[OBS] = get_distributions(obs)
 
     # number of threads per listing
-    lstgs = load_file(TEST, 'lookup').index
-    p[SIM]['threads'] = num_threads(sim['threads'], lstgs)
-    p[OBS]['threads'] = num_threads(obs['threads'], lstgs)
+    p[SIM]['threads'] = num_threads(sim['threads'], idx)
+    p[OBS]['threads'] = num_threads(obs['threads'], idx)
 
     # number of offers per thread
     p[SIM]['offers'] = num_offers(sim['offers'])
     p[OBS]['offers'] = num_offers(obs['offers'])
 
+    return p
+
+
+def main():
+    # observed outcomes
+    obs = get_obs_outcomes(TEST)
+
+    # simulated outcomes
+    sim = concat_sim_chunks(TEST)
+    sim = {k: sim[k] for k in ['threads', 'offers']}
+
+    # lookup file
+    lookup = load_file(TEST, 'lookup')
+
+    # unconditional distributions
+    p = create_outputs(obs, sim, lookup.index)
+
     # save
-    dump(p, PLOT_DIR + 'distributions.pkl')
+    dump(p, PLOT_DIR + 'p.pkl')
 
 
 if __name__ == '__main__':

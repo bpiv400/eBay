@@ -1,7 +1,9 @@
 import pandas as pd
-from processing.processing_utils import input_partition, load_file, init_x
+from processing.processing_utils import input_partition, init_x, \
+	get_obs_outcomes
 from processing.f_discrim.discrim_utils import concat_sim_chunks, \
-	get_obs_outcomes, save_discrim_files
+	save_discrim_files
+from constants import TRAIN_RL, VALIDATION, TEST
 
 
 def construct_x(x, idx_thread):
@@ -16,7 +18,8 @@ def construct_x(x, idx_thread):
 def main():
 	# extract partition from command line
 	part = input_partition()
-	print('discrim/{}/listings'.format(part))
+	assert part in [TRAIN_RL, VALIDATION, TEST]
+	print('{}/listings'.format(part))
 
 	# initialize listing features
 	lookup, obs = get_obs_outcomes(part)

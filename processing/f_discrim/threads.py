@@ -1,8 +1,9 @@
 import argparse
 import pandas as pd
-from processing.processing_utils import init_x, get_x_thread
+from processing.processing_utils import init_x, get_x_thread, \
+    get_obs_outcomes
 from processing.f_discrim.discrim_utils import concat_sim_chunks, \
-    get_obs_outcomes, save_discrim_files
+    save_discrim_files
 from constants import TRAIN_RL, VALIDATION, TEST
 from featnames import SPLIT, DAYS, DELAY, EXP, AUTO, REJECT, TIME_FEATS, MSG
 
@@ -63,7 +64,7 @@ def main():
     print('{}/{}'.format(part, name))
 
     # observed data
-    _, obs = get_obs_outcomes(part)
+    obs = get_obs_outcomes(part)
     x_obs = construct_x(part, tf, obs)
 
     # simulated data

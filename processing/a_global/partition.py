@@ -1,8 +1,8 @@
-import sys
-from compress_pickle import load, dump
-import numpy as np, pandas as pd
-from constants import *
-from processing.processing_consts import *
+from compress_pickle import dump
+import numpy as np
+import pandas as pd
+from constants import PARTS_DIR
+from processing.processing_consts import CLEAN_DIR, SHARES, LTYPES, SEED
 
 
 def partition_lstgs(s):
@@ -27,7 +27,7 @@ def partition_lstgs(s):
 if __name__ == "__main__":
     # load listings
     L = pd.read_csv(CLEAN_DIR + 'listings.csv', 
-        dtype=LTYPES).set_index('lstg')
+                    dtype=LTYPES).set_index('lstg')
 
     # drop flagged listings and listings with high start prices
     L = L.loc[~L.flag & (L.start_price <= 1000)]
@@ -38,8 +38,12 @@ if __name__ == "__main__":
     dump(partitions, PARTS_DIR + 'partitions.pkl')
 
     # lookup files
-    lookup = L[['meta', 'cat', 'start_date', \
-        'start_price', 'decline_price', 'accept_price']].copy()
+    lookup = L[['meta',
+                'cat',
+                'start_date',
+                'start_price',
+                'decline_price',
+                'accept_price']].copy()
     del L
     lookup.loc[:, 'start_date'] = lookup.start_date.astype('int64') * 24 * 3600
     lookup.rename({'start_date': 'start_time'}, axis=1, inplace=True)

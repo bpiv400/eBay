@@ -13,5 +13,5 @@ then
 	python repo/assess/distributions.py
 elif [ "$SGE_TASK_ID" == 3 ]
 then
-  python repo/assess/p_discrim.py
+  python repo/assess/roc.py
 fi

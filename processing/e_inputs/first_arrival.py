@@ -1,12 +1,13 @@
-from processing.processing_utils import input_partition, load_file, init_x
+from processing.processing_utils import input_partition, init_x, \
+    get_obs_outcomes
 from processing.e_inputs.inputs_utils import get_arrival_times, save_files
 from processing.processing_consts import INTERVAL, INTERVAL_COUNTS
 from constants import FIRST_ARRIVAL_MODEL
 
 
-def get_first_arrival_period(lstg_start, thread_start):
+def process_inputs(d, part):
     # first arrival time
-    clock = get_arrival_times(lstg_start, thread_start)
+    clock = get_arrival_times(d, append_last=False)
     clock = clock[clock.index.isin([0, 1], level='thread')]
     clock = clock.sort_index().unstack()
     diff = clock[1] - clock[0]
@@ -16,20 +17,8 @@ def get_first_arrival_period(lstg_start, thread_start):
     y[y.isna()] = INTERVAL_COUNTS[1]
     y = y.astype('int64')
 
-    return y
-
-
-def process_inputs(part):
-    # load timestamps
-    lstg_start = load_file(part, 'lookup').start_time
-    thread_start = load_file(part, 'clock').xs(1, level='index')
-
-    # arrival period
-    y = get_first_arrival_period(lstg_start, thread_start)
-    idx = y.index
-
     # listing features
-    x = init_x(part, idx)
+    x = init_x(part, y.index)
 
     return {'y': y, 'x': x}
 
@@ -39,8 +28,11 @@ def main():
     part = input_partition()
     print('{}/{}'.format(part, FIRST_ARRIVAL_MODEL))
 
+    # dictionary of components
+    obs = get_obs_outcomes(part, timestamps=True)
+
     # create input dictionary
-    d = process_inputs(part)
+    d = process_inputs(obs, part)
 
     # save various output files
     save_files(d, part, FIRST_ARRIVAL_MODEL)
