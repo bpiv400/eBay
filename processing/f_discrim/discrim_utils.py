@@ -8,13 +8,13 @@ from processing.processing_utils import input_partition, load_file, \
 from utils import is_split
 from constants import TRAIN_RL, VALIDATION, INPUT_DIR, SIM_CHUNKS, \
     ENV_SIM_DIR, IDX, SLR_PREFIX, MONTH, FIRST_ARRIVAL_MODEL, \
-    INTERARRIVAL_MODEL, ARRIVAL_MODELS
+    INTERARRIVAL_MODEL
 from featnames import DAYS, DELAY, CON, SPLIT, NORM, REJECT, AUTO, EXP, \
     CENSORED, CLOCK_FEATS, TIME_FEATS, OUTCOME_FEATS, MONTHS_SINCE_LSTG, \
     BYR_HIST
 
 
-def process_sim_offers(df, lstg_end, keep_tf=True):
+def process_sim_offers(df, lstg_end):
     # censor timestamps
     df.clock = np.minimum(df.clock,
                           lstg_end.reindex(
@@ -33,19 +33,8 @@ def process_sim_offers(df, lstg_end, keep_tf=True):
     df[REJECT] = df[CON] == 0
     df[AUTO] = (df[DELAY] == 0) & df.index.isin(IDX[SLR_PREFIX], level='index')
     df[EXP] = (df[DELAY] == 1) | df[CENSORED]
-    # difference time feats
-    if keep_tf:
-        tf = df[TIME_FEATS].astype('float64')
-        df.drop(TIME_FEATS, axis=1, inplace=True)
-        for c in TIME_FEATS:
-            wide = tf[c].unstack()
-            first = wide[[1]].stack()
-            diff = wide.diff(axis=1).stack()
-            df[c] = pd.concat([first, diff], axis=0).sort_index()
-            assert df[c].isna().sum() == 0
-        df = df.loc[:, CLOCK_FEATS + TIME_FEATS + OUTCOME_FEATS]
-    else:
-        df = df.loc[:, CLOCK_FEATS + OUTCOME_FEATS]
+    # select and sort features
+    df = df.loc[:, CLOCK_FEATS + TIME_FEATS + OUTCOME_FEATS]
     return df
 
 
@@ -56,6 +45,22 @@ def process_sim_threads(df, start_time):
     df = df.drop(['clock', 'start_time'], axis=1)
     # reorder columns to match observed
     df = df.loc[:, [MONTHS_SINCE_LSTG, BYR_HIST]]
+    return df
+
+
+def diff_tf(df):
+    # pull out time feats
+    tf = df[TIME_FEATS].astype('float64')
+    df.drop(TIME_FEATS, axis=1, inplace=True)
+    # for each feat, unstack, difference, and stack
+    for c in TIME_FEATS:
+        wide = tf[c].unstack()
+        first = wide[[1]].stack()
+        diff = wide.diff(axis=1).stack()
+        df[c] = pd.concat([first, diff], axis=0).sort_index()
+        assert df[c].isna().sum() == 0
+    # censored feats to 0
+    df.loc[df[CENSORED], TIME_FEATS] = 0
     return df
 
 
@@ -76,6 +81,9 @@ def concat_sim_chunks(part, drop_censored=False):
     # concatenate
     threads = pd.concat(threads, axis=0).sort_index()
     offers = pd.concat(offers, axis=0).sort_index()
+
+    # difference time feats
+    offers = diff_tf(offers)
 
     # drop censored offers
     if drop_censored:

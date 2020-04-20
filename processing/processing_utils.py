@@ -9,7 +9,7 @@ from constants import START, PARTITIONS, PARTS_DIR, MAX_DELAY, IDX, \
     BYR_PREFIX, SLR_PREFIX, DAY, HOLIDAYS, MONTH
 from featnames import HOLIDAY, DOW_PREFIX, TIME_OF_DAY, AFTERNOON, \
     CLOCK_FEATS, DELAY, EXP, BYR_HIST, THREAD_COUNT, \
-    MONTHS_SINCE_LSTG, TIME_FEATS
+    MONTHS_SINCE_LSTG, TIME_FEATS, AUTO, SPLIT, MSG
 
 
 # function to load file from partitions directory
@@ -184,7 +184,7 @@ def get_obs_outcomes(part, drop_censored=False, timestamps=False):
 
     # otherwise set time feats to 0 for censored observations
     else:
-        obs['offers'].loc[:, TIME_FEATS] = 0.0
+        obs['offers'].loc[cens, TIME_FEATS] = 0.0
 
     # load timestamps
     if timestamps:
