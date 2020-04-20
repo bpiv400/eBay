@@ -75,22 +75,23 @@ def save_sizes(x, name):
     :param x: dictionary of input dataframes.
     :param name: string name of model.
     """
+    m = name.replace('_discrim', '')  # base model name
+
     sizes = dict()
 
     # count components of x
     sizes['x'] = {k: len(v.columns) for k, v in x.items()}
 
     # save interval and interval counts
-    if 'arrival' in name:
+    if 'arrival' in m:
         sizes['interval'] = INTERVAL[1]
         sizes['interval_count'] = INTERVAL_COUNTS[1]
     elif name.startswith('delay'):
-        turn = int(name[-1])
+        turn = int(m[-1])
         sizes['interval'] = INTERVAL[turn]
         sizes['interval_count'] = INTERVAL_COUNTS[turn]
 
     # length of model output vector
-    m = name.replace('_discrim', '')
     sizes['out'] = NUM_OUT[m]
 
     dump(sizes, INPUT_DIR + 'sizes/{}.pkl'.format(name))
