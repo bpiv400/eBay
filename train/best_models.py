@@ -18,10 +18,13 @@ def extract_best_experiment(em):
 def main():
     # for each model, choose best experiment
     for m in MODELS + DISCRIM_MODELS + ['init_slr']:
-        em = EventMultiplexer().AddRunsFromDirectory(LOG_DIR + m)
+        em = EventMultiplexer().AddRunsFromDirectory(LOG_DIR + m).Reload()
+
+        if len(em.Runs().keys()) == 0:
+            continue
 
         # find best performing experiment
-        run = extract_best_experiment(em.Reload())      
+        run = extract_best_experiment(em)
 
         # copy best performing model into parent directory
         print('{}: {}'.format(m, run))
