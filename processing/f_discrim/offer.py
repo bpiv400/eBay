@@ -5,7 +5,7 @@ from processing.e_inputs.offer import process_inputs
 from processing.f_discrim.discrim_utils import concat_sim_chunks, \
     save_discrim_files
 from processing.f_discrim.discrim_consts import OFFER_FEATS
-from constants import OFFER_MODELS, TRAIN_RL, VALIDATION, TEST
+from constants import OFFER_MODELS, TRAIN_RL, VALIDATION, TEST, DELAY
 
 
 def construct_x_offer(d, y, turn):
@@ -44,7 +44,7 @@ def main():
     assert m in OFFER_MODELS
 
     # dictionaries of components
-    obs = get_obs_outcomes(part)
+    obs = get_obs_outcomes(part, timestamps=outcome == DELAY)
     sim = concat_sim_chunks(part)
 
     # dictionaries with x and y
