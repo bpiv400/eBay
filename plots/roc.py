@@ -1,5 +1,4 @@
 from compress_pickle import load
-import pandas as pd
 from plots.plots_utils import roc_plot
 from constants import PLOT_DIR
 

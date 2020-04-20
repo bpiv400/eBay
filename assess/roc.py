@@ -1,10 +1,11 @@
+import os
 from compress_pickle import dump
 import numpy as np
 import pandas as pd
 from train.EBayDataset import EBayDataset
 from assess.assess_utils import get_model_predictions
 from assess.assess_consts import ROC_DIM
-from constants import TEST, DISCRIM_MODELS, PLOT_DIR
+from constants import TEST, DISCRIM_MODELS, PLOT_DIR, MODEL_DIR
 
 
 def get_roc(p0, p1):
@@ -23,6 +24,9 @@ def main():
 
 	# loop over discriminator models
 	for m in DISCRIM_MODELS:
+		if not os.path.isfile(MODEL_DIR + '{}.net'.format(m)):
+			continue
+
 		print(m)
 
 		# initialize dataset
@@ -37,7 +41,7 @@ def main():
 		roc[m] = get_roc(p[y == 0], p[y == 1]).rename(m)
 
 	# save predictions
-	dump(roc, PLOT_DIR + 'roc.pkl'.format(m))
+	dump(roc, PLOT_DIR + 'roc.pkl')
 
 
 if __name__ == '__main__':

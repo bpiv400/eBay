@@ -8,10 +8,10 @@ from processing.f_discrim.discrim_consts import OFFER_FEATS
 from constants import OFFER_MODELS, TRAIN_RL, VALIDATION, TEST
 
 
-def construct_x_offer(d, offers, feats, turn):
+def construct_x_offer(d, y, turn):
     # x and y
     x = d['x']
-    y = offers[feats].reindex(index=d['y'].index)
+    y = y.reindex(index=d['y'].index)
     # feature group, initialize if necessary
     group = 'offer{}'.format(turn)
     if group not in x:
@@ -47,18 +47,18 @@ def main():
     obs = get_obs_outcomes(part)
     sim = concat_sim_chunks(part)
 
-    # offers for turn
-    offers_obs = obs['offers'].xs(turn, level='index')
-    offers_sim = sim['offers'].xs(turn, level='index')
-
     # dictionaries with x and y
     d_obs = process_inputs(obs, part, outcome, turn)
     d_sim = process_inputs(sim, part, outcome, turn)
 
-    # put y in x
+    # offers for turn
     feats = OFFER_FEATS[outcome]
-    x_obs = construct_x_offer(d_obs, offers_obs, feats, turn)
-    x_sim = construct_x_offer(d_sim, offers_sim, feats, turn)
+    y_obs = obs['offers'].xs(turn, level='index')[feats]
+    y_sim = sim['offers'].xs(turn, level='index')[feats]
+
+    # put y in x
+    x_obs = construct_x_offer(d_obs, y_obs, turn)
+    x_sim = construct_x_offer(d_sim, y_sim, turn)
 
     # save various output files
     save_discrim_files(part, name, x_obs, x_sim)

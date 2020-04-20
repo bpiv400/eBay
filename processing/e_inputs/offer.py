@@ -8,8 +8,8 @@ from utils import get_remaining
 from processing.e_inputs.inputs_utils import save_files
 from constants import IDX, DAY, MAX_DELAY, BYR_PREFIX, SLR_PREFIX, \
     PARTITIONS, CON_MULTIPLIER
-from featnames import CON, NORM, SPLIT, MSG, AUTO, EXP, REJECT, DAYS, DELAY, \
-    INT_REMAINING, TIME_FEATS
+from featnames import CON, NORM, SPLIT, MSG, AUTO, EXP, REJECT, DAYS, \
+    DELAY, INT_REMAINING, TIME_FEATS
 
 
 def get_y_con(df, turn):
@@ -52,11 +52,10 @@ def check_zero(x):
                 assert_zero(x[k], [SPLIT, MSG])
 
 
-def calculate_remaining(part, idx, turn):
+def calculate_remaining(d, idx, turn):
     # load timestamps
-    lstg_start = load_file(part, 'lookup').start_time.reindex(
-        index=idx, level='lstg')
-    delay_start = load_file(part, 'clock').groupby(
+    lstg_start = d['lstg_start'].reindex(index=idx, level='lstg')
+    delay_start = d['clock'].groupby(
         ['lstg', 'thread']).shift().dropna().astype('int64')
 
     # remaining feature
@@ -142,7 +141,7 @@ def process_inputs(d, part, outcome, turn):
 
     # add time remaining to x_thread
     if outcome == DELAY:
-        x_thread[INT_REMAINING] = calculate_remaining(part, idx, turn)
+        x_thread[INT_REMAINING] = calculate_remaining(d, part, idx)
 
     x['lstg'] = pd.concat([x['lstg'], x_thread], axis=1)
 
@@ -179,7 +178,7 @@ def main():
         assert turn in range(1, 8)
 
     # threads and offers
-    obs = get_obs_outcomes(part)
+    obs = get_obs_outcomes(part, timestamps=outcome == DELAY)
 
     # input dataframes, output processed dataframes
     d = process_inputs(obs, part, outcome, turn)
