@@ -27,6 +27,7 @@ def main():
 		if not os.path.isfile(MODEL_DIR + '{}.net'.format(m)):
 			continue
 
+		m = m.replace('_discrim', '')
 		print(m)
 
 		# initialize dataset
@@ -36,9 +37,10 @@ def main():
 		# model predictions
 		p, _ = get_model_predictions(m, data)
 		p = p[:, 1]
+		p0, p1 = p[y == 0], p[y == 1]
 
 		# calculate roc curve
-		roc[m] = get_roc(p[y == 0], p[y == 1]).rename(m)
+		roc[m] = get_roc(p0, p1).rename(m)
 
 	# save predictions
 	dump(roc, PLOT_DIR + 'roc.pkl')

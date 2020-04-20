@@ -3,11 +3,11 @@ import numpy as np
 import pandas as pd
 from compress_pickle import load
 from utils import slr_norm, byr_norm, extract_clock_feats
-from processing.processing_consts import CLEAN_DIR
+from processing.processing_consts import CLEAN_DIR, INTERVAL
 from constants import START, PARTITIONS, PARTS_DIR, MAX_DELAY, IDX, \
-    BYR_PREFIX, SLR_PREFIX, DAY, HOLIDAYS
+    BYR_PREFIX, SLR_PREFIX, DAY, HOLIDAYS, MONTH
 from featnames import HOLIDAY, DOW_PREFIX, TIME_OF_DAY, AFTERNOON, \
-    CLOCK_FEATS, DELAY, EXP, BYR_HIST, THREAD_COUNT
+    CLOCK_FEATS, DELAY, EXP, BYR_HIST, THREAD_COUNT, MONTHS_SINCE_LSTG
 
 
 # function to load file from partitions directory
@@ -145,9 +145,15 @@ def init_x(part, idx):
     return x
 
 
-def get_x_thread(threads, idx):
+def get_x_thread(threads, idx, censor_months=False):
     # initialize x_thread as copy
     x_thread = threads.copy()
+
+    # months_since_lstg censored by interval
+    if censor_months:
+        intervals = (x_thread[MONTHS_SINCE_LSTG] * MONTH) // INTERVAL[1]
+        months_cens = intervals * INTERVAL[1] / MONTH
+        x_thread.loc[:, MONTHS_SINCE_LSTG] = months_cens
 
     # byr_hist as a decimal
     x_thread.loc[:, BYR_HIST] = x_thread.byr_hist.astype('float32') / 10

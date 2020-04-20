@@ -43,7 +43,7 @@ def construct_x(part, tf, d):
     # initialize input dictionary with lstg features
     x = init_x(part, idx)
     # add thread features to x['lstg']
-    x_thread = get_x_thread(d['threads'], idx)
+    x_thread = get_x_thread(d['threads'], idx, censor_months=True)
     x_thread['thread_count'] = x_thread.index.get_level_values(level='thread')
     x['lstg'] = pd.concat([x['lstg'], x_thread], axis=1)
     # offer features
@@ -52,7 +52,6 @@ def construct_x(part, tf, d):
 
 
 def main():
-    # partiton
     # extract parameters from command line
     parser = argparse.ArgumentParser()
     parser.add_argument('--part', type=str)

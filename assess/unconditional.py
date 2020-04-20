@@ -19,7 +19,7 @@ def get_pdf(y, intervals, add_last=True):
     pdf = counts / len(y)
     pdf = pd.Series(pdf, index=x, name=y.name)
     # reindex to include every interval
-    idx = range(intervals+1) if add_last else range(intervals)
+    idx = range(intervals + 1) if add_last else range(intervals)
     pdf = pdf.reindex(index=idx, fill_value=0.0)
     return pdf
 

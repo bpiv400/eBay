@@ -20,7 +20,7 @@ def get_model_predictions(name, data):
         net = net.to('cuda')
 
     # get predictions from neural net
-    lnp, lnL = [], []
+    lnp, lnl = [], []
     batches = get_batches(data)
     for b in batches:
         if torch.cuda.is_available():
@@ -29,10 +29,10 @@ def get_model_predictions(name, data):
         if theta.size()[1] == 1:
             theta = torch.cat((torch.zeros_like(theta), theta), dim=1)
         lnp.append(log_softmax(theta, dim=-1))
-        lnL.append(-nll_loss(lnp[-1], b['y'], reduction='none'))
+        lnl.append(-nll_loss(lnp[-1], b['y'], reduction='none'))
 
     # concatenate and convert to numpy
     lnp = torch.cat(lnp).numpy()
-    lnl = torch.cat(lnL).numpy()
+    lnl = torch.cat(lnl).numpy()
 
     return np.exp(lnp), lnl
