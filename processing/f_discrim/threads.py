@@ -43,8 +43,7 @@ def construct_x(part, tf, d):
     # initialize input dictionary with lstg features
     x = init_x(part, idx)
     # add thread features to x['lstg']
-    x_thread = get_x_thread(d['threads'], idx, censor_months=True)
-    x_thread['thread_count'] = x_thread.index.get_level_values(level='thread')
+    x_thread = get_x_thread(d['threads'], idx, censor_months=False)
     x['lstg'] = pd.concat([x['lstg'], x_thread], axis=1)
     # offer features
     x.update(get_x_offer(d['offers'], idx, tf))
