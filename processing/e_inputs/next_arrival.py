@@ -2,22 +2,20 @@ import pandas as pd
 import numpy as np
 from processing.processing_utils import input_partition, init_x, \
     collect_date_clock_feats, get_obs_outcomes
-from processing.e_inputs.inputs_utils import get_arrival_times, save_files
+from processing.e_inputs.inputs_utils import get_arrival_times, \
+    save_files
 from utils import get_months_since_lstg
 from processing.processing_consts import INTERVAL, INTERVAL_COUNTS
 from constants import MONTH
 from featnames import THREAD_COUNT, MONTHS_SINCE_LAST, MONTHS_SINCE_LSTG
 
 
-def get_interarrival_period(d):
-    # arrival times
-    clock = get_arrival_times(d, append_last=True)
-
+def get_interarrival_period(clock):
     # calculate interarrival times in seconds
     df = clock.unstack()
     diff = pd.DataFrame(0.0, index=df.index, columns=df.columns[1:])
     for i in diff.columns:
-        diff[i] = df[i] - df[i - 1]
+        diff[i] = df[i] - df[i-1]
 
     # restack
     diff = diff.rename_axis(clock.index.names[-1], axis=1).stack()
@@ -46,20 +44,22 @@ def get_interarrival_period(d):
     return y, diff
 
 
-def get_x_thread_arrival(d, idx, diff):
+def get_x_thread_arrival(clock, lstg_start, idx, diff):
     # seconds since START at beginning of arrival window
-    seconds = d['clock'].groupby('lstg').shift().dropna().astype(
+    seconds = clock.groupby('lstg').shift().dropna().astype(
         'int64').reindex(index=idx)
 
     # clock features
     clock_feats = collect_date_clock_feats(seconds)
 
     # thread count so far
-    thread_count = pd.Series(seconds.index.get_level_values(level='thread') - 1,
-                             index=seconds.index, name=THREAD_COUNT)
+    thread_num = seconds.index.get_level_values(level='thread')
+    thread_count = pd.Series(thread_num - 1,
+                             index=seconds.index,
+                             name=THREAD_COUNT)
 
     # months since lstg start
-    months_since_lstg = get_months_since_lstg(d['lstg_start'], seconds)
+    months_since_lstg = get_months_since_lstg(lstg_start, seconds)
     assert (months_since_lstg.max() < 1) & (months_since_lstg.min() >= 0)
 
     # months since last arrival
@@ -77,15 +77,18 @@ def get_x_thread_arrival(d, idx, diff):
 
 
 def process_inputs(d, part):
+    # arrival times
+    clock = get_arrival_times(d, append_last=True)
+
     # interarrival times
-    y, diff = get_interarrival_period(d)
+    y, diff = get_interarrival_period(clock)
     idx = y.index
 
     # listing features
     x = init_x(part, idx)
 
     # add thread features to x['lstg']
-    x_thread = get_x_thread_arrival(d, idx, diff)
+    x_thread = get_x_thread_arrival(clock, d['lstg_start'], idx, diff)
     x['lstg'] = pd.concat([x['lstg'], x_thread], axis=1)
 
     return {'y': y, 'x': x}

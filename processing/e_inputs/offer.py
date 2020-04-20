@@ -141,7 +141,7 @@ def process_inputs(d, part, outcome, turn):
 
     # add time remaining to x_thread
     if outcome == DELAY:
-        x_thread[INT_REMAINING] = calculate_remaining(d, part, idx)
+        x_thread[INT_REMAINING] = calculate_remaining(d, idx, turn)
 
     x['lstg'] = pd.concat([x['lstg'], x_thread], axis=1)
 
