@@ -3,11 +3,13 @@ import numpy as np
 import pandas as pd
 from compress_pickle import load
 from utils import slr_norm, byr_norm, extract_clock_feats
-from processing.processing_consts import CLEAN_DIR, INTERVAL
+from processing.processing_consts import CLEAN_DIR, INTERVAL, \
+    INTERVAL_COUNTS
 from constants import START, PARTITIONS, PARTS_DIR, MAX_DELAY, IDX, \
     BYR_PREFIX, SLR_PREFIX, DAY, HOLIDAYS, MONTH
 from featnames import HOLIDAY, DOW_PREFIX, TIME_OF_DAY, AFTERNOON, \
-    CLOCK_FEATS, DELAY, EXP, BYR_HIST, THREAD_COUNT, MONTHS_SINCE_LSTG
+    CLOCK_FEATS, DELAY, EXP, BYR_HIST, THREAD_COUNT, \
+    MONTHS_SINCE_LSTG, TIME_FEATS
 
 
 # function to load file from partitions directory
@@ -152,7 +154,7 @@ def get_x_thread(threads, idx, censor_months=False):
     # months_since_lstg censored by interval
     if censor_months:
         intervals = (x_thread[MONTHS_SINCE_LSTG] * MONTH) // INTERVAL[1]
-        months_cens = intervals * INTERVAL[1] / MONTH
+        months_cens = intervals / INTERVAL_COUNTS[1]
         x_thread.loc[:, MONTHS_SINCE_LSTG] = months_cens
 
     # byr_hist as a decimal
@@ -176,9 +178,13 @@ def get_obs_outcomes(part, drop_censored=False, timestamps=False):
     obs['offers'] = load_file(part, 'x_offer')
 
     # drop censored observations
+    cens = (obs['offers'][DELAY] < 1) & obs['offers'][EXP]
     if drop_censored:
-        keep = (obs['offers'][DELAY] == 1) | ~obs['offers'][EXP]
-        obs['offers'] = obs['offers'][keep]
+        obs['offers'] = obs['offers'][~cens]
+
+    # otherwise set time feats to 0 for censored observations
+    else:
+        obs['offers'].loc[:, TIME_FEATS] = 0.0
 
     # load timestamps
     if timestamps:

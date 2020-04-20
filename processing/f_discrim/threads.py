@@ -4,18 +4,20 @@ from processing.processing_utils import init_x, get_x_thread, \
     get_obs_outcomes
 from processing.f_discrim.discrim_utils import concat_sim_chunks, \
     save_discrim_files
-from constants import TRAIN_RL, VALIDATION, TEST
-from featnames import SPLIT, DAYS, DELAY, EXP, AUTO, REJECT, TIME_FEATS, MSG
+from processing.processing_consts import INTERVAL, INTERVAL_COUNTS
+from constants import TRAIN_RL, VALIDATION, TEST, DAY, MAX_DELAY
+from featnames import SPLIT, DAYS, DELAY, EXP, AUTO, REJECT, \
+    TIME_FEATS, MSG, TIME_OF_DAY
 
 
 def get_x_offer(offers, idx, tf):
     # initialize dictionary of offer features
-    x_offer = {}
+    x_offer = dict()
     # turn features
     for i in range(1, 8):
         # offer features at turn i
         offer = offers.xs(i, level='index').reindex(
-            index=idx, fill_value=0).astype('float32')
+            index=idx, fill_value=0)
         # drop time feats, if tf parameter is False
         if not tf:
             offer.drop(TIME_FEATS, axis=1, inplace=True)
@@ -32,6 +34,14 @@ def get_x_offer(offers, idx, tf):
             for feat in [MSG, SPLIT]:
                 assert (offer[feat].min() == 0) and (offer[feat].max() == 0)
                 offer.drop(feat, axis=1, inplace=True)
+        # drop time of day
+        offer.drop(TIME_OF_DAY, axis=1, inplace=True)
+        # days and delay in intervals
+        if i > 1:
+            seconds = offer[DAYS] * DAY
+            intervals = seconds // INTERVAL[i]
+            offer.loc[:, DELAY] = intervals / INTERVAL_COUNTS[i]
+            offer.loc[:, DAYS] = offer[DELAY] * MAX_DELAY[i] / DAY
         # put in dictionary
         x_offer['offer%d' % i] = offer.astype('float32')
     return x_offer
@@ -43,7 +53,7 @@ def construct_x(part, tf, d):
     # initialize input dictionary with lstg features
     x = init_x(part, idx)
     # add thread features to x['lstg']
-    x_thread = get_x_thread(d['threads'], idx, censor_months=False)
+    x_thread = get_x_thread(d['threads'], idx, censor_months=True)
     x['lstg'] = pd.concat([x['lstg'], x_thread], axis=1)
     # offer features
     x.update(get_x_offer(d['offers'], idx, tf))
@@ -62,11 +72,11 @@ def main():
     print('{}/{}'.format(part, name))
 
     # observed data
-    obs = get_obs_outcomes(part)
+    obs = get_obs_outcomes(part, drop_censored=True)
     x_obs = construct_x(part, tf, obs)
 
     # simulated data
-    sim = concat_sim_chunks(part)
+    sim = concat_sim_chunks(part, drop_censored=True)
     x_sim = construct_x(part, tf, sim)
 
     # save data
