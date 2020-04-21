@@ -147,15 +147,9 @@ def init_x(part, idx):
     return x
 
 
-def get_x_thread(threads, idx, censor_months=False):
+def get_x_thread(threads, idx):
     # initialize x_thread as copy
     x_thread = threads.copy()
-
-    # months_since_lstg censored by interval
-    if censor_months:
-        intervals = (x_thread[MONTHS_SINCE_LSTG] * MONTH) // INTERVAL[1]
-        months_cens = intervals / INTERVAL_COUNTS[1]
-        x_thread.loc[:, MONTHS_SINCE_LSTG] = months_cens
 
     # byr_hist as a decimal
     x_thread.loc[:, BYR_HIST] = x_thread.byr_hist.astype('float32') / 10

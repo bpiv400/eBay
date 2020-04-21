@@ -104,7 +104,7 @@ MODELS = ARRIVAL_MODELS + OFFER_MODELS
 CENSORED_MODELS = [INTERARRIVAL_MODEL] + DELAY_MODELS
 
 # discriminator models
-DISCRIM_MODELS = ['{}_discrim'.format(m) for m in MODELS] + ['threads']
+DISCRIM_MODELS = ['listings', 'threads']
 
 # initializations
 INIT_MODELS = ['init_{}'.format(role) for role in [BYR_PREFIX, SLR_PREFIX]]
