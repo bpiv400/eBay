@@ -260,12 +260,15 @@ class RlTrainer:
             p.start()
 
         # wait until processes finish
-        for p in procs:
-            p.join()
-
-        # accumulate awards
-        assert reward_queue.qsize() == self.evaluation_chunks
         rewards = list()
+        for p in procs:
+            while p.is_alive():
+                p.join(timeout=1)
+                while True:
+                    try:
+                        rewards = rewards + reward_queue.get(block=False)
+                    except queue.Empty:
+                        break
         while not reward_queue.empty():
             rewards = rewards + reward_queue.get_nowait()
         return rewards
