@@ -1,4 +1,3 @@
-import os
 from compress_pickle import dump
 import numpy as np
 import pandas as pd
@@ -24,10 +23,6 @@ def main():
 
 	# loop over discriminator models
 	for m in DISCRIM_MODELS:
-		if not os.path.isfile(MODEL_DIR + '{}.net'.format(m)):
-			continue
-
-		m = m.replace('_discrim', '')
 		print(m)
 
 		# initialize dataset

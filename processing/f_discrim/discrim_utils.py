@@ -3,12 +3,11 @@ import pandas as pd
 from compress_pickle import load, dump
 from processing.e_inputs.inputs_utils import save_sizes, \
     convert_x_to_numpy, save_small
-from processing.processing_utils import input_partition, load_file, \
-    collect_date_clock_feats, get_days_delay, get_norm, get_obs_outcomes
+from processing.processing_utils import load_file, \
+    collect_date_clock_feats, get_days_delay, get_norm
 from utils import is_split
 from constants import TRAIN_RL, VALIDATION, INPUT_DIR, SIM_CHUNKS, \
-    ENV_SIM_DIR, IDX, SLR_PREFIX, MONTH, FIRST_ARRIVAL_MODEL, \
-    INTERARRIVAL_MODEL
+    ENV_SIM_DIR, IDX, SLR_PREFIX, MONTH
 from featnames import DAYS, DELAY, CON, SPLIT, NORM, REJECT, AUTO, EXP, \
     CENSORED, CLOCK_FEATS, TIME_FEATS, OUTCOME_FEATS, MONTHS_SINCE_LSTG, \
     BYR_HIST
@@ -147,42 +146,3 @@ def save_discrim_files(part, name, x_obs, x_sim):
     # save small
     if part == TRAIN_RL:
         save_small(d, name)
-
-
-def construct_x_arrival(d, construct_y):
-    x = d['x']
-    y = construct_y(d['y'])
-    for c in y.columns:
-        x['lstg'][c] = y[c].astype('float32')
-    assert x['lstg'].isna().sum().sum() == 0
-    return x
-
-
-def create_arrival_discrim_input(m, process_inputs, construct_y):
-    """
-    Creates training inputs for arrival discriminator models.
-    :param m: string name of model.
-    :param process_inputs: function that creates input dictionaries.
-    :param construct_y: function that creates outcome features.
-    :return: None
-    """
-    # partition name from command line
-    part = input_partition()
-    name = '{}_discrim'.format(m)
-    print('{}/{}'.format(part, name))
-
-    # dictionaries of components
-    timestamps = m in [FIRST_ARRIVAL_MODEL, INTERARRIVAL_MODEL]
-    obs = get_obs_outcomes(part, timestamps=timestamps)
-    sim = concat_sim_chunks(part)
-
-    # dictionaries with x and y
-    d_obs = process_inputs(obs, part)
-    d_sim = process_inputs(sim, part)
-
-    # put y into x
-    x_obs = construct_x_arrival(d_obs, construct_y)
-    x_sim = construct_x_arrival(d_sim, construct_y)
-
-    # save various output files
-    save_discrim_files(part, name, x_obs, x_sim)

@@ -1,6 +1,0 @@
-from featnames import CLOCK_FEATS, TIME_FEATS, DAYS, DELAY, AUTO, EXP, \
-    CON, REJECT, NORM, SPLIT, MSG
-
-OFFER_FEATS = {DELAY: CLOCK_FEATS + TIME_FEATS + [DAYS, DELAY, AUTO, EXP],
-               CON: [CON, REJECT, NORM, SPLIT],
-               MSG: [MSG]}
