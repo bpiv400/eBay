@@ -1,10 +1,7 @@
-import sys, pickle
-import pandas as pd, numpy as np
-from datetime import datetime as dt
 from compress_pickle import dump
-from constants import *
 from processing.processing_utils import *
 from processing.processing_consts import *
+from constants import PCTILE_DIR
 
 
 # creates series of percentiles indexed by column variable
@@ -26,7 +23,7 @@ def get_pctiles(s):
 T = pd.read_csv(CLEAN_DIR + 'threads.csv', dtype=TTYPES).set_index(
 	['lstg', 'thread'])
 T.loc[:, 'byr_hist'], toSave = get_pctiles(T['byr_hist'])
-dump(toSave, '%s/pctile/byr_hist.pkl' % PREFIX)
+dump(toSave, '{}/byr_hist.pkl'.format(PCTILE_DIR))
 dump(T, CLEAN_DIR + 'threads.pkl')
 
 # load offers
@@ -123,7 +120,7 @@ for feat in ['fdbk_score', 'slr_lstgs', 'slr_bos', 'arrival_rate']:
 	print(feat)
 	L.loc[:, feat], toSave = get_pctiles(L[feat])
 	if feat != 'arrival_rate':
-		dump(toSave, '{}/pctile/{}.pkl'.format(PREFIX, feat))
+		dump(toSave, '{}/{}.pkl'.format(PCTILE_DIR, feat))
 
 # save listings
 dump(L, CLEAN_DIR + 'listings.pkl')

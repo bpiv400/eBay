@@ -15,22 +15,24 @@ def get_model_predictions(name, data):
         - lnL: N-length vector of log-likelihoods.
     """
     # initialize neural net
-    net = load_model(name, verbose=False).to('cuda')
+    net = load_model(name, verbose=False)
+    if torch.cuda.is_available():
+        net = net.to('cuda')
 
     # get predictions from neural net
-    lnp, lnL = [], []
+    lnp, lnl = [], []
     batches = get_batches(data)
     for b in batches:
-        b['x'] = {k: v.to('cuda') for k, v in b['x'].items()}
-        b['y'] = b['y'].to('cuda')
-        theta = net(b['x']).double()
+        if torch.cuda.is_available():
+            b['x'] = {k: v.to('cuda') for k, v in b['x'].items()}
+        theta = net(b['x']).cpu().double()
         if theta.size()[1] == 1:
             theta = torch.cat((torch.zeros_like(theta), theta), dim=1)
         lnp.append(log_softmax(theta, dim=-1))
-        lnL.append(-nll_loss(lnp[-1], b['y'], reduction='none'))
+        lnl.append(-nll_loss(lnp[-1], b['y'], reduction='none'))
 
     # concatenate and convert to numpy
-    lnp = torch.cat(lnp).cpu().numpy()
-    lnL = torch.cat(lnL).cpu().numpy()
+    lnp = torch.cat(lnp).numpy()
+    lnl = torch.cat(lnl).numpy()
 
-    return np.exp(lnp), lnL
+    return np.exp(lnp), lnl

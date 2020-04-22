@@ -1,59 +1,28 @@
 import numpy as np
 import pandas as pd
 from compress_pickle import dump
-from processing.processing_utils import load_file
-from processing.processing_consts import *
-from constants import *
-from featnames import *
+from processing.processing_consts import NUM_OUT, N_SMALL, INTERVAL, \
+    INTERVAL_COUNTS
+from constants import INPUT_DIR, INDEX_DIR, VALIDATION, TRAIN_MODELS, \
+    IDX, BYR_PREFIX
+from featnames import CLOCK_FEATS, TIME_FEATS, OUTCOME_FEATS, TURN_FEATS
 
 
-def get_interarrival_period(clock):
-    # calculate interarrival times in seconds
-    df = clock.unstack()
-    diff = pd.DataFrame(0.0, index=df.index, columns=df.columns[1:])
-    for i in diff.columns:
-        diff[i] = df[i] - df[i - 1]
-
-    # restack
-    diff = diff.rename_axis(clock.index.names[-1], axis=1).stack()
-
-    # original datatype
-    diff = diff.astype(clock.dtype)
-
-    # indicator for whether observation is last in lstg
-    thread = pd.Series(diff.index.get_level_values(level='thread'),
-                       index=diff.index)
-    last_thread = thread.groupby('lstg').max().reindex(
-        index=thread.index, level='lstg')
-    censored = thread == last_thread
-
-    # drop interarrivals after BINs
-    diff = diff[diff > 0]
-    y = diff[diff.index.get_level_values(level='thread') > 1]
-    censored = censored.reindex(index=y.index)
-
-    # convert y to periods
-    y //= INTERVAL[1]
-
-    # replace censored interarrival times negative count of censored buckets
-    y.loc[censored] -= INTERVAL_COUNTS[1]
-
-    return y, diff
-
-
-def get_arrival_times(lstg_start, thread_start, lstg_end=None):
+def get_arrival_times(d, append_last=False):
     # thread 0: start of listing
-    s = lstg_start.to_frame().assign(thread=0).set_index(
+    s = d['lstg_start'].to_frame().assign(thread=0).set_index(
         'thread', append=True).squeeze()
 
     # threads 1 to N: real threads
+    thread_start = d['clock'].xs(1, level='index')
     threads = thread_start.reset_index('thread').drop(
         'clock', axis=1).squeeze().groupby('lstg').max().reindex(
-        index=lstg_start.index, fill_value=0)
+        index=d['lstg_start'].index, fill_value=0)
 
     # thread N+1: end of lstg
-    if lstg_end is not None:
-        s1 = lstg_end.to_frame().assign(thread=threads + 1).set_index(
+    if append_last:
+        s1 = d['lstg_end'].to_frame().assign(
+            thread=threads + 1).set_index(
             'thread', append=True).squeeze()
         s = pd.concat([s, s1], axis=0)
 
@@ -62,45 +31,10 @@ def get_arrival_times(lstg_start, thread_start, lstg_end=None):
 
     # thread to int
     idx = clock.index
-    clock.index.set_levels(idx.levels[-1].astype('int16'), level=-1, inplace=True)
+    clock.index.set_levels(idx.levels[-1].astype('int16'),
+                           level=-1, inplace=True)
 
     return clock.rename('clock')
-
-
-def get_y_con(df):
-    # drop zero delay and expired offers
-    mask = ~df[AUTO] & ~df[EXP]
-    # concession is an int from 0 to 100
-    return (df.loc[mask, CON] * CON_MULTIPLIER).astype('int8')
-
-
-def get_y_msg(df, turn):
-    # for buyers, drop accepts and rejects
-    if turn in IDX[BYR_PREFIX]:
-        mask = (df[CON] > 0) & (df[CON] < 1)
-    # for sellers, drop accepts, expires, and auto responses
-    else:
-        mask = ~df[EXP] & ~df[AUTO] & (df[CON] < 1)
-    return df.loc[mask, MSG]
-
-
-def assert_zero(offer, cols):
-    for c in cols:
-        assert offer[c].max() == 0
-        assert offer[c].min() == 0
-
-
-def check_zero(x):
-    keys = [k for k in x.keys() if k.startswith('offer')]
-    for k in keys:
-        if k in x:
-            i = int(k[-1])
-            if i == 1:
-                assert_zero(x[k], [DAYS, DELAY])
-            if i % 2 == 1:
-                assert_zero(x[k], [AUTO, EXP, REJECT])
-            if i == 7:
-                assert_zero(x[k], [SPLIT, MSG])
 
 
 def save_featnames(x, name):
@@ -141,22 +75,24 @@ def save_sizes(x, name):
     :param x: dictionary of input dataframes.
     :param name: string name of model.
     """
+    m = name.replace('_discrim', '')  # base model name
+
     sizes = dict()
 
     # count components of x
     sizes['x'] = {k: len(v.columns) for k, v in x.items()}
 
     # save interval and interval counts
-    if 'arrival' in name:
+    if 'arrival' in m:
         sizes['interval'] = INTERVAL[1]
         sizes['interval_count'] = INTERVAL_COUNTS[1]
     elif name.startswith('delay'):
-        turn = int(name[-1])
+        turn = int(m[-1])
         sizes['interval'] = INTERVAL[turn]
         sizes['interval_count'] = INTERVAL_COUNTS[turn]
 
     # length of model output vector
-    sizes['out'] = NUM_OUT[name]
+    sizes['out'] = NUM_OUT[m]
 
     dump(sizes, INPUT_DIR + 'sizes/{}.pkl'.format(name))
 

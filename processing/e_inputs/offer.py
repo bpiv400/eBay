@@ -2,19 +2,60 @@ import argparse
 import numpy as np
 import pandas as pd
 from processing.processing_consts import INTERVAL, INTERVAL_COUNTS
-from processing.processing_utils import load_file, init_x
-from processing.e_inputs.inputs_utils import save_files, get_y_con, get_y_msg, \
-    check_zero, get_x_thread
-from constants import IDX, DAY, MAX_DELAY, BYR_PREFIX, SLR_PREFIX, PARTITIONS
-from featnames import CON, NORM, SPLIT, MSG, AUTO, EXP, REJECT, DAYS, DELAY, \
-    INT_REMAINING, TIME_FEATS
+from processing.processing_utils import load_file, init_x, \
+    get_x_thread, get_obs_outcomes
+from utils import get_remaining
+from processing.e_inputs.inputs_utils import save_files
+from constants import IDX, DAY, MAX_DELAY, BYR_PREFIX, SLR_PREFIX, \
+    PARTITIONS, CON_MULTIPLIER
+from featnames import CON, NORM, SPLIT, MSG, AUTO, EXP, REJECT, DAYS, \
+    DELAY, INT_REMAINING, TIME_FEATS
 
 
-def calculate_remaining(part, idx, turn):
+def get_y_con(df, turn):
+    # drop zero delay and expired offers
+    mask = ~df[AUTO] & ~df[EXP]
+    # concession is an int from 0 to 100
+    y = (df.loc[mask, CON] * CON_MULTIPLIER).astype('int8')
+    # boolean for accept in turn 7
+    if turn == 7:
+        y = y == 100
+    return y
+
+
+def get_y_msg(df, turn):
+    # for buyers, drop accepts and rejects
+    if turn in IDX[BYR_PREFIX]:
+        mask = (df[CON] > 0) & (df[CON] < 1)
+    # for sellers, drop accepts, expires, and auto responses
+    else:
+        mask = ~df[EXP] & ~df[AUTO] & (df[CON] < 1)
+    return df.loc[mask, MSG]
+
+
+def assert_zero(offer, cols):
+    for c in cols:
+        assert offer[c].max() == 0
+        assert offer[c].min() == 0
+
+
+def check_zero(x):
+    keys = [k for k in x.keys() if k.startswith('offer')]
+    for k in keys:
+        if k in x:
+            i = int(k[-1])
+            if i == 1:
+                assert_zero(x[k], [DAYS, DELAY])
+            if i % 2 == 1:
+                assert_zero(x[k], [AUTO, EXP, REJECT])
+            if i == 7:
+                assert_zero(x[k], [SPLIT, MSG])
+
+
+def calculate_remaining(d, idx, turn):
     # load timestamps
-    lstg_start = load_file(part, 'lookup').start_time.reindex(
-        index=idx, level='lstg')
-    delay_start = load_file(part, 'clock').groupby(
+    lstg_start = d['lstg_start'].reindex(index=idx, level='lstg')
+    delay_start = d['clock'].groupby(
         ['lstg', 'thread']).shift().dropna().astype('int64')
 
     # remaining feature
@@ -79,18 +120,13 @@ def get_y_delay(df, turn):
     return delay
 
 
-# loads data and calls helper functions to construct train inputs
-def process_inputs(part, outcome, turn):
-    # load dataframes
-    offers = load_file(part, 'x_offer')
-    threads = load_file(part, 'x_thread')
-    df = offers.xs(turn, level='index')
+def process_inputs(d, part, outcome, turn):
+    # subset to turn
+    df = d['offers'].xs(turn, level='index')
 
     # y and master index
     if outcome == CON:
-        y = get_y_con(df)
-        if turn == 7:
-            y = y == 100
+        y = get_y_con(df, turn)
     elif outcome == MSG:
         y = get_y_msg(df, turn)
     else:
@@ -101,16 +137,16 @@ def process_inputs(part, outcome, turn):
     x = init_x(part, idx)
 
     # thread features
-    x_thread = get_x_thread(threads, idx)
+    x_thread = get_x_thread(d['threads'], idx)
 
     # add time remaining to x_thread
     if outcome == DELAY:
-        x_thread[INT_REMAINING] = calculate_remaining(part, idx, turn)
+        x_thread[INT_REMAINING] = calculate_remaining(d, idx, turn)
 
     x['lstg'] = pd.concat([x['lstg'], x_thread], axis=1)
 
     # offer features
-    x.update(get_x_offer(offers, idx, outcome, turn))
+    x.update(get_x_offer(d['offers'], idx, outcome, turn))
 
     # error checking
     check_zero(x)
@@ -141,8 +177,11 @@ def main():
     else:
         assert turn in range(1, 8)
 
+    # threads and offers
+    obs = get_obs_outcomes(part, timestamps=outcome == DELAY)
+
     # input dataframes, output processed dataframes
-    d = process_inputs(part, outcome, turn)
+    d = process_inputs(obs, part, outcome, turn)
 
     # save various output files
     save_files(d, part, name)

@@ -1,7 +1,13 @@
-from compress_pickle import load, dump
 import numpy as np
+from compress_pickle import load, dump
+from tensorboard.backend.event_processing.event_multiplexer import EventMultiplexer
+from train.best_models import extract_best_experiment
 from processing.processing_consts import NUM_OUT
-from constants import INPUT_DIR, VALIDATION, MODELS, PLOT_DATA_DIR
+from constants import LOG_DIR, INPUT_DIR, TEST, MODELS, PLOT_DIR, CENSORED_MODELS
+
+
+def get_num_out(m):
+    return NUM_OUT[m] if NUM_OUT[m] > 1 else 2
 
 
 def get_baserate(y, num_out):
@@ -25,40 +31,44 @@ def get_delay_baserate(y, num_out):
 
 
 def main():
-    # initialize output dataframe
-    lnL0, lnL_bar = dict(), dict()
-
-    # calculate initialization value and baserate for each model
+    # loop over models, save training curves to dictionary
+    lnl = dict()
     for m in MODELS:
         print(m)
 
+        # initialize dictionary
+        lnl[m] = dict()
+
         # number of periods
-        num_out = NUM_OUT[m]
-        if num_out == 1:
-            num_out += 1
+        num_out = get_num_out(m)
 
         # load data
-        y = load(INPUT_DIR + '{}/{}.gz'.format(VALIDATION, m))['y']
+        y = load(INPUT_DIR + '{}/{}.gz'.format(TEST, m))['y']
 
-        if 'delay' in m or m == 'next_arrival':
+        if m in CENSORED_MODELS:
             # initialization value
             p_arrival = np.ones((y >= 0).sum()) / num_out
             p_cens = -y[y < 0] / num_out
-            lnL0[m] = np.log(np.concatenate([p_arrival, p_cens], axis=0)).mean()
+            lnl0 = np.log(np.concatenate([p_arrival, p_cens], axis=0)).mean()
 
             # baserate
-            lnL_bar[m] = get_delay_baserate(y, num_out)
+            lnl[m]['baserate'] = get_delay_baserate(y, num_out)
 
         else:
             # initialization value
-            lnL0[m] = np.log(1 / num_out)
+            lnl0 = np.log(1 / num_out)
 
             # baserate
-            lnL_bar[m] = get_baserate(y, num_out)
+            lnl[m]['baserate'] = get_baserate(y, num_out)
+
+        # find best performing experiment
+        em = EventMultiplexer().AddRunsFromDirectory(LOG_DIR + m)
+        run = extract_best_experiment(em.Reload()) 
+        for k in ['test', 'train']:
+            lnl[m][k] = [lnl0] + [s.value for s in em.Scalars(run, 'lnL_' + k)]
 
     # save output
-    dump(lnL0, PLOT_DATA_DIR + '{}.pkl'.format('lnL0'))
-    dump(lnL_bar, PLOT_DATA_DIR + '{}.pkl'.format('lnL_bar'))
+    dump(lnl, PLOT_DIR + 'training_curves.pkl')
 
 
 if __name__ == '__main__':

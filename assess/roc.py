@@ -1,47 +1,44 @@
+from compress_pickle import dump
 import numpy as np
 import pandas as pd
 from train.EBayDataset import EBayDataset
 from assess.assess_utils import get_model_predictions
-from constants import TEST, DISCRIM_MODELS, PLOT_DATA_DIR
+from assess.assess_consts import ROC_DIM
+from constants import TEST, DISCRIM_MODELS, PLOT_DIR, MODEL_DIR
+
+
+def get_roc(p0, p1):
+	s = pd.Series()
+	for tau in ROC_DIM:
+		fp = np.sum(p0 > tau) / len(p0)
+		tp = np.sum(p1 > tau) / len(p1)
+		s.loc[fp] = tp
+	# check for doubles
+	assert len(s.index) == len(s.index.unique())
+	return s.sort_index()
 
 
 def main():
-	# initialize output dictionary
-	d = dict()
+	roc = dict()
 
 	# loop over discriminator models
-	# for m in DISCRIM_MODELS:
-	for m in ['threads', 'threads_no_tf']:
+	for m in DISCRIM_MODELS:
+		print(m)
+
 		# initialize dataset
 		data = EBayDataset(TEST, m)
 		y = data.d['y']
 
 		# model predictions
-		p, lnL = get_model_predictions(m, data)
+		p, _ = get_model_predictions(m, data)
 		p = p[:, 1]
+		p0, p1 = p[y == 0], p[y == 1]
 
-		# ROC curve
-		d[m] = pd.Series(name='true_positive_rate')
-		for i in range(101):
-			y_hat = p > float(i / 100)
-			fp = (~y & y_hat).sum() / (~y).sum()
-			tp = (y & y_hat).sum() / y.sum()
-			d[m].loc[fp] = tp
+		# calculate roc curve
+		roc[m] = get_roc(p0, p1).rename(m)
 
-		# sort
-		d[m] = d[m].sort_index()
-		assert len(d[m].index) == len(d[m].index.unique())
-
-		# auc
-		fp = d[m].index.values
-		fp_delta = fp[1:] - fp[:-1]
-		tp = d[m].values
-		tp_bar = (tp[1:] + tp[:-1]) / 2
-		auc = (fp_delta * tp_bar).sum()
-		print('{}: {}'.format(m, auc))
-
-	# save dictionary
-	# dump(d, PLOT_DATA_DIR + '{}.pkl'.format('roc_discrim'))
+	# save predictions
+	dump(roc, PLOT_DIR + 'roc.pkl')
 
 
 if __name__ == '__main__':

@@ -1,22 +1,22 @@
 import argparse
 import pandas as pd
-from processing.processing_utils import load_file, init_x, get_x_thread
-from processing.f_discrim.discrim_utils import concat_sim_chunks, save_discrim_files
+from processing.processing_utils import init_x, get_x_thread, \
+    get_obs_outcomes
+from processing.f_discrim.discrim_utils import concat_sim_chunks, \
+    save_discrim_files
 from constants import TRAIN_RL, VALIDATION, TEST
-from featnames import SPLIT, DAYS, DELAY, EXP, AUTO, REJECT, TIME_FEATS, MSG
+from featnames import SPLIT, DAYS, DELAY, EXP, AUTO, REJECT, \
+    TIME_FEATS, MSG
 
 
-def get_x_offer(offers, idx, tf):
+def get_x_offer(offers, idx):
     # initialize dictionary of offer features
-    x_offer = {}
+    x_offer = dict()
     # turn features
     for i in range(1, 8):
         # offer features at turn i
         offer = offers.xs(i, level='index').reindex(
-            index=idx, fill_value=0).astype('float32')
-        # drop time feats, if tf parameter is False
-        if not tf:
-            offer.drop(TIME_FEATS, axis=1, inplace=True)
+            index=idx, fill_value=0)
         # drop feats that are zero
         if i == 1:
             for feat in [DAYS, DELAY, EXP, REJECT]:
@@ -35,22 +35,20 @@ def get_x_offer(offers, idx, tf):
     return x_offer
 
 
-def construct_x(part, tf, threads, offers):
+def construct_x(part, d):
     # master index
-    idx = threads.index
+    idx = d['threads'].index
     # initialize input dictionary with lstg features
     x = init_x(part, idx)
     # add thread features to x['lstg']
-    x_thread = get_x_thread(threads, idx)
-    x_thread['thread_count'] = x_thread.index.get_level_values(level='thread')
+    x_thread = get_x_thread(d['threads'], idx)
     x['lstg'] = pd.concat([x['lstg'], x_thread], axis=1)
     # offer features
-    x.update(get_x_offer(offers, idx, tf))
+    x.update(get_x_offer(d['offers'], idx))
     return x
 
 
 def main():
-    # partiton
     # extract parameters from command line
     parser = argparse.ArgumentParser()
     parser.add_argument('--part', type=str)
@@ -62,15 +60,19 @@ def main():
     print('{}/{}'.format(part, name))
 
     # observed data
-    threads_obs = load_file(part, 'x_thread')
-    offers_obs = load_file(part, 'x_offer')
-    censored = (offers_obs[EXP] == 1) & (offers_obs[DELAY] < 1)
-    offers_obs = offers_obs.loc[~censored, :]
-    x_obs = construct_x(part, tf, threads_obs, offers_obs)
+    obs = get_obs_outcomes(part)
+    x_obs = construct_x(part, obs)
 
     # simulated data
-    threads_sim, offers_sim = concat_sim_chunks(part)
-    x_sim = construct_x(part, tf, threads_sim, offers_sim)
+    sim = concat_sim_chunks(part)
+    x_sim = construct_x(part, sim)
+
+    # remove time feats
+    if not tf:
+        for i in range(1, 8):
+            key = 'offer{}'.format(i)
+            x_obs[key].drop(TIME_FEATS, axis=1, inplace=True)
+            x_sim[key].drop(TIME_FEATS, axis=1, inplace=True)
 
     # save data
     save_discrim_files(part, name, x_obs, x_sim)

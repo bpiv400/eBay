@@ -1,17 +1,23 @@
 import numpy as np
 import pandas as pd
 from compress_pickle import load, dump
-from processing.e_inputs.inputs_utils import save_sizes, convert_x_to_numpy, save_small
-from processing.processing_utils import load_file, collect_date_clock_feats, \
-    get_days_delay, get_norm
+from processing.e_inputs.inputs_utils import save_sizes, \
+    convert_x_to_numpy, save_small
+from processing.processing_utils import load_file, \
+    collect_date_clock_feats, get_days_delay, get_norm
 from utils import is_split
-from constants import TRAIN_RL, VALIDATION, INPUT_DIR, SIM_CHUNKS, ENV_SIM_DIR, \
-    IDX, SLR_PREFIX, MONTH
-from featnames import DAYS, DELAY, CON, SPLIT, NORM, REJECT, AUTO, EXP, CENSORED, \
-    CLOCK_FEATS, TIME_FEATS, OUTCOME_FEATS, MONTHS_SINCE_LSTG, BYR_HIST
+from constants import TRAIN_RL, VALIDATION, INPUT_DIR, SIM_CHUNKS, \
+    ENV_SIM_DIR, IDX, SLR_PREFIX, MONTH
+from featnames import DAYS, DELAY, CON, SPLIT, NORM, REJECT, AUTO, EXP, \
+    CENSORED, CLOCK_FEATS, TIME_FEATS, OUTCOME_FEATS, MONTHS_SINCE_LSTG, \
+    BYR_HIST
 
 
-def process_sim_offers(df, keep_tf=True):
+def process_sim_offers(df, lstg_end):
+    # censor timestamps
+    df.clock = np.minimum(df.clock,
+                          lstg_end.reindex(
+                              index=df.index, level='lstg'))
     # clock features
     df = df.join(collect_date_clock_feats(df.clock))
     # days and delay
@@ -25,26 +31,15 @@ def process_sim_offers(df, keep_tf=True):
     # reject auto and exp are last
     df[REJECT] = df[CON] == 0
     df[AUTO] = (df[DELAY] == 0) & df.index.isin(IDX[SLR_PREFIX], level='index')
-    df[EXP] = df[DELAY] == 1
-    # difference time feats
-    if keep_tf:
-        tf = df[TIME_FEATS].astype('float64')
-        df.drop(TIME_FEATS, axis=1, inplace=True)
-        for c in TIME_FEATS:
-            wide = tf[c].unstack()
-            first = wide[[1]].stack()
-            diff = wide.diff(axis=1).stack()
-            df[c] = pd.concat([first, diff], axis=0).sort_index()
-            assert df[c].isna().sum() == 0
-        df = df.loc[:, CLOCK_FEATS + TIME_FEATS + OUTCOME_FEATS]
-    else:
-        df = df.loc[:, CLOCK_FEATS + OUTCOME_FEATS]
+    df[EXP] = (df[DELAY] == 1) | df[CENSORED]
+    # select and sort features
+    df = df.loc[:, CLOCK_FEATS + TIME_FEATS + OUTCOME_FEATS]
     return df
 
 
-def process_sim_threads(part, df):
+def process_sim_threads(df, start_time):
     # convert clock to months_since_lstg
-    df = df.join(load_file(part, 'lookup').start_time)
+    df = df.join(start_time)
     df[MONTHS_SINCE_LSTG] = (df.clock - df.start_time) / MONTH
     df = df.drop(['clock', 'start_time'], axis=1)
     # reorder columns to match observed
@@ -52,11 +47,28 @@ def process_sim_threads(part, df):
     return df
 
 
-def concat_sim_chunks(part):
+def diff_tf(df):
+    # pull out time feats
+    tf = df[TIME_FEATS].astype('float64')
+    df.drop(TIME_FEATS, axis=1, inplace=True)
+    # for each feat, unstack, difference, and stack
+    for c in TIME_FEATS:
+        wide = tf[c].unstack()
+        first = wide[[1]].stack()
+        diff = wide.diff(axis=1).stack()
+        df[c] = pd.concat([first, diff], axis=0).sort_index()
+        assert df[c].isna().sum() == 0
+    # censored feats to 0
+    df.loc[df[CENSORED], TIME_FEATS] = 0
+    return df
+
+
+def concat_sim_chunks(part, drop_censored=False):
     """
     Loops over simulations, concatenates dataframes.
     :param part: string name of partition.
-    :return: concatentated and sorted threads and offers dataframes.
+    :param drop_censored: True if censored observations are dropped.
+    :return: dictionary of dataframes.
     """
     # collect chunks
     threads, offers = [], []
@@ -69,18 +81,44 @@ def concat_sim_chunks(part):
     threads = pd.concat(threads, axis=0).sort_index()
     offers = pd.concat(offers, axis=0).sort_index()
 
+    # difference time feats
+    offers = diff_tf(offers)
+
     # drop censored offers
-    offers = offers.loc[~offers[CENSORED], :]
-    offers.drop(CENSORED, axis=1, inplace=True)
+    if drop_censored:
+        offers = offers.loc[~offers[CENSORED], :]
+
+    # initialize output dictionary
+    sim = dict()
+
+    # save timestamps
+    sim['clock'] = offers.clock
+    sim['lstg_start'] = load_file(part, 'lookup').start_time
+
+    # end of listing
+    sale_time = offers.loc[offers[CON] == 100, 'clock'].reset_index(
+        level=['thread', 'index'], drop=True)
+    sim['lstg_end'] = sale_time.reindex(index=sim['lstg_start'].index,
+                                        fill_value=-1)
+    no_sale = sim['lstg_end'][sim['lstg_end'] == -1].index
+    sim['lstg_end'].loc[no_sale] = sim['lstg_start'][no_sale] + MONTH - 1
 
     # conform to observed inputs
-    threads = process_sim_threads(part, threads)
-    offers = process_sim_offers(offers)
+    sim['threads'] = process_sim_threads(threads, sim['lstg_start'])
+    sim['offers'] = process_sim_offers(offers, sim['lstg_end'])
 
-    return threads, offers
+    return sim
 
 
 def save_discrim_files(part, name, x_obs, x_sim):
+    """
+    Packages discriminator inputs for training.
+    :param part: string name of partition.
+    :param name: string name of model.
+    :param x_obs: dictionary of observed data.
+    :param x_sim: dictionary of simulated data.
+    :return: None
+    """
     # featnames and sizes
     if part == VALIDATION:
         save_sizes(x_obs, name)

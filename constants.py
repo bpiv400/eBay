@@ -23,21 +23,23 @@ elif 'Windows' in platform() and 'C:' in os.getcwd():  # Barry's laptop
 else:  # cluster and AWS
     PREFIX = os.path.expanduser('~/weka/eBay')
 
-PARTS_DIR = '%s/partitions/' % PREFIX
-ENV_SIM_DIR = '%s/envSimulator/' % PREFIX
-OUTPUT_DIR = '%s/outputs/' % PREFIX
-INPUT_DIR = '%s/inputs/' % PREFIX
-INDEX_DIR = '%s/index/' % PREFIX
-FEATNAMES_DIR = '%sfeatnames/' % INPUT_DIR
-MODEL_DIR = '%smodels/' % OUTPUT_DIR
-REINFORCE_DIR = '%s/agent/' % PREFIX
-RL_LOG_DIR = '%slogs/' % REINFORCE_DIR
-RL_EVAL_DIR = '%s/eval/' % REINFORCE_DIR
+PARTS_DIR = '{}/partitions/'.format(PREFIX)
+ENV_SIM_DIR = '{}/envSimulator/'.format(PREFIX)
+OUTPUT_DIR = '{}/outputs/'.format(PREFIX)
+INPUT_DIR = '{}/inputs/'.format(PREFIX)
+INDEX_DIR = '{}/index/'.format(PREFIX)
+PCTILE_DIR = '{}/pctile/'.format(PREFIX)
+FEATNAMES_DIR = INPUT_DIR + 'featnames/'
+LOG_DIR = OUTPUT_DIR + 'logs/'
+MODEL_DIR = OUTPUT_DIR + 'models/'
+PLOT_DIR = OUTPUT_DIR + 'plots/'
+REINFORCE_DIR = '{}/agent/'.format(PREFIX)
+RL_LOG_DIR = '{}logs/'.format(REINFORCE_DIR)
+RL_EVAL_DIR = '{}/eval/'.format(REINFORCE_DIR)
 
 PARAMS_PATH = INPUT_DIR + 'params.pkl'
 
-PLOT_DIR = '{}/{}/'.format(os.path.expanduser('~/Dropbox/eBay'), 'figures')
-PLOT_DATA_DIR = '{}{}/'.format(PLOT_DIR, 'data')
+FIGURE_DIR = '{}/{}/'.format(os.path.expanduser('~/Dropbox/eBay'), 'figures')
 
 # partitions
 TRAIN_MODELS = 'train_models'
@@ -101,13 +103,23 @@ CON_MODELS = ['{}{}'.format(CON, i) for i in range(1, 8)]
 MSG_MODELS = ['{}{}'.format(MSG, i) for i in range(1, 7)]
 OFFER_MODELS = DELAY_MODELS + CON_MODELS + MSG_MODELS
 MODELS = ARRIVAL_MODELS + OFFER_MODELS
-SLR_INIT = 'init_slr'
-BYR_INIT = 'init_byr'
+
+# censored models
+CENSORED_MODELS = [INTERARRIVAL_MODEL] + DELAY_MODELS
 
 # discriminator models
 DISCRIM_MODELS = ['listings', 'threads', 'threads_no_tf']
+
+# initializations
+SLR_INIT = 'init_slr'
+BYR_INIT = 'init_byr'
+INIT_MODELS = [SLR_INIT, BYR_INIT]
 
 TURN_FEATS = {
     BYR_INIT: ['t1', 't3', 't5'],
     SLR_INIT: ['t2', 't4']
 }
+
+# outcome types
+SIM = 'simulation'
+OBS = 'data'

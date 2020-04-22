@@ -2,9 +2,14 @@ import argparse
 import numpy as np
 import pandas as pd
 from compress_pickle import load
-from utils import slr_norm, byr_norm, extract_clock_feats, is_split
-from constants import *
-from featnames import *
+from utils import slr_norm, byr_norm, extract_clock_feats
+from processing.processing_consts import CLEAN_DIR, INTERVAL, \
+    INTERVAL_COUNTS
+from constants import START, PARTITIONS, PARTS_DIR, MAX_DELAY, IDX, \
+    BYR_PREFIX, SLR_PREFIX, DAY, HOLIDAYS, MONTH
+from featnames import HOLIDAY, DOW_PREFIX, TIME_OF_DAY, AFTERNOON, \
+    CLOCK_FEATS, DELAY, EXP, BYR_HIST, THREAD_COUNT, \
+    MONTHS_SINCE_LSTG, TIME_FEATS, AUTO, SPLIT, MSG
 
 
 # function to load file from partitions directory
@@ -156,3 +161,30 @@ def get_x_thread(threads, idx):
     x_thread = pd.DataFrame(index=idx).join(x_thread)
 
     return x_thread.astype('float32')
+
+
+def get_obs_outcomes(part, drop_censored=False, timestamps=False):
+    # initialize output dictionary
+    obs = dict()
+
+    # observed outcomes
+    obs['threads'] = load_file(part, 'x_thread')
+    obs['offers'] = load_file(part, 'x_offer')
+
+    # drop censored observations
+    cens = (obs['offers'][DELAY] < 1) & obs['offers'][EXP]
+    if drop_censored:
+        obs['offers'] = obs['offers'][~cens]
+
+    # otherwise set time feats to 0 for censored observations
+    else:
+        obs['offers'].loc[cens, TIME_FEATS] = 0.0
+
+    # load timestamps
+    if timestamps:
+        obs['lstg_start'] = load_file(part, 'lookup').start_time
+        obs['lstg_end'] = load(CLEAN_DIR + 'listings.pkl').end_time.reindex(
+            index=obs['lstg_start'].index)
+        obs['clock'] = load_file(part, 'clock')
+
+    return obs
