@@ -28,7 +28,6 @@ for i in range(1, 7):
     seller_groupings.append('offer{}'.format(i))
     del i
 
-# hyperparameter name constants
 # concession set constants
 CON_TYPE = 'con_type'
 FULL_CON = 'full'

@@ -46,7 +46,7 @@ class RlTrainer:
         # ids
         self.run_id = gen_run_id()
         self.log_dir = RL_LOG_DIR + '{}/'.format(self.agent_params['role'])
-        self.run_dir = '{}/'.format(self.run_id)
+        self.run_dir = '{}{}/'.format(self.log_dir, self.run_id)
 
         # parameters
         self.env_params_train = self.generate_train_params()
