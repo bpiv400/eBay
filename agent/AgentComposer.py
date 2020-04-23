@@ -15,7 +15,7 @@ class AgentComposer(Composer):
     def __init__(self, cols=None, agent_params=None):
         super().__init__(cols)
         # parameters
-        self.byr = agent_params[BYR_PREFIX]
+        self.byr = agent_params['role'] == BYR_PREFIX
         self.delay = agent_params[DELAY]
         self.feat_type = agent_params[FEAT_TYPE]
         self.con_type = agent_params[CON_TYPE]

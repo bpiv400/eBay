@@ -17,7 +17,7 @@ class EbayRunner(MinibatchRl):
                  sampler,
                  seed=None,
                  affinity=None,
-                 batches_per_evaluation=None,
+                 batches_per_eval=None,
                  batch_size=None):
         # initialize logging
         self._opt_infos = None
@@ -30,14 +30,14 @@ class EbayRunner(MinibatchRl):
         # super constructor
         super().__init__(algo=algo, agent=agent, sampler=sampler,
                          seed=seed, affinity=affinity,
-                         n_steps=batch_size * batches_per_evaluation,
+                         n_steps=batch_size * batches_per_eval,
                          log_interval_steps=batch_size)
         # re initializing components
         self.algo = algo
         self.sampler = sampler
         self.agent = agent
         # additional state vars
-        self.batches_per_evaluation = batches_per_evaluation
+        self.batches_per_eval = batches_per_eval
         self.itr_ = 0
 
     def update_agent(self, agent):
@@ -50,7 +50,7 @@ class EbayRunner(MinibatchRl):
         n_itr = self.startup()
         set_seed(make_seed())
         assert self.log_interval_itrs == 1
-        assert n_itr == self.batches_per_evaluation
+        assert n_itr == self.batches_per_eval
         for itr in range(n_itr):
             logger.set_iteration(itr + self.itr_)
             with logger.prefix(f"itr #{itr + self.itr_} "):
@@ -61,7 +61,7 @@ class EbayRunner(MinibatchRl):
                 self.store_diagnostics(itr + self.itr_, traj_infos, opt_info)
                 self.log_diagnostics(itr + self.itr_)
 
-        self.itr_ += self.batches_per_evaluation
+        self.itr_ += self.batches_per_eval
         self.shutdown()
         return self.itr_
 
@@ -79,7 +79,7 @@ class EbayRunner(MinibatchRl):
         Write diagnostics (including stored ones) to csv via the logger.
         """
         # save model if evaluation happens after this batch
-        if (itr + 1) % self.batches_per_evaluation == 0:
+        if (itr + 1) % self.batches_per_eval == 0:
             self.save_itr_snapshot(itr)
 
         # update cumulative variables

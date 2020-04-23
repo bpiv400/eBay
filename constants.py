@@ -35,11 +35,9 @@ MODEL_DIR = OUTPUT_DIR + 'models/'
 PLOT_DIR = OUTPUT_DIR + 'plots/'
 REINFORCE_DIR = '{}/agent/'.format(PREFIX)
 RL_LOG_DIR = '{}logs/'.format(REINFORCE_DIR)
-RL_EVAL_DIR = '{}/eval/'.format(REINFORCE_DIR)
+RL_EVAL_DIR = '{}eval/'.format(REINFORCE_DIR)
 
 PARAMS_PATH = INPUT_DIR + 'params.pkl'
-
-FIGURE_DIR = '{}/{}/'.format(os.path.expanduser('~/Dropbox/eBay'), 'figures')
 
 # partitions
 TRAIN_MODELS = 'train_models'

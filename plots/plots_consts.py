@@ -1,7 +1,11 @@
+import os
 import pandas as pd
 from processing.processing_consts import CLEAN_DIR
 from assess.assess_consts import SPLIT_VALS
 from featnames import META, START_PRICE
+
+# where to save figures
+FIG_DIR = '{}/{}/'.format(os.path.expanduser('~/Dropbox/eBay'), 'figures')
 
 # fontsize by plot type
 FONTSIZE = {'roc': 16,

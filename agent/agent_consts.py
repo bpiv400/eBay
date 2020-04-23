@@ -1,20 +1,19 @@
-from constants import REINFORCE_DIR
+from constants import REINFORCE_DIR, BYR_PREFIX, SLR_PREFIX
 
-#  the threshold for likelihood of no arrivals
-# used to drop listings before RL training
+# threshold for likelihood of no arrivals
 NO_ARRIVAL_CUTOFF = .50 ** (1.0 / 12)
 NO_ARRIVAL = 'no_arrival'
-INIT_LR = .001
 
+# files
+SELLER_TRAIN_INPUT = REINFORCE_DIR + 'train/seller.hdf5'
+
+# state dictionaries
 AGENT_STATE = 'agent_state_dict'
 OPTIM_STATE = 'optimizer_state_dict'
 
 # sub directory names
 TRAIN_DIR = "train"
 TRAIN_SEED = 10
-
-# files
-SELLER_TRAIN_INPUT = "{}{}/seller.hdf5".format(REINFORCE_DIR, TRAIN_DIR)
 
 # seller input groups
 seller_groupings = [
@@ -43,7 +42,30 @@ ALL_FEATS = "all"
 
 PARAM_SHARING = True
 
-# SET THESE PARAMETERS
-BATCH_SIZE = 1000
-BATCHES_PER_LOG = 1
+# command-line parameters
+AGENT_PARAMS = {'role': {'type': str,
+                         'choices': [BYR_PREFIX, SLR_PREFIX],
+                         'default': SLR_PREFIX},
+                'delay': {'type': bool, 'default': False},
+                'feat_id': {'type': str,
+                            'choices': [ALL_FEATS, NO_TIME],
+                            'default': ALL_FEATS},
+                'con_type': {'type': str,
+                             'choices': [FULL_CON, QUARTILES, HALF],
+                             'default': QUARTILES}}
 
+BATCH_PARAMS = {'batch_size': {'type': int, 'default': 2048},
+                'batches_per_eval': {'type': int, 'default': 1}}
+
+PPO_PARAMS = {'minibatches': {'type': int, 'default': 4},
+              'epochs': {'type': int, 'default': 4},
+              'entropy_loss_coeff': {'type': float, 'default': 0.0},
+              'value_loss_coeff': {'type': float, 'default': 1.0},
+              'ratio_clip': {'type': float, 'default': 0.1},
+              'discount': {'type': float, 'default': 1.0},
+              'learning_rate': {'type': float, 'default': 0.001}}
+
+PARAM_DICTS = [AGENT_PARAMS, BATCH_PARAMS, PPO_PARAMS]
+
+# multi-processing parameters
+THREADS_PER_PROC = 1

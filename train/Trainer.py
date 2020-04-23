@@ -48,6 +48,7 @@ class Trainer:
         """
         Public method to train model.
         :param dropout: pair of dropout rates, one for last embedding, one for fully connected.
+        :param norm: one of ['batch', 'layer', 'weight']
         """
         # experiment id
         dtstr = dt.now().strftime('%y%m%d-%H%M')
@@ -62,7 +63,7 @@ class Trainer:
             writer = None
 
         # tune initial learning rate
-        lr, net, lnL_test0 = self._tune_lr(writer=writer, 
+        lr, net, lnl_test0 = self._tune_lr(writer=writer,
                                            dropout=dropout, 
                                            norm=norm)
 
@@ -83,7 +84,7 @@ class Trainer:
         print(optimizer)
 
         # training loop
-        epoch, last = 1, np.inf
+        epoch = 1
         while True:
             # run one epoch
             print('Epoch {}'.format(epoch))
@@ -104,11 +105,10 @@ class Trainer:
                 break
 
             # stop training if holdout objective hasn't improved in 12 epochs
-            if epoch >= 11 and output['lnL_test'] < lnL_test0:
+            if epoch >= 11 and output['lnL_test'] < lnl_test0:
                 break
 
-            # update last, increment epoch
-            last = output['loss']
+            # increment epoch
             epoch += 1
 
         return -output['lnL_test']

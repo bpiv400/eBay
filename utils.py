@@ -1,5 +1,4 @@
 import pickle
-import pandas as pd
 import torch
 import numpy as np
 from compress_pickle import load
@@ -117,7 +116,7 @@ def load_state_dict(name=None):
     return state_dict
 
 
-def load_model(name, verbose=True):
+def load_model(name, verbose=False):
     """
     Initialize PyTorch network for some model
     :param str name: full name of the model

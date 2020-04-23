@@ -11,8 +11,8 @@ from compress_pickle import load
 from featnames import CAT
 from constants import PARTITIONS, PARTS_DIR, TRAIN_RL
 from agent.agent_consts import SELLER_TRAIN_INPUT
-from agent.agent_utils import (remove_unlikely_arrival_lstgs,
-                               add_no_arrival_likelihood)
+from agent.a_inputs.inputs_utils import (remove_unlikely_arrival_lstgs,
+                                         add_no_arrival_likelihood)
 from rlenv.env_consts import X_LSTG_FILENAME, LOOKUP_FILENAME, X_LSTG, LOOKUP
 from rlenv.env_utils import align_x_lstg_lookup
 
