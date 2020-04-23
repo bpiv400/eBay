@@ -13,6 +13,8 @@ OPTIM_STATE = 'optimizer_state_dict'
 TRAIN_DIR = "train"
 TRAIN_SEED = 10
 
+THREADS_PER_PROC = 1
+
 # files
 SELLER_TRAIN_INPUT = "{}{}/seller.hdf5".format(REINFORCE_DIR, TRAIN_DIR)
 
