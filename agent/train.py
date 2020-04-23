@@ -42,9 +42,7 @@ class RlTrainer:
 
         # fields
         self.itr = 0
-        self.eval_scores = list()
         self.norm = None
-        self.checkpoint = {AGENT_STATE: None, OPTIM_STATE: None}
 
         # ids
         self.run_id = gen_run_id()
