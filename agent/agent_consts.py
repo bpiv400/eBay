@@ -55,14 +55,16 @@ AGENT_PARAMS = {'role': {'type': str,
                              'default': QUARTILES}}
 
 BATCH_PARAMS = {'batch_size': {'type': int, 'default': 2048},
-                'batches_per_eval': {'type': int, 'default': 1}}
+                'batch_count': {'type': int, 'default': 10}}
 
-PPO_PARAMS = {'minibatches': {'type': int, 'default': 4},
+PPO_PARAMS = {'minibatches': {'type': int, 'default': 16},
               'epochs': {'type': int, 'default': 4},
               'entropy_loss_coeff': {'type': float, 'default': 0.0},
               'value_loss_coeff': {'type': float, 'default': 1.0},
               'ratio_clip': {'type': float, 'default': 0.1},
               'discount': {'type': float, 'default': 1.0},
+              'gae_lambda': {'type': float, 'default': 1.0},
+              'clip_grad_norm': {'type': float, 'default': 1.0},
               'learning_rate': {'type': float, 'default': 0.001}}
 
 PARAM_DICTS = [AGENT_PARAMS, BATCH_PARAMS, PPO_PARAMS]

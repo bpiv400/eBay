@@ -12,7 +12,7 @@ from constants import RL_LOG_DIR
 
 def get_con_set(con):
     if con == FULL_CON:
-        return nmp.linspace(0, 100, 101) / 100
+        return np.linspace(0, 100, 101) / 100
     elif con == QUARTILES:
         return np.array([0, 0.25, 0.50, 0.75, 1.0])
     elif con == HALF:
@@ -111,8 +111,7 @@ def save_params(role=None,
                 agent_params=None,
                 batch_params=None,
                 ppo_params=None,
-                time_elapsed=None,
-                iterations=None):
+                time_elapsed=None):
     path = RL_LOG_DIR + '{}/runs.pkl'.format(role)
 
     # if file does not exist, create it
@@ -129,7 +128,6 @@ def save_params(role=None,
 
     # add timings
     df.loc[run_id, 'time_elapsed'] = time_elapsed
-    df.loc[run_id, 'iterations'] = iterations
 
     # save file
     dump(df, path)

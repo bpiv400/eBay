@@ -7,6 +7,7 @@ import multiprocessing as mp
 from torch.utils.tensorboard.writer import SummaryWriter
 from rlpyt.algos.pg.ppo import PPO
 from rlpyt.agents.pg.categorical import CategoricalPgAgent
+from rlpyt.runners.minibatch_rl import MinibatchRl
 from rlpyt.samplers.serial.sampler import SerialSampler
 from rlpyt.samplers.parallel.cpu.sampler import CpuSampler
 from rlpyt.samplers.parallel.cpu.collectors import CpuResetCollector
@@ -17,14 +18,12 @@ from rlpyt.utils.logging.context import logger_context
 from featnames import DELAY
 from constants import (RL_EVAL_DIR, RL_LOG_DIR, SLR_INIT, BYR_INIT,
                        BYR_PREFIX)
-from agent.agent_consts import (AGENT_STATE, OPTIM_STATE,
-                                SELLER_TRAIN_INPUT, PARAM_DICTS,
+from agent.agent_consts import (SELLER_TRAIN_INPUT, PARAM_DICTS,
                                 AGENT_PARAMS, BATCH_PARAMS, PPO_PARAMS)
 from agent.agent_utils import load_init_model, detect_norm, \
     gen_run_id, save_params
 from agent.AgentComposer import AgentComposer
 from agent.models.PgCategoricalAgentModel import PgCategoricalAgentModel
-from agent.runners.EbayRunner import EbayRunner
 from rlenv.env_utils import load_chunk
 from rlenv.interfaces.PlayerInterface import SimulatedBuyer, SimulatedSeller
 from rlenv.interfaces.ArrivalInterface import ArrivalInterface
@@ -99,8 +98,7 @@ class RlTrainer:
 
     def generate_agent(self):
         return CategoricalPgAgent(ModelCls=PgCategoricalAgentModel,
-                                  model_kwargs=self.generate_model_kwargs(),
-                                  initial_model_state_dict=self.checkpoint[AGENT_STATE])
+                                  model_kwargs=self.generate_model_kwargs())
 
     def generate_sampler(self):
         batch_b = mp.cpu_count() * 2
@@ -133,13 +131,14 @@ class RlTrainer:
             )
 
     def generate_runner(self):
-        affinity = dict(workers_cpus=list(range(mp.cpu_count())))
-        runner = EbayRunner(algo=self.generate_algorithm(),
-                            agent=self.generate_agent(),
-                            sampler=self.sampler,
-                            batches_per_eval=self.batch_params['batches_per_eval'],
-                            batch_size=self.batch_params['batch_size'],
-                            affinity=affinity)
+        affinity = dict(workers_cpus=list(range(mp.cpu_count())),
+                        cuda_idx=0)
+        runner = MinibatchRl(algo=self.generate_algorithm(),
+                             agent=self.generate_agent(),
+                             sampler=self.sampler,
+                             n_steps=self.batch_params['batch_size'] * self.batch_params['batch_count'],
+                             log_interval_steps=self.batch_params['batch_size'],
+                             affinity=affinity)
         return runner
 
     def train(self):
@@ -150,9 +149,8 @@ class RlTrainer:
                             run_ID=self.run_id,
                             snapshot_mode='last'):
             logger.set_tf_summary_writer(self.writer)
-            for i in range(10):
-                self.itr = self.runner.train()
-                self.writer.flush()
+            self.itr = self.runner.train()
+            self.writer.flush()
 
 
 def main():
@@ -193,8 +191,7 @@ def main():
                 agent_params=agent_params,
                 batch_params=batch_params,
                 ppo_params=ppo_params,
-                time_elapsed=time_elapsed,
-                iterations=trainer.itr)
+                time_elapsed=time_elapsed)
 
 
 if __name__ == '__main__':
