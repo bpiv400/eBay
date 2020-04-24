@@ -100,7 +100,7 @@ class AgentComposer(Composer):
 
     @staticmethod
     def verify_lstg_append(lstg_append=None, agent_name=None):
-        print(lstg_append)
+        # print(lstg_append)
         assert lstg_append[0] == MONTHS_SINCE_LSTG
         assert lstg_append[1] == BYR_HIST
         assert lstg_append[2] == THREAD_COUNT

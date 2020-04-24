@@ -53,10 +53,10 @@ AGENT_PARAMS = {'role': {'type': str,
                              'choices': [FULL_CON, QUARTILES, HALF],
                              'default': QUARTILES}}
 
-BATCH_PARAMS = {'batch_size': {'type': int, 'default': 2048},
+BATCH_PARAMS = {'batch_size': {'type': int, 'default': 4096},
                 'batch_count': {'type': int, 'default': 10}}
 
-PPO_PARAMS = {'minibatches': {'type': int, 'default': 16},
+PPO_PARAMS = {'mbsize': {'type': int, 'default': 512},
               'epochs': {'type': int, 'default': 4},
               'entropy_loss_coeff': {'type': float, 'default': 0.0},
               'value_loss_coeff': {'type': float, 'default': 1.0},

@@ -4,7 +4,7 @@ Train a seller agent that makes concessions, not offers
 import argparse
 from datetime import datetime as dt
 import multiprocessing as mp
-from torch.utils.tensorboard.writer import SummaryWriter
+import torch
 from rlpyt.algos.pg.ppo import PPO
 from rlpyt.agents.pg.categorical import CategoricalPgAgent
 from rlpyt.runners.minibatch_rl import MinibatchRl
@@ -13,7 +13,6 @@ from rlpyt.samplers.parallel.cpu.sampler import CpuSampler
 from rlpyt.samplers.parallel.cpu.collectors import CpuResetCollector
 from rlpyt.samplers.serial.sampler import SerialEvalCollector
 from rlpyt.samplers.parallel.cpu.collectors import CpuEvalCollector
-from rlpyt.utils.logging import logger
 from rlpyt.utils.logging.context import logger_context
 from featnames import DELAY
 from constants import (RL_EVAL_DIR, RL_LOG_DIR, SLR_INIT, BYR_INIT,
@@ -39,6 +38,11 @@ class RlTrainer:
         self.batch_params = kwargs['batch_params']
         self.ppo_params = kwargs['ppo_params']
 
+        # minibatches in ppo_params
+        self.ppo_params['minibatches'] = \
+            int(self.batch_params['batch_size'] / self.ppo_params['mbsize'])
+        del self.ppo_params['mbsize']
+
         # fields
         self.itr = 0
         self.norm = None
@@ -46,7 +50,6 @@ class RlTrainer:
         # ids
         self.run_id = gen_run_id()
         self.log_dir = RL_LOG_DIR + '{}/'.format(self.agent_params['role'])
-        self.run_dir = '{}{}/'.format(self.log_dir, self.run_id)
 
         # parameters
         self.env_params_train = self.generate_train_params()
@@ -54,9 +57,6 @@ class RlTrainer:
         # rlpyt components
         self.sampler = self.generate_sampler()
         self.runner = self.generate_runner()
-
-        # logging setup
-        self.writer = SummaryWriter(self.run_dir)
 
     def generate_train_params(self):
         chunk_path = '{}1.gz'.format(RL_EVAL_DIR)
@@ -131,8 +131,8 @@ class RlTrainer:
             )
 
     def generate_runner(self):
-        affinity = dict(workers_cpus=list(range(mp.cpu_count())),
-                        cuda_idx=0)
+        workers_cpu = list(range(int(mp.cpu_count() / 2)))
+        affinity = dict(workers_cpus=workers_cpu, cuda_idx=0)
         runner = MinibatchRl(algo=self.generate_algorithm(),
                              agent=self.generate_agent(),
                              sampler=self.sampler,
@@ -144,13 +144,11 @@ class RlTrainer:
     def train(self):
         with logger_context(log_dir=self.log_dir,
                             name='debug',
-                            use_summary_writer=False,
+                            use_summary_writer=True,
                             override_prefix=True,
                             run_ID=self.run_id,
-                            snapshot_mode='last'):
-            logger.set_tf_summary_writer(self.writer)
+                            snapshot_mode='all'):
             self.itr = self.runner.train()
-            self.writer.flush()
 
 
 def main():
@@ -192,6 +190,13 @@ def main():
                 batch_params=batch_params,
                 ppo_params=ppo_params,
                 time_elapsed=time_elapsed)
+
+    # drop optimization parameters
+    run_dir = trainer.log_dir + '{}/'.format(trainer.run_id)
+    for i in range(batch_params['batch_count']):
+        path = run_dir + 'itr_{}.pkl'.format(i)
+        d = torch.load(path)
+        torch.save(d['agent_state_dict'], path)
 
 
 if __name__ == '__main__':

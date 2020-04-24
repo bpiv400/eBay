@@ -13,21 +13,19 @@ from rlenv.interfaces.PlayerInterface import SimulatedBuyer, SimulatedSeller
 class EvalGenerator(Generator):
     def __init__(self, **kwargs):
         """
-        :param itr: number of minibatches of training that have taken place
         :param verbose: boolean for whether to print information about threads
         :param model_class: class that inherits agent.models.AgentModel
         :param model_kwargs: dictionary containing kwargs for model_class
-        :param run_dir: directory where logs and model parameters live
+        :param model_path: path to agent state dict
         :param composer: agent.AgentComposer
         :param record: boolean for whether recorder should dump thread info
         """
-        self.itr = kwargs['itr']
         self._composer = kwargs['composer']  # type: AgentComposer
         self.agent_byr = self._composer.byr
         self.delay = self._composer.delay
         self.model_kwargs = kwargs['model_kwargs']
         self.ModelCls = kwargs['model_class']
-        self.run_dir = kwargs['run_dir']
+        self.model_path = kwargs['model_path']
         self.record = kwargs['record']
         super().__init__(direct=None,
                          verbose=kwargs['verbose'])
@@ -49,8 +47,7 @@ class EvalGenerator(Generator):
 
     def generate_agent(self):
         model = self.ModelCls(**self.model_kwargs)
-        if self.itr != 0:
-            load_agent_params(model=model, run_dir=self.run_dir)
+        load_agent_params(model=model, model_path=self.model_path)
         agent = AgentPlayer(agent_model=model)
         return agent
 
@@ -101,4 +98,4 @@ class EvalGenerator(Generator):
 
     @property
     def records_path(self):
-        return '{}{}_{}.gz'.format(self.run_dir, self.itr, self.chunk)
+        return '{}sim/{}/{}.gz'.format(self.run_dir, self.itr, self.chunk)

@@ -115,7 +115,3 @@ class SellerEnvironment(AgentEnvironment):
     @property
     def horizon(self):
         return 100
-
-
-
-

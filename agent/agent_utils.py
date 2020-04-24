@@ -34,14 +34,14 @@ def detect_norm(init_dict=None):
         raise NotImplementedError("Unexpected normalization type")
 
 
-def load_agent_params(model=None, run_dir=None):
+def load_agent_params(model=None, model_path=None):
     """
-
-    :param torch.nn.Module model:
-    :param string run_dir:
+    Loads state dict of trained agent.
+    :param torch.nn.Module model: agent model.
+    :param str model_path: path to agent state dict.
     :return:
     """
-    params = torch.load('{}params.pkl'.format(run_dir), map_location=torch.device('cpu'))
+    params = torch.load(model_path,  map_location=torch.device('cpu'))
     state_dict = params[AGENT_STATE]
     model.load_state_dict(state_dict=state_dict, strict=True)
     for param in model.parameters(recurse=True):
@@ -90,7 +90,7 @@ def gen_run_id():
     return dt.now().strftime('%y%m%d-%H%M')
 
 
-def create_params_file(path):
+def create_params_file():
     # append parameters
     series = list()
     for d in PARAM_DICTS:
@@ -101,9 +101,9 @@ def create_params_file(path):
     series.append(pd.Series(name='time_elapsed', dtype=int))
     series.append(pd.Series(name='iterations', dtype=int))
 
-    # create and save dataframe
+    # create and return dataframe
     df = pd.concat(series, axis=1)
-    dump(df, path)
+    return df
 
 
 def save_params(role=None,
@@ -116,10 +116,11 @@ def save_params(role=None,
 
     # if file does not exist, create it
     if not os.path.isfile(path):
-        create_params_file(path)
+        df = create_params_file()
 
-    # open file
-    df = load(path)
+    # otherwise, open file
+    else:
+        df = load(path)
 
     # add parameters
     for d in [agent_params, batch_params, ppo_params]:
