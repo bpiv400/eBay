@@ -5,8 +5,7 @@ import pandas as pd
 import torch
 from datetime import datetime as dt
 from utils import load_state_dict
-from agent.agent_consts import FULL_CON, QUARTILES, HALF, \
-    AGENT_STATE, PARAM_DICTS
+from agent.agent_consts import FULL_CON, QUARTILES, HALF, PARAM_DICTS
 from constants import RL_LOG_DIR
 
 
@@ -34,15 +33,15 @@ def detect_norm(init_dict=None):
         raise NotImplementedError("Unexpected normalization type")
 
 
-def load_agent_params(model=None, model_path=None):
+def load_agent_model(model=None, model_path=None):
     """
     Loads state dict of trained agent.
     :param torch.nn.Module model: agent model.
     :param str model_path: path to agent state dict.
     :return:
     """
-    params = torch.load(model_path,  map_location=torch.device('cpu'))
-    state_dict = params[AGENT_STATE]
+    state_dict = torch.load(model_path,
+                            map_location=torch.device('cpu'))
     model.load_state_dict(state_dict=state_dict, strict=True)
     for param in model.parameters(recurse=True):
         param.requires_grad = False
@@ -99,7 +98,6 @@ def create_params_file():
 
     # columns for timings
     series.append(pd.Series(name='time_elapsed', dtype=int))
-    series.append(pd.Series(name='iterations', dtype=int))
 
     # create and return dataframe
     df = pd.concat(series, axis=1)

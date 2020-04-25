@@ -1,6 +1,7 @@
 """
 Train a seller agent that makes concessions, not offers
 """
+import os
 import argparse
 from datetime import datetime as dt
 import multiprocessing as mp
@@ -17,8 +18,9 @@ from rlpyt.utils.logging.context import logger_context
 from featnames import DELAY
 from constants import (RL_EVAL_DIR, RL_LOG_DIR, SLR_INIT, BYR_INIT,
                        BYR_PREFIX)
-from agent.agent_consts import (SELLER_TRAIN_INPUT, PARAM_DICTS,
-                                AGENT_PARAMS, BATCH_PARAMS, PPO_PARAMS)
+from agent.agent_consts import (SELLER_TRAIN_INPUT, AGENT_STATE,
+                                PARAM_DICTS, AGENT_PARAMS,
+                                BATCH_PARAMS, PPO_PARAMS)
 from agent.agent_utils import load_init_model, detect_norm, \
     gen_run_id, save_params
 from agent.AgentComposer import AgentComposer
@@ -131,7 +133,7 @@ class RlTrainer:
             )
 
     def generate_runner(self):
-        workers_cpu = list(range(int(mp.cpu_count() / 2)))
+        workers_cpu = list(range(mp.cpu_count()))
         affinity = dict(workers_cpus=workers_cpu, cuda_idx=0)
         runner = MinibatchRl(algo=self.generate_algorithm(),
                              agent=self.generate_agent(),
@@ -192,11 +194,18 @@ def main():
                 time_elapsed=time_elapsed)
 
     # drop optimization parameters
-    run_dir = trainer.log_dir + '{}/'.format(trainer.run_id)
+    run_dir = trainer.log_dir + 'run_{}/'.format(trainer.run_id)
     for i in range(batch_params['batch_count']):
-        path = run_dir + 'itr_{}.pkl'.format(i)
-        d = torch.load(path)
-        torch.save(d['agent_state_dict'], path)
+        # load params
+        in_path = run_dir + 'itr_{}.pkl'.format(i)
+        d = torch.load(in_path)
+        # save model
+        itr_dir = run_dir + 'itr/{}/'.format(i)
+        if not os.path.isdir(itr_dir):
+            os.makedirs(itr_dir)
+        torch.save(d[AGENT_STATE], itr_dir + 'agent.net')
+        # delete params
+        os.remove(in_path)
 
 
 if __name__ == '__main__':

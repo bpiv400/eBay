@@ -121,3 +121,6 @@ TURN_FEATS = {
 # outcome types
 SIM = 'simulation'
 OBS = 'data'
+
+# RL normalization type
+RL_NORM = 'weight'
