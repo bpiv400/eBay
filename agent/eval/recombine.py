@@ -32,8 +32,8 @@ def main():
     for itr in range(iterations):
         # load chunks
         rewards = list()
-        for i in range(SIM_CHUNKS):
-            path = run_dir + 'rewards/{}/{}.gz'.format(itr, i)
+        for i in range(1, SIM_CHUNKS+1):
+            path = run_dir + 'itr/{}/rewards/{}.gz'.format(itr, i)
             rewards.append(load(path))
 
         # single series
@@ -45,7 +45,7 @@ def main():
         writer.add_scalar(gen_tag('Median'), np.median(rewards), itr)
         writer.add_scalar(gen_tag('Min'), np.min(rewards), itr)
         writer.add_scalar(gen_tag('Std'), np.std(rewards), itr)
-        writer.add_histogram(gen_tag('Histogram'), rewards, itr)
+        writer.add_histogram(gen_tag('ln(reward)'), np.log(rewards), itr)
 
 
 if __name__ == '__main__':
