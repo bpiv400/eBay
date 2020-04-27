@@ -6,6 +6,7 @@ import argparse
 from datetime import datetime as dt
 import multiprocessing as mp
 import torch
+from agent.CrossEntropyPPO import CrossEntropyPPO
 from rlpyt.algos.pg.ppo import PPO
 from rlpyt.agents.pg.categorical import CategoricalPgAgent
 from rlpyt.runners.minibatch_rl import MinibatchRl
@@ -16,13 +17,12 @@ from rlpyt.samplers.serial.sampler import SerialEvalCollector
 from rlpyt.samplers.parallel.cpu.collectors import CpuEvalCollector
 from rlpyt.utils.logging.context import logger_context
 from featnames import DELAY
-from constants import (RL_EVAL_DIR, RL_LOG_DIR, SLR_INIT, BYR_INIT,
-                       BYR_PREFIX)
+from constants import RL_EVAL_DIR, RL_LOG_DIR, BYR_PREFIX
 from agent.agent_consts import (SELLER_TRAIN_INPUT, AGENT_STATE,
                                 PARAM_DICTS, AGENT_PARAMS,
-                                BATCH_PARAMS, PPO_PARAMS)
-from agent.agent_utils import load_init_model, detect_norm, \
-    gen_run_id, save_params
+                                BATCH_PARAMS, PPO_PARAMS,
+                                THREADS_PER_PROC)
+from agent.agent_utils import gen_run_id, save_params, generate_model_kwargs
 from agent.AgentComposer import AgentComposer
 from agent.models.PgCategoricalAgentModel import PgCategoricalAgentModel
 from rlenv.env_utils import load_chunk
@@ -40,14 +40,8 @@ class RlTrainer:
         self.batch_params = kwargs['batch_params']
         self.ppo_params = kwargs['ppo_params']
 
-        # minibatches in ppo_params
-        self.ppo_params['minibatches'] = \
-            int(self.batch_params['batch_size'] / self.ppo_params['mbsize'])
-        del self.ppo_params['mbsize']
-
-        # fields
+        # iteration
         self.itr = 0
-        self.norm = None
 
         # ids
         self.run_id = gen_run_id()
@@ -55,6 +49,11 @@ class RlTrainer:
 
         # parameters
         self.env_params_train = self.generate_train_params()
+
+        # minibatches in ppo_params
+        self.ppo_params['minibatches'] = \
+            int(self.batch_params['batch_size'] / self.ppo_params['mbsize'])
+        del self.ppo_params['mbsize']
 
         # rlpyt components
         self.sampler = self.generate_sampler()
@@ -76,31 +75,16 @@ class RlTrainer:
         return env_params
 
     def generate_algorithm(self):
-        return PPO(**self.ppo_params)
-
-    def generate_model_kwargs(self):
-        model_kwargs = {
-            'sizes': self.env_params_train['composer'].agent_sizes,
-            BYR_PREFIX: self.agent_params['role'] == BYR_PREFIX,
-            DELAY: self.agent_params[DELAY]
-        }
-        # load simulator model to initialize policy
-        if self.itr == 0:
-            if not model_kwargs[BYR_PREFIX]:
-                init_model = SLR_INIT
-            else:
-                init_model = BYR_INIT
-            init_dict = load_init_model(name=init_model,
-                                        size=model_kwargs['sizes']['out'])
-            self.norm = detect_norm(init_dict)
-            model_kwargs['init_dict'] = init_dict
-        # set norm type
-        model_kwargs['norm'] = self.norm
-        return model_kwargs
+        return CrossEntropyPPO(**self.ppo_params)
+        # return PPO(**self.ppo_params)
 
     def generate_agent(self):
+        sizes = self.env_params_train['composer'].agent_sizes
+        byr = self.agent_params['role'] == BYR_PREFIX
+        delay = self.agent_params[DELAY]
+        model_kwargs = generate_model_kwargs(sizes, byr, delay)
         return CategoricalPgAgent(ModelCls=PgCategoricalAgentModel,
-                                  model_kwargs=self.generate_model_kwargs())
+                                  model_kwargs=model_kwargs)
 
     def generate_sampler(self):
         batch_b = mp.cpu_count() * 2
@@ -134,7 +118,9 @@ class RlTrainer:
 
     def generate_runner(self):
         workers_cpu = list(range(mp.cpu_count()))
-        affinity = dict(workers_cpus=workers_cpu, cuda_idx=0)
+        affinity = dict(workers_cpus=workers_cpu,
+                        master_torch_threads=THREADS_PER_PROC,
+                        cuda_idx=0)
         runner = MinibatchRl(algo=self.generate_algorithm(),
                              agent=self.generate_agent(),
                              sampler=self.sampler,
@@ -163,6 +149,8 @@ def main():
         for k, v in d.items():
             parser.add_argument('--{}'.format(k), **v)
     args = vars(parser.parse_args())
+    for k, v in args.items():
+        print('{}: {}'.format(k, v))
 
     # split parameters
     agent_params, ppo_params, batch_params = dict(), dict(), dict()
