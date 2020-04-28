@@ -7,7 +7,6 @@ from datetime import datetime as dt
 from utils import load_state_dict
 from agent.agent_consts import FULL_CON, QUARTILES, HALF, PARAM_DICTS
 from constants import RL_LOG_DIR, BYR_PREFIX, SLR_INIT, BYR_INIT
-from featnames import DELAY
 
 
 def get_con_set(con):
@@ -131,17 +130,3 @@ def save_params(role=None,
 
     # save file
     dump(df, path)
-
-
-def generate_model_kwargs(sizes, byr, delay):
-    # initialize model keyword arguments
-    model_kwargs = {'sizes': sizes, BYR_PREFIX: byr, DELAY: delay}
-    # load simulator model to initialize policy
-    if byr:
-        init_model = BYR_INIT
-    else:
-        init_model = SLR_INIT
-    init_dict = load_init_model(name=init_model, size=sizes['out'])
-    model_kwargs['norm'] = detect_norm(init_dict)
-    model_kwargs['init_dict'] = init_dict
-    return model_kwargs

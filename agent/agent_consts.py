@@ -57,7 +57,8 @@ BATCH_PARAMS = {'batch_size': {'type': int, 'default': 2 ** 13},
                 'batch_count': {'type': int, 'default': 10}}
 
 PPO_PARAMS = {'mbsize': {'type': int, 'default': 512},
-              'epochs': {'type': int, 'default': 4},
+              'epochs': {'type': int, 'default': 1},
+              'cross_entropy_loss_coeff': {'type': float, 'default': 1.0},
               'entropy_loss_coeff': {'type': float, 'default': 1.0},
               'value_loss_coeff': {'type': float, 'default': 1.0},
               'ratio_clip': {'type': float, 'default': 0.1},

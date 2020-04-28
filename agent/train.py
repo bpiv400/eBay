@@ -7,7 +7,6 @@ from datetime import datetime as dt
 import multiprocessing as mp
 import torch
 from agent.CrossEntropyPPO import CrossEntropyPPO
-from rlpyt.algos.pg.ppo import PPO
 from rlpyt.agents.pg.categorical import CategoricalPgAgent
 from rlpyt.runners.minibatch_rl import MinibatchRl
 from rlpyt.samplers.serial.sampler import SerialSampler
@@ -17,12 +16,12 @@ from rlpyt.samplers.serial.sampler import SerialEvalCollector
 from rlpyt.samplers.parallel.cpu.collectors import CpuEvalCollector
 from rlpyt.utils.logging.context import logger_context
 from featnames import DELAY
-from constants import RL_EVAL_DIR, RL_LOG_DIR, BYR_PREFIX
-from agent.agent_consts import (SELLER_TRAIN_INPUT, AGENT_STATE,
-                                PARAM_DICTS, AGENT_PARAMS,
-                                BATCH_PARAMS, PPO_PARAMS,
-                                THREADS_PER_PROC)
-from agent.agent_utils import gen_run_id, save_params, generate_model_kwargs
+from constants import RL_EVAL_DIR, RL_LOG_DIR, BYR_PREFIX, \
+    SLR_INIT, BYR_INIT
+from agent.agent_consts import SELLER_TRAIN_INPUT, AGENT_STATE, \
+    PARAM_DICTS, AGENT_PARAMS, BATCH_PARAMS, PPO_PARAMS, THREADS_PER_PROC
+from agent.agent_utils import gen_run_id, save_params, \
+    load_init_model, detect_norm
 from agent.AgentComposer import AgentComposer
 from agent.models.PgCategoricalAgentModel import PgCategoricalAgentModel
 from rlenv.env_utils import load_chunk
@@ -76,13 +75,24 @@ class RlTrainer:
 
     def generate_algorithm(self):
         return CrossEntropyPPO(**self.ppo_params)
-        # return PPO(**self.ppo_params)
 
     def generate_agent(self):
-        sizes = self.env_params_train['composer'].agent_sizes
-        byr = self.agent_params['role'] == BYR_PREFIX
-        delay = self.agent_params[DELAY]
-        model_kwargs = generate_model_kwargs(sizes, byr, delay)
+        # initialize model keyword arguments
+        model_kwargs = dict()
+        model_kwargs['sizes'] = self.env_params_train['composer'].agent_sizes
+        model_kwargs[BYR_PREFIX] = self.agent_params['role'] == BYR_PREFIX
+        model_kwargs[DELAY] = self.agent_params[DELAY]
+
+        # load simulator model to initialize policy
+        if model_kwargs[BYR_PREFIX]:
+            init_model = BYR_INIT
+        else:
+            init_model = SLR_INIT
+        init_dict = load_init_model(name=init_model,
+                                    size=model_kwargs['sizes']['out'])
+        model_kwargs['norm'] = detect_norm(init_dict)
+        model_kwargs['init_dict'] = init_dict
+
         return CategoricalPgAgent(ModelCls=PgCategoricalAgentModel,
                                   model_kwargs=model_kwargs)
 
