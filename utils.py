@@ -188,10 +188,7 @@ def get_cut(meta):
 def slr_reward(price=None, start_price=None, meta=None, elapsed=None,
                relist_count=None, discount_rate=None):
     # eBay's cut
-    if type(meta) is str:
-        cut = get_cut(meta)
-    elif type(meta) is pd.core.series.Series:
-        cut = meta.apply(get_cut)
+    cut = get_cut(meta)
     # total discount
     months = (elapsed / MONTH) + relist_count
     delta = discount_rate ** months

@@ -5,6 +5,7 @@ from rlenv.env_consts import OFFER_EVENT
 from rlenv.env_utils import get_con_outcomes
 from agent.spaces.ConSpace import ConSpace
 from utils import slr_reward
+from processing.processing_consts import MONTHLY_DISCOUNT
 
 SellerTraj = namedtuple("SellerTraj", ["lstg", "relist_count", "thread",
                                        "turn", "byr_time",
@@ -96,7 +97,8 @@ class SellerEnvironment(AgentEnvironment):
                               meta=self.lookup[META],
                               elapsed=self.outcome[2] - self.start_time,
                               relist_count=self.relist_count,
-                              discount_rate=self.discount_rate)
+                              # TODO: change to self.discount_rate
+                              discount_rate=MONTHLY_DISCOUNT)
 
     def get_info(self, agent_sale=False, lstg_complete=False):
         # initialize vars
