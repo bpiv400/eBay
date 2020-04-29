@@ -14,14 +14,14 @@ from featnames import DELAY
 
 
 def gen_eval_kwargs(composer=None, model_kwargs=None,
-                    run_dir=None, itr=None, num=None, record=None):
+                    run_dir=None, itr=None, num=None):
     eval_kwargs = {'composer': composer,
                    'model_kwargs': model_kwargs,
                    'model_class': PgCategoricalAgentModel,
                    'run_dir': run_dir,
                    'itr': itr,
                    'num': num,
-                   'record': record,
+                   'record': True,
                    'verbose': False}
     return eval_kwargs
 
@@ -39,13 +39,11 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--byr', action='store_true')
     parser.add_argument('--num', type=int, required=True)
-    parser.add_argument('--run', type=str, required=True)
     args = parser.parse_args()
-    num, run = args.num, args.run
     role = BYR_PREFIX if args.byr else SLR_PREFIX
 
     # load chunk
-    chunk_path = '{}{}.gz'.format(RL_EVAL_DIR, num)
+    chunk_path = '{}{}.gz'.format(RL_EVAL_DIR, args.num)
     chunk = load_chunk(input_path=chunk_path)
 
     # restrict to no arrivals
@@ -55,43 +53,37 @@ def main():
 
     # find run parameters
     parent_dir = RL_LOG_DIR + '{}/'.format(role)
-    params = load(parent_dir + 'runs.pkl').loc[run]
-    run_dir = parent_dir + 'run_{}/'.format(run)
+    params = load(parent_dir + 'runs.pkl')
+    runs = params.index
 
-    # create composer
-    agent_params = params[AGENT_PARAMS.keys()]
-    composer = AgentComposer(cols=chunk[0].columns,
-                             agent_params=agent_params)
-    model_kwargs = gen_model_kwargs(composer)
-
-    # create outcomes directory
-    outcomes_dir = run_dir + 'outcomes/'
-    if not os.path.isdir(outcomes_dir):
-        os.mkdir(outcomes_dir)
-
-    # loop over models
-    iterations = int(params['batch_count'])
-    for itr in range(iterations):
-        # rewards directory
-        rewards_dir = run_dir + 'itr/{}/rewards/'.format(itr)
-        if not os.path.isdir(rewards_dir):
-            os.makedirs(rewards_dir)
+    # loop over runs
+    for run in runs:
+        # run directory
+        run_dir = parent_dir + 'run_{}/'.format(run)
 
         # check if file exists
-        if os.path.isfile(rewards_dir + '{}.gz'.format(num)):
-            print('Rewards for iteration {} already exists.'.format(itr))
+        if os.path.isfile(run_dir + 'rewards/{}.gz'.format(args.num)):
+            print('{} already exists.'.format(run))
             continue
 
         # timer
         t0 = dt.now()
+
+        # create composer
+        agent_params = params.loc[run, AGENT_PARAMS.keys()]
+        composer = AgentComposer(cols=chunk[0].columns,
+                                 agent_params=agent_params)
+        model_kwargs = gen_model_kwargs(composer)
+
+        # last model
+        itr = int(params.loc[run, 'batch_count']) - 1
 
         # create generator
         eval_kwargs = gen_eval_kwargs(composer=composer,
                                       model_kwargs=model_kwargs,
                                       run_dir=run_dir,
                                       itr=itr,
-                                      num=num,
-                                      record=(itr == iterations - 1))
+                                      num=args.num)
         eval_generator = EvalGenerator(**eval_kwargs)
 
         # run generator to simulate rewards
@@ -99,11 +91,11 @@ def main():
         rewards = pd.Series(rewards, index=chunk[0].index)
 
         # print elapsed time
-        seconds = (dt.now() - t0).total_seconds()
-        print('Iteration {0:d}: {1:.0f} seconds'.format(itr, seconds))
+        seconds = int((dt.now() - t0).total_seconds())
+        print('{}/{}: {} seconds'.format(run, itr, seconds))
 
         # save rewards
-        dump(rewards, rewards_dir + '{}.gz'.format(num))
+        dump(rewards, rewards_dir + '{}.gz'.format(args.num))
 
 
 if __name__ == '__main__':

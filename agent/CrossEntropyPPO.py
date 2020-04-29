@@ -1,11 +1,13 @@
 import torch
 from collections import namedtuple
-from rlpyt.algos.pg.ppo import PPO
-from rlpyt.utils.tensor import valid_mean
-from rlpyt.utils.quick_args import save__init__args
 from rlpyt.agents.base import AgentInputs, AgentInputsRnn
+from rlpyt.algos.pg.base import PolicyGradientAlgo
+from rlpyt.algos.utils import discount_return, \
+    generalized_advantage_estimation
+from rlpyt.utils.tensor import valid_mean
 from rlpyt.utils.buffer import buffer_to, buffer_method
 from rlpyt.utils.collections import namedarraytuple
+from rlpyt.utils.quick_args import save__init__args
 from rlpyt.utils.misc import iterate_mb_idxs
 from agent.models.PgCategoricalAgentModel import PgCategoricalAgentModel
 
@@ -19,11 +21,12 @@ LossInputs = namedarraytuple("LossInputs",
 OptInfo = namedtuple("OptInfo",
                      ["loss",
                       "gradNorm",
+                      "value_error",
                       "entropy",
                       "cross_entropy"])
 
 
-class CrossEntropyPPO(PPO):
+class CrossEntropyPPO(PolicyGradientAlgo):
     """
     Swaps entropy bonus with cross-entropy penalty, where cross-entropy
     is calculated using the policy from the initialized agent.
@@ -45,16 +48,21 @@ class CrossEntropyPPO(PPO):
             epochs=4,
             ratio_clip=0.1,
             linear_lr_schedule=True,
-            normalize_advantage=False
+            normalize_advantage=False,
+            mid_batch_reset=True
     ):
         """Saves input settings."""
         if optim_kwargs is None:
             optim_kwargs = dict()
         save__init__args(locals())
 
+        # output fields
+        self.opt_info_fields = tuple(f for f in OptInfo._fields)
+
         # parameters to be definied later
         self._batch_size = None
         self._ratio_clip = self.ratio_clip
+        self._value_loss_coeff = self.value_loss_coeff
         self._entropy_loss_coeff = self.entropy_loss_coeff
         self.lr_scheduler = None
         self.init_agent = None
@@ -83,6 +91,51 @@ class CrossEntropyPPO(PPO):
         if self.linear_lr_schedule:
             self.lr_scheduler = torch.optim.lr_scheduler.LambdaLR(
                 optimizer=self.optimizer, lr_lambda=self.step)
+
+    @staticmethod
+    def valid_from_done(done):
+        """Returns a float mask which is zero for all time-steps after the last
+        `done=True` is signaled.  This function operates on the leading dimension
+        of `done`, assumed to correspond to time [T,...], other dimensions are
+        preserved."""
+        done = done.type(torch.float)
+        done_count = torch.cumsum(done, dim=0)
+        done_max, _ = torch.max(done_count, dim=0)
+        valid = torch.abs(done_count - done_max) + done
+        valid = torch.clamp(valid, max=1)
+        return valid
+
+    def process_returns(self, samples):
+        """
+        Compute bootstrapped returns and advantages from a minibatch of
+        samples. Uses either discounted returns (if ``self.gae_lambda==1``)
+        or generalized advantage estimation. Masks out invalid samples.
+        """
+        # break out samples
+        print(samples.env)
+        exit()
+        reward, done, value, bv = (samples.env.reward,
+                                   samples.env.done,
+                                   samples.agent.agent_info.value,
+                                   samples.agent.bootstrap_value)
+        done = done.type(reward.dtype)
+
+        # action-based discounting and GAE
+        if self.gae_lambda == 1:  # GAE reduces to empirical discounted.
+            return_ = discount_return(reward, done, bv, self.discount)
+            advantage = return_ - value
+        else:
+            advantage, return_ = generalized_advantage_estimation(
+                reward, value, done, bv, self.discount, self.gae_lambda)
+
+        # zero out steps from unfinished trajectories
+        valid = self.valid_from_done(done)
+
+        # do not normalize advantage
+        if self.normalize_advantage:
+            raise NotImplementedError()
+
+        return return_, advantage, valid
 
     def optimize_agent(self, itr, samples):
         """
@@ -125,7 +178,7 @@ class CrossEntropyPPO(PPO):
                 T_idxs = idxs % T
                 B_idxs = idxs // T
                 self.optimizer.zero_grad()
-                loss, entropy, cross_entropy = self.loss(
+                loss, value_error, entropy, cross_entropy = self.loss(
                     *loss_inputs[T_idxs, B_idxs])
                 loss.backward()
                 grad_norm = torch.nn.utils.clip_grad_norm_(
@@ -134,6 +187,7 @@ class CrossEntropyPPO(PPO):
 
                 opt_info.loss.append(loss.item())
                 opt_info.gradNorm.append(grad_norm)
+                opt_info.value_error.append(value_error.item())
                 opt_info.entropy.append(entropy.item())
                 opt_info.cross_entropy.append(cross_entropy.item())
                 self.update_counter += 1
@@ -143,8 +197,13 @@ class CrossEntropyPPO(PPO):
             self.lr_scheduler.step()
             self.ratio_clip = self._ratio_clip * self.step(itr)
 
+        # step down value error penalty
+        self.value_loss_coeff = \
+            self._value_loss_coeff * self.step(itr+1)
+
         # step down entropy bonus
-        self.entropy_loss_coeff = self._entropy_loss_coeff * self.step(itr)
+        self.entropy_loss_coeff = \
+            self._entropy_loss_coeff * self.step(itr+1)
 
         return opt_info
 
@@ -159,8 +218,7 @@ class CrossEntropyPPO(PPO):
         Policy loss: min(likelhood-ratio * advantage, clip(likelihood_ratio, 1-eps, 1+eps) * advantage)
         Value loss:  0.5 * (estimated_value - return) ^ 2
         Calls the agent to compute forward pass on training data, and uses
-        the ``agent.distribution`` to compute likelihoods and entropies.  Valid
-        for feedforward or recurrent agents.
+        the ``agent.distribution`` to compute likelihoods and entropies.
         """
         # agent's policy
         pi_new, value = self.agent(*agent_inputs)
@@ -178,8 +236,8 @@ class CrossEntropyPPO(PPO):
         pi_loss = - valid_mean(surrogate, valid)
 
         # loss from value estimation
-        value_error = 0.5 * (value - return_) ** 2
-        value_loss = self.value_loss_coeff * valid_mean(value_error, valid)
+        value_error = valid_mean(0.5 * (value - return_) ** 2, valid)
+        value_loss = self.value_loss_coeff * value_error
 
         # cross-entropy loss
         pi_0, _ = self.init_agent(*agent_inputs)
@@ -194,4 +252,4 @@ class CrossEntropyPPO(PPO):
         loss = pi_loss + value_loss + cross_entropy_loss + entropy_loss
 
         # cross-entropy replaces entropy
-        return loss, entropy, cross_entropy
+        return loss, value_error, entropy, cross_entropy

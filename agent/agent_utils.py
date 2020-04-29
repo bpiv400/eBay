@@ -6,7 +6,7 @@ import torch
 from datetime import datetime as dt
 from utils import load_state_dict
 from agent.agent_consts import FULL_CON, QUARTILES, HALF, PARAM_DICTS
-from constants import RL_LOG_DIR, BYR_PREFIX, SLR_INIT, BYR_INIT
+from constants import RL_LOG_DIR
 
 
 def get_con_set(con):

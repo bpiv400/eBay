@@ -191,17 +191,19 @@ def main():
                 ppo_params=ppo_params,
                 time_elapsed=time_elapsed)
 
-    # drop optimization parameters
+    # create new subfolders
     run_dir = trainer.log_dir + 'run_{}/'.format(trainer.run_id)
+    for name in ['models', 'rewards', 'outcomes']:
+        os.mkdir(run_dir + '{}/'.format(name))
+
+    # drop optimization parameters
     for i in range(batch_params['batch_count']):
         # load params
         in_path = run_dir + 'itr_{}.pkl'.format(i)
         d = torch.load(in_path)
         # save model
-        itr_dir = run_dir + 'itr/{}/'.format(i)
-        if not os.path.isdir(itr_dir):
-            os.makedirs(itr_dir)
-        torch.save(d[AGENT_STATE], itr_dir + 'agent.net')
+        out_path = run_dir + 'models/{}.net'.format(i)
+        torch.save(d[AGENT_STATE], out_path)
         # delete params
         os.remove(in_path)
 
