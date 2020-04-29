@@ -124,3 +124,10 @@ OBS = 'data'
 
 # RL normalization type
 RL_NORM = 'weight'
+
+# fee constants
+LISTING_FEE = .03
+
+# meta categories with sale fees != .09 * price
+META_7 = [21, 10]
+META_6 = [32, 14, 11, 7, 28]

@@ -3,13 +3,11 @@ import numpy as np
 import pandas as pd
 from compress_pickle import load
 from utils import slr_norm, byr_norm, extract_clock_feats
-from processing.processing_consts import CLEAN_DIR, INTERVAL, \
-    INTERVAL_COUNTS
+from processing.processing_consts import CLEAN_DIR
 from constants import START, PARTITIONS, PARTS_DIR, MAX_DELAY, IDX, \
-    BYR_PREFIX, SLR_PREFIX, DAY, HOLIDAYS, MONTH
+    BYR_PREFIX, SLR_PREFIX, DAY, HOLIDAYS
 from featnames import HOLIDAY, DOW_PREFIX, TIME_OF_DAY, AFTERNOON, \
-    CLOCK_FEATS, DELAY, EXP, BYR_HIST, THREAD_COUNT, \
-    MONTHS_SINCE_LSTG, TIME_FEATS, AUTO, SPLIT, MSG
+    CLOCK_FEATS, DELAY, EXP, BYR_HIST, THREAD_COUNT, TIME_FEATS
 
 
 # function to load file from partitions directory

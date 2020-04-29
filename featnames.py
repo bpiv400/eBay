@@ -54,8 +54,6 @@ CENSORED = 'censored'
 OUTCOME_FEATS = [DAYS, DELAY, AUTO, EXP, CON, REJECT, NORM, SPLIT, MSG]
 ALL_OFFER_FEATS = CLOCK_FEATS + TIME_FEATS + OUTCOME_FEATS
 
-# turn indices relocated to constants to avoid cyclic dependency
-
 # thread features
 BYR_HIST = 'byr_hist'
 MONTHS_SINCE_LSTG = 'months_since_lstg'
@@ -74,3 +72,6 @@ ACC_PRICE = 'accept_price'
 
 # lstg feats
 RELISTED = 'relisted'
+
+# for init models
+MAX_REWARD = 'max_reward'

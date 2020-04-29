@@ -21,13 +21,6 @@ SIM_CHUNKS_DIR = 'chunks'
 SIM_VALS_DIR = 'vals'
 SIM_DISCRIM_DIR = 'discrim'
 
-# fee constants
-LISTING_FEE = .03
-
-# meta categories with sale fees != .09 * price
-META_7 = [21, 10]
-META_6 = [32, 14, 11, 7, 28]
-
 # holiday and day-of-week indicators, indexed by days since START
 DATE_FEATS = unpickle(INPUT_DIR + 'date_feats.pkl')
 

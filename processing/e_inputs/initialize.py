@@ -2,17 +2,18 @@ import argparse
 import numpy as np
 import pandas as pd
 from processing.processing_utils import load_file, init_x, get_x_thread
-from processing.e_inputs.inputs_utils import save_files, get_y_con, check_zero
+from processing.e_inputs.inputs_utils import save_files, check_zero
+from processing.e_inputs.offer import get_y_con
+from utils import get_remaining, slr_reward
+from processing.processing_consts import MONTHLY_DISCOUNT
 from constants import IDX, MAX_DELAY, BYR_PREFIX, SLR_PREFIX
-from featnames import DELAY, AUTO, EXP, REJECT, CON, NORM, SPLIT, MSG, INT_REMAINING, TIME_FEATS
-from utils import get_remaining
+from featnames import DELAY, AUTO, EXP, REJECT, CON, NORM, SPLIT, \
+    MSG, INT_REMAINING, TIME_FEATS, META, START_PRICE, MAX_REWARD
 
 
-def calculate_remaining(part, idx):
-    # load timestamps
-    lstg_start = load_file(part, 'lookup').start_time.reindex(
-        index=idx, level='lstg')
-    delay_start = load_file(part, 'clock').groupby(
+def calculate_remaining(lstg_start=None, clock=None, idx=None):
+    # start of delay period
+    delay_start = clock.groupby(
         ['lstg', 'thread']).shift().dropna().astype('int64')
 
     # remaining is turn-specific
@@ -99,6 +100,10 @@ def process_inputs(part, role, delay):
     y = get_y_con(df)
     idx = y.index
 
+    # lookup values and timestamps
+    lookup = load_file(part, 'lookup').reindex(index=idx, level='lstg')
+    clock = load_file(part, 'clock').reindex(index=idx)
+
     # listing features
     x = init_x(part, idx)
 
@@ -109,9 +114,19 @@ def process_inputs(part, role, delay):
 
     # thread features
     x_thread = get_x_thread(threads, idx)
-    x_thread = add_turn_indicators(x_thread)
+    if role == SLR_PREFIX:
+        elapsed = clock - lookup.start_time
+        x_thread[MAX_REWARD] = slr_reward(price=lookup[START_PRICE],
+                                          start_price=lookup[START_PRICE],
+                                          meta=lookup[META],
+                                          elapsed=elapsed,
+                                          relist_count=0,
+                                          discount_rate=MONTHLY_DISCOUNT)
     if delay:
-        x_thread[INT_REMAINING] = calculate_remaining(part, idx)
+        x_thread[INT_REMAINING] = calculate_remaining(lstg_start=lookup.start_time,
+                                                      clock=clock,
+                                                      idx=idx)
+    x_thread = add_turn_indicators(x_thread)
     x['lstg'] = pd.concat([x['lstg'], x_thread], axis=1)
 
     # offer features
