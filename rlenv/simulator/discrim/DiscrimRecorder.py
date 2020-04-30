@@ -74,23 +74,17 @@ class DiscrimRecorder(Recorder):
         self.compress_common_cols([LSTG, THREAD, CLOCK],
                                   [self.threads, self.offers],
                                   [np.int32, np.uint16, np.int32])
-        self.offers.set_index(
-            ['lstg', 'thread', 'index'], inplace=True)
-        self.threads.set_index(
-            ['lstg', 'thread'], inplace=True)
-        if self.record_sim:
-            self.threads.set_index('sim', inplace=True, append=True)
-            self.offers.set_index('sim', inplace=True, append=True)
+        self.offers.set_index(INDEX_COLS[self.record_sim], inplace=True)
+        self.threads.set_index(INDEX_COLS[self.record_sim][:-1], inplace=True)
         assert np.all(self.offers.xs(1, level='index')[CON] > 0)
 
     def records2frames(self):
         # convert both dictionaries to dataframes
+        offer_cols = OFFER_COLS
+        thread_cols = THREAD_COLS
         if self.record_sim:
-            offer_cols = OFFER_COLS + ['sim']
-            thread_cols = THREAD_COLS + ['sim']
-        else:
-            offer_cols = OFFER_COLS
-            thread_cols = THREAD_COLS
+            offer_cols += ['sim']
+            thread_cols += ['sim']
         self.offers = self.record2frame(self.offers, offer_cols)
         self.threads = self.record2frame(self.threads, thread_cols)
 

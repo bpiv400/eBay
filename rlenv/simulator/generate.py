@@ -44,27 +44,22 @@ def main():
     parser.add_argument('--verbose', action='store_true',
                         help='print event detail')
     parser.add_argument('--thread', required=False, type=int)
-
     args = parser.parse_args()
-    num, part, values, verbose = args.num, args.part, args.values, args.verbose
-    if part not in PARTITIONS:
-        raise RuntimeError('part must be one of: {}'.format(PARTITIONS))
-    print('{} {}: {}'.format(part, num, 'values' if values else 'discrim'))
-    
-    # num is modulus SIM_CHUNKS
-    num = ((num-1) % SIM_CHUNKS) + 1
 
-    # check whether chunk is finished processing
+    assert args.part in PARTITIONS
+    print('{} {}: {}'.format(args.part, args.num,
+                             'values' if args.values else 'discrim'))
 
     # create generator
-    gen_class = get_gen_class(values=values, test=args.test)
-    generator = gen_class(direct=get_env_sim_dir(part), verbose=verbose, start=args.thread)   # type: Generator
-    if values and chunk_done(num):
-        print('{} already done'.format(num))
+    gen_class = get_gen_class(values=args.values, test=args.test)
+    generator = gen_class(direct=get_env_sim_dir(args.part),
+                          verbose=args.verbose,
+                          start=args.thread)   # type: Generator
+    if args.values and chunk_done(args.num):
+        print('{} already done'.format(args.num))
         exit(0)
-    generator.process_chunk(chunk=num)
+    generator.process_chunk(chunk=args.num)
 
 
 if __name__ == '__main__':
-    print('main')
     main()

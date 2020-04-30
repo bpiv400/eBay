@@ -9,7 +9,9 @@ class DiscrimGenerator(SimulatorGenerator):
         super(DiscrimGenerator, self).__init__(direct=direct, verbose=verbose)
 
     def generate_recorder(self):
-        return DiscrimRecorder(records_path=self.records_path, verbose=self.verbose)
+        return DiscrimRecorder(records_path=self.records_path,
+                               verbose=self.verbose,
+                               record_sim=True)
 
     def generate(self):
         """
@@ -43,9 +45,11 @@ class DiscrimGenerator(SimulatorGenerator):
         :param environment: RewardEnvironment
         :return: outcome tuple
         """
-        environment.reset()
-        outcome = environment.run()
-        return outcome
+        while True:
+            environment.reset()
+            outcome = environment.run()
+            if outcome.sale:
+                return outcome
 
     @property
     def records_path(self):

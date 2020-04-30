@@ -1,11 +1,12 @@
-from featnames import META
+from featnames import META, START_PRICE
 from agent.AgentPlayer import AgentPlayer
 from agent.agent_utils import load_agent_model
 from agent.AgentComposer import AgentComposer
-from rlenv.env_utils import calculate_slr_gross
 from rlenv.simulator.Generator import Generator
 from rlenv.simulator.discrim.DiscrimRecorder import DiscrimRecorder
 from rlenv.interfaces.PlayerInterface import SimulatedBuyer, SimulatedSeller
+from utils import slr_reward
+from processing.processing_consts import MONTHLY_DISCOUNT
 
 
 class EvalGenerator(Generator):
@@ -85,15 +86,20 @@ class EvalGenerator(Generator):
         return rewards
 
     def simulate_lstg(self, environment):
-        list_count = 1
+        relist_count = 0
         while True:
             environment.reset()
-            sale, price, _ = environment.run()
+            sale, price, dur = environment.run()
             if sale:
-                return calculate_slr_gross(price=price, list_count=list_count,
-                                           meta=environment.lookup[META])
+                return slr_reward(price=price,
+                                  start_price=environment.lookup[START_PRICE],
+                                  meta=environment.lookup[META],
+                                  elapsed=dur,
+                                  relist_count=relist_count,
+                                  # TODO: change to self.discount_rate
+                                  discount_rate=MONTHLY_DISCOUNT)
             else:
-                list_count += 1
+                relist_count += 1
 
     @property
     def records_path(self):

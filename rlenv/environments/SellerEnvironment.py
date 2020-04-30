@@ -92,10 +92,10 @@ class SellerEnvironment(AgentEnvironment):
         if not self.last_event.is_sale():
             return 0.0
         else:
-            return slr_reward(price=self.outcome[1],
+            return slr_reward(price=self.outcome.price,
                               start_price=self.lookup[START_PRICE],
                               meta=self.lookup[META],
-                              elapsed=self.outcome[2] - self.start_time,
+                              elapsed=self.outcome.dur,
                               relist_count=self.relist_count,
                               # TODO: change to self.discount_rate
                               discount_rate=MONTHLY_DISCOUNT)

@@ -17,6 +17,8 @@ CENSOR = 'censored'
 # for discriminator
 OFFER_COLS = [LSTG, THREAD, INDEX, CLOCK, CON, MSG, CENSOR] + TIME_FEATS
 THREAD_COLS = [LSTG, THREAD, BYR_HIST, CLOCK]
+INDEX_COLS = {False: ['lstg', 'thread', 'index'],
+              True: ['lstg', 'sim', 'thread', 'index']}
 
 # for values
 VAL_COLS = [LSTG, VAL, SE, AVG_PRICE, NUM_SALES, P_SALE, CUT]
