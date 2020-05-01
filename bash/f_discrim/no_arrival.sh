@@ -7,11 +7,11 @@
 
 if [ "$SGE_TASK_ID" == 1 ]
 then
-	python repo/processing/f_discrim/listings.py --part test_rl
+	python repo/processing/f_discrim/no_arrival.py --part test_rl
 elif [ "$SGE_TASK_ID" == 2 ]
 then
-	python repo/processing/f_discrim/threads.py --part train_rl
+	python repo/processing/f_discrim/no_arrival.py --part train_rl
 elif [ "$SGE_TASK_ID" == 3 ]
 then
-	python repo/processing/f_discrim/threads.py --part test
+	python repo/processing/f_discrim/no_arrival.py --part test
 fi
