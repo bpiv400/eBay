@@ -85,6 +85,9 @@ def get_x_offer(offers, idx, role):
         # put in dictionary
         x_offer['offer%d' % i] = offer.astype('float32')
 
+    # error checking
+    check_zero(x_offer)
+
     return x_offer
 
 
@@ -123,14 +126,10 @@ def process_inputs(part, role, delay):
     # offer features
     x.update(get_x_offer(offers, idx, role))
 
-    # error checking
-    check_zero(x)
-
     return {'y': y, 'x': x}
 
 
-def main():
-    # extract parameters from command line
+def input_parameters():
     parser = argparse.ArgumentParser()
     parser.add_argument('--part', type=str)
     parser.add_argument('--role', type=str)
@@ -140,8 +139,13 @@ def main():
     assert role in [BYR_PREFIX, SLR_PREFIX]
     if role == BYR_PREFIX or delay:
         raise NotImplementedError()
-    else:
-        name = 'init_policy_{}'.format(role)
+    return part, role, delay
+
+
+def main():
+    # extract parameters from command line
+    part, role, delay = input_parameters()
+    name = 'init_policy_{}'.format(role)
     print('%s/%s' % (part, name))
 
     # input dataframes, output processed dataframes

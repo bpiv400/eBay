@@ -91,7 +91,7 @@ def get_batches(data, is_training=False):
     if data.name in NUM_WORKERS:
         num_workers = NUM_WORKERS[data.name]
     else:
-        num_workers = 8
+        num_workers = 7
 
     # collate function
     collate_fn = collate_kl if data.has_p else collate

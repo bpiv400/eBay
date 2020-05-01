@@ -1,108 +1,80 @@
-import argparse
 import numpy as np
 import pandas as pd
-from processing.processing_utils import load_file, init_x, get_x_thread
-from processing.e_inputs.inputs_utils import save_files, check_zero
-from processing.e_inputs.offer import get_y_con
-from utils import get_remaining, slr_reward
+from processing.processing_utils import init_x, get_x_thread
+from processing.e_inputs.inputs_utils import save_files
+from processing.e_inputs.init_policy import calculate_remaining, \
+    add_turn_indicators, get_x_offer, input_parameters
+from processing.f_discrim.discrim_utils import concat_sim_chunks
 from processing.processing_consts import MONTHLY_DISCOUNT
-from constants import IDX, MAX_DELAY, BYR_PREFIX, SLR_PREFIX
-from featnames import DELAY, AUTO, EXP, REJECT, CON, NORM, SPLIT, \
-    MSG, INT_REMAINING, TIME_FEATS, META, START_PRICE, MAX_REWARD
+from constants import IDX, BYR_PREFIX, SLR_PREFIX, MONTH, LISTING_FEE
+from featnames import INT_REMAINING, EXP, AUTO, CON, NORM
+from utils import get_cut
 
 
-def calculate_remaining(lstg_start=None, clock=None, idx=None):
-    # start of delay period
-    delay_start = clock.groupby(
-        ['lstg', 'thread']).shift().dropna().astype('int64')
-
-    # remaining is turn-specific
-    remaining = pd.Series(np.nan, index=idx)
-    for turn in idx.unique(level='index'):
-        turn_start = delay_start.xs(turn, level='index').reindex(index=idx)
-        mask = idx.get_level_values(level='index') == turn
-        remaining.loc[mask] = get_remaining(
-            lstg_start, turn_start, MAX_DELAY[turn])
-
-    # error checking
-    assert np.all(remaining > 0) and np.all(remaining <= 1)
-
-    return remaining
-
-
-def add_turn_indicators(df):
-    """
-    Appends turn indicator variables to offer matrix
-    :param df: dataframe with index ['lstg', 'thread', 'index'].
-    :return: dataframe with turn indicators appended
-    """
-    indices = np.sort(np.unique(df.index.get_level_values('index')))
-    for i in range(len(indices) - 1):
-        ind = indices[i]
-        df['t{}'.format(ind)] = df.index.isin([ind], level='index')
-    return df
+def get_discounted_values(sales, months):
+    # join sales and timestamps
+    df = months.to_frame().join(sales)
+    # time difference
+    td = df.months_to_sale - df.months
+    assert np.all(td >= 0)
+    # discounted listing fees
+    M = np.ceil(df.months_to_sale) - np.ceil(df.months)
+    k = df.months % 1
+    delta = MONTHLY_DISCOUNT ** k
+    delta *= 1 - MONTHLY_DISCOUNT ** (M+1)
+    delta /= 1 - MONTHLY_DISCOUNT
+    costs = LISTING_FEE * delta
+    # discounted sale price
+    proceeds = df.gross * (MONTHLY_DISCOUNT ** td)
+    return proceeds - costs
 
 
-# sets unseen feats to 0
-def set_zero_feats(offer, i):
-    # turn number
-    turn = offer.index.get_level_values(level='index')
-    # all features are zero for future turns
-    if i > 1:
-        offer.loc[i > turn, :] = 0.0
-    # for current turn, set feats to 0
-    curr = i == turn
-    offer.loc[curr, [CON, NORM, SPLIT, AUTO, EXP, REJECT, MSG]] = 0.0
-    return offer
+def get_duration(d, role):
+    df = d['offers']
+    mask = df.index.isin(IDX[role], level='index') & ~df[EXP] & ~df[AUTO]
+    clock = d['clock'].loc[mask]
+    elapsed = (clock - d['lookup'].start_time.reindex(
+        index=clock.index, level='lstg')) / MONTH
+    months = elapsed + elapsed.index.get_level_values(level='sim')
+    return months.rename('months')
 
 
-def get_x_offer(offers, idx, role):
-    # initialize dictionary of offer features
-    x_offer = {}
-
-    # dataframe of offer features for relevant threads
-    threads = idx.droplevel(level='index').unique()
-    offers = pd.DataFrame(index=threads).join(offers)
-
-    # drop time feats from buyer models
-    if role == BYR_PREFIX:
-        offers.drop(TIME_FEATS, axis=1, inplace=True)
-
-    # turn features
-    for i in range(1, max(IDX[role]) + 1):
-        # offer features at turn i
-        offer = offers.xs(i, level='index').reindex(
-            index=idx, fill_value=0).astype('float32')
-
-        # set unseen feats to 0 and add turn indicators
-        offer = set_zero_feats(offer, i)
-        offer = add_turn_indicators(offer)
-
-        # set censored time feats to zero
-        if i > 1 and role == SLR_PREFIX:
-            censored = (offer[EXP] == 1) & (offer[DELAY] < 1)
-            offer.loc[censored, TIME_FEATS] = 0.0
-
-        # put in dictionary
-        x_offer['offer%d' % i] = offer.astype('float32')
-
-    return x_offer
+def get_sales(d):
+    # normalized sale price
+    is_sale = d['offers'][CON] == 1
+    norm = d['offers'].loc[is_sale, NORM]
+    slr_turn = norm.index.isin(IDX[SLR_PREFIX], level='index')
+    norm.loc[slr_turn] = 1 - norm[slr_turn]
+    # number of relistings
+    relist_count = norm.index.get_level_values(level='sim')
+    norm = norm.reset_index(['sim', 'thread', 'index'], drop=True)
+    # time of sale
+    sale_time = d['clock'][is_sale].reset_index(
+        ['sim', 'thread', 'index'], drop=True)
+    elapsed = (sale_time - d['lookup'].start_time) / MONTH
+    assert (elapsed > 0).all()
+    months = relist_count + elapsed
+    # gross price
+    cut = d['lookup'].meta.apply(get_cut)
+    gross = norm * (1-cut) * d['lookup'].start_price
+    return pd.concat([gross.rename('gross'),
+                      months.rename('months_to_sale')], axis=1)
 
 
-# loads data and calls helper functions to construct train inputs
 def process_inputs(part, role, delay):
-    # load dataframes
-    offers = load_file(part, 'x_offer')
-    threads = load_file(part, 'x_thread')
+    # load simulated data
+    sim = concat_sim_chunks(part,
+                            restrict_to_first=False,
+                            drop_no_arrivals=True)
 
-    # outcome and master index
-    df = offers[offers.index.isin(IDX[role], level='index')]
-    y = get_y_con(df)
-    idx = y.index
+    # value components
+    sales = get_sales(sim)
+    months = get_duration(sim, role)
+    idx = months.index
 
-    # lookup values and timestamps
-    lookup = load_file(part, 'lookup').reindex(index=idx, level='lstg')
-    clock = load_file(part, 'clock').reindex(index=idx)
+    values = get_discounted_values(sales, months)
+    norm_values = values / sim['lookup'].start_price.reindex(
+        index=idx, level='lstg')
 
     # listing features
     x = init_x(part, idx)
@@ -113,44 +85,24 @@ def process_inputs(part, role, delay):
                        axis=1, inplace=True)
 
     # thread features
-    x_thread = get_x_thread(threads, idx)
-    if role == SLR_PREFIX:
-        elapsed = clock - lookup.start_time
-        x_thread[MAX_REWARD] = slr_reward(price=lookup[START_PRICE],
-                                          start_price=lookup[START_PRICE],
-                                          meta=lookup[META],
-                                          elapsed=elapsed,
-                                          relist_count=0,
-                                          discount_rate=MONTHLY_DISCOUNT)
+    x_thread = get_x_thread(sim['threads'], idx)
     if delay:
-        x_thread[INT_REMAINING] = calculate_remaining(lstg_start=lookup.start_time,
-                                                      clock=clock,
+        x_thread[INT_REMAINING] = calculate_remaining(lstg_start=sim['start_time'],
+                                                      clock=sim['clock'],
                                                       idx=idx)
     x_thread = add_turn_indicators(x_thread)
     x['lstg'] = pd.concat([x['lstg'], x_thread], axis=1)
 
     # offer features
-    x.update(get_x_offer(offers, idx, role))
+    x.update(get_x_offer(sim['offers'], idx, role))
 
-    # error checking
-    check_zero(x)
-
-    return {'y': y, 'x': x}
+    return {'y': norm_values, 'x': x}
 
 
 def main():
     # extract parameters from command line
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--part', type=str)
-    parser.add_argument('--role', type=str)
-    parser.add_argument('--delay', action='store_true')
-    args = parser.parse_args()
-    part, role, delay = args.part, args.role, args.delay
-    assert role in [BYR_PREFIX, SLR_PREFIX]
-    if role == 'byr' or delay:
-        raise NotImplementedError()
-    else:
-        name = 'init_{}'.format(role)
+    part, role, delay = input_parameters()
+    name = 'init_value_{}'.format(role)
     print('%s/%s' % (part, name))
 
     # input dataframes, output processed dataframes

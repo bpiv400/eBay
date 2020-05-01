@@ -58,14 +58,14 @@ BATCH_PARAMS = {'batch_size': {'type': int, 'default': 2 ** 13},
 
 PPO_PARAMS = {'mbsize': {'type': int, 'default': 512},
               'epochs': {'type': int, 'default': 1},
-              'cross_entropy_loss_coeff': {'type': float, 'default': 10.},
-              'entropy_loss_coeff': {'type': float, 'default': 10.},
-              'value_loss_coeff': {'type': float, 'default': 1.0},
-              'ratio_clip': {'type': float, 'default': 0.1},
-              'discount': {'type': float, 'default': 1.0},
-              'gae_lambda': {'type': float, 'default': 1.0},
-              'clip_grad_norm': {'type': float, 'default': 1.0},
-              'learning_rate': {'type': float, 'default': 0.001}}
+              'cross_entropy_loss_coeff': {'type': float, 'default': 1.},
+              'entropy_loss_coeff': {'type': float, 'default': 1.},
+              'value_loss_coeff': {'type': float, 'default': 1.},
+              'ratio_clip': {'type': float, 'default': .1},
+              'discount': {'type': float, 'default': 1.},
+              'gae_lambda': {'type': float, 'default': 1.},
+              'clip_grad_norm': {'type': float, 'default': 1.},
+              'learning_rate': {'type': float, 'default': .001}}
 
 PARAM_DICTS = [AGENT_PARAMS, BATCH_PARAMS, PPO_PARAMS]
 

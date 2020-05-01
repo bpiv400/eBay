@@ -1,7 +1,8 @@
 import argparse
 from train.Trainer import Trainer
-from train.train_consts import INT_DROPOUT, DROPOUT_GRID, NORM_TYPE
-from constants import SMALL, TRAIN_RL, TRAIN_MODELS, VALIDATION, DISCRIM_MODELS
+from train.train_consts import INT_DROPOUT, DROPOUT_GRID
+from constants import SMALL, TRAIN_RL, TRAIN_MODELS, VALIDATION, \
+    DISCRIM_MODELS, INIT_VALUE_MODELS, INIT_MODELS, RL_NORM
 
 
 def main():
@@ -15,7 +16,7 @@ def main():
     # partition to train on
     if args.dev:
         train_part = SMALL
-    elif args.name in DISCRIM_MODELS:
+    elif args.name in DISCRIM_MODELS + INIT_VALUE_MODELS:
         train_part = TRAIN_RL
     else:
         train_part = TRAIN_MODELS
@@ -27,7 +28,7 @@ def main():
     dropout = tuple([float(i / INT_DROPOUT) for i in DROPOUT_GRID[args.dropout-1]])
 
     # normalization
-    norm = 'batch' if args.name not in NORM_TYPE else NORM_TYPE[args.name]
+    norm = RL_NORM if args.name in INIT_MODELS else 'batch'
 
     # train model
     trainer.train_model(dropout=dropout, norm=norm)

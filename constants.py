@@ -106,16 +106,24 @@ MODELS = ARRIVAL_MODELS + OFFER_MODELS
 CENSORED_MODELS = [INTERARRIVAL_MODEL] + DELAY_MODELS
 
 # discriminator models
-DISCRIM_MODELS = ['listings', 'threads', 'threads_no_tf']
+DISCRIM_LISTINGS = 'listings'
+DISCRIM_THREADS = 'threads'
+DISCRIM_MODELS = [DISCRIM_LISTINGS, DISCRIM_THREADS]
 
-# initializations
-SLR_INIT = 'init_slr'
-BYR_INIT = 'init_byr'
-INIT_MODELS = [SLR_INIT, BYR_INIT]
+# policy initializations
+SLR_POLICY_INIT = 'init_policy_slr'
+BYR_POLICY_INIT = 'init_policy_byr'
+INIT_POLICY_MODELS = [SLR_POLICY_INIT, BYR_POLICY_INIT]
+
+SLR_VALUE_INIT = 'init_value_slr'
+BYR_VALUE_INIT = 'init_value_byr'
+INIT_VALUE_MODELS = [SLR_VALUE_INIT, BYR_VALUE_INIT]
+
+INIT_MODELS = INIT_POLICY_MODELS + INIT_VALUE_MODELS
 
 TURN_FEATS = {
-    BYR_INIT: ['t1', 't3', 't5'],
-    SLR_INIT: ['t2', 't4']
+    BYR_PREFIX: ['t1', 't3', 't5'],
+    SLR_PREFIX: ['t2', 't4']
 }
 
 # outcome types
@@ -131,3 +139,6 @@ LISTING_FEE = .03
 # meta categories with sale fees != .09 * price
 META_7 = [21, 10]
 META_6 = [32, 14, 11, 7, 28]
+
+# threshold for likelihood of no arrivals
+NO_ARRIVAL_CUTOFF = .50 ** (1.0 / 12)

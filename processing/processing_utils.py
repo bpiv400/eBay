@@ -49,14 +49,9 @@ def input_partition():
     parser = argparse.ArgumentParser()
 
     # partition
-    parser.add_argument('--part', required=True, type=str, help='partition name')
-    part = parser.parse_args().part
-
-    # error checking
-    if part not in PARTITIONS:
-        raise RuntimeError('part must be one of: {}'.format(PARTITIONS))
-
-    return part
+    parser.add_argument('--part', required=True, type=str,
+                        choices=PARTITIONS, help='partition name')
+    return parser.parse_args().part
 
 
 def get_days_delay(clock):

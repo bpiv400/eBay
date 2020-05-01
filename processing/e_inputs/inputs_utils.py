@@ -4,7 +4,8 @@ from compress_pickle import dump
 from processing.processing_consts import NUM_OUT, N_SMALL, INTERVAL, \
     INTERVAL_COUNTS, MONTHLY_DISCOUNT
 from constants import INPUT_DIR, INDEX_DIR, VALIDATION, TRAIN_MODELS, \
-    IDX, BYR_PREFIX, TURN_FEATS
+    IDX, BYR_PREFIX, TURN_FEATS, DELAY_MODELS, INIT_VALUE_MODELS, \
+    INIT_MODELS, ARRIVAL_PREFIX
 from featnames import CLOCK_FEATS, OUTCOME_FEATS, \
     SPLIT, MSG, AUTO, EXP, REJECT, DAYS, DELAY, TIME_FEATS
 
@@ -57,11 +58,11 @@ def check_zero(x):
                 assert_zero(x[k], [SPLIT, MSG])
 
 
-def save_featnames(x, name):
+def save_featnames(x, m):
     """
     Creates dictionary of input feature names.
     :param x: dictionary of input dataframes.
-    :param name: string name of model.
+    :param m: string name of model.
     """
     # initialize featnames dictionary
     featnames = {k: list(v.columns) for k, v in x.items() if 'offer' not in k}
@@ -69,14 +70,15 @@ def save_featnames(x, name):
     # for offer models
     if 'offer1' in x:
         # buyer models do not have time feats
-        if name == 'init_byr' or name[-1] in [str(i) for i in IDX[BYR_PREFIX]]:
+        if BYR_PREFIX in m or m[-1] in [str(i) for i in IDX[BYR_PREFIX]]:
             feats = CLOCK_FEATS + OUTCOME_FEATS
         else:
             feats = CLOCK_FEATS + TIME_FEATS + OUTCOME_FEATS
 
         # add turn indicators for RL initializations
-        if name.startswith('init'):
-            feats += TURN_FEATS[name]
+        if m in INIT_MODELS:
+            role = m.split('_')[-1]
+            feats += TURN_FEATS[role]
 
         # check that all offer groupings have same organization
         for k in x.keys():
@@ -86,7 +88,7 @@ def save_featnames(x, name):
         # one vector of featnames for offer groupings
         featnames['offer'] = feats
 
-    dump(featnames, INPUT_DIR + 'featnames/{}.pkl'.format(name))
+    dump(featnames, INPUT_DIR + 'featnames/{}.pkl'.format(m))
 
 
 def save_sizes(x, m):
@@ -101,22 +103,22 @@ def save_sizes(x, m):
     sizes['x'] = {k: len(v.columns) for k, v in x.items()}
 
     # for arrival models, save interval and interval counts
-    if 'arrival' in m:
+    if ARRIVAL_PREFIX in m:
         sizes['interval'] = INTERVAL[1]
         sizes['interval_count'] = INTERVAL_COUNTS[1]
-    elif m.startswith('delay'):
+    elif m in DELAY_MODELS:
         turn = int(m[-1])
         sizes['interval'] = INTERVAL[turn]
         sizes['interval_count'] = INTERVAL_COUNTS[turn]
 
     # for init models, save discount rate
-    if 'init' in m:
+    if m in INIT_VALUE_MODELS:
         sizes['discount_rate'] = MONTHLY_DISCOUNT
 
     # length of model output vector
     sizes['out'] = NUM_OUT[m]
 
-    dump(sizes, INPUT_DIR + 'sizes/{}.pkl'.format(name))
+    dump(sizes, INPUT_DIR + 'sizes/{}.pkl'.format(m))
 
 
 def convert_x_to_numpy(x, idx):

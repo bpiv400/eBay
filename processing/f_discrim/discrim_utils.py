@@ -7,21 +7,21 @@ from processing.processing_utils import load_file, \
     collect_date_clock_feats, get_days_delay, get_norm
 from utils import is_split
 from constants import TRAIN_RL, VALIDATION, INPUT_DIR, SIM_CHUNKS, \
-    ENV_SIM_DIR, IDX, SLR_PREFIX, MONTH
+    ENV_SIM_DIR, IDX, SLR_PREFIX, MONTH, NO_ARRIVAL_CUTOFF
 from featnames import DAYS, DELAY, CON, SPLIT, NORM, REJECT, AUTO, EXP, \
     CENSORED, CLOCK_FEATS, TIME_FEATS, OUTCOME_FEATS, MONTHS_SINCE_LSTG, \
     BYR_HIST
 
 
-def process_sim_offers(df, lstg_end):
+def process_sim_offers(df, end_time):
     # censor timestamps
-    df.clock = np.minimum(df.clock,
-                          lstg_end.reindex(
-                              index=df.index, level='lstg'))
+    timestamps = df.clock.to_frame().join(end_time.rename('end'))
+    timestamps = timestamps.reorder_levels(df.index.names)
+    clock = timestamps.min(axis=1)
     # clock features
-    df = df.join(collect_date_clock_feats(df.clock))
+    df = df.join(collect_date_clock_feats(clock))
     # days and delay
-    df[DAYS], df[DELAY] = get_days_delay(df.clock.unstack())
+    df[DAYS], df[DELAY] = get_days_delay(clock.unstack())
     # concession as a decimal
     df.loc[:, CON] /= 100
     # indicator for split
@@ -34,7 +34,7 @@ def process_sim_offers(df, lstg_end):
     df[EXP] = (df[DELAY] == 1) | df[CENSORED]
     # select and sort features
     df = df.loc[:, CLOCK_FEATS + TIME_FEATS + OUTCOME_FEATS]
-    return df
+    return df, clock
 
 
 def process_sim_threads(df, start_time):
@@ -63,11 +63,15 @@ def diff_tf(df):
     return df
 
 
-def concat_sim_chunks(part, drop_censored=False):
+def concat_sim_chunks(part, drop_censored=False,
+                      restrict_to_first=True,
+                      drop_no_arrivals=False):
     """
     Loops over simulations, concatenates dataframes.
-    :param part: string name of partition.
-    :param drop_censored: True if censored observations are dropped.
+    :param str part: name of partition.
+    :param bool drop_censored: True if censored observations are dropped.
+    :param bool restrict_to_first: True if only first simulation is kept.
+    :param bool drop_no_arrivals: True if dropping listings with infrequent arrivals.
     :return: dictionary of dataframes.
     """
     # collect chunks
@@ -81,6 +85,24 @@ def concat_sim_chunks(part, drop_censored=False):
     threads = pd.concat(threads, axis=0).sort_index()
     offers = pd.concat(offers, axis=0).sort_index()
 
+    # load lookup
+    lookup = load_file(part, 'lookup')
+
+    # initialize output dictionary
+    sim = dict()
+
+    # drop listings with infrequent arrivals
+    if drop_no_arrivals:
+        lookup = lookup.loc[lookup.p_no_arrival < NO_ARRIVAL_CUTOFF, :]
+        threads = threads.reindex(index=lookup.index, level='lstg')
+        offers = offers.reindex(index=lookup.index, level='lstg')
+        sim['lookup'] = lookup
+
+    # keep only first simulation
+    if restrict_to_first:
+        threads = threads.xs(0, level='sim')
+        offers = offers.xs(0, level='sim')
+
     # difference time feats
     offers = diff_tf(offers)
 
@@ -88,24 +110,19 @@ def concat_sim_chunks(part, drop_censored=False):
     if drop_censored:
         offers = offers.loc[~offers[CENSORED], :]
 
-    # initialize output dictionary
-    sim = dict()
-
-    # save timestamps
-    sim['clock'] = offers.clock
-    sim['lstg_start'] = load_file(part, 'lookup').start_time
+    # index of 'lstg' or ['lstg', 'sim']
+    idx = threads.reset_index('thread', drop=True).index.unique()
 
     # end of listing
     sale_time = offers.loc[offers[CON] == 100, 'clock'].reset_index(
         level=['thread', 'index'], drop=True)
-    sim['lstg_end'] = sale_time.reindex(index=sim['lstg_start'].index,
-                                        fill_value=-1)
-    no_sale = sim['lstg_end'][sim['lstg_end'] == -1].index
-    sim['lstg_end'].loc[no_sale] = sim['lstg_start'][no_sale] + MONTH - 1
+    sim['end_time'] = sale_time.reindex(index=idx, fill_value=-1)
+    no_sale = sim['end_time'][sim['end_time'] == -1].index
+    sim['end_time'].loc[no_sale] = sim['end_time'].loc[no_sale] + MONTH - 1
 
     # conform to observed inputs
-    sim['threads'] = process_sim_threads(threads, sim['lstg_start'])
-    sim['offers'] = process_sim_offers(offers, sim['lstg_end'])
+    sim['threads'] = process_sim_threads(threads, lookup.start_time)
+    sim['offers'], sim['clock'] = process_sim_offers(offers, sim['end_time'])
 
     return sim
 
