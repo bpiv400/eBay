@@ -52,10 +52,10 @@ class PgCategoricalAgentModel(AgentModel):
         return logits
 
     def _forward_dict(self, input_dict=None, compute_value=True):
-        l = []
+        elem = []
         for k in self.nn0.keys():
-            l.append(self.nn0[k](input_dict))
-        embedded = torch.cat(l, dim=l[0].dim() - 1)
+            elem.append(self.nn0[k](input_dict))
+        embedded = torch.cat(elem, dim=elem[0].dim() - 1)
 
         # fully connected
         if PARAM_SHARING:

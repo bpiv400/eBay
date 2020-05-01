@@ -1,15 +1,16 @@
 from collections import namedtuple
-from featnames import META, LSTG
+from featnames import META, LSTG, START_PRICE
 from rlenv.environments.AgentEnvironment import AgentEnvironment
 from rlenv.env_consts import OFFER_EVENT
-from rlenv.env_utils import get_con_outcomes, calculate_slr_gross
+from rlenv.env_utils import get_con_outcomes
 from agent.spaces.ConSpace import ConSpace
-
+from utils import slr_reward
+from processing.processing_consts import MONTHLY_DISCOUNT
 
 SellerTraj = namedtuple("SellerTraj", ["lstg", "relist_count", "thread",
-                                        "turn", "byr_time",
-                                         "byr_con", "byr_delay", "byr_msg",
-                                         "slr_time", "slr_con", "slr_delay"])
+                                       "turn", "byr_time",
+                                       "byr_con", "byr_delay", "byr_msg",
+                                       "slr_time", "slr_con", "slr_delay"])
 EmptyTraj = namedtuple("EmptyTraj", ["traj_done"])
 
 
@@ -91,10 +92,13 @@ class SellerEnvironment(AgentEnvironment):
         if not self.last_event.is_sale():
             return 0.0
         else:
-            slr_gross = calculate_slr_gross(price=self.outcome[1], 
-                                            list_count=self.relist_count + 1,
-                                            meta=self.lookup[META])
-            return slr_gross
+            return slr_reward(price=self.outcome.price,
+                              start_price=self.lookup[START_PRICE],
+                              meta=self.lookup[META],
+                              elapsed=self.outcome.dur,
+                              relist_count=self.relist_count,
+                              # TODO: change to self.discount_rate
+                              discount_rate=MONTHLY_DISCOUNT)
 
     def get_info(self, agent_sale=False, lstg_complete=False):
         # initialize vars
@@ -115,7 +119,3 @@ class SellerEnvironment(AgentEnvironment):
     @property
     def horizon(self):
         return 100
-
-
-
-

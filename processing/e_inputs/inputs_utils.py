@@ -2,10 +2,11 @@ import numpy as np
 import pandas as pd
 from compress_pickle import dump
 from processing.processing_consts import NUM_OUT, N_SMALL, INTERVAL, \
-    INTERVAL_COUNTS
+    INTERVAL_COUNTS, MONTHLY_DISCOUNT
 from constants import INPUT_DIR, INDEX_DIR, VALIDATION, TRAIN_MODELS, \
-    IDX, BYR_PREFIX
-from featnames import CLOCK_FEATS, TIME_FEATS, OUTCOME_FEATS, TURN_FEATS
+    IDX, BYR_PREFIX, TURN_FEATS
+from featnames import CLOCK_FEATS, OUTCOME_FEATS, \
+    SPLIT, MSG, AUTO, EXP, REJECT, DAYS, DELAY, TIME_FEATS
 
 
 def get_arrival_times(d, append_last=False):
@@ -35,6 +36,25 @@ def get_arrival_times(d, append_last=False):
                            level=-1, inplace=True)
 
     return clock.rename('clock')
+
+
+def assert_zero(offer, cols):
+    for c in cols:
+        assert offer[c].max() == 0
+        assert offer[c].min() == 0
+
+
+def check_zero(x):
+    keys = [k for k in x.keys() if k.startswith('offer')]
+    for k in keys:
+        if k in x:
+            i = int(k[-1])
+            if i == 1:
+                assert_zero(x[k], [DAYS, DELAY])
+            if i % 2 == 1:
+                assert_zero(x[k], [AUTO, EXP, REJECT])
+            if i == 7:
+                assert_zero(x[k], [SPLIT, MSG])
 
 
 def save_featnames(x, name):
@@ -69,27 +89,29 @@ def save_featnames(x, name):
     dump(featnames, INPUT_DIR + 'featnames/{}.pkl'.format(name))
 
 
-def save_sizes(x, name):
+def save_sizes(x, m):
     """
     Creates dictionary of input sizes.
     :param x: dictionary of input dataframes.
-    :param name: string name of model.
+    :param m: string name of model.
     """
-    m = name.replace('_discrim', '')  # base model name
-
     sizes = dict()
 
     # count components of x
     sizes['x'] = {k: len(v.columns) for k, v in x.items()}
 
-    # save interval and interval counts
+    # for arrival models, save interval and interval counts
     if 'arrival' in m:
         sizes['interval'] = INTERVAL[1]
         sizes['interval_count'] = INTERVAL_COUNTS[1]
-    elif name.startswith('delay'):
+    elif m.startswith('delay'):
         turn = int(m[-1])
         sizes['interval'] = INTERVAL[turn]
         sizes['interval_count'] = INTERVAL_COUNTS[turn]
+
+    # for init models, save discount rate
+    if 'init' in m:
+        sizes['discount_rate'] = MONTHLY_DISCOUNT
 
     # length of model output vector
     sizes['out'] = NUM_OUT[m]

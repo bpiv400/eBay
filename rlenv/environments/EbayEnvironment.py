@@ -144,7 +144,9 @@ class EbayEnvironment:
         else:
             start_norm = 1 - offer.price
         sale_price = start_norm * self.lookup[START_PRICE]
-        self.outcome = self.Outcome(True, sale_price, offer.time)
+        self.outcome = self.Outcome(True,
+                                    sale_price,
+                                    offer.time - self.start_time)
         self.empty_queue()
 
     def process_first_offer(self, event):

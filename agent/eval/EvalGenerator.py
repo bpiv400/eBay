@@ -1,47 +1,44 @@
-from constants import RL_EVAL_DIR
-from featnames import META
+from featnames import META, START_PRICE
 from agent.AgentPlayer import AgentPlayer
-from agent.agent_utils import load_agent_params
-from agent.agent_consts import NO_ARRIVAL, NO_ARRIVAL_CUTOFF
+from agent.agent_utils import load_agent_model
 from agent.AgentComposer import AgentComposer
-from rlenv.env_utils import calculate_slr_gross, load_chunk
 from rlenv.simulator.Generator import Generator
 from rlenv.simulator.discrim.DiscrimRecorder import DiscrimRecorder
 from rlenv.interfaces.PlayerInterface import SimulatedBuyer, SimulatedSeller
+from utils import slr_reward
+from processing.processing_consts import MONTHLY_DISCOUNT
 
 
 class EvalGenerator(Generator):
     def __init__(self, **kwargs):
         """
-        :param itr: number of minibatches of training that have taken place
         :param verbose: boolean for whether to print information about threads
         :param model_class: class that inherits agent.models.AgentModel
         :param model_kwargs: dictionary containing kwargs for model_class
-        :param run_dir: directory where logs and model parameters live
+        :param str run_dir: path to run directory
+        :param int itr: model iteration
+        :param int num: chunk number
         :param composer: agent.AgentComposer
         :param record: boolean for whether recorder should dump thread info
         """
-        self.itr = kwargs['itr']
         self._composer = kwargs['composer']  # type: AgentComposer
         self.agent_byr = self._composer.byr
         self.delay = self._composer.delay
         self.model_kwargs = kwargs['model_kwargs']
         self.ModelCls = kwargs['model_class']
         self.run_dir = kwargs['run_dir']
+        self.itr = kwargs['itr']
+        self.num = kwargs['num']
         self.record = kwargs['record']
         super().__init__(direct=None,
                          verbose=kwargs['verbose'])
 
     def load_chunk(self, chunk=None):
-        path = '{}{}.gz'.format(RL_EVAL_DIR, chunk)
-        self.x_lstg, self.lookup = load_chunk(input_path=path)
-        no_arrival_bool = self.lookup[NO_ARRIVAL] >= NO_ARRIVAL_CUTOFF
-        no_arrival_idx = self.lookup.index[no_arrival_bool]
-        self.x_lstg = self.x_lstg.drop(index=no_arrival_idx)
-        self.lookup = self.lookup.drop(index=no_arrival_idx)
+        self.x_lstg, self.lookup = chunk
 
     def generate_recorder(self):
-        return DiscrimRecorder(verbose=self.verbose, records_path=self.records_path,
+        return DiscrimRecorder(verbose=self.verbose,
+                               records_path=self.records_path,
                                record_sim=True)
 
     def generate_composer(self):
@@ -49,8 +46,8 @@ class EvalGenerator(Generator):
 
     def generate_agent(self):
         model = self.ModelCls(**self.model_kwargs)
-        if self.itr != 0:
-            load_agent_params(model=model, run_dir=self.run_dir)
+        model_path = self.run_dir + 'itr/{}/agent.net'.format(self.itr)
+        load_agent_model(model=model, model_path=model_path)
         agent = AgentPlayer(agent_model=model)
         return agent
 
@@ -89,16 +86,21 @@ class EvalGenerator(Generator):
         return rewards
 
     def simulate_lstg(self, environment):
-        list_count = 1
+        relist_count = 0
         while True:
             environment.reset()
-            sale, price, _ = environment.run()
+            sale, price, dur = environment.run()
             if sale:
-                return calculate_slr_gross(price=price, list_count=list_count,
-                                           meta=environment.lookup[META])
+                return slr_reward(price=price,
+                                  start_price=environment.lookup[START_PRICE],
+                                  meta=environment.lookup[META],
+                                  elapsed=dur,
+                                  relist_count=relist_count,
+                                  # TODO: change to self.discount_rate
+                                  discount_rate=MONTHLY_DISCOUNT)
             else:
-                list_count += 1
+                relist_count += 1
 
     @property
     def records_path(self):
-        return '{}{}_{}.gz'.format(self.run_dir, self.itr, self.chunk)
+        return self.run_dir + 'outcomes/{}.gz'.format(self.num)

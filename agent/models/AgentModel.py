@@ -10,3 +10,6 @@ class AgentModel(nn.Module):
 
     def con(self, input_dict=None):
         raise NotImplementedError()
+
+    def forward(self, observation, prev_action, prev_reward):
+        raise NotImplementedError()

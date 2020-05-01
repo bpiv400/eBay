@@ -1,10 +1,10 @@
 import numpy as np
-from plots.plots_consts import FONTSIZE
-from constants import FIGURE_DIR
+from plots.plots_consts import FIG_DIR, FONTSIZE
 
 import matplotlib.pyplot as plt
 plt.style.use('grayscale')
 plt.rc('text.latex', preamble=r'\usepackage{amsmath}')
+
 
 def save_fig(name, legend=True, legend_kwargs=None,
              xlabel=None, ylabel=None, square=False):
@@ -33,7 +33,7 @@ def save_fig(name, legend=True, legend_kwargs=None,
     plt.ylabel(ylabel, fontsize=fontsize)
 
     # save
-    plt.savefig(FIGURE_DIR + '{}.png'.format(name),
+    plt.savefig(FIG_DIR + '{}.png'.format(name),
                 format='png',
                 transparent=True,
                 bbox_inches='tight')

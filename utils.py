@@ -1,11 +1,12 @@
 import pickle
-import pandas as pd
 import torch
 import numpy as np
+import pandas as pd
 from compress_pickle import load
 from nets.FeedForward import FeedForward
 from nets.nets_consts import LAYERS_FULL
-from constants import MAX_DELAY, DAY, MONTH, SPLIT_PCTS, INPUT_DIR, MODEL_DIR
+from constants import MAX_DELAY, DAY, MONTH, SPLIT_PCTS, INPUT_DIR, \
+    MODEL_DIR, META_6, META_7, LISTING_FEE
 
 
 def unpickle(file):
@@ -117,7 +118,7 @@ def load_state_dict(name=None):
     return state_dict
 
 
-def load_model(name, verbose=True):
+def load_model(name, verbose=False):
     """
     Initialize PyTorch network for some model
     :param str name: full name of the model
@@ -174,3 +175,30 @@ def fully_connected_compat(state_dict=None):
     new_prefix = 'output'
     substitute_prefix(old_prefix=old_prefix, new_prefix=new_prefix,
                       state_dict=state_dict)
+
+
+def get_cut(meta):
+    if meta in META_6:
+        return .06
+    if meta in META_7:
+        return .07
+    return .09
+
+
+def slr_reward(price=None, start_price=None, meta=None, elapsed=None,
+               relist_count=None, discount_rate=None):
+    # eBay's cut
+    cut = get_cut(meta)
+    # total discount
+    months = (elapsed / MONTH) + relist_count
+    delta = discount_rate ** months
+    # gross from sale
+    gross = price * (1 - cut) * delta
+    # net after listing fees
+    net = gross - LISTING_FEE * (relist_count + 1)
+    # normalize by start_price and return
+    return net / start_price
+
+
+def byr_reward(price=None, start_price=None, value=None):
+    return value - (price / start_price)
