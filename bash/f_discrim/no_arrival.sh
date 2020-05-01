@@ -1,6 +1,6 @@
 #!/bin/bash
 #$ -t 1-3
-#$ -l m_mem_free=25G
+#$ -l m_mem_free=50G
 #$ -N f_no_arrival
 #$ -j y
 #$ -o logs/processing/
