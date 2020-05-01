@@ -111,9 +111,7 @@ class CrossEntropyPPO(PolicyGradientAlgo):
         samples. Uses either discounted returns (if ``self.gae_lambda==1``)
         or generalized advantage estimation. Masks out invalid samples.
         """
-        # break out samples
-        print(samples.env)
-        exit()
+        print("Complete training iteration")
         reward, done, value, bv = (samples.env.reward,
                                    samples.env.done,
                                    samples.agent.agent_info.value,

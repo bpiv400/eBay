@@ -5,6 +5,7 @@ import os
 import argparse
 from datetime import datetime as dt
 import multiprocessing as mp
+import psutil
 import torch
 from agent.CrossEntropyPPO import CrossEntropyPPO
 from rlpyt.agents.pg.categorical import CategoricalPgAgent
@@ -28,6 +29,10 @@ from rlenv.env_utils import load_chunk
 from rlenv.interfaces.PlayerInterface import SimulatedBuyer, SimulatedSeller
 from rlenv.interfaces.ArrivalInterface import ArrivalInterface
 from rlenv.environments.SellerEnvironment import SellerEnvironment
+
+WORKERS = 4
+ASSIGN_CPUS = True
+MULTIPLE_CPUS = True
 
 
 class RlTrainer:
@@ -97,7 +102,7 @@ class RlTrainer:
                                   model_kwargs=model_kwargs)
 
     def generate_sampler(self):
-        batch_b = mp.cpu_count() * 2
+        batch_b = len(self.workers_cpus) * 2
         batch_t = int(self.batch_params['batch_size'] / batch_b)
         if self.debug:
             return SerialSampler(
@@ -127,17 +132,54 @@ class RlTrainer:
             )
 
     def generate_runner(self):
-        workers_cpu = list(range(mp.cpu_count()))
-        affinity = dict(workers_cpus=workers_cpu,
-                        master_torch_threads=THREADS_PER_PROC,
-                        cuda_idx=0)
         runner = MinibatchRl(algo=self.generate_algorithm(),
                              agent=self.generate_agent(),
                              sampler=self.sampler,
                              n_steps=self.batch_params['batch_size'] * self.batch_params['batch_count'],
                              log_interval_steps=self.batch_params['batch_size'],
-                             affinity=affinity)
+                             affinity=self.generate_affinity())
         return runner
+
+    def generate_affinity(self):
+        if ASSIGN_CPUS:
+            workers_cpus = self.workers_cpus
+            n_worker = None
+        else:
+            workers_cpus = None
+            n_worker = len(self.workers_cpus)
+
+        affinity = dict(workers_cpus=workers_cpus,
+                        n_worker=n_worker,
+                        master_torch_threads=THREADS_PER_PROC,
+                        cuda_idx=0,
+                        set_affinity=ASSIGN_CPUS)
+        return affinity
+
+    @property
+    def workers_cpus(self):
+        if ASSIGN_CPUS:
+            cpus = self.workers_cpus_manual()
+        else:
+            cpus = list(range(WORKERS))
+        return cpus
+
+    @staticmethod
+    def workers_cpus_manual():
+        eligible = list(range(mp.cpu_count()))
+        if mp.cpu_count() == 64:
+            eligible.remove(1)
+            eligible.remove(33)
+        if MULTIPLE_CPUS:
+            threads_per_worker = int(len(eligible) / WORKERS)
+            cpus = list()
+            for i in range(WORKERS):
+                curr = eligible[(i * threads_per_worker): (i+1) * threads_per_worker]
+                cpus.append(curr)
+            for j in range((len(eligible) // WORKERS)):
+                cpus[j].append(eligible[j + threads_per_worker * WORKERS])
+        else:
+            cpus = eligible[0:WORKERS]
+        return cpus
 
     def train(self):
         with logger_context(log_dir=self.log_dir,

@@ -53,7 +53,7 @@ AGENT_PARAMS = {'role': {'type': str,
                              'choices': [FULL_CON, QUARTILES, HALF],
                              'default': FULL_CON}}
 
-BATCH_PARAMS = {'batch_size': {'type': int, 'default': 2 ** 13},
+BATCH_PARAMS = {'batch_size': {'type': int, 'default': 2 ** 12},
                 'batch_count': {'type': int, 'default': 10}}
 
 PPO_PARAMS = {'mbsize': {'type': int, 'default': 512},
