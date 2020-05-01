@@ -112,8 +112,6 @@ class CrossEntropyPPO(PolicyGradientAlgo):
         or generalized advantage estimation. Masks out invalid samples.
         """
         # break out samples
-        print(samples.env)
-        exit()
         reward, done, value, bv = (samples.env.reward,
                                    samples.env.done,
                                    samples.agent.agent_info.value,

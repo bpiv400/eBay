@@ -5,6 +5,7 @@ import os
 import argparse
 from datetime import datetime as dt
 import multiprocessing as mp
+import warnings
 import torch
 from agent.CrossEntropyPPO import CrossEntropyPPO
 from rlpyt.agents.pg.categorical import CategoricalPgAgent
@@ -97,8 +98,10 @@ class RlTrainer:
                                   model_kwargs=model_kwargs)
 
     def generate_sampler(self):
-        batch_b = mp.cpu_count() * 2
+        batch_b = len(self.worker_cpus) * 2
         batch_t = int(self.batch_params['batch_size'] / batch_b)
+        if batch_t < 12:
+            warnings.warn("Very few actions per environment")
         if self.debug:
             return SerialSampler(
                 EnvCls=SellerEnvironment,
@@ -127,13 +130,12 @@ class RlTrainer:
             )
 
     def generate_runner(self):
-        workers_cpu = list(range(mp.cpu_count()))
-        affinity = dict(workers_cpus=workers_cpu,
+        affinity = dict(workers_cpus=self.worker_cpus,
                         master_torch_threads=THREADS_PER_PROC,
-                        cuda_idx=0)
-        runner = MinibatchRl(algo=self.generate_algorithm(),
-                             agent=self.generate_agent(),
+                        cuda_index=0)
+        runner = MinibatchRl(agent=self.generate_agent(),
                              sampler=self.sampler,
+                             algo=self.generate_algorithm(),
                              n_steps=self.batch_params['batch_size'] * self.batch_params['batch_count'],
                              log_interval_steps=self.batch_params['batch_size'],
                              affinity=affinity)
@@ -147,6 +149,15 @@ class RlTrainer:
                             run_ID=self.run_id,
                             snapshot_mode='all'):
             self.itr = self.runner.train()
+    
+    @property
+    def worker_cpus(self):
+        workers_cpu = list(range(mp.cpu_count()))
+        if len(workers_cpu) == 64:
+            workers_cpu.remove(33)
+            workers_cpu.remove(1)
+        return workers_cpu
+
 
 
 def main():
