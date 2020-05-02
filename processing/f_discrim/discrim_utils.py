@@ -1,11 +1,14 @@
 import numpy as np
 import pandas as pd
+import torch
+from torch.nn.functional import log_softmax
 from compress_pickle import load, dump
 from processing.e_inputs.inputs_utils import save_sizes, \
     convert_x_to_numpy, save_small
 from processing.processing_utils import load_file, \
     collect_date_clock_feats, get_days_delay, get_norm
-from utils import is_split
+from utils import is_split, load_model
+from train.train_consts import MBSIZE
 from constants import TRAIN_RL, VALIDATION, INPUT_DIR, SIM_CHUNKS, \
     ENV_SIM_DIR, IDX, SLR_PREFIX, MONTH, NO_ARRIVAL_CUTOFF
 from featnames import DAYS, DELAY, CON, SPLIT, NORM, REJECT, AUTO, EXP, \
@@ -163,3 +166,26 @@ def save_discrim_files(part, name, x_obs, x_sim):
     # save small
     if part == TRAIN_RL:
         save_small(d, name)
+
+
+def get_model_predictions(m, x):
+    # initialize neural net
+    net = load_model(m, verbose=False)
+    if torch.cuda.is_available():
+        net = net.to('cuda')
+
+    # split into batches
+    v = np.array(range(len(x['lstg'])))
+    batches = np.array_split(v, 1 + len(v) // MBSIZE[False])
+
+    # model predictions
+    p0 = []
+    for b in batches:
+        x_b = {k: torch.from_numpy(v[b, :]) for k, v in x.items()}
+        if torch.cuda.is_available():
+            x_b = {k: v.to('cuda') for k, v in x_b.items()}
+        theta_b = net(x_b).cpu().double()
+        p0.append(np.exp(log_softmax(theta_b, dim=-1)))
+
+    # concatenate and return
+    return torch.cat(p0, dim=0).numpy()

@@ -5,7 +5,7 @@ from processing.d_frames.frames_utils import get_partition, load_frames
 from processing.processing_consts import CLEAN_DIR, W2V_DIR
 from constants import *
 
-AS_IS_FEATS = ['store', 'slr_us', 'fast', 'slr_lstgs', 'slr_bos', \
+AS_IS_FEATS = ['store', 'slr_us', 'fast', 'slr_lstgs', 'slr_bos',
                'start_price_pctile', 'fdbk_score', 'fdbk_pstv']
 
 
@@ -47,7 +47,7 @@ def get_x_lstg(L):
     df['has_accept'] = df.auto_accept < 1 
     # remove slr prefix
     df.rename(lambda c: c[4:] if c.startswith('slr_') else c, 
-                        axis=1, inplace=True)   
+              axis=1, inplace=True)
     return df
 
 

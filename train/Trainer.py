@@ -1,6 +1,7 @@
 import numpy as np
 import torch
-from torch.nn.functional import log_softmax, nll_loss
+from torch.nn.functional import log_softmax, logsigmoid, mse_loss, \
+    nll_loss
 from datetime import datetime as dt
 from torch.utils.tensorboard import SummaryWriter
 from torch.optim import Adam, lr_scheduler
@@ -8,7 +9,8 @@ from train.EBayDataset import EBayDataset
 from train.train_consts import FTOL, LR0, LR1, LR_FACTOR, INT_DROPOUT
 from nets.FeedForward import FeedForward
 from train.Sample import get_batches
-from constants import MODEL_DIR, LOG_DIR
+from constants import MODEL_DIR, LOG_DIR, DELAY_MODELS, \
+    INTERARRIVAL_MODEL, INIT_VALUE_MODELS
 from utils import load_sizes
 
 
@@ -33,8 +35,9 @@ class Trainer:
         self.dev = dev
         self.device = device
 
-        # boolean for time loss
-        self.is_delay = 'delay' in name or name == 'next_arrival'
+        # boolean for different loss functions
+        self.is_delay = name in DELAY_MODELS or name == INTERARRIVAL_MODEL
+        self.is_init_value = name in INIT_VALUE_MODELS
 
         # load model size parameters
         self.sizes = load_sizes(name)
@@ -198,17 +201,25 @@ class Trainer:
         # call forward on model
         net.train(is_training)
         theta = net(b['x'])
-        if theta.size()[1] == 1:
-            theta = torch.cat((torch.zeros_like(theta), theta), dim=1)
 
-        # softmax
-        lnq = log_softmax(theta, dim=-1)
+        if self.is_init_value:
+            # restrict to [0,1]
+            q = torch.exp(logsigmoid(theta))
+            y = b['y'].unsqueeze(dim=-1)
+            loss = mse_loss(q, y, reduction='sum')
 
-        # calculate loss
-        if self.is_delay:
-            loss = self._time_loss(lnq, b['y'])
         else:
-            loss = nll_loss(lnq, b['y'], reduction='sum')
+            # softmax
+            if theta.size()[1] == 1:
+                theta = torch.cat((torch.zeros_like(theta), theta), dim=1)
+            lnq = log_softmax(theta, dim=-1)
+            y = b['y'].long()
+
+            # calculate loss
+            if self.is_delay:
+                loss = self._time_loss(lnq, y)
+            else:
+                loss = nll_loss(lnq, y, reduction='sum')
 
         # add in regularization penalty and step down gradients
         if is_training:

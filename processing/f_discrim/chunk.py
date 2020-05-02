@@ -4,23 +4,26 @@ or generating discrim inputs
 """
 import os
 import numpy as np
-from compress_pickle import load
-from constants import PARTS_DIR, SIM_CHUNKS
-from featnames import START_PRICE
-from rlenv.env_consts import LOOKUP_FILENAME
-from rlenv.env_utils import get_env_sim_subdir, align_x_lstg_lookup, dump_chunk
+import pandas as pd
+from processing.processing_utils import load_file
+from constants import SIM_CHUNKS
+from featnames import START_PRICE, CAT
+from rlenv.env_utils import get_env_sim_subdir, dump_chunk
 from processing.processing_utils import input_partition
 
 
 def main():
     part = input_partition()
     # load inputs
-    x_lstg = load('{}{}/x_lstg.gz'.format(PARTS_DIR, part))
-    lookup = load('{}{}/{}'.format(PARTS_DIR, part, LOOKUP_FILENAME))
+    x_lstg = load_file(part, 'x_lstg')
+    lookup = load_file(part, 'lookup')
 
-    # sort and subset
-    lookup = lookup.drop('cat', axis=1).sort_values(by=START_PRICE)
-    x_lstg = align_x_lstg_lookup(x_lstg, lookup)
+    # sort by start_price
+    lookup = lookup.drop(CAT, axis=1).sort_values(by=START_PRICE)
+    x_lstg = {k: v.reindex(index=lookup.index) for k, v in x_lstg.items()}
+
+    # concatenate into one dataframe
+    x_lstg = pd.concat(x_lstg.values(), axis=1)
     assert x_lstg.isna().sum().sum() == 0
 
     # make directories partition and components if they don't exist

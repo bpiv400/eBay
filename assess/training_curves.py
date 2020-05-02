@@ -1,7 +1,7 @@
 import numpy as np
 from compress_pickle import load, dump
 from tensorboard.backend.event_processing.event_multiplexer import EventMultiplexer
-from train.best_models import extract_best_experiment
+from processing.f_discrim.best_models import extract_best_experiment
 from processing.processing_consts import NUM_OUT
 from constants import LOG_DIR, INPUT_DIR, TEST, MODELS, PLOT_DIR, CENSORED_MODELS
 

@@ -239,14 +239,6 @@ def load_sim_outputs(part, values=False):
     return output
 
 
-def dump_chunk(x_lstg=None, lookup=None, path=None):
-    d = {
-        X_LSTG: x_lstg,
-        LOOKUP: lookup
-    }
-    dump(d, path)
-
-
 def align_x_lstg_lookup(x_lstg, lookup):
     x_lstg = pd.concat([df.reindex(index=lookup.index) for df in x_lstg.values()],
                        axis=1)

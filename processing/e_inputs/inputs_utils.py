@@ -4,8 +4,8 @@ from compress_pickle import dump
 from processing.processing_consts import NUM_OUT, N_SMALL, INTERVAL, \
     INTERVAL_COUNTS, MONTHLY_DISCOUNT
 from constants import INPUT_DIR, INDEX_DIR, VALIDATION, TRAIN_MODELS, \
-    IDX, BYR_PREFIX, TURN_FEATS, DELAY_MODELS, INIT_VALUE_MODELS, \
-    INIT_MODELS, ARRIVAL_PREFIX
+    TRAIN_RL, IDX, BYR_PREFIX, TURN_FEATS, DELAY_MODELS, \
+    INIT_VALUE_MODELS, INIT_MODELS, ARRIVAL_PREFIX
 from featnames import CLOCK_FEATS, OUTCOME_FEATS, \
     SPLIT, MSG, AUTO, EXP, REJECT, DAYS, DELAY, TIME_FEATS
 
@@ -113,7 +113,7 @@ def save_sizes(x, m):
 
     # for init models, save discount rate
     if m in INIT_VALUE_MODELS:
-        sizes['discount_rate'] = MONTHLY_DISCOUNT
+        sizes['delta'] = MONTHLY_DISCOUNT
 
     # length of model output vector
     sizes['out'] = NUM_OUT[m]
@@ -131,8 +131,6 @@ def convert_x_to_numpy(x, idx):
     for k, v in x.items():
         assert np.all(v.index == idx)
         x[k] = v.to_numpy(dtype='float32')
-
-    return x
 
 
 def save_small(d, name):
@@ -163,7 +161,7 @@ def save_files(d, part, name):
     idx = d['y'].index
 
     # input features
-    d['x'] = convert_x_to_numpy(d['x'], idx)
+    convert_x_to_numpy(d['x'], idx)
 
     # convert outcome to numpy
     d['y'] = d['y'].to_numpy()
@@ -175,5 +173,5 @@ def save_files(d, part, name):
     dump(idx, INDEX_DIR + '{}/{}.gz'.format(part, name))
 
     # save subset
-    if part == TRAIN_MODELS:
+    if part in [TRAIN_MODELS, TRAIN_RL]:
         save_small(d, name)
