@@ -1,15 +1,18 @@
 import pandas as pd
 from processing.e_inputs.inputs_utils import save_files
 from processing.processing_utils import input_partition, init_x, \
-	get_obs_outcomes
+	load_file
 from featnames import CLOCK_FEATS, THREAD_COUNT, BYR_HIST
 
 
 # loads data and calls helper functions to construct train inputs
-def process_inputs(d, part):
+def process_inputs(part):
+	threads = load_file(part, 'x_thread')
+	offers = load_file(part, 'x_offer')
+
 	# thread features
-	x_offer = d['offers'].xs(1, level='index')
-	x_thread = x_offer[CLOCK_FEATS].join(d['threads'])
+	x_offer = offers.xs(1, level='index')
+	x_thread = x_offer[CLOCK_FEATS].join(threads)
 	x_thread[THREAD_COUNT] = x_thread.index.get_level_values(level='thread') - 1
 
 	# outcome
@@ -31,11 +34,8 @@ def main():
 	part = input_partition()
 	print('{}/{}'.format(part, BYR_HIST))
 
-	# dictionary of components
-	obs = get_obs_outcomes(part, timestamps=False)
-
 	# input dataframes, output processed dataframes
-	d = process_inputs(obs, part)
+	d = process_inputs(part)
 
 	# save various output files
 	save_files(d, part, BYR_HIST)

@@ -1,7 +1,6 @@
 import numpy as np
 import torch
-from torch.nn.functional import log_softmax, logsigmoid, mse_loss, \
-    nll_loss
+from torch.nn.functional import log_softmax, nll_loss
 from datetime import datetime as dt
 from torch.utils.tensorboard import SummaryWriter
 from torch.optim import Adam, lr_scheduler
@@ -202,24 +201,16 @@ class Trainer:
         net.train(is_training)
         theta = net(b['x'])
 
-        if self.is_init_value:
-            # restrict to [0,1]
-            q = torch.exp(logsigmoid(theta))
-            y = b['y'].unsqueeze(dim=-1)
-            loss = mse_loss(q, y, reduction='sum')
+        # softmax
+        if theta.size()[1] == 1:
+            theta = torch.cat((torch.zeros_like(theta), theta), dim=1)
+        lnq = log_softmax(theta, dim=-1)
 
+        # calculate loss
+        if self.is_delay:
+            loss = self._time_loss(lnq, b['y'])
         else:
-            # softmax
-            if theta.size()[1] == 1:
-                theta = torch.cat((torch.zeros_like(theta), theta), dim=1)
-            lnq = log_softmax(theta, dim=-1)
-            y = b['y'].long()
-
-            # calculate loss
-            if self.is_delay:
-                loss = self._time_loss(lnq, y)
-            else:
-                loss = nll_loss(lnq, y, reduction='sum')
+            loss = nll_loss(lnq, b['y'], reduction='sum')
 
         # add in regularization penalty and step down gradients
         if is_training:

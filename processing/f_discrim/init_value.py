@@ -1,13 +1,14 @@
 import numpy as np
 import pandas as pd
-from processing.processing_utils import init_x, get_x_thread
+from processing.processing_utils import init_x, get_x_thread, load_file
 from processing.e_inputs.inputs_utils import save_files
 from processing.e_inputs.init_policy import calculate_remaining, \
     add_turn_indicators, get_x_offer, input_parameters
-from processing.f_discrim.discrim_utils import concat_sim_chunks
 from processing.processing_consts import MONTHLY_DISCOUNT
-from constants import IDX, BYR_PREFIX, SLR_PREFIX, MONTH, LISTING_FEE
-from featnames import INT_REMAINING, EXP, AUTO, CON, NORM
+from constants import IDX, BYR_PREFIX, SLR_PREFIX, MONTH, \
+    LISTING_FEE, NO_ARRIVAL_CUTOFF, MAX_NORM_VALUE
+from featnames import INT_REMAINING, EXP, AUTO, CON, NORM, \
+    META, START_PRICE, START_TIME
 from utils import get_cut
 
 
@@ -29,20 +30,20 @@ def get_discounted_values(sales, months):
     return proceeds - costs
 
 
-def get_duration(d, role):
-    df = d['offers']
-    mask = df.index.isin(IDX[role], level='index') & ~df[EXP] & ~df[AUTO]
-    clock = d['clock'].loc[mask]
-    elapsed = (clock - d['lookup'].start_time.reindex(
-        index=clock.index, level='lstg')) / MONTH
+def get_duration(offers, clock, lookup, role):
+    mask = offers.index.isin(IDX[role], level='index') \
+           & ~offers[EXP] & ~offers[AUTO]
+    idx = mask[mask].index
+    elapsed = (clock.loc[mask] - lookup.start_time.reindex(
+        index=idx, level='lstg')) / MONTH
     months = elapsed + elapsed.index.get_level_values(level='sim')
     return months.rename('months')
 
 
-def get_sales(d):
+def get_sales(offers, clock, lookup):
     # normalized sale price
-    is_sale = d['offers'][CON] == 1.
-    norm = d['offers'].loc[is_sale, NORM]
+    is_sale = offers[CON] == 1.
+    norm = offers.loc[is_sale, NORM]
     slr_turn = norm.index.isin(IDX[SLR_PREFIX], level='index')
     norm_slr = 1 - norm.loc[slr_turn]
     norm.loc[slr_turn] = norm_slr
@@ -50,47 +51,69 @@ def get_sales(d):
     relist_count = norm.index.get_level_values(level='sim')
     norm = norm.reset_index(['sim', 'thread', 'index'], drop=True)
     # time of sale
-    sale_time = d['clock'][is_sale].reset_index(
+    sale_time = clock[is_sale].reset_index(
         ['sim', 'thread', 'index'], drop=True)
-    elapsed = (sale_time - d['lookup'].start_time) / MONTH
+    elapsed = (sale_time - lookup[START_TIME]) / MONTH
     assert (elapsed >= 0).all()
     months = relist_count + elapsed
     # gross price
-    cut = d['lookup'].meta.apply(get_cut)
-    gross = norm * (1-cut) * d['lookup'].start_price
+    cut = lookup[META].apply(get_cut)
+    gross = norm * (1-cut) * lookup[START_PRICE]
     return pd.concat([gross.rename('gross'),
                       months.rename('months_to_sale')], axis=1)
 
 
-def process_inputs(part, role, delay):
+def get_data(part):
+    # lookup file
+    lookup = load_file(part, 'lookup')
     # load simulated data
-    sim = concat_sim_chunks(part,
-                            restrict_to_first=False,
-                            drop_no_arrivals=True)
+    threads = load_file(part, 'x_thread_sim')
+    offers = load_file(part, 'x_offer_sim')
+    clock = load_file(part, 'clock_sim')
+    # drop listings with infrequent arrivals
+    lookup = lookup.loc[lookup.p_no_arrival < NO_ARRIVAL_CUTOFF, :]
+    threads = threads.reindex(index=lookup.index, level='lstg')
+    offers = offers.reindex(index=lookup.index, level='lstg')
+    clock = clock.reindex(index=lookup.index, level='lstg')
+    return lookup, threads, offers, clock
+
+
+def process_inputs(part, role, delay):
+    # data
+    lookup, threads, offers, clock = get_data(part)
+
     # value components
-    sales = get_sales(sim)
-    months = get_duration(sim, role)
+    sales = get_sales(offers, clock, lookup)
+    months = get_duration(offers, clock, lookup, role)
     idx = months.index
     values = get_discounted_values(sales, months)
-    norm_values = values / sim['lookup'].start_price.reindex(
+    norm_values = values / lookup[START_PRICE].reindex(
         index=idx, level='lstg')
+    y = np.maximum(np.round(norm_values * 100), 0.).astype('uint8')
+    assert (y.max() <= MAX_NORM_VALUE) and (y.min() >= 0)
+
     # listing features
     x = init_x(part, idx)
+
     # remove auto accept/reject features from x['lstg'] for buyer models
     if role == BYR_PREFIX:
-        x['lstg'].drop(['auto_decline', 'auto_accept', 'has_decline', 'has_accept'],
+        x['lstg'].drop(['auto_decline', 'auto_accept',
+                        'has_decline', 'has_accept'],
                        axis=1, inplace=True)
+
     # thread features
-    x_thread = get_x_thread(sim['threads'], idx)
+    x_thread = get_x_thread(threads, idx)
     if delay:
-        x_thread[INT_REMAINING] = calculate_remaining(lstg_start=sim['start_time'],
-                                                      clock=sim['clock'],
+        x_thread[INT_REMAINING] = calculate_remaining(lstg_start=lookup.start_time,
+                                                      clock=clock,
                                                       idx=idx)
     x_thread = add_turn_indicators(x_thread)
     x['lstg'] = pd.concat([x['lstg'], x_thread], axis=1)
+
     # offer features
-    x.update(get_x_offer(sim['offers'], idx, role))
-    return {'y': norm_values, 'x': x}
+    x.update(get_x_offer(offers, idx, role))
+
+    return {'y': y, 'x': x}
 
 
 def main():

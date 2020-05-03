@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 from processing.processing_utils import input_partition, init_x, \
-    collect_date_clock_feats, get_obs_outcomes
+    collect_date_clock_feats, load_file
 from processing.e_inputs.inputs_utils import get_arrival_times, \
     save_files
 from utils import get_months_since_lstg
@@ -10,18 +10,18 @@ from constants import MONTH
 from featnames import THREAD_COUNT, MONTHS_SINCE_LAST, MONTHS_SINCE_LSTG
 
 
-def get_interarrival_period(clock):
+def get_interarrival_period(arrivals):
     # calculate interarrival times in seconds
-    df = clock.unstack()
+    df = arrivals.unstack()
     diff = pd.DataFrame(0.0, index=df.index, columns=df.columns[1:])
     for i in diff.columns:
         diff[i] = df[i] - df[i-1]
 
     # restack
-    diff = diff.rename_axis(clock.index.names[-1], axis=1).stack()
+    diff = diff.rename_axis(arrivals.index.names[-1], axis=1).stack()
 
     # original datatype
-    diff = diff.astype(clock.dtype)
+    diff = diff.astype(arrivals.dtype)
 
     # indicator for whether observation is last in lstg
     thread = pd.Series(diff.index.get_level_values(level='thread'),
@@ -44,9 +44,9 @@ def get_interarrival_period(clock):
     return y, diff
 
 
-def get_x_thread_arrival(clock, lstg_start, idx, diff):
+def get_x_thread_arrival(arrivals, lstg_start, idx, diff):
     # seconds since START at beginning of arrival window
-    seconds = clock.groupby('lstg').shift().dropna().astype(
+    seconds = arrivals.groupby('lstg').shift().dropna().astype(
         'int64').reindex(index=idx)
 
     # clock features
@@ -76,19 +76,25 @@ def get_x_thread_arrival(clock, lstg_start, idx, diff):
     return x_thread.astype('float32')
 
 
-def process_inputs(d, part):
+def process_inputs(part):
+    # data
+    clock = load_file(part, 'clock')
+    lstg_start = load_file(part, 'lookup').start_time
+    lstg_end = load_file(part, 'lstg_end')
+
     # arrival times
-    clock = get_arrival_times(d, append_last=True)
+    arrivals = get_arrival_times(clock, lstg_start, lstg_end,
+                                 append_last=True)
 
     # interarrival times
-    y, diff = get_interarrival_period(clock)
+    y, diff = get_interarrival_period(arrivals)
     idx = y.index
 
     # listing features
     x = init_x(part, idx)
 
     # add thread features to x['lstg']
-    x_thread = get_x_thread_arrival(clock, d['lstg_start'], idx, diff)
+    x_thread = get_x_thread_arrival(arrivals, lstg_start, idx, diff)
     x['lstg'] = pd.concat([x['lstg'], x_thread], axis=1)
 
     return {'y': y, 'x': x}
@@ -99,11 +105,8 @@ def main():
     part = input_partition()
     print('%s/next_arrival' % part)
 
-    # dictionary of components
-    obs = get_obs_outcomes(part, timestamps=True)
-
     # create input dictionary
-    d = process_inputs(obs, part)
+    d = process_inputs(part)
 
     # save various output files
     save_files(d, part, 'next_arrival')

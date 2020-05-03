@@ -1,32 +1,19 @@
 import os
 from compress_pickle import load
-import numpy as np, pandas as pd
+import pandas as pd
 from processing.processing_consts import FEATS_DIR
-from constants import PARTS_DIR
 
 
-# loads processed chunk files
 def load_frames(name):
-    '''
-    name: one of 'events', 'tf_lstg', 'tf_slr'.
-    '''
-    # path to file number x
-    path = lambda num: FEATS_DIR + '{}_{}.gz'.format(num, name)
+    """
+    Loads processed chunk files.
+    :param str name: one of ['slr', 'cat', 'cndtn, 'tf_offer']
+    :return DataFrame output: concatentated input files.
+    """
     # loop and append
     output = []
     n = len([f for f in os.listdir(FEATS_DIR) if name in f])
     for i in range(1,n+1):
-        output.append(load(path(i)))
+        output.append(load(FEATS_DIR + '{}_{}.gz'.format(i, name)))
     output = pd.concat(output).sort_index()
     return output
-
-
-# returns partition indices and path to file function
-def get_partition(part):
-    '''
-    part: one of 'train_models', 'train_rl', 'test'
-    '''
-    partitions = load(PARTS_DIR + 'partitions.pkl')
-    idx = partitions[part]
-    path = lambda name: PARTS_DIR + '%s/%s.gz' % (part, name)
-    return idx, path

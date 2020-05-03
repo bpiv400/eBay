@@ -1,6 +1,6 @@
 import pandas as pd
 from processing.processing_utils import input_partition, init_x, \
-	get_obs_outcomes
+	get_obs_outcomes, load_file
 from processing.f_discrim.discrim_utils import concat_sim_chunks, \
 	save_discrim_files
 from constants import TRAIN_RL, VALIDATION, TEST
@@ -22,16 +22,17 @@ def main():
 	print('{}/listings'.format(part))
 
 	# initialize listing features
-	lookup, obs = get_obs_outcomes(part)
-	x = init_x(part, lookup.index)
+	idx = load_file(part, 'lookup').index
+	x = init_x(part, idx)
 
 	# observed data
-	idx_obs = obs['thread'].xs(1, level='thread').index
+	threads_obs = load_file(part, 'x_thread')
+	idx_obs = threads_obs.xs(1, level='thread').index
 	x_obs = construct_x(x, idx_obs)
 
 	# simulated data
-	sim = concat_sim_chunks(part)
-	idx_sim = sim['threads'].xs(1, level='thread').index
+	threads_sim = load_file(part, 'x_thread_sim').xs(0, level='sim')
+	idx_sim = threads_sim.xs(1, level='thread').index
 	x_sim = construct_x(x, idx_sim)
 
 	# save data

@@ -48,7 +48,7 @@ def collate(batch):
                 x[k] = [torch.from_numpy(v)]
 
     # convert to (single) tensors
-    y = torch.from_numpy(np.asarray(y)).float()
+    y = torch.from_numpy(np.asarray(y)).long()
     x = {k: torch.stack(v).float() for k, v in x.items()}
 
     # output is dictionary of tensors

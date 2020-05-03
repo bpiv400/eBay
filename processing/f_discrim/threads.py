@@ -1,9 +1,7 @@
 import argparse
 import pandas as pd
-from processing.processing_utils import init_x, get_x_thread, \
-    get_obs_outcomes
-from processing.f_discrim.discrim_utils import concat_sim_chunks, \
-    save_discrim_files
+from processing.processing_utils import init_x, get_x_thread, load_file
+from processing.f_discrim.discrim_utils import save_discrim_files
 from constants import TRAIN_RL, VALIDATION, TEST
 from featnames import SPLIT, DAYS, DELAY, EXP, AUTO, REJECT, \
     TIME_FEATS, MSG
@@ -35,16 +33,16 @@ def get_x_offer(offers, idx):
     return x_offer
 
 
-def construct_x(part, d):
+def construct_x(part, threads, offers):
     # master index
-    idx = d['threads'].index
+    idx = threads.index
     # initialize input dictionary with lstg features
     x = init_x(part, idx)
     # add thread features to x['lstg']
-    x_thread = get_x_thread(d['threads'], idx)
+    x_thread = get_x_thread(threads, idx)
     x['lstg'] = pd.concat([x['lstg'], x_thread], axis=1)
     # offer features
-    x.update(get_x_offer(d['offers'], idx))
+    x.update(get_x_offer(offers, idx))
     return x
 
 
@@ -60,12 +58,16 @@ def main():
     print('{}/{}'.format(part, name))
 
     # observed data
-    obs = get_obs_outcomes(part)
-    x_obs = construct_x(part, obs)
+    threads_obs = load_file(part, 'x_thread')
+    offers_obs = load_file(part, 'x_offer')
 
-    # simulated data
-    sim = concat_sim_chunks(part)
-    x_sim = construct_x(part, sim)
+    # simulated data, first listing window only
+    threads_sim = load_file(part, 'x_thread_sim').xs(0, level='sim')
+    offers_sim = load_file(part, 'x_offer_sim').xs(0, level='sim')
+
+    # construct input variable dictionaries
+    x_obs = construct_x(part, threads_obs, offers_obs)
+    x_sim = construct_x(part, threads_sim, offers_sim)
 
     # remove time feats
     if not tf:

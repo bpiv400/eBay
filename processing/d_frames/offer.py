@@ -1,11 +1,12 @@
 from compress_pickle import load, dump
-import numpy as np, pandas as pd
-from processing.processing_utils import input_partition, \
+import pandas as pd
+from processing.processing_utils import input_partition, load_file, \
     collect_date_clock_feats, get_days_delay, get_norm, get_con
-from processing.d_frames.frames_utils import get_partition, load_frames
+from processing.d_frames.frames_utils import load_frames
 from processing.processing_consts import CLEAN_DIR
-from constants import START, PARTS_DIR, SLR_PREFIX, IDX
-from featnames import DAYS, DELAY, CON, NORM, SPLIT, MSG, REJECT, AUTO, EXP
+from constants import PARTS_DIR, SLR_PREFIX, IDX
+from featnames import DAYS, DELAY, CON, NORM, SPLIT, MSG, REJECT, \
+    AUTO, EXP, TIME_FEATS
 from utils import is_split
 
 
@@ -37,14 +38,19 @@ def get_x_offer(start_price, events, tf):
     # message indicator is last
     df[MSG] = events.message
 
+    # set time feats to 0 for censored observations
+    df.loc[(df[DELAY] < 1) & df[EXP], TIME_FEATS] = 0.0
+
     return df
 
 
 def main():
     # partition and corresponding indices
     part = input_partition()
-    idx, path = get_partition(part)
     print('{}/x_offer'.format(part))
+
+    # lstg index
+    idx = load_file(part, 'lookup').index
 
     # load other data
     start_price = load(PARTS_DIR + '%s/lookup.gz' % part).start_price
@@ -53,10 +59,10 @@ def main():
 
     # offer features
     x_offer = get_x_offer(start_price, events, tf)
-    dump(x_offer, path('x_offer'))
+    dump(x_offer, PARTS_DIR + '{}/x_offer.gz'.format(part))
 
     # offer timestamps
-    dump(events.clock, path('clock'))
+    dump(events.clock, PARTS_DIR + '{}/clock.gz'.format(part))
 
 
 if __name__ == "__main__":

@@ -10,33 +10,33 @@ from featnames import CLOCK_FEATS, OUTCOME_FEATS, \
     SPLIT, MSG, AUTO, EXP, REJECT, DAYS, DELAY, TIME_FEATS
 
 
-def get_arrival_times(d, append_last=False):
+def get_arrival_times(clock, lstg_start, lstg_end, append_last=False):
     # thread 0: start of listing
-    s = d['lstg_start'].to_frame().assign(thread=0).set_index(
+    s = lstg_start.to_frame().assign(thread=0).set_index(
         'thread', append=True).squeeze()
 
     # threads 1 to N: real threads
-    thread_start = d['clock'].xs(1, level='index')
+    thread_start = clock.xs(1, level='index')
     threads = thread_start.reset_index('thread').drop(
         'clock', axis=1).squeeze().groupby('lstg').max().reindex(
-        index=d['lstg_start'].index, fill_value=0)
+        index=lstg_start.index, fill_value=0)
 
     # thread N+1: end of lstg
     if append_last:
-        s1 = d['lstg_end'].to_frame().assign(
+        s1 = lstg_end.to_frame().assign(
             thread=threads + 1).set_index(
             'thread', append=True).squeeze()
         s = pd.concat([s, s1], axis=0)
 
     # concatenate and sort into single series
-    clock = pd.concat([s, thread_start], axis=0).sort_index()
+    arrivals = pd.concat([s, thread_start], axis=0).sort_index()
 
     # thread to int
-    idx = clock.index
-    clock.index.set_levels(idx.levels[-1].astype('int16'),
-                           level=-1, inplace=True)
+    idx = arrivals.index
+    arrivals.index.set_levels(idx.levels[-1].astype('int16'),
+                              level=-1, inplace=True)
 
-    return clock.rename('clock')
+    return arrivals.rename('arrival')
 
 
 def assert_zero(offer, cols):

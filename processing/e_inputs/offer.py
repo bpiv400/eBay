@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 from processing.processing_consts import INTERVAL, INTERVAL_COUNTS
 from processing.processing_utils import init_x, get_x_thread, \
-    get_obs_outcomes
+    load_file
 from utils import get_remaining
 from processing.e_inputs.inputs_utils import save_files, check_zero
 from constants import IDX, DAY, MAX_DELAY, BYR_PREFIX, SLR_PREFIX, \
@@ -33,10 +33,10 @@ def get_y_msg(df, turn):
     return df.loc[mask, MSG]
 
 
-def calculate_remaining(d, idx, turn):
+def calculate_remaining(clock, lstg_start, idx, turn):
     # load timestamps
-    lstg_start = d['lstg_start'].reindex(index=idx, level='lstg')
-    delay_start = d['clock'].groupby(
+    lstg_start = lstg_start.reindex(index=idx, level='lstg')
+    delay_start = clock.groupby(
         ['lstg', 'thread']).shift().dropna().astype('int64')
 
     # remaining feature
@@ -101,9 +101,14 @@ def get_y_delay(df, turn):
     return delay
 
 
-def process_inputs(d, part, outcome, turn):
+def process_inputs(part, outcome, turn):
+    threads = load_file(part, 'x_thread')
+    offers = load_file(part, 'x_offer')
+    clock = load_file(part, 'clock')
+    lstg_start = load_file(part, 'lookup').start_time
+
     # subset to turn
-    df = d['offers'].xs(turn, level='index')
+    df = offers.xs(turn, level='index')
 
     # y and master index
     if outcome == CON:
@@ -118,16 +123,19 @@ def process_inputs(d, part, outcome, turn):
     x = init_x(part, idx)
 
     # thread features
-    x_thread = get_x_thread(d['threads'], idx)
+    x_thread = get_x_thread(threads, idx)
 
     # add time remaining to x_thread
     if outcome == DELAY:
-        x_thread[INT_REMAINING] = calculate_remaining(d, idx, turn)
+        x_thread[INT_REMAINING] = calculate_remaining(clock,
+                                                      lstg_start,
+                                                      idx,
+                                                      turn)
 
     x['lstg'] = pd.concat([x['lstg'], x_thread], axis=1)
 
     # offer features
-    x.update(get_x_offer(d['offers'], idx, outcome, turn))
+    x.update(get_x_offer(offers, idx, outcome, turn))
 
     # error checking
     check_zero(x)
@@ -158,11 +166,8 @@ def main():
     else:
         assert turn in range(1, 8)
 
-    # threads and offers
-    obs = get_obs_outcomes(part, timestamps=outcome == DELAY)
-
     # input dataframes, output processed dataframes
-    d = process_inputs(obs, part, outcome, turn)
+    d = process_inputs(part, outcome, turn)
 
     # save various output files
     save_files(d, part, name)
