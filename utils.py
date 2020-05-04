@@ -206,6 +206,12 @@ def byr_reward(price=None, start_price=None, value=None):
 
 
 def get_model_predictions(m, x):
+    """
+    Returns predicted categorical distribution.
+    :param str m: name of model
+    :param dict x: dictionary of input tensors
+    :return: torch tensor
+    """
     # initialize neural net
     net = load_model(m, verbose=False)
     if torch.cuda.is_available():
@@ -253,6 +259,12 @@ def load_file(part, x):
 
 
 def init_x(part, idx=None):
+    """
+    Initialized dictionary of input dataframes.
+    :param str part: name of partition
+    :param idx: (multi-)index to reindex with
+    :return: dictionary of (reindexed) input dataframes
+    """
     x = load_file(part, 'x_lstg')
     x = {k: v.astype('float32') for k, v in x.items()}
     if idx is not None:
