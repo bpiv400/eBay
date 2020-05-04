@@ -29,8 +29,8 @@ def save_discrim_files(part, name, x_obs, x_sim):
     idx_sim = x_sim['lstg'].index
 
     # create dictionary of numpy arrays
-    x_obs = convert_x_to_numpy(x_obs, idx_obs)
-    x_sim = convert_x_to_numpy(x_sim, idx_sim)
+    convert_x_to_numpy(x_obs, idx_obs)
+    convert_x_to_numpy(x_sim, idx_sim)
 
     # y=1 for real data
     y_obs = np.ones(len(idx_obs), dtype=bool)
