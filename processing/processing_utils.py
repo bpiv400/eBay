@@ -1,17 +1,10 @@
-import argparse
 import numpy as np
 import pandas as pd
-from compress_pickle import load
 from utils import slr_norm, byr_norm, extract_clock_feats
-from constants import START, PARTITIONS, PARTS_DIR, MAX_DELAY, IDX, \
+from constants import START, MAX_DELAY, IDX, \
     BYR_PREFIX, SLR_PREFIX, DAY, HOLIDAYS
 from featnames import HOLIDAY, DOW_PREFIX, TIME_OF_DAY, AFTERNOON, \
-    CLOCK_FEATS, BYR_HIST, THREAD_COUNT
-
-
-# function to load file from partitions directory
-def load_file(part, x):
-    return load(PARTS_DIR + '{}/{}.gz'.format(part, x))
+    CLOCK_FEATS
 
 
 def extract_day_feats(seconds):
@@ -38,19 +31,6 @@ def collect_date_clock_feats(seconds):
     df[TIME_OF_DAY], df[AFTERNOON] = extract_clock_feats(seconds)
     assert list(df.columns) == CLOCK_FEATS
     return df
-
-
-def input_partition():
-    """
-    Parses command line input for partition name.
-    :return part: string partition name.
-    """
-    parser = argparse.ArgumentParser()
-
-    # partition
-    parser.add_argument('--part', required=True, type=str,
-                        choices=PARTITIONS, help='partition name')
-    return parser.parse_args().part
 
 
 def get_days_delay(clock):
@@ -131,25 +111,3 @@ def get_norm(con):
                                prev_byr_norm=norm[i - 1],
                                prev_slr_norm=norm[i - 2])
     return norm.rename_axis('index', axis=1).stack().astype('float64')
-
-
-def init_x(part, idx):
-    x = load_file(part, 'x_lstg')
-    x = {k: v.reindex(index=idx, level='lstg').astype('float32') for k, v in x.items()}
-    return x
-
-
-def get_x_thread(threads, idx):
-    # initialize x_thread as copy
-    x_thread = threads.copy()
-
-    # byr_hist as a decimal
-    x_thread.loc[:, BYR_HIST] = x_thread.byr_hist.astype('float32') / 10
-
-    # thread count, including current thread
-    x_thread[THREAD_COUNT] = x_thread.index.get_level_values(level='thread')
-
-    # reindex to create x_thread
-    x_thread = pd.DataFrame(index=idx).join(x_thread)
-
-    return x_thread.astype('float32')

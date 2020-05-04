@@ -1,7 +1,7 @@
-import sys, argparse
+import argparse
 from compress_pickle import dump, load
-import pandas as pd, numpy as np
-from processing.processing_consts import CUTOFF, CLEAN_DIR, CHUNKS_DIR, LVARS, TVARS, OVARS
+from processing.processing_consts import CUTOFF, CLEAN_DIR, \
+    CHUNKS_DIR, LVARS, TVARS, OVARS
 
 
 # split into chunks and save

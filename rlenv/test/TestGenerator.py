@@ -1,8 +1,8 @@
 from compress_pickle import load
-from rlenv.simulator.Generator import SimulatorGenerator
+from simulator import SimulatorGenerator
 from rlenv.test.LstgLog import LstgLog
 from rlenv.test.TestEnvironment import TestEnvironment
-from rlenv.simulator.discrim.DiscrimRecorder import DiscrimRecorder
+from simulator import DiscrimRecorder
 from rlenv.env_utils import get_env_sim_subdir
 
 

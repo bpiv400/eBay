@@ -1,8 +1,8 @@
 from compress_pickle import load, dump
 import numpy as np
-from processing.processing_utils import input_partition, \
-    extract_day_feats, load_file
+from processing.processing_utils import extract_day_feats
 from processing.d_frames.frames_utils import load_frames
+from utils import input_partition, load_file
 from processing.processing_consts import CLEAN_DIR, W2V_DIR
 from constants import *
 

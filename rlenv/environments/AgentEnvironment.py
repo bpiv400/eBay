@@ -10,7 +10,7 @@ from featnames import START_TIME
 from constants import MONTH
 from rlenv.env_consts import (LOOKUP, X_LSTG, ENV_LSTG_COUNT)
 from rlenv.environments.EbayEnvironment import EbayEnvironment
-from rlenv.simulator.Recorder import Recorder
+from simulator import Recorder
 from agent.agent_utils import get_con_set
 from agent.agent_consts import seller_groupings, NO_ARRIVAL_CUTOFF, NO_ARRIVAL
 
