@@ -17,8 +17,8 @@ from rlpyt.samplers.serial.sampler import SerialEvalCollector
 from rlpyt.samplers.parallel.cpu.collectors import CpuEvalCollector
 from rlpyt.utils.logging.context import logger_context
 from featnames import DELAY
-from constants import RL_EVAL_DIR, RL_LOG_DIR, BYR_PREFIX, \
-    SLR_POLICY_INIT, BYR_POLICY_INIT
+from constants import RL_LOG_DIR, BYR_PREFIX, \
+    SLR_POLICY_INIT, BYR_POLICY_INIT, PARTS_DIR, TRAIN_RL
 from agent.agent_consts import SELLER_TRAIN_INPUT, AGENT_STATE, \
     PARAM_DICTS, AGENT_PARAMS, BATCH_PARAMS, PPO_PARAMS, THREADS_PER_PROC
 from agent.agent_utils import gen_run_id, save_params, \
@@ -60,7 +60,7 @@ class RlTrainer:
         self.runner = self.generate_runner()
 
     def generate_train_params(self):
-        chunk_path = '{}1.gz'.format(RL_EVAL_DIR)
+        chunk_path = PARTS_DIR + '{}/chunks/1.gz'.format(TRAIN_RL)
         x_lstg_cols = load_chunk(input_path=chunk_path)[0].columns
         composer = AgentComposer(cols=x_lstg_cols,
                                  agent_params=self.agent_params)

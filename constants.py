@@ -34,7 +34,6 @@ MODEL_DIR = OUTPUT_DIR + 'models/'
 PLOT_DIR = OUTPUT_DIR + 'plots/'
 REINFORCE_DIR = '{}/agent/'.format(PREFIX)
 RL_LOG_DIR = '{}logs/'.format(REINFORCE_DIR)
-RL_EVAL_DIR = '{}eval/'.format(REINFORCE_DIR)
 
 # partitions
 TRAIN_MODELS = 'train_models'

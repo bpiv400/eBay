@@ -259,6 +259,6 @@ def init_x(part, idx=None):
         if len(idx.names) == 1:
             x = {k: v.reindex(index=idx) for k, v in x.items()}
         else:
-            x = {k: v.reindex(index=idx, level='lstg') \
+            x = {k: v.reindex(index=idx, level='lstg')
                  for k, v in x.items()}
     return x
