@@ -18,7 +18,7 @@ from rlpyt.samplers.parallel.cpu.collectors import CpuEvalCollector
 from rlpyt.utils.logging.context import logger_context
 from featnames import DELAY
 from constants import RL_EVAL_DIR, RL_LOG_DIR, BYR_PREFIX, \
-    SLR_INIT, BYR_INIT
+    SLR_POLICY_INIT, BYR_POLICY_INIT
 from agent.agent_consts import SELLER_TRAIN_INPUT, AGENT_STATE, \
     PARAM_DICTS, AGENT_PARAMS, BATCH_PARAMS, PPO_PARAMS, THREADS_PER_PROC
 from agent.agent_utils import gen_run_id, save_params, \
@@ -86,9 +86,9 @@ class RlTrainer:
 
         # load simulator model to initialize policy
         if model_kwargs[BYR_PREFIX]:
-            init_model = BYR_INIT
+            init_model = BYR_POLICY_INIT
         else:
-            init_model = SLR_INIT
+            init_model = SLR_POLICY_INIT
         init_dict = load_init_model(name=init_model,
                                     size=model_kwargs['sizes']['out'])
         model_kwargs['norm'] = detect_norm(init_dict)
@@ -157,7 +157,6 @@ class RlTrainer:
             workers_cpu.remove(33)
             workers_cpu.remove(1)
         return workers_cpu
-
 
 
 def main():

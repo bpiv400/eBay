@@ -2,7 +2,7 @@ import math
 import torch
 import numpy as np
 from constants import (TURN_FEATS, BYR_PREFIX, SLR_PREFIX,
-                       SLR_INIT, BYR_INIT)
+                       SLR_POLICY_INIT, BYR_POLICY_INIT)
 from featnames import (OUTCOME_FEATS, MONTHS_SINCE_LSTG, BYR_HIST)
 from utils import load_sizes, load_featnames
 from rlenv.env_consts import *
@@ -29,9 +29,9 @@ class AgentComposer(Composer):
 
     def _build_agent_sizes(self):
         if not self.byr:
-            sizes = load_sizes(SLR_INIT)
+            sizes = load_sizes(SLR_POLICY_INIT)
         else:
-            sizes = load_sizes(BYR_INIT)
+            sizes = load_sizes(BYR_POLICY_INIT)
         sizes['out'] = len(get_con_set(self.con_type))
         return sizes
 

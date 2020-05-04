@@ -256,5 +256,9 @@ def init_x(part, idx=None):
     x = load_file(part, 'x_lstg')
     x = {k: v.astype('float32') for k, v in x.items()}
     if idx is not None:
-        x = {k: v.reindex(index=idx, level='lstg') for k, v in x.items()}
+        if len(idx.names) == 1:
+            x = {k: v.reindex(index=idx) for k, v in x.items()}
+        else:
+            x = {k: v.reindex(index=idx, level='lstg') \
+                 for k, v in x.items()}
     return x
