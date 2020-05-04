@@ -1,7 +1,8 @@
 import pandas as pd
 from inputs.inputs_utils import save_files
 from utils import load_file, input_partition, init_x
-from featnames import CLOCK_FEATS, THREAD_COUNT, BYR_HIST
+from constants import BYR_HIST_MODEL
+from featnames import CLOCK_FEATS, THREAD_COUNT
 
 
 # loads data and calls helper functions to construct train inputs
@@ -31,13 +32,13 @@ def process_inputs(part):
 def main():
 	# partition name from command line
 	part = input_partition()
-	print('{}/{}'.format(part, BYR_HIST))
+	print('{}/{}'.format(part, BYR_HIST_MODEL))
 
 	# input dataframes, output processed dataframes
 	d = process_inputs(part)
 
 	# save various output files
-	save_files(d, part, BYR_HIST)
+	save_files(d, part, BYR_HIST_MODEL)
 
 
 if __name__ == '__main__':
