@@ -24,7 +24,6 @@ else:  # cluster and AWS
     PREFIX = os.path.expanduser('~/weka/eBay')
 
 PARTS_DIR = '{}/partitions/'.format(PREFIX)
-ENV_SIM_DIR = '{}/envSimulator/'.format(PREFIX)
 OUTPUT_DIR = '{}/outputs/'.format(PREFIX)
 INPUT_DIR = '{}/inputs/'.format(PREFIX)
 INDEX_DIR = '{}/index/'.format(PREFIX)
@@ -36,8 +35,6 @@ PLOT_DIR = OUTPUT_DIR + 'plots/'
 REINFORCE_DIR = '{}/agent/'.format(PREFIX)
 RL_LOG_DIR = '{}logs/'.format(REINFORCE_DIR)
 RL_EVAL_DIR = '{}eval/'.format(REINFORCE_DIR)
-
-PARAMS_PATH = INPUT_DIR + 'params.pkl'
 
 # partitions
 TRAIN_MODELS = 'train_models'

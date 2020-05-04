@@ -1,9 +1,5 @@
 from constants import REINFORCE_DIR, BYR_PREFIX, SLR_PREFIX
 
-# threshold for likelihood of no arrivals
-NO_ARRIVAL_CUTOFF = .50 ** (1.0 / 12)
-NO_ARRIVAL = 'no_arrival'
-
 # files
 SELLER_TRAIN_INPUT = REINFORCE_DIR + 'train/seller.hdf5'
 
