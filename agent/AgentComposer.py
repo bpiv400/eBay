@@ -91,31 +91,34 @@ class AgentComposer(Composer):
 
     def verify_agent(self):
         agent_name = SLR_POLICY_INIT if not self.byr else BYR_POLICY_INIT
+        agent_role = SLR_PREFIX if not self.byr else BYR_PREFIX
         Composer.verify_lstg_sets_shared(agent_name, self.x_lstg_cols, self.lstg_sets.copy())
         agent_feats = load_featnames(agent_name)
         lstg_append = Composer.remove_shared_feats(agent_feats[LSTG_MAP], self.lstg_sets[LSTG_MAP])
-        AgentComposer.verify_lstg_append(lstg_append=lstg_append, agent_name=agent_name)
+        AgentComposer.verify_lstg_append(lstg_append=lstg_append, agent_role=agent_role)
         offer_feats = agent_feats['offer']
-        AgentComposer.verify_agent_offer(offer_feats=offer_feats, agent_name=agent_name)
+        AgentComposer.verify_agent_offer(offer_feats=offer_feats,
+                                         agent_role=agent_role,
+                                         agent_name=agent_name)
 
     @staticmethod
-    def verify_lstg_append(lstg_append=None, agent_name=None):
+    def verify_lstg_append(lstg_append=None, agent_role=None):
         # print(lstg_append)
         assert lstg_append[0] == MONTHS_SINCE_LSTG
         assert lstg_append[1] == BYR_HIST
         assert lstg_append[2] == THREAD_COUNT
-        turn_feats = TURN_FEATS[agent_name]
+        turn_feats = TURN_FEATS[agent_role]
         AgentComposer.verify_sequence(lstg_append, turn_feats, 3)
         assert len(lstg_append) == (len(turn_feats) + 3)
 
     @staticmethod
-    def verify_agent_offer(offer_feats=None, agent_name=None):
-        if agent_name == SLR_POLICY_INIT:
-            assumed_feats = CLOCK_FEATS + TIME_FEATS + OUTCOME_FEATS + TURN_FEATS[agent_name]
+    def verify_agent_offer(offer_feats=None, agent_role=None, agent_name=None):
+        if agent_role == SLR_PREFIX:
+            assumed_feats = CLOCK_FEATS + TIME_FEATS + OUTCOME_FEATS + TURN_FEATS[agent_role]
         else:
-            assumed_feats = CLOCK_FEATS + OUTCOME_FEATS + TURN_FEATS[agent_name]
+            assumed_feats = CLOCK_FEATS + OUTCOME_FEATS + TURN_FEATS[agent_role]
         AgentComposer.verify_all_feats(assumed_feats=assumed_feats, model_feats=offer_feats)
-        last_turn = 6 if SLR_PREFIX in agent_name else 7
+        last_turn = 6 if agent_role == SLR_PREFIX else 7
         sizes = load_sizes(agent_name)['x']
         for turn in range(1, 8):
             if turn <= last_turn:
