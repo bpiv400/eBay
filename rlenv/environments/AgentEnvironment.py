@@ -7,7 +7,7 @@ from rlpyt.envs.base import Env
 from rlpyt.spaces.composite import Composite
 from rlpyt.spaces.float_box import FloatBox
 from featnames import START_TIME
-from constants import MONTH, NO_ARRIVAL_CUTOFF
+from constants import MONTH
 from rlenv.env_consts import LOOKUP, X_LSTG, ENV_LSTG_COUNT
 from rlenv.environments.EbayEnvironment import EbayEnvironment
 from rlenv import Recorder
@@ -76,14 +76,7 @@ class AgentEnvironment(EbayEnvironment, Env):
         self._x_lstg_slice = self._file[X_LSTG][sorted_ids, :]
         self._lookup_slice = self._lookup_slice[unsorted_ids, :]
         self._x_lstg_slice = self._x_lstg_slice[unsorted_ids, :]
-        self._drop_unlikely_arrivals()
         self._ix = 0
-
-    def _drop_unlikely_arrivals(self):
-        pi_idx = self._lookup_cols.index(NO_ARRIVAL)
-        keep_bool = self._lookup_slice[:, pi_idx] < NO_ARRIVAL_CUTOFF
-        self._lookup_slice = self._lookup_slice[keep_bool, :]
-        self._x_lstg_slice = self._x_lstg_slice[keep_bool, :]
 
     def agent_tuple(self, lstg_complete=None, agent_sale=None):
         obs = self.get_obs(sources=self.last_event.sources(),
