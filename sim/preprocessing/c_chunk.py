@@ -3,32 +3,13 @@ Chunks a partition into NUM_CHUNKS pieces for value estimation
 or generating discrim inputs
 """
 import os
-import h5py
 import numpy as np
 import pandas as pd
 from compress_pickle import dump
-from agent.agent_consts import SELLER_TRAIN_INPUT
 from utils import load_file, input_partition, init_x
-from constants import SIM_CHUNKS, PARTS_DIR, TRAIN_RL, NO_ARRIVAL_CUTOFF
+from constants import SIM_CHUNKS, PARTS_DIR
 from featnames import START_PRICE, CAT
-from rlenv.env_consts import X_LSTG, LOOKUP
-
-os.environ["HDF5_USE_FILE_LOCKING"] = "FALSE"
-
-
-def store_inputs(x_lstg, lookup, path):
-    # drop listings with infrequent arrivals
-    df = lookup[lookup.p_no_arrival < NO_ARRIVAL_CUTOFF]
-    df = df.drop('p_no_arrival', axis=1).reset_index(drop=False)
-    lookup_cols = [c.encode('utf-8') for c in list(df.columns)]
-    # save hdf5 file
-    f = h5py.File(path, 'w')
-    lookup_vals = df.values.astype(np.float32)
-    x_lstg_vals = x_lstg.values.astype(np.float32)
-    lookup_dataset = f.create_dataset(LOOKUP, data=lookup_vals)
-    f.create_dataset(X_LSTG, data=x_lstg_vals)
-    lookup_dataset.attrs['cols'] = lookup_cols
-    f.close()
+from rlenv.env_consts import LOOKUP
 
 
 def main():
@@ -43,10 +24,6 @@ def main():
     # concatenate into one dataframe
     x_lstg = pd.concat(x_lstg.values(), axis=1)
     assert x_lstg.isna().sum().sum() == 0
-
-    # save RL seller input as HDF5 file
-    if part == TRAIN_RL:
-        store_inputs(x_lstg, lookup, SELLER_TRAIN_INPUT)
 
     # make chunk directory
     chunk_dir = PARTS_DIR + '{}/chunks/'.format(part)
