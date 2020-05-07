@@ -8,7 +8,8 @@ from train.EBayDataset import EBayDataset
 from train.train_consts import FTOL, LR0, LR1, LR_FACTOR, INT_DROPOUT
 from nets.FeedForward import FeedForward
 from train.Sample import get_batches
-from constants import MODEL_DIR, LOG_DIR
+from constants import MODEL_DIR, LOG_DIR, DELAY_MODELS, \
+    INTERARRIVAL_MODEL, INIT_VALUE_MODELS
 from utils import load_sizes
 
 
@@ -33,8 +34,9 @@ class Trainer:
         self.dev = dev
         self.device = device
 
-        # boolean for time loss
-        self.is_delay = 'delay' in name or name == 'next_arrival'
+        # boolean for different loss functions
+        self.is_delay = name in DELAY_MODELS or name == INTERARRIVAL_MODEL
+        self.is_init_value = name in INIT_VALUE_MODELS
 
         # load model size parameters
         self.sizes = load_sizes(name)
@@ -198,10 +200,10 @@ class Trainer:
         # call forward on model
         net.train(is_training)
         theta = net(b['x'])
-        if theta.size()[1] == 1:
-            theta = torch.cat((torch.zeros_like(theta), theta), dim=1)
 
         # softmax
+        if theta.size()[1] == 1:
+            theta = torch.cat((torch.zeros_like(theta), theta), dim=1)
         lnq = log_softmax(theta, dim=-1)
 
         # calculate loss

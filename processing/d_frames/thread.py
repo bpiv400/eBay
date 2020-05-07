@@ -1,18 +1,19 @@
 from compress_pickle import load, dump
-import numpy as np, pandas as pd
+import numpy as np
+import pandas as pd
 from constants import HIST_QUANTILES, PARTS_DIR
-from processing.processing_utils import input_partition
-from processing.d_frames.frames_utils import get_partition
 from processing.processing_consts import CLEAN_DIR
 from featnames import BYR_HIST, MONTHS_SINCE_LSTG
-from utils import get_months_since_lstg
+from utils import get_months_since_lstg, input_partition, load_file
 
 
 def main():
 	# data partition
 	part = input_partition()
-	idx, path = get_partition(part)
 	print('{}/x_thread'.format(part))
+
+	# lstg indices
+	idx = load_file(part, 'lookup').index
 
 	# load data
 	lstg_start = load(PARTS_DIR + '{}/lookup.gz'.format(part)).start_time
@@ -33,7 +34,7 @@ def main():
 	x_thread = pd.concat([months, hist], axis=1)
 
 	# save
-	dump(x_thread, path('x_thread'))
+	dump(x_thread, PARTS_DIR + '{}/x_thread.gz'.format(part))
 
 
 if __name__ == "__main__":

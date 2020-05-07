@@ -14,7 +14,7 @@ class PgCategoricalAgentModel(AgentModel):
     Returns a vector of
     """
     def __init__(self, init_dict=None, sizes=None, norm=None,
-                 byr=False, delay=False):
+                 byr=False, delay=False, dropout=(0., 0.)):
         """
         kwargs:
             sizes: gives all sizes for the model, including size
@@ -27,17 +27,25 @@ class PgCategoricalAgentModel(AgentModel):
         # expand embeddings
         groups = create_groupings(sizes=sizes)
         # create embedding layers
-        self.nn0, total = create_embedding_layers(groups=groups, sizes=sizes,
-                                                  dropout=0.0, norm=norm)
+        self.nn0, total = create_embedding_layers(groups=groups,
+                                                  sizes=sizes,
+                                                  dropout=dropout[0],
+                                                  norm=norm)
 
         if PARAM_SHARING:
             # shared fully connected layers
-            self.nn1 = FullyConnected(total, dropout=0.0, norm=norm)
+            self.nn1 = FullyConnected(total,
+                                      dropout=dropout[1],
+                                      norm=norm)
             self.nn1_action = None
             self.nn1_value = None
         else:
-            self.nn1_action = FullyConnected(total, dropout=0.0, norm=norm)
-            self.nn1_value = FullyConnected(total, dropout=0.0, norm=norm)
+            self.nn1_action = FullyConnected(total,
+                                             dropout=dropout[1],
+                                             norm=norm)
+            self.nn1_value = FullyConnected(total,
+                                            dropout=dropout[1],
+                                            norm=norm)
             self.nn1 = None
         # output layers
         self.output_value = nn.Linear(HIDDEN, 1)

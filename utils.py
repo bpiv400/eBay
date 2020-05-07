@@ -1,12 +1,13 @@
+import argparse
 import pickle
 import torch
 import numpy as np
-import pandas as pd
 from compress_pickle import load
 from nets.FeedForward import FeedForward
 from nets.nets_consts import LAYERS_FULL
 from constants import MAX_DELAY, DAY, MONTH, SPLIT_PCTS, INPUT_DIR, \
-    MODEL_DIR, META_6, META_7, LISTING_FEE
+    MODEL_DIR, META_6, META_7, LISTING_FEE, PARTITIONS, PARTS_DIR, \
+    MONTHLY_DISCOUNT
 
 
 def unpickle(file):
@@ -185,20 +186,96 @@ def get_cut(meta):
     return .09
 
 
-def slr_reward(price=None, start_price=None, meta=None, elapsed=None,
-               relist_count=None, discount_rate=None):
-    # eBay's cut
-    cut = get_cut(meta)
-    # total discount
-    months = (elapsed / MONTH) + relist_count
-    delta = discount_rate ** months
-    # gross from sale
-    gross = price * (1 - cut) * delta
-    # net after listing fees
-    net = gross - LISTING_FEE * (relist_count + 1)
-    # normalize by start_price and return
-    return net / start_price
+def slr_reward(months_to_sale=None, months_since_start=None,
+               sale_proceeds=None):
+    """
+    Discounts proceeds from sale and listing fees paid.
+    :param months_to_sale: months from listing start to sale
+    :param months_since_start: months since start of listing
+    :param sale_proceeds: sale price net of eBay cut
+    :return: time-discounted net proceeds
+    """
+    # time difference
+    td = months_to_sale - months_since_start
+    assert (td >= 0).all()
+    # discounted listing fees
+    M = np.ceil(months_to_sale) - np.ceil(months_since_start)
+    k = months_since_start % 1
+    delta = MONTHLY_DISCOUNT ** k
+    delta *= 1 - MONTHLY_DISCOUNT ** (M + 1)
+    delta /= 1 - MONTHLY_DISCOUNT
+    costs = LISTING_FEE * delta
+    # discounted sale price
+    discounted_proceeds = sale_proceeds * (MONTHLY_DISCOUNT ** td)
+    return discounted_proceeds - costs
 
 
-def byr_reward(price=None, start_price=None, value=None):
-    return value - (price / start_price)
+def get_model_predictions(m, x):
+    """
+    Returns predicted categorical distribution.
+    :param str m: name of model
+    :param dict x: dictionary of input tensors
+    :return: torch tensor
+    """
+    # initialize neural net
+    net = load_model(m, verbose=False)
+    if torch.cuda.is_available():
+        net = net.to('cuda')
+
+    # split into batches
+    v = np.array(range(len(x['lstg'])))
+    batches = np.array_split(v, 1 + len(v) // 2048)
+
+    # model predictions
+    p0 = []
+    for b in batches:
+        x_b = {k: torch.from_numpy(v[b, :]) for k, v in x.items()}
+        if torch.cuda.is_available():
+            x_b = {k: v.to('cuda') for k, v in x_b.items()}
+        theta_b = net(x_b).cpu().double()
+        p0.append(np.exp(torch.nn.functional.log_softmax(
+            theta_b, dim=-1)))
+
+    # concatenate and return
+    return torch.cat(p0, dim=0).numpy()
+
+
+def input_partition():
+    """
+    Parses command line input for partition name.
+    :return part: string partition name.
+    """
+    parser = argparse.ArgumentParser()
+
+    # partition
+    parser.add_argument('--part', required=True, type=str,
+                        choices=PARTITIONS, help='partition name')
+    return parser.parse_args().part
+
+
+def load_file(part, x):
+    """
+    Loads file from partitions directory.
+    :param str part: name of partition
+    :param x: name of file
+    :return: dataframe
+    """
+    return load(PARTS_DIR + '{}/{}.gz'.format(part, x))
+
+
+def init_x(part, idx=None):
+    """
+    Initialized dictionary of input dataframes.
+    :param str part: name of partition
+    :param idx: (multi-)index to reindex with
+    :return: dictionary of (reindexed) input dataframes
+    """
+    x = load_file(part, 'x_lstg')
+    x = {k: v.astype('float32') for k, v in x.items()}
+    if idx is not None:
+        if len(idx.names) == 1:
+            x = {k: v.reindex(index=idx) for k, v in x.items()}
+        else:
+            x = {k: v.reindex(index=idx, level='lstg')
+                 for k, v in x.items()}
+    return x

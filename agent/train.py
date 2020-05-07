@@ -5,7 +5,7 @@ import os
 import argparse
 from datetime import datetime as dt
 import multiprocessing as mp
-import psutil
+import warnings
 import torch
 from agent.CrossEntropyPPO import CrossEntropyPPO
 from rlpyt.agents.pg.categorical import CategoricalPgAgent
@@ -17,8 +17,8 @@ from rlpyt.samplers.serial.sampler import SerialEvalCollector
 from rlpyt.samplers.parallel.cpu.collectors import CpuEvalCollector
 from rlpyt.utils.logging.context import logger_context
 from featnames import DELAY
-from constants import RL_EVAL_DIR, RL_LOG_DIR, BYR_PREFIX, \
-    SLR_INIT, BYR_INIT
+from constants import RL_LOG_DIR, BYR_PREFIX, \
+    SLR_POLICY_INIT, BYR_POLICY_INIT, PARTS_DIR, TRAIN_RL
 from agent.agent_consts import SELLER_TRAIN_INPUT, AGENT_STATE, \
     PARAM_DICTS, AGENT_PARAMS, BATCH_PARAMS, PPO_PARAMS, THREADS_PER_PROC
 from agent.agent_utils import gen_run_id, save_params, \
@@ -64,7 +64,7 @@ class RlTrainer:
         self.runner = self.generate_runner()
 
     def generate_train_params(self):
-        chunk_path = '{}1.gz'.format(RL_EVAL_DIR)
+        chunk_path = PARTS_DIR + '{}/chunks/1.gz'.format(TRAIN_RL)
         x_lstg_cols = load_chunk(input_path=chunk_path)[0].columns
         composer = AgentComposer(cols=x_lstg_cols,
                                  agent_params=self.agent_params)
@@ -90,9 +90,9 @@ class RlTrainer:
 
         # load simulator model to initialize policy
         if model_kwargs[BYR_PREFIX]:
-            init_model = BYR_INIT
+            init_model = BYR_POLICY_INIT
         else:
-            init_model = SLR_INIT
+            init_model = SLR_POLICY_INIT
         init_dict = load_init_model(name=init_model,
                                     size=model_kwargs['sizes']['out'])
         model_kwargs['norm'] = detect_norm(init_dict)
@@ -102,8 +102,10 @@ class RlTrainer:
                                   model_kwargs=model_kwargs)
 
     def generate_sampler(self):
-        batch_b = len(self.workers_cpus) * 2
+        batch_b = len(self.worker_cpus) * 2
         batch_t = int(self.batch_params['batch_size'] / batch_b)
+        if batch_t < 12:
+            warnings.warn("Very few actions per environment")
         if self.debug:
             return SerialSampler(
                 EnvCls=SellerEnvironment,
@@ -189,6 +191,14 @@ class RlTrainer:
                             run_ID=self.run_id,
                             snapshot_mode='all'):
             self.itr = self.runner.train()
+    
+    @property
+    def worker_cpus(self):
+        workers_cpu = list(range(mp.cpu_count()))
+        if len(workers_cpu) == 64:
+            workers_cpu.remove(33)
+            workers_cpu.remove(1)
+        return workers_cpu
 
 
 def main():

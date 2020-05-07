@@ -1,12 +1,11 @@
+from constants import FIRST_ARRIVAL_MODEL, SLR_POLICY_INIT, \
+    DISCRIM_LISTINGS, DISCRIM_THREADS
+
 # optimization parameters
-NUM_WORKERS = {'first_arrival': 4,
-               'hist': 7,
-               'con1': 7,
-               'init_byr': 5,
-               'init_slr': 6,
-               'listings': 6,
-               'threads': 6,
-               'threads_no_tf': 7}
+NUM_WORKERS = {FIRST_ARRIVAL_MODEL: 4,
+               SLR_POLICY_INIT: 6,
+               DISCRIM_LISTINGS: 6,
+               DISCRIM_THREADS: 6}
 MBSIZE = {True: 128, False: 2048}  # True for training, False for validation
 
 # learning rate parameters
@@ -22,6 +21,3 @@ DROPOUT_GRID = []
 for i in range(0, MAX_DROPOUT):
     for j in range(i + 1, MAX_DROPOUT + 1):
         DROPOUT_GRID.append([i, j])
-
-# type of normalization
-NORM_TYPE = {'init_slr': 'weight', 'init_byr': 'weight'}

@@ -1,8 +1,7 @@
 from constants import REINFORCE_DIR, BYR_PREFIX, SLR_PREFIX
 
-# threshold for likelihood of no arrivals
-NO_ARRIVAL_CUTOFF = .50 ** (1.0 / 12)
-NO_ARRIVAL = 'no_arrival'
+# files
+SELLER_TRAIN_INPUT = REINFORCE_DIR + 'train/seller.hdf5'
 
 # state dictionaries
 AGENT_STATE = 'agent_state_dict'
@@ -11,9 +10,6 @@ OPTIM_STATE = 'optimizer_state_dict'
 # sub directory names
 TRAIN_DIR = "train"
 TRAIN_SEED = 10
-
-# files
-SELLER_TRAIN_INPUT = "{}{}/seller.hdf5".format(REINFORCE_DIR, TRAIN_DIR)
 
 # seller input groups
 seller_groupings = [
@@ -58,14 +54,14 @@ BATCH_PARAMS = {'batch_size': {'type': int, 'default': 2 ** 12},
 
 PPO_PARAMS = {'mbsize': {'type': int, 'default': 512},
               'epochs': {'type': int, 'default': 1},
-              'cross_entropy_loss_coeff': {'type': float, 'default': 10.},
-              'entropy_loss_coeff': {'type': float, 'default': 10.},
-              'value_loss_coeff': {'type': float, 'default': 1.0},
-              'ratio_clip': {'type': float, 'default': 0.1},
-              'discount': {'type': float, 'default': 1.0},
-              'gae_lambda': {'type': float, 'default': 1.0},
-              'clip_grad_norm': {'type': float, 'default': 1.0},
-              'learning_rate': {'type': float, 'default': 0.001}}
+              'cross_entropy_loss_coeff': {'type': float, 'default': 1.},
+              'entropy_loss_coeff': {'type': float, 'default': 1.},
+              'value_loss_coeff': {'type': float, 'default': 1.},
+              'ratio_clip': {'type': float, 'default': .1},
+              'discount': {'type': float, 'default': 1.},
+              'gae_lambda': {'type': float, 'default': 1.},
+              'clip_grad_norm': {'type': float, 'default': 1.},
+              'learning_rate': {'type': float, 'default': .001}}
 
 PARAM_DICTS = [AGENT_PARAMS, BATCH_PARAMS, PPO_PARAMS]
 

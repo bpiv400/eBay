@@ -19,9 +19,6 @@ class EBayDataset(Dataset):
         # number of labels
         self.N = len(self.d['y'])
 
-        # boolean for kl divergence
-        self.has_p = 'p' in self.d
-
     def __getitem__(self, idx):
         """
         Returns a tuple of data components for example.
@@ -33,15 +30,6 @@ class EBayDataset(Dataset):
 
         # index components of input dictionary
         x = {k: v[idx, :] for k, v in self.d['x'].items()}
-
-        # p is indexed directly
-        if self.has_p:
-            if 'turn' in self.d:
-                turn = self.d['turn'][idx]
-                p = self.d['p'][turn]
-            else:
-                p = self.d['p']
-            return y, x, p
 
         return y, x
 

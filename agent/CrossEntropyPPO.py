@@ -1,15 +1,15 @@
 import torch
+import numpy as np
 from collections import namedtuple
 from rlpyt.agents.base import AgentInputs, AgentInputsRnn
 from rlpyt.algos.pg.base import PolicyGradientAlgo
-from rlpyt.algos.utils import discount_return, \
-    generalized_advantage_estimation
 from rlpyt.utils.tensor import valid_mean
 from rlpyt.utils.buffer import buffer_to, buffer_method
 from rlpyt.utils.collections import namedarraytuple
 from rlpyt.utils.quick_args import save__init__args
 from rlpyt.utils.misc import iterate_mb_idxs
 from agent.models.PgCategoricalAgentModel import PgCategoricalAgentModel
+from utils import slr_reward
 
 LossInputs = namedarraytuple("LossInputs",
                              ["agent_inputs",
@@ -34,7 +34,7 @@ class CrossEntropyPPO(PolicyGradientAlgo):
 
     def __init__(
             self,
-            discount=0.99,
+            discount=1,
             learning_rate=0.001,
             value_loss_coeff=1.,
             cross_entropy_loss_coeff=1.,
@@ -66,6 +66,14 @@ class CrossEntropyPPO(PolicyGradientAlgo):
         self._entropy_loss_coeff = self.entropy_loss_coeff
         self.lr_scheduler = None
         self.init_agent = None
+
+        # not implemented
+        if gae_lambda != 1:
+            raise NotImplementedError()
+        if discount != 1:
+            raise NotImplementedError()
+        if normalize_advantage:
+            raise NotImplementedError()
 
     def step(self, itr):
         """
@@ -105,33 +113,65 @@ class CrossEntropyPPO(PolicyGradientAlgo):
         valid = torch.clamp(valid, max=1)
         return valid
 
+    @ staticmethod
+    def discount_return(reward=None, done=None, months=None):
+        """
+        Computes time-discounted sum of future rewards from each
+        time-step to the end of the batch. Sum resets where `done`
+        is 1. Operations vectorized across all trailing dimensions
+        after the first [T,].
+        :param tensor reward: slr's normalized gross return.
+        :param tensor done: indicator for end of trajectory.
+        :param tensor months: months since beginning of listing.
+        :return tensor return_: time-discounted return.
+        """
+        dtype = reward.dtype  # cast new tensors to this data type
+        T = len(reward)  # number of time steps sampled by each env
+        N = reward.shape[-1]  # number of environments
+
+        # initialize matrix of returns
+        return_ = torch.zeros(reward.shape, dtype=dtype)
+
+        # initialize variables that track sale outcomes
+        months_to_sale = torch.tensor(1e8, dtype=dtype).expand(N)
+        sale_proceeds = torch.zeros(N, dtype=dtype)
+
+        for t in reversed(range(T)):
+            # update sale outcomes when sales are observed
+            months_to_sale = months_to_sale * (1-done[t]) + months[t] * done[t]
+            sale_proceeds = sale_proceeds * (1-done[t]) + reward[t] * done[t]
+
+            # discounted sale proceeds
+            return_[t] += slr_reward(months_to_sale=months_to_sale,
+                                     months_since_start=months[t],
+                                     sale_proceeds=sale_proceeds)
+
+        return return_
+
     def process_returns(self, samples):
         """
         Compute bootstrapped returns and advantages from a minibatch of
-        samples. Uses either discounted returns (if ``self.gae_lambda==1``)
-        or generalized advantage estimation. Masks out invalid samples.
+        samples. Discounts returns and masks out invalid samples.
         """
-        print("Complete training iteration")
-        reward, done, value, bv = (samples.env.reward,
-                                   samples.env.done,
-                                   samples.agent.agent_info.value,
-                                   samples.agent.bootstrap_value)
+        # break out samples
+        env = samples.env
+        reward, done, months, start_price = (env.reward,
+                                             env.done,
+                                             env.env_info.months,
+                                             env.env_info.start_price)
         done = done.type(reward.dtype)
+        months = months.type(reward.dtype)
+        start_price = start_price.type(reward.dtype)
 
-        # action-based discounting and GAE
-        if self.gae_lambda == 1:  # GAE reduces to empirical discounted.
-            return_ = discount_return(reward, done, bv, self.discount)
-            advantage = return_ - value
-        else:
-            advantage, return_ = generalized_advantage_estimation(
-                reward, value, done, bv, self.discount, self.gae_lambda)
-
+        # time discounting
+        return_ = self.discount_return(reward=reward,
+                                       done=done,
+                                       months=months)
+        return_ /= start_price  # normalize
+        advantage = return_ - samples.agent.agent_info.value
+        
         # zero out steps from unfinished trajectories
         valid = self.valid_from_done(done)
-
-        # do not normalize advantage
-        if self.normalize_advantage:
-            raise NotImplementedError()
 
         return return_, advantage, valid
 

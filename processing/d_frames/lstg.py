@@ -1,11 +1,12 @@
 from compress_pickle import load, dump
 import numpy as np
-from processing.processing_utils import input_partition, extract_day_feats
-from processing.d_frames.frames_utils import get_partition, load_frames
+from processing.processing_utils import extract_day_feats
+from processing.d_frames.frames_utils import load_frames
+from utils import input_partition, load_file
 from processing.processing_consts import CLEAN_DIR, W2V_DIR
 from constants import *
 
-AS_IS_FEATS = ['store', 'slr_us', 'fast', 'slr_lstgs', 'slr_bos', \
+AS_IS_FEATS = ['store', 'slr_us', 'fast', 'slr_lstgs', 'slr_bos',
                'start_price_pctile', 'fdbk_score', 'fdbk_pstv']
 
 
@@ -47,21 +48,26 @@ def get_x_lstg(L):
     df['has_accept'] = df.auto_accept < 1 
     # remove slr prefix
     df.rename(lambda c: c[4:] if c.startswith('slr_') else c, 
-                        axis=1, inplace=True)   
+              axis=1, inplace=True)
     return df
 
 
 def main():
     # partition and corresponding indices
     part = input_partition()
-    idx, path = get_partition(part)
     print('{}/x_lstg'.format(part))
 
-    # initialize output dictionary
-    x = {}
+    # lstg indices
+    idx = load_file(part, 'lookup').index
 
     # listing features
     L = load(CLEAN_DIR + 'listings.pkl').reindex(index=idx)
+
+    # save end time
+    dump(L.end_time, PARTS_DIR + '{}/lstg_end.gz'.format(part))
+
+    # initialize output dictionary
+    x = dict()
 
     # listing features
     print('Listing features')
@@ -96,12 +102,11 @@ def main():
                         axis=1, inplace=True)
 
     # ensure indices are aligned with lookup
-    lookup = load(PARTS_DIR + '{}/lookup.gz'.format(part))
     for v in x.values():
-        assert np.all(lookup.index == v.index)
+        assert np.all(idx == v.index)
 
     # save as gz
-    dump(x, path('x_lstg'))
+    dump(x, PARTS_DIR + '{}/x_lstg.gz'.format(part))
 
 
 if __name__ == "__main__":

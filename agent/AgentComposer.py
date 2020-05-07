@@ -2,7 +2,7 @@ import math
 import torch
 import numpy as np
 from constants import (TURN_FEATS, BYR_PREFIX, SLR_PREFIX,
-                       SLR_INIT, BYR_INIT)
+                       SLR_POLICY_INIT, BYR_POLICY_INIT)
 from featnames import (OUTCOME_FEATS, MONTHS_SINCE_LSTG, BYR_HIST)
 from utils import load_sizes, load_featnames
 from rlenv.env_consts import *
@@ -29,9 +29,9 @@ class AgentComposer(Composer):
 
     def _build_agent_sizes(self):
         if not self.byr:
-            sizes = load_sizes(SLR_INIT)
+            sizes = load_sizes(SLR_POLICY_INIT)
         else:
-            sizes = load_sizes(BYR_INIT)
+            sizes = load_sizes(BYR_POLICY_INIT)
         sizes['out'] = len(get_con_set(self.con_type))
         return sizes
 
@@ -90,38 +90,41 @@ class AgentComposer(Composer):
         return full_vector
 
     def verify_agent(self):
-        agent_name = SLR_INIT if not self.byr else BYR_INIT
+        agent_name = SLR_POLICY_INIT if not self.byr else BYR_POLICY_INIT
+        agent_role = SLR_PREFIX if not self.byr else BYR_PREFIX
         Composer.verify_lstg_sets_shared(agent_name, self.x_lstg_cols, self.lstg_sets.copy())
         agent_feats = load_featnames(agent_name)
         lstg_append = Composer.remove_shared_feats(agent_feats[LSTG_MAP], self.lstg_sets[LSTG_MAP])
-        AgentComposer.verify_lstg_append(lstg_append=lstg_append, agent_name=agent_name)
+        AgentComposer.verify_lstg_append(lstg_append=lstg_append, agent_role=agent_role)
         offer_feats = agent_feats['offer']
-        AgentComposer.verify_agent_offer(offer_feats=offer_feats, agent_name=agent_name)
+        AgentComposer.verify_agent_offer(offer_feats=offer_feats,
+                                         agent_role=agent_role,
+                                         agent_name=agent_name)
 
     @staticmethod
-    def verify_lstg_append(lstg_append=None, agent_name=None):
+    def verify_lstg_append(lstg_append=None, agent_role=None):
         # print(lstg_append)
         assert lstg_append[0] == MONTHS_SINCE_LSTG
         assert lstg_append[1] == BYR_HIST
         assert lstg_append[2] == THREAD_COUNT
-        turn_feats = TURN_FEATS[agent_name]
+        turn_feats = TURN_FEATS[agent_role]
         AgentComposer.verify_sequence(lstg_append, turn_feats, 3)
         assert len(lstg_append) == (len(turn_feats) + 3)
 
     @staticmethod
-    def verify_agent_offer(offer_feats=None, agent_name=None):
-        if agent_name == SLR_INIT:
-            assumed_feats = CLOCK_FEATS + TIME_FEATS + OUTCOME_FEATS + TURN_FEATS[agent_name]
+    def verify_agent_offer(offer_feats=None, agent_role=None, agent_name=None):
+        if agent_role == SLR_PREFIX:
+            assumed_feats = CLOCK_FEATS + TIME_FEATS + OUTCOME_FEATS + TURN_FEATS[agent_role]
         else:
-            assumed_feats = CLOCK_FEATS + OUTCOME_FEATS + TURN_FEATS[agent_name]
+            assumed_feats = CLOCK_FEATS + OUTCOME_FEATS + TURN_FEATS[agent_role]
         AgentComposer.verify_all_feats(assumed_feats=assumed_feats, model_feats=offer_feats)
-        last_turn = 6 if SLR_PREFIX in agent_name else 7
+        last_turn = 6 if agent_role == SLR_PREFIX else 7
         sizes = load_sizes(agent_name)['x']
-        for i in range(1, 8):
-            if i <= last_turn:
-                assert 'offer{}'.format(i) in sizes
+        for turn in range(1, 8):
+            if turn <= last_turn:
+                assert 'offer{}'.format(turn) in sizes
             else:
-                assert 'offer{}'.format(i) not in sizes
+                assert 'offer{}'.format(turn) not in sizes
 
     @property
     def agent_sizes(self):

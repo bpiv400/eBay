@@ -5,13 +5,12 @@ import torch
 import os
 import numpy as np
 import pandas as pd
-from compress_pickle import load, dump
+from compress_pickle import load
 from torch.distributions.categorical import Categorical
 from torch.distributions.bernoulli import Bernoulli
-from constants import (INPUT_DIR, ENV_SIM_DIR, DAY, ARRIVAL_MODELS)
+from constants import PARTS_DIR, INPUT_DIR, DAY, ARRIVAL_MODELS
 from rlenv.env_consts import (SIM_CHUNKS_DIR, SIM_VALS_DIR, OFFER_MAPS,
-                              SIM_DISCRIM_DIR, DATE_FEATS, NORM_IND,
-                              LOOKUP, X_LSTG)
+                              SIM_DISCRIM_DIR, DATE_FEATS, NORM_IND)
 from utils import extract_clock_feats, is_split, slr_norm, byr_norm
 
 
@@ -166,7 +165,7 @@ def get_env_sim_dir(part):
     :param str part: partition in PARTITIONS
     :return: str
     """
-    return '{}{}/'.format(ENV_SIM_DIR, part)
+    return PARTS_DIR + '{}/'.format(part)
 
 
 def get_env_sim_subdir(part=None, base_dir=None, chunks=False,
@@ -237,14 +236,6 @@ def load_sim_outputs(part, values=False):
             output[dataset] = [piece[dataset] for piece in output_list]
             output[dataset] = pd.concat(output[dataset], axis=1)
     return output
-
-
-def dump_chunk(x_lstg=None, lookup=None, path=None):
-    d = {
-        X_LSTG: x_lstg,
-        LOOKUP: lookup
-    }
-    dump(d, path)
 
 
 def align_x_lstg_lookup(x_lstg, lookup):
