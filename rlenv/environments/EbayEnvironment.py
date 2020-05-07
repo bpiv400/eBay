@@ -19,7 +19,7 @@ from utils import get_months_since_lstg
 
 
 class EbayEnvironment:
-    Outcome = namedtuple('outcome', [SALE, PRICE, DUR])
+    Outcome = namedtuple('outcome', ['sale', 'price', 'months'])
 
     def __init__(self, params=None):
         # interfaces
@@ -144,9 +144,8 @@ class EbayEnvironment:
         else:
             start_norm = 1 - offer.price
         sale_price = start_norm * self.lookup[START_PRICE]
-        self.outcome = self.Outcome(True,
-                                    sale_price,
-                                    offer.time - self.start_time)
+        months = (offer.time - self.start_time) / MONTH
+        self.outcome = self.Outcome(True, sale_price, months)
         self.empty_queue()
 
     def process_first_offer(self, event):

@@ -4,30 +4,11 @@ from inputs.inputs_utils import save_files, get_x_thread
 from inputs.init_policy import calculate_remaining, \
     add_turn_indicators, get_x_offer, input_parameters
 from utils import load_file, init_x
-from inputs.inputs_consts import MONTHLY_DISCOUNT
 from constants import IDX, BYR_PREFIX, SLR_PREFIX, MONTH, \
-    LISTING_FEE, NO_ARRIVAL_CUTOFF, MAX_NORM_VALUE
+    NO_ARRIVAL_CUTOFF, MAX_NORM_VALUE
 from featnames import INT_REMAINING, EXP, AUTO, CON, NORM, \
     META, START_PRICE, START_TIME
-from utils import get_cut
-
-
-def get_discounted_values(sales, months):
-    # join sales and timestamps
-    df = months.to_frame().join(sales)
-    # time difference
-    td = df.months_to_sale - df.months
-    assert np.all(td >= 0)
-    # discounted listing fees
-    M = np.ceil(df.months_to_sale) - np.ceil(df.months)
-    k = df.months % 1
-    delta = MONTHLY_DISCOUNT ** k
-    delta *= 1 - MONTHLY_DISCOUNT ** (M+1)
-    delta /= 1 - MONTHLY_DISCOUNT
-    costs = LISTING_FEE * delta
-    # discounted sale price
-    proceeds = df.gross * (MONTHLY_DISCOUNT ** td)
-    return proceeds - costs
+from utils import get_cut, slr_reward
 
 
 def get_duration(offers, clock, lookup, role):
@@ -59,7 +40,7 @@ def get_sales(offers, clock, lookup):
     # gross price
     cut = lookup[META].apply(get_cut)
     gross = norm * (1-cut) * lookup[START_PRICE]
-    return pd.concat([gross.rename('gross'),
+    return pd.concat([gross.rename('sale_proceeds'),
                       months.rename('months_to_sale')], axis=1)
 
 
@@ -84,11 +65,20 @@ def process_inputs(part, role, delay):
 
     # value components
     sales = get_sales(offers, clock, lookup)
-    months = get_duration(offers, clock, lookup, role)
-    idx = months.index
-    values = get_discounted_values(sales, months)
+    months_since_start = get_duration(offers, clock, lookup, role)
+    df = months_since_start.to_frame().join(sales)
+    idx = df.index
+
+    # discounted values
+    values = slr_reward(months_to_sale=df.months_to_sale,
+                        months_since_start=df.months_since_start,
+                        sale_proceeds=df.sale_proceeds)
+
+    # normalize by start price
     norm_values = values / lookup[START_PRICE].reindex(
         index=idx, level='lstg')
+
+    # integer values
     y = np.maximum(np.round(norm_values * 100), 0.).astype('uint8')
     assert (y.max() <= MAX_NORM_VALUE) and (y.min() >= 0)
 

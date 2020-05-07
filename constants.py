@@ -24,16 +24,21 @@ else:  # cluster and AWS
     PREFIX = os.path.expanduser('~/weka/eBay')
 
 PARTS_DIR = '{}/partitions/'.format(PREFIX)
-OUTPUT_DIR = '{}/outputs/'.format(PREFIX)
-INPUT_DIR = '{}/inputs/'.format(PREFIX)
 INDEX_DIR = '{}/index/'.format(PREFIX)
 PCTILE_DIR = '{}/pctile/'.format(PREFIX)
+
+INPUT_DIR = '{}/inputs/'.format(PREFIX)
+SIZES_DIR = INPUT_DIR + 'sizes/'
 FEATNAMES_DIR = INPUT_DIR + 'featnames/'
+
+OUTPUT_DIR = '{}/outputs/'.format(PREFIX)
 LOG_DIR = OUTPUT_DIR + 'logs/'
 MODEL_DIR = OUTPUT_DIR + 'models/'
 PLOT_DIR = OUTPUT_DIR + 'plots/'
+
 REINFORCE_DIR = '{}/agent/'.format(PREFIX)
-RL_LOG_DIR = '{}logs/'.format(REINFORCE_DIR)
+RL_LOG_DIR = REINFORCE_DIR + 'logs/'
+RL_TRAIN_DIR = REINFORCE_DIR + 'train/'
 
 # partitions
 TRAIN_MODELS = 'train_models'
@@ -133,6 +138,9 @@ RL_NORM = 'weight'
 # fee constants
 LISTING_FEE = .03
 
+# monthly discount rate for agents
+MONTHLY_DISCOUNT = 0.995
+
 # meta categories with sale fees != .09 * price
 META_7 = [21, 10]
 META_6 = [32, 14, 11, 7, 28]
@@ -142,3 +150,6 @@ NO_ARRIVAL_CUTOFF = .50 ** (1.0 / 12)
 
 # maximum norm value for value initialization, in percentage points
 MAX_NORM_VALUE = 94
+
+# number of workers for the RL
+NUM_WORKERS_RL = 32

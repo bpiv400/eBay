@@ -1,20 +1,15 @@
-from collections import namedtuple
-from featnames import LSTG
 from rlenv.environments.AgentEnvironment import AgentEnvironment
 from rlenv.env_consts import OFFER_EVENT
 from rlenv.env_utils import get_con_outcomes
 from agent.spaces.ConSpace import ConSpace
-
-SellerTraj = namedtuple("SellerTraj", ["lstg", "relist_count", "thread",
-                                       "turn", "byr_time",
-                                       "byr_con", "byr_delay", "byr_msg",
-                                       "slr_time", "slr_con", "slr_delay"])
-EmptyTraj = namedtuple("EmptyTraj", ["traj_done"])
+from utils import get_cut
+from featnames import META
 
 
 class SellerEnvironment(AgentEnvironment):
     def __init__(self, **kwargs):
-        super(SellerEnvironment, self).__init__(**kwargs)
+        super().__init__(**kwargs)
+        self.cut = None  # eBay's cut from a sale
 
     def is_agent_turn(self, event):
         """
@@ -32,14 +27,15 @@ class SellerEnvironment(AgentEnvironment):
             event, lstg_complete = super().run()
             self.last_event = event
             if not lstg_complete or self.outcome.sale:
-                return self.agent_tuple(lstg_complete=lstg_complete,
-                                        agent_sale=False)
+                return self.agent_tuple(lstg_complete=lstg_complete)
             else:
                 self.relist()
 
     # restructure
     def reset(self):
         self.reset_lstg()
+        # eBay's cut from a sale
+        self.cut = get_cut(self.lookup[META])
         super().reset()  # calls EBayEnvironment.reset()
         while True:
             event, lstg_complete = super().run()  # calls EBayEnvironment.run()
@@ -74,10 +70,16 @@ class SellerEnvironment(AgentEnvironment):
         offer = self.last_event.update_con_outcomes(con_outcomes=con_outcomes)
         lstg_complete = super().process_post_offer(self.last_event, offer)
         if lstg_complete:
-            return super().agent_tuple(lstg_complete=lstg_complete,
-                                       agent_sale=True)
+            return self.agent_tuple(lstg_complete=lstg_complete)
         self.last_event = None
-        return self.run()
+        # run until the item sells
+        while True:
+            event, lstg_complete = super().run()
+            self.last_event = event
+            if not lstg_complete or self.outcome.sale:
+                return self.agent_tuple(lstg_complete=lstg_complete)
+            else:
+                self.relist()
 
     def con_from_action(self, action=None):
         return self.con_set[action]
@@ -90,30 +92,7 @@ class SellerEnvironment(AgentEnvironment):
         if not self.last_event.is_sale():
             return 0.0
         else:
-            return self.outcome.price
-            # return slr_reward(price=self.outcome.price,
-            #                   start_price=self.lookup[START_PRICE],
-            #                   meta=self.lookup[META],
-            #                   elapsed=self.outcome.dur,
-            #                   relist_count=self.relist_count,
-            #                   # TODO: change to self.discount_rate
-            #                   discount_rate=MONTHLY_DISCOUNT)
-
-    def get_info(self, agent_sale=False, lstg_complete=False):
-        # initialize vars
-        tuple_dict = {
-            "lstg": self.lookup[LSTG],
-            "thread": self.last_event.thread_id,
-            "relist_count": 0,  # TODO UPDATE
-        }
-
-        if not agent_sale:
-            tuple_dict['turn'] = self.last_event.turn - 1
-            if self.last_event.turn == 2:
-                tuple_dict['slr_time'] = None
-                tuple_dict['slr_delay'] = None
-                tuple_dict['slr_con'] = None
-        return EmptyTraj(traj_done=lstg_complete)
+            return self.outcome.price * (1-self.cut)
 
     @property
     def horizon(self):

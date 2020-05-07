@@ -6,7 +6,7 @@ from collections import namedtuple
 from rlpyt.envs.base import Env
 from rlpyt.spaces.composite import Composite
 from rlpyt.spaces.float_box import FloatBox
-from featnames import START_TIME
+from featnames import START_TIME, START_PRICE
 from constants import MONTH
 from rlenv.env_consts import LOOKUP, X_LSTG, ENV_LSTG_COUNT
 from rlenv.environments.EbayEnvironment import EbayEnvironment
@@ -15,6 +15,7 @@ from agent.agent_utils import get_con_set
 from agent.agent_consts import seller_groupings
 
 SellerObs = namedtuple("SellerObs", seller_groupings)
+InfoTraj = namedtuple("InfoTraj", ["months", "start_price"])
 
 
 class AgentEnvironment(EbayEnvironment, Env):
@@ -78,15 +79,18 @@ class AgentEnvironment(EbayEnvironment, Env):
         self._x_lstg_slice = self._x_lstg_slice[unsorted_ids, :]
         self._ix = 0
 
-    def agent_tuple(self, lstg_complete=None, agent_sale=None):
+    def agent_tuple(self, lstg_complete=None):
         obs = self.get_obs(sources=self.last_event.sources(),
                            turn=self.last_event.turn)
-        return (obs, self.get_reward(), lstg_complete,
-                self.get_info(agent_sale=agent_sale, lstg_complete=lstg_complete))
+        months = (self.last_event.priority - self.start_time) / MONTH
+        months += self.relist_count  # add in months without sale
+        info = InfoTraj(months=months, start_price=self.lookup[START_PRICE])
+        return obs, self.get_reward(), lstg_complete, info
 
     def get_obs(self, sources=None, turn=None):
         obs_dict = self.composer.build_input_dict(model_name=None,
-                                                  sources=sources, turn=turn)
+                                                  sources=sources,
+                                                  turn=turn)
         return SellerObs(**obs_dict)
 
     def con_from_action(self, action=None):
@@ -94,9 +98,6 @@ class AgentEnvironment(EbayEnvironment, Env):
 
     def get_reward(self):
         raise NotImplementedError()
-
-    def get_info(self, agent_sale=False, lstg_complete=False):
-        return NotImplementedError()
 
     @property
     def horizon(self):

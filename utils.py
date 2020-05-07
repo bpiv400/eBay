@@ -6,7 +6,8 @@ from compress_pickle import load
 from nets.FeedForward import FeedForward
 from nets.nets_consts import LAYERS_FULL
 from constants import MAX_DELAY, DAY, MONTH, SPLIT_PCTS, INPUT_DIR, \
-    MODEL_DIR, META_6, META_7, LISTING_FEE, PARTITIONS, PARTS_DIR
+    MODEL_DIR, META_6, META_7, LISTING_FEE, PARTITIONS, PARTS_DIR, \
+    MONTHLY_DISCOUNT
 
 
 def unpickle(file):
@@ -185,23 +186,28 @@ def get_cut(meta):
     return .09
 
 
-def slr_reward(price=None, start_price=None, meta=None, elapsed=None,
-               relist_count=None, discount_rate=None):
-    # eBay's cut
-    cut = get_cut(meta)
-    # total discount
-    months = (elapsed / MONTH) + relist_count
-    delta = discount_rate ** months
-    # gross from sale
-    gross = price * (1 - cut) * delta
-    # net after listing fees
-    net = gross - LISTING_FEE * (relist_count + 1)
-    # normalize by start_price and return
-    return net / start_price
-
-
-def byr_reward(price=None, start_price=None, value=None):
-    return value - (price / start_price)
+def slr_reward(months_to_sale=None, months_since_start=None,
+               sale_proceeds=None):
+    """
+    Discounts proceeds from sale and listing fees paid.
+    :param months_to_sale: months from listing start to sale
+    :param months_since_start: months since start of listing
+    :param sale_proceeds: sale price net of eBay cut
+    :return: time-discounted net proceeds
+    """
+    # time difference
+    td = months_to_sale - months_since_start
+    assert (td >= 0).all()
+    # discounted listing fees
+    M = np.ceil(months_to_sale) - np.ceil(months_since_start)
+    k = months_since_start % 1
+    delta = MONTHLY_DISCOUNT ** k
+    delta *= 1 - MONTHLY_DISCOUNT ** (M + 1)
+    delta /= 1 - MONTHLY_DISCOUNT
+    costs = LISTING_FEE * delta
+    # discounted sale price
+    discounted_proceeds = sale_proceeds * (MONTHLY_DISCOUNT ** td)
+    return discounted_proceeds - costs
 
 
 def get_model_predictions(m, x):

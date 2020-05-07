@@ -31,6 +31,3 @@ for m in INIT_VALUE_MODELS:
     NUM_OUT[m] = MAX_NORM_VALUE + 1
 for m in [CON_MODELS[-1]] + MSG_MODELS + DISCRIM_MODELS:
     NUM_OUT[m] = 1
-
-# monthly discount rate for agents
-MONTHLY_DISCOUNT = 0.995
