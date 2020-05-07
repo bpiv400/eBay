@@ -30,9 +30,9 @@ from rlenv.interfaces.PlayerInterface import SimulatedBuyer, SimulatedSeller
 from rlenv.interfaces.ArrivalInterface import ArrivalInterface
 from rlenv.environments.SellerEnvironment import SellerEnvironment
 
-WORKERS = 4
+WORKERS = 8
 ASSIGN_CPUS = True
-MULTIPLE_CPUS = True
+MULTIPLE_CPUS = False
 
 
 class RlTrainer:
@@ -102,7 +102,7 @@ class RlTrainer:
                                   model_kwargs=model_kwargs)
 
     def generate_sampler(self):
-        batch_b = len(self.worker_cpus) * 2
+        batch_b = len(self.workers_cpus) * 2
         batch_t = int(self.batch_params['batch_size'] / batch_b)
         if batch_t < 12:
             warnings.warn("Very few actions per environment")
