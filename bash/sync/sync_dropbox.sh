@@ -5,8 +5,8 @@ rclone copy ~/weka/eBay/inputs/date_feats.pkl dropbox:ebay/data/inputs
 rclone sync ~/weka/eBay/outputs/models dropbox:ebay/data/outputs/models --max-depth=1
 
 # grab all of 1 chunk and the test data from test_rl
-rclone copy ~/weka/eBay/envSimulator/test_rl/chunks/1.gz dropbox:ebay/data/envSimulator/test_rl/chunks
-rclone copy ~/weka/eBay/envSimulator/test_rl/chunks/1_test.gz dropbox:ebay/data/envSimulator/test_rl/chunks
+rclone copy ~/weka/eBay/partitions/test_rl/chunks/1.gz dropbox:ebay/data/partitions/test_rl/chunks
+rclone copy ~/weka/eBay/partitions/test_rl/chunks/1_test.gz dropbox:ebay/data/partitions/test_rl/chunks
 
 
 # agent training input files
