@@ -1,20 +1,27 @@
+import numpy as np
 import torch
 import torch.nn as nn
 from torch.nn.functional import softmax
 from utils import substitute_prefix
+from constants import MODEL_NORM
 from agent.agent_consts import PARAM_SHARING
 from agent.models.AgentModel import AgentModel
-from nets.nets_utils import (create_embedding_layers, create_groupings,
-                             FullyConnected)
-from nets.nets_consts import HIDDEN
+from nets.FeedForward import FeedForward
 
 
 class PgCategoricalAgentModel(AgentModel):
     """
-    Returns a vector of
+    Agent for eBay simulation
+
+    1. Fully separate networks for value and policy networks
+    2. Policy network outputs categorical probability distribution
+     over actions
+    3. Both networks use batch normalization
+    4. Both networks use dropout and share dropout hyperparameters
     """
-    def __init__(self, init_dict=None, sizes=None, norm=None,
-                 byr=False, delay=False, dropout=(0., 0.)):
+    def __init__(self, init_dict_policy=None, init_dict_value=None,
+                 sizes_policy=None, sizes_value=None, byr=False,
+                 delay=False, dropout=(0., 0.)):
         """
         kwargs:
             sizes: gives all sizes for the model, including size
@@ -23,36 +30,14 @@ class PgCategoricalAgentModel(AgentModel):
         """
         super(PgCategoricalAgentModel, self).__init__(byr=byr,
                                                       delay=delay,
-                                                      sizes=sizes)
-        # expand embeddings
-        groups = create_groupings(sizes=sizes)
-        # create embedding layers
-        self.nn0, total = create_embedding_layers(groups=groups,
-                                                  sizes=sizes,
-                                                  dropout=dropout[0],
-                                                  norm=norm)
-
-        if PARAM_SHARING:
-            # shared fully connected layers
-            self.nn1 = FullyConnected(total,
-                                      dropout=dropout[1],
-                                      norm=norm)
-            self.nn1_action = None
-            self.nn1_value = None
-        else:
-            self.nn1_action = FullyConnected(total,
-                                             dropout=dropout[1],
-                                             norm=norm)
-            self.nn1_value = FullyConnected(total,
-                                            dropout=dropout[1],
-                                            norm=norm)
-            self.nn1 = None
-        # output layers
-        self.output_value = nn.Linear(HIDDEN, 1)
-        self.output_action = nn.Linear(HIDDEN, sizes['out'])
-
-        if init_dict is not None:
-            self._init_policy(init_dict=init_dict)
+                                                      sizes=sizes_policy)
+        self.policy_network = FeedForward(sizes=sizes_policy, dropout=dropout,
+                                          norm=MODEL_NORM)
+        self.value_network = FeedForward(sizes=sizes_value, dropout=dropout,
+                                         norm=MODEL_NORM)
+        with torch.no_grad():
+            vals = np.arange(0, sizes_value['out'] / 100, 0.01)
+            self.values = nn.Parameter(torch.from_numpy(vals), requires_grad=False)
 
     def con(self, input_dict=None):
         logits, _ = self._forward_dict(input_dict=input_dict, compute_value=False)
@@ -60,30 +45,13 @@ class PgCategoricalAgentModel(AgentModel):
         return logits
 
     def _forward_dict(self, input_dict=None, compute_value=True):
-        elem = []
-        for k in self.nn0.keys():
-            elem.append(self.nn0[k](input_dict))
-        embedded = torch.cat(elem, dim=elem[0].dim() - 1)
-
-        # fully connected
-        if PARAM_SHARING:
-            hidden_action = self.nn1(embedded)
-            hidden_value = hidden_action
-        else:
-            hidden_action = self.nn1_action(embedded)
-            if compute_value:
-                hidden_value = self.nn1_value(embedded)
-            else:
-                hidden_value = None
-
+        logits = self.policy_network(input_dict)
         # value output head
         if compute_value:
-            v = self.output_value(hidden_value)
+            value_distribution = self.value_network(input_dict)
+            v = torch.matmul(value_distribution, self.values)
         else:
             v = None
-
-        # policy output head
-        logits = self.output_action(hidden_action)
 
         return logits, v
 

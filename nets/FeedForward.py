@@ -34,7 +34,7 @@ class FeedForward(nn.Module):
         elements = []
         for k in self.nn0.keys():
             elements.append(self.nn0[k](x))
-        hidden = self.nn1(torch.cat(elements, dim=1))
+        hidden = self.nn1(torch.cat(elements, dim=elements[0].dim() - 1))
         return self.output(hidden)
 
 

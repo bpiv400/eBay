@@ -132,8 +132,8 @@ TURN_FEATS = {
 SIM = 'simulation'
 OBS = 'data'
 
-# RL normalization type
-RL_NORM = 'weight'
+# normalization type
+MODEL_NORM = 'weight'
 
 # fee constants
 LISTING_FEE = .03
