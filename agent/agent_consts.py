@@ -35,8 +35,6 @@ FEAT_TYPE = "feat_id"
 NO_TIME = "no_time"
 ALL_FEATS = "all"
 
-PARAM_SHARING = True
-
 # command-line parameters
 AGENT_PARAMS = {'role': {'type': str,
                          'choices': [BYR_PREFIX, SLR_PREFIX],

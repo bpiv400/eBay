@@ -6,7 +6,8 @@ import torch
 from datetime import datetime as dt
 from utils import load_state_dict
 from agent.agent_consts import FULL_CON, QUARTILES, HALF, PARAM_DICTS
-from constants import RL_LOG_DIR
+from constants import (RL_LOG_DIR, SLR_VALUE_INIT, SLR_POLICY_INIT,
+                       BYR_VALUE_INIT, BYR_POLICY_INIT)
 
 
 def get_con_set(con):
@@ -130,3 +131,14 @@ def save_params(role=None,
 
     # save file
     dump(df, path)
+
+
+def get_network_name(byr=False, policy=False):
+    if policy and byr:
+        return BYR_POLICY_INIT
+    elif policy and not byr:
+        return SLR_POLICY_INIT
+    elif not policy and byr:
+        return BYR_VALUE_INIT
+    else:
+        return SLR_VALUE_INIT

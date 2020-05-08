@@ -84,7 +84,6 @@ class RlTrainer:
     def generate_agent(self):
         # initialize model keyword arguments
         model_kwargs = dict()
-        model_kwargs['sizes'] = self.env_params_train['composer'].agent_sizes
         model_kwargs[BYR_PREFIX] = self.agent_params['role'] == BYR_PREFIX
         model_kwargs[DELAY] = self.agent_params[DELAY]
 

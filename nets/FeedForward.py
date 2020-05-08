@@ -11,6 +11,7 @@ class FeedForward(nn.Module):
         :param dropout: tuple of dropout rates.
         """
         super(FeedForward, self).__init__()
+        self.sizes = sizes
 
         # expand embeddings
         groups = create_groupings(sizes)

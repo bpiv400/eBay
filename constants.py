@@ -133,7 +133,7 @@ SIM = 'simulation'
 OBS = 'data'
 
 # normalization type
-MODEL_NORM = 'weight'
+MODEL_NORM = 'batch'
 
 # fee constants
 LISTING_FEE = .03
