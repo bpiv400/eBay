@@ -140,7 +140,7 @@ def save_sizes(x, m):
 
     # for init models, save discount rate
     if m in INIT_VALUE_MODELS:
-        sizes['delta'] = MONTHLY_DISCOUNT
+        sizes['monthly_discount'] = MONTHLY_DISCOUNT
 
     # length of model output vector
     sizes['out'] = NUM_OUT[m]

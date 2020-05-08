@@ -2,7 +2,7 @@ import argparse
 from train.Trainer import Trainer
 from train.train_consts import INT_DROPOUT, DROPOUT_GRID
 from constants import SMALL, TRAIN_RL, TRAIN_MODELS, VALIDATION, \
-    DISCRIM_MODELS, INIT_VALUE_MODELS, INIT_POLICY_MODELS, RL_NORM
+    DISCRIM_MODELS, INIT_VALUE_MODELS, MODEL_NORM
 
 
 def main():
@@ -27,11 +27,8 @@ def main():
     # compute dropout
     dropout = tuple([float(i / INT_DROPOUT) for i in DROPOUT_GRID[args.dropout-1]])
 
-    # normalization
-    norm = RL_NORM if args.name in INIT_POLICY_MODELS else 'batch'
-
     # train model
-    trainer.train_model(dropout=dropout, norm=norm)
+    trainer.train_model(dropout=dropout, norm=MODEL_NORM)
 
 
 if __name__ == '__main__':

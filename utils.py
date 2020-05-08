@@ -6,8 +6,7 @@ from compress_pickle import load
 from nets.FeedForward import FeedForward
 from nets.nets_consts import LAYERS_FULL
 from constants import MAX_DELAY, DAY, MONTH, SPLIT_PCTS, INPUT_DIR, \
-    MODEL_DIR, META_6, META_7, LISTING_FEE, PARTITIONS, PARTS_DIR, \
-    MONTHLY_DISCOUNT
+    MODEL_DIR, META_6, META_7, LISTING_FEE, PARTITIONS, PARTS_DIR
 
 
 def unpickle(file):
@@ -187,27 +186,39 @@ def get_cut(meta):
 
 
 def slr_reward(months_to_sale=None, months_since_start=None,
-               sale_proceeds=None):
+               sale_proceeds=None, monthly_discount=None,
+               action_diff=None, action_discount=None, action_cost=None):
     """
     Discounts proceeds from sale and listing fees paid.
     :param months_to_sale: months from listing start to sale
     :param months_since_start: months since start of listing
     :param sale_proceeds: sale price net of eBay cut
-    :return: time-discounted net proceeds
+    :param monthly_discount: multiplicative factor on proceeds, by month
+    :param action_diff: number of actions from current state until sale
+    :param action_discount: multiplicative factor of proceeds, by action
+    :param action_cost: cost per action
+    :return: discounted net proceeds
     """
-    # time difference
-    td = months_to_sale - months_since_start
-    assert (td >= 0).all()
     # discounted listing fees
     M = np.ceil(months_to_sale) - np.ceil(months_since_start)
-    k = months_since_start % 1
-    delta = MONTHLY_DISCOUNT ** k
-    delta *= 1 - MONTHLY_DISCOUNT ** (M + 1)
-    delta /= 1 - MONTHLY_DISCOUNT
-    costs = LISTING_FEE * delta
-    # discounted sale price
-    discounted_proceeds = sale_proceeds * (MONTHLY_DISCOUNT ** td)
-    return discounted_proceeds - costs
+    if monthly_discount is not None:
+        k = months_since_start % 1
+        factor = (1 - monthly_discount ** (M+1)) / (1 - monthly_discount)
+        delta = (monthly_discount ** k) * factor
+        costs = LISTING_FEE * delta
+    else:
+        costs = LISTING_FEE * (M+1)
+    # add in action costs
+    if action_diff is not None and action_cost is not None:
+        costs += action_cost * action_diff
+    # discounted proceeds
+    if monthly_discount is not None:
+        months_diff = months_to_sale - months_since_start
+        assert (months_diff >= 0).all()
+        sale_proceeds *= monthly_discount ** months_diff
+    if action_diff is not None and action_discount is not None:
+        sale_proceeds *= action_discount ** action_diff
+    return sale_proceeds - costs
 
 
 def get_model_predictions(m, x):

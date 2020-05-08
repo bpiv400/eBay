@@ -132,14 +132,11 @@ TURN_FEATS = {
 SIM = 'simulation'
 OBS = 'data'
 
-# RL normalization type
-RL_NORM = 'weight'
+# normalization type
+MODEL_NORM = 'batch'
 
 # fee constants
 LISTING_FEE = .03
-
-# monthly discount rate for agents
-MONTHLY_DISCOUNT = 0.995
 
 # meta categories with sale fees != .09 * price
 META_7 = [21, 10]

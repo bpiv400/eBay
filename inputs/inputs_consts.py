@@ -17,6 +17,9 @@ INTERVAL = {1: HOUR,
 
 INTERVAL_COUNTS = {i: int(MAX_DELAY[i] / INTERVAL[i]) for i in INTERVAL.keys()}
 
+# monthly discount rate for agents
+MONTHLY_DISCOUNT = 0.995
+
 # size of model output
 NUM_OUT = dict()
 for m in ARRIVAL_MODELS[:-1]:

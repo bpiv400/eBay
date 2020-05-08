@@ -1,8 +1,10 @@
 import torch
+from torch.nn.utils import clip_grad_norm_
+from torch import optim
 import numpy as np
 from collections import namedtuple
 from rlpyt.agents.base import AgentInputs, AgentInputsRnn
-from rlpyt.algos.pg.base import PolicyGradientAlgo
+from rlpyt.algos.base import RlAlgorithm
 from rlpyt.utils.tensor import valid_mean
 from rlpyt.utils.buffer import buffer_to, buffer_method
 from rlpyt.utils.collections import namedarraytuple
@@ -26,7 +28,7 @@ OptInfo = namedtuple("OptInfo",
                       "cross_entropy"])
 
 
-class CrossEntropyPPO(PolicyGradientAlgo):
+class CrossEntropyPPO(RlAlgorithm):
     """
     Swaps entropy bonus with cross-entropy penalty, where cross-entropy
     is calculated using the policy from the initialized agent.
@@ -34,26 +36,17 @@ class CrossEntropyPPO(PolicyGradientAlgo):
 
     def __init__(
             self,
-            discount=1,
+            monthly_discount=0.995,
+            action_discount=1,
+            action_cost=0,
             learning_rate=0.001,
             value_loss_coeff=1.,
             cross_entropy_loss_coeff=1.,
             entropy_loss_coeff=0.01,
-            OptimCls=torch.optim.Adam,
-            optim_kwargs=None,
             clip_grad_norm=1.,
-            initial_optim_state_dict=None,
-            gae_lambda=1,
             minibatches=4,
-            epochs=4,
-            ratio_clip=0.1,
-            linear_lr_schedule=True,
-            normalize_advantage=False,
-            mid_batch_reset=True
+            ratio_clip=0.1
     ):
-        """Saves input settings."""
-        if optim_kwargs is None:
-            optim_kwargs = dict()
         save__init__args(locals())
 
         # output fields
@@ -61,19 +54,16 @@ class CrossEntropyPPO(PolicyGradientAlgo):
 
         # parameters to be definied later
         self._batch_size = None
-        self._ratio_clip = self.ratio_clip
-        self._value_loss_coeff = self.value_loss_coeff
-        self._entropy_loss_coeff = self.entropy_loss_coeff
+        self.agent = None
+        self.n_itr = None
+        self.batch_spec = None
+        self.optimizer = None
         self.lr_scheduler = None
         self.init_agent = None
 
-        # not implemented
-        if gae_lambda != 1:
-            raise NotImplementedError()
-        if discount != 1:
-            raise NotImplementedError()
-        if normalize_advantage:
-            raise NotImplementedError()
+        # for stepping down parameters later
+        self._ratio_clip = self.ratio_clip
+        self._entropy_loss_coeff = self.entropy_loss_coeff
 
     def step(self, itr):
         """
@@ -85,20 +75,24 @@ class CrossEntropyPPO(PolicyGradientAlgo):
 
     def initialize(self, *args, **kwargs):
         """
-        Extends base ``initialize()`` to initialize learning rate schedule, if
-        applicable.
+        Called by runner.
         """
-        super().initialize(*args, **kwargs)
+        self.agent = kwargs['agent']
+        self.n_itr = kwargs['n_itr']
+        self.batch_spec = kwargs['batch_spec']
 
         # init_agent new initialized agent
         self.init_agent = PgCategoricalAgentModel(
             **self.agent.model_kwargs).to(self.agent.device)
 
-        # original PPO initialization
+        # for logging
         self._batch_size = self.batch_spec.size // self.minibatches  # For logging.
-        if self.linear_lr_schedule:
-            self.lr_scheduler = torch.optim.lr_scheduler.LambdaLR(
-                optimizer=self.optimizer, lr_lambda=self.step)
+
+        # optimization
+        self.optimizer = optim.Adam(self.agent.parameters(),
+                                    lr=self.learning_rate)
+        self.lr_scheduler = optim.lr_scheduler.LambdaLR(
+            optimizer=self.optimizer, lr_lambda=self.step)
 
     @staticmethod
     def valid_from_done(done):
@@ -113,8 +107,7 @@ class CrossEntropyPPO(PolicyGradientAlgo):
         valid = torch.clamp(valid, max=1)
         return valid
 
-    @ staticmethod
-    def discount_return(reward=None, done=None, months=None):
+    def discount_return(self, reward=None, done=None, months=None):
         """
         Computes time-discounted sum of future rewards from each
         time-step to the end of the batch. Sum resets where `done`
@@ -126,25 +119,30 @@ class CrossEntropyPPO(PolicyGradientAlgo):
         :return tensor return_: time-discounted return.
         """
         dtype = reward.dtype  # cast new tensors to this data type
-        T = len(reward)  # number of time steps sampled by each env
-        N = reward.shape[-1]  # number of environments
+        T, N = reward.shape  # time steps, number of environments
 
         # initialize matrix of returns
         return_ = torch.zeros(reward.shape, dtype=dtype)
 
         # initialize variables that track sale outcomes
         months_to_sale = torch.tensor(1e8, dtype=dtype).expand(N)
+        action_diff = torch.zeros(N, dtype=dtype)
         sale_proceeds = torch.zeros(N, dtype=dtype)
 
         for t in reversed(range(T)):
             # update sale outcomes when sales are observed
             months_to_sale = months_to_sale * (1-done[t]) + months[t] * done[t]
+            action_diff = (action_diff + 1) * (1-done[t])
             sale_proceeds = sale_proceeds * (1-done[t]) + reward[t] * done[t]
 
             # discounted sale proceeds
             return_[t] += slr_reward(months_to_sale=months_to_sale,
                                      months_since_start=months[t],
-                                     sale_proceeds=sale_proceeds)
+                                     sale_proceeds=sale_proceeds,
+                                     monthly_discount=self.monthly_discount,
+                                     action_diff=action_diff,
+                                     action_discount=self.action_discount,
+                                     action_cost=self.action_cost)
 
         return return_
 
@@ -206,38 +204,32 @@ class CrossEntropyPPO(PolicyGradientAlgo):
             old_dist_info=samples.agent.agent_info.dist_info,
         )
 
-        # loop over algorithm epochs
+        # loop over minibatches
         T, B = samples.env.reward.shape[:2]
         opt_info = OptInfo(*([] for _ in range(len(OptInfo._fields))))
         batch_size = T * B
         mb_size = batch_size // self.minibatches
-        for _ in range(self.epochs):
-            for idxs in iterate_mb_idxs(batch_size, mb_size, shuffle=True):
-                T_idxs = idxs % T
-                B_idxs = idxs // T
-                self.optimizer.zero_grad()
-                loss, value_error, entropy, cross_entropy = self.loss(
-                    *loss_inputs[T_idxs, B_idxs])
-                loss.backward()
-                grad_norm = torch.nn.utils.clip_grad_norm_(
-                    self.agent.parameters(), self.clip_grad_norm)
-                self.optimizer.step()
+        for idxs in iterate_mb_idxs(batch_size, mb_size, shuffle=True):
+            T_idxs = idxs % T
+            B_idxs = idxs // T
+            self.optimizer.zero_grad()
+            loss, value_error, entropy, cross_entropy = self.loss(
+                *loss_inputs[T_idxs, B_idxs])
+            loss.backward()
+            grad_norm = clip_grad_norm_(self.agent.parameters(),
+                                        self.clip_grad_norm)
+            self.optimizer.step()
 
-                opt_info.loss.append(loss.item())
-                opt_info.gradNorm.append(grad_norm)
-                opt_info.value_error.append(value_error.item())
-                opt_info.entropy.append(entropy.item())
-                opt_info.cross_entropy.append(cross_entropy.item())
-                self.update_counter += 1
+            opt_info.loss.append(loss.item())
+            opt_info.gradNorm.append(grad_norm)
+            opt_info.value_error.append(value_error.item())
+            opt_info.entropy.append(entropy.item())
+            opt_info.cross_entropy.append(cross_entropy.item())
+            self.update_counter += 1
 
         # step down learning rate
-        if self.linear_lr_schedule:
-            self.lr_scheduler.step()
-            self.ratio_clip = self._ratio_clip * self.step(itr)
-
-        # step down value error penalty
-        self.value_loss_coeff = \
-            self._value_loss_coeff * self.step(itr+1)
+        self.lr_scheduler.step()
+        self.ratio_clip = self._ratio_clip * self.step(itr)
 
         # step down entropy bonus
         self.entropy_loss_coeff = \

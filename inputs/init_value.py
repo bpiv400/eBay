@@ -3,12 +3,12 @@ import pandas as pd
 from inputs.inputs_utils import save_files, get_x_thread
 from inputs.init_policy import calculate_remaining, \
     add_turn_indicators, get_x_offer, input_parameters
-from utils import load_file, init_x
+from utils import load_file, init_x, get_cut, slr_reward
+from inputs.inputs_consts import MONTHLY_DISCOUNT
 from constants import IDX, BYR_PREFIX, SLR_PREFIX, MONTH, \
     NO_ARRIVAL_CUTOFF, MAX_NORM_VALUE
 from featnames import INT_REMAINING, EXP, AUTO, CON, NORM, \
     META, START_PRICE, START_TIME
-from utils import get_cut, slr_reward
 
 
 def get_duration(offers, clock, lookup, role):
@@ -71,8 +71,9 @@ def process_inputs(part, role, delay):
 
     # discounted values
     values = slr_reward(months_to_sale=df.months_to_sale,
-                        months_since_start=df.months_since_start,
-                        sale_proceeds=df.sale_proceeds)
+                        months_since_start=df.months,
+                        sale_proceeds=df.sale_proceeds,
+                        monthly_discount=MONTHLY_DISCOUNT)
 
     # normalize by start price
     norm_values = values / lookup[START_PRICE].reindex(
