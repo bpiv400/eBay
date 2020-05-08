@@ -10,4 +10,3 @@ rclone copy dropbox:ebay/data/partitions/test_rl/chunks/1_test.gz partitions/tes
 
 # agent files
 rclone sync dropbox:ebay/data/agent/train agent/train
-rclone sync dropbox:ebay/data/agent/eval agent/eval

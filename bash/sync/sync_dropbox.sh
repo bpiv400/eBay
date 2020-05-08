@@ -11,4 +11,3 @@ rclone copy ~/weka/eBay/partitions/test_rl/chunks/1_test.gz dropbox:ebay/data/pa
 
 # agent training input files
 rclone sync ~/weka/eBay/agent/train dropbox:ebay/data/agent/train
-rclone sync ~/weka/eBay/agent/eval dropbox:ebay/data/agent/eval
