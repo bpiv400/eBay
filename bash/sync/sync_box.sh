@@ -9,5 +9,5 @@ rclone copy dropbox:ebay/data/envSimulator/test_rl/chunks/1.gz envSimulator/test
 rclone copy dropbox:ebay/data/envSimulator/test_rl/chunks/1_test.gz envSimulator/test_rl/chunks
 
 # agent files
-rclone copy dropbox:ebay/data/agent/train/seller.hdf5 agent/train
+rclone sync dropbox:ebay/data/agent/train agent/train
 rclone sync dropbox:ebay/data/agent/eval agent/eval

@@ -10,5 +10,5 @@ rclone copy ~/weka/eBay/envSimulator/test_rl/chunks/1_test.gz dropbox:ebay/data/
 
 
 # agent training input files
-rclone copy ~/weka/eBay/agent/train/seller.hdf5 dropbox:ebay/data/agent/train
+rclone sync ~/weka/eBay/agent/train dropbox:ebay/data/agent/train
 rclone sync ~/weka/eBay/agent/eval dropbox:ebay/data/agent/eval
