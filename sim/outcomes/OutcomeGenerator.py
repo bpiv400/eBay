@@ -1,3 +1,4 @@
+from rlenv.env_consts import SIM_DISCRIM_DIR
 from rlenv.Generator import SimulatorGenerator
 from sim.outcomes.OutcomeRecorder import OutcomeRecorder
 from datetime import datetime as dt
@@ -52,4 +53,4 @@ class OutcomeGenerator(SimulatorGenerator):
 
     @property
     def records_path(self):
-        return self.dir + '{}.gz'.format(self.chunk)
+        return '{}{}/{}.gz'.format(self.dir, SIM_DISCRIM_DIR, self.chunk)

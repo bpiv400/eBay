@@ -1,8 +1,8 @@
 from compress_pickle import load
-from simulator import SimulatorGenerator
+from rlenv.Generator import SimulatorGenerator
 from rlenv.test.LstgLog import LstgLog
 from rlenv.test.TestEnvironment import TestEnvironment
-from simulator import DiscrimRecorder
+from sim.outcomes.OutcomeRecorder import OutcomeRecorder
 from rlenv.env_utils import get_env_sim_subdir
 
 
@@ -13,7 +13,7 @@ class TestGenerator(SimulatorGenerator):
         self.test_data = None
 
     def generate_recorder(self):
-        return DiscrimRecorder(records_path="", verbose=self.verbose)
+        return OutcomeRecorder(records_path="", verbose=self.verbose)
 
     def load_chunk(self, chunk=None):
         super().load_chunk(chunk=chunk)

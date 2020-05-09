@@ -19,7 +19,7 @@ X_LSTG_FILENAME = 'x_lstg.gz'
 # partition subdir names
 SIM_CHUNKS_DIR = 'chunks'
 SIM_VALS_DIR = 'vals'
-SIM_DISCRIM_DIR = 'discrim'
+SIM_DISCRIM_DIR = 'outcomes'
 
 # holiday and day-of-week indicators, indexed by days since START
 DATE_FEATS = unpickle(INPUT_DIR + 'date_feats.pkl')

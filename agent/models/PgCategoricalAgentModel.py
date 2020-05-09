@@ -68,6 +68,7 @@ class PgCategoricalAgentModel(AgentModel):
         """
         :return: tuple of pi, v
         """
+        print(self.training)
         input_dict = observation._asdict()
         logits, v = self._forward_dict(input_dict=input_dict,
                                        compute_value=True)

@@ -4,7 +4,6 @@ import torch
 import numpy as np
 from compress_pickle import load
 from nets.FeedForward import FeedForward
-from nets.nets_consts import LAYERS_FULL
 from constants import MAX_DELAY, DAY, MONTH, SPLIT_PCTS, INPUT_DIR, \
     MODEL_DIR, META_6, META_7, LISTING_FEE, PARTITIONS, PARTS_DIR, \
     MONTHLY_DISCOUNT

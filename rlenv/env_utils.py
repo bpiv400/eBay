@@ -252,6 +252,8 @@ def load_chunk(base_dir=None, num=None, input_path=None):
     :param input_path: optional path to the chunk
     :return: (pd.Dataframe giving x_lstg, pd.DataFrame giving lookup)
     """
+    print(base_dir)
+    print(input_path)
     if input_path is None:
         input_path = '{}chunks/{}.gz'.format(base_dir, num)
     input_dict = load(input_path)
