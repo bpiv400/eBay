@@ -38,7 +38,6 @@ class CrossEntropyPPO(PolicyGradientAlgo):
             discount=1,
             lr_value=0.001,
             lr_policy=0.001,
-            value_loss_coeff=1.,
             cross_entropy_loss_coeff=1.,
             entropy_loss_coeff=0.01,
             OptimCls=torch.optim.Adam,
@@ -64,7 +63,6 @@ class CrossEntropyPPO(PolicyGradientAlgo):
         # parameters to be defined later
         self._batch_size = None
         self._ratio_clip = self.ratio_clip
-        self._value_loss_coeff = self.value_loss_coeff
         self._entropy_loss_coeff = self.entropy_loss_coeff
         self.lr_scheduler_value = None
         self.lr_scheduler_policy = None
@@ -267,10 +265,6 @@ class CrossEntropyPPO(PolicyGradientAlgo):
             self.lr_scheduler_policy.step()
             self.ratio_clip = self._ratio_clip * self.step(itr)
 
-        # step down value error penalty
-        self.value_loss_coeff = \
-            self._value_loss_coeff * self.step(itr+1)
-
         # step down entropy bonus
         self.entropy_loss_coeff = \
             self._entropy_loss_coeff * self.step(itr+1)
@@ -307,7 +301,6 @@ class CrossEntropyPPO(PolicyGradientAlgo):
 
         # loss from value estimation
         value_error = valid_mean(0.5 * (value - return_) ** 2, valid)
-        value_loss = self.value_loss_coeff * value_error
 
         # cross-entropy loss
         pi_0, _ = self.init_agent(*agent_inputs)
@@ -319,10 +312,10 @@ class CrossEntropyPPO(PolicyGradientAlgo):
         entropy_loss = - self.entropy_loss_coeff * entropy
 
         # total loss
-        loss = pi_loss + value_loss + cross_entropy_loss + entropy_loss
+        policy_loss = pi_loss + cross_entropy_loss + entropy_loss
 
         # cross-entropy replaces entropy
-        return loss, value_error, entropy, cross_entropy
+        return policy_loss, value_error, entropy, cross_entropy
 
     def optim_state_dict(self):
         return {

@@ -8,6 +8,9 @@ from agent.agent_utils import get_network_name
 from agent.models.AgentModel import AgentModel
 from nets.FeedForward import FeedForward
 
+VALUE_STANDARD = torch.from_numpy(np.arange(0, 0.95, 0.01)).float()
+VALUE_STANDARD = VALUE_STANDARD.to(torch.device('cuda'))
+
 
 class PgCategoricalAgentModel(AgentModel):
     """
@@ -75,6 +78,10 @@ class PgCategoricalAgentModel(AgentModel):
                 input_dict[elem_name] = elem.unsqueeze(0)
             if self.training:
                 self.eval()
+
+        # temporary check
+        # if self.training:
+        #     torch.all(VALUE_STANDARD.eq(self.values.data))
 
         logits, v = self._forward_dict(input_dict=input_dict,
                                        compute_value=True)
