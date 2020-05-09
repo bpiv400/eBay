@@ -248,8 +248,8 @@ class CrossEntropyPPO(PolicyGradientAlgo):
                     *loss_inputs[T_idxs, B_idxs])
                 loss.backward()
                 grad_norm = torch.nn.utils.clip_grad_norm_(
-                    itertools.chain(self.agent.value_params,
-                                    self.agent.policy_params),
+                    itertools.chain(self.agent.value_parameters(),
+                                    self.agent.policy_parameters()),
                     self.clip_grad_norm)
                 self.optimizer_policy.step()
                 self.optimizer_value.step()
@@ -323,3 +323,9 @@ class CrossEntropyPPO(PolicyGradientAlgo):
 
         # cross-entropy replaces entropy
         return loss, value_error, entropy, cross_entropy
+
+    def optim_state_dict(self):
+        return {
+            'value': self.optimizer_value.state_dict(),
+            'policy': self.optimizer_policy.state_dict()
+        }
