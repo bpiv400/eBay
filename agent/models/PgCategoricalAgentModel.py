@@ -53,15 +53,16 @@ class PgCategoricalAgentModel(AgentModel):
         return logits
 
     def _forward_dict(self, input_dict=None, compute_value=True):
-        logits = self.policy_network(input_dict)
+        pi_logits = self.policy_network(input_dict)
         # value output head
         if compute_value:
-            value_distribution = self.value_network(input_dict)
+            v_logits = self.value_network(input_dict)
+            value_distribution = softmax(v_logits, dim=v_logits.dim() - 1)
             v = torch.matmul(value_distribution, self.values)
         else:
             v = None
 
-        return logits, v
+        return pi_logits, v
 
     def forward(self, observation, prev_action, prev_reward):
         """
