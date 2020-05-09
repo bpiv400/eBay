@@ -1,3 +1,4 @@
+import itertools
 import torch
 import numpy as np
 from collections import namedtuple
@@ -35,7 +36,8 @@ class CrossEntropyPPO(PolicyGradientAlgo):
     def __init__(
             self,
             discount=1,
-            learning_rate=0.001,
+            lr_value=0.001,
+            lr_policy=0.001,
             value_loss_coeff=1.,
             cross_entropy_loss_coeff=1.,
             entropy_loss_coeff=0.01,
@@ -59,13 +61,20 @@ class CrossEntropyPPO(PolicyGradientAlgo):
         # output fields
         self.opt_info_fields = tuple(f for f in OptInfo._fields)
 
-        # parameters to be definied later
+        # parameters to be defined later
         self._batch_size = None
         self._ratio_clip = self.ratio_clip
         self._value_loss_coeff = self.value_loss_coeff
         self._entropy_loss_coeff = self.entropy_loss_coeff
-        self.lr_scheduler = None
+        self.lr_scheduler_value = None
+        self.lr_scheduler_policy = None
+        self.optimizer_value = None
+        self.optimizer_policy = None
         self.init_agent = None
+        self.agent = None
+        self.n_itr = None
+        self.batch_spec = None
+        self.mid_batch_reset = None
 
         # not implemented
         if gae_lambda != 1:
@@ -83,22 +92,38 @@ class CrossEntropyPPO(PolicyGradientAlgo):
         """
         return float((self.n_itr - itr) / self.n_itr)
 
-    def initialize(self, *args, **kwargs):
+    def initialize(self, agent, n_itr, batch_spec, mid_batch_reset=False,
+                   examples=None, world_size=1, rank=0):
         """
-        Extends base ``initialize()`` to initialize learning rate schedule, if
-        applicable.
+        Build the torch optimizer and store other input attributes. Params
+        ``batch_spec`` and ``examples`` are unused.
         """
-        super().initialize(*args, **kwargs)
+        self.optimizer_value = self.OptimCls(agent.value_params,
+                                             lr=self.lr_value,
+                                             **self.optim_kwargs)
+        self.optimizer_policy = self.OptimCls(agent.policy_params,
+                                              lr=self.lr_policy,
+                                              **self.optim_kwargs)
+
+        if self.initial_optim_state_dict is not None:
+            raise NotImplementedError("Doesn't expect warm start optimizer")
+        self.agent = agent
+        self.n_itr = n_itr
+        self.batch_spec = batch_spec
+        self.mid_batch_reset = mid_batch_reset
 
         # init_agent new initialized agent
         self.init_agent = PgCategoricalAgentModel(
             **self.agent.model_kwargs).to(self.agent.device)
 
         # original PPO initialization
-        self._batch_size = self.batch_spec.size // self.minibatches  # For logging.
+        # For logging
+        self._batch_size = self.batch_spec.size // self.minibatches
         if self.linear_lr_schedule:
-            self.lr_scheduler = torch.optim.lr_scheduler.LambdaLR(
-                optimizer=self.optimizer, lr_lambda=self.step)
+            self.lr_scheduler_value = torch.optim.lr_scheduler.LambdaLR(
+                optimizer=self.optimizer_value, lr_lambda=self.step)
+            self.lr_scheduler_policy = torch.optim.lr_scheduler.LambdaLR(
+                optimizer=self.optimizer_policy, lr_lambda=self.step)
 
     @staticmethod
     def valid_from_done(done):
@@ -215,13 +240,19 @@ class CrossEntropyPPO(PolicyGradientAlgo):
             for idxs in iterate_mb_idxs(batch_size, mb_size, shuffle=True):
                 T_idxs = idxs % T
                 B_idxs = idxs // T
-                self.optimizer.zero_grad()
+                self.optimizer_value.zero_grad()
+                self.optimizer_policy.zero_grad()
+                self.agent.zero_values_grad()
+
                 loss, value_error, entropy, cross_entropy = self.loss(
                     *loss_inputs[T_idxs, B_idxs])
                 loss.backward()
                 grad_norm = torch.nn.utils.clip_grad_norm_(
-                    self.agent.parameters(), self.clip_grad_norm)
-                self.optimizer.step()
+                    itertools.chain(self.agent.value_params,
+                                    self.agent.policy_params),
+                    self.clip_grad_norm)
+                self.optimizer_policy.step()
+                self.optimizer_value.step()
 
                 opt_info.loss.append(loss.item())
                 opt_info.gradNorm.append(grad_norm)
@@ -232,7 +263,8 @@ class CrossEntropyPPO(PolicyGradientAlgo):
 
         # step down learning rate
         if self.linear_lr_schedule:
-            self.lr_scheduler.step()
+            self.lr_scheduler_value.step()
+            self.lr_scheduler_policy.step()
             self.ratio_clip = self._ratio_clip * self.step(itr)
 
         # step down value error penalty

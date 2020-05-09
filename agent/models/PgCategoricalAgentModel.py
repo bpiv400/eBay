@@ -43,6 +43,11 @@ class PgCategoricalAgentModel(AgentModel):
     def policy_params(self):
         return self.policy_network.parameters()
 
+    def zero_values_grad(self):
+        if self.values.grad is not None:
+            self.values.grad.detach_()
+            self.values.grad.zero_()
+
     def con(self, input_dict=None):
         logits, _ = self._forward_dict(input_dict=input_dict, compute_value=False)
         logits = logits.squeeze()
