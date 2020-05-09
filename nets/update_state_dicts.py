@@ -6,7 +6,7 @@ to the new structure where it's called output
 import argparse
 import os
 import torch
-from constants import MODELS, PREFIX
+from constants import MODELS, PREFIX, MODEL_DIR
 from utils import load_state_dict, load_sizes
 from nets.nets_consts import LAYERS_FULL
 from nets.FeedForward import FeedForward
@@ -18,10 +18,14 @@ def update_dicts():
         os.mkdir(BACKUP_DIR)
     for model in MODELS:
         state_dict = load_state_dict(model)
-        backup_path = '{}{}.net'.format(BACKUP_DIR, model)
+        backup_path = get_backup_path(model)
         torch.save(state_dict, backup_path)
         fully_connected_compat(state_dict=state_dict)
         check_compat(model_name=model, state_dict=state_dict)
+
+
+def get_backup_path(model):
+    return '{}{}.net'.format(BACKUP_DIR, model)
 
 
 def check_compat(model_name=None, state_dict=None):
@@ -68,18 +72,25 @@ def substitute_prefix(old_prefix=None, new_prefix=None, state_dict=None):
 
 
 def replace_dicts():
-    pass
+    for model in MODELS:
+        curr_path = get_backup_path(model)
+        state_dict = torch.load(curr_path, map_location=torch.device('cpu'))
+        standard_path = '{}{}.net'.format(MODEL_DIR, model)
+        fully_connected_compat(state_dict=state_dict)
+        check_compat(model_name=model, state_dict=state_dict)
+        torch.save(state_dict, standard_path)
 
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--step', type=str, default=1)
+    parser.add_argument('--step', type=int, default=1)
     step = parser.parse_args().step
     if step == 1:
         update_dicts()
         print('Done storing backups')
     else:
         replace_dicts()
+        print('Done replacement')
 
 
 if __name__ == '__main__':
