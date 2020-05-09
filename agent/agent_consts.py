@@ -63,7 +63,8 @@ PPO_PARAMS = {'mbsize': {'type': int, 'default': 512},
               'discount': {'type': float, 'default': 1.},
               'gae_lambda': {'type': float, 'default': 1.},
               'clip_grad_norm': {'type': float, 'default': 1.},
-              'learning_rate': {'type': float, 'default': .001}}
+              'lr_policy': {'type': float, 'default': .001},
+              'lr_value': {'type': float, 'default': .001}}
 
 PARAM_DICTS = [AGENT_PARAMS, BATCH_PARAMS, PPO_PARAMS]
 
