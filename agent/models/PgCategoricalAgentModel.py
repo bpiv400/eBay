@@ -33,14 +33,13 @@ class PgCategoricalAgentModel(AgentModel):
         self.value_network = self._init_network(policy=False)
         with torch.no_grad():
             vals = np.arange(0, self.value_network.sizes['out'] / 100, 0.01)
-            self.values = nn.Parameter(torch.from_numpy(vals), requires_grad=False)
+            self.values = nn.Parameter(torch.from_numpy(vals).float(),
+                                       requires_grad=False)
 
-    @property
-    def value_params(self):
+    def value_parameters(self):
         return self.value_network.parameters()
 
-    @property
-    def policy_params(self):
+    def policy_parameters(self):
         return self.policy_network.parameters()
 
     def zero_values_grad(self):
@@ -68,8 +67,14 @@ class PgCategoricalAgentModel(AgentModel):
         """
         :return: tuple of pi, v
         """
-        print(self.training)
+        # setup input dictionary and fix dimensionality
         input_dict = observation._asdict()
+        if input_dict['lstg'].dim() == 1:
+            for elem_name, elem in input_dict.items():
+                input_dict[elem_name] = elem.unsqueeze(0)
+            if self.training:
+                self.eval()
+
         logits, v = self._forward_dict(input_dict=input_dict,
                                        compute_value=True)
 

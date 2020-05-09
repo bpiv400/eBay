@@ -98,10 +98,10 @@ class CrossEntropyPPO(PolicyGradientAlgo):
         Build the torch optimizer and store other input attributes. Params
         ``batch_spec`` and ``examples`` are unused.
         """
-        self.optimizer_value = self.OptimCls(agent.value_params,
+        self.optimizer_value = self.OptimCls(agent.value_parameters(),
                                              lr=self.lr_value,
                                              **self.optim_kwargs)
-        self.optimizer_policy = self.OptimCls(agent.policy_params,
+        self.optimizer_policy = self.OptimCls(agent.policy_parameters(),
                                               lr=self.lr_policy,
                                               **self.optim_kwargs)
 

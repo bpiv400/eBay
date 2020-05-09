@@ -8,7 +8,7 @@ import multiprocessing as mp
 import warnings
 import torch
 from agent.CrossEntropyPPO import CrossEntropyPPO
-from rlpyt.agents.pg.categorical import CategoricalPgAgent
+from agent.SplitCategoricalPgAgent import SplitCategoricalPgAgent
 from rlpyt.runners.minibatch_rl import MinibatchRl
 from rlpyt.samplers.serial.sampler import SerialSampler
 from rlpyt.samplers.parallel.cpu.sampler import CpuSampler
@@ -87,8 +87,8 @@ class RlTrainer:
         model_kwargs[DELAY] = self.agent_params[DELAY]
         model_kwargs[DROPOUT] = tuple(self.agent_params[DROPOUT])
 
-        return CategoricalPgAgent(ModelCls=PgCategoricalAgentModel,
-                                  model_kwargs=model_kwargs)
+        return SplitCategoricalPgAgent(ModelCls=PgCategoricalAgentModel,
+                                       model_kwargs=model_kwargs)
 
     def generate_sampler(self):
         batch_b = len(self.workers_cpus) * 2
