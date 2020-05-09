@@ -1,4 +1,4 @@
-from constants import REINFORCE_DIR, BYR_PREFIX, SLR_PREFIX
+from constants import REINFORCE_DIR, BYR_PREFIX, SLR_PREFIX, DROPOUT
 
 # files
 SELLER_TRAIN_INPUT = REINFORCE_DIR + 'train/seller.hdf5'
@@ -40,6 +40,10 @@ AGENT_PARAMS = {'role': {'type': str,
                          'choices': [BYR_PREFIX, SLR_PREFIX],
                          'default': SLR_PREFIX},
                 'delay': {'type': bool, 'default': False},
+                DROPOUT: {'nargs': 2,
+                          'type': float,
+                          'default': [0.0, 0.0]
+                          },
                 'feat_id': {'type': str,
                             'choices': [ALL_FEATS, NO_TIME],
                             'default': ALL_FEATS},

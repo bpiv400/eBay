@@ -7,6 +7,7 @@ from featnames import DELAY, CON, MSG
 SLR_PREFIX = 'slr'
 BYR_PREFIX = 'byr'
 ARRIVAL_PREFIX = 'arrival'
+DROPOUT = 'dropout'
 
 # count concessions within this range as 1/2
 TOL_HALF = 0.02

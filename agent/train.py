@@ -17,12 +17,10 @@ from rlpyt.samplers.serial.sampler import SerialEvalCollector
 from rlpyt.samplers.parallel.cpu.collectors import CpuEvalCollector
 from rlpyt.utils.logging.context import logger_context
 from featnames import DELAY
-from constants import RL_LOG_DIR, BYR_PREFIX, \
-    SLR_POLICY_INIT, BYR_POLICY_INIT, PARTS_DIR, TRAIN_RL
+from constants import RL_LOG_DIR, BYR_PREFIX, PARTS_DIR, TRAIN_RL, DROPOUT
 from agent.agent_consts import SELLER_TRAIN_INPUT, AGENT_STATE, \
     PARAM_DICTS, AGENT_PARAMS, BATCH_PARAMS, PPO_PARAMS, THREADS_PER_PROC
-from agent.agent_utils import gen_run_id, save_params, \
-    load_init_model, detect_norm
+from agent.agent_utils import gen_run_id, save_params
 from agent.AgentComposer import AgentComposer
 from agent.models.PgCategoricalAgentModel import PgCategoricalAgentModel
 from rlenv.env_utils import load_chunk
@@ -30,8 +28,9 @@ from rlenv.interfaces.PlayerInterface import SimulatedBuyer, SimulatedSeller
 from rlenv.interfaces.ArrivalInterface import ArrivalInterface
 from rlenv.environments.SellerEnvironment import SellerEnvironment
 
-WORKERS = 8
-ASSIGN_CPUS = True
+# remember to deprecate these
+WORKERS = 12
+ASSIGN_CPUS = False
 MULTIPLE_CPUS = False
 
 
@@ -86,16 +85,7 @@ class RlTrainer:
         model_kwargs = dict()
         model_kwargs[BYR_PREFIX] = self.agent_params['role'] == BYR_PREFIX
         model_kwargs[DELAY] = self.agent_params[DELAY]
-
-        # load simulator model to initialize policy
-        if model_kwargs[BYR_PREFIX]:
-            init_model = BYR_POLICY_INIT
-        else:
-            init_model = SLR_POLICY_INIT
-        init_dict = load_init_model(name=init_model,
-                                    size=model_kwargs['sizes']['out'])
-        model_kwargs['norm'] = detect_norm(init_dict)
-        model_kwargs['init_dict'] = init_dict
+        model_kwargs[DROPOUT] = tuple(self.agent_params[DROPOUT])
 
         return CategoricalPgAgent(ModelCls=PgCategoricalAgentModel,
                                   model_kwargs=model_kwargs)
