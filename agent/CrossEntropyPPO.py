@@ -20,7 +20,7 @@ LossInputs = namedarraytuple("LossInputs",
                               "valid",
                               "old_dist_info"])
 OptInfo = namedtuple("OptInfo",
-                     ["loss",
+                     ["policy_loss",
                       "gradNorm",
                       "value_error",
                       "entropy",
@@ -136,7 +136,7 @@ class CrossEntropyPPO(PolicyGradientAlgo):
         valid = torch.clamp(valid, max=1)
         return valid
 
-    @ staticmethod
+    @staticmethod
     def discount_return(reward=None, done=None, months=None):
         """
         Computes time-discounted sum of future rewards from each
@@ -252,7 +252,7 @@ class CrossEntropyPPO(PolicyGradientAlgo):
                 self.optimizer_policy.step()
                 self.optimizer_value.step()
 
-                opt_info.loss.append(loss.item())
+                opt_info.policy_loss.append(loss.item())
                 opt_info.gradNorm.append(grad_norm)
                 opt_info.value_error.append(value_error.item())
                 opt_info.entropy.append(entropy.item())
