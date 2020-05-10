@@ -20,7 +20,7 @@ from featnames import DELAY
 from constants import RL_LOG_DIR, BYR_PREFIX, PARTS_DIR, TRAIN_RL, DROPOUT
 from agent.agent_consts import SELLER_TRAIN_INPUT, AGENT_STATE, \
     PARAM_DICTS, AGENT_PARAMS, BATCH_PARAMS, PPO_PARAMS, THREADS_PER_PROC
-from agent.agent_utils import gen_run_id, save_params
+from agent.agent_utils import gen_run_id, save_params, sampling_process
 from agent.AgentComposer import AgentComposer
 from agent.models.PgCategoricalAgentModel import PgCategoricalAgentModel
 from rlenv.env_utils import load_chunk
@@ -120,6 +120,7 @@ class RlTrainer:
                 eval_CollectorCls=CpuEvalCollector,
                 eval_env_kwargs={},
                 eval_max_steps=50,
+                worker_process=sampling_process
             )
 
     def generate_runner(self):

@@ -1,9 +1,12 @@
 import os
+from datetime import datetime as dt
 from compress_pickle import load, dump
 import numpy as np
 import pandas as pd
 import torch
-from datetime import datetime as dt
+from rlpyt.samplers.parallel.worker import initialize_worker
+from rlpyt.utils.collections import AttrDict
+from rlpyt.utils.seed import set_envs_seeds
 from utils import load_state_dict
 from agent.agent_consts import FULL_CON, QUARTILES, HALF, PARAM_DICTS
 from constants import (RL_LOG_DIR, SLR_VALUE_INIT, SLR_POLICY_INIT,
@@ -142,3 +145,53 @@ def get_network_name(byr=False, policy=False):
         return BYR_VALUE_INIT
     else:
         return SLR_VALUE_INIT
+
+
+def sampling_process(common_kwargs, worker_kwargs):
+    """Target function used for forking parallel worker processes in the
+    samplers. After ``initialize_worker()``, it creates the specified number
+    of environment instances and gives them to the collector when
+    instantiating it.  It then calls collector startup methods for
+    environments and agent.  If applicable, instantiates evaluation
+    environment instances and evaluation collector.
+    Then enters infinite loop, waiting for signals from master to collect
+    training samples or else run evaluation, until signaled to exit.
+    """
+    c, w = AttrDict(**common_kwargs), AttrDict(**worker_kwargs)
+    print(w.rank)
+    print(list(common_kwargs.keys()))
+    initialize_worker(w.rank, w.seed, w.cpus, c.torch_threads)
+    envs = [c.EnvCls(**c.env_kwargs) for _ in range(w.n_envs)] # edit this
+    set_envs_seeds(envs, w.seed)
+
+    collector = c.CollectorCls(
+        rank=w.rank,
+        envs=envs,
+        samples_np=w.samples_np,
+        batch_T=c.batch_T,
+        TrajInfoCls=c.TrajInfoCls,
+        agent=c.get("agent", None),  # Optional depending on parallel setup.
+        sync=w.get("sync", None),
+        step_buffer_np=w.get("step_buffer_np", None),
+        global_B=c.get("global_B", 1),
+        env_ranks=w.get("env_ranks", None),
+    )
+    agent_inputs, traj_infos = collector.start_envs(c.max_decorrelation_steps)
+    collector.start_agent()
+
+
+    ctrl = c.ctrl
+    ctrl.barrier_out.wait()
+    while True:
+        collector.reset_if_needed(agent_inputs)  # Outside barrier?
+        ctrl.barrier_in.wait()
+        if ctrl.quit.value:
+            break
+        agent_inputs, traj_infos, completed_infos = collector.collect_batch(
+            agent_inputs, traj_infos, ctrl.itr.value)
+        for info in completed_infos:
+            c.traj_infos_queue.put(info)
+        ctrl.barrier_out.wait()
+
+    for env in envs:
+        env.close()

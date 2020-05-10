@@ -2,10 +2,10 @@ import itertools
 import torch
 import numpy as np
 from collections import namedtuple
-from rlpyt.agents.base import AgentInputs, AgentInputsRnn
+from rlpyt.agents.base import AgentInputs
 from rlpyt.algos.pg.base import PolicyGradientAlgo
 from rlpyt.utils.tensor import valid_mean
-from rlpyt.utils.buffer import buffer_to, buffer_method
+from rlpyt.utils.buffer import buffer_to
 from rlpyt.utils.collections import namedarraytuple
 from rlpyt.utils.quick_args import save__init__args
 from rlpyt.utils.misc import iterate_mb_idxs
