@@ -49,8 +49,7 @@ AGENT_PARAMS = {'role': {'type': str,
                              'choices': [FULL_CON, QUARTILES, HALF],
                              'default': FULL_CON}}
 
-BATCH_PARAMS = {'batch_size': {'type': int, 'default': 2 ** 12},
-                'batch_count': {'type': int, 'default': 10}}
+BATCH_PARAMS = {'batch_size': {'type': int, 'default': 2 ** 12}}
 
 PPO_PARAMS = {'mbsize': {'type': int, 'default': 512},
               'cross_entropy_loss_coeff': {'type': float, 'default': 1.},
@@ -58,9 +57,13 @@ PPO_PARAMS = {'mbsize': {'type': int, 'default': 512},
               'value_loss_coeff': {'type': float, 'default': 1.},
               'ratio_clip': {'type': float, 'default': .1},
               'clip_grad_norm': {'type': float, 'default': 1.},
-              'learning_rate': {'type': float, 'default': .001}}
+              'learning_rate': {'type': float, 'default': .001},
+              'patience': {'type': float, 'default': 1}}
 
 PARAM_DICTS = [AGENT_PARAMS, BATCH_PARAMS, PPO_PARAMS]
 
 # multi-processing parameters
 THREADS_PER_PROC = 1
+
+# final learning rate
+LR1 = 1e-7

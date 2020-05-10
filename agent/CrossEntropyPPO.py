@@ -1,7 +1,8 @@
 import torch
 from torch.nn.utils import clip_grad_norm_
-from torch import optim
+from torch.optim import Adam, lr_scheduler
 import numpy as np
+from datetime import datetime as dt
 from collections import namedtuple
 from rlpyt.agents.base import AgentInputs, AgentInputsRnn
 from rlpyt.algos.base import RlAlgorithm
@@ -40,6 +41,7 @@ class CrossEntropyPPO(RlAlgorithm):
             action_discount=1,
             action_cost=0,
             learning_rate=0.001,
+            patience=2,
             value_loss_coeff=1.,
             cross_entropy_loss_coeff=1.,
             entropy_loss_coeff=0.01,
@@ -55,30 +57,16 @@ class CrossEntropyPPO(RlAlgorithm):
         # parameters to be definied later
         self._batch_size = None
         self.agent = None
-        self.n_itr = None
         self.batch_spec = None
         self.optimizer = None
         self.lr_scheduler = None
         self.init_agent = None
-
-        # for stepping down parameters later
-        self._ratio_clip = self.ratio_clip
-        self._entropy_loss_coeff = self.entropy_loss_coeff
-
-    def step(self, itr):
-        """
-        Returns a multipicative factor that decreases linearly with itr.
-        :param int itr: iteration
-        :return float: coefficient on initial parameter value
-        """
-        return float((self.n_itr - itr) / self.n_itr)
 
     def initialize(self, *args, **kwargs):
         """
         Called by runner.
         """
         self.agent = kwargs['agent']
-        self.n_itr = kwargs['n_itr']
         self.batch_spec = kwargs['batch_spec']
 
         # init_agent new initialized agent
@@ -89,10 +77,10 @@ class CrossEntropyPPO(RlAlgorithm):
         self._batch_size = self.batch_spec.size // self.minibatches  # For logging.
 
         # optimization
-        self.optimizer = optim.Adam(self.agent.parameters(),
-                                    lr=self.learning_rate)
-        self.lr_scheduler = optim.lr_scheduler.LambdaLR(
-            optimizer=self.optimizer, lr_lambda=self.step)
+        self.optimizer = Adam(self.agent.parameters(),
+                              lr=self.learning_rate)
+        self.lr_scheduler = lr_scheduler.ReduceLROnPlateau(
+            optimizer=self.optimizer, patience=self.patience)
 
     @staticmethod
     def valid_from_done(done):
@@ -209,12 +197,14 @@ class CrossEntropyPPO(RlAlgorithm):
         opt_info = OptInfo(*([] for _ in range(len(OptInfo._fields))))
         batch_size = T * B
         mb_size = batch_size // self.minibatches
+        total_loss = torch.tensor(0.)
         for idxs in iterate_mb_idxs(batch_size, mb_size, shuffle=True):
             T_idxs = idxs % T
             B_idxs = idxs // T
             self.optimizer.zero_grad()
             loss, value_error, entropy, cross_entropy = self.loss(
                 *loss_inputs[T_idxs, B_idxs])
+            total_loss += loss
             loss.backward()
             grad_norm = clip_grad_norm_(self.agent.parameters(),
                                         self.clip_grad_norm)
@@ -227,15 +217,14 @@ class CrossEntropyPPO(RlAlgorithm):
             opt_info.cross_entropy.append(cross_entropy.item())
             self.update_counter += 1
 
-        # step down learning rate
-        self.lr_scheduler.step()
-        self.ratio_clip = self._ratio_clip * self.step(itr)
-
-        # step down entropy bonus
-        self.entropy_loss_coeff = \
-            self._entropy_loss_coeff * self.step(itr+1)
+        self.lr_scheduler.step(total_loss)
 
         return opt_info
+
+    @property
+    def lr(self):
+        for param_group in self.optimizer.param_groups:
+            return param_group['lr']
 
     @staticmethod
     def mean_kl(p, q, valid=None, eps=1e-8):

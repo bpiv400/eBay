@@ -72,7 +72,7 @@ class SellerEnvironment(AgentEnvironment):
         if lstg_complete:
             return self.agent_tuple(lstg_complete=lstg_complete)
         self.last_event = None
-        # run until the item sells
+        # previously the run method
         while True:
             event, lstg_complete = super().run()
             self.last_event = event

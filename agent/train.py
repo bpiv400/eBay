@@ -8,6 +8,7 @@ import multiprocessing as mp
 import warnings
 import torch
 from agent.CrossEntropyPPO import CrossEntropyPPO
+from agent.EBayRunner import EBayMinibatchRl
 from rlpyt.agents.pg.categorical import CategoricalPgAgent
 from rlpyt.runners.minibatch_rl import MinibatchRl
 from rlpyt.samplers.serial.sampler import SerialSampler
@@ -134,12 +135,11 @@ class RlTrainer:
             )
 
     def generate_runner(self):
-        runner = MinibatchRl(algo=self.generate_algorithm(),
-                             agent=self.generate_agent(),
-                             sampler=self.sampler,
-                             n_steps=self.batch_params['batch_size'] * self.batch_params['batch_count'],
-                             log_interval_steps=self.batch_params['batch_size'],
-                             affinity=self.generate_affinity())
+        runner = EBayMinibatchRl(algo=self.generate_algorithm(),
+                                 agent=self.generate_agent(),
+                                 sampler=self.sampler,
+                                 log_interval_steps=self.batch_params['batch_size'],
+                                 affinity=self.generate_affinity())
         return runner
 
     def generate_affinity(self):
