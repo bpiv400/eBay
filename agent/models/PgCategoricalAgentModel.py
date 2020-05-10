@@ -8,9 +8,6 @@ from agent.agent_utils import get_network_name
 from agent.models.AgentModel import AgentModel
 from nets.FeedForward import FeedForward
 
-VALUE_STANDARD = torch.from_numpy(np.arange(0, 0.95, 0.01)).float()
-VALUE_STANDARD = VALUE_STANDARD.to(torch.device('cuda'))
-
 
 class PgCategoricalAgentModel(AgentModel):
     """
