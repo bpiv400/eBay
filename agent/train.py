@@ -12,9 +12,7 @@ from agent.EBayRunner import EBayMinibatchRl
 from agent.SplitCategoricalPgAgent import SplitCategoricalPgAgent
 from rlpyt.samplers.serial.sampler import SerialSampler
 from rlpyt.samplers.parallel.cpu.sampler import CpuSampler
-from rlpyt.samplers.parallel.cpu.collectors import CpuResetCollector
-from rlpyt.samplers.serial.sampler import SerialEvalCollector
-from rlpyt.samplers.parallel.cpu.collectors import CpuEvalCollector
+from rlpyt.samplers.parallel.gpu.sampler import GpuSampler
 from rlpyt.utils.logging.context import logger_context
 from featnames import DELAY
 from constants import RL_LOG_DIR, BYR_PREFIX, PARTS_DIR, TRAIN_RL, DROPOUT
@@ -43,6 +41,7 @@ class RlTrainer:
         self.agent_params = kwargs['agent_params']
         self.batch_params = kwargs['batch_params']
         self.ppo_params = kwargs['ppo_params']
+        self.system_params = kwargs['system_params']
 
         # iteration
         self.itr = 0
@@ -102,22 +101,22 @@ class RlTrainer:
                 batch_B=batch_b,
                 batch_T=batch_t,
                 max_decorrelation_steps=0,
-                CollectorCls=CpuResetCollector,
                 eval_n_envs=0,
-                eval_CollectorCls=SerialEvalCollector,
                 eval_env_kwargs={},
                 eval_max_steps=50,
             )
         else:
-            return CpuSampler(
+            if self.system_params['gpu']:
+                sampler_class = GpuSampler
+            else:
+                sampler_class = CpuSampler
+            return sampler_class(
                 EnvCls=SellerEnvironment,
                 env_kwargs=self.env_params_train,
                 batch_B=batch_b,
                 batch_T=batch_t,
                 max_decorrelation_steps=0,
-                CollectorCls=CpuResetCollector,
                 eval_n_envs=0,
-                eval_CollectorCls=CpuEvalCollector,
                 eval_env_kwargs={},
                 eval_max_steps=50,
             )
