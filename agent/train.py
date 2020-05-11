@@ -120,7 +120,6 @@ class RlTrainer:
                 eval_CollectorCls=CpuEvalCollector,
                 eval_env_kwargs={},
                 eval_max_steps=50,
-                worker_process=sampling_process
             )
 
     def generate_runner(self):
