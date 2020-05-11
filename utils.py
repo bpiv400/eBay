@@ -4,7 +4,6 @@ import torch
 import numpy as np
 from compress_pickle import load
 from nets.FeedForward import FeedForward
-from nets.nets_consts import LAYERS_FULL
 from constants import MAX_DELAY, DAY, MONTH, SPLIT_PCTS, INPUT_DIR, \
     MODEL_DIR, META_6, META_7, LISTING_FEE, PARTITIONS, PARTS_DIR
 
@@ -113,8 +112,6 @@ def load_state_dict(name=None):
     """
     model_path = '{}{}.net'.format(MODEL_DIR, name)
     state_dict = torch.load(model_path, map_location=torch.device('cpu'))
-    # TODO: remove if/when models are retrained
-    fully_connected_compat(state_dict=state_dict)
     return state_dict
 
 
@@ -144,37 +141,6 @@ def load_model(name, verbose=False):
     net.eval()
 
     return net
-
-
-def substitute_prefix(old_prefix=None, new_prefix=None, state_dict=None):
-    effected_keys = list()
-    for key in state_dict.keys():
-        if key[:len(old_prefix)] == old_prefix:
-            effected_keys.append(key)
-    # null case
-    if len(effected_keys) == 0:
-        return state_dict
-
-    # replace each old prefix with a new prefix
-    for effected_key in effected_keys:
-        effected_suffix = effected_key[len(old_prefix):]
-        new_key = '{}{}'.format(new_prefix, effected_suffix)
-        state_dict[new_key] = state_dict[effected_key]
-        del state_dict[effected_key]
-
-
-def fully_connected_compat(state_dict=None):
-    """
-    Renames the parameters in a torch state dict generated
-    when output layer lived in FullyConnected to be compatible
-    with separate output layer
-    :param state_dict: dictionary name -> param
-    :return: dict
-    """
-    old_prefix = 'nn1.seq.{}'.format(LAYERS_FULL)
-    new_prefix = 'output'
-    substitute_prefix(old_prefix=old_prefix, new_prefix=new_prefix,
-                      state_dict=state_dict)
 
 
 def get_cut(meta):

@@ -5,11 +5,12 @@ value estimations or discriminator inputs
 import os
 import argparse
 import torch
-from constants import PARTITIONS, PARTS_DIR
-from sim.values.ValueGenerator import ValueGenerator
-from rlenv import Generator
-from sim.outcomes import OutcomeGenerator
+from constants import PARTITIONS
+from rlenv.Generator import Generator
+from rlenv.env_utils import get_env_sim_dir
 from rlenv.test.TestGenerator import TestGenerator
+from sim.values.ValueGenerator import ValueGenerator
+from sim.outcomes.OutcomeGenerator import OutcomeGenerator
 
 
 def chunk_done(generator):
@@ -47,8 +48,8 @@ def main():
     assert args.part in PARTITIONS
     print('{} {}: {}'.format(args.part, args.num, args.name))
 
-    # directory for processed chunks
-    chunk_dir = PARTS_DIR + '{}/{}/'.format(args.part, args.name)
+    # directory for input chunks
+    chunk_dir = get_env_sim_dir(args.part)
     if not os.path.isdir(chunk_dir):
         os.mkdir(chunk_dir)
 
@@ -57,7 +58,7 @@ def main():
     generator = gen_class(direct=chunk_dir,
                           verbose=args.verbose,
                           start=args.thread)   # type: Generator
-    if args.values and chunk_done(args.num):
+    if args.name == 'values' and chunk_done(args.num):
         print('{} already done'.format(args.num))
         exit(0)
     generator.process_chunk(chunk=args.num)

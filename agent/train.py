@@ -9,8 +9,7 @@ import warnings
 import torch
 from agent.CrossEntropyPPO import CrossEntropyPPO
 from agent.EBayRunner import EBayMinibatchRl
-from rlpyt.agents.pg.categorical import CategoricalPgAgent
-from rlpyt.runners.minibatch_rl import MinibatchRl
+from agent.SplitCategoricalPgAgent import SplitCategoricalPgAgent
 from rlpyt.samplers.serial.sampler import SerialSampler
 from rlpyt.samplers.parallel.cpu.sampler import CpuSampler
 from rlpyt.samplers.parallel.cpu.collectors import CpuResetCollector
@@ -18,12 +17,10 @@ from rlpyt.samplers.serial.sampler import SerialEvalCollector
 from rlpyt.samplers.parallel.cpu.collectors import CpuEvalCollector
 from rlpyt.utils.logging.context import logger_context
 from featnames import DELAY
-from constants import RL_LOG_DIR, BYR_PREFIX, \
-    SLR_POLICY_INIT, BYR_POLICY_INIT, PARTS_DIR, TRAIN_RL
+from constants import RL_LOG_DIR, BYR_PREFIX, PARTS_DIR, TRAIN_RL, DROPOUT
 from agent.agent_consts import SELLER_TRAIN_INPUT, AGENT_STATE, \
     PARAM_DICTS, AGENT_PARAMS, BATCH_PARAMS, PPO_PARAMS, THREADS_PER_PROC
-from agent.agent_utils import gen_run_id, save_params, \
-    load_init_model, detect_norm
+from agent.agent_utils import gen_run_id, save_params, sampling_process
 from agent.AgentComposer import AgentComposer
 from agent.models.PgCategoricalAgentModel import PgCategoricalAgentModel
 from rlenv.env_utils import load_chunk
@@ -31,7 +28,8 @@ from rlenv.interfaces.PlayerInterface import SimulatedBuyer, SimulatedSeller
 from rlenv.interfaces.ArrivalInterface import ArrivalInterface
 from rlenv.environments.SellerEnvironment import SellerEnvironment
 
-WORKERS = 8
+# remember to deprecate these
+WORKERS = 2
 ASSIGN_CPUS = True
 MULTIPLE_CPUS = False
 
@@ -85,22 +83,12 @@ class RlTrainer:
     def generate_agent(self):
         # initialize model keyword arguments
         model_kwargs = dict()
-        model_kwargs['sizes'] = self.env_params_train['composer'].agent_sizes
         model_kwargs[BYR_PREFIX] = self.agent_params['role'] == BYR_PREFIX
         model_kwargs[DELAY] = self.agent_params[DELAY]
+        model_kwargs[DROPOUT] = tuple(self.agent_params[DROPOUT])
 
-        # load simulator model to initialize policy
-        if model_kwargs[BYR_PREFIX]:
-            init_model = BYR_POLICY_INIT
-        else:
-            init_model = SLR_POLICY_INIT
-        init_dict = load_init_model(name=init_model,
-                                    size=model_kwargs['sizes']['out'])
-        model_kwargs['norm'] = detect_norm(init_dict)
-        model_kwargs['init_dict'] = init_dict
-
-        return CategoricalPgAgent(ModelCls=PgCategoricalAgentModel,
-                                  model_kwargs=model_kwargs)
+        return SplitCategoricalPgAgent(ModelCls=PgCategoricalAgentModel,
+                                       model_kwargs=model_kwargs)
 
     def generate_sampler(self):
         batch_b = len(self.workers_cpus) * 2
@@ -132,6 +120,7 @@ class RlTrainer:
                 eval_CollectorCls=CpuEvalCollector,
                 eval_env_kwargs={},
                 eval_max_steps=50,
+                worker_process=sampling_process
             )
 
     def generate_runner(self):

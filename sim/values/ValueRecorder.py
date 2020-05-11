@@ -1,4 +1,7 @@
 import numpy as np
+from featnames import LSTG
+from rlenv.Recorder import (Recorder, VAL_COLS, VAL, SE,
+                            AVG_PRICE, NUM_SALES, P_SALE, CUT)
 
 
 class ValueRecorder(Recorder):

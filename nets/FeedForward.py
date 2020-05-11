@@ -11,6 +11,7 @@ class FeedForward(nn.Module):
         :param dropout: tuple of dropout rates.
         """
         super(FeedForward, self).__init__()
+        self.sizes = sizes
 
         # expand embeddings
         groups = create_groupings(sizes)
@@ -34,7 +35,7 @@ class FeedForward(nn.Module):
         elements = []
         for k in self.nn0.keys():
             elements.append(self.nn0[k](x))
-        hidden = self.nn1(torch.cat(elements, dim=1))
+        hidden = self.nn1(torch.cat(elements, dim=elements[0].dim() - 1))
         return self.output(hidden)
 
 

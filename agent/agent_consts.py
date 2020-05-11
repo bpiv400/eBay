@@ -1,4 +1,4 @@
-from constants import REINFORCE_DIR, BYR_PREFIX, SLR_PREFIX
+from constants import REINFORCE_DIR, BYR_PREFIX, SLR_PREFIX, DROPOUT
 
 # files
 SELLER_TRAIN_INPUT = REINFORCE_DIR + 'train/seller.hdf5'
@@ -35,13 +35,15 @@ FEAT_TYPE = "feat_id"
 NO_TIME = "no_time"
 ALL_FEATS = "all"
 
-PARAM_SHARING = True
-
 # command-line parameters
 AGENT_PARAMS = {'role': {'type': str,
                          'choices': [BYR_PREFIX, SLR_PREFIX],
                          'default': SLR_PREFIX},
                 'delay': {'type': bool, 'default': False},
+                DROPOUT: {'nargs': 2,
+                          'type': float,
+                          'default': [0.0, 0.0]
+                          },
                 'feat_id': {'type': str,
                             'choices': [ALL_FEATS, NO_TIME],
                             'default': ALL_FEATS},
@@ -54,11 +56,11 @@ BATCH_PARAMS = {'batch_size': {'type': int, 'default': 2 ** 12}}
 PPO_PARAMS = {'mbsize': {'type': int, 'default': 512},
               'cross_entropy_loss_coeff': {'type': float, 'default': 1.},
               'entropy_loss_coeff': {'type': float, 'default': 1.},
-              'value_loss_coeff': {'type': float, 'default': 1.},
               'ratio_clip': {'type': float, 'default': .1},
               'clip_grad_norm': {'type': float, 'default': 1.},
-              'learning_rate': {'type': float, 'default': .001},
-              'patience': {'type': float, 'default': 1}}
+              'patience': {'type': float, 'default': 1},
+              'lr_policy': {'type': float, 'default': .001},
+              'lr_value': {'type': float, 'default': .001}}
 
 PARAM_DICTS = [AGENT_PARAMS, BATCH_PARAMS, PPO_PARAMS]
 
