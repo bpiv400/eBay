@@ -93,10 +93,12 @@ def gen_run_id():
     return dt.now().strftime('%y%m%d-%H%M')
 
 
-def create_params_file():
+def create_params_file(trainer_args):
     # append parameters
     series = list()
-    for d in PARAM_DICTS:
+    for param_set, d in trainer_args.items():
+        if param_set == 'system_params':
+            continue
         for k, v in d.items():
             series.append(pd.Series(name=k, dtype=v['type']))
 
@@ -116,7 +118,7 @@ def save_params(run_id=None,
 
     # if file does not exist, create it
     if not os.path.isfile(path):
-        df = create_params_file()
+        df = create_params_file(trainer_params)
 
     # otherwise, open file
     else:
