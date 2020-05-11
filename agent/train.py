@@ -25,11 +25,6 @@ from rlenv.interfaces.PlayerInterface import SimulatedBuyer, SimulatedSeller
 from rlenv.interfaces.ArrivalInterface import ArrivalInterface
 from rlenv.environments.SellerEnvironment import SellerEnvironment
 
-# remember to deprecate these
-WORKERS = 32
-ASSIGN_CPUS = True
-MULTIPLE_CPUS = False
-
 
 class RlTrainer:
     def __init__(self, **kwargs):
@@ -125,7 +120,7 @@ class RlTrainer:
         return runner
 
     def generate_affinity(self):
-        if ASSIGN_CPUS:
+        if not self.system_params['auto']:
             workers_cpus = self.workers_cpus
             n_worker = None
         else:
@@ -136,29 +131,30 @@ class RlTrainer:
                         n_worker=n_worker,
                         master_torch_threads=THREADS_PER_PROC,
                         cuda_idx=0,
-                        set_affinity=ASSIGN_CPUS)
+                        set_affinity=not self.system_params['auto'])
         return affinity
 
     @property
     def workers_cpus(self):
-        if ASSIGN_CPUS:
+        if not self.system_params['auto']:
             cpus = self.workers_cpus_manual()
         else:
-            cpus = self.eligible_cpus[:WORKERS]
+            cpus = self.eligible_cpus[:self.system_params['workers']]
         return cpus
 
     def workers_cpus_manual(self):
         eligible = self.eligible_cpus
-        if MULTIPLE_CPUS:
-            threads_per_worker = int(len(eligible) / WORKERS)
+        worker_count = self.system_params['workers']
+        if self.system_params['multiple']:
+            threads_per_worker = int(len(eligible) / worker_count)
             cpus = list()
-            for i in range(WORKERS):
+            for i in range(worker_count):
                 curr = eligible[(i * threads_per_worker): (i+1) * threads_per_worker]
                 cpus.append(curr)
-            for j in range((len(eligible) // WORKERS)):
-                cpus[j].append(eligible[j + threads_per_worker * WORKERS])
+            for j in range((len(eligible) // worker_count)):
+                cpus[j].append(eligible[j + threads_per_worker * worker_count])
         else:
-            cpus = eligible[0:WORKERS]
+            cpus = eligible[:worker_count]
         return cpus
 
     def train(self):
