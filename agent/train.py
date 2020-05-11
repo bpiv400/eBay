@@ -120,15 +120,7 @@ class RlTrainer:
         return runner
 
     def generate_affinity(self):
-        if not self.system_params['auto']:
-            workers_cpus = self.workers_cpus
-            n_worker = None
-        else:
-            workers_cpus = None
-            n_worker = len(self.workers_cpus)
-
-        affinity = dict(workers_cpus=workers_cpus,
-                        n_worker=n_worker,
+        affinity = dict(workers_cpus=self.workers_cpus,
                         master_torch_threads=THREADS_PER_PROC,
                         cuda_idx=0,
                         set_affinity=not self.system_params['auto'])

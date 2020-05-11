@@ -153,7 +153,7 @@ def get_train_file_path(rank):
     return '{}train/{}.hdf5'.format(REINFORCE_DIR, rank)
 
 
-def cpu_sampling_process(common_kwargs, worker_kwargs):
+def ebay_sampling_process(common_kwargs, worker_kwargs):
     """Target function used for forking parallel worker processes in the
     samplers. After ``initialize_worker()``, it creates the specified number
     of environment instances and gives them to the collector when
