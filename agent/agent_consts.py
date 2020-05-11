@@ -1,7 +1,4 @@
-from constants import REINFORCE_DIR, BYR_PREFIX, SLR_PREFIX, DROPOUT
-
-# files
-SELLER_TRAIN_INPUT = REINFORCE_DIR + 'train/seller.hdf5'
+from constants import BYR_PREFIX, SLR_PREFIX, DROPOUT
 
 # state dictionaries
 AGENT_STATE = 'agent_state_dict'

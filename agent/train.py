@@ -18,9 +18,10 @@ from rlpyt.samplers.parallel.cpu.collectors import CpuEvalCollector
 from rlpyt.utils.logging.context import logger_context
 from featnames import DELAY
 from constants import RL_LOG_DIR, BYR_PREFIX, PARTS_DIR, TRAIN_RL, DROPOUT
-from agent.agent_consts import SELLER_TRAIN_INPUT, AGENT_STATE, \
-    PARAM_DICTS, AGENT_PARAMS, BATCH_PARAMS, PPO_PARAMS, THREADS_PER_PROC
-from agent.agent_utils import gen_run_id, save_params, sampling_process
+from agent.agent_consts import (AGENT_STATE, PARAM_DICTS,
+                                AGENT_PARAMS, BATCH_PARAMS,
+                                PPO_PARAMS, THREADS_PER_PROC)
+from agent.agent_utils import gen_run_id, save_params
 from agent.AgentComposer import AgentComposer
 from agent.models.PgCategoricalAgentModel import PgCategoricalAgentModel
 from rlenv.env_utils import load_chunk
@@ -70,7 +71,6 @@ class RlTrainer:
         env_params = {
             'composer': composer,
             'verbose': self.verbose,
-            'filename': SELLER_TRAIN_INPUT,
             'arrival': ArrivalInterface(),
             'seller': SimulatedSeller(full=False),
             'buyer': SimulatedBuyer()

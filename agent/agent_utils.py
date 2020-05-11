@@ -8,9 +8,9 @@ from rlpyt.samplers.parallel.worker import initialize_worker
 from rlpyt.utils.collections import AttrDict
 from rlpyt.utils.seed import set_envs_seeds
 from utils import load_state_dict
-from agent.agent_consts import FULL_CON, QUARTILES, HALF, PARAM_DICTS
 from constants import (RL_LOG_DIR, SLR_VALUE_INIT, SLR_POLICY_INIT,
-                       BYR_VALUE_INIT, BYR_POLICY_INIT)
+                       BYR_VALUE_INIT, BYR_POLICY_INIT, REINFORCE_DIR)
+from agent.agent_consts import FULL_CON, QUARTILES, HALF, PARAM_DICTS
 
 
 def get_con_set(con):
@@ -147,7 +147,11 @@ def get_network_name(byr=False, policy=False):
         return SLR_VALUE_INIT
 
 
-def sampling_process(common_kwargs, worker_kwargs):
+def get_train_file_path(rank):
+    return '{}train/{}.hdf5'.format(REINFORCE_DIR, rank)
+
+
+def cpu_sampling_process(common_kwargs, worker_kwargs):
     """Target function used for forking parallel worker processes in the
     samplers. After ``initialize_worker()``, it creates the specified number
     of environment instances and gives them to the collector when
@@ -158,10 +162,12 @@ def sampling_process(common_kwargs, worker_kwargs):
     training samples or else run evaluation, until signaled to exit.
     """
     c, w = AttrDict(**common_kwargs), AttrDict(**worker_kwargs)
-    print(w.rank)
     print(list(common_kwargs.keys()))
     initialize_worker(w.rank, w.seed, w.cpus, c.torch_threads)
-    envs = [c.EnvCls(**c.env_kwargs) for _ in range(w.n_envs)] # edit this
+    envs = list()
+    for env_rank in w.env_ranks:
+        filename = get_train_file_path(env_rank)
+        envs.append(c.EnvCls(**c.env_kwargs, filename=filename))
     set_envs_seeds(envs, w.seed)
 
     collector = c.CollectorCls(

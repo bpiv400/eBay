@@ -3,11 +3,13 @@ import time
 import torch
 from collections import deque
 from rlpyt.runners.base import BaseRunner
+from rlpyt.samplers.parallel.base import ParallelSamplerBase
 from rlpyt.utils.quick_args import save__init__args
 from rlpyt.utils.seed import set_seed, make_seed
 from rlpyt.utils.logging import logger
 from rlpyt.utils.prog_bar import ProgBarCounter
 from agent.agent_consts import LR1
+from agent.agent_utils import cpu_sampling_process
 
 
 class EBayMinibatchRlBase(BaseRunner):
@@ -57,16 +59,21 @@ class EBayMinibatchRlBase(BaseRunner):
             cpu_affin = "UNAVAILABLE MacOS"
         logger.log(f"Runner {getattr(self, 'rank', '')} master CPU affinity: "
             f"{cpu_affin}.")
+
         if self.affinity.get("master_torch_threads", None) is not None:
             torch.set_num_threads(self.affinity["master_torch_threads"])
+
         logger.log(f"Runner {getattr(self, 'rank', '')} master Torch threads: "
             f"{torch.get_num_threads()}.")
+
         if self.seed is None:
             self.seed = make_seed()
         set_seed(self.seed)
+
         self.rank = rank = getattr(self, "rank", 0)
         self.world_size = world_size = getattr(self, "world_size", 1)
-        examples = self.sampler.initialize(
+
+        sampler_init_args = dict(
             agent=self.agent,  # Agent gets initialized in sampler.
             affinity=self.affinity,
             seed=self.seed + 1,
@@ -75,6 +82,10 @@ class EBayMinibatchRlBase(BaseRunner):
             rank=rank,
             world_size=world_size,
         )
+        if isinstance(self.sampler, ParallelSamplerBase):
+            sampler_init_args['worker_process'] = cpu_sampling_process
+        examples = self.sampler.initialize(**sampler_init_args)
+
         self.itr_batch_size = self.sampler.batch_spec.size * world_size
         self.log_interval_itrs = max(1,
             self.log_interval_steps // self.itr_batch_size)
