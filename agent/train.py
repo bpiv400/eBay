@@ -26,7 +26,7 @@ from rlenv.interfaces.ArrivalInterface import ArrivalInterface
 from rlenv.environments.SellerEnvironment import SellerEnvironment
 
 # remember to deprecate these
-WORKERS = 16
+WORKERS = 32
 ASSIGN_CPUS = True
 MULTIPLE_CPUS = False
 
@@ -144,15 +144,11 @@ class RlTrainer:
         if ASSIGN_CPUS:
             cpus = self.workers_cpus_manual()
         else:
-            cpus = list(range(WORKERS))
+            cpus = self.eligible_cpus[:WORKERS]
         return cpus
 
-    @staticmethod
-    def workers_cpus_manual():
-        eligible = list(range(mp.cpu_count()))
-        if mp.cpu_count() == 64:
-            eligible.remove(1)
-            eligible.remove(33)
+    def workers_cpus_manual(self):
+        eligible = self.eligible_cpus
         if MULTIPLE_CPUS:
             threads_per_worker = int(len(eligible) / WORKERS)
             cpus = list()
@@ -175,11 +171,14 @@ class RlTrainer:
             self.itr = self.runner.train()
     
     @property
-    def worker_cpus(self):
+    def eligible_cpus(self):
         workers_cpu = list(range(mp.cpu_count()))
         if len(workers_cpu) == 64:
             workers_cpu.remove(33)
             workers_cpu.remove(1)
+        elif len(workers_cpu) == 32:
+            workers_cpu.remove(1)
+            workers_cpu.remove(17)
         return workers_cpu
 
 
