@@ -210,11 +210,8 @@ def main():
     time_elapsed = (dt.now() - t0).total_seconds()
 
     # save parameters to file
-    save_params(role=agent_params['role'],
-                run_id=trainer.run_id,
-                agent_params=agent_params,
-                batch_params=batch_params,
-                ppo_params=ppo_params,
+    save_params(run_id=trainer.run_id,
+                trainer_params=trainer_args,
                 time_elapsed=time_elapsed)
 
     # create new subfolders
@@ -223,7 +220,7 @@ def main():
         os.mkdir(run_dir + '{}/'.format(name))
 
     # drop optimization parameters
-    for i in range(batch_params['batch_count']):
+    for i in range(trainer_args['batch_params']['batch_count']):
         # load params
         in_path = run_dir + 'itr_{}.pkl'.format(i)
         d = torch.load(in_path)

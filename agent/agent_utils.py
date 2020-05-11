@@ -108,12 +108,10 @@ def create_params_file():
     return df
 
 
-def save_params(role=None,
-                run_id=None,
-                agent_params=None,
-                batch_params=None,
-                ppo_params=None,
+def save_params(run_id=None,
+                trainer_params=None,
                 time_elapsed=None):
+    role = trainer_params['agent_params']['role']
     path = RL_LOG_DIR + '{}/runs.pkl'.format(role)
 
     # if file does not exist, create it
@@ -125,7 +123,9 @@ def save_params(role=None,
         df = load(path)
 
     # add parameters
-    for d in [agent_params, batch_params, ppo_params]:
+    for param_set, d in trainer_params.items():
+        if param_set == 'system_params':
+            continue
         for k, v in d.items():
             df.loc[run_id, k] = v
 
