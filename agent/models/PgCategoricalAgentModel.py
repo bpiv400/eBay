@@ -52,6 +52,12 @@ class PgCategoricalAgentModel(AgentModel):
         logits = logits.squeeze()
         return logits
 
+    def pi(self, observation, prev_action, prev_reward):
+        input_dict = observation._asdict()
+        logits = self.con(input_dict=input_dict)
+        pi = softmax(logits, dim=logits.dim() - 1)
+        return pi
+
     def _forward_dict(self, input_dict=None, compute_value=True):
         pi_logits = self.policy_network(input_dict)
         # value output head
