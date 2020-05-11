@@ -83,6 +83,7 @@ class EBayMinibatchRlBase(BaseRunner):
             world_size=world_size,
         )
         if isinstance(self.sampler, ParallelSamplerBase):
+            print('checks out')
             sampler_init_args['worker_process'] = cpu_sampling_process
         examples = self.sampler.initialize(**sampler_init_args)
 

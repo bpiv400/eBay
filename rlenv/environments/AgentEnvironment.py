@@ -11,7 +11,7 @@ from constants import MONTH
 from rlenv.env_consts import LOOKUP, X_LSTG, ENV_LSTG_COUNT
 from rlenv.environments.EbayEnvironment import EbayEnvironment
 from rlenv import Recorder
-from agent.agent_utils import get_con_set
+from agent.agent_utils import get_con_set, get_train_file_path
 from agent.agent_consts import seller_groupings
 
 SellerObs = namedtuple("SellerObs", seller_groupings)
@@ -23,7 +23,10 @@ class AgentEnvironment(EbayEnvironment, Env):
     def __init__(self, **kwargs):
         super().__init__(params=kwargs)
         # attributes for getting lstg data
-        self._filename = kwargs['filename']
+        if 'filename' not in kwargs:
+            self._filename = get_train_file_path(1)
+        else:
+            self._filename = kwargs['filename']
         self._file = None
         self._file_opened = False
         self._num_lstgs = None

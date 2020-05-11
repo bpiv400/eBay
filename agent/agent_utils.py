@@ -162,11 +162,10 @@ def cpu_sampling_process(common_kwargs, worker_kwargs):
     training samples or else run evaluation, until signaled to exit.
     """
     c, w = AttrDict(**common_kwargs), AttrDict(**worker_kwargs)
-    print(list(common_kwargs.keys()))
     initialize_worker(w.rank, w.seed, w.cpus, c.torch_threads)
     envs = list()
     for env_rank in w.env_ranks:
-        filename = get_train_file_path(env_rank)
+        filename = get_train_file_path(env_rank + 1)
         envs.append(c.EnvCls(**c.env_kwargs, filename=filename))
     set_envs_seeds(envs, w.seed)
 
