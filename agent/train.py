@@ -29,7 +29,7 @@ from rlenv.interfaces.ArrivalInterface import ArrivalInterface
 from rlenv.environments.SellerEnvironment import SellerEnvironment
 
 # remember to deprecate these
-WORKERS = 2
+WORKERS = 12
 ASSIGN_CPUS = True
 MULTIPLE_CPUS = False
 

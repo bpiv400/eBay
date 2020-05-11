@@ -73,11 +73,9 @@ class CrossEntropyPPO(RlAlgorithm):
 
         #optimizers
         self.optimizer_value = Adam(self.agent.value_parameters(),
-                                    lr=self.lr_value,
-                                    **self.optim_kwargs)
+                                    lr=self.lr_value)
         self.optimizer_policy = Adam(self.agent.policy_parameters(),
-                                     lr=self.lr_policy,
-                                     **self.optim_kwargs)
+                                     lr=self.lr_policy)
         # init_agent new initialized agent
         self.init_agent = PgCategoricalAgentModel(
             **self.agent.model_kwargs).to(self.agent.device)
