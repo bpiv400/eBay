@@ -36,7 +36,7 @@ ALL_FEATS = "all"
 AGENT_PARAMS = {'role': {'type': str,
                          'choices': [BYR_PREFIX, SLR_PREFIX],
                          'default': SLR_PREFIX},
-                'delay': {'type': bool, 'default': False},
+                'delay': {'action': 'store_true'},
                 DROPOUT: {'nargs': 2,
                           'type': float,
                           'default': [0.0, 0.0]
@@ -59,7 +59,14 @@ PPO_PARAMS = {'mbsize': {'type': int, 'default': 512},
               'lr_policy': {'type': float, 'default': .001},
               'lr_value': {'type': float, 'default': .001}}
 
-PARAM_DICTS = [AGENT_PARAMS, BATCH_PARAMS, PPO_PARAMS]
+SYSTEM_PARAMS = {'gpu': {'action': 'store_true'},
+                 'debug': {'action': 'store_true'},
+                 'verbose': {'action': 'store_true'}}
+
+PARAM_DICTS = {'agent_params': AGENT_PARAMS,
+               'batch_params': BATCH_PARAMS,
+               'ppo_params': PPO_PARAMS,
+               'system_params': SYSTEM_PARAMS}
 
 # multi-processing parameters
 THREADS_PER_PROC = 1

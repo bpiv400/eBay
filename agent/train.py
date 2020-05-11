@@ -16,9 +16,7 @@ from rlpyt.samplers.parallel.gpu.sampler import GpuSampler
 from rlpyt.utils.logging.context import logger_context
 from featnames import DELAY
 from constants import RL_LOG_DIR, BYR_PREFIX, PARTS_DIR, TRAIN_RL, DROPOUT
-from agent.agent_consts import (AGENT_STATE, PARAM_DICTS,
-                                AGENT_PARAMS, BATCH_PARAMS,
-                                PPO_PARAMS, THREADS_PER_PROC)
+from agent.agent_consts import (AGENT_STATE, PARAM_DICTS, THREADS_PER_PROC)
 from agent.agent_utils import gen_run_id, save_params
 from agent.AgentComposer import AgentComposer
 from agent.models.PgCategoricalAgentModel import PgCategoricalAgentModel
@@ -35,9 +33,6 @@ MULTIPLE_CPUS = False
 
 class RlTrainer:
     def __init__(self, **kwargs):
-        # arguments
-        self.debug = kwargs['debug']
-        self.verbose = kwargs['verbose']
         self.agent_params = kwargs['agent_params']
         self.batch_params = kwargs['batch_params']
         self.ppo_params = kwargs['ppo_params']
@@ -69,7 +64,7 @@ class RlTrainer:
                                  agent_params=self.agent_params)
         env_params = {
             'composer': composer,
-            'verbose': self.verbose,
+            'verbose': self.system_params['verbose'],
             'arrival': ArrivalInterface(),
             'seller': SimulatedSeller(full=False),
             'buyer': SimulatedBuyer()
@@ -94,7 +89,7 @@ class RlTrainer:
         batch_t = int(self.batch_params['batch_size'] / batch_b)
         if batch_t < 12:
             warnings.warn("Very few actions per environment")
-        if self.debug:
+        if self.system_params['debug']:
             return SerialSampler(
                 EnvCls=SellerEnvironment,
                 env_kwargs=self.env_params_train,
@@ -190,11 +185,8 @@ class RlTrainer:
 
 def main():
     parser = argparse.ArgumentParser()
-    # basic arguments
-    parser.add_argument('--verbose', action='store_true')
-    parser.add_argument('--debug', action='store_true')
     # experiment parameters
-    for d in PARAM_DICTS:
+    for d in PARAM_DICTS.values():
         for k, v in d.items():
             parser.add_argument('--{}'.format(k), **v)
     args = vars(parser.parse_args())
@@ -202,20 +194,15 @@ def main():
         print('{}: {}'.format(k, v))
 
     # split parameters
-    agent_params, ppo_params, batch_params = dict(), dict(), dict()
-    for k in AGENT_PARAMS.keys():
-        agent_params[k] = args[k]
-    for k in BATCH_PARAMS.keys():
-        batch_params[k] = args[k]
-    for k in PPO_PARAMS.keys():
-        ppo_params[k] = args[k]
+    trainer_args = dict()
+    for param_set, param_dict in PARAM_DICTS.items():
+        curr_params = dict()
+        for k in param_dict.keys():
+            curr_params[k] = args[k]
+        trainer_args[param_set] = curr_params
 
     # initialize trainer
-    trainer = RlTrainer(debug=args['debug'],
-                        verbose=args['verbose'],
-                        agent_params=agent_params,
-                        batch_params=batch_params,
-                        ppo_params=ppo_params)
+    trainer = RlTrainer(**trainer_args)
 
     # training loop
     t0 = dt.now()
