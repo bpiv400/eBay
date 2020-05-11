@@ -165,7 +165,7 @@ def cpu_sampling_process(common_kwargs, worker_kwargs):
     initialize_worker(w.rank, w.seed, w.cpus, c.torch_threads)
     envs = list()
     for env_rank in w.env_ranks:
-        filename = get_train_file_path(env_rank + 1)
+        filename = get_train_file_path(env_rank)
         envs.append(c.EnvCls(**c.env_kwargs, filename=filename))
     set_envs_seeds(envs, w.seed)
 
