@@ -202,3 +202,14 @@ def ebay_sampling_process(common_kwargs, worker_kwargs):
 
     for env in envs:
         env.close()
+
+
+def network_size(net):
+    bits = 32
+    total_bits = 0.0
+    for m in net.modules():
+        for p in m.parameters():
+            s = np.array(p.size())
+            b = np.prod(np.array(s)) * bits
+            total_bits += b
+    return total_bits / 8e6
