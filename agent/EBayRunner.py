@@ -8,7 +8,6 @@ from rlpyt.utils.quick_args import save__init__args
 from rlpyt.utils.seed import set_seed, make_seed
 from rlpyt.utils.logging import logger
 from rlpyt.utils.prog_bar import ProgBarCounter
-from agent.agent_consts import LR1
 from agent.agent_utils import ebay_sampling_process
 
 
@@ -83,11 +82,7 @@ class EBayMinibatchRlBase(BaseRunner):
             world_size=world_size,
         )
         if isinstance(self.sampler, ParallelSamplerBase):
-<<<<<<< HEAD
-            sampler_init_args['worker_process'] = cpu_sampling_process
-=======
             sampler_init_args['worker_process'] = ebay_sampling_process
->>>>>>> master
         examples = self.sampler.initialize(**sampler_init_args)
 
         self.itr_batch_size = self.sampler.batch_spec.size * world_size
@@ -163,14 +158,8 @@ class EBayMinibatchRlBase(BaseRunner):
         new_updates = self.algo.update_counter - self._last_update_counter
         new_samples = (self.sampler.batch_size * self.world_size *
             self.log_interval_itrs)
-        updates_per_second = (float('nan') if itr == 0 else
-            new_updates / train_time_elapsed)
-        samples_per_second = (float('nan') if itr == 0 else
-            new_samples / train_time_elapsed)
-        replay_ratio = (new_updates * self.algo.batch_size * self.world_size /
-            new_samples)
-        cum_replay_ratio = (self.algo.batch_size * self.algo.update_counter /
-            ((itr + 1) * self.sampler.batch_size))  # world_size cancels.
+        updates_per_second = (new_updates / train_time_elapsed)
+        samples_per_second = (new_samples / train_time_elapsed)
         cum_steps = (itr + 1) * self.sampler.batch_size * self.world_size
 
         with logger.tabular_prefix(prefix):
@@ -184,17 +173,19 @@ class EBayMinibatchRlBase(BaseRunner):
             logger.record_tabular('CumUpdates', self.algo.update_counter)
             logger.record_tabular('StepsPerSecond', samples_per_second)
             logger.record_tabular('UpdatesPerSecond', updates_per_second)
-            logger.record_tabular('ReplayRatio', replay_ratio)
-            logger.record_tabular('CumReplayRatio', cum_replay_ratio)
-            logger.record_tabular('PolicyLearningRate', self.algo.lr_policy)
-            logger.record_tabular('ValueLearningRate', self.algo.lr_value)
+
+        with logger.tabular_prefix('LearningRate/'):
+            logger.record_tabular('Policy', self.algo.policy_learning_rate)
+            logger.record_tabular('Value', self.algo.value_learning_rate)
+
         self._log_infos(traj_infos)
         logger.dump_tabular(with_prefix=False)
 
         self._last_time = new_time
         self._last_update_counter = self.algo.update_counter
-        logger.log(f"Optimizing over {self.log_interval_itrs} iterations.")
-        self.pbar = ProgBarCounter(self.log_interval_itrs)
+        if not self.algo.training_complete:
+            logger.log(f"Optimizing over {self.log_interval_itrs} iterations.")
+            self.pbar = ProgBarCounter(self.log_interval_itrs)
 
     def _log_infos(self, traj_infos=None):
         """
@@ -242,12 +233,12 @@ class EBayMinibatchRl(EBayMinibatchRlBase):
                 self.agent.sample_mode(itr)  # Might not be this agent sampling.
                 samples, traj_infos = self.sampler.obtain_samples(itr)
                 self.agent.train_mode(itr)
-                opt_info = self.algo.optimize_agent(itr, samples)
+                opt_info = self.algo.optimize_agent(samples)
                 self.store_diagnostics(itr, traj_infos, opt_info)
                 if (itr + 1) % self.log_interval_itrs == 0:
                     self.log_diagnostics(itr)
 
-                if self.algo.lr_policy < LR1:
+                if self.algo.training_complete:
                     break
             itr += 1
         self.shutdown()
@@ -264,7 +255,7 @@ class EBayMinibatchRl(EBayMinibatchRlBase):
         self._traj_infos.extend(traj_infos)
         super().store_diagnostics(itr, traj_infos, opt_info)
 
-    def log_diagnostics(self, itr, prefix='Diagnostics/'):
+    def log_diagnostics(self, itr, traj_infos=None, eval_time=None, prefix='Diagnostics/'):
         with logger.tabular_prefix(prefix):
             logger.record_tabular('NewCompletedTrajs', self._new_completed_trajs)
             logger.record_tabular('StepsInTrajWindow',

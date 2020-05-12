@@ -62,6 +62,7 @@ class RlTrainer:
         return env_params
 
     def generate_algorithm(self):
+        print(self.ppo_params)
         return CrossEntropyPPO(**self.ppo_params)
 
     def generate_agent(self):

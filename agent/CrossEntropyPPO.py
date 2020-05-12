@@ -10,6 +10,7 @@ from rlpyt.utils.collections import namedarraytuple
 from rlpyt.utils.quick_args import save__init__args
 from rlpyt.utils.misc import iterate_mb_idxs
 from agent.models.PgCategoricalAgentModel import PgCategoricalAgentModel
+from agent.agent_consts import LR1
 from utils import slr_reward
 
 LossInputs = namedarraytuple("LossInputs",
@@ -20,10 +21,10 @@ LossInputs = namedarraytuple("LossInputs",
                               "valid",
                               "old_dist_info"])
 OptInfo = namedtuple("OptInfo",
-                     ["policy_loss",
-                      "gradNorm",
-                      "value_error",
-                      "entropy"])
+                     ["PolicyLoss",
+                      "GradNorm",
+                      "ValueError",
+                      "Entropy"])
 
 
 class CrossEntropyPPO(RlAlgorithm):
@@ -38,8 +39,8 @@ class CrossEntropyPPO(RlAlgorithm):
             action_discount=1,
             action_cost=0,
             patience=2,
-            lr_value=0.001,
-            lr_policy=0.001,
+            lr=0.001,
+            same_lr=True,
             entropy_loss_coeff=0.01,
             clip_grad_norm=1.,
             minibatches=4,
@@ -55,8 +56,7 @@ class CrossEntropyPPO(RlAlgorithm):
         self._batch_size = None
         self.agent = None
         self.batch_spec = None
-        self.lr_scheduler_value = None
-        self.lr_scheduler_policy = None
+        self.lr_scheduler = None
         self.optimizer_value = None
         self.optimizer_policy = None
         if self.cross_entropy:
@@ -71,9 +71,9 @@ class CrossEntropyPPO(RlAlgorithm):
 
         # optimizers
         self.optimizer_value = Adam(self.agent.value_parameters(),
-                                    lr=self.lr_value)
+                                    lr=self.lr)
         self.optimizer_policy = Adam(self.agent.policy_parameters(),
-                                     lr=self.lr_policy)
+                                     lr=self.lr)
 
         # init_agent new initialized agent
         if self.cross_entropy:
@@ -83,10 +83,8 @@ class CrossEntropyPPO(RlAlgorithm):
         # for logging
         self._batch_size = self.batch_spec.size // self.minibatches  # For logging.
 
-        # lr schedulers
-        self.lr_scheduler_value = lr_scheduler.ReduceLROnPlateau(
-            optimizer=self.optimizer_value, patience=self.patience)
-        self.lr_scheduler_policy = lr_scheduler.ReduceLROnPlateau(
+        # lr scheduler
+        self.lr_scheduler = lr_scheduler.ReduceLROnPlateau(
             optimizer=self.optimizer_policy, patience=self.patience)
 
     @staticmethod
@@ -168,7 +166,7 @@ class CrossEntropyPPO(RlAlgorithm):
 
         return return_, advantage, valid
 
-    def optimize_agent(self, itr, samples):
+    def optimize_agent(self, samples):
         """
         Train the agent, for multiple epochs over minibatches taken from the
         input samples.  Organizes agent inputs from the training data, and
@@ -206,7 +204,6 @@ class CrossEntropyPPO(RlAlgorithm):
         mb_size = batch_size // self.minibatches
         # start updates
         total_policy_loss = 0.0
-        total_value_loss = 0.0
         # TODO: Fully reimplement or remove epochs functionality
         for _ in range(1):
             for idxs in iterate_mb_idxs(batch_size, mb_size, shuffle=True):
@@ -220,7 +217,6 @@ class CrossEntropyPPO(RlAlgorithm):
                     *loss_inputs[T_idxs, B_idxs])
                 # update total loss
                 total_policy_loss += policy_loss.item()
-                total_value_loss += value_error.item()
                 # compute gradients
                 policy_loss.backward()
                 value_error.backward()
@@ -232,26 +228,35 @@ class CrossEntropyPPO(RlAlgorithm):
                 self.optimizer_policy.step()
                 self.optimizer_value.step()
 
-                opt_info.policy_loss.append(policy_loss.item())
-                opt_info.gradNorm.append(grad_norm)
-                opt_info.value_error.append(value_error.item())
-                opt_info.entropy.append(entropy.item())
+                opt_info.PolicyLoss.append(policy_loss.item())
+                opt_info.GradNorm.append(grad_norm)
+                opt_info.ValueError.append(value_error.item())
+                opt_info.Entropy.append(entropy.item())
                 self.update_counter += 1
 
-        # step down learning rates
-        self.lr_scheduler_value.step(total_value_loss)
-        self.lr_scheduler_policy.step(total_policy_loss)
+        # step down learning rate
+        self.lr_scheduler.step(total_policy_loss)
+
+        # ensure value optimizer has same learning rate
+        if self.same_lr:
+            lr = self.policy_learning_rate
+            for param_group in self.optimizer_value.param_groups:
+                param_group['lr'] = lr
         return opt_info
 
     @property
-    def lr_policy(self):
+    def policy_learning_rate(self):
         for param_group in self.optimizer_policy.param_groups:
             return param_group['lr']
 
     @property
-    def lr_value(self):
+    def value_learning_rate(self):
         for param_group in self.optimizer_value.param_groups:
             return param_group['lr']
+
+    @property
+    def training_complete(self):
+        return self.policy_learning_rate < LR1
 
     @staticmethod
     def mean_kl(p, q, valid=None, eps=1e-8):

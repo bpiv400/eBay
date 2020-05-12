@@ -57,8 +57,8 @@ PPO_PARAMS = {'minibatches': {'type': int, 'default': 1},
               'ratio_clip': {'type': float, 'default': .1},
               'clip_grad_norm': {'type': float, 'default': 1.},
               'patience': {'type': float, 'default': 1},
-              'lr_policy': {'type': float, 'default': .001},
-              'lr_value': {'type': float, 'default': .001}}
+              'lr': {'type': float, 'default': .001},
+              'same_lr': {'action': 'store_true'}}
 
 SYSTEM_PARAMS = {'gpu': {'action': 'store_true'},
                  'workers': {'type': int,
