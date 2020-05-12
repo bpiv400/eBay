@@ -1,3 +1,4 @@
+import psutil
 from constants import BYR_PREFIX, SLR_PREFIX, DROPOUT
 
 # state dictionaries
@@ -60,6 +61,10 @@ PPO_PARAMS = {'minibatches': {'type': int, 'default': 1},
               'lr_value': {'type': float, 'default': .001}}
 
 SYSTEM_PARAMS = {'gpu': {'action': 'store_true'},
+                 'workers': {'type': int,
+                             'default': psutil.cpu_count(logical=False)},
+                 'auto': {'action': 'store_true'},
+                 'multiple': {'action': 'store_true'},
                  'debug': {'action': 'store_true'},
                  'verbose': {'action': 'store_true'}}
 

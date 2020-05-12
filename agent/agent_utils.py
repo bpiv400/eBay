@@ -152,7 +152,7 @@ def get_train_file_path(rank):
     return '{}train/{}.hdf5'.format(REINFORCE_DIR, rank)
 
 
-def cpu_sampling_process(common_kwargs, worker_kwargs):
+def ebay_sampling_process(common_kwargs, worker_kwargs):
     """Target function used for forking parallel worker processes in the
     samplers. After ``initialize_worker()``, it creates the specified number
     of environment instances and gives them to the collector when
@@ -166,7 +166,7 @@ def cpu_sampling_process(common_kwargs, worker_kwargs):
     initialize_worker(w.rank, w.seed, w.cpus, c.torch_threads)
     envs = list()
     for env_rank in w.env_ranks:
-        filename = get_train_file_path(env_rank + 1)
+        filename = get_train_file_path(env_rank)
         envs.append(c.EnvCls(**c.env_kwargs, filename=filename))
     set_envs_seeds(envs, w.seed)
 
@@ -201,3 +201,14 @@ def cpu_sampling_process(common_kwargs, worker_kwargs):
 
     for env in envs:
         env.close()
+
+
+def network_size(net):
+    bits = 32
+    total_bits = 0.0
+    for m in net.modules():
+        for p in m.parameters():
+            s = np.array(p.size())
+            b = np.prod(np.array(s)) * bits
+            total_bits += b
+    return total_bits / 8e6

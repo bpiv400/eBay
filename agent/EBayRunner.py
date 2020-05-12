@@ -9,7 +9,7 @@ from rlpyt.utils.seed import set_seed, make_seed
 from rlpyt.utils.logging import logger
 from rlpyt.utils.prog_bar import ProgBarCounter
 from agent.agent_consts import LR1
-from agent.agent_utils import cpu_sampling_process
+from agent.agent_utils import ebay_sampling_process
 
 
 class EBayMinibatchRlBase(BaseRunner):
@@ -83,7 +83,11 @@ class EBayMinibatchRlBase(BaseRunner):
             world_size=world_size,
         )
         if isinstance(self.sampler, ParallelSamplerBase):
+<<<<<<< HEAD
             sampler_init_args['worker_process'] = cpu_sampling_process
+=======
+            sampler_init_args['worker_process'] = ebay_sampling_process
+>>>>>>> master
         examples = self.sampler.initialize(**sampler_init_args)
 
         self.itr_batch_size = self.sampler.batch_spec.size * world_size
@@ -119,12 +123,10 @@ class EBayMinibatchRlBase(BaseRunner):
         Returns all state needed for full checkpoint/snapshot of training run,
         including agent parameters and optimizer parameters.
         """
-        return dict(
-            itr=itr,
-            cum_steps=itr * self.sampler.batch_size * self.world_size,
-            agent_state_dict=self.agent.state_dict(),
-            optimizer_state_dict=self.algo.optim_state_dict(),
-        )
+        return dict(itr=itr,
+                    cum_steps=itr * self.sampler.batch_size * self.world_size,
+                    agent_state_dict=self.agent.state_dict(),
+                    optimizer_state_dict=self.algo.optim_state_dict())
 
     def save_itr_snapshot(self, itr):
         """
