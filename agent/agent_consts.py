@@ -37,7 +37,7 @@ ALL_FEATS = "all"
 AGENT_PARAMS = {'role': {'type': str,
                          'choices': [BYR_PREFIX, SLR_PREFIX],
                          'default': SLR_PREFIX},
-                'delay': {'action': 'store_true'},
+                'delay': {'type': bool, 'action': 'store_true'},
                 DROPOUT: {'nargs': 2,
                           'type': float,
                           'default': [0.0, 0.0]
@@ -53,7 +53,7 @@ BATCH_PARAMS = {'batch_size': {'type': int, 'default': 2 ** 12}}
 
 PPO_PARAMS = {'minibatches': {'type': int, 'default': 1},
               'entropy_loss_coeff': {'type': float, 'default': .01},
-              'cross_entropy': {'action': 'store_true'},
+              'cross_entropy': {'type': bool, 'action': 'store_true'},
               'ratio_clip': {'type': float, 'default': .1},
               'clip_grad_norm': {'type': float, 'default': 1.},
               'patience': {'type': float, 'default': 1},
