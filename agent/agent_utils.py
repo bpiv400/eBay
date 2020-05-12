@@ -96,9 +96,10 @@ def gen_run_id():
 def create_params_file():
     # append parameters
     series = list()
-    for d in PARAM_DICTS:
-        for k, v in d.items():
-            series.append(pd.Series(name=k, dtype=v['type']))
+    for param_set, d in PARAM_DICTS.items():
+        if param_set != 'system_params':
+            for k, v in d.items():
+                series.append(pd.Series(name=k, dtype=v['type']))
 
     # columns for timings
     series.append(pd.Series(name='time_elapsed', dtype=int))

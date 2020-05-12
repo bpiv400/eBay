@@ -83,7 +83,6 @@ class EBayMinibatchRlBase(BaseRunner):
             world_size=world_size,
         )
         if isinstance(self.sampler, ParallelSamplerBase):
-            print('checks out')
             sampler_init_args['worker_process'] = cpu_sampling_process
         examples = self.sampler.initialize(**sampler_init_args)
 
@@ -185,6 +184,8 @@ class EBayMinibatchRlBase(BaseRunner):
             logger.record_tabular('UpdatesPerSecond', updates_per_second)
             logger.record_tabular('ReplayRatio', replay_ratio)
             logger.record_tabular('CumReplayRatio', cum_replay_ratio)
+            logger.record_tabular('PolicyLearningRate', self.algo.lr_policy)
+            logger.record_tabular('ValueLearningRate', self.algo.lr_value)
         self._log_infos(traj_infos)
         logger.dump_tabular(with_prefix=False)
 
@@ -244,7 +245,7 @@ class EBayMinibatchRl(EBayMinibatchRlBase):
                 if (itr + 1) % self.log_interval_itrs == 0:
                     self.log_diagnostics(itr)
 
-                if self.algo.lr < LR1:
+                if self.algo.lr_policy < LR1:
                     break
             itr += 1
         self.shutdown()

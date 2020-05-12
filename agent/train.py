@@ -48,11 +48,6 @@ class RlTrainer:
         # parameters
         self.env_params_train = self.generate_train_params()
 
-        # minibatches in ppo_params
-        self.ppo_params['minibatches'] = \
-            int(self.batch_params['batch_size'] / self.ppo_params['mbsize'])
-        del self.ppo_params['mbsize']
-
         # rlpyt components
         self.sampler = self.generate_sampler()
         self.runner = self.generate_runner()

@@ -50,9 +50,9 @@ AGENT_PARAMS = {'role': {'type': str,
 
 BATCH_PARAMS = {'batch_size': {'type': int, 'default': 2 ** 12}}
 
-PPO_PARAMS = {'mbsize': {'type': int, 'default': 512},
-              'cross_entropy_loss_coeff': {'type': float, 'default': 1.},
-              'entropy_loss_coeff': {'type': float, 'default': 1.},
+PPO_PARAMS = {'minibatches': {'type': int, 'default': 1},
+              'entropy_loss_coeff': {'type': float, 'default': .01},
+              'cross_entropy': {'action': 'store_true'},
               'ratio_clip': {'type': float, 'default': .1},
               'clip_grad_norm': {'type': float, 'default': 1.},
               'patience': {'type': float, 'default': 1},
