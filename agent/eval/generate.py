@@ -11,12 +11,13 @@ from constants import NO_ARRIVAL_CUTOFF, BYR_PREFIX, SLR_PREFIX, \
 from featnames import DELAY, NO_ARRIVAL
 
 
-def gen_eval_kwargs(composer=None, model_kwargs=None, run_dir=None, num=None):
+def gen_eval_kwargs(composer=None, model_kwargs=None, run_dir=None,
+                    path_suffix=None):
     eval_kwargs = {'composer': composer,
                    'model_kwargs': model_kwargs,
                    'model_class': PgCategoricalAgentModel,
                    'run_dir': run_dir,
-                   'num': num,
+                   'path_suffix': path_suffix,
                    'verbose': False}
     return eval_kwargs
 
@@ -59,12 +60,15 @@ def main():
         run_dir = parent_dir + 'run_{}/'.format(run)
 
         # check if file exists
-        if os.path.isfile(run_dir + 'outcomes/{}.gz'.format(args.num)):
+        path_suffix = '{}/{}.gz'.format(args.part, args.num)
+        if os.path.isfile(run_dir + path_suffix):
             print('Outcomes for [run {} / chunk {}] already generated.'.format(
                 run, args.num))
             continue
         else:
-            print(run)
+            if not os.path.isdir(run_dir + args.part):
+                os.mkdir(run_dir + args.part)
+            print(run_dir + path_suffix)
 
         # create composer
         agent_params = params.loc[run, AGENT_PARAMS.keys()]
@@ -76,7 +80,7 @@ def main():
         eval_kwargs = gen_eval_kwargs(composer=composer,
                                       model_kwargs=model_kwargs,
                                       run_dir=run_dir,
-                                      num=args.num)
+                                      path_suffix=path_suffix)
         eval_generator = EvalGenerator(**eval_kwargs)
 
         # run generator to simulate outcomes

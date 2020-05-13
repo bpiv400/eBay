@@ -11,7 +11,6 @@ from agent.EBayRunner import EBayMinibatchRl
 from agent.models.SplitCategoricalPgAgent import SplitCategoricalPgAgent
 from rlpyt.samplers.serial.sampler import SerialSampler
 from rlpyt.samplers.parallel.cpu.sampler import CpuSampler
-from rlpyt.samplers.parallel.gpu.sampler import GpuSampler
 from rlpyt.utils.logging.context import logger_context
 from featnames import DELAY
 from constants import RL_LOG_DIR, BYR_PREFIX, PARTS_DIR, TRAIN_RL, DROPOUT
@@ -91,11 +90,7 @@ class RlTrainer:
                 eval_max_steps=50,
             )
         else:
-            if self.system_params['gpu']:
-                sampler_class = GpuSampler
-            else:
-                sampler_class = CpuSampler
-            return sampler_class(
+            return CpuSampler(
                 EnvCls=SellerEnvironment,
                 env_kwargs=self.env_params_train,
                 batch_B=batch_b,

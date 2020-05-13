@@ -58,8 +58,7 @@ PPO_PARAMS = {'minibatches': {'type': int, 'default': 1},
               'lr': {'type': float, 'default': .001},
               'same_lr': {'action': 'store_true'}}
 
-SYSTEM_PARAMS = {'gpu': {'action': 'store_true'},
-                 'workers': {'type': int,
+SYSTEM_PARAMS = {'workers': {'type': int,
                              'default': psutil.cpu_count(logical=False)},
                  'auto': {'action': 'store_true'},
                  'multiple': {'action': 'store_true'},

@@ -22,7 +22,7 @@ class EvalGenerator(OutcomeGenerator):
         self.model_kwargs = kwargs['model_kwargs']
         self.ModelCls = kwargs['model_class']
         self.run_dir = kwargs['run_dir']
-        self.num = kwargs['num']
+        self.path_suffix = kwargs['path_suffix']
         super().__init__(direct=None, verbose=kwargs['verbose'])
 
     def load_chunk(self, chunk=None):
@@ -54,4 +54,4 @@ class EvalGenerator(OutcomeGenerator):
 
     @property
     def records_path(self):
-        return self.run_dir + 'outcomes/{}.gz'.format(self.num)
+        return self.run_dir + self.path_suffix
