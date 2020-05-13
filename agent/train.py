@@ -1,7 +1,6 @@
 """
 Train a seller agent that makes concessions, not offers
 """
-import os
 import argparse
 from datetime import datetime as dt
 import multiprocessing as mp
@@ -9,7 +8,7 @@ import warnings
 import torch
 from agent.CrossEntropyPPO import CrossEntropyPPO
 from agent.EBayRunner import EBayMinibatchRl
-from agent.SplitCategoricalPgAgent import SplitCategoricalPgAgent
+from agent.models.SplitCategoricalPgAgent import SplitCategoricalPgAgent
 from rlpyt.samplers.serial.sampler import SerialSampler
 from rlpyt.samplers.parallel.cpu.sampler import CpuSampler
 from rlpyt.samplers.parallel.gpu.sampler import GpuSampler
@@ -62,7 +61,6 @@ class RlTrainer:
         return env_params
 
     def generate_algorithm(self):
-        print(self.ppo_params)
         return CrossEntropyPPO(**self.ppo_params)
 
     def generate_agent(self):
@@ -70,7 +68,8 @@ class RlTrainer:
         model_kwargs = dict()
         model_kwargs[BYR_PREFIX] = self.agent_params['role'] == BYR_PREFIX
         model_kwargs[DELAY] = self.agent_params[DELAY]
-        model_kwargs[DROPOUT] = tuple(self.agent_params[DROPOUT])
+        model_kwargs[DROPOUT] = (self.agent_params['dropout0'],
+                                 self.agent_params['dropout1'])
 
         return SplitCategoricalPgAgent(ModelCls=PgCategoricalAgentModel,
                                        model_kwargs=model_kwargs)
@@ -151,7 +150,7 @@ class RlTrainer:
                             use_summary_writer=True,
                             override_prefix=True,
                             run_ID=self.run_id,
-                            snapshot_mode='all'):
+                            snapshot_mode='last'):
             self.itr = self.runner.train()
     
     @property
@@ -194,24 +193,13 @@ def main():
 
     # save parameters to file
     save_params(run_id=trainer.run_id,
-                trainer_params=trainer_args,
+                args=args,
                 time_elapsed=time_elapsed)
 
-    # create new subfolders
-    run_dir = trainer.log_dir + 'run_{}/'.format(trainer.run_id)
-    for name in ['models', 'rewards', 'outcomes']:
-        os.mkdir(run_dir + '{}/'.format(name))
-
     # drop optimization parameters
-    for i in range(trainer_args['batch_params']['batch_count']):
-        # load params
-        in_path = run_dir + 'itr_{}.pkl'.format(i)
-        d = torch.load(in_path)
-        # save model
-        out_path = run_dir + 'models/{}.net'.format(i)
-        torch.save(d[AGENT_STATE], out_path)
-        # delete params
-        os.remove(in_path)
+    path = trainer.log_dir + 'run_{}/params.pkl'.format(trainer.run_id)
+    d = torch.load(path)
+    torch.save(d[AGENT_STATE], path)
 
 
 if __name__ == '__main__':

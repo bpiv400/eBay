@@ -69,9 +69,4 @@ START_TIME = 'start_time'
 START_PRICE = 'start_price'
 DEC_PRICE = 'decline_price'
 ACC_PRICE = 'accept_price'
-
-# lstg feats
-RELISTED = 'relisted'
-
-# for init models
-MAX_REWARD = 'max_reward'
+NO_ARRIVAL = 'p_no_arrival'

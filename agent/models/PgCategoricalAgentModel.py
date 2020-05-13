@@ -59,6 +59,11 @@ class PgCategoricalAgentModel(AgentModel):
         return pi
 
     def _forward_dict(self, input_dict=None, compute_value=True):
+        if input_dict['lstg'].dim() == 1:
+            for elem_name, elem in input_dict.items():
+                input_dict[elem_name] = elem.unsqueeze(0)
+            if self.training:
+                self.eval()
         pi_logits = self.policy_network(input_dict)
         # value output head
         if compute_value:
@@ -76,11 +81,6 @@ class PgCategoricalAgentModel(AgentModel):
         """
         # setup input dictionary and fix dimensionality
         input_dict = observation._asdict()
-        if input_dict['lstg'].dim() == 1:
-            for elem_name, elem in input_dict.items():
-                input_dict[elem_name] = elem.unsqueeze(0)
-            if self.training:
-                self.eval()
 
         # temporary check
         # if self.training:

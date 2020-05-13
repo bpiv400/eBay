@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 from collections import OrderedDict
 from nets.nets_consts import AFFINE, LAYERS_EMBEDDING, LAYERS_FULL, HIDDEN
+from constants import MODEL_NORM
 
 
 class Layer(nn.Module):
@@ -60,7 +61,8 @@ def stack_layers(num, layers=1, dropout=0.0, norm='batch'):
 
 
 class Embedding(nn.Module):
-    def __init__(self, counts, dropout=0.0, norm='batch'):
+    def __init__(self, counts, dropout=0.0,
+                 layers0=LAYERS_EMBEDDING, norm=MODEL_NORM):
         """
         :param counts: dictionary of scalar input sizes.
         :param dropout: scalar dropout rate.
@@ -75,7 +77,7 @@ class Embedding(nn.Module):
         self.layer1 = nn.ModuleDict()
         for k, v in counts.items():
             self.layer1[k] = stack_layers(v, 
-                                          layers=LAYERS_EMBEDDING,
+                                          layers=layers0,
                                           norm=norm)
 
         # second layer: concatenation
@@ -149,12 +151,15 @@ def create_groupings(sizes):
     return groups
 
 
-def create_embedding_layers(groups=None, sizes=None, 
-                            dropout=None, norm=None):
+def create_embedding_layers(groups=None, sizes=None, dropout=None,
+                            layers0=LAYERS_EMBEDDING, norm=MODEL_NORM):
     # embeddings
     d, total = OrderedDict(), 0
     for name, group in groups.items():
         counts = {k: v for k, v in sizes['x'].items() if k in group}
-        d[name] = Embedding(counts, dropout=dropout, norm=norm)
+        d[name] = Embedding(counts,
+                            dropout=dropout,
+                            layers0=layers0,
+                            norm=norm)
         total += sum(counts.values())
     return nn.ModuleDict(d), total

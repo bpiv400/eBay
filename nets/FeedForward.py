@@ -1,11 +1,13 @@
 import torch
 import torch.nn as nn
-from nets.nets_consts import HIDDEN
+from nets.nets_consts import HIDDEN, LAYERS_EMBEDDING
 from nets.nets_utils import FullyConnected, create_embedding_layers, create_groupings
+from constants import MODEL_NORM
 
 
 class FeedForward(nn.Module):
-    def __init__(self, sizes, dropout=(0.0, 0.0), norm='batch'):
+    def __init__(self, sizes, dropout=(0.0, 0.0),
+                 layers0=LAYERS_EMBEDDING, norm=MODEL_NORM):
         """
         :param sizes: dictionary of scalar input sizes; sizes['x'] is an OrderedDict
         :param dropout: tuple of dropout rates.
@@ -19,6 +21,7 @@ class FeedForward(nn.Module):
         self.nn0, total = create_embedding_layers(groups=groups,
                                                   sizes=sizes,
                                                   dropout=dropout[0],
+                                                  layers0=layers0,
                                                   norm=norm)
 
         # fully connected

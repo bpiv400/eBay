@@ -1,6 +1,7 @@
 import psutil
 import time
 import torch
+import numpy as np
 from collections import deque
 from rlpyt.runners.base import BaseRunner
 from rlpyt.samplers.parallel.base import ParallelSamplerBase
@@ -196,12 +197,17 @@ class EBayMinibatchRlBase(BaseRunner):
             traj_infos = self._traj_infos
         if traj_infos:
             for k in traj_infos[0]:
-                if not k.startswith("_"):
-                    logger.record_tabular_misc_stat(k, [info[k] for info in traj_infos])
+                # if not k.startswith("_"):
+                if k == 'Length':
+                    v = [info[k] for info in traj_infos]
+                    logger.record_tabular_misc_stat(k, v)
 
         if self._opt_infos:
             for k, v in self._opt_infos.items():
-                logger.record_tabular_misc_stat(k, v)
+                if k in ['DiscountedReturn', 'Advantage', 'Entropy']:
+                    logger.record_tabular_misc_stat(k, v)
+                else:
+                    logger.record_tabular(k, np.average(v))
         self._opt_infos = {k: list() for k in self._opt_infos}  # (reset)
 
 

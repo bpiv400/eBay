@@ -9,10 +9,10 @@ Lots of memory dumping code while I try to find leak
 import numpy as np
 from featnames import START_PRICE, START_TIME, ACC_PRICE, DEC_PRICE
 from rlenv.env_utils import load_chunk
+from rlenv.environments.SimulatorEnvironment import SimulatorEnvironment
 from rlenv.interfaces.ArrivalInterface import ArrivalInterface
 from rlenv.interfaces.PlayerInterface import SimulatedSeller, SimulatedBuyer
 from rlenv.Composer import Composer
-from rlenv.environments.SimulatorEnvironment import SimulatorEnvironment
 
 
 class Generator:
@@ -88,10 +88,14 @@ class Generator:
         return self.create_env(x_lstg=x_lstg, lookup=lookup, log=log)
 
     def create_env(self, x_lstg=None, lookup=None, log=None):
-        return SimulatorEnvironment(buyer=self.buyer, seller=self.seller,
-                                    arrival=self.arrival, x_lstg=x_lstg,
-                                    lookup=lookup, recorder=self.recorder,
-                                    verbose=self.verbose, composer=self.composer)
+        return SimulatorEnvironment(buyer=self.buyer,
+                                    seller=self.seller,
+                                    arrival=self.arrival,
+                                    x_lstg=x_lstg,
+                                    lookup=lookup,
+                                    recorder=self.recorder,
+                                    verbose=self.verbose,
+                                    composer=self.composer)
 
     def simulate_lstg(self, environment):
         raise NotImplementedError()

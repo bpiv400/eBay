@@ -5,11 +5,12 @@ from datetime import datetime as dt
 from torch.utils.tensorboard import SummaryWriter
 from torch.optim import Adam, lr_scheduler
 from train.EBayDataset import EBayDataset
-from train.train_consts import FTOL, LR0, LR1, LR_FACTOR, INT_DROPOUT
 from nets.FeedForward import FeedForward
 from train.Sample import get_batches
+from nets.nets_consts import LAYERS_EMBEDDING
+from train.train_consts import FTOL, LR0, LR1, LR_FACTOR, INT_DROPOUT
 from constants import MODEL_DIR, LOG_DIR, DELAY_MODELS, \
-    INTERARRIVAL_MODEL, INIT_VALUE_MODELS
+    INTERARRIVAL_MODEL, INIT_VALUE_MODELS, MODEL_NORM
 from utils import load_sizes
 
 
@@ -46,10 +47,11 @@ class Trainer:
         self.train = EBayDataset(train_part, name)
         self.test = EBayDataset(test_part, name)
 
-    def train_model(self, dropout=(0.0, 0.0), norm='batch'):
+    def train_model(self, dropout=(0.0, 0.0), layers0=LAYERS_EMBEDDING, norm=MODEL_NORM):
         """
         Public method to train model.
         :param dropout: pair of dropout rates, one for last embedding, one for fully connected.
+        :param layers0: number of layers in first embedding
         :param norm: one of ['batch', 'layer', 'weight']
         """
         # experiment id
@@ -66,7 +68,8 @@ class Trainer:
 
         # tune initial learning rate
         lr, net, lnl_test0 = self._tune_lr(writer=writer,
-                                           dropout=dropout, 
+                                           dropout=dropout,
+                                           layers0=layers0,
                                            norm=norm)
 
         # path to save model
@@ -220,11 +223,14 @@ class Trainer:
 
         return loss.item()
 
-    def _tune_lr(self, writer=None, dropout=None, norm=None):
+    def _tune_lr(self, writer=None, dropout=None, layers0=None, norm=None):
         nets, loss = [], []
         for lr in LR0:
             # initialize model and optimizer
-            nets.append(FeedForward(self.sizes, dropout=dropout, norm=norm).to(self.device))
+            nets.append(FeedForward(self.sizes,
+                                    dropout=dropout,
+                                    layers0=layers0,
+                                    norm=norm).to(self.device))
             optimizer = Adam(nets[-1].parameters(), lr=lr)
  
             # print to console

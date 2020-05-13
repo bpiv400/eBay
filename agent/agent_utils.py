@@ -99,7 +99,8 @@ def create_params_file():
     for param_set, d in PARAM_DICTS.items():
         if param_set != 'system_params':
             for k, v in d.items():
-                series.append(pd.Series(name=k, dtype=v['type']))
+                dtype = bool if 'type' not in v else v['type']
+                series.append(pd.Series(name=k, dtype=dtype))
 
     # columns for timings
     series.append(pd.Series(name='time_elapsed', dtype=int))
@@ -110,10 +111,9 @@ def create_params_file():
 
 
 def save_params(run_id=None,
-                trainer_params=None,
+                args=None,
                 time_elapsed=None):
-    role = trainer_params['agent_params']['role']
-    path = RL_LOG_DIR + '{}/runs.pkl'.format(role)
+    path = RL_LOG_DIR + '{}/runs.pkl'.format(args['role'])
 
     # if file does not exist, create it
     if not os.path.isfile(path):
@@ -124,10 +124,8 @@ def save_params(run_id=None,
         df = load(path)
 
     # add parameters
-    for param_set, d in trainer_params.items():
-        if param_set == 'system_params':
-            continue
-        for k, v in d.items():
+    for k, v in args.items():
+        if k in df.columns:
             df.loc[run_id, k] = v
 
     # add timings

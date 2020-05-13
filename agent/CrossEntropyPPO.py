@@ -1,6 +1,6 @@
-import itertools
 import torch
 from torch.optim import Adam, lr_scheduler
+from torch.nn.utils import clip_grad_norm_
 from collections import namedtuple
 from rlpyt.agents.base import AgentInputs
 from rlpyt.algos.base import RlAlgorithm
@@ -21,10 +21,13 @@ LossInputs = namedarraytuple("LossInputs",
                               "valid",
                               "old_dist_info"])
 OptInfo = namedtuple("OptInfo",
-                     ["PolicyLoss",
-                      "GradNorm",
-                      "ValueError",
-                      "Entropy"])
+                     ["DiscountedReturn",
+                      "Advantage",
+                      "Entropy",
+                      "PolicyLoss",
+                      "GradNormPolicy",
+                      "GradNormValue",
+                      "ValueError"])
 
 
 class CrossEntropyPPO(RlAlgorithm):
@@ -188,7 +191,9 @@ class CrossEntropyPPO(RlAlgorithm):
 
         # extract sample components and put them in LossInputs
         return_, advantage, valid = self.process_returns(samples)
-        loss_inputs = LossInputs(  # So can slice all.
+
+        # for slicing
+        loss_inputs = LossInputs(
             agent_inputs=agent_inputs,
             action=samples.agent.action,
             return_=return_,
@@ -197,42 +202,55 @@ class CrossEntropyPPO(RlAlgorithm):
             old_dist_info=samples.agent.agent_info.dist_info,
         )
 
+        # initialize opt_info with return and advantange
+        opt_info = OptInfo(*([] for _ in range(len(OptInfo._fields))))
+        opt_info.DiscountedReturn.append(
+            return_[valid.bool()].numpy())
+        opt_info.Advantage.append(
+            advantage[valid.bool()].numpy())
+
         # loop over minibatches
         T, B = samples.env.reward.shape[:2]
-        opt_info = OptInfo(*([] for _ in range(len(OptInfo._fields))))
         batch_size = T * B
         mb_size = batch_size // self.minibatches
         # start updates
         total_policy_loss = 0.0
-        # TODO: Fully reimplement or remove epochs functionality
-        for _ in range(1):
-            for idxs in iterate_mb_idxs(batch_size, mb_size, shuffle=True):
-                T_idxs = idxs % T
-                B_idxs = idxs // T
-                self.optimizer_value.zero_grad()
-                self.optimizer_policy.zero_grad()
-                self.agent.zero_values_grad()
+        # loop over minibatches
+        for idxs in iterate_mb_idxs(batch_size, mb_size, shuffle=True):
+            T_idxs = idxs % T
+            B_idxs = idxs // T
+            self.optimizer_value.zero_grad()
+            self.optimizer_policy.zero_grad()
+            self.agent.zero_values_grad()
 
-                policy_loss, value_error, entropy = self.loss(
-                    *loss_inputs[T_idxs, B_idxs])
-                # update total loss
-                total_policy_loss += policy_loss.item()
-                # compute gradients
-                policy_loss.backward()
-                value_error.backward()
-                grad_norm = torch.nn.utils.clip_grad_norm_(
-                    itertools.chain(self.agent.value_parameters(),
-                                    self.agent.policy_parameters()),
-                    self.clip_grad_norm)
-                # update weights
-                self.optimizer_policy.step()
-                self.optimizer_value.step()
+            # loss/error
+            policy_loss, value_error, entropy = self.loss(
+                *loss_inputs[T_idxs, B_idxs])
+            total_policy_loss += policy_loss.item()
 
-                opt_info.PolicyLoss.append(policy_loss.item())
-                opt_info.GradNorm.append(grad_norm)
-                opt_info.ValueError.append(value_error.item())
-                opt_info.Entropy.append(entropy.item())
-                self.update_counter += 1
+            # policy step
+            policy_loss.backward()
+            grad_norm_policy = clip_grad_norm_(
+                self.agent.policy_parameters(),
+                self.clip_grad_norm)
+            self.optimizer_policy.step()
+
+            # value step
+            value_error.backward()
+            grad_norm_value = clip_grad_norm_(
+                self.agent.value_parameters(),
+                self.clip_grad_norm)
+            self.optimizer_value.step()
+
+            # save for logging
+            opt_info.Entropy.append(entropy)
+            opt_info.PolicyLoss.append(policy_loss.item())
+            opt_info.GradNormPolicy.append(grad_norm_policy)
+            opt_info.GradNormValue.append(grad_norm_value)
+            opt_info.ValueError.append(value_error.item())
+
+            # increment counter
+            self.update_counter += 1
 
         # step down learning rate
         self.lr_scheduler.step(total_policy_loss)
@@ -263,6 +281,10 @@ class CrossEntropyPPO(RlAlgorithm):
         kl = torch.sum(p * (torch.log(p + eps) - torch.log(q + eps)), dim=-1)
         return valid_mean(kl, valid)
 
+    @staticmethod
+    def entropy(p, eps=1e-8):
+        return -torch.sum(p * torch.log(p + eps), dim=-1)
+
     def loss(self, agent_inputs, action, return_, advantage, valid, pi_old):
         """
         Compute the training loss: policy_loss + value_loss + entropy_loss
@@ -271,11 +293,11 @@ class CrossEntropyPPO(RlAlgorithm):
         Calls the agent to compute forward pass on training data, and uses
         the ``agent.distribution`` to compute likelihoods and entropies.
         """
-        # agent's policy
+        # agent outputs
         pi_new, value = self.agent(*agent_inputs)
-        dist = self.agent.distribution
 
         # loss from policy
+        dist = self.agent.distribution
         ratio = dist.likelihood_ratio(action,
                                       old_dist_info=pi_old,
                                       new_dist_info=pi_new)
@@ -289,22 +311,24 @@ class CrossEntropyPPO(RlAlgorithm):
         # loss from value estimation
         value_error = valid_mean(0.5 * (value - return_) ** 2, valid)
 
+        # calculate entropy for each action
+        entropy = self.entropy(pi_new.prob)[valid.bool()]
+
         # cross-entropy loss
         if self.cross_entropy:
-            pi_0, _ = self.init_agent(*agent_inputs)
-            entropy = self.mean_kl(pi_0.to('cpu'), pi_new.prob, valid)
-            entropy_loss = self.entropy_loss_coeff * entropy
+            pi_0 = self.init_agent.con(*agent_inputs)
+            cross_entropy = self.mean_kl(pi_0.to('cpu'), pi_new.prob, valid)
+            entropy_loss = self.entropy_loss_coeff * cross_entropy
 
         # entropy bonus
         else:
-            entropy = dist.mean_entropy(pi_new, valid)
-            entropy_loss = - self.entropy_loss_coeff * entropy
+            entropy_loss = - self.entropy_loss_coeff * entropy.mean()
 
         # total loss
         policy_loss = pi_loss + entropy_loss
 
-        # cross-entropy replaces entropy
-        return policy_loss, value_error, entropy
+        # loss values and statistics to record
+        return policy_loss, value_error, entropy.detach().numpy()
 
     def optim_state_dict(self):
         return {

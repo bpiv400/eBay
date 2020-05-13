@@ -2,7 +2,7 @@ import argparse
 from train.Trainer import Trainer
 from train.train_consts import INT_DROPOUT, DROPOUT_GRID
 from constants import SMALL, TRAIN_RL, TRAIN_MODELS, VALIDATION, \
-    DISCRIM_MODELS, INIT_VALUE_MODELS, MODEL_NORM
+    DISCRIM_MODELS, INIT_VALUE_MODELS, INIT_MODELS
 
 
 def main():
@@ -27,8 +27,11 @@ def main():
     # compute dropout
     dropout = tuple([float(i / INT_DROPOUT) for i in DROPOUT_GRID[args.dropout-1]])
 
+    # layers in first network
+    layers0 = 1 if args.name in INIT_MODELS else 4
+
     # train model
-    trainer.train_model(dropout=dropout, norm=MODEL_NORM)
+    trainer.train_model(dropout=dropout, layers0=layers0)
 
 
 if __name__ == '__main__':
