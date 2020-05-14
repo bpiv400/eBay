@@ -2,6 +2,7 @@
 Environment for training the buyer agent
 """
 from rlenv.env_consts import DELAY_EVENT, RL_ARRIVAL_EVENT
+from rlenv.env_utils import get_clock_feats
 from rlenv.sources import RlArrivalSources
 from rlenv.environments.AgentEnvironment import AgentEnvironment
 from rlenv.events.Arrival import Arrival
@@ -39,10 +40,9 @@ class BuyerEnvironment(AgentEnvironment):
         # should deterministically return RL_ARRIVAL_EVENT at start of lstg
         # lstg should never be complete at this point
         event, _ = super().run()
+        event.update_arrival()
         self.last_event = event
-
         return self.get_obs()
-
 
     def is_agent_turn(self, event):
         """

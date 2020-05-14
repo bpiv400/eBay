@@ -1,5 +1,6 @@
 from rlenv.events.Event import Event
 from rlenv.env_consts import ARRIVAL, RL_ARRIVAL_EVENT
+from rlenv.env_utils import get_clock_feats
 from utils import get_months_since_lstg
 
 
@@ -25,6 +26,15 @@ class Arrival(Event):
         self.sources = sources
         self.start = priority
 
-    def update_arrival(self, **kwargs):
-        months_since_lstg = get_months_since_lstg(lstg_start=self.start, start=self.priority)
-        self.sources.update_arrival(months_since_lstg=months_since_lstg, **kwargs)
+    def update_arrival(self, thread_count=None):
+        """
+        :param thread_count: current clock features
+        :return:
+        """
+        update_args = dict(months_since_lstg=get_months_since_lstg(lstg_start=self.start,
+                                                                   start=self.priority),
+                           clock_feats=get_clock_feats(self.priority))
+        if thread_count is not None:
+            update_args['thread_count'] = thread_count
+
+        self.sources.update_arrival(**update_args)

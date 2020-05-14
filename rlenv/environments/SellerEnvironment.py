@@ -77,9 +77,10 @@ class SellerEnvironment(AgentEnvironment):
         while True:
             event, lstg_complete = super().run()
             self.last_event = event
+            if not lstg_complete:
+                self.prepare_offer(event)
+
             if not lstg_complete or self.outcome.sale:
-                if not lstg_complete:
-                    self.prepare_offer(event)
                 return self.agent_tuple(lstg_complete=lstg_complete)
             else:
                 self.relist()
