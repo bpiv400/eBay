@@ -28,7 +28,7 @@ def main():
     dropout = tuple([float(i / INT_DROPOUT) for i in DROPOUT_GRID[args.dropout-1]])
 
     # train model
-    trainer.train_model(dropout=dropout, layers0=1)
+    trainer.train_model(dropout=dropout)
 
 
 if __name__ == '__main__':

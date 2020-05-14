@@ -47,7 +47,7 @@ class Trainer:
         self.train = EBayDataset(train_part, name)
         self.test = EBayDataset(test_part, name)
 
-    def train_model(self, dropout=(0.0, 0.0), layers0=LAYERS_EMBEDDING, norm=MODEL_NORM):
+    def train_model(self, dropout=(0.0, 0.0), norm=MODEL_NORM):
         """
         Public method to train model.
         :param dropout: pair of dropout rates, one for last embedding, one for fully connected.
@@ -69,7 +69,6 @@ class Trainer:
         # tune initial learning rate
         lr, net, lnl_test0 = self._tune_lr(writer=writer,
                                            dropout=dropout,
-                                           layers0=layers0,
                                            norm=norm)
 
         # path to save model
@@ -223,13 +222,12 @@ class Trainer:
 
         return loss.item()
 
-    def _tune_lr(self, writer=None, dropout=None, layers0=None, norm=None):
+    def _tune_lr(self, writer=None, dropout=None, norm=None):
         nets, loss = [], []
         for lr in LR0:
             # initialize model and optimizer
             nets.append(FeedForward(self.sizes,
                                     dropout=dropout,
-                                    layers0=layers0,
                                     norm=norm).to(self.device))
             optimizer = Adam(nets[-1].parameters(), lr=lr)
  
