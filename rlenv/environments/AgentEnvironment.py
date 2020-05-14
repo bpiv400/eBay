@@ -96,7 +96,7 @@ class AgentEnvironment(EbayEnvironment, Env):
                                                   turn=turn)
         return SellerObs(**obs_dict)
 
-    def con_from_action(self, action=None):
+    def turn_from_action(self, action=None):
         raise NotImplementedError()
 
     def get_reward(self):
