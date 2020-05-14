@@ -1,8 +1,5 @@
-from constants import MONTH
 from rlenv.events.Event import Event
-from rlenv.env_consts import ARRIVAL
-from rlenv.env_utils import time_delta
-from rlenv.interfaces.ArrivalInterface import ArrivalInterface
+from rlenv.env_consts import ARRIVAL, RL_ARRIVAL_EVENT
 from utils import get_months_since_lstg
 
 
@@ -14,21 +11,20 @@ class Arrival(Event):
     Attributes:
         priority: inherited from Event
     """
-    def __init__(self, priority=None, sources=None):
+    def __init__(self, priority=None, sources=None, rl=False):
         """
         Constructor
 
         :param priority: integer time of the event
         """
-        super(Arrival, self).__init__(ARRIVAL, priority=int(priority))
+        if not rl:
+            event_type = ARRIVAL
+        else:
+            event_type = RL_ARRIVAL_EVENT
+        super(Arrival, self).__init__(event_type, priority=int(priority))
         self.sources = sources
         self.start = priority
 
-    def update_arrival(self, clock_feats=None, thread_count=None):
+    def update_arrival(self, **kwargs):
         months_since_lstg = get_months_since_lstg(lstg_start=self.start, start=self.priority)
-        self.sources.update_arrival(clock_feats=clock_feats, thread_count=thread_count,
-                                    months_since_lstg=months_since_lstg)
-
-    def inter_arrival(self):
-        seconds = self.interface.inter_arrival(self.sources())
-        return seconds
+        self.sources.update_arrival(months_since_lstg=months_since_lstg, **kwargs)
