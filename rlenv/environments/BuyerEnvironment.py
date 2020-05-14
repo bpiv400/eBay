@@ -13,7 +13,7 @@ class BuyerEnvironment(AgentEnvironment):
         super().__init__(**kwargs)
 
     def turn_from_action(self, action=None):  # might not make sense
-        pass
+        return self.con_set[action]
 
     def get_reward(self):
         pass
@@ -23,7 +23,22 @@ class BuyerEnvironment(AgentEnvironment):
         return 100
 
     def step(self, action):
-        pass
+        con = self.turn_from_action(action=action)
+        if self.last_event.event_type == RL_ARRIVAL_EVENT:
+            if con == 0:
+                # delay
+            else:
+                # concession and new thread
+        else:
+            if con == 0:
+                # expiration rejection and end the simulation
+            else:
+                if con != 1:
+                    # ordinary concession
+                else:
+                    # accept the seller's last offer and end the  simulation
+
+
 
     def reset(self):
         """
