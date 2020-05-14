@@ -2,7 +2,7 @@ import argparse
 from train.Trainer import Trainer
 from train.train_consts import INT_DROPOUT, DROPOUT_GRID
 from constants import SMALL, TRAIN_RL, TRAIN_MODELS, VALIDATION, \
-    DISCRIM_MODELS, INIT_VALUE_MODELS, INIT_MODELS
+    DISCRIM_MODELS, INIT_VALUE_MODELS
 
 
 def main():
