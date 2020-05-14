@@ -166,14 +166,14 @@ def slr_reward(months_to_sale=None, months_since_start=None,
     :return: discounted net proceeds
     """
     # discounted listing fees
-    M = np.ceil(months_to_sale) - np.ceil(months_since_start)
+    M = np.ceil(months_to_sale) - np.ceil(months_since_start) + 1
     if monthly_discount is not None:
         k = months_since_start % 1
-        factor = (1 - monthly_discount ** (M+1)) / (1 - monthly_discount)
-        delta = (monthly_discount ** k) * factor
+        factor = (1 - monthly_discount ** M) / (1 - monthly_discount)
+        delta = (monthly_discount ** (1-k)) * factor
         costs = LISTING_FEE * delta
     else:
-        costs = LISTING_FEE * (M+1)
+        costs = LISTING_FEE * M
     # add in action costs
     if action_diff is not None and action_cost is not None:
         costs += action_cost * action_diff
@@ -185,6 +185,24 @@ def slr_reward(months_to_sale=None, months_since_start=None,
     if action_diff is not None and action_discount is not None:
         sale_proceeds *= action_discount ** action_diff
     return sale_proceeds - costs
+
+
+def max_slr_reward(months_since_start=None, bin_proceeds=None,
+                   monthly_discount=None):
+    """
+    Discounts proceeds from sale and listing fees paid.
+    :param months_since_start: months since start of listing
+    :param bin_proceeds: start price net of eBay cut
+    :param monthly_discount: multiplicative factor on proceeds, by month
+    :return: discounted maximum proceeds
+    """
+    # discounted listing fees
+    if monthly_discount is not None:
+        k = months_since_start % 1
+        costs = LISTING_FEE * (monthly_discount ** (1-k))
+    else:
+        costs = LISTING_FEE
+    return bin_proceeds - costs
 
 
 def get_model_predictions(m, x):

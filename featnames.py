@@ -70,3 +70,8 @@ START_PRICE = 'start_price'
 DEC_PRICE = 'decline_price'
 ACC_PRICE = 'accept_price'
 NO_ARRIVAL = 'p_no_arrival'
+
+# agent costs
+MONTHLY_DISCOUNT = 'monthly_discount'
+ACTION_DISCOUNT = 'action_discount'
+ACTION_COST = 'action_cost'

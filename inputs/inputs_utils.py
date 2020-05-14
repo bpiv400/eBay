@@ -2,12 +2,13 @@ import numpy as np
 import pandas as pd
 from compress_pickle import dump
 from inputs.inputs_consts import NUM_OUT, N_SMALL, INTERVAL, \
-    INTERVAL_COUNTS, MONTHLY_DISCOUNT
+    INTERVAL_COUNTS, DELTA_MONTH, DELTA_ACTION, C_ACTION
 from constants import INPUT_DIR, INDEX_DIR, VALIDATION, TRAIN_MODELS, \
     TRAIN_RL, IDX, BYR_PREFIX, TURN_FEATS, DELAY_MODELS, \
     INIT_VALUE_MODELS, INIT_MODELS, ARRIVAL_PREFIX, CON_MULTIPLIER
 from featnames import CLOCK_FEATS, OUTCOME_FEATS, BYR_HIST, CON, \
-    SPLIT, MSG, AUTO, EXP, REJECT, DAYS, DELAY, TIME_FEATS, THREAD_COUNT
+    SPLIT, MSG, AUTO, EXP, REJECT, DAYS, DELAY, TIME_FEATS, \
+    THREAD_COUNT, MONTHLY_DISCOUNT, ACTION_DISCOUNT, ACTION_COST
 
 
 def get_y_con(df, turn=None):
@@ -140,7 +141,9 @@ def save_sizes(x, m):
 
     # for init models, save discount rate
     if m in INIT_VALUE_MODELS:
-        sizes['monthly_discount'] = MONTHLY_DISCOUNT
+        sizes[MONTHLY_DISCOUNT] = DELTA_MONTH
+        sizes[ACTION_DISCOUNT] = DELTA_ACTION
+        sizes[ACTION_COST] = C_ACTION
 
     # length of model output vector
     sizes['out'] = NUM_OUT[m]
