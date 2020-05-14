@@ -20,5 +20,5 @@ MAX_DROPOUT = 7
 DROPOUT_GRID = []
 for i in range(1, MAX_DROPOUT):
     for j in range(i + 1, MAX_DROPOUT + 1):
-        if j - i <= 4:
+        if j - i <= 3:
             DROPOUT_GRID.append([i, j])
