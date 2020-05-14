@@ -120,10 +120,11 @@ class ArrivalSources(Sources):
         self.source_dict[MONTHS_SINCE_LAST] = months_since_last
 
 
-class RlArrivalSources(Sources):
+class RlSources(ThreadSources):
     def __init__(self, x_lstg=None):
-        super(RlArrivalSources, self).__init__(x_lstg=x_lstg)
+        super(RlSources, self).__init__(x_lstg=x_lstg)
 
     def update_arrival(self, clock_feats=None, months_since_lstg=None):
-        self.source_dict[CLOCK_MAP] = clock_feats
         self.source_dict[MONTHS_SINCE_LSTG] = months_since_lstg
+        offer_map = OFFER_MAPS[1]
+        self.source_dict[offer_map][CLOCK_START_IND:CLOCK_END_IND] = clock_feats

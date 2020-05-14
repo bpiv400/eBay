@@ -4,7 +4,7 @@ Environment for training the buyer agent
 import numpy as np
 from agent.agent_consts import BUYER_ARRIVE_INTERVAL
 from rlenv.env_consts import DELAY_EVENT, RL_ARRIVAL_EVENT
-from rlenv.sources import RlArrivalSources, ThreadSources
+from rlenv.sources import RlSources, ThreadSources
 from rlenv.environments.AgentEnvironment import AgentEnvironment
 from rlenv.events.Arrival import Arrival
 from rlenv.events.Thread import RlThread
@@ -39,7 +39,7 @@ class BuyerEnvironment(AgentEnvironment):
                 self.last_event = None
                 return self.run()
             else:
-                sources = ThreadSources(x_lstg=self.x_lstg)
+                sources = self.last_event.sources
                 arrival_time = self.get_arrival_time(self.last_event.priority)
                 sources.init_thread(hist=self.composer.hist)
                 thread = RlThread(priority=arrival_time, sources=sources, con=con, rl_buyer=True,
@@ -67,7 +67,7 @@ class BuyerEnvironment(AgentEnvironment):
         """
         self.reset_lstg()
         super().reset()
-        rl_sources = RlArrivalSources(x_lstg=self.x_lstg)
+        rl_sources = RlSources(x_lstg=self.x_lstg)
         event = Arrival(priority=self.start_time, sources=rl_sources)
         self.queue.push(event)
         # should deterministically return RL_ARRIVAL_EVENT at start of lstg
