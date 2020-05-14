@@ -1,11 +1,13 @@
 """
 Environment for training the buyer agent
 """
+import numpy as np
+from agent.agent_consts import BUYER_ARRIVE_INTERVAL
 from rlenv.env_consts import DELAY_EVENT, RL_ARRIVAL_EVENT
-from rlenv.env_utils import get_clock_feats
-from rlenv.sources import RlArrivalSources
+from rlenv.sources import RlArrivalSources, ThreadSources
 from rlenv.environments.AgentEnvironment import AgentEnvironment
 from rlenv.events.Arrival import Arrival
+from rlenv.events.Thread import RlThread
 
 
 class BuyerEnvironment(AgentEnvironment):
@@ -22,13 +24,30 @@ class BuyerEnvironment(AgentEnvironment):
     def horizon(self):
         return 100
 
+    def get_arrival_time(self, priority):
+        backstop = min(self.end_time, priority + BUYER_ARRIVE_INTERVAL)
+        delay = int(np.random.uniform() * (backstop - priority))
+        return delay + priority
+
     def step(self, action):
         con = self.turn_from_action(action=action)
         if self.last_event.event_type == RL_ARRIVAL_EVENT:
             if con == 0:
-                # delay
+                # push rl arrival back into queue
+                self.last_event.priority += BUYER_ARRIVE_INTERVAL
+                self.queue.push(self.last_event)
+                self.last_event = None
+                return self.run()
             else:
-                # concession and new thread
+                sources = ThreadSources(x_lstg=self.x_lstg)
+                arrival_time = self.get_arrival_time(self.last_event.priority)
+                sources.init_thread(hist=self.composer.hist)
+                thread = RlThread(priority=arrival_time, sources=sources, con=con, rl_buyer=True,
+                                  thread_id=self.thread_counter)
+                self.thread_counter += 1
+                self.queue.push(thread)
+                self.last_event = None
+                return self.run()
         else:
             if con == 0:
                 # expiration rejection and end the simulation
@@ -37,7 +56,6 @@ class BuyerEnvironment(AgentEnvironment):
                     # ordinary concession
                 else:
                     # accept the seller's last offer and end the  simulation
-
 
 
     def reset(self):
@@ -69,7 +87,8 @@ class BuyerEnvironment(AgentEnvironment):
             return not (self.is_lstg_expired(event))
         else:
             return (event.type == DELAY_EVENT and
-                    event.turn % 2 == 1 and event.rl)
+                    event.turn % 2 == 1 and
+                    isinstance(event, RlThread))
 
     def define_action_space(self, con_set=None):
         return

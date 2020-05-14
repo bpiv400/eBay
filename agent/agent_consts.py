@@ -75,3 +75,6 @@ THREADS_PER_PROC = 1
 
 # final learning rate
 LR1 = 1e-7
+
+# seconds in buyer arrival window
+BUYER_ARRIVE_INTERVAL = 8 * 60 * 60

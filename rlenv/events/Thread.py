@@ -130,13 +130,13 @@ class Thread(Event):
     def byr_expire(self):
         self.sources.byr_expire(turn=self.turn)
 
-    def get_obs(self):
-        pass
-        # raise NotImplementedError()
-        # srcs = self.sources()
-        # maybe move to composer or sources
-        # return OBS_SPACE(LSTG_MAP=srcs[LSTG_MAP].values,
-        #                 THREAD_MAP=srcs[THREAD_MAP].values,
-        #                 TURN_IND_MAP=srcs[TURN_IND_MAP].values.astype(np.int),
-        #                 X_TIME_MAP=srcs[X_TIME_MAP][INT_REMAINING])
 
+class RlThread(Thread):
+    def __init__(self, priority=None, thread_id=None, rl_buyer=False,
+                 sources=None, con=None):
+        super(RlThread, self).__init__(priority=priority,
+                                       thread_id=thread_id)
+        self.rl_buyer = rl_buyer
+        self.sources = sources
+        self.stored_concession = con
+        self.event_type = OFFER_EVENT

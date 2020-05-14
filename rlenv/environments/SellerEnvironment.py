@@ -26,6 +26,9 @@ class SellerEnvironment(AgentEnvironment):
         while True:
             event, lstg_complete = super().run()
             self.last_event = event
+            if not lstg_complete:
+                self.prepare_offer(event)
+
             if not lstg_complete or self.outcome.sale:
                 return self.agent_tuple(lstg_complete=lstg_complete)
             else:
@@ -73,17 +76,7 @@ class SellerEnvironment(AgentEnvironment):
         if lstg_complete:
             return self.agent_tuple(lstg_complete=lstg_complete)
         self.last_event = None
-        # previously the run method
-        while True:
-            event, lstg_complete = super().run()
-            self.last_event = event
-            if not lstg_complete:
-                self.prepare_offer(event)
-
-            if not lstg_complete or self.outcome.sale:
-                return self.agent_tuple(lstg_complete=lstg_complete)
-            else:
-                self.relist()
+        return self.run()
 
     def turn_from_action(self, action=None):
         return self.con_set[action]
