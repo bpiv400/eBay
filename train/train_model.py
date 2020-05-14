@@ -27,11 +27,8 @@ def main():
     # compute dropout
     dropout = tuple([float(i / INT_DROPOUT) for i in DROPOUT_GRID[args.dropout-1]])
 
-    # layers in first network
-    layers0 = 1 if args.name in INIT_MODELS else 4
-
     # train model
-    trainer.train_model(dropout=dropout, layers0=layers0)
+    trainer.train_model(dropout=dropout, layers0=1)
 
 
 if __name__ == '__main__':
