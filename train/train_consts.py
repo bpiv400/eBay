@@ -16,9 +16,8 @@ FTOL = 1e-2  # decrease learning rate when relative improvement in loss is less 
 
 # dropout grid
 INT_DROPOUT = 10
-MAX_DROPOUT = 7
 DROPOUT_GRID = []
-for j in range(1, MAX_DROPOUT + 1):
-    for i in range(0, j):
+for j in range(0, 8):
+    for i in range(0, j+1):
         if j - i <= 3:
             DROPOUT_GRID.append([i, j])

@@ -6,8 +6,7 @@ from constants import MODEL_NORM
 
 
 class FeedForward(nn.Module):
-    def __init__(self, sizes, dropout=(0.0, 0.0),
-                 layers0=LAYERS_EMBEDDING, norm=MODEL_NORM):
+    def __init__(self, sizes, dropout=(0.0, 0.0), norm=MODEL_NORM):
         """
         :param sizes: dictionary of scalar input sizes; sizes['x'] is an OrderedDict
         :param dropout: tuple of dropout rates.
@@ -21,7 +20,6 @@ class FeedForward(nn.Module):
         self.nn0, total = create_embedding_layers(groups=groups,
                                                   sizes=sizes,
                                                   dropout=dropout[0],
-                                                  layers0=layers0,
                                                   norm=norm)
 
         # fully connected

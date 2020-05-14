@@ -6,7 +6,7 @@ from constants import MODEL_NORM
 
 
 class Layer(nn.Module):
-    def __init__(self, num_in, num_out, dropout=0.0, norm=None):
+    def __init__(self, num_in, num_out, dropout=0.0, norm=MODEL_NORM):
         """
         :param num_in: scalar number of input weights.
         :param num_out: scalar number of output weights.
@@ -46,7 +46,7 @@ class Layer(nn.Module):
         return x
 
 
-def stack_layers(num, layers=1, dropout=0.0, norm='batch'):
+def stack_layers(num, layers=1, dropout=0.0, norm=MODEL_NORM):
     """
     :param num: scalar number of input and output weights.
     :param layers: scalar number of layers to stack.
@@ -61,8 +61,7 @@ def stack_layers(num, layers=1, dropout=0.0, norm='batch'):
 
 
 class Embedding(nn.Module):
-    def __init__(self, counts, dropout=0.0,
-                 layers0=LAYERS_EMBEDDING, norm=MODEL_NORM):
+    def __init__(self, counts, dropout=0.0, norm=MODEL_NORM):
         """
         :param counts: dictionary of scalar input sizes.
         :param dropout: scalar dropout rate.
@@ -76,9 +75,7 @@ class Embedding(nn.Module):
         # first stack of layers: N to N
         self.layer1 = nn.ModuleDict()
         for k, v in counts.items():
-            self.layer1[k] = stack_layers(v, 
-                                          layers=layers0,
-                                          norm=norm)
+            self.layer1[k] = stack_layers(v, layers=1, norm=norm)
 
         # second layer: concatenation
         num = sum(counts.values())
@@ -110,7 +107,7 @@ class Embedding(nn.Module):
 
 
 class FullyConnected(nn.Module):
-    def __init__(self, num_in, dropout=0.0, norm='batch'):
+    def __init__(self, num_in, dropout=0.0, norm=MODEL_NORM):
         """
         :param num_in: scalar number of input weights.
         :param dropout: scalar dropout rate.
@@ -151,15 +148,12 @@ def create_groupings(sizes):
     return groups
 
 
-def create_embedding_layers(groups=None, sizes=None, dropout=None,
-                            layers0=LAYERS_EMBEDDING, norm=MODEL_NORM):
+def create_embedding_layers(groups=None, sizes=None,
+                            dropout=0.0, norm=MODEL_NORM):
     # embeddings
     d, total = OrderedDict(), 0
     for name, group in groups.items():
         counts = {k: v for k, v in sizes['x'].items() if k in group}
-        d[name] = Embedding(counts,
-                            dropout=dropout,
-                            layers0=layers0,
-                            norm=norm)
+        d[name] = Embedding(counts, dropout=dropout, norm=norm)
         total += sum(counts.values())
     return nn.ModuleDict(d), total
