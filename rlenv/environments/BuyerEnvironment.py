@@ -29,6 +29,28 @@ class BuyerEnvironment(AgentEnvironment):
         delay = int(np.random.uniform() * (backstop - priority))
         return delay + priority
 
+    def process_rl_offer(self, event):
+        # first update days, delay if 
+
+        # check whether the lstg expired, censoring this offer
+        if self.is_lstg_expired(event):
+            return self.process_lstg_expiration(event)
+        if event.thread_expired():
+
+        # if current turn != turn 1, update delay and days
+        # update time and clock features of current turn (diffed time features if not turn 1)
+        # update con outcomes
+        # process post offer
+        if event.turn == 1:
+
+
+
+    def process_offer(self, event):
+        if isinstance(event, RlThread) and event.turn % 2 != 0:
+            return self.process_rl_offer(event)
+        else:
+            return super().process_offer(event)
+
     def step(self, action):
         con = self.turn_from_action(action=action)
         if self.last_event.event_type == RL_ARRIVAL_EVENT:
