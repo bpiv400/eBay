@@ -114,7 +114,9 @@ class Thread(Event):
         return Offer(params=offer_params, rej=False)
 
     def init_offer(self, time_feats=None, clock_feats=None):
-        self.sources.init_offer(time_feats=time_feats, clock_feats=clock_feats, turn=self.turn)
+        self.sources.init_offer(time_feats=time_feats,
+                                clock_feats=clock_feats,
+                                turn=self.turn)
 
     def summary(self):
         return self.sources.summary(self.turn)

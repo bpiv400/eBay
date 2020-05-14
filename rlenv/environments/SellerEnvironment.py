@@ -42,6 +42,7 @@ class SellerEnvironment(AgentEnvironment):
             # if the lstg isn't complete that means it's time to sample an agent action
             if not lstg_complete:
                 self.last_event = event
+                self.prepare_offer(event)
                 return self.get_obs(sources=event.sources(), turn=event.turn)
             # if the lstg is complete
             else:
@@ -68,7 +69,7 @@ class SellerEnvironment(AgentEnvironment):
                                         sources=self.last_event.sources(),
                                         turn=self.last_event.turn)
         offer = self.last_event.update_con_outcomes(con_outcomes=con_outcomes)
-        lstg_complete = super().process_post_offer(self.last_event, offer)
+        lstg_complete = self.process_post_offer(self.last_event, offer)
         if lstg_complete:
             return self.agent_tuple(lstg_complete=lstg_complete)
         self.last_event = None
@@ -77,6 +78,8 @@ class SellerEnvironment(AgentEnvironment):
             event, lstg_complete = super().run()
             self.last_event = event
             if not lstg_complete or self.outcome.sale:
+                if not lstg_complete:
+                    self.prepare_offer(event)
                 return self.agent_tuple(lstg_complete=lstg_complete)
             else:
                 self.relist()
