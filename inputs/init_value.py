@@ -107,7 +107,7 @@ def process_inputs(part, role, delay):
     x['lstg'] = pd.concat([x['lstg'], x_thread], axis=1)
 
     # offer features
-    x.update(get_x_offer(offers, idx, role))
+    x.update(get_x_offer(offers, idx, role, delay))
 
     return {'y': y, 'x': x}
 
