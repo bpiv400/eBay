@@ -15,10 +15,7 @@ class AgentComposer(Composer):
     def __init__(self, cols=None, agent_params=None):
         super().__init__(cols)
         # parameters
-        self.byr = agent_params['role'] == BYR_PREFIX
-        self.delay = agent_params[DELAY]
-        self.feat_type = agent_params[FEAT_TYPE]
-        self.con_type = agent_params[CON_TYPE]
+        self.agent_params = agent_params
 
         self.sizes['agent'] = self._build_agent_sizes()
         self.x_lstg_cols = list(cols)
@@ -26,6 +23,29 @@ class AgentComposer(Composer):
 
         # verification
         self.verify_agent()
+
+    @property
+    def byr(self):
+        return self.agent_params['role'] == BYR_PREFIX
+
+    @property
+    def delay(self):
+        return self.agent_params[DELAY]
+
+    @property
+    def hist(self):
+        if self.byr:
+            return self.agent_params[BYR_HIST]
+        else:
+            raise NotImplementedError('No hist attribute for seller')
+
+    @property
+    def feat_type(self):
+        return self.agent_params[FEAT_TYPE]
+    
+    @property
+    def con_type(self):
+        return self.agent_params[CON_TYPE]
 
     def _build_agent_sizes(self):
         if not self.byr:
@@ -114,9 +134,9 @@ class AgentComposer(Composer):
     @staticmethod
     def verify_agent_offer(offer_feats=None, agent_role=None, agent_name=None):
         if agent_role == SLR_PREFIX:
-            assumed_feats = CLOCK_FEATS + TIME_FEATS + OUTCOME_FEATS + TURN_FEATS[agent_role]
+            assumed_feats = CLOCK_FEATS + TIME_FEATS + OUTCOME_FEATS
         else:
-            assumed_feats = CLOCK_FEATS + OUTCOME_FEATS + TURN_FEATS[agent_role]
+            assumed_feats = CLOCK_FEATS + OUTCOME_FEATS
         AgentComposer.verify_all_feats(assumed_feats=assumed_feats, model_feats=offer_feats)
         last_turn = 6 if agent_role == SLR_PREFIX else 7
         sizes = load_sizes(agent_name)['x']

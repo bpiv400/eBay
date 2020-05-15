@@ -57,6 +57,10 @@ class BuyerEnvironment(AgentEnvironment):
             return super().process_offer(event)
 
     def step(self, action):
+        """
+        Takes in a buyer action, updates the relevant event, then continues
+        the simulation
+        """
         con = self.turn_from_action(action=action)
         if self.last_event.event_type == RL_ARRIVAL_EVENT:
             if con == 0:
