@@ -42,7 +42,7 @@ class AgentComposer(Composer):
     @property
     def feat_type(self):
         return self.agent_params[FEAT_TYPE]
-    
+
     @property
     def con_type(self):
         return self.agent_params[CON_TYPE]
@@ -105,7 +105,6 @@ class AgentComposer(Composer):
         else:
             full_vector = np.concatenate([offer_vector[:TIME_START_IND],
                                           offer_vector[TIME_END_IND:]])
-        full_vector = np.concatenate([full_vector, self.turn_inds])
         full_vector = torch.from_numpy(full_vector).squeeze().float()
         return full_vector
 
