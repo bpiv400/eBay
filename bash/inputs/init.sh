@@ -17,7 +17,7 @@ then
 elif [ "$SGE_TASK_ID" == 4 ]
 then
 	python repo/inputs/init_value.py --part "$1" --role slr --delay
-if [ "$SGE_TASK_ID" == 5 ]
+elif [ "$SGE_TASK_ID" == 5 ]
 then
 	python repo/inputs/init_policy.py --part "$1" --role byr
 elif [ "$SGE_TASK_ID" == 6 ]
