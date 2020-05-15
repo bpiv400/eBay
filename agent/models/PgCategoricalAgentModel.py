@@ -103,7 +103,6 @@ class PgCategoricalAgentModel(AgentModel):
         init_dict = load_state_dict(network_name)
         net = FeedForward(sizes=sizes,
                           dropout=self.dropout,
-                          layers0=1,
                           norm=MODEL_NORM)
         net.load_state_dict(init_dict, strict=True)
         return net
