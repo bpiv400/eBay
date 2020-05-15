@@ -140,3 +140,13 @@ class RlThread(Thread):
         self.sources = sources
         self.stored_concession = con
         self.event_type = OFFER_EVENT
+
+    def prep_rl_offer(self, con=None, priority=None):
+        self.event_type = OFFER_EVENT
+        self.stored_concession = con
+        delay_outcomes = get_delay_outcomes(seconds=priority-self.priority,
+                                            max_delay=self.max_delay,
+                                            turn=self.turn)
+        self.sources.update_delay(delay_outcomes=delay_outcomes, turn=self.turn)
+        self.priority = priority
+

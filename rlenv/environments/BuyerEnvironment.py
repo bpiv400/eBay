@@ -2,7 +2,7 @@
 Environment for training the buyer agent
 """
 import numpy as np
-from agent.agent_consts import BUYER_ARRIVE_INTERVAL
+from agent.agent_consts import BUYER_ARRIVE_INTERVAL, DELAY_INTERVAL
 from rlenv.env_consts import DELAY_EVENT, RL_ARRIVAL_EVENT
 from rlenv.sources import RlSources, ThreadSources
 from rlenv.environments.AgentEnvironment import AgentEnvironment
@@ -27,10 +27,14 @@ class BuyerEnvironment(AgentEnvironment):
     def get_arrival_time(self, priority):
         backstop = min(self.end_time, priority + BUYER_ARRIVE_INTERVAL)
         delay = int(np.random.uniform() * (backstop - priority))
-        return delay + priority
+        return max(delay, 1) + priority
+
+    def get_offer_time(self, priority):
+        backstop = min(priority + self.end_time, priority + DELAY_INTERVAL)
+        delay = int(np.random.uniform() * (backstop - priority))
+        return max(delay, 1) + priority
 
     def process_rl_offer(self, event):
-        # first update days, delay if 
 
         # check whether the lstg expired, censoring this offer
         if self.is_lstg_expired(event):
@@ -42,6 +46,7 @@ class BuyerEnvironment(AgentEnvironment):
         # update con outcomes
         # process post offer
         if event.turn == 1:
+            # prepare for delay
 
 
 
@@ -75,9 +80,12 @@ class BuyerEnvironment(AgentEnvironment):
                 # expiration rejection and end the simulation
             else:
                 if con != 1:
-                    # ordinary concession
+                    offer_time = self.get_offer_time(self.last_event.priority)
+                    self.last_event.prep_rl_offer(con=con, priority=offer_time)
+                    return self.run()
                 else:
                     # accept the seller's last offer and end the  simulation
+
 
 
     def reset(self):
