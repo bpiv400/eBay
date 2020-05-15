@@ -5,21 +5,10 @@ from inputs.inputs_consts import NUM_OUT, N_SMALL, INTERVAL, \
     INTERVAL_COUNTS, DELTA_MONTH, DELTA_ACTION, C_ACTION
 from constants import INPUT_DIR, INDEX_DIR, VALIDATION, TRAIN_MODELS, \
     TRAIN_RL, IDX, BYR_PREFIX, TURN_FEATS, DELAY_MODELS, \
-    INIT_VALUE_MODELS, INIT_MODELS, ARRIVAL_PREFIX, CON_MULTIPLIER
-from featnames import CLOCK_FEATS, OUTCOME_FEATS, BYR_HIST, CON, \
+    INIT_VALUE_MODELS, INIT_MODELS, ARRIVAL_PREFIX
+from featnames import CLOCK_FEATS, OUTCOME_FEATS, BYR_HIST, \
     SPLIT, MSG, AUTO, EXP, REJECT, DAYS, DELAY, TIME_FEATS, \
     THREAD_COUNT, MONTHLY_DISCOUNT, ACTION_DISCOUNT, ACTION_COST
-
-
-def get_y_con(df, turn=None):
-    # drop zero delay and expired offers
-    mask = ~df[AUTO] & ~df[EXP]
-    # concession is an int from 0 to 100
-    y = (df.loc[mask, CON] * CON_MULTIPLIER).astype('int8')
-    # boolean for accept in turn 7
-    if turn == 7:
-        y = y == 100
-    return y
 
 
 def get_x_thread(threads, idx):
@@ -102,11 +91,6 @@ def save_featnames(x, m):
             feats = CLOCK_FEATS + OUTCOME_FEATS
         else:
             feats = CLOCK_FEATS + TIME_FEATS + OUTCOME_FEATS
-
-        # add turn indicators for RL initializations
-        if m in INIT_MODELS:
-            role = m.split('_')[-1]
-            feats += TURN_FEATS[role]
 
         # check that all offer groupings have same organization
         for k in x.keys():

@@ -1,12 +1,25 @@
 import argparse
 import numpy as np
 import pandas as pd
-from inputs.inputs_utils import save_files, check_zero, \
-    get_x_thread, get_y_con
+from inputs.inputs_utils import save_files, check_zero, get_x_thread
 from utils import get_remaining, load_file, init_x
-from constants import IDX, MAX_DELAY, BYR_PREFIX, SLR_PREFIX
-from featnames import DELAY, AUTO, EXP, REJECT, CON, NORM, SPLIT, \
-    MSG, INT_REMAINING, TIME_FEATS
+from constants import IDX, MAX_DELAY, BYR_PREFIX, SLR_PREFIX, \
+    CON_MULTIPLIER
+from featnames import DELAY, AUTO, EXP, CON, NORM, SPLIT, REJECT, \
+    MSG, INT_REMAINING, TIME_FEATS, OUTCOME_FEATS, CLOCK_FEATS, \
+    START_TIME
+
+
+def get_y(df, delay):
+    # when only choosing concession, drop expirations
+    if not delay:
+        df = df[~df[EXP]]
+    # concession is an int from 0 to 100
+    y = (df[CON] * CON_MULTIPLIER).astype('int8')
+    # when choosing delay, expired offer is last index
+    if delay:
+        y[df[EXP]] = CON_MULTIPLIER + 1
+    return y
 
 
 def calculate_remaining(lstg_start=None, clock=None, idx=None):
@@ -42,19 +55,33 @@ def add_turn_indicators(df):
 
 
 # sets unseen feats to 0
-def set_zero_feats(offer, i):
+def set_zero_feats(offer, i, role, delay):
     # turn number
     turn = offer.index.get_level_values(level='index')
+
     # all features are zero for future turns
-    if i > 1:
-        offer.loc[i > turn, :] = 0.0
-    # for current turn, set feats to 0
+    offer.loc[i > turn, :] = 0.
+
+    # for current turn, set non-delay outcome feats to 0
     curr = i == turn
-    offer.loc[curr, [CON, NORM, SPLIT, AUTO, EXP, REJECT, MSG]] = 0.0
+    assert (offer.loc[curr, AUTO] == 0).all()
+    offer.loc[curr, [EXP, CON, NORM, SPLIT, REJECT, MSG]] = 0.
+
+    # when choosing delay, set other current-turn feats to 0
+    if delay:
+        # for seller, set feats to 0 in current turn
+        if role == SLR_PREFIX:
+            offer.loc[i == turn, :] = 0.
+        # for buyer, set feats to 0, except clock feats in turn 1
+        else:
+            offer.loc[i == turn, OUTCOME_FEATS] = 0.
+            if i > 1:
+                offer.loc[i == turn, CLOCK_FEATS] = 0.
+
     return offer
 
 
-def get_x_offer(offers, idx, role):
+def get_x_offer(offers, idx, role, delay):
     # initialize dictionary of offer features
     x_offer = {}
 
@@ -72,9 +99,8 @@ def get_x_offer(offers, idx, role):
         offer = offers.xs(i, level='index').reindex(
             index=idx, fill_value=0).astype('float32')
 
-        # set unseen feats to 0 and add turn indicators
-        offer = set_zero_feats(offer, i)
-        offer = add_turn_indicators(offer)
+        # set unseen feats to 0
+        offer = set_zero_feats(offer, i, role, delay)
 
         # set censored time feats to zero
         if i > 1 and role == SLR_PREFIX:
@@ -96,34 +122,37 @@ def process_inputs(part, role, delay):
     offers = load_file(part, 'x_offer')
     threads = load_file(part, 'x_thread')
 
-    # outcome and master index
-    df = offers[offers.index.isin(IDX[role], level='index')]
-    y = get_y_con(df)
-    idx = y.index
+    # restrict by role, drop auto replies
+    role_mask = offers.index.isin(IDX[role], level='index')
+    df = offers[~offers[AUTO] & role_mask]
 
-    # lookup values and timestamps
-    lookup = load_file(part, 'lookup').reindex(index=idx, level='lstg')
-    clock = load_file(part, 'clock').reindex(index=idx)
+    # outcome and master index
+    y = get_y(df, delay)
+    idx = y.index
 
     # listing features
     x = init_x(part, idx)
 
     # remove auto accept/reject features from x['lstg'] for buyer models
     if role == BYR_PREFIX:
-        x['lstg'].drop(['auto_decline', 'auto_accept', 'has_decline', 'has_accept'],
+        x['lstg'].drop(['auto_decline', 'auto_accept',
+                        'has_decline', 'has_accept'],
                        axis=1, inplace=True)
 
     # thread features
     x_thread = get_x_thread(threads, idx)
     x_thread = add_turn_indicators(x_thread)
     if delay:
-        x_thread[INT_REMAINING] = calculate_remaining(lstg_start=lookup.start_time,
-                                                      clock=clock,
-                                                      idx=idx)
+        lstg_start = load_file(part, 'lookup')[START_TIME]
+        clock = load_file(part, 'clock')
+        x_thread[INT_REMAINING] = \
+            calculate_remaining(lstg_start=lstg_start,
+                                clock=clock,
+                                idx=idx)
     x['lstg'] = pd.concat([x['lstg'], x_thread], axis=1)
 
     # offer features
-    x.update(get_x_offer(offers, idx, role))
+    x.update(get_x_offer(offers, idx, role, delay))
 
     return {'y': y, 'x': x}
 
@@ -136,7 +165,7 @@ def input_parameters():
     args = parser.parse_args()
     part, role, delay = args.part, args.role, args.delay
     assert role in [BYR_PREFIX, SLR_PREFIX]
-    if role == BYR_PREFIX or delay:
+    if role == BYR_PREFIX:
         raise NotImplementedError()
     return part, role, delay
 
@@ -145,6 +174,8 @@ def main():
     # extract parameters from command line
     part, role, delay = input_parameters()
     name = 'init_policy_{}'.format(role)
+    if delay:
+        name += '_delay'
     print('%s/%s' % (part, name))
 
     # input dataframes, output processed dataframes

@@ -1,14 +1,24 @@
 import argparse
 import numpy as np
 import pandas as pd
-from inputs.inputs_utils import save_files, check_zero, get_y_con, \
-    get_x_thread
+from inputs.inputs_utils import save_files, check_zero, get_x_thread
 from utils import get_remaining, load_file, init_x
 from inputs.inputs_consts import INTERVAL, INTERVAL_COUNTS
 from constants import IDX, DAY, MAX_DELAY, BYR_PREFIX, SLR_PREFIX, \
-    PARTITIONS
+    PARTITIONS, CON_MULTIPLIER
 from featnames import CON, NORM, SPLIT, MSG, AUTO, EXP, REJECT, DAYS, \
     DELAY, INT_REMAINING, TIME_FEATS
+
+
+def get_y_con(df, turn):
+    # drop zero delay and expired offers
+    mask = ~df[AUTO] & ~df[EXP]
+    # concession is an int from 0 to 100
+    y = (df.loc[mask, CON] * CON_MULTIPLIER).astype('int8')
+    # boolean for accept in turn 7
+    if turn == 7:
+        y = y == 100
+    return y
 
 
 def get_y_msg(df, turn):
