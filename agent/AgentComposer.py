@@ -85,7 +85,7 @@ class AgentComposer(Composer):
         else:
             full_vector = np.concatenate([offer_vector[:TIME_START_IND],
                                           offer_vector[TIME_END_IND:]])
-        full_vector = np.concatenate([full_vector, self.turn_inds])
+        # full_vector = np.concatenate([full_vector, self.turn_inds])
         full_vector = torch.from_numpy(full_vector).squeeze().float()
         return full_vector
 
@@ -114,9 +114,9 @@ class AgentComposer(Composer):
     @staticmethod
     def verify_agent_offer(offer_feats=None, agent_role=None, agent_name=None):
         if agent_role == SLR_PREFIX:
-            assumed_feats = CLOCK_FEATS + TIME_FEATS + OUTCOME_FEATS + TURN_FEATS[agent_role]
+            assumed_feats = CLOCK_FEATS + TIME_FEATS + OUTCOME_FEATS
         else:
-            assumed_feats = CLOCK_FEATS + OUTCOME_FEATS + TURN_FEATS[agent_role]
+            assumed_feats = CLOCK_FEATS + OUTCOME_FEATS
         AgentComposer.verify_all_feats(assumed_feats=assumed_feats, model_feats=offer_feats)
         last_turn = 6 if agent_role == SLR_PREFIX else 7
         sizes = load_sizes(agent_name)['x']

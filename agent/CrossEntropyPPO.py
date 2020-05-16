@@ -11,7 +11,7 @@ from rlpyt.utils.quick_args import save__init__args
 from rlpyt.utils.misc import iterate_mb_idxs
 from agent.models.PgCategoricalAgentModel import PgCategoricalAgentModel
 from agent.agent_consts import LR1
-from utils import slr_reward
+from utils import slr_reward, max_slr_reward
 
 LossInputs = namedarraytuple("LossInputs",
                              ["agent_inputs",
@@ -103,7 +103,8 @@ class CrossEntropyPPO(RlAlgorithm):
         valid = torch.clamp(valid, max=1)
         return valid
 
-    def discount_return(self, reward=None, done=None, months=None):
+    def discount_return(self, reward=None, done=None, months=None,
+                        bin_proceeds=None):
         """
         Computes time-discounted sum of future rewards from each
         time-step to the end of the batch. Sum resets where `done`
@@ -112,6 +113,8 @@ class CrossEntropyPPO(RlAlgorithm):
         :param tensor reward: slr's normalized gross return.
         :param tensor done: indicator for end of trajectory.
         :param tensor months: months since beginning of listing.
+        :param tensor bin_proceeds: what seller would net if
+        item sold for bin price immediately.
         :return tensor return_: time-discounted return.
         """
         dtype = reward.dtype  # cast new tensors to this data type
@@ -140,6 +143,12 @@ class CrossEntropyPPO(RlAlgorithm):
                                      action_discount=self.action_discount,
                                      action_cost=self.action_cost)
 
+            # normalize
+            max_return = max_slr_reward(months_since_start=months[t],
+                                        bin_proceeds=bin_proceeds[t],
+                                        monthly_discount=self.monthly_discount)
+            return_[t] /= max_return
+
         return return_
 
     def process_returns(self, samples):
@@ -149,19 +158,19 @@ class CrossEntropyPPO(RlAlgorithm):
         """
         # break out samples
         env = samples.env
-        reward, done, months, start_price = (env.reward,
-                                             env.done,
-                                             env.env_info.months,
-                                             env.env_info.start_price)
+        reward, done, months, bin_proceeds = (env.reward,
+                                              env.done,
+                                              env.env_info.months,
+                                              env.env_info.bin_proceeds)
         done = done.type(reward.dtype)
         months = months.type(reward.dtype)
-        start_price = start_price.type(reward.dtype)
+        bin_proceeds = bin_proceeds.type(reward.dtype)
 
         # time discounting
         return_ = self.discount_return(reward=reward,
                                        done=done,
-                                       months=months)
-        return_ /= start_price  # normalize
+                                       months=months,
+                                       bin_proceeds=bin_proceeds)
         advantage = return_ - samples.agent.agent_info.value
         
         # zero out steps from unfinished trajectories

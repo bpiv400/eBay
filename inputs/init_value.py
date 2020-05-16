@@ -6,7 +6,7 @@ from inputs.init_policy import calculate_remaining, \
 from utils import load_file, init_x, get_cut, slr_reward, max_slr_reward
 from inputs.inputs_consts import DELTA_MONTH
 from constants import IDX, BYR_PREFIX, SLR_PREFIX, MONTH, \
-    NO_ARRIVAL_CUTOFF
+    NO_ARRIVAL_CUTOFF, TRAIN_RL, VALIDATION, TEST
 from featnames import INT_REMAINING, EXP, AUTO, CON, NORM, \
     META, START_PRICE, START_TIME, NO_ARRIVAL
 
@@ -117,6 +117,9 @@ def main():
     part, role, delay = input_parameters()
     name = 'init_value_{}'.format(role)
     print('%s/%s' % (part, name))
+
+    # policy is trained using TRAIN_RL
+    assert part in [TRAIN_RL, VALIDATION, TEST]
 
     # input dataframes, output processed dataframes
     d = process_inputs(part, role, delay)
