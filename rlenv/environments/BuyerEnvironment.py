@@ -2,9 +2,10 @@
 Environment for training the buyer agent
 """
 import numpy as np
+from utils import get_months_since_lstg
 from agent.agent_consts import BUYER_ARRIVE_INTERVAL, DELAY_INTERVAL
 from rlenv.env_consts import DELAY_EVENT, RL_ARRIVAL_EVENT
-from rlenv.sources import RlSources, ThreadSources
+from rlenv.sources import RlSources
 from rlenv.environments.AgentEnvironment import AgentEnvironment
 from rlenv.events.Arrival import Arrival
 from rlenv.events.Thread import RlThread
@@ -40,15 +41,17 @@ class BuyerEnvironment(AgentEnvironment):
         if self.is_lstg_expired(event):
             return self.process_lstg_expiration(event)
         if event.thread_expired():
-
-        # if current turn != turn 1, update delay and days
-        # update time and clock features of current turn (diffed time features if not turn 1)
+            raise RuntimeError("Thread should never expire before agent offer")
+        time_feats = self.time_feats.get_feats(thread_id=event.thread_id,
+                                               time=event.priority)
+        months_since_lstg = None
+        if event.turn == 1:
+            months_since_lstg = get_months_since_lstg(lstg_start=self.start_time,
+                                                      start=event.priority)
+        event.init_offer(months_since_lstg=months_since_lstg, time_feats=time_feats)
+        offer = event.execute_offer()
         # update con outcomes
         # process post offer
-        if event.turn == 1:
-            # prepare for delay
-
-
 
     def process_offer(self, event):
         if isinstance(event, RlThread) and event.turn % 2 != 0:
@@ -81,16 +84,11 @@ class BuyerEnvironment(AgentEnvironment):
                 return self.run()
         else:
             if con == 0:
-                # expiration rejection and end the simulation
+                return self.agent_tuple(done=True)
             else:
-                if con != 1:
-                    offer_time = self.get_offer_time(self.last_event.priority)
-                    self.last_event.prep_rl_offer(con=con, priority=offer_time)
-                    return self.run()
-                else:
-                    # accept the seller's last offer and end the  simulation
-
-
+                offer_time = self.get_offer_time(self.last_event.priority)
+                self.last_event.prep_rl_offer(con=con, priority=offer_time)
+                return self.run()
 
     def reset(self):
         """

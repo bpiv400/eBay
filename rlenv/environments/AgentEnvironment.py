@@ -17,7 +17,7 @@ from agent.agent_utils import get_con_set, get_train_file_path
 from agent.agent_consts import seller_groupings
 
 SellerObs = namedtuple("SellerObs", seller_groupings)
-InfoTraj = namedtuple("InfoTraj", ["months", "start_price"])
+InfoTraj = namedtuple("InfoTraj", ["months", "start_price", "done"])
 
 
 class AgentEnvironment(EbayEnvironment, Env):
@@ -84,13 +84,15 @@ class AgentEnvironment(EbayEnvironment, Env):
         self._x_lstg_slice = self._x_lstg_slice[unsorted_ids, :]
         self._ix = 0
 
-    def agent_tuple(self, lstg_complete=None):
+    def agent_tuple(self, done=None):
         obs = self.get_obs(sources=self.last_event.sources(),
                            turn=self.last_event.turn)
         months = (self.last_event.priority - self.start_time) / MONTH
         months += self.relist_count  # add in months without sale
-        info = InfoTraj(months=months, start_price=self.lookup[START_PRICE])
-        return obs, self.get_reward(), lstg_complete, info
+        info = InfoTraj(months=months,
+                        start_price=self.lookup[START_PRICE],
+                        done=done)
+        return obs, self.get_reward(), done, info
 
     def get_obs(self, sources=None, turn=None):
         obs_dict = self.composer.build_input_dict(model_name=None,

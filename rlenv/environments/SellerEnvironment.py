@@ -30,7 +30,7 @@ class SellerEnvironment(AgentEnvironment):
                 self.prepare_offer(event)
 
             if not lstg_complete or self.outcome.sale:
-                return self.agent_tuple(lstg_complete=lstg_complete)
+                return self.agent_tuple(done=lstg_complete)
             else:
                 self.relist()
 
@@ -74,7 +74,7 @@ class SellerEnvironment(AgentEnvironment):
         offer = self.last_event.update_con_outcomes(con_outcomes=con_outcomes)
         lstg_complete = self.process_post_offer(self.last_event, offer)
         if lstg_complete:
-            return self.agent_tuple(lstg_complete=lstg_complete)
+            return self.agent_tuple(done=lstg_complete)
         self.last_event = None
         return self.run()
 

@@ -123,8 +123,19 @@ class ArrivalSources(Sources):
 class RlSources(ThreadSources):
     def __init__(self, x_lstg=None):
         super(RlSources, self).__init__(x_lstg=x_lstg)
+        self.source_dict[CLOCK_MAP] = None
 
     def update_arrival(self, clock_feats=None, months_since_lstg=None):
         self.source_dict[MONTHS_SINCE_LSTG] = months_since_lstg
-        offer_map = OFFER_MAPS[1]
-        self.source_dict[offer_map][CLOCK_START_IND:CLOCK_END_IND] = clock_feats
+        self.source_dict[CLOCK_MAP] = clock_feats
+
+    def prepare_hist(self, time_feats=None, clock_feats=None, months_since_lstg=None):
+        self.source_dict[CLOCK_MAP] = clock_feats
+        super().prepare_hist(time_feats=time_feats, clock_feats=clock_feats,
+                             months_since_lstg=months_since_lstg)
+
+    def init_offer(self, time_feats=None, clock_feats=None, turn=None):
+        self.source_dict[CLOCK_MAP] = clock_feats
+        super().init_offer(time_feats=time_feats, clock_feats=clock_feats,
+                           turn=turn)
+
