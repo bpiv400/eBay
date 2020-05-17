@@ -5,10 +5,10 @@ from utils import get_remaining
 from inputs.inputs_consts import NUM_OUT, N_SMALL, INTERVAL, \
     INTERVAL_COUNTS, DELTA_MONTH, DELTA_ACTION, C_ACTION
 from constants import INPUT_DIR, INDEX_DIR, VALIDATION, TRAIN_MODELS, \
-    TRAIN_RL, IDX, BYR_PREFIX, DELAY_MODELS, \
+    TRAIN_RL, IDX, BYR_PREFIX, DELAY_MODELS, SLR_PREFIX, \
     INIT_VALUE_MODELS, ARRIVAL_PREFIX, MAX_DELAY
 from featnames import CLOCK_FEATS, OUTCOME_FEATS, BYR_HIST, \
-    SPLIT, MSG, AUTO, EXP, REJECT, DAYS, DELAY, TIME_FEATS, \
+    CON, NORM, SPLIT, MSG, AUTO, EXP, REJECT, DAYS, DELAY, TIME_FEATS, \
     THREAD_COUNT, MONTHLY_DISCOUNT, ACTION_DISCOUNT, ACTION_COST
 
 
@@ -134,8 +134,16 @@ def get_x_offer_init(offers, idx, role=None, delay=None):
             index=idx, fill_value=0).astype('float32')
         turn = offer.index.get_level_values(level='index')
 
-        # all features are zero for current and future turns
-        offer.loc[i >= turn, :] = 0.
+        # all features are zero for future turns
+        offer.loc[i > turn, :] = 0.
+
+        # current turn features
+        if not delay and role == SLR_PREFIX:
+            assert (offer.loc[i == turn, AUTO] == 0).all()
+            assert (offer.loc[i == turn, EXP] == 0).all()
+            offer.loc[i == turn, [CON, NORM, SPLIT, REJECT, MSG]] = 0.
+        else:
+            offer.loc[i == turn, :] = 0.
 
         # put in dictionary
         x_offer['offer%d' % i] = offer.astype('float32')
