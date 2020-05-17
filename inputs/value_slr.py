@@ -1,8 +1,8 @@
 import numpy as np
 import pandas as pd
-from inputs.inputs_utils import save_files, get_x_thread
-from inputs.init_policy import calculate_remaining, \
-    add_turn_indicators, get_x_offer, input_parameters
+from inputs.inputs_utils import save_files, get_x_thread, \
+    calculate_remaining, get_x_offer_init
+from inputs.policy_slr import input_parameters
 from utils import load_file, init_x, get_cut, slr_reward, max_slr_reward
 from inputs.inputs_consts import DELTA_MONTH
 from constants import IDX, BYR_PREFIX, SLR_PREFIX, MONTH, \
@@ -98,16 +98,15 @@ def process_inputs(part, role, delay):
                        axis=1, inplace=True)
 
     # thread features
-    x_thread = get_x_thread(threads, idx)
+    x_thread = get_x_thread(threads, idx, turn_indicators=True)
     if delay:
         x_thread[INT_REMAINING] = calculate_remaining(lstg_start=lookup.start_time,
                                                       clock=clock,
                                                       idx=idx)
-    x_thread = add_turn_indicators(x_thread)
     x['lstg'] = pd.concat([x['lstg'], x_thread], axis=1)
 
     # offer features
-    x.update(get_x_offer(offers, idx, role, delay))
+    x.update(get_x_offer_init(offers, idx, role=SLR_PREFIX, delay=delay))
 
     return {'y': y, 'x': x}
 
@@ -115,7 +114,7 @@ def process_inputs(part, role, delay):
 def main():
     # extract parameters from command line
     part, role, delay = input_parameters()
-    name = 'init_value_{}'.format(role)
+    name = 'value_{}'.format(role)
     print('%s/%s' % (part, name))
 
     # policy is trained using TRAIN_RL

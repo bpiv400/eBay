@@ -1,17 +1,31 @@
 import numpy as np
 import pandas as pd
 from compress_pickle import dump
+from utils import get_remaining
 from inputs.inputs_consts import NUM_OUT, N_SMALL, INTERVAL, \
     INTERVAL_COUNTS, DELTA_MONTH, DELTA_ACTION, C_ACTION
 from constants import INPUT_DIR, INDEX_DIR, VALIDATION, TRAIN_MODELS, \
-    TRAIN_RL, IDX, BYR_PREFIX, TURN_FEATS, DELAY_MODELS, \
-    INIT_VALUE_MODELS, INIT_MODELS, ARRIVAL_PREFIX
+    TRAIN_RL, IDX, BYR_PREFIX, DELAY_MODELS, \
+    INIT_VALUE_MODELS, ARRIVAL_PREFIX, MAX_DELAY
 from featnames import CLOCK_FEATS, OUTCOME_FEATS, BYR_HIST, \
     SPLIT, MSG, AUTO, EXP, REJECT, DAYS, DELAY, TIME_FEATS, \
     THREAD_COUNT, MONTHLY_DISCOUNT, ACTION_DISCOUNT, ACTION_COST
 
 
-def get_x_thread(threads, idx):
+def add_turn_indicators(df):
+    """
+    Appends turn indicator variables to offer matrix
+    :param df: dataframe with index ['lstg', 'thread', 'index'].
+    :return: dataframe with turn indicators appended
+    """
+    indices = np.sort(np.unique(df.index.get_level_values('index')))
+    for i in range(len(indices) - 1):
+        ind = indices[i]
+        df['t{}'.format(ind)] = df.index.isin([ind], level='index')
+    return df
+
+
+def get_x_thread(threads, idx, turn_indicators=False):
     # initialize x_thread as copy
     x_thread = threads.copy()
 
@@ -23,6 +37,9 @@ def get_x_thread(threads, idx):
 
     # reindex to create x_thread
     x_thread = pd.DataFrame(index=idx).join(x_thread)
+
+    if turn_indicators:
+        x_thread = add_turn_indicators(x_thread)
 
     return x_thread.astype('float32')
 
@@ -56,6 +73,24 @@ def get_arrival_times(clock, lstg_start, lstg_end, append_last=False):
     return arrivals.rename('arrival')
 
 
+def calculate_remaining(lstg_start=None, clock=None, idx=None):
+    # start of delay period
+    delay_start = clock.groupby(
+        ['lstg', 'thread']).shift().dropna().astype('int64')
+    # remaining is turn-specific
+    remaining = pd.Series(1.0, index=idx)
+    turns = idx.unique(level='index')
+    for turn in turns:
+        if turn > 1:
+            turn_start = delay_start.xs(turn, level='index').reindex(index=idx)
+            mask = idx.get_level_values(level='index') == turn
+            remaining.loc[mask] = get_remaining(
+                lstg_start, turn_start, MAX_DELAY[turn])
+    # error checking
+    assert np.all(remaining > 0) and np.all(remaining <= 1)
+    return remaining
+
+
 def assert_zero(offer, cols):
     for c in cols:
         assert offer[c].max() == 0
@@ -73,6 +108,42 @@ def check_zero(x):
                 assert_zero(x[k], [AUTO, EXP, REJECT])
             if i == 7:
                 assert_zero(x[k], [SPLIT, MSG])
+
+
+def get_x_offer_init(offers, idx, role=None, delay=None):
+    # initialize dictionary of offer features
+    x_offer = {}
+
+    # dataframe of offer features for relevant threads
+    threads = idx.droplevel(level='index').unique()
+    offers = pd.DataFrame(index=threads).join(offers)
+
+    # drop time feats from buyer models
+    if role == BYR_PREFIX:
+        offers.drop(TIME_FEATS, axis=1, inplace=True)
+
+    # last index
+    last = max(IDX[role])
+    if delay:
+        last -= 1
+
+    # turn features
+    for i in range(1, last + 1):
+        # offer features at turn i, and turn number
+        offer = offers.xs(i, level='index').reindex(
+            index=idx, fill_value=0).astype('float32')
+        turn = offer.index.get_level_values(level='index')
+
+        # all features are zero for current and future turns
+        offer.loc[i >= turn, :] = 0.
+
+        # put in dictionary
+        x_offer['offer%d' % i] = offer.astype('float32')
+
+    # error checking
+    check_zero(x_offer)
+
+    return x_offer
 
 
 def save_featnames(x, m):
