@@ -5,14 +5,14 @@ from inputs.inputs_utils import save_files, get_x_thread, \
 from inputs.policy_slr import input_parameters
 from utils import load_file, init_x, get_cut, slr_reward, max_slr_reward
 from inputs.inputs_consts import DELTA_MONTH
-from constants import IDX, BYR_PREFIX, SLR_PREFIX, MONTH, \
-    NO_ARRIVAL_CUTOFF, TRAIN_RL, VALIDATION, TEST
+from constants import IDX, SLR_PREFIX, MONTH, NO_ARRIVAL_CUTOFF, \
+    TRAIN_RL, VALIDATION, TEST
 from featnames import INT_REMAINING, EXP, AUTO, CON, NORM, \
     META, START_PRICE, START_TIME, NO_ARRIVAL
 
 
-def get_duration(offers, clock, lookup, role):
-    mask = offers.index.isin(IDX[role], level='index') \
+def get_duration(offers, clock, lookup):
+    mask = offers.index.isin(IDX[SLR_PREFIX], level='index') \
            & ~offers[EXP] & ~offers[AUTO]
     idx = mask[mask].index
     elapsed = (clock.loc[mask] - lookup.start_time.reindex(
@@ -61,13 +61,13 @@ def get_data(part):
     return lookup, threads, offers, clock
 
 
-def process_inputs(part, role, delay):
+def process_inputs(part, delay):
     # data
     lookup, threads, offers, clock = get_data(part)
 
     # value components
     sales = get_sales(offers, clock, lookup)
-    months_since_start = get_duration(offers, clock, lookup, role)
+    months_since_start = get_duration(offers, clock, lookup)
     df = months_since_start.to_frame().join(sales)
     idx = df.index
 
@@ -91,12 +91,6 @@ def process_inputs(part, role, delay):
     # listing features
     x = init_x(part, idx)
 
-    # remove auto accept/reject features from x['lstg'] for buyer models
-    if role == BYR_PREFIX:
-        x['lstg'].drop(['auto_decline', 'auto_accept',
-                        'has_decline', 'has_accept'],
-                       axis=1, inplace=True)
-
     # thread features
     x_thread = get_x_thread(threads, idx, turn_indicators=True)
     if delay:
@@ -113,15 +107,17 @@ def process_inputs(part, role, delay):
 
 def main():
     # extract parameters from command line
-    part, role, delay = input_parameters()
-    name = 'value_{}'.format(role)
+    part, delay = input_parameters()
+    name = 'value_{}'.format(SLR_PREFIX)
+    if delay:
+        name += '_delay'
     print('%s/%s' % (part, name))
 
     # policy is trained using TRAIN_RL
     assert part in [TRAIN_RL, VALIDATION, TEST]
 
     # input dataframes, output processed dataframes
-    d = process_inputs(part, role, delay)
+    d = process_inputs(part, delay)
 
     # save various output files
     save_files(d, part, name)
