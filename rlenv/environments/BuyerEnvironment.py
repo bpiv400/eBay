@@ -2,7 +2,7 @@
 Environment for training the buyer agent
 """
 import numpy as np
-from constants import HOUR
+from constants import HOUR, DAY
 from utils import get_months_since_lstg
 from rlenv.env_consts import DELAY_EVENT, RL_ARRIVAL_EVENT
 from rlenv.sources import RlSources
@@ -82,7 +82,7 @@ class BuyerEnvironment(AgentEnvironment):
         if self.last_event.event_type == RL_ARRIVAL_EVENT:
             if con == 0:
                 # push rl arrival back into queue
-                self.last_event.priority += BUYER_ARRIVE_INTERVAL
+                self.last_event.priority += DAY
                 self.queue.push(self.last_event)
                 self.last_event = None
                 return self.run()
@@ -102,6 +102,8 @@ class BuyerEnvironment(AgentEnvironment):
             else:
                 offer_time = self.get_offer_time(self.last_event.priority)
                 self.last_event.prep_rl_offer(con=con, priority=offer_time)
+                self.queue.push(self.last_event)
+                self.last_event = None
                 return self.run()
 
     def reset(self):

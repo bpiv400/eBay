@@ -124,6 +124,7 @@ class RlSources(ThreadSources):
     def __init__(self, x_lstg=None):
         super(RlSources, self).__init__(x_lstg=x_lstg)
         self.source_dict[CLOCK_MAP] = None
+        self.source_dict[INT_REMAINING] = 1.0
 
     def update_arrival(self, clock_feats=None, months_since_lstg=None):
         self.source_dict[MONTHS_SINCE_LSTG] = months_since_lstg
