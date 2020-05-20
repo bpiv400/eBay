@@ -27,7 +27,7 @@ class BuyerEnvironment(AgentEnvironment):
 
     @property
     def horizon(self):
-        return 100
+        return 34
 
     def _hours_since_lstg(self, priority):
         return int((priority - self.start_time) / HOUR)
@@ -48,7 +48,10 @@ class BuyerEnvironment(AgentEnvironment):
         return seconds + event.priority
 
     def process_rl_offer(self, event):
-
+        """
+        :param RlThread event:
+        :return: bool indicating the lstg is over
+        """
         # check whether the lstg expired, censoring this offer
         if self.is_lstg_expired(event):
             return self.process_lstg_expiration(event)
@@ -60,7 +63,7 @@ class BuyerEnvironment(AgentEnvironment):
         if event.turn == 1:
             months_since_lstg = get_months_since_lstg(lstg_start=self.start_time,
                                                       time=event.priority)
-        event.init_offer(months_since_lstg=months_since_lstg, time_feats=time_feats)
+        event.init_rl_offer(months_since_lstg=months_since_lstg, time_feats=time_feats)
         offer = event.execute_offer()
         # update con outcomes
         # process post offer
