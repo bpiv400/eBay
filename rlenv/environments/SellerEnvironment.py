@@ -26,8 +26,11 @@ class SellerEnvironment(AgentEnvironment):
         while True:
             event, lstg_complete = super().run()
             self.last_event = event
+            if not lstg_complete:
+                self.prepare_offer(event)
+
             if not lstg_complete or self.outcome.sale:
-                return self.agent_tuple(lstg_complete=lstg_complete)
+                return self.agent_tuple(done=lstg_complete)
             else:
                 self.relist()
 
@@ -42,6 +45,7 @@ class SellerEnvironment(AgentEnvironment):
             # if the lstg isn't complete that means it's time to sample an agent action
             if not lstg_complete:
                 self.last_event = event
+                self.prepare_offer(event)
                 return self.get_obs(sources=event.sources(), turn=event.turn)
             # if the lstg is complete
             else:
@@ -63,25 +67,18 @@ class SellerEnvironment(AgentEnvironment):
         :param action: float returned from agent
         :return:
         """
-        con = self.con_from_action(action)
+        con = self.turn_from_action(action)
         con_outcomes = get_con_outcomes(con=con,
                                         sources=self.last_event.sources(),
                                         turn=self.last_event.turn)
         offer = self.last_event.update_con_outcomes(con_outcomes=con_outcomes)
-        lstg_complete = super().process_post_offer(self.last_event, offer)
+        lstg_complete = self.process_post_offer(self.last_event, offer)
         if lstg_complete:
-            return self.agent_tuple(lstg_complete=lstg_complete)
+            return self.agent_tuple(done=lstg_complete)
         self.last_event = None
-        # previously the run method
-        while True:
-            event, lstg_complete = super().run()
-            self.last_event = event
-            if not lstg_complete or self.outcome.sale:
-                return self.agent_tuple(lstg_complete=lstg_complete)
-            else:
-                self.relist()
+        return self.run()
 
-    def con_from_action(self, action=None):
+    def turn_from_action(self, action=None):
         return self.con_set[action]
 
     def define_action_space(self, con_set=None):

@@ -15,10 +15,7 @@ class AgentComposer(Composer):
     def __init__(self, cols=None, agent_params=None):
         super().__init__(cols)
         # parameters
-        self.byr = agent_params['role'] == BYR_PREFIX
-        self.delay = agent_params[DELAY]
-        self.feat_type = agent_params[FEAT_TYPE]
-        self.con_type = agent_params[CON_TYPE]
+        self.agent_params = agent_params
 
         self.sizes['agent'] = self._build_agent_sizes()
         self.x_lstg_cols = list(cols)
@@ -26,6 +23,29 @@ class AgentComposer(Composer):
 
         # verification
         self.verify_agent()
+
+    @property
+    def byr(self):
+        return self.agent_params['role'] == BYR_PREFIX
+
+    @property
+    def delay(self):
+        return self.agent_params[DELAY]
+
+    @property
+    def hist(self):
+        if self.byr:
+            return self.agent_params[BYR_HIST]
+        else:
+            raise NotImplementedError('No hist attribute for seller')
+
+    @property
+    def feat_type(self):
+        return self.agent_params[FEAT_TYPE]
+
+    @property
+    def con_type(self):
+        return self.agent_params[CON_TYPE]
 
     def _build_agent_sizes(self):
         if not self.byr:
@@ -85,7 +105,6 @@ class AgentComposer(Composer):
         else:
             full_vector = np.concatenate([offer_vector[:TIME_START_IND],
                                           offer_vector[TIME_END_IND:]])
-        # full_vector = np.concatenate([full_vector, self.turn_inds])
         full_vector = torch.from_numpy(full_vector).squeeze().float()
         return full_vector
 

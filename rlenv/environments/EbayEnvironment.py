@@ -11,7 +11,7 @@ from rlenv.events.Arrival import Arrival
 from rlenv.sources import ArrivalSources
 from rlenv.sources import ThreadSources
 from rlenv.events.Thread import Thread
-from rlenv.env_consts import (INTERACT, SALE, PRICE, DUR, ACC_IND, CON,
+from rlenv.env_consts import (INTERACT, ACC_IND, CON,
                               REJ_IND, OFF_IND, ARRIVAL, FIRST_OFFER, MSG,
                               OFFER_EVENT, DELAY_EVENT)
 from rlenv.env_utils import get_clock_feats, get_con_outcomes, need_msg, model_str
@@ -176,8 +176,6 @@ class EbayEnvironment:
         if event.turn != 1:
             time_feats = self.time_feats.get_feats(thread_id=event.thread_id,
                                                    time=event.priority)
-            # print('raw time feats')
-            # print(pd.Series(data=time_feats, index=TIME_FEATS))
             clock_feats = get_clock_feats(event.priority)
             event.init_offer(time_feats=time_feats, clock_feats=clock_feats)
         return False
@@ -193,9 +191,7 @@ class EbayEnvironment:
             return self.process_lstg_expiration(event)
 
         # update sources with clock feats
-        clock_feats = get_clock_feats(event.priority)
-        event.update_arrival(thread_count=self.thread_counter - 1,
-                             clock_feats=clock_feats)
+        event.update_arrival(thread_count=self.thread_counter - 1)
 
         # call model to sample inter arrival time and update arrival check priority
         input_dict = self._get_arrival_input_dict(event=event)

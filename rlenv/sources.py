@@ -84,11 +84,6 @@ class ThreadSources(Sources):
         # TODO: could index once and pass resulting vector to output
         # TODO: would require update of recorders
         offer_map = OFFER_MAPS[turn]
-        # print('summary')
-        # print(turn)
-        # print('con ind: {}'.format(CON_IND))
-        # print(self.source_dict[offer_map])
-        # print(self.source_dict[offer_map][CON_IND])
         con = int(np.round(self.source_dict[offer_map][CON_IND] * 100))
         msg = self.source_dict[offer_map][MSG_IND] == 1
         norm = self.source_dict[offer_map][NORM_IND]
@@ -123,3 +118,24 @@ class ArrivalSources(Sources):
         self.source_dict[CLOCK_MAP] = clock_feats
         self.source_dict[MONTHS_SINCE_LSTG] = months_since_lstg
         self.source_dict[MONTHS_SINCE_LAST] = months_since_last
+
+
+class RlSources(ThreadSources):
+    def __init__(self, x_lstg=None):
+        super(RlSources, self).__init__(x_lstg=x_lstg)
+        self.source_dict[CLOCK_MAP] = None
+
+    def update_arrival(self, clock_feats=None, months_since_lstg=None):
+        self.source_dict[MONTHS_SINCE_LSTG] = months_since_lstg
+        self.source_dict[CLOCK_MAP] = clock_feats
+
+    def prepare_hist(self, time_feats=None, clock_feats=None, months_since_lstg=None):
+        self.source_dict[CLOCK_MAP] = clock_feats
+        super().prepare_hist(time_feats=time_feats, clock_feats=clock_feats,
+                             months_since_lstg=months_since_lstg)
+
+    def init_offer(self, time_feats=None, clock_feats=None, turn=None):
+        self.source_dict[CLOCK_MAP] = clock_feats
+        super().init_offer(time_feats=time_feats, clock_feats=clock_feats,
+                           turn=turn)
+

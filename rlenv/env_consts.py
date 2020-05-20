@@ -56,6 +56,7 @@ ARRIVAL = 'ARRIVAL'
 
 # thread level
 FIRST_OFFER = 'FIRST_OFFER' # first byer offer
+RL_ARRIVAL_EVENT = 'RL_ARRIVE'
 OFFER_EVENT = 'OFFER'
 DELAY_EVENT = 'DELAY'
 

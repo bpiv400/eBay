@@ -8,14 +8,16 @@ from rlpyt.spaces.composite import Composite
 from rlpyt.spaces.float_box import FloatBox
 from featnames import START_TIME, START_PRICE
 from constants import MONTH
-from rlenv.env_consts import LOOKUP, X_LSTG, ENV_LSTG_COUNT
+from rlenv.env_consts import (LOOKUP, X_LSTG, ENV_LSTG_COUNT,
+                              CLOCK_START_IND, TIME_END_IND,
+                              OFFER_MAPS, TIME_START_IND, CLOCK_END_IND)
 from rlenv.environments.EbayEnvironment import EbayEnvironment
-from rlenv import Recorder
+from rlenv.Recorder import Recorder
 from agent.agent_utils import get_con_set, get_train_file_path
 from agent.agent_consts import seller_groupings
 
 SellerObs = namedtuple("SellerObs", seller_groupings)
-InfoTraj = namedtuple("InfoTraj", ["months", "bin_proceeds"])
+InfoTraj = namedtuple("InfoTraj", ["months", "bin_proceeds", "done"])
 
 
 class AgentEnvironment(EbayEnvironment, Env):
@@ -82,14 +84,15 @@ class AgentEnvironment(EbayEnvironment, Env):
         self._x_lstg_slice = self._x_lstg_slice[unsorted_ids, :]
         self._ix = 0
 
-    def agent_tuple(self, lstg_complete=None):
+    def agent_tuple(self, done=None):
         obs = self.get_obs(sources=self.last_event.sources(),
                            turn=self.last_event.turn)
         months = (self.last_event.priority - self.start_time) / MONTH
         months += self.relist_count  # add in months without sale
         bin_proceeds = (1-self.cut) * self.lookup[START_PRICE]
-        info = InfoTraj(months=months, bin_proceeds=bin_proceeds)
-        return obs, self.get_reward(), lstg_complete, info
+        info = InfoTraj(months=months, bin_proceeds=bin_proceeds,
+                        done=done)
+        return obs, self.get_reward(), done, info
 
     def get_obs(self, sources=None, turn=None):
         obs_dict = self.composer.build_input_dict(model_name=None,
@@ -97,7 +100,7 @@ class AgentEnvironment(EbayEnvironment, Env):
                                                   turn=turn)
         return SellerObs(**obs_dict)
 
-    def con_from_action(self, action=None):
+    def turn_from_action(self, action=None):
         raise NotImplementedError()
 
     def get_reward(self):

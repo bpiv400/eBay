@@ -7,9 +7,10 @@ from rlenv.events.Event import Event
 from rlenv.env_consts import (FIRST_OFFER, DELAY_EVENT, OFFER_EVENT)
 from constants import (SLR_PREFIX, BYR_PREFIX, MAX_DELAY)
 from rlenv.env_utils import (slr_rej_outcomes, slr_auto_acc_outcomes,
-                             get_delay_outcomes)
+                             get_delay_outcomes, get_clock_feats,
+                             get_con_outcomes)
 from rlenv.time.Offer import Offer
-from utils import get_remaining
+from utils import get_remaining, get_months_since_lstg
 
 
 class Thread(Event):
@@ -114,7 +115,9 @@ class Thread(Event):
         return Offer(params=offer_params, rej=False)
 
     def init_offer(self, time_feats=None, clock_feats=None):
-        self.sources.init_offer(time_feats=time_feats, clock_feats=clock_feats, turn=self.turn)
+        self.sources.init_offer(time_feats=time_feats,
+                                clock_feats=clock_feats,
+                                turn=self.turn)
 
     def summary(self):
         return self.sources.summary(self.turn)
@@ -128,13 +131,67 @@ class Thread(Event):
     def byr_expire(self):
         self.sources.byr_expire(turn=self.turn)
 
-    def get_obs(self):
-        pass
-        # raise NotImplementedError()
-        # srcs = self.sources()
-        # maybe move to composer or sources
-        # return OBS_SPACE(LSTG_MAP=srcs[LSTG_MAP].values,
-        #                 THREAD_MAP=srcs[THREAD_MAP].values,
-        #                 TURN_IND_MAP=srcs[TURN_IND_MAP].values.astype(np.int),
-        #                 X_TIME_MAP=srcs[X_TIME_MAP][INT_REMAINING])
 
+class RlThread(Thread):
+    def __init__(self, priority=None, thread_id=None, rl_buyer=False,
+                 sources=None, con=None):
+        super(RlThread, self).__init__(priority=priority,
+                                       thread_id=thread_id)
+        self.rl_buyer = rl_buyer
+        self.sources = sources
+        self.stored_concession = con
+        self.event_type = OFFER_EVENT
+
+    def prep_rl_offer(self, con=None, priority=None):
+        """
+        Updates sources with the delay outcomes associated with an upcoming
+        RL offer. Called at the moment the agent chooses the delay/con
+        :param con: concession associated with incoming offer
+        :param priority: time that the offer will take place
+        """
+        self.event_type = OFFER_EVENT
+        self.stored_concession = con
+        delay_outcomes = get_delay_outcomes(seconds=priority-self.priority,
+                                            max_delay=self.max_delay,
+                                            turn=self.turn)
+        self.sources.update_delay(delay_outcomes=delay_outcomes, turn=self.turn)
+        self.priority = priority
+
+    def init_rl_offer(self, time_feats=None, months_since_lstg=None):
+        """
+        Updates sources with the time and clock features of the moment
+        the RL makes its offer. If this is the first turn, it also
+        updates months_since_lstg to the value of the current time
+        :param time_feats: raw current time features
+        :param months_since_lstg: float giving months_since_lstg
+        """
+        clock_feats = get_clock_feats(self.priority)
+        if self.turn == 1:
+            self.sources.prepare_hist(time_feats=time_feats,
+                                      months_since_lstg=months_since_lstg,
+                                      clock_feats=clock_feats)
+        else:
+            self.sources.init_offer(time_feats=time_feats,
+                                    clock_feats=clock_feats,
+                                    turn=self.turn)
+
+    def execute_offer(self):
+        """
+        After the prescribed delay has elapsed, executes the agent's selected
+        concession by updating the relevant sources
+        :return Offer representing the executed turn
+        """
+        # process slr rejection
+        if self.stored_concession == 0:
+            return self.slr_rej()
+        elif self.stored_concession > 1:
+            return self.slr_expire_rej()
+            # process seller expiration rejection
+            # probably won't get to this point
+            # will probably get caught by thread_expired check
+        # process ordinary concession or acceptance
+        else:
+            con_outcomes = get_con_outcomes(con=self.stored_concession,
+                                            sources=self.sources(),
+                                            turn=self.turn)
+            return self.update_con_outcomes(con_outcomes=con_outcomes)
