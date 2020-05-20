@@ -40,6 +40,10 @@ class AgentComposer(Composer):
             raise NotImplementedError('No hist attribute for seller')
 
     @property
+    def groupings(self):
+        return list(self.agent_sizes['x'].keys())
+
+    @property
     def feat_type(self):
         return self.agent_params[FEAT_TYPE]
 

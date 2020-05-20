@@ -9,13 +9,10 @@ from rlpyt.spaces.float_box import FloatBox
 from featnames import START_TIME, START_PRICE
 from constants import MONTH
 from rlenv.env_consts import (LOOKUP, X_LSTG, ENV_LSTG_COUNT)
-from rlenv.env_utils import model_str
 from rlenv.environments.EbayEnvironment import EbayEnvironment
 from rlenv.Recorder import Recorder
 from agent.agent_utils import get_con_set, get_train_file_path
-from agent.agent_consts import seller_groupings
 
-SellerObs = namedtuple("SellerObs", seller_groupings)
 InfoTraj = namedtuple("InfoTraj", ["months", "bin_proceeds", "done"])
 
 
@@ -35,12 +32,16 @@ class AgentEnvironment(EbayEnvironment, Env):
         self._lookup_slice, self._x_lstg_slice = None, None
         self._ix = -1
         self.relist_count = 0
-        
+
         self.last_event = None  # type: Thread
         # action and observation spaces
         self.con_set = get_con_set(self.composer.con_type)
         self._action_space = self.define_action_space(con_set=self.con_set)
         self._observation_space = self.define_observation_space()
+        self._obs_class = self.define_observation_class()
+
+    def define_observation_class(self):
+        raise NotImplementedError("Please extend")
 
     def open_input_file(self):
         os.environ["HDF5_USE_FILE_LOCKING"] = "FALSE"
@@ -53,7 +54,7 @@ class AgentEnvironment(EbayEnvironment, Env):
     def define_observation_space(self):
         sizes = self.composer.agent_sizes['x']
         boxes = [FloatBox(-1000, 1000, shape=size) for size in sizes.values()]
-        return Composite(boxes, SellerObs)
+        return Composite(boxes, self._obs_class)
 
     def reset_lstg(self):
         """
@@ -97,7 +98,7 @@ class AgentEnvironment(EbayEnvironment, Env):
         obs_dict = self.composer.build_input_dict(model_name=None,
                                                   sources=sources,
                                                   turn=turn)
-        return SellerObs(**obs_dict)
+        return self._obs_class(**obs_dict)
 
     def get_offer_time(self, event):
         # query with delay model
@@ -108,7 +109,7 @@ class AgentEnvironment(EbayEnvironment, Env):
         delay = self.get_delay(input_dict=input_dict, turn=event.turn,
                                thread_id=event.thread_id, time=event.time,
                                max_interval=max(1, max_interval))
-        return max(delay, 1) + priority
+        return max(delay, 1) + event.priority
 
     def turn_from_action(self, action=None):
         raise NotImplementedError()

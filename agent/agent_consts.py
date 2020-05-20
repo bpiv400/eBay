@@ -9,18 +9,6 @@ OPTIM_STATE = 'optimizer_state_dict'
 TRAIN_DIR = "train"
 TRAIN_SEED = 10
 
-# seller input groups
-seller_groupings = [
-    'lstg',
-    'w2v_byr',
-    'w2v_slr',
-    'cat',
-    'cndtn',
-    'slr'
-]
-for i in range(1, 7):
-    seller_groupings.append('offer{}'.format(i))
-    del i
 
 # concession set constants
 CON_TYPE = 'con_type'

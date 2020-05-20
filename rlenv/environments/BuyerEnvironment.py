@@ -2,6 +2,7 @@
 Environment for training the buyer agent
 """
 import numpy as np
+from collections import namedtuple
 from constants import HOUR, DAY
 from utils import get_months_since_lstg
 from rlenv.env_consts import DELAY_EVENT, RL_ARRIVAL_EVENT
@@ -20,6 +21,9 @@ class BuyerEnvironment(AgentEnvironment):
 
     def get_reward(self):
         pass
+
+    def define_observation_class(self):
+        return namedtuple('BuyerObs', self.composer.groupings)
 
     @property
     def horizon(self):
