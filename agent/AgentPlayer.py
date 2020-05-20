@@ -10,7 +10,7 @@ class AgentPlayer(PlayerInterface):
 
         :param agent.models.AgentModel.AgentModel agent_model:
         """
-        super().__init__(byr=agent_model.byr)
+        super().__init__(byr=agent_model.byr, agent=True)
         self.agent_model = agent_model
         if not self.agent_model.delay:
             if not self.byr:

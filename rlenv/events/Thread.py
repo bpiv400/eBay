@@ -10,7 +10,7 @@ from rlenv.env_utils import (slr_rej_outcomes, slr_auto_acc_outcomes,
                              get_delay_outcomes, get_clock_feats,
                              get_con_outcomes)
 from rlenv.time.Offer import Offer
-from utils import get_remaining, get_months_since_lstg
+from utils import get_remaining
 
 
 class Thread(Event):

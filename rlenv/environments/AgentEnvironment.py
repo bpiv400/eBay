@@ -9,6 +9,7 @@ from rlpyt.spaces.float_box import FloatBox
 from featnames import START_TIME, START_PRICE
 from constants import MONTH
 from rlenv.env_consts import (LOOKUP, X_LSTG, ENV_LSTG_COUNT)
+from rlenv.env_utils import model_str
 from rlenv.environments.EbayEnvironment import EbayEnvironment
 from rlenv.Recorder import Recorder
 from agent.agent_utils import get_con_set, get_train_file_path
@@ -97,6 +98,17 @@ class AgentEnvironment(EbayEnvironment, Env):
                                                   sources=sources,
                                                   turn=turn)
         return SellerObs(**obs_dict)
+
+    def get_offer_time(self, event):
+        # query with delay model
+        input_dict = self.get_delay_input_dict(event=event)
+        width = self.intervals[event.turn]
+        intervals = (self.end_time - event.priority) / width
+        max_interval = min(int(intervals), int(event.max_delay / width))
+        delay = self.get_delay(input_dict=input_dict, turn=event.turn,
+                               thread_id=event.thread_id, time=event.time,
+                               max_interval=max(1, max_interval))
+        return max(delay, 1) + priority
 
     def turn_from_action(self, action=None):
         raise NotImplementedError()

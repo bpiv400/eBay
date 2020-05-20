@@ -231,12 +231,9 @@ class EbayEnvironment:
 
     def process_delay(self, event):
         # no need to check expiration since this must occur at the same time as the previous offer
-        model_name = model_str(DELAY, turn=event.turn)
-        input_dict = self.composer.build_input_dict(model_name=model_name, sources=event.sources(),
-                                                    turn=event.turn)
-        delay_seconds = self.get_delay(input_dict=input_dict, turn=event.turn, thread_id=event.thread_id,
-                                       time=event.priority)
-        # print('delay seconds: {}'.format(delay_seconds))
+        input_dict = self.get_delay_input_dict(event)
+        delay_seconds = self.get_delay(input_dict=input_dict, turn=event.turn,
+                                       thread_id=event.thread_id, time=event.priority)
         # Test environment returns None when delay model is mistakenly called
         if delay_seconds is None:
             # print("No delay returned; exiting listing.")s
@@ -360,11 +357,14 @@ class EbayEnvironment:
         # print(event.summary())
         return offer
 
-    def get_delay(self, input_dict=None, turn=None, thread_id=None, time=None):
+    def get_delay(self, input_dict=None, turn=None, thread_id=None, time=None,
+                  max_interval=None):
         if turn % 2 == 0:
-            index = self.seller.delay(input_dict=input_dict, turn=turn)
+            index = self.seller.delay(input_dict=input_dict, turn=turn,
+                                      max_interval=max_interval)
         else:
-            index = self.buyer.delay(input_dict=input_dict, turn=turn)
+            index = self.buyer.delay(input_dict=input_dict, turn=turn,
+                                     max_interval=max_interval)
         seconds = int((index + np.random.uniform()) * self.intervals[turn])
         seconds = min(seconds, MAX_DELAY[turn])
         return seconds
@@ -377,4 +377,11 @@ class EbayEnvironment:
         input_dict = self.composer.build_input_dict(model_name=model_name,
                                                     sources=event.sources(),
                                                     turn=None)
+        return input_dict
+
+    def get_delay_input_dict(self, event=None):
+        model_name = model_str(DELAY, turn=event.turn)
+        input_dict = self.composer.build_input_dict(model_name=model_name,
+                                                    sources=event.sources(),
+                                                    turn=event.turn)
         return input_dict

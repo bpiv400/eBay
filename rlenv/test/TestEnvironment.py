@@ -25,7 +25,7 @@ class TestEnvironment(SimulatorEnvironment):
                                      time=time, turn=turn)
 
     def get_delay(self, input_dict=None, turn=None, thread_id=None,
-                  time=None, delay_type=None):
+                  time=None, max_interval=None):
         return self.lstg_log.get_delay(thread_id=thread_id, turn=turn,
                                        input_dict=input_dict, time=time)
 

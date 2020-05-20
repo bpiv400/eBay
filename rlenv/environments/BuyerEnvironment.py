@@ -43,12 +43,6 @@ class BuyerEnvironment(AgentEnvironment):
                                    intervals=(curr_interval, last_interval))
         return seconds + event.priority
 
-    def get_offer_time(self, priority):
-        # query with delay model
-        backstop = min(priority + self.end_time, priority + DELAY_INTERVAL)
-        delay = int(np.random.uniform() * (backstop - priority))
-        return max(delay, 1) + priority
-
     def process_rl_offer(self, event):
 
         # check whether the lstg expired, censoring this offer
