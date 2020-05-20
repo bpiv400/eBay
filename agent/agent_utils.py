@@ -15,15 +15,18 @@ from constants import (RL_LOG_DIR, SLR_VALUE_INIT, SLR_POLICY_INIT,
 from agent.agent_consts import FULL_CON, QUARTILES, HALF, PARAM_DICTS
 
 
-def get_con_set(con):
+def get_con_set(con, byr=False, delay=False):
     if con == FULL_CON:
-        return np.linspace(0, 100, 101) / 100
+        con_set = np.linspace(0, 100, 101) / 100
     elif con == QUARTILES:
-        return np.array([0, 0.25, 0.50, 0.75, 1.0])
+        con_set = np.array([0, 0.25, 0.50, 0.75, 1.0])
     elif con == HALF:
-        return np.array([0.0, 0.50, 1.0])
+        con_set = np.array([0.0, 0.50, 1.0])
     else:
         raise RuntimeError("Invalid concession set type parameter")
+    if not byr and delay:
+        con_set = np.concatenate([con_set, np.array([1.1])])
+    return con_set
 
 
 def detect_norm(init_dict=None):

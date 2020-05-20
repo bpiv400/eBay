@@ -1,8 +1,7 @@
 import math
 import torch
 import numpy as np
-from constants import (TURN_FEATS, BYR_PREFIX, SLR_PREFIX,
-                       SLR_POLICY_INIT, BYR_POLICY_INIT)
+from constants import (TURN_FEATS, BYR_PREFIX, SLR_PREFIX)
 from featnames import (OUTCOME_FEATS, MONTHS_SINCE_LSTG, BYR_HIST,
                        INT_REMAINING)
 from utils import load_sizes, load_featnames
@@ -49,11 +48,10 @@ class AgentComposer(Composer):
         return self.agent_params[CON_TYPE]
 
     def _build_agent_sizes(self):
-        if not self.byr:
-            sizes = load_sizes(SLR_POLICY_INIT)
-        else:
-            sizes = load_sizes(BYR_POLICY_INIT)
-        sizes['out'] = len(get_con_set(self.con_type))
+        sizes = load_sizes(get_agent_name(byr=self.byr, delay=self.delay,
+                                          policy=True))
+        sizes['out'] = len(get_con_set(self.con_type, byr=self.byr,
+                                       delay=self.delay))
         return sizes
 
     def _update_turn_inds(self, turn):
@@ -136,9 +134,7 @@ class AgentComposer(Composer):
         self.verify_lstg_append(lstg_append=lstg_append)
         # verify offer feats
         offer_feats = agent_feats['offer']
-        AgentComposer.verify_agent_offer(offer_feats=offer_feats,
-                                         agent_role=agent_role,
-                                         agent_name=agent_name)
+        self.verify_agent_offer(offer_feats=offer_feats)
 
     def verify_lstg_append(self, lstg_append=None):
         start_index = 0
@@ -173,20 +169,18 @@ class AgentComposer(Composer):
         # check that all appended features have been exhausted
         assert len(lstg_append) == start_index
 
-    @staticmethod
-    def verify_agent_offer(offer_feats=None, agent_role=None, agent_name=None):
-        if agent_role == SLR_PREFIX:
+    def verify_agent_offer(self, offer_feats=None):
+        if not self.byr and self.feat_type == ALL_FEATS:
             assumed_feats = CLOCK_FEATS + TIME_FEATS + OUTCOME_FEATS
         else:
             assumed_feats = CLOCK_FEATS + OUTCOME_FEATS
         AgentComposer.verify_all_feats(assumed_feats=assumed_feats, model_feats=offer_feats)
-        last_turn = 6 if agent_role == SLR_PREFIX else 7
-        sizes = load_sizes(agent_name)['x']
+        last_turn = 6 if self.byr or not self.delay else 5
         for turn in range(1, 8):
             if turn <= last_turn:
-                assert 'offer{}'.format(turn) in sizes
+                assert 'offer{}'.format(turn) in self.agent_sizes['x']
             else:
-                assert 'offer{}'.format(turn) not in sizes
+                assert 'offer{}'.format(turn) not in self.agent_sizes['x']
 
     @property
     def agent_sizes(self):
