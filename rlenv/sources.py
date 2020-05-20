@@ -134,8 +134,3 @@ class RlSources(ThreadSources):
         super().prepare_hist(time_feats=time_feats, clock_feats=clock_feats,
                              months_since_lstg=months_since_lstg)
 
-    def init_offer(self, time_feats=None, clock_feats=None, turn=None):
-        self.source_dict[CLOCK_MAP] = clock_feats
-        super().init_offer(time_feats=time_feats, clock_feats=clock_feats,
-                           turn=turn)
-

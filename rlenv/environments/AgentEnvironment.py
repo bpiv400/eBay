@@ -8,9 +8,7 @@ from rlpyt.spaces.composite import Composite
 from rlpyt.spaces.float_box import FloatBox
 from featnames import START_TIME, START_PRICE
 from constants import MONTH
-from rlenv.env_consts import (LOOKUP, X_LSTG, ENV_LSTG_COUNT,
-                              CLOCK_START_IND, TIME_END_IND,
-                              OFFER_MAPS, TIME_START_IND, CLOCK_END_IND)
+from rlenv.env_consts import (LOOKUP, X_LSTG, ENV_LSTG_COUNT)
 from rlenv.environments.EbayEnvironment import EbayEnvironment
 from rlenv.Recorder import Recorder
 from agent.agent_utils import get_con_set, get_train_file_path

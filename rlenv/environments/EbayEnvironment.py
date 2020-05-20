@@ -194,8 +194,10 @@ class EbayEnvironment:
         event.update_arrival(thread_count=self.thread_counter - 1)
 
         # call model to sample inter arrival time and update arrival check priority
-        input_dict = self._get_arrival_input_dict(event=event)
-        seconds = self.get_arrival(time=event.priority, input_dict=input_dict)
+        input_dict = self.get_arrival_input_dict(event=event)
+        first = event.priority == self.start_time
+        seconds = self.get_arrival(first=first, input_dict=input_dict,
+                                   time=event.priority)
         event.priority = min(event.priority + seconds, self.end_time)
 
         # if a buyer arrives, create a thread at the arrival time
@@ -325,11 +327,11 @@ class EbayEnvironment:
             msg = self.buyer.msg(input_dict=input_dict, turn=turn)
         return msg
 
-    def get_arrival(self, input_dict=None, time=None):
-        if time == self.start_time:
-            intervals = self.arrival.first_arrival(input_dict)
+    def get_arrival(self, input_dict=None, time=None, first=None, max_interval=None):
+        if first:
+            intervals = self.arrival.first_arrival(input_dict=input_dict, max_interval=max_interval)
         else:
-            intervals = self.arrival.inter_arrival(input_dict)
+            intervals = self.arrival.inter_arrival(input_dict=input_dict)
         width = self.intervals[1]
         return int((intervals + np.random.uniform()) * width)
 
@@ -367,8 +369,8 @@ class EbayEnvironment:
         seconds = min(seconds, MAX_DELAY[turn])
         return seconds
 
-    def _get_arrival_input_dict(self, event=None):
-        if event.priority == self.start_time:
+    def get_arrival_input_dict(self, event=None, first=False):
+        if first:
             model_name = FIRST_ARRIVAL_MODEL
         else:
             model_name = INTERARRIVAL_MODEL

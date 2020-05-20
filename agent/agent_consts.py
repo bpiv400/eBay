@@ -1,5 +1,5 @@
 import psutil
-from constants import BYR_PREFIX, SLR_PREFIX, DROPOUT
+from constants import BYR_PREFIX, SLR_PREFIX
 
 # state dictionaries
 AGENT_STATE = 'agent_state_dict'
@@ -75,7 +75,3 @@ THREADS_PER_PROC = 1
 
 # final learning rate
 LR1 = 1e-7
-
-# seconds in buyer arrival window
-BUYER_ARRIVE_INTERVAL = 8 * 60 * 60
-DELAY_INTERVAL = 5 * 60

@@ -3,7 +3,6 @@ Environment for training the buyer agent
 """
 import numpy as np
 from utils import get_months_since_lstg
-from agent.agent_consts import BUYER_ARRIVE_INTERVAL, DELAY_INTERVAL
 from rlenv.env_consts import DELAY_EVENT, RL_ARRIVAL_EVENT
 from rlenv.sources import RlSources
 from rlenv.environments.AgentEnvironment import AgentEnvironment
@@ -25,12 +24,24 @@ class BuyerEnvironment(AgentEnvironment):
     def horizon(self):
         return 100
 
-    def get_arrival_time(self, priority):
-        backstop = min(self.end_time, priority + BUYER_ARRIVE_INTERVAL)
-        delay = int(np.random.uniform() * (backstop - priority))
-        return max(delay, 1) + priority
+    def get_arrival_time(self, event):
+        """
+        Gets an arrival time for the RL, forces the arrival to occur before
+        the lstg ends
+        :param event: RL_ARRIVAL_EVENT where the buyer has selected
+        to make an offer
+        :return: int giving arrival time
+        """
+        intervals_to_end = (float(event.priority - self.end_time)
+                            / self.intervals[1])
+        assert int(intervals_to_end) == intervals_to_end
+        input_dict = self.get_arrival_input_dict(event=event, first=True)
+        seconds = self.get_arrival(input_dict=input_dict, first=True, time=event.priority,
+                                   max_interval=intervals_to_end)
+        return seconds + event.priority
 
     def get_offer_time(self, priority):
+        # query with delay model
         backstop = min(priority + self.end_time, priority + DELAY_INTERVAL)
         delay = int(np.random.uniform() * (backstop - priority))
         return max(delay, 1) + priority
