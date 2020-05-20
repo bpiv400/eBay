@@ -2,6 +2,7 @@
 Environment for training the buyer agent
 """
 import numpy as np
+from constants import HOUR
 from utils import get_months_since_lstg
 from rlenv.env_consts import DELAY_EVENT, RL_ARRIVAL_EVENT
 from rlenv.sources import RlSources
@@ -24,6 +25,9 @@ class BuyerEnvironment(AgentEnvironment):
     def horizon(self):
         return 100
 
+    def _hours_since_lstg(self, priority):
+        return int((priority - self.start_time) / HOUR)
+
     def get_arrival_time(self, event):
         """
         Gets an arrival time for the RL, forces the arrival to occur before
@@ -32,12 +36,11 @@ class BuyerEnvironment(AgentEnvironment):
         to make an offer
         :return: int giving arrival time
         """
-        intervals_to_end = (float(event.priority - self.end_time)
-                            / self.intervals[1])
-        assert int(intervals_to_end) == intervals_to_end
+        curr_interval = self._hours_since_lstg(event.priority)
+        last_interval = curr_interval + 24
         input_dict = self.get_arrival_input_dict(event=event, first=True)
         seconds = self.get_arrival(input_dict=input_dict, first=True, time=event.priority,
-                                   max_interval=intervals_to_end)
+                                   intervals=(curr_interval, last_interval))
         return seconds + event.priority
 
     def get_offer_time(self, priority):
@@ -58,7 +61,7 @@ class BuyerEnvironment(AgentEnvironment):
         months_since_lstg = None
         if event.turn == 1:
             months_since_lstg = get_months_since_lstg(lstg_start=self.start_time,
-                                                      start=event.priority)
+                                                      time=event.priority)
         event.init_offer(months_since_lstg=months_since_lstg, time_feats=time_feats)
         offer = event.execute_offer()
         # update con outcomes

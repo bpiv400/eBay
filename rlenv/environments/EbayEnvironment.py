@@ -155,7 +155,7 @@ class EbayEnvironment:
         """
         # prepare sources and features
         sources = ThreadSources(x_lstg=self.x_lstg)
-        months_since_lstg = get_months_since_lstg(lstg_start=self.start_time, start=event.priority)
+        months_since_lstg = get_months_since_lstg(lstg_start=self.start_time, time=event.priority)
         time_feats = self.time_feats.get_feats(time=event.priority, thread_id=event.thread_id)
         sources.prepare_hist(time_feats=time_feats, clock_feats=get_clock_feats(event.priority),
                              months_since_lstg=months_since_lstg)
@@ -327,9 +327,9 @@ class EbayEnvironment:
             msg = self.buyer.msg(input_dict=input_dict, turn=turn)
         return msg
 
-    def get_arrival(self, input_dict=None, time=None, first=None, max_interval=None):
+    def get_arrival(self, input_dict=None, time=None, first=None, intervals=None):
         if first:
-            intervals = self.arrival.first_arrival(input_dict=input_dict, max_interval=max_interval)
+            intervals = self.arrival.first_arrival(input_dict=input_dict, intervals=intervals)
         else:
             intervals = self.arrival.inter_arrival(input_dict=input_dict)
         width = self.intervals[1]

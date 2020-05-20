@@ -17,25 +17,25 @@ class ArrivalInterface:
         hist = hist / 10
         return hist
 
-    def first_arrival(self, input_dict=None, max_interval=None):
+    def first_arrival(self, input_dict=None, intervals=None):
         """
         :param input_dict: standard model input dictionary
-        :param max_interval: optional integer that gives the
-        maximum number of intervals to draw over, used to hide
-        expiration/no arrival in case of buyer agent
+        :param intervals: optional 2-tuple of integers that gives
+        the intervals to sample over (inclusive of the first,
+        exclusive of the second)
         """
         model = self.first_arrival_model
         return self.arrival(model=model, input_dict=input_dict,
-                            max_interval=max_interval)
+                            intervals=intervals)
 
     def inter_arrival(self, input_dict=None):
         model = self.interarrival_model
         return self.arrival(model=model, input_dict=input_dict)
 
     @staticmethod
-    def arrival(model=None, input_dict=None, max_interval=None):
+    def arrival(model=None, input_dict=None, intervals=None):
         params = model(input_dict).squeeze()
-        if max_interval is not None:
-            params = params[:max_interval]
+        if intervals is not None:
+            params = params[intervals[0]:intervals[1]]
         intervals = sample_categorical(params)
         return intervals
