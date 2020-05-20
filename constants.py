@@ -114,19 +114,17 @@ DISCRIM_THREADS_NO_TF = 'threads_no_tf'
 DISCRIM_MODELS = [DISCRIM_LISTINGS, DISCRIM_THREADS, DISCRIM_THREADS_NO_TF]
 
 # policy initializations
-SLR_POLICY_INIT = 'init_policy_slr'
-BYR_POLICY_INIT = 'init_policy_byr'
-SLR_DELAY_POLICY_INIT = 'init_policy_slr_delay'
-BYR_DELAY_POLICY_INIT = 'init_policy_byr_delay'
-INIT_POLICY_MODELS = [SLR_POLICY_INIT, BYR_POLICY_INIT,
-                      SLR_DELAY_POLICY_INIT, BYR_DELAY_POLICY_INIT]
+SLR_POLICY_INIT = 'policy_slr'
+SLR_DELAY_POLICY_INIT = 'policy_slr_delay'
+BYR_DELAY_POLICY_INIT = 'policy_byr_delay'
+INIT_POLICY_MODELS = [SLR_POLICY_INIT, SLR_DELAY_POLICY_INIT,
+                      BYR_DELAY_POLICY_INIT]
 
-SLR_VALUE_INIT = 'init_value_slr'
-BYR_VALUE_INIT = 'init_value_byr'
-SLR_DELAY_VALUE_INIT = 'init_value_slr_delay'
-BYR_DELAY_VALUE_INIT = 'init_value_slr_delay'
-INIT_VALUE_MODELS = [SLR_VALUE_INIT, BYR_VALUE_INIT,
-                     SLR_DELAY_VALUE_INIT, BYR_DELAY_VALUE_INIT]
+SLR_VALUE_INIT = 'value_slr'
+SLR_DELAY_VALUE_INIT = 'value_slr_delay'
+BYR_DELAY_VALUE_INIT = 'value_byr_delay'
+INIT_VALUE_MODELS = [SLR_VALUE_INIT, SLR_DELAY_VALUE_INIT,
+                     BYR_DELAY_VALUE_INIT]
 
 INIT_MODELS = INIT_POLICY_MODELS + INIT_VALUE_MODELS
 

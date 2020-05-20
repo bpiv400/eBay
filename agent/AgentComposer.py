@@ -3,11 +3,12 @@ import torch
 import numpy as np
 from constants import (TURN_FEATS, BYR_PREFIX, SLR_PREFIX,
                        SLR_POLICY_INIT, BYR_POLICY_INIT)
-from featnames import (OUTCOME_FEATS, MONTHS_SINCE_LSTG, BYR_HIST)
+from featnames import (OUTCOME_FEATS, MONTHS_SINCE_LSTG, BYR_HIST,
+                       INT_REMAINING)
 from utils import load_sizes, load_featnames
 from rlenv.env_consts import *
 from agent.agent_consts import FEAT_TYPE, CON_TYPE, ALL_FEATS
-from agent.agent_utils import get_con_set
+from agent.agent_utils import get_con_set, get_agent_name
 from rlenv.Composer import Composer
 
 
@@ -66,18 +67,12 @@ class AgentComposer(Composer):
         self.turn_inds = inds
 
     def build_input_dict(self, model_name=None, sources=None, turn=None):
+        # build agent input if model name isn't given
         if model_name is None:
             return self._build_agent_dict(sources=sources, turn=turn)
-        agent_remainder = 1 if self.byr else 0
-        agent_models = [CON] if not self.delay else [CON, DELAY]
-        if turn is not None and turn % 2 == agent_remainder:
-            base_model = model_name[:-1]
-            if base_model == MSG:
-                return None
-            elif base_model in agent_models:
-                return self._build_agent_dict(sources=sources, turn=turn)
-        return super().build_input_dict(model_name=model_name, sources=sources,
-                                        turn=turn)
+        else:
+            return super().build_input_dict(model_name=model_name, sources=sources,
+                                            turn=turn)
 
     def _build_agent_dict(self, sources=None, turn=None):
         obs_dict = dict()
@@ -92,9 +87,28 @@ class AgentComposer(Composer):
         return obs_dict
 
     def _build_agent_lstg_vector(self, sources=None):
-        solo_feats = np.array([sources[MONTHS_SINCE_LSTG], sources[BYR_HIST],
-                               sources[OFFER_MAPS[1]][THREAD_COUNT_IND] + 1])
-        lstg = np.concatenate([sources[LSTG_MAP], solo_feats, self.turn_inds])
+        feats = []
+        solo_feats = [sources[MONTHS_SINCE_LSTG], sources[BYR_HIST]]
+
+        # set base, add clock features if buyer and thread count if slr
+        if self.byr:
+            feats.append(sources[LSTG_MAP][:-4])
+            feats.append(sources[CLOCK_MAP][:-2])
+        else:
+            feats.append(sources[LSTG_MAP])
+            solo_feats.append(sources[OFFER_MAPS[1]][THREAD_COUNT_IND] + 1)
+
+        # append solo feats and turn indicators
+        solo_feats = np.array(solo_feats)
+        feats.append(solo_feats)
+        feats.append(self.turn_inds)
+
+        # append remaining for delay models
+        if self.delay:
+            feats.append(np.array([sources[INT_REMAINING]]))
+
+        # concatenate all features into lstg vector and convert to tensor
+        lstg = np.concatenate(feats)
         lstg = lstg.astype(np.float32)
         lstg = torch.from_numpy(lstg).squeeze().float()
         return lstg
@@ -109,26 +123,55 @@ class AgentComposer(Composer):
         return full_vector
 
     def verify_agent(self):
-        agent_name = SLR_POLICY_INIT if not self.byr else BYR_POLICY_INIT
-        agent_role = SLR_PREFIX if not self.byr else BYR_PREFIX
-        Composer.verify_lstg_sets_shared(agent_name, self.x_lstg_cols, self.lstg_sets.copy())
-        agent_feats = load_featnames(agent_name)
-        lstg_append = Composer.remove_shared_feats(agent_feats[LSTG_MAP], self.lstg_sets[LSTG_MAP])
-        AgentComposer.verify_lstg_append(lstg_append=lstg_append, agent_role=agent_role)
+        # exclude auto accept / reject features from buyer shared lstgs
+        lstg_sets = self.lstg_sets.copy()
+        if self.byr:
+            lstg_sets[LSTG_MAP] = lstg_sets[LSTG_MAP][:-4]
+        # verify shared lstg features
+        model = get_agent_name(delay=self.delay, byr=self.byr, policy=True)
+        Composer.verify_lstg_sets_shared(model, self.x_lstg_cols, lstg_sets)
+        # verify appended features
+        agent_feats = load_featnames(model)
+        lstg_append = Composer.remove_shared_feats(agent_feats[LSTG_MAP], lstg_sets[LSTG_MAP])
+        self.verify_lstg_append(lstg_append=lstg_append)
+        # verify offer feats
         offer_feats = agent_feats['offer']
         AgentComposer.verify_agent_offer(offer_feats=offer_feats,
                                          agent_role=agent_role,
                                          agent_name=agent_name)
 
-    @staticmethod
-    def verify_lstg_append(lstg_append=None, agent_role=None):
-        # print(lstg_append)
-        assert lstg_append[0] == MONTHS_SINCE_LSTG
-        assert lstg_append[1] == BYR_HIST
-        assert lstg_append[2] == THREAD_COUNT
+    def verify_lstg_append(self, lstg_append=None):
+        start_index = 0
+        # ensure the first appended buyer features are day-wise clock feats
+        if self.byr:
+            AgentComposer.verify_sequence(lstg_append, CLOCK_FEATS[:-2], 0)
+            start_index += len(CLOCK_FEATS)
+
+        # in all cases check that months_since_lstg and byr_hist are next
+        assert lstg_append[start_index] == MONTHS_SINCE_LSTG
+        assert lstg_append[start_index + 1] == BYR_HIST
+
+        # for the seller, check that next feature is thread count
+        if not self.byr:
+            assert lstg_append[start_index + 2] == THREAD_COUNT
+            start_index += 3
+            agent_role = SLR_PREFIX
+        else:
+            start_index += 2
+            agent_role = BYR_PREFIX
+
+        # ensure turn indicators are next in all cases
         turn_feats = TURN_FEATS[agent_role]
-        AgentComposer.verify_sequence(lstg_append, turn_feats, 3)
-        assert len(lstg_append) == (len(turn_feats) + 3)
+        AgentComposer.verify_sequence(lstg_append, turn_feats, start_index)
+        start_index += len(turn_feats)
+
+        # for the delay agents, check that the last feature is int remaining
+        if self.delay:
+            assert lstg_append[start_index] == INT_REMAINING
+            start_index += 1
+
+        # check that all appended features have been exhausted
+        assert len(lstg_append) == start_index
 
     @staticmethod
     def verify_agent_offer(offer_feats=None, agent_role=None, agent_name=None):
