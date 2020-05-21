@@ -83,8 +83,8 @@ class Thread(Event):
     def slr_expire_rej(self):
         return self.slr_rej()
 
-    def slr_auto_rej(self, time_feats=None, clock_feats=None):
-        self.init_offer(time_feats=time_feats, clock_feats=clock_feats)
+    def slr_auto_rej(self, time_feats=None):
+        self.init_offer(time_feats=time_feats)
         delay_outcomes = np.array([0.0, 0.0, 1.0, 0.0], dtype=np.float)
         self.sources.update_delay(delay_outcomes=delay_outcomes, turn=self.turn)
         return self.slr_rej()
@@ -114,7 +114,13 @@ class Thread(Event):
         }
         return Offer(params=offer_params, rej=False)
 
-    def init_offer(self, time_feats=None, clock_feats=None):
+    def init_offer(self, time_feats=None):
+        """
+        Updates the clock and time features to their current
+        values before sampling a concession / executing an offer
+        :param time_feats: np.array containing time feats
+        """
+        clock_feats = get_clock_feats(self.priority)
         self.sources.init_offer(time_feats=time_feats,
                                 clock_feats=clock_feats,
                                 turn=self.turn)
@@ -201,4 +207,5 @@ class RlThread(Thread):
             con_outcomes = get_con_outcomes(con=self.stored_concession,
                                             sources=self.sources(),
                                             turn=self.turn)
+            self.stored_concession = None
             return self.update_con_outcomes(con_outcomes=con_outcomes)

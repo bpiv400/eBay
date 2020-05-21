@@ -120,10 +120,9 @@ class EbayEnvironment:
         elif event.is_rej():
             if slr_offer:
                 self._process_slr_rej(event, offer)
-                return False
             else:
                 self._process_byr_rej(offer)
-                return False
+            return False
         else:
             if not slr_offer:
                 auto = self._check_slr_autos(offer.price)
@@ -292,10 +291,9 @@ class EbayEnvironment:
     def _process_slr_auto_rej(self, event, offer):
         self.time_feats.update_features(offer=offer)
         event.change_turn()
-        clock_feats = get_clock_feats(event.priority)
         time_feats = self.time_feats.get_feats(thread_id=event.thread_id,
                                                time=event.priority)
-        offer = event.slr_auto_rej(time_feats=time_feats, clock_feats=clock_feats)
+        offer = event.slr_auto_rej(time_feats=time_feats)
         self.record(event)
         self.time_feats.update_features(offer=offer)
         self._init_delay(event)

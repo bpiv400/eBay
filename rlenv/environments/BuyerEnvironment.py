@@ -1,10 +1,8 @@
 """
 Environment for training the buyer agent
 """
-import numpy as np
 from collections import namedtuple
 from constants import HOUR, DAY
-from utils import get_months_since_lstg
 from rlenv.env_consts import DELAY_EVENT, RL_ARRIVAL_EVENT
 from rlenv.sources import RlSources
 from rlenv.environments.AgentEnvironment import AgentEnvironment
@@ -15,6 +13,9 @@ from rlenv.events.Thread import RlThread
 class BuyerEnvironment(AgentEnvironment):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+        # boolean indicating the sale that occurred took place in
+        # an RL thread
+        self.rl_sale = False
 
     def turn_from_action(self, action=None):  # might not make sense
         return self.con_set[action]
@@ -47,39 +48,22 @@ class BuyerEnvironment(AgentEnvironment):
                                    intervals=(curr_interval, last_interval))
         return seconds + event.priority
 
-    def process_rl_offer(self, event):
-        """
-        :param RlThread event:
-        :return: bool indicating the lstg is over
-        """
-        # check whether the lstg expired, censoring this offer
-        if self.is_lstg_expired(event):
-            return self.process_lstg_expiration(event)
-        slr_offer = event.turn % 2 == 0
-        if event.thread_expired():
-            if slr_offer:
-                self.process_slr_expire(event)
-                return False
-            else:
-                raise RuntimeError("Thread should never expire before"
-                                   "buyer agent offer")
-        time_feats = self.time_feats.get_feats(thread_id=event.thread_id,
-                                               time=event.priority)
-        months_since_lstg = None
-        if event.turn == 1:
-            months_since_lstg = get_months_since_lstg(lstg_start=self.start_time,
-                                                      time=event.priority)
-        event.init_rl_offer(months_since_lstg=months_since_lstg, time_feats=time_feats)
-        offer = event.execute_offer()
-        # update con outcomes
-        # update time feats
-        # process post offer
-
     def process_offer(self, event):
         if isinstance(event, RlThread) and event.turn % 2 != 0:
             return self.process_rl_offer(event)
         else:
             return super().process_offer(event)
+
+    def process_rl_offer(self, event):
+        """
+        Executes the RL agent's stored concession, then
+        if the lstg ends as a result, updates a flag to indicate
+        the RL buyer bought the item
+        """
+        lstg_complete = super().process_rl_offer(event)
+        if lstg_complete:
+            self.rl_sale = True
+        return lstg_complete
 
     def step(self, action):
         """
@@ -100,6 +84,7 @@ class BuyerEnvironment(AgentEnvironment):
                 sources.init_thread(hist=self.composer.hist)
                 thread = RlThread(priority=arrival_time, sources=sources, con=con, rl_buyer=True,
                                   thread_id=self.thread_counter)
+                self.rl_thread = thread
                 self.thread_counter += 1
                 self.queue.push(thread)
                 self.last_event = None
@@ -145,6 +130,3 @@ class BuyerEnvironment(AgentEnvironment):
             return (event.type == DELAY_EVENT and
                     event.turn % 2 == 1 and
                     isinstance(event, RlThread))
-
-    def define_action_space(self, con_set=None):
-        return
