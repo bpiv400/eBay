@@ -179,16 +179,23 @@ class RlThread(Thread):
         """
         After the prescribed delay has elapsed, executes the agent's selected
         concession by updating the relevant sources
+
+        Errors if encountering slr expiration rejection or buyer rejection
+        because these should have already been processed
+
+        slr expiration rejection encoded as con > 1
         :return Offer representing the executed turn
         """
         # process slr rejection
         if self.stored_concession == 0:
-            return self.slr_rej()
+            if self.turn % 2 == 0:
+                return self.slr_rej()
+            else:
+                raise RuntimeError("Buyer rejections should have"
+                                   " already executed")
         elif self.stored_concession > 1:
-            return self.slr_expire_rej()
-            # process seller expiration rejection
-            # probably won't get to this point
-            # will probably get caught by thread_expired check
+            raise RuntimeError("Slr expiration rejections should have"
+                               "already been executed")
         # process ordinary concession or acceptance
         else:
             con_outcomes = get_con_outcomes(con=self.stored_concession,

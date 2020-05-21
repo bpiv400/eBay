@@ -3,15 +3,16 @@ import h5py
 import pandas as pd
 import numpy as np
 from collections import namedtuple
+from featnames import START_TIME, START_PRICE
+from constants import MONTH
+from agent.spaces.ConSpace import ConSpace
+from agent.agent_utils import get_con_set, get_train_file_path
 from rlpyt.envs.base import Env
 from rlpyt.spaces.composite import Composite
 from rlpyt.spaces.float_box import FloatBox
-from featnames import START_TIME, START_PRICE
-from constants import MONTH
 from rlenv.env_consts import (LOOKUP, X_LSTG, ENV_LSTG_COUNT)
 from rlenv.environments.EbayEnvironment import EbayEnvironment
 from rlenv.Recorder import Recorder
-from agent.agent_utils import get_con_set, get_train_file_path
 
 InfoTraj = namedtuple("InfoTraj", ["months", "bin_proceeds", "done"])
 
@@ -35,8 +36,10 @@ class AgentEnvironment(EbayEnvironment, Env):
 
         self.last_event = None  # type: Thread
         # action and observation spaces
-        self.con_set = get_con_set(self.composer.con_type)
-        self._action_space = self.define_action_space(con_set=self.con_set)
+        self.con_set = get_con_set(con=self.composer.con_type,
+                                   byr=self.composer.byr,
+                                   delay=self.composer.delay)
+        self._action_space = self.define_action_space()
         self._observation_space = self.define_observation_space()
         self._obs_class = self.define_observation_class()
 
@@ -112,13 +115,25 @@ class AgentEnvironment(EbayEnvironment, Env):
         return max(delay, 1) + event.priority
 
     def turn_from_action(self, action=None):
-        raise NotImplementedError()
+        return self.con_set[action]
 
     def get_reward(self):
         raise NotImplementedError()
 
     @property
     def horizon(self):
+        pass
+
+    def define_action_space(self):
+        return ConSpace(con_set=self.con_set)
+
+    # TODO: may update
+    def record(self, event, byr_hist=None, censored=False):
+        if not censored and byr_hist is None:
+            if self.verbose:
+                Recorder.print_offer(event)
+
+    def is_agent_turn(self, event):
         raise NotImplementedError()
 
     def step(self, action):
@@ -129,18 +144,5 @@ class AgentEnvironment(EbayEnvironment, Env):
         """
         raise NotImplementedError()
 
-    # TODO: May update
-    def record(self, event, byr_hist=None, censored=False):
-        if not censored and byr_hist is None:
-            # print('summary in record')
-            # print(event.summary())
-            if self.verbose:
-                Recorder.print_offer(event)
-
-    def is_agent_turn(self, event):
-        raise NotImplementedError()
-
-    def define_action_space(self, con_set=None):
-        raise NotImplementedError()
 
 

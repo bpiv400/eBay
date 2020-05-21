@@ -55,8 +55,14 @@ class BuyerEnvironment(AgentEnvironment):
         # check whether the lstg expired, censoring this offer
         if self.is_lstg_expired(event):
             return self.process_lstg_expiration(event)
+        slr_offer = event.turn % 2 == 0
         if event.thread_expired():
-            raise RuntimeError("Thread should never expire before agent offer")
+            if slr_offer:
+                self.process_slr_expire(event)
+                return False
+            else:
+                raise RuntimeError("Thread should never expire before"
+                                   "buyer agent offer")
         time_feats = self.time_feats.get_feats(thread_id=event.thread_id,
                                                time=event.priority)
         months_since_lstg = None
@@ -66,6 +72,7 @@ class BuyerEnvironment(AgentEnvironment):
         event.init_rl_offer(months_since_lstg=months_since_lstg, time_feats=time_feats)
         offer = event.execute_offer()
         # update con outcomes
+        # update time feats
         # process post offer
 
     def process_offer(self, event):

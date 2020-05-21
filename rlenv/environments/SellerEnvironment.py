@@ -1,7 +1,6 @@
 from collections import namedtuple
 from utils import get_cut
 from featnames import META
-from agent.spaces.ConSpace import ConSpace
 from rlenv.environments.AgentEnvironment import AgentEnvironment
 from rlenv.env_consts import OFFER_EVENT
 from rlenv.env_utils import get_con_outcomes
@@ -78,13 +77,6 @@ class SellerEnvironment(AgentEnvironment):
             return self.agent_tuple(done=lstg_complete)
         self.last_event = None
         return self.run()
-
-    def turn_from_action(self, action=None):
-        return self.con_set[action]
-
-    def define_action_space(self, con_set=None):
-        # message not included because agent can't write a msg
-        return ConSpace(con_set=con_set)
 
     def define_observation_class(self):
         return namedtuple("SellerObs", self.composer.groupings)
