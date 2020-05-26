@@ -3,6 +3,7 @@ Environment for training the buyer agent
 """
 from collections import namedtuple
 from constants import HOUR, DAY
+from featnames import START_PRICE
 from rlenv.env_consts import DELAY_EVENT, RL_ARRIVAL_EVENT
 from rlenv.sources import RlSources
 from rlenv.environments.AgentEnvironment import AgentEnvironment
@@ -22,7 +23,16 @@ class BuyerEnvironment(AgentEnvironment):
         return self.con_set[action]
 
     def get_reward(self):
-        pass
+        """
+        Returns the buyer reward for the current turn. For now, assumes
+        that the buyer values the item at the start price
+        """
+        if self.rl_event.type == RL_ARRIVAL_EVENT:
+            return 0.0
+        elif not self.rl_event.is_sale():
+            return 0.0
+        else:
+            return self.lookup[START_PRICE] - self.outcome.price
 
     def define_observation_class(self):
         return namedtuple('BuyerObs', self.composer.groupings)
@@ -107,7 +117,6 @@ class BuyerEnvironment(AgentEnvironment):
         if event is not self.rl_event and not lstg_complete:
             raise RuntimeError("Other threads should only return "
                                "to agent when the lstg ends")
-
         return self.agent_tuple(done=lstg_complete)
 
     def reset(self):
