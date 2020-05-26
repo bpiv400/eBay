@@ -15,6 +15,7 @@ class BuyerEnvironment(AgentEnvironment):
         super().__init__(**kwargs)
         # boolean indicating the sale that occurred took place in
         # an RL thread
+        self.rl_event = None
         self.rl_sale = False
 
     def turn_from_action(self, action=None):  # might not make sense
@@ -84,7 +85,7 @@ class BuyerEnvironment(AgentEnvironment):
                 sources.init_thread(hist=self.composer.hist)
                 thread = RlThread(priority=arrival_time, sources=sources, con=con, rl_buyer=True,
                                   thread_id=self.thread_counter)
-                self.rl_thread = thread
+                self.rl_event = thread
                 self.thread_counter += 1
                 self.queue.push(thread)
                 self.last_event = None
@@ -99,6 +100,16 @@ class BuyerEnvironment(AgentEnvironment):
                 self.last_event = None
                 return self.run()
 
+    def run(self):
+        event, lstg_complete = super().run()
+        # set last event flag to point to rl event
+        self.last_event = self.rl_event
+        if event is not self.rl_event and not lstg_complete:
+            raise RuntimeError("Other threads should only return "
+                               "to agent when the lstg ends")
+
+        return self.agent_tuple(done=lstg_complete)
+
     def reset(self):
         """
         Resets the environment by drawing a new listing,
@@ -110,10 +121,13 @@ class BuyerEnvironment(AgentEnvironment):
         super().reset()
         rl_sources = RlSources(x_lstg=self.x_lstg)
         event = Arrival(priority=self.start_time, sources=rl_sources)
+        self.rl_event = event
         self.queue.push(event)
         # should deterministically return RL_ARRIVAL_EVENT at start of lstg
         # lstg should never be complete at this point
         event, _ = super().run()
+        if event.type != RL_ARRIVAL_EVENT:
+            raise RuntimeError("Bad assumption about first event")
         event.update_arrival()
         self.last_event = event
         return self.get_obs()
