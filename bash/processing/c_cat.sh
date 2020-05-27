@@ -1,5 +1,5 @@
 #!/bin/bash
-#$ -t 1-185
+#$ -t 1-102
 #$ -q short.q
 #$ -l m_mem_free=12G
 #$ -N c_cat

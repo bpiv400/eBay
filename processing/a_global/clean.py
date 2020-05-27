@@ -1,126 +1,136 @@
+import numpy as np
+import pandas as pd
 from compress_pickle import dump
-from processing.processing_utils import *
-from processing.processing_consts import *
-from constants import PCTILE_DIR
+from processing.processing_utils import read_csv
+from processing.processing_consts import CLEAN_DIR
+from constants import PCTILE_DIR, START
+from featnames import START_PRICE, BYR_HIST
 
 
 # creates series of percentiles indexed by column variable
 def get_pctiles(s):
-	N = len(s.index)
-	# create series of index name and values pctile
-	idx = pd.Index(np.sort(s.values), name=s.name)
-	pctiles = pd.Series(np.arange(N) / (N-1), index=idx, name='pctile')
-	pctiles = pctiles.groupby(pctiles.index).min()
-	# put max in 99th percentile
-	pctiles.loc[pctiles == 1] -= 1e-16
-	# reformat series with index s.index and values pctiles
-	s = s.to_frame().join(pctiles, on=s.name).drop(
-		s.name, axis=1).squeeze().rename(s.name)
-	return s, pctiles
+    N = len(s.index)
+    # create series of index name and values pctile
+    idx = pd.Index(np.sort(s.values), name=s.name)
+    pctiles = pd.Series(np.arange(N) / (N - 1), index=idx, name='pctile')
+    pctiles = pctiles.groupby(pctiles.index).min()
+    # put max in 99th percentile
+    pctiles.loc[pctiles == 1] -= 1e-16
+    # reformat series with index s.index and values pctiles
+    s = s.to_frame().join(pctiles, on=s.name).drop(
+        s.name, axis=1).squeeze().rename(s.name)
+    return s, pctiles
 
 
-# convert byr_hist to pctiles and save threads
-T = pd.read_csv(CLEAN_DIR + 'threads.csv', dtype=TTYPES).set_index(
-	['lstg', 'thread'])
-T.loc[:, 'byr_hist'], toSave = get_pctiles(T['byr_hist'])
-dump(toSave, '{}/byr_hist.pkl'.format(PCTILE_DIR))
-dump(T, CLEAN_DIR + 'threads.pkl')
+def get_seconds(t):
+    return t.hour * 3600 + t.minute * 60 + t.second
 
-# load offers
-O = pd.read_csv(CLEAN_DIR + 'offers.csv', dtype=OTYPES).set_index(
-	['lstg', 'thread', 'index'])
 
-# arrival time
-thread_start = O.clock.xs(1, level='index')
-s = pd.to_datetime(thread_start, origin=START, unit='s')
+def main():
+    # load files
+    offers = read_csv('offers')
+    threads = read_csv('threads')
+    listings = read_csv('listings')
 
-# split off missing
-toReplace = T.bin & ((thread_start+1) % (24 * 3600) == 0)
-missing = pd.to_datetime(s.loc[toReplace].dt.date)
-labeled = s.loc[~toReplace]
+    # convert byr_hist to pctiles and save threads
+    threads.loc[:, BYR_HIST], toSave = \
+        get_pctiles(threads[BYR_HIST])
+    dump(toSave, PCTILE_DIR + '{}.pkl'.format(BYR_HIST))
+    dump(threads, CLEAN_DIR + 'threads.pkl')
 
-# cdf using labeled data
-seconds = lambda t: t.hour*3600 + t.minute*60 + t.second
-N = len(labeled.index)
-sec = pd.Series(np.arange(1, N+1) / N, 
-	index=np.sort(seconds(labeled.dt).values), name='pctile')
-pctile = sec.groupby(sec.index).min()
-pctile.loc[-1] = 0
-pctile = pctile.sort_index().rename('pctile')
-cdf = pctile.rename('x').reset_index().set_index('x').squeeze()
+    # arrival time
+    thread_start = offers.clock.xs(1, level='index')
+    s = pd.to_datetime(thread_start, origin=START, unit='s')
 
-# calculate censoring second
-last = O.loc[~O.censored, 'clock'].groupby(['lstg', 'thread']).max()
-last = last.loc[~toReplace]
-last = last.groupby('lstg').max()
-last = pd.to_datetime(last, origin=START, unit='s')
-last = last.reindex(index=missing.index, level='lstg').dropna()
+    # split off missing
+    toReplace = threads.bin & ((thread_start + 1) % (24 * 3600) == 0)
+    missing = pd.to_datetime(s.loc[toReplace].dt.date)
+    labeled = s.loc[~toReplace]
 
-# restrict censoring seconds to same day as bin with missing time
-sameDate = pd.to_datetime(last.dt.date) == missing.reindex(last.index)
-lower = seconds(last.dt).loc[sameDate].rename('lower')
+    # cdf using labeled data
+    N = len(labeled.index)
+    sec = pd.Series(np.arange(1, N + 1) / N,
+                    index=np.sort(get_seconds(labeled.dt).values),
+                    name='pctile')
+    pctile = sec.groupby(sec.index).min()
+    pctile.loc[-1] = 0
+    pctile = pctile.sort_index().rename('pctile')
+    cdf = pctile.rename('x').reset_index().set_index('x').squeeze()
 
-# make end time one second after last observed same day offer before BIN
-lower += 1
-lower.loc[lower == 3600 * 24] -= 1
+    # calculate censoring second
+    last = offers.loc[~offers.censored, 'clock'].groupby(
+        ['lstg', 'thread']).max()
+    last = last.loc[~toReplace]
+    last = last.groupby('lstg').max()
+    last = pd.to_datetime(last, origin=START, unit='s')
+    last = last.reindex(index=missing.index, level='lstg').dropna()
 
-# uniform random
-rand = pd.Series(np.random.rand(len(missing.index)), 
-	index=missing.index, name='x')
+    # restrict censoring seconds to same day as bin with missing time
+    sameDate = pd.to_datetime(last.dt.date) == missing.reindex(last.index)
+    lower = get_seconds(last.dt).loc[sameDate].rename('lower')
 
-# amend rand for censored observations
-tau = lower.to_frame().join(pctile, on='lower')['pctile']
-rand.loc[tau.index] = tau
+    # make end time one second after last observed same day offer before BIN
+    lower += 1
+    lower.loc[lower == 3600 * 24] -= 1
 
-# read off of cdf
-newsec = cdf.reindex(index=rand, method='ffill').values
-delta = pd.Series(pd.to_timedelta(newsec, unit='second'), 
-	index=rand.index)
+    # uniform random
+    rand = pd.Series(np.random.rand(len(missing.index)),
+                     index=missing.index, name='x')
 
-# new bin arrival times
-tdiff = missing + delta - pd.to_datetime(START)
-tdiff = tdiff.dt.total_seconds().astype('int64')
+    # amend rand for censored observations
+    tau = lower.to_frame().join(pctile, on='lower')['pctile']
+    rand.loc[tau.index] = tau
 
-# end time of listing
-end_time = tdiff.reset_index(
-	'thread', drop=True).rename('end_time')
+    # read off of cdf
+    newsec = cdf.reindex(index=rand, method='ffill').values
+    delta = pd.Series(pd.to_timedelta(newsec, unit='second'),
+                      index=rand.index)
 
-# update offers clock
-df = O.clock.reindex(index=end_time.index, level='lstg')
-df = df.rename('clock').to_frame().join(end_time)
-idx = df[df['clock'] > df['end_time']].index
-O.loc[idx, 'clock'] = df.loc[idx, 'end_time']
+    # new bin arrival times
+    tdiff = missing + delta - pd.to_datetime(START)
+    tdiff = tdiff.dt.total_seconds().astype('int64')
 
-# save offers and threads
-dump(O, CLEAN_DIR + 'offers.pkl')
-del O, T
+    # end time of listing
+    end_time = tdiff.reset_index(
+        'thread', drop=True).rename('end_time')
 
-# load listings
-L = pd.read_csv(CLEAN_DIR + 'listings.csv', 
-	dtype=LTYPES).set_index('lstg')
+    # update offers clock
+    df = offers.clock.reindex(index=end_time.index, level='lstg')
+    df = df.to_frame().join(end_time)
+    idx = df[df['clock'] > df['end_time']].index
+    offers.loc[idx, 'clock'] = df.loc[idx, 'end_time']
 
-# update listing end time
-L.loc[end_time.index, 'end_time'] = end_time
+    # save offers and threads
+    dump(offers, CLEAN_DIR + 'offers.pkl')
 
-# add arrivals per day to listings
-arrivals = thread_start.groupby('lstg').count().reindex(
-	index=L.index, fill_value=0)
-duration = (L.end_time+1) / (24 * 3600) - L.start_date
-L['arrival_rate'] = arrivals / duration
+    # update listing end time
+    listings.loc[end_time.index, 'end_time'] = end_time
 
-# add start_price percentile
-L['start_price_pctile'], _ = get_pctiles(L['start_price'])
+    # add arrivals per day to listings
+    arrivals = thread_start.groupby('lstg').count().reindex(
+        index=listings.index, fill_value=0)
+    duration = (listings.end_time + 1) / (24 * 3600) - listings.start_date
+    listings['arrival_rate'] = arrivals / duration
 
-# convert fdbk_pstv to a rate
-L.loc[:, 'fdbk_pstv'] = L.fdbk_pstv / L.fdbk_score
-L.loc[L.fdbk_pstv.isna(), 'fdbk_pstv'] = 1
+    # add start_price percentile
+    listings['start_price_pctile'], _ = \
+        get_pctiles(listings[START_PRICE])
 
-# replace count and rate variables with percentiles
-for feat in ['fdbk_score', 'slr_lstgs', 'slr_bos', 'arrival_rate']:
-	print(feat)
-	L.loc[:, feat], toSave = get_pctiles(L[feat])
-	if feat != 'arrival_rate':
-		dump(toSave, '{}/{}.pkl'.format(PCTILE_DIR, feat))
+    # convert fdbk_pstv to a rate
+    listings.loc[listings.fdbk_score < 0, 'fdbk_score'] = 0
+    listings.loc[:, 'fdbk_pstv'] = listings.fdbk_pstv / listings.fdbk_score
+    listings.loc[listings.fdbk_pstv.isna(), 'fdbk_pstv'] = 1
 
-# save listings
-dump(L, CLEAN_DIR + 'listings.pkl')
+    # replace count and rate variables with percentiles
+    for feat in ['fdbk_score', 'photos', 'slr_lstg_ct', 'slr_bo_ct', 'arrival_rate']:
+        print(feat)
+        listings.loc[:, feat], toSave = get_pctiles(listings[feat])
+        if feat != 'arrival_rate':
+            dump(toSave, PCTILE_DIR + '{}.pkl'.format(feat))
+
+    # save listings
+    dump(listings, CLEAN_DIR + 'listings.pkl')
+
+
+if __name__ == '__main__':
+    main()

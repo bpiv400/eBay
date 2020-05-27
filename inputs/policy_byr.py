@@ -1,11 +1,9 @@
 import pandas as pd
-from inputs.inputs_utils import save_files, get_x_thread, \
-    calculate_remaining, get_x_offer_init
-from processing.processing_utils import extract_day_feats
-from utils import load_file, init_x, input_partition
+from inputs.inputs_utils import get_policy_data, save_files, construct_x_init
+from utils import input_partition
 from constants import IDX, BYR_PREFIX, CON_MULTIPLIER, \
-    TRAIN_MODELS, VALIDATION, TEST, DAY, MONTH
-from featnames import CON, INT_REMAINING, START_TIME, MONTHS_SINCE_LSTG
+    TRAIN_MODELS, VALIDATION, TEST, DAY
+from featnames import CON
 
 
 def get_y(df, lstg_start):
@@ -30,56 +28,20 @@ def get_y(df, lstg_start):
 
 def process_inputs(part):
     # load dataframes
-    offers = load_file(part, 'x_offer')
-    threads = load_file(part, 'x_thread')
-    clock = load_file(part, 'clock')
-    lstg_start = load_file(part, 'lookup')[START_TIME]
+    offers, threads, clock, lstg_start = get_policy_data(part)
 
     # restict by role, join timestamps and offer features
     df = clock[clock.index.isin(IDX[BYR_PREFIX], level='index')]
     df = df.to_frame().join(offers)
 
-    # outcome and master index
+    # outcome
     y = get_y(df, lstg_start)
-    idx = y.index
-    idx1 = y.xs(1, level='index', drop_level=False).index
-    idx2 = idx.drop(idx1)
 
-    # listing features
-    x = init_x(part, idx)
-
-    # remove auto accept/reject features from x['lstg'] for buyer models
-    x['lstg'].drop(['auto_decline', 'auto_accept',
-                    'has_decline', 'has_accept'],
-                   axis=1, inplace=True)
-
-    # current time feats
-    clock1 = pd.Series(DAY * idx1.get_level_values(level='day'),
-                       index=idx1) + lstg_start.reindex(index=idx1,
-                                                        level='lstg')
-    clock2 = clock.xs(1, level='index').reindex(index=idx2)
-    date_feats = pd.concat([extract_day_feats(clock1),
-                            extract_day_feats(clock2)]).sort_index()
-    date_feats.rename(lambda c: 'thread_{}'.format(c),
-                      axis=1, inplace=True)
-
-    # thread features
-    x_thread = date_feats.join(get_x_thread(threads, idx,
-                                            turn_indicators=True))
-
-    # redefine months_since_lstg
-    x_thread.loc[idx1, MONTHS_SINCE_LSTG] = \
-        idx1.get_level_values(level='day') * DAY / MONTH
-
-    # remaining
-    x_thread[INT_REMAINING] = \
-        calculate_remaining(lstg_start=lstg_start,
-                            clock=clock,
-                            idx=idx)
-    x['lstg'] = pd.concat([x['lstg'], x_thread], axis=1)
-
-    # offer features
-    x.update(get_x_offer_init(offers, idx, role=BYR_PREFIX, delay=True))
+    # input feature dictionary
+    x = construct_x_init(part=part, role=BYR_PREFIX, delay=True,
+                         idx=y.index, offers=offers,
+                         threads=threads, clock=clock,
+                         lstg_start=lstg_start)
 
     return {'y': y, 'x': x}
 

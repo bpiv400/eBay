@@ -283,7 +283,7 @@ def make_helper_feats(events):
     first_offer = (df.index.get_level_values('index') == 1).astype(bool)
     df['bin'] = (first_offer & real_threads & (df.offer_norm == 1).astype(bool)).astype(bool)
     df['bin'] = (df['bin'] & df['accept']).astype(bool)
-    first_offer = first_offer & real_threads & ~df.flag & ~df.bin
+    first_offer = first_offer & real_threads & ~df.bin
     df['first_offer'] = (df.offer_norm[first_offer]).astype(np.float64)
     return df
 
@@ -394,7 +394,7 @@ def get_cat_lstg_counts(events, levels):
 
 def get_cat_accepts(events, levels):
     # loop over hierarchy, excluding lstg
-    events['accept_norm'] = events.price[events.accept & ~events.flag & ~events.bin] / events.start_price
+    events['accept_norm'] = events.price[events.accept & ~events.bin] / events.start_price
     tf = prep_tf(events)
 
     for i in range(len(levels)):
@@ -431,17 +431,14 @@ def get_cat_delay(events, levels):
     tf = prep_tf(events)
     clock_df = events.clock.unstack()
     delay = pd.DataFrame(index=clock_df.index)
-    delay[0] = np.NaN # excluding turn 0
+    delay[0] = np.NaN  # excluding turn 0
     for i in range(1, 8):
         if i in clock_df.columns:
             delay[i] = (clock_df[i] - clock_df[i - 1]).dt.total_seconds()
-            if i in [2, 4, 6]:
-                max_delay = MAX_DELAY['slr']
-                censored = delay[i] > MAX_DELAY['slr']
-            elif i in [3, 5]:
-                censored = delay[i] > MAX_DELAY['byr']
-                max_delay = MAX_DELAY['byr']
-            else: # excluding turn 1 and turn 7
+            if i > 1:
+                max_delay = MAX_DELAY[i]
+                censored = delay[i] > MAX_DELAY[i]
+            else:  # excluding turn 1
                 censored = delay.index
                 max_delay = 1
             delay.loc[censored, i] = np.NaN
@@ -546,7 +543,7 @@ def create_events(L, T, O, levels):
     events = add_start_end(offers, L, levels)
     # add features for later use
     events['byr'] = events.index.isin(IDX['byr'], level='index')
-    lstg_cols = ['flag', 'start_price', 'arrival_rate', 'start_price_pctile']
+    lstg_cols = ['start_price', 'arrival_rate', 'start_price_pctile']
     events = events.join(L[lstg_cols])
     return events
 

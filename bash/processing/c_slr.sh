@@ -1,5 +1,5 @@
 #!/bin/bash
-#$ -t 1-281
+#$ -t 1-141
 #$ -q short.q
 #$ -l m_mem_free=8G
 #$ -N c_slr

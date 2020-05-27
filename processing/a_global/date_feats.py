@@ -1,4 +1,4 @@
-import numpy as np, pandas as pd
+import pandas as pd
 from compress_pickle import dump
 from constants import INPUT_DIR, START, END, MAX_DAYS
 from processing.processing_utils import extract_day_feats

@@ -61,12 +61,17 @@ LTYPES = {'lstg': 'int64',
           'accept_price': 'float64',
           'store': bool,
           'slr_us': bool,
-          'flag': bool,
           'fast': bool}
 
+DATA_TYPES = {'listings': LTYPES,
+              'threads': TTYPES,
+              'offers': OTYPES}
+INDICES = {'offers': ['lstg', 'thread', 'index'],
+           'threads': ['lstg', 'thread'],
+           'listings': 'lstg'}
 
 # features for chunks
 LVARS = ['cat', 'cndtn', 'start_date', 'end_time',
-         'start_price', 'start_price_pctile', 'arrival_rate', 'flag']
+         'start_price', 'start_price_pctile', 'arrival_rate']
 TVARS = ['byr_hist', 'bin']
 OVARS = ['clock', 'price', 'accept', 'reject', 'censored', 'message']

@@ -1,15 +1,16 @@
 import numpy as np
 import pandas as pd
 from compress_pickle import dump
-from utils import get_remaining
+from utils import get_remaining, load_file
 from inputs.inputs_consts import NUM_OUT, N_SMALL, INTERVAL, \
     INTERVAL_COUNTS, DELTA_MONTH, DELTA_ACTION, C_ACTION
 from constants import INPUT_DIR, INDEX_DIR, VALIDATION, TRAIN_MODELS, \
     TRAIN_RL, IDX, BYR_PREFIX, DELAY_MODELS, SLR_PREFIX, \
-    INIT_VALUE_MODELS, ARRIVAL_PREFIX, MAX_DELAY
+    INIT_VALUE_MODELS, ARRIVAL_PREFIX, MAX_DELAY, NO_ARRIVAL_CUTOFF
 from featnames import CLOCK_FEATS, OUTCOME_FEATS, BYR_HIST, \
     CON, NORM, SPLIT, MSG, AUTO, EXP, REJECT, DAYS, DELAY, TIME_FEATS, \
-    THREAD_COUNT, MONTHLY_DISCOUNT, ACTION_DISCOUNT, ACTION_COST
+    THREAD_COUNT, MONTHLY_DISCOUNT, ACTION_DISCOUNT, ACTION_COST, \
+    NO_ARRIVAL
 
 
 def add_turn_indicators(df):
@@ -152,6 +153,94 @@ def get_x_offer_init(offers, idx, role=None, delay=None):
     check_zero(x_offer)
 
     return x_offer
+
+
+def construct_x_init(part=None, role=None, delay=None, idx=None,
+                     offers=None, threads=None, clock=None,
+                     lstg_start=None):
+    # delay must be True for byr
+    if role == BYR_PREFIX:
+        assert delay
+
+    # listing features
+    x = init_x(part, idx)
+
+    # thread features
+    x_thread = get_x_thread(threads, idx, turn_indicators=True)
+
+    if role == BYR_PREFIX:
+        # split master index
+        idx1 = pd.Series(index=idx).xs(
+            1, level='index', drop_level=False).index
+        idx2 = idx.drop(idx1)
+
+        # remove auto accept/reject features from x['lstg'] for buyer models
+        x['lstg'].drop(['auto_decline', 'auto_accept',
+                        'has_decline', 'has_accept'],
+                       axis=1, inplace=True)
+
+        # current time feats
+        clock1 = pd.Series(DAY * idx1.get_level_values(level='day'),
+                           index=idx1) + lstg_start.reindex(index=idx1,
+                                                            level='lstg')
+        clock2 = clock.xs(1, level='index').reindex(index=idx2)
+        date_feats = pd.concat([extract_day_feats(clock1),
+                                extract_day_feats(clock2)]).sort_index()
+        date_feats.rename(lambda c: 'thread_{}'.format(c),
+                          axis=1, inplace=True)
+
+        # thread features
+        x_thread = date_feats.join(x_thread)
+
+        # redefine months_since_lstg
+        x_thread.loc[idx1, MONTHS_SINCE_LSTG] = \
+            idx1.get_level_values(level='day') * DAY / MONTH
+
+    # remaining
+    if delay:
+        x_thread[INT_REMAINING] = \
+            calculate_remaining(lstg_start=lstg_start,
+                                clock=clock,
+                                idx=idx)
+    x['lstg'] = pd.concat([x['lstg'], x_thread], axis=1)
+
+    # offer features
+    x.update(get_x_offer_init(offers, idx, role=role, delay=delay))
+
+    return x
+
+
+def get_sale_norm(offers):
+    is_sale = offers[CON] == 1.
+    norm = offers.loc[is_sale, NORM]
+    # for seller, norm is defined as distance from start_price
+    slr_turn = norm.index.isin(IDX[SLR_PREFIX], level='index')
+    norm_slr = 1 - norm.loc[slr_turn]
+    norm.loc[slr_turn] = norm_slr
+    return norm
+
+
+def get_policy_data(part):
+    offers = load_file(part, 'x_offer')
+    threads = load_file(part, 'x_thread')
+    clock = load_file(part, 'clock')
+    lstg_start = load_file(part, 'lookup')[START_TIME]
+    return offers, threads, clock, lstg_start
+
+
+def get_value_data(part):
+    # lookup file
+    lookup = load_file(part, 'lookup')
+    # load simulated data
+    threads = load_file(part, 'x_thread_sim')
+    offers = load_file(part, 'x_offer_sim')
+    clock = load_file(part, 'clock_sim')
+    # drop listings with infrequent arrivals
+    lookup = lookup.loc[lookup[NO_ARRIVAL] < NO_ARRIVAL_CUTOFF, :]
+    threads = threads.reindex(index=lookup.index, level='lstg')
+    offers = offers.reindex(index=lookup.index, level='lstg')
+    clock = clock.reindex(index=lookup.index, level='lstg')
+    return lookup, threads, offers, clock
 
 
 def save_featnames(x, m):

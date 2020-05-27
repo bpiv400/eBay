@@ -4,6 +4,7 @@ cd /data/eBay
 *** threads
 
 use dta/threads, clear
+drop if flag
 drop end_time flag
 
 export delim using clean/threads.csv, dataf replace
@@ -22,29 +23,14 @@ export delim using clean/offers.csv, dataf replace
 
 *** listings
 
-use dta/offers, clear
-
-collapse (sum) accept, by(lstg thread)
-
-merge 1:1 lstg thread using dta/threads, nogen keepus(flag end_time)
-
-collapse (max) flag (sum) accept, by(lstg end_time)
+use dta/threads, clear
+keep lstg flag end_time
+sort lstg flag end_time
+by lstg flag end_time: keep if _n == 1
 
 merge 1:1 lstg using dta/listings, nogen
-keep if unique
-drop byr* views wtchrs bo sale_price leaf product title unique
-
-* flag listings in which start_price has changed
-
-order flag, last
-replace flag = 0 if flag == .
-replace flag = 1 if bin_rev
-drop bin_rev
-
-* flag listings that expired without sale in fewer than 31 days
-
-replace flag = 1 if !accept & end_date - start_date < 30
-drop accept
+keep if flag != 1
+drop byr* views wtchrs bo sale_price leaf product flag relisted
 
 * shipping
 
@@ -72,12 +58,10 @@ export delim using clean/listings.csv, nolab dataf replace
 
 *** seller sentences for word2vec
 
-use dta/listings, clear
 keep slr cat
-order slr cat
-
 sort slr cat
 by slr cat: keep if _n == 1
+
 by slr: egen long count = sum(1)
 drop if count == 1
 drop count
@@ -87,6 +71,7 @@ export delim using clean/cat_slr.csv, dataf replace
 *** buyer sentences for word2vec
 
 use dta/threads, clear
+drop if flag
 keep lstg byr
 
 merge m:1 lstg using dta/listings, nogen keep(3) keepus(cat)

@@ -5,8 +5,8 @@ from processing.processing_consts import CUTOFF, CLEAN_DIR, \
 
 
 # split into chunks and save
-def chunk(group, L, T, O):
-    S = L[group].reset_index().set_index(group).squeeze()
+def create_chunks(group, listings, threads, offers):
+    S = listings[group].reset_index().set_index(group).squeeze()
     counts = S.groupby(S.index.name).count()
     groups = []
     total = 0
@@ -14,16 +14,16 @@ def chunk(group, L, T, O):
     for i in range(len(counts)):
         groups.append(counts.index[i])
         total += counts.iloc[i]
-        if (i == len(counts)-1) or (total >= CUTOFF):
-            # find correspinding listings
+        if (i == len(counts) - 1) or (total >= CUTOFF):
+            # find corresponding listings
             idx = S.loc[groups]
             # create chunks
-            L_i = L.reindex(index=idx)
-            T_i = T.reindex(index=idx, level='lstg')
-            O_i = O.reindex(index=idx, level='lstg')
+            L_i = listings.reindex(index=idx)
+            T_i = threads.reindex(index=idx, level='lstg')
+            O_i = offers.reindex(index=idx, level='lstg')
             # save
             chunk = {'listings': L_i, 'threads': T_i, 'offers': O_i}
-            path = CHUNKS_DIR + '%s%d.gz' % (group, num)
+            path = CHUNKS_DIR + '{}{}.gz'.format(group, num)
             dump(chunk, path)
             # reinitialize
             groups = []
@@ -32,24 +32,28 @@ def chunk(group, L, T, O):
             num += 1
 
 
-if __name__ == '__main__':
-	# parse parameters
+def main():
+    # parse parameters
     parser = argparse.ArgumentParser()
     parser.add_argument('--num', action='store', type=int, required=True)
     num = parser.parse_args().num
 
     # read in data frames
-    L = load(CLEAN_DIR + 'listings.pkl')
-    T = load(CLEAN_DIR + 'threads.pkl')
-    O = load(CLEAN_DIR + 'offers.pkl')
+    listings = load(CLEAN_DIR + 'listings.pkl')
+    threads = load(CLEAN_DIR + 'threads.pkl')
+    offers = load(CLEAN_DIR + 'offers.pkl')
 
     # slr features
     if num == 1:
-    	chunk('slr', L, T, O)
+        create_chunks('slr', listings, threads, offers)
 
     # cat features
     elif num == 2:
-    	L = L[LVARS]
-    	T = T[TVARS]
-    	O = O[OVARS]
-    	chunk('cat', L, T, O)
+        listings = listings[LVARS]
+        threads = threads[TVARS]
+        offers = offers[OVARS]
+        create_chunks('cat', listings, threads, offers)
+
+
+if __name__ == '__main__':
+    main()

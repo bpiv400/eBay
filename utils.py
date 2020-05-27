@@ -205,6 +205,28 @@ def max_slr_reward(months_since_start=None, bin_proceeds=None,
     return bin_proceeds - costs
 
 
+def byr_reward(net_value=None, months_diff=None,
+               monthly_discount=None, action_diff=None,
+               action_discount=None, action_cost=None):
+    """
+    Discounts proceeds from sale and listing fees paid.
+    :param net_value: value less price paid; 0 if no sale
+    :param months_diff: months until purchase; np.inf if no sale
+    :param monthly_discount: multiplicative factor on proceeds, by month
+    :param action_diff: number of actions from current state until sale
+    :param action_discount: multiplicative factor of proceeds, by action
+    :param action_cost: cost per action
+    :return: discounted net proceeds
+    """
+    if monthly_discount is not None:
+        net_value *= monthly_discount ** months_diff
+    if action_discount is not None:
+        net_value *= action_discount ** action_diff
+    if action_cost is not None:
+        net_value -= action_cost * action_diff
+    return net_value
+
+
 def get_model_predictions(m, x):
     """
     Returns predicted categorical distribution.
