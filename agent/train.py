@@ -22,6 +22,7 @@ from rlenv.env_utils import load_chunk
 from rlenv.interfaces.PlayerInterface import SimulatedBuyer, SimulatedSeller
 from rlenv.interfaces.ArrivalInterface import ArrivalInterface
 from rlenv.environments.SellerEnvironment import SellerEnvironment
+from rlenv.environments.BuyerEnvironment import BuyerEnvironment
 
 
 class RlTrainer:
@@ -54,10 +55,18 @@ class RlTrainer:
             'composer': composer,
             'verbose': self.system_params['verbose'],
             'arrival': ArrivalInterface(),
-            'seller': SimulatedSeller(full=False),
+            'seller': self.simulated_seller,
             'buyer': SimulatedBuyer()
         }
         return env_params
+
+    @property
+    def simulated_seller(self):
+        if self.agent_params['role'] == BYR_PREFIX:
+            return SimulatedSeller(full=True)
+        else:
+            #
+            return SimulatedSeller(full=False)
 
     def generate_algorithm(self):
         return CrossEntropyPPO(**self.ppo_params)
@@ -123,6 +132,14 @@ class RlTrainer:
         else:
             cpus = self.eligible_cpus[:self.system_params['workers']]
         return cpus
+
+    @property
+    def env_class(self):
+        if self.agent_params['role'] == BYR_PREFIX:
+            return BuyerEnvironment
+        else:
+            # extend to differentiate between delay environment?
+            return SellerEnvironment
 
     def workers_cpus_manual(self):
         eligible = self.eligible_cpus
