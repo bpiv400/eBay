@@ -47,9 +47,9 @@ def main():
     listings = read_csv('listings')
 
     # convert byr_hist to pctiles and save threads
-    threads.loc[:, BYR_HIST], toSave = \
+    threads.loc[:, BYR_HIST], to_save = \
         get_pctiles(threads[BYR_HIST])
-    dump(toSave, PCTILE_DIR + '{}.pkl'.format(BYR_HIST))
+    dump(to_save, PCTILE_DIR + '{}.pkl'.format(BYR_HIST))
     dump(threads, CLEAN_DIR + 'threads.pkl')
 
     # arrival time
@@ -80,8 +80,8 @@ def main():
     last = last.reindex(index=missing.index, level='lstg').dropna()
 
     # restrict censoring seconds to same day as bin with missing time
-    sameDate = pd.to_datetime(last.dt.date) == missing.reindex(last.index)
-    lower = get_seconds(last.dt).loc[sameDate].rename('lower')
+    same_date = pd.to_datetime(last.dt.date) == missing.reindex(last.index)
+    lower = get_seconds(last.dt).loc[same_date].rename('lower')
 
     # make end time one second after last observed same day offer before BIN
     lower += 1
@@ -138,9 +138,9 @@ def main():
     # replace count and rate variables with percentiles
     for feat in ['fdbk_score', 'photos', 'slr_lstg_ct', 'slr_bo_ct', 'arrival_rate']:
         print(feat)
-        listings.loc[:, feat], toSave = get_pctiles(listings[feat])
+        listings.loc[:, feat], to_save = get_pctiles(listings[feat])
         if feat != 'arrival_rate':
-            dump(toSave, PCTILE_DIR + '{}.pkl'.format(feat))
+            dump(to_save, PCTILE_DIR + '{}.pkl'.format(feat))
 
     # save listings
     dump(listings, CLEAN_DIR + 'listings.pkl')

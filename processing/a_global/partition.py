@@ -11,7 +11,7 @@ SHARES = {TRAIN_MODELS: 0.6, TRAIN_RL: 0.16, VALIDATION: 0.04}
 def partition_lstgs(s):
     # series of index slr and value lstg
     slrs = s.reset_index().sort_values(
-        by=['slr','lstg']).set_index('slr').squeeze()
+        by=['slr', 'lstg']).set_index('slr').squeeze()
     # randomly order sellers
     u = np.unique(slrs.index.values)
     np.random.seed(SEED)   # set seed
