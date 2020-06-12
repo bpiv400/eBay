@@ -64,9 +64,9 @@ EXPIRATION = 2 * DAY
 # maximal delay times
 MAX_DELAY = {1: MONTH,
              2: 2 * DAY,
-             3: 14 * DAY,
+             3: 2 * DAY,
              4: 2 * DAY,
-             5: 14 * DAY,
+             5: 2 * DAY,
              6: 2 * DAY,
              7: 2 * DAY}
 
