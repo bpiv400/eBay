@@ -434,7 +434,7 @@ def get_cat_delay(events, levels):
     delay[0] = np.NaN  # excluding turn 0
     for i in range(1, 8):
         if i in clock_df.columns:
-            delay[i] = (clock_df[i] - clock_df[i - 1]).dt.total_seconds()
+            delay[i] = clock_df[i] - clock_df[i - 1]
             if i > 1:
                 max_delay = MAX_DELAY[i]
                 censored = delay[i] > MAX_DELAY[i]

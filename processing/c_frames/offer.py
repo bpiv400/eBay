@@ -1,11 +1,9 @@
 from compress_pickle import load, dump
 import pandas as pd
-from processing.processing_utils import collect_date_clock_feats, \
+from processing.c_frames.util import collect_date_clock_feats, \
     get_days_delay, get_norm, get_con
-from processing.d_frames.frames_utils import load_frames
 from utils import input_partition, load_file, is_split
-from processing.processing_consts import CLEAN_DIR
-from constants import PARTS_DIR, SLR_PREFIX, IDX
+from constants import PARTS_DIR, SLR_PREFIX, IDX, CLEAN_DIR
 from featnames import DAYS, DELAY, CON, NORM, SPLIT, MSG, REJECT, \
     AUTO, EXP, TIME_FEATS
 
@@ -55,7 +53,7 @@ def main():
     # load other data
     start_price = load(PARTS_DIR + '%s/lookup.gz' % part).start_price
     events = load(CLEAN_DIR + 'offers.pkl').reindex(index=idx, level='lstg')
-    tf = load_frames('tf_offer').reindex(index=idx, level='lstg')
+    tf = load(PARTS_DIR + 'tf.gz').reindex(index=idx, level='lstg')
 
     # offer features
     x_offer = get_x_offer(start_price, events, tf)

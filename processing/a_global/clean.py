@@ -4,6 +4,47 @@ from compress_pickle import dump
 from constants import CLEAN_DIR, PCTILE_DIR, START
 from featnames import START_PRICE, BYR_HIST
 
+# data types for csv read
+OTYPES = {'lstg': 'int64',
+          'thread': 'int64',
+          'index': 'uint8',
+          'clock': 'int64',
+          'price': 'float64',
+          'accept': bool,
+          'reject': bool,
+          'censored': bool,
+          'message': bool}
+
+TTYPES = {'lstg': 'int64',
+          'thread': 'int64',
+          'byr': 'int64',
+          'byr_hist': 'int64',
+          'bin': bool,
+          'byr_us': bool}
+
+LTYPES = {'lstg': 'int64',
+          'slr': 'int64',
+          'meta': 'uint8',
+          'leaf': 'int64',
+          'cndtn': 'uint8',
+          'start_date': 'uint16',
+          'end_time': 'int64',
+          'fdbk_score': 'int64',
+          'fdbk_pstv': 'int64',
+          'start_price': 'float64',
+          'photos': 'uint8',
+          'slr_lstg_ct': 'int64',
+          'slr_bo_ct': 'int64',
+          'decline_price': 'float64',
+          'accept_price': 'float64',
+          'store': bool,
+          'slr_us': bool,
+          'fast': bool}
+
+DATA_TYPES = {'listings': LTYPES,
+              'threads': TTYPES,
+              'offers': OTYPES}
+
 # indices when reading in CSVs
 IDX_NAMES = {'offers': ['lstg', 'thread', 'index'],
              'threads': ['lstg', 'thread'],
@@ -17,7 +58,8 @@ def read_csv(name):
     :return: datafrome of features
     """
     filename = CLEAN_DIR + '{}.csv'.format(name)
-    df = pd.read_csv(filename).set_index(IDX_NAMES[name])
+    df = pd.read_csv(filename, dtype=DATA_TYPES[name])
+    df = df.set_index(IDX_NAMES[name])
     return df
 
 
@@ -57,9 +99,9 @@ def main():
     s = pd.to_datetime(thread_start, origin=START, unit='s')
 
     # split off missing
-    toReplace = threads.bin & ((thread_start + 1) % (24 * 3600) == 0)
-    missing = pd.to_datetime(s.loc[toReplace].dt.date)
-    labeled = s.loc[~toReplace]
+    to_replace = threads.bin & ((thread_start + 1) % (24 * 3600) == 0)
+    missing = pd.to_datetime(s.loc[to_replace].dt.date)
+    labeled = s.loc[~to_replace]
 
     # cdf using labeled data
     N = len(labeled.index)
@@ -74,7 +116,7 @@ def main():
     # calculate censoring second
     last = offers.loc[~offers.censored, 'clock'].groupby(
         ['lstg', 'thread']).max()
-    last = last.loc[~toReplace]
+    last = last.loc[~to_replace]
     last = last.groupby('lstg').max()
     last = pd.to_datetime(last, origin=START, unit='s')
     last = last.reindex(index=missing.index, level='lstg').dropna()

@@ -1,8 +1,7 @@
 from compress_pickle import load, dump
 import numpy as np
 import pandas as pd
-from constants import HIST_QUANTILES, PARTS_DIR
-from processing.processing_consts import CLEAN_DIR
+from constants import HIST_QUANTILES, PARTS_DIR, CLEAN_DIR
 from featnames import BYR_HIST, MONTHS_SINCE_LSTG
 from utils import get_months_since_lstg, input_partition, load_file
 

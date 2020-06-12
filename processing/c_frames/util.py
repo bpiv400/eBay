@@ -36,7 +36,7 @@ def collect_date_clock_feats(seconds):
 def get_days_delay(clock):
     """
     Calculates time between successive offers.
-    :param clock: dataframe with index ['lstg', 'thread'], 
+    :param clock: dataframe with index ['lstg', 'thread'],
         turn numbers as columns, and seconds since START as values
     :return days: fractional number of days between offers.
     :return delay: time between offers as share of MAX_DELAY.

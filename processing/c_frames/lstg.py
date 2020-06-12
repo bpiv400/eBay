@@ -1,13 +1,11 @@
 from compress_pickle import load, dump
 import numpy as np
-from processing.processing_utils import extract_day_feats
-from processing.d_frames.frames_utils import load_frames
+from processing.c_frames.util import extract_day_feats
 from utils import input_partition, load_file
-from processing.processing_consts import CLEAN_DIR, W2V_DIR
-from constants import *
+from constants import CLEAN_DIR, W2V_DIR, PARTS_DIR, DAY
 
-AS_IS_FEATS = ['store', 'slr_us', 'fast', 'slr_lstgs', 'slr_bos',
-               'start_price_pctile', 'fdbk_score', 'fdbk_pstv']
+AS_IS_FEATS = ['store', 'slr_us', 'fast', 'photos', 'slr_lstg_ct',
+               'slr_bo_ct', 'start_price_pctile', 'fdbk_score', 'fdbk_pstv']
 
 
 # returns booleans for whether offer is round and ends in nines
@@ -23,6 +21,8 @@ def do_rounding(offer):
 def get_x_lstg(L):
     # initialize output dataframe with as-is features
     df = L[AS_IS_FEATS].copy()
+    # indicator for at least 1 photo
+    df['has_photos'] = L.photos > 0
     # perfect feedback score
     df['fdbk_100'] = L.fdbk_pstv == 1
     # rounding
@@ -32,9 +32,6 @@ def get_x_lstg(L):
     # date features
     date_feats = extract_day_feats(L.start_date * DAY)
     df = df.join(date_feats.rename(lambda x: 'start_' + x, axis=1))
-    # photos divided by 12, and binary indicator
-    df['photos'] = L.photos / 12
-    df['has_photos'] = L.photos > 0
     # condition
     s = L.cndtn
     df['new'] = s == 1
@@ -82,16 +79,11 @@ def main():
         x['w2v_{}'.format(role)] = w2v.astype('float32')
     del L
 
-    # slr features
+    # slr and cat features
     print('Seller features')
-    x['slr'] = load_frames('slr').reindex(
-        index=idx, fill_value=0).astype('float32')
-    
-    # cat and cndtn features
-    print('Categorical features')
-    df = load_frames('cat').reindex(index=idx, fill_value=0).astype('float32')
-    for name in ['cat', 'cndtn']:
-        x[name] = df[[c for c in df.columns if c.startswith(name + '_')]]
+    for name in ['slr', 'meta', 'leaf']:
+        x[name] = load(PARTS_DIR + '{}.gz'.format(name)).reindex(
+            index=idx, fill_value=0).astype('float32')
 
     # take natural log of number of listings
     for k, v in x.items():
