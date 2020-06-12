@@ -44,10 +44,10 @@ RL_LOG_DIR = REINFORCE_DIR + 'logs/'
 RL_TRAIN_DIR = REINFORCE_DIR + 'train/'
 
 # partitions
-TRAIN_MODELS = 'train_models'
-TRAIN_RL = 'train_rl'
-VALIDATION = 'test_rl'
-TEST = 'test_rl'  # TODO: rename to 'test' when using real test data
+TRAIN_MODELS = 'sim'
+TRAIN_RL = 'rl'
+VALIDATION = 'valid'
+TEST = VALIDATION  # TODO: rename to 'test' when using real test data
 PARTITIONS = [TRAIN_MODELS, TRAIN_RL, VALIDATION, TEST]
 SMALL = 'small'
 

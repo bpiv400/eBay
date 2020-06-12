@@ -1,5 +1,6 @@
 from compress_pickle import dump
 import numpy as np
+import pandas as pd
 from constants import SEED, CLEAN_DIR, PARTS_DIR, TRAIN_MODELS, \
     TRAIN_RL, VALIDATION
 
@@ -26,7 +27,7 @@ def partition_lstgs(s):
     return d
 
 
-if __name__ == "__main__":
+def main():
     # load listings
     listings = pd.read_csv(CLEAN_DIR + 'listings.csv').set_index('lstg')
     
@@ -45,3 +46,7 @@ if __name__ == "__main__":
     lookup.rename({'start_date': 'start_time'}, axis=1, inplace=True)
     for part, idx in partitions.items():
         dump(lookup.reindex(index=idx), '{}{}/lookup.gz'.format(PARTS_DIR, part))
+
+
+if __name__ == "__main__":
+    main()
