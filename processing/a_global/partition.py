@@ -1,8 +1,10 @@
 from compress_pickle import dump
 import numpy as np
-from processing.processing_utils import read_csv
-from processing.processing_consts import SHARES, SEED
-from constants import PARTS_DIR
+from constants import SEED, CLEAN_DIR, PARTS_DIR, TRAIN_MODELS, \
+    TRAIN_RL, VALIDATION
+
+# for partitioning
+SHARES = {TRAIN_MODELS: 0.6, TRAIN_RL: 0.16, VALIDATION: 0.04}
 
 
 def partition_lstgs(s):
@@ -26,7 +28,7 @@ def partition_lstgs(s):
 
 if __name__ == "__main__":
     # load listings
-    listings = read_csv('listings')
+    listings = pd.read_csv(CLEAN_DIR + 'listings.csv').set_index('lstg')
     
     # partition by seller
     partitions = partition_lstgs(listings.slr)
@@ -34,7 +36,6 @@ if __name__ == "__main__":
 
     # lookup files
     lookup = listings[['meta',
-                       'cat',
                        'start_date',
                        'start_price',
                        'decline_price',

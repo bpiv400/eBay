@@ -3,7 +3,9 @@ import numpy as np
 import pandas as pd
 from compress_pickle import dump
 from gensim.models import Word2Vec
-from processing.processing_consts import *
+from constants import BYR_PREFIX, SLR_PREFIX, SEED, CLEAN_DIR, W2V_DIR
+
+VOCAB_SIZE = 32  # vocabulary size for embeddings
 
 
 def run_model(s):
@@ -11,9 +13,6 @@ def run_model(s):
     print('Constructing sentences')
     sentences, max_length = [], 0
     for idx in np.unique(s.index.values):
-        val = s.loc[idx]
-        if isinstance(val, str):
-            continue
         sentence = s.loc[idx].values.tolist()
         sentences.append(sentence)
         max_length = np.maximum(max_length, len(sentence))
@@ -29,31 +28,29 @@ def run_model(s):
     # output dataframe
     print('Creating output')
     leafs = model.wv.vocab.keys()
-    output = pd.DataFrame(index=pd.Index([], name='category'),
+    output = pd.DataFrame(index=pd.Index([], name='leaf'),
                           columns=[str(i) for i in range(VOCAB_SIZE)])
     for leaf in leafs:
-        output.loc[leaf] = model.wv.get_vector(leaf)
+        output.loc[int(leaf)] = model.wv.get_vector(leaf)
     return output.sort_index()
 
 
 def main():
     # parse parameters
     parser = argparse.ArgumentParser()
-    parser.add_argument('--num', type=int, required=True)
-    num = parser.parse_args().num - 1
-    role = ['byr', 'slr'][num]
+    parser.add_argument('--slr', action='store_true')
+    slr = parser.parse_args().slr
+    role = SLR_PREFIX if slr else BYR_PREFIX
 
     # load sentences
-    s = pd.read_csv(CLEAN_DIR + 'cat_%s.csv' % role,
-                    dtype={role: 'int64', 'cat': str},
-                    index_col=0,
-                    squeeze=True)
+    filename = CLEAN_DIR + 'leaf_{}.csv'.format(role)
+    s = pd.read_csv(filename).set_index(role).squeeze().astype(str)
 
     # run model
-    df = run_model(s).rename(lambda x: role + x, axis=1)
+    df = run_model(s).rename(lambda x: role + x, axis=1).sort_index()
 
     # save
-    dump(df, W2V_DIR + '%s.gz' % role)
+    dump(df, W2V_DIR + '{}.gz'.format(role))
 
 
 if __name__ == '__main__':

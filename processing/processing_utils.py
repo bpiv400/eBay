@@ -1,22 +1,10 @@
 import numpy as np
 import pandas as pd
 from utils import slr_norm, byr_norm, extract_clock_feats
-from processing.processing_consts import CLEAN_DIR, DATA_TYPES, INDICES
 from constants import START, MAX_DELAY, IDX, \
     BYR_PREFIX, SLR_PREFIX, DAY, HOLIDAYS
 from featnames import HOLIDAY, DOW_PREFIX, TIME_OF_DAY, AFTERNOON, \
     CLOCK_FEATS
-
-
-def read_csv(name):
-    """
-    Reads in one of three csvs of features.
-    :param str name: one of ['listings', 'threads', 'offers']
-    :return: datafrome of features
-    """
-    df = pd.read_csv(CLEAN_DIR + '{}.csv'.format(name),
-                     dtype=DATA_TYPES[name]).set_index(INDICES[name])
-    return df
 
 
 def extract_day_feats(seconds):

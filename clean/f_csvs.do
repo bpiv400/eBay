@@ -30,7 +30,7 @@ by lstg flag end_time: keep if _n == 1
 
 merge 1:1 lstg using dta/listings, nogen
 keep if flag != 1
-drop byr* views wtchrs bo sale_price leaf product flag relisted
+drop byr* views wtchrs bo sale_price flag
 
 * shipping
 
@@ -58,15 +58,15 @@ export delim using clean/listings.csv, nolab dataf replace
 
 *** seller sentences for word2vec
 
-keep slr cat
-sort slr cat
-by slr cat: keep if _n == 1
+keep slr leaf
+sort slr leaf
+by slr leaf: keep if _n == 1
 
 by slr: egen long count = sum(1)
 drop if count == 1
 drop count
 
-export delim using clean/cat_slr.csv, dataf replace
+export delim using clean/leaf_slr.csv, dataf replace
 
 *** buyer sentences for word2vec
 
@@ -74,13 +74,13 @@ use dta/threads, clear
 drop if flag
 keep lstg byr
 
-merge m:1 lstg using dta/listings, nogen keep(3) keepus(cat)
+merge m:1 lstg using dta/listings, nogen keep(3) keepus(leaf)
 drop lstg
 
-sort byr cat
-by byr cat: keep if _n == 1
+sort byr leaf
+by byr leaf: keep if _n == 1
 by byr: egen long count = sum(1)
 drop if count == 1
 drop count
 
-export delim using clean/cat_byr.csv, dataf replace
+export delim using clean/leaf_byr.csv, dataf replace

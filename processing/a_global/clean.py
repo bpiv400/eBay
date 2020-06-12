@@ -1,10 +1,24 @@
 import numpy as np
 import pandas as pd
 from compress_pickle import dump
-from processing.processing_utils import read_csv
-from processing.processing_consts import CLEAN_DIR
-from constants import PCTILE_DIR, START
+from constants import CLEAN_DIR, PCTILE_DIR, START
 from featnames import START_PRICE, BYR_HIST
+
+# indices when reading in CSVs
+IDX_NAMES = {'offers': ['lstg', 'thread', 'index'],
+             'threads': ['lstg', 'thread'],
+             'listings': 'lstg'}
+
+
+def read_csv(name):
+    """
+    Reads in one of three csvs of features.
+    :param str name: one of ['listings', 'threads', 'offers']
+    :return: datafrome of features
+    """
+    filename = CLEAN_DIR + '{}.csv'.format(name)
+    df = pd.read_csv(filename).set_index(IDX_NAMES[name])
+    return df
 
 
 # creates series of percentiles indexed by column variable

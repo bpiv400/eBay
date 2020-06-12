@@ -10,7 +10,7 @@ replace cndtn = 8 if cndtn == 4000
 replace cndtn = 9 if cndtn == 5000
 replace cndtn = 10 if cndtn == 6000
 replace cndtn = 11 if cndtn == 7000
-
+compress cndtn
 
 label def cndtn ///
 	0 "Not listed" ///
