@@ -1,8 +1,10 @@
 import argparse
+import numpy as np
+import pandas as pd
 from compress_pickle import dump, load
-from processing.b_feats.utils import *
+from processing.b_feats.utils import collapse_dict, open_offers
 from processing.utils import get_con, get_norm
-from constants import *
+from constants import START, CLEAN_DIR, PARTS_DIR, PARTITIONS, IDX
 
 
 def thread_count(subset, full=False):
@@ -355,16 +357,6 @@ def output_path(part, model):
         return PARTS_DIR + '{}/tf.gz'.format(part)
     else:
         return PARTS_DIR + '{}/tf_{}.gz'.format(part, model)
-
-
-def prepare_events(events):
-    # buyer turn indicator
-    events['byr'] = events.index.isin(IDX['byr'], level='index')
-
-    # add normalized offer to events
-    con = get_con(events.price.unstack(), L.start_price)
-    events['norm'] = get_norm(con)
-    return events
 
 
 def main():
