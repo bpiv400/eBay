@@ -1,7 +1,7 @@
 import argparse
 from compress_pickle import dump, load
 from datetime import datetime as dt
-import processing.b_feats.utils as util
+from processing.b_feats.utils import create_events, get_all_cat_feats
 from constants import PARTITIONS, PARTS_DIR, CLEAN_DIR
 
 
@@ -32,12 +32,12 @@ def main():
 
     # set levels for hierarchical feats
     print('Creating offer events...')
-    events = util.create_events(listings, threads, offers, [name])
+    events = create_events(listings, threads, offers, [name])
 
     # categorical features
     print('Creating categorical features...')
     start = dt.now()
-    feats = util.get_all_cat_feats(events, [name])
+    feats = get_all_cat_feats(events, [name])
     assert not feats.isna().any().any()
     print('{} seconds'.format((dt.now() - start).total_seconds()))
 

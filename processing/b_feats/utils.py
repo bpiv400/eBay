@@ -1,5 +1,6 @@
-from constants import *
-from processing.b_feats.time_funcs import *
+import numpy as np
+import pandas as pd
+from constants import START, MAX_DELAY
 
 QUANTILES = [0.25, 0.5, 0.75, 1]  # quantiles of feature distribution
 
@@ -139,7 +140,6 @@ def inplace_quantiles(df):
     4. df is sorted in ascending order of targ (with nans at back)
 
     :param df: pandas.DataFrame
-    :param name: gives the name of the feature being created (e.g. first_offer)
     :return:
     """
     total_count = len(df)
@@ -169,7 +169,7 @@ def inplace_quantiles(df):
         if i <= last_filled:
             lstg_count_dict[curr_lstg] += 1
 
-    res_dict = {i:list() for i in [25, 50, 75, 100]}
+    res_dict = {i: list() for i in [25, 50, 75, 100]}
     lstg_order = []
     # iterate over all lstgs
     for curr_lstg, curr_inds in lstg_ind_dict.items():
@@ -403,8 +403,6 @@ def get_cat_accepts(events, levels):
         # quantiles of (normalized) accept price over 30-day window
         quants = fast_quantiles(events, curr_levels, 'accept_norm')
         tf = tf.join(quants)
-        # for identical timestamps
-        cols = [c for c in tf.columns if c.startswith(levels[-1])]
     # collapse to lstg
     return tf.sort_index()
 
@@ -416,8 +414,8 @@ def get_cat_con(events, levels):
 
     for i in range(len(levels)):
         curr_levels = levels[: i + 1]
-        bin = get_perc(events,  curr_levels, 'bin', 'lstg_ind', name='bin')
-        tf = tf.join(bin)
+        perc = get_perc(events,  curr_levels, 'bin', 'lstg_ind', name='bin')
+        tf = tf.join(perc)
         # quantiles of (normalized) accept price over 30-day window
         quants = fast_quantiles(events, curr_levels, 'first_offer')
         tf = tf.join(quants)

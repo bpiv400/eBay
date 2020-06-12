@@ -2,7 +2,8 @@ import argparse
 import numpy as np
 import pandas as pd
 from compress_pickle import dump, load
-from processing.b_feats.utils import collapse_dict, open_offers
+from processing.b_feats.utils import collapse_dict
+from processing.b_feats.time_funcs import open_offers
 from processing.utils import get_con, get_norm
 from constants import START, CLEAN_DIR, PARTS_DIR, PARTITIONS, IDX
 
