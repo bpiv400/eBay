@@ -1,5 +1,5 @@
 clear all
-cd /data/eBay
+cd ~/weka/eBay
 use dta/conform
 
 * flag weird behavior with prices

@@ -1,5 +1,5 @@
 clear all
-cd /data/eBay
+cd ~/weka/eBay
 use dta/clean
 
 * add in BINs

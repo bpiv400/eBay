@@ -1,5 +1,5 @@
 clear all
-cd /data/eBay
+cd ~/weka/eBay
 import delim using raw/listings.csv
 
 * rename variables

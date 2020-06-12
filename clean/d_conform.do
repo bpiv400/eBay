@@ -1,5 +1,5 @@
 clear all
-cd /data/eBay
+cd ~/weka/eBay
 use dta/bins
 
 * recode accepts and rejects

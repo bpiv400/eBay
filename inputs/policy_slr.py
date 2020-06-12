@@ -2,7 +2,7 @@ import argparse
 from inputs.inputs_utils import get_policy_data, save_files, construct_x_init
 from constants import IDX, SLR_PREFIX, CON_MULTIPLIER, \
     TRAIN_MODELS, VALIDATION, TEST
-from featnames import AUTO, EXP, CON, START_TIME
+from featnames import AUTO, EXP, CON
 
 
 def get_y(df, delay):
