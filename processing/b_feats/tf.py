@@ -3,9 +3,27 @@ import numpy as np
 import pandas as pd
 from compress_pickle import dump, load
 from processing.b_feats.utils import collapse_dict
-from processing.b_feats.time_funcs import open_offers
 from processing.utils import get_con, get_norm
 from constants import START, CLEAN_DIR, PARTS_DIR, PARTITIONS, IDX
+
+
+def open_offers(df, levels, role):
+    # index number
+    if 'index' in df.columns:
+        index = df['index']
+    else:
+        index = df.index.get_level_values('index')
+    # open and closed markers
+    if role == 'slr':
+        start = ~df.byr & ~df.accept & (index > 0) & ~df.censored
+        end = df.byr & (index > 1) & ~df.censored
+    elif role == 'byr':
+        start = df.byr & ~df.reject & ~df.accept
+        end = ~df.byr & (index > 1) & ~df.censored
+    # open - closed
+    s = start.astype(np.int64) - end.astype(np.int64)
+    # cumulative sum by levels grouping
+    return s.groupby(by=levels).cumsum()
 
 
 def thread_count(subset, full=False):
