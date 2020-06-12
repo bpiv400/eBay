@@ -1,4 +1,5 @@
 clear all
+ssc install savesome
 cd ~/weka/eBay
 use dta/conform
 
