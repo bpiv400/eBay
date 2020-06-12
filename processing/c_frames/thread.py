@@ -2,7 +2,7 @@ from compress_pickle import load, dump
 import numpy as np
 import pandas as pd
 from constants import HIST_QUANTILES, PARTS_DIR, CLEAN_DIR
-from featnames import BYR_HIST, MONTHS_SINCE_LSTG
+from featnames import BYR_HIST, MONTHS_SINCE_LSTG, START_TIME
 from utils import get_months_since_lstg, input_partition, load_file
 
 
@@ -11,18 +11,15 @@ def main():
 	part = input_partition()
 	print('{}/x_thread'.format(part))
 
-	# lstg indices
-	idx = load_file(part, 'lookup').index
-
 	# load data
-	lstg_start = load(PARTS_DIR + '{}/lookup.gz'.format(part)).start_time
+	lookup = load_file(part, 'lookup')
 	thread_start = load(CLEAN_DIR + 'offers.pkl').reindex(
-		index=idx, level='lstg').clock.xs(1, level='index')
+		index=lookup.index, level='lstg').clock.xs(1, level='index')
 	byr_hist = load(CLEAN_DIR + 'threads.pkl').reindex(
-		index=idx, level='lstg')[BYR_HIST]
+		index=lookup.index, level='lstg')[BYR_HIST]
 
 	# months since lstg start
-	months = get_months_since_lstg(lstg_start, thread_start).rename(MONTHS_SINCE_LSTG)
+	months = get_months_since_lstg(lookup[START_TIME], thread_start).rename(MONTHS_SINCE_LSTG)
 	assert months.max() < 1
 
 	# buyer history deciles

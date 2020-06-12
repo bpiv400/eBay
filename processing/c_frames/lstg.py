@@ -2,7 +2,8 @@ from compress_pickle import load, dump
 import numpy as np
 from processing.utils import extract_day_feats
 from utils import input_partition, load_file
-from constants import CLEAN_DIR, W2V_DIR, PARTS_DIR, DAY
+from constants import CLEAN_DIR, W2V_DIR, PARTS_DIR, DAY, BYR_PREFIX, \
+    SLR_PREFIX
 
 AS_IS_FEATS = ['store', 'slr_us', 'fast', 'photos', 'slr_lstg_ct',
                'slr_bo_ct', 'start_price_pctile', 'fdbk_score', 'fdbk_pstv']
@@ -18,29 +19,28 @@ def do_rounding(offer):
     return is_round, is_nines
 
 
-def get_x_lstg(L):
+def get_x_lstg(lstgs):
     # initialize output dataframe with as-is features
-    df = L[AS_IS_FEATS].copy()
-    # indicator for at least 1 photo
-    df['has_photos'] = L.photos > 0
-    # perfect feedback score
-    df['fdbk_100'] = L.fdbk_pstv == 1
-    # rounding
-    df['start_is_round'], df['start_is_nines'] = do_rounding(L.start_price)
+    df = lstgs[AS_IS_FEATS].copy()
+    # binary feats
+    df['has_photos'] = lstgs.photos > 0
+    df['fdbk_100'] = lstgs.fdbk_pstv == 1
+    df['start_is_round'], df['start_is_nines'] = \
+        do_rounding(lstgs.start_price)
     # normalize start_date to years
-    df['start_years'] = L.start_date / 365
+    df['start_years'] = lstgs.start_date / 365
     # date features
-    date_feats = extract_day_feats(L.start_date * DAY)
+    date_feats = extract_day_feats(lstgs.start_date * DAY)
     df = df.join(date_feats.rename(lambda x: 'start_' + x, axis=1))
     # condition
-    s = L.cndtn
+    s = lstgs.cndtn
     df['new'] = s == 1
     df['used'] = s == 7
     df['refurb'] = s.isin([2, 3, 4, 5, 6])
     df['wear'] = s.isin([8, 9, 10, 11]) * (s - 7)
     # auto decline/accept prices
-    df['auto_decline'] = L.decline_price / L.start_price
-    df['auto_accept'] = L.accept_price / L.start_price
+    df['auto_decline'] = lstgs.decline_price / lstgs.start_price
+    df['auto_accept'] = lstgs.accept_price / lstgs.start_price
     df['has_decline'] = df.auto_decline > 0
     df['has_accept'] = df.auto_accept < 1 
     # remove slr prefix
@@ -58,31 +58,31 @@ def main():
     idx = load_file(part, 'lookup').index
 
     # listing features
-    L = load(CLEAN_DIR + 'listings.pkl').reindex(index=idx)
+    lstgs = load(CLEAN_DIR + 'listings.pkl').reindex(index=idx)
 
     # save end time
-    dump(L.end_time, PARTS_DIR + '{}/lstg_end.gz'.format(part))
+    dump(lstgs.end_time, PARTS_DIR + '{}/lstg_end.gz'.format(part))
 
     # initialize output dictionary
     x = dict()
 
     # listing features
     print('Listing features')
-    x['lstg'] = get_x_lstg(L)
+    x['lstg'] = get_x_lstg(lstgs)
 
     # word2vec features
     print('Word2Vec features')
-    for role in ['byr', 'slr']:
-        w2v = load(W2V_DIR + '%s.gz' % role).reindex(
-            index=L[['cat']].values.squeeze(), fill_value=0)
-        w2v.set_index(L.index, inplace=True)
+    for role in [BYR_PREFIX, SLR_PREFIX]:
+        w2v = load(W2V_DIR + '{}.gz'.format(role)).reindex(
+            index=lstgs[['leaf']].values.squeeze(), fill_value=0)
+        w2v.set_index(lstgs.index, inplace=True)
         x['w2v_{}'.format(role)] = w2v.astype('float32')
-    del L
+    del lstgs
 
     # slr and cat features
     print('Seller features')
     for name in ['slr', 'meta', 'leaf']:
-        x[name] = load(PARTS_DIR + '{}.gz'.format(name)).reindex(
+        x[name] = load(PARTS_DIR + '{}/{}.gz'.format(part, name)).reindex(
             index=idx, fill_value=0).astype('float32')
 
     # take natural log of number of listings

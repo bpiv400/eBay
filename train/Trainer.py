@@ -7,7 +7,7 @@ from torch.optim import Adam, lr_scheduler
 from train.EBayDataset import EBayDataset
 from nets.FeedForward import FeedForward
 from train.Sample import get_batches
-from nets.nets_consts import LAYERS_EMBEDDING
+from nets.constants import LAYERS_EMBEDDING
 from train.constants import FTOL, LR0, LR1, LR_FACTOR, INT_DROPOUT
 from constants import MODEL_DIR, LOG_DIR, DELAY_MODELS, \
     INTERARRIVAL_MODEL, INIT_VALUE_MODELS, MODEL_NORM
