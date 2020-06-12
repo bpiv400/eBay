@@ -1,6 +1,6 @@
 from constants import (BYR_HIST_MODEL, FIRST_ARRIVAL_MODEL,
                        INTERARRIVAL_MODEL)
-from rlenv.env_utils import sample_categorical
+from rlenv.utils import sample_categorical
 from utils import load_model
 
 

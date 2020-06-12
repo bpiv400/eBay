@@ -9,7 +9,7 @@ from compress_pickle import dump
 from utils import load_file, input_partition, init_x
 from constants import SIM_CHUNKS, PARTS_DIR
 from featnames import START_PRICE, CAT
-from rlenv.env_consts import LOOKUP
+from rlenv.constants import LOOKUP
 
 
 def main():

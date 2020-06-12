@@ -1,5 +1,5 @@
 import pandas as pd
-from inputs.inputs_utils import get_policy_data, save_files, construct_x_init
+from inputs.utils import get_policy_data, save_files, construct_x_init
 from utils import input_partition
 from constants import IDX, BYR_PREFIX, CON_MULTIPLIER, \
     TRAIN_MODELS, VALIDATION, TEST, DAY

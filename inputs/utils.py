@@ -1,16 +1,17 @@
 import numpy as np
 import pandas as pd
 from compress_pickle import dump
-from utils import get_remaining, load_file
-from inputs.inputs_consts import NUM_OUT, N_SMALL, INTERVAL, \
+from processing.utils import extract_day_feats
+from utils import get_remaining, load_file, init_x
+from inputs.constants import NUM_OUT, N_SMALL, INTERVAL, \
     INTERVAL_COUNTS, DELTA_MONTH, DELTA_ACTION, C_ACTION
 from constants import INPUT_DIR, INDEX_DIR, VALIDATION, TRAIN_MODELS, \
-    TRAIN_RL, IDX, BYR_PREFIX, DELAY_MODELS, SLR_PREFIX, \
+    TRAIN_RL, IDX, BYR_PREFIX, DELAY_MODELS, SLR_PREFIX, DAY, MONTH, \
     INIT_VALUE_MODELS, ARRIVAL_PREFIX, MAX_DELAY, NO_ARRIVAL_CUTOFF
 from featnames import CLOCK_FEATS, OUTCOME_FEATS, BYR_HIST, \
     CON, NORM, SPLIT, MSG, AUTO, EXP, REJECT, DAYS, DELAY, TIME_FEATS, \
     THREAD_COUNT, MONTHLY_DISCOUNT, ACTION_DISCOUNT, ACTION_COST, \
-    NO_ARRIVAL
+    NO_ARRIVAL, START_TIME, INT_REMAINING, MONTHS_SINCE_LSTG
 
 
 def add_turn_indicators(df):

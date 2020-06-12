@@ -1,9 +1,8 @@
 import numpy as np
-import pandas as pd
-from inputs.inputs_utils import save_files, get_value_data, \
+from inputs.utils import save_files, get_value_data, \
     construct_x_init, get_sale_norm
 from utils import byr_reward, input_partition
-from inputs.inputs_consts import DELTA_MONTH, DELTA_ACTION, C_ACTION
+from inputs.constants import DELTA_MONTH, DELTA_ACTION, C_ACTION
 from constants import IDX, BYR_PREFIX, MONTH, \
     TRAIN_RL, VALIDATION, TEST
 from featnames import EXP, AUTO, START_PRICE, START_TIME

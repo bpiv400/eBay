@@ -7,8 +7,8 @@ from featnames import (OUTCOME_FEATS,
                        MONTHS_SINCE_LSTG, BYR_HIST,
                        INT_REMAINING, MONTHS_SINCE_LAST)
 from utils import load_sizes, load_featnames
-from rlenv.env_consts import *
-from rlenv.env_utils import model_str
+from rlenv.constants import *
+from rlenv.utils import model_str
 
 
 class Composer:

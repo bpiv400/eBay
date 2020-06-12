@@ -2,7 +2,7 @@ import argparse
 import numpy as np
 import pandas as pd
 from compress_pickle import dump
-from inputs.inputs_utils import save_sizes, convert_x_to_numpy, \
+from inputs.utils import save_sizes, convert_x_to_numpy, \
     save_small, get_x_thread
 from utils import load_file, init_x
 from constants import TRAIN_RL, VALIDATION, TEST, DISCRIM_MODELS, \

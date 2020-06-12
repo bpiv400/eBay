@@ -1,6 +1,6 @@
 from constants import MAX_DELAY, MONTH
 from featnames import MSG, CON, DELAY, EXP
-from rlenv.env_utils import compare_input_dicts, model_str
+from rlenv.utils import compare_input_dicts, model_str
 
 
 class TurnLog:

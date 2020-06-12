@@ -1,7 +1,7 @@
 import argparse
 from compress_pickle import dump, load
 from datetime import datetime as dt
-import processing.b_feats.util as util
+import processing.b_feats.utils as util
 from constants import PARTITIONS, PARTS_DIR, CLEAN_DIR
 
 

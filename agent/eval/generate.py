@@ -4,7 +4,7 @@ from compress_pickle import load
 from agent.eval.EvalGenerator import EvalGenerator
 from agent.models.PgCategoricalAgentModel import PgCategoricalAgentModel
 from agent.AgentComposer import AgentComposer
-from rlenv.env_utils import load_chunk
+from rlenv.utils import load_chunk
 from agent.agent_consts import AGENT_PARAMS, DROPOUT
 from constants import NO_ARRIVAL_CUTOFF, BYR_PREFIX, SLR_PREFIX, \
     RL_LOG_DIR, TRAIN_RL, VALIDATION, TEST, PARTS_DIR

@@ -1,7 +1,7 @@
 import argparse
 from compress_pickle import dump, load
-from processing.b_feats.util import *
-from processing.processing_utils import get_con, get_norm
+from processing.b_feats.utils import *
+from processing.utils import get_con, get_norm
 from constants import *
 
 
@@ -351,7 +351,10 @@ def add_deltas_index(deltas, events):
 
 
 def output_path(part, model):
-    return PARTS_DIR + '{}/tf_{}.gz'.format(part, model)
+    if model == 'offer':
+        return PARTS_DIR + '{}/tf.gz'.format(part)
+    else:
+        return PARTS_DIR + '{}/tf_{}.gz'.format(part, model)
 
 
 def prepare_events(events):

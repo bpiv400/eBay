@@ -1,10 +1,10 @@
 import numpy as np
 import pandas as pd
-from inputs.inputs_utils import save_files, get_value_data, \
+from inputs.utils import save_files, get_value_data, \
     construct_x_init, get_sale_norm
 from inputs.policy_slr import input_parameters
 from utils import get_cut, slr_reward, max_slr_reward
-from inputs.inputs_consts import DELTA_MONTH, DELTA_ACTION, C_ACTION
+from inputs.constants import DELTA_MONTH, DELTA_ACTION, C_ACTION
 from constants import IDX, SLR_PREFIX, MONTH, TRAIN_RL, VALIDATION, TEST
 from featnames import EXP, AUTO, META, START_PRICE, START_TIME
 

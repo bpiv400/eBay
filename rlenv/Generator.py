@@ -8,7 +8,7 @@ Lots of memory dumping code while I try to find leak
 """
 import numpy as np
 from featnames import START_PRICE, START_TIME, ACC_PRICE, DEC_PRICE
-from rlenv.env_utils import load_chunk
+from rlenv.utils import load_chunk
 from rlenv.environments.SimulatorEnvironment import SimulatorEnvironment
 from rlenv.interfaces.ArrivalInterface import ArrivalInterface
 from rlenv.interfaces.PlayerInterface import SimulatedSeller, SimulatedBuyer

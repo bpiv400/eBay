@@ -9,8 +9,8 @@ from compress_pickle import load
 from torch.distributions.categorical import Categorical
 from torch.distributions.bernoulli import Bernoulli
 from constants import PARTS_DIR, INPUT_DIR, DAY, ARRIVAL_MODELS
-from rlenv.env_consts import (SIM_CHUNKS_DIR, SIM_VALS_DIR, OFFER_MAPS,
-                              SIM_DISCRIM_DIR, DATE_FEATS, NORM_IND)
+from rlenv.constants import (SIM_CHUNKS_DIR, SIM_VALS_DIR, OFFER_MAPS,
+                             SIM_DISCRIM_DIR, DATE_FEATS, NORM_IND)
 from utils import extract_clock_feats, is_split, slr_norm, byr_norm
 
 
@@ -303,7 +303,7 @@ def load_featnames(name):
     """
     Loads featnames dictionary for a model
     :param name: str giving name (e.g. hist, con_byr),
-     see env_consts.py for model names
+     see constants.py for model names
     :return: dict
     """
     return load(INPUT_DIR + 'featnames/{}.pkl'.format(name))

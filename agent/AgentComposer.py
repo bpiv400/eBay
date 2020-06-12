@@ -5,7 +5,7 @@ from constants import (TURN_FEATS, BYR_PREFIX, SLR_PREFIX,
                        SLR_POLICY_INIT, BYR_POLICY_INIT)
 from featnames import (OUTCOME_FEATS, MONTHS_SINCE_LSTG, BYR_HIST)
 from utils import load_sizes, load_featnames
-from rlenv.env_consts import *
+from rlenv.constants import *
 from agent.agent_consts import FEAT_TYPE, CON_TYPE, ALL_FEATS
 from agent.agent_utils import get_con_set
 from rlenv.Composer import Composer

@@ -65,10 +65,10 @@ def read_csv(name):
 
 # creates series of percentiles indexed by column variable
 def get_pctiles(s):
-    N = len(s.index)
+    n = len(s.index)
     # create series of index name and values pctile
     idx = pd.Index(np.sort(s.values), name=s.name)
-    pctiles = pd.Series(np.arange(N) / (N - 1), index=idx, name='pctile')
+    pctiles = pd.Series(np.arange(n) / (n - 1), index=idx, name='pctile')
     pctiles = pctiles.groupby(pctiles.index).min()
     # put max in 99th percentile
     pctiles.loc[pctiles == 1] -= 1e-16
