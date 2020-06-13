@@ -3,8 +3,9 @@ import numpy as np
 import pandas as pd
 from compress_pickle import dump, load
 from processing.b_feats.utils import collapse_dict
-from processing.utils import get_con, get_norm
-from constants import START, CLEAN_DIR, PARTS_DIR, PARTITIONS, IDX
+from processing.processing_utils import get_con, get_norm
+from constants import START, CLEAN_DIR, PARTS_DIR, PARTITIONS, IDX, \
+    SLR_PREFIX
 
 
 def open_offers(df, levels, role):
@@ -14,10 +15,10 @@ def open_offers(df, levels, role):
     else:
         index = df.index.get_level_values('index')
     # open and closed markers
-    if role == 'slr':
+    if role == SLR_PREFIX:
         start = ~df.byr & ~df.accept & (index > 0) & ~df.censored
         end = df.byr & (index > 1) & ~df.censored
-    elif role == 'byr':
+    else:
         start = df.byr & ~df.reject & ~df.accept
         end = ~df.byr & (index > 1) & ~df.censored
     # open - closed

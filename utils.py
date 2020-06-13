@@ -1,6 +1,7 @@
 import argparse
 import pickle
 import torch
+from torch.nn.functional import log_softmax
 import numpy as np
 from compress_pickle import load
 from nets.FeedForward import FeedForward
@@ -127,7 +128,7 @@ def load_model(name, verbose=False):
 
     # create neural network
     sizes = load_sizes(name)
-    net = FeedForward(sizes)  # type: torch.nn.Module
+    net = FeedForward(sizes)  # type: nn.Module
 
     # read in model parameters
     state_dict = load_state_dict(name=name)
@@ -250,8 +251,7 @@ def get_model_predictions(m, x):
         if torch.cuda.is_available():
             x_b = {k: v.to('cuda') for k, v in x_b.items()}
         theta_b = net(x_b).cpu().double()
-        p0.append(np.exp(torch.nn.functional.log_softmax(
-            theta_b, dim=-1)))
+        p0.append(np.exp(log_softmax(theta_b, dim=-1)))
 
     # concatenate and return
     return torch.cat(p0, dim=0).numpy()
