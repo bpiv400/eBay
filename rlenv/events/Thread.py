@@ -4,12 +4,12 @@ class for encapsulating data and methods related to the first buyer offer
 import numpy as np
 from rlenv.sources import ThreadSources
 from rlenv.events.Event import Event
-from rlenv.constants import (FIRST_OFFER, DELAY_EVENT, OFFER_EVENT)
+from rlenv.const import (FIRST_OFFER, DELAY_EVENT, OFFER_EVENT)
 from constants import (SLR_PREFIX, BYR_PREFIX, MAX_DELAY)
-from rlenv.utils import (slr_rej_outcomes, slr_auto_acc_outcomes,
-                         get_delay_outcomes)
+from rlenv.util import (slr_rej_outcomes, slr_auto_acc_outcomes,
+                        get_delay_outcomes)
 from rlenv.time.Offer import Offer
-from util import get_remaining
+from utils import get_remaining
 
 
 class Thread(Event):

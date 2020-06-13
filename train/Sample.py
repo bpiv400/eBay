@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 from torch.utils.data import Sampler, DataLoader
-from train.constants import MBSIZE, NUM_WORKERS
+from train.const import MBSIZE, NUM_WORKERS
 
 
 class Sample(Sampler):

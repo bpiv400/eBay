@@ -1,9 +1,9 @@
 from constants import MONTH
 from rlenv.events.Event import Event
-from rlenv.constants import ARRIVAL
-from rlenv.utils import time_delta
+from rlenv.const import ARRIVAL
+from rlenv.util import time_delta
 from rlenv.interfaces.ArrivalInterface import ArrivalInterface
-from util import get_months_since_lstg
+from utils import get_months_since_lstg
 
 
 class Arrival(Event):

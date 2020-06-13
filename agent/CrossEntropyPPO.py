@@ -11,7 +11,7 @@ from rlpyt.utils.quick_args import save__init__args
 from rlpyt.utils.misc import iterate_mb_idxs
 from agent.models.PgCategoricalAgentModel import PgCategoricalAgentModel
 from agent.agent_consts import LR1
-from util import slr_reward, max_slr_reward
+from utils import slr_reward, max_slr_reward
 
 LossInputs = namedarraytuple("LossInputs",
                              ["agent_inputs",

@@ -1,7 +1,7 @@
 import pandas as pd
 from compress_pickle import dump
 from constants import INPUT_DIR, START, END, MAX_DAYS
-from processing.utils import extract_day_feats
+from processing.util import extract_day_feats
 
 # clock features by second
 N = pd.to_datetime(END) - pd.to_datetime(START) + pd.to_timedelta(MAX_DAYS, unit='d')

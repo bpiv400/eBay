@@ -4,7 +4,7 @@ import torch
 from processing.b_feats.tf import get_lstg_time_feats
 from rlenv.time.TimeFeatures import TimeFeatures
 from rlenv.time.offer_types import *
-from rlenv.constants import EXPIRATION
+from rlenv.const import EXPIRATION
 
 
 # consts

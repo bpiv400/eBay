@@ -1,5 +1,5 @@
 from featnames import OUTCOME_FEATS, CON, EXP, AUTO, MSG, DELAY
-from rlenv.utils import populate_test_model_inputs, model_str, need_msg
+from rlenv.util import populate_test_model_inputs, model_str, need_msg
 from rlenv.test.TurnLog import TurnLog
 
 

@@ -1,10 +1,10 @@
 import torch
 from torch.distributions.categorical import Categorical
 from torch.distributions.bernoulli import Bernoulli
-from rlenv.utils import (model_str, proper_squeeze,
-                         sample_categorical, sample_bernoulli)
+from rlenv.util import (model_str, proper_squeeze,
+                        sample_categorical, sample_bernoulli)
 from featnames import *
-from util import load_model
+from utils import load_model
 
 
 class PlayerInterface:

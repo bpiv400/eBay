@@ -1,6 +1,6 @@
 import pandas as pd
-from inputs.utils import get_policy_data, save_files, construct_x_init
-from util import input_partition
+from inputs.util import get_policy_data, save_files, construct_x_init
+from utils import input_partition
 from constants import IDX, BYR_PREFIX, CON_MULTIPLIER, \
     TRAIN_MODELS, VALIDATION, TEST, DAY
 from featnames import CON

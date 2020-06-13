@@ -2,8 +2,8 @@ import os
 import sys
 from datetime import datetime as dt
 from compress_pickle import dump, load
-from rlenv.utils import get_checkpoint_path
-from rlenv.constants import SIM_VALS_DIR, VAL_TIME_LIMIT
+from rlenv.util import get_checkpoint_path
+from rlenv.const import SIM_VALS_DIR, VAL_TIME_LIMIT
 from rlenv.Generator import SimulatorGenerator
 from sim.values.ValueCalculator import ValueCalculator
 from sim.values.ValueRecorder import ValueRecorder

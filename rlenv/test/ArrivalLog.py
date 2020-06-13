@@ -1,6 +1,6 @@
 from constants import (FIRST_ARRIVAL_MODEL,
                        BYR_HIST_MODEL, INTERARRIVAL_MODEL)
-from rlenv.utils import compare_input_dicts
+from rlenv.util import compare_input_dicts
 
 
 class ArrivalLog:

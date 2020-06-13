@@ -88,7 +88,7 @@ def load_sizes(name):
     """
     Loads featnames dictionary for a model
     :param name: str giving name (e.g. hist, con_byr),
-     see constants.py for model names
+     see const.py for model names
     :return: dict
     """
     return load(INPUT_DIR + 'sizes/{}.pkl'.format(name))
@@ -99,7 +99,7 @@ def load_featnames(name):
     Loads featnames dictionary for a model
     #TODO: extend to include agents
     :param name: str giving name (e.g. hist, con_byr),
-     see constants.py for model names
+     see const.py for model names
     :return: dict
     """
     return load(INPUT_DIR + 'featnames/{}.pkl'.format(name))

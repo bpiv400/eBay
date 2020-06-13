@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 from constants import HIST_QUANTILES, PARTS_DIR, CLEAN_DIR
 from featnames import BYR_HIST, MONTHS_SINCE_LSTG, START_TIME
-from util import get_months_since_lstg, input_partition, load_file
+from utils import get_months_since_lstg, input_partition, load_file
 
 
 def main():

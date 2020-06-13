@@ -1,6 +1,6 @@
 import numpy as np
-from rlenv.constants import *
-from rlenv.utils import last_norm
+from rlenv.const import *
+from rlenv.util import last_norm
 from featnames import *
 from copy import deepcopy
 

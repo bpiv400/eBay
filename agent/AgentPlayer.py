@@ -1,5 +1,5 @@
 import torch
-from rlenv.utils import sample_categorical
+from rlenv.util import sample_categorical
 from rlenv.interfaces.PlayerInterface import (PlayerInterface, SimulatedSeller,
                                               SimulatedBuyer)
 

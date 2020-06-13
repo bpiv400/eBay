@@ -1,6 +1,6 @@
-from inputs.utils import get_arrival_times, save_files
-from util import input_partition, load_file, init_x
-from inputs.constants import INTERVAL, INTERVAL_COUNTS
+from inputs.util import get_arrival_times, save_files
+from utils import input_partition, load_file, init_x
+from inputs.const import INTERVAL, INTERVAL_COUNTS
 from constants import FIRST_ARRIVAL_MODEL
 
 

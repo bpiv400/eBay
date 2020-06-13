@@ -1,7 +1,7 @@
 import argparse
 from compress_pickle import dump, load
 from datetime import datetime as dt
-from processing.b_feats.utils import create_events, get_all_cat_feats
+from processing.b_feats.util import create_events, get_all_cat_feats
 from constants import PARTITIONS, PARTS_DIR, CLEAN_DIR
 
 

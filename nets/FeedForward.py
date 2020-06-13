@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
-from nets.constants import HIDDEN
-from nets.utils import FullyConnected, create_embedding_layers, create_groupings
+from nets.const import HIDDEN
+from nets.util import FullyConnected, create_embedding_layers, create_groupings
 from constants import MODEL_NORM
 
 

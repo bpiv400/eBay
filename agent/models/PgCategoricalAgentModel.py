@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 from torch.nn.functional import softmax
 from constants import MODEL_NORM
-from util import load_state_dict, load_sizes
+from utils import load_state_dict, load_sizes
 from agent.agent_utils import get_network_name
 from agent.models.AgentModel import AgentModel
 from nets.FeedForward import FeedForward

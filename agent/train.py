@@ -18,7 +18,7 @@ from agent.agent_consts import (AGENT_STATE, PARAM_DICTS, THREADS_PER_PROC)
 from agent.agent_utils import gen_run_id, save_params
 from agent.AgentComposer import AgentComposer
 from agent.models.PgCategoricalAgentModel import PgCategoricalAgentModel
-from rlenv.utils import load_chunk
+from rlenv.util import load_chunk
 from rlenv.interfaces.PlayerInterface import SimulatedBuyer, SimulatedSeller
 from rlenv.interfaces.ArrivalInterface import ArrivalInterface
 from rlenv.environments.SellerEnvironment import SellerEnvironment

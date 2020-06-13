@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from util import extract_clock_feats, byr_norm, slr_norm
+from utils import extract_clock_feats, byr_norm, slr_norm
 from constants import START, MAX_DELAY, IDX, \
     BYR_PREFIX, SLR_PREFIX, DAY, HOLIDAYS
 from featnames import HOLIDAY, DOW_PREFIX, TIME_OF_DAY, AFTERNOON, \

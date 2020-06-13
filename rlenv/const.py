@@ -1,4 +1,4 @@
-from util import unpickle
+from utils import unpickle
 from constants import INPUT_DIR
 from featnames import (CON, DELAY, MSG, ALL_OFFER_FEATS, CLOCK_FEATS,
                        TIME_FEATS, DAYS, EXP, NORM, SPLIT, AUTO, REJECT,

@@ -3,8 +3,8 @@ import pandas as pd
 from compress_pickle import load, dump
 from constants import INPUT_DIR, INDEX_DIR, PARTS_DIR, MODELS
 from processing.processing_consts import CLEAN_DIR
-from rlenv.utils import (get_env_sim_subdir, load_featnames,
-                         get_env_sim_dir, load_chunk)
+from rlenv.util import (get_env_sim_subdir, load_featnames,
+                        get_env_sim_dir, load_chunk)
 
 
 def load_all_inputs(part=None, lstgs=None):

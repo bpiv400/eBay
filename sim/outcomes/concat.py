@@ -1,8 +1,8 @@
 import pandas as pd
 from compress_pickle import load, dump
-from processing.utils import collect_date_clock_feats, \
+from processing.util import collect_date_clock_feats, \
     get_days_delay, get_norm
-from util import is_split, input_partition, load_file
+from utils import is_split, input_partition, load_file
 from constants import SIM_CHUNKS, IDX, SLR_PREFIX, MONTH, PARTS_DIR
 from featnames import DAYS, DELAY, CON, SPLIT, NORM, REJECT, AUTO, EXP, \
     CENSORED, CLOCK_FEATS, TIME_FEATS, OUTCOME_FEATS, MONTHS_SINCE_LSTG, \

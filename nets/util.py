@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 from collections import OrderedDict
-from nets.constants import AFFINE, LAYERS_EMBEDDING, LAYERS_FULL, HIDDEN
+from nets.const import AFFINE, LAYERS_EMBEDDING, LAYERS_FULL, HIDDEN
 from constants import MODEL_NORM
 
 

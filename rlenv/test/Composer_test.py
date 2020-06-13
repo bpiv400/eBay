@@ -2,8 +2,8 @@ import pytest
 from rlenv.interface.model_names import model_str
 from rlenv.composer.maps import *
 from rlenv.composer.Composer import Composer
-from rlenv.constants import *
-from rlenv.utils import *
+from rlenv.const import *
+from rlenv.util import *
 from rlenv.interface import model_names
 
 @pytest.fixture

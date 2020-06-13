@@ -1,4 +1,4 @@
-from rlenv.constants import SIM_DISCRIM_DIR
+from rlenv.const import SIM_DISCRIM_DIR
 from rlenv.Generator import SimulatorGenerator
 from sim.outcomes.OutcomeRecorder import OutcomeRecorder
 from datetime import datetime as dt

@@ -1,5 +1,5 @@
 import argparse
-from inputs.utils import get_policy_data, save_files, construct_x_init
+from inputs.util import get_policy_data, save_files, construct_x_init
 from constants import IDX, SLR_PREFIX, CON_MULTIPLIER, \
     TRAIN_MODELS, VALIDATION, TEST
 from featnames import AUTO, EXP, CON
