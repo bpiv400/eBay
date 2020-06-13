@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+from util import extract_clock_feats, byr_norm, slr_norm
 from constants import START, MAX_DELAY, IDX, \
     BYR_PREFIX, SLR_PREFIX, DAY, HOLIDAYS
 from featnames import HOLIDAY, DOW_PREFIX, TIME_OF_DAY, AFTERNOON, \
@@ -26,7 +27,6 @@ def collect_date_clock_feats(seconds):
     :param seconds: seconds since START.
     :return: dataframe of date and clock features.
     """
-    from utils import extract_clock_feats
     df = extract_day_feats(seconds)
     df[TIME_OF_DAY], df[AFTERNOON] = extract_clock_feats(seconds)
     assert list(df.columns) == CLOCK_FEATS
@@ -97,7 +97,6 @@ def get_norm(con):
     :param con: pandas series of rounded concessions.
     :return: pandas series of normalized concessions.
     """
-    from utils import byr_norm, slr_norm
     df = con.unstack()
     norm = pd.DataFrame(index=df.index, columns=df.columns)
     norm[1] = df[1]

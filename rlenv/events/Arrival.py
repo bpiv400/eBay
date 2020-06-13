@@ -3,7 +3,7 @@ from rlenv.events.Event import Event
 from rlenv.constants import ARRIVAL
 from rlenv.utils import time_delta
 from rlenv.interfaces.ArrivalInterface import ArrivalInterface
-from utils import get_months_since_lstg
+from util import get_months_since_lstg
 
 
 class Arrival(Event):

@@ -11,7 +11,7 @@ from torch.distributions.bernoulli import Bernoulli
 from constants import PARTS_DIR, INPUT_DIR, DAY, ARRIVAL_MODELS
 from rlenv.constants import (SIM_CHUNKS_DIR, SIM_VALS_DIR, OFFER_MAPS,
                              SIM_DISCRIM_DIR, DATE_FEATS, NORM_IND)
-from utils import extract_clock_feats, is_split, slr_norm, byr_norm
+from util import extract_clock_feats, is_split, slr_norm, byr_norm
 
 
 def model_str(model_name, turn=None):

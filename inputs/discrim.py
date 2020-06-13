@@ -4,7 +4,7 @@ import pandas as pd
 from compress_pickle import dump
 from inputs.utils import save_sizes, convert_x_to_numpy, \
     save_small, get_x_thread
-from utils import load_file, init_x
+from util import load_file, init_x
 from constants import TRAIN_RL, VALIDATION, TEST, DISCRIM_MODELS, \
     DISCRIM_LISTINGS, DISCRIM_THREADS_NO_TF, INPUT_DIR
 from featnames import SPLIT, DAYS, DELAY, EXP, AUTO, REJECT, \

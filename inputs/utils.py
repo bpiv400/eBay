@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 from compress_pickle import dump
 from processing.utils import extract_day_feats
-from utils import get_remaining, load_file, init_x
+from util import get_remaining, load_file, init_x
 from inputs.constants import NUM_OUT, N_SMALL, INTERVAL, \
     INTERVAL_COUNTS, DELTA_MONTH, DELTA_ACTION, C_ACTION
 from constants import INPUT_DIR, INDEX_DIR, VALIDATION, TRAIN_MODELS, \

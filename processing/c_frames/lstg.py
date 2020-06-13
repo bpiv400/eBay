@@ -1,7 +1,7 @@
 from compress_pickle import load, dump
 import numpy as np
 from processing.utils import extract_day_feats
-from utils import input_partition, load_file
+from util import input_partition, load_file
 from constants import CLEAN_DIR, W2V_DIR, PARTS_DIR, DAY, BYR_PREFIX, \
     SLR_PREFIX
 

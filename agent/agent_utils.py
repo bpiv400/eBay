@@ -7,7 +7,7 @@ import torch
 from rlpyt.samplers.parallel.worker import initialize_worker
 from rlpyt.utils.collections import AttrDict
 from rlpyt.utils.seed import set_envs_seeds
-from utils import load_state_dict
+from util import load_state_dict
 from constants import (RL_LOG_DIR, SLR_VALUE_INIT, SLR_POLICY_INIT,
                        BYR_VALUE_INIT, BYR_POLICY_INIT, REINFORCE_DIR)
 from agent.agent_consts import FULL_CON, QUARTILES, HALF, PARAM_DICTS

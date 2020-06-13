@@ -15,7 +15,7 @@ from rlenv.constants import (INTERACT, SALE, PRICE, DUR, ACC_IND, CON,
                              REJ_IND, OFF_IND, ARRIVAL, FIRST_OFFER, MSG,
                              OFFER_EVENT, DELAY_EVENT)
 from rlenv.utils import get_clock_feats, get_con_outcomes, need_msg, model_str
-from utils import get_months_since_lstg
+from util import get_months_since_lstg
 
 
 class EbayEnvironment:

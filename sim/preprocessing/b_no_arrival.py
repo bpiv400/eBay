@@ -1,6 +1,6 @@
 from compress_pickle import dump
 import pandas as pd
-from utils import get_model_predictions, input_partition, load_file
+from util import get_model_predictions, input_partition, load_file
 from constants import FIRST_ARRIVAL_MODEL, PARTS_DIR
 
 

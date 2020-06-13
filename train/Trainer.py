@@ -11,7 +11,7 @@ from nets.constants import LAYERS_EMBEDDING
 from train.constants import FTOL, LR0, LR1, LR_FACTOR, INT_DROPOUT
 from constants import MODEL_DIR, LOG_DIR, DELAY_MODELS, \
     INTERARRIVAL_MODEL, INIT_VALUE_MODELS, MODEL_NORM
-from utils import load_sizes
+from util import load_sizes
 
 
 class Trainer:

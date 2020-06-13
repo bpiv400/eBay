@@ -6,7 +6,7 @@ from constants import (MODELS, OFFER_MODELS, FIRST_ARRIVAL_MODEL,
 from featnames import (OUTCOME_FEATS,
                        MONTHS_SINCE_LSTG, BYR_HIST,
                        INT_REMAINING, MONTHS_SINCE_LAST)
-from utils import load_sizes, load_featnames
+from util import load_sizes, load_featnames
 from rlenv.constants import *
 from rlenv.utils import model_str
 

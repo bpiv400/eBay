@@ -2,7 +2,7 @@ import numpy as np
 import torch
 from torch.nn.functional import log_softmax, nll_loss
 from train.Sample import get_batches
-from utils import load_model
+from util import load_model
 
 
 def get_model_predictions(name, data):

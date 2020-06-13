@@ -7,7 +7,7 @@ import argparse
 import os
 import torch
 from constants import MODELS, PREFIX, MODEL_DIR
-from utils import load_state_dict, load_sizes
+from util import load_state_dict, load_sizes
 from nets.constants import LAYERS_FULL
 from nets.FeedForward import FeedForward
 BACKUP_DIR = '{}/backup/'.format(PREFIX)

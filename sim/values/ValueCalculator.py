@@ -1,6 +1,6 @@
 import math
 import numpy as np
-from utils import get_cut
+from util import get_cut
 from constants import LISTING_FEE
 from rlenv.constants import SE_TOL, MIN_SALES
 from featnames import META

@@ -6,7 +6,7 @@ import os
 import h5py
 import numpy as np
 import pandas as pd
-from utils import load_file, init_x
+from util import load_file, init_x
 from constants import NO_ARRIVAL_CUTOFF, TRAIN_RL, RL_TRAIN_DIR, \
     NUM_WORKERS_RL
 from featnames import CAT, START_PRICE

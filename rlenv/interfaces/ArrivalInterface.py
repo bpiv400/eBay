@@ -1,7 +1,7 @@
 from constants import (BYR_HIST_MODEL, FIRST_ARRIVAL_MODEL,
                        INTERARRIVAL_MODEL)
 from rlenv.utils import sample_categorical
-from utils import load_model
+from util import load_model
 
 
 class ArrivalInterface:

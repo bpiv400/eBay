@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 from processing.utils import collect_date_clock_feats
 from inputs.utils import get_arrival_times, save_files
-from utils import get_months_since_lstg, input_partition, \
+from util import get_months_since_lstg, input_partition, \
     load_file, init_x
 from inputs.constants import INTERVAL, INTERVAL_COUNTS
 from constants import MONTH

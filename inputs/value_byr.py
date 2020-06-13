@@ -1,7 +1,7 @@
 import numpy as np
 from inputs.utils import save_files, get_value_data, \
     construct_x_init, get_sale_norm
-from utils import byr_reward, input_partition
+from util import byr_reward, input_partition
 from inputs.constants import DELTA_MONTH, DELTA_ACTION, C_ACTION
 from constants import IDX, BYR_PREFIX, MONTH, \
     TRAIN_RL, VALIDATION, TEST

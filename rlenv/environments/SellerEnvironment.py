@@ -2,7 +2,7 @@ from rlenv.environments.AgentEnvironment import AgentEnvironment
 from rlenv.constants import OFFER_EVENT
 from rlenv.utils import get_con_outcomes
 from agent.spaces.ConSpace import ConSpace
-from utils import get_cut
+from util import get_cut
 from featnames import META
 
 

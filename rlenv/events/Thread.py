@@ -9,7 +9,7 @@ from constants import (SLR_PREFIX, BYR_PREFIX, MAX_DELAY)
 from rlenv.utils import (slr_rej_outcomes, slr_auto_acc_outcomes,
                          get_delay_outcomes)
 from rlenv.time.Offer import Offer
-from utils import get_remaining
+from util import get_remaining
 
 
 class Thread(Event):

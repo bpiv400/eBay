@@ -2,7 +2,7 @@ import argparse
 import numpy as np
 import pandas as pd
 from inputs.utils import save_files, check_zero, get_x_thread
-from utils import get_remaining, load_file, init_x
+from util import get_remaining, load_file, init_x
 from inputs.constants import INTERVAL, INTERVAL_COUNTS
 from constants import IDX, DAY, MAX_DELAY, BYR_PREFIX, SLR_PREFIX, \
     PARTITIONS, CON_MULTIPLIER
