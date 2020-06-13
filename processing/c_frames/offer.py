@@ -5,7 +5,7 @@ from processing.util import collect_date_clock_feats, \
 from utils import input_partition, load_file, is_split
 from constants import PARTS_DIR, SLR_PREFIX, IDX, CLEAN_DIR
 from featnames import DAYS, DELAY, CON, NORM, SPLIT, MSG, REJECT, \
-    AUTO, EXP, TIME_FEATS
+    AUTO, EXP, TIME_FEATS, START_PRICE
 
 
 def get_x_offer(start_price, events, tf):
@@ -47,16 +47,15 @@ def main():
     part = input_partition()
     print('{}/x_offer'.format(part))
 
-    # lstg index
-    idx = load_file(part, 'lookup').index
-
     # load other data
-    start_price = load(PARTS_DIR + '%s/lookup.gz' % part).start_price
-    events = load(CLEAN_DIR + 'offers.pkl').reindex(index=idx, level='lstg')
-    tf = load(PARTS_DIR + 'tf.gz').reindex(index=idx, level='lstg')
+    lookup = load_file(part, 'lookup')
+    events = load(CLEAN_DIR + 'offers.pkl').reindex(
+        index=lookup.index, level='lstg')
+    tf = load(PARTS_DIR + '{}/tf.gz'.format(part)).reindex(
+        index=lookup.index, level='lstg')
 
     # offer features
-    x_offer = get_x_offer(start_price, events, tf)
+    x_offer = get_x_offer(lookup[START_PRICE], events, tf)
     dump(x_offer, PARTS_DIR + '{}/x_offer.gz'.format(part))
 
     # offer timestamps
