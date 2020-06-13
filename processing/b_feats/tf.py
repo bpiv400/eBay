@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 from compress_pickle import dump, load
 from processing.b_feats.utils import collapse_dict
-from processing.utils import get_con, get_norm
+import processing.utils as util
 from constants import START, CLEAN_DIR, PARTS_DIR, PARTITIONS, IDX, \
     SLR_PREFIX
 
@@ -399,8 +399,8 @@ def main():
     events['byr'] = events.index.isin(IDX['byr'], level='index')
 
     # add normalized offer to events
-    con = get_con(events.price.unstack(), listings.start_price)
-    events['norm'] = get_norm(con)
+    con = util.get_con(events.price.unstack(), listings.start_price)
+    events['norm'] = util.get_norm(con)
 
     # create lstg-level time-valued features
     print('Creating lstg-level time-valued features')
