@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-import utils
+import utils as util
 from constants import START, MAX_DELAY, IDX, \
     BYR_PREFIX, SLR_PREFIX, DAY, HOLIDAYS
 from featnames import HOLIDAY, DOW_PREFIX, TIME_OF_DAY, AFTERNOON, \
@@ -28,7 +28,7 @@ def collect_date_clock_feats(seconds):
     :return: dataframe of date and clock features.
     """
     df = extract_day_feats(seconds)
-    df[TIME_OF_DAY], df[AFTERNOON] = utils.extract_clock_feats(seconds)
+    df[TIME_OF_DAY], df[AFTERNOON] = util.extract_clock_feats(seconds)
     assert list(df.columns) == CLOCK_FEATS
     return df
 
@@ -103,11 +103,11 @@ def get_norm(con):
     norm[2] = df[2] * (1 - norm[1])
     for i in range(3, 8):
         if i in IDX[BYR_PREFIX]:
-            norm[i] = utils.byr_norm(con=df[i],
-                                     prev_byr_norm=norm[i - 2],
-                                     prev_slr_norm=norm[i - 1])
+            norm[i] = util.byr_norm(con=df[i],
+                                    prev_byr_norm=norm[i - 2],
+                                    prev_slr_norm=norm[i - 1])
         elif i in IDX[SLR_PREFIX]:
-            norm[i] = utils.slr_norm(con=df[i],
-                                     prev_byr_norm=norm[i - 1],
-                                     prev_slr_norm=norm[i - 2])
+            norm[i] = util.slr_norm(con=df[i],
+                                    prev_byr_norm=norm[i - 1],
+                                    prev_slr_norm=norm[i - 2])
     return norm.rename_axis('index', axis=1).stack().astype('float64')
