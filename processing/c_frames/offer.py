@@ -1,6 +1,6 @@
 from compress_pickle import load, dump
 import pandas as pd
-from processing.processing_utils import collect_date_clock_feats, \
+from processing.utils import collect_date_clock_feats, \
     get_days_delay, get_norm, get_con
 from utils import input_partition, load_file, is_split
 from constants import PARTS_DIR, SLR_PREFIX, IDX, CLEAN_DIR
