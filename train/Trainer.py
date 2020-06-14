@@ -36,7 +36,7 @@ class Trainer:
         self.device = device
 
         # boolean for different loss functions
-        self.is_delay = name in DELAY_MODELS or name == INTERARRIVAL_MODEL
+        self.is_delay = name in DELAY_MODELS + ['arrival', INTERARRIVAL_MODEL]
         self.is_init_value = name in INIT_VALUE_MODELS
 
         # load model size parameters

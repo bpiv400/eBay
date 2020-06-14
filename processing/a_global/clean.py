@@ -50,6 +50,32 @@ IDX_NAMES = {'offers': ['lstg', 'thread', 'index'],
              'threads': ['lstg', 'thread'],
              'listings': 'lstg'}
 
+CHUNKS = 256  # number of chunks
+
+
+def create_chunks(listings, threads, offers):
+    """
+    Chunks data by listing.
+    :param listings: dataframe with index ['lstg']
+    :param threads: dataframe with index ['lstg', 'thread']
+    :param offers: dataframe with index ['lstg', 'thread', 'index']
+    """
+    groups = np.array_split(listings.index, CHUNKS)
+    for i in range(CHUNKS):
+        print('Creating chunk {} of {}'.format(i+1, CHUNKS))
+        # find corresponding listings
+        idx = groups[i]
+        # create chunks
+        listings_i = listings.reindex(index=idx)
+        threads_i = threads.reindex(index=idx, level='lstg')
+        offers_i = offers.reindex(index=idx, level='lstg')
+        # save
+        chunk = {'listings': listings_i,
+                 'threads': threads_i,
+                 'offers': offers_i}
+        path = CLEAN_DIR + 'chunks/{}.gz'.format(i+1)
+        dump(chunk, path)
+
 
 def read_csv(name):
     """
@@ -186,6 +212,9 @@ def main():
 
     # save listings
     dump(listings, CLEAN_DIR + 'listings.pkl')
+
+    # chunk by listing
+    create_chunks(listings, threads, offers)
 
 
 if __name__ == '__main__':
