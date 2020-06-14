@@ -25,7 +25,7 @@ C_ACTION = 0.
 
 # size of model output
 NUM_OUT = dict()
-for m in ARRIVAL_MODELS[:-1] + 'arrival':
+for m in ARRIVAL_MODELS[:-1] + ['arrival']:
     NUM_OUT[m] = INTERVAL_COUNTS[1] + 1
 NUM_OUT[BYR_HIST_MODEL] = HIST_QUANTILES
 for m in DELAY_MODELS:
