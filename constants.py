@@ -21,6 +21,8 @@ elif 'Windows' in platform() and 'A:' in os.getcwd():  # Barry's pc
     PREFIX = 'A:/ebay'
 elif 'Windows' in platform() and 'C:' in os.getcwd():  # Barry's laptop
     PREFIX = os.path.expanduser('~/ebay')
+elif 'Darwin' in platform():  # Etan's Mac laptop
+    PREFIX = os.path.expanduser('~/eBay/data')
 else:  # cluster and AWS
     PREFIX = os.path.expanduser('~/weka/eBay')
 

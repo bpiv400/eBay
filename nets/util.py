@@ -139,9 +139,9 @@ def create_groupings(sizes):
     groups = dict()
     groups['w2v'] = ['lstg', 'w2v_slr', 'w2v_byr']
     if 'slr' in sizes['x']:
-        groups['other'] = ['lstg', 'cat', 'cndtn', 'slr']
+        groups['other'] = ['lstg', 'meta', 'leaf', 'slr']
     else:
-        groups['other'] = ['lstg', 'cat', 'cndtn']
+        groups['other'] = ['lstg', 'meta', 'leaf']
     if 'offer1' in sizes['x']:
         groups['offer'] = ['lstg'] \
             + [k for k in sizes['x'].keys() if 'offer' in k]

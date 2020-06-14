@@ -29,13 +29,12 @@ def get_interarrival_period(arrivals):
 
     # drop interarrivals after BINs
     diff = diff[diff > 0]
-    y = diff[diff.index.get_level_values(level='thread') > 1]
-    censored = censored.reindex(index=y.index)
 
     # convert y to periods
-    y //= INTERVAL[1]
+    y = diff // INTERVAL[1]
 
     # replace censored interarrival times negative count of censored buckets
+    censored = censored.reindex(index=y.index)
     y.loc[censored] -= INTERVAL_COUNTS[1]
 
     return y, diff
@@ -61,6 +60,8 @@ def get_x_thread_arrival(arrivals, lstg_start, idx, diff):
 
     # months since last arrival
     months_since_last = diff.groupby('lstg').shift().dropna() / MONTH
+    months_since_last = months_since_last.reindex(
+        index=idx, fill_value=0.)
     assert np.all(months_since_last.index == idx)
 
     # concatenate into dataframe
@@ -100,13 +101,13 @@ def process_inputs(part):
 def main():
     # partition name from command line
     part = input_partition()
-    print('%s/next_arrival' % part)
+    print('%s/arrival' % part)
 
     # create input dictionary
     d = process_inputs(part)
 
     # save various output files
-    save_files(d, part, 'next_arrival')
+    save_files(d, part, 'arrival')
 
 
 if __name__ == '__main__':

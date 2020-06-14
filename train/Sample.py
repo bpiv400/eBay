@@ -62,16 +62,9 @@ def get_batches(data, is_training=False):
     :param is_training: chop into minibatches if True.
     :return: iterable batches of examples.
     """
-    # number of workers
-    if data.name in NUM_WORKERS:
-        num_workers = NUM_WORKERS[data.name]
-    else:
-        num_workers = 7
-
-    # dataloader
     batches = DataLoader(data,
                          collate_fn=collate,
                          batch_sampler=Sample(data, is_training),
-                         num_workers=num_workers,
+                         num_workers=NUM_WORKERS,
                          pin_memory=True)
     return batches
