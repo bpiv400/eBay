@@ -1,5 +1,6 @@
 #!/bin/bash
 #$ -t 1-26
+#$ -pe openmp 4
 #$ -N train
 #$ -o logs/train/
 #$ -j y
