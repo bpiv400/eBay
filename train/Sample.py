@@ -1,3 +1,4 @@
+import multiprocessing as mp
 import numpy as np
 import torch
 from torch.utils.data import Sampler, DataLoader
@@ -62,7 +63,10 @@ def get_batches(data, is_training=False):
     :param is_training: chop into minibatches if True.
     :return: iterable batches of examples.
     """
-    num_workers = 3 if data.name in ['arrival', 'first_arrival'] else NUM_WORKERS
+    if data.name in NUM_WORKERS:
+        num_workers = NUM_WORKERS[data.name]
+    else:
+        num_workers = mp.cpu_count() - 1
     batches = DataLoader(data,
                          collate_fn=collate,
                          batch_sampler=Sample(data, is_training),

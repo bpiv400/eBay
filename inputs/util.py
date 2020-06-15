@@ -7,7 +7,8 @@ from inputs.const import NUM_OUT, N_SMALL, INTERVAL, \
     INTERVAL_COUNTS, DELTA_MONTH, DELTA_ACTION, C_ACTION
 from constants import INPUT_DIR, INDEX_DIR, VALIDATION, TRAIN_MODELS, \
     TRAIN_RL, IDX, BYR_PREFIX, DELAY_MODELS, SLR_PREFIX, DAY, MONTH, \
-    INIT_VALUE_MODELS, ARRIVAL_PREFIX, MAX_DELAY, NO_ARRIVAL_CUTOFF
+    INIT_VALUE_MODELS, ARRIVAL_PREFIX, MAX_DELAY, NO_ARRIVAL_CUTOFF, \
+    HIST_QUANTILES
 from featnames import CLOCK_FEATS, OUTCOME_FEATS, BYR_HIST, \
     CON, NORM, SPLIT, MSG, AUTO, EXP, REJECT, DAYS, DELAY, TIME_FEATS, \
     THREAD_COUNT, MONTHLY_DISCOUNT, ACTION_DISCOUNT, ACTION_COST, \
@@ -30,19 +31,15 @@ def add_turn_indicators(df):
 def get_x_thread(threads, idx, turn_indicators=False):
     # initialize x_thread as copy
     x_thread = threads.copy()
-
     # byr_hist as a decimal
-    x_thread.loc[:, BYR_HIST] = x_thread.byr_hist.astype('float32') / 10
-
+    x_thread.loc[:, BYR_HIST] = \
+        x_thread.byr_hist.astype('float32') / HIST_QUANTILES
     # thread count, including current thread
     x_thread[THREAD_COUNT] = x_thread.index.get_level_values(level='thread')
-
     # reindex to create x_thread
     x_thread = pd.DataFrame(index=idx).join(x_thread)
-
     if turn_indicators:
         x_thread = add_turn_indicators(x_thread)
-
     return x_thread.astype('float32')
 
 

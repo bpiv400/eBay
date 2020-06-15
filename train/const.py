@@ -1,5 +1,6 @@
 # optimization parameters
-NUM_WORKERS = 7
+NUM_WORKERS = {'arrival': 3,
+               'first_arrival': 5}
 MBSIZE = {True: 128, False: 2048}  # True for training, False for validation
 
 # learning rate parameters

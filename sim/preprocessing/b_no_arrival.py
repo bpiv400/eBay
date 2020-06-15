@@ -18,11 +18,8 @@ def main():
     # model predictions
     p = get_model_predictions(FIRST_ARRIVAL_MODEL, x)
 
-    # put in series
-    p0 = pd.Series(p[:,-1], index=lookup.index, name='p_no_arrival')
-
     # join with lookup
-    lookup = lookup.join(p0)
+    lookup['p_no_arrival'] = pd.Series(p[:, -1], index=lookup.index)
 
     # save
     dump(lookup, PARTS_DIR + '{}/lookup.gz'.format(part))
