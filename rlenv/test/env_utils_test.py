@@ -1,5 +1,5 @@
-from rlenv.env_utils import *
-import rlenv.env_consts as model_names
+from rlenv.util import *
+import rlenv.const as model_names
 from constants import ENV_SIM_DIR
 from rlenv.Composer import Composer
 

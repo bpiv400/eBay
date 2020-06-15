@@ -1,9 +1,9 @@
 import argparse
 import numpy as np
 import pandas as pd
-from inputs.inputs_utils import save_files, check_zero, get_x_thread
+from inputs.util import save_files, check_zero, get_x_thread
 from utils import get_remaining, load_file, init_x
-from inputs.inputs_consts import INTERVAL, INTERVAL_COUNTS
+from inputs.const import INTERVAL, INTERVAL_COUNTS
 from constants import IDX, DAY, MAX_DELAY, BYR_PREFIX, SLR_PREFIX, \
     PARTITIONS, CON_MULTIPLIER
 from featnames import CON, NORM, SPLIT, MSG, AUTO, EXP, REJECT, DAYS, \

@@ -3,7 +3,7 @@ from rlenv.Generator import SimulatorGenerator
 from rlenv.test.LstgLog import LstgLog
 from rlenv.test.TestEnvironment import TestEnvironment
 from sim.outcomes.OutcomeRecorder import OutcomeRecorder
-from rlenv.env_utils import get_env_sim_subdir
+from rlenv.util import get_env_sim_subdir
 
 
 class TestGenerator(SimulatorGenerator):

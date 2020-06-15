@@ -1,6 +1,6 @@
 from rlenv.events.Event import Event
-from rlenv.env_consts import ARRIVAL, RL_ARRIVAL_EVENT
-from rlenv.env_utils import get_clock_feats
+from rlenv.const import ARRIVAL, RL_ARRIVAL_EVENT
+from rlenv.util import get_clock_feats
 from utils import get_months_since_lstg
 
 

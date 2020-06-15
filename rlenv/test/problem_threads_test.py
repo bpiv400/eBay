@@ -5,7 +5,7 @@ from processing.c_feats.test.test_utils import (compare_all,
 from processing.c_feats.tf import get_lstg_time_feats
 from rlenv.time.TimeFeatures import TimeFeatures
 from rlenv.time.Offer import Offer
-from rlenv.env_consts import BYR_PREFIX, SLR_PREFIX
+from rlenv.const import BYR_PREFIX, SLR_PREFIX
 
 
 @pytest.fixture()

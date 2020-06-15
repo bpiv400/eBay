@@ -1,4 +1,4 @@
-from rlenv.env_consts import ARRIVAL
+from rlenv.const import ARRIVAL
 
 
 class Event:

@@ -21,12 +21,16 @@ elif 'Windows' in platform() and 'A:' in os.getcwd():  # Barry's pc
     PREFIX = 'A:/ebay'
 elif 'Windows' in platform() and 'C:' in os.getcwd():  # Barry's laptop
     PREFIX = os.path.expanduser('~/ebay')
+elif 'Darwin' in platform():  # Etan's Mac laptop
+    PREFIX = os.path.expanduser('~/eBay/data')
 else:  # cluster and AWS
     PREFIX = os.path.expanduser('~/weka/eBay')
 
 PARTS_DIR = '{}/partitions/'.format(PREFIX)
 INDEX_DIR = '{}/index/'.format(PREFIX)
 PCTILE_DIR = '{}/pctile/'.format(PREFIX)
+CLEAN_DIR = '{}/clean/'.format(PREFIX)
+W2V_DIR = '{}/w2v/'.format(PREFIX)
 
 INPUT_DIR = '{}/inputs/'.format(PREFIX)
 SIZES_DIR = INPUT_DIR + 'sizes/'
@@ -42,10 +46,10 @@ RL_LOG_DIR = REINFORCE_DIR + 'logs/'
 RL_TRAIN_DIR = REINFORCE_DIR + 'train/'
 
 # partitions
-TRAIN_MODELS = 'train_models'
-TRAIN_RL = 'train_rl'
-VALIDATION = 'test_rl'
-TEST = 'test_rl'  # TODO: rename to 'test' when using real test data
+TRAIN_MODELS = 'sim'
+TRAIN_RL = 'rl'
+VALIDATION = 'valid'
+TEST = VALIDATION  # TODO: rename to 'test' when using real test data
 PARTITIONS = [TRAIN_MODELS, TRAIN_RL, VALIDATION, TEST]
 SMALL = 'small'
 
@@ -62,9 +66,9 @@ EXPIRATION = 2 * DAY
 # maximal delay times
 MAX_DELAY = {1: MONTH,
              2: 2 * DAY,
-             3: 14 * DAY,
+             3: 2 * DAY,
              4: 2 * DAY,
-             5: 14 * DAY,
+             5: 2 * DAY,
              6: 2 * DAY,
              7: 2 * DAY}
 
@@ -114,17 +118,17 @@ DISCRIM_THREADS_NO_TF = 'threads_no_tf'
 DISCRIM_MODELS = [DISCRIM_LISTINGS, DISCRIM_THREADS, DISCRIM_THREADS_NO_TF]
 
 # policy initializations
-SLR_POLICY_INIT = 'init_policy_slr'
-BYR_POLICY_INIT = 'init_policy_byr'
-SLR_DELAY_POLICY_INIT = 'init_policy_slr_delay'
-BYR_DELAY_POLICY_INIT = 'init_policy_byr_delay'
+SLR_POLICY_INIT = 'policy_slr'
+BYR_POLICY_INIT = 'policy_byr'
+SLR_DELAY_POLICY_INIT = 'policy_slr_delay'
+BYR_DELAY_POLICY_INIT = 'policy_byr_delay'
 INIT_POLICY_MODELS = [SLR_POLICY_INIT, BYR_POLICY_INIT,
                       SLR_DELAY_POLICY_INIT, BYR_DELAY_POLICY_INIT]
 
-SLR_VALUE_INIT = 'init_value_slr'
-BYR_VALUE_INIT = 'init_value_byr'
-SLR_DELAY_VALUE_INIT = 'init_value_slr_delay'
-BYR_DELAY_VALUE_INIT = 'init_value_slr_delay'
+SLR_VALUE_INIT = 'value_slr'
+BYR_VALUE_INIT = 'value_byr'
+SLR_DELAY_VALUE_INIT = 'value_slr_delay'
+BYR_DELAY_VALUE_INIT = 'value_slr_delay'
 INIT_VALUE_MODELS = [SLR_VALUE_INIT, BYR_VALUE_INIT,
                      SLR_DELAY_VALUE_INIT, BYR_DELAY_VALUE_INIT]
 
@@ -157,3 +161,6 @@ MAX_NORM_VALUE = 94
 
 # number of workers for the RL
 NUM_WORKERS_RL = 32
+
+# fixed random seed
+SEED = 123456

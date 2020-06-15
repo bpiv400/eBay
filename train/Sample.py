@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 from torch.utils.data import Sampler, DataLoader
-from train.train_consts import MBSIZE, NUM_WORKERS
+from train.const import MBSIZE, NUM_WORKERS
 
 
 class Sample(Sampler):
@@ -62,13 +62,7 @@ def get_batches(data, is_training=False):
     :param is_training: chop into minibatches if True.
     :return: iterable batches of examples.
     """
-    # number of workers
-    if data.name in NUM_WORKERS:
-        num_workers = NUM_WORKERS[data.name]
-    else:
-        num_workers = 7
-
-    # dataloader
+    num_workers = 3 if data.name == 'arrival' else NUM_WORKERS
     batches = DataLoader(data,
                          collate_fn=collate,
                          batch_sampler=Sample(data, is_training),

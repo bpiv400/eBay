@@ -2,7 +2,7 @@ import math
 import numpy as np
 from utils import get_cut
 from constants import LISTING_FEE
-from rlenv.env_consts import SE_TOL, MIN_SALES
+from rlenv.const import SE_TOL, MIN_SALES
 from featnames import META
 
 

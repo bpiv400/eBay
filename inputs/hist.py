@@ -1,5 +1,5 @@
 import pandas as pd
-from inputs.inputs_utils import save_files
+from inputs.util import save_files
 from utils import load_file, input_partition, init_x
 from constants import BYR_HIST_MODEL
 from featnames import CLOCK_FEATS, THREAD_COUNT, BYR_HIST

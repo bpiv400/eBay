@@ -1,6 +1,7 @@
 import argparse
 import pickle
 import torch
+from torch.nn.functional import log_softmax
 import numpy as np
 from compress_pickle import load
 from nets.FeedForward import FeedForward
@@ -87,7 +88,7 @@ def load_sizes(name):
     """
     Loads featnames dictionary for a model
     :param name: str giving name (e.g. hist, con_byr),
-     see env_consts.py for model names
+     see const.py for model names
     :return: dict
     """
     return load(INPUT_DIR + 'sizes/{}.pkl'.format(name))
@@ -98,7 +99,7 @@ def load_featnames(name):
     Loads featnames dictionary for a model
     #TODO: extend to include agents
     :param name: str giving name (e.g. hist, con_byr),
-     see env_consts.py for model names
+     see const.py for model names
     :return: dict
     """
     return load(INPUT_DIR + 'featnames/{}.pkl'.format(name))
@@ -127,7 +128,7 @@ def load_model(name, verbose=False):
 
     # create neural network
     sizes = load_sizes(name)
-    net = FeedForward(sizes)  # type: torch.nn.Module
+    net = FeedForward(sizes)  # type: nn.Module
 
     # read in model parameters
     state_dict = load_state_dict(name=name)
@@ -205,6 +206,28 @@ def max_slr_reward(months_since_start=None, bin_proceeds=None,
     return bin_proceeds - costs
 
 
+def byr_reward(net_value=None, months_diff=None,
+               monthly_discount=None, action_diff=None,
+               action_discount=None, action_cost=None):
+    """
+    Discounts proceeds from sale and listing fees paid.
+    :param net_value: value less price paid; 0 if no sale
+    :param months_diff: months until purchase; np.inf if no sale
+    :param monthly_discount: multiplicative factor on proceeds, by month
+    :param action_diff: number of actions from current state until sale
+    :param action_discount: multiplicative factor of proceeds, by action
+    :param action_cost: cost per action
+    :return: discounted net proceeds
+    """
+    if monthly_discount is not None:
+        net_value *= monthly_discount ** months_diff
+    if action_discount is not None:
+        net_value *= action_discount ** action_diff
+    if action_cost is not None:
+        net_value -= action_cost * action_diff
+    return net_value
+
+
 def get_model_predictions(m, x):
     """
     Returns predicted categorical distribution.
@@ -228,8 +251,7 @@ def get_model_predictions(m, x):
         if torch.cuda.is_available():
             x_b = {k: v.to('cuda') for k, v in x_b.items()}
         theta_b = net(x_b).cpu().double()
-        p0.append(np.exp(torch.nn.functional.log_softmax(
-            theta_b, dim=-1)))
+        p0.append(np.exp(log_softmax(theta_b, dim=-1)))
 
     # concatenate and return
     return torch.cat(p0, dim=0).numpy()

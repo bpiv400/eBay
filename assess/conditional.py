@@ -1,5 +1,5 @@
 from compress_pickle import dump
-from processing.processing_utils import load_file, get_obs_outcomes
+from processing.util import load_file, get_obs_outcomes
 from processing.f_discrim.discrim_utils import concat_sim_chunks
 from assess.assess_consts import SPLIT_VALS
 from constants import TEST, PLOT_DIR, SIM, OBS, IDX, SLR_PREFIX

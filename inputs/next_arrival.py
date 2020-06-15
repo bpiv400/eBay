@@ -1,10 +1,10 @@
 import pandas as pd
 import numpy as np
-from processing.processing_utils import collect_date_clock_feats
-from inputs.inputs_utils import get_arrival_times, save_files
+from processing.util import collect_date_clock_feats
+from inputs.util import get_arrival_times, save_files
 from utils import get_months_since_lstg, input_partition, \
     load_file, init_x
-from inputs.inputs_consts import INTERVAL, INTERVAL_COUNTS
+from inputs.const import INTERVAL, INTERVAL_COUNTS
 from constants import MONTH
 from featnames import THREAD_COUNT, MONTHS_SINCE_LAST, MONTHS_SINCE_LSTG
 
@@ -15,8 +15,6 @@ def get_interarrival_period(arrivals):
     diff = pd.DataFrame(0.0, index=df.index, columns=df.columns[1:])
     for i in diff.columns:
         diff[i] = df[i] - df[i-1]
-
-    # restack
     diff = diff.rename_axis(arrivals.index.names[-1], axis=1).stack()
 
     # original datatype
