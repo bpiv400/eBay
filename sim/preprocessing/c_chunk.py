@@ -17,8 +17,7 @@ def main():
     part = input_partition()
 
     # load inputs
-    lookup = load_file(part, LOOKUP).drop(CAT, axis=1).sort_values(
-        by=START_PRICE)
+    lookup = load_file(part, LOOKUP)..sort_values(by=START_PRICE)
     x_lstg = init_x(part, lookup.index)
 
     # concatenate into one dataframe
