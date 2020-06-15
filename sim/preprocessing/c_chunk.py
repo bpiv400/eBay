@@ -8,7 +8,7 @@ import pandas as pd
 from compress_pickle import dump
 from utils import load_file, input_partition, init_x
 from constants import SIM_CHUNKS, PARTS_DIR
-from featnames import START_PRICE, CAT
+from featnames import START_PRICE
 from rlenv.const import LOOKUP
 
 
@@ -17,7 +17,7 @@ def main():
     part = input_partition()
 
     # load inputs
-    lookup = load_file(part, LOOKUP)..sort_values(by=START_PRICE)
+    lookup = load_file(part, LOOKUP).sort_values(by=START_PRICE)
     x_lstg = init_x(part, lookup.index)
 
     # concatenate into one dataframe
