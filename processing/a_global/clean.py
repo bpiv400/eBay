@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 from compress_pickle import dump
-from constants import CLEAN_DIR, PCTILE_DIR, START
+from constants import CLEAN_DIR, PCTILE_DIR, START, NUM_CHUNKS
 from featnames import START_PRICE, BYR_HIST
 
 # data types for csv read
@@ -50,8 +50,6 @@ IDX_NAMES = {'offers': ['lstg', 'thread', 'index'],
              'threads': ['lstg', 'thread'],
              'listings': 'lstg'}
 
-CHUNKS = 256  # number of chunks
-
 
 def create_chunks(listings, threads, offers):
     """
@@ -61,8 +59,8 @@ def create_chunks(listings, threads, offers):
     :param offers: dataframe with index ['lstg', 'thread', 'index']
     """
     groups = np.array_split(listings.index, CHUNKS)
-    for i in range(CHUNKS):
-        print('Creating chunk {} of {}'.format(i+1, CHUNKS))
+    for i in range(NUM_CHUNKS):
+        print('Creating chunk {} of {}'.format(i+1, NUM_CHUNKS))
         # find corresponding listings
         idx = groups[i]
         # create chunks

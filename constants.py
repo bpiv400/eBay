@@ -164,3 +164,6 @@ NUM_WORKERS_RL = 32
 
 # fixed random seed
 SEED = 123456
+
+# number of chunks
+NUM_CHUNKS = 256
