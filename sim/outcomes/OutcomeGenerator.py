@@ -1,12 +1,22 @@
-from rlenv.const import SIM_DISCRIM_DIR
+from compress_pickle import load
 from rlenv.Generator import SimulatorGenerator
 from sim.outcomes.OutcomeRecorder import OutcomeRecorder
 from datetime import datetime as dt
+from constants import PARTS_DIR, NO_ARRIVAL_CUTOFF
+from featnames import P_NO_ARRIVAL
+from utils import load_file
 
 
 class OutcomeGenerator(SimulatorGenerator):
-    def __init__(self, direct=None, verbose=False, start=None):
-        super().__init__(direct=direct, verbose=verbose)
+    def __init__(self, part=None, verbose=False, start=None):
+        super().__init__(part=part, verbose=verbose)
+
+    def load_chunk(self, chunk=None):
+        self.chunk = chunk
+        path = PARTS_DIR + '{}/chunks/{}.gz'.format(self.part, chunk)
+        self.x_lstg, self.lookup = load(path)
+        p0 = load_file(self.part, P_NO_ARRIVAL)
+        self.lookup = self.lookup.join(p0)
 
     def generate_recorder(self):
         return OutcomeRecorder(records_path=self.records_path,
@@ -39,18 +49,19 @@ class OutcomeGenerator(SimulatorGenerator):
         # save the recorder
         self.recorder.dump()
 
-    def simulate_lstg(self, environment):
+    def simulate_lstg(self, env):
         """
-        Simulates a particular listing once
-        :param environment: RewardEnvironment
+        Simulates a particular listing either once or until sale.
+        :param env: SimulatorEnvironment
         :return: outcome tuple
         """
         while True:
-            environment.reset()
-            outcome = environment.run()
-            if outcome.sale:
+            env.reset()
+            outcome = env.run()
+            sim_once = env.lookup[P_NO_ARRIVAL] > NO_ARRIVAL_CUTOFF
+            if outcome.sale or sim_once:
                 return outcome
 
     @property
     def records_path(self):
-        return '{}{}/{}.gz'.format(self.dir, SIM_DISCRIM_DIR, self.chunk)
+        return PARTS_DIR + '{}/outcomes/{}.gz'.format(self.part, self.chunk)

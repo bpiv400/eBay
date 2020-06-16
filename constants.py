@@ -156,9 +156,6 @@ META_6 = [32, 14, 11, 7, 28]
 # threshold for likelihood of no arrivals
 NO_ARRIVAL_CUTOFF = .50 ** (1.0 / 12)
 
-# maximum norm value for value initialization, in percentage points
-MAX_NORM_VALUE = 94
-
 # number of workers for the RL
 NUM_WORKERS_RL = 32
 

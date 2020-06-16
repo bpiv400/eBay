@@ -26,7 +26,6 @@ def create_chunks(lookup, x, chunk_dir):
                  'x_lstg': x.iloc[idx, :]}
         path = chunk_dir + '{}.gz'.format(i+1)
         dump(chunk, path)
-
         # increment indices
         idx = idx + 1
         if idx[-1] >= len(x):
