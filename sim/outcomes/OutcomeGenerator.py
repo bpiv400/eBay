@@ -14,9 +14,10 @@ class OutcomeGenerator(SimulatorGenerator):
     def load_chunk(self, chunk=None):
         self.chunk = chunk
         path = PARTS_DIR + '{}/chunks/{}.gz'.format(self.part, chunk)
-        self.x_lstg, self.lookup = load(path)
+        d = load(path)
+        self.x_lstg = d['x_lstg']
         p0 = load_file(self.part, P_NO_ARRIVAL)
-        self.lookup = self.lookup.join(p0)
+        self.lookup = d['lookup'].join(p0)
 
     def generate_recorder(self):
         return OutcomeRecorder(records_path=self.records_path,
@@ -55,10 +56,10 @@ class OutcomeGenerator(SimulatorGenerator):
         :param env: SimulatorEnvironment
         :return: outcome tuple
         """
+        sim_once = env.lookup[P_NO_ARRIVAL] > NO_ARRIVAL_CUTOFF
         while True:
             env.reset()
             outcome = env.run()
-            sim_once = env.lookup[P_NO_ARRIVAL] > NO_ARRIVAL_CUTOFF
             if outcome.sale or sim_once:
                 return outcome
 
