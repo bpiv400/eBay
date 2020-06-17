@@ -93,7 +93,7 @@ class BuyerEnvironment(AgentEnvironment):
                 return self.agent_tuple(done=True)
             else:
                 # otherwise sample offer time
-                offer_time = self.get_offer_time(self.last_event.priority)
+                offer_time = self.get_offer_time(self.last_event)
                 self.last_event.prep_rl_offer(con=con, priority=offer_time)
                 self.queue.push(self.last_event)
                 self.last_event = None
