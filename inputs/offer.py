@@ -3,9 +3,10 @@ import numpy as np
 import pandas as pd
 from inputs.util import save_files, check_zero, get_x_thread
 from utils import get_remaining, load_file, init_x
-from inputs.const import INTERVAL, INTERVAL_COUNTS
+from inputs.const import INTERVAL_TURN, INTERVAL_ARRIVAL, \
+    INTERVAL_COUNT_TURN, INTERVAL_COUNT_ARRIVAL
 from constants import IDX, DAY, BYR_PREFIX, SLR_PREFIX, \
-    PARTITIONS, CON_MULTIPLIER, MAX_TURN_DELAY, MAX_ARRIVAL_DELAY
+    PARTITIONS, CON_MULTIPLIER, MAX_DELAY_TURN, MAX_DELAY_ARRIVAL
 from featnames import CON, NORM, SPLIT, MSG, AUTO, EXP, REJECT, DAYS, \
     DELAY, INT_REMAINING, TIME_FEATS
 
@@ -39,8 +40,7 @@ def calculate_remaining(clock, lstg_start, idx, turn):
 
     # remaining feature
     turn_start = delay_start.xs(turn, level='index').reindex(index=idx)
-    max_delay = MAX_TURN_DELAY if turn > 1 else MAX_ARRIVAL_DELAY
-    remaining = get_remaining(lstg_start, turn_start, max_delay)
+    remaining = get_remaining(lstg_start, turn_start)
 
     # error checking
     assert np.all(remaining > 0) and np.all(remaining <= 1)
@@ -89,15 +89,23 @@ def get_y_delay(df, turn):
     delay = delay[delay > 0]
     df = df.reindex(index=delay.index)
     # error checking
-    max_delay = MAX_TURN_DELAY if turn > 1 else MAX_ARRIVAL_DELAY
+    if turn > 1:
+        max_delay = MAX_DELAY_TURN
+        interval = INTERVAL_TURN
+        interval_count = INTERVAL_COUNT_TURN
+    else:
+        max_delay = MAX_DELAY_ARRIVAL
+        interval = INTERVAL_ARRIVAL
+        interval_count = INTERVAL_COUNT_ARRIVAL
+
     assert delay.max() <= max_delay
     # convert to periods
-    delay //= INTERVAL[turn]
+    delay //= interval
     # replace expired delays with last index
     assert np.all(df.loc[df[DELAY] == 1, EXP])
-    delay.loc[delay == INTERVAL_COUNTS[turn]] = -1
+    delay.loc[delay == interval_count] = -1
     # replace censored delays with negative index
-    delay.loc[df[EXP] & (df[DELAY] < 1)] -= INTERVAL_COUNTS[turn]
+    delay.loc[df[EXP] & (df[DELAY] < 1)] -= interval_count
     return delay
 
 

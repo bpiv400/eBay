@@ -1,6 +1,6 @@
 from inputs.util import get_arrival_times, save_files
 from utils import input_partition, load_file, init_x
-from inputs.const import INTERVAL, INTERVAL_COUNTS
+from inputs.const import INTERVAL_ARRIVAL, INTERVAL_COUNT_ARRIVAL
 from constants import FIRST_ARRIVAL_MODEL
 
 
@@ -18,8 +18,8 @@ def process_inputs(part):
     diff = arrivals[1] - arrivals[0]
 
     # interarrival time in periods
-    y = diff // INTERVAL[1]
-    y[y.isna()] = INTERVAL_COUNTS[1]
+    y = diff // INTERVAL_ARRIVAL
+    y[y.isna()] = INTERVAL_COUNT_ARRIVAL
     y = y.astype('int64')
 
     # listing features

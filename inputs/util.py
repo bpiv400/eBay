@@ -3,11 +3,12 @@ import pandas as pd
 from compress_pickle import dump
 from processing.util import extract_day_feats
 from utils import get_remaining, load_file, init_x
-from inputs.const import NUM_OUT, N_SMALL, INTERVAL, \
-    INTERVAL_COUNTS, DELTA_MONTH, DELTA_ACTION, C_ACTION
+from inputs.const import NUM_OUT, N_SMALL, DELTA_MONTH, \
+    DELTA_ACTION, C_ACTION, INTERVAL_ARRIVAL, INTERVAL_TURN, \
+    INTERVAL_COUNT_TURN, INTERVAL_COUNT_ARRIVAL
 from constants import INPUT_DIR, INDEX_DIR, VALIDATION, TRAIN_MODELS, \
     TRAIN_RL, IDX, BYR_PREFIX, DELAY_MODELS, SLR_PREFIX, DAY, MONTH, \
-    INIT_VALUE_MODELS, ARRIVAL_PREFIX, MAX_DELAY, NO_ARRIVAL_CUTOFF, \
+    INIT_VALUE_MODELS, ARRIVAL_PREFIX, MAX_DELAY_TURN, NO_ARRIVAL_CUTOFF, \
     HIST_QUANTILES
 from featnames import CLOCK_FEATS, OUTCOME_FEATS, BYR_HIST, \
     CON, NORM, SPLIT, MSG, AUTO, EXP, REJECT, DAYS, DELAY, TIME_FEATS, \
@@ -84,7 +85,7 @@ def calculate_remaining(lstg_start=None, clock=None, idx=None):
             turn_start = delay_start.xs(turn, level='index').reindex(index=idx)
             mask = idx.get_level_values(level='index') == turn
             remaining.loc[mask] = get_remaining(
-                lstg_start, turn_start, MAX_DELAY[turn])
+                lstg_start, turn_start)
     # error checking
     assert np.all(remaining > 0) and np.all(remaining <= 1)
     return remaining
@@ -282,12 +283,12 @@ def save_sizes(x, m):
 
     # for arrival models, save interval and interval counts
     if ARRIVAL_PREFIX in m:
-        sizes['interval'] = INTERVAL[1]
-        sizes['interval_count'] = INTERVAL_COUNTS[1]
+        sizes['interval'] = INTERVAL_ARRIVAL
+        sizes['interval_count'] = INTERVAL_COUNT_ARRIVAL
     elif m in DELAY_MODELS:
         turn = int(m[-1])
-        sizes['interval'] = INTERVAL[turn]
-        sizes['interval_count'] = INTERVAL_COUNTS[turn]
+        sizes['interval'] = INTERVAL_TURN
+        sizes['interval_count'] = INTERVAL_COUNT_TURN
 
     # for init models, save discount rate
     if m in INIT_VALUE_MODELS:

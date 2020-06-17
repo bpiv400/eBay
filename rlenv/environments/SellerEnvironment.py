@@ -1,5 +1,5 @@
 from collections import namedtuple
-from constants import MAX_DELAY
+from constants import MAX_DELAY_TURN
 from rlenv.environments.AgentEnvironment import AgentEnvironment
 from rlenv.const import OFFER_EVENT, DELAY_EVENT
 from rlenv.util import get_con_outcomes
@@ -103,8 +103,7 @@ class SellerEnvironment(AgentEnvironment):
             self.last_event.prep_rl_offer(con=con, priority=offer_time)
         # expiration rejection
         else:
-            max_delay = MAX_DELAY[self.last_event.turn]
-            self.last_event.update_delay(seconds=max_delay)
+            self.last_event.update_delay(seconds=MAX_DELAY_TURN)
         self.queue.push(self.last_event)
         self.last_event = None
         return self.run()

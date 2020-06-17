@@ -3,7 +3,7 @@ from copy import deepcopy
 import pandas as pd
 from rlenv.time.offer_types import *
 from processing.b_feats.util import get_all_cat_feats
-from constants import MAX_DELAY
+from constants import MAX_DELAY_TURN
 
 
 COLS = ['accept', 'censored', 'clock', 'price', 'reject', 'byr', 'flag', 'start_price',
@@ -1484,13 +1484,13 @@ def delay_appendix_2(events, meta=1, leaf=1):
     offer['thread'] = 1
     events = add_event(events, offer, trigger_type=OFFER, meta=meta, leaf=leaf)
 
-    time += MAX_DELAY['slr']
+    time += MAX_DELAY_TURN
     offer['clock'] = time
     offer['byr'] = False
     offer['price'] = 30
     events = add_event(events, offer, trigger_type=SLR_REJECTION, meta=meta, leaf=leaf)
 
-    time += MAX_DELAY['byr']
+    time += MAX_DELAY_TURN
     offer['clock'] = time
     offer['byr'] = True
     offer['price'] = 50
@@ -1618,7 +1618,7 @@ def test_delay_meta():
                         if j != i:
                             considered = considered + offers[j]
                     considered = np.array(considered)
-                    considered = considered / MAX_DELAY[delay_type]
+                    considered = considered / MAX_DELAY_TURN
                     quant = np.nanquantile(considered, q=q, interpolation='lower')
                     if np.isnan(quant):
                         quant = 0
@@ -1784,7 +1784,7 @@ def test_delay_leaf():
                         if j != i:
                             considered = considered + offers[j]
                     considered = np.array(considered)
-                    considered = considered / MAX_DELAY[delay_type]
+                    considered = considered / MAX_DELAY_TURN
                     quant = np.nanquantile(considered, q=q, interpolation='lower')
                     if np.isnan(quant):
                         quant = 0
@@ -1808,7 +1808,7 @@ def test_delay_leaf():
                     if j != i:
                         considered = considered + offers[j]
                 considered = np.array(considered)
-                considered = considered / MAX_DELAY[delay_type]
+                considered = considered / MAX_DELAY_TURN
                 quant = np.nanquantile(considered, q=q, interpolation='lower')
                 if np.isnan(quant):
                     quant = 0

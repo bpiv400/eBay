@@ -4,7 +4,7 @@ from processing.util import collect_date_clock_feats
 from inputs.util import get_arrival_times, save_files
 from utils import get_months_since_lstg, input_partition, \
     load_file, init_x
-from inputs.const import INTERVAL, INTERVAL_COUNTS
+from inputs.const import INTERVAL_ARRIVAL, INTERVAL_COUNT_ARRIVAL
 from constants import MONTH
 from featnames import THREAD_COUNT, MONTHS_SINCE_LAST, MONTHS_SINCE_LSTG
 
@@ -31,11 +31,11 @@ def get_interarrival_period(arrivals):
     diff = diff[diff > 0]
 
     # convert y to periods
-    y = diff // INTERVAL[1]
+    y = diff // INTERVAL_ARRIVAL
 
     # replace censored interarrival times negative count of censored buckets
     censored = censored.reindex(index=y.index)
-    y.loc[censored] -= INTERVAL_COUNTS[1]
+    y.loc[censored] -= INTERVAL_COUNT_ARRIVAL
 
     return y, diff
 

@@ -5,7 +5,7 @@ import numpy as np
 from rlenv.sources import ThreadSources
 from rlenv.events.Event import Event
 from rlenv.const import (FIRST_OFFER, DELAY_EVENT, OFFER_EVENT)
-from constants import (SLR_PREFIX, BYR_PREFIX, MAX_DELAY)
+from constants import (SLR_PREFIX, BYR_PREFIX)
 from rlenv.util import (slr_rej_outcomes, slr_auto_acc_outcomes,
                         get_delay_outcomes, get_clock_feats,
                         get_con_outcomes)
@@ -25,7 +25,6 @@ class Thread(Event):
         self.sources = None
         self.turn = 1
         self.thread_id = thread_id
-        self.max_delay = None
 
     def init_thread(self, sources=None, hist=None):
         self.sources = sources  # type: ThreadSources
@@ -52,17 +51,13 @@ class Thread(Event):
 
     def init_delay(self, lstg_start):
         self.type = DELAY_EVENT
-        self._init_delay_params(lstg_start)
+        self._set_remaining(lstg_start)
 
     def change_turn(self):
         self.turn += 1
 
-    def _init_delay_params(self, lstg_start):
-        # update object to contain relevant delay attributes
-        self.max_delay = MAX_DELAY[self.turn]
-        # create remaining
-        remaining = get_remaining(
-            lstg_start, self.priority, self.max_delay)
+    def _set_remaining(self, lstg_start):
+        remaining = get_remaining(lstg_start, self.priority)
         self.sources.init_remaining(remaining=remaining)
 
     def update_delay(self, seconds=None):

@@ -64,15 +64,8 @@ MONTH = MAX_DAYS * DAY
 EXPIRATION = 2 * DAY
 
 # maximal delay times
-MAX_ARRIVAL_DELAY = MONTH
-MAX_TURN_DELAY = 2 * DAY
-MAX_DELAY = {1: MONTH,
-             2: 2 * DAY,
-             3: 2 * DAY,
-             4: 2 * DAY,
-             5: 2 * DAY,
-             6: 2 * DAY,
-             7: 2 * DAY}
+MAX_DELAY_ARRIVAL = MONTH
+MAX_DELAY_TURN = 2 * DAY
 
 # concessions that denote an (almost) even split
 SPLIT_PCTS = [.49, .50, .51]

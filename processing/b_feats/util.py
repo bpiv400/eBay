@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from constants import START, MAX_DELAY, IDX
+from constants import START, IDX, MAX_DELAY_TURN
 
 QUANTILES = [0.25, 0.5, 0.75, 1]  # quantiles of feature distribution
 
@@ -434,8 +434,8 @@ def get_cat_delay(events, levels):
         if i in clock_df.columns:
             delay[i] = (clock_df[i] - clock_df[i - 1]).dt.total_seconds()
             if i > 1:
-                max_delay = MAX_DELAY[i]
-                censored = delay[i] > MAX_DELAY[i]
+                max_delay = MAX_DELAY_TURN
+                censored = delay[i] > max_delay
             else:  # excluding turn 1
                 censored = delay.index
                 max_delay = 1

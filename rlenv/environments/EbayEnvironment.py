@@ -1,7 +1,7 @@
 import numpy as np
 from collections import namedtuple
-from constants import (BYR_PREFIX, MONTH, MAX_DELAY, FIRST_ARRIVAL_MODEL,
-                       BYR_HIST_MODEL, INTERARRIVAL_MODEL)
+from constants import (BYR_PREFIX, MONTH, FIRST_ARRIVAL_MODEL,
+                       BYR_HIST_MODEL, INTERARRIVAL_MODEL, MAX_DELAY_TURN)
 from featnames import ACC_PRICE, DEC_PRICE, START_PRICE, DELAY
 from rlenv.Heap import Heap
 from rlenv.time.TimeFeatures import TimeFeatures
@@ -362,7 +362,7 @@ class EbayEnvironment:
             index = self.buyer.delay(input_dict=input_dict, turn=turn,
                                      max_interval=max_interval)
         seconds = int((index + np.random.uniform()) * self.intervals[turn])
-        seconds = min(seconds, MAX_DELAY[turn])
+        seconds = min(seconds, MAX_DELAY_TURN)
         return seconds
 
     def get_arrival_input_dict(self, event=None, first=False):
