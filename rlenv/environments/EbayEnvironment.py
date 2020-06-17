@@ -3,6 +3,8 @@ from collections import namedtuple
 from constants import (BYR_PREFIX, MONTH, FIRST_ARRIVAL_MODEL,
                        BYR_HIST_MODEL, INTERARRIVAL_MODEL, MAX_DELAY_TURN)
 from featnames import ACC_PRICE, DEC_PRICE, START_PRICE, DELAY
+from utils import get_months_since_lstg
+from inputs.const import INTERVAL_ARRIVAL, INTERVAL_TURN
 from rlenv.Heap import Heap
 from rlenv.time.TimeFeatures import TimeFeatures
 from rlenv.time.Offer import Offer
@@ -15,7 +17,6 @@ from rlenv.const import (INTERACT, ACC_IND, CON, MSG,
                          REJ_IND, OFF_IND, ARRIVAL, FIRST_OFFER,
                          OFFER_EVENT, DELAY_EVENT)
 from rlenv.util import get_clock_feats, get_con_outcomes, need_msg, model_str
-from utils import get_months_since_lstg
 
 
 class EbayEnvironment:
@@ -42,9 +43,7 @@ class EbayEnvironment:
         self.thread_counter = 1
         self.outcome = None
 
-        # interval data
         self.composer = params['composer']
-        self.intervals = self.composer.intervals
 
     def reset(self):
         self.queue.reset()
@@ -325,8 +324,7 @@ class EbayEnvironment:
             intervals = self.arrival.first_arrival(input_dict=input_dict, intervals=intervals)
         else:
             intervals = self.arrival.inter_arrival(input_dict=input_dict)
-        width = self.intervals[1]
-        return int((intervals + np.random.uniform()) * width)
+        return int((intervals + np.random.uniform()) * INTERVAL_ARRIVAL)
 
     def get_hist(self, input_dict=None, time=None, thread_id=None):
         return self.arrival.hist(input_dict=input_dict)
@@ -361,7 +359,7 @@ class EbayEnvironment:
         else:
             index = self.buyer.delay(input_dict=input_dict, turn=turn,
                                      max_interval=max_interval)
-        seconds = int((index + np.random.uniform()) * self.intervals[turn])
+        seconds = int((index + np.random.uniform()) * INTERVAL_TURN)
         seconds = min(seconds, MAX_DELAY_TURN)
         return seconds
 
