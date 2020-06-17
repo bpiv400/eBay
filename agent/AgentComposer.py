@@ -1,13 +1,15 @@
+import argparse
 import math
 import torch
 import numpy as np
-from constants import (TURN_FEATS, BYR_PREFIX, SLR_PREFIX)
-from featnames import (OUTCOME_FEATS, MONTHS_SINCE_LSTG, BYR_HIST,
-                       INT_REMAINING)
+from constants import (TURN_FEATS, BYR_PREFIX, SLR_PREFIX,
+                       PARTS_DIR, TRAIN_RL)
+from featnames import (OUTCOME_FEATS, MONTHS_SINCE_LSTG, BYR_HIST)
 from utils import load_sizes, load_featnames
 from rlenv.const import *
-from agent.agent_consts import FEAT_TYPE, CON_TYPE, ALL_FEATS
-from agent.agent_utils import get_con_set, get_agent_name
+from rlenv.util import load_chunk
+from agent.agent_consts import FEAT_TYPE, CON_TYPE, ALL_FEATS, AGENT_PARAMS
+from agent.agent_utils import get_con_set, get_agent_name, compose_args
 from rlenv.Composer import Composer
 
 
@@ -192,3 +194,18 @@ class AgentComposer(Composer):
     @property
     def agent_sizes(self):
         return self.sizes['agent']
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    compose_args(arg_dict=AGENT_PARAMS, parser=parser)
+    agent_params = vars(parser.parse_args())
+    chunk_path = PARTS_DIR + '{}/chunks/1.gz'.format(TRAIN_RL)
+    x_lstg_cols = load_chunk(input_path=chunk_path)[0].columns
+    composer = AgentComposer(cols=x_lstg_cols,
+                             agent_params=agent_params)
+    print('Verified inputs correctly.')
+
+
+if __name__ == '__main__':
+    main()

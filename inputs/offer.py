@@ -4,8 +4,8 @@ import pandas as pd
 from inputs.util import save_files, check_zero, get_x_thread
 from utils import get_remaining, load_file, init_x
 from inputs.const import INTERVAL, INTERVAL_COUNTS
-from constants import IDX, DAY, MAX_DELAY, BYR_PREFIX, SLR_PREFIX, \
-    PARTITIONS, CON_MULTIPLIER
+from constants import IDX, DAY, BYR_PREFIX, SLR_PREFIX, \
+    PARTITIONS, CON_MULTIPLIER, MAX_TURN_DELAY, MAX_ARRIVAL_DELAY
 from featnames import CON, NORM, SPLIT, MSG, AUTO, EXP, REJECT, DAYS, \
     DELAY, INT_REMAINING, TIME_FEATS
 
@@ -39,7 +39,8 @@ def calculate_remaining(clock, lstg_start, idx, turn):
 
     # remaining feature
     turn_start = delay_start.xs(turn, level='index').reindex(index=idx)
-    remaining = get_remaining(lstg_start, turn_start, MAX_DELAY[turn])
+    max_delay = MAX_TURN_DELAY if turn > 1 else MAX_ARRIVAL_DELAY
+    remaining = get_remaining(lstg_start, turn_start, max_delay)
 
     # error checking
     assert np.all(remaining > 0) and np.all(remaining <= 1)
@@ -88,7 +89,8 @@ def get_y_delay(df, turn):
     delay = delay[delay > 0]
     df = df.reindex(index=delay.index)
     # error checking
-    assert delay.max() <= MAX_DELAY[turn]
+    max_delay = MAX_TURN_DELAY if turn > 1 else MAX_ARRIVAL_DELAY
+    assert delay.max() <= max_delay
     # convert to periods
     delay //= INTERVAL[turn]
     # replace expired delays with last index

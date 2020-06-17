@@ -95,7 +95,7 @@ class Composer:
             assert missing_idx_min == len(featnames[LSTG_MAP])
         # remove those missing features
         model_featnames[LSTG_MAP] = [feat for feat in model_featnames[LSTG_MAP] if feat in x_lstg_cols]
-         # iterate over all x_lstg features based and check that have same elements in the same order
+        # iterate over all x_lstg features based and check that have same elements in the same order
         for grouping_name, lstg_feats in featnames.items():
             model_grouping = model_featnames[grouping_name]
             assert len(model_grouping) == len(lstg_feats)

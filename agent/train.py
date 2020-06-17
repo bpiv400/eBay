@@ -15,7 +15,7 @@ from rlpyt.utils.logging.context import logger_context
 from featnames import DELAY
 from constants import RL_LOG_DIR, BYR_PREFIX, PARTS_DIR, TRAIN_RL, DROPOUT
 from agent.agent_consts import (AGENT_STATE, PARAM_DICTS, THREADS_PER_PROC)
-from agent.agent_utils import gen_run_id, save_params
+from agent.agent_utils import gen_run_id, save_params, compose_args
 from agent.AgentComposer import AgentComposer
 from agent.models.PgCategoricalAgentModel import PgCategoricalAgentModel
 from rlenv.util import load_chunk
@@ -180,8 +180,7 @@ def main():
     parser = argparse.ArgumentParser()
     # experiment parameters
     for d in PARAM_DICTS.values():
-        for k, v in d.items():
-            parser.add_argument('--{}'.format(k), **v)
+        compose_args(arg_dict=d, parser=parser)
     args = vars(parser.parse_args())
     for k, v in args.items():
         print('{}: {}'.format(k, v))

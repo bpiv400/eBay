@@ -224,3 +224,8 @@ def network_size(net):
             b = np.prod(np.array(s)) * bits
             total_bits += b
     return total_bits / 8e6
+
+
+def compose_args(arg_dict=None, parser=None):
+    for k, v in arg_dict.items():
+        parser.add_argument('--{}'.format(k), **v)
