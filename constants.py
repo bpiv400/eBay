@@ -64,6 +64,8 @@ MONTH = MAX_DAYS * DAY
 EXPIRATION = 2 * DAY
 
 # maximal delay times
+MAX_ARRIVAL_DELAY = MONTH
+MAX_TURN_DELAY = 2 * DAY
 MAX_DELAY = {1: MONTH,
              2: 2 * DAY,
              3: 2 * DAY,

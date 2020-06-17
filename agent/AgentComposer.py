@@ -94,7 +94,8 @@ class AgentComposer(Composer):
 
         # set base, add clock features if buyer and thread count if slr
         if self.byr:
-            feats.append(sources[LSTG_MAP][:-4])
+            feats.append(sources[LSTG_MAP][:4])
+            feats.append(sources[LSTG_MAP][6:-4])
             feats.append(sources[CLOCK_MAP][:-2])
         else:
             feats.append(sources[LSTG_MAP])
@@ -104,10 +105,6 @@ class AgentComposer(Composer):
         solo_feats = np.array(solo_feats)
         feats.append(solo_feats)
         feats.append(self.turn_inds)
-
-        # append remaining for delay models
-        if self.delay:
-            feats.append(np.array([sources[INT_REMAINING]]))
 
         # concatenate all features into lstg vector and convert to tensor
         lstg = np.concatenate(feats)
@@ -125,10 +122,21 @@ class AgentComposer(Composer):
         return full_vector
 
     def verify_agent(self):
-        # exclude auto accept / reject features from buyer shared lstgs
         lstg_sets = self.lstg_sets.copy()
         if self.byr:
-            lstg_sets[LSTG_MAP] = lstg_sets[LSTG_MAP][:-4]
+            # verify the lstg_sets[LSTG_MAP][4:6] gives count feats
+            assert lstg_sets[LSTG_MAP][4:6] == ['lstg_ct', 'bo_ct']
+            # verify lstg_sets[LSTG_MAP][-4:] give auto feats
+            auto_feats = ['auto_decline', 'auto_accept',
+                          'has_decline', 'has_accept']
+            assert lstg_sets[LSTG_MAP][-4:] == auto_feats
+            # exclude auto accept / reject features  and lstg_ct + bo_ct
+            # from byr shared features
+            start_feats = lstg_sets[LSTG_MAP][:4]
+            end_feats = lstg_sets[LSTG_MAP][6:-4]
+            lstg_sets[LSTG_MAP] = start_feats + end_feats
+            # remove slr feats
+            del lstg_sets[SLR_PREFIX]
         # verify shared lstg features
         model = get_agent_name(delay=self.delay, byr=self.byr, policy=True)
         Composer.verify_lstg_sets_shared(model, self.x_lstg_cols, lstg_sets)
@@ -145,7 +153,7 @@ class AgentComposer(Composer):
         # ensure the first appended buyer features are day-wise clock feats
         if self.byr:
             AgentComposer.verify_sequence(lstg_append, CLOCK_FEATS[:-2], 0)
-            start_index += len(CLOCK_FEATS)
+            start_index += len(CLOCK_FEATS[:-2])
 
         # in all cases check that months_since_lstg and byr_hist are next
         assert lstg_append[start_index] == MONTHS_SINCE_LSTG
@@ -164,11 +172,6 @@ class AgentComposer(Composer):
         turn_feats = TURN_FEATS[agent_role]
         AgentComposer.verify_sequence(lstg_append, turn_feats, start_index)
         start_index += len(turn_feats)
-
-        # for the delay agents, check that the last feature is int remaining
-        if self.delay:
-            assert lstg_append[start_index] == INT_REMAINING
-            start_index += 1
 
         # check that all appended features have been exhausted
         assert len(lstg_append) == start_index

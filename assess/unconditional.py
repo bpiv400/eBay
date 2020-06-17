@@ -7,7 +7,8 @@ from processing.f_discrim.discrim_utils import concat_sim_chunks
 from assess.assess_consts import MAX_THREADS
 from processing.processing_consts import INTERVAL
 from constants import TEST, PLOT_DIR, BYR_HIST_MODEL, CON_MULTIPLIER, \
-    HIST_QUANTILES, SIM, OBS, ARRIVAL_PREFIX, MAX_DELAY, PCTILE_DIR
+    HIST_QUANTILES, SIM, OBS, ARRIVAL_PREFIX, PCTILE_DIR, \
+    MAX_ARRIVAL_DELAY, MAX_TURN_DELAY
 from featnames import MONTHS_SINCE_LSTG, BYR_HIST, DELAY, EXP, CON, \
     MSG, REJECT
 
@@ -55,7 +56,7 @@ def get_arrival_distributions(threads):
 
     # arrival times
     y = threads[MONTHS_SINCE_LSTG]
-    pdf = get_pdf(y, MAX_DELAY[1], add_last=False).to_frame()
+    pdf = get_pdf(y, MAX_ARRIVAL_DELAY, add_last=False).to_frame()
     pdf['period'] = pdf.index // INTERVAL[1]
     p[ARRIVAL_PREFIX] = pdf.groupby('period').sum().squeeze()
 
@@ -80,7 +81,7 @@ def get_distributions(d):
         if turn > 1:
             y = df[DELAY].copy()
             y.loc[df[EXP]] = 1.0  # count expirations and censors together
-            p[turn][DELAY] = get_cdf(y, MAX_DELAY[turn])
+            p[turn][DELAY] = get_cdf(y, MAX_TURN_DELAY)
 
         # concession
         p[turn][CON] = get_cdf(df[CON], CON_MULTIPLIER)
