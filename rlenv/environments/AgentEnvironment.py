@@ -100,7 +100,7 @@ class AgentEnvironment(EbayEnvironment, Env):
                            turn=self.last_event.turn)
         months = (self.last_event.priority - self.start_time) / MONTH
         months += self.relist_count  # add in months without sale
-        bin_proceeds = (1-self.cut) * self.lookup[START_PRICE]`
+        bin_proceeds = (1-self.cut) * self.lookup[START_PRICE]
         info = InfoTraj(months=months, bin_proceeds=bin_proceeds,
                         done=done)
         return obs, self.get_reward(), done, info

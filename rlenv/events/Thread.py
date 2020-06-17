@@ -146,7 +146,8 @@ class RlThread(Thread):
         self.rl_buyer = rl_buyer
         self.sources = sources
         self.stored_concession = con
-        self.event_type = OFFER_EVENT
+        if self.rl_buyer:
+            self.event_type = OFFER_EVENT
 
     def prep_rl_offer(self, con=None, priority=None):
         """

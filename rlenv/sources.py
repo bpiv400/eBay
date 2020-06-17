@@ -120,9 +120,9 @@ class ArrivalSources(Sources):
         self.source_dict[MONTHS_SINCE_LAST] = months_since_last
 
 
-class RlSources(ThreadSources):
+class RlBuyerSources(ThreadSources):
     def __init__(self, x_lstg=None):
-        super(RlSources, self).__init__(x_lstg=x_lstg)
+        super(RlBuyerSources, self).__init__(x_lstg=x_lstg)
         self.source_dict[CLOCK_MAP] = None
         self.source_dict[INT_REMAINING] = 1.0
 

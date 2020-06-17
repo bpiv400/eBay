@@ -5,7 +5,7 @@ from collections import namedtuple
 from constants import HOUR, DAY
 from featnames import START_PRICE
 from rlenv.env_consts import DELAY_EVENT, RL_ARRIVAL_EVENT
-from rlenv.sources import RlSources
+from rlenv.sources import RlBuyerSources
 from rlenv.environments.AgentEnvironment import AgentEnvironment
 from rlenv.events.Arrival import Arrival
 from rlenv.events.Thread import RlThread
@@ -80,7 +80,8 @@ class BuyerEnvironment(AgentEnvironment):
                 sources = self.last_event.sources
                 arrival_time = self.get_arrival_time(self.last_event.priority)
                 sources.init_thread(hist=self.composer.hist)
-                thread = RlThread(priority=arrival_time, sources=sources, con=con, rl_buyer=True,
+                thread = RlThread(priority=arrival_time, sources=sources,
+                                  con=con, rl_buyer=True,
                                   thread_id=self.thread_counter)
                 self.rl_event = thread
                 self.thread_counter += 1
@@ -117,7 +118,7 @@ class BuyerEnvironment(AgentEnvironment):
         """
         self.reset_lstg()
         super().reset()
-        rl_sources = RlSources(x_lstg=self.x_lstg)
+        rl_sources = RlBuyerSources(x_lstg=self.x_lstg)
         event = Arrival(priority=self.start_time, sources=rl_sources)
         self.rl_event = event
         self.queue.push(event)

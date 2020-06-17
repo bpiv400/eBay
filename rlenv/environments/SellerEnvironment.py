@@ -3,6 +3,7 @@ from constants import MAX_DELAY
 from rlenv.environments.AgentEnvironment import AgentEnvironment
 from rlenv.env_consts import OFFER_EVENT, DELAY_EVENT
 from rlenv.env_utils import get_con_outcomes
+from rlenv.events.Thread import RlThread
 
 
 class SellerEnvironment(AgentEnvironment):
@@ -106,6 +107,10 @@ class SellerEnvironment(AgentEnvironment):
         self.queue.push(self.last_event)
         self.last_event = None
         return self.run()
+
+    def make_thread(self, priority):
+        return RlThread(priority=priority, rl_buyer=False,
+                        thread_id=self.thread_counter)
 
     def define_observation_class(self):
         return namedtuple("SellerObs", self.composer.groupings)
