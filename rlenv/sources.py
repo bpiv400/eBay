@@ -121,6 +121,10 @@ class ArrivalSources(Sources):
 
 
 class RlBuyerSources(ThreadSources):
+    """
+    Sources used for the rl buyer arrival event and thread events
+    that feature an rl buyer
+    """
     def __init__(self, x_lstg=None):
         super(RlBuyerSources, self).__init__(x_lstg=x_lstg)
         self.source_dict[CLOCK_MAP] = None

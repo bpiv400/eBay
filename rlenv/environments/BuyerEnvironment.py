@@ -119,7 +119,8 @@ class BuyerEnvironment(AgentEnvironment):
         self.reset_lstg()
         super().reset()
         rl_sources = RlBuyerSources(x_lstg=self.x_lstg)
-        event = Arrival(priority=self.start_time, sources=rl_sources)
+        event = Arrival(priority=self.start_time, sources=rl_sources,
+                        rl=True)
         self.rl_event = event
         self.queue.push(event)
         # should deterministically return RL_ARRIVAL_EVENT at start of lstg
