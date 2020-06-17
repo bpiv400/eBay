@@ -56,7 +56,7 @@ class RlTrainer:
             'verbose': self.system_params['verbose'],
             'arrival': ArrivalInterface(),
             'seller': self.simulated_seller,
-            'buyer': SimulatedBuyer()
+            'buyer': SimulatedBuyer(full=True)
         }
         return env_params
 
@@ -138,7 +138,6 @@ class RlTrainer:
         if self.agent_params['role'] == BYR_PREFIX:
             return BuyerEnvironment
         else:
-            # extend to differentiate between delay environment?
             return SellerEnvironment
 
     def workers_cpus_manual(self):
