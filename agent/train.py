@@ -14,8 +14,8 @@ from rlpyt.samplers.parallel.cpu.sampler import CpuSampler
 from rlpyt.utils.logging.context import logger_context
 from featnames import DELAY
 from constants import RL_LOG_DIR, BYR_PREFIX, PARTS_DIR, TRAIN_RL, DROPOUT
-from agent.agent_consts import (AGENT_STATE, PARAM_DICTS, THREADS_PER_PROC)
-from agent.agent_utils import gen_run_id, save_params, compose_args
+from agent.const import (AGENT_STATE, PARAM_DICTS, THREADS_PER_PROC)
+from agent.util import gen_run_id, save_params, compose_args
 from agent.AgentComposer import AgentComposer
 from agent.models.PgCategoricalAgentModel import PgCategoricalAgentModel
 from rlenv.util import load_chunk

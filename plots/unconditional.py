@@ -4,8 +4,8 @@ import pandas as pd
 from plots.plots_utils import continuous_pdf, cdf_plot, survival_plot, \
     grouped_bar
 from processing.processing_consts import INTERVAL
-from constants import PLOT_DIR, SIM, OBS, BYR_HIST_MODEL, MAX_DELAY, \
-    HOUR, DAY, ARRIVAL_PREFIX
+from constants import PLOT_DIR, SIM, OBS, BYR_HIST_MODEL, \
+    HOUR, DAY, ARRIVAL_PREFIX, MAX_ARRIVAL_DELAY, MAX_TURN_DELAY
 from featnames import CON, MSG, DELAY
 
 
@@ -37,7 +37,7 @@ def draw_arrival(p, suffix=''):
     df = construct_df(p, ARRIVAL_PREFIX)
     df.index = df.index.values / (DAY / INTERVAL[1])
 
-    xticks = np.arange(0, MAX_DELAY[1] / DAY, 3)
+    xticks = np.arange(0, MAX_ARRIVAL_DELAY[1] / DAY, 3)
 
     continuous_pdf(name, df,
                    xticks=xticks,
@@ -67,12 +67,12 @@ def draw_delay(p, suffix='', turns=range(2, 8)):
 
         if turn in [2, 4, 6, 7]:
             df.index = df.index.values / HOUR
-            threshold = MAX_DELAY[turn] / HOUR
+            threshold = MAX_TURN_DELAY / HOUR
             xticks = np.arange(0, threshold + 1e-8, 6)
             xlabel = 'Response time in hours'
         else:
             df.index = df.index.values / DAY
-            threshold = MAX_DELAY[turn] / DAY
+            threshold = MAX_TURN_DELAY / DAY
             xticks = np.arange(0, threshold + 1e-8, 2)
             xlabel = 'Response time in days'
 

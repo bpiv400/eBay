@@ -12,7 +12,7 @@ from constants import (RL_LOG_DIR, SLR_VALUE_INIT, SLR_POLICY_INIT,
                        BYR_DELAY_POLICY_INIT, BYR_DELAY_VALUE_INIT,
                        REINFORCE_DIR, SLR_DELAY_VALUE_INIT,
                        SLR_DELAY_POLICY_INIT)
-from agent.agent_consts import FULL_CON, QUARTILES, HALF, PARAM_DICTS
+from agent.const import FULL_CON, QUARTILES, HALF, PARAM_DICTS
 
 
 def get_con_set(con, byr=False, delay=False):

@@ -1,5 +1,6 @@
 import argparse
 import math
+import pprint
 import torch
 import numpy as np
 from constants import (TURN_FEATS, BYR_PREFIX, SLR_PREFIX,
@@ -8,8 +9,8 @@ from featnames import (OUTCOME_FEATS, MONTHS_SINCE_LSTG, BYR_HIST)
 from utils import load_sizes, load_featnames
 from rlenv.const import *
 from rlenv.util import load_chunk
-from agent.agent_consts import FEAT_TYPE, CON_TYPE, ALL_FEATS, AGENT_PARAMS
-from agent.agent_utils import get_con_set, get_agent_name, compose_args
+from agent.const import FEAT_TYPE, CON_TYPE, ALL_FEATS, AGENT_PARAMS
+from agent.util import get_con_set, get_agent_name, compose_args
 from rlenv.Composer import Composer
 
 
@@ -154,7 +155,9 @@ class AgentComposer(Composer):
         start_index = 0
         # ensure the first appended buyer features are day-wise clock feats
         if self.byr:
-            AgentComposer.verify_sequence(lstg_append, CLOCK_FEATS[:-2], 0)
+            thread_clock_feats = ['thread_{}'.format(feat) for feat in CLOCK_FEATS]
+            thread_clock_feats = thread_clock_feats[:-2]
+            AgentComposer.verify_sequence(lstg_append, thread_clock_feats, 0)
             start_index += len(CLOCK_FEATS[:-2])
 
         # in all cases check that months_since_lstg and byr_hist are next
@@ -200,6 +203,8 @@ def main():
     parser = argparse.ArgumentParser()
     compose_args(arg_dict=AGENT_PARAMS, parser=parser)
     agent_params = vars(parser.parse_args())
+    print('Args:')
+    pprint.pprint(agent_params)
     chunk_path = PARTS_DIR + '{}/chunks/1.gz'.format(TRAIN_RL)
     x_lstg_cols = load_chunk(input_path=chunk_path)[0].columns
     composer = AgentComposer(cols=x_lstg_cols,
