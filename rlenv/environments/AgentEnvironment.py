@@ -3,9 +3,9 @@ import h5py
 import pandas as pd
 import numpy as np
 from collections import namedtuple
-from featnames import START_TIME, START_PRICE
+from featnames import START_TIME, START_PRICE, META
 from constants import MONTH
-from utils import get_months_since_lstg
+from utils import get_months_since_lstg, get_cut
 from agent.spaces.ConSpace import ConSpace
 from agent.agent_utils import get_con_set, get_train_file_path
 from rlpyt.envs.base import Env
@@ -44,6 +44,12 @@ class AgentEnvironment(EbayEnvironment, Env):
         self._observation_space = self.define_observation_space()
         self._obs_class = self.define_observation_class()
 
+        self.cut = None
+
+    @property
+    def delay(self):
+        return self.composer.delay
+
     def define_observation_class(self):
         raise NotImplementedError("Please extend")
 
@@ -75,6 +81,7 @@ class AgentEnvironment(EbayEnvironment, Env):
         self.start_time = self.lookup[START_TIME]
         self.end_time = self.start_time + MONTH
         self.relist_count = 0
+        self.cut = get_cut(self.lookup[META])
 
     def _draw_lstgs(self):
         ids = np.random.choice(self._num_lstgs, ENV_LSTG_COUNT,

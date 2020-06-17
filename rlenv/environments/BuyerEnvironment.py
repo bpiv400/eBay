@@ -19,9 +19,6 @@ class BuyerEnvironment(AgentEnvironment):
         self.rl_event = None
         self.rl_sale = False
 
-    def turn_from_action(self, action=None):  # might not make sense
-        return self.con_set[action]
-
     def get_reward(self):
         """
         Returns the buyer reward for the current turn. For now, assumes
@@ -65,17 +62,6 @@ class BuyerEnvironment(AgentEnvironment):
         else:
             return super().process_offer(event)
 
-    def process_rl_offer(self, event):
-        """
-        Executes the RL agent's stored concession, then
-        if the lstg ends as a result, updates a flag to indicate
-        the RL buyer bought the item
-        """
-        lstg_complete = super().process_rl_offer(event)
-        if lstg_complete:
-            self.rl_sale = True
-        return lstg_complete
-
     def step(self, action):
         """
         Takes in a buyer action, updates the relevant event, then continues
@@ -83,6 +69,7 @@ class BuyerEnvironment(AgentEnvironment):
         """
         con = self.turn_from_action(action=action)
         if self.last_event.event_type == RL_ARRIVAL_EVENT:
+            # rejection indicates delay without action
             if con == 0:
                 # push rl arrival back into queue
                 self.last_event.priority += DAY
@@ -101,9 +88,11 @@ class BuyerEnvironment(AgentEnvironment):
                 self.last_event = None
                 return self.run()
         else:
+            # expiration rejection ends the trajectory
             if con == 0:
                 return self.agent_tuple(done=True)
             else:
+                # otherwise sample offer time
                 offer_time = self.get_offer_time(self.last_event.priority)
                 self.last_event.prep_rl_offer(con=con, priority=offer_time)
                 self.queue.push(self.last_event)

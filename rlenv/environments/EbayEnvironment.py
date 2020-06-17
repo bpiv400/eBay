@@ -75,8 +75,6 @@ class EbayEnvironment:
             # print('processing first offer for thread {} for turn 1'.format(event.thread_id))
             return self.process_first_offer(event)
         elif event.type == OFFER_EVENT:
-            # print('processing offer for thread {} for turn {}'.format(event.thread_id,
-            #                                                           event.turn))
             return self.process_offer(event)
         elif event.type == DELAY_EVENT:
             # print('processing delay for thread {} for turn {}'.format(event.thread_id,
