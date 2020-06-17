@@ -83,8 +83,8 @@ class Thread(Event):
     def slr_expire_rej(self):
         return self.slr_rej()
 
-    def slr_auto_rej(self, time_feats=None, clock_feats=None):
-        self.init_offer(time_feats=time_feats, clock_feats=clock_feats)
+    def slr_auto_rej(self, time_feats=None):
+        self.init_offer(time_feats=time_feats)
         delay_outcomes = np.array([0.0, 0.0, 1.0, 0.0], dtype=np.float)
         self.sources.update_delay(delay_outcomes=delay_outcomes, turn=self.turn)
         return self.slr_rej()
@@ -114,7 +114,13 @@ class Thread(Event):
         }
         return Offer(params=offer_params, rej=False)
 
-    def init_offer(self, time_feats=None, clock_feats=None):
+    def init_offer(self, time_feats=None):
+        """
+        Updates the clock and time features to their current
+        values before sampling a concession / executing an offer
+        :param time_feats: np.array containing time feats
+        """
+        clock_feats = get_clock_feats(self.priority)
         self.sources.init_offer(time_feats=time_feats,
                                 clock_feats=clock_feats,
                                 turn=self.turn)
@@ -140,7 +146,8 @@ class RlThread(Thread):
         self.rl_buyer = rl_buyer
         self.sources = sources
         self.stored_concession = con
-        self.event_type = OFFER_EVENT
+        if self.rl_buyer:
+            self.event_type = OFFER_EVENT
 
     def prep_rl_offer(self, con=None, priority=None):
         """
@@ -179,19 +186,27 @@ class RlThread(Thread):
         """
         After the prescribed delay has elapsed, executes the agent's selected
         concession by updating the relevant sources
+
+        Errors if encountering slr expiration rejection or buyer rejection
+        because these should have already been processed
+
+        slr expiration rejection encoded as con > 1
         :return Offer representing the executed turn
         """
         # process slr rejection
         if self.stored_concession == 0:
-            return self.slr_rej()
+            if self.turn % 2 == 0:
+                return self.slr_rej()
+            else:
+                raise RuntimeError("Buyer rejections should have"
+                                   " already executed")
         elif self.stored_concession > 1:
-            return self.slr_expire_rej()
-            # process seller expiration rejection
-            # probably won't get to this point
-            # will probably get caught by thread_expired check
+            raise RuntimeError("Slr expiration rejections should have"
+                               "already been executed")
         # process ordinary concession or acceptance
         else:
             con_outcomes = get_con_outcomes(con=self.stored_concession,
                                             sources=self.sources(),
                                             turn=self.turn)
+            self.stored_concession = None
             return self.update_con_outcomes(con_outcomes=con_outcomes)

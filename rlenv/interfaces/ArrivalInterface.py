@@ -17,16 +17,25 @@ class ArrivalInterface:
         hist = hist / 10
         return hist
 
-    def first_arrival(self, input_dict=None):
+    def first_arrival(self, input_dict=None, intervals=None):
+        """
+        :param input_dict: standard model input dictionary
+        :param intervals: optional 2-tuple of integers that gives
+        the intervals to sample over (inclusive of the first,
+        exclusive of the second)
+        """
         model = self.first_arrival_model
-        return self.arrival(model=model, input_dict=input_dict)
+        return self.arrival(model=model, input_dict=input_dict,
+                            intervals=intervals)
 
     def inter_arrival(self, input_dict=None):
         model = self.interarrival_model
         return self.arrival(model=model, input_dict=input_dict)
 
     @staticmethod
-    def arrival(model=None, input_dict=None):
+    def arrival(model=None, input_dict=None, intervals=None):
         params = model(input_dict).squeeze()
+        if intervals is not None:
+            params = params[intervals[0]:intervals[1]]
         intervals = sample_categorical(params)
         return intervals

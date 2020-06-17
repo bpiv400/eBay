@@ -120,10 +120,15 @@ class ArrivalSources(Sources):
         self.source_dict[MONTHS_SINCE_LAST] = months_since_last
 
 
-class RlSources(ThreadSources):
+class RlBuyerSources(ThreadSources):
+    """
+    Sources used for the rl buyer arrival event and thread events
+    that feature an rl buyer
+    """
     def __init__(self, x_lstg=None):
-        super(RlSources, self).__init__(x_lstg=x_lstg)
+        super(RlBuyerSources, self).__init__(x_lstg=x_lstg)
         self.source_dict[CLOCK_MAP] = None
+        self.source_dict[INT_REMAINING] = 1.0
 
     def update_arrival(self, clock_feats=None, months_since_lstg=None):
         self.source_dict[MONTHS_SINCE_LSTG] = months_since_lstg
@@ -133,9 +138,4 @@ class RlSources(ThreadSources):
         self.source_dict[CLOCK_MAP] = clock_feats
         super().prepare_hist(time_feats=time_feats, clock_feats=clock_feats,
                              months_since_lstg=months_since_lstg)
-
-    def init_offer(self, time_feats=None, clock_feats=None, turn=None):
-        self.source_dict[CLOCK_MAP] = clock_feats
-        super().init_offer(time_feats=time_feats, clock_feats=clock_feats,
-                           turn=turn)
 

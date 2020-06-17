@@ -32,7 +32,7 @@ class Arrival(Event):
         :return:
         """
         update_args = dict(months_since_lstg=get_months_since_lstg(lstg_start=self.start,
-                                                                   start=self.priority),
+                                                                   time=self.priority),
                            clock_feats=get_clock_feats(self.priority))
         if thread_count is not None:
             update_args['thread_count'] = thread_count

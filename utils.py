@@ -52,14 +52,14 @@ def is_split(con):
     return con in SPLIT_PCTS
 
 
-def get_months_since_lstg(lstg_start=None, start=None):
+def get_months_since_lstg(lstg_start=None, time=None):
     """
     Float number of months between inputs.
     :param lstg_start: seconds from START to lstg start.
-    :param start: seconds from START to focal event.
+    :param time: seconds from START to focal event.
     :return: number of months between lstg_start and start.
     """
-    return (start - lstg_start) / MONTH
+    return (time - lstg_start) / MONTH
 
 
 def slr_norm(con=None, prev_byr_norm=None, prev_slr_norm=None):

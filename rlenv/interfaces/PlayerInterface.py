@@ -8,9 +8,10 @@ from utils import load_model
 
 
 class PlayerInterface:
-    def __init__(self, byr=False):
+    def __init__(self, byr=False, agent=False):
         # store args
         self.byr = byr
+        self.agent = agent
 
     def con(self, input_dict=None, turn=None):
         params = self.query_con(input_dict=input_dict, turn=turn)
@@ -20,8 +21,10 @@ class PlayerInterface:
         params = self.query_msg(input_dict=input_dict, turn=turn)
         return self.sample_msg(params=params)
 
-    def delay(self, input_dict=None, turn=None):
+    def delay(self, input_dict=None, turn=None, max_interval=None):
         params = self.query_delay(input_dict=input_dict, turn=turn)
+        if max_interval is not None:
+            params = params[:max_interval]
         return self.sample_delay(params=params)
 
     def sample_con(self, params=None, turn=None):
@@ -45,7 +48,7 @@ class PlayerInterface:
 
 class SimulatedPlayer(PlayerInterface):
     def __init__(self, byr=False, full=True):
-        super().__init__(byr=byr)
+        super().__init__(byr=byr, agent=False)
 
         self.full = full
 

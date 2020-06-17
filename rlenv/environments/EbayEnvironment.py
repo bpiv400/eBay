@@ -75,8 +75,6 @@ class EbayEnvironment:
             # print('processing first offer for thread {} for turn 1'.format(event.thread_id))
             return self.process_first_offer(event)
         elif event.type == OFFER_EVENT:
-            # print('processing offer for thread {} for turn {}'.format(event.thread_id,
-            #                                                           event.turn))
             return self.process_offer(event)
         elif event.type == DELAY_EVENT:
             # print('processing delay for thread {} for turn {}'.format(event.thread_id,
@@ -120,10 +118,9 @@ class EbayEnvironment:
         elif event.is_rej():
             if slr_offer:
                 self._process_slr_rej(event, offer)
-                return False
             else:
                 self._process_byr_rej(offer)
-                return False
+            return False
         else:
             if not slr_offer:
                 auto = self._check_slr_autos(offer.price)
@@ -155,7 +152,7 @@ class EbayEnvironment:
         """
         # prepare sources and features
         sources = ThreadSources(x_lstg=self.x_lstg)
-        months_since_lstg = get_months_since_lstg(lstg_start=self.start_time, start=event.priority)
+        months_since_lstg = get_months_since_lstg(lstg_start=self.start_time, time=event.priority)
         time_feats = self.time_feats.get_feats(time=event.priority, thread_id=event.thread_id)
         sources.prepare_hist(time_feats=time_feats, clock_feats=get_clock_feats(event.priority),
                              months_since_lstg=months_since_lstg)
@@ -194,8 +191,10 @@ class EbayEnvironment:
         event.update_arrival(thread_count=self.thread_counter - 1)
 
         # call model to sample inter arrival time and update arrival check priority
-        input_dict = self._get_arrival_input_dict(event=event)
-        seconds = self.get_arrival(time=event.priority, input_dict=input_dict)
+        input_dict = self.get_arrival_input_dict(event=event)
+        first = event.priority == self.start_time
+        seconds = self.get_arrival(first=first, input_dict=input_dict,
+                                   time=event.priority)
         event.priority = min(event.priority + seconds, self.end_time)
 
         # if a buyer arrives, create a thread at the arrival time
@@ -229,12 +228,9 @@ class EbayEnvironment:
 
     def process_delay(self, event):
         # no need to check expiration since this must occur at the same time as the previous offer
-        model_name = model_str(DELAY, turn=event.turn)
-        input_dict = self.composer.build_input_dict(model_name=model_name, sources=event.sources(),
-                                                    turn=event.turn)
-        delay_seconds = self.get_delay(input_dict=input_dict, turn=event.turn, thread_id=event.thread_id,
-                                       time=event.priority)
-        # print('delay seconds: {}'.format(delay_seconds))
+        input_dict = self.get_delay_input_dict(event)
+        delay_seconds = self.get_delay(input_dict=input_dict, turn=event.turn,
+                                       thread_id=event.thread_id, time=event.priority)
         # Test environment returns None when delay model is mistakenly called
         if delay_seconds is None:
             # print("No delay returned; exiting listing.")s
@@ -293,10 +289,9 @@ class EbayEnvironment:
     def _process_slr_auto_rej(self, event, offer):
         self.time_feats.update_features(offer=offer)
         event.change_turn()
-        clock_feats = get_clock_feats(event.priority)
         time_feats = self.time_feats.get_feats(thread_id=event.thread_id,
                                                time=event.priority)
-        offer = event.slr_auto_rej(time_feats=time_feats, clock_feats=clock_feats)
+        offer = event.slr_auto_rej(time_feats=time_feats)
         self.record(event)
         self.time_feats.update_features(offer=offer)
         self._init_delay(event)
@@ -325,11 +320,11 @@ class EbayEnvironment:
             msg = self.buyer.msg(input_dict=input_dict, turn=turn)
         return msg
 
-    def get_arrival(self, input_dict=None, time=None):
-        if time == self.start_time:
-            intervals = self.arrival.first_arrival(input_dict)
+    def get_arrival(self, input_dict=None, time=None, first=None, intervals=None):
+        if first:
+            intervals = self.arrival.first_arrival(input_dict=input_dict, intervals=intervals)
         else:
-            intervals = self.arrival.inter_arrival(input_dict)
+            intervals = self.arrival.inter_arrival(input_dict=input_dict)
         width = self.intervals[1]
         return int((intervals + np.random.uniform()) * width)
 
@@ -358,21 +353,31 @@ class EbayEnvironment:
         # print(event.summary())
         return offer
 
-    def get_delay(self, input_dict=None, turn=None, thread_id=None, time=None):
+    def get_delay(self, input_dict=None, turn=None, thread_id=None, time=None,
+                  max_interval=None):
         if turn % 2 == 0:
-            index = self.seller.delay(input_dict=input_dict, turn=turn)
+            index = self.seller.delay(input_dict=input_dict, turn=turn,
+                                      max_interval=max_interval)
         else:
-            index = self.buyer.delay(input_dict=input_dict, turn=turn)
+            index = self.buyer.delay(input_dict=input_dict, turn=turn,
+                                     max_interval=max_interval)
         seconds = int((index + np.random.uniform()) * self.intervals[turn])
         seconds = min(seconds, MAX_DELAY[turn])
         return seconds
 
-    def _get_arrival_input_dict(self, event=None):
-        if event.priority == self.start_time:
+    def get_arrival_input_dict(self, event=None, first=False):
+        if first:
             model_name = FIRST_ARRIVAL_MODEL
         else:
             model_name = INTERARRIVAL_MODEL
         input_dict = self.composer.build_input_dict(model_name=model_name,
                                                     sources=event.sources(),
                                                     turn=None)
+        return input_dict
+
+    def get_delay_input_dict(self, event=None):
+        model_name = model_str(DELAY, turn=event.turn)
+        input_dict = self.composer.build_input_dict(model_name=model_name,
+                                                    sources=event.sources(),
+                                                    turn=event.turn)
         return input_dict

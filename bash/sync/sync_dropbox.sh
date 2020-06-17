@@ -11,6 +11,11 @@ do
 done
 rclone copy ~/weka/eBay/partitions/test_rl/chunks/1_test.gz dropbox:ebay/data/partitions/test_rl/chunks
 
-
+for init_type in policy value
+do
+    rclone copy ~/weka/eBay/inputs/test_rl/${init_type}_slr.gz dropbox:ebay/data/inputs/test_rl
+    rclone copy ~/weka/eBay/inputs/test_rl/${init_type}_slr_delay.gz dropbox:ebay/data/inputs/test_rl
+    rclone copy ~/weka/eBay/inputs/test_rl/${init_type}_byr_delay.gz dropbox:ebay/data/inputs/test_rl
+done
 # agent training input files
 rclone sync ~/weka/eBay/agent/train dropbox:ebay/data/agent/train

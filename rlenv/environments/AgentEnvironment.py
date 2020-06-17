@@ -3,18 +3,18 @@ import h5py
 import pandas as pd
 import numpy as np
 from collections import namedtuple
+from featnames import START_TIME, START_PRICE, META
+from constants import MONTH
+from utils import get_months_since_lstg, get_cut
+from agent.spaces.ConSpace import ConSpace
+from agent.agent_utils import get_con_set, get_train_file_path
 from rlpyt.envs.base import Env
 from rlpyt.spaces.composite import Composite
 from rlpyt.spaces.float_box import FloatBox
-from featnames import START_TIME, START_PRICE
-from constants import MONTH
 from rlenv.const import LOOKUP, X_LSTG, ENV_LSTG_COUNT
 from rlenv.environments.EbayEnvironment import EbayEnvironment
 from rlenv.Recorder import Recorder
-from agent.agent_utils import get_con_set, get_train_file_path
-from agent.agent_consts import seller_groupings
 
-SellerObs = namedtuple("SellerObs", seller_groupings)
 InfoTraj = namedtuple("InfoTraj", ["months", "bin_proceeds", "done"])
 
 
@@ -34,12 +34,24 @@ class AgentEnvironment(EbayEnvironment, Env):
         self._lookup_slice, self._x_lstg_slice = None, None
         self._ix = -1
         self.relist_count = 0
-        
+
         self.last_event = None  # type: Thread
         # action and observation spaces
-        self.con_set = get_con_set(self.composer.con_type)
-        self._action_space = self.define_action_space(con_set=self.con_set)
+        self.con_set = get_con_set(con=self.composer.con_type,
+                                   byr=self.composer.byr,
+                                   delay=self.composer.delay)
+        self._action_space = self.define_action_space()
         self._observation_space = self.define_observation_space()
+        self._obs_class = self.define_observation_class()
+
+        self.cut = None
+
+    @property
+    def delay(self):
+        return self.composer.delay
+
+    def define_observation_class(self):
+        raise NotImplementedError("Please extend")
 
     def open_input_file(self):
         os.environ["HDF5_USE_FILE_LOCKING"] = "FALSE"
@@ -52,7 +64,7 @@ class AgentEnvironment(EbayEnvironment, Env):
     def define_observation_space(self):
         sizes = self.composer.agent_sizes['x']
         boxes = [FloatBox(-1000, 1000, shape=size) for size in sizes.values()]
-        return Composite(boxes, SellerObs)
+        return Composite(boxes, self._obs_class)
 
     def reset_lstg(self):
         """
@@ -69,6 +81,7 @@ class AgentEnvironment(EbayEnvironment, Env):
         self.start_time = self.lookup[START_TIME]
         self.end_time = self.start_time + MONTH
         self.relist_count = 0
+        self.cut = get_cut(self.lookup[META])
 
     def _draw_lstgs(self):
         ids = np.random.choice(self._num_lstgs, ENV_LSTG_COUNT,
@@ -96,16 +109,65 @@ class AgentEnvironment(EbayEnvironment, Env):
         obs_dict = self.composer.build_input_dict(model_name=None,
                                                   sources=sources,
                                                   turn=turn)
-        return SellerObs(**obs_dict)
+        return self._obs_class(**obs_dict)
+
+    def get_offer_time(self, event):
+        # query with delay model
+        input_dict = self.get_delay_input_dict(event=event)
+        width = self.intervals[event.turn]
+        intervals = (self.end_time - event.priority) / width
+        max_interval = min(int(intervals), int(event.max_delay / width))
+        delay = self.get_delay(input_dict=input_dict, turn=event.turn,
+                               thread_id=event.thread_id, time=event.time,
+                               max_interval=max(1, max_interval))
+        return max(delay, 1) + event.priority
+
+    def process_rl_offer(self, event):
+        """
+        :param RlThread event:
+        :return: bool indicating the lstg is over
+        """
+        # check whether the lstg expired, censoring this offer
+        if self.is_lstg_expired(event):
+            return self.process_lstg_expiration(event)
+        slr_offer = event.turn % 2 == 0
+        if event.thread_expired():
+            if slr_offer:
+                self.process_slr_expire(event)
+                return False
+            else:
+                raise RuntimeError("Thread should never expire before"
+                                   "buyer agent offer")
+        time_feats = self.time_feats.get_feats(thread_id=event.thread_id,
+                                               time=event.priority)
+        months_since_lstg = None
+        if event.turn == 1:
+            months_since_lstg = get_months_since_lstg(lstg_start=self.start_time,
+                                                      time=event.priority)
+        event.init_rl_offer(months_since_lstg=months_since_lstg, time_feats=time_feats)
+        offer = event.execute_offer()
+        return self.process_post_offer(event, offer)
 
     def turn_from_action(self, action=None):
-        raise NotImplementedError()
+        return self.con_set[action]
 
     def get_reward(self):
         raise NotImplementedError()
 
     @property
     def horizon(self):
+        pass
+
+    def define_action_space(self):
+        return ConSpace(con_set=self.con_set)
+
+    # TODO: may update
+    def record(self, event, byr_hist=None, censored=False):
+        if not censored and byr_hist is None:
+            if self.verbose:
+                Recorder.print_offer(event)
+
+    def is_agent_turn(self, event):
         raise NotImplementedError()
 
     def step(self, action):
@@ -116,18 +178,5 @@ class AgentEnvironment(EbayEnvironment, Env):
         """
         raise NotImplementedError()
 
-    # TODO: May update
-    def record(self, event, byr_hist=None, censored=False):
-        if not censored and byr_hist is None:
-            # print('summary in record')
-            # print(event.summary())
-            if self.verbose:
-                Recorder.print_offer(event)
-
-    def is_agent_turn(self, event):
-        raise NotImplementedError()
-
-    def define_action_space(self, con_set=None):
-        raise NotImplementedError()
 
 

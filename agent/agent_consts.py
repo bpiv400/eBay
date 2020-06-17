@@ -1,5 +1,5 @@
 import psutil
-from constants import BYR_PREFIX, SLR_PREFIX, DROPOUT
+from constants import BYR_PREFIX, SLR_PREFIX
 
 # state dictionaries
 AGENT_STATE = 'agent_state_dict'
@@ -9,18 +9,6 @@ OPTIM_STATE = 'optimizer_state_dict'
 TRAIN_DIR = "train"
 TRAIN_SEED = 10
 
-# seller input groups
-seller_groupings = [
-    'lstg',
-    'w2v_byr',
-    'w2v_slr',
-    'cat',
-    'cndtn',
-    'slr'
-]
-for i in range(1, 7):
-    seller_groupings.append('offer{}'.format(i))
-    del i
 
 # concession set constants
 CON_TYPE = 'con_type'
@@ -75,7 +63,3 @@ THREADS_PER_PROC = 1
 
 # final learning rate
 LR1 = 1e-7
-
-# seconds in buyer arrival window
-BUYER_ARRIVE_INTERVAL = 8 * 60 * 60
-DELAY_INTERVAL = 5 * 60
