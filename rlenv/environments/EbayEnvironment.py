@@ -65,6 +65,7 @@ class EbayEnvironment:
                     return event, True
 
     def process_event(self, event):
+        print(event.type)
         if INTERACT and event.type != ARRIVAL:
             input('Press Enter to continue...')
         if event.type == ARRIVAL:

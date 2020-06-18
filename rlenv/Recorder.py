@@ -1,6 +1,9 @@
 import pandas as pd
 from compress_pickle import dump
-from featnames import START_TIME, START_PRICE, TIME_FEATS, MSG, CON, LSTG, BYR_HIST
+from constants import MONTH
+from featnames import (START_TIME, START_PRICE, TIME_FEATS,
+                       MSG, CON, LSTG, BYR_HIST, ACC_PRICE,
+                       DEC_PRICE)
 
 # variable names
 INDEX = 'index'
@@ -85,6 +88,18 @@ class Recorder:
             print('Days: {}, Delay: {}'.format(days, delay))
         print('Offer type: {}'.format(otype))
         print('Concession: {} | norm: {} | message: {}'.format(con, norm, msg))
+
+    @staticmethod
+    def print_lstg(lookup):
+        print("LSTG: {}".format(int(lookup[LSTG])))
+        print('start time: {} | end time: {}'.format(int(lookup[START_TIME]),
+                                                     int(lookup[START_TIME] + MONTH)))
+        print(('Start price: {} | accept price: {}' +
+              ' | decline price: {}').format(lookup[START_PRICE], lookup[ACC_PRICE],
+                                             lookup[DEC_PRICE]))
+        norm_acc = lookup[START_PRICE] / lookup[ACC_PRICE]
+        norm_dec = lookup[START_PRICE] / lookup[DEC_PRICE] if lookup[DEC_PRICE] > 0 else 0.0
+        print('Norm accept price: {} | Norm decline price: {}'.format(norm_acc, norm_dec))
 
     def print_sale(self, sale, price, dur):
         """
