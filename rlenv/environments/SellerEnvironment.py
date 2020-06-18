@@ -1,10 +1,17 @@
 from collections import namedtuple
 from constants import MAX_DELAY_TURN
+from utils import load_sizes
+from agent.util import get_agent_name
 from rlenv.const import OFFER_EVENT, DELAY_EVENT
 from rlenv.environments.AgentEnvironment import AgentEnvironment
 from rlenv.events.Thread import RlThread
 from rlenv.Recorder import Recorder
 from rlenv.util import get_con_outcomes
+
+SELLER_GROUPINGS = list(load_sizes(get_agent_name(byr=False, delay=False, policy=True))['x'].keys())
+SELLER_DELAY_GROUPINGS = list(load_sizes(get_agent_name(byr=False, delay=True, policy=True))['x'].keys())
+SellerObs = namedtuple("SellerObs", SELLER_GROUPINGS)
+SellerDelayObs = namedtuple("SellerDelayObs", SELLER_DELAY_GROUPINGS)
 
 
 class SellerEnvironment(AgentEnvironment):
@@ -125,7 +132,10 @@ class SellerEnvironment(AgentEnvironment):
                         thread_id=self.thread_counter)
 
     def define_observation_class(self):
-        return namedtuple("SellerObs", self.composer.groupings)
+        if self.delay:
+            return SellerDelayObs
+        else:
+            return SellerObs
 
     def get_reward(self):
         if not self.last_event.is_sale():
