@@ -107,6 +107,7 @@ class SellerEnvironment(AgentEnvironment):
         else:
             delay = MAX_DELAY_TURN
             self.last_event.update_delay(seconds=MAX_DELAY_TURN)
+        print('after agent: {}'.format(self.last_event.type))
         self.queue.push(self.last_event)
         self.last_event = None
         Recorder.print_agent_turn(con=con, delay=delay / MAX_DELAY_TURN)

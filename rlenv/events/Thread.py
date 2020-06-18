@@ -141,7 +141,7 @@ class RlThread(Thread):
         self.sources = sources
         self.stored_concession = con
         if self.rl_buyer:
-            self.event_type = OFFER_EVENT
+            self.type = OFFER_EVENT
 
     def prep_rl_offer(self, con=None, priority=None):
         """
@@ -151,7 +151,7 @@ class RlThread(Thread):
         :param priority: time that the offer will take place
         """
         assert self.turn != 1
-        self.event_type = OFFER_EVENT
+        self.type = OFFER_EVENT
         self.stored_concession = con
         delay_outcomes = get_delay_outcomes(seconds=priority-self.priority,
                                             turn=self.turn)

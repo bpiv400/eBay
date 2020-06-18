@@ -95,6 +95,12 @@ class PgCategoricalAgentModel(AgentModel):
         pi = pi.squeeze()
         v = v.squeeze()
 
+
+        # supplementing the above transformations
+        if len(v.shape) == 0:
+            v = v.unsqueeze(0)
+            pi = pi.unsqueeze(0)
+
         return pi, v
 
     def _init_network(self, policy=True):
