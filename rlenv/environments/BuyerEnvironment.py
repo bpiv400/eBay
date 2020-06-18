@@ -4,7 +4,7 @@ Environment for training the buyer agent
 from collections import namedtuple
 from constants import HOUR, DAY
 from featnames import START_PRICE
-from rlenv.env_consts import DELAY_EVENT, RL_ARRIVAL_EVENT
+from rlenv.const import DELAY_EVENT, RL_ARRIVAL_EVENT
 from rlenv.sources import RlBuyerSources
 from rlenv.environments.AgentEnvironment import AgentEnvironment
 from rlenv.events.Arrival import Arrival

@@ -8,7 +8,8 @@ import pandas as pd
 from compress_pickle import load
 from torch.distributions.categorical import Categorical
 from torch.distributions.bernoulli import Bernoulli
-from constants import PARTS_DIR, INPUT_DIR, DAY, ARRIVAL_MODELS
+from constants import PARTS_DIR, INPUT_DIR, DAY, ARRIVAL_MODELS, \
+    MAX_DELAY_TURN
 from rlenv.const import (SIM_CHUNKS_DIR, SIM_VALS_DIR, OFFER_MAPS,
                          SIM_DISCRIM_DIR, DATE_FEATS, NORM_IND)
 from utils import extract_clock_feats, is_split, slr_norm, byr_norm
@@ -260,23 +261,22 @@ def load_chunk(base_dir=None, num=None, input_path=None):
     return x_lstg, lookup
 
 
-def get_delay_outcomes(seconds=0, max_delay=0, turn=0):
+def get_delay_outcomes(seconds=0, turn=0):
     """
     Generates all features
     :param seconds: number of seconds delayed
-    :param max_delay: max possible duration of delay
     :param turn: turn number
     :return: np.array
     """
-    delay = get_delay(seconds, max_delay)
+    delay = get_delay(seconds)
     days = get_days(seconds)
     exp = get_exp(delay, turn)
     auto = get_auto(delay, turn)
     return np.array([days, delay, auto, exp], dtype=np.float)
 
 
-def get_delay(seconds, max_delay):
-    return seconds / max_delay
+def get_delay(seconds):
+    return seconds / MAX_DELAY_TURN
 
 
 def get_days(seconds):

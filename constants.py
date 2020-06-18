@@ -143,8 +143,8 @@ MODEL_NORM = 'batch'
 LISTING_FEE = .03
 
 # meta categories with sale fees != .09 * price
-META_7 = [21, 10]
-META_6 = [32, 14, 11, 7, 28]
+META_7 = [11116, 619]
+META_6 = [58058, 1249, 625, 293, 15032]
 
 # threshold for likelihood of no arrivals
 NO_ARRIVAL_CUTOFF = .50 ** (1.0 / 12)
@@ -157,3 +157,6 @@ NUM_WORKERS_RL = 32
 
 # fixed random seed
 SEED = 123456
+
+# flag to prevent loading models from stored parameters
+EMPTY = True

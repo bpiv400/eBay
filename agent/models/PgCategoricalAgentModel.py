@@ -2,7 +2,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 from torch.nn.functional import softmax
-from constants import MODEL_NORM
+from constants import MODEL_NORM, EMPTY
 from utils import load_state_dict, load_sizes
 from agent.util import get_agent_name
 from agent.models.AgentModel import AgentModel
@@ -100,9 +100,10 @@ class PgCategoricalAgentModel(AgentModel):
     def _init_network(self, policy=True):
         network_name = get_agent_name(byr=self.byr, policy=policy, delay=self.delay)
         sizes = load_sizes(network_name)
-        init_dict = load_state_dict(network_name)
         net = FeedForward(sizes=sizes,
                           dropout=self.dropout,
                           norm=MODEL_NORM)
-        net.load_state_dict(init_dict, strict=True)
+        if not EMPTY:
+            init_dict = load_state_dict(network_name)
+            net.load_state_dict(init_dict, strict=True)
         return net

@@ -24,7 +24,7 @@ class AgentEnvironment(EbayEnvironment, Env):
         super().__init__(params=kwargs)
         # attributes for getting lstg data
         if 'filename' not in kwargs:
-            self._filename = get_train_file_path(1)
+            self._filename = get_train_file_path(0)
         else:
             self._filename = kwargs['filename']
         self._file = None
@@ -41,8 +41,8 @@ class AgentEnvironment(EbayEnvironment, Env):
                                    byr=self.composer.byr,
                                    delay=self.composer.delay)
         self._action_space = self.define_action_space()
-        self._observation_space = self.define_observation_space()
         self._obs_class = self.define_observation_class()
+        self._observation_space = self.define_observation_space()
 
         self.cut = None
 

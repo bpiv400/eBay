@@ -62,8 +62,7 @@ class Thread(Event):
 
     def update_delay(self, seconds=None):
         # update outcomes
-        delay_outcomes = get_delay_outcomes(seconds=seconds, max_delay=self.max_delay,
-                                            turn=self.turn)
+        delay_outcomes = get_delay_outcomes(seconds=seconds, turn=self.turn)
         self.sources.update_delay(delay_outcomes=delay_outcomes, turn=self.turn)
         # change event type
         self.type = OFFER_EVENT
@@ -151,10 +150,10 @@ class RlThread(Thread):
         :param con: concession associated with incoming offer
         :param priority: time that the offer will take place
         """
+        assert self.turn != 1
         self.event_type = OFFER_EVENT
         self.stored_concession = con
         delay_outcomes = get_delay_outcomes(seconds=priority-self.priority,
-                                            max_delay=self.max_delay,
                                             turn=self.turn)
         self.sources.update_delay(delay_outcomes=delay_outcomes, turn=self.turn)
         self.priority = priority
