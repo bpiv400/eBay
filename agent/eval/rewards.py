@@ -6,7 +6,7 @@ from compress_pickle import load
 from torch.utils.tensorboard import SummaryWriter
 from tensorboard.backend.event_processing.event_multiplexer import \
     EventMultiplexer
-from constants import BYR_PREFIX, SLR_PREFIX, RL_LOG_DIR, SIM_CHUNKS
+from constants import BYR, SLR, RL_LOG_DIR, SIM_CHUNKS
 
 SCALARS = {'Average': np.mean,
            'Max': np.max,
@@ -23,7 +23,7 @@ def main():
     # command line arguments
     parser = argparse.ArgumentParser()
     parser.add_argument('--byr', action='store_true')
-    role = BYR_PREFIX if parser.parse_args().byr else SLR_PREFIX
+    role = BYR if parser.parse_args().byr else SLR
 
     # find all runs
     parent_dir = RL_LOG_DIR + '{}/'.format(role)

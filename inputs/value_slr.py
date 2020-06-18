@@ -1,21 +1,27 @@
 import numpy as np
 import pandas as pd
-from inputs.util import save_files, get_value_data, \
-    construct_x_init, get_sale_norm
+from inputs.util import save_files, construct_x_slr, \
+    get_sale_norm, create_index_slr
 from inputs.policy_slr import input_parameters
-from utils import get_cut, slr_reward, max_slr_reward
+from utils import get_cut, slr_reward, max_slr_reward, load_file
 from inputs.const import DELTA_MONTH, DELTA_ACTION, C_ACTION
-from constants import IDX, SLR_PREFIX, MONTH, TRAIN_RL, VALIDATION, TEST
-from featnames import EXP, AUTO, META, START_PRICE, START_TIME
+from constants import MONTH, TRAIN_RL, VALIDATION, TEST, \
+    NO_ARRIVAL_CUTOFF
+from featnames import META, START_PRICE, START_TIME, CON, \
+    NO_ARRIVAL
 
 
-def get_duration(offers, clock, lookup):
-    mask = offers.index.isin(IDX[SLR_PREFIX], level='index') \
-           & ~offers[EXP] & ~offers[AUTO]
-    idx = mask[mask].index
-    elapsed = (clock.loc[mask] - lookup.start_time.reindex(
-        index=idx, level='lstg')) / MONTH
-    months = elapsed + elapsed.index.get_level_values(level='sim')
+def get_duration(idx, clock, lookup, delay):
+    # calculate number of months from listing start to action
+    if delay:
+        t_now = clock.groupby(clock.index.names[:-1]).shift()
+        t_now = t_now.dropna().astype(clock.dtype)
+        t_now = t_now.loc[idx]
+    else:
+        t_now = clock.loc[idx]
+    t_start = lookup.start_time.reindex(index=idx, level='lstg')
+    months = (t_now - t_start) / MONTH \
+        + t_start.index.get_level_values(level='sim')
     return months.rename('months')
 
 
@@ -25,7 +31,7 @@ def get_sales(offers, clock, lookup):
     relist_count = norm.index.get_level_values(level='sim')
     norm = norm.reset_index(['sim', 'thread', 'index'], drop=True)
     # time of sale
-    sale_time = clock[is_sale].reset_index(
+    sale_time = clock[offers[CON] == 1].reset_index(
         ['sim', 'thread', 'index'], drop=True)
     elapsed = (sale_time - lookup[START_TIME]) / MONTH
     assert (elapsed >= 0).all()
@@ -39,13 +45,33 @@ def get_sales(offers, clock, lookup):
                       months.rename('months_to_sale')], axis=1)
 
 
+def get_sim_data(part):
+    # indices of listings
+    p0 = load_file(part, NO_ARRIVAL)
+    idx = p0[p0 <= NO_ARRIVAL_CUTOFF].index
+    # load (simulated) data
+    lookup = load_file(part, 'lookup')
+    threads = load_file(part, 'x_thread_sim')
+    offers = load_file(part, 'x_offer_sim')
+    clock = load_file(part, 'clock_sim')
+    # drop listings with infrequent arrivals
+    lookup = lookup.reindex(index=idx)
+    threads = threads.reindex(index=idx, level='lstg')
+    offers = offers.reindex(index=idx, level='lstg')
+    clock = clock.reindex(index=idx, level='lstg')
+    return lookup, threads, offers, clock
+
+
 def process_inputs(part, delay):
     # data
-    lookup, threads, offers, clock = get_value_data(part)
+    lookup, threads, offers, clock = get_sim_data(part)
+
+    # master index
+    idx = create_index_slr(offers, delay)
 
     # value components
     sales = get_sales(offers, clock, lookup)
-    months_since_start = get_duration(offers, clock, lookup)
+    months_since_start = get_duration(idx, clock, lookup, delay)
     df = months_since_start.to_frame().join(sales)
 
     # discounted values
@@ -66,10 +92,8 @@ def process_inputs(part, delay):
     y = np.maximum(np.round(norm_values * 100), 0.).astype('uint8')
 
     # input features dictionary
-    x = construct_x_init(part=part, role=SLR_PREFIX, delay=delay,
-                         idx=y.index, offers=offers,
-                         threads=threads, clock=clock,
-                         lstg_start=lookup[START_TIME])
+    x = construct_x_slr(part=part, delay=delay, idx=y.index,
+                        offers=offers, threads=threads)
 
     return {'y': y, 'x': x}
 

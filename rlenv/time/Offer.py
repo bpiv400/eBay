@@ -1,14 +1,14 @@
 from random import random
-from constants import BYR_PREFIX, SLR_PREFIX
+from constants import BYR, SLR
 from rlenv.time.offer_types import BYR_REJECTION, SLR_REJECTION, OFFER
 
 
 class Offer:
     def __init__(self, params=None, rej=False, accept=False):
         # set offer type
-        if rej and params['player'] == BYR_PREFIX:
+        if rej and params['player'] == BYR:
             self.otype = BYR_REJECTION
-        elif rej and params['player'] == SLR_PREFIX:
+        elif rej and params['player'] == SLR:
             self.otype = SLR_REJECTION
         else:
             self.otype = OFFER

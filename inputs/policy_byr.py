@@ -1,47 +1,35 @@
 import pandas as pd
-from inputs.util import get_policy_data, save_files, construct_x_init
-from utils import input_partition
-from constants import IDX, BYR_PREFIX, CON_MULTIPLIER, \
-    TRAIN_MODELS, VALIDATION, TEST, DAY
-from featnames import CON
+from inputs.util import save_files, construct_x_byr, \
+    create_index_byr
+from utils import input_partition, load_file
+from constants import BYR, CON_MULTIPLIER, \
+    TRAIN_MODELS, VALIDATION, TEST
+from featnames import CON, START_TIME
 
 
-def get_y(df, lstg_start):
-    # waiting periods before first offer
-    arrival_time = df.clock.xs(1, level='index', drop_level=False)
-    days = ((arrival_time - lstg_start) // DAY).rename('day')
-    # expand index
-    days0 = days[days > 0] - 1
-    wide = days0.to_frame().assign(con=0).set_index(
-        'day', append=True).squeeze().unstack()
-    for i in wide.columns:
-        wide.loc[i < days0, i] = 0.
-    y0 = wide.stack().astype('int8')
-    # combine concession and waiting time
-    y = (df[CON] * CON_MULTIPLIER).astype('int8')
-    y = y.to_frame().join(days.reindex(
-        index=y.index, fill_value=0)).set_index(
-        'day', append=True).squeeze()
-    y = pd.concat([y0, y]).sort_index()
+def get_y(idx, idx1, offers):
+    y = pd.Series(0, dtype='int8', index=idx)
+    y.loc[idx1] = (offers[CON] * CON_MULTIPLIER).astype(y.dtype)
     return y
 
 
 def process_inputs(part):
     # load dataframes
-    offers, threads, clock, lstg_start = get_policy_data(part)
+    offers = load_file(part, 'x_offer')
+    threads = load_file(part, 'x_thread')
+    clock = load_file(part, 'clock')
+    lstg_start = load_file(part, 'lookup')[START_TIME]
 
-    # restict by role, join timestamps and offer features
-    df = clock[clock.index.isin(IDX[BYR_PREFIX], level='index')]
-    df = df.to_frame().join(offers)
+    # master index
+    idx, idx1 = create_index_byr(clock, lstg_start)
 
     # outcome
-    y = get_y(df, lstg_start)
+    y = get_y(idx, idx1, offers)
 
     # input feature dictionary
-    x = construct_x_init(part=part, role=BYR_PREFIX, delay=True,
-                         idx=y.index, offers=offers,
-                         threads=threads, clock=clock,
-                         lstg_start=lstg_start)
+    x = construct_x_byr(part=part, idx=y.index, offers=offers,
+                        threads=threads, clock=clock,
+                        lstg_start=lstg_start)
 
     return {'y': y, 'x': x}
 
@@ -49,7 +37,7 @@ def process_inputs(part):
 def main():
     # extract parameters from command line
     part = input_partition()
-    name = 'policy_{}_delay'.format(BYR_PREFIX)
+    name = 'policy_{}_delay'.format(BYR)
     print('%s/%s' % (part, name))
 
     # policy is trained on TRAIN_MODELS

@@ -3,7 +3,7 @@ import pandas as pd
 from processing.util import collect_date_clock_feats, \
     get_days_delay, get_norm, get_con
 from utils import input_partition, load_file, is_split
-from constants import PARTS_DIR, SLR_PREFIX, IDX, CLEAN_DIR
+from constants import PARTS_DIR, SLR, IDX, CLEAN_DIR
 from featnames import DAYS, DELAY, CON, NORM, SPLIT, MSG, REJECT, \
     AUTO, EXP, TIME_FEATS, START_PRICE
 
@@ -22,7 +22,7 @@ def get_x_offer(start_price, events, tf):
     df[DAYS], df[DELAY] = get_days_delay(events.clock.unstack())
 
     # auto and exp are functions of delay
-    df[AUTO] = (df[DELAY] == 0) & df.index.isin(IDX[SLR_PREFIX], level='index')
+    df[AUTO] = (df[DELAY] == 0) & df.index.isin(IDX[SLR], level='index')
     df[EXP] = (df[DELAY] == 1) | events.censored
 
     # concession

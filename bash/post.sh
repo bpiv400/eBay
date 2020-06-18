@@ -4,4 +4,4 @@
 #$ -j y
 #$ -o logs/train/
 
-python repo/train/post.py
+python repo/train/post.py --set "$1"

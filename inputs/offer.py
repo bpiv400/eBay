@@ -3,8 +3,8 @@ import numpy as np
 import pandas as pd
 from inputs.util import save_files, check_zero, get_x_thread
 from utils import get_remaining, load_file, init_x
-from inputs.const import INTERVAL, INTERVAL_COUNTS
-from constants import IDX, DAY, MAX_DELAY, BYR_PREFIX, SLR_PREFIX, \
+from inputs.const import DELAY_INTERVAL, DELAY_INTERVAL_CT
+from constants import IDX, DAY, MAX_DELAY, BYR, SLR, \
     PARTITIONS, CON_MULTIPLIER
 from featnames import CON, NORM, SPLIT, MSG, AUTO, EXP, REJECT, DAYS, \
     DELAY, INT_REMAINING, TIME_FEATS
@@ -23,7 +23,7 @@ def get_y_con(df, turn):
 
 def get_y_msg(df, turn):
     # for buyers, drop accepts and rejects
-    if turn in IDX[BYR_PREFIX]:
+    if turn in IDX[BYR]:
         mask = (df[CON] > 0) & (df[CON] < 1)
     # for sellers, drop accepts, expires, and auto responses
     else:
@@ -53,7 +53,7 @@ def get_x_offer(offers, idx, outcome, turn):
     # dataframe of offer features for relevant threads
     offers = pd.DataFrame(index=idx).join(offers)
     # drop time feats from buyer models
-    if turn in IDX[BYR_PREFIX]:
+    if turn in IDX[BYR]:
         offers.drop(TIME_FEATS, axis=1, inplace=True)
     # last turn to include
     if outcome == DELAY:
@@ -73,7 +73,7 @@ def get_x_offer(offers, idx, outcome, turn):
                 offer[[CON, NORM, SPLIT, AUTO, EXP, REJECT]] = 0.0
         # assert that time feats are all zero for censored observations
         else:
-            if i > 1 and turn in IDX[SLR_PREFIX]:
+            if i > 1 and turn in IDX[SLR]:
                 censored = (offer[EXP] == 1) & (offer[DELAY] < 1)
                 assert (offer.loc[censored, TIME_FEATS] == 0.0).all().all()
         # put in dictionary
@@ -90,12 +90,12 @@ def get_y_delay(df, turn):
     # error checking
     assert delay.max() <= MAX_DELAY[turn]
     # convert to periods
-    delay //= INTERVAL[turn]
+    delay //= DELAY_INTERVAL
     # replace expired delays with last index
     assert np.all(df.loc[df[DELAY] == 1, EXP])
-    delay.loc[delay == INTERVAL_COUNTS[turn]] = -1
+    delay.loc[delay == DELAY_INTERVAL_CT] = -1
     # replace censored delays with negative index
-    delay.loc[df[EXP] & (df[DELAY] < 1)] -= INTERVAL_COUNTS[turn]
+    delay.loc[df[EXP] & (df[DELAY] < 1)] -= DELAY_INTERVAL_CT
     return delay
 
 

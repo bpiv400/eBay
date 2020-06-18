@@ -5,7 +5,7 @@ import numpy as np
 from rlenv.sources import ThreadSources
 from rlenv.events.Event import Event
 from rlenv.const import (FIRST_OFFER, DELAY_EVENT, OFFER_EVENT)
-from constants import (SLR_PREFIX, BYR_PREFIX, MAX_DELAY)
+from constants import (SLR, BYR, MAX_DELAY)
 from rlenv.util import (slr_rej_outcomes, slr_auto_acc_outcomes,
                         get_delay_outcomes, get_clock_feats,
                         get_con_outcomes)
@@ -41,7 +41,7 @@ class Thread(Event):
         norm = self.sources.update_con_outcomes(con_outcomes=con_outcomes, turn=self.turn)
         offer_params = {
             'price': norm,
-            'player': SLR_PREFIX if self.turn % 2 == 0 else BYR_PREFIX,
+            'player': SLR if self.turn % 2 == 0 else BYR,
             'time': self.priority,
             'thread_id': self.thread_id
         }
@@ -94,7 +94,7 @@ class Thread(Event):
         norm = self.sources.update_con_outcomes(con_outcomes=con_outcomes, turn=self.turn)
         offer_params = {
             'price': norm,
-            'player': SLR_PREFIX,
+            'player': SLR,
             'time': self.priority,
             'thread_id': self.thread_id
         }
@@ -108,7 +108,7 @@ class Thread(Event):
         norm = self.sources.update_con_outcomes(con_outcomes=outcomes, turn=self.turn)
         offer_params = {
             'price': norm,
-            'player': SLR_PREFIX,
+            'player': SLR,
             'time': self.priority,
             'thread_id': self.thread_id
         }

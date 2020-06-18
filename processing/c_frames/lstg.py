@@ -4,8 +4,8 @@ import numpy as np
 import pandas as pd
 from processing.util import extract_day_feats
 from utils import input_partition, load_file
-from constants import CLEAN_DIR, W2V_DIR, PARTS_DIR, DAY, BYR_PREFIX, \
-    SLR_PREFIX, NUM_CHUNKS
+from constants import CLEAN_DIR, W2V_DIR, PARTS_DIR, DAY, BYR, \
+    SLR, NUM_CHUNKS
 from featnames import START_PRICE
 
 AS_IS_FEATS = ['store', 'slr_us', 'fast', 'photos', 'slr_lstg_ct',
@@ -13,9 +13,11 @@ AS_IS_FEATS = ['store', 'slr_us', 'fast', 'photos', 'slr_lstg_ct',
 
 
 def create_chunks(lookup, x, chunk_dir):
-    lookup = lookup.sort_values(by=START_PRICE)
     # concatenate into one dataframe
     x = pd.concat(x.values(), axis=1)
+    # sort by start_price
+    lookup = lookup.sort_values(by=START_PRICE)
+    x = x.reindex(index=lookup.index)
     assert x.isna().sum().sum() == 0
     # iteration prep
     idx = np.arange(0, len(x), step=NUM_CHUNKS)
@@ -96,7 +98,7 @@ def main():
 
     # word2vec features
     print('Word2Vec features')
-    for role in [BYR_PREFIX, SLR_PREFIX]:
+    for role in [BYR, SLR]:
         w2v = load(W2V_DIR + '{}.gz'.format(role)).reindex(
             index=lstgs[['leaf']].values.squeeze(), fill_value=0)
         w2v.set_index(lstgs.index, inplace=True)

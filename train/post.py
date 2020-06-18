@@ -8,6 +8,7 @@ from tensorboard.backend.event_processing.event_multiplexer import \
 from constants import MODEL_DIR, LOG_DIR, MODELS, DISCRIM_MODELS, \
     INIT_MODELS, FIRST_ARRIVAL_MODEL, PARTS_DIR, TRAIN_RL, VALIDATION
 from utils import get_model_predictions, load_file
+from featnames import NO_ARRIVAL
 
 
 def save_no_arrival_prob(part):
@@ -20,7 +21,7 @@ def save_no_arrival_prob(part):
     p = get_model_predictions(FIRST_ARRIVAL_MODEL, x)
 
     # create series
-    s = pd.Series(p[:, -1], index=idx, name='p_no_arrival')
+    s = pd.Series(p[:, -1], index=idx, name=NO_ARRIVAL)
 
     # save
     dump(s, PARTS_DIR + '{}/p_no_arrival.gz'.format(part))
@@ -45,18 +46,24 @@ def extract_best_run(m):
 def main():
     # command line parameter for model group
     parser = argparse.ArgumentParser()
-    parser.add_argument('--post', action='store_true')
-    post = parser.parse_args().post
+    parser.add_argument('--set', type=str,
+                        choices=['sim', 'discrim', 'init'])
+    model_set = parser.parse_args().set
 
     # model group
-    models = INIT_MODELS + DISCRIM_MODELS if post else MODELS
+    if model_set == 'sim':
+        models = MODELS
+    elif model_set == 'discrim':
+        models = DISCRIM_MODELS
+    else:
+        models = INIT_MODELS
 
     # for each model, choose best experiment
     for m in models:
         extract_best_run(m)
 
     # create series of no-arrival probability
-    if not post:
+    if model_set == 'sim':
         for part in [TRAIN_RL, VALIDATION]:
             save_no_arrival_prob(part)
 

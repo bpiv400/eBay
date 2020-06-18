@@ -1,6 +1,5 @@
 # optimization parameters
-NUM_WORKERS = {'arrival': 3,
-               'first_arrival': 5,
+NUM_WORKERS = {'first_arrival': 5,
                'policy_slr': 6,
                'policy_slr_delay': 6}
 MBSIZE = {True: 128, False: 2048}  # True for training, False for validation

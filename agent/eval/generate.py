@@ -6,7 +6,7 @@ from agent.models.PgCategoricalAgentModel import PgCategoricalAgentModel
 from agent.AgentComposer import AgentComposer
 from rlenv.util import load_chunk
 from agent.agent_consts import AGENT_PARAMS, DROPOUT
-from constants import NO_ARRIVAL_CUTOFF, BYR_PREFIX, SLR_PREFIX, \
+from constants import NO_ARRIVAL_CUTOFF, BYR, SLR, \
     RL_LOG_DIR, TRAIN_RL, VALIDATION, TEST, PARTS_DIR
 from featnames import DELAY, NO_ARRIVAL
 
@@ -23,7 +23,7 @@ def gen_eval_kwargs(composer=None, model_kwargs=None, run_dir=None,
 
 
 def gen_model_kwargs(agent_params):
-    model_kwargs = {BYR_PREFIX: agent_params.role == BYR_PREFIX,
+    model_kwargs = {BYR: agent_params.role == BYR,
                     DELAY: agent_params.delay,
                     DROPOUT: (agent_params.dropout0,
                               agent_params.dropout1)}
@@ -38,7 +38,7 @@ def main():
     parser.add_argument('--part', type=str, required=True,
                         choices=[TRAIN_RL, VALIDATION, TEST])
     args = parser.parse_args()
-    role = BYR_PREFIX if args.byr else SLR_PREFIX
+    role = BYR if args.byr else SLR
 
     # load chunk
     chunk_path = PARTS_DIR + '{}/chunks/{}.gz'.format(args.part, args.num)

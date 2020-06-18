@@ -3,10 +3,10 @@ from compress_pickle import load, dump
 from processing.util import collect_date_clock_feats, \
     get_days_delay, get_norm
 from utils import is_split, input_partition, load_file
-from constants import SIM_CHUNKS, IDX, SLR_PREFIX, MONTH, PARTS_DIR
+from constants import NUM_CHUNKS, IDX, SLR, MONTH, PARTS_DIR
 from featnames import DAYS, DELAY, CON, SPLIT, NORM, REJECT, AUTO, EXP, \
     CENSORED, CLOCK_FEATS, TIME_FEATS, OUTCOME_FEATS, MONTHS_SINCE_LSTG, \
-    BYR_HIST
+    BYR_HIST, START_TIME
 
 
 def diff_tf(df):
@@ -29,9 +29,9 @@ def process_sim_offers(df, end_time):
     # difference time features
     df = diff_tf(df)
     # censor timestamps
-    timestamps = df.clock.to_frame().join(end_time.rename('end'))
-    timestamps = timestamps.reorder_levels(df.index.names)
-    clock = timestamps.min(axis=1)
+    ts = df.clock.to_frame().join(end_time.rename('end'))
+    ts = ts.reorder_levels(df.index.names)
+    clock = ts.min(axis=1)
     # clock features
     df = df.join(collect_date_clock_feats(clock))
     # days and delay
@@ -44,7 +44,7 @@ def process_sim_offers(df, end_time):
     df[NORM] = get_norm(df[CON])
     # reject auto and exp are last
     df[REJECT] = df[CON] == 0
-    df[AUTO] = (df[DELAY] == 0) & df.index.isin(IDX[SLR_PREFIX], level='index')
+    df[AUTO] = (df[DELAY] == 0) & df.index.isin(IDX[SLR], level='index')
     df[EXP] = (df[DELAY] == 1) | df[CENSORED]
     # select and sort features
     df = df.loc[:, CLOCK_FEATS + TIME_FEATS + OUTCOME_FEATS]
@@ -69,19 +69,17 @@ def concat_sim_chunks(part):
     """
     # collect chunks
     threads, offers = [], []
-    for i in range(1, SIM_CHUNKS + 1):
+    for i in range(1, NUM_CHUNKS + 1):
         sim = load(PARTS_DIR + '{}/outcomes/{}.gz'.format(part, i))
         threads.append(sim['threads'])
         offers.append(sim['offers'])
-
     # concatenate
     threads = pd.concat(threads, axis=0).sort_index()
     offers = pd.concat(offers, axis=0).sort_index()
-
     return threads, offers
 
 
-def clean_components(threads, offers, part):
+def clean_components(threads, offers, lstg_start):
     # output dictionary
     d = dict()
 
@@ -92,12 +90,10 @@ def clean_components(threads, offers, part):
     sale_time = offers.loc[offers[CON] == 100, 'clock'].reset_index(
         level=['thread', 'index'], drop=True)
     d['lstg_end'] = sale_time.reindex(index=idx, fill_value=-1)
-    no_sale = d['lstg_end'][d['lstg_end'] == -1].index
-    d['lstg_end'].loc[no_sale] = d['lstg_end'].loc[no_sale] + MONTH - 1
+    d['lstg_end'].loc[d['lstg_end'] == -1] += lstg_start + MONTH
 
     # conform to observed inputs
-    lookup = load_file(part, 'lookup')
-    d['x_thread'] = process_sim_threads(threads, lookup.start_time)
+    d['x_thread'] = process_sim_threads(threads, lstg_start)
     d['x_offer'], d['clock'] = process_sim_offers(offers, d['lstg_end'])
 
     return d
@@ -108,9 +104,10 @@ def main():
 
     # concatenate chunks
     threads, offers = concat_sim_chunks(part)
+    lstg_start = load_file(part, 'lookup')[START_TIME]
 
     # create output dataframes
-    d = clean_components(threads, offers, part)
+    d = clean_components(threads, offers, lstg_start)
 
     # save
     for k, df in d.items():

@@ -3,7 +3,7 @@ from rlenv.Generator import SimulatorGenerator
 from sim.outcomes.OutcomeRecorder import OutcomeRecorder
 from datetime import datetime as dt
 from constants import PARTS_DIR, NO_ARRIVAL_CUTOFF
-from featnames import P_NO_ARRIVAL
+from featnames import NO_ARRIVAL
 from utils import load_file
 
 
@@ -16,7 +16,7 @@ class OutcomeGenerator(SimulatorGenerator):
         path = PARTS_DIR + '{}/chunks/{}.gz'.format(self.part, chunk)
         d = load(path)
         self.x_lstg = d['x_lstg']
-        p0 = load_file(self.part, P_NO_ARRIVAL)
+        p0 = load_file(self.part, NO_ARRIVAL)
         self.lookup = d['lookup'].join(p0)
 
     def generate_recorder(self):
@@ -56,7 +56,7 @@ class OutcomeGenerator(SimulatorGenerator):
         :param env: SimulatorEnvironment
         :return: outcome tuple
         """
-        sim_once = env.lookup[P_NO_ARRIVAL] > NO_ARRIVAL_CUTOFF
+        sim_once = env.lookup[NO_ARRIVAL] > NO_ARRIVAL_CUTOFF
         while True:
             env.reset()
             outcome = env.run()

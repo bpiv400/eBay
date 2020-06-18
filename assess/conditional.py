@@ -2,13 +2,13 @@ from compress_pickle import dump
 from processing.util import load_file, get_obs_outcomes
 from processing.f_discrim.discrim_utils import concat_sim_chunks
 from assess.assess_consts import SPLIT_VALS
-from constants import TEST, PLOT_DIR, SIM, OBS, IDX, SLR_PREFIX
+from constants import TEST, PLOT_DIR, SIM, OBS, IDX, SLR
 from featnames import META, START_PRICE, CON, NORM
 
 
 def sale_price_rate(df, idx):
     norm = df.loc[df[CON] == 1, NORM]
-    slr = norm.index.isin(IDX[SLR_PREFIX], level='index')
+    slr = norm.index.isin(IDX[SLR], level='index')
     norm.loc[slr] = 1 - norm.loc[slr]
     return norm.mean(), len(norm) / len(idx)
 

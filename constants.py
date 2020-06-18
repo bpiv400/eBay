@@ -4,9 +4,9 @@ from platform import platform
 from featnames import DELAY, CON, MSG
 
 # strings for referencing quantities related to buyer and seller interface
-SLR_PREFIX = 'slr'
-BYR_PREFIX = 'byr'
-ARRIVAL_PREFIX = 'arrival'
+SLR = 'slr'
+BYR = 'byr'
+ARRIVAL = 'arrival'
 DROPOUT = 'dropout'
 
 # count concessions within this range as 1/2
@@ -81,13 +81,10 @@ HIST_QUANTILES = 10
 # multiplier for concession
 CON_MULTIPLIER = 100
 
-# number of chunks for environment simulation
-SIM_CHUNKS = 1000
-
 # indices for byr and slr offers
 IDX = {
-    BYR_PREFIX: [1, 3, 5, 7],
-    SLR_PREFIX: [2, 4, 6]
+    BYR: [1, 3, 5, 7],
+    SLR: [2, 4, 6]
 }
 
 # date range and holidays
@@ -109,7 +106,7 @@ OFFER_MODELS = DELAY_MODELS + CON_MODELS + MSG_MODELS
 MODELS = ARRIVAL_MODELS + OFFER_MODELS
 
 # censored models
-CENSORED_MODELS = [INTERARRIVAL_MODEL] + DELAY_MODELS
+CENSORED_MODELS = [FIRST_ARRIVAL_MODEL, INTERARRIVAL_MODEL] + DELAY_MODELS
 
 # discriminator models
 DISCRIM_LISTINGS = 'listings'
@@ -119,24 +116,24 @@ DISCRIM_MODELS = [DISCRIM_LISTINGS, DISCRIM_THREADS, DISCRIM_THREADS_NO_TF]
 
 # policy initializations
 SLR_POLICY_INIT = 'policy_slr'
-BYR_POLICY_INIT = 'policy_byr'
+BYR_POLICY_INIT = 'policy_byr_delay'
 SLR_DELAY_POLICY_INIT = 'policy_slr_delay'
-BYR_DELAY_POLICY_INIT = 'policy_byr_delay'
-INIT_POLICY_MODELS = [SLR_POLICY_INIT, BYR_POLICY_INIT,
-                      SLR_DELAY_POLICY_INIT, BYR_DELAY_POLICY_INIT]
+INIT_POLICY_MODELS = [SLR_POLICY_INIT,
+                      BYR_POLICY_INIT,
+                      SLR_DELAY_POLICY_INIT]
 
 SLR_VALUE_INIT = 'value_slr'
-BYR_VALUE_INIT = 'value_byr'
+BYR_VALUE_INIT = 'value_byr_delay'
 SLR_DELAY_VALUE_INIT = 'value_slr_delay'
-BYR_DELAY_VALUE_INIT = 'value_slr_delay'
-INIT_VALUE_MODELS = [SLR_VALUE_INIT, BYR_VALUE_INIT,
-                     SLR_DELAY_VALUE_INIT, BYR_DELAY_VALUE_INIT]
+INIT_VALUE_MODELS = [SLR_VALUE_INIT,
+                     BYR_VALUE_INIT,
+                     SLR_DELAY_VALUE_INIT]
 
 INIT_MODELS = INIT_POLICY_MODELS + INIT_VALUE_MODELS
 
 TURN_FEATS = {
-    BYR_PREFIX: ['t1', 't3', 't5'],
-    SLR_PREFIX: ['t2', 't4']
+    BYR: ['t1', 't3', 't5'],
+    SLR: ['t2', 't4']
 }
 
 # outcome types
@@ -150,8 +147,8 @@ MODEL_NORM = 'batch'
 LISTING_FEE = .03
 
 # meta categories with sale fees != .09 * price
-META_7 = [21, 10]
-META_6 = [32, 14, 11, 7, 28]
+META_7 = [11116, 619]
+META_6 = [58058, 1249, 625, 293, 15032]
 
 # threshold for likelihood of no arrivals
 NO_ARRIVAL_CUTOFF = .50 ** (1.0 / 12)

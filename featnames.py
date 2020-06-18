@@ -75,6 +75,3 @@ NO_ARRIVAL = 'p_no_arrival'
 MONTHLY_DISCOUNT = 'monthly_discount'
 ACTION_DISCOUNT = 'action_discount'
 ACTION_COST = 'action_cost'
-
-# no arrival probability
-P_NO_ARRIVAL = 'p_no_arrival'

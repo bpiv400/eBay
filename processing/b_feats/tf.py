@@ -5,7 +5,7 @@ from compress_pickle import dump, load
 from processing.b_feats.util import collapse_dict
 from processing.util import get_con, get_norm
 from constants import START, CLEAN_DIR, PARTS_DIR, PARTITIONS, IDX, \
-    SLR_PREFIX
+    SLR
 
 
 def open_offers(df, levels, role):
@@ -15,7 +15,7 @@ def open_offers(df, levels, role):
     else:
         index = df.index.get_level_values('index')
     # open and closed markers
-    if role == SLR_PREFIX:
+    if role == SLR:
         start = ~df.byr & ~df.accept & (index > 0) & ~df.censored
         end = df.byr & (index > 1) & ~df.censored
     else:

@@ -1,7 +1,7 @@
 import math
 import torch
 import numpy as np
-from constants import (TURN_FEATS, BYR_PREFIX, SLR_PREFIX,
+from constants import (TURN_FEATS, BYR, SLR,
                        SLR_POLICY_INIT, BYR_POLICY_INIT)
 from featnames import (OUTCOME_FEATS, MONTHS_SINCE_LSTG, BYR_HIST)
 from utils import load_sizes, load_featnames
@@ -26,7 +26,7 @@ class AgentComposer(Composer):
 
     @property
     def byr(self):
-        return self.agent_params['role'] == BYR_PREFIX
+        return self.agent_params['role'] == BYR
 
     @property
     def delay(self):
@@ -110,7 +110,7 @@ class AgentComposer(Composer):
 
     def verify_agent(self):
         agent_name = SLR_POLICY_INIT if not self.byr else BYR_POLICY_INIT
-        agent_role = SLR_PREFIX if not self.byr else BYR_PREFIX
+        agent_role = SLR if not self.byr else BYR
         Composer.verify_lstg_sets_shared(agent_name, self.x_lstg_cols, self.lstg_sets.copy())
         agent_feats = load_featnames(agent_name)
         lstg_append = Composer.remove_shared_feats(agent_feats[LSTG_MAP], self.lstg_sets[LSTG_MAP])
@@ -132,12 +132,12 @@ class AgentComposer(Composer):
 
     @staticmethod
     def verify_agent_offer(offer_feats=None, agent_role=None, agent_name=None):
-        if agent_role == SLR_PREFIX:
+        if agent_role == SLR:
             assumed_feats = CLOCK_FEATS + TIME_FEATS + OUTCOME_FEATS
         else:
             assumed_feats = CLOCK_FEATS + OUTCOME_FEATS
         AgentComposer.verify_all_feats(assumed_feats=assumed_feats, model_feats=offer_feats)
-        last_turn = 6 if agent_role == SLR_PREFIX else 7
+        last_turn = 6 if agent_role == SLR else 7
         sizes = load_sizes(agent_name)['x']
         for turn in range(1, 8):
             if turn <= last_turn:
