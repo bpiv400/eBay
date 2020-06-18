@@ -4,7 +4,7 @@ from featnames import (CON, DELAY, MSG, ALL_OFFER_FEATS, CLOCK_FEATS,
                        TIME_FEATS, DAYS, EXP, NORM, SPLIT, AUTO, REJECT,
                        THREAD_COUNT)
 
-INTERACT = True
+INTERACT = False
 
 # dataset dictionary keys
 X_LSTG = 'x_lstg'

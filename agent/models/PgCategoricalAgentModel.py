@@ -19,7 +19,8 @@ class PgCategoricalAgentModel(AgentModel):
     3. Both networks use batch normalization
     4. Both networks use dropout and share dropout hyperparameters
     """
-    def __init__(self, byr=False, delay=False, dropout=(0., 0.)):
+    def __init__(self, byr=False, delay=False, dropout=(0., 0.),
+                 debug=False):
         """
         kwargs:
             sizes: gives all sizes for the model, including size
@@ -31,6 +32,7 @@ class PgCategoricalAgentModel(AgentModel):
         self.dropout = dropout
         self.policy_network = self._init_network(policy=True)
         self.value_network = self._init_network(policy=False)
+        self.debug = debug
         with torch.no_grad():
             vals = np.arange(0, self.value_network.sizes['out'] / 100, 0.01)
             self.values = nn.Parameter(torch.from_numpy(vals).float(),
@@ -97,7 +99,7 @@ class PgCategoricalAgentModel(AgentModel):
 
 
         # supplementing the above transformations
-        if len(v.shape) == 0:
+        if len(v.shape) == 0 and self.debug:
             v = v.unsqueeze(0)
             pi = pi.unsqueeze(0)
 

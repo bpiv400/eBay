@@ -14,7 +14,7 @@ from rlpyt.samplers.parallel.cpu.sampler import CpuSampler
 from rlpyt.utils.logging.context import logger_context
 from featnames import DELAY
 from constants import RL_LOG_DIR, BYR_PREFIX, PARTS_DIR, TRAIN_RL, DROPOUT
-from agent.const import (AGENT_STATE, PARAM_DICTS, THREADS_PER_PROC)
+from agent.const import (AGENT_STATE, PARAM_DICTS, THREADS_PER_PROC, DUPLICATE_PARAMS)
 from agent.util import gen_run_id, save_params, compose_args
 from agent.AgentComposer import AgentComposer
 from agent.models.PgCategoricalAgentModel import PgCategoricalAgentModel
@@ -78,17 +78,16 @@ class RlTrainer:
         model_kwargs[DELAY] = self.agent_params[DELAY]
         model_kwargs[DROPOUT] = (self.agent_params['dropout0'],
                                  self.agent_params['dropout1'])
+        model_kwargs['debug'] = self.system_params['debug']
 
         return SplitCategoricalPgAgent(ModelCls=PgCategoricalAgentModel,
                                        model_kwargs=model_kwargs)
 
     def generate_sampler(self):
-        # batch_b = len(self.workers_cpus) * 2
-        batch_b = 1
-        batch_t = int(self.batch_params['batch_size'] / batch_b)
-        if batch_t < 12:
-            warnings.warn("Very few actions per environment")
+
         if self.system_params['debug']:
+            batch_b = 1
+            batch_t = int(self.batch_params['batch_size'] / batch_b)
             return SerialSampler(
                 EnvCls=SellerEnvironment,
                 env_kwargs=self.env_params_train,
@@ -100,6 +99,10 @@ class RlTrainer:
                 eval_max_steps=50,
             )
         else:
+            batch_b = len(self.workers_cpus) * 2
+            batch_t = int(self.batch_params['batch_size'] / batch_b)
+            if batch_t < 12:
+                warnings.warn("Very few actions per environment")
             return CpuSampler(
                 EnvCls=SellerEnvironment,
                 env_kwargs=self.env_params_train,
@@ -193,6 +196,11 @@ def main():
         for k in param_dict.keys():
             curr_params[k] = args[k]
         trainer_args[param_set] = curr_params
+
+    # duplicate args across dictionaries as necessary
+    for source, dest, params in DUPLICATE_PARAMS:
+        for param in params:
+            trainer_args[dest][param] = trainer_args[source][param]
 
     # initialize trainer
     trainer = RlTrainer(**trainer_args)
