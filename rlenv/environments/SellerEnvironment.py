@@ -1,9 +1,10 @@
 from collections import namedtuple
 from constants import MAX_DELAY_TURN
-from rlenv.environments.AgentEnvironment import AgentEnvironment
 from rlenv.const import OFFER_EVENT, DELAY_EVENT
-from rlenv.util import get_con_outcomes
+from rlenv.environments.AgentEnvironment import AgentEnvironment
 from rlenv.events.Thread import RlThread
+from rlenv.Recorder import Recorder
+from rlenv.util import get_con_outcomes
 
 
 class SellerEnvironment(AgentEnvironment):
@@ -100,12 +101,15 @@ class SellerEnvironment(AgentEnvironment):
         # not expiration rejection
         if con <= 1:
             offer_time = self.get_offer_time(self.last_event)
+            delay = offer_time - self.last_event.priority
             self.last_event.prep_rl_offer(con=con, priority=offer_time)
         # expiration rejection
         else:
+            delay = MAX_DELAY_TURN
             self.last_event.update_delay(seconds=MAX_DELAY_TURN)
         self.queue.push(self.last_event)
         self.last_event = None
+        Recorder.print_agent_turn(con=con, delay=delay / MAX_DELAY_TURN)
         return self.run()
 
     def make_thread(self, priority):

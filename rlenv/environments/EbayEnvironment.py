@@ -10,6 +10,7 @@ from rlenv.time.TimeFeatures import TimeFeatures
 from rlenv.time.Offer import Offer
 from rlenv.events.Event import Event
 from rlenv.events.Arrival import Arrival
+from rlenv.Recorder import Recorder
 from rlenv.sources import ArrivalSources
 from rlenv.sources import ThreadSources
 from rlenv.events.Thread import Thread
@@ -57,6 +58,10 @@ class EbayEnvironment:
     def run(self):
         while True:
             event = self.queue.pop()
+            if self.verbose:
+                Recorder.print_next_event(event)
+            if INTERACT and event.type != ARRIVAL:
+                input('Press Enter to continue...\n')
             if self.is_agent_turn(event):
                 return event, False
             else:
@@ -65,9 +70,6 @@ class EbayEnvironment:
                     return event, True
 
     def process_event(self, event):
-        print(event.type)
-        if INTERACT and event.type != ARRIVAL:
-            input('Press Enter to continue...')
         if event.type == ARRIVAL:
             # print('processing arrival')
             return self.process_arrival(event)

@@ -83,7 +83,8 @@ class RlTrainer:
                                        model_kwargs=model_kwargs)
 
     def generate_sampler(self):
-        batch_b = len(self.workers_cpus) * 2
+        # batch_b = len(self.workers_cpus) * 2
+        batch_b = 1
         batch_t = int(self.batch_params['batch_size'] / batch_b)
         if batch_t < 12:
             warnings.warn("Very few actions per environment")
