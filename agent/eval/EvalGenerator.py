@@ -1,5 +1,5 @@
 from agent.AgentPlayer import AgentPlayer
-from agent.agent_utils import load_agent_model
+from agent.util import load_agent_model
 from agent.AgentComposer import AgentComposer
 from sim.outcomes.OutcomeGenerator import OutcomeGenerator
 from rlenv.interfaces.PlayerInterface import SimulatedBuyer, SimulatedSeller

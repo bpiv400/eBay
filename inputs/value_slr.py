@@ -1,77 +1,61 @@
 import numpy as np
 import pandas as pd
 from inputs.util import save_files, construct_x_slr, \
-    get_sale_norm, create_index_slr
+    get_sale_norm, create_index_slr, get_init_data
 from inputs.policy_slr import input_parameters
-from utils import get_cut, slr_reward, max_slr_reward, load_file
+from utils import get_cut, slr_reward, max_slr_reward
 from inputs.const import DELTA_MONTH, DELTA_ACTION, C_ACTION
-from constants import MONTH, TRAIN_RL, VALIDATION, TEST, \
-    NO_ARRIVAL_CUTOFF
-from featnames import META, START_PRICE, START_TIME, CON, \
-    NO_ARRIVAL
+from constants import MONTH, TRAIN_RL, VALIDATION, TEST
+from featnames import META, START_PRICE, START_TIME, CON
 
 
-def get_duration(idx, clock, lookup, delay):
+def get_duration(idx, delay, data):
     # calculate number of months from listing start to action
+    clock = data['clock']
     if delay:
         t_now = clock.groupby(clock.index.names[:-1]).shift()
         t_now = t_now.dropna().astype(clock.dtype)
         t_now = t_now.loc[idx]
     else:
         t_now = clock.loc[idx]
-    t_start = lookup.start_time.reindex(index=idx, level='lstg')
+    lstg_start = data['lookup'][START_TIME]
+    t_start = lstg_start.reindex(index=idx, level='lstg')
     months = (t_now - t_start) / MONTH \
         + t_start.index.get_level_values(level='sim')
     return months.rename('months')
 
 
-def get_sales(offers, clock, lookup):
-    norm = get_sale_norm(offers)
+def get_sales(data):
+    norm = get_sale_norm(data['offers'])
     # number of relistings
     relist_count = norm.index.get_level_values(level='sim')
     norm = norm.reset_index(['sim', 'thread', 'index'], drop=True)
     # time of sale
-    sale_time = clock[offers[CON] == 1].reset_index(
-        ['sim', 'thread', 'index'], drop=True)
-    elapsed = (sale_time - lookup[START_TIME]) / MONTH
+    sale_time = data['clock'][data['offers'][CON] == 1]
+    sale_time = sale_time.reset_index(
+        sale_time.index.names[1:], drop=True)
+    elapsed = (sale_time - data['lookup'][START_TIME]) / MONTH
     assert (elapsed >= 0).all()
     months = relist_count + elapsed
     # gross bin_price and gross actual price
-    cut = lookup[META].apply(get_cut)
-    bin_gross = (1-cut) * lookup[START_PRICE]
+    cut = data['lookup'][META].apply(get_cut)
+    bin_gross = (1-cut) * data['lookup'][START_PRICE]
     gross = norm * bin_gross
     return pd.concat([bin_gross.rename('bin_proceeds'),
                       gross.rename('sale_proceeds'),
                       months.rename('months_to_sale')], axis=1)
 
 
-def get_sim_data(part):
-    # indices of listings
-    p0 = load_file(part, NO_ARRIVAL)
-    idx = p0[p0 <= NO_ARRIVAL_CUTOFF].index
-    # load (simulated) data
-    lookup = load_file(part, 'lookup')
-    threads = load_file(part, 'x_thread_sim')
-    offers = load_file(part, 'x_offer_sim')
-    clock = load_file(part, 'clock_sim')
-    # drop listings with infrequent arrivals
-    lookup = lookup.reindex(index=idx)
-    threads = threads.reindex(index=idx, level='lstg')
-    offers = offers.reindex(index=idx, level='lstg')
-    clock = clock.reindex(index=idx, level='lstg')
-    return lookup, threads, offers, clock
-
-
 def process_inputs(part, delay):
     # data
-    lookup, threads, offers, clock = get_sim_data(part)
+    data = get_init_data(part, sim=True)
 
     # master index
-    idx = create_index_slr(offers, delay)
+    idx = create_index_slr(data['offers'], delay)
 
     # value components
-    sales = get_sales(offers, clock, lookup)
-    months_since_start = get_duration(idx, clock, lookup, delay)
+    sales = get_sales(data)
+    months_since_start = get_duration(idx, delay, data)
     df = months_since_start.to_frame().join(sales)
 
     # discounted values
@@ -92,8 +76,8 @@ def process_inputs(part, delay):
     y = np.maximum(np.round(norm_values * 100), 0.).astype('uint8')
 
     # input features dictionary
-    x = construct_x_slr(part=part, delay=delay, idx=y.index,
-                        offers=offers, threads=threads)
+    x = construct_x_slr(part=part, delay=delay,
+                        idx=y.index, data=data)
 
     return {'y': y, 'x': x}
 

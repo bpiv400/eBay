@@ -5,7 +5,7 @@ from agent.eval.EvalGenerator import EvalGenerator
 from agent.models.PgCategoricalAgentModel import PgCategoricalAgentModel
 from agent.AgentComposer import AgentComposer
 from rlenv.util import load_chunk
-from agent.agent_consts import AGENT_PARAMS, DROPOUT
+from agent.const import AGENT_PARAMS, DROPOUT
 from constants import NO_ARRIVAL_CUTOFF, BYR, SLR, \
     RL_LOG_DIR, TRAIN_RL, VALIDATION, TEST, PARTS_DIR
 from featnames import DELAY, NO_ARRIVAL

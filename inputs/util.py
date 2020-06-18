@@ -2,17 +2,18 @@ import numpy as np
 import pandas as pd
 from compress_pickle import dump
 from processing.util import extract_day_feats
-from utils import get_remaining, init_x
+from utils import get_remaining, init_x, load_file
 from inputs.const import NUM_OUT, N_SMALL, ARRIVAL_INTERVAL, \
     ARRIVAL_INTERVAL_CT, DELAY_INTERVAL, DELAY_INTERVAL_CT, \
     DELTA_MONTH, DELTA_ACTION, C_ACTION
-from constants import INPUT_DIR, INDEX_DIR, VALIDATION, TRAIN_MODELS, \
-    TRAIN_RL, IDX, BYR, DELAY_MODELS, SLR, DAY, MONTH, \
-    INIT_VALUE_MODELS, ARRIVAL, MAX_DELAY, HIST_QUANTILES
+from constants import INPUT_DIR, INDEX_DIR, VALIDATION, \
+    TRAIN_MODELS, TRAIN_RL, IDX, BYR, DELAY_MODELS, SLR, DAY, \
+    MONTH, INIT_VALUE_MODELS, ARRIVAL, MAX_DELAY, \
+    HIST_QUANTILES, NO_ARRIVAL_CUTOFF
 from featnames import CLOCK_FEATS, OUTCOME_FEATS, BYR_HIST, \
     CON, NORM, SPLIT, MSG, AUTO, EXP, REJECT, DAYS, DELAY, TIME_FEATS, \
     THREAD_COUNT, MONTHLY_DISCOUNT, ACTION_DISCOUNT, ACTION_COST, \
-    MONTHS_SINCE_LSTG
+    MONTHS_SINCE_LSTG, NO_ARRIVAL, START_TIME
 
 
 def add_turn_indicators(df):
@@ -151,8 +152,7 @@ def get_x_offer_init(offers, idx, role=None, delay=None):
     return x_offer
 
 
-def construct_x_byr(part=None, idx=None, offers=None,
-                    threads=None, clock=None, lstg_start=None):
+def construct_x_byr(part=None, idx=None, data=None):
     # listing features
     x = init_x(part, idx)
     del x['slr']  # byr does not observe slr features
@@ -164,7 +164,8 @@ def construct_x_byr(part=None, idx=None, offers=None,
                    axis=1, inplace=True)
 
     # thread features
-    x_thread = get_x_thread(threads, idx, turn_indicators=True)
+    x_thread = get_x_thread(data['threads'], idx,
+                            turn_indicators=True)
     x_thread.drop(THREAD_COUNT, axis=1, inplace=True)
 
     # split master index
@@ -173,9 +174,11 @@ def construct_x_byr(part=None, idx=None, offers=None,
     idx2 = idx.drop(idx1)
 
     # current time feats
+    lstg_start = data['lookup'][START_TIME]
     clock1 = pd.Series(DAY * idx1.get_level_values(level='day'),
                        index=idx1) + lstg_start.reindex(index=idx1,
                                                         level='lstg')
+    clock = data['clock']
     clock2 = clock.groupby(clock.index.names[:-1]).shift()
     clock2 = clock2[idx2].astype(clock.dtype)
     combined = pd.concat([clock1, clock2]).sort_index()
@@ -193,7 +196,8 @@ def construct_x_byr(part=None, idx=None, offers=None,
     x['lstg'] = pd.concat([x['lstg'], x_thread], axis=1)
 
     # offer features
-    x.update(get_x_offer_init(offers, idx, role=BYR, delay=True))
+    x.update(get_x_offer_init(data['offers'], idx,
+                              role=BYR, delay=True))
 
     # no nans
     for v in x.values():
@@ -202,19 +206,20 @@ def construct_x_byr(part=None, idx=None, offers=None,
     return x
 
 
-def construct_x_slr(part=None, delay=None, idx=None,
-                    offers=None, threads=None):
+def construct_x_slr(part=None, delay=None, idx=None, data=None):
     # listing features
     x = init_x(part, idx)
 
     # thread features
-    x_thread = get_x_thread(threads, idx, turn_indicators=True)
+    x_thread = get_x_thread(data['threads'], idx,
+                            turn_indicators=True)
 
     # concatenate with the lstg grouping
     x['lstg'] = pd.concat([x['lstg'], x_thread], axis=1)
 
     # offer features
-    x.update(get_x_offer_init(offers, idx, role=SLR, delay=delay))
+    x.update(get_x_offer_init(data['offers'], idx,
+                              role=SLR, delay=delay))
 
     # no nans
     for v in x.values():
@@ -258,6 +263,26 @@ def create_index_byr(clock, lstg_start):
         days.reindex(index=s.index, fill_value=0).reset_index())
     idx, _ = idx0.union(idx1).sortlevel()
     return idx, idx1
+
+
+def load_reindex(part=None, name=None, sim=None, idx=None):
+    suffix = '_sim' if sim else ''
+    df = load_file(part, '{}{}'.format(name, suffix)).reindex(
+        index=idx, level='lstg')
+    return df
+
+
+def get_init_data(part, sim=False):
+    # restrict to listings with non-infrequent arrivals
+    p0 = load_file(part, NO_ARRIVAL)
+    idx = p0[p0 < NO_ARRIVAL_CUTOFF].index
+    # data frames
+    data = dict()
+    data['lookup'] = load_file(part, 'lookup').loc[idx]
+    data['offers'] = load_reindex(part, 'x_offer', sim, idx)
+    data['threads'] = load_reindex(part, 'x_thread', sim, idx)
+    data['clock'] = load_reindex(part, 'clock', sim, idx)
+    return data
 
 
 def save_featnames(x, m):

@@ -1,7 +1,7 @@
 import pandas as pd
 from inputs.util import save_files, construct_x_byr, \
-    create_index_byr
-from utils import input_partition, load_file
+    create_index_byr, get_init_data
+from utils import input_partition
 from constants import BYR, CON_MULTIPLIER, \
     TRAIN_MODELS, VALIDATION, TEST
 from featnames import CON, START_TIME
@@ -15,21 +15,17 @@ def get_y(idx, idx1, offers):
 
 def process_inputs(part):
     # load dataframes
-    offers = load_file(part, 'x_offer')
-    threads = load_file(part, 'x_thread')
-    clock = load_file(part, 'clock')
-    lstg_start = load_file(part, 'lookup')[START_TIME]
+    data = get_init_data(part)
 
     # master index
-    idx, idx1 = create_index_byr(clock, lstg_start)
+    idx, idx1 = create_index_byr(data['clock'],
+                                 data['lookup'][START_TIME])
 
     # outcome
-    y = get_y(idx, idx1, offers)
+    y = get_y(idx, idx1, data['offers'])
 
     # input feature dictionary
-    x = construct_x_byr(part=part, idx=y.index, offers=offers,
-                        threads=threads, clock=clock,
-                        lstg_start=lstg_start)
+    x = construct_x_byr(part=part, idx=y.index, data=data)
 
     return {'y': y, 'x': x}
 

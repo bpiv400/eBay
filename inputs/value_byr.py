@@ -1,29 +1,31 @@
 import numpy as np
 import pandas as pd
 from inputs.util import save_files, construct_x_byr, \
-    get_sale_norm, create_index_byr
-from utils import byr_reward, input_partition, load_file
+    get_sale_norm, create_index_byr, get_init_data
+from utils import byr_reward, input_partition
 from inputs.const import DELTA_MONTH, DELTA_ACTION, C_ACTION
 from constants import BYR, TRAIN_RL, VALIDATION, TEST, DAY, MONTH
 from featnames import START_PRICE, START_TIME, CON
 
 
-def get_months(idx, clock, offers, lstg_start):
+def get_months(idx, data):
     # months is inf if no sale
     months = pd.Series(np.inf, index=idx, name='months_diff')
     # split index by turn
     idx_first = idx[idx.isin([1], level='index')]
     idx_next = idx[idx.isin([3, 5, 7], level='index')]
     # beginning of delay window for first offer
+    lstg_start = data['lookup'][START_TIME]
     t_first = lstg_start.reindex(index=idx_first, level='lstg')
     t_first += DAY * t_first.index.get_level_values(level='day')
     # beginning of delay window for subsequent offers
+    clock = data['clock']
     t_next = clock.groupby(clock.index.names[:-1]).shift()
     t_next = t_next.dropna().astype(clock.dtype)
     t_next = t_next.to_frame().assign(day=0).set_index(
         'day', append=True).squeeze().loc[idx_next]
     # for sales, fill in with months to sale
-    t_sale = clock[offers[CON] == 1].reset_index(
+    t_sale = clock[data['offers'][CON] == 1].reset_index(
         'index', drop=True).rename('sale_time')
     t_now = pd.concat([t_first, t_next]).rename('delay_start')
     df = t_now.to_frame().join(t_sale).reorder_levels(
@@ -35,18 +37,20 @@ def get_months(idx, clock, offers, lstg_start):
 
 def process_inputs(part):
     # data
-    lookup = load_file(part, 'lookup')
-    offers = load_file(part, 'x_offer')
-    threads = load_file(part, 'x_thread')
-    clock = load_file(part, 'clock')
+    data = get_init_data(part)
+    start_price = data['lookup'][START_PRICE]
 
     # master index
-    idx, _ = create_index_byr(clock, lookup[START_TIME])
+    idx, _ = create_index_byr(data['clock'],
+                              data['lookup'][START_TIME])
 
     # value components
-    norm = get_sale_norm(offers).reset_index('index', drop=True)
-    net = ((1 - norm) * lookup[START_PRICE]).rename('net_value')
-    months = get_months(idx, clock, offers, lookup[START_TIME])
+    norm = get_sale_norm(data['offers']).reset_index(
+        'index', drop=True)
+    net = ((1 - norm) * start_price).rename('net_value')
+    months = get_months(idx, data)
+
+    # combine in dataframe
     df = months.to_frame().join(net)
     df.index = df.index.reorder_levels(months.index.names)
 
@@ -57,7 +61,7 @@ def process_inputs(part):
     values[values.isna()] = 0.
 
     # normalize by start_price
-    norm_values = values / lookup[START_PRICE].reindex(
+    norm_values = values / start_price.reindex(
         index=values.index, level='lstg')
     assert norm_values.max() <= 1
 
@@ -65,9 +69,7 @@ def process_inputs(part):
     y = np.maximum(np.round(norm_values * 100), 0.).astype('uint8')
 
     # input feature dictionary
-    x = construct_x_byr(part=part, idx=y.index, offers=offers,
-                        threads=threads, clock=clock,
-                        lstg_start=lookup[START_TIME])
+    x = construct_x_byr(part=part, idx=y.index, data=data)
 
     return {'y': y, 'x': x}
 

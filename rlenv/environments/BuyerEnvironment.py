@@ -3,7 +3,7 @@ Environment for training the buyer agent
 """
 import numpy as np
 from utils import get_months_since_lstg
-from agent.agent_consts import BUYER_ARRIVE_INTERVAL, DELAY_INTERVAL
+from agent.const import BUYER_ARRIVE_INTERVAL, DELAY_INTERVAL
 from rlenv.env_consts import DELAY_EVENT, RL_ARRIVAL_EVENT
 from rlenv.sources import RlSources
 from rlenv.environments.AgentEnvironment import AgentEnvironment

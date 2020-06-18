@@ -10,7 +10,7 @@ from rlpyt.utils.seed import set_envs_seeds
 from utils import load_state_dict
 from constants import (RL_LOG_DIR, SLR_VALUE_INIT, SLR_POLICY_INIT,
                        BYR_VALUE_INIT, BYR_POLICY_INIT, REINFORCE_DIR)
-from agent.agent_consts import FULL_CON, QUARTILES, HALF, PARAM_DICTS
+from agent.const import FULL_CON, QUARTILES, HALF, PARAM_DICTS
 
 
 def get_con_set(con):
