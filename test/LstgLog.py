@@ -3,8 +3,8 @@ from featnames import START_TIME, MONTHS_SINCE_LSTG, BYR_HIST, CON, AUTO
 from constants import (MONTH, MODELS, FIRST_ARRIVAL_MODEL,
                        BYR_HIST_MODEL, INTERARRIVAL_MODEL, OFFER_MODELS)
 from rlenv.util import populate_test_model_inputs
-from rlenv.test.ArrivalLog import ArrivalLog
-from rlenv.test.ThreadLog import ThreadLog
+from test.ArrivalLog import ArrivalLog
+from test.ThreadLog import ThreadLog
 
 
 class LstgLog:

@@ -1,7 +1,7 @@
 from compress_pickle import load
 from rlenv.Generator import SimulatorGenerator
-from rlenv.test.LstgLog import LstgLog
-from rlenv.test.TestEnvironment import TestEnvironment
+from test.LstgLog import LstgLog
+from test.TestEnvironment import TestEnvironment
 from sim.outcomes.OutcomeRecorder import OutcomeRecorder
 from rlenv.util import get_env_sim_subdir
 

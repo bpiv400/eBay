@@ -7,7 +7,7 @@ import argparse
 import torch
 from constants import PARTITIONS
 from rlenv.Generator import Generator
-from rlenv.test.TestGenerator import TestGenerator
+from test.TestGenerator import TestGenerator
 from sim.values.ValueGenerator import ValueGenerator
 from sim.outcomes.OutcomeGenerator import OutcomeGenerator
 

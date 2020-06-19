@@ -1,5 +1,5 @@
 from rlenv.environments.SimulatorEnvironment import SimulatorEnvironment
-from rlenv.test.LstgLog import LstgLog
+from test.LstgLog import LstgLog
 
 
 class TestEnvironment(SimulatorEnvironment):

@@ -8,7 +8,7 @@ from constants import MONTH
 from utils import get_months_since_lstg, get_cut
 from agent.spaces.ConSpace import ConSpace
 from agent.util import get_con_set, get_train_file_path
-from inputs.const import INTERVAL_COUNT_TURN, INTERVAL_TURN
+from inputs.const import INTERVAL_CT_TURN, INTERVAL_TURN
 from rlpyt.envs.base import Env
 from rlpyt.spaces.composite import Composite
 from rlpyt.spaces.float_box import FloatBox
@@ -122,7 +122,7 @@ class AgentEnvironment(EbayEnvironment, Env):
         # query with delay model
         input_dict = self.get_delay_input_dict(event=event)
         intervals = (self.end_time - event.priority) / INTERVAL_TURN
-        max_interval = min(int(intervals), INTERVAL_COUNT_TURN)
+        max_interval = min(int(intervals), INTERVAL_CT_TURN)
         delay = self.get_delay(input_dict=input_dict, turn=event.turn,
                                thread_id=event.thread_id, time=event.priority,
                                max_interval=max(1, max_interval))
