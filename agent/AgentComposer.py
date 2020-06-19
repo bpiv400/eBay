@@ -3,7 +3,7 @@ import torch
 import numpy as np
 from featnames import INT_REMAINING
 from constants import TURN_FEATS, BYR, SLR
-from featnames import (OUTCOME_FEATS, MONTHS_SINCE_LSTG, BYR_HIST)
+from featnames import OUTCOME_FEATS, MONTHS_SINCE_LSTG, BYR_HIST
 from utils import load_sizes, load_featnames
 from rlenv.const import *
 from agent.const import FEAT_TYPE, CON_TYPE, ALL_FEATS
