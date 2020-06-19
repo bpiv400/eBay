@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 from compress_pickle import dump
 from gensim.models import Word2Vec
-from constants import BYR_PREFIX, SLR_PREFIX, SEED, CLEAN_DIR, W2V_DIR
+from constants import BYR, SLR, SEED, CLEAN_DIR, W2V_DIR
 
 VOCAB_SIZE = 32  # vocabulary size for embeddings
 
@@ -40,7 +40,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--slr', action='store_true')
     slr = parser.parse_args().slr
-    role = SLR_PREFIX if slr else BYR_PREFIX
+    role = SLR if slr else BYR
 
     # load sentences
     filename = CLEAN_DIR + 'leaf_{}.csv'.format(role)

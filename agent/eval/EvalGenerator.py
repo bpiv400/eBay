@@ -1,5 +1,5 @@
 from agent.AgentPlayer import AgentPlayer
-from agent.agent_utils import load_agent_model
+from agent.util import load_agent_model
 from agent.AgentComposer import AgentComposer
 from sim.outcomes.OutcomeGenerator import OutcomeGenerator
 from rlenv.interfaces.PlayerInterface import SimulatedBuyer, SimulatedSeller
@@ -23,7 +23,7 @@ class EvalGenerator(OutcomeGenerator):
         self.ModelCls = kwargs['model_class']
         self.run_dir = kwargs['run_dir']
         self.path_suffix = kwargs['path_suffix']
-        super().__init__(direct=None, verbose=kwargs['verbose'])
+        super().__init__(part=None, verbose=kwargs['verbose'])
 
     def load_chunk(self, chunk=None):
         self.x_lstg, self.lookup = chunk

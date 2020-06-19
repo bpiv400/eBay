@@ -1,14 +1,12 @@
 import argparse
-from inputs.util import get_policy_data, save_files, construct_x_init
-from constants import IDX, SLR_PREFIX, CON_MULTIPLIER, \
-    TRAIN_MODELS, VALIDATION, TEST
-from featnames import AUTO, EXP, CON
+from inputs.util import save_files, construct_x_slr, \
+    create_index_slr, get_init_data
+from constants import SLR, CON_MULTIPLIER, TRAIN_RL, \
+    VALIDATION, TEST
+from featnames import EXP, CON
 
 
 def get_y(df, delay):
-    # when only choosing concession, drop expirations
-    if not delay:
-        df = df[~df[EXP]]
     # concession is an int from 0 to 100
     y = (df[CON] * CON_MULTIPLIER).astype('int8')
     # when choosing delay, expired offer is last index
@@ -19,21 +17,18 @@ def get_y(df, delay):
 
 def process_inputs(part, delay):
     # load dataframes
-    offers, threads, clock, lstg_start = get_policy_data(part)
+    data = get_init_data(part)
 
-    # restrict by role, drop auto replies
-    role_mask = offers.index.isin(IDX[SLR_PREFIX], level='index')
-    df = offers[~offers[AUTO] & role_mask]
+    # master index
+    idx = create_index_slr(data['offers'], delay)
 
     # outcome and master index
-    y = get_y(df, delay)
+    y = get_y(data['offers'].loc[idx, [CON, EXP]], delay)
 
     # input features dictionary
+    x = construct_x_slr(part=part, delay=delay,
+                        idx=y.index, data=data)
 
-    x = construct_x_init(part=part, role=SLR_PREFIX, delay=delay,
-                         idx=y.index, offers=offers,
-                         threads=threads, clock=clock,
-                         lstg_start=lstg_start)
     return {'y': y, 'x': x}
 
 
@@ -43,7 +38,7 @@ def input_parameters(outcome):
     parser.add_argument('--delay', action='store_true')
     args = parser.parse_args()
     part, delay = args.part, args.delay
-    name = '{}_{}'.format(outcome, SLR_PREFIX)
+    name = '{}_{}'.format(outcome, SLR)
     if delay:
         name += '_delay'
     print('%s/%s' % (part, name))
@@ -55,7 +50,7 @@ def main():
     part, delay, name = input_parameters('policy')
 
     # policy is trained on TRAIN_MODELS
-    assert part in [TRAIN_MODELS, VALIDATION, TEST]
+    assert part in [TRAIN_RL, VALIDATION, TEST]
 
     # input dataframes, output processed dataframes
     d = process_inputs(part, delay)

@@ -2,7 +2,7 @@ import torch
 import numpy as np
 import pandas as pd
 from constants import (MODELS, OFFER_MODELS, FIRST_ARRIVAL_MODEL,
-                       SLR_PREFIX, BYR_HIST_MODEL, INTERARRIVAL_MODEL)
+                       SLR, BYR_HIST_MODEL, INTERARRIVAL_MODEL)
 from featnames import (OUTCOME_FEATS,
                        MONTHS_SINCE_LSTG, BYR_HIST,
                        INT_REMAINING, MONTHS_SINCE_LAST)
@@ -39,7 +39,7 @@ class Composer:
         x_lstg_cols = list(x_lstg_cols)
         featnames = load_featnames(FIRST_ARRIVAL_MODEL)
         featnames[LSTG_MAP] = [feat for feat in featnames[LSTG_MAP] if feat in x_lstg_cols]
-        featnames[SLR_PREFIX] = load_featnames(model_str(CON, turn=2))[SLR_PREFIX]
+        featnames[SLR] = load_featnames(model_str(CON, turn=2))[SLR]
         for model in MODELS:
             # verify all x_lstg based sets contain the same features in the same order
             Composer.verify_lstg_sets_shared(model, x_lstg_cols, featnames.copy())

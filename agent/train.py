@@ -13,9 +13,9 @@ from rlpyt.samplers.serial.sampler import SerialSampler
 from rlpyt.samplers.parallel.cpu.sampler import CpuSampler
 from rlpyt.utils.logging.context import logger_context
 from featnames import DELAY
-from constants import RL_LOG_DIR, BYR_PREFIX, PARTS_DIR, TRAIN_RL, DROPOUT
-from agent.agent_consts import (AGENT_STATE, PARAM_DICTS, THREADS_PER_PROC)
-from agent.agent_utils import gen_run_id, save_params
+from constants import RL_LOG_DIR, BYR, PARTS_DIR, TRAIN_RL, DROPOUT
+from agent.const import (AGENT_STATE, PARAM_DICTS, THREADS_PER_PROC)
+from agent.util import gen_run_id, save_params
 from agent.AgentComposer import AgentComposer
 from agent.models.PgCategoricalAgentModel import PgCategoricalAgentModel
 from rlenv.util import load_chunk
@@ -74,7 +74,7 @@ class RlTrainer:
     def generate_agent(self):
         # initialize model keyword arguments
         model_kwargs = dict()
-        model_kwargs[BYR_PREFIX] = self.agent_params['role'] == BYR_PREFIX
+        model_kwargs[BYR] = self.agent_params['role'] == BYR
         model_kwargs[DELAY] = self.agent_params[DELAY]
         model_kwargs[DROPOUT] = (self.agent_params['dropout0'],
                                  self.agent_params['dropout1'])

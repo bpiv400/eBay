@@ -7,7 +7,7 @@ from processing.f_discrim.discrim_utils import concat_sim_chunks
 from assess.assess_consts import MAX_THREADS
 from processing.processing_consts import INTERVAL
 from constants import TEST, PLOT_DIR, BYR_HIST_MODEL, CON_MULTIPLIER, \
-    HIST_QUANTILES, SIM, OBS, ARRIVAL_PREFIX, MAX_DELAY, PCTILE_DIR
+    HIST_QUANTILES, SIM, OBS, ARRIVAL, MAX_DELAY, PCTILE_DIR
 from featnames import MONTHS_SINCE_LSTG, BYR_HIST, DELAY, EXP, CON, \
     MSG, REJECT
 
@@ -57,7 +57,7 @@ def get_arrival_distributions(threads):
     y = threads[MONTHS_SINCE_LSTG]
     pdf = get_pdf(y, MAX_DELAY[1], add_last=False).to_frame()
     pdf['period'] = pdf.index // INTERVAL[1]
-    p[ARRIVAL_PREFIX] = pdf.groupby('period').sum().squeeze()
+    p[ARRIVAL] = pdf.groupby('period').sum().squeeze()
 
     # buyer history
     y = threads[BYR_HIST] / HIST_QUANTILES

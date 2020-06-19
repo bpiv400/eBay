@@ -1,6 +1,6 @@
 import numpy as np
 from collections import namedtuple
-from constants import (BYR_PREFIX, MONTH, MAX_DELAY, FIRST_ARRIVAL_MODEL,
+from constants import (BYR, MONTH, MAX_DELAY, FIRST_ARRIVAL_MODEL,
                        BYR_HIST_MODEL, INTERARRIVAL_MODEL)
 from featnames import ACC_PRICE, DEC_PRICE, START_PRICE, DELAY
 from rlenv.Heap import Heap
@@ -136,7 +136,7 @@ class EbayEnvironment:
             return False
 
     def _process_sale(self, offer):
-        if offer.player == BYR_PREFIX:
+        if offer.player == BYR:
             start_norm = offer.price
         else:
             start_norm = 1 - offer.price
@@ -210,7 +210,7 @@ class EbayEnvironment:
         offer_params = {
             'thread_id': event.thread_id,
             'time': event.priority,
-            'player': BYR_PREFIX
+            'player': BYR
         }
         self.time_feats.update_features(offer=Offer(params=offer_params, rej=True))
 

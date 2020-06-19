@@ -9,7 +9,7 @@ import pandas as pd
 from utils import load_file, init_x
 from constants import NO_ARRIVAL_CUTOFF, TRAIN_RL, RL_TRAIN_DIR, \
     NUM_WORKERS_RL
-from featnames import CAT, START_PRICE
+from featnames import START_PRICE, NO_ARRIVAL
 from rlenv.const import X_LSTG, LOOKUP
 
 os.environ["HDF5_USE_FILE_LOCKING"] = "FALSE"
@@ -20,12 +20,11 @@ def get_cols(df):
 
 
 def main():
-    # load lookup
-    lookup = load_file(TRAIN_RL, LOOKUP).drop(CAT, axis=1)
-
-    # drop listings with infrequent arrivals
-    lookup = lookup[lookup.p_no_arrival < NO_ARRIVAL_CUTOFF]
-    lookup = lookup.drop('p_no_arrival', axis=1)
+    # lookup file
+    lookup = load_file(TRAIN_RL, LOOKUP)
+    p0 = load_file(TRAIN_RL, NO_ARRIVAL)
+    keep = p0 <= NO_ARRIVAL_CUTOFF  # drop infrequent arrivals
+    lookup = lookup[keep]
 
     # sort by start_price
     lookup = lookup.sort_values(by=START_PRICE)

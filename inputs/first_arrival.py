@@ -1,13 +1,14 @@
 from inputs.util import get_arrival_times, save_files
 from utils import input_partition, load_file, init_x
-from inputs.const import INTERVAL, INTERVAL_COUNTS
-from constants import FIRST_ARRIVAL_MODEL
+from inputs.const import ARRIVAL_INTERVAL, ARRIVAL_INTERVAL_CT
+from constants import FIRST_ARRIVAL_MODEL, HOUR
+from featnames import START_TIME
 
 
 def process_inputs(part):
     # data
     clock = load_file(part, 'clock')
-    lstg_start = load_file(part, 'lookup').start_time
+    lstg_start = load_file(part, 'lookup')[START_TIME]
     lstg_end = load_file(part, 'lstg_end')
 
     # first arrival time
@@ -18,9 +19,13 @@ def process_inputs(part):
     diff = arrivals[1] - arrivals[0]
 
     # interarrival time in periods
-    y = diff // INTERVAL[1]
-    y[y.isna()] = INTERVAL_COUNTS[1]
-    y = y.astype('int64')
+    y = diff // ARRIVAL_INTERVAL
+
+    # fill in missings
+    idx0 = y[y.isna()].index
+    hours = ((lstg_end - lstg_start + 1) / HOUR)[idx0]
+    y[idx0] = hours - (ARRIVAL_INTERVAL_CT + 1)
+    y = y.astype(clock.dtype)
 
     # listing features
     x = init_x(part, y.index)

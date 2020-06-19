@@ -1,5 +1,5 @@
 import psutil
-from constants import BYR_PREFIX, SLR_PREFIX
+from constants import BYR, SLR
 
 # state dictionaries
 AGENT_STATE = 'agent_state_dict'
@@ -23,8 +23,8 @@ ALL_FEATS = "all"
 
 # command-line parameters
 AGENT_PARAMS = {'role': {'type': str,
-                         'choices': [BYR_PREFIX, SLR_PREFIX],
-                         'default': SLR_PREFIX},
+                         'choices': [BYR, SLR],
+                         'default': SLR},
                 'delay': {'action': 'store_true'},
                 'dropout0': {'type': float, 'default': 0.0},
                 'dropout1': {'type': float, 'default': 0.0},

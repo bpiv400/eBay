@@ -2,7 +2,7 @@ import argparse
 from train.Trainer import Trainer
 from train.const import INT_DROPOUT, DROPOUT_GRID
 from constants import SMALL, TRAIN_RL, TRAIN_MODELS, VALIDATION, \
-    DISCRIM_MODELS, INIT_VALUE_MODELS
+    DISCRIM_MODELS, INIT_MODELS
 
 
 def main():
@@ -16,7 +16,7 @@ def main():
     # partition to train on
     if args.dev:
         train_part = SMALL
-    elif args.name in DISCRIM_MODELS + INIT_VALUE_MODELS:
+    elif args.name in DISCRIM_MODELS + INIT_MODELS:
         train_part = TRAIN_RL
     else:
         train_part = TRAIN_MODELS

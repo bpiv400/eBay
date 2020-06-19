@@ -7,7 +7,6 @@ import argparse
 import torch
 from constants import PARTITIONS
 from rlenv.Generator import Generator
-from rlenv.util import get_env_sim_dir
 from rlenv.test.TestGenerator import TestGenerator
 from sim.values.ValueGenerator import ValueGenerator
 from sim.outcomes.OutcomeGenerator import OutcomeGenerator
@@ -48,14 +47,9 @@ def main():
     assert args.part in PARTITIONS
     print('{} {}: {}'.format(args.part, args.num, args.name))
 
-    # directory for input chunks
-    chunk_dir = get_env_sim_dir(args.part)
-    if not os.path.isdir(chunk_dir):
-        os.mkdir(chunk_dir)
-
     # create generator
     gen_class = get_gen_class(args.name)
-    generator = gen_class(direct=chunk_dir,
+    generator = gen_class(part=args.part,
                           verbose=args.verbose,
                           start=args.thread)   # type: Generator
     if args.name == 'values' and chunk_done(args.num):

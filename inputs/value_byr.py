@@ -1,42 +1,67 @@
 import numpy as np
-from inputs.util import save_files, get_value_data, \
-    construct_x_init, get_sale_norm
+import pandas as pd
+from inputs.util import save_files, construct_x_byr, \
+    get_sale_norm, create_index_byr, get_init_data
 from utils import byr_reward, input_partition
 from inputs.const import DELTA_MONTH, DELTA_ACTION, C_ACTION
-from constants import IDX, BYR_PREFIX, MONTH, \
-    TRAIN_RL, VALIDATION, TEST
-from featnames import EXP, AUTO, START_PRICE, START_TIME
+from constants import BYR, TRAIN_RL, VALIDATION, TEST, DAY, MONTH
+from featnames import START_PRICE, START_TIME, CON
 
 
-def get_duration(offers, clock, lookup):
-    mask = offers.index.isin(IDX[SLR_PREFIX], level='index') \
-           & ~offers[EXP] & ~offers[AUTO]
-    idx = mask[mask].index
-    elapsed = (clock.loc[mask] - lookup.start_time.reindex(
-        index=idx, level='lstg')) / MONTH
-    months = elapsed + elapsed.index.get_level_values(level='sim')
-    return months.rename('months')
+def get_months(idx, data):
+    # months is inf if no sale
+    months = pd.Series(np.inf, index=idx, name='months_diff')
+    # split index by turn
+    idx_first = idx[idx.isin([1], level='index')]
+    idx_next = idx[idx.isin([3, 5, 7], level='index')]
+    # beginning of delay window for first offer
+    lstg_start = data['lookup'][START_TIME]
+    t_first = lstg_start.reindex(index=idx_first, level='lstg')
+    t_first += DAY * t_first.index.get_level_values(level='day')
+    # beginning of delay window for subsequent offers
+    clock = data['clock']
+    t_next = clock.groupby(clock.index.names[:-1]).shift()
+    t_next = t_next.dropna().astype(clock.dtype)
+    t_next = t_next.to_frame().assign(day=0).set_index(
+        'day', append=True).squeeze().loc[idx_next]
+    # for sales, fill in with months to sale
+    t_sale = clock[data['offers'][CON] == 1].reset_index(
+        'index', drop=True).rename('sale_time')
+    t_now = pd.concat([t_first, t_next]).rename('delay_start')
+    df = t_now.to_frame().join(t_sale).reorder_levels(
+        t_now.index.names)
+    df = df[~df.sale_time.isna()].astype(clock.dtype)
+    months.loc[df.index] = (df.sale_time - df.delay_start) / MONTH
+    return months
 
 
 def process_inputs(part):
     # data
-    lookup, threads, offers, clock = get_value_data(part)
+    data = get_init_data(part)
+    start_price = data['lookup'][START_PRICE]
+
+    # master index
+    idx, _ = create_index_byr(data['clock'],
+                              data['lookup'][START_TIME])
 
     # value components
-    norm = get_sale_norm(offers)
-    net_value = (1 - norm) * lookup[START_PRICE]
+    norm = get_sale_norm(data['offers']).reset_index(
+        'index', drop=True)
+    net = ((1 - norm) * start_price).rename('net_value')
+    months = get_months(idx, data)
 
-    sales = get_sales(offers, clock, lookup)
-    months_since_start = get_duration(offers, clock, lookup)
-    df = months_since_start.to_frame().join(sales)
+    # combine in dataframe
+    df = months.to_frame().join(net)
+    df.index = df.index.reorder_levels(months.index.names)
 
     # discounted values
     values = byr_reward(net_value=df.net_value,
                         months_diff=df.months_diff,
                         monthly_discount=DELTA_MONTH)
+    values[values.isna()] = 0.
 
     # normalize by start_price
-    norm_values = values / lookup[START_PRICE].reindex(
+    norm_values = values / start_price.reindex(
         index=values.index, level='lstg')
     assert norm_values.max() <= 1
 
@@ -44,10 +69,7 @@ def process_inputs(part):
     y = np.maximum(np.round(norm_values * 100), 0.).astype('uint8')
 
     # input feature dictionary
-    x = construct_x_init(part=part, role=BYR_PREFIX, delay=True,
-                         idx=y.index, offers=offers,
-                         threads=threads, clock=clock,
-                         lstg_start=lookup[START_TIME])
+    x = construct_x_byr(part=part, idx=y.index, data=data)
 
     return {'y': y, 'x': x}
 
@@ -55,7 +77,7 @@ def process_inputs(part):
 def main():
     # extract parameters from command line
     part = input_partition()
-    name = 'value_{}_delay'.format(BYR_PREFIX)
+    name = 'value_{}_delay'.format(BYR)
     print('%s/%s' % (part, name))
 
     # policy is trained using TRAIN_RL

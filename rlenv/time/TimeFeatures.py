@@ -12,7 +12,7 @@ import math
 from collections import deque, Counter
 import numpy as np
 from featnames import TIME_FEATS, THREAD_COUNT
-from constants import EXPIRATION, BYR_PREFIX
+from constants import EXPIRATION, BYR
 from rlenv.Heap import Heap
 from rlenv.time.Offer import Offer
 from rlenv.time.offer_types import BYR_REJECTION, SLR_REJECTION, OFFER
@@ -217,7 +217,7 @@ class TimeFeatures:
 
     def update_features_old(self, trigger_type=None, thread_id=None, offer=None):
         if trigger_type == BYR_REJECTION:
-            offer['player'] = BYR_PREFIX
+            offer['player'] = BYR
             offer['thread_id'] = thread_id
         else:
             offer['player'] = offer['type']

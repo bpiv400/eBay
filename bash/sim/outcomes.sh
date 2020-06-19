@@ -1,5 +1,5 @@
 #!/bin/bash
-#$ -t 1-1000
+#$ -t 1-256
 #$ -q short.q
 #$ -l m_mem_free=4G
 #$ -N outcomes

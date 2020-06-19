@@ -5,7 +5,7 @@ from plots.plots_utils import continuous_pdf, cdf_plot, survival_plot, \
     grouped_bar
 from processing.processing_consts import INTERVAL
 from constants import PLOT_DIR, SIM, OBS, BYR_HIST_MODEL, MAX_DELAY, \
-    HOUR, DAY, ARRIVAL_PREFIX
+    HOUR, DAY, ARRIVAL
 from featnames import CON, MSG, DELAY
 
 
@@ -32,9 +32,9 @@ def draw_thread_offer(p, suffix=''):
 
 def draw_arrival(p, suffix=''):
     # arrival model
-    name = '{}{}'.format(ARRIVAL_PREFIX, suffix)
+    name = '{}{}'.format(ARRIVAL, suffix)
     print(name)
-    df = construct_df(p, ARRIVAL_PREFIX)
+    df = construct_df(p, ARRIVAL)
     df.index = df.index.values / (DAY / INTERVAL[1])
 
     xticks = np.arange(0, MAX_DELAY[1] / DAY, 3)

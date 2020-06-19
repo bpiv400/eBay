@@ -7,10 +7,9 @@ from torch.optim import Adam, lr_scheduler
 from train.EBayDataset import EBayDataset
 from nets.FeedForward import FeedForward
 from train.Sample import get_batches
-from nets.const import LAYERS_EMBEDDING
 from train.const import FTOL, LR0, LR1, LR_FACTOR, INT_DROPOUT
-from constants import MODEL_DIR, LOG_DIR, DELAY_MODELS, \
-    INTERARRIVAL_MODEL, INIT_VALUE_MODELS, MODEL_NORM
+from constants import MODEL_DIR, LOG_DIR, CENSORED_MODELS, \
+    INIT_VALUE_MODELS, MODEL_NORM
 from utils import load_sizes
 
 
@@ -36,7 +35,7 @@ class Trainer:
         self.device = device
 
         # boolean for different loss functions
-        self.is_delay = name in DELAY_MODELS + ['arrival', INTERARRIVAL_MODEL]
+        self.use_time_loss = name in CENSORED_MODELS
         self.is_init_value = name in INIT_VALUE_MODELS
 
         # load model size parameters
@@ -209,7 +208,7 @@ class Trainer:
         lnq = log_softmax(theta, dim=-1)
 
         # calculate loss
-        if self.is_delay:
+        if self.use_time_loss:
             loss = self._time_loss(lnq, b['y'])
         else:
             loss = nll_loss(lnq, b['y'], reduction='sum')

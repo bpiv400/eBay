@@ -1,5 +1,5 @@
 #!/bin/bash
-#$ -t 1-4
+#$ -t 1-3
 #$ -l m_mem_free=50G
 #$ -N arrival
 #$ -j y
@@ -14,7 +14,4 @@ then
 elif [ "$SGE_TASK_ID" == 3 ]
 then
 	python repo/inputs/hist.py --part "$1"
-elif [ "$SGE_TASK_ID" == 4 ]
-then
-	python repo/inputs/arrival.py --part "$1"
 fi

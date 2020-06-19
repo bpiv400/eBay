@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 from utils import extract_clock_feats, byr_norm, slr_norm
 from constants import START, MAX_DELAY, IDX, \
-    BYR_PREFIX, SLR_PREFIX, DAY, HOLIDAYS
+    BYR, SLR, DAY, HOLIDAYS
 from featnames import HOLIDAY, DOW_PREFIX, TIME_OF_DAY, AFTERNOON, \
     CLOCK_FEATS
 
@@ -102,11 +102,11 @@ def get_norm(con):
     norm[1] = df[1]
     norm[2] = df[2] * (1 - norm[1])
     for i in range(3, 8):
-        if i in IDX[BYR_PREFIX]:
+        if i in IDX[BYR]:
             norm[i] = byr_norm(con=df[i],
                                prev_byr_norm=norm[i - 2],
                                prev_slr_norm=norm[i - 1])
-        elif i in IDX[SLR_PREFIX]:
+        elif i in IDX[SLR]:
             norm[i] = slr_norm(con=df[i],
                                prev_byr_norm=norm[i - 1],
                                prev_slr_norm=norm[i - 2])

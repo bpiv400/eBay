@@ -8,7 +8,6 @@ Lots of memory dumping code while I try to find leak
 """
 import numpy as np
 from featnames import START_PRICE, START_TIME, ACC_PRICE, DEC_PRICE
-from rlenv.util import load_chunk
 from rlenv.environments.SimulatorEnvironment import SimulatorEnvironment
 from rlenv.interfaces.ArrivalInterface import ArrivalInterface
 from rlenv.interfaces.PlayerInterface import SimulatedSeller, SimulatedBuyer
@@ -16,13 +15,13 @@ from rlenv.Composer import Composer
 
 
 class Generator:
-    def __init__(self, direct=None, verbose=False):
+    def __init__(self, part=None, verbose=False):
         """
         Constructor
-        :param direct: base directory for current partition
-        :param verbose: whether to print info about simulator activity
+        :param str part: name of partition
+        :param bool verbose: if True, print info about simulator activity
         """
-        self.dir = direct
+        self.part = part
         self.verbose = verbose
         self.initialized = False
 
@@ -133,8 +132,7 @@ class SimulatorGenerator(Generator):
         raise NotImplementedError()
 
     def load_chunk(self, chunk=None):
-        self.chunk = chunk
-        self.x_lstg, self.lookup = load_chunk(base_dir=self.dir, num=self.chunk)
+        raise NotImplementedError()
 
     def generate(self):
         raise NotImplementedError()

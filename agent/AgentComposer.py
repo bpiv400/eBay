@@ -1,13 +1,13 @@
 import math
 import torch
 import numpy as np
-from constants import (TURN_FEATS, BYR_PREFIX, SLR_PREFIX)
-from featnames import (OUTCOME_FEATS, MONTHS_SINCE_LSTG, BYR_HIST,
-                       INT_REMAINING)
+from featnames import INT_REMAINING
+from constants import TURN_FEATS, BYR, SLR
+from featnames import (OUTCOME_FEATS, MONTHS_SINCE_LSTG, BYR_HIST)
 from utils import load_sizes, load_featnames
 from rlenv.const import *
-from agent.agent_consts import FEAT_TYPE, CON_TYPE, ALL_FEATS
-from agent.agent_utils import get_con_set, get_agent_name
+from agent.const import FEAT_TYPE, CON_TYPE, ALL_FEATS
+from agent.util import get_con_set, get_agent_name
 from rlenv.Composer import Composer
 
 
@@ -26,7 +26,7 @@ class AgentComposer(Composer):
 
     @property
     def byr(self):
-        return self.agent_params['role'] == BYR_PREFIX
+        return self.agent_params['role'] == BYR
 
     @property
     def delay(self):
@@ -41,7 +41,7 @@ class AgentComposer(Composer):
 
     @property
     def groupings(self):
-        return list(self.agent_sizes['x'].keys())
+        return list(self.sizes['agent']['x'].keys())
 
     @property
     def feat_type(self):
@@ -155,10 +155,10 @@ class AgentComposer(Composer):
         if not self.byr:
             assert lstg_append[start_index + 2] == THREAD_COUNT
             start_index += 3
-            agent_role = SLR_PREFIX
+            agent_role = SLR
         else:
             start_index += 2
-            agent_role = BYR_PREFIX
+            agent_role = BYR
 
         # ensure turn indicators are next in all cases
         turn_feats = TURN_FEATS[agent_role]
