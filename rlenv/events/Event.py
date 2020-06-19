@@ -17,6 +17,7 @@ class Event:
         assert(isinstance(priority, int))
         self.type = event_type
         self.priority = priority
+        self.turn = 1
 
     def __lt__(self, other):
         """

@@ -32,6 +32,9 @@ class RlTrainer:
         self.ppo_params = kwargs['ppo_params']
         self.system_params = kwargs['system_params']
 
+        # agent type check
+        self._is_agent_valid()
+
         # iteration
         self.itr = 0
 
@@ -45,6 +48,10 @@ class RlTrainer:
         # rlpyt components
         self.sampler = self.generate_sampler()
         self.runner = self.generate_runner()
+
+    def _is_agent_valid(self):
+        if not self.agent_params['delay'] and self.agent_params['role'] == BYR_PREFIX:
+            raise RuntimeError("Buyer agent must choose its delay. Check parameters")
 
     def generate_train_params(self):
         chunk_path = PARTS_DIR + '{}/chunks/1.gz'.format(TRAIN_RL)
@@ -89,7 +96,7 @@ class RlTrainer:
             batch_b = 1
             batch_t = int(self.batch_params['batch_size'] / batch_b)
             return SerialSampler(
-                EnvCls=SellerEnvironment,
+                EnvCls=self.env_class,
                 env_kwargs=self.env_params_train,
                 batch_B=batch_b,
                 batch_T=batch_t,
@@ -104,7 +111,7 @@ class RlTrainer:
             if batch_t < 12:
                 warnings.warn("Very few actions per environment")
             return CpuSampler(
-                EnvCls=SellerEnvironment,
+                EnvCls=self.env_class,
                 env_kwargs=self.env_params_train,
                 batch_B=batch_b,
                 batch_T=batch_t,

@@ -109,6 +109,8 @@ class AgentEnvironment(EbayEnvironment, Env):
         return obs, self.get_reward(), done, info
 
     def get_obs(self, sources=None, turn=None):
+        if sources is None or turn is None:
+            raise RuntimeError("Missing arguments to get observation")
         obs_dict = self.composer.build_input_dict(model_name=None,
                                                   sources=sources,
                                                   turn=turn)

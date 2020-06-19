@@ -23,7 +23,6 @@ class Thread(Event):
 
         # sources object
         self.sources = None
-        self.turn = 1
         self.thread_id = thread_id
 
     def init_thread(self, sources=None, hist=None):

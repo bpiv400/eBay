@@ -11,6 +11,7 @@ class Arrival(Event):
 
     Attributes:
         priority: inherited from Event
+        turn:  inherited from Event (fixed to 1)
     """
     def __init__(self, priority=None, sources=None, rl=False):
         """

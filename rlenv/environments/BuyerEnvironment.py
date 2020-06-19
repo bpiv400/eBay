@@ -130,7 +130,8 @@ class BuyerEnvironment(AgentEnvironment):
             raise RuntimeError("Bad assumption about first event")
         event.update_arrival()
         self.last_event = event
-        return self.get_obs()
+        return self.get_obs(sources=self.last_event.sources,
+                            turn=self.last_event.turn)
 
     def is_agent_turn(self, event):
         """
