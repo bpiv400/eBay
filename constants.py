@@ -154,7 +154,7 @@ META_6 = [58058, 1249, 625, 293, 15032]
 NO_ARRIVAL_CUTOFF = .50 ** (1.0 / 12)
 
 # number of workers for the RL
-NUM_WORKERS_RL = 32
+NUM_WORKERS_RL = 8
 
 # fixed random seed
 SEED = 123456
