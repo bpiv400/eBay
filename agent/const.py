@@ -1,5 +1,6 @@
 import psutil
 from constants import BYR_PREFIX, SLR_PREFIX
+from featnames import BYR_HIST
 
 # state dictionaries
 AGENT_STATE = 'agent_state_dict'
@@ -33,7 +34,10 @@ AGENT_PARAMS = {'role': {'type': str,
                             'default': ALL_FEATS},
                 'con_type': {'type': str,
                              'choices': [FULL_CON, QUARTILES, HALF],
-                             'default': FULL_CON}}
+                             'default': FULL_CON},
+                BYR_HIST: {'type': float,
+                           'default': 0.5}
+                }
 
 BATCH_PARAMS = {'batch_size': {'type': int, 'default': 2 ** 9}}
 

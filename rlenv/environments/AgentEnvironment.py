@@ -106,7 +106,8 @@ class AgentEnvironment(EbayEnvironment, Env):
         bin_proceeds = (1-self.cut) * self.lookup[START_PRICE]
         info = InfoTraj(months=months, bin_proceeds=bin_proceeds,
                         done=done)
-        return obs, self.get_reward(), done, info
+        reward = self.get_reward()
+        return obs, reward, done, info
 
     def get_obs(self, sources=None, turn=None):
         if sources is None or turn is None:

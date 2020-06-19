@@ -13,7 +13,7 @@ from rlenv.events.Arrival import Arrival
 from rlenv.events.Thread import RlThread
 
 
-BUYER_DELAY_GROUPINGS = list(load_sizes(get_agent_name(byr=False, delay=False,
+BUYER_DELAY_GROUPINGS = list(load_sizes(get_agent_name(byr=True, delay=True,
                                                        policy=True))['x'].keys())
 BuyerDelayObs = namedtuple('BuyerDelayObs', BUYER_DELAY_GROUPINGS)
 
@@ -36,7 +36,7 @@ class BuyerEnvironment(AgentEnvironment):
             return self.lookup[START_PRICE] - self.outcome.price
 
     def define_observation_class(self):
-        return namedtuple('BuyerObs', self.composer.groupings)
+        return BuyerDelayObs
 
     @property
     def horizon(self):
@@ -82,7 +82,7 @@ class BuyerEnvironment(AgentEnvironment):
                 return self.run()
         else:
             sources = self.last_event.sources
-            arrival_time = self.get_arrival_time(self.last_event.priority)
+            arrival_time = self.get_arrival_time(self.last_event)
             sources.init_thread(hist=self.composer.hist)
             thread = RlThread(priority=arrival_time, sources=sources,
                               con=con, rl_buyer=True,
@@ -95,7 +95,8 @@ class BuyerEnvironment(AgentEnvironment):
 
     def _step_thread(self, con=None):
         # expiration rejection ends the trajectory
-        if con == 0:
+        # or rejection on the last turn
+        if con == 0 or (self.last_event.turn == 7 and con < 1):
             return self.agent_tuple(done=True)
         else:
             # otherwise sample offer time
@@ -112,9 +113,9 @@ class BuyerEnvironment(AgentEnvironment):
         """
         con = self.turn_from_action(action=action)
         if self.last_event.type == RL_ARRIVAL_EVENT:
-            self._step_arrival(con=con)
+            return self._step_arrival(con=con)
         else:
-            self._step_thread(con=con)
+            return self._step_thread(con=con)
 
     def run(self):
         event, lstg_complete = super().run()
@@ -123,7 +124,8 @@ class BuyerEnvironment(AgentEnvironment):
         if event is not self.rl_event and not lstg_complete:
             raise RuntimeError("Other threads should only return "
                                "to agent when the lstg ends")
-        return self.agent_tuple(done=lstg_complete)
+        agent_tuple = self.agent_tuple(done=lstg_complete)
+        return agent_tuple
 
     def reset(self):
         """
