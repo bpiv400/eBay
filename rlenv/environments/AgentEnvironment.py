@@ -7,7 +7,8 @@ from featnames import START_TIME, START_PRICE, META
 from constants import MONTH
 from utils import get_months_since_lstg, get_cut
 from agent.spaces.ConSpace import ConSpace
-from agent.agent_utils import get_con_set, get_train_file_path
+from agent.util import get_con_set, get_train_file_path
+from inputs.const import INTERVAL_COUNT_TURN, INTERVAL_TURN
 from rlpyt.envs.base import Env
 from rlpyt.spaces.composite import Composite
 from rlpyt.spaces.float_box import FloatBox
@@ -25,7 +26,7 @@ class AgentEnvironment(EbayEnvironment, Env):
         super().__init__(params=kwargs)
         # attributes for getting lstg data
         if 'filename' not in kwargs:
-            self._filename = get_train_file_path(1)
+            self._filename = get_train_file_path(0)
         else:
             self._filename = kwargs['filename']
         self._file = None
@@ -42,8 +43,8 @@ class AgentEnvironment(EbayEnvironment, Env):
                                    byr=self.composer.byr,
                                    delay=self.composer.delay)
         self._action_space = self.define_action_space()
-        self._observation_space = self.define_observation_space()
         self._obs_class = self.define_observation_class()
+        self._observation_space = self.define_observation_space()
 
         self.cut = None
 
@@ -83,6 +84,8 @@ class AgentEnvironment(EbayEnvironment, Env):
         self.end_time = self.start_time + MONTH
         self.relist_count = 0
         self.cut = get_cut(self.lookup[META])
+        if self.verbose:
+            Recorder.print_lstg(self.lookup)
 
     def _draw_lstgs(self):
         ids = np.random.choice(self._num_lstgs, ENV_LSTG_COUNT,
@@ -104,9 +107,12 @@ class AgentEnvironment(EbayEnvironment, Env):
         bin_proceeds = (1-self.cut) * self.lookup[START_PRICE]
         info = InfoTraj(months=months, bin_proceeds=bin_proceeds,
                         done=done)
-        return obs, self.get_reward(), done, info
+        reward = self.get_reward()
+        return obs, reward, done, info
 
     def get_obs(self, sources=None, turn=None):
+        if sources is None or turn is None:
+            raise RuntimeError("Missing arguments to get observation")
         obs_dict = self.composer.build_input_dict(model_name=None,
                                                   sources=sources,
                                                   turn=turn)
@@ -115,11 +121,10 @@ class AgentEnvironment(EbayEnvironment, Env):
     def get_offer_time(self, event):
         # query with delay model
         input_dict = self.get_delay_input_dict(event=event)
-        width = self.intervals[event.turn]
-        intervals = (self.end_time - event.priority) / width
-        max_interval = min(int(intervals), int(event.max_delay / width))
+        intervals = (self.end_time - event.priority) / INTERVAL_TURN
+        max_interval = min(int(intervals), INTERVAL_COUNT_TURN)
         delay = self.get_delay(input_dict=input_dict, turn=event.turn,
-                               thread_id=event.thread_id, time=event.time,
+                               thread_id=event.thread_id, time=event.priority,
                                max_interval=max(1, max_interval))
         return max(delay, 1) + event.priority
 

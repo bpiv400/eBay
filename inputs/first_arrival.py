@@ -1,8 +1,8 @@
 from inputs.util import get_arrival_times, save_files
 from utils import input_partition, load_file, init_x
-from inputs.const import ARRIVAL_INTERVAL, ARRIVAL_INTERVAL_CT
-from constants import FIRST_ARRIVAL_MODEL, HOUR
 from featnames import START_TIME
+from inputs.const import INTERVAL_ARRIVAL, INTERVAL_CT_ARRIVAL
+from constants import FIRST_ARRIVAL_MODEL, HOUR
 
 
 def process_inputs(part):
@@ -19,12 +19,12 @@ def process_inputs(part):
     diff = arrivals[1] - arrivals[0]
 
     # interarrival time in periods
-    y = diff // ARRIVAL_INTERVAL
+    y = diff // INTERVAL_ARRIVAL
 
     # fill in missings
     idx0 = y[y.isna()].index
     hours = ((lstg_end - lstg_start + 1) / HOUR)[idx0]
-    y[idx0] = hours - (ARRIVAL_INTERVAL_CT + 1)
+    y[idx0] = hours - (INTERVAL_CT_ARRIVAL + 1)
     y = y.astype(clock.dtype)
 
     # listing features

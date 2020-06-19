@@ -1,5 +1,6 @@
 import psutil
 from constants import BYR, SLR
+from featnames import BYR_HIST
 
 # state dictionaries
 AGENT_STATE = 'agent_state_dict'
@@ -33,9 +34,12 @@ AGENT_PARAMS = {'role': {'type': str,
                             'default': ALL_FEATS},
                 'con_type': {'type': str,
                              'choices': [FULL_CON, QUARTILES, HALF],
-                             'default': FULL_CON}}
+                             'default': FULL_CON},
+                BYR_HIST: {'type': float,
+                           'default': 0.5}
+                }
 
-BATCH_PARAMS = {'batch_size': {'type': int, 'default': 2 ** 12}}
+BATCH_PARAMS = {'batch_size': {'type': int, 'default': 2 ** 9}}
 
 PPO_PARAMS = {'minibatches': {'type': int, 'default': 1},
               'entropy_loss_coeff': {'type': float, 'default': .01},
@@ -57,6 +61,12 @@ PARAM_DICTS = {'agent_params': AGENT_PARAMS,
                'batch_params': BATCH_PARAMS,
                'ppo_params': PPO_PARAMS,
                'system_params': SYSTEM_PARAMS}
+
+# list of parameters that must be shared among dictionaries
+# tuple is of form (source dict, destination dict, [parameters])
+DUPLICATE_PARAMS = [
+    ('system_params', 'ppo_params', ['debug'])
+]
 
 # multi-processing parameters
 THREADS_PER_PROC = 1

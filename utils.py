@@ -5,8 +5,9 @@ from torch.nn.functional import log_softmax
 import numpy as np
 from compress_pickle import load
 from nets.FeedForward import FeedForward
-from constants import MAX_DELAY, DAY, MONTH, SPLIT_PCTS, INPUT_DIR, \
-    MODEL_DIR, META_6, META_7, LISTING_FEE, PARTITIONS, PARTS_DIR
+from constants import DAY, MONTH, SPLIT_PCTS, INPUT_DIR, \
+    MODEL_DIR, META_6, META_7, LISTING_FEE, PARTITIONS, PARTS_DIR, \
+    MAX_DELAY_TURN, MAX_DELAY_ARRIVAL, EMPTY
 
 
 def unpickle(file):
@@ -18,16 +19,16 @@ def unpickle(file):
     return pickle.load(open(file, "rb"))
 
 
-def get_remaining(lstg_start, delay_start, max_delay):
+def get_remaining(lstg_start, delay_start):
     """
     Calculates number of delay intervals remaining in lstg.
     :param lstg_start: seconds from START to start of lstg.
     :param delay_start: seconds from START to beginning of delay window.
-    :param max_delay: length of delay period.
     """
-    remaining = lstg_start + MAX_DELAY[1] - delay_start
-    remaining /= max_delay
-    remaining = np.minimum(1, remaining)
+    remaining = lstg_start - delay_start
+    remaining += MAX_DELAY_ARRIVAL
+    remaining /= MAX_DELAY_TURN
+    remaining = np.minimum(1.0, remaining)
     return remaining
 
 
@@ -130,11 +131,12 @@ def load_model(name, verbose=False):
     sizes = load_sizes(name)
     net = FeedForward(sizes)  # type: nn.Module
 
-    # read in model parameters
-    state_dict = load_state_dict(name=name)
+    if not EMPTY:
+        # read in model parameters
+        state_dict = load_state_dict(name=name)
 
-    # load parameters into model
-    net.load_state_dict(state_dict, strict=True)
+        # load parameters into model
+        net.load_state_dict(state_dict, strict=True)
 
     # eval mode
     for param in net.parameters(recurse=True):

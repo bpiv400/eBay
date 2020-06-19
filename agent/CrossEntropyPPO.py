@@ -4,6 +4,7 @@ from torch.nn.utils import clip_grad_norm_
 from collections import namedtuple
 from rlpyt.agents.base import AgentInputs
 from rlpyt.algos.base import RlAlgorithm
+from rlpyt.distributions.categorical import DistInfo
 from rlpyt.utils.tensor import valid_mean
 from rlpyt.utils.buffer import buffer_to
 from rlpyt.utils.collections import namedarraytuple
@@ -48,7 +49,8 @@ class CrossEntropyPPO(RlAlgorithm):
             clip_grad_norm=1.,
             minibatches=4,
             ratio_clip=0.1,
-            cross_entropy=False
+            cross_entropy=False,
+            debug=False
     ):
         save__init__args(locals())
 
@@ -62,6 +64,7 @@ class CrossEntropyPPO(RlAlgorithm):
         self.lr_scheduler = None
         self.optimizer_value = None
         self.optimizer_policy = None
+        self.debug = debug
         if self.cross_entropy:
             self.init_agent = None
 
@@ -165,13 +168,18 @@ class CrossEntropyPPO(RlAlgorithm):
         done = done.type(reward.dtype)
         months = months.type(reward.dtype)
         bin_proceeds = bin_proceeds.type(reward.dtype)
-
+        # print('reward shape: {}'.format(reward.shape))
         # time discounting
         return_ = self.discount_return(reward=reward,
                                        done=done,
                                        months=months,
                                        bin_proceeds=bin_proceeds)
-        advantage = return_ - samples.agent.agent_info.value
+        # print('return shape: {}'.format(return_.shape))
+        # print('value shape: {}'.format(samples.agent.agent_info.value.shape))
+        value = samples.agent.agent_info.value
+        if self.debug:
+            value = value[:, :, 0]
+        advantage = return_ - value
         
         # zero out steps from unfinished trajectories
         valid = self.valid_from_done(done)
@@ -200,7 +208,6 @@ class CrossEntropyPPO(RlAlgorithm):
 
         # extract sample components and put them in LossInputs
         return_, advantage, valid = self.process_returns(samples)
-
         # for slicing
         loss_inputs = LossInputs(
             agent_inputs=agent_inputs,
@@ -307,6 +314,10 @@ class CrossEntropyPPO(RlAlgorithm):
 
         # loss from policy
         dist = self.agent.distribution
+        if self.debug:
+            pi_new = buffer_to(DistInfo(prob=pi_new.prob.unsqueeze(1)),
+                               device="cpu")
+
         ratio = dist.likelihood_ratio(action,
                                       old_dist_info=pi_old,
                                       new_dist_info=pi_new)

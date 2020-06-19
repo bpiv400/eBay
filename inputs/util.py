@@ -2,14 +2,14 @@ import numpy as np
 import pandas as pd
 from compress_pickle import dump
 from processing.util import extract_day_feats
-from utils import get_remaining, init_x, load_file
-from inputs.const import NUM_OUT, N_SMALL, ARRIVAL_INTERVAL, \
-    ARRIVAL_INTERVAL_CT, DELAY_INTERVAL, DELAY_INTERVAL_CT, \
-    DELTA_MONTH, DELTA_ACTION, C_ACTION
-from constants import INPUT_DIR, INDEX_DIR, VALIDATION, \
-    TRAIN_MODELS, TRAIN_RL, IDX, BYR, DELAY_MODELS, SLR, DAY, \
-    MONTH, INIT_VALUE_MODELS, ARRIVAL, MAX_DELAY, \
-    HIST_QUANTILES, NO_ARRIVAL_CUTOFF
+from utils import get_remaining, load_file, init_x
+from inputs.const import NUM_OUT, N_SMALL, DELTA_MONTH, \
+    DELTA_ACTION, C_ACTION, INTERVAL_ARRIVAL, INTERVAL_TURN, \
+    INTERVAL_CT_TURN, INTERVAL_CT_ARRIVAL
+from constants import INPUT_DIR, INDEX_DIR, VALIDATION, TRAIN_MODELS, \
+    TRAIN_RL, IDX, BYR, DELAY_MODELS, SLR, DAY, MONTH, \
+    INIT_VALUE_MODELS, ARRIVAL, MAX_DELAY_TURN, NO_ARRIVAL_CUTOFF, \
+    HIST_QUANTILES
 from featnames import CLOCK_FEATS, OUTCOME_FEATS, BYR_HIST, \
     CON, NORM, SPLIT, MSG, AUTO, EXP, REJECT, DAYS, DELAY, TIME_FEATS, \
     THREAD_COUNT, MONTHLY_DISCOUNT, ACTION_DISCOUNT, ACTION_COST, \
@@ -86,7 +86,7 @@ def calculate_remaining(lstg_start=None, clock=None, idx=None):
             turn_start = delay_start.xs(turn, level='index').reindex(index=idx)
             mask = idx.get_level_values(level='index') == turn
             remaining.loc[mask] = get_remaining(
-                lstg_start, turn_start, MAX_DELAY[turn])
+                lstg_start, turn_start)
     # error checking
     assert np.all(remaining > 0) and np.all(remaining <= 1)
     return remaining
@@ -326,11 +326,11 @@ def save_sizes(x, m):
 
     # for arrival models, save interval and interval counts
     if ARRIVAL in m:
-        sizes['interval'] = ARRIVAL_INTERVAL
-        sizes['interval_count'] = ARRIVAL_INTERVAL_CT
+        sizes['interval'] = INTERVAL_ARRIVAL
+        sizes['interval_count'] = INTERVAL_CT_ARRIVAL
     elif m in DELAY_MODELS:
-        sizes['interval'] = DELAY_INTERVAL
-        sizes['interval_count'] = DELAY_INTERVAL_CT
+        sizes['interval'] = INTERVAL_TURN
+        sizes['interval_count'] = INTERVAL_CT_TURN
 
     # for init models, save discount rate
     if m in INIT_VALUE_MODELS:

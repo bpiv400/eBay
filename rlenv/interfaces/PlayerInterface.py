@@ -23,6 +23,7 @@ class PlayerInterface:
 
     def delay(self, input_dict=None, turn=None, max_interval=None):
         params = self.query_delay(input_dict=input_dict, turn=turn)
+        # print('Max interval: {}'.format(max_interval))
         if max_interval is not None:
             params = params[:max_interval]
         return self.sample_delay(params=params)

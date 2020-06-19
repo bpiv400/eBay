@@ -1,6 +1,10 @@
 import pandas as pd
 from compress_pickle import dump
-from featnames import START_TIME, START_PRICE, TIME_FEATS, MSG, CON, LSTG, BYR_HIST
+from constants import MONTH
+from featnames import (START_TIME, START_PRICE, TIME_FEATS,
+                       MSG, CON, LSTG, BYR_HIST, ACC_PRICE,
+                       DEC_PRICE)
+from rlenv.const import ARRIVAL, RL_ARRIVAL_EVENT
 
 # variable names
 INDEX = 'index'
@@ -85,6 +89,32 @@ class Recorder:
             print('Days: {}, Delay: {}'.format(days, delay))
         print('Offer type: {}'.format(otype))
         print('Concession: {} | norm: {} | message: {}'.format(con, norm, msg))
+
+    @staticmethod
+    def print_lstg(lookup):
+        print("LSTG: {}".format(int(lookup[LSTG])))
+        print('start time: {} | end time: {}'.format(int(lookup[START_TIME]),
+                                                     int(lookup[START_TIME] + MONTH)))
+        print(('Start price: {} | accept price: {}' +
+              ' | decline price: {}').format(lookup[START_PRICE], lookup[ACC_PRICE],
+                                             lookup[DEC_PRICE]))
+        norm_acc = lookup[ACC_PRICE] / lookup[START_PRICE]
+        norm_dec = lookup[DEC_PRICE] / lookup[START_PRICE] if lookup[DEC_PRICE] > 0 else 0.0
+        print('Norm accept price: {} | Norm decline price: {}'.format(norm_acc, norm_dec))
+
+    @staticmethod
+    def print_next_event(event):
+        print('NEXT EVENT DRAWING...')
+        print('Type: {}'.format(event.type))
+        if event.type not in [ARRIVAL, RL_ARRIVAL_EVENT]:
+            print('Thread: {} | Turn: {}'.format(event.thread_id, event.turn))
+
+    @staticmethod
+    def print_agent_turn(con=None, delay=None):
+        if delay is not None:
+            print('AGENT TURN: con: {} | delay : {}'.format(con, delay))
+        else:
+            print('AGENT TURN: con: {}'.format(con))
 
     def print_sale(self, sale, price, dur):
         """

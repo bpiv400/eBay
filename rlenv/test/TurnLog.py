@@ -1,4 +1,4 @@
-from constants import MAX_DELAY, MONTH
+from constants import MONTH, MAX_DELAY_TURN, MAX_DELAY_ARRIVAL
 from featnames import MSG, CON, DELAY, EXP
 from rlenv.util import compare_input_dicts, model_str
 
@@ -69,5 +69,6 @@ class TurnLog:
         return self.turn % 2 != 0
 
     def _init_offer_time(self):
-        delay = int(MAX_DELAY[self.turn] * self.delay)
+        max_delay = MAX_DELAY_TURN if self.turn > 1 else MAX_DELAY_ARRIVAL
+        delay = int(max_delay * self.delay)
         return self.delay_time + delay

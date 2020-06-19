@@ -18,7 +18,6 @@ class Composer:
     def __init__(self, cols):
         self.sizes = Composer.make_sizes()
         self.lstg_sets = self.build_lstg_sets(cols)
-        self.intervals = self.make_intervals()
 
     @staticmethod
     def make_sizes():
@@ -80,7 +79,8 @@ class Composer:
         have a common ordering
         :param str model: model name
         :param [str] x_lstg_cols: list of featnames in x_lstg
-        :param dict featnames: dictionary containing all x_lstg groupings
+        :param dict featnames: dictionary containing all x_lstg features
+        that appear in the model organized into feature groupings
         :return: None
         """
         model_featnames = load_featnames(model)
@@ -139,15 +139,6 @@ class Composer:
             else:
                 input_dict[input_set] = torch.from_numpy(sources[input_set]).float().unsqueeze(0)
         return input_dict
-
-    def make_intervals(self):
-        ints = dict()
-        for i in range(1, 8):
-            if i == 1:
-                ints[i] = self.sizes[FIRST_ARRIVAL_MODEL][INTERVAL]
-            else:
-                ints[i] = self.sizes[model_str(DELAY, turn=i)][INTERVAL]
-        return ints
 
     @staticmethod
     def _build_offer_vector(offer_vector, byr=False):

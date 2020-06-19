@@ -4,6 +4,8 @@ Environment for training the buyer agent
 from collections import namedtuple
 from constants import HOUR, DAY
 from featnames import START_PRICE
+from utils import load_sizes
+from agent.util import get_agent_name
 from rlenv.const import DELAY_EVENT, RL_ARRIVAL_EVENT
 from rlenv.sources import RlBuyerSources
 from rlenv.environments.AgentEnvironment import AgentEnvironment
@@ -11,13 +13,15 @@ from rlenv.events.Arrival import Arrival
 from rlenv.events.Thread import RlThread
 
 
+BUYER_DELAY_GROUPINGS = list(load_sizes(get_agent_name(byr=True, delay=True,
+                                                       policy=True))['x'].keys())
+BuyerDelayObs = namedtuple('BuyerDelayObs', BUYER_DELAY_GROUPINGS)
+
+
 class BuyerEnvironment(AgentEnvironment):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        # boolean indicating the sale that occurred took place in
-        # an RL thread
         self.rl_event = None
-        self.rl_sale = False
 
     def get_reward(self):
         """
@@ -32,7 +36,7 @@ class BuyerEnvironment(AgentEnvironment):
             return self.lookup[START_PRICE] - self.outcome.price
 
     def define_observation_class(self):
-        return namedtuple('BuyerObs', self.composer.groupings)
+        return BuyerDelayObs
 
     @property
     def horizon(self):
@@ -62,43 +66,56 @@ class BuyerEnvironment(AgentEnvironment):
         else:
             return super().process_offer(event)
 
+    def _step_arrival(self, con=None):
+        # rejection indicates delay without action
+        if con == 0:
+            # push rl arrival back into queue
+            self.last_event.priority += DAY
+            # if the delay pushes the arrival event to the end of the lstg
+            if self.is_lstg_expired(self.last_event):
+                self.process_lstg_expiration(self.last_event)
+                return self.agent_tuple(done=True)
+            # otherwise put the event back in the queue and keep going
+            else:
+                self.queue.push(self.last_event)
+                self.last_event = None
+                return self.run()
+        else:
+            sources = self.last_event.sources
+            arrival_time = self.get_arrival_time(self.last_event)
+            sources.init_thread(hist=self.composer.hist)
+            thread = RlThread(priority=arrival_time, sources=sources,
+                              con=con, rl_buyer=True,
+                              thread_id=self.thread_counter)
+            self.rl_event = thread
+            self.thread_counter += 1
+            self.queue.push(thread)
+            self.last_event = None
+            return self.run()
+
+    def _step_thread(self, con=None):
+        # expiration rejection ends the trajectory
+        # or rejection on the last turn
+        if con == 0 or (self.last_event.turn == 7 and con < 1):
+            return self.agent_tuple(done=True)
+        else:
+            # otherwise sample offer time
+            offer_time = self.get_offer_time(self.last_event)
+            self.last_event.prep_rl_offer(con=con, priority=offer_time)
+            self.queue.push(self.last_event)
+            self.last_event = None
+            return self.run()
+
     def step(self, action):
         """
         Takes in a buyer action, updates the relevant event, then continues
         the simulation
         """
         con = self.turn_from_action(action=action)
-        if self.last_event.event_type == RL_ARRIVAL_EVENT:
-            # rejection indicates delay without action
-            if con == 0:
-                # push rl arrival back into queue
-                self.last_event.priority += DAY
-                self.queue.push(self.last_event)
-                self.last_event = None
-                return self.run()
-            else:
-                sources = self.last_event.sources
-                arrival_time = self.get_arrival_time(self.last_event.priority)
-                sources.init_thread(hist=self.composer.hist)
-                thread = RlThread(priority=arrival_time, sources=sources,
-                                  con=con, rl_buyer=True,
-                                  thread_id=self.thread_counter)
-                self.rl_event = thread
-                self.thread_counter += 1
-                self.queue.push(thread)
-                self.last_event = None
-                return self.run()
+        if self.last_event.type == RL_ARRIVAL_EVENT:
+            return self._step_arrival(con=con)
         else:
-            # expiration rejection ends the trajectory
-            if con == 0:
-                return self.agent_tuple(done=True)
-            else:
-                # otherwise sample offer time
-                offer_time = self.get_offer_time(self.last_event)
-                self.last_event.prep_rl_offer(con=con, priority=offer_time)
-                self.queue.push(self.last_event)
-                self.last_event = None
-                return self.run()
+            return self._step_thread(con=con)
 
     def run(self):
         event, lstg_complete = super().run()
@@ -107,7 +124,8 @@ class BuyerEnvironment(AgentEnvironment):
         if event is not self.rl_event and not lstg_complete:
             raise RuntimeError("Other threads should only return "
                                "to agent when the lstg ends")
-        return self.agent_tuple(done=lstg_complete)
+        agent_tuple = self.agent_tuple(done=lstg_complete)
+        return agent_tuple
 
     def reset(self):
         """
@@ -130,7 +148,8 @@ class BuyerEnvironment(AgentEnvironment):
             raise RuntimeError("Bad assumption about first event")
         event.update_arrival()
         self.last_event = event
-        return self.get_obs()
+        return self.get_obs(sources=self.last_event.sources(),
+                            turn=self.last_event.turn)
 
     def is_agent_turn(self, event):
         """

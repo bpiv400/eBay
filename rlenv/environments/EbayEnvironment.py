@@ -1,13 +1,16 @@
 import numpy as np
 from collections import namedtuple
-from constants import (BYR, MONTH, MAX_DELAY, FIRST_ARRIVAL_MODEL,
-                       BYR_HIST_MODEL, INTERARRIVAL_MODEL)
+from constants import (BYR, MONTH, FIRST_ARRIVAL_MODEL,
+                       BYR_HIST_MODEL, INTERARRIVAL_MODEL, MAX_DELAY_TURN)
 from featnames import ACC_PRICE, DEC_PRICE, START_PRICE, DELAY
+from utils import get_months_since_lstg
+from inputs.const import INTERVAL_ARRIVAL, INTERVAL_TURN
 from rlenv.Heap import Heap
 from rlenv.time.TimeFeatures import TimeFeatures
 from rlenv.time.Offer import Offer
 from rlenv.events.Event import Event
 from rlenv.events.Arrival import Arrival
+from rlenv.Recorder import Recorder
 from rlenv.sources import ArrivalSources
 from rlenv.sources import ThreadSources
 from rlenv.events.Thread import Thread
@@ -15,7 +18,6 @@ from rlenv.const import (INTERACT, ACC_IND, CON, MSG,
                          REJ_IND, OFF_IND, ARRIVAL, FIRST_OFFER,
                          OFFER_EVENT, DELAY_EVENT)
 from rlenv.util import get_clock_feats, get_con_outcomes, need_msg, model_str
-from utils import get_months_since_lstg
 
 
 class EbayEnvironment:
@@ -42,9 +44,7 @@ class EbayEnvironment:
         self.thread_counter = 1
         self.outcome = None
 
-        # interval data
         self.composer = params['composer']
-        self.intervals = self.composer.intervals
 
     def reset(self):
         self.queue.reset()
@@ -58,6 +58,10 @@ class EbayEnvironment:
     def run(self):
         while True:
             event = self.queue.pop()
+            if self.verbose:
+                Recorder.print_next_event(event)
+            if INTERACT and event.type != ARRIVAL:
+                input('Press Enter to continue...\n')
             if self.is_agent_turn(event):
                 return event, False
             else:
@@ -66,8 +70,6 @@ class EbayEnvironment:
                     return event, True
 
     def process_event(self, event):
-        if INTERACT and event.type != ARRIVAL:
-            input('Press Enter to continue...')
         if event.type == ARRIVAL:
             # print('processing arrival')
             return self.process_arrival(event)
@@ -173,8 +175,7 @@ class EbayEnvironment:
         if event.turn != 1:
             time_feats = self.time_feats.get_feats(thread_id=event.thread_id,
                                                    time=event.priority)
-            clock_feats = get_clock_feats(event.priority)
-            event.init_offer(time_feats=time_feats, clock_feats=clock_feats)
+            event.init_offer(time_feats=time_feats)
         return False
 
     def process_arrival(self, event):
@@ -191,8 +192,8 @@ class EbayEnvironment:
         event.update_arrival(thread_count=self.thread_counter - 1)
 
         # call model to sample inter arrival time and update arrival check priority
-        input_dict = self.get_arrival_input_dict(event=event)
         first = event.priority == self.start_time
+        input_dict = self.get_arrival_input_dict(event=event, first=first)
         seconds = self.get_arrival(first=first, input_dict=input_dict,
                                    time=event.priority)
         event.priority = min(event.priority + seconds, self.end_time)
@@ -216,10 +217,9 @@ class EbayEnvironment:
 
     def process_slr_expire(self, event):
         # update sources with new clock and features
-        clock_feats = get_clock_feats(event.priority)
         time_feats = self.time_feats.get_feats(thread_id=event.thread_id,
                                                time=event.priority)
-        event.init_offer(time_feats=time_feats, clock_feats=clock_feats)
+        event.init_offer(time_feats=time_feats)
         offer = event.slr_expire_rej()
         self.record(event, censored=False)
         self.time_feats.update_features(offer=offer)
@@ -325,8 +325,7 @@ class EbayEnvironment:
             intervals = self.arrival.first_arrival(input_dict=input_dict, intervals=intervals)
         else:
             intervals = self.arrival.inter_arrival(input_dict=input_dict)
-        width = self.intervals[1]
-        return int((intervals + np.random.uniform()) * width)
+        return int((intervals + np.random.uniform()) * INTERVAL_ARRIVAL)
 
     def get_hist(self, input_dict=None, time=None, thread_id=None):
         return self.arrival.hist(input_dict=input_dict)
@@ -361,8 +360,8 @@ class EbayEnvironment:
         else:
             index = self.buyer.delay(input_dict=input_dict, turn=turn,
                                      max_interval=max_interval)
-        seconds = int((index + np.random.uniform()) * self.intervals[turn])
-        seconds = min(seconds, MAX_DELAY[turn])
+        seconds = int((index + np.random.uniform()) * INTERVAL_TURN)
+        seconds = min(seconds, MAX_DELAY_TURN)
         return seconds
 
     def get_arrival_input_dict(self, event=None, first=False):

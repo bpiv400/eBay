@@ -1,9 +1,17 @@
 from collections import namedtuple
-from constants import MAX_DELAY
-from rlenv.environments.AgentEnvironment import AgentEnvironment
+from constants import MAX_DELAY_TURN
+from utils import load_sizes
+from agent.util import get_agent_name
 from rlenv.const import OFFER_EVENT, DELAY_EVENT
-from rlenv.util import get_con_outcomes
+from rlenv.environments.AgentEnvironment import AgentEnvironment
 from rlenv.events.Thread import RlThread
+from rlenv.Recorder import Recorder
+from rlenv.util import get_con_outcomes
+
+SELLER_GROUPINGS = list(load_sizes(get_agent_name(byr=False, delay=False, policy=True))['x'].keys())
+SELLER_DELAY_GROUPINGS = list(load_sizes(get_agent_name(byr=False, delay=True, policy=True))['x'].keys())
+SellerObs = namedtuple("SellerObs", SELLER_GROUPINGS)
+SellerDelayObs = namedtuple("SellerDelayObs", SELLER_DELAY_GROUPINGS)
 
 
 class SellerEnvironment(AgentEnvironment):
@@ -100,21 +108,34 @@ class SellerEnvironment(AgentEnvironment):
         # not expiration rejection
         if con <= 1:
             offer_time = self.get_offer_time(self.last_event)
+            delay = offer_time - self.last_event.priority
             self.last_event.prep_rl_offer(con=con, priority=offer_time)
         # expiration rejection
         else:
-            max_delay = MAX_DELAY[self.last_event.turn]
-            self.last_event.update_delay(seconds=max_delay)
+            delay = MAX_DELAY_TURN
+            self.last_event.update_delay(seconds=MAX_DELAY_TURN)
         self.queue.push(self.last_event)
         self.last_event = None
+        if self.verbose:
+            Recorder.print_agent_turn(con=con,
+                                      delay=delay / MAX_DELAY_TURN)
         return self.run()
+
+    def process_offer(self, event):
+        if event.turn % 2 == 0 and self.delay:
+            return self.process_rl_offer(event)
+        else:
+            return super().process_offer(event)
 
     def make_thread(self, priority):
         return RlThread(priority=priority, rl_buyer=False,
                         thread_id=self.thread_counter)
 
     def define_observation_class(self):
-        return namedtuple("SellerObs", self.composer.groupings)
+        if self.delay:
+            return SellerDelayObs
+        else:
+            return SellerObs
 
     def get_reward(self):
         if not self.last_event.is_sale():

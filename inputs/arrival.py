@@ -4,7 +4,7 @@ from processing.util import collect_date_clock_feats
 from inputs.util import get_arrival_times, save_files
 from utils import get_months_since_lstg, input_partition, \
     load_file, init_x
-from inputs.const import INTERVAL_CT_ARRIVAL, INTERVAL_ARRIVAL
+from inputs.const import INTERVAL_ARRIVAL, INTERVAL_CT_ARRIVAL
 from constants import MONTH
 from featnames import THREAD_COUNT, MONTHS_SINCE_LAST, MONTHS_SINCE_LSTG
 
@@ -29,14 +29,14 @@ def get_interarrival_period(arrivals):
 
     # drop interarrivals after BINs
     diff = diff[diff > 0]
-    y = diff[diff.index.get_level_values(level='thread') > 1]
-    censored = censored.reindex(index=y.index)
 
     # convert y to periods
-    y //= INTERVAL_ARRIVAL
+    y = diff // INTERVAL_ARRIVAL
 
     # replace censored interarrival times negative count of censored buckets
+    censored = censored.reindex(index=y.index)
     y.loc[censored] -= INTERVAL_CT_ARRIVAL
+
     return y, diff
 
 
@@ -60,6 +60,8 @@ def get_x_thread_arrival(arrivals, lstg_start, idx, diff):
 
     # months since last arrival
     months_since_last = diff.groupby('lstg').shift().dropna() / MONTH
+    months_since_last = months_since_last.reindex(
+        index=idx, fill_value=0.)
     assert np.all(months_since_last.index == idx)
 
     # concatenate into dataframe
@@ -99,13 +101,13 @@ def process_inputs(part):
 def main():
     # partition name from command line
     part = input_partition()
-    print('%s/next_arrival' % part)
+    print('%s/arrival' % part)
 
     # create input dictionary
     d = process_inputs(part)
 
     # save various output files
-    save_files(d, part, 'next_arrival')
+    save_files(d, part, 'arrival')
 
 
 if __name__ == '__main__':

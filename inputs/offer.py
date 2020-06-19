@@ -3,9 +3,9 @@ import numpy as np
 import pandas as pd
 from inputs.util import save_files, check_zero, get_x_thread
 from utils import get_remaining, load_file, init_x
-from inputs.const import DELAY_INTERVAL, DELAY_INTERVAL_CT
-from constants import IDX, DAY, MAX_DELAY, BYR, SLR, \
-    PARTITIONS, CON_MULTIPLIER
+from inputs.const import INTERVAL_TURN, INTERVAL_CT_TURN
+from constants import IDX, DAY, BYR, SLR, \
+    PARTITIONS, CON_MULTIPLIER, MAX_DELAY_TURN
 from featnames import CON, NORM, SPLIT, MSG, AUTO, EXP, REJECT, DAYS, \
     DELAY, INT_REMAINING, TIME_FEATS
 
@@ -39,7 +39,7 @@ def calculate_remaining(clock, lstg_start, idx, turn):
 
     # remaining feature
     turn_start = delay_start.xs(turn, level='index').reindex(index=idx)
-    remaining = get_remaining(lstg_start, turn_start, MAX_DELAY[turn])
+    remaining = get_remaining(lstg_start, turn_start)
 
     # error checking
     assert np.all(remaining > 0) and np.all(remaining <= 1)
@@ -88,14 +88,15 @@ def get_y_delay(df, turn):
     delay = delay[delay > 0]
     df = df.reindex(index=delay.index)
     # error checking
-    assert delay.max() <= MAX_DELAY[turn]
+
+    assert delay.max() <= MAX_DELAY_TURN
     # convert to periods
-    delay //= DELAY_INTERVAL
+    delay //= INTERVAL_TURN
     # replace expired delays with last index
     assert np.all(df.loc[df[DELAY] == 1, EXP])
-    delay.loc[delay == DELAY_INTERVAL_CT] = -1
+    delay.loc[delay == INTERVAL_CT_TURN] = -1
     # replace censored delays with negative index
-    delay.loc[df[EXP] & (df[DELAY] < 1)] -= DELAY_INTERVAL_CT
+    delay.loc[df[EXP] & (df[DELAY] < 1)] -= INTERVAL_CT_TURN
     return delay
 
 

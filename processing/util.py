@@ -1,8 +1,8 @@
 import numpy as np
 import pandas as pd
 from utils import extract_clock_feats, byr_norm, slr_norm
-from constants import START, MAX_DELAY, IDX, \
-    BYR, SLR, DAY, HOLIDAYS
+from constants import START, IDX, BYR, SLR, \
+    DAY, HOLIDAYS, MAX_DELAY_TURN
 from featnames import HOLIDAY, DOW_PREFIX, TIME_OF_DAY, AFTERNOON, \
     CLOCK_FEATS
 
@@ -48,7 +48,7 @@ def get_days_delay(clock):
     # for turn 1, days and delay are 0
     for i in range(2, 8):
         days[i] = clock[i] - clock[i - 1]
-        delay[i] = days[i] / MAX_DELAY[i]
+        delay[i] = days[i] / MAX_DELAY_TURN
     # no delay larger than 1
     assert delay.max().max() <= 1
 
