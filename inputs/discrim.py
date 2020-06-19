@@ -6,9 +6,9 @@ from inputs.util import save_sizes, convert_x_to_numpy, \
     save_small, get_x_thread
 from utils import load_file, init_x
 from constants import TRAIN_RL, VALIDATION, TEST, DISCRIM_MODELS, \
-    DISCRIM_LISTINGS, DISCRIM_THREADS_NO_TF, INPUT_DIR
+    DISCRIM_LISTINGS, DISCRIM_THREADS_NO_TF, INPUT_DIR, MONTH
 from featnames import SPLIT, DAYS, DELAY, EXP, AUTO, REJECT, \
-    TIME_FEATS, MSG
+    TIME_FEATS, MSG, START_TIME, CON
 
 
 def save_discrim_files(part, name, x_obs, x_sim):
@@ -97,6 +97,17 @@ def construct_x_listings(x, idx_thread):
     return d
 
 
+def lstgs_to_drop(part):
+    is_sale = (load_file(part, 'x_offer')[CON] == 1).groupby(
+        'lstg').max()
+    idx_sale = is_sale[is_sale].index
+    exp_time = load_file(part, 'lstg_end').drop(idx_sale)
+    start_time = load_file(part, 'lookup')[START_TIME].drop(idx_sale)
+    to_drop = exp_time - start_time + 1 < MONTH
+    idx_drop = to_drop[to_drop].index
+    return idx_drop
+
+
 def main():
     # extract parameters from command line
     parser = argparse.ArgumentParser()
@@ -107,9 +118,14 @@ def main():
     assert part in [TRAIN_RL, VALIDATION, TEST]
     print('{}/{}'.format(part, name))
 
+    # drop listings that expire before a month in the data
+    idx_drop = lstgs_to_drop(part)
+
     # threads data, observed and simulated
-    threads_obs = load_file(part, 'x_thread')
-    threads_sim = load_file(part, 'x_thread_sim').xs(0, level='sim')
+    threads_obs = load_file(part, 'x_thread').drop(
+        idx_drop, level='lstg')
+    threads_sim = load_file(part, 'x_thread_sim').xs(
+        0, level='sim').drop(idx_drop, level='lstg')
 
     # listings inputs
     if name == DISCRIM_LISTINGS:
@@ -127,8 +143,10 @@ def main():
     # threads inputs
     else:
         # offers data, observed and simulated
-        offers_obs = load_file(part, 'x_offer')
-        offers_sim = load_file(part, 'x_offer_sim').xs(0, level='sim')
+        offers_obs = load_file(part, 'x_offer').drop(
+            idx_drop, level='lstg')
+        offers_sim = load_file(part, 'x_offer_sim').xs(
+            0, level='sim').drop(idx_drop, level='lstg')
 
         # construct input variable dictionaries
         x_obs = construct_x_threads(part, threads_obs, offers_obs)
