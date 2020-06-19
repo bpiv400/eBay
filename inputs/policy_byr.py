@@ -2,8 +2,8 @@ import pandas as pd
 from inputs.util import save_files, construct_x_byr, \
     create_index_byr, get_init_data
 from utils import input_partition
-from constants import BYR, CON_MULTIPLIER, \
-    TRAIN_MODELS, VALIDATION, TEST
+from constants import BYR, CON_MULTIPLIER, TRAIN_RL, \
+    VALIDATION, TEST
 from featnames import CON, START_TIME
 
 
@@ -37,7 +37,7 @@ def main():
     print('%s/%s' % (part, name))
 
     # policy is trained on TRAIN_MODELS
-    assert part in [TRAIN_MODELS, VALIDATION, TEST]
+    assert part in [TRAIN_RL, VALIDATION, TEST]
 
     # input dataframes, output processed dataframes
     d = process_inputs(part)

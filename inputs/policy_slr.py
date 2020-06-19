@@ -1,7 +1,7 @@
 import argparse
 from inputs.util import save_files, construct_x_slr, \
     create_index_slr, get_init_data
-from constants import SLR, CON_MULTIPLIER, TRAIN_MODELS, \
+from constants import SLR, CON_MULTIPLIER, TRAIN_RL, \
     VALIDATION, TEST
 from featnames import EXP, CON
 
@@ -50,7 +50,7 @@ def main():
     part, delay, name = input_parameters('policy')
 
     # policy is trained on TRAIN_MODELS
-    assert part in [TRAIN_MODELS, VALIDATION, TEST]
+    assert part in [TRAIN_RL, VALIDATION, TEST]
 
     # input dataframes, output processed dataframes
     d = process_inputs(part, delay)
