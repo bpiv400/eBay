@@ -1,15 +1,23 @@
 from compress_pickle import load
+from constants import BYR
 from rlenv.Generator import Generator
 from test.LstgLog import LstgLog
 from test.TestQueryStrategy import TestQueryStrategy
 from sim.outcomes.OutcomeRecorder import OutcomeRecorder
 from rlenv.util import get_env_sim_subdir
+from utils import init_optional_arg
 
 
 class TestGenerator(Generator):
-    def __init__(self, verbose=False, part=None, start=None):
-        super().__init__(verbose=verbose, part=part)
-        self.start = start
+    def __init__(self, *args, **kwargs):
+        super().__init__(verbose=kwargs['verbose'],
+                         part=kwargs['part'])
+        init_optional_arg(kwargs=kwargs, name='start',
+                          default=None)
+        self.start = kwargs['start']
+        self.agent = kwargs['agent']
+        self.byr = kwargs['byr']
+        self.delay = kwargs['delay'] or self.byr
         self.test_data = None
 
     def generate_query_strategy(self):
@@ -46,6 +54,7 @@ class TestGenerator(Generator):
                 'x_offer': self.test_data['x_offer'],
                 'lookup': lookup
             }
+
             print('Generating lstg log for {}...'.format(lstg))
             log = LstgLog(params=params)
             print('Log constructed')
