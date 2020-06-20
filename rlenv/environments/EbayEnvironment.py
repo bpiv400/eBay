@@ -1,8 +1,9 @@
 from collections import namedtuple
 from constants import (BYR, MONTH, FIRST_ARRIVAL_MODEL,
                        BYR_HIST_MODEL, INTERARRIVAL_MODEL)
-from featnames import ACC_PRICE, DEC_PRICE, START_PRICE, DELAY
-from utils import get_months_since_lstg
+from featnames import ACC_PRICE, DEC_PRICE, START_PRICE,\
+    DELAY, START_TIME, META
+from utils import get_months_since_lstg, get_cut
 from rlenv.Heap import Heap
 from rlenv.time.TimeFeatures import TimeFeatures
 from rlenv.time.Offer import Offer
@@ -33,7 +34,9 @@ class EbayEnvironment:
         # queue
         self.queue = Heap(entry_type=Event)
 
-        # end time
+        # lstg params
+        self.cut = None
+        self.relist_count = 0
         self.end_time = None
         self.start_time = None
         self.thread_counter = 1
@@ -41,6 +44,7 @@ class EbayEnvironment:
 
         self.composer = params['composer']
         self.query_strategy = params['query_strategy']
+        self.loader = params['loader']
 
     def reset(self):
         self.queue.reset()
@@ -50,6 +54,26 @@ class EbayEnvironment:
         sources = ArrivalSources(x_lstg=self.x_lstg)
         event = Arrival(priority=self.start_time, sources=sources)
         self.queue.push(event)
+
+    def has_next_lstg(self):
+        if not self.loader.did_init:
+            self.loader.init()
+        return self.loader.has_next()
+
+    def reset_lstg(self):
+        """
+        Sample a new lstg from the file and set lookup and x_lstg series
+        """
+        if self.has_next_lstg():
+            x_lstg, lookup = self.loader.next_lstg()
+            self.x_lstg = self.composer.decompose_x_lstg(x_lstg)
+            self.lookup = lookup
+        self.start_time = self.lookup[START_TIME]
+        self.end_time = self.start_time + MONTH
+        self.relist_count = 0
+        self.cut = get_cut(self.lookup[META])
+        if self.verbose:
+            Recorder.print_lstg(self.lookup)
 
     def run(self):
         while True:
