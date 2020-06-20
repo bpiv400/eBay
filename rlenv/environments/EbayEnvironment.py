@@ -191,7 +191,8 @@ class EbayEnvironment:
         first = event.priority == self.start_time
         input_dict = self.get_arrival_input_dict(event=event, first=first)
         seconds = self.get_arrival(first=first, input_dict=input_dict,
-                                   time=event.priority)
+                                   time=event.priority,
+                                   thread_id=self.thread_counter)
         event.priority = min(event.priority + seconds, self.end_time)
 
         # if a buyer arrives, create a thread at the arrival time

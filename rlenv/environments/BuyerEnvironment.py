@@ -57,7 +57,8 @@ class BuyerEnvironment(AgentEnvironment):
         last_interval = curr_interval + 24
         input_dict = self.get_arrival_input_dict(event=event, first=True)
         seconds = self.get_arrival(input_dict=input_dict, first=True, time=event.priority,
-                                   intervals=(curr_interval, last_interval))
+                                   intervals=(curr_interval, last_interval),
+                                   thread_id=self.thread_counter)
         return seconds + event.priority
 
     def process_offer(self, event):
