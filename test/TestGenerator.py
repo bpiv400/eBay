@@ -7,18 +7,25 @@ from rlenv.util import get_env_sim_subdir
 
 
 class TestGenerator(Generator):
-    def __init__(self, direct=None, verbose=False, start=None):
-        super().__init__(direct=direct, verbose=verbose)
+    def __init__(self, verbose=False, part=None, start=None):
+        super().__init__(verbose=verbose, part=part)
         self.start = start
         self.test_data = None
+
+    def generate_query_strategy(self):
+        pass
+
+    def generate_composer(self):
+        pass
 
     def generate_recorder(self):
         return OutcomeRecorder(records_path="", verbose=self.verbose)
 
     def load_chunk(self, chunk=None):
-        super().load_chunk(chunk=chunk)
-        chunk_dir = get_env_sim_subdir(base_dir=self.dir, chunks=True)
         print('Loading test data...')
+        chunk_dir = get_env_sim_subdir(part=self.part, chunks=True)
+        chunk_data = load('{}{}.gz'.format(chunk_dir, chunk))
+        self.x_lstg, self.lookup = chunk_data['x_lstg'], chunk_data['lookup']
         self.test_data = load('{}{}_test.gz'.format(chunk_dir, self.chunk))
 
     def generate(self):

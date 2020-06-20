@@ -23,8 +23,8 @@ class ValueGenerator(SimulatorGenerator):
     def load_chunk(self, chunk=None):
         pass
 
-    def __init__(self, direct=None, verbose=False, start=None):
-        super(ValueGenerator, self).__init__(direct=direct, verbose=verbose)
+    def __init__(self, verbose=False, start=None):
+        super(ValueGenerator, self).__init__(verbose=verbose)
         self.val_calc = None  # type: ValueCalculator
 
         # checkpoint params

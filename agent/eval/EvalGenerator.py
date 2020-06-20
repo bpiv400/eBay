@@ -22,10 +22,10 @@ class EvalGenerator(OutcomeGenerator):
         self.delay = self._composer.delay
         self.model_kwargs = kwargs['model_kwargs']
         self.ModelCls = kwargs['model_class']
-        self.run_dir = kwargs['run_dir']
-        self.path_suffix = kwargs['path_suffix']
+        self.run_dir = kwargs['run_dir'] # don't know what this is
+        self.path_suffix = kwargs['path_suffix'] # don't know what this is
         # Todo: why the fuk is part None
-        super().__init__(part=None, verbose=kwargs['verbose'])
+        super().__init__(verbose=kwargs['verbose'])
 
     def load_chunk(self, chunk=None):
         self.x_lstg, self.lookup = chunk
