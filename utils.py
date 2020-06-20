@@ -272,6 +272,11 @@ def input_partition():
     return parser.parse_args().part
 
 
+def init_optional_arg(kwargs=None, name=None, default=None):
+    if name not in kwargs:
+        args[name] = default
+
+
 def load_file(part, x):
     """
     Loads file from partitions directory.

@@ -25,9 +25,6 @@ class EbayEnvironment:
 
     def __init__(self, params=None):
         # interfaces
-        self.arrival = params['arrival']
-        self.buyer = params['buyer']
-        self.seller = params['seller']
         self.verbose = params['verbose']
 
         # features
@@ -306,29 +303,20 @@ class EbayEnvironment:
         event.init_delay(self.start_time)
         self.queue.push(event)
 
-    def get_con(self, input_dict=None, time=None, thread_id=None, turn=None):
-        if turn % 2 == 0:
-            con = self.seller.con(input_dict=input_dict, turn=turn)
-        else:
-            con = self.buyer.con(input_dict=input_dict, turn=turn)
-        return con
+    def get_con(self, *args, **kwargs):
+        return self.query_strategy.get_con(*args, **kwargs)
 
-    def get_msg(self, input_dict=None, time=None, turn=None, thread_id=None):
-        if turn % 2 == 0:
-            msg = self.seller.msg(input_dict=input_dict, turn=turn)
-        else:
-            msg = self.buyer.msg(input_dict=input_dict, turn=turn)
-        return msg
+    def get_msg(self, *args, **kwargs):
+        return self.query_strategy.get_msg(*args, **kwargs)
 
-    def get_arrival(self, input_dict=None, time=None, first=None, intervals=None):
-        if first:
-            intervals = self.arrival.first_arrival(input_dict=input_dict, intervals=intervals)
-        else:
-            intervals = self.arrival.inter_arrival(input_dict=input_dict)
-        return int((intervals + np.random.uniform()) * INTERVAL_ARRIVAL)
+    def get_arrival(self, *args, **kwargs):
+        return self.query_strategy.get_arrival(*args, **kwargs)
 
-    def get_hist(self, input_dict=None, time=None, thread_id=None):
-        return self.arrival.hist(input_dict=input_dict)
+    def get_hist(self, *args, **kwargs):
+        return self.query_strategy.get_hist(*args, **kwargs)
+
+    def get_delay(self, *args, **kwargs):
+        return self.query_strategy.get_delay(*args, **kwargs)
 
     def get_offer_outcomes(self, event, slr=False):
         # sample concession
@@ -351,18 +339,6 @@ class EbayEnvironment:
         # print('summary right before get offer outcomes returns')
         # print(event.summary())
         return offer
-
-    def get_delay(self, input_dict=None, turn=None, thread_id=None, time=None,
-                  max_interval=None):
-        if turn % 2 == 0:
-            index = self.seller.delay(input_dict=input_dict, turn=turn,
-                                      max_interval=max_interval)
-        else:
-            index = self.buyer.delay(input_dict=input_dict, turn=turn,
-                                     max_interval=max_interval)
-        seconds = int((index + np.random.uniform()) * INTERVAL_TURN)
-        seconds = min(seconds, MAX_DELAY_TURN)
-        return seconds
 
     def get_arrival_input_dict(self, event=None, first=False):
         if first:
