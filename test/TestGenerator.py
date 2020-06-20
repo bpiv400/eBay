@@ -1,12 +1,12 @@
 from compress_pickle import load
-from rlenv.Generator import SimulatorGenerator
+from rlenv.Generator import Generator
 from test.LstgLog import LstgLog
 from test.TestEnvironment import TestEnvironment
 from sim.outcomes.OutcomeRecorder import OutcomeRecorder
 from rlenv.util import get_env_sim_subdir
 
 
-class TestGenerator(SimulatorGenerator):
+class TestGenerator(Generator):
     def __init__(self, direct=None, verbose=False, start=None):
         super().__init__(direct=direct, verbose=verbose)
         self.start = start
@@ -42,7 +42,8 @@ class TestGenerator(SimulatorGenerator):
             print('Generating lstg log for {}...'.format(lstg))
             log = LstgLog(params=params)
             print('Log constructed')
-            environment = self.setup_env(lstg=lstg, lookup=lookup, log=log)
+            self.query_strategy.update_log(log)
+            environment = self.setup_env(lstg=lstg, lookup=lookup)
 
             # update listing in recorder
             self.recorder.update_lstg(lookup=lookup, lstg=lstg)
@@ -56,15 +57,19 @@ class TestGenerator(SimulatorGenerator):
         :param environment: RewardEnvironment
         :return: outcome tuple
         """
+        # simulate once for each buyer in BuyerEnvironment mode
+        # this output needs to match first agent action
         environment.reset()
+        # going to need to change to return for each agent action
         outcome = environment.run()
         return outcome
 
-    def create_env(self, x_lstg=None, lookup=None, log=None):
-        return TestEnvironment(buyer=self.buyer, seller=self.seller,
-                               arrival=self.arrival, x_lstg=x_lstg,
-                               lookup=lookup, verbose=self.verbose,
-                               log=log, composer=self.composer,
+    def create_env(self, x_lstg=None, lookup=None):
+        # fix this to choose correct environment type
+        return TestEnvironment(x_lstg=x_lstg, lookup=lookup,
+                               verbose=self.verbose,
+                               query_strategy=self.query_strategy,
+                               composer=self.composer,
                                recorder=self.recorder)
 
     @property

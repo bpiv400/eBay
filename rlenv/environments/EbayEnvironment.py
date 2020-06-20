@@ -1,10 +1,8 @@
-import numpy as np
 from collections import namedtuple
 from constants import (BYR, MONTH, FIRST_ARRIVAL_MODEL,
-                       BYR_HIST_MODEL, INTERARRIVAL_MODEL, MAX_DELAY_TURN)
+                       BYR_HIST_MODEL, INTERARRIVAL_MODEL)
 from featnames import ACC_PRICE, DEC_PRICE, START_PRICE, DELAY
 from utils import get_months_since_lstg
-from inputs.const import INTERVAL_ARRIVAL, INTERVAL_TURN
 from rlenv.Heap import Heap
 from rlenv.time.TimeFeatures import TimeFeatures
 from rlenv.time.Offer import Offer
@@ -42,6 +40,7 @@ class EbayEnvironment:
         self.outcome = None
 
         self.composer = params['composer']
+        self.query_strategy = params['query_strategy']
 
     def reset(self):
         self.queue.reset()

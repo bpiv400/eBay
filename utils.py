@@ -274,7 +274,7 @@ def input_partition():
 
 def init_optional_arg(kwargs=None, name=None, default=None):
     if name not in kwargs:
-        args[name] = default
+        kwargs[name] = default
 
 
 def load_file(part, x):

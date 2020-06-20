@@ -9,9 +9,10 @@ Lots of memory dumping code while I try to find leak
 import numpy as np
 from featnames import START_PRICE, START_TIME, ACC_PRICE, DEC_PRICE
 from rlenv.environments.SimulatorEnvironment import SimulatorEnvironment
+from rlenv.Composer import Composer
 from rlenv.interfaces.ArrivalInterface import ArrivalInterface
 from rlenv.interfaces.PlayerInterface import SimulatedSeller, SimulatedBuyer
-from rlenv.Composer import Composer
+from rlenv.DefaultQueryStrategy import DefaultQueryStrategy
 
 
 class Generator:
@@ -33,9 +34,7 @@ class Generator:
         # model interfaces and input composer
         self.recorder = None
         self.composer = None
-        self.seller = None
-        self.buyer = None
-        self.arrival = None
+        self.query_strategy = None
 
     def process_chunk(self, chunk=None):
         self.load_chunk(chunk=chunk)
@@ -45,9 +44,7 @@ class Generator:
 
     def initialize(self):
         self.composer = self.generate_composer()
-        self.buyer = self.generate_buyer()
-        self.seller = self.generate_seller()
-        self.arrival = ArrivalInterface()
+        self.query_strategy = self.generate_query_strategy()
         self.recorder = self.generate_recorder()
         self.initialized = True
 
@@ -57,24 +54,20 @@ class Generator:
     def generate_recorder(self):
         raise NotImplementedError()
 
+    def generate_query_strategy(self):
+        raise NotImplementedError()
+
     def generate_composer(self):
-        raise NotImplementedError()
-
-    def generate_buyer(self):
-        raise NotImplementedError()
-
-    def generate_seller(self):
         raise NotImplementedError()
 
     def generate(self):
         raise NotImplementedError()
 
-    def setup_env(self, lstg=None, lookup=None, log=None):
+    def setup_env(self, lstg=None, lookup=None):
         """
         Generates the environment required to simulate the given listing
         :param lstg: int giving a lstg id
         :param pd.Series lookup: metadata about lstg
-        :param log: optional LstgLog passed if testing environment
         :return: SimulatorEnvironment or subclass
         """
         if self.verbose:
@@ -84,12 +77,10 @@ class Generator:
         x_lstg = self.x_lstg.loc[lstg, :].astype(np.float32)
         x_lstg = self.composer.decompose_x_lstg(x_lstg)
         # create and return environment
-        return self.create_env(x_lstg=x_lstg, lookup=lookup, log=log)
+        return self.create_env(x_lstg=x_lstg, lookup=lookup)
 
-    def create_env(self, x_lstg=None, lookup=None, log=None):
-        return SimulatorEnvironment(buyer=self.buyer,
-                                    seller=self.seller,
-                                    arrival=self.arrival,
+    def create_env(self, x_lstg=None, lookup=None):
+        return SimulatorEnvironment(query_strategy=self.query_strategy,
                                     x_lstg=x_lstg,
                                     lookup=lookup,
                                     recorder=self.recorder,
@@ -122,11 +113,13 @@ class SimulatorGenerator(Generator):
     def generate_composer(self):
         return Composer(self.x_lstg.columns)
 
-    def generate_buyer(self):
-        return SimulatedBuyer()
-
-    def generate_seller(self):
-        return SimulatedSeller(full=True)
+    def generate_query_strategy(self):
+        buyer = SimulatedBuyer()
+        seller = SimulatedSeller(full=True)
+        arrival = ArrivalInterface()
+        return DefaultQueryStrategy(buyer=buyer,
+                                    seller=seller,
+                                    arrival=arrival)
 
     def generate_recorder(self):
         raise NotImplementedError()
