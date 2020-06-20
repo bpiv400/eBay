@@ -1,7 +1,7 @@
 from compress_pickle import load
 from rlenv.Generator import Generator
 from test.LstgLog import LstgLog
-from test.TestEnvironment import TestEnvironment
+from test.TestQueryStrategy import TestQueryStrategy
 from sim.outcomes.OutcomeRecorder import OutcomeRecorder
 from rlenv.util import get_env_sim_subdir
 
@@ -66,11 +66,11 @@ class TestGenerator(Generator):
 
     def create_env(self, x_lstg=None, lookup=None):
         # fix this to choose correct environment type
-        return TestEnvironment(x_lstg=x_lstg, lookup=lookup,
-                               verbose=self.verbose,
-                               query_strategy=self.query_strategy,
-                               composer=self.composer,
-                               recorder=self.recorder)
+        return TestQueryStrategy(x_lstg=x_lstg, lookup=lookup,
+                                 verbose=self.verbose,
+                                 query_strategy=self.query_strategy,
+                                 composer=self.composer,
+                                 recorder=self.recorder)
 
     @property
     def records_path(self):

@@ -8,6 +8,7 @@ from rlenv.interfaces.PlayerInterface import SimulatedBuyer, SimulatedSeller
 class EvalGenerator(OutcomeGenerator):
     def __init__(self, **kwargs):
         """
+        # TODO: The directory strings are out of date
         :param verbose: boolean for whether to print information about threads
         :param model_class: class that inherits agent.models.AgentModel
         :param model_kwargs: dictionary containing kwargs for model_class
@@ -23,6 +24,7 @@ class EvalGenerator(OutcomeGenerator):
         self.ModelCls = kwargs['model_class']
         self.run_dir = kwargs['run_dir']
         self.path_suffix = kwargs['path_suffix']
+        # Todo: why the fuk is part None
         super().__init__(part=None, verbose=kwargs['verbose'])
 
     def load_chunk(self, chunk=None):

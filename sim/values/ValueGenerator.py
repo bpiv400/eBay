@@ -9,6 +9,7 @@ from sim.values.ValueCalculator import ValueCalculator
 from sim.values.ValueRecorder import ValueRecorder
 
 
+# TODO: Deprecate or update
 class ValueGenerator(SimulatorGenerator):
     """
     Uninherited attributes:
@@ -17,6 +18,11 @@ class ValueGenerator(SimulatorGenerator):
         start: time that the current iteration of RewardGenerator began
         has_checkpoint: whether a recent checkpoint file has been created for this environment
     """
+
+    #TODO: Implement
+    def load_chunk(self, chunk=None):
+        pass
+
     def __init__(self, direct=None, verbose=False, start=None):
         super(ValueGenerator, self).__init__(direct=direct, verbose=verbose)
         self.val_calc = None  # type: ValueCalculator

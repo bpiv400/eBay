@@ -114,12 +114,18 @@ class SimulatorGenerator(Generator):
         return Composer(self.x_lstg.columns)
 
     def generate_query_strategy(self):
-        buyer = SimulatedBuyer()
-        seller = SimulatedSeller(full=True)
+        buyer = self.generate_buyer()
+        seller = self.generate_seller()
         arrival = ArrivalInterface()
         return DefaultQueryStrategy(buyer=buyer,
                                     seller=seller,
                                     arrival=arrival)
+
+    def generate_buyer(self):
+        return SimulatedBuyer()
+
+    def generate_seller(self):
+        return SimulatedSeller(full=True)
 
     def generate_recorder(self):
         raise NotImplementedError()

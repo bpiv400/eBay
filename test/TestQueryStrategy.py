@@ -2,7 +2,7 @@ from rlenv.environments.SimulatorEnvironment import SimulatorEnvironment
 from test.LstgLog import LstgLog
 
 
-class TestEnvironment(SimulatorEnvironment):
+class TestQueryStrategy(DefaultQuery):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.lstg_log = kwargs['log']  # type: LstgLog

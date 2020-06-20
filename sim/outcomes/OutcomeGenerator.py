@@ -8,7 +8,7 @@ from utils import load_file
 
 
 class OutcomeGenerator(SimulatorGenerator):
-    def __init__(self, part=None, verbose=False, start=None):
+    def __init__(self, part=None, verbose=False):
         super().__init__(part=part, verbose=verbose)
 
     def load_chunk(self, chunk=None):
