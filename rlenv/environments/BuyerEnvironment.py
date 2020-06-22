@@ -135,7 +135,7 @@ class BuyerEnvironment(AgentEnvironment):
         running the environment
         :return: observation associated with the first rl arrival
         """
-        self.reset_lstg()
+        self.next_lstg()
         super().reset()
         rl_sources = RlBuyerSources(x_lstg=self.x_lstg)
         event = Arrival(priority=self.start_time, sources=rl_sources,

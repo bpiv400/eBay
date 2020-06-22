@@ -5,6 +5,7 @@ import pandas as pd
 from agent.util import get_train_file_path
 from featnames import LSTG
 from rlenv.const import LOOKUP, X_LSTG, ENV_LSTG_COUNT
+from rlenv.util import load_chunk
 
 
 class LstgLoader:
@@ -47,14 +48,30 @@ class LstgLoader:
 
 
 class ChunkLoader(LstgLoader):
+    def __init__(self, x_lstg=None, lookup=None):
+        super().__init__()
+        self._x_lstg_slice = x_lstg
+        self._lookup_slice = lookup
+        self._ix = 0
+        self._num_lstgs = len(lookup.index)
+
     def next_id(self):
-        pass
+        if self.has_next():
+            return self._lookup_slice[self._ix, LSTG]
+        else:
+            raise RuntimeError("Exhausted lstgs")
 
     def next_lstg(self):
-        pass
+        if self.has_next():
+            self.lookup = self._lookup_slice[self._ix, :]
+            self.x_lstg = self._x_lstg_slice[self._ix, :]
+            self._ix += 1
+            return self.x_lstg, self.lookup
+        else:
+            raise RuntimeError("Exhausted lstgs")
 
     def has_next(self):
-        pass
+        return self._ix < self._num_lstgs
 
     def init(self):
         pass

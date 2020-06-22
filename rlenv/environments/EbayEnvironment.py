@@ -60,14 +60,13 @@ class EbayEnvironment:
             self.loader.init()
         return self.loader.has_next()
 
-    def reset_lstg(self):
+    def next_lstg(self):
         """
         Sample a new lstg from the file and set lookup and x_lstg series
         """
-        if self.has_next_lstg():
-            x_lstg, lookup = self.loader.next_lstg()
-            self.x_lstg = self.composer.decompose_x_lstg(x_lstg)
-            self.lookup = lookup
+        x_lstg, lookup = self.loader.next_lstg()
+        self.x_lstg = self.composer.decompose_x_lstg(x_lstg)
+        self.lookup = lookup
         self.start_time = self.lookup[START_TIME]
         self.end_time = self.start_time + MONTH
         self.relist_count = 0

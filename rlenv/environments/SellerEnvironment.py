@@ -55,7 +55,7 @@ class SellerEnvironment(AgentEnvironment):
 
     # restructure
     def reset(self):
-        self.reset_lstg()
+        self.next_lstg()
         super().reset()  # calls EBayEnvironment.reset()
         while True:
             event, lstg_complete = super().run()  # calls EBayEnvironment.run()
@@ -74,7 +74,7 @@ class SellerEnvironment(AgentEnvironment):
                 # otherwise, there's been a buy it now sale w/o a seller action,
                 # so we move onto the next lstg
                 else:
-                    self.reset_lstg()
+                    self.next_lstg()
                     super().reset()
 
     def relist(self):
