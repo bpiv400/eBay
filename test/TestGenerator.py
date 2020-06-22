@@ -9,6 +9,8 @@ from test.TestQueryStrategy import TestQueryStrategy
 from sim.outcomes.OutcomeRecorder import OutcomeRecorder
 from rlenv.util import get_env_sim_subdir, load_chunk
 from utils import init_optional_arg, subset_lstgs
+from test.util import subset_inputs
+from test.TestLoader import TestLoader
 
 
 class TestGenerator(Generator):
@@ -43,13 +45,15 @@ class TestGenerator(Generator):
         test_data = load('{}{}_test.gz'.format(chunk_dir, chunk))
         test_data = self._remove_extra_models(test_data=test_data)
         # subset inputs to only contain lstgs where the agent has at least 1 action
-        if self.agent:
-            valid_lstgs = self._get_valid_lstgs(test_data=test_data)
+        valid_lstgs = self._get_valid_lstgs(test_data=test_data, lookup=lookup)
+        if len(valid_lstgs) < len(lookup.index):
             x_lstg = subset_lstgs(df=x_lstg, lstgs=valid_lstgs)
             lookup = subset_lstgs(df=lookup, lstgs=valid_lstgs)
             test_data['x_thread'] = subset_lstgs(df=test_data['x_thread'], lstgs=valid_lstgs)
             test_data['x_offer'] = subset_lstgs(df=test_data['x_offer'], lstgs=valid_lstgs)
-        else:
+            test_data['inputs'] = subset_inputs(input_data=test_data,
+                                                value=valid_lstgs, level='lstg')
+        return TestLoader(x_lstg=x_lstg, lookup=lookup, test_data=test_data)
 
     def _remove_extra_models(self, test_data):
         """
@@ -63,7 +67,7 @@ class TestGenerator(Generator):
             del test_data['inputs'][model_name]
         return test_data
 
-    def _get_valid_lstgs(self, test_data=None):
+    def _get_valid_lstgs(self, test_data=None, lookup=None):
         """
         Retrieves a list of lstgs from the chunk where the agent makes at least one
         turn.
@@ -71,6 +75,20 @@ class TestGenerator(Generator):
         Verifies this list matches exactly the lstgs with inputs for the relevant model
         :return: pd.Int64Index
         """
+        if self.start is not None:
+            start_index = list(lookup.index).index(self.start)
+            start_lstgs = lookup.index[start_index:]
+        else:
+            start_lstgs = lookup.index
+        if self.agent:
+            agent_lstgs = self._get_agent_lstgs(test_data=test_data)
+            lstgs = start_lstgs.intersect1d(agent_lstgs,
+                                            start_lstgs)
+            return lstgs
+        else:
+            return start_lstgs
+
+    def _get_agent_lstgs(self, test_data=None):
         x_offer = test_data['x_offer'].copy()  # x_offer: pd.DataFrame
         if self.byr:
             # all lstgs should have at least 1 action
