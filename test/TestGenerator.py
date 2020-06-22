@@ -1,20 +1,26 @@
 import numpy as np
 from compress_pickle import load
+from agent.const import BYR, FEAT_TYPE, CON_TYPE, FULL_CON
 from agent.util import get_agent_name
+from agent.AgentComposer import AgentComposer
 from constants import INIT_POLICY_MODELS
-from featnames import LSTG
+from featnames import LSTG, DELAY, BYR_HIST
+from rlenv.Composer import Composer
+from rlenv.environments.BuyerEnvironment import BuyerEnvironment
+from rlenv.environments.SellerEnvironment import SellerEnvironment
+from rlenv.environments.SimulatorEnvironment import SimulatorEnvironment
 from rlenv.Generator import Generator
+from rlenv.util import get_env_sim_subdir, load_chunk
+from sim.outcomes.OutcomeRecorder import OutcomeRecorder
 from test.LstgLog import LstgLog
 from test.TestQueryStrategy import TestQueryStrategy
-from sim.outcomes.OutcomeRecorder import OutcomeRecorder
-from rlenv.util import get_env_sim_subdir, load_chunk
-from utils import init_optional_arg, subset_lstgs
 from test.util import subset_inputs
 from test.TestLoader import TestLoader
+from utils import init_optional_arg, subset_lstgs
 
 
 class TestGenerator(Generator):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, **kwargs):
         super().__init__(verbose=kwargs['verbose'],
                          part=kwargs['part'])
         init_optional_arg(kwargs=kwargs, name='start',
@@ -24,16 +30,29 @@ class TestGenerator(Generator):
         # boolean for whether the test is for an agent environment
         self.agent = kwargs['agent']
         # boolean for whether the agent is a byr
-        self.byr = kwargs['byr']
+        self.byr = kwargs['role'] == BYR
+        # feat type
+        self.feat_type = kwargs[FEAT_TYPE]
         # boolean for whether to the agent selects its delay
-        self.delay = kwargs['delay'] or self.byr
+        self.delay = kwargs[DELAY] or self.byr
         self.test_data = None
 
     def generate_query_strategy(self):
-        pass
+        return TestQueryStrategy()
 
     def generate_composer(self):
-        pass
+        if self.agent:
+            agent_params = {
+                BYR: self.byr,
+                DELAY: self.delay,
+                FEAT_TYPE: self.feat_type,
+                CON_TYPE: FULL_CON,
+                BYR_HIST: None
+            }
+            return AgentComposer(cols=self.loader.x_lstg_cols,
+                                 agent_params=agent_params)
+        else:
+            return Composer(cols=self.loader.x_lstg_cols)
 
     def generate_recorder(self):
         return OutcomeRecorder(records_path="", verbose=self.verbose)
@@ -119,12 +138,7 @@ class TestGenerator(Generator):
         assert lstgs.isin(input_lstgs).all()
         return lstgs
 
-    def _prune_data(self):
-        """
-        Remove all lstgs before start, and all lstgs that don't have at least 1 action
-        for the agent
-        :return:
-        """
+
     def generate(self):
         if self.start is not None:
             start_index = list(self.lookup.index).index(self.start)
@@ -169,13 +183,20 @@ class TestGenerator(Generator):
         outcome = environment.run()
         return outcome
 
-    def create_env(self, x_lstg=None, lookup=None):
+    def create_env(self):
+        if self.agent:
+            if self.byr:
+                env_class = BuyerEnvironment
+            else:
+                env_class = SellerEnvironment
+        else:
+            env_class = SimulationEnvironment
         # fix this to choose correct environment type
-        return TestQueryStrategy(x_lstg=x_lstg, lookup=lookup,
-                                 verbose=self.verbose,
-                                 query_strategy=self.query_strategy,
-                                 composer=self.composer,
-                                 recorder=self.recorder)
+        return env_class(verbose=self.verbose,
+                         loader=self.loader,
+                         query_strategy=self.query_strategy,
+                         composer=self.composer,
+                         recorder=self.recorder)
 
     @property
     def records_path(self):

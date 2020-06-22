@@ -3,9 +3,9 @@ from test.LstgLog import LstgLog
 
 
 class TestQueryStrategy(QueryStrategy):
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.lstg_log = kwargs['log']  # type: LstgLog
+    def __init__(self, ):
+        super().__init__()
+        self.lstg_log = None  # type: LstgLog
 
     def update_log(self, log):
         self.lstg_log = log

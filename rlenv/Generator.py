@@ -110,6 +110,7 @@ class Generator:
 
 class SimulatorGenerator(Generator):
     def generate_composer(self):
+        x_lstg_cols = load_chunk()
         return Composer(self.x_lstg.columns)
 
     def generate_query_strategy(self):

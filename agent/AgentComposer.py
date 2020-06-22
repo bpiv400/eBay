@@ -20,7 +20,7 @@ class AgentComposer(Composer):
         self.agent_params = agent_params
 
         self.sizes['agent'] = self._build_agent_sizes()
-        self.x_lstg_cols = list(cols)
+        self.x_lstg_cols = list(cols) if type(cols) != list else cols
         self.turn_inds = None
 
         # verification
@@ -42,16 +42,15 @@ class AgentComposer(Composer):
             raise NotImplementedError('No hist attribute for seller')
 
     @property
-    def groupings(self):
-        return list(self.sizes['agent']['x'].keys())
-
-    @property
     def feat_type(self):
         return self.agent_params[FEAT_TYPE]
 
     @property
     def con_type(self):
         return self.agent_params[CON_TYPE]
+
+    def set_hist(self, hist=None):
+        self.agent_params[BYR_HIST] = hist
 
     def _build_agent_sizes(self):
         sizes = load_sizes(get_agent_name(byr=self.byr, delay=self.delay,
