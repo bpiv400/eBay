@@ -138,14 +138,8 @@ class TestGenerator(Generator):
         assert lstgs.isin(input_lstgs).all()
         return lstgs
 
-
     def generate(self):
-        if self.start is not None:
-            start_index = list(self.lookup.index).index(self.start)
-            lstgs = self.lookup.index[start_index:]
-        else:
-            lstgs = self.lookup.index
-        for i, lstg in enumerate(lstgs):
+        while self.environment.has_next_lstg():
             # index lookup dataframe
             lookup = self.lookup.loc[lstg, :]
 
@@ -162,7 +156,6 @@ class TestGenerator(Generator):
             log = LstgLog(params=params)
             print('Log constructed')
             self.query_strategy.update_log(log)
-            environment = self.setup_env(lstg=lstg, lookup=lookup)
 
             # update listing in recorder
             self.recorder.update_lstg(lookup=lookup, lstg=lstg)
@@ -183,20 +176,16 @@ class TestGenerator(Generator):
         outcome = environment.run()
         return outcome
 
-    def create_env(self):
+    @property
+    def env_class(self):
         if self.agent:
             if self.byr:
                 env_class = BuyerEnvironment
             else:
                 env_class = SellerEnvironment
         else:
-            env_class = SimulationEnvironment
-        # fix this to choose correct environment type
-        return env_class(verbose=self.verbose,
-                         loader=self.loader,
-                         query_strategy=self.query_strategy,
-                         composer=self.composer,
-                         recorder=self.recorder)
+            env_class = SimulatorEnvironment
+        return env_class
 
     @property
     def records_path(self):

@@ -1,14 +1,10 @@
 """
 Generates values or discrim inputs for a chunk of lstgs
 
-If a checkpoint file for the current simulation, we load it and pick up where we left off.
-Otherwise, starts from scratch with the first listing in the file
 
-Lots of memory dumping code while I try to find leak
 """
-import numpy as np
-from featnames import START_PRICE, START_TIME, ACC_PRICE, DEC_PRICE
 from rlenv.environments.SimulatorEnvironment import SimulatorEnvironment
+from rlenv.environments.EbayEnvironment import EbayEnvironment
 from rlenv.Composer import Composer
 from rlenv.interfaces.ArrivalInterface import ArrivalInterface
 from rlenv.interfaces.PlayerInterface import SimulatedSeller, SimulatedBuyer
@@ -34,11 +30,13 @@ class Generator:
         self.composer = None
         self.loader = None
         self.query_strategy = None
+        self.environment = None  # type: EbayEnvironment
 
     def process_chunk(self, chunk=None):
         self.loader = self.load_chunk(chunk=chunk)
         if not self.initialized:
             self.initialize()
+        self.environment = self.generate_environment()
         return self.generate()
 
     def initialize(self):
@@ -62,29 +60,16 @@ class Generator:
     def generate(self):
         raise NotImplementedError()
 
-    def setup_env(self, lstg=None, lookup=None):
-        """
-        Generates the environment required to simulate the given listing
-        :param lstg: int giving a lstg id
-        :param pd.Series lookup: metadata about lstg
-        :return: SimulatorEnvironment or subclass
-        """
-        if self.verbose:
-            self.print_lstg_info(lstg, lookup)
+    @property
+    def env_class(self):
+        raise NotImplementedError
 
-        # index x_lstg
-        x_lstg = self.x_lstg.loc[lstg, :].astype(np.float32)
-        x_lstg = self.composer.decompose_x_lstg(x_lstg)
-        # create and return environment
-        return self.create_env(x_lstg=x_lstg, lookup=lookup)
-
-    def create_env(self, x_lstg=None, lookup=None):
-        return SimulatorEnvironment(query_strategy=self.query_strategy,
-                                    x_lstg=x_lstg,
-                                    lookup=lookup,
-                                    recorder=self.recorder,
-                                    verbose=self.verbose,
-                                    composer=self.composer)
+    def generate_environment(self):
+        return self.env_class(query_strategy=self.query_strategy,
+                              loader=self.loader,
+                              recorder=self.recorder,
+                              verbose=self.verbose,
+                              composer=self.composer)
 
     def simulate_lstg(self, environment):
         raise NotImplementedError()
@@ -97,21 +82,10 @@ class Generator:
         """
         raise NotImplementedError()
 
-    @staticmethod
-    def print_lstg_info(lstg, lookup):
-        """
-        Prints header giving basic info about the current lstg
-        :param lstg: int giving lstg id
-        :param lookup: pd.Series containing metadata about the lstg
-        """
-        print('lstg: {} | start_time: {} | start_price: {} | auto_rej: {} | auto_acc: {}'.format(
-            lstg, lookup[START_TIME], lookup[START_PRICE], lookup[DEC_PRICE], lookup[ACC_PRICE]))
-
 
 class SimulatorGenerator(Generator):
     def generate_composer(self):
-        x_lstg_cols = load_chunk()
-        return Composer(self.x_lstg.columns)
+        return Composer(cols=self.loader.x_lstg_cols)
 
     def generate_query_strategy(self):
         buyer = self.generate_buyer()
@@ -120,6 +94,10 @@ class SimulatorGenerator(Generator):
         return DefaultQueryStrategy(buyer=buyer,
                                     seller=seller,
                                     arrival=arrival)
+
+    @property
+    def env_class(self):
+        return SimulatorEnvironment
 
     def generate_buyer(self):
         return SimulatedBuyer()
