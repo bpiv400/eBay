@@ -148,66 +148,11 @@ class LstgLog:
     @staticmethod
     def subset_params(params=None):
         params = params.copy()
-        params['x_offer'] = LstgLog.subset_df(df=params['x_offer'],
-                                              lstg=params['lstg'])
-        params['x_thread'] = LstgLog.subset_df(df=params['x_thread'],
-                                               lstg=params['lstg'])
-        params['inputs'] = LstgLog.subset_inputs(input_data=params['inputs'], models=MODELS,
-                                                 level='lstg', value=params['lstg'])
+        params['x_offer'] = subset_df(df=params['x_offer'],\
+                                      lstg=params['lstg'])
+        params['x_thread'] = subset_df(df=params['x_thread'],
+                                       lstg=params['lstg'])
+        params['inputs'] = subset_inputs(input_data=params['inputs'], models=MODELS,
+                                         level='lstg', value=params['lstg'])
         # print(params['inputs']['arrival']['lstg'])
         return params
-
-    @staticmethod
-    def subset_df(df=None, lstg=None):
-        """
-        Subsets an arbitrary dataframe to only contain rows for the given
-        lstg
-        :param df: pd.DataFrame
-        :param lstg: integer giving lstg
-        :return: pd.Series or pd.DataFrame
-        """
-        if isinstance(df.index, pd.MultiIndex):
-            lstgs = df.index.unique(level='lstg')
-            if lstg in lstgs:
-                return df.xs(lstg, level='lstg', drop_level=True)
-        else:
-            if lstg in df.index:
-                return df.loc[lstg, :]
-        return None
-
-    @staticmethod
-    def subset_inputs(models=None, input_data=None, value=None, level=None):
-        inputs = dict()
-        for model in models:
-            inputs[model] = dict()
-            index_is_cached = False
-            curr_index = None
-            for input_group, feats_df in input_data[model].items():
-                if feats_df is not None:
-                    multi_index = isinstance(feats_df.index, pd.MultiIndex)
-                else:
-                    multi_index = False
-                if not index_is_cached:
-                    if multi_index:
-                        contains_value = feats_df is not None and\
-                                         (value in feats_df.index.unique(level=level))
-                    else:
-                        contains_value = feats_df is not None and\
-                                         (value in feats_df.index)
-                    if contains_value:
-                        if multi_index:
-                            full_lstgs = feats_df.index.get_level_values(level)
-                        else:
-                            full_lstgs = feats_df.index
-                        curr_index = full_lstgs == value
-                    else:
-                        curr_index = None
-                    index_is_cached = True
-                if curr_index is not None:
-                    subset = feats_df.loc[curr_index, :]
-                    if multi_index:
-                        subset.index = subset.index.droplevel(level=level)
-                else:
-                    subset = None
-                inputs[model][input_group] = subset
-        return inputs

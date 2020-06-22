@@ -5,6 +5,7 @@ from constants import INPUT_DIR, INDEX_DIR, PARTS_DIR, MODELS,\
     VALIDATION, PARTITIONS, INIT_POLICY_MODELS
 from rlenv.util import (get_env_sim_subdir, load_featnames,
                         get_env_sim_dir, load_chunk)
+from utils import subset_lstgs
 
 
 def load_all_inputs(part=None, lstgs=None):
@@ -58,13 +59,6 @@ def load_outcomes(part=None, lstgs=None):
     x_offer = subset_lstgs(df=x_offer, lstgs=lstgs)
     x_offer['censored'] = x_offer.exp & (x_offer.delay < 1)
     return x_thread, x_offer
-
-
-def subset_lstgs(df=None, lstgs=None):
-    full_lstgs = df.index.get_level_values('lstg')
-    contains = full_lstgs.isin(lstgs)
-    df = df.loc[contains, :]
-    return df
 
 
 def lstgs_without_duplicated_timestamps(lstgs=None):

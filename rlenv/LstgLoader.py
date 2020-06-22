@@ -5,14 +5,17 @@ import pandas as pd
 from agent.util import get_train_file_path
 from featnames import LSTG
 from rlenv.const import LOOKUP, X_LSTG, ENV_LSTG_COUNT
-from rlenv.util import load_chunk
 
 
 class LstgLoader:
-
+    """
+    Abstract class to pass lstg data from an arbitrary data source
+    to the environment and generator as necessary
+    """
     def __init__(self):
         self.lookup = None
         self.x_lstg = None
+        self.lstg = None
 
     def next_lstg(self):
         raise NotImplementedError()
@@ -48,6 +51,9 @@ class LstgLoader:
 
 
 class ChunkLoader(LstgLoader):
+    """
+    Loads lstgs from a chunk or chunk subset
+    """
     def __init__(self, x_lstg=None, lookup=None):
         super().__init__()
         self._x_lstg_slice = x_lstg
@@ -56,21 +62,25 @@ class ChunkLoader(LstgLoader):
         self._num_lstgs = len(lookup.index)
 
     def next_id(self):
+        self.verify_init()
         if self.has_next():
             return self._lookup_slice[self._ix, LSTG]
         else:
             raise RuntimeError("Exhausted lstgs")
 
     def next_lstg(self):
+        self.verify_init()
         if self.has_next():
-            self.lookup = self._lookup_slice[self._ix, :]
-            self.x_lstg = self._x_lstg_slice[self._ix, :]
+            self.lookup = self._lookup_slice.loc[self._ix, :]
+            self.x_lstg = self._x_lstg_slice.loc[self._ix, :]
+            self.lstg = self.lookup[self._ix, LSTG]
             self._ix += 1
             return self.x_lstg, self.lookup
         else:
             raise RuntimeError("Exhausted lstgs")
 
     def has_next(self):
+        self.verify_init()
         return self._ix < self._num_lstgs
 
     def init(self):
@@ -105,9 +115,10 @@ class TrainLoader(LstgLoader):
                            index=self._x_lstg_cols)
         lookup = pd.Series(self._lookup_slice[self._ix, :],
                            index=self._lookup_cols)
-        self._ix += 1
         self.x_lstg = x_lstg
         self.lookup = lookup
+        self.lstg = self.lookup[self._ix, LSTG]
+        self._ix += 1
         return self.x_lstg, self.lookup
 
     def _cache_empty(self):

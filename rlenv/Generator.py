@@ -28,16 +28,15 @@ class Generator:
 
         # data
         self.chunk = None
-        self.x_lstg = None
-        self.lookup = None
 
         # model interfaces and input composer
         self.recorder = None
         self.composer = None
+        self.loader = None
         self.query_strategy = None
 
     def process_chunk(self, chunk=None):
-        self.load_chunk(chunk=chunk)
+        self.loader = self.load_chunk(chunk=chunk)
         if not self.initialized:
             self.initialize()
         return self.generate()
