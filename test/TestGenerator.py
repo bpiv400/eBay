@@ -138,19 +138,44 @@ class TestGenerator(Generator):
         assert lstgs.isin(input_lstgs).all()
         return lstgs
 
+    def _count_rl_buyers(self):
+        return 1
+
+    def _generate_lstg_log(self, buyer=None):
+        # exclude inputs for the selected buyer from
+        # con1, con3, con5, con7
+
+        # exclude the arrival for the selected buyer from
+        # the first arrival model if it's the first buyer
+
+        # exclude the arrival from the other arrival model
+        # if it's a later arrival
+
+        # remove the thread from x_thread
+
+    def simulate_lstg_buyer(self, buyer=None):
+        lstg_log = self._generate_lstg_log(buyer=(i + 1))
+        agent_log = self._generate_agent_log(buyer=(i + 1))
+
     def generate(self):
         while self.environment.has_next_lstg():
-            # index lookup dataframe
-            lookup = self.lookup.loc[lstg, :]
+            self.environment.next_lstg()
+            if self.byr:
+                buyers = self._count_rl_buyers(x_thread=x_thread)
+                for i in range(buyers):
+                    # set up lstg log
+                    self.simulate_lstg_buyer(buyer=(i + 1))
 
             # create environment
             params = {
-                'lstg': lstg,
+                'lstg': self.loader.lstg,
                 'inputs': self.test_data['inputs'],
                 'x_thread': self.test_data['x_thread'],
                 'x_offer': self.test_data['x_offer'],
                 'lookup': lookup
             }
+
+            #
 
             print('Generating lstg log for {}...'.format(lstg))
             log = LstgLog(params=params)

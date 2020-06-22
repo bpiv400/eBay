@@ -71,9 +71,6 @@ class Generator:
                               verbose=self.verbose,
                               composer=self.composer)
 
-    def simulate_lstg(self, environment):
-        raise NotImplementedError()
-
     @property
     def records_path(self):
         """

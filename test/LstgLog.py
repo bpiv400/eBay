@@ -5,7 +5,7 @@ from constants import (MONTH, MODELS, FIRST_ARRIVAL_MODEL,
 from rlenv.util import populate_test_model_inputs
 from test.ArrivalLog import ArrivalLog
 from test.ThreadLog import ThreadLog
-
+from utils import init_optional_arg
 
 class LstgLog:
 
@@ -13,8 +13,13 @@ class LstgLog:
         """
         :param params: dict
         """
+        init_optional_arg(kwargs=params,
+                          name='agent_params',
+                          default=None)
         self.lstg = params['lstg']
         self.lookup = params['lookup']
+        self.agent = params['agent_params'] is not None
+        self.agent_params = params['agent_params']
         params = LstgLog.subset_params(params)
         self.arrivals = self.generate_arrival_logs(params)
         self.threads = self.generate_thread_logs(params)
@@ -94,14 +99,27 @@ class LstgLog:
                                                  value=thread_id)
         return ArrivalLog(hist=hist, time=time, arrival_inputs=arrival_inputs,
                           hist_inputs=hist_inputs, check_time=check_time,
-                          first_arrival=thread_id == 1)
+                          first_arrival=thread_id == 1,
+                          agent=self.is_agent_arrival(thread_id=thread_id))
+
+    def is_agent_arrival(self, thread_id=None):
+        if self.agent:
+            if self.agent_params['byr']:
+                return thread_id == self.agent_params['thread_id']
+        return False
 
     def generate_thread_log(self, thread_id=None, params=None):
         thread_params = dict()
         thread_params['x_offer'] = params['x_offer'].xs(thread_id, level='thread', drop_level=True)
         thread_params['inputs'] = LstgLog.subset_inputs(models=OFFER_MODELS, input_data=params['inputs'],
                                                         value=thread_id, level='thread')
-        return ThreadLog(params=thread_params, arrival_time=self.arrivals[thread_id].time)
+        agent_thread = self.is_agent_thread(thread_id=thread_id)
+        if agent_thread:
+            agent_buyer = self.agent_params['byr']
+        else:
+            agent_buyer = False
+        return ThreadLog(params=thread_params, arrival_time=self.arrivals[thread_id].time,
+                         agent=agent_thread, agent_buyer=agent_buyer)
 
     def get_con(self, thread_id=None, turn=None, input_dict=None, time=None):
         """

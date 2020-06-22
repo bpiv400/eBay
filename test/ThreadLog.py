@@ -4,8 +4,11 @@ from test.TurnLog import TurnLog
 
 
 class ThreadLog:
-    def __init__(self, params=None, arrival_time=None):
+    def __init__(self, params=None, arrival_time=None,
+                 agent=True, agent_buyer=True):
         self.arrival_time = arrival_time
+        self.agent = agent
+        self.agent_buyer = agent_buyer
         self.turns = dict()
         uncensored_turns = self.uncensored(params=params)
         for turn in range(1, uncensored_turns + 1):
