@@ -18,8 +18,9 @@ def process_inputs(part):
     data = get_init_data(part)
 
     # master index
-    idx, idx1 = create_index_byr(data['clock'],
-                                 data['lookup'][START_TIME])
+    idx, idx1 = create_index_byr(clock=data['clock'],
+                                 offers=data['offers'],
+                                 lstg_start=data['lookup'][START_TIME])
 
     # outcome
     y = get_y(idx, idx1, data['offers'])

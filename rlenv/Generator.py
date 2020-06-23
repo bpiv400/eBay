@@ -7,11 +7,16 @@ Otherwise, starts from scratch with the first listing in the file
 Lots of memory dumping code while I try to find leak
 """
 import numpy as np
-from featnames import START_PRICE, START_TIME, ACC_PRICE, DEC_PRICE
+from compress_pickle import load
+from constants import PARTS_DIR
+from featnames import START_PRICE, START_TIME, ACC_PRICE, \
+    DEC_PRICE, NO_ARRIVAL
 from rlenv.environments.SimulatorEnvironment import SimulatorEnvironment
 from rlenv.interfaces.ArrivalInterface import ArrivalInterface
 from rlenv.interfaces.PlayerInterface import SimulatedSeller, SimulatedBuyer
 from rlenv.Composer import Composer
+from rlenv.util import get_env_sim_subdir
+from utils import load_file
 
 
 class Generator:
@@ -132,7 +137,13 @@ class SimulatorGenerator(Generator):
         raise NotImplementedError()
 
     def load_chunk(self, chunk=None):
-        raise NotImplementedError()
+        self.chunk = chunk
+        chunk_dir = get_env_sim_subdir(part=self.part,
+                                       chunks=True)
+        d = load(chunk_dir + '{}.gz'.format(chunk))
+        self.x_lstg = d['x_lstg']
+        p0 = load_file(self.part, NO_ARRIVAL)
+        self.lookup = d['lookup'].join(p0)
 
     def generate(self):
         raise NotImplementedError()

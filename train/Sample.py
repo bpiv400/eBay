@@ -66,7 +66,7 @@ def get_batches(data, is_training=False):
     if data.name in NUM_WORKERS:
         num_workers = NUM_WORKERS[data.name]
     else:
-        num_workers = mp.cpu_count() - 1
+        num_workers = mp.cpu_count()
     batches = DataLoader(data,
                          collate_fn=collate,
                          batch_sampler=Sample(data, is_training),

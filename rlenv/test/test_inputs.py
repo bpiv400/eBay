@@ -2,9 +2,9 @@ import argparse
 import pandas as pd
 from compress_pickle import load, dump
 from constants import INPUT_DIR, INDEX_DIR, PARTS_DIR, MODELS
-from processing.processing_consts import CLEAN_DIR
+from featnames import DELAY, EXP
 from rlenv.util import (get_env_sim_subdir, load_featnames,
-                        get_env_sim_dir, load_chunk)
+                        get_env_sim_dir)
 
 
 def load_all_inputs(part=None, lstgs=None):
@@ -39,6 +39,12 @@ def load_model_inputs(model=None, input_dir=None, index_dir=None, lstgs=None):
     return inputs
 
 
+def load_reindex(part=None, name=None, lstgs=None):
+    df = load(PARTS_DIR + '{}/{}.gz'.format(part, name))
+    df = df.reindex(index=lstgs, level='lstg')
+    return df
+
+
 def load_outcomes(part=None, lstgs=None):
     outcome_dir = '{}{}/'.format(PARTS_DIR, part)
     x_thread = load('{}x_thread.gz'.format(outcome_dir))
@@ -56,16 +62,21 @@ def subset_lstgs(df=None, lstgs=None):
     return df
 
 
-def lstgs_without_duplicated_timestamps(lstgs=None):
+def remove_duplicated_timestamps(part, lstgs):
     # load timestamps
-    offers = load(CLEAN_DIR + 'offers.pkl').reindex(index=lstgs, level='lstg')
+    clock = load(PARTS_DIR + '{}/clock.gz'.format(part)).reindex(
+        index=lstgs, level='lstg')
+    offers = load(PARTS_DIR + '{}/x_offer.gz'.format(part)).reindex(
+        index=lstgs, level='lstg')
 
     # remove censored offers
-    clock = offers.loc[~offers.censored, 'clock']
+    censored = (offers[DELAY] < 1) & offers[EXP]
+    clock = clock.loc[~censored]
 
     # remove duplicate timestamps within thread
-    toDrop = clock.groupby(['lstg', 'thread']).apply(lambda x: x.duplicated())
-    clock = clock[~toDrop]
+    to_drop = clock.groupby(['lstg', 'thread']).apply(
+        lambda x: x.duplicated())
+    clock = clock[~to_drop]
 
     # flag listings with duplicate timestamps across threads
     flag = clock.groupby('lstg').apply(lambda x: x.duplicated())
@@ -89,24 +100,21 @@ def main():
 
     # index of listings
     print('Loading chunk...')
-    _, lookup = load_chunk(base_dir=base_dir, num=num)
-    lstgs = lookup.sort_index().index
-    # lstgs = lstgs_without_duplicated_timestamps(lstgs=lstgs)
+    chunk = load(PARTS_DIR + '{}/chunks/{}.gz'.format(part, num))
+    lstgs = chunk['lookup'].sort_index().index
+    # lstgs = remove_duplicated_timestamps(part, lstgs)
 
     # model inputs
     print('Loading model inputs...')
     model_inputs = load_all_inputs(part=part, lstgs=lstgs)
 
-    # other components
-    print('Loading x offer and x_thread...')
-    x_thread, x_offer = load_outcomes(part=part, lstgs=lstgs)
-
     # save output
-    output = {
-        'inputs': model_inputs,
-        'x_thread': x_thread,
-        'x_offer': x_offer
-    }
+    output = {'inputs': model_inputs}
+    for name in ['x_thread', 'x_offer']:
+        output[name] = load_reindex(part=part,
+                                    name=name,
+                                    lstgs=lstgs)
+
     print('Dumping file...')
     subdir = get_env_sim_subdir(base_dir=base_dir, chunks=True)
     path = '{}{}_test.gz'.format(subdir, num)

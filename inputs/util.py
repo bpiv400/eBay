@@ -119,6 +119,9 @@ def get_x_offer_init(offers, idx, role=None, delay=None):
     threads = idx.droplevel(level='index').unique()
     offers = pd.DataFrame(index=threads).join(offers)
 
+    # set message indicator to False
+    offers[MSG] = False
+
     # drop time feats from buyer models
     if role == BYR:
         offers.drop(TIME_FEATS, axis=1, inplace=True)
@@ -144,7 +147,7 @@ def get_x_offer_init(offers, idx, role=None, delay=None):
         else:
             offer.loc[i == turn, :] = 0.
         # put in dictionary
-        x_offer['offer%d' % i] = offer.astype('float32')
+        x_offer['offer%d' % i] = offer
 
     # error checking
     check_zero(x_offer)
@@ -238,17 +241,22 @@ def get_sale_norm(offers):
     return norm
 
 
-def create_index_slr(offers, delay):
-    mask = offers.index.isin(IDX[SLR], level='index') & ~offers[AUTO]
+def create_index_slr(offers=None, delay=None):
+    slr_turn = offers.index.isin(IDX[SLR], level='index')
+    censored = offers[EXP] & (offers[DELAY] < 1)
+    mask = slr_turn & ~offers[AUTO] & ~censored
     if not delay:  # when not choosing delay, drop expirations
         mask = mask & ~offers[EXP]
     idx = offers[mask].index
     return idx
 
 
-def create_index_byr(clock, lstg_start):
+def create_index_byr(clock=None, offers=None, lstg_start=None):
     # buyer turns
     s = clock[clock.index.isin(IDX[BYR], level='index')]
+    # remove censored
+    censored = offers[EXP] & (offers[DELAY] < 1)
+    s = s[~censored]
     # hours before first offer
     arrival_time = s.xs(1, level='index', drop_level=False)
     days = ((arrival_time - lstg_start) // DAY).rename('day')

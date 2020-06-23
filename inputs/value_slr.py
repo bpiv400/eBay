@@ -51,7 +51,7 @@ def process_inputs(part, delay):
     data = get_init_data(part, sim=True)
 
     # master index
-    idx = create_index_slr(data['offers'], delay)
+    idx = create_index_slr(offers=data['offers'], delay=delay)
 
     # value components
     sales = get_sales(data)

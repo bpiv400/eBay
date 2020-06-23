@@ -1,5 +1,7 @@
 # optimization parameters
-NUM_WORKERS = {'first_arrival': 5}
+NUM_WORKERS = {'first_arrival': 5,
+               'policy_byr_delay': 2,
+               'value_byr_delay': 2}
 MBSIZE = {True: 128, False: 2048}  # True for training, False for validation
 
 # learning rate parameters
