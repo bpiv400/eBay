@@ -335,28 +335,6 @@ def get_reject(con):
     return con == 0
 
 
-def compare_input_dicts(model=None, stored_inputs=None, env_inputs=None):
-    assert len(stored_inputs) == len(env_inputs)
-    for feat_set_name, stored_feats in stored_inputs.items():
-        env_feats = env_inputs[feat_set_name]
-        feat_eq = torch.lt(torch.abs(torch.add(-stored_feats, env_feats)), 1e-4)
-        if not torch.all(feat_eq):
-            print('Model input inequality found for {} in {}'.format(model, feat_set_name))
-            feat_eq = (~feat_eq.numpy())[0, :]
-            feat_eq = np.nonzero(feat_eq)[0]
-            featnames = load_featnames(model)
-            if 'offer' in feat_set_name:
-                featnames = featnames['offer']
-            else:
-                featnames = featnames[feat_set_name]
-            for feat_index in feat_eq:
-                print('-- INCONSISTENCY IN {} --'.format(featnames[feat_index]))
-                print('stored value = {} | env value = {}'.format(stored_feats[0, feat_index],
-                                                                  env_feats[0, feat_index]))
-            input("Press Enter to continue...")
-            # raise RuntimeError("Environment inputs diverged from true inputs")
-
-
 def need_msg(con, slr=None):
     if not slr:
         return 0 < con < 1

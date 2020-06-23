@@ -57,6 +57,7 @@ class LstgLog:
     def generate_agent_log(self, params):
         # if the agent is a buyer
         agent_log = AgentLog(byr=self.byr,
+                             delay=self.delay,
                              thread_id=self.agent_thread)
         full_inputs = params['inputs'][get_agent_name(byr=self.byr,
                                                       delay=self.delay,
@@ -68,7 +69,7 @@ class LstgLog:
             days = int(byr_arrival.time - self.lookup[START_TIME] / DAY)
             for i in range(days):
                 action_index = (self.agent_thread, 1, i)
-                input_dict = populate_test_model_inputs(full_inputs=self.agent,
+                input_dict = populate_test_model_inputs(full_inputs=full_inputs,
                                                         value=action_index)
                 time = self.lookup[START_TIME] + (i * DAY)
                 log = ActionLog(input_dict=input_dict, time=time, con=0)

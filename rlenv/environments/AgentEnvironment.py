@@ -8,10 +8,12 @@ from rlpyt.envs.base import Env
 from rlpyt.spaces.composite import Composite
 from rlpyt.spaces.float_box import FloatBox
 from rlenv.environments.EbayEnvironment import EbayEnvironment
+from rlenv.events.Thread import RlThread
 from rlenv.Recorder import Recorder
 from agent.util import get_con_set
 
-InfoTraj = namedtuple("InfoTraj", ["months", "bin_proceeds", "done"])
+InfoTraj = namedtuple("InfoTraj", ["months", "bin_proceeds", "done",
+                                   "turn", "thread_id"])
 
 
 class AgentEnvironment(EbayEnvironment, Env):
@@ -45,8 +47,13 @@ class AgentEnvironment(EbayEnvironment, Env):
         months = (self.last_event.priority - self.start_time) / MONTH
         months += self.relist_count  # add in months without sale
         bin_proceeds = (1-self.cut) * self.lookup[START_PRICE]
+        if isinstance(self.last_event, RlThread):
+            thread_id = self.last_event.thread_id
+        else:
+            thread_id = 1
         info = InfoTraj(months=months, bin_proceeds=bin_proceeds,
-                        done=done)
+                        done=done, turn=self.last_event.turn,
+                        thread_id=thread_id)
         reward = self.get_reward()
         return obs, reward, done, info
 
