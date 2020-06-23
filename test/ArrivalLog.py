@@ -24,6 +24,10 @@ class ArrivalLog:
         else:
             model = INTERARRIVAL_MODEL
         compare_input_dicts(model=model, stored_inputs=self.arrival_inputs, env_inputs=input_dict)
+        return self.inter_arrival
+
+    @property
+    def inter_arrival(self):
         inter_arrival = self.time - self.check_time
         return int(inter_arrival)
 

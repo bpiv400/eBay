@@ -211,7 +211,7 @@ class CrossEntropyPPO(RlAlgorithm):
         # for slicing
         loss_inputs = LossInputs(
             agent_inputs=agent_inputs,
-            action=samples.agent.action,
+            action=samples.agent.con,
             return_=return_,
             advantage=advantage,
             valid=valid,

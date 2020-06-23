@@ -1,8 +1,10 @@
 import pandas as pd
+from agent.util import get_agent_name
 from featnames import START_TIME, MONTHS_SINCE_LSTG, BYR_HIST, CON, AUTO
-from constants import (MONTH, MODELS, FIRST_ARRIVAL_MODEL,
+from constants import (MONTH, MODELS, FIRST_ARRIVAL_MODEL, DAY,
                        BYR_HIST_MODEL, INTERARRIVAL_MODEL, OFFER_MODELS)
 from rlenv.util import populate_test_model_inputs
+from test.AgentLog import AgentLog, ActionLog
 from test.ArrivalLog import ArrivalLog
 from test.ThreadLog import ThreadLog
 from utils import init_optional_arg
@@ -24,6 +26,82 @@ class LstgLog:
         params = LstgLog.subset_params(params)
         self.arrivals = self.generate_arrival_logs(params)
         self.threads = self.generate_thread_logs(params)
+        self.agent_log = self.generate_agent_log(params)
+        if self.agent and self.agent_params['byr']:
+            self.skip_agent_arrival()
+
+    @property
+    def byr(self):
+        if self.agent:
+            return self.agent_params['byr']
+        else:
+            raise RuntimeError("byr not defined")
+
+    @property
+    def agent_thread(self):
+        if self.agent:
+            if 'thread_id' in self.agent_params:
+                return self.agent_thread
+            else:
+                return None
+        else:
+            raise RuntimeError('agent thread not defined')
+
+    @property
+    def delay(self):
+        if self.agent:
+            return self.agent_params['delay']
+        else:
+            raise RuntimeError('Delay not defined')
+
+    def generate_agent_log(self, params):
+        # if the agent is a buyer
+        agent_log = AgentLog(byr=self.byr,
+                             thread_id=self.agent_thread)
+        full_inputs = params['inputs'][get_agent_name(byr=self.byr,
+                                                      delay=self.delay,
+                                                      policy=True)]
+        if self.byr:
+            byr_arrival = self.arrivals[self.agent_thread]
+
+            # find the floor of the number of days that have passed since the start of the
+            days = int(byr_arrival.time - self.lookup[START_TIME] / DAY)
+            for i in range(days):
+                action_index = (self.agent_thread, 1, i)
+                input_dict = populate_test_model_inputs(full_inputs=self.agent,
+                                                        value=action_index)
+                time = self.lookup[START_TIME] + (i * DAY)
+                log = ActionLog(input_dict=input_dict, time=time, con=0)
+                agent_log.push_action(action=log)
+            # lstg
+            # for all the days except the last one, insert an agent action event into the
+            # queue that corresponds to not arriving
+            # for the last day, insert an action that corresponds to the offer
+            # (extract from thread)
+            # store the difference between the check time on that last day and the offer
+            # to feed arrival model when it queries for the delay (could verify intervals here)
+        # insert remaining offers into queue
+
+
+    def skip_agent_arrival(self):
+        byr_arrival = self.arrivals[self.agent_thread]
+        if byr_arrival.censored:
+            raise RuntimeError("Agent buyer arrival must not be censored")
+        # if this is the first arrival
+            # if this is a buy it now event (i.e. there's no censored next arrival)
+                # replace the interarrival with the end of the lstg
+                # censor the arrival
+            # if this is not a buy it now event (i.e there's an arrival next (censored or not)
+                # replace the interarrival time with the difference between the check time
+                # and the time of the next arrival
+        # if there is an arrival before this one
+            # if this is a buy it now event (i.e. there's no censored next arrival)
+                # replace the interarrival time of the previous arrival with the end of the lstg
+                # censored the previous arrival
+            # if this is not a buy it now event (i.e. there's a next arrival)
+                # replace the interarrival time of the previous arrival with the
+                # difference between the time of the next arrival and the check time
+                # of the previous arrival
 
     @property
     def has_arrivals(self):
@@ -105,9 +183,18 @@ class LstgLog:
 
     def is_agent_arrival(self, thread_id=None):
         if self.agent:
-            if self.agent_params['byr']:
-                return thread_id == self.agent_params['thread_id']
+            if self.byr:
+                return thread_id == self.agent_thread
         return False
+
+    def is_agent_thread(self, thread_id=None):
+        if self.agent:
+            if self.byr:
+                return thread_id == self.agent_thread
+            else:
+                return True
+        else:
+            return False
 
     def generate_thread_log(self, thread_id=None, params=None):
         thread_params = dict()
@@ -116,7 +203,7 @@ class LstgLog:
                                                         value=thread_id, level='thread')
         agent_thread = self.is_agent_thread(thread_id=thread_id)
         if agent_thread:
-            agent_buyer = self.agent_params['byr']
+            agent_buyer = self.byr
         else:
             agent_buyer = False
         return ThreadLog(params=thread_params, arrival_time=self.arrivals[thread_id].time,

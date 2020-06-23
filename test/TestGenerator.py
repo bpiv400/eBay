@@ -139,29 +139,41 @@ class TestGenerator(Generator):
         return lstgs
 
     def _count_rl_buyers(self):
-        return 1
+        # there should always be at least 1 if initial agent subsetting
+        # was correct
+        threads = self.loader.x_offer.index.get_level_values('thread')
+        return len(threads.unique())
+
+    def _generate_lstg_log(self, buyer=None):
+        params = {
+            'lstg': self.loader.lstg,
+            'inputs': self.loader.inputs,
+            'x_thread': self.loader.x_thread,
+            'x_offer': self.loader.x_offer,
+            'lookup': self.loader.lookup
+        }
+        if self.agent:
+            params['agent_params'] = {
+                'byr': self.byr,
+                'delay': self.delay,
+                'thread_id': buyer
+            }
+        return LstgLog(params=params)
 
     def simulate_lstg_buyer(self, buyer=None):
-        lstg_log = self._generate_lstg_log(buyer=(i + 1))
-        agent_log = self._generate_agent_log(buyer=(i + 1))
+        lstg_log = self._generate_lstg_log(buyer=buyer)
+        agent_log = self._generate_agent_log(buyer=buyer)
 
     def generate(self):
         while self.environment.has_next_lstg():
             self.environment.next_lstg()
             if self.byr:
-                buyers = self._count_rl_buyers(x_thread=x_thread)
+                buyers = self._count_rl_buyers()
                 for i in range(buyers):
-                    # set up lstg log
+                    # simulate lstg once for each buyer
                     self.simulate_lstg_buyer(buyer=(i + 1))
 
-            # create environment
-            params = {
-                'lstg': self.loader.lstg,
-                'inputs': self.test_data['inputs'],
-                'x_thread': self.test_data['x_thread'],
-                'x_offer': self.test_data['x_offer'],
-                'lookup': lookup
-            }
+
 
             #
 
