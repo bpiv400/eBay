@@ -10,12 +10,13 @@ class ThreadLog:
         self.agent = agent
         self.agent_buyer = agent_buyer
         self.turns = dict()
-        uncensored_turns = self.uncensored(params=params)
-        for turn in range(1, uncensored_turns + 1):
+        self.uncensored_turns = self.uncensored(params=params)
+        for turn in range(1, self.uncensored_turns + 1):
             self.turns[turn] = self.generate_turn_log(params=params, turn=turn)
         if self.has_censored(params=params):
-            censored = self.generate_censored_turn_log(params=params, turn=uncensored_turns + 1)
-            self.turns[uncensored_turns + 1] = censored
+            censored = self.generate_censored_turn_log(params=params,
+                                                       turn=self.uncensored_turns + 1)
+            self.turns[self.uncensored_turns + 1] = censored
 
     def is_agent_turn(self, turn):
         if self.agent:
@@ -95,6 +96,22 @@ class ThreadLog:
             if num_offers == 1:
                 raise RuntimeError("Initial buyer offer should never be censored")
             return num_offers - 1
+
+    def get_agent_turns(self, delay=False):
+        agent_turns = list()
+        if not self.agent:
+            raise RuntimeError("Querying agent turns from a thread that the agent"
+                               "doesn't participate in")
+        if delay:
+            last_turn = len(self.turns)
+        else:
+            last_turn = self.uncensored_turns
+        for i in range(1, last_turn + 1):
+            if self.is_agent_turn(turn=i):
+                agent_turns.append(self.turns[i])
+        if len(agent_turns) == 0:
+            raise RuntimeError("There should always be at least 1 agent turn")
+        return agent_turns
 
     def get_con(self, time=None, turn=None, input_dict=None):
         return self.turns[turn].get_con(check_time=time, input_dict=input_dict)

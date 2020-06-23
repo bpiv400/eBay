@@ -57,26 +57,31 @@ class LstgLog:
     def generate_agent_log(self, params):
         # if the agent is a buyer
         agent_log = AgentLog(byr=self.byr,
-                             delay=self.delay,
-                             thread_id=self.agent_thread)
-        full_inputs = params['inputs'][get_agent_name(byr=self.byr,
-                                                      delay=self.delay,
-                                                      policy=True)]
+                             delay=self.delay)
+        full_inputs = params['inputs'][agent_log.model_name]
         if self.byr:
             byr_arrival = self.arrivals[self.agent_thread]
-
             # find the floor of the number of days that have passed since the start of the
             days = int(byr_arrival.time - self.lookup[START_TIME] / DAY)
             for i in range(days):
                 action_index = (self.agent_thread, 1, i)
                 input_dict = populate_test_model_inputs(full_inputs=full_inputs,
                                                         value=action_index)
-                time = self.lookup[START_TIME] + (i * DAY)
-                log = ActionLog(input_dict=input_dict, time=time, con=0)
+                time = (i * DAY) / MONTH
+                log = ActionLog(input_dict=input_dict, months=time, con=0,
+                                thread_id=self.agent_thread, turn=1)
                 agent_log.push_action(action=log)
-            # lstg
-            # for all the days except the last one, insert an agent action event into the
-            # queue that corresponds to not arriving
+
+            # set interarrival time to account for query of first arrival model
+            interarrival_time = byr_arrival.time - (days * DAY + self.lookup[START_TIME])
+            self.agent_log.set_interarrival_time(interarrival_time=interarrival_time)
+
+
+            time = (days * DAY) / MONTH
+            first_turn_index = (self.agent_thread, 1, days)
+            con = byr_thread.agent_con(turn=1)
+            input_dict = populate_test_model_inputs(full_inputs=full_inputs, value=first_turn_index)
+            first_offer = ActionLog
             # for the last day, insert an action that corresponds to the offer
             # (extract from thread)
             # store the difference between the check time on that last day and the offer

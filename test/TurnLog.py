@@ -11,6 +11,7 @@ class TurnLog:
         self.con = outcomes[CON]
         self.msg = outcomes[MSG]
         self.delay = outcomes[DELAY]
+        self.expired = outcomes[EXP]
         self.censored = outcomes[EXP] and outcomes[DELAY] < 1
         # turn
         self.turn = turn
@@ -27,6 +28,24 @@ class TurnLog:
         self.offer_time = self._init_offer_time()
 
         self.agent = agent
+
+    def agent_con(self):
+        if self.agent:
+            if self.censored:
+                return 50
+            elif not self.byr and self.expired:
+                return 101
+            else:
+                return int(self.con * 100)
+        else:
+            raise RuntimeError("Queried concession for agent from a turn"
+                               " not stored as an agent turn")
+
+    def agent_time(self, delay=False):
+        if delay:
+            return self.delay_time
+        else:
+            return self.offer_time
 
     def agent_check(self, model):
         if self.agent:

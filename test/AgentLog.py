@@ -13,6 +13,11 @@ class AgentLog:
         self.interarrival_time = None
         self.action_queue = Heap(entry_type=ActionLog)
 
+    def set_interarrival_time(self, interarrival_time=None):
+        if not self.byr:
+            raise RuntimeError("Seller agent has no interarrival time query")
+        self.interarrival_time = interarrival_time
+
     def push_action(self, action=None):
         self.action_queue.push(action)
 
