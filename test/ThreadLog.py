@@ -17,13 +17,24 @@ class ThreadLog:
             censored = self.generate_censored_turn_log(params=params, turn=uncensored_turns + 1)
             self.turns[uncensored_turns + 1] = censored
 
+    def is_agent_turn(self, turn):
+        if self.agent:
+            if self.agent_buyer:
+                return turn % 2 == 1
+            else:
+                return turn % 2 == 0
+        else:
+            return False
+
     def generate_censored_turn_log(self, params=None, turn=None):
+        agent_turn = self.is_agent_turn(turn)
         outcomes = params['x_offer'].loc[turn, :]
         outcomes = outcomes[OUTCOME_FEATS]
         model = model_str(DELAY, turn=turn)
         delay_inputs = populate_test_model_inputs(full_inputs=params['inputs'][model])
         delay_time = self.delay_time(turn=turn)
-        return TurnLog(outcomes=outcomes, delay_inputs=delay_inputs, delay_time=delay_time, turn=turn)
+        return TurnLog(outcomes=outcomes, delay_inputs=delay_inputs, delay_time=delay_time, turn=turn,
+                       agent=agent_turn)
 
     def generate_turn_log(self, params=None, turn=None):
         outcomes = params['x_offer'].loc[turn, :].squeeze()
@@ -53,8 +64,10 @@ class ThreadLog:
         else:
             delay_inputs = None
         delay_time = self.delay_time(turn=turn)
+        agent_turn = self.is_agent_turn(turn)
         turn_log = TurnLog(outcomes=outcomes, delay_inputs=delay_inputs, con_inputs=con_inputs,
-                           msg_inputs=msg_inputs, delay_time=delay_time, turn=turn)
+                           msg_inputs=msg_inputs, delay_time=delay_time, turn=turn,
+                           agent=agent_turn)
         return turn_log
 
     def delay_time(self, turn=None):

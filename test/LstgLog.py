@@ -7,6 +7,7 @@ from test.ArrivalLog import ArrivalLog
 from test.ThreadLog import ThreadLog
 from utils import init_optional_arg
 
+
 class LstgLog:
 
     def __init__(self, params=None):

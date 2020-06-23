@@ -141,18 +141,6 @@ class TestGenerator(Generator):
     def _count_rl_buyers(self):
         return 1
 
-    def _generate_lstg_log(self, buyer=None):
-        # exclude inputs for the selected buyer from
-        # con1, con3, con5, con7
-
-        # exclude the arrival for the selected buyer from
-        # the first arrival model if it's the first buyer
-
-        # exclude the arrival from the other arrival model
-        # if it's a later arrival
-
-        # remove the thread from x_thread
-
     def simulate_lstg_buyer(self, buyer=None):
         lstg_log = self._generate_lstg_log(buyer=(i + 1))
         agent_log = self._generate_agent_log(buyer=(i + 1))
