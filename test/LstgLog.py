@@ -54,39 +54,78 @@ class LstgLog:
         else:
             raise RuntimeError('Delay not defined')
 
+    def record_agent_arrivals(self, full_inputs=None, agent_log=None):
+        byr_arrival = self.arrivals[self.agent_thread]
+        # find the floor of the number of days that have passed since the start of the
+        days = int(byr_arrival.time - self.lookup[START_TIME] / DAY)
+        for i in range(days):
+            action_index = (self.agent_thread, 1, i)
+            input_dict = populate_test_model_inputs(full_inputs=full_inputs,
+                                                    value=action_index)
+            time = (i * DAY) / MONTH
+            log = ActionLog(input_dict=input_dict, months=time, con=0,
+                            thread_id=self.agent_thread, turn=1)
+            agent_log.push_action(action=log)
+
+        # set interarrival time to account for query of first arrival modell
+        interarrival_time = byr_arrival.time - (days * DAY + self.lookup[START_TIME])
+        self.agent_log.set_interarrival_time(interarrival_time=interarrival_time)
+        return days
+
+    def record_buyer_first_turn(self, full_inputs=None, agent_log=None,
+                                days=None, agent_turns=None):
+        con = agent_turns[1].agent_con()
+        time = (days * DAY) / MONTH
+        first_turn_index = (self.agent_thread, 1, days)
+        input_dict = populate_test_model_inputs(full_inputs=full_inputs, value=first_turn_index)
+        first_offer = ActionLog(input_dict=input_dict, months=time, con=con,
+                                thread_id=self.agent_thread, turn=1)
+        agent_log.push_action(action=first_offer)
+        # add remaining turns
+        del agent_turns[1]
+
+    def record_agent_thread(self, turns=None, agent_log=None, thread_id=None, full_inputs=None):
+        for turn_number, turn_log in turns.items():
+            time = turn_log.agent_time(delay=self.delay)
+            months = (time - self.lookup[START_TIME]) / MONTH
+            con = turn_log.agent_con()
+            if self.byr:
+                index = (thread_id, turn_number, 0)
+            else:
+                index = (thread_id, turn_number)
+            input_dict = populate_test_model_inputs(full_inputs=full_inputs, value=index)
+            action = ActionLog(con=turn_log.agent_con(), censored=turn_log.is_censored,
+                               months=months, input_dict=input_dict, thread_id=thread_id,
+                               turn=turn_number)
+            agent_log.push_action(action=action)
+
+    def generate_buyer_log(self, full_inputs=None, agent_log=None):
+        days = self.record_agent_arrivals(full_inputs=full_inputs, agent_log=agent_log)
+        # add first turn
+        agent_turns = self.threads[self.agent_thread].get_agent_turns(delay=self.delay)
+        self.record_buyer_first_turn(full_inputs=full_inputs, agent_log=agent_log,
+                                     days=days, agent_turns=agent_turns)
+        # record remaining threads
+        self.record_agent_thread(turns=agent_turns, agent_log=agent_log,
+                                 thread_id=self.agent_thread, full_inputs=full_inputs)
+
     def generate_agent_log(self, params):
         # if the agent is a buyer
         agent_log = AgentLog(byr=self.byr,
                              delay=self.delay)
         full_inputs = params['inputs'][agent_log.model_name]
         if self.byr:
-            byr_arrival = self.arrivals[self.agent_thread]
-            # find the floor of the number of days that have passed since the start of the
-            days = int(byr_arrival.time - self.lookup[START_TIME] / DAY)
-            for i in range(days):
-                action_index = (self.agent_thread, 1, i)
-                input_dict = populate_test_model_inputs(full_inputs=full_inputs,
-                                                        value=action_index)
-                time = (i * DAY) / MONTH
-                log = ActionLog(input_dict=input_dict, months=time, con=0,
-                                thread_id=self.agent_thread, turn=1)
-                agent_log.push_action(action=log)
+            self.generate_buyer_log(full_inputs=full_inputs, agent_log=agent_log)
+        else:
+            self.generate_seller_log(full_inputs=full_inputs, agent_log=agent_log)
+        return agent_log
 
-            # set interarrival time to account for query of first arrival model
-            interarrival_time = byr_arrival.time - (days * DAY + self.lookup[START_TIME])
-            self.agent_log.set_interarrival_time(interarrival_time=interarrival_time)
-
-
-            time = (days * DAY) / MONTH
-            first_turn_index = (self.agent_thread, 1, days)
-            con = byr_thread.agent_con(turn=1)
-            input_dict = populate_test_model_inputs(full_inputs=full_inputs, value=first_turn_index)
-            first_offer = ActionLog
-            # for the last day, insert an action that corresponds to the offer
-            # (extract from thread)
-            # store the difference between the check time on that last day and the offer
-            # to feed arrival model when it queries for the delay (could verify intervals here)
-        # insert remaining offers into queue
+    def generate_seller_log(self, full_inputs=None, agent_log=None):
+        for thread_id, thread_log in self.threads.items():
+            agent_turns = thread_log.get_agent_turns(delay=self.delay)
+            if len(agent_turns) != 0:
+                self.record_agent_thread(agent_log=agent_log, full_inputs=full_inputs,
+                                         thread_id=thread_id, turns=agent_turns)
 
 
     def skip_agent_arrival(self):

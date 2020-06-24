@@ -98,7 +98,7 @@ class ThreadLog:
             return num_offers - 1
 
     def get_agent_turns(self, delay=False):
-        agent_turns = list()
+        agent_turns = dict()
         if not self.agent:
             raise RuntimeError("Querying agent turns from a thread that the agent"
                                "doesn't participate in")
@@ -108,9 +108,7 @@ class ThreadLog:
             last_turn = self.uncensored_turns
         for i in range(1, last_turn + 1):
             if self.is_agent_turn(turn=i):
-                agent_turns.append(self.turns[i])
-        if len(agent_turns) == 0:
-            raise RuntimeError("There should always be at least 1 agent turn")
+                agent_turns[i] = (self.turns[i])
         return agent_turns
 
     def get_con(self, time=None, turn=None, input_dict=None):
