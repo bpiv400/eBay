@@ -21,7 +21,9 @@ class ArrivalLog:
             model = FIRST_ARRIVAL_MODEL
         else:
             model = INTERARRIVAL_MODEL
-        compare_input_dicts(model=model, stored_inputs=self.arrival_inputs, env_inputs=input_dict)
+        compare_input_dicts(model=model,
+                            stored_inputs=self.arrival_inputs,
+                            env_inputs=input_dict)
         inter_arrival = self.time - self.check_time
         return int(inter_arrival)
 

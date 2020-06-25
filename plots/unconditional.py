@@ -1,9 +1,9 @@
 from compress_pickle import load
 import numpy as np
 import pandas as pd
-from plots.plots_utils import continuous_pdf, cdf_plot, survival_plot, \
+from plots.util import continuous_pdf, cdf_plot, survival_plot, \
     grouped_bar
-from processing.processing_consts import INTERVAL
+from inputs.const import ARRIVAL_INTERVAL
 from constants import PLOT_DIR, SIM, OBS, BYR_HIST_MODEL, MAX_DELAY, \
     HOUR, DAY, ARRIVAL
 from featnames import CON, MSG, DELAY
@@ -35,7 +35,7 @@ def draw_arrival(p, suffix=''):
     name = '{}{}'.format(ARRIVAL, suffix)
     print(name)
     df = construct_df(p, ARRIVAL)
-    df.index = df.index.values / (DAY / INTERVAL[1])
+    df.index = df.index.values / (DAY / ARRIVAL_INTERVAL)
 
     xticks = np.arange(0, MAX_DELAY[1] / DAY, 3)
 

@@ -132,9 +132,11 @@ class Composer:
         fixed_sizes = self.sizes[model_name]['x']  # dict
         for input_set, size in fixed_sizes.items():
             if input_set == LSTG_MAP:
-                input_dict[input_set] = self._build_lstg_vector(model_name, sources=sources)
+                input_dict[input_set] = self._build_lstg_vector(
+                    model_name, sources=sources)
             elif 'offer' == input_set[:-1]:
-                input_dict[input_set] = self._build_offer_vector(offer_vector=sources[input_set],
+                input_dict[input_set] = self._build_offer_vector(
+                    offer_vector=sources[input_set],
                                                                  byr=turn % 2 != 0)
             else:
                 input_dict[input_set] = torch.from_numpy(sources[input_set]).float().unsqueeze(0)

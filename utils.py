@@ -112,7 +112,8 @@ def load_state_dict(name=None):
     :return: dict
     """
     model_path = '{}{}.net'.format(MODEL_DIR, name)
-    state_dict = torch.load(model_path, map_location=torch.device('cpu'))
+    state_dict = torch.load(model_path,
+                            map_location=torch.device('cpu'))
     return state_dict
 
 

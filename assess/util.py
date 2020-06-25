@@ -2,7 +2,15 @@ import numpy as np
 import torch
 from torch.nn.functional import log_softmax, nll_loss
 from train.Sample import get_batches
-from utils import load_model
+from utils import load_model, load_file
+from constants import TEST
+
+
+def load_threads_offers(sim=False):
+    suffix = '_sim' if sim else ''
+    threads = load_file(TEST, 'x_thread{}'.format(suffix))
+    offers = load_file(TEST, 'x_offer{}'.format(suffix))
+    return threads, offers
 
 
 def get_model_predictions(name, data):

@@ -173,8 +173,7 @@ class EbayEnvironment:
         if event.turn != 1:
             time_feats = self.time_feats.get_feats(thread_id=event.thread_id,
                                                    time=event.priority)
-            clock_feats = get_clock_feats(event.priority)
-            event.init_offer(time_feats=time_feats, clock_feats=clock_feats)
+            event.init_offer(time_feats=time_feats)
         return False
 
     def process_arrival(self, event):
@@ -191,9 +190,11 @@ class EbayEnvironment:
         event.update_arrival(thread_count=self.thread_counter - 1)
 
         # call model to sample inter arrival time and update arrival check priority
-        input_dict = self.get_arrival_input_dict(event=event)
         first = event.priority == self.start_time
-        seconds = self.get_arrival(first=first, input_dict=input_dict,
+        input_dict = self.get_arrival_input_dict(event=event,
+                                                 first=first)
+        seconds = self.get_arrival(first=first,
+                                   input_dict=input_dict,
                                    time=event.priority)
         event.priority = min(event.priority + seconds, self.end_time)
 
@@ -216,10 +217,9 @@ class EbayEnvironment:
 
     def process_slr_expire(self, event):
         # update sources with new clock and features
-        clock_feats = get_clock_feats(event.priority)
         time_feats = self.time_feats.get_feats(thread_id=event.thread_id,
                                                time=event.priority)
-        event.init_offer(time_feats=time_feats, clock_feats=clock_feats)
+        event.init_offer(time_feats=time_feats)
         offer = event.slr_expire_rej()
         self.record(event, censored=False)
         self.time_feats.update_features(offer=offer)

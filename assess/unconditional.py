@@ -1,15 +1,15 @@
 import numpy as np
 import pandas as pd
 from compress_pickle import load, dump
-from processing.util import load_file, get_obs_outcomes
-from processing.e_inputs.offer import get_y_msg
-from processing.f_discrim.discrim_utils import concat_sim_chunks
-from assess.assess_consts import MAX_THREADS
-from processing.processing_consts import INTERVAL
+from utils import load_file
+from inputs.offer import get_y_msg
+from assess.util import load_threads_offers
+from assess.const import MAX_THREADS
+from inputs.const import ARRIVAL_INTERVAL
 from constants import TEST, PLOT_DIR, BYR_HIST_MODEL, CON_MULTIPLIER, \
-    HIST_QUANTILES, SIM, OBS, ARRIVAL, MAX_DELAY, PCTILE_DIR
+    HIST_QUANTILES, SIM, OBS, ARRIVAL, MAX_DELAY, PCTILE_DIR, MONTH
 from featnames import MONTHS_SINCE_LSTG, BYR_HIST, DELAY, EXP, CON, \
-    MSG, REJECT
+    MSG, REJECT, START_TIME
 
 
 def get_pdf(y, intervals, add_last=True):
@@ -56,7 +56,7 @@ def get_arrival_distributions(threads):
     # arrival times
     y = threads[MONTHS_SINCE_LSTG]
     pdf = get_pdf(y, MAX_DELAY[1], add_last=False).to_frame()
-    pdf['period'] = pdf.index // INTERVAL[1]
+    pdf['period'] = pdf.index // ARRIVAL_INTERVAL
     p[ARRIVAL] = pdf.groupby('period').sum().squeeze()
 
     # buyer history
@@ -70,11 +70,11 @@ def get_arrival_distributions(threads):
     return p
 
 
-def get_distributions(d):
-    p = get_arrival_distributions(d['threads'])
+def get_distributions(threads, offers):
+    p = get_arrival_distributions(threads)
     for turn in range(1, 8):
         p[turn] = dict()
-        df = d['offers'].xs(turn, level='index')
+        df = offers.xs(turn, level='index')
 
         # delay
         if turn > 1:
@@ -116,37 +116,49 @@ def num_offers(df):
     return s
 
 
-def create_outputs(obs, sim, idx):
-    p = dict()
-
-    # loop over models, get observed and simulated distributions
-    p[SIM] = get_distributions(sim)
-    p[OBS] = get_distributions(obs)
+def create_outputs(threads, offers, lstgs):
+    # loop over models, get distributions
+    d = get_distributions(threads, offers)
 
     # number of threads per listing
-    p[SIM]['threads'] = num_threads(sim['threads'], idx)
-    p[OBS]['threads'] = num_threads(obs['threads'], idx)
+    d['threads'] = num_threads(threads, lstgs)
 
     # number of offers per thread
-    p[SIM]['offers'] = num_offers(sim['offers'])
-    p[OBS]['offers'] = num_offers(obs['offers'])
+    d['offers'] = num_offers(offers)
 
-    return p
+    return d
+
+
+def lstgs_to_drop(part):
+    is_sale = (load_file(part, 'x_offer')[CON] == 1).groupby(
+        'lstg').max()
+    idx_sale = is_sale[is_sale].index
+    exp_time = load_file(part, 'lstg_end').drop(idx_sale)
+    start_time = load_file(part, 'lookup')[START_TIME].drop(idx_sale)
+    to_drop = exp_time - start_time + 1 < MONTH
+    idx_drop = to_drop[to_drop].index
+    return idx_drop
 
 
 def main():
-    # observed outcomes
-    obs = get_obs_outcomes(TEST)
-
-    # simulated outcomes
-    sim = concat_sim_chunks(TEST)
-    sim = {k: sim[k] for k in ['threads', 'offers']}
+    # observed and simulated outcomes
+    threads_obs, offers_obs = load_threads_offers(sim=False)
+    threads_sim, offers_sim = load_threads_offers(sim=True)
 
     # lookup file
-    lookup = load_file(TEST, 'lookup')
+    lstgs = load_file(TEST, 'lookup').index
+
+    # drop listings that expire before a month in the data
+    idx_drop = lstgs_to_drop(TEST)
+    threads_obs = threads_obs.drop(idx_drop, level='lstg')
+    offers_obs = offers_obs.drop(idx_drop, level='lstg')
+    threads_sim = threads_sim.drop(idx_drop, level='lstg')
+    offers_sim = offers_sim.drop(idx_drop, level='lstg')
 
     # unconditional distributions
-    p = create_outputs(obs, sim, lookup.index)
+    p = dict()
+    p[OBS] = create_outputs(threads_obs, offers_obs, lstgs)
+    p[SIM] = create_outputs(threads_sim, offers_sim, lstgs)
 
     # save
     dump(p, PLOT_DIR + 'p.pkl')

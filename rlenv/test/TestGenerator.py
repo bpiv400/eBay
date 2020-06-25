@@ -15,7 +15,9 @@ class TestGenerator(SimulatorGenerator):
                                verbose=self.verbose)
 
     def load_chunk(self, chunk=None):
-        super().load_chunk(chunk=chunk)
+        super().load_chunk(chunk=chunk)  # lookup and x_lstg
+        # load model inputs
+        print('Loading model inputs')
         lstgs = self.lookup.index
         self.data = dict()
         self.data['inputs'] = load_all_inputs(part=self.part,
