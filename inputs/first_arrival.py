@@ -27,10 +27,6 @@ def process_inputs(part):
     y[idx0] = hours - (ARRIVAL_INTERVAL_CT + 1)
     y = y.astype(clock.dtype)
 
-    # drop early expirations
-    y = y[y >= -1]
-    y[y == -1] = ARRIVAL_INTERVAL_CT
-
     # listing features
     x = init_x(part, y.index)
 

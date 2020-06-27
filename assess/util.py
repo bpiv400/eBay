@@ -10,6 +10,9 @@ def load_threads_offers(sim=False):
     suffix = '_sim' if sim else ''
     threads = load_file(TEST, 'x_thread{}'.format(suffix))
     offers = load_file(TEST, 'x_offer{}'.format(suffix))
+    if sim:
+        threads = threads.xs(0, level='sim')
+        offers = offers.xs(0, level='sim')
     return threads, offers
 
 

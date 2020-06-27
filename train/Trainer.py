@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import torch
 from torch.nn.functional import log_softmax, nll_loss
@@ -50,7 +51,6 @@ class Trainer:
         """
         Public method to train model.
         :param dropout: pair of dropout rates, one for last embedding, one for fully connected.
-        :param layers0: number of layers in first embedding
         :param norm: one of ['batch', 'layer', 'weight']
         """
         # experiment id
@@ -71,7 +71,10 @@ class Trainer:
                                            norm=norm)
 
         # path to save model
-        model_path = MODEL_DIR + '{}/{}.net'.format(self.name, expid)
+        model_dir = MODEL_DIR + '{}/'.format(self.name)
+        if not os.path.isdir(model_dir):
+            os.mkdir(model_dir)
+        model_path = model_dir + '{}.net'.format(expid)
 
         # save model
         if not self.dev:

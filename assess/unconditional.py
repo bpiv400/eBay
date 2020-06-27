@@ -129,17 +129,6 @@ def create_outputs(threads, offers, lstgs):
     return d
 
 
-def lstgs_to_drop(part):
-    is_sale = (load_file(part, 'x_offer')[CON] == 1).groupby(
-        'lstg').max()
-    idx_sale = is_sale[is_sale].index
-    exp_time = load_file(part, 'lstg_end').drop(idx_sale)
-    start_time = load_file(part, 'lookup')[START_TIME].drop(idx_sale)
-    to_drop = exp_time - start_time + 1 < MONTH
-    idx_drop = to_drop[to_drop].index
-    return idx_drop
-
-
 def main():
     # observed and simulated outcomes
     threads_obs, offers_obs = load_threads_offers(sim=False)
@@ -147,13 +136,6 @@ def main():
 
     # lookup file
     lstgs = load_file(TEST, 'lookup').index
-
-    # drop listings that expire before a month in the data
-    idx_drop = lstgs_to_drop(TEST)
-    threads_obs = threads_obs.drop(idx_drop, level='lstg')
-    offers_obs = offers_obs.drop(idx_drop, level='lstg')
-    threads_sim = threads_sim.drop(idx_drop, level='lstg')
-    offers_sim = offers_sim.drop(idx_drop, level='lstg')
 
     # unconditional distributions
     p = dict()
