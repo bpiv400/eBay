@@ -28,7 +28,7 @@ class LstgLog:
         self.threads = self.generate_thread_logs(params)
         self.agent_log = self.generate_agent_log(params)
         if self.agent and self.agent_params['byr']:
-            self.skip_agent_arrival()
+            self.skip_agent_arrival(params=params)
 
     @property
     def byr(self):
@@ -127,18 +127,25 @@ class LstgLog:
                 self.record_agent_thread(agent_log=agent_log, full_inputs=full_inputs,
                                          thread_id=thread_id, turns=agent_turns)
 
-
-    def skip_agent_arrival(self):
+    def skip_agent_arrival(self, params=None):
         byr_arrival = self.arrivals[self.agent_thread]
         if byr_arrival.censored:
             raise RuntimeError("Agent buyer arrival must not be censored")
         # if this is the first arrival
-            # if this is a buy it now event (i.e. there's no censored next arrival)
+        if self.agent_thread == 1:
+            # if bin
+            if self.check_bin(params=params, thread_id=self.agent_thread):
                 # replace the interarrival with the end of the lstg
                 # censor the arrival
+                byr_arrival.censored = True
+                byr_arrival.time = self.lookup[START_TIME] + MONTH
+            else:
+                for
+                next_arrival = self.arrivals[self.agent_thread + 1]
+                byr_arrival.time = next_arrival.time
             # if this is not a buy it now event (i.e there's an arrival next (censored or not)
-                # replace the interarrival time with the difference between the check time
-                # and the time of the next arrival
+            # replace the interarrival time with the difference between the check time
+            # and the time of the next arrival
         # if there is an arrival before this one
             # if this is a buy it now event (i.e. there's no censored next arrival)
                 # replace the interarrival time of the previous arrival with the end of the lstg
@@ -275,6 +282,7 @@ class LstgLog:
         """
         :return: int
         """
+        thread_id = self.translate_thread_id(thread_id=)
         delay = self.threads[thread_id].get_delay(turn=turn, time=time, input_dict=input_dict)
         if delay == MONTH:
             return self.lookup[START_TIME] + MONTH - time
