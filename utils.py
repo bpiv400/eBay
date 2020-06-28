@@ -7,6 +7,7 @@ from compress_pickle import load
 from nets.FeedForward import FeedForward
 from constants import MAX_DELAY, DAY, MONTH, SPLIT_PCTS, INPUT_DIR, \
     MODEL_DIR, META_6, META_7, LISTING_FEE, PARTITIONS, PARTS_DIR
+from featnames import DELAY, EXP
 
 
 def unpickle(file):
@@ -297,3 +298,13 @@ def init_x(part, idx=None):
             x = {k: v.reindex(index=idx, level='lstg')
                  for k, v in x.items()}
     return x
+
+
+def drop_censored(df):
+    """
+    Removes censored observations from a dataframe of offers
+    :param df: dataframe with index ['lstg', 'thread', 'index']
+    :return: dataframe
+    """
+    censored = df[EXP] & (df[DELAY] < 1)
+    return df[~censored]

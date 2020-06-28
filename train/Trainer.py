@@ -1,4 +1,6 @@
 import os
+import psutil
+import time
 import numpy as np
 import torch
 from torch.nn.functional import log_softmax, nll_loss
@@ -8,7 +10,7 @@ from torch.optim import Adam, lr_scheduler
 from train.EBayDataset import EBayDataset
 from nets.FeedForward import FeedForward
 from train.Sample import get_batches
-from train.const import FTOL, LR0, LR1, LR_FACTOR, INT_DROPOUT
+from train.const import FTOL, LR0, LR1, LR_FACTOR, INT_DROPOUT, NUM_WORKERS
 from constants import MODEL_DIR, LOG_DIR, CENSORED_MODELS, \
     INIT_VALUE_MODELS, MODEL_NORM
 from utils import load_sizes
@@ -22,18 +24,30 @@ class Trainer:
         * train: trains the initialized model under given parameters.
     """
 
-    def __init__(self, name, train_part, test_part, dev=False, device='cuda'):
+    def __init__(self, name, train_part, test_part, dev=False, gpu=0):
         """
         :param name: string model name.
         :param train_part: string partition name for training data.
         :param test_part: string partition name for holdout data.
         :param dev: True for development.
-        :param device: 'cuda' or 'cpu'.
+        :param gpu: index of gpu to use.
         """
         # save parameters to self
         self.name = name
         self.dev = dev
-        self.device = device
+        torch.cuda.set_device(gpu)
+
+        # set cpu affinity
+        p = psutil.Process()
+        max_workers = psutil.cpu_count() // torch.cuda.device_count()
+        if name in NUM_WORKERS:
+            self.num_workers = NUM_WORKERS[name]
+        else:
+            self.num_workers = max_workers
+        start = max_workers * gpu
+        processes = list(range(start, start + self.num_workers))
+        p.cpu_affinity(processes)
+        print('Running on cpus: {}'.format(p.cpu_affinity()))
 
         # boolean for different loss functions
         self.use_time_loss = name in CENSORED_MODELS
@@ -146,7 +160,9 @@ class Trainer:
         :return: scalar loss.
         """
         is_training = optimizer is not None
-        batches = get_batches(data, is_training=is_training)
+        batches = get_batches(data,
+                              num_workers=self.num_workers,
+                              is_training=is_training)
 
         # loop over batches, calculate log-likelihood
         loss = 0.0
@@ -158,9 +174,9 @@ class Trainer:
             # move to device
             for key, value in b.items():
                 if type(value) is dict:
-                    b[key] = {k: v.to(self.device) for k, v in value.items()}
+                    b[key] = {k: v.to('cuda') for k, v in value.items()}
                 else:
-                    b[key] = value.to(self.device)
+                    b[key] = value.to('cuda')
 
             # increment loss
             loss += self._run_batch(b, net, optimizer)
@@ -180,16 +196,16 @@ class Trainer:
     def _time_loss(lnq, y):
         # arrivals have positive y
         arrival = y >= 0
-        lnL = torch.sum(lnq[arrival, y[arrival]])
+        lnl = torch.sum(lnq[arrival, y[arrival]])
 
         # non-arrivals
         cens = y < 0
         y_cens = y[cens]
         q_cens = torch.exp(lnq[cens, :])
         for i in range(q_cens.size()[0]):
-            lnL += torch.log(torch.sum(q_cens[i, y_cens[i]:]))
+            lnl += torch.log(torch.sum(q_cens[i, y_cens[i]:]))
 
-        return -lnL
+        return -lnl
 
     def _run_batch(self, b, net, optimizer):
         """
@@ -228,9 +244,8 @@ class Trainer:
         nets, loss = [], []
         for lr in LR0:
             # initialize model and optimizer
-            nets.append(FeedForward(self.sizes,
-                                    dropout=dropout,
-                                    norm=norm).to(self.device))
+            net = FeedForward(self.sizes, dropout=dropout, norm=norm)
+            nets.append(net.to('cuda'))
             optimizer = Adam(nets[-1].parameters(), lr=lr)
  
             # print to console

@@ -13,8 +13,8 @@ DROPOUT = 'dropout'
 TOL_HALF = 0.02
 
 # paths and directories
-if 'Ubuntu' in platform():  # Etan's box
-    PREFIX = '/data/eBay'
+if 'Ubuntu' in platform():  # Etan's new box
+    PREFIX = os.path.expanduser('~/eBay/data')
 elif 'debian' in platform():
     PREFIX = os.path.expanduser('~/shared/ebay')
 elif 'Windows' in platform() and 'A:' in os.getcwd():  # Barry's pc

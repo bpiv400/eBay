@@ -11,6 +11,7 @@ def main():
     parser.add_argument('--name', type=str, required=True)
     parser.add_argument('--dropout', type=int, required=True)
     parser.add_argument('--dev', action='store_true')
+    parser.add_argument('--gpu', type=int, default=0)
     args = parser.parse_args()
 
     # partition to train on
@@ -22,7 +23,8 @@ def main():
         train_part = TRAIN_MODELS
 
     # initialize trainer
-    trainer = Trainer(args.name, train_part, VALIDATION, dev=args.dev)
+    trainer = Trainer(args.name, train_part, VALIDATION,
+                      dev=args.dev, gpu=args.gpu)
 
     # compute dropout
     dropout = tuple([float(i / INT_DROPOUT) for i in DROPOUT_GRID[args.dropout-1]])
