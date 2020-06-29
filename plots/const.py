@@ -5,7 +5,7 @@ from assess.const import META_LABELS
 from featnames import META, START_PRICE
 
 # where to save figures
-FIG_DIR = '{}/{}/'.format(os.path.expanduser('~/Dropbox/eBay'), 'figures')
+FIG_DIR = '{}/{}/'.format(os.path.expanduser('~/eBay'), 'figures')
 
 # fontsize by plot type
 FONTSIZE = {'roc': 16,

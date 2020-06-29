@@ -98,6 +98,23 @@ def construct_x_listings(x, idx_thread):
     return d
 
 
+def clean_sim_offers(offers, months, part):
+    # drop offers after expiration
+    clock_sim = load_file(part, 'clock_sim').xs(0, level='sim')
+    start_time = load_file(part, 'lookup')[START_TIME]
+    months_sim = (clock_sim - start_time.reindex(
+        index=clock_sim.index, level='lstg')) / MONTH
+    keep = months_sim < months.reindex(
+        index=months_sim.index, level='lstg', fill_value=1.)
+    return offers[keep]
+
+
+def clean_sim_threads(threads, months):
+    keep = threads[MONTHS_SINCE_LSTG] < months.reindex(
+        index=threads.index, level='lstg', fill_value=1.)
+    return threads[keep]
+
+
 def months_to_exp(part):
     is_sale = (load_file(part, 'x_offer')[CON] == 1).groupby(
         'lstg').max()
@@ -107,6 +124,22 @@ def months_to_exp(part):
     months = (exp_time - start_time + 1) / MONTH
     months = months[months < 1.]
     return months
+
+
+def load_threads_offers(part=None, sim=False):
+    suffix = '_sim' if sim else ''
+    threads = load_file(part, 'x_thread{}'.format(suffix))
+    offers = load_file(part, 'x_offer{}'.format(suffix))
+    offers = drop_censored(offers)
+    if sim:
+        # first simulation only
+        threads = threads.xs(0, level='sim')
+        offers = offers.xs(0, level='sim')
+        # drop threads and offers after observed lstg expiration
+        months = months_to_exp(part)
+        threads = clean_sim_threads(threads, months)
+        offers = clean_sim_offers(offers, months, part)
+    return threads, offers
 
 
 def main():
@@ -119,17 +152,9 @@ def main():
     assert part in [TRAIN_RL, VALIDATION, TEST]
     print('{}/{}'.format(part, name))
 
-    # drop listings that expire before a month in the data
-    months = months_to_exp(part)
-
-    # threads data, observed and simulated
-    threads_obs = load_file(part, 'x_thread')
-    threads_sim = load_file(part, 'x_thread_sim').xs(0, level='sim')
-
-    # drop simulated threads after expiration
-    keep = threads_sim[MONTHS_SINCE_LSTG] < months.reindex(
-        index=threads_sim.index, level='lstg', fill_value=1.)
-    threads_sim = threads_sim[keep]
+    # observed and simulated outcomes
+    threads_obs, offers_obs = load_threads_offers(part=part, sim=False)
+    threads_sim, offers_sim = load_threads_offers(part=part, sim=True)
 
     # listings inputs
     if name == DISCRIM_LISTINGS:
@@ -146,24 +171,6 @@ def main():
 
     # threads inputs
     else:
-        # offers data, observed and simulated
-        offers_obs = load_file(part, 'x_offer')
-        offers_sim = load_file(part, 'x_offer_sim').xs(
-            0, level='sim')
-
-        # drop offers after expiration
-        clock_sim = load_file(part, 'clock_sim').xs(0, level='sim')
-        start_time = load_file(part, 'lookup')[START_TIME]
-        months_sim = (clock_sim - start_time.reindex(
-            index=clock_sim.index, level='lstg')) / MONTH
-        keep = months_sim < months.reindex(
-            index=months_sim.index, level='lstg', fill_value=1.)
-        offers_sim = offers_sim[keep]
-
-        # drop censored offers
-        offers_obs = drop_censored(offers_obs)
-        offers_sim = drop_censored(offers_sim)
-
         # construct input variable dictionaries
         x_obs = construct_x_threads(part, threads_obs, offers_obs)
         x_sim = construct_x_threads(part, threads_sim, offers_sim)

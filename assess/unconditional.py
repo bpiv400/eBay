@@ -3,13 +3,13 @@ import pandas as pd
 from compress_pickle import load, dump
 from utils import load_file
 from inputs.offer import get_y_msg
-from assess.util import load_threads_offers
+from inputs.discrim import load_threads_offers
 from assess.const import MAX_THREADS
 from inputs.const import ARRIVAL_INTERVAL
 from constants import TEST, PLOT_DIR, BYR_HIST_MODEL, CON_MULTIPLIER, \
-    HIST_QUANTILES, SIM, OBS, ARRIVAL, MAX_DELAY, PCTILE_DIR, MONTH
+    HIST_QUANTILES, SIM, OBS, ARRIVAL, MAX_DELAY, PCTILE_DIR
 from featnames import MONTHS_SINCE_LSTG, BYR_HIST, DELAY, EXP, CON, \
-    MSG, REJECT, START_TIME
+    MSG, REJECT
 
 
 def get_pdf(y, intervals, add_last=True):
@@ -131,8 +131,8 @@ def create_outputs(threads, offers, lstgs):
 
 def main():
     # observed and simulated outcomes
-    threads_obs, offers_obs = load_threads_offers(sim=False)
-    threads_sim, offers_sim = load_threads_offers(sim=True)
+    threads_obs, offers_obs = load_threads_offers(part=TEST, sim=False)
+    threads_sim, offers_sim = load_threads_offers(part=TEST, sim=True)
 
     # lookup file
     lstgs = load_file(TEST, 'lookup').index
