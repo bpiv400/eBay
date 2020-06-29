@@ -9,7 +9,7 @@ from inputs.const import NUM_OUT, N_SMALL, ARRIVAL_INTERVAL, \
 from constants import INPUT_DIR, INDEX_DIR, VALIDATION, \
     TRAIN_MODELS, TRAIN_RL, IDX, BYR, DELAY_MODELS, SLR, DAY, \
     MONTH, INIT_VALUE_MODELS, ARRIVAL, MAX_DELAY, \
-    HIST_QUANTILES, NO_ARRIVAL_CUTOFF
+    HIST_QUANTILES, NO_ARRIVAL_CUTOFF, DISCRIM_MODELS
 from featnames import CLOCK_FEATS, OUTCOME_FEATS, BYR_HIST, \
     CON, NORM, SPLIT, MSG, AUTO, EXP, REJECT, DAYS, DELAY, TIME_FEATS, \
     THREAD_COUNT, MONTHLY_DISCOUNT, ACTION_DISCOUNT, ACTION_COST, \
@@ -304,19 +304,24 @@ def save_featnames(x, m):
 
     # for offer models
     if 'offer1' in x:
-        # buyer models do not have time feats
-        if BYR in m or m[-1] in [str(i) for i in IDX[BYR]]:
-            feats = CLOCK_FEATS + OUTCOME_FEATS
+        if m in DISCRIM_MODELS:
+            for i in range(1, 8):
+                k = 'offer{}'.format(i)
+                featnames[k] = list(x[k].columns)
         else:
-            feats = CLOCK_FEATS + TIME_FEATS + OUTCOME_FEATS
+            # buyer models do not have time feats
+            if BYR in m or m[-1] in [str(i) for i in IDX[BYR]]:
+                feats = CLOCK_FEATS + OUTCOME_FEATS
+            else:
+                feats = CLOCK_FEATS + TIME_FEATS + OUTCOME_FEATS
 
-        # check that all offer groupings have same organization
-        for k in x.keys():
-            if 'offer' in k:
-                assert list(x[k].columns) == feats
+            # check that all offer groupings have same organization
+            for k in x.keys():
+                if 'offer' in k:
+                    assert list(x[k].columns) == feats
 
-        # one vector of featnames for offer groupings
-        featnames['offer'] = feats
+            # one vector of featnames for offer groupings
+            featnames['offer'] = feats
 
     dump(featnames, INPUT_DIR + 'featnames/{}.pkl'.format(m))
 

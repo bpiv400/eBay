@@ -2,8 +2,8 @@ import argparse
 import numpy as np
 import pandas as pd
 from compress_pickle import dump
-from inputs.util import save_sizes, convert_x_to_numpy, \
-    save_small, get_x_thread
+from inputs.util import save_featnames, save_sizes, \
+    convert_x_to_numpy, save_small, get_x_thread
 from utils import load_file, init_x, drop_censored
 from constants import TRAIN_RL, VALIDATION, TEST, DISCRIM_MODELS, \
     DISCRIM_LISTINGS, DISCRIM_THREADS_NO_TF, INPUT_DIR, MONTH
@@ -22,6 +22,7 @@ def save_discrim_files(part, name, x_obs, x_sim):
     """
     # featnames and sizes
     if part == VALIDATION:
+        save_featnames(x_obs, name)
         save_sizes(x_obs, name)
 
     # indices
