@@ -1,6 +1,6 @@
 import pandas as pd
 from agent.util import get_agent_name
-from featnames import START_TIME, MONTHS_SINCE_LSTG, BYR_HIST, CON, AUTO
+from featnames import START_TIME, MONTHS_SINCE_LSTG, BYR_HIST, CON, AUTO, LSTG
 from constants import (MONTH, MODELS, FIRST_ARRIVAL_MODEL, DAY,
                        BYR_HIST_MODEL, INTERARRIVAL_MODEL, OFFER_MODELS)
 from rlenv.util import populate_test_model_inputs
@@ -26,8 +26,10 @@ class LstgLog:
         params = LstgLog.subset_params(params)
         self.arrivals = self.generate_arrival_logs(params)
         self.threads = self.generate_thread_logs(params)
-        self.agent_log = self.generate_agent_log(params)
+        self.agent_log = self.generate_agent_log(params) # revisit this
         if self.agent and self.agent_params['byr']:
+            self.translator = ThreadTranslator(agent_thread=self.agent_thread,
+                                               arrivals=self.arrivals)
             self.skip_agent_arrival(params=params)
 
     @property
@@ -315,3 +317,90 @@ class LstgLog:
                                          level='lstg', value=params['lstg'])
         # print(params['inputs']['arrival']['lstg'])
         return params
+
+
+
+class ThreadTranslator:
+    def __init__(self, arrivals=None, agent_thread=None, params=None):
+        self.agent_thread = agent_thread
+        # boolean for whether the agent is the first thread
+        self.agent_first = self.agent_thread == 1
+        # boolean for whether the agent is the last thread
+        self.agent_last = self.agent_thread == len(arrivals)
+        # time when the buyer agent model is queried and produces a first offer
+        self.agent_check_time = self.get_rl_check_time(params=params)
+        # time when the buyer agent model executes the first offer
+        self.agent_arrival_time = arrivals[self.agent_thread].time
+        # number of seconds the first arrival model should delay for when
+        # queried for arrival time of the buyer's first offer
+        self.rl_interarrival_time = self.agent_arrival_time - self.agent_check_time
+        # first thread where time >= rl_check_time,
+        # None if rl thread is the last thread
+        self.thread_l = self.get_thread_l(arrivals=arrivals)
+        if self.thread_l is not None:
+            # boolean for whether thread l arrival time is after agent arrival time
+            self.l_after_agent = arrivals[self.thread_l].time > self.agent_arrival_time
+            # boolean for whether thread_l is censored
+            self.l_censored = arrivals[self.thread_l].censored
+            # counter of threads with arrival time >= rl_check_time
+            # j should be < 0 when l_censored
+            self.j = self.agent_thread - self.thread_l
+        else:
+            self.l_censored, self.l_after_agent = None, None
+            self.j = None
+        # boolean for whether the id will be queried twice
+        self.query_twice = self.get_query_twice()
+        self.agent_env_id = self.get_agent_env_id(arrivals=arrivals)
+        self.hidden_arrival = None
+        self.arrival_translator = self.make_arrival_translator(arrivals)
+
+    def get_query_twice(self):
+        if self.thread_l is not None:
+            return self.l_censored
+        else:
+            return self.agent_last
+
+
+    def get_agent_env_id(self, arrivals=None):
+        if self.agent_first:
+            if not self.query_twice:
+                return 1
+            else:
+                return 2
+        else:
+            
+
+    def get_thread_l(self, arrivals=None):
+        """
+        Get first thread where time >= rl_check_time
+        :param arrivals:
+        :return:
+        """
+        after_rl_check = list()
+        for thread_id, arrival_log in arrivals.items():
+            if arrival_log.time >= self.agent_check_time and \
+                    thread_id != self.agent_thread:
+                after_rl_check.append(thread_id)
+        if len(after_rl_check) == 0:
+            assert self.agent_last
+            return None
+        else:
+            return min(after_rl_check)
+
+
+    def get_rl_check_time(self, params=None):
+        df = params['inputs'][get_agent_name(byr=True,
+                                             delay=True,
+                                             policy=True)][LSTG]
+        df = df.xs(key=self.agent_thread, level='thread',
+                   drop_level=True)
+        df = df.xs(key=1, level='index', drop_level=True)
+        day = df.index.max()
+        return (day * DAY) + params['lookup'][START_TIME]
+
+
+    def make_arrival_translator(self, arrivals):
+        if self.agent_first:
+            return self.first_arrival_translator(arrivals)
+        else:
+            return self.standard_arrival_translator(arrivals)

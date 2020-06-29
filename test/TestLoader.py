@@ -17,5 +17,5 @@ class TestLoader(ChunkLoader):
                                  lstg=self.lstg)
         self.x_thread = subset_df(df=self._test_data['x_offer'],
                                   lstg=self.lstg)
-        self.lstg = subset_inputs(input_data=self._test_data['inputs'],
-                                  level='lstg', value=self.lstg)
+        self.inputs = subset_inputs(input_data=self._test_data['inputs'],
+                                    level='lstg', value=self.lstg)
