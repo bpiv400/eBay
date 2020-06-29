@@ -75,3 +75,7 @@ NO_ARRIVAL = 'p_no_arrival'
 MONTHLY_DISCOUNT = 'monthly_discount'
 ACTION_DISCOUNT = 'action_discount'
 ACTION_COST = 'action_cost'
+
+# for chunks
+X_LSTG = 'x_lstg'
+LOOKUP = 'lookup'

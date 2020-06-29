@@ -7,8 +7,6 @@ from featnames import (CON, DELAY, MSG, ALL_OFFER_FEATS, CLOCK_FEATS,
 INTERACT = False
 
 # dataset dictionary keys
-X_LSTG = 'x_lstg'
-LOOKUP = 'lookup'
 INTERVAL = 'interval'
 
 # filenames

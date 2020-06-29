@@ -1,4 +1,4 @@
-import multiprocessing as mp
+import psutil
 import numpy as np
 import torch
 from torch.utils.data import Sampler, DataLoader
@@ -56,14 +56,17 @@ def collate(batch):
     return {'y': y, 'x': x}
 
 
-def get_batches(data, num_workers=None, is_training=False):
+def get_batches(data, is_training=False):
     """
     Creates a Dataloader object.
     :param data: Inputs object.
-    :param int num_workers: number of workers.
     :param is_training: chop into minibatches if True.
     :return: iterable batches of examples.
     """
+    if data.name in NUM_WORKERS:
+        num_workers = NUM_WORKERS[data.name]
+    else:
+        num_workers = len(psutil.Process().cpu_affinity())
     batches = DataLoader(data,
                          collate_fn=collate,
                          batch_sampler=Sample(data, is_training),

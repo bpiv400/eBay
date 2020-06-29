@@ -1,8 +1,8 @@
 import argparse
 from train.Trainer import Trainer
+from utils import set_gpu_workers
 from train.const import INT_DROPOUT, DROPOUT_GRID
-from constants import SMALL, TRAIN_RL, TRAIN_MODELS, VALIDATION, \
-    DISCRIM_MODELS, INIT_MODELS
+from constants import SMALL, TRAIN_RL, TRAIN_MODELS, DISCRIM_MODELS, INIT_MODELS
 
 
 def main():
@@ -11,8 +11,10 @@ def main():
     parser.add_argument('--name', type=str, required=True)
     parser.add_argument('--dropout', type=int, required=True)
     parser.add_argument('--dev', action='store_true')
-    parser.add_argument('--gpu', type=int, default=0)
     args = parser.parse_args()
+
+    # set gpu and cpu affinity
+    set_gpu_workers()
 
     # partition to train on
     if args.dev:
@@ -23,8 +25,9 @@ def main():
         train_part = TRAIN_MODELS
 
     # initialize trainer
-    trainer = Trainer(args.name, train_part, VALIDATION,
-                      dev=args.dev, gpu=args.gpu)
+    trainer = Trainer(name=args.name,
+                      train_part=train_part,
+                      dev=args.dev)
 
     # compute dropout
     dropout = tuple([float(i / INT_DROPOUT) for i in DROPOUT_GRID[args.dropout-1]])

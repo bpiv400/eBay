@@ -23,6 +23,7 @@ from rlenv.interfaces.PlayerInterface import SimulatedBuyer, SimulatedSeller
 from rlenv.interfaces.ArrivalInterface import ArrivalInterface
 from rlenv.environments.SellerEnvironment import SellerEnvironment
 from rlenv.environments.BuyerEnvironment import BuyerEnvironment
+from utils import set_gpu_workers
 
 
 class RlTrainer:
@@ -62,7 +63,7 @@ class RlTrainer:
 
     @property
     def simulated_seller(self):
-        if self.agent_params['role'] == BYR_PREFIX:
+        if self.agent_params['role'] == BYR:
             return SimulatedSeller(full=True)
         else:
             #
@@ -135,7 +136,7 @@ class RlTrainer:
 
     @property
     def env_class(self):
-        if self.agent_params['role'] == BYR_PREFIX:
+        if self.agent_params['role'] == BYR:
             return BuyerEnvironment
         else:
             return SellerEnvironment
@@ -193,6 +194,9 @@ def main():
         for k in param_dict.keys():
             curr_params[k] = args[k]
         trainer_args[param_set] = curr_params
+        
+    # set gpu and cpu affinity
+    set_gpu_workers()
 
     # initialize trainer
     trainer = RlTrainer(**trainer_args)

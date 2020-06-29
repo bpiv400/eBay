@@ -1,6 +1,10 @@
 import argparse
 import pickle
+import psutil
+import py3nvml
+import time
 import torch
+from torch import cuda
 from torch.nn.functional import log_softmax
 import numpy as np
 from compress_pickle import load
@@ -308,3 +312,26 @@ def drop_censored(df):
     """
     censored = df[EXP] & (df[DELAY] < 1)
     return df[~censored]
+
+
+def set_gpu_workers():
+    # set gpu
+    while True:
+        free_gpus = np.where(py3nvml.get_free_gpus())[0]
+        if len(free_gpus) > 0:
+            gpu = int(free_gpus[0])
+            break
+        else:
+            print('Waiting 5 minutes for a free GPU...')
+            time.sleep(300)
+
+    cuda.set_device(gpu)
+    print('Training on cuda:{}'.format(gpu))
+
+    # set cpu affinity
+    p = psutil.Process()
+    max_workers = psutil.cpu_count() // cuda.device_count()
+    start = max_workers * gpu
+    processes = list(range(start, start + max_workers))
+    p.cpu_affinity(processes)
+    print('CPUs for dataloader: {}'.format(p.cpu_affinity()))

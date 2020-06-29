@@ -1,6 +1,4 @@
 import os
-import psutil
-import time
 import numpy as np
 import torch
 from torch.nn.functional import log_softmax, nll_loss
@@ -10,9 +8,9 @@ from torch.optim import Adam, lr_scheduler
 from train.EBayDataset import EBayDataset
 from nets.FeedForward import FeedForward
 from train.Sample import get_batches
-from train.const import FTOL, LR0, LR1, LR_FACTOR, INT_DROPOUT, NUM_WORKERS
+from train.const import FTOL, LR0, LR1, LR_FACTOR, INT_DROPOUT
 from constants import MODEL_DIR, LOG_DIR, CENSORED_MODELS, \
-    INIT_VALUE_MODELS, MODEL_NORM
+    INIT_VALUE_MODELS, MODEL_NORM, VALIDATION
 from utils import load_sizes
 
 
@@ -24,30 +22,15 @@ class Trainer:
         * train: trains the initialized model under given parameters.
     """
 
-    def __init__(self, name, train_part, test_part, dev=False, gpu=0):
+    def __init__(self, name=None, train_part=None, dev=False):
         """
         :param name: string model name.
         :param train_part: string partition name for training data.
-        :param test_part: string partition name for holdout data.
         :param dev: True for development.
-        :param gpu: index of gpu to use.
         """
         # save parameters to self
         self.name = name
         self.dev = dev
-        torch.cuda.set_device(gpu)
-
-        # set cpu affinity
-        p = psutil.Process()
-        max_workers = psutil.cpu_count() // torch.cuda.device_count()
-        if name in NUM_WORKERS:
-            self.num_workers = NUM_WORKERS[name]
-        else:
-            self.num_workers = max_workers
-        start = max_workers * gpu
-        processes = list(range(start, start + self.num_workers))
-        p.cpu_affinity(processes)
-        print('Running on cpus: {}'.format(p.cpu_affinity()))
 
         # boolean for different loss functions
         self.use_time_loss = name in CENSORED_MODELS
@@ -59,7 +42,7 @@ class Trainer:
 
         # load datasets
         self.train = EBayDataset(train_part, name)
-        self.test = EBayDataset(test_part, name)
+        self.valid = EBayDataset(VALIDATION, name)
 
     def train_model(self, dropout=(0.0, 0.0), norm=MODEL_NORM):
         """
@@ -160,9 +143,7 @@ class Trainer:
         :return: scalar loss.
         """
         is_training = optimizer is not None
-        batches = get_batches(data,
-                              num_workers=self.num_workers,
-                              is_training=is_training)
+        batches = get_batches(data, is_training=is_training)
 
         # loop over batches, calculate log-likelihood
         loss = 0.0
@@ -277,8 +258,8 @@ class Trainer:
         with torch.no_grad():
             loss_train = self._run_loop(self.train, net)
             output['lnL_train'] = -loss_train / self.train.N
-            loss_test = self._run_loop(self.test, net)
-            output['lnL_test'] = -loss_test / self.test.N
+            loss_test = self._run_loop(self.valid, net)
+            output['lnL_test'] = -loss_test / self.valid.N
 
         # save output to tensorboard writer
         for k, v in output.items():

@@ -3,7 +3,7 @@ import h5py
 import pandas as pd
 import numpy as np
 from collections import namedtuple
-from featnames import START_TIME, START_PRICE, META
+from featnames import START_TIME, START_PRICE, META, X_LSTG, LOOKUP
 from constants import MONTH
 from utils import get_months_since_lstg, get_cut
 from agent.spaces.ConSpace import ConSpace
@@ -11,7 +11,7 @@ from agent.agent_utils import get_con_set, get_train_file_path
 from rlpyt.envs.base import Env
 from rlpyt.spaces.composite import Composite
 from rlpyt.spaces.float_box import FloatBox
-from rlenv.const import LOOKUP, X_LSTG, ENV_LSTG_COUNT
+from rlenv.const import ENV_LSTG_COUNT
 from rlenv.environments.EbayEnvironment import EbayEnvironment
 from rlenv.Recorder import Recorder
 from agent.util import get_con_set, get_train_file_path
