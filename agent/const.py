@@ -39,7 +39,7 @@ AGENT_PARAMS = {'role': {'type': str,
                            'default': 0.5}
                 }
 
-BATCH_PARAMS = {'batch_size': {'type': int, 'default': 2 ** 9}}
+BATCH_PARAMS = {'batch_size': {'type': int, 'default': 2 ** 12}}
 
 PPO_PARAMS = {'minibatches': {'type': int, 'default': 1},
               'entropy_loss_coeff': {'type': float, 'default': .01},

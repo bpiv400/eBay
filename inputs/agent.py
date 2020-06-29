@@ -36,15 +36,16 @@ def main():
     assert x_lstg.isna().sum().sum() == 0
 
     # iteration prep
-    idx = np.arange(0, len(x_lstg), step=NUM_RL_WORKERS)
+    num_files = NUM_RL_WORKERS * 2  # need twice as many files
+    idx = np.arange(0, len(x_lstg), step=num_files)
 
     # columns names
     lookup_cols = get_cols(lookup)
     x_lstg_cols = get_cols(x_lstg)
 
     # split and save as hdf5
-    for i in range(NUM_RL_WORKERS):
-        print('Chunk {} of {}'.format(i+1, NUM_RL_WORKERS))
+    for i in range(num_files):
+        print('Chunk {} of {}'.format(i+1, num_files))
 
         # split dataframes, convert to numpy
         lookup_i = lookup.iloc[idx, :].values
