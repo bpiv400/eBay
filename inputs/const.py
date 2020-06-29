@@ -34,5 +34,5 @@ for m in [SLR_POLICY_INIT, BYR_DELAY_POLICY_INIT]:
     NUM_OUT[m] = CON_MULTIPLIER + 1
 NUM_OUT[SLR_DELAY_POLICY_INIT] = CON_MULTIPLIER + 2
 
-# number of physical cores for training RL
-NUM_PHYSICAL_CORES = 8
+# number of workers for training RL
+NUM_RL_WORKERS = 16
