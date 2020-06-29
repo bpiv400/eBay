@@ -36,14 +36,14 @@ def main():
     assert x_lstg.isna().sum().sum() == 0
 
     # iteration prep
-    idx = np.arange(0, len(x_lstg), step=NUM_WORKERS_RL)
+    num_files = NUM_PHYSICAL_CORES * 2  # need twice as many files
+    idx = np.arange(0, len(x_lstg), step=num_files)
 
     # columns names
     lookup_cols = get_cols(lookup)
     x_lstg_cols = get_cols(x_lstg)
 
     # split and save as hdf5
-    num_files = NUM_PHYSICAL_CORES * 2
     for i in range(num_files):
         print('Chunk {} of {}'.format(i+1, num_files))
 
