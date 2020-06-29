@@ -7,10 +7,9 @@ import h5py
 import numpy as np
 import pandas as pd
 from utils import load_file, init_x
-from constants import NO_ARRIVAL_CUTOFF, TRAIN_RL, RL_TRAIN_DIR, \
-    NUM_WORKERS_RL
-from featnames import START_PRICE, NO_ARRIVAL
-from rlenv.const import X_LSTG, LOOKUP
+from constants import NO_ARRIVAL_CUTOFF, TRAIN_RL, RL_TRAIN_DIR
+from inputs.const import NUM_PHYSICAL_CORES
+from featnames import START_PRICE, NO_ARRIVAL, X_LSTG, LOOKUP
 
 os.environ["HDF5_USE_FILE_LOCKING"] = "FALSE"
 
@@ -37,15 +36,16 @@ def main():
     assert x_lstg.isna().sum().sum() == 0
 
     # iteration prep
-    idx = np.arange(0, len(x_lstg), step=NUM_WORKERS_RL)
+    num_files = NUM_PHYSICAL_CORES * 2  # need twice as many files
+    idx = np.arange(0, len(x_lstg), step=num_files)
 
     # columns names
     lookup_cols = get_cols(lookup)
     x_lstg_cols = get_cols(x_lstg)
 
     # split and save as hdf5
-    for i in range(NUM_WORKERS_RL):
-        print('Chunk {} of {}'.format(i+1, NUM_WORKERS_RL))
+    for i in range(num_files):
+        print('Chunk {} of {}'.format(i+1, num_files))
 
         # split dataframes, convert to numpy
         lookup_i = lookup.iloc[idx, :].values

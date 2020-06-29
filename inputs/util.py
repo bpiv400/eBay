@@ -7,9 +7,8 @@ from inputs.const import NUM_OUT, N_SMALL, DELTA_MONTH, \
     DELTA_ACTION, C_ACTION, INTERVAL_ARRIVAL, INTERVAL_TURN, \
     INTERVAL_CT_TURN, INTERVAL_CT_ARRIVAL
 from constants import INPUT_DIR, INDEX_DIR, VALIDATION, TRAIN_MODELS, \
-    TRAIN_RL, IDX, BYR, DELAY_MODELS, SLR, DAY, MONTH, \
-    INIT_VALUE_MODELS, ARRIVAL, MAX_DELAY_TURN, NO_ARRIVAL_CUTOFF, \
-    HIST_QUANTILES
+    TRAIN_RL, IDX, BYR, DELAY_MODELS, DISCRIM_MODELS, SLR, DAY, MONTH, \
+    INIT_VALUE_MODELS, ARRIVAL, NO_ARRIVAL_CUTOFF, HIST_QUANTILES
 from featnames import CLOCK_FEATS, OUTCOME_FEATS, BYR_HIST, \
     CON, NORM, SPLIT, MSG, AUTO, EXP, REJECT, DAYS, DELAY, TIME_FEATS, \
     THREAD_COUNT, MONTHLY_DISCOUNT, ACTION_DISCOUNT, ACTION_COST, \
@@ -119,6 +118,9 @@ def get_x_offer_init(offers, idx, role=None, delay=None):
     threads = idx.droplevel(level='index').unique()
     offers = pd.DataFrame(index=threads).join(offers)
 
+    # set message indicator to False
+    offers[MSG] = False
+
     # drop time feats from buyer models
     if role == BYR:
         offers.drop(TIME_FEATS, axis=1, inplace=True)
@@ -144,7 +146,7 @@ def get_x_offer_init(offers, idx, role=None, delay=None):
         else:
             offer.loc[i == turn, :] = 0.
         # put in dictionary
-        x_offer['offer%d' % i] = offer.astype('float32')
+        x_offer['offer%d' % i] = offer
 
     # error checking
     check_zero(x_offer)
@@ -238,17 +240,22 @@ def get_sale_norm(offers):
     return norm
 
 
-def create_index_slr(offers, delay):
-    mask = offers.index.isin(IDX[SLR], level='index') & ~offers[AUTO]
+def create_index_slr(offers=None, delay=None):
+    slr_turn = offers.index.isin(IDX[SLR], level='index')
+    censored = offers[EXP] & (offers[DELAY] < 1)
+    mask = slr_turn & ~offers[AUTO] & ~censored
     if not delay:  # when not choosing delay, drop expirations
         mask = mask & ~offers[EXP]
     idx = offers[mask].index
     return idx
 
 
-def create_index_byr(clock, lstg_start):
+def create_index_byr(clock=None, offers=None, lstg_start=None):
     # buyer turns
     s = clock[clock.index.isin(IDX[BYR], level='index')]
+    # remove censored
+    censored = offers[EXP] & (offers[DELAY] < 1)
+    s = s[~censored]
     # hours before first offer
     arrival_time = s.xs(1, level='index', drop_level=False)
     days = ((arrival_time - lstg_start) // DAY).rename('day')
@@ -296,19 +303,24 @@ def save_featnames(x, m):
 
     # for offer models
     if 'offer1' in x:
-        # buyer models do not have time feats
-        if BYR in m or m[-1] in [str(i) for i in IDX[BYR]]:
-            feats = CLOCK_FEATS + OUTCOME_FEATS
+        if m in DISCRIM_MODELS:
+            for i in range(1, 8):
+                k = 'offer{}'.format(i)
+                featnames[k] = list(x[k].columns)
         else:
-            feats = CLOCK_FEATS + TIME_FEATS + OUTCOME_FEATS
+            # buyer models do not have time feats
+            if BYR in m or m[-1] in [str(i) for i in IDX[BYR]]:
+                feats = CLOCK_FEATS + OUTCOME_FEATS
+            else:
+                feats = CLOCK_FEATS + TIME_FEATS + OUTCOME_FEATS
 
-        # check that all offer groupings have same organization
-        for k in x.keys():
-            if 'offer' in k:
-                assert list(x[k].columns) == feats
+            # check that all offer groupings have same organization
+            for k in x.keys():
+                if 'offer' in k:
+                    assert list(x[k].columns) == feats
 
-        # one vector of featnames for offer groupings
-        featnames['offer'] = feats
+            # one vector of featnames for offer groupings
+            featnames['offer'] = feats
 
     dump(featnames, INPUT_DIR + 'featnames/{}.pkl'.format(m))
 

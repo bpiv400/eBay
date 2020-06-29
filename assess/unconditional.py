@@ -3,12 +3,12 @@ import pandas as pd
 from compress_pickle import load, dump
 from utils import load_file
 from inputs.offer import get_y_msg
-from sim.outcomes.concat import concat_sim_chunks
-from assess.assess_consts import MAX_THREADS
+from inputs.discrim import load_threads_offers
+from assess.const import MAX_THREADS
+from inputs.const import INTERVAL_ARRIVAL
 from constants import TEST, PLOT_DIR, BYR_HIST_MODEL, CON_MULTIPLIER, \
     HIST_QUANTILES, SIM, OBS, ARRIVAL, PCTILE_DIR, \
     MAX_DELAY_ARRIVAL, MAX_DELAY_TURN
-from inputs.const import INTERVAL_ARRIVAL
 from featnames import MONTHS_SINCE_LSTG, BYR_HIST, DELAY, EXP, CON, \
     MSG, REJECT
 
@@ -71,11 +71,11 @@ def get_arrival_distributions(threads):
     return p
 
 
-def get_distributions(d):
-    p = get_arrival_distributions(d['threads'])
+def get_distributions(threads, offers):
+    p = get_arrival_distributions(threads)
     for turn in range(1, 8):
         p[turn] = dict()
-        df = d['offers'].xs(turn, level='index')
+        df = offers.xs(turn, level='index')
 
         # delay
         if turn > 1:
@@ -117,37 +117,31 @@ def num_offers(df):
     return s
 
 
-def create_outputs(obs, sim, idx):
-    p = dict()
-
-    # loop over models, get observed and simulated distributions
-    p[SIM] = get_distributions(sim)
-    p[OBS] = get_distributions(obs)
+def create_outputs(threads, offers, lstgs):
+    # loop over models, get distributions
+    d = get_distributions(threads, offers)
 
     # number of threads per listing
-    p[SIM]['threads'] = num_threads(sim['threads'], idx)
-    p[OBS]['threads'] = num_threads(obs['threads'], idx)
+    d['threads'] = num_threads(threads, lstgs)
 
     # number of offers per thread
-    p[SIM]['offers'] = num_offers(sim['offers'])
-    p[OBS]['offers'] = num_offers(obs['offers'])
+    d['offers'] = num_offers(offers)
 
-    return p
+    return d
 
 
 def main():
-    # observed outcomes
-    obs = get_obs_outcomes(TEST)
-
-    # simulated outcomes
-    sim = concat_sim_chunks(TEST)
-    sim = {k: sim[k] for k in ['threads', 'offers']}
+    # observed and simulated outcomes
+    threads_obs, offers_obs = load_threads_offers(part=TEST, sim=False)
+    threads_sim, offers_sim = load_threads_offers(part=TEST, sim=True)
 
     # lookup file
-    lookup = load_file(TEST, 'lookup')
+    lstgs = load_file(TEST, 'lookup').index
 
     # unconditional distributions
-    p = create_outputs(obs, sim, lookup.index)
+    p = dict()
+    p[OBS] = create_outputs(threads_obs, offers_obs, lstgs)
+    p[SIM] = create_outputs(threads_sim, offers_sim, lstgs)
 
     # save
     dump(p, PLOT_DIR + 'p.pkl')

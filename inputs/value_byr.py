@@ -41,8 +41,9 @@ def process_inputs(part):
     start_price = data['lookup'][START_PRICE]
 
     # master index
-    idx, _ = create_index_byr(data['clock'],
-                              data['lookup'][START_TIME])
+    idx, _ = create_index_byr(clock=data['clock'],
+                              offers=data['offers'],
+                              lstg_start=data['lookup'][START_TIME])
 
     # value components
     norm = get_sale_norm(data['offers']).reset_index(

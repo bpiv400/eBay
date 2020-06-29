@@ -20,7 +20,7 @@ def process_inputs(part, delay):
     data = get_init_data(part)
 
     # master index
-    idx = create_index_slr(data['offers'], delay)
+    idx = create_index_slr(offers=data['offers'], delay=delay)
 
     # outcome and master index
     y = get_y(data['offers'].loc[idx, [CON, EXP]], delay)

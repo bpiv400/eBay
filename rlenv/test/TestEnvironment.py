@@ -28,4 +28,3 @@ class TestEnvironment(SimulatorEnvironment):
                   time=None, max_interval=None):
         return self.lstg_log.get_delay(thread_id=thread_id, turn=turn,
                                        input_dict=input_dict, time=time)
-

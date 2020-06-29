@@ -1,7 +1,7 @@
 from compress_pickle import dump
-from processing.util import load_file, get_obs_outcomes
-from processing.f_discrim.discrim_utils import concat_sim_chunks
-from assess.assess_consts import SPLIT_VALS
+from utils import load_file
+from assess.util import load_threads_offers
+from assess.const import META_LABELS, PRICE_CUTOFFS
 from constants import TEST, PLOT_DIR, SIM, OBS, IDX, SLR
 from featnames import META, START_PRICE, CON, NORM
 
@@ -30,12 +30,9 @@ def partition_d(d, idx):
 
 
 def main():
-    # observed outcomes
-    obs = get_obs_outcomes(TEST)
-
-    # simulated outcomes
-    sim = concat_sim_chunks(TEST)
-    sim = {k: sim[k] for k in ['threads', 'offers']}
+    # observed and simulated outcomes
+    threads_obs, offers_obs = load_threads_offers(sim=False)
+    threads_sim, offers_sim = load_threads_offers(sim=True)
 
     # lookup file
     lookup = load_file(TEST, 'lookup')

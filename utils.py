@@ -1,6 +1,10 @@
 import argparse
 import pickle
+import psutil
+import py3nvml
+from time import sleep
 import torch
+from torch import cuda
 from torch.nn.functional import log_softmax
 import numpy as np
 from compress_pickle import load
@@ -8,6 +12,7 @@ from nets.FeedForward import FeedForward
 from constants import DAY, MONTH, SPLIT_PCTS, INPUT_DIR, \
     MODEL_DIR, META_6, META_7, LISTING_FEE, PARTITIONS, PARTS_DIR, \
     MAX_DELAY_TURN, MAX_DELAY_ARRIVAL, EMPTY
+from featnames import DELAY, EXP
 
 
 def unpickle(file):
@@ -113,7 +118,8 @@ def load_state_dict(name=None):
     :return: dict
     """
     model_path = '{}{}.net'.format(MODEL_DIR, name)
-    state_dict = torch.load(model_path, map_location=torch.device('cpu'))
+    state_dict = torch.load(model_path,
+                            map_location=torch.device('cpu'))
     return state_dict
 
 
@@ -129,7 +135,7 @@ def load_model(name, verbose=False):
 
     # create neural network
     sizes = load_sizes(name)
-    net = FeedForward(sizes)  # type: nn.Module
+    net = FeedForward(sizes)  # type: torch.nn.Module
 
     if not EMPTY:
         # read in model parameters
@@ -169,14 +175,14 @@ def slr_reward(months_to_sale=None, months_since_start=None,
     :return: discounted net proceeds
     """
     # discounted listing fees
-    M = np.ceil(months_to_sale) - np.ceil(months_since_start) + 1
+    months = np.ceil(months_to_sale) - np.ceil(months_since_start) + 1
     if monthly_discount is not None:
         k = months_since_start % 1
-        factor = (1 - monthly_discount ** M) / (1 - monthly_discount)
+        factor = (1 - monthly_discount ** months) / (1 - monthly_discount)
         delta = (monthly_discount ** (1-k)) * factor
         costs = LISTING_FEE * delta
     else:
-        costs = LISTING_FEE * M
+        costs = LISTING_FEE * months
     # add in action costs
     if action_diff is not None and action_cost is not None:
         costs += action_cost * action_diff
@@ -298,3 +304,36 @@ def init_x(part, idx=None):
             x = {k: v.reindex(index=idx, level='lstg')
                  for k, v in x.items()}
     return x
+
+
+def drop_censored(df):
+    """
+    Removes censored observations from a dataframe of offers
+    :param df: dataframe with index ['lstg', 'thread', 'index']
+    :return: dataframe
+    """
+    censored = df[EXP] & (df[DELAY] < 1)
+    return df[~censored]
+
+
+def set_gpu_workers():
+    # set gpu
+    while True:
+        free_gpus = np.where(py3nvml.get_free_gpus())[0]
+        if len(free_gpus) > 0:
+            gpu = int(free_gpus[0])
+            break
+        else:
+            print('Waiting 5 minutes for a free GPU...')
+            sleep(300)
+
+    cuda.set_device(gpu)
+    print('Training on cuda:{}'.format(gpu))
+
+    # set cpu affinity
+    p = psutil.Process()
+    max_workers = psutil.cpu_count() // cuda.device_count()
+    start = max_workers * gpu
+    processes = list(range(start, start + max_workers))
+    p.cpu_affinity(processes)
+    print('CPUs for dataloader: {}'.format(p.cpu_affinity()))

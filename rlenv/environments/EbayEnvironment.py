@@ -181,7 +181,6 @@ class EbayEnvironment:
     def process_arrival(self, event):
         """
         Updates queue with results of an Arrival Event
-
         :param event: Event corresponding to current event
         :return: boolean indicating whether the lstg has ended
         """
@@ -193,8 +192,10 @@ class EbayEnvironment:
 
         # call model to sample inter arrival time and update arrival check priority
         first = event.priority == self.start_time
-        input_dict = self.get_arrival_input_dict(event=event, first=first)
-        seconds = self.get_arrival(first=first, input_dict=input_dict,
+        input_dict = self.get_arrival_input_dict(event=event,
+                                                 first=first)
+        seconds = self.get_arrival(first=first,
+                                   input_dict=input_dict,
                                    time=event.priority)
         event.priority = min(event.priority + seconds, self.end_time)
 

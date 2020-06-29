@@ -13,8 +13,8 @@ DROPOUT = 'dropout'
 TOL_HALF = 0.02
 
 # paths and directories
-if 'Ubuntu' in platform():  # Etan's box
-    PREFIX = '/data/eBay'
+if 'Ubuntu' in platform():  # Etan's new box
+    PREFIX = os.path.expanduser('~/eBay/data')
 elif 'debian' in platform():
     PREFIX = os.path.expanduser('~/shared/ebay')
 elif 'Windows' in platform() and 'A:' in os.getcwd():  # Barry's pc
@@ -147,13 +147,11 @@ META_6 = [58058, 1249, 625, 293, 15032]
 # threshold for likelihood of no arrivals
 NO_ARRIVAL_CUTOFF = .50 ** (1.0 / 12)
 
-# number of workers for the RL
-NUM_WORKERS_RL = 8
-
 # fixed random seed
 SEED = 123456
 
 # number of chunks
 NUM_CHUNKS = 256
+
 # flag to prevent loading models from stored parameters
 EMPTY = True

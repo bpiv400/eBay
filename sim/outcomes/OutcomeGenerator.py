@@ -1,23 +1,14 @@
-from compress_pickle import load
 from rlenv.Generator import SimulatorGenerator
+from rlenv.util import get_env_sim_subdir
 from sim.outcomes.OutcomeRecorder import OutcomeRecorder
 from datetime import datetime as dt
-from constants import PARTS_DIR, NO_ARRIVAL_CUTOFF
+from constants import NO_ARRIVAL_CUTOFF
 from featnames import NO_ARRIVAL
-from utils import load_file
 
 
 class OutcomeGenerator(SimulatorGenerator):
-    def __init__(self, part=None, verbose=False, start=None):
+    def __init__(self, part=None, verbose=False):
         super().__init__(part=part, verbose=verbose)
-
-    def load_chunk(self, chunk=None):
-        self.chunk = chunk
-        path = PARTS_DIR + '{}/chunks/{}.gz'.format(self.part, chunk)
-        d = load(path)
-        self.x_lstg = d['x_lstg']
-        p0 = load_file(self.part, NO_ARRIVAL)
-        self.lookup = d['lookup'].join(p0)
 
     def generate_recorder(self):
         return OutcomeRecorder(records_path=self.records_path,
@@ -65,4 +56,6 @@ class OutcomeGenerator(SimulatorGenerator):
 
     @property
     def records_path(self):
-        return PARTS_DIR + '{}/outcomes/{}.gz'.format(self.part, self.chunk)
+        out_dir = get_env_sim_subdir(part=self.part,
+                                     discrim=True)
+        return out_dir + '{}.gz'.format(self.chunk)

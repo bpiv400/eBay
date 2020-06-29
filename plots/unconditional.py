@@ -5,7 +5,7 @@ from constants import PLOT_DIR, SIM, OBS, BYR_HIST_MODEL, \
     HOUR, DAY, ARRIVAL, MAX_DELAY_TURN, MAX_DELAY_ARRIVAL
 from featnames import CON, MSG, DELAY
 from inputs.const import INTERVAL_ARRIVAL
-from plots.plots_utils import continuous_pdf, cdf_plot, survival_plot, \
+from plots.util import continuous_pdf, cdf_plot, survival_plot, \
     grouped_bar
 
 

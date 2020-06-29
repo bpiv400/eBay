@@ -1,3 +1,4 @@
+import time
 import torch
 import torch.nn as nn
 from nets.const import HIDDEN
@@ -35,7 +36,8 @@ class FeedForward(nn.Module):
         """
         elements = []
         for k in self.nn0.keys():
-            elements.append(self.nn0[k](x))
+            out = self.nn0[k](x)
+            elements.append(out)
         hidden = self.nn1(torch.cat(elements, dim=elements[0].dim() - 1))
         return self.output(hidden)
 

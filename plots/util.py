@@ -1,5 +1,5 @@
 import numpy as np
-from plots.plots_consts import FIG_DIR, FONTSIZE
+from plots.const import FIG_DIR, FONTSIZE
 
 import matplotlib.pyplot as plt
 plt.style.use('grayscale')

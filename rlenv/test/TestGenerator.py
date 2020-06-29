@@ -1,32 +1,34 @@
-from compress_pickle import load
 from rlenv.Generator import SimulatorGenerator
 from rlenv.test.LstgLog import LstgLog
 from rlenv.test.TestEnvironment import TestEnvironment
+from rlenv.test.util import load_all_inputs, load_reindex
 from sim.outcomes.OutcomeRecorder import OutcomeRecorder
-from rlenv.util import get_env_sim_subdir
 
 
 class TestGenerator(SimulatorGenerator):
-    def __init__(self, direct=None, verbose=False, start=None):
-        super().__init__(direct=direct, verbose=verbose)
-        self.start = start
-        self.test_data = None
+    def __init__(self, part=None, verbose=False):
+        super().__init__(part=part, verbose=verbose)
+        self.data = None
 
     def generate_recorder(self):
-        return OutcomeRecorder(records_path="", verbose=self.verbose)
+        return OutcomeRecorder(records_path="",
+                               verbose=self.verbose)
 
     def load_chunk(self, chunk=None):
-        super().load_chunk(chunk=chunk)
-        chunk_dir = get_env_sim_subdir(base_dir=self.dir, chunks=True)
-        print('Loading test data...')
-        self.test_data = load('{}{}_test.gz'.format(chunk_dir, self.chunk))
+        super().load_chunk(chunk=chunk)  # lookup and x_lstg
+        # load model inputs
+        print('Loading model inputs')
+        lstgs = self.lookup.index
+        self.data = dict()
+        self.data['inputs'] = load_all_inputs(part=self.part,
+                                              lstgs=lstgs)
+        for name in ['x_thread', 'x_offer']:
+            self.data[name] = load_reindex(part=self.part,
+                                           name=name,
+                                           lstgs=lstgs)
 
     def generate(self):
-        if self.start is not None:
-            start_index = list(self.lookup.index).index(self.start)
-            lstgs = self.lookup.index[start_index:]
-        else:
-            lstgs = self.lookup.index
+        lstgs = self.lookup.index
         for i, lstg in enumerate(lstgs):
             # index lookup dataframe
             lookup = self.lookup.loc[lstg, :]
@@ -34,9 +36,9 @@ class TestGenerator(SimulatorGenerator):
             # create environment
             params = {
                 'lstg': lstg,
-                'inputs': self.test_data['inputs'],
-                'x_thread': self.test_data['x_thread'],
-                'x_offer': self.test_data['x_offer'],
+                'inputs': self.data['inputs'],
+                'x_thread': self.data['x_thread'],
+                'x_offer': self.data['x_offer'],
                 'lookup': lookup
             }
             print('Generating lstg log for {}...'.format(lstg))

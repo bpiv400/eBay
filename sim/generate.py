@@ -36,12 +36,12 @@ def main():
     torch.set_default_dtype(torch.float32)
     # parse arguments
     parser = argparse.ArgumentParser()
-    parser.add_argument('--num', required=True, type=int, help='chunk number')
-    parser.add_argument('--part', required=True, type=str, help='partition name')
-    parser.add_argument('--name', choices=['outcomes', 'values', 'test'], default='outcomes')
+    parser.add_argument('--num', required=True, type=int)
+    parser.add_argument('--part', required=True, type=str)
+    parser.add_argument('--name', required=True,
+                        choices=['outcomes', 'values', 'test'])
     parser.add_argument('--verbose', action='store_true',
                         help='print event detail')
-    parser.add_argument('--thread', required=False, type=int)
     args = parser.parse_args()
 
     assert args.part in PARTITIONS
@@ -49,9 +49,7 @@ def main():
 
     # create generator
     gen_class = get_gen_class(args.name)
-    generator = gen_class(part=args.part,
-                          verbose=args.verbose,
-                          start=args.thread)   # type: Generator
+    generator = gen_class(part=args.part, verbose=args.verbose)
     if args.name == 'values' and chunk_done(args.num):
         print('{} already done'.format(args.num))
         exit(0)

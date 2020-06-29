@@ -3,7 +3,7 @@ Train a seller agent that makes concessions, not offers
 """
 import argparse
 from datetime import datetime as dt
-import multiprocessing as mp
+import psutil
 import warnings
 import torch
 from agent.CrossEntropyPPO import CrossEntropyPPO
@@ -23,6 +23,7 @@ from rlenv.interfaces.PlayerInterface import SimulatedBuyer, SimulatedSeller
 from rlenv.interfaces.ArrivalInterface import ArrivalInterface
 from rlenv.environments.SellerEnvironment import SellerEnvironment
 from rlenv.environments.BuyerEnvironment import BuyerEnvironment
+from utils import set_gpu_workers
 
 
 class RlTrainer:
@@ -134,7 +135,7 @@ class RlTrainer:
     def generate_affinity(self):
         affinity = dict(workers_cpus=self.workers_cpus,
                         master_torch_threads=THREADS_PER_PROC,
-                        cuda_idx=0,
+                        cuda_idx=torch.cuda.current_device(),
                         set_affinity=not self.system_params['auto'])
         return affinity
 
@@ -179,7 +180,7 @@ class RlTrainer:
     
     @property
     def eligible_cpus(self):
-        workers_cpu = list(range(mp.cpu_count()))
+        workers_cpu = list(psutil.Process().cpu_affinity())
         if len(workers_cpu) == 64:
             workers_cpu.remove(33)
             workers_cpu.remove(1)
@@ -190,6 +191,9 @@ class RlTrainer:
 
 
 def main():
+    # set gpu and cpu affinity
+    set_gpu_workers()
+
     parser = argparse.ArgumentParser()
     # experiment parameters
     for d in PARAM_DICTS.values():

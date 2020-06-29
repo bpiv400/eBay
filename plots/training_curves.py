@@ -1,7 +1,7 @@
 from compress_pickle import load
 import numpy as np
 import pandas as pd
-from plots.plots_utils import training_plot
+from plots.util import training_plot
 from constants import PLOT_DIR, MODELS
 
 

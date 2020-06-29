@@ -1,6 +1,8 @@
 # optimization parameters
-NUM_WORKERS = {'first_arrival': 5}
-MBSIZE = {True: 128, False: 2048}  # True for training, False for validation
+NUM_WORKERS = {'first_arrival': 5,
+               'policy_byr_delay': 2,
+               'value_byr_delay': 2}
+MBSIZE = {True: 128, False: 1e4}  # True for training, False for validation
 
 # learning rate parameters
 LR_FACTOR = 0.1  # multiply learning rate by this factor when training slows

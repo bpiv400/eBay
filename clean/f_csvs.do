@@ -84,3 +84,14 @@ drop if count == 1
 drop count
 
 export delim using clean/leaf_byr.csv, dataf replace
+
+*** meta names
+
+use dta/listings, clear
+keep meta
+sort meta
+by meta: keep if _n == 1
+decode meta, gen(label)
+label drop meta
+
+export delim using clean/meta.csv, dataf replace

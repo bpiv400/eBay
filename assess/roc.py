@@ -2,9 +2,9 @@ from compress_pickle import dump
 import numpy as np
 import pandas as pd
 from train.EBayDataset import EBayDataset
-from assess.assess_utils import get_model_predictions
-from assess.assess_consts import ROC_DIM
-from constants import TEST, DISCRIM_MODELS, PLOT_DIR, MODEL_DIR
+from assess.util import get_model_predictions
+from assess.const import ROC_DIM
+from constants import TEST, DISCRIM_MODELS, PLOT_DIR
 
 
 def get_roc(p0, p1):
