@@ -1,5 +1,6 @@
 from QueryStrategy import QueryStrategy
 from test.LstgLog import LstgLog
+from utils import init_optional_arg
 
 
 class TestQueryStrategy(QueryStrategy):
@@ -11,8 +12,12 @@ class TestQueryStrategy(QueryStrategy):
         self.lstg_log = log
 
     def get_arrival(self, *args, **kwargs):
-        return self.lstg_log.get_inter_arrival(input_dict=input_dict, time=time,
-                                               thread_id=self.thread_counter)
+        init_optional_arg(kwargs=kwargs, name='intervals', default=None)
+        agent = kwargs['intervals'] is None
+        return self.lstg_log.get_inter_arrival(input_dict=kwargs['input_dict'],
+                                               time=kwargs['time'],
+                                               agent=agent,
+                                               thread_id=kwargs['thread_id'])
 
     def get_hist(self, *args, **kwargs):
         return self.lstg_log.get_hist(thread_id=thread_id, time=time,

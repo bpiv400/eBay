@@ -101,8 +101,7 @@ class TestGenerator(Generator):
             start_lstgs = lookup.index
         if self.agent:
             agent_lstgs = self._get_agent_lstgs(test_data=test_data)
-            lstgs = start_lstgs.intersect1d(agent_lstgs,
-                                            start_lstgs)
+            lstgs = np.intersect1d(agent_lstgs, start_lstgs)
             return lstgs
         else:
             return start_lstgs
@@ -114,14 +113,13 @@ class TestGenerator(Generator):
             lstgs = x_offer.index.get_level_values('lstg').unique()
         else:
             slr_offers = x_offer.index.get_level_values('index') % 2 == 0
-            man_offers = x_offer['auto']
+            man_offers = ~x_offer['auto']
             censored_offers = x_offer['censored']
             if self.delay:
 
                 # keep all lstgs with at least 1 thread with at least 1 non-auto seller
                 # offer
-                keep = np.logical_and(slr_offers, man_offers,
-                                      np.logical_not(censored_offers))
+                keep = np.logical_and(slr_offers, man_offers)
                 lstgs = x_offer.index.get_level_values('lstg')[keep].unique()
             else:
                 # keep all lstgs with at least 1 thread

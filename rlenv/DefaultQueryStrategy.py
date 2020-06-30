@@ -27,7 +27,7 @@ class DefaultQueryStrategy(QueryStrategy):
     def get_arrival(self, *args, **kwargs):
         init_optional_arg(kwargs=kwargs, name='first', default=False)
         init_optional_arg(kwargs=kwargs, name='intervals', default=None)
-        if kwargs['first']:
+        if kwargs['first'] or kwargs['intervals'] is not None:
             intervals = self.arrival.first_arrival(input_dict=kwargs['input_dict'],
                                                    intervals=kwargs['intervals'])
         else:

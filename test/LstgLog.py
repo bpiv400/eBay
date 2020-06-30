@@ -250,14 +250,16 @@ class LstgLog:
         """
         :return: np.float
         """
-        con = self.threads[thread_id].get_con(turn=turn, time=time, input_dict=input_dict)
+        true_id = self.translate_thread(thread_id=thread_id)
+        con = self.threads[true_id].get_con(turn=turn, time=time, input_dict=input_dict)
         return con
 
     def get_msg(self, thread_id=None, turn=None, input_dict=None, time=None):
         """
         :return: np.float
         """
-        msg = self.threads[thread_id].get_msg(turn=turn, time=time, input_dict=input_dict)
+        true_id = self.translate_thread(thread_id=thread_id)
+        msg = self.threads[true_id].get_msg(turn=turn, time=time, input_dict=input_dict)
         if msg:
             return 1.0
         else:
@@ -267,18 +269,35 @@ class LstgLog:
         """
         :return: int
         """
-        thread_id = self.translate_thread_id(thread_id=)
-        delay = self.threads[thread_id].get_delay(turn=turn, time=time, input_dict=input_dict)
+        true_id = self.translate_thread(thread_id=thread_id)
+        delay = self.threads[true_id].get_delay(turn=turn, time=time, input_dict=input_dict)
         if delay == MONTH:
             return self.lookup[START_TIME] + MONTH - time
         else:
             return delay
 
-    def get_inter_arrival(self, thread_id=None, input_dict=None, time=None):
-        return self.arrivals[thread_id].get_inter_arrival(check_time=time, input_dict=input_dict)
+    def get_inter_arrival(self, thread_id=None, input_dict=None, time=None, agent=False):
+        if agent:
+            return self.translator.get_agent_arrival(check_time=time, thread_id=thread_id)
+        else:
+            true_id = self.translate_arrival(thread_id=thread_id)
+            return self.arrivals[true_id].get_inter_arrival(check_time=time,
+                                                            input_dict=input_dict)
 
     def get_hist(self, thread_id=None, input_dict=None, time=None):
         return self.arrivals[thread_id].get_hist(check_time=time, input_dict=input_dict)
+
+    def translate_thread(self, thread_id=None):
+        if self.translator is None:
+            return thread_id
+        else:
+            return self.translator.translate_thread(thread_id)
+
+    def translate_arrival(self, thread_id=None):
+        if self.translator is None:
+            return thread_id
+        else:
+            return self.translator.translate_arrival(thread_id)
 
     @staticmethod
     def check_bin(params=None, thread_id=None):
@@ -316,7 +335,7 @@ class ThreadTranslator:
         self.agent_arrival_time = arrivals[self.agent_thread].time
         # number of seconds the first arrival model should delay for when
         # queried for arrival time of the buyer's first offer
-        self.rl_interarrival_time = self.agent_arrival_time - self.agent_check_time
+        self.agent_interarrival_time = self.agent_arrival_time - self.agent_check_time
         # see get_thread_l for description
         self.thread_l = self.get_thread_l(arrivals=arrivals)
         if self.thread_l is not None:
@@ -442,16 +461,16 @@ class ThreadTranslator:
         else:
             return env_id
 
+    def get_agent_arrival(self, thread_id=None, check_time=None):
+        assert thread_id == self.agent_env_id
+        assert check_time == self.agent_check_time
+        return self.agent_interarrival_time
+
     def translate_arrival(self, env_id):
         if env_id == self.hidden_arrival:
             raise RuntimeError("Should not query arrival for %s" %
                                env_id)
         else:
-            if env_id == self.agent_env_id:
-                if self.did_query and not self.query_twice:
-                    raise RuntimeError("Should not query arrival twice for rl"
-                                        " if query_twice flag is not set")
-                self.did_query = True
             if env_id in self.arrival_translator:
                 return self.arrival_translator[env_id]
             else:
