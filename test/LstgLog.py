@@ -232,8 +232,7 @@ class LstgLog:
                                                  value=thread_id)
         return ArrivalLog(hist=hist, time=time, arrival_inputs=arrival_inputs,
                           hist_inputs=hist_inputs, check_time=check_time,
-                          first_arrival=thread_id == 1,
-                          agent=self.is_agent_arrival(thread_id=thread_id))
+                          first_arrival=thread_id == 1)
 
     def is_agent_arrival(self, thread_id=None):
         if self.agent:
@@ -353,6 +352,9 @@ class ThreadTranslator:
         self.hidden_arrival = self.get_hidden_arrival()
         self.arrival_translator = self.make_arrival_translator()
         self.thread_translator = self.make_thread_translator()
+        # flag for whether the agent_env_id has been queried in the arrival
+        # process
+        self.did_query = False
 
     def get_query_twice(self):
         if self.thread_l is not None:
@@ -451,8 +453,25 @@ class ThreadTranslator:
         return translator
 
     def translate_thread(self, env_id):
-        pass
+        if env_id in self.thread_translator:
+            return self.thread_translator[env_id]
+        else:
+            return env_id
 
     def translate_arrival(self, env_id):
-        pass
+        if env_id == self.hidden_arrival:
+            raise RuntimeError("Should not query arrival for %s" %
+                               env_id)
+        else:
+            if env_id == self.agent_env_id:
+                if self.did_query and not self.query_twice:
+                    raise RuntimeError("Should not query arrival twice for rl"
+                                        " if query_twice flag is not set")
+                self.did_query = True
+            if env_id in self.arrival_translator:
+                return self.arrival_translator[env_id]
+            else:
+                return env_id
+
+
 
