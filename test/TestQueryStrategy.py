@@ -20,19 +20,26 @@ class TestQueryStrategy(QueryStrategy):
                                                thread_id=kwargs['thread_id'])
 
     def get_hist(self, *args, **kwargs):
-        return self.lstg_log.get_hist(thread_id=thread_id, time=time,
-                                      input_dict=input_dict)
+        return self.lstg_log.get_hist(thread_id=kwargs['thread_id'],
+                                      time=kwargs['time'],
+                                      input_dict=kwargs['input_dict'])
 
     def get_con(self, *args, **kwargs):
-        con = self.lstg_log.get_con(input_dict=input_dict, thread_id=thread_id,
-                                    time=time, turn=turn)
+        con = self.lstg_log.get_con(thread_id=kwargs['thread_id'],
+                                    time=kwargs['time'],
+                                    input_dict=kwargs['input_dict'],
+                                    turn=kwargs['turn'])
         return con
 
     def get_msg(self, *args, **kwargs):
-        return self.lstg_log.get_msg(input_dict=input_dict, thread_id=thread_id,
-                                     time=time, turn=turn)
+        return self.lstg_log.get_msg(thread_id=kwargs['thread_id'],
+                                     time=kwargs['time'],
+                                     input_dict=kwargs['input_dict'],
+                                     turn=kwargs['turn'])
 
     def get_delay(self, *args, **kwargs):
-        return self.lstg_log.get_delay(thread_id=thread_id, turn=turn,
-                                       input_dict=input_dict, time=time)
+        return self.lstg_log.get_delay(thread_id=kwargs['thread_id'],
+                                       time=kwargs['time'],
+                                       input_dict=kwargs['input_dict'],
+                                       turn=kwargs['turn'])
 
