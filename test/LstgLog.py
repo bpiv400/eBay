@@ -63,15 +63,13 @@ class LstgLog:
         for i in range(days):
             action_index = (self.agent_thread, 1, i)
             input_dict = populate_test_model_inputs(full_inputs=full_inputs,
-                                                    value=action_index)
+                                                    value=action_index,
+                                                    agent=True,
+                                                    agent_byr=True)
             time = (i * DAY) / MONTH
             log = ActionLog(input_dict=input_dict, months=time, con=0,
                             thread_id=self.agent_thread, turn=1)
             agent_log.push_action(action=log)
-
-        # set interarrival time to account for query of first arrival modell
-        interarrival_time = byr_arrival.time - (days * DAY + self.lookup[START_TIME])
-        self.agent_log.set_interarrival_time(interarrival_time=interarrival_time)
         return days
 
     def record_buyer_first_turn(self, full_inputs=None, agent_log=None,
@@ -79,7 +77,8 @@ class LstgLog:
         con = agent_turns[1].agent_con()
         time = (days * DAY) / MONTH
         first_turn_index = (self.agent_thread, 1, days)
-        input_dict = populate_test_model_inputs(full_inputs=full_inputs, value=first_turn_index)
+        input_dict = populate_test_model_inputs(full_inputs=full_inputs, value=first_turn_index,
+                                                agent=True, agent_byr=self.byr)
         first_offer = ActionLog(input_dict=input_dict, months=time, con=con,
                                 thread_id=self.agent_thread, turn=1)
         agent_log.push_action(action=first_offer)
@@ -95,7 +94,8 @@ class LstgLog:
                 index = (thread_id, turn_number, 0)
             else:
                 index = (thread_id, turn_number)
-            input_dict = populate_test_model_inputs(full_inputs=full_inputs, value=index)
+            input_dict = populate_test_model_inputs(full_inputs=full_inputs, value=index,
+                                                    agent=True, agent_byr=self.byr)
             action = ActionLog(con=turn_log.agent_con(), censored=turn_log.is_censored,
                                months=months, input_dict=input_dict, thread_id=thread_id,
                                turn=turn_number)
@@ -213,7 +213,7 @@ class LstgLog:
                                                  value=thread_id)
         return ArrivalLog(hist=hist, time=time, arrival_inputs=arrival_inputs,
                           hist_inputs=hist_inputs, check_time=check_time,
-                          first_rival=thread_id == 1)
+                          first_arrival=thread_id == 1)
 
     def is_agent_arrival(self, thread_id=None):
         if self.agent:

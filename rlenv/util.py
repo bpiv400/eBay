@@ -10,6 +10,7 @@ from torch.distributions.categorical import Categorical
 from torch.distributions.bernoulli import Bernoulli
 from constants import PARTS_DIR, INPUT_DIR, DAY, ARRIVAL_MODELS, \
     MAX_DELAY_TURN
+from featnames import MSG
 from rlenv.const import (SIM_CHUNKS_DIR, SIM_VALS_DIR, OFFER_MAPS,
                          SIM_DISCRIM_DIR, DATE_FEATS, NORM_IND)
 from utils import extract_clock_feats, is_split, slr_norm, byr_norm
@@ -342,13 +343,19 @@ def need_msg(con, slr=None):
         return con < 1
 
 
-def populate_test_model_inputs(full_inputs=None, value=None):
+def populate_test_model_inputs(full_inputs=None, value=None, agent_byr=False, agent=False):
     inputs = dict()
     for feat_set_name, feat_df in full_inputs.items():
         if value is not None:
             curr_set = full_inputs[feat_set_name].loc[value, :]
         else:
             curr_set = full_inputs[feat_set_name]
+        # silence messages from agent
+        if agent and 'offer' in feat_set_name:
+            remainder = 1 if agent_byr else 0
+            turn = int(feat_set_name[-1])
+            if turn % 2 == remainder:
+                curr_set[MSG] = 0
         curr_set = curr_set.values
         curr_set = torch.from_numpy(curr_set).float()
         if len(curr_set.shape) == 1:

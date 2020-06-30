@@ -32,7 +32,8 @@ class ThreadLog:
         outcomes = params['x_offer'].loc[turn, :]
         outcomes = outcomes[OUTCOME_FEATS]
         model = model_str(DELAY, turn=turn)
-        delay_inputs = populate_test_model_inputs(full_inputs=params['inputs'][model])
+        delay_inputs = populate_test_model_inputs(full_inputs=params['inputs'][model],
+                                                  agent=self.agent, agent_byr=self.agent_buyer)
         delay_time = self.delay_time(turn=turn)
         return TurnLog(outcomes=outcomes, delay_inputs=delay_inputs, delay_time=delay_time, turn=turn,
                        agent=agent_turn)
@@ -50,7 +51,8 @@ class ThreadLog:
         # msg inputs if necessary
         if not outcomes[AUTO] and not outcomes[EXP] and need_msg(outcomes[CON], slr=turn % 2 == 0):
             model = model_str(MSG, turn=turn)
-            msg_inputs = populate_test_model_inputs(full_inputs=params['inputs'][model])
+            msg_inputs = populate_test_model_inputs(full_inputs=params['inputs'][model],
+                                                    agent=self.agent, agent_byr=self.agent_buyer)
         else:
             msg_inputs = None
         # delay inputs if necessary
@@ -61,7 +63,9 @@ class ThreadLog:
                 delay_inputs = None
                 print('instant buyer offer')
             else:
-                delay_inputs = populate_test_model_inputs(full_inputs=params['inputs'][model])
+                delay_inputs = populate_test_model_inputs(full_inputs=params['inputs'][model],
+                                                          agent=self.agent,
+                                                          agent_byr=self.agent_buyer)
         else:
             delay_inputs = None
         delay_time = self.delay_time(turn=turn)
