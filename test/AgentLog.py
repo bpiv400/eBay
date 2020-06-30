@@ -39,10 +39,10 @@ class AgentLog:
             compare_input_dicts(model=self.model_name,
                                 stored_inputs=next_action.input_dict,
                                 env_inputs=obs)
-        # check that the queue is empty if this is done
-        if done:
-            assert self.action_queue.empty
         return next_action.con
+
+    def verify_done(self):
+        assert self.action_queue.empty
 
 
 class ActionLog:

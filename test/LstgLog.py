@@ -285,7 +285,20 @@ class LstgLog:
                                                             input_dict=input_dict)
 
     def get_hist(self, thread_id=None, input_dict=None, time=None):
-        return self.arrivals[thread_id].get_hist(check_time=time, input_dict=input_dict)
+        true_id = self.translate_thread(thread_id=thread_id)
+        return self.arrivals[true_id].get_hist(check_time=time,
+                                               input_dict=input_dict)
+
+    def get_action(self, agent_tuple=None):
+        if not self.agent:
+            raise RuntimeError("Querying action in non-agent LstgLog")
+        return self.agent_log.get_action(agent_tuple=agent_tuple)
+
+    def verify_done(self):
+        if not self.agent:
+            raise RuntimeError("Verifying empty action queue for "
+                               "non-agent LstgLog")
+        self.agent_log.verify_done()
 
     def translate_thread(self, thread_id=None):
         if self.translator is None:

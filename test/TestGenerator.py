@@ -158,45 +158,43 @@ class TestGenerator(Generator):
             }
         return LstgLog(params=params)
 
-    def simulate_lstg_buyer(self, buyer=None):
+    def simulate_agent_lstg(self, buyer=None):
         lstg_log = self._generate_lstg_log(buyer=buyer)
-        agent_log = self._generate_agent_log(buyer=buyer)
+        self.query_strategy.update_log(lstg_log)
+        obs = self.environment.reset()
+        agent_tuple = obs, None, None, None
+        done = False
+        while not done:
+            action = lstg_log.get_action(agent_tuple=agent_tuple)
+            agent_tuple = self.environment.step(action)
+            done = agent_tuple[2]
+        lstg_log.verify_done()
 
     def generate(self):
         while self.environment.has_next_lstg():
             self.environment.next_lstg()
+            self.recorder.update_lstg(lookup=self.loader.lookup,
+                                      lstg=self.loader.lstg)
             if self.byr:
                 buyers = self._count_rl_buyers()
                 for i in range(buyers):
                     # simulate lstg once for each buyer
-                    self.simulate_lstg_buyer(buyer=(i + 1))
+                    self.simulate_agent_lstg(buyer=(i + 1))
+            elif self.agent:
+                self.simulate_agent_lstg()
+            else:
+                self.simulate_lstg()
 
-
-
-            #
-
-            print('Generating lstg log for {}...'.format(lstg))
-            log = LstgLog(params=params)
-            print('Log constructed')
-            self.query_strategy.update_log(log)
-
-            # update listing in recorder
-            self.recorder.update_lstg(lookup=lookup, lstg=lstg)
-
-            # simulate lstg once
-            self.simulate_lstg(environment)
-
-    def simulate_lstg(self, environment):
+    def simulate_lstg(self):
         """
         Simulates a particular listing once
-        :param environment: RewardEnvironment
         :return: outcome tuple
         """
         # simulate once for each buyer in BuyerEnvironment mode
         # this output needs to match first agent action
-        environment.reset()
+        self.environment.reset()
         # going to need to change to return for each agent action
-        outcome = environment.run()
+        outcome = self.environment.run()
         return outcome
 
     @property
