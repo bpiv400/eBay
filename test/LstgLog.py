@@ -351,7 +351,8 @@ class ThreadTranslator:
         self.query_twice = self.get_query_twice()
         self.agent_env_id = self.get_agent_env_id()
         self.hidden_arrival = self.get_hidden_arrival()
-        self.arrival_translator = self.make_arrival_translator(arrivals)
+        self.arrival_translator = self.make_arrival_translator()
+        self.thread_translator = self.make_thread_translator()
 
     def get_query_twice(self):
         if self.thread_l is not None:
@@ -417,10 +418,41 @@ class ThreadTranslator:
         return (day * DAY) + params['lookup'][START_TIME]
 
 
-    def make_arrival_translator(self, arrivals=None):
+    def make_arrival_translator(self):
+        """
+        Dictionary that translates the env id of arrival queries to
+        their original id in the recorded trajectories
+        :return: dict
+        """
         translator = dict()
-        if self.thread_l is not None and self.j >= 1 and not self.agent_last:
+        if self.thread_l is not None and self.j >= 1:
             for env_id in range(self.thread_l + 2, self.thread_l + self.j + 2):
                 translator[env_id] = env_id - 1
-        elif self.thread_l is not None and self.j >= 1:
-            
+        # leaving comments to track logic
+        # at least one thread with time > rl_arrival_time
+        # all threads have their true arrival log
+        # elif self.thread_l is not None:
+        #    return translator
+        # no arrivals after agent_check_time, agent is last arrival
+        #else:
+        #    return translator
+        return translator
+
+    def make_thread_translator(self):
+        translator = dict()
+        if self.thread_l is not None:
+            if self.j >= 1:
+                translator[self.thread_l + 1] = self.thread_l + self.j
+                for env_id in range(self.thread_l + 2, self.thread_l + self.j + 1):
+                    translator[env_id] = env_id - 1
+            elif not self.l_censored:
+                    translator[self.thread_l - 1] = self.thread_l
+                    translator[self.thread_l] = self.thread_l - 1
+        return translator
+
+    def translate_thread(self, env_id):
+        pass
+
+    def translate_arrival(self, env_id):
+        pass
+
