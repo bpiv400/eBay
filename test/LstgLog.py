@@ -94,8 +94,11 @@ class LstgLog:
                 index = (thread_id, turn_number, 0)
             else:
                 index = (thread_id, turn_number)
-            input_dict = populate_test_model_inputs(full_inputs=full_inputs, value=index,
-                                                    agent=True, agent_byr=self.byr)
+            if turn_log.is_censored:
+                input_dict = None
+            else:
+                input_dict = populate_test_model_inputs(full_inputs=full_inputs, value=index,
+                                                       agent=True, agent_byr=self.byr)
             action = ActionLog(con=turn_log.agent_con(), censored=turn_log.is_censored,
                                months=months, input_dict=input_dict, thread_id=thread_id,
                                turn=turn_number)

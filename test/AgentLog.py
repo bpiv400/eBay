@@ -32,6 +32,9 @@ class AgentLog:
             assert math.isclose(next_action.months, info.months)
             # check that done flags are the same
             assert done == info.done
+        else:
+            assert (next_action.turn == 1 and self.byr) or \
+                   (next_action.turn % 2 == 0 and not self.byr)
         if not next_action.censored:
             compare_input_dicts(model=self.model_name,
                                 stored_inputs=next_action.input_dict,

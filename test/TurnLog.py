@@ -1,5 +1,5 @@
 from constants import MONTH, MAX_DELAY_TURN, MAX_DELAY_ARRIVAL
-from featnames import MSG, CON, DELAY, EXP
+from featnames import MSG, CON, DELAY, EXP, AUTO
 from rlenv.util import model_str
 from test.util import compare_input_dicts
 
@@ -10,6 +10,7 @@ class TurnLog:
         # outcomes
         self.con = outcomes[CON]
         self.msg = outcomes[MSG]
+        self.auto = outcomes[AUTO]
         self.delay = outcomes[DELAY]
         self.expired = outcomes[EXP]
         self.censored = outcomes[EXP] and outcomes[DELAY] < 1

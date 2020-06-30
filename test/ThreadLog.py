@@ -23,7 +23,9 @@ class ThreadLog:
             if self.agent_buyer:
                 return turn % 2 == 1
             else:
-                return turn % 2 == 0
+                slr = turn % 2 == 0
+                auto = self.turns[turn].auto
+                return slr and not auto
         else:
             return False
 
@@ -106,13 +108,17 @@ class ThreadLog:
         if not self.agent:
             raise RuntimeError("Querying agent turns from a thread that the agent"
                                "doesn't participate in")
+        # for delay models, the agent will be queried for censored offers
         if delay:
             last_turn = len(self.turns)
         else:
             last_turn = self.uncensored_turns
         for i in range(1, last_turn + 1):
+            # checks that turn corresponds to the current agent and offer isn't automatic
             if self.is_agent_turn(turn=i):
-                agent_turns[i] = (self.turns[i])
+                # adds turn if the agent is a delay agent or the offer isn't an expiration
+                if delay or not self.turns[i].expired:
+                    agent_turns[i] = (self.turns[i])
         return agent_turns
 
     def get_con(self, time=None, turn=None, input_dict=None):
