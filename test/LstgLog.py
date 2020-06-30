@@ -27,10 +27,10 @@ class LstgLog:
         self.arrivals = self.generate_arrival_logs(params)
         self.threads = self.generate_thread_logs(params)
         self.agent_log = self.generate_agent_log(params) # revisit this
-        if self.agent and self.agent_params['byr']:
+        if self.agent and self.byr:
             self.translator = ThreadTranslator(agent_thread=self.agent_thread,
                                                arrivals=self.arrivals)
-            self.skip_agent_arrival(params=params)
+            self.update_arrival_time()
 
     @property
     def byr(self):
@@ -129,33 +129,14 @@ class LstgLog:
                 self.record_agent_thread(agent_log=agent_log, full_inputs=full_inputs,
                                          thread_id=thread_id, turns=agent_turns)
 
-    def skip_agent_arrival(self, params=None):
-        byr_arrival = self.arrivals[self.agent_thread]
-        if byr_arrival.censored:
-            raise RuntimeError("Agent buyer arrival must not be censored")
-        # if this is the first arrival
-        if self.agent_thread == 1:
-            # if bin
-            if self.check_bin(params=params, thread_id=self.agent_thread):
-                # replace the interarrival with the end of the lstg
-                # censor the arrival
-                byr_arrival.censored = True
-                byr_arrival.time = self.lookup[START_TIME] + MONTH
-            else:
-                for
-                next_arrival = self.arrivals[self.agent_thread + 1]
-                byr_arrival.time = next_arrival.time
-            # if this is not a buy it now event (i.e there's an arrival next (censored or not)
-            # replace the interarrival time with the difference between the check time
-            # and the time of the next arrival
-        # if there is an arrival before this one
-            # if this is a buy it now event (i.e. there's no censored next arrival)
-                # replace the interarrival time of the previous arrival with the end of the lstg
-                # censored the previous arrival
-            # if this is not a buy it now event (i.e. there's a next arrival)
-                # replace the interarrival time of the previous arrival with the
-                # difference between the time of the next arrival and the check time
-                # of the previous arrival
+    def update_arrival_time(self):
+        if (self.agent_thread + 1) in self.arrivals:
+            target_time = self.arrivals[self.agent_thread + 1].time
+        else:
+            target_time = self.lookup[START_TIME] + MONTH
+        target_censored = target_time == (self.lookup[START_TIME] + MONTH)
+        self.arrivals[self.agent_thread].time = target_time
+        self.arrivals[self.agent_thread].censored = target_censored
 
     @property
     def has_arrivals(self):
@@ -232,7 +213,7 @@ class LstgLog:
                                                  value=thread_id)
         return ArrivalLog(hist=hist, time=time, arrival_inputs=arrival_inputs,
                           hist_inputs=hist_inputs, check_time=check_time,
-                          first_arrival=thread_id == 1)
+                          first_rival=thread_id == 1)
 
     def is_agent_arrival(self, thread_id=None):
         if self.agent:
