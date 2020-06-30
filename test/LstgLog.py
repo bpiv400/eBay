@@ -334,8 +334,7 @@ class ThreadTranslator:
         # number of seconds the first arrival model should delay for when
         # queried for arrival time of the buyer's first offer
         self.rl_interarrival_time = self.agent_arrival_time - self.agent_check_time
-        # first thread where time >= rl_check_time,
-        # None if rl thread is the last thread
+        # see get_thread_l for description
         self.thread_l = self.get_thread_l(arrivals=arrivals)
         if self.thread_l is not None:
             # boolean for whether thread l arrival time is after agent arrival time
@@ -350,8 +349,8 @@ class ThreadTranslator:
             self.j = None
         # boolean for whether the id will be queried twice
         self.query_twice = self.get_query_twice()
-        self.agent_env_id = self.get_agent_env_id(arrivals=arrivals)
-        self.hidden_arrival = None
+        self.agent_env_id = self.get_agent_env_id()
+        self.hidden_arrival = self.get_hidden_arrival()
         self.arrival_translator = self.make_arrival_translator(arrivals)
 
     def get_query_twice(self):
@@ -361,19 +360,38 @@ class ThreadTranslator:
             return self.agent_last
 
 
-    def get_agent_env_id(self, arrivals=None):
+    def get_agent_env_id(self):
         if self.agent_first:
-            if not self.query_twice:
+            if self.query_twice:
                 return 1
             else:
                 return 2
         else:
-            
+            if self.thread_l is not None:
+                if self.l_after_agent:
+                    if self.l_censored:
+                        return self.thread_l - 1 # query_twice
+                    else:
+                        return self.thread_l
+                else:
+                    return self.thread_l + 1
+            else:
+                return self.agent_thread
+
+    def get_hidden_arrival(self):
+        if self.query_twice:
+             return None
+        else:
+            return self.agent_thread
+
 
     def get_thread_l(self, arrivals=None):
         """
-        Get first thread where time >= rl_check_time
-        :param arrivals:
+        first thread where time >= rl_check_time,
+        None if rl thread is the last thread (meaning there are no censored
+        arrivals) and there are no arrivals after the rl check time,
+        before the rl arrival time
+        :param arrivals: dictionary
         :return:
         """
         after_rl_check = list()
@@ -399,8 +417,10 @@ class ThreadTranslator:
         return (day * DAY) + params['lookup'][START_TIME]
 
 
-    def make_arrival_translator(self, arrivals):
-        if self.agent_first:
-            return self.first_arrival_translator(arrivals)
-        else:
-            return self.standard_arrival_translator(arrivals)
+    def make_arrival_translator(self, arrivals=None):
+        translator = dict()
+        if self.thread_l is not None and self.j >= 1 and not self.agent_last:
+            for env_id in range(self.thread_l + 2, self.thread_l + self.j + 2):
+                translator[env_id] = env_id - 1
+        elif self.thread_l is not None and self.j >= 1:
+            
