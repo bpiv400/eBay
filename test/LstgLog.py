@@ -1,12 +1,12 @@
-import pandas as pd
 from agent.util import get_agent_name
 from featnames import START_TIME, MONTHS_SINCE_LSTG, BYR_HIST, CON, AUTO, LSTG
-from constants import (MONTH, MODELS, FIRST_ARRIVAL_MODEL, DAY,
+from constants import (MONTH, FIRST_ARRIVAL_MODEL, DAY,
                        BYR_HIST_MODEL, INTERARRIVAL_MODEL, OFFER_MODELS)
 from rlenv.util import populate_test_model_inputs
 from test.AgentLog import AgentLog, ActionLog
 from test.ArrivalLog import ArrivalLog
 from test.ThreadLog import ThreadLog
+from test.util import subset_inputs
 from utils import init_optional_arg
 
 
@@ -236,8 +236,8 @@ class LstgLog:
     def generate_thread_log(self, thread_id=None, params=None):
         thread_params = dict()
         thread_params['x_offer'] = params['x_offer'].xs(thread_id, level='thread', drop_level=True)
-        thread_params['inputs'] = LstgLog.subset_inputs(models=OFFER_MODELS, input_data=params['inputs'],
-                                                        value=thread_id, level='thread')
+        thread_params['inputs'] = subset_inputs(models=OFFER_MODELS, input_data=params['inputs'],
+                                                value=thread_id, level='thread')
         agent_thread = self.is_agent_thread(thread_id=thread_id)
         if agent_thread:
             agent_buyer = self.byr
@@ -308,19 +308,6 @@ class LstgLog:
         elif len(thread1.index) == 2:
             return thread1.loc[2, AUTO] and (thread1.loc[2, CON] == 1)
 
-    @staticmethod
-    def subset_params(params=None):
-        params = params.copy()
-        params['x_offer'] = subset_df(df=params['x_offer'],\
-                                      lstg=params['lstg'])
-        params['x_thread'] = subset_df(df=params['x_thread'],
-                                       lstg=params['lstg'])
-        params['inputs'] = subset_inputs(input_data=params['inputs'], models=MODELS,
-                                         level='lstg', value=params['lstg'])
-        # print(params['inputs']['arrival']['lstg'])
-        return params
-
-
 
 class ThreadTranslator:
     def __init__(self, arrivals=None, agent_thread=None, params=None):
@@ -365,7 +352,6 @@ class ThreadTranslator:
         else:
             return self.agent_last
 
-
     def get_agent_env_id(self):
         if self.agent_first:
             if self.query_twice:
@@ -376,7 +362,7 @@ class ThreadTranslator:
             if self.thread_l is not None:
                 if self.l_after_agent:
                     if self.l_censored:
-                        return self.thread_l - 1 # query_twice
+                        return self.thread_l - 1  # query_twice
                     else:
                         return self.thread_l
                 else:
@@ -386,10 +372,9 @@ class ThreadTranslator:
 
     def get_hidden_arrival(self):
         if self.query_twice:
-             return None
+            return None
         else:
             return self.agent_thread
-
 
     def get_thread_l(self, arrivals=None):
         """
@@ -411,7 +396,6 @@ class ThreadTranslator:
         else:
             return min(after_rl_check)
 
-
     def get_rl_check_time(self, params=None):
         df = params['inputs'][get_agent_name(byr=True,
                                              delay=True,
@@ -421,7 +405,6 @@ class ThreadTranslator:
         df = df.xs(key=1, level='index', drop_level=True)
         day = df.index.max()
         return (day * DAY) + params['lookup'][START_TIME]
-
 
     def make_arrival_translator(self):
         """
@@ -451,8 +434,8 @@ class ThreadTranslator:
                 for env_id in range(self.thread_l + 2, self.thread_l + self.j + 1):
                     translator[env_id] = env_id - 1
             elif not self.l_censored:
-                    translator[self.thread_l - 1] = self.thread_l
-                    translator[self.thread_l] = self.thread_l - 1
+                translator[self.thread_l - 1] = self.thread_l
+                translator[self.thread_l] = self.thread_l - 1
         return translator
 
     def translate_thread(self, env_id):
