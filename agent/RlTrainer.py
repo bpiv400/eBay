@@ -1,0 +1,110 @@
+import psutil
+import torch
+from datetime import datetime as dt
+from agent.CrossEntropyPPO import CrossEntropyPPO
+from agent.EBayRunner import EBayMinibatchRl
+from agent.models.SplitCategoricalPgAgent import SplitCategoricalPgAgent
+from rlpyt.samplers.serial.sampler import SerialSampler
+from rlpyt.samplers.parallel.cpu.sampler import CpuSampler
+from rlpyt.utils.logging.context import logger_context
+from featnames import DELAY
+from constants import RL_LOG_DIR, BYR
+from agent.const import THREADS_PER_PROC
+from agent.AgentComposer import AgentComposer
+from agent.models.PgCategoricalAgentModel import PgCategoricalAgentModel
+from rlenv.interfaces.PlayerInterface import SimulatedBuyer, SimulatedSeller
+from rlenv.interfaces.ArrivalInterface import ArrivalInterface
+from rlenv.environments.SellerEnvironment import SellerEnvironment
+from rlenv.environments.BuyerEnvironment import BuyerEnvironment
+
+
+class RlTrainer:
+    def __init__(self, **kwargs):
+        self.agent_params = kwargs['agent_params']
+        self.model_params = kwargs['model_params']
+        self.ppo_params = kwargs['ppo_params']
+        self.system_params = kwargs['system_params']
+
+        # flags
+        self.byr = BYR in self.agent_params['name']
+        self.delay = DELAY in self.agent_params['name']
+
+        # counts
+        self.itr = 0
+        self.batch_size = self.system_params['batch_size']
+
+        # output paths
+        if not self.system_params['dev']:
+            self.run_id = dt.now().strftime('%y%m%d-%H%M')
+            self.log_dir = RL_LOG_DIR + '{}/'.format(
+                self.agent_params['name'])
+
+        # rlpyt components
+        self.sampler = self.generate_sampler()
+        self.runner = self.generate_runner()
+
+    def generate_algorithm(self):
+        return CrossEntropyPPO(**self.ppo_params)
+
+    def generate_agent(self):
+        model_kwargs = self.model_params
+        model_kwargs[BYR] = self.byr
+        model_kwargs[DELAY] = self.delay
+        return SplitCategoricalPgAgent(ModelCls=PgCategoricalAgentModel,
+                                       model_kwargs=model_kwargs)
+
+    def generate_sampler(self):
+        # sampler and batch sizes
+        if self.system_params['serial']:
+            sampler_cls = SerialSampler
+            batch_b = 1
+        else:
+            sampler_cls = CpuSampler
+            batch_b = len(self.worker_cpus) * 2
+
+        # environment
+        env = BuyerEnvironment if self.byr else SellerEnvironment
+        env_params = dict(composer=AgentComposer(agent_params=self.agent_params),
+                          verbose=self.system_params['verbose'],
+                          arrival=ArrivalInterface(),
+                          seller=SimulatedSeller(full=self.byr),
+                          buyer=SimulatedBuyer(full=True))
+
+        return sampler_cls(
+                EnvCls=env,
+                env_kwargs=env_params,
+                batch_B=batch_b,
+                batch_T=self.batch_size // batch_b,
+                max_decorrelation_steps=0,
+                eval_n_envs=0,
+                eval_env_kwargs={},
+                eval_max_steps=50,
+            )
+
+    def generate_runner(self):
+        affinity = dict(workers_cpus=self.worker_cpus,
+                        master_torch_threads=THREADS_PER_PROC,
+                        cuda_idx=torch.cuda.current_device(),
+                        set_affinity=True)
+        runner = EBayMinibatchRl(algo=self.generate_algorithm(),
+                                 agent=self.generate_agent(),
+                                 sampler=self.sampler,
+                                 log_interval_steps=self.batch_size,
+                                 affinity=affinity)
+        return runner
+
+    @property
+    def worker_cpus(self):
+        return list(psutil.Process().cpu_affinity())
+
+    def train(self):
+        if self.system_params['dev']:
+            self.itr = self.runner.train()
+        else:
+            with logger_context(log_dir=self.log_dir,
+                                name='log',
+                                use_summary_writer=True,
+                                override_prefix=True,
+                                run_ID=self.run_id,
+                                snapshot_mode='last'):
+                self.itr = self.runner.train()

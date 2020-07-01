@@ -2,7 +2,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 from torch.nn.functional import softmax
-from constants import MODEL_NORM, EMPTY
+from constants import MODEL_NORM
 from utils import load_state_dict, load_sizes
 from agent.util import get_agent_name
 from agent.models.AgentModel import AgentModel
@@ -19,20 +19,16 @@ class PgCategoricalAgentModel(AgentModel):
     3. Both networks use batch normalization
     4. Both networks use dropout and share dropout hyperparameters
     """
-    def __init__(self, byr=False, delay=False, dropout=(0., 0.),
-                 debug=False):
+    def __init__(self, **kwargs):
         """
         kwargs:
             sizes: gives all sizes for the model, including size
             of each input grouping 'x' and number of elements in
             output vector 'out'
         """
-        super(PgCategoricalAgentModel, self).__init__(byr=byr,
-                                                      delay=delay)
-        self.dropout = dropout
+        super().__init__(**kwargs)
         self.policy_network = self._init_network(policy=True)
         self.value_network = self._init_network(policy=False)
-        self.debug = debug
         with torch.no_grad():
             vals = np.arange(0, self.value_network.sizes['out'] / 100, 0.01)
             self.values = nn.Parameter(torch.from_numpy(vals).float(),
@@ -97,21 +93,21 @@ class PgCategoricalAgentModel(AgentModel):
         pi = pi.squeeze()
         v = v.squeeze()
 
-
-        # supplementing the above transformations
-        if len(v.shape) == 0 and self.debug:
-            v = v.unsqueeze(0)
-            pi = pi.unsqueeze(0)
+        # # supplementing the above transformations
+        # if len(v.shape) == 0 and self.debug:
+        #     v = v.unsqueeze(0)
+        #     pi = pi.unsqueeze(0)
 
         return pi, v
 
     def _init_network(self, policy=True):
-        network_name = get_agent_name(byr=self.byr, policy=policy, delay=self.delay)
+        network_name = get_agent_name(byr=self.byr,
+                                      policy=policy,
+                                      delay=self.delay)
         sizes = load_sizes(network_name)
-        net = FeedForward(sizes=sizes,
-                          dropout=self.dropout,
-                          norm=MODEL_NORM)
-        if not EMPTY:
+        dropout = self.dropout_policy if policy else self.dropout_value
+        net = FeedForward(sizes=sizes, dropout=dropout)
+        if not self.untrained:
             init_dict = load_state_dict(network_name)
             net.load_state_dict(init_dict, strict=True)
         return net

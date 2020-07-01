@@ -4,7 +4,7 @@ from inputs.util import save_files, construct_x_slr, \
     get_sale_norm, create_index_slr, get_init_data
 from inputs.policy_slr import input_parameters
 from utils import get_cut, slr_reward, max_slr_reward
-from inputs.const import DELTA_MONTH, DELTA_ACTION, C_ACTION
+from inputs.const import DELTA_ACTION, C_ACTION
 from constants import MONTH, TRAIN_RL, VALIDATION, TEST
 from featnames import META, START_PRICE, START_TIME, CON
 
@@ -61,12 +61,10 @@ def process_inputs(part, delay):
     # discounted values
     values = slr_reward(months_to_sale=df.months_to_sale,
                         months_since_start=df.months,
-                        sale_proceeds=df.sale_proceeds,
-                        monthly_discount=DELTA_MONTH)
+                        sale_proceeds=df.sale_proceeds)
 
     max_values = max_slr_reward(months_since_start=df.months,
-                                bin_proceeds=df.bin_proceeds,
-                                monthly_discount=DELTA_MONTH)
+                                bin_proceeds=df.bin_proceeds)
 
     # normalize by max values
     norm_values = values / max_values

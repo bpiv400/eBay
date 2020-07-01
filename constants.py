@@ -153,5 +153,18 @@ SEED = 123456
 # number of chunks
 NUM_CHUNKS = 256
 
-# flag to prevent loading models from stored parameters
-EMPTY = True
+# learning rate parameters
+LR_FACTOR = 0.1  # multiply learning rate by this factor when training slows
+LR0 = [1e-3]  # initial learning rates to search over
+LR1 = 1e-7  # stop training when learning rate is lower than this
+FTOL = 1e-2  # decrease learning rate when relative improvement in loss is less than this
+
+# dropout grid
+DROPOUT_GRID = []
+for j in range(8):
+    for i in range(j+1):
+        if j - i <= 3:
+            DROPOUT_GRID.append((i / 10, j / 10))
+
+# monthly discount rate for agent
+DELTA_MONTH = .995

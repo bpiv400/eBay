@@ -1,204 +1,30 @@
-"""
-Train a seller agent that makes concessions, not offers
-"""
 import argparse
 from datetime import datetime as dt
-import psutil
-import warnings
 import torch
-from agent.CrossEntropyPPO import CrossEntropyPPO
-from agent.EBayRunner import EBayMinibatchRl
-from agent.models.SplitCategoricalPgAgent import SplitCategoricalPgAgent
-from rlpyt.samplers.serial.sampler import SerialSampler
-from rlpyt.samplers.parallel.cpu.sampler import CpuSampler
-from rlpyt.utils.logging.context import logger_context
-from featnames import DELAY
-from constants import RL_LOG_DIR, BYR, PARTS_DIR, TRAIN_RL, DROPOUT
-from agent.const import (AGENT_STATE, PARAM_DICTS, THREADS_PER_PROC, DUPLICATE_PARAMS)
-from agent.util import gen_run_id, save_params, compose_args
-from agent.AgentComposer import AgentComposer
-from agent.models.PgCategoricalAgentModel import PgCategoricalAgentModel
-from rlenv.util import load_chunk
-from rlenv.interfaces.PlayerInterface import SimulatedBuyer, SimulatedSeller
-from rlenv.interfaces.ArrivalInterface import ArrivalInterface
-from rlenv.environments.SellerEnvironment import SellerEnvironment
-from rlenv.environments.BuyerEnvironment import BuyerEnvironment
+from compress_pickle import load
+from agent.RlTrainer import RlTrainer
+from agent.const import AGENT_STATE, PARAM_DICTS
+from agent.util import save_params, compose_args
 from utils import set_gpu_workers
-
-
-class RlTrainer:
-    def __init__(self, **kwargs):
-        self.agent_params = kwargs['agent_params']
-        self.batch_params = kwargs['batch_params']
-        self.ppo_params = kwargs['ppo_params']
-        self.system_params = kwargs['system_params']
-
-        # agent type check
-        self._is_agent_valid()
-
-        # iteration
-        self.itr = 0
-
-        # ids
-        self.run_id = gen_run_id()
-        self.log_dir = RL_LOG_DIR + '{}/'.format(self.agent_params['role'])
-
-        # parameters
-        self.env_params_train = self.generate_train_params()
-
-        # rlpyt components
-        self.sampler = self.generate_sampler()
-        self.runner = self.generate_runner()
-
-    def _is_agent_valid(self):
-        if not self.agent_params['delay'] and \
-                self.agent_params['role'] == BYR:
-            raise RuntimeError("Buyer agent must choose its delay."
-                               " Check parameters")
-
-    def generate_train_params(self):
-        chunk_path = PARTS_DIR + '{}/chunks/1.gz'.format(TRAIN_RL)
-        x_lstg_cols = load_chunk(input_path=chunk_path)[0].columns
-        composer = AgentComposer(cols=x_lstg_cols,
-                                 agent_params=self.agent_params)
-        env_params = {
-            'composer': composer,
-            'verbose': self.system_params['verbose'],
-            'arrival': ArrivalInterface(),
-            'seller': self.simulated_seller,
-            'buyer': SimulatedBuyer(full=True)
-        }
-        return env_params
-
-    @property
-    def simulated_seller(self):
-        if self.agent_params['role'] == BYR:
-            return SimulatedSeller(full=True)
-        else:
-            #
-            return SimulatedSeller(full=False)
-
-    def generate_algorithm(self):
-        return CrossEntropyPPO(**self.ppo_params)
-
-    def generate_agent(self):
-        # initialize model keyword arguments
-        model_kwargs = dict()
-        model_kwargs[BYR] = self.agent_params['role'] == BYR
-        model_kwargs[DELAY] = self.agent_params[DELAY]
-        model_kwargs[DROPOUT] = (self.agent_params['dropout0'],
-                                 self.agent_params['dropout1'])
-        model_kwargs['debug'] = self.system_params['debug']
-
-        return SplitCategoricalPgAgent(ModelCls=PgCategoricalAgentModel,
-                                       model_kwargs=model_kwargs)
-
-    def generate_sampler(self):
-
-        if self.system_params['debug']:
-            batch_b = 1
-            batch_t = int(self.batch_params['batch_size'] / batch_b)
-            return SerialSampler(
-                EnvCls=self.env_class,
-                env_kwargs=self.env_params_train,
-                batch_B=batch_b,
-                batch_T=batch_t,
-                max_decorrelation_steps=0,
-                eval_n_envs=0,
-                eval_env_kwargs={},
-                eval_max_steps=50,
-            )
-        else:
-            batch_b = len(self.workers_cpus) * 2
-            batch_t = int(self.batch_params['batch_size'] / batch_b)
-            if batch_t < 12:
-                warnings.warn("Very few actions per environment")
-            return CpuSampler(
-                EnvCls=self.env_class,
-                env_kwargs=self.env_params_train,
-                batch_B=batch_b,
-                batch_T=batch_t,
-                max_decorrelation_steps=0,
-                eval_n_envs=0,
-                eval_env_kwargs={},
-                eval_max_steps=50,
-            )
-
-    def generate_runner(self):
-        runner = EBayMinibatchRl(algo=self.generate_algorithm(),
-                                 agent=self.generate_agent(),
-                                 sampler=self.sampler,
-                                 log_interval_steps=self.batch_params['batch_size'],
-                                 affinity=self.generate_affinity())
-        return runner
-
-    def generate_affinity(self):
-        affinity = dict(workers_cpus=self.workers_cpus,
-                        master_torch_threads=THREADS_PER_PROC,
-                        cuda_idx=torch.cuda.current_device(),
-                        set_affinity=not self.system_params['auto'])
-        return affinity
-
-    @property
-    def workers_cpus(self):
-        if not self.system_params['auto']:
-            cpus = self.workers_cpus_manual()
-        else:
-            cpus = self.eligible_cpus[:self.system_params['workers']]
-        return cpus
-
-    @property
-    def env_class(self):
-        if self.agent_params['role'] == BYR:
-            return BuyerEnvironment
-        else:
-            return SellerEnvironment
-
-    def workers_cpus_manual(self):
-        eligible = self.eligible_cpus
-        worker_count = self.system_params['workers']
-        if self.system_params['multiple']:
-            threads_per_worker = int(len(eligible) / worker_count)
-            cpus = list()
-            for i in range(worker_count):
-                curr = eligible[(i * threads_per_worker): (i+1) * threads_per_worker]
-                cpus.append(curr)
-            for j in range((len(eligible) // worker_count)):
-                cpus[j].append(eligible[j + threads_per_worker * worker_count])
-        else:
-            cpus = eligible[:worker_count]
-        return cpus
-
-    def train(self):
-        with logger_context(log_dir=self.log_dir,
-                            name='debug',
-                            use_summary_writer=True,
-                            override_prefix=True,
-                            run_ID=self.run_id,
-                            snapshot_mode='last'):
-            self.itr = self.runner.train()
-    
-    @property
-    def eligible_cpus(self):
-        workers_cpu = list(psutil.Process().cpu_affinity())
-        if len(workers_cpu) == 64:
-            workers_cpu.remove(33)
-            workers_cpu.remove(1)
-        elif len(workers_cpu) == 32:
-            workers_cpu.remove(1)
-            workers_cpu.remove(17)
-        return workers_cpu
+from constants import MODEL_DIR
 
 
 def main():
-    # set gpu and cpu affinity
-    set_gpu_workers()
+    set_gpu_workers()  # set gpu and cpu affinity
 
+    # command-line parameters
     parser = argparse.ArgumentParser()
-    # experiment parameters
     for d in PARAM_DICTS.values():
         compose_args(arg_dict=d, parser=parser)
     args = vars(parser.parse_args())
+
+    # add dropout
+    s = load(MODEL_DIR + 'dropout.pkl')
+    for name in ['policy', 'value']:
+        args['dropout_{}'.format(name)] = \
+            s.loc['{}_{}'.format(name, args['name'])]
+
+    # print to console
     for k, v in args.items():
         print('{}: {}'.format(k, v))
 
@@ -210,11 +36,6 @@ def main():
             curr_params[k] = args[k]
         trainer_args[param_set] = curr_params
 
-    # duplicate args across dictionaries as necessary
-    for source, dest, params in DUPLICATE_PARAMS:
-        for param in params:
-            trainer_args[dest][param] = trainer_args[source][param]
-
     # initialize trainer
     trainer = RlTrainer(**trainer_args)
 
@@ -223,15 +44,17 @@ def main():
     trainer.train()
     time_elapsed = (dt.now() - t0).total_seconds()
 
-    # save parameters to file
-    save_params(run_id=trainer.run_id,
-                args=args,
-                time_elapsed=time_elapsed)
+    if not trainer_args['system_params']['dev']:
+        # save parameters to file
+        save_params(run_id=trainer.run_id,
+                    args=args,
+                    time_elapsed=time_elapsed)
 
-    # drop optimization parameters
-    path = trainer.log_dir + 'run_{}/params.pkl'.format(trainer.run_id)
-    d = torch.load(path)
-    torch.save(d[AGENT_STATE], path)
+        # drop optimization parameters
+        path = trainer.log_dir + 'run_{}/params.pkl'.format(
+            trainer.run_id)
+        d = torch.load(path)
+        torch.save(d[AGENT_STATE], path)
 
 
 if __name__ == '__main__':

@@ -1,6 +1,7 @@
+import os
 import argparse
 from shutil import copyfile
-from compress_pickle import dump
+from compress_pickle import load, dump
 import numpy as np
 import pandas as pd
 from tensorboard.backend.event_processing.event_multiplexer import \
@@ -37,10 +38,7 @@ def extract_best_run(m):
     # find best run
     idx = np.argmax(lnl)
     run = list(em.Runs().keys())[idx]
-    # copy best performing model into parent directory
-    print('{}: {}'.format(m, run))
-    copyfile(MODEL_DIR + '{}/{}.net'.format(m, run),
-             MODEL_DIR + '{}.net'.format(m))
+    return run
 
 
 def main():
@@ -58,9 +56,28 @@ def main():
     else:
         models = INIT_MODELS
 
-    # for each model, choose best experiment
+    # create dropout file
+    dropout_path = MODEL_DIR + 'dropout.pkl'
+    if not os.path.isfile(dropout_path):
+        s = pd.Series(name='dropout')
+    else:
+        s = load(dropout_path)
+
+    # loop over models
     for m in models:
-        extract_best_run(m)
+        run = extract_best_run(m)  # best performing run
+        print('{}: {}'.format(m, run))
+
+        # copy best performing model into parent directory
+        copyfile(MODEL_DIR + '{}/{}.net'.format(m, run),
+                 MODEL_DIR + '{}.net'.format(m))
+
+        # save dropout
+        elem = run.split('_')
+        dropout = (float(elem[-2]) / 10, float(elem[-1]) / 10)
+        s.loc[m] = dropout
+
+    dump(s, dropout_path)  # save dropout file
 
     # create series of no-arrival probability
     if model_set == 'sim':

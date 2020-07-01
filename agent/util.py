@@ -1,5 +1,4 @@
 import os
-from datetime import datetime as dt
 from compress_pickle import load, dump
 import numpy as np
 import pandas as pd
@@ -94,10 +93,6 @@ def load_init_model(name=None, size=None):
     return state_dict
 
 
-def gen_run_id():
-    return dt.now().strftime('%y%m%d-%H%M')
-
-
 def create_params_file():
     # append parameters
     series = list()
@@ -115,10 +110,8 @@ def create_params_file():
     return df
 
 
-def save_params(run_id=None,
-                args=None,
-                time_elapsed=None):
-    path = RL_LOG_DIR + '{}/runs.pkl'.format(args['role'])
+def save_params(run_id=None, args=None, time_elapsed=None):
+    path = RL_LOG_DIR + '{}/runs.pkl'.format(args['name'])
 
     # if file does not exist, create it
     if not os.path.isfile(path):
@@ -138,6 +131,11 @@ def save_params(run_id=None,
 
     # save file
     dump(df, path)
+
+
+def compose_args(arg_dict=None, parser=None):
+    for k, v in arg_dict.items():
+        parser.add_argument('--{}'.format(k), **v)
 
 
 def get_agent_name(byr=False, policy=False, delay=False):
@@ -212,19 +210,3 @@ def ebay_sampling_process(common_kwargs, worker_kwargs):
 
     for env in envs:
         env.close()
-
-
-def network_size(net):
-    bits = 32
-    total_bits = 0.0
-    for m in net.modules():
-        for p in m.parameters():
-            s = np.array(p.size())
-            b = np.prod(np.array(s)) * bits
-            total_bits += b
-    return total_bits / 8e6
-
-
-def compose_args(arg_dict=None, parser=None):
-    for k, v in arg_dict.items():
-        parser.add_argument('--{}'.format(k), **v)

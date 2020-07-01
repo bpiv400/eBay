@@ -1,5 +1,6 @@
 import torch
-from torch.optim import Adam, lr_scheduler
+from torch.optim import Adam
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.nn.utils import clip_grad_norm_
 from collections import namedtuple
 from rlpyt.agents.base import AgentInputs
@@ -8,10 +9,9 @@ from rlpyt.distributions.categorical import DistInfo
 from rlpyt.utils.tensor import valid_mean
 from rlpyt.utils.buffer import buffer_to
 from rlpyt.utils.collections import namedarraytuple
-from rlpyt.utils.quick_args import save__init__args
 from rlpyt.utils.misc import iterate_mb_idxs
 from agent.models.PgCategoricalAgentModel import PgCategoricalAgentModel
-from agent.const import LR1
+from constants import FTOL, LR1, LR_FACTOR
 from utils import slr_reward, max_slr_reward
 
 LossInputs = namedarraytuple("LossInputs",
@@ -25,10 +25,12 @@ OptInfo = namedtuple("OptInfo",
                      ["DiscountedReturn",
                       "Advantage",
                       "Entropy",
-                      "PolicyLoss",
                       "GradNormPolicy",
                       "GradNormValue",
-                      "ValueError"])
+                      "PolicyLoss",
+                      "ValueError",
+                      "PolicyLR",
+                      "ValueLR"])
 
 
 class CrossEntropyPPO(RlAlgorithm):
@@ -39,33 +41,39 @@ class CrossEntropyPPO(RlAlgorithm):
 
     def __init__(
             self,
-            monthly_discount=0.995,
-            action_discount=1,
-            action_cost=0,
-            patience=2,
+            action_discount=1.,
+            action_cost=0.,
             lr=0.001,
             same_lr=True,
-            entropy_loss_coeff=0.01,
+            entropy_coeff=0.01,
             clip_grad_norm=1.,
-            minibatches=4,
+            mb_size=128,
             ratio_clip=0.1,
-            cross_entropy=False,
-            debug=False
+            use_cross_entropy=False,
+            debug_ppo=False
     ):
-        save__init__args(locals())
+        # save parameters to self
+        self.action_discount = action_discount
+        self.action_cost = action_cost
+        self.lr = lr
+        self.same_lr = same_lr
+        self.entropy_coeff = entropy_coeff
+        self.clip_grad_norm = clip_grad_norm
+        self.mb_size = mb_size
+        self.ratio_clip = ratio_clip
+        self.use_cross_entropy = use_cross_entropy
+        self.debug = debug_ppo
 
         # output fields
         self.opt_info_fields = tuple(f for f in OptInfo._fields)
 
         # parameters to be defined later
-        self._batch_size = None
         self.agent = None
         self.batch_spec = None
         self.lr_scheduler = None
         self.optimizer_value = None
         self.optimizer_policy = None
-        self.debug = debug
-        if self.cross_entropy:
+        if self.use_cross_entropy:
             self.init_agent = None
 
     def initialize(self, *args, **kwargs):
@@ -82,16 +90,15 @@ class CrossEntropyPPO(RlAlgorithm):
                                      lr=self.lr)
 
         # init_agent new initialized agent
-        if self.cross_entropy:
+        if self.use_cross_entropy:
             self.init_agent = PgCategoricalAgentModel(
                 **self.agent.model_kwargs).to(self.agent.device)
 
-        # for logging
-        self._batch_size = self.batch_spec.size // self.minibatches  # For logging.
-
         # lr scheduler
-        self.lr_scheduler = lr_scheduler.ReduceLROnPlateau(
-            optimizer=self.optimizer_policy, patience=self.patience)
+        self.lr_scheduler = ReduceLROnPlateau(optimizer=self.optimizer_policy,
+                                              patience=0,
+                                              factor=LR_FACTOR,
+                                              threshold=FTOL)
 
     @staticmethod
     def valid_from_done(done):
@@ -141,15 +148,13 @@ class CrossEntropyPPO(RlAlgorithm):
             return_[t] += slr_reward(months_to_sale=months_to_sale,
                                      months_since_start=months[t],
                                      sale_proceeds=sale_proceeds,
-                                     monthly_discount=self.monthly_discount,
                                      action_diff=action_diff,
                                      action_discount=self.action_discount,
                                      action_cost=self.action_cost)
 
             # normalize
             max_return = max_slr_reward(months_since_start=months[t],
-                                        bin_proceeds=bin_proceeds[t],
-                                        monthly_discount=self.monthly_discount)
+                                        bin_proceeds=bin_proceeds[t])
             return_[t] /= max_return
 
         return return_
@@ -228,11 +233,9 @@ class CrossEntropyPPO(RlAlgorithm):
         # loop over minibatches
         T, B = samples.env.reward.shape[:2]
         batch_size = T * B
-        mb_size = batch_size // self.minibatches
-        # start updates
-        total_policy_loss = 0.0
+        total_policy_loss, total_value_error = 0., 0.
         # loop over minibatches
-        for idxs in iterate_mb_idxs(batch_size, mb_size, shuffle=True):
+        for idxs in iterate_mb_idxs(batch_size, self.mb_size, shuffle=True):
             T_idxs = idxs % T
             B_idxs = idxs // T
             self.optimizer_value.zero_grad()
@@ -243,6 +246,7 @@ class CrossEntropyPPO(RlAlgorithm):
             policy_loss, value_error, entropy = self.loss(
                 *loss_inputs[T_idxs, B_idxs])
             total_policy_loss += policy_loss.item()
+            total_value_error += value_error.item()
 
             # policy step
             policy_loss.backward()
@@ -260,13 +264,17 @@ class CrossEntropyPPO(RlAlgorithm):
 
             # save for logging
             opt_info.Entropy.append(entropy)
-            opt_info.PolicyLoss.append(policy_loss.item())
             opt_info.GradNormPolicy.append(grad_norm_policy)
             opt_info.GradNormValue.append(grad_norm_value)
-            opt_info.ValueError.append(value_error.item())
 
             # increment counter
             self.update_counter += 1
+
+        # save loss/error and learning rates
+        opt_info.PolicyLoss.append(total_policy_loss)
+        opt_info.ValueError.append(total_value_error)
+        opt_info.PolicyLR.append(self.policy_learning_rate)
+        opt_info.ValueLR.append(self.value_learning_rate)
 
         # step down learning rate
         self.lr_scheduler.step(total_policy_loss)
@@ -335,14 +343,14 @@ class CrossEntropyPPO(RlAlgorithm):
         entropy = self.entropy(pi_new.prob)[valid.bool()]
 
         # cross-entropy loss
-        if self.cross_entropy:
+        if self.use_cross_entropy:
             pi_0 = self.init_agent.con(*agent_inputs)
             cross_entropy = self.mean_kl(pi_0.to('cpu'), pi_new.prob, valid)
-            entropy_loss = self.entropy_loss_coeff * cross_entropy
+            entropy_loss = self.entropy_coeff * cross_entropy
 
         # entropy bonus
         else:
-            entropy_loss = - self.entropy_loss_coeff * entropy.mean()
+            entropy_loss = - self.entropy_coeff * entropy.mean()
 
         # total loss
         policy_loss = pi_loss + entropy_loss

@@ -11,7 +11,7 @@ from inputs.const import INTERVAL_CT_TURN, INTERVAL_TURN
 from rlpyt.envs.base import Env
 from rlpyt.spaces.composite import Composite
 from rlpyt.spaces.float_box import FloatBox
-from rlenv.const import ENV_LSTG_COUNT
+from agent.const import LSTG_SMALL
 from rlenv.environments.EbayEnvironment import EbayEnvironment
 from rlenv.Recorder import Recorder
 from agent.util import get_con_set, get_train_file_path
@@ -23,6 +23,7 @@ class AgentEnvironment(EbayEnvironment, Env):
 
     def __init__(self, **kwargs):
         super().__init__(params=kwargs)
+
         # attributes for getting lstg data
         if 'filename' not in kwargs:
             self._filename = get_train_file_path(0)
@@ -87,8 +88,8 @@ class AgentEnvironment(EbayEnvironment, Env):
             Recorder.print_lstg(self.lookup)
 
     def _draw_lstgs(self):
-        ids = np.random.choice(self._num_lstgs, ENV_LSTG_COUNT,
-                               replace=False)
+        ids = np.array(range(self._num_lstgs))
+        np.random.shuffle(ids)
         reordering = np.argsort(ids)
         sorted_ids = ids[reordering]
         unsorted_ids = np.argsort(reordering)

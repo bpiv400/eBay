@@ -11,7 +11,7 @@ from compress_pickle import load
 from nets.FeedForward import FeedForward
 from constants import DAY, MONTH, SPLIT_PCTS, INPUT_DIR, \
     MODEL_DIR, META_6, META_7, LISTING_FEE, PARTITIONS, PARTS_DIR, \
-    MAX_DELAY_TURN, MAX_DELAY_ARRIVAL, EMPTY
+    MAX_DELAY_TURN, MAX_DELAY_ARRIVAL, DELTA_MONTH
 from featnames import DELAY, EXP
 
 
@@ -123,11 +123,12 @@ def load_state_dict(name=None):
     return state_dict
 
 
-def load_model(name, verbose=False):
+def load_model(name, verbose=False, use_trained=True):
     """
     Initialize PyTorch network for some model
     :param str name: full name of the model
     :param verbose: boolean for printing statements
+    :param use_trained: loads trained model when True
     :return: torch.nn.Module
     """
     if verbose:
@@ -137,7 +138,7 @@ def load_model(name, verbose=False):
     sizes = load_sizes(name)
     net = FeedForward(sizes)  # type: torch.nn.Module
 
-    if not EMPTY:
+    if use_trained:
         # read in model parameters
         state_dict = load_state_dict(name=name)
 
@@ -161,14 +162,13 @@ def get_cut(meta):
 
 
 def slr_reward(months_to_sale=None, months_since_start=None,
-               sale_proceeds=None, monthly_discount=None,
-               action_diff=None, action_discount=None, action_cost=None):
+               sale_proceeds=None, action_diff=None,
+               action_discount=None, action_cost=None):
     """
     Discounts proceeds from sale and listing fees paid.
     :param months_to_sale: months from listing start to sale
     :param months_since_start: months since start of listing
     :param sale_proceeds: sale price net of eBay cut
-    :param monthly_discount: multiplicative factor on proceeds, by month
     :param action_diff: number of actions from current state until sale
     :param action_discount: multiplicative factor of proceeds, by action
     :param action_cost: cost per action
@@ -176,59 +176,47 @@ def slr_reward(months_to_sale=None, months_since_start=None,
     """
     # discounted listing fees
     months = np.ceil(months_to_sale) - np.ceil(months_since_start) + 1
-    if monthly_discount is not None:
-        k = months_since_start % 1
-        factor = (1 - monthly_discount ** months) / (1 - monthly_discount)
-        delta = (monthly_discount ** (1-k)) * factor
-        costs = LISTING_FEE * delta
-    else:
-        costs = LISTING_FEE * months
+    k = months_since_start % 1
+    factor = (1 - DELTA_MONTH ** months) / (1 - DELTA_MONTH)
+    delta = (DELTA_MONTH ** (1-k)) * factor
+    costs = LISTING_FEE * delta
     # add in action costs
     if action_diff is not None and action_cost is not None:
         costs += action_cost * action_diff
     # discounted proceeds
-    if monthly_discount is not None:
-        months_diff = months_to_sale - months_since_start
-        assert (months_diff >= 0).all()
-        sale_proceeds *= monthly_discount ** months_diff
+    months_diff = months_to_sale - months_since_start
+    assert (months_diff >= 0).all()
+    sale_proceeds *= DELTA_MONTH ** months_diff
     if action_diff is not None and action_discount is not None:
         sale_proceeds *= action_discount ** action_diff
     return sale_proceeds - costs
 
 
-def max_slr_reward(months_since_start=None, bin_proceeds=None,
-                   monthly_discount=None):
+def max_slr_reward(months_since_start=None, bin_proceeds=None):
     """
     Discounts proceeds from sale and listing fees paid.
     :param months_since_start: months since start of listing
     :param bin_proceeds: start price net of eBay cut
-    :param monthly_discount: multiplicative factor on proceeds, by month
     :return: discounted maximum proceeds
     """
     # discounted listing fees
-    if monthly_discount is not None:
-        k = months_since_start % 1
-        costs = LISTING_FEE * (monthly_discount ** (1-k))
-    else:
-        costs = LISTING_FEE
+    k = months_since_start % 1
+    costs = LISTING_FEE * (DELTA_MONTH ** (1-k))
     return bin_proceeds - costs
 
 
-def byr_reward(net_value=None, months_diff=None,
-               monthly_discount=None, action_diff=None,
+def byr_reward(net_value=None, months_diff=None, action_diff=None,
                action_discount=None, action_cost=None):
     """
     Discounts proceeds from sale and listing fees paid.
     :param net_value: value less price paid; 0 if no sale
     :param months_diff: months until purchase; np.inf if no sale
-    :param monthly_discount: multiplicative factor on proceeds, by month
     :param action_diff: number of actions from current state until sale
     :param action_discount: multiplicative factor of proceeds, by action
     :param action_cost: cost per action
     :return: discounted net proceeds
     """
-    if monthly_discount is not None:
-        net_value *= monthly_discount ** months_diff
+    net_value *= DELTA_MONTH ** months_diff
     if action_discount is not None:
         net_value *= action_discount ** action_diff
     if action_cost is not None:
@@ -317,6 +305,9 @@ def drop_censored(df):
 
 
 def set_gpu_workers():
+    """
+    Sets the GPU index and the CPU affinity.
+    """
     # set gpu
     while True:
         free_gpus = np.where(py3nvml.get_free_gpus())[0]

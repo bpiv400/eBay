@@ -1,8 +1,8 @@
 import argparse
-from train.Trainer import Trainer
+from sim.SimTrainer import SimTrainer
 from utils import set_gpu_workers
-from train.const import INT_DROPOUT, DROPOUT_GRID
-from constants import SMALL, TRAIN_RL, TRAIN_MODELS, DISCRIM_MODELS, INIT_MODELS
+from constants import SMALL, TRAIN_RL, TRAIN_MODELS, DISCRIM_MODELS, \
+    INIT_MODELS, DROPOUT_GRID
 
 
 def main():
@@ -25,12 +25,12 @@ def main():
         train_part = TRAIN_MODELS
 
     # initialize trainer
-    trainer = Trainer(name=args.name,
-                      train_part=train_part,
-                      dev=args.dev)
+    trainer = SimTrainer(name=args.name,
+                         train_part=train_part,
+                         dev=args.dev)
 
     # compute dropout
-    dropout = tuple([float(i / INT_DROPOUT) for i in DROPOUT_GRID[args.dropout-1]])
+    dropout = DROPOUT_GRID[args.dropout-1]
 
     # train model
     trainer.train_model(dropout=dropout)

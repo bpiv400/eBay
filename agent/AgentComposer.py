@@ -14,11 +14,15 @@ from rlenv.Composer import Composer
 
 
 class AgentComposer(Composer):
-    def __init__(self, cols=None, agent_params=None):
+    def __init__(self, agent_params=None):
+        # create columns
+        chunk_path = PARTS_DIR + '{}/chunks/1.gz'.format(TRAIN_RL)
+        cols = load_chunk(input_path=chunk_path)[0].columns
+
         super().__init__(cols)
+
         # parameters
         self.agent_params = agent_params
-
         self.sizes['agent'] = self._build_agent_sizes()
         self.x_lstg_cols = list(cols)
         self.turn_inds = None
@@ -28,11 +32,11 @@ class AgentComposer(Composer):
 
     @property
     def byr(self):
-        return self.agent_params['role'] == BYR
+        return BYR in self.agent_params['name']
 
     @property
     def delay(self):
-        return self.agent_params[DELAY]
+        return DELAY in self.agent_params['name']
 
     @property
     def hist(self):
@@ -54,9 +58,11 @@ class AgentComposer(Composer):
         return self.agent_params[CON_TYPE]
 
     def _build_agent_sizes(self):
-        sizes = load_sizes(get_agent_name(byr=self.byr, delay=self.delay,
+        sizes = load_sizes(get_agent_name(byr=self.byr,
+                                          delay=self.delay,
                                           policy=True))
-        sizes['out'] = len(get_con_set(self.con_type, byr=self.byr,
+        sizes['out'] = len(get_con_set(self.con_type,
+                                       byr=self.byr,
                                        delay=self.delay))
         return sizes
 
@@ -204,10 +210,7 @@ def main():
     agent_params = vars(parser.parse_args())
     print('Args:')
     pprint.pprint(agent_params)
-    chunk_path = PARTS_DIR + '{}/chunks/1.gz'.format(TRAIN_RL)
-    x_lstg_cols = load_chunk(input_path=chunk_path)[0].columns
-    composer = AgentComposer(cols=x_lstg_cols,
-                             agent_params=agent_params)
+    composer = AgentComposer(agent_params=agent_params)
     print('Verified inputs correctly.')
 
 

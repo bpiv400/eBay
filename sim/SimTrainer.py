@@ -5,16 +5,16 @@ from torch.nn.functional import log_softmax, nll_loss
 from datetime import datetime as dt
 from torch.utils.tensorboard import SummaryWriter
 from torch.optim import Adam, lr_scheduler
-from train.EBayDataset import EBayDataset
+from sim.EBayDataset import EBayDataset
 from nets.FeedForward import FeedForward
-from train.Sample import get_batches
-from train.const import FTOL, LR0, LR1, LR_FACTOR, INT_DROPOUT
+from sim.Sample import get_batches
 from constants import MODEL_DIR, LOG_DIR, CENSORED_MODELS, \
-    INIT_VALUE_MODELS, MODEL_NORM, VALIDATION
+    INIT_VALUE_MODELS, MODEL_NORM, VALIDATION, LR_FACTOR, \
+    LR0, LR1, FTOL
 from utils import load_sizes
 
 
-class Trainer:
+class SimTrainer:
     """
     Trains a model until convergence.
 
@@ -52,7 +52,7 @@ class Trainer:
         """
         # experiment id
         dtstr = dt.now().strftime('%y%m%d-%H%M')
-        levels = [int(d * INT_DROPOUT) for d in dropout]
+        levels = [int(d * 10) for d in dropout]
         expid = '{}_{}_{}'.format(dtstr, levels[0], levels[1])
 
         # initialize writer

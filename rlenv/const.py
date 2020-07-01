@@ -80,13 +80,3 @@ AUTO_IND = ALL_OFFER_FEATS.index(AUTO)
 REJECT_IND = ALL_OFFER_FEATS.index(REJECT)
 EXP_IND = ALL_OFFER_FEATS.index(EXP)
 THREAD_COUNT_IND = ALL_OFFER_FEATS.index(THREAD_COUNT)
-
-
-# Reinforcement learning environment parameters
-
-# space names
-ACTION_SPACE_NAME = 'NegotiationActionSpace'
-
-# env hyper params
-SELLER_HORIZON = 100
-ENV_LSTG_COUNT = 1000

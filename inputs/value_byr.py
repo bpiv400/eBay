@@ -3,7 +3,7 @@ import pandas as pd
 from inputs.util import save_files, construct_x_byr, \
     get_sale_norm, create_index_byr, get_init_data
 from utils import byr_reward, input_partition
-from inputs.const import DELTA_MONTH, DELTA_ACTION, C_ACTION
+from inputs.const import DELTA_ACTION, C_ACTION
 from constants import BYR, TRAIN_RL, VALIDATION, TEST, DAY, MONTH
 from featnames import START_PRICE, START_TIME, CON
 
@@ -57,8 +57,7 @@ def process_inputs(part):
 
     # discounted values
     values = byr_reward(net_value=df.net_value,
-                        months_diff=df.months_diff,
-                        monthly_discount=DELTA_MONTH)
+                        months_diff=df.months_diff)
     values[values.isna()] = 0.
 
     # normalize by start_price

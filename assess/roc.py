@@ -1,7 +1,7 @@
 from compress_pickle import dump
 import numpy as np
 import pandas as pd
-from train.EBayDataset import EBayDataset
+from sim.EBayDataset import EBayDataset
 from assess.util import get_model_predictions
 from assess.const import ROC_DIM
 from constants import TEST, DISCRIM_MODELS, PLOT_DIR

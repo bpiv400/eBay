@@ -175,10 +175,6 @@ class EBayMinibatchRlBase(BaseRunner):
             logger.record_tabular('StepsPerSecond', samples_per_second)
             logger.record_tabular('UpdatesPerSecond', updates_per_second)
 
-        with logger.tabular_prefix('LearningRate/'):
-            logger.record_tabular('Policy', self.algo.policy_learning_rate)
-            logger.record_tabular('Value', self.algo.value_learning_rate)
-
         self._log_infos(traj_infos)
         logger.dump_tabular(with_prefix=False)
 
@@ -204,8 +200,8 @@ class EBayMinibatchRlBase(BaseRunner):
 
         if self._opt_infos:
             for k, v in self._opt_infos.items():
-                if k in ['DiscountedReturn', 'Advantage', 'Entropy']:
-                    logger.record_tabular_misc_stat(k, v)
+                if type(v[0]) is np.ndarray:
+                    logger.record_tabular_misc_stat(k, np.concatenate(v))
                 else:
                     logger.record_tabular(k, np.average(v))
         self._opt_infos = {k: list() for k in self._opt_infos}  # (reset)
