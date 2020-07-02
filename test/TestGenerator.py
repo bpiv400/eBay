@@ -161,6 +161,10 @@ class TestGenerator(Generator):
     def simulate_agent_lstg(self, buyer=None):
         lstg_log = self._generate_lstg_log(buyer=buyer)
         self.query_strategy.update_log(lstg_log)
+        if self.byr:
+            hist = self.loader.x_thread.loc[buyer, 'byr_hist']
+            hist = hist / 10
+            self.composer.set_hist(hist=hist)
         obs = self.environment.reset()
         agent_tuple = obs, None, None, None
         done = False
