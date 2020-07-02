@@ -58,6 +58,11 @@ class TestGenerator(Generator):
         return OutcomeRecorder(records_path="", verbose=self.verbose)
 
     def load_chunk(self, chunk=None):
+        """
+        Initializes lstg loader for the
+        :param chunk:
+        :return:
+        """
         print('Loading test data...')
         chunk_dir = get_env_sim_subdir(part=self.part, chunks=True)
         x_lstg, lookup = load_chunk(input_path='{}{}.gz'.format(chunk_dir, chunk))
@@ -72,7 +77,7 @@ class TestGenerator(Generator):
             test_data['x_offer'] = subset_lstgs(df=test_data['x_offer'], lstgs=valid_lstgs)
             test_data['inputs'] = subset_inputs(input_data=test_data,
                                                 value=valid_lstgs, level='lstg')
-        return TestLoader(x_lstg=x_lstg, lookup=lookup, test_data=test_data)
+        self.loader = TestLoader(x_lstg=x_lstg, lookup=lookup, test_data=test_data)
 
     def _remove_extra_models(self, test_data):
         """

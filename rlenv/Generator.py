@@ -22,9 +22,6 @@ class Generator:
         self.verbose = verbose
         self.initialized = False
 
-        # data
-        self.chunk = None
-
         # model interfaces and input composer
         self.recorder = None
         self.composer = None
@@ -109,9 +106,6 @@ class SimulatorGenerator(Generator):
         raise NotImplementedError()
 
     def generate(self):
-        raise NotImplementedError()
-
-    def simulate_lstg(self, environment):
         raise NotImplementedError()
 
     @property

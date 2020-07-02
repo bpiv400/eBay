@@ -89,6 +89,9 @@ class ChunkLoader(LstgLoader):
     def did_init(self):
         return True
 
+    def __len__(self):
+        return self._num_lstgs
+
     @property
     def x_lstg_cols(self):
         return list(self._x_lstg_slice.columns)
