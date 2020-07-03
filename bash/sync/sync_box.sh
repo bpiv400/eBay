@@ -7,6 +7,6 @@ rclone sync dropbox:ebay/data/inputs/valid inputs/vallid
 
 # grab all of valid chunks
 rclone sync dropbox:ebay/data/partitions/valid/chunks partitions/valid/chunks
-
+rlcone sync dropbox:ebay/data/partitions/valid partitions/valid --max-depth=1
 # agent files
 rclone sync dropbox:ebay/data/agent/train agent/train
