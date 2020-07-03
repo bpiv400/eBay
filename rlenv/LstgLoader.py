@@ -55,25 +55,29 @@ class ChunkLoader(LstgLoader):
     Loads lstgs from a chunk or chunk subset
     """
     def __init__(self, x_lstg=None, lookup=None):
+        """
+        :param pd.DataFrame x_lstg:
+        :param pd.DataFrame lookup:
+        """
         super().__init__()
         self._x_lstg_slice = x_lstg
-        self._lookup_slice = lookup
+        self._lookup_slice = lookup.reset_index(drop=False)
         self._ix = 0
         self._num_lstgs = len(lookup.index)
 
     def next_id(self):
         self.verify_init()
         if self.has_next():
-            return self._lookup_slice[self._ix, LSTG]
+            return self._lookup_slice.iloc[self._ix, LSTG]
         else:
             raise RuntimeError("Exhausted lstgs")
 
     def next_lstg(self):
         self.verify_init()
         if self.has_next():
-            self.lookup = self._lookup_slice.loc[self._ix, :]
-            self.x_lstg = self._x_lstg_slice.loc[self._ix, :]
-            self.lstg = self.lookup[self._ix, LSTG]
+            self.lookup = self._lookup_slice.iloc[self._ix, :]
+            self.x_lstg = self._x_lstg_slice.iloc[self._ix, :]
+            self.lstg = self.lookup[LSTG]
             self._ix += 1
             return self.x_lstg, self.lookup
         else:
@@ -124,7 +128,7 @@ class TrainLoader(LstgLoader):
                            index=self._lookup_cols)
         self.x_lstg = x_lstg
         self.lookup = lookup
-        self.lstg = self.lookup[self._ix, LSTG]
+        self.lstg = self.lookup.loc[self._ix, LSTG]
         self._ix += 1
         return self.x_lstg, self.lookup
 

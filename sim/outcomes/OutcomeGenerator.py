@@ -10,6 +10,7 @@ from sim.outcomes.OutcomeRecorder import OutcomeRecorder
 class OutcomeGenerator(SimulatorGenerator):
     def __init__(self, part=None, verbose=False):
         super().__init__(part=part, verbose=verbose)
+        self.chunk = None
 
     def load_chunk(self, chunk=None):
         """
@@ -17,6 +18,7 @@ class OutcomeGenerator(SimulatorGenerator):
         (Subroutine of process_chunk)
         :param chunk: int
         """
+        self.chunk = chunk
         base_dir = get_env_sim_dir(part=self.part)
         x_lstg, lookup = load_chunk(base_dir=base_dir,
                                     num=chunk)
@@ -56,7 +58,9 @@ class OutcomeGenerator(SimulatorGenerator):
         Simulates a particular listing either once or until sale.
         :return: outcome tuple
         """
-        sim_once = self.loader.lookup[NO_ARRIVAL] > NO_ARRIVAL_CUTOFF
+        # TODO: Replace after Etan response
+        # sim_once = self.loader.lookup[NO_ARRIVAL] > NO_ARRIVAL_CUTOFF
+        sim_once = True
         while True:
             self.environment.reset()
             outcome = self.environment.run()

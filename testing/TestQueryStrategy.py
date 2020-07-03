@@ -1,5 +1,5 @@
-from QueryStrategy import QueryStrategy
-from test.LstgLog import LstgLog
+from rlenv.QueryStrategy import QueryStrategy
+from testing.LstgLog import LstgLog
 from utils import init_optional_arg
 
 

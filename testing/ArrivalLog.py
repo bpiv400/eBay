@@ -1,6 +1,6 @@
 from constants import (FIRST_ARRIVAL_MODEL,
                        BYR_HIST_MODEL, INTERARRIVAL_MODEL)
-from test.util import compare_input_dicts
+from testing.util import compare_input_dicts
 
 
 class ArrivalLog:

@@ -1,9 +1,8 @@
 import numpy as np
 import pandas as pd
-from collections.abc import Iterable
-
 import torch
-from util import load_featnames
+from collections.abc import Iterable
+from utils import load_featnames
 
 
 class Subsetter:

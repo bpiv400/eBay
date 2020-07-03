@@ -84,7 +84,7 @@ EXP_IND = ALL_OFFER_FEATS.index(EXP)
 THREAD_COUNT_IND = ALL_OFFER_FEATS.index(THREAD_COUNT)
 
 
-# Reinforcement learning environment parameters
+# Reinforcem`ent learning environment parameters
 
 # space names
 ACTION_SPACE_NAME = 'NegotiationActionSpace'

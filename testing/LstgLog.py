@@ -2,12 +2,12 @@ from featnames import START_TIME, MONTHS_SINCE_LSTG, BYR_HIST, CON, AUTO
 from constants import (MONTH, FIRST_ARRIVAL_MODEL, DAY,
                        BYR_HIST_MODEL, INTERARRIVAL_MODEL, OFFER_MODELS)
 from rlenv.util import populate_test_model_inputs
-from test.AgentLog import AgentLog
-from test.ActionLog import ActionLog
-from test.ArrivalLog import ArrivalLog
-from test.ThreadLog import ThreadLog
-from test.ThreadTranslator import ThreadTranslator
-from test.util import subset_inputs
+from testing.AgentLog import AgentLog
+from testing.ActionLog import ActionLog
+from testing.ArrivalLog import ArrivalLog
+from testing.ThreadLog import ThreadLog
+from testing.ThreadTranslator import ThreadTranslator
+from testing.util import subset_inputs
 from utils import init_optional_arg
 
 

@@ -1,6 +1,6 @@
 from featnames import OUTCOME_FEATS, CON, EXP, AUTO, MSG, DELAY
 from rlenv.util import populate_test_model_inputs, model_str, need_msg
-from test.TurnLog import TurnLog
+from testing.TurnLog import TurnLog
 
 
 class ThreadLog:

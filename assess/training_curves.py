@@ -64,7 +64,7 @@ def main():
         # find best performing experiment
         em = EventMultiplexer().AddRunsFromDirectory(LOG_DIR + m)
         run = extract_best_experiment(em.Reload()) 
-        for k in ['test', 'train']:
+        for k in ['testing', 'train']:
             lnl[m][k] = [lnl0] + [s.value for s in em.Scalars(run, 'lnL_' + k)]
 
     # save output

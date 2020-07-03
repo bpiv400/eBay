@@ -1,8 +1,8 @@
 import math
 from agent.util import get_agent_name
-from Heap import Heap
-from test.ActionLog import ActionLog
-from test.util import compare_input_dicts
+from rlenv.Heap import Heap
+from testing.ActionLog import ActionLog
+from testing.util import compare_input_dicts
 
 
 class AgentLog:

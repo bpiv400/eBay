@@ -12,10 +12,10 @@ from rlenv.environments.SimulatorEnvironment import SimulatorEnvironment
 from rlenv.Generator import Generator
 from rlenv.util import get_env_sim_subdir, load_chunk
 from sim.outcomes.OutcomeRecorder import OutcomeRecorder
-from test.LstgLog import LstgLog
-from test.TestQueryStrategy import TestQueryStrategy
-from test.util import subset_inputs
-from test.TestLoader import TestLoader
+from testing.LstgLog import LstgLog
+from testing.TestQueryStrategy import TestQueryStrategy
+from testing.util import subset_inputs
+from testing.TestLoader import TestLoader
 from utils import init_optional_arg, subset_lstgs
 
 
@@ -27,7 +27,7 @@ class TestGenerator(Generator):
                           default=None)
         # id of the first lstg in the chunk to simulate
         self.start = kwargs['start']
-        # boolean for whether the test is for an agent environment
+        # boolean for whether the testing is for an agent environment
         self.agent = kwargs['agent']
         # boolean for whether the agent is a byr
         self.byr = kwargs['role'] == BYR
@@ -63,7 +63,7 @@ class TestGenerator(Generator):
         :param chunk:
         :return:
         """
-        print('Loading test data...')
+        print('Loading testing data...')
         chunk_dir = get_env_sim_subdir(part=self.part, chunks=True)
         x_lstg, lookup = load_chunk(input_path='{}{}.gz'.format(chunk_dir, chunk))
         test_data = load('{}{}_test.gz'.format(chunk_dir, chunk))
@@ -81,7 +81,7 @@ class TestGenerator(Generator):
 
     def _remove_extra_models(self, test_data):
         """
-        Remove the unused policy models from the test data inputs
+        Remove the unused policy models from the testing data inputs
         """
         unused_models = INIT_POLICY_MODELS
         if self.agent:

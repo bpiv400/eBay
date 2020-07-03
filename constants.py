@@ -49,7 +49,7 @@ RL_TRAIN_DIR = REINFORCE_DIR + 'train/'
 TRAIN_MODELS = 'sim'
 TRAIN_RL = 'rl'
 VALIDATION = 'valid'
-TEST = VALIDATION  # TODO: rename to 'test' when using real test data
+TEST = VALIDATION  # TODO: rename to 'testing' when using real testing data
 PARTITIONS = [TRAIN_MODELS, TRAIN_RL, VALIDATION, TEST]
 SMALL = 'small'
 
@@ -156,4 +156,4 @@ SEED = 123456
 # number of chunks
 NUM_CHUNKS = 256
 # flag to prevent loading models from stored parameters
-EMPTY = True
+EMPTY = False
