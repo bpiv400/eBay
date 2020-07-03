@@ -38,8 +38,7 @@ MODEL_PARAMS = {'dropout_policy': {'type': tuple,
                                   'default': (0., 0.)},
                 'untrained': {'action': 'store_true'}}
 
-PPO_PARAMS = {'mb_size': {'type': int, 'default': 2 ** 7},
-              'entropy_coeff': {'type': float, 'default': .01},
+PPO_PARAMS = {'entropy_coeff': {'type': float, 'default': .01},
               'use_cross_entropy': {'action': 'store_true'},
               'ratio_clip': {'type': float, 'default': .1},
               'clip_grad_norm': {'type': float, 'default': 1.},
@@ -50,7 +49,7 @@ PPO_PARAMS = {'mb_size': {'type': int, 'default': 2 ** 7},
               'debug_ppo': {'action': 'store_true'}}
 
 SYSTEM_PARAMS = {'serial': {'action': 'store_true'},
-                 'dev': {'action': 'store_true'},
+                 'no_logging': {'action': 'store_true'},
                  'verbose': {'action': 'store_true'},
                  'batch_size': {'type': int, 'default': 2 ** 12}}
 
@@ -61,7 +60,3 @@ PARAM_DICTS = {'agent_params': AGENT_PARAMS,
 
 # multi-processing parameters
 THREADS_PER_PROC = 1
-
-# for quick training
-BATCH_SMALL = 2 ** 12
-LSTG_SMALL = 1000

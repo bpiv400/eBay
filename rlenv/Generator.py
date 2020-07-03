@@ -8,7 +8,7 @@ Lots of memory dumping code while I try to find leak
 """
 import numpy as np
 from compress_pickle import load
-from constants import PARTS_DIR
+from constants import NO_ARRIVAL_CUTOFF
 from featnames import START_PRICE, START_TIME, ACC_PRICE, \
     DEC_PRICE, NO_ARRIVAL
 from rlenv.environments.SimulatorEnvironment import SimulatorEnvironment
@@ -42,8 +42,8 @@ class Generator:
         self.buyer = None
         self.arrival = None
 
-    def process_chunk(self, chunk=None):
-        self.load_chunk(chunk=chunk)
+    def process_chunk(self, chunk=None, drop_infreq=False):
+        self.load_chunk(chunk=chunk, drop_infreq=drop_infreq)
         if not self.initialized:
             self.initialize()
         return self.generate()
@@ -56,7 +56,7 @@ class Generator:
         self.recorder = self.generate_recorder()
         self.initialized = True
 
-    def load_chunk(self, chunk=None):
+    def load_chunk(self, chunk=None, drop_infreq=None):
         raise NotImplementedError()
 
     def generate_recorder(self):
@@ -136,14 +136,18 @@ class SimulatorGenerator(Generator):
     def generate_recorder(self):
         raise NotImplementedError()
 
-    def load_chunk(self, chunk=None):
+    def load_chunk(self, chunk=None, drop_infreq=None):
         self.chunk = chunk
         chunk_dir = get_env_sim_subdir(part=self.part,
                                        chunks=True)
         d = load(chunk_dir + '{}.gz'.format(chunk))
-        self.x_lstg = d['x_lstg']
         p0 = load_file(self.part, NO_ARRIVAL)
-        self.lookup = d['lookup'].join(p0)
+        if drop_infreq:
+            self.lookup = d['lookup'][p0 <= NO_ARRIVAL_CUTOFF]
+            self.x_lstg = d['x_lstg'].reindex(index=self.lookup.index)
+        else:
+            self.lookup = d['lookup'].join(p0)
+            self.x_lstg = d['x_lstg']
 
     def generate(self):
         raise NotImplementedError()

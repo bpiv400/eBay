@@ -20,38 +20,39 @@ from rlenv.environments.BuyerEnvironment import BuyerEnvironment
 
 class RlTrainer:
     def __init__(self, **kwargs):
+        # save parameters directly
         self.agent_params = kwargs['agent_params']
-        self.model_params = kwargs['model_params']
         self.ppo_params = kwargs['ppo_params']
         self.system_params = kwargs['system_params']
 
-        # flags
+        # buyer flag
         self.byr = BYR in self.agent_params['name']
-        self.delay = DELAY in self.agent_params['name']
+
+        # model parameters
+        self.model_params = kwargs['model_params']
+        self.model_params[BYR] = self.byr
+        self.model_params[DELAY] = DELAY in self.agent_params['name']
 
         # counts
         self.itr = 0
         self.batch_size = self.system_params['batch_size']
 
+        # fix minibatch size to batch size
+        self.ppo_params['mb_size'] = self.batch_size
+
         # output paths
-        if not self.system_params['dev']:
-            self.run_id = dt.now().strftime('%y%m%d-%H%M')
+        if not self.system_params['no_logging']:
+            ts = dt.now().strftime('%y%m%d-%H%M')
+            self.run_id = '{}_{}'.format(ts, torch.cuda.current_device())
             self.log_dir = RL_LOG_DIR + '{}/'.format(
                 self.agent_params['name'])
+
+        # initialize composer
+        self.composer = AgentComposer(agent_params=self.agent_params)
 
         # rlpyt components
         self.sampler = self.generate_sampler()
         self.runner = self.generate_runner()
-
-    def generate_algorithm(self):
-        return CrossEntropyPPO(**self.ppo_params)
-
-    def generate_agent(self):
-        model_kwargs = self.model_params
-        model_kwargs[BYR] = self.byr
-        model_kwargs[DELAY] = self.delay
-        return SplitCategoricalPgAgent(ModelCls=PgCategoricalAgentModel,
-                                       model_kwargs=model_kwargs)
 
     def generate_sampler(self):
         # sampler and batch sizes
@@ -64,7 +65,7 @@ class RlTrainer:
 
         # environment
         env = BuyerEnvironment if self.byr else SellerEnvironment
-        env_params = dict(composer=AgentComposer(agent_params=self.agent_params),
+        env_params = dict(composer=self.composer,
                           verbose=self.system_params['verbose'],
                           arrival=ArrivalInterface(),
                           seller=SimulatedSeller(full=self.byr),
@@ -82,12 +83,15 @@ class RlTrainer:
             )
 
     def generate_runner(self):
+        algo = CrossEntropyPPO(**self.ppo_params)
+        agent = SplitCategoricalPgAgent(ModelCls=PgCategoricalAgentModel,
+                                        model_kwargs=self.model_params)
         affinity = dict(workers_cpus=self.worker_cpus,
                         master_torch_threads=THREADS_PER_PROC,
                         cuda_idx=torch.cuda.current_device(),
                         set_affinity=True)
-        runner = EBayMinibatchRl(algo=self.generate_algorithm(),
-                                 agent=self.generate_agent(),
+        runner = EBayMinibatchRl(algo=algo,
+                                 agent=agent,
                                  sampler=self.sampler,
                                  log_interval_steps=self.batch_size,
                                  affinity=affinity)
@@ -98,7 +102,7 @@ class RlTrainer:
         return list(psutil.Process().cpu_affinity())
 
     def train(self):
-        if self.system_params['dev']:
+        if self.system_params['no_logging']:
             self.itr = self.runner.train()
         else:
             with logger_context(log_dir=self.log_dir,

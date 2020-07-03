@@ -2,55 +2,52 @@ import argparse
 import os
 from compress_pickle import load
 from agent.eval.EvalGenerator import EvalGenerator
-from agent.models.PgCategoricalAgentModel import PgCategoricalAgentModel
 from agent.AgentComposer import AgentComposer
-from rlenv.util import load_chunk
-from agent.const import AGENT_PARAMS
-from constants import NO_ARRIVAL_CUTOFF, BYR, SLR, DROPOUT, \
-    RL_LOG_DIR, TRAIN_RL, VALIDATION, TEST, PARTS_DIR
-from featnames import DELAY, NO_ARRIVAL
+from agent.const import ALL_FEATS, FULL_CON
+from constants import MODEL_DIR, BYR, RL_LOG_DIR, TRAIN_RL, VALIDATION, \
+    TEST, AGENTS
+from featnames import DELAY
 
 
-def gen_eval_kwargs(composer=None, model_kwargs=None, run_dir=None,
-                    path_suffix=None):
-    eval_kwargs = {'composer': composer,
+def gen_eval_kwargs(part=None, composer=None, model_kwargs=None, run_dir=None):
+    eval_kwargs = {'part': part,
+                   'composer': composer,
                    'model_kwargs': model_kwargs,
-                   'model_class': PgCategoricalAgentModel,
                    'run_dir': run_dir,
-                   'path_suffix': path_suffix,
                    'verbose': False}
     return eval_kwargs
 
 
-def gen_model_kwargs(agent_params):
-    model_kwargs = {BYR: agent_params.role == BYR,
-                    DELAY: agent_params.delay,
-                    DROPOUT: (agent_params.dropout0,
-                              agent_params.dropout1)}
+def gen_model_kwargs(name=None):
+    model_kwargs = {BYR: BYR in name,
+                    DELAY: DELAY in name}
+    # add in dropout
+    s = load(MODEL_DIR + 'dropout.pkl')
+    for net in ['policy', 'value']:
+        model_kwargs['dropout_{}'.format(net)] = \
+            s.loc['{}_{}'.format(net, name)]
     return model_kwargs
+
+
+def gen_agent_params(name):
+    agent_params = {'name': name,
+                    'feat_id': ALL_FEATS,
+                    'con_type': FULL_CON}
+    return agent_params
 
 
 def main():
     # command line arguments
     parser = argparse.ArgumentParser()
-    parser.add_argument('--byr', action='store_true')
+    parser.add_argument('--name', choices=AGENTS, required=True)
     parser.add_argument('--num', type=int, required=True)
     parser.add_argument('--part', type=str, required=True,
                         choices=[TRAIN_RL, VALIDATION, TEST])
     args = parser.parse_args()
-    role = BYR if args.byr else SLR
-
-    # load chunk
-    chunk_path = PARTS_DIR + '{}/chunks/{}.gz'.format(args.part, args.num)
-    chunk = load_chunk(input_path=chunk_path)
-
-    # restrict to no arrivals
-    keep = chunk[1][NO_ARRIVAL] < NO_ARRIVAL_CUTOFF
-    idx = chunk[1].index[keep]
-    chunk = [df.reindex(index=idx) for df in chunk]
+    name, num, part = args.name, args.num, args.part
 
     # find run parameters
-    parent_dir = RL_LOG_DIR + '{}/'.format(role)
+    parent_dir = RL_LOG_DIR + '{}/'.format(name)
     params = load(parent_dir + 'runs.pkl')
     runs = params.index
 
@@ -60,31 +57,29 @@ def main():
         run_dir = parent_dir + 'run_{}/'.format(run)
 
         # check if file exists
-        path_suffix = '{}/{}.gz'.format(args.part, args.num)
+        path_suffix = '{}/{}.gz'.format(part, num)
         if os.path.isfile(run_dir + path_suffix):
-            print('Outcomes for [run {} / chunk {}] already generated.'.format(
-                run, args.num))
+            print('run_{}/{}.gz already simulated.'.format(run, num))
             continue
         else:
-            if not os.path.isdir(run_dir + args.part):
-                os.mkdir(run_dir + args.part)
+            if not os.path.isdir(run_dir + part):
+                os.mkdir(run_dir + part)
             print(run_dir + path_suffix)
 
         # create composer
-        agent_params = params.loc[run, AGENT_PARAMS.keys()]
-        composer = AgentComposer(cols=chunk[0].columns,
-                                 agent_params=agent_params)
-        model_kwargs = gen_model_kwargs(agent_params)
+        agent_params = gen_agent_params(name)
+        composer = AgentComposer(agent_params=agent_params)
 
         # create generator
-        eval_kwargs = gen_eval_kwargs(composer=composer,
+        model_kwargs = gen_model_kwargs(name)
+        eval_kwargs = gen_eval_kwargs(part=part,
+                                      composer=composer,
                                       model_kwargs=model_kwargs,
-                                      run_dir=run_dir,
-                                      path_suffix=path_suffix)
+                                      run_dir=run_dir)
         eval_generator = EvalGenerator(**eval_kwargs)
 
         # run generator to simulate outcomes
-        eval_generator.process_chunk(chunk)
+        eval_generator.process_chunk(num)
 
 
 if __name__ == '__main__':

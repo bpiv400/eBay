@@ -1,38 +1,38 @@
+from rlenv.Generator import SimulatorGenerator
+from sim.outcomes.OutcomeRecorder import OutcomeRecorder
 from agent.AgentPlayer import AgentPlayer
 from agent.util import load_agent_model
+from agent.models.PgCategoricalAgentModel import PgCategoricalAgentModel
 from agent.AgentComposer import AgentComposer
-from sim.outcomes.OutcomeGenerator import OutcomeGenerator
 from rlenv.interfaces.PlayerInterface import SimulatedBuyer, SimulatedSeller
 
 
-class EvalGenerator(OutcomeGenerator):
+class EvalGenerator(SimulatorGenerator):
     def __init__(self, **kwargs):
         """
+        :param str part: name of partition
         :param verbose: boolean for whether to print information about threads
         :param model_class: class that inherits agent.models.AgentModel
         :param model_kwargs: dictionary containing kwargs for model_class
         :param str run_dir: path to run directory
-        :param int num: chunk number
         :param composer: agent.AgentComposer
-        :param record: boolean for whether recorder should dump thread info
         """
         self._composer = kwargs['composer']  # type: AgentComposer
         self.agent_byr = self._composer.byr
-        self.delay = self._composer.delay
         self.model_kwargs = kwargs['model_kwargs']
-        self.ModelCls = kwargs['model_class']
         self.run_dir = kwargs['run_dir']
-        self.path_suffix = kwargs['path_suffix']
-        super().__init__(part=None, verbose=kwargs['verbose'])
+        super().__init__(part=kwargs['part'], verbose=kwargs['verbose'])
 
-    def load_chunk(self, chunk=None):
-        self.x_lstg, self.lookup = chunk
+    def generate_recorder(self):
+        return OutcomeRecorder(records_path=self.records_path,
+                               verbose=self.verbose,
+                               record_sim=True)
 
     def generate_composer(self):
         return self._composer
 
     def generate_agent(self):
-        model = self.ModelCls(**self.model_kwargs)
+        model = PgCategoricalAgentModel(**self.model_kwargs)
         model_path = self.run_dir + 'params.pkl'
         load_agent_model(model=model, model_path=model_path)
         agent = AgentPlayer(agent_model=model)
@@ -42,7 +42,7 @@ class EvalGenerator(OutcomeGenerator):
         if self.agent_byr:
             buyer = self.generate_agent()
         else:
-            buyer = SimulatedBuyer(full=True)
+            buyer = SimulatedBuyer(full=Full)
         return buyer
 
     def generate_seller(self):
@@ -52,6 +52,38 @@ class EvalGenerator(OutcomeGenerator):
             seller = self.generate_agent()
         return seller
 
+    def generate(self):
+        """
+        Simulates all lstgs in chunk according to experiment parameters
+        """
+        for i, lstg in enumerate(self.x_lstg.index):
+            # index lookup dataframe
+            lookup = self.lookup.loc[lstg, :]
+
+            # create environment
+            environment = self.setup_env(lstg=lstg, lookup=lookup)
+
+            # update listing in recorder
+            self.recorder.update_lstg(lookup=lookup, lstg=lstg)
+
+            # simulate lstg until sale
+            self.simulate_lstg(environment)
+
+        # save the recorder
+        self.recorder.dump()
+
+    def simulate_lstg(self, env):
+        """
+        Simulates a particular listing either once or until sale.
+        :param env: SimulatorEnvironment
+        :return: outcome tuple
+        """
+        while True:
+            env.reset()
+            outcome = env.run()
+            if outcome.sale:
+                return outcome
+
     @property
     def records_path(self):
-        return self.run_dir + self.path_suffix
+        return self.run_dir + '{}/{}.gz'.format(self.part, self.chunk)

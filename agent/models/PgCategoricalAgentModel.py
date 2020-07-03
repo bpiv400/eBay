@@ -2,7 +2,6 @@ import numpy as np
 import torch
 import torch.nn as nn
 from torch.nn.functional import softmax
-from constants import MODEL_NORM
 from utils import load_state_dict, load_sizes
 from agent.util import get_agent_name
 from agent.models.AgentModel import AgentModel
@@ -46,7 +45,8 @@ class PgCategoricalAgentModel(AgentModel):
             self.values.grad.zero_()
 
     def con(self, input_dict=None):
-        logits, _ = self._forward_dict(input_dict=input_dict, compute_value=False)
+        logits, _ = self._forward_dict(input_dict=input_dict,
+                                       compute_value=False)
         logits = logits.squeeze()
         return logits
 

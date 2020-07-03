@@ -11,7 +11,7 @@ from rlpyt.utils.buffer import buffer_to
 from rlpyt.utils.collections import namedarraytuple
 from rlpyt.utils.misc import iterate_mb_idxs
 from agent.models.PgCategoricalAgentModel import PgCategoricalAgentModel
-from constants import FTOL, LR1, LR_FACTOR
+from constants import LR1, LR_FACTOR
 from utils import slr_reward, max_slr_reward
 
 LossInputs = namedarraytuple("LossInputs",
@@ -49,6 +49,7 @@ class CrossEntropyPPO(RlAlgorithm):
             clip_grad_norm=1.,
             mb_size=128,
             ratio_clip=0.1,
+            patience=0,
             use_cross_entropy=False,
             debug_ppo=False
     ):
@@ -61,6 +62,7 @@ class CrossEntropyPPO(RlAlgorithm):
         self.clip_grad_norm = clip_grad_norm
         self.mb_size = mb_size
         self.ratio_clip = ratio_clip
+        self.patience = patience
         self.use_cross_entropy = use_cross_entropy
         self.debug = debug_ppo
 
@@ -96,9 +98,9 @@ class CrossEntropyPPO(RlAlgorithm):
 
         # lr scheduler
         self.lr_scheduler = ReduceLROnPlateau(optimizer=self.optimizer_policy,
-                                              patience=0,
+                                              patience=self.patience,
                                               factor=LR_FACTOR,
-                                              threshold=FTOL)
+                                              threshold=0.)
 
     @staticmethod
     def valid_from_done(done):

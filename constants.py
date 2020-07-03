@@ -110,6 +110,7 @@ DISCRIM_THREADS_NO_TF = 'threads_no_tf'
 DISCRIM_MODELS = [DISCRIM_LISTINGS, DISCRIM_THREADS, DISCRIM_THREADS_NO_TF]
 
 # policy initializations
+AGENTS = ['slr', 'slr_delay', 'byr_delay']
 SLR_POLICY_INIT = 'policy_slr'
 SLR_DELAY_POLICY_INIT = 'policy_slr_delay'
 BYR_DELAY_POLICY_INIT = 'policy_byr_delay'

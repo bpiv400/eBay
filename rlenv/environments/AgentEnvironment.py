@@ -11,7 +11,6 @@ from inputs.const import INTERVAL_CT_TURN, INTERVAL_TURN
 from rlpyt.envs.base import Env
 from rlpyt.spaces.composite import Composite
 from rlpyt.spaces.float_box import FloatBox
-from agent.const import LSTG_SMALL
 from rlenv.environments.EbayEnvironment import EbayEnvironment
 from rlenv.Recorder import Recorder
 from agent.util import get_con_set, get_train_file_path

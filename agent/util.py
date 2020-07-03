@@ -1,17 +1,14 @@
-import os
-from compress_pickle import load, dump
 import numpy as np
-import pandas as pd
 import torch
 from rlpyt.samplers.parallel.worker import initialize_worker
 from rlpyt.utils.collections import AttrDict
 from rlpyt.utils.seed import set_envs_seeds
 from utils import load_state_dict
-from constants import (RL_LOG_DIR, SLR_VALUE_INIT, SLR_POLICY_INIT,
+from constants import (SLR_VALUE_INIT, SLR_POLICY_INIT,
                        BYR_DELAY_POLICY_INIT, BYR_DELAY_VALUE_INIT,
                        REINFORCE_DIR, SLR_DELAY_VALUE_INIT,
                        SLR_DELAY_POLICY_INIT)
-from agent.const import FULL_CON, QUARTILES, HALF, PARAM_DICTS
+from agent.const import FULL_CON, QUARTILES, HALF
 
 
 def get_con_set(con, byr=False, delay=False):
@@ -91,46 +88,6 @@ def load_init_model(name=None, size=None):
     state_dict[output_w_name] = new_w
     state_dict[output_b_name] = new_b
     return state_dict
-
-
-def create_params_file():
-    # append parameters
-    series = list()
-    for param_set, d in PARAM_DICTS.items():
-        if param_set != 'system_params':
-            for k, v in d.items():
-                dtype = bool if 'type' not in v else v['type']
-                series.append(pd.Series(name=k, dtype=dtype))
-
-    # columns for timings
-    series.append(pd.Series(name='time_elapsed', dtype=int))
-
-    # create and return dataframe
-    df = pd.concat(series, axis=1)
-    return df
-
-
-def save_params(run_id=None, args=None, time_elapsed=None):
-    path = RL_LOG_DIR + '{}/runs.pkl'.format(args['name'])
-
-    # if file does not exist, create it
-    if not os.path.isfile(path):
-        df = create_params_file()
-
-    # otherwise, open file
-    else:
-        df = load(path)
-
-    # add parameters
-    for k, v in args.items():
-        if k in df.columns:
-            df.loc[run_id, k] = v
-
-    # add timings
-    df.loc[run_id, 'time_elapsed'] = time_elapsed
-
-    # save file
-    dump(df, path)
 
 
 def compose_args(arg_dict=None, parser=None):
