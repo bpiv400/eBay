@@ -2,7 +2,7 @@ import argparse
 import pandas as pd
 from compress_pickle import load, dump
 from constants import INPUT_DIR, INDEX_DIR, PARTS_DIR, MODELS,\
-    VALIDATION, PARTITIONS, INIT_POLICY_MODELS
+    VALIDATION, PARTITIONS, INIT_POLICY_MODELS, CLEAN_DIR
 from rlenv.util import (get_env_sim_subdir, load_featnames,
                         get_env_sim_dir, load_chunk)
 from utils import subset_lstgs
@@ -98,7 +98,7 @@ def main():
     print('Loading chunk...')
     _, lookup = load_chunk(base_dir=base_dir, num=num)
     lstgs = lookup.sort_index().index
-    # lstgs = lstgs_without_duplicated_timestamps(lstgs=lstgs)
+    lstgs = lstgs_without_duplicated_timestamps(lstgs=lstgs)
 
     # model inputs
     print('Loading model inputs...')
