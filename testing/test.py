@@ -13,3 +13,7 @@ def main():
         generator_kwargs[args] = args[arg]
     gen = TestGenerator(**generator_kwargs)
     gen.process_chunk(chunk=args['num'])
+
+
+if __name__ == '__main__':
+    main()

@@ -16,11 +16,11 @@ TOL_HALF = 0.02
 if 'Ubuntu' in platform():  # Etan's box
     PREFIX = '/data/eBay'
 elif 'debian' in platform():
-    PREFIX = os.path.expanduser('~/shared/ebay')
+    PREFIX = os.path.expanduser('~/shared/ebay/data')
 elif 'Windows' in platform() and 'A:' in os.getcwd():  # Barry's pc
-    PREFIX = 'A:/ebay'
+    PREFIX = 'A:/ebay/data'
 elif 'Windows' in platform() and 'C:' in os.getcwd():  # Barry's laptop
-    PREFIX = os.path.expanduser('~/ebay')
+    PREFIX = os.path.expanduser('~/ebay/data')
 elif 'Darwin' in platform():  # Etan's Mac laptop
     PREFIX = os.path.expanduser('~/eBay/data')
 else:  # cluster and AWS
