@@ -4,7 +4,6 @@ import pandas as pd
 from datetime import datetime as dt
 import torch
 from compress_pickle import load, dump
-from agent.models.PgCategoricalAgentModel import PgCategoricalAgentModel
 from agent.RlTrainer import RlTrainer
 from agent.const import AGENT_STATE, PARAM_DICTS
 from agent.util import compose_args
@@ -12,19 +11,16 @@ from agent.eval.EvalGenerator import EvalGenerator
 from utils import set_gpu_workers
 from constants import MODEL_DIR, RL_LOG_DIR, TRAIN_RL, VALIDATION
 
-CHUNK_NUM = 1
-
 
 def simulate(part=None, run_dir=None, composer=None, model_kwargs=None):
     eval_kwargs = {'part': part,
                    'composer': composer,
                    'model_kwargs': model_kwargs,
-                   'model_class': PgCategoricalAgentModel,
                    'run_dir': run_dir,
                    'verbose': False}
     eval_generator = EvalGenerator(**eval_kwargs)
     # TODO: run in parallel over all chunks
-    eval_generator.process_chunk(chunk=CHUNK_NUM, drop_infreq=True)
+    eval_generator.process_chunk(chunk=1, drop_infreq=True)
 
 
 def main():
@@ -84,13 +80,13 @@ def main():
         d = torch.load(path)
         torch.save(d[AGENT_STATE], path)
 
-        # simulate outcomes
-        for part in [TRAIN_RL, VALIDATION]:
-            os.mkdir(run_dir + '{}/'.format(part))
-            simulate(part=part,
-                     run_dir=run_dir,
-                     composer=trainer.composer,
-                     model_kwargs=trainer.model_params)
+        # # simulate outcomes
+        # for part in [TRAIN_RL, VALIDATION]:
+        #     os.mkdir(run_dir + '{}/'.format(part))
+        #     simulate(part=part,
+        #              run_dir=run_dir,
+        #              composer=trainer.composer,
+        #              model_kwargs=trainer.model_params)
 
     # save experiment results
     if params is not None:
