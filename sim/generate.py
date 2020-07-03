@@ -7,7 +7,6 @@ import argparse
 import torch
 from constants import PARTITIONS
 from rlenv.Generator import Generator
-from testing.TestGenerator import TestGenerator
 from sim.values.ValueGenerator import ValueGenerator
 from sim.outcomes.OutcomeGenerator import OutcomeGenerator
 
@@ -26,8 +25,6 @@ def chunk_done(generator):
 def get_generator_class(name):
     if name == 'values':
         return ValueGenerator
-    elif name == 'testing':
-        return TestGenerator
     else:
         return OutcomeGenerator
 
@@ -46,7 +43,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--num', required=True, type=int, help='chunk number')
     parser.add_argument('--part', required=True, type=str, help='partition name')
-    parser.add_argument('--name', choices=['outcomes', 'values', 'testing'], default='outcomes')
+    parser.add_argument('--name', choices=['outcomes', 'values'], default='outcomes')
     parser.add_argument('--verbose', action='store_true',
                         help='print event detail')
     parser.add_argument('--thread', required=False, type=int)
