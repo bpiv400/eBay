@@ -7,7 +7,7 @@ rclone sync ~/weka/eBay/inputs/valid dropbox:ebay/data/inputs/valid
 
 # grab all of valid chunks
 rclone sync ~/weka/eBay/partitions/valid/chunks dropbox:ebay/data/partitions/valid/chunks
-rclone sync ~/weka/eBay/partitions/valid dropbox:ebay/data/inputs/valid --max-depth=1
+rclone sync ~/weka/eBay/partitions/valid dropbox:ebay/data/partitions/valid --max-depth=1
 
 # agent training input files
 rclone sync ~/weka/eBay/agent/train dropbox:ebay/data/agent/train
