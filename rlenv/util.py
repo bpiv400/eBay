@@ -10,10 +10,11 @@ from torch.distributions.categorical import Categorical
 from torch.distributions.bernoulli import Bernoulli
 from constants import PARTS_DIR, INPUT_DIR, DAY, ARRIVAL_MODELS, \
     MAX_DELAY_TURN
-from featnames import MSG
+from featnames import MSG, NO_ARRIVAL
 from rlenv.const import (SIM_CHUNKS_DIR, SIM_VALS_DIR, OFFER_MAPS,
                          SIM_DISCRIM_DIR, DATE_FEATS, NORM_IND)
-from utils import extract_clock_feats, is_split, slr_norm, byr_norm
+from utils import extract_clock_feats, is_split, slr_norm,\
+    byr_norm
 
 
 def model_str(model_name, turn=None):
@@ -256,9 +257,15 @@ def load_chunk(base_dir=None, num=None, input_path=None):
     """
     if input_path is None:
         input_path = '{}chunks/{}.gz'.format(base_dir, num)
+        p0_path = '{}{}.gz'.format(base_dir, NO_ARRIVAL)
+    else:
+        root_path = input_path[:input_path.find('chunks')]
+        p0_path = '{}{}.gz'.format(root_path, NO_ARRIVAL)
+    p0 = load(p0_path)
     input_dict = load(input_path)
     x_lstg = input_dict['x_lstg']
     lookup = input_dict['lookup']
+    lookup = lookup.join(p0)
     return x_lstg, lookup
 
 

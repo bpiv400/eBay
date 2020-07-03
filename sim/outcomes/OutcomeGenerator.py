@@ -59,8 +59,7 @@ class OutcomeGenerator(SimulatorGenerator):
         :return: outcome tuple
         """
         # TODO: Replace after Etan response
-        # sim_once = self.loader.lookup[NO_ARRIVAL] > NO_ARRIVAL_CUTOFF
-        sim_once = True
+        sim_once = self.loader.lookup[NO_ARRIVAL] > NO_ARRIVAL_CUTOFF
         while True:
             self.environment.reset()
             outcome = self.environment.run()
