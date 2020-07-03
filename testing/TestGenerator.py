@@ -1,6 +1,6 @@
 import numpy as np
 from compress_pickle import load
-from agent.const import BYR, FEAT_TYPE, CON_TYPE, FULL_CON
+from agent.const import BYR, FEAT_TYPE, CON_TYPE, FULL_CON, ALL_FEATS
 from agent.util import get_agent_name
 from agent.AgentComposer import AgentComposer
 from constants import INIT_POLICY_MODELS
@@ -21,6 +21,10 @@ from utils import init_optional_arg, subset_lstgs
 
 class TestGenerator(Generator):
     def __init__(self, **kwargs):
+        """
+        kwargs contains start, role, agent, delay, part, verbose
+        :param kwargs:
+        """
         super().__init__(verbose=kwargs['verbose'],
                          part=kwargs['part'])
         init_optional_arg(kwargs=kwargs, name='start',
@@ -31,8 +35,6 @@ class TestGenerator(Generator):
         self.agent = kwargs['agent']
         # boolean for whether the agent is a byr
         self.byr = kwargs['role'] == BYR
-        # feat type
-        self.feat_type = kwargs[FEAT_TYPE]
         # boolean for whether to the agent selects its delay
         self.delay = kwargs[DELAY] or self.byr
         self.test_data = None
@@ -45,7 +47,7 @@ class TestGenerator(Generator):
             agent_params = {
                 BYR: self.byr,
                 DELAY: self.delay,
-                FEAT_TYPE: self.feat_type,
+                FEAT_TYPE: ALL_FEATS,
                 CON_TYPE: FULL_CON,
                 BYR_HIST: None
             }

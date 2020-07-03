@@ -5,11 +5,11 @@ import torch
 import numpy as np
 from constants import TURN_FEATS, BYR, SLR, PARTS_DIR, TRAIN_RL
 from featnames import OUTCOME_FEATS, MONTHS_SINCE_LSTG, BYR_HIST
-from utils import load_sizes, load_featnames
+from utils import load_sizes, load_featnames, compose_args
 from rlenv.const import *
 from rlenv.util import load_chunk
 from agent.const import FEAT_TYPE, CON_TYPE, ALL_FEATS, AGENT_PARAMS
-from agent.util import get_con_set, get_agent_name, compose_args
+from agent.util import get_con_set, get_agent_name
 from rlenv.Composer import Composer
 
 

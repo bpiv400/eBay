@@ -15,7 +15,8 @@ from rlpyt.utils.logging.context import logger_context
 from featnames import DELAY
 from constants import RL_LOG_DIR, BYR, PARTS_DIR, TRAIN_RL, DROPOUT
 from agent.const import (AGENT_STATE, PARAM_DICTS, THREADS_PER_PROC, DUPLICATE_PARAMS)
-from agent.util import gen_run_id, save_params, compose_args
+from agent.util import gen_run_id, save_params
+from utils import compose_args
 from agent.AgentComposer import AgentComposer
 from agent.models.PgCategoricalAgentModel import PgCategoricalAgentModel
 from rlenv.util import load_chunk

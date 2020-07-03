@@ -330,3 +330,8 @@ def subset_lstgs(df=None, lstgs=None):
     contains = full_lstgs.isin(lstgs)
     df = df.loc[contains, :]
     return df
+
+
+def compose_args(arg_dict=None, parser=None):
+    for k, v in arg_dict.items():
+        parser.add_argument('--{}'.format(k), **v)
