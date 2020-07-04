@@ -40,13 +40,6 @@ class RlTrainer:
         # fix minibatch size to batch size
         self.ppo_params['mb_size'] = self.batch_size
 
-        # output paths
-        if not self.system_params['no_logging']:
-            ts = dt.now().strftime('%y%m%d-%H%M')
-            self.run_id = '{}_{}'.format(ts, torch.cuda.current_device())
-            self.log_dir = RL_LOG_DIR + '{}/'.format(
-                self.agent_params['name'])
-
         # initialize composer
         self.composer = AgentComposer(agent_params=self.agent_params)
 
@@ -102,13 +95,14 @@ class RlTrainer:
         return list(psutil.Process().cpu_affinity())
 
     def train(self):
-        if self.system_params['no_logging']:
+        if self.system_params['exp'] is None:
             self.itr = self.runner.train()
         else:
-            with logger_context(log_dir=self.log_dir,
+            log_dir = RL_LOG_DIR + '{}/'.format(self.agent_params['name'])
+            with logger_context(log_dir=log_dir,
                                 name='log',
                                 use_summary_writer=True,
                                 override_prefix=True,
-                                run_ID=self.run_id,
+                                run_ID=self.system_params['exp'],
                                 snapshot_mode='last'):
                 self.itr = self.runner.train()

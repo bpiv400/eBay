@@ -1,4 +1,5 @@
 import torch
+import numpy as np
 from torch.optim import Adam
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.nn.utils import clip_grad_norm_
@@ -29,8 +30,7 @@ OptInfo = namedtuple("OptInfo",
                       "GradNormValue",
                       "PolicyLoss",
                       "ValueError",
-                      "PolicyLR",
-                      "ValueLR"])
+                      "PolicyLR"])
 
 
 class CrossEntropyPPO(RlAlgorithm):
@@ -49,7 +49,7 @@ class CrossEntropyPPO(RlAlgorithm):
             clip_grad_norm=1.,
             mb_size=128,
             ratio_clip=0.1,
-            patience=0,
+            lr_step_batches=1,
             use_cross_entropy=False,
             debug_ppo=False
     ):
@@ -62,9 +62,10 @@ class CrossEntropyPPO(RlAlgorithm):
         self.clip_grad_norm = clip_grad_norm
         self.mb_size = mb_size
         self.ratio_clip = ratio_clip
-        self.patience = patience
+        self.lr_step_batches = lr_step_batches
         self.use_cross_entropy = use_cross_entropy
         self.debug = debug_ppo
+        self.loss_history = []  # for stepping down lr
 
         # output fields
         self.opt_info_fields = tuple(f for f in OptInfo._fields)
@@ -98,9 +99,9 @@ class CrossEntropyPPO(RlAlgorithm):
 
         # lr scheduler
         self.lr_scheduler = ReduceLROnPlateau(optimizer=self.optimizer_policy,
-                                              patience=self.patience,
                                               factor=LR_FACTOR,
-                                              threshold=0.)
+                                              threshold=0.,
+                                              patience=0)
 
     @staticmethod
     def valid_from_done(done):
@@ -272,35 +273,41 @@ class CrossEntropyPPO(RlAlgorithm):
             # increment counter
             self.update_counter += 1
 
-        # save loss/error and learning rates
+        # save loss/error and learning rate
         opt_info.PolicyLoss.append(total_policy_loss)
         opt_info.ValueError.append(total_value_error)
-        opt_info.PolicyLR.append(self.policy_learning_rate)
-        opt_info.ValueLR.append(self.value_learning_rate)
+
+        # save learning rate
+        lr = self.learning_rate
+        opt_info.PolicyLR.append(lr)
 
         # step down learning rate
-        self.lr_scheduler.step(total_policy_loss)
+        self.loss_history.append(total_policy_loss)
+        print(self.loss_history)
+        if len(self.loss_history) >= self.lr_step_batches:
+            avg_loss = np.mean(self.loss_history[-self.lr_step_batches:])
+            self.lr_scheduler.step(avg_loss)
 
-        # ensure value optimizer has same learning rate
-        if self.same_lr:
-            lr = self.policy_learning_rate
-            for param_group in self.optimizer_value.param_groups:
-                param_group['lr'] = lr
+            # clear loss history after stepping down learning rate
+            if lr != self.learning_rate:
+                self.loss_history = []
+
+            # ensure value optimizer has same learning rate
+            if self.same_lr:
+                lr = self.learning_rate
+                for param_group in self.optimizer_value.param_groups:
+                    param_group['lr'] = lr
+
         return opt_info
 
     @property
-    def policy_learning_rate(self):
+    def learning_rate(self):
         for param_group in self.optimizer_policy.param_groups:
             return param_group['lr']
 
     @property
-    def value_learning_rate(self):
-        for param_group in self.optimizer_value.param_groups:
-            return param_group['lr']
-
-    @property
     def training_complete(self):
-        return self.policy_learning_rate < LR1
+        return self.learning_rate < LR1
 
     @staticmethod
     def mean_kl(p, q, valid=None, eps=1e-8):

@@ -1,8 +1,6 @@
 import argparse
 import pickle
 import psutil
-import py3nvml
-from time import sleep
 import torch
 from torch import cuda
 from torch.nn.functional import log_softmax
@@ -304,20 +302,10 @@ def drop_censored(df):
     return df[~censored]
 
 
-def set_gpu_workers():
+def set_gpu_workers(gpu=None):
     """
     Sets the GPU index and the CPU affinity.
     """
-    # set gpu
-    while True:
-        free_gpus = np.where(py3nvml.get_free_gpus())[0]
-        if len(free_gpus) > 0:
-            gpu = int(free_gpus[0])
-            break
-        else:
-            print('Waiting 5 minutes for a free GPU...')
-            sleep(300)
-
     cuda.set_device(gpu)
     print('Training on cuda:{}'.format(gpu))
 

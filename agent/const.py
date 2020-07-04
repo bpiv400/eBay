@@ -43,13 +43,15 @@ PPO_PARAMS = {'entropy_coeff': {'type': float, 'default': .01},
               'ratio_clip': {'type': float, 'default': .1},
               'clip_grad_norm': {'type': float, 'default': 1.},
               'lr': {'type': float, 'default': .001},
+              'lr_step_batches': {'type': int, 'default': 1},
               'same_lr': {'action': 'store_true'},
               'action_discount': {'type': float, 'default': 1.},
               'action_cost': {'type': float, 'default': 0.},
               'debug_ppo': {'action': 'store_true'}}
 
-SYSTEM_PARAMS = {'serial': {'action': 'store_true'},
-                 'no_logging': {'action': 'store_true'},
+SYSTEM_PARAMS = {'gpu': {'type': int, 'default': 0},
+                 'exp': {'type': int},
+                 'serial': {'action': 'store_true'},
                  'verbose': {'action': 'store_true'},
                  'batch_size': {'type': int, 'default': 2 ** 12}}
 
