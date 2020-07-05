@@ -79,7 +79,7 @@ class TestGenerator(Generator):
             test_data['x_offer'] = subset_lstgs(df=test_data['x_offer'], lstgs=valid_lstgs)
             test_data['inputs'] = subset_inputs(input_data=test_data,
                                                 value=valid_lstgs, level='lstg')
-        self.loader = TestLoader(x_lstg=x_lstg, lookup=lookup, test_data=test_data)
+        return TestLoader(x_lstg=x_lstg, lookup=lookup, test_data=test_data)
 
     def _remove_extra_models(self, test_data):
         """
@@ -203,6 +203,8 @@ class TestGenerator(Generator):
         """
         # simulate once for each buyer in BuyerEnvironment mode
         # this output needs to match first agent action
+        lstg_log = self._generate_lstg_log(buyer=None   )
+        self.query_strategy.update_log(lstg_log)
         self.environment.reset()
         # going to need to change to return for each agent action
         outcome = self.environment.run()

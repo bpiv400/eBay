@@ -10,7 +10,7 @@ def main():
     args = vars(parser.parse_args())
     generator_kwargs = dict()
     for arg in TEST_GENERATOR_KWARGS:
-        generator_kwargs[args] = args[arg]
+        generator_kwargs[arg] = args[arg]
     gen = TestGenerator(**generator_kwargs)
     gen.process_chunk(chunk=args['num'])
 

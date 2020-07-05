@@ -41,10 +41,10 @@ class Subsetter:
     def __call__(self, feats_df=None):
         if self.index is not None:
             subset = feats_df.loc[self.index, :]
+            if self.multi_index and not self.multi_value:
+                subset.index = subset.index.droplevel(level=self.level)
         else:
             subset = None
-        if self.multi_index and not self.multi_value:
-            subset.index = subset.index.droplevel(level=self.level)
         return subset
 
 

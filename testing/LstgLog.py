@@ -24,7 +24,6 @@ class LstgLog:
         self.lookup = params['lookup']
         self.agent = params['agent_params'] is not None
         self.agent_params = params['agent_params']
-        params = LstgLog.subset_params(params)
         self.arrivals = self.generate_arrival_logs(params)
         self.threads = self.generate_thread_logs(params)
         self.agent_log = self.generate_agent_log(params) # revisit this
@@ -117,6 +116,8 @@ class LstgLog:
 
     def generate_agent_log(self, params):
         # if the agent is a buyer
+        if not self.agent:
+            return None
         agent_log = AgentLog(byr=self.byr,
                              delay=self.delay)
         full_inputs = params['inputs'][agent_log.model_name]

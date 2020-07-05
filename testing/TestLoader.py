@@ -19,3 +19,4 @@ class TestLoader(ChunkLoader):
                                   lstg=self.lstg)
         self.inputs = subset_inputs(input_data=self._test_data['inputs'],
                                     level='lstg', value=self.lstg)
+        return self.x_lstg, self.lookup
