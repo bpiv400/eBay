@@ -7,13 +7,13 @@ class AgentModel(nn.Module):
                  delay=False,
                  dropout_policy=None,
                  dropout_value=None,
-                 untrained=False):
+                 pretrained=False):
         super().__init__()
         self.byr = byr
         self.delay = delay
         self.dropout_policy = dropout_policy
         self.dropout_value = dropout_value
-        self.untrained = untrained
+        self.pretrained = pretrained
 
     def con(self, input_dict=None):
         raise NotImplementedError()

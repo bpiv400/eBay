@@ -28,10 +28,10 @@ class PgCategoricalAgentModel(AgentModel):
         super().__init__(**kwargs)
         self.policy_network = self._init_network(policy=True)
         self.value_network = self._init_network(policy=False)
-        with torch.no_grad():
-            vals = np.arange(0, self.value_network.sizes['out'] / 100, 0.01)
-            self.values = nn.Parameter(torch.from_numpy(vals).float(),
-                                       requires_grad=False)
+        # with torch.no_grad():
+        #     vals = np.arange(0, self.value_network.sizes['out'] / 100, 0.01)
+        #     self.values = nn.Parameter(torch.from_numpy(vals).float(),
+        #                                requires_grad=False)
 
     def value_parameters(self):
         return self.value_network.parameters()
@@ -65,9 +65,10 @@ class PgCategoricalAgentModel(AgentModel):
         pi_logits = self.policy_network(input_dict)
         # value output head
         if compute_value:
-            v_logits = self.value_network(input_dict)
-            value_distribution = softmax(v_logits, dim=v_logits.dim() - 1)
-            v = torch.matmul(value_distribution, self.values)
+            # v_logits = self.value_network(input_dict)
+            # value_distribution = softmax(v_logits, dim=v_logits.dim() - 1)
+            # v = torch.matmul(value_distribution, self.values)
+            v = torch.sigmoid(self.value_network(input_dict))
         else:
             v = None
 
@@ -105,9 +106,11 @@ class PgCategoricalAgentModel(AgentModel):
                                       policy=policy,
                                       delay=self.delay)
         sizes = load_sizes(network_name)
+        if not policy:
+            sizes['out'] = 1
         dropout = self.dropout_policy if policy else self.dropout_value
         net = FeedForward(sizes=sizes, dropout=dropout)
-        if not self.untrained:
+        if self.pretrained:
             init_dict = load_state_dict(network_name)
             net.load_state_dict(init_dict, strict=True)
         return net

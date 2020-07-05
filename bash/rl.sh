@@ -9,22 +9,25 @@ fi
 
 # index of last experiment
 LAST=$(tail -n1 "data/agent/logs/exps.csv" | cut -d, -f1)
-printf "Running %d experiments\n" "$LAST"
+printf "Running %d experiments\n" "$((LAST+1))"
 
 for ((i=0; i<=LAST; i++))
 do
   printf "Experiment #%d: " $i
-  GPU=0
+  GPU=1
   while true
   do
-    PROCESS=$(nvidia-smi -i $GPU --query-compute-apps=name --format=csv,noheader)
-    if [[ "$PROCESS" != *"python"* ]]; then
+    PID=$(nvidia-smi -i $GPU | grep '      C   ' | awk '{ print $3 }')
+    if [[ "$PID" == "" ]]; then
       break
     fi
     if [ $GPU == 3 ]; then
       sleep 60
     fi
-    GPU=$(((GPU + 1) % 4))
+    GPU=$(((GPU + 1) % 3))
+    if [ $GPU == 0 ]; then
+      GPU=1
+    fi
   done
   printf "starting on GPU %d\n" $GPU
   python repo/agent/train.py --gpu $GPU --exp $i &>/dev/null &

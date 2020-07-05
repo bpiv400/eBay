@@ -169,3 +169,6 @@ for j in range(8):
 
 # monthly discount rate for agent
 DELTA_MONTH = .995
+
+# number of workers for training RL
+NUM_RL_WORKERS = 16

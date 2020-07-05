@@ -9,7 +9,7 @@ from compress_pickle import load
 from nets.FeedForward import FeedForward
 from constants import DAY, MONTH, SPLIT_PCTS, INPUT_DIR, \
     MODEL_DIR, META_6, META_7, LISTING_FEE, PARTITIONS, PARTS_DIR, \
-    MAX_DELAY_TURN, MAX_DELAY_ARRIVAL, DELTA_MONTH
+    MAX_DELAY_TURN, MAX_DELAY_ARRIVAL, DELTA_MONTH, NUM_RL_WORKERS
 from featnames import DELAY, EXP
 
 
@@ -307,12 +307,12 @@ def set_gpu_workers(gpu=None):
     Sets the GPU index and the CPU affinity.
     """
     cuda.set_device(gpu)
+    t = torch.tensor(0., device='cuda')  # put something on GPU
     print('Training on cuda:{}'.format(gpu))
 
     # set cpu affinity
     p = psutil.Process()
-    max_workers = psutil.cpu_count() // cuda.device_count()
-    start = max_workers * gpu
-    processes = list(range(start, start + max_workers))
+    start = NUM_RL_WORKERS * gpu
+    processes = list(range(start, start + NUM_RL_WORKERS))
     p.cpu_affinity(processes)
     print('CPUs for dataloader: {}'.format(p.cpu_affinity()))

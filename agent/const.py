@@ -36,7 +36,7 @@ MODEL_PARAMS = {'dropout_policy': {'type': tuple,
                                    'default': (0., 0.)},
                 'dropout_value': {'type': tuple,
                                   'default': (0., 0.)},
-                'untrained': {'action': 'store_true'}}
+                'pretrained': {'action': 'store_true'}}
 
 PPO_PARAMS = {'entropy_coeff': {'type': float, 'default': .01},
               'use_cross_entropy': {'action': 'store_true'},
@@ -49,7 +49,7 @@ PPO_PARAMS = {'entropy_coeff': {'type': float, 'default': .01},
               'action_cost': {'type': float, 'default': 0.},
               'debug_ppo': {'action': 'store_true'}}
 
-SYSTEM_PARAMS = {'gpu': {'type': int, 'default': 0},
+SYSTEM_PARAMS = {'gpu': {'type': int, 'default': 1},
                  'exp': {'type': int},
                  'serial': {'action': 'store_true'},
                  'verbose': {'action': 'store_true'},

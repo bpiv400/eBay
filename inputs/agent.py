@@ -7,8 +7,7 @@ import h5py
 import numpy as np
 import pandas as pd
 from utils import load_file, init_x
-from constants import NO_ARRIVAL_CUTOFF, TRAIN_RL, RL_TRAIN_DIR
-from inputs.const import NUM_RL_WORKERS
+from constants import NO_ARRIVAL_CUTOFF, TRAIN_RL, RL_TRAIN_DIR, NUM_RL_WORKERS
 from featnames import START_PRICE, NO_ARRIVAL, X_LSTG, LOOKUP
 
 os.environ["HDF5_USE_FILE_LOCKING"] = "FALSE"

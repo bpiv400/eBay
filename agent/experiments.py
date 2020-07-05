@@ -4,12 +4,12 @@ from constants import RL_LOG_DIR
 
 
 ranges = dict(batch_size=[4096],
-              lr_step_batches=[1, 2],
+              lr_step_batches=[16, 32],
               ratio_clip=[.1, .2],
               clip_grad_norm=[-1, 0.5, 1],
-              entropy_coeff=[.1, .2],
+              entropy_coeff=[.01, .05],
               lr=[1e-3, 1e-4],
-              same_lr=[True, False])
+              same_lr=[True])
 
 
 def main():

@@ -243,7 +243,7 @@ class CrossEntropyPPO(RlAlgorithm):
             B_idxs = idxs // T
             self.optimizer_value.zero_grad()
             self.optimizer_policy.zero_grad()
-            self.agent.zero_values_grad()
+            # self.agent.zero_values_grad()
 
             # loss/error
             policy_loss, value_error, entropy = self.loss(
@@ -283,7 +283,6 @@ class CrossEntropyPPO(RlAlgorithm):
 
         # step down learning rate
         self.loss_history.append(total_policy_loss)
-        print(self.loss_history)
         if len(self.loss_history) >= self.lr_step_batches:
             avg_loss = np.mean(self.loss_history[-self.lr_step_batches:])
             self.lr_scheduler.step(avg_loss)
