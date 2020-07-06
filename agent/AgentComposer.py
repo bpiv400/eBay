@@ -58,9 +58,8 @@ class AgentComposer(Composer):
         return self.agent_params[CON_TYPE]
 
     def _build_agent_sizes(self):
-        sizes = load_sizes(get_agent_name(byr=self.byr,
-                                          delay=self.delay,
-                                          policy=True))
+        agent_name = get_agent_name(byr=self.byr, delay=self.delay)
+        sizes = load_sizes(agent_name)
         sizes['out'] = len(get_con_set(self.con_type,
                                        byr=self.byr,
                                        delay=self.delay))
@@ -146,7 +145,7 @@ class AgentComposer(Composer):
             # remove slr feats
             del lstg_sets[SLR]
         # verify shared lstg features
-        model = get_agent_name(delay=self.delay, byr=self.byr, policy=True)
+        model = get_agent_name(delay=self.delay, byr=self.byr)
         Composer.verify_lstg_sets_shared(model, self.x_lstg_cols, lstg_sets)
         # verify appended features
         agent_feats = load_featnames(model)

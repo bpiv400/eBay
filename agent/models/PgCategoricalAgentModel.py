@@ -1,6 +1,6 @@
 import torch
 from torch.nn.functional import softmax
-from utils import load_state_dict, load_sizes
+from utils import load_sizes
 from agent.util import get_agent_name
 from agent.models.AgentModel import AgentModel
 from nets.FeedForward import FeedForward
@@ -24,8 +24,17 @@ class PgCategoricalAgentModel(AgentModel):
             output vector 'out'
         """
         super().__init__(**kwargs)
-        self.policy_network = self._init_network(policy=True)
-        self.value_network = self._init_network(policy=False)
+
+        # policy net
+        agent_name = get_agent_name(byr=self.byr, delay=self.delay)
+        sizes = load_sizes(agent_name)
+        self.policy_network = FeedForward(sizes=sizes,
+                                          dropout=self.dropout_policy)
+
+        # value net
+        sizes['out'] = 1
+        self.value_network = FeedForward(sizes=sizes,
+                                         dropout=self.dropout_value)
 
     def value_parameters(self):
         return self.value_network.parameters()
@@ -74,17 +83,3 @@ class PgCategoricalAgentModel(AgentModel):
         v = v.squeeze()
 
         return pi, v
-
-    def _init_network(self, policy=True):
-        network_name = get_agent_name(byr=self.byr,
-                                      policy=policy,
-                                      delay=self.delay)
-        sizes = load_sizes(network_name)
-        if not policy:  # TODO: fix sizes file
-            sizes['out'] = 1
-        dropout = self.dropout_policy if policy else self.dropout_value
-        net = FeedForward(sizes=sizes, dropout=dropout)
-        if self.pretrained:
-            init_dict = load_state_dict(network_name)
-            net.load_state_dict(init_dict, strict=True)
-        return net

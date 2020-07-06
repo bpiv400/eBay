@@ -4,10 +4,8 @@ from rlpyt.samplers.parallel.worker import initialize_worker
 from rlpyt.utils.collections import AttrDict
 from rlpyt.utils.seed import set_envs_seeds
 from utils import load_state_dict
-from constants import (SLR_VALUE_INIT, SLR_POLICY_INIT,
-                       BYR_DELAY_POLICY_INIT, BYR_DELAY_VALUE_INIT,
-                       REINFORCE_DIR, SLR_DELAY_VALUE_INIT,
-                       SLR_DELAY_POLICY_INIT)
+from constants import POLICY_SLR, POLICY_BYR_DELAY, \
+    REINFORCE_DIR, POLICY_SLR_DELAY
 from agent.const import FULL_CON, QUARTILES, HALF
 
 
@@ -23,19 +21,6 @@ def get_con_set(con, byr=False, delay=False):
     if not byr and delay:
         con_set = np.concatenate([con_set, np.array([1.1])])
     return con_set
-
-
-def detect_norm(init_dict=None):
-    found_v, found_g = False, False
-    for param_name in init_dict.keys():
-        if '_v' in param_name:
-            found_v = True
-        elif '_g' in param_name:
-            found_g = True
-    if found_g and found_v:
-        return "weight"
-    else:
-        raise NotImplementedError("Unexpected normalization type")
 
 
 def load_agent_model(model=None, model_path=None):
@@ -95,22 +80,13 @@ def compose_args(arg_dict=None, parser=None):
         parser.add_argument('--{}'.format(k), **v)
 
 
-def get_agent_name(byr=False, policy=False, delay=False):
+def get_agent_name(byr=False, delay=False):
     if byr and delay:
-        if policy:
-            return BYR_DELAY_POLICY_INIT
-        else:
-            return BYR_DELAY_VALUE_INIT
+        return POLICY_BYR_DELAY
     elif not byr and delay:
-        if policy:
-            return SLR_DELAY_POLICY_INIT
-        else:
-            return SLR_DELAY_VALUE_INIT
+        return POLICY_SLR_DELAY
     elif not byr and not delay:
-        if policy:
-            return SLR_POLICY_INIT
-        else:
-            return SLR_VALUE_INIT
+        return POLICY_SLR
     else:
         raise NotImplementedError("BYR MUST HAVE DELAY")
 

@@ -35,8 +35,7 @@ AGENT_PARAMS = {'name': {'type': str,
 MODEL_PARAMS = {'dropout_policy': {'type': tuple,
                                    'default': (0., 0.)},
                 'dropout_value': {'type': tuple,
-                                  'default': (0., 0.)},
-                'pretrained': {'action': 'store_true'}}
+                                  'default': (0., 0.)}}
 
 PPO_PARAMS = {'entropy_coeff': {'type': float, 'default': .01},
               'use_cross_entropy': {'action': 'store_true'},
@@ -59,5 +58,6 @@ PARAM_DICTS = {'agent_params': AGENT_PARAMS,
 # multi-processing parameters
 THREADS_PER_PROC = 1
 
-# stopping value
-VALUE_ERROR_THRESHOLD = .5 * .01 ** 2
+# stopping parameters
+STOPPING_WINDOW = 400
+STOPPING_THRESHOLD = .01

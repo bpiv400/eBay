@@ -7,7 +7,7 @@ import pandas as pd
 from tensorboard.backend.event_processing.event_multiplexer import \
     EventMultiplexer
 from constants import MODEL_DIR, LOG_DIR, MODELS, DISCRIM_MODELS, \
-    INIT_MODELS, FIRST_ARRIVAL_MODEL, PARTS_DIR, TRAIN_RL, VALIDATION
+    POLICY_MODELS, FIRST_ARRIVAL_MODEL, PARTS_DIR, TRAIN_RL, VALIDATION
 from utils import get_model_predictions, load_file
 from featnames import NO_ARRIVAL
 
@@ -44,17 +44,14 @@ def extract_best_run(m):
 def main():
     # command line parameter for model group
     parser = argparse.ArgumentParser()
-    parser.add_argument('--set', type=str,
-                        choices=['sim', 'discrim', 'init'])
-    model_set = parser.parse_args().set
+    parser.add_argument('--discrim', action='store_true')
+    args = parser.parse_args()
 
     # model group
-    if model_set == 'sim':
-        models = MODELS
-    elif model_set == 'discrim':
+    if args.discrim:
         models = DISCRIM_MODELS
     else:
-        models = INIT_MODELS
+        models = MODELS + POLICY_MODELS
 
     # create dropout file
     dropout_path = MODEL_DIR + 'dropout.pkl'
@@ -80,7 +77,7 @@ def main():
     dump(s, dropout_path)  # save dropout file
 
     # create series of no-arrival probability
-    if model_set == 'sim':
+    if not args.discrim:
         for part in [TRAIN_RL, VALIDATION]:
             save_no_arrival_prob(part)
 

@@ -13,8 +13,8 @@ from rlenv.events.Arrival import Arrival
 from rlenv.events.Thread import RlThread
 
 
-BUYER_DELAY_GROUPINGS = list(load_sizes(get_agent_name(byr=True, delay=True,
-                                                       policy=True))['x'].keys())
+BUYER_DELAY_GROUPINGS = list(load_sizes(get_agent_name(
+    byr=True, delay=True))['x'].keys())
 BuyerDelayObs = namedtuple('BuyerDelayObs', BUYER_DELAY_GROUPINGS)
 
 

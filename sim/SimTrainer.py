@@ -9,9 +9,13 @@ from sim.EBayDataset import EBayDataset
 from nets.FeedForward import FeedForward
 from sim.Sample import get_batches
 from constants import MODEL_DIR, LOG_DIR, CENSORED_MODELS, \
-    INIT_VALUE_MODELS, MODEL_NORM, VALIDATION, LR_FACTOR, \
-    LR0, LR1, FTOL
+    MODEL_NORM, VALIDATION
 from utils import load_sizes
+
+LR_FACTOR = 0.1  # multiply learning rate by this factor when training slows
+LR0 = [1e-3]  # initial learning rates to search over
+LR1 = 1e-7  # stop training when learning rate is lower than this
+FTOL = 1e-2  # decrease learning rate when relative improvement in loss is less than this
 
 
 class SimTrainer:
@@ -34,7 +38,6 @@ class SimTrainer:
 
         # boolean for different loss functions
         self.use_time_loss = name in CENSORED_MODELS
-        self.is_init_value = name in INIT_VALUE_MODELS
 
         # load model size parameters
         self.sizes = load_sizes(name)

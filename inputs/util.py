@@ -1,17 +1,13 @@
 import numpy as np
 import pandas as pd
 from compress_pickle import dump
-from processing.util import extract_day_feats
-from utils import get_remaining, load_file, init_x
-from inputs.const import NUM_OUT, N_SMALL, DELTA_ACTION, C_ACTION, INTERVAL_ARRIVAL, INTERVAL_TURN, \
-    INTERVAL_CT_TURN, INTERVAL_CT_ARRIVAL
+from utils import get_remaining, load_file
+from inputs.const import NUM_OUT, N_SMALL
 from constants import INPUT_DIR, INDEX_DIR, VALIDATION, TRAIN_MODELS, \
-    TRAIN_RL, IDX, BYR, DELAY_MODELS, DISCRIM_MODELS, SLR, DAY, MONTH, \
-    INIT_VALUE_MODELS, ARRIVAL, NO_ARRIVAL_CUTOFF, HIST_QUANTILES, DELTA_MONTH
+    TRAIN_RL, IDX, BYR, DISCRIM_MODELS, SLR, NO_ARRIVAL_CUTOFF, HIST_QUANTILES
 from featnames import CLOCK_FEATS, OUTCOME_FEATS, BYR_HIST, \
     CON, NORM, SPLIT, MSG, AUTO, EXP, REJECT, DAYS, DELAY, TIME_FEATS, \
-    THREAD_COUNT, MONTHLY_DISCOUNT, ACTION_DISCOUNT, ACTION_COST, \
-    MONTHS_SINCE_LSTG, NO_ARRIVAL, START_TIME
+    THREAD_COUNT, NO_ARRIVAL
 
 
 def add_turn_indicators(df):
@@ -153,124 +149,6 @@ def get_x_offer_init(offers, idx, role=None, delay=None):
     return x_offer
 
 
-def construct_x_byr(part=None, idx=None, data=None):
-    # listing features
-    x = init_x(part, idx)
-    del x['slr']  # byr does not observe slr features
-
-    # remove auto accept/reject features from x['lstg'] for buyer models
-    x['lstg'].drop(['auto_decline', 'auto_accept',
-                    'has_decline', 'has_accept',
-                    'lstg_ct', 'bo_ct'],
-                   axis=1, inplace=True)
-
-    # thread features
-    x_thread = get_x_thread(data['threads'], idx,
-                            turn_indicators=True)
-    x_thread.drop(THREAD_COUNT, axis=1, inplace=True)
-
-    # split master index
-    idx1 = pd.Series(index=idx).xs(
-        1, level='index', drop_level=False).index
-    idx2 = idx.drop(idx1)
-
-    # current time feats
-    lstg_start = data['lookup'][START_TIME]
-    clock1 = pd.Series(DAY * idx1.get_level_values(level='day'),
-                       index=idx1) + lstg_start.reindex(index=idx1,
-                                                        level='lstg')
-    clock = data['clock']
-    clock2 = clock.groupby(clock.index.names[:-1]).shift()
-    clock2 = clock2[idx2].astype(clock.dtype)
-    combined = pd.concat([clock1, clock2]).sort_index()
-    date_feats = extract_day_feats(combined).rename(
-        lambda c: 'thread_{}'.format(c), axis=1)
-
-    # thread features
-    x_thread = pd.concat([date_feats, x_thread], axis=1)
-
-    # redefine months_since_lstg
-    x_thread.loc[idx1, MONTHS_SINCE_LSTG] = \
-        idx1.get_level_values(level='day') * DAY / MONTH
-
-    # concatenate with the listing grouping
-    x['lstg'] = pd.concat([x['lstg'], x_thread], axis=1)
-
-    # offer features
-    x.update(get_x_offer_init(data['offers'], idx,
-                              role=BYR, delay=True))
-
-    # no nans
-    for v in x.values():
-        assert v.isna().sum().sum() == 0
-
-    return x
-
-
-def construct_x_slr(part=None, delay=None, idx=None, data=None):
-    # listing features
-    x = init_x(part, idx)
-
-    # thread features
-    x_thread = get_x_thread(data['threads'], idx,
-                            turn_indicators=True)
-
-    # concatenate with the lstg grouping
-    x['lstg'] = pd.concat([x['lstg'], x_thread], axis=1)
-
-    # offer features
-    x.update(get_x_offer_init(data['offers'], idx,
-                              role=SLR, delay=delay))
-
-    # no nans
-    for v in x.values():
-        assert v.isna().sum().sum() == 0
-
-    return x
-
-
-def get_sale_norm(offers):
-    is_sale = offers[CON] == 1.
-    norm = offers.loc[is_sale, NORM]
-    # for seller, norm is defined as distance from start_price
-    slr_turn = norm.index.isin(IDX[SLR], level='index')
-    norm_slr = 1 - norm.loc[slr_turn]
-    norm.loc[slr_turn] = norm_slr
-    return norm
-
-
-def create_index_slr(offers=None, delay=None):
-    slr_turn = offers.index.isin(IDX[SLR], level='index')
-    censored = offers[EXP] & (offers[DELAY] < 1)
-    mask = slr_turn & ~offers[AUTO] & ~censored
-    if not delay:  # when not choosing delay, drop expirations
-        mask = mask & ~offers[EXP]
-    idx = offers[mask].index
-    return idx
-
-
-def create_index_byr(clock=None, offers=None, lstg_start=None):
-    # buyer turns
-    s = clock[clock.index.isin(IDX[BYR], level='index')]
-    # remove censored
-    censored = offers[EXP] & (offers[DELAY] < 1)
-    s = s[~censored]
-    # hours before first offer
-    arrival_time = s.xs(1, level='index', drop_level=False)
-    days = ((arrival_time - lstg_start) // DAY).rename('day')
-    days0 = days[days > 0] - 1
-    wide = days0.to_frame().assign(con=0).set_index(
-        'day', append=True).squeeze().unstack()
-    for i in wide.columns:
-        wide.loc[i < days0, i] = 0.
-    idx0 = wide.stack().index
-    # combine with offers index
-    idx1 = pd.MultiIndex.from_frame(
-        days.reindex(index=s.index, fill_value=0).reset_index())
-    idx, _ = idx0.union(idx1).sortlevel()
-    return idx, idx1
-
-
 def load_reindex(part=None, name=None, sim=None, idx=None):
     suffix = '_sim' if sim else ''
     df = load_file(part, '{}{}'.format(name, suffix)).reindex(
@@ -334,20 +212,6 @@ def save_sizes(x, m):
 
     # count components of x
     sizes['x'] = {k: len(v.columns) for k, v in x.items()}
-
-    # for arrival models, save interval and interval counts
-    if ARRIVAL in m:
-        sizes['interval'] = INTERVAL_ARRIVAL
-        sizes['interval_count'] = INTERVAL_CT_ARRIVAL
-    elif m in DELAY_MODELS:
-        sizes['interval'] = INTERVAL_TURN
-        sizes['interval_count'] = INTERVAL_CT_TURN
-
-    # for init models, save discount rate
-    if m in INIT_VALUE_MODELS:
-        sizes[MONTHLY_DISCOUNT] = DELTA_MONTH
-        sizes[ACTION_DISCOUNT] = DELTA_ACTION
-        sizes[ACTION_COST] = C_ACTION
 
     # length of model output vector
     sizes['out'] = NUM_OUT[m]

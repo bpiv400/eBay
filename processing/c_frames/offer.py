@@ -3,7 +3,7 @@ import pandas as pd
 from processing.util import collect_date_clock_feats, \
     get_days_delay, get_norm, get_con
 from utils import input_partition, load_file, is_split
-from constants import PARTS_DIR, SLR, IDX, CLEAN_DIR
+from constants import PARTS_DIR, FEATS_DIR, SLR, IDX, CLEAN_DIR
 from featnames import DAYS, DELAY, CON, NORM, SPLIT, MSG, REJECT, \
     AUTO, EXP, TIME_FEATS, START_PRICE
 
@@ -51,7 +51,7 @@ def main():
     lookup = load_file(part, 'lookup')
     events = load(CLEAN_DIR + 'offers.pkl').reindex(
         index=lookup.index, level='lstg')
-    tf = load(PARTS_DIR + '{}/tf.gz'.format(part)).reindex(
+    tf = load(FEATS_DIR + '{}/tf.gz'.format(part)).reindex(
         index=lookup.index, level='lstg')
 
     # offer features

@@ -8,7 +8,7 @@ from rlpyt.utils.buffer import buffer_to
 from rlpyt.utils.collections import namedarraytuple
 from agent.models.PgCategoricalAgentModel import PgCategoricalAgentModel
 from utils import slr_reward, max_slr_reward
-from agent.const import VALUE_ERROR_THRESHOLD
+from agent.const import STOPPING_WINDOW, STOPPING_THRESHOLD
 
 LossInputs = namedarraytuple("LossInputs",
                              ["agent_inputs",
@@ -53,14 +53,17 @@ class CrossEntropyPPO:
 
         # parameters to be defined later
         self.agent = None
-        self.optimizer_value = None
-        self.optimizer_policy = None
-        self.training_complete = None
+        self._optimizer_value = None
+        self._optimizer_policy = None
         if self.use_cross_entropy:
-            self.init_agent = None
+            self._init_agent = None
 
         # count number of updates
         self.update_counter = 0
+
+        # for stopping
+        self.training_complete = False
+        self._error_history = []
 
     def initialize(self, *args, **kwargs):
         """
@@ -69,14 +72,14 @@ class CrossEntropyPPO:
         self.agent = kwargs['agent']
 
         # optimizers
-        self.optimizer_value = Adam(self.agent.value_parameters(),
-                                    lr=self.lr)
-        self.optimizer_policy = Adam(self.agent.policy_parameters(),
+        self._optimizer_value = Adam(self.agent.value_parameters(),
                                      lr=self.lr)
+        self._optimizer_policy = Adam(self.agent.policy_parameters(),
+                                      lr=self.lr)
 
         # init_agent new initialized agent
         if self.use_cross_entropy:
-            self.init_agent = PgCategoricalAgentModel(
+            self._init_agent = PgCategoricalAgentModel(
                 **self.agent.model_kwargs).to(self.agent.device)
 
     @staticmethod
@@ -205,8 +208,8 @@ class CrossEntropyPPO:
             advantage[valid.bool()].numpy())
 
         # zero gradients
-        self.optimizer_value.zero_grad()
-        self.optimizer_policy.zero_grad()
+        self._optimizer_value.zero_grad()
+        self._optimizer_policy.zero_grad()
 
         # loss/error
         T, B = samples.env.reward.shape[:2]
@@ -218,11 +221,11 @@ class CrossEntropyPPO:
 
         # policy step
         policy_loss.backward()
-        self.optimizer_policy.step()
+        self._optimizer_policy.step()
 
         # value step
         value_error.backward()
-        self.optimizer_value.step()
+        self._optimizer_value.step()
 
         # save for logging
         opt_info.PolicyLoss.append(policy_loss.item())
@@ -233,17 +236,20 @@ class CrossEntropyPPO:
         self.update_counter += 1
 
         # update training complete flag
-        self.training_complete = value_error.item() < VALUE_ERROR_THRESHOLD
+        self._error_history.append(value_error.item())
+        if len(self._error_history) >= STOPPING_WINDOW:
+            avg_error = np.mean(self._error_history[-STOPPING_WINDOW:])
+            self.training_complete = avg_error < STOPPING_THRESHOLD
 
         return opt_info
 
     @staticmethod
-    def mean_kl(p, q, valid=None, eps=1e-8):
+    def _mean_kl(p, q, valid=None, eps=1e-8):
         kl = torch.sum(p * (torch.log(p + eps) - torch.log(q + eps)), dim=-1)
         return valid_mean(kl, valid)
 
     @staticmethod
-    def entropy(p, eps=1e-8):
+    def _entropy(p, eps=1e-8):
         return -torch.sum(p * torch.log(p + eps), dim=-1)
 
     def loss(self, agent_inputs, action, return_, advantage, valid, pi_old):
@@ -272,12 +278,12 @@ class CrossEntropyPPO:
         value_error = valid_mean(0.5 * (value - return_) ** 2, valid)
 
         # calculate entropy for each action
-        entropy = self.entropy(pi_new.prob)[valid.bool()]
+        entropy = self._entropy(pi_new.prob)[valid.bool()]
 
         # cross-entropy loss
         if self.use_cross_entropy:
-            pi_0 = self.init_agent.con(*agent_inputs)
-            cross_entropy = self.mean_kl(pi_0.to('cpu'), pi_new.prob, valid)
+            pi_0 = self._init_agent.con(*agent_inputs)
+            cross_entropy = self._mean_kl(pi_0.to('cpu'), pi_new.prob, valid)
             entropy_loss = self.entropy_coeff * cross_entropy
 
         # entropy bonus
@@ -292,6 +298,6 @@ class CrossEntropyPPO:
 
     def optim_state_dict(self):
         return {
-            'value': self.optimizer_value.state_dict(),
-            'policy': self.optimizer_policy.state_dict()
+            'value': self._optimizer_value.state_dict(),
+            'policy': self._optimizer_policy.state_dict()
         }

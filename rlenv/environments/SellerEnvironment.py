@@ -8,8 +8,10 @@ from rlenv.events.Thread import RlThread
 from rlenv.Recorder import Recorder
 from rlenv.util import get_con_outcomes
 
-SELLER_GROUPINGS = list(load_sizes(get_agent_name(byr=False, delay=False, policy=True))['x'].keys())
-SELLER_DELAY_GROUPINGS = list(load_sizes(get_agent_name(byr=False, delay=True, policy=True))['x'].keys())
+SELLER_GROUPINGS = list(load_sizes(get_agent_name(
+    byr=False, delay=False))['x'].keys())
+SELLER_DELAY_GROUPINGS = list(load_sizes(get_agent_name(
+    byr=False, delay=True))['x'].keys())
 SellerObs = namedtuple("SellerObs", SELLER_GROUPINGS)
 SellerDelayObs = namedtuple("SellerDelayObs", SELLER_DELAY_GROUPINGS)
 

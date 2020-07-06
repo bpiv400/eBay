@@ -112,20 +112,10 @@ DISCRIM_MODELS = [DISCRIM_LISTINGS, DISCRIM_THREADS, DISCRIM_THREADS_NO_TF]
 
 # policy initializations
 AGENTS = ['slr', 'slr_delay', 'byr_delay']
-SLR_POLICY_INIT = 'policy_slr'
-SLR_DELAY_POLICY_INIT = 'policy_slr_delay'
-BYR_DELAY_POLICY_INIT = 'policy_byr_delay'
-INIT_POLICY_MODELS = [SLR_POLICY_INIT, SLR_DELAY_POLICY_INIT,
-                      BYR_DELAY_POLICY_INIT]
-
-SLR_VALUE_INIT = 'value_slr'
-SLR_DELAY_VALUE_INIT = 'value_slr_delay'
-BYR_DELAY_VALUE_INIT = 'value_byr_delay'
-INIT_VALUE_MODELS = [SLR_VALUE_INIT, SLR_DELAY_VALUE_INIT,
-                     BYR_DELAY_VALUE_INIT]
-
-
-INIT_MODELS = INIT_POLICY_MODELS + INIT_VALUE_MODELS
+POLICY_SLR = 'policy_slr'
+POLICY_SLR_DELAY = 'policy_slr_delay'
+POLICY_BYR_DELAY = 'policy_byr_delay'
+POLICY_MODELS = [POLICY_SLR, POLICY_SLR_DELAY, POLICY_BYR_DELAY]
 
 TURN_FEATS = {
     BYR: ['t1', 't3', 't5'],
@@ -154,19 +144,6 @@ SEED = 123456
 
 # number of chunks
 NUM_CHUNKS = 256
-
-# learning rate parameters
-LR_FACTOR = 0.1  # multiply learning rate by this factor when training slows
-LR0 = [1e-3]  # initial learning rates to search over
-LR1 = 1e-7  # stop training when learning rate is lower than this
-FTOL = 1e-2  # decrease learning rate when relative improvement in loss is less than this
-
-# dropout grid
-DROPOUT_GRID = []
-for j in range(8):
-    for i in range(j+1):
-        if j - i <= 3:
-            DROPOUT_GRID.append((i / 10, j / 10))
 
 # monthly discount rate for agent
 DELTA_MONTH = .995
