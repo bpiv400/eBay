@@ -31,6 +31,7 @@ INDEX_DIR = '{}/index/'.format(PREFIX)
 PCTILE_DIR = '{}/pctile/'.format(PREFIX)
 CLEAN_DIR = '{}/clean/'.format(PREFIX)
 W2V_DIR = '{}/w2v/'.format(PREFIX)
+FEATS_DIR = '{}/feats/'.format(PREFIX)
 
 INPUT_DIR = '{}/inputs/'.format(PREFIX)
 SIZES_DIR = INPUT_DIR + 'sizes/'

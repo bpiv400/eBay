@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 from processing.util import extract_day_feats
 from utils import input_partition, load_file
-from constants import CLEAN_DIR, W2V_DIR, PARTS_DIR, DAY, BYR, \
+from constants import CLEAN_DIR, W2V_DIR, FEATS_DIR, PARTS_DIR, DAY, BYR, \
     SLR, NUM_CHUNKS
 from featnames import START_PRICE
 
@@ -108,7 +108,7 @@ def main():
     # slr and cat features
     print('Seller features')
     for name in ['slr', 'meta', 'leaf']:
-        x[name] = load(PARTS_DIR + '{}/{}.gz'.format(part, name)).reindex(
+        x[name] = load(FEATS_DIR + '{}/{}.gz'.format(part, name)).reindex(
             index=idx, fill_value=0).astype('float32')
 
     # take natural log of number of listings
