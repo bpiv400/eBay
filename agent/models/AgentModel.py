@@ -5,8 +5,8 @@ class AgentModel(nn.Module):
     def __init__(self,
                  byr=False,
                  delay=False,
-                 dropout_policy=None,
-                 dropout_value=None,
+                 dropout_policy=(0., 0.),
+                 dropout_value=(0., 0.),
                  pretrained=False):
         super().__init__()
         self.byr = byr

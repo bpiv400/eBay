@@ -7,6 +7,3 @@ class SplitCategoricalPgAgent(CategoricalPgAgent):
 
     def policy_parameters(self):
         return self.model.policy_parameters()
-
-    def zero_values_grad(self):
-        self.model.zero_values_grad()

@@ -1,6 +1,5 @@
 import psutil
 import torch
-from datetime import datetime as dt
 from agent.CrossEntropyPPO import CrossEntropyPPO
 from agent.EBayRunner import EBayMinibatchRl
 from agent.models.SplitCategoricalPgAgent import SplitCategoricalPgAgent
@@ -36,9 +35,6 @@ class RlTrainer:
         # counts
         self.itr = 0
         self.batch_size = self.system_params['batch_size']
-
-        # fix minibatch size to batch size
-        self.ppo_params['mb_size'] = self.batch_size
 
         # initialize composer
         self.composer = AgentComposer(agent_params=self.agent_params)

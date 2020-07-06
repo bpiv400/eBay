@@ -41,13 +41,9 @@ MODEL_PARAMS = {'dropout_policy': {'type': tuple,
 PPO_PARAMS = {'entropy_coeff': {'type': float, 'default': .01},
               'use_cross_entropy': {'action': 'store_true'},
               'ratio_clip': {'type': float, 'default': .1},
-              'clip_grad_norm': {'type': float, 'default': 1.},
-              'lr': {'type': float, 'default': .001},
-              'lr_step_batches': {'type': int, 'default': 1},
-              'same_lr': {'action': 'store_true'},
+              'lr': {'type': float, 'default': .0002},
               'action_discount': {'type': float, 'default': 1.},
-              'action_cost': {'type': float, 'default': 0.},
-              'debug_ppo': {'action': 'store_true'}}
+              'action_cost': {'type': float, 'default': 0.}}
 
 SYSTEM_PARAMS = {'gpu': {'type': int, 'default': 1},
                  'exp': {'type': int},
@@ -62,3 +58,6 @@ PARAM_DICTS = {'agent_params': AGENT_PARAMS,
 
 # multi-processing parameters
 THREADS_PER_PROC = 1
+
+# stopping value
+VALUE_ERROR_THRESHOLD = .5 * .01 ** 2

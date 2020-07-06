@@ -42,11 +42,11 @@ def main():
                 raise RuntimeError('{} not in args'.format(k))
             args[k] = v
 
-    # add dropout
-    s = load(MODEL_DIR + 'dropout.pkl')
-    for name in ['policy', 'value']:
-        args['dropout_{}'.format(name)] = \
-            s.loc['{}_{}'.format(name, args['name'])]
+    # # add dropout
+    # s = load(MODEL_DIR + 'dropout.pkl')
+    # for name in ['policy', 'value']:
+    #     args['dropout_{}'.format(name)] = \
+    #         s.loc['{}_{}'.format(name, args['name'])]
 
     # print to console
     for k, v in args.items():

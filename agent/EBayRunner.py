@@ -168,7 +168,7 @@ class EBayMinibatchRlBase(BaseRunner):
                 logger.record_tabular('CumTrainTime',
                     self._cum_time - self._cum_eval_time)  # Already added new eval_time.
             logger.record_tabular('Iteration', itr)
-            logger.record_tabular('CumTime (s)', self._cum_time)
+            logger.record_tabular('CumSeconds', self._cum_time)
             logger.record_tabular('CumSteps', cum_steps)
             logger.record_tabular('CumCompletedTrajs', self._cum_completed_trajs)
             logger.record_tabular('CumUpdates', self.algo.update_counter)

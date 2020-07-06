@@ -307,7 +307,6 @@ def set_gpu_workers(gpu=None):
     Sets the GPU index and the CPU affinity.
     """
     cuda.set_device(gpu)
-    t = torch.tensor(0., device='cuda')  # put something on GPU
     print('Training on cuda:{}'.format(gpu))
 
     # set cpu affinity

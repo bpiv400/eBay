@@ -1,6 +1,4 @@
-import numpy as np
 import torch
-import torch.nn as nn
 from torch.nn.functional import softmax
 from utils import load_state_dict, load_sizes
 from agent.util import get_agent_name
@@ -28,21 +26,12 @@ class PgCategoricalAgentModel(AgentModel):
         super().__init__(**kwargs)
         self.policy_network = self._init_network(policy=True)
         self.value_network = self._init_network(policy=False)
-        # with torch.no_grad():
-        #     vals = np.arange(0, self.value_network.sizes['out'] / 100, 0.01)
-        #     self.values = nn.Parameter(torch.from_numpy(vals).float(),
-        #                                requires_grad=False)
 
     def value_parameters(self):
         return self.value_network.parameters()
 
     def policy_parameters(self):
         return self.policy_network.parameters()
-
-    def zero_values_grad(self):
-        if self.values.grad is not None:
-            self.values.grad.detach_()
-            self.values.grad.zero_()
 
     def con(self, input_dict=None):
         logits, _ = self._forward_dict(input_dict=input_dict,
@@ -65,9 +54,6 @@ class PgCategoricalAgentModel(AgentModel):
         pi_logits = self.policy_network(input_dict)
         # value output head
         if compute_value:
-            # v_logits = self.value_network(input_dict)
-            # value_distribution = softmax(v_logits, dim=v_logits.dim() - 1)
-            # v = torch.matmul(value_distribution, self.values)
             v = torch.sigmoid(self.value_network(input_dict))
         else:
             v = None
@@ -78,26 +64,14 @@ class PgCategoricalAgentModel(AgentModel):
         """
         :return: tuple of pi, v
         """
-        # setup input dictionary and fix dimensionality
         input_dict = observation._asdict()
-
-        # temporary check
-        # if self.training:
-        #     torch.all(VALUE_STANDARD.eq(self.values.data))
-
         logits, v = self._forward_dict(input_dict=input_dict,
                                        compute_value=True)
-
         pi = softmax(logits, dim=logits.dim() - 1)
 
         # transformations
         pi = pi.squeeze()
         v = v.squeeze()
-
-        # # supplementing the above transformations
-        # if len(v.shape) == 0 and self.debug:
-        #     v = v.unsqueeze(0)
-        #     pi = pi.unsqueeze(0)
 
         return pi, v
 
@@ -106,7 +80,7 @@ class PgCategoricalAgentModel(AgentModel):
                                       policy=policy,
                                       delay=self.delay)
         sizes = load_sizes(network_name)
-        if not policy:
+        if not policy:  # TODO: fix sizes file
             sizes['out'] = 1
         dropout = self.dropout_policy if policy else self.dropout_value
         net = FeedForward(sizes=sizes, dropout=dropout)
