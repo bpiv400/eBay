@@ -2,20 +2,17 @@
 Environment for training the buyer agent
 """
 from collections import namedtuple
-from constants import HOUR, DAY
+from constants import HOUR, DAY, POLICY_BYR
 from featnames import START_PRICE
 from utils import load_sizes
-from agent.util import get_agent_name
 from rlenv.const import DELAY_EVENT, RL_ARRIVAL_EVENT
 from rlenv.sources import RlBuyerSources
 from rlenv.environments.AgentEnvironment import AgentEnvironment
 from rlenv.events.Arrival import Arrival
 from rlenv.events.Thread import RlThread
 
-
-BUYER_DELAY_GROUPINGS = list(load_sizes(get_agent_name(
-    byr=True, delay=True))['x'].keys())
-BuyerDelayObs = namedtuple('BuyerDelayObs', BUYER_DELAY_GROUPINGS)
+BuyerObs = namedtuple('BuyerObs',
+                      list(load_sizes(POLICY_BYR)['x'].keys()))
 
 
 class BuyerEnvironment(AgentEnvironment):
@@ -36,7 +33,7 @@ class BuyerEnvironment(AgentEnvironment):
             return self.lookup[START_PRICE] - self.outcome.price
 
     def define_observation_class(self):
-        return BuyerDelayObs
+        return BuyerObs
 
     @property
     def horizon(self):

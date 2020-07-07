@@ -43,7 +43,6 @@ MODEL_DIR = OUTPUT_DIR + 'models/'
 PLOT_DIR = OUTPUT_DIR + 'plots/'
 
 REINFORCE_DIR = '{}/agent/'.format(PREFIX)
-RL_LOG_DIR = REINFORCE_DIR + 'logs/'
 RL_TRAIN_DIR = REINFORCE_DIR + 'train/'
 
 # partitions
@@ -111,11 +110,10 @@ DISCRIM_THREADS_NO_TF = 'threads_no_tf'
 DISCRIM_MODELS = [DISCRIM_LISTINGS, DISCRIM_THREADS, DISCRIM_THREADS_NO_TF]
 
 # policy initializations
-AGENTS = ['slr', 'slr_delay', 'byr_delay']
+AGENTS = [SLR, BYR]
 POLICY_SLR = 'policy_slr'
-POLICY_SLR_DELAY = 'policy_slr_delay'
-POLICY_BYR_DELAY = 'policy_byr_delay'
-POLICY_MODELS = [POLICY_SLR, POLICY_SLR_DELAY, POLICY_BYR_DELAY]
+POLICY_BYR = 'policy_byr'
+POLICY_MODELS = [POLICY_SLR, POLICY_BYR]
 
 TURN_FEATS = {
     BYR: ['t1', 't3', 't5'],

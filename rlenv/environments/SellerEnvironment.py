@@ -1,19 +1,13 @@
 from collections import namedtuple
-from constants import MAX_DELAY_TURN
+from constants import MAX_DELAY_TURN, POLICY_SLR
 from utils import load_sizes
-from agent.util import get_agent_name
-from rlenv.const import OFFER_EVENT, DELAY_EVENT
+from rlenv.const import DELAY_EVENT
 from rlenv.environments.AgentEnvironment import AgentEnvironment
 from rlenv.events.Thread import RlThread
 from rlenv.Recorder import Recorder
-from rlenv.util import get_con_outcomes
 
-SELLER_GROUPINGS = list(load_sizes(get_agent_name(
-    byr=False, delay=False))['x'].keys())
-SELLER_DELAY_GROUPINGS = list(load_sizes(get_agent_name(
-    byr=False, delay=True))['x'].keys())
-SellerObs = namedtuple("SellerObs", SELLER_GROUPINGS)
-SellerDelayObs = namedtuple("SellerDelayObs", SELLER_DELAY_GROUPINGS)
+SellerObs = namedtuple("SellerObs",
+                       list(load_sizes(POLICY_SLR)['x'].keys()))
 
 
 class SellerEnvironment(AgentEnvironment):
@@ -26,20 +20,7 @@ class SellerEnvironment(AgentEnvironment):
         :param rlenv.events.Thread.Thread event:
         :return: bool
         """
-        if self.delay:
-            return self._delay_agent_turn(event)
-        else:
-            return self._con_agent_turn(event)
-
-    @staticmethod
-    def _delay_agent_turn(event):
         return event.type == DELAY_EVENT and event.turn % 2 == 0
-
-    def _con_agent_turn(self, event):
-        if event.type == OFFER_EVENT and event.turn % 2 == 0:
-            return not (self.is_lstg_expired(event) or event.thread_expired())
-        else:
-            return False
 
     def run(self):
         # until EbayEnvironment.run() returns an agent action
@@ -47,9 +28,6 @@ class SellerEnvironment(AgentEnvironment):
             event, lstg_complete = super().run()
             self.last_event = event
             # update most recent time/clock features if sampling an agent
-            # concession from the con-only agent
-            if not lstg_complete and not self.delay:
-                self.prepare_offer(event)
             if not lstg_complete or self.outcome.sale:
                 return self.agent_tuple(done=lstg_complete)
             else:
@@ -64,9 +42,6 @@ class SellerEnvironment(AgentEnvironment):
             # if the lstg isn't complete that means it's time to sample an agent action
             if not lstg_complete:
                 self.last_event = event
-                # if this isn't a delay agent, update sources with recent time/clock feats
-                if not self.delay:
-                    self.prepare_offer(event)
                 return self.get_obs(sources=event.sources(), turn=event.turn)
             # if the lstg is complete
             else:
@@ -90,23 +65,6 @@ class SellerEnvironment(AgentEnvironment):
         :return: tuple described in rlenv
         """
         con = self.turn_from_action(action)
-        if self.delay:
-            return self._delay_agent_step(con)
-        else:
-            return self._con_agent_step(con)
-
-    def _con_agent_step(self, con):
-        con_outcomes = get_con_outcomes(con=con,
-                                        sources=self.last_event.sources(),
-                                        turn=self.last_event.turn)
-        offer = self.last_event.update_con_outcomes(con_outcomes=con_outcomes)
-        lstg_complete = self.process_post_offer(self.last_event, offer)
-        if lstg_complete:
-            return self.agent_tuple(done=lstg_complete)
-        self.last_event = None
-        return self.run()
-
-    def _delay_agent_step(self, con):
         # not expiration rejection
         if con <= 1:
             offer_time = self.get_offer_time(self.last_event)
@@ -124,7 +82,7 @@ class SellerEnvironment(AgentEnvironment):
         return self.run()
 
     def process_offer(self, event):
-        if event.turn % 2 == 0 and self.delay:
+        if event.turn % 2 == 0:
             return self.process_rl_offer(event)
         else:
             return super().process_offer(event)
@@ -134,10 +92,7 @@ class SellerEnvironment(AgentEnvironment):
                         thread_id=self.thread_counter)
 
     def define_observation_class(self):
-        if self.delay:
-            return SellerDelayObs
-        else:
-            return SellerObs
+        return SellerObs
 
     def get_reward(self):
         if not self.last_event.is_sale():

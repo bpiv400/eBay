@@ -4,12 +4,11 @@ from rlpyt.samplers.parallel.worker import initialize_worker
 from rlpyt.utils.collections import AttrDict
 from rlpyt.utils.seed import set_envs_seeds
 from utils import load_state_dict
-from constants import POLICY_SLR, POLICY_BYR_DELAY, \
-    REINFORCE_DIR, POLICY_SLR_DELAY
+from constants import REINFORCE_DIR
 from agent.const import FULL_CON, QUARTILES, HALF
 
 
-def get_con_set(con, byr=False, delay=False):
+def get_con_set(con, byr=False):
     if con == FULL_CON:
         con_set = np.linspace(0, 100, 101) / 100
     elif con == QUARTILES:
@@ -18,7 +17,7 @@ def get_con_set(con, byr=False, delay=False):
         con_set = np.array([0.0, 0.50, 1.0])
     else:
         raise RuntimeError("Invalid concession set type parameter")
-    if not byr and delay:
+    if not byr:
         con_set = np.concatenate([con_set, np.array([1.1])])
     return con_set
 
@@ -78,17 +77,6 @@ def load_init_model(name=None, size=None):
 def compose_args(arg_dict=None, parser=None):
     for k, v in arg_dict.items():
         parser.add_argument('--{}'.format(k), **v)
-
-
-def get_agent_name(byr=False, delay=False):
-    if byr and delay:
-        return POLICY_BYR_DELAY
-    elif not byr and delay:
-        return POLICY_SLR_DELAY
-    elif not byr and not delay:
-        return POLICY_SLR
-    else:
-        raise NotImplementedError("BYR MUST HAVE DELAY")
 
 
 def get_train_file_path(rank):

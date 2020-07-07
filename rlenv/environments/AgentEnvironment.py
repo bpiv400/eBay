@@ -39,17 +39,12 @@ class AgentEnvironment(EbayEnvironment, Env):
         self.last_event = None  # type: Thread
         # action and observation spaces
         self.con_set = get_con_set(con=self.composer.con_type,
-                                   byr=self.composer.byr,
-                                   delay=self.composer.delay)
+                                   byr=self.composer.byr)
         self._action_space = self.define_action_space()
         self._obs_class = self.define_observation_class()
         self._observation_space = self.define_observation_space()
 
         self.cut = None
-
-    @property
-    def delay(self):
-        return self.composer.delay
 
     def define_observation_class(self):
         raise NotImplementedError("Please extend")
@@ -122,8 +117,10 @@ class AgentEnvironment(EbayEnvironment, Env):
         input_dict = self.get_delay_input_dict(event=event)
         intervals = (self.end_time - event.priority) / INTERVAL_TURN
         max_interval = min(int(intervals), INTERVAL_CT_TURN)
-        delay = self.get_delay(input_dict=input_dict, turn=event.turn,
-                               thread_id=event.thread_id, time=event.priority,
+        delay = self.get_delay(input_dict=input_dict,
+                               turn=event.turn,
+                               thread_id=event.thread_id,
+                               time=event.priority,
                                max_interval=max(1, max_interval))
         return max(delay, 1) + event.priority
 

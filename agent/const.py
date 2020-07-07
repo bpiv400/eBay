@@ -1,3 +1,4 @@
+from constants import AGENTS
 from featnames import BYR_HIST
 
 # state dictionaries
@@ -21,16 +22,15 @@ ALL_FEATS = "all"
 
 # command-line parameters
 AGENT_PARAMS = {'name': {'type': str,
-                         'choices': ['slr', 'slr_delay', 'byr_delay'],
-                         'default': 'slr'},
+                         'choices': AGENTS,
+                         'required': True},
                 'feat_id': {'type': str,
                             'choices': [ALL_FEATS, NO_TIME],
                             'default': ALL_FEATS},
                 'con_type': {'type': str,
                              'choices': [FULL_CON, QUARTILES, HALF],
                              'default': FULL_CON},
-                BYR_HIST: {'type': float, 'default': 0.5}
-                }
+                BYR_HIST: {'type': float, 'default': 0.5}}
 
 MODEL_PARAMS = {'dropout_policy': {'type': tuple,
                                    'default': (0., 0.)},
@@ -60,4 +60,4 @@ THREADS_PER_PROC = 1
 
 # stopping parameters
 STOPPING_WINDOW = 400
-STOPPING_THRESHOLD = .01
+STOPPING_THRESHOLD = .001  # TODO: use .01

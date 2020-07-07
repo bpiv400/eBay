@@ -3,7 +3,7 @@ from torch.distributions.categorical import Categorical
 from torch.distributions.bernoulli import Bernoulli
 from rlenv.util import (model_str, proper_squeeze,
                         sample_categorical, sample_bernoulli)
-from featnames import *
+from featnames import CON, DELAY, MSG
 from utils import load_model
 
 

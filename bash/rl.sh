@@ -30,6 +30,6 @@ do
     fi
   done
   printf "starting on GPU %d\n" $GPU
-  python repo/agent/train.py --gpu $GPU --exp $i &>/dev/null &
+  python repo/agent/train.py --gpu $GPU --exp $i --name slr &>/dev/null &
   sleep 15
 done

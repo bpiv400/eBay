@@ -6,7 +6,7 @@ from compress_pickle import load
 from torch.utils.tensorboard import SummaryWriter
 from tensorboard.backend.event_processing.event_multiplexer import \
     EventMultiplexer
-from constants import BYR, SLR, RL_LOG_DIR, SIM_CHUNKS
+from constants import BYR, SLR, REINFORCE_DIR, SIM_CHUNKS
 
 SCALARS = {'Average': np.mean,
            'Max': np.max,
@@ -26,7 +26,7 @@ def main():
     role = BYR if parser.parse_args().byr else SLR
 
     # find all runs
-    parent_dir = RL_LOG_DIR + '{}/'.format(role)
+    parent_dir = REINFORCE_DIR + '{}/'.format(role)
     params = load(parent_dir + 'runs.pkl')
     runs = params.index
 

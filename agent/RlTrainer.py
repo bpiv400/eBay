@@ -6,8 +6,7 @@ from agent.models.SplitCategoricalPgAgent import SplitCategoricalPgAgent
 from rlpyt.samplers.serial.sampler import SerialSampler
 from rlpyt.samplers.parallel.cpu.sampler import CpuSampler
 from rlpyt.utils.logging.context import logger_context
-from featnames import DELAY
-from constants import RL_LOG_DIR, BYR
+from constants import REINFORCE_DIR, BYR
 from agent.const import THREADS_PER_PROC
 from agent.AgentComposer import AgentComposer
 from agent.models.PgCategoricalAgentModel import PgCategoricalAgentModel
@@ -30,7 +29,6 @@ class RlTrainer:
         # model parameters
         self.model_params = kwargs['model_params']
         self.model_params[BYR] = self.byr
-        self.model_params[DELAY] = DELAY in self.agent_params['name']
 
         # counts
         self.itr = 0
@@ -94,7 +92,7 @@ class RlTrainer:
         if self.system_params['exp'] is None:
             self.itr = self.runner.train()
         else:
-            log_dir = RL_LOG_DIR + '{}/'.format(self.agent_params['name'])
+            log_dir = REINFORCE_DIR + '{}/'.format(self.agent_params['name'])
             with logger_context(log_dir=log_dir,
                                 name='log',
                                 use_summary_writer=True,

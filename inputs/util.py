@@ -105,7 +105,7 @@ def check_zero(x):
                 assert_zero(x[k], [SPLIT, MSG])
 
 
-def get_x_offer_init(offers, idx, role=None, delay=None):
+def get_x_offer_init(offers, idx, role=None):
     # initialize dictionary of offer features
     x_offer = {}
 
@@ -120,12 +120,8 @@ def get_x_offer_init(offers, idx, role=None, delay=None):
     if role == BYR:
         offers.drop(TIME_FEATS, axis=1, inplace=True)
 
-    # last index
-    last = max(IDX[role])
-    if delay:
-        last -= 1
-
     # turn features
+    last = max(IDX[role]) - 1
     for i in range(1, last + 1):
         # offer features at turn i, and turn number
         offer = offers.xs(i, level='index').reindex(
@@ -134,7 +130,7 @@ def get_x_offer_init(offers, idx, role=None, delay=None):
         # all features are zero for future turns
         offer.loc[i > turn, :] = 0.
         # current turn features
-        if not delay and role == SLR:
+        if role == SLR:
             assert (offer.loc[i == turn, AUTO] == 0).all()
             assert (offer.loc[i == turn, EXP] == 0).all()
             offer.loc[i == turn, [CON, NORM, SPLIT, REJECT, MSG]] = 0.

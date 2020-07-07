@@ -2,10 +2,10 @@ import psutil
 import numpy as np
 import torch
 from torch.utils.data import Sampler, DataLoader
-from constants import FIRST_ARRIVAL_MODEL, POLICY_BYR_DELAY
+from constants import FIRST_ARRIVAL_MODEL, POLICY_BYR
 
 NUM_WORKERS = {FIRST_ARRIVAL_MODEL: 5,
-               POLICY_BYR_DELAY: 2}
+               POLICY_BYR: 2}
 MBSIZE = {True: 128, False: 1e4}  # True for training, False for validation
 
 

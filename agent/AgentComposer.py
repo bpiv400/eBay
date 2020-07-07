@@ -3,13 +3,14 @@ import math
 import pprint
 import torch
 import numpy as np
-from constants import TURN_FEATS, BYR, SLR, PARTS_DIR, TRAIN_RL
+from constants import TURN_FEATS, BYR, SLR, PARTS_DIR, TRAIN_RL, \
+    POLICY_BYR, POLICY_SLR
 from featnames import OUTCOME_FEATS, MONTHS_SINCE_LSTG, BYR_HIST
 from utils import load_sizes, load_featnames
 from rlenv.const import *
 from rlenv.util import load_chunk
 from agent.const import FEAT_TYPE, CON_TYPE, ALL_FEATS, AGENT_PARAMS
-from agent.util import get_con_set, get_agent_name, compose_args
+from agent.util import get_con_set, compose_args
 from rlenv.Composer import Composer
 
 
@@ -35,8 +36,8 @@ class AgentComposer(Composer):
         return BYR in self.agent_params['name']
 
     @property
-    def delay(self):
-        return DELAY in self.agent_params['name']
+    def agent_name(self):
+        return POLICY_BYR if self.byr else POLICY_SLR
 
     @property
     def hist(self):
@@ -58,11 +59,9 @@ class AgentComposer(Composer):
         return self.agent_params[CON_TYPE]
 
     def _build_agent_sizes(self):
-        agent_name = get_agent_name(byr=self.byr, delay=self.delay)
-        sizes = load_sizes(agent_name)
+        sizes = load_sizes(self.agent_name)
         sizes['out'] = len(get_con_set(self.con_type,
-                                       byr=self.byr,
-                                       delay=self.delay))
+                                       byr=self.byr))
         return sizes
 
     def _update_turn_inds(self, turn):
@@ -145,11 +144,13 @@ class AgentComposer(Composer):
             # remove slr feats
             del lstg_sets[SLR]
         # verify shared lstg features
-        model = get_agent_name(delay=self.delay, byr=self.byr)
-        Composer.verify_lstg_sets_shared(model, self.x_lstg_cols, lstg_sets)
+        Composer.verify_lstg_sets_shared(self.agent_name,
+                                         self.x_lstg_cols,
+                                         lstg_sets)
         # verify appended features
-        agent_feats = load_featnames(model)
-        lstg_append = Composer.remove_shared_feats(agent_feats[LSTG_MAP], lstg_sets[LSTG_MAP])
+        agent_feats = load_featnames(self.agent_name)
+        lstg_append = Composer.remove_shared_feats(agent_feats[LSTG_MAP],
+                                                   lstg_sets[LSTG_MAP])
         self.verify_lstg_append(lstg_append=lstg_append)
         # verify offer feats
         offer_feats = agent_feats['offer']
@@ -190,8 +191,9 @@ class AgentComposer(Composer):
             assumed_feats = CLOCK_FEATS + TIME_FEATS + OUTCOME_FEATS
         else:
             assumed_feats = CLOCK_FEATS + OUTCOME_FEATS
-        AgentComposer.verify_all_feats(assumed_feats=assumed_feats, model_feats=offer_feats)
-        last_turn = 6 if self.byr or not self.delay else 5
+        AgentComposer.verify_all_feats(assumed_feats=assumed_feats,
+                                       model_feats=offer_feats)
+        last_turn = 6 if self.byr else 5
         for turn in range(1, 8):
             if turn <= last_turn:
                 assert 'offer{}'.format(turn) in self.agent_sizes['x']

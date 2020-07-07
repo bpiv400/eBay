@@ -3,8 +3,8 @@ from inputs.util import save_files, get_x_thread, \
     get_x_offer_init, get_init_data
 from processing.util import extract_day_feats
 from utils import input_partition, init_x
-from constants import IDX, DAY, BYR, CON_MULTIPLIER, \
-    TRAIN_MODELS, VALIDATION, TEST
+from constants import IDX, DAY, MONTH, BYR, CON_MULTIPLIER, \
+    TRAIN_MODELS, VALIDATION, TEST, POLICY_BYR
 from featnames import CON, START_TIME, EXP, DELAY, THREAD_COUNT, \
     MONTHS_SINCE_LSTG
 
@@ -53,8 +53,7 @@ def construct_x(part=None, idx=None, data=None):
     x['lstg'] = pd.concat([x['lstg'], x_thread], axis=1)
 
     # offer features
-    x.update(get_x_offer_init(data['offers'], idx,
-                              role=BYR, delay=True))
+    x.update(get_x_offer_init(data['offers'], idx, role=BYR))
 
     # no nans
     for v in x.values():
@@ -112,8 +111,7 @@ def process_inputs(part):
 def main():
     # extract parameters from command line
     part = input_partition()
-    name = 'policy_{}_delay'.format(BYR)
-    print('%s/%s' % (part, name))
+    print('{}/{}'.format(part, POLICY_BYR))
 
     # policy is trained on TRAIN_MODELS
     assert part in [TRAIN_MODELS, VALIDATION, TEST]
@@ -122,7 +120,7 @@ def main():
     d = process_inputs(part)
 
     # save various output files
-    save_files(d, part, name)
+    save_files(d, part, POLICY_BYR)
 
 
 if __name__ == '__main__':

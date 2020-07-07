@@ -1,9 +1,9 @@
 import torch
 from torch.nn.functional import softmax
 from utils import load_sizes
-from agent.util import get_agent_name
 from agent.models.AgentModel import AgentModel
 from nets.FeedForward import FeedForward
+from constants import POLICY_SLR, POLICY_BYR
 
 
 class PgCategoricalAgentModel(AgentModel):
@@ -26,8 +26,7 @@ class PgCategoricalAgentModel(AgentModel):
         super().__init__(**kwargs)
 
         # policy net
-        agent_name = get_agent_name(byr=self.byr, delay=self.delay)
-        sizes = load_sizes(agent_name)
+        sizes = load_sizes(POLICY_BYR if self.byr else POLICY_SLR)
         self.policy_network = FeedForward(sizes=sizes,
                                           dropout=self.dropout_policy)
 

@@ -8,7 +8,7 @@ from agent.const import AGENT_STATE, PARAM_DICTS
 from agent.util import compose_args
 from agent.eval.EvalGenerator import EvalGenerator
 from utils import set_gpu_workers
-from constants import MODEL_DIR, RL_LOG_DIR, TRAIN_RL, VALIDATION
+from constants import MODEL_DIR, REINFORCE_DIR, TRAIN_RL, VALIDATION
 
 
 def simulate(part=None, run_dir=None, composer=None, model_kwargs=None):
@@ -35,7 +35,7 @@ def main():
     # swap in experiment parameters
     if args['exp'] is not None:
         print('Using parameters for experiment {}'.format(args['exp']))
-        exp_path = RL_LOG_DIR + 'exps.csv'
+        exp_path = REINFORCE_DIR + 'exps.csv'
         params = pd.read_csv(exp_path, index_col=0).loc[args['exp']].to_dict()
         for k, v in params.items():
             if k not in args:
@@ -66,7 +66,7 @@ def main():
 
     # when logging, simulate and reconfigure outputs
     if args['exp'] is not None:
-        run_dir = RL_LOG_DIR + '{}/run_{}/'.format(
+        run_dir = REINFORCE_DIR + '{}/run_{}/'.format(
             args['name'], args['exp'])
 
         # drop optimization parameters
