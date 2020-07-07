@@ -65,11 +65,11 @@ class CrossEntropyPPO:
         self.training_complete = False
         self._error_history = []
 
-    def initialize(self, *args, **kwargs):
+    def initialize(self, agent=None):
         """
         Called by runner.
         """
-        self.agent = kwargs['agent']
+        self.agent = agent
 
         # optimizers
         self._optimizer_value = Adam(self.agent.value_parameters(),

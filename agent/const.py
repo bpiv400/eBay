@@ -15,8 +15,9 @@ NO_TIME = "no_time"
 ALL_FEATS = "all"
 
 # command-line parameters
-AGENT_PARAMS = {BYR_HIST: {'type': int, 'choices': range(HIST_QUANTILES)},
-                'feat_id': {'type': str,
+AGENT_PARAMS = {BYR_HIST: {'type': int,
+                           'choices': list(range(HIST_QUANTILES))},
+                FEAT_TYPE: {'type': str,
                             'choices': [ALL_FEATS, NO_TIME],
                             'default': ALL_FEATS}}
 
