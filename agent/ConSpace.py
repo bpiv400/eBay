@@ -3,14 +3,14 @@ from rlpyt.spaces.base import Space
 
 
 class ConSpace(Space):
-    def __init__(self, con_set=None):
-        self.con_set = con_set
+    def __init__(self, size=None):
+        self.size = size
         self.dtype = np.int64
         self._null_value = 0
         self.shape = ()
 
     def sample(self):
-        index = np.random.randint(0, self.con_set.size)
+        index = np.random.randint(0, self.size)
         return np.array(index)
 
     def null_value(self):
@@ -18,12 +18,12 @@ class ConSpace(Space):
 
     @property
     def bounds(self):
-        return 0, self.con_set.size
+        return 0, self.size
 
     @property
     def n(self):
         """Number of elements in the space"""
-        return self.con_set.size
+        return self.size
 
     def __repr__(self):
-        return "ConSpace({})".format(self.con_set)
+        return "ConSpace"

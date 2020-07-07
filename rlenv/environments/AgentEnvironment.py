@@ -6,14 +6,14 @@ from collections import namedtuple
 from featnames import START_TIME, START_PRICE, META, X_LSTG, LOOKUP
 from constants import MONTH
 from utils import get_months_since_lstg, get_cut
-from agent.spaces.ConSpace import ConSpace
+from agent.ConSpace import ConSpace
 from inputs.const import INTERVAL_CT_TURN, INTERVAL_TURN
 from rlpyt.envs.base import Env
 from rlpyt.spaces.composite import Composite
 from rlpyt.spaces.float_box import FloatBox
 from rlenv.environments.EbayEnvironment import EbayEnvironment
 from rlenv.Recorder import Recorder
-from agent.util import get_con_set, get_train_file_path
+from agent.util import get_train_file_path
 
 InfoTraj = namedtuple("InfoTraj", ["months", "bin_proceeds", "done"])
 
@@ -37,10 +37,12 @@ class AgentEnvironment(EbayEnvironment, Env):
         self.relist_count = 0
 
         self.last_event = None  # type: Thread
-        # action and observation spaces
-        self.con_set = get_con_set(con=self.composer.con_type,
-                                   byr=self.composer.byr)
+        # action space
+        num_actions = kwargs['composer'].sizes['agent']['out']
+        self.con_set = np.array(range(num_actions)) / 100
         self._action_space = self.define_action_space()
+
+        # observation space
         self._obs_class = self.define_observation_class()
         self._observation_space = self.define_observation_space()
 
@@ -99,7 +101,8 @@ class AgentEnvironment(EbayEnvironment, Env):
         months = (self.last_event.priority - self.start_time) / MONTH
         months += self.relist_count  # add in months without sale
         bin_proceeds = (1-self.cut) * self.lookup[START_PRICE]
-        info = InfoTraj(months=months, bin_proceeds=bin_proceeds,
+        info = InfoTraj(months=months,
+                        bin_proceeds=bin_proceeds,
                         done=done)
         reward = self.get_reward()
         return obs, reward, done, info
@@ -158,10 +161,10 @@ class AgentEnvironment(EbayEnvironment, Env):
 
     @property
     def horizon(self):
-        pass
+        return NotImplementedError()
 
     def define_action_space(self):
-        return ConSpace(con_set=self.con_set)
+        return ConSpace(size=len(self.con_set))
 
     # TODO: may update
     def record(self, event, byr_hist=None, censored=False):

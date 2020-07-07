@@ -1,6 +1,3 @@
-"""
-Environment for training the buyer agent
-"""
 from collections import namedtuple
 from constants import HOUR, DAY, POLICY_BYR
 from featnames import START_PRICE

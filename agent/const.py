@@ -1,4 +1,4 @@
-from constants import AGENTS
+from constants import HIST_QUANTILES
 from featnames import BYR_HIST
 
 # state dictionaries
@@ -9,28 +9,16 @@ OPTIM_STATE = 'optimizer_state_dict'
 TRAIN_DIR = "train"
 TRAIN_SEED = 10
 
-# concession set constants
-CON_TYPE = 'con_type'
-FULL_CON = 'full'
-QUARTILES = 'quartiles'
-HALF = 'half'
-
 # feat id
 FEAT_TYPE = "feat_id"
 NO_TIME = "no_time"
 ALL_FEATS = "all"
 
 # command-line parameters
-AGENT_PARAMS = {'name': {'type': str,
-                         'choices': AGENTS,
-                         'required': True},
+AGENT_PARAMS = {BYR_HIST: {'type': int, 'choices': range(HIST_QUANTILES)},
                 'feat_id': {'type': str,
                             'choices': [ALL_FEATS, NO_TIME],
-                            'default': ALL_FEATS},
-                'con_type': {'type': str,
-                             'choices': [FULL_CON, QUARTILES, HALF],
-                             'default': FULL_CON},
-                BYR_HIST: {'type': float, 'default': 0.5}}
+                            'default': ALL_FEATS}}
 
 MODEL_PARAMS = {'dropout_policy': {'type': tuple,
                                    'default': (0., 0.)},

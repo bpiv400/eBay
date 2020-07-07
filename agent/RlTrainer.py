@@ -6,7 +6,7 @@ from agent.models.SplitCategoricalPgAgent import SplitCategoricalPgAgent
 from rlpyt.samplers.serial.sampler import SerialSampler
 from rlpyt.samplers.parallel.cpu.sampler import CpuSampler
 from rlpyt.utils.logging.context import logger_context
-from constants import REINFORCE_DIR, BYR
+from constants import REINFORCE_DIR, BYR, SLR
 from agent.const import THREADS_PER_PROC
 from agent.AgentComposer import AgentComposer
 from agent.models.PgCategoricalAgentModel import PgCategoricalAgentModel
@@ -14,6 +14,7 @@ from rlenv.interfaces.PlayerInterface import SimulatedBuyer, SimulatedSeller
 from rlenv.interfaces.ArrivalInterface import ArrivalInterface
 from rlenv.environments.SellerEnvironment import SellerEnvironment
 from rlenv.environments.BuyerEnvironment import BuyerEnvironment
+from featnames import BYR_HIST
 
 
 class RlTrainer:
@@ -24,7 +25,7 @@ class RlTrainer:
         self.system_params = kwargs['system_params']
 
         # buyer flag
-        self.byr = BYR in self.agent_params['name']
+        self.byr = self.agent_params[BYR_HIST] is not None
 
         # model parameters
         self.model_params = kwargs['model_params']
@@ -92,7 +93,8 @@ class RlTrainer:
         if self.system_params['exp'] is None:
             self.itr = self.runner.train()
         else:
-            log_dir = REINFORCE_DIR + '{}/'.format(self.agent_params['name'])
+            log_dir = REINFORCE_DIR + '{}/'.format(
+                BYR if self.byr else SLR)
             with logger_context(log_dir=log_dir,
                                 name='log',
                                 use_summary_writer=True,

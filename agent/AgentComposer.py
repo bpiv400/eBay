@@ -9,8 +9,8 @@ from featnames import OUTCOME_FEATS, MONTHS_SINCE_LSTG, BYR_HIST
 from utils import load_sizes, load_featnames
 from rlenv.const import *
 from rlenv.util import load_chunk
-from agent.const import FEAT_TYPE, CON_TYPE, ALL_FEATS, AGENT_PARAMS
-from agent.util import get_con_set, compose_args
+from agent.const import FEAT_TYPE, ALL_FEATS, AGENT_PARAMS
+from agent.util import compose_args
 from rlenv.Composer import Composer
 
 
@@ -24,7 +24,7 @@ class AgentComposer(Composer):
 
         # parameters
         self.agent_params = agent_params
-        self.sizes['agent'] = self._build_agent_sizes()
+        self.sizes['agent'] = load_sizes(self.agent_name)
         self.x_lstg_cols = list(cols)
         self.turn_inds = None
 
@@ -33,7 +33,7 @@ class AgentComposer(Composer):
 
     @property
     def byr(self):
-        return BYR in self.agent_params['name']
+        return self.agent_params[BYR_HIST] is not None
 
     @property
     def agent_name(self):
@@ -42,7 +42,7 @@ class AgentComposer(Composer):
     @property
     def hist(self):
         if self.byr:
-            return self.agent_params[BYR_HIST]
+            return self.agent_params[BYR_HIST] / 10
         else:
             raise NotImplementedError('No hist attribute for seller')
 
@@ -53,16 +53,6 @@ class AgentComposer(Composer):
     @property
     def feat_type(self):
         return self.agent_params[FEAT_TYPE]
-
-    @property
-    def con_type(self):
-        return self.agent_params[CON_TYPE]
-
-    def _build_agent_sizes(self):
-        sizes = load_sizes(self.agent_name)
-        sizes['out'] = len(get_con_set(self.con_type,
-                                       byr=self.byr))
-        return sizes
 
     def _update_turn_inds(self, turn):
         if not self.byr:

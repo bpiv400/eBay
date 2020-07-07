@@ -1,25 +1,9 @@
-import numpy as np
 import torch
 from rlpyt.samplers.parallel.worker import initialize_worker
 from rlpyt.utils.collections import AttrDict
 from rlpyt.utils.seed import set_envs_seeds
 from utils import load_state_dict
 from constants import REINFORCE_DIR
-from agent.const import FULL_CON, QUARTILES, HALF
-
-
-def get_con_set(con, byr=False):
-    if con == FULL_CON:
-        con_set = np.linspace(0, 100, 101) / 100
-    elif con == QUARTILES:
-        con_set = np.array([0, 0.25, 0.50, 0.75, 1.0])
-    elif con == HALF:
-        con_set = np.array([0.0, 0.50, 1.0])
-    else:
-        raise RuntimeError("Invalid concession set type parameter")
-    if not byr:
-        con_set = np.concatenate([con_set, np.array([1.1])])
-    return con_set
 
 
 def load_agent_model(model=None, model_path=None):
