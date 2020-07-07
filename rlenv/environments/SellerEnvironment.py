@@ -1,13 +1,16 @@
 from collections import namedtuple
-from constants import MAX_DELAY_TURN, POLICY_SLR
+from constants import MAX_DELAY_TURN, POLICY_SLR, MONTH
 from utils import load_sizes
 from rlenv.const import DELAY_EVENT
 from rlenv.environments.AgentEnvironment import AgentEnvironment
 from rlenv.events.Thread import RlThread
 from rlenv.Recorder import Recorder
+from featnames import START_PRICE
 
 SellerObs = namedtuple("SellerObs",
                        list(load_sizes(POLICY_SLR)['x'].keys()))
+SellerInfoTraj = namedtuple("SellerInfoTraj",
+                            ["months", "bin_proceeds"])
 
 
 class SellerEnvironment(AgentEnvironment):
@@ -88,7 +91,8 @@ class SellerEnvironment(AgentEnvironment):
             return super().process_offer(event)
 
     def make_thread(self, priority):
-        return RlThread(priority=priority, rl_buyer=False,
+        return RlThread(priority=priority,
+                        rl_buyer=False,
                         thread_id=self.thread_counter)
 
     def define_observation_class(self):
@@ -99,6 +103,14 @@ class SellerEnvironment(AgentEnvironment):
             return 0.0
         else:
             return self.outcome.price * (1-self.cut)
+
+    def get_info(self):
+        months = (self.last_event.priority - self.start_time) / MONTH
+        months += self.relist_count  # add in months without sale
+        bin_proceeds = (1 - self.cut) * self.lookup[START_PRICE]
+        info = SellerInfoTraj(months=months,
+                              bin_proceeds=bin_proceeds)
+        return info
 
     @property
     def horizon(self):

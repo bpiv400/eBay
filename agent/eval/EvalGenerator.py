@@ -1,6 +1,6 @@
 from rlenv.Generator import SimulatorGenerator
 from sim.outcomes.OutcomeRecorder import OutcomeRecorder
-from agent.AgentPlayer import AgentPlayer
+from agent.eval.AgentPlayer import AgentPlayer
 from agent.util import load_agent_model
 from agent.models.PgCategoricalAgentModel import PgCategoricalAgentModel
 from agent.AgentComposer import AgentComposer

@@ -1,6 +1,7 @@
 import psutil
 import torch
-from agent.CrossEntropyPPO import CrossEntropyPPO
+from agent.algo.SellerPPO import SellerPPO
+from agent.algo.BuyerPPO import BuyerPPO
 from agent.EBayRunner import EBayMinibatchRl
 from agent.models.SplitCategoricalPgAgent import SplitCategoricalPgAgent
 from rlpyt.samplers.serial.sampler import SerialSampler
@@ -70,15 +71,20 @@ class RlTrainer:
                 eval_max_steps=50,
             )
 
+    def generate_algo(self):
+        if self.byr:
+            return BuyerPPO(**self.ppo_params)
+        else:
+            return SellerPPO(**self.ppo_params)
+
     def generate_runner(self):
-        algo = CrossEntropyPPO(**self.ppo_params)
         agent = SplitCategoricalPgAgent(ModelCls=PgCategoricalAgentModel,
                                         model_kwargs=self.model_params)
         affinity = dict(workers_cpus=self.worker_cpus,
                         master_torch_threads=THREADS_PER_PROC,
                         cuda_idx=torch.cuda.current_device(),
                         set_affinity=True)
-        runner = EBayMinibatchRl(algo=algo,
+        runner = EBayMinibatchRl(algo=self.generate_algo(),
                                  agent=agent,
                                  sampler=self.sampler,
                                  log_interval_steps=self.batch_size,

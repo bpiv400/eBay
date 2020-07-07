@@ -2,8 +2,7 @@ import os
 import h5py
 import pandas as pd
 import numpy as np
-from collections import namedtuple
-from featnames import START_TIME, START_PRICE, META, X_LSTG, LOOKUP
+from featnames import START_TIME, META, X_LSTG, LOOKUP
 from constants import MONTH
 from utils import get_months_since_lstg, get_cut
 from agent.ConSpace import ConSpace
@@ -14,8 +13,6 @@ from rlpyt.spaces.float_box import FloatBox
 from rlenv.environments.EbayEnvironment import EbayEnvironment
 from rlenv.Recorder import Recorder
 from agent.util import get_train_file_path
-
-InfoTraj = namedtuple("InfoTraj", ["months", "bin_proceeds", "done"])
 
 
 class AgentEnvironment(EbayEnvironment, Env):
@@ -98,13 +95,8 @@ class AgentEnvironment(EbayEnvironment, Env):
     def agent_tuple(self, done=None):
         obs = self.get_obs(sources=self.last_event.sources(),
                            turn=self.last_event.turn)
-        months = (self.last_event.priority - self.start_time) / MONTH
-        months += self.relist_count  # add in months without sale
-        bin_proceeds = (1-self.cut) * self.lookup[START_PRICE]
-        info = InfoTraj(months=months,
-                        bin_proceeds=bin_proceeds,
-                        done=done)
         reward = self.get_reward()
+        info = self.get_info()
         return obs, reward, done, info
 
     def get_obs(self, sources=None, turn=None):
@@ -114,6 +106,12 @@ class AgentEnvironment(EbayEnvironment, Env):
                                                   sources=sources,
                                                   turn=turn)
         return self._obs_class(**obs_dict)
+
+    def get_reward(self):
+        raise NotImplementedError()
+
+    def get_info(self):
+        raise NotImplementedError()
 
     def get_offer_time(self, event):
         # query with delay model
@@ -155,9 +153,6 @@ class AgentEnvironment(EbayEnvironment, Env):
 
     def turn_from_action(self, action=None):
         return self.con_set[action]
-
-    def get_reward(self):
-        raise NotImplementedError()
 
     @property
     def horizon(self):

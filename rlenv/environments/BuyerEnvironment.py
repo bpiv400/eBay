@@ -10,31 +10,17 @@ from rlenv.events.Thread import RlThread
 
 BuyerObs = namedtuple('BuyerObs',
                       list(load_sizes(POLICY_BYR)['x'].keys()))
+BuyerInfoTraj = namedtuple("BuyerInfoTraj", ["item_value"])
 
 
 class BuyerEnvironment(AgentEnvironment):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.rl_event = None
-
-    def get_reward(self):
-        """
-        Returns the buyer reward for the current turn. For now, assumes
-        that the buyer values the item at the start price
-        """
-        if self.rl_event.type == RL_ARRIVAL_EVENT:
-            return 0.0
-        elif not self.rl_event.is_sale():
-            return 0.0
-        else:
-            return self.lookup[START_PRICE] - self.outcome.price
+        self.item_value = None
 
     def define_observation_class(self):
         return BuyerObs
-
-    @property
-    def horizon(self):
-        return 34
 
     def _hours_since_lstg(self, priority):
         return int((priority - self.start_time) / HOUR)
@@ -129,6 +115,7 @@ class BuyerEnvironment(AgentEnvironment):
         :return: observation associated with the first rl arrival
         """
         self.reset_lstg()
+        self.item_value = self.lookup[START_PRICE]  # TODO: allow for different values
         super().reset()
         rl_sources = RlBuyerSources(x_lstg=self.x_lstg)
         event = Arrival(priority=self.start_time, sources=rl_sources,
@@ -157,3 +144,22 @@ class BuyerEnvironment(AgentEnvironment):
             return (event.type == DELAY_EVENT and
                     event.turn % 2 == 1 and
                     isinstance(event, RlThread))
+
+    def get_reward(self):
+        """
+        Returns the buyer reward for the current turn. For now, assumes
+        that the buyer values the item at the start price
+        """
+        if self.rl_event.type == RL_ARRIVAL_EVENT:
+            return 0.0
+        elif not self.rl_event.is_sale():
+            return 0.0
+        else:
+            return self.item_value - self.outcome.price
+
+    def get_info(self):
+        return BuyerInfoTraj(item_value=self.item_value)
+
+    @property
+    def horizon(self):
+        return 34

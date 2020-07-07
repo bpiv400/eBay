@@ -7,7 +7,6 @@ from rlpyt.utils.tensor import valid_mean
 from rlpyt.utils.buffer import buffer_to
 from rlpyt.utils.collections import namedarraytuple
 from agent.models.PgCategoricalAgentModel import PgCategoricalAgentModel
-from utils import slr_reward, max_slr_reward
 from agent.const import STOPPING_WINDOW, STOPPING_THRESHOLD
 
 LossInputs = namedarraytuple("LossInputs",
@@ -95,51 +94,8 @@ class CrossEntropyPPO:
         valid = torch.clamp(valid, max=1)
         return valid
 
-    def discount_return(self, reward=None, done=None, months=None,
-                        bin_proceeds=None):
-        """
-        Computes time-discounted sum of future rewards from each
-        time-step to the end of the batch. Sum resets where `done`
-        is 1. Operations vectorized across all trailing dimensions
-        after the first [T,].
-        :param tensor reward: slr's normalized gross return.
-        :param tensor done: indicator for end of trajectory.
-        :param tensor months: months since beginning of listing.
-        :param tensor bin_proceeds: what seller would net if
-        item sold for bin price immediately.
-        :return tensor return_: time-discounted return.
-        """
-        dtype = reward.dtype  # cast new tensors to this data type
-        T, N = reward.shape  # time steps, number of environments
-
-        # initialize matrix of returns
-        return_ = torch.zeros(reward.shape, dtype=dtype)
-
-        # initialize variables that track sale outcomes
-        months_to_sale = torch.tensor(1e8, dtype=dtype).expand(N)
-        action_diff = torch.zeros(N, dtype=dtype)
-        sale_proceeds = torch.zeros(N, dtype=dtype)
-
-        for t in reversed(range(T)):
-            # update sale outcomes when sales are observed
-            months_to_sale = months_to_sale * (1-done[t]) + months[t] * done[t]
-            action_diff = (action_diff + 1) * (1-done[t])
-            sale_proceeds = sale_proceeds * (1-done[t]) + reward[t] * done[t]
-
-            # discounted sale proceeds
-            return_[t] += slr_reward(months_to_sale=months_to_sale,
-                                     months_since_start=months[t],
-                                     sale_proceeds=sale_proceeds,
-                                     action_diff=action_diff,
-                                     action_discount=self.action_discount,
-                                     action_cost=self.action_cost)
-
-            # normalize
-            max_return = max_slr_reward(months_since_start=months[t],
-                                        bin_proceeds=bin_proceeds[t])
-            return_[t] /= max_return
-
-        return return_
+    def discount_return(self, reward=None, done=None, info=None):
+        raise NotImplementedError()
 
     def process_returns(self, samples):
         """
@@ -148,22 +104,16 @@ class CrossEntropyPPO:
         """
         # break out samples
         env = samples.env
-        reward, done, months, bin_proceeds = (env.reward,
-                                              env.done,
-                                              env.env_info.months,
-                                              env.env_info.bin_proceeds)
+        reward, done, info = (env.reward, env.done, env.env_info)
         done = done.type(reward.dtype)
-        months = months.type(reward.dtype)
-        bin_proceeds = bin_proceeds.type(reward.dtype)
 
-        # time discounting
+        # time and/or action discounting
         return_ = self.discount_return(reward=reward,
                                        done=done,
-                                       months=months,
-                                       bin_proceeds=bin_proceeds)
+                                       info=info)
         value = samples.agent.agent_info.value
         advantage = return_ - value
-        
+
         # zero out steps from unfinished trajectories
         valid = self.valid_from_done(done)
 
@@ -186,6 +136,8 @@ class CrossEntropyPPO:
             prev_reward=samples.env.prev_reward,
         )
         agent_inputs = buffer_to(agent_inputs, device=self.agent.device)
+
+        # TODO: remove? condition appears to be False
         if hasattr(self.agent, "update_obs_rms"):
             self.agent.update_obs_rms(agent_inputs.observation)
 
