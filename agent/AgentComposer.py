@@ -16,43 +16,32 @@ from rlenv.Composer import Composer
 
 class AgentComposer(Composer):
     def __init__(self, agent_params=None):
-        # create columns
+        # create columns and initialize Composer class
         chunk_path = PARTS_DIR + '{}/chunks/1.gz'.format(TRAIN_RL)
         cols = load_chunk(input_path=chunk_path)[0].columns
-
         super().__init__(cols)
 
-        # parameters
-        self.agent_params = agent_params
+        # agent parameters
+        self.byr = agent_params['byr']
+        if self.byr:
+            self.hist = agent_params[BYR_HIST] / 10
+            self.agent_name = POLICY_BYR
+            self.feat_type = ALL_FEATS
+        else:
+            self.agent_name = POLICY_SLR
+            self.feat_type = agent_params[FEAT_TYPE]
         self.sizes['agent'] = load_sizes(self.agent_name)
         self.x_lstg_cols = list(cols)
+
+        # parameters to be set later
         self.turn_inds = None
 
         # verification
         self.verify_agent()
 
     @property
-    def byr(self):
-        return self.agent_params[BYR_HIST] is not None
-
-    @property
-    def agent_name(self):
-        return POLICY_BYR if self.byr else POLICY_SLR
-
-    @property
-    def hist(self):
-        if self.byr:
-            return self.agent_params[BYR_HIST] / 10
-        else:
-            raise NotImplementedError('No hist attribute for seller')
-
-    @property
     def groupings(self):
         return list(self.sizes['agent']['x'].keys())
-
-    @property
-    def feat_type(self):
-        return self.agent_params[FEAT_TYPE]
 
     def _update_turn_inds(self, turn):
         if not self.byr:

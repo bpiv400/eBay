@@ -143,8 +143,5 @@ SEED = 123456
 # number of chunks
 NUM_CHUNKS = 256
 
-# monthly discount rate for agent
-DELTA_MONTH = .995
-
 # number of workers for training RL
 NUM_RL_WORKERS = 16

@@ -19,7 +19,7 @@ def simulate(part=None, run_dir=None, composer=None, model_kwargs=None):
                    'verbose': False}
     eval_generator = EvalGenerator(**eval_kwargs)
     # TODO: run in parallel over all chunks
-    eval_generator.process_chunk(chunk=1, drop_infreq=True)
+    eval_generator.process_chunk(chunk=1)
 
 
 def main():
@@ -56,8 +56,9 @@ def main():
     trainer_args = dict()
     for param_set, param_dict in PARAM_DICTS.items():
         curr_params = dict()
-        for k in param_dict.keys():
-            curr_params[k] = args[k]
+        for k in param_dict:
+            if k in args:
+                curr_params[k] = args[k]
         trainer_args[param_set] = curr_params
 
     # training loop

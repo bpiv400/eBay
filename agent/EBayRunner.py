@@ -40,6 +40,7 @@ class EBayMinibatchRlBase(BaseRunner):
         self.seed = seed
         self.affinity = dict() if affinity is None else affinity
         self.log_interval_steps = int(log_interval_steps)
+        self.rank = 0
 
         # other fixed parameters
         self.min_itr_learn = getattr(self.algo, 'min_itr_learn', 0)
@@ -90,7 +91,7 @@ class EBayMinibatchRlBase(BaseRunner):
             seed=self.seed + 1,
             bootstrap_value=getattr(self.algo, "bootstrap_value", False),
             traj_info_kwargs=dict(),
-            rank=0,
+            rank=self.rank,
             world_size=1,
         )
         if isinstance(self.sampler, ParallelSamplerBase):

@@ -1,11 +1,25 @@
 import torch
 from agent.algo.CrossEntropyPPO import CrossEntropyPPO
-from utils import byr_reward
 
 
 class BuyerPPO(CrossEntropyPPO):
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, ppo_params=None, econ_params=None):
+        super().__init__(**ppo_params)
+
+        # buyer-specific parameters
+        self.action_discount = econ_params['action_discount']
+        self.action_cost = econ_params['action_cost']
+
+    def _get_return(self, net_value=None, action_diff=None):
+        """
+        Discounts proceeds from sale and listing fees paid.
+        :param net_value: value less price paid; 0 if no sale
+        :param action_diff: number of actions from current state until sale
+        :return: discounted net proceeds
+        """
+        net_value *= self.action_discount ** action_diff
+        net_value -= self.action_cost * action_diff
+        return net_value
 
     def discount_return(self, reward=None, done=None, info=None):
         """
@@ -37,10 +51,8 @@ class BuyerPPO(CrossEntropyPPO):
             net_value = net_value * (1 - done[t]) + reward[t] * done[t]
 
             # discounted sale proceeds
-            return_[t] += byr_reward(net_value=net_value,
-                                     action_diff=action_diff,
-                                     action_discount=self.action_discount,
-                                     action_cost=self.action_cost)
+            return_[t] += self._get_return(net_value=net_value,
+                                           action_diff=action_diff)
 
         # normalize by start_price
         return_ /= item_value

@@ -3,20 +3,15 @@ Generates values or discrim inputs for a chunk of lstgs
 
 If a checkpoint file for the current simulation, we load it and pick up where we left off.
 Otherwise, starts from scratch with the first listing in the file
-
-Lots of memory dumping code while I try to find leak
 """
 import numpy as np
 from compress_pickle import load
-from constants import NO_ARRIVAL_CUTOFF
-from featnames import START_PRICE, START_TIME, ACC_PRICE, \
-    DEC_PRICE, NO_ARRIVAL
+from featnames import START_PRICE, START_TIME, ACC_PRICE, DEC_PRICE
 from rlenv.environments.SimulatorEnvironment import SimulatorEnvironment
 from rlenv.interfaces.ArrivalInterface import ArrivalInterface
 from rlenv.interfaces.PlayerInterface import SimulatedSeller, SimulatedBuyer
 from rlenv.Composer import Composer
 from rlenv.util import get_env_sim_subdir
-from utils import load_file
 
 
 class Generator:
@@ -42,8 +37,8 @@ class Generator:
         self.buyer = None
         self.arrival = None
 
-    def process_chunk(self, chunk=None, drop_infreq=False):
-        self.load_chunk(chunk=chunk, drop_infreq=drop_infreq)
+    def process_chunk(self, chunk=None):
+        self.load_chunk(chunk=chunk)
         if not self.initialized:
             self.initialize()
         return self.generate()
@@ -56,7 +51,7 @@ class Generator:
         self.recorder = self.generate_recorder()
         self.initialized = True
 
-    def load_chunk(self, chunk=None, drop_infreq=None):
+    def load_chunk(self, chunk=None):
         raise NotImplementedError()
 
     def generate_recorder(self):
@@ -136,18 +131,13 @@ class SimulatorGenerator(Generator):
     def generate_recorder(self):
         raise NotImplementedError()
 
-    def load_chunk(self, chunk=None, drop_infreq=None):
+    def load_chunk(self, chunk=None):
         self.chunk = chunk
         chunk_dir = get_env_sim_subdir(part=self.part,
                                        chunks=True)
         d = load(chunk_dir + '{}.gz'.format(chunk))
-        p0 = load_file(self.part, NO_ARRIVAL)
-        if drop_infreq:
-            self.lookup = d['lookup'][p0 <= NO_ARRIVAL_CUTOFF]
-            self.x_lstg = d['x_lstg'].reindex(index=self.lookup.index)
-        else:
-            self.lookup = d['lookup'].join(p0)
-            self.x_lstg = d['x_lstg']
+        self.lookup = d['lookup']
+        self.x_lstg = d['x_lstg']
 
     def generate(self):
         raise NotImplementedError()

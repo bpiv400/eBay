@@ -22,14 +22,13 @@ class RlTrainer:
     def __init__(self, **kwargs):
         # save parameters directly
         self.agent_params = kwargs['agent_params']
+        self.econ_params = kwargs['econ_params']
+        self.model_params = kwargs['model_params']
         self.ppo_params = kwargs['ppo_params']
         self.system_params = kwargs['system_params']
 
-        # buyer flag
-        self.byr = self.agent_params[BYR_HIST] is not None
-
-        # model parameters
-        self.model_params = kwargs['model_params']
+        # buyer indicator
+        self.byr = kwargs['agent_params'][BYR]
         self.model_params[BYR] = self.byr
 
         # counts
@@ -64,7 +63,7 @@ class RlTrainer:
                 EnvCls=env,
                 env_kwargs=env_params,
                 batch_B=batch_b,
-                batch_T=self.batch_size // batch_b,
+                batch_T=int(self.batch_size / batch_b),
                 max_decorrelation_steps=0,
                 eval_n_envs=0,
                 eval_env_kwargs={},
@@ -72,10 +71,9 @@ class RlTrainer:
             )
 
     def generate_algo(self):
-        if self.byr:
-            return BuyerPPO(**self.ppo_params)
-        else:
-            return SellerPPO(**self.ppo_params)
+        algo = BuyerPPO if self.byr else SellerPPO
+        return algo(ppo_params=self.ppo_params,
+                    econ_params=self.econ_params)
 
     def generate_runner(self):
         agent = SplitCategoricalPgAgent(ModelCls=PgCategoricalAgentModel,
@@ -99,12 +97,16 @@ class RlTrainer:
         if self.system_params['exp'] is None:
             self.itr = self.runner.train()
         else:
-            log_dir = REINFORCE_DIR + '{}/'.format(
-                BYR if self.byr else SLR)
+            run_id = str(self.system_params['exp'])
+            if self.byr:
+                log_dir = REINFORCE_DIR + '{}/'.format(BYR)
+                run_id += '_{}'.format(self.agent_params[BYR_HIST])
+            else:
+                log_dir = REINFORCE_DIR + '{}/'.format(SLR)
             with logger_context(log_dir=log_dir,
                                 name='log',
                                 use_summary_writer=True,
                                 override_prefix=True,
-                                run_ID=self.system_params['exp'],
+                                run_ID=run_id,
                                 snapshot_mode='last'):
                 self.itr = self.runner.train()

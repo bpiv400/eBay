@@ -1,39 +1,39 @@
 import torch
 from torch.nn.functional import softmax
 from utils import load_sizes
-from agent.models.AgentModel import AgentModel
 from nets.FeedForward import FeedForward
+from agent.const import T1_IDX, DELAY_BOOST
 from constants import POLICY_SLR, POLICY_BYR
 
 
-class PgCategoricalAgentModel(AgentModel):
+class PgCategoricalAgentModel(torch.nn.Module):
     """
     Agent for eBay simulation
 
     1. Fully separate networks for value and policy networks
     2. Policy network outputs categorical probability distribution
      over actions
-    3. Both networks use batch normalization
-    4. Both networks use dropout and share dropout hyperparameters
+    3. Value network outputs a scalar between 0 and 1
+    4. Both networks use batch normalization
+    5. Both networks use dropout with separate dropout hyperparameters
     """
-    def __init__(self, **kwargs):
+    def __init__(self, byr=None, dropout=None):
         """
         kwargs:
             sizes: gives all sizes for the model, including size
             of each input grouping 'x' and number of elements in
             output vector 'out'
         """
-        super().__init__(**kwargs)
+        super().__init__()
+        self.byr = byr
 
         # policy net
         sizes = load_sizes(POLICY_BYR if self.byr else POLICY_SLR)
-        self.policy_network = FeedForward(sizes=sizes,
-                                          dropout=self.dropout_policy)
+        self.policy_network = FeedForward(sizes=sizes, dropout=dropout)
 
         # value net
         sizes['out'] = 1
-        self.value_network = FeedForward(sizes=sizes,
-                                         dropout=self.dropout_value)
+        self.value_network = FeedForward(sizes=sizes, dropout=dropout)
 
     def value_parameters(self):
         return self.value_network.parameters()
@@ -47,20 +47,23 @@ class PgCategoricalAgentModel(AgentModel):
         logits = logits.squeeze()
         return logits
 
-    def pi(self, observation, prev_action, prev_reward):
-        input_dict = observation._asdict()
-        logits = self.con(input_dict=input_dict)
-        pi = softmax(logits, dim=logits.dim() - 1)
-        return pi
-
     def _forward_dict(self, input_dict=None, compute_value=True):
+        # processing for single observations
         if input_dict['lstg'].dim() == 1:
             for elem_name, elem in input_dict.items():
                 input_dict[elem_name] = elem.unsqueeze(0)
             if self.training:
                 self.eval()
+
+        # policy
         pi_logits = self.policy_network(input_dict)
-        # value output head
+
+        # bias towards waiting for buyer's first turn
+        if self.byr:
+            first_turn = input_dict['lstg'][:, T1_IDX] == 1
+            pi_logits[first_turn, 0] += DELAY_BOOST
+
+        # value
         if compute_value:
             v = torch.sigmoid(self.value_network(input_dict))
         else:
@@ -72,7 +75,10 @@ class PgCategoricalAgentModel(AgentModel):
         """
         :return: tuple of pi, v
         """
+        # noinspection PyProtectedMember
         input_dict = observation._asdict()
+
+        # get policy and value
         logits, v = self._forward_dict(input_dict=input_dict,
                                        compute_value=True)
         pi = softmax(logits, dim=logits.dim() - 1)

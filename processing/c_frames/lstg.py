@@ -1,37 +1,12 @@
-import os
 from compress_pickle import load, dump
 import numpy as np
-import pandas as pd
 from processing.util import extract_day_feats
 from utils import input_partition, load_file
 from constants import CLEAN_DIR, W2V_DIR, FEATS_DIR, PARTS_DIR, DAY, BYR, \
-    SLR, NUM_CHUNKS
-from featnames import START_PRICE
+    SLR
 
 AS_IS_FEATS = ['store', 'slr_us', 'fast', 'photos', 'slr_lstg_ct',
                'slr_bo_ct', 'start_price_pctile', 'fdbk_score', 'fdbk_pstv']
-
-
-def create_chunks(lookup, x, chunk_dir):
-    # concatenate into one dataframe
-    x = pd.concat(x.values(), axis=1)
-    # sort by start_price
-    lookup = lookup.sort_values(by=START_PRICE)
-    x = x.reindex(index=lookup.index)
-    assert x.isna().sum().sum() == 0
-    # iteration prep
-    idx = np.arange(0, len(x), step=NUM_CHUNKS)
-    # create chunks
-    for i in range(NUM_CHUNKS):
-        # create chunk and save
-        chunk = {'lookup': lookup.iloc[idx, :],
-                 'x_lstg': x.iloc[idx, :]}
-        path = chunk_dir + '{}.gz'.format(i+1)
-        dump(chunk, path)
-        # increment indices
-        idx = idx + 1
-        if idx[-1] >= len(x):
-            idx = idx[:-1]
 
 
 # returns booleans for whether offer is round and ends in nines
@@ -125,14 +100,6 @@ def main():
 
     # save as gz
     dump(x, PARTS_DIR + '{}/x_lstg.gz'.format(part))
-
-    # make chunk directory
-    chunk_dir = PARTS_DIR + '{}/chunks/'.format(part)
-    if not os.path.isdir(chunk_dir):
-        os.mkdir(chunk_dir)
-
-    # save chunks
-    create_chunks(lookup, x, chunk_dir)
 
 
 if __name__ == "__main__":

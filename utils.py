@@ -9,7 +9,7 @@ from compress_pickle import load
 from nets.FeedForward import FeedForward
 from constants import DAY, MONTH, SPLIT_PCTS, INPUT_DIR, \
     MODEL_DIR, META_6, META_7, LISTING_FEE, PARTITIONS, PARTS_DIR, \
-    MAX_DELAY_TURN, MAX_DELAY_ARRIVAL, DELTA_MONTH, NUM_RL_WORKERS
+    MAX_DELAY_TURN, MAX_DELAY_ARRIVAL, NUM_RL_WORKERS
 from featnames import DELAY, EXP
 
 
@@ -159,67 +159,6 @@ def get_cut(meta):
     return .09
 
 
-def slr_reward(months_to_sale=None, months_since_start=None,
-               sale_proceeds=None, action_diff=None,
-               action_discount=None, action_cost=None):
-    """
-    Discounts proceeds from sale and listing fees paid.
-    :param months_to_sale: months from listing start to sale
-    :param months_since_start: months since start of listing
-    :param sale_proceeds: sale price net of eBay cut
-    :param action_diff: number of actions from current state until sale
-    :param action_discount: multiplicative factor of proceeds, by action
-    :param action_cost: cost per action
-    :return: discounted net proceeds
-    """
-    # discounted listing fees
-    months = np.ceil(months_to_sale) - np.ceil(months_since_start) + 1
-    k = months_since_start % 1
-    factor = (1 - DELTA_MONTH ** months) / (1 - DELTA_MONTH)
-    delta = (DELTA_MONTH ** (1-k)) * factor
-    costs = LISTING_FEE * delta
-    # add in action costs
-    if action_diff is not None and action_cost is not None:
-        costs += action_cost * action_diff
-    # discounted proceeds
-    months_diff = months_to_sale - months_since_start
-    assert (months_diff >= 0).all()
-    sale_proceeds *= DELTA_MONTH ** months_diff
-    if action_diff is not None and action_discount is not None:
-        sale_proceeds *= action_discount ** action_diff
-    return sale_proceeds - costs
-
-
-def max_slr_reward(months_since_start=None, bin_proceeds=None):
-    """
-    Discounts proceeds from sale and listing fees paid.
-    :param months_since_start: months since start of listing
-    :param bin_proceeds: start price net of eBay cut
-    :return: discounted maximum proceeds
-    """
-    # discounted listing fees
-    k = months_since_start % 1
-    costs = LISTING_FEE * (DELTA_MONTH ** (1-k))
-    return bin_proceeds - costs
-
-
-def byr_reward(net_value=None, action_diff=None,
-               action_discount=None, action_cost=None):
-    """
-    Discounts proceeds from sale and listing fees paid.
-    :param net_value: value less price paid; 0 if no sale
-    :param action_diff: number of actions from current state until sale
-    :param action_discount: multiplicative factor of proceeds, by action
-    :param action_cost: cost per action
-    :return: discounted net proceeds
-    """
-    if action_discount is not None:
-        net_value *= action_discount ** action_diff
-    if action_cost is not None:
-        net_value -= action_cost * action_diff
-    return net_value
-
-
 def get_model_predictions(m, x):
     """
     Returns predicted categorical distribution.
@@ -233,8 +172,12 @@ def get_model_predictions(m, x):
         net = net.to('cuda')
 
     # split into batches
-    v = np.array(range(len(x['lstg'])))
-    batches = np.array_split(v, 1 + len(v) // 2048)
+    vec = np.array(range(len(x['lstg'])))
+    batches = np.array_split(vec, 1 + len(vec) // 2048)
+
+    # convert to 32-bit numpy arrays
+    if 'DataFrame' in str(type(x['lstg'])):
+        x = {k: v.values.astype('float32') for k, v in x.items()}
 
     # model predictions
     p0 = []
@@ -310,6 +253,6 @@ def set_gpu_workers(gpu=None):
     # set cpu affinity
     p = psutil.Process()
     start = NUM_RL_WORKERS * gpu
-    processes = list(range(start, start + NUM_RL_WORKERS))
-    p.cpu_affinity(processes)
-    print('CPUs for dataloader: {}'.format(p.cpu_affinity()))
+    workers = list(range(start, start + NUM_RL_WORKERS))
+    p.cpu_affinity(workers)
+    print('vCPUs: {}'.format(p.cpu_affinity()))

@@ -7,7 +7,7 @@ from rlpyt.utils.tensor import valid_mean
 from rlpyt.utils.buffer import buffer_to
 from rlpyt.utils.collections import namedarraytuple
 from agent.models.PgCategoricalAgentModel import PgCategoricalAgentModel
-from agent.const import STOPPING_WINDOW, STOPPING_THRESHOLD
+from agent.const import STOPPING_EPOCHS, STOPPING_THRESHOLD
 
 LossInputs = namedarraytuple("LossInputs",
                              ["agent_inputs",
@@ -32,20 +32,20 @@ class CrossEntropyPPO:
 
     def __init__(
             self,
-            action_discount=1.,
-            action_cost=0.,
-            entropy_coeff=0.01,
-            lr=0.002,
-            ratio_clip=0.1,
-            use_cross_entropy=False
+            entropy_coeff=None,
+            lr=None,
+            ratio_clip=None,
+            use_cross_entropy=None,
     ):
         # save parameters to self
-        self.action_discount = action_discount
-        self.action_cost = action_cost
         self.entropy_coeff = entropy_coeff
         self.lr = lr
         self.ratio_clip = ratio_clip
         self.use_cross_entropy = use_cross_entropy
+
+        # fixed parameters
+        self.mid_batch_reset = False
+        self.bootstrap_value = True
 
         # output fields
         self.opt_info_fields = tuple(f for f in OptInfo._fields)
@@ -62,7 +62,7 @@ class CrossEntropyPPO:
 
         # for stopping
         self.training_complete = False
-        self._error_history = []
+        self._qualified_epochs = 0
 
     def initialize(self, agent=None):
         """
@@ -187,11 +187,13 @@ class CrossEntropyPPO:
         # increment counter
         self.update_counter += 1
 
-        # update training complete flag
-        self._error_history.append(value_error.item())
-        if len(self._error_history) >= STOPPING_WINDOW:
-            avg_error = np.mean(self._error_history[-STOPPING_WINDOW:])
-            self.training_complete = avg_error < STOPPING_THRESHOLD
+        # update qualified epochs and training complete flag
+        if value_error.item() < STOPPING_THRESHOLD:
+            self._qualified_epochs += 1
+            if self._qualified_epochs == STOPPING_EPOCHS:
+                self.training_complete = True
+        else:
+            self._qualified_epochs = 0
 
         return opt_info
 
