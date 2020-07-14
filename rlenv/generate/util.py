@@ -1,9 +1,9 @@
 import pandas as pd
-from compress_pickle import load, dump
+from compress_pickle import dump
 from processing.util import collect_date_clock_feats, \
     get_days_delay, get_norm
-from utils import is_split, input_partition, load_file
-from constants import NUM_CHUNKS, IDX, SLR, MONTH, PARTS_DIR
+from utils import is_split, load_file
+from constants import IDX, SLR, MONTH, PARTS_DIR
 from featnames import DAYS, DELAY, CON, SPLIT, NORM, REJECT, AUTO, EXP, \
     CENSORED, CLOCK_FEATS, TIME_FEATS, OUTCOME_FEATS, MONTHS_SINCE_LSTG, \
     BYR_HIST, START_TIME
@@ -61,24 +61,6 @@ def process_sim_threads(df, start_time):
     return df
 
 
-def concat_sim_chunks(part):
-    """
-    Loops over simulations, concatenates dataframes.
-    :param str part: name of partition.
-    :return tuple (threads, offers): dataframes of threads and offers.
-    """
-    # collect chunks
-    threads, offers = [], []
-    for i in range(1, NUM_CHUNKS + 1):
-        sim = load(PARTS_DIR + '{}/outcomes/{}.gz'.format(part, i))
-        threads.append(sim['threads'])
-        offers.append(sim['offers'])
-    # concatenate
-    threads = pd.concat(threads, axis=0).sort_index()
-    offers = pd.concat(offers, axis=0).sort_index()
-    return threads, offers
-
-
 def clean_components(threads, offers, lstg_start):
     # output dictionary
     d = dict()
@@ -99,11 +81,26 @@ def clean_components(threads, offers, lstg_start):
     return d
 
 
-def main():
-    part = input_partition()
+def concat_sim_chunks(sims):
+    """
+    Loops over simulations, concatenates dataframes.
+    :param list sims: list of dictionaries of simulated outcomes.
+    :return tuple (threads, offers): dataframes of threads and offers.
+    """
+    # collect chunks
+    threads, offers = [], []
+    for sim in sims:
+        threads.append(sim['threads'])
+        offers.append(sim['offers'])
+    # concatenate
+    threads = pd.concat(threads, axis=0).sort_index()
+    offers = pd.concat(offers, axis=0).sort_index()
+    return threads, offers
 
+
+def process_sims(part=None, sims=None):
     # concatenate chunks
-    threads, offers = concat_sim_chunks(part)
+    threads, offers = concat_sim_chunks(sims)
     lstg_start = load_file(part, 'lookup')[START_TIME]
 
     # create output dataframes
@@ -113,6 +110,3 @@ def main():
     for k, df in d.items():
         dump(df, PARTS_DIR + '{}/{}_sim.gz'.format(part, k))
 
-
-if __name__ == '__main__':
-    main()

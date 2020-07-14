@@ -1,6 +1,5 @@
 import numpy as np
 import pandas as pd
-from compress_pickle import dump
 from constants import MONTH
 from featnames import (START_TIME, START_PRICE, TIME_FEATS,
                        MSG, CON, LSTG, BYR_HIST, ACC_PRICE,
@@ -30,8 +29,7 @@ VAL_COLS = [LSTG, VAL, SE, AVG_PRICE, NUM_SALES, P_SALE, CUT]
 
 
 class Recorder:
-    def __init__(self, records_path, verbose):
-        self.records_path = records_path
+    def __init__(self, verbose):
         self.verbose = verbose
 
         self.lstg = None
@@ -52,12 +50,6 @@ class Recorder:
 
     def reset_sim(self):
         self.sim += 1
-
-    def dump(self):
-        self.records2frames()
-        self.compress_frames()
-        dump(self.construct_output(), self.records_path)
-        self.reset_recorders()
 
     @staticmethod
     def print_offer(event):
@@ -143,13 +135,13 @@ class Recorder:
     def add_offer(self, event, time_feats=None, censored=False):
         raise NotImplementedError()
 
-    def records2frames(self):
+    def _records2frames(self):
         raise NotImplementedError()
 
     def construct_output(self):
         raise NotImplementedError()
 
-    def compress_frames(self):
+    def _compress_frames(self):
         raise NotImplementedError()
 
     def reset_recorders(self):
@@ -157,8 +149,8 @@ class Recorder:
 
 
 class OutcomeRecorder(Recorder):
-    def __init__(self, records_path=None, verbose=None, record_sim=False):
-        super().__init__(records_path, verbose)
+    def __init__(self, verbose=None, record_sim=False):
+        super().__init__(verbose)
         self.offers = None
         self.threads = None
         self.record_sim = record_sim
@@ -211,7 +203,7 @@ class OutcomeRecorder(Recorder):
             for frame in frames:
                 frame[col] = frame[col].astype(dtypes[i])
 
-    def compress_frames(self):
+    def _compress_frames(self):
         # offers dataframe
         self.offers[INDEX] = self.offers[INDEX].astype(np.uint8)
         self.offers[CON] = self.offers[CON].astype(np.uint8)
@@ -232,7 +224,7 @@ class OutcomeRecorder(Recorder):
         self.threads.set_index(INDEX_COLS[self.record_sim][:-1], inplace=True)
         assert np.all(self.offers.xs(1, level='index')[CON] > 0)
 
-    def records2frames(self):
+    def _records2frames(self):
         # convert both dictionaries to dataframes
         offer_cols = OFFER_COLS
         thread_cols = THREAD_COLS
@@ -243,5 +235,7 @@ class OutcomeRecorder(Recorder):
         self.threads = self.record2frame(self.threads, thread_cols)
 
     def construct_output(self):
+        self._records2frames()
+        self._compress_frames()
         return {'offers': self.offers.sort_index(),
                 'threads': self.threads.sort_index()}

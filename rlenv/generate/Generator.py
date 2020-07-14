@@ -12,13 +12,11 @@ from featnames import START_PRICE, START_TIME, ACC_PRICE, DEC_PRICE, \
 
 
 class Generator:
-    def __init__(self, part=None, verbose=False):
+    def __init__(self, verbose=False):
         """
         Constructor
-        :param str part: name of partition
         :param bool verbose: if True, print info about simulator activity
         """
-        self.part = part
         self.verbose = verbose
         self.initialized = False
 
@@ -35,8 +33,8 @@ class Generator:
         self.buyer = None
         self.arrival = None
 
-    def process_chunk(self, chunk=None):
-        self.load_chunk(chunk=chunk)
+    def process_chunk(self, part=None, chunk=None):
+        self.load_chunk(part=part, chunk=chunk)
         if not self.initialized:
             self.initialize()
         return self.generate()
@@ -103,14 +101,6 @@ class Generator:
     def simulate_lstg(self, environment):
         raise NotImplementedError()
 
-    @property
-    def records_path(self):
-        """
-        Returns path to the output directory for this simulation chunk
-        :return: str
-        """
-        raise NotImplementedError()
-
     @staticmethod
     def print_lstg_info(lstg, lookup):
         """
@@ -135,10 +125,8 @@ class SimulatorGenerator(Generator):
     def generate_recorder(self):
         raise NotImplementedError()
 
-    def load_chunk(self, chunk=None):
-        self.chunk = chunk
-        chunk_dir = get_env_sim_subdir(part=self.part,
-                                       chunks=True)
+    def load_chunk(self, part=None, chunk=None):
+        chunk_dir = get_env_sim_subdir(part=part, chunks=True)
         d = load(chunk_dir + '{}.gz'.format(chunk))
         self.lookup = d[LOOKUP]
         self.x_lstg = d[X_LSTG]
@@ -167,24 +155,19 @@ class SimulatorGenerator(Generator):
         print('Avg time per listing: {} seconds'.format(
             (dt.now() - t0).total_seconds() / len(self.x_lstg.index)))
 
-        # save the recorder
-        self.recorder.dump()
+        # return a dictionary
+        return self.recorder.construct_output()
 
     def simulate_lstg(self, environment):
-        raise NotImplementedError()
-
-    @property
-    def records_path(self):
         raise NotImplementedError()
 
 
 class DiscrimGenerator(SimulatorGenerator):
     def __init__(self, part=None, verbose=False):
-        super().__init__(part=part, verbose=verbose)
+        super().__init__(verbose=verbose)
 
     def generate_recorder(self):
-        return OutcomeRecorder(records_path=self.records_path,
-                               verbose=self.verbose,
+        return OutcomeRecorder(verbose=self.verbose,
                                record_sim=False)
 
     def simulate_lstg(self, env):
@@ -196,9 +179,3 @@ class DiscrimGenerator(SimulatorGenerator):
         env.reset()
         outcome = env.run()
         return outcome
-
-    @property
-    def records_path(self):
-        out_dir = get_env_sim_subdir(part=self.part,
-                                     discrim=True)
-        return out_dir + '{}.gz'.format(self.chunk)

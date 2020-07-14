@@ -100,7 +100,7 @@ def construct_x_listings(x, idx_thread):
 
 def clean_sim_offers(offers, months, part):
     # drop offers after expiration
-    clock_sim = load_file(part, 'clock_sim').xs(0, level='sim')
+    clock_sim = load_file(part, 'clock_sim')
     start_time = load_file(part, 'lookup')[START_TIME]
     months_sim = (clock_sim - start_time.reindex(
         index=clock_sim.index, level='lstg')) / MONTH
@@ -132,9 +132,6 @@ def load_threads_offers(part=None, sim=False):
     offers = load_file(part, 'x_offer{}'.format(suffix))
     offers = drop_censored(offers)
     if sim:
-        # first simulation only
-        threads = threads.xs(0, level='sim')
-        offers = offers.xs(0, level='sim')
         # drop threads and offers after observed lstg expiration
         months = months_to_exp(part)
         threads = clean_sim_threads(threads, months)
