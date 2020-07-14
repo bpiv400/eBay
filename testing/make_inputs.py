@@ -2,7 +2,7 @@ import argparse
 import pandas as pd
 from compress_pickle import load, dump
 from constants import INPUT_DIR, INDEX_DIR, PARTS_DIR, MODELS,\
-    VALIDATION, PARTITIONS, INIT_POLICY_MODELS, CLEAN_DIR
+    VALIDATION, PARTITIONS, POLICY_MODELS, CLEAN_DIR
 from rlenv.util import (get_env_sim_subdir, load_featnames,
                         get_env_sim_dir, load_chunk)
 from utils import subset_lstgs
@@ -12,7 +12,7 @@ def load_all_inputs(part=None, lstgs=None):
     input_dir = '{}{}/'.format(INPUT_DIR, part)
     index_dir = '{}{}/'.format(INDEX_DIR, part)
     inputs_dict = dict()
-    for model in MODELS + INIT_POLICY_MODELS:
+    for model in MODELS + POLICY_MODELS:
         inputs_dict[model] = load_model_inputs(model=model,
                                                input_dir=input_dir,
                                                index_dir=index_dir,
