@@ -4,8 +4,8 @@ from agent.const import BYR, FEAT_TYPE, CON_TYPE, FULL_CON,\
     ALL_FEATS, SLR
 from agent.util import get_agent_name
 from agent.AgentComposer import AgentComposer
-from constants import INIT_POLICY_MODELS, NO_ARRIVAL_CUTOFF
-from featnames import LSTG, DELAY, BYR_HIST, NO_ARRIVAL
+from constants import POLICY_MODELS, NO_ARRIVAL_CUTOFF
+from featnames import LSTG, BYR_HIST, NO_ARRIVAL
 from rlenv.Composer import Composer
 from rlenv.environments.BuyerEnvironment import BuyerEnvironment
 from rlenv.environments.SellerEnvironment import SellerEnvironment
@@ -36,8 +36,6 @@ class TestGenerator(Generator):
         self.agent = kwargs['agent']
         # boolean for whether the agent is a byr
         self.byr = kwargs['role'] == BYR
-        # boolean for whether to the agent selects its delay
-        self.delay = kwargs[DELAY] or self.byr
         self.test_data = None
 
     def generate_query_strategy(self):
@@ -47,7 +45,6 @@ class TestGenerator(Generator):
         if self.agent:
             agent_params = {
                 'role': BYR if self.byr else SLR,
-                DELAY: self.delay,
                 FEAT_TYPE: ALL_FEATS,
                 CON_TYPE: FULL_CON,
                 BYR_HIST: None
@@ -87,9 +84,9 @@ class TestGenerator(Generator):
         """
         Remove the unused policy models from the testing data inputs
         """
-        unused_models = INIT_POLICY_MODELS
+        unused_models = POLICY_MODELS
         if self.agent:
-            agent_name = get_agent_name(policy=True, byr=self.byr, delay=self.delay)
+            agent_name = get_agent_name(byr=self.byr)
             unused_models.remove(agent_name)
         for model_name in unused_models:
             del test_data['inputs'][model_name]
@@ -124,26 +121,16 @@ class TestGenerator(Generator):
             # all lstgs should have at least 1 action
             lstgs = x_offer.index.get_level_values('lstg').unique()
         else:
+            # keep all lstgs with at least 1 thread with at least 1 non-auto seller
+            # offer
             slr_offers = x_offer.index.get_level_values('index') % 2 == 0
             man_offers = ~x_offer['auto']
-            censored_offers = x_offer['censored']
-            if self.delay:
-
-                # keep all lstgs with at least 1 thread with at least 1 non-auto seller
-                # offer
-                predicates = (slr_offers, man_offers)
-            else:
-                # keep all lstgs with at least 1 thread
-                # with at least 1 non-auto / non-expiration seller offer
-                exp_offers = x_offer['exp']
-                predicates = (slr_offers, man_offers,
-                              np.logical_not(censored_offers),
-                              np.logical_not(exp_offers))
+            predicates = (slr_offers, man_offers)
             keep = np.logical_and.reduce(predicates)
             lstgs = x_offer.index.get_level_values('lstg')[keep].unique()
             lstgs = lstgs[lstgs.isin(common_lstgs)]
         # verify that x_offer based lstgs match lstgs used as model input exactly
-        model_name = get_agent_name(policy=True, byr=self.byr, delay=self.delay)
+        model_name = get_agent_name(byr=self.byr)
         input_lstgs = test_data['inputs'][model_name][LSTG].index.get_level_values('lstg').unique()
         # print(input_lstgs[~input_lstgs.isin(lstgs)])
         assert input_lstgs.isin(lstgs).all()
@@ -168,7 +155,6 @@ class TestGenerator(Generator):
         if self.agent:
             params['agent_params'] = {
                 'byr': self.byr,
-                'delay': self.delay,
                 'thread_id': buyer
             }
         return LstgLog(params=params)

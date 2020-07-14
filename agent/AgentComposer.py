@@ -31,10 +31,6 @@ class AgentComposer(Composer):
         return self.agent_params['role'] == BYR
 
     @property
-    def delay(self):
-        return self.agent_params[DELAY]
-
-    @property
     def hist(self):
         if self.byr:
             return self.agent_params[BYR_HIST]
@@ -53,10 +49,8 @@ class AgentComposer(Composer):
         self.agent_params[BYR_HIST] = hist
 
     def _build_agent_sizes(self):
-        sizes = load_sizes(get_agent_name(byr=self.byr, delay=self.delay,
-                                          policy=True))
-        sizes['out'] = len(get_con_set(self.con_type, byr=self.byr,
-                                       delay=self.delay))
+        sizes = load_sizes(get_agent_name(byr=self.byr))
+        sizes['out'] = len(get_con_set(self.con_type, byr=self.byr))
         return sizes
 
     def _update_turn_inds(self, turn):
@@ -139,7 +133,7 @@ class AgentComposer(Composer):
             # remove slr feats
             del lstg_sets[SLR]
         # verify shared lstg features
-        model = get_agent_name(delay=self.delay, byr=self.byr, policy=True)
+        model = get_agent_name(byr=self.byr)
         Composer.verify_lstg_sets_shared(model, self.x_lstg_cols, lstg_sets)
         # verify appended features
         agent_feats = load_featnames(model)
@@ -185,7 +179,7 @@ class AgentComposer(Composer):
         else:
             assumed_feats = CLOCK_FEATS + OUTCOME_FEATS
         AgentComposer.verify_all_feats(assumed_feats=assumed_feats, model_feats=offer_feats)
-        last_turn = 6 if self.byr or not self.delay else 5
+        last_turn = 6 if self.byr else 5
         for turn in range(1, 8):
             if turn <= last_turn:
                 assert 'offer{}'.format(turn) in self.agent_sizes['x']

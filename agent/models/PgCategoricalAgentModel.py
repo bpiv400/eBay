@@ -106,7 +106,7 @@ class PgCategoricalAgentModel(AgentModel):
         return pi, v
 
     def _init_network(self, policy=True):
-        network_name = get_agent_name(byr=self.byr, policy=policy, delay=self.delay)
+        network_name = get_agent_name(byr=self.byr)
         sizes = load_sizes(network_name)
         net = FeedForward(sizes=sizes,
                           dropout=self.dropout,

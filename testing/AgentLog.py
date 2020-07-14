@@ -6,11 +6,9 @@ from testing.util import compare_input_dicts
 
 
 class AgentLog:
-    def __init__(self, byr=False, delay=False):
+    def __init__(self, byr=False):
         self.byr = byr
-        self.delay = delay
-        self.model_name = get_agent_name(byr=self.byr, delay=self.delay,
-                                         policy=True)
+        self.model_name = get_agent_name(byr=self.byr)
         self.action_queue = Heap(entry_type=ActionLog)
 
     def push_action(self, action=None):

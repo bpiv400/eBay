@@ -8,14 +8,12 @@ from rlpyt.samplers.parallel.worker import initialize_worker
 from rlpyt.utils.collections import AttrDict
 from rlpyt.utils.seed import set_envs_seeds
 from utils import load_state_dict
-from constants import (RL_LOG_DIR, SLR_VALUE_INIT, SLR_POLICY_INIT,
-                       BYR_DELAY_POLICY_INIT, BYR_DELAY_VALUE_INIT,
-                       REINFORCE_DIR, SLR_DELAY_VALUE_INIT,
-                       SLR_DELAY_POLICY_INIT)
+from constants import (RL_LOG_DIR, REINFORCE_DIR, POLICY_SLR,
+                       POLICY_BYR)
 from agent.const import FULL_CON, QUARTILES, HALF, PARAM_DICTS
 
 
-def get_con_set(con, byr=False, delay=False):
+def get_con_set(con, byr=False):
     if con == FULL_CON:
         con_set = np.linspace(0, 100, 101) / 100
     elif con == QUARTILES:
@@ -24,7 +22,7 @@ def get_con_set(con, byr=False, delay=False):
         con_set = np.array([0.0, 0.50, 1.0])
     else:
         raise RuntimeError("Invalid concession set type parameter")
-    if not byr and delay:
+    if not byr:
         con_set = np.concatenate([con_set, np.array([1.1])])
     return con_set
 
@@ -140,24 +138,11 @@ def save_params(run_id=None,
     dump(df, path)
 
 
-def get_agent_name(byr=False, policy=False, delay=False):
-    if byr and delay:
-        if policy:
-            return BYR_DELAY_POLICY_INIT
-        else:
-            return BYR_DELAY_VALUE_INIT
-    elif not byr and delay:
-        if policy:
-            return SLR_DELAY_POLICY_INIT
-        else:
-            return SLR_DELAY_VALUE_INIT
-    elif not byr and not delay:
-        if policy:
-            return SLR_POLICY_INIT
-        else:
-            return SLR_VALUE_INIT
+def get_agent_name(byr=False):
+    if byr:
+        return POLICY_BYR
     else:
-        raise NotImplementedError("BYR MUST HAVE DELAY")
+        return POLICY_SLR
 
 
 def get_train_file_path(rank):

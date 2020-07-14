@@ -91,9 +91,7 @@ class ThreadTranslator:
             return min(after_rl_check)
 
     def get_rl_check_time(self, params=None):
-        df = params['inputs'][get_agent_name(byr=True,
-                                             delay=True,
-                                             policy=True)][LSTG]
+        df = params['inputs'][get_agent_name(byr=True)][LSTG]
         df = df.xs(key=self.agent_thread, level='thread',
                    drop_level=True)
         df = df.xs(key=1, level='index', drop_level=True)

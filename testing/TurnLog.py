@@ -42,11 +42,8 @@ class TurnLog:
             raise RuntimeError("Queried concession for agent from a turn"
                                " not stored as an agent turn")
 
-    def agent_time(self, delay=False):
-        if delay:
-            return self.delay_time
-        else:
-            return self.offer_time
+    def agent_time(self):
+        return self.delay_time
 
     def agent_check(self, model):
         if self.agent:

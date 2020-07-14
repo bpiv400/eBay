@@ -90,9 +90,8 @@ class LstgLog:
 
     def record_agent_thread(self, turns=None, agent_log=None, thread_id=None, full_inputs=None):
         for turn_number, turn_log in turns.items():
-            time = turn_log.agent_time(delay=self.delay)
+            time = turn_log.agent_time()
             months = (time - self.lookup[START_TIME]) / MONTH
-            con = turn_log.agent_con()
             if self.byr:
                 index = (thread_id, turn_number, 0)
             else:
@@ -110,7 +109,7 @@ class LstgLog:
     def generate_buyer_log(self, full_inputs=None, agent_log=None):
         days = self.record_agent_arrivals(full_inputs=full_inputs, agent_log=agent_log)
         # add first turn
-        agent_turns = self.threads[self.agent_thread].get_agent_turns(delay=self.delay)
+        agent_turns = self.threads[self.agent_thread].get_agent_turns()
         self.record_buyer_first_turn(full_inputs=full_inputs, agent_log=agent_log,
                                      days=days, agent_turns=agent_turns)
         # record remaining threads
@@ -121,8 +120,7 @@ class LstgLog:
         # if the agent is a buyer
         if not self.agent:
             return None
-        agent_log = AgentLog(byr=self.byr,
-                             delay=self.delay)
+        agent_log = AgentLog(byr=self.byr)
         full_inputs = params['inputs'][agent_log.model_name]
         if self.byr:
             self.generate_buyer_log(full_inputs=full_inputs, agent_log=agent_log)
@@ -132,7 +130,7 @@ class LstgLog:
 
     def generate_seller_log(self, full_inputs=None, agent_log=None):
         for thread_id, thread_log in self.threads.items():
-            agent_turns = thread_log.get_agent_turns(delay=self.delay)
+            agent_turns = thread_log.get_agent_turns()
             if len(agent_turns) != 0:
                 self.record_agent_thread(agent_log=agent_log, full_inputs=full_inputs,
                                          thread_id=thread_id, turns=agent_turns)

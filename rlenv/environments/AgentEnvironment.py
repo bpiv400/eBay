@@ -23,8 +23,7 @@ class AgentEnvironment(EbayEnvironment, Env):
         self.last_event = None  # type: Thread
         # action and observation spaces
         self.con_set = get_con_set(con=self.composer.con_type,
-                                   byr=self.composer.byr,
-                                   delay=self.composer.delay)
+                                   byr=self.composer.byr)
         self._action_space = self.define_action_space()
         self._obs_class = self.define_observation_class()
         self._observation_space = self.define_observation_space()
