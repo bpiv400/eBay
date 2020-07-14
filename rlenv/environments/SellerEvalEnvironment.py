@@ -1,19 +1,18 @@
-from constants import MAX_DELAY_TURN, MONTH, POLICY_SLR
+from collections import namedtuple
+from constants import MAX_DELAY_TURN, POLICY_SLR
+from utils import load_sizes
 from rlenv.const import DELAY_EVENT
-from rlenv.environments.AgentEnvironment import AgentEnvironment
+from rlenv.environments.EvalEnvironment import EvalEnvironment
 from rlenv.events.Thread import RlThread
 from rlenv.generate.Recorder import Recorder
-from rlpyt.utils.collections import namedarraytuple
-from featnames import START_PRICE
-from utils import load_sizes
 
-SellerObs = namedarraytuple("SellerObs",
-                            list(load_sizes(POLICY_SLR)['x'].keys()))
-SellerInfoTraj = namedarraytuple("SellerInfoTraj",
-                                 ["months", "bin_proceeds"])
+SellerObs = namedtuple("SellerObs",
+                       list(load_sizes(POLICY_SLR)['x'].keys()))
+SellerInfoTraj = namedtuple("SellerInfoTraj",
+                            ["months", "bin_proceeds"])
 
 
-class SellerEnvironment(AgentEnvironment):
+class SellerEvalEnvironment(EvalEnvironment):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
@@ -32,20 +31,19 @@ class SellerEnvironment(AgentEnvironment):
             self.last_event = event
             # update most recent time/clock features if sampling an agent
             if not lstg_complete or self.outcome.sale:
-                return self.agent_tuple(done=lstg_complete)
+                return self.outcome
             else:
                 self.relist()
 
     # restructure
     def reset(self):
-        self.reset_lstg()
         super().reset()  # calls EBayEnvironment.reset()
         while True:
             event, lstg_complete = super().run()  # calls EBayEnvironment.run()
             # if the lstg isn't complete that means it's time to sample an agent action
             if not lstg_complete:
                 self.last_event = event
-                return self.get_obs(sources=event.sources(), turn=event.turn)
+                return self.outcome
             # if the lstg is complete
             else:
                 # check whether it's expired -- if so, relist
@@ -94,24 +92,3 @@ class SellerEnvironment(AgentEnvironment):
         return RlThread(priority=priority,
                         rl_buyer=False,
                         thread_id=self.thread_counter)
-
-    def define_observation_class(self):
-        return SellerObs
-
-    def get_reward(self):
-        if not self.last_event.is_sale():
-            return 0.0
-        else:
-            return self.outcome.price * (1-self.cut)
-
-    def get_info(self):
-        months = (self.last_event.priority - self.start_time) / MONTH
-        months += self.relist_count  # add in months without sale
-        bin_proceeds = (1 - self.cut) * self.lookup[START_PRICE]
-        info = SellerInfoTraj(months=months,
-                              bin_proceeds=bin_proceeds)
-        return info
-
-    @property
-    def horizon(self):
-        return 100

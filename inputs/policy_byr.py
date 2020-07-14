@@ -4,7 +4,7 @@ from inputs.util import save_files, get_x_thread, \
 from processing.util import extract_day_feats
 from utils import input_partition, init_x
 from constants import IDX, DAY, MONTH, BYR, CON_MULTIPLIER, \
-    TRAIN_MODELS, VALIDATION, TEST, POLICY_BYR
+    TRAIN_RL, VALIDATION, TEST, POLICY_BYR
 from featnames import CON, START_TIME, EXP, DELAY, THREAD_COUNT, \
     MONTHS_SINCE_LSTG
 
@@ -114,7 +114,7 @@ def main():
     print('{}/{}'.format(part, POLICY_BYR))
 
     # policy is trained on TRAIN_MODELS
-    assert part in [TRAIN_MODELS, VALIDATION, TEST]
+    assert part in [TRAIN_RL, VALIDATION, TEST]
 
     # input dataframes, output processed dataframes
     d = process_inputs(part)

@@ -5,9 +5,11 @@ import torch
 import numpy as np
 from constants import TURN_FEATS, BYR, SLR, PARTS_DIR, TRAIN_RL, \
     POLICY_BYR, POLICY_SLR
-from featnames import OUTCOME_FEATS, MONTHS_SINCE_LSTG, BYR_HIST
+from featnames import OUTCOME_FEATS, MONTHS_SINCE_LSTG, BYR_HIST, \
+    TIME_FEATS, CLOCK_FEATS, THREAD_COUNT
 from utils import load_sizes, load_featnames
-from rlenv.const import *
+from rlenv.const import LSTG_MAP, CLOCK_MAP, OFFER_MAPS, THREAD_COUNT_IND, \
+    TIME_START_IND, TIME_END_IND
 from rlenv.util import load_chunk
 from agent.const import FEAT_TYPE, ALL_FEATS, AGENT_PARAMS
 from agent.util import compose_args
@@ -190,7 +192,7 @@ def main():
     agent_params = vars(parser.parse_args())
     print('Args:')
     pprint.pprint(agent_params)
-    composer = AgentComposer(agent_params=agent_params)
+    AgentComposer(agent_params=agent_params)
     print('Verified inputs correctly.')
 
 

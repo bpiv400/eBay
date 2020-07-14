@@ -4,7 +4,7 @@ from agent.algo.CrossEntropyPPO import CrossEntropyPPO
 
 class BuyerPPO(CrossEntropyPPO):
     def __init__(self, ppo_params=None, econ_params=None):
-        super().__init__(**ppo_params)
+        super().__init__(**ppo_params, byr=True)
 
         # buyer-specific parameters
         self.action_discount = econ_params['action_discount']

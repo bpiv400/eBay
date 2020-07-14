@@ -69,7 +69,6 @@ START_TIME = 'start_time'
 START_PRICE = 'start_price'
 DEC_PRICE = 'decline_price'
 ACC_PRICE = 'accept_price'
-NO_ARRIVAL = 'p_no_arrival'
 
 # agent costs
 MONTHLY_DISCOUNT = 'monthly_discount'
@@ -79,3 +78,5 @@ ACTION_COST = 'action_cost'
 # for chunks
 X_LSTG = 'x_lstg'
 LOOKUP = 'lookup'
+P_ARRIVAL = 'p_arrival'
+NO_ARRIVAL = 'p_no_arrival'

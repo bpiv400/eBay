@@ -41,9 +41,7 @@ OUTPUT_DIR = '{}/outputs/'.format(PREFIX)
 LOG_DIR = OUTPUT_DIR + 'logs/'
 MODEL_DIR = OUTPUT_DIR + 'models/'
 PLOT_DIR = OUTPUT_DIR + 'plots/'
-
-REINFORCE_DIR = '{}/agent/'.format(PREFIX)
-RL_TRAIN_DIR = REINFORCE_DIR + 'train/'
+AGENT_DIR = OUTPUT_DIR + 'agent/'
 
 # partitions
 TRAIN_MODELS = 'sim'
@@ -141,7 +139,7 @@ NO_ARRIVAL_CUTOFF = .50 ** (1.0 / 12)
 SEED = 123456
 
 # number of chunks
-NUM_CHUNKS = 256
+NUM_CHUNKS = 60
 
-# number of workers for training RL
+# multiprocessing and RL training
 NUM_RL_WORKERS = 16

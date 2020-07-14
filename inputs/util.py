@@ -113,9 +113,6 @@ def get_x_offer_init(offers, idx, role=None):
     threads = idx.droplevel(level='index').unique()
     offers = pd.DataFrame(index=threads).join(offers)
 
-    # set message indicator to False
-    offers[MSG] = False
-
     # drop time feats from buyer models
     if role == BYR:
         offers.drop(TIME_FEATS, axis=1, inplace=True)
@@ -127,15 +124,14 @@ def get_x_offer_init(offers, idx, role=None):
         offer = offers.xs(i, level='index').reindex(
             index=idx, fill_value=0).astype('float32')
         turn = offer.index.get_level_values(level='index')
-        # all features are zero for future turns
-        offer.loc[i > turn, :] = 0.
-        # current turn features
-        if role == SLR:
-            assert (offer.loc[i == turn, AUTO] == 0).all()
-            assert (offer.loc[i == turn, EXP] == 0).all()
-            offer.loc[i == turn, [CON, NORM, SPLIT, REJECT, MSG]] = 0.
-        else:
-            offer.loc[i == turn, :] = 0.
+
+        # all features are zero for current and future turns
+        offer.loc[i >= turn, :] = 0.
+
+        # msg is 0 for turns of focal player
+        if i in IDX[role]:
+            offer.loc[:, MSG] = 0.
+
         # put in dictionary
         x_offer['offer%d' % i] = offer
 
@@ -145,23 +141,22 @@ def get_x_offer_init(offers, idx, role=None):
     return x_offer
 
 
-def load_reindex(part=None, name=None, sim=None, idx=None):
-    suffix = '_sim' if sim else ''
-    df = load_file(part, '{}{}'.format(name, suffix)).reindex(
-        index=idx, level='lstg')
+def load_reindex(part=None, name=None, idx=None):
+    df = load_file(part, name)
+    df = df.reindex(index=idx, level='lstg')
     return df
 
 
-def get_init_data(part, sim=False):
+def get_init_data(part):
     # restrict to listings with non-infrequent arrivals
     p0 = load_file(part, NO_ARRIVAL)
     idx = p0[p0 < NO_ARRIVAL_CUTOFF].index
     # data frames
     data = dict()
     data['lookup'] = load_file(part, 'lookup').loc[idx]
-    data['offers'] = load_reindex(part, 'x_offer', sim, idx)
-    data['threads'] = load_reindex(part, 'x_thread', sim, idx)
-    data['clock'] = load_reindex(part, 'clock', sim, idx)
+    data['offers'] = load_reindex(part, 'x_offer', idx)
+    data['threads'] = load_reindex(part, 'x_thread', idx)
+    data['clock'] = load_reindex(part, 'clock', idx)
     return data
 
 

@@ -1,15 +1,16 @@
 import numpy as np
 from rlenv.environments.EbayEnvironment import EbayEnvironment
 from constants import MONTH
-from featnames import START_TIME, TIME_FEATS
+from featnames import START_TIME, TIME_FEATS, X_LSTG, LOOKUP, P_ARRIVAL
 
 
 class SimulatorEnvironment(EbayEnvironment):
     def __init__(self, **kwargs):
-        super(SimulatorEnvironment, self).__init__(kwargs)
+        super().__init__(kwargs)
 
-        self.x_lstg = kwargs['x_lstg']
-        self.lookup = kwargs['lookup']
+        self.x_lstg = kwargs[X_LSTG]
+        self.lookup = kwargs[LOOKUP]
+        self.p_arrival = kwargs[P_ARRIVAL]
         self.recorder = kwargs['recorder']
 
         # end time
@@ -17,7 +18,7 @@ class SimulatorEnvironment(EbayEnvironment):
         self.end_time = self.start_time + MONTH
 
     def reset(self):
-        super(SimulatorEnvironment, self).reset()
+        super().reset()
         if self.recorder is not None:
             self.recorder.reset_sim()
         if self.verbose:
@@ -30,7 +31,7 @@ class SimulatorEnvironment(EbayEnvironment):
         :return: a 3-tuple of (bool, float, int) giving whether the listing sells,
         the amount it sells for if it sells, and the amount of time it took to sell
         """
-        super(SimulatorEnvironment, self).run()
+        super().run()
         return self.outcome
 
     def record(self, event, byr_hist=None, censored=False):

@@ -1,4 +1,4 @@
-from collections import namedtuple
+from rlpyt.utils.collections import namedarraytuple
 from constants import HOUR, DAY, POLICY_BYR
 from featnames import START_PRICE
 from utils import load_sizes
@@ -8,9 +8,9 @@ from rlenv.environments.AgentEnvironment import AgentEnvironment
 from rlenv.events.Arrival import Arrival
 from rlenv.events.Thread import RlThread
 
-BuyerObs = namedtuple('BuyerObs',
-                      list(load_sizes(POLICY_BYR)['x'].keys()))
-BuyerInfoTraj = namedtuple("BuyerInfoTraj", ["item_value"])
+BuyerObs = namedarraytuple('BuyerObs',
+                           list(load_sizes(POLICY_BYR)['x'].keys()))
+BuyerInfoTraj = namedarraytuple("BuyerInfoTraj", ["item_value"])
 
 
 class BuyerEnvironment(AgentEnvironment):
@@ -35,9 +35,8 @@ class BuyerEnvironment(AgentEnvironment):
         """
         curr_interval = self._hours_since_lstg(event.priority)
         last_interval = curr_interval + 24
-        input_dict = self.get_arrival_input_dict(event=event, first=True)
-        seconds = self.get_arrival(input_dict=input_dict, first=True, time=event.priority,
-                                   intervals=(curr_interval, last_interval))
+        seconds = self.get_first_arrival(
+            intervals=(curr_interval, last_interval))
         return seconds + event.priority
 
     def process_offer(self, event):

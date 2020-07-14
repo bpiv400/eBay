@@ -6,7 +6,7 @@ from constants import LISTING_FEE
 
 class SellerPPO(CrossEntropyPPO):
     def __init__(self, ppo_params=None, econ_params=None):
-        super().__init__(**ppo_params)
+        super().__init__(**ppo_params, byr=False)
 
         # seller-specific parameters
         self.monthly_discount = econ_params['monthly_discount']

@@ -1,7 +1,11 @@
 import numpy as np
-from rlenv.const import *
+from rlenv.const import OFFER_MAPS, CLOCK_MAP, CLOCK_START_IND, \
+    CLOCK_END_IND, TIME_START_IND, TIME_END_IND, NORM_IND, MSG_IND, \
+    DELAY_START_IND, DELAY_END_IND, CON_IND, DELAY_IND, CON_START_IND, \
+    DAYS_IND, AUTO_IND, REJECT_IND, EXP_IND
 from rlenv.util import last_norm
-from featnames import *
+from featnames import MONTHS_SINCE_LSTG, INT_REMAINING, BYR_HIST, \
+    ALL_OFFER_FEATS, THREAD_COUNT, MONTHS_SINCE_LAST
 from copy import deepcopy
 
 
@@ -138,4 +142,3 @@ class RlBuyerSources(ThreadSources):
         self.source_dict[CLOCK_MAP] = clock_feats
         super().prepare_hist(time_feats=time_feats, clock_feats=clock_feats,
                              months_since_lstg=months_since_lstg)
-

@@ -17,29 +17,23 @@ class PgCategoricalAgentModel(torch.nn.Module):
     4. Both networks use batch normalization
     5. Both networks use dropout with separate dropout hyperparameters
     """
-    def __init__(self, byr=None, dropout=None):
-        """
-        kwargs:
-            sizes: gives all sizes for the model, including size
-            of each input grouping 'x' and number of elements in
-            output vector 'out'
-        """
+    def __init__(self, byr=None, dropout=None, pretrained=False):
         super().__init__()
         self.byr = byr
 
         # policy net
         sizes = load_sizes(POLICY_BYR if self.byr else POLICY_SLR)
-        self.policy_network = FeedForward(sizes=sizes, dropout=dropout)
+        self.policy_net = FeedForward(sizes=sizes, dropout=dropout)
 
         # value net
         sizes['out'] = 1
-        self.value_network = FeedForward(sizes=sizes, dropout=dropout)
+        self.value_net = FeedForward(sizes=sizes, dropout=dropout)
 
     def value_parameters(self):
-        return self.value_network.parameters()
+        return self.value_net.parameters()
 
     def policy_parameters(self):
-        return self.policy_network.parameters()
+        return self.policy_net.parameters()
 
     def con(self, input_dict=None):
         logits, _ = self._forward_dict(input_dict=input_dict,
@@ -56,7 +50,7 @@ class PgCategoricalAgentModel(torch.nn.Module):
                 self.eval()
 
         # policy
-        pi_logits = self.policy_network(input_dict)
+        pi_logits = self.policy_net(input_dict)
 
         # bias towards waiting for buyer's first turn
         if self.byr:
@@ -65,7 +59,7 @@ class PgCategoricalAgentModel(torch.nn.Module):
 
         # value
         if compute_value:
-            v = torch.sigmoid(self.value_network(input_dict))
+            v = torch.sigmoid(self.value_net(input_dict))
         else:
             v = None
 

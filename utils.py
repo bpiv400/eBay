@@ -2,13 +2,12 @@ import argparse
 import pickle
 import psutil
 import torch
-from torch import cuda
 from torch.nn.functional import log_softmax
 import numpy as np
 from compress_pickle import load
 from nets.FeedForward import FeedForward
 from constants import DAY, MONTH, SPLIT_PCTS, INPUT_DIR, \
-    MODEL_DIR, META_6, META_7, LISTING_FEE, PARTITIONS, PARTS_DIR, \
+    MODEL_DIR, META_6, META_7, PARTITIONS, PARTS_DIR, \
     MAX_DELAY_TURN, MAX_DELAY_ARRIVAL, NUM_RL_WORKERS
 from featnames import DELAY, EXP
 
@@ -247,7 +246,7 @@ def set_gpu_workers(gpu=None):
     """
     Sets the GPU index and the CPU affinity.
     """
-    cuda.set_device(gpu)
+    torch.cuda.set_device(gpu)
     print('Training on cuda:{}'.format(gpu))
 
     # set cpu affinity

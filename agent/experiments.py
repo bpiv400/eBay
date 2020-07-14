@@ -1,9 +1,10 @@
 from itertools import product
 import pandas as pd
-from constants import REINFORCE_DIR
+from constants import AGENT_DIR
 
-
-ranges = dict(entropy_coeff=[.005, .01, .05, .1])
+ranges = dict(entropy_coeff=[.001, .005],
+              lr=[.0005, .0001],
+              ratio_clip=[.1, .2])
 
 
 def main():
@@ -15,7 +16,7 @@ def main():
                                                     name='exp_id'))
 
     # save experiments file
-    exps.to_csv(REINFORCE_DIR + 'exps.csv')
+    exps.to_csv(AGENT_DIR + 'exps.csv')
 
 
 if __name__ == '__main__':

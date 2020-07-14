@@ -1,38 +1,19 @@
-import torch
 from rlenv.util import sample_categorical
-from rlenv.interfaces.PlayerInterface import (PlayerInterface, SimulatedSeller,
-                                              SimulatedBuyer)
+from rlenv.interfaces.PlayerInterface import PlayerInterface, \
+    SimulatedSeller, SimulatedBuyer
 
 
 class AgentPlayer(PlayerInterface):
     def __init__(self, agent_model=None):
-        """
-
-        :param agent.models.AgentModel.AgentModel agent_model:
-        """
         super().__init__(byr=agent_model.byr, agent=True)
         self.agent_model = agent_model
-        if not self.agent_model.delay:
-            if not self.byr:
-                self.delay_simulator = SimulatedSeller(full=False)
-            else:
-                self.delay_simulator = SimulatedBuyer(full=False)
+        if not self.byr:
+            self.delay_simulator = SimulatedSeller(full=False)
+        else:
+            self.delay_simulator = SimulatedBuyer(full=False)
 
     def sample_con(self, params=None, turn=None):
-        """
-        :param torch.FloatTensor params:
-        :param turn: turn number
-        :return:
-        """
-        shape = params.shape[0]
-        con_class = sample_categorical(params)
-        if shape == 3:
-            con = con_class * 50
-        elif shape == 5:
-            con = con_class * 25
-        else:
-            con = con_class * 100
-        return con / 100
+        return sample_categorical(params)
 
     def sample_msg(self, params=None, turn=None):
         return 0.0

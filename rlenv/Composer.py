@@ -3,11 +3,12 @@ import numpy as np
 import pandas as pd
 from constants import (MODELS, OFFER_MODELS, FIRST_ARRIVAL_MODEL,
                        SLR, BYR_HIST_MODEL, INTERARRIVAL_MODEL)
-from featnames import (OUTCOME_FEATS,
-                       MONTHS_SINCE_LSTG, BYR_HIST,
-                       INT_REMAINING, MONTHS_SINCE_LAST)
+from featnames import (OUTCOME_FEATS, CLOCK_FEATS, TIME_FEATS,
+                       MONTHS_SINCE_LSTG, BYR_HIST, DELAY, CON,
+                       INT_REMAINING, MONTHS_SINCE_LAST, THREAD_COUNT)
 from utils import load_sizes, load_featnames
-from rlenv.const import *
+from rlenv.const import LSTG_MAP, CLOCK_MAP, OFFER_MAPS, THREAD_COUNT_IND, \
+    TIME_START_IND, TIME_END_IND, CLOCK_START_IND, CLOCK_END_IND
 from rlenv.util import model_str
 
 
@@ -136,8 +137,7 @@ class Composer:
                     model_name, sources=sources)
             elif 'offer' == input_set[:-1]:
                 input_dict[input_set] = self._build_offer_vector(
-                    offer_vector=sources[input_set],
-                                                                 byr=turn % 2 != 0)
+                    offer_vector=sources[input_set], byr=turn % 2 != 0)
             else:
                 input_dict[input_set] = torch.from_numpy(sources[input_set]).float().unsqueeze(0)
         return input_dict

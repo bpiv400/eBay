@@ -1,14 +1,16 @@
+import os
 import psutil
 import torch
+from datetime import datetime as dt
 from agent.algo.SellerPPO import SellerPPO
 from agent.algo.BuyerPPO import BuyerPPO
 from agent.EBayRunner import EBayMinibatchRl
 from agent.models.SplitCategoricalPgAgent import SplitCategoricalPgAgent
 from rlpyt.samplers.serial.sampler import SerialSampler
-from rlpyt.samplers.parallel.cpu.sampler import CpuSampler
+from rlpyt.samplers.parallel.gpu.alternating_sampler import AlternatingSampler
 from rlpyt.utils.logging.context import logger_context
-from constants import REINFORCE_DIR, BYR, SLR
-from agent.const import THREADS_PER_PROC
+from constants import AGENT_DIR, BYR, SLR
+from agent.const import FEAT_TYPE
 from agent.AgentComposer import AgentComposer
 from agent.models.PgCategoricalAgentModel import PgCategoricalAgentModel
 from rlenv.interfaces.PlayerInterface import SimulatedBuyer, SimulatedSeller
@@ -29,7 +31,6 @@ class RlTrainer:
 
         # buyer indicator
         self.byr = kwargs['agent_params'][BYR]
-        self.model_params[BYR] = self.byr
 
         # counts
         self.itr = 0
@@ -39,17 +40,33 @@ class RlTrainer:
         self.composer = AgentComposer(agent_params=self.agent_params)
 
         # rlpyt components
-        self.sampler = self.generate_sampler()
-        self.runner = self.generate_runner()
+        self.sampler = self._generate_sampler()
+        self.runner = self._generate_runner()
 
-    def generate_sampler(self):
+        # for logging
+        if self.system_params['log']:
+            self.log_dir = self._make_log_dir()
+            self.run_id = dt.now().strftime('%y%m%d-%H%M%S')
+
+    def _make_log_dir(self):
+        if self.byr:
+            log_dir = AGENT_DIR + '{}/hist_{}'.format(
+                BYR, self.agent_params[BYR_HIST])
+        else:
+            log_dir = AGENT_DIR + '{}/{}'.format(
+                SLR, self.agent_params[FEAT_TYPE])
+        if not os.path.isdir(log_dir):
+            os.mkdir(log_dir)
+        return log_dir
+
+    def _generate_sampler(self):
         # sampler and batch sizes
         if self.system_params['serial']:
             sampler_cls = SerialSampler
             batch_b = 1
         else:
-            sampler_cls = CpuSampler
-            batch_b = len(self.worker_cpus) * 2
+            sampler_cls = AlternatingSampler
+            batch_b = len(self._cpus)
 
         # environment
         env = BuyerEnvironment if self.byr else SellerEnvironment
@@ -70,19 +87,22 @@ class RlTrainer:
                 eval_max_steps=50,
             )
 
-    def generate_algo(self):
+    def _generate_algo(self):
         algo = BuyerPPO if self.byr else SellerPPO
         return algo(ppo_params=self.ppo_params,
                     econ_params=self.econ_params)
 
-    def generate_runner(self):
+    def _generate_runner(self):
         agent = SplitCategoricalPgAgent(ModelCls=PgCategoricalAgentModel,
                                         model_kwargs=self.model_params)
-        affinity = dict(workers_cpus=self.worker_cpus,
-                        master_torch_threads=THREADS_PER_PROC,
+        affinity = dict(master_cpus=self._cpus,
+                        master_torch_threads=len(self._cpus),
+                        workers_cpus=self._cpus,
+                        worker_torch_threads=1,
                         cuda_idx=torch.cuda.current_device(),
+                        alternating=True,
                         set_affinity=True)
-        runner = EBayMinibatchRl(algo=self.generate_algo(),
+        runner = EBayMinibatchRl(algo=self._generate_algo(),
                                  agent=agent,
                                  sampler=self.sampler,
                                  log_interval_steps=self.batch_size,
@@ -90,23 +110,17 @@ class RlTrainer:
         return runner
 
     @property
-    def worker_cpus(self):
+    def _cpus(self):
         return list(psutil.Process().cpu_affinity())
 
     def train(self):
-        if self.system_params['exp'] is None:
+        if not self.system_params['log']:
             self.itr = self.runner.train()
         else:
-            run_id = str(self.system_params['exp'])
-            if self.byr:
-                log_dir = REINFORCE_DIR + '{}/'.format(BYR)
-                run_id += '_{}'.format(self.agent_params[BYR_HIST])
-            else:
-                log_dir = REINFORCE_DIR + '{}/'.format(SLR)
-            with logger_context(log_dir=log_dir,
+            with logger_context(log_dir=self.log_dir,
                                 name='log',
                                 use_summary_writer=True,
                                 override_prefix=True,
-                                run_ID=run_id,
+                                run_ID=self.run_id,
                                 snapshot_mode='last'):
                 self.itr = self.runner.train()

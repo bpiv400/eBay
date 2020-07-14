@@ -60,13 +60,13 @@ def proper_squeeze(tensor):
     return tensor
 
 
-def sample_categorical(params):
+def sample_categorical(logits=None):
     """
     Samples from a categorical distribution
-    :param torch.FloatTensor params: logits of categorical distribution
+    :param torch.FloatTensor logits: logits of categorical distribution
     :return: 1 dimensional np.array
     """
-    cat = Categorical(logits=params)
+    cat = Categorical(logits=logits)
     return proper_squeeze(cat.sample(sample_shape=(1,)).float()).numpy()
 
 

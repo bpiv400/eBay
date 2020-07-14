@@ -1,5 +1,5 @@
-from rlenv.Generator import SimulatorGenerator
-from sim.outcomes.OutcomeRecorder import OutcomeRecorder
+from rlenv.generate.Generator import SimulatorGenerator
+from rlenv.generate.Recorder import OutcomeRecorder
 from agent.eval.AgentPlayer import AgentPlayer
 from agent.util import load_agent_model
 from agent.models.PgCategoricalAgentModel import PgCategoricalAgentModel
@@ -42,7 +42,7 @@ class EvalGenerator(SimulatorGenerator):
         if self.agent_byr:
             buyer = self.generate_agent()
         else:
-            buyer = SimulatedBuyer(full=Full)
+            buyer = SimulatedBuyer(full=True)
         return buyer
 
     def generate_seller(self):

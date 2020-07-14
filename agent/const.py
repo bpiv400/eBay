@@ -1,4 +1,4 @@
-from constants import HIST_QUANTILES, POLICY_BYR, BYR, DROPOUT
+from constants import HIST_QUANTILES, POLICY_BYR, BYR
 from featnames import BYR_HIST
 from utils import load_featnames
 
@@ -21,14 +21,11 @@ AGENT_PARAMS = {BYR: {'action': 'store_true'},
                             'choices': [ALL_FEATS, NO_TIME],
                             'default': ALL_FEATS},
                 BYR_HIST: {'type': int,
-                           'choices': list(range(HIST_QUANTILES)),
-                           'default': 0}}
+                           'choices': list(range(HIST_QUANTILES))}}
 
 ECON_PARAMS = {'monthly_discount': {'type': float, 'default': .995},
                'action_discount': {'type': float, 'default': 1.},
                'action_cost': {'type': float, 'default': 0.}}
-
-MODEL_PARAMS = {DROPOUT: {'type': tuple, 'default': (0., 0.)}}
 
 PPO_PARAMS = {'entropy_coeff': {'type': float, 'default': .01},
               'use_cross_entropy': {'action': 'store_true'},
@@ -36,6 +33,7 @@ PPO_PARAMS = {'entropy_coeff': {'type': float, 'default': .01},
               'lr': {'type': float, 'default': .0002}}
 
 SYSTEM_PARAMS = {'gpu': {'type': int, 'default': 0},
+                 'log': {'action': 'store_true'},
                  'exp': {'type': int},
                  'serial': {'action': 'store_true'},
                  'verbose': {'action': 'store_true'},
@@ -43,16 +41,11 @@ SYSTEM_PARAMS = {'gpu': {'type': int, 'default': 0},
 
 PARAM_DICTS = {'agent_params': AGENT_PARAMS,
                'econ_params': ECON_PARAMS,
-               'model_params': MODEL_PARAMS,
                'ppo_params': PPO_PARAMS,
                'system_params': SYSTEM_PARAMS}
 
-# multi-processing parameters
-THREADS_PER_PROC = 1
-
-# stopping parameters
-STOPPING_EPOCHS = 100
-STOPPING_THRESHOLD = .001  # TODO: use .01
+# run for this many epochs
+STOPPING_EPOCHS = 500
 
 # for identifying first turn in buyer model
 T1_IDX = load_featnames(POLICY_BYR)['lstg'].index('t1')

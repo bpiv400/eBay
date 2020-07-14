@@ -2,8 +2,8 @@ import os
 import h5py
 import pandas as pd
 import numpy as np
-from featnames import START_TIME, META, X_LSTG, LOOKUP
-from constants import MONTH
+from featnames import START_TIME, META, X_LSTG, LOOKUP, P_ARRIVAL
+from constants import MONTH, PARTS_DIR, TRAIN_RL
 from utils import get_months_since_lstg, get_cut
 from agent.ConSpace import ConSpace
 from inputs.const import INTERVAL_CT_TURN, INTERVAL_TURN
@@ -11,25 +11,25 @@ from rlpyt.envs.base import Env
 from rlpyt.spaces.composite import Composite
 from rlpyt.spaces.float_box import FloatBox
 from rlenv.environments.EbayEnvironment import EbayEnvironment
-from rlenv.Recorder import Recorder
-from agent.util import get_train_file_path
+from rlenv.generate.Recorder import Recorder
 
 
 class AgentEnvironment(EbayEnvironment, Env):
 
     def __init__(self, **kwargs):
         super().__init__(params=kwargs)
-
         # attributes for getting lstg data
-        if 'filename' not in kwargs:
-            self._filename = get_train_file_path(0)
+        if 'rank' not in kwargs:
+            self._filename = self._get_train_file_path(rank=0)
         else:
-            self._filename = kwargs['filename']
+            self._filename = self._get_train_file_path(rank=kwargs['rank'])
         self._file = None
         self._file_opened = False
         self._num_lstgs = None
         self._lookup_cols = None
-        self._lookup_slice, self._x_lstg_slice = None, None
+        self._lookup_slice = None
+        self._x_lstg_slice = None
+        self._p_arrival_slice = None
         self._ix = -1
         self.relist_count = 0
 
@@ -72,6 +72,7 @@ class AgentEnvironment(EbayEnvironment, Env):
         self.x_lstg = pd.Series(self._x_lstg_slice[self._ix, :], index=self.composer.x_lstg_cols)
         self.x_lstg = self.composer.decompose_x_lstg(self.x_lstg)
         self.lookup = pd.Series(self._lookup_slice[self._ix, :], index=self._lookup_cols)
+        self.p_arrival = self._p_arrival_slice[self._ix, :]
         self._ix += 1
         self.start_time = self.lookup[START_TIME]
         self.end_time = self.start_time + MONTH
@@ -80,7 +81,12 @@ class AgentEnvironment(EbayEnvironment, Env):
         if self.verbose:
             Recorder.print_lstg(self.lookup)
 
+    @staticmethod
+    def _get_train_file_path(rank=None):
+        return PARTS_DIR + '{}/agent/{}.hdf5'.format(TRAIN_RL, rank)
+
     def _draw_lstgs(self):
+        # ids = np.random.choice(self._num_lstgs, 1000, replace=False)
         ids = np.array(range(self._num_lstgs))
         np.random.shuffle(ids)
         reordering = np.argsort(ids)
@@ -88,8 +94,10 @@ class AgentEnvironment(EbayEnvironment, Env):
         unsorted_ids = np.argsort(reordering)
         self._lookup_slice = self._file[LOOKUP][sorted_ids, :]
         self._x_lstg_slice = self._file[X_LSTG][sorted_ids, :]
+        self._p_arrival_slice = self._file[P_ARRIVAL][sorted_ids, :]
         self._lookup_slice = self._lookup_slice[unsorted_ids, :]
         self._x_lstg_slice = self._x_lstg_slice[unsorted_ids, :]
+        self._p_arrival_slice = self._p_arrival_slice[unsorted_ids, :]
         self._ix = 0
 
     def agent_tuple(self, done=None):

@@ -4,9 +4,9 @@ from datetime import datetime as dt
 from compress_pickle import dump, load
 from rlenv.util import get_checkpoint_path
 from rlenv.const import SIM_VALS_DIR, VAL_TIME_LIMIT
-from rlenv.Generator import SimulatorGenerator
-from sim.values.ValueCalculator import ValueCalculator
-from sim.values.ValueRecorder import ValueRecorder
+from rlenv.generate.Generator import SimulatorGenerator
+from agent.eval.ValueCalculator import ValueCalculator
+from agent.eval.ValueRecorder import ValueRecorder
 
 
 class ValueGenerator(SimulatorGenerator):

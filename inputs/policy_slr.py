@@ -2,7 +2,7 @@ import pandas as pd
 from inputs.util import save_files, get_x_thread, \
     get_x_offer_init, get_init_data
 from utils import init_x, input_partition
-from constants import IDX, SLR, CON_MULTIPLIER, TRAIN_MODELS, \
+from constants import IDX, SLR, CON_MULTIPLIER, TRAIN_RL, \
     VALIDATION, TEST, POLICY_SLR
 from featnames import EXP, CON, DELAY, AUTO
 
@@ -66,7 +66,7 @@ def main():
     print('{}/{}'.format(part, POLICY_SLR))
 
     # policy is trained on TRAIN_MODELS
-    assert part in [TRAIN_MODELS, VALIDATION, TEST]
+    assert part in [TRAIN_RL, VALIDATION, TEST]
 
     # input dataframes, output processed dataframes
     d = process_inputs(part)

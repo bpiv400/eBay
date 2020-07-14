@@ -1,8 +1,8 @@
-from rlenv.Generator import SimulatorGenerator
+from rlenv.generate.Generator import SimulatorGenerator
 from rlenv.test.LstgLog import LstgLog
 from rlenv.test.TestEnvironment import TestEnvironment
 from rlenv.test.util import load_all_inputs, load_reindex
-from sim.outcomes.OutcomeRecorder import OutcomeRecorder
+from rlenv.generate.Recorder import OutcomeRecorder
 
 
 class TestGenerator(SimulatorGenerator):

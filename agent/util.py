@@ -3,7 +3,6 @@ from rlpyt.samplers.parallel.worker import initialize_worker
 from rlpyt.utils.collections import AttrDict
 from rlpyt.utils.seed import set_envs_seeds
 from utils import load_state_dict
-from constants import REINFORCE_DIR
 
 
 def load_agent_model(model=None, model_path=None):
@@ -63,10 +62,6 @@ def compose_args(arg_dict=None, parser=None):
         parser.add_argument('--{}'.format(k), **v)
 
 
-def get_train_file_path(rank):
-    return '{}train/{}.hdf5'.format(REINFORCE_DIR, rank)
-
-
 def ebay_sampling_process(common_kwargs, worker_kwargs):
     """Target function used for forking parallel worker processes in the
     samplers. After ``initialize_worker()``, it creates the specified number
@@ -81,8 +76,7 @@ def ebay_sampling_process(common_kwargs, worker_kwargs):
     initialize_worker(w.rank, w.seed, w.cpus, c.torch_threads)
     envs = list()
     for env_rank in w.env_ranks:
-        filename = get_train_file_path(env_rank)
-        envs.append(c.EnvCls(**c.env_kwargs, filename=filename))
+        envs.append(c.EnvCls(**c.env_kwargs, rank=env_rank))
     set_envs_seeds(envs, w.seed)
 
     collector = c.CollectorCls(

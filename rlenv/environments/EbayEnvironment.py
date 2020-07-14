@@ -1,7 +1,7 @@
 import numpy as np
 from collections import namedtuple
-from constants import (BYR, MONTH, FIRST_ARRIVAL_MODEL,
-                       BYR_HIST_MODEL, INTERARRIVAL_MODEL, MAX_DELAY_TURN)
+from constants import (BYR, MONTH, BYR_HIST_MODEL, INTERARRIVAL_MODEL,
+                       MAX_DELAY_TURN)
 from featnames import ACC_PRICE, DEC_PRICE, START_PRICE, DELAY
 from utils import get_months_since_lstg
 from inputs.const import INTERVAL_ARRIVAL, INTERVAL_TURN
@@ -10,7 +10,7 @@ from rlenv.time.TimeFeatures import TimeFeatures
 from rlenv.time.Offer import Offer
 from rlenv.events.Event import Event
 from rlenv.events.Arrival import Arrival
-from rlenv.Recorder import Recorder
+from rlenv.generate.Recorder import Recorder
 from rlenv.sources import ArrivalSources
 from rlenv.sources import ThreadSources
 from rlenv.events.Thread import Thread
@@ -33,6 +33,7 @@ class EbayEnvironment:
         # features
         self.x_lstg = None
         self.lookup = None
+        self.p_arrival = None
 
         self.time_feats = TimeFeatures()
         # queue
@@ -191,12 +192,10 @@ class EbayEnvironment:
         event.update_arrival(thread_count=self.thread_counter - 1)
 
         # call model to sample inter arrival time and update arrival check priority
-        first = event.priority == self.start_time
-        input_dict = self.get_arrival_input_dict(event=event,
-                                                 first=first)
-        seconds = self.get_arrival(first=first,
-                                   input_dict=input_dict,
-                                   time=event.priority)
+        if event.priority == self.start_time:
+            seconds = self.get_first_arrival()
+        else:
+            seconds = self.get_interarrival(event=event)
         event.priority = min(event.priority + seconds, self.end_time)
 
         # if a buyer arrives, create a thread at the arrival time
@@ -321,12 +320,25 @@ class EbayEnvironment:
             msg = self.buyer.msg(input_dict=input_dict, turn=turn)
         return msg
 
-    def get_arrival(self, input_dict=None, time=None, first=None, intervals=None):
-        if first:
-            intervals = self.arrival.first_arrival(input_dict=input_dict, intervals=intervals)
-        else:
-            intervals = self.arrival.inter_arrival(input_dict=input_dict)
-        return int((intervals + np.random.uniform()) * INTERVAL_ARRIVAL)
+    @staticmethod
+    def _arrival_interval_to_seconds(interval=None):
+        return int((interval + np.random.uniform()) * INTERVAL_ARRIVAL)
+
+    def get_first_arrival(self, intervals=None):
+        probs = self.p_arrival
+        if intervals is not None:
+            probs = probs[intervals[0]:intervals[1]]
+        interval = np.random.choice(len(probs), p=probs)
+        seconds = self._arrival_interval_to_seconds(interval=interval)
+        return seconds
+
+    def get_interarrival(self, event=None):
+        input_dict = self.composer.build_input_dict(model_name=INTERARRIVAL_MODEL,
+                                                    sources=event.sources(),
+                                                    turn=None)
+        interval = self.arrival.inter_arrival(input_dict=input_dict)
+        seconds = self._arrival_interval_to_seconds(interval=interval)
+        return seconds
 
     def get_hist(self, input_dict=None, time=None, thread_id=None):
         return self.arrival.hist(input_dict=input_dict)
@@ -364,16 +376,6 @@ class EbayEnvironment:
         seconds = int((index + np.random.uniform()) * INTERVAL_TURN)
         seconds = min(seconds, MAX_DELAY_TURN)
         return seconds
-
-    def get_arrival_input_dict(self, event=None, first=False):
-        if first:
-            model_name = FIRST_ARRIVAL_MODEL
-        else:
-            model_name = INTERARRIVAL_MODEL
-        input_dict = self.composer.build_input_dict(model_name=model_name,
-                                                    sources=event.sources(),
-                                                    turn=None)
-        return input_dict
 
     def get_delay_input_dict(self, event=None):
         model_name = model_str(DELAY, turn=event.turn)

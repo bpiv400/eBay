@@ -6,8 +6,8 @@ from rlpyt.agents.base import AgentInputs
 from rlpyt.utils.tensor import valid_mean
 from rlpyt.utils.buffer import buffer_to
 from rlpyt.utils.collections import namedarraytuple
-from agent.models.PgCategoricalAgentModel import PgCategoricalAgentModel
-from agent.const import STOPPING_EPOCHS, STOPPING_THRESHOLD
+from agent.models.HumanAgentModel import HumanAgentModel
+from agent.const import STOPPING_EPOCHS
 
 LossInputs = namedarraytuple("LossInputs",
                              ["agent_inputs",
@@ -29,6 +29,9 @@ class CrossEntropyPPO:
     Swaps entropy bonus with cross-entropy penalty, where cross-entropy
     is calculated using the policy from the initialized agent.
     """
+    mid_batch_reset = False
+    bootstrap_value = True
+    opt_info_fields = tuple(f for f in OptInfo._fields)
 
     def __init__(
             self,
@@ -36,6 +39,7 @@ class CrossEntropyPPO:
             lr=None,
             ratio_clip=None,
             use_cross_entropy=None,
+            byr=None
     ):
         # save parameters to self
         self.entropy_coeff = entropy_coeff
@@ -43,26 +47,20 @@ class CrossEntropyPPO:
         self.ratio_clip = ratio_clip
         self.use_cross_entropy = use_cross_entropy
 
-        # fixed parameters
-        self.mid_batch_reset = False
-        self.bootstrap_value = True
-
-        # output fields
-        self.opt_info_fields = tuple(f for f in OptInfo._fields)
-
         # parameters to be defined later
         self.agent = None
         self._optimizer_value = None
         self._optimizer_policy = None
+
+        # human agent
         if self.use_cross_entropy:
-            self._init_agent = None
+            self._human = HumanAgentModel(byr=byr).to('cuda')
 
         # count number of updates
         self.update_counter = 0
 
         # for stopping
         self.training_complete = False
-        self._qualified_epochs = 0
 
     def initialize(self, agent=None):
         """
@@ -75,11 +73,6 @@ class CrossEntropyPPO:
                                      lr=self.lr)
         self._optimizer_policy = Adam(self.agent.policy_parameters(),
                                       lr=self.lr)
-
-        # init_agent new initialized agent
-        if self.use_cross_entropy:
-            self._init_agent = PgCategoricalAgentModel(
-                **self.agent.model_kwargs).to(self.agent.device)
 
     @staticmethod
     def valid_from_done(done):
@@ -184,16 +177,10 @@ class CrossEntropyPPO:
         opt_info.ValueError.append(value_error.item())
         opt_info.Entropy.append(entropy)
 
-        # increment counter
+        # increment counter and set complete flag
         self.update_counter += 1
-
-        # update qualified epochs and training complete flag
-        if value_error.item() < STOPPING_THRESHOLD:
-            self._qualified_epochs += 1
-            if self._qualified_epochs == STOPPING_EPOCHS:
-                self.training_complete = True
-        else:
-            self._qualified_epochs = 0
+        if self.update_counter == STOPPING_EPOCHS:
+            self.training_complete = True
 
         return opt_info
 
@@ -236,7 +223,7 @@ class CrossEntropyPPO:
 
         # cross-entropy loss
         if self.use_cross_entropy:
-            pi_0 = self._init_agent.con(*agent_inputs)
+            pi_0 = self._human.get_policy(*agent_inputs)
             cross_entropy = self._mean_kl(pi_0.to('cpu'), pi_new.prob, valid)
             entropy_loss = self.entropy_coeff * cross_entropy
 

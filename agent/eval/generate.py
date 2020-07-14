@@ -4,7 +4,7 @@ from compress_pickle import load
 from agent.eval.EvalGenerator import EvalGenerator
 from agent.AgentComposer import AgentComposer
 from agent.const import ALL_FEATS, FULL_CON
-from constants import MODEL_DIR, BYR, REINFORCE_DIR, TRAIN_RL, VALIDATION, \
+from constants import MODEL_DIR, BYR, AGENT_DIR, TRAIN_RL, VALIDATION, \
     TEST, AGENTS
 from featnames import DELAY
 
@@ -47,7 +47,7 @@ def main():
     name, num, part = args.name, args.num, args.part
 
     # find run parameters
-    parent_dir = REINFORCE_DIR + '{}/'.format(name)
+    parent_dir = AGENT_DIR + '{}/'.format(name)
     params = load(parent_dir + 'runs.pkl')
     runs = params.index
 
