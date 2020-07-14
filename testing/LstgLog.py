@@ -21,6 +21,7 @@ class LstgLog:
                           name='agent_params',
                           default=None)
         self.lstg = params['lstg']
+        print(self.lstg)
         self.lookup = params['lookup']
         self.agent = params['agent_params'] is not None
         self.agent_params = params['agent_params']
@@ -31,6 +32,8 @@ class LstgLog:
             self.translator = ThreadTranslator(agent_thread=self.agent_thread,
                                                arrivals=self.arrivals)
             self.update_arrival_time()
+        else:
+            self.translator = None
 
     @property
     def byr(self):
@@ -184,6 +187,7 @@ class LstgLog:
         check_time = self.arrival_check_time(params=params, thread_id=thread_id)
         full_arrival_inputs = params['inputs'][model]
         # print(full_arrival_inputs)
+        print(value)
         arrival_inputs = populate_test_model_inputs(full_inputs=full_arrival_inputs,
                                                     value=value)
         time = self.lookup[START_TIME] + MONTH
@@ -206,6 +210,7 @@ class LstgLog:
             model = INTERARRIVAL_MODEL
             value = thread_id
         check_time = self.arrival_check_time(params=params, thread_id=thread_id)
+        # print(params['x_thread'].columns)
         time = int(params['x_thread'].loc[thread_id, MONTHS_SINCE_LSTG] * MONTH)
         time += self.lookup[START_TIME]
         hist = params['x_thread'].loc[thread_id, BYR_HIST] / 10

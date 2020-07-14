@@ -3,8 +3,8 @@ from compress_pickle import load
 from agent.const import BYR, FEAT_TYPE, CON_TYPE, FULL_CON, ALL_FEATS
 from agent.util import get_agent_name
 from agent.AgentComposer import AgentComposer
-from constants import INIT_POLICY_MODELS
-from featnames import LSTG, DELAY, BYR_HIST
+from constants import INIT_POLICY_MODELS, NO_ARRIVAL_CUTOFF
+from featnames import LSTG, DELAY, BYR_HIST, NO_ARRIVAL
 from rlenv.Composer import Composer
 from rlenv.environments.BuyerEnvironment import BuyerEnvironment
 from rlenv.environments.SellerEnvironment import SellerEnvironment
@@ -77,7 +77,7 @@ class TestGenerator(Generator):
             lookup = subset_lstgs(df=lookup, lstgs=valid_lstgs)
             test_data['x_thread'] = subset_lstgs(df=test_data['x_thread'], lstgs=valid_lstgs)
             test_data['x_offer'] = subset_lstgs(df=test_data['x_offer'], lstgs=valid_lstgs)
-            test_data['inputs'] = subset_inputs(input_data=test_data,
+            test_data['inputs'] = subset_inputs(input_data=test_data['inputs'],
                                                 value=valid_lstgs, level='lstg')
         return TestLoader(x_lstg=x_lstg, lookup=lookup, test_data=test_data)
 
@@ -101,6 +101,8 @@ class TestGenerator(Generator):
         Verifies this list matches exactly the lstgs with inputs for the relevant model
         :return: pd.Int64Index
         """
+        common_bool = lookup[NO_ARRIVAL] >= NO_ARRIVAL_CUTOFF
+        common_index = lookup.index[common_bool]
         if self.start is not None:
             start_index = list(lookup.index).index(self.start)
             start_lstgs = lookup.index[start_index:]
@@ -108,10 +110,11 @@ class TestGenerator(Generator):
             start_lstgs = lookup.index
         if self.agent:
             agent_lstgs = self._get_agent_lstgs(test_data=test_data)
-            lstgs = np.intersect1d(agent_lstgs, start_lstgs)
+            lstgs = np.intersect1d(agent_lstgs, start_lstgs,
+                                   common_index)
             return lstgs
         else:
-            return start_lstgs
+            return np.intersect1d(start_lstgs, common_index)
 
     def _get_agent_lstgs(self, test_data=None):
         x_offer = test_data['x_offer'].copy()  # x_offer: pd.DataFrame
@@ -203,7 +206,7 @@ class TestGenerator(Generator):
         """
         # simulate once for each buyer in BuyerEnvironment mode
         # this output needs to match first agent action
-        lstg_log = self._generate_lstg_log(buyer=None   )
+        lstg_log = self._generate_lstg_log(buyer=None)
         self.query_strategy.update_log(lstg_log)
         self.environment.reset()
         # going to need to change to return for each agent action

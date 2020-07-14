@@ -13,7 +13,7 @@ class TestQueryStrategy(QueryStrategy):
 
     def get_arrival(self, *args, **kwargs):
         init_optional_arg(kwargs=kwargs, name='intervals', default=None)
-        agent = kwargs['intervals'] is None
+        agent = kwargs['intervals'] is not None
         return self.lstg_log.get_inter_arrival(input_dict=kwargs['input_dict'],
                                                time=kwargs['time'],
                                                agent=agent,

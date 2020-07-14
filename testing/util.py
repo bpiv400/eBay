@@ -30,7 +30,7 @@ class Subsetter:
         else:
             # extract all values of target level
             if self.multi_index:
-                lstgs = feats_df.index.unique(level=self.level)
+                lstgs = feats_df.index.get_level_values(level=self.level)
             else:
                 lstgs = feats_df.index
             # check whether the target value appears in the target level
