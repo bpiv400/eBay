@@ -18,21 +18,23 @@ class ThreadLog:
                                                        turn=self.uncensored_turns + 1)
             self.turns[self.uncensored_turns + 1] = censored
 
-    def is_agent_turn(self, turn):
+    def is_agent_turn(self, turn=None, outcomes=None):
         if self.agent:
             if self.agent_buyer:
                 return turn % 2 == 1
             else:
                 slr = turn % 2 == 0
-                auto = self.turns[turn].auto
+                auto = outcomes[AUTO] if outcomes is not None else\
+                    self.turns[turn].auto
                 return slr and not auto
         else:
             return False
 
     def generate_censored_turn_log(self, params=None, turn=None):
-        agent_turn = self.is_agent_turn(turn)
         outcomes = params['x_offer'].loc[turn, :]
         outcomes = outcomes[OUTCOME_FEATS]
+        agent_turn = self.is_agent_turn(turn=turn,
+                                        outcomes=outcomes)
         model = model_str(DELAY, turn=turn)
         delay_inputs = populate_test_model_inputs(full_inputs=params['inputs'][model],
                                                   agent=self.agent, agent_byr=self.agent_buyer)
@@ -71,7 +73,8 @@ class ThreadLog:
         else:
             delay_inputs = None
         delay_time = self.delay_time(turn=turn)
-        agent_turn = self.is_agent_turn(turn)
+        agent_turn = self.is_agent_turn(turn=turn,
+                                        outcomes=outcomes)
         turn_log = TurnLog(outcomes=outcomes, delay_inputs=delay_inputs, con_inputs=con_inputs,
                            msg_inputs=msg_inputs, delay_time=delay_time, turn=turn,
                            agent=agent_turn)

@@ -37,6 +37,8 @@ class AgentLog:
             assert (next_action.turn == 1 and self.byr) or \
                    (next_action.turn % 2 == 0 and not self.byr)
         if not next_action.censored:
+            for feat_set in obs.keys():
+                obs[feat_set] = obs[feat_set].unsqueeze(0)
             compare_input_dicts(model=self.model_name,
                                 stored_inputs=next_action.input_dict,
                                 env_inputs=obs)

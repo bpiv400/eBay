@@ -21,7 +21,6 @@ class LstgLog:
                           name='agent_params',
                           default=None)
         self.lstg = params['lstg']
-        print(self.lstg)
         self.lookup = params['lookup']
         self.agent = params['agent_params'] is not None
         self.agent_params = params['agent_params']
@@ -29,6 +28,7 @@ class LstgLog:
         self.threads = self.generate_thread_logs(params)
         self.agent_log = self.generate_agent_log(params) # revisit this
         if self.agent and self.byr:
+            print('translating...')
             self.translator = ThreadTranslator(agent_thread=self.agent_thread,
                                                arrivals=self.arrivals)
             self.update_arrival_time()
@@ -101,7 +101,7 @@ class LstgLog:
                 input_dict = None
             else:
                 input_dict = populate_test_model_inputs(full_inputs=full_inputs, value=index,
-                                                       agent=True, agent_byr=self.byr)
+                                                        agent=True, agent_byr=self.byr)
             action = ActionLog(con=turn_log.agent_con(), censored=turn_log.is_censored,
                                months=months, input_dict=input_dict, thread_id=thread_id,
                                turn=turn_number)
@@ -154,16 +154,18 @@ class LstgLog:
         thread_logs = dict()
         for thread_id, arrival_log in self.arrivals.items():
             if not arrival_log.censored:
-                print('Thread id: {}'.format(thread_id))
+                # print('Thread id: {}'.format(thread_id))
                 thread_logs[thread_id] = self.generate_thread_log(thread_id=thread_id, params=params)
         return thread_logs
 
     def generate_arrival_logs(self, params):
         arrival_logs = dict()
         if params['x_thread'] is None:
+            # print('first censored')
             censored = self.generate_censored_arrival(params=params, thread_id=1)
             arrival_logs[1] = censored
         else:
+            # print('first real thread')
             num_arrivals = len(params['x_thread'].index)
             for i in range(1, num_arrivals + 1):
                 curr_arrival = self.generate_arrival_log(params=params,
@@ -187,7 +189,7 @@ class LstgLog:
         check_time = self.arrival_check_time(params=params, thread_id=thread_id)
         full_arrival_inputs = params['inputs'][model]
         # print(full_arrival_inputs)
-        print(value)
+        # print(value)
         arrival_inputs = populate_test_model_inputs(full_inputs=full_arrival_inputs,
                                                     value=value)
         time = self.lookup[START_TIME] + MONTH
@@ -216,7 +218,7 @@ class LstgLog:
         hist = params['x_thread'].loc[thread_id, BYR_HIST] / 10
         full_arrival_inputs = params['inputs'][model]
         full_hist_inputs = params['inputs'][BYR_HIST_MODEL]
-        print('value: {}'.format(value))
+        # print('value: {}'.format(value))
         arrival_inputs = populate_test_model_inputs(full_inputs=full_arrival_inputs,
                                                     value=value)
         hist_inputs = populate_test_model_inputs(full_inputs=full_hist_inputs,

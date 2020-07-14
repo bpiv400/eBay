@@ -1,6 +1,7 @@
 import numpy as np
 from compress_pickle import load
-from agent.const import BYR, FEAT_TYPE, CON_TYPE, FULL_CON, ALL_FEATS
+from agent.const import BYR, FEAT_TYPE, CON_TYPE, FULL_CON,\
+    ALL_FEATS, SLR
 from agent.util import get_agent_name
 from agent.AgentComposer import AgentComposer
 from constants import INIT_POLICY_MODELS, NO_ARRIVAL_CUTOFF
@@ -45,7 +46,7 @@ class TestGenerator(Generator):
     def generate_composer(self):
         if self.agent:
             agent_params = {
-                BYR: self.byr,
+                'role': BYR if self.byr else SLR,
                 DELAY: self.delay,
                 FEAT_TYPE: ALL_FEATS,
                 CON_TYPE: FULL_CON,
@@ -79,7 +80,8 @@ class TestGenerator(Generator):
             test_data['x_offer'] = subset_lstgs(df=test_data['x_offer'], lstgs=valid_lstgs)
             test_data['inputs'] = subset_inputs(input_data=test_data['inputs'],
                                                 value=valid_lstgs, level='lstg')
-        return TestLoader(x_lstg=x_lstg, lookup=lookup, test_data=test_data)
+        return TestLoader(x_lstg=x_lstg, lookup=lookup,
+                          test_data=test_data, agent=self.agent)
 
     def _remove_extra_models(self, test_data):
         """
@@ -101,7 +103,7 @@ class TestGenerator(Generator):
         Verifies this list matches exactly the lstgs with inputs for the relevant model
         :return: pd.Int64Index
         """
-        common_bool = lookup[NO_ARRIVAL] >= NO_ARRIVAL_CUTOFF
+        common_bool = lookup[NO_ARRIVAL] <= NO_ARRIVAL_CUTOFF
         common_index = lookup.index[common_bool]
         if self.start is not None:
             start_index = list(lookup.index).index(self.start)
@@ -109,14 +111,14 @@ class TestGenerator(Generator):
         else:
             start_lstgs = lookup.index
         if self.agent:
-            agent_lstgs = self._get_agent_lstgs(test_data=test_data)
-            lstgs = np.intersect1d(agent_lstgs, start_lstgs,
-                                   common_index)
+            agent_lstgs = self._get_agent_lstgs(test_data=test_data,
+                                                common_lstgs=common_index)
+            lstgs = np.intersect1d(agent_lstgs, start_lstgs)
             return lstgs
         else:
             return np.intersect1d(start_lstgs, common_index)
 
-    def _get_agent_lstgs(self, test_data=None):
+    def _get_agent_lstgs(self, test_data=None, common_lstgs=None):
         x_offer = test_data['x_offer'].copy()  # x_offer: pd.DataFrame
         if self.byr:
             # all lstgs should have at least 1 action
@@ -129,21 +131,24 @@ class TestGenerator(Generator):
 
                 # keep all lstgs with at least 1 thread with at least 1 non-auto seller
                 # offer
-                keep = np.logical_and(slr_offers, man_offers)
-                lstgs = x_offer.index.get_level_values('lstg')[keep].unique()
+                predicates = (slr_offers, man_offers)
             else:
                 # keep all lstgs with at least 1 thread
                 # with at least 1 non-auto / non-expiration seller offer
                 exp_offers = x_offer['exp']
-                keep = np.logical_and(slr_offers, man_offers,
-                                      np.logical_not(censored_offers),
-                                      np.logical_not(exp_offers))
-                lstgs = x_offer.index.get_level_values('lstg')[keep].unique()
+                predicates = (slr_offers, man_offers,
+                              np.logical_not(censored_offers),
+                              np.logical_not(exp_offers))
+            keep = np.logical_and.reduce(predicates)
+            lstgs = x_offer.index.get_level_values('lstg')[keep].unique()
+            lstgs = lstgs[lstgs.isin(common_lstgs)]
         # verify that x_offer based lstgs match lstgs used as model input exactly
         model_name = get_agent_name(policy=True, byr=self.byr, delay=self.delay)
         input_lstgs = test_data['inputs'][model_name][LSTG].index.get_level_values('lstg').unique()
+        # print(input_lstgs[~input_lstgs.isin(lstgs)])
         assert input_lstgs.isin(lstgs).all()
-        assert lstgs.isin(input_lstgs).all()
+        # print(lstgs[~lstgs.isin(input_lstgs)])
+        # assert lstgs.isin(input_lstgs).all()
         return lstgs
 
     def _count_rl_buyers(self):
@@ -175,6 +180,7 @@ class TestGenerator(Generator):
             hist = self.loader.x_thread.loc[buyer, 'byr_hist']
             hist = hist / 10
             self.composer.set_hist(hist=hist)
+        # print('resetting: {}'.format(self.loader.lstg))
         obs = self.environment.reset()
         agent_tuple = obs, None, None, None
         done = False
@@ -186,6 +192,7 @@ class TestGenerator(Generator):
 
     def generate(self):
         while self.environment.has_next_lstg():
+            print('next lstg')
             self.environment.next_lstg()
             self.recorder.update_lstg(lookup=self.loader.lookup,
                                       lstg=self.loader.lstg)
