@@ -27,6 +27,7 @@ def load_model_inputs(model=None, input_dir=None, index_dir=None, lstgs=None):
     containing the input data for those feature sets
     """
     # load input and index files and featnames
+    print(model)
     input_path = '{}{}.gz'.format(input_dir, model)
     index_path = '{}{}.gz'.format(index_dir, model)
     index = load(index_path)
