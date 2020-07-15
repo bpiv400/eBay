@@ -5,6 +5,7 @@ rclone copy ~/weka/eBay/inputs/date_feats.pkl dropbox:ebay/data/inputs
 rclone sync ~/weka/eBay/outputs/models dropbox:ebay/data/outputs/models --max-depth=1
 rclone sync ~/weka/eBay/inputs/valid dropbox:ebay/data/inputs/valid
 rclone sync ~/weka/eBay/index/valid dropbox:ebay/data/index/valid
+rclone sync ~/weka/eBay/clean dropbox:ebay/data/clean
 
 # grab all of valid chunks
 rclone sync ~/weka/eBay/partitions/valid/chunks dropbox:ebay/data/partitions/valid/chunks

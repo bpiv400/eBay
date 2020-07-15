@@ -1,10 +1,9 @@
 import numpy as np
-from compress_pickle import load
 from agent.const import BYR, FEAT_TYPE, ALL_FEATS
 from agent.util import get_agent_name
 from agent.AgentComposer import AgentComposer
-from constants import POLICY_MODELS, NO_ARRIVAL_CUTOFF
-from featnames import LSTG, BYR_HIST, NO_ARRIVAL
+from constants import POLICY_MODELS
+from featnames import LSTG, BYR_HIST
 from rlenv.Composer import Composer
 from rlenv.environments.BuyerEnvironment import BuyerEnvironment
 from rlenv.environments.SellerEnvironment import SellerEnvironment
@@ -35,7 +34,6 @@ class TestGenerator(Generator):
         self.agent = kwargs['agent']
         # boolean for whether the agent is a byr
         self.byr = kwargs[BYR]
-        self.test_data = None
 
     def generate_query_strategy(self):
         return TestQueryStrategy()
@@ -64,6 +62,10 @@ class TestGenerator(Generator):
         x_lstg, lookup, p_arrival = chunk_tuple
         # lstgs without duplicated time stamps first
         test_data = dict()
+        non_dups = lstgs_without_duplicated_timestamps(
+            lstgs=lookup.index)
+        for df in [x_lstg, lookup, p_arrival]:
+            df = df.reindex(non_dups)
         test_data['inputs'] = load_all_inputs(part=part,
                                               lstgs=lookup.index)
         for name in ['x_thread', 'x_offer']:
@@ -82,7 +84,8 @@ class TestGenerator(Generator):
             test_data['inputs'] = subset_inputs(input_data=test_data['inputs'],
                                                 value=valid_lstgs, level='lstg')
         return TestLoader(x_lstg=x_lstg, lookup=lookup,
-                          test_data=test_data, agent=self.agent)
+                          p_arrival=p_arrival, test_data=test_data,
+                          agent=self.agent)
 
     def _remove_extra_models(self, test_data):
         """
@@ -104,22 +107,19 @@ class TestGenerator(Generator):
         Verifies this list matches exactly the lstgs with inputs for the relevant model
         :return: pd.Int64Index
         """
-        common_bool = lookup[NO_ARRIVAL] <= NO_ARRIVAL_CUTOFF
-        common_index = lookup.index[common_bool]
         if self.start is not None:
             start_index = list(lookup.index).index(self.start)
             start_lstgs = lookup.index[start_index:]
         else:
             start_lstgs = lookup.index
         if self.agent:
-            agent_lstgs = self._get_agent_lstgs(test_data=test_data,
-                                                common_lstgs=common_index)
+            agent_lstgs = self._get_agent_lstgs(test_data=test_data)
             lstgs = np.intersect1d(agent_lstgs, start_lstgs)
             return lstgs
         else:
-            return np.intersect1d(start_lstgs, common_index)
+            return start_lstgs
 
-    def _get_agent_lstgs(self, test_data=None, common_lstgs=None):
+    def _get_agent_lstgs(self, test_data=None):
         x_offer = test_data['x_offer'].copy()  # x_offer: pd.DataFrame
         if self.byr:
             # all lstgs should have at least 1 action
@@ -132,7 +132,6 @@ class TestGenerator(Generator):
             predicates = (slr_offers, man_offers)
             keep = np.logical_and.reduce(predicates)
             lstgs = x_offer.index.get_level_values('lstg')[keep].unique()
-            lstgs = lstgs[lstgs.isin(common_lstgs)]
         # verify that x_offer based lstgs match lstgs used as model input exactly
         model_name = get_agent_name(byr=self.byr)
         input_lstgs = test_data['inputs'][model_name][LSTG].index.get_level_values('lstg').unique()
