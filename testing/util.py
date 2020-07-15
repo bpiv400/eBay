@@ -6,7 +6,8 @@ from collections.abc import Iterable
 from utils import load_featnames
 from rlenv.util import load_featnames
 from utils import load_file
-from constants import MODELS, INPUT_DIR, INDEX_DIR, CLEAN_DIR
+from constants import MODELS, INPUT_DIR, INDEX_DIR, CLEAN_DIR,\
+    FIRST_ARRIVAL_MODEL
 from featnames import CENSORED, EXP, DELAY
 
 
@@ -136,7 +137,9 @@ def load_all_inputs(part=None, lstgs=None):
     input_dir = '{}{}/'.format(INPUT_DIR, part)
     index_dir = '{}{}/'.format(INDEX_DIR, part)
     inputs_dict = dict()
-    for model in MODELS:
+    models = MODELS
+    models.remove(FIRST_ARRIVAL_MODEL)
+    for model in models:
         inputs_dict[model] = load_model_inputs(model=model,
                                                input_dir=input_dir,
                                                index_dir=index_dir,

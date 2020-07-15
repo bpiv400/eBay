@@ -12,7 +12,8 @@ def main():
     for arg in TEST_GENERATOR_KWARGS:
         generator_kwargs[arg] = args[arg]
     gen = TestGenerator(**generator_kwargs)
-    gen.process_chunk(chunk=args['num'])
+    gen.process_chunk(part=generator_kwargs['part'],
+                      chunk=args['num'])
 
 
 if __name__ == '__main__':

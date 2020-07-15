@@ -178,19 +178,21 @@ class LstgLog:
                 print('has bin')
         return arrival_logs
 
-    def generate_censored_arrival(self, params=None, thread_id=None):
+    @staticmethod
+    def get_arrival_inputs(params=None, thread_id=None):
         if thread_id == 1:
-            model = FIRST_ARRIVAL_MODEL
-            value = None
+            arrival_inputs = None
         else:
-            model = INTERARRIVAL_MODEL
-            value = thread_id
+            full_arrival_inputs = params['inputs'][INTERARRIVAL_MODEL]
+            arrival_inputs = populate_test_model_inputs(
+                full_inputs=full_arrival_inputs,
+                value=thread_id)
+        return arrival_inputs
+
+    def generate_censored_arrival(self, params=None, thread_id=None):
+        arrival_inputs = self.get_arrival_inputs(params=params,
+                                                 thread_id=thread_id)
         check_time = self.arrival_check_time(params=params, thread_id=thread_id)
-        full_arrival_inputs = params['inputs'][model]
-        # print(full_arrival_inputs)
-        # print(value)
-        arrival_inputs = populate_test_model_inputs(full_inputs=full_arrival_inputs,
-                                                    value=value)
         time = self.lookup[START_TIME] + MONTH
         return ArrivalLog(check_time=check_time, arrival_inputs=arrival_inputs, time=time,
                           first_arrival=thread_id == 1)
@@ -204,22 +206,16 @@ class LstgLog:
         return check_time
 
     def generate_arrival_log(self, params=None, thread_id=None):
-        if thread_id == 1:
-            model = FIRST_ARRIVAL_MODEL
-            value = None
-        else:
-            model = INTERARRIVAL_MODEL
-            value = thread_id
+        arrival_inputs = self.get_arrival_inputs(params=params,
+                                                 thread_id=thread_id)
         check_time = self.arrival_check_time(params=params, thread_id=thread_id)
         # print(params['x_thread'].columns)
         time = int(params['x_thread'].loc[thread_id, MONTHS_SINCE_LSTG] * MONTH)
         time += self.lookup[START_TIME]
         hist = params['x_thread'].loc[thread_id, BYR_HIST] / 10
-        full_arrival_inputs = params['inputs'][model]
+
         full_hist_inputs = params['inputs'][BYR_HIST_MODEL]
         # print('value: {}'.format(value))
-        arrival_inputs = populate_test_model_inputs(full_inputs=full_arrival_inputs,
-                                                    value=value)
         hist_inputs = populate_test_model_inputs(full_inputs=full_hist_inputs,
                                                  value=thread_id)
         return ArrivalLog(hist=hist, time=time, arrival_inputs=arrival_inputs,
