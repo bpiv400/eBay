@@ -139,5 +139,9 @@ class DiscrimGenerator(SimulatorGenerator):
         :return: outcome tuple
         """
         self.environment.reset()
-        outcome = self.environment.run()
+        try:
+            outcome = self.environment.run()
+        except ValueError:
+            print('numpy error on: {}'.format(self.loader.lstg))
+            raise RuntimeError("Stopping")
         return outcome

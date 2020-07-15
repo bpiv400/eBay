@@ -1,4 +1,5 @@
 import numpy as np
+from torch.distributions import Categorical
 from constants import BYR_HIST_MODEL, INTERARRIVAL_MODEL
 from rlenv.util import sample_categorical
 from utils import load_model
@@ -25,6 +26,7 @@ class ArrivalInterface:
     def first_arrival(probs=None, intervals=None):
         if intervals is not None:
             probs = probs[intervals[0]:intervals[1]]
-            probs /= np.sum(probs)
+        probs = probs.values
+        probs /= probs.sum()
         sample = np.random.choice(len(probs), p=probs)
         return sample

@@ -1,23 +1,11 @@
 import numpy as np
 from rlenv.environments.EbayEnvironment import EbayEnvironment
-<<<<<<< HEAD
-from constants import MONTH
-from featnames import START_TIME, TIME_FEATS, X_LSTG, LOOKUP, P_ARRIVAL
-=======
 from featnames import TIME_FEATS
->>>>>>> test_framework
 
 
 class SimulatorEnvironment(EbayEnvironment):
     def __init__(self, **kwargs):
         super().__init__(kwargs)
-
-<<<<<<< HEAD
-        self.x_lstg = kwargs[X_LSTG]
-        self.lookup = kwargs[LOOKUP]
-        self.p_arrival = kwargs[P_ARRIVAL]
-=======
->>>>>>> test_framework
         self.recorder = kwargs['recorder']
 
     def reset(self):

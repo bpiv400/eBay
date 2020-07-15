@@ -25,7 +25,7 @@ def main():
         cls = ValueGenerator
     else:
         cls = DiscrimGenerator
-    gen = cls(part=part, verbose=verbose)
+    gen = cls(verbose=verbose)
 
     # process chunks in parallel
     num_workers = min(NUM_CHUNKS, psutil.cpu_count() - 1)

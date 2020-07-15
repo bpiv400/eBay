@@ -2,9 +2,8 @@ import os
 import h5py
 import numpy as np
 import pandas as pd
-from agent.util import get_train_file_path
+from constants import PARTS_DIR, TRAIN_RL
 from featnames import LSTG, LOOKUP, X_LSTG, P_ARRIVAL
-from rlenv.const import ENV_LSTG_COUNT
 
 
 class LstgLoader:
@@ -108,9 +107,9 @@ class TrainLoader(LstgLoader):
     def __init__(self, **kwargs):
         super().__init__()
         if 'rank' not in kwargs:
-            self._filename = get_train_file_path(rank=0)
+            self._filename = self._get_train_file_path(rank=0)
         else:
-            self._filename = get_train_file_path(rank=kwargs['rank'])
+            self._filename = self._get_train_file_path(rank=kwargs['rank'])
         self._file = None
         self._is_init = False
         self._num_lstgs = None
@@ -120,6 +119,10 @@ class TrainLoader(LstgLoader):
         self._p_arrival_slice = None
         self._ix = -1
         self._file_opened = False
+
+    @staticmethod
+    def _get_train_file_path(rank=None):
+        return PARTS_DIR + '{}/agent/{}.hdf5'.format(TRAIN_RL, rank)
 
     def next_lstg(self):
         self.verify_init()
