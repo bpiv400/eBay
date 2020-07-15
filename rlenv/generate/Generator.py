@@ -1,14 +1,13 @@
-from compress_pickle import load
 from datetime import datetime as dt
-
 from rlenv.generate.Recorder import OutcomeRecorder
 from rlenv.environments.SimulatorEnvironment import SimulatorEnvironment
+from rlenv.environments.EbayEnvironment import EbayEnvironment
+from rlenv.Composer import Composer
 from rlenv.interfaces.ArrivalInterface import ArrivalInterface
 from rlenv.interfaces.PlayerInterface import SimulatedSeller, SimulatedBuyer
-from rlenv.Composer import Composer
-from rlenv.util import get_env_sim_subdir
-from featnames import START_PRICE, START_TIME, ACC_PRICE, DEC_PRICE, \
-    X_LSTG, LOOKUP, P_ARRIVAL
+from rlenv.LstgLoader import ChunkLoader
+from rlenv.util import get_env_sim_dir, load_chunk
+from rlenv.DefaultQueryStrategy import DefaultQueryStrategy
 
 
 class Generator:
@@ -20,101 +19,68 @@ class Generator:
         self.verbose = verbose
         self.initialized = False
 
-        # data
-        self.chunk = None
-        self.x_lstg = None
-        self.lookup = None
-        self.p_arrival = None
-
         # model interfaces and input composer
         self.recorder = None
         self.composer = None
-        self.seller = None
-        self.buyer = None
-        self.arrival = None
+        self.loader = None
+        self.query_strategy = None
+        self.environment = None  # type: EbayEnvironment
 
     def process_chunk(self, part=None, chunk=None):
-        self.load_chunk(part=part, chunk=chunk)
+        self.loader = self.load_chunk(part=part, chunk=chunk)
         if not self.initialized:
             self.initialize()
+        self.environment = self.generate_environment()
         return self.generate()
 
     def initialize(self):
         self.composer = self.generate_composer()
-        self.buyer = self.generate_buyer()
-        self.seller = self.generate_seller()
-        self.arrival = ArrivalInterface()
+        self.query_strategy = self.generate_query_strategy()
         self.recorder = self.generate_recorder()
         self.initialized = True
 
-    def load_chunk(self, chunk=None):
+    def load_chunk(self, part=None, chunk=None):
         raise NotImplementedError()
 
     def generate_recorder(self):
         raise NotImplementedError()
 
+    def generate_query_strategy(self):
+        raise NotImplementedError()
+
     def generate_composer(self):
-        raise NotImplementedError()
-
-    def generate_buyer(self):
-        raise NotImplementedError()
-
-    def generate_seller(self):
         raise NotImplementedError()
 
     def generate(self):
         raise NotImplementedError()
 
-    def setup_env(self, lstg=None, lookup=None, log=None):
-        """
-        Generates the environment required to simulate the given listing
-        :param lstg: int giving a lstg id
-        :param pd.Series lookup: metadata about lstg
-        :param log: optional LstgLog passed if testing environment
-        :return: SimulatorEnvironment or subclass
-        """
-        if self.verbose:
-            self.print_lstg_info(lstg, lookup)
+    @property
+    def env_class(self):
+        raise NotImplementedError
 
-        # index x_lstg and p_arrival
-        x_lstg = self.x_lstg.loc[lstg, :]
-        x_lstg = self.composer.decompose_x_lstg(x_lstg)
-        p_arrival = self.p_arrival.loc[lstg, :].values
-
-        # create and return environment
-        return self.create_env(x_lstg=x_lstg,
-                               lookup=lookup,
-                               p_arrival=p_arrival,
-                               log=log)
-
-    def create_env(self, x_lstg=None, lookup=None, p_arrival=None, log=None):
-        return SimulatorEnvironment(buyer=self.buyer,
-                                    seller=self.seller,
-                                    arrival=self.arrival,
-                                    x_lstg=x_lstg,
-                                    lookup=lookup,
-                                    p_arrival=p_arrival,
-                                    recorder=self.recorder,
-                                    verbose=self.verbose,
-                                    composer=self.composer)
-
-    def simulate_lstg(self, environment):
-        raise NotImplementedError()
-
-    @staticmethod
-    def print_lstg_info(lstg, lookup):
-        """
-        Prints header giving basic info about the current lstg
-        :param lstg: int giving lstg id
-        :param lookup: pd.Series containing metadata about the lstg
-        """
-        print('lstg: {} | start_time: {} | start_price: {} | auto_rej: {} | auto_acc: {}'.format(
-            lstg, lookup[START_TIME], lookup[START_PRICE], lookup[DEC_PRICE], lookup[ACC_PRICE]))
+    def generate_environment(self):
+        return self.env_class(query_strategy=self.query_strategy,
+                              loader=self.loader,
+                              recorder=self.recorder,
+                              verbose=self.verbose,
+                              composer=self.composer)
 
 
 class SimulatorGenerator(Generator):
     def generate_composer(self):
-        return Composer(self.x_lstg.columns)
+        return Composer(cols=self.loader.x_lstg_cols)
+
+    def generate_query_strategy(self):
+        buyer = self.generate_buyer()
+        seller = self.generate_seller()
+        arrival = ArrivalInterface()
+        return DefaultQueryStrategy(buyer=buyer,
+                                    seller=seller,
+                                    arrival=arrival)
+
+    @property
+    def env_class(self):
+        return SimulatorEnvironment
 
     def generate_buyer(self):
         return SimulatedBuyer()
@@ -126,56 +92,52 @@ class SimulatorGenerator(Generator):
         raise NotImplementedError()
 
     def load_chunk(self, part=None, chunk=None):
-        chunk_dir = get_env_sim_subdir(part=part, chunks=True)
-        d = load(chunk_dir + '{}.gz'.format(chunk))
-        self.lookup = d[LOOKUP]
-        self.x_lstg = d[X_LSTG]
-        self.p_arrival = d[P_ARRIVAL]
+        base_dir = get_env_sim_dir(part=part)
+        x_lstg, lookup, p_arrival = load_chunk(base_dir=base_dir,
+                                               num=chunk)
+        return ChunkLoader(x_lstg=x_lstg, lookup=lookup,
+                           p_arrival=p_arrival)
 
     def generate(self):
         """
         Simulates all lstgs in chunk according to experiment parameters
         """
-        print('Total listings: {}'.format(len(self.x_lstg)))
+        print('Total listings: {}'.format(len(self.loader)))
         t0 = dt.now()
-        for lstg in self.x_lstg.index:
-            # index lookup dataframe
-            lookup = self.lookup.loc[lstg, :]
-
-            # create environment
-            env = self.setup_env(lstg=lstg, lookup=lookup)
-
+        while self.environment.has_next_lstg():
+            self.environment.next_lstg()
             # update listing in recorder
-            self.recorder.update_lstg(lookup=lookup, lstg=lstg)
+            self.recorder.update_lstg(lookup=self.loader.lookup,
+                                      lstg=self.loader.lstg)
 
-            # simulate lstg once
-            self.simulate_lstg(env)
+            # simulate lstg until sale
+            self.simulate_lstg()
 
         # time elapsed
         print('Avg time per listing: {} seconds'.format(
-            (dt.now() - t0).total_seconds() / len(self.x_lstg.index)))
+            (dt.now() - t0).total_seconds() / len(self.loader)))
 
         # return a dictionary
         return self.recorder.construct_output()
 
-    def simulate_lstg(self, environment):
+    def simulate_lstg(self):
         raise NotImplementedError()
 
 
 class DiscrimGenerator(SimulatorGenerator):
-    def __init__(self, part=None, verbose=False):
+    def __init__(self, verbose=False):
         super().__init__(verbose=verbose)
 
     def generate_recorder(self):
         return OutcomeRecorder(verbose=self.verbose,
                                record_sim=False)
 
-    def simulate_lstg(self, env):
+    def simulate_lstg(self):
         """
         Simulates a particular listing once.
         :param env: SimulatorEnvironment
         :return: outcome tuple
         """
-        env.reset()
-        outcome = env.run()
+        self.environment.reset()
+        outcome = self.environment.run()
         return outcome

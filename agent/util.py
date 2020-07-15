@@ -3,6 +3,20 @@ from rlpyt.samplers.parallel.worker import initialize_worker
 from rlpyt.utils.collections import AttrDict
 from rlpyt.utils.seed import set_envs_seeds
 from utils import load_state_dict
+from constants import (POLICY_SLR, POLICY_BYR)
+
+
+def detect_norm(init_dict=None):
+    found_v, found_g = False, False
+    for param_name in init_dict.keys():
+        if '_v' in param_name:
+            found_v = True
+        elif '_g' in param_name:
+            found_g = True
+    if found_g and found_v:
+        return "weight"
+    else:
+        raise NotImplementedError("Unexpected normalization type")
 
 
 def load_agent_model(model=None, model_path=None):
@@ -57,9 +71,11 @@ def load_init_model(name=None, size=None):
     return state_dict
 
 
-def compose_args(arg_dict=None, parser=None):
-    for k, v in arg_dict.items():
-        parser.add_argument('--{}'.format(k), **v)
+def get_agent_name(byr=False):
+    if byr:
+        return POLICY_BYR
+    else:
+        return POLICY_SLR
 
 
 def ebay_sampling_process(common_kwargs, worker_kwargs):

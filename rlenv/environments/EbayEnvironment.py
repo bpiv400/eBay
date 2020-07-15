@@ -1,10 +1,9 @@
-import numpy as np
 from collections import namedtuple
-from constants import (BYR, MONTH, BYR_HIST_MODEL, INTERARRIVAL_MODEL,
-                       MAX_DELAY_TURN)
-from featnames import ACC_PRICE, DEC_PRICE, START_PRICE, DELAY
-from utils import get_months_since_lstg
-from inputs.const import INTERVAL_ARRIVAL, INTERVAL_TURN
+from constants import (BYR, MONTH,
+                       BYR_HIST_MODEL, INTERARRIVAL_MODEL)
+from featnames import ACC_PRICE, DEC_PRICE, START_PRICE,\
+    DELAY, START_TIME, META
+from utils import get_months_since_lstg, get_cut
 from rlenv.Heap import Heap
 from rlenv.time.TimeFeatures import TimeFeatures
 from rlenv.time.Offer import Offer
@@ -25,9 +24,6 @@ class EbayEnvironment:
 
     def __init__(self, params=None):
         # interfaces
-        self.arrival = params['arrival']
-        self.buyer = params['buyer']
-        self.seller = params['seller']
         self.verbose = params['verbose']
 
         # features
@@ -39,13 +35,17 @@ class EbayEnvironment:
         # queue
         self.queue = Heap(entry_type=Event)
 
-        # end time
+        # lstg params
+        self.cut = None
+        self.relist_count = 0
         self.end_time = None
         self.start_time = None
         self.thread_counter = 1
         self.outcome = None
 
         self.composer = params['composer']
+        self.query_strategy = params['query_strategy']
+        self.loader = params['loader']
 
     def reset(self):
         self.queue.reset()
@@ -55,6 +55,26 @@ class EbayEnvironment:
         sources = ArrivalSources(x_lstg=self.x_lstg)
         event = Arrival(priority=self.start_time, sources=sources)
         self.queue.push(event)
+
+    def has_next_lstg(self):
+        if not self.loader.did_init:
+            self.loader.init()
+        return self.loader.has_next()
+
+    def next_lstg(self):
+        """
+        Sample a new lstg from the file and set lookup and x_lstg series
+        """
+        x_lstg, lookup, p_arrival = self.loader.next_lstg()
+        self.x_lstg = self.composer.decompose_x_lstg(x_lstg)
+        self.lookup = lookup
+        self.start_time = self.lookup[START_TIME]
+        self.end_time = self.start_time + MONTH
+        self.relist_count = 0
+        self.query_strategy.update_p_arrival(p_arrival=p_arrival)
+        self.cut = get_cut(self.lookup[META])
+        if self.verbose:
+            Recorder.print_lstg(self.lookup)
 
     def run(self):
         while True:
@@ -80,8 +100,7 @@ class EbayEnvironment:
         elif event.type == OFFER_EVENT:
             return self.process_offer(event)
         elif event.type == DELAY_EVENT:
-            # print('processing delay for thread {} for turn {}'.format(event.thread_id,
-            #                                                           event.turn))
+            # print('processing delay for thread {} for turn {}'.format(event.thread_id,event.turn))
             return self.process_delay(event)
         else:
             raise NotImplementedError()
@@ -193,9 +212,10 @@ class EbayEnvironment:
 
         # call model to sample inter arrival time and update arrival check priority
         if event.priority == self.start_time:
-            seconds = self.get_first_arrival()
+            seconds = self.get_first_arrival(time=event.priority,
+                                             thread_id=self.thread_counter)
         else:
-            seconds = self.get_interarrival(event=event)
+            seconds = self.get_inter_arrival(event=event)
         event.priority = min(event.priority + seconds, self.end_time)
 
         # if a buyer arrives, create a thread at the arrival time
@@ -306,42 +326,28 @@ class EbayEnvironment:
         event.init_delay(self.start_time)
         self.queue.push(event)
 
-    def get_con(self, input_dict=None, time=None, thread_id=None, turn=None):
-        if turn % 2 == 0:
-            con = self.seller.con(input_dict=input_dict, turn=turn)
-        else:
-            con = self.buyer.con(input_dict=input_dict, turn=turn)
-        return con
+    def get_con(self, *args, **kwargs):
+        return self.query_strategy.get_con(*args, **kwargs)
 
-    def get_msg(self, input_dict=None, time=None, turn=None, thread_id=None):
-        if turn % 2 == 0:
-            msg = self.seller.msg(input_dict=input_dict, turn=turn)
-        else:
-            msg = self.buyer.msg(input_dict=input_dict, turn=turn)
-        return msg
+    def get_msg(self, *args, **kwargs):
+        return self.query_strategy.get_msg(*args, **kwargs)
 
-    @staticmethod
-    def _arrival_interval_to_seconds(interval=None):
-        return int((interval + np.random.uniform()) * INTERVAL_ARRIVAL)
+    def get_first_arrival(self, *args, **kwargs):
+        return self.query_strategy.get_first_arrival(*args, **kwargs)
 
-    def get_first_arrival(self, intervals=None):
-        probs = self.p_arrival
-        if intervals is not None:
-            probs = probs[intervals[0]:intervals[1]]
-        interval = np.random.choice(len(probs), p=probs)
-        seconds = self._arrival_interval_to_seconds(interval=interval)
-        return seconds
-
-    def get_interarrival(self, event=None):
+    def get_inter_arrival(self, event=None):
         input_dict = self.composer.build_input_dict(model_name=INTERARRIVAL_MODEL,
                                                     sources=event.sources(),
                                                     turn=None)
-        interval = self.arrival.inter_arrival(input_dict=input_dict)
-        seconds = self._arrival_interval_to_seconds(interval=interval)
-        return seconds
+        return self.query_strategy.get_inter_arrival(time=event.priority,
+                                                     thread_id=self.thread_counter,
+                                                     input_dict=input_dict)
 
-    def get_hist(self, input_dict=None, time=None, thread_id=None):
-        return self.arrival.hist(input_dict=input_dict)
+    def get_hist(self, *args, **kwargs):
+        return self.query_strategy.get_hist(*args, **kwargs)
+
+    def get_delay(self, *args, **kwargs):
+        return self.query_strategy.get_delay(*args, **kwargs)
 
     def get_offer_outcomes(self, event, slr=False):
         # sample concession
@@ -361,21 +367,7 @@ class EbayEnvironment:
             msg = self.get_msg(input_dict=input_dict, time=event.priority, turn=event.turn,
                                thread_id=event.thread_id)
             event.update_msg(msg=msg)
-        # print('summary right before get offer outcomes returns')
-        # print(event.summary())
         return offer
-
-    def get_delay(self, input_dict=None, turn=None, thread_id=None, time=None,
-                  max_interval=None):
-        if turn % 2 == 0:
-            index = self.seller.delay(input_dict=input_dict, turn=turn,
-                                      max_interval=max_interval)
-        else:
-            index = self.buyer.delay(input_dict=input_dict, turn=turn,
-                                     max_interval=max_interval)
-        seconds = int((index + np.random.uniform()) * INTERVAL_TURN)
-        seconds = min(seconds, MAX_DELAY_TURN)
-        return seconds
 
     def get_delay_input_dict(self, event=None):
         model_name = model_str(DELAY, turn=event.turn)

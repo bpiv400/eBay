@@ -204,6 +204,11 @@ def input_partition():
     return parser.parse_args().part
 
 
+def init_optional_arg(kwargs=None, name=None, default=None):
+    if name not in kwargs:
+        kwargs[name] = default
+
+
 def load_file(part, x):
     """
     Loads file from partitions directory.
@@ -255,3 +260,8 @@ def set_gpu_workers(gpu=None):
     workers = list(range(start, start + NUM_RL_WORKERS))
     p.cpu_affinity(workers)
     print('vCPUs: {}'.format(p.cpu_affinity()))
+
+
+def compose_args(arg_dict=None, parser=None):
+    for k, v in arg_dict.items():
+        parser.add_argument('--{}'.format(k), **v)

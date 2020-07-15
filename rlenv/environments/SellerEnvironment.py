@@ -1,16 +1,17 @@
-from constants import MAX_DELAY_TURN, MONTH, POLICY_SLR
+from rlpyt.utils.collections import namedarraytuple
+from featnames import START_PRICE
+from constants import MAX_DELAY_TURN, POLICY_SLR
+from utils import load_sizes
 from rlenv.const import DELAY_EVENT
 from rlenv.environments.AgentEnvironment import AgentEnvironment
 from rlenv.events.Thread import RlThread
 from rlenv.generate.Recorder import Recorder
-from rlpyt.utils.collections import namedarraytuple
-from featnames import START_PRICE
-from utils import load_sizes
 
 SellerObs = namedarraytuple("SellerObs",
                             list(load_sizes(POLICY_SLR)['x'].keys()))
 SellerInfoTraj = namedarraytuple("SellerInfoTraj",
-                                 ["months", "bin_proceeds"])
+                                 ["months", "bin_proceeds",
+                                  "done", "turn", "thread_id"])
 
 
 class SellerEnvironment(AgentEnvironment):
@@ -38,7 +39,7 @@ class SellerEnvironment(AgentEnvironment):
 
     # restructure
     def reset(self):
-        self.reset_lstg()
+        self.next_lstg()
         super().reset()  # calls EBayEnvironment.reset()
         while True:
             event, lstg_complete = super().run()  # calls EBayEnvironment.run()
@@ -54,7 +55,7 @@ class SellerEnvironment(AgentEnvironment):
                 # otherwise, there's been a buy it now sale w/o a seller action,
                 # so we move onto the next lstg
                 else:
-                    self.reset_lstg()
+                    self.next_lstg()
                     super().reset()
 
     def relist(self):
@@ -104,11 +105,12 @@ class SellerEnvironment(AgentEnvironment):
         else:
             return self.outcome.price * (1-self.cut)
 
-    def get_info(self):
-        months = (self.last_event.priority - self.start_time) / MONTH
-        months += self.relist_count  # add in months without sale
+    def get_info(self, months=None, turn=None, thread_id=None,
+                 done=None):
         bin_proceeds = (1 - self.cut) * self.lookup[START_PRICE]
-        info = SellerInfoTraj(months=months,
+        info = SellerInfoTraj(months=months, turn=turn,
+                              done=done,
+                              thread_id=thread_id,
                               bin_proceeds=bin_proceeds)
         return info
 

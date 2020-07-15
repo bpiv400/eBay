@@ -3,7 +3,7 @@ import h5py
 
 
 COLS = ['taco', 'dog', 'man with a hat']
-PATH = 'test.hdf5'
+PATH = 'testing.hdf5'
 
 
 def main():

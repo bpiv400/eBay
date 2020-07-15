@@ -3,14 +3,11 @@ import os
 import argparse
 import pandas as pd
 import torch
-from compress_pickle import load
 from agent.RlTrainer import RlTrainer
 from agent.const import AGENT_STATE, PARAM_DICTS, AGENT_PARAMS, SYSTEM_PARAMS
-from agent.util import compose_args
 from agent.eval.EvalGenerator import EvalGenerator
-from utils import set_gpu_workers
-from constants import MODEL_DIR, AGENT_DIR, TRAIN_RL, VALIDATION, \
-    POLICY_SLR, POLICY_BYR, BYR, DROPOUT
+from utils import set_gpu_workers, compose_args
+from constants import AGENT_DIR, BYR, DROPOUT
 
 
 def simulate(part=None, run_dir=None, composer=None, model_kwargs=None):

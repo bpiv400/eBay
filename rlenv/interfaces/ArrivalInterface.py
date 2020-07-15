@@ -1,3 +1,4 @@
+import numpy as np
 from constants import BYR_HIST_MODEL, INTERARRIVAL_MODEL
 from rlenv.util import sample_categorical
 from utils import load_model
@@ -18,4 +19,12 @@ class ArrivalInterface:
     def inter_arrival(self, input_dict=None):
         logits = self.interarrival_model(input_dict).squeeze()
         sample = sample_categorical(logits)
+        return sample
+
+    @staticmethod
+    def first_arrival(probs=None, intervals=None):
+        if intervals is not None:
+            probs = probs[intervals[0]:intervals[1]]
+            probs /= np.sum(probs)
+        sample = np.random.choice(len(probs), p=probs)
         return sample

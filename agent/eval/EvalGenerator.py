@@ -10,6 +10,7 @@ from rlenv.interfaces.PlayerInterface import SimulatedBuyer, SimulatedSeller
 class EvalGenerator(SimulatorGenerator):
     def __init__(self, **kwargs):
         """
+<<<<<<< HEAD
         :param str part: name of partition
         :param verbose: boolean for whether to print information about threads
         :param model_class: class that inherits agent.models.AgentModel
@@ -20,8 +21,6 @@ class EvalGenerator(SimulatorGenerator):
         self._composer = kwargs['composer']  # type: AgentComposer
         self.agent_byr = self._composer.byr
         self.model_kwargs = kwargs['model_kwargs']
-        self.run_dir = kwargs['run_dir']
-        super().__init__(part=kwargs['part'], verbose=kwargs['verbose'])
 
     def generate_recorder(self):
         return OutcomeRecorder(records_path=self.records_path,

@@ -10,9 +10,11 @@ from torch.distributions.categorical import Categorical
 from torch.distributions.bernoulli import Bernoulli
 from constants import PARTS_DIR, INPUT_DIR, DAY, ARRIVAL_MODELS, \
     MAX_DELAY_TURN
+from featnames import MSG, LOOKUP, X_LSTG, P_ARRIVAL
 from rlenv.const import (SIM_CHUNKS_DIR, SIM_VALS_DIR, OFFER_MAPS,
                          SIM_DISCRIM_DIR, DATE_FEATS, NORM_IND)
-from utils import extract_clock_feats, is_split, slr_norm, byr_norm
+from utils import extract_clock_feats, is_split, slr_norm,\
+    byr_norm
 
 
 def model_str(model_name, turn=None):
@@ -256,9 +258,10 @@ def load_chunk(base_dir=None, num=None, input_path=None):
     if input_path is None:
         input_path = '{}chunks/{}.gz'.format(base_dir, num)
     input_dict = load(input_path)
-    x_lstg = input_dict['x_lstg']
-    lookup = input_dict['lookup']
-    return x_lstg, lookup
+    x_lstg = input_dict[X_LSTG]
+    lookup = input_dict[LOOKUP]
+    p_arrival = input_dict[P_ARRIVAL]
+    return x_lstg, lookup, p_arrival
 
 
 def get_delay_outcomes(seconds=0, turn=0):
@@ -335,28 +338,6 @@ def get_reject(con):
     return con == 0
 
 
-def compare_input_dicts(model=None, stored_inputs=None, env_inputs=None):
-    assert len(stored_inputs) == len(env_inputs)
-    for feat_set_name, stored_feats in stored_inputs.items():
-        env_feats = env_inputs[feat_set_name]
-        feat_eq = torch.lt(torch.abs(torch.add(-stored_feats, env_feats)), 1e-4)
-        if not torch.all(feat_eq):
-            print('Model input inequality found for {} in {}'.format(model, feat_set_name))
-            feat_eq = (~feat_eq.numpy())[0, :]
-            feat_eq = np.nonzero(feat_eq)[0]
-            featnames = load_featnames(model)
-            if 'offer' in feat_set_name:
-                featnames = featnames['offer']
-            else:
-                featnames = featnames[feat_set_name]
-            for feat_index in feat_eq:
-                print('-- INCONSISTENCY IN {} --'.format(featnames[feat_index]))
-                print('stored value = {} | env value = {}'.format(stored_feats[0, feat_index],
-                                                                  env_feats[0, feat_index]))
-            input("Press Enter to continue...")
-            # raise RuntimeError("Environment inputs diverged from true inputs")
-
-
 def need_msg(con, slr=None):
     if not slr:
         return 0 < con < 1
@@ -364,13 +345,19 @@ def need_msg(con, slr=None):
         return con < 1
 
 
-def populate_test_model_inputs(full_inputs=None, value=None):
+def populate_test_model_inputs(full_inputs=None, value=None, agent_byr=False, agent=False):
     inputs = dict()
     for feat_set_name, feat_df in full_inputs.items():
         if value is not None:
             curr_set = full_inputs[feat_set_name].loc[value, :]
         else:
             curr_set = full_inputs[feat_set_name]
+        # silence messages from agent
+        if agent and 'offer' in feat_set_name:
+            remainder = 1 if agent_byr else 0
+            turn = int(feat_set_name[-1])
+            if turn % 2 == remainder:
+                curr_set[MSG] = 0
         curr_set = curr_set.values
         curr_set = torch.from_numpy(curr_set).float()
         if len(curr_set.shape) == 1:

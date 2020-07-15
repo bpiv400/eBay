@@ -1,6 +1,5 @@
-from constants import (FIRST_ARRIVAL_MODEL,
-                       BYR_HIST_MODEL, INTERARRIVAL_MODEL)
-from rlenv.util import compare_input_dicts
+from constants import (BYR_HIST_MODEL, INTERARRIVAL_MODEL)
+from testing.util import compare_input_dicts
 
 
 class ArrivalLog:
@@ -17,13 +16,14 @@ class ArrivalLog:
 
     def get_inter_arrival(self, check_time=None, input_dict=None):
         assert check_time == self.check_time
-        if self.first_arrival:
-            model = FIRST_ARRIVAL_MODEL
-        else:
-            model = INTERARRIVAL_MODEL
-        compare_input_dicts(model=model,
-                            stored_inputs=self.arrival_inputs,
-                            env_inputs=input_dict)
+        if input_dict is not None:
+            compare_input_dicts(model=INTERARRIVAL_MODEL,
+                                stored_inputs=self.arrival_inputs,
+                                env_inputs=input_dict)
+        return self.inter_arrival
+
+    @property
+    def inter_arrival(self):
         inter_arrival = self.time - self.check_time
         return int(inter_arrival)
 

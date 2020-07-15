@@ -16,11 +16,11 @@ TOL_HALF = 0.02
 if 'Ubuntu' in platform():  # Etan's new box
     PREFIX = os.path.expanduser('~/eBay/data')
 elif 'debian' in platform():
-    PREFIX = os.path.expanduser('~/shared/ebay')
+    PREFIX = os.path.expanduser('~/shared/ebay/data')
 elif 'Windows' in platform() and 'A:' in os.getcwd():  # Barry's pc
-    PREFIX = 'A:/ebay'
+    PREFIX = 'A:/ebay/data'
 elif 'Windows' in platform() and 'C:' in os.getcwd():  # Barry's laptop
-    PREFIX = os.path.expanduser('~/ebay')
+    PREFIX = os.path.expanduser('~/ebay/data')
 elif 'Darwin' in platform():  # Etan's Mac laptop
     PREFIX = os.path.expanduser('~/eBay/data')
 else:  # cluster and AWS
@@ -47,7 +47,7 @@ AGENT_DIR = OUTPUT_DIR + 'agent/'
 TRAIN_MODELS = 'sim'
 TRAIN_RL = 'rl'
 VALIDATION = 'valid'
-TEST = VALIDATION  # TODO: rename to 'test' when using real test data
+TEST = VALIDATION  # TODO: rename to 'testing' when using real testing data
 PARTITIONS = [TRAIN_MODELS, TRAIN_RL, VALIDATION, TEST]
 SMALL = 'small'
 

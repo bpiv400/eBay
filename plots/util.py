@@ -69,7 +69,7 @@ def line_plot(df, style=None, ds='steps-post', xlim=None, ylim=None,
 
 def training_plot(name, df):
     line_plot(df,
-              style={'test': '-k', 'train': '--k', 'baserate': '-k'},
+              style={'testing': '-k', 'train': '--k', 'baserate': '-k'},
               ds='default')
     save_fig('training_{}'.format(name), legend=False)
 

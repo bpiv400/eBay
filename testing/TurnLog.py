@@ -1,15 +1,18 @@
 from constants import MONTH, MAX_DELAY_TURN, MAX_DELAY_ARRIVAL
-from featnames import MSG, CON, DELAY, EXP
-from rlenv.util import compare_input_dicts, model_str
+from featnames import MSG, CON, DELAY, EXP, AUTO
+from rlenv.util import model_str
+from testing.util import compare_input_dicts
 
 
 class TurnLog:
     def __init__(self, outcomes=None, turn=None, con_inputs=None, delay_inputs=None,
-                 msg_inputs=None, delay_time=None):
+                 msg_inputs=None, delay_time=None, agent=False):
         # outcomes
         self.con = outcomes[CON]
         self.msg = outcomes[MSG]
+        self.auto = outcomes[AUTO]
         self.delay = outcomes[DELAY]
+        self.expired = outcomes[EXP]
         self.censored = outcomes[EXP] and outcomes[DELAY] < 1
         # turn
         self.turn = turn
@@ -25,11 +28,34 @@ class TurnLog:
         self.delay_time = delay_time
         self.offer_time = self._init_offer_time()
 
+        self.agent = agent
+
+    def agent_con(self):
+        if self.agent:
+            if self.censored:
+                return 50
+            elif not self.byr and self.expired:
+                return 101
+            else:
+                return int(self.con * 100)
+        else:
+            raise RuntimeError("Queried concession for agent from a turn"
+                               " not stored as an agent turn")
+
+    def agent_time(self):
+        return self.delay_time
+
+    def agent_check(self, model):
+        if self.agent:
+            raise RuntimeError("Environment unexpectedly queried" +
+                               "{} model on an agent turn".format(model))
+
     @property
     def is_censored(self):
         return self.censored
 
     def get_con(self, check_time=None, input_dict=None):
+        self.agent_check('con{}'.format(self.turn))
         if self.con_inputs is None:
             raise RuntimeError("Environment unexpectedly queried concession model")
         assert check_time == self.offer_time
@@ -57,8 +83,9 @@ class TurnLog:
             return int(self.offer_time - self.delay_time)
 
     def get_msg(self, check_time=None, input_dict=None):
+        self.agent_check('msg{}'.format(self.turn))
         if self.msg_inputs is None:
-            raise RuntimeError("Environment unexpectedly queried delay model")
+            raise RuntimeError("Environment unexpectedly queried msg model")
         assert check_time == self.offer_time
         compare_input_dicts(model=self.delay_model_name, stored_inputs=self.msg_inputs,
                             env_inputs=input_dict)

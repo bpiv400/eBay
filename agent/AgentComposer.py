@@ -3,16 +3,13 @@ import math
 import pprint
 import torch
 import numpy as np
-from constants import TURN_FEATS, BYR, SLR, PARTS_DIR, TRAIN_RL, \
-    POLICY_BYR, POLICY_SLR
-from featnames import OUTCOME_FEATS, MONTHS_SINCE_LSTG, BYR_HIST, \
-    TIME_FEATS, CLOCK_FEATS, THREAD_COUNT
-from utils import load_sizes, load_featnames
-from rlenv.const import LSTG_MAP, CLOCK_MAP, OFFER_MAPS, THREAD_COUNT_IND, \
-    TIME_START_IND, TIME_END_IND
+from constants import TURN_FEATS, BYR, SLR, PARTS_DIR, TRAIN_RL
+from featnames import OUTCOME_FEATS, MONTHS_SINCE_LSTG, BYR_HIST
+from utils import load_sizes, load_featnames, compose_args
+from rlenv.const import *
 from rlenv.util import load_chunk
 from agent.const import FEAT_TYPE, ALL_FEATS, AGENT_PARAMS
-from agent.util import compose_args
+from agent.util import get_agent_name
 from rlenv.Composer import Composer
 
 
@@ -22,28 +19,32 @@ class AgentComposer(Composer):
         chunk_path = PARTS_DIR + '{}/chunks/1.gz'.format(TRAIN_RL)
         cols = load_chunk(input_path=chunk_path)[0].columns
         super().__init__(cols)
-
-        # agent parameters
-        self.byr = agent_params['byr']
-        if self.byr:
-            self.hist = agent_params[BYR_HIST] / 10
-            self.agent_name = POLICY_BYR
-            self.feat_type = ALL_FEATS
-        else:
-            self.agent_name = POLICY_SLR
-            self.feat_type = agent_params[FEAT_TYPE]
+        self.agent_params = agent_params
+        self.agent_name = get_agent_name(byr=self.byr)
         self.sizes['agent'] = load_sizes(self.agent_name)
-        self.x_lstg_cols = list(cols)
-
+        self.x_lstg_cols = list(cols) if type(cols) != list else cols
         # parameters to be set later
         self.turn_inds = None
 
         # verification
         self.verify_agent()
 
+    def byr(self):
+        return self.agent_params[BYR]
+
     @property
-    def groupings(self):
-        return list(self.sizes['agent']['x'].keys())
+    def hist(self):
+        if self.byr:
+            return self.agent_params[BYR_HIST]
+        else:
+            raise NotImplementedError('No hist attribute for seller')
+
+    @property
+    def feat_type(self):
+        return self.agent_params[FEAT_TYPE]
+
+    def set_hist(self, hist=None):
+        self.agent_params[BYR_HIST] = hist
 
     def _update_turn_inds(self, turn):
         if not self.byr:

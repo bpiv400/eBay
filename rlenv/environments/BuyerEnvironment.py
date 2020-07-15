@@ -8,9 +8,12 @@ from rlenv.environments.AgentEnvironment import AgentEnvironment
 from rlenv.events.Arrival import Arrival
 from rlenv.events.Thread import RlThread
 
+
 BuyerObs = namedarraytuple('BuyerObs',
                            list(load_sizes(POLICY_BYR)['x'].keys()))
-BuyerInfoTraj = namedarraytuple("BuyerInfoTraj", ["item_value"])
+BuyerInfoTraj = namedarraytuple("BuyerInfoTraj", ["item_value",
+                                                  "months", "done",
+                                                  "turn", "thread_id"])
 
 
 class BuyerEnvironment(AgentEnvironment):
@@ -35,8 +38,10 @@ class BuyerEnvironment(AgentEnvironment):
         """
         curr_interval = self._hours_since_lstg(event.priority)
         last_interval = curr_interval + 24
-        seconds = self.get_first_arrival(
-            intervals=(curr_interval, last_interval))
+        intervals = (curr_interval, last_interval)
+        seconds = self.get_first_arrival(time=event.priority,
+                                         thread_id=self.thread_counter,
+                                         intervals=intervals)
         return seconds + event.priority
 
     def process_offer(self, event):
@@ -113,7 +118,7 @@ class BuyerEnvironment(AgentEnvironment):
         running the environment
         :return: observation associated with the first rl arrival
         """
-        self.reset_lstg()
+        self.next_lstg()
         self.item_value = self.lookup[START_PRICE]  # TODO: allow for different values
         super().reset()
         rl_sources = RlBuyerSources(x_lstg=self.x_lstg)
@@ -156,8 +161,12 @@ class BuyerEnvironment(AgentEnvironment):
         else:
             return self.item_value - self.outcome.price
 
-    def get_info(self):
-        return BuyerInfoTraj(item_value=self.item_value)
+    def get_info(self, months=None, turn=None, done=None,
+                 thread_id=None):
+        return BuyerInfoTraj(item_value=self.item_value,
+                             thread_id=thread_id,
+                             months=months, done=done,
+                             turn=turn)
 
     @property
     def horizon(self):

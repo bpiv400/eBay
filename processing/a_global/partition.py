@@ -23,7 +23,7 @@ def partition_lstgs(s):
         curr = last + int(u.size * val)
         d[key] = np.sort(slrs.loc[u[last:curr]].values)
         last = curr
-    d['test'] = np.sort(slrs.loc[u[last:]].values)
+    d['testing'] = np.sort(slrs.loc[u[last:]].values)
     return d
 
 

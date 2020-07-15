@@ -1,4 +1,4 @@
-from rlenv.const import ARRIVAL
+from rlenv.const import ARRIVAL, RL_ARRIVAL_EVENT
 
 
 class Event:
@@ -24,11 +24,13 @@ class Event:
         Overrides less-than comparison method to make comparisons
         based on priority alone
 
-        Throws RuntimeError if both have the same lstg and same time
+        If events have the same priority, any non-arrival event takes
+        priority over an arrival event. If both events are arrival events,
+        the ordinary arrival event takes priority over the RL arrival event
         """
         if self.priority == other.priority:
             if self.type == ARRIVAL:
-                return False
+                return other.type == RL_ARRIVAL_EVENT
             else:
                 return True
         else:

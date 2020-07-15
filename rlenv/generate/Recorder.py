@@ -98,9 +98,12 @@ class Recorder:
     @staticmethod
     def print_next_event(event):
         print('NEXT EVENT DRAWING...')
-        print('Type: {}'.format(event.type))
+        print_string = 'Type: {}'.format(event.type)
         if event.type not in [ARRIVAL, RL_ARRIVAL_EVENT]:
-            print('Thread: {} | Turn: {}'.format(event.thread_id, event.turn))
+            print_string += ' | '
+            print_string += 'Thread: {} | Turn: {}'.format(event.thread_id,
+                                                           event.turn)
+        print(print_string)
 
     @staticmethod
     def print_agent_turn(con=None, delay=None):
