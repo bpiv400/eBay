@@ -9,10 +9,9 @@ rclone sync ~/weka/eBay/inputs/valid dropbox:ebay/data/inputs/valid
 rclone sync ~/weka/eBay/index/valid dropbox:ebay/data/index/valid
 rclone copy ~/weka/eBay/feats/offers.pkl dropbox:ebay/data/feats
 
-
 # grab all of valid chunks
 rclone sync ~/weka/eBay/partitions/agent/valid/chunks dropbox:ebay/data/partitions/agent/valid/chunks
-rclone sync ~/weka/eBay/partitions/model/valid/chunks dropbox:ebay/partitions/model/valid/chunks
+rclone sync ~/weka/eBay/partitions/models/valid/chunks dropbox:ebay/partitions/models/valid/chunks
 # x_offer, x_thread, x_lstg, clock, lookup
 rclone sync ~/weka/eBay/partitions/agent/valid dropbox:ebay/data/partitions/agent/valid --max-depth=1
 
