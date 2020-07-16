@@ -1,5 +1,5 @@
 from utils import unpickle
-from constants import INPUT_DIR, FEATS_DIR
+from constants import FEATS_DIR
 from featnames import (CON, DELAY, MSG, ALL_OFFER_FEATS, CLOCK_FEATS,
                        TIME_FEATS, DAYS, EXP, NORM, SPLIT, AUTO, REJECT,
                        THREAD_COUNT)

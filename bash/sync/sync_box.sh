@@ -1,7 +1,7 @@
 # simulator inputs
 rclone sync dropbox:ebay/data/inputs/featnames data/inputs/featnames
 rclone sync dropbox:ebay/data/inputs/sizes data/inputs/sizes
-rclone copy dropbox:ebay/data/inputs/date_feats.pkl data/inputs
+rclone copy dropbox:ebay/data/feats/date_feats.pkl data/feats
 rclone sync dropbox:ebay/data/outputs/models data/outputs/models --max-depth=1
 
 # testing framework inputs

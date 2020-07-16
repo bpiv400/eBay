@@ -1,7 +1,7 @@
 # simulator inputs
 rclone sync ~/weka/eBay/inputs/featnames dropbox:ebay/data/inputs/featnames
 rclone sync ~/weka/eBay/inputs/sizes dropbox:ebay/data/inputs/sizes
-rclone copy ~/weka/eBay/inputs/date_feats.pkl dropbox:ebay/data/inputs
+rclone copy ~/weka/eBay/feats/date_feats.pkl dropbox:ebay/data/feats
 rclone sync ~/weka/eBay/outputs/models dropbox:ebay/data/outputs/models --max-depth=1
 
 # testing framework inputs
