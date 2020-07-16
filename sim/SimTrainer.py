@@ -9,7 +9,7 @@ from sim.EBayDataset import EBayDataset
 from nets.FeedForward import FeedForward
 from sim.Sample import get_batches
 from constants import MODEL_DIR, LOG_DIR, CENSORED_MODELS, \
-    MODEL_NORM, VALIDATION
+    MODEL_NORM, VALIDATION, MODELS, TRAIN_MODELS, TRAIN_RL
 from utils import load_sizes
 
 LR_FACTOR = 0.1  # multiply learning rate by this factor when training slows
@@ -26,15 +26,12 @@ class SimTrainer:
         * train: trains the initialized model under given parameters.
     """
 
-    def __init__(self, name=None, train_part=None, dev=False):
+    def __init__(self, name=None):
         """
         :param name: string model name.
-        :param train_part: string partition name for training data.
-        :param dev: True for development.
         """
         # save parameters to self
         self.name = name
-        self.dev = dev
 
         # boolean for different loss functions
         self.use_time_loss = name in CENSORED_MODELS
@@ -44,14 +41,16 @@ class SimTrainer:
         print(self.sizes)
 
         # load datasets
+        train_part = TRAIN_MODELS if name in MODELS else TRAIN_RL
         self.train = EBayDataset(train_part, name)
         self.valid = EBayDataset(VALIDATION, name)
 
-    def train_model(self, dropout=(0.0, 0.0), norm=MODEL_NORM):
+    def train_model(self, dropout=(0.0, 0.0), norm=MODEL_NORM, log=True):
         """
         Public method to train model.
         :param dropout: pair of dropout rates, one for last embedding, one for fully connected.
         :param norm: one of ['batch', 'layer', 'weight']
+        :param log: True for Tensorboard logging.
         """
         # experiment id
         dtstr = dt.now().strftime('%y%m%d-%H%M')
@@ -59,7 +58,7 @@ class SimTrainer:
         expid = '{}_{}_{}'.format(dtstr, levels[0], levels[1])
 
         # initialize writer
-        if not self.dev:
+        if log:
             writer_path = LOG_DIR + '{}/{}'.format(self.name, expid)
             writer = SummaryWriter(writer_path)
         else:
@@ -77,7 +76,7 @@ class SimTrainer:
         model_path = model_dir + '{}.net'.format(expid)
 
         # save model
-        if not self.dev:
+        if log:
             torch.save(net.state_dict(), model_path)
 
         # initialize optimizer and scheduler
@@ -100,7 +99,7 @@ class SimTrainer:
                                      epoch=epoch)
 
             # save model
-            if not self.dev:
+            if log:
                 torch.save(net.state_dict(), model_path)
 
             # reduce learning rate if loss has not meaningfully improved

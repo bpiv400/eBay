@@ -1,48 +1,35 @@
 import argparse
-from compress_pickle import dump, load
+from compress_pickle import dump
 from datetime import datetime as dt
 from processing.b_feats.util import create_events, get_all_cat_feats
-from constants import PARTITIONS, PARTS_DIR, CLEAN_DIR
+from processing.util import load_feats
+from constants import FEATS_DIR
+from featnames import SLR, META, LEAF
 
 
 def main():
     # parse parameters
     parser = argparse.ArgumentParser()
-    parser.add_argument('--part',
-                        type=str,
-                        choices=PARTITIONS,
+    parser.add_argument('--name', type=str, choices=[SLR, META, LEAF],
                         required=True)
-    parser.add_argument('--name',
-                        type=str,
-                        choices=['slr', 'meta', 'leaf'],
-                        required=True)
-    args = parser.parse_args()
-    part, name = args.part, args.name
-    print('{}/{}'.format(part, name))
-
-    # listing ids
-    idx = load(PARTS_DIR + 'partitions.pkl')[part]
+    name = parser.parse_args().name
 
     # load files
-    offers = load(CLEAN_DIR + 'offers.pkl').reindex(
-        index=idx, level='lstg')
-    threads = load(CLEAN_DIR + 'threads.pkl').reindex(
-        index=idx, level='lstg')
-    listings = load(CLEAN_DIR + 'listings.pkl').reindex(index=idx)
+    data = {}
+    for level in ['listings', 'threads', 'offers']:
+        data[level] = load_feats(level)
 
     # set levels for hierarchical feats
-    print('Creating offer events...')
-    events = create_events(listings, threads, offers, [name])
+    events = create_events(data=data, levels=[name])
 
     # categorical features
-    print('Creating categorical features...')
     start = dt.now()
     feats = get_all_cat_feats(events, [name])
     assert not feats.isna().any().any()
     print('{} seconds'.format((dt.now() - start).total_seconds()))
 
     # save
-    dump(feats, PARTS_DIR + '{}/{}.gz'.format(part, name))
+    dump(feats, FEATS_DIR + '{}.gz'.format(name))
 
 
 if __name__ == "__main__":

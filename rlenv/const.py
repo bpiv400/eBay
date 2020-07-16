@@ -1,26 +1,18 @@
 from utils import unpickle
-from constants import INPUT_DIR
+from constants import INPUT_DIR, FEATS_DIR
 from featnames import (CON, DELAY, MSG, ALL_OFFER_FEATS, CLOCK_FEATS,
                        TIME_FEATS, DAYS, EXP, NORM, SPLIT, AUTO, REJECT,
                        THREAD_COUNT)
 
 INTERACT = False
 
-# dataset dictionary keys
-INTERVAL = 'interval'
-
-# filenames
-COMPOSER_DIR = '{}composer/'.format(INPUT_DIR)  # location of composer
-AGENT_FEATS_FILENAME = 'agent_feats.xlsx'  # location of file containing lists of features for all agents
-LOOKUP_FILENAME = 'lookup.gz'
-X_LSTG_FILENAME = 'x_lstg.gz'
 # partition subdir names
 SIM_CHUNKS_DIR = 'chunks'
 SIM_VALS_DIR = 'vals'
 SIM_DISCRIM_DIR = 'outcomes'
 
 # holiday and day-of-week indicators, indexed by days since START
-DATE_FEATS = unpickle(INPUT_DIR + 'date_feats.pkl')
+DATE_FEATS = unpickle(FEATS_DIR + 'date_feats.pkl')
 
 # number of hours the val generation job may run before termination
 VAL_TIME_LIMIT = 48

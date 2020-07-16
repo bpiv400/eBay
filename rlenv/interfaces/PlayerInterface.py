@@ -3,6 +3,7 @@ from torch.distributions.categorical import Categorical
 from torch.distributions.bernoulli import Bernoulli
 from rlenv.util import (model_str, proper_squeeze,
                         sample_categorical, sample_bernoulli)
+from constants import BYR, SLR, IDX
 from featnames import CON, DELAY, MSG
 from utils import load_model
 
@@ -58,17 +59,17 @@ class SimulatedPlayer(PlayerInterface):
         self.delay_models = dict()
 
     def load_models(self):
-        if self.byr:
-            turns = [1, 3, 5, 7]
-        else:
-            turns = [2, 4, 6]
+        turns = IDX[BYR] if self.byr else IDX[SLR]
         for turn in turns:
             if self.full:
-                self.con_models[turn] = load_model(model_str(CON, turn=turn))
-            if turn != 1:
-                self.delay_models[turn] = load_model(model_str(DELAY, turn=turn))
-            if turn != 7 and self.full:
-                self.msg_models[turn] = load_model(model_str(MSG, turn=turn))
+                self.con_models[turn] = load_model(
+                    model_str(CON, turn=turn))
+                if turn < 7:
+                    self.msg_models[turn] = load_model(
+                        model_str(MSG, turn=turn))
+            if turn > 1:
+                self.delay_models[turn] = load_model(
+                    model_str(DELAY, turn=turn))
 
     def query_con(self, input_dict=None, turn=None):
         """

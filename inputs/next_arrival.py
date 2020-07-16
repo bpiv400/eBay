@@ -1,12 +1,13 @@
 import pandas as pd
 import numpy as np
 from processing.util import collect_date_clock_feats
-from inputs.util import get_arrival_times, save_files
-from utils import get_months_since_lstg, input_partition, \
-    load_file, init_x
-from inputs.const import INTERVAL_CT_ARRIVAL, INTERVAL_ARRIVAL
-from constants import MONTH
-from featnames import THREAD_COUNT, MONTHS_SINCE_LAST, MONTHS_SINCE_LSTG
+from inputs.util import get_arrival_times, save_files, get_ind_x
+from utils import get_months_since_lstg, input_partition, load_file
+from constants import MONTH, INTERVAL_ARRIVAL, INTERVAL_CT_ARRIVAL
+from featnames import THREAD_COUNT, MONTHS_SINCE_LAST, MONTHS_SINCE_LSTG, \
+    START_TIME, END_TIME
+
+AGENT = False
 
 
 def get_interarrival_period(arrivals):
@@ -40,7 +41,7 @@ def get_interarrival_period(arrivals):
     return y, diff
 
 
-def get_x_thread_arrival(arrivals, lstg_start, idx, diff):
+def get_x_thread_arrival(arrivals=None, lstg_start=None, idx=None, diff=None):
     # seconds since START at beginning of arrival window
     seconds = arrivals.groupby('lstg').shift().dropna().astype(
         'int64').reindex(index=idx)
@@ -74,26 +75,30 @@ def get_x_thread_arrival(arrivals, lstg_start, idx, diff):
 
 def process_inputs(part):
     # data
-    clock = load_file(part, 'clock')
-    lstg_start = load_file(part, 'lookup').start_time
-    lstg_end = load_file(part, 'lstg_end')
+    clock = load_file(part, 'clock', agent=AGENT)
+    lookup = load_file(part, 'lookup', agent=AGENT)
+    lstg_start = lookup[START_TIME]
+    lstg_end = lookup[END_TIME]
 
     # arrival times
-    arrivals = get_arrival_times(clock, lstg_start, lstg_end,
+    arrivals = get_arrival_times(clock=clock,
+                                 lstg_start=lstg_start,
+                                 lstg_end=lstg_end,
                                  append_last=True)
 
     # interarrival times
     y, diff = get_interarrival_period(arrivals)
-    idx = y.index
 
-    # listing features
-    x = init_x(part, idx)
+    # thread features
+    x = {'thread': get_x_thread_arrival(arrivals=arrivals,
+                                        lstg_start=lstg_start,
+                                        idx=y.index,
+                                        diff=diff)}
 
-    # add thread features to x['lstg']
-    x_thread = get_x_thread_arrival(arrivals, lstg_start, idx, diff)
-    x['lstg'] = pd.concat([x['lstg'], x_thread], axis=1)
+    # indices for listing features
+    idx_x = get_ind_x(lstgs=lookup.index, idx=y.index)
 
-    return {'y': y, 'x': x}
+    return {'y': y, 'x': x, 'idx_x': idx_x}
 
 
 def main():

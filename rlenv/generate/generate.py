@@ -1,12 +1,10 @@
-from multiprocessing import Pool
-import psutil
 import argparse
 import torch
-import time
-from constants import PARTITIONS, NUM_CHUNKS
+from constants import PARTITIONS, AGENT_PARTS_DIR
 from agent.eval.ValueGenerator import ValueGenerator
 from rlenv.generate.Generator import DiscrimGenerator
 from rlenv.generate.util import process_sims
+from utils import run_func_on_chunks
 
 
 def main():
@@ -18,7 +16,7 @@ def main():
                         help='print event detail')
     args = parser.parse_args()
     part, values, verbose = args.part, args.values, args.verbose
-    assert part in PARTITIONS
+    assert part in PARTITIONS[1:]
 
     # create generator
     if values:
@@ -28,18 +26,10 @@ def main():
     gen = cls(verbose=verbose)
 
     # process chunks in parallel
-    num_workers = min(NUM_CHUNKS, psutil.cpu_count() - 1)
-    pool = Pool(num_workers)
-    jobs = [pool.apply_async(gen.process_chunk, (part, i))
-            for i in range(NUM_CHUNKS)]
-    sims = []
-    for job in jobs:
-        while True:
-            if job.ready():
-                sims.append(job.get())
-                continue
-            else:
-                time.sleep(5)
+    sims = run_func_on_chunks(
+        f=gen.process_chunk,
+        args=lambda i: AGENT_PARTS_DIR + '{}/chunks/{}.gz'.format(part, i)
+    )
 
     # concatenate, clean, and save
     process_sims(part=part, sims=sims)

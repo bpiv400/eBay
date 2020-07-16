@@ -1,11 +1,10 @@
-import argparse
 import numpy as np
 import pandas as pd
+from datetime import datetime as dt
 from compress_pickle import dump, load
 from processing.b_feats.util import collapse_dict
-from processing.util import get_con, get_norm
-from constants import START, CLEAN_DIR, PARTS_DIR, PARTITIONS, IDX, \
-    SLR
+from utils import run_func_on_chunks
+from constants import START, IDX, BYR, SLR, FEATS_DIR
 
 
 def open_offers(df, levels, role):
@@ -191,10 +190,8 @@ def full_feat(max_offers=None, offer_counter=None, role=False, is_open=False, op
     else:
         count = offer_counter.sum(axis=1)
         count = count.groupby('lstg').cumsum()
-
     # best offer
     best = max_offers.max(axis=1).fillna(0.0)
-
     # keep only later timestep
     count = conform_cut(count)
     best = conform_cut(best)
@@ -372,57 +369,25 @@ def add_deltas_index(deltas, events):
     return deltas
 
 
-def output_path(part, model):
-    if model == 'offer':
-        return PARTS_DIR + '{}/tf.gz'.format(part)
-    else:
-        return PARTS_DIR + '{}/tf_{}.gz'.format(part, model)
+def create_tf(path=None):
+    start = dt.now()
+    events = load(path)
+    print('{} offers'.format(len(events)))
+    events[BYR] = events.index.isin(IDX[BYR], level='index')
+    tf_lstg_focal = get_lstg_time_feats(events, full=False)
+    con_feats = con_time_feats(tf_lstg_focal, events)
+    assert not con_feats.isna().any().any()
+    print('{} seconds'.format((dt.now() - start).total_seconds()))
+    return con_feats
 
 
 def main():
-    # parse parameters
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--part', type=str, choices=PARTITIONS, required=True)
-    parser.add_argument('--arrival', action='store_true', default=False)
-    args = parser.parse_args()
-    part, arrival = args.part, args.arrival
-
-    # listing ids
-    idx = load(PARTS_DIR + 'partitions.pkl')[part]
-
-    # load files
-    events = load(CLEAN_DIR + 'offers.pkl').reindex(
-        index=idx, level='lstg')
-    listings = load(CLEAN_DIR + 'listings.pkl').reindex(index=idx)
-
-    # buyer turn indicator
-    events['byr'] = events.index.isin(IDX['byr'], level='index')
-
-    # add normalized offer to events
-    con = get_con(events.price.unstack(), listings.start_price)
-    events['norm'] = get_norm(con)
-
-    # create lstg-level time-valued features
-    print('Creating lstg-level time-valued features')
-    if not arrival:
-        tf_lstg_focal = get_lstg_time_feats(events, full=False)
-
-        print('preparing concession output...')
-        con_feats = con_time_feats(tf_lstg_focal, events)
-        assert not con_feats.isna().any().any()
-        dump(con_feats, output_path(part, 'offer'))
-
-        # print('preparing delay output...')
-        # delay_feats = delay_time_feats(tf_lstg_focal, events)
-        # assert not delay_feats.isna().any().any()
-        # dump(delay_feats, output_path(part, 'delay_diff'))
-        
-    else:
-        tf_lstg_full = get_lstg_time_feats(events, full=True)
-        print('preparing arrival output...')
-        arrival_feats = arrival_time_feats(tf_lstg_full)
-        assert not arrival_feats.isna().any().any()
-        dump(arrival_feats, output_path(part, 'arrival'))
+    res = run_func_on_chunks(
+        f=create_tf,
+        args=lambda i: FEATS_DIR + 'chunks/{}.gz'.format(i)
+    )
+    df = pd.concat(res).sort_index()
+    dump(df, FEATS_DIR + 'tf.gz')
 
 
 if __name__ == "__main__":

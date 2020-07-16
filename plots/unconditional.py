@@ -2,9 +2,8 @@ from compress_pickle import load
 import numpy as np
 import pandas as pd
 from constants import PLOT_DIR, SIM, OBS, BYR_HIST_MODEL, \
-    HOUR, DAY, ARRIVAL, MAX_DELAY_TURN, MAX_DELAY_ARRIVAL
+    HOUR, DAY, ARRIVAL, MAX_DELAY_TURN, MAX_DELAY_ARRIVAL, INTERVAL_ARRIVAL
 from featnames import CON, MSG, DELAY
-from inputs.const import INTERVAL_ARRIVAL
 from plots.util import continuous_pdf, cdf_plot, survival_plot, \
     grouped_bar
 

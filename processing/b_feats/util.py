@@ -478,12 +478,12 @@ def get_cat_quantiles_wrapper(events, levels, featname):
     return tf.sort_index()
 
 
-def create_obs(df, isStart, cols):
+def create_obs(df, is_start, cols):
     toAppend = pd.DataFrame(index=df.index, columns=['index'] + cols)
     for c in ['accept', 'message']:
         if c in cols:
             toAppend[c] = False
-    if isStart:
+    if is_start:
         toAppend.loc[:, 'reject'] = False
         toAppend.loc[:, 'index'] = 0
         toAppend.loc[:, 'censored'] = False
@@ -508,9 +508,9 @@ def expand_index(df, levels):
     return df
 
 
-def add_start_end(offers, L, levels):
+def add_start_end(offers, listings, levels):
     # listings dataframe
-    lstgs = L[levels + ['start_date', 'end_time', 'start_price']].copy()
+    lstgs = listings[levels + ['start_date', 'end_time', 'start_price']].copy()
     lstgs['thread'] = 0
     lstgs.set_index('thread', append=True, inplace=True)
     lstgs = expand_index(lstgs, levels)
@@ -527,22 +527,17 @@ def add_start_end(offers, L, levels):
     return offers.sort_index()
 
 
-def init_offers(L, T, O, levels):
-    offers = O.join(T['byr_hist'])
-    offers = offers.join(L[levels])
-    offers = expand_index(offers, levels)
-    return offers
-
-
-def create_events(L, T, O, levels):
+def create_events(data=None, levels=None):
     # initial offers data frame
-    offers = init_offers(L, T, O, levels)
+    offers = data['offers'].join(data['threads']['byr_hist'])
+    offers = offers.join(data['listings'][levels])
+    offers = expand_index(offers, levels)
     # add start times and expirations for unsold listings
-    events = add_start_end(offers, L, levels)
+    events = add_start_end(offers, data['listings'], levels)
     # add features for later use
     events['byr'] = events.index.isin(IDX['byr'], level='index')
     lstg_cols = ['start_price', 'arrival_rate', 'start_price_pctile']
-    events = events.join(L[lstg_cols])
+    events = events.join(data['listings'][lstg_cols])
     return events
 
 

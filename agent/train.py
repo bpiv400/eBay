@@ -1,4 +1,3 @@
-from multiprocessing import set_start_method
 import os
 import argparse
 import pandas as pd
@@ -6,8 +5,8 @@ import torch
 from agent.RlTrainer import RlTrainer
 from agent.const import AGENT_STATE, PARAM_DICTS, AGENT_PARAMS, SYSTEM_PARAMS
 from agent.eval.EvalGenerator import EvalGenerator
-from utils import set_gpu_workers, compose_args
-from constants import AGENT_DIR, BYR, DROPOUT
+from utils import set_gpu_workers, run_func_on_chunks, compose_args
+from constants import AGENT_DIR, MODEL_PARTS_DIR, BYR, DROPOUT
 
 
 def simulate(part=None, run_dir=None, composer=None, model_kwargs=None):
@@ -16,9 +15,11 @@ def simulate(part=None, run_dir=None, composer=None, model_kwargs=None):
                    'model_kwargs': model_kwargs,
                    'run_dir': run_dir,
                    'verbose': False}
-    eval_generator = EvalGenerator(**eval_kwargs)
-    # TODO: run in parallel over all chunks
-    eval_generator.process_chunk(chunk=1)
+    gen = EvalGenerator(**eval_kwargs)
+    sims = run_func_on_chunks(
+        f=gen.process_chunk,
+        args=lambda i: MODEL_PARTS_DIR + '{}/chunks/{}.gz'.format(part, i)
+    )
 
 
 def main():
@@ -101,5 +102,4 @@ def main():
 
 
 if __name__ == '__main__':
-    set_start_method("spawn")
     main()

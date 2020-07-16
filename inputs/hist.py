@@ -1,14 +1,15 @@
-import pandas as pd
-from inputs.util import save_files
-from utils import load_file, input_partition, init_x
+from inputs.util import save_files, get_ind_x
+from utils import load_file, input_partition
 from constants import BYR_HIST_MODEL
-from featnames import CLOCK_FEATS, THREAD_COUNT, BYR_HIST
+from featnames import CLOCK_FEATS, THREAD_COUNT, BYR_HIST, LOOKUP
+
+AGENT = False
 
 
-# loads data and calls helper functions to construct train inputs
 def process_inputs(part):
-	threads = load_file(part, 'x_thread')
-	offers = load_file(part, 'x_offer')
+	lookup = load_file(part, LOOKUP, agent=AGENT)
+	threads = load_file(part, 'x_thread', agent=AGENT)
+	offers = load_file(part, 'x_offer', agent=AGENT)
 
 	# thread features
 	x_offer = offers.xs(1, level='index')
@@ -17,16 +18,12 @@ def process_inputs(part):
 
 	# outcome
 	y = x_thread[BYR_HIST]
-	idx = y.index
-	x_thread = x_thread.drop(BYR_HIST, axis=1)
+	x = {'thread': x_thread.drop(BYR_HIST, axis=1)}
 
-	# listing features
-	x = init_x(part, idx)
+	# indices for listing features
+	idx_x = get_ind_x(lstgs=lookup.index, idx=y.index)
 
-	# add thread features to x['lstg']
-	x['lstg'] = pd.concat([x['lstg'], x_thread.astype('float32')], axis=1) 
-
-	return {'y': y, 'x': x}
+	return {'y': y, 'x': x, 'idx_x': idx_x}
 
 
 def main():

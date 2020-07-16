@@ -1,8 +1,10 @@
+import os
 import numpy as np
 import pandas as pd
 from compress_pickle import dump
-from constants import CLEAN_DIR, PCTILE_DIR, START, NUM_CHUNKS
-from featnames import START_PRICE, BYR_HIST
+from processing.util import get_con, get_norm
+from constants import CLEAN_DIR, FEATS_DIR, PCTILE_DIR, START, NUM_CHUNKS
+from featnames import START_PRICE, BYR_HIST, NORM
 
 # data types for csv read
 OTYPES = {'lstg': 'int64',
@@ -51,28 +53,25 @@ IDX_NAMES = {'offers': ['lstg', 'thread', 'index'],
              'listings': 'lstg'}
 
 
-def create_chunks(listings, threads, offers):
+def create_chunks(offers=None, start_price=None):
     """
     Chunks data by listing.
-    :param listings: dataframe with index ['lstg']
-    :param threads: dataframe with index ['lstg', 'thread']
-    :param offers: dataframe with index ['lstg', 'thread', 'index']
+    :param offers: DataFrame with index ['lstg', 'thread', 'index']
+    :param start_price: Series with index ['lstg']
     """
-    groups = np.array_split(listings.index, CHUNKS)
+    # output directory
+    chunk_dir = FEATS_DIR + 'chunks/'
+    if not os.path.isdir(chunk_dir):
+        os.mkdir(chunk_dir)
+    # add norm to offers
+    con = get_con(offers.price.unstack(), start_price)
+    offers[NORM] = get_norm(con)
+    # split into chunks
+    groups = np.array_split(start_price.index, NUM_CHUNKS)
     for i in range(NUM_CHUNKS):
         print('Creating chunk {} of {}'.format(i+1, NUM_CHUNKS))
-        # find corresponding listings
-        idx = groups[i]
-        # create chunks
-        listings_i = listings.reindex(index=idx)
-        threads_i = threads.reindex(index=idx, level='lstg')
-        offers_i = offers.reindex(index=idx, level='lstg')
-        # save
-        chunk = {'listings': listings_i,
-                 'threads': threads_i,
-                 'offers': offers_i}
-        path = CLEAN_DIR + 'chunks/{}.gz'.format(i+1)
-        dump(chunk, path)
+        dump(offers.reindex(index=groups[i], level='lstg'),
+             chunk_dir + '{}.gz'.format(i))
 
 
 def read_csv(name):
@@ -116,7 +115,7 @@ def main():
     threads.loc[:, BYR_HIST], to_save = \
         get_pctiles(threads[BYR_HIST])
     dump(to_save, PCTILE_DIR + '{}.pkl'.format(BYR_HIST))
-    dump(threads, CLEAN_DIR + 'threads.pkl')
+    dump(threads, FEATS_DIR + 'threads.gz')
 
     # arrival time
     thread_start = offers.clock.xs(1, level='index')
@@ -181,7 +180,7 @@ def main():
     offers.loc[idx, 'clock'] = df.loc[idx, 'end_time']
 
     # save offers and threads
-    dump(offers, CLEAN_DIR + 'offers.pkl')
+    dump(offers, FEATS_DIR + 'offers.gz')
 
     # update listing end time
     listings.loc[end_time.index, 'end_time'] = end_time
@@ -209,10 +208,10 @@ def main():
             dump(to_save, PCTILE_DIR + '{}.pkl'.format(feat))
 
     # save listings
-    dump(listings, CLEAN_DIR + 'listings.pkl')
+    dump(listings, FEATS_DIR + 'listings.gz')
 
     # chunk by listing
-    create_chunks(listings, threads, offers)
+    create_chunks(offers=offers, start_price=listings[START_PRICE])
 
 
 if __name__ == '__main__':

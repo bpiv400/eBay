@@ -5,10 +5,9 @@ from utils import load_file
 from inputs.offer import get_y_msg
 from inputs.discrim import load_threads_offers
 from assess.const import MAX_THREADS
-from inputs.const import INTERVAL_ARRIVAL
 from constants import TEST, PLOT_DIR, BYR_HIST_MODEL, CON_MULTIPLIER, \
     HIST_QUANTILES, SIM, OBS, ARRIVAL, PCTILE_DIR, \
-    MAX_DELAY_ARRIVAL, MAX_DELAY_TURN
+    MAX_DELAY_ARRIVAL, MAX_DELAY_TURN, INTERVAL_ARRIVAL
 from featnames import MONTHS_SINCE_LSTG, BYR_HIST, DELAY, EXP, CON, \
     MSG, REJECT
 

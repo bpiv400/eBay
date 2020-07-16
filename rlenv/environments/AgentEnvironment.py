@@ -1,8 +1,7 @@
 import numpy as np
-from constants import MONTH
+from constants import MONTH, INTERVAL_TURN, INTERVAL_CT_TURN
 from utils import get_months_since_lstg
 from agent.ConSpace import ConSpace
-from inputs.const import INTERVAL_CT_TURN, INTERVAL_TURN
 from rlpyt.envs.base import Env
 from rlpyt.spaces.composite import Composite
 from rlpyt.spaces.float_box import FloatBox
@@ -12,12 +11,11 @@ from rlenv.generate.Recorder import Recorder
 
 
 class AgentEnvironment(EbayEnvironment, Env):
-
     def __init__(self, **kwargs):
         super().__init__(params=kwargs)
         self.relist_count = 0
-
         self.last_event = None  # type: Thread
+
         # action space
         num_actions = self.composer.agent_sizes['out']
         self.con_set = np.array(range(num_actions)) / 100

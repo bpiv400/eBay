@@ -2,12 +2,12 @@ from datetime import datetime as dt
 from rlenv.generate.Recorder import OutcomeRecorder
 from rlenv.environments.SimulatorEnvironment import SimulatorEnvironment
 from rlenv.environments.EbayEnvironment import EbayEnvironment
-from rlenv.Composer import Composer
 from rlenv.interfaces.ArrivalInterface import ArrivalInterface
 from rlenv.interfaces.PlayerInterface import SimulatedSeller, SimulatedBuyer
 from rlenv.LstgLoader import ChunkLoader
 from rlenv.util import get_env_sim_dir, load_chunk
 from rlenv.DefaultQueryStrategy import DefaultQueryStrategy
+from rlenv.Composer import Composer
 
 
 class Generator:

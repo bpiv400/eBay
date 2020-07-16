@@ -1,15 +1,17 @@
 import argparse
 import pickle
 import psutil
+from time import sleep
 import torch
+import torch.multiprocessing as mp
 from torch.nn.functional import log_softmax
 import numpy as np
 from compress_pickle import load
 from nets.FeedForward import FeedForward
 from constants import DAY, MONTH, SPLIT_PCTS, INPUT_DIR, \
-    MODEL_DIR, META_6, META_7, PARTITIONS, PARTS_DIR, \
-    MAX_DELAY_TURN, MAX_DELAY_ARRIVAL, NUM_RL_WORKERS
-from featnames import DELAY, EXP
+    MODEL_DIR, META_6, META_7, PARTITIONS, MODEL_PARTS_DIR, \
+    MAX_DELAY_TURN, MAX_DELAY_ARRIVAL, NUM_CHUNKS, AGENT_PARTS_DIR
+from featnames import DELAY, EXP, X_LSTG
 
 
 def unpickle(file):
@@ -100,7 +102,6 @@ def load_sizes(name):
 def load_featnames(name):
     """
     Loads featnames dictionary for a model
-    #TODO: extend to include agents
     :param name: str giving name (e.g. hist, con_byr),
      see const.py for model names
     :return: dict
@@ -147,7 +148,33 @@ def load_model(name, verbose=False, use_trained=True):
         param.requires_grad = False
     net.eval()
 
+    # use shared memory
+    net.share_memory()
+
     return net
+
+
+def run_func_on_chunks(f=None, args=None):
+    """
+    Applies f to all chunks in parallel.
+    :param f: function that takes in path to data as input
+    :param args: function that takes in chunk number and generates args
+    :return: list of worker-specific output
+    """
+    num_workers = min(NUM_CHUNKS, psutil.cpu_count() - 1)
+    pool = mp.Pool(num_workers)
+    jobs = []
+    for i in range(NUM_CHUNKS):
+        jobs.append(pool.apply_async(f, (args(i),)))
+    res = []
+    for job in jobs:
+        while True:
+            if job.ready():
+                res.append(job.get())
+                break
+            else:
+                sleep(5)
+    return res
 
 
 def get_cut(meta):
@@ -204,37 +231,26 @@ def input_partition():
     return parser.parse_args().part
 
 
+<<<<<<< HEAD
 def init_optional_arg(kwargs=None, name=None, default=None):
     if name not in kwargs:
         kwargs[name] = default
 
 
 def load_file(part, x):
+=======
+def load_file(part, x, agent=None):
+>>>>>>> rl_tune
     """
     Loads file from partitions directory.
     :param str part: name of partition
-    :param x: name of file
+    :param str x: name of file
+    :param bool agent: use agent files if True
     :return: dataframe
     """
-    return load(PARTS_DIR + '{}/{}.gz'.format(part, x))
-
-
-def init_x(part, idx=None):
-    """
-    Initialized dictionary of input dataframes.
-    :param str part: name of partition
-    :param idx: (multi-)index to reindex with
-    :return: dictionary of (reindexed) input dataframes
-    """
-    x = load_file(part, 'x_lstg')
-    x = {k: v.astype('float32') for k, v in x.items()}
-    if idx is not None:
-        if len(idx.names) == 1:
-            x = {k: v.reindex(index=idx) for k, v in x.items()}
-        else:
-            x = {k: v.reindex(index=idx, level='lstg')
-                 for k, v in x.items()}
-    return x
+    folder = AGENT_PARTS_DIR if agent else MODEL_PARTS_DIR
+    suffix = 'pkl' if x == X_LSTG else 'gz'
+    return load('{}{}/{}.{}'.format(folder, part, x, suffix))
 
 
 def drop_censored(df):
@@ -256,8 +272,8 @@ def set_gpu_workers(gpu=None):
 
     # set cpu affinity
     p = psutil.Process()
-    start = NUM_RL_WORKERS * gpu
-    workers = list(range(start, start + NUM_RL_WORKERS))
+    start = NUM_CHUNKS * gpu
+    workers = list(range(start, start + NUM_CHUNKS))
     p.cpu_affinity(workers)
     print('vCPUs: {}'.format(p.cpu_affinity()))
 
