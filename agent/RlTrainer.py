@@ -13,10 +13,10 @@ from constants import AGENT_DIR, BYR, SLR
 from agent.const import FEAT_TYPE
 from agent.AgentComposer import AgentComposer
 from agent.models.PgCategoricalAgentModel import PgCategoricalAgentModel
-from rlenv.interfaces.PlayerInterface import SimulatedBuyer, SimulatedSeller
-from rlenv.interfaces.ArrivalInterface import ArrivalInterface
+from rlenv.DefaultQueryStrategy import DefaultQueryStrategy
 from rlenv.environments.SellerEnvironment import SellerEnvironment
 from rlenv.environments.BuyerEnvironment import BuyerEnvironment
+from rlenv.LstgLoader import TrainLoader
 from featnames import BYR_HIST
 
 
@@ -60,22 +60,22 @@ class RlTrainer:
         return log_dir
 
     def _generate_sampler(self):
+        env_params = dict(composer=self.composer,
+                          verbose=self.system_params['verbose'],
+                          query_strategy=DefaultQueryStrategy,
+                          recorder=None)
         # sampler and batch sizes
         if self.system_params['serial']:
             sampler_cls = SerialSampler
             batch_b = 1
+            x_lstg_cols = env_params['composer'].x_lstg_cols
+            env_params['loader'] = TrainLoader(x_lstg_cols=x_lstg_cols)
         else:
             sampler_cls = AlternatingSampler
             batch_b = len(self._cpus)
 
         # environment
         env = BuyerEnvironment if self.byr else SellerEnvironment
-        env_params = dict(composer=self.composer,
-                          verbose=self.system_params['verbose'],
-                          arrival=ArrivalInterface(),
-                          seller=SimulatedSeller(full=self.byr),
-                          buyer=SimulatedBuyer(full=True))
-
         return sampler_cls(
                 EnvCls=env,
                 env_kwargs=env_params,

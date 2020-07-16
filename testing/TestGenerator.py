@@ -64,8 +64,10 @@ class TestGenerator(Generator):
         test_data = dict()
         non_dups = lstgs_without_duplicated_timestamps(
             lstgs=lookup.index)
-        for df in [x_lstg, lookup, p_arrival]:
-            df = df.reindex(non_dups)
+        x_lstg = x_lstg.reindex(non_dups)
+        lookup = lookup.reindex(non_dups)
+        p_arrival = p_arrival.reindex(non_dups)
+        assert 59729927 not in lookup
         test_data['inputs'] = load_all_inputs(part=part,
                                               lstgs=lookup.index)
         for name in ['x_thread', 'x_offer']:

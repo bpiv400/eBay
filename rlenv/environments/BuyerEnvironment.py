@@ -118,9 +118,8 @@ class BuyerEnvironment(AgentEnvironment):
         running the environment
         :return: observation associated with the first rl arrival
         """
-        self.next_lstg()
+        self.init_reset()  # in AgentEnvironment
         self.item_value = self.lookup[START_PRICE]  # TODO: allow for different values
-        super().reset()
         rl_sources = RlBuyerSources(x_lstg=self.x_lstg)
         event = Arrival(priority=self.start_time, sources=rl_sources,
                         rl=True)

@@ -6,7 +6,7 @@ from collections.abc import Iterable
 from utils import load_featnames
 from rlenv.util import load_featnames
 from utils import load_file
-from constants import MODELS, INPUT_DIR, INDEX_DIR, CLEAN_DIR,\
+from constants import MODELS, INPUT_DIR, INDEX_DIR, FEATS_DIR,\
     FIRST_ARRIVAL_MODEL, POLICY_MODELS
 from featnames import CENSORED, EXP, DELAY
 
@@ -157,7 +157,7 @@ def load_reindex(part=None, name=None, lstgs=None):
 
 def lstgs_without_duplicated_timestamps(lstgs=None):
     # load timestamps
-    offers = load(CLEAN_DIR + 'offers.pkl').reindex(index=lstgs, level='lstg')
+    offers = load(FEATS_DIR + 'offers.pkl').reindex(index=lstgs, level='lstg')
 
     # remove censored offers
     clock = offers.loc[~offers.censored, 'clock']
