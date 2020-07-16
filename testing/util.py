@@ -8,7 +8,7 @@ from rlenv.util import load_featnames
 from utils import load_file
 from constants import MODELS, INPUT_DIR, INDEX_DIR, FEATS_DIR,\
     FIRST_ARRIVAL_MODEL, POLICY_MODELS
-from featnames import CENSORED, EXP, DELAY
+from featnames import CENSORED, EXP, DELAY, MSG
 
 
 class Subsetter:
@@ -180,3 +180,24 @@ def subset_lstgs(df=None, lstgs=None):
     contains = full_lstgs.isin(lstgs)
     df = df.loc[contains, :]
     return df
+
+
+def populate_test_model_inputs(full_inputs=None, value=None, agent_byr=False, agent=False):
+    inputs = dict()
+    for feat_set_name, feat_df in full_inputs.items():
+        if value is not None:
+            curr_set = full_inputs[feat_set_name].loc[value, :].copy()
+        else:
+            curr_set = full_inputs[feat_set_name].copy()
+        # silence messages from agent
+        if agent and 'offer' in feat_set_name:
+            remainder = 1 if agent_byr else 0
+            turn = int(feat_set_name[-1])
+            if turn % 2 == remainder:
+                curr_set[MSG] = 0
+        curr_set = curr_set.values
+        curr_set = torch.from_numpy(curr_set).float()
+        if len(curr_set.shape) == 1:
+            curr_set = curr_set.unsqueeze(0)
+        inputs[feat_set_name] = curr_set
+    return inputs

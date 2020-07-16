@@ -37,7 +37,7 @@ class TurnLog:
             elif not self.byr and self.expired:
                 return 101
             else:
-                return int(self.con * 100)
+                return int(round(self.con * 100))
         else:
             raise RuntimeError("Queried concession for agent from a turn"
                                " not stored as an agent turn")

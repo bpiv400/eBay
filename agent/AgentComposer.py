@@ -29,6 +29,7 @@ class AgentComposer(Composer):
         # verification
         self.verify_agent()
 
+    @property
     def byr(self):
         return self.agent_params[BYR]
 

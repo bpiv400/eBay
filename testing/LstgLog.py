@@ -1,13 +1,12 @@
 from featnames import START_TIME, MONTHS_SINCE_LSTG, BYR_HIST, CON, AUTO
-from constants import (MONTH, FIRST_ARRIVAL_MODEL, DAY,
-                       BYR_HIST_MODEL, INTERARRIVAL_MODEL, OFFER_MODELS)
-from rlenv.util import populate_test_model_inputs
+from constants import (MONTH, DAY, BYR_HIST_MODEL,
+                       INTERARRIVAL_MODEL, OFFER_MODELS)
 from testing.AgentLog import AgentLog
 from testing.ActionLog import ActionLog
 from testing.ArrivalLog import ArrivalLog
 from testing.ThreadLog import ThreadLog
 from testing.ThreadTranslator import ThreadTranslator
-from testing.util import subset_inputs
+from testing.util import subset_inputs, populate_test_model_inputs
 from utils import init_optional_arg
 
 
@@ -24,7 +23,6 @@ class LstgLog:
         self.lookup = params['lookup']
         self.agent = params['agent_params'] is not None
         self.agent_params = params['agent_params']
-        self.first_arrival = True
         self.arrivals = self.generate_arrival_logs(params)
         self.threads = self.generate_thread_logs(params)
         self.agent_log = self.generate_agent_log(params) # revisit this
@@ -41,7 +39,7 @@ class LstgLog:
         if self.agent:
             return self.agent_params['byr']
         else:
-            raise RuntimeError("byr not defined")
+            return False
 
     @property
     def agent_thread(self):
@@ -174,8 +172,8 @@ class LstgLog:
             if not self.check_bin(params=params, thread_id=num_arrivals):
                 censored = self.generate_censored_arrival(params=params, thread_id=num_arrivals + 1)
                 arrival_logs[num_arrivals + 1] = censored
-            else:
-                print('has bin')
+            # else:
+            #    print('has bin')
         return arrival_logs
 
     @staticmethod
@@ -284,9 +282,8 @@ class LstgLog:
         return self.translator.get_agent_arrival(check_time=time, thread_id=thread_id)
 
     def get_inter_arrival(self, thread_id=None, input_dict=None, time=None):
-        if self.first_arrival:
+        if time == self.lookup[START_TIME]:
             assert input_dict is None
-            self.first_arrival = False
         else:
             assert input_dict is not None
         true_id = self.translate_arrival(thread_id=thread_id)

@@ -7,7 +7,7 @@ SCRIPT_PARAMS = {BYR: {'action': 'store_true'},
                           'choices': PARTITIONS
                           },
                  'num': {'type': int,
-                         'default': 1},
+                         'default': 0},
                  'start': {'type': int,
                            'required': False},
                  'verbose': {'action': 'store_true'}

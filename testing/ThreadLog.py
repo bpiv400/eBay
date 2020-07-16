@@ -1,5 +1,6 @@
 from featnames import OUTCOME_FEATS, CON, EXP, AUTO, MSG, DELAY
-from rlenv.util import populate_test_model_inputs, model_str, need_msg
+from rlenv.util import model_str, need_msg
+from testing.util import populate_test_model_inputs
 from testing.TurnLog import TurnLog
 
 
@@ -49,7 +50,8 @@ class ThreadLog:
         # concession inputs if necessary
         if not outcomes[AUTO] and not outcomes[EXP]:
             model = model_str(CON, turn=turn)
-            con_inputs = populate_test_model_inputs(full_inputs=params['inputs'][model])
+            con_inputs = populate_test_model_inputs(full_inputs=params['inputs'][model],
+                                                    agent=self.agent, agent_byr=self.agent_buyer)
         else:
             con_inputs = None
         # msg inputs if necessary

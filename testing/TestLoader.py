@@ -14,6 +14,9 @@ class TestLoader(ChunkLoader):
         self.block_next = False
         self.agent = agent
 
+    def has_next(self):
+        return super().has_next() or self.block_next
+
     def next_lstg(self):
         if self.block_next and self.agent:
             self.block_next = False

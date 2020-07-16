@@ -35,6 +35,15 @@ class TestGenerator(Generator):
         self.agent = kwargs['agent']
         # boolean for whether the agent is a byr
         self.byr = kwargs[BYR]
+        self.print_test_description()
+
+    def print_test_description(self):
+        if not self.agent:
+            print('Testing Simulator')
+        elif self.byr:
+            print('Testing Buyer Agent')
+        else:
+            print('Testing Seller Agent')
 
     def generate_query_strategy(self):
         return TestQueryStrategy()
@@ -46,7 +55,8 @@ class TestGenerator(Generator):
                 FEAT_TYPE: ALL_FEATS,
                 BYR_HIST: None
             }
-            return AgentComposer(agent_params=agent_params)
+            composer = AgentComposer(agent_params=agent_params)
+            return composer
         else:
             return Composer(cols=self.loader.x_lstg_cols)
 
@@ -86,6 +96,7 @@ class TestGenerator(Generator):
             test_data['x_offer'] = subset_lstgs(df=test_data['x_offer'], lstgs=valid_lstgs)
             test_data['inputs'] = subset_inputs(input_data=test_data['inputs'],
                                                 value=valid_lstgs, level='lstg')
+        print('Running tests...')
         return TestLoader(x_lstg=x_lstg, lookup=lookup,
                           p_arrival=p_arrival, test_data=test_data,
                           agent=self.agent)
@@ -108,7 +119,7 @@ class TestGenerator(Generator):
         Drops lstgs where there's at least one offer within 1%
         of the accept or reject price if that price is non-null
         """
-        print('Lstg count: {}'.format(len(lookup)))
+        # print('Lstg count: {}'.format(len(lookup)))
         lookup = lookup.copy()
         # normalize start / decline prices
         for price in [ACC_PRICE, DEC_PRICE]:
@@ -133,8 +144,8 @@ class TestGenerator(Generator):
         low_diff_count = offers['low_diff'].groupby(level='lstg').sum()
         no_low_diffs_lstgs = low_diff_count.index[low_diff_count == 0]
         output_lstgs = no_low_diffs_lstgs.union(null_offer_lstgs)
-        print('num lstgs after diffs removal: {}'.format(
-            len(output_lstgs)))
+        # print('num lstgs after diffs removal: {}'.format(
+        #     len(output_lstgs)))
         return output_lstgs
 
     @staticmethod
@@ -142,7 +153,7 @@ class TestGenerator(Generator):
         """
         Drops lstgs where a buyer makes at least one instantaneous offer
         """
-        print('Lstg count: {}'.format(len(lookup.index)))
+        # print('Lstg count: {}'.format(len(lookup.index)))
         lookup = lookup.copy()
         offers = test_data['x_offer'].copy()
         offers['byr'] = offers.index.get_level_values('index') % 2 == 1
@@ -152,9 +163,9 @@ class TestGenerator(Generator):
         instant_count = offers['instant_byr'].groupby(level='lstg').sum()
         instant_lstgs = instant_count.index[instant_count > 0]
         lookup = lookup.drop(index=instant_lstgs, inplace=False)
-        print('num lstgs after instant removal: {}'.format(
-            len(lookup.index)
-        ))
+        # print('num lstgs after instant removal: {}'.format(
+        #     len(lookup.index)
+        # ))
         return lookup.index
 
     def _get_valid_lstgs(self, test_data=None, lookup=None):
@@ -241,12 +252,11 @@ class TestGenerator(Generator):
         while not done:
             action = lstg_log.get_action(agent_tuple=agent_tuple)
             agent_tuple = self.environment.step(action)
-            done = agent_tuple[2]
+            done = agent_tuple[2] or self.environment.relist_count > 0
         lstg_log.verify_done()
 
     def generate(self):
         while self.environment.has_next_lstg():
-            print('next lstg')
             self.environment.next_lstg()
             self.recorder.update_lstg(lookup=self.loader.lookup,
                                       lstg=self.loader.lstg)
