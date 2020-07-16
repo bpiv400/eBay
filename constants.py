@@ -26,7 +26,8 @@ elif 'Darwin' in platform():  # Etan's Mac laptop
 else:  # cluster and AWS
     PREFIX = os.path.expanduser('~/weka/eBay')
 
-PARTS_DIR = '{}/partitions/'.format(PREFIX)
+MODEL_PARTS_DIR = '{}/partitions/models/'.format(PREFIX)
+AGENT_PARTS_DIR = '{}/partitions/agent/'.format(PREFIX)
 INDEX_DIR = '{}/index/'.format(PREFIX)
 PCTILE_DIR = '{}/pctile/'.format(PREFIX)
 CLEAN_DIR = '{}/clean/'.format(PREFIX)

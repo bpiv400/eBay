@@ -8,8 +8,8 @@ import pandas as pd
 from compress_pickle import load
 from torch.distributions.categorical import Categorical
 from torch.distributions.bernoulli import Bernoulli
-from constants import PARTS_DIR, INPUT_DIR, DAY, ARRIVAL_MODELS, \
-    MAX_DELAY_TURN
+from constants import INPUT_DIR, DAY, ARRIVAL_MODELS, \
+    MAX_DELAY_TURN, MODEL_PARTS_DIR, AGENT_PARTS_DIR
 from featnames import LOOKUP, X_LSTG, P_ARRIVAL
 from rlenv.const import (SIM_CHUNKS_DIR, SIM_VALS_DIR, OFFER_MAPS,
                          SIM_DISCRIM_DIR, DATE_FEATS, NORM_IND)
@@ -162,13 +162,16 @@ def get_checkpoint_path(part_dir, chunk_num, discrim=False):
     return '{}chunks/{}_check_{}.gz'.format(part_dir, chunk_num, insert)
 
 
-def get_env_sim_dir(part):
+def get_env_sim_dir(part, model=False):
     """
     Gets path to root directory of partition
     :param str part: partition in PARTITIONS
-    :return: str
     """
-    return PARTS_DIR + '{}/'.format(part)
+    if model:
+        prefix = MODEL_PARTS_DIR
+    else:
+        prefix = AGENT_PARTS_DIR
+    return  '{}{}/'.format(prefix, part)
 
 
 def get_env_sim_subdir(part=None, base_dir=None, chunks=False,

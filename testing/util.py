@@ -7,7 +7,7 @@ from utils import load_featnames
 from rlenv.util import load_featnames
 from utils import load_file
 from constants import MODELS, INPUT_DIR, INDEX_DIR, FEATS_DIR,\
-    FIRST_ARRIVAL_MODEL, POLICY_MODELS
+    FIRST_ARRIVAL_MODEL, POLICY_MODELS, MODEL_PARTS_DIR
 from featnames import CENSORED, EXP, DELAY, MSG
 
 
@@ -73,7 +73,6 @@ def subset_inputs(models=None, input_data=None, value=None, level=None):
 
 
 def compare_input_dicts(model=None, stored_inputs=None, env_inputs=None):
-    assert len(stored_inputs) == len(env_inputs)
     for feat_set_name, stored_feats in stored_inputs.items():
         env_feats = env_inputs[feat_set_name]
         feat_eq = torch.lt(torch.abs(torch.add(-stored_feats, env_feats)), 1e-4)
@@ -118,29 +117,33 @@ def load_model_inputs(model=None, input_dir=None, index_dir=None, lstgs=None):
     index_path = '{}{}.gz'.format(index_dir, model)
     index = load(index_path)
     featnames = load_featnames(model)
-    inputs = load(input_path)['x']
+    full_inputs = load(input_path)
+    x_inputs = full_inputs['x']
+    x_idx = full_inputs['idx_x']
     contains = None
-    for feat_set_name in list(inputs.keys()):
+    for feat_set_name in list(x_inputs.keys()):
         cols = featnames['offer'] if 'offer' in feat_set_name else featnames[feat_set_name]
-        inputs_df = pd.DataFrame(data=inputs[feat_set_name],
+        inputs_df = pd.DataFrame(data=x_inputs[feat_set_name],
                                  index=index,
                                  columns=cols)
         if contains is None:
             full_lstgs = inputs_df.index.get_level_values('lstg')
             contains = full_lstgs.isin(lstgs)
         inputs_df = inputs_df.loc[contains, :]
-        inputs[feat_set_name] = inputs_df
-    return inputs
+        x_inputs[feat_set_name] = inputs_df
+    return x_inputs
 
 
 def load_all_inputs(part=None, lstgs=None):
     input_dir = '{}{}/'.format(INPUT_DIR, part)
     index_dir = '{}{}/'.format(INDEX_DIR, part)
+    x_lstg = load('{}x_lstg.pkl'.format(MODEL_PARTS_DIR))
     inputs_dict = dict()
     models = MODELS + POLICY_MODELS
     models.remove(FIRST_ARRIVAL_MODEL)
     for model in models:
         inputs_dict[model] = load_model_inputs(model=model,
+                                               x_lstg=x_lstg,
                                                input_dir=input_dir,
                                                index_dir=index_dir,
                                                lstgs=lstgs)
