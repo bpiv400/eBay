@@ -1,9 +1,10 @@
-from compress_pickle import load, dump
+from compress_pickle import dump
 import numpy as np
-from processing.util import extract_day_feats
-from utils import input_partition, load_file
-from constants import CLEAN_DIR, W2V_DIR, FEATS_DIR, PARTS_DIR, DAY, BYR, \
-    SLR
+from processing.util import extract_day_feats, get_lstgs, load_feats
+from constants import MODEL_PARTS_DIR, INPUT_DIR, DAY, BYR, SLR, \
+    TRAIN_MODELS, VALIDATION, TEST
+from featnames import START_PRICE, META, LEAF
+from utils import input_partition
 
 AS_IS_FEATS = ['store', 'slr_us', 'fast', 'photos', 'slr_lstg_ct',
                'slr_bo_ct', 'start_price_pctile', 'fdbk_score', 'fdbk_pstv']
@@ -19,87 +20,92 @@ def do_rounding(offer):
     return is_round, is_nines
 
 
-def get_x_lstg(lstgs):
+def construct_lstg_feats(listings):
     # initialize output dataframe with as-is features
-    df = lstgs[AS_IS_FEATS].copy()
+    df = listings[AS_IS_FEATS].copy()
     # binary feats
-    df['has_photos'] = lstgs.photos > 0
-    df['fdbk_100'] = lstgs.fdbk_pstv == 1
+    df['has_photos'] = listings.photos > 0
+    df['fdbk_100'] = listings.fdbk_pstv == 1
     df['start_is_round'], df['start_is_nines'] = \
-        do_rounding(lstgs.start_price)
+        do_rounding(listings[START_PRICE])
     # normalize start_date to years
-    df['start_years'] = lstgs.start_date / 365
+    df['start_years'] = listings.start_date / 365
     # date features
-    date_feats = extract_day_feats(lstgs.start_date * DAY)
+    date_feats = extract_day_feats(listings.start_date * DAY)
     df = df.join(date_feats.rename(lambda x: 'start_' + x, axis=1))
     # condition
-    s = lstgs.cndtn
+    s = listings.cndtn
     df['new'] = s == 1
     df['used'] = s == 7
     df['refurb'] = s.isin([2, 3, 4, 5, 6])
     df['wear'] = s.isin([8, 9, 10, 11]) * (s - 7)
     # auto decline/accept prices
-    df['auto_decline'] = lstgs.decline_price / lstgs.start_price
-    df['auto_accept'] = lstgs.accept_price / lstgs.start_price
+    df['auto_decline'] = listings.decline_price / listings.start_price
+    df['auto_accept'] = listings.accept_price / listings.start_price
     df['has_decline'] = df.auto_decline > 0
     df['has_accept'] = df.auto_accept < 1 
     # remove slr prefix
     df.rename(lambda c: c[4:] if c.startswith('slr_') else c, 
               axis=1, inplace=True)
-    return df
+    return df.astype('float32')
 
 
-def main():
-    # partition and corresponding indices
-    part = input_partition()
-    print('{}/x_lstg'.format(part))
-
-    # lstg indices
-    lookup = load_file(part, 'lookup')
-    idx = lookup.index
-
+def create_x_lstg(lstgs=None):
     # listing features
-    lstgs = load(CLEAN_DIR + 'listings.pkl').reindex(index=idx)
-
-    # save end time
-    dump(lstgs.end_time, PARTS_DIR + '{}/lstg_end.gz'.format(part))
+    listings = load_feats('listings', lstgs=lstgs)
 
     # initialize output dictionary
     x = dict()
 
     # listing features
-    print('Listing features')
-    x['lstg'] = get_x_lstg(lstgs)
+    x['lstg'] = construct_lstg_feats(listings)
 
     # word2vec features
-    print('Word2Vec features')
     for role in [BYR, SLR]:
-        w2v = load(W2V_DIR + '{}.gz'.format(role)).reindex(
-            index=lstgs[['leaf']].values.squeeze(), fill_value=0)
-        w2v.set_index(lstgs.index, inplace=True)
+        w2v = load_feats('w2v_{}'.format(role),
+                         lstgs=listings[[LEAF]].values.squeeze(),
+                         fill_zero=True)
+        w2v.set_index(lstgs, inplace=True)
         x['w2v_{}'.format(role)] = w2v.astype('float32')
-    del lstgs
+    del listings
 
     # slr and cat features
-    print('Seller features')
-    for name in ['slr', 'meta', 'leaf']:
-        x[name] = load(FEATS_DIR + '{}/{}.gz'.format(part, name)).reindex(
-            index=idx, fill_value=0).astype('float32')
+    for name in [SLR, META, LEAF]:
+        x[name] = load_feats(name,
+                             lstgs=lstgs,
+                             fill_zero=True).astype('float32')
 
     # take natural log of number of listings
     for k, v in x.items():
         count_cols = [c for c in v.columns if c.endswith('lstgs')]
         for c in count_cols:
             x[k].loc[:, c] = x[k][c].apply(np.log1p)
-            x[k].rename({c: c.replace('lstgs', 'ln_lstgs')}, 
+            x[k].rename({c: c.replace('lstgs', 'ln_lstgs')},
                         axis=1, inplace=True)
 
     # ensure indices are aligned with lookup
     for v in x.values():
-        assert np.all(idx == v.index)
+        assert np.all(lstgs == v.index)
 
-    # save as gz
-    dump(x, PARTS_DIR + '{}/x_lstg.gz'.format(part))
+    return x
+
+
+def main():
+    part = input_partition()
+    assert part in [TRAIN_MODELS, VALIDATION, TEST]
+    print('{}/x_lstg'.format(part))
+
+    # create dataframe
+    x_lstg = create_x_lstg(lstgs=get_lstgs(part))
+
+    # extract column names and save
+    if part == VALIDATION:
+        cols = {k: list(v.columns) for k, v in x_lstg.items()}
+        dump(cols, INPUT_DIR + 'featnames/x_lstg.pkl')
+
+    # convert to numpy and save
+    x_lstg = {k: v.values for k, v in x_lstg.items()}
+    dump(x_lstg, MODEL_PARTS_DIR + '{}/x_lstg.pkl'.format(part))
 
 
 if __name__ == "__main__":

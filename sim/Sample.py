@@ -2,11 +2,8 @@ import psutil
 import numpy as np
 import torch
 from torch.utils.data import Sampler, DataLoader
-from constants import FIRST_ARRIVAL_MODEL, POLICY_BYR
 
-NUM_WORKERS = {FIRST_ARRIVAL_MODEL: 5,
-               POLICY_BYR: 2}
-MBSIZE = {True: 128, False: 1e4}  # True for training, False for validation
+MBSIZE = {True: 128, False: 1e5}  # True for training, False for validation
 
 
 class Sample(Sampler):
@@ -67,13 +64,9 @@ def get_batches(data, is_training=False):
     :param is_training: chop into minibatches if True.
     :return: iterable batches of examples.
     """
-    if data.name in NUM_WORKERS:
-        num_workers = NUM_WORKERS[data.name]
-    else:
-        num_workers = len(psutil.Process().cpu_affinity())
     batches = DataLoader(data,
                          collate_fn=collate,
                          batch_sampler=Sample(data, is_training),
-                         num_workers=num_workers,
+                         num_workers=len(psutil.Process().cpu_affinity()),
                          pin_memory=True)
     return batches

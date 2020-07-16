@@ -6,7 +6,6 @@ from rlenv.environments.SimulatorEnvironment import SimulatorEnvironment
 from rlenv.interfaces.ArrivalInterface import ArrivalInterface
 from rlenv.interfaces.PlayerInterface import SimulatedSeller, SimulatedBuyer
 from rlenv.Composer import Composer
-from rlenv.util import get_env_sim_subdir
 from featnames import START_PRICE, START_TIME, ACC_PRICE, DEC_PRICE, \
     X_LSTG, LOOKUP, P_ARRIVAL
 
@@ -33,8 +32,8 @@ class Generator:
         self.buyer = None
         self.arrival = None
 
-    def process_chunk(self, part=None, chunk=None):
-        self.load_chunk(part=part, chunk=chunk)
+    def process_chunk(self, path=None):
+        self.load_chunk(path)
         if not self.initialized:
             self.initialize()
         return self.generate()
@@ -47,7 +46,7 @@ class Generator:
         self.recorder = self.generate_recorder()
         self.initialized = True
 
-    def load_chunk(self, chunk=None):
+    def load_chunk(self, path=None):
         raise NotImplementedError()
 
     def generate_recorder(self):
@@ -125,9 +124,8 @@ class SimulatorGenerator(Generator):
     def generate_recorder(self):
         raise NotImplementedError()
 
-    def load_chunk(self, part=None, chunk=None):
-        chunk_dir = get_env_sim_subdir(part=part, chunks=True)
-        d = load(chunk_dir + '{}.gz'.format(chunk))
+    def load_chunk(self, path=None):
+        d = load(path)
         self.lookup = d[LOOKUP]
         self.x_lstg = d[X_LSTG]
         self.p_arrival = d[P_ARRIVAL]
@@ -163,7 +161,7 @@ class SimulatorGenerator(Generator):
 
 
 class DiscrimGenerator(SimulatorGenerator):
-    def __init__(self, part=None, verbose=False):
+    def __init__(self, verbose=False):
         super().__init__(verbose=verbose)
 
     def generate_recorder(self):

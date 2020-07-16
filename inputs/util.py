@@ -1,13 +1,12 @@
 import numpy as np
 import pandas as pd
-from compress_pickle import dump
-from utils import get_remaining, load_file
-from inputs.const import NUM_OUT, N_SMALL
-from constants import INPUT_DIR, INDEX_DIR, VALIDATION, TRAIN_MODELS, \
-    TRAIN_RL, IDX, BYR, DISCRIM_MODELS, SLR, NO_ARRIVAL_CUTOFF, HIST_QUANTILES
+from compress_pickle import load, dump
+from utils import get_remaining
+from inputs.const import NUM_OUT
+from constants import INPUT_DIR, INDEX_DIR, VALIDATION, \
+    IDX, BYR, DISCRIM_MODELS, HIST_QUANTILES, POLICY_BYR, BYR_DROP
 from featnames import CLOCK_FEATS, OUTCOME_FEATS, BYR_HIST, \
-    CON, NORM, SPLIT, MSG, AUTO, EXP, REJECT, DAYS, DELAY, TIME_FEATS, \
-    THREAD_COUNT, NO_ARRIVAL
+    SPLIT, MSG, AUTO, EXP, REJECT, DAYS, DELAY, TIME_FEATS, THREAD_COUNT
 
 
 def add_turn_indicators(df):
@@ -39,7 +38,7 @@ def get_x_thread(threads, idx, turn_indicators=False):
     return x_thread.astype('float32')
 
 
-def get_arrival_times(clock, lstg_start, lstg_end, append_last=False):
+def get_arrival_times(clock=None, lstg_start=None, lstg_end=None, append_last=False):
     # thread 0: start of listing
     s = lstg_start.to_frame().assign(thread=0).set_index(
         'thread', append=True).squeeze()
@@ -141,72 +140,68 @@ def get_x_offer_init(offers, idx, role=None):
     return x_offer
 
 
-def load_reindex(part=None, name=None, idx=None):
-    df = load_file(part, name)
-    df = df.reindex(index=idx, level='lstg')
-    return df
-
-
-def get_init_data(part):
-    # restrict to listings with non-infrequent arrivals
-    p0 = load_file(part, NO_ARRIVAL)
-    idx = p0[p0 < NO_ARRIVAL_CUTOFF].index
-    # data frames
-    data = dict()
-    data['lookup'] = load_file(part, 'lookup').loc[idx]
-    data['offers'] = load_reindex(part, 'x_offer', idx)
-    data['threads'] = load_reindex(part, 'x_thread', idx)
-    data['clock'] = load_reindex(part, 'clock', idx)
-    return data
-
-
-def save_featnames(x, m):
+def get_ind_x(lstgs=None, idx=None):
     """
-    Creates dictionary of input feature names.
-    :param x: dictionary of input dataframes.
-    :param m: string name of model.
+    For each lstg in idx, finds corresponding index in lstgs.
+    :param lstgs: index of lookup.
+    :param idx: index of outcome.
+    :return: array of indices in lstgs.
     """
-    # initialize featnames dictionary
-    featnames = {k: list(v.columns) for k, v in x.items() if 'offer' not in k}
-
-    # for offer models
-    if 'offer1' in x:
-        if m in DISCRIM_MODELS:
-            for i in range(1, 8):
-                k = 'offer{}'.format(i)
-                featnames[k] = list(x[k].columns)
-        else:
-            # buyer models do not have time feats
-            if BYR in m or m[-1] in [str(i) for i in IDX[BYR]]:
-                feats = CLOCK_FEATS + OUTCOME_FEATS
-            else:
-                feats = CLOCK_FEATS + TIME_FEATS + OUTCOME_FEATS
-
-            # check that all offer groupings have same organization
-            for k in x.keys():
-                if 'offer' in k:
-                    assert list(x[k].columns) == feats
-
-            # one vector of featnames for offer groupings
-            featnames['offer'] = feats
-
-    dump(featnames, INPUT_DIR + 'featnames/{}.pkl'.format(m))
+    idx = idx.get_level_values(level='lstg')  # restrict to lstg id
+    idx_x = np.searchsorted(lstgs, idx)
+    return idx_x
 
 
-def save_sizes(x, m):
+def save_featnames_and_sizes(x=None, m=None):
     """
-    Creates dictionary of input sizes.
-    :param x: dictionary of input dataframes.
-    :param m: string name of model.
+    Creates dictionary of input feature names and sizes.
+    :param dict x: input dataframes.
+    :param str m: name of model.
     """
+    # initialize dictionaries from listing feature names
+    featnames = load(INPUT_DIR + 'featnames/x_lstg.pkl')
     sizes = dict()
+    sizes['x'] = {k: len(v) for k, v in featnames.items()}
 
-    # count components of x
-    sizes['x'] = {k: len(v.columns) for k, v in x.items()}
+    if m == POLICY_BYR:
+        del featnames['slr']
+        del sizes['x']['slr']
+        featnames['lstg'] = [k for k in featnames['lstg'] if k not in BYR_DROP]
+        sizes['x']['lstg'] = len(featnames['lstg'])
+
+    # add thread features to end of lstg grouping
+    if x is not None:
+        featnames['lstg'] += list(x['thread'].columns)
+        sizes['x']['lstg'] += len(x['thread'].columns)
+
+        # for offer models
+        if 'offer1' in x:
+            if m in DISCRIM_MODELS:
+                for i in range(1, 8):
+                    k = 'offer{}'.format(i)
+                    featnames[k] = list(x[k].columns)
+                    sizes['x'][k] = len(featnames[k])
+            else:
+                # buyer models do not have time feats
+                if BYR in m or m[-1] in [str(i) for i in IDX[BYR]]:
+                    feats = CLOCK_FEATS + OUTCOME_FEATS
+                else:
+                    feats = CLOCK_FEATS + TIME_FEATS + OUTCOME_FEATS
+
+                # check that all offer groupings have same organization
+                for k in x.keys():
+                    if 'offer' in k:
+                        assert list(x[k].columns) == feats
+                        sizes['x'][k] = len(feats)  # put length in sizes
+
+                # one vector of featnames for offer groupings
+                featnames['offer'] = feats
 
     # length of model output vector
     sizes['out'] = NUM_OUT[m]
 
+    # save
+    dump(featnames, INPUT_DIR + 'featnames/{}.pkl'.format(m))
     dump(sizes, INPUT_DIR + 'sizes/{}.pkl'.format(m))
 
 
@@ -222,35 +217,19 @@ def convert_x_to_numpy(x, idx):
         x[k] = v.to_numpy(dtype='float32')
 
 
-def save_small(d, name):
-    # randomly select indices
-    v = np.arange(np.shape(d['y'])[0])
-    np.random.shuffle(v)
-    idx_small = v[:N_SMALL]
-
-    # outcome
-    small = dict()
-    small['y'] = d['y'][idx_small]
-
-    # inputs
-    small['x'] = {k: v[idx_small, :] for k, v in d['x'].items()}
-
-    # save
-    dump(small, INPUT_DIR + 'small/{}.gz'.format(name))
-
-
 # save featnames and sizes
 def save_files(d, part, name):
     # featnames and sizes
     if part == VALIDATION:
-        save_featnames(d['x'], name)
-        save_sizes(d['x'], name)
+        save_featnames_and_sizes(x=None if 'x' not in d else d['x'],
+                                 m=name)
 
     # pandas index
     idx = d['y'].index
 
     # input features
-    convert_x_to_numpy(d['x'], idx)
+    if 'x' in d:
+        convert_x_to_numpy(d['x'], idx)
 
     # convert outcome to numpy
     d['y'] = d['y'].to_numpy()
@@ -260,7 +239,3 @@ def save_files(d, part, name):
 
     # save index
     dump(idx, INDEX_DIR + '{}/{}.gz'.format(part, name))
-
-    # save subset
-    if part in [TRAIN_MODELS, TRAIN_RL]:
-        save_small(d, name)

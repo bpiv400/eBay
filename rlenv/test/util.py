@@ -39,7 +39,7 @@ def load_all_inputs(part=None, lstgs=None):
 
 
 def load_reindex(part=None, name=None, lstgs=None):
-    df = load_file(part, name)
+    df = load_file(part, name, agent=False)
     df = df.reindex(index=lstgs, level='lstg')
     if name == 'x_offer':
         df[CENSORED] = df[EXP] & (df[DELAY] < 1)

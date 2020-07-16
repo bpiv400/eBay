@@ -8,7 +8,7 @@ import pandas as pd
 from compress_pickle import load
 from torch.distributions.categorical import Categorical
 from torch.distributions.bernoulli import Bernoulli
-from constants import PARTS_DIR, INPUT_DIR, DAY, ARRIVAL_MODELS, \
+from constants import MODEL_PARTS_DIR, INPUT_DIR, DAY, ARRIVAL_MODELS, \
     MAX_DELAY_TURN
 from rlenv.const import (SIM_CHUNKS_DIR, SIM_VALS_DIR, OFFER_MAPS,
                          SIM_DISCRIM_DIR, DATE_FEATS, NORM_IND)
@@ -166,7 +166,7 @@ def get_env_sim_dir(part):
     :param str part: partition in PARTITIONS
     :return: str
     """
-    return PARTS_DIR + '{}/'.format(part)
+    return MODEL_PARTS_DIR + '{}/'.format(part)
 
 
 def get_env_sim_subdir(part=None, base_dir=None, chunks=False,

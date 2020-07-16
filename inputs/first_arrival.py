@@ -1,18 +1,22 @@
-from inputs.util import get_arrival_times, save_files
-from utils import input_partition, load_file, init_x
-from featnames import START_TIME
-from inputs.const import INTERVAL_ARRIVAL, INTERVAL_CT_ARRIVAL
-from constants import FIRST_ARRIVAL_MODEL, HOUR
+from inputs.util import get_arrival_times, save_files, get_ind_x
+from utils import input_partition, load_file
+from featnames import START_TIME, END_TIME
+from constants import FIRST_ARRIVAL_MODEL, HOUR, INTERVAL_ARRIVAL, INTERVAL_CT_ARRIVAL
+
+AGENT = False
 
 
 def process_inputs(part):
     # data
-    clock = load_file(part, 'clock')
-    lstg_start = load_file(part, 'lookup')[START_TIME]
-    lstg_end = load_file(part, 'lstg_end')
+    clock = load_file(part, 'clock', agent=AGENT)
+    lookup = load_file(part, 'lookup', agent=AGENT)
+    lstg_start = lookup[START_TIME]
+    lstg_end = lookup[END_TIME]
 
     # first arrival time
-    arrivals = get_arrival_times(clock, lstg_start, lstg_end,
+    arrivals = get_arrival_times(clock=clock,
+                                 lstg_start=lstg_start,
+                                 lstg_end=lstg_end,
                                  append_last=False)
     arrivals = arrivals[arrivals.index.isin([0, 1], level='thread')]
     arrivals = arrivals.sort_index().unstack()
@@ -27,10 +31,10 @@ def process_inputs(part):
     y[idx0] = hours - (INTERVAL_CT_ARRIVAL + 1)
     y = y.astype(clock.dtype)
 
-    # listing features
-    x = init_x(part, y.index)
+    # indices for listing features
+    idx_x = get_ind_x(lstgs=lookup.index, idx=y.index)
 
-    return {'y': y, 'x': x}
+    return {'y': y, 'idx_x': idx_x}
 
 
 def main():

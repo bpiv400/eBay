@@ -1,7 +1,8 @@
 import numpy as np
 import pandas as pd
+from compress_pickle import load
 from utils import extract_clock_feats, byr_norm, slr_norm
-from constants import START, IDX, BYR, SLR, \
+from constants import FEATS_DIR, MODEL_PARTS_DIR, START, IDX, BYR, SLR, \
     DAY, HOLIDAYS, MAX_DELAY_TURN
 from featnames import HOLIDAY, DOW_PREFIX, TIME_OF_DAY, AFTERNOON, \
     CLOCK_FEATS
@@ -111,3 +112,31 @@ def get_norm(con):
                                prev_byr_norm=norm[i - 1],
                                prev_slr_norm=norm[i - 2])
     return norm.rename_axis('index', axis=1).stack().astype('float64')
+
+
+def get_lstgs(part):
+    """
+    Grabs list of partition-specific listing ids.
+    :param str part: name of partition
+    :return: list of partition-specific listings ids
+    """
+    return load(MODEL_PARTS_DIR + 'partitions.pkl')[part]
+
+
+def load_feats(name, lstgs=None, fill_zero=False):
+    """
+    Loads dataframe of features (and reindexes).
+    :param str name: filename
+    :param lstgs: listings to restrict to
+    :param bool fill_zero: fill missings with 0's if True
+    :return: dataframe of features
+    """
+    df = load(FEATS_DIR + '{}.gz'.format(name))
+    if lstgs is None:
+        return df
+    kwargs = {'index': lstgs}
+    if len(df.index.names) > 1:
+        kwargs['level'] = 'lstg'
+    if fill_zero:
+        kwargs['fill_value'] = 0.
+    return df.reindex(**kwargs)

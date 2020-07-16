@@ -3,7 +3,7 @@ from compress_pickle import dump
 from processing.util import collect_date_clock_feats, \
     get_days_delay, get_norm
 from utils import is_split, load_file
-from constants import IDX, SLR, MONTH, PARTS_DIR
+from constants import IDX, SLR, MONTH, AGENT_PARTS_DIR
 from featnames import DAYS, DELAY, CON, SPLIT, NORM, REJECT, AUTO, EXP, \
     CENSORED, CLOCK_FEATS, TIME_FEATS, OUTCOME_FEATS, MONTHS_SINCE_LSTG, \
     BYR_HIST, START_TIME
@@ -71,12 +71,12 @@ def clean_components(threads, offers, lstg_start):
     # end of listing
     sale_time = offers.loc[offers[CON] == 100, 'clock'].reset_index(
         level=['thread', 'index'], drop=True)
-    d['lstg_end'] = sale_time.reindex(index=idx, fill_value=-1)
-    d['lstg_end'].loc[d['lstg_end'] == -1] += lstg_start + MONTH
+    lstg_end = sale_time.reindex(index=idx, fill_value=-1)
+    lstg_end.loc[lstg_end == -1] += lstg_start + MONTH
 
     # conform to observed inputs
     d['x_thread'] = process_sim_threads(threads, lstg_start)
-    d['x_offer'], d['clock'] = process_sim_offers(offers, d['lstg_end'])
+    d['x_offer'], d['clock'] = process_sim_offers(offers, lstg_end)
 
     return d
 
@@ -101,12 +101,12 @@ def concat_sim_chunks(sims):
 def process_sims(part=None, sims=None):
     # concatenate chunks
     threads, offers = concat_sim_chunks(sims)
-    lstg_start = load_file(part, 'lookup')[START_TIME]
+    lstg_start = load_file(part, 'lookup', agent=True)[START_TIME]
 
     # create output dataframes
     d = clean_components(threads, offers, lstg_start)
 
     # save
     for k, df in d.items():
-        dump(df, PARTS_DIR + '{}/{}_sim.gz'.format(part, k))
+        dump(df, AGENT_PARTS_DIR + '{}/{}_sim.gz'.format(part, k))
 

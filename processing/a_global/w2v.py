@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 from compress_pickle import dump
 from gensim.models import Word2Vec
-from constants import BYR, SLR, SEED, CLEAN_DIR, W2V_DIR
+from constants import BYR, SLR, SEED, CLEAN_DIR, FEATS_DIR
 
 VOCAB_SIZE = 32  # vocabulary size for embeddings
 
@@ -50,7 +50,7 @@ def main():
     df = run_model(s).rename(lambda x: role + x, axis=1).sort_index()
 
     # save
-    dump(df, W2V_DIR + '{}.gz'.format(role))
+    dump(df, FEATS_DIR + 'w2v_{}.pkl'.format(role))
 
 
 if __name__ == '__main__':

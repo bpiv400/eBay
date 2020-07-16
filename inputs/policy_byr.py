@@ -1,27 +1,20 @@
 import pandas as pd
-from inputs.util import save_files, get_x_thread, \
-    get_x_offer_init, get_init_data
+from inputs.util import save_files, get_x_thread, get_x_offer_init, \
+    get_ind_x
 from processing.util import extract_day_feats
-from utils import input_partition, init_x
+from utils import input_partition, load_file
 from constants import IDX, DAY, MONTH, BYR, CON_MULTIPLIER, \
-    TRAIN_RL, VALIDATION, TEST, POLICY_BYR
+    POLICY_BYR, AGENT_PARTITIONS
 from featnames import CON, START_TIME, EXP, DELAY, THREAD_COUNT, \
-    MONTHS_SINCE_LSTG
+    MONTHS_SINCE_LSTG, LOOKUP
+
+AGENT = True
 
 
-def construct_x(part=None, idx=None, data=None):
-    # listing features
-    x = init_x(part, idx)
-    del x['slr']  # byr does not observe slr features
-
-    # remove auto accept/reject features from x['lstg'] for buyer models
-    x['lstg'].drop(['auto_decline', 'auto_accept',
-                    'has_decline', 'has_accept',
-                    'lstg_ct', 'bo_ct'],
-                   axis=1, inplace=True)
-
+def construct_x(idx=None, threads=None, offers=None,
+                clock=None, lstg_start=None):
     # thread features
-    x_thread = get_x_thread(data['threads'], idx,
+    x_thread = get_x_thread(threads, idx,
                             turn_indicators=True)
     x_thread.drop(THREAD_COUNT, axis=1, inplace=True)
 
@@ -31,11 +24,9 @@ def construct_x(part=None, idx=None, data=None):
     idx2 = idx.drop(idx1)
 
     # current time feats
-    lstg_start = data['lookup'][START_TIME]
     clock1 = pd.Series(DAY * idx1.get_level_values(level='day'),
                        index=idx1) + lstg_start.reindex(index=idx1,
                                                         level='lstg')
-    clock = data['clock']
     clock2 = clock.groupby(clock.index.names[:-1]).shift()
     clock2 = clock2[idx2].astype(clock.dtype)
     combined = pd.concat([clock1, clock2]).sort_index()
@@ -49,11 +40,11 @@ def construct_x(part=None, idx=None, data=None):
     x_thread.loc[idx1, MONTHS_SINCE_LSTG] = \
         idx1.get_level_values(level='day') * DAY / MONTH
 
-    # concatenate with the listing grouping
-    x['lstg'] = pd.concat([x['lstg'], x_thread], axis=1)
+    # initialize x with thread features
+    x = {'thread': x_thread}
 
     # offer features
-    x.update(get_x_offer_init(data['offers'], idx, role=BYR))
+    x.update(get_x_offer_init(offers, idx, role=BYR))
 
     # no nans
     for v in x.values():
@@ -92,20 +83,31 @@ def create_index(clock=None, offers=None, lstg_start=None):
 
 def process_inputs(part):
     # load dataframes
-    data = get_init_data(part)
+    offers = load_file(part, 'x_offer', agent=AGENT)
+    threads = load_file(part, 'x_thread', agent=AGENT)
+    clock = load_file(part, 'clock', agent=AGENT)
+    lookup = load_file(part, LOOKUP, agent=AGENT)
+    lstg_start = lookup[START_TIME]
 
     # master index
-    idx, idx1 = create_index(clock=data['clock'],
-                             offers=data['offers'],
-                             lstg_start=data['lookup'][START_TIME])
+    idx, idx1 = create_index(clock=clock,
+                             offers=offers,
+                             lstg_start=lstg_start)
 
     # outcome
-    y = get_y(idx, idx1, data['offers'])
+    y = get_y(idx, idx1, offers)
 
     # input feature dictionary
-    x = construct_x(part=part, idx=y.index, data=data)
+    x = construct_x(idx=y.index,
+                    threads=threads,
+                    offers=offers,
+                    clock=clock,
+                    lstg_start=lstg_start)
 
-    return {'y': y, 'x': x}
+    # indices for listing features
+    idx_x = get_ind_x(lstgs=lookup.index, idx=idx)
+
+    return {'y': y, 'x': x, 'idx_x': idx_x}
 
 
 def main():
@@ -114,7 +116,7 @@ def main():
     print('{}/{}'.format(part, POLICY_BYR))
 
     # policy is trained on TRAIN_MODELS
-    assert part in [TRAIN_RL, VALIDATION, TEST]
+    assert part in AGENT_PARTITIONS
 
     # input dataframes, output processed dataframes
     d = process_inputs(part)

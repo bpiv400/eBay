@@ -1,6 +1,6 @@
 from utils import get_months_since_lstg
 from agent.ConSpace import ConSpace
-from inputs.const import INTERVAL_CT_TURN, INTERVAL_TURN
+from constants import INTERVAL_TURN, INTERVAL_CT_TURN
 from rlenv.environments.SimulatorEnvironment import SimulatorEnvironment
 
 

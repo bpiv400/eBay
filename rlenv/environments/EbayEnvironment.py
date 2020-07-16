@@ -1,10 +1,9 @@
 import numpy as np
 from collections import namedtuple
 from constants import (BYR, MONTH, BYR_HIST_MODEL, INTERARRIVAL_MODEL,
-                       MAX_DELAY_TURN)
+                       MAX_DELAY_TURN, INTERVAL_TURN, INTERVAL_ARRIVAL)
 from featnames import ACC_PRICE, DEC_PRICE, START_PRICE, DELAY
 from utils import get_months_since_lstg
-from inputs.const import INTERVAL_ARRIVAL, INTERVAL_TURN
 from rlenv.Heap import Heap
 from rlenv.time.TimeFeatures import TimeFeatures
 from rlenv.time.Offer import Offer
@@ -328,6 +327,7 @@ class EbayEnvironment:
         probs = self.p_arrival
         if intervals is not None:
             probs = probs[intervals[0]:intervals[1]]
+            probs /= np.sum(probs)
         interval = np.random.choice(len(probs), p=probs)
         seconds = self._arrival_interval_to_seconds(interval=interval)
         return seconds

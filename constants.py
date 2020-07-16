@@ -13,8 +13,8 @@ DROPOUT = 'dropout'
 TOL_HALF = 0.02
 
 # paths and directories
-if 'Ubuntu' in platform():  # Etan's new box
-    PREFIX = os.path.expanduser('~/eBay/data')
+if 'Ubuntu' in platform():  # Etan's box(es)
+    PREFIX = os.path.expanduser('/data/eBay')
 elif 'debian' in platform():
     PREFIX = os.path.expanduser('~/shared/ebay')
 elif 'Windows' in platform() and 'A:' in os.getcwd():  # Barry's pc
@@ -26,7 +26,8 @@ elif 'Darwin' in platform():  # Etan's Mac laptop
 else:  # cluster and AWS
     PREFIX = os.path.expanduser('~/weka/eBay')
 
-PARTS_DIR = '{}/partitions/'.format(PREFIX)
+MODEL_PARTS_DIR = '{}/partitions/models/'.format(PREFIX)
+AGENT_PARTS_DIR = '{}/partitions/agent/'.format(PREFIX)
 INDEX_DIR = '{}/index/'.format(PREFIX)
 PCTILE_DIR = '{}/pctile/'.format(PREFIX)
 CLEAN_DIR = '{}/clean/'.format(PREFIX)
@@ -49,7 +50,11 @@ TRAIN_RL = 'rl'
 VALIDATION = 'valid'
 TEST = VALIDATION  # TODO: rename to 'test' when using real test data
 PARTITIONS = [TRAIN_MODELS, TRAIN_RL, VALIDATION, TEST]
-SMALL = 'small'
+SIM_PARTITIONS = [TRAIN_MODELS, VALIDATION, TEST]
+AGENT_PARTITIONS = [TRAIN_RL, VALIDATION, TEST]
+
+# for splitting data
+SHARES = {TRAIN_MODELS: 0.6, TRAIN_RL: 0.16, VALIDATION: 0.04}
 
 # delete activity after lstg is open MAX_DAYS
 MAX_DAYS = 31
@@ -64,6 +69,12 @@ EXPIRATION = 2 * DAY
 # maximal delay times
 MAX_DELAY_ARRIVAL = MONTH
 MAX_DELAY_TURN = 2 * DAY
+
+# intervals
+INTERVAL_TURN = int(5 * MINUTE)
+INTERVAL_ARRIVAL = int(HOUR)
+INTERVAL_CT_TURN = int(MAX_DELAY_TURN / INTERVAL_TURN)
+INTERVAL_CT_ARRIVAL = int(MAX_DELAY_ARRIVAL / INTERVAL_ARRIVAL)
 
 # concessions that denote an (almost) even split
 SPLIT_PCTS = [.49, .50, .51]
@@ -139,7 +150,9 @@ NO_ARRIVAL_CUTOFF = .50 ** (1.0 / 12)
 SEED = 123456
 
 # number of chunks
-NUM_CHUNKS = 60
+NUM_CHUNKS = 16
 
-# multiprocessing and RL training
-NUM_RL_WORKERS = 16
+# features to drop from 'lstg' grouping for byr
+BYR_DROP = ['auto_decline', 'auto_accept',
+            'has_decline', 'has_accept',
+            'lstg_ct', 'bo_ct']

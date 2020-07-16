@@ -3,27 +3,27 @@ from rlenv.test.LstgLog import LstgLog
 from rlenv.test.TestEnvironment import TestEnvironment
 from rlenv.test.util import load_all_inputs, load_reindex
 from rlenv.generate.Recorder import OutcomeRecorder
+from constants import VALIDATION
 
 
 class TestGenerator(SimulatorGenerator):
-    def __init__(self, part=None, verbose=False):
-        super().__init__(part=part, verbose=verbose)
+    def __init__(self, verbose=False):
+        super().__init__(verbose=verbose)
         self.data = None
 
     def generate_recorder(self):
-        return OutcomeRecorder(records_path="",
-                               verbose=self.verbose)
+        return OutcomeRecorder(verbose=self.verbose)
 
-    def load_chunk(self, chunk=None):
-        super().load_chunk(chunk=chunk)  # lookup and x_lstg
+    def load_chunk(self, part=VALIDATION, chunk=None):
+        super().load_chunk(part=part, chunk=chunk)  # lookup and x_lstg
         # load model inputs
         print('Loading model inputs')
         lstgs = self.lookup.index
         self.data = dict()
-        self.data['inputs'] = load_all_inputs(part=self.part,
+        self.data['inputs'] = load_all_inputs(part=part,
                                               lstgs=lstgs)
         for name in ['x_thread', 'x_offer']:
-            self.data[name] = load_reindex(part=self.part,
+            self.data[name] = load_reindex(part=part,
                                            name=name,
                                            lstgs=lstgs)
 
@@ -68,7 +68,3 @@ class TestGenerator(SimulatorGenerator):
                                lookup=lookup, verbose=self.verbose,
                                log=log, composer=self.composer,
                                recorder=self.recorder)
-
-    @property
-    def records_path(self):
-        raise RuntimeError("No recorder")
