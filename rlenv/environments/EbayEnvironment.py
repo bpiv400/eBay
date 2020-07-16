@@ -1,7 +1,7 @@
 from collections import namedtuple
 from featnames import START_TIME, META
 from utils import get_cut
-from constants import BYR, MONTH, BYR_HIST_MODEL, INTERARRIVAL_MODEL,
+from constants import BYR, MONTH, BYR_HIST_MODEL, INTERARRIVAL_MODEL
 from featnames import ACC_PRICE, DEC_PRICE, START_PRICE, DELAY
 from utils import get_months_since_lstg
 from rlenv.Heap import Heap

@@ -112,17 +112,26 @@ def subset_df(df=None, lstg=None):
     return None
 
 
-def load_model_inputs(model=None, input_dir=None, index_dir=None, lstgs=None):
+def load_model_inputs(model=None, input_dir=None,
+                      index_dir=None, lstgs=None, x_lstg=None):
     input_path = '{}{}.gz'.format(input_dir, model)
     index_path = '{}{}.gz'.format(index_dir, model)
     index = load(index_path)
     featnames = load_featnames(model)
     full_inputs = load(input_path)
     x_inputs = full_inputs['x']
-    x_idx = full_inputs['idx_x']
+    x_idx = pd.Series(index=index,
+                      data=full_inputs['idx_x'])
     contains = None
     for feat_set_name in list(x_inputs.keys()):
-        cols = featnames['offer'] if 'offer' in feat_set_name else featnames[feat_set_name]
+        # set column names
+        if feat_set_name == 'thread':
+            # use naive values for thread since it's not in featnames
+            cols = list(range(x_inputs[feat_set_name].shape[1]))
+        elif 'offer' in feat_set_name:
+            cols = featnames['offer']
+        else:
+            cols = featnames[feat_set_name]
         inputs_df = pd.DataFrame(data=x_inputs[feat_set_name],
                                  index=index,
                                  columns=cols)
@@ -131,6 +140,31 @@ def load_model_inputs(model=None, input_dir=None, index_dir=None, lstgs=None):
             contains = full_lstgs.isin(lstgs)
         inputs_df = inputs_df.loc[contains, :]
         x_inputs[feat_set_name] = inputs_df
+    x_idx = x_idx[contains]
+    # fixing x_lstg inputs except 'lstg'
+    # b/c it must combine with 'thread'
+    x_lstg_sets = list(x_lstg.keys())
+    x_lstg_sets.remove('lstg')
+    for feat_set_name in x_lstg_sets:
+        vals = x_lstg[feat_set_name][x_idx, :]
+        cols = featnames[feat_set_name]
+        inputs_df = pd.DataFrame(data=vals,
+                                 index=x_idx.index,
+                                 columns=cols)
+        x_inputs[feat_set_name] = inputs_df
+
+    # fixing lstg
+    lstg_vals = x_lstg['lstg'][x_idx, :]
+    thread_vals = x_inputs['thread'].values
+    lstg_vals = np.concatenate((lstg_vals, thread_vals), axis=1)
+    cols = featnames['lstg']
+    x_inputs['lstg'] = pd.DataFrame(
+        data=lstg_vals,
+        index=x_inputs['thread'].index,
+        columns=cols
+    )
+    del x_inputs['thread']
+
     return x_inputs
 
 
