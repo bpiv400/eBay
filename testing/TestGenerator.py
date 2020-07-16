@@ -3,7 +3,7 @@ from agent.const import BYR, FEAT_TYPE, ALL_FEATS
 from agent.util import get_agent_name
 from agent.AgentComposer import AgentComposer
 from constants import POLICY_MODELS
-from featnames import LSTG, BYR_HIST
+from featnames import LSTG, BYR_HIST, ACC_PRICE, DEC_PRICE, START_PRICE
 from rlenv.Composer import Composer
 from rlenv.environments.BuyerEnvironment import BuyerEnvironment
 from rlenv.environments.SellerEnvironment import SellerEnvironment
@@ -101,6 +101,40 @@ class TestGenerator(Generator):
             del test_data['inputs'][model_name]
         return test_data
 
+    @staticmethod
+    def _get_auto_safe_lstgs(test_data=None, lookup=None):
+        """
+        Drops lstgs where there's at least one offer within 1%
+        of the accept or reject price if that price is non-null
+        """
+        print('Lstg count: {}'.format(len(lookup)))
+        lookup = lookup.copy()
+        # normalize start / decline prices
+        for price in [ACC_PRICE, DEC_PRICE]:
+            lookup[price] = lookup[price] / lookup[START_PRICE]
+        # drop offers that are 0 or 1 (and very near or 1)
+        offers = test_data['x_offer'].copy()
+        near_null_offers = (offers['norm'] >= .99) | (offers['norm'] <= 0.01)
+        offers = offers.loc[~near_null_offers, :]
+
+        # extract lstgs that no longer appear in offers
+        # these should be kept because they  must have no offers
+        # or consist entirely of offers adjacent to null acc/rej prices
+        null_offer_lstgs = lookup.index[~lookup.index.isin(
+            offers.index.get_level_values('lstg').unique())]
+
+        # inner join offers with lookup
+        offers = offers.join(other=lookup, on='lstg')
+        offers['diff_acc'] = (offers['norm'] - offers[ACC_PRICE]).abs()
+        offers['diff_dec'] = (offers['norm'] - offers[DEC_PRICE]).abs()
+        offers['low_diff'] = (offers['diff_acc'] < 0.01) |\
+                             (offers['diff_dec'] < 0.01)
+        low_diff_count = offers['low_diff'].groupby(level='lstg').sum()
+        no_low_diffs_lstgs = low_diff_count.index[low_diff_count == 0]
+        output_lstgs = no_low_diffs_lstgs.union(null_offer_lstgs)
+        print('num lstgs after removal: {}'.format(len(output_lstgs)))
+        return output_lstgs
+
     def _get_valid_lstgs(self, test_data=None, lookup=None):
         """
         Retrieves a list of lstgs from the chunk where the agent makes at least one
@@ -109,6 +143,8 @@ class TestGenerator(Generator):
         Verifies this list matches exactly the lstgs with inputs for the relevant model
         :return: pd.Int64Index
         """
+        auto_safe_lstgs = self._get_auto_safe_lstgs(test_data=test_data,
+                                                    lookup=lookup)
         if self.start is not None:
             start_index = list(lookup.index).index(self.start)
             start_lstgs = lookup.index[start_index:]
@@ -116,10 +152,11 @@ class TestGenerator(Generator):
             start_lstgs = lookup.index
         if self.agent:
             agent_lstgs = self._get_agent_lstgs(test_data=test_data)
-            lstgs = np.intersect1d(agent_lstgs, start_lstgs)
+            lstgs = np.intersect1d(agent_lstgs, start_lstgs,
+                                   auto_safe_lstgs)
             return lstgs
         else:
-            return start_lstgs
+            return np.intersect1d(start_lstgs, auto_safe_lstgs)
 
     def _get_agent_lstgs(self, test_data=None):
         x_offer = test_data['x_offer'].copy()  # x_offer: pd.DataFrame

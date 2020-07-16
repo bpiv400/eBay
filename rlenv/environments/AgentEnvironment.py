@@ -1,5 +1,4 @@
 import numpy as np
-from featnames import START_PRICE
 from constants import MONTH
 from utils import get_months_since_lstg
 from agent.ConSpace import ConSpace
