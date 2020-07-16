@@ -5,7 +5,7 @@ rclone copy dropbox:ebay/data/inputs/date_feats.pkl data/inputs
 rclone sync dropbox:ebay/data/outputs/models data/outputs/models --max-depth=1
 rclone sync dropbox:ebay/data/inputs/valid data/inputs/valid
 rclone sync dropbox:ebay/data/index/valid data/index/valid
-rclone sync dropbox:ebay/data/clean data/clean
+rclone copy dropbox:ebay/data/feats/offers.pkl data/feats
 
 
 # grab all of valid chunks
