@@ -11,7 +11,8 @@ rclone copy dropbox:ebay/data/feats/offers.pkl data/feats
 
 # grab all of valid chunks for testing framework
 rclone sync dropbox:ebay/data/partitions/agent/valid/chunks data/partitions/agent/valid/chunks
-rclone sync dropbox:ebay/data/partitions/models/valid/chunks data/partitions/model/valid/chunks
+# TODO: ADD BLACK
+# rclone sync dropbox:ebay/data/partitions/models/valid/chunks data/partitions/model/valid/chunks
 # x_offer, x_thread, x_lstg, clock, lookup
 rclone sync dropbox:ebay/data/partitions/agent/valid data/partitions/agent/valid --max-depth=1
 
