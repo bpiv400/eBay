@@ -81,6 +81,12 @@ class AgentEnvironment(EbayEnvironment, Env):
                                max_interval=max(1, max_interval))
         return max(delay, 1) + event.priority
 
+    def init_reset(self):
+        if not self.has_next_lstg():
+            raise RuntimeError("Out of lstgs")
+        self.next_lstg()
+        super().reset()  # calls EBayEnvironment.reset()
+
     def process_rl_offer(self, event):
         """
         :param RlThread event:

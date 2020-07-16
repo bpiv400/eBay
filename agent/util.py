@@ -2,6 +2,7 @@ import torch
 from rlpyt.samplers.parallel.worker import initialize_worker
 from rlpyt.utils.collections import AttrDict
 from rlpyt.utils.seed import set_envs_seeds
+from rlenv.LstgLoader import TrainLoader
 from utils import load_state_dict
 from constants import (POLICY_SLR, POLICY_BYR)
 
@@ -91,8 +92,11 @@ def ebay_sampling_process(common_kwargs, worker_kwargs):
     c, w = AttrDict(**common_kwargs), AttrDict(**worker_kwargs)
     initialize_worker(w.rank, w.seed, w.cpus, c.torch_threads)
     envs = list()
+    x_lstg_cols = c.env_kwargs['composer'].x_lstg_cols
     for env_rank in w.env_ranks:
-        envs.append(c.EnvCls(**c.env_kwargs, rank=env_rank))
+        loader = TrainLoader(rank=env_rank,
+                             x_lstg_cols=x_lstg_cols)
+        envs.append(c.EnvCls(**c.env_kwargs, loader=loader))
     set_envs_seeds(envs, w.seed)
 
     collector = c.CollectorCls(

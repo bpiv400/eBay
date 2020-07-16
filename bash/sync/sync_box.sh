@@ -7,9 +7,10 @@ rclone sync dropbox:ebay/data/inputs/valid data/inputs/valid
 rclone sync dropbox:ebay/data/index/valid data/index/valid
 rclone copy dropbox:ebay/data/feats/offers.pkl data/feats
 
-
 # grab all of valid chunks
 rclone sync dropbox:ebay/data/partitions/valid/chunks data/partitions/valid/chunks
 rclone sync dropbox:ebay/data/partitions/valid data/partitions/valid --max-depth=1
+
 # agent files
-rclone sync dropbox:ebay/data/agent/train data/agent/train
+rclone sync dropbox:ebay/data/partitions/rl/agent data/partitions/rl/agent
+
