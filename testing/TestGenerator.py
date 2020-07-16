@@ -1,4 +1,5 @@
 import numpy as np
+from functools import reduce
 from agent.const import BYR, FEAT_TYPE, ALL_FEATS
 from agent.util import get_agent_name
 from agent.AgentComposer import AgentComposer
@@ -132,8 +133,29 @@ class TestGenerator(Generator):
         low_diff_count = offers['low_diff'].groupby(level='lstg').sum()
         no_low_diffs_lstgs = low_diff_count.index[low_diff_count == 0]
         output_lstgs = no_low_diffs_lstgs.union(null_offer_lstgs)
-        print('num lstgs after removal: {}'.format(len(output_lstgs)))
+        print('num lstgs after diffs removal: {}'.format(
+            len(output_lstgs)))
         return output_lstgs
+
+    @staticmethod
+    def _get_delay_buyer_lstgs(test_data=None, lookup=None):
+        """
+        Drops lstgs where a buyer makes at least one instantaneous offer
+        """
+        print('Lstg count: {}'.format(len(lookup.index)))
+        lookup = lookup.copy()
+        offers = test_data['x_offer'].copy()
+        offers['byr'] = offers.index.get_level_values('index') % 2 == 1
+        offers['not_first'] = (offers.index.get_level_values('index') != 1)
+        offers['byr_not_first'] = (offers['byr']) & (offers['not_first'])
+        offers['instant_byr'] = (offers['byr_not_first']) & (offers['delay'] == 0)
+        instant_count = offers['instant_byr'].groupby(level='lstg').sum()
+        instant_lstgs = instant_count.index[instant_count > 0]
+        lookup = lookup.drop(index=instant_lstgs, inplace=False)
+        print('num lstgs after instant removal: {}'.format(
+            len(lookup.index)
+        ))
+        return lookup.index
 
     def _get_valid_lstgs(self, test_data=None, lookup=None):
         """
@@ -145,18 +167,22 @@ class TestGenerator(Generator):
         """
         auto_safe_lstgs = self._get_auto_safe_lstgs(test_data=test_data,
                                                     lookup=lookup)
+        non_instant_lstgs = self._get_delay_buyer_lstgs(test_data=test_data,
+                                                        lookup=lookup)
         if self.start is not None:
             start_index = list(lookup.index).index(self.start)
             start_lstgs = lookup.index[start_index:]
         else:
             start_lstgs = lookup.index
+        lstg_groups = [
+            start_lstgs,
+            auto_safe_lstgs,
+            non_instant_lstgs
+        ]
         if self.agent:
             agent_lstgs = self._get_agent_lstgs(test_data=test_data)
-            lstgs = np.intersect1d(agent_lstgs, start_lstgs,
-                                   auto_safe_lstgs)
-            return lstgs
-        else:
-            return np.intersect1d(start_lstgs, auto_safe_lstgs)
+            lstg_groups.append(agent_lstgs)
+        return reduce(np.intersect1d, lstg_groups)
 
     def _get_agent_lstgs(self, test_data=None):
         x_offer = test_data['x_offer'].copy()  # x_offer: pd.DataFrame
