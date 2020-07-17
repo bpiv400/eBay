@@ -138,14 +138,11 @@ def load_model(name, verbose=False, use_trained=True):
     net = FeedForward(sizes)  # type: torch.nn.Module
 
     if use_trained:
-        print('loading state dict')
         # read in model parameters
         state_dict = load_state_dict(name=name)
 
-        print('setting up state dict')
         # load parameters into model
         net.load_state_dict(state_dict, strict=True)
-        print('set up')
     # eval mode
     for param in net.parameters(recurse=True):
         param.requires_grad = False
@@ -159,7 +156,6 @@ def load_model(name, verbose=False, use_trained=True):
 
 def process_chunk_worker(part=None, chunk=None,
                          gen_class=None, gen_kwargs=None):
-    print('Creating generator for chunk {}...'.format(chunk))
     gen = gen_class(**gen_kwargs)
     return gen.process_chunk(chunk=chunk, part=part)
 

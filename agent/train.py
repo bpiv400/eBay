@@ -3,6 +3,7 @@ import argparse
 import gc
 import pandas as pd
 import torch
+import torch.multiprocessing as mp
 from agent.RlTrainer import RlTrainer
 from agent.const import AGENT_STATE, PARAM_DICTS, AGENT_PARAMS, SYSTEM_PARAMS
 from agent.eval.EvalGenerator import EvalGenerator
@@ -11,7 +12,7 @@ from utils import set_gpu_workers, run_func_on_chunks, compose_args,\
 from rlenv.generate.util import process_sims
 from constants import AGENT_DIR, BYR, DROPOUT, TRAIN_RL, VALIDATION
 
-MAIN_GENERATOR = True
+MAIN_GENERATOR = False
 
 def simulate(part=None, run_dir=None,
              agent_params=None, model_kwargs=None):
@@ -118,4 +119,5 @@ def main():
 
 
 if __name__ == '__main__':
+    mp.set_start_method('spawn')
     main()
