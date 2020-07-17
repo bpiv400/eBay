@@ -1,4 +1,4 @@
-from rlenv.generate.Generator import SimulatorGenerator
+from rlenv.generate.Generator import Generator
 from rlenv.generate.Recorder import OutcomeRecorder
 from agent.eval.AgentPlayer import AgentPlayer
 from agent.util import load_agent_model
@@ -7,28 +7,19 @@ from agent.AgentComposer import AgentComposer
 from rlenv.interfaces.PlayerInterface import SimulatedBuyer, SimulatedSeller
 
 
-class EvalGenerator(SimulatorGenerator):
+class EvalGenerator(Generator):
     def __init__(self, **kwargs):
-        """
-<<<<<<< HEAD
-        :param str part: name of partition
-        :param verbose: boolean for whether to print information about threads
-        :param model_class: class that inherits agent.models.AgentModel
-        :param model_kwargs: dictionary containing kwargs for model_class
-        :param str run_dir: path to run directory
-        :param composer: agent.AgentComposer
-        """
-        self._composer = kwargs['composer']  # type: AgentComposer
-        self.agent_byr = self._composer.byr
+        super().__init__(verbose=kwargs['verbose'])
+        self.agent_params = kwargs['agent_params']
         self.model_kwargs = kwargs['model_kwargs']
+        self.run_dir = kwargs['run_dir']
 
     def generate_recorder(self):
-        return OutcomeRecorder(records_path=self.records_path,
-                               verbose=self.verbose,
+        return OutcomeRecorder(verbose=self.verbose,
                                record_sim=True)
 
     def generate_composer(self):
-        return self._composer
+        return AgentComposer(agent_params=self.agent_params)
 
     def generate_agent(self):
         model = PgCategoricalAgentModel(**self.model_kwargs)

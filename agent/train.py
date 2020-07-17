@@ -6,13 +6,13 @@ from agent.RlTrainer import RlTrainer
 from agent.const import AGENT_STATE, PARAM_DICTS, AGENT_PARAMS, SYSTEM_PARAMS
 from agent.eval.EvalGenerator import EvalGenerator
 from utils import set_gpu_workers, run_func_on_chunks, compose_args
-from constants import AGENT_DIR, MODEL_PARTS_DIR, BYR, DROPOUT
+from constants import AGENT_DIR, BYR, DROPOUT, TRAIN_RL, VALIDATION
 
 
 def simulate(part=None, run_dir=None,
-             agent_kwargs=None, model_kwargs=None):
+             agent_params=None, model_kwargs=None):
     eval_kwargs = {'part': part,
-                   'agent_kwargs': agent_kwargs,
+                   'agent_params': agent_params,
                    'model_kwargs': model_kwargs,
                    'run_dir': run_dir,
                    'verbose': False}
@@ -103,7 +103,7 @@ def main():
             simulate(part=part,
                      run_dir=run_dir,
                      model_kwargs=model_params,
-                     agent_kwargs=trainer_args[AGENT_PARAMS])
+                     agent_params=trainer_args[AGENT_PARAMS])
 
 
 if __name__ == '__main__':

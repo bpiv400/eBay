@@ -111,14 +111,14 @@ class BuyerEnvironment(AgentEnvironment):
         agent_tuple = self.agent_tuple(done=lstg_complete)
         return agent_tuple
 
-    def reset(self):
+    def reset(self, next_lstg=True):
         """
         Resets the environment by drawing a new listing,
         resetting the queue, adding a buyer rl arrival event, then
         running the environment
         :return: observation associated with the first rl arrival
         """
-        self.init_reset()  # in AgentEnvironment
+        self.init_reset(next_lstg=next_lstg)  # in AgentEnvironment
         self.item_value = self.lookup[START_PRICE]  # TODO: allow for different values
         rl_sources = RlBuyerSources(x_lstg=self.x_lstg)
         event = Arrival(priority=self.start_time, sources=rl_sources,

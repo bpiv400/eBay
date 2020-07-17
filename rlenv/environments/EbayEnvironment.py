@@ -1,8 +1,9 @@
+import numpy as np
 from collections import namedtuple
 from featnames import START_TIME, META
 from utils import get_cut
 from constants import BYR, MONTH, BYR_HIST_MODEL, INTERARRIVAL_MODEL
-from featnames import ACC_PRICE, DEC_PRICE, START_PRICE, DELAY
+from featnames import ACC_PRICE, DEC_PRICE, START_PRICE, DELAY, TIME_FEATS
 from utils import get_months_since_lstg
 from rlenv.Heap import Heap
 from rlenv.time.TimeFeatures import TimeFeatures
@@ -46,6 +47,10 @@ class EbayEnvironment:
 
         self.composer = params['composer']
         self.query_strategy = params['query_strategy']
+        if 'recorder' in params:
+            self.recorder = params['recorder']
+        else:
+            self.recorder = None
         if 'loader' in params:
             self.loader = params['loader']
         else:
@@ -60,6 +65,10 @@ class EbayEnvironment:
         sources = ArrivalSources(x_lstg=self.x_lstg)
         event = Arrival(priority=self.start_time, sources=sources)
         self.queue.push(event)
+        if self.recorder is not None:
+            self.recorder.reset_sim()
+        if self.verbose:
+            print('Simulation {}'.format(self.recorder.sim))
 
     def has_next_lstg(self):
         if not self.loader.did_init:
@@ -80,6 +89,13 @@ class EbayEnvironment:
         self.cut = get_cut(self.lookup[META])
         if self.verbose:
             Recorder.print_lstg(self.lookup)
+        if self.recorder is not None:
+            # update listing in recorder
+            self.recorder.update_lstg(lookup=self.lookup,
+                                      lstg=self.loader.lstg)
+        else:
+            if self.verbose:
+                Recorder.print_lstg(lookup)
 
     def run(self):
         while True:
@@ -111,7 +127,20 @@ class EbayEnvironment:
             raise NotImplementedError()
 
     def record(self, event, byr_hist=None, censored=False):
-        raise NotImplementedError()
+        if (self.recorder is None and self.verbose and
+                byr_hist is None and not censored):
+            Recorder.print_offer(event)
+        else:
+            if byr_hist is None:
+                if not censored:
+                    time_feats = self.time_feats.get_feats(thread_id=event.thread_id,
+                                                           time=event.priority)
+                else:
+                    time_feats = np.zeros(len(TIME_FEATS))
+                self.recorder.add_offer(event=event, time_feats=time_feats, censored=censored)
+            else:
+                self.recorder.start_thread(thread_id=event.thread_id, byr_hist=byr_hist,
+                                           time=event.priority)
 
     def process_offer(self, event):
         # check whether the lstg expired, censoring this offer

@@ -106,9 +106,6 @@ class SimulatorGenerator(Generator):
         t0 = dt.now()
         while self.environment.has_next_lstg():
             self.environment.next_lstg()
-            # update listing in recorder
-            self.recorder.update_lstg(lookup=self.loader.lookup,
-                                      lstg=self.loader.lstg)
 
             # simulate lstg until sale
             self.simulate_lstg()

@@ -47,6 +47,8 @@ class Recorder:
         self.sim = -1
         self.start_time = lookup[START_TIME]
         self.start_price = lookup[START_PRICE]
+        if self.verbose:
+            self.print_lstg(lookup)
 
     def reset_sim(self):
         self.sim += 1
