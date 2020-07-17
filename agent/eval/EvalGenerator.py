@@ -59,9 +59,10 @@ class EvalGenerator(SimulatorGenerator):
         if obs is not None:
             done = False
             while not done:
-                action = self.agent.con(input_dict=obs)
+                action = self.agent.con(obs=obs)
                 agent_tuple = self.environment.step(action)
                 done = agent_tuple[2]
+                obs = agent_tuple[0]
             return self.environment.outcome
         else:
             return None

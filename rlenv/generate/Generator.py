@@ -1,7 +1,6 @@
 from datetime import datetime as dt
 from rlenv.generate.Recorder import OutcomeRecorder
 from rlenv.environments.SimulatorEnvironment import SimulatorEnvironment
-from rlenv.environments.EbayEnvironment import EbayEnvironment
 from rlenv.interfaces.ArrivalInterface import ArrivalInterface
 from rlenv.interfaces.PlayerInterface import SimulatedSeller, SimulatedBuyer
 from rlenv.LstgLoader import ChunkLoader
@@ -27,15 +26,21 @@ class Generator:
         self.environment = None
 
     def process_chunk(self, part=None, chunk=None):
+        print('Loading chunk {}...'.format(chunk))
         self.loader = self.load_chunk(part=part, chunk=chunk)
+        print('Initializing environment {}...'.format(chunk))
         if not self.initialized:
             self.initialize()
         self.environment = self.generate_environment()
+        print('Processing chunk {}...'.format(chunk))
         return self.generate()
 
     def initialize(self):
+        print('Initializing composer...')
         self.composer = self.generate_composer()
+        print('Initializing query strategy...')
         self.query_strategy = self.generate_query_strategy()
+        print('Initializing recorder...')
         self.recorder = self.generate_recorder()
         self.initialized = True
 
@@ -66,8 +71,11 @@ class Generator:
         return SimulatedSeller(full=True)
 
     def generate_query_strategy(self):
+        print('initializing buyer')
         buyer = self.generate_buyer()
+        print('initializing seller')
         seller = self.generate_seller()
+        print('initializing arrival interface')
         arrival = ArrivalInterface()
         return DefaultQueryStrategy(buyer=buyer,
                                     seller=seller,

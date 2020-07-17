@@ -36,11 +36,13 @@ class PgCategoricalAgentModel(torch.nn.Module):
     def policy_parameters(self):
         return self.policy_net.parameters()
 
-    def con(self, input_dict=None):
+    def con(self, obs=None):
+        input_dict = obs._asdict()
         logits, _ = self._forward_dict(input_dict=input_dict,
                                        compute_value=False)
         logits = logits.squeeze()
-        return sample_categorical(logits=logits)
+        action = sample_categorical(logits=logits)
+        return int(action)
 
     def _forward_dict(self, input_dict=None, compute_value=True):
         # processing for single observations

@@ -1,5 +1,6 @@
 import os
 import argparse
+import gc
 import pandas as pd
 import torch
 from agent.RlTrainer import RlTrainer
@@ -10,6 +11,7 @@ from utils import set_gpu_workers, run_func_on_chunks, compose_args,\
 from rlenv.generate.util import process_sims
 from constants import AGENT_DIR, BYR, DROPOUT, TRAIN_RL, VALIDATION
 
+MAIN_GENERATOR = True
 
 def simulate(part=None, run_dir=None,
              agent_params=None, model_kwargs=None):
@@ -17,15 +19,19 @@ def simulate(part=None, run_dir=None,
                    'model_kwargs': model_kwargs,
                    'run_dir': run_dir,
                    'verbose': False}
-    sims = run_func_on_chunks(
-        f=process_chunk_worker,
-        func_kwargs=dict(
+    process_args = dict(
             part=part,
             gen_class=EvalGenerator,
             gen_kwargs=eval_kwargs
         )
-    )
-    process_sims(part=part, parent_dir=run_dir, sims=sims)
+    if MAIN_GENERATOR:
+        process_chunk_worker(**process_args, chunk=1)
+    else:
+        sims = run_func_on_chunks(
+            f=process_chunk_worker,
+            func_kwargs=process_args
+        )
+        process_sims(part=part, parent_dir=run_dir, sims=sims)
 
 
 def main():
@@ -99,14 +105,16 @@ def main():
                 df.loc[trainer.run_id, k] = v
         df.to_csv(run_path)
         del trainer
-
+        del d
+        gc.collect()
         # # simulate outcomes
         for part in [TRAIN_RL, VALIDATION]:
             os.mkdir(run_dir + '{}/'.format(part))
+            print('Simulating {}...'.format(part))
             simulate(part=part,
                      run_dir=run_dir,
                      model_kwargs=model_params,
-                     agent_params=trainer_args[AGENT_PARAMS])
+                     agent_params=trainer_args['agent_params'])
 
 
 if __name__ == '__main__':
