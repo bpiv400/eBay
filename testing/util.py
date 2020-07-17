@@ -7,7 +7,8 @@ from utils import load_featnames
 from rlenv.util import load_featnames
 from utils import load_file
 from constants import MODELS, INPUT_DIR, INDEX_DIR, FEATS_DIR,\
-    FIRST_ARRIVAL_MODEL, POLICY_MODELS, AGENT_PARTS_DIR
+    FIRST_ARRIVAL_MODEL, POLICY_MODELS, AGENT_PARTS_DIR,\
+    MODEL_PARTS_DIR, POLICY_BYR
 from featnames import CENSORED, EXP, DELAY, MSG
 
 
@@ -145,6 +146,9 @@ def load_model_inputs(model=None, input_dir=None,
     # b/c it must combine with 'thread'
     x_lstg_sets = list(x_lstg.keys())
     x_lstg_sets.remove('lstg')
+    featnames_list = list(featnames.keys())
+    x_lstg_sets = [set_name for set_name in x_lstg_sets
+                   if set_name in featnames_list]
     for feat_set_name in x_lstg_sets:
         vals = x_lstg[feat_set_name][x_idx, :]
         cols = featnames[feat_set_name]
@@ -155,9 +159,14 @@ def load_model_inputs(model=None, input_dir=None,
 
     # fixing lstg
     lstg_vals = x_lstg['lstg'][x_idx, :]
+    # drop bo_ct, lstg_ct, & auto acc/dec features from policy byr
+    if model == POLICY_BYR:
+        first = lstg_vals[:, :4]
+        middle = lstg_vals[:, 6:-4]
+        lstg_vals = np.concatenate((first, middle), axis=1)
     thread_vals = x_inputs['thread'].values
-    lstg_vals = np.concatenate((lstg_vals, thread_vals), axis=1)
     cols = featnames['lstg']
+    lstg_vals = np.concatenate((lstg_vals, thread_vals), axis=1)
     x_inputs['lstg'] = pd.DataFrame(
         data=lstg_vals,
         index=x_inputs['thread'].index,
@@ -171,11 +180,13 @@ def load_model_inputs(model=None, input_dir=None,
 def load_all_inputs(part=None, lstgs=None):
     input_dir = '{}{}/'.format(INPUT_DIR, part)
     index_dir = '{}{}/'.format(INDEX_DIR, part)
-    x_lstg = load('{}{}/x_lstg.pkl'.format(AGENT_PARTS_DIR, part))
+    x_lstg_agent = load('{}{}/x_lstg.pkl'.format(AGENT_PARTS_DIR, part))
+    x_lstg_models = load('{}{}/x_lstg.pkl'.format(MODEL_PARTS_DIR, part))
     inputs_dict = dict()
     models = MODELS + POLICY_MODELS
     models.remove(FIRST_ARRIVAL_MODEL)
     for model in models:
+        x_lstg = x_lstg_agent if model in POLICY_MODELS else x_lstg_models
         inputs_dict[model] = load_model_inputs(model=model,
                                                x_lstg=x_lstg,
                                                input_dir=input_dir,
@@ -196,6 +207,8 @@ def lstgs_without_duplicated_timestamps(lstgs=None):
     # load timestamps
     offers = load(FEATS_DIR + 'offers.pkl').reindex(index=lstgs, level='lstg')
 
+    print('prob in lstgs: {}'.format(22458042 in lstgs))
+
     # remove censored offers
     clock = offers.loc[~offers.censored, 'clock']
 
@@ -209,6 +222,8 @@ def lstgs_without_duplicated_timestamps(lstgs=None):
 
     # drop flagged listgins
     lstgs = lstgs.drop(flag[flag].index)
+
+    print('AFTER DROP: {}'.format(22458042 in lstgs))
     return lstgs
 
 
