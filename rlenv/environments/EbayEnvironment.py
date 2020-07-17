@@ -17,6 +17,7 @@ from rlenv.const import (INTERACT, ACC_IND, CON, MSG,
                          REJ_IND, OFF_IND, ARRIVAL, FIRST_OFFER,
                          OFFER_EVENT, DELAY_EVENT)
 from rlenv.util import get_clock_feats, get_con_outcomes, need_msg, model_str
+from rlenv.LstgLoader import TrainLoader
 
 
 class EbayEnvironment:
@@ -45,7 +46,11 @@ class EbayEnvironment:
 
         self.composer = params['composer']
         self.query_strategy = params['query_strategy']
-        self.loader = params['loader']
+        if 'loader' in params:
+            self.loader = params['loader']
+        else:
+            x_lstg_cols = self.composer.x_lstg_cols
+            self.loader = TrainLoader(x_lstg_cols=x_lstg_cols)
 
     def reset(self):
         self.queue.reset()

@@ -70,7 +70,8 @@ def sample_categorical(logits=None):
     :return: 1 dimensional np.array
     """
     cat = Categorical(logits=logits)
-    return proper_squeeze(cat.sample(sample_shape=(1,)).float()).numpy()
+    sample = proper_squeeze(cat.sample(sample_shape=(1,)).float()).numpy()
+    return sample
 
 
 def sample_bernoulli(params):

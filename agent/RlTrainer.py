@@ -16,6 +16,8 @@ from agent.models.PgCategoricalAgentModel import PgCategoricalAgentModel
 from rlenv.DefaultQueryStrategy import DefaultQueryStrategy
 from rlenv.environments.SellerEnvironment import SellerEnvironment
 from rlenv.environments.BuyerEnvironment import BuyerEnvironment
+from rlenv.interfaces.ArrivalInterface import ArrivalInterface
+from rlenv.interfaces.PlayerInterface import SimulatedSeller, SimulatedBuyer
 from rlenv.LstgLoader import TrainLoader
 from featnames import BYR_HIST
 
@@ -59,10 +61,17 @@ class RlTrainer:
             os.mkdir(log_dir)
         return log_dir
 
+    def _generate_query_strategy(self):
+        return DefaultQueryStrategy(
+            arrival=ArrivalInterface(),
+            seller=SimulatedSeller(full=self.byr),
+            buyer=SimulatedBuyer(full=True)
+        )
+
     def _generate_sampler(self):
         env_params = dict(composer=self.composer,
                           verbose=self.system_params['verbose'],
-                          query_strategy=DefaultQueryStrategy,
+                          query_strategy=self._generate_query_strategy(),
                           recorder=None)
         # sampler and batch sizes
         if self.system_params['serial']:

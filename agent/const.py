@@ -21,6 +21,7 @@ AGENT_PARAMS = {BYR: {'action': 'store_true'},
                             'choices': [ALL_FEATS, NO_TIME],
                             'default': ALL_FEATS},
                 BYR_HIST: {'type': int,
+                           'default': 5,
                            'choices': list(range(HIST_QUANTILES))}}
 
 ECON_PARAMS = {'monthly_discount': {'type': float, 'default': .995},
