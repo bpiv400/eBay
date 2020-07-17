@@ -95,7 +95,8 @@ class SimulatorGenerator(Generator):
         base_dir = get_env_sim_dir(part=part)
         x_lstg, lookup, p_arrival = load_chunk(base_dir=base_dir,
                                                num=chunk)
-        return ChunkLoader(x_lstg=x_lstg, lookup=lookup,
+        return ChunkLoader(x_lstg=x_lstg,
+                           lookup=lookup,
                            p_arrival=p_arrival)
 
     def generate(self):
@@ -106,8 +107,6 @@ class SimulatorGenerator(Generator):
         t0 = dt.now()
         while self.environment.has_next_lstg():
             self.environment.next_lstg()
-
-            # simulate lstg until sale
             self.simulate_lstg()
 
         # time elapsed
@@ -132,7 +131,6 @@ class DiscrimGenerator(SimulatorGenerator):
     def simulate_lstg(self):
         """
         Simulates a particular listing once.
-        :param env: SimulatorEnvironment
         :return: outcome tuple
         """
         self.environment.reset()

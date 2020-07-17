@@ -17,16 +17,5 @@ class SimulatorEnvironment(EbayEnvironment):
         super().run()
         return self.outcome
 
-    def record(self, event, byr_hist=None, censored=False):
-        """
-        Add record of offer or thread to Recorder
-        :param censored:
-        :param byr_hist:
-        :param rlenv.events.Thread.Thread event: event containing most recent offer
-        """
-
     def is_agent_turn(self, event):
         return False
-
-
-

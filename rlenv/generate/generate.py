@@ -1,3 +1,4 @@
+import torch.multiprocessing as mp
 import argparse
 import torch
 from constants import PARTITIONS, AGENT_PARTS_DIR
@@ -28,15 +29,14 @@ def main():
     # process chunks in parallel
     sims = run_func_on_chunks(
         f=gen.process_chunk,
-        func_kwargs=dict(
-            part=part
-        )
+        func_kwargs=dict(part=part)
     )
 
     # concatenate, clean, and save
-    process_sims(part=part, sims=sims)
+    process_sims(part=part, sims=sims, parent_dir=AGENT_PARTS_DIR)
 
 
 if __name__ == '__main__':
+    mp.set_start_method('spawn')
     torch.set_default_dtype(torch.float32)
     main()

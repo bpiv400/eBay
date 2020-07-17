@@ -1,7 +1,9 @@
+import torch.multiprocessing as mp
 import os
 import argparse
 import pandas as pd
 import torch
+from rlenv.generate.util import process_sims
 from agent.RlTrainer import RlTrainer
 from agent.const import AGENT_STATE, PARAM_DICTS, AGENT_PARAMS, SYSTEM_PARAMS
 from agent.eval.EvalGenerator import EvalGenerator
@@ -19,10 +21,9 @@ def simulate(part=None, run_dir=None,
     gen = EvalGenerator(**eval_kwargs)
     sims = run_func_on_chunks(
         f=gen.process_chunk,
-        func_kwargs=dict(
-            part=part
-        )
+        func_kwargs=dict(part=part)
     )
+    process_sims(part=part, sims=sims, parent_dir=run_dir)
 
 
 def main():
@@ -89,7 +90,7 @@ def main():
             df = pd.DataFrame(index=pd.Index([], name='run_id'))
 
         exclude = list({**AGENT_PARAMS, **SYSTEM_PARAMS}.keys())
-        exclude += ['dropout']
+        exclude += [DROPOUT]
         exclude.remove('batch_size')
         for k, v in args.items():
             if k not in exclude:
@@ -107,4 +108,5 @@ def main():
 
 
 if __name__ == '__main__':
+    mp.set_start_method('spawn')
     main()
