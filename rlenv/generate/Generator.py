@@ -24,7 +24,7 @@ class Generator:
         self.composer = None
         self.loader = None
         self.query_strategy = None
-        self.environment = None  # type: EbayEnvironment
+        self.environment = None
 
     def process_chunk(self, part=None, chunk=None):
         self.loader = self.load_chunk(part=part, chunk=chunk)

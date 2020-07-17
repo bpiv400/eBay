@@ -44,7 +44,7 @@ class EvalGenerator(SimulatorGenerator):
         if self.byr:
             seller = SimulatedSeller(full=True)
         else:
-            seller = self.generate_agent()
+            seller = SimulatedSeller(full=False)
         return seller
 
     @property
@@ -54,19 +54,14 @@ class EvalGenerator(SimulatorGenerator):
         else:
             return SellerEnvironment
 
-    def _simulate_lstg_slr(self):
-        pass
-
-    def _simulate_lstg_byr(self):
-        pass
-
     def simulate_lstg(self):
-        """
-        Simulates a particular listing either once or until sale.
-        :param env: SimulatorEnvironment
-        :return: outcome tuple
-        """
-        if self.byr:
-            return self._simulate_lstg_byr()
+        obs = self.environment.reset(next_lstg=False)
+        if obs is not None:
+            done = False
+            while not done:
+                action = self.agent.con(input_dict=obs)
+                agent_tuple = self.environment.step(action)
+                done = agent_tuple[2]
+            return self.environment.outcome
         else:
-            return self._simulate_lstg_slr()
+            return None

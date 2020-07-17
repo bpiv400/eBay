@@ -98,8 +98,7 @@ class TestGenerator(Generator):
                                                 value=valid_lstgs, level='lstg')
         print('Running tests...')
         return TestLoader(x_lstg=x_lstg, lookup=lookup,
-                          p_arrival=p_arrival, test_data=test_data,
-                          agent=self.agent)
+                          p_arrival=p_arrival, test_data=test_data)
 
     def _remove_extra_models(self, test_data):
         """

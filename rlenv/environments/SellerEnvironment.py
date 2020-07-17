@@ -37,7 +37,6 @@ class SellerEnvironment(AgentEnvironment):
             else:
                 self.relist()
 
-    # restructure
     def reset(self, next_lstg=True):
         self.init_reset(next_lstg=next_lstg)  # in AgentEnvironment
         while True:
@@ -52,10 +51,16 @@ class SellerEnvironment(AgentEnvironment):
                 if not self.outcome.sale:
                     self.relist()
                 # otherwise, there's been a buy it now sale w/o a seller action,
-                # so we move onto the next lstg
                 else:
-                    self.next_lstg()
-                    super().reset()
+                    # this case should happens in TestGenerator
+                    # b/c lstgs with no seller actions should be removed
+                    if next_lstg:
+                        # conditional prevents queuing up next lstg
+                        # in EvalGenerator
+                        self.next_lstg() # queue up next lstg in training
+                        super().reset()
+                    else:
+                        return None
 
     def relist(self):
         self.relist_count += 1
