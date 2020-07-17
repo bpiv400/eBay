@@ -1,18 +1,28 @@
-from rlenv.generate.Generator import Generator
+from rlenv.generate.Generator import SimulatorGenerator
 from rlenv.generate.Recorder import OutcomeRecorder
-from agent.eval.AgentPlayer import AgentPlayer
 from agent.util import load_agent_model
 from agent.models.PgCategoricalAgentModel import PgCategoricalAgentModel
 from agent.AgentComposer import AgentComposer
+from rlenv.environments.BuyerEnvironment import BuyerEnvironment
+from rlenv.environments.SellerEnvironment import SellerEnvironment
 from rlenv.interfaces.PlayerInterface import SimulatedBuyer, SimulatedSeller
 
 
-class EvalGenerator(Generator):
+class EvalGenerator(SimulatorGenerator):
     def __init__(self, **kwargs):
         super().__init__(verbose=kwargs['verbose'])
         self.agent_params = kwargs['agent_params']
         self.model_kwargs = kwargs['model_kwargs']
         self.run_dir = kwargs['run_dir']
+        self.agent = None
+
+    def initialize(self):
+        super().initialize()
+        self.agent = self.generate_agent()
+
+    @property
+    def byr(self):
+        return self.agent_params['byr']
 
     def generate_recorder(self):
         return OutcomeRecorder(verbose=self.verbose,
@@ -25,55 +35,34 @@ class EvalGenerator(Generator):
         model = PgCategoricalAgentModel(**self.model_kwargs)
         model_path = self.run_dir + 'params.pkl'
         load_agent_model(model=model, model_path=model_path)
-        agent = AgentPlayer(agent_model=model)
-        return agent
+        return model
 
     def generate_buyer(self):
-        if self.agent_byr:
-            buyer = self.generate_agent()
-        else:
-            buyer = SimulatedBuyer(full=True)
-        return buyer
+        return SimulatedBuyer(full=True)
 
     def generate_seller(self):
-        if self.agent_byr:
+        if self.byr:
             seller = SimulatedSeller(full=True)
         else:
-            seller = self.generate_agent()
+            seller = SimulatedSeller(full=False)
         return seller
 
-    def generate(self):
-        """
-        Simulates all lstgs in chunk according to experiment parameters
-        """
-        for i, lstg in enumerate(self.x_lstg.index):
-            # index lookup dataframe
-            lookup = self.lookup.loc[lstg, :]
-
-            # create environment
-            environment = self.setup_env(lstg=lstg, lookup=lookup)
-
-            # update listing in recorder
-            self.recorder.update_lstg(lookup=lookup, lstg=lstg)
-
-            # simulate lstg until sale
-            self.simulate_lstg(environment)
-
-        # save the recorder
-        self.recorder.dump()
-
-    def simulate_lstg(self, env):
-        """
-        Simulates a particular listing either once or until sale.
-        :param env: SimulatorEnvironment
-        :return: outcome tuple
-        """
-        while True:
-            env.reset()
-            outcome = env.run()
-            if outcome.sale:
-                return outcome
-
     @property
-    def records_path(self):
-        return self.run_dir + '{}/{}.gz'.format(self.part, self.chunk)
+    def env_class(self):
+        if self.byr:
+            return BuyerEnvironment
+        else:
+            return SellerEnvironment
+
+    def simulate_lstg(self):
+        obs = self.environment.reset(next_lstg=False)
+        if obs is not None:
+            done = False
+            while not done:
+                action = self.agent.con(obs=obs)
+                agent_tuple = self.environment.step(action)
+                done = agent_tuple[2]
+                obs = agent_tuple[0]
+            return self.environment.outcome
+        else:
+            return None

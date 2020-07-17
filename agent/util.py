@@ -99,6 +99,7 @@ def ebay_sampling_process(common_kwargs, worker_kwargs):
         envs.append(c.EnvCls(**c.env_kwargs, loader=loader))
     set_envs_seeds(envs, w.seed)
 
+    print(c.get("agent", None))
     collector = c.CollectorCls(
         rank=w.rank,
         envs=envs,

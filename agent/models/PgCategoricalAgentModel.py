@@ -4,6 +4,7 @@ from utils import load_sizes
 from nets.FeedForward import FeedForward
 from agent.const import T1_IDX, DELAY_BOOST
 from constants import POLICY_SLR, POLICY_BYR
+from rlenv.util import sample_categorical
 
 
 class PgCategoricalAgentModel(torch.nn.Module):
@@ -17,7 +18,7 @@ class PgCategoricalAgentModel(torch.nn.Module):
     4. Both networks use batch normalization
     5. Both networks use dropout with separate dropout hyperparameters
     """
-    def __init__(self, byr=None, dropout=None, pretrained=False):
+    def __init__(self, byr=None, dropout=None):
         super().__init__()
         self.byr = byr
 
@@ -35,11 +36,13 @@ class PgCategoricalAgentModel(torch.nn.Module):
     def policy_parameters(self):
         return self.policy_net.parameters()
 
-    def con(self, input_dict=None):
+    def con(self, obs=None):
+        input_dict = obs._asdict()
         logits, _ = self._forward_dict(input_dict=input_dict,
                                        compute_value=False)
         logits = logits.squeeze()
-        return logits
+        action = sample_categorical(logits=logits)
+        return int(action)
 
     def _forward_dict(self, input_dict=None, compute_value=True):
         # processing for single observations
@@ -62,7 +65,6 @@ class PgCategoricalAgentModel(torch.nn.Module):
             v = torch.sigmoid(self.value_net(input_dict))
         else:
             v = None
-
         return pi_logits, v
 
     def forward(self, observation, prev_action, prev_reward):
@@ -73,9 +75,10 @@ class PgCategoricalAgentModel(torch.nn.Module):
         input_dict = observation._asdict()
 
         # get policy and value
-        logits, v = self._forward_dict(input_dict=input_dict,
-                                       compute_value=True)
-        pi = softmax(logits, dim=logits.dim() - 1)
+        pi_logits, v = self._forward_dict(input_dict=input_dict,
+                                          compute_value=True)
+
+        pi = softmax(pi_logits, dim=pi_logits.dim() - 1)
 
         # transformations
         pi = pi.squeeze()

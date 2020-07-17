@@ -61,13 +61,17 @@ class SimulatedPlayer(PlayerInterface):
     def load_models(self):
         turns = IDX[BYR] if self.byr else IDX[SLR]
         for turn in turns:
+            print(turn)
             if self.full:
+                print('con')
                 self.con_models[turn] = load_model(
                     model_str(CON, turn=turn))
                 if turn < 7:
+                    print('msg')
                     self.msg_models[turn] = load_model(
                         model_str(MSG, turn=turn))
             if turn > 1:
+                print('delay')
                 self.delay_models[turn] = load_model(
                     model_str(DELAY, turn=turn))
 
@@ -112,6 +116,7 @@ class SimulatedPlayer(PlayerInterface):
 class SimulatedBuyer(SimulatedPlayer):
     def __init__(self, full=True):
         super().__init__(byr=True, full=full)
+        print('in buyer start up')
         self.load_models()
 
     def sample_con(self, params=None, turn=None):

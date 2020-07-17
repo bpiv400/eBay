@@ -133,6 +133,7 @@ def load_model(name, verbose=False, use_trained=True):
         print('Loading {} model'.format(name))
 
     # create neural network
+    print('sizes')
     sizes = load_sizes(name)
     net = FeedForward(sizes)  # type: torch.nn.Module
 
@@ -142,7 +143,6 @@ def load_model(name, verbose=False, use_trained=True):
 
         # load parameters into model
         net.load_state_dict(state_dict, strict=True)
-
     # eval mode
     for param in net.parameters(recurse=True):
         param.requires_grad = False
@@ -152,6 +152,12 @@ def load_model(name, verbose=False, use_trained=True):
     net.share_memory()
 
     return net
+
+
+def process_chunk_worker(part=None, chunk=None,
+                         gen_class=None, gen_kwargs=None):
+    gen = gen_class(**gen_kwargs)
+    return gen.process_chunk(chunk=chunk, part=part)
 
 
 def run_func_on_chunks(f=None, func_kwargs=None):
