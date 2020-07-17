@@ -68,7 +68,6 @@ class BuyerEnvironment(AgentEnvironment):
         else:
             sources = self.last_event.sources
             arrival_time = self.get_arrival_time(self.last_event)
-            sources.init_thread(hist=self.composer.hist)
             thread = RlThread(priority=arrival_time, sources=sources,
                               con=con, rl_buyer=True,
                               thread_id=self.thread_counter)
@@ -123,7 +122,8 @@ class BuyerEnvironment(AgentEnvironment):
         """
         self.init_reset(next_lstg=next_lstg)  # in AgentEnvironment
         self.item_value = self.lookup[START_PRICE]  # TODO: allow for different values
-        rl_sources = RlBuyerSources(x_lstg=self.x_lstg)
+        rl_sources = RlBuyerSources(x_lstg=self.x_lstg,
+                                    hist=self.composer.hist)
         event = Arrival(priority=self.start_time, sources=rl_sources,
                         rl=True)
         self.rl_event = event

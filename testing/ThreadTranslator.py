@@ -19,6 +19,7 @@ class ThreadTranslator:
         self.agent_interarrival_time = self.agent_arrival_time - self.agent_check_time
         # see get_thread_l for description
         self.thread_l = self.get_thread_l(arrivals=arrivals)
+        self.print_translator()
         if self.thread_l is not None:
             # boolean for whether thread l arrival time is after agent arrival time
             self.l_after_agent = arrivals[self.thread_l].time > self.agent_arrival_time
@@ -39,6 +40,23 @@ class ThreadTranslator:
         # flag for whether the agent_env_id has been queried in the arrival
         # process
         self.did_query = False
+
+    def print_translator(self):
+        print('TRANSLATOR')
+        print('Agent thread: {}'.format(self.agent_thread))
+        print('Agent env id: {}'.format(self.agent_env_id))
+        print('thread l: {}'.format(self.thread_l))
+        print('Agent first: {}'.format(self.agent_first))
+        print('Agent last: {}'.format(self.agent_last))
+        print('l after agent: {}'.format(self.l_after_agent))
+        print('l censored: {}'.format(self.l_censored))
+        print('j: {}'.format(self.j))
+        print('Query twice: {}'.format(self.query_twice))
+        print('Hidden arrival: {}'.format(self.hidden_arrival))
+        print('ARRIVAL TRANSLATION')
+        print(self.arrival_translator)
+        print('THREAD TRANSLATION')
+        print(self.thread_translator)
 
     def get_query_twice(self):
         if self.thread_l is not None:
@@ -68,7 +86,7 @@ class ThreadTranslator:
         if self.query_twice:
             return None
         else:
-            return self.agent_thread
+            return self.agent_env_id
 
     def get_thread_l(self, arrivals=None):
         """

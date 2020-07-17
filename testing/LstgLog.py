@@ -27,7 +27,6 @@ class LstgLog:
         self.threads = self.generate_thread_logs(params)
         self.agent_log = self.generate_agent_log(params) # revisit this
         if self.agent and self.byr:
-            print('translating...')
             self.translator = ThreadTranslator(agent_thread=self.agent_thread,
                                                arrivals=self.arrivals,
                                                params=params)
@@ -289,6 +288,8 @@ class LstgLog:
         else:
             assert input_dict is not None
         true_id = self.translate_arrival(thread_id=thread_id)
+        print('thread id: {}'.format(thread_id))
+        print('true id: {}'.format(true_id))
         return self.arrivals[true_id].get_inter_arrival(check_time=time,
                                                         input_dict=input_dict)
 

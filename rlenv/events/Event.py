@@ -14,7 +14,6 @@ class Event:
         super(Event, self).__init__()
         # error checking
         assert(isinstance(event_type, str))
-        print(priority)
         assert(isinstance(priority, int))
         self.type = event_type
         self.priority = priority
@@ -32,6 +31,8 @@ class Event:
         if self.priority == other.priority:
             if self.type == ARRIVAL:
                 return other.type == RL_ARRIVAL_EVENT
+            elif self.type == RL_ARRIVAL_EVENT:
+                return other.type != ARRIVAL
             else:
                 return True
         else:
