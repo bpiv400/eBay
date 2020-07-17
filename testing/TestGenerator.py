@@ -211,10 +211,7 @@ class TestGenerator(Generator):
         # verify that x_offer based lstgs match lstgs used as model input exactly
         model_name = get_agent_name(byr=self.byr)
         input_lstgs = test_data['inputs'][model_name][LSTG].index.get_level_values('lstg').unique()
-        # print(input_lstgs[~input_lstgs.isin(lstgs)])
         assert input_lstgs.isin(lstgs).all()
-        # print(lstgs[~lstgs.isin(input_lstgs)])
-        # assert lstgs.isin(input_lstgs).all()
         return lstgs
 
     def _count_rl_buyers(self):
@@ -246,7 +243,7 @@ class TestGenerator(Generator):
             hist = hist / 10
             self.composer.set_hist(hist=hist)
         # print('resetting: {}'.format(self.loader.lstg))
-        obs = self.environment.reset()
+        obs = self.environment.reset(next_lstg=False)
         agent_tuple = obs, None, None, None
         done = False
         while not done:

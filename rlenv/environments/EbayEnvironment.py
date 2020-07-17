@@ -127,9 +127,9 @@ class EbayEnvironment:
             raise NotImplementedError()
 
     def record(self, event, byr_hist=None, censored=False):
-        if (self.recorder is None and self.verbose and
-                byr_hist is None and not censored):
-            Recorder.print_offer(event)
+        if self.recorder is None:
+            if self.verbose and byr_hist is None and not censored:
+                Recorder.print_offer(event)
         else:
             if byr_hist is None:
                 if not censored:
