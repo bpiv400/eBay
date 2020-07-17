@@ -115,9 +115,8 @@ class ArrivalSources(Sources):
         self.source_dict[MONTHS_SINCE_LAST] = 0.0
         self.source_dict[THREAD_COUNT] = 0.0
 
-    def update_arrival(self, clock_feats=None, months_since_lstg=None, thread_count=None):
-        prev_months_since_lstg = self.source_dict[MONTHS_SINCE_LSTG]
-        months_since_last = months_since_lstg - prev_months_since_lstg
+    def update_arrival(self, clock_feats=None, months_since_lstg=None,
+                       thread_count=None, months_since_last=None):
         self.source_dict[THREAD_COUNT] = thread_count
         self.source_dict[CLOCK_MAP] = clock_feats
         self.source_dict[MONTHS_SINCE_LSTG] = months_since_lstg

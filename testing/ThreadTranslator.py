@@ -19,7 +19,6 @@ class ThreadTranslator:
         self.agent_interarrival_time = self.agent_arrival_time - self.agent_check_time
         # see get_thread_l for description
         self.thread_l = self.get_thread_l(arrivals=arrivals)
-        self.print_translator()
         if self.thread_l is not None:
             # boolean for whether thread l arrival time is after agent arrival time
             self.l_after_agent = arrivals[self.thread_l].time > self.agent_arrival_time
@@ -40,6 +39,7 @@ class ThreadTranslator:
         # flag for whether the agent_env_id has been queried in the arrival
         # process
         self.did_query = False
+        self.print_translator()
 
     def print_translator(self):
         print('TRANSLATOR')

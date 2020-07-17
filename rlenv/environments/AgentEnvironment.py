@@ -92,6 +92,8 @@ class AgentEnvironment(EbayEnvironment, Env):
         # check whether the lstg expired, censoring this offer
         if self.is_lstg_expired(event):
             return self.process_lstg_expiration(event)
+        if event.turn == 1:
+            self.last_arrival_time = event.priority
         slr_offer = event.turn % 2 == 0
         if event.thread_expired():
             if slr_offer:

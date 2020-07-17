@@ -25,14 +25,14 @@ class LstgLog:
         self.agent_params = params['agent_params']
         self.arrivals = self.generate_arrival_logs(params)
         self.threads = self.generate_thread_logs(params)
-        self.agent_log = self.generate_agent_log(params) # revisit this
         if self.agent and self.byr:
             self.translator = ThreadTranslator(agent_thread=self.agent_thread,
                                                arrivals=self.arrivals,
                                                params=params)
-            self.update_arrival_time()
         else:
             self.translator = None
+        self.agent_log = self.generate_agent_log(params)
+        self.update_arrival_time()
 
     @property
     def byr(self):
@@ -82,7 +82,8 @@ class LstgLog:
         input_dict = populate_test_model_inputs(full_inputs=full_inputs, value=first_turn_index,
                                                 agent=True, agent_byr=self.byr)
         first_offer = ActionLog(input_dict=input_dict, months=time, con=con,
-                                thread_id=self.agent_thread, turn=1)
+                                thread_id=self.translate_thread(self.agent_thread),
+                                turn=1)
         agent_log.push_action(action=first_offer)
         # add remaining turns
         del agent_turns[1]
@@ -101,7 +102,8 @@ class LstgLog:
                 input_dict = populate_test_model_inputs(full_inputs=full_inputs, value=index,
                                                         agent=True, agent_byr=self.byr)
             action = ActionLog(con=turn_log.agent_con(), censored=turn_log.is_censored,
-                               months=months, input_dict=input_dict, thread_id=thread_id,
+                               months=months, input_dict=input_dict,
+                               thread_id=self.translate_thread(self.agent_thread),
                                turn=turn_number)
             agent_log.push_action(action=action)
 
@@ -288,8 +290,8 @@ class LstgLog:
         else:
             assert input_dict is not None
         true_id = self.translate_arrival(thread_id=thread_id)
-        print('thread id: {}'.format(thread_id))
         print('true id: {}'.format(true_id))
+        print('actual id: {}'.format(thread_id))
         return self.arrivals[true_id].get_inter_arrival(check_time=time,
                                                         input_dict=input_dict)
 

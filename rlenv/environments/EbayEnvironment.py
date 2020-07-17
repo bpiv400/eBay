@@ -44,6 +44,7 @@ class EbayEnvironment:
         self.start_time = None
         self.thread_counter = 1
         self.outcome = None
+        self.last_arrival_time = None
 
         self.composer = params['composer']
         self.query_strategy = params['query_strategy']
@@ -83,6 +84,7 @@ class EbayEnvironment:
         self.x_lstg = self.composer.decompose_x_lstg(x_lstg)
         self.lookup = lookup
         self.start_time = self.lookup[START_TIME]
+        self.last_arrival_time = self.start_time
         self.end_time = self.start_time + MONTH
         self.relist_count = 0
         self.query_strategy.update_p_arrival(p_arrival=p_arrival)
@@ -240,7 +242,9 @@ class EbayEnvironment:
             return self.process_lstg_expiration(event)
 
         # update sources with clock feats
-        event.update_arrival(thread_count=self.thread_counter - 1)
+        event.update_arrival(thread_count=self.thread_counter - 1,
+                             last_arrival_time=self.last_arrival_time)
+        print(self.last_arrival_time)
 
         # call model to sample inter arrival time and update arrival check priority
         if event.priority == self.start_time:
@@ -248,10 +252,12 @@ class EbayEnvironment:
                                              thread_id=self.thread_counter)
         else:
             seconds = self.get_inter_arrival(event=event)
+        check_in_time = event.priority
         event.priority = min(event.priority + seconds, self.end_time)
 
         # if a buyer arrives, create a thread at the arrival time
         if event.priority < self.end_time:
+            self.last_arrival_time = check_in_time
             self.queue.push(self.make_thread(event.priority))
             self.thread_counter += 1
         self.queue.push(event)
