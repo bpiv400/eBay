@@ -231,16 +231,12 @@ def input_partition():
     return parser.parse_args().part
 
 
-<<<<<<< HEAD
 def init_optional_arg(kwargs=None, name=None, default=None):
     if name not in kwargs:
         kwargs[name] = default
 
 
-def load_file(part, x):
-=======
 def load_file(part, x, agent=None):
->>>>>>> rl_tune
     """
     Loads file from partitions directory.
     :param str part: name of partition

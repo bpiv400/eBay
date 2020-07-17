@@ -1,11 +1,12 @@
 import numpy as np
 from utils import init_optional_arg
-from inputs.const import INTERVAL_ARRIVAL, INTERVAL_TURN, MAX_DELAY_TURN
+from constants import INTERVAL_ARRIVAL, INTERVAL_TURN, MAX_DELAY_TURN
 from rlenv.QueryStrategy import QueryStrategy
 
 
 class DefaultQueryStrategy(QueryStrategy):
     def __init__(self, buyer=None, seller=None, arrival=None):
+        super().__init__()
         self.buyer = buyer
         self.seller = seller
         self.arrival = arrival

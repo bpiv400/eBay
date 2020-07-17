@@ -15,6 +15,7 @@ rclone sync ~/weka/eBay/partitions/agent/valid/chunks dropbox:ebay/data/partitio
 # rclone sync ~/weka/eBay/partitions/models/valid/chunks dropbox:ebay/partitions/models/valid/chunks
 # x_offer, x_thread, x_lstg, clock, lookup
 rclone sync ~/weka/eBay/partitions/agent/valid dropbox:ebay/data/partitions/agent/valid --max-depth=1
+rclone sync ~/weka/eBay/partitions/models/valid dropbox:ebay/data/partitions/models/valid --max-depth=1
 
 # agent training input files
 rclone sync ~/weka/eBay/partitions/agent/rl/chunks dropbox:ebay/data/partitions/agent/rl/chunks
