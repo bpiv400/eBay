@@ -154,6 +154,12 @@ def load_model(name, verbose=False, use_trained=True):
     return net
 
 
+def process_chunk_worker(part=None, chunk=None,
+                         gen_class=None, gen_kwargs=None):
+    gen = gen_class(**gen_kwargs)
+    return gen.process_chunk(chunk=chunk, part=part)
+
+
 def run_func_on_chunks(f=None, func_kwargs=None):
     """
     Applies f to all chunks in parallel.

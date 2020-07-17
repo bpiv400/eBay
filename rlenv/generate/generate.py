@@ -4,7 +4,7 @@ from constants import PARTITIONS, AGENT_PARTS_DIR
 from agent.eval.ValueGenerator import ValueGenerator
 from rlenv.generate.Generator import DiscrimGenerator
 from rlenv.generate.util import process_sims
-from utils import run_func_on_chunks
+from utils import run_func_on_chunks, process_chunk_worker
 
 
 def main():
@@ -23,18 +23,22 @@ def main():
         cls = ValueGenerator
     else:
         cls = DiscrimGenerator
-    gen = cls(verbose=verbose)
 
+    gen_kwargs = {
+        'verbose': verbose
+    }
     # process chunks in parallel
     sims = run_func_on_chunks(
-        f=gen.process_chunk,
+        f=process_chunk_worker,
         func_kwargs=dict(
-            part=part
+            part=part,
+            gen_class=cls,
+            gen_kwargs=gen_kwargs
         )
     )
 
     # concatenate, clean, and save
-    process_sims(part=part, sims=sims)
+    process_sims(part=part, sims=sims, parent_dir=AGENT_PARTS_DIR)
 
 
 if __name__ == '__main__':
