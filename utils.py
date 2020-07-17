@@ -175,7 +175,6 @@ def run_func_on_chunks(f=None, func_kwargs=None):
         kw = func_kwargs.copy()
         kw['chunk'] = i
         jobs.append(pool.apply_async(f, kwds=kw))
-        sleep(45)
     res = []
     for job in jobs:
         while True:
