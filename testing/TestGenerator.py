@@ -255,7 +255,9 @@ class TestGenerator(Generator):
         while self.environment.has_next_lstg():
             self.environment.next_lstg()
             if self.byr:
+                # TODO: REPLACE WHEN CONVINCED IT WORKS
                 buyers = self._count_rl_buyers()
+                buyers = min(buyers, 1)
                 for i in range(buyers):
                     # simulate lstg once for each buyer
                     print('Agent is thread {}'.format(i+1))
