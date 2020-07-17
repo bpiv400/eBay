@@ -369,8 +369,10 @@ def add_deltas_index(deltas, events):
     return deltas
 
 
-def create_tf(path=None):
+def create_tf(path_generator=None, chunk=None):
+
     start = dt.now()
+    path = path_generator(chunk)
     events = load(path)
     print('{} offers'.format(len(events)))
     events[BYR] = events.index.isin(IDX[BYR], level='index')
@@ -384,7 +386,10 @@ def create_tf(path=None):
 def main():
     res = run_func_on_chunks(
         f=create_tf,
-        args=lambda i: FEATS_DIR + 'chunks/{}.gz'.format(i)
+        func_kwargs=dict(
+            path_generator=
+            lambda i: FEATS_DIR + 'chunks/{}.gz'.format(i)
+        )
     )
     df = pd.concat(res).sort_index()
     dump(df, FEATS_DIR + 'tf.gz')

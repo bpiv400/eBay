@@ -9,16 +9,19 @@ from utils import set_gpu_workers, run_func_on_chunks, compose_args
 from constants import AGENT_DIR, MODEL_PARTS_DIR, BYR, DROPOUT
 
 
-def simulate(part=None, run_dir=None, composer=None, model_kwargs=None):
+def simulate(part=None, run_dir=None,
+             agent_kwargs=None, model_kwargs=None):
     eval_kwargs = {'part': part,
-                   'composer': composer,
+                   'agent_kwargs': agent_kwargs,
                    'model_kwargs': model_kwargs,
                    'run_dir': run_dir,
                    'verbose': False}
     gen = EvalGenerator(**eval_kwargs)
     sims = run_func_on_chunks(
         f=gen.process_chunk,
-        args=lambda i: MODEL_PARTS_DIR + '{}/chunks/{}.gz'.format(part, i)
+        func_kwargs=dict(
+            part=part
+        )
     )
 
 
@@ -61,8 +64,9 @@ def main():
         trainer_args[param_set] = curr_params
 
     # model parameters
-    trainer_args['model_params'] = {BYR: args[BYR],
-                                    DROPOUT: args[DROPOUT]}
+    model_params = {BYR: args[BYR],
+                    DROPOUT: args[DROPOUT]}
+    trainer_args['model_params'] = model_params
 
     # training loop
     trainer = RlTrainer(**trainer_args)
@@ -91,14 +95,15 @@ def main():
             if k not in exclude:
                 df.loc[trainer.run_id, k] = v
         df.to_csv(run_path)
+        del trainer
 
         # # simulate outcomes
-        # for part in [TRAIN_RL, VALIDATION]:
-        #     os.mkdir(run_dir + '{}/'.format(part))
-        #     simulate(part=part,
-        #              run_dir=run_dir,
-        #              composer=trainer.composer,
-        #              model_kwargs=trainer.model_params)
+        for part in [TRAIN_RL, VALIDATION]:
+            os.mkdir(run_dir + '{}/'.format(part))
+            simulate(part=part,
+                     run_dir=run_dir,
+                     model_kwargs=model_params,
+                     agent_kwargs=trainer_args[AGENT_PARAMS])
 
 
 if __name__ == '__main__':

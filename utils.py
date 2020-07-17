@@ -154,18 +154,21 @@ def load_model(name, verbose=False, use_trained=True):
     return net
 
 
-def run_func_on_chunks(f=None, args=None):
+def run_func_on_chunks(f=None, func_kwargs=None):
     """
     Applies f to all chunks in parallel.
-    :param f: function that takes in path to data as input
-    :param args: function that takes in chunk number and generates args
+    :param f: function that takes chunk number as input along with
+    other arguments
+    :param func_kwargs: dictionary of other keyword arguments
     :return: list of worker-specific output
     """
     num_workers = min(NUM_CHUNKS, psutil.cpu_count() - 1)
     pool = mp.Pool(num_workers)
     jobs = []
     for i in range(NUM_CHUNKS):
-        jobs.append(pool.apply_async(f, (args(i),)))
+        kw = func_kwargs.copy()
+        kw['chunk'] = i
+        jobs.append(pool.apply_async(f, kwds=kw))
     res = []
     for job in jobs:
         while True:

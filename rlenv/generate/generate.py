@@ -28,7 +28,9 @@ def main():
     # process chunks in parallel
     sims = run_func_on_chunks(
         f=gen.process_chunk,
-        args=lambda i: AGENT_PARTS_DIR + '{}/chunks/{}.gz'.format(part, i)
+        func_kwargs=dict(
+            part=part
+        )
     )
 
     # concatenate, clean, and save
