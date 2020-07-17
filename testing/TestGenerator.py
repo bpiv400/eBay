@@ -60,9 +60,6 @@ class TestGenerator(Generator):
         else:
             return Composer(cols=self.loader.x_lstg_cols)
 
-    def generate_recorder(self):
-        return OutcomeRecorder(verbose=self.verbose)
-
     def load_chunk(self, chunk=None, part=None):
         """
         Initializes lstg loader for the
@@ -251,15 +248,17 @@ class TestGenerator(Generator):
             done = agent_tuple[2] or self.environment.relist_count > 0
         lstg_log.verify_done()
 
+    def generate_recorder(self):
+        return None
+
     def generate(self):
         while self.environment.has_next_lstg():
             self.environment.next_lstg()
-            self.recorder.update_lstg(lookup=self.loader.lookup,
-                                      lstg=self.loader.lstg)
             if self.byr:
                 buyers = self._count_rl_buyers()
                 for i in range(buyers):
                     # simulate lstg once for each buyer
+                    print('Agent is thread {}'.format(i+1))
                     self.simulate_agent_lstg(buyer=(i + 1))
             elif self.agent:
                 self.simulate_agent_lstg()

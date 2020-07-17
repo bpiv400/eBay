@@ -14,6 +14,7 @@ class Event:
         super(Event, self).__init__()
         # error checking
         assert(isinstance(event_type, str))
+        print(priority)
         assert(isinstance(priority, int))
         self.type = event_type
         self.priority = priority

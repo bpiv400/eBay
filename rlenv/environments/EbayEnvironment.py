@@ -67,8 +67,8 @@ class EbayEnvironment:
         self.queue.push(event)
         if self.recorder is not None:
             self.recorder.reset_sim()
-        if self.verbose:
-            print('Simulation {}'.format(self.recorder.sim))
+        elif self.verbose:
+            print('Simulation {}'.format(self.relist_count))
 
     def has_next_lstg(self):
         if not self.loader.did_init:
@@ -87,8 +87,6 @@ class EbayEnvironment:
         self.relist_count = 0
         self.query_strategy.update_p_arrival(p_arrival=p_arrival)
         self.cut = get_cut(self.lookup[META])
-        if self.verbose:
-            Recorder.print_lstg(self.lookup)
         if self.recorder is not None:
             # update listing in recorder
             self.recorder.update_lstg(lookup=self.lookup,

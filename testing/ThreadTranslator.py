@@ -11,9 +11,9 @@ class ThreadTranslator:
         # boolean for whether the agent is the last thread
         self.agent_last = self.agent_thread == len(arrivals)
         # time when the buyer agent model is queried and produces a first offer
-        self.agent_check_time = self.get_rl_check_time(params=params)
+        self.agent_check_time = int(self.get_rl_check_time(params=params))
         # time when the buyer agent model executes the first offer
-        self.agent_arrival_time = arrivals[self.agent_thread].time
+        self.agent_arrival_time = int(arrivals[self.agent_thread].time)
         # number of seconds the first arrival model should delay for when
         # queried for arrival time of the buyer's first offer
         self.agent_interarrival_time = self.agent_arrival_time - self.agent_check_time

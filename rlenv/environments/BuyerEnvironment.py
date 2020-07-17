@@ -55,6 +55,7 @@ class BuyerEnvironment(AgentEnvironment):
         if con == 0:
             # push rl arrival back into queue
             self.last_event.priority += DAY
+            print(self.last_event.type)
             # if the delay pushes the arrival event to the end of the lstg
             if self.is_lstg_expired(self.last_event):
                 self.process_lstg_expiration(self.last_event)
@@ -105,6 +106,8 @@ class BuyerEnvironment(AgentEnvironment):
         event, lstg_complete = super().run()
         # set last event flag to point to rl event
         self.last_event = self.rl_event
+        if self.last_event.type == RL_ARRIVAL_EVENT:
+            self.last_event.update_arrival()
         if event is not self.rl_event and not lstg_complete:
             raise RuntimeError("Other threads should only return "
                                "to agent when the lstg ends")
@@ -128,7 +131,7 @@ class BuyerEnvironment(AgentEnvironment):
         # should deterministically return RL_ARRIVAL_EVENT at start of lstg
         # lstg should never be complete at this point
         event, _ = super().run()
-        if event.type != RL_ARRIVAL_EVENT:
+        if event.type != RL_ARRIVAL_EVENT and event.priority == self.start_time:
             raise RuntimeError("Bad assumption about first event")
         event.update_arrival()
         self.last_event = event

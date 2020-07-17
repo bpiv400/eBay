@@ -207,8 +207,6 @@ def lstgs_without_duplicated_timestamps(lstgs=None):
     # load timestamps
     offers = load(FEATS_DIR + 'offers.pkl').reindex(index=lstgs, level='lstg')
 
-    print('prob in lstgs: {}'.format(22458042 in lstgs))
-
     # remove censored offers
     clock = offers.loc[~offers.censored, 'clock']
 
@@ -223,7 +221,6 @@ def lstgs_without_duplicated_timestamps(lstgs=None):
     # drop flagged listgins
     lstgs = lstgs.drop(flag[flag].index)
 
-    print('AFTER DROP: {}'.format(22458042 in lstgs))
     return lstgs
 
 
