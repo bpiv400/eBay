@@ -4,13 +4,15 @@ import argparse
 import gc
 import pandas as pd
 import torch
+from compress_pickle import load
 from agent.RlTrainer import RlTrainer
 from agent.const import AGENT_STATE, PARAM_DICTS, AGENT_PARAMS, SYSTEM_PARAMS
 from agent.eval.EvalGenerator import EvalGenerator
 from utils import set_gpu_workers, run_func_on_chunks, compose_args,\
     process_chunk_worker
 from rlenv.generate.util import process_sims
-from constants import AGENT_DIR, BYR, DROPOUT, TRAIN_RL, VALIDATION
+from constants import AGENT_DIR, BYR, DROPOUT, TRAIN_RL, VALIDATION, \
+    POLICY_BYR, POLICY_SLR, MODEL_DIR
 
 MAIN_GENERATOR = False
 
@@ -58,9 +60,8 @@ def main():
             args[k] = v
 
     # add dropout
-    # s = load(MODEL_DIR + 'dropout.pkl')
-    # args[DROPOUT] = s.loc[POLICY_BYR if args['byr'] else POLICY_SLR]
-    args[DROPOUT] = (0., 0.)
+    s = load(MODEL_DIR + 'dropout.pkl')
+    args[DROPOUT] = s.loc[POLICY_BYR if args['byr'] else POLICY_SLR]
 
     # print to console
     for k, v in args.items():

@@ -57,7 +57,7 @@ class SellerEnvironment(AgentEnvironment):
                     if next_lstg:
                         # conditional prevents queuing up next lstg
                         # in EvalGenerator
-                        self.next_lstg() # queue up next lstg in training
+                        self.next_lstg()  # queue up next lstg in training
                         super().reset()
                     else:
                         return None

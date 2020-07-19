@@ -133,7 +133,6 @@ def load_model(name, verbose=False, use_trained=True):
         print('Loading {} model'.format(name))
 
     # create neural network
-    print('sizes')
     sizes = load_sizes(name)
     net = FeedForward(sizes)  # type: torch.nn.Module
 
