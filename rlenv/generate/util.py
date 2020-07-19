@@ -105,10 +105,12 @@ def process_sims(part=None, sims=None, parent_dir=None):
     lstg_start = load_file(part, 'lookup', agent=True)[START_TIME]
     # create output dataframes
     d = clean_components(threads, offers, lstg_start)
+
     # create directory if it doesn't exist
     folder = parent_dir + '{}/'.format(part)
     if os.path.isdir(folder):
         os.mkdir(folder)
+
     # save
     for k, df in d.items():
         path = folder + '{}.gz'.format(k)

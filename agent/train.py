@@ -1,25 +1,29 @@
+import torch.multiprocessing as mp
 import os
 import argparse
 import gc
 import pandas as pd
 import torch
-import torch.multiprocessing as mp
+from compress_pickle import load
 from agent.RlTrainer import RlTrainer
 from agent.const import AGENT_STATE, PARAM_DICTS, AGENT_PARAMS, SYSTEM_PARAMS
 from agent.eval.EvalGenerator import EvalGenerator
 from utils import set_gpu_workers, run_func_on_chunks, compose_args,\
     process_chunk_worker
 from rlenv.generate.util import process_sims
-from constants import AGENT_DIR, BYR, DROPOUT, TRAIN_RL, VALIDATION
+from constants import AGENT_DIR, BYR, DROPOUT, TRAIN_RL, VALIDATION, \
+    POLICY_BYR, POLICY_SLR, MODEL_DIR
 
 MAIN_GENERATOR = False
 
-def simulate(part=None, run_dir=None,
-             agent_params=None, model_kwargs=None):
-    eval_kwargs = {'agent_params': agent_params,
-                   'model_kwargs': model_kwargs,
-                   'run_dir': run_dir,
-                   'verbose': False}
+
+def simulate(part=None, run_dir=None, agent_params=None, model_kwargs=None):
+    eval_kwargs = dict(
+        agent_params=agent_params,
+        model_kwargs=model_kwargs,
+        run_dir=run_dir,
+        verbose=False
+    )
     process_args = dict(
             part=part,
             gen_class=EvalGenerator,
@@ -56,9 +60,8 @@ def main():
             args[k] = v
 
     # add dropout
-    # s = load(MODEL_DIR + 'dropout.pkl')
-    # args[DROPOUT] = s.loc[POLICY_BYR if args['byr'] else POLICY_SLR]
-    args[DROPOUT] = (0., 0.)
+    s = load(MODEL_DIR + 'dropout.pkl')
+    args[DROPOUT] = s.loc[POLICY_BYR if args['byr'] else POLICY_SLR]
 
     # print to console
     for k, v in args.items():
@@ -99,16 +102,19 @@ def main():
             df = pd.DataFrame(index=pd.Index([], name='run_id'))
 
         exclude = list({**AGENT_PARAMS, **SYSTEM_PARAMS}.keys())
-        exclude += ['dropout']
+        exclude += [DROPOUT]
         exclude.remove('batch_size')
         for k, v in args.items():
             if k not in exclude:
                 df.loc[trainer.run_id, k] = v
         df.to_csv(run_path)
+
+        # housekeeping
         del trainer
         del d
         gc.collect()
-        # # simulate outcomes
+
+        # simulate outcomes
         for part in [TRAIN_RL, VALIDATION]:
             os.mkdir(run_dir + '{}/'.format(part))
             print('Simulating {}...'.format(part))

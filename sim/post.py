@@ -15,7 +15,7 @@ from constants import MODEL_DIR, LOG_DIR, MODELS, DISCRIM_MODELS, \
     POLICY_MODELS, FIRST_ARRIVAL_MODEL, AGENT_PARTS_DIR, TRAIN_RL, \
     VALIDATION, NO_ARRIVAL_CUTOFF, NUM_CHUNKS, DROPOUT
 from utils import get_model_predictions
-from featnames import START_PRICE, LOOKUP, X_LSTG, P_ARRIVAL
+from featnames import START_PRICE, LOOKUP, X_LSTG, P_ARRIVAL, END_TIME
 
 
 def save_chunks(lookup=None, x_lstg=None, p_arrival=None, part=None):
@@ -26,7 +26,7 @@ def save_chunks(lookup=None, x_lstg=None, p_arrival=None, part=None):
     assert x_lstg.isna().sum().sum() == 0
 
     # sort by start_price
-    lookup = lookup.sort_values(by=START_PRICE)
+    lookup = lookup.drop(END_TIME, axis=1).sort_values(by=START_PRICE)
     x_lstg = x_lstg.reindex(index=lookup.index)
     p_arrival = p_arrival.reindex(index=lookup.index)
 

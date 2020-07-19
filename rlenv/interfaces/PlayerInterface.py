@@ -61,7 +61,6 @@ class SimulatedPlayer(PlayerInterface):
     def load_models(self):
         turns = IDX[BYR] if self.byr else IDX[SLR]
         for turn in turns:
-            print(turn)
             if self.full:
                 self.con_models[turn] = load_model(
                     model_str(CON, turn=turn))

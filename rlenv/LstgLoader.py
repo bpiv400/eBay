@@ -1,9 +1,7 @@
-import os
-import h5py
 import numpy as np
 import pandas as pd
 from constants import TRAIN_RL, AGENT_PARTS_DIR
-from featnames import LSTG, LOOKUP, X_LSTG, P_ARRIVAL
+from featnames import LSTG
 from rlenv.util import load_chunk
 
 

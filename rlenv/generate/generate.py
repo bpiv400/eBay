@@ -1,3 +1,4 @@
+import torch.multiprocessing as mp
 import argparse
 import torch
 from constants import PARTITIONS, AGENT_PARTS_DIR
@@ -42,5 +43,6 @@ def main():
 
 
 if __name__ == '__main__':
+    mp.set_start_method('spawn')
     torch.set_default_dtype(torch.float32)
     main()

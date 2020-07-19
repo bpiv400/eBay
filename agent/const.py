@@ -46,7 +46,7 @@ PARAM_DICTS = {'agent_params': AGENT_PARAMS,
                'system_params': SYSTEM_PARAMS}
 
 # run for this many epochs
-STOPPING_EPOCHS = 1
+STOPPING_EPOCHS = 500
 
 # for identifying first turn in buyer model
 T1_IDX = load_featnames(POLICY_BYR)['lstg'].index('t1')
