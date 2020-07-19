@@ -1,6 +1,4 @@
-import numpy as np
 from rlenv.environments.EbayEnvironment import EbayEnvironment
-from featnames import TIME_FEATS
 
 
 class SimulatorEnvironment(EbayEnvironment):

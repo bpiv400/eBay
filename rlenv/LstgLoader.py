@@ -159,4 +159,3 @@ class TrainLoader(LstgLoader):
             lookup=self._lookup_slice,
             p_arrival=self._p_arrival_slice
         )
-
