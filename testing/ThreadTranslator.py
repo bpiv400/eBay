@@ -39,7 +39,6 @@ class ThreadTranslator:
         # flag for whether the agent_env_id has been queried in the arrival
         # process
         self.did_query = False
-        self.print_translator()
 
     def print_translator(self):
         print('TRANSLATOR')

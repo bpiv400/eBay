@@ -244,7 +244,6 @@ class EbayEnvironment:
         # update sources with clock feats
         event.update_arrival(thread_count=self.thread_counter - 1,
                              last_arrival_time=self.last_arrival_time)
-        print(self.last_arrival_time)
 
         # call model to sample inter arrival time and update arrival check priority
         if event.priority == self.start_time:

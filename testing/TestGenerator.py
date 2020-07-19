@@ -11,7 +11,6 @@ from rlenv.environments.SellerEnvironment import SellerEnvironment
 from rlenv.environments.SimulatorEnvironment import SimulatorEnvironment
 from rlenv.generate.Generator import Generator
 from rlenv.util import get_env_sim_subdir, load_chunk
-from rlenv.generate.Recorder import OutcomeRecorder
 from testing.LstgLog import LstgLog
 from testing.TestQueryStrategy import TestQueryStrategy
 from testing.util import subset_inputs, load_all_inputs, load_reindex, \
@@ -31,6 +30,7 @@ class TestGenerator(Generator):
                           default=None)
         # id of the first lstg in the chunk to simulate
         self.start = kwargs['start']
+        self.first_only = kwargs['first']
         # boolean for whether the testing is for an agent environment
         self.agent = kwargs['agent']
         # boolean for whether the agent is a byr
@@ -256,12 +256,13 @@ class TestGenerator(Generator):
         while self.environment.has_next_lstg():
             self.environment.next_lstg()
             if self.byr:
-                # TODO: REPLACE WHEN CONVINCED IT WORKS
                 buyers = self._count_rl_buyers()
-                buyers = min(buyers, 1)
+                if self.first_only:
+                    buyers = min(buyers, 1)
                 for i in range(buyers):
                     # simulate lstg once for each buyer
-                    print('Agent is thread {}'.format(i+1))
+                    if self.verbose:
+                        print('Agent is thread {}'.format(i+1))
                     self.simulate_agent_lstg(buyer=(i + 1))
             elif self.agent:
                 self.simulate_agent_lstg()
@@ -292,7 +293,3 @@ class TestGenerator(Generator):
         else:
             env_class = SimulatorEnvironment
         return env_class
-
-    @property
-    def records_path(self):
-        raise RuntimeError("No recorder")

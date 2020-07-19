@@ -55,7 +55,8 @@ class BuyerEnvironment(AgentEnvironment):
         if con == 0:
             # push rl arrival back into queue
             self.last_event.priority += DAY
-            print(self.last_event.type)
+            if self.verbose:
+                print(self.last_event.type)
             # if the delay pushes the arrival event to the end of the lstg
             if self.is_lstg_expired(self.last_event):
                 self.process_lstg_expiration(self.last_event)
