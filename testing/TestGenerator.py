@@ -222,7 +222,8 @@ class TestGenerator(Generator):
             'inputs': self.loader.inputs,
             'x_thread': self.loader.x_thread,
             'x_offer': self.loader.x_offer,
-            'lookup': self.loader.lookup
+            'lookup': self.loader.lookup,
+            'verbose': self.verbose
         }
         if self.agent:
             params['agent_params'] = {

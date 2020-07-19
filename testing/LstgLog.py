@@ -23,12 +23,15 @@ class LstgLog:
         self.lookup = params['lookup']
         self.agent = params['agent_params'] is not None
         self.agent_params = params['agent_params']
+        self.verbose = params['verbose']
         self.arrivals = self.generate_arrival_logs(params)
         self.threads = self.generate_thread_logs(params)
         if self.agent and self.byr:
             self.translator = ThreadTranslator(agent_thread=self.agent_thread,
                                                arrivals=self.arrivals,
                                                params=params)
+            if self.verbose:
+                self.translator.print_translator()
         else:
             self.translator = None
         self.agent_log = self.generate_agent_log(params)
@@ -290,8 +293,9 @@ class LstgLog:
         else:
             assert input_dict is not None
         true_id = self.translate_arrival(thread_id=thread_id)
-        print('true id: {}'.format(true_id))
-        print('actual id: {}'.format(thread_id))
+        if self.verbose:
+            print('true id: {}'.format(true_id))
+            print('actual id: {}'.format(thread_id))
         return self.arrivals[true_id].get_inter_arrival(check_time=time,
                                                         input_dict=input_dict)
 

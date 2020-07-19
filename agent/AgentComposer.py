@@ -10,7 +10,7 @@ from featnames import OUTCOME_FEATS, MONTHS_SINCE_LSTG, BYR_HIST, \
     TIME_FEATS, CLOCK_FEATS, THREAD_COUNT
 from rlenv.Composer import Composer
 from rlenv.const import LSTG_MAP, CLOCK_MAP, OFFER_MAPS, THREAD_COUNT_IND, \
-    TIME_START_IND, TIME_END_IND
+    TIME_START_IND, TIME_END_IND, CLOCK_END_IND, CLOCK_START_IND
 from rlenv.util import load_chunk
 from utils import load_sizes, load_featnames, compose_args
 
@@ -72,14 +72,15 @@ class AgentComposer(Composer):
         self._update_turn_inds(turn)
         for set_name in self.agent_sizes['x'].keys():
             if set_name == LSTG_MAP:
-                obs_dict[set_name] = self._build_agent_lstg_vector(sources=sources)
+                obs_dict[set_name] = self._build_agent_lstg_vector(sources=sources,
+                                                                   turn=turn)
             elif set_name[:-1] == 'offer':
                 obs_dict[set_name] = self._build_agent_offer_vector(offer_vector=sources[set_name])
             else:
                 obs_dict[set_name] = torch.from_numpy(sources[set_name]).float()
         return obs_dict
 
-    def _build_agent_lstg_vector(self, sources=None):
+    def _build_agent_lstg_vector(self, sources=None, turn=None):
         feats = []
         solo_feats = [sources[MONTHS_SINCE_LSTG], sources[BYR_HIST]]
 
@@ -87,7 +88,12 @@ class AgentComposer(Composer):
         if self.byr:
             feats.append(sources[LSTG_MAP][:4])
             feats.append(sources[LSTG_MAP][6:-4])
-            feats.append(sources[CLOCK_MAP][:-2])
+            if turn == 1:
+                feats.append(sources[CLOCK_MAP][:-2])
+            else:
+                clock_feats = sources[OFFER_MAPS[turn - 1]]
+                feats.append(clock_feats[CLOCK_START_IND:
+                                         (CLOCK_END_IND - 2)])
         else:
             feats.append(sources[LSTG_MAP])
             solo_feats.append(sources[OFFER_MAPS[1]][THREAD_COUNT_IND] + 1)
