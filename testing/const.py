@@ -18,4 +18,5 @@ SCRIPT_PARAMS = {BYR: {'action': 'store_true'},
                            }
                  }
 
-TEST_GENERATOR_KWARGS = ['start', BYR, 'agent', 'verbose', 'part']
+TEST_GENERATOR_KWARGS = ['start', BYR, 'agent', 'verbose', 'part',
+                         'first']

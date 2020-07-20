@@ -242,9 +242,9 @@ class EbayEnvironment:
             return self.process_lstg_expiration(event)
 
         # update sources with clock feats
-        event.update_arrival(thread_count=self.thread_counter - 1,
-                             last_arrival_time=self.last_arrival_time)
 
+        event.update_arrival(thread_count=self.time_feats.get_thread_count(),
+                             last_arrival_time=self.last_arrival_time)
         # call model to sample inter arrival time and update arrival check priority
         if event.priority == self.start_time:
             seconds = self.get_first_arrival(time=event.priority,

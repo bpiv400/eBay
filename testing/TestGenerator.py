@@ -255,6 +255,7 @@ class TestGenerator(Generator):
     def generate(self):
         while self.environment.has_next_lstg():
             self.environment.next_lstg()
+            print(self.loader.lstg)
             if self.byr:
                 buyers = self._count_rl_buyers()
                 if self.first_only:
