@@ -44,7 +44,11 @@ def construct_x(idx=None, threads=None, offers=None,
     x = {'thread': x_thread}
 
     # offer features
-    x.update(get_x_offer_init(offers, idx, role=BYR))
+    new_idx = idx.to_frame().xs(0, level='day').index
+    x_offer = get_x_offer_init(offers, new_idx, role=BYR)
+    x_offer = {k: v.reindex(index=idx, fill_value=0.)
+               for k, v in x_offer.items()}
+    x.update(x_offer)
 
     # no nans
     for v in x.values():
@@ -98,7 +102,7 @@ def process_inputs(part):
     y = get_y(idx, idx1, offers)
 
     # input feature dictionary
-    x = construct_x(idx=y.index,
+    x = construct_x(idx=idx,
                     threads=threads,
                     offers=offers,
                     clock=clock,
