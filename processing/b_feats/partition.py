@@ -1,7 +1,6 @@
-from compress_pickle import dump
+from compress_pickle import load, dump
 import numpy as np
-import pandas as pd
-from constants import SEED, FEATS_DIR, MODEL_PARTS_DIR, SHARES
+from constants import SLR, SEED, FEATS_DIR, PARTS_DIR, SHARES
 
 
 def partition_lstgs(s):
@@ -25,11 +24,11 @@ def partition_lstgs(s):
 
 def main():
     # load listings
-    listings = pd.read_csv(FEATS_DIR + 'listings.csv').set_index('lstg')
+    listings = load(FEATS_DIR + 'listings.gz')
     
     # partition by seller
-    partitions = partition_lstgs(listings.slr)
-    dump(partitions, MODEL_PARTS_DIR + 'partitions.pkl')
+    partitions = partition_lstgs(listings[SLR])
+    dump(partitions, PARTS_DIR + 'partitions.pkl')
 
 
 if __name__ == "__main__":

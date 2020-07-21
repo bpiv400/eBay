@@ -2,7 +2,7 @@ from itertools import product
 import pandas as pd
 from constants import AGENT_DIR
 
-ranges = dict(entropy_coeff=[.001, .005],
+ranges = dict(entropy_coeff=[.01],
               lr=[.0005, .0001],
               ratio_clip=[.1, .2])
 

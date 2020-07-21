@@ -1,6 +1,6 @@
 from inputs.util import save_files, get_x_thread, get_x_offer_init, get_ind_x
 from utils import input_partition, load_file
-from constants import IDX, SLR, CON_MULTIPLIER, AGENT_PARTITIONS, POLICY_SLR
+from constants import IDX, SLR, CON_MULTIPLIER, POLICY_SLR
 from featnames import EXP, CON, DELAY, AUTO, LOOKUP
 
 
@@ -36,9 +36,9 @@ def create_index(offers):
 
 def process_inputs(part):
     # load dataframes
-    lookup = load_file(part, LOOKUP, agent=True)
-    threads = load_file(part, 'x_thread', agent=True)
-    offers = load_file(part, 'x_offer', agent=True)
+    lookup = load_file(part, LOOKUP)
+    threads = load_file(part, 'x_thread')
+    offers = load_file(part, 'x_offer')
 
     # master index
     idx = create_index(offers)
@@ -61,9 +61,6 @@ def main():
     # extract parameters from command line
     part = input_partition()
     print('{}/{}'.format(part, POLICY_SLR))
-
-    # policy is trained on TRAIN_MODELS
-    assert part in AGENT_PARTITIONS
 
     # input dataframes, output processed dataframes
     d = process_inputs(part)

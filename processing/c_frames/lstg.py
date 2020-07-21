@@ -1,8 +1,8 @@
 from compress_pickle import dump
 import numpy as np
 from processing.util import extract_day_feats, get_lstgs, load_feats
-from constants import MODEL_PARTS_DIR, INPUT_DIR, DAY, BYR, SLR, \
-    TRAIN_MODELS, VALIDATION, TEST
+from constants import PARTS_DIR, INPUT_DIR, DAY, BYR, SLR, \
+    VALIDATION
 from featnames import START_PRICE, META, LEAF
 from utils import input_partition
 
@@ -92,7 +92,6 @@ def create_x_lstg(lstgs=None):
 
 def main():
     part = input_partition()
-    assert part in [TRAIN_MODELS, VALIDATION, TEST]
     print('{}/x_lstg'.format(part))
 
     # create dataframe
@@ -105,7 +104,7 @@ def main():
 
     # convert to numpy and save
     x_lstg = {k: v.values for k, v in x_lstg.items()}
-    dump(x_lstg, MODEL_PARTS_DIR + '{}/x_lstg.pkl'.format(part))
+    dump(x_lstg, PARTS_DIR + '{}/x_lstg.pkl'.format(part))
 
 
 if __name__ == "__main__":

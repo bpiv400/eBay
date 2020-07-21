@@ -1,85 +1,65 @@
 import argparse
 import os
-from compress_pickle import load
-from agent.eval.EvalGenerator import EvalGenerator
-from agent.AgentComposer import AgentComposer
-from agent.const import ALL_FEATS, FULL_CON
-from constants import MODEL_DIR, BYR, AGENT_DIR, TRAIN_RL, VALIDATION, \
-    TEST, AGENTS
-from featnames import DELAY
-
-
-def gen_eval_kwargs(part=None, composer=None, model_kwargs=None, run_dir=None):
-    eval_kwargs = {'part': part,
-                   'composer': composer,
-                   'model_kwargs': model_kwargs,
-                   'run_dir': run_dir,
-                   'verbose': False}
-    return eval_kwargs
-
-
-def gen_model_kwargs(name=None):
-    model_kwargs = {BYR: BYR in name,
-                    DELAY: DELAY in name}
-    # add in dropout
-    s = load(MODEL_DIR + 'dropout.pkl')
-    for net in ['policy', 'value']:
-        model_kwargs['dropout_{}'.format(net)] = \
-            s.loc['{}_{}'.format(net, name)]
-    return model_kwargs
-
-
-def gen_agent_params(name):
-    agent_params = {'name': name,
-                    'feat_id': ALL_FEATS,
-                    'con_type': FULL_CON}
-    return agent_params
+import pandas as pd
+from agent.train import simulate
+from agent.Prefs import SellerPrefs
+from agent.const import ALL_FEATS, FEAT_TYPE
+from constants import BYR, SLR, AGENT_DIR, TRAIN_RL, VALIDATION, DROPOUT
+from featnames import BYR_HIST
 
 
 def main():
-    # command line arguments
+    # command-line parameters
     parser = argparse.ArgumentParser()
-    parser.add_argument('--name', choices=AGENTS, required=True)
-    parser.add_argument('--num', type=int, required=True)
-    parser.add_argument('--part', type=str, required=True,
-                        choices=[TRAIN_RL, VALIDATION, TEST])
+    parser.add_argument('--exp', type=int, required=True)
+    parser.add_argument('--run_id', type=str, required=True)
     args = parser.parse_args()
-    name, num, part = args.name, args.num, args.part
+    exp, run_id = args.exp, args.run_id
 
-    # find run parameters
-    parent_dir = AGENT_DIR + '{}/'.format(name)
-    params = load(parent_dir + 'runs.pkl')
-    runs = params.index
+    # directories
+    log_dir = AGENT_DIR + '{}/{}/'.format(SLR, ALL_FEATS)
+    run_dir = log_dir + 'run_{}/'.format(run_id)
 
-    # loop over runs
-    for run in runs:
-        # run directory
-        run_dir = parent_dir + 'run_{}/'.format(run)
+    # simulate outcomes
+    for part in [VALIDATION, TRAIN_RL]:
+        part_dir = run_dir + '{}/'.format(part)
+        if not os.path.isdir(part_dir):
+            os.mkdir(part_dir)
+        print('Simulating {}...'.format(part))
+        simulate(part=part,
+                 run_dir=run_dir,
+                 model_kwargs={
+                     BYR: False,
+                     DROPOUT: (0., 0.)
+                 },
+                 agent_params={
+                     BYR: False,
+                     FEAT_TYPE: ALL_FEATS,
+                     BYR_HIST: None
+                 })
 
-        # check if file exists
-        path_suffix = '{}/{}.gz'.format(part, num)
-        if os.path.isfile(run_dir + path_suffix):
-            print('run_{}/{}.gz already simulated.'.format(run, num))
-            continue
-        else:
-            if not os.path.isdir(run_dir + part):
-                os.mkdir(run_dir + part)
-            print(run_dir + path_suffix)
+    # experiment parameters
+    print('Using parameters for experiment {}'.format(exp))
+    exp_path = AGENT_DIR + 'exps.csv'
+    params = pd.read_csv(exp_path, index_col=0).loc[exp].to_dict()
+    params['monthly_discount'] = .995
+    params['action_discount'] = 1.
+    params['action_cost'] = 0.
+    params['cross_entropy'] = False
+    params['batch_size'] = 4096
 
-        # create composer
-        agent_params = gen_agent_params(name)
-        composer = AgentComposer(agent_params=agent_params)
+    # TODO: construct valuation from outcomes
+    prefs = SellerPrefs(params=params)
 
-        # create generator
-        model_kwargs = gen_model_kwargs(name)
-        eval_kwargs = gen_eval_kwargs(part=part,
-                                      composer=composer,
-                                      model_kwargs=model_kwargs,
-                                      run_dir=run_dir)
-        eval_generator = EvalGenerator(**eval_kwargs)
-
-        # run generator to simulate outcomes
-        eval_generator.process_chunk(num)
+    # save run parameters
+    run_path = log_dir + 'runs.csv'
+    if os.path.isfile(run_path):
+        df = pd.read_csv(run_path, index_col=0)
+    else:
+        df = pd.DataFrame(index=pd.Index([], name='run_id'))
+    for k, v in params.items():
+        df.loc[run_id, k] = v
+    df.to_csv(run_path)
 
 
 if __name__ == '__main__':

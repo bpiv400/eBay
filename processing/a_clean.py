@@ -3,7 +3,8 @@ import numpy as np
 import pandas as pd
 from compress_pickle import dump
 from processing.util import get_con, get_norm
-from constants import CLEAN_DIR, FEATS_DIR, PCTILE_DIR, START, NUM_CHUNKS
+from constants import CLEAN_DIR, FEATS_DIR, PCTILE_DIR, START, \
+    NUM_CHUNKS, MONTH
 from featnames import START_PRICE, BYR_HIST, NORM
 
 # data types for csv read
@@ -53,11 +54,12 @@ IDX_NAMES = {'offers': ['lstg', 'thread', 'index'],
              'listings': 'lstg'}
 
 
-def create_chunks(offers=None, start_price=None):
+def create_chunks(offers=None, start_price=None, slr=None):
     """
     Chunks data by listing.
-    :param offers: DataFrame with index ['lstg', 'thread', 'index']
-    :param start_price: Series with index ['lstg']
+    :param DataFrame offers: offer features with index ['lstg', 'thread', 'index']
+    :param Series start_price: listing start price with index ['lstg']
+    :param Series slr: seller id with index ['lstg']
     """
     # output directory
     chunk_dir = FEATS_DIR + 'chunks/'
@@ -66,11 +68,15 @@ def create_chunks(offers=None, start_price=None):
     # add norm to offers
     con = get_con(offers.price.unstack(), start_price)
     offers[NORM] = get_norm(con)
-    # split into chunks
-    groups = np.array_split(start_price.index, NUM_CHUNKS)
+    # split into chunks by seller
+    slrs = slr.reset_index().sort_values(
+        by=['slr', 'lstg']).set_index('slr').squeeze()
+    u = np.unique(slr.values)
+    groups = np.array_split(u, NUM_CHUNKS)
     for i in range(NUM_CHUNKS):
         print('Creating chunk {} of {}'.format(i+1, NUM_CHUNKS))
-        dump(offers.reindex(index=groups[i], level='lstg'),
+        lstgs = slrs.loc[groups[i]].values
+        dump(offers.reindex(index=lstgs, level='lstg'),
              chunk_dir + '{}.gz'.format(i))
 
 
@@ -101,6 +107,15 @@ def get_pctiles(s):
     return s, pctiles
 
 
+def find_early_exps(offers=None, listings=None):
+    sale = offers['accept'].groupby('lstg').max()
+    no_sale = listings.loc[~sale, ['start_date', 'end_time']]
+    start_time = no_sale.start_date.astype('int64') * 3600 * 24
+    months = (no_sale.end_time + 1 - start_time) / MONTH
+    to_drop = no_sale[months < 1.].index
+    return to_drop
+
+
 def get_seconds(t):
     return t.hour * 3600 + t.minute * 60 + t.second
 
@@ -110,6 +125,18 @@ def main():
     offers = read_csv('offers')
     threads = read_csv('threads')
     listings = read_csv('listings')
+
+    # drop listings with zero arrivals
+    num_threads = threads.byr.groupby('lstg').count().reindex(
+        index=listings.index, fill_value=0)
+    lstgs = num_threads[num_threads > 0].index
+    listings = listings.reindex(index=lstgs)
+
+    # drop listings that expire before 31 days
+    to_drop = find_early_exps(offers=offers, listings=listings)
+    listings.drop(to_drop, inplace=True)
+    threads = threads.reindex(index=listings.index, level='lstg')
+    offers = offers.reindex(index=listings.index, level='lstg')
 
     # convert byr_hist to pctiles and save threads
     threads.loc[:, BYR_HIST], to_save = \
@@ -211,7 +238,8 @@ def main():
     dump(listings, FEATS_DIR + 'listings.gz')
 
     # chunk by listing
-    create_chunks(offers=offers, start_price=listings[START_PRICE])
+    create_chunks(offers=offers,
+                  start_price=listings[START_PRICE])
 
 
 if __name__ == '__main__':

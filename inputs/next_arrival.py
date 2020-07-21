@@ -5,9 +5,7 @@ from inputs.util import get_arrival_times, save_files, get_ind_x
 from utils import get_months_since_lstg, input_partition, load_file
 from constants import MONTH, INTERVAL_ARRIVAL, INTERVAL_CT_ARRIVAL
 from featnames import THREAD_COUNT, MONTHS_SINCE_LAST, MONTHS_SINCE_LSTG, \
-    START_TIME, END_TIME
-
-AGENT = False
+    START_TIME, END_TIME, LOOKUP
 
 
 def get_interarrival_period(arrivals):
@@ -75,8 +73,8 @@ def get_x_thread_arrival(arrivals=None, lstg_start=None, idx=None, diff=None):
 
 def process_inputs(part):
     # data
-    clock = load_file(part, 'clock', agent=AGENT)
-    lookup = load_file(part, 'lookup', agent=AGENT)
+    clock = load_file(part, 'clock')
+    lookup = load_file(part, LOOKUP)
     lstg_start = lookup[START_TIME]
     lstg_end = lookup[END_TIME]
 

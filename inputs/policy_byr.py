@@ -3,12 +3,9 @@ from inputs.util import save_files, get_x_thread, get_x_offer_init, \
     get_ind_x
 from processing.util import extract_day_feats
 from utils import input_partition, load_file
-from constants import IDX, DAY, MONTH, BYR, CON_MULTIPLIER, \
-    POLICY_BYR, AGENT_PARTITIONS
+from constants import IDX, DAY, MONTH, BYR, CON_MULTIPLIER, POLICY_BYR
 from featnames import CON, START_TIME, EXP, DELAY, THREAD_COUNT, \
     MONTHS_SINCE_LSTG, LOOKUP
-
-AGENT = True
 
 
 def construct_x(idx=None, threads=None, offers=None,
@@ -87,10 +84,10 @@ def create_index(clock=None, offers=None, lstg_start=None):
 
 def process_inputs(part):
     # load dataframes
-    offers = load_file(part, 'x_offer', agent=AGENT)
-    threads = load_file(part, 'x_thread', agent=AGENT)
-    clock = load_file(part, 'clock', agent=AGENT)
-    lookup = load_file(part, LOOKUP, agent=AGENT)
+    offers = load_file(part, 'x_offer')
+    threads = load_file(part, 'x_thread')
+    clock = load_file(part, 'clock')
+    lookup = load_file(part, LOOKUP)
     lstg_start = lookup[START_TIME]
 
     # master index
@@ -118,9 +115,6 @@ def main():
     # extract parameters from command line
     part = input_partition()
     print('{}/{}'.format(part, POLICY_BYR))
-
-    # policy is trained on TRAIN_MODELS
-    assert part in AGENT_PARTITIONS
 
     # input dataframes, output processed dataframes
     d = process_inputs(part)

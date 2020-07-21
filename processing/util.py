@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 from compress_pickle import load
 from utils import extract_clock_feats, byr_norm, slr_norm
-from constants import FEATS_DIR, MODEL_PARTS_DIR, START, IDX, BYR, SLR, \
+from constants import FEATS_DIR, PARTS_DIR, START, IDX, BYR, SLR, \
     DAY, HOLIDAYS, MAX_DELAY_TURN
 from featnames import HOLIDAY, DOW_PREFIX, TIME_OF_DAY, AFTERNOON, \
     CLOCK_FEATS
@@ -120,7 +120,7 @@ def get_lstgs(part):
     :param str part: name of partition
     :return: list of partition-specific listings ids
     """
-    return load(MODEL_PARTS_DIR + 'partitions.pkl')[part]
+    return load(PARTS_DIR + 'partitions.pkl')[part]
 
 
 def load_feats(name, lstgs=None, fill_zero=False):

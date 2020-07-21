@@ -1,9 +1,11 @@
 import argparse
+from compress_pickle import load
 import numpy as np
 import pandas as pd
 from compress_pickle import dump
 from gensim.models import Word2Vec
 from constants import BYR, SLR, SEED, CLEAN_DIR, FEATS_DIR
+from featnames import LEAF
 
 VOCAB_SIZE = 32  # vocabulary size for embeddings
 

@@ -369,11 +369,9 @@ def add_deltas_index(deltas, events):
     return deltas
 
 
-def create_tf(path_generator=None, chunk=None):
-
+def create_tf(chunk_path=None):
     start = dt.now()
-    path = path_generator(chunk)
-    events = load(path)
+    events = load(chunk_path)
     print('{} offers'.format(len(events)))
     events[BYR] = events.index.isin(IDX[BYR], level='index')
     tf_lstg_focal = get_lstg_time_feats(events, full=False)
@@ -387,8 +385,7 @@ def main():
     res = run_func_on_chunks(
         f=create_tf,
         func_kwargs=dict(
-            path_generator=
-            lambda i: FEATS_DIR + 'chunks/{}.gz'.format(i)
+            chunk_path=lambda i: FEATS_DIR + 'chunks/{}.gz'.format(i)
         )
     )
     df = pd.concat(res).sort_index()

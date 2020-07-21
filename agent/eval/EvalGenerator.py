@@ -1,6 +1,6 @@
+import torch
 from rlenv.generate.Generator import SimulatorGenerator
 from rlenv.generate.Recorder import OutcomeRecorder
-from agent.util import load_agent_model
 from agent.models.PgCategoricalAgentModel import PgCategoricalAgentModel
 from agent.AgentComposer import AgentComposer
 from rlenv.environments.BuyerEnvironment import BuyerEnvironment
@@ -33,8 +33,12 @@ class EvalGenerator(SimulatorGenerator):
 
     def generate_agent(self):
         model = PgCategoricalAgentModel(**self.model_kwargs)
-        model_path = self.run_dir + 'params.pkl'
-        load_agent_model(model=model, model_path=model_path)
+        state_dict = torch.load(self.run_dir + 'params.pkl',
+                                map_location=torch.device('cpu'))
+        model.load_state_dict(state_dict=state_dict, strict=True)
+        for param in model.parameters(recurse=True):
+            param.requires_grad = False
+        model.eval()
         return model
 
     def generate_buyer(self):

@@ -52,7 +52,7 @@ class Recorder:
 
     def reset_sim(self):
         self.sim += 1
-        print('Simulation {}'.format(self.sim))
+        # print('Simulation {}'.format(self.sim))
 
     @staticmethod
     def print_offer(event):

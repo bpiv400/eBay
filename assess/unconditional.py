@@ -130,12 +130,13 @@ def create_outputs(threads, offers, lstgs):
 
 
 def main():
+    # lookup file
+    lookup = load_file(TEST, 'lookup')
+    lstgs = lookup.index
+
     # observed and simulated outcomes
     threads_obs, offers_obs = load_threads_offers(part=TEST, sim=False)
     threads_sim, offers_sim = load_threads_offers(part=TEST, sim=True)
-
-    # lookup file
-    lstgs = load_file(TEST, 'lookup').index
 
     # unconditional distributions
     p = dict()

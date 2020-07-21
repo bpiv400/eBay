@@ -2,15 +2,15 @@ import os
 import psutil
 import torch
 from datetime import datetime as dt
-from agent.algo.SellerPPO import SellerPPO
-from agent.algo.BuyerPPO import BuyerPPO
 from agent.EBayRunner import EBayMinibatchRl
+from agent.EBayPPO import EBayPPO
 from agent.models.SplitCategoricalPgAgent import SplitCategoricalPgAgent
+from agent.Prefs import SellerPrefs, BuyerPrefs
 from rlpyt.samplers.serial.sampler import SerialSampler
 from rlpyt.samplers.parallel.gpu.alternating_sampler import AlternatingSampler
 from rlpyt.utils.logging.context import logger_context
 from constants import AGENT_DIR, BYR, SLR
-from agent.const import FEAT_TYPE
+from agent.const import FEAT_TYPE, AGENT_STATE
 from agent.AgentComposer import AgentComposer
 from agent.models.PgCategoricalAgentModel import PgCategoricalAgentModel
 from rlenv.DefaultQueryStrategy import DefaultQueryStrategy
@@ -26,9 +26,7 @@ class RlTrainer:
     def __init__(self, **kwargs):
         # save parameters directly
         self.agent_params = kwargs['agent_params']
-        self.econ_params = kwargs['econ_params']
         self.model_params = kwargs['model_params']
-        self.ppo_params = kwargs['ppo_params']
         self.system_params = kwargs['system_params']
 
         # buyer indicator
@@ -41,6 +39,10 @@ class RlTrainer:
         # initialize composer
         self.composer = AgentComposer(agent_params=self.agent_params)
 
+        # preferences
+        pref_cls = BuyerPrefs if self.byr else SellerPrefs
+        self.prefs = pref_cls(params=kwargs['econ_params'])
+
         # rlpyt components
         self.sampler = self._generate_sampler()
         self.runner = self._generate_runner()
@@ -52,10 +54,10 @@ class RlTrainer:
 
     def _make_log_dir(self):
         if self.byr:
-            log_dir = AGENT_DIR + '{}/hist_{}'.format(
+            log_dir = AGENT_DIR + '{}/hist_{}/'.format(
                 BYR, self.agent_params[BYR_HIST])
         else:
-            log_dir = AGENT_DIR + '{}/{}'.format(
+            log_dir = AGENT_DIR + '{}/{}/'.format(
                 SLR, self.agent_params[FEAT_TYPE])
         if not os.path.isdir(log_dir):
             os.mkdir(log_dir)
@@ -97,9 +99,7 @@ class RlTrainer:
             )
 
     def _generate_algo(self):
-        algo = BuyerPPO if self.byr else SellerPPO
-        return algo(ppo_params=self.ppo_params,
-                    econ_params=self.econ_params)
+        return EBayPPO(prefs=self.prefs)
 
     def _generate_runner(self):
         agent = SplitCategoricalPgAgent(ModelCls=PgCategoricalAgentModel,
@@ -133,3 +133,8 @@ class RlTrainer:
                                 run_ID=self.run_id,
                                 snapshot_mode='last'):
                 self.itr = self.runner.train()
+
+            # delete optimization parameters
+            path = self.log_dir + 'run_{}/params.pkl'.format(self.run_id)
+            d = torch.load(path)
+            torch.save(d[AGENT_STATE], path)

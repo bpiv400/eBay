@@ -1,42 +1,44 @@
-import torch.multiprocessing as mp
-import os
 import argparse
+import os
 import gc
-import pandas as pd
-import torch
 from compress_pickle import load
 from agent.RlTrainer import RlTrainer
-from agent.const import AGENT_STATE, PARAM_DICTS, AGENT_PARAMS, SYSTEM_PARAMS
+from agent.util import save_run
+from agent.const import PARAM_DICTS
 from agent.eval.EvalGenerator import EvalGenerator
-from utils import set_gpu_workers, run_func_on_chunks, compose_args,\
-    process_chunk_worker
 from rlenv.generate.util import process_sims
-from constants import AGENT_DIR, BYR, DROPOUT, TRAIN_RL, VALIDATION, \
+from utils import set_gpu_workers, compose_args, \
+    process_chunk_worker, run_func_on_chunks
+from constants import BYR, DROPOUT, VALIDATION, \
     POLICY_BYR, POLICY_SLR, MODEL_DIR
-
-MAIN_GENERATOR = False
 
 
 def simulate(part=None, run_dir=None, agent_params=None, model_kwargs=None):
+    # directory for simulation output
+    part_dir = run_dir + '{}/'.format(part)
+    if not os.path.isdir(part_dir):
+        os.mkdir(part_dir)
+
+    # arguments for generator
     eval_kwargs = dict(
         agent_params=agent_params,
         model_kwargs=model_kwargs,
         run_dir=run_dir,
         verbose=False
     )
-    process_args = dict(
+
+    # run in parallel on chunks
+    sims = run_func_on_chunks(
+        f=process_chunk_worker,
+        func_kwargs=dict(
             part=part,
             gen_class=EvalGenerator,
             gen_kwargs=eval_kwargs
         )
-    if MAIN_GENERATOR:
-        process_chunk_worker(**process_args, chunk=1)
-    else:
-        sims = run_func_on_chunks(
-            f=process_chunk_worker,
-            func_kwargs=process_args
-        )
-        process_sims(part=part, parent_dir=run_dir, sims=sims)
+    )
+
+    # combine and process output
+    process_sims(part=part, parent_dir=run_dir, sims=sims)
 
 
 def main():
@@ -49,19 +51,9 @@ def main():
     # set gpu and cpu affinity
     set_gpu_workers(gpu=args['gpu'])
 
-    # swap in experiment parameters
-    if args['exp'] is not None:
-        print('Using parameters for experiment {}'.format(args['exp']))
-        exp_path = AGENT_DIR + 'exps.csv'
-        params = pd.read_csv(exp_path, index_col=0).loc[args['exp']].to_dict()
-        for k, v in params.items():
-            if k not in args:
-                raise RuntimeError('{} not in args'.format(k))
-            args[k] = v
-
     # add dropout
     s = load(MODEL_DIR + 'dropout.pkl')
-    args[DROPOUT] = s.loc[POLICY_BYR if args['byr'] else POLICY_SLR]
+    args[DROPOUT] = s.loc[POLICY_BYR if args[BYR] else POLICY_SLR]
 
     # print to console
     for k, v in args.items():
@@ -70,60 +62,42 @@ def main():
     # split parameters
     trainer_args = dict()
     for param_set, param_dict in PARAM_DICTS.items():
-        curr_params = dict()
-        for k in param_dict:
-            if k in args:
-                curr_params[k] = args[k]
-        trainer_args[param_set] = curr_params
+        trainer_args[param_set] = {k: args[k] for k in param_dict}
 
     # model parameters
-    model_params = {BYR: args[BYR],
-                    DROPOUT: args[DROPOUT]}
+    model_params = {BYR: args[BYR], DROPOUT: args[DROPOUT]}
     trainer_args['model_params'] = model_params
 
-    # training loop
+    # training with entropy bonus
     trainer = RlTrainer(**trainer_args)
     trainer.train()
 
-    # when logging, simulate and reconfigure outputs
+    # extract path information and delete trainer
+    log_dir = trainer.log_dir
+    run_id = trainer.run_id
+    del trainer
+    gc.collect()
+
+    # re-train with cross_entropy
+
+    # when logging, simulate
     if args['log']:
-        run_dir = trainer.log_dir + '/run_{}/'.format(trainer.run_id)
-
-        # drop optimization parameters
-        path = run_dir + 'params.pkl'
-        d = torch.load(path)
-        torch.save(d[AGENT_STATE], path)
-
-        # save run parameters
-        run_path = trainer.log_dir + 'runs.csv'
-        if os.path.isfile(run_path):
-            df = pd.read_csv(run_path, index_col=0)
-        else:
-            df = pd.DataFrame(index=pd.Index([], name='run_id'))
-
-        exclude = list({**AGENT_PARAMS, **SYSTEM_PARAMS}.keys())
-        exclude += [DROPOUT]
-        exclude.remove('batch_size')
-        for k, v in args.items():
-            if k not in exclude:
-                df.loc[trainer.run_id, k] = v
-        df.to_csv(run_path)
-
-        # housekeeping
-        del trainer
-        del d
-        gc.collect()
+        run_dir = log_dir + 'run_{}/'.format(run_id)
 
         # simulate outcomes
-        for part in [TRAIN_RL, VALIDATION]:
-            os.mkdir(run_dir + '{}/'.format(part))
-            print('Simulating {}...'.format(part))
-            simulate(part=part,
-                     run_dir=run_dir,
-                     model_kwargs=model_params,
-                     agent_params=trainer_args['agent_params'])
+        simulate(part=VALIDATION,
+                 run_dir=run_dir,
+                 model_kwargs=trainer_args['model_params'],
+                 agent_params=trainer_args['agent_params'])
+
+        # TODO: evaluate simulations
+
+
+        # save run parameters
+        save_run(log_dir=log_dir,
+                 run_id=run_id,
+                 args=trainer_args['econ_params'])
 
 
 if __name__ == '__main__':
-    mp.set_start_method('spawn')
     main()

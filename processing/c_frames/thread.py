@@ -1,7 +1,7 @@
 from compress_pickle import dump
 import numpy as np
 import pandas as pd
-from constants import HIST_QUANTILES, MODEL_PARTS_DIR, TRAIN_MODELS, VALIDATION, TEST
+from constants import HIST_QUANTILES, PARTS_DIR
 from featnames import BYR_HIST, MONTHS_SINCE_LSTG, START_DATE
 from processing.util import get_lstgs, load_feats
 from utils import get_months_since_lstg, input_partition
@@ -32,11 +32,10 @@ def create_x_thread(lstgs=None):
 
 def main():
 	part = input_partition()
-	assert part in [TRAIN_MODELS, VALIDATION, TEST]
 	print('{}/x_thread'.format(part))
 
 	x_thread = create_x_thread(lstgs=get_lstgs(part))
-	dump(x_thread, MODEL_PARTS_DIR + '{}/x_thread.gz'.format(part))
+	dump(x_thread, PARTS_DIR + '{}/x_thread.gz'.format(part))
 
 
 if __name__ == "__main__":

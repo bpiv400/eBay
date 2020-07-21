@@ -2,8 +2,7 @@ import numpy as np
 from torch.utils.data import Dataset
 from compress_pickle import load
 from utils import load_file, load_featnames
-from constants import INPUT_DIR, BYR_DROP, DISCRIM_MODELS, \
-    POLICY_MODELS, POLICY_BYR
+from constants import INPUT_DIR, BYR_DROP, POLICY_BYR
 from featnames import X_LSTG
 
 
@@ -30,8 +29,7 @@ class EBayDataset(Dataset):
         self.N = len(self.d['y'])
 
     def _get_x_lstg(self):
-        agent = self.name in DISCRIM_MODELS + POLICY_MODELS
-        x_lstg = load_file(self.part, X_LSTG, agent=agent)
+        x_lstg = load_file(self.part, X_LSTG)
 
         if self.name == POLICY_BYR:
             del x_lstg['slr']  # byr does not observe slr features

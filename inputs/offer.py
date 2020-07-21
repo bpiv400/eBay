@@ -6,9 +6,7 @@ from utils import get_remaining, load_file
 from constants import IDX, DAY, BYR, SLR, SIM_PARTITIONS, \
     CON_MULTIPLIER, MAX_DELAY_TURN, INTERVAL_TURN, INTERVAL_CT_TURN
 from featnames import CON, NORM, SPLIT, MSG, AUTO, EXP, REJECT, DAYS, \
-    DELAY, INT_REMAINING, TIME_FEATS
-
-AGENT = False
+    DELAY, INT_REMAINING, TIME_FEATS, LOOKUP
 
 
 def get_y_con(df, turn):
@@ -106,10 +104,10 @@ def get_y_delay(df, turn):
 
 
 def process_inputs(part, outcome, turn):
-    threads = load_file(part, 'x_thread', agent=AGENT)
-    offers = load_file(part, 'x_offer', agent=AGENT)
-    clock = load_file(part, 'clock', agent=AGENT)
-    lookup = load_file(part, 'lookup', agent=AGENT)
+    threads = load_file(part, 'x_thread')
+    offers = load_file(part, 'x_offer')
+    clock = load_file(part, 'clock')
+    lookup = load_file(part, LOOKUP)
     lstg_start = lookup.start_time
 
     # subset to turn

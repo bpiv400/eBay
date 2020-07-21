@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from constants import TRAIN_RL, AGENT_PARTS_DIR
+from constants import TRAIN_RL, PARTS_DIR
 from featnames import LSTG
 from rlenv.util import load_chunk
 
@@ -116,7 +116,7 @@ class TrainLoader(LstgLoader):
 
     @staticmethod
     def _get_train_file_path(rank=None):
-        return AGENT_PARTS_DIR + '{}/chunks/{}.gz'.format(TRAIN_RL, rank)
+        return PARTS_DIR + '{}/chunks/{}.gz'.format(TRAIN_RL, rank)
 
     def next_lstg(self):
         self.verify_init()

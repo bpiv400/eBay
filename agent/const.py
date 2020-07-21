@@ -2,6 +2,11 @@ from constants import HIST_QUANTILES, POLICY_BYR, BYR
 from featnames import BYR_HIST
 from utils import load_featnames
 
+# optimization parameters
+LR = 1e-4
+RATIO_CLIP = 0.1
+ENTROPY_BONUS = 0.1
+
 # state dictionaries
 AGENT_STATE = 'agent_state_dict'
 OPTIM_STATE = 'optimizer_state_dict'
@@ -28,11 +33,6 @@ ECON_PARAMS = {'monthly_discount': {'type': float, 'default': .995},
                'action_discount': {'type': float, 'default': 1.},
                'action_cost': {'type': float, 'default': 0.}}
 
-PPO_PARAMS = {'entropy_coeff': {'type': float, 'default': .01},
-              'use_cross_entropy': {'action': 'store_true'},
-              'ratio_clip': {'type': float, 'default': .1},
-              'lr': {'type': float, 'default': .0002}}
-
 SYSTEM_PARAMS = {'gpu': {'type': int, 'default': 0},
                  'log': {'action': 'store_true'},
                  'exp': {'type': int},
@@ -42,7 +42,6 @@ SYSTEM_PARAMS = {'gpu': {'type': int, 'default': 0},
 
 PARAM_DICTS = {'agent_params': AGENT_PARAMS,
                'econ_params': ECON_PARAMS,
-               'ppo_params': PPO_PARAMS,
                'system_params': SYSTEM_PARAMS}
 
 # run for this many epochs

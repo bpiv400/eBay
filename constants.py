@@ -26,8 +26,7 @@ elif 'Darwin' in platform():  # Etan's Mac laptop
 else:  # cluster and AWS
     PREFIX = os.path.expanduser('~/weka/eBay')
 
-MODEL_PARTS_DIR = '{}/partitions/models/'.format(PREFIX)
-AGENT_PARTS_DIR = '{}/partitions/agent/'.format(PREFIX)
+PARTS_DIR = '{}/partitions/'.format(PREFIX)
 INDEX_DIR = '{}/index/'.format(PREFIX)
 PCTILE_DIR = '{}/pctile/'.format(PREFIX)
 CLEAN_DIR = '{}/clean/'.format(PREFIX)
@@ -56,7 +55,7 @@ SIM_PARTITIONS = [TRAIN_MODELS, VALIDATION, TEST]
 AGENT_PARTITIONS = [TRAIN_RL, VALIDATION, TEST]
 
 # for splitting data
-SHARES = {TRAIN_MODELS: 0.6, TRAIN_RL: 0.16, VALIDATION: 0.04}
+SHARES = {TRAIN_MODELS: 0.75, TRAIN_RL: 0.1, VALIDATION: 0.05}
 
 # delete activity after lstg is open MAX_DAYS
 MAX_DAYS = 31
@@ -112,13 +111,10 @@ OFFER_MODELS = DELAY_MODELS + CON_MODELS + MSG_MODELS
 MODELS = ARRIVAL_MODELS + OFFER_MODELS
 
 # censored models
-CENSORED_MODELS = [FIRST_ARRIVAL_MODEL, INTERARRIVAL_MODEL] + DELAY_MODELS
+CENSORED_MODELS = [INTERARRIVAL_MODEL] + DELAY_MODELS
 
 # discriminator models
-DISCRIM_LISTINGS = 'listings'
-DISCRIM_THREADS = 'threads'
-DISCRIM_THREADS_NO_TF = 'threads_no_tf'
-DISCRIM_MODELS = [DISCRIM_LISTINGS, DISCRIM_THREADS, DISCRIM_THREADS_NO_TF]
+DISCRIM_MODEL = 'discrim'
 
 # policy initializations
 AGENTS = [SLR, BYR]
@@ -144,9 +140,6 @@ LISTING_FEE = .03
 # meta categories with sale fees != .09 * price
 META_7 = [11116, 619]
 META_6 = [58058, 1249, 625, 293, 15032]
-
-# threshold for likelihood of no arrivals
-NO_ARRIVAL_CUTOFF = .50 ** (1.0 / 12)
 
 # fixed random seed
 SEED = 123456

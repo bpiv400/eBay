@@ -7,7 +7,7 @@ from rlpyt.utils.tensor import valid_mean
 from rlpyt.utils.buffer import buffer_to
 from rlpyt.utils.collections import namedarraytuple
 from agent.models.HumanAgentModel import HumanAgentModel
-from agent.const import STOPPING_EPOCHS
+from agent.const import STOPPING_EPOCHS, LR, RATIO_CLIP, ENTROPY_BONUS
 
 LossInputs = namedarraytuple("LossInputs",
                              ["agent_inputs",
@@ -20,11 +20,12 @@ OptInfo = namedtuple("OptInfo",
                      ["DiscountedReturn",
                       "Advantage",
                       "Entropy",
+                      "KL",
                       "PolicyLoss",
                       "ValueError"])
 
 
-class CrossEntropyPPO:
+class EBayPPO:
     """
     Swaps entropy bonus with cross-entropy penalty, where cross-entropy
     is calculated using the policy from the initialized agent.
@@ -33,28 +34,18 @@ class CrossEntropyPPO:
     bootstrap_value = True
     opt_info_fields = tuple(f for f in OptInfo._fields)
 
-    def __init__(
-            self,
-            entropy_coeff=None,
-            lr=None,
-            ratio_clip=None,
-            use_cross_entropy=None,
-            byr=None
-    ):
+    def __init__(self, prefs=None, kl_penalty=None):
         # save parameters to self
-        self.entropy_coeff = entropy_coeff
-        self.lr = lr
-        self.ratio_clip = ratio_clip
-        self.use_cross_entropy = use_cross_entropy
+        self.prefs = prefs
+        self.kl_penalty = kl_penalty
+
+        # for cross-entropy
+        self.human = HumanAgentModel(byr=prefs.byr).to('cuda')
 
         # parameters to be defined later
         self.agent = None
-        self._optimizer_value = None
-        self._optimizer_policy = None
-
-        # human agent
-        if self.use_cross_entropy:
-            self._human = HumanAgentModel(byr=byr).to('cuda')
+        self._optim_value = None
+        self._optim_policy = None
 
         # count number of updates
         self.update_counter = 0
@@ -69,10 +60,8 @@ class CrossEntropyPPO:
         self.agent = agent
 
         # optimizers
-        self._optimizer_value = Adam(self.agent.value_parameters(),
-                                     lr=self.lr)
-        self._optimizer_policy = Adam(self.agent.policy_parameters(),
-                                      lr=self.lr)
+        self._optim_value = Adam(self.agent.value_parameters(), lr=LR)
+        self._optim_policy = Adam(self.agent.policy_parameters(), lr=LR)
 
     @staticmethod
     def valid_from_done(done):
@@ -85,10 +74,7 @@ class CrossEntropyPPO:
         done_max, _ = torch.max(done_count, dim=0)
         valid = torch.abs(done_count - done_max) + done
         valid = torch.clamp(valid, max=1)
-        return valid
-
-    def discount_return(self, reward=None, done=None, info=None):
-        raise NotImplementedError()
+        return valid.bool()
 
     def process_returns(self, samples):
         """
@@ -101,9 +87,9 @@ class CrossEntropyPPO:
         done = done.type(reward.dtype)
 
         # time and/or action discounting
-        return_ = self.discount_return(reward=reward,
-                                       done=done,
-                                       info=info)
+        return_ = self.prefs.discount_return(reward=reward,
+                                             done=done,
+                                             info=info)
         value = samples.agent.agent_info.value
         advantage = return_ - value
 
@@ -130,9 +116,8 @@ class CrossEntropyPPO:
         )
         agent_inputs = buffer_to(agent_inputs, device=self.agent.device)
 
-        # TODO: remove? condition appears to be False
         if hasattr(self.agent, "update_obs_rms"):
-            self.agent.update_obs_rms(agent_inputs.observation)
+            raise NotImplementedError()
 
         # extract sample components and put them in LossInputs
         return_, advantage, valid = self.process_returns(samples)
@@ -148,34 +133,35 @@ class CrossEntropyPPO:
         # initialize opt_info with return and advantange
         opt_info = OptInfo(*([] for _ in range(len(OptInfo._fields))))
         opt_info.DiscountedReturn.append(
-            return_[valid.bool()].numpy())
+            return_[valid].numpy())
         opt_info.Advantage.append(
-            advantage[valid.bool()].numpy())
+            advantage[valid].numpy())
 
         # zero gradients
-        self._optimizer_value.zero_grad()
-        self._optimizer_policy.zero_grad()
+        self._optim_value.zero_grad()
+        self._optim_policy.zero_grad()
 
         # loss/error
         T, B = samples.env.reward.shape[:2]
         idxs = np.arange(T * B)
         T_idxs = idxs % T
         B_idxs = idxs // T
-        policy_loss, value_error, entropy = self.loss(
-            *loss_inputs[T_idxs, B_idxs])
+        policy_loss, value_error, entropy, kl = \
+            self.loss(*loss_inputs[T_idxs, B_idxs])
 
         # policy step
         policy_loss.backward()
-        self._optimizer_policy.step()
+        self._optim_policy.step()
 
         # value step
         value_error.backward()
-        self._optimizer_value.step()
+        self._optim_value.step()
 
         # save for logging
         opt_info.PolicyLoss.append(policy_loss.item())
         opt_info.ValueError.append(value_error.item())
         opt_info.Entropy.append(entropy)
+        opt_info.KL.append(kl)
 
         # increment counter and set complete flag
         self.update_counter += 1
@@ -184,14 +170,8 @@ class CrossEntropyPPO:
 
         return opt_info
 
-    @staticmethod
-    def _mean_kl(p, q, valid=None, eps=1e-8):
-        kl = torch.sum(p * (torch.log(p + eps) - torch.log(q + eps)), dim=-1)
-        return valid_mean(kl, valid)
-
-    @staticmethod
-    def _entropy(p, eps=1e-8):
-        return -torch.sum(p * torch.log(p + eps), dim=-1)
+    def _get_entropy_loss(self, pi_new=None, valid=None):
+        raise NotImplementedError()
 
     def loss(self, agent_inputs, action, return_, advantage, valid, pi_old):
         """
@@ -209,36 +189,49 @@ class CrossEntropyPPO:
                                                          old_dist_info=pi_old,
                                                          new_dist_info=pi_new)
         surr_1 = ratio * advantage
-        clipped_ratio = torch.clamp(ratio, 1. - self.ratio_clip,
-                                    1. + self.ratio_clip)
-        surr_2 = clipped_ratio * advantage
+        clipped = torch.clamp(ratio, 1. - RATIO_CLIP, 1. + RATIO_CLIP)
+        surr_2 = clipped * advantage
         surrogate = torch.min(surr_1, surr_2)
         pi_loss = - valid_mean(surrogate, valid)
 
         # loss from value estimation
         value_error = valid_mean(0.5 * (value - return_) ** 2, valid)
 
-        # calculate entropy for each action
-        entropy = self._entropy(pi_new.prob)[valid.bool()]
+        # entropy
+        entropy = self._entropy(p=pi_new.prob, valid=valid)
 
-        # cross-entropy loss
-        if self.use_cross_entropy:
-            pi_0 = self._human.get_policy(*agent_inputs)
-            cross_entropy = self._mean_kl(pi_0.to('cpu'), pi_new.prob, valid)
-            entropy_loss = self.entropy_coeff * cross_entropy
+        # cross entropy
+        pi_0 = self.human.get_policy(agent_inputs.observation).to('cpu')
+        kl = self._cross_entropy(p=pi_0, q=pi_new.prob, valid=valid)
 
-        # entropy bonus
+        # (cross-)entropy loss
+        if self.kl_penalty is not None:
+            entropy_loss = self.kl_penalty * kl.mean()
         else:
-            entropy_loss = - self.entropy_coeff * entropy.mean()
+            entropy_loss = - ENTROPY_BONUS * entropy.mean()
 
         # total loss
         policy_loss = pi_loss + entropy_loss
 
         # loss values and statistics to record
-        return policy_loss, value_error, entropy.detach().numpy()
+        entropy = entropy.detach().numpy()
+        kl = kl.detach().numpy()
+        return policy_loss, value_error, entropy, kl
 
     def optim_state_dict(self):
         return {
-            'value': self._optimizer_value.state_dict(),
-            'policy': self._optimizer_policy.state_dict()
+            'value': self._optim_value.state_dict(),
+            'policy': self._optim_policy.state_dict()
         }
+
+    @staticmethod
+    def _entropy(p=None, valid=None, eps=1e-8):
+        entropy = -torch.sum(p * torch.log(p + eps), dim=-1)
+        entropy = entropy[valid]
+        return entropy
+
+    @staticmethod
+    def _cross_entropy(p=None, q=None, valid=None, eps=1e-8):
+        kl = torch.sum(p * (torch.log(p + eps) - torch.log(q + eps)), dim=-1)
+        kl = kl[valid]
+        return kl

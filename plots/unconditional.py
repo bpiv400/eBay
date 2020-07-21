@@ -11,10 +11,12 @@ from plots.util import continuous_pdf, cdf_plot, survival_plot, \
 def construct_df(p, key, turn=None):
     if turn is None:
         return pd.concat([p[SIM][key].rename(SIM),
-                          p[OBS][key].rename(OBS)], axis=1)
+                          p[OBS][key].rename(OBS)],
+                         axis=1, sort=True)
     else:
         return pd.concat([p[SIM][turn][key].rename(SIM),
-                          p[OBS][turn][key].rename(OBS)], axis=1)
+                          p[OBS][turn][key].rename(OBS)],
+                         axis=1, sort=True)
 
 
 def draw_thread_offer(p, suffix=''):

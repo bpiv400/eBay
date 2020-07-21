@@ -5,7 +5,7 @@ import torch
 import numpy as np
 from agent.const import FEAT_TYPE, ALL_FEATS, AGENT_PARAMS
 from agent.util import get_agent_name
-from constants import TURN_FEATS, BYR, SLR, AGENT_PARTS_DIR, TRAIN_RL
+from constants import TURN_FEATS, BYR, SLR, PARTS_DIR, TRAIN_RL
 from featnames import OUTCOME_FEATS, MONTHS_SINCE_LSTG, BYR_HIST, \
     TIME_FEATS, CLOCK_FEATS, THREAD_COUNT
 from rlenv.Composer import Composer
@@ -18,7 +18,7 @@ from utils import load_sizes, load_featnames, compose_args
 class AgentComposer(Composer):
     def __init__(self, agent_params=None):
         # create columns and initialize Composer class
-        chunk_path = AGENT_PARTS_DIR + '{}/chunks/1.gz'.format(TRAIN_RL)
+        chunk_path = PARTS_DIR + '{}/chunks/1.gz'.format(TRAIN_RL)
         cols = load_chunk(input_path=chunk_path)[0].columns
         super().__init__(cols)
         self.agent_params = agent_params

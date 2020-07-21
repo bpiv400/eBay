@@ -3,7 +3,7 @@ import pandas as pd
 from processing.util import collect_date_clock_feats, \
     get_days_delay, get_norm, get_con, get_lstgs, load_feats
 from utils import is_split, input_partition
-from constants import MODEL_PARTS_DIR, SLR, IDX, TRAIN_MODELS, VALIDATION, TEST
+from constants import PARTS_DIR, SLR, IDX
 from featnames import DAYS, DELAY, CON, NORM, SPLIT, MSG, REJECT, \
     AUTO, EXP, TIME_FEATS, START_PRICE
 
@@ -56,12 +56,11 @@ def create_x_offer(lstgs=None):
 
 def main():
     part = input_partition()
-    assert part in [TRAIN_MODELS, VALIDATION, TEST]
     print('{}/x_offer'.format(part))
 
     x_offer, clock = create_x_offer(lstgs=get_lstgs(part))
-    dump(x_offer, MODEL_PARTS_DIR + '{}/x_offer.gz'.format(part))
-    dump(clock, MODEL_PARTS_DIR + '{}/clock.gz'.format(part))
+    dump(x_offer, PARTS_DIR + '{}/x_offer.gz'.format(part))
+    dump(clock, PARTS_DIR + '{}/clock.gz'.format(part))
 
 
 if __name__ == "__main__":

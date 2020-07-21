@@ -9,8 +9,8 @@ import numpy as np
 from compress_pickle import load
 from nets.FeedForward import FeedForward
 from constants import DAY, MONTH, SPLIT_PCTS, INPUT_DIR, \
-    MODEL_DIR, META_6, META_7, PARTITIONS, MODEL_PARTS_DIR, \
-    MAX_DELAY_TURN, MAX_DELAY_ARRIVAL, NUM_CHUNKS, AGENT_PARTS_DIR
+    MODEL_DIR, META_6, META_7, PARTITIONS, PARTS_DIR, \
+    MAX_DELAY_TURN, MAX_DELAY_ARRIVAL, NUM_CHUNKS
 from featnames import DELAY, EXP, X_LSTG
 
 
@@ -244,17 +244,15 @@ def init_optional_arg(kwargs=None, name=None, default=None):
         kwargs[name] = default
 
 
-def load_file(part, x, agent=None):
+def load_file(part, x):
     """
     Loads file from partitions directory.
     :param str part: name of partition
     :param str x: name of file
-    :param bool agent: use agent files if True
     :return: dataframe
     """
-    folder = AGENT_PARTS_DIR if agent else MODEL_PARTS_DIR
     suffix = 'pkl' if x == X_LSTG else 'gz'
-    return load('{}{}/{}.{}'.format(folder, part, x, suffix))
+    return load(PARTS_DIR + '{}/{}.{}'.format(part, x, suffix))
 
 
 def drop_censored(df):
@@ -267,10 +265,17 @@ def drop_censored(df):
     return df[~censored]
 
 
-def set_gpu_workers(gpu=None):
+def set_gpu_workers(gpu=None, spawn=True):
     """
     Sets the GPU index and the CPU affinity.
+    :param int gpu: index of cuda device.
+    :param bool spawn: use spawn context for multiprocessing.
     """
+    # use spawn for multiprocessing
+    if spawn:
+        torch.multiprocessing.set_start_method('spawn')
+
+    # set gpu
     torch.cuda.set_device(gpu)
     print('Training on cuda:{}'.format(gpu))
 

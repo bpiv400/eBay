@@ -1,10 +1,9 @@
 import numpy as np
 import pandas as pd
 from compress_pickle import load, dump
-from utils import get_remaining
 from inputs.const import NUM_OUT
 from constants import INPUT_DIR, INDEX_DIR, VALIDATION, \
-    IDX, BYR, DISCRIM_MODELS, HIST_QUANTILES, POLICY_BYR, BYR_DROP
+    IDX, BYR, DISCRIM_MODEL, HIST_QUANTILES, POLICY_BYR, BYR_DROP
 from featnames import CLOCK_FEATS, OUTCOME_FEATS, BYR_HIST, \
     SPLIT, MSG, AUTO, EXP, REJECT, DAYS, DELAY, TIME_FEATS, THREAD_COUNT
 
@@ -65,24 +64,6 @@ def get_arrival_times(clock=None, lstg_start=None, lstg_end=None, append_last=Fa
                               level=-1, inplace=True)
 
     return arrivals.rename('arrival')
-
-
-def calculate_remaining(lstg_start=None, clock=None, idx=None):
-    # start of delay period
-    delay_start = clock.groupby(
-        ['lstg', 'thread']).shift().dropna().astype('int64')
-    # remaining is turn-specific
-    remaining = pd.Series(1.0, index=idx)
-    turns = idx.unique(level='index')
-    for turn in turns:
-        if turn > 1:
-            turn_start = delay_start.xs(turn, level='index').reindex(index=idx)
-            mask = idx.get_level_values(level='index') == turn
-            remaining.loc[mask] = get_remaining(
-                lstg_start, turn_start)
-    # error checking
-    assert np.all(remaining > 0) and np.all(remaining <= 1)
-    return remaining
 
 
 def assert_zero(offer, cols):
@@ -176,7 +157,7 @@ def save_featnames_and_sizes(x=None, m=None):
 
         # for offer models
         if 'offer1' in x:
-            if m in DISCRIM_MODELS:
+            if m == DISCRIM_MODEL:
                 for i in range(1, 8):
                     k = 'offer{}'.format(i)
                     featnames[k] = list(x[k].columns)

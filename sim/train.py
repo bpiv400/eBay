@@ -19,7 +19,7 @@ def main():
     args = parser.parse_args()
 
     # set gpu and cpu affinity
-    set_gpu_workers(args.gpu)
+    set_gpu_workers(args.gpu, spawn=False)
 
     # initialize trainer
     trainer = SimTrainer(name=args.name)

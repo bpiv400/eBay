@@ -10,12 +10,10 @@ from torch.distributions.categorical import Categorical
 from torch.distributions.bernoulli import Bernoulli
 from constants import INPUT_DIR
 from featnames import LOOKUP, X_LSTG, P_ARRIVAL
-from constants import MODEL_PARTS_DIR, DAY, ARRIVAL_MODELS, \
-    MAX_DELAY_TURN, AGENT_PARTS_DIR
+from constants import PARTS_DIR, DAY, ARRIVAL_MODELS, MAX_DELAY_TURN
 from rlenv.const import (SIM_CHUNKS_DIR, SIM_VALS_DIR, OFFER_MAPS,
                          SIM_DISCRIM_DIR, DATE_FEATS, NORM_IND)
-from utils import extract_clock_feats, is_split, slr_norm,\
-    byr_norm
+from utils import extract_clock_feats, is_split, slr_norm, byr_norm
 
 
 def model_str(model_name, turn=None):
@@ -164,15 +162,11 @@ def get_checkpoint_path(part_dir, chunk_num, discrim=False):
     return '{}chunks/{}_check_{}.gz'.format(part_dir, chunk_num, insert)
 
 
-def get_env_sim_dir(part, model=False):
+def get_env_sim_dir(part):
     """
     Gets path to root directory of partition
     """
-    if model:
-        prefix = MODEL_PARTS_DIR
-    else:
-        prefix = AGENT_PARTS_DIR
-    return  '{}{}/'.format(prefix, part)
+    return PARTS_DIR + '{}/'.format(part)
 
 
 def get_env_sim_subdir(part=None, base_dir=None, chunks=False,
@@ -347,5 +341,3 @@ def need_msg(con, slr=None):
         return 0 < con < 1
     else:
         return con < 1
-
-

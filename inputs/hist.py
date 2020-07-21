@@ -3,13 +3,11 @@ from utils import load_file, input_partition
 from constants import BYR_HIST_MODEL
 from featnames import CLOCK_FEATS, THREAD_COUNT, BYR_HIST, LOOKUP
 
-AGENT = False
-
 
 def process_inputs(part):
-	lookup = load_file(part, LOOKUP, agent=AGENT)
-	threads = load_file(part, 'x_thread', agent=AGENT)
-	offers = load_file(part, 'x_offer', agent=AGENT)
+	lookup = load_file(part, LOOKUP)
+	threads = load_file(part, 'x_thread')
+	offers = load_file(part, 'x_offer')
 
 	# thread features
 	x_offer = offers.xs(1, level='index')

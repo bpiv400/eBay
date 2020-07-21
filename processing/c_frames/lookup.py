@@ -1,6 +1,6 @@
 from compress_pickle import dump
 import pandas as pd
-from constants import MODEL_PARTS_DIR, TRAIN_MODELS, VALIDATION, TEST
+from constants import PARTS_DIR
 from featnames import LOOKUP, META, START_TIME, END_TIME, START_PRICE, \
     DEC_PRICE, ACC_PRICE, START_DATE
 from processing.util import get_lstgs, load_feats
@@ -24,11 +24,10 @@ def create_lookup(lstgs=None):
 
 def main():
     part = input_partition()
-    assert part in [TRAIN_MODELS, VALIDATION, TEST]
     print('{}/lookup'.format(part))
 
     lookup = create_lookup(lstgs=get_lstgs(part))
-    dump(lookup, MODEL_PARTS_DIR + '{}/{}.gz'.format(part, LOOKUP))
+    dump(lookup, PARTS_DIR + '{}/{}.gz'.format(part, LOOKUP))
 
 
 if __name__ == "__main__":

@@ -19,9 +19,10 @@ class HumanAgentModel(torch.nn.Module):
         # load pretrained model
         init_dict = load_state_dict(name)
         self.net.load_state_dict(init_dict, strict=True)
-
-    def get_policy(self, input_dict=None):
         self.eval()
+
+    def get_policy(self, observation=None):
+        input_dict = observation._asdict()
 
         # processing for single observations
         if input_dict['lstg'].dim() == 1:
@@ -29,4 +30,5 @@ class HumanAgentModel(torch.nn.Module):
                 input_dict[elem_name] = elem.unsqueeze(0)
 
         logits = self.net(input_dict).squeeze()
-        return logits
+        pi = torch.softmax(logits, dim=-1)
+        return pi

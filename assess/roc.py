@@ -4,7 +4,7 @@ import pandas as pd
 from sim.EBayDataset import EBayDataset
 from assess.util import get_model_predictions
 from assess.const import ROC_DIM
-from constants import TEST, DISCRIM_MODELS, PLOT_DIR
+from constants import TEST, DISCRIM_THREADS, PLOT_DIR
 
 
 def get_roc(p0, p1):
@@ -19,23 +19,17 @@ def get_roc(p0, p1):
 
 
 def main():
-	roc = dict()
+	# initialize dataset
+	data = EBayDataset(TEST, DISCRIM_THREADS)
+	y = data.d['y']
 
-	# loop over discriminator models
-	for m in DISCRIM_MODELS:
-		print(m)
+	# model predictions
+	p, _ = get_model_predictions(DISCRIM_THREADS, data)
+	p = p[:, 1]
+	p0, p1 = p[y == 0], p[y == 1]
 
-		# initialize dataset
-		data = EBayDataset(TEST, m)
-		y = data.d['y']
-
-		# model predictions
-		p, _ = get_model_predictions(m, data)
-		p = p[:, 1]
-		p0, p1 = p[y == 0], p[y == 1]
-
-		# calculate roc curve
-		roc[m] = get_roc(p0, p1).rename(m)
+	# calculate roc curve
+	roc = get_roc(p0, p1).rename('roc')
 
 	# save predictions
 	dump(roc, PLOT_DIR + 'roc.pkl')
