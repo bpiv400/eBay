@@ -154,9 +154,12 @@ class Composer:
     @staticmethod
     def _build_lstg_vector(model_name, sources=None):
         if model_name == INTERARRIVAL_MODEL:
-            solo_feats = np.array([sources[MONTHS_SINCE_LSTG], sources[MONTHS_SINCE_LAST],
+            solo_feats = np.array([sources[MONTHS_SINCE_LSTG],
+                                   sources[MONTHS_SINCE_LAST],
                                    sources[THREAD_COUNT]])
-            lstg = np.concatenate([sources[LSTG_MAP], sources[CLOCK_MAP], solo_feats])
+            lstg = np.concatenate([sources[LSTG_MAP],
+                                   sources[CLOCK_MAP],
+                                   solo_feats])
         elif model_name == FIRST_ARRIVAL_MODEL:
             # append nothing
             lstg = sources[LSTG_MAP]

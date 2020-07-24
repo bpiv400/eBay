@@ -12,7 +12,10 @@ class Prefs:
     def discount_return(self):
         raise NotImplementedError()
 
-    def _get_return(self):
+    def get_return(self):
+        raise NotImplementedError()
+
+    def get_max_return(self):
         raise NotImplementedError()
 
 
@@ -52,15 +55,16 @@ class BuyerPrefs(Prefs):
             net_value = net_value * (1 - done[t]) + reward[t] * done[t]
 
             # discounted sale proceeds
-            return_[t] += self._get_return(net_value=net_value,
-                                           action_diff=action_diff)
+            return_[t] += self.get_return(net_value=net_value,
+                                          action_diff=action_diff)
 
         # normalize by start_price
-        return_ /= item_value
+        max_return = self.get_max_return(item_value=item_value)
+        return_ /= max_return
 
         return return_
 
-    def _get_return(self, net_value=None, action_diff=None):
+    def get_return(self, net_value=None, action_diff=None):
         """
         Discounts proceeds from sale and listing fees paid.
         :param net_value: value less price paid; 0 if no sale
@@ -70,6 +74,14 @@ class BuyerPrefs(Prefs):
         net_value *= self.action_discount ** action_diff
         net_value -= self.action_cost * action_diff
         return net_value
+
+    def get_max_return(self, item_value=None):
+        """
+        Return's buyer's valuation
+        :param float item_value: buyer's valuation
+        :return: float
+        """
+        return item_value
 
 
 class SellerPrefs(Prefs):
@@ -112,20 +124,20 @@ class SellerPrefs(Prefs):
             sale_proceeds = sale_proceeds * (1 - done[t]) + reward[t] * done[t]
 
             # discounted sale proceeds
-            return_[t] += self._get_return(months_to_sale=months_to_sale,
-                                           months_since_start=months[t],
-                                           sale_proceeds=sale_proceeds,
-                                           action_diff=action_diff)
+            return_[t] += self.get_return(months_to_sale=months_to_sale,
+                                          months_since_start=months[t],
+                                          sale_proceeds=sale_proceeds,
+                                          action_diff=action_diff)
 
         # normalize
-        max_return = self._get_max_return(months_since_start=months,
-                                          bin_proceeds=bin_proceeds)
+        max_return = self.get_max_return(months_since_start=months,
+                                         bin_proceeds=bin_proceeds)
         return_ /= max_return
 
         return return_
 
-    def _get_return(self, months_to_sale=None, months_since_start=None,
-                    sale_proceeds=None, action_diff=None):
+    def get_return(self, months_to_sale=None, months_since_start=None,
+                   sale_proceeds=None, action_diff=None):
         """
         Discounts proceeds from sale and listing fees paid.
         :param months_to_sale: months from listing start to sale
@@ -149,7 +161,7 @@ class SellerPrefs(Prefs):
         sale_proceeds *= self.action_discount ** action_diff
         return sale_proceeds - costs
 
-    def _get_max_return(self, months_since_start=None, bin_proceeds=None):
+    def get_max_return(self, months_since_start=None, bin_proceeds=None):
         """
         Discounts proceeds from sale and listing fees paid.
         :param months_since_start: months since start of listing

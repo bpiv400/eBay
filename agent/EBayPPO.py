@@ -17,7 +17,8 @@ LossInputs = namedarraytuple("LossInputs",
                               "valid",
                               "old_dist_info"])
 OptInfo = namedtuple("OptInfo",
-                     ["DiscountedReturn",
+                     ["ActionsPerTraj",
+                      "DiscountedReturn",
                       "Advantage",
                       "Entropy",
                       "KL",
@@ -74,29 +75,8 @@ class EBayPPO:
         done_max, _ = torch.max(done_count, dim=0)
         valid = torch.abs(done_count - done_max) + done
         valid = torch.clamp(valid, max=1)
+        valid[done.bool()] = 0.  # last obs of traj doesn't have action
         return valid.bool()
-
-    def process_returns(self, samples):
-        """
-        Compute bootstrapped returns and advantages from a minibatch of
-        samples. Discounts returns and masks out invalid samples.
-        """
-        # break out samples
-        env = samples.env
-        reward, done, info = (env.reward, env.done, env.env_info)
-        done = done.type(reward.dtype)
-
-        # time and/or action discounting
-        return_ = self.prefs.discount_return(reward=reward,
-                                             done=done,
-                                             info=info)
-        value = samples.agent.agent_info.value
-        advantage = return_ - value
-
-        # zero out steps from unfinished trajectories
-        valid = self.valid_from_done(done)
-
-        return return_, advantage, valid
 
     def optimize_agent(self, samples):
         """
@@ -108,19 +88,33 @@ class EBayPPO:
         if self.agent.recurrent:
             raise NotImplementedError()
 
-        # Move agent inputs to device once, index there.
+        # Move agent inputs to device once, index there
+        env = samples.env
         agent_inputs = AgentInputs(
-            observation=samples.env.observation,
+            observation=env.observation,
             prev_action=samples.agent.prev_action,
-            prev_reward=samples.env.prev_reward,
+            prev_reward=env.prev_reward,
         )
         agent_inputs = buffer_to(agent_inputs, device=self.agent.device)
 
         if hasattr(self.agent, "update_obs_rms"):
             raise NotImplementedError()
 
-        # extract sample components and put them in LossInputs
-        return_, advantage, valid = self.process_returns(samples)
+        # break out samples
+        reward, done, info = (env.reward, env.done, env.env_info)
+        done = done.type(reward.dtype)
+
+        # time and/or action discounting
+        return_ = self.prefs.discount_return(reward=reward,
+                                             done=done,
+                                             info=info)
+        value = samples.agent.agent_info.value
+        advantage = return_ - value
+
+        # ignore steps from unfinished trajectories
+        valid = self.valid_from_done(done)
+
+        # put sample components in LossInputs
         loss_inputs = LossInputs(
             agent_inputs=agent_inputs,
             action=samples.agent.action,
@@ -130,8 +124,10 @@ class EBayPPO:
             old_dist_info=samples.agent.agent_info.dist_info,
         )
 
-        # initialize opt_info with return and advantange
+        # initialize opt_info
         opt_info = OptInfo(*([] for _ in range(len(OptInfo._fields))))
+        opt_info.ActionsPerTraj.append(
+            info.actions[done.bool()].numpy())
         opt_info.DiscountedReturn.append(
             return_[valid].numpy())
         opt_info.Advantage.append(

@@ -2,9 +2,9 @@ from compress_pickle import dump
 import numpy as np
 import pandas as pd
 from sim.EBayDataset import EBayDataset
-from assess.util import get_model_predictions
+from utils import get_model_predictions
 from assess.const import ROC_DIM
-from constants import TEST, DISCRIM_THREADS, PLOT_DIR
+from constants import TEST, DISCRIM_MODEL, PLOT_DIR
 
 
 def get_roc(p0, p1):
@@ -20,11 +20,11 @@ def get_roc(p0, p1):
 
 def main():
 	# initialize dataset
-	data = EBayDataset(TEST, DISCRIM_THREADS)
+	data = EBayDataset(part=TEST, name=DISCRIM_MODEL)
 	y = data.d['y']
 
 	# model predictions
-	p, _ = get_model_predictions(DISCRIM_THREADS, data)
+	p = get_model_predictions(data)
 	p = p[:, 1]
 	p0, p1 = p[y == 0], p[y == 1]
 

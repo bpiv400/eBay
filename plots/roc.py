@@ -1,6 +1,6 @@
 from compress_pickle import load
 from plots.util import roc_plot
-from constants import PLOT_DIR, DISCRIM_THREADS
+from constants import PLOT_DIR, DISCRIM_MODEL
 
 
 def get_auc(s):
@@ -20,7 +20,7 @@ def main():
     print('AUC: {}'.format(get_auc(s)))
 
     # roc plot
-    roc_plot(DISCRIM_THREADS, s)
+    roc_plot(DISCRIM_MODEL, s)
 
 
 if __name__ == '__main__':

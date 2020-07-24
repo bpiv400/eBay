@@ -1,16 +1,15 @@
 import argparse
 import os
 import gc
-from compress_pickle import load
 from agent.RlTrainer import RlTrainer
-from agent.util import save_run
-from agent.const import PARAM_DICTS
 from agent.eval.EvalGenerator import EvalGenerator
+from agent.util import get_values, save_run
+from agent.const import PARAM_DICTS, KL_PENALTY
 from rlenv.generate.util import process_sims
 from utils import set_gpu_workers, compose_args, \
-    process_chunk_worker, run_func_on_chunks
-from constants import BYR, DROPOUT, VALIDATION, \
-    POLICY_BYR, POLICY_SLR, MODEL_DIR
+    unpickle, run_func_on_chunks, process_chunk_worker
+from constants import BYR, DROPOUT, VALIDATION, MODEL_DIR, \
+    POLICY_SLR, POLICY_BYR
 
 
 def simulate(part=None, run_dir=None, agent_params=None, model_kwargs=None):
@@ -41,6 +40,25 @@ def simulate(part=None, run_dir=None, agent_params=None, model_kwargs=None):
     process_sims(part=part, parent_dir=run_dir, sims=sims)
 
 
+def post_train(trainer=None, trainer_args=None):
+    # # simulate outcomes
+    # simulate(part=VALIDATION,
+    #          run_dir=run_dir,
+    #          model_kwargs=trainer_args['model_params'],
+    #          agent_params=trainer_args['agent_params'])
+
+    # # evaluate simulations
+    # values = get_values(part=VALIDATION,
+    #                     run_dir=run_dir,
+    #                     prefs=prefs)
+
+    # save run parameters
+    save_run(log_dir=trainer.log_dir,
+             run_id=trainer.run_id,
+             econ_params=trainer_args['econ_params'],
+             kl_penalty=trainer.algo.kl_penalty)
+
+
 def main():
     # command-line parameters
     parser = argparse.ArgumentParser()
@@ -49,10 +67,10 @@ def main():
     args = vars(parser.parse_args())
 
     # set gpu and cpu affinity
-    set_gpu_workers(gpu=args['gpu'])
+    set_gpu_workers(gpu=args['gpu'], spawn=True)
 
     # add dropout
-    s = load(MODEL_DIR + 'dropout.pkl')
+    s = unpickle(MODEL_DIR + 'dropout.pkl')
     args[DROPOUT] = s.loc[POLICY_BYR if args[BYR] else POLICY_SLR]
 
     # print to console
@@ -71,32 +89,31 @@ def main():
     # training with entropy bonus
     trainer = RlTrainer(**trainer_args)
     trainer.train()
+    base_run_id = trainer.run_id
+    if args['log']:
+        post_train(trainer=trainer, trainer_args=trainer_args)
 
-    # extract path information and delete trainer
-    log_dir = trainer.log_dir
-    run_id = trainer.run_id
+    # put state dict in model parameters
+    state_dict = trainer.agent.model.state_dict()
+    trainer_args['model_params']['model_state_dict'] = state_dict
+
+    # housekeeping
     del trainer
     gc.collect()
 
     # re-train with cross_entropy
+    for i in range(len(KL_PENALTY)):
+        print('Training with KL penalty: {}'.format(KL_PENALTY[i]))
+        trainer = RlTrainer(kl_penalty_idx=i,
+                            run_id=base_run_id,
+                            **trainer_args)
+        trainer.train()
+        if args['log']:
+            post_train(trainer=trainer, trainer_args=trainer_args)
 
-    # when logging, simulate
-    if args['log']:
-        run_dir = log_dir + 'run_{}/'.format(run_id)
-
-        # simulate outcomes
-        simulate(part=VALIDATION,
-                 run_dir=run_dir,
-                 model_kwargs=trainer_args['model_params'],
-                 agent_params=trainer_args['agent_params'])
-
-        # TODO: evaluate simulations
-
-
-        # save run parameters
-        save_run(log_dir=log_dir,
-                 run_id=run_id,
-                 args=trainer_args['econ_params'])
+        # housekeeping
+        del trainer
+        gc.collect()
 
 
 if __name__ == '__main__':

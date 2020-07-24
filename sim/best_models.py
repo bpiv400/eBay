@@ -10,6 +10,12 @@ from constants import MODEL_DIR, LOG_DIR, MODELS, DISCRIM_MODEL, \
     POLICY_MODELS, DROPOUT
 
 
+def get_lnl(em=None, run=None, name=None):
+    tuples = em.Scalars(run, 'lnL_{}'.format(name))
+    lnl = [tuples[i].value for i in range(len(tuples))]
+    return lnl
+
+
 def extract_best_run(m):
     # load tensorboard log
     em = EventMultiplexer().AddRunsFromDirectory(LOG_DIR + m).Reload()
@@ -20,7 +26,10 @@ def extract_best_run(m):
     # find best run
     idx = np.argmax(lnl)
     run = list(em.Runs().keys())[idx]
-    return run
+    # log-likelihoods
+    lnl_test = get_lnl(em=em, run=run, name='test')
+    lnl_train = get_lnl(em=em, run=run, name='train')
+    return run, lnl_test, lnl_train
 
 
 def main():
@@ -44,7 +53,7 @@ def main():
 
     # loop over models
     for m in models:
-        run = extract_best_run(m)  # best performing run
+        run, _, _ = extract_best_run(m)  # best performing run
         print('{}: {}'.format(m, run))
 
         # copy best performing model into parent directory

@@ -202,7 +202,8 @@ def load_reindex(part=None, name=None, lstgs=None):
 
 def lstgs_without_duplicated_timestamps(lstgs=None):
     # load timestamps
-    offers = load(FEATS_DIR + 'offers.pkl').reindex(index=lstgs, level='lstg')
+    offers = load(FEATS_DIR + 'offers.gz').reindex(
+        index=lstgs, level='lstg')
 
     # remove censored offers
     clock = offers.loc[~offers.censored, 'clock']

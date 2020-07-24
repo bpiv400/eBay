@@ -174,7 +174,6 @@ class OutcomeRecorder(Recorder):
         :param byr_hist: float giving byr history decile
         :param int time: time of the offer
         """
-        byr_hist = int(10 * byr_hist)
         row = [self.lstg, thread_id, byr_hist, time]
         if self.record_sim:
             row.append(self.sim)

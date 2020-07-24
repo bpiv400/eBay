@@ -1,7 +1,7 @@
-import numpy as np
 from plots.const import FIG_DIR, FONTSIZE
 
 import matplotlib.pyplot as plt
+from matplotlib.ticker import MaxNLocator
 plt.style.use('grayscale')
 plt.rc('text.latex', preamble=r'\usepackage{amsmath}')
 
@@ -43,7 +43,7 @@ def save_fig(name, legend=True, legend_kwargs=None,
 
 
 def line_plot(df, style=None, ds='steps-post', xlim=None, ylim=None,
-              xticks=None, yticks=None, diagonal=False):
+              xticks=None, yticks=None, diagonal=False, integer_xticks=False):
     plt.clf()
 
     df.plot.line(style=style,
@@ -53,6 +53,9 @@ def line_plot(df, style=None, ds='steps-post', xlim=None, ylim=None,
                  yticks=yticks,
                  ds=ds,
                  legend=False)
+
+    if integer_xticks:
+        plt.gca().xaxis.set_major_locator(MaxNLocator(integer=True))
 
     # gridlines
     plt.grid(axis='both',
@@ -70,25 +73,26 @@ def line_plot(df, style=None, ds='steps-post', xlim=None, ylim=None,
 def training_plot(name, df):
     line_plot(df,
               style={'testing': '-k', 'train': '--k', 'baserate': '-k'},
+              integer_xticks=True,
               ds='default')
     save_fig('training_{}'.format(name), legend=False)
 
 
-def continuous_pdf(name, df, xticks=None, xlabel=None, ylabel=None):
-    line_plot(df, xticks=xticks)
+def continuous_pdf(name, df, xlabel=None, ylabel=None, **plotargs):
+    line_plot(df, **plotargs)
     save_fig('p_{}'.format(name), xlabel=xlabel, ylabel=ylabel)
 
 
-def cdf_plot(name, df, xlim=None, xticks=None, xlabel=None, ylabel=None):
-    line_plot(df, xlim=xlim, ylim=[0, 1], xticks=xticks)
+def cdf_plot(name, df, xlabel=None, ylabel=None, **plotargs):
+    line_plot(df, ylim=[0, 1], **plotargs)
     save_fig('p_{}'.format(name),
              xlabel=xlabel,
              ylabel=ylabel,
              legend_kwargs={'loc': 'lower right'})
 
 
-def survival_plot(name, df, xlim=None, xticks=None, xlabel=None, ylabel=None):
-    line_plot(df, xlim=xlim, ylim=[0, 1], xticks=xticks)
+def survival_plot(name, df, xlabel=None, ylabel=None, **plotargs):
+    line_plot(df, ylim=[0, 1], **plotargs)
     save_fig('p_{}'.format(name), xlabel=xlabel, ylabel=ylabel,
              legend_kwargs={'loc': 'upper right'})
 
@@ -119,7 +123,6 @@ def bar_plot(df, horizontal=False, stacked=False, rot=0,
         plt.gca().set_yticks(yticks)
 
 
-def grouped_bar(name, df, horizontal=False, xlabel=None, ylabel=None,
-                xlim=None, ylim=None):
-    bar_plot(df, horizontal=horizontal, xlim=xlim, ylim=ylim)
+def grouped_bar(name, df, xlabel=None, ylabel=None, **plotargs):
+    bar_plot(df, **plotargs)
     save_fig('p_{}'.format(name), xlabel=xlabel, ylabel=ylabel)

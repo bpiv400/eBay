@@ -164,12 +164,13 @@ class BuyerEnvironment(AgentEnvironment):
         else:
             return self.item_value - self.outcome.price
 
-    def get_info(self, months=None, turn=None, done=None,
-                 thread_id=None):
+    def get_info(self, months=None, done=None, thread_id=None):
         return BuyerInfoTraj(item_value=self.item_value,
                              thread_id=thread_id,
-                             months=months, done=done,
-                             turn=turn)
+                             months=months,
+                             done=done,
+                             turn=self.last_event.turn,
+                             actions=self.agent_actions)
 
     @property
     def horizon(self):

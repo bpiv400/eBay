@@ -12,7 +12,7 @@ from rlenv.events.Thread import RlThread
 class AgentEnvironment(EbayEnvironment, Env):
     def __init__(self, **kwargs):
         super().__init__(params=kwargs)
-        self.relist_count = 0
+        self.agent_actions = 0
         self.last_event = None  # type: Thread
 
         # action space
@@ -45,8 +45,8 @@ class AgentEnvironment(EbayEnvironment, Env):
         else:
             thread_id = 1
         reward = self.get_reward()
-        info = self.get_info(months=months, done=done,
-                             turn=self.last_event.turn,
+        info = self.get_info(months=months,
+                             done=done,
                              thread_id=thread_id)
         return obs, reward, done, info
 
@@ -61,8 +61,7 @@ class AgentEnvironment(EbayEnvironment, Env):
     def get_reward(self):
         raise NotImplementedError()
 
-    def get_info(self, months=None, turn=None, thread_id=None,
-                 done=None):
+    def get_info(self, months=None, thread_id=None, done=None):
         raise NotImplementedError()
 
     def get_offer_time(self, event):
@@ -78,6 +77,7 @@ class AgentEnvironment(EbayEnvironment, Env):
         return max(delay, 1) + event.priority
 
     def init_reset(self, next_lstg=True):
+        self.agent_actions = 0
         if next_lstg:
             if not self.has_next_lstg():
                 raise RuntimeError("Out of lstgs")
@@ -108,7 +108,8 @@ class AgentEnvironment(EbayEnvironment, Env):
         if event.turn == 1:
             months_since_lstg = get_months_since_lstg(lstg_start=self.start_time,
                                                       time=event.priority)
-        event.init_rl_offer(months_since_lstg=months_since_lstg, time_feats=time_feats)
+        event.init_rl_offer(months_since_lstg=months_since_lstg,
+                            time_feats=time_feats)
         offer = event.execute_offer()
         return self.process_post_offer(event, offer)
 

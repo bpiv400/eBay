@@ -1,9 +1,8 @@
 import numpy as np
 from compress_pickle import load, dump
-from tensorboard.backend.event_processing.event_multiplexer import EventMultiplexer
-from train.best_models import extract_best_experiment
-from processing.processing_consts import NUM_OUT
-from constants import LOG_DIR, INPUT_DIR, TEST, MODELS, PLOT_DIR, CENSORED_MODELS
+from sim.best_models import extract_best_run
+from inputs.const import NUM_OUT
+from constants import INPUT_DIR, TEST, MODELS, PLOT_DIR, CENSORED_MODELS
 
 
 def get_num_out(m):
@@ -62,10 +61,9 @@ def main():
             lnl[m]['baserate'] = get_baserate(y, num_out)
 
         # find best performing experiment
-        em = EventMultiplexer().AddRunsFromDirectory(LOG_DIR + m)
-        run = extract_best_experiment(em.Reload()) 
-        for k in ['testing', 'train']:
-            lnl[m][k] = [lnl0] + [s.value for s in em.Scalars(run, 'lnL_' + k)]
+        run, lnl_test, lnl_train = extract_best_run(m)
+        lnl[m]['test'] = [lnl0] + lnl_test
+        lnl[m]['train'] = [lnl0] + lnl_train
 
     # save output
     dump(lnl, PLOT_DIR + 'training_curves.pkl')

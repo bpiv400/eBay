@@ -1,7 +1,6 @@
 import numpy as np
 import pandas as pd
 from compress_pickle import load, dump
-from utils import load_file
 from inputs.offer import get_y_msg
 from inputs.discrim import load_threads_offers
 from assess.const import MAX_THREADS
@@ -12,20 +11,19 @@ from featnames import MONTHS_SINCE_LSTG, BYR_HIST, DELAY, EXP, CON, \
     MSG, REJECT
 
 
-def get_pdf(y, intervals, add_last=True):
+def get_pdf(y=None, intervals=None, add_last=False):
     # construct pdf with integer indices
-    v = np.sort((y * intervals).astype('int64').values)
+    v = np.sort(y.astype('int64').values)
     x, counts = np.unique(v, return_counts=True)
-    pdf = counts / len(y)
-    pdf = pd.Series(pdf, index=x, name=y.name)
+    pdf = pd.Series(counts / len(y), index=x, name=y.name)
     # reindex to include every interval
     idx = range(intervals + 1) if add_last else range(intervals)
     pdf = pdf.reindex(index=idx, fill_value=0.0)
     return pdf
 
 
-def get_cdf(y, intervals, add_last=True):
-    pdf = get_pdf(y, intervals, add_last=add_last)
+def get_cdf(y=None, intervals=None):
+    pdf = get_pdf(y, intervals, add_last=True)
     return pdf.cumsum()
 
 
@@ -33,7 +31,6 @@ def get_quantiles(pc, n_quantiles):
     quantiles = np.arange(0, 1, float(1/n_quantiles))
     low = [pc[pc >= d].index[0] for d in quantiles]
     high = [pc[pc < d].index[-1] for d in quantiles[1:]]
-
     # index of ranges
     idx = []
     for i in range(len(quantiles) - 1):
@@ -43,10 +40,8 @@ def get_quantiles(pc, n_quantiles):
             idx.append('{}'.format(low[i]))
         else:
             idx.append('NaN')
-
     # last entry has no explicit upper bound
     idx.append('{}+'.format(low[-1]))
-
     return idx
 
 
@@ -54,36 +49,34 @@ def get_arrival_distributions(threads):
     p = dict()
 
     # arrival times
-    y = threads[MONTHS_SINCE_LSTG]
-    pdf = get_pdf(y, MAX_DELAY_ARRIVAL, add_last=False).to_frame()
-    pdf['period'] = pdf.index // INTERVAL_ARRIVAL
+    pdf = get_pdf(y=threads[MONTHS_SINCE_LSTG] * MAX_DELAY_ARRIVAL,
+                  intervals=MAX_DELAY_ARRIVAL).to_frame()
+    pdf['period'] = np.array(pdf.index) // INTERVAL_ARRIVAL
     p[ARRIVAL] = pdf.groupby('period').sum().squeeze()
 
     # buyer history
-    y = threads[BYR_HIST] / HIST_QUANTILES
-    pdf = get_pdf(y, HIST_QUANTILES, add_last=False)
+    pdf = get_pdf(y=threads[BYR_HIST], intervals=HIST_QUANTILES)
     pc = load(PCTILE_DIR + '{}.pkl'.format(BYR_HIST))
     pdf.index = get_quantiles(pc, HIST_QUANTILES)
-    pdf.drop('NaN', inplace=True)
     p[BYR_HIST_MODEL] = pdf
 
     return p
 
 
-def get_distributions(threads, offers):
+def get_distributions(threads=None, offers=None):
     p = get_arrival_distributions(threads)
     for turn in range(1, 8):
         p[turn] = dict()
         df = offers.xs(turn, level='index')
 
-        # delay
+        # delay (no censored delays in data)
         if turn > 1:
-            y = df[DELAY].copy()
-            y.loc[df[EXP]] = 1.0  # count expirations and censors together
-            p[turn][DELAY] = get_cdf(y, MAX_DELAY_TURN)
+            p[turn][DELAY] = get_cdf(y=df[DELAY] * MAX_DELAY_TURN,
+                                     intervals=MAX_DELAY_TURN)
 
         # concession
-        p[turn][CON] = get_cdf(df[CON], CON_MULTIPLIER)
+        p[turn][CON] = get_cdf(y=df[CON] * CON_MULTIPLIER,
+                               intervals=CON_MULTIPLIER)
 
         # message
         if turn < 7:
@@ -92,56 +85,51 @@ def get_distributions(threads, offers):
     return p
 
 
-def num_threads(df, lstgs):
+def num_threads(threads=None):
     # threads per listing
-    s = df.reset_index('thread')['thread'].groupby('lstg').count()
-    s = s.reindex(index=lstgs, fill_value=0)  # fill in zeros
-    s = s.groupby(s).count() / len(lstgs)
+    s = threads.reset_index('thread')['thread'].groupby('lstg').count()
+    s = s.groupby(s).count() / len(s)
     # censor at MAX_THREADS
-    s.iloc[MAX_THREADS] = s.iloc[MAX_THREADS:].sum(axis=0)
-    s = s[:MAX_THREADS + 1]
+    s.loc[MAX_THREADS] = s[s.index >= MAX_THREADS].sum(axis=0)
+    s = s[s.index <= MAX_THREADS]
+    assert np.abs(s.sum() - 1) < 1e-8
+    # relabel index
     idx = s.index.astype(str).tolist()
     idx[-1] += '+'
     s.index = idx
-    assert np.abs(s.sum() - 1) < 1e-8
     return s
 
 
-def num_offers(df):
-    censored = df[EXP] & (df[DELAY] < 1)
-    byr_reject = df[REJECT] & df.index.isin([3, 5], level='index')
-    df = df[~censored & ~byr_reject]
-    s = df.reset_index('index')['index'].groupby(['lstg', 'thread']).count()
+def num_offers(offers=None):
+    byr_reject = offers[REJECT] & offers.index.isin([3, 5], level='index')
+    s = offers.loc[~byr_reject, REJECT].rename('turn')
+    s = s.groupby(['lstg', 'thread']).count()
     s = s.groupby(s).count() / len(s)
     return s
 
 
-def create_outputs(threads, offers, lstgs):
+def create_outputs(threads, offers):
     # loop over models, get distributions
-    d = get_distributions(threads, offers)
+    d = get_distributions(threads=threads, offers=offers)
 
     # number of threads per listing
-    d['threads'] = num_threads(threads, lstgs)
+    d['threads'] = num_threads(threads=threads)
 
     # number of offers per thread
-    d['offers'] = num_offers(offers)
+    d['offers'] = num_offers(offers=offers)
 
     return d
 
 
 def main():
-    # lookup file
-    lookup = load_file(TEST, 'lookup')
-    lstgs = lookup.index
-
     # observed and simulated outcomes
     threads_obs, offers_obs = load_threads_offers(part=TEST, sim=False)
     threads_sim, offers_sim = load_threads_offers(part=TEST, sim=True)
 
     # unconditional distributions
     p = dict()
-    p[OBS] = create_outputs(threads_obs, offers_obs, lstgs)
-    p[SIM] = create_outputs(threads_sim, offers_sim, lstgs)
+    p[OBS] = create_outputs(threads_obs, offers_obs)
+    p[SIM] = create_outputs(threads_sim, offers_sim)
 
     # save
     dump(p, PLOT_DIR + 'p.pkl')

@@ -13,7 +13,6 @@ class ArrivalInterface:
     def hist(self, input_dict=None):
         logits = self.hist_model(input_dict).cpu()
         hist = sample_categorical(logits)[0]
-        hist = hist / 10
         return hist
 
     def inter_arrival(self, input_dict=None):

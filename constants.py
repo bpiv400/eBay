@@ -9,9 +9,6 @@ BYR = 'byr'
 ARRIVAL = 'arrival'
 DROPOUT = 'dropout'
 
-# count concessions within this range as 1/2
-TOL_HALF = 0.02
-
 # paths and directories
 if 'Ubuntu' in platform():  # Etan's box(es)
     PREFIX = os.path.expanduser('/data/eBay')
@@ -81,7 +78,7 @@ INTERVAL_CT_ARRIVAL = int(MAX_DELAY_ARRIVAL / INTERVAL_ARRIVAL)
 SPLIT_PCTS = [.49, .50, .51]
 
 # quantiles of byr_hist distribution
-HIST_QUANTILES = 10
+HIST_QUANTILES = 7
 
 # multiplier for concession
 CON_MULTIPLIER = 100

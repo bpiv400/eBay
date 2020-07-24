@@ -27,7 +27,7 @@ def draw_thread_offer(p, suffix=''):
 
         den = 'threads' if key == 'offers' else 'listings'
         grouped_bar(name, df,
-                    ylim=[0, 0.6],
+                    ylim=[0, 1],
                     ylabel='Fraction of {}'.format(den))
 
 
@@ -42,6 +42,7 @@ def draw_arrival(p, suffix=''):
 
     continuous_pdf(name, df,
                    xticks=xticks,
+                   ylim=[0, 0.02],
                    xlabel='Days since listing start',
                    ylabel='Fraction of buyers, by hour')
 
@@ -66,16 +67,11 @@ def draw_delay(p, suffix='', turns=range(2, 8)):
         # survival plot
         df = 1 - df
 
-        if turn in [2, 4, 6, 7]:
-            df.index = df.index.values / HOUR
-            threshold = MAX_DELAY_TURN / HOUR
-            xticks = np.arange(0, threshold + 1e-8, 6)
-            xlabel = 'Response time in hours'
-        else:
-            df.index = df.index.values / DAY
-            threshold = MAX_DELAY_TURN / DAY
-            xticks = np.arange(0, threshold + 1e-8, 2)
-            xlabel = 'Response time in days'
+        # ticks and labels
+        df.index = df.index.values / HOUR
+        threshold = MAX_DELAY_TURN / HOUR
+        xticks = np.arange(0, threshold + 1e-8, 6)
+        xlabel = 'Response time in hours'
 
         survival_plot(name, df,
                       xlim=[0, threshold],

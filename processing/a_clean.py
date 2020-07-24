@@ -4,7 +4,7 @@ import pandas as pd
 from compress_pickle import dump
 from processing.util import get_con, get_norm
 from constants import CLEAN_DIR, FEATS_DIR, PCTILE_DIR, START, \
-    NUM_CHUNKS, MONTH
+    NUM_CHUNKS, MONTH, SLR
 from featnames import START_PRICE, BYR_HIST, NORM
 
 # data types for csv read
@@ -27,7 +27,7 @@ TTYPES = {'lstg': 'int64',
 
 LTYPES = {'lstg': 'int64',
           'slr': 'int64',
-          'meta': 'uint8',
+          'meta': 'int64',
           'leaf': 'int64',
           'cndtn': 'uint8',
           'start_date': 'uint16',
@@ -239,7 +239,8 @@ def main():
 
     # chunk by listing
     create_chunks(offers=offers,
-                  start_price=listings[START_PRICE])
+                  start_price=listings[START_PRICE],
+                  slr=listings[SLR])
 
 
 if __name__ == '__main__':

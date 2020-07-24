@@ -1,9 +1,9 @@
 import numpy as np
 from collections import namedtuple
-from featnames import START_TIME, META
 from utils import get_cut
 from constants import BYR, MONTH, BYR_HIST_MODEL, INTERARRIVAL_MODEL
-from featnames import ACC_PRICE, DEC_PRICE, START_PRICE, DELAY, TIME_FEATS
+from featnames import ACC_PRICE, DEC_PRICE, START_PRICE, DELAY, \
+    TIME_FEATS, START_TIME, META
 from utils import get_months_since_lstg
 from rlenv.Heap import Heap
 from rlenv.time.TimeFeatures import TimeFeatures
@@ -139,7 +139,8 @@ class EbayEnvironment:
                     time_feats = np.zeros(len(TIME_FEATS))
                 self.recorder.add_offer(event=event, time_feats=time_feats, censored=censored)
             else:
-                self.recorder.start_thread(thread_id=event.thread_id, byr_hist=byr_hist,
+                self.recorder.start_thread(thread_id=event.thread_id,
+                                           byr_hist=byr_hist,
                                            time=event.priority)
 
     def process_offer(self, event):
@@ -209,13 +210,18 @@ class EbayEnvironment:
         # prepare sources and features
         sources = ThreadSources(x_lstg=self.x_lstg)
         months_since_lstg = get_months_since_lstg(lstg_start=self.start_time, time=event.priority)
-        time_feats = self.time_feats.get_feats(time=event.priority, thread_id=event.thread_id)
-        sources.prepare_hist(time_feats=time_feats, clock_feats=get_clock_feats(event.priority),
+        time_feats = self.time_feats.get_feats(time=event.priority,
+                                               thread_id=event.thread_id)
+        sources.prepare_hist(time_feats=time_feats,
+                             clock_feats=get_clock_feats(event.priority),
                              months_since_lstg=months_since_lstg)
         # sample history
         input_dict = self.composer.build_input_dict(model_name=BYR_HIST_MODEL,
-                                                    sources=sources(), turn=None)
-        hist = self.get_hist(input_dict=input_dict, time=event.priority, thread_id=event.thread_id)
+                                                    sources=sources(),
+                                                    turn=None)
+        hist = self.get_hist(input_dict=input_dict,
+                             time=event.priority,
+                             thread_id=event.thread_id)
         # print
         if self.verbose:
             print('Thread {} initiated | Buyer hist: {}'.format(event.thread_id, hist))

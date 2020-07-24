@@ -5,7 +5,7 @@ from utils import load_featnames
 # optimization parameters
 LR = 1e-4
 RATIO_CLIP = 0.1
-ENTROPY_BONUS = 0.1
+ENTROPY_BONUS = .0001
 
 # state dictionaries
 AGENT_STATE = 'agent_state_dict'
@@ -26,7 +26,6 @@ AGENT_PARAMS = {BYR: {'action': 'store_true'},
                             'choices': [ALL_FEATS, NO_TIME],
                             'default': ALL_FEATS},
                 BYR_HIST: {'type': int,
-                           'default': 5,
                            'choices': list(range(HIST_QUANTILES))}}
 
 ECON_PARAMS = {'monthly_discount': {'type': float, 'default': .995},
@@ -52,3 +51,6 @@ T1_IDX = load_featnames(POLICY_BYR)['lstg'].index('t1')
 
 # extra weight given to first-turn delay logit in byr model
 DELAY_BOOST = 10
+
+# cross-entropy penalties
+KL_PENALTY = [0, 0.05, .1]

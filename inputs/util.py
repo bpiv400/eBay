@@ -3,9 +3,9 @@ import pandas as pd
 from compress_pickle import load, dump
 from inputs.const import NUM_OUT
 from constants import INPUT_DIR, INDEX_DIR, VALIDATION, \
-    IDX, BYR, DISCRIM_MODEL, HIST_QUANTILES, POLICY_BYR, BYR_DROP
-from featnames import CLOCK_FEATS, OUTCOME_FEATS, BYR_HIST, \
-    SPLIT, MSG, AUTO, EXP, REJECT, DAYS, DELAY, TIME_FEATS, THREAD_COUNT
+    IDX, BYR, DISCRIM_MODEL, POLICY_BYR, BYR_DROP
+from featnames import CLOCK_FEATS, OUTCOME_FEATS, SPLIT, MSG, AUTO, \
+    EXP, REJECT, DAYS, DELAY, TIME_FEATS, THREAD_COUNT
 
 
 def add_turn_indicators(df):
@@ -24,9 +24,6 @@ def add_turn_indicators(df):
 def get_x_thread(threads, idx, turn_indicators=False):
     # initialize x_thread as copy
     x_thread = threads.copy()
-    # byr_hist as a decimal
-    x_thread.loc[:, BYR_HIST] = \
-        x_thread.byr_hist.astype('float32') / HIST_QUANTILES
     # thread count, including current thread
     x_thread[THREAD_COUNT] = x_thread.index.get_level_values(level='thread')
     # reindex to create x_thread

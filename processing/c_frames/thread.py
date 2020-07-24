@@ -22,7 +22,7 @@ def create_x_thread(lstgs=None):
 
 	# buyer history deciles
 	hist = np.floor(HIST_QUANTILES * byr_hist).astype('int8')
-	assert hist.max() == 9
+	assert hist.max() == HIST_QUANTILES - 1
 
 	# create dataframe
 	x_thread = pd.concat([months, hist], axis=1)

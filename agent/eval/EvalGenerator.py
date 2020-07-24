@@ -6,6 +6,7 @@ from agent.AgentComposer import AgentComposer
 from rlenv.environments.BuyerEnvironment import BuyerEnvironment
 from rlenv.environments.SellerEnvironment import SellerEnvironment
 from rlenv.interfaces.PlayerInterface import SimulatedBuyer, SimulatedSeller
+from constants import BYR, DROPOUT
 
 
 class EvalGenerator(SimulatorGenerator):
@@ -32,7 +33,8 @@ class EvalGenerator(SimulatorGenerator):
         return AgentComposer(agent_params=self.agent_params)
 
     def generate_agent(self):
-        model = PgCategoricalAgentModel(**self.model_kwargs)
+        model = PgCategoricalAgentModel(byr=self.model_kwargs[BYR],
+                                        dropout=self.model_kwargs[DROPOUT])
         state_dict = torch.load(self.run_dir + 'params.pkl',
                                 map_location=torch.device('cpu'))
         model.load_state_dict(state_dict=state_dict, strict=True)

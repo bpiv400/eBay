@@ -8,6 +8,7 @@ from torch.nn.functional import log_softmax
 import numpy as np
 from compress_pickle import load
 from nets.FeedForward import FeedForward
+from sim.Sample import get_batches
 from constants import DAY, MONTH, SPLIT_PCTS, INPUT_DIR, \
     MODEL_DIR, META_6, META_7, PARTITIONS, PARTS_DIR, \
     MAX_DELAY_TURN, MAX_DELAY_ARRIVAL, NUM_CHUNKS
@@ -193,37 +194,30 @@ def get_cut(meta):
     return .09
 
 
-def get_model_predictions(m, x):
+def get_model_predictions(data):
     """
     Returns predicted categorical distribution.
-    :param str m: name of model
-    :param dict x: dictionary of input tensors
+    :param EBayDataset data: model to simulate
     :return: torch tensor
     """
     # initialize neural net
-    net = load_model(m, verbose=False)
+    net = load_model(data.name, verbose=False)
     if torch.cuda.is_available():
         net = net.to('cuda')
 
-    # split into batches
-    vec = np.array(range(len(x['lstg'])))
-    batches = np.array_split(vec, 1 + len(vec) // 2048)
-
-    # convert to 32-bit numpy arrays
-    if 'DataFrame' in str(type(x['lstg'])):
-        x = {k: v.values.astype('float32') for k, v in x.items()}
-
-    # model predictions
-    p0 = []
+    # get predictions from neural net
+    lnp = []
+    batches = get_batches(data)
     for b in batches:
-        x_b = {k: torch.from_numpy(v[b, :]) for k, v in x.items()}
         if torch.cuda.is_available():
-            x_b = {k: v.to('cuda') for k, v in x_b.items()}
-        theta_b = net(x_b).cpu().double()
-        p0.append(np.exp(log_softmax(theta_b, dim=-1)))
+            b['x'] = {k: v.to('cuda') for k, v in b['x'].items()}
+        theta = net(b['x']).cpu().double()
+        if theta.size()[1] == 1:
+            theta = torch.cat((torch.zeros_like(theta), theta), dim=1)
+        lnp.append(log_softmax(theta, dim=-1))
 
-    # concatenate and return
-    return torch.cat(p0, dim=0).numpy()
+    # concatenate, exponentiate and return
+    return np.exp(torch.cat(lnp).numpy())
 
 
 def input_partition():

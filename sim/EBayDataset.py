@@ -7,7 +7,7 @@ from featnames import X_LSTG
 
 
 class EBayDataset(Dataset):
-    def __init__(self, part, name):
+    def __init__(self, part=None, name=None):
         """
         Defines a parent class that extends torch.utils.data.Dataset.
         :param part: string partition name (e.g., train_models).

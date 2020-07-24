@@ -5,7 +5,7 @@ from utils import set_gpu_workers
 DROPOUT_GRID = []
 for j in range(8):
     for i in range(j+1):
-        if j - i <= 3:
+        if j - i <= 1:
             DROPOUT_GRID.append((float(i) / 10, float(j) / 10))
 
 

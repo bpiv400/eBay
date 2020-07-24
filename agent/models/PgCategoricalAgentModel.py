@@ -16,9 +16,9 @@ class PgCategoricalAgentModel(torch.nn.Module):
      over actions
     3. Value network outputs a scalar between 0 and 1
     4. Both networks use batch normalization
-    5. Both networks use dropout with separate dropout hyperparameters
+    5. Both networks use dropout with shared dropout hyperparameters
     """
-    def __init__(self, byr=None, dropout=None, model_path=None):
+    def __init__(self, byr=None, dropout=None, model_state_dict=None):
         super().__init__()
         self.byr = byr
 
@@ -31,10 +31,9 @@ class PgCategoricalAgentModel(torch.nn.Module):
         self.value_net = FeedForward(sizes=sizes, dropout=dropout)
 
         # initialized model
-        if model_path is not None:
-            state_dict = torch.load(model_path,
-                                    map_location=torch.device('cpu'))
-            self.load_state_dict(state_dict=state_dict, strict=True)
+        if model_state_dict is not None:
+            self.load_state_dict(state_dict=model_state_dict,
+                                 strict=True)
 
     def value_parameters(self):
         return self.value_net.parameters()

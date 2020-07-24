@@ -46,8 +46,8 @@ class AgentComposer(Composer):
     def feat_type(self):
         return self.agent_params[FEAT_TYPE]
 
-    def set_hist(self, hist=None):
-        self.agent_params[BYR_HIST] = hist
+    # def set_hist(self, hist=None):
+    #     self.agent_params[BYR_HIST] = hist
 
     def _update_turn_inds(self, turn):
         if not self.byr:

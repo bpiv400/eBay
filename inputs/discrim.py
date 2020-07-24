@@ -73,12 +73,17 @@ def get_x_offer(offers, idx):
     return x_offer
 
 
-def construct_x(part=None, sim=False):
-    # load files
+def load_threads_offers(part=None, sim=False):
     suffix = '_sim' if sim else ''
     threads = load_file(part, 'x_thread{}'.format(suffix))
     offers = load_file(part, 'x_offer{}'.format(suffix))
     offers = drop_censored(offers)
+    return threads, offers
+
+
+def construct_x(part=None, sim=False):
+    # load files
+    threads, offers = load_threads_offers(part=part, sim=sim)
     # master index
     idx = threads.index
     # thread features

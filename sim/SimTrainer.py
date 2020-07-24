@@ -1,5 +1,4 @@
 import os
-import numpy as np
 import torch
 from torch.nn.functional import log_softmax, nll_loss
 from datetime import datetime as dt
@@ -13,9 +12,10 @@ from constants import MODEL_DIR, LOG_DIR, CENSORED_MODELS, \
 from utils import load_sizes
 
 LR_FACTOR = 0.1  # multiply learning rate by this factor when training slows
-LR0 = [1e-3]  # initial learning rates to search over
+LR0 = 1e-3  # initial learning rate
 LR1 = 1e-7  # stop training when learning rate is lower than this
 FTOL = 1e-2  # decrease learning rate when relative improvement in loss is less than this
+AMSGRAD = True  # use AMSgrad version of ADAM if True
 
 
 class SimTrainer:
@@ -42,8 +42,8 @@ class SimTrainer:
 
         # load datasets
         train_part = TRAIN_RL if name == DISCRIM_MODEL else TRAIN_MODELS
-        self.train = EBayDataset(train_part, name)
-        self.valid = EBayDataset(VALIDATION, name)
+        self.train = EBayDataset(part=train_part, name=name)
+        self.valid = EBayDataset(part=VALIDATION, name=name)
 
     def train_model(self, dropout=(0.0, 0.0), norm=MODEL_NORM, log=True):
         """
@@ -64,32 +64,25 @@ class SimTrainer:
         else:
             writer = None
 
-        # tune initial learning rate
-        lr, net, lnl_test0 = self._tune_lr(writer=writer,
-                                           dropout=dropout,
-                                           norm=norm)
-
         # path to save model
         model_dir = MODEL_DIR + '{}/'.format(self.name)
         if not os.path.isdir(model_dir):
             os.mkdir(model_dir)
         model_path = model_dir + '{}.net'.format(expid)
 
-        # save model
-        if log:
-            torch.save(net.state_dict(), model_path)
-
-        # initialize optimizer and scheduler
-        optimizer = Adam(net.parameters(), lr=lr)
+        # initialize neural net, optimizer and scheduler
+        net = FeedForward(self.sizes, dropout=dropout, norm=norm).to('cuda')
+        optimizer = Adam(net.parameters(), lr=LR0, amsgrad=AMSGRAD)
         scheduler = lr_scheduler.ReduceLROnPlateau(optimizer,
                                                    mode='min',
                                                    factor=LR_FACTOR,
                                                    patience=0,
                                                    threshold=FTOL)
+        print(net)
         print(optimizer)
 
         # training loop
-        epoch = 1
+        epoch, lnl_test0 = 0, None
         while True:
             # run one epoch
             print('Epoch {}'.format(epoch))
@@ -97,6 +90,10 @@ class SimTrainer:
                                      optimizer=optimizer,
                                      writer=writer,
                                      epoch=epoch)
+
+            # set 0th-epoch log-likelihood
+            if epoch == 0:
+                lnl_test0 = output['lnL_test']
 
             # save model
             if log:
@@ -109,8 +106,8 @@ class SimTrainer:
             if self._get_lr(optimizer) < LR1:
                 break
 
-            # stop training if holdout objective hasn't improved in 12 epochs
-            if epoch >= 11 and output['lnL_test'] < lnl_test0:
+            # stop training if holdout objective hasn't improved in 9 epochs
+            if epoch >= 8 and output['lnL_test'] < lnl_test0:
                 break
 
             # increment epoch
@@ -222,38 +219,6 @@ class SimTrainer:
             optimizer.step()
 
         return loss.item()
-
-    def _tune_lr(self, writer=None, dropout=None, norm=None):
-        nets, loss = [], []
-        for lr in LR0:
-            # initialize model and optimizer
-            net = FeedForward(self.sizes, dropout=dropout, norm=norm)
-            nets.append(net.to('cuda'))
-            optimizer = Adam(nets[-1].parameters(), lr=lr)
- 
-            # print to console
-            if len(nets) == 1:
-                print(nets[-1])
-            print('Tuning with lr of {}'.format(lr))
- 
-            # run model for one epoch
-            loss.append(self._run_loop(self.train, nets[-1], optimizer))
-            print('\tloss: {}'.format(loss[-1]))
- 
-        # best learning rate and model
-        idx = int(np.argmin(loss))
-        lr = LR0[idx]
-        net = nets[idx]
- 
-        # initialize output with log10 learning rate
-        output = {'lr': lr, 'loss': loss[idx]}
- 
-        # collect remaining output and print
-        print('Epoch 0')
-        output = self._collect_output(net, writer, output)
- 
-        # return lr of smallest loss and corresponding model
-        return lr, net, output['lnL_test']
 
     def _collect_output(self, net, writer, output, epoch=0):
         # calculate log-likelihood on validation set

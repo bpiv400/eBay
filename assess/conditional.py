@@ -1,6 +1,6 @@
 from compress_pickle import dump
 from utils import load_file
-from assess.util import load_threads_offers
+from inputs.discrim import load_threads_offers
 from assess.const import META_LABELS, PRICE_CUTOFFS
 from constants import TEST, PLOT_DIR, SIM, OBS, IDX, SLR
 from featnames import META, START_PRICE, CON, NORM
