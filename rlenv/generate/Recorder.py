@@ -218,9 +218,6 @@ class OutcomeRecorder(Recorder):
             if 'offers' in name or 'count' in name:
                 self.offers[name] = self.offers[name].astype(np.uint8)
 
-        # threads dataframe
-        self.threads[BYR_HIST] = self.threads[BYR_HIST].astype(np.uint8)
-
         # common columns in offers and threads dataframes
         self.compress_common_cols([LSTG, THREAD, CLOCK],
                                   [self.threads, self.offers],

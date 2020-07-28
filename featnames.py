@@ -61,8 +61,6 @@ MONTHS_SINCE_LAST = 'months_since_last'
 
 # lookup column names
 LSTG = 'lstg'
-SLR = 'slr'
-STORE = 'store'
 META = 'meta'
 LEAF = 'leaf'
 START_DATE = 'start_date'
@@ -71,6 +69,7 @@ END_TIME = 'end_time'
 START_PRICE = 'start_price'
 DEC_PRICE = 'decline_price'
 ACC_PRICE = 'accept_price'
+SLR_BO_CT = 'slr_bo_ct'
 
 # agent costs
 MONTHLY_DISCOUNT = 'monthly_discount'

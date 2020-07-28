@@ -1,11 +1,11 @@
 import numpy as np
 import pandas as pd
 from compress_pickle import load
-from utils import extract_clock_feats, byr_norm, slr_norm
-from constants import FEATS_DIR, PARTS_DIR, START, IDX, BYR, SLR, \
+from utils import extract_clock_feats, byr_norm, slr_norm, unpickle
+from constants import FEATS_DIR, PARTS_DIR, PCTILE_DIR, START, IDX, BYR, SLR, \
     DAY, HOLIDAYS, MAX_DELAY_TURN
 from featnames import HOLIDAY, DOW_PREFIX, TIME_OF_DAY, AFTERNOON, \
-    CLOCK_FEATS
+    CLOCK_FEATS, BYR_HIST
 
 
 def extract_day_feats(seconds):
@@ -112,6 +112,21 @@ def get_norm(con):
                                prev_byr_norm=norm[i - 1],
                                prev_slr_norm=norm[i - 2])
     return norm.rename_axis('index', axis=1).stack().astype('float64')
+
+
+def hist_to_pctile(s, reverse=False):
+    """
+    Converts byr hist counts to percentiles or visa versa.
+    :param Series s: counts, or percentiles if reverse.
+    :param bool reverse: convert pctile to hist if True.
+    :return: Series
+    """
+    pctile = unpickle(PCTILE_DIR + '{}.pkl'.format(BYR_HIST))
+    if reverse:
+        pctile = pctile.reset_index().set_index('pctile').squeeze()
+    v = pctile.reindex(index=s.values, method='pad').values
+    hist = pd.Series(v, index=s.index, name=BYR_HIST)
+    return hist
 
 
 def get_lstgs(part):

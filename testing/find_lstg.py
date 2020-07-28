@@ -2,7 +2,7 @@
 Finds an arbitrary lstg given partition
 """
 import argparse
-from constants import VALIDATION, PARTITIONS, NUM_CHUNKS
+from constants import VALIDATION, PARTITIONS, NUM_RL_WORKERS
 from rlenv.util import load_chunk, get_env_sim_dir
 from utils import compose_args
 
@@ -19,7 +19,7 @@ def main():
     compose_args(parser=parser, arg_dict=args)
     args = parser.parse_args()
     base_dir = get_env_sim_dir(args.part)
-    for i in range(NUM_CHUNKS):
+    for i in range(NUM_RL_WORKERS):
         _, lookup, _ = load_chunk(base_dir=base_dir, num=i)
         if args.lstg in lookup.index:
             print('Found lstg in {} chunk {}'.format(args.part,

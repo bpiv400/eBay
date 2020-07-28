@@ -1,11 +1,9 @@
 import argparse
-from compress_pickle import load
 import numpy as np
 import pandas as pd
 from compress_pickle import dump
 from gensim.models import Word2Vec
-from constants import BYR, SLR, SEED, CLEAN_DIR, FEATS_DIR
-from featnames import LEAF
+from constants import BYR, SLR, SEED, CLEAN_DIR, FEATS_DIR, NUM_FEATS_CHUNKS
 
 VOCAB_SIZE = 32  # vocabulary size for embeddings
 
@@ -26,7 +24,7 @@ def run_model(s):
                      window=max_length,
                      min_count=1,
                      size=VOCAB_SIZE,
-                     workers=0)
+                     workers=NUM_FEATS_CHUNKS)
     # output dataframe
     print('Creating output')
     leafs = model.wv.vocab.keys()
@@ -52,7 +50,7 @@ def main():
     df = run_model(s).rename(lambda x: role + x, axis=1).sort_index()
 
     # save
-    dump(df, FEATS_DIR + 'w2v_{}.pkl'.format(role))
+    dump(df, FEATS_DIR + 'w2v_{}.gz'.format(role))
 
 
 if __name__ == '__main__':

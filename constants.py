@@ -41,6 +41,7 @@ PLOT_DIR = OUTPUT_DIR + 'plots/'
 AGENT_DIR = OUTPUT_DIR + 'agent/'
 
 DATE_FEATS_PATH = FEATS_DIR + 'date_feats.pkl'
+DROPOUT_PATH = MODEL_DIR + 'dropout.pkl'
 
 # partitions
 TRAIN_MODELS = 'sim'
@@ -77,9 +78,6 @@ INTERVAL_CT_ARRIVAL = int(MAX_DELAY_ARRIVAL / INTERVAL_ARRIVAL)
 # concessions that denote an (almost) even split
 SPLIT_PCTS = [.49, .50, .51]
 
-# quantiles of byr_hist distribution
-HIST_QUANTILES = 7
-
 # multiplier for concession
 CON_MULTIPLIER = 100
 
@@ -114,7 +112,6 @@ CENSORED_MODELS = [INTERARRIVAL_MODEL] + DELAY_MODELS
 DISCRIM_MODEL = 'discrim'
 
 # policy initializations
-AGENTS = [SLR, BYR]
 POLICY_SLR = 'policy_slr'
 POLICY_BYR = 'policy_byr'
 POLICY_MODELS = [POLICY_SLR, POLICY_BYR]
@@ -142,9 +139,13 @@ META_6 = [58058, 1249, 625, 293, 15032]
 SEED = 123456
 
 # number of chunks
-NUM_CHUNKS = 16
+NUM_RL_WORKERS = 16
+NUM_FEATS_CHUNKS = NUM_RL_WORKERS * 2
 
 # features to drop from 'lstg' grouping for byr
 BYR_DROP = ['auto_decline', 'auto_accept',
             'has_decline', 'has_accept',
             'lstg_ct', 'bo_ct']
+
+# for dropping infrequent arrivals when training seller agent
+NO_ARRIVAL_CUTOFF = 0.5 ** (1/12)

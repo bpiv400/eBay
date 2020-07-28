@@ -1,19 +1,18 @@
 import numpy as np
 import pandas as pd
-from compress_pickle import load, dump
+from compress_pickle import dump
 from inputs.offer import get_y_msg
-from inputs.discrim import load_threads_offers
+from discrim.input import load_threads_offers
+from processing.util import hist_to_pctile
 from assess.const import MAX_THREADS
 from constants import TEST, PLOT_DIR, BYR_HIST_MODEL, CON_MULTIPLIER, \
-    HIST_QUANTILES, SIM, OBS, ARRIVAL, PCTILE_DIR, \
-    MAX_DELAY_ARRIVAL, MAX_DELAY_TURN, INTERVAL_ARRIVAL
-from featnames import MONTHS_SINCE_LSTG, BYR_HIST, DELAY, EXP, CON, \
-    MSG, REJECT
+    SIM, OBS, ARRIVAL, MAX_DELAY_ARRIVAL, MAX_DELAY_TURN, INTERVAL_ARRIVAL
+from featnames import MONTHS_SINCE_LSTG, BYR_HIST, DELAY, CON, MSG, REJECT
 
 
 def get_pdf(y=None, intervals=None, add_last=False):
     # construct pdf with integer indices
-    v = np.sort(y.astype('int64').values)
+    v = np.sort(y.values)
     x, counts = np.unique(v, return_counts=True)
     pdf = pd.Series(counts / len(y), index=x, name=y.name)
     # reindex to include every interval
@@ -27,38 +26,18 @@ def get_cdf(y=None, intervals=None):
     return pdf.cumsum()
 
 
-def get_quantiles(pc, n_quantiles):
-    quantiles = np.arange(0, 1, float(1/n_quantiles))
-    low = [pc[pc >= d].index[0] for d in quantiles]
-    high = [pc[pc < d].index[-1] for d in quantiles[1:]]
-    # index of ranges
-    idx = []
-    for i in range(len(quantiles) - 1):
-        if high[i] > low[i]:
-            idx.append('{}-{}'.format(low[i], high[i]))
-        elif high[i] == low[i]:
-            idx.append('{}'.format(low[i]))
-        else:
-            idx.append('NaN')
-    # last entry has no explicit upper bound
-    idx.append('{}+'.format(low[-1]))
-    return idx
-
-
 def get_arrival_distributions(threads):
     p = dict()
 
     # arrival times
-    pdf = get_pdf(y=threads[MONTHS_SINCE_LSTG] * MAX_DELAY_ARRIVAL,
-                  intervals=MAX_DELAY_ARRIVAL).to_frame()
+    y = (threads[MONTHS_SINCE_LSTG] * MAX_DELAY_ARRIVAL).astype('int64')
+    pdf = get_pdf(y=y, intervals=MAX_DELAY_ARRIVAL).to_frame()
     pdf['period'] = np.array(pdf.index) // INTERVAL_ARRIVAL
     p[ARRIVAL] = pdf.groupby('period').sum().squeeze()
 
     # buyer history
-    pdf = get_pdf(y=threads[BYR_HIST], intervals=HIST_QUANTILES)
-    pc = load(PCTILE_DIR + '{}.pkl'.format(BYR_HIST))
-    pdf.index = get_quantiles(pc, HIST_QUANTILES)
-    p[BYR_HIST_MODEL] = pdf
+    y = hist_to_pctile(threads[BYR_HIST], reverse=True)
+    p[BYR_HIST_MODEL] = get_cdf(y=y, intervals=y.max())
 
     return p
 

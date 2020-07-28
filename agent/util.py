@@ -2,10 +2,9 @@ import os
 import pandas as pd
 from compress_pickle import load
 from utils import load_file, get_cut
-from agent.const import FEAT_TYPE, ENTROPY_BONUS
+from agent.const import ENTROPY_BONUS
 from constants import AGENT_DIR, BYR, SLR, POLICY_SLR, POLICY_BYR, MONTH
-from featnames import LOOKUP, META, CON, NORM, START_PRICE, \
-    START_TIME, BYR_HIST
+from featnames import LOOKUP, META, CON, NORM, START_PRICE, START_TIME
 
 
 def get_months(lstg_start=None, sale_time=None):
@@ -62,47 +61,22 @@ def get_values(part=None, run_dir=None, prefs=None):
     return values
 
 
-def save_run(log_dir=None, run_id=None, econ_params=None, kl_penalty=None):
-    path = log_dir + 'runs.csv'
-    if os.path.isfile(path):
-        df = pd.read_csv(path, index_col=0)
-    else:
-        df = pd.DataFrame(index=pd.Index([], name='run_id'))
-
-    # economic parameters
-    for k, v in econ_params.items():
-        df.loc[run_id, k] = v
-
-    # entropy bonus or cross-entropy penalty
-    if kl_penalty is None:
-        df.loc[run_id, 'entropy_coeff'] = ENTROPY_BONUS
-    else:
-        df.loc[run_id, 'entropy_coeff'] = kl_penalty
-
-    # # moments of value distribution
-    # for col in values.columns:
-    #     s = values[col]
-    #     df.loc[run_id, '{}_mean'.format(col)] = s.mean()
-    #     df.loc[run_id, '{}_median'.format(col)] = s.median()
-    #     df.loc[run_id, '{}_min'.format(col)] = s.min()
-    #     df.loc[run_id, '{}_max'.format(col)] = s.max()
-    #     df.loc[run_id, '{}_std'.format(col)] = s.std()
-
-    # save
-    df.to_csv(path, float_format='%.4f')
-
-
 def get_agent_name(byr=False):
     return POLICY_BYR if byr else POLICY_SLR
 
 
-def make_log_dir(agent_params=None):
-    if agent_params[BYR]:
-        log_dir = AGENT_DIR + '{}/hist_{}/'.format(
-            BYR, agent_params[BYR_HIST])
-    else:
-        log_dir = AGENT_DIR + '{}/{}/'.format(
-            SLR, agent_params[FEAT_TYPE])
+def get_log_dir(byr=None):
+    role = BYR if byr else SLR
+    log_dir = AGENT_DIR + '{}/'.format(role)
     if not os.path.isdir(log_dir):
         os.mkdir(log_dir)
     return log_dir
+
+
+def get_run_id(kl_coeff=None, delta=None, beta=None):
+    suffix = 'delta_{}_beta_{}'.format(delta, beta)
+    if kl_coeff is None:
+        run_id = 'entropy_{}_{}'.format(ENTROPY_BONUS, suffix)
+    else:
+        run_id = 'kl_{}_{}'.format(kl_coeff, suffix)
+    return run_id

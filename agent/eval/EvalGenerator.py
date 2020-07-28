@@ -6,35 +6,29 @@ from agent.AgentComposer import AgentComposer
 from rlenv.environments.BuyerEnvironment import BuyerEnvironment
 from rlenv.environments.SellerEnvironment import SellerEnvironment
 from rlenv.interfaces.PlayerInterface import SimulatedBuyer, SimulatedSeller
-from constants import BYR, DROPOUT
 
 
 class EvalGenerator(SimulatorGenerator):
-    def __init__(self, **kwargs):
-        super().__init__(verbose=kwargs['verbose'])
-        self.agent_params = kwargs['agent_params']
-        self.model_kwargs = kwargs['model_kwargs']
-        self.run_dir = kwargs['run_dir']
+    def __init__(self, byr=None, dropout=None, run_dir=None, verbose=False):
+        super().__init__(verbose=verbose)
+        self.byr = byr
+        self.dropout = dropout
+        self.run_dir = run_dir
         self.agent = None
 
     def initialize(self):
         super().initialize()
         self.agent = self.generate_agent()
 
-    @property
-    def byr(self):
-        return self.agent_params['byr']
-
     def generate_recorder(self):
         return OutcomeRecorder(verbose=self.verbose,
                                record_sim=True)
 
     def generate_composer(self):
-        return AgentComposer(agent_params=self.agent_params)
+        return AgentComposer(byr=self.byr)
 
     def generate_agent(self):
-        model = PgCategoricalAgentModel(byr=self.model_kwargs[BYR],
-                                        dropout=self.model_kwargs[DROPOUT])
+        model = PgCategoricalAgentModel(byr=self.byr, dropout=self.dropout)
         state_dict = torch.load(self.run_dir + 'params.pkl',
                                 map_location=torch.device('cpu'))
         model.load_state_dict(state_dict=state_dict, strict=True)

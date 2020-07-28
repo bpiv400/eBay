@@ -1,18 +1,16 @@
 import psutil
 import torch
-from datetime import datetime as dt
 from agent.EBayRunner import EBayMinibatchRl
 from agent.EBayPPO import EBayPPO
 from agent.models.SplitCategoricalPgAgent import SplitCategoricalPgAgent
-from agent.Prefs import SellerPrefs, BuyerPrefs
 from rlpyt.samplers.serial.sampler import SerialSampler
 from rlpyt.samplers.parallel.gpu.alternating_sampler import AlternatingSampler
 from rlpyt.utils.logging.context import logger_context
 from constants import BYR
-from agent.const import AGENT_STATE, KL_PENALTY
+from agent.const import AGENT_STATE
+from agent.util import get_log_dir, get_run_id
 from agent.AgentComposer import AgentComposer
 from agent.models.PgCategoricalAgentModel import PgCategoricalAgentModel
-from agent.util import make_log_dir
 from rlenv.DefaultQueryStrategy import DefaultQueryStrategy
 from rlenv.environments.SellerEnvironment import SellerEnvironment
 from rlenv.environments.BuyerEnvironment import BuyerEnvironment
@@ -22,34 +20,28 @@ from rlenv.LstgLoader import TrainLoader
 
 
 class RlTrainer:
-    def __init__(self, kl_penalty_idx=None, run_id=None, **kwargs):
-        # save system params to self
-        self.params = kwargs['system_params']
+    def __init__(self, **params):
+        # save params to self
+        self.system_params = params['system']
+        self.model_params = params['model']
 
         # buyer indicator
-        self.byr = kwargs['agent_params'][BYR]
+        self.byr = self.model_params[BYR]
 
         # counts
         self.itr = 0
-        self.batch_size = self.params['batch_size']
+        self.batch_size = self.system_params['batch_size']
 
         # initialize composer
-        self.composer = AgentComposer(
-            agent_params=kwargs['agent_params'])
+        self.composer = AgentComposer(byr=self.byr)
 
         # algorithm
-        pref_cls = BuyerPrefs if self.byr else SellerPrefs
-        prefs = pref_cls(params=kwargs['econ_params'])
-        if kl_penalty_idx is None:
-            self.algo = EBayPPO(prefs=prefs)
-        else:
-            self.algo = EBayPPO(prefs=prefs,
-                                kl_penalty=KL_PENALTY[kl_penalty_idx])
+        self.algo = EBayPPO(byr=self.byr, **params['econ'])
 
         # agent
         self.agent = SplitCategoricalPgAgent(
             ModelCls=PgCategoricalAgentModel,
-            model_kwargs=kwargs['model_params']
+            model_kwargs=self.model_params
         )
 
         # rlpyt components
@@ -57,14 +49,8 @@ class RlTrainer:
         self.runner = self._generate_runner()
 
         # for logging
-        if self.params['log']:
-            self.log_dir = make_log_dir(
-                agent_params=kwargs['agent_params'])
-
-        if run_id is None:
-            self.run_id = dt.now().strftime('%y%m%d-%H%M%S')
-        else:
-            self.run_id = '{}_{}'.format(run_id, kl_penalty_idx)
+        self.log_dir = get_log_dir(byr=self.byr)
+        self.run_id = get_run_id(**params['econ'])
 
     def _generate_query_strategy(self):
         return DefaultQueryStrategy(
@@ -75,11 +61,11 @@ class RlTrainer:
 
     def _generate_sampler(self):
         env_params = dict(composer=self.composer,
-                          verbose=self.params['verbose'],
+                          verbose=self.system_params['verbose'],
                           query_strategy=self._generate_query_strategy(),
                           recorder=None)
         # sampler and batch sizes
-        if self.params['serial']:
+        if self.system_params['serial']:
             sampler_cls = SerialSampler
             batch_b = 1
             x_lstg_cols = env_params['composer'].x_lstg_cols
@@ -121,7 +107,7 @@ class RlTrainer:
         return list(psutil.Process().cpu_affinity())
 
     def train(self):
-        if not self.params['log']:
+        if not self.system_params['log']:
             self.itr = self.runner.train()
         else:
             with logger_context(log_dir=self.log_dir,

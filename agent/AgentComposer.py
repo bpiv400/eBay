@@ -1,9 +1,8 @@
 import argparse
 import math
-import pprint
 import torch
 import numpy as np
-from agent.const import FEAT_TYPE, ALL_FEATS, AGENT_PARAMS
+from agent.const import ALL_FEATS
 from agent.util import get_agent_name
 from constants import TURN_FEATS, BYR, SLR, PARTS_DIR, TRAIN_RL
 from featnames import OUTCOME_FEATS, MONTHS_SINCE_LSTG, BYR_HIST, \
@@ -12,16 +11,19 @@ from rlenv.Composer import Composer
 from rlenv.const import LSTG_MAP, CLOCK_MAP, OFFER_MAPS, THREAD_COUNT_IND, \
     TIME_START_IND, TIME_END_IND, CLOCK_END_IND, CLOCK_START_IND
 from rlenv.util import load_chunk
-from utils import load_sizes, load_featnames, compose_args
+from utils import load_sizes, load_featnames
 
 
 class AgentComposer(Composer):
-    def __init__(self, agent_params=None):
+    feat_type = ALL_FEATS
+
+    def __init__(self, byr=None):
         # create columns and initialize Composer class
         chunk_path = PARTS_DIR + '{}/chunks/1.gz'.format(TRAIN_RL)
         cols = load_chunk(input_path=chunk_path)[0].columns
         super().__init__(cols)
-        self.agent_params = agent_params
+
+        self.byr = byr
         self.agent_name = get_agent_name(byr=self.byr)
         self.sizes['agent'] = load_sizes(self.agent_name)
         self.x_lstg_cols = list(cols) if type(cols) != list else cols
@@ -32,22 +34,11 @@ class AgentComposer(Composer):
         self.verify_agent()
 
     @property
-    def byr(self):
-        return self.agent_params[BYR]
-
-    @property
     def hist(self):
         if self.byr:
-            return self.agent_params[BYR_HIST]
+            raise NotImplementedError('Need to draw byr hist')
         else:
             raise NotImplementedError('No hist attribute for seller')
-
-    @property
-    def feat_type(self):
-        return self.agent_params[FEAT_TYPE]
-
-    # def set_hist(self, hist=None):
-    #     self.agent_params[BYR_HIST] = hist
 
     def _update_turn_inds(self, turn):
         if not self.byr:
@@ -198,11 +189,9 @@ class AgentComposer(Composer):
 
 def main():
     parser = argparse.ArgumentParser()
-    compose_args(arg_dict=AGENT_PARAMS, parser=parser)
-    agent_params = vars(parser.parse_args())
-    print('Args:')
-    pprint.pprint(agent_params)
-    AgentComposer(agent_params=agent_params)
+    parser.add_argument('--byr', 'store_true')
+    byr = parser.parse_args().byr
+    AgentComposer(byr=byr)
     print('Verified inputs correctly.')
 
 

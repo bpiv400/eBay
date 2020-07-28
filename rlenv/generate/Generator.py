@@ -1,12 +1,9 @@
 from datetime import datetime as dt
-from rlenv.generate.Recorder import OutcomeRecorder
-from rlenv.environments.SimulatorEnvironment import SimulatorEnvironment
 from rlenv.interfaces.ArrivalInterface import ArrivalInterface
 from rlenv.interfaces.PlayerInterface import SimulatedSeller, SimulatedBuyer
 from rlenv.LstgLoader import ChunkLoader
 from rlenv.util import get_env_sim_dir, load_chunk
 from rlenv.DefaultQueryStrategy import DefaultQueryStrategy
-from rlenv.Composer import Composer
 
 
 class Generator:
@@ -111,28 +108,3 @@ class SimulatorGenerator(Generator):
 
     def simulate_lstg(self):
         raise NotImplementedError()
-
-
-class DiscrimGenerator(SimulatorGenerator):
-    def __init__(self, verbose=False):
-        super().__init__(verbose=verbose)
-
-    def generate_composer(self):
-        return Composer(cols=self.loader.x_lstg_cols)
-
-    def generate_recorder(self):
-        return OutcomeRecorder(verbose=self.verbose,
-                               record_sim=False)
-
-    @property
-    def env_class(self):
-        return SimulatorEnvironment
-
-    def simulate_lstg(self):
-        """
-        Simulates a particular listing once.
-        :return: outcome tuple
-        """
-        self.environment.reset()
-        outcome = self.environment.run()
-        return outcome

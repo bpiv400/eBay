@@ -4,8 +4,7 @@ import pandas as pd
 from constants import PLOT_DIR, SIM, OBS, BYR_HIST_MODEL, \
     HOUR, DAY, ARRIVAL, MAX_DELAY_TURN, MAX_DELAY_ARRIVAL, INTERVAL_ARRIVAL
 from featnames import CON, MSG, DELAY
-from plots.util import continuous_pdf, cdf_plot, survival_plot, \
-    grouped_bar
+from plots.util import continuous_pdf, cdf_plot, survival_plot, grouped_bar
 
 
 def construct_df(p, key, turn=None):
@@ -51,10 +50,10 @@ def draw_arrival(p, suffix=''):
     print(name)
     df = construct_df(p, BYR_HIST_MODEL)
 
-    grouped_bar(name, df,
-                horizontal=True,
-                xlabel='Fraction of buyers',
-                ylabel='Count of past Best Offer threads')
+    cdf_plot(name, df,
+             xlim=[0, 250],
+             xlabel='Prior best-offer threads for buyer',
+             ylabel='Cumulative share of threads')
 
 
 def draw_delay(p, suffix='', turns=range(2, 8)):

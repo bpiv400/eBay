@@ -14,6 +14,7 @@ class AgentEnvironment(EbayEnvironment, Env):
         super().__init__(params=kwargs)
         self.agent_actions = 0
         self.last_event = None  # type: Thread
+        self.months_to_action = None
 
         # action space
         num_actions = self.composer.agent_sizes['out']
@@ -32,22 +33,12 @@ class AgentEnvironment(EbayEnvironment, Env):
         boxes = [FloatBox(-1000, 1000, shape=size) for size in sizes.values()]
         return Composite(boxes, self._obs_class)
 
-    def agent_tuple(self, done=None):
+    def agent_tuple(self, done=None, event=None):
         obs = self.get_obs(sources=self.last_event.sources(),
                            turn=self.last_event.turn)
-
-        # create info tuple
-        months = (self.last_event.priority - self.start_time) / MONTH
-        months += self.relist_count  # add in months without sale
-        # not sure if this logic jives with LstgLoader
-        if isinstance(self.last_event, RlThread):
-            thread_id = self.last_event.thread_id
-        else:
-            thread_id = 1
         reward = self.get_reward()
-        info = self.get_info(months=months,
-                             done=done,
-                             thread_id=thread_id)
+        info = self.get_info(event=event)
+        self.last_event = event  # save event to self after get_info()
         return obs, reward, done, info
 
     def get_obs(self, sources=None, turn=None):
@@ -61,7 +52,7 @@ class AgentEnvironment(EbayEnvironment, Env):
     def get_reward(self):
         raise NotImplementedError()
 
-    def get_info(self, months=None, thread_id=None, done=None):
+    def get_info(self, event=None):
         raise NotImplementedError()
 
     def get_offer_time(self, event):
@@ -77,7 +68,9 @@ class AgentEnvironment(EbayEnvironment, Env):
         return max(delay, 1) + event.priority
 
     def init_reset(self, next_lstg=True):
+        self.last_event = None
         self.agent_actions = 0
+        self.months_to_action = None
         if next_lstg:
             if not self.has_next_lstg():
                 raise RuntimeError("Out of lstgs")
@@ -133,6 +126,3 @@ class AgentEnvironment(EbayEnvironment, Env):
         :return:
         """
         raise NotImplementedError()
-
-
-

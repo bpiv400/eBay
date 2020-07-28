@@ -1,7 +1,7 @@
 from inputs.util import get_arrival_times, save_files, get_ind_x
 from utils import input_partition, load_file
 from featnames import START_TIME, END_TIME, LOOKUP
-from constants import FIRST_ARRIVAL_MODEL, INTERVAL_ARRIVAL
+from constants import FIRST_ARRIVAL_MODEL, INTERVAL_ARRIVAL, INTERVAL_CT_ARRIVAL
 
 
 def process_inputs(part):
@@ -22,7 +22,10 @@ def process_inputs(part):
 
     # interarrival time in periods
     y = diff // INTERVAL_ARRIVAL
-    assert not y.isna().all()
+
+    # fill in missings
+    y[y.isna()] = INTERVAL_CT_ARRIVAL
+    y = y.astype('int64')
 
     # indices for listing features
     idx_x = get_ind_x(lstgs=lookup.index, idx=y.index)

@@ -7,7 +7,7 @@ from torch.optim import Adam, lr_scheduler
 from sim.EBayDataset import EBayDataset
 from nets.FeedForward import FeedForward
 from sim.Sample import get_batches
-from constants import MODEL_DIR, LOG_DIR, CENSORED_MODELS, \
+from constants import MODEL_DIR, LOG_DIR, CENSORED_MODELS, BYR_HIST_MODEL, \
     MODEL_NORM, VALIDATION, DISCRIM_MODEL, TRAIN_MODELS, TRAIN_RL
 from utils import load_sizes
 
@@ -35,6 +35,7 @@ class SimTrainer:
 
         # boolean for different loss functions
         self.use_time_loss = name in CENSORED_MODELS
+        self.use_count_loss = name == BYR_HIST_MODEL
 
         # load model size parameters
         self.sizes = load_sizes(name)
@@ -187,6 +188,37 @@ class SimTrainer:
 
         return -lnl
 
+    @staticmethod
+    def _count_loss(theta, y):
+        # transformations
+        pi = torch.sigmoid(theta[:, 0])
+        params = torch.exp(theta[:, 1:])
+
+        # split by y
+        idx0, idx1 = y == 0, y > 0
+        pi0, pi1 = pi[idx0], pi[idx1]
+        a0, a1 = params[idx0, 0], params[idx1, 0]
+        b0, b1 = params[idx0, 1], params[idx1, 1]
+        y1 = y[idx1]
+
+        # zeros
+        if len(pi0) > 0:
+            lnl = torch.sum(torch.log(pi0 + (1-pi0) * a0 / (a0 + b0)))
+        else:
+            lnl = 0.
+
+        # non-zeros
+        if len(y1) > 0:
+            lnl += torch.sum(torch.log(1-pi1)
+                             + torch.log(a1)
+                             - torch.log(a1 + b1 + y1)
+                             + torch.lgamma(b1 + y1)
+                             - torch.lgamma(a1 + b1 + y1)
+                             + torch.lgamma(a1 + b1)
+                             - torch.lgamma(b1))
+
+        return -lnl
+
     def _run_batch(self, b, net, optimizer):
         """
         Loops over examples in batch, calculates loss.
@@ -201,16 +233,19 @@ class SimTrainer:
         net.train(is_training)
         theta = net(b['x'])
 
-        # softmax
-        if theta.size()[1] == 1:
-            theta = torch.cat((torch.zeros_like(theta), theta), dim=1)
-        lnq = log_softmax(theta, dim=-1)
-
-        # calculate loss
-        if self.use_time_loss:
-            loss = self._time_loss(lnq, b['y'])
+        if self.use_count_loss:
+            loss = self._count_loss(theta, b['y'])
         else:
-            loss = nll_loss(lnq, b['y'], reduction='sum')
+            # softmax
+            if theta.size()[1] == 1:
+                theta = torch.cat((torch.zeros_like(theta), theta), dim=1)
+            lnq = log_softmax(theta, dim=-1)
+
+            # calculate loss
+            if self.use_time_loss:
+                loss = self._time_loss(lnq, b['y'])
+            else:
+                loss = nll_loss(lnq, b['y'], reduction='sum')
 
         # add in regularization penalty and step down gradients
         if is_training:

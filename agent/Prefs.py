@@ -4,9 +4,9 @@ from constants import LISTING_FEE
 
 
 class Prefs:
-    def __init__(self, action_discount=None, action_cost=None):
-        self.action_discount = action_discount
-        self.action_cost = action_cost
+    def __init__(self, delta=None, beta=None):
+        self.delta = delta
+        self.beta = beta
         self.byr = None
 
     def discount_return(self):
@@ -20,9 +20,8 @@ class Prefs:
 
 
 class BuyerPrefs(Prefs):
-    def __init__(self, params=None):
-        super().__init__(action_discount=params['action_discount'],
-                         action_cost=params['action_cost'])
+    def __init__(self, delta=None, beta=None):
+        super().__init__(delta=delta, beta=beta)
         self.byr = True
 
     def discount_return(self, reward=None, done=None, info=None):
@@ -71,8 +70,7 @@ class BuyerPrefs(Prefs):
         :param action_diff: number of actions from current state until sale
         :return: discounted net proceeds
         """
-        net_value *= self.action_discount ** action_diff
-        net_value -= self.action_cost * action_diff
+        net_value *= self.delta ** action_diff
         return net_value
 
     def get_max_return(self, item_value=None):
@@ -85,10 +83,8 @@ class BuyerPrefs(Prefs):
 
 
 class SellerPrefs(Prefs):
-    def __init__(self, params=None):
-        super().__init__(action_discount=params['action_discount'],
-                         action_cost=params['action_cost'])
-        self.monthly_discount = params['monthly_discount']
+    def __init__(self, delta=None, beta=None):
+        super().__init__(delta=delta, beta=beta)
         self.byr = False
 
     def discount_return(self, reward=None, done=None, info=None):
@@ -107,6 +103,7 @@ class SellerPrefs(Prefs):
 
         # unpack info
         months = info.months.type(dtype)
+        months_last = info.months_last.type(dtype)
         bin_proceeds = info.bin_proceeds.type(dtype)
 
         # initialize matrix of returns
@@ -114,51 +111,45 @@ class SellerPrefs(Prefs):
 
         # initialize variables that track sale outcomes
         months_to_sale = torch.tensor(1e8, dtype=dtype).expand(N)
-        action_diff = torch.zeros(N, dtype=dtype)
         sale_proceeds = torch.zeros(N, dtype=dtype)
 
         for t in reversed(range(T)):
             # update sale outcomes when sales are observed
             months_to_sale = months_to_sale * (1 - done[t]) + months[t] * done[t]
-            action_diff = (action_diff + 1) * (1 - done[t])
             sale_proceeds = sale_proceeds * (1 - done[t]) + reward[t] * done[t]
 
             # discounted sale proceeds
             return_[t] += self.get_return(months_to_sale=months_to_sale,
-                                          months_since_start=months[t],
-                                          sale_proceeds=sale_proceeds,
-                                          action_diff=action_diff)
+                                          months_since_start=months_last[t],
+                                          sale_proceeds=sale_proceeds)
 
         # normalize
-        max_return = self.get_max_return(months_since_start=months,
+        max_return = self.get_max_return(months_since_start=months_last,
                                          bin_proceeds=bin_proceeds)
         return_ /= max_return
+        # assert return_.max() < 1  # BIN must arrive after seller's last action
 
         return return_
 
     def get_return(self, months_to_sale=None, months_since_start=None,
-                   sale_proceeds=None, action_diff=None):
+                   sale_proceeds=None):
         """
         Discounts proceeds from sale and listing fees paid.
         :param months_to_sale: months from listing start to sale
         :param months_since_start: months since start of listing
         :param sale_proceeds: sale price net of eBay cut
-        :param action_diff: number of actions from current state until sale
         :return: discounted net proceeds
         """
         # discounted listing fees
         months = np.ceil(months_to_sale) - np.ceil(months_since_start) + 1
         k = months_since_start % 1
-        factor = (1 - self.monthly_discount ** months) / (1 - self.monthly_discount)
-        delta = (self.monthly_discount ** (1 - k)) * factor
-        costs = LISTING_FEE * delta
-        # add in action costs
-        costs += self.action_cost * action_diff
+        factor = (1 - self.delta ** months) / (1 - self.delta)
+        discount = (self.delta ** (1 - k)) * factor
+        costs = LISTING_FEE * discount
         # discounted proceeds
         months_diff = months_to_sale - months_since_start
         assert (months_diff >= 0).all()
-        sale_proceeds *= self.monthly_discount ** months_diff
-        sale_proceeds *= self.action_discount ** action_diff
+        sale_proceeds *= self.delta ** months_diff
         return sale_proceeds - costs
 
     def get_max_return(self, months_since_start=None, bin_proceeds=None):
@@ -170,5 +161,5 @@ class SellerPrefs(Prefs):
         """
         # discounted listing fees
         k = months_since_start % 1
-        costs = LISTING_FEE * (self.monthly_discount ** (1 - k))
+        costs = LISTING_FEE * (self.delta ** (1 - k))
         return bin_proceeds - costs

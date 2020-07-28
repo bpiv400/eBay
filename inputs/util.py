@@ -1,11 +1,12 @@
 import numpy as np
 import pandas as pd
 from compress_pickle import load, dump
+from utils import unpickle
 from inputs.const import NUM_OUT
 from constants import INPUT_DIR, INDEX_DIR, VALIDATION, \
-    IDX, BYR, DISCRIM_MODEL, POLICY_BYR, BYR_DROP
+    IDX, BYR, DISCRIM_MODEL, POLICY_BYR, BYR_DROP, PCTILE_DIR
 from featnames import CLOCK_FEATS, OUTCOME_FEATS, SPLIT, MSG, AUTO, \
-    EXP, REJECT, DAYS, DELAY, TIME_FEATS, THREAD_COUNT
+    EXP, REJECT, DAYS, DELAY, TIME_FEATS, THREAD_COUNT, BYR_HIST
 
 
 def add_turn_indicators(df):
@@ -161,7 +162,7 @@ def save_featnames_and_sizes(x=None, m=None):
                     sizes['x'][k] = len(featnames[k])
             else:
                 # buyer models do not have time feats
-                if BYR in m or m[-1] in [str(i) for i in IDX[BYR]]:
+                if m == POLICY_BYR or m[-1] in [str(i) for i in IDX[BYR]]:
                     feats = CLOCK_FEATS + OUTCOME_FEATS
                 else:
                     feats = CLOCK_FEATS + TIME_FEATS + OUTCOME_FEATS
@@ -195,7 +196,6 @@ def convert_x_to_numpy(x, idx):
         x[k] = v.to_numpy(dtype='float32')
 
 
-# save featnames and sizes
 def save_files(d, part, name):
     # featnames and sizes
     if part == VALIDATION:

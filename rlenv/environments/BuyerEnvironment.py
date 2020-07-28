@@ -11,9 +11,7 @@ from rlenv.events.Thread import RlThread
 
 BuyerObs = namedarraytuple('BuyerObs',
                            list(load_sizes(POLICY_BYR)['x'].keys()))
-BuyerInfoTraj = namedarraytuple("BuyerInfoTraj", ["item_value",
-                                                  "months", "done",
-                                                  "turn", "thread_id"])
+BuyerInfoTraj = namedarraytuple("BuyerInfoTraj", ["item_value"])
 
 
 class BuyerEnvironment(AgentEnvironment):
@@ -164,13 +162,13 @@ class BuyerEnvironment(AgentEnvironment):
         else:
             return self.item_value - self.outcome.price
 
-    def get_info(self, months=None, done=None, thread_id=None):
-        return BuyerInfoTraj(item_value=self.item_value,
-                             thread_id=thread_id,
-                             months=months,
-                             done=done,
-                             turn=self.last_event.turn,
-                             actions=self.agent_actions)
+    def get_info(self, event=None):
+        # # not sure if this logic jives with LstgLoader
+        # if isinstance(self.last_event, RlThread):
+        #     thread_id = self.last_event.thread_id
+        # else:
+        #     thread_id = 1
+        return BuyerInfoTraj(item_value=self.item_value)
 
     @property
     def horizon(self):

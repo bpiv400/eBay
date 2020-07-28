@@ -4,7 +4,7 @@ from datetime import datetime as dt
 from compress_pickle import dump, load
 from processing.b_feats.util import collapse_dict
 from utils import run_func_on_chunks
-from constants import START, IDX, BYR, SLR, FEATS_DIR
+from constants import START, IDX, BYR, SLR, FEATS_DIR, NUM_FEATS_CHUNKS
 
 
 def open_offers(df, levels, role):
@@ -369,9 +369,9 @@ def add_deltas_index(deltas, events):
     return deltas
 
 
-def create_tf(chunk_path=None):
+def create_tf(chunk=None):
     start = dt.now()
-    events = load(chunk_path)
+    events = load(FEATS_DIR + 'chunks/{}.gz'.format(chunk))['offers']
     print('{} offers'.format(len(events)))
     events[BYR] = events.index.isin(IDX[BYR], level='index')
     tf_lstg_focal = get_lstg_time_feats(events, full=False)
@@ -383,10 +383,9 @@ def create_tf(chunk_path=None):
 
 def main():
     res = run_func_on_chunks(
+        num_chunks=NUM_FEATS_CHUNKS,
         f=create_tf,
-        func_kwargs=dict(
-            chunk_path=lambda i: FEATS_DIR + 'chunks/{}.gz'.format(i)
-        )
+        func_kwargs=dict()
     )
     df = pd.concat(res).sort_index()
     dump(df, FEATS_DIR + 'tf.gz')

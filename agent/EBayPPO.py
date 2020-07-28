@@ -7,6 +7,7 @@ from rlpyt.utils.tensor import valid_mean
 from rlpyt.utils.buffer import buffer_to
 from rlpyt.utils.collections import namedarraytuple
 from agent.models.HumanAgentModel import HumanAgentModel
+from agent.Prefs import SellerPrefs, BuyerPrefs
 from agent.const import STOPPING_EPOCHS, LR, RATIO_CLIP, ENTROPY_BONUS
 
 LossInputs = namedarraytuple("LossInputs",
@@ -35,13 +36,16 @@ class EBayPPO:
     bootstrap_value = True
     opt_info_fields = tuple(f for f in OptInfo._fields)
 
-    def __init__(self, prefs=None, kl_penalty=None):
+    def __init__(self, byr=None, delta=None, beta=None, kl_coeff=None):
         # save parameters to self
-        self.prefs = prefs
-        self.kl_penalty = kl_penalty
+        self.kl_coeff = kl_coeff
+
+        # agent preferences
+        pref_cls = BuyerPrefs if byr else SellerPrefs
+        self.prefs = pref_cls(delta=delta, beta=beta)
 
         # for cross-entropy
-        self.human = HumanAgentModel(byr=prefs.byr).to('cuda')
+        self.human = HumanAgentModel(byr=byr).to('cuda')
 
         # parameters to be defined later
         self.agent = None
@@ -75,7 +79,7 @@ class EBayPPO:
         done_max, _ = torch.max(done_count, dim=0)
         valid = torch.abs(done_count - done_max) + done
         valid = torch.clamp(valid, max=1)
-        valid[done.bool()] = 0.  # last obs of traj doesn't have action
+        # valid[done.bool()] = 0.  # last obs of traj doesn't have action
         return valid.bool()
 
     def optimize_agent(self, samples):
@@ -201,8 +205,8 @@ class EBayPPO:
         kl = self._cross_entropy(p=pi_0, q=pi_new.prob, valid=valid)
 
         # (cross-)entropy loss
-        if self.kl_penalty is not None:
-            entropy_loss = self.kl_penalty * kl.mean()
+        if self.kl_coeff is not None:
+            entropy_loss = self.kl_coeff * kl.mean()
         else:
             entropy_loss = - ENTROPY_BONUS * entropy.mean()
 

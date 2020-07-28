@@ -7,14 +7,11 @@ from featnames import EXP, CON, DELAY, AUTO, LOOKUP
 def construct_x(idx=None, threads=None, offers=None):
     # initialize dictionary with thread features
     x = {'thread': get_x_thread(threads, idx, turn_indicators=True)}
-
     # offer features
     x.update(get_x_offer_init(offers, idx, role=SLR))
-
     # no nans
     for v in x.values():
         assert v.isna().sum().sum() == 0
-
     return x
 
 
@@ -47,11 +44,9 @@ def process_inputs(part):
     y = get_y(offers.loc[idx, [CON, EXP]])
 
     # input features dictionary
-    x = construct_x(idx=y.index,
-                    threads=threads,
-                    offers=offers)
+    x = construct_x(idx=y.index, threads=threads, offers=offers)
 
-    # indices for listing features
+    # indices for fixed features
     idx_x = get_ind_x(lstgs=lookup.index, idx=idx)
 
     return {'y': y, 'x': x, 'idx_x': idx_x}

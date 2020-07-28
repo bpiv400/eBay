@@ -11,7 +11,7 @@ from nets.FeedForward import FeedForward
 from sim.Sample import get_batches
 from constants import DAY, MONTH, SPLIT_PCTS, INPUT_DIR, \
     MODEL_DIR, META_6, META_7, PARTITIONS, PARTS_DIR, \
-    MAX_DELAY_TURN, MAX_DELAY_ARRIVAL, NUM_CHUNKS
+    MAX_DELAY_TURN, MAX_DELAY_ARRIVAL, NUM_RL_WORKERS
 from featnames import DELAY, EXP, X_LSTG
 
 
@@ -22,6 +22,16 @@ def unpickle(file):
     :return: contents of file
     """
     return pickle.load(open(file, "rb"))
+
+
+def topickle(contents=None, path=None):
+    """
+    Pickles a .pkl file encoded with Python 3
+    :param contents: pickle-able object
+    :param str path: path to file
+    :return: contents of file
+    """
+    return pickle.dump(contents, open(path, "wb"))
 
 
 def get_remaining(lstg_start, delay_start):
@@ -160,18 +170,19 @@ def process_chunk_worker(part=None, chunk=None,
     return gen.process_chunk(chunk=chunk, part=part)
 
 
-def run_func_on_chunks(f=None, func_kwargs=None):
+def run_func_on_chunks(f=None, func_kwargs=None, num_chunks=None):
     """
     Applies f to all chunks in parallel.
     :param f: function that takes chunk number as input along with
     other arguments
     :param func_kwargs: dictionary of other keyword arguments
+    :param int num_chunks: number of chunks
     :return: list of worker-specific output
     """
-    num_workers = min(NUM_CHUNKS, psutil.cpu_count() - 1)
+    num_workers = min(num_chunks, psutil.cpu_count() - 4)
     pool = mp.Pool(num_workers)
     jobs = []
-    for i in range(NUM_CHUNKS):
+    for i in range(num_chunks):
         kw = func_kwargs.copy()
         kw['chunk'] = i
         jobs.append(pool.apply_async(f, kwds=kw))
@@ -194,10 +205,11 @@ def get_cut(meta):
     return .09
 
 
-def get_model_predictions(data):
+def get_model_predictions(data, softmax=True):
     """
     Returns predicted categorical distribution.
     :param EBayDataset data: model to simulate
+    :param bool softmax: take softmax if True
     :return: torch tensor
     """
     # initialize neural net
@@ -206,18 +218,22 @@ def get_model_predictions(data):
         net = net.to('cuda')
 
     # get predictions from neural net
-    lnp = []
+    theta = []
     batches = get_batches(data)
     for b in batches:
         if torch.cuda.is_available():
             b['x'] = {k: v.to('cuda') for k, v in b['x'].items()}
-        theta = net(b['x']).cpu().double()
-        if theta.size()[1] == 1:
-            theta = torch.cat((torch.zeros_like(theta), theta), dim=1)
-        lnp.append(log_softmax(theta, dim=-1))
+        theta.append(net(b['x']).cpu().double())
+    theta = torch.cat(theta)
 
-    # concatenate, exponentiate and return
-    return np.exp(torch.cat(lnp).numpy())
+    if not softmax:
+        return theta.numpy()
+
+    # take softmax
+    if theta.size()[1] == 1:
+        theta = torch.cat((torch.zeros_like(theta), theta), dim=1)
+    p = np.exp(log_softmax(theta, dim=-1).numpy())
+    return p
 
 
 def input_partition():
@@ -259,11 +275,12 @@ def drop_censored(df):
     return df[~censored]
 
 
-def set_gpu_workers(gpu=None, spawn=True):
+def set_gpu_workers(gpu=None, spawn=True, use_all=False):
     """
     Sets the GPU index and the CPU affinity.
     :param int gpu: index of cuda device.
     :param bool spawn: use spawn context for multiprocessing.
+    :param bool use_all: use all cpus if True.
     """
     # use spawn for multiprocessing
     if spawn:
@@ -271,13 +288,14 @@ def set_gpu_workers(gpu=None, spawn=True):
 
     # set gpu
     torch.cuda.set_device(gpu)
-    print('Training on cuda:{}'.format(gpu))
+    print('Using cuda:{}'.format(gpu))
 
     # set cpu affinity
     p = psutil.Process()
-    start = NUM_CHUNKS * gpu
-    workers = list(range(start, start + NUM_CHUNKS))
-    p.cpu_affinity(workers)
+    if not use_all:
+        start = NUM_RL_WORKERS * gpu
+        workers = list(range(start, start + NUM_RL_WORKERS))
+        p.cpu_affinity(workers)
     print('vCPUs: {}'.format(p.cpu_affinity()))
 
 

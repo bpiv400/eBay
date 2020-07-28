@@ -3,8 +3,9 @@ import numpy as np
 import pandas as pd
 from compress_pickle import dump
 from processing.util import get_con, get_norm
-from constants import CLEAN_DIR, FEATS_DIR, PCTILE_DIR, START, \
-    NUM_CHUNKS, MONTH, SLR
+from utils import topickle
+from constants import CLEAN_DIR, FEATS_DIR, PARTS_DIR, PCTILE_DIR, START, SEED, \
+    SHARES, NUM_FEATS_CHUNKS, SLR
 from featnames import START_PRICE, BYR_HIST, NORM
 
 # data types for csv read
@@ -54,30 +55,51 @@ IDX_NAMES = {'offers': ['lstg', 'thread', 'index'],
              'listings': 'lstg'}
 
 
-def create_chunks(offers=None, start_price=None, slr=None):
+def create_chunks(listings=None, threads=None, offers=None):
     """
     Chunks data by listing.
+    :param DataFrame listings: listing features with index ['lstg']
+    :param DataFrame threads: thread features with index ['lstg', 'thread']
     :param DataFrame offers: offer features with index ['lstg', 'thread', 'index']
-    :param Series start_price: listing start price with index ['lstg']
-    :param Series slr: seller id with index ['lstg']
     """
     # output directory
     chunk_dir = FEATS_DIR + 'chunks/'
     if not os.path.isdir(chunk_dir):
         os.mkdir(chunk_dir)
     # add norm to offers
-    con = get_con(offers.price.unstack(), start_price)
+    con = get_con(offers.price.unstack(), listings[START_PRICE])
     offers[NORM] = get_norm(con)
     # split into chunks by seller
-    slrs = slr.reset_index().sort_values(
-        by=['slr', 'lstg']).set_index('slr').squeeze()
-    u = np.unique(slr.values)
-    groups = np.array_split(u, NUM_CHUNKS)
-    for i in range(NUM_CHUNKS):
-        print('Creating chunk {} of {}'.format(i+1, NUM_CHUNKS))
+    slrs = listings[SLR].reset_index().sort_values(
+        by=[SLR, 'lstg']).set_index(SLR).squeeze()
+    u = np.unique(listings[SLR].values)
+    groups = np.array_split(u, NUM_FEATS_CHUNKS)
+    for i in range(NUM_FEATS_CHUNKS):
+        print('Creating chunk {} of {}'.format(i + 1, NUM_FEATS_CHUNKS))
         lstgs = slrs.loc[groups[i]].values
-        dump(offers.reindex(index=lstgs, level='lstg'),
-             chunk_dir + '{}.gz'.format(i))
+        chunk = {'listings': listings.reindex(index=lstgs),
+                 'threads': threads.reindex(index=lstgs, level='lstg'),
+                 'offers': offers.reindex(index=lstgs, level='lstg')}
+        dump(chunk, chunk_dir + '{}.gz'.format(i))
+
+
+def partition_lstgs(s):
+    # series of index slr and value lstg
+    slrs = s.reset_index().sort_values(
+        by=['slr', 'lstg']).set_index('slr').squeeze()
+    # randomly order sellers
+    u = np.unique(slrs.index.values)
+    np.random.seed(SEED)   # set seed
+    np.random.shuffle(u)
+    # partition listings into dictionary
+    d = {}
+    last = 0
+    for key, val in SHARES.items():
+        curr = last + int(u.size * val)
+        d[key] = np.sort(slrs.loc[u[last:curr]].values)
+        last = curr
+    d['testing'] = np.sort(slrs.loc[u[last:]].values)
+    return d
 
 
 def read_csv(name):
@@ -97,7 +119,8 @@ def get_pctiles(s):
     n = len(s.index)
     # create series of index name and values pctile
     idx = pd.Index(np.sort(s.values), name=s.name)
-    pctiles = pd.Series(np.arange(n) / (n - 1), index=idx, name='pctile')
+    pctiles = pd.Series(np.arange(n) / (n - 1),
+                        index=idx, name='pctile')
     pctiles = pctiles.groupby(pctiles.index).min()
     # put max in 99th percentile
     pctiles.loc[pctiles == 1] -= 1e-16
@@ -105,15 +128,6 @@ def get_pctiles(s):
     s = s.to_frame().join(pctiles, on=s.name).drop(
         s.name, axis=1).squeeze().rename(s.name)
     return s, pctiles
-
-
-def find_early_exps(offers=None, listings=None):
-    sale = offers['accept'].groupby('lstg').max()
-    no_sale = listings.loc[~sale, ['start_date', 'end_time']]
-    start_time = no_sale.start_date.astype('int64') * 3600 * 24
-    months = (no_sale.end_time + 1 - start_time) / MONTH
-    to_drop = no_sale[months < 1.].index
-    return to_drop
 
 
 def get_seconds(t):
@@ -126,21 +140,8 @@ def main():
     threads = read_csv('threads')
     listings = read_csv('listings')
 
-    # drop listings with zero arrivals
-    num_threads = threads.byr.groupby('lstg').count().reindex(
-        index=listings.index, fill_value=0)
-    lstgs = num_threads[num_threads > 0].index
-    listings = listings.reindex(index=lstgs)
-
-    # drop listings that expire before 31 days
-    to_drop = find_early_exps(offers=offers, listings=listings)
-    listings.drop(to_drop, inplace=True)
-    threads = threads.reindex(index=listings.index, level='lstg')
-    offers = offers.reindex(index=listings.index, level='lstg')
-
     # convert byr_hist to pctiles and save threads
-    threads.loc[:, BYR_HIST], to_save = \
-        get_pctiles(threads[BYR_HIST])
+    _, to_save = get_pctiles(threads[BYR_HIST])
     dump(to_save, PCTILE_DIR + '{}.pkl'.format(BYR_HIST))
     dump(threads, FEATS_DIR + 'threads.gz')
 
@@ -238,9 +239,11 @@ def main():
     dump(listings, FEATS_DIR + 'listings.gz')
 
     # chunk by listing
-    create_chunks(offers=offers,
-                  start_price=listings[START_PRICE],
-                  slr=listings[SLR])
+    create_chunks(listings=listings, threads=threads, offers=offers)
+
+    # partition by seller
+    partitions = partition_lstgs(listings[SLR])
+    topickle(partitions, PARTS_DIR + 'partitions.pkl')
 
 
 if __name__ == '__main__':

@@ -63,6 +63,10 @@ drop cents
 
 drop if meta == 316 | meta == 6000 | meta == 10542 | meta == 172008
 
+g int days = end_date - start_date + 1
+drop if sale_price == . & days < 31
+drop days
+
 * feedback variables
 
 replace fdbk_score = 0 if fdbk_score == .

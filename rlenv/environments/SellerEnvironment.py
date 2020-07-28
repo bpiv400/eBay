@@ -1,6 +1,6 @@
 from rlpyt.utils.collections import namedarraytuple
-from featnames import START_PRICE, ACC_PRICE
-from constants import MAX_DELAY_TURN, POLICY_SLR
+from featnames import START_PRICE
+from constants import MAX_DELAY_TURN, POLICY_SLR, MONTH
 from utils import load_sizes
 from rlenv.const import DELAY_EVENT
 from rlenv.environments.AgentEnvironment import AgentEnvironment
@@ -11,16 +11,16 @@ SellerObs = namedarraytuple("SellerObs",
                             list(load_sizes(POLICY_SLR)['x'].keys()))
 SellerInfoTraj = namedarraytuple("SellerInfoTraj",
                                  ["months",
+                                  "months_last",
                                   "bin_proceeds",
-                                  "done",
                                   "turn",
-                                  "thread_id",
                                   "actions"])
 
 
 class SellerEnvironment(AgentEnvironment):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+        self.months_last = None
 
     def is_agent_turn(self, event):
         """
@@ -33,12 +33,13 @@ class SellerEnvironment(AgentEnvironment):
     def run(self):  # until EbayEnvironment.run() stops at agent turn
         while True:
             event, lstg_complete = super().run()
-            self.last_event = event
-            # update most recent time/clock features if sampling an agent
-            if not lstg_complete:
+            if not lstg_complete:  # seller turn
                 self.agent_actions += 1
             if not lstg_complete or self.outcome.sale:
-                return self.agent_tuple(done=lstg_complete)
+                _agent_tuple = self.agent_tuple(done=lstg_complete,
+                                                event=event)
+                self.months_last = self._get_months(priority=event.priority)
+                return _agent_tuple
             else:
                 self.relist()
 
@@ -50,6 +51,7 @@ class SellerEnvironment(AgentEnvironment):
             if not lstg_complete:
                 self.last_event = event
                 self.agent_actions += 1
+                self.months_last = self._get_months(priority=event.priority)
                 return self.get_obs(sources=event.sources(),
                                     turn=event.turn)
             # if the lstg is complete
@@ -90,7 +92,7 @@ class SellerEnvironment(AgentEnvironment):
             delay = MAX_DELAY_TURN
             self.last_event.update_delay(seconds=MAX_DELAY_TURN)
         self.queue.push(self.last_event)
-        self.last_event = None
+        # self.last_event = None
         if self.verbose:
             Recorder.print_agent_turn(con=con,
                                       delay=delay / MAX_DELAY_TURN)
@@ -111,20 +113,22 @@ class SellerEnvironment(AgentEnvironment):
         return SellerObs
 
     def get_reward(self):
-        if not self.last_event.is_sale():
+        if self.outcome is None:
             return 0.0
         else:
             return self.outcome.price * (1-self.cut)
 
-    def get_info(self, months=None, thread_id=None, done=None):
+    def get_info(self, event=None):
         bin_proceeds = (1 - self.cut) * self.lookup[START_PRICE]
-        info = SellerInfoTraj(months=months,
+        info = SellerInfoTraj(months=self._get_months(event.priority),
+                              months_last=self.months_last,
                               turn=self.last_event.turn,
-                              done=done,
-                              thread_id=thread_id,
                               bin_proceeds=bin_proceeds,
                               actions=self.agent_actions)
         return info
+
+    def _get_months(self, priority=None):
+        return self.relist_count + (priority - self.start_time) / MONTH
 
     @property
     def horizon(self):
