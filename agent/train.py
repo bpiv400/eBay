@@ -1,44 +1,18 @@
 import argparse
 import os
 import torch
-import pandas as pd
 from agent.RlTrainer import RlTrainer
 from agent.const import PARAM_DICTS
 from agent.eval.EvalGenerator import EvalGenerator
-from agent.util import get_log_dir, get_run_id, get_values
+from agent.util import get_log_dir, get_run_id
 from rlenv.generate.util import process_sims
-from utils import unpickle, topickle, compose_args, set_gpu_workers, \
+from utils import unpickle, compose_args, set_gpu_workers, \
     run_func_on_chunks, process_chunk_worker
 from constants import DROPOUT_PATH, POLICY_BYR, BYR, POLICY_SLR, DROPOUT, \
     VALIDATION, NUM_RL_WORKERS
 
 
-def save_values(log_dir=None, run_id=None, values=None):
-    path = log_dir + 'runs.pkl'
-    if os.path.isfile(path):
-        df = unpickle(path)
-    else:
-        df = pd.DataFrame(index=pd.Index([], name='run_id'))
-
-    # moments of value distribution
-    for col in values.columns:
-        s = values[col]
-        df.loc[run_id, '{}_mean'.format(col)] = s.mean()
-        df.loc[run_id, '{}_median'.format(col)] = s.median()
-        df.loc[run_id, '{}_min'.format(col)] = s.min()
-        df.loc[run_id, '{}_max'.format(col)] = s.max()
-        df.loc[run_id, '{}_std'.format(col)] = s.std()
-
-    # save
-    topickle(contents=df, path=path)
-
-
 def simulate(part=None, trainer=None):
-    # directory for simulation output
-    part_dir = trainer.run_dir + '{}/'.format(part)
-    if not os.path.isdir(part_dir):
-        os.mkdir(part_dir)
-
     # arguments for generator
     eval_kwargs = dict(
         byr=trainer.byr,
@@ -58,15 +32,8 @@ def simulate(part=None, trainer=None):
     )
 
     # combine and process output
-    process_sims(part=part, parent_dir=trainer.run_dir, sims=sims)
-
-    # evaluate simulations
-    prefs = trainer.algo.prefs
-    prefs.eval()  # sets beta to 1
-    values = get_values(part=VALIDATION,
-                        run_dir=trainer.run_dir,
-                        prefs=prefs)
-    save_values(values)
+    part_dir = trainer.run_dir + '{}/'.format(part)
+    process_sims(part=part, sims=sims, output_dir=part_dir)
 
 
 def get_model_params(**args):

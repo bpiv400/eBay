@@ -38,6 +38,7 @@ def process_sim_offers(df, end_time):
     # days and delay
     df[DAYS], df[DELAY] = get_days_delay(clock.unstack())
     # concession as a decimal
+    df.loc[df[CON] == 101, CON] = 0
     df.loc[:, CON] /= 100
     # indicator for split
     df[SPLIT] = df[CON].apply(lambda x: is_split(x))
@@ -99,20 +100,18 @@ def concat_sim_chunks(sims):
     return threads, offers
 
 
-def process_sims(part=None, sims=None, parent_dir=None):
+def process_sims(part=None, sims=None, output_dir=None):
     # concatenate chunks
     threads, offers = concat_sim_chunks(sims)
-    lstg_start = load_file(part, LOOKUP)[START_TIME]
+
     # create output dataframes
+    lstg_start = load_file(part, LOOKUP)[START_TIME]
     d = clean_components(threads, offers, lstg_start)
 
     # create directory if it doesn't exist
-    folder = parent_dir + '{}/'.format(part)
-    if not os.path.isdir(folder):
-        os.mkdir(folder)
+    if not os.path.isdir(output_dir):
+        os.mkdir(output_dir)
 
     # save
     for k, df in d.items():
-        path = folder + '{}.gz'.format(k)
-        suffix = '_sim' if os.path.isfile(path) else ''
-        dump(df, folder + '{}{}.gz'.format(k, suffix))
+        dump(df, output_dir + '{}.gz'.format(k))

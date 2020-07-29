@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 from compress_pickle import dump
 from inputs.offer import get_y_msg
-from discrim.input import load_threads_offers
+from inputs.discrim import load_threads_offers
 from processing.util import hist_to_pctile
 from assess.const import MAX_THREADS
 from constants import TEST, PLOT_DIR, BYR_HIST_MODEL, CON_MULTIPLIER, \

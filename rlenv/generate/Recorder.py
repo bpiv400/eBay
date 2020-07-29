@@ -1,9 +1,8 @@
 import numpy as np
 import pandas as pd
-from constants import MONTH
-from featnames import (START_TIME, START_PRICE, TIME_FEATS,
-                       MSG, CON, LSTG, BYR_HIST, ACC_PRICE,
-                       DEC_PRICE)
+from constants import MONTH, SIM
+from featnames import START_TIME, START_PRICE, TIME_FEATS, MSG, CON, \
+    LSTG, BYR_HIST, ACC_PRICE, DEC_PRICE
 from rlenv.const import ARRIVAL, RL_ARRIVAL_EVENT
 
 # variable names
@@ -19,10 +18,9 @@ CUT = 'cut'
 CENSOR = 'censored'
 
 # for discriminator
-OFFER_COLS = [LSTG, THREAD, INDEX, CLOCK, CON, MSG, CENSOR] + TIME_FEATS
-THREAD_COLS = [LSTG, THREAD, BYR_HIST, CLOCK]
-INDEX_COLS = {False: ['lstg', 'thread', 'index'],
-              True: ['lstg', 'sim', 'thread', 'index']}
+OFFER_COLS = [LSTG, SIM, THREAD, INDEX, CLOCK, CON, MSG, CENSOR] + TIME_FEATS
+THREAD_COLS = [LSTG, SIM, THREAD, BYR_HIST, CLOCK]
+INDEX_COLS = [LSTG, SIM, THREAD, INDEX]
 
 # for values
 VAL_COLS = [LSTG, VAL, SE, AVG_PRICE, NUM_SALES, P_SALE, CUT]
@@ -155,11 +153,10 @@ class Recorder:
 
 
 class OutcomeRecorder(Recorder):
-    def __init__(self, verbose=None, record_sim=False):
+    def __init__(self, verbose=None):
         super().__init__(verbose)
         self.offers = None
         self.threads = None
-        self.record_sim = record_sim
         self.reset_recorders()
 
     def reset_recorders(self):
@@ -174,9 +171,7 @@ class OutcomeRecorder(Recorder):
         :param byr_hist: float giving byr history decile
         :param int time: time of the offer
         """
-        row = [self.lstg, thread_id, byr_hist, time]
-        if self.record_sim:
-            row.append(self.sim)
+        row = [self.lstg, self.sim, thread_id, byr_hist, time]
         self.threads.append(row)
 
     def add_offer(self, event=None, time_feats=None, censored=False):
@@ -186,6 +181,7 @@ class OutcomeRecorder(Recorder):
         if event.turn == 1:
             assert con > 0
         row = [self.lstg,
+               self.sim,
                event.thread_id,
                event.turn,
                event.priority,
@@ -194,8 +190,6 @@ class OutcomeRecorder(Recorder):
                censored
                ]
         row += list(time_feats)
-        if self.record_sim:
-            row.append(self.sim)
         self.offers.append(row)
         if self.verbose:
             if censored:
@@ -222,19 +216,14 @@ class OutcomeRecorder(Recorder):
         self.compress_common_cols([LSTG, THREAD, CLOCK],
                                   [self.threads, self.offers],
                                   [np.int32, np.uint16, np.int32])
-        self.offers.set_index(INDEX_COLS[self.record_sim], inplace=True)
-        self.threads.set_index(INDEX_COLS[self.record_sim][:-1], inplace=True)
+        self.offers.set_index(INDEX_COLS, inplace=True)
+        self.threads.set_index(INDEX_COLS[:-1], inplace=True)
         assert np.all(self.offers.xs(1, level='index')[CON] > 0)
 
     def _records2frames(self):
         # convert both dictionaries to dataframes
-        offer_cols = OFFER_COLS
-        thread_cols = THREAD_COLS
-        if self.record_sim:
-            offer_cols += ['sim']
-            thread_cols += ['sim']
-        self.offers = self.record2frame(self.offers, offer_cols)
-        self.threads = self.record2frame(self.threads, thread_cols)
+        self.offers = self.record2frame(self.offers, OFFER_COLS)
+        self.threads = self.record2frame(self.threads, THREAD_COLS)
 
     def construct_output(self):
         self._records2frames()

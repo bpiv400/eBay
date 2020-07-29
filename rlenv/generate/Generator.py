@@ -1,4 +1,7 @@
 from datetime import datetime as dt
+from rlenv.Composer import Composer
+from rlenv.environments.SimulatorEnvironment import SimulatorEnvironment
+from rlenv.generate.Recorder import OutcomeRecorder
 from rlenv.interfaces.ArrivalInterface import ArrivalInterface
 from rlenv.interfaces.PlayerInterface import SimulatedSeller, SimulatedBuyer
 from rlenv.LstgLoader import ChunkLoader
@@ -87,7 +90,7 @@ class SimulatorGenerator(Generator):
         raise NotImplementedError()
 
     def generate_recorder(self):
-        raise NotImplementedError()
+        return OutcomeRecorder(verbose=self.verbose)
 
     def generate(self):
         """
@@ -108,3 +111,26 @@ class SimulatorGenerator(Generator):
 
     def simulate_lstg(self):
         raise NotImplementedError()
+
+
+class OutcomeGenerator(SimulatorGenerator):
+    def __init__(self, verbose=False):
+        super().__init__(verbose=verbose)
+
+    def generate_composer(self):
+        return Composer(cols=self.loader.x_lstg_cols)
+
+    @property
+    def env_class(self):
+        return SimulatorEnvironment
+
+    def simulate_lstg(self):
+        """
+        Simulates listing until a sale.
+        :return: None
+        """
+        while True:
+            self.environment.reset()
+            outcome = self.environment.run()
+            if outcome.sale:
+                return

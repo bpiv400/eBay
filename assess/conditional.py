@@ -1,6 +1,6 @@
 from compress_pickle import dump
 from utils import load_file
-from discrim.input import load_threads_offers
+from inputs.discrim import load_threads_offers
 from constants import TEST, PLOT_DIR, SIM, OBS, IDX, SLR
 from featnames import META, START_PRICE, CON, NORM
 

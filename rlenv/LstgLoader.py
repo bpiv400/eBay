@@ -1,7 +1,6 @@
 import numpy as np
 import pandas as pd
-from constants import TRAIN_RL, PARTS_DIR, INTERVAL_CT_ARRIVAL, \
-    NUM_RL_WORKERS, NO_ARRIVAL_CUTOFF
+from constants import TRAIN_RL, PARTS_DIR, NUM_RL_WORKERS
 from featnames import LSTG
 from rlenv.util import load_chunk
 
@@ -112,7 +111,6 @@ class TrainLoader(LstgLoader):
             self._filename = self._get_train_file_path(rank=kwargs['rank'])
         chunk = load_chunk(input_path=self._filename)
         self._x_lstg_slice, self._lookup_slice, self._p_arrival_slice = chunk
-        self._drop_infreq()
         self._internal_loader = None
         self._draw_lstgs()
 
@@ -162,10 +160,3 @@ class TrainLoader(LstgLoader):
             lookup=self._lookup_slice,
             p_arrival=self._p_arrival_slice
         )
-
-    def _drop_infreq(self):
-        keep = self._p_arrival_slice[INTERVAL_CT_ARRIVAL] < NO_ARRIVAL_CUTOFF
-        # print('Dropping {0:2.1f}% of listings'.format(100 * (1 - keep.mean())))
-        self._p_arrival_slice = self._p_arrival_slice[keep]
-        self._x_lstg_slice = self._x_lstg_slice[keep]
-        self._lookup_slice = self._lookup_slice[keep]

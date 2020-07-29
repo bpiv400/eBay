@@ -12,12 +12,6 @@ class Prefs:
 
     def get_return(self):
         raise NotImplementedError()
-    
-    def eval(self):
-        self.beta = 1.
-        
-    def train(self, beta=None):
-        self.beta = beta
 
 
 class BuyerPrefs(Prefs):

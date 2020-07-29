@@ -6,14 +6,13 @@ while true
 do
   PID=$(nvidia-smi -i $GPU | grep '      C   ' | awk '{ print $3 }')
   if [[ "$PID" == "" ]]; then
-    GPU=$(GPU + 1)
+    GPU=$((GPU + 1))
   else
     GPU=0
-    printf "Checking again in 60 seconds...\n"
     sleep 60
   fi
 
-  if [ $GPU == 4 ]; then
+  if [[ $GPU == 4 ]]; then
     break
   fi
 done

@@ -6,7 +6,7 @@ from sim.EBayDataset import EBayDataset
 from utils import get_model_predictions, load_file, load_featnames, \
     set_gpu_workers
 from constants import FIRST_ARRIVAL_MODEL, PARTS_DIR, NUM_RL_WORKERS, \
-    TRAIN_RL, VALIDATION, TEST, INTERVAL_CT_ARRIVAL
+    TRAIN_RL, VALIDATION, TEST, INTERVAL_CT_ARRIVAL, NO_ARRIVAL_CUTOFF
 from featnames import SLR_BO_CT, LOOKUP, X_LSTG, P_ARRIVAL, END_TIME
 
 
@@ -24,8 +24,9 @@ def save_chunks(p_arrival=None, part=None, lookup=None):
     # drop extraneous lookup columns
     lookup.drop([END_TIME, SLR_BO_CT], axis=1, inplace=True)
 
-    # sort by no arrival probability
-    p_arrival = p_arrival.sort_values(INTERVAL_CT_ARRIVAL)
+    # drop infrequent arrivals and sort by no arrival probability
+    keep = p_arrival[INTERVAL_CT_ARRIVAL] < NO_ARRIVAL_CUTOFF
+    p_arrival = p_arrival[keep].sort_values(INTERVAL_CT_ARRIVAL)
     x_lstg = x_lstg.reindex(index=p_arrival.index)
     lookup = lookup.reindex(index=p_arrival.index)
 

@@ -58,9 +58,9 @@ python repo/plots/training_curves.py
 # chunks, discrim generator, and discrim input
 for part in valid rl
 do
-  # python repo/sim/chunks.py --part $part
-  python repo/discrim/generate.py --part $part
-  python repo/discrim/input.py --part $part
+  python repo/sim/chunks.py --part $part
+  python repo/sim/generate.py --part $part
+  python repo/inputs/discrim.py --part $part
 done
 
 # discriminator plots

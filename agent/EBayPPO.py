@@ -136,7 +136,7 @@ class EBayPPO:
         opt_info.ActionsPerTraj.append(info.num_actions[done].numpy())
 
         con = samples.agent.action[valid].numpy()
-        con[con > 100] = 100
+        con[con > 100] = 0
         con_rate = ((0 < con) & (con < 100)).mean().item()
         opt_info.ConRate.append(con_rate)
         opt_info.Concession.append(con)

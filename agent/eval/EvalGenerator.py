@@ -1,6 +1,5 @@
 import torch
 from rlenv.generate.Generator import SimulatorGenerator
-from rlenv.generate.Recorder import OutcomeRecorder
 from agent.models.PgCategoricalAgentModel import PgCategoricalAgentModel
 from agent.AgentComposer import AgentComposer
 from rlenv.environments.BuyerEnvironment import BuyerEnvironment
@@ -19,10 +18,6 @@ class EvalGenerator(SimulatorGenerator):
     def initialize(self):
         super().initialize()
         self.agent = self.generate_agent()
-
-    def generate_recorder(self):
-        return OutcomeRecorder(verbose=self.verbose,
-                               record_sim=True)
 
     def generate_composer(self):
         return AgentComposer(byr=self.byr)
