@@ -1,5 +1,5 @@
 import numpy as np
-from constants import MONTH, INTERVAL_TURN, INTERVAL_CT_TURN
+from constants import INTERVAL_TURN, INTERVAL_CT_TURN
 from utils import get_months_since_lstg
 from agent.ConSpace import ConSpace
 from rlpyt.envs.base import Env
@@ -12,9 +12,8 @@ from rlenv.events.Thread import RlThread
 class AgentEnvironment(EbayEnvironment, Env):
     def __init__(self, **kwargs):
         super().__init__(params=kwargs)
-        self.agent_actions = 0
-        self.last_event = None  # type: Thread
-        self.months_to_action = None
+        self.num_actions = None  # count of agent actions
+        self.last_event = None
 
         # action space
         num_actions = self.composer.agent_sizes['out']
@@ -34,19 +33,27 @@ class AgentEnvironment(EbayEnvironment, Env):
         return Composite(boxes, self._obs_class)
 
     def agent_tuple(self, done=None, event=None):
-        obs = self.get_obs(sources=self.last_event.sources(),
-                           turn=self.last_event.turn)
+        """
+        Constructs observation and calls child environment to get reward
+        and info, then sets self.last_event to current event.
+        :param bool done: True if trajectory complete.
+        :param RlThread event: either agent's turn or trajectory is complete.
+        :return: tuple
+        """
+        obs = self.get_obs(event=event, done=done)
         reward = self.get_reward()
         info = self.get_info(event=event)
         self.last_event = event  # save event to self after get_info()
         return obs, reward, done, info
 
-    def get_obs(self, sources=None, turn=None):
-        if sources is None or turn is None:
+    def get_obs(self, event=None, done=False):
+        if not done:  # agent action
+            self.num_actions += 1
+        if event.sources() is None or event.turn is None:
             raise RuntimeError("Missing arguments to get observation")
         obs_dict = self.composer.build_input_dict(model_name=None,
-                                                  sources=sources,
-                                                  turn=turn)
+                                                  sources=event.sources(),
+                                                  turn=event.turn)
         return self._obs_class(**obs_dict)
 
     def get_reward(self):
@@ -69,8 +76,7 @@ class AgentEnvironment(EbayEnvironment, Env):
 
     def init_reset(self, next_lstg=True):
         self.last_event = None
-        self.agent_actions = 0
-        self.months_to_action = None
+        self.num_actions = 0
         if next_lstg:
             if not self.has_next_lstg():
                 raise RuntimeError("Out of lstgs")

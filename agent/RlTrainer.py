@@ -51,6 +51,7 @@ class RlTrainer:
         # for logging
         self.log_dir = get_log_dir(byr=self.byr)
         self.run_id = get_run_id(**params['econ'])
+        self.run_dir = self.log_dir + 'run_{}/'.format(self.run_id)
 
     def _generate_query_strategy(self):
         return DefaultQueryStrategy(
@@ -119,6 +120,6 @@ class RlTrainer:
                 self.itr = self.runner.train()
 
             # delete optimization parameters
-            path = self.log_dir + 'run_{}/params.pkl'.format(self.run_id)
+            path = self.run_dir + 'params.pkl'
             d = torch.load(path)
             torch.save(d[AGENT_STATE], path)

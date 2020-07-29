@@ -19,6 +19,8 @@ LossInputs = namedarraytuple("LossInputs",
                               "old_dist_info"])
 OptInfo = namedtuple("OptInfo",
                      ["ActionsPerTraj",
+                      "ConRate",
+                      "Concession",
                       "DiscountedReturn",
                       "Advantage",
                       "Entropy",
@@ -36,9 +38,9 @@ class EBayPPO:
     bootstrap_value = True
     opt_info_fields = tuple(f for f in OptInfo._fields)
 
-    def __init__(self, byr=None, delta=None, beta=None, kl_coeff=None):
+    def __init__(self, byr=None, delta=None, beta=None, kl=None):
         # save parameters to self
-        self.kl_coeff = kl_coeff
+        self.kl_coeff = kl
 
         # agent preferences
         pref_cls = BuyerPrefs if byr else SellerPrefs
@@ -106,17 +108,17 @@ class EBayPPO:
 
         # break out samples
         reward, done, info = (env.reward, env.done, env.env_info)
-        done = done.type(reward.dtype)
 
         # time and/or action discounting
-        return_ = self.prefs.discount_return(reward=reward,
-                                             done=done,
-                                             info=info)
+        return_, censored = self.prefs.discount_return(reward=reward,
+                                                       done=done,
+                                                       info=info)
         value = samples.agent.agent_info.value
         advantage = return_ - value
 
         # ignore steps from unfinished trajectories
         valid = self.valid_from_done(done)
+        valid[censored] = False  # ignore censored actions
 
         # put sample components in LossInputs
         loss_inputs = LossInputs(
@@ -130,12 +132,17 @@ class EBayPPO:
 
         # initialize opt_info
         opt_info = OptInfo(*([] for _ in range(len(OptInfo._fields))))
-        opt_info.ActionsPerTraj.append(
-            info.actions[done.bool()].numpy())
-        opt_info.DiscountedReturn.append(
-            return_[valid].numpy())
-        opt_info.Advantage.append(
-            advantage[valid].numpy())
+
+        opt_info.ActionsPerTraj.append(info.num_actions[done].numpy())
+
+        con = samples.agent.action[valid].numpy()
+        con[con > 100] = 100
+        con_rate = ((0 < con) & (con < 100)).mean().item()
+        opt_info.ConRate.append(con_rate)
+        opt_info.Concession.append(con)
+
+        opt_info.DiscountedReturn.append(return_[valid].numpy())
+        opt_info.Advantage.append(advantage[valid].numpy())
 
         # zero gradients
         self._optim_value.zero_grad()

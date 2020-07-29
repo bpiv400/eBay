@@ -168,15 +168,15 @@ class EBayMinibatchRlBase(BaseRunner):
         cum_steps = (itr + 1) * self.sampler.batch_size
 
         with logger.tabular_prefix(prefix):
-            logger.record_tabular('Iteration', itr)
-            logger.record_tabular('CumSeconds', self._cum_time)
-            logger.record_tabular('CumSteps', cum_steps)
+            # logger.record_tabular('Iteration', itr)
+            # logger.record_tabular('CumSeconds', self._cum_time)
+            # logger.record_tabular('CumSteps', cum_steps)
             logger.record_tabular('CumCompletedTrajs', self._cum_completed_trajs)
-            logger.record_tabular('CumUpdates', self.algo.update_counter)
+            # logger.record_tabular('CumUpdates', self.algo.update_counter)
             logger.record_tabular('StepsPerSecond', samples_per_second)
             logger.record_tabular('UpdatesPerSecond', updates_per_second)
 
-        self._log_infos(traj_infos)
+        self._log_infos()
         logger.dump_tabular(with_prefix=False)
 
         self._last_time = new_time
@@ -185,20 +185,11 @@ class EBayMinibatchRlBase(BaseRunner):
             logger.log(f"Optimizing over {self.log_interval_itrs} iterations.")
             self.pbar = ProgBarCounter(self.log_interval_itrs)
 
-    def _log_infos(self, traj_infos=None):
+    def _log_infos(self):
         """
         Writes trajectory info and optimizer info into csv via the logger.
         Resets stored optimizer info.
         """
-        if traj_infos is None:
-            traj_infos = self._traj_infos
-        if traj_infos:
-            for k in traj_infos[0]:
-                # if not k.startswith("_"):
-                if k == 'Length':
-                    v = [info[k] for info in traj_infos]
-                    logger.record_tabular_misc_stat(k, v)
-
         if self._opt_infos:
             for k, v in self._opt_infos.items():
                 if type(v[0]) is np.ndarray:
@@ -265,8 +256,8 @@ class EBayMinibatchRl(EBayMinibatchRlBase):
         with logger.tabular_prefix(prefix):
             logger.record_tabular('NewCompletedTrajs',
                                   self._new_completed_trajs)
-            steps = sum(info["Length"] for info in self._traj_infos)
-            logger.record_tabular('StepsInTrajWindow', steps)
+            # steps = sum(info["Length"] for info in self._traj_infos)
+            # logger.record_tabular('StepsInTrajWindow', steps)
         super().log_diagnostics(itr, prefix=prefix)
         self._new_completed_trajs = 0
 

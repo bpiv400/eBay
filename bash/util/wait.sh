@@ -9,6 +9,7 @@ do
     GPU=$(GPU + 1)
   else
     GPU=0
+    printf "Checking again in 60 seconds...\n"
     sleep 60
   fi
 

@@ -1,25 +1,42 @@
 #!/bin/bash
 
-while getopts ":f:" opt; do
-  case $opt in
-    f) FEAT_TYPE="$OPTARG"
-    ;;
-    \?) echo "Invalid option -$OPTARG" >&2
-    ;;
-  esac
+# default values
+DELTA=0.995
+BETA=1.0
+OTHER_ARGUMENTS=()
+
+# Loop through arguments and process them
+for arg in "$@"
+do
+    case $arg in
+        -b|--beta)
+        DELTA="$2"
+        shift # Remove argument name from processing
+        shift # Remove argument value from processing
+        ;;
+        -d|--delta)
+        DELTA="$2"
+        shift # Remove argument name from processing
+        shift # Remove argument value from processing
+        ;;
+        *)
+        OTHER_ARGUMENTS+=("$1")
+        shift # Remove generic argument from processing
+        ;;
+    esac
 done
 
-LAST=$(bash repo/bash/rl/last.sh)
-printf "Running %d experiments\n" "$((LAST+1))"
-for ((i=0; i<=LAST; i++))
+# with entropy bonus
+GPU=$(bash repo/bash/gpu.sh)
+printf "entropy: starting on cuda:%d\n" "$GPU"
+python repo/agent/train.py --gpu "$GPU" --log --delta "$DELTA" --beta "$BETA" &>/dev/null &
+
+# with kl penalty
+./repo/bash/util/wait.sh
+for kl in 0 1.0 0.1 0.01 0.001 0.0001
 do
-  printf "Experiment #%d: " $i
   GPU=$(bash repo/bash/gpu.sh)
-  printf "starting on GPU %d\n" "$GPU"
-  if [ "$FEAT_TYPE" == "" ]; then
-    python repo/agent/train.py --gpu "$GPU" --exp $i --log &>/dev/null &
-  else
-    python repo/agent/train.py --gpu "$GPU" --exp $i --log --feat_type "$FEAT_TYPE" &>/dev/null &
-  fi
-  sleep 15
+  printf "kl %1.4g: starting on cuda:%d\n" "$kl" "$GPU"
+  python repo/agent/train.py --gpu "$GPU" --log --delta "$DELTA" --beta "$BETA" --kl $kl &>/dev/null &
+  sleep 30
 done

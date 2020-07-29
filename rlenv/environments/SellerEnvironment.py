@@ -1,6 +1,6 @@
 from rlpyt.utils.collections import namedarraytuple
 from featnames import START_PRICE
-from constants import MAX_DELAY_TURN, POLICY_SLR, MONTH
+from constants import MAX_DELAY_TURN, POLICY_SLR, MONTH, LISTING_FEE
 from utils import load_sizes
 from rlenv.const import DELAY_EVENT
 from rlenv.environments.AgentEnvironment import AgentEnvironment
@@ -12,9 +12,9 @@ SellerObs = namedarraytuple("SellerObs",
 SellerInfoTraj = namedarraytuple("SellerInfoTraj",
                                  ["months",
                                   "months_last",
-                                  "bin_proceeds",
+                                  "max_return",
                                   "turn",
-                                  "actions"])
+                                  "num_actions"])
 
 
 class SellerEnvironment(AgentEnvironment):
@@ -33,27 +33,20 @@ class SellerEnvironment(AgentEnvironment):
     def run(self):  # until EbayEnvironment.run() stops at agent turn
         while True:
             event, lstg_complete = super().run()
-            if not lstg_complete:  # seller turn
-                self.agent_actions += 1
             if not lstg_complete or self.outcome.sale:
-                _agent_tuple = self.agent_tuple(done=lstg_complete,
-                                                event=event)
-                self.months_last = self._get_months(priority=event.priority)
-                return _agent_tuple
+                return self.agent_tuple(done=lstg_complete, event=event)
             else:
                 self.relist()
 
     def reset(self, next_lstg=True):
         self.init_reset(next_lstg=next_lstg)  # in AgentEnvironment
+        self.months_last = None
         while True:
             event, lstg_complete = super().run()  # calls EBayEnvironment.run()
             # if the lstg isn't complete that means it's time to sample an agent action
             if not lstg_complete:
                 self.last_event = event
-                self.agent_actions += 1
-                self.months_last = self._get_months(priority=event.priority)
-                return self.get_obs(sources=event.sources(),
-                                    turn=event.turn)
+                return self.get_obs(event=event, done=False)
             # if the lstg is complete
             else:
                 # check whether it's expired -- if so, relist
@@ -82,20 +75,27 @@ class SellerEnvironment(AgentEnvironment):
         :return: tuple described in rlenv
         """
         con = self.turn_from_action(action)
+
         # not expiration rejection
         if con <= 1:
             offer_time = self.get_offer_time(self.last_event)
-            delay = offer_time - self.last_event.priority
+            delay = (offer_time - self.last_event.priority) / MAX_DELAY_TURN
             self.last_event.prep_rl_offer(con=con, priority=offer_time)
+
         # expiration rejection
         else:
-            delay = MAX_DELAY_TURN
+            delay = 1.
             self.last_event.update_delay(seconds=MAX_DELAY_TURN)
+
+        # put event in queue
         self.queue.push(self.last_event)
-        # self.last_event = None
+
+        # record time of last agent offer (not time of delay)
+        self.months_last = self._get_months(priority=self.last_event.priority)
+
         if self.verbose:
-            Recorder.print_agent_turn(con=con,
-                                      delay=delay / MAX_DELAY_TURN)
+            Recorder.print_agent_turn(con=con, delay=delay)
+
         return self.run()
 
     def process_offer(self, event):
@@ -116,15 +116,19 @@ class SellerEnvironment(AgentEnvironment):
         if self.outcome is None:
             return 0.0
         else:
-            return self.outcome.price * (1-self.cut)
+            gross = self.outcome.price * (1-self.cut)
+            listing_fees = LISTING_FEE * (self.relist_count+1)
+            net = gross - listing_fees
+            return net
 
     def get_info(self, event=None):
-        bin_proceeds = (1 - self.cut) * self.lookup[START_PRICE]
-        info = SellerInfoTraj(months=self._get_months(event.priority),
+        months = self._get_months(event.priority)
+        max_return = (1-self.cut) * self.lookup[START_PRICE] - LISTING_FEE
+        info = SellerInfoTraj(months=months,
                               months_last=self.months_last,
                               turn=self.last_event.turn,
-                              bin_proceeds=bin_proceeds,
-                              actions=self.agent_actions)
+                              max_return=max_return,
+                              num_actions=self.num_actions)
         return info
 
     def _get_months(self, priority=None):

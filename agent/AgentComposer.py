@@ -33,13 +33,6 @@ class AgentComposer(Composer):
         # verification
         self.verify_agent()
 
-    @property
-    def hist(self):
-        if self.byr:
-            raise NotImplementedError('Need to draw byr hist')
-        else:
-            raise NotImplementedError('No hist attribute for seller')
-
     def _update_turn_inds(self, turn):
         if not self.byr:
             inds = np.zeros(2, dtype=np.float32)

@@ -3,7 +3,8 @@ import pandas as pd
 from compress_pickle import load
 from utils import load_file, get_cut
 from agent.const import ENTROPY_BONUS
-from constants import AGENT_DIR, BYR, SLR, POLICY_SLR, POLICY_BYR, MONTH
+from constants import AGENT_DIR, BYR, SLR, POLICY_SLR, POLICY_BYR, MONTH, \
+    LISTING_FEE
 from featnames import LOOKUP, META, CON, NORM, START_PRICE, START_TIME
 
 
@@ -13,20 +14,12 @@ def get_months(lstg_start=None, sale_time=None):
     return months
 
 
-def get_proceeds(lookup=None, idx_sale=None, norm=None):
-    cut = lookup[META].apply(get_cut)
+def get_sale_norm(idx_sale=None, norm=None):
     sale_norm = norm.loc[idx_sale]
     slr_turn = (idx_sale.get_level_values(level='index') % 2) == 0
     sale_norm.loc[slr_turn] = 1 - sale_norm.loc[slr_turn]
     sale_norm = sale_norm.groupby('lstg').first()
-    sale_price = sale_norm * lookup[START_PRICE]
-    proceeds = sale_price * (1 - cut)
-    bin_proceeds = lookup[START_PRICE] * (1-cut)
-    return proceeds, bin_proceeds
-
-
-def get_idx_sale(offers=None):
-    return offers[offers[CON] == 1].index
+    return sale_norm
 
 
 def get_values(part=None, run_dir=None, prefs=None):
@@ -37,20 +30,19 @@ def get_values(part=None, run_dir=None, prefs=None):
     if prefs.byr:
         raise NotImplementedError()
     else:
-        idx_sale = get_idx_sale(offers=offers)
-        proceeds, bin_proceeds = get_proceeds(lookup=lookup,
-                                              idx_sale=idx_sale,
-                                              norm=offers[NORM])
+        cut = lookup[META].apply(get_cut)
+        idx_sale = offers[offers[CON] == 1].index
+        sale_norm = get_sale_norm(idx_sale=idx_sale, norm=offers[NORM])
+        num_listings = idx_sale.get_level_values(level='sim') + 1
+        listing_fees = LISTING_FEE * num_listings
+        proceeds = sale_norm * lookup[START_PRICE] * (1-cut) - listing_fees
         months = get_months(lstg_start=lookup[START_TIME],
                             sale_time=clock.loc[idx_sale])
 
         raw_values = prefs.get_return(months_to_sale=months,
-                                      months_since_start=0,
-                                      sale_proceeds=proceeds,
-                                      action_diff=0)
+                                      sale_proceeds=proceeds)
 
-        max_values = prefs.get_max_return(months_since_start=0,
-                                          bin_proceeds=bin_proceeds)
+        max_values = lookup[START_PRICE] * (1-cut)
 
     norm_values = raw_values / max_values  # normalized values
 
@@ -73,10 +65,10 @@ def get_log_dir(byr=None):
     return log_dir
 
 
-def get_run_id(kl_coeff=None, delta=None, beta=None):
+def get_run_id(kl=None, delta=None, beta=None):
     suffix = 'delta_{}_beta_{}'.format(delta, beta)
-    if kl_coeff is None:
+    if kl is None:
         run_id = 'entropy_{}_{}'.format(ENTROPY_BONUS, suffix)
     else:
-        run_id = 'kl_{}_{}'.format(kl_coeff, suffix)
+        run_id = 'kl_{}_{}'.format(kl, suffix)
     return run_id

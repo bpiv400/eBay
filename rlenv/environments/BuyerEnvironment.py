@@ -1,7 +1,8 @@
+import numpy as np
 from rlpyt.utils.collections import namedarraytuple
-from constants import HOUR, DAY, POLICY_BYR
-from featnames import START_PRICE
-from utils import load_sizes
+from constants import HOUR, DAY, POLICY_BYR, PCTILE_DIR
+from featnames import START_PRICE, BYR_HIST
+from utils import load_sizes, unpickle
 from rlenv.const import DELAY_EVENT, RL_ARRIVAL_EVENT
 from rlenv.sources import RlBuyerSources
 from rlenv.environments.AgentEnvironment import AgentEnvironment
@@ -11,7 +12,8 @@ from rlenv.events.Thread import RlThread
 
 BuyerObs = namedarraytuple('BuyerObs',
                            list(load_sizes(POLICY_BYR)['x'].keys()))
-BuyerInfoTraj = namedarraytuple("BuyerInfoTraj", ["item_value"])
+BuyerInfoTraj = namedarraytuple("BuyerInfoTraj", ["max_return",
+                                                  "num_actions"])
 
 
 class BuyerEnvironment(AgentEnvironment):
@@ -19,6 +21,9 @@ class BuyerEnvironment(AgentEnvironment):
         super().__init__(**kwargs)
         self.rl_event = None
         self.item_value = None
+
+        # for drawing experience
+        self.hist_pctile = unpickle(PCTILE_DIR + '{}.pkl'.format(BYR_HIST)).values
 
     def define_observation_class(self):
         return BuyerObs
@@ -122,8 +127,9 @@ class BuyerEnvironment(AgentEnvironment):
         self.init_reset(next_lstg=next_lstg)  # in AgentEnvironment
         self.item_value = self.lookup[START_PRICE]  # TODO: allow for different values
         rl_sources = RlBuyerSources(x_lstg=self.x_lstg,
-                                    hist=self.composer.hist)
-        event = Arrival(priority=self.start_time, sources=rl_sources,
+                                    hist=self._draw_hist())
+        event = Arrival(priority=self.start_time,
+                        sources=rl_sources,
                         rl=True)
         self.rl_event = event
         self.queue.push(event)
@@ -134,8 +140,7 @@ class BuyerEnvironment(AgentEnvironment):
             raise RuntimeError("Bad assumption about first event")
         event.update_arrival()
         self.last_event = event
-        return self.get_obs(sources=self.last_event.sources(),
-                            turn=self.last_event.turn)
+        return self.get_obs(event=event, done=False)
 
     def is_agent_turn(self, event):
         """
@@ -168,7 +173,14 @@ class BuyerEnvironment(AgentEnvironment):
         #     thread_id = self.last_event.thread_id
         # else:
         #     thread_id = 1
-        return BuyerInfoTraj(item_value=self.item_value)
+        return BuyerInfoTraj(max_return=self.item_value,
+                             num_actions=self.num_actions)
+
+    def _draw_hist(self):
+        q = np.random.uniform()
+        idx = np.searchsorted(self.hist_pctile, q) - 1
+        hist = self.hist_pctile[idx]
+        return hist
 
     @property
     def horizon(self):

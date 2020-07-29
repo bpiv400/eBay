@@ -1,6 +1,4 @@
-import numpy as np
 import torch
-from constants import LISTING_FEE
 
 
 class Prefs:
@@ -14,9 +12,12 @@ class Prefs:
 
     def get_return(self):
         raise NotImplementedError()
-
-    def get_max_return(self):
-        raise NotImplementedError()
+    
+    def eval(self):
+        self.beta = 1.
+        
+    def train(self, beta=None):
+        self.beta = beta
 
 
 class BuyerPrefs(Prefs):
@@ -39,7 +40,7 @@ class BuyerPrefs(Prefs):
         T, N = reward.shape  # time steps, number of environments
 
         # unpack info
-        item_value = info.item_value.type(dtype)
+        max_return = info.max_return.type(dtype)
 
         # initialize matrix of returns
         return_ = torch.zeros(reward.shape, dtype=dtype)
@@ -58,7 +59,6 @@ class BuyerPrefs(Prefs):
                                           action_diff=action_diff)
 
         # normalize by start_price
-        max_return = self.get_max_return(item_value=item_value)
         return_ /= max_return
 
         return return_
@@ -70,16 +70,7 @@ class BuyerPrefs(Prefs):
         :param action_diff: number of actions from current state until sale
         :return: discounted net proceeds
         """
-        net_value *= self.delta ** action_diff
-        return net_value
-
-    def get_max_return(self, item_value=None):
-        """
-        Return's buyer's valuation
-        :param float item_value: buyer's valuation
-        :return: float
-        """
-        return item_value
+        return net_value * (self.delta ** action_diff)
 
 
 class SellerPrefs(Prefs):
@@ -101,65 +92,48 @@ class SellerPrefs(Prefs):
         dtype = reward.dtype  # cast new tensors to this data type
         T, N = reward.shape  # time steps, number of environments
 
-        # unpack info
-        months = info.months.type(dtype)
-        months_last = info.months_last.type(dtype)
-        bin_proceeds = info.bin_proceeds.type(dtype)
+        # recast
+        done = done.type(torch.int)
+        max_return = info.max_return.type(dtype)
 
         # initialize matrix of returns
         return_ = torch.zeros(reward.shape, dtype=dtype)
 
         # initialize variables that track sale outcomes
-        months_to_sale = torch.tensor(1e8, dtype=dtype).expand(N)
+        t_sale = torch.tensor(1e8, dtype=dtype).expand(N)
         sale_proceeds = torch.zeros(N, dtype=dtype)
 
+        # to be later marked valid=False
+        censored = torch.zeros(reward.shape, dtype=torch.bool)
+
         for t in reversed(range(T)):
-            # update sale outcomes when sales are observed
-            months_to_sale = months_to_sale * (1 - done[t]) + months[t] * done[t]
+            # time until sale
+            t_sale = t_sale * (1 - done[t]) + info.months[t] * done[t]
+            months_to_sale = (t_sale - info.months_last[t]).type(dtype)
+
+            # price paid at sale, less fees
             sale_proceeds = sale_proceeds * (1 - done[t]) + reward[t] * done[t]
+            sale_proceeds = torch.min(sale_proceeds, max_return[t])  # precision
 
             # discounted sale proceeds
             return_[t] += self.get_return(months_to_sale=months_to_sale,
-                                          months_since_start=months_last[t],
                                           sale_proceeds=sale_proceeds)
 
+            # offers made after listing sells
+            censored[t] = months_to_sale < 0
+
         # normalize
-        max_return = self.get_max_return(months_since_start=months_last,
-                                         bin_proceeds=bin_proceeds)
         return_ /= max_return
-        # assert return_.max() < 1  # BIN must arrive after seller's last action
 
-        return return_
+        return return_, censored
 
-    def get_return(self, months_to_sale=None, months_since_start=None,
-                   sale_proceeds=None):
+    def get_return(self, months_to_sale=None, sale_proceeds=None):
         """
-        Discounts proceeds from sale and listing fees paid.
-        :param months_to_sale: months from listing start to sale
-        :param months_since_start: months since start of listing
-        :param sale_proceeds: sale price net of eBay cut
+        Discounts proceeds from sale, net of fees.
+        :param months_to_sale: months from now until sale
+        :param sale_proceeds: sale price net of eBay cut and listing fees
         :return: discounted net proceeds
         """
-        # discounted listing fees
-        months = np.ceil(months_to_sale) - np.ceil(months_since_start) + 1
-        k = months_since_start % 1
-        factor = (1 - self.delta ** months) / (1 - self.delta)
-        discount = (self.delta ** (1 - k)) * factor
-        costs = LISTING_FEE * discount
-        # discounted proceeds
-        months_diff = months_to_sale - months_since_start
-        assert (months_diff >= 0).all()
-        sale_proceeds *= self.delta ** months_diff
-        return sale_proceeds - costs
-
-    def get_max_return(self, months_since_start=None, bin_proceeds=None):
-        """
-        Discounts proceeds from sale and listing fees paid.
-        :param months_since_start: months since start of listing
-        :param bin_proceeds: start price net of eBay cut
-        :return: discounted maximum proceeds
-        """
-        # discounted listing fees
-        k = months_since_start % 1
-        costs = LISTING_FEE * (self.delta ** (1 - k))
-        return bin_proceeds - costs
+        discounted = (self.delta ** months_to_sale) * sale_proceeds
+        discounted[months_to_sale > 0] *= self.beta
+        return discounted

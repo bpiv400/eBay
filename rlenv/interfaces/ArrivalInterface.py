@@ -13,17 +13,16 @@ class ArrivalInterface:
 
         # for hist model
         s = unpickle(PCTILE_DIR + '{}.pkl'.format(BYR_HIST))
-        self.hist_array = s.index.values
-        self.hist_pctile = s.values
+        s = s.reindex(index=range(s.index.max() + 1), method='pad')
+        self.hist_pctile = s
 
     def hist(self, input_dict=None):
         theta = self.hist_model(input_dict).cpu().squeeze().numpy()
         hist = self._draw_hist(theta)  # hist is a count
-        idx = np.searchsorted(self.hist_array, hist)
-        if idx == len(self.hist_pctile):
+        if hist > self.hist_pctile.index[-1]:
             pctile = 1.
         else:
-            pctile = self.hist_pctile[idx]
+            pctile = self.hist_pctile.loc[hist]
         return pctile
 
     def inter_arrival(self, input_dict=None):

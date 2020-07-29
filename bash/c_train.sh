@@ -50,7 +50,7 @@ do
 done
 
 # best models and training plots
-bash repo/bash/util/wait.sh
+./repo/bash/util/wait.sh
 python repo/sim/best_models.py
 python repo/assess/training_curves.py
 python repo/plots/training_curves.py
@@ -80,7 +80,7 @@ do
 done
 
 # best discrim model
-bash repo/bash/util/wait.sh
+./repo/bash/util/wait.sh
 python repo/sim/best_models.py --group discrim
 
 # roc plot

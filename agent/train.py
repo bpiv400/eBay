@@ -35,8 +35,7 @@ def save_values(log_dir=None, run_id=None, values=None):
 
 def simulate(part=None, trainer=None):
     # directory for simulation output
-    run_dir = trainer.log_dir + '{}/'.format(trainer.run_id)
-    part_dir = run_dir + '{}/'.format(part)
+    part_dir = trainer.run_dir + '{}/'.format(part)
     if not os.path.isdir(part_dir):
         os.mkdir(part_dir)
 
@@ -44,7 +43,7 @@ def simulate(part=None, trainer=None):
     eval_kwargs = dict(
         byr=trainer.byr,
         dropout=trainer.model_params[DROPOUT],
-        run_dir=run_dir
+        run_dir=trainer.run_dir
     )
 
     # run in parallel on chunks
@@ -59,12 +58,14 @@ def simulate(part=None, trainer=None):
     )
 
     # combine and process output
-    process_sims(part=part, parent_dir=run_dir, sims=sims)
+    process_sims(part=part, parent_dir=trainer.run_dir, sims=sims)
 
     # evaluate simulations
+    prefs = trainer.algo.prefs
+    prefs.eval()  # sets beta to 1
     values = get_values(part=VALIDATION,
-                        run_dir=run_dir,
-                        prefs=trainer.algo.prefs)
+                        run_dir=trainer.run_dir,
+                        prefs=prefs)
     save_values(values)
 
 
@@ -76,10 +77,11 @@ def get_model_params(**args):
     print('{}: {}'.format(DROPOUT, dropout))
 
     # if using cross entropy, load entropy model
-    if args['kl_coeff'] is not None:
-        entropy_dir = get_log_dir(**args)
-        entropy_id = get_run_id(**args)
-        model_path = '{}_{}/params.pkl'.format(entropy_dir, entropy_id)
+    if args['kl'] is not None:
+        entropy_dir = get_log_dir(byr=args[BYR])
+        entropy_id = get_run_id(delta=args['delta'],
+                                beta=args['beta'])
+        model_path = entropy_dir + 'run_{}/params.pkl'.format(entropy_id)
         state_dict = torch.load(model_path,
                                 map_location=torch.device('cpu'))
         model_params['model_state_dict'] = state_dict
@@ -96,7 +98,7 @@ def startup():
     args = vars(parser.parse_args())
 
     # set gpu and cpu affinity
-    set_gpu_workers(gpu=args['gpu'], spawn=True)
+    set_gpu_workers(gpu=args['gpu'], use_all=args['all'], spawn=True)
 
     # print to console
     for k, v in args.items():
@@ -116,8 +118,15 @@ def startup():
 def main():
     trainer_args = startup()
     trainer = RlTrainer(**trainer_args)
+
+    # if model has already been trained, quit
+    if os.path.isfile(trainer.run_dir + 'params.pkl'):
+        print('{} already exists.'.format(trainer.run_id))
+        exit()
+
     trainer.train()
-    simulate(part=VALIDATION, trainer=trainer)
+    if trainer_args['econ']['kl'] is not None:
+        simulate(part=VALIDATION, trainer=trainer)
 
 
 if __name__ == '__main__':
