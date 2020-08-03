@@ -2,9 +2,8 @@ import torch
 
 
 class Prefs:
-    def __init__(self, delta=None, beta=None):
+    def __init__(self, delta=None):
         self.delta = delta
-        self.beta = beta
         self.byr = None
 
     def discount_return(self):
@@ -15,8 +14,8 @@ class Prefs:
 
 
 class BuyerPrefs(Prefs):
-    def __init__(self, delta=None, beta=None):
-        super().__init__(delta=delta, beta=beta)
+    def __init__(self, delta=None):
+        super().__init__(delta=delta)
         self.byr = True
 
     def discount_return(self, reward=None, done=None, info=None):
@@ -68,8 +67,8 @@ class BuyerPrefs(Prefs):
 
 
 class SellerPrefs(Prefs):
-    def __init__(self, delta=None, beta=None):
-        super().__init__(delta=delta, beta=beta)
+    def __init__(self, delta=None):
+        super().__init__(delta=delta)
         self.byr = False
 
     def discount_return(self, reward=None, done=None, info=None):
@@ -128,6 +127,4 @@ class SellerPrefs(Prefs):
         :param sale_proceeds: sale price net of eBay cut and listing fees
         :return: discounted net proceeds
         """
-        discounted = (self.delta ** months_to_sale) * sale_proceeds
-        discounted[months_to_sale > 0] *= self.beta
-        return discounted
+        return (self.delta ** months_to_sale) * sale_proceeds

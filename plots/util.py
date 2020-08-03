@@ -1,13 +1,29 @@
-from plots.const import FIG_DIR, FONTSIZE
-
+import os
+from constants import FIG_DIR
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
-plt.style.use('grayscale')
+
+FONTSIZE = {'roc': 16,  # fontsize by plot type
+            'training': 24,
+            'num': 16,
+            'sale': 16,
+            'response': 16}
+
+plt.style.use('ggplot')
+plt.rcParams.update({
+    "text.usetex": True,
+    "font.family": "sans-serif",
+    "font.sans-serif": ["Helvetica"]})
 plt.rc('text.latex', preamble=r'\usepackage{amsmath}')
 
 
-def save_fig(name, legend=True, legend_kwargs=None,
+def save_fig(path, legend=True, legend_kwargs=None,
              xlabel=None, ylabel=None, square=False):
+    # create directory
+    folder, name = path.split('/')
+    if not os.path.isdir(FIG_DIR + folder):
+        os.mkdir(FIG_DIR + folder)
+
     # font size
     fontsize = FONTSIZE[name.split('_')[0]]
 
@@ -33,9 +49,9 @@ def save_fig(name, legend=True, legend_kwargs=None,
     plt.ylabel(ylabel, fontsize=fontsize)
 
     # save
-    plt.savefig(FIG_DIR + '{}.png'.format(name),
+    plt.savefig(FIG_DIR + '{}.png'.format(path),
                 format='png',
-                transparent=True,
+                # transparent=True,
                 bbox_inches='tight')
 
     # close
@@ -43,7 +59,8 @@ def save_fig(name, legend=True, legend_kwargs=None,
 
 
 def line_plot(df, style=None, ds='steps-post', xlim=None, ylim=None,
-              xticks=None, yticks=None, diagonal=False, integer_xticks=False):
+              xticks=None, yticks=None, diagonal=False,
+              integer_xticks=False, logx=False):
     plt.clf()
 
     df.plot.line(style=style,
@@ -56,6 +73,9 @@ def line_plot(df, style=None, ds='steps-post', xlim=None, ylim=None,
 
     if integer_xticks:
         plt.gca().xaxis.set_major_locator(MaxNLocator(integer=True))
+
+    if logx:
+        plt.xscale('log')
 
     # gridlines
     plt.grid(axis='both',
@@ -70,40 +90,50 @@ def line_plot(df, style=None, ds='steps-post', xlim=None, ylim=None,
         plt.gca().plot([low, high], [low, high], '--k', linewidth=0.5)
 
 
-def training_plot(name, df):
+def training_plot(path, df):
     line_plot(df,
               style={'testing': '-k', 'train': '--k', 'baserate': '-k'},
               integer_xticks=True,
               ds='default')
-    save_fig('training_{}'.format(name), legend=False)
+    save_fig(path, legend=False)
 
 
-def continuous_pdf(name, df, xlabel=None, ylabel=None, **plotargs):
+def continuous_pdf(path, df, xlabel=None, ylabel=None, **plotargs):
     line_plot(df, **plotargs)
-    save_fig('p_{}'.format(name), xlabel=xlabel, ylabel=ylabel)
+    save_fig(path, xlabel=xlabel, ylabel=ylabel)
 
 
-def cdf_plot(name, df, xlabel=None, ylabel=None, **plotargs):
+def cdf_plot(path, df, xlabel=None, ylabel=None,
+             legend_kwargs=None, **plotargs):
+    if legend_kwargs is None:
+        legend_kwargs = {'loc': 'lower right'}
     line_plot(df, ylim=[0, 1], **plotargs)
-    save_fig('p_{}'.format(name),
+    save_fig(path,
              xlabel=xlabel,
              ylabel=ylabel,
-             legend_kwargs={'loc': 'lower right'})
+             legend_kwargs=legend_kwargs)
 
 
-def survival_plot(name, df, xlabel=None, ylabel=None, **plotargs):
+def survival_plot(path, df, xlabel=None, ylabel=None, **plotargs):
     line_plot(df, ylim=[0, 1], **plotargs)
-    save_fig('p_{}'.format(name), xlabel=xlabel, ylabel=ylabel,
+    save_fig(path, xlabel=xlabel, ylabel=ylabel,
              legend_kwargs={'loc': 'upper right'})
 
 
-def roc_plot(name, s):
+def roc_plot(path, s):
     line_plot(s, xlim=[0, 1], ylim=[0, 1], diagonal=True, ds='default')
-    save_fig('roc_{}'.format(name),
+    save_fig(path,
              xlabel='False positive rate',
              ylabel='True positive rate',
              square=True,
              legend=False)
+
+
+def response_plot(path, df, byr=False):
+    line_plot(df, xlim=[.4, .95], ylim=[0, 1], ds='default')
+    save_fig(path,
+             xlabel='{} offer as fraction of list price'.format(
+                 'Seller' if byr else 'Buyer'))
 
 
 def bar_plot(df, horizontal=False, stacked=False, rot=0,
@@ -123,6 +153,6 @@ def bar_plot(df, horizontal=False, stacked=False, rot=0,
         plt.gca().set_yticks(yticks)
 
 
-def grouped_bar(name, df, xlabel=None, ylabel=None, **plotargs):
+def grouped_bar(path, df, xlabel=None, ylabel=None, **plotargs):
     bar_plot(df, **plotargs)
-    save_fig('p_{}'.format(name), xlabel=xlabel, ylabel=ylabel)
+    save_fig(path, xlabel=xlabel, ylabel=ylabel)

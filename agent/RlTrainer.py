@@ -36,7 +36,7 @@ class RlTrainer:
         self.composer = AgentComposer(byr=self.byr)
 
         # algorithm
-        self.algo = EBayPPO(byr=self.byr, **params['econ'])
+        self.algo = EBayPPO(byr=self.byr, **params['ppo'])
 
         # agent
         self.agent = SplitCategoricalPgAgent(
@@ -50,7 +50,7 @@ class RlTrainer:
 
         # for logging
         self.log_dir = get_log_dir(byr=self.byr)
-        self.run_id = get_run_id(**params['econ'])
+        self.run_id = get_run_id(**params['ppo'])
         self.run_dir = self.log_dir + 'run_{}/'.format(self.run_id)
 
     def _generate_query_strategy(self):

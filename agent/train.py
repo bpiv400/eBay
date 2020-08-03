@@ -44,14 +44,14 @@ def get_model_params(**args):
     print('{}: {}'.format(DROPOUT, dropout))
 
     # if using cross entropy, load entropy model
-    if args['kl'] is not None:
-        entropy_dir = get_log_dir(byr=args[BYR])
-        entropy_id = get_run_id(delta=args['delta'],
-                                beta=args['beta'])
-        model_path = entropy_dir + 'run_{}/params.pkl'.format(entropy_id)
-        state_dict = torch.load(model_path,
-                                map_location=torch.device('cpu'))
-        model_params['model_state_dict'] = state_dict
+    if args['use_kl']:
+        raise NotImplementedError('need to find best entropy run')
+        # entropy_dir = get_log_dir(byr=args[BYR])
+        # entropy_id = get_run_id(delta=args['delta'])
+        # model_path = entropy_dir + 'run_{}/params.pkl'.format(entropy_id)
+        # state_dict = torch.load(model_path,
+        #                         map_location=torch.device('cpu'))
+        # model_params['model_state_dict'] = state_dict
 
     return model_params
 
@@ -92,8 +92,7 @@ def main():
         exit()
 
     trainer.train()
-    if trainer_args['econ']['kl'] is not None:
-        simulate(part=VALIDATION, trainer=trainer)
+    simulate(part=VALIDATION, trainer=trainer)
 
 
 if __name__ == '__main__':

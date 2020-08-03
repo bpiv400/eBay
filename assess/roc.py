@@ -3,13 +3,13 @@ import numpy as np
 import pandas as pd
 from sim.EBayDataset import EBayDataset
 from utils import get_model_predictions
-from assess.const import ROC_DIM
 from constants import TEST, DISCRIM_MODEL, PLOT_DIR
 
 
 def get_roc(p0, p1):
 	s = pd.Series()
-	for tau in ROC_DIM:
+	dim = np.arange(0, 1 + 1e-8, 0.001)
+	for tau in dim:
 		fp = np.sum(p0 > tau) / len(p0)
 		tp = np.sum(p1 > tau) / len(p1)
 		s.loc[fp] = tp

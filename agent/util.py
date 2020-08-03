@@ -1,5 +1,4 @@
 import os
-from agent.const import ENTROPY_BONUS
 from constants import AGENT_DIR, BYR, SLR, POLICY_SLR, POLICY_BYR
 
 
@@ -15,14 +14,7 @@ def get_log_dir(byr=None):
     return log_dir
 
 
-def get_run_suffix(delta=None, beta=None):
-    return 'delta_{}_beta_{}'.format(delta, beta)
-
-
-def get_run_id(kl=None, delta=None, beta=None):
-    suffix = get_run_suffix(delta=delta, beta=beta)
-    if kl is None:
-        run_id = 'entropy_{}_{}'.format(ENTROPY_BONUS, suffix)
-    else:
-        run_id = 'kl_{}_{}'.format(kl, suffix)
-    return run_id
+def get_run_id(delta=None, entropy_coeff=None, use_kl=False):
+    prefix = 'kl' if use_kl else 'entropy'
+    suffix = '{}_delta_{}'.format(entropy_coeff, delta)
+    return '{}_{}'.format(prefix, suffix)

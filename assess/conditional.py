@@ -1,8 +1,8 @@
 from compress_pickle import dump
 from utils import load_file
 from inputs.discrim import load_threads_offers
-from constants import TEST, PLOT_DIR, SIM, OBS, IDX, SLR
-from featnames import META, START_PRICE, CON, NORM
+from constants import TEST, PLOT_DIR, IDX, SLR
+from featnames import META, START_PRICE, CON, NORM, SIM, OBS
 
 
 def sale_price_rate(df, idx):

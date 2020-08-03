@@ -8,7 +8,7 @@ from rlpyt.utils.buffer import buffer_to
 from rlpyt.utils.collections import namedarraytuple
 from agent.models.HumanAgentModel import HumanAgentModel
 from agent.Prefs import SellerPrefs, BuyerPrefs
-from agent.const import STOPPING_EPOCHS, LR, RATIO_CLIP, ENTROPY_BONUS
+from agent.const import STOPPING_EPOCHS, LR, RATIO_CLIP
 
 LossInputs = namedarraytuple("LossInputs",
                              ["agent_inputs",
@@ -38,13 +38,14 @@ class EBayPPO:
     bootstrap_value = True
     opt_info_fields = tuple(f for f in OptInfo._fields)
 
-    def __init__(self, byr=None, delta=None, beta=None, kl=None):
+    def __init__(self, byr=None, delta=None, entropy_coeff=None, use_kl=False):
         # save parameters to self
-        self.kl_coeff = kl
+        self.entropy_coeff = entropy_coeff
+        self.use_kl = use_kl
 
         # agent preferences
         pref_cls = BuyerPrefs if byr else SellerPrefs
-        self.prefs = pref_cls(delta=delta, beta=beta)
+        self.prefs = pref_cls(delta=delta)
 
         # for cross-entropy
         self.human = HumanAgentModel(byr=byr).to('cuda')
@@ -67,7 +68,7 @@ class EBayPPO:
         self.agent = agent
 
         # optimizers
-        self._optim_value = Adam(self.agent.value_parameters(), lr=LR)
+        self._optim_value = Adam(self.agent.value_parameters(), lr=LR * 10)
         self._optim_policy = Adam(self.agent.policy_parameters(), lr=LR)
 
     @staticmethod
@@ -212,10 +213,10 @@ class EBayPPO:
         kl = self._cross_entropy(p=pi_0, q=pi_new.prob, valid=valid)
 
         # (cross-)entropy loss
-        if self.kl_coeff is not None:
-            entropy_loss = self.kl_coeff * kl.mean()
+        if self.use_kl:
+            entropy_loss = self.entropy_coeff * kl.mean()
         else:
-            entropy_loss = - ENTROPY_BONUS * entropy.mean()
+            entropy_loss = - self.entropy_coeff * entropy.mean()
 
         # total loss
         policy_loss = pi_loss + entropy_loss

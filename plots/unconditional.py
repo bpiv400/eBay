@@ -1,9 +1,9 @@
 from compress_pickle import load
 import numpy as np
 import pandas as pd
-from constants import PLOT_DIR, SIM, OBS, BYR_HIST_MODEL, \
+from constants import PLOT_DIR, BYR_HIST_MODEL, \
     HOUR, DAY, ARRIVAL, MAX_DELAY_TURN, MAX_DELAY_ARRIVAL, INTERVAL_ARRIVAL
-from featnames import CON, MSG, DELAY
+from featnames import CON, MSG, DELAY, SIM, OBS
 from plots.util import continuous_pdf, cdf_plot, survival_plot, grouped_bar
 
 
@@ -26,7 +26,7 @@ def draw_thread_offer(p, suffix=''):
 
         den = 'threads' if key == 'offers' else 'listings'
         grouped_bar(name, df,
-                    ylim=[0, 1],
+                    ylim=[0, 0.5],
                     ylabel='Fraction of {}'.format(den))
 
 

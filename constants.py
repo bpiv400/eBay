@@ -23,25 +23,27 @@ elif 'Darwin' in platform():  # Etan's Mac laptop
 else:  # cluster and AWS
     PREFIX = os.path.expanduser('~/weka/eBay')
 
-PARTS_DIR = '{}/partitions/'.format(PREFIX)
-INDEX_DIR = '{}/index/'.format(PREFIX)
-PCTILE_DIR = '{}/pctile/'.format(PREFIX)
-CLEAN_DIR = '{}/clean/'.format(PREFIX)
-W2V_DIR = '{}/w2v/'.format(PREFIX)
-FEATS_DIR = '{}/feats/'.format(PREFIX)
+PARTS_DIR = '{}/partitions/'.format(PREFIX)     # post-partition features
+INDEX_DIR = '{}/index/'.format(PREFIX)          # indices for input files
+PCTILE_DIR = '{}/pctile/'.format(PREFIX)        # percentiles of features
+CLEAN_DIR = '{}/clean/'.format(PREFIX)          # cleaned csvs
+W2V_DIR = '{}/w2v/'.format(PREFIX)              # for word2vec features
+FEATS_DIR = '{}/feats/'.format(PREFIX)          # pre-partion features
+FIG_DIR = '{}/figures/'.format(PREFIX)          # for saving figures
 
-INPUT_DIR = '{}/inputs/'.format(PREFIX)
-SIZES_DIR = INPUT_DIR + 'sizes/'
-FEATNAMES_DIR = INPUT_DIR + 'featnames/'
+INPUT_DIR = '{}/inputs/'.format(PREFIX)         # inputs for models
+SIZES_DIR = INPUT_DIR + 'sizes/'                # for initializing models
+FEATNAMES_DIR = INPUT_DIR + 'featnames/'        # for testing
 
-OUTPUT_DIR = '{}/outputs/'.format(PREFIX)
-LOG_DIR = OUTPUT_DIR + 'logs/'
-MODEL_DIR = OUTPUT_DIR + 'models/'
-PLOT_DIR = OUTPUT_DIR + 'plots/'
-AGENT_DIR = OUTPUT_DIR + 'agent/'
+OUTPUT_DIR = '{}/outputs/'.format(PREFIX)       # for saving outputs
+LOG_DIR = OUTPUT_DIR + 'logs/'                  # model logs
+MODEL_DIR = OUTPUT_DIR + 'models/'              # trained models
+PLOT_DIR = OUTPUT_DIR + 'plots/'                # for creating figures
+AGENT_DIR = OUTPUT_DIR + 'agent/'               # agent logs and models
 
 DATE_FEATS_PATH = FEATS_DIR + 'date_feats.pkl'
 DROPOUT_PATH = MODEL_DIR + 'dropout.pkl'
+META_PATH = CLEAN_DIR + 'meta.csv'
 
 # partitions
 TRAIN_MODELS = 'sim'
@@ -120,10 +122,6 @@ TURN_FEATS = {
     BYR: ['t1', 't3', 't5'],
     SLR: ['t2', 't4']
 }
-
-# outcome types
-SIM = 'simulation'
-OBS = 'data'
 
 # normalization type
 MODEL_NORM = 'batch'

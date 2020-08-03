@@ -1,8 +1,8 @@
 import numpy as np
 import pandas as pd
-from constants import MONTH, SIM
+from constants import MONTH
 from featnames import START_TIME, START_PRICE, TIME_FEATS, MSG, CON, \
-    LSTG, BYR_HIST, ACC_PRICE, DEC_PRICE
+    LSTG, BYR_HIST, ACC_PRICE, DEC_PRICE, SIM
 from rlenv.const import ARRIVAL, RL_ARRIVAL_EVENT
 
 # variable names

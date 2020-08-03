@@ -4,10 +4,12 @@ from compress_pickle import dump
 from inputs.offer import get_y_msg
 from inputs.discrim import load_threads_offers
 from processing.util import hist_to_pctile
-from assess.const import MAX_THREADS
+from assess.util import discrete_pdf
+from utils import load_file
 from constants import TEST, PLOT_DIR, BYR_HIST_MODEL, CON_MULTIPLIER, \
-    SIM, OBS, ARRIVAL, MAX_DELAY_ARRIVAL, MAX_DELAY_TURN, INTERVAL_ARRIVAL
-from featnames import MONTHS_SINCE_LSTG, BYR_HIST, DELAY, CON, MSG, REJECT
+    ARRIVAL, MAX_DELAY_ARRIVAL, MAX_DELAY_TURN, INTERVAL_ARRIVAL
+from featnames import MONTHS_SINCE_LSTG, BYR_HIST, DELAY, CON, MSG, \
+    SIM, OBS
 
 
 def get_pdf(y=None, intervals=None, add_last=False):
@@ -64,35 +66,23 @@ def get_distributions(threads=None, offers=None):
     return p
 
 
-def num_threads(threads=None):
-    # threads per listing
+def num_threads(threads=None, lstgs=None):
     s = threads.reset_index('thread')['thread'].groupby('lstg').count()
-    s = s.groupby(s).count() / len(s)
-    # censor at MAX_THREADS
-    s.loc[MAX_THREADS] = s[s.index >= MAX_THREADS].sum(axis=0)
-    s = s[s.index <= MAX_THREADS]
-    assert np.abs(s.sum() - 1) < 1e-8
-    # relabel index
-    idx = s.index.astype(str).tolist()
-    idx[-1] += '+'
-    s.index = idx
-    return s
+    s = s.reindex(index=lstgs, fill_value=0)  # listings w/o threads
+    return discrete_pdf(s, censoring=3)
 
 
 def num_offers(offers=None):
-    byr_reject = offers[REJECT] & offers.index.isin([3, 5], level='index')
-    s = offers.loc[~byr_reject, REJECT].rename('turn')
-    s = s.groupby(['lstg', 'thread']).count()
-    s = s.groupby(s).count() / len(s)
-    return s
+    s = offers.iloc[:, 0].groupby(['lstg', 'thread']).count()
+    return discrete_pdf(s)
 
 
-def create_outputs(threads, offers):
+def create_outputs(threads=None, offers=None, lstgs=None):
     # loop over models, get distributions
     d = get_distributions(threads=threads, offers=offers)
 
     # number of threads per listing
-    d['threads'] = num_threads(threads=threads)
+    d['threads'] = num_threads(lstgs=lstgs, threads=threads)
 
     # number of offers per thread
     d['offers'] = num_offers(offers=offers)
@@ -105,10 +95,18 @@ def main():
     threads_obs, offers_obs = load_threads_offers(part=TEST, sim=False)
     threads_sim, offers_sim = load_threads_offers(part=TEST, sim=True)
 
+    # lookup file
+    lstgs = load_file(TEST, 'sim/x_thread').index.get_level_values(
+        level='lstg').unique()
+
     # unconditional distributions
     p = dict()
-    p[OBS] = create_outputs(threads_obs, offers_obs)
-    p[SIM] = create_outputs(threads_sim, offers_sim)
+    p[OBS] = create_outputs(threads=threads_obs,
+                            offers=offers_obs,
+                            lstgs=lstgs)
+    p[SIM] = create_outputs(threads=threads_sim,
+                            offers=offers_sim,
+                            lstgs=lstgs)
 
     # save
     dump(p, PLOT_DIR + 'p.pkl')
