@@ -127,4 +127,7 @@ class SellerPrefs(Prefs):
         :param sale_proceeds: sale price net of eBay cut and listing fees
         :return: discounted net proceeds
         """
-        return (self.delta ** months_to_sale) * sale_proceeds
+        if self.delta == 0.:
+            return sale_proceeds
+        else:
+            return (self.delta ** months_to_sale) * sale_proceeds

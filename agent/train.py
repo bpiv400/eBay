@@ -4,6 +4,7 @@ import torch
 from agent.RlTrainer import RlTrainer
 from agent.const import PARAM_DICTS
 from agent.eval.EvalGenerator import EvalGenerator
+from agent.models.AgentModel import BetaCategoricalAgentModel
 from agent.util import get_log_dir, get_run_id
 from rlenv.generate.util import process_sims
 from utils import unpickle, compose_args, set_gpu_workers, \
@@ -13,12 +14,15 @@ from constants import DROPOUT_PATH, POLICY_BYR, BYR, POLICY_SLR, DROPOUT, \
 
 
 def simulate(part=None, trainer=None):
+    # recreate model
+    state_dict = torch.load(trainer.run_dir + 'params.pkl',
+                            map_location=torch.device('cpu'))
+    model_params = trainer.model_params
+    model_params['model_state_dict'] = state_dict
+    model = BetaCategoricalAgentModel(**model_params)
+
     # arguments for generator
-    eval_kwargs = dict(
-        byr=trainer.byr,
-        dropout=trainer.model_params[DROPOUT],
-        run_dir=trainer.run_dir
-    )
+    eval_kwargs = dict(env=trainer.env, model=model)
 
     # run in parallel on chunks
     sims = run_func_on_chunks(
@@ -86,8 +90,8 @@ def main():
     trainer_args = startup()
     trainer = RlTrainer(**trainer_args)
 
-    # if model has already been trained, quit
-    if os.path.isfile(trainer.run_dir + 'params.pkl'):
+    # if logging and model has already been trained, quit
+    if trainer_args['system']['log'] and os.path.isdir(trainer.run_dir):
         print('{} already exists.'.format(trainer.run_id))
         exit()
 

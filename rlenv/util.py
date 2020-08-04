@@ -1,7 +1,6 @@
 """
 Utility functions for use in objects related to the RL environment
 """
-import torch
 import os
 import numpy as np
 import pandas as pd
@@ -61,20 +60,26 @@ def proper_squeeze(tensor):
     return tensor
 
 
-def sample_categorical(logits=None):
+def sample_categorical(logits=None, probs=None):
     """
     Samples from a categorical distribution
-    :param torch.FloatTensor logits: logits of categorical distribution
+    :param logits: logits of categorical distribution
+    :param probs: probabilities of categorical distribution
     :return: 1 dimensional np.array
     """
-    cat = Categorical(logits=logits)
-    sample = proper_squeeze(cat.sample(sample_shape=(1,)).float()).numpy()
-    return sample
+    assert logits is None or probs is None
+    if logits is not None:
+        cat = Categorical(logits=logits)
+    else:
+        cat = Categorical(probs=probs)
+    sample = proper_squeeze(cat.sample(sample_shape=(1,)).float())
+    return sample.numpy()
 
 
 def sample_bernoulli(params):
     dist = Bernoulli(logits=params)
-    return proper_squeeze(dist.sample((1,))).numpy()
+    sample = proper_squeeze(dist.sample((1,)))
+    return sample.numpy()
 
 
 def last_norm(sources=None, turn=0):

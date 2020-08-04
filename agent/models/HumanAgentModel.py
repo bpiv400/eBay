@@ -1,4 +1,5 @@
 import torch
+from rlpyt.distributions.categorical import DistInfo
 from utils import load_sizes, load_state_dict
 from nets.FeedForward import FeedForward
 from constants import POLICY_SLR, POLICY_BYR
@@ -22,6 +23,7 @@ class HumanAgentModel(torch.nn.Module):
         self.eval()
 
     def get_policy(self, observation=None):
+        # noinspection PyProtectedMember
         input_dict = observation._asdict()
 
         # processing for single observations

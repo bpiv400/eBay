@@ -13,11 +13,14 @@ SellerInfoTraj = namedarraytuple("SellerInfoTraj",
                                  ["months",
                                   "months_last",
                                   "max_return",
-                                  "turn",
-                                  "num_actions"])
+                                  "num_actions",
+                                  "relist_ct"])
 
 
 class SellerEnvironment(AgentEnvironment):
+    """
+    Abstract class for implementing seller agent environment.
+    """
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.months_last = None
@@ -30,13 +33,8 @@ class SellerEnvironment(AgentEnvironment):
         """
         return event.type == DELAY_EVENT and event.turn % 2 == 0
 
-    def run(self):  # until EbayEnvironment.run() stops at agent turn
-        while True:
-            event, lstg_complete = super().run()
-            if not lstg_complete or self.outcome.sale:
-                return self.agent_tuple(done=lstg_complete, event=event)
-            else:
-                self.relist()
+    def run(self):
+        raise NotImplementedError
 
     def reset(self, next_lstg=True):
         self.init_reset(next_lstg=next_lstg)  # in AgentEnvironment
@@ -49,24 +47,10 @@ class SellerEnvironment(AgentEnvironment):
                 return self.get_obs(event=event, done=False)
             # if the lstg is complete
             else:
-                # check whether it's expired -- if so, relist
-                if not self.outcome.sale:
-                    self.relist()
-                # otherwise, there's been a buy it now sale w/o a seller action,
-                else:
-                    # this case should happens in TestGenerator
-                    # b/c lstgs with no seller actions should be removed
-                    if next_lstg:
-                        # conditional prevents queuing up next lstg
-                        # in EvalGenerator
-                        self.next_lstg()  # queue up next lstg in training
-                        super().reset()
-                    else:
-                        return None
+                self._process_lstg_complete_without_action(next_lstg)
 
-    def relist(self):
-        self.relist_count += 1
-        super().reset()  # calls EBayEnvironment.reset()
+    def _process_lstg_complete_without_action(self, next_lstg):
+        raise NotImplementedError
 
     def step(self, action):
         """
@@ -113,22 +97,16 @@ class SellerEnvironment(AgentEnvironment):
         return SellerObs
 
     def get_reward(self):
-        if self.outcome is None:
-            return 0.0
-        else:
-            gross = self.outcome.price * (1-self.cut)
-            listing_fees = LISTING_FEE * (self.relist_count+1)
-            net = gross - listing_fees
-            return net
+        raise NotImplementedError
 
     def get_info(self, event=None):
         months = self._get_months(event.priority)
         max_return = (1-self.cut) * self.lookup[START_PRICE] - LISTING_FEE
         info = SellerInfoTraj(months=months,
                               months_last=self.months_last,
-                              turn=self.last_event.turn,
                               max_return=max_return,
-                              num_actions=self.num_actions)
+                              num_actions=self.num_actions,
+                              relist_ct=self.relist_count)
         return info
 
     def _get_months(self, priority=None):
@@ -137,3 +115,77 @@ class SellerEnvironment(AgentEnvironment):
     @property
     def horizon(self):
         return 100
+
+
+class ImpatientSellerEnvironment(SellerEnvironment):
+    """
+    Item does not relist. Seller receives nothing (and pays listing fee)
+    if item does not sell.
+    """
+    def run(self):  # until EbayEnvironment.run() stops at agent turn
+        while True:
+            event, lstg_complete = super().run()
+            return self.agent_tuple(done=lstg_complete, event=event)
+
+    def _process_lstg_complete_without_action(self, next_lstg):
+        # this case should happens in TestGenerator
+        # b/c lstgs with no seller actions should be removed
+        if next_lstg:
+            # conditional prevents queuing up next lstg
+            # in EvalGenerator
+            self.next_lstg()  # queue up next lstg in training
+            super().reset()
+        else:
+            return None
+
+    def get_reward(self):
+        if self.outcome is None:  # agent action
+            return 0.0
+        elif not self.outcome.sale:
+            return - LISTING_FEE  # no sale costs one listing fee
+        else:
+            gross = self.outcome.price * (1-self.cut)
+            net = gross - LISTING_FEE
+            return net
+
+
+class RelistingSellerEnvironment(SellerEnvironment):
+    """
+    Item relists until sale.
+    """
+    def run(self):  # until EbayEnvironment.run() stops at agent turn
+        while True:
+            event, lstg_complete = super().run()
+            if not lstg_complete or self.outcome.sale:
+                return self.agent_tuple(done=lstg_complete, event=event)
+            else:
+                self.relist()
+
+    def _process_lstg_complete_without_action(self, next_lstg):
+        # check whether it's expired -- if so, relist
+        if not self.outcome.sale:
+            self.relist()
+        # otherwise, there's been a buy it now sale w/o a seller action,
+        else:
+            # this case should happens in TestGenerator
+            # b/c lstgs with no seller actions should be removed
+            if next_lstg:
+                # conditional prevents queuing up next lstg
+                # in EvalGenerator
+                self.next_lstg()  # queue up next lstg in training
+                super().reset()
+            else:
+                return None
+
+    def relist(self):
+        self.relist_count += 1
+        super().reset()  # calls EBayEnvironment.reset()
+
+    def get_reward(self):
+        if self.outcome is None:
+            return 0.0
+        else:
+            gross = self.outcome.price * (1-self.cut)
+            listing_fees = LISTING_FEE * (self.relist_count+1)
+            net = gross - listing_fees
+            return net

@@ -195,6 +195,7 @@ class EBayMinibatchRlBase(BaseRunner):
                 if type(v[0]) is np.ndarray:
                     logger.record_tabular_misc_stat(k, np.concatenate(v))
                 else:
+                    k = k.replace('_', '/')
                     logger.record_tabular(k, np.average(v))
         self._opt_infos = {k: list() for k in self._opt_infos}  # (reset)
 

@@ -1,4 +1,6 @@
 # clock feats
+from constants import BYR, SLR
+
 HOLIDAY = 'holiday'
 DOW_PREFIX = 'dow'
 TIME_OF_DAY = 'time_of_day'
@@ -85,3 +87,7 @@ P_ARRIVAL = 'p_arrival'
 # outcome types
 SIM = 'sim'
 OBS = 'obs'
+TURN_FEATS = {
+    BYR: ['t1', 't3', 't5'],
+    SLR: ['t2', 't4']
+}

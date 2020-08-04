@@ -118,11 +118,6 @@ POLICY_SLR = 'policy_slr'
 POLICY_BYR = 'policy_byr'
 POLICY_MODELS = [POLICY_SLR, POLICY_BYR]
 
-TURN_FEATS = {
-    BYR: ['t1', 't3', 't5'],
-    SLR: ['t2', 't4']
-}
-
 # normalization type
 MODEL_NORM = 'batch'
 
@@ -147,3 +142,6 @@ BYR_DROP = ['auto_decline', 'auto_accept',
 
 # for dropping infrequent arrivals when training seller agent
 NO_ARRIVAL_CUTOFF = 0.5 ** (1/12)
+
+# for precision issues
+EPS = 1e-8

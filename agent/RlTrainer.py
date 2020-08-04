@@ -2,7 +2,6 @@ import psutil
 import torch
 from agent.EBayRunner import EBayMinibatchRl
 from agent.EBayPPO import EBayPPO
-from agent.models.SplitCategoricalPgAgent import SplitCategoricalPgAgent
 from rlpyt.samplers.serial.sampler import SerialSampler
 from rlpyt.samplers.parallel.gpu.alternating_sampler import AlternatingSampler
 from rlpyt.utils.logging.context import logger_context
@@ -10,9 +9,11 @@ from constants import BYR
 from agent.const import AGENT_STATE
 from agent.util import get_log_dir, get_run_id
 from agent.AgentComposer import AgentComposer
-from agent.models.PgCategoricalAgentModel import PgCategoricalAgentModel
+from agent.models.AgentModel import BetaCategoricalAgentModel
+from agent.models.SplitAgent import SplitBetaCategoricalPgAgent
 from rlenv.DefaultQueryStrategy import DefaultQueryStrategy
-from rlenv.environments.SellerEnvironment import SellerEnvironment
+from rlenv.environments.SellerEnvironment import \
+    RelistingSellerEnvironment, ImpatientSellerEnvironment
 from rlenv.environments.BuyerEnvironment import BuyerEnvironment
 from rlenv.interfaces.ArrivalInterface import ArrivalInterface
 from rlenv.interfaces.PlayerInterface import SimulatedSeller, SimulatedBuyer
@@ -39,10 +40,13 @@ class RlTrainer:
         self.algo = EBayPPO(byr=self.byr, **params['ppo'])
 
         # agent
-        self.agent = SplitCategoricalPgAgent(
-            ModelCls=PgCategoricalAgentModel,
+        self.agent = SplitBetaCategoricalPgAgent(
+            ModelCls=BetaCategoricalAgentModel,
             model_kwargs=self.model_params
         )
+
+        # environment
+        self.env = self._generate_env()
 
         # rlpyt components
         self.sampler = self._generate_sampler()
@@ -50,7 +54,8 @@ class RlTrainer:
 
         # for logging
         self.log_dir = get_log_dir(byr=self.byr)
-        self.run_id = get_run_id(**params['ppo'])
+        self.run_id = get_run_id(suffix=self.system_params['suffix'],
+                                 **params['ppo'])
         self.run_dir = self.log_dir + 'run_{}/'.format(self.run_id)
 
     def _generate_query_strategy(self):
@@ -59,6 +64,15 @@ class RlTrainer:
             seller=SimulatedSeller(full=self.byr),
             buyer=SimulatedBuyer(full=True)
         )
+
+    def _generate_env(self):
+        if self.byr:
+            return BuyerEnvironment
+        else:
+            if self.algo.prefs.delta == 0.:
+                return ImpatientSellerEnvironment
+            else:
+                return RelistingSellerEnvironment
 
     def _generate_sampler(self):
         env_params = dict(composer=self.composer,
@@ -76,9 +90,8 @@ class RlTrainer:
             batch_b = len(self._cpus)
 
         # environment
-        env = BuyerEnvironment if self.byr else SellerEnvironment
         return sampler_cls(
-                EnvCls=env,
+                EnvCls=self.env,
                 env_kwargs=env_params,
                 batch_B=batch_b,
                 batch_T=int(self.batch_size / batch_b),

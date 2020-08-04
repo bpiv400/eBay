@@ -2,6 +2,7 @@ import numpy as np
 from constants import INTERVAL_TURN, INTERVAL_CT_TURN
 from utils import get_months_since_lstg
 from agent.ConSpace import ConSpace
+from agent.const import NUM_ACTIONS_BYR, NUM_ACTIONS_SLR
 from rlpyt.envs.base import Env
 from rlpyt.spaces.composite import Composite
 from rlpyt.spaces.float_box import FloatBox
@@ -16,10 +17,10 @@ class AgentEnvironment(EbayEnvironment, Env):
         self.last_event = None
 
         # action space
-        num_actions = self.composer.agent_sizes['out']
+        num_actions = NUM_ACTIONS_BYR if self.composer.byr else NUM_ACTIONS_SLR
         self.con_set = np.array(range(num_actions)) / 100
-        # action and observation spaces
         self._action_space = self.define_action_space()
+
         # observation space
         self._obs_class = self.define_observation_class()
         self._observation_space = self.define_observation_space()
