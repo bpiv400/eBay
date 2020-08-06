@@ -5,7 +5,8 @@ from utils import load_featnames
 LR_POLICY = 1e-4
 LR_VALUE = 1e-3
 RATIO_CLIP = 0.1
-VALUE_DROPOUT = (.0, .1)
+DROPOUT_POLICY = (.0, .0)
+DROPOUT_VALUE = (.0, .1)
 DELTA = [.7, .8, .9, .995]
 
 # state dictionaries
@@ -17,9 +18,8 @@ FEAT_TYPE = "feat_id"
 NO_TIME = "no_time"
 ALL_FEATS = "all"
 
-PPO_PARAMS = {'delta': {'type': float, 'default': .995},
-              'entropy_coeff': {'type': float, 'default': .001},
-              'use_kl': {'action': 'store_true'}}
+PPO_PARAMS = {'delta': {'type': float, 'default': 0.},
+              'entropy_coeff': {'type': float, 'default': .001}}
 
 SYSTEM_PARAMS = {'gpu': {'type': int, 'default': 0},
                  'log': {'action': 'store_true'},
@@ -32,8 +32,9 @@ SYSTEM_PARAMS = {'gpu': {'type': int, 'default': 0},
 
 PARAM_DICTS = {'ppo': PPO_PARAMS, 'system': SYSTEM_PARAMS}
 
-# run for this many epochs
-STOPPING_EPOCHS = 2500
+# counts for stepping down entropy and stopping
+REDUCE_EPOCHS = 1000
+STOP_EPOCHS = 2000
 
 # for identifying first turn in buyer model
 T1_IDX = load_featnames(POLICY_BYR)['lstg'].index('t1')
@@ -45,6 +46,10 @@ DELAY_BOOST = 10
 IDX_AGENT_REJ = 0
 IDX_AGENT_ACC = 1
 IDX_AGENT_EXP = 2  # only for seller
+
+# number of output parameters in agent models
+NUM_PARAM_BYR = 5
+NUM_PARAM_SLR = 6
 
 # number of agent actions
 NUM_ACTIONS_BYR = 101

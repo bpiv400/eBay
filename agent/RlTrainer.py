@@ -1,19 +1,19 @@
 import psutil
 import torch
-from agent.EBayRunner import EBayMinibatchRl
+from agent.EBayRunner import EBayRunner
 from agent.EBayPPO import EBayPPO
 from rlpyt.samplers.serial.sampler import SerialSampler
 from rlpyt.samplers.parallel.gpu.alternating_sampler import AlternatingSampler
 from rlpyt.utils.logging.context import logger_context
-from constants import BYR
+from featnames import BYR
 from agent.const import AGENT_STATE
-from agent.util import get_log_dir, get_run_id
+from agent.util import get_paths
 from agent.AgentComposer import AgentComposer
-from agent.models.AgentModel import BetaCategoricalAgentModel
-from agent.models.SplitAgent import SplitBetaCategoricalPgAgent
+from agent.AgentModel import AgentModel
+from agent.EBayAgent import EBayAgent
 from rlenv.DefaultQueryStrategy import DefaultQueryStrategy
 from rlenv.environments.SellerEnvironment import \
-    RelistingSellerEnvironment, ImpatientSellerEnvironment
+    RelistSellerEnvironment, NoRelistSellerEnvironment
 from rlenv.environments.BuyerEnvironment import BuyerEnvironment
 from rlenv.interfaces.ArrivalInterface import ArrivalInterface
 from rlenv.interfaces.PlayerInterface import SimulatedSeller, SimulatedBuyer
@@ -23,26 +23,26 @@ from rlenv.LstgLoader import TrainLoader
 class RlTrainer:
     def __init__(self, **params):
         # save params to self
-        self.system_params = params['system']
-        self.model_params = params['model']
-
-        # buyer indicator
-        self.byr = self.model_params[BYR]
+        self.params = params['system']
+        self.byr = params[BYR]
+        self.delta = params['ppo']['delta']
+        if self.byr:
+            assert self.delta == 0.
 
         # counts
         self.itr = 0
-        self.batch_size = self.system_params['batch_size']
+        self.batch_size = self.params['batch_size']
 
         # initialize composer
         self.composer = AgentComposer(byr=self.byr)
 
         # algorithm
-        self.algo = EBayPPO(byr=self.byr, **params['ppo'])
+        self.algo = EBayPPO(**params['ppo'])
 
         # agent
-        self.agent = SplitBetaCategoricalPgAgent(
-            ModelCls=BetaCategoricalAgentModel,
-            model_kwargs=self.model_params
+        self.agent = EBayAgent(
+            ModelCls=AgentModel,
+            model_kwargs={BYR: self.byr}
         )
 
         # environment
@@ -53,10 +53,11 @@ class RlTrainer:
         self.runner = self._generate_runner()
 
         # for logging
-        self.log_dir = get_log_dir(byr=self.byr)
-        self.run_id = get_run_id(suffix=self.system_params['suffix'],
-                                 **params['ppo'])
-        self.run_dir = self.log_dir + 'run_{}/'.format(self.run_id)
+        self.log_dir, self.run_id, self.run_dir = get_paths(
+            byr=self.byr,
+            suffix=self.params['suffix'],
+            **params['ppo']
+        )
 
     def _generate_query_strategy(self):
         return DefaultQueryStrategy(
@@ -68,23 +69,25 @@ class RlTrainer:
     def _generate_env(self):
         if self.byr:
             return BuyerEnvironment
-        else:
-            if self.algo.prefs.delta == 0.:
-                return ImpatientSellerEnvironment
-            else:
-                return RelistingSellerEnvironment
+        if self.delta == 0.:
+            return NoRelistSellerEnvironment
+        return RelistSellerEnvironment
 
     def _generate_sampler(self):
-        env_params = dict(composer=self.composer,
-                          verbose=self.system_params['verbose'],
-                          query_strategy=self._generate_query_strategy(),
-                          recorder=None)
+        env_params = dict(
+            composer=self.composer,
+            verbose=self.params['verbose'],
+            query_strategy=self._generate_query_strategy()
+        )
+        if not self.byr:
+            env_params['no_relist'] = self.delta == 0.
+
         # sampler and batch sizes
-        if self.system_params['serial']:
+        if self.params['serial']:
             sampler_cls = SerialSampler
             batch_b = 1
-            x_lstg_cols = env_params['composer'].x_lstg_cols
-            env_params['loader'] = TrainLoader(x_lstg_cols=x_lstg_cols)
+            env_params['loader'] = TrainLoader(
+                x_lstg_cols=self.composer.x_lstg_cols)
         else:
             sampler_cls = AlternatingSampler
             batch_b = len(self._cpus)
@@ -109,11 +112,11 @@ class RlTrainer:
                         cuda_idx=torch.cuda.current_device(),
                         alternating=True,
                         set_affinity=True)
-        runner = EBayMinibatchRl(algo=self.algo,
-                                 agent=self.agent,
-                                 sampler=self.sampler,
-                                 log_interval_steps=self.batch_size,
-                                 affinity=affinity)
+        runner = EBayRunner(algo=self.algo,
+                            agent=self.agent,
+                            sampler=self.sampler,
+                            log_interval_steps=self.batch_size,
+                            affinity=affinity)
         return runner
 
     @property
@@ -121,7 +124,7 @@ class RlTrainer:
         return list(psutil.Process().cpu_affinity())
 
     def train(self):
-        if not self.system_params['log']:
+        if not self.params['log']:
             self.itr = self.runner.train()
         else:
             with logger_context(log_dir=self.log_dir,

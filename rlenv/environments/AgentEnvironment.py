@@ -1,4 +1,5 @@
 import numpy as np
+import torch
 from constants import INTERVAL_TURN, INTERVAL_CT_TURN
 from utils import get_months_since_lstg
 from agent.ConSpace import ConSpace
@@ -8,12 +9,12 @@ from rlpyt.spaces.composite import Composite
 from rlpyt.spaces.float_box import FloatBox
 from rlenv.environments.EbayEnvironment import EbayEnvironment
 from rlenv.events.Thread import RlThread
+from featnames import BYR_HIST
 
 
 class AgentEnvironment(EbayEnvironment, Env):
     def __init__(self, **kwargs):
         super().__init__(params=kwargs)
-        self.num_actions = None  # count of agent actions
         self.last_event = None
 
         # action space
@@ -47,14 +48,17 @@ class AgentEnvironment(EbayEnvironment, Env):
         self.last_event = event  # save event to self after get_info()
         return obs, reward, done, info
 
-    def get_obs(self, event=None, done=False):
-        if not done:  # agent action
-            self.num_actions += 1
+    def get_obs(self, event=None, done=None):
         if event.sources() is None or event.turn is None:
             raise RuntimeError("Missing arguments to get observation")
-        obs_dict = self.composer.build_input_dict(model_name=None,
-                                                  sources=event.sources(),
-                                                  turn=event.turn)
+        if BYR_HIST in event.sources():
+            obs_dict = self.composer.build_input_dict(model_name=None,
+                                                      sources=event.sources(),
+                                                      turn=event.turn)
+        else:  # incomplete sources; triggers warning in AgentModel
+            assert done
+            obs_dict = {k: torch.zeros(v).float()
+                        for k, v in self.composer.agent_sizes['x'].items()}
         return self._obs_class(**obs_dict)
 
     def get_reward(self):
@@ -77,7 +81,6 @@ class AgentEnvironment(EbayEnvironment, Env):
 
     def init_reset(self, next_lstg=True):
         self.last_event = None
-        self.num_actions = 0
         if next_lstg:
             if not self.has_next_lstg():
                 raise RuntimeError("Out of lstgs")

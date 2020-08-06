@@ -3,10 +3,10 @@ import numpy as np
 import pandas as pd
 from inputs.util import save_files, check_zero, get_x_thread, get_ind_x
 from utils import get_remaining, load_file
-from constants import IDX, DAY, BYR, SLR, SIM_PARTITIONS, \
+from constants import IDX, DAY, SIM_PARTITIONS, \
     CON_MULTIPLIER, MAX_DELAY_TURN, INTERVAL_TURN, INTERVAL_CT_TURN
 from featnames import CON, NORM, SPLIT, MSG, AUTO, EXP, REJECT, DAYS, \
-    DELAY, INT_REMAINING, TIME_FEATS, LOOKUP
+    DELAY, INT_REMAINING, TIME_FEATS, LOOKUP, SLR, BYR
 
 
 def get_y_con(df, turn):

@@ -1,6 +1,7 @@
 from plots.util import cdf_plot, grouped_bar, response_plot
 from utils import unpickle
-from constants import PLOT_DIR, SLR
+from constants import PLOT_DIR
+from featnames import SLR
 
 
 def draw_counts(s, path=None):

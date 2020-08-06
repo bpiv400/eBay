@@ -7,9 +7,9 @@ from processing.util import hist_to_pctile
 from assess.util import discrete_pdf
 from utils import load_file
 from constants import TEST, PLOT_DIR, BYR_HIST_MODEL, CON_MULTIPLIER, \
-    ARRIVAL, MAX_DELAY_ARRIVAL, MAX_DELAY_TURN, INTERVAL_ARRIVAL
+    MAX_DELAY_ARRIVAL, MAX_DELAY_TURN, INTERVAL_ARRIVAL
 from featnames import MONTHS_SINCE_LSTG, BYR_HIST, DELAY, CON, MSG, \
-    SIM, OBS
+    SIM, OBS, ARRIVAL
 
 
 def get_pdf(y=None, intervals=None, add_last=False):

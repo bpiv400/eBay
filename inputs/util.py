@@ -4,9 +4,9 @@ from compress_pickle import load, dump
 from utils import unpickle
 from inputs.const import NUM_OUT
 from constants import INPUT_DIR, INDEX_DIR, VALIDATION, \
-    IDX, BYR, DISCRIM_MODEL, POLICY_BYR, BYR_DROP, PCTILE_DIR
+    IDX, DISCRIM_MODEL, POLICY_BYR, BYR_DROP, PCTILE_DIR
 from featnames import CLOCK_FEATS, OUTCOME_FEATS, SPLIT, MSG, AUTO, \
-    EXP, REJECT, DAYS, DELAY, TIME_FEATS, THREAD_COUNT, BYR_HIST
+    EXP, REJECT, DAYS, DELAY, TIME_FEATS, THREAD_COUNT, BYR_HIST, BYR
 
 
 def add_turn_indicators(df):

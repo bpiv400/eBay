@@ -1,14 +1,9 @@
-import os
 import argparse
 from shutil import copyfile
-from compress_pickle import load
 import numpy as np
-import pandas as pd
 from tensorboard.backend.event_processing.event_multiplexer import \
     EventMultiplexer
-from utils import topickle
-from constants import MODEL_DIR, LOG_DIR, MODELS, DISCRIM_MODEL, \
-    POLICY_MODELS, DROPOUT, DROPOUT_PATH
+from constants import MODEL_DIR, LOG_DIR, MODELS, DISCRIM_MODEL
 
 
 def get_lnl(em=None, run=None, name=None):
@@ -43,13 +38,7 @@ def main():
     if discrim:
         models = [DISCRIM_MODEL]
     else:
-        models = MODELS + POLICY_MODELS
-
-    # create dropout file
-    if not os.path.isfile(DROPOUT_PATH):
-        s = pd.Series(name=DROPOUT)
-    else:
-        s = load(DROPOUT_PATH)
+        models = MODELS
 
     # loop over models
     for m in models:
@@ -59,12 +48,6 @@ def main():
         # copy best performing model into parent directory
         copyfile(MODEL_DIR + '{}/{}.net'.format(m, run),
                  MODEL_DIR + '{}.net'.format(m))
-
-        # save dropout
-        elem = run.split('_')
-        dropout = (float(elem[-2]) / 10, float(elem[-1]) / 10)
-        s.loc[m] = dropout
-        topickle(contents=s, path=DROPOUT_PATH)  # save dropout file
 
 
 if __name__ == '__main__':

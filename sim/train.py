@@ -1,6 +1,7 @@
 import argparse
 from sim.SimTrainer import SimTrainer
 from utils import set_gpu_workers
+from constants import MODELS, DISCRIM_MODEL
 
 DROPOUT_GRID = []
 for j in range(8):
@@ -12,8 +13,10 @@ for j in range(8):
 def main():
     # extract parameters from command line
     parser = argparse.ArgumentParser()
-    parser.add_argument('--name', type=str, required=True)
-    parser.add_argument('--dropout', type=int, required=True)
+    parser.add_argument('--name', type=str, required=True,
+                        choices=MODELS + [DISCRIM_MODEL])
+    parser.add_argument('--dropout', type=int, required=True,
+                        choices=range(len(DROPOUT_GRID)))
     parser.add_argument('--nolog', action='store_true')
     parser.add_argument('--gpu', type=int, required=True)
     args = parser.parse_args()

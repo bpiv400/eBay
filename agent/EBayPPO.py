@@ -2,17 +2,15 @@ import numpy as np
 import torch
 from torch.optim import Adam
 from collections import namedtuple
-from rlpyt.agents.base import AgentInputs
 from rlpyt.utils.tensor import valid_mean
 from rlpyt.utils.buffer import buffer_to
 from rlpyt.utils.collections import namedarraytuple
-from agent.models.HumanAgentModel import HumanAgentModel
-from agent.Prefs import SellerPrefs, BuyerPrefs
-from agent.const import STOPPING_EPOCHS, LR_POLICY, LR_VALUE, RATIO_CLIP
-from constants import EPS
+from agent.Prefs import Prefs
+from agent.const import REDUCE_EPOCHS, STOP_EPOCHS, \
+    LR_POLICY, LR_VALUE, RATIO_CLIP
 
 LossInputs = namedarraytuple("LossInputs",
-                             ["agent_inputs",
+                             ["observation",
                               "action",
                               "return_",
                               "advantage",
@@ -29,9 +27,9 @@ OptInfo = namedtuple("OptInfo",
                       "DiscountedReturn",
                       "Advantage",
                       "Entropy",
-                      # "KL",
                       "Loss_Policy",
-                      "Loss_Value"])
+                      "Loss_Value",
+                      "Loss_EntropyBonus"])
 
 
 class EBayPPO:
@@ -43,18 +41,12 @@ class EBayPPO:
     bootstrap_value = True
     opt_info_fields = tuple(f for f in OptInfo._fields)
 
-    def __init__(self, byr=None, delta=None, entropy_coeff=None, use_kl=False):
+    def __init__(self, delta=None, entropy_coeff=None):
         # save parameters to self
         self.entropy_coeff = entropy_coeff
-        self.use_kl = use_kl
 
         # agent preferences
-        pref_cls = BuyerPrefs if byr else SellerPrefs
-        self.prefs = pref_cls(delta=delta)
-
-        # for cross-entropy
-        if use_kl:
-            self.human = HumanAgentModel(byr=byr).to('cuda')
+        self.prefs = Prefs(delta=delta)
 
         # parameters to be defined later
         self.agent = None
@@ -65,6 +57,7 @@ class EBayPPO:
         self.update_counter = 0
 
         # for stopping
+        self.entropy_step = entropy_coeff / (STOP_EPOCHS - REDUCE_EPOCHS)
         self.training_complete = False
 
     def initialize(self, agent=None):
@@ -99,22 +92,11 @@ class EBayPPO:
         moves them to device (e.g. GPU) up front, so that minibatches are
         formed within device, without further data transfer.
         """
-        if self.agent.recurrent:
-            raise NotImplementedError()
-
-        # Move agent inputs to device once, index there
-        env = samples.env
-        agent_inputs = AgentInputs(
-            observation=env.observation,
-            prev_action=samples.agent.prev_action,
-            prev_reward=env.prev_reward,
-        )
-        agent_inputs = buffer_to(agent_inputs, device=self.agent.device)
-
-        if hasattr(self.agent, "update_obs_rms"):
+        if self.agent.recurrent or hasattr(self.agent, "update_obs_rms"):
             raise NotImplementedError()
 
         # break out samples
+        env = samples.env
         reward, done, info = (env.reward, env.done, env.env_info)
 
         # time and/or action discounting
@@ -130,8 +112,9 @@ class EBayPPO:
         valid[censored] = False  # ignore censored actions
 
         # put sample components in LossInputs
+        observation = buffer_to(env.observation, device=self.agent.device)
         loss_inputs = LossInputs(
-            agent_inputs=agent_inputs,
+            observation=observation,
             action=samples.agent.action,
             return_=return_,
             advantage=advantage,
@@ -171,8 +154,6 @@ class EBayPPO:
         idxs = np.arange(T * B)
         T_idxs = idxs % T
         B_idxs = idxs // T
-        # policy_loss, value_error, entropy, kl = \
-        #     self.loss(*loss_inputs[T_idxs, B_idxs])
         policy_loss, value_error, entropy = \
             self.loss(*loss_inputs[T_idxs, B_idxs])
 
@@ -187,17 +168,19 @@ class EBayPPO:
         # save for logging
         opt_info.Loss_Policy.append(policy_loss.item())
         opt_info.Loss_Value.append(value_error.item())
+        opt_info.Loss_EntropyBonus.append(self.entropy_coeff)
         opt_info.Entropy.append(entropy.detach().numpy())
-        # opt_info.KL.append(kl.detach().numpy())
 
-        # increment counter and set complete flag
+        # increment counter, reduce entropy bonus, and set complete flag
         self.update_counter += 1
-        if self.update_counter == STOPPING_EPOCHS:
+        if self.update_counter >= REDUCE_EPOCHS:
+            self.entropy_coeff -= self.entropy_step
+        if self.update_counter == STOP_EPOCHS:
             self.training_complete = True
 
         return opt_info
 
-    def loss(self, agent_inputs, action, return_, advantage, valid, pi_old):
+    def loss(self, observation, action, return_, advantage, valid, pi_old):
         """
         Compute the training loss: policy_loss + value_loss + entropy_loss
         Policy loss: min(likelhood-ratio * advantage, clip(likelihood_ratio, 1-eps, 1+eps) * advantage)
@@ -206,14 +189,14 @@ class EBayPPO:
         the ``agent.distribution`` to compute likelihoods and entropies.
         """
         # agent outputs
-        pi_new, v = self.agent(*agent_inputs)
+        pi_new, v = self.agent(observation=observation)
 
         # loss from policy
         ratio = self.agent.distribution.likelihood_ratio(action,
                                                          old_dist_info=pi_old,
                                                          new_dist_info=pi_new)
-        surr_1 = ratio * advantage
         clipped = torch.clamp(ratio, 1. - RATIO_CLIP, 1. + RATIO_CLIP)
+        surr_1 = ratio * advantage
         surr_2 = clipped * advantage
         surrogate = torch.min(surr_1, surr_2)
         pi_loss = - valid_mean(surrogate, valid)
@@ -223,23 +206,12 @@ class EBayPPO:
 
         # entropy
         entropy = self.agent.distribution.entropy(pi_new)[valid]
-
-        # cross entropy
-        # pi_0 = self.human.get_policy(agent_inputs.observation).to('cpu')
-        # kl = self._cross_entropy(p=pi_0, q=pi_new.prob, valid=valid)
-
-        # (cross-)entropy loss
-        # if self.use_kl:
-        #     entropy_loss = self.entropy_coeff * kl.mean()
-        # else:
-        #     entropy_loss = - self.entropy_coeff * entropy.mean()
         entropy_loss = - self.entropy_coeff * entropy.mean()
 
         # total loss
         policy_loss = pi_loss + entropy_loss
 
         # return loss values and statistics to record
-        # return policy_loss, value_error, entropy, kl
         return policy_loss, value_error, entropy
 
     def optim_state_dict(self):
@@ -247,9 +219,3 @@ class EBayPPO:
             'value': self._optim_value.state_dict(),
             'policy': self._optim_policy.state_dict()
         }
-
-    @staticmethod
-    def _cross_entropy(p=None, q=None, valid=None):
-        kl = torch.sum(p * (torch.log(p + EPS) - torch.log(q + EPS)), dim=-1)
-        kl = kl[valid]
-        return kl

@@ -1,13 +1,7 @@
 import os
 from pandas.tseries.holiday import USFederalHolidayCalendar as Calendar
 from platform import platform
-from featnames import DELAY, CON, MSG
-
-# strings for referencing quantities related to buyer and seller interface
-SLR = 'slr'
-BYR = 'byr'
-ARRIVAL = 'arrival'
-DROPOUT = 'dropout'
+from featnames import DELAY, CON, MSG, SLR, BYR
 
 # paths and directories
 if 'Ubuntu' in platform():  # Etan's box(es)
@@ -42,7 +36,6 @@ PLOT_DIR = OUTPUT_DIR + 'plots/'                # for creating figures
 AGENT_DIR = OUTPUT_DIR + 'agent/'               # agent logs and models
 
 DATE_FEATS_PATH = FEATS_DIR + 'date_feats.pkl'
-DROPOUT_PATH = MODEL_DIR + 'dropout.pkl'
 META_PATH = CLEAN_DIR + 'meta.csv'
 
 # partitions

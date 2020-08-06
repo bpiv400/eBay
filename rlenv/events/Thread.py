@@ -5,7 +5,7 @@ import numpy as np
 from rlenv.sources import ThreadSources
 from rlenv.events.Event import Event
 from rlenv.const import FIRST_OFFER, DELAY_EVENT, OFFER_EVENT
-from constants import SLR, BYR
+from featnames import SLR, BYR
 from rlenv.util import (slr_rej_outcomes, slr_auto_acc_outcomes,
                         get_delay_outcomes, get_clock_feats,
                         get_con_outcomes)

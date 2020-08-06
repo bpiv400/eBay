@@ -1,9 +1,8 @@
 from compress_pickle import dump
 import numpy as np
 from processing.util import extract_day_feats, get_lstgs, load_feats
-from constants import PARTS_DIR, INPUT_DIR, DAY, BYR, SLR, \
-    VALIDATION
-from featnames import START_PRICE, META, LEAF
+from constants import PARTS_DIR, INPUT_DIR, DAY, VALIDATION
+from featnames import START_PRICE, META, LEAF, SLR, BYR
 from utils import input_partition
 
 AS_IS_FEATS = ['store', 'slr_us', 'fast', 'photos', 'slr_lstg_ct',

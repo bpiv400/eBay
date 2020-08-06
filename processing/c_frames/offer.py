@@ -3,9 +3,9 @@ import pandas as pd
 from processing.util import collect_date_clock_feats, \
     get_days_delay, get_norm, get_con, get_lstgs, load_feats
 from utils import is_split, input_partition
-from constants import PARTS_DIR, SLR, IDX
+from constants import PARTS_DIR, IDX
 from featnames import DAYS, DELAY, CON, NORM, SPLIT, MSG, REJECT, \
-    AUTO, EXP, TIME_FEATS, START_PRICE
+    AUTO, EXP, TIME_FEATS, START_PRICE, SLR
 
 
 def get_x_offer(start_price, offers, tf):

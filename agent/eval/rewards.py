@@ -6,7 +6,8 @@ from compress_pickle import load
 from torch.utils.tensorboard import SummaryWriter
 from tensorboard.backend.event_processing.event_multiplexer import \
     EventMultiplexer
-from constants import BYR, SLR, AGENT_DIR, SIM_CHUNKS
+from constants import AGENT_DIR, SIM_CHUNKS
+from featnames import SLR, BYR
 
 SCALARS = {'Average': np.mean,
            'Max': np.max,

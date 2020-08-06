@@ -5,8 +5,8 @@ from compress_pickle import dump
 from processing.util import get_con, get_norm
 from utils import topickle
 from constants import CLEAN_DIR, FEATS_DIR, PARTS_DIR, PCTILE_DIR, START, SEED, \
-    SHARES, NUM_FEATS_CHUNKS, SLR
-from featnames import START_PRICE, BYR_HIST, NORM
+    SHARES, NUM_FEATS_CHUNKS
+from featnames import START_PRICE, BYR_HIST, NORM, SLR
 
 # data types for csv read
 OTYPES = {'lstg': 'int64',

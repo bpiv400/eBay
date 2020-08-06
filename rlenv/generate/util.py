@@ -4,10 +4,10 @@ from compress_pickle import dump
 from processing.util import collect_date_clock_feats, \
     get_days_delay, get_norm
 from utils import is_split, load_file
-from constants import IDX, SLR, MONTH
+from constants import IDX, MONTH
 from featnames import DAYS, DELAY, CON, SPLIT, NORM, REJECT, AUTO, EXP, \
     CENSORED, CLOCK_FEATS, TIME_FEATS, OUTCOME_FEATS, MONTHS_SINCE_LSTG, \
-    BYR_HIST, START_TIME, LOOKUP
+    BYR_HIST, START_TIME, LOOKUP, SLR
 
 
 def diff_tf(df):

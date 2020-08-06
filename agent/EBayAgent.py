@@ -1,26 +1,17 @@
 import torch
 from rlpyt.agents.base import AgentStep, BaseAgent
 from rlpyt.agents.pg.base import AgentInfo
-from rlpyt.agents.pg.categorical import CategoricalPgAgent
 from rlpyt.utils.buffer import buffer_to
-from agent.models.BetaCategorical import BetaCategorical
+from agent.BetaCategorical import BetaCategorical
 from agent.util import pack_dist_info
 
 
-class SplitCategoricalPgAgent(CategoricalPgAgent):
-    def value_parameters(self):
-        return self.model.value_net.parameters()
-
-    def policy_parameters(self):
-        return self.model.policy_net.parameters()
-
-
-class SplitBetaCategoricalPgAgent(BaseAgent):
+class EBayAgent(BaseAgent):
     """
     Agent for policy gradient algorithm using beta-categorical action distribution.
     """
 
-    def __call__(self, observation, prev_action, prev_reward):
+    def __call__(self, observation, prev_action=None, prev_reward=None):
         """Performs forward pass on training data, for algorithm."""
         model_inputs = buffer_to((observation, prev_action, prev_reward),
                                  device=self.device)

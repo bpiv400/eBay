@@ -13,7 +13,7 @@ from rlpyt.utils.prog_bar import ProgBarCounter
 from rlenv.LstgLoader import TrainLoader
 
 
-class EBayMinibatchRlBase(BaseRunner):
+class EBayBaseRunner(BaseRunner):
     """
     Implements startup, logging, and agent checkpointing functionality, to be
     called in the `train()` method of the subclassed runner.  Subclasses will
@@ -203,7 +203,7 @@ class EBayMinibatchRlBase(BaseRunner):
         raise NotImplementedError()
 
 
-class EBayMinibatchRl(EBayMinibatchRlBase):
+class EBayRunner(EBayBaseRunner):
     """
     Runs RL on minibatches; tracks performance online using learning
     trajectories.

@@ -2,10 +2,10 @@ import torch
 import numpy as np
 import pandas as pd
 from constants import (MODELS, OFFER_MODELS, FIRST_ARRIVAL_MODEL,
-                       SLR, BYR_HIST_MODEL, INTERARRIVAL_MODEL)
+                       BYR_HIST_MODEL, INTERARRIVAL_MODEL)
 from featnames import (OUTCOME_FEATS, CLOCK_FEATS, TIME_FEATS,
                        MONTHS_SINCE_LSTG, BYR_HIST, DELAY, CON,
-                       INT_REMAINING, MONTHS_SINCE_LAST, THREAD_COUNT)
+                       INT_REMAINING, MONTHS_SINCE_LAST, THREAD_COUNT, SLR)
 from utils import load_sizes, load_featnames
 from rlenv.const import LSTG_MAP, CLOCK_MAP, OFFER_MAPS, THREAD_COUNT_IND, \
     TIME_START_IND, TIME_END_IND, CLOCK_START_IND, CLOCK_END_IND

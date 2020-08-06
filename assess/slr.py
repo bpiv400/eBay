@@ -4,8 +4,8 @@ from agent.util import get_run_id
 from assess.util import load_data, get_pctiles, discrete_pdf
 from utils import topickle, load_file
 from agent.const import DELTA
-from constants import PLOT_DIR, AGENT_DIR, SLR, TEST, IDX
-from featnames import LOOKUP, CON, NORM, START_PRICE, REJECT, ACCEPT
+from constants import PLOT_DIR, AGENT_DIR, TEST, IDX
+from featnames import LOOKUP, CON, NORM, START_PRICE, REJECT, ACCEPT, SLR
 
 
 def gaussian_kernel(x, bw=.02):

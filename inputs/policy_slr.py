@@ -1,7 +1,7 @@
 from inputs.util import save_files, get_x_thread, get_x_offer_init, get_ind_x
 from utils import input_partition, load_file
-from constants import IDX, SLR, CON_MULTIPLIER, POLICY_SLR
-from featnames import EXP, CON, DELAY, AUTO, LOOKUP
+from constants import IDX, CON_MULTIPLIER, POLICY_SLR
+from featnames import EXP, CON, DELAY, AUTO, LOOKUP, SLR
 
 
 def construct_x(idx=None, threads=None, offers=None):

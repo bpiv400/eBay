@@ -1,9 +1,9 @@
 import numpy as np
 from collections import namedtuple
 from utils import get_cut
-from constants import BYR, MONTH, BYR_HIST_MODEL, INTERARRIVAL_MODEL
+from constants import MONTH, BYR_HIST_MODEL, INTERARRIVAL_MODEL
 from featnames import ACC_PRICE, DEC_PRICE, START_PRICE, DELAY, \
-    TIME_FEATS, START_TIME, META
+    TIME_FEATS, START_TIME, META, BYR
 from utils import get_months_since_lstg
 from rlenv.Heap import Heap
 from rlenv.time.TimeFeatures import TimeFeatures

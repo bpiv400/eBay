@@ -3,9 +3,9 @@ from inputs.util import save_files, get_x_thread, get_x_offer_init, \
     get_ind_x
 from processing.util import extract_day_feats
 from utils import input_partition, load_file
-from constants import IDX, DAY, MONTH, BYR, CON_MULTIPLIER, POLICY_BYR
+from constants import IDX, DAY, MONTH, CON_MULTIPLIER, POLICY_BYR
 from featnames import CON, START_TIME, EXP, DELAY, THREAD_COUNT, \
-    MONTHS_SINCE_LSTG, LOOKUP
+    MONTHS_SINCE_LSTG, LOOKUP, BYR
 
 
 def construct_x(idx=None, threads=None, offers=None,

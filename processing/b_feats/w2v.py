@@ -3,7 +3,8 @@ import numpy as np
 import pandas as pd
 from compress_pickle import dump
 from gensim.models import Word2Vec
-from constants import BYR, SLR, SEED, CLEAN_DIR, FEATS_DIR, NUM_FEATS_CHUNKS
+from constants import SEED, CLEAN_DIR, FEATS_DIR, NUM_FEATS_CHUNKS
+from featnames import SLR, BYR
 
 VOCAB_SIZE = 32  # vocabulary size for embeddings
 

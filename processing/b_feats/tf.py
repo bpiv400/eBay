@@ -4,7 +4,8 @@ from datetime import datetime as dt
 from compress_pickle import dump, load
 from processing.b_feats.util import collapse_dict
 from utils import run_func_on_chunks
-from constants import START, IDX, BYR, SLR, FEATS_DIR, NUM_FEATS_CHUNKS
+from constants import START, IDX, FEATS_DIR, NUM_FEATS_CHUNKS
+from featnames import SLR, BYR
 
 
 def open_offers(df, levels, role):

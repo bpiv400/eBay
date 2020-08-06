@@ -4,9 +4,9 @@ import torch
 import numpy as np
 from agent.const import ALL_FEATS
 from agent.util import get_agent_name
-from constants import BYR, SLR, PARTS_DIR, TRAIN_RL
+from constants import PARTS_DIR, TRAIN_RL
 from featnames import OUTCOME_FEATS, MONTHS_SINCE_LSTG, BYR_HIST, \
-    TIME_FEATS, CLOCK_FEATS, THREAD_COUNT, TURN_FEATS
+    TIME_FEATS, CLOCK_FEATS, THREAD_COUNT, TURN_FEATS, SLR, BYR
 from rlenv.Composer import Composer
 from rlenv.const import LSTG_MAP, CLOCK_MAP, OFFER_MAPS, THREAD_COUNT_IND, \
     TIME_START_IND, TIME_END_IND, CLOCK_END_IND, CLOCK_START_IND

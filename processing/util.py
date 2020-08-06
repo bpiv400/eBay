@@ -2,10 +2,9 @@ import numpy as np
 import pandas as pd
 from compress_pickle import load
 from utils import extract_clock_feats, byr_norm, slr_norm, unpickle
-from constants import FEATS_DIR, PARTS_DIR, PCTILE_DIR, START, IDX, BYR, SLR, \
-    DAY, HOLIDAYS, MAX_DELAY_TURN
+from constants import FEATS_DIR, PARTS_DIR, PCTILE_DIR, START, IDX, DAY, HOLIDAYS, MAX_DELAY_TURN
 from featnames import HOLIDAY, DOW_PREFIX, TIME_OF_DAY, AFTERNOON, \
-    CLOCK_FEATS, BYR_HIST
+    CLOCK_FEATS, BYR_HIST, SLR, BYR
 
 
 def extract_day_feats(seconds):

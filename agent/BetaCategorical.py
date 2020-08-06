@@ -1,10 +1,11 @@
 import torch
 from torch.distributions import Beta, Categorical
+import numpy as np
 from rlpyt.distributions.base import Distribution
 from rlpyt.distributions.discrete import DiscreteMixin
 from rlpyt.utils.collections import namedarraytuple
 from rlpyt.utils.tensor import valid_mean
-from agent.const import IDX_AGENT_REJ, IDX_AGENT_ACC, IDX_AGENT_EXP
+from agent.const import IDX_AGENT_ACC, IDX_AGENT_EXP, IDX_AGENT_REJ
 from constants import EPS
 
 DistInfo = namedarraytuple("DistInfo", ["pi", "a", "b"])
@@ -20,9 +21,32 @@ class BetaCategorical(DiscreteMixin, Distribution):
 
     def entropy(self, dist_info):
         pi, a, b = self._unpack(dist_info)
-        cat_entropy = Categorical(probs=pi).entropy()
-        beta_entropy = Beta(a, b).entropy()
-        return cat_entropy + beta_entropy
+        a = a.unsqueeze(1)
+        b = b.unsqueeze(1)
+
+        # approximate probability of each concession using midpoint
+        dim = torch.from_numpy(np.arange(1, 100) / 100).float().unsqueeze(0)
+        x = dim.expand(a.size()[0], -1)
+        p = .01 * torch.exp(Beta(a, b).log_prob(x))
+        p[:, [0, -1]] *= 1.5
+        p /= p.sum(-1, True)
+
+        # multiply by P(concession)
+        p *= pi[:, [-1]]
+
+        # add accept and reject (and expire) probabilities
+        k = pi.size()[-1]
+        assert k in [3, 4]
+        if k == 3:
+            p = torch.cat([pi[:, [0]], p, pi[:, [1]]], dim=1)
+        else:
+            p = torch.cat([pi[:, [0]], p, pi[:, [1, 2]]], dim=1)
+        assert torch.max(torch.abs(p.sum(-1) - 1.)) < 1e-6
+
+        # calculate entropy of categorical distribution
+        entropy = -torch.sum(p * torch.log(p + EPS), dim=-1)
+
+        return entropy
 
     def perplexity(self, dist_info):
         return torch.exp(self.entropy(dist_info))
@@ -61,10 +85,8 @@ class BetaCategorical(DiscreteMixin, Distribution):
             x_con = x[con].float() / 100
             a_con = a[con]
             b_con = b[con]
-            lnl[con] = torch.log(pi[con, k - 1] + EPS)
-            lnl[con] += - self._log_beta_function(a_con, b_con) \
-                + (a_con-1) * torch.log(x_con) \
-                + (b_con-1) * torch.log(1-x_con)
+            lnl[con] = torch.log(pi[con, k - 1] + EPS) \
+                + Beta(a_con, b_con).log_prob(x_con)
 
         return lnl
 
@@ -108,7 +130,3 @@ class BetaCategorical(DiscreteMixin, Distribution):
     @staticmethod
     def _unpack(dist_info):
         return dist_info.pi, dist_info.a, dist_info.b
-
-    @staticmethod
-    def _log_beta_function(a, b):
-        return torch.lgamma(a) + torch.lgamma(b) - torch.lgamma(a + b)

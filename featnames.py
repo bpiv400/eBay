@@ -1,6 +1,10 @@
-# clock feats
-from constants import BYR, SLR
+# strings for referencing quantities related to buyer and seller interface
+SLR = 'slr'
+BYR = 'byr'
+ARRIVAL = 'arrival'
+DROPOUT = 'dropout'
 
+# clock feats
 HOLIDAY = 'holiday'
 DOW_PREFIX = 'dow'
 TIME_OF_DAY = 'time_of_day'
@@ -87,6 +91,8 @@ P_ARRIVAL = 'p_arrival'
 # outcome types
 SIM = 'sim'
 OBS = 'obs'
+
+# turn feats
 TURN_FEATS = {
     BYR: ['t1', 't3', 't5'],
     SLR: ['t2', 't4']

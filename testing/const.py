@@ -1,5 +1,5 @@
-from constants import BYR, VALIDATION, PARTITIONS
-
+from constants import VALIDATION, PARTITIONS
+from featnames import BYR
 
 SCRIPT_PARAMS = {BYR: {'action': 'store_true'},
                  'agent': {'action': 'store_true'},

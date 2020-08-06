@@ -5,8 +5,8 @@ import pandas as pd
 from processing.b_feats.util import create_events, get_all_cat_feats
 from processing.util import load_feats
 from utils import run_func_on_chunks
-from constants import SLR, FEATS_DIR, NUM_FEATS_CHUNKS
-from featnames import META, LEAF
+from constants import FEATS_DIR, NUM_FEATS_CHUNKS
+from featnames import META, LEAF, SLR
 
 
 def create_feats(data=None, name=None):

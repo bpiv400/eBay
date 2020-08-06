@@ -11,8 +11,8 @@ TODO:
 import math
 from collections import deque, Counter
 import numpy as np
-from featnames import TIME_FEATS, THREAD_COUNT
-from constants import EXPIRATION, BYR
+from featnames import TIME_FEATS, THREAD_COUNT, BYR
+from constants import EXPIRATION
 from rlenv.Heap import Heap
 from rlenv.time.Offer import Offer
 from rlenv.time.offer_types import BYR_REJECTION, SLR_REJECTION, OFFER
