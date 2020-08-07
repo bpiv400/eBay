@@ -1,33 +1,34 @@
 import numpy as np
 import torch
-from constants import INTERVAL_TURN, INTERVAL_CT_TURN
-from utils import get_months_since_lstg
-from agent.ConSpace import ConSpace
-from agent.const import NUM_ACTIONS_BYR, NUM_ACTIONS_SLR
+from rlpyt.utils.collections import namedarraytuple
 from rlpyt.envs.base import Env
 from rlpyt.spaces.composite import Composite
 from rlpyt.spaces.float_box import FloatBox
-from rlenv.environments.EbayEnvironment import EbayEnvironment
+from rlenv.environments.EBayEnv import EBayEnv
 from rlenv.events.Thread import RlThread
+from agent.ConSpace import ConSpace
+from utils import get_months_since_lstg
+from agent.const import NUM_ACTIONS_BYR, NUM_ACTIONS_SLR
+from constants import INTERVAL_TURN, INTERVAL_CT_TURN, MONTH
 from featnames import BYR_HIST
 
+INFO_FIELDS = ["months", "months_last", "max_return", "num_actions"]
+Info = namedarraytuple("Info", INFO_FIELDS)
 
-class AgentEnvironment(EbayEnvironment, Env):
+
+class AgentEnv(EBayEnv, Env):
     def __init__(self, **kwargs):
         super().__init__(params=kwargs)
         self.last_event = None
+        self.num_actions = None  # number of agent actions
 
         # action space
-        num_actions = NUM_ACTIONS_BYR if self.composer.byr else NUM_ACTIONS_SLR
-        self.con_set = np.array(range(num_actions)) / 100
-        self._action_space = self.define_action_space()
+        n = NUM_ACTIONS_BYR if self.composer.byr else NUM_ACTIONS_SLR
+        self.con_set = np.array(range(n)) / 100
+        self._action_space = self._define_action_space()
 
         # observation space
-        self._obs_class = self.define_observation_class()
         self._observation_space = self.define_observation_space()
-
-    def define_observation_class(self):
-        raise NotImplementedError("Please extend")
 
     def define_observation_space(self):
         sizes = self.composer.agent_sizes['x']
@@ -49,6 +50,8 @@ class AgentEnvironment(EbayEnvironment, Env):
         return obs, reward, done, info
 
     def get_obs(self, event=None, done=None):
+        if not done:
+            self.num_actions += 1
         if event.sources() is None or event.turn is None:
             raise RuntimeError("Missing arguments to get observation")
         if BYR_HIST in event.sources():
@@ -65,7 +68,10 @@ class AgentEnvironment(EbayEnvironment, Env):
         raise NotImplementedError()
 
     def get_info(self, event=None):
-        raise NotImplementedError()
+        return Info(months=self._get_months(event.priority),
+                    months_last=self._get_months(self.last_event.priority),
+                    max_return=self._get_max_return(),
+                    num_actions=self.num_actions)
 
     def get_offer_time(self, event):
         # query with delay model
@@ -81,6 +87,7 @@ class AgentEnvironment(EbayEnvironment, Env):
 
     def init_reset(self, next_lstg=True):
         self.last_event = None
+        self.num_actions = 0
         if next_lstg:
             if not self.has_next_lstg():
                 raise RuntimeError("Out of lstgs")
@@ -95,16 +102,23 @@ class AgentEnvironment(EbayEnvironment, Env):
         # check whether the lstg expired, censoring this offer
         if self.is_lstg_expired(event):
             return self.process_lstg_expiration(event)
+
+        # housekeeping for buyer's first turn
         if event.turn == 1:
             self.last_arrival_time = event.priority
-        slr_offer = event.turn % 2 == 0
+            event.set_thread_id(self.thread_counter)
+            self.thread_counter += 1
+
+        # process seller expiration rejection
         if event.thread_expired():
-            if slr_offer:
+            if event.turn % 2 == 0:  # seller's turn
                 self.process_slr_expire(event)
                 return False
             else:
                 raise RuntimeError("Thread should never expire before"
                                    "buyer agent offer")
+
+        # initalize offer
         time_feats = self.time_feats.get_feats(thread_id=event.thread_id,
                                                time=event.priority)
         months_since_lstg = None
@@ -113,7 +127,11 @@ class AgentEnvironment(EbayEnvironment, Env):
                                                       time=event.priority)
         event.init_rl_offer(months_since_lstg=months_since_lstg,
                             time_feats=time_feats)
+
+        # execute offer
         offer = event.execute_offer()
+
+        # return True if lstg is over
         return self.process_post_offer(event, offer)
 
     def turn_from_action(self, action=None):
@@ -123,7 +141,11 @@ class AgentEnvironment(EbayEnvironment, Env):
     def horizon(self):
         return NotImplementedError()
 
-    def define_action_space(self):
+    @property
+    def _obs_class(self):
+        raise NotImplementedError()
+
+    def _define_action_space(self):
         return ConSpace(size=len(self.con_set))
 
     def is_agent_turn(self, event):
@@ -135,4 +157,10 @@ class AgentEnvironment(EbayEnvironment, Env):
         :param action: float returned from agent
         :return:
         """
+        raise NotImplementedError()
+
+    def _get_months(self, priority=None):
+        return self.relist_count + (priority - self.start_time) / MONTH
+
+    def _get_max_return(self):
         raise NotImplementedError()

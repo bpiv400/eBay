@@ -1,6 +1,6 @@
 from datetime import datetime as dt
 from rlenv.Composer import Composer
-from rlenv.environments.SimulatorEnvironment import SimulatorEnvironment
+from rlenv.environments.SimulatorEnv import SimulatorEnv
 from rlenv.generate.Recorder import OutcomeRecorder
 from rlenv.interfaces.ArrivalInterface import ArrivalInterface
 from rlenv.interfaces.PlayerInterface import SimulatedSeller, SimulatedBuyer
@@ -122,7 +122,7 @@ class OutcomeGenerator(SimulatorGenerator):
 
     @property
     def env_class(self):
-        return SimulatorEnvironment
+        return SimulatorEnv
 
     def simulate_lstg(self):
         """

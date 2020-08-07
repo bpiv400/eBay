@@ -6,9 +6,9 @@ from agent.AgentComposer import AgentComposer
 from constants import POLICY_MODELS
 from featnames import LSTG, BYR_HIST, ACC_PRICE, DEC_PRICE, START_PRICE
 from rlenv.Composer import Composer
-from rlenv.environments.BuyerEnvironment import BuyerEnvironment
-from rlenv.environments.SellerEnvironment import SellerEnvironment
-from rlenv.environments.SimulatorEnvironment import SimulatorEnvironment
+from rlenv.environments.BuyerEnv import BuyerEnv
+from rlenv.environments.SellerEnv import SellerEnv
+from rlenv.environments.SimulatorEnv import SimulatorEnv
 from rlenv.generate.Generator import Generator
 from rlenv.util import get_env_sim_subdir, load_chunk
 from testing.LstgLog import LstgLog
@@ -287,9 +287,9 @@ class TestGenerator(Generator):
     def env_class(self):
         if self.agent:
             if self.byr:
-                env_class = BuyerEnvironment
+                env_class = BuyerEnv
             else:
-                env_class = SellerEnvironment
+                env_class = SellerEnv
         else:
-            env_class = SimulatorEnvironment
+            env_class = SimulatorEnv
         return env_class

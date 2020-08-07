@@ -20,7 +20,7 @@ class Sources:
 
 class ThreadSources(Sources):
     def __init__(self, x_lstg=None):
-        super(ThreadSources, self).__init__(x_lstg=x_lstg)
+        super().__init__(x_lstg=x_lstg)
         # other clock features initialized to lstg start date
         self.source_dict[INT_REMAINING] = 0.0
         self.source_dict[BYR_HIST] = 0.0
@@ -111,7 +111,7 @@ class ThreadSources(Sources):
 
 class ArrivalSources(Sources):
     def __init__(self, x_lstg=None):
-        super(ArrivalSources, self).__init__(x_lstg=x_lstg)
+        super().__init__(x_lstg=x_lstg)
         self.source_dict[MONTHS_SINCE_LAST] = 0.0
         self.source_dict[THREAD_COUNT] = 0.0
 
@@ -129,7 +129,7 @@ class RlBuyerSources(ThreadSources):
     that feature an rl buyer
     """
     def __init__(self, x_lstg=None, hist=None):
-        super(RlBuyerSources, self).__init__(x_lstg=x_lstg)
+        super().__init__(x_lstg=x_lstg)
         self.source_dict[CLOCK_MAP] = None
         self.source_dict[INT_REMAINING] = 1.0
         self.source_dict[BYR_HIST] = hist

@@ -1,7 +1,7 @@
-from rlenv.environments.EbayEnvironment import EbayEnvironment
+from rlenv.environments.EBayEnv import EBayEnv
 
 
-class SimulatorEnvironment(EbayEnvironment):
+class SimulatorEnv(EBayEnv):
     def __init__(self, **kwargs):
         super().__init__(kwargs)
 

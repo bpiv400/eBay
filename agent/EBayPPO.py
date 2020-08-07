@@ -6,8 +6,7 @@ from rlpyt.utils.tensor import valid_mean
 from rlpyt.utils.buffer import buffer_to
 from rlpyt.utils.collections import namedarraytuple
 from agent.Prefs import Prefs
-from agent.const import REDUCE_EPOCHS, STOP_EPOCHS, \
-    LR_POLICY, LR_VALUE, RATIO_CLIP
+from agent.const import PERIOD_EPOCHS, LR_POLICY, LR_VALUE, RATIO_CLIP
 
 LossInputs = namedarraytuple("LossInputs",
                              ["observation",
@@ -18,7 +17,7 @@ LossInputs = namedarraytuple("LossInputs",
                               "old_dist_info"])
 OptInfo = namedtuple("OptInfo",
                      ["ActionsPerTraj",
-                      "RelistsPerTraj",
+                      "MonthsToDone",
                       "Rate_Con",
                       "Rate_Acc",
                       "Rate_Rej",
@@ -57,7 +56,7 @@ class EBayPPO:
         self.update_counter = 0
 
         # for stopping
-        self.entropy_step = entropy_coeff / (STOP_EPOCHS - REDUCE_EPOCHS)
+        self.entropy_step = entropy_coeff / PERIOD_EPOCHS
         self.training_complete = False
 
     def initialize(self, agent=None):
@@ -126,7 +125,7 @@ class EBayPPO:
         opt_info = OptInfo(*([] for _ in range(len(OptInfo._fields))))
 
         opt_info.ActionsPerTraj.append(info.num_actions[done].numpy())
-        opt_info.RelistsPerTraj.append(info.relist_ct[done].numpy())
+        opt_info.MonthsToDone.append(info.months[done].numpy())
 
         con = samples.agent.action[valid].numpy()
         con_rate = ((0 < con) & (con < 100)).mean().item()
@@ -173,9 +172,9 @@ class EBayPPO:
 
         # increment counter, reduce entropy bonus, and set complete flag
         self.update_counter += 1
-        if self.update_counter >= REDUCE_EPOCHS:
+        if self.entropy_coeff > 0. and self.update_counter >= PERIOD_EPOCHS:
             self.entropy_coeff -= self.entropy_step
-        if self.update_counter == STOP_EPOCHS:
+        if self.update_counter == 3 * PERIOD_EPOCHS:
             self.training_complete = True
 
         return opt_info

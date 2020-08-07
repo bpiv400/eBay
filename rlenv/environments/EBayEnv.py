@@ -11,8 +11,8 @@ from rlenv.time.Offer import Offer
 from rlenv.events.Event import Event
 from rlenv.events.Arrival import Arrival
 from rlenv.generate.Recorder import Recorder
-from rlenv.sources import ArrivalSources
-from rlenv.sources import ThreadSources
+from rlenv.Sources import ArrivalSources
+from rlenv.Sources import ThreadSources
 from rlenv.events.Thread import Thread
 from rlenv.const import (INTERACT, ACC_IND, CON, MSG,
                          REJ_IND, OFF_IND, ARRIVAL, FIRST_OFFER,
@@ -21,8 +21,8 @@ from rlenv.util import get_clock_feats, get_con_outcomes, need_msg, model_str
 from rlenv.LstgLoader import TrainLoader
 
 
-class EbayEnvironment:
-    Outcome = namedtuple('outcome', ['sale', 'price', 'months'])
+class EBayEnv:
+    Outcome = namedtuple('outcome', ['sale', 'price', 'months', 'thread'])
 
     def __init__(self, params=None):
         # interfaces
@@ -199,7 +199,7 @@ class EbayEnvironment:
             start_norm = 1 - offer.price
         sale_price = start_norm * self.lookup[START_PRICE]
         months = (offer.time - self.start_time) / MONTH
-        self.outcome = self.Outcome(True, sale_price, months)
+        self.outcome = self.Outcome(True, sale_price, months, offer.thread_id)
         self.empty_queue()
 
     def process_first_offer(self, event):
@@ -209,7 +209,8 @@ class EbayEnvironment:
         """
         # prepare sources and features
         sources = ThreadSources(x_lstg=self.x_lstg)
-        months_since_lstg = get_months_since_lstg(lstg_start=self.start_time, time=event.priority)
+        months_since_lstg = get_months_since_lstg(lstg_start=self.start_time,
+                                                  time=event.priority)
         time_feats = self.time_feats.get_feats(time=event.priority,
                                                thread_id=event.thread_id)
         sources.prepare_hist(time_feats=time_feats,
@@ -315,7 +316,7 @@ class EbayEnvironment:
         :param event: rlenv.Event subclass
         :return: boolean
         """
-        self.outcome = self.Outcome(False, 0, MONTH)
+        self.outcome = self.Outcome(False, 0, MONTH, None)
         self.queue.push(event)
         self.empty_queue()
         if self.verbose:

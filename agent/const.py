@@ -32,9 +32,8 @@ SYSTEM_PARAMS = {'gpu': {'type': int, 'default': 0},
 
 PARAM_DICTS = {'ppo': PPO_PARAMS, 'system': SYSTEM_PARAMS}
 
-# counts for stepping down entropy and stopping
-REDUCE_EPOCHS = 1000
-STOP_EPOCHS = 2000
+# count for stepping down entropy and stopping
+PERIOD_EPOCHS = 1000
 
 # for identifying first turn in buyer model
 T1_IDX = load_featnames(POLICY_BYR)['lstg'].index('t1')

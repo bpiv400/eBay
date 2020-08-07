@@ -12,9 +12,9 @@ from agent.AgentComposer import AgentComposer
 from agent.AgentModel import AgentModel
 from agent.EBayAgent import EBayAgent
 from rlenv.DefaultQueryStrategy import DefaultQueryStrategy
-from rlenv.environments.SellerEnvironment import \
-    RelistSellerEnvironment, NoRelistSellerEnvironment
-from rlenv.environments.BuyerEnvironment import BuyerEnvironment
+from rlenv.environments.SellerEnv import \
+    RelistSellerEnv, NoRelistSellerEnv
+from rlenv.environments.BuyerEnv import BuyerEnv
 from rlenv.interfaces.ArrivalInterface import ArrivalInterface
 from rlenv.interfaces.PlayerInterface import SimulatedSeller, SimulatedBuyer
 from rlenv.LstgLoader import TrainLoader
@@ -68,10 +68,10 @@ class RlTrainer:
 
     def _generate_env(self):
         if self.byr:
-            return BuyerEnvironment
+            return BuyerEnv
         if self.delta == 0.:
-            return NoRelistSellerEnvironment
-        return RelistSellerEnvironment
+            return NoRelistSellerEnv
+        return RelistSellerEnv
 
     def _generate_sampler(self):
         env_params = dict(
