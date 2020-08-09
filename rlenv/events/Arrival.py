@@ -2,6 +2,7 @@ from rlenv.events.Event import Event
 from rlenv.const import ARRIVAL, RL_ARRIVAL_EVENT
 from rlenv.util import get_clock_feats
 from utils import get_months_since_lstg
+from constants import MONTH
 
 
 class Arrival(Event):
@@ -27,9 +28,8 @@ class Arrival(Event):
         self.sources = sources
         self.start = priority
 
-    def update_arrival(self, thread_count=None):
+    def update_arrival(self, thread_count=None, last_arrival_time=None):
         """
-        :param thread_count: current clock features
         :return:
         """
         update_args = dict(months_since_lstg=get_months_since_lstg(lstg_start=self.start,
@@ -37,5 +37,9 @@ class Arrival(Event):
                            clock_feats=get_clock_feats(self.priority))
         if thread_count is not None:
             update_args['thread_count'] = thread_count
+
+        if last_arrival_time is not None:
+            months_since_last = (self.priority - last_arrival_time) / MONTH
+            update_args['months_since_last'] = months_since_last
 
         self.sources.update_arrival(**update_args)

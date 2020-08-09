@@ -1,9 +1,10 @@
+import os
 import pandas as pd
 from compress_pickle import dump
 from processing.util import collect_date_clock_feats, \
     get_days_delay, get_norm
 from utils import is_split, load_file
-from constants import IDX, SLR, MONTH, AGENT_PARTS_DIR
+from constants import IDX, SLR, MONTH
 from featnames import DAYS, DELAY, CON, SPLIT, NORM, REJECT, AUTO, EXP, \
     CENSORED, CLOCK_FEATS, TIME_FEATS, OUTCOME_FEATS, MONTHS_SINCE_LSTG, \
     BYR_HIST, START_TIME
@@ -98,15 +99,21 @@ def concat_sim_chunks(sims):
     return threads, offers
 
 
-def process_sims(part=None, sims=None):
+def process_sims(part=None, sims=None, parent_dir=None):
     # concatenate chunks
     threads, offers = concat_sim_chunks(sims)
     lstg_start = load_file(part, 'lookup', agent=True)[START_TIME]
-
     # create output dataframes
     d = clean_components(threads, offers, lstg_start)
 
+    # create directory if it doesn't exist
+    folder = parent_dir + '{}/'.format(part)
+    if os.path.isdir(folder):
+        os.mkdir(folder)
+
     # save
     for k, df in d.items():
-        dump(df, AGENT_PARTS_DIR + '{}/{}_sim.gz'.format(part, k))
+        path = folder + '{}.gz'.format(k)
+        suffix = '_sim' if os.path.isfile(path) else ''
+        dump(df, folder + '{}{}.gz'.format(k, suffix))
 

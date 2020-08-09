@@ -23,16 +23,19 @@ class LstgLog:
         self.lookup = params['lookup']
         self.agent = params['agent_params'] is not None
         self.agent_params = params['agent_params']
+        self.verbose = params['verbose']
         self.arrivals = self.generate_arrival_logs(params)
         self.threads = self.generate_thread_logs(params)
-        self.agent_log = self.generate_agent_log(params) # revisit this
         if self.agent and self.byr:
-            print('translating...')
             self.translator = ThreadTranslator(agent_thread=self.agent_thread,
-                                               arrivals=self.arrivals)
-            self.update_arrival_time()
+                                               arrivals=self.arrivals,
+                                               params=params)
+            if self.verbose:
+                self.translator.print_translator()
         else:
             self.translator = None
+        self.agent_log = self.generate_agent_log(params)
+        self.update_arrival_time()
 
     @property
     def byr(self):
@@ -45,7 +48,7 @@ class LstgLog:
     def agent_thread(self):
         if self.agent:
             if 'thread_id' in self.agent_params:
-                return self.agent_thread
+                return self.agent_params['thread_id']
             else:
                 return None
         else:
@@ -61,7 +64,7 @@ class LstgLog:
     def record_agent_arrivals(self, full_inputs=None, agent_log=None):
         byr_arrival = self.arrivals[self.agent_thread]
         # find the floor of the number of days that have passed since the start of the
-        days = int(byr_arrival.time - self.lookup[START_TIME] / DAY)
+        days = int((byr_arrival.time - self.lookup[START_TIME]) / DAY)
         for i in range(days):
             action_index = (self.agent_thread, 1, i)
             input_dict = populate_test_model_inputs(full_inputs=full_inputs,
@@ -82,7 +85,8 @@ class LstgLog:
         input_dict = populate_test_model_inputs(full_inputs=full_inputs, value=first_turn_index,
                                                 agent=True, agent_byr=self.byr)
         first_offer = ActionLog(input_dict=input_dict, months=time, con=con,
-                                thread_id=self.agent_thread, turn=1)
+                                thread_id=self.translate_thread(self.agent_thread),
+                                turn=1)
         agent_log.push_action(action=first_offer)
         # add remaining turns
         del agent_turns[1]
@@ -101,7 +105,8 @@ class LstgLog:
                 input_dict = populate_test_model_inputs(full_inputs=full_inputs, value=index,
                                                         agent=True, agent_byr=self.byr)
             action = ActionLog(con=turn_log.agent_con(), censored=turn_log.is_censored,
-                               months=months, input_dict=input_dict, thread_id=thread_id,
+                               months=months, input_dict=input_dict,
+                               thread_id=self.translate_thread(self.agent_thread),
                                turn=turn_number)
             agent_log.push_action(action=action)
 
@@ -279,7 +284,8 @@ class LstgLog:
             return delay
 
     def get_agent_arrival(self, time=None, thread_id=None):
-        return self.translator.get_agent_arrival(check_time=time, thread_id=thread_id)
+        arrival_time = self.translator.get_agent_arrival(check_time=time, thread_id=thread_id)
+        return arrival_time
 
     def get_inter_arrival(self, thread_id=None, input_dict=None, time=None):
         if time == self.lookup[START_TIME]:
@@ -287,6 +293,9 @@ class LstgLog:
         else:
             assert input_dict is not None
         true_id = self.translate_arrival(thread_id=thread_id)
+        if self.verbose:
+            print('true id: {}'.format(true_id))
+            print('actual id: {}'.format(thread_id))
         return self.arrivals[true_id].get_inter_arrival(check_time=time,
                                                         input_dict=input_dict)
 

@@ -1,8 +1,9 @@
+import numpy as np
 from collections import namedtuple
 from featnames import START_TIME, META
 from utils import get_cut
 from constants import BYR, MONTH, BYR_HIST_MODEL, INTERARRIVAL_MODEL
-from featnames import ACC_PRICE, DEC_PRICE, START_PRICE, DELAY
+from featnames import ACC_PRICE, DEC_PRICE, START_PRICE, DELAY, TIME_FEATS
 from utils import get_months_since_lstg
 from rlenv.Heap import Heap
 from rlenv.time.TimeFeatures import TimeFeatures
@@ -17,6 +18,7 @@ from rlenv.const import (INTERACT, ACC_IND, CON, MSG,
                          REJ_IND, OFF_IND, ARRIVAL, FIRST_OFFER,
                          OFFER_EVENT, DELAY_EVENT)
 from rlenv.util import get_clock_feats, get_con_outcomes, need_msg, model_str
+from rlenv.LstgLoader import TrainLoader
 
 
 class EbayEnvironment:
@@ -42,10 +44,19 @@ class EbayEnvironment:
         self.start_time = None
         self.thread_counter = 1
         self.outcome = None
+        self.last_arrival_time = None
 
         self.composer = params['composer']
         self.query_strategy = params['query_strategy']
-        self.loader = params['loader']
+        if 'recorder' in params:
+            self.recorder = params['recorder']
+        else:
+            self.recorder = None
+        if 'loader' in params:
+            self.loader = params['loader']
+        else:
+            x_lstg_cols = self.composer.x_lstg_cols
+            self.loader = TrainLoader(x_lstg_cols=x_lstg_cols)
 
     def reset(self):
         self.queue.reset()
@@ -55,6 +66,10 @@ class EbayEnvironment:
         sources = ArrivalSources(x_lstg=self.x_lstg)
         event = Arrival(priority=self.start_time, sources=sources)
         self.queue.push(event)
+        if self.recorder is not None:
+            self.recorder.reset_sim()
+        elif self.verbose:
+            print('Simulation {}'.format(self.relist_count))
 
     def has_next_lstg(self):
         if not self.loader.did_init:
@@ -69,12 +84,18 @@ class EbayEnvironment:
         self.x_lstg = self.composer.decompose_x_lstg(x_lstg)
         self.lookup = lookup
         self.start_time = self.lookup[START_TIME]
+        self.last_arrival_time = self.start_time
         self.end_time = self.start_time + MONTH
         self.relist_count = 0
         self.query_strategy.update_p_arrival(p_arrival=p_arrival)
         self.cut = get_cut(self.lookup[META])
-        if self.verbose:
-            Recorder.print_lstg(self.lookup)
+        if self.recorder is not None:
+            # update listing in recorder
+            self.recorder.update_lstg(lookup=self.lookup,
+                                      lstg=self.loader.lstg)
+        else:
+            if self.verbose:
+                Recorder.print_lstg(lookup)
 
     def run(self):
         while True:
@@ -106,7 +127,20 @@ class EbayEnvironment:
             raise NotImplementedError()
 
     def record(self, event, byr_hist=None, censored=False):
-        raise NotImplementedError()
+        if self.recorder is None:
+            if self.verbose and byr_hist is None and not censored:
+                Recorder.print_offer(event)
+        else:
+            if byr_hist is None:
+                if not censored:
+                    time_feats = self.time_feats.get_feats(thread_id=event.thread_id,
+                                                           time=event.priority)
+                else:
+                    time_feats = np.zeros(len(TIME_FEATS))
+                self.recorder.add_offer(event=event, time_feats=time_feats, censored=censored)
+            else:
+                self.recorder.start_thread(thread_id=event.thread_id, byr_hist=byr_hist,
+                                           time=event.priority)
 
     def process_offer(self, event):
         # check whether the lstg expired, censoring this offer
@@ -208,18 +242,21 @@ class EbayEnvironment:
             return self.process_lstg_expiration(event)
 
         # update sources with clock feats
-        event.update_arrival(thread_count=self.thread_counter - 1)
 
+        event.update_arrival(thread_count=self.time_feats.get_thread_count(),
+                             last_arrival_time=self.last_arrival_time)
         # call model to sample inter arrival time and update arrival check priority
         if event.priority == self.start_time:
             seconds = self.get_first_arrival(time=event.priority,
                                              thread_id=self.thread_counter)
         else:
             seconds = self.get_inter_arrival(event=event)
+        check_in_time = event.priority
         event.priority = min(event.priority + seconds, self.end_time)
 
         # if a buyer arrives, create a thread at the arrival time
         if event.priority < self.end_time:
+            self.last_arrival_time = check_in_time
             self.queue.push(self.make_thread(event.priority))
             self.thread_counter += 1
         self.queue.push(event)

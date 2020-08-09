@@ -1,5 +1,5 @@
 from utils import unpickle
-from constants import FEATS_DIR
+from constants import DATE_FEATS_PATH
 from featnames import (CON, DELAY, MSG, ALL_OFFER_FEATS, CLOCK_FEATS,
                        TIME_FEATS, DAYS, EXP, NORM, SPLIT, AUTO, REJECT,
                        THREAD_COUNT)
@@ -12,7 +12,7 @@ SIM_VALS_DIR = 'vals'
 SIM_DISCRIM_DIR = 'outcomes'
 
 # holiday and day-of-week indicators, indexed by days since START
-DATE_FEATS = unpickle(FEATS_DIR + 'date_feats.pkl')
+DATE_FEATS = unpickle(DATE_FEATS_PATH)
 
 # number of hours the val generation job may run before termination
 VAL_TIME_LIMIT = 48

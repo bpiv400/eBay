@@ -1,7 +1,6 @@
 from datetime import datetime as dt
 from rlenv.generate.Recorder import OutcomeRecorder
 from rlenv.environments.SimulatorEnvironment import SimulatorEnvironment
-from rlenv.environments.EbayEnvironment import EbayEnvironment
 from rlenv.interfaces.ArrivalInterface import ArrivalInterface
 from rlenv.interfaces.PlayerInterface import SimulatedSeller, SimulatedBuyer
 from rlenv.LstgLoader import ChunkLoader
@@ -24,7 +23,7 @@ class Generator:
         self.composer = None
         self.loader = None
         self.query_strategy = None
-        self.environment = None  # type: EbayEnvironment
+        self.environment = None
 
     def process_chunk(self, part=None, chunk=None):
         self.loader = self.load_chunk(part=part, chunk=chunk)
@@ -39,13 +38,7 @@ class Generator:
         self.recorder = self.generate_recorder()
         self.initialized = True
 
-    def load_chunk(self, part=None, chunk=None):
-        raise NotImplementedError()
-
     def generate_recorder(self):
-        raise NotImplementedError()
-
-    def generate_query_strategy(self):
         raise NotImplementedError()
 
     def generate_composer(self):
@@ -65,10 +58,11 @@ class Generator:
                               verbose=self.verbose,
                               composer=self.composer)
 
+    def generate_buyer(self):
+        return SimulatedBuyer(full=True)
 
-class SimulatorGenerator(Generator):
-    def generate_composer(self):
-        return Composer(cols=self.loader.x_lstg_cols)
+    def generate_seller(self):
+        return SimulatedSeller(full=True)
 
     def generate_query_strategy(self):
         buyer = self.generate_buyer()
@@ -78,25 +72,25 @@ class SimulatorGenerator(Generator):
                                     seller=seller,
                                     arrival=arrival)
 
-    @property
-    def env_class(self):
-        return SimulatorEnvironment
-
-    def generate_buyer(self):
-        return SimulatedBuyer()
-
-    def generate_seller(self):
-        return SimulatedSeller(full=True)
-
-    def generate_recorder(self):
-        raise NotImplementedError()
-
     def load_chunk(self, part=None, chunk=None):
         base_dir = get_env_sim_dir(part=part)
         x_lstg, lookup, p_arrival = load_chunk(base_dir=base_dir,
                                                num=chunk)
-        return ChunkLoader(x_lstg=x_lstg, lookup=lookup,
+        return ChunkLoader(x_lstg=x_lstg,
+                           lookup=lookup,
                            p_arrival=p_arrival)
+
+
+class SimulatorGenerator(Generator):
+    def generate_composer(self):
+        raise NotImplementedError()
+
+    @property
+    def env_class(self):
+        raise NotImplementedError()
+
+    def generate_recorder(self):
+        raise NotImplementedError()
 
     def generate(self):
         """
@@ -106,11 +100,6 @@ class SimulatorGenerator(Generator):
         t0 = dt.now()
         while self.environment.has_next_lstg():
             self.environment.next_lstg()
-            # update listing in recorder
-            self.recorder.update_lstg(lookup=self.loader.lookup,
-                                      lstg=self.loader.lstg)
-
-            # simulate lstg until sale
             self.simulate_lstg()
 
         # time elapsed
@@ -128,20 +117,22 @@ class DiscrimGenerator(SimulatorGenerator):
     def __init__(self, verbose=False):
         super().__init__(verbose=verbose)
 
+    def generate_composer(self):
+        return Composer(cols=self.loader.x_lstg_cols)
+
     def generate_recorder(self):
         return OutcomeRecorder(verbose=self.verbose,
                                record_sim=False)
 
+    @property
+    def env_class(self):
+        return SimulatorEnvironment
+
     def simulate_lstg(self):
         """
         Simulates a particular listing once.
-        :param env: SimulatorEnvironment
         :return: outcome tuple
         """
         self.environment.reset()
-        try:
-            outcome = self.environment.run()
-        except ValueError:
-            print('numpy error on: {}'.format(self.loader.lstg))
-            raise RuntimeError("Stopping")
+        outcome = self.environment.run()
         return outcome

@@ -4,7 +4,7 @@ from rlpyt.utils.collections import AttrDict
 from rlpyt.utils.seed import set_envs_seeds
 from rlenv.LstgLoader import TrainLoader
 from utils import load_state_dict
-from constants import (POLICY_SLR, POLICY_BYR)
+from constants import POLICY_SLR, POLICY_BYR
 
 
 def detect_norm(init_dict=None):
@@ -98,7 +98,6 @@ def ebay_sampling_process(common_kwargs, worker_kwargs):
                              x_lstg_cols=x_lstg_cols)
         envs.append(c.EnvCls(**c.env_kwargs, loader=loader))
     set_envs_seeds(envs, w.seed)
-
     collector = c.CollectorCls(
         rank=w.rank,
         envs=envs,

@@ -85,6 +85,9 @@ class TimeFeatures:
             args['time'] = time
         return self.feats[feat].peek(**args)
 
+    def get_thread_count(self):
+        return self._get_feat(feat=THREAD_COUNT)
+
     def get_feats(self, thread_id=None, time=None):
         """
         Gets the time features associated with a specific lstg

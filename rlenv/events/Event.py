@@ -31,6 +31,8 @@ class Event:
         if self.priority == other.priority:
             if self.type == ARRIVAL:
                 return other.type == RL_ARRIVAL_EVENT
+            elif self.type == RL_ARRIVAL_EVENT:
+                return other.type != ARRIVAL
             else:
                 return True
         else:

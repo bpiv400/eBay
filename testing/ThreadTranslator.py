@@ -11,9 +11,9 @@ class ThreadTranslator:
         # boolean for whether the agent is the last thread
         self.agent_last = self.agent_thread == len(arrivals)
         # time when the buyer agent model is queried and produces a first offer
-        self.agent_check_time = self.get_rl_check_time(params=params)
+        self.agent_check_time = int(self.get_rl_check_time(params=params))
         # time when the buyer agent model executes the first offer
-        self.agent_arrival_time = arrivals[self.agent_thread].time
+        self.agent_arrival_time = int(arrivals[self.agent_thread].time)
         # number of seconds the first arrival model should delay for when
         # queried for arrival time of the buyer's first offer
         self.agent_interarrival_time = self.agent_arrival_time - self.agent_check_time
@@ -39,6 +39,23 @@ class ThreadTranslator:
         # flag for whether the agent_env_id has been queried in the arrival
         # process
         self.did_query = False
+
+    def print_translator(self):
+        print('TRANSLATOR')
+        print('Agent thread: {}'.format(self.agent_thread))
+        print('Agent env id: {}'.format(self.agent_env_id))
+        print('thread l: {}'.format(self.thread_l))
+        print('Agent first: {}'.format(self.agent_first))
+        print('Agent last: {}'.format(self.agent_last))
+        print('l after agent: {}'.format(self.l_after_agent))
+        print('l censored: {}'.format(self.l_censored))
+        print('j: {}'.format(self.j))
+        print('Query twice: {}'.format(self.query_twice))
+        print('Hidden arrival: {}'.format(self.hidden_arrival))
+        print('ARRIVAL TRANSLATION')
+        print(self.arrival_translator)
+        print('THREAD TRANSLATION')
+        print(self.thread_translator)
 
     def get_query_twice(self):
         if self.thread_l is not None:
@@ -68,7 +85,7 @@ class ThreadTranslator:
         if self.query_twice:
             return None
         else:
-            return self.agent_thread
+            return self.agent_env_id
 
     def get_thread_l(self, arrivals=None):
         """

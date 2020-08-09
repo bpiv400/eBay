@@ -44,6 +44,8 @@ MODEL_DIR = OUTPUT_DIR + 'models/'
 PLOT_DIR = OUTPUT_DIR + 'plots/'
 AGENT_DIR = OUTPUT_DIR + 'agent/'
 
+DATE_FEATS_PATH = FEATS_DIR + 'date_feats.pkl'
+
 # partitions
 TRAIN_MODELS = 'sim'
 TRAIN_RL = 'rl'

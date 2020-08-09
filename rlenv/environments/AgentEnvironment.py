@@ -7,7 +7,6 @@ from rlpyt.spaces.composite import Composite
 from rlpyt.spaces.float_box import FloatBox
 from rlenv.environments.EbayEnvironment import EbayEnvironment
 from rlenv.events.Thread import RlThread
-from rlenv.generate.Recorder import Recorder
 
 
 class AgentEnvironment(EbayEnvironment, Env):
@@ -78,10 +77,11 @@ class AgentEnvironment(EbayEnvironment, Env):
                                max_interval=max(1, max_interval))
         return max(delay, 1) + event.priority
 
-    def init_reset(self):
-        if not self.has_next_lstg():
-            raise RuntimeError("Out of lstgs")
-        self.next_lstg()
+    def init_reset(self, next_lstg=True):
+        if next_lstg:
+            if not self.has_next_lstg():
+                raise RuntimeError("Out of lstgs")
+            self.next_lstg()
         super().reset()  # calls EBayEnvironment.reset()
 
     def process_rl_offer(self, event):
@@ -92,6 +92,8 @@ class AgentEnvironment(EbayEnvironment, Env):
         # check whether the lstg expired, censoring this offer
         if self.is_lstg_expired(event):
             return self.process_lstg_expiration(event)
+        if event.turn == 1:
+            self.last_arrival_time = event.priority
         slr_offer = event.turn % 2 == 0
         if event.thread_expired():
             if slr_offer:
@@ -119,12 +121,6 @@ class AgentEnvironment(EbayEnvironment, Env):
 
     def define_action_space(self):
         return ConSpace(size=len(self.con_set))
-
-    # TODO: may update
-    def record(self, event, byr_hist=None, censored=False):
-        if not censored and byr_hist is None:
-            if self.verbose:
-                Recorder.print_offer(event)
 
     def is_agent_turn(self, event):
         raise NotImplementedError()

@@ -1,25 +1,42 @@
+import torch.multiprocessing as mp
 import os
 import argparse
+import gc
 import pandas as pd
 import torch
+from compress_pickle import load
 from agent.RlTrainer import RlTrainer
 from agent.const import AGENT_STATE, PARAM_DICTS, AGENT_PARAMS, SYSTEM_PARAMS
 from agent.eval.EvalGenerator import EvalGenerator
-from utils import set_gpu_workers, run_func_on_chunks, compose_args
-from constants import AGENT_DIR, MODEL_PARTS_DIR, BYR, DROPOUT
+from utils import set_gpu_workers, run_func_on_chunks, compose_args,\
+    process_chunk_worker
+from rlenv.generate.util import process_sims
+from constants import AGENT_DIR, BYR, DROPOUT, TRAIN_RL, VALIDATION, \
+    POLICY_BYR, POLICY_SLR, MODEL_DIR
+
+MAIN_GENERATOR = False
 
 
-def simulate(part=None, run_dir=None, composer=None, model_kwargs=None):
-    eval_kwargs = {'part': part,
-                   'composer': composer,
-                   'model_kwargs': model_kwargs,
-                   'run_dir': run_dir,
-                   'verbose': False}
-    gen = EvalGenerator(**eval_kwargs)
-    sims = run_func_on_chunks(
-        f=gen.process_chunk,
-        args=lambda i: MODEL_PARTS_DIR + '{}/chunks/{}.gz'.format(part, i)
+def simulate(part=None, run_dir=None, agent_params=None, model_kwargs=None):
+    eval_kwargs = dict(
+        agent_params=agent_params,
+        model_kwargs=model_kwargs,
+        run_dir=run_dir,
+        verbose=False
     )
+    process_args = dict(
+            part=part,
+            gen_class=EvalGenerator,
+            gen_kwargs=eval_kwargs
+        )
+    if MAIN_GENERATOR:
+        process_chunk_worker(**process_args, chunk=1)
+    else:
+        sims = run_func_on_chunks(
+            f=process_chunk_worker,
+            func_kwargs=process_args
+        )
+        process_sims(part=part, parent_dir=run_dir, sims=sims)
 
 
 def main():
@@ -43,9 +60,8 @@ def main():
             args[k] = v
 
     # add dropout
-    # s = load(MODEL_DIR + 'dropout.pkl')
-    # args[DROPOUT] = s.loc[POLICY_BYR if args['byr'] else POLICY_SLR]
-    args[DROPOUT] = (0., 0.)
+    s = load(MODEL_DIR + 'dropout.pkl')
+    args[DROPOUT] = s.loc[POLICY_BYR if args['byr'] else POLICY_SLR]
 
     # print to console
     for k, v in args.items():
@@ -61,8 +77,9 @@ def main():
         trainer_args[param_set] = curr_params
 
     # model parameters
-    trainer_args['model_params'] = {BYR: args[BYR],
-                                    DROPOUT: args[DROPOUT]}
+    model_params = {BYR: args[BYR],
+                    DROPOUT: args[DROPOUT]}
+    trainer_args['model_params'] = model_params
 
     # training loop
     trainer = RlTrainer(**trainer_args)
@@ -85,21 +102,28 @@ def main():
             df = pd.DataFrame(index=pd.Index([], name='run_id'))
 
         exclude = list({**AGENT_PARAMS, **SYSTEM_PARAMS}.keys())
-        exclude += ['dropout']
+        exclude += [DROPOUT]
         exclude.remove('batch_size')
         for k, v in args.items():
             if k not in exclude:
                 df.loc[trainer.run_id, k] = v
         df.to_csv(run_path)
 
-        # # simulate outcomes
-        # for part in [TRAIN_RL, VALIDATION]:
-        #     os.mkdir(run_dir + '{}/'.format(part))
-        #     simulate(part=part,
-        #              run_dir=run_dir,
-        #              composer=trainer.composer,
-        #              model_kwargs=trainer.model_params)
+        # housekeeping
+        del trainer
+        del d
+        gc.collect()
+
+        # simulate outcomes
+        for part in [TRAIN_RL, VALIDATION]:
+            os.mkdir(run_dir + '{}/'.format(part))
+            print('Simulating {}...'.format(part))
+            simulate(part=part,
+                     run_dir=run_dir,
+                     model_kwargs=model_params,
+                     agent_params=trainer_args['agent_params'])
 
 
 if __name__ == '__main__':
+    mp.set_start_method('spawn')
     main()

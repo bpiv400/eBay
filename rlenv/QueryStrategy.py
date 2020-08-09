@@ -5,7 +5,7 @@ to determine turn and arrival outcomes
 """
 
 
-class QueryStrategy(object):
+class QueryStrategy:
     def __init__(self):
         self.p_arrival = None
 

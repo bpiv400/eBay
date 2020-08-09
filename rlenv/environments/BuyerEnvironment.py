@@ -55,6 +55,8 @@ class BuyerEnvironment(AgentEnvironment):
         if con == 0:
             # push rl arrival back into queue
             self.last_event.priority += DAY
+            if self.verbose:
+                print(self.last_event.type)
             # if the delay pushes the arrival event to the end of the lstg
             if self.is_lstg_expired(self.last_event):
                 self.process_lstg_expiration(self.last_event)
@@ -67,7 +69,6 @@ class BuyerEnvironment(AgentEnvironment):
         else:
             sources = self.last_event.sources
             arrival_time = self.get_arrival_time(self.last_event)
-            sources.init_thread(hist=self.composer.hist)
             thread = RlThread(priority=arrival_time, sources=sources,
                               con=con, rl_buyer=True,
                               thread_id=self.thread_counter)
@@ -105,22 +106,25 @@ class BuyerEnvironment(AgentEnvironment):
         event, lstg_complete = super().run()
         # set last event flag to point to rl event
         self.last_event = self.rl_event
+        if self.last_event.type == RL_ARRIVAL_EVENT:
+            self.last_event.update_arrival()
         if event is not self.rl_event and not lstg_complete:
             raise RuntimeError("Other threads should only return "
                                "to agent when the lstg ends")
         agent_tuple = self.agent_tuple(done=lstg_complete)
         return agent_tuple
 
-    def reset(self):
+    def reset(self, next_lstg=True):
         """
         Resets the environment by drawing a new listing,
         resetting the queue, adding a buyer rl arrival event, then
         running the environment
         :return: observation associated with the first rl arrival
         """
-        self.init_reset()  # in AgentEnvironment
+        self.init_reset(next_lstg=next_lstg)  # in AgentEnvironment
         self.item_value = self.lookup[START_PRICE]  # TODO: allow for different values
-        rl_sources = RlBuyerSources(x_lstg=self.x_lstg)
+        rl_sources = RlBuyerSources(x_lstg=self.x_lstg,
+                                    hist=self.composer.hist)
         event = Arrival(priority=self.start_time, sources=rl_sources,
                         rl=True)
         self.rl_event = event
@@ -128,7 +132,7 @@ class BuyerEnvironment(AgentEnvironment):
         # should deterministically return RL_ARRIVAL_EVENT at start of lstg
         # lstg should never be complete at this point
         event, _ = super().run()
-        if event.type != RL_ARRIVAL_EVENT:
+        if event.type != RL_ARRIVAL_EVENT and event.priority == self.start_time:
             raise RuntimeError("Bad assumption about first event")
         event.update_arrival()
         self.last_event = event

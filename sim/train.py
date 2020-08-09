@@ -6,7 +6,7 @@ DROPOUT_GRID = []
 for j in range(8):
     for i in range(j+1):
         if j - i <= 3:
-            DROPOUT_GRID.append((i / 10, j / 10))
+            DROPOUT_GRID.append((float(i) / 10, float(j) / 10))
 
 
 def main():

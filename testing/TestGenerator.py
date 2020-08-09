@@ -11,7 +11,6 @@ from rlenv.environments.SellerEnvironment import SellerEnvironment
 from rlenv.environments.SimulatorEnvironment import SimulatorEnvironment
 from rlenv.generate.Generator import Generator
 from rlenv.util import get_env_sim_subdir, load_chunk
-from rlenv.generate.Recorder import OutcomeRecorder
 from testing.LstgLog import LstgLog
 from testing.TestQueryStrategy import TestQueryStrategy
 from testing.util import subset_inputs, load_all_inputs, load_reindex, \
@@ -31,6 +30,7 @@ class TestGenerator(Generator):
                           default=None)
         # id of the first lstg in the chunk to simulate
         self.start = kwargs['start']
+        self.first_only = kwargs['first']
         # boolean for whether the testing is for an agent environment
         self.agent = kwargs['agent']
         # boolean for whether the agent is a byr
@@ -59,9 +59,6 @@ class TestGenerator(Generator):
             return composer
         else:
             return Composer(cols=self.loader.x_lstg_cols)
-
-    def generate_recorder(self):
-        return OutcomeRecorder(verbose=self.verbose)
 
     def load_chunk(self, chunk=None, part=None):
         """
@@ -98,8 +95,7 @@ class TestGenerator(Generator):
                                                 value=valid_lstgs, level='lstg')
         print('Running tests...')
         return TestLoader(x_lstg=x_lstg, lookup=lookup,
-                          p_arrival=p_arrival, test_data=test_data,
-                          agent=self.agent)
+                          p_arrival=p_arrival, test_data=test_data)
 
     def _remove_extra_models(self, test_data):
         """
@@ -211,10 +207,7 @@ class TestGenerator(Generator):
         # verify that x_offer based lstgs match lstgs used as model input exactly
         model_name = get_agent_name(byr=self.byr)
         input_lstgs = test_data['inputs'][model_name][LSTG].index.get_level_values('lstg').unique()
-        # print(input_lstgs[~input_lstgs.isin(lstgs)])
         assert input_lstgs.isin(lstgs).all()
-        # print(lstgs[~lstgs.isin(input_lstgs)])
-        # assert lstgs.isin(input_lstgs).all()
         return lstgs
 
     def _count_rl_buyers(self):
@@ -229,7 +222,8 @@ class TestGenerator(Generator):
             'inputs': self.loader.inputs,
             'x_thread': self.loader.x_thread,
             'x_offer': self.loader.x_offer,
-            'lookup': self.loader.lookup
+            'lookup': self.loader.lookup,
+            'verbose': self.verbose
         }
         if self.agent:
             params['agent_params'] = {
@@ -246,7 +240,7 @@ class TestGenerator(Generator):
             hist = hist / 10
             self.composer.set_hist(hist=hist)
         # print('resetting: {}'.format(self.loader.lstg))
-        obs = self.environment.reset()
+        obs = self.environment.reset(next_lstg=False)
         agent_tuple = obs, None, None, None
         done = False
         while not done:
@@ -255,15 +249,21 @@ class TestGenerator(Generator):
             done = agent_tuple[2] or self.environment.relist_count > 0
         lstg_log.verify_done()
 
+    def generate_recorder(self):
+        return None
+
     def generate(self):
         while self.environment.has_next_lstg():
             self.environment.next_lstg()
-            self.recorder.update_lstg(lookup=self.loader.lookup,
-                                      lstg=self.loader.lstg)
+            print(self.loader.lstg)
             if self.byr:
                 buyers = self._count_rl_buyers()
+                if self.first_only:
+                    buyers = min(buyers, 1)
                 for i in range(buyers):
                     # simulate lstg once for each buyer
+                    if self.verbose:
+                        print('Agent is thread {}'.format(i+1))
                     self.simulate_agent_lstg(buyer=(i + 1))
             elif self.agent:
                 self.simulate_agent_lstg()
@@ -294,7 +294,3 @@ class TestGenerator(Generator):
         else:
             env_class = SimulatorEnvironment
         return env_class
-
-    @property
-    def records_path(self):
-        raise RuntimeError("No recorder")
