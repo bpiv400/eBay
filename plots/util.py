@@ -6,8 +6,9 @@ from matplotlib.ticker import MaxNLocator
 FONTSIZE = {'roc': 16,  # fontsize by plot type
             'training': 24,
             'num': 16,
-            'sale': 16,
-            'response': 16}
+            'cdf': 16,
+            'action': 16,
+            'con': 16}
 
 plt.style.use('ggplot')
 plt.rcParams.update({
@@ -17,7 +18,7 @@ plt.rcParams.update({
 plt.rc('text.latex', preamble=r'\usepackage{amsmath}')
 
 
-def save_fig(path, legend=True, legend_kwargs=None,
+def save_fig(path, legend=True, legend_kwargs=None, reverse_legend=False,
              xlabel=None, ylabel=None, square=False):
     # create directory
     folder, name = path.split('/')
@@ -43,6 +44,9 @@ def save_fig(path, legend=True, legend_kwargs=None,
                    fancybox=False,
                    frameon=False,
                    fontsize=fontsize)
+        if reverse_legend:
+            handles, labels = plt.gca().get_legend_handles_labels()
+            plt.gca().legend(reversed(handles), reversed(labels))
 
     # axis labels
     plt.xlabel(xlabel, fontsize=fontsize)
@@ -129,11 +133,11 @@ def roc_plot(path, s):
              legend=False)
 
 
-def response_plot(path, df, byr=False):
-    line_plot(df, xlim=[.4, .95], ylim=[0, 1], ds='default')
-    save_fig(path,
-             xlabel='{} offer as fraction of list price'.format(
-                 'Seller' if byr else 'Buyer'))
+def con_plot(path, df, byr=False):
+    line_plot(df, ds='default')
+    role = 'Seller' if byr else 'Buyer'
+    xlabel = '{} offer as fraction of list price'.format(role)
+    save_fig(path, xlabel=xlabel, ylabel='Average concession')
 
 
 def bar_plot(df, horizontal=False, stacked=False, rot=0,
@@ -156,3 +160,21 @@ def bar_plot(df, horizontal=False, stacked=False, rot=0,
 def grouped_bar(path, df, xlabel=None, ylabel=None, **plotargs):
     bar_plot(df, **plotargs)
     save_fig(path, xlabel=xlabel, ylabel=ylabel)
+
+
+def area_plot(df, xlim=None, ylim=None, xticks=None, yticks=None):
+    plt.clf()
+    df.plot.area(xlim=xlim, ylim=ylim)
+
+    # ticks
+    if xticks is not None:
+        plt.gca().set_xticks(xticks)
+    if yticks is not None:
+        plt.gca().set_yticks(yticks)
+
+
+def action_plot(path, df, byr=False):
+    area_plot(df, ylim=[0, 1])
+    save_fig(path, reverse_legend=True,
+             xlabel='{} offer as fraction of list price'.format(
+                 'Seller' if byr else 'Buyer'))

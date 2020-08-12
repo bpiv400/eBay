@@ -10,7 +10,7 @@ from agent.const import AGENT_STATE
 from agent.util import get_paths
 from agent.AgentComposer import AgentComposer
 from agent.AgentModel import AgentModel
-from agent.EBayAgent import EBayAgent
+from agent.SplitCategoricalPgAgent import SplitCategoricalPgAgent
 from rlenv.DefaultQueryStrategy import DefaultQueryStrategy
 from rlenv.environments.SellerEnv import \
     RelistSellerEnv, NoRelistSellerEnv
@@ -40,9 +40,10 @@ class RlTrainer:
         self.algo = EBayPPO(**params['ppo'])
 
         # agent
-        self.agent = EBayAgent(
+        self.agent = SplitCategoricalPgAgent(
             ModelCls=AgentModel,
-            model_kwargs={BYR: self.byr}
+            model_kwargs={BYR: self.byr,
+                          'serial': self.params['serial']}
         )
 
         # environment

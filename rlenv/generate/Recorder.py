@@ -86,7 +86,7 @@ class Recorder:
 
     @staticmethod
     def print_lstg(lookup):
-        print("LSTG: {}".format(int(lookup[LSTG])))
+        print("\nLSTG: {}".format(int(lookup[LSTG])))
         print('start time: {} | end time: {}'.format(int(lookup[START_TIME]),
                                                      int(lookup[START_TIME] + MONTH)))
         print(('Start price: {} | accept price: {}' +
@@ -99,7 +99,7 @@ class Recorder:
     @staticmethod
     def print_next_event(event):
         print('NEXT EVENT DRAWING...')
-        print_string = 'Type: {}'.format(event.type)
+        print_string = 'Type: {} at {}'.format(event.type, event.priority)
         if event.type not in [ARRIVAL, RL_ARRIVAL_EVENT]:
             print_string += ' | '
             print_string += 'Thread: {} | Turn: {}'.format(event.thread_id,

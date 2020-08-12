@@ -1,9 +1,7 @@
 from rlenv.generate.Generator import SimulatorGenerator
 from agent.AgentComposer import AgentComposer
 from rlenv.interfaces.PlayerInterface import SimulatedBuyer, SimulatedSeller
-from agent.BetaCategorical import BetaCategorical
-from agent.const import NUM_ACTIONS_SLR, NUM_ACTIONS_BYR
-from agent.util import pack_dist_info
+from rlenv.util import sample_categorical
 
 
 class EvalGenerator(SimulatorGenerator):
@@ -12,8 +10,6 @@ class EvalGenerator(SimulatorGenerator):
         self.env = env
         self.model = model
         self._init_model()
-        num_actions = NUM_ACTIONS_BYR if self.model.byr else NUM_ACTIONS_SLR
-        self.distribution = BetaCategorical(dim=num_actions)
 
     def _init_model(self):
         for param in self.model.parameters(recurse=True):
@@ -38,9 +34,8 @@ class EvalGenerator(SimulatorGenerator):
         if obs is not None:
             done = False
             while not done:
-                params, _ = self.model(observation=obs)
-                dist_info = pack_dist_info(params)
-                action = self.distribution.sample(dist_info)
+                probs, _ = self.model(observation=obs)
+                action = int(sample_categorical(probs=probs))
                 agent_tuple = self.environment.step(action)
                 done = agent_tuple[2]
                 obs = agent_tuple[0]

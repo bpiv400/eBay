@@ -1,58 +1,58 @@
+import argparse
 import numpy as np
 import pandas as pd
-from agent.util import get_run_id
+from agent.util import get_paths
 from assess.util import load_data, get_pctiles, discrete_pdf
-from utils import topickle, load_file
-from agent.const import DELTA
-from constants import PLOT_DIR, AGENT_DIR, TEST, IDX
-from featnames import LOOKUP, CON, NORM, START_PRICE, REJECT, ACCEPT, SLR
+from utils import topickle
+from constants import PLOT_DIR, TEST, IDX
+from featnames import CON, NORM, SLR, AUTO
+
+DIM = np.arange(.4, .96, .01)
 
 
 def gaussian_kernel(x, bw=.02):
     return lambda z: np.exp(-0.5 * ((x - z) / bw) ** 2)
 
 
-def local_constant(y, kernel=None, dim=None):
-    y_hat = np.zeros_like(dim)
-    for i, z in enumerate(dim):
+def nw(y, kernel=None, dim=DIM):
+    y_hat = pd.Series(0, index=dim)
+    for z in dim:
         k = kernel(z)
-        y_hat[i] = np.sum(y * k) / np.sum(k)
+        y_hat.loc[z] = np.sum(y * k) / np.sum(k)
     return y_hat
 
 
-def slr_response(offers=None):
-    idx_slr = offers.index.isin(IDX[SLR], level='index')
-    norm = offers[NORM].shift().loc[idx_slr]
-    con = offers.loc[idx_slr, CON]
-    dim = np.arange(.4, .96, .01)
+def slr_action(offers=None):
+    norm = offers[NORM].groupby(offers.index.names[:-1]).shift().dropna()
     y_hat = {}
     for t in IDX[SLR]:
-        x = norm.xs(t, level='index').values
+        x = norm.xs(t, level='index')
         kernel = gaussian_kernel(x)
-        con_t = con.xs(t, level='index').values
-        df = pd.DataFrame(0., index=dim, columns=[ACCEPT, REJECT, CON])
-
+        con = offers[CON].xs(t, level='index')
+        auto = offers[AUTO].xs(t, level='index')
+        assert np.all(con.index == x.index)
+        assert np.all(auto.index == x.index)
         # accept and reject probability
-        y_accept = con_t == 1
-        y_reject = con_t == 0
-        df.loc[:, ACCEPT] = local_constant(y_accept, kernel=kernel, dim=dim)
-        df.loc[:, REJECT] = local_constant(y_reject, kernel=kernel, dim=dim)
-
-        # average concession
-        idx_con = ~y_accept & ~y_reject
-        x_con = x[idx_con]
-        kernel_con = gaussian_kernel(x_con)
-        y_con = con_t[idx_con]
-        df.loc[:, CON] = local_constant(y_con, kernel=kernel_con, dim=dim)
-
-        # rename columns
-        df.rename({ACCEPT: 'Accept rate',
-                   REJECT: 'Reject rate',
-                   CON: 'Average concession'},
-                  axis=1, inplace=True)
-
+        df = pd.DataFrame(index=DIM)
+        df['Auto reject'] = nw((con == 0) & auto, kernel=kernel)
+        df['Manual reject'] = nw((con == 0) & ~auto,  kernel=kernel)
+        df['Manual accept'] = nw((con == 1) & ~auto, kernel=kernel)
+        df['Auto accept'] = nw((con == 1) & auto, kernel=kernel)
+        df['Concession'] = 1 - df.sum(axis=1)
         y_hat[t] = df
+    return y_hat
 
+
+def slr_con(offers=None, name=None):
+    idx = (offers[CON] > 0) & (offers[CON] < 1)
+    norm = offers[NORM].groupby(offers.index.names[:-1]).shift().dropna()[idx]
+    con = offers.loc[idx, CON]
+    y_hat = {}
+    for t in IDX[SLR]:
+        x = norm.xs(t, level='index')
+        y = con.xs(t, level='index')
+        assert np.all(x.index == y.index)
+        y_hat[t] = nw(y, kernel=gaussian_kernel(x)).rename(name)
     return y_hat
 
 
@@ -62,13 +62,14 @@ def num_months(threads=None):
     return discrete_pdf(s, censoring=4)
 
 
-def num_threads(threads=None):
+def num_threads(threads=None, lstgs=None):
     s = threads.iloc[:, 0].groupby('lstg').count()
+    s = s.reindex(index=lstgs, fill_value=0)
     return discrete_pdf(s, censoring=4)
 
 
 def num_offers(offers=None):
-    s = offers.iloc[:, 0].groupby(['lstg', 'sim', 'thread']).count()
+    s = offers.iloc[:, 0].groupby(offers.index.names[:-1]).count()
     return discrete_pdf(s)
 
 
@@ -79,6 +80,8 @@ def get_sale_pctiles(offers=None, start_price=None):
     sale_norm.loc[slr_turn] = 1 - sale_norm.loc[slr_turn]
     # keep only lstg in index
     sale_norm = sale_norm.reset_index(sale_norm.index.names[1:], drop=True)
+    # non-sales
+    sale_norm = sale_norm.reindex(index=start_price.index, fill_value=0.)
     # multiply by start price to get sale price
     sale_price = np.round(sale_norm * start_price, decimals=2)
     # percentiles
@@ -95,63 +98,67 @@ def fill_nans(df):
 
 def collect_outputs(threads=None, offers=None, start_price=None, name=None):
     d = dict()
-    d['sale_norm'], d['sale_price'] = \
+    d['cdf_norm'], d['cdf_price'] = \
         get_sale_pctiles(offers=offers, start_price=start_price)
-    d['num_months'] = num_months(threads)
-    d['num_threads'] = num_threads(threads)
+    if 'sim' in threads.index.names:
+        d['num_months'] = num_months(threads)
+    d['num_threads'] = num_threads(threads=threads, lstgs=start_price.index)
     d['num_offers'] = num_offers(offers)
     for k, v in d.items():
         d[k] = v.rename(name)
-
+    d['con'] = slr_con(offers, name=name)
     return d
 
 
 def main():
-    # simulated seller
-    start_price = load_file(TEST, LOOKUP)[START_PRICE]
-    threads, offers, _ = load_data(part=TEST)
-    lstgs = threads.index.get_level_values(level='lstg').unique()
-    start_price = start_price.reindex(index=lstgs)  # drop infreq arrivals
+    # flag for relisting environment
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--relist', action='store_true')
+    relist = parser.parse_args().relist
 
-    # initialize output dictionary with simulated seller
+    # simulated seller
+    threads, offers, _, start_price = load_data(part=TEST, relist=relist)
+
+    # simulated seller
     d = collect_outputs(threads=threads,
                         offers=offers,
                         start_price=start_price,
                         name='Simulated seller')
+    d['action'] = {'sim': slr_action(offers)}
 
-    # seller responses
-    y_hat = {-1: slr_response(offers)}  # delta = -1 ==> simulated seller
+    # RL seller
+    path_args = dict(byr=False, delta=0., entropy_coeff=.001)
+    if relist:
+        path_args['delta'] = .995
+    else:
+        path_args['suffix'] = 'betacat'
+    _, _, run_dir = get_paths(**path_args)
+    threads_rl, offers_rl, _, _ = load_data(part=TEST,
+                                            run_dir=run_dir,
+                                            relist=relist)
 
-    # loop over delta
-    log_dir = AGENT_DIR + '{}/'.format(SLR)
-    for delta in DELTA:
-        print(delta)
-        # data from agent seller
-        run_id = get_run_id(delta=delta,
-                            entropy_coeff=.001)  # TODO: find best run
-        run_dir = log_dir + 'run_{}/'.format(run_id)
-        threads_sim, offers_sim, _ = load_data(part=TEST, run_dir=run_dir)
-        name = 'RL seller: $\\delta = {}$'.format(delta)
+    d_rl = collect_outputs(threads=threads_rl,
+                           offers=offers_rl,
+                           start_price=start_price,
+                           name='RL seller')
+    d['action']['rl'] = slr_action(offers_rl)
 
-        # dictionary of series
-        d_sim = collect_outputs(threads=threads_sim,
-                                offers=offers_sim,
-                                start_price=start_price,
-                                name=name)
-        for k, v in d.items():  # put in DataFrames
-            d[k] = pd.concat([v, d_sim[k]], axis=1)
-
-        y_hat[delta] = slr_response(offers_sim)
+    # concatenate DataFrames
+    for k, v in d.items():
+        if k.startswith('cdf') or k.startswith('num'):
+            d[k] = pd.concat([v, d_rl[k]], axis=1, sort=True)
+        elif k == 'con':
+            for t in IDX[SLR]:
+                d[k][t] = pd.concat([v[t], d_rl[k][t]], axis=1, sort=True)
 
     # fill in nans
-    for k in ['sale_price', 'sale_norm']:
+    for k in ['cdf_price', 'cdf_norm']:
         d[k] = fill_nans(d[k])
 
-    # put in one dictionary
-    d['y_hat'] = y_hat
-
     # save
-    topickle(d, PLOT_DIR + '{}.pkl'.format(SLR))
+    suffix = 'relist' if relist else 'norelist'
+    path = PLOT_DIR + '{}_{}.pkl'.format(SLR, suffix)
+    topickle(d, path)
 
 
 if __name__ == '__main__':

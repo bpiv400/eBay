@@ -192,6 +192,8 @@ class EBayBaseRunner(BaseRunner):
         """
         if self._opt_infos:
             for k, v in self._opt_infos.items():
+                if len(v) == 0:
+                    continue
                 if type(v[0]) is np.ndarray:
                     logger.record_tabular_misc_stat(k, np.concatenate(v))
                 else:

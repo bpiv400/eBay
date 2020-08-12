@@ -1,12 +1,11 @@
 import numpy as np
 import pandas as pd
 from compress_pickle import load, dump
-from utils import unpickle
 from inputs.const import NUM_OUT
 from constants import INPUT_DIR, INDEX_DIR, VALIDATION, \
-    IDX, DISCRIM_MODEL, POLICY_BYR, BYR_DROP, PCTILE_DIR
+    IDX, DISCRIM_MODEL, POLICY_BYR, BYR_DROP
 from featnames import CLOCK_FEATS, OUTCOME_FEATS, SPLIT, MSG, AUTO, \
-    EXP, REJECT, DAYS, DELAY, TIME_FEATS, THREAD_COUNT, BYR_HIST, BYR
+    EXP, REJECT, DAYS, DELAY, TIME_FEATS, THREAD_COUNT, BYR, CON, NORM
 
 
 def add_turn_indicators(df):
@@ -96,19 +95,24 @@ def get_x_offer_init(offers, idx, role=None):
         offers.drop(TIME_FEATS, axis=1, inplace=True)
 
     # turn features
-    last = max(IDX[role]) - 1
-    for i in range(1, last + 1):
+    # for i in range(1, max(IDX[role]) + 1):
+    for i in range(1, max(IDX[role])):
         # offer features at turn i, and turn number
         offer = offers.xs(i, level='index').reindex(
             index=idx, fill_value=0).astype('float32')
         turn = offer.index.get_level_values(level='index')
 
-        # all features are zero for current and future turns
-        offer.loc[i >= turn, :] = 0.
-
         # msg is 0 for turns of focal player
         if i in IDX[role]:
             offer.loc[:, MSG] = 0.
+
+        # all features are zero for future turns
+        offer.loc[i > turn, :] = 0.
+
+        # for current turn, post-delay features set to 0
+        offer.loc[i == turn, [CON, REJECT, NORM, SPLIT]] = 0.
+        if i in IDX[role]:
+            assert offer.loc[i == turn, [AUTO, MSG]].max().max() == 0.
 
         # put in dictionary
         x_offer['offer%d' % i] = offer

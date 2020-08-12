@@ -48,7 +48,8 @@ class AgentComposer(Composer):
         if model_name is None:
             return self._build_agent_dict(sources=sources, turn=turn)
         else:
-            return super().build_input_dict(model_name=model_name, sources=sources,
+            return super().build_input_dict(model_name=model_name,
+                                            sources=sources,
                                             turn=turn)
 
     def _build_agent_dict(self, sources=None, turn=None):

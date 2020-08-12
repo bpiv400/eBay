@@ -1,4 +1,5 @@
-from plots.util import cdf_plot, grouped_bar, response_plot
+import argparse
+from plots.util import cdf_plot, grouped_bar, action_plot, con_plot
 from utils import unpickle
 from constants import PLOT_DIR
 from featnames import SLR
@@ -15,13 +16,13 @@ def draw_counts(s, path=None):
 
 
 def draw_cdf(df, path=None):
-    if 'sale_price' in path:  # for log scale
+    if 'price' in path:  # for log scale
         df = df.loc[df.index > 0, :]
         xlim = [1, 1000]
         xlabel = 'Sale price'
         logx = True
     else:
-        xlim = [0.4, 1]
+        xlim = [0.2, 1]
         xlabel = 'Sale price / list price'
         logx = False
 
@@ -33,23 +34,40 @@ def draw_cdf(df, path=None):
              legend_kwargs=dict(loc='upper left'))
 
 
-def draw_response(df, path=None):
-    response_plot(path, df, byr=False)
+def draw_action(df, path=None):
+    action_plot(path, df, byr=False)
+
+
+def draw_con(df, path):
+    con_plot(path, df)
 
 
 def main():
-    # seller agent
-    d = unpickle(PLOT_DIR + '{}.pkl'.format(SLR))
+    # flag for relisting environment
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--relist', action='store_true')
+    relist = parser.parse_args().relist
+    suffix = 'relist' if relist else 'norelist'
+    folder = '{}_{}/'.format(SLR, suffix)
+
+    d = unpickle(PLOT_DIR + '{}_{}.pkl'.format(SLR, suffix))
     for k, v in d.items():
-        if k != 'y_hat':
-            path = '{}/{}'.format(SLR, k)
-            f = draw_cdf if 'sale' in k else draw_counts
-            f(v, path=path)
+        print(k)
+        if k == 'action':
+            for name in d[k].keys():  # wave plots
+                for t, df in d[k][name].items():
+                    path = folder + 'action_{}_{}'.format(name, t)
+                    draw_action(df, path=path)
+        elif k == 'con':
+            for t, df in d[k].items():  # average concession
+                path = folder + 'con_{}'.format(t)
+                draw_con(df, path=path)
         else:
-            for delta in d[k].keys():
-                for t, df in d[k][delta].items():
-                    path = '{}/response_{}_{}'.format(SLR, delta, t)
-                    draw_response(df, path=path)
+            path = folder + '{}'.format(k)
+            if k.startswith('num'):  # bar charts
+                draw_counts(v, path=path)
+            elif k.startswith('cdf'):  # cdf plots
+                draw_cdf(v, path)
 
 
 if __name__ == '__main__':

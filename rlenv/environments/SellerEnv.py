@@ -1,12 +1,18 @@
 from rlpyt.utils.collections import namedarraytuple
-from featnames import START_PRICE
-from constants import MAX_DELAY_TURN, POLICY_SLR, LISTING_FEE
-from utils import load_sizes
 from rlenv.const import DELAY_EVENT
 from rlenv.environments.AgentEnv import AgentEnv
 from rlenv.events.Thread import RlThread
 from rlenv.generate.Recorder import Recorder
+from utils import load_sizes
+from constants import MAX_DELAY_TURN, POLICY_SLR, LISTING_FEE
+from featnames import BYR_HIST, START_PRICE
 
+
+SellerInfo = namedarraytuple("SellerInfo",
+                             ["months",
+                              "months_last",
+                              "max_return",
+                              "num_actions"])
 SellerObs = namedarraytuple("SellerObs",
                             list(load_sizes(POLICY_SLR)['x'].keys()))
 
@@ -18,6 +24,8 @@ class SellerEnv(AgentEnv):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+        self.last_priority = None  # to be set in step() after choosing delay
+        self.num_actions = None  # number of agent actions
 
     def step(self, action):
         """
@@ -26,20 +34,17 @@ class SellerEnv(AgentEnv):
         :return: tuple described in rlenv
         """
         con = self.turn_from_action(action)
-
-        # not expiration rejection
-        if con <= 1:
-            offer_time = self.get_offer_time(self.last_event)
-            delay = (offer_time - self.last_event.priority) / MAX_DELAY_TURN
-            self.last_event.prep_rl_offer(con=con, priority=offer_time)
-
-        # expiration rejection
-        else:
-            delay = 1.
-            self.last_event.update_delay(seconds=MAX_DELAY_TURN)
+        assert 0 <= con <= 1
+        offer_time = self.get_offer_time(self.last_event)
+        delay = (offer_time - self.last_event.priority) / MAX_DELAY_TURN
+        self.last_event.prep_rl_offer(con=con, priority=offer_time)
 
         # put event in queue
         self.queue.push(self.last_event)
+
+        # record time of offer
+        self.last_priority = self.last_event.priority
+        self.last_event = None
 
         if self.verbose:
             Recorder.print_agent_turn(con=con, delay=delay)
@@ -65,11 +70,34 @@ class SellerEnv(AgentEnv):
         """
         return event.type == DELAY_EVENT and event.turn % 2 == 0
 
+    def get_obs(self, event=None, done=None):
+        if not done:
+            self.num_actions += 1
+        if event.sources() is None or event.turn is None:
+            raise RuntimeError("Missing arguments to get observation")
+        if BYR_HIST in event.sources():
+            obs_dict = self.composer.build_input_dict(model_name=None,
+                                                      sources=event.sources(),
+                                                      turn=event.turn)
+        else:  # incomplete sources; triggers warning in AgentModel
+            assert done
+            obs_dict = self.empty_obs_dict
+        return self._obs_class(**obs_dict)
+
+    def get_info(self, event=None):
+        max_return = (1-self.cut) * self.lookup[START_PRICE] - LISTING_FEE
+        return SellerInfo(months=self._get_months(event.priority),
+                          months_last=self._get_months(self.last_priority),
+                          max_return=max_return,
+                          num_actions=self.num_actions)
+
     def get_reward(self):
         raise NotImplementedError()
 
-    def _get_max_return(self):
-        return (1-self.cut) * self.lookup[START_PRICE] - LISTING_FEE
+    def init_reset(self, next_lstg=True):
+        self.last_priority = None
+        self.num_actions = 0
+        super().init_reset(next_lstg=next_lstg)
 
     @property
     def horizon(self):
@@ -83,7 +111,7 @@ class SellerEnv(AgentEnv):
 class RelistSellerEnv(SellerEnv):
 
     def reset(self, next_lstg=True):
-        self.init_reset(next_lstg=next_lstg)  # in AgentEnvironment
+        self.init_reset(next_lstg=next_lstg)  # in SellerEnvironment
         while True:
             event, lstg_complete = super().run()  # calls EBayEnvironment.run()
             # if the lstg isn't complete that means it's time to sample an agent action
@@ -132,7 +160,7 @@ class RelistSellerEnv(SellerEnv):
 class NoRelistSellerEnv(SellerEnv):
 
     def reset(self, next_lstg=True):
-        self.init_reset(next_lstg=next_lstg)  # in AgentEnvironment
+        self.init_reset(next_lstg=next_lstg)  # in SellerEnvironment
         while True:
             event, lstg_complete = super().run()  # calls EBayEnvironment.run()
             # if the lstg isn't complete that means it's time to sample an agent action
@@ -152,9 +180,8 @@ class NoRelistSellerEnv(SellerEnv):
                     return None
 
     def run(self):  # until EbayEnvironment.run() stops at agent turn
-        while True:
-            event, lstg_complete = super().run()
-            return self.agent_tuple(done=lstg_complete, event=event)
+        event, lstg_complete = super().run()
+        return self.agent_tuple(done=lstg_complete, event=event)
 
     def get_reward(self):
         if self.outcome is None:

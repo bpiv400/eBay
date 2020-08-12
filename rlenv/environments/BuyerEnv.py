@@ -1,14 +1,19 @@
 import numpy as np
 from rlpyt.utils.collections import namedarraytuple
-from constants import HOUR, DAY, POLICY_BYR, PCTILE_DIR
+from constants import HOUR, POLICY_BYR, PCTILE_DIR
 from featnames import START_PRICE, BYR_HIST
 from utils import load_sizes, unpickle
-from rlenv.const import DELAY_EVENT, RL_ARRIVAL_EVENT
+from rlenv.const import DELAY_EVENT, RL_ARRIVAL_EVENT, CLOCK_MAP
 from rlenv.Sources import RlBuyerSources
 from rlenv.environments.AgentEnv import AgentEnv
 from rlenv.events.Arrival import RlArrival
 from rlenv.events.Thread import RlThread
 
+BuyerInfo = namedarraytuple("BuyerInfo",
+                            ["months",
+                             "max_return",
+                             "num_delays",
+                             "num_offers"])
 BuyerObs = namedarraytuple('BuyerObs',
                            list(load_sizes(POLICY_BYR)['x'].keys()))
 
@@ -17,7 +22,9 @@ class BuyerEnv(AgentEnv):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.item_value = None
-        self.agent_thread = None  # thread number for agent buyer
+        self.agent_thread = None
+        self.num_delays = None
+        self.num_offers = None
 
         # for drawing experience
         path = PCTILE_DIR + '{}.pkl'.format(BYR_HIST)
@@ -32,6 +39,9 @@ class BuyerEnv(AgentEnv):
         """
         self.init_reset(next_lstg=next_lstg)  # in AgentEnvironment
         self.item_value = self.lookup[START_PRICE]  # TODO: allow for different values
+        self.agent_thread = None
+        self.num_delays = 0
+        self.num_offers = 0
 
         # put rl arrival in queue
         rl_sources = RlBuyerSources(x_lstg=self.x_lstg,
@@ -64,7 +74,10 @@ class BuyerEnv(AgentEnv):
         # rejection indicates delay without action
         if con == 0:
             self.last_event.delay()  # adds DAY to priority, updates sources
+            if self.last_event.priority >= self.end_time:
+                return self.agent_tuple(done=True, event=self.last_event)
             self.queue.push(self.last_event)
+            self.num_delays += 1
 
         else:
             sources = self.last_event.sources
@@ -74,18 +87,53 @@ class BuyerEnv(AgentEnv):
                               con=con,
                               rl_buyer=True)
             self.queue.push(thread)
+            self.num_offers += 1
 
+        self.last_event = None
         return self.run()
 
     def _step_thread(self, con=None):
+        assert self.last_event.turn in [3, 5, 7]
+        # trajectory ends with buyer reject
+        if con == 0. or (con < 1 and self.last_event.turn == 7):
+            return self.agent_tuple(done=True, event=self.last_event)
+
+        # otherwise, draw an offer time and put event in queue
         offer_time = self.get_offer_time(self.last_event)
         self.last_event.prep_rl_offer(con=con, priority=offer_time)
         self.queue.push(self.last_event)
+        self.num_offers += 1
+        self.last_event = None
         return self.run()
 
     def run(self):
         event, lstg_complete = super().run()
         return self.agent_tuple(done=lstg_complete, event=event)
+
+    def is_agent_turn(self, event):
+        """
+        Indicates the buyer agent needs to take a turn when there's an
+        agent arrival event or when it's buyer's turn in an RL thread
+        :return bool: True if agent buyer takes an action
+        """
+        if event.type == RL_ARRIVAL_EVENT:
+            return not (self.is_lstg_expired(event))
+        elif event.type == DELAY_EVENT:
+            return event.turn % 2 == 1 and isinstance(event, RlThread)
+        else:
+            return False
+
+    def process_offer(self, event):
+        if isinstance(event, RlThread) and event.turn % 2 == 1:
+            if event.turn == 1:  # housekeeping for buyer's first turn
+                self.last_arrival_time = event.priority
+                event.set_thread_id(self.thread_counter)
+                self.thread_counter += 1
+                self.agent_thread = event.thread_id
+
+            return self.process_rl_offer(event)
+        else:
+            return super().process_offer(event)
 
     def get_reward(self):
         """
@@ -103,24 +151,23 @@ class BuyerEnv(AgentEnv):
         # sale to agent buyer
         return self.item_value - self.outcome.price
 
-    def is_agent_turn(self, event):
-        """
-        Indicates the buyer agent needs to take a turn when there's an
-        agent arrival event or when it's buyer's turn in an RL thread
-        :return bool: True if agent buyer takes an action
-        """
-        if event.type == RL_ARRIVAL_EVENT:
-            return not (self.is_lstg_expired(event))
-        elif event.type == DELAY_EVENT:
-            return event.turn % 2 == 1 and isinstance(event, RlThread)
-        else:
-            return False
+    def get_obs(self, event=None, done=None):
+        if event.sources() is None or event.turn is None:
+            raise RuntimeError("Missing arguments to get observation")
+        if CLOCK_MAP in event.sources() and BYR_HIST in event.sources():
+            obs_dict = self.composer.build_input_dict(model_name=None,
+                                                      sources=event.sources(),
+                                                      turn=event.turn)
+        else:  # incomplete sources; triggers warning in AgentModel
+            assert done
+            obs_dict = self.empty_obs_dict
+        return self._obs_class(**obs_dict)
 
-    def process_offer(self, event):
-        if isinstance(event, RlThread) and event.turn % 2 != 0:
-            return self.process_rl_offer(event)
-        else:
-            return super().process_offer(event)
+    def get_info(self, event=None):
+        return BuyerInfo(months=self._get_months(event.priority),
+                         max_return=self.item_value,
+                         num_delays=self.num_delays,
+                         num_offers=self.num_offers)
 
     def _hours_since_lstg(self, priority):
         return int((priority - self.start_time) / HOUR)
@@ -144,9 +191,6 @@ class BuyerEnv(AgentEnv):
         idx = np.searchsorted(self.hist_pctile, q) - 1
         hist = self.hist_pctile[idx]
         return hist
-
-    def _get_max_return(self):
-        return self.item_value
 
     @property
     def horizon(self):

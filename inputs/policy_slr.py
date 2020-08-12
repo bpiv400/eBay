@@ -15,25 +15,17 @@ def construct_x(idx=None, threads=None, offers=None):
     return x
 
 
-def get_y(df):
-    # concession is an int from 0 to 100
-    y = (df[CON] * CON_MULTIPLIER).astype('int8')
-    # expired offer is last index
-    y[df[EXP]] = CON_MULTIPLIER + 1
-    return y
-
-
 def create_index(offers):
     slr_turn = offers.index.isin(IDX[SLR], level='index')
     censored = offers[EXP] & (offers[DELAY] < 1)
     mask = slr_turn & ~offers[AUTO] & ~censored
-    idx = offers[mask].index
+    idx = mask[mask].index
     return idx
 
 
 def process_inputs(part):
     # load dataframes
-    lookup = load_file(part, LOOKUP)
+    lstgs = load_file(part, LOOKUP).index
     threads = load_file(part, 'x_thread')
     offers = load_file(part, 'x_offer')
 
@@ -41,13 +33,13 @@ def process_inputs(part):
     idx = create_index(offers)
 
     # outcome and master index
-    y = get_y(offers.loc[idx, [CON, EXP]])
+    y = (offers.loc[idx, CON] * CON_MULTIPLIER).astype('int8')
 
     # input features dictionary
-    x = construct_x(idx=y.index, threads=threads, offers=offers)
+    x = construct_x(idx=idx, threads=threads, offers=offers)
 
     # indices for fixed features
-    idx_x = get_ind_x(lstgs=lookup.index, idx=idx)
+    idx_x = get_ind_x(lstgs=lstgs, idx=idx)
 
     return {'y': y, 'x': x, 'idx_x': idx_x}
 

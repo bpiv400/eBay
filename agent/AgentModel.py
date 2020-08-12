@@ -1,10 +1,10 @@
 import torch
-from torch.nn.functional import softmax, softplus
+from torch.nn.functional import softplus, softmax
+import numpy as np
+from scipy.special import betainc
 from nets.FeedForward import FeedForward
 from utils import load_sizes
-from agent.const import T1_IDX, DELAY_BOOST, DROPOUT_POLICY, DROPOUT_VALUE, \
-    IDX_AGENT_REJ, NUM_ACTIONS_SLR, NUM_ACTIONS_BYR, NUM_PARAM_SLR, \
-    NUM_PARAM_BYR
+from agent.const import DROPOUT_POLICY, DROPOUT_VALUE
 from constants import POLICY_SLR, POLICY_BYR
 
 
@@ -17,20 +17,24 @@ class AgentModel(torch.nn.Module):
     4. Both networks use batch normalization
     5. Both networks use dropout with shared dropout hyperparameters
     """
-    def __init__(self, byr=None):
+    def __init__(self, byr=None, serial=False):
         super().__init__()
+
+        # save params to self
         self.byr = byr
+        self.serial = serial
 
         # policy net
-        sizes = load_sizes(POLICY_BYR if self.byr else POLICY_SLR)
-        sizes['out'] = NUM_PARAM_BYR if self.byr else NUM_PARAM_SLR
+        sizes = load_sizes(POLICY_BYR if byr else POLICY_SLR)
+        sizes['out'] = 5
         self.policy_net = FeedForward(sizes=sizes, dropout=DROPOUT_POLICY)
-        self.num_out = sizes['out']
-        self.x_sizes = sizes['x']
 
         # value net
         sizes['out'] = 1
         self.value_net = FeedForward(sizes=sizes, dropout=DROPOUT_VALUE)
+
+        # for discrete pdf
+        self.dim = torch.from_numpy(np.linspace(0, 1, 100)).float()
 
     def forward(self, observation, prev_action=None, prev_reward=None):
         """
@@ -58,27 +62,85 @@ class AgentModel(torch.nn.Module):
         # policy
         theta = self.policy_net(input_dict)
 
-        # bias towards waiting for buyer's first turn
-        if self.byr:
-            first_turn = input_dict['lstg'][:, T1_IDX] == 1
-            theta[first_turn, IDX_AGENT_REJ] += DELAY_BOOST
+        # beta distribution
+        pi = softmax(theta[:, :-2], dim=-1)
+        beta_params = softplus(torch.clamp(theta[:, -2:], min=-5))
+        a, b = beta_params[:, 0], beta_params[:, 1]
 
-        # beta-categorical distribution
-        if self.num_out in [5, 6]:
-            pi = softmax(theta[:, :-2], dim=-1).squeeze()
-            beta_params = softplus(torch.clamp(theta[:, -2:], min=-5)) + 1  # 0 mass at {0,1}
-            a = beta_params[:, 0].squeeze()
-            b = beta_params[:, 1].squeeze()
-            params = (pi, a, b)
-
-        # categorical distribution
-        elif self.num_out in [NUM_ACTIONS_SLR, NUM_ACTIONS_BYR]:
-            params = softmax(theta, dim=theta.dim() - 1).squeeze()
-
-        else:
-            raise RuntimeError("Incorrect sizes['out']")
+        # convert to categorical distribution
+        pdf = self._discrete_pdf(pi, a, b)
 
         # value
-        v = torch.sigmoid(self.value_net(input_dict)).squeeze()
+        v = torch.sigmoid(self.value_net(input_dict))
 
-        return params, v
+        # squeeze
+        if not self.serial:
+            pdf = pdf.squeeze()
+            v = v.squeeze()
+
+        return pdf, v
+
+    def _discrete_pdf(self, pi, a, b):
+        a = a.unsqueeze(-1)
+        b = b.unsqueeze(-1)
+        x = self.dim.expand(a.size()[0], -1).to(a.device)
+
+        cdf = self._beta_cdf(a, b, x)  # for concessions
+        assert torch.max(cdf) <= 1
+        assert torch.min(cdf) >= 0
+        # test = betainc(a.cpu().detach().numpy(),
+        #                b.cpu().detach().numpy(),
+        #                x.cpu().detach().numpy())
+        # check = np.max(np.abs(cdf.cpu().detach().numpy() - test))
+        # if np.any(np.isnan(check)) or check > 1e-6:
+        #     print(torch.cat([a, b], dim=-1))
+        #     print(check)
+        #     print(np.isnan(test).sum())
+        #     print(torch.isnan(cdf).sum().item())
+        #     raise ValueError('Distributions are not equivalent.')
+
+        pdf = cdf[:, 1:] - cdf[:, :-1]
+
+        # add in accepts and rejects
+        pdf *= pi[:, [-1]]  # scale by concession probability
+        pdf = torch.cat([pi[:, [0]], pdf, pi[:, [1]]], dim=-1)
+        assert torch.min(pdf) >= 0
+        assert torch.max(torch.abs(pdf.sum(-1) - 1.)) < 1e-6
+        assert torch.max(torch.abs(pdf.sum(-1) - 1.)) < 1e-6
+        pdf /= pdf.sum(-1, True)  # for precision
+
+        return pdf
+
+    @staticmethod
+    def _beta_cdf(a, b, x, n_iter=41):
+        beta = torch.exp(torch.lgamma(a) + torch.lgamma(b) - torch.lgamma(a + b))
+
+        # split values
+        S0 = (a + 1) / (a + b + 2)
+        x_l = torch.min(x, S0)
+        x_h = torch.max(x, S0)
+
+        # low values
+        T = torch.zeros_like(x)
+        for k in reversed(range(n_iter)):
+            v = -(a + k) * (a + b + k) * x_l / (a + 2 * k) / (a + 2 * k + 1)
+            T = v / (T + 1)
+            if k > 0:
+                v = k * (b - k) * x_l / (a + 2 * k - 1) / (a + 2 * k)
+                T = v / (T + 1)
+
+        cdf_l = x_l ** a * (1 - x_l) ** b / (a * beta) / (T + 1)
+
+        # high values
+        T = torch.zeros_like(x)
+        for k in reversed(range(n_iter)):
+            v = -(b + k) * (a + b + k) * (1 - x_h) / (b + 2 * k) / (b + 2 * k + 1)
+            T = v / (T + 1)
+            if k > 0:
+                v = k * (a - k) * (1 - x_h) / (b + 2 * k - 1) / (b + 2 * k)
+                T = v / (T + 1)
+
+        cdf_h = 1 - x_h ** a * (1 - x_h) ** b / (b * beta) / (T + 1)
+
+        # concatenate
+        return cdf_l * (x <= S0) + cdf_h * (x > S0)

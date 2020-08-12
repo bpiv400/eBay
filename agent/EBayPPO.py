@@ -2,6 +2,7 @@ import numpy as np
 import torch
 from torch.optim import Adam
 from collections import namedtuple
+from rlpyt.agents.base import AgentInputs
 from rlpyt.utils.tensor import valid_mean
 from rlpyt.utils.buffer import buffer_to
 from rlpyt.utils.collections import namedarraytuple
@@ -9,7 +10,7 @@ from agent.Prefs import Prefs
 from agent.const import PERIOD_EPOCHS, LR_POLICY, LR_VALUE, RATIO_CLIP
 
 LossInputs = namedarraytuple("LossInputs",
-                             ["observation",
+                             ["agent_inputs",
                               "action",
                               "return_",
                               "advantage",
@@ -17,11 +18,13 @@ LossInputs = namedarraytuple("LossInputs",
                               "old_dist_info"])
 OptInfo = namedtuple("OptInfo",
                      ["ActionsPerTraj",
+                      "DelaysPerTraj",
+                      "OffersPerTraj",
                       "MonthsToDone",
                       "Rate_Con",
                       "Rate_Acc",
                       "Rate_Rej",
-                      "Rate_Exp",
+                      "Rate_Sale",
                       "Concession",
                       "DiscountedReturn",
                       "Advantage",
@@ -49,6 +52,7 @@ class EBayPPO:
 
         # parameters to be defined later
         self.agent = None
+        self.byr = None
         self._optim_value = None
         self._optim_policy = None
 
@@ -64,6 +68,7 @@ class EBayPPO:
         Called by runner.
         """
         self.agent = agent
+        self.byr = agent.model.byr
 
         # optimizers
         self._optim_value = Adam(self.agent.value_parameters(),
@@ -98,22 +103,30 @@ class EBayPPO:
         env = samples.env
         reward, done, info = (env.reward, env.done, env.env_info)
 
+        # ignore steps from unfinished trajectories
+        valid = self.valid_from_done(done)
+
         # time and/or action discounting
-        return_, censored = self.prefs.discount_return(reward=reward,
-                                                       done=done,
-                                                       info=info)
-        # value = samples.agent.agent_info.value
+        pref_args = dict(reward=reward, done=done, info=info)
+        if self.byr:
+            return_ = self.prefs.discount_return_byr(**pref_args)
+        else:
+            return_, censored = self.prefs.discount_return_slr(**pref_args)
+            valid[censored] = False  # ignore censored actions
+
+        # advantage
         value = samples.agent.agent_info.value
         advantage = return_ - value
 
-        # ignore steps from unfinished trajectories
-        valid = self.valid_from_done(done)
-        valid[censored] = False  # ignore censored actions
-
-        # put sample components in LossInputs
-        observation = buffer_to(env.observation, device=self.agent.device)
+        # Move inputs to device once, index there
+        agent_inputs = AgentInputs(
+            observation=env.observation,
+            prev_action=samples.agent.prev_action,
+            prev_reward=env.prev_reward,
+        )
+        agent_inputs = buffer_to(agent_inputs, device=self.agent.device)
         loss_inputs = LossInputs(
-            observation=observation,
+            agent_inputs=agent_inputs,
             action=samples.agent.action,
             return_=return_,
             advantage=advantage,
@@ -124,19 +137,18 @@ class EBayPPO:
         # initialize opt_info
         opt_info = OptInfo(*([] for _ in range(len(OptInfo._fields))))
 
-        opt_info.ActionsPerTraj.append(info.num_actions[done].numpy())
+        if not self.byr:
+            opt_info.ActionsPerTraj.append(info.num_actions[done].numpy())
+        else:
+            opt_info.DelaysPerTraj.append(info.num_delays[done].numpy())
+            opt_info.OffersPerTraj.append(info.num_offers[done].numpy())
         opt_info.MonthsToDone.append(info.months[done].numpy())
 
         con = samples.agent.action[valid].numpy()
-        con_rate = ((0 < con) & (con < 100)).mean().item()
-        acc_rate = (con == 100).mean().item()
-        rej_rate = (con == 0).mean().item()
-        exp_rate = (con == 101).mean().item()
-
-        opt_info.Rate_Con.append(con_rate)
-        opt_info.Rate_Acc.append(acc_rate)
-        opt_info.Rate_Rej.append(rej_rate)
-        opt_info.Rate_Exp.append(exp_rate)
+        opt_info.Rate_Con.append(((0 < con) & (con < 100)).mean())
+        opt_info.Rate_Acc.append((con == 100).mean())
+        opt_info.Rate_Rej.append((con == 0).mean())
+        opt_info.Rate_Sale.append((reward[done].numpy() != 0.).mean())
 
         con = con[(con < 100) & (con > 0)]
         opt_info.Concession.append(con)
@@ -179,7 +191,7 @@ class EBayPPO:
 
         return opt_info
 
-    def loss(self, observation, action, return_, advantage, valid, pi_old):
+    def loss(self, agent_inputs, action, return_, advantage, valid, pi_old):
         """
         Compute the training loss: policy_loss + value_loss + entropy_loss
         Policy loss: min(likelhood-ratio * advantage, clip(likelihood_ratio, 1-eps, 1+eps) * advantage)
@@ -188,7 +200,7 @@ class EBayPPO:
         the ``agent.distribution`` to compute likelihoods and entropies.
         """
         # agent outputs
-        pi_new, v = self.agent(observation=observation)
+        pi_new, v = self.agent(*agent_inputs)
 
         # loss from policy
         ratio = self.agent.distribution.likelihood_ratio(action,
