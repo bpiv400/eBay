@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 from constants import MONTH
 from featnames import START_TIME, START_PRICE, TIME_FEATS, MSG, CON, \
-    LSTG, BYR_HIST, ACC_PRICE, DEC_PRICE, SIM
+    LSTG, BYR_HIST, ACC_PRICE, DEC_PRICE
 from rlenv.const import ARRIVAL, RL_ARRIVAL_EVENT
 
 # variable names
@@ -18,9 +18,9 @@ CUT = 'cut'
 CENSOR = 'censored'
 
 # for discriminator
-OFFER_COLS = [LSTG, SIM, THREAD, INDEX, CLOCK, CON, MSG, CENSOR] + TIME_FEATS
-THREAD_COLS = [LSTG, SIM, THREAD, BYR_HIST, CLOCK]
-INDEX_COLS = [LSTG, SIM, THREAD, INDEX]
+OFFER_COLS = [LSTG, THREAD, INDEX, CLOCK, CON, MSG, CENSOR] + TIME_FEATS
+THREAD_COLS = [LSTG, THREAD, BYR_HIST, CLOCK]
+INDEX_COLS = [LSTG, THREAD, INDEX]
 
 # for values
 VAL_COLS = [LSTG, VAL, SE, AVG_PRICE, NUM_SALES, P_SALE, CUT]
@@ -171,7 +171,7 @@ class OutcomeRecorder(Recorder):
         :param byr_hist: float giving byr history decile
         :param int time: time of the offer
         """
-        row = [self.lstg, self.sim, thread_id, byr_hist, time]
+        row = [self.lstg, thread_id, byr_hist, time]
         self.threads.append(row)
 
     def add_offer(self, event=None, time_feats=None, censored=False):
@@ -181,7 +181,6 @@ class OutcomeRecorder(Recorder):
         if event.turn == 1:
             assert con > 0
         row = [self.lstg,
-               self.sim,
                event.thread_id,
                event.turn,
                event.priority,

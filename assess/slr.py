@@ -3,9 +3,9 @@ import numpy as np
 import pandas as pd
 from agent.util import get_paths
 from assess.util import load_data, get_pctiles, discrete_pdf
-from utils import topickle
+from utils import topickle, load_file
 from constants import PLOT_DIR, TEST, IDX
-from featnames import CON, NORM, SLR, AUTO
+from featnames import CON, NORM, SLR, AUTO, LOOKUP, START_PRICE
 
 DIM = np.arange(.4, .96, .01)
 
@@ -116,8 +116,11 @@ def main():
     parser.add_argument('--relist', action='store_true')
     relist = parser.parse_args().relist
 
+    # start price
+    start_price = load_file(TEST, LOOKUP)[START_PRICE]
+
     # simulated seller
-    threads, offers, _, start_price = load_data(part=TEST, relist=relist)
+    threads, offers, _ = load_data(part=TEST, relist=relist)
 
     # simulated seller
     d = collect_outputs(threads=threads,
@@ -133,9 +136,7 @@ def main():
     else:
         path_args['suffix'] = 'betacat'
     _, _, run_dir = get_paths(**path_args)
-    threads_rl, offers_rl, _, _ = load_data(part=TEST,
-                                            run_dir=run_dir,
-                                            relist=relist)
+    threads_rl, offers_rl, _ = load_data(part=TEST, run_dir=run_dir)
 
     d_rl = collect_outputs(threads=threads_rl,
                            offers=offers_rl,

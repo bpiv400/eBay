@@ -12,8 +12,7 @@ from agent.AgentComposer import AgentComposer
 from agent.AgentModel import AgentModel
 from agent.SplitCategoricalPgAgent import SplitCategoricalPgAgent
 from rlenv.DefaultQueryStrategy import DefaultQueryStrategy
-from rlenv.environments.SellerEnv import \
-    RelistSellerEnv, NoRelistSellerEnv
+from rlenv.environments.SellerEnv import SellerEnv
 from rlenv.environments.BuyerEnv import BuyerEnv
 from rlenv.interfaces.ArrivalInterface import ArrivalInterface
 from rlenv.interfaces.PlayerInterface import SimulatedSeller, SimulatedBuyer
@@ -25,9 +24,6 @@ class RlTrainer:
         # save params to self
         self.params = params['system']
         self.byr = params[BYR]
-        self.delta = params['ppo']['delta']
-        if self.byr:
-            assert self.delta == 0.
 
         # counts
         self.itr = 0
@@ -45,9 +41,6 @@ class RlTrainer:
             model_kwargs={BYR: self.byr,
                           'serial': self.params['serial']}
         )
-
-        # environment
-        self.env = self._generate_env()
 
         # rlpyt components
         self.sampler = self._generate_sampler()
@@ -67,21 +60,14 @@ class RlTrainer:
             buyer=SimulatedBuyer(full=True)
         )
 
-    def _generate_env(self):
-        if self.byr:
-            return BuyerEnv
-        if self.delta == 0.:
-            return NoRelistSellerEnv
-        return RelistSellerEnv
-
     def _generate_sampler(self):
+        # environment
         env_params = dict(
             composer=self.composer,
             verbose=self.params['verbose'],
             query_strategy=self._generate_query_strategy()
         )
-        if not self.byr:
-            env_params['no_relist'] = self.delta == 0.
+        env = BuyerEnv if self.byr else SellerEnv
 
         # sampler and batch sizes
         if self.params['serial']:
@@ -95,7 +81,7 @@ class RlTrainer:
 
         # environment
         return sampler_cls(
-                EnvCls=self.env,
+                EnvCls=env,
                 env_kwargs=env_params,
                 batch_B=batch_b,
                 batch_T=int(self.batch_size / batch_b),

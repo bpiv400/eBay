@@ -126,11 +126,8 @@ class OutcomeGenerator(SimulatorGenerator):
 
     def simulate_lstg(self):
         """
-        Simulates listing until a sale.
+        Simulates listing once.
         :return: None
         """
-        while True:
-            self.environment.reset()
-            outcome = self.environment.run()
-            if outcome.sale:
-                return
+        self.environment.reset()
+        self.environment.run()

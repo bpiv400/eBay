@@ -7,6 +7,8 @@ from utils import load_sizes
 from agent.const import DROPOUT_POLICY, DROPOUT_VALUE
 from constants import POLICY_SLR, POLICY_BYR
 
+TEST_BETA = False
+
 
 class AgentModel(torch.nn.Module):
     """
@@ -85,27 +87,29 @@ class AgentModel(torch.nn.Module):
         b = b.unsqueeze(-1)
         x = self.dim.expand(a.size()[0], -1).to(a.device)
 
-        cdf = self._beta_cdf(a, b, x)  # for concessions
+        # get cdf of concessions, convert to pdf
+        cdf = self._beta_cdf(a, b, x)
         assert torch.max(cdf) <= 1
         assert torch.min(cdf) >= 0
-        # test = betainc(a.cpu().detach().numpy(),
-        #                b.cpu().detach().numpy(),
-        #                x.cpu().detach().numpy())
-        # check = np.max(np.abs(cdf.cpu().detach().numpy() - test))
-        # if np.any(np.isnan(check)) or check > 1e-6:
-        #     print(torch.cat([a, b], dim=-1))
-        #     print(check)
-        #     print(np.isnan(test).sum())
-        #     print(torch.isnan(cdf).sum().item())
-        #     raise ValueError('Distributions are not equivalent.')
-
         pdf = cdf[:, 1:] - cdf[:, :-1]
+        assert torch.max(torch.abs(pdf.sum(-1) - 1.)) < 1e-6
+
+        if TEST_BETA:
+            test = betainc(a.cpu().detach().numpy(),
+                           b.cpu().detach().numpy(),
+                           x.cpu().detach().numpy())
+            check = np.max(np.abs(cdf.cpu().detach().numpy() - test))
+            if np.any(np.isnan(check)) or check > 1e-6:
+                print(torch.cat([a, b], dim=-1))
+                print(check)
+                print(np.isnan(test).sum())
+                print(torch.isnan(cdf).sum().item())
+                raise ValueError('Distributions are not equivalent.')
 
         # add in accepts and rejects
         pdf *= pi[:, [-1]]  # scale by concession probability
         pdf = torch.cat([pi[:, [0]], pdf, pi[:, [1]]], dim=-1)
         assert torch.min(pdf) >= 0
-        assert torch.max(torch.abs(pdf.sum(-1) - 1.)) < 1e-6
         assert torch.max(torch.abs(pdf.sum(-1) - 1.)) < 1e-6
         pdf /= pdf.sum(-1, True)  # for precision
 

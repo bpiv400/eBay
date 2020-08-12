@@ -14,8 +14,7 @@ FEAT_TYPE = "feat_id"
 NO_TIME = "no_time"
 ALL_FEATS = "all"
 
-PPO_PARAMS = {'delta': {'type': float, 'default': 0.},
-              'entropy_coeff': {'type': float, 'default': .001}}
+PPO_PARAMS = {'entropy_coeff': {'type': float, 'default': .001}}
 
 SYSTEM_PARAMS = {'gpu': {'type': int, 'default': 0},
                  'log': {'action': 'store_true'},

@@ -133,8 +133,5 @@ BYR_DROP = ['auto_decline', 'auto_accept',
             'has_decline', 'has_accept',
             'lstg_ct', 'bo_ct']
 
-# for dropping infrequent arrivals when training seller agent
-NO_ARRIVAL_CUTOFF = 0.5 ** (1/12)
-
 # for precision issues
 EPS = 1e-8

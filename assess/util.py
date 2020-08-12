@@ -1,9 +1,8 @@
 import numpy as np
 import pandas as pd
 from compress_pickle import load
-from utils import load_file
 from constants import PARTS_DIR
-from featnames import EXP, DELAY, START_PRICE, LOOKUP
+from featnames import EXP, DELAY
 
 
 def get_pctiles(s):
@@ -30,7 +29,7 @@ def discrete_pdf(s, censoring=None):
     return s
 
 
-def load_data(part=None, run_dir=None, relist=True):
+def load_data(part=None, run_dir=None):
     # folder of simulation output
     if run_dir is None:  # using simulated players
         folder = PARTS_DIR + '{}/sim/'.format(part)
@@ -45,13 +44,4 @@ def load_data(part=None, run_dir=None, relist=True):
     offers = offers[~drop]
     clock = clock[~drop]
     assert (clock.xs(1, level='index').index == threads.index).all()
-    # start price
-    start_price = load_file(part, LOOKUP)[START_PRICE]
-    lstgs = threads.index.get_level_values(level='lstg').unique()
-    start_price = start_price.reindex(index=lstgs)  # drop infreq arrivals
-    # when not relisting, keep only first simulation
-    if not relist:
-        threads = threads.xs(0, level='sim')
-        offers = offers.xs(0, level='sim')
-        clock = clock.xs(0, level='sim')
-    return threads, offers, clock, start_price
+    return threads, offers, clock

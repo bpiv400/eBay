@@ -15,6 +15,12 @@ def construct_x(idx=None, threads=None, offers=None):
     return x
 
 
+def get_y(df):
+    y = (df[CON] * CON_MULTIPLIER).astype('int8')
+    y[df[EXP]] = CON_MULTIPLIER + 1  # expiration rejections
+    return y
+
+
 def create_index(offers):
     slr_turn = offers.index.isin(IDX[SLR], level='index')
     censored = offers[EXP] & (offers[DELAY] < 1)
@@ -33,7 +39,8 @@ def process_inputs(part):
     idx = create_index(offers)
 
     # outcome and master index
-    y = (offers.loc[idx, CON] * CON_MULTIPLIER).astype('int8')
+    df = offers.loc[idx, [CON, EXP]]
+    y = get_y(df)
 
     # input features dictionary
     x = construct_x(idx=idx, threads=threads, offers=offers)

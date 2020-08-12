@@ -74,12 +74,9 @@ def get_x_offer(offers, idx):
 
 
 def load_threads_offers(part=None, sim=False):
-    if sim:
-        threads = load_file(part, 'sim/x_thread').xs(0, level='sim')
-        offers = load_file(part, 'sim/x_offer').xs(0, level='sim')
-    else:
-        threads = load_file(part, 'x_thread')
-        offers = load_file(part, 'x_offer')
+    prefix = 'sim/' if sim else ''
+    threads = load_file(part, '{}x_thread'.format(prefix))
+    offers = load_file(part, '{}x_offer'.format(prefix))
     offers = drop_censored(offers)
     return threads, offers
 

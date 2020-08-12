@@ -6,7 +6,7 @@ from rlpyt.agents.base import AgentInputs
 from rlpyt.utils.tensor import valid_mean
 from rlpyt.utils.buffer import buffer_to
 from rlpyt.utils.collections import namedarraytuple
-from agent.Prefs import Prefs
+from agent.util import discount_return_slr, discount_return_byr
 from agent.const import PERIOD_EPOCHS, LR_POLICY, LR_VALUE, RATIO_CLIP
 
 LossInputs = namedarraytuple("LossInputs",
@@ -43,12 +43,9 @@ class EBayPPO:
     bootstrap_value = True
     opt_info_fields = tuple(f for f in OptInfo._fields)
 
-    def __init__(self, delta=None, entropy_coeff=None):
+    def __init__(self, entropy_coeff=None):
         # save parameters to self
         self.entropy_coeff = entropy_coeff
-
-        # agent preferences
-        self.prefs = Prefs(delta=delta)
 
         # parameters to be defined later
         self.agent = None
@@ -109,9 +106,9 @@ class EBayPPO:
         # time and/or action discounting
         pref_args = dict(reward=reward, done=done, info=info)
         if self.byr:
-            return_ = self.prefs.discount_return_byr(**pref_args)
+            return_ = discount_return_byr(**pref_args)
         else:
-            return_, censored = self.prefs.discount_return_slr(**pref_args)
+            return_, censored = discount_return_slr(**pref_args)
             valid[censored] = False  # ignore censored actions
 
         # advantage
@@ -148,7 +145,7 @@ class EBayPPO:
         opt_info.Rate_Con.append(((0 < con) & (con < 100)).mean())
         opt_info.Rate_Acc.append((con == 100).mean())
         opt_info.Rate_Rej.append((con == 0).mean())
-        opt_info.Rate_Sale.append((reward[done].numpy() != 0.).mean())
+        opt_info.Rate_Sale.append((reward[done].numpy() > 0.).mean())
 
         con = con[(con < 100) & (con > 0)]
         opt_info.Concession.append(con)

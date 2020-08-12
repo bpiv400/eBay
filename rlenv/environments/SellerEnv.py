@@ -7,7 +7,6 @@ from utils import load_sizes
 from constants import MAX_DELAY_TURN, POLICY_SLR, LISTING_FEE
 from featnames import BYR_HIST, START_PRICE
 
-
 SellerInfo = namedarraytuple("SellerInfo",
                              ["months",
                               "months_last",
@@ -18,14 +17,31 @@ SellerObs = namedarraytuple("SellerObs",
 
 
 class SellerEnv(AgentEnv):
-    """
-    Abstract class for implementing seller agent environment.
-    """
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.last_priority = None  # to be set in step() after choosing delay
         self.num_actions = None  # number of agent actions
+
+    def reset(self, next_lstg=True):
+        self.init_reset(next_lstg=next_lstg)  # in SellerEnvironment
+        while True:
+            event, lstg_complete = super().run()  # calls EBayEnvironment.run()
+            # if the lstg isn't complete that means it's time to sample an agent action
+            if not lstg_complete:
+                self.last_event = event
+                return self.get_obs(event=event, done=False)
+            # if the lstg is complete
+            else:
+                # this case should happens in TestGenerator
+                # b/c lstgs with no seller actions should be removed
+                if next_lstg:
+                    # conditional prevents queuing up next lstg
+                    # in EvalGenerator
+                    self.next_lstg()  # queue up next lstg in training
+                    super().reset()
+                else:
+                    return None
 
     def step(self, action):
         """
@@ -50,6 +66,10 @@ class SellerEnv(AgentEnv):
             Recorder.print_agent_turn(con=con, delay=delay)
 
         return self.run()
+
+    def run(self):  # until EbayEnvironment.run() stops at agent turn
+        event, lstg_complete = super().run()
+        return self.agent_tuple(done=lstg_complete, event=event)
 
     def process_offer(self, event):
         if event.turn % 2 == 0:
@@ -92,7 +112,14 @@ class SellerEnv(AgentEnv):
                           num_actions=self.num_actions)
 
     def get_reward(self):
-        raise NotImplementedError()
+        if self.outcome is None:
+            return 0.0
+        elif not self.outcome.sale:
+            return - LISTING_FEE
+        else:
+            gross = self.outcome.price * (1 - self.cut)
+            net = gross - LISTING_FEE
+            return net
 
     def init_reset(self, next_lstg=True):
         self.last_priority = None
@@ -106,89 +133,3 @@ class SellerEnv(AgentEnv):
     @property
     def _obs_class(self):
         return SellerObs
-
-
-class RelistSellerEnv(SellerEnv):
-
-    def reset(self, next_lstg=True):
-        self.init_reset(next_lstg=next_lstg)  # in SellerEnvironment
-        while True:
-            event, lstg_complete = super().run()  # calls EBayEnvironment.run()
-            # if the lstg isn't complete that means it's time to sample an agent action
-            if not lstg_complete:
-                self.last_event = event
-                return self.get_obs(event=event, done=False)
-            # if the lstg is complete
-            else:
-                # check whether it's expired -- if so, relist
-                if not self.outcome.sale:
-                    self._relist()
-                # otherwise, there's been a buy it now sale w/o a seller action,
-                else:
-                    # this case should happens in TestGenerator
-                    # b/c lstgs with no seller actions should be removed
-                    if next_lstg:
-                        # conditional prevents queuing up next lstg
-                        # in EvalGenerator
-                        self.next_lstg()  # queue up next lstg in training
-                        super().reset()
-                    else:
-                        return None
-
-    def run(self):  # until EbayEnvironment.run() stops at agent turn
-        while True:
-            event, lstg_complete = super().run()
-            if not lstg_complete or self.outcome.sale:
-                return self.agent_tuple(done=lstg_complete, event=event)
-            else:
-                self._relist()
-
-    def get_reward(self):
-        if self.outcome is None:
-            return 0.0
-        else:
-            gross = self.outcome.price * (1 - self.cut)
-            listing_fees = LISTING_FEE * (self.relist_count + 1)
-            net = gross - listing_fees
-            return net
-
-    def _relist(self):
-        self.relist_count += 1
-        super().reset()  # calls EBayEnvironment.reset()
-
-
-class NoRelistSellerEnv(SellerEnv):
-
-    def reset(self, next_lstg=True):
-        self.init_reset(next_lstg=next_lstg)  # in SellerEnvironment
-        while True:
-            event, lstg_complete = super().run()  # calls EBayEnvironment.run()
-            # if the lstg isn't complete that means it's time to sample an agent action
-            if not lstg_complete:
-                self.last_event = event
-                return self.get_obs(event=event, done=False)
-            # if the lstg is complete
-            else:
-                # this case should happens in TestGenerator
-                # b/c lstgs with no seller actions should be removed
-                if next_lstg:
-                    # conditional prevents queuing up next lstg
-                    # in EvalGenerator
-                    self.next_lstg()  # queue up next lstg in training
-                    super().reset()
-                else:
-                    return None
-
-    def run(self):  # until EbayEnvironment.run() stops at agent turn
-        event, lstg_complete = super().run()
-        return self.agent_tuple(done=lstg_complete, event=event)
-
-    def get_reward(self):
-        if self.outcome is None:
-            return 0.0
-        elif not self.outcome.sale:
-            return - LISTING_FEE
-        else:
-            gross = self.outcome.price * (1 - self.cut)
-            net = gross - LISTING_FEE
-            return net

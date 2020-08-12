@@ -1,18 +1,13 @@
-import argparse
 import os
 from compress_pickle import dump
 import pandas as pd
 from sim.EBayDataset import EBayDataset
-from utils import get_model_predictions, load_file, load_featnames, \
-    set_gpu_workers
-from constants import FIRST_ARRIVAL_MODEL, PARTS_DIR, NUM_RL_WORKERS, \
-    TRAIN_RL, VALIDATION, TEST, INTERVAL_CT_ARRIVAL, NO_ARRIVAL_CUTOFF
+from utils import get_model_predictions, load_file, load_featnames, input_partition
+from constants import FIRST_ARRIVAL_MODEL, PARTS_DIR, NUM_RL_WORKERS, INTERVAL_CT_ARRIVAL
 from featnames import SLR_BO_CT, LOOKUP, X_LSTG, P_ARRIVAL, END_TIME
 
 
 def save_chunks(p_arrival=None, part=None, lookup=None):
-    print('Saving {} chunks'.format(part))
-
     # x_lstg
     x_lstg = load_file(part, X_LSTG)
     featnames = load_featnames(X_LSTG)
@@ -24,9 +19,8 @@ def save_chunks(p_arrival=None, part=None, lookup=None):
     # drop extraneous lookup columns
     lookup.drop([END_TIME, SLR_BO_CT], axis=1, inplace=True)
 
-    # drop infrequent arrivals and sort by no arrival probability
-    keep = p_arrival[INTERVAL_CT_ARRIVAL] < NO_ARRIVAL_CUTOFF
-    p_arrival = p_arrival[keep].sort_values(INTERVAL_CT_ARRIVAL)
+    # sort by no arrival probability
+    p_arrival = p_arrival.sort_values(INTERVAL_CT_ARRIVAL)
     x_lstg = x_lstg.reindex(index=p_arrival.index)
     lookup = lookup.reindex(index=p_arrival.index)
 
@@ -58,14 +52,8 @@ def get_p_arrival(part=None, lookup=None):
 
 def main():
     # command line parameters
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--part', choices=[TRAIN_RL, VALIDATION, TEST])
-    parser.add_argument('--gpu', type=int, default=0)
-    args = parser.parse_args()
-    part, gpu = args.part, args.gpu
-
-    # set gpu
-    set_gpu_workers(gpu=gpu, spawn=True)
+    part = input_partition()
+    print('Saving {} chunks'.format(part))
 
     # lookup file
     lookup = load_file(part, LOOKUP)
