@@ -22,11 +22,12 @@ class AgentComposer(Composer):
         chunk_path = PARTS_DIR + '{}/chunks/1.gz'.format(TRAIN_RL)
         cols = load_chunk(input_path=chunk_path)[0].columns
         super().__init__(cols)
-
         self.byr = byr
+
         self.agent_name = get_agent_name(byr=self.byr)
         self.sizes['agent'] = load_sizes(self.agent_name)
         self.x_lstg_cols = list(cols) if type(cols) != list else cols
+
         # parameters to be set later
         self.turn_inds = None
 

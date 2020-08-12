@@ -6,7 +6,6 @@ from rlpyt.agents.base import AgentInputs
 from rlpyt.utils.tensor import valid_mean
 from rlpyt.utils.buffer import buffer_to
 from rlpyt.utils.collections import namedarraytuple
-from agent.util import discount_return_slr, discount_return_byr
 from agent.const import PERIOD_EPOCHS, LR_POLICY, LR_VALUE, RATIO_CLIP
 
 LossInputs = namedarraytuple("LossInputs",
@@ -75,6 +74,42 @@ class EBayPPO:
                                   lr=LR_POLICY, amsgrad=True)
 
     @staticmethod
+    def discount_return(reward=None, done=None, info=None):
+        """
+        Computes time-discounted sum of future rewards from each
+        time-step to the end of the batch. Sum resets where `done`
+        is 1. Operations vectorized across all trailing dimensions
+        after the first [T,].
+        :param tensor reward: slr's normalized gross return.
+        :param tensor done: indicator for end of trajectory.
+        :param namedtuple info: contains other required feats
+        :return tensor return_: time-discounted return.
+        """
+        dtype = reward.dtype  # cast new tensors to this data type
+        T, N = reward.shape  # time steps, number of environments
+
+        # recast
+        done = done.type(torch.int)
+        max_return = info.max_return.type(dtype)
+
+        # initialize matrix of returns
+        return_ = torch.zeros(reward.shape, dtype=dtype)
+
+        # initialize variables that track sale outcomes
+        net_value = torch.zeros(N, dtype=dtype)
+
+        for t in reversed(range(T)):
+            # value less price paid
+            net_value = net_value * (1 - done[t]) + reward[t] * done[t]
+            net_value = torch.min(net_value, max_return[t])  # precision
+            return_[t] += net_value
+
+        # normalize
+        return_ /= max_return
+
+        return return_
+
+    @staticmethod
     def valid_from_done(done):
         """Returns a float mask which is zero for all time-steps after the last
         `done=True` is signaled.  This function operates on the leading dimension
@@ -105,12 +140,7 @@ class EBayPPO:
         valid = self.valid_from_done(done)
 
         # time and/or action discounting
-        pref_args = dict(reward=reward, done=done, info=info)
-        if self.byr:
-            return_ = discount_return_byr(**pref_args)
-        else:
-            return_, censored = discount_return_slr(**pref_args)
-            valid[censored] = False  # ignore censored actions
+        return_ = self.discount_return(reward=reward, done=done, info=info)
 
         # advantage
         value = samples.agent.agent_info.value
@@ -135,11 +165,9 @@ class EBayPPO:
         # initialize opt_info
         opt_info = OptInfo(*([] for _ in range(len(OptInfo._fields))))
 
-        if not self.byr:
-            opt_info.ActionsPerTraj.append(info.num_actions[done].numpy())
-        else:
+        if self.byr:
             opt_info.DelaysPerTraj.append(info.num_delays[done].numpy())
-            opt_info.OffersPerTraj.append(info.num_offers[done].numpy())
+        opt_info.OffersPerTraj.append(info.num_offers[done].numpy())
         opt_info.MonthsToDone.append(info.months[done].numpy())
 
         con = samples.agent.action[valid].numpy()

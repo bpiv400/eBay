@@ -14,6 +14,7 @@ class AgentEnv(EBayEnv, Env):
     def __init__(self, **kwargs):
         super().__init__(params=kwargs)
         self.last_event = None
+        self.num_offers = None  # number of agent offers (excl. byr delays)
         self.empty_obs_dict = {k: torch.zeros(v).float()
                                for k, v in self.composer.agent_sizes['x'].items()}
 
@@ -68,6 +69,7 @@ class AgentEnv(EBayEnv, Env):
 
     def init_reset(self, next_lstg=True):
         self.last_event = None
+        self.num_offers = 0
         if next_lstg:
             if not self.has_next_lstg():
                 raise RuntimeError("Out of lstgs")

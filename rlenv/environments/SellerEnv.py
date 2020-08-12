@@ -10,19 +10,21 @@ from featnames import BYR_HIST, START_PRICE
 
 SellerInfo = namedarraytuple("SellerInfo",
                              ["months",
-                              "months_last",
                               "max_return",
-                              "num_actions"])
+                              "num_offers"])
 SellerObs = namedarraytuple("SellerObs",
                             list(load_sizes(POLICY_SLR)['x'].keys()))
 
 
 class SellerEnv(AgentEnv):
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.last_priority = None  # to be set in step() after choosing delay
-        self.num_actions = None  # number of agent actions
+    def is_agent_turn(self, event):
+        """
+        Checks whether the agent should take a turn
+        :param rlenv.events.Thread.Thread event:
+        :return: bool
+        """
+        return event.type == DELAY_EVENT and event.turn % 2 == 0
 
     def reset(self, next_lstg=True):
         self.init_reset(next_lstg=next_lstg)  # in SellerEnvironment
@@ -61,7 +63,6 @@ class SellerEnv(AgentEnv):
         self.queue.push(self.last_event)
 
         # record time of offer
-        self.last_priority = self.last_event.priority
         self.last_event = None
 
         if self.verbose:
@@ -84,17 +85,9 @@ class SellerEnv(AgentEnv):
                         rl_buyer=False,
                         thread_id=self.thread_counter)
 
-    def is_agent_turn(self, event):
-        """
-        Checks whether the agent should take a turn
-        :param rlenv.events.Thread.Thread event:
-        :return: bool
-        """
-        return event.type == DELAY_EVENT and event.turn % 2 == 0
-
     def get_obs(self, event=None, done=None):
         if not done:
-            self.num_actions += 1
+            self.num_offers += 1
         if event.sources() is None or event.turn is None:
             raise RuntimeError("Missing arguments to get observation")
         if BYR_HIST in event.sources():
@@ -109,9 +102,8 @@ class SellerEnv(AgentEnv):
     def get_info(self, event=None):
         max_return = (1-self.cut) * self.lookup[START_PRICE] - LISTING_FEE
         return SellerInfo(months=self._get_months(event.priority),
-                          months_last=self._get_months(self.last_priority),
                           max_return=max_return,
-                          num_actions=self.num_actions)
+                          num_offers=self.num_offers)
 
     def get_reward(self):
         if self.outcome is None:
@@ -122,11 +114,6 @@ class SellerEnv(AgentEnv):
             gross = self.outcome.price * (1 - self.cut)
             net = gross - LISTING_FEE
             return net
-
-    def init_reset(self, next_lstg=True):
-        self.last_priority = None
-        self.num_actions = 0
-        super().init_reset(next_lstg=next_lstg)
 
     @property
     def horizon(self):

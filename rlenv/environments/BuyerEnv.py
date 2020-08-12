@@ -24,7 +24,6 @@ class BuyerEnv(AgentEnv):
         self.item_value = None
         self.agent_thread = None
         self.num_delays = None
-        self.num_offers = None
 
         # for drawing experience
         path = PCTILE_DIR + '{}.pkl'.format(BYR_HIST)
@@ -41,7 +40,6 @@ class BuyerEnv(AgentEnv):
         self.item_value = self.lookup[START_PRICE]  # TODO: allow for different values
         self.agent_thread = None
         self.num_delays = 0
-        self.num_offers = 0
 
         # put rl arrival in queue
         rl_sources = RlBuyerSources(x_lstg=self.x_lstg,
