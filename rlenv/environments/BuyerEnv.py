@@ -1,6 +1,6 @@
 import numpy as np
 from rlpyt.utils.collections import namedarraytuple
-from constants import HOUR, POLICY_BYR, PCTILE_DIR
+from constants import HOUR, POLICY_BYR, PCTILE_DIR, NUM_ACTIONS_BYR
 from featnames import START_PRICE, BYR_HIST
 from utils import load_sizes, unpickle
 from rlenv.const import DELAY_EVENT, RL_ARRIVAL_EVENT, CLOCK_MAP
@@ -199,3 +199,7 @@ class BuyerEnv(AgentEnv):
     @property
     def _obs_class(self):
         return BuyerObs
+
+    @property
+    def con_set(self):
+        return np.array(range(NUM_ACTIONS_BYR)) / 100

@@ -24,6 +24,7 @@ OptInfo = namedtuple("OptInfo",
                       "Rate_Con",
                       "Rate_Acc",
                       "Rate_Rej",
+                      "Rate_Exp",
                       "Rate_Sale",
                       "Concession",
                       "DiscountedReturn",
@@ -146,6 +147,8 @@ class EBayPPO:
         opt_info.Rate_Acc.append((con == 100).mean())
         opt_info.Rate_Rej.append((con == 0).mean())
         opt_info.Rate_Sale.append((reward[done].numpy() > 0.).mean())
+        if not self.byr:
+            opt_info.Rate_Exp.append((con == 101).mean())
 
         con = con[(con < 100) & (con > 0)]
         opt_info.Concession.append(con)

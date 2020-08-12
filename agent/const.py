@@ -29,6 +29,3 @@ PARAM_DICTS = {'ppo': PPO_PARAMS, 'system': SYSTEM_PARAMS}
 
 # count for stepping down entropy and stopping
 PERIOD_EPOCHS = 1000
-
-# number of agent actions
-NUM_ACTIONS = 101

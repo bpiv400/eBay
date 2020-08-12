@@ -7,7 +7,6 @@ from rlenv.environments.EBayEnv import EBayEnv
 from rlenv.events.Thread import RlThread
 from agent.ConSpace import ConSpace
 from utils import get_months_since_lstg
-from agent.const import NUM_ACTIONS
 from constants import INTERVAL_TURN, INTERVAL_CT_TURN, MONTH
 
 
@@ -19,7 +18,6 @@ class AgentEnv(EBayEnv, Env):
                                for k, v in self.composer.agent_sizes['x'].items()}
 
         # action space
-        self.con_set = np.array(range(NUM_ACTIONS)) / 100
         self._action_space = self._define_action_space()
 
         # observation space
@@ -119,6 +117,10 @@ class AgentEnv(EBayEnv, Env):
 
     @property
     def _obs_class(self):
+        raise NotImplementedError()
+
+    @property
+    def con_set(self):
         raise NotImplementedError()
 
     def _define_action_space(self):

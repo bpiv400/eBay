@@ -28,7 +28,7 @@ class AgentModel(torch.nn.Module):
 
         # policy net
         sizes = load_sizes(POLICY_BYR if byr else POLICY_SLR)
-        sizes['out'] = 5
+        sizes['out'] = 5 if byr else 6
         self.policy_net = FeedForward(sizes=sizes, dropout=DROPOUT_POLICY)
 
         # value net
@@ -109,6 +109,8 @@ class AgentModel(torch.nn.Module):
         # add in accepts and rejects
         pdf *= pi[:, [-1]]  # scale by concession probability
         pdf = torch.cat([pi[:, [0]], pdf, pi[:, [1]]], dim=-1)
+        if not self.byr:
+            pdf = torch.cat([pdf, pi[:, [2]]], dim=-1)  # expiration rejection
         assert torch.min(pdf) >= 0
         assert torch.max(torch.abs(pdf.sum(-1) - 1.)) < 1e-6
         pdf /= pdf.sum(-1, True)  # for precision

@@ -135,3 +135,7 @@ BYR_DROP = ['auto_decline', 'auto_accept',
 
 # for precision issues
 EPS = 1e-8
+
+# number of agent actions
+NUM_ACTIONS_BYR = 101
+NUM_ACTIONS_SLR = 102

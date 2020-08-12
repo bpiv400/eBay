@@ -1,10 +1,11 @@
+import numpy as np
 from rlpyt.utils.collections import namedarraytuple
 from rlenv.const import DELAY_EVENT
 from rlenv.environments.AgentEnv import AgentEnv
 from rlenv.events.Thread import RlThread
 from rlenv.generate.Recorder import Recorder
 from utils import load_sizes
-from constants import MAX_DELAY_TURN, POLICY_SLR, LISTING_FEE
+from constants import MAX_DELAY_TURN, POLICY_SLR, LISTING_FEE, NUM_ACTIONS_SLR
 from featnames import BYR_HIST, START_PRICE
 
 SellerInfo = namedarraytuple("SellerInfo",
@@ -27,21 +28,19 @@ class SellerEnv(AgentEnv):
         self.init_reset(next_lstg=next_lstg)  # in SellerEnvironment
         while True:
             event, lstg_complete = super().run()  # calls EBayEnvironment.run()
-            # if the lstg isn't complete that means it's time to sample an agent action
+
+            # time to sample an agent action
             if not lstg_complete:
                 self.last_event = event
                 return self.get_obs(event=event, done=False)
+
             # if the lstg is complete
+            if next_lstg:
+                # conditional prevents queuing up next lstg in EvalGenerator
+                self.next_lstg()  # queue up next lstg in training
+                super().reset()
             else:
-                # this case should happens in TestGenerator
-                # b/c lstgs with no seller actions should be removed
-                if next_lstg:
-                    # conditional prevents queuing up next lstg
-                    # in EvalGenerator
-                    self.next_lstg()  # queue up next lstg in training
-                    super().reset()
-                else:
-                    return None
+                return None  # for TestGenerator
 
     def step(self, action):
         """
@@ -50,10 +49,13 @@ class SellerEnv(AgentEnv):
         :return: tuple described in rlenv
         """
         con = self.turn_from_action(action)
-        assert 0 <= con <= 1
-        offer_time = self.get_offer_time(self.last_event)
-        delay = (offer_time - self.last_event.priority) / MAX_DELAY_TURN
-        self.last_event.prep_rl_offer(con=con, priority=offer_time)
+        if con <= 1:
+            offer_time = self.get_offer_time(self.last_event)
+            delay = (offer_time - self.last_event.priority) / MAX_DELAY_TURN
+            self.last_event.prep_rl_offer(con=con, priority=offer_time)
+        else:
+            delay = MAX_DELAY_TURN
+            self.last_event.update_delay(seconds=MAX_DELAY_TURN)
 
         # put event in queue
         self.queue.push(self.last_event)
@@ -133,3 +135,7 @@ class SellerEnv(AgentEnv):
     @property
     def _obs_class(self):
         return SellerObs
+
+    @property
+    def con_set(self):
+        return np.array(range(NUM_ACTIONS_SLR)) / 100
