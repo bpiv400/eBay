@@ -5,7 +5,7 @@ from compress_pickle import dump
 from processing.util import get_con, get_norm
 from utils import topickle
 from constants import CLEAN_DIR, FEATS_DIR, PARTS_DIR, PCTILE_DIR, START, SEED, \
-    SHARES, NUM_FEATS_CHUNKS
+    SHARES, NUM_CHUNKS
 from featnames import START_PRICE, BYR_HIST, NORM, SLR
 
 # data types for csv read
@@ -73,9 +73,9 @@ def create_chunks(listings=None, threads=None, offers=None):
     slrs = listings[SLR].reset_index().sort_values(
         by=[SLR, 'lstg']).set_index(SLR).squeeze()
     u = np.unique(listings[SLR].values)
-    groups = np.array_split(u, NUM_FEATS_CHUNKS)
-    for i in range(NUM_FEATS_CHUNKS):
-        print('Creating chunk {} of {}'.format(i + 1, NUM_FEATS_CHUNKS))
+    groups = np.array_split(u, NUM_CHUNKS)
+    for i in range(NUM_CHUNKS):
+        print('Creating chunk {} of {}'.format(i + 1, NUM_CHUNKS))
         lstgs = slrs.loc[groups[i]].values
         chunk = {'listings': listings.reindex(index=lstgs),
                  'threads': threads.reindex(index=lstgs, level='lstg'),

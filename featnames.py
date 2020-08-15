@@ -77,6 +77,7 @@ START_PRICE = 'start_price'
 DEC_PRICE = 'decline_price'
 ACC_PRICE = 'accept_price'
 SLR_BO_CT = 'slr_bo_ct'
+STORE = 'store'
 
 # agent costs
 MONTHLY_DISCOUNT = 'monthly_discount'
@@ -91,6 +92,7 @@ P_ARRIVAL = 'p_arrival'
 # outcome types
 SIM = 'sim'
 OBS = 'obs'
+RL = 'rl'
 
 # turn feats
 TURN_FEATS = {

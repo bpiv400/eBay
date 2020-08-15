@@ -1,8 +1,8 @@
 import numpy as np
 from rlpyt.utils.collections import namedarraytuple
-from constants import HOUR, POLICY_BYR, PCTILE_DIR, NUM_ACTIONS_BYR
+from constants import HOUR, POLICY_BYR, PCTILE_DIR
 from featnames import START_PRICE, BYR_HIST
-from utils import load_sizes, unpickle
+from utils import load_sizes, unpickle, get_months_since_lstg
 from rlenv.const import DELAY_EVENT, RL_ARRIVAL_EVENT, CLOCK_MAP
 from rlenv.Sources import RlBuyerSources
 from rlenv.environments.AgentEnv import AgentEnv
@@ -42,16 +42,12 @@ class BuyerEnv(AgentEnv):
         self.num_delays = 0
 
         # put rl arrival in queue
-        rl_sources = RlBuyerSources(x_lstg=self.x_lstg,
-                                    hist=self._draw_hist())
+        rl_sources = RlBuyerSources(x_lstg=self.x_lstg, hist=self._draw_hist())
         event = RlArrival(priority=self.start_time, sources=rl_sources)
         self.queue.push(event)
-        event_copy = event
 
-        # should return same rl arrival event
-        event, lstg_complete = super().run()
+        event, lstg_complete = super().run()  # returns same RlArrival
         assert not lstg_complete
-        assert event is event_copy
         self.last_event = event
 
         # return observation to agent
@@ -85,7 +81,6 @@ class BuyerEnv(AgentEnv):
                               con=con,
                               rl_buyer=True)
             self.queue.push(thread)
-            self.num_offers += 1
 
         self.last_event = None
         return self.run()
@@ -97,15 +92,17 @@ class BuyerEnv(AgentEnv):
             return self.agent_tuple(done=True, event=self.last_event)
 
         # otherwise, draw an offer time and put event in queue
-        offer_time = self.get_offer_time(self.last_event)
+        delay_seconds = self.draw_agent_delay(self.last_event)
+        offer_time = delay_seconds + self.last_event.priority
         self.last_event.prep_rl_offer(con=con, priority=offer_time)
         self.queue.push(self.last_event)
-        self.num_offers += 1
         self.last_event = None
         return self.run()
 
     def run(self):
         event, lstg_complete = super().run()
+        if not lstg_complete:
+            self.last_event = event
         return self.agent_tuple(done=lstg_complete, event=event)
 
     def is_agent_turn(self, event):
@@ -116,10 +113,9 @@ class BuyerEnv(AgentEnv):
         """
         if event.type == RL_ARRIVAL_EVENT:
             return not (self.is_lstg_expired(event))
-        elif event.type == DELAY_EVENT:
+        if event.type == DELAY_EVENT:
             return event.turn % 2 == 1 and isinstance(event, RlThread)
-        else:
-            return False
+        return False
 
     def process_offer(self, event):
         if isinstance(event, RlThread) and event.turn % 2 == 1:
@@ -129,7 +125,29 @@ class BuyerEnv(AgentEnv):
                 self.thread_counter += 1
                 self.agent_thread = event.thread_id
 
-            return self.process_rl_offer(event)
+            # check whether the lstg expired, censoring this offer
+            if self.is_lstg_expired(event):
+                return self.process_lstg_expiration(event)
+
+            if event.thread_expired():
+                raise RuntimeError("Thread should not expire before byr agent offer")
+
+            # initalize offer
+            time_feats = self.time_feats.get_feats(thread_id=event.thread_id,
+                                                   time=event.priority)
+            months_since_lstg = None
+            if event.turn == 1:
+                months_since_lstg = get_months_since_lstg(lstg_start=self.start_time,
+                                                          time=event.priority)
+            event.init_rl_offer(months_since_lstg=months_since_lstg,
+                                time_feats=time_feats)
+
+            # execute offer
+            offer = event.execute_offer()
+            self.num_offers += 1
+
+            # return True if lstg is over
+            return self.process_post_offer(event, offer)
         else:
             return super().process_offer(event)
 
@@ -197,7 +215,3 @@ class BuyerEnv(AgentEnv):
     @property
     def _obs_class(self):
         return BuyerObs
-
-    @property
-    def con_set(self):
-        return np.array(range(NUM_ACTIONS_BYR)) / 100

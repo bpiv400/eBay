@@ -4,6 +4,7 @@ LR_VALUE = 1e-3
 RATIO_CLIP = 0.1
 DROPOUT_POLICY = (.0, .0)
 DROPOUT_VALUE = (.0, .1)
+BATCH_SIZE = 8192
 
 # state dictionaries
 AGENT_STATE = 'agent_state_dict'
@@ -14,16 +15,14 @@ FEAT_TYPE = "feat_id"
 NO_TIME = "no_time"
 ALL_FEATS = "all"
 
-PPO_PARAMS = {'entropy_coeff': {'type': float, 'default': .001}}
+PPO_PARAMS = {'entropy_coeff': {'type': float, 'default': 1.}}
 
 SYSTEM_PARAMS = {'gpu': {'type': int, 'default': 0},
                  'log': {'action': 'store_true'},
                  'exp': {'type': int},
                  'serial': {'action': 'store_true'},
                  'verbose': {'action': 'store_true'},
-                 'all': {'action': 'store_true'},
-                 'suffix': {'type': str},
-                 'batch_size': {'type': int, 'default': 2 ** 12}}
+                 'suffix': {'type': str}}
 
 PARAM_DICTS = {'ppo': PPO_PARAMS, 'system': SYSTEM_PARAMS}
 

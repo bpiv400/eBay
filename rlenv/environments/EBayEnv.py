@@ -396,11 +396,16 @@ class EBayEnv:
     def get_offer_outcomes(self, event, slr=False):
         # sample concession
         model_name = model_str(CON, turn=event.turn)
-        input_dict = self.composer.build_input_dict(model_name=model_name, sources=event.sources(),
+        input_dict = self.composer.build_input_dict(model_name=model_name,
+                                                    sources=event.sources(),
                                                     turn=event.turn)
-        con = self.get_con(input_dict=input_dict, time=event.priority, turn=event.turn,
+        con = self.get_con(input_dict=input_dict,
+                           time=event.priority,
+                           turn=event.turn,
                            thread_id=event.thread_id)
-        con_outcomes = get_con_outcomes(con=con, sources=event.sources(), turn=event.turn)
+        con_outcomes = get_con_outcomes(con=con,
+                                        sources=event.sources(),
+                                        turn=event.turn)
         # update features
         offer = event.update_con_outcomes(con_outcomes=con_outcomes)
         # sample msg if necessary

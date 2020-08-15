@@ -170,7 +170,7 @@ class AgentComposer(Composer):
             assumed_feats = CLOCK_FEATS + OUTCOME_FEATS
         AgentComposer.verify_all_feats(assumed_feats=assumed_feats,
                                        model_feats=offer_feats)
-        last_turn = 6 if self.byr else 5
+        last_turn = 7 if self.byr else 6
         for turn in range(1, 8):
             if turn <= last_turn:
                 assert 'offer{}'.format(turn) in self.agent_sizes['x']

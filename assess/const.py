@@ -8,3 +8,6 @@ META_LABELS = pd.read_csv(CLEAN_DIR + 'meta.csv').set_index(META).squeeze()
 
 # values for splitting along given variable
 PRICE_CUTOFFS = [0, 5, 9, 13, 20, 25, 40, 60, 100, 225, np.inf]
+
+# for splitting concessions
+SPLITS = [0., .2, .4, .6, .8, .99]

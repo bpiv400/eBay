@@ -95,8 +95,7 @@ def get_x_offer_init(offers, idx, role=None):
         offers.drop(TIME_FEATS, axis=1, inplace=True)
 
     # turn features
-    # for i in range(1, max(IDX[role]) + 1):
-    for i in range(1, max(IDX[role])):
+    for i in range(1, max(IDX[role]) + 1):
         # offer features at turn i, and turn number
         offer = offers.xs(i, level='index').reindex(
             index=idx, fill_value=0).astype('float32')

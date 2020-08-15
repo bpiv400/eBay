@@ -9,9 +9,8 @@ import numpy as np
 from compress_pickle import load
 from nets.FeedForward import FeedForward
 from sim.Sample import get_batches
-from constants import DAY, MONTH, SPLIT_PCTS, INPUT_DIR, \
-    MODEL_DIR, META_6, META_7, PARTITIONS, PARTS_DIR, \
-    MAX_DELAY_TURN, MAX_DELAY_ARRIVAL, NUM_RL_WORKERS
+from constants import DAY, MONTH, SPLIT_PCTS, INPUT_DIR, MODEL_DIR, META_6, META_7, \
+    PARTITIONS, PARTS_DIR, MAX_DELAY_TURN, MAX_DELAY_ARRIVAL, NUM_CHUNKS
 from featnames import DELAY, EXP, X_LSTG
 
 
@@ -164,25 +163,23 @@ def load_model(name, verbose=False, use_trained=True):
     return net
 
 
-def process_chunk_worker(part=None, chunk=None,
-                         gen_class=None, gen_kwargs=None):
+def process_chunk_worker(part=None, chunk=None, gen_class=None, gen_kwargs=None):
     gen = gen_class(**gen_kwargs)
     return gen.process_chunk(chunk=chunk, part=part)
 
 
-def run_func_on_chunks(f=None, func_kwargs=None, num_chunks=None):
+def run_func_on_chunks(f=None, func_kwargs=None):
     """
     Applies f to all chunks in parallel.
     :param f: function that takes chunk number as input along with
     other arguments
     :param func_kwargs: dictionary of other keyword arguments
-    :param int num_chunks: number of chunks
     :return: list of worker-specific output
     """
-    num_workers = min(num_chunks, psutil.cpu_count() - 4)
+    num_workers = min(NUM_CHUNKS, psutil.cpu_count())
     pool = mp.Pool(num_workers)
     jobs = []
-    for i in range(num_chunks):
+    for i in range(NUM_CHUNKS):
         kw = func_kwargs.copy()
         kw['chunk'] = i
         jobs.append(pool.apply_async(f, kwds=kw))
@@ -275,12 +272,11 @@ def drop_censored(df):
     return df[~censored]
 
 
-def set_gpu_workers(gpu=None, spawn=True, use_all=False):
+def set_gpu(gpu=None, spawn=True):
     """
     Sets the GPU index and the CPU affinity.
     :param int gpu: index of cuda device.
     :param bool spawn: use spawn context for multiprocessing.
-    :param bool use_all: use all cpus if True.
     """
     # use spawn for multiprocessing
     if spawn:
@@ -289,14 +285,6 @@ def set_gpu_workers(gpu=None, spawn=True, use_all=False):
     # set gpu
     torch.cuda.set_device(gpu)
     print('Using cuda:{}'.format(gpu))
-
-    # set cpu affinity
-    p = psutil.Process()
-    if not use_all:
-        start = NUM_RL_WORKERS * gpu
-        workers = list(range(start, start + NUM_RL_WORKERS))
-        p.cpu_affinity(workers)
-    print('vCPUs: {}'.format(p.cpu_affinity()))
 
 
 def compose_args(arg_dict=None, parser=None):

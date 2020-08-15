@@ -24,7 +24,6 @@ class EBayBaseRunner(BaseRunner):
         sampler: The sampler instance.
         seed (int): Random seed to use, if ``None`` will generate randomly.
         affinity (dict): Hardware component assignments for sampler and algorithm.
-        log_interval_steps (int): Number of environment steps between logging to csv.
     """
     def __init__(
             self,
@@ -33,7 +32,6 @@ class EBayBaseRunner(BaseRunner):
             sampler,
             seed=None,
             affinity=None,
-            log_interval_steps=1e5,
     ):
         # save parameters to self
         self.algo = algo
@@ -41,8 +39,8 @@ class EBayBaseRunner(BaseRunner):
         self.sampler = sampler
         self.seed = seed
         self.affinity = dict() if affinity is None else affinity
-        self.log_interval_steps = int(log_interval_steps)
         self.rank = 0
+        self.log_interval_itrs = 1
 
         # other fixed parameters
         self.min_itr_learn = getattr(self.algo, 'min_itr_learn', 0)
@@ -50,7 +48,6 @@ class EBayBaseRunner(BaseRunner):
 
         # parameters to be set later
         self.itr_batch_size = None
-        self.log_interval_itrs = None
         self._start_time = None
         self._last_time = None
         self._cum_time = None
@@ -101,8 +98,6 @@ class EBayBaseRunner(BaseRunner):
         self.sampler.initialize(**sampler_init_args)
 
         self.itr_batch_size = self.sampler.batch_spec.size
-        self.log_interval_itrs = max(1,
-                                     self.log_interval_steps // self.itr_batch_size)
         self.agent.to_device(self.affinity.get("cuda_idx", None))
         self.algo.initialize(agent=self.agent)
         self.initialize_logging()
@@ -161,11 +156,10 @@ class EBayBaseRunner(BaseRunner):
         self._cum_time = new_time - self._start_time
         train_time_elapsed = new_time - self._last_time - eval_time
         new_updates = self.algo.update_counter - self._last_update_counter
-        new_samples = (self.sampler.batch_size *
-                       self.log_interval_itrs)
+        new_samples = (self.sampler.batch_size * self.log_interval_itrs)
         updates_per_second = (new_updates / train_time_elapsed)
         samples_per_second = (new_samples / train_time_elapsed)
-        cum_steps = (itr + 1) * self.sampler.batch_size
+        # cum_steps = (itr + 1) * self.sampler.batch_size
 
         with logger.tabular_prefix(prefix):
             # logger.record_tabular('Iteration', itr)
@@ -280,8 +274,7 @@ def ebay_sampling_process(common_kwargs, worker_kwargs):
     envs = list()
     x_lstg_cols = c.env_kwargs['composer'].x_lstg_cols
     for env_rank in w.env_ranks:
-        loader = TrainLoader(rank=env_rank,
-                             x_lstg_cols=x_lstg_cols)
+        loader = TrainLoader(rank=env_rank, x_lstg_cols=x_lstg_cols)
         envs.append(c.EnvCls(**c.env_kwargs, loader=loader))
     set_envs_seeds(envs, w.seed)
     collector = c.CollectorCls(

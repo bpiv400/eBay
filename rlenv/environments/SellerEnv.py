@@ -1,11 +1,10 @@
-import numpy as np
 from rlpyt.utils.collections import namedarraytuple
-from rlenv.const import DELAY_EVENT
+from rlenv.const import DELAY_EVENT, OFFER_EVENT
 from rlenv.environments.AgentEnv import AgentEnv
 from rlenv.events.Thread import RlThread
-from rlenv.generate.Recorder import Recorder
+from rlenv.util import get_con_outcomes
 from utils import load_sizes
-from constants import MAX_DELAY_TURN, POLICY_SLR, LISTING_FEE, NUM_ACTIONS_SLR
+from constants import POLICY_SLR
 from featnames import BYR_HIST, START_PRICE
 
 SellerInfo = namedarraytuple("SellerInfo",
@@ -24,7 +23,12 @@ class SellerEnv(AgentEnv):
         :param rlenv.events.Thread.Thread event:
         :return: bool
         """
-        return event.type == DELAY_EVENT and event.turn % 2 == 0
+        if event.turn % 2 == 0:
+            if event.type == DELAY_EVENT:
+                return True
+            if event.type == OFFER_EVENT:
+                return not(self.is_lstg_expired(event) or event.thread_expired())
+        return False
 
     def reset(self, next_lstg=True):
         self.init_reset(next_lstg=next_lstg)  # in SellerEnvironment
@@ -33,11 +37,15 @@ class SellerEnv(AgentEnv):
 
             # time to sample an agent action
             if not lstg_complete:
-                self.last_event = event
-                return self.get_obs(event=event, done=False)
+                if event.type == DELAY_EVENT:  # draw delay
+                    self._process_slr_delay(event)
+                else:
+                    self.last_event = event
+                    self.prepare_offer(event)
+                    return self.get_obs(event=event, done=False)
 
             # if the lstg is complete
-            if next_lstg:
+            elif next_lstg:
                 # conditional prevents queuing up next lstg in EvalGenerator
                 self.next_lstg()  # queue up next lstg in training
                 super().reset()
@@ -51,34 +59,37 @@ class SellerEnv(AgentEnv):
         :return: tuple described in rlenv
         """
         con = self.turn_from_action(action)
-        if con <= 1:
-            offer_time = self.get_offer_time(self.last_event)
-            delay = (offer_time - self.last_event.priority) / MAX_DELAY_TURN
-            self.last_event.prep_rl_offer(con=con, priority=offer_time)
-        else:
-            delay = MAX_DELAY_TURN
-            self.last_event.update_delay(seconds=MAX_DELAY_TURN)
-
-        # put event in queue
-        self.queue.push(self.last_event)
-
-        # record time of offer
-        self.last_event = None
 
         if self.verbose:
-            Recorder.print_agent_turn(con=con, delay=delay)
+            print('AGENT TURN: con: {}'.format(con))
 
+        con_outcomes = get_con_outcomes(con=con,
+                                        sources=self.last_event.sources(),
+                                        turn=self.last_event.turn)
+        offer = self.last_event.update_con_outcomes(con_outcomes=con_outcomes)
+        lstg_complete = self.process_post_offer(self.last_event, offer)
+        if lstg_complete:
+            return self.agent_tuple(event=self.last_event, done=lstg_complete)
+        self.last_event = None
         return self.run()
 
     def run(self):  # until EbayEnvironment.run() stops at agent turn
-        event, lstg_complete = super().run()
-        return self.agent_tuple(done=lstg_complete, event=event)
+        while True:
+            event, lstg_complete = super().run()
+            if event.type == DELAY_EVENT:
+                self._process_slr_delay(event)
+            else:
+                self.last_event = event
+                if not lstg_complete:
+                    self.prepare_offer(event)
+                return self.agent_tuple(done=lstg_complete, event=event)
 
-    def process_offer(self, event):
-        if event.turn % 2 == 0:
-            return self.process_rl_offer(event)
-        else:
-            return super().process_offer(event)
+    def _process_slr_delay(self, event):
+        delay_seconds = self.draw_agent_delay(event)
+        event.update_delay(seconds=delay_seconds)
+        self.queue.push(event)
+        if self.verbose:
+            print('AGENT TURN: delay (sec) : {}'.format(delay_seconds))
 
     def make_thread(self, priority):
         return RlThread(priority=priority,
@@ -100,20 +111,14 @@ class SellerEnv(AgentEnv):
         return self._obs_class(**obs_dict)
 
     def get_info(self, event=None):
-        max_return = (1-self.cut) * self.lookup[START_PRICE] - LISTING_FEE
         return SellerInfo(months=self._get_months(event.priority),
-                          max_return=max_return,
+                          max_return=self.lookup[START_PRICE],
                           num_offers=self.num_offers)
 
     def get_reward(self):
-        if self.outcome is None:
-            return 0.0
-        elif not self.outcome.sale:
-            return - LISTING_FEE
-        else:
-            gross = self.outcome.price * (1 - self.cut)
-            net = gross - LISTING_FEE
-            return net
+        if self.outcome is None or not self.outcome.sale:
+            return 0.
+        return self.outcome.price
 
     @property
     def horizon(self):
@@ -122,7 +127,3 @@ class SellerEnv(AgentEnv):
     @property
     def _obs_class(self):
         return SellerObs
-
-    @property
-    def con_set(self):
-        return np.array(range(NUM_ACTIONS_SLR)) / 100

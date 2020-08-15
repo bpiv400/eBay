@@ -23,7 +23,6 @@ PCTILE_DIR = '{}/pctile/'.format(PREFIX)        # percentiles of features
 CLEAN_DIR = '{}/clean/'.format(PREFIX)          # cleaned csvs
 W2V_DIR = '{}/w2v/'.format(PREFIX)              # for word2vec features
 FEATS_DIR = '{}/feats/'.format(PREFIX)          # pre-partion features
-FIG_DIR = '{}/figures/'.format(PREFIX)          # for saving figures
 
 INPUT_DIR = '{}/inputs/'.format(PREFIX)         # inputs for models
 SIZES_DIR = INPUT_DIR + 'sizes/'                # for initializing models
@@ -37,6 +36,8 @@ AGENT_DIR = OUTPUT_DIR + 'agent/'               # agent logs and models
 
 DATE_FEATS_PATH = FEATS_DIR + 'date_feats.pkl'
 META_PATH = CLEAN_DIR + 'meta.csv'
+
+FIG_DIR = os.path.expanduser('~/eBay/figures/')  # for saving figures
 
 # partitions
 TRAIN_MODELS = 'sim'
@@ -121,12 +122,14 @@ LISTING_FEE = .03
 META_7 = [11116, 619]
 META_6 = [58058, 1249, 625, 293, 15032]
 
+# meta categories for collectibles
+COLLECTIBLES = [1, 237, 260, 550, 870, 11116, 20081, 45100, 64482]
+
 # fixed random seed
 SEED = 123456
 
 # number of chunks
-NUM_RL_WORKERS = 16
-NUM_FEATS_CHUNKS = NUM_RL_WORKERS * 2
+NUM_CHUNKS = 64
 
 # features to drop from 'lstg' grouping for byr
 BYR_DROP = ['auto_decline', 'auto_accept',
@@ -135,7 +138,3 @@ BYR_DROP = ['auto_decline', 'auto_accept',
 
 # for precision issues
 EPS = 1e-8
-
-# number of agent actions
-NUM_ACTIONS_BYR = 101
-NUM_ACTIONS_SLR = 102

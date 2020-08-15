@@ -3,8 +3,9 @@ from compress_pickle import dump
 import pandas as pd
 from sim.EBayDataset import EBayDataset
 from utils import get_model_predictions, load_file, load_featnames, input_partition
-from constants import FIRST_ARRIVAL_MODEL, PARTS_DIR, NUM_RL_WORKERS, INTERVAL_CT_ARRIVAL
-from featnames import SLR_BO_CT, LOOKUP, X_LSTG, P_ARRIVAL, END_TIME
+from constants import FIRST_ARRIVAL_MODEL, PARTS_DIR, NUM_CHUNKS, INTERVAL_CT_ARRIVAL
+from featnames import LOOKUP, X_LSTG, P_ARRIVAL, META, START_PRICE, START_TIME, \
+    DEC_PRICE, ACC_PRICE
 
 
 def save_chunks(p_arrival=None, part=None, lookup=None):
@@ -17,7 +18,7 @@ def save_chunks(p_arrival=None, part=None, lookup=None):
     assert x_lstg.isna().sum().sum() == 0
 
     # drop extraneous lookup columns
-    lookup.drop([END_TIME, SLR_BO_CT], axis=1, inplace=True)
+    lookup = lookup[[META, START_PRICE, DEC_PRICE, ACC_PRICE, START_TIME]]
 
     # sort by no arrival probability
     p_arrival = p_arrival.sort_values(INTERVAL_CT_ARRIVAL)
@@ -31,9 +32,9 @@ def save_chunks(p_arrival=None, part=None, lookup=None):
 
     # split into chunks
     idx = lookup.index
-    for i in range(NUM_RL_WORKERS):
+    for i in range(NUM_CHUNKS):
         idx_i = [idx[k] for k in range(len(idx))
-                 if k % NUM_RL_WORKERS == i]
+                 if k % NUM_CHUNKS == i]
         chunk = {LOOKUP: lookup.reindex(index=idx_i),
                  X_LSTG: x_lstg.reindex(index=idx_i),
                  P_ARRIVAL: p_arrival.reindex(index=idx_i)}

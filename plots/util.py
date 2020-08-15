@@ -1,5 +1,4 @@
-import os
-from constants import FIG_DIR
+from constants import FIG_DIR, IDX, BYR
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
 
@@ -11,19 +10,12 @@ FONTSIZE = {'roc': 16,  # fontsize by plot type
             'con': 16}
 
 plt.style.use('ggplot')
-plt.rcParams.update({
-    "text.usetex": True,
-    "font.family": "sans-serif",
-    "font.sans-serif": ["Helvetica"]})
-plt.rc('text.latex', preamble=r'\usepackage{amsmath}')
 
 
 def save_fig(path, legend=True, legend_kwargs=None, reverse_legend=False,
              xlabel=None, ylabel=None, square=False):
     # create directory
-    folder, name = path.split('/')
-    if not os.path.isdir(FIG_DIR + folder):
-        os.mkdir(FIG_DIR + folder)
+    name = path.split('/')[-1]
 
     # font size
     fontsize = FONTSIZE[name.split('_')[0]]
@@ -133,13 +125,6 @@ def roc_plot(path, s):
              legend=False)
 
 
-def con_plot(path, df, byr=False):
-    line_plot(df, ds='default')
-    role = 'Seller' if byr else 'Buyer'
-    xlabel = '{} offer as fraction of list price'.format(role)
-    save_fig(path, xlabel=xlabel, ylabel='Average concession')
-
-
 def bar_plot(df, horizontal=False, stacked=False, rot=0,
              xlim=None, ylim=None, xticks=None, yticks=None):
     plt.clf()
@@ -164,7 +149,7 @@ def grouped_bar(path, df, xlabel=None, ylabel=None, **plotargs):
 
 def area_plot(df, xlim=None, ylim=None, xticks=None, yticks=None):
     plt.clf()
-    df.plot.area(xlim=xlim, ylim=ylim)
+    df.plot.area(xlim=xlim, ylim=ylim, cmap=plt.get_cmap('plasma'))
 
     # ticks
     if xticks is not None:
@@ -173,8 +158,8 @@ def area_plot(df, xlim=None, ylim=None, xticks=None, yticks=None):
         plt.gca().set_yticks(yticks)
 
 
-def action_plot(path, df, byr=False):
+def action_plot(path, df, turn=None):
     area_plot(df, ylim=[0, 1])
     save_fig(path, reverse_legend=True,
              xlabel='{} offer as fraction of list price'.format(
-                 'Seller' if byr else 'Buyer'))
+                 'Seller' if turn in IDX[BYR] else 'Buyer'))

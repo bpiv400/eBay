@@ -2,7 +2,7 @@ import argparse
 import os
 from agent.RlTrainer import RlTrainer
 from agent.const import PARAM_DICTS
-from utils import compose_args, set_gpu_workers
+from utils import compose_args, set_gpu
 from constants import BYR
 
 
@@ -15,7 +15,7 @@ def startup():
     args = vars(parser.parse_args())
 
     # set gpu and cpu affinity
-    set_gpu_workers(gpu=args['gpu'], use_all=args['all'], spawn=True)
+    set_gpu(gpu=args['gpu'])
 
     # print to console
     for k, v in args.items():

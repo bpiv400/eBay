@@ -5,7 +5,7 @@ import pandas as pd
 from processing.b_feats.util import create_events, get_all_cat_feats
 from processing.util import load_feats
 from utils import run_func_on_chunks
-from constants import FEATS_DIR, NUM_FEATS_CHUNKS
+from constants import FEATS_DIR
 from featnames import META, LEAF, SLR
 
 
@@ -34,11 +34,7 @@ def main():
     name = parser.parse_args().name
 
     if name == SLR:
-        res = run_func_on_chunks(
-            num_chunks=NUM_FEATS_CHUNKS,
-            f=process_chunk,
-            func_kwargs=dict()
-        )
+        res = run_func_on_chunks(f=process_chunk, func_kwargs=dict())
         feats = pd.concat(res).sort_index()
     else:
         data = dict()

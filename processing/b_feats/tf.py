@@ -4,7 +4,7 @@ from datetime import datetime as dt
 from compress_pickle import dump, load
 from processing.b_feats.util import collapse_dict
 from utils import run_func_on_chunks
-from constants import START, IDX, FEATS_DIR, NUM_FEATS_CHUNKS
+from constants import START, IDX, FEATS_DIR
 from featnames import SLR, BYR
 
 
@@ -383,11 +383,7 @@ def create_tf(chunk=None):
 
 
 def main():
-    res = run_func_on_chunks(
-        num_chunks=NUM_FEATS_CHUNKS,
-        f=create_tf,
-        func_kwargs=dict()
-    )
+    res = run_func_on_chunks(f=create_tf, func_kwargs=dict())
     df = pd.concat(res).sort_index()
     dump(df, FEATS_DIR + 'tf.gz')
 

@@ -1,6 +1,6 @@
 import argparse
 from sim.SimTrainer import SimTrainer
-from utils import set_gpu_workers
+from utils import set_gpu
 from constants import MODELS, POLICY_MODELS, DISCRIM_MODEL
 
 DROPOUT_GRID = []
@@ -22,7 +22,7 @@ def main():
     args = parser.parse_args()
 
     # set gpu and cpu affinity
-    set_gpu_workers(args.gpu, spawn=False)
+    set_gpu(args.gpu, spawn=False)
 
     # initialize trainer
     trainer = SimTrainer(name=args.name)

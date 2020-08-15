@@ -6,7 +6,7 @@ from rlpyt.samplers.serial.sampler import SerialSampler
 from rlpyt.samplers.parallel.gpu.alternating_sampler import AlternatingSampler
 from rlpyt.utils.logging.context import logger_context
 from featnames import BYR
-from agent.const import AGENT_STATE
+from agent.const import AGENT_STATE, BATCH_SIZE
 from agent.util import get_paths
 from agent.AgentComposer import AgentComposer
 from agent.AgentModel import AgentModel
@@ -25,9 +25,8 @@ class RlTrainer:
         self.params = params['system']
         self.byr = params[BYR]
 
-        # counts
+        # iteration
         self.itr = 0
-        self.batch_size = self.params['batch_size']
 
         # initialize composer
         self.composer = AgentComposer(byr=self.byr)
@@ -72,19 +71,21 @@ class RlTrainer:
         # sampler and batch sizes
         if self.params['serial']:
             sampler_cls = SerialSampler
-            batch_b = 1
+            batch_B = 1
+            batch_T = 128
             env_params['loader'] = TrainLoader(
                 x_lstg_cols=self.composer.x_lstg_cols)
         else:
             sampler_cls = AlternatingSampler
-            batch_b = len(self._cpus)
+            batch_B = len(self._cpus)
+            batch_T = int(BATCH_SIZE / batch_B)
 
         # environment
         return sampler_cls(
                 EnvCls=env,
                 env_kwargs=env_params,
-                batch_B=batch_b,
-                batch_T=int(self.batch_size / batch_b),
+                batch_B=batch_B,
+                batch_T=batch_T,
                 max_decorrelation_steps=0,
                 eval_n_envs=0,
                 eval_env_kwargs={},
@@ -102,7 +103,6 @@ class RlTrainer:
         runner = EBayRunner(algo=self.algo,
                             agent=self.agent,
                             sampler=self.sampler,
-                            log_interval_steps=self.batch_size,
                             affinity=affinity)
         return runner
 

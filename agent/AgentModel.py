@@ -28,7 +28,7 @@ class AgentModel(torch.nn.Module):
 
         # policy net
         sizes = load_sizes(POLICY_BYR if byr else POLICY_SLR)
-        sizes['out'] = 5 if byr else 6
+        sizes['out'] = 5
         self.policy_net = FeedForward(sizes=sizes, dropout=DROPOUT_POLICY)
 
         # value net
@@ -89,8 +89,6 @@ class AgentModel(torch.nn.Module):
 
         # get cdf of concessions, convert to pdf
         cdf = self._beta_cdf(a, b, x)
-        assert torch.max(cdf) <= 1
-        assert torch.min(cdf) >= 0
         pdf = cdf[:, 1:] - cdf[:, :-1]
         assert torch.max(torch.abs(pdf.sum(-1) - 1.)) < 1e-6
 
@@ -109,11 +107,11 @@ class AgentModel(torch.nn.Module):
         # add in accepts and rejects
         pdf *= pi[:, [-1]]  # scale by concession probability
         pdf = torch.cat([pi[:, [0]], pdf, pi[:, [1]]], dim=-1)
-        if not self.byr:
-            pdf = torch.cat([pdf, pi[:, [2]]], dim=-1)  # expiration rejection
         assert torch.min(pdf) >= 0
-        assert torch.max(torch.abs(pdf.sum(-1) - 1.)) < 1e-6
-        pdf /= pdf.sum(-1, True)  # for precision
+        total = pdf.sum(-1, True)
+        if torch.max(torch.abs(total - 1.)) >= 1e-6:
+            print('Warning: total probability is {}.'.format(total))
+        pdf /= total  # for precision
 
         return pdf
 
@@ -149,4 +147,5 @@ class AgentModel(torch.nn.Module):
         cdf_h = 1 - x_h ** a * (1 - x_h) ** b / (b * beta) / (T + 1)
 
         # concatenate
-        return cdf_l * (x <= S0) + cdf_h * (x > S0)
+        cdf = cdf_l * (x <= S0) + cdf_h * (x > S0)
+        return torch.clamp(cdf, min=0., max=1.)

@@ -6,21 +6,17 @@ from agent.util import get_paths
 from rlenv.environments.SellerEnv import SellerEnv
 from rlenv.environments.BuyerEnv import BuyerEnv
 from rlenv.generate.util import process_sims
-from utils import set_gpu_workers, run_func_on_chunks, process_chunk_worker
+from utils import run_func_on_chunks, process_chunk_worker
 from agent.const import AGENT_STATE, OPTIM_STATE
-from constants import BYR, VALIDATION, NUM_RL_WORKERS
+from constants import BYR, VALIDATION
 
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--byr', action='store_true')
-    parser.add_argument('--entropy_coeff', type=float, default=.001)
+    parser.add_argument('--entropy_coeff', type=float, default=.1)
     parser.add_argument('--suffix', type=str)
-    parser.add_argument('--gpu', type=int, default=0)
     args = vars(parser.parse_args())
-
-    # set gpu and cpu affinity
-    set_gpu_workers(gpu=args['gpu'], spawn=True)
 
     # environment class and run directory
     env = BuyerEnv if args[BYR] else SellerEnv
@@ -37,7 +33,6 @@ def main():
 
     # run in parallel on chunks
     sims = run_func_on_chunks(
-        num_chunks=NUM_RL_WORKERS,
         f=process_chunk_worker,
         func_kwargs=dict(
             part=VALIDATION,
@@ -52,4 +47,5 @@ def main():
 
 
 if __name__ == '__main__':
+    torch.multiprocessing.set_start_method('spawn')
     main()

@@ -14,7 +14,8 @@ LossInputs = namedarraytuple("LossInputs",
                               "return_",
                               "advantage",
                               "valid",
-                              "old_dist_info"])
+                              "pi_old",
+                              "max_return"])
 OptInfo = namedtuple("OptInfo",
                      ["ActionsPerTraj",
                       "DelaysPerTraj",
@@ -23,10 +24,10 @@ OptInfo = namedtuple("OptInfo",
                       "Rate_Con",
                       "Rate_Acc",
                       "Rate_Rej",
-                      "Rate_Exp",
                       "Rate_Sale",
                       "Concession",
-                      "DiscountedReturn",
+                      "DollarReturn",
+                      "NormReturn",
                       "Advantage",
                       "Entropy",
                       "Loss_Policy",
@@ -74,7 +75,7 @@ class EBayPPO:
                                   lr=LR_POLICY, amsgrad=True)
 
     @staticmethod
-    def discount_return(reward=None, done=None, info=None):
+    def discount_return(reward=None, done=None):
         """
         Computes time-discounted sum of future rewards from each
         time-step to the end of the batch. Sum resets where `done`
@@ -82,7 +83,6 @@ class EBayPPO:
         after the first [T,].
         :param tensor reward: slr's normalized gross return.
         :param tensor done: indicator for end of trajectory.
-        :param namedtuple info: contains other required feats
         :return tensor return_: time-discounted return.
         """
         dtype = reward.dtype  # cast new tensors to this data type
@@ -90,7 +90,6 @@ class EBayPPO:
 
         # recast
         done = done.type(torch.int)
-        max_return = info.max_return.type(dtype)
 
         # initialize matrix of returns
         return_ = torch.zeros(reward.shape, dtype=dtype)
@@ -101,11 +100,7 @@ class EBayPPO:
         for t in reversed(range(T)):
             # value less price paid
             net_value = net_value * (1 - done[t]) + reward[t] * done[t]
-            net_value = torch.min(net_value, max_return[t])  # precision
             return_[t] += net_value
-
-        # normalize
-        return_ /= max_return
 
         return return_
 
@@ -140,11 +135,12 @@ class EBayPPO:
         valid = self.valid_from_done(done)
 
         # time and/or action discounting
-        return_ = self.discount_return(reward=reward, done=done, info=info)
+        return_ = self.discount_return(reward=reward, done=done)
 
         # advantage
         value = samples.agent.agent_info.value
-        advantage = return_ - value
+        max_return = env.env_info.max_return.type(value.dtype)
+        advantage = return_ - value * max_return
 
         # Move inputs to device once, index there
         agent_inputs = AgentInputs(
@@ -159,7 +155,8 @@ class EBayPPO:
             return_=return_,
             advantage=advantage,
             valid=valid,
-            old_dist_info=samples.agent.agent_info.dist_info,
+            pi_old=samples.agent.agent_info.dist_info,
+            max_return=max_return
         )
 
         # initialize opt_info
@@ -175,13 +172,12 @@ class EBayPPO:
         opt_info.Rate_Acc.append((con == 100).mean())
         opt_info.Rate_Rej.append((con == 0).mean())
         opt_info.Rate_Sale.append((reward[done].numpy() > 0.).mean())
-        if not self.byr:
-            opt_info.Rate_Exp.append((con == 101).mean())
 
         con = con[(con < 100) & (con > 0)]
         opt_info.Concession.append(con)
 
-        opt_info.DiscountedReturn.append(return_[valid].numpy())
+        opt_info.DollarReturn.append(return_[done].numpy())
+        opt_info.NormReturn.append((return_[done] / max_return[done]).numpy())
         opt_info.Advantage.append(advantage[valid].numpy())
 
         # zero gradients
@@ -212,14 +208,14 @@ class EBayPPO:
 
         # increment counter, reduce entropy bonus, and set complete flag
         self.update_counter += 1
-        if self.entropy_coeff > 0. and self.update_counter >= PERIOD_EPOCHS:
+        if 2 * PERIOD_EPOCHS > self.update_counter >= PERIOD_EPOCHS:
             self.entropy_coeff -= self.entropy_step
         if self.update_counter == 3 * PERIOD_EPOCHS:
             self.training_complete = True
 
         return opt_info
 
-    def loss(self, agent_inputs, action, return_, advantage, valid, pi_old):
+    def loss(self, agent_inputs, action, return_, advantage, valid, pi_old, max_return):
         """
         Compute the training loss: policy_loss + value_loss + entropy_loss
         Policy loss: min(likelhood-ratio * advantage, clip(likelihood_ratio, 1-eps, 1+eps) * advantage)
@@ -241,7 +237,7 @@ class EBayPPO:
         pi_loss = - valid_mean(surrogate, valid)
 
         # loss from value estimation
-        value_error = valid_mean(0.5 * (v - return_) ** 2, valid)
+        value_error = valid_mean(0.5 * (v * max_return - return_) ** 2, valid)
 
         # entropy
         entropy = self.agent.distribution.entropy(pi_new)[valid]
