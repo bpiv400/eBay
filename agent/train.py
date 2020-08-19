@@ -3,7 +3,6 @@ import os
 from agent.RlTrainer import RlTrainer
 from agent.const import PARAMS
 from utils import compose_args, set_gpu
-from constants import BYR
 
 
 def startup():

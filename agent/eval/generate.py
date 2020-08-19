@@ -14,8 +14,7 @@ from constants import BYR, VALIDATION
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--byr', action='store_true')
-    parser.add_argument('--entropy', type=float, default=1.)
-    parser.add_argument('--suffix', type=str)
+    parser.add_argument('--name', type=str)
     args = vars(parser.parse_args())
 
     # environment class and run directory

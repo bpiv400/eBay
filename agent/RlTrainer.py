@@ -5,7 +5,7 @@ from agent.EBayPPO import EBayPPO
 from rlpyt.samplers.serial.sampler import SerialSampler
 from rlpyt.samplers.parallel.gpu.alternating_sampler import AlternatingSampler
 from rlpyt.utils.logging.context import logger_context
-from agent.const import AGENT_STATE, BATCH_SIZE
+from agent.const import AGENT_STATE, BATCH_SIZE, ENTROPY
 from agent.util import get_paths
 from agent.AgentComposer import AgentComposer
 from agent.AgentModel import AgentModel
@@ -19,8 +19,7 @@ from rlenv.LstgLoader import TrainLoader
 
 
 class RlTrainer:
-    def __init__(self, byr=False, serial=False, suffix=None,
-                 norm=False, nocon=False, entropy=None):
+    def __init__(self, byr=False, serial=False, name=None, nocon=False):
         # save params to self
         self.byr = byr
 
@@ -31,7 +30,8 @@ class RlTrainer:
         self.composer = AgentComposer(byr=byr)
 
         # algorithm
-        self.algo = EBayPPO(entropy=entropy, norm=norm)
+        entropy = ENTROPY * 10 if nocon else ENTROPY
+        self.algo = EBayPPO(entropy=entropy)
 
         # agent
         self.agent = SplitCategoricalPgAgent(
@@ -44,8 +44,8 @@ class RlTrainer:
         self.runner = self._generate_runner()
 
         # for logging
-        self.log_dir, self.run_id, self.run_dir = get_paths(
-            byr=byr, suffix=suffix, entropy=entropy)
+        self.log_dir, self.run_id, self.run_dir = \
+            get_paths(byr=byr, name=name)
 
     def _generate_query_strategy(self):
         return DefaultQueryStrategy(

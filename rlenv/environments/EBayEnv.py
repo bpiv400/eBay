@@ -1,10 +1,9 @@
 import numpy as np
-import pandas as pd
 from collections import namedtuple
 from utils import get_cut
 from constants import MONTH, BYR_HIST_MODEL, INTERARRIVAL_MODEL
 from featnames import ACC_PRICE, DEC_PRICE, START_PRICE, DELAY, \
-    TIME_FEATS, START_TIME, META, BYR, ALL_OFFER_FEATS
+    TIME_FEATS, START_TIME, META, BYR
 from utils import get_months_since_lstg
 from rlenv.Heap import Heap
 from rlenv.time.TimeFeatures import TimeFeatures
@@ -238,12 +237,6 @@ class EBayEnv:
             time_feats = self.time_feats.get_feats(thread_id=event.thread_id,
                                                    time=event.priority)
             event.init_offer(time_feats=time_feats)
-        if event.turn == 3:
-            for t in range(1, 4):
-                s = pd.Series(event.sources()['offer{}'.format(t)],
-                              index=ALL_OFFER_FEATS)
-                print(s)
-            print(time_feats)
         return False
 
     def process_arrival(self, event):

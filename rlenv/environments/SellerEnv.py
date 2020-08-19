@@ -10,8 +10,7 @@ from featnames import BYR_HIST, START_PRICE
 SellerInfo = namedarraytuple("SellerInfo",
                              ["months",
                               "max_return",
-                              "num_offers",
-                              "turn"])
+                              "num_offers"])
 SellerObs = namedarraytuple("SellerObs",
                             list(load_sizes(POLICY_SLR)['x'].keys()))
 
@@ -114,8 +113,7 @@ class SellerEnv(AgentEnv):
     def get_info(self, event=None):
         return SellerInfo(months=self._get_months(event.priority),
                           max_return=self.lookup[START_PRICE],
-                          num_offers=self.num_offers,
-                          turn=event.turn)
+                          num_offers=self.num_offers)
 
     def get_reward(self):
         if self.outcome is None or not self.outcome.sale:

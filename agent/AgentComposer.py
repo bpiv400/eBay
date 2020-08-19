@@ -2,7 +2,6 @@ import argparse
 import math
 import torch
 import numpy as np
-from agent.const import ALL_FEATS
 from agent.util import get_agent_name
 from constants import PARTS_DIR, TRAIN_RL
 from featnames import OUTCOME_FEATS, MONTHS_SINCE_LSTG, BYR_HIST, \
@@ -15,7 +14,6 @@ from utils import load_sizes, load_featnames
 
 
 class AgentComposer(Composer):
-    feat_type = ALL_FEATS
 
     def __init__(self, byr=None):
         # create columns and initialize Composer class
@@ -96,7 +94,7 @@ class AgentComposer(Composer):
         return lstg
 
     def _build_agent_offer_vector(self, offer_vector=None):
-        if not self.byr and self.feat_type == ALL_FEATS:
+        if not self.byr:
             full_vector = offer_vector
         else:
             full_vector = np.concatenate([offer_vector[:TIME_START_IND],
@@ -164,7 +162,7 @@ class AgentComposer(Composer):
         assert len(lstg_append) == start_index
 
     def verify_agent_offer(self, offer_feats=None):
-        if not self.byr and self.feat_type == ALL_FEATS:
+        if not self.byr:
             assumed_feats = CLOCK_FEATS + TIME_FEATS + OUTCOME_FEATS
         else:
             assumed_feats = CLOCK_FEATS + OUTCOME_FEATS

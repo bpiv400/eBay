@@ -1,10 +1,9 @@
 import numpy as np
 from functools import reduce
-from agent.const import FEAT_TYPE, ALL_FEATS
 from agent.util import get_agent_name
 from agent.AgentComposer import AgentComposer
 from constants import BYR, POLICY_MODELS
-from featnames import LSTG, BYR_HIST, ACC_PRICE, DEC_PRICE, START_PRICE
+from featnames import LSTG, ACC_PRICE, DEC_PRICE, START_PRICE
 from rlenv.Composer import Composer
 from rlenv.environments.BuyerEnv import BuyerEnv
 from rlenv.environments.SellerEnv import SellerEnv

@@ -14,8 +14,7 @@ LossInputs = namedarraytuple("LossInputs",
                               "return_",
                               "advantage",
                               "valid",
-                              "pi_old",
-                              "max_return"])
+                              "pi_old"])
 OptInfo = namedtuple("OptInfo",
                      ["ActionsPerTraj",
                       "DelaysPerTraj",
@@ -160,13 +159,8 @@ class EBayPPO:
         opt_info.DollarReturn.append(return_[done].numpy())
         opt_info.NormReturn.append((return_[done] / info.max_return[done]).numpy())
 
-        # either normalize return or rescale values
-        if self.norm:
-            return_ /= info.max_return
-        else:
-            value *= info.max_return
-
-        # advantage
+        # normalize return and calculate advantage
+        return_ /= info.max_return
         advantage = return_ - value
         opt_info.Advantage.append(advantage[valid].numpy())
 
@@ -183,8 +177,7 @@ class EBayPPO:
             return_=return_,
             advantage=advantage,
             valid=valid,
-            pi_old=samples.agent.agent_info.dist_info,
-            max_return=info.max_return
+            pi_old=samples.agent.agent_info.dist_info
         )
 
         # zero gradients
@@ -222,7 +215,7 @@ class EBayPPO:
 
         return opt_info
 
-    def loss(self, agent_inputs, action, return_, advantage, valid, pi_old, max_return):
+    def loss(self, agent_inputs, action, return_, advantage, valid, pi_old):
         """
         Compute the training loss: policy_loss + value_loss + entropy_loss
         Policy loss: min(likelhood-ratio * advantage, clip(likelihood_ratio, 1-eps, 1+eps) * advantage)
@@ -232,8 +225,6 @@ class EBayPPO:
         """
         # agent outputs
         pi_new, v = self.agent(*agent_inputs)
-        if not self.norm:
-            v *= max_return
 
         # loss from policy
         ratio = self.agent.distribution.likelihood_ratio(action,

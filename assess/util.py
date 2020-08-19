@@ -79,15 +79,20 @@ def get_pctiles(s):
     return pctiles
 
 
-def load_data(part=None, lstgs=None, obs=False, sim=False, run_dir=None):
+def load_data(part=None, lstgs=None, obs=False, sim=False, check=False, run_dir=None):
     # folder of simulation output
     if obs:  # using data
         assert not sim
+        assert not check
         assert run_dir is None
         folder = PARTS_DIR + '{}/'.format(part)
     elif sim:
+        assert not check
         assert run_dir is None
         folder = PARTS_DIR + '{}/sim/'.format(part)
+    elif check:
+        assert run_dir is None
+        folder = PARTS_DIR + '{}/check/'.format(part)
     else:
         folder = run_dir + '{}/'.format(part)
     # load dataframes

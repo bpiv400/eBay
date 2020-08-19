@@ -15,14 +15,12 @@ def get_log_dir(byr=None):
     return log_dir
 
 
-def get_paths(**kwargs):
+def get_paths(byr=None, name=None):
     # log directory
-    log_dir = get_log_dir(kwargs[BYR])
+    log_dir = get_log_dir(byr)
 
     # run id
-    run_id = 'entropy_{}'.format(kwargs['entropy'])
-    if 'suffix' in kwargs and kwargs['suffix'] is not None:
-        run_id += '_{}'.format(kwargs['suffix'])
+    run_id = name
 
     # concatenate
     run_dir = log_dir + 'run_{}/'.format(run_id)
