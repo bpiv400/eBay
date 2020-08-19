@@ -10,7 +10,8 @@ from featnames import BYR_HIST, START_PRICE
 SellerInfo = namedarraytuple("SellerInfo",
                              ["months",
                               "max_return",
-                              "num_offers"])
+                              "num_offers",
+                              "turn"])
 SellerObs = namedarraytuple("SellerObs",
                             list(load_sizes(POLICY_SLR)['x'].keys()))
 
@@ -31,7 +32,7 @@ class SellerEnv(AgentEnv):
         return False
 
     def reset(self, next_lstg=True):
-        self.init_reset(next_lstg=next_lstg)  # in SellerEnvironment
+        self.init_reset(next_lstg=next_lstg)  # in AgentEnvironment
         while True:
             event, lstg_complete = super().run()  # calls EBayEnvironment.run()
 
@@ -113,7 +114,8 @@ class SellerEnv(AgentEnv):
     def get_info(self, event=None):
         return SellerInfo(months=self._get_months(event.priority),
                           max_return=self.lookup[START_PRICE],
-                          num_offers=self.num_offers)
+                          num_offers=self.num_offers,
+                          turn=event.turn)
 
     def get_reward(self):
         if self.outcome is None or not self.outcome.sale:

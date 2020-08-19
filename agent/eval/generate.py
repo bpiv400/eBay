@@ -14,7 +14,7 @@ from constants import BYR, VALIDATION
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--byr', action='store_true')
-    parser.add_argument('--entropy_coeff', type=float, default=.1)
+    parser.add_argument('--entropy', type=float, default=1.)
     parser.add_argument('--suffix', type=str)
     args = vars(parser.parse_args())
 
@@ -23,7 +23,7 @@ def main():
     _, _, run_dir = get_paths(**args)
 
     # recreate model
-    model = AgentModel(byr=args[BYR])
+    model = AgentModel(byr=args[BYR], nocon='nocon' in args['suffix'])
     path = run_dir + 'params.pkl'
     d = torch.load(path, map_location=torch.device('cpu'))
     if OPTIM_STATE in d:

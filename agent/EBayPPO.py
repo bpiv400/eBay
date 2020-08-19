@@ -44,9 +44,10 @@ class EBayPPO:
     bootstrap_value = True
     opt_info_fields = tuple(f for f in OptInfo._fields)
 
-    def __init__(self, entropy_coeff=None):
+    def __init__(self, entropy=None, norm=False):
         # save parameters to self
-        self.entropy_coeff = entropy_coeff
+        self.entropy_coef = entropy
+        self.norm = norm
 
         # parameters to be defined later
         self.agent = None
@@ -58,7 +59,7 @@ class EBayPPO:
         self.update_counter = 0
 
         # for stopping
-        self.entropy_step = entropy_coeff / PERIOD_EPOCHS
+        self.entropy_step = self.entropy_coef / PERIOD_EPOCHS
         self.training_complete = False
 
     def initialize(self, agent=None):
@@ -130,34 +131,13 @@ class EBayPPO:
         # break out samples
         env = samples.env
         reward, done, info = (env.reward, env.done, env.env_info)
+        value = samples.agent.agent_info.value
 
         # ignore steps from unfinished trajectories
         valid = self.valid_from_done(done)
 
-        # time and/or action discounting
+        # propagate return from end of trajectory (and discount, if necessary)
         return_ = self.discount_return(reward=reward, done=done)
-
-        # advantage
-        value = samples.agent.agent_info.value
-        max_return = env.env_info.max_return.type(value.dtype)
-        advantage = return_ - value * max_return
-
-        # Move inputs to device once, index there
-        agent_inputs = AgentInputs(
-            observation=env.observation,
-            prev_action=samples.agent.prev_action,
-            prev_reward=env.prev_reward,
-        )
-        agent_inputs = buffer_to(agent_inputs, device=self.agent.device)
-        loss_inputs = LossInputs(
-            agent_inputs=agent_inputs,
-            action=samples.agent.action,
-            return_=return_,
-            advantage=advantage,
-            valid=valid,
-            pi_old=samples.agent.agent_info.dist_info,
-            max_return=max_return
-        )
 
         # initialize opt_info
         opt_info = OptInfo(*([] for _ in range(len(OptInfo._fields))))
@@ -174,11 +154,38 @@ class EBayPPO:
         opt_info.Rate_Sale.append((reward[done].numpy() > 0.).mean())
 
         con = con[(con < 100) & (con > 0)]
-        opt_info.Concession.append(con)
+        if len(con) > 0:
+            opt_info.Concession.append(con)
 
         opt_info.DollarReturn.append(return_[done].numpy())
-        opt_info.NormReturn.append((return_[done] / max_return[done]).numpy())
+        opt_info.NormReturn.append((return_[done] / info.max_return[done]).numpy())
+
+        # either normalize return or rescale values
+        if self.norm:
+            return_ /= info.max_return
+        else:
+            value *= info.max_return
+
+        # advantage
+        advantage = return_ - value
         opt_info.Advantage.append(advantage[valid].numpy())
+
+        # Move inputs to device once, index there
+        agent_inputs = AgentInputs(
+            observation=env.observation,
+            prev_action=samples.agent.prev_action,
+            prev_reward=env.prev_reward,
+        )
+        agent_inputs = buffer_to(agent_inputs, device=self.agent.device)
+        loss_inputs = LossInputs(
+            agent_inputs=agent_inputs,
+            action=samples.agent.action,
+            return_=return_,
+            advantage=advantage,
+            valid=valid,
+            pi_old=samples.agent.agent_info.dist_info,
+            max_return=info.max_return
+        )
 
         # zero gradients
         self._optim_value.zero_grad()
@@ -203,13 +210,13 @@ class EBayPPO:
         # save for logging
         opt_info.Loss_Policy.append(policy_loss.item())
         opt_info.Loss_Value.append(value_error.item())
-        opt_info.Loss_EntropyBonus.append(self.entropy_coeff)
+        opt_info.Loss_EntropyBonus.append(self.entropy_coef)
         opt_info.Entropy.append(entropy.detach().numpy())
 
         # increment counter, reduce entropy bonus, and set complete flag
         self.update_counter += 1
         if 2 * PERIOD_EPOCHS > self.update_counter >= PERIOD_EPOCHS:
-            self.entropy_coeff -= self.entropy_step
+            self.entropy_coef -= self.entropy_step
         if self.update_counter == 3 * PERIOD_EPOCHS:
             self.training_complete = True
 
@@ -225,6 +232,8 @@ class EBayPPO:
         """
         # agent outputs
         pi_new, v = self.agent(*agent_inputs)
+        if not self.norm:
+            v *= max_return
 
         # loss from policy
         ratio = self.agent.distribution.likelihood_ratio(action,
@@ -237,11 +246,11 @@ class EBayPPO:
         pi_loss = - valid_mean(surrogate, valid)
 
         # loss from value estimation
-        value_error = valid_mean(0.5 * (v * max_return - return_) ** 2, valid)
+        value_error = valid_mean(0.5 * (v - return_) ** 2, valid)
 
         # entropy
         entropy = self.agent.distribution.entropy(pi_new)[valid]
-        entropy_loss = - self.entropy_coeff * entropy.mean()
+        entropy_loss = - self.entropy_coef * entropy.mean()
 
         # total loss
         policy_loss = pi_loss + entropy_loss

@@ -1,26 +1,19 @@
-from assess.util import load_data, get_valid_slr, get_action_dist, find_best_run, \
-    merge_dicts, count_dist, cdf_months, cdf_sale, get_lookup, arrival_dist, \
-    hist_dist, delay_dist, con_dist, norm_norm
+from assess.util import load_data, get_action_dist, merge_dicts, count_dist, \
+    cdf_months, cdf_sale, get_lookup, arrival_dist, hist_dist, delay_dist, con_dist
 from utils import topickle
 from constants import PLOT_DIR, TEST
-from featnames import SLR, START_PRICE, OBS, RL, ARRIVAL, BYR_HIST, DELAY, CON
+from featnames import START_PRICE, OBS, SIM, ARRIVAL, BYR_HIST, DELAY, CON
 
 
 def collect_outputs(data=None, lookup=None, name=None):
-    data, lookup = get_valid_slr(data=data, lookup=lookup)  # restrict to valid listings
     threads, offers, clock = [data[k] for k in ['threads', 'offers', 'clock']]
 
     d = dict()
     d['cdf_norm'], d['cdf_price'] = cdf_sale(
-        offers=offers,
-        start_price=lookup[START_PRICE]
-    )
+        offers=offers, start_price=lookup[START_PRICE])
 
     d['cdf_months'] = cdf_months(
-        offers=offers,
-        clock=clock,
-        lookup=lookup
-    )
+        offers=offers, clock=clock, lookup=lookup)
 
     # offer distributions
     d['pdf_{}'.format(ARRIVAL)] = arrival_dist(threads)
@@ -28,14 +21,9 @@ def collect_outputs(data=None, lookup=None, name=None):
     d['cdf_{}'.format(DELAY)] = delay_dist(offers)
     d['cdf_{}'.format(CON)] = con_dist(offers)
 
-    # norm-norm plot
-    d['norm-norm'] = norm_norm(offers)
-
-    # thread and offer counts
     for k in ['threads', 'offers']:
         d['num_{}'.format(k)] = count_dist(data[k], level=k)
 
-    # rename series
     for k, v in d.items():
         if type(v) is dict:
             for key, value in v.items():
@@ -53,25 +41,22 @@ def construct_d(lookup=None):
     data[OBS] = load_data(part=TEST, lstgs=lookup.index, obs=True)
     d = collect_outputs(data=data[OBS], lookup=lookup, name='Observed sellers')
 
-    # RL seller
-    run_dir = find_best_run()
-    print('Best run: {}'.format(run_dir))
-    data[RL] = load_data(part=TEST, lstgs=lookup.index, run_dir=run_dir)
-    d_rl = collect_outputs(data=data[RL], lookup=lookup, name='RL seller')
+    # simulated seller
+    data[SIM] = load_data(part=TEST, lstgs=lookup.index, sim=True)
+    d_sim = collect_outputs(data=data[SIM], lookup=lookup, name='Simulated seller')
 
     # concatenate DataFrames
-    d = merge_dicts(d, d_rl)
+    d = merge_dicts(d, d_sim)
 
     # action probabilities
-    # d['action'] = get_action_dist(offers_dim=data[OBS]['offers'],
-    #                               offers_action=data[RL]['offers'],
-    #                               byr=False)
+    d['action'] = get_action_dist(offers_dim=data[OBS]['offers'],
+                                  offers_action=data[SIM]['offers'])
 
     return d
 
 
 def main():
-    lookup, filename = get_lookup(prefix=SLR)
+    lookup, filename = get_lookup(prefix=SIM)
 
     # dictionary of inputs for plots
     d = construct_d(lookup)

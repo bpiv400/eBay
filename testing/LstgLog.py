@@ -32,10 +32,13 @@ class LstgLog:
                                                params=params)
             if self.verbose:
                 self.translator.print_translator()
+
         else:
             self.translator = None
+
         self.agent_log = self.generate_agent_log(params)
-        self.update_arrival_time()
+        if self.agent and self.byr:
+            self.update_arrival_time()
 
     @property
     def byr(self):
@@ -215,7 +218,7 @@ class LstgLog:
         # print(params['x_thread'].columns)
         time = int(params['x_thread'].loc[thread_id, MONTHS_SINCE_LSTG] * MONTH)
         time += self.lookup[START_TIME]
-        hist = params['x_thread'].loc[thread_id, BYR_HIST] / 10
+        hist = params['x_thread'].loc[thread_id, BYR_HIST]
 
         full_hist_inputs = params['inputs'][BYR_HIST_MODEL]
         # print('value: {}'.format(value))

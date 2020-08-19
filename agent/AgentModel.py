@@ -19,16 +19,23 @@ class AgentModel(torch.nn.Module):
     4. Both networks use batch normalization
     5. Both networks use dropout with shared dropout hyperparameters
     """
-    def __init__(self, byr=None, serial=False):
+    def __init__(self, byr=None, serial=False, nocon=False):
+        """
+        Initializes feed-forward networks for agent.
+        :param bool byr: use buyer sizes if True.
+        :param bool serial: serial sampler doesn't like squeezed outputs.
+        :param bool nocon: accept or reject only if True.
+        """
         super().__init__()
 
         # save params to self
         self.byr = byr
         self.serial = serial
+        self.out = 1 if nocon else 5
 
         # policy net
         sizes = load_sizes(POLICY_BYR if byr else POLICY_SLR)
-        sizes['out'] = 5
+        sizes['out'] = self.out
         self.policy_net = FeedForward(sizes=sizes, dropout=DROPOUT_POLICY)
 
         # value net
@@ -40,11 +47,11 @@ class AgentModel(torch.nn.Module):
 
     def forward(self, observation, prev_action=None, prev_reward=None):
         """
-        Predicts policy parameters and state value
+        Predicts policy distribution and state value.
         :param namedtuplearray observation: contains dict of agent inputs
         :param None prev_action: (not used; for recurrent agents only)
         :param None prev_reward: (not used; for recurrent agents only)
-        :return: tuple of params, v
+        :return: tuple of policy distribution, value
         """
         # noinspection PyProtectedMember
         input_dict = observation._asdict()
@@ -64,13 +71,11 @@ class AgentModel(torch.nn.Module):
         # policy
         theta = self.policy_net(input_dict)
 
-        # beta distribution
-        pi = softmax(theta[:, :-2], dim=-1)
-        beta_params = softplus(torch.clamp(theta[:, -2:], min=-5))
-        a, b = beta_params[:, 0], beta_params[:, 1]
-
         # convert to categorical distribution
-        pdf = self._discrete_pdf(pi, a, b)
+        if self.out == 1:
+            pdf = self._cat_from_binary(theta)
+        else:
+            pdf = self._cat_from_beta(theta)
 
         # value
         v = torch.sigmoid(self.value_net(input_dict))
@@ -82,12 +87,22 @@ class AgentModel(torch.nn.Module):
 
         return pdf, v
 
-    def _discrete_pdf(self, pi, a, b):
-        a = a.unsqueeze(-1)
-        b = b.unsqueeze(-1)
-        x = self.dim.expand(a.size()[0], -1).to(a.device)
+    @staticmethod
+    def _cat_from_binary(theta):
+        p_accept = torch.sigmoid(theta)
+        p_reject = 1. - p_accept
+        zeros = torch.zeros_like(p_accept).expand(-1, 99)
+        pdf = torch.cat([p_reject, zeros, p_accept], dim=-1)
+        return pdf
+
+    def _cat_from_beta(self, theta):
+        # beta distribution
+        pi = softmax(theta[:, :-2], dim=-1)
+        beta_params = softplus(torch.clamp(theta[:, -2:], min=-5))
+        a, b = beta_params[:, [0]], beta_params[:, [1]]
 
         # get cdf of concessions, convert to pdf
+        x = self.dim.expand(a.size()[0], -1).to(a.device)
         cdf = self._beta_cdf(a, b, x)
         pdf = cdf[:, 1:] - cdf[:, :-1]
         assert torch.max(torch.abs(pdf.sum(-1) - 1.)) < 1e-6

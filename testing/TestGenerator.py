@@ -1,9 +1,9 @@
 import numpy as np
 from functools import reduce
-from agent.const import BYR, FEAT_TYPE, ALL_FEATS
+from agent.const import FEAT_TYPE, ALL_FEATS
 from agent.util import get_agent_name
 from agent.AgentComposer import AgentComposer
-from constants import POLICY_MODELS
+from constants import BYR, POLICY_MODELS
 from featnames import LSTG, BYR_HIST, ACC_PRICE, DEC_PRICE, START_PRICE
 from rlenv.Composer import Composer
 from rlenv.environments.BuyerEnv import BuyerEnv
@@ -50,13 +50,7 @@ class TestGenerator(Generator):
 
     def generate_composer(self):
         if self.agent:
-            agent_params = {
-                BYR: self.byr,
-                FEAT_TYPE: ALL_FEATS,
-                BYR_HIST: None
-            }
-            composer = AgentComposer(agent_params=agent_params)
-            return composer
+            return AgentComposer(byr=self.byr)
         else:
             return Composer(cols=self.loader.x_lstg_cols)
 

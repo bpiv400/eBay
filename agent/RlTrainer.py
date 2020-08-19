@@ -5,7 +5,6 @@ from agent.EBayPPO import EBayPPO
 from rlpyt.samplers.serial.sampler import SerialSampler
 from rlpyt.samplers.parallel.gpu.alternating_sampler import AlternatingSampler
 from rlpyt.utils.logging.context import logger_context
-from featnames import BYR
 from agent.const import AGENT_STATE, BATCH_SIZE
 from agent.util import get_paths
 from agent.AgentComposer import AgentComposer
@@ -20,37 +19,33 @@ from rlenv.LstgLoader import TrainLoader
 
 
 class RlTrainer:
-    def __init__(self, **params):
+    def __init__(self, byr=False, serial=False, suffix=None,
+                 norm=False, nocon=False, entropy=None):
         # save params to self
-        self.params = params['system']
-        self.byr = params[BYR]
+        self.byr = byr
 
         # iteration
         self.itr = 0
 
         # initialize composer
-        self.composer = AgentComposer(byr=self.byr)
+        self.composer = AgentComposer(byr=byr)
 
         # algorithm
-        self.algo = EBayPPO(**params['ppo'])
+        self.algo = EBayPPO(entropy=entropy, norm=norm)
 
         # agent
         self.agent = SplitCategoricalPgAgent(
             ModelCls=AgentModel,
-            model_kwargs={BYR: self.byr,
-                          'serial': self.params['serial']}
+            model_kwargs={'byr': byr, 'serial': serial, 'nocon': nocon}
         )
 
         # rlpyt components
-        self.sampler = self._generate_sampler()
+        self.sampler = self._generate_sampler(serial=serial)
         self.runner = self._generate_runner()
 
         # for logging
         self.log_dir, self.run_id, self.run_dir = get_paths(
-            byr=self.byr,
-            suffix=self.params['suffix'],
-            **params['ppo']
-        )
+            byr=byr, suffix=suffix, entropy=entropy)
 
     def _generate_query_strategy(self):
         return DefaultQueryStrategy(
@@ -59,17 +54,17 @@ class RlTrainer:
             buyer=SimulatedBuyer(full=True)
         )
 
-    def _generate_sampler(self):
+    def _generate_sampler(self, serial=False):
         # environment
         env_params = dict(
             composer=self.composer,
-            verbose=self.params['verbose'],
+            verbose=serial,
             query_strategy=self._generate_query_strategy()
         )
         env = BuyerEnv if self.byr else SellerEnv
 
         # sampler and batch sizes
-        if self.params['serial']:
+        if serial:
             sampler_cls = SerialSampler
             batch_B = 1
             batch_T = 128
@@ -110,8 +105,8 @@ class RlTrainer:
     def _cpus(self):
         return list(psutil.Process().cpu_affinity())
 
-    def train(self):
-        if not self.params['log']:
+    def train(self, log=False):
+        if not log:
             self.itr = self.runner.train()
         else:
             with logger_context(log_dir=self.log_dir,

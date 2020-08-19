@@ -20,7 +20,7 @@ def get_paths(**kwargs):
     log_dir = get_log_dir(kwargs[BYR])
 
     # run id
-    run_id = 'entropy_{}'.format(kwargs['entropy_coeff'])
+    run_id = 'entropy_{}'.format(kwargs['entropy'])
     if 'suffix' in kwargs and kwargs['suffix'] is not None:
         run_id += '_{}'.format(kwargs['suffix'])
 
