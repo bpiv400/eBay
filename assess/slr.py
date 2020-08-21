@@ -1,9 +1,11 @@
+import numpy as np
 from assess.util import load_data, get_valid_slr, get_action_dist, find_best_run, \
     merge_dicts, count_dist, cdf_months, cdf_sale, get_lookup, arrival_dist, \
-    hist_dist, delay_dist, con_dist, norm_norm
+    hist_dist, delay_dist, con_dist, norm_norm, accept3d
 from utils import topickle
 from constants import PLOT_DIR, TEST
-from featnames import SLR, START_PRICE, OBS, RL, ARRIVAL, BYR_HIST, DELAY, CON
+from featnames import SLR, START_PRICE, OBS, RL, ARRIVAL, BYR_HIST, DELAY, CON, \
+    ACCEPT
 
 
 def collect_outputs(data=None, lookup=None, name=None):
@@ -54,13 +56,16 @@ def construct_d(lookup=None):
     d = collect_outputs(data=data[OBS], lookup=lookup, name='Observed sellers')
 
     # RL seller
-    run_dir = find_best_run()
-    print('Best run: {}'.format(run_dir))
-    data[RL] = load_data(part=TEST, lstgs=lookup.index, run_dir=run_dir)
+    data[RL] = load_data(part=TEST, lstgs=lookup.index, run_dir=find_best_run())
     d_rl = collect_outputs(data=data[RL], lookup=lookup, name='RL seller')
 
     # concatenate DataFrames
     d = merge_dicts(d, d_rl)
+
+    # accept probabilities
+    d[ACCEPT], other = dict(), np.log10(lookup[START_PRICE])
+    for k, v in data.items():
+        d[ACCEPT][k] = accept3d(offers=v['offers'], other=other)
 
     # action probabilities
     # d['action'] = get_action_dist(offers_dim=data[OBS]['offers'],

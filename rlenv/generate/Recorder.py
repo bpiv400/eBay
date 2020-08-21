@@ -2,28 +2,12 @@ import numpy as np
 import pandas as pd
 from constants import MONTH
 from featnames import START_TIME, START_PRICE, TIME_FEATS, MSG, CON, \
-    LSTG, BYR_HIST, ACC_PRICE, DEC_PRICE
+    LSTG, THREAD, INDEX, BYR_HIST, ACC_PRICE, DEC_PRICE, CLOCK
 from rlenv.const import ARRIVAL, RL_ARRIVAL_EVENT
 
-# variable names
-INDEX = 'index'
-VAL = 'value'
-THREAD = 'thread'
-CLOCK = 'clock'
-SE = 'se'
-AVG_PRICE = 'avg_price'
-NUM_SALES = 'num_sales'
-P_SALE = 'p_sale'
-CUT = 'cut'
-CENSOR = 'censored'
-
-# for discriminator
-OFFER_COLS = [LSTG, THREAD, INDEX, CLOCK, CON, MSG, CENSOR] + TIME_FEATS
+OFFER_COLS = [LSTG, THREAD, INDEX, CLOCK, CON, MSG] + TIME_FEATS
 THREAD_COLS = [LSTG, THREAD, BYR_HIST, CLOCK]
 INDEX_COLS = [LSTG, THREAD, INDEX]
-
-# for values
-VAL_COLS = [LSTG, VAL, SE, AVG_PRICE, NUM_SALES, P_SALE, CUT]
 
 
 class Recorder:
@@ -136,16 +120,10 @@ class Recorder:
     def start_thread(self, thread_id=None, time=None, byr_hist=None):
         raise NotImplementedError()
 
-    def add_offer(self, event, time_feats=None, censored=False):
-        raise NotImplementedError()
-
-    def _records2frames(self):
+    def add_offer(self, event, time_feats=None):
         raise NotImplementedError()
 
     def construct_output(self):
-        raise NotImplementedError()
-
-    def _compress_frames(self):
         raise NotImplementedError()
 
     def reset_recorders(self):
@@ -174,7 +152,7 @@ class OutcomeRecorder(Recorder):
         row = [self.lstg, thread_id, byr_hist, time]
         self.threads.append(row)
 
-    def add_offer(self, event=None, time_feats=None, censored=False):
+    def add_offer(self, event=None, time_feats=None):
         # change ordering if OFFER_COLS changes
         summary = event.summary()
         con, norm, msg = summary
@@ -185,14 +163,11 @@ class OutcomeRecorder(Recorder):
                event.turn,
                event.priority,
                con,
-               msg,
-               censored
+               msg
                ]
         row += list(time_feats)
         self.offers.append(row)
         if self.verbose:
-            if censored:
-                print('censored')
             self.print_offer(event)
 
     @staticmethod
@@ -201,12 +176,15 @@ class OutcomeRecorder(Recorder):
             for frame in frames:
                 frame[col] = frame[col].astype(dtypes[i])
 
-    def _compress_frames(self):
+    def construct_output(self):
+        # convert both lists to dataframes
+        self.offers = self.record2frame(self.offers, OFFER_COLS)
+        self.threads = self.record2frame(self.threads, THREAD_COLS)
+
         # offers dataframe
         self.offers[INDEX] = self.offers[INDEX].astype(np.uint8)
         self.offers[CON] = self.offers[CON].astype(np.uint8)
         self.offers[MSG] = self.offers[MSG].astype(bool)
-        self.offers[CENSOR] = self.offers[CENSOR].astype(bool)
         for name in TIME_FEATS:
             if 'offers' in name or 'count' in name:
                 self.offers[name] = self.offers[name].astype(np.uint8)
@@ -215,17 +193,8 @@ class OutcomeRecorder(Recorder):
         self.compress_common_cols([LSTG, THREAD, CLOCK],
                                   [self.threads, self.offers],
                                   [np.int32, np.uint16, np.int32])
-        self.offers.set_index(INDEX_COLS, inplace=True)
-        self.threads.set_index(INDEX_COLS[:-1], inplace=True)
+        self.offers.set_index(INDEX_COLS, inplace=True).sort_index()
+        self.threads.set_index(INDEX_COLS[:-1], inplace=True).sort_index()
         assert np.all(self.offers.xs(1, level='index')[CON] > 0)
 
-    def _records2frames(self):
-        # convert both dictionaries to dataframes
-        self.offers = self.record2frame(self.offers, OFFER_COLS)
-        self.threads = self.record2frame(self.threads, THREAD_COLS)
-
-    def construct_output(self):
-        self._records2frames()
-        self._compress_frames()
-        return {'offers': self.offers.sort_index(),
-                'threads': self.threads.sort_index()}
+        return dict(offers=self.offers, threads=self.threads)

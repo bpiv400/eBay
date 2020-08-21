@@ -1,4 +1,5 @@
 import torch
+from rlpyt.agents.pg.categorical import CategoricalPgAgent
 from torch.nn.functional import softplus, softmax
 import numpy as np
 from scipy.special import betainc
@@ -164,3 +165,11 @@ class AgentModel(torch.nn.Module):
         # concatenate
         cdf = cdf_l * (x <= S0) + cdf_h * (x > S0)
         return torch.clamp(cdf, min=0., max=1.)
+
+
+class SplitCategoricalPgAgent(CategoricalPgAgent):
+    def value_parameters(self):
+        return self.model.value_net.parameters()
+
+    def policy_parameters(self):
+        return self.model.policy_net.parameters()

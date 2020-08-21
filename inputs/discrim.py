@@ -77,7 +77,10 @@ def load_threads_offers(part=None, sim=False):
     prefix = 'sim/' if sim else ''
     threads = load_file(part, '{}x_thread'.format(prefix))
     offers = load_file(part, '{}x_offer'.format(prefix))
-    offers = drop_censored(offers)
+    if not sim:
+        offers = drop_censored(offers)
+    else:
+        assert (offers.loc[offers[EXP], DELAY] == 1.).all()
     return threads, offers
 
 

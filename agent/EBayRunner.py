@@ -264,7 +264,7 @@ def ebay_sampling_process(common_kwargs, worker_kwargs):
     samplers. After ``initialize_worker()``, it creates the specified number
     of environment instances and gives them to the collector when
     instantiating it.  It then calls collector startup methods for
-    environments and agent.  If applicable, instantiates evaluation
+    envs and agent.  If applicable, instantiates evaluation
     environment instances and evaluation collector.
     Then enters infinite loop, waiting for signals from master to collect
     training samples or else run evaluation, until signaled to exit.

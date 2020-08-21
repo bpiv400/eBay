@@ -55,7 +55,7 @@ def save_fig(path, legend=True, legend_kwargs=None, reverse_legend=False,
     plt.close()
 
 
-def line_plot(df, style=None, ds='steps-post', xlim=None, ylim=None,
+def draw_line(df, style=None, ds='steps-post', xlim=None, ylim=None,
               xticks=None, yticks=None, diagonal=False,
               integer_xticks=False, logx=False):
     plt.clf()
@@ -135,7 +135,7 @@ def dist_plot(path, df):
         raise NotImplementedError('Invalid name: {}'.format(name))
 
     # create plot and save
-    line_plot(df, **args)
+    draw_line(df, **args)
     save_fig(path,
              xlabel=xlabel,
              ylabel='{} of {}'.format(prefix, den),
@@ -143,7 +143,7 @@ def dist_plot(path, df):
 
 
 def training_plot(path, df):
-    line_plot(df,
+    draw_line(df,
               style={'testing': '-k', 'train': '--k', 'baserate': '-k'},
               integer_xticks=True,
               ds='default')
@@ -166,11 +166,11 @@ def diag_plot(path, df):
     else:
         raise NotImplementedError('Invalid name: {}'.format(name))
 
-    line_plot(df, diagonal=True, ds='default', **limits)
+    draw_line(df, diagonal=True, ds='default', **limits)
     save_fig(path, square=True, legend=isinstance(df, pd.DataFrame), **labels)
 
 
-def bar_plot(df, horizontal=False, stacked=False, rot=0,
+def draw_bar(df, horizontal=False, stacked=False, rot=0,
              xlim=None, ylim=None, xticks=None, yticks=None):
     plt.clf()
 
@@ -207,13 +207,13 @@ def count_plot(path, df):
     else:
         raise NotImplementedError('Invalid name: {}'.format(name))
 
-    bar_plot(df, **args)
+    draw_bar(df, **args)
     save_fig(path, xlabel=xlabel,
              ylabel='Fraction of {}'.format(den),
              legend=isinstance(df, pd.DataFrame))
 
 
-def area_plot(df, xlim=None, ylim=None, xticks=None, yticks=None):
+def draw_area(df, xlim=None, ylim=None, xticks=None, yticks=None):
     plt.clf()
     df.plot.area(xlim=xlim, ylim=ylim, cmap=plt.get_cmap('plasma'))
 
@@ -225,7 +225,38 @@ def area_plot(df, xlim=None, ylim=None, xticks=None, yticks=None):
 
 
 def action_plot(path, df, turn=None):
-    area_plot(df, ylim=[0, 1])
+    draw_area(df, ylim=[0, 1])
     save_fig(path, reverse_legend=True,
              xlabel='{} offer as fraction of list price'.format(
                  'Seller' if turn in IDX[BYR] else 'Buyer'))
+
+
+def draw_contour(s, yticks=None, yticklabels=None):
+    plt.clf()
+
+    k = int(np.sqrt(len(s)))
+    X = np.reshape(s.index.get_level_values(0), (k, k))
+    Y = np.reshape(s.index.get_level_values(1), (k, k))
+    Z = np.reshape(s.values, (k, k))
+
+    lower = np.floor(s.min() * 100) / 100
+    upper = np.ceil(s.max() * 100) / 100
+    levels = np.arange(lower, upper, .01)
+    subset = [i for i in levels if int(i * 100) % 5 == 0]
+
+    fig, ax = plt.subplots()
+    CS = ax.contour(X, Y, Z, levels=levels, cmap=plt.get_cmap('plasma'))
+    ax.clabel(CS, inline=True, fontsize=10, levels=subset)
+
+    # if yticks is not None:
+    #     plt.yticks(ticks=yticks, labels=yticklabels)
+
+
+def contour_plot(path, s):
+    yticklabels = [10, 20, 50, 100, 200, 500, 1000]
+    yticks = np.log10(yticklabels)
+    draw_contour(s, yticks=yticks, yticklabels=yticklabels)
+    save_fig(path,
+             legend=False,
+             xlabel='Last buyer offer / list price',
+             ylabel='List price')

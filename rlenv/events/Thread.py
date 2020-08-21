@@ -33,7 +33,8 @@ class Thread(Event):
             return self.sources.is_expire(self.turn)
 
     def update_con_outcomes(self, con_outcomes=None):
-        norm = self.sources.update_con_outcomes(con_outcomes=con_outcomes, turn=self.turn)
+        norm = self.sources.update_con_outcomes(con_outcomes=con_outcomes,
+                                                turn=self.turn)
         offer_params = {
             'price': norm,
             'player': SLR if self.turn % 2 == 0 else BYR,

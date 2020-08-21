@@ -1,9 +1,8 @@
-import numpy as np
 from collections import namedtuple
 from utils import get_cut
 from constants import MONTH, BYR_HIST_MODEL, INTERARRIVAL_MODEL
-from featnames import ACC_PRICE, DEC_PRICE, START_PRICE, DELAY, \
-    TIME_FEATS, START_TIME, META, BYR
+from featnames import ACC_PRICE, DEC_PRICE, START_PRICE, DELAY, START_TIME, \
+    META, BYR
 from utils import get_months_since_lstg
 from rlenv.Heap import Heap
 from rlenv.time.TimeFeatures import TimeFeatures
@@ -126,18 +125,15 @@ class EBayEnv:
         else:
             raise NotImplementedError()
 
-    def record(self, event, byr_hist=None, censored=False):
+    def record(self, event, byr_hist=None):
         if self.recorder is None:
-            if self.verbose and byr_hist is None and not censored:
+            if self.verbose and byr_hist is None:
                 Recorder.print_offer(event)
         else:
             if byr_hist is None:
-                if not censored:
-                    time_feats = self.time_feats.get_feats(thread_id=event.thread_id,
-                                                           time=event.priority)
-                else:
-                    time_feats = np.zeros(len(TIME_FEATS))
-                self.recorder.add_offer(event=event, time_feats=time_feats, censored=censored)
+                time_feats = self.time_feats.get_feats(thread_id=event.thread_id,
+                                                       time=event.priority)
+                self.recorder.add_offer(event=event, time_feats=time_feats)
             else:
                 self.recorder.start_thread(thread_id=event.thread_id,
                                            byr_hist=byr_hist,
@@ -166,7 +162,7 @@ class EBayEnv:
         slr_offer = event.turn % 2 == 0
         # print('summary right before record')
         # print(event.summary())
-        self.record(event, censored=False)
+        self.record(event)
         # check whether the offer is an acceptance
         if event.is_sale():
             self._process_sale(offer)
@@ -271,7 +267,7 @@ class EBayEnv:
 
     def process_byr_expire(self, event):
         event.byr_expire()
-        self.record(event, censored=False)
+        self.record(event)
         offer_params = {
             'thread_id': event.thread_id,
             'time': event.priority,
@@ -285,7 +281,7 @@ class EBayEnv:
                                                time=event.priority)
         event.init_offer(time_feats=time_feats)
         offer = event.slr_expire_rej()
-        self.record(event, censored=False)
+        self.record(event)
         self.time_feats.update_features(offer=offer)
         self._init_delay(event)
         return False
@@ -325,10 +321,7 @@ class EBayEnv:
 
     def empty_queue(self):
         while not self.queue.empty:
-            event = self.queue.pop()
-            if not isinstance(event, Arrival) and event.type != FIRST_OFFER:
-                event.priority = min(event.priority, self.end_time)
-                self.record(event=event, censored=True)
+            self.queue.pop()
 
     def make_thread(self, priority):
         return Thread(priority=priority, thread_id=self.thread_counter)
@@ -362,7 +355,7 @@ class EBayEnv:
 
     def _process_slr_auto_acc(self, event):
         offer = event.slr_auto_acc()
-        self.record(event, censored=False)
+        self.record(event)
         self._process_sale(offer)
 
     def _init_delay(self, event):
@@ -411,9 +404,12 @@ class EBayEnv:
         # sample msg if necessary
         if need_msg(con, slr):
             model_name = model_str(MSG, turn=event.turn)
-            input_dict = self.composer.build_input_dict(model_name=model_name, sources=event.sources(),
+            input_dict = self.composer.build_input_dict(model_name=model_name,
+                                                        sources=event.sources(),
                                                         turn=event.turn)
-            msg = self.get_msg(input_dict=input_dict, time=event.priority, turn=event.turn,
+            msg = self.get_msg(input_dict=input_dict,
+                               time=event.priority,
+                               turn=event.turn,
                                thread_id=event.thread_id)
             event.update_msg(msg=msg)
         return offer

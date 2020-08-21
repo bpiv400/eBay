@@ -3,7 +3,7 @@ import torch
 from rlpyt.envs.base import Env
 from rlpyt.spaces.composite import Composite
 from rlpyt.spaces.float_box import FloatBox
-from rlenv.environments.EBayEnv import EBayEnv
+from rlenv.EBayEnv import EBayEnv
 from rlenv.events.Thread import RlThread
 from agent.ConSpace import ConSpace
 from constants import INTERVAL_TURN, INTERVAL_CT_TURN, MONTH, CON_MULTIPLIER

@@ -13,16 +13,20 @@ class DefaultQueryStrategy(QueryStrategy):
 
     def get_con(self, *args, **kwargs):
         if kwargs['turn'] % 2 == 0:
-            con = self.seller.con(input_dict=kwargs['input_dict'], turn=kwargs['turn'])
+            con = self.seller.con(input_dict=kwargs['input_dict'],
+                                  turn=kwargs['turn'])
         else:
-            con = self.buyer.con(input_dict=kwargs['input_dict'], turn=kwargs['turn'])
+            con = self.buyer.con(input_dict=kwargs['input_dict'],
+                                 turn=kwargs['turn'])
         return con
 
     def get_msg(self, *args, **kwargs):
         if kwargs['turn'] % 2 == 0:
-            msg = self.seller.msg(input_dict=kwargs['input_dict'], turn=kwargs['turn'])
+            msg = self.seller.msg(input_dict=kwargs['input_dict'],
+                                  turn=kwargs['turn'])
         else:
-            msg = self.buyer.msg(input_dict=kwargs['input_dict'], turn=kwargs['turn'])
+            msg = self.buyer.msg(input_dict=kwargs['input_dict'],
+                                 turn=kwargs['turn'])
         return msg
 
     @staticmethod

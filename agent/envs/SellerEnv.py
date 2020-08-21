@@ -1,6 +1,6 @@
 from rlpyt.utils.collections import namedarraytuple
 from rlenv.const import DELAY_EVENT, OFFER_EVENT
-from rlenv.environments.AgentEnv import AgentEnv
+from agent.envs.AgentEnv import AgentEnv
 from rlenv.events.Thread import RlThread
 from rlenv.util import get_con_outcomes
 from utils import load_sizes

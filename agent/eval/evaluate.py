@@ -7,7 +7,7 @@ from agent.util import get_log_dir
 from assess.util import get_value_slr
 from utils import load_file, topickle
 from constants import VALIDATION
-from featnames import LOOKUP, START_PRICE
+from featnames import LOOKUP, START_PRICE, OBS
 
 
 def print_summary(df, idx):
@@ -20,10 +20,11 @@ def main():
     # buyer flag
     parser = argparse.ArgumentParser()
     parser.add_argument('--byr', action='store_true')
-    byr = parser.parse_args().byr
-    log_dir = get_log_dir(byr=byr)
+    parser.add_argument('--heuristic', action='store_true')
+    args = parser.parse_args()
+    log_dir = get_log_dir(byr=args.byr)
 
-    if byr:
+    if args.byr:
         raise NotImplementedError()
 
     start_price = load_file(VALIDATION, LOOKUP)[START_PRICE]
@@ -31,15 +32,18 @@ def main():
     # initialize with values from data
     df = pd.DataFrame(columns=['norm', 'price'], dtype=np.float64)
     offers = load_file(VALIDATION, 'x_offer')
-    df.loc['obs', :] = get_value_slr(offers=offers, start_price=start_price)
-    print_summary(df, 'obs')
+    df.loc[OBS, :] = get_value_slr(offers=offers, start_price=start_price)
+    print_summary(df, OBS)
 
     # agent runs
     for run_id in os.listdir(log_dir):
         run_dir = log_dir + '{}/'.format(run_id)
         if not os.path.isdir(run_dir):
             continue
-        path = run_dir + '{}/x_offer.gz'.format(VALIDATION)
+        folder = run_dir + '{}/'.format(VALIDATION)
+        if args.heuristic:
+            folder += 'heuristic/'
+        path = folder + 'x_offer.gz'
         if os.path.isfile(path):
             offers = load(path)
             df.loc[run_id] = get_value_slr(offers=offers,

@@ -164,6 +164,8 @@ def load_model(name, verbose=False, use_trained=True):
 
 
 def process_chunk_worker(part=None, chunk=None, gen_class=None, gen_kwargs=None):
+    if gen_kwargs is None:
+        gen_kwargs = dict()
     gen = gen_class(**gen_kwargs)
     return gen.process_chunk(chunk=chunk, part=part)
 

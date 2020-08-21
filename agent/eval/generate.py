@@ -1,48 +1,88 @@
 import argparse
 import torch
-from agent.AgentModel import AgentModel
-from agent.eval.EvalGenerator import EvalGenerator
-from agent.util import get_paths
-from rlenv.environments.SellerEnv import SellerEnv
-from rlenv.environments.BuyerEnv import BuyerEnv
+from agent.AgentComposer import AgentComposer
+from agent.values.generate import ValueGenerator
+from agent.models.HeuristicSlr import HeuristicSlr
+from agent.util import get_paths, load_agent_model
+from agent.envs.BuyerEnv import BuyerEnv
+from agent.envs.SellerEnv import SellerEnv
+from rlenv.generate.Generator import Generator
 from rlenv.generate.util import process_sims
+from rlenv.interfaces.PlayerInterface import SimulatedBuyer, SimulatedSeller
+from rlenv.util import sample_categorical
 from utils import run_func_on_chunks, process_chunk_worker
-from agent.const import AGENT_STATE, OPTIM_STATE
-from constants import BYR, VALIDATION
+from constants import VALIDATION, TRAIN_RL, TEST
+
+
+class AgentGenerator(Generator):
+    def __init__(self, model=None, verbose=False):
+        super().__init__(verbose=verbose)
+        self.model = model
+
+    def generate_composer(self):
+        return AgentComposer(byr=self.model.byr)
+
+    def generate_buyer(self):
+        return SimulatedBuyer(full=True)
+
+    def generate_seller(self):
+        return SimulatedSeller(full=self.model.byr)
+
+    @property
+    def env_class(self):
+        return BuyerEnv if self.model.byr else SellerEnv
+
+    def simulate_lstg(self):
+        obs = self.env.reset(next_lstg=False)
+        if obs is not None:
+            done = False
+            while not done:
+                probs, _ = self.model(observation=obs)
+                action = int(sample_categorical(probs=probs))
+                agent_tuple = self.env.step(action)
+                done = agent_tuple[2]
+                obs = agent_tuple[0]
 
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--byr', action='store_true')
+    parser.add_argument('--part', choices=[TRAIN_RL, VALIDATION, TEST])
     parser.add_argument('--name', type=str)
-    args = vars(parser.parse_args())
+    parser.add_argument('--heuristic', action='store_true')
+    args = parser.parse_args()
 
     # environment class and run directory
-    env = BuyerEnv if args[BYR] else SellerEnv
-    _, _, run_dir = get_paths(**args)
+    _, _, run_dir = get_paths(byr=args.byr, name=args.name)
 
     # recreate model
-    model = AgentModel(byr=args[BYR], nocon='nocon' in args['suffix'])
-    path = run_dir + 'params.pkl'
-    d = torch.load(path, map_location=torch.device('cpu'))
-    if OPTIM_STATE in d:
-        d = d[AGENT_STATE]
-        torch.save(d, path)
-    model.load_state_dict(d, strict=True)
+    if args.heuristic:
+        if args.byr:
+            raise NotImplementedError()
+        else:
+            model = HeuristicSlr()
+    else:
+        nocon = 'nocon' in args.name
+        model = load_agent_model(
+            model_args=dict(byr=args.byr, nocon=nocon),
+            run_dir=run_dir
+        )
 
     # run in parallel on chunks
     sims = run_func_on_chunks(
         f=process_chunk_worker,
         func_kwargs=dict(
-            part=VALIDATION,
-            gen_class=EvalGenerator,
-            gen_kwargs=dict(env=env, model=model)
+            part=args.part,
+            gen_class=ValueGenerator if args.values else AgentGenerator,
+            gen_kwargs=dict(model=model)
         )
     )
 
     # combine and process output
-    part_dir = run_dir + '{}/'.format(VALIDATION)
-    process_sims(part=VALIDATION, sims=sims, output_dir=part_dir)
+    output_dir = run_dir + '{}/'.format(args.part)
+    if args.heuristic:
+        output_dir += 'heuristic/'
+    process_sims(part=args.part, sims=sims, output_dir=output_dir)
 
 
 if __name__ == '__main__':

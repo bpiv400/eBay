@@ -5,9 +5,9 @@ from agent.AgentComposer import AgentComposer
 from constants import BYR, POLICY_MODELS
 from featnames import LSTG, ACC_PRICE, DEC_PRICE, START_PRICE
 from rlenv.Composer import Composer
-from rlenv.environments.BuyerEnv import BuyerEnv
-from rlenv.environments.SellerEnv import SellerEnv
-from rlenv.environments.SimulatorEnv import SimulatorEnv
+from agent.envs.BuyerEnv import BuyerEnv
+from agent.envs.SellerEnv import SellerEnv
+from sim.generate import SimulatorEnv
 from rlenv.generate.Generator import Generator
 from rlenv.util import get_env_sim_subdir, load_chunk
 from testing.LstgLog import LstgLog

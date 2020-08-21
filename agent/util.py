@@ -1,4 +1,7 @@
 import os
+import torch
+from agent.const import OPTIM_STATE, AGENT_STATE
+from agent.models.AgentModel import AgentModel
 from constants import AGENT_DIR, POLICY_SLR, POLICY_BYR
 from featnames import SLR, BYR
 
@@ -26,3 +29,17 @@ def get_paths(byr=None, name=None):
     run_dir = log_dir + 'run_{}/'.format(run_id)
 
     return log_dir, run_id, run_dir
+
+
+def load_agent_model(model_args=None, run_dir=None):
+    model = AgentModel(**model_args)
+    path = run_dir + 'params.pkl'
+    d = torch.load(path, map_location=torch.device('cpu'))
+    if OPTIM_STATE in d:
+        d = d[AGENT_STATE]
+        torch.save(d, path)
+    model.load_state_dict(d, strict=True)
+    for param in model.parameters(recurse=True):
+        param.requires_grad = False
+    model.eval()
+    return model

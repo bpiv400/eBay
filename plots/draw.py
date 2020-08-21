@@ -1,6 +1,6 @@
 import argparse
 import os
-from plots.util import count_plot, action_plot, dist_plot, diag_plot
+from plots.util import count_plot, action_plot, dist_plot, diag_plot, contour_plot
 from utils import unpickle
 from constants import PLOT_DIR, FIG_DIR
 
@@ -29,6 +29,12 @@ def main():
             path = folder + k
             print(path)
             f(path, v)
+        elif k == 'accept':
+            for t, d_k in v.items():
+                for key, s in d_k.items():
+                    path = folder + '{}_{}_{}'.format(k, key, t)
+                    print(path)
+                    contour_plot(path, s)
         else:
             if k == 'action':
                 f = action_plot

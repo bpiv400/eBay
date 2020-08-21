@@ -12,7 +12,7 @@ SIM_VALS_DIR = 'vals'
 SIM_DISCRIM_DIR = 'outcomes'
 
 # holiday and day-of-week indicators, indexed by days since START
-DATE_FEATS = unpickle(DATE_FEATS_PATH)
+DATE_FEATS_DF = unpickle(DATE_FEATS_PATH)
 
 # number of hours the val generation job may run before termination
 VAL_TIME_LIMIT = 48
@@ -23,8 +23,6 @@ DUR = 'dur'
 PRICE = 'price'
 
 # param names
-MIN_SALES = 20
-SE_TOL = .5
 
 # composer maps
 SIZE = 'size'
@@ -45,7 +43,7 @@ OFF_IND = 2
 ARRIVAL = 'ARRIVAL'
 
 # thread level
-FIRST_OFFER = 'FIRST_OFFER'  # first byer offer
+FIRST_OFFER = 'FIRST_OFFER'  # first buyer offer
 RL_ARRIVAL_EVENT = 'RL_ARRIVE'
 OFFER_EVENT = 'OFFER'
 DELAY_EVENT = 'DELAY'

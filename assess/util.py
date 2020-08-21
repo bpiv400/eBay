@@ -79,48 +79,53 @@ def get_pctiles(s):
     return pctiles
 
 
-def load_data(part=None, lstgs=None, obs=False, sim=False, check=False, run_dir=None):
+def load_data(part=None, lstgs=None, obs=False, sim=False, run_dir=None):
     # folder of simulation output
     if obs:  # using data
-        assert not sim
-        assert not check
-        assert run_dir is None
+        assert not sim and run_dir is None
         folder = PARTS_DIR + '{}/'.format(part)
     elif sim:
-        assert not check
         assert run_dir is None
         folder = PARTS_DIR + '{}/sim/'.format(part)
-    elif check:
-        assert run_dir is None
-        folder = PARTS_DIR + '{}/check/'.format(part)
     else:
         folder = run_dir + '{}/'.format(part)
+
     # load dataframes
     data = dict()
     data['threads'] = load(folder + 'x_thread.gz')
     data['offers'] = load(folder + 'x_offer.gz')
     data['clock'] = load(folder + 'clock.gz')
+
     # drop censored offers
-    drop = data['offers'][EXP] & (data['offers'][DELAY] < 1)
-    for k in ['offers', 'clock']:
-        data[k] = data[k][~drop]
-    assert (data['clock'].xs(1, level='index').index == data['threads'].index).all()
+    if not sim:
+        drop = data['offers'][EXP] & (data['offers'][DELAY] < 1)
+        for k in ['offers', 'clock']:
+            data[k] = data[k][~drop]
+        assert (data['clock'].xs(1, level='index').index == data['threads'].index).all()
+    else:
+        (data['offers'].loc[data['offers'][EXP], DELAY] == 1.).all()
+
     # restrict to lstgs
-    for k, v in data.items():
-        data[k] = v.reindex(index=lstgs, level='lstg')
+    if lstgs is not None:
+        for k, v in data.items():
+            data[k] = v.reindex(index=lstgs, level='lstg')
+
     return data
 
 
-def gaussian_kernel(x, bw=.02):
-    return lambda z: np.exp(-0.5 * ((x - z) / bw) ** 2)
+def gaussian_kernel(x, bw=.25):
+    if len(np.shape(x)) == 1:
+        x = np.expand_dims(x, 1)
+    bw *= np.std(x, axis=0)  # scale bandwidth by standard deviation
+    return lambda z: np.exp(-0.5 * np.sum(((x - z) / bw) ** 2, axis=1))
 
 
 def nw(y, kernel=None, dim=None):
     y_hat = pd.Series(index=dim)
-    for z in dim:
-        k = kernel(z)
+    for i in range(len(dim)):
+        k = kernel(dim[i])
         v = np.sum(y * k) / np.sum(k)
-        y_hat.loc[z] = v
+        y_hat.iloc[i] = v
     return y_hat
 
 
@@ -165,6 +170,41 @@ def norm_norm(offers=None):
         assert (y.index == x.index).all()
         kernel = gaussian_kernel(x)
         y_hat[t] = nw(y, kernel=kernel, dim=dim)
+    return y_hat
+
+
+def get_bounds(df, interval=.05, num=50):
+    assert len(df.columns) == 2
+    dims = []
+    for col in df.columns:
+        s = df[col]
+        lower = np.floor(np.percentile(s, 10) / interval) * interval
+        upper = np.ceil(np.percentile(s, 90) / interval) * interval
+        dim = np.linspace(lower, upper, num)
+        dims.append(dim)
+    return dims
+
+
+def dim_from_df(df):
+    dim1, dim2 = get_bounds(df)
+    X, Y = np.meshgrid(dim1, dim2)
+    dims = [np.reshape(v, -1) for v in [X, Y]]
+    dim = pd.MultiIndex.from_arrays(dims, names=['last_norm', 'log_price'])
+    return dim
+
+
+def accept3d(offers=None, other=None):
+    last_norm = get_last_norm(offers[NORM])
+    df = last_norm.to_frame().join(other)
+
+    y_hat = {}
+    for t in [2, 4, 6]:
+        x = df.xs(t, level='index')
+        y = (offers[CON] == 1).xs(t, level='index')
+        assert (x.index == y.index).all()
+        y_hat[t] = nw(y=y.values,
+                      kernel=gaussian_kernel(x.values),
+                      dim=dim_from_df(x))
     return y_hat
 
 
@@ -251,6 +291,7 @@ def find_best_run(byr=None):
     log_dir = get_log_dir(byr=byr)
     df = unpickle(log_dir + 'runs.pkl')
     run_id = df[NORM].idxmax()
+    print('Best run: {}'.format(run_id))
     return log_dir + '{}/'.format(run_id)
 
 

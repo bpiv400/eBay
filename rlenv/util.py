@@ -11,7 +11,7 @@ from constants import INPUT_DIR
 from featnames import LOOKUP, X_LSTG, P_ARRIVAL
 from constants import PARTS_DIR, DAY, ARRIVAL_MODELS, MAX_DELAY_TURN
 from rlenv.const import (SIM_CHUNKS_DIR, SIM_VALS_DIR, OFFER_MAPS,
-                         SIM_DISCRIM_DIR, DATE_FEATS, NORM_IND)
+                         SIM_DISCRIM_DIR, DATE_FEATS_DF, NORM_IND)
 from utils import extract_clock_feats, is_split, slr_norm, byr_norm
 
 
@@ -42,7 +42,7 @@ def get_clock_feats(time):
     and index 8 is an indicator for whether the time is in the afternoon.
     """
     # holiday and day of week indicators
-    date_feats = DATE_FEATS[time // DAY]
+    date_feats = DATE_FEATS_DF[time // DAY]
 
     # concatenate
     return np.append(date_feats, extract_clock_feats(time)).astype('float32')

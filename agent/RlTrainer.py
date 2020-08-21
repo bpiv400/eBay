@@ -8,11 +8,10 @@ from rlpyt.utils.logging.context import logger_context
 from agent.const import AGENT_STATE, BATCH_SIZE, ENTROPY
 from agent.util import get_paths
 from agent.AgentComposer import AgentComposer
-from agent.AgentModel import AgentModel
-from agent.SplitCategoricalPgAgent import SplitCategoricalPgAgent
+from agent.models.AgentModel import AgentModel, SplitCategoricalPgAgent
 from rlenv.DefaultQueryStrategy import DefaultQueryStrategy
-from rlenv.environments.SellerEnv import SellerEnv
-from rlenv.environments.BuyerEnv import BuyerEnv
+from agent.envs.SellerEnv import SellerEnv
+from agent.envs.BuyerEnv import BuyerEnv
 from rlenv.interfaces.ArrivalInterface import ArrivalInterface
 from rlenv.interfaces.PlayerInterface import SimulatedSeller, SimulatedBuyer
 from rlenv.LstgLoader import TrainLoader

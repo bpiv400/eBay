@@ -86,7 +86,7 @@ class EBayPPO:
         :return tensor return_: time-discounted return.
         """
         dtype = reward.dtype  # cast new tensors to this data type
-        T, N = reward.shape  # time steps, number of environments
+        T, N = reward.shape  # time steps, number of envs
 
         # recast
         done = done.type(torch.int)

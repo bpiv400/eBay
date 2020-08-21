@@ -56,7 +56,9 @@ format *price %9.2f
 sort lstg slr
 export delim using clean/listings.csv, nolab dataf replace
 
-*** seller sentences for word2vec
+*** seller sentences for word2vec (use flagged listings)
+
+use dta/listings, clear
 
 keep slr leaf
 sort slr leaf
@@ -68,10 +70,9 @@ drop count
 
 export delim using clean/leaf_slr.csv, dataf replace
 
-*** buyer sentences for word2vec
+*** buyer sentences for word2vec (use flagged listings)
 
 use dta/threads, clear
-drop if flag
 keep lstg byr
 
 merge m:1 lstg using dta/listings, nogen keep(3) keepus(leaf)

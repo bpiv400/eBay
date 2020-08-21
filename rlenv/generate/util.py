@@ -1,12 +1,11 @@
 import os
 import pandas as pd
 from compress_pickle import dump
-from processing.util import collect_date_clock_feats, \
-    get_days_delay, get_norm
+from processing.util import collect_date_clock_feats, get_days_delay, get_norm
 from utils import is_split, load_file
 from constants import IDX, MONTH
 from featnames import DAYS, DELAY, CON, SPLIT, NORM, REJECT, AUTO, EXP, \
-    CENSORED, CLOCK_FEATS, TIME_FEATS, OUTCOME_FEATS, MONTHS_SINCE_LSTG, \
+    CLOCK_FEATS, TIME_FEATS, OUTCOME_FEATS, MONTHS_SINCE_LSTG, \
     BYR_HIST, START_TIME, LOOKUP, SLR
 
 
@@ -21,8 +20,6 @@ def diff_tf(df):
         diff = wide.diff(axis=1).stack()
         df[c] = pd.concat([first, diff], axis=0).sort_index()
         assert df[c].isna().sum() == 0
-    # censored feats to 0
-    df.loc[df[CENSORED], TIME_FEATS] = 0
     return df
 
 
@@ -47,7 +44,7 @@ def process_sim_offers(df, end_time):
     # reject auto and exp are last
     df[REJECT] = df[CON] == 0
     df[AUTO] = (df[DELAY] == 0) & df.index.isin(IDX[SLR], level='index')
-    df[EXP] = (df[DELAY] == 1) | df[CENSORED]
+    df[EXP] = df[DELAY] == 1
     # select and sort features
     df = df.loc[:, CLOCK_FEATS + TIME_FEATS + OUTCOME_FEATS]
     return df, clock

@@ -5,7 +5,7 @@ from featnames import START_PRICE, BYR_HIST
 from utils import load_sizes, unpickle, get_months_since_lstg
 from rlenv.const import DELAY_EVENT, RL_ARRIVAL_EVENT, CLOCK_MAP
 from rlenv.Sources import RlBuyerSources
-from rlenv.environments.AgentEnv import AgentEnv
+from agent.envs.AgentEnv import AgentEnv
 from rlenv.events.Arrival import RlArrival
 from rlenv.events.Thread import RlThread
 

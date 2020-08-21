@@ -10,7 +10,8 @@ DOW_PREFIX = 'dow'
 TIME_OF_DAY = 'time_of_day'
 AFTERNOON = 'afternoon'
 
-CLOCK_FEATS = [HOLIDAY] + [DOW_PREFIX + str(i) for i in range(6)] + [TIME_OF_DAY, AFTERNOON]
+DATE_FEATS = [HOLIDAY] + [DOW_PREFIX + str(i) for i in range(6)]
+CLOCK_FEATS = DATE_FEATS + [TIME_OF_DAY, AFTERNOON]
 
 # time feats
 SLR_OFFERS = 'slr_offers'
@@ -66,8 +67,12 @@ BYR_HIST = 'byr_hist'
 MONTHS_SINCE_LSTG = 'months_since_lstg'
 MONTHS_SINCE_LAST = 'months_since_last'
 
-# lookup column names
+# index labels
 LSTG = 'lstg'
+THREAD = 'thread'
+INDEX = 'index'
+
+# lookup column names
 META = 'meta'
 LEAF = 'leaf'
 START_DATE = 'start_date'
@@ -84,8 +89,11 @@ MONTHLY_DISCOUNT = 'monthly_discount'
 ACTION_DISCOUNT = 'action_discount'
 ACTION_COST = 'action_cost'
 
-# for chunks
+# partition components
 X_LSTG = 'x_lstg'
+X_OFFER = 'x_offer'
+X_THREAD = 'x_thread'
+CLOCK = 'clock'
 LOOKUP = 'lookup'
 P_ARRIVAL = 'p_arrival'
 

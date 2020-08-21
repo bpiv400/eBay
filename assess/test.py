@@ -1,7 +1,7 @@
 from assess.util import load_data, get_valid_slr, find_best_run, get_lookup
 from constants import TEST
 from featnames import SLR, OBS, SIM, RL, NORM, MSG, DELAY, MONTHS_SINCE_LSTG, \
-    BYR_HIST, CLOCK_FEATS, TIME_FEATS, START_PRICE
+    BYR_HIST, TIME_FEATS, START_PRICE
 
 
 def run_test(data=None, lookup=None):
@@ -22,20 +22,20 @@ def run_test(data=None, lookup=None):
 
     print('\tOffer count: {}'.format((norm3 == 1).sum()))
     print('\tBIN rate: {}'.format((norm3 == 1).mean()))
-    # print('\tAvg months (BIN): {}'.format(
-    #     threads_idx.loc[norm3 == 1, MONTHS_SINCE_LSTG].mean()))
-    # print('\tAvg months (~BIN): {}'.format(
-    #     threads_idx.loc[norm3 < 1, MONTHS_SINCE_LSTG].mean()))
-    # print('\tAvg hist (BIN): {}'.format(
-    #     threads_idx.loc[norm3 == 1, BYR_HIST].mean()))
-    # print('\tAvg hist (~BIN): {}'.format(
-    #     threads_idx.loc[norm3 < 1, BYR_HIST].mean()))
-    # print('\tAvg slr delay: {}'.format(delay2.mean()))
-    # print('\tAvg byr delay: {}'.format(delay3.mean()))
+    print('\tAvg months (BIN): {}'.format(
+        threads_idx.loc[norm3 == 1, MONTHS_SINCE_LSTG].mean()))
+    print('\tAvg months (~BIN): {}'.format(
+        threads_idx.loc[norm3 < 1, MONTHS_SINCE_LSTG].mean()))
+    print('\tAvg hist (BIN): {}'.format(
+        threads_idx.loc[norm3 == 1, BYR_HIST].mean()))
+    print('\tAvg hist (~BIN): {}'.format(
+        threads_idx.loc[norm3 < 1, BYR_HIST].mean()))
+    print('\tAvg slr delay: {}'.format(delay2.mean()))
+    print('\tAvg byr delay: {}'.format(delay3.mean()))
     print('\tAvg list price: {}'.format(
         lookup[START_PRICE].reindex(index=idx, level='lstg').mean()))
 
-    # print(offers.xs(3, level='index').loc[idx, TIME_FEATS].mean())
+    print(offers.xs(3, level='index').loc[idx, TIME_FEATS].mean())
 
 
 def main():
@@ -47,7 +47,6 @@ def main():
     # observed sellers
     data[OBS] = load_data(part=TEST, lstgs=lookup.index, obs=True)
     data[SIM] = load_data(part=TEST, lstgs=lookup.index, sim=True)
-    data['check'] = load_data(part=TEST, lstgs=lookup.index, check=True)
     data[RL] = load_data(part=TEST, lstgs=lookup.index, run_dir=run_dir)
 
     for k, v in data.items():
