@@ -1,9 +1,10 @@
 import numpy as np
 import pandas as pd
+from rlenv.events.Thread import Thread
+from rlenv.const import FIRST_OFFER
 from constants import MONTH
 from featnames import START_TIME, START_PRICE, TIME_FEATS, MSG, CON, \
     LSTG, THREAD, INDEX, BYR_HIST, ACC_PRICE, DEC_PRICE, CLOCK
-from rlenv.const import ARRIVAL, RL_ARRIVAL_EVENT
 
 OFFER_COLS = [LSTG, THREAD, INDEX, CLOCK, CON, MSG] + TIME_FEATS
 THREAD_COLS = [LSTG, THREAD, BYR_HIST, CLOCK]
@@ -84,10 +85,9 @@ class Recorder:
     def print_next_event(event):
         print('NEXT EVENT DRAWING...')
         print_string = 'Type: {} at {}'.format(event.type, event.priority)
-        if event.type not in [ARRIVAL, RL_ARRIVAL_EVENT]:
-            print_string += ' | '
-            print_string += 'Thread: {} | Turn: {}'.format(event.thread_id,
-                                                           event.turn)
+        if isinstance(event, Thread) and event.type != FIRST_OFFER:
+            print_string += ' | Thread: {} | Turn: {}'.format(
+                event.thread_id, event.turn)
         print(print_string)
 
     @staticmethod
@@ -131,8 +131,9 @@ class Recorder:
 
 
 class OutcomeRecorder(Recorder):
-    def __init__(self, verbose=None):
+    def __init__(self, verbose=None, byr_agent=False):
         super().__init__(verbose)
+        self.byr_agent = byr_agent
         self.offers = None
         self.threads = None
         self.reset_recorders()
@@ -142,14 +143,17 @@ class OutcomeRecorder(Recorder):
         self.offers = []
         self.threads = []
 
-    def start_thread(self, thread_id=None, byr_hist=None, time=None):
+    def start_thread(self, thread_id=None, byr_hist=None, time=None, agent=False):
         """
         Records an arrival
         :param thread_id: int giving the thread id
         :param byr_hist: float giving byr history decile
         :param int time: time of the offer
+        :param bool agent: True if agent byr starts thread
         """
         row = [self.lstg, thread_id, byr_hist, time]
+        if self.byr_agent:
+            row += [agent]
         self.threads.append(row)
 
     def add_offer(self, event=None, time_feats=None):
@@ -179,7 +183,10 @@ class OutcomeRecorder(Recorder):
     def construct_output(self):
         # convert both lists to dataframes
         self.offers = self.record2frame(self.offers, OFFER_COLS)
-        self.threads = self.record2frame(self.threads, THREAD_COLS)
+        thread_cols = THREAD_COLS
+        if self.byr_agent:
+            thread_cols += ['byr_agent']
+        self.threads = self.record2frame(self.threads, thread_cols)
 
         # offers dataframe
         self.offers[INDEX] = self.offers[INDEX].astype(np.uint8)

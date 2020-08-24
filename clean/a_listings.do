@@ -46,25 +46,35 @@ replace bin_rev = 1 if decline_price > accept_price
 replace decline_price = start_price if decline_price > start_price
 replace accept_price = start_price if accept_price > start_price
 
-* title occurs only once?
+* keep only unique listings
 
 by title, sort: egen int temp = sum(1)
-g byte unique = temp == 1
+keep if temp == 1
 drop temp title
 
-* listings to keep
+* drop sparse meta categories
 
-keep if unique & !bin_rev
-drop unique bin_rev
+drop if meta == 316 | meta == 6000 | meta == 10542 | meta == 172008
+
+* for word2vec features
+
+savesome lstg slr using dta/w2v_slr, replace
+
+* drop listings with changed bin price
+
+drop if bin_rev
+drop bin_rev
+
+* drop listings with high or low bin prices
 
 g long cents = round(start_price * 100)
 keep if cents <= 1000 * 100 & cents >= 9.95 * 100
 drop cents
 
-drop if meta == 316 | meta == 6000 | meta == 10542 | meta == 172008
+* drop listings that expire before a week
 
-g int days = end_date - start_date + 1
-drop if sale_price == . & days < 31
+g int days = end_date - start_date
+drop if sale_price == . & days < 7
 drop days
 
 * feedback variables

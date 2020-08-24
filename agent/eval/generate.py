@@ -1,7 +1,6 @@
 import argparse
 import torch
 from agent.AgentComposer import AgentComposer
-from agent.values.generate import ValueGenerator
 from agent.models.HeuristicSlr import HeuristicSlr
 from agent.util import get_paths, load_agent_model
 from agent.envs.BuyerEnv import BuyerEnv
@@ -15,8 +14,8 @@ from constants import VALIDATION, TRAIN_RL, TEST
 
 
 class AgentGenerator(Generator):
-    def __init__(self, model=None, verbose=False):
-        super().__init__(verbose=verbose)
+    def __init__(self, model=None, byr_agent=None, verbose=False):
+        super().__init__(verbose=verbose, byr_agent=byr_agent)
         self.model = model
 
     def generate_composer(self):
@@ -73,8 +72,8 @@ def main():
         f=process_chunk_worker,
         func_kwargs=dict(
             part=args.part,
-            gen_class=ValueGenerator if args.values else AgentGenerator,
-            gen_kwargs=dict(model=model)
+            gen_class=AgentGenerator,
+            gen_kwargs=dict(model=model, byr_agent=args.byr)
         )
     )
 

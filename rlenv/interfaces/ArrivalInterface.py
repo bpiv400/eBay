@@ -27,7 +27,7 @@ class ArrivalInterface:
 
     def inter_arrival(self, input_dict=None):
         logits = self.interarrival_model(input_dict).cpu().squeeze()
-        sample = sample_categorical(logits)
+        sample = sample_categorical(logits=logits)
         return sample
 
     @staticmethod

@@ -2,13 +2,14 @@ import argparse
 import math
 import torch
 import numpy as np
+from agent.const import BYR_DROP_IND
 from agent.util import get_agent_name
 from constants import PARTS_DIR, TRAIN_RL
 from featnames import OUTCOME_FEATS, MONTHS_SINCE_LSTG, BYR_HIST, \
     TIME_FEATS, CLOCK_FEATS, THREAD_COUNT, TURN_FEATS, SLR, BYR
 from rlenv.Composer import Composer
-from rlenv.const import LSTG_MAP, CLOCK_MAP, OFFER_MAPS, THREAD_COUNT_IND, \
-    TIME_START_IND, TIME_END_IND, CLOCK_END_IND, CLOCK_START_IND
+from rlenv.const import LSTG_MAP, OFFER_MAPS, THREAD_COUNT_IND, \
+    TIME_START_IND, TIME_END_IND
 from rlenv.util import load_chunk
 from utils import load_sizes, load_featnames
 
@@ -24,7 +25,7 @@ class AgentComposer(Composer):
 
         self.agent_name = get_agent_name(byr=self.byr)
         self.sizes['agent'] = load_sizes(self.agent_name)
-        self.x_lstg_cols = list(cols) if type(cols) != list else cols
+        self.x_lstg_cols = cols if type(cols) is list else list(cols)
 
         # parameters to be set later
         self.turn_inds = None
@@ -56,28 +57,24 @@ class AgentComposer(Composer):
         self._update_turn_inds(turn)
         for set_name in self.agent_sizes['x'].keys():
             if set_name == LSTG_MAP:
-                obs_dict[set_name] = self._build_agent_lstg_vector(sources=sources,
-                                                                   turn=turn)
+                obs_dict[set_name] = self._build_agent_lstg_vector(sources)
             elif set_name[:-1] == 'offer':
-                obs_dict[set_name] = self._build_agent_offer_vector(offer_vector=sources[set_name])
+                obs_dict[set_name] = self._build_agent_offer_vector(sources[set_name])
             else:
                 obs_dict[set_name] = torch.from_numpy(sources[set_name]).float()
         return obs_dict
 
-    def _build_agent_lstg_vector(self, sources=None, turn=None):
+    def _build_agent_lstg_vector(self, sources=None):
         feats = []
         solo_feats = [sources[MONTHS_SINCE_LSTG], sources[BYR_HIST]]
 
-        # set base, add clock features if buyer and thread count if slr
+        # set base, add thread count if slr
         if self.byr:
-            feats.append(sources[LSTG_MAP][:4])
-            feats.append(sources[LSTG_MAP][6:-4])
-            if turn == 1:
-                feats.append(sources[CLOCK_MAP][:-2])
-            else:
-                clock_feats = sources[OFFER_MAPS[turn - 1]]
-                feats.append(clock_feats[CLOCK_START_IND:
-                                         (CLOCK_END_IND - 2)])
+            byr_subset = []
+            for i in range(len(sources[LSTG_MAP])):
+                if i not in BYR_DROP_IND:
+                    byr_subset.append(sources[LSTG_MAP][i])
+            feats.append(byr_subset)
         else:
             feats.append(sources[LSTG_MAP])
             solo_feats.append(sources[OFFER_MAPS[1]][THREAD_COUNT_IND] + 1)
@@ -88,15 +85,14 @@ class AgentComposer(Composer):
         feats.append(self.turn_inds)
 
         # concatenate all features into lstg vector and convert to tensor
-        lstg = np.concatenate(feats)
-        lstg = lstg.astype(np.float32)
+        lstg = np.concatenate(feats).astype(np.float32)
         lstg = torch.from_numpy(lstg).squeeze().float()
         return lstg
 
     def _build_agent_offer_vector(self, offer_vector=None):
         if not self.byr:
             full_vector = offer_vector
-        else:
+        else:  # remove time feats
             full_vector = np.concatenate([offer_vector[:TIME_START_IND],
                                           offer_vector[TIME_END_IND:]])
         full_vector = torch.from_numpy(full_vector).squeeze().float()
@@ -132,25 +128,17 @@ class AgentComposer(Composer):
         self.verify_agent_offer(offer_feats=offer_feats)
 
     def verify_lstg_append(self, lstg_append=None):
-        start_index = 0
-        # ensure the first appended buyer features are day-wise clock feats
-        if self.byr:
-            thread_clock_feats = ['thread_{}'.format(feat) for feat in CLOCK_FEATS]
-            thread_clock_feats = thread_clock_feats[:-2]
-            AgentComposer.verify_sequence(lstg_append, thread_clock_feats, 0)
-            start_index += len(CLOCK_FEATS[:-2])
-
         # in all cases check that months_since_lstg and byr_hist are next
-        assert lstg_append[start_index] == MONTHS_SINCE_LSTG
-        assert lstg_append[start_index + 1] == BYR_HIST
+        assert lstg_append[0] == MONTHS_SINCE_LSTG
+        assert lstg_append[1] == BYR_HIST
 
         # for the seller, check that next feature is thread count
         if not self.byr:
-            assert lstg_append[start_index + 2] == THREAD_COUNT
-            start_index += 3
+            assert lstg_append[2] == THREAD_COUNT
+            start_index = 3
             agent_role = SLR
         else:
-            start_index += 2
+            start_index = 2
             agent_role = BYR
 
         # ensure turn indicators are next in all cases

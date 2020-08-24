@@ -4,9 +4,9 @@ from rlpyt.envs.base import Env
 from rlpyt.spaces.composite import Composite
 from rlpyt.spaces.float_box import FloatBox
 from rlenv.EBayEnv import EBayEnv
-from rlenv.events.Thread import RlThread
 from agent.ConSpace import ConSpace
 from constants import INTERVAL_TURN, INTERVAL_CT_TURN, MONTH, CON_MULTIPLIER
+from featnames import BYR_HIST
 
 
 class AgentEnv(EBayEnv, Env):
@@ -33,7 +33,7 @@ class AgentEnv(EBayEnv, Env):
         """
         Constructs observation and calls child environment to get reward
         and info, then sets self.last_event to current event.
-        :param RlThread event: either agent's turn or trajectory is complete.
+        :param Thread event: either agent's turn or trajectory is complete.
         :param bool done: True if trajectory complete.
         :return: tuple
         """
@@ -43,7 +43,16 @@ class AgentEnv(EBayEnv, Env):
         return obs, reward, done, info
 
     def get_obs(self, event=None, done=None):
-        raise NotImplementedError()
+        if event.sources() is None or event.turn is None:
+            raise RuntimeError("Missing arguments to get observation")
+        if BYR_HIST in event.sources():
+            obs_dict = self.composer.build_input_dict(model_name=None,
+                                                      sources=event.sources(),
+                                                      turn=event.turn)
+        else:  # incomplete sources; triggers warning in AgentModel
+            assert done
+            obs_dict = self.empty_obs_dict
+        return self._obs_class(**obs_dict)
 
     def get_reward(self):
         raise NotImplementedError()

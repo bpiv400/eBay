@@ -8,12 +8,14 @@ from rlenv.util import get_env_sim_dir, load_chunk
 
 
 class Generator:
-    def __init__(self, verbose=False):
+    def __init__(self, verbose=False, byr_agent=False):
         """
         Constructor
         :param bool verbose: if True, print info about simulator activity
+        :param bool byr_agent: if True, flags agent buyer thread id in recorder
         """
         self.verbose = verbose
+        self.byr_agent = byr_agent
         self.initialized = False
 
         # model interfaces and input composer
@@ -37,7 +39,8 @@ class Generator:
         self.initialized = True
 
     def generate_recorder(self):
-        return OutcomeRecorder(verbose=self.verbose)
+        return OutcomeRecorder(verbose=self.verbose,
+                               byr_agent=self.byr_agent)
 
     def generate_composer(self):
         raise NotImplementedError()

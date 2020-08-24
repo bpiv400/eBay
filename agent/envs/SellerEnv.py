@@ -1,11 +1,10 @@
 from rlpyt.utils.collections import namedarraytuple
 from rlenv.const import DELAY_EVENT, OFFER_EVENT
 from agent.envs.AgentEnv import AgentEnv
-from rlenv.events.Thread import RlThread
 from rlenv.util import get_con_outcomes
 from utils import load_sizes
 from constants import POLICY_SLR
-from featnames import BYR_HIST, START_PRICE
+from featnames import START_PRICE
 
 SellerInfo = namedarraytuple("SellerInfo",
                              ["months",
@@ -45,12 +44,10 @@ class SellerEnv(AgentEnv):
                     return self.get_obs(event=event, done=False)
 
             # if the lstg is complete
-            elif next_lstg:
-                # conditional prevents queuing up next lstg in EvalGenerator
-                self.next_lstg()  # queue up next lstg in training
-                super().reset()
+            elif next_lstg:  # queue up next lstg in training
+                self.init_reset(next_lstg=True)
             else:
-                return None  # for TestGenerator
+                return None  # for EvalGenerator
 
     def step(self, action):
         """
@@ -59,18 +56,22 @@ class SellerEnv(AgentEnv):
         :return: tuple described in rlenv
         """
         con = self.turn_from_action(action)
-
         if self.verbose:
             print('AGENT TURN: con: {}'.format(con))
 
-        con_outcomes = get_con_outcomes(con=con,
-                                        sources=self.last_event.sources(),
-                                        turn=self.last_event.turn)
-        offer = self.last_event.update_con_outcomes(con_outcomes=con_outcomes)
-        lstg_complete = self.process_post_offer(self.last_event, offer)
-        if lstg_complete:
-            return self.agent_tuple(event=self.last_event, done=lstg_complete)
+        # copy event
+        thread = self.last_event
         self.last_event = None
+
+        # execute offer
+        self.num_offers += 1
+        con_outcomes = get_con_outcomes(con=con,
+                                        sources=thread.sources(),
+                                        turn=thread.turn)
+        offer = thread.update_con_outcomes(con_outcomes)
+        lstg_complete = self.process_post_offer(thread, offer)
+        if lstg_complete:
+            return self.agent_tuple(event=thread, done=lstg_complete)
         return self.run()
 
     def run(self):  # until EbayEnvironment.run() stops at agent turn
@@ -90,25 +91,6 @@ class SellerEnv(AgentEnv):
         self.queue.push(event)
         if self.verbose:
             print('AGENT TURN: delay (sec) : {}'.format(delay_seconds))
-
-    def make_thread(self, priority):
-        return RlThread(priority=priority,
-                        rl_buyer=False,
-                        thread_id=self.thread_counter)
-
-    def get_obs(self, event=None, done=None):
-        if not done:
-            self.num_offers += 1
-        if event.sources() is None or event.turn is None:
-            raise RuntimeError("Missing arguments to get observation")
-        if BYR_HIST in event.sources():
-            obs_dict = self.composer.build_input_dict(model_name=None,
-                                                      sources=event.sources(),
-                                                      turn=event.turn)
-        else:  # incomplete sources; triggers warning in AgentModel
-            assert done
-            obs_dict = self.empty_obs_dict
-        return self._obs_class(**obs_dict)
 
     def get_info(self, event=None):
         return SellerInfo(months=self._get_months(event.priority),

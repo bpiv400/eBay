@@ -38,7 +38,8 @@ class Composer:
         """
         x_lstg_cols = list(x_lstg_cols)
         featnames = load_featnames(FIRST_ARRIVAL_MODEL)
-        featnames[LSTG_MAP] = [feat for feat in featnames[LSTG_MAP] if feat in x_lstg_cols]
+        for c in featnames[LSTG_MAP]:
+            assert c in x_lstg_cols
         featnames[SLR] = load_featnames(model_str(CON, turn=2))[SLR]
         for model in MODELS:
             # verify all x_lstg based sets contain the same features in the same order

@@ -82,7 +82,7 @@ class EBayEnv:
         x_lstg, lookup, p_arrival = self.loader.next_lstg()
         self.x_lstg = self.composer.decompose_x_lstg(x_lstg)
         self.lookup = lookup
-        self.start_time = self.lookup[START_TIME]
+        self.start_time = int(self.lookup[START_TIME])
         self.last_arrival_time = self.start_time
         self.end_time = self.start_time + MONTH
         self.relist_count = 0
@@ -125,7 +125,7 @@ class EBayEnv:
         else:
             raise NotImplementedError()
 
-    def record(self, event, byr_hist=None):
+    def record(self, event, byr_hist=None, agent=False):
         if self.recorder is None:
             if self.verbose and byr_hist is None:
                 Recorder.print_offer(event)
@@ -137,7 +137,8 @@ class EBayEnv:
             else:
                 self.recorder.start_thread(thread_id=event.thread_id,
                                            byr_hist=byr_hist,
-                                           time=event.priority)
+                                           time=event.priority,
+                                           agent=agent)
 
     def process_offer(self, event):
         # check whether the lstg expired, censoring this offer
@@ -203,6 +204,10 @@ class EBayEnv:
         Processes the buyer's first offer in a thread
         :return:
         """
+        # assign thread id
+        event.set_id(self.thread_counter)
+        self.thread_counter += 1
+
         # prepare sources and features
         sources = ThreadSources(x_lstg=self.x_lstg)
         months_since_lstg = get_months_since_lstg(lstg_start=self.start_time,
@@ -222,6 +227,7 @@ class EBayEnv:
         # print
         if self.verbose:
             print('Thread {} initiated | Buyer hist: {}'.format(event.thread_id, hist))
+
         # update features with history
         event.init_thread(sources=sources, hist=hist)
         self.record(event, byr_hist=hist)
@@ -261,7 +267,6 @@ class EBayEnv:
         if event.priority < self.end_time:
             self.last_arrival_time = check_in_time
             self.queue.push(self.make_thread(event.priority))
-            self.thread_counter += 1
         self.queue.push(event)
         return False
 
@@ -289,8 +294,10 @@ class EBayEnv:
     def process_delay(self, event):
         # no need to check expiration since this must occur at the same time as the previous offer
         input_dict = self.get_delay_input_dict(event)
-        delay_seconds = self.get_delay(input_dict=input_dict, turn=event.turn,
-                                       thread_id=event.thread_id, time=event.priority)
+        delay_seconds = self.get_delay(input_dict=input_dict,
+                                       turn=event.turn,
+                                       thread_id=event.thread_id,
+                                       time=event.priority)
         # Test environment returns None when delay model is mistakenly called
         if delay_seconds is None:
             # print("No delay returned; exiting listing.")s
@@ -324,7 +331,7 @@ class EBayEnv:
             self.queue.pop()
 
     def make_thread(self, priority):
-        return Thread(priority=priority, thread_id=self.thread_counter)
+        return Thread(priority=priority)
 
     def _check_slr_autos(self, norm):
         """ """

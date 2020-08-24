@@ -1,8 +1,8 @@
 from rlenv.events.Event import Event
-from rlenv.const import ARRIVAL, RL_ARRIVAL_EVENT
+from rlenv.const import ARRIVAL
 from rlenv.util import get_clock_feats
 from utils import get_months_since_lstg
-from constants import MONTH, DAY
+from constants import MONTH
 
 
 class Arrival(Event):
@@ -39,15 +39,3 @@ class Arrival(Event):
             update_args['months_since_last'] = months_since_last
 
         self.sources.update_arrival(**update_args)
-
-
-class RlArrival(Arrival):
-    def __init__(self, priority=None, sources=None):
-        super().__init__(priority=priority,
-                         sources=sources,
-                         event_type=RL_ARRIVAL_EVENT)
-        self.update_arrival()  # updates sources from priority
-
-    def delay(self):
-        self.priority += DAY
-        self.update_arrival()

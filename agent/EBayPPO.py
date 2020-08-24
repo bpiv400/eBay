@@ -98,7 +98,6 @@ class EBayPPO:
         net_value = torch.zeros(N, dtype=dtype)
 
         for t in reversed(range(T)):
-            # value less price paid
             net_value = net_value * (1 - done[t]) + reward[t] * done[t]
             return_[t] += net_value
 

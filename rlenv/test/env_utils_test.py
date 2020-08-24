@@ -1,3 +1,4 @@
+import torch
 from rlenv.util import *
 import rlenv.const as model_names
 from constants import ENV_SIM_DIR
@@ -19,7 +20,7 @@ def test_proper_squeeze():
 
 def test_categorical_sample():
     params = torch.ones(1, 5).float()
-    samp = sample_categorical(params, 1)
+    samp = sample_categorical(logits=params)
     assert len(samp.shape) == 1
     params = torch.ones(1, 3).float()
     outcomes = dict()

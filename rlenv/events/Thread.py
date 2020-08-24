@@ -6,9 +6,8 @@ from rlenv.Sources import ThreadSources
 from rlenv.events.Event import Event
 from rlenv.const import FIRST_OFFER, DELAY_EVENT, OFFER_EVENT
 from featnames import SLR, BYR
-from rlenv.util import (slr_rej_outcomes, slr_auto_acc_outcomes,
-                        get_delay_outcomes, get_clock_feats,
-                        get_con_outcomes)
+from rlenv.util import slr_rej_outcomes, slr_auto_acc_outcomes, \
+    get_delay_outcomes, get_clock_feats
 from rlenv.time.Offer import Offer
 from utils import get_remaining
 
@@ -17,9 +16,15 @@ class Thread(Event):
     """
     Attributes:
     """
-    def __init__(self, priority=None, thread_id=None):
+    def __init__(self, priority=None, agent=False):
         super().__init__(event_type=FIRST_OFFER, priority=priority)
-        self.sources = None  # to be initialized later
+        self.agent = agent
+
+        # to be initialized later
+        self.sources = None
+        self.thread_id = None
+
+    def set_id(self, thread_id=None):
         self.thread_id = thread_id
 
     def init_thread(self, sources=None, hist=None):
@@ -33,6 +38,7 @@ class Thread(Event):
             return self.sources.is_expire(self.turn)
 
     def update_con_outcomes(self, con_outcomes=None):
+        assert self.thread_id is not None
         norm = self.sources.update_con_outcomes(con_outcomes=con_outcomes,
                                                 turn=self.turn)
         offer_params = {
@@ -127,80 +133,3 @@ class Thread(Event):
 
     def byr_expire(self):
         self.sources.byr_expire(turn=self.turn)
-
-
-class RlThread(Thread):
-    def __init__(self, priority=None, sources=None, con=None,
-                 thread_id=None, rl_buyer=False):
-        super().__init__(priority=priority, thread_id=thread_id)
-        self.rl_buyer = rl_buyer
-        self.sources = sources
-        self.stored_concession = con
-        if self.rl_buyer:
-            self.type = OFFER_EVENT
-
-    def set_thread_id(self, thread_id=None):
-        self.thread_id = thread_id
-
-    def prep_rl_offer(self, con=None, priority=None):
-        """
-        Updates sources with the delay outcomes associated with an upcoming
-        RL offer. Called at the moment the agent chooses the delay/con
-        :param con: concession associated with incoming offer
-        :param priority: time that the offer will take place
-        """
-        assert self.turn != 1
-        self.type = OFFER_EVENT
-        self.stored_concession = con
-        delay_outcomes = get_delay_outcomes(seconds=priority-self.priority,
-                                            turn=self.turn)
-        self.sources.update_delay(delay_outcomes=delay_outcomes,
-                                  turn=self.turn)
-        self.priority = priority
-
-    def init_rl_offer(self, time_feats=None, months_since_lstg=None):
-        """
-        Updates sources with the time and clock features of the moment
-        the RL makes its offer. If this is the first turn, it also
-        updates months_since_lstg to the value of the current time
-        :param time_feats: raw current time features
-        :param months_since_lstg: float giving months_since_lstg
-        """
-        clock_feats = get_clock_feats(self.priority)
-        if self.turn == 1:
-            self.sources.prepare_hist(time_feats=time_feats,
-                                      months_since_lstg=months_since_lstg,
-                                      clock_feats=clock_feats)
-        else:
-            self.sources.init_offer(time_feats=time_feats,
-                                    clock_feats=clock_feats,
-                                    turn=self.turn)
-
-    def execute_offer(self):
-        """
-        After the prescribed delay has elapsed, executes the agent's selected
-        concession by updating the relevant sources
-
-        Errors if encountering slr expiration rejection or buyer rejection
-        because these should have already been processed
-
-        slr expiration rejection encoded as con > 1
-        :return Offer representing the executed turn
-        """
-        # process slr rejection
-        if self.stored_concession == 0:
-            if self.turn % 2 == 0:
-                return self.slr_rej()
-            else:
-                raise RuntimeError("Buyer rejections should have"
-                                   " already executed")
-        elif self.stored_concession > 1:
-            raise RuntimeError("Slr expiration rejections should have"
-                               "already been executed")
-        # process ordinary concession or acceptance
-        else:
-            con_outcomes = get_con_outcomes(con=self.stored_concession,
-                                            sources=self.sources(),
-                                            turn=self.turn)
-            self.stored_concession = None
-            return self.update_con_outcomes(con_outcomes=con_outcomes)

@@ -35,12 +35,12 @@ def main():
     args = parser.parse_args()
 
     # environment class and run directory
-    _, _, run_dir = get_paths(byr=args.byr, name=args.name)
+    _, _, run_dir = get_paths(byr=False, name=args.name)
 
     # recreate model
     nocon = 'nocon' in args.name
     model = load_agent_model(
-        model_args=dict(byr=args.byr, nocon=nocon),
+        model_args=dict(byr=False, nocon=nocon),
         run_dir=run_dir
     )
 
@@ -49,7 +49,7 @@ def main():
         f=process_chunk_worker,
         func_kwargs=dict(
             part=args.part,
-            gen_class=ValueGenerator if args.values else AgentGenerator,
+            gen_class=ValueGenerator,
             gen_kwargs=dict(model=model)
         )
     )

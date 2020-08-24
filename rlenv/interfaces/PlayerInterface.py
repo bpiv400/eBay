@@ -93,7 +93,7 @@ class SimulatedPlayer(PlayerInterface):
         return sample_bernoulli(params)
 
     def sample_delay(self, params=None, turn=None):
-        delay = sample_categorical(params)
+        delay = sample_categorical(logits=params)
         return delay
 
     def sample_con(self, params=None, turn=None):
@@ -144,5 +144,5 @@ class SimulatedSeller(SimulatedPlayer):
         self.load_models()
 
     def sample_con(self, params=None, turn=None):
-        con = (sample_categorical(params) / 100)
+        con = (sample_categorical(logits=params) / 100)
         return con
