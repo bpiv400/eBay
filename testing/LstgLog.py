@@ -1,5 +1,5 @@
-from featnames import START_TIME, MONTHS_SINCE_LSTG, BYR_HIST, CON, AUTO
-from constants import (MONTH, DAY, BYR_HIST_MODEL,
+from featnames import START_TIME, WEEKS_SINCE_LSTG, BYR_HIST, CON, AUTO
+from constants import (WEEK, DAY, BYR_HIST_MODEL,
                        INTERARRIVAL_MODEL, OFFER_MODELS)
 from testing.AgentLog import AgentLog
 from testing.ActionLog import ActionLog
@@ -74,7 +74,7 @@ class LstgLog:
                                                     value=action_index,
                                                     agent=True,
                                                     agent_byr=True)
-            time = (i * DAY) / MONTH
+            time = (i * DAY) / WEEK
             log = ActionLog(input_dict=input_dict, months=time, con=0,
                             thread_id=self.agent_thread, turn=1)
             agent_log.push_action(action=log)
@@ -83,7 +83,7 @@ class LstgLog:
     def record_buyer_first_turn(self, full_inputs=None, agent_log=None,
                                 days=None, agent_turns=None):
         con = agent_turns[1].agent_con()
-        time = (days * DAY) / MONTH
+        time = (days * DAY) / WEEK
         first_turn_index = (self.agent_thread, 1, days)
         input_dict = populate_test_model_inputs(full_inputs=full_inputs, value=first_turn_index,
                                                 agent=True, agent_byr=self.byr)
@@ -97,7 +97,7 @@ class LstgLog:
     def record_agent_thread(self, turns=None, agent_log=None, thread_id=None, full_inputs=None):
         for turn_number, turn_log in turns.items():
             time = turn_log.agent_time()
-            months = (time - self.lookup[START_TIME]) / MONTH
+            months = (time - self.lookup[START_TIME]) / WEEK
             if self.byr:
                 index = (thread_id, turn_number, 0)
             else:
@@ -146,8 +146,8 @@ class LstgLog:
         if (self.agent_thread + 1) in self.arrivals:
             target_time = self.arrivals[self.agent_thread + 1].time
         else:
-            target_time = self.lookup[START_TIME] + MONTH
-        target_censored = target_time == (self.lookup[START_TIME] + MONTH)
+            target_time = self.lookup[START_TIME] + WEEK
+        target_censored = target_time == (self.lookup[START_TIME] + WEEK)
         self.arrivals[self.agent_thread].time = target_time
         self.arrivals[self.agent_thread].censored = target_censored
 
@@ -199,7 +199,7 @@ class LstgLog:
         arrival_inputs = self.get_arrival_inputs(params=params,
                                                  thread_id=thread_id)
         check_time = self.arrival_check_time(params=params, thread_id=thread_id)
-        time = self.lookup[START_TIME] + MONTH
+        time = self.lookup[START_TIME] + WEEK
         return ArrivalLog(check_time=check_time, arrival_inputs=arrival_inputs, time=time,
                           first_arrival=thread_id == 1)
 
@@ -207,7 +207,7 @@ class LstgLog:
         if thread_id == 1:
             check_time = self.lookup[START_TIME]
         else:
-            check_time = int(params['x_thread'].loc[thread_id - 1, MONTHS_SINCE_LSTG] * MONTH)
+            check_time = int(params['x_thread'].loc[thread_id - 1, WEEKS_SINCE_LSTG] * WEEK)
             check_time += self.lookup[START_TIME]
         return check_time
 
@@ -216,7 +216,7 @@ class LstgLog:
                                                  thread_id=thread_id)
         check_time = self.arrival_check_time(params=params, thread_id=thread_id)
         # print(params['x_thread'].columns)
-        time = int(params['x_thread'].loc[thread_id, MONTHS_SINCE_LSTG] * MONTH)
+        time = int(params['x_thread'].loc[thread_id, WEEKS_SINCE_LSTG] * WEEK)
         time += self.lookup[START_TIME]
         hist = params['x_thread'].loc[thread_id, BYR_HIST]
 
@@ -281,8 +281,8 @@ class LstgLog:
         """
         true_id = self.translate_thread(thread_id=thread_id)
         delay = self.threads[true_id].get_delay(turn=turn, time=time, input_dict=input_dict)
-        if delay == MONTH:
-            return self.lookup[START_TIME] + MONTH - time
+        if delay == WEEK:
+            return self.lookup[START_TIME] + WEEK - time
         else:
             return delay
 

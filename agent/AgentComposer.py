@@ -5,7 +5,7 @@ import numpy as np
 from agent.const import BYR_DROP_IND
 from agent.util import get_agent_name
 from constants import PARTS_DIR, TRAIN_RL
-from featnames import OUTCOME_FEATS, MONTHS_SINCE_LSTG, BYR_HIST, \
+from featnames import OUTCOME_FEATS, WEEKS_SINCE_LSTG, BYR_HIST, \
     TIME_FEATS, CLOCK_FEATS, THREAD_COUNT, TURN_FEATS, SLR, BYR
 from rlenv.Composer import Composer
 from rlenv.const import LSTG_MAP, OFFER_MAPS, THREAD_COUNT_IND, \
@@ -66,7 +66,7 @@ class AgentComposer(Composer):
 
     def _build_agent_lstg_vector(self, sources=None):
         feats = []
-        solo_feats = [sources[MONTHS_SINCE_LSTG], sources[BYR_HIST]]
+        solo_feats = [sources[WEEKS_SINCE_LSTG], sources[BYR_HIST]]
 
         # set base, add thread count if slr
         if self.byr:
@@ -129,7 +129,7 @@ class AgentComposer(Composer):
 
     def verify_lstg_append(self, lstg_append=None):
         # in all cases check that months_since_lstg and byr_hist are next
-        assert lstg_append[0] == MONTHS_SINCE_LSTG
+        assert lstg_append[0] == WEEKS_SINCE_LSTG
         assert lstg_append[1] == BYR_HIST
 
         # for the seller, check that next feature is thread count

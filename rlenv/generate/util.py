@@ -3,9 +3,9 @@ import pandas as pd
 from compress_pickle import dump
 from processing.util import collect_date_clock_feats, get_days_delay, get_norm
 from utils import is_split, load_file
-from constants import IDX, MONTH
+from constants import IDX, WEEK
 from featnames import DAYS, DELAY, CON, SPLIT, NORM, REJECT, AUTO, EXP, \
-    CLOCK_FEATS, TIME_FEATS, OUTCOME_FEATS, MONTHS_SINCE_LSTG, \
+    CLOCK_FEATS, TIME_FEATS, OUTCOME_FEATS, WEEKS_SINCE_LSTG, \
     BYR_HIST, START_TIME, LOOKUP, SLR
 
 
@@ -53,10 +53,10 @@ def process_sim_offers(df, end_time):
 def process_sim_threads(df, start_time):
     # convert clock to months_since_lstg
     df = df.join(start_time)
-    df[MONTHS_SINCE_LSTG] = (df.clock - df.start_time) / MONTH
+    df[WEEKS_SINCE_LSTG] = (df.clock - df.start_time) / WEEK
     df = df.drop(['clock', 'start_time'], axis=1)
     # reorder columns to match observed
-    df = df.loc[:, [MONTHS_SINCE_LSTG, BYR_HIST]]
+    df = df.loc[:, [WEEKS_SINCE_LSTG, BYR_HIST]]
     return df
 
 
@@ -71,7 +71,7 @@ def clean_components(threads, offers, lstg_start):
     sale_time = offers.loc[offers[CON] == 100, 'clock'].reset_index(
         level=['thread', 'index'], drop=True)
     lstg_end = sale_time.reindex(index=idx, fill_value=-1)
-    lstg_end.loc[lstg_end == -1] += lstg_start + MONTH
+    lstg_end.loc[lstg_end == -1] += lstg_start + WEEK
 
     # conform to observed inputs
     d['x_thread'] = process_sim_threads(threads, lstg_start)

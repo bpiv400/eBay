@@ -1,6 +1,5 @@
 import numpy as np
 import pandas as pd
-from compress_pickle import load
 from utils import extract_clock_feats, byr_norm, slr_norm, unpickle
 from constants import FEATS_DIR, PARTS_DIR, PCTILE_DIR, START, IDX, DAY, HOLIDAYS, MAX_DELAY_TURN
 from featnames import HOLIDAY, DOW_PREFIX, TIME_OF_DAY, AFTERNOON, \
@@ -134,7 +133,7 @@ def get_lstgs(part):
     :param str part: name of partition
     :return: list of partition-specific listings ids
     """
-    return load(PARTS_DIR + 'partitions.pkl')[part]
+    return unpickle(PARTS_DIR + 'partitions.pkl')[part]
 
 
 def load_feats(name, lstgs=None, fill_zero=False):
@@ -145,7 +144,7 @@ def load_feats(name, lstgs=None, fill_zero=False):
     :param bool fill_zero: fill missings with 0's if True
     :return: dataframe of features
     """
-    df = load(FEATS_DIR + '{}.gz'.format(name))
+    df = unpickle(FEATS_DIR + '{}.pkl'.format(name))
     if lstgs is None:
         return df
     kwargs = {'index': lstgs}
@@ -154,3 +153,13 @@ def load_feats(name, lstgs=None, fill_zero=False):
     if fill_zero:
         kwargs['fill_value'] = 0.
     return df.reindex(**kwargs)
+
+
+def get_pctiles(s=None):
+    """
+    Converts values into percentiles.
+    :param pandas.Series s: values to calculate percentiles from
+    :return: pandas.Series with index of unique values and percentiles as values
+    """
+    return (s.groupby(s).count() / len(s)).cumsum().shift(
+        fill_value=0.).rename('pctile')

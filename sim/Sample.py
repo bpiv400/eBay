@@ -67,6 +67,6 @@ def get_batches(data, is_training=False):
     batches = DataLoader(data,
                          collate_fn=collate,
                          batch_sampler=Sample(data, is_training),
-                         num_workers=len(psutil.Process().cpu_affinity()),
+                         num_workers=psutil.cpu_count(),
                          pin_memory=True)
     return batches

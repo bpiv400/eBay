@@ -47,12 +47,12 @@ by lstg thread: egen byte temp2 = min(temp)
 drop if index > temp2
 drop check temp*
 
-* delete activity after 31 days
+* delete activity after a week
 
 merge m:1 lstg using dta/listings, nogen keep(3) keepus(*_date)
 format clock %tc
 
-replace end_date = start_date + 30 if end_date > start_date + 30
+replace end_date = start_date + 7 if end_date > start_date + 7
 g double new_end_time = clock(string(end_date, "%td") + " 23:59:59", "DMYhms")
 replace end_time = new_end_time if end_time > new_end_time
 drop new_end_time *_date

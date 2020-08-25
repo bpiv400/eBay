@@ -7,7 +7,7 @@ from constants import POLICY_SLR
 from featnames import START_PRICE
 
 SellerInfo = namedarraytuple("SellerInfo",
-                             ["months",
+                             ["days",
                               "max_return",
                               "num_offers"])
 SellerObs = namedarraytuple("SellerObs",
@@ -93,7 +93,7 @@ class SellerEnv(AgentEnv):
             print('AGENT TURN: delay (sec) : {}'.format(delay_seconds))
 
     def get_info(self, event=None):
-        return SellerInfo(months=self._get_months(event.priority),
+        return SellerInfo(days=self._get_days(event.priority),
                           max_return=self.lookup[START_PRICE],
                           num_offers=self.num_offers)
 

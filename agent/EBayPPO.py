@@ -19,7 +19,7 @@ OptInfo = namedtuple("OptInfo",
                      ["ActionsPerTraj",
                       "DelaysPerTraj",
                       "OffersPerTraj",
-                      "MonthsToDone",
+                      "DaysToDone",
                       "Rate_Con",
                       "Rate_Acc",
                       "Rate_Rej",
@@ -143,7 +143,7 @@ class EBayPPO:
         if self.byr:
             opt_info.DelaysPerTraj.append(info.num_delays[done].numpy())
         opt_info.OffersPerTraj.append(info.num_offers[done].numpy())
-        opt_info.MonthsToDone.append(info.months[done].numpy())
+        opt_info.DaysToDone.append(info.days[done].numpy())
 
         con = samples.agent.action[valid].numpy()
         opt_info.Rate_Con.append(((0 < con) & (con < 100)).mean())

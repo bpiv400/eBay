@@ -1,8 +1,7 @@
-from compress_pickle import dump
 import pandas as pd
 from processing.util import collect_date_clock_feats, \
     get_days_delay, get_norm, get_con, get_lstgs, load_feats
-from utils import is_split, input_partition
+from utils import topickle, is_split, input_partition
 from constants import PARTS_DIR, IDX
 from featnames import DAYS, DELAY, CON, NORM, SPLIT, MSG, REJECT, \
     AUTO, EXP, TIME_FEATS, START_PRICE, SLR
@@ -59,8 +58,8 @@ def main():
     print('{}/x_offer'.format(part))
 
     x_offer, clock = create_x_offer(lstgs=get_lstgs(part))
-    dump(x_offer, PARTS_DIR + '{}/x_offer.gz'.format(part))
-    dump(clock, PARTS_DIR + '{}/clock.gz'.format(part))
+    topickle(x_offer, PARTS_DIR + '{}/x_offer.pkl'.format(part))
+    topickle(clock, PARTS_DIR + '{}/clock.pkl'.format(part))
 
 
 if __name__ == "__main__":

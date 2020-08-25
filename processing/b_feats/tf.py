@@ -1,9 +1,8 @@
 import numpy as np
 import pandas as pd
 from datetime import datetime as dt
-from compress_pickle import dump, load
 from processing.b_feats.util import collapse_dict
-from utils import run_func_on_chunks
+from utils import unpickle, topickle, run_func_on_chunks
 from constants import START, IDX, FEATS_DIR
 from featnames import SLR, BYR
 
@@ -372,7 +371,7 @@ def add_deltas_index(deltas, events):
 
 def create_tf(chunk=None):
     start = dt.now()
-    events = load(FEATS_DIR + 'chunks/{}.gz'.format(chunk))['offers']
+    events = unpickle(FEATS_DIR + 'chunks/{}.pkl'.format(chunk))['offers']
     print('{} offers'.format(len(events)))
     events[BYR] = events.index.isin(IDX[BYR], level='index')
     tf_lstg_focal = get_lstg_time_feats(events, full=False)
@@ -385,7 +384,7 @@ def create_tf(chunk=None):
 def main():
     res = run_func_on_chunks(f=create_tf, func_kwargs=dict())
     df = pd.concat(res).sort_index()
-    dump(df, FEATS_DIR + 'tf.gz')
+    topickle(df, FEATS_DIR + 'tf.pkl')
 
 
 if __name__ == "__main__":

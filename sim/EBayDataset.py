@@ -1,8 +1,8 @@
 import numpy as np
 from torch.utils.data import Dataset
 from compress_pickle import load
-from utils import load_file, load_featnames
-from constants import INPUT_DIR, BYR_DROP, POLICY_BYR
+from utils import load_file
+from constants import INPUT_DIR
 from featnames import X_LSTG
 
 
@@ -18,28 +18,15 @@ class EBayDataset(Dataset):
         self.name = name
 
         # listing features
-        self.x_lstg = self._get_x_lstg()
+        self.x_lstg = load_file(self.part, X_LSTG)
 
         # dictionary of inputs
-        self.d = load(INPUT_DIR + '{}/{}.gz'.format(part, name))
+        self.d = load(INPUT_DIR + '{}/{}.pkl'.format(part, name))
         if 'x' in self.d:
             self.offer_keys = [k for k in self.d['x'].keys() if 'offer' in k]
 
         # number of labels
         self.N = len(self.d['y'])
-
-    def _get_x_lstg(self):
-        x_lstg = load_file(self.part, X_LSTG)
-
-        if self.name == POLICY_BYR:
-            del x_lstg['slr']  # byr does not observe slr features
-
-            # remove auto accept/reject and experience features
-            lstg_feats = load_featnames(X_LSTG)['lstg']
-            keep = [k not in BYR_DROP for k in lstg_feats]
-            x_lstg['lstg'] = x_lstg['lstg'][:, keep]
-
-        return x_lstg
 
     def __getitem__(self, idx):
         """

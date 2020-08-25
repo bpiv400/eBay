@@ -84,7 +84,7 @@ def get_x_offer(offers=None, idx=None, outcome=None, turn=None):
     return x_offer
 
 
-def get_y_delay(df, turn):
+def get_y_delay(df):
     # convert to seconds
     delay = np.round(df[DAYS] * DAY).astype('int64')
     # drop zero delays
@@ -119,7 +119,7 @@ def process_inputs(part, outcome, turn):
     elif outcome == MSG:
         y = get_y_msg(df, turn)
     else:
-        y = get_y_delay(df, turn)
+        y = get_y_delay(df)
     idx = y.index
 
     # thread features

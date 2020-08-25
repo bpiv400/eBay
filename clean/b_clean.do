@@ -9,6 +9,12 @@ rename any_mssg message
 rename item lstg
 drop src_cre_dt fdbk_*
 
+* for word2vec features
+
+merge m:1 lstg using dta/w2v_slr, nogen keep(3) keepus(leaf)
+savesome byr leaf using dta/w2v_byr, replace
+drop leaf
+
 * restrict lstgs and merge in start_price
 
 merge m:1 lstg using dta/listings, nogen keep(3) keepus(start_price)
@@ -68,6 +74,8 @@ by slr lstg byr thread type status price: drop if clock - clock[_n-1] == 1000
 by slr lstg byr thread, sort: egen temp = max(byr_us)
 replace byr_us = temp
 drop temp
+
+* common hist count within thread
 
 foreach var of varlist ???_hist {
 	by slr lstg byr thread, sort: egen temp = min(`var')

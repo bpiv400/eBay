@@ -2,9 +2,9 @@ import pandas as pd
 import numpy as np
 from processing.util import collect_date_clock_feats
 from inputs.util import get_arrival_times, save_files, get_ind_x
-from utils import get_months_since_lstg, input_partition, load_file
-from constants import MONTH, INTERVAL_ARRIVAL, INTERVAL_CT_ARRIVAL
-from featnames import THREAD_COUNT, MONTHS_SINCE_LAST, MONTHS_SINCE_LSTG, \
+from utils import get_weeks_since_lstg, input_partition, load_file
+from constants import DAY, WEEK, MAX_DAYS, INTERVAL_ARRIVAL, INTERVAL_CT_ARRIVAL
+from featnames import THREAD_COUNT, WEEKS_SINCE_LAST, WEEKS_SINCE_LSTG, \
     START_TIME, END_TIME, LOOKUP
 
 
@@ -53,19 +53,20 @@ def get_x_thread_arrival(arrivals=None, lstg_start=None, idx=None, diff=None):
                              index=seconds.index,
                              name=THREAD_COUNT)
 
-    # months since lstg start
-    months_since_lstg = get_months_since_lstg(lstg_start, seconds)
-    assert (months_since_lstg.max() < 1) & (months_since_lstg.min() >= 0)
+    # weeks since lstg start
+    weeks_since_lstg = get_weeks_since_lstg(lstg_start, seconds)
+    assert weeks_since_lstg.max() < (MAX_DAYS * DAY) / WEEK
+    assert weeks_since_lstg.min() >= 0
 
-    # months since last arrival
-    months_since_last = diff.groupby('lstg').shift().dropna() / MONTH
-    assert np.all(months_since_last.index == idx)
+    # weeks since last arrival
+    weeks_since_last = diff.groupby('lstg').shift().dropna() / WEEK
+    assert np.all(weeks_since_last.index == idx)
 
     # concatenate into dataframe
     x_thread = pd.concat(
         [clock_feats,
-         months_since_lstg.rename(MONTHS_SINCE_LSTG),
-         months_since_last.rename(MONTHS_SINCE_LAST),
+         weeks_since_lstg.rename(WEEKS_SINCE_LSTG),
+         weeks_since_last.rename(WEEKS_SINCE_LAST),
          thread_count], axis=1)
 
     return x_thread.astype('float32')

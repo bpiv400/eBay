@@ -4,15 +4,15 @@ from rlenv.const import OFFER_MAPS, CLOCK_MAP, CLOCK_START_IND, \
     DELAY_START_IND, DELAY_END_IND, CON_IND, DELAY_IND, CON_START_IND, \
     DAYS_IND, AUTO_IND, REJECT_IND, EXP_IND
 from rlenv.util import last_norm
-from featnames import MONTHS_SINCE_LSTG, INT_REMAINING, BYR_HIST, \
-    ALL_OFFER_FEATS, THREAD_COUNT, MONTHS_SINCE_LAST
+from featnames import WEEKS_SINCE_LSTG, INT_REMAINING, BYR_HIST, \
+    ALL_OFFER_FEATS, THREAD_COUNT, WEEKS_SINCE_LAST
 from copy import deepcopy
 
 
 class Sources:
     def __init__(self, x_lstg=None):
         self.source_dict = deepcopy(x_lstg)
-        self.source_dict[MONTHS_SINCE_LSTG] = 0.0
+        self.source_dict[WEEKS_SINCE_LSTG] = 0.0
 
     def __call__(self):
         return self.source_dict
@@ -29,8 +29,8 @@ class ThreadSources(Sources):
                                                        dtype=np.float)
         self.offer_prev_time = None
 
-    def prepare_hist(self, time_feats=None, clock_feats=None, months_since_lstg=None):
-        self.source_dict[MONTHS_SINCE_LSTG] = months_since_lstg
+    def prepare_hist(self, time_feats=None, clock_feats=None, weeks_since_lstg=None):
+        self.source_dict[WEEKS_SINCE_LSTG] = weeks_since_lstg
         offer_map = OFFER_MAPS[1]
         self.source_dict[offer_map][CLOCK_START_IND:CLOCK_END_IND] = clock_feats
         self.source_dict[offer_map][TIME_START_IND:TIME_END_IND] = time_feats
@@ -112,12 +112,12 @@ class ThreadSources(Sources):
 class ArrivalSources(Sources):
     def __init__(self, x_lstg=None):
         super().__init__(x_lstg=x_lstg)
-        self.source_dict[MONTHS_SINCE_LAST] = 0.0
+        self.source_dict[WEEKS_SINCE_LAST] = 0.0
         self.source_dict[THREAD_COUNT] = 0.0
 
-    def update_arrival(self, clock_feats=None, months_since_lstg=None,
-                       thread_count=None, months_since_last=None):
+    def update_arrival(self, clock_feats=None, weeks_since_lstg=None,
+                       thread_count=None, weeks_since_last=None):
         self.source_dict[THREAD_COUNT] = thread_count
         self.source_dict[CLOCK_MAP] = clock_feats
-        self.source_dict[MONTHS_SINCE_LSTG] = months_since_lstg
-        self.source_dict[MONTHS_SINCE_LAST] = months_since_last
+        self.source_dict[WEEKS_SINCE_LSTG] = weeks_since_lstg
+        self.source_dict[WEEKS_SINCE_LAST] = weeks_since_last

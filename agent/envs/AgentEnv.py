@@ -5,7 +5,7 @@ from rlpyt.spaces.composite import Composite
 from rlpyt.spaces.float_box import FloatBox
 from rlenv.EBayEnv import EBayEnv
 from agent.ConSpace import ConSpace
-from constants import INTERVAL_TURN, INTERVAL_CT_TURN, MONTH, CON_MULTIPLIER
+from constants import INTERVAL_TURN, INTERVAL_CT_TURN, DAY, CON_MULTIPLIER
 from featnames import BYR_HIST
 
 
@@ -106,5 +106,5 @@ class AgentEnv(EBayEnv, Env):
         """
         raise NotImplementedError()
 
-    def _get_months(self, priority=None):
-        return self.relist_count + (priority - self.start_time) / MONTH
+    def _get_days(self, priority=None):
+        return (priority - self.start_time) / DAY

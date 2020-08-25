@@ -2,8 +2,8 @@ import argparse
 import psutil
 import numpy as np
 import pandas as pd
-from compress_pickle import dump
 from gensim.models import Word2Vec
+from utils import topickle
 from constants import SEED, CLEAN_DIR, FEATS_DIR
 from featnames import SLR, BYR
 
@@ -52,7 +52,7 @@ def main():
     df = run_model(s).rename(lambda x: role + x, axis=1).sort_index()
 
     # save
-    dump(df, FEATS_DIR + 'w2v_{}.gz'.format(role))
+    topickle(df, FEATS_DIR + 'w2v_{}.pkl'.format(role))
 
 
 if __name__ == '__main__':

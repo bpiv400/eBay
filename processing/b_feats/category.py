@@ -1,10 +1,9 @@
 import argparse
-from compress_pickle import load, dump
 from datetime import datetime as dt
 import pandas as pd
 from processing.b_feats.util import create_events, get_all_cat_feats
 from processing.util import load_feats
-from utils import run_func_on_chunks
+from utils import unpickle, topickle, run_func_on_chunks
 from constants import FEATS_DIR
 from featnames import META, LEAF, SLR
 
@@ -21,7 +20,7 @@ def create_feats(data=None, name=None):
 
 
 def process_chunk(chunk=None):
-    chunk = load(FEATS_DIR + 'chunks/{}.gz'.format(chunk))
+    chunk = unpickle(FEATS_DIR + 'chunks/{}.pkl'.format(chunk))
     return create_feats(data=chunk, name=SLR)
 
 
@@ -39,11 +38,11 @@ def main():
     else:
         data = dict()
         for level in ['listings', 'threads', 'offers']:
-            data[level] = load_feats(name)
+            data[level] = load_feats(level)
         feats = create_feats(data=data, name=name)
 
     # save
-    dump(feats, FEATS_DIR + '{}.gz'.format(name))
+    topickle(feats, FEATS_DIR + '{}.pkl'.format(name))
 
 
 if __name__ == "__main__":

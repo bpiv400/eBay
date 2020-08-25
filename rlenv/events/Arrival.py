@@ -1,8 +1,9 @@
 from rlenv.events.Event import Event
 from rlenv.const import ARRIVAL
 from rlenv.util import get_clock_feats
-from utils import get_months_since_lstg
-from constants import MONTH
+from utils import get_weeks_since_lstg
+from constants import WEEK
+from featnames import WEEKS_SINCE_LAST, THREAD_COUNT
 
 
 class Arrival(Event):
@@ -27,15 +28,15 @@ class Arrival(Event):
         """
         :return:
         """
-        months_since_lstg = get_months_since_lstg(lstg_start=self.start,
-                                                  time=self.priority)
-        update_args = dict(months_since_lstg=months_since_lstg,
+        weeks_since_lstg = get_weeks_since_lstg(lstg_start=self.start,
+                                                time=self.priority)
+        update_args = dict(weeks_since_lstg=weeks_since_lstg,
                            clock_feats=get_clock_feats(self.priority))
         if thread_count is not None:
-            update_args['thread_count'] = thread_count
+            update_args[THREAD_COUNT] = thread_count
 
         if last_arrival_time is not None:
-            months_since_last = (self.priority - last_arrival_time) / MONTH
-            update_args['months_since_last'] = months_since_last
+            weeks_since_last = (self.priority - last_arrival_time) / WEEK
+            update_args[WEEKS_SINCE_LAST] = weeks_since_last
 
         self.sources.update_arrival(**update_args)

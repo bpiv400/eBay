@@ -64,8 +64,8 @@ ALL_OFFER_FEATS = CLOCK_FEATS + TIME_FEATS + OUTCOME_FEATS
 
 # thread features
 BYR_HIST = 'byr_hist'
-MONTHS_SINCE_LSTG = 'months_since_lstg'
-MONTHS_SINCE_LAST = 'months_since_last'
+WEEKS_SINCE_LSTG = 'weeks_since_lstg'
+WEEKS_SINCE_LAST = 'weeks_since_last'
 
 # index labels
 LSTG = 'lstg'

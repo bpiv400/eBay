@@ -8,7 +8,7 @@ from assess.util import discrete_pdf
 from utils import load_file
 from constants import TEST, PLOT_DIR, BYR_HIST_MODEL, CON_MULTIPLIER, \
     MAX_DELAY_ARRIVAL, MAX_DELAY_TURN, INTERVAL_ARRIVAL
-from featnames import MONTHS_SINCE_LSTG, BYR_HIST, DELAY, CON, MSG, \
+from featnames import WEEKS_SINCE_LSTG, BYR_HIST, DELAY, CON, MSG, \
     SIM, OBS, ARRIVAL
 
 
@@ -32,7 +32,7 @@ def get_arrival_distributions(threads):
     p = dict()
 
     # arrival times
-    y = (threads[MONTHS_SINCE_LSTG] * MAX_DELAY_ARRIVAL).astype('int64')
+    y = (threads[WEEKS_SINCE_LSTG] * MAX_DELAY_ARRIVAL).astype('int64')
     pdf = get_pdf(y=y, intervals=MAX_DELAY_ARRIVAL).to_frame()
     pdf['period'] = np.array(pdf.index) // INTERVAL_ARRIVAL
     p[ARRIVAL] = pdf.groupby('period').sum().squeeze()

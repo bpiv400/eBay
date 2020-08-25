@@ -1,9 +1,9 @@
 from collections import namedtuple
 from utils import get_cut
-from constants import MONTH, BYR_HIST_MODEL, INTERARRIVAL_MODEL
+from constants import DAY, BYR_HIST_MODEL, INTERARRIVAL_MODEL, MAX_DELAY_ARRIVAL
 from featnames import ACC_PRICE, DEC_PRICE, START_PRICE, DELAY, START_TIME, \
     META, BYR
-from utils import get_months_since_lstg
+from utils import get_weeks_since_lstg
 from rlenv.Heap import Heap
 from rlenv.time.TimeFeatures import TimeFeatures
 from rlenv.time.Offer import Offer
@@ -21,7 +21,7 @@ from rlenv.LstgLoader import TrainLoader
 
 
 class EBayEnv:
-    Outcome = namedtuple('outcome', ['sale', 'price', 'months', 'thread'])
+    Outcome = namedtuple('outcome', ['sale', 'price', 'days', 'thread'])
 
     def __init__(self, params=None):
         # interfaces
@@ -82,9 +82,11 @@ class EBayEnv:
         x_lstg, lookup, p_arrival = self.loader.next_lstg()
         self.x_lstg = self.composer.decompose_x_lstg(x_lstg)
         self.lookup = lookup
+        if ACC_PRICE not in lookup.columns:
+            self.lookup[ACC_PRICE] = self.lookup[START_PRICE]
         self.start_time = int(self.lookup[START_TIME])
         self.last_arrival_time = self.start_time
-        self.end_time = self.start_time + MONTH
+        self.end_time = self.start_time + MAX_DELAY_ARRIVAL
         self.relist_count = 0
         self.query_strategy.update_p_arrival(p_arrival=p_arrival)
         self.cut = get_cut(self.lookup[META])
@@ -195,8 +197,8 @@ class EBayEnv:
         else:
             start_norm = 1 - offer.price
         sale_price = start_norm * self.lookup[START_PRICE]
-        months = (offer.time - self.start_time) / MONTH
-        self.outcome = self.Outcome(True, sale_price, months, offer.thread_id)
+        days = (offer.time - self.start_time) / DAY
+        self.outcome = self.Outcome(True, sale_price, days, offer.thread_id)
         self.empty_queue()
 
     def process_first_offer(self, event):
@@ -210,8 +212,8 @@ class EBayEnv:
 
         # prepare sources and features
         sources = ThreadSources(x_lstg=self.x_lstg)
-        months_since_lstg = get_months_since_lstg(lstg_start=self.start_time,
-                                                  time=event.priority)
+        months_since_lstg = get_weeks_since_lstg(lstg_start=self.start_time,
+                                                 time=event.priority)
         time_feats = self.time_feats.get_feats(time=event.priority,
                                                thread_id=event.thread_id)
         sources.prepare_hist(time_feats=time_feats,
@@ -266,7 +268,7 @@ class EBayEnv:
         # if a buyer arrives, create a thread at the arrival time
         if event.priority < self.end_time:
             self.last_arrival_time = check_in_time
-            self.queue.push(self.make_thread(event.priority))
+            self.queue.push(Thread(priority=event.priority))
         self.queue.push(event)
         return False
 
@@ -319,7 +321,7 @@ class EBayEnv:
         :param event: rlenv.Event subclass
         :return: boolean
         """
-        self.outcome = self.Outcome(False, 0, MONTH, None)
+        self.outcome = self.Outcome(False, 0, MAX_DELAY_ARRIVAL, None)
         self.queue.push(event)
         self.empty_queue()
         if self.verbose:
@@ -330,11 +332,7 @@ class EBayEnv:
         while not self.queue.empty:
             self.queue.pop()
 
-    def make_thread(self, priority):
-        return Thread(priority=priority)
-
     def _check_slr_autos(self, norm):
-        """ """
         if norm < self.lookup[ACC_PRICE] / self.lookup[START_PRICE]:
             if norm < self.lookup[DEC_PRICE] / self.lookup[START_PRICE]:
                 return REJ_IND

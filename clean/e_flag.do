@@ -1,5 +1,4 @@
 clear all
-ssc install savesome
 cd ~/weka/eBay
 use dta/conform
 
@@ -21,10 +20,10 @@ by lstg thread: replace flag = 1 if price > price[_n-2] & _n > 2 & mod(_n,2) == 
 by lstg thread: replace flag = 1 if price < price[_n-1] & mod(index,2) == 0
 by lstg thread: replace flag = 1 if price > price[_n-1] & _n > 1 & mod(index,2) == 1
 	
-by lstg thread: replace flag = 1 if _n < _N & price >= accept_price & !bin & mod(index,2) == 1 & (clock != clock[_n+1] | !accept[_n+1])
+by lstg thread: replace flag = 1 if _n < _N & price == start_price & !bin & mod(index,2) == 1 & (clock != clock[_n+1] | !accept[_n+1])
 by lstg thread: replace flag = 1 if _n < _N & price <= decline_price & mod(index,2) == 1 & (clock != clock[_n+1] | !reject[_n+1])
-by lstg thread: replace flag = 1 if _n < _N & price < accept_price & price > decline_price & clock == clock[_n+1]
-drop accept_price decline_price
+by lstg thread: replace flag = 1 if _n < _N & price < start_price & price > decline_price & clock == clock[_n+1]
+drop decline_price
 
 replace flag = 1 if price == 0 & index == 1
 
@@ -32,6 +31,16 @@ replace flag = 1 if price == 0 & index == 1
 
 sort lstg thread index
 by lstg thread: replace flag = 1 if (clock - clock[_n-1]) / 1000 > 48 * 3600 & _n > 1 & mod(index, 2) == 1
+
+* flag offers at 48 hours that are not rejects
+
+sort lstg thread index
+by lstg thread: replace flag = 1 if (clock - clock[_n-1]) / 1000 == 48 * 3600 & !reject & _n > 1
+
+* flag offers that appear to be auto accepts
+
+sort lstg thread index
+by lstg thread: replace flag = 1 if clock == clock[_n-1] & accept & mod(index, 2) == 0 & _n > 1
 
 * flag entire listing
 

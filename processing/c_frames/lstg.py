@@ -40,9 +40,7 @@ def construct_lstg_feats(listings):
     df['wear'] = s.isin([8, 9, 10, 11]) * (s - 7)
     # auto decline/accept prices
     df['auto_decline'] = listings.decline_price / listings.start_price
-    df['auto_accept'] = listings.accept_price / listings.start_price
     df['has_decline'] = df.auto_decline > 0
-    df['has_accept'] = df.auto_accept < 1 
     # remove slr prefix
     df.rename(lambda c: c[4:] if c.startswith('slr_') else c, 
               axis=1, inplace=True)

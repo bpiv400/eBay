@@ -1,4 +1,4 @@
-from constants import MONTH, MAX_DELAY_TURN, MAX_DELAY_ARRIVAL
+from constants import WEEK, MAX_DELAY_TURN, MAX_DELAY_ARRIVAL
 from featnames import MSG, CON, DELAY, EXP, AUTO
 from rlenv.util import model_str
 from testing.util import compare_input_dicts
@@ -78,7 +78,7 @@ class TurnLog:
                             stored_inputs=self.delay_inputs,
                             env_inputs=input_dict)
         if self.is_censored:
-            return MONTH
+            return WEEK
         else:
             return int(self.offer_time - self.delay_time)
 

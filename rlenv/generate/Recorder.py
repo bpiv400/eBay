@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 from rlenv.events.Thread import Thread
 from rlenv.const import FIRST_OFFER
-from constants import MONTH
+from constants import WEEK
 from featnames import START_TIME, START_PRICE, TIME_FEATS, MSG, CON, \
     LSTG, THREAD, INDEX, BYR_HIST, ACC_PRICE, DEC_PRICE, CLOCK
 
@@ -73,7 +73,7 @@ class Recorder:
     def print_lstg(lookup):
         print("\nLSTG: {}".format(int(lookup[LSTG])))
         print('start time: {} | end time: {}'.format(int(lookup[START_TIME]),
-                                                     int(lookup[START_TIME] + MONTH)))
+                                                     int(lookup[START_TIME] + WEEK)))
         print(('Start price: {} | accept price: {}' +
               ' | decline price: {}').format(lookup[START_PRICE], lookup[ACC_PRICE],
                                              lookup[DEC_PRICE]))

@@ -11,7 +11,7 @@ do
 done
 
 # low dropout
-for NAME in con1 con2 con3 con4 con5 delay2 delay3 delay4 delay5 msg1 msg2 msg3 policy_slr
+for NAME in con1 con2 con3 con4 con5 delay2 delay3 delay4 delay5 msg1 msg2 msg3
 do
   for D in {0..1}
   do

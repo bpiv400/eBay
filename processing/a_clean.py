@@ -1,8 +1,7 @@
 import os
 import numpy as np
 import pandas as pd
-from compress_pickle import dump
-from processing.util import get_con, get_norm
+from processing.util import get_con, get_norm, get_pctiles
 from utils import topickle
 from constants import CLEAN_DIR, FEATS_DIR, PARTS_DIR, PCTILE_DIR, START, SEED, \
     SHARES, NUM_CHUNKS
@@ -80,7 +79,7 @@ def create_chunks(listings=None, threads=None, offers=None):
         chunk = {'listings': listings.reindex(index=lstgs),
                  'threads': threads.reindex(index=lstgs, level='lstg'),
                  'offers': offers.reindex(index=lstgs, level='lstg')}
-        dump(chunk, chunk_dir + '{}.gz'.format(i))
+        topickle(chunk, chunk_dir + '{}.pkl'.format(i))
 
 
 def partition_lstgs(s):
@@ -114,24 +113,21 @@ def read_csv(name):
     return df
 
 
-# creates series of percentiles indexed by column variable
-def get_pctiles(s):
-    n = len(s.index)
-    # create series of index name and values pctile
-    idx = pd.Index(np.sort(s.values), name=s.name)
-    pctiles = pd.Series(np.arange(n) / (n - 1),
-                        index=idx, name='pctile')
-    pctiles = pctiles.groupby(pctiles.index).min()
-    # put max in 99th percentile
-    pctiles.loc[pctiles == 1] -= 1e-16
-    # reformat series with index s.index and values pctiles
-    s = s.to_frame().join(pctiles, on=s.name).drop(
-        s.name, axis=1).squeeze().rename(s.name)
-    return s, pctiles
-
-
 def get_seconds(t):
     return t.hour * 3600 + t.minute * 60 + t.second
+
+
+def series_to_pctiles(s=None, pctiles=None):
+    """
+    Converts values into percentiles
+    :param pandas.Series s: values from which percentiles are calculated from
+    :param pandas.Series pctiles: corresponding percentiles
+    :return: pandas.Series with same index as s and values from pctiles
+    """
+    if pctiles is None:
+        pctiles = get_pctiles(s)
+    return s.to_frame().join(pctiles, on=s.name).drop(
+        s.name, axis=1).squeeze().rename(s.name)
 
 
 def main():
@@ -141,9 +137,9 @@ def main():
     listings = read_csv('listings')
 
     # convert byr_hist to pctiles and save threads
-    _, to_save = get_pctiles(threads[BYR_HIST])
-    dump(to_save, PCTILE_DIR + '{}.pkl'.format(BYR_HIST))
-    dump(threads, FEATS_DIR + 'threads.gz')
+    to_save = get_pctiles(threads[BYR_HIST])
+    topickle(to_save, PCTILE_DIR + '{}.pkl'.format(BYR_HIST))
+    topickle(threads, FEATS_DIR + 'threads.pkl')
 
     # arrival time
     thread_start = offers.clock.xs(1, level='index')
@@ -208,7 +204,7 @@ def main():
     offers.loc[idx, 'clock'] = df.loc[idx, 'end_time']
 
     # save offers and threads
-    dump(offers, FEATS_DIR + 'offers.gz')
+    topickle(offers, FEATS_DIR + 'offers.pkl')
 
     # update listing end time
     listings.loc[end_time.index, 'end_time'] = end_time
@@ -220,8 +216,7 @@ def main():
     listings['arrival_rate'] = arrivals / duration
 
     # add start_price percentile
-    listings['start_price_pctile'], _ = \
-        get_pctiles(listings[START_PRICE])
+    listings['start_price_pctile'] = series_to_pctiles(s=listings[START_PRICE])
 
     # convert fdbk_pstv to a rate
     listings.loc[listings.fdbk_score < 0, 'fdbk_score'] = 0
@@ -229,14 +224,16 @@ def main():
     listings.loc[listings.fdbk_pstv.isna(), 'fdbk_pstv'] = 1
 
     # replace count and rate variables with percentiles
-    for feat in ['fdbk_score', 'photos', 'slr_lstg_ct', 'slr_bo_ct', 'arrival_rate']:
+    listings.loc[:, 'arrival_rate'] = series_to_pctiles(s=listings['arrival_rate'])
+    for feat in ['fdbk_score', 'photos', 'slr_lstg_ct', 'slr_bo_ct']:
         print(feat)
-        listings.loc[:, feat], to_save = get_pctiles(listings[feat])
-        if feat != 'arrival_rate':
-            dump(to_save, PCTILE_DIR + '{}.pkl'.format(feat))
+        pctiles = get_pctiles(listings[feat])
+        listings.loc[:, feat] = series_to_pctiles(
+            s=listings[feat], pctiles=pctiles)
+        topickle(pctiles, PCTILE_DIR + '{}.pkl'.format(feat))
 
     # save listings
-    dump(listings, FEATS_DIR + 'listings.gz')
+    topickle(listings, FEATS_DIR + 'listings.pkl')
 
     # chunk by listing
     create_chunks(listings=listings, threads=threads, offers=offers)

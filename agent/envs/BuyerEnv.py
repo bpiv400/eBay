@@ -4,7 +4,7 @@ from constants import HOUR, POLICY_BYR, PCTILE_DIR, INTERVAL_CT_ARRIVAL, \
     DAY, MAX_DAYS
 from featnames import START_PRICE, BYR_HIST
 from rlenv.util import get_clock_feats, get_con_outcomes
-from utils import load_sizes, unpickle, get_months_since_lstg
+from utils import load_sizes, unpickle, get_weeks_since_lstg
 from rlenv.const import FIRST_OFFER, DELAY_EVENT, OFFER_EVENT, RL_ARRIVAL_EVENT
 from rlenv.Sources import ThreadSources
 from agent.envs.AgentEnv import AgentEnv
@@ -12,7 +12,7 @@ from rlenv.events.Event import Event
 from rlenv.events.Thread import Thread
 
 BuyerInfo = namedarraytuple("BuyerInfo",
-                            ["months",
+                            ["days",
                              "max_return",
                              "num_delays",
                              "num_offers"])
@@ -199,7 +199,7 @@ class BuyerEnv(AgentEnv):
         return self.item_value - self.outcome.price
 
     def get_info(self, event=None):
-        return BuyerInfo(months=self._get_months(event.priority),
+        return BuyerInfo(days=self._get_days(event.priority),
                          max_return=self.item_value,
                          num_delays=self.num_delays,
                          num_offers=self.num_offers)
@@ -215,11 +215,11 @@ class BuyerEnv(AgentEnv):
         clock_feats = get_clock_feats(arrival_time)
         time_feats = self.time_feats.get_feats(time=arrival_time,
                                                thread_id=self.thread_counter)
-        months_since_lstg = get_months_since_lstg(lstg_start=self.start_time,
-                                                  time=arrival_time)
+        weeks_since_lstg = get_weeks_since_lstg(lstg_start=self.start_time,
+                                                time=arrival_time)
         sources.prepare_hist(clock_feats=clock_feats,
                              time_feats=time_feats,
-                             months_since_lstg=months_since_lstg)
+                             weeks_since_lstg=weeks_since_lstg)
 
         # construct thread, then return
         thread = Thread(priority=arrival_time, agent=True)

@@ -5,10 +5,10 @@ from compress_pickle import load
 from agent.util import get_log_dir
 from utils import unpickle, load_file
 from assess.const import SPLITS
-from constants import PARTS_DIR, IDX, MONTH, BYR, EPS, COLLECTIBLES, TEST, \
+from constants import PARTS_DIR, IDX, BYR, EPS, COLLECTIBLES, TEST, \
     MAX_DELAY_ARRIVAL, MAX_DELAY_TURN, INTERVAL_ARRIVAL, PCTILE_DIR, DAY, HOUR
 from featnames import EXP, DELAY, CON, NORM, AUTO, START_TIME, STORE, SLR_BO_CT, \
-    START_PRICE, META, LOOKUP, MSG, MONTHS_SINCE_LSTG, BYR_HIST
+    START_PRICE, META, LOOKUP, MSG, WEEKS_SINCE_LSTG, BYR_HIST
 
 
 def discrete_pdf(y=None):
@@ -27,7 +27,7 @@ def discrete_cdf(y=None):
 
 
 def arrival_dist(threads=None):
-    s = threads[MONTHS_SINCE_LSTG] * MAX_DELAY_ARRIVAL
+    s = threads[WEEKS_SINCE_LSTG] * MAX_DELAY_ARRIVAL
     pdf = discrete_pdf(s)
 
     # sum over interval

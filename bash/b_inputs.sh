@@ -1,11 +1,11 @@
 #!/bin/bash
 
 # first arrival model in all partitions
-for part in sim rl valid; do
+for part in sim rl_byr rl_slr valid; do
   python repo/inputs/first_arrival.py --part $part &
 done
 
-# for other inputs, skip rl partition
+# for other inputs, skip rl partitions
 for part in sim valid; do
   for f in next_arrival hist policy_slr policy_byr; do
     python repo/inputs/$f\.py --part $part &

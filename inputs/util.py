@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from compress_pickle import load, dump
+from utils import unpickle, topickle
 from inputs.const import NUM_OUT
 from constants import INPUT_DIR, INDEX_DIR, VALIDATION, \
     IDX, DISCRIM_MODEL, POLICY_BYR, BYR_DROP
@@ -141,7 +141,7 @@ def save_featnames_and_sizes(x=None, m=None):
     :param str m: name of model.
     """
     # initialize dictionaries from listing feature names
-    featnames = load(INPUT_DIR + 'featnames/x_lstg.pkl')
+    featnames = unpickle(INPUT_DIR + 'featnames/x_lstg.pkl')
     sizes = dict()
     sizes['x'] = {k: len(v) for k, v in featnames.items()}
 
@@ -183,8 +183,8 @@ def save_featnames_and_sizes(x=None, m=None):
     sizes['out'] = NUM_OUT[m]
 
     # save
-    dump(featnames, INPUT_DIR + 'featnames/{}.pkl'.format(m))
-    dump(sizes, INPUT_DIR + 'sizes/{}.pkl'.format(m))
+    topickle(featnames, INPUT_DIR + 'featnames/{}.pkl'.format(m))
+    topickle(sizes, INPUT_DIR + 'sizes/{}.pkl'.format(m))
 
 
 def convert_x_to_numpy(x, idx):
@@ -216,7 +216,7 @@ def save_files(d, part, name):
     d['y'] = d['y'].to_numpy()
 
     # save data
-    dump(d, INPUT_DIR + '{}/{}.gz'.format(part, name))
+    topickle(d, INPUT_DIR + '{}/{}.pkl'.format(part, name))
 
     # save index
-    dump(idx, INDEX_DIR + '{}/{}.gz'.format(part, name))
+    topickle(idx, INDEX_DIR + '{}/{}.pkl'.format(part, name))

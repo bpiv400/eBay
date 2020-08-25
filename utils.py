@@ -6,12 +6,11 @@ import torch
 import torch.multiprocessing as mp
 from torch.nn.functional import log_softmax
 import numpy as np
-from compress_pickle import load
 from nets.FeedForward import FeedForward
 from sim.Sample import get_batches
-from constants import DAY, MONTH, SPLIT_PCTS, INPUT_DIR, MODEL_DIR, META_6, META_7, \
+from constants import DAY, WEEK, SPLIT_PCTS, INPUT_DIR, MODEL_DIR, META_6, META_7, \
     PARTITIONS, PARTS_DIR, MAX_DELAY_TURN, MAX_DELAY_ARRIVAL, NUM_CHUNKS
-from featnames import DELAY, EXP, X_LSTG
+from featnames import DELAY, EXP
 
 
 def unpickle(file):
@@ -67,14 +66,14 @@ def is_split(con):
     return con in SPLIT_PCTS
 
 
-def get_months_since_lstg(lstg_start=None, time=None):
+def get_weeks_since_lstg(lstg_start=None, time=None):
     """
-    Float number of months between inputs.
+    Float number of weeks between inputs.
     :param lstg_start: seconds from START to lstg start.
     :param time: seconds from START to focal event.
-    :return: number of months between lstg_start and start.
+    :return: number of weeks between lstg_start and start.
     """
-    return (time - lstg_start) / MONTH
+    return (time - lstg_start) / WEEK
 
 
 def slr_norm(con=None, prev_byr_norm=None, prev_slr_norm=None):
@@ -106,7 +105,7 @@ def load_sizes(name):
      see const.py for model names
     :return: dict
     """
-    return load(INPUT_DIR + 'sizes/{}.pkl'.format(name))
+    return unpickle(INPUT_DIR + 'sizes/{}.pkl'.format(name))
 
 
 def load_featnames(name):
@@ -116,7 +115,7 @@ def load_featnames(name):
      see const.py for model names
     :return: dict
     """
-    return load(INPUT_DIR + 'featnames/{}.pkl'.format(name))
+    return unpickle(INPUT_DIR + 'featnames/{}.pkl'.format(name))
 
 
 def load_state_dict(name=None):
@@ -260,8 +259,7 @@ def load_file(part, x):
     :param str x: name of file
     :return: dataframe
     """
-    suffix = 'pkl' if x == X_LSTG else 'gz'
-    return load(PARTS_DIR + '{}/{}.{}'.format(part, x, suffix))
+    return unpickle(PARTS_DIR + '{}/{}.pkl'.format(part, x))
 
 
 def drop_censored(df):
