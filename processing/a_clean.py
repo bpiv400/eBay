@@ -4,7 +4,7 @@ import pandas as pd
 from processing.util import get_con, get_norm, get_pctiles
 from utils import topickle
 from constants import CLEAN_DIR, FEATS_DIR, PARTS_DIR, PCTILE_DIR, START, SEED, \
-    SHARES, NUM_CHUNKS
+    SHARES, NUM_CHUNKS, DAY
 from featnames import START_PRICE, BYR_HIST, NORM, SLR
 
 # data types for csv read
@@ -146,7 +146,7 @@ def main():
     s = pd.to_datetime(thread_start, origin=START, unit='s')
 
     # split off missing
-    to_replace = threads.bin & ((thread_start + 1) % (24 * 3600) == 0)
+    to_replace = threads.bin & ((thread_start + 1) % DAY == 0)
     missing = pd.to_datetime(s.loc[to_replace].dt.date)
     labeled = s.loc[~to_replace]
 
@@ -174,7 +174,7 @@ def main():
 
     # make end time one second after last observed same day offer before BIN
     lower += 1
-    lower.loc[lower == 3600 * 24] -= 1
+    lower.loc[lower == DAY] -= 1
 
     # uniform random
     rand = pd.Series(np.random.rand(len(missing.index)),
@@ -212,7 +212,7 @@ def main():
     # add arrivals per day to listings
     arrivals = thread_start.groupby('lstg').count().reindex(
         index=listings.index, fill_value=0)
-    duration = (listings.end_time + 1) / (24 * 3600) - listings.start_date
+    duration = (listings.end_time + 1) / DAY - listings.start_date
     listings['arrival_rate'] = arrivals / duration
 
     # add start_price percentile

@@ -39,7 +39,12 @@ by lstg thread: replace flag = 1 if (clock - clock[_n-1]) / 1000 == 48 * 3600 & 
 * flag offers that appear to be auto accepts
 
 sort lstg thread index
-by lstg thread: replace flag = 1 if clock == clock[_n-1] & accept & mod(index, 2) == 0 & _n > 1
+by lstg thread: replace flag = 1 if clock == clock[_n-1] & !reject & mod(index, 2) == 0 & _n > 1
+
+* flag in-thread buyer bin offers before seller responds
+
+sort lstg thread index
+by lstg thread: replace flag = 1 if clock == clock[_n-1] & _n > 1 & mod(index, 2) == 1
 
 * flag entire listing
 
