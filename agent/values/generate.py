@@ -6,6 +6,7 @@ from agent.values.ValueRecorder import ValueRecorder
 from agent.eval.generate import AgentGenerator
 from agent.util import get_paths, load_agent_model
 from utils import run_func_on_chunks, process_chunk_worker, topickle
+from constants import RL_SLR, TEST
 from featnames import START_PRICE
 
 
@@ -30,7 +31,7 @@ class ValueGenerator(AgentGenerator):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--part', type=str)
+    parser.add_argument('--part', type=str, choices=[RL_SLR, TEST])
     parser.add_argument('--name', type=str)
     args = parser.parse_args()
 

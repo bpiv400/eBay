@@ -3,10 +3,8 @@ from testing.util import subset_inputs, subset_df
 
 
 class TestLoader(ChunkLoader):
-    def __init__(self, x_lstg=None, lookup=None, test_data=None,
-                 p_arrival=None):
-        super().__init__(x_lstg=x_lstg, lookup=lookup,
-                         p_arrival=p_arrival)
+    def __init__(self, x_lstg=None, lookup=None, test_data=None, p_arrival=None):
+        super().__init__(x_lstg=x_lstg, lookup=lookup, p_arrival=p_arrival)
         self._test_data = test_data
         self.x_offer = None
         self.x_thread = None

@@ -1,9 +1,9 @@
 import numpy as np
 import pandas as pd
-from compress_pickle import load
 import torch
 from collections.abc import Iterable
-from utils import load_featnames
+from utils import unpickle, load_featnames
+from processing.util import load_feats
 from rlenv.util import load_featnames
 from utils import load_file
 from constants import MODELS, INPUT_DIR, INDEX_DIR, FEATS_DIR,\
@@ -114,14 +114,11 @@ def subset_df(df=None, lstg=None):
 
 def load_model_inputs(model=None, input_dir=None,
                       index_dir=None, lstgs=None, x_lstg=None):
-    input_path = '{}{}.gz'.format(input_dir, model)
-    index_path = '{}{}.gz'.format(index_dir, model)
-    index = load(index_path)
+    index = unpickle('{}{}.pkl'.format(index_dir, model))
     featnames = load_featnames(model)
-    full_inputs = load(input_path)
+    full_inputs = unpickle('{}{}.pkl'.format(input_dir, model))
     x_inputs = full_inputs['x']
-    x_idx = pd.Series(index=index,
-                      data=full_inputs['idx_x'])
+    x_idx = pd.Series(index=index, data=full_inputs['idx_x'])
     contains = None
     for feat_set_name in list(x_inputs.keys()):
         # set column names
@@ -179,9 +176,10 @@ def load_model_inputs(model=None, input_dir=None,
 def load_all_inputs(part=None, lstgs=None):
     input_dir = '{}{}/'.format(INPUT_DIR, part)
     index_dir = '{}{}/'.format(INDEX_DIR, part)
-    x_lstg = load('{}{}/x_lstg.pkl'.format(PARTS_DIR, part))
+    x_lstg = unpickle('{}{}/x_lstg.pkl'.format(PARTS_DIR, part))
     inputs_dict = dict()
-    models = MODELS + POLICY_MODELS
+    # models = MODELS + POLICY_MODELS
+    models = MODELS
     models.remove(FIRST_ARRIVAL_MODEL)
     for model in models:
         inputs_dict[model] = load_model_inputs(model=model,
@@ -202,8 +200,7 @@ def load_reindex(part=None, name=None, lstgs=None):
 
 def lstgs_without_duplicated_timestamps(lstgs=None):
     # load timestamps
-    offers = load(FEATS_DIR + 'offers.gz').reindex(
-        index=lstgs, level='lstg')
+    offers = load_feats(name='offers', lstgs=lstgs)
 
     # remove censored offers
     clock = offers.loc[~offers.censored, 'clock']

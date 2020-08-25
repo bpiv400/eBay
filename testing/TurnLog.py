@@ -1,4 +1,4 @@
-from constants import WEEK, MAX_DELAY_TURN, MAX_DELAY_ARRIVAL
+from constants import MAX_DELAY_TURN, MAX_DELAY_ARRIVAL
 from featnames import MSG, CON, DELAY, EXP, AUTO
 from rlenv.util import model_str
 from testing.util import compare_input_dicts
@@ -59,7 +59,8 @@ class TurnLog:
         if self.con_inputs is None:
             raise RuntimeError("Environment unexpectedly queried concession model")
         assert check_time == self.offer_time
-        compare_input_dicts(model=self.con_model_name, stored_inputs=self.con_inputs,
+        compare_input_dicts(model=self.con_model_name,
+                            stored_inputs=self.con_inputs,
                             env_inputs=input_dict)
         return self.con
 
@@ -78,7 +79,7 @@ class TurnLog:
                             stored_inputs=self.delay_inputs,
                             env_inputs=input_dict)
         if self.is_censored:
-            return WEEK
+            return MAX_DELAY_ARRIVAL
         else:
             return int(self.offer_time - self.delay_time)
 
@@ -87,7 +88,8 @@ class TurnLog:
         if self.msg_inputs is None:
             raise RuntimeError("Environment unexpectedly queried msg model")
         assert check_time == self.offer_time
-        compare_input_dicts(model=self.delay_model_name, stored_inputs=self.msg_inputs,
+        compare_input_dicts(model=self.delay_model_name,
+                            stored_inputs=self.msg_inputs,
                             env_inputs=input_dict)
         return self.msg
 

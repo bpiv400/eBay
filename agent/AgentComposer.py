@@ -2,9 +2,8 @@ import argparse
 import math
 import torch
 import numpy as np
-from agent.const import BYR_DROP_IND
 from agent.util import get_agent_name
-from constants import PARTS_DIR, TRAIN_RL
+from constants import PARTS_DIR, VALIDATION, BYR_DROP
 from featnames import OUTCOME_FEATS, WEEKS_SINCE_LSTG, BYR_HIST, \
     TIME_FEATS, CLOCK_FEATS, THREAD_COUNT, TURN_FEATS, SLR, BYR
 from rlenv.Composer import Composer
@@ -18,10 +17,13 @@ class AgentComposer(Composer):
 
     def __init__(self, byr=None):
         # create columns and initialize Composer class
-        chunk_path = PARTS_DIR + '{}/chunks/1.gz'.format(TRAIN_RL)
+        chunk_path = PARTS_DIR + '{}/chunks/1.gz'.format(VALIDATION)
         cols = load_chunk(input_path=chunk_path)[0].columns
         super().__init__(cols)
         self.byr = byr
+        if byr:
+            self.byr_idx = [i for i in range(len(self.lstg_sets[LSTG_MAP]))
+                            if self.lstg_sets[LSTG_MAP][i] not in BYR_DROP]
 
         self.agent_name = get_agent_name(byr=self.byr)
         self.sizes['agent'] = load_sizes(self.agent_name)
@@ -70,10 +72,7 @@ class AgentComposer(Composer):
 
         # set base, add thread count if slr
         if self.byr:
-            byr_subset = []
-            for i in range(len(sources[LSTG_MAP])):
-                if i not in BYR_DROP_IND:
-                    byr_subset.append(sources[LSTG_MAP][i])
+            byr_subset = [sources[LSTG_MAP][i] for i in self.byr_idx]
             feats.append(byr_subset)
         else:
             feats.append(sources[LSTG_MAP])
@@ -101,17 +100,9 @@ class AgentComposer(Composer):
     def verify_agent(self):
         lstg_sets = self.lstg_sets.copy()
         if self.byr:
-            # verify the lstg_sets[LSTG_MAP][4:6] gives count feats
-            assert lstg_sets[LSTG_MAP][4:6] == ['lstg_ct', 'bo_ct']
-            # verify lstg_sets[LSTG_MAP][-4:] give auto feats
-            auto_feats = ['auto_decline', 'auto_accept',
-                          'has_decline', 'has_accept']
-            assert lstg_sets[LSTG_MAP][-4:] == auto_feats
-            # exclude auto accept / reject features  and lstg_ct + bo_ct
-            # from byr shared features
-            start_feats = lstg_sets[LSTG_MAP][:4]
-            end_feats = lstg_sets[LSTG_MAP][6:-4]
-            lstg_sets[LSTG_MAP] = start_feats + end_feats
+            assert len(set(lstg_sets[LSTG_MAP][self.byr_idx]) & set(BYR_DROP)) == 0
+            # exclude auto reject features and lstg_ct + bo_ct
+            lstg_sets[LSTG_MAP] = lstg_sets[LSTG_MAP][self.byr_idx]
             # remove slr feats
             del lstg_sets[SLR]
         # verify shared lstg features

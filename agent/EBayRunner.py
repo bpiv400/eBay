@@ -274,7 +274,9 @@ def ebay_sampling_process(common_kwargs, worker_kwargs):
     envs = list()
     x_lstg_cols = c.env_kwargs['composer'].x_lstg_cols
     for env_rank in w.env_ranks:
-        loader = TrainLoader(rank=env_rank, x_lstg_cols=x_lstg_cols)
+        loader = TrainLoader(rank=env_rank,
+                             x_lstg_cols=x_lstg_cols,
+                             byr=c.env_kwargs['composer'].byr)
         envs.append(c.EnvCls(**c.env_kwargs, loader=loader))
     set_envs_seeds(envs, w.seed)
     collector = c.CollectorCls(

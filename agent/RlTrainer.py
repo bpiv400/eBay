@@ -9,7 +9,7 @@ from agent.const import AGENT_STATE, BATCH_SIZE, ENTROPY
 from agent.util import get_paths
 from agent.AgentComposer import AgentComposer
 from agent.models.AgentModel import AgentModel, SplitCategoricalPgAgent
-from rlenv.DefaultQueryStrategy import DefaultQueryStrategy
+from rlenv.QueryStrategy import DefaultQueryStrategy
 from agent.envs.SellerEnv import SellerEnv
 from agent.envs.BuyerEnv import BuyerEnv
 from rlenv.interfaces.ArrivalInterface import ArrivalInterface

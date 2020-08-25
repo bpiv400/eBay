@@ -1,8 +1,8 @@
 import torch
 from torch.distributions.categorical import Categorical
 from torch.distributions.bernoulli import Bernoulli
-from rlenv.util import (model_str, proper_squeeze,
-                        sample_categorical, sample_bernoulli)
+from rlenv.util import model_str, proper_squeeze, sample_categorical, \
+    sample_bernoulli
 from constants import IDX
 from featnames import CON, DELAY, MSG, SLR, BYR
 from utils import load_model

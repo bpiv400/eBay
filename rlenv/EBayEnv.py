@@ -1,8 +1,7 @@
 from collections import namedtuple
 from utils import get_cut
 from constants import DAY, BYR_HIST_MODEL, INTERARRIVAL_MODEL, MAX_DELAY_ARRIVAL
-from featnames import ACC_PRICE, DEC_PRICE, START_PRICE, DELAY, START_TIME, \
-    META, BYR
+from featnames import DEC_PRICE, START_PRICE, DELAY, START_TIME, META, BYR
 from utils import get_weeks_since_lstg
 from rlenv.Heap import Heap
 from rlenv.time.TimeFeatures import TimeFeatures
@@ -13,9 +12,8 @@ from rlenv.generate.Recorder import Recorder
 from rlenv.Sources import ArrivalSources
 from rlenv.Sources import ThreadSources
 from rlenv.events.Thread import Thread
-from rlenv.const import (INTERACT, ACC_IND, CON, MSG,
-                         REJ_IND, OFF_IND, ARRIVAL, FIRST_OFFER,
-                         OFFER_EVENT, DELAY_EVENT)
+from rlenv.const import INTERACT, ACC_IND, CON, MSG, REJ_IND, OFF_IND, \
+    ARRIVAL, FIRST_OFFER, OFFER_EVENT, DELAY_EVENT
 from rlenv.util import get_clock_feats, get_con_outcomes, need_msg, model_str
 from rlenv.LstgLoader import TrainLoader
 
@@ -82,8 +80,6 @@ class EBayEnv:
         x_lstg, lookup, p_arrival = self.loader.next_lstg()
         self.x_lstg = self.composer.decompose_x_lstg(x_lstg)
         self.lookup = lookup
-        if ACC_PRICE not in lookup.columns:
-            self.lookup[ACC_PRICE] = self.lookup[START_PRICE]
         self.start_time = int(self.lookup[START_TIME])
         self.last_arrival_time = self.start_time
         self.end_time = self.start_time + MAX_DELAY_ARRIVAL
@@ -212,13 +208,13 @@ class EBayEnv:
 
         # prepare sources and features
         sources = ThreadSources(x_lstg=self.x_lstg)
-        months_since_lstg = get_weeks_since_lstg(lstg_start=self.start_time,
-                                                 time=event.priority)
+        weeks_since_lstg = get_weeks_since_lstg(lstg_start=self.start_time,
+                                                time=event.priority)
         time_feats = self.time_feats.get_feats(time=event.priority,
                                                thread_id=event.thread_id)
         sources.prepare_hist(time_feats=time_feats,
                              clock_feats=get_clock_feats(event.priority),
-                             months_since_lstg=months_since_lstg)
+                             weeks_since_lstg=weeks_since_lstg)
         # sample history
         input_dict = self.composer.build_input_dict(model_name=BYR_HIST_MODEL,
                                                     sources=sources(),
@@ -333,13 +329,10 @@ class EBayEnv:
             self.queue.pop()
 
     def _check_slr_autos(self, norm):
-        if norm < self.lookup[ACC_PRICE] / self.lookup[START_PRICE]:
-            if norm < self.lookup[DEC_PRICE] / self.lookup[START_PRICE]:
-                return REJ_IND
-            else:
-                return OFF_IND
+        if norm < self.lookup[DEC_PRICE] / self.lookup[START_PRICE]:
+            return REJ_IND
         else:
-            return ACC_IND
+            return OFF_IND
 
     def _process_byr_rej(self, offer):
         self.time_feats.update_features(offer=offer)

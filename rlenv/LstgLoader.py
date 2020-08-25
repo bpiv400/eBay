@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
-from constants import TRAIN_RL, PARTS_DIR, NUM_CHUNKS
-from featnames import LSTG
+from constants import RL_SLR, RL_BYR, PARTS_DIR, NUM_CHUNKS
+from featnames import BYR, LSTG
 from rlenv.util import load_chunk
 
 
@@ -105,6 +105,7 @@ class ChunkLoader(LstgLoader):
 class TrainLoader(LstgLoader):
     def __init__(self, **kwargs):
         super().__init__()
+        self.byr = kwargs[BYR]
         if 'rank' not in kwargs:
             self._filename = self._get_train_file_path(rank=0)
         else:
@@ -114,10 +115,10 @@ class TrainLoader(LstgLoader):
         self._internal_loader = None
         self._draw_lstgs()
 
-    @staticmethod
-    def _get_train_file_path(rank=None):
+    def _get_train_file_path(self, rank=None):
         rank = rank % NUM_CHUNKS  # for using more workers
-        return PARTS_DIR + '{}/chunks/{}.gz'.format(TRAIN_RL, rank)
+        part = RL_BYR if self.byr else RL_SLR
+        return PARTS_DIR + '{}/chunks/{}.gz'.format(part, rank)
 
     def next_lstg(self):
         self.verify_init()

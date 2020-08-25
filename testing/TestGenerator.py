@@ -59,12 +59,11 @@ class TestGenerator(Generator):
         """
         print('Loading testing data...')
         chunk_dir = get_env_sim_subdir(part=part, chunks=True)
-        chunk_tuple = load_chunk(input_path='{}{}.gz'.format(chunk_dir, chunk))
-        x_lstg, lookup, p_arrival = chunk_tuple
+        chunk_path = '{}{}.pkl'.format(chunk_dir, chunk)
+        x_lstg, lookup, p_arrival = load_chunk(input_path=chunk_path)
         # lstgs without duplicated time stamps first
         test_data = dict()
-        non_dups = lstgs_without_duplicated_timestamps(
-            lstgs=lookup.index)
+        non_dups = lstgs_without_duplicated_timestamps(lstgs=lookup.index)
         x_lstg = x_lstg.reindex(non_dups)
         lookup = lookup.reindex(non_dups)
         p_arrival = p_arrival.reindex(non_dups)
@@ -75,20 +74,25 @@ class TestGenerator(Generator):
             test_data[name] = load_reindex(part=part,
                                            name=name,
                                            lstgs=lookup.index)
-        test_data = self._remove_extra_models(test_data=test_data)
+        # test_data = self._remove_extra_models(test_data=test_data)
         # subset inputs to only contain lstgs where the agent has at least 1 action
-        valid_lstgs = self._get_valid_lstgs(test_data=test_data, lookup=lookup)
+        valid_lstgs = self._get_valid_lstgs(test_data=test_data,
+                                            lookup=lookup)
         if len(valid_lstgs) < len(lookup.index):
             x_lstg = subset_lstgs(df=x_lstg, lstgs=valid_lstgs)
             lookup = subset_lstgs(df=lookup, lstgs=valid_lstgs)
             p_arrival = subset_lstgs(df=p_arrival, lstgs=valid_lstgs)
-            test_data['x_thread'] = subset_lstgs(df=test_data['x_thread'], lstgs=valid_lstgs)
-            test_data['x_offer'] = subset_lstgs(df=test_data['x_offer'], lstgs=valid_lstgs)
+            test_data['x_thread'] = subset_lstgs(df=test_data['x_thread'],
+                                                 lstgs=valid_lstgs)
+            test_data['x_offer'] = subset_lstgs(df=test_data['x_offer'],
+                                                lstgs=valid_lstgs)
             test_data['inputs'] = subset_inputs(input_data=test_data['inputs'],
                                                 value=valid_lstgs, level='lstg')
         print('Running tests...')
-        return TestLoader(x_lstg=x_lstg, lookup=lookup,
-                          p_arrival=p_arrival, test_data=test_data)
+        return TestLoader(x_lstg=x_lstg,
+                          lookup=lookup,
+                          p_arrival=p_arrival,
+                          test_data=test_data)
 
     def _remove_extra_models(self, test_data):
         """
@@ -111,7 +115,8 @@ class TestGenerator(Generator):
         # print('Lstg count: {}'.format(len(lookup)))
         lookup = lookup.copy()
         # normalize start / decline prices
-        for price in [ACC_PRICE, DEC_PRICE]:
+        # for price in [ACC_PRICE, DEC_PRICE]:
+        for price in [DEC_PRICE]:
             lookup[price] = lookup[price] / lookup[START_PRICE]
         # drop offers that are 0 or 1 (and very near or 1)
         offers = test_data['x_offer'].copy()
@@ -126,10 +131,8 @@ class TestGenerator(Generator):
 
         # inner join offers with lookup
         offers = offers.join(other=lookup, on='lstg')
-        offers['diff_acc'] = (offers['norm'] - offers[ACC_PRICE]).abs()
         offers['diff_dec'] = (offers['norm'] - offers[DEC_PRICE]).abs()
-        offers['low_diff'] = (offers['diff_acc'] < 0.01) |\
-                             (offers['diff_dec'] < 0.01)
+        offers['low_diff'] = offers['diff_dec'] < 0.01
         low_diff_count = offers['low_diff'].groupby(level='lstg').sum()
         no_low_diffs_lstgs = low_diff_count.index[low_diff_count == 0]
         output_lstgs = no_low_diffs_lstgs.union(null_offer_lstgs)
@@ -230,24 +233,23 @@ class TestGenerator(Generator):
         self.query_strategy.update_log(lstg_log)
         if self.byr:
             hist = self.loader.x_thread.loc[buyer, 'byr_hist']
-            hist = hist / 10
             self.composer.set_hist(hist=hist)
         # print('resetting: {}'.format(self.loader.lstg))
-        obs = self.environment.reset(next_lstg=False)
+        obs = self.env.reset(next_lstg=False)
         agent_tuple = obs, None, None, None
         done = False
         while not done:
             action = lstg_log.get_action(agent_tuple=agent_tuple)
-            agent_tuple = self.environment.step(action)
-            done = agent_tuple[2] or self.environment.relist_count > 0
+            agent_tuple = self.env.step(action)
+            done = agent_tuple[2] or self.env.relist_count > 0
         lstg_log.verify_done()
 
     def generate_recorder(self):
         return None
 
     def generate(self):
-        while self.environment.has_next_lstg():
-            self.environment.next_lstg()
+        while self.env.has_next_lstg():
+            self.env.next_lstg()
             if self.byr:
                 buyers = self._count_rl_buyers()
                 if self.first_only:
@@ -271,9 +273,9 @@ class TestGenerator(Generator):
         # this output needs to match first agent action
         lstg_log = self._generate_lstg_log(buyer=None)
         self.query_strategy.update_log(lstg_log)
-        self.environment.reset()
+        self.env.reset()
         # going to need to change to return for each agent action
-        outcome = self.environment.run()
+        outcome = self.env.run()
         return outcome
 
     @property

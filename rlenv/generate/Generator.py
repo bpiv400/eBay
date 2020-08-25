@@ -3,7 +3,7 @@ from rlenv.generate.Recorder import OutcomeRecorder
 from rlenv.interfaces.ArrivalInterface import ArrivalInterface
 from rlenv.interfaces.PlayerInterface import SimulatedSeller, SimulatedBuyer
 from rlenv.LstgLoader import ChunkLoader
-from rlenv.DefaultQueryStrategy import DefaultQueryStrategy
+from rlenv.QueryStrategy import DefaultQueryStrategy
 from rlenv.util import get_env_sim_dir, load_chunk
 
 

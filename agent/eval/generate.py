@@ -10,7 +10,7 @@ from rlenv.generate.util import process_sims
 from rlenv.interfaces.PlayerInterface import SimulatedBuyer, SimulatedSeller
 from rlenv.util import sample_categorical
 from utils import run_func_on_chunks, process_chunk_worker
-from constants import VALIDATION, TRAIN_RL, TEST
+from constants import VALIDATION, RL_SLR, RL_BYR, TEST
 
 
 class AgentGenerator(Generator):
@@ -46,7 +46,7 @@ class AgentGenerator(Generator):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--byr', action='store_true')
-    parser.add_argument('--part', choices=[TRAIN_RL, VALIDATION, TEST])
+    parser.add_argument('--part', choices=[RL_SLR, RL_BYR, VALIDATION, TEST])
     parser.add_argument('--name', type=str)
     parser.add_argument('--heuristic', action='store_true')
     args = parser.parse_args()

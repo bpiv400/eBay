@@ -1,10 +1,8 @@
 """
 Utility functions for use in objects related to the RL environment
 """
-import os
 import numpy as np
 import pandas as pd
-from compress_pickle import load
 from torch.distributions.categorical import Categorical
 from torch.distributions.bernoulli import Bernoulli
 from constants import INPUT_DIR
@@ -12,7 +10,7 @@ from featnames import LOOKUP, X_LSTG, P_ARRIVAL
 from constants import PARTS_DIR, DAY, ARRIVAL_MODELS, MAX_DELAY_TURN
 from rlenv.const import (SIM_CHUNKS_DIR, SIM_VALS_DIR, OFFER_MAPS,
                          SIM_DISCRIM_DIR, DATE_FEATS_DF, NORM_IND)
-from utils import extract_clock_feats, is_split, slr_norm, byr_norm
+from utils import unpickle, extract_clock_feats, is_split, slr_norm, byr_norm
 
 
 def model_str(model_name, turn=None):
@@ -151,22 +149,6 @@ def slr_auto_acc_outcomes(sources, turn):
     return np.array([con, 0.0, norm, 0.0], dtype=np.float32)
 
 
-def get_checkpoint_path(part_dir, chunk_num, discrim=False):
-    """
-    Returns path to checkpoint file for the given chunk
-    and environment simulation (discrim or values)
-    :param str part_dir: path to root directory of partition
-    :param int chunk_num: chunk id
-    :param bool discrim: whether this is a discrim input sim
-    :return: str
-    """
-    if discrim:
-        insert = 'discrim'
-    else:
-        insert = 'val'
-    return '{}chunks/{}_check_{}.gz'.format(part_dir, chunk_num, insert)
-
-
 def get_env_sim_dir(part):
     """
     Gets path to root directory of partition
@@ -202,48 +184,6 @@ def get_env_sim_subdir(part=None, base_dir=None, chunks=False,
     return '{}{}/'.format(base_dir, subdir)
 
 
-def load_output_chunk(directory, c):
-    """
-    Loads all the simulator output pieces for a chunk
-    :param str directory: path to records directory
-    :param int c: chunk num
-    :return: list containing all output pieces (dicts or dataframes)
-    """
-    subdir = '{}{}/'.format(directory, c)
-    pieces = os.listdir(subdir)
-    print(subdir)
-    print(pieces)
-    pieces = [piece for piece in pieces if '.gz' in piece]
-    output_list = list()
-    for piece in pieces:
-        piece_path = '{}{}'.format(subdir, piece)
-        output_list.append(load(piece_path))
-    return output_list
-
-
-def load_sim_outputs(part, values=False):
-    """
-    Loads all simulator outputs for a value estimation or discrim input sim
-    and concatenates each set of output dataframes into 1 dataframe
-    :param str part: partition in PARTITIONS
-    :param bool values: whether this is a value simulation
-    :return: {str: pd.Dataframe}
-    """
-    directory = get_env_sim_subdir(part=part, values=values, discrim=not values)
-    chunks = [path for path in os.listdir(directory) if path.isnumeric()]
-    output_list = list()
-    for chunk in chunks:
-        output_list = output_list + load_output_chunk(directory, int(chunk))
-    if values:
-        output = {'values': pd.concat(output_list, axis=1)}
-    else:
-        output = dict()
-        for dataset in ['offers', 'threads', 'sales']:
-            output[dataset] = [piece[dataset] for piece in output_list]
-            output[dataset] = pd.concat(output[dataset], axis=1)
-    return output
-
-
 def align_x_lstg_lookup(x_lstg, lookup):
     x_lstg = pd.concat([df.reindex(index=lookup.index) for df in x_lstg.values()],
                        axis=1)
@@ -259,12 +199,9 @@ def load_chunk(base_dir=None, num=None, input_path=None):
     :return: (pd.Dataframe giving x_lstg, pd.DataFrame giving lookup)
     """
     if input_path is None:
-        input_path = '{}chunks/{}.gz'.format(base_dir, num)
-    input_dict = load(input_path)
-    x_lstg = input_dict[X_LSTG]
-    lookup = input_dict[LOOKUP]
-    p_arrival = input_dict[P_ARRIVAL]
-    return x_lstg, lookup, p_arrival
+        input_path = base_dir + 'chunks/{}.pkl'.format(num)
+    input_dict = unpickle(input_path)
+    return [input_dict[k] for k in [X_LSTG, LOOKUP, P_ARRIVAL]]
 
 
 def get_delay_outcomes(seconds=0, turn=0):
@@ -312,7 +249,7 @@ def load_featnames(name):
      see const.py for model names
     :return: dict
     """
-    return load(INPUT_DIR + 'featnames/{}.pkl'.format(name))
+    return unpickle(INPUT_DIR + 'featnames/{}.pkl'.format(name))
 
 
 def get_con_outcomes(con=None, sources=None, turn=0):

@@ -12,7 +12,6 @@ drop sale_price
 
 replace flag = 1 if price > start_price
 replace flag = 1 if price == start_price & !bin & index == 1
-drop start_price
 
 sort lstg thread index
 by lstg thread: replace flag = 1 if price < price[_n-2] & _n > 2 & mod(_n,2) == 1
@@ -23,7 +22,7 @@ by lstg thread: replace flag = 1 if price > price[_n-1] & _n > 1 & mod(index,2) 
 by lstg thread: replace flag = 1 if _n < _N & price == start_price & !bin & mod(index,2) == 1 & (clock != clock[_n+1] | !accept[_n+1])
 by lstg thread: replace flag = 1 if _n < _N & price <= decline_price & mod(index,2) == 1 & (clock != clock[_n+1] | !reject[_n+1])
 by lstg thread: replace flag = 1 if _n < _N & price < start_price & price > decline_price & clock == clock[_n+1]
-drop decline_price
+drop start_price decline_price
 
 replace flag = 1 if price == 0 & index == 1
 

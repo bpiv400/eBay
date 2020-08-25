@@ -14,9 +14,6 @@ SIM_DISCRIM_DIR = 'outcomes'
 # holiday and day-of-week indicators, indexed by days since START
 DATE_FEATS_DF = unpickle(DATE_FEATS_PATH)
 
-# number of hours the val generation job may run before termination
-VAL_TIME_LIMIT = 48
-
 # outcome tuple names
 SALE = 'sale'
 DUR = 'dur'

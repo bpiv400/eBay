@@ -1,11 +1,10 @@
 import torch
 import numpy as np
 import pandas as pd
-from constants import (MODELS, OFFER_MODELS, FIRST_ARRIVAL_MODEL,
-                       BYR_HIST_MODEL, INTERARRIVAL_MODEL)
-from featnames import (OUTCOME_FEATS, CLOCK_FEATS, TIME_FEATS,
-                       WEEKS_SINCE_LSTG, BYR_HIST, DELAY, CON,
-                       INT_REMAINING, WEEKS_SINCE_LAST, THREAD_COUNT, SLR)
+from constants import MODELS, OFFER_MODELS, FIRST_ARRIVAL_MODEL, \
+    BYR_HIST_MODEL, INTERARRIVAL_MODEL
+from featnames import OUTCOME_FEATS, CLOCK_FEATS, TIME_FEATS, WEEKS_SINCE_LSTG, \
+    BYR_HIST, DELAY, CON, INT_REMAINING, WEEKS_SINCE_LAST, THREAD_COUNT, SLR
 from utils import load_sizes, load_featnames
 from rlenv.const import LSTG_MAP, CLOCK_MAP, OFFER_MAPS, THREAD_COUNT_IND, \
     TIME_START_IND, TIME_END_IND, CLOCK_START_IND, CLOCK_END_IND
@@ -162,8 +161,7 @@ class Composer:
                                    sources[CLOCK_MAP],
                                    solo_feats])
         elif model_name == FIRST_ARRIVAL_MODEL:
-            # append nothing
-            lstg = sources[LSTG_MAP]
+            lstg = sources[LSTG_MAP]  # append nothing
         elif model_name == BYR_HIST_MODEL:
             solo_feats = np.array([sources[WEEKS_SINCE_LSTG],
                                    sources[OFFER_MAPS[1]][THREAD_COUNT_IND]])

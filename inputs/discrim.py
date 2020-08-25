@@ -3,7 +3,7 @@ from compress_pickle import dump
 from inputs.util import save_featnames_and_sizes, \
     convert_x_to_numpy, get_x_thread, get_ind_x
 from utils import load_file, drop_censored, input_partition
-from constants import VALIDATION, DISCRIM_MODEL, INPUT_DIR
+from constants import TRAIN_DISCRIM, VALIDATION, TEST, DISCRIM_MODEL, INPUT_DIR
 from featnames import SPLIT, DAYS, DELAY, EXP, AUTO, REJECT, MSG, LOOKUP
 
 
@@ -99,6 +99,7 @@ def construct_x(part=None, sim=False):
 def main():
     # extract parameters from command line
     part = input_partition()
+    assert part in [TRAIN_DISCRIM, VALIDATION, TEST]
     print('{}/{}'.format(part, DISCRIM_MODEL))
 
     # listing ids

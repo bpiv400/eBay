@@ -1,9 +1,8 @@
 import os
 import pandas as pd
-from compress_pickle import dump
 from processing.util import collect_date_clock_feats, get_days_delay, get_norm
-from utils import is_split, load_file
-from constants import IDX, WEEK
+from utils import topickle, is_split, load_file
+from constants import IDX, WEEK, MAX_DELAY_ARRIVAL
 from featnames import DAYS, DELAY, CON, SPLIT, NORM, REJECT, AUTO, EXP, \
     CLOCK_FEATS, TIME_FEATS, OUTCOME_FEATS, WEEKS_SINCE_LSTG, \
     BYR_HIST, START_TIME, LOOKUP, SLR
@@ -71,7 +70,7 @@ def clean_components(threads, offers, lstg_start):
     sale_time = offers.loc[offers[CON] == 100, 'clock'].reset_index(
         level=['thread', 'index'], drop=True)
     lstg_end = sale_time.reindex(index=idx, fill_value=-1)
-    lstg_end.loc[lstg_end == -1] += lstg_start + WEEK
+    lstg_end.loc[lstg_end == -1] += lstg_start + MAX_DELAY_ARRIVAL
 
     # conform to observed inputs
     d['x_thread'] = process_sim_threads(threads, lstg_start)
@@ -111,4 +110,4 @@ def process_sims(part=None, sims=None, output_dir=None):
 
     # save
     for k, df in d.items():
-        dump(df, output_dir + '{}.gz'.format(k))
+        topickle(df, output_dir + '{}.pkl'.format(k))

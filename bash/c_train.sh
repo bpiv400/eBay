@@ -52,22 +52,27 @@ done
 # best models and training plots
 ./repo/bash/util/wait.sh
 python repo/sim/best_models.py
-python repo/assess/training_curves.py
-python repo/plots/training_curves.py
+#python repo/assess/training_curves.py
+#python repo/plots/training_curves.py
 
-# chunks, discrim generator, and discrim input
-for part in valid rl
+# chunks
+for part in valid discrim rl_slr rl_byr
 do
-  python repo/sim/chunks.py --part $part
+  python repo/sim/chunks.py --part $part &
+done
+
+# discrim generator and input
+for part in valid discrim
+do
   python repo/sim/generate.py --part $part
   python repo/inputs/discrim.py --part $part
 done
 
-# discriminator plots
-python repo/assess/unconditional.py
-python repo/plots/unconditional.py
-python repo/assess/conditional.py
-python repo/plots/conditional.py
+## discriminator plots
+#python repo/assess/unconditional.py
+#python repo/plots/unconditional.py
+#python repo/assess/conditional.py
+#python repo/plots/conditional.py
 
 # run discrim model
 for D in {0..7}
@@ -83,6 +88,6 @@ done
 ./repo/bash/util/wait.sh
 python repo/sim/best_models.py --group discrim
 
-# roc plot
-python repo/assess/roc.py
-python repo/plots/roc.py
+## roc plot
+#python repo/assess/roc.py
+#python repo/plots/roc.py

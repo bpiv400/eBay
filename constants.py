@@ -41,19 +41,19 @@ FIG_DIR = os.path.expanduser('~/eBay/figures/')  # for saving figures
 
 # partitions
 TRAIN_MODELS = 'sim'
+TRAIN_DISCRIM = 'discrim'
 RL_SLR = 'rl_slr'
 RL_BYR = 'rl_byr'
 VALIDATION = 'valid'
 TEST = VALIDATION  # TODO: rename to 'testing' when using real testing data
-PARTITIONS = [TRAIN_MODELS, RL_SLR, RL_BYR, VALIDATION, TEST]
+PARTITIONS = [TRAIN_MODELS, TRAIN_DISCRIM, RL_SLR, RL_BYR, VALIDATION, TEST]
 SIM_PARTITIONS = [TRAIN_MODELS, VALIDATION, TEST]
 AGENT_PARTITIONS = [RL_SLR, RL_BYR, VALIDATION, TEST]
-TRAIN_DISCRIM = 'discrim'
 
 # for splitting data
 SHARES = {TRAIN_MODELS: 0.75, RL_SLR: 0.05, RL_BYR: 0.05, VALIDATION: 0.05}
 
-# delete activity after lstg is open MAX_DAYS
+# listing window stays open this many days
 MAX_DAYS = 8
 
 # temporal constants
@@ -134,9 +134,7 @@ SEED = 123456
 NUM_CHUNKS = 64
 
 # features to drop from 'lstg' grouping for byr
-BYR_DROP = ['auto_decline', 'auto_accept',
-            'has_decline', 'has_accept',
-            'lstg_ct', 'bo_ct']
+BYR_DROP = ['lstg_ct', 'bo_ct', 'auto_decline', 'has_decline']
 
 # for precision issues
 EPS = 1e-8

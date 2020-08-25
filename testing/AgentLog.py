@@ -28,7 +28,7 @@ class AgentLog:
             if next_action.turn != 1:
                 assert next_action.thread_id == info.thread_id
             # check that time is the same
-            assert math.isclose(next_action.months, info.months)
+            assert math.isclose(next_action.days, info.days)
             # check that done flags are the same
             assert done == info.done
         else:

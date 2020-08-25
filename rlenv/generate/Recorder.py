@@ -2,9 +2,9 @@ import numpy as np
 import pandas as pd
 from rlenv.events.Thread import Thread
 from rlenv.const import FIRST_OFFER
-from constants import WEEK
+from constants import MAX_DELAY_ARRIVAL
 from featnames import START_TIME, START_PRICE, TIME_FEATS, MSG, CON, \
-    LSTG, THREAD, INDEX, BYR_HIST, ACC_PRICE, DEC_PRICE, CLOCK
+    LSTG, THREAD, INDEX, BYR_HIST, DEC_PRICE, CLOCK
 
 OFFER_COLS = [LSTG, THREAD, INDEX, CLOCK, CON, MSG] + TIME_FEATS
 THREAD_COLS = [LSTG, THREAD, BYR_HIST, CLOCK]
@@ -72,14 +72,11 @@ class Recorder:
     @staticmethod
     def print_lstg(lookup):
         print("\nLSTG: {}".format(int(lookup[LSTG])))
-        print('start time: {} | end time: {}'.format(int(lookup[START_TIME]),
-                                                     int(lookup[START_TIME] + WEEK)))
-        print(('Start price: {} | accept price: {}' +
-              ' | decline price: {}').format(lookup[START_PRICE], lookup[ACC_PRICE],
-                                             lookup[DEC_PRICE]))
-        norm_acc = lookup[ACC_PRICE] / lookup[START_PRICE]
-        norm_dec = lookup[DEC_PRICE] / lookup[START_PRICE] if lookup[DEC_PRICE] > 0 else 0.0
-        print('Norm accept price: {} | Norm decline price: {}'.format(norm_acc, norm_dec))
+        print('start time: {} | end time: {}'.format(
+            int(lookup[START_TIME]), int(lookup[START_TIME] + MAX_DELAY_ARRIVAL)))
+        norm_dec = lookup[DEC_PRICE] / lookup[START_PRICE]
+        print('Start price: {} | decline price: {} | norm decline price: {}'.format(
+            lookup[START_PRICE], lookup[DEC_PRICE], norm_dec))
 
     @staticmethod
     def print_next_event(event):

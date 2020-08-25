@@ -1,6 +1,6 @@
 from featnames import START_TIME, WEEKS_SINCE_LSTG, BYR_HIST, CON, AUTO
-from constants import (WEEK, DAY, BYR_HIST_MODEL,
-                       INTERARRIVAL_MODEL, OFFER_MODELS)
+from constants import MAX_DELAY_ARRIVAL, DAY, WEEK, BYR_HIST_MODEL, \
+   INTERARRIVAL_MODEL, OFFER_MODELS
 from testing.AgentLog import AgentLog
 from testing.ActionLog import ActionLog
 from testing.ArrivalLog import ArrivalLog
@@ -74,8 +74,7 @@ class LstgLog:
                                                     value=action_index,
                                                     agent=True,
                                                     agent_byr=True)
-            time = (i * DAY) / WEEK
-            log = ActionLog(input_dict=input_dict, months=time, con=0,
+            log = ActionLog(input_dict=input_dict, days=i, con=0,
                             thread_id=self.agent_thread, turn=1)
             agent_log.push_action(action=log)
         return days
@@ -83,11 +82,12 @@ class LstgLog:
     def record_buyer_first_turn(self, full_inputs=None, agent_log=None,
                                 days=None, agent_turns=None):
         con = agent_turns[1].agent_con()
-        time = (days * DAY) / WEEK
         first_turn_index = (self.agent_thread, 1, days)
         input_dict = populate_test_model_inputs(full_inputs=full_inputs, value=first_turn_index,
                                                 agent=True, agent_byr=self.byr)
-        first_offer = ActionLog(input_dict=input_dict, months=time, con=con,
+        first_offer = ActionLog(input_dict=input_dict,
+                                months=days,
+                                con=con,
                                 thread_id=self.translate_thread(self.agent_thread),
                                 turn=1)
         agent_log.push_action(action=first_offer)
@@ -97,7 +97,7 @@ class LstgLog:
     def record_agent_thread(self, turns=None, agent_log=None, thread_id=None, full_inputs=None):
         for turn_number, turn_log in turns.items():
             time = turn_log.agent_time()
-            months = (time - self.lookup[START_TIME]) / WEEK
+            days = (time - self.lookup[START_TIME]) / DAY
             if self.byr:
                 index = (thread_id, turn_number, 0)
             else:
@@ -107,8 +107,10 @@ class LstgLog:
             else:
                 input_dict = populate_test_model_inputs(full_inputs=full_inputs, value=index,
                                                         agent=True, agent_byr=self.byr)
-            action = ActionLog(con=turn_log.agent_con(), censored=turn_log.is_censored,
-                               months=months, input_dict=input_dict,
+            action = ActionLog(con=turn_log.agent_con(),
+                               censored=turn_log.is_censored,
+                               days=days,
+                               input_dict=input_dict,
                                thread_id=self.translate_thread(self.agent_thread),
                                turn=turn_number)
             agent_log.push_action(action=action)
@@ -146,8 +148,8 @@ class LstgLog:
         if (self.agent_thread + 1) in self.arrivals:
             target_time = self.arrivals[self.agent_thread + 1].time
         else:
-            target_time = self.lookup[START_TIME] + WEEK
-        target_censored = target_time == (self.lookup[START_TIME] + WEEK)
+            target_time = self.lookup[START_TIME] + MAX_DELAY_ARRIVAL
+        target_censored = target_time == (self.lookup[START_TIME] + MAX_DELAY_ARRIVAL)
         self.arrivals[self.agent_thread].time = target_time
         self.arrivals[self.agent_thread].censored = target_censored
 
@@ -199,7 +201,7 @@ class LstgLog:
         arrival_inputs = self.get_arrival_inputs(params=params,
                                                  thread_id=thread_id)
         check_time = self.arrival_check_time(params=params, thread_id=thread_id)
-        time = self.lookup[START_TIME] + WEEK
+        time = self.lookup[START_TIME] + MAX_DELAY_ARRIVAL
         return ArrivalLog(check_time=check_time, arrival_inputs=arrival_inputs, time=time,
                           first_arrival=thread_id == 1)
 
@@ -281,8 +283,8 @@ class LstgLog:
         """
         true_id = self.translate_thread(thread_id=thread_id)
         delay = self.threads[true_id].get_delay(turn=turn, time=time, input_dict=input_dict)
-        if delay == WEEK:
-            return self.lookup[START_TIME] + WEEK - time
+        if delay == MAX_DELAY_ARRIVAL:
+            return self.lookup[START_TIME] + MAX_DELAY_ARRIVAL - time
         else:
             return delay
 
