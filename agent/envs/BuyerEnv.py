@@ -4,10 +4,11 @@ from constants import HOUR, POLICY_BYR, PCTILE_DIR, INTERVAL_CT_ARRIVAL, \
     DAY, MAX_DAYS
 from featnames import START_PRICE, BYR_HIST
 from rlenv.util import get_clock_feats, get_con_outcomes
-from utils import load_sizes, unpickle, get_weeks_since_lstg
+from utils import load_sizes, unpickle, get_days_since_lstg
 from rlenv.const import FIRST_OFFER, DELAY_EVENT, OFFER_EVENT, RL_ARRIVAL_EVENT
 from rlenv.Sources import ThreadSources
 from agent.envs.AgentEnv import AgentEnv
+from agent.util import define_con_set
 from rlenv.events.Event import Event
 from rlenv.events.Thread import Thread
 
@@ -215,11 +216,11 @@ class BuyerEnv(AgentEnv):
         clock_feats = get_clock_feats(arrival_time)
         time_feats = self.time_feats.get_feats(time=arrival_time,
                                                thread_id=self.thread_counter)
-        weeks_since_lstg = get_weeks_since_lstg(lstg_start=self.start_time,
-                                                time=arrival_time)
+        days_since_lstg = get_days_since_lstg(lstg_start=self.start_time,
+                                              time=arrival_time)
         sources.prepare_hist(clock_feats=clock_feats,
                              time_feats=time_feats,
-                             weeks_since_lstg=weeks_since_lstg)
+                             days_since_lstg=days_since_lstg)
 
         # construct thread, then return
         thread = Thread(priority=arrival_time, agent=True)
@@ -246,6 +247,9 @@ class BuyerEnv(AgentEnv):
         idx = np.searchsorted(self.hist_pctile, q) - 1
         hist = self.hist_pctile[idx]
         return hist
+
+    def _define_con_set(self, con_set):
+        return define_con_set(con_set=con_set, byr=True)
 
     @property
     def horizon(self):

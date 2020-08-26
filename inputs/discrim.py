@@ -1,8 +1,7 @@
 import numpy as np
-from compress_pickle import dump
 from inputs.util import save_featnames_and_sizes, \
     convert_x_to_numpy, get_x_thread, get_ind_x
-from utils import load_file, drop_censored, input_partition
+from utils import topickle, load_file, drop_censored, input_partition
 from constants import TRAIN_DISCRIM, VALIDATION, TEST, DISCRIM_MODEL, INPUT_DIR
 from featnames import SPLIT, DAYS, DELAY, EXP, AUTO, REJECT, MSG, LOOKUP
 
@@ -44,7 +43,7 @@ def save_discrim_files(part=None, x_obs=None, x_sim=None, lstgs=None):
     d['idx_x'] = np.concatenate((idx_x_obs, idx_x_sim), axis=0)
 
     # save inputs
-    dump(d, INPUT_DIR + '{}/{}.gz'.format(part, DISCRIM_MODEL))
+    topickle(d, INPUT_DIR + '{}/{}.pkl'.format(part, DISCRIM_MODEL))
 
 
 def get_x_offer(offers, idx):

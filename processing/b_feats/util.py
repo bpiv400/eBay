@@ -1,6 +1,8 @@
 import numpy as np
 import pandas as pd
+from processing.util import hist_to_pctile
 from constants import START, IDX, MAX_DELAY_TURN
+from featnames import BYR_HIST
 
 QUANTILES = [0.25, 0.5, 0.75, 1]  # quantiles of feature distribution
 
@@ -42,7 +44,7 @@ def prep_quantiles(df, l, featname, new=False):
         quant_vector = df.reset_index(drop=False)
         quant_vector = quant_vector[[featname, lstg_ind] + l]
         quant_vector = quant_vector.groupby(by=l + [lstg_ind]).max()[featname]
-    elif featname == 'first_offer' or featname == 'byr_hist':
+    elif featname == 'first_offer' or featname == BYR_HIST:
         quant_vector = df.xs(1, level='index')
         quant_vector = quant_vector_index(quant_vector, l, featname, new=new)
     elif featname == 'slr_delay' or featname == 'byr_delay':
@@ -60,7 +62,7 @@ def prep_quantiles(df, l, featname, new=False):
     elif featname == 'start_price_pctile' or featname == 'arrival_rate':
         quant_vector = df.xs(0, level='thread').xs(0, level='index')
         quant_vector = quant_vector_index(quant_vector, l, featname, new=new)
-    elif featname == 'byr_hist':
+    elif featname == BYR_HIST:
         quant_vector = df.xs(1, level='index')
         quant_vector = quant_vector_index(quant_vector, l, featname, new=new)
     else:
@@ -156,7 +158,7 @@ def inplace_quantiles(df):
     targs = df['targ'].values
     lstgs = df['lstg'].values
     # compute indices of quantiles in full distribution
-    full_quant_inds = {q:int(q * last_filled / 100) for q in [25, 50, 75, 100]}
+    full_quant_inds = {q: int(q * last_filled / 100) for q in [25, 50, 75, 100]}
     lstg_ind_dict = dict()
     lstg_count_dict = dict()
     # populate dictionary of lstgs with lists containing indices corresponding
@@ -331,7 +333,6 @@ def get_msg_rate(events, levels, turn):
     events['is_turn'] = (~events.message.isna())
     events.loc[:, 'is_turn'] = events['is_turn'].astype(bool)
     events.loc[:, 'is_turn'] = events['is_turn'].astype(int)
-    print(events.dtypes)
     name = 'msg_rate_{}'.format(turn)
     msg_rate = get_perc(events, levels, 'message', 'is_turn', name)
     return msg_rate
@@ -339,17 +340,10 @@ def get_msg_rate(events, levels, turn):
 
 def get_cat_msg_rate(events, levels):
     tf = prep_tf(events)
-    print(tf.index.names)
-    print(events.index.names)
-    print(events.columns)
-    print(events[['message']].dtypes)
     for i in range(len(levels)):
         curr_levels = levels[: i+1]
         for turn in range(1, 7):
             tf = tf.join(get_msg_rate(events.copy(), curr_levels, turn))
-    print(tf.min())
-    print(tf.max())
-    print(tf.mean())
     return tf
 
 
@@ -399,7 +393,6 @@ def get_cat_accepts(events, levels):
 
     for i in range(len(levels)):
         curr_levels = levels[: i + 1]
-        print('curr level: {}'.format(curr_levels[-1]))
         # quantiles of (normalized) accept price over 30-day window
         quants = fast_quantiles(events, curr_levels, 'accept_norm')
         tf = tf.join(quants)
@@ -416,11 +409,11 @@ def get_cat_con(events, levels):
         curr_levels = levels[: i + 1]
         perc = get_perc(events,  curr_levels, 'bin', 'lstg_ind', name='bin')
         tf = tf.join(perc)
+
         # quantiles of (normalized) accept price over 30-day window
         quants = fast_quantiles(events, curr_levels, 'first_offer')
         tf = tf.join(quants)
-        # for identical timestamps
-        cols = [c for c in tf.columns if c.startswith(levels[-1])]
+
     # collapse to lstg
     return tf.sort_index()
 
@@ -461,9 +454,9 @@ def get_cat_start_price(events, levels):
 
 
 def get_cat_byr_hist(events, levels):
-    events.loc[events.base, 'byr_hist'] = np.NaN
-    events.byr_hist = events.byr_hist.astype(np.float)
-    return get_cat_quantiles_wrapper(events, levels, 'byr_hist')
+    events.loc[events.base, BYR_HIST] = np.NaN
+    events.loc[:, BYR_HIST] = hist_to_pctile(events[BYR_HIST])
+    return get_cat_quantiles_wrapper(events, levels, BYR_HIST)
 
 
 def get_cat_arrival(events, levels):
@@ -539,5 +532,3 @@ def create_events(data=None, levels=None):
     lstg_cols = ['start_price', 'arrival_rate', 'start_price_pctile']
     events = events.join(data['listings'][lstg_cols])
     return events
-
-

@@ -9,19 +9,34 @@ from featnames import META, LEAF, SLR
 
 
 def create_feats(data=None, name=None):
-    # set levels for hierarchical feats
-    events = create_events(data=data, levels=[name])
-    # categorical features
-    start = dt.now()
-    feats = get_all_cat_feats(events, [name])
+    events = create_events(data=data, levels=[name])  # set levels
+    feats = get_all_cat_feats(events, [name])  # categorical features
     assert not feats.isna().any().any()
-    print('{} seconds'.format((dt.now() - start).total_seconds()))
+    return feats
+
+
+def process_subset(data=None, name=None, meta=None, chunk=None):
+    start = dt.now()
+    val = meta[chunk]
+    lstgs = data['listings'].loc[data['listings'][META] == val].index
+    for k, v in data.items():
+        if len(v.index.names) == 1:
+            data[k] = v.reindex(index=lstgs)
+        else:
+            data[k] = v.reindex(index=lstgs, level='lstg')
+    feats = create_feats(data=data, name=name)
+    sec = (dt.now() - start).total_seconds()
+    print('{} {}: {} listings, {} seconds'.format(META, val, len(lstgs), sec))
     return feats
 
 
 def process_chunk(chunk=None):
+    start = dt.now()
     chunk = unpickle(FEATS_DIR + 'chunks/{}.pkl'.format(chunk))
-    return create_feats(data=chunk, name=SLR)
+    feats = create_feats(data=chunk, name=SLR)
+    sec = (dt.now() - start).total_seconds()
+    print('Chunk {}: {} listings, {} seconds'.format(chunk, len(feats), sec))
+    return feats
 
 
 def main():
@@ -31,15 +46,27 @@ def main():
                         choices=[SLR, META, LEAF],
                         required=True)
     name = parser.parse_args().name
+    print('Creating feats at {} level'.format(name))
 
     if name == SLR:
         res = run_func_on_chunks(f=process_chunk, func_kwargs=dict())
-        feats = pd.concat(res).sort_index()
+
     else:
+        # load data
         data = dict()
         for level in ['listings', 'threads', 'offers']:
             data[level] = load_feats(level)
-        feats = create_feats(data=data, name=name)
+
+        # parallel processing
+        meta = data['listings'][META].unique()
+        print('{} unique meta categories'.format(len(meta)))
+        kwargs = dict(data=data, name=name, meta=meta)
+        res = run_func_on_chunks(f=process_subset,
+                                 func_kwargs=kwargs,
+                                 num_chunks=len(meta))
+
+    # concatenate dataframes
+    feats = pd.concat(res).sort_index()
 
     # save
     topickle(feats, FEATS_DIR + '{}.pkl'.format(name))

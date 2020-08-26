@@ -60,7 +60,6 @@ MAX_DAYS = 8
 MINUTE = 60
 HOUR = 60 * MINUTE
 DAY = 24 * HOUR
-WEEK = 7 * DAY
 EXPIRATION = 2 * DAY
 
 # maximal delay times

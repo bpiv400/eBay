@@ -118,7 +118,7 @@ class TrainLoader(LstgLoader):
     def _get_train_file_path(self, rank=None):
         rank = rank % NUM_CHUNKS  # for using more workers
         part = RL_BYR if self.byr else RL_SLR
-        return PARTS_DIR + '{}/chunks/{}.gz'.format(part, rank)
+        return PARTS_DIR + '{}/chunks/{}.pkl'.format(part, rank)
 
     def next_lstg(self):
         self.verify_init()

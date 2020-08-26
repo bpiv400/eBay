@@ -5,7 +5,7 @@ import numpy as np
 from scipy.special import betainc
 from nets.FeedForward import FeedForward
 from utils import load_sizes
-from agent.const import DROPOUT_POLICY, DROPOUT_VALUE
+from agent.const import DROPOUT, FULL, SPARSE, NONE
 from constants import POLICY_SLR, POLICY_BYR
 
 TEST_BETA = False
@@ -20,28 +20,41 @@ class AgentModel(torch.nn.Module):
     4. Both networks use batch normalization
     5. Both networks use dropout with shared dropout hyperparameters
     """
-    def __init__(self, byr=None, serial=False, nocon=False):
+    def __init__(self, byr=None, serial=False, con_set=False):
         """
         Initializes feed-forward networks for agent.
         :param bool byr: use buyer sizes if True.
         :param bool serial: serial sampler doesn't like squeezed outputs.
-        :param bool nocon: accept or reject only if True.
+        :param str con_set: restricts concession set.
         """
         super().__init__()
 
         # save params to self
         self.byr = byr
         self.serial = serial
-        self.out = 1 if nocon else 5
+        self.con_set = con_set
+
+        # size of policy output
+        if con_set == FULL:
+            self.out = 5
+        elif con_set == SPARSE:
+            self.out = 11
+        elif con_set == NONE:
+            assert not byr
+            self.out = 2
+        else:
+            raise ValueError('Invalid concession set: {}'.format(con_set))
+        if not byr:  # expiration rejection
+            self.out += 1
 
         # policy net
         sizes = load_sizes(POLICY_BYR if byr else POLICY_SLR)
         sizes['out'] = self.out
-        self.policy_net = FeedForward(sizes=sizes, dropout=DROPOUT_POLICY)
+        self.policy_net = FeedForward(sizes=sizes, dropout=DROPOUT)
 
         # value net
         sizes['out'] = 1
-        self.value_net = FeedForward(sizes=sizes, dropout=DROPOUT_VALUE)
+        self.value_net = FeedForward(sizes=sizes, dropout=DROPOUT)
 
         # for discrete pdf
         self.dim = torch.from_numpy(np.linspace(0, 1, 100)).float()
@@ -73,10 +86,10 @@ class AgentModel(torch.nn.Module):
         theta = self.policy_net(input_dict)
 
         # convert to categorical distribution
-        if self.out == 1:
-            pdf = self._cat_from_binary(theta)
-        else:
+        if self.out in [5, 6]:
             pdf = self._cat_from_beta(theta)
+        else:
+            pdf = softmax(theta, dim=-1)
 
         # value
         v = torch.sigmoid(self.value_net(input_dict))
@@ -88,17 +101,10 @@ class AgentModel(torch.nn.Module):
 
         return pdf, v
 
-    @staticmethod
-    def _cat_from_binary(theta):
-        p_accept = torch.sigmoid(theta)
-        p_reject = 1. - p_accept
-        zeros = torch.zeros_like(p_accept).expand(-1, 99)
-        pdf = torch.cat([p_reject, zeros, p_accept], dim=-1)
-        return pdf
-
     def _cat_from_beta(self, theta):
         # beta distribution
         pi = softmax(theta[:, :-2], dim=-1)
+        p_acc, p_rej, p_con = pi[:, [0]], pi[:, [1]], pi[:, [2]]
         beta_params = softplus(torch.clamp(theta[:, -2:], min=-5))
         a, b = beta_params[:, [0]], beta_params[:, [1]]
 
@@ -121,8 +127,10 @@ class AgentModel(torch.nn.Module):
                 raise ValueError('Distributions are not equivalent.')
 
         # add in accepts and rejects
-        pdf *= pi[:, [-1]]  # scale by concession probability
-        pdf = torch.cat([pi[:, [0]], pdf, pi[:, [1]]], dim=-1)
+        pdf *= p_con  # scale by concession probability
+        pdf = torch.cat([p_rej, pdf, p_acc], dim=-1)
+        if self.out == 6:  # expiration reject
+            pdf = torch.cat([pdf, pi[:, [3]]], dim=-1)
         assert torch.min(pdf) >= 0
         total = pdf.sum(-1, True)
         if torch.max(torch.abs(total - 1.)) >= 1e-6:

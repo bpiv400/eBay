@@ -1,5 +1,5 @@
-from featnames import START_TIME, WEEKS_SINCE_LSTG, BYR_HIST, CON, AUTO
-from constants import MAX_DELAY_ARRIVAL, DAY, WEEK, BYR_HIST_MODEL, \
+from featnames import START_TIME, DAYS_SINCE_LSTG, BYR_HIST, CON, AUTO
+from constants import MAX_DELAY_ARRIVAL, DAY, BYR_HIST_MODEL, \
    INTERARRIVAL_MODEL, OFFER_MODELS
 from testing.AgentLog import AgentLog
 from testing.ActionLog import ActionLog
@@ -209,7 +209,7 @@ class LstgLog:
         if thread_id == 1:
             check_time = self.lookup[START_TIME]
         else:
-            check_time = int(params['x_thread'].loc[thread_id - 1, WEEKS_SINCE_LSTG] * WEEK)
+            check_time = int(params['x_thread'].loc[thread_id - 1, DAYS_SINCE_LSTG] * DAY)
             check_time += self.lookup[START_TIME]
         return check_time
 
@@ -218,7 +218,7 @@ class LstgLog:
                                                  thread_id=thread_id)
         check_time = self.arrival_check_time(params=params, thread_id=thread_id)
         # print(params['x_thread'].columns)
-        time = int(params['x_thread'].loc[thread_id, WEEKS_SINCE_LSTG] * WEEK)
+        time = int(params['x_thread'].loc[thread_id, DAYS_SINCE_LSTG] * DAY)
         time += self.lookup[START_TIME]
         hist = params['x_thread'].loc[thread_id, BYR_HIST]
 

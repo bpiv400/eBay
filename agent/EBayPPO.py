@@ -6,6 +6,7 @@ from rlpyt.agents.base import AgentInputs
 from rlpyt.utils.tensor import valid_mean
 from rlpyt.utils.buffer import buffer_to
 from rlpyt.utils.collections import namedarraytuple
+from agent.util import define_con_set
 from agent.const import PERIOD_EPOCHS, LR_POLICY, LR_VALUE, RATIO_CLIP
 
 LossInputs = namedarraytuple("LossInputs",
@@ -23,6 +24,7 @@ OptInfo = namedtuple("OptInfo",
                       "Rate_Con",
                       "Rate_Acc",
                       "Rate_Rej",
+                      "Rate_Exp",
                       "Rate_Sale",
                       "Concession",
                       "DollarReturn",
@@ -51,6 +53,7 @@ class EBayPPO:
         # parameters to be defined later
         self.agent = None
         self.byr = None
+        self.con_set = None
         self._optim_value = None
         self._optim_policy = None
 
@@ -67,6 +70,8 @@ class EBayPPO:
         """
         self.agent = agent
         self.byr = agent.model.byr
+        self.con_set = define_con_set(con_set=agent.model.con_set,
+                                      byr=self.byr)
 
         # optimizers
         self._optim_value = Adam(self.agent.value_parameters(),
@@ -145,13 +150,16 @@ class EBayPPO:
         opt_info.OffersPerTraj.append(info.num_offers[done].numpy())
         opt_info.DaysToDone.append(info.days[done].numpy())
 
-        con = samples.agent.action[valid].numpy()
-        opt_info.Rate_Con.append(((0 < con) & (con < 100)).mean())
-        opt_info.Rate_Acc.append((con == 100).mean())
-        opt_info.Rate_Rej.append((con == 0).mean())
+        action = samples.agent.action[valid].numpy()
+        con = np.take_along_axis(self.con_set, action, 0)
+        opt_info.Rate_Con.append(((0. < con) & (con < 1.)).mean())
+        opt_info.Rate_Acc.append((con == 1.).mean())
+        opt_info.Rate_Rej.append((con == 0.).mean())
+        if not self.byr:
+            opt_info.Rate_Exp.append((con > 1.).mean())
         opt_info.Rate_Sale.append((reward[done].numpy() > 0.).mean())
 
-        con = con[(con < 100) & (con > 0)]
+        con = con[(con < 1.) & (con > 0.)]
         if len(con) > 0:
             opt_info.Concession.append(con)
 

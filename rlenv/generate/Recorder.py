@@ -197,8 +197,9 @@ class OutcomeRecorder(Recorder):
         self.compress_common_cols([LSTG, THREAD, CLOCK],
                                   [self.threads, self.offers],
                                   [np.int32, np.uint16, np.int32])
-        self.offers.set_index(INDEX_COLS, inplace=True).sort_index()
-        self.threads.set_index(INDEX_COLS[:-1], inplace=True).sort_index()
+        self.offers.set_index(INDEX_COLS, inplace=True)
+        self.threads.set_index(INDEX_COLS[:-1], inplace=True)
         assert np.all(self.offers.xs(1, level='index')[CON] > 0)
 
-        return dict(offers=self.offers, threads=self.threads)
+        return dict(offers=self.offers.sort_index(),
+                    threads=self.threads.sort_index())

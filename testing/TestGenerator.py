@@ -3,7 +3,7 @@ from functools import reduce
 from agent.util import get_agent_name
 from agent.AgentComposer import AgentComposer
 from constants import BYR, POLICY_MODELS
-from featnames import LSTG, ACC_PRICE, DEC_PRICE, START_PRICE
+from featnames import LSTG, DEC_PRICE, START_PRICE
 from rlenv.Composer import Composer
 from agent.envs.BuyerEnv import BuyerEnv
 from agent.envs.SellerEnv import SellerEnv

@@ -4,7 +4,7 @@ import torch
 import numpy as np
 from agent.util import get_agent_name
 from constants import PARTS_DIR, VALIDATION, BYR_DROP
-from featnames import OUTCOME_FEATS, WEEKS_SINCE_LSTG, BYR_HIST, \
+from featnames import OUTCOME_FEATS, DAYS_SINCE_LSTG, BYR_HIST, \
     TIME_FEATS, CLOCK_FEATS, THREAD_COUNT, TURN_FEATS, SLR, BYR
 from rlenv.Composer import Composer
 from rlenv.const import LSTG_MAP, OFFER_MAPS, THREAD_COUNT_IND, \
@@ -17,7 +17,7 @@ class AgentComposer(Composer):
 
     def __init__(self, byr=None):
         # create columns and initialize Composer class
-        chunk_path = PARTS_DIR + '{}/chunks/1.gz'.format(VALIDATION)
+        chunk_path = PARTS_DIR + '{}/chunks/1.pkl'.format(VALIDATION)
         cols = load_chunk(input_path=chunk_path)[0].columns
         super().__init__(cols)
         self.byr = byr
@@ -68,7 +68,7 @@ class AgentComposer(Composer):
 
     def _build_agent_lstg_vector(self, sources=None):
         feats = []
-        solo_feats = [sources[WEEKS_SINCE_LSTG], sources[BYR_HIST]]
+        solo_feats = [sources[DAYS_SINCE_LSTG], sources[BYR_HIST]]
 
         # set base, add thread count if slr
         if self.byr:
@@ -100,9 +100,11 @@ class AgentComposer(Composer):
     def verify_agent(self):
         lstg_sets = self.lstg_sets.copy()
         if self.byr:
-            assert len(set(lstg_sets[LSTG_MAP][self.byr_idx]) & set(BYR_DROP)) == 0
             # exclude auto reject features and lstg_ct + bo_ct
-            lstg_sets[LSTG_MAP] = lstg_sets[LSTG_MAP][self.byr_idx]
+            lstg = [lstg_sets[LSTG_MAP][i] for i in self.byr_idx]
+            assert len(set(lstg) & set(BYR_DROP)) == 0
+            lstg_sets[LSTG_MAP] = lstg
+
             # remove slr feats
             del lstg_sets[SLR]
         # verify shared lstg features
@@ -120,7 +122,7 @@ class AgentComposer(Composer):
 
     def verify_lstg_append(self, lstg_append=None):
         # in all cases check that months_since_lstg and byr_hist are next
-        assert lstg_append[0] == WEEKS_SINCE_LSTG
+        assert lstg_append[0] == DAYS_SINCE_LSTG
         assert lstg_append[1] == BYR_HIST
 
         # for the seller, check that next feature is thread count

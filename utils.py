@@ -8,7 +8,7 @@ from torch.nn.functional import log_softmax
 import numpy as np
 from nets.FeedForward import FeedForward
 from sim.Sample import get_batches
-from constants import DAY, WEEK, SPLIT_PCTS, INPUT_DIR, MODEL_DIR, META_6, META_7, \
+from constants import DAY, SPLIT_PCTS, INPUT_DIR, MODEL_DIR, META_6, META_7, \
     PARTITIONS, PARTS_DIR, MAX_DELAY_TURN, MAX_DELAY_ARRIVAL, NUM_CHUNKS
 from featnames import DELAY, EXP
 
@@ -66,14 +66,14 @@ def is_split(con):
     return con in SPLIT_PCTS
 
 
-def get_weeks_since_lstg(lstg_start=None, time=None):
+def get_days_since_lstg(lstg_start=None, time=None):
     """
-    Float number of weeks between inputs.
+    Float number of days between inputs.
     :param lstg_start: seconds from START to lstg start.
     :param time: seconds from START to focal event.
-    :return: number of weeks between lstg_start and start.
+    :return: number of days between lstg_start and start.
     """
-    return (time - lstg_start) / WEEK
+    return (time - lstg_start) / DAY
 
 
 def slr_norm(con=None, prev_byr_norm=None, prev_slr_norm=None):
@@ -169,18 +169,19 @@ def process_chunk_worker(part=None, chunk=None, gen_class=None, gen_kwargs=None)
     return gen.process_chunk(chunk=chunk, part=part)
 
 
-def run_func_on_chunks(f=None, func_kwargs=None):
+def run_func_on_chunks(f=None, func_kwargs=None, num_chunks=NUM_CHUNKS):
     """
     Applies f to all chunks in parallel.
     :param f: function that takes chunk number as input along with
     other arguments
     :param func_kwargs: dictionary of other keyword arguments
+    :param int num_chunks: number of chunks
     :return: list of worker-specific output
     """
-    num_workers = min(NUM_CHUNKS, psutil.cpu_count())
+    num_workers = min(num_chunks, psutil.cpu_count())
     pool = mp.Pool(num_workers)
     jobs = []
-    for i in range(NUM_CHUNKS):
+    for i in range(num_chunks):
         kw = func_kwargs.copy()
         kw['chunk'] = i
         jobs.append(pool.apply_async(f, kwds=kw))

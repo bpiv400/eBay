@@ -50,6 +50,8 @@ def main():
     parser.add_argument('--name', type=str)
     parser.add_argument('--heuristic', action='store_true')
     args = parser.parse_args()
+    if args.byr:
+        assert args.part != RL_SLR
 
     # environment class and run directory
     _, _, run_dir = get_paths(byr=args.byr, name=args.name)

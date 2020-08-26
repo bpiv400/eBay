@@ -1,6 +1,7 @@
 import os
+import numpy as np
 import torch
-from agent.const import OPTIM_STATE, AGENT_STATE
+from agent.const import OPTIM_STATE, AGENT_STATE, FULL, SPARSE, NONE
 from agent.models.AgentModel import AgentModel
 from constants import AGENT_DIR, POLICY_SLR, POLICY_BYR
 from featnames import SLR, BYR
@@ -43,3 +44,19 @@ def load_agent_model(model_args=None, run_dir=None):
         param.requires_grad = False
     model.eval()
     return model
+
+
+def define_con_set(con_set=None, byr=False):
+    if con_set == FULL:
+        num_con = 101
+    elif con_set == SPARSE:
+        num_con = 11
+    elif con_set == NONE:
+        num_con = 2
+    else:
+        raise ValueError('Invalid concession set: {}'.format(con_set))
+
+    cons = np.arange(num_con) / (num_con - 1)
+    if not byr:
+        cons = np.concatenate([cons, [1.1]])  # expiration rejection
+    return cons

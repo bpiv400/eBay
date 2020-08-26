@@ -64,8 +64,8 @@ ALL_OFFER_FEATS = CLOCK_FEATS + TIME_FEATS + OUTCOME_FEATS
 
 # thread features
 BYR_HIST = 'byr_hist'
-WEEKS_SINCE_LSTG = 'weeks_since_lstg'
-WEEKS_SINCE_LAST = 'weeks_since_last'
+DAYS_SINCE_LSTG = 'days_since_lstg'
+DAYS_SINCE_LAST = 'days_since_last'
 
 # index labels
 LSTG = 'lstg'
@@ -80,7 +80,6 @@ START_TIME = 'start_time'
 END_TIME = 'end_time'
 START_PRICE = 'start_price'
 DEC_PRICE = 'decline_price'
-ACC_PRICE = 'accept_price'
 SLR_BO_CT = 'slr_bo_ct'
 STORE = 'store'
 

@@ -4,7 +4,7 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
 from constants import FIG_DIR, IDX, BYR, MAX_DELAY_TURN, MAX_DELAY_ARRIVAL, \
-    DAY, HOUR
+    DAY, HOUR, MAX_DAYS
 from featnames import CON, NORM, DELAY, ARRIVAL, BYR_HIST, MSG
 
 FONTSIZE = {'training': 24}  # fontsize by plot type
@@ -108,9 +108,9 @@ def dist_plot(path, df):
     elif name.startswith(NORM):
         args = dict(xlim=[0, 1])
         xlabel = 'Sale price / list price'
-    elif name.startswith('months'):
-        args = dict(xlim=[0, 1])
-        xlabel = 'Fraction of month'
+    elif name.startswith('days'):
+        args = dict(xlim=[0, MAX_DAYS])
+        xlabel = 'Listing time in days'
     elif name.startswith(ARRIVAL):
         upper = MAX_DELAY_ARRIVAL / DAY
         args = dict(xticks=np.arange(0, upper, 3),

@@ -1,14 +1,14 @@
 import argparse
 import numpy as np
 import pandas as pd
-from compress_pickle import load
 from agent.util import get_log_dir
 from utils import unpickle, load_file
 from assess.const import SPLITS
-from constants import PARTS_DIR, IDX, BYR, EPS, COLLECTIBLES, TEST, \
+from constants import PARTS_DIR, IDX, BYR, EPS, COLLECTIBLES, TEST, MAX_DAYS, \
     MAX_DELAY_ARRIVAL, MAX_DELAY_TURN, INTERVAL_ARRIVAL, PCTILE_DIR, DAY, HOUR
 from featnames import EXP, DELAY, CON, NORM, AUTO, START_TIME, STORE, SLR_BO_CT, \
-    START_PRICE, META, LOOKUP, MSG, WEEKS_SINCE_LSTG, BYR_HIST
+    START_PRICE, META, LOOKUP, MSG, DAYS_SINCE_LSTG, BYR_HIST, X_THREAD, \
+    X_OFFER, CLOCK
 
 
 def discrete_pdf(y=None):
@@ -27,7 +27,7 @@ def discrete_cdf(y=None):
 
 
 def arrival_dist(threads=None):
-    s = threads[WEEKS_SINCE_LSTG] * MAX_DELAY_ARRIVAL
+    s = threads[DAYS_SINCE_LSTG] * MAX_DELAY_ARRIVAL
     pdf = discrete_pdf(s)
 
     # sum over interval
@@ -92,9 +92,9 @@ def load_data(part=None, lstgs=None, obs=False, sim=False, run_dir=None):
 
     # load dataframes
     data = dict()
-    data['threads'] = load(folder + 'x_thread.gz')
-    data['offers'] = load(folder + 'x_offer.gz')
-    data['clock'] = load(folder + 'clock.gz')
+    data['threads'] = unpickle(folder + '{}.pkl'.format(X_THREAD))
+    data['offers'] = unpickle(folder + '{}.pkl'.format(X_OFFER))
+    data['clock'] = unpickle(folder + '{}.pkl'.format(CLOCK))
 
     # drop censored offers
     if not sim:
@@ -342,13 +342,13 @@ def count_dist(df=None, level=None):
     return s
 
 
-def cdf_months(offers=None, clock=None, lookup=None):
+def cdf_days(offers=None, clock=None, lookup=None):
     idx_sale = offers[offers[CON] == 1].index
     clock_sale = clock.loc[idx_sale].reset_index(clock.index.names[1:], drop=True)
-    months = (clock_sale - lookup[START_TIME]) / MONTH
-    assert months.max() < 1.
-    months[months.isna()] = 1.
-    pctile = get_pctiles(months)
+    days = (clock_sale - lookup[START_TIME]) / DAY
+    assert days.max() < MAX_DAYS
+    days[days.isna()] = MAX_DAYS
+    pctile = get_pctiles(days)
     return pctile
 
 

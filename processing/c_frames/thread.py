@@ -1,8 +1,8 @@
 import pandas as pd
-from constants import PARTS_DIR, DAY, WEEK, MAX_DAYS
-from featnames import BYR_HIST, WEEKS_SINCE_LSTG, START_DATE
+from constants import PARTS_DIR, MAX_DAYS
+from featnames import BYR_HIST, DAYS_SINCE_LSTG, START_DATE
 from processing.util import get_lstgs, load_feats, hist_to_pctile
-from utils import topickle, get_weeks_since_lstg, input_partition
+from utils import topickle, get_days_since_lstg, input_partition
 
 
 def create_x_thread(lstgs=None):
@@ -13,16 +13,16 @@ def create_x_thread(lstgs=None):
     lstg_start = start_date.astype('int64') * 24 * 3600
     hist = load_feats('threads', lstgs=lstgs)[BYR_HIST]
 
-    # months since lstg start
-    weeks = get_weeks_since_lstg(lstg_start, thread_start)
-    weeks = weeks.rename(WEEKS_SINCE_LSTG)
-    assert weeks.max() < (MAX_DAYS * DAY) / WEEK
+    # days since lstg start
+    days = get_days_since_lstg(lstg_start, thread_start)
+    days = days.rename(DAYS_SINCE_LSTG)
+    assert days.max() < MAX_DAYS
 
     # convert hist to percentile
     hist = hist_to_pctile(hist)
 
     # create dataframe
-    x_thread = pd.concat([weeks, hist], axis=1)
+    x_thread = pd.concat([days, hist], axis=1)
 
     return x_thread
 

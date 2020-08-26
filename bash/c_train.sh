@@ -39,7 +39,7 @@ done
 # high dropout
 for NAME in con7 msg5 msg6
 do
-  for D in {7..14}
+  for D in {7..12}
   do
     printf "Model %s: " $NAME
     GPU=$(bash repo/bash/util/gpu.sh)
@@ -58,7 +58,7 @@ python repo/sim/best_models.py
 # chunks
 for part in valid discrim rl_slr rl_byr
 do
-  python repo/sim/chunks.py --part $part &
+  python repo/sim/chunks.py --part $part
 done
 
 # discrim generator and input
@@ -86,8 +86,8 @@ done
 
 # best discrim model
 ./repo/bash/util/wait.sh
-python repo/sim/best_models.py --group discrim
+python repo/sim/best_models.py --discrim
 
-## roc plot
-#python repo/assess/roc.py
-#python repo/plots/roc.py
+# roc plot
+python repo/assess/roc.py
+python repo/plots/roc.py

@@ -2,9 +2,9 @@ import os
 import pandas as pd
 from processing.util import collect_date_clock_feats, get_days_delay, get_norm
 from utils import topickle, is_split, load_file
-from constants import IDX, WEEK, MAX_DELAY_ARRIVAL
+from constants import IDX, DAY, MAX_DELAY_ARRIVAL
 from featnames import DAYS, DELAY, CON, SPLIT, NORM, REJECT, AUTO, EXP, \
-    CLOCK_FEATS, TIME_FEATS, OUTCOME_FEATS, WEEKS_SINCE_LSTG, \
+    CLOCK_FEATS, TIME_FEATS, OUTCOME_FEATS, DAYS_SINCE_LSTG, \
     BYR_HIST, START_TIME, LOOKUP, SLR
 
 
@@ -52,10 +52,10 @@ def process_sim_offers(df, end_time):
 def process_sim_threads(df, start_time):
     # convert clock to months_since_lstg
     df = df.join(start_time)
-    df[WEEKS_SINCE_LSTG] = (df.clock - df.start_time) / WEEK
+    df[DAYS_SINCE_LSTG] = (df.clock - df.start_time) / DAY
     df = df.drop(['clock', 'start_time'], axis=1)
     # reorder columns to match observed
-    df = df.loc[:, [WEEKS_SINCE_LSTG, BYR_HIST]]
+    df = df.loc[:, [DAYS_SINCE_LSTG, BYR_HIST]]
     return df
 
 

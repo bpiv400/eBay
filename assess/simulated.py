@@ -1,5 +1,5 @@
 from assess.util import load_data, get_action_dist, merge_dicts, count_dist, \
-    cdf_months, cdf_sale, get_lookup, arrival_dist, hist_dist, delay_dist, con_dist
+    cdf_days, cdf_sale, get_lookup, arrival_dist, hist_dist, delay_dist, con_dist
 from utils import topickle
 from constants import PLOT_DIR, TEST
 from featnames import START_PRICE, OBS, SIM, ARRIVAL, BYR_HIST, DELAY, CON
@@ -12,8 +12,7 @@ def collect_outputs(data=None, lookup=None, name=None):
     d['cdf_norm'], d['cdf_price'] = cdf_sale(
         offers=offers, start_price=lookup[START_PRICE])
 
-    d['cdf_months'] = cdf_months(
-        offers=offers, clock=clock, lookup=lookup)
+    d['cdf_days'] = cdf_days(offers=offers, clock=clock, lookup=lookup)
 
     # offer distributions
     d['pdf_{}'.format(ARRIVAL)] = arrival_dist(threads)

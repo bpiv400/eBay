@@ -1,6 +1,6 @@
 from assess.util import load_data, get_valid_slr, find_best_run, get_lookup
 from constants import TEST
-from featnames import SLR, OBS, SIM, RL, NORM, MSG, DELAY, WEEKS_SINCE_LSTG, \
+from featnames import SLR, OBS, SIM, RL, NORM, MSG, DELAY, DAYS_SINCE_LSTG, \
     BYR_HIST, TIME_FEATS, START_PRICE
 
 
@@ -23,9 +23,9 @@ def run_test(data=None, lookup=None):
     print('\tOffer count: {}'.format((norm3 == 1).sum()))
     print('\tBIN rate: {}'.format((norm3 == 1).mean()))
     print('\tAvg months (BIN): {}'.format(
-        threads_idx.loc[norm3 == 1, WEEKS_SINCE_LSTG].mean()))
+        threads_idx.loc[norm3 == 1, DAYS_SINCE_LSTG].mean()))
     print('\tAvg months (~BIN): {}'.format(
-        threads_idx.loc[norm3 < 1, WEEKS_SINCE_LSTG].mean()))
+        threads_idx.loc[norm3 < 1, DAYS_SINCE_LSTG].mean()))
     print('\tAvg hist (BIN): {}'.format(
         threads_idx.loc[norm3 == 1, BYR_HIST].mean()))
     print('\tAvg hist (~BIN): {}'.format(

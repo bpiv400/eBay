@@ -1,5 +1,5 @@
 from compress_pickle import load
-from plots.util import roc_plot
+from plots.util import diag_plot
 from constants import PLOT_DIR, DISCRIM_MODEL
 
 
@@ -20,7 +20,7 @@ def main():
     print('AUC: {}'.format(get_auc(s)))
 
     # roc plot
-    roc_plot(DISCRIM_MODEL, s)
+    diag_plot('{}/{}'.format(DISCRIM_MODEL, 'roc'), s)
 
 
 if __name__ == '__main__':

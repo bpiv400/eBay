@@ -18,9 +18,10 @@ from rlenv.LstgLoader import TrainLoader
 
 
 class RlTrainer:
-    def __init__(self, byr=False, serial=False, name=None, nocon=False):
+    def __init__(self, byr=False, serial=False, name=None, con_set=False):
         # save params to self
         self.byr = byr
+        self.con_set = con_set
 
         # iteration
         self.itr = 0
@@ -29,13 +30,13 @@ class RlTrainer:
         self.composer = AgentComposer(byr=byr)
 
         # algorithm
-        entropy = ENTROPY * 10 if nocon else ENTROPY
+        entropy = ENTROPY[con_set]
         self.algo = EBayPPO(entropy=entropy)
 
         # agent
         self.agent = SplitCategoricalPgAgent(
             ModelCls=AgentModel,
-            model_kwargs={'byr': byr, 'serial': serial, 'nocon': nocon}
+            model_kwargs=dict(byr=byr, serial=serial, con_set=con_set)
         )
 
         # rlpyt components
@@ -58,7 +59,8 @@ class RlTrainer:
         env_params = dict(
             composer=self.composer,
             verbose=serial,
-            query_strategy=self._generate_query_strategy()
+            query_strategy=self._generate_query_strategy(),
+            con_set=self.con_set
         )
         env = BuyerEnv if self.byr else SellerEnv
 
@@ -68,7 +70,9 @@ class RlTrainer:
             batch_B = 1
             batch_T = 128
             env_params['loader'] = TrainLoader(
-                x_lstg_cols=self.composer.x_lstg_cols)
+                x_lstg_cols=self.composer.x_lstg_cols,
+                byr=self.byr
+            )
         else:
             sampler_cls = AlternatingSampler
             batch_B = len(self._cpus)

@@ -1,11 +1,10 @@
-import numpy as np
 import torch
 from rlpyt.envs.base import Env
 from rlpyt.spaces.composite import Composite
 from rlpyt.spaces.float_box import FloatBox
 from rlenv.EBayEnv import EBayEnv
 from agent.ConSpace import ConSpace
-from constants import INTERVAL_TURN, INTERVAL_CT_TURN, DAY, CON_MULTIPLIER
+from constants import INTERVAL_TURN, INTERVAL_CT_TURN, DAY
 from featnames import BYR_HIST
 
 
@@ -18,7 +17,8 @@ class AgentEnv(EBayEnv, Env):
                                for k, v in self.composer.agent_sizes['x'].items()}
 
         # action space
-        self.con_set = np.array(range(CON_MULTIPLIER + 1)) / 100
+        self.con_set = self._define_con_set(kwargs['con_set'])
+        print(self.con_set)
         self._action_space = self._define_action_space()
 
         # observation space
@@ -94,6 +94,9 @@ class AgentEnv(EBayEnv, Env):
 
     def _define_action_space(self):
         return ConSpace(size=len(self.con_set))
+
+    def _define_con_set(self, con_set):
+        raise NotImplementedError()
 
     def is_agent_turn(self, event):
         raise NotImplementedError()

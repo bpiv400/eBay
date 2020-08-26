@@ -2,7 +2,7 @@ from collections import namedtuple
 from utils import get_cut
 from constants import DAY, BYR_HIST_MODEL, INTERARRIVAL_MODEL, MAX_DELAY_ARRIVAL
 from featnames import DEC_PRICE, START_PRICE, DELAY, START_TIME, META, BYR
-from utils import get_weeks_since_lstg
+from utils import get_days_since_lstg
 from rlenv.Heap import Heap
 from rlenv.time.TimeFeatures import TimeFeatures
 from rlenv.time.Offer import Offer
@@ -53,7 +53,7 @@ class EBayEnv:
             self.loader = params['loader']
         else:
             x_lstg_cols = self.composer.x_lstg_cols
-            self.loader = TrainLoader(x_lstg_cols=x_lstg_cols)
+            self.loader = TrainLoader(x_lstg_cols=x_lstg_cols, byr=False)
 
     def reset(self):
         self.queue.reset()
@@ -208,13 +208,13 @@ class EBayEnv:
 
         # prepare sources and features
         sources = ThreadSources(x_lstg=self.x_lstg)
-        weeks_since_lstg = get_weeks_since_lstg(lstg_start=self.start_time,
-                                                time=event.priority)
+        days_since_lstg = get_days_since_lstg(lstg_start=self.start_time,
+                                              time=event.priority)
         time_feats = self.time_feats.get_feats(time=event.priority,
                                                thread_id=event.thread_id)
         sources.prepare_hist(time_feats=time_feats,
                              clock_feats=get_clock_feats(event.priority),
-                             weeks_since_lstg=weeks_since_lstg)
+                             days_since_lstg=days_since_lstg)
         # sample history
         input_dict = self.composer.build_input_dict(model_name=BYR_HIST_MODEL,
                                                     sources=sources(),

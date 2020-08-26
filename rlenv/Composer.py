@@ -3,8 +3,8 @@ import numpy as np
 import pandas as pd
 from constants import MODELS, OFFER_MODELS, FIRST_ARRIVAL_MODEL, \
     BYR_HIST_MODEL, INTERARRIVAL_MODEL
-from featnames import OUTCOME_FEATS, CLOCK_FEATS, TIME_FEATS, WEEKS_SINCE_LSTG, \
-    BYR_HIST, DELAY, CON, INT_REMAINING, WEEKS_SINCE_LAST, THREAD_COUNT, SLR
+from featnames import OUTCOME_FEATS, CLOCK_FEATS, TIME_FEATS, DAYS_SINCE_LSTG, \
+    BYR_HIST, DELAY, CON, INT_REMAINING, DAYS_SINCE_LAST, THREAD_COUNT, SLR
 from utils import load_sizes, load_featnames
 from rlenv.const import LSTG_MAP, CLOCK_MAP, OFFER_MAPS, THREAD_COUNT_IND, \
     TIME_START_IND, TIME_END_IND, CLOCK_START_IND, CLOCK_END_IND
@@ -154,8 +154,8 @@ class Composer:
     @staticmethod
     def _build_lstg_vector(model_name, sources=None):
         if model_name == INTERARRIVAL_MODEL:
-            solo_feats = np.array([sources[WEEKS_SINCE_LSTG],
-                                   sources[WEEKS_SINCE_LAST],
+            solo_feats = np.array([sources[DAYS_SINCE_LSTG],
+                                   sources[DAYS_SINCE_LAST],
                                    sources[THREAD_COUNT]])
             lstg = np.concatenate([sources[LSTG_MAP],
                                    sources[CLOCK_MAP],
@@ -163,13 +163,13 @@ class Composer:
         elif model_name == FIRST_ARRIVAL_MODEL:
             lstg = sources[LSTG_MAP]  # append nothing
         elif model_name == BYR_HIST_MODEL:
-            solo_feats = np.array([sources[WEEKS_SINCE_LSTG],
+            solo_feats = np.array([sources[DAYS_SINCE_LSTG],
                                    sources[OFFER_MAPS[1]][THREAD_COUNT_IND]])
             lstg = np.concatenate([sources[LSTG_MAP],
                                    sources[OFFER_MAPS[1]][CLOCK_START_IND:CLOCK_END_IND],
                                    solo_feats])
         else:
-            solo_feats = [sources[WEEKS_SINCE_LSTG],
+            solo_feats = [sources[DAYS_SINCE_LSTG],
                           sources[BYR_HIST],
                           sources[OFFER_MAPS[1]][THREAD_COUNT_IND] + 1]
             if DELAY in model_name:
@@ -192,7 +192,7 @@ class Composer:
     def verify_offer_append(model, shared_feats):
         model_feats = load_featnames(model)[LSTG_MAP]
         model_feats = Composer.remove_shared_feats(model_feats, shared_feats)
-        assert model_feats[0] == WEEKS_SINCE_LSTG
+        assert model_feats[0] == DAYS_SINCE_LSTG
         assert model_feats[1] == BYR_HIST
         assert model_feats[2] == THREAD_COUNT
         assert len(model_feats) == 3
@@ -207,7 +207,7 @@ class Composer:
     def verify_delay_append(model, shared_feats):
         model_feats = load_featnames(model)[LSTG_MAP]
         model_feats = Composer.remove_shared_feats(model_feats, shared_feats)
-        assert model_feats[0] == WEEKS_SINCE_LSTG
+        assert model_feats[0] == DAYS_SINCE_LSTG
         assert model_feats[1] == BYR_HIST
         assert model_feats[2] == THREAD_COUNT
         assert model_feats[3] == INT_REMAINING
@@ -219,8 +219,8 @@ class Composer:
         model_feats = Composer.remove_shared_feats(model_feats, shared_feats)
         Composer.verify_sequence(model_feats, CLOCK_FEATS, 0)
         next_ind = len(CLOCK_FEATS)
-        assert model_feats[next_ind] == WEEKS_SINCE_LSTG
-        assert model_feats[next_ind + 1] == WEEKS_SINCE_LAST
+        assert model_feats[next_ind] == DAYS_SINCE_LSTG
+        assert model_feats[next_ind + 1] == DAYS_SINCE_LAST
         assert model_feats[next_ind + 2] == THREAD_COUNT
 
     @staticmethod
@@ -234,5 +234,5 @@ class Composer:
         model_feats = load_featnames(BYR_HIST_MODEL)[LSTG_MAP]
         model_feats = Composer.remove_shared_feats(model_feats, shared_feats)
         Composer.verify_sequence(model_feats, CLOCK_FEATS, 0)
-        assert model_feats[len(CLOCK_FEATS)] == WEEKS_SINCE_LSTG
+        assert model_feats[len(CLOCK_FEATS)] == DAYS_SINCE_LSTG
         assert model_feats[len(CLOCK_FEATS) + 1] == THREAD_COUNT

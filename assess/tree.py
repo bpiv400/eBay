@@ -1,7 +1,7 @@
 from sklearn.tree import DecisionTreeClassifier, export_text
 from assess.util import find_best_run, load_data, get_last_norm
 from utils import load_file
-from constants import TEST, WEEK
+from constants import TEST, DAY
 from featnames import LOOKUP, AUTO, CON, NORM, START_PRICE, START_TIME, BYR_HIST
 
 
@@ -22,7 +22,7 @@ def main():
         # features
         X = threads[BYR_HIST].reindex(index=idx).to_frame()
         X['thread_num'] = X.index.get_level_values('thread')
-        X['months'] = (clock.loc[idx] - lookup[START_TIME]) / WEEK
+        X['days'] = (clock.loc[idx] - lookup[START_TIME]) / DAY
         X = X.join(get_last_norm(offers[NORM]))
         X = X.join(lookup[START_PRICE])
 
