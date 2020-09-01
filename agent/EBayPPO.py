@@ -7,7 +7,8 @@ from rlpyt.utils.tensor import valid_mean
 from rlpyt.utils.buffer import buffer_to
 from rlpyt.utils.collections import namedarraytuple
 from agent.util import define_con_set
-from agent.const import PERIOD_EPOCHS, LR_POLICY, LR_VALUE, RATIO_CLIP
+from agent.const import PERIOD_EPOCHS, LR_POLICY, LR_VALUE, RATIO_CLIP, \
+    ENTROPY_THRESHOLD
 
 LossInputs = namedarraytuple("LossInputs",
                              ["agent_inputs",
@@ -39,16 +40,15 @@ OptInfo = namedtuple("OptInfo",
 class EBayPPO:
     """
     Swaps entropy bonus with cross-entropy penalty, where cross-entropy
-    is calculated using the policy from the initialized agent.
+    is calculated using the policy from the initialized agents.
     """
     mid_batch_reset = False
     bootstrap_value = True
     opt_info_fields = tuple(f for f in OptInfo._fields)
 
-    def __init__(self, entropy=None, norm=False):
+    def __init__(self, entropy=None):
         # save parameters to self
         self.entropy_coef = entropy
-        self.norm = norm
 
         # parameters to be defined later
         self.agent = None
@@ -123,8 +123,8 @@ class EBayPPO:
 
     def optimize_agent(self, samples):
         """
-        Train the agent, for multiple epochs over minibatches taken from the
-        input samples.  Organizes agent inputs from the training data, and
+        Train the agents, for multiple epochs over minibatches taken from the
+        input samples.  Organizes agents inputs from the training data, and
         moves them to device (e.g. GPU) up front, so that minibatches are
         formed within device, without further data transfer.
         """
@@ -211,13 +211,14 @@ class EBayPPO:
         opt_info.Loss_Policy.append(policy_loss.item())
         opt_info.Loss_Value.append(value_error.item())
         opt_info.Loss_EntropyBonus.append(self.entropy_coef)
-        opt_info.Entropy.append(entropy.detach().numpy())
+        entropy = entropy.detach().numpy()
+        opt_info.Entropy.append(entropy)
 
         # increment counter, reduce entropy bonus, and set complete flag
         self.update_counter += 1
         if 2 * PERIOD_EPOCHS > self.update_counter >= PERIOD_EPOCHS:
             self.entropy_coef -= self.entropy_step
-        if self.update_counter == 3 * PERIOD_EPOCHS:
+        if entropy.mean() < ENTROPY_THRESHOLD:
             self.training_complete = True
 
         return opt_info
@@ -227,10 +228,10 @@ class EBayPPO:
         Compute the training loss: policy_loss + value_loss + entropy_loss
         Policy loss: min(likelhood-ratio * advantage, clip(likelihood_ratio, 1-eps, 1+eps) * advantage)
         Value loss:  0.5 * (estimated_value - return) ^ 2
-        Calls the agent to compute forward pass on training data, and uses
-        the ``agent.distribution`` to compute likelihoods and entropies.
+        Calls the agents to compute forward pass on training data, and uses
+        the ``agents.distribution`` to compute likelihoods and entropies.
         """
-        # agent outputs
+        # agents outputs
         pi_new, v = self.agent(*agent_inputs)
 
         # loss from policy

@@ -2,7 +2,7 @@ from constants import BYR_HIST_MODEL, INTERARRIVAL_MODEL
 from testing.util import compare_input_dicts
 
 
-class ArrivalLog:
+class Arrival:
 
     def __init__(
             self,

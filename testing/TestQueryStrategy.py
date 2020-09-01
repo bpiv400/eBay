@@ -1,12 +1,12 @@
 from rlenv.QueryStrategy import QueryStrategy
-from testing.LstgLog import LstgLog
+from testing.agents.BuyerListing import BuyerListing
 from utils import init_optional_arg
 
 
 class TestQueryStrategy(QueryStrategy):
     def __init__(self):
         super().__init__()
-        self.lstg_log = None  # type: LstgLog
+        self.lstg_log = None  # type: BuyerListing
 
     def update_log(self, log):
         self.lstg_log = log

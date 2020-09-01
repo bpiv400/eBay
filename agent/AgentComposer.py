@@ -26,7 +26,7 @@ class AgentComposer(Composer):
                             if self.lstg_sets[LSTG_MAP][i] not in BYR_DROP]
 
         self.agent_name = get_agent_name(byr=self.byr)
-        self.sizes['agent'] = load_sizes(self.agent_name)
+        self.sizes['agents'] = load_sizes(self.agent_name)
         self.x_lstg_cols = cols if type(cols) is list else list(cols)
 
         # parameters to be set later
@@ -46,7 +46,7 @@ class AgentComposer(Composer):
         self.turn_inds = inds
 
     def build_input_dict(self, model_name=None, sources=None, turn=None):
-        # build agent input if model name isn't given
+        # build agents input if model name isn't given
         if model_name is None:
             return self._build_agent_dict(sources=sources, turn=turn)
         else:
@@ -158,7 +158,7 @@ class AgentComposer(Composer):
 
     @property
     def agent_sizes(self):
-        return self.sizes['agent']
+        return self.sizes['agents']
 
 
 def main():

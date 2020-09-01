@@ -20,7 +20,11 @@ by lstg thread: replace flag = 1 if price < price[_n-1] & mod(index,2) == 0
 by lstg thread: replace flag = 1 if price > price[_n-1] & _n > 1 & mod(index,2) == 1
 	
 by lstg thread: replace flag = 1 if _n < _N & price == start_price & !bin & mod(index,2) == 1 & (clock != clock[_n+1] | !accept[_n+1])
-by lstg thread: replace flag = 1 if _n < _N & price <= decline_price & mod(index,2) == 1 & (clock != clock[_n+1] | !reject[_n+1])
+
+replace decline_price = 0 if decline_price == .
+by lstg thread: replace flag = 1 if _n == _N & price < decline_price & mod(index,2) == 1
+by lstg thread: replace flag = 1 if _n < _N & price < decline_price & mod(index,2) == 1 & clock != clock[_n+1]
+by lstg thread: replace flag = 1 if _n < _N & price < decline_price & mod(index,2) == 1 & !reject[_n+1]
 by lstg thread: replace flag = 1 if _n < _N & price < start_price & price > decline_price & clock == clock[_n+1]
 drop start_price decline_price
 
@@ -67,7 +71,7 @@ replace message = 0 if message == .
 * save offers
 
 sort lstg thread index
-order lstg thread index clock price accept reject censored message bin flag byr* end_time
+order lstg thread index clock price accept reject message bin flag byr* end_time
 savesome lstg-message if !flag using dta/offers, replace
 
 * save threads

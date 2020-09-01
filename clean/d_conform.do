@@ -70,28 +70,10 @@ replace reject = 1 if copy
 replace message = . if copy
 
 sort lstg thread index
-by lstg thread: replace clock = min(end_time, clock[_n-1] + 48 * 3600 * 1000) if copy
+by lstg thread: replace clock = clock[_n-1] + 48 * 3600 * 1000 if copy
 by lstg thread: replace price = price[_n-2] if copy
 
-g byte censored = copy & clock == end_time
-drop copy
-
-* add expired rejects when listing ends or sells on different thread
-
-by lstg thread: g byte check = !accept & _n == _N & mod(index,2) == 1 & price != price[_n-2]
-expand 2*check, gen(copy)
-drop check
-
-replace index = index + 1 if copy
-replace reject = 1 if copy
-replace message = . if copy
-
-sort lstg thread index
-by lstg thread: replace clock = end_time if copy
-by lstg thread: replace price = price[_n-2] if copy & index > 2
-by lstg thread: replace price = start_price if copy & index == 2
-
-replace censored = 1 if copy
+drop if clock > end_time
 drop copy
 
 * renumber threads

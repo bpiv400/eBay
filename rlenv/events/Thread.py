@@ -9,6 +9,7 @@ from featnames import SLR, BYR
 from rlenv.util import slr_rej_outcomes, slr_auto_acc_outcomes, \
     get_delay_outcomes, get_clock_feats
 from rlenv.time.Offer import Offer
+from constants import MAX_DELAY_TURN
 from utils import get_remaining
 
 
@@ -64,6 +65,8 @@ class Thread(Event):
         self.sources.init_remaining(remaining=remaining)
 
     def update_delay(self, seconds=None):
+        if seconds > MAX_DELAY_TURN:
+            raise RuntimeError('Excessive delay: {} seconds'.format(seconds))
         # update outcomes
         delay_outcomes = get_delay_outcomes(seconds=seconds, turn=self.turn)
         self.sources.update_delay(delay_outcomes=delay_outcomes, turn=self.turn)

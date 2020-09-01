@@ -1,13 +1,7 @@
 import argparse
 from sim.SimTrainer import SimTrainer
 from utils import set_gpu
-from constants import MODELS, DISCRIM_MODEL
-
-DROPOUT_GRID = []
-for j in range(8):
-    for i in range(j+1):
-        if j - i <= 1:
-            DROPOUT_GRID.append((float(i) / 10, float(j) / 10))
+from constants import MODELS, DISCRIM_MODEL, DROPOUT_GRID
 
 
 def main():

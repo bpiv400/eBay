@@ -1,4 +1,5 @@
 import psutil
+import os
 import torch
 from agent.EBayRunner import EBayRunner
 from agent.EBayPPO import EBayPPO
@@ -18,34 +19,10 @@ from rlenv.LstgLoader import TrainLoader
 
 
 class RlTrainer:
-    def __init__(self, byr=False, serial=False, name=None, con_set=False):
-        # save params to self
+    def __init__(self, byr=False, con_set=False, dropout=None):
         self.byr = byr
         self.con_set = con_set
-
-        # iteration
-        self.itr = 0
-
-        # initialize composer
-        self.composer = AgentComposer(byr=byr)
-
-        # algorithm
-        entropy = ENTROPY[con_set]
-        self.algo = EBayPPO(entropy=entropy)
-
-        # agent
-        self.agent = SplitCategoricalPgAgent(
-            ModelCls=AgentModel,
-            model_kwargs=dict(byr=byr, serial=serial, con_set=con_set)
-        )
-
-        # rlpyt components
-        self.sampler = self._generate_sampler(serial=serial)
-        self.runner = self._generate_runner()
-
-        # for logging
-        self.log_dir, self.run_id, self.run_dir = \
-            get_paths(byr=byr, name=name)
+        self.dropout = dropout
 
     def _generate_query_strategy(self):
         return DefaultQueryStrategy(
@@ -54,10 +31,23 @@ class RlTrainer:
             buyer=SimulatedBuyer(full=True)
         )
 
+    def _generate_agent(self, serial=False):
+        kwargs = dict(
+                byr=self.byr,
+                dropout=self.dropout,
+                serial=serial,
+                con_set=self.con_set
+            )
+        return SplitCategoricalPgAgent(
+            ModelCls=AgentModel,
+            model_kwargs=kwargs
+        )
+
     def _generate_sampler(self, serial=False):
         # environment
+        composer = AgentComposer(byr=self.byr)
         env_params = dict(
-            composer=self.composer,
+            composer=composer,
             verbose=serial,
             query_strategy=self._generate_query_strategy(),
             con_set=self.con_set
@@ -70,7 +60,7 @@ class RlTrainer:
             batch_B = 1
             batch_T = 128
             env_params['loader'] = TrainLoader(
-                x_lstg_cols=self.composer.x_lstg_cols,
+                x_lstg_cols=composer.x_lstg_cols,
                 byr=self.byr
             )
         else:
@@ -90,7 +80,8 @@ class RlTrainer:
                 eval_max_steps=50,
             )
 
-    def _generate_runner(self):
+    def _generate_runner(self, agent=None, sampler=None):
+        algo = EBayPPO(entropy=ENTROPY[self.con_set])
         affinity = dict(master_cpus=self._cpus,
                         master_torch_threads=len(self._cpus),
                         workers_cpus=self._cpus,
@@ -98,29 +89,43 @@ class RlTrainer:
                         cuda_idx=torch.cuda.current_device(),
                         alternating=True,
                         set_affinity=True)
-        runner = EBayRunner(algo=self.algo,
-                            agent=self.agent,
-                            sampler=self.sampler,
-                            affinity=affinity)
-        return runner
+        return EBayRunner(algo=algo,
+                          agent=agent,
+                          sampler=sampler,
+                          affinity=affinity)
 
     @property
     def _cpus(self):
         return list(psutil.Process().cpu_affinity())
 
-    def train(self, log=False):
+    def train(self, log=False, serial=False):
+        if serial:
+            assert not log
+
+        # construct runner
+        agent = self._generate_agent(serial)
+        sampler = self._generate_sampler(serial)
+        runner = self._generate_runner(agent=agent, sampler=sampler)
+
         if not log:
-            self.itr = self.runner.train()
+            runner.train()
         else:
-            with logger_context(log_dir=self.log_dir,
+            log_dir, run_id, run_dir = get_paths(byr=self.byr,
+                                                 con_set=self.con_set,
+                                                 dropout=self.dropout)
+            if os.path.isdir(run_dir):
+                print('{} already exists.'.format(run_id))
+                exit()
+
+            with logger_context(log_dir=log_dir,
                                 name='log',
                                 use_summary_writer=True,
                                 override_prefix=True,
-                                run_ID=self.run_id,
+                                run_ID=run_id,
                                 snapshot_mode='last'):
-                self.itr = self.runner.train()
+                runner.train()
 
             # delete optimization parameters
-            path = self.run_dir + 'params.pkl'
+            path = run_dir + 'params.pkl'
             d = torch.load(path)
             torch.save(d[AGENT_STATE], path)

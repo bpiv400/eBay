@@ -12,11 +12,6 @@ from agent.util import define_con_set
 from rlenv.events.Event import Event
 from rlenv.events.Thread import Thread
 
-BuyerInfo = namedarraytuple("BuyerInfo",
-                            ["days",
-                             "max_return",
-                             "num_delays",
-                             "num_offers"])
 BuyerObs = namedarraytuple('BuyerObs',
                            list(load_sizes(POLICY_BYR)['x'].keys()))
 
@@ -24,9 +19,7 @@ BuyerObs = namedarraytuple('BuyerObs',
 class BuyerEnv(AgentEnv):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.item_value = None
         self.agent_thread = None
-        self.num_delays = None
         self.hist = None
 
         # for drawing experience
@@ -63,7 +56,6 @@ class BuyerEnv(AgentEnv):
         super().init_reset(next_lstg=next_lstg)
         self.item_value = self.lookup[START_PRICE]  # TODO: allow for different values
         self.agent_thread = None
-        self.num_delays = 0
         self.hist = self._draw_hist()
 
     def step(self, action):
@@ -146,8 +138,8 @@ class BuyerEnv(AgentEnv):
 
     def is_agent_turn(self, event):
         """
-        When the agent thread comes back on the buyer's turn, it's time to act.
-        :return bool: True if agent buyer takes an action
+        When the agents thread comes back on the buyer's turn, it's time to act.
+        :return bool: True if agents buyer takes an action
         """
         if event.turn % 2 == 1:
             if event.type == RL_ARRIVAL_EVENT:
@@ -192,18 +184,12 @@ class BuyerEnv(AgentEnv):
         if self.outcome.thread != self.agent_thread:
             return 0.
 
-        # sale to agent buyer
+        # sale to agents buyer
         if self.verbose:
             print('Sale to RL buyer. List price: {}. Paid price: {}'.format(
                 self.item_value, self.outcome.price))
         assert self.item_value >= self.outcome.price
         return self.item_value - self.outcome.price
-
-    def get_info(self, event=None):
-        return BuyerInfo(days=self._get_days(event.priority),
-                         max_return=self.item_value,
-                         num_delays=self.num_delays,
-                         num_offers=self.num_offers)
 
     def _create_rl_event(self, midnight=None):
         assert midnight % DAY == 0
@@ -253,7 +239,7 @@ class BuyerEnv(AgentEnv):
 
     @property
     def horizon(self):
-        return 34
+        return MAX_DAYS + 3
 
     @property
     def _obs_class(self):

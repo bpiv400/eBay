@@ -65,8 +65,6 @@ class EBayEnv:
         self.queue.push(event)
         if self.recorder is not None:
             self.recorder.reset_sim()
-        elif self.verbose:
-            print('Simulation {}'.format(self.relist_count))
 
     def has_next_lstg(self):
         if not self.loader.did_init:
@@ -329,7 +327,7 @@ class EBayEnv:
             self.queue.pop()
 
     def _check_slr_autos(self, norm):
-        if norm <= self.lookup[DEC_PRICE] / self.lookup[START_PRICE]:
+        if norm < self.lookup[DEC_PRICE] / self.lookup[START_PRICE]:
             return REJ_IND
         else:
             return OFF_IND

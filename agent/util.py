@@ -1,10 +1,8 @@
 import os
 import numpy as np
-import torch
-from agent.const import OPTIM_STATE, AGENT_STATE, FULL, SPARSE, NONE
-from agent.models.AgentModel import AgentModel
-from constants import AGENT_DIR, POLICY_SLR, POLICY_BYR
-from featnames import SLR, BYR
+from agent.const import FULL, SPARSE, NOCON
+from constants import AGENT_DIR, POLICY_SLR, POLICY_BYR, DROPOUT_GRID
+from featnames import SLR, BYR, DROPOUT
 
 
 def get_agent_name(byr=False):
@@ -19,12 +17,14 @@ def get_log_dir(byr=None):
     return log_dir
 
 
-def get_paths(byr=None, name=None):
+def get_paths(**kwargs):
     # log directory
-    log_dir = get_log_dir(byr)
+    log_dir = get_log_dir(kwargs[BYR])
 
     # run id
-    run_id = name
+    dropout = DROPOUT_GRID[kwargs[DROPOUT]]
+    dropout = [int(10 * dropout[i]) for i in range(len(dropout))]
+    run_id = '{}_{}_{}'.format(kwargs['con_set'], dropout[0], dropout[1])
 
     # concatenate
     run_dir = log_dir + 'run_{}/'.format(run_id)
@@ -32,26 +32,12 @@ def get_paths(byr=None, name=None):
     return log_dir, run_id, run_dir
 
 
-def load_agent_model(model_args=None, run_dir=None):
-    model = AgentModel(**model_args)
-    path = run_dir + 'params.pkl'
-    d = torch.load(path, map_location=torch.device('cpu'))
-    if OPTIM_STATE in d:
-        d = d[AGENT_STATE]
-        torch.save(d, path)
-    model.load_state_dict(d, strict=True)
-    for param in model.parameters(recurse=True):
-        param.requires_grad = False
-    model.eval()
-    return model
-
-
 def define_con_set(con_set=None, byr=False):
     if con_set == FULL:
         num_con = 101
     elif con_set == SPARSE:
         num_con = 11
-    elif con_set == NONE:
+    elif con_set == NOCON:
         num_con = 2
     else:
         raise ValueError('Invalid concession set: {}'.format(con_set))

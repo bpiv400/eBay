@@ -146,7 +146,7 @@ class OutcomeRecorder(Recorder):
         :param thread_id: int giving the thread id
         :param byr_hist: float giving byr history decile
         :param int time: time of the offer
-        :param bool agent: True if agent byr starts thread
+        :param bool agent: True if agents byr starts thread
         """
         row = [self.lstg, thread_id, byr_hist, time]
         if self.byr_agent:

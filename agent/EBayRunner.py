@@ -15,12 +15,12 @@ from rlenv.LstgLoader import TrainLoader
 
 class EBayBaseRunner(BaseRunner):
     """
-    Implements startup, logging, and agent checkpointing functionality, to be
+    Implements startup, logging, and agents checkpointing functionality, to be
     called in the `train()` method of the subclassed runner.  Subclasses will
     modify/extend many of the methods here.
     Args:
         algo: The algorithm instance.
-        agent: The learning agent instance.
+        agent: The learning agents instance.
         sampler: The sampler instance.
         seed (int): Random seed to use, if ``None`` will generate randomly.
         affinity (dict): Hardware component assignments for sampler and algorithm.
@@ -60,7 +60,7 @@ class EBayBaseRunner(BaseRunner):
     def startup(self):
         """
         Sets hardware affinities, initializes the following: 1) sampler (which
-        should initialize the agent), 2) agent device and data-parallel wrapper (if applicable),
+        should initialize the agents), 2) agents device and data-parallel wrapper (if applicable),
         3) algorithm, 4) logger.
         """
         p = psutil.Process()
@@ -116,7 +116,7 @@ class EBayBaseRunner(BaseRunner):
     def get_itr_snapshot(self, itr):
         """
         Returns all state needed for full checkpoint/snapshot of training run,
-        including agent parameters and optimizer parameters.
+        including agents parameters and optimizer parameters.
         """
         return dict(itr=itr,
                     cum_steps=itr * self.sampler.batch_size,
@@ -224,7 +224,7 @@ class EBayRunner(EBayBaseRunner):
         while True:
             logger.set_iteration(itr)
             with logger.prefix(f"itr #{itr} "):
-                self.agent.sample_mode(itr)  # Might not be this agent sampling.
+                self.agent.sample_mode(itr)  # Might not be this agents sampling.
                 samples, traj_infos = self.sampler.obtain_samples(itr)
                 self.agent.train_mode(itr)
                 opt_info = self.algo.optimize_agent(samples)
@@ -264,7 +264,7 @@ def ebay_sampling_process(common_kwargs, worker_kwargs):
     samplers. After ``initialize_worker()``, it creates the specified number
     of environment instances and gives them to the collector when
     instantiating it.  It then calls collector startup methods for
-    envs and agent.  If applicable, instantiates evaluation
+    envs and agents.  If applicable, instantiates evaluation
     environment instances and evaluation collector.
     Then enters infinite loop, waiting for signals from master to collect
     training samples or else run evaluation, until signaled to exit.
@@ -285,7 +285,7 @@ def ebay_sampling_process(common_kwargs, worker_kwargs):
         samples_np=w.samples_np,
         batch_T=c.batch_T,
         TrajInfoCls=c.TrajInfoCls,
-        agent=c.get("agent", None),  # Optional depending on parallel setup.
+        agent=c.get("agents", None),  # Optional depending on parallel setup.
         sync=w.get("sync", None),
         step_buffer_np=w.get("step_buffer_np", None),
         global_B=c.get("global_B", 1),

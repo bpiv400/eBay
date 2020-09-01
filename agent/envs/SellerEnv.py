@@ -4,25 +4,19 @@ from agent.envs.AgentEnv import AgentEnv
 from agent.util import define_con_set
 from rlenv.util import get_delay_outcomes, get_con_outcomes
 from utils import load_sizes
+from rlenv.const import DELAY_IND
 from constants import POLICY_SLR, MAX_DELAY_TURN
 from featnames import START_PRICE
 
-SellerInfo = namedarraytuple("SellerInfo",
-                             ["days",
-                              "max_return",
-                              "num_offers"])
 SellerObs = namedarraytuple("SellerObs",
                             list(load_sizes(POLICY_SLR)['x'].keys()))
 
 
 class SellerEnv(AgentEnv):
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.last_delay_seconds = None
 
     def is_agent_turn(self, event):
         """
-        Checks whether the agent should take a turn
+        Checks whether the agents should take a turn
         :param rlenv.events.Thread.Thread event:
         :return: bool
         """
@@ -33,16 +27,12 @@ class SellerEnv(AgentEnv):
                 return not(self.is_lstg_expired(event) or event.thread_expired())
         return False
 
-    def init_reset(self, next_lstg=None):
-        super().init_reset(next_lstg=next_lstg)
-        self.last_delay_seconds = None
-
     def reset(self, next_lstg=True):
         self.init_reset(next_lstg=next_lstg)  # in AgentEnvironment
         while True:
             event, lstg_complete = super().run()  # calls EBayEnvironment.run()
 
-            # time to sample an agent action
+            # time to sample an agents action
             if not lstg_complete:
                 if event.type == DELAY_EVENT:  # draw delay
                     self._process_slr_delay(event)
@@ -57,10 +47,14 @@ class SellerEnv(AgentEnv):
             else:
                 return None  # for EvalGenerator
 
+    def init_reset(self, next_lstg=None):
+        super().init_reset(next_lstg=next_lstg)
+        self.item_value = self.lookup[START_PRICE]
+
     def step(self, action):
         """
         Process int giving concession/delay
-        :param action: int returned from agent
+        :param action: int returned from agents
         :return: tuple described in rlenv
         """
         con = self.turn_from_action(action)
@@ -82,15 +76,24 @@ class SellerEnv(AgentEnv):
             if lstg_complete:
                 return self.agent_tuple(event=thread, done=lstg_complete)
         else:
+            # get initial delay from sources
+            last_delay = thread.sources()['offer{}'.format(thread.turn)][DELAY_IND]
+            assert 0 < last_delay < 1
+            last_delay_seconds = int(round(last_delay * MAX_DELAY_TURN))
+
+            # update sources with expiration delay
             delay_outcomes = get_delay_outcomes(seconds=MAX_DELAY_TURN,
                                                 turn=thread.turn)
             thread.sources.update_delay(delay_outcomes=delay_outcomes,
                                         turn=thread.turn)
-            thread.priority += MAX_DELAY_TURN - self.last_delay_seconds
+
+            # update priority and push thread to queue
+            thread.priority += MAX_DELAY_TURN - last_delay_seconds
             self.queue.push(thread)
+
         return self.run()
 
-    def run(self):  # until EbayEnvironment.run() stops at agent turn
+    def run(self):  # until EbayEnvironment.run() stops at agents turn
         while True:
             event, lstg_complete = super().run()
             if event.type == DELAY_EVENT:
@@ -103,16 +106,10 @@ class SellerEnv(AgentEnv):
 
     def _process_slr_delay(self, event):
         delay_seconds = self.draw_agent_delay(event)
-        event.update_delay(seconds=delay_seconds)
-        self.queue.push(event)
-        self.last_delay_seconds = delay_seconds
         if self.verbose:
             print('AGENT TURN: delay (sec) : {}'.format(delay_seconds))
-
-    def get_info(self, event=None):
-        return SellerInfo(days=self._get_days(event.priority),
-                          max_return=self.lookup[START_PRICE],
-                          num_offers=self.num_offers)
+        event.update_delay(seconds=delay_seconds)
+        self.queue.push(event)
 
     def get_reward(self):
         if self.outcome is None or not self.outcome.sale:

@@ -5,27 +5,27 @@ from processing.util import get_con, get_norm, get_pctiles
 from utils import topickle
 from constants import CLEAN_DIR, FEATS_DIR, PARTS_DIR, PCTILE_DIR, START, SEED, \
     SHARES, NUM_CHUNKS, DAY
-from featnames import START_PRICE, BYR_HIST, NORM, SLR
+from featnames import START_PRICE, BYR_HIST, NORM, SLR, LSTG, THREAD, INDEX, \
+    CLOCK
 
 # data types for csv read
-OTYPES = {'lstg': 'int64',
-          'thread': 'int64',
-          'index': 'uint8',
-          'clock': 'int64',
+OTYPES = {LSTG: 'int64',
+          THREAD: 'int64',
+          INDEX: 'uint8',
+          CLOCK: 'int64',
           'price': 'float64',
           'accept': bool,
           'reject': bool,
-          'censored': bool,
           'message': bool}
 
-TTYPES = {'lstg': 'int64',
-          'thread': 'int64',
+TTYPES = {LSTG: 'int64',
+          THREAD: 'int64',
           'byr': 'int64',
           'byr_hist': 'int64',
           'bin': bool,
           'byr_us': bool}
 
-LTYPES = {'lstg': 'int64',
+LTYPES = {LSTG: 'int64',
           'slr': 'int64',
           'meta': 'int64',
           'leaf': 'int64',
@@ -49,9 +49,9 @@ DATA_TYPES = {'listings': LTYPES,
               'offers': OTYPES}
 
 # indices when reading in CSVs
-IDX_NAMES = {'offers': ['lstg', 'thread', 'index'],
-             'threads': ['lstg', 'thread'],
-             'listings': 'lstg'}
+IDX_NAMES = {'offers': [LSTG, THREAD, INDEX],
+             'threads': [LSTG, THREAD],
+             'listings': LSTG}
 
 
 def create_chunks(listings=None, threads=None, offers=None):
@@ -70,22 +70,22 @@ def create_chunks(listings=None, threads=None, offers=None):
     offers[NORM] = get_norm(con)
     # split into chunks by seller
     slrs = listings[SLR].reset_index().sort_values(
-        by=[SLR, 'lstg']).set_index(SLR).squeeze()
+        by=[SLR, LSTG]).set_index(SLR).squeeze()
     u = np.unique(listings[SLR].values)
     groups = np.array_split(u, NUM_CHUNKS)
     for i in range(NUM_CHUNKS):
         print('Creating chunk {} of {}'.format(i + 1, NUM_CHUNKS))
         lstgs = slrs.loc[groups[i]].values
         chunk = {'listings': listings.reindex(index=lstgs),
-                 'threads': threads.reindex(index=lstgs, level='lstg'),
-                 'offers': offers.reindex(index=lstgs, level='lstg')}
+                 'threads': threads.reindex(index=lstgs, level=LSTG),
+                 'offers': offers.reindex(index=lstgs, level=LSTG)}
         topickle(chunk, chunk_dir + '{}.pkl'.format(i))
 
 
 def partition_lstgs(s):
     # series of index slr and value lstg
     slrs = s.reset_index().sort_values(
-        by=['slr', 'lstg']).set_index('slr').squeeze()
+        by=[SLR, LSTG]).set_index(SLR).squeeze()
     # randomly order sellers
     u = np.unique(slrs.index.values)
     np.random.seed(SEED)   # set seed
@@ -142,7 +142,7 @@ def main():
     topickle(threads, FEATS_DIR + 'threads.pkl')
 
     # arrival time
-    thread_start = offers.clock.xs(1, level='index')
+    thread_start = offers.clock.xs(1, level=INDEX)
     s = pd.to_datetime(thread_start, origin=START, unit='s')
 
     # split off missing
@@ -161,12 +161,11 @@ def main():
     cdf = pctile.rename('x').reset_index().set_index('x').squeeze()
 
     # calculate censoring second
-    last = offers.loc[~offers.censored, 'clock'].groupby(
-        ['lstg', 'thread']).max()
+    last = offers[CLOCK].groupby([LSTG, THREAD]).max()
     last = last.loc[~to_replace]
-    last = last.groupby('lstg').max()
+    last = last.groupby(LSTG).max()
     last = pd.to_datetime(last, origin=START, unit='s')
-    last = last.reindex(index=missing.index, level='lstg').dropna()
+    last = last.reindex(index=missing.index, level=LSTG).dropna()
 
     # restrict censoring seconds to same day as bin with missing time
     same_date = pd.to_datetime(last.dt.date) == missing.reindex(last.index)
@@ -195,13 +194,13 @@ def main():
 
     # end time of listing
     end_time = tdiff.reset_index(
-        'thread', drop=True).rename('end_time')
+        THREAD, drop=True).rename('end_time')
 
     # update offers clock
-    df = offers.clock.reindex(index=end_time.index, level='lstg')
+    df = offers.clock.reindex(index=end_time.index, level=LSTG)
     df = df.to_frame().join(end_time)
-    idx = df[df['clock'] > df['end_time']].index
-    offers.loc[idx, 'clock'] = df.loc[idx, 'end_time']
+    idx = df[df[CLOCK] > df['end_time']].index
+    offers.loc[idx, CLOCK] = df.loc[idx, 'end_time']
 
     # save offers and threads
     topickle(offers, FEATS_DIR + 'offers.pkl')
@@ -210,7 +209,7 @@ def main():
     listings.loc[end_time.index, 'end_time'] = end_time
 
     # add arrivals per day to listings
-    arrivals = thread_start.groupby('lstg').count().reindex(
+    arrivals = thread_start.groupby(LSTG).count().reindex(
         index=listings.index, fill_value=0)
     duration = (listings.end_time + 1) / DAY - listings.start_date
     listings['arrival_rate'] = arrivals / duration

@@ -1,5 +1,5 @@
 from sklearn.tree import DecisionTreeClassifier, export_text
-from assess.util import find_best_run, load_data, get_last_norm
+from assess.util import find_best_run, load_data, get_last_norm, get_log_dir
 from utils import load_file
 from constants import TEST, DAY
 from featnames import LOOKUP, AUTO, CON, NORM, START_PRICE, START_TIME, BYR_HIST
@@ -7,7 +7,9 @@ from featnames import LOOKUP, AUTO, CON, NORM, START_PRICE, START_TIME, BYR_HIST
 
 def main():
     lookup = load_file(TEST, LOOKUP)
-    data = load_data(part=TEST, run_dir=find_best_run())
+    # run_dir = find_best_run()
+    run_dir = get_log_dir(byr=False) + 'run_nocon_0_1/'
+    data = load_data(part=TEST, run_dir=run_dir)
     threads, offers, clock = [data[k] for k in ['threads', 'offers', 'clock']]
 
     for turn in [2, 4, 6]:
@@ -16,8 +18,16 @@ def main():
         idx = offers[~offers[AUTO] & is_turn].index
 
         # outcome
-        y = (offers.loc[idx, CON].astype('int64') == 1).values
-        print('Turn {0:d} baserate: {1:2.1f}%'.format(turn, 100 * y.mean()))
+        con = offers.loc[idx, CON]
+        # y = ((0 < con) & (con < 1)) + 2 * (con == 1)
+        y = con == 1
+        y = y.values
+        print('Turn {0:d} accept rate: {1:2.1f}%'.format(
+            turn, 100 * y.mean()))
+        # print('Turn {0:d} concession rate: {1:2.1f}%'.format(
+        #     turn, 100 * (y == 1).mean()))
+        # print('Turn {0:d} accept rate: {1:2.1f}%'.format(
+        #     turn, 100 * (y == 2).mean()))
 
         # features
         X = threads[BYR_HIST].reindex(index=idx).to_frame()

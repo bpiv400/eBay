@@ -263,16 +263,6 @@ def load_file(part, x):
     return unpickle(PARTS_DIR + '{}/{}.pkl'.format(part, x))
 
 
-def drop_censored(df):
-    """
-    Removes censored observations from a dataframe of offers
-    :param df: dataframe with index ['lstg', 'thread', 'index']
-    :return: dataframe
-    """
-    censored = df[EXP] & (df[DELAY] < 1)
-    return df[~censored]
-
-
 def set_gpu(gpu=None, spawn=True):
     """
     Sets the GPU index and the CPU affinity.

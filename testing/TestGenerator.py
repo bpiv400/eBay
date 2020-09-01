@@ -1,57 +1,36 @@
-import numpy as np
-from functools import reduce
-from agent.util import get_agent_name
-from agent.AgentComposer import AgentComposer
-from constants import BYR, POLICY_MODELS
-from featnames import LSTG, DEC_PRICE, START_PRICE
-from rlenv.Composer import Composer
-from agent.envs.BuyerEnv import BuyerEnv
-from agent.envs.SellerEnv import SellerEnv
 from sim.generate import SimulatorEnv
+from rlenv.Composer import Composer
 from rlenv.generate.Generator import Generator
-from rlenv.util import get_env_sim_subdir, load_chunk
-from testing.LstgLog import LstgLog
+from rlenv.util import get_env_sim_subdir
+from testing.Listing import Listing
 from testing.TestQueryStrategy import TestQueryStrategy
-from testing.util import subset_inputs, load_all_inputs, load_reindex, \
-    lstgs_without_duplicated_timestamps, subset_lstgs
+from testing.util import load_all_inputs, reindex_dict, \
+    get_auto_safe_lstgs, drop_duplicated_timestamps
 from testing.TestLoader import TestLoader
-from utils import init_optional_arg
+from utils import unpickle, load_file
+from agent.const import FULL
+from featnames import X_THREAD, X_OFFER, LOOKUP, LSTG
 
 
 class TestGenerator(Generator):
-    def __init__(self, **kwargs):
-        """
-        kwargs contains start, role, agent, delay, part, verbose
-        :param kwargs:
-        """
-        super().__init__(verbose=kwargs['verbose'])
-        init_optional_arg(kwargs=kwargs, name='start',
-                          default=None)
-        # id of the first lstg in the chunk to simulate
-        self.start = kwargs['start']
-        self.first_only = kwargs['first']
-        # boolean for whether the testing is for an agent environment
-        self.agent = kwargs['agent']
-        # boolean for whether the agent is a byr
-        self.byr = kwargs[BYR]
-        self.print_test_description()
+    def __init__(self, verbose=False):
+        super().__init__(verbose=verbose, byr=False, slr=False)
+        print('Testing Simulator')
 
-    def print_test_description(self):
-        if not self.agent:
-            print('Testing Simulator')
-        elif self.byr:
-            print('Testing Buyer Agent')
-        else:
-            print('Testing Seller Agent')
+    def generate_env(self):
+        return self.env_class(query_strategy=self.query_strategy,
+                              loader=self.loader,
+                              recorder=None,
+                              verbose=self.verbose,
+                              composer=self.composer,
+                              con_set=FULL,
+                              test=True)
 
     def generate_query_strategy(self):
         return TestQueryStrategy()
 
     def generate_composer(self):
-        if self.agent:
-            return AgentComposer(byr=self.byr)
-        else:
-            return Composer(cols=self.loader.x_lstg_cols)
+        return Composer(cols=self.loader.x_lstg_cols)
 
     def load_chunk(self, chunk=None, part=None):
         """
@@ -59,232 +38,73 @@ class TestGenerator(Generator):
         """
         print('Loading testing data...')
         chunk_dir = get_env_sim_subdir(part=part, chunks=True)
-        chunk_path = '{}{}.pkl'.format(chunk_dir, chunk)
-        x_lstg, lookup, p_arrival = load_chunk(input_path=chunk_path)
-        # lstgs without duplicated time stamps first
-        test_data = dict()
-        non_dups = lstgs_without_duplicated_timestamps(lstgs=lookup.index)
-        x_lstg = x_lstg.reindex(non_dups)
-        lookup = lookup.reindex(non_dups)
-        p_arrival = p_arrival.reindex(non_dups)
-        assert 59729927 not in lookup
-        test_data['inputs'] = load_all_inputs(part=part,
-                                              lstgs=lookup.index)
-        for name in ['x_thread', 'x_offer']:
-            test_data[name] = load_reindex(part=part,
-                                           name=name,
-                                           lstgs=lookup.index)
-        # test_data = self._remove_extra_models(test_data=test_data)
-        # subset inputs to only contain lstgs where the agent has at least 1 action
-        valid_lstgs = self._get_valid_lstgs(test_data=test_data,
-                                            lookup=lookup)
-        if len(valid_lstgs) < len(lookup.index):
-            x_lstg = subset_lstgs(df=x_lstg, lstgs=valid_lstgs)
-            lookup = subset_lstgs(df=lookup, lstgs=valid_lstgs)
-            p_arrival = subset_lstgs(df=p_arrival, lstgs=valid_lstgs)
-            test_data['x_thread'] = subset_lstgs(df=test_data['x_thread'],
-                                                 lstgs=valid_lstgs)
-            test_data['x_offer'] = subset_lstgs(df=test_data['x_offer'],
-                                                lstgs=valid_lstgs)
-            test_data['inputs'] = subset_inputs(input_data=test_data['inputs'],
-                                                value=valid_lstgs, level='lstg')
+        chunk_path = chunk_dir + '{}.pkl'.format(chunk)
+        chunk = unpickle(chunk_path)
+        lstgs = chunk[LOOKUP].index
+
+        # add in threads and offers
+        for name in [X_THREAD, X_OFFER]:
+            chunk[name] = load_file(part, name).reindex(
+                index=lstgs, level=LSTG)
+
+        # model inputs, subset to lstgs
+        inputs = load_all_inputs(part=part, byr=self.byr, slr=self.slr)
+        inputs = reindex_dict(d=inputs, lstgs=lstgs)
+
+        # subset to valid listings
+        valid = self._get_valid_lstgs(part=part, chunk=chunk)
+        if len(valid) < len(lstgs):
+            chunk = reindex_dict(d=chunk, lstgs=valid)
+            inputs = reindex_dict(d=inputs, lstgs=valid)
+        print('{} listings in chunk, {} of them valid'.format(
+            len(lstgs), len(valid)))
+
+        # put in dictionary
+        chunk['inputs'] = inputs
+
         print('Running tests...')
-        return TestLoader(x_lstg=x_lstg,
-                          lookup=lookup,
-                          p_arrival=p_arrival,
-                          test_data=test_data)
+        return TestLoader(chunk)
 
-    def _remove_extra_models(self, test_data):
+    def _get_valid_lstgs(self, part=None, chunk=None):
         """
-        Remove the unused policy models from the testing data inputs
-        """
-        unused_models = POLICY_MODELS
-        if self.agent:
-            agent_name = get_agent_name(byr=self.byr)
-            unused_models.remove(agent_name)
-        for model_name in unused_models:
-            del test_data['inputs'][model_name]
-        return test_data
-
-    @staticmethod
-    def _get_auto_safe_lstgs(test_data=None, lookup=None):
-        """
-        Drops lstgs where there's at least one offer within 1%
-        of the accept or reject price if that price is non-null
-        """
-        # print('Lstg count: {}'.format(len(lookup)))
-        lookup = lookup.copy()
-        # normalize start / decline prices
-        # for price in [ACC_PRICE, DEC_PRICE]:
-        for price in [DEC_PRICE]:
-            lookup[price] = lookup[price] / lookup[START_PRICE]
-        # drop offers that are 0 or 1 (and very near or 1)
-        offers = test_data['x_offer'].copy()
-        near_null_offers = (offers['norm'] >= .99) | (offers['norm'] <= 0.01)
-        offers = offers.loc[~near_null_offers, :]
-
-        # extract lstgs that no longer appear in offers
-        # these should be kept because they  must have no offers
-        # or consist entirely of offers adjacent to null acc/rej prices
-        null_offer_lstgs = lookup.index[~lookup.index.isin(
-            offers.index.get_level_values('lstg').unique())]
-
-        # inner join offers with lookup
-        offers = offers.join(other=lookup, on='lstg')
-        offers['diff_dec'] = (offers['norm'] - offers[DEC_PRICE]).abs()
-        offers['low_diff'] = offers['diff_dec'] < 0.01
-        low_diff_count = offers['low_diff'].groupby(level='lstg').sum()
-        no_low_diffs_lstgs = low_diff_count.index[low_diff_count == 0]
-        output_lstgs = no_low_diffs_lstgs.union(null_offer_lstgs)
-        # print('num lstgs after diffs removal: {}'.format(
-        #     len(output_lstgs)))
-        return output_lstgs
-
-    @staticmethod
-    def _get_delay_buyer_lstgs(test_data=None, lookup=None):
-        """
-        Drops lstgs where a buyer makes at least one instantaneous offer
-        """
-        # print('Lstg count: {}'.format(len(lookup.index)))
-        lookup = lookup.copy()
-        offers = test_data['x_offer'].copy()
-        offers['byr'] = offers.index.get_level_values('index') % 2 == 1
-        offers['not_first'] = (offers.index.get_level_values('index') != 1)
-        offers['byr_not_first'] = (offers['byr']) & (offers['not_first'])
-        offers['instant_byr'] = (offers['byr_not_first']) & (offers['delay'] == 0)
-        instant_count = offers['instant_byr'].groupby(level='lstg').sum()
-        instant_lstgs = instant_count.index[instant_count > 0]
-        lookup = lookup.drop(index=instant_lstgs, inplace=False)
-        # print('num lstgs after instant removal: {}'.format(
-        #     len(lookup.index)
-        # ))
-        return lookup.index
-
-    def _get_valid_lstgs(self, test_data=None, lookup=None):
-        """
-        Retrieves a list of lstgs from the chunk where the agent makes at least one
+        Retrieves a list of lstgs from the chunk where the agents makes at least one
         turn.
 
         Verifies this list matches exactly the lstgs with inputs for the relevant model
         :return: pd.Int64Index
         """
-        auto_safe_lstgs = self._get_auto_safe_lstgs(test_data=test_data,
-                                                    lookup=lookup)
-        non_instant_lstgs = self._get_delay_buyer_lstgs(test_data=test_data,
-                                                        lookup=lookup)
-        if self.start is not None:
-            start_index = list(lookup.index).index(self.start)
-            start_lstgs = lookup.index[start_index:]
-        else:
-            start_lstgs = lookup.index
-        lstg_groups = [
-            start_lstgs,
-            auto_safe_lstgs,
-            non_instant_lstgs
-        ]
-        if self.agent:
-            agent_lstgs = self._get_agent_lstgs(test_data=test_data)
-            lstg_groups.append(agent_lstgs)
-        return reduce(np.intersect1d, lstg_groups)
+        # lstgs without duplicated time stamps first
+        non_dups = drop_duplicated_timestamps(part=part, chunk=chunk)
+        auto_safe = get_auto_safe_lstgs(chunk)
+        return non_dups.intersection(auto_safe, sort=None)
 
-    def _get_agent_lstgs(self, test_data=None):
-        x_offer = test_data['x_offer'].copy()  # x_offer: pd.DataFrame
-        if self.byr:
-            # all lstgs should have at least 1 action
-            lstgs = x_offer.index.get_level_values('lstg').unique()
-        else:
-            # keep all lstgs with at least 1 thread with at least 1 non-auto seller
-            # offer
-            slr_offers = x_offer.index.get_level_values('index') % 2 == 0
-            man_offers = ~x_offer['auto']
-            predicates = (slr_offers, man_offers)
-            keep = np.logical_and.reduce(predicates)
-            lstgs = x_offer.index.get_level_values('lstg')[keep].unique()
-        # verify that x_offer based lstgs match lstgs used as model input exactly
-        model_name = get_agent_name(byr=self.byr)
-        input_lstgs = test_data['inputs'][model_name][LSTG].index.get_level_values('lstg').unique()
-        assert input_lstgs.isin(lstgs).all()
-        return lstgs
-
-    def _count_rl_buyers(self):
-        # there should always be at least 1 if initial agent subsetting
-        # was correct
-        threads = self.loader.x_offer.index.get_level_values('thread')
-        return len(threads.unique())
-
-    def _generate_lstg_log(self, buyer=None):
+    def _get_listing_params(self):
         params = {
-            'lstg': self.loader.lstg,
+            LSTG: self.loader.lstg,
             'inputs': self.loader.inputs,
-            'x_thread': self.loader.x_thread,
-            'x_offer': self.loader.x_offer,
-            'lookup': self.loader.lookup,
+            X_THREAD: self.loader.x_thread,
+            X_OFFER: self.loader.x_offer,
+            LOOKUP: self.loader.lookup,
             'verbose': self.verbose
         }
-        if self.agent:
-            params['agent_params'] = {
-                'byr': self.byr,
-                'thread_id': buyer
-            }
-        return LstgLog(params=params)
-
-    def simulate_agent_lstg(self, buyer=None):
-        lstg_log = self._generate_lstg_log(buyer=buyer)
-        self.query_strategy.update_log(lstg_log)
-        if self.byr:
-            hist = self.loader.x_thread.loc[buyer, 'byr_hist']
-            self.composer.set_hist(hist=hist)
-        # print('resetting: {}'.format(self.loader.lstg))
-        obs = self.env.reset(next_lstg=False)
-        agent_tuple = obs, None, None, None
-        done = False
-        while not done:
-            action = lstg_log.get_action(agent_tuple=agent_tuple)
-            agent_tuple = self.env.step(action)
-            done = agent_tuple[2] or self.env.relist_count > 0
-        lstg_log.verify_done()
-
-    def generate_recorder(self):
-        return None
+        return params
 
     def generate(self):
         while self.env.has_next_lstg():
             self.env.next_lstg()
-            if self.byr:
-                buyers = self._count_rl_buyers()
-                if self.first_only:
-                    buyers = min(buyers, 1)
-                for i in range(buyers):
-                    # simulate lstg once for each buyer
-                    if self.verbose:
-                        print('Agent is thread {}'.format(i+1))
-                    self.simulate_agent_lstg(buyer=(i + 1))
-            elif self.agent:
-                self.simulate_agent_lstg()
-            else:
-                self.simulate_lstg()
+            self.simulate_lstg()
 
     def simulate_lstg(self):
         """
         Simulates a particular listing once
         :return: outcome tuple
         """
-        # simulate once for each buyer in BuyerEnvironment mode
-        # this output needs to match first agent action
-        lstg_log = self._generate_lstg_log(buyer=None)
+        params = self._get_listing_params()
+        lstg_log = Listing(params=params)
         self.query_strategy.update_log(lstg_log)
         self.env.reset()
-        # going to need to change to return for each agent action
-        outcome = self.env.run()
-        return outcome
+        self.env.run()
 
     @property
     def env_class(self):
-        if self.agent:
-            if self.byr:
-                env_class = BuyerEnv
-            else:
-                env_class = SellerEnv
-        else:
-            env_class = SimulatorEnv
-        return env_class
+        return SimulatorEnv

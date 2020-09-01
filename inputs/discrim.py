@@ -1,9 +1,9 @@
 import numpy as np
 from inputs.util import save_featnames_and_sizes, \
     convert_x_to_numpy, get_x_thread, get_ind_x
-from utils import topickle, load_file, drop_censored, input_partition
+from utils import topickle, load_file, input_partition
 from constants import TRAIN_DISCRIM, VALIDATION, TEST, DISCRIM_MODEL, INPUT_DIR
-from featnames import SPLIT, DAYS, DELAY, EXP, AUTO, REJECT, MSG, LOOKUP
+from featnames import SPLIT, DAYS, DELAY, EXP, AUTO, REJECT, MSG, LOOKUP, THREAD
 
 
 def save_discrim_files(part=None, x_obs=None, x_sim=None, lstgs=None):
@@ -20,8 +20,8 @@ def save_discrim_files(part=None, x_obs=None, x_sim=None, lstgs=None):
         save_featnames_and_sizes(x_obs, DISCRIM_MODEL)
 
     # indices
-    idx_obs = x_obs['thread'].index
-    idx_sim = x_sim['thread'].index
+    idx_obs = x_obs[THREAD].index
+    idx_sim = x_sim[THREAD].index
 
     # create dictionary of numpy arrays
     convert_x_to_numpy(x_obs, idx_obs)
@@ -76,10 +76,6 @@ def load_threads_offers(part=None, sim=False):
     prefix = 'sim/' if sim else ''
     threads = load_file(part, '{}x_thread'.format(prefix))
     offers = load_file(part, '{}x_offer'.format(prefix))
-    if not sim:
-        offers = drop_censored(offers)
-    else:
-        assert (offers.loc[offers[EXP], DELAY] == 1.).all()
     return threads, offers
 
 

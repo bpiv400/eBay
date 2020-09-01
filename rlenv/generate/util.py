@@ -2,10 +2,10 @@ import os
 import pandas as pd
 from processing.util import collect_date_clock_feats, get_days_delay, get_norm
 from utils import topickle, is_split, load_file
-from constants import IDX, DAY, MAX_DELAY_ARRIVAL
+from constants import IDX, DAY, MAX_DAYS
 from featnames import DAYS, DELAY, CON, SPLIT, NORM, REJECT, AUTO, EXP, \
     CLOCK_FEATS, TIME_FEATS, OUTCOME_FEATS, DAYS_SINCE_LSTG, \
-    BYR_HIST, START_TIME, LOOKUP, SLR
+    BYR_HIST, START_TIME, LOOKUP, SLR, X_THREAD, X_OFFER, CLOCK
 
 
 def diff_tf(df):
@@ -22,19 +22,16 @@ def diff_tf(df):
     return df
 
 
-def process_sim_offers(df, end_time):
+def process_sim_offers(df=None):
     # difference time features
     df = diff_tf(df)
-    # censor timestamps
-    ts = df.clock.to_frame().join(end_time.rename('end'))
-    ts = ts.reorder_levels(df.index.names)
-    clock = ts.min(axis=1)
     # clock features
+    clock = df[CLOCK]
+    df.drop(CLOCK, axis=1, inplace=True)
     df = df.join(collect_date_clock_feats(clock))
     # days and delay
     df[DAYS], df[DELAY] = get_days_delay(clock.unstack())
     # concession as a decimal
-    df.loc[df[CON] == 101, CON] = 0
     df.loc[:, CON] /= 100
     # indicator for split
     df[SPLIT] = df[CON].apply(lambda x: is_split(x))
@@ -49,34 +46,15 @@ def process_sim_offers(df, end_time):
     return df, clock
 
 
-def process_sim_threads(df, start_time):
+def process_sim_threads(df=None, lstg_start=None):
     # convert clock to months_since_lstg
-    df = df.join(start_time)
+    df = df.join(lstg_start)
     df[DAYS_SINCE_LSTG] = (df.clock - df.start_time) / DAY
+    assert df[DAYS_SINCE_LSTG].max() < MAX_DAYS
     df = df.drop(['clock', 'start_time'], axis=1)
     # reorder columns to match observed
     df = df.loc[:, [DAYS_SINCE_LSTG, BYR_HIST]]
     return df
-
-
-def clean_components(threads, offers, lstg_start):
-    # output dictionary
-    d = dict()
-
-    # index of 'lstg' or ['lstg', 'sim']
-    idx = threads.reset_index('thread', drop=True).index.unique()
-
-    # end of listing
-    sale_time = offers.loc[offers[CON] == 100, 'clock'].reset_index(
-        level=['thread', 'index'], drop=True)
-    lstg_end = sale_time.reindex(index=idx, fill_value=-1)
-    lstg_end.loc[lstg_end == -1] += lstg_start + MAX_DELAY_ARRIVAL
-
-    # conform to observed inputs
-    d['x_thread'] = process_sim_threads(threads, lstg_start)
-    d['x_offer'], d['clock'] = process_sim_offers(offers, lstg_end)
-
-    return d
 
 
 def concat_sim_chunks(sims):
@@ -101,8 +79,11 @@ def process_sims(part=None, sims=None, output_dir=None):
     threads, offers = concat_sim_chunks(sims)
 
     # create output dataframes
+    d = dict()
     lstg_start = load_file(part, LOOKUP)[START_TIME]
-    d = clean_components(threads, offers, lstg_start)
+    d[X_THREAD] = process_sim_threads(df=threads,
+                                      lstg_start=lstg_start)
+    d[X_OFFER], d[CLOCK] = process_sim_offers(df=offers)
 
     # create directory if it doesn't exist
     if not os.path.isdir(output_dir):

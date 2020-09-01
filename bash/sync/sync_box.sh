@@ -17,6 +17,6 @@ rclone sync dropbox:ebay/data/partitions/agent/valid/chunks data/partitions/agen
 rclone sync dropbox:ebay/data/partitions/agent/valid data/partitions/agent/valid --max-depth=1
 rclone sync dropbox:ebay/data/partitions/models/valid data/partitions/models/valid --max-depth=1
 
-# agent files
+# agents files
 rclone sync dropbox:ebay/data/partitions/agent/rl/chunks data/partitions/agent/rl/chunks
 

@@ -3,12 +3,12 @@ import pandas as pd
 import torch
 from collections.abc import Iterable
 from utils import unpickle, load_featnames
-from processing.util import load_feats
 from rlenv.util import load_featnames
 from utils import load_file
-from constants import MODELS, INPUT_DIR, INDEX_DIR, FEATS_DIR,\
-    FIRST_ARRIVAL_MODEL, POLICY_MODELS, PARTS_DIR, POLICY_BYR
-from featnames import CENSORED, EXP, DELAY, MSG
+from constants import MODELS, INPUT_DIR, INDEX_DIR, \
+    FIRST_ARRIVAL_MODEL, POLICY_SLR, POLICY_BYR, IDX
+from featnames import SLR, X_LSTG, X_OFFER, LOOKUP, NORM, AUTO, \
+    CLOCK, LSTG, INDEX, DEC_PRICE, START_PRICE, MSG
 
 
 class Subsetter:
@@ -112,32 +112,25 @@ def subset_df(df=None, lstg=None):
     return None
 
 
-def load_model_inputs(model=None, input_dir=None,
-                      index_dir=None, lstgs=None, x_lstg=None):
-    index = unpickle('{}{}.pkl'.format(index_dir, model))
+def load_model_inputs(model=None, part=None, x_lstg=None):
+    index = unpickle(INDEX_DIR + '{}/{}.pkl'.format(part, model))
     featnames = load_featnames(model)
-    full_inputs = unpickle('{}{}.pkl'.format(input_dir, model))
+    full_inputs = unpickle(INPUT_DIR + '{}/{}.pkl'.format(part, model))
     x_inputs = full_inputs['x']
     x_idx = pd.Series(index=index, data=full_inputs['idx_x'])
-    contains = None
-    for feat_set_name in list(x_inputs.keys()):
+    for k in x_inputs.keys():
         # set column names
-        if feat_set_name == 'thread':
+        if k == 'thread':
             # use naive values for thread since it's not in featnames
-            cols = list(range(x_inputs[feat_set_name].shape[1]))
-        elif 'offer' in feat_set_name:
+            cols = list(range(x_inputs[k].shape[1]))
+        elif 'offer' in k:
             cols = featnames['offer']
         else:
-            cols = featnames[feat_set_name]
-        inputs_df = pd.DataFrame(data=x_inputs[feat_set_name],
+            cols = featnames[k]
+        inputs_df = pd.DataFrame(data=x_inputs[k],
                                  index=index,
                                  columns=cols)
-        if contains is None:
-            full_lstgs = inputs_df.index.get_level_values('lstg')
-            contains = full_lstgs.isin(lstgs)
-        inputs_df = inputs_df.loc[contains, :]
-        x_inputs[feat_set_name] = inputs_df
-    x_idx = x_idx[contains]
+        x_inputs[k] = inputs_df
     # fixing x_lstg inputs except 'lstg'
     # b/c it must combine with 'thread'
     x_lstg_sets = list(x_lstg.keys())
@@ -145,13 +138,13 @@ def load_model_inputs(model=None, input_dir=None,
     featnames_list = list(featnames.keys())
     x_lstg_sets = [set_name for set_name in x_lstg_sets
                    if set_name in featnames_list]
-    for feat_set_name in x_lstg_sets:
-        vals = x_lstg[feat_set_name][x_idx, :]
-        cols = featnames[feat_set_name]
+    for k in x_lstg_sets:
+        vals = x_lstg[k][x_idx, :]
+        cols = featnames[k]
         inputs_df = pd.DataFrame(data=vals,
                                  index=x_idx.index,
                                  columns=cols)
-        x_inputs[feat_set_name] = inputs_df
+        x_inputs[k] = inputs_df
 
     # fixing lstg
     lstg_vals = x_lstg['lstg'][x_idx, :]
@@ -173,67 +166,48 @@ def load_model_inputs(model=None, input_dir=None,
     return x_inputs
 
 
-def load_all_inputs(part=None, lstgs=None):
-    input_dir = '{}{}/'.format(INPUT_DIR, part)
-    index_dir = '{}{}/'.format(INDEX_DIR, part)
-    x_lstg = unpickle('{}{}/x_lstg.pkl'.format(PARTS_DIR, part))
-    inputs_dict = dict()
-    # models = MODELS + POLICY_MODELS
+def load_all_inputs(part=None, byr=False, slr=False):
+    x_lstg = load_file(part, X_LSTG)
+
     models = MODELS
     models.remove(FIRST_ARRIVAL_MODEL)
+    if byr:
+        models += [POLICY_BYR]
+    elif slr:
+        models += [POLICY_SLR]
+
+    inputs_dict = dict()
     for model in models:
         inputs_dict[model] = load_model_inputs(model=model,
                                                x_lstg=x_lstg,
-                                               input_dir=input_dir,
-                                               index_dir=index_dir,
-                                               lstgs=lstgs)
+                                               part=part)
     return inputs_dict
 
 
-def load_reindex(part=None, name=None, lstgs=None):
-    df = load_file(part, name)
-    df = df.reindex(index=lstgs, level='lstg')
-    if name == 'x_offer':
-        df[CENSORED] = df[EXP] & (df[DELAY] < 1)
-    return df
+def reindex_dict(d=None, lstgs=None):
+    for m, v in d.items():
+        if isinstance(v, dict):
+            for k, df in v.items():
+                if len(df.index.names) == 1:
+                    d[m][k] = df.reindex(index=lstgs)
+                else:
+                    d[m][k] = df.reindex(index=lstgs, level='lstg')
+        else:
+            if len(v.index.names) == 1:
+                d[m] = v.reindex(index=lstgs)
+            else:
+                d[m] = v.reindex(index=lstgs, level='lstg')
+    return d
 
 
-def lstgs_without_duplicated_timestamps(lstgs=None):
-    # load timestamps
-    offers = load_feats(name='offers', lstgs=lstgs)
-
-    # remove censored offers
-    clock = offers.loc[~offers.censored, 'clock']
-
-    # remove duplicate timestamps within thread
-    toDrop = clock.groupby(['lstg', 'thread']).apply(lambda x: x.duplicated())
-    clock = clock[~toDrop]
-
-    # flag listings with duplicate timestamps across threads
-    flag = clock.groupby('lstg').apply(lambda x: x.duplicated())
-    flag = flag.groupby('lstg').max()
-
-    # drop flagged listgins
-    lstgs = lstgs.drop(flag[flag].index)
-
-    return lstgs
-
-
-def subset_lstgs(df=None, lstgs=None):
-    full_lstgs = df.index.get_level_values('lstg')
-    contains = full_lstgs.isin(lstgs)
-    df = df.loc[contains, :]
-    return df
-
-
-def populate_test_model_inputs(full_inputs=None, value=None, agent_byr=False, agent=False):
+def populate_inputs(full_inputs=None, value=None, agent_byr=False, agent=False):
     inputs = dict()
     for feat_set_name, feat_df in full_inputs.items():
         if value is not None:
             curr_set = full_inputs[feat_set_name].loc[value, :].copy()
         else:
             curr_set = full_inputs[feat_set_name].copy()
-        # silence messages from agent
+        # silence messages from agents
         if agent and 'offer' in feat_set_name:
             remainder = 1 if agent_byr else 0
             turn = int(feat_set_name[-1])
@@ -245,3 +219,62 @@ def populate_test_model_inputs(full_inputs=None, value=None, agent_byr=False, ag
             curr_set = curr_set.unsqueeze(0)
         inputs[feat_set_name] = curr_set
     return inputs
+
+
+def drop_duplicated_timestamps(part=None, chunk=None):
+    # timestemps
+    lstgs = chunk[LOOKUP].index
+    clock = load_file(part, CLOCK).reindex(index=lstgs, level=LSTG)
+    # remove duplicate timestamps within thread
+    toDrop = clock.groupby(clock.index.names[:-1]).apply(
+        lambda x: x.duplicated())
+    clock = clock[~toDrop]
+    # flag listings with duplicate timestamps across threads
+    flag = clock.groupby(LSTG).apply(lambda x: x.duplicated())
+    flag = flag.groupby(LSTG).max()
+    # drop flagged listings
+    output_lstgs = lstgs.drop(flag[flag].index)
+    return output_lstgs
+
+
+def get_auto_safe_lstgs(chunk=None):
+    """
+    Drops lstgs where there's at least one offer within 1%
+    of the accept or reject price if that price is non-null
+    """
+    # print('Lstg count: {}'.format(len(lookup)))
+    lookup = chunk[LOOKUP].copy()
+    # normalize decline prices
+    lookup[DEC_PRICE] /= lookup[START_PRICE]
+    # drop offers that are 0 or 1 (and very near or 1)
+    offers = chunk[X_OFFER].copy()
+    near_null_offers = (offers[NORM] >= .99) | (offers[NORM] <= 0.01)
+    offers = offers.loc[~near_null_offers, :]
+
+    # extract lstgs that no longer appear in offers
+    # these should be kept because they  must have no offers
+    # or consist entirely of offers adjacent to null acc/rej prices
+    null_offer_lstgs = lookup.index[~lookup.index.isin(
+        offers.index.get_level_values(LSTG).unique())]
+
+    # inner join offers with lookup
+    offers = offers.join(other=lookup, on=LSTG)
+    offers['diff_dec'] = (offers[NORM] - offers[DEC_PRICE]).abs()
+    offers['low_diff'] = offers['diff_dec'] < 0.01
+    low_diff_count = offers['low_diff'].groupby(level=LSTG).sum()
+    no_low_diffs_lstgs = low_diff_count.index[low_diff_count == 0]
+    output_lstgs = no_low_diffs_lstgs.union(null_offer_lstgs)
+    return output_lstgs
+
+
+def get_byr_lstgs(chunk=None):
+    return chunk[X_OFFER].index.get_level_values(LSTG).unique()
+
+
+def get_slr_lstgs(chunk=None):
+    # keep all lstgs with at least 1 non-auto seller offer
+    auto = chunk[X_OFFER][AUTO]
+    valid = ~auto[auto.index.isin(IDX[SLR], level=INDEX)]
+    s = valid.groupby(LSTG).sum()
+    output_lstgs = s[s > 0].index
+    return output_lstgs

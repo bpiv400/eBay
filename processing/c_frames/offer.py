@@ -4,7 +4,7 @@ from processing.util import collect_date_clock_feats, \
 from utils import topickle, is_split, input_partition
 from constants import PARTS_DIR, IDX
 from featnames import DAYS, DELAY, CON, NORM, SPLIT, MSG, REJECT, \
-    AUTO, EXP, TIME_FEATS, START_PRICE, SLR
+    AUTO, EXP, START_PRICE, SLR, CLOCK, INDEX
 
 
 def get_x_offer(start_price, offers, tf):
@@ -12,17 +12,17 @@ def get_x_offer(start_price, offers, tf):
     df = pd.DataFrame(index=offers.index).sort_index()
 
     # clock features
-    df = df.join(collect_date_clock_feats(offers.clock))
+    df = df.join(collect_date_clock_feats(offers[CLOCK]))
 
     # differenced time feats
     df = df.join(tf.reindex(index=df.index, fill_value=0))
 
     # delay features
-    df[DAYS], df[DELAY] = get_days_delay(offers.clock.unstack())
+    df[DAYS], df[DELAY] = get_days_delay(offers[CLOCK].unstack())
 
     # auto and exp are functions of delay
-    df[AUTO] = (df[DELAY] == 0) & df.index.isin(IDX[SLR], level='index')
-    df[EXP] = (df[DELAY] == 1) | offers.censored
+    df[AUTO] = (df[DELAY] == 0) & df.index.isin(IDX[SLR], level=INDEX)
+    df[EXP] = df[DELAY] == 1
 
     # concession
     df[CON] = get_con(offers.price.unstack(), start_price)
@@ -35,8 +35,8 @@ def get_x_offer(start_price, offers, tf):
     # message indicator is last
     df[MSG] = offers.message
 
-    # set time feats to 0 for censored observations
-    df.loc[(df[DELAY] < 1) & df[EXP], TIME_FEATS] = 0.0
+    # error checking
+    assert all(df.loc[df[EXP], REJECT])
 
     return df
 

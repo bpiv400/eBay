@@ -57,7 +57,6 @@ ACCEPT = 'accept'
 REJECT = 'reject'
 AUTO = 'auto'
 EXP = 'exp'
-CENSORED = 'censored'
 
 OUTCOME_FEATS = [DAYS, DELAY, AUTO, EXP, CON, REJECT, NORM, SPLIT, MSG]
 ALL_OFFER_FEATS = CLOCK_FEATS + TIME_FEATS + OUTCOME_FEATS
@@ -83,7 +82,7 @@ DEC_PRICE = 'decline_price'
 SLR_BO_CT = 'slr_bo_ct'
 STORE = 'store'
 
-# agent costs
+# agents costs
 MONTHLY_DISCOUNT = 'monthly_discount'
 ACTION_DISCOUNT = 'action_discount'
 ACTION_COST = 'action_cost'

@@ -6,13 +6,13 @@ from featnames import LSTG, START_TIME
 class ThreadTranslator:
     def __init__(self, arrivals=None, agent_thread=None, params=None):
         self.agent_thread = agent_thread
-        # boolean for whether the agent is the first thread
+        # boolean for whether the agents is the first thread
         self.agent_first = self.agent_thread == 1
-        # boolean for whether the agent is the last thread
+        # boolean for whether the agents is the last thread
         self.agent_last = self.agent_thread == len(arrivals)
-        # time when the buyer agent model is queried and produces a first offer
+        # time when the buyer agents model is queried and produces a first offer
         self.agent_check_time = int(self.get_rl_check_time(params=params))
-        # time when the buyer agent model executes the first offer
+        # time when the buyer agents model executes the first offer
         self.agent_arrival_time = int(arrivals[self.agent_thread].time)
         # number of seconds the first arrival model should delay for when
         # queried for arrival time of the buyer's first offer
@@ -20,7 +20,7 @@ class ThreadTranslator:
         # see get_thread_l for description
         self.thread_l = self.get_thread_l(arrivals=arrivals)
         if self.thread_l is not None:
-            # boolean for whether thread l arrival time is after agent arrival time
+            # boolean for whether thread l arrival time is after agents arrival time
             self.l_after_agent = arrivals[self.thread_l].time > self.agent_arrival_time
             # boolean for whether thread_l is censored
             self.l_censored = arrivals[self.thread_l].censored
@@ -47,7 +47,7 @@ class ThreadTranslator:
         print('thread l: {}'.format(self.thread_l))
         print('Agent first: {}'.format(self.agent_first))
         print('Agent last: {}'.format(self.agent_last))
-        print('l after agent: {}'.format(self.l_after_agent))
+        print('l after agents: {}'.format(self.l_after_agent))
         print('l censored: {}'.format(self.l_censored))
         print('j: {}'.format(self.j))
         print('Query twice: {}'.format(self.query_twice))
@@ -130,7 +130,7 @@ class ThreadTranslator:
         # all threads have their true arrival log
         # elif self.thread_l is not None:
         #    return translator
-        # no arrivals after agent_check_time, agent is last arrival
+        # no arrivals after agent_check_time, agents is last arrival
         #else:
         #    return translator
         return translator

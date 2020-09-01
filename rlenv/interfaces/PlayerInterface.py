@@ -93,8 +93,7 @@ class SimulatedPlayer(PlayerInterface):
         return sample_bernoulli(params)
 
     def sample_delay(self, params=None, turn=None):
-        delay = sample_categorical(logits=params)
-        return delay
+        return sample_categorical(logits=params)
 
     def sample_con(self, params=None, turn=None):
         raise NotImplementedError()

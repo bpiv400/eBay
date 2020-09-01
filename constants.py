@@ -32,7 +32,7 @@ OUTPUT_DIR = '{}/outputs/'.format(PREFIX)       # for saving outputs
 LOG_DIR = OUTPUT_DIR + 'logs/'                  # model logs
 MODEL_DIR = OUTPUT_DIR + 'models/'              # trained models
 PLOT_DIR = OUTPUT_DIR + 'plots/'                # for creating figures
-AGENT_DIR = OUTPUT_DIR + 'agent/'               # agent logs and models
+AGENT_DIR = OUTPUT_DIR + 'agents/'               # agents logs and models
 
 DATE_FEATS_PATH = FEATS_DIR + 'date_feats.pkl'
 META_PATH = CLEAN_DIR + 'meta.csv'
@@ -137,3 +137,10 @@ BYR_DROP = ['lstg_ct', 'bo_ct', 'auto_decline', 'has_decline']
 
 # for precision issues
 EPS = 1e-8
+
+# dropout options
+DROPOUT_GRID = []
+for j in range(8):
+    for i in range(j+1):
+        if j - i <= 1:
+            DROPOUT_GRID.append((float(i) / 10, float(j) / 10))

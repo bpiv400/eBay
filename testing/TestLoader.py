@@ -1,24 +1,22 @@
 from rlenv.LstgLoader import ChunkLoader
 from testing.util import subset_inputs, subset_df
+from featnames import X_LSTG, X_OFFER, X_THREAD, LOOKUP, P_ARRIVAL
 
 
 class TestLoader(ChunkLoader):
-    def __init__(self, x_lstg=None, lookup=None, test_data=None, p_arrival=None):
-        super().__init__(x_lstg=x_lstg, lookup=lookup, p_arrival=p_arrival)
-        self._test_data = test_data
+    def __init__(self, chunk=None):
+        super().__init__(x_lstg=chunk[X_LSTG],
+                         lookup=chunk[LOOKUP],
+                         p_arrival=chunk[P_ARRIVAL])
+        self._chunk = chunk
         self.x_offer = None
         self.x_thread = None
         self.inputs = None
 
-    def has_next(self):
-        return super().has_next()
-
     def next_lstg(self):
         super().next_lstg()
-        self.x_offer = subset_df(df=self._test_data['x_offer'],
-                                 lstg=self.lstg)
-        self.x_thread = subset_df(df=self._test_data['x_thread'],
-                                  lstg=self.lstg)
-        self.inputs = subset_inputs(input_data=self._test_data['inputs'],
+        self.x_offer = subset_df(df=self._chunk[X_OFFER], lstg=self.lstg)
+        self.x_thread = subset_df(df=self._chunk[X_THREAD], lstg=self.lstg)
+        self.inputs = subset_inputs(input_data=self._chunk['inputs'],
                                     level='lstg', value=self.lstg)
         return self.x_lstg, self.lookup, self.p_arrival

@@ -78,7 +78,7 @@ class ChunkLoader(LstgLoader):
             self.lookup = self._lookup_slice.iloc[self._ix, :]
             self.x_lstg = self._x_lstg_slice.iloc[self._ix, :]
             self.p_arrival = self._p_arrival_slice.iloc[self._ix, :]
-            self.lstg = self.lookup[LSTG]
+            self.lstg = int(self.lookup[LSTG])
             self._ix += 1
             return self.x_lstg, self.lookup, self.p_arrival
         else:

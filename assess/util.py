@@ -5,10 +5,11 @@ from agent.util import get_log_dir
 from utils import unpickle, load_file
 from assess.const import SPLITS
 from constants import PARTS_DIR, IDX, BYR, EPS, COLLECTIBLES, TEST, MAX_DAYS, \
-    MAX_DELAY_ARRIVAL, MAX_DELAY_TURN, INTERVAL_ARRIVAL, PCTILE_DIR, DAY, HOUR
+    MAX_DELAY_ARRIVAL, MAX_DELAY_TURN, INTERVAL_ARRIVAL, PCTILE_DIR, DAY, HOUR, \
+    VALIDATION
 from featnames import EXP, DELAY, CON, NORM, AUTO, START_TIME, STORE, SLR_BO_CT, \
     START_PRICE, META, LOOKUP, MSG, DAYS_SINCE_LSTG, BYR_HIST, X_THREAD, \
-    X_OFFER, CLOCK
+    X_OFFER, CLOCK, SLR, LSTG
 
 
 def discrete_pdf(y=None):
@@ -96,15 +97,6 @@ def load_data(part=None, lstgs=None, obs=False, sim=False, run_dir=None):
     data['offers'] = unpickle(folder + '{}.pkl'.format(X_OFFER))
     data['clock'] = unpickle(folder + '{}.pkl'.format(CLOCK))
 
-    # drop censored offers
-    if not sim:
-        drop = data['offers'][EXP] & (data['offers'][DELAY] < 1)
-        for k in ['offers', 'clock']:
-            data[k] = data[k][~drop]
-        assert (data['clock'].xs(1, level='index').index == data['threads'].index).all()
-    else:
-        (data['offers'].loc[data['offers'][EXP], DELAY] == 1.).all()
-
     # restrict to lstgs
     if lstgs is not None:
         for k, v in data.items():
@@ -140,8 +132,10 @@ def get_sale_norm(offers=None):
 
 
 def get_valid_slr(data=None, lookup=None):
-    # count non-automatic seller offers in turn 2
-    s = (~data['offers'][AUTO].xs(2, level='index')).groupby('lstg').sum()
+    # count non-automatic seller offers
+    auto = data['offers'][AUTO]
+    valid = ~auto[auto.index.isin(IDX[SLR], level='index')]
+    s = valid.groupby(LSTG).sum()
     lstgs = s[s > 0].index  # listings to keep
     for k, v in data.items():
         data[k] = v.reindex(index=lstgs, level='lstg')
@@ -290,7 +284,8 @@ def get_action_dist(offers_dim=None, offers_action=None, byr=None):
 def find_best_run(byr=None):
     log_dir = get_log_dir(byr=byr)
     df = unpickle(log_dir + 'runs.pkl')
-    run_id = df[NORM].idxmax()
+    s = df.xs(VALIDATION, level='part')[NORM]
+    run_id = s[~s.isna()].astype('float64').idxmax()
     print('Best run: {}'.format(run_id))
     return log_dir + '{}/'.format(run_id)
 

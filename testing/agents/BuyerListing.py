@@ -1,16 +1,16 @@
 from featnames import START_TIME, DAYS_SINCE_LSTG, BYR_HIST, CON, AUTO
 from constants import MAX_DELAY_ARRIVAL, DAY, BYR_HIST_MODEL, \
    INTERARRIVAL_MODEL, OFFER_MODELS
-from testing.AgentLog import AgentLog
-from testing.ActionLog import ActionLog
-from testing.ArrivalLog import ArrivalLog
-from testing.ThreadLog import ThreadLog
-from testing.ThreadTranslator import ThreadTranslator
-from testing.util import subset_inputs, populate_test_model_inputs
+from testing.agents.ActionQueue import ActionQueue
+from testing.Action import Action
+from testing.Arrival import Arrival
+from testing.Thread import Thread
+from testing.agents.ThreadTranslator import ThreadTranslator
+from testing.util import subset_inputs, populate_inputs
 from utils import init_optional_arg
 
 
-class LstgLog:
+class BuyerListing:
 
     def __init__(self, params=None):
         """
@@ -55,14 +55,7 @@ class LstgLog:
             else:
                 return None
         else:
-            raise RuntimeError('agent thread not defined')
-
-    @property
-    def delay(self):
-        if self.agent:
-            return self.agent_params['delay']
-        else:
-            raise RuntimeError('Delay not defined')
+            raise RuntimeError('agents thread not defined')
 
     def record_agent_arrivals(self, full_inputs=None, agent_log=None):
         byr_arrival = self.arrivals[self.agent_thread]
@@ -70,12 +63,12 @@ class LstgLog:
         days = int((byr_arrival.time - self.lookup[START_TIME]) / DAY)
         for i in range(days):
             action_index = (self.agent_thread, 1, i)
-            input_dict = populate_test_model_inputs(full_inputs=full_inputs,
-                                                    value=action_index,
-                                                    agent=True,
-                                                    agent_byr=True)
-            log = ActionLog(input_dict=input_dict, days=i, con=0,
-                            thread_id=self.agent_thread, turn=1)
+            input_dict = populate_inputs(full_inputs=full_inputs,
+                                         value=action_index,
+                                         agent=True,
+                                         agent_byr=True)
+            log = Action(input_dict=input_dict, days=i, con=0,
+                         thread_id=self.agent_thread, turn=1)
             agent_log.push_action(action=log)
         return days
 
@@ -83,13 +76,13 @@ class LstgLog:
                                 days=None, agent_turns=None):
         con = agent_turns[1].agent_con()
         first_turn_index = (self.agent_thread, 1, days)
-        input_dict = populate_test_model_inputs(full_inputs=full_inputs, value=first_turn_index,
-                                                agent=True, agent_byr=self.byr)
-        first_offer = ActionLog(input_dict=input_dict,
-                                months=days,
-                                con=con,
-                                thread_id=self.translate_thread(self.agent_thread),
-                                turn=1)
+        input_dict = populate_inputs(full_inputs=full_inputs, value=first_turn_index,
+                                     agent=True, agent_byr=self.byr)
+        first_offer = Action(input_dict=input_dict,
+                             months=days,
+                             con=con,
+                             thread_id=self.translate_thread(self.agent_thread),
+                             turn=1)
         agent_log.push_action(action=first_offer)
         # add remaining turns
         del agent_turns[1]
@@ -105,14 +98,14 @@ class LstgLog:
             if turn_log.is_censored:
                 input_dict = None
             else:
-                input_dict = populate_test_model_inputs(full_inputs=full_inputs, value=index,
-                                                        agent=True, agent_byr=self.byr)
-            action = ActionLog(con=turn_log.agent_con(),
-                               censored=turn_log.is_censored,
-                               days=days,
-                               input_dict=input_dict,
-                               thread_id=self.translate_thread(self.agent_thread),
-                               turn=turn_number)
+                input_dict = populate_inputs(full_inputs=full_inputs, value=index,
+                                             agent=True, agent_byr=self.byr)
+            action = Action(con=turn_log.agent_con(),
+                            censored=turn_log.is_censored,
+                            days=days,
+                            input_dict=input_dict,
+                            thread_id=self.translate_thread(self.agent_thread),
+                            turn=turn_number)
             agent_log.push_action(action=action)
 
     def generate_buyer_log(self, full_inputs=None, agent_log=None):
@@ -126,10 +119,10 @@ class LstgLog:
                                  thread_id=self.agent_thread, full_inputs=full_inputs)
 
     def generate_agent_log(self, params):
-        # if the agent is a buyer
+        # if the agents is a buyer
         if not self.agent:
             return None
-        agent_log = AgentLog(byr=self.byr)
+        agent_log = ActionQueue(byr=self.byr)
         full_inputs = params['inputs'][agent_log.model_name]
         if self.byr:
             self.generate_buyer_log(full_inputs=full_inputs, agent_log=agent_log)
@@ -192,7 +185,7 @@ class LstgLog:
             arrival_inputs = None
         else:
             full_arrival_inputs = params['inputs'][INTERARRIVAL_MODEL]
-            arrival_inputs = populate_test_model_inputs(
+            arrival_inputs = populate_inputs(
                 full_inputs=full_arrival_inputs,
                 value=thread_id)
         return arrival_inputs
@@ -202,8 +195,8 @@ class LstgLog:
                                                  thread_id=thread_id)
         check_time = self.arrival_check_time(params=params, thread_id=thread_id)
         time = self.lookup[START_TIME] + MAX_DELAY_ARRIVAL
-        return ArrivalLog(check_time=check_time, arrival_inputs=arrival_inputs, time=time,
-                          first_arrival=thread_id == 1)
+        return Arrival(check_time=check_time, arrival_inputs=arrival_inputs, time=time,
+                       first_arrival=thread_id == 1)
 
     def arrival_check_time(self, params=None, thread_id=None):
         if thread_id == 1:
@@ -224,11 +217,11 @@ class LstgLog:
 
         full_hist_inputs = params['inputs'][BYR_HIST_MODEL]
         # print('value: {}'.format(value))
-        hist_inputs = populate_test_model_inputs(full_inputs=full_hist_inputs,
-                                                 value=thread_id)
-        return ArrivalLog(hist=hist, time=time, arrival_inputs=arrival_inputs,
-                          hist_inputs=hist_inputs, check_time=check_time,
-                          first_arrival=thread_id == 1)
+        hist_inputs = populate_inputs(full_inputs=full_hist_inputs,
+                                      value=thread_id)
+        return Arrival(hist=hist, time=time, arrival_inputs=arrival_inputs,
+                       hist_inputs=hist_inputs, check_time=check_time,
+                       first_arrival=thread_id == 1)
 
     def is_agent_arrival(self, thread_id=None):
         if self.agent:
@@ -255,8 +248,8 @@ class LstgLog:
             agent_buyer = self.byr
         else:
             agent_buyer = False
-        return ThreadLog(params=thread_params, arrival_time=self.arrivals[thread_id].time,
-                         agent=agent_thread, agent_buyer=agent_buyer)
+        return Thread(params=thread_params, arrival_time=self.arrivals[thread_id].time,
+                      agent=agent_thread, agent_buyer=agent_buyer)
 
     def get_con(self, thread_id=None, turn=None, input_dict=None, time=None):
         """
@@ -311,13 +304,13 @@ class LstgLog:
 
     def get_action(self, agent_tuple=None):
         if not self.agent:
-            raise RuntimeError("Querying action in non-agent LstgLog")
+            raise RuntimeError("Querying action in non-agents LstgLog")
         return self.agent_log.get_action(agent_tuple=agent_tuple)
 
     def verify_done(self):
         if not self.agent:
             raise RuntimeError("Verifying empty action queue for "
-                               "non-agent LstgLog")
+                               "non-agents LstgLog")
         self.agent_log.verify_done()
 
     def translate_thread(self, thread_id=None):
