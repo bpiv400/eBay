@@ -18,11 +18,8 @@ by lstg thread: replace flag = 1 if price < price[_n-2] & _n > 2 & mod(_n,2) == 
 by lstg thread: replace flag = 1 if price > price[_n-2] & _n > 2 & mod(_n,2) == 0
 by lstg thread: replace flag = 1 if price < price[_n-1] & mod(index,2) == 0
 by lstg thread: replace flag = 1 if price > price[_n-1] & _n > 1 & mod(index,2) == 1
-	
-by lstg thread: replace flag = 1 if _n < _N & price == start_price & !bin & mod(index,2) == 1 & (clock != clock[_n+1] | !accept[_n+1])
 
-replace decline_price = 0 if decline_price == .
-by lstg thread: replace flag = 1 if _n == _N & price < decline_price & mod(index,2) == 1
+by lstg thread: replace flag = 1 if _n == _N & price < decline_price & mod(index,2) == 1 & !reject
 by lstg thread: replace flag = 1 if _n < _N & price < decline_price & mod(index,2) == 1 & clock != clock[_n+1]
 by lstg thread: replace flag = 1 if _n < _N & price < decline_price & mod(index,2) == 1 & !reject[_n+1]
 by lstg thread: replace flag = 1 if _n < _N & price < start_price & price > decline_price & clock == clock[_n+1]
@@ -30,10 +27,10 @@ drop start_price decline_price
 
 replace flag = 1 if price == 0 & index == 1
 
-* flag byr offers that come after 48 hours
+* flag offers that come after 48 hours
 
 sort lstg thread index
-by lstg thread: replace flag = 1 if (clock - clock[_n-1]) / 1000 > 48 * 3600 & _n > 1 & mod(index, 2) == 1
+by lstg thread: replace flag = 1 if (clock - clock[_n-1]) / 1000 > 48 * 3600 & _n > 1
 
 * flag offers at 48 hours that are not rejects
 
@@ -50,14 +47,30 @@ by lstg thread: replace flag = 1 if clock == clock[_n-1] & !reject & mod(index, 
 sort lstg thread index
 by lstg thread: replace flag = 1 if clock == clock[_n-1] & _n > 1 & mod(index, 2) == 1
 
+* flag 7th-turn offers that are neither accepts nor rejects
+
+replace flag = 1 if index == 7 & !accept & !reject
+
+* flag listings that expire before a week
+
+sort lstg thread index
+by lstg: egen byte sells = max(accept)
+
+merge m:1 lstg using dta/listings, nogen keep(3) keepus(start_date)
+g int days = dofc(end_time) - start_date
+replace flag = 1 if days < 7 & !sells
+drop start_date days sells
+
 * flag entire listing
 
+sort lstg thread index
 by lstg: egen byte temp = max(flag)
 replace flag = temp
 drop temp
 
 * fill in missing variables
 
+sort lstg thread index
 by lstg thread: egen double start_time = min(clock)
 foreach x in byr slr {
 	sort `x' start_time lstg thread index

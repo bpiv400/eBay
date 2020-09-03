@@ -40,7 +40,7 @@ drop ship_*
 * reformat clock variables
 
 order end_time, a(start_date)
-replace end_date = start_date + 30 if end_date > start_date + 30
+replace end_date = start_date + 7 if end_date > start_date + 7
 replace end_time = clock(string(end_date + 1, "%td"), "DMY") - 1000 if end_time == .
 drop end_date
 

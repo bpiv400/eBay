@@ -9,7 +9,6 @@ from featnames import THREAD, BYR_HIST
 class BuyerTestGenerator(TestGenerator):
     def __init__(self, verbose=False):
         super().__init__(verbose=verbose, byr=True, slr=False)
-        print('Testing Buyer Agent')
 
     def generate_composer(self):
         return AgentComposer(byr=True)
@@ -31,8 +30,7 @@ class BuyerTestGenerator(TestGenerator):
         lstg_log = BuyerListing(params=params)
         self.query_strategy.update_log(lstg_log)
         hist = self.loader.x_thread.loc[buyer, BYR_HIST]
-        self.composer.set_hist(hist=hist)
-        obs = self.env.reset(next_lstg=False)
+        obs = self.env.reset(next_lstg=False, hist=hist)
         agent_tuple = obs, None, None, None
         done = False
         while not done:

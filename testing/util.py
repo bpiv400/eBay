@@ -5,10 +5,10 @@ from collections.abc import Iterable
 from utils import unpickle, load_featnames
 from rlenv.util import load_featnames
 from utils import load_file
-from constants import MODELS, INPUT_DIR, INDEX_DIR, \
+from constants import MODELS, INPUT_DIR, INDEX_DIR, BYR_DROP, \
     FIRST_ARRIVAL_MODEL, POLICY_SLR, POLICY_BYR, IDX
 from featnames import SLR, X_LSTG, X_OFFER, LOOKUP, NORM, AUTO, \
-    CLOCK, LSTG, INDEX, DEC_PRICE, START_PRICE, MSG
+    CLOCK, LSTG, INDEX, DEC_PRICE, START_PRICE, MSG, THREAD
 
 
 class Subsetter:
@@ -93,25 +93,6 @@ def compare_input_dicts(model=None, stored_inputs=None, env_inputs=None):
             # raise RuntimeError("Environment inputs diverged from true inputs")
 
 
-def subset_df(df=None, lstg=None):
-    """
-    Subsets an arbitrary dataframe to only contain rows for the given
-    lstg
-    :param df: pd.DataFrame
-    :param lstg: integer giving lstg
-    :return: pd.Series or pd.DataFrame
-    """
-    df = df.copy()
-    if isinstance(df.index, pd.MultiIndex):
-        lstgs = df.index.unique(level='lstg')
-        if lstg in lstgs:
-            return df.xs(lstg, level='lstg', drop_level=True)
-    else:
-        if lstg in df.index:
-            return df.loc[lstg, :]
-    return None
-
-
 def load_model_inputs(model=None, part=None, x_lstg=None):
     index = unpickle(INDEX_DIR + '{}/{}.pkl'.format(part, model))
     featnames = load_featnames(model)
@@ -120,7 +101,7 @@ def load_model_inputs(model=None, part=None, x_lstg=None):
     x_idx = pd.Series(index=index, data=full_inputs['idx_x'])
     for k in x_inputs.keys():
         # set column names
-        if k == 'thread':
+        if k == THREAD:
             # use naive values for thread since it's not in featnames
             cols = list(range(x_inputs[k].shape[1]))
         elif 'offer' in k:
@@ -131,10 +112,9 @@ def load_model_inputs(model=None, part=None, x_lstg=None):
                                  index=index,
                                  columns=cols)
         x_inputs[k] = inputs_df
-    # fixing x_lstg inputs except 'lstg'
-    # b/c it must combine with 'thread'
+    # fixing x_lstg inputs except 'lstg' b/c it must combine with 'thread'
     x_lstg_sets = list(x_lstg.keys())
-    x_lstg_sets.remove('lstg')
+    x_lstg_sets.remove(LSTG)
     featnames_list = list(featnames.keys())
     x_lstg_sets = [set_name for set_name in x_lstg_sets
                    if set_name in featnames_list]
@@ -147,21 +127,21 @@ def load_model_inputs(model=None, part=None, x_lstg=None):
         x_inputs[k] = inputs_df
 
     # fixing lstg
-    lstg_vals = x_lstg['lstg'][x_idx, :]
+    lstg_vals = x_lstg[LSTG][x_idx, :]
     # drop bo_ct, lstg_ct, & auto acc/dec features from policy byr
     if model == POLICY_BYR:
-        first = lstg_vals[:, :4]
-        middle = lstg_vals[:, 6:-4]
-        lstg_vals = np.concatenate((first, middle), axis=1)
-    thread_vals = x_inputs['thread'].values
-    cols = featnames['lstg']
+        lstg_names = load_featnames(X_LSTG)[LSTG]
+        idx_drop = [i for i in range(len(lstg_names))
+                    if lstg_names[i] in BYR_DROP]
+        lstg_vals = np.delete(lstg_vals, idx_drop, axis=1)
+    thread_vals = x_inputs[THREAD].values
     lstg_vals = np.concatenate((lstg_vals, thread_vals), axis=1)
-    x_inputs['lstg'] = pd.DataFrame(
+    x_inputs[LSTG] = pd.DataFrame(
         data=lstg_vals,
-        index=x_inputs['thread'].index,
-        columns=cols
+        index=x_inputs[THREAD].index,
+        columns=featnames[LSTG]
     )
-    del x_inputs['thread']
+    del x_inputs[THREAD]
 
     return x_inputs
 
@@ -209,9 +189,8 @@ def populate_inputs(full_inputs=None, value=None, agent_byr=False, agent=False):
             curr_set = full_inputs[feat_set_name].copy()
         # silence messages from agents
         if agent and 'offer' in feat_set_name:
-            remainder = 1 if agent_byr else 0
             turn = int(feat_set_name[-1])
-            if turn % 2 == remainder:
+            if turn % 2 == int(agent_byr):
                 curr_set[MSG] = 0
         curr_set = curr_set.values
         curr_set = torch.from_numpy(curr_set).float()

@@ -1,12 +1,12 @@
 from inputs.util import get_arrival_times, save_files, get_ind_x
 from utils import input_partition, load_file
-from featnames import START_TIME, END_TIME, LOOKUP
+from featnames import START_TIME, END_TIME, LOOKUP, CLOCK, THREAD
 from constants import FIRST_ARRIVAL_MODEL, INTERVAL_ARRIVAL, INTERVAL_CT_ARRIVAL
 
 
 def process_inputs(part):
     # data
-    clock = load_file(part, 'clock')
+    clock = load_file(part, CLOCK)
     lookup = load_file(part, LOOKUP)
     lstg_start = lookup[START_TIME]
     lstg_end = lookup[END_TIME]
@@ -16,7 +16,7 @@ def process_inputs(part):
                                  lstg_start=lstg_start,
                                  lstg_end=lstg_end,
                                  append_last=False)
-    arrivals = arrivals[arrivals.index.isin([0, 1], level='thread')]
+    arrivals = arrivals[arrivals.index.isin([0, 1], level=THREAD)]
     arrivals = arrivals.sort_index().unstack()
     diff = arrivals[1] - arrivals[0]
 

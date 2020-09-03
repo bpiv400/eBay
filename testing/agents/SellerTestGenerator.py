@@ -8,7 +8,6 @@ from testing.TestGenerator import TestGenerator
 class SellerTestGenerator(TestGenerator):
     def __init__(self, verbose=False):
         super().__init__(verbose=verbose, byr=False, slr=True)
-        print('Testing Seller Agent')
 
     def generate_composer(self):
         return AgentComposer(byr=False)

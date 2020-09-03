@@ -4,7 +4,7 @@ from testing.util import subset_inputs, populate_inputs
 from constants import MAX_DELAY_ARRIVAL, DAY, BYR_HIST_MODEL, \
    INTERARRIVAL_MODEL, OFFER_MODELS
 from featnames import START_TIME, DAYS_SINCE_LSTG, BYR_HIST, CON, AUTO, \
-    X_THREAD, X_OFFER, THREAD, LSTG
+    X_THREAD, X_OFFER, THREAD, LSTG, LOOKUP
 
 
 class Listing:
@@ -14,11 +14,10 @@ class Listing:
         :param params: dict
         """
         self.lstg = params[LSTG]
-        self.lookup = params['lookup']
+        self.lookup = params[LOOKUP]
         self.start_time = self.lookup[START_TIME]
-        self.agent = False
         self.verbose = params['verbose']
-        self.arrivals = self.generate_arrival_logs(params)
+        self.arrivals = self.generate_arrivals(params)
         self.threads = self.generate_threads(params)
 
     @property
@@ -27,14 +26,13 @@ class Listing:
 
     def generate_threads(self, params):
         threads = dict()
-        for thread_id, arrival_log in self.arrivals.items():
-            if not arrival_log.censored:
-                # print('Thread id: {}'.format(thread_id))
+        for thread_id, arrival in self.arrivals.items():
+            if not arrival.censored:
                 threads[thread_id] = self.generate_thread(thread_id=thread_id,
                                                           params=params)
         return threads
 
-    def generate_arrival_logs(self, params):
+    def generate_arrivals(self, params):
         arrivals = dict()
         if params[X_THREAD] is None:
             arrivals[1] = self.generate_censored_arrival(params=params,

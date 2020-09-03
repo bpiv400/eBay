@@ -26,7 +26,7 @@ class BuyerEnv(AgentEnv):
         path = PCTILE_DIR + '{}.pkl'.format(BYR_HIST)
         self.hist_pctile = unpickle(path).values
 
-    def reset(self, next_lstg=True):
+    def reset(self, next_lstg=True, hist=None):
         """
         Resets the environment by drawing a new listing,
         resetting the queue, adding a buyer rl arrival event, then
@@ -34,6 +34,10 @@ class BuyerEnv(AgentEnv):
         :return: observation associated with the first rl arrival
         """
         self.init_reset(next_lstg=next_lstg)  # in BuyerEnv
+        if hist is None:
+            self.hist = self._draw_hist()
+        else:  # for TestGenerator
+            self.hist = hist
         while True:
             # put an RL arrival into the queue and run environment
             self.queue.push(self._create_rl_event(self.start_time))
@@ -56,7 +60,6 @@ class BuyerEnv(AgentEnv):
         super().init_reset(next_lstg=next_lstg)
         self.item_value = self.lookup[START_PRICE]  # TODO: allow for different values
         self.agent_thread = None
-        self.hist = self._draw_hist()
 
     def step(self, action):
         """

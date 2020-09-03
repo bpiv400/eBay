@@ -13,9 +13,14 @@ from featnames import X_THREAD, X_OFFER, LOOKUP, LSTG
 
 
 class TestGenerator(Generator):
-    def __init__(self, verbose=False):
-        super().__init__(verbose=verbose, byr=False, slr=False)
-        print('Testing Simulator')
+    def __init__(self, verbose=False, byr=False, slr=False):
+        super().__init__(verbose=verbose, byr=byr, slr=slr)
+        if byr:
+            print('Testing buyer agent')
+        elif slr:
+            print('Testing seller agent')
+        else:
+            print('Testing Simulator')
 
     def generate_env(self):
         return self.env_class(query_strategy=self.query_strategy,

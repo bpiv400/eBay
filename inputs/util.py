@@ -4,8 +4,8 @@ from utils import unpickle, topickle
 from inputs.const import NUM_OUT
 from constants import INPUT_DIR, INDEX_DIR, VALIDATION, \
     IDX, DISCRIM_MODEL, POLICY_BYR, BYR_DROP
-from featnames import CLOCK_FEATS, OUTCOME_FEATS, SPLIT, MSG, AUTO, \
-    EXP, REJECT, DAYS, DELAY, TIME_FEATS, THREAD_COUNT, BYR, CON, NORM
+from featnames import CLOCK_FEATS, OUTCOME_FEATS, SPLIT, MSG, AUTO, LSTG, X_LSTG, \
+    EXP, REJECT, DAYS, DELAY, TIME_FEATS, THREAD_COUNT, BYR, INDEX, SLR, THREAD
 
 
 def add_turn_indicators(df):
@@ -14,10 +14,10 @@ def add_turn_indicators(df):
     :param df: dataframe with index ['lstg', 'thread', 'index'].
     :return: dataframe with turn indicators appended
     """
-    indices = np.sort(np.unique(df.index.get_level_values('index')))
+    indices = np.sort(np.unique(df.index.get_level_values(INDEX)))
     for i in range(len(indices) - 1):
         ind = indices[i]
-        df['t{}'.format(ind)] = df.index.isin([ind], level='index')
+        df['t{}'.format(ind)] = df.index.isin([ind], level=INDEX)
     return df
 
 
@@ -82,46 +82,6 @@ def check_zero(x):
                 assert_zero(x[k], [SPLIT, MSG])
 
 
-def get_x_offer_init(offers, idx, role=None):
-    # initialize dictionary of offer features
-    x_offer = {}
-
-    # dataframe of offer features for relevant threads
-    threads = idx.droplevel(level='index').unique()
-    offers = pd.DataFrame(index=threads).join(offers)
-
-    # drop time feats from buyer models
-    if role == BYR:
-        offers.drop(TIME_FEATS, axis=1, inplace=True)
-
-    # turn features
-    for i in range(1, max(IDX[role]) + 1):
-        # offer features at turn i, and turn number
-        offer = offers.xs(i, level='index').reindex(
-            index=idx, fill_value=0).astype('float32')
-        turn = offer.index.get_level_values(level='index')
-
-        # msg is 0 for turns of focal player
-        if i in IDX[role]:
-            offer.loc[:, MSG] = 0.
-
-        # all features are zero for future turns
-        offer.loc[i > turn, :] = 0.
-
-        # for current turn, post-delay features set to 0
-        offer.loc[i == turn, [CON, REJECT, NORM, SPLIT]] = 0.
-        if i in IDX[role]:
-            assert offer.loc[i == turn, [AUTO, MSG]].max().max() == 0.
-
-        # put in dictionary
-        x_offer['offer%d' % i] = offer
-
-    # error checking
-    check_zero(x_offer)
-
-    return x_offer
-
-
 def get_ind_x(lstgs=None, idx=None):
     """
     For each lstg in idx, finds corresponding index in lstgs.
@@ -129,7 +89,7 @@ def get_ind_x(lstgs=None, idx=None):
     :param idx: index of outcome.
     :return: array of indices in lstgs.
     """
-    idx = idx.get_level_values(level='lstg')  # restrict to lstg id
+    idx = idx.get_level_values(level=LSTG)  # restrict to lstg id
     idx_x = np.searchsorted(lstgs, idx)
     return idx_x
 
@@ -141,20 +101,20 @@ def save_featnames_and_sizes(x=None, m=None):
     :param str m: name of model.
     """
     # initialize dictionaries from listing feature names
-    featnames = unpickle(INPUT_DIR + 'featnames/x_lstg.pkl')
+    featnames = unpickle(INPUT_DIR + 'featnames/{}.pkl'.format(X_LSTG))
     sizes = dict()
     sizes['x'] = {k: len(v) for k, v in featnames.items()}
 
     if m == POLICY_BYR:
-        del featnames['slr']
-        del sizes['x']['slr']
-        featnames['lstg'] = [k for k in featnames['lstg'] if k not in BYR_DROP]
-        sizes['x']['lstg'] = len(featnames['lstg'])
+        del featnames[SLR]
+        del sizes['x'][SLR]
+        featnames[LSTG] = [k for k in featnames[LSTG] if k not in BYR_DROP]
+        sizes['x'][LSTG] = len(featnames[LSTG])
 
     # add thread features to end of lstg grouping
     if x is not None:
-        featnames['lstg'] += list(x['thread'].columns)
-        sizes['x']['lstg'] += len(x['thread'].columns)
+        featnames[LSTG] += list(x[THREAD].columns)
+        sizes['x'][LSTG] += len(x[THREAD].columns)
 
         # for offer models
         if 'offer1' in x:

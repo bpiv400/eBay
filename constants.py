@@ -32,7 +32,7 @@ OUTPUT_DIR = '{}/outputs/'.format(PREFIX)       # for saving outputs
 LOG_DIR = OUTPUT_DIR + 'logs/'                  # model logs
 MODEL_DIR = OUTPUT_DIR + 'models/'              # trained models
 PLOT_DIR = OUTPUT_DIR + 'plots/'                # for creating figures
-AGENT_DIR = OUTPUT_DIR + 'agents/'               # agents logs and models
+AGENT_DIR = OUTPUT_DIR + 'agent/'               # agents logs and models
 
 DATE_FEATS_PATH = FEATS_DIR + 'date_feats.pkl'
 META_PATH = CLEAN_DIR + 'meta.csv'
@@ -132,7 +132,7 @@ SEED = 123456
 # number of chunks
 NUM_CHUNKS = 64
 
-# features to drop from 'lstg' grouping for byr
+# features to drop from 'lstg' grouping for byr agent
 BYR_DROP = ['lstg_ct', 'bo_ct', 'auto_decline', 'has_decline']
 
 # for precision issues

@@ -1,24 +1,26 @@
+import numpy as np
 from processing.util import load_feats
 from inputs.util import save_files, get_ind_x
 from utils import load_file, input_partition
 from constants import BYR_HIST_MODEL
-from featnames import CLOCK_FEATS, THREAD_COUNT, BYR_HIST, LOOKUP
+from featnames import CLOCK_FEATS, THREAD_COUNT, BYR_HIST, LOOKUP, THREAD, \
+	X_THREAD, X_OFFER, INDEX
 
 
 def process_inputs(part):
 	lstgs = load_file(part, LOOKUP).index
-	threads = load_file(part, 'x_thread')
-	offers = load_file(part, 'x_offer')
+	threads = load_file(part, X_THREAD)
+	offers = load_file(part, X_OFFER)
 
 	# thread features
-	clock_feats = offers.xs(1, level='index')[CLOCK_FEATS]
+	clock_feats = offers.xs(1, level=INDEX)[CLOCK_FEATS]
 	x_thread = clock_feats.join(threads.drop(BYR_HIST, axis=1))
-	x_thread[THREAD_COUNT] = x_thread.index.get_level_values(level='thread') - 1
-	x = {'thread': x_thread}
+	x_thread[THREAD_COUNT] = x_thread.index.get_level_values(level=THREAD) - 1
+	x = {THREAD: x_thread}
 
 	# outcome
 	y = load_feats('threads', lstgs=lstgs)[BYR_HIST]
-	assert (y.index == x['thread'].index).all()
+	assert np.all(y.index == x[THREAD].index)
 
 	# indices for listing features
 	idx_x = get_ind_x(lstgs=lstgs, idx=y.index)

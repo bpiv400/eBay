@@ -10,7 +10,7 @@ from constants import INTERVAL_TURN, INTERVAL_CT_TURN, DAY, MAX_DELAY_TURN
 from featnames import BYR_HIST
 
 Info = namedarraytuple("Info", ["days", "max_return",
-                                "num_delays", "num_offers",
+                                "num_delays", "num_offers", "num_threads",
                                 "turn", "thread_id", "priority"])
 
 
@@ -75,6 +75,7 @@ class AgentEnv(EBayEnv, Env):
                     max_return=self.item_value,
                     num_delays=self.num_delays,
                     num_offers=self.num_offers,
+                    num_threads=self.thread_counter - 1,
                     turn=event.turn,
                     thread_id=thread_id,
                     priority=event.priority)

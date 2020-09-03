@@ -6,7 +6,7 @@ from inputs.util import save_files, check_zero, get_x_thread, get_ind_x
 from utils import get_remaining, load_file
 from constants import IDX, SIM_PARTITIONS, MAX_DELAY_TURN, \
     INTERVAL_TURN, INTERVAL_CT_TURN
-from featnames import INT_REMAINING, TIME_FEATS, LOOKUP, SLR, BYR, \
+from featnames import INT_REMAINING, TIME_FEATS, LOOKUP, SLR, BYR, DELAY, \
     X_THREAD, X_OFFER, CLOCK, LSTG, THREAD, INDEX, START_TIME, END_TIME, CON
 
 
@@ -108,7 +108,7 @@ def main():
     part, turn = args.part, args.turn
 
     # model name
-    name = 'delay{}'.format(turn)
+    name = '{}{}'.format(DELAY, turn)
     print('{}/{}'.format(part, name))
 
     # input dataframes, output processed dataframes

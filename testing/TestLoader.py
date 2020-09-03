@@ -1,6 +1,7 @@
+import pandas as pd
 from rlenv.LstgLoader import ChunkLoader
-from testing.util import subset_inputs, subset_df
-from featnames import X_LSTG, X_OFFER, X_THREAD, LOOKUP, P_ARRIVAL
+from testing.util import subset_inputs
+from featnames import X_LSTG, X_OFFER, X_THREAD, LOOKUP, P_ARRIVAL, LSTG
 
 
 class TestLoader(ChunkLoader):
@@ -15,8 +16,24 @@ class TestLoader(ChunkLoader):
 
     def next_lstg(self):
         super().next_lstg()
-        self.x_offer = subset_df(df=self._chunk[X_OFFER], lstg=self.lstg)
-        self.x_thread = subset_df(df=self._chunk[X_THREAD], lstg=self.lstg)
+        self.x_offer = self.subset_df(df=self._chunk[X_OFFER])
+        self.x_thread = self.subset_df(df=self._chunk[X_THREAD])
         self.inputs = subset_inputs(input_data=self._chunk['inputs'],
-                                    level='lstg', value=self.lstg)
+                                    level=LSTG, value=self.lstg)
         return self.x_lstg, self.lookup, self.p_arrival
+
+    def subset_df(self, df=None):
+        """
+        Subsets an arbitrary dataframe to only contain rows for the given lstg
+        :param df: pd.DataFrame
+        :return: pd.Series or pd.DataFrame
+        """
+        df = df.copy()
+        if isinstance(df.index, pd.MultiIndex):
+            lstgs = df.index.unique(level=LSTG)
+            if self.lstg in lstgs:
+                return df.xs(self.lstg, level=LSTG, drop_level=True)
+        else:
+            if self.lstg in df.index:
+                return df.loc[self.lstg, :]
+        return None

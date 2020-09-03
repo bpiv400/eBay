@@ -75,7 +75,7 @@ def main():
     part, turn = args.part, args.turn
 
     # model name
-    name = 'con{}'.format(turn)
+    name = '{}{}'.format(CON, turn)
     print('{}/{}'.format(part, name))
 
     # input dataframes, output processed dataframes

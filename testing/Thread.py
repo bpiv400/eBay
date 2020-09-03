@@ -26,21 +26,18 @@ class Thread:
             self.turns[turn] = self.generate_censored_turn(params=params,
                                                            turn=turn)
 
-    def is_agent_turn(self, turn=None, outcomes=None):
+    def is_agent_turn(self, turn=None, auto=False):
         if self.agent:
             if self.agent_buyer:
                 return turn % 2 == 1
             else:
                 if turn % 2 == 0:
-                    if outcomes is None:
-                        return not self.turns[turn].auto
-                    else:
-                        return not outcomes[AUTO]
+                    return not auto
         else:
             return False
 
     def generate_censored_turn(self, params=None, turn=None):
-        agent_turn = self.is_agent_turn(turn=turn)
+        agent_turn = self.is_agent_turn(turn=turn, auto=False)
         model = model_str(DELAY, turn=turn)
         full_inputs = params['inputs'][model]
         delay_inputs = populate_inputs(full_inputs=full_inputs,
@@ -82,7 +79,7 @@ class Thread:
         else:
             delay_inputs = None
         delay_time = self.delay_time(turn=turn)
-        agent_turn = self.is_agent_turn(turn=turn, outcomes=outcomes)
+        agent_turn = self.is_agent_turn(turn=turn, auto=outcomes[AUTO])
         return Turn(outcomes=outcomes,
                     delay_inputs=delay_inputs,
                     con_inputs=con_inputs,
@@ -102,7 +99,6 @@ class Thread:
     def has_censored(self):
         last_turn = self.offers.index.max()
         last_con = self.offers.loc[last_turn, CON]
-        print('{}: {}'.format(last_turn, last_con))
         if last_con == 1:
             return False
         elif last_con == 0 and last_turn % 2 == 1:
@@ -120,7 +116,8 @@ class Thread:
         last_turn = len(self.turns)
         for i in range(1, last_turn + 1):
             # checks that turn corresponds to the current agents and offer isn't automatic
-            if self.is_agent_turn(turn=i) and self.turns[i].delay < 1.:
+            agent_turn = self.is_agent_turn(turn=i, auto=self.turns[i].auto)
+            if agent_turn and not self.turns[i].expired:
                 # adds turn if an expiration does not occur on agents's turn
                 agent_turns[i] = (self.turns[i])
         return agent_turns

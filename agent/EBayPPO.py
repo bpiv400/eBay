@@ -8,19 +8,21 @@ from rlpyt.utils.buffer import buffer_to
 from rlpyt.utils.collections import namedarraytuple
 from agent.util import define_con_set
 from agent.const import PERIOD_EPOCHS, LR_POLICY, LR_VALUE, RATIO_CLIP, \
-    ENTROPY_THRESHOLD
+    ENTROPY_THRESHOLD, DEPTH_COEF
 
 LossInputs = namedarraytuple("LossInputs",
                              ["agent_inputs",
                               "action",
                               "return_",
                               "advantage",
+                              "turn",
                               "valid",
                               "pi_old"])
 OptInfo = namedtuple("OptInfo",
-                     ["ActionsPerTraj",
-                      "DelaysPerTraj",
+                     ["DelaysPerTraj",
                       "OffersPerTraj",
+                      "ThreadsPerTraj",
+                      "OffersPerThread",
                       "DaysToDone",
                       "Rate_Con",
                       "Rate_Acc",
@@ -34,7 +36,8 @@ OptInfo = namedtuple("OptInfo",
                       "Entropy",
                       "Loss_Policy",
                       "Loss_Value",
-                      "Loss_EntropyBonus"])
+                      "Loss_EntropyBonus",
+                      "Loss_DepthBonus"])
 
 
 class EBayPPO:
@@ -49,6 +52,7 @@ class EBayPPO:
     def __init__(self, entropy=None):
         # save parameters to self
         self.entropy_coef = entropy
+        self.depth_coef = DEPTH_COEF
 
         # parameters to be defined later
         self.agent = None
@@ -62,6 +66,7 @@ class EBayPPO:
 
         # for stopping
         self.entropy_step = self.entropy_coef / PERIOD_EPOCHS
+        self.depth_step = self.depth_coef / PERIOD_EPOCHS
         self.training_complete = False
 
     def initialize(self, agent=None):
@@ -147,7 +152,11 @@ class EBayPPO:
 
         if self.byr:
             opt_info.DelaysPerTraj.append(info.num_delays[done].numpy())
-        opt_info.OffersPerTraj.append(info.num_offers[done].numpy())
+        num_offers = info.num_offers[done].numpy()
+        num_threads = info.num_threads[done].numpy()
+        opt_info.OffersPerTraj.append(num_offers)
+        opt_info.ThreadsPerTraj.append(num_threads)
+        opt_info.OffersPerThread.append(num_offers / num_threads)
         opt_info.DaysToDone.append(info.days[done].numpy())
 
         action = samples.agent.action[valid].numpy()
@@ -171,18 +180,21 @@ class EBayPPO:
         advantage = return_ - value
         opt_info.Advantage.append(advantage[valid].numpy())
 
-        # Move inputs to device once, index there
+        # for getting policy and value in eval mode
         agent_inputs = AgentInputs(
             observation=env.observation,
             prev_action=samples.agent.prev_action,
             prev_reward=env.prev_reward,
         )
         agent_inputs = buffer_to(agent_inputs, device=self.agent.device)
+
+        # reshape inputs to loss function
         loss_inputs = LossInputs(
             agent_inputs=agent_inputs,
             action=samples.agent.action,
             return_=return_,
             advantage=advantage,
+            turn=info.turn,
             valid=valid,
             pi_old=samples.agent.agent_info.dist_info
         )
@@ -211,6 +223,7 @@ class EBayPPO:
         opt_info.Loss_Policy.append(policy_loss.item())
         opt_info.Loss_Value.append(value_error.item())
         opt_info.Loss_EntropyBonus.append(self.entropy_coef)
+        opt_info.Loss_DepthBonus.append(self.depth_coef)
         entropy = entropy.detach().numpy()
         opt_info.Entropy.append(entropy)
 
@@ -218,12 +231,13 @@ class EBayPPO:
         self.update_counter += 1
         if 2 * PERIOD_EPOCHS > self.update_counter >= PERIOD_EPOCHS:
             self.entropy_coef -= self.entropy_step
+            self.depth_coef -= self.depth_step
         if entropy.mean() < ENTROPY_THRESHOLD:
             self.training_complete = True
 
         return opt_info
 
-    def loss(self, agent_inputs, action, return_, advantage, valid, pi_old):
+    def loss(self, agent_inputs, action, return_, advantage, turn, valid, pi_old):
         """
         Compute the training loss: policy_loss + value_loss + entropy_loss
         Policy loss: min(likelhood-ratio * advantage, clip(likelihood_ratio, 1-eps, 1+eps) * advantage)
@@ -247,12 +261,21 @@ class EBayPPO:
         # loss from value estimation
         value_error = valid_mean(0.5 * (v - return_) ** 2, valid)
 
-        # entropy
+        # entropy bonus
         entropy = self.agent.distribution.entropy(pi_new)[valid]
         entropy_loss = - self.entropy_coef * entropy.mean()
 
+        # depth bonus
+        mask = valid & (turn % 2 == int(self.byr))
+        depth = (turn[mask] + 1) // 2 - 1
+        depth_loss = - self.depth_coef * depth.float().mean()
+
         # total loss
-        policy_loss = pi_loss + entropy_loss
+        policy_loss = pi_loss + entropy_loss + depth_loss
+
+        print(pi_loss)
+        print(entropy_loss)
+        print(depth_loss)
 
         # return loss values and statistics to record
         return policy_loss, value_error, entropy

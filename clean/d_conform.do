@@ -58,6 +58,25 @@ replace end_time = new_end_time if end_time > new_end_time
 drop new_end_time *_date
 drop if clock > end_time
 
+* add expired rejects when seller does not return
+
+sort lstg thread index
+by lstg thread: g byte check = !accept & !reject & _n == _N & mod(index,2) == 1 & index < 7
+expand 2*check, gen(copy)
+drop check
+
+replace index = index + 1 if copy
+replace reject = 1 if copy
+replace message = . if copy
+
+sort lstg thread index
+by lstg thread: replace clock = clock[_n-1] + 48 * 3600 * 1000 if copy
+by lstg thread: replace price = price[_n-2] if copy
+by lstg thread: replace price = start_price if copy & _n == 2
+
+drop if clock > end_time
+drop copy
+
 * add expired rejects when buyer does not return
 
 sort lstg thread index

@@ -3,7 +3,8 @@ from inputs.util import save_featnames_and_sizes, \
     convert_x_to_numpy, get_x_thread, get_ind_x
 from utils import topickle, load_file, input_partition
 from constants import TRAIN_DISCRIM, VALIDATION, TEST, DISCRIM_MODEL, INPUT_DIR
-from featnames import SPLIT, DAYS, DELAY, EXP, AUTO, REJECT, MSG, LOOKUP, THREAD
+from featnames import SPLIT, DAYS, DELAY, EXP, AUTO, REJECT, MSG, LOOKUP, THREAD, \
+    X_OFFER, X_THREAD, INDEX
 
 
 def save_discrim_files(part=None, x_obs=None, x_sim=None, lstgs=None):
@@ -52,8 +53,8 @@ def get_x_offer(offers, idx):
     # turn features
     for i in range(1, 8):
         # offer features at turn i
-        offer = offers.xs(i, level='index').reindex(
-            index=idx, fill_value=0)
+        offer = offers.xs(i, level=INDEX).reindex(
+            index=idx, fill_value=0).astype('float32')
         # drop feats that are zero
         if i == 1:
             for feat in [DAYS, DELAY, EXP, REJECT]:
@@ -68,14 +69,14 @@ def get_x_offer(offers, idx):
                 assert (offer[feat].min() == 0) and (offer[feat].max() == 0)
                 offer.drop(feat, axis=1, inplace=True)
         # put in dictionary
-        x_offer['offer%d' % i] = offer.astype('float32')
+        x_offer['offer{}'.format(i)] = offer
     return x_offer
 
 
 def load_threads_offers(part=None, sim=False):
     prefix = 'sim/' if sim else ''
-    threads = load_file(part, '{}x_thread'.format(prefix))
-    offers = load_file(part, '{}x_offer'.format(prefix))
+    threads = load_file(part, '{}{}'.format(prefix, X_THREAD))
+    offers = load_file(part, '{}{}'.format(prefix, X_OFFER))
     return threads, offers
 
 
@@ -85,7 +86,7 @@ def construct_x(part=None, sim=False):
     # master index
     idx = threads.index
     # thread features
-    x = {'thread': get_x_thread(threads, idx)}
+    x = {THREAD: get_x_thread(threads, idx)}
     # offer features
     x.update(get_x_offer(offers, idx))
     return x

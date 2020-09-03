@@ -10,7 +10,6 @@ from nets.FeedForward import FeedForward
 from sim.Sample import get_batches
 from constants import DAY, SPLIT_PCTS, INPUT_DIR, MODEL_DIR, META_6, META_7, \
     PARTITIONS, PARTS_DIR, MAX_DELAY_TURN, MAX_DELAY_ARRIVAL, NUM_CHUNKS
-from featnames import DELAY, EXP
 
 
 def unpickle(file):

@@ -16,6 +16,8 @@ class CensoredTurn:
         self.agent = agent
         self.delay_time = delay_time
         self.delay_inputs = delay_inputs
+        self.auto = False
+        self.expired = True
 
         # model name
         self.delay_model_name = model_str(DELAY, turn=turn)
