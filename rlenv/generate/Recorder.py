@@ -71,7 +71,7 @@ class Recorder:
 
     @staticmethod
     def print_lstg(lookup):
-        print("\nLSTG: {}".format(int(lookup[LSTG])))
+        print("\n\nLSTG: {}".format(int(lookup[LSTG])))
         print('start time: {} | end time: {}'.format(
             int(lookup[START_TIME]), int(lookup[START_TIME] + MAX_DELAY_ARRIVAL)))
         norm_dec = lookup[DEC_PRICE] / lookup[START_PRICE]

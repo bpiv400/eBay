@@ -10,10 +10,10 @@ class ValueRecorder(Recorder):
         super().__init__(verbose=verbose)
         self.values = []
 
-    def start_thread(self, thread_id=None, time=None, byr_hist=None):
+    def start_thread(self, thread_id=None, time=None, byr_hist=None, agent=None):
         pass
 
-    def add_offer(self, event, time_feats=None, censored=False):
+    def add_offer(self, event, time_feats=None):
         if self.verbose:
             self.print_offer(event)
 
@@ -39,5 +39,7 @@ class ValueRecorder(Recorder):
             val_calc.sales
         ]
         self.values.append(row)
-        print('{0:d}: {1:d} simulations, {2:2.1f}%'.format(
-            row[0], row[4], 100 * row[3] / val_calc.start_price))
+        norm = 100 * row[3] / val_calc.start_price
+        se = 100 * row[2]
+        print('{0:d}: {1:d} sims, {2:2.2f}% ({3:2.2f}%)'.format(
+            row[0], row[4], norm, se))

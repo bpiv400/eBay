@@ -89,12 +89,7 @@ class Thread:
                     agent=agent_turn)
 
     def delay_time(self, turn=None):
-        # delay time
-        if turn == 1:
-            delay_time = self.arrival_time
-        else:
-            delay_time = self.turns[turn - 1].offer_time
-        return delay_time
+        return self.arrival_time if turn == 1 else self.turns[turn-1].offer_time
 
     def has_censored(self):
         last_turn = self.offers.index.max()
@@ -111,7 +106,6 @@ class Thread:
         if not self.agent:
             raise RuntimeError("Querying agents turns from a thread that the agents"
                                "doesn't participate in")
-        # for delay models, the agents will be queried for censored offers
 
         last_turn = len(self.turns)
         for i in range(1, last_turn + 1):

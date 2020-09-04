@@ -1,5 +1,5 @@
 import numpy as np
-from constants import LISTING_FEE
+from constants import LISTING_FEE, EPS
 
 MIN_CT = 10     # run for at least this many simulations
 SE_TOL = .01    # run until standard error is less than this
@@ -50,4 +50,7 @@ class ValueCalculator:
 
     @property
     def stabilized(self):
-        return self.ct >= MIN_CT and self.se < SE_TOL
+        if self.ct >= MIN_CT:
+            return EPS < self.mean_x < self.start_price and EPS < self.se < SE_TOL
+        else:
+            return False

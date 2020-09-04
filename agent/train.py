@@ -2,6 +2,8 @@ import argparse
 from agent.RlTrainer import RlTrainer
 from agent.const import PARAMS
 from utils import compose_args, set_gpu
+from constants import DROPOUT_GRID
+from featnames import DROPOUT
 
 
 def startup():
@@ -16,6 +18,9 @@ def startup():
     # set gpu and cpu affinity
     set_gpu(gpu=args['gpu'])
     del args['gpu']
+
+    # translate dropout from index to tuple
+    args[DROPOUT] = DROPOUT_GRID[args[DROPOUT]]
 
     # print to console
     for k, v in args.items():

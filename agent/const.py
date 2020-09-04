@@ -17,7 +17,7 @@ DEPTH_COEF = 10.                                 # for incentivizing visits to l
 AGENT_STATE = 'agent_state_dict'
 OPTIM_STATE = 'optimizer_state_dict'
 
-PARAMS = {'byr': {'action': 'store_true'},          # buyer agents model
+PARAMS = {'byr': {'action': 'store_true'},          # buyer agent model
           'dropout': {'type': int, 'default': 0},   # index for dropout
           'con_set': {'choices': CON_SETS,          # concession set
                       'default': FULL}}

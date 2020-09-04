@@ -16,15 +16,8 @@ class Composer:
     Class for composing inputs to interface from various input streams
     """
     def __init__(self, cols):
-        self.sizes = Composer.make_sizes()
+        self.sizes = {m: load_sizes(m) for m in MODELS}
         self.lstg_sets = self.build_lstg_sets(cols)
-
-    @staticmethod
-    def make_sizes():
-        output = dict()
-        for model in MODELS:
-            output[model] = load_sizes(model)
-        return output
 
     @staticmethod
     def build_lstg_sets(x_lstg_cols):

@@ -128,12 +128,12 @@ def load_model_inputs(model=None, part=None, x_lstg=None):
 
     # fixing lstg
     lstg_vals = x_lstg[LSTG][x_idx, :]
-    # drop bo_ct, lstg_ct, & auto acc/dec features from policy byr
+    # drop bo_ct, lstg_ct, & auto decline features from policy byr
     if model == POLICY_BYR:
         lstg_names = load_featnames(X_LSTG)[LSTG]
-        idx_drop = [i for i in range(len(lstg_names))
-                    if lstg_names[i] in BYR_DROP]
-        lstg_vals = np.delete(lstg_vals, idx_drop, axis=1)
+        keep = [i for i in range(len(lstg_names))
+                if lstg_names[i] not in BYR_DROP]
+        lstg_vals = lstg_vals[:, keep]
     thread_vals = x_inputs[THREAD].values
     lstg_vals = np.concatenate((lstg_vals, thread_vals), axis=1)
     x_inputs[LSTG] = pd.DataFrame(
@@ -149,7 +149,7 @@ def load_model_inputs(model=None, part=None, x_lstg=None):
 def load_all_inputs(part=None, byr=False, slr=False):
     x_lstg = load_file(part, X_LSTG)
 
-    models = MODELS
+    models = MODELS.copy()
     models.remove(FIRST_ARRIVAL_MODEL)
     if byr:
         models += [POLICY_BYR]

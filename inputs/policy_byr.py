@@ -2,17 +2,27 @@ import numpy as np
 import pandas as pd
 from inputs.util import save_files, get_x_thread, check_zero, get_ind_x
 from processing.util import collect_date_clock_feats
-from utils import input_partition, load_file
-from constants import DAY, IDX, CON_MULTIPLIER, POLICY_BYR
+from utils import load_file
+from constants import DAY, IDX, CON_MULTIPLIER, POLICY_BYR, VALIDATION
 from featnames import CON, THREAD_COUNT, LOOKUP, BYR, X_OFFER, X_THREAD, CLOCK, \
-    INDEX, START_TIME, TIME_FEATS, OUTCOME_FEATS, MSG, REJECT, NORM, SPLIT, THREAD
+    INDEX, START_TIME, TIME_FEATS, OUTCOME_FEATS, MSG, REJECT, NORM, SPLIT, THREAD, \
+    DAYS_SINCE_LSTG
 
 
 def get_x_offer(offers, idx):
-    x_offer = {}
-    for i in range(1, max(IDX[BYR]) + 1):
+    # first turn
+    first_offer = offers.xs(1, level=INDEX).astype('float32')
+    offer1 = pd.DataFrame(index=idx).join(first_offer)
+    offer1.index = offer1.index.reorder_levels(idx.names)
+    offer1 = offer1.sort_index()
+    turn = offer1.index.get_level_values(level=INDEX)
+    offer1.loc[turn == 1, OUTCOME_FEATS] = 0.
+    x_offer = {'offer1': offer1}
+
+    # later turns
+    for i in range(2, max(IDX[BYR]) + 1):
         # offer features at turn i, and turn number
-        offer = offers.xs(i, level=INDEX).reindex(
+        offer = offers.xs(i, level=INDEX).droplevel('day').reindex(
             index=idx, fill_value=0).astype('float32')
         turn = offer.index.get_level_values(level=INDEX)
 
@@ -30,15 +40,17 @@ def get_x_offer(offers, idx):
         x_offer['offer{}'.format(i)] = offer
 
     # error checking
-    check_zero(x_offer)
+    check_zero(x_offer, byr_exp=False)
 
     return x_offer
 
 
-def construct_x(idx=None, threads=None, offers=None):
+def construct_x(idx=None, threads=None, clock=None, lookup=None, offers=None):
     # thread features
     x_thread = get_x_thread(threads, idx, turn_indicators=True)
     x_thread.drop(THREAD_COUNT, axis=1, inplace=True)
+    days = (clock - lookup[START_TIME]) / DAY
+    x_thread[DAYS_SINCE_LSTG] = np.minimum(x_thread[DAYS_SINCE_LSTG], days)
     # initialize x with thread features
     x = {THREAD: x_thread}
     # offer features
@@ -66,7 +78,7 @@ def append_arrival_delays(clock=None, lstg_start=None):
     days = (first_offer - lstg_start).rename('day') // DAY
     first_offer = pd.concat([first_offer, days], axis=1).set_index(
         'day', append=True).squeeze()
-    later_offers = later_offers.to_frame().assign(day=0).set_index(
+    later_offers = later_offers.to_frame().join(days.droplevel(INDEX)).set_index(
         'day', append=True).squeeze()
     # expand by number of days
     ranges = days[days > 0].apply(range)
@@ -81,12 +93,12 @@ def append_arrival_delays(clock=None, lstg_start=None):
     return ts, ts_delay.index, ts_offer.index
 
 
-def process_inputs(part):
+def process_inputs():
     # load dataframes
-    offers = load_file(part, X_OFFER)
-    threads = load_file(part, X_THREAD)
-    clock = load_file(part, CLOCK)
-    lookup = load_file(part, LOOKUP)
+    offers = load_file(VALIDATION, X_OFFER)
+    threads = load_file(VALIDATION, X_THREAD)
+    clock = load_file(VALIDATION, CLOCK)
+    lookup = load_file(VALIDATION, LOOKUP)
 
     # append arrival timestamps to clock
     clock, idx0, idx1 = append_arrival_delays(clock=clock,
@@ -106,7 +118,11 @@ def process_inputs(part):
     y = (offers.loc[idx, CON] * CON_MULTIPLIER).astype('int8')
 
     # input feature dictionary
-    x = construct_x(idx=idx, threads=threads, offers=offers)
+    x = construct_x(idx=idx,
+                    threads=threads,
+                    clock=clock,
+                    lookup=lookup,
+                    offers=offers)
 
     # indices for listing features
     idx_x = get_ind_x(lstgs=lookup.index, idx=idx)
@@ -115,15 +131,13 @@ def process_inputs(part):
 
 
 def main():
-    # extract parameters from command line
-    part = input_partition()
-    print('{}/{}'.format(part, POLICY_BYR))
+    print('{}/{}'.format(VALIDATION, POLICY_BYR))
 
     # input dataframes, output processed dataframes
-    d = process_inputs(part)
+    d = process_inputs()
 
     # save various output files
-    save_files(d, part, POLICY_BYR)
+    save_files(d, VALIDATION, POLICY_BYR)
 
 
 if __name__ == '__main__':

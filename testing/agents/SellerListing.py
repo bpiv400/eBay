@@ -1,4 +1,4 @@
-from testing.Action import Action
+from testing.agents.Action import Action
 from testing.agents.AgentListing import AgentListing
 from testing.util import populate_inputs
 
@@ -10,7 +10,7 @@ class SellerListing(AgentListing):
     def is_agent_thread(self, thread_id=None):
         return True
 
-    def record_agent_thread(self, turns=None, thread_id=None, full_inputs=None):
+    def record_seller_thread(self, turns=None, thread_id=None, full_inputs=None):
         for t, turn in turns.items():
             time = turn.agent_time()
             index = (thread_id, t)
@@ -34,6 +34,6 @@ class SellerListing(AgentListing):
         for thread_id, thread in self.threads.items():
             agent_turns = thread.get_agent_turns()
             if len(agent_turns) != 0:
-                self.record_agent_thread(full_inputs=full_inputs,
-                                         thread_id=thread_id,
-                                         turns=agent_turns)
+                self.record_seller_thread(full_inputs=full_inputs,
+                                          thread_id=thread_id,
+                                          turns=agent_turns)

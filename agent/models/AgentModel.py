@@ -1,15 +1,11 @@
 import torch
 from rlpyt.agents.pg.categorical import CategoricalPgAgent
-from torch.nn.functional import softplus, softmax
+from torch.nn.functional import softmax
 import numpy as np
-from scipy.special import betainc
 from nets.FeedForward import FeedForward
 from agent.util import define_con_set
 from utils import load_sizes
-from agent.const import FULL
-from constants import POLICY_SLR, POLICY_BYR, DROPOUT_GRID
-
-TEST_BETA = False
+from constants import POLICY_SLR, POLICY_BYR
 
 
 class AgentModel(torch.nn.Module):
@@ -35,9 +31,6 @@ class AgentModel(torch.nn.Module):
         self.byr = byr
         self.serial = serial
         self.con_set = con_set
-
-        # convert dropout index to tuple
-        dropout = DROPOUT_GRID[dropout]
 
         # size of policy output
         self.out = len(define_con_set(byr=byr, con_set=con_set))

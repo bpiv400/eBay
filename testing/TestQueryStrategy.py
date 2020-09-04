@@ -15,8 +15,7 @@ class TestQueryStrategy(QueryStrategy):
         init_optional_arg(kwargs=kwargs, name='intervals', default=None)
         agent = kwargs['intervals'] is not None
         if agent:
-            return self.lstg_log.get_agent_arrival(time=kwargs['time'],
-                                                   thread_id=kwargs['thread_id'])
+            return self.lstg_log.get_agent_arrival()
         else:
             return self.lstg_log.get_inter_arrival(time=kwargs['time'],
                                                    thread_id=kwargs['thread_id'])

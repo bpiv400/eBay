@@ -180,7 +180,6 @@ class EBayEnv:
                 elif auto == REJ_IND:
                     self._process_slr_auto_rej(event, offer)
                     return False
-            # print('updated time features after standard offer')
             self.time_feats.update_features(offer=offer)
             self._init_delay(event)
             return False
@@ -258,6 +257,9 @@ class EBayEnv:
             seconds = self.get_inter_arrival(event=event)
         check_in_time = event.priority
         event.priority = min(event.priority + seconds, self.end_time)
+
+        if self.verbose:
+            print('Next arrival at {}'.format(event.priority))
 
         # if a buyer arrives, create a thread at the arrival time
         if event.priority < self.end_time:

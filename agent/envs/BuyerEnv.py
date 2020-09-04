@@ -38,16 +38,16 @@ class BuyerEnv(AgentEnv):
             self.hist = self._draw_hist()
         else:  # for TestGenerator
             self.hist = hist
+
         while True:
             # put an RL arrival into the queue and run environment
             self.queue.push(self._create_rl_event(self.start_time))
             event, lstg_complete = super().run()  # calls EBayEnv.run()
 
-            # when rl buyer arrives, create a prospective thread
+            # when rl buyer arrives, create a prospective thread but do not put in queue
             if not lstg_complete:
                 thread = self._create_thread(event.priority)
                 self.last_event = thread
-                self.queue.push(thread)
                 return self.get_obs(event=thread, done=False)
 
             # item sells before rl buyer arrival
@@ -120,12 +120,6 @@ class BuyerEnv(AgentEnv):
             return self.agent_tuple(done=True, event=thread)
 
         # otherwise, execute the offer
-        time_feats = self.time_feats.get_feats(thread_id=thread.thread_id,
-                                               time=thread.priority)
-        clock_feats = get_clock_feats(thread.priority)
-        thread.sources.init_offer(time_feats=time_feats,
-                                  clock_feats=clock_feats,
-                                  turn=thread.turn)
         return self._execute_offer(con=con, thread=thread)
 
     def _execute_offer(self, con=None, thread=None):
@@ -148,30 +142,31 @@ class BuyerEnv(AgentEnv):
             if event.type == RL_ARRIVAL_EVENT:
                 return True
             if isinstance(event, Thread) and event.agent:
-                return not self.is_lstg_expired(event)
+                return not self.is_lstg_expired(event) and not event.thread_expired()
         return False
 
     def run(self):
         while True:
             event, lstg_complete = super().run()  # calls EBayEnv.run()
 
-            # for prospective RL arrival, create thread and put back in queue
-            if event.type == RL_ARRIVAL_EVENT:
-                thread = self._create_thread(event.priority)
-                self.last_event = thread
-                self.queue.push(thread)
-
             # for RL buyer delay, draw delay and put back in queue
-            elif event.type == DELAY_EVENT:  # sample delay and put back in queue
+            if event.type == DELAY_EVENT:  # sample delay and put back in queue
                 delay_seconds = self.draw_agent_delay(event)
                 event.update_delay(seconds=delay_seconds)
                 self.queue.push(event)
 
-            # otherwise, it's time for the RL to make an offer
             else:
-                if not lstg_complete:  # save event for step methods
+                # agent's turn to make a concession
+                if not lstg_complete:
+
+                    # replace RL arrival with thread
+                    if event.type == RL_ARRIVAL_EVENT:
+                        event = self._create_thread(event.priority)
+
                     self.prepare_offer(event)
-                    self.last_event = event
+                    self.last_event = event  # save event for step methods
+
+                # return if done or time for agent action
                 return self.agent_tuple(done=lstg_complete, event=event)
 
     def get_reward(self):

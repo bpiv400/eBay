@@ -24,12 +24,12 @@ class BuyerTestGenerator(TestGenerator):
         threads = self.loader.x_offer.index.get_level_values(THREAD)
         return len(threads.unique())
 
-    def simulate_lstg(self, buyer=None):
+    def simulate_lstg(self, thread_id=None):
         params = self._get_listing_params()
-        params['thread_id'] = buyer
+        params['thread_id'] = thread_id
         lstg_log = BuyerListing(params=params)
         self.query_strategy.update_log(lstg_log)
-        hist = self.loader.x_thread.loc[buyer, BYR_HIST]
+        hist = self.loader.x_thread.loc[thread_id, BYR_HIST]
         obs = self.env.reset(next_lstg=False, hist=hist)
         agent_tuple = obs, None, None, None
         done = False
@@ -42,12 +42,12 @@ class BuyerTestGenerator(TestGenerator):
     def generate(self):
         while self.env.has_next_lstg():
             self.env.next_lstg()
-            buyers = self._count_rl_buyers()
-            for i in range(buyers):
+            num_buyers = self._count_rl_buyers()
+            for thread_id in range(1, num_buyers + 1):
                 # simulate lstg once for each buyer
                 if self.verbose:
-                    print('Agent is thread {}'.format(i+1))
-                self.simulate_lstg(buyer=(i + 1))
+                    print('\nAgent is thread {}'.format(thread_id))
+                self.simulate_lstg(thread_id=thread_id)
 
     @property
     def env_class(self):

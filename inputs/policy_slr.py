@@ -1,9 +1,9 @@
 import pandas as pd
 from inputs.util import save_files, get_x_thread, get_ind_x, check_zero
-from utils import input_partition, load_file
-from constants import IDX, CON_MULTIPLIER, POLICY_SLR
-from featnames import EXP, CON, DELAY, AUTO, LOOKUP, SLR, INDEX, MSG, \
-    REJECT, NORM, SPLIT, THREAD, X_THREAD, X_OFFER
+from utils import load_file
+from constants import IDX, CON_MULTIPLIER, POLICY_SLR, VALIDATION
+from featnames import CON, AUTO, LOOKUP, SLR, INDEX, MSG, REJECT, NORM, \
+    SPLIT, THREAD, X_THREAD, X_OFFER
 
 
 def get_x_offer(offers, idx):
@@ -12,12 +12,12 @@ def get_x_offer(offers, idx):
 
     # dataframe of offer features for relevant threads
     threads = idx.droplevel(level=INDEX).unique()
-    offers = pd.DataFrame(index=threads).join(offers)
+    df = pd.DataFrame(index=threads).join(offers)
 
     # turn features
     for i in range(1, max(IDX[SLR]) + 1):
         # offer features at turn i, and turn number
-        offer = offers.xs(i, level=INDEX).reindex(
+        offer = df.xs(i, level=INDEX).reindex(
             index=idx, fill_value=0).astype('float32')
         turn = offer.index.get_level_values(level=INDEX)
 
@@ -55,17 +55,16 @@ def construct_x(idx=None, threads=None, offers=None):
 
 def create_index(offers):
     slr_turn = offers.index.isin(IDX[SLR], level=INDEX)
-    censored = offers[EXP] & (offers[DELAY] < 1)
-    mask = slr_turn & ~offers[AUTO] & ~censored
+    mask = slr_turn & ~offers[AUTO]
     idx = mask[mask].index
     return idx
 
 
-def process_inputs(part):
+def process_inputs():
     # load dataframes
-    lstgs = load_file(part, LOOKUP).index
-    threads = load_file(part, X_THREAD)
-    offers = load_file(part, X_OFFER)
+    lstgs = load_file(VALIDATION, LOOKUP).index
+    threads = load_file(VALIDATION, X_THREAD)
+    offers = load_file(VALIDATION, X_OFFER)
 
     # master index
     idx = create_index(offers)
@@ -83,15 +82,13 @@ def process_inputs(part):
 
 
 def main():
-    # extract parameters from command line
-    part = input_partition()
-    print('{}/{}'.format(part, POLICY_SLR))
+    print('{}/{}'.format(VALIDATION, POLICY_SLR))
 
     # input dataframes, output processed dataframes
-    d = process_inputs(part)
+    d = process_inputs()
 
     # save various output files
-    save_files(d, part, POLICY_SLR)
+    save_files(d, VALIDATION, POLICY_SLR)
 
 
 if __name__ == '__main__':

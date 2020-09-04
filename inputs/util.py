@@ -25,7 +25,7 @@ def get_x_thread(threads, idx, turn_indicators=False):
     # initialize x_thread as copy
     x_thread = threads.copy()
     # thread count, including current thread
-    x_thread[THREAD_COUNT] = x_thread.index.get_level_values(level='thread')
+    x_thread[THREAD_COUNT] = x_thread.index.get_level_values(level=THREAD)
     # reindex to create x_thread
     x_thread = pd.DataFrame(index=idx).join(x_thread)
     x_thread.index = x_thread.index.reorder_levels(idx.names)
@@ -63,23 +63,26 @@ def get_arrival_times(clock=None, lstg_start=None, lstg_end=None, append_last=Fa
     return arrivals.rename('arrival')
 
 
-def assert_zero(offer, cols):
+def assert_zero(offer, cols, k):
     for c in cols:
-        assert offer[c].max() == 0
-        assert offer[c].min() == 0
+        if offer[c].max() != 0 or offer[c].min() != 0:
+            raise RuntimeError('Non-zero entry in {}: {}'.format(k, c))
 
 
-def check_zero(x):
+def check_zero(x, byr_exp=True):
     keys = [k for k in x.keys() if k.startswith('offer')]
+    byr_cols = [AUTO, REJECT]
+    if byr_exp:
+        byr_cols += [EXP]
     for k in keys:
         if k in x:
             i = int(k[-1])
             if i == 1:
-                assert_zero(x[k], [DAYS, DELAY])
+                assert_zero(x[k], [DAYS, DELAY], k)
             if i % 2 == 1:
-                assert_zero(x[k], [AUTO, EXP, REJECT])
+                assert_zero(x[k], byr_cols, k)
             if i == 7:
-                assert_zero(x[k], [SPLIT, MSG])
+                assert_zero(x[k], [SPLIT, MSG], k)
 
 
 def get_ind_x(lstgs=None, idx=None):

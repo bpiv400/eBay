@@ -15,7 +15,7 @@ class Listing:
         """
         self.lstg = params[LSTG]
         self.lookup = params[LOOKUP]
-        self.start_time = self.lookup[START_TIME]
+        self.start_time = int(round(self.lookup[START_TIME]))
         self.verbose = params['verbose']
         self.arrivals = self.generate_arrivals(params)
         self.threads = self.generate_threads(params)
@@ -34,19 +34,17 @@ class Listing:
 
     def generate_arrivals(self, params):
         arrivals = dict()
-        if params[X_THREAD] is None:
-            arrivals[1] = self.generate_censored_arrival(params=params,
-                                                         thread_id=1)
-        else:
-            num_arrivals = len(params[X_THREAD].index)
+        num_arrivals = 0 if params[X_THREAD] is None else len(params[X_THREAD].index)
+        if num_arrivals > 0:
             for thread_id in range(1, num_arrivals + 1):
                 arrivals[thread_id] = self.generate_arrival(params=params,
                                                             thread_id=thread_id)
 
-            if not self.check_bin(params=params, thread_id=num_arrivals):
-                thread_id = num_arrivals + 1
-                arrivals[thread_id] = self.generate_censored_arrival(params=params,
-                                                                     thread_id=thread_id)
+        if num_arrivals == 0 or not self.check_bin(params=params,
+                                                   thread_id=num_arrivals):
+            thread_id = num_arrivals + 1
+            arrivals[thread_id] = self.generate_censored_arrival(params=params,
+                                                                 thread_id=thread_id)
         return arrivals
 
     @staticmethod
@@ -67,7 +65,8 @@ class Listing:
         time = self.start_time + MAX_DELAY_ARRIVAL
         return Arrival(check_time=check_time,
                        arrival_inputs=arrival_inputs, time=time,
-                       first_arrival=thread_id == 1)
+                       first_arrival=thread_id == 1,
+                       agent_buyer=self.is_agent_buyer)
 
     def arrival_check_time(self, params=None, thread_id=None):
         if thread_id == 1:
@@ -92,10 +91,10 @@ class Listing:
                        arrival_inputs=arrival_inputs,
                        hist_inputs=hist_inputs,
                        check_time=check_time,
-                       first_arrival=thread_id == 1)
+                       first_arrival=thread_id == 1,
+                       agent_buyer=self.is_agent_buyer)
 
-    @staticmethod
-    def _get_thread_params(thread_id=None, params=None):
+    def generate_thread(self, thread_id=None, params=None):
         thread_params = dict()
         thread_params[X_OFFER] = params[X_OFFER].xs(thread_id,
                                                     level=THREAD,
@@ -104,13 +103,10 @@ class Listing:
                                                 input_data=params['inputs'],
                                                 value=thread_id,
                                                 level=THREAD)
-        return thread_params
-
-    def generate_thread(self, thread_id=None, params=None):
-        thread_params = self._get_thread_params(thread_id=thread_id,
-                                                params=params)
         return Thread(params=thread_params,
-                      arrival_time=self.arrivals[thread_id].time)
+                      arrival_time=self.arrivals[thread_id].time,
+                      agent=self.is_agent_thread(thread_id),
+                      agent_buyer=self.is_agent_buyer)
 
     def get_con(self, thread_id=None, turn=None, input_dict=None, time=None):
         """
@@ -156,3 +152,10 @@ class Listing:
             return thread1.loc[1, CON] == 1
         elif len(thread1.index) == 2:
             return thread1.loc[2, AUTO] and (thread1.loc[2, CON] == 1)
+
+    def is_agent_thread(self, thread_id=None):
+        return False
+
+    @property
+    def is_agent_buyer(self):
+        return False
