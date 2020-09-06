@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 from torch.optim import Adam
-from collections import namedtuple
+from collections import namedtuple, OrderedDict
 from rlpyt.agents.base import AgentInputs
 from rlpyt.utils.tensor import valid_mean
 from rlpyt.utils.buffer import buffer_to
@@ -9,35 +9,24 @@ from rlpyt.utils.collections import namedarraytuple
 from agent.util import define_con_set
 from agent.const import PERIOD_EPOCHS, LR_POLICY, LR_VALUE, RATIO_CLIP, \
     ENTROPY_THRESHOLD, DEPTH_COEF
+from constants import IDX
+from featnames import BYR, SLR
 
 LossInputs = namedarraytuple("LossInputs",
-                             ["agent_inputs",
-                              "action",
-                              "return_",
-                              "advantage",
-                              "turn",
-                              "valid",
-                              "pi_old"])
-OptInfo = namedtuple("OptInfo",
-                     ["DelaysPerTraj",
-                      "OffersPerTraj",
-                      "ThreadsPerTraj",
-                      "OffersPerThread",
-                      "DaysToDone",
-                      "Rate_Con",
-                      "Rate_Acc",
-                      "Rate_Rej",
-                      "Rate_Exp",
-                      "Rate_Sale",
-                      "Concession",
-                      "DollarReturn",
-                      "NormReturn",
-                      "Advantage",
-                      "Entropy",
-                      "Loss_Policy",
-                      "Loss_Value",
-                      "Loss_EntropyBonus",
-                      "Loss_DepthBonus"])
+                             ["agent_inputs", "action", "return_", "advantage",
+                              "turn", "valid", "pi_old"])
+FIELDS = ["OffersPerTraj", "ThreadsPerTraj", "OffersPerThread", "DaysToDone",
+          "Turn1_AccRate", "Turn1_RejRate", "Turn1_ConRate", "Turn1Con",
+          "Turn2_AccRate", "Turn2_RejRate", "Turn2_ExpRate", "Turn2_ConRate", "Turn2Con",
+          "Turn3_AccRate", "Turn3_RejRate", "Turn3_ConRate", "Turn3Con",
+          "Turn4_AccRate", "Turn4_RejRate", "Turn4_ExpRate", "Turn4_ConRate", "Turn4Con",
+          "Turn5_AccRate", "Turn5_RejRate", "Turn5_ConRate", "Turn5Con",
+          "Turn6_AccRate", "Turn6_RejRate", "Turn6_ExpRate", "Turn6_ConRate", "Turn6Con",
+          "Turn7_AccRate",
+          "Rate_1", "Rate_2", "Rate_3", "Rate_4", "Rate_5", "Rate_6", "Rate_7", "Rate_Sale",
+          "DollarReturn", "NormReturn", "Advantage", "Entropy",
+          "Loss_Policy", "Loss_Value", "Loss_EntropyBonus", "Loss_DepthBonus"]
+OptInfo = namedtuple("OptInfo", FIELDS)
 
 
 class EBayPPO:
@@ -47,7 +36,7 @@ class EBayPPO:
     """
     mid_batch_reset = False
     bootstrap_value = True
-    opt_info_fields = tuple(f for f in OptInfo._fields)
+    opt_info_fields = FIELDS
 
     def __init__(self, entropy=None):
         # save parameters to self
@@ -148,37 +137,44 @@ class EBayPPO:
         return_ = self.discount_return(reward=reward, done=done)
 
         # initialize opt_info
-        opt_info = OptInfo(*([] for _ in range(len(OptInfo._fields))))
+        opt_info = OrderedDict()
 
-        if self.byr:
-            opt_info.DelaysPerTraj.append(info.num_delays[done].numpy())
+        # various counts
         num_offers = info.num_offers[done].numpy()
         num_threads = info.num_threads[done].numpy()
-        opt_info.OffersPerTraj.append(num_offers)
-        opt_info.ThreadsPerTraj.append(num_threads)
-        opt_info.OffersPerThread.append(num_offers / num_threads)
-        opt_info.DaysToDone.append(info.days[done].numpy())
+        opt_info['OffersPerTraj'] = num_offers
+        opt_info['ThreadsPerTraj'] = num_threads
+        opt_info['OffersPerThread'] = num_offers / num_threads
+        opt_info['DaysToDone'] = info.days[done].numpy()
 
+        # action stats
         action = samples.agent.action[valid].numpy()
         con = np.take_along_axis(self.con_set, action, 0)
-        opt_info.Rate_Con.append(((0. < con) & (con < 1.)).mean())
-        opt_info.Rate_Acc.append((con == 1.).mean())
-        opt_info.Rate_Rej.append((con == 0.).mean())
-        if not self.byr:
-            opt_info.Rate_Exp.append((con > 1.).mean())
-        opt_info.Rate_Sale.append((reward[done].numpy() > 0.).mean())
+        turn = info.turn[valid].numpy()
+        role = BYR if self.byr else SLR
+        for t in IDX[role]:
+            opt_info['Rate_{}'.format(t)] = np.mean(turn == t)
 
-        con = con[(con < 1.) & (con > 0.)]
-        if len(con) > 0:
-            opt_info.Concession.append(con)
+            con_t = con[turn == t]
+            prefix = 'Turn{}'.format(t)
+            opt_info['{}_{}'.format(prefix, 'AccRate')] = np.mean(con_t == 1)
+            if not self.byr:
+                opt_info['{}_{}'.format(prefix, 'ExpRate')] = np.mean(con_t > 1)
+            if t < 7:
+                opt_info['{}_{}'.format(prefix, 'RejRate')] = np.mean(con_t == 0)
+                opt_info['{}_{}'.format(prefix, 'ConRate')] = \
+                    np.mean((con_t > 0) & (con_t < 1))
+                opt_info['{}{}'.format(prefix, 'Con')] = \
+                    con_t[(con_t > 0) & (con_t < 1)]
 
-        opt_info.DollarReturn.append(return_[done].numpy())
-        opt_info.NormReturn.append((return_[done] / info.max_return[done]).numpy())
+        opt_info['Rate_Sale'] = np.mean(reward[done].numpy() > 0.)
+        opt_info['DollarReturn'] = return_[done].numpy()
+        opt_info['NormReturn'] = (return_[done] / info.max_return[done]).numpy()
 
         # normalize return and calculate advantage
         return_ /= info.max_return
         advantage = return_ - value
-        opt_info.Advantage.append(advantage[valid].numpy())
+        opt_info['Advantage'] = advantage[valid].numpy()
 
         # for getting policy and value in eval mode
         agent_inputs = AgentInputs(
@@ -220,12 +216,12 @@ class EBayPPO:
         self._optim_value.step()
 
         # save for logging
-        opt_info.Loss_Policy.append(policy_loss.item())
-        opt_info.Loss_Value.append(value_error.item())
-        opt_info.Loss_EntropyBonus.append(self.entropy_coef)
-        opt_info.Loss_DepthBonus.append(self.depth_coef)
+        opt_info['Loss_Policy'] = policy_loss.item()
+        opt_info['Loss_Value'] = value_error.item()
+        opt_info['Loss_EntropyBonus'] = self.entropy_coef
+        opt_info['Loss_DepthBonus'] = self.depth_coef
         entropy = entropy.detach().numpy()
-        opt_info.Entropy.append(entropy)
+        opt_info['Entropy'] = entropy
 
         # increment counter, reduce entropy bonus, and set complete flag
         self.update_counter += 1
@@ -235,7 +231,14 @@ class EBayPPO:
         if entropy.mean() < ENTROPY_THRESHOLD:
             self.training_complete = True
 
-        return opt_info
+        # enclose in lists
+        for k in FIELDS:
+            if k not in opt_info:
+                opt_info[k] = []
+            else:
+                opt_info[k] = [opt_info[k]]
+
+        return OptInfo(**opt_info)
 
     def loss(self, agent_inputs, action, return_, advantage, turn, valid, pi_old):
         """
@@ -266,16 +269,16 @@ class EBayPPO:
         entropy_loss = - self.entropy_coef * entropy.mean()
 
         # depth bonus
-        mask = valid & (turn % 2 == int(self.byr))
-        depth = (turn[mask] + 1) // 2 - 1
-        depth_loss = - self.depth_coef * depth.float().mean()
+        if self.depth_coef > 0:
+            depth = (turn[valid] + 1) // 2 - 1
+            print(turn[valid].unique())
+            print(depth.unique())
+            depth_loss = - self.depth_coef * depth.float().mean()
+        else:
+            depth_loss = 0
 
         # total loss
         policy_loss = pi_loss + entropy_loss + depth_loss
-
-        print(pi_loss)
-        print(entropy_loss)
-        print(depth_loss)
 
         # return loss values and statistics to record
         return policy_loss, value_error, entropy

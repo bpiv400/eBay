@@ -7,7 +7,7 @@ from rlenv.util import get_clock_feats, get_con_outcomes
 from utils import load_sizes, unpickle, get_days_since_lstg
 from rlenv.const import FIRST_OFFER, DELAY_EVENT, OFFER_EVENT, RL_ARRIVAL_EVENT
 from rlenv.Sources import ThreadSources
-from agent.envs.AgentEnv import AgentEnv
+from agent.envs.AgentEnv import AgentEnv, EventLog
 from agent.util import define_con_set
 from rlenv.events.Event import Event
 from rlenv.events.Thread import Thread
@@ -19,8 +19,8 @@ BuyerObs = namedarraytuple('BuyerObs',
 class BuyerEnv(AgentEnv):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.agent_thread = None
         self.hist = None
+        self.agent_thread = None
 
         # for drawing experience
         path = PCTILE_DIR + '{}.pkl'.format(BYR_HIST)
@@ -47,7 +47,7 @@ class BuyerEnv(AgentEnv):
             # when rl buyer arrives, create a prospective thread but do not put in queue
             if not lstg_complete:
                 thread = self._create_thread(event.priority)
-                self.last_event = thread
+                self.curr_event = thread
                 return self.get_obs(event=thread, done=False)
 
             # item sells before rl buyer arrival
@@ -59,15 +59,18 @@ class BuyerEnv(AgentEnv):
     def init_reset(self, next_lstg=None):
         super().init_reset(next_lstg=next_lstg)
         self.item_value = self.lookup[START_PRICE]  # TODO: allow for different values
-        self.agent_thread = None
+        self.agent_thread = 0
 
     def step(self, action):
         """
         Takes in a buyer action, updates the relevant event, then continues
         the simulation
         """
+        self.last_event = EventLog(priority=self.curr_event.priority,
+                                   thread_id=self.curr_event.thread_id,
+                                   turn=self.curr_event.turn)
         con = self.turn_from_action(action=action)
-        event_type = self.last_event.type
+        event_type = self.curr_event.type
         if event_type == FIRST_OFFER:
             if con == 0:
                 return self._step_arrival_delay()
@@ -79,48 +82,43 @@ class BuyerEnv(AgentEnv):
             raise ValueError('Invalid event type: {}'.format(event_type))
 
     def _step_arrival_delay(self):
-        next_midnight = (self.last_event.priority // DAY + 1) * DAY
+        next_midnight = (self.curr_event.priority // DAY + 1) * DAY
         if next_midnight == self.end_time:
-            return self.agent_tuple(done=True, event=self.last_event)
+            return self.agent_tuple(done=True,
+                                    event=self.curr_event,
+                                    info=self.get_info(self.last_event))
         self.queue.push(self._create_rl_event(next_midnight))
-        self.num_delays += 1
-        self.last_event = None
+        self.curr_event = None
         return self.run()
 
     def _step_first_offer(self, con=None):
-        # copy event
-        thread = self.last_event
-        self.last_event = None
-
         # save thread id and increment counter
-        self.agent_thread = thread.thread_id
+        self.agent_thread = self.curr_event.thread_id
         self.thread_counter += 1
 
         # record and print
-        hist = thread.sources()[BYR_HIST]
-        self.record(thread, byr_hist=hist, agent=True)
+        hist = self.curr_event.sources()[BYR_HIST]
+        self.record(self.curr_event, byr_hist=hist, agent=True)
         if self.verbose:
             print('Agent thread {} initiated | Buyer hist: {}'.format(
                 self.agent_thread, hist))
 
         # create and execute offer
-        return self._execute_offer(con=con, thread=thread)
+        return self._execute_offer(con=con, thread=self.curr_event)
 
     def _step_thread(self, con=None):
-        # copy event
-        thread = self.last_event
-        self.last_event = None
-
         # error checking
-        assert thread.turn in [3, 5, 7]
-        assert not thread.thread_expired()
+        assert self.curr_event.turn in [3, 5, 7]
+        assert not self.curr_event.thread_expired()
 
         # trajectory ends with buyer reject
-        if con == 0. or (con < 1 and thread.turn == 7):
-            return self.agent_tuple(done=True, event=thread)
+        if con == 0. or (con < 1 and self.curr_event.turn == 7):
+            return self.agent_tuple(done=True,
+                                    event=self.curr_event,
+                                    info=self.get_info(self.last_event))
 
         # otherwise, execute the offer
-        return self._execute_offer(con=con, thread=thread)
+        return self._execute_offer(con=con, thread=self.curr_event)
 
     def _execute_offer(self, con=None, thread=None):
         self.num_offers += 1
@@ -130,7 +128,9 @@ class BuyerEnv(AgentEnv):
         offer = thread.update_con_outcomes(con_outcomes=con_outcomes)
         lstg_complete = self.process_post_offer(thread, offer)
         if lstg_complete:
-            return self.agent_tuple(event=thread, done=lstg_complete)
+            return self.agent_tuple(event=thread,
+                                    done=lstg_complete,
+                                    info=self.get_info(self.last_event))
         return self.run()
 
     def is_agent_turn(self, event):
@@ -164,10 +164,12 @@ class BuyerEnv(AgentEnv):
                         event = self._create_thread(event.priority)
 
                     self.prepare_offer(event)
-                    self.last_event = event  # save event for step methods
+                    self.curr_event = event  # save event for step methods
 
                 # return if done or time for agent action
-                return self.agent_tuple(done=lstg_complete, event=event)
+                return self.agent_tuple(done=lstg_complete,
+                                        event=event,
+                                        info=self.get_info(self.last_event))
 
     def get_reward(self):
         """
@@ -182,7 +184,7 @@ class BuyerEnv(AgentEnv):
         if self.outcome.thread != self.agent_thread:
             return 0.
 
-        # sale to agents buyer
+        # sale to agent buyer
         if self.verbose:
             print('Sale to RL buyer. List price: {}. Paid price: {}'.format(
                 self.item_value, self.outcome.price))

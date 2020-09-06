@@ -11,7 +11,7 @@ RATIO_CLIP = 0.1
 BATCH_SIZE = 4096
 ENTROPY = {FULL: .01, SPARSE: .02, NOCON: .05}   # entropy bonus coefficient
 ENTROPY_THRESHOLD = .05                          # stopping threshold
-DEPTH_COEF = 10.                                 # for incentivizing visits to later turns
+DEPTH_COEF = .1                                  # for incentivizing visits to later turns
 
 # state dictionaries
 AGENT_STATE = 'agent_state_dict'

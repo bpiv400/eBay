@@ -1,6 +1,6 @@
 from rlpyt.utils.collections import namedarraytuple
 from rlenv.const import DELAY_EVENT, OFFER_EVENT
-from agent.envs.AgentEnv import AgentEnv
+from agent.envs.AgentEnv import AgentEnv, EventLog
 from agent.util import define_con_set
 from rlenv.util import get_delay_outcomes, get_con_outcomes
 from utils import load_sizes
@@ -37,7 +37,7 @@ class SellerEnv(AgentEnv):
                 if event.type == DELAY_EVENT:  # draw delay
                     self._process_slr_delay(event)
                 else:
-                    self.last_event = event
+                    self.curr_event = event
                     self.prepare_offer(event)
                     return self.get_obs(event=event, done=False)
 
@@ -57,39 +57,42 @@ class SellerEnv(AgentEnv):
         :param action: int returned from agents
         :return: tuple described in rlenv
         """
+        self.last_event = EventLog(priority=self.curr_event.priority,
+                                   thread_id=self.curr_event.thread_id,
+                                   turn=self.curr_event.turn)
         con = self.turn_from_action(action)
         if self.verbose:
             print('AGENT TURN: con: {}'.format(con))
-
-        # copy event
-        thread = self.last_event
-        self.last_event = None
 
         # execute offer
         self.num_offers += 1
         if con <= 1:
             con_outcomes = get_con_outcomes(con=con,
-                                            sources=thread.sources(),
-                                            turn=thread.turn)
-            offer = thread.update_con_outcomes(con_outcomes)
-            lstg_complete = self.process_post_offer(thread, offer)
+                                            sources=self.curr_event.sources(),
+                                            turn=self.curr_event.turn)
+            offer = self.curr_event.update_con_outcomes(con_outcomes)
+            lstg_complete = self.process_post_offer(self.curr_event, offer)
             if lstg_complete:
-                return self.agent_tuple(event=thread, done=lstg_complete)
+                return self.agent_tuple(event=self.curr_event,
+                                        done=lstg_complete,
+                                        info=self.get_info(self.last_event))
         else:
             # get initial delay from sources
-            last_delay = thread.sources()['offer{}'.format(thread.turn)][DELAY_IND]
+            turn = self.curr_event.turn
+            key = 'offer{}'.format(turn)
+            last_delay = self.curr_event.sources()[key][DELAY_IND]
             assert 0 < last_delay < 1
             last_delay_seconds = int(round(last_delay * MAX_DELAY_TURN))
 
             # update sources with expiration delay
             delay_outcomes = get_delay_outcomes(seconds=MAX_DELAY_TURN,
-                                                turn=thread.turn)
-            thread.sources.update_delay(delay_outcomes=delay_outcomes,
-                                        turn=thread.turn)
+                                                turn=turn)
+            self.curr_event.sources.update_delay(delay_outcomes=delay_outcomes,
+                                                 turn=turn)
 
             # update priority and push thread to queue
-            thread.priority += MAX_DELAY_TURN - last_delay_seconds
-            self.queue.push(thread)
+            self.curr_event.priority += MAX_DELAY_TURN - last_delay_seconds
+            self.queue.push(self.curr_event)
 
         return self.run()
 
@@ -99,10 +102,12 @@ class SellerEnv(AgentEnv):
             if event.type == DELAY_EVENT:
                 self._process_slr_delay(event)
             else:
-                self.last_event = event
+                self.curr_event = event  # save for step method
                 if not lstg_complete:
                     self.prepare_offer(event)
-                return self.agent_tuple(done=lstg_complete, event=event)
+                return self.agent_tuple(done=lstg_complete,
+                                        event=event,
+                                        info=self.get_info(self.last_event))
 
     def _process_slr_delay(self, event):
         delay_seconds = self.draw_agent_delay(event)

@@ -32,11 +32,12 @@ class BuyerTestGenerator(TestGenerator):
         hist = self.loader.x_thread.loc[thread_id, BYR_HIST]
         obs = self.env.reset(next_lstg=False, hist=hist)
         agent_tuple = obs, None, None, None
-        done = False
-        while not done:
-            action = lstg_log.get_action(agent_tuple=agent_tuple)
-            agent_tuple = self.env.step(action)
-            done = agent_tuple is None or agent_tuple[2]
+        if obs is not None:
+            done = False
+            while not done:
+                action = lstg_log.get_action(agent_tuple=agent_tuple)
+                agent_tuple = self.env.step(action)
+                done = agent_tuple is None or agent_tuple[2]
         lstg_log.verify_done()
 
     def generate(self):

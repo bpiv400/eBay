@@ -1,7 +1,7 @@
 import os
 import numpy as np
 from agent.const import FULL, SPARSE, NOCON
-from constants import AGENT_DIR, POLICY_SLR, POLICY_BYR, DROPOUT_GRID
+from constants import AGENT_DIR, POLICY_SLR, POLICY_BYR
 from featnames import SLR, BYR, DROPOUT
 
 
@@ -22,8 +22,7 @@ def get_paths(**kwargs):
     log_dir = get_log_dir(kwargs[BYR])
 
     # run id
-    dropout = DROPOUT_GRID[kwargs[DROPOUT]]
-    dropout = [int(10 * dropout[i]) for i in range(len(dropout))]
+    dropout = [int(10 * kwargs[DROPOUT][i]) for i in range(2)]
     run_id = '{}_{}_{}'.format(kwargs['con_set'], dropout[0], dropout[1])
 
     # concatenate

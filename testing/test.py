@@ -3,16 +3,11 @@ from testing.TestGenerator import TestGenerator
 from testing.agents.SellerTestGenerator import SellerTestGenerator
 from testing.agents.BuyerTestGenerator import BuyerTestGenerator
 from utils import compose_args
-from constants import VALIDATION, PARTITIONS
+from constants import VALIDATION
 
 SCRIPT_PARAMS = {'byr': {'action': 'store_true'},
                  'slr': {'action': 'store_true'},
-                 'part': {'type': str,
-                          'default': VALIDATION,
-                          'choices': PARTITIONS
-                          },
-                 'num': {'type': int,
-                         'default': 0},
+                 'num': {'type': int, 'default': 0},
                  'verbose': {'action': 'store_true'}
                  }
 
@@ -29,7 +24,7 @@ def main():
     else:
         gen_cls = TestGenerator
     gen = gen_cls(verbose=args.verbose)
-    gen.process_chunk(part=args.part, chunk=args.num)
+    gen.process_chunk(part=VALIDATION, chunk=args.num)
 
 
 if __name__ == '__main__':

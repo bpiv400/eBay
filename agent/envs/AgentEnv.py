@@ -1,3 +1,4 @@
+from collections import namedtuple
 import torch
 from rlpyt.envs.base import Env
 from rlpyt.spaces.composite import Composite
@@ -9,9 +10,9 @@ from agent.ConSpace import ConSpace
 from constants import INTERVAL_TURN, INTERVAL_CT_TURN, DAY, MAX_DELAY_TURN
 from featnames import BYR_HIST
 
-Info = namedarraytuple("Info", ["days", "max_return",
-                                "num_delays", "num_offers", "num_threads",
+Info = namedarraytuple("Info", ["days", "max_return", "num_offers", "num_threads",
                                 "turn", "thread_id", "priority"])
+EventLog = namedtuple("EventLog", ["priority", "thread_id", "turn"])
 
 
 class AgentEnv(EBayEnv, Env):
@@ -20,9 +21,9 @@ class AgentEnv(EBayEnv, Env):
         self.test = False if 'test' not in kwargs else kwargs['test']
 
         # parameters to be set later
+        self.curr_event = None
         self.last_event = None
         self.item_value = None
-        self.num_delays = None  # only relevant for byr agents
         self.num_offers = None  # number of agents offers (excl. byr delays)
 
         # for passing an empty observation to agents
@@ -41,17 +42,17 @@ class AgentEnv(EBayEnv, Env):
         boxes = [FloatBox(-1000, 1000, shape=size) for size in sizes.values()]
         return Composite(boxes, self._obs_class)
 
-    def agent_tuple(self, event=None, done=None):
+    def agent_tuple(self, event=None, done=None, info=None):
         """
         Constructs observation and calls child environment to get reward
         and info, then sets self.last_event to current event.
         :param Thread event: either agents's turn or trajectory is complete.
         :param bool done: True if trajectory complete.
+        :param namedtuple info: from get_info(event).
         :return: tuple
         """
         obs = self.get_obs(event=event, done=done)
         reward = self.get_reward()
-        info = self.get_info(event=event)
         return obs, reward, done, info
 
     def get_obs(self, event=None, done=None):
@@ -70,14 +71,12 @@ class AgentEnv(EBayEnv, Env):
         raise NotImplementedError()
 
     def get_info(self, event=None):
-        thread_id = 0 if not isinstance(event, Thread) else event.thread_id
         return Info(days=self._get_days(event.priority),
                     max_return=self.item_value,
-                    num_delays=self.num_delays,
                     num_offers=self.num_offers,
                     num_threads=self.thread_counter - 1,
                     turn=event.turn,
-                    thread_id=thread_id,
+                    thread_id=event.thread_id,
                     priority=event.priority)
 
     def draw_agent_delay(self, event):
@@ -95,8 +94,8 @@ class AgentEnv(EBayEnv, Env):
         return max(1, delay_seconds)
 
     def init_reset(self, next_lstg=True):
+        self.curr_event = None
         self.last_event = None
-        self.num_delays = 0
         self.num_offers = 0
         if next_lstg:
             if not self.has_next_lstg():
