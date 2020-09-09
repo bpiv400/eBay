@@ -1,8 +1,10 @@
 import os
 import numpy as np
 from agent.const import FULL, SPARSE, NOCON
-from constants import AGENT_DIR, POLICY_SLR, POLICY_BYR
-from featnames import SLR, BYR, DROPOUT
+from assess.util import get_sale_norm
+from constants import AGENT_DIR, POLICY_SLR, POLICY_BYR, VALIDATION, IDX
+from featnames import SLR, BYR, DROPOUT, NORM, AUTO, INDEX, LSTG
+from utils import unpickle
 
 
 def get_agent_name(byr=False):
@@ -45,3 +47,32 @@ def define_con_set(con_set=None, byr=False):
     if not byr:
         cons = np.concatenate([cons, [1.1]])  # expiration rejection
     return cons
+
+
+def find_best_run(byr=None, sales=False):
+    log_dir = get_log_dir(byr=byr)
+    df = unpickle(log_dir + 'runs.pkl')
+    s = df.xs(VALIDATION, level='part')[NORM]
+    s = s.xs('sales' if sales else 'all', level='listings')
+    run_id = s[~s.isna()].astype('float64').idxmax()
+    print('Best run: {}'.format(run_id))
+    return log_dir + '{}/'.format(run_id)
+
+
+def get_valid_slr(data=None, lookup=None):
+    # count non-automatic seller offers
+    auto = data['offers'][AUTO]
+    valid = ~auto[auto.index.isin(IDX[SLR], level=INDEX)]
+    s = valid.groupby(LSTG).sum()
+    lstgs = s[s > 0].index.intersection(lookup.index, sort=None)  # listings to keep
+    for k, v in data.items():
+        data[k] = v.reindex(index=lstgs, level=LSTG)
+    lookup = lookup.reindex(index=lstgs)
+    return data, lookup
+
+
+def get_value_slr(offers=None, start_price=None):
+    norm = get_sale_norm(offers)
+    norm = norm.reindex(index=start_price.index, fill_value=0.)
+    price = norm * start_price
+    return norm.mean(), price.mean()

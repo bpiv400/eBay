@@ -1,17 +1,24 @@
 import argparse
 import os
 import pandas as pd
-from agent.util import get_log_dir
-from assess.util import get_valid_slr, get_value_slr
+from agent.util import get_log_dir, get_valid_slr, get_value_slr
 from utils import unpickle, load_file, topickle
-from constants import VALIDATION, RL_SLR, PARTS_DIR
-from featnames import LOOKUP, START_PRICE, OBS, X_OFFER
+from constants import VALIDATION, RL_SLR, PARTS_DIR, DAY
+from featnames import LOOKUP, START_PRICE, SIM, OBS, X_OFFER, END_TIME
 
 PARTS = [VALIDATION, RL_SLR]
+FIXED_RUNS = [OBS, SIM, 'noslrexp', 'slraccrej']
 
 
-def get_values(folder=None, lookup=None):
-    path = folder + '{}.pkl'.format(X_OFFER)
+def get_values(folder=None, part=None, subfolder='', restricted=False):
+    lookup = load_file(part, LOOKUP)
+
+    # restrict to sales
+    if restricted:
+        no_sale = (lookup[END_TIME] + 1) % DAY == 0
+        lookup = lookup[~no_sale]
+
+    path = folder + '{}/{}{}.pkl'.format(part, subfolder, X_OFFER)
     if os.path.isfile(path):
         data = dict(offers=unpickle(path))
         data, lookup = get_valid_slr(data=data, lookup=lookup)
@@ -19,6 +26,29 @@ def get_values(folder=None, lookup=None):
                              start_price=lookup[START_PRICE])
     else:
         return None
+
+
+def populate_df(df=None, part=None, log_dir=None, run_ids=None,
+                restricted=False, heuristic=False):
+    lstg_set = 'sales' if restricted else 'all'
+
+    # values from data
+    for dset in FIXED_RUNS:
+        df.loc[(part, lstg_set, dset), :] = get_values(
+            folder=PARTS_DIR,
+            part=part,
+            subfolder='{}/'.format(dset) if dset != OBS else '',
+            restricted=restricted
+        )
+
+    # values from agents runs
+    for run_id in run_ids:
+        values = get_values(folder=log_dir + '{}/'.format(run_id),
+                            part=part,
+                            subfolder='heuristic/' if heuristic else '',
+                            restricted=restricted)
+        if values is not None:
+            df.loc[(part, lstg_set, run_id), :] = values
 
 
 def main():
@@ -34,27 +64,18 @@ def main():
 
     # initialize output dataframe
     run_ids = [p for p in os.listdir(log_dir) if os.path.isdir(log_dir + p)]
-    idx = pd.MultiIndex.from_product([PARTS, [OBS] + run_ids],
-                                     names=['part', 'run_id'])
-    df = pd.DataFrame(columns=['norm', 'price'], index=idx)
+    idx = pd.MultiIndex.from_product([PARTS, ['all', 'sales'], FIXED_RUNS + run_ids],
+                                     names=['part', 'listings', 'run_id'])
+    df = pd.DataFrame(columns=['norm', 'price'], index=idx).sort_index()
 
     for part in PARTS:
-        lookup = load_file(part, LOOKUP)
-
-        # values from data
-        folder = PARTS_DIR + '{}/'.format(part)
-        df.loc[(part, OBS), :] = get_values(folder=folder, lookup=lookup)
-
-        # values from agents runs
-        for run_id in run_ids:
-            folder = log_dir + '{}/{}/'.format(run_id, part)
-            if args.heuristic:
-                folder += 'heuristic/'
-            values = get_values(folder=folder, lookup=lookup)
-            if values is not None:
-                df.loc[(part, run_id), :] = values
-
-    df = df.sort_index()
+        for restricted in [False, True]:
+            populate_df(df=df,
+                        part=part,
+                        log_dir=log_dir,
+                        run_ids=run_ids,
+                        restricted=restricted,
+                        heuristic=args.heuristic)
 
     # save table
     print(df)

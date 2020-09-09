@@ -8,7 +8,7 @@ from rlpyt.utils.buffer import buffer_to
 from rlpyt.utils.collections import namedarraytuple
 from agent.util import define_con_set
 from agent.const import PERIOD_EPOCHS, LR_POLICY, LR_VALUE, RATIO_CLIP, \
-    ENTROPY_THRESHOLD, DEPTH_COEF
+    ENTROPY_THRESHOLD, DEPTH_COEF, NOCON
 from constants import IDX
 from featnames import BYR, SLR
 
@@ -162,10 +162,11 @@ class EBayPPO:
                 opt_info['{}_{}'.format(prefix, 'ExpRate')] = np.mean(con_t > 1)
             if t < 7:
                 opt_info['{}_{}'.format(prefix, 'RejRate')] = np.mean(con_t == 0)
-                opt_info['{}_{}'.format(prefix, 'ConRate')] = \
-                    np.mean((con_t > 0) & (con_t < 1))
-                opt_info['{}{}'.format(prefix, 'Con')] = \
-                    con_t[(con_t > 0) & (con_t < 1)]
+                if self.con_set != NOCON:
+                    opt_info['{}_{}'.format(prefix, 'ConRate')] = \
+                        np.mean((con_t > 0) & (con_t < 1))
+                    opt_info['{}{}'.format(prefix, 'Con')] = \
+                        con_t[(con_t > 0) & (con_t < 1)]
 
         opt_info['Rate_Sale'] = np.mean(reward[done].numpy() > 0.)
         opt_info['DollarReturn'] = return_[done].numpy()
@@ -271,8 +272,6 @@ class EBayPPO:
         # depth bonus
         if self.depth_coef > 0:
             depth = (turn[valid] + 1) // 2 - 1
-            print(turn[valid].unique())
-            print(depth.unique())
             depth_loss = - self.depth_coef * depth.float().mean()
         else:
             depth_loss = 0

@@ -21,7 +21,7 @@ class SellerTestGenerator(TestGenerator):
         params = self._get_listing_params()
         lstg_log = SellerListing(params=params)
         self.query_strategy.update_log(lstg_log)
-        obs = self.env.reset(next_lstg=False)
+        obs = self.env.reset()
         agent_tuple = obs, None, None, None
         if obs is not None:
             done = False

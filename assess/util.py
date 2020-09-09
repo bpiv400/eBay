@@ -1,15 +1,13 @@
 import argparse
 import numpy as np
 import pandas as pd
-from agent.util import get_log_dir
 from utils import unpickle, load_file
 from assess.const import SPLITS
 from constants import PARTS_DIR, IDX, BYR, EPS, COLLECTIBLES, TEST, MAX_DAYS, \
-    MAX_DELAY_ARRIVAL, MAX_DELAY_TURN, INTERVAL_ARRIVAL, PCTILE_DIR, DAY, HOUR, \
-    VALIDATION
-from featnames import EXP, DELAY, CON, NORM, AUTO, START_TIME, STORE, SLR_BO_CT, \
+    MAX_DELAY_ARRIVAL, MAX_DELAY_TURN, INTERVAL_ARRIVAL, PCTILE_DIR, DAY, HOUR
+from featnames import DELAY, CON, NORM, AUTO, START_TIME, STORE, SLR_BO_CT, \
     START_PRICE, META, LOOKUP, MSG, DAYS_SINCE_LSTG, BYR_HIST, X_THREAD, \
-    X_OFFER, CLOCK, SLR, LSTG
+    X_OFFER, CLOCK, INDEX
 
 
 def discrete_pdf(y=None):
@@ -50,7 +48,7 @@ def hist_dist(threads=None):
 def delay_dist(offers=None):
     p = dict()
     for turn in range(2, 8):
-        s = offers[DELAY].xs(turn, level='index') * MAX_DELAY_TURN
+        s = offers[DELAY].xs(turn, level=INDEX) * MAX_DELAY_TURN
         cdf = discrete_cdf(s)
         cdf.index = cdf.index.values / HOUR
         p[turn] = cdf
@@ -131,25 +129,6 @@ def get_sale_norm(offers=None):
     return sale_norm
 
 
-def get_valid_slr(data=None, lookup=None):
-    # count non-automatic seller offers
-    auto = data['offers'][AUTO]
-    valid = ~auto[auto.index.isin(IDX[SLR], level='index')]
-    s = valid.groupby(LSTG).sum()
-    lstgs = s[s > 0].index  # listings to keep
-    for k, v in data.items():
-        data[k] = v.reindex(index=lstgs, level='lstg')
-    lookup = lookup.reindex(index=lstgs)
-    return data, lookup
-
-
-def get_value_slr(offers=None, start_price=None):
-    norm = get_sale_norm(offers)
-    norm = norm.reindex(index=start_price.index, fill_value=0.)
-    price = norm * start_price
-    return norm.mean(), price.mean()
-
-
 def get_last_norm(norm=None):
     return norm.groupby(norm.index.names[:-1]).shift().dropna()
 
@@ -161,7 +140,7 @@ def norm_norm(offers=None):
     for t in [2, 4, 6]:
         x = last_norm.xs(t, level='index')
         y = 1 - offers[NORM].xs(t, level='index')
-        assert (y.index == x.index).all()
+        assert np.all(y.index == x.index)
         kernel = gaussian_kernel(x)
         y_hat[t] = nw(y, kernel=kernel, dim=dim)
     return y_hat
@@ -195,7 +174,7 @@ def accept3d(offers=None, other=None):
     for t in [2, 4, 6]:
         x = df.xs(t, level='index')
         y = (offers[CON] == 1).xs(t, level='index')
-        assert (x.index == y.index).all()
+        assert np.all(x.index == y.index)
         y_hat[t] = nw(y=y.values,
                       kernel=gaussian_kernel(x.values),
                       dim=dim_from_df(x))
@@ -209,7 +188,7 @@ def action_dist(offers=None, dims=None):
         # inputs
         x = norm.xs(t, level='index')
         con = offers[CON].xs(t, level='index')
-        assert (con.index == x.index).all()
+        assert np.all(con.index == x.index)
         if t in IDX[BYR]:
             x_plus = x[x > 0]
             con_zero = con.reindex(index=x[x == 0.].index)
@@ -238,7 +217,7 @@ def action_dist(offers=None, dims=None):
                 for i in range(len(SPLITS) - 1):
                     low, high = SPLITS[i], SPLITS[i + 1]
                     k = '{}-{}% concession'.format(int(low * 100), int(high * 100))
-                    df.loc[0., k] = ((con_zero > low) & (con_zero <= high)).mean()
+                    df.loc[0., k] = np.mean((con_zero > low) & (con_zero <= high))
             df.loc[0., 'Accept'] = (con_zero == 1).mean()
             assert abs(df.loc[0].sum() - 1.) < EPS
 
@@ -279,15 +258,6 @@ def get_action_dist(offers_dim=None, offers_action=None, byr=None):
     dims = get_dims(offers=offers_dim, byr=byr)
     d = action_dist(offers=offers_action, dims=dims)
     return d
-
-
-def find_best_run(byr=None):
-    log_dir = get_log_dir(byr=byr)
-    df = unpickle(log_dir + 'runs.pkl')
-    s = df.xs(VALIDATION, level='part')[NORM]
-    run_id = s[~s.isna()].astype('float64').idxmax()
-    print('Best run: {}'.format(run_id))
-    return log_dir + '{}/'.format(run_id)
 
 
 def concat_and_fill(v1, v2):

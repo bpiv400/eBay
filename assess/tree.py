@@ -1,5 +1,6 @@
 from sklearn.tree import DecisionTreeClassifier, export_text
-from assess.util import find_best_run, load_data, get_last_norm, get_log_dir
+from assess.util import load_data, get_last_norm, get_log_dir
+from agent.util import find_best_run
 from utils import load_file
 from constants import TEST, DAY
 from featnames import LOOKUP, AUTO, CON, NORM, START_PRICE, START_TIME, BYR_HIST

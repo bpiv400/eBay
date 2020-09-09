@@ -12,13 +12,13 @@ from rlenv.interfaces.PlayerInterface import SimulatedBuyer, SimulatedSeller
 from rlenv.util import sample_categorical
 from utils import run_func_on_chunks, process_chunk_worker, compose_args
 from agent.const import PARAMS, AGENT_STATE, OPTIM_STATE
-from constants import VALIDATION, RL_SLR, RL_BYR, TEST
+from constants import VALIDATION, RL_SLR, RL_BYR, TEST, DROPOUT_GRID
 from featnames import BYR, DROPOUT
 
 
 class AgentGenerator(Generator):
     def __init__(self, model=None, byr=False, slr=False, con_set=None):
-        super().__init__(verbose=False, byr=byr, slr=slr)
+        super().__init__(verbose=False, byr=byr, slr=slr, test=True)
         self.model = model
         self.con_set = con_set
         assert byr or slr
@@ -42,7 +42,8 @@ class AgentGenerator(Generator):
                               recorder=self.recorder,
                               verbose=self.verbose,
                               composer=self.composer,
-                              con_set=self.con_set)
+                              con_set=self.con_set,
+                              test=True)
 
     def simulate_lstg(self):
         obs = self.env.reset(next_lstg=False)
@@ -81,6 +82,9 @@ def main():
     if byr:
         assert part != RL_SLR
 
+    # dropout as tuple of floats
+    args[DROPOUT] = DROPOUT_GRID[args[DROPOUT]]
+
     # environment class and run directory
     _, _, run_dir = get_paths(**args)
 
@@ -91,6 +95,7 @@ def main():
         else:
             model = HeuristicSlr()
     else:
+
         model = load_agent_model(
             model_args=dict(byr=byr,
                             dropout=args[DROPOUT],

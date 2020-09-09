@@ -298,7 +298,7 @@ class EBayEnv:
                                        time=event.priority)
         # Test environment returns None when delay model is mistakenly called
         if delay_seconds is None:
-            # print("No delay returned; exiting listing.")s
+            # print("No delay returned; exiting listing.")
             return True
         event.update_delay(seconds=delay_seconds)
         self.queue.push(event)

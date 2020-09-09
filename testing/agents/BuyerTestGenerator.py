@@ -30,7 +30,7 @@ class BuyerTestGenerator(TestGenerator):
         lstg_log = BuyerListing(params=params)
         self.query_strategy.update_log(lstg_log)
         hist = self.loader.x_thread.loc[thread_id, BYR_HIST]
-        obs = self.env.reset(next_lstg=False, hist=hist)
+        obs = self.env.reset(hist=hist)
         agent_tuple = obs, None, None, None
         if obs is not None:
             done = False

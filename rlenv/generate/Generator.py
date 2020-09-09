@@ -8,12 +8,13 @@ from rlenv.util import get_env_sim_dir, load_chunk
 
 
 class Generator:
-    def __init__(self, verbose=False, byr=False, slr=False):
+    def __init__(self, verbose=False, byr=False, slr=False, test=False):
         """
         Constructor
         :param bool verbose: if True, print info about simulator activity
         :param bool byr: byr agents if True
         :param bool slr: slr agents if True
+        :param bool test: if True, does not advance listing
         """
         self.verbose = verbose
         self.byr = byr
@@ -22,6 +23,7 @@ class Generator:
         if byr:
             assert not slr
         self.initialized = False
+        self.test = test
 
         # model interfaces and input composer
         self.recorder = None
@@ -78,7 +80,8 @@ class Generator:
                               loader=self.loader,
                               recorder=self.recorder,
                               verbose=self.verbose,
-                              composer=self.composer)
+                              composer=self.composer,
+                              test=self.test)
 
     def generate_buyer(self):
         return SimulatedBuyer(full=True)

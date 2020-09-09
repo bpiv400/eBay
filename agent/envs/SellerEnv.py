@@ -27,8 +27,8 @@ class SellerEnv(AgentEnv):
                 return not(self.is_lstg_expired(event) or event.thread_expired())
         return False
 
-    def reset(self, next_lstg=True):
-        self.init_reset(next_lstg=next_lstg)  # in AgentEnvironment
+    def reset(self):
+        self.init_reset()  # in AgentEnvironment
         while True:
             event, lstg_complete = super().run()  # calls EBayEnvironment.run()
 
@@ -42,13 +42,13 @@ class SellerEnv(AgentEnv):
                     return self.get_obs(event=event, done=False)
 
             # if the lstg is complete
-            elif next_lstg:  # queue up next lstg in training
-                self.init_reset(next_lstg=True)
+            elif not self.test:  # queue up next lstg in training
+                self.init_reset()
             else:
                 return None  # for EvalGenerator
 
-    def init_reset(self, next_lstg=None):
-        super().init_reset(next_lstg=next_lstg)
+    def init_reset(self):
+        super().init_reset()
         self.item_value = self.lookup[START_PRICE]
 
     def step(self, action):

@@ -18,7 +18,7 @@ EventLog = namedtuple("EventLog", ["priority", "thread_id", "turn"])
 class AgentEnv(EBayEnv, Env):
     def __init__(self, **kwargs):
         super().__init__(params=kwargs)
-        self.test = False if 'test' not in kwargs else kwargs['test']
+        self.test = kwargs['test']
 
         # parameters to be set later
         self.curr_event = None
@@ -80,7 +80,6 @@ class AgentEnv(EBayEnv, Env):
                     priority=event.priority)
 
     def draw_agent_delay(self, event):
-        # query delay model
         input_dict = self.get_delay_input_dict(event=event)
         intervals = (self.end_time - event.priority) / INTERVAL_TURN
         max_interval = max(1, min(int(intervals), INTERVAL_CT_TURN))
@@ -89,15 +88,13 @@ class AgentEnv(EBayEnv, Env):
                                        thread_id=event.thread_id,
                                        time=event.priority,
                                        max_interval=max_interval)
-        if not self.test:  # expiration delays only allowed in testing
-            assert delay_seconds < MAX_DELAY_TURN
         return max(1, delay_seconds)
 
-    def init_reset(self, next_lstg=True):
+    def init_reset(self):
         self.curr_event = None
         self.last_event = None
         self.num_offers = 0
-        if next_lstg:
+        if not self.test:
             if not self.has_next_lstg():
                 raise RuntimeError("Out of lstgs")
             self.next_lstg()

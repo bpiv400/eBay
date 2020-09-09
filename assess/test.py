@@ -1,4 +1,5 @@
-from assess.util import load_data, get_valid_slr, find_best_run, get_lookup
+from assess.util import load_data, get_lookup
+from agent.util import find_best_run, get_valid_slr
 from constants import TEST
 from featnames import SLR, OBS, SIM, RL, NORM, MSG, DELAY, DAYS_SINCE_LSTG, \
     BYR_HIST, TIME_FEATS, START_PRICE

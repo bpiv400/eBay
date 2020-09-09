@@ -1,4 +1,4 @@
-from sim.generate import SimulatorEnv
+from sim.envs import SimulatorEnv
 from rlenv.Composer import Composer
 from rlenv.generate.Generator import Generator
 from rlenv.util import get_env_sim_subdir
@@ -14,7 +14,7 @@ from featnames import X_THREAD, X_OFFER, LOOKUP, LSTG
 
 class TestGenerator(Generator):
     def __init__(self, verbose=False, byr=False, slr=False):
-        super().__init__(verbose=verbose, byr=byr, slr=slr)
+        super().__init__(verbose=verbose, byr=byr, slr=slr, test=True)
         if byr:
             print('Testing buyer agent')
         elif slr:
