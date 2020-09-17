@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from constants import RL_SLR, RL_BYR, PARTS_DIR, NUM_CHUNKS
+from constants import RL_BYR, RL_SLR, PARTS_DIR, NUM_CHUNKS
 from featnames import BYR, LSTG
 from rlenv.util import load_chunk
 
@@ -33,7 +33,7 @@ class LstgLoader:
         """
         raise NotImplementedError()
 
-    def init(self):
+    def init(self, rank):
         """
         Performs loader initialization if any
         """
@@ -88,7 +88,7 @@ class ChunkLoader(LstgLoader):
         self.verify_init()
         return self._ix < self._num_lstgs
 
-    def init(self):
+    def init(self, rank):
         pass
 
     def did_init(self):
@@ -105,32 +105,36 @@ class ChunkLoader(LstgLoader):
 class TrainLoader(LstgLoader):
     def __init__(self, **kwargs):
         super().__init__()
-        self.byr = kwargs[BYR]
-        if 'rank' not in kwargs:
-            self._filename = self._get_train_file_path(rank=0)
-        else:
-            self._filename = self._get_train_file_path(rank=kwargs['rank'])
-        chunk = load_chunk(input_path=self._filename)
-        self._x_lstg_slice, self._lookup_slice, self._p_arrival_slice = chunk
+        self.part = RL_BYR if kwargs[BYR] else RL_SLR
+
+        # to be initialized later
+        self._x_lstg_slice = self._lookup_slice = self._p_arrival_slice = None
         self._internal_loader = None
+
+    def init(self, rank):
+        filename = self._get_train_file_path(rank)
+        chunk = load_chunk(input_path=filename)
+        self._x_lstg_slice, self._lookup_slice, self._p_arrival_slice = chunk
         self._draw_lstgs()
 
     def _get_train_file_path(self, rank=None):
         rank = rank % NUM_CHUNKS  # for using more workers
-        part = RL_BYR if self.byr else RL_SLR
-        return PARTS_DIR + '{}/chunks/{}.pkl'.format(part, rank)
+        return PARTS_DIR + '{}/chunks/{}.pkl'.format(self.part, rank)
 
     def next_lstg(self):
         self.verify_init()
         if self._cache_empty():
             self._draw_lstgs()
-        return self._internal_loader.next_lstg()
+        x_lstg, lookup, p_arrival = self._internal_loader.next_lstg()
+        self.lstg = self._internal_loader.lstg
+        return x_lstg, lookup, p_arrival
 
     def _cache_empty(self):
         return not self._internal_loader.has_next()
 
     def has_next(self):
-        self.verify_init()
+        if not self.did_init:
+            self.init(0)
         return True
 
     @property
@@ -139,16 +143,13 @@ class TrainLoader(LstgLoader):
 
     @property
     def did_init(self):
-        return True
+        return self._lookup_slice is not None
 
     def next_id(self):
         self.verify_init()
         if self._cache_empty():
             self._draw_lstgs()
         return self._internal_loader.next_id()
-
-    def init(self):
-        pass
 
     def _draw_lstgs(self):
         lstgs = np.array(self._lookup_slice.index)

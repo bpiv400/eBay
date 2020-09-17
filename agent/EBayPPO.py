@@ -1,5 +1,6 @@
 import numpy as np
 import torch
+from torch.distributions import Beta
 from torch.optim import Adam
 from collections import namedtuple, OrderedDict
 from rlpyt.agents.base import AgentInputs
@@ -8,14 +9,14 @@ from rlpyt.utils.buffer import buffer_to
 from rlpyt.utils.collections import namedarraytuple
 from agent.util import define_con_set
 from agent.const import PERIOD_EPOCHS, LR_POLICY, LR_VALUE, RATIO_CLIP, \
-    ENTROPY_THRESHOLD, DEPTH_COEF, NOCON
-from constants import IDX
+    ENTROPY_THRESHOLD, ENTROPY
+from constants import IDX, EPS
 from featnames import BYR, SLR
 
 LossInputs = namedarraytuple("LossInputs",
                              ["agent_inputs", "action", "return_", "advantage",
-                              "turn", "valid", "pi_old"])
-FIELDS = ["OffersPerTraj", "ThreadsPerTraj", "OffersPerThread", "DaysToDone",
+                              "valid", "pi_old"])
+FIELDS = ["ActionsPerTraj", "ThreadsPerTraj", "ActionsPerThread", "DaysToDone",
           "Turn1_AccRate", "Turn1_RejRate", "Turn1_ConRate", "Turn1Con",
           "Turn2_AccRate", "Turn2_RejRate", "Turn2_ExpRate", "Turn2_ConRate", "Turn2Con",
           "Turn3_AccRate", "Turn3_RejRate", "Turn3_ConRate", "Turn3Con",
@@ -24,8 +25,8 @@ FIELDS = ["OffersPerTraj", "ThreadsPerTraj", "OffersPerThread", "DaysToDone",
           "Turn6_AccRate", "Turn6_RejRate", "Turn6_ExpRate", "Turn6_ConRate", "Turn6Con",
           "Turn7_AccRate",
           "Rate_1", "Rate_2", "Rate_3", "Rate_4", "Rate_5", "Rate_6", "Rate_7", "Rate_Sale",
-          "DollarReturn", "NormReturn", "Advantage", "Entropy",
-          "Loss_Policy", "Loss_Value", "Loss_EntropyBonus", "Loss_DepthBonus"]
+          "DollarReturn", "NormReturn", "Value", "Advantage", "Entropy",
+          "Loss_Policy", "Loss_Value", "Loss_EntropyBonus"]
 OptInfo = namedtuple("OptInfo", FIELDS)
 
 
@@ -38,15 +39,13 @@ class EBayPPO:
     bootstrap_value = True
     opt_info_fields = FIELDS
 
-    def __init__(self, entropy=None):
-        # save parameters to self
-        self.entropy_coef = entropy
-        self.depth_coef = DEPTH_COEF
-
+    def __init__(self):
         # parameters to be defined later
         self.agent = None
         self.byr = None
         self.con_set = None
+        self.entropy_coef = None
+        self.entropy_step = None
         self._optim_value = None
         self._optim_policy = None
 
@@ -54,8 +53,6 @@ class EBayPPO:
         self.update_counter = 0
 
         # for stopping
-        self.entropy_step = self.entropy_coef / PERIOD_EPOCHS
-        self.depth_step = self.depth_coef / PERIOD_EPOCHS
         self.training_complete = False
 
     def initialize(self, agent=None):
@@ -66,6 +63,8 @@ class EBayPPO:
         self.byr = agent.model.byr
         self.con_set = define_con_set(con_set=agent.model.con_set,
                                       byr=self.byr)
+        self.entropy_coef = ENTROPY[agent.model.con_set]
+        self.entropy_step = self.entropy_coef / PERIOD_EPOCHS
 
         # optimizers
         self._optim_value = Adam(self.agent.value_parameters(),
@@ -74,33 +73,31 @@ class EBayPPO:
                                   lr=LR_POLICY, amsgrad=True)
 
     @staticmethod
-    def discount_return(reward=None, done=None):
+    def backward_from_done(x=None, done=None):
         """
-        Computes time-discounted sum of future rewards from each
-        time-step to the end of the batch. Sum resets where `done`
-        is 1. Operations vectorized across all trailing dimensions
-        after the first [T,].
-        :param tensor reward: slr's normalized gross return.
-        :param tensor done: indicator for end of trajectory.
-        :return tensor return_: time-discounted return.
+        Propagates value at done across trajectory. Operations
+        vectorized across all trailing dimensions after the first [T,].
+        :param tensor x: tensor to propagate across trajectory
+        :param tensor done: indicator for end of trajectory
+        :return tensor newx: value at done at every step of trajectory
         """
-        dtype = reward.dtype  # cast new tensors to this data type
-        T, N = reward.shape  # time steps, number of envs
+        dtype = x.dtype  # cast new tensors to this data type
+        T, N = x.shape  # time steps, number of envs
 
         # recast
         done = done.type(torch.int)
 
-        # initialize matrix of returns
-        return_ = torch.zeros(reward.shape, dtype=dtype)
+        # initialize output tensor
+        newx = torch.zeros(x.shape, dtype=dtype)
 
-        # initialize variables that track sale outcomes
-        net_value = torch.zeros(N, dtype=dtype)
+        # vector for given time period
+        v = torch.zeros(N, dtype=dtype)
 
         for t in reversed(range(T)):
-            net_value = net_value * (1 - done[t]) + reward[t] * done[t]
-            return_[t] += net_value
+            v = v * (1 - done[t]) + x[t] * done[t]
+            newx[t] += v
 
-        return return_
+        return newx
 
     @staticmethod
     def valid_from_done(done):
@@ -134,17 +131,18 @@ class EBayPPO:
         valid = self.valid_from_done(done)
 
         # propagate return from end of trajectory (and discount, if necessary)
-        return_ = self.discount_return(reward=reward, done=done)
+        return_ = self.backward_from_done(x=reward, done=done)
 
         # initialize opt_info
         opt_info = OrderedDict()
 
         # various counts
-        num_offers = info.num_offers[done].numpy()
+        num_actions = info.num_actions[done].numpy()
         num_threads = info.num_threads[done].numpy()
-        opt_info['OffersPerTraj'] = num_offers
+        opt_info['ActionsPerTraj'] = num_actions
         opt_info['ThreadsPerTraj'] = num_threads
-        opt_info['OffersPerThread'] = num_offers / num_threads
+        if not self.byr:
+            opt_info['ActionsPerThread'] = num_actions / num_threads
         opt_info['DaysToDone'] = info.days[done].numpy()
 
         # action stats
@@ -153,8 +151,15 @@ class EBayPPO:
         turn = info.turn[valid].numpy()
         role = BYR if self.byr else SLR
         for t in IDX[role]:
-            opt_info['Rate_{}'.format(t)] = np.mean(turn == t)
+            # rate of reaching turn t
+            if self.byr:
+                last_turn = self.backward_from_done(x=info.turn, done=done)
+                turn_ct = last_turn[valid].numpy()
+            else:
+                turn_ct = turn
+            opt_info['Rate_{}'.format(t)] = np.mean(turn_ct == t)
 
+            # accept, reject, and expiration rates, and moments of concession dist
             con_t = con[turn == t]
             prefix = 'Turn{}'.format(t)
             opt_info['{}_{}'.format(prefix, 'AccRate')] = np.mean(con_t == 1)
@@ -162,19 +167,20 @@ class EBayPPO:
                 opt_info['{}_{}'.format(prefix, 'ExpRate')] = np.mean(con_t > 1)
             if t < 7:
                 opt_info['{}_{}'.format(prefix, 'RejRate')] = np.mean(con_t == 0)
-                if self.con_set != NOCON:
+                if len(self.con_set) > 3:
                     opt_info['{}_{}'.format(prefix, 'ConRate')] = \
                         np.mean((con_t > 0) & (con_t < 1))
                     opt_info['{}{}'.format(prefix, 'Con')] = \
                         con_t[(con_t > 0) & (con_t < 1)]
 
-        opt_info['Rate_Sale'] = np.mean(reward[done].numpy() > 0.)
+        opt_info['Rate_Sale'] = np.mean(reward[done].numpy() != 0)
         opt_info['DollarReturn'] = return_[done].numpy()
         opt_info['NormReturn'] = (return_[done] / info.max_return[done]).numpy()
 
         # normalize return and calculate advantage
         return_ /= info.max_return
         advantage = return_ - value
+        opt_info['Value'] = value[valid].numpy()
         opt_info['Advantage'] = advantage[valid].numpy()
 
         # for getting policy and value in eval mode
@@ -191,7 +197,6 @@ class EBayPPO:
             action=samples.agent.action,
             return_=return_,
             advantage=advantage,
-            turn=info.turn,
             valid=valid,
             pi_old=samples.agent.agent_info.dist_info
         )
@@ -205,7 +210,7 @@ class EBayPPO:
         idxs = np.arange(T * B)
         T_idxs = idxs % T
         B_idxs = idxs // T
-        policy_loss, value_error, entropy = \
+        policy_loss, value_loss, entropy = \
             self.loss(*loss_inputs[T_idxs, B_idxs])
 
         # policy step
@@ -213,14 +218,13 @@ class EBayPPO:
         self._optim_policy.step()
 
         # value step
-        value_error.backward()
+        value_loss.backward()
         self._optim_value.step()
 
         # save for logging
         opt_info['Loss_Policy'] = policy_loss.item()
-        opt_info['Loss_Value'] = value_error.item()
+        opt_info['Loss_Value'] = value_loss.item()
         opt_info['Loss_EntropyBonus'] = self.entropy_coef
-        opt_info['Loss_DepthBonus'] = self.depth_coef
         entropy = entropy.detach().numpy()
         opt_info['Entropy'] = entropy
 
@@ -228,7 +232,6 @@ class EBayPPO:
         self.update_counter += 1
         if 2 * PERIOD_EPOCHS > self.update_counter >= PERIOD_EPOCHS:
             self.entropy_coef -= self.entropy_step
-            self.depth_coef -= self.depth_step
         if entropy.mean() < ENTROPY_THRESHOLD:
             self.training_complete = True
 
@@ -241,7 +244,7 @@ class EBayPPO:
 
         return OptInfo(**opt_info)
 
-    def loss(self, agent_inputs, action, return_, advantage, turn, valid, pi_old):
+    def loss(self, agent_inputs, action, return_, advantage, valid, pi_old):
         """
         Compute the training loss: policy_loss + value_loss + entropy_loss
         Policy loss: min(likelhood-ratio * advantage, clip(likelihood_ratio, 1-eps, 1+eps) * advantage)
@@ -250,7 +253,7 @@ class EBayPPO:
         the ``agents.distribution`` to compute likelihoods and entropies.
         """
         # agents outputs
-        pi_new, v = self.agent(*agent_inputs)
+        pi_new, value_params = self.agent(*agent_inputs, vparams=True)
 
         # loss from policy
         ratio = self.agent.distribution.likelihood_ratio(action,
@@ -263,24 +266,30 @@ class EBayPPO:
         pi_loss = - valid_mean(surrogate, valid)
 
         # loss from value estimation
-        value_error = valid_mean(0.5 * (v - return_) ** 2, valid)
+        pi, a, b = value_params
+        idx0 = (return_ == 0) & valid  # no sale
+        lnL = torch.sum(torch.log(pi[idx0, 0] + EPS))
+        if not self.byr:
+            idx1 = (return_ == 1) & valid  # sells for list price
+            lnL += torch.sum(torch.log(pi[idx1, 1] + EPS))
+            idx_beta = (0 < return_) & (return_ < 1) & valid  # intermediate outcome
+            return_beta = return_[idx_beta]
+        else:
+            idx_beta = (return_ != 0) & valid
+            return_beta = torch.clamp((return_[idx_beta] + 1) / 2, min=EPS)
+        lnL += torch.sum(torch.log(pi[idx_beta, -1] + EPS))
+        lnL += torch.sum(Beta(a[idx_beta], b[idx_beta]).log_prob(return_beta))
+        value_loss = -lnL
 
         # entropy bonus
         entropy = self.agent.distribution.entropy(pi_new)[valid]
         entropy_loss = - self.entropy_coef * entropy.mean()
 
-        # depth bonus
-        if self.depth_coef > 0:
-            depth = (turn[valid] + 1) // 2 - 1
-            depth_loss = - self.depth_coef * depth.float().mean()
-        else:
-            depth_loss = 0
-
         # total loss
-        policy_loss = pi_loss + entropy_loss + depth_loss
+        policy_loss = pi_loss + entropy_loss
 
         # return loss values and statistics to record
-        return policy_loss, value_error, entropy
+        return policy_loss, value_loss, entropy
 
     def optim_state_dict(self):
         return {

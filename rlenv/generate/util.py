@@ -53,8 +53,17 @@ def process_sim_threads(df=None, lstg_start=None):
     assert df[DAYS_SINCE_LSTG].max() < MAX_DAYS
     df = df.drop(['clock', 'start_time'], axis=1)
     # reorder columns to match observed
-    df = df.loc[:, [DAYS_SINCE_LSTG, BYR_HIST]]
+    thread_cols = [DAYS_SINCE_LSTG, BYR_HIST]
+    if 'byr_agent' in df.columns:
+        thread_cols += ['byr_agent']
+    df = df.loc[:, thread_cols]
     return df
+
+
+def process_sim_delays(s=None, lstg_start=None):
+    s = (s - lstg_start.reindex(index=s.index)) / DAY
+    s = s.rename(DAYS_SINCE_LSTG)
+    return s
 
 
 def concat_sim_chunks(sims):
@@ -64,26 +73,31 @@ def concat_sim_chunks(sims):
     :return tuple (threads, offers): dataframes of threads and offers.
     """
     # collect chunks
-    threads, offers = [], []
+    data = dict()
     for sim in sims:
-        threads.append(sim['threads'])
-        offers.append(sim['offers'])
+        for k, v in sim.items():
+            if k not in data:
+                data[k] = []
+            data[k].append(v)
     # concatenate
-    threads = pd.concat(threads, axis=0).sort_index()
-    offers = pd.concat(offers, axis=0).sort_index()
-    return threads, offers
+    for k, v in data.items():
+        data[k] = pd.concat(v, axis=0).sort_index()
+    return data
 
 
 def process_sims(part=None, sims=None, output_dir=None):
     # concatenate chunks
-    threads, offers = concat_sim_chunks(sims)
+    data = concat_sim_chunks(sims)
 
     # create output dataframes
     d = dict()
     lstg_start = load_file(part, LOOKUP)[START_TIME]
-    d[X_THREAD] = process_sim_threads(df=threads,
+    d[X_THREAD] = process_sim_threads(df=data['threads'],
                                       lstg_start=lstg_start)
-    d[X_OFFER], d[CLOCK] = process_sim_offers(df=offers)
+    d[X_OFFER], d[CLOCK] = process_sim_offers(df=data['offers'])
+    if 'delays' in data:
+        d['delays'] = process_sim_delays(s=data['delays'],
+                                         lstg_start=lstg_start)
 
     # create directory if it doesn't exist
     if not os.path.isdir(output_dir):

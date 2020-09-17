@@ -6,7 +6,7 @@ from agent.EBayPPO import EBayPPO
 from rlpyt.samplers.serial.sampler import SerialSampler
 from rlpyt.samplers.parallel.gpu.alternating_sampler import AlternatingSampler
 from rlpyt.utils.logging.context import logger_context
-from agent.const import AGENT_STATE, BATCH_SIZE, ENTROPY
+from agent.const import AGENT_STATE, BATCH_SIZE
 from agent.util import get_paths
 from agent.AgentComposer import AgentComposer
 from agent.models.AgentModel import AgentModel, SplitCategoricalPgAgent
@@ -19,10 +19,9 @@ from rlenv.LstgLoader import TrainLoader
 
 
 class RlTrainer:
-    def __init__(self, byr=False, con_set=False, dropout=None):
+    def __init__(self, byr=False, con_set=False):
         self.byr = byr
         self.con_set = con_set
-        self.dropout = dropout
 
     def _generate_query_strategy(self):
         return DefaultQueryStrategy(
@@ -34,7 +33,6 @@ class RlTrainer:
     def _generate_agent(self, serial=False):
         kwargs = dict(
                 byr=self.byr,
-                dropout=self.dropout,
                 serial=serial,
                 con_set=self.con_set
             )
@@ -50,7 +48,11 @@ class RlTrainer:
             composer=composer,
             verbose=serial,
             query_strategy=self._generate_query_strategy(),
-            con_set=self.con_set
+            con_set=self.con_set,
+            loader=TrainLoader(
+                x_lstg_cols=composer.x_lstg_cols,
+                byr=self.byr
+            )
         )
         env = BuyerEnv if self.byr else SellerEnv
 
@@ -59,10 +61,6 @@ class RlTrainer:
             sampler_cls = SerialSampler
             batch_B = 1
             batch_T = 128
-            env_params['loader'] = TrainLoader(
-                x_lstg_cols=composer.x_lstg_cols,
-                byr=self.byr
-            )
         else:
             sampler_cls = AlternatingSampler
             batch_B = len(self._cpus)
@@ -81,7 +79,7 @@ class RlTrainer:
             )
 
     def _generate_runner(self, agent=None, sampler=None):
-        algo = EBayPPO(entropy=ENTROPY[self.con_set])
+        algo = EBayPPO()
         affinity = dict(master_cpus=self._cpus,
                         master_torch_threads=len(self._cpus),
                         workers_cpus=self._cpus,
@@ -98,21 +96,21 @@ class RlTrainer:
     def _cpus(self):
         return list(psutil.Process().cpu_affinity())
 
-    def train(self, log=False, serial=False):
-        if serial:
-            assert not log
+    def train(self, **kwargs):
+        if kwargs['serial']:
+            assert not kwargs['log']
 
         # construct runner
-        agent = self._generate_agent(serial)
-        sampler = self._generate_sampler(serial)
+        agent = self._generate_agent(kwargs['serial'])
+        sampler = self._generate_sampler(kwargs['serial'])
         runner = self._generate_runner(agent=agent, sampler=sampler)
 
-        if not log:
+        if not kwargs['log']:
             runner.train()
         else:
             log_dir, run_id, run_dir = get_paths(byr=self.byr,
                                                  con_set=self.con_set,
-                                                 dropout=self.dropout)
+                                                 suffix=kwargs['suffix'])
             if os.path.isdir(run_dir):
                 print('{} already exists.'.format(run_id))
                 exit()

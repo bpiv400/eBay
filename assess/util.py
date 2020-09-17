@@ -1,6 +1,8 @@
 import argparse
 import numpy as np
 import pandas as pd
+
+from agent.util import get_sale_norm
 from utils import unpickle, load_file
 from assess.const import SPLITS
 from constants import PARTS_DIR, IDX, BYR, EPS, COLLECTIBLES, TEST, MAX_DAYS, \
@@ -117,16 +119,6 @@ def nw(y, kernel=None, dim=None):
         v = np.sum(y * k) / np.sum(k)
         y_hat.iloc[i] = v
     return y_hat
-
-
-def get_sale_norm(offers=None):
-    sale_norm = offers.loc[offers[CON] == 1, NORM]
-    # redefine norm to be fraction of list price
-    slr_turn = (sale_norm.index.get_level_values(level='index') % 2) == 0
-    sale_norm = slr_turn * (1. - sale_norm) + (1. - slr_turn) * sale_norm
-    # keep only lstg in index
-    sale_norm = sale_norm.reset_index(sale_norm.index.names[1:], drop=True)
-    return sale_norm
 
 
 def get_last_norm(norm=None):

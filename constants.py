@@ -41,14 +41,14 @@ FIG_DIR = os.path.expanduser('~/eBay/figures/')  # for saving figures
 
 # partitions
 TRAIN_MODELS = 'sim'
-TRAIN_DISCRIM = 'discrim'
+DISCRIM = 'discrim'
 RL_SLR = 'rl_slr'
 RL_BYR = 'rl_byr'
 VALIDATION = 'valid'
 TEST = VALIDATION  # TODO: rename to 'testing' when using real testing data
-PARTITIONS = [TRAIN_MODELS, TRAIN_DISCRIM, RL_SLR, RL_BYR, VALIDATION, TEST]
+PARTITIONS = [TRAIN_MODELS, DISCRIM, RL_SLR, RL_BYR, VALIDATION, TEST]
 SIM_PARTITIONS = [TRAIN_MODELS, VALIDATION, TEST]
-AGENT_PARTITIONS = [RL_SLR, RL_BYR, TRAIN_DISCRIM, VALIDATION, TEST]
+AGENT_PARTITIONS = [RL_SLR, RL_BYR, DISCRIM, VALIDATION, TEST]
 
 # for splitting data
 SHARES = {TRAIN_MODELS: 0.75, RL_SLR: 0.05, RL_BYR: 0.05, VALIDATION: 0.05}
@@ -116,13 +116,6 @@ POLICY_MODELS = [POLICY_SLR, POLICY_BYR]
 # normalization type
 MODEL_NORM = 'batch'
 
-# fee constants
-LISTING_FEE = .03
-
-# meta categories with sale fees != .09 * price
-META_7 = [11116, 619]
-META_6 = [58058, 1249, 625, 293, 15032]
-
 # meta categories for collectibles
 COLLECTIBLES = [1, 237, 260, 550, 870, 11116, 20081, 45100, 64482]
 
@@ -137,6 +130,9 @@ BYR_DROP = ['lstg_ct', 'bo_ct', 'auto_decline', 'has_decline']
 
 # for precision issues
 EPS = 1e-8
+
+# number of times to simulate each listing
+VALUE_SIMS = 10
 
 # dropout options
 DROPOUT_GRID = []

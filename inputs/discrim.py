@@ -1,10 +1,10 @@
 import numpy as np
 from inputs.util import save_featnames_and_sizes, \
     convert_x_to_numpy, get_x_thread, get_ind_x
-from utils import topickle, load_file, input_partition
-from constants import TRAIN_DISCRIM, VALIDATION, TEST, DISCRIM_MODEL, INPUT_DIR
+from utils import topickle, load_file, input_partition, load_data
+from constants import DISCRIM, VALIDATION, TEST, DISCRIM_MODEL, INPUT_DIR
 from featnames import SPLIT, DAYS, DELAY, EXP, AUTO, REJECT, MSG, LOOKUP, THREAD, \
-    X_OFFER, X_THREAD, INDEX
+    INDEX, X_THREAD, X_OFFER
 
 
 def save_discrim_files(part=None, x_obs=None, x_sim=None, lstgs=None):
@@ -73,29 +73,22 @@ def get_x_offer(offers, idx):
     return x_offer
 
 
-def load_threads_offers(part=None, sim=False):
-    prefix = 'sim/' if sim else ''
-    threads = load_file(part, '{}{}'.format(prefix, X_THREAD))
-    offers = load_file(part, '{}{}'.format(prefix, X_OFFER))
-    return threads, offers
-
-
 def construct_x(part=None, sim=False):
     # load files
-    threads, offers = load_threads_offers(part=part, sim=sim)
+    data = load_data(part=part, sim=sim)
     # master index
-    idx = threads.index
+    idx = data[X_THREAD].index
     # thread features
-    x = {THREAD: get_x_thread(threads, idx)}
+    x = {THREAD: get_x_thread(data[X_THREAD], idx)}
     # offer features
-    x.update(get_x_offer(offers, idx))
+    x.update(get_x_offer(data[X_OFFER], idx))
     return x
 
 
 def main():
     # extract parameters from command line
     part = input_partition()
-    assert part in [TRAIN_DISCRIM, VALIDATION, TEST]
+    assert part in [DISCRIM, VALIDATION, TEST]
     print('{}/{}'.format(part, DISCRIM_MODEL))
 
     # listing ids

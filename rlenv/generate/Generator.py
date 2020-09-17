@@ -66,7 +66,8 @@ class Generator:
             (dt.now() - t0).total_seconds() / len(self.loader)))
 
         # return a dictionary
-        return self.recorder.construct_output()
+        if self.recorder is not None:
+            return self.recorder.construct_output()
 
     def simulate_lstg(self):
         raise NotImplementedError()

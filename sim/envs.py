@@ -77,13 +77,3 @@ class NoSlrExpEnv(SimulatorEnv):
             return self.process_post_offer(event, offer)
         else:
             return super().process_offer(event)
-
-
-class SlrAccRejEnv(NoSlrExpEnv):
-
-    def get_con(self, *args, **kwargs):
-        con = super().get_con(*args, **kwargs)
-        if kwargs['turn'] % 2 == 0 and con < 1:
-            return 0
-        else:
-            return con

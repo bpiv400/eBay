@@ -2,10 +2,9 @@ import numpy as np
 import pandas as pd
 from compress_pickle import dump
 from inputs.offer import get_y_msg
-from inputs.discrim import load_threads_offers
 from processing.util import hist_to_pctile
 from assess.util import discrete_pdf
-from utils import load_file
+from utils import load_file, load_data
 from constants import TEST, PLOT_DIR, BYR_HIST_MODEL, CON_MULTIPLIER, \
     MAX_DELAY_ARRIVAL, MAX_DELAY_TURN, INTERVAL_ARRIVAL
 from featnames import DAYS_SINCE_LSTG, BYR_HIST, DELAY, CON, MSG, \
@@ -92,8 +91,8 @@ def create_outputs(threads=None, offers=None, lstgs=None):
 
 def main():
     # observed and simulated outcomes
-    threads_obs, offers_obs = load_threads_offers(part=TEST, sim=False)
-    threads_sim, offers_sim = load_threads_offers(part=TEST, sim=True)
+    threads_obs, offers_obs = load_data(part=TEST, sim=False)
+    threads_sim, offers_sim = load_data(part=TEST, sim=True)
 
     # lookup file
     lstgs = load_file(TEST, 'sim/x_thread').index.get_level_values(

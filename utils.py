@@ -1,4 +1,5 @@
 import argparse
+import os
 import pickle
 import psutil
 from time import sleep
@@ -8,8 +9,9 @@ from torch.nn.functional import log_softmax
 import numpy as np
 from nets.FeedForward import FeedForward
 from sim.Sample import get_batches
-from constants import DAY, SPLIT_PCTS, INPUT_DIR, MODEL_DIR, META_6, META_7, \
-    PARTITIONS, PARTS_DIR, MAX_DELAY_TURN, MAX_DELAY_ARRIVAL, NUM_CHUNKS
+from constants import DAY, SPLIT_PCTS, INPUT_DIR, MODEL_DIR, PARTITIONS, \
+    PARTS_DIR, MAX_DELAY_TURN, MAX_DELAY_ARRIVAL, NUM_CHUNKS
+from featnames import LOOKUP, X_THREAD, X_OFFER, CLOCK
 
 
 def unpickle(file):
@@ -195,14 +197,6 @@ def run_func_on_chunks(f=None, func_kwargs=None, num_chunks=NUM_CHUNKS):
     return res
 
 
-def get_cut(meta):
-    if meta in META_6:
-        return .06
-    if meta in META_7:
-        return .07
-    return .09
-
-
 def get_model_predictions(data, softmax=True):
     """
     Returns predicted categorical distribution.
@@ -262,17 +256,26 @@ def load_file(part, x):
     return unpickle(PARTS_DIR + '{}/{}.pkl'.format(part, x))
 
 
-def set_gpu(gpu=None, spawn=True):
+def load_data(part=None, sim=False, folder=PARTS_DIR):
+    folder += '{}/'.format(part)
+    if sim:
+        assert folder == PARTS_DIR
+        folder += 'sim/'
+    data = {LOOKUP: load_file(part, LOOKUP),
+            X_THREAD: unpickle(folder + '{}.pkl'.format(X_THREAD)),
+            X_OFFER: unpickle(folder + '{}.pkl'.format(X_OFFER)),
+            CLOCK: unpickle(folder + '{}.pkl'.format(CLOCK))}
+    delay_path = folder + 'delays.pkl'
+    if os.path.isfile(delay_path):
+        data['delays'] = unpickle(delay_path)
+    return data
+
+
+def set_gpu(gpu=None):
     """
     Sets the GPU index and the CPU affinity.
     :param int gpu: index of cuda device.
-    :param bool spawn: use spawn context for multiprocessing.
     """
-    # use spawn for multiprocessing
-    if spawn:
-        torch.multiprocessing.set_start_method('spawn')
-
-    # set gpu
     torch.cuda.set_device(gpu)
     print('Using cuda:{}'.format(gpu))
 

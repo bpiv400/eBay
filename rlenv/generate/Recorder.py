@@ -7,8 +7,15 @@ from featnames import START_TIME, START_PRICE, TIME_FEATS, MSG, CON, \
     LSTG, THREAD, INDEX, BYR_HIST, DEC_PRICE, CLOCK
 
 OFFER_COLS = [LSTG, THREAD, INDEX, CLOCK, CON, MSG] + TIME_FEATS
+DELAY_COLS = [LSTG, CLOCK]
 THREAD_COLS = [LSTG, THREAD, BYR_HIST, CLOCK]
 INDEX_COLS = [LSTG, THREAD, INDEX]
+
+DTYPES = {LSTG: np.int32, THREAD: np.uint16, INDEX: np.uint8,
+          MSG: bool, CON: np.uint8, CLOCK: np.int32}
+for name in TIME_FEATS:
+    if 'offers' in name or 'count' in name:
+        DTYPES[name] = np.uint8
 
 
 class Recorder:
@@ -18,7 +25,6 @@ class Recorder:
         self.lstg = None
         self.start_time = None
         self.start_price = None
-        self.sim = None
 
     def update_lstg(self, lookup, lstg):
         """
@@ -27,15 +33,10 @@ class Recorder:
         :param int lstg: listing id
         """
         self.lstg = lstg
-        self.sim = -1
         self.start_time = lookup[START_TIME]
         self.start_price = lookup[START_PRICE]
         if self.verbose:
             self.print_lstg(lookup)
-
-    def reset_sim(self):
-        self.sim += 1
-        # print('Simulation {}'.format(self.sim))
 
     @staticmethod
     def print_offer(event):
@@ -112,7 +113,11 @@ class Recorder:
         :param [str] cols:
         :return: pd.DataFrame with columns given by cols
         """
-        return pd.DataFrame(data=record, columns=cols)
+        df = pd.DataFrame(data=record, columns=cols)
+        for c in df.columns:
+            if c in DTYPES:
+                df[c] = df[c].astype(DTYPES[c])
+        return df
 
     def start_thread(self, thread_id=None, time=None, byr_hist=None):
         raise NotImplementedError()
@@ -133,12 +138,16 @@ class OutcomeRecorder(Recorder):
         self.byr_agent = byr_agent
         self.offers = None
         self.threads = None
+        if self.byr_agent:
+            self.delays = None
         self.reset_recorders()
 
     def reset_recorders(self):
         # tracker dictionaries
         self.offers = []
         self.threads = []
+        if self.byr_agent:
+            self.delays = []
 
     def start_thread(self, thread_id=None, byr_hist=None, time=None, agent=False):
         """
@@ -171,35 +180,31 @@ class OutcomeRecorder(Recorder):
         if self.verbose:
             self.print_offer(event)
 
-    @staticmethod
-    def compress_common_cols(cols, frames, dtypes):
-        for i, col in enumerate(cols):
-            for frame in frames:
-                frame[col] = frame[col].astype(dtypes[i])
+    def add_agent_delay(self, priority):
+        assert self.byr_agent
+        self.delays.append([self.lstg, priority])
 
     def construct_output(self):
-        # convert both lists to dataframes
+        # convert lists to dataframes
         self.offers = self.record2frame(self.offers, OFFER_COLS)
         thread_cols = THREAD_COLS
         if self.byr_agent:
             thread_cols += ['byr_agent']
         self.threads = self.record2frame(self.threads, thread_cols)
+        if self.byr_agent:
+            self.delays = self.record2frame(self.delays, DELAY_COLS)
 
-        # offers dataframe
-        self.offers[INDEX] = self.offers[INDEX].astype(np.uint8)
-        self.offers[CON] = self.offers[CON].astype(np.uint8)
-        self.offers[MSG] = self.offers[MSG].astype(bool)
-        for name in TIME_FEATS:
-            if 'offers' in name or 'count' in name:
-                self.offers[name] = self.offers[name].astype(np.uint8)
-
-        # common columns in offers and threads dataframes
-        self.compress_common_cols([LSTG, THREAD, CLOCK],
-                                  [self.threads, self.offers],
-                                  [np.int32, np.uint16, np.int32])
+        # set index
         self.offers.set_index(INDEX_COLS, inplace=True)
         self.threads.set_index(INDEX_COLS[:-1], inplace=True)
-        assert np.all(self.offers.xs(1, level='index')[CON] > 0)
+        assert np.all(self.offers.xs(1, level=INDEX)[CON] > 0)
+        if self.byr_agent:
+            self.delays.set_index(LSTG, inplace=True)
 
-        return dict(offers=self.offers.sort_index(),
+        # output dictionary
+        data = dict(offers=self.offers.sort_index(),
                     threads=self.threads.sort_index())
+        if self.byr_agent:
+            data['delays'] = self.delays.squeeze().sort_index()
+
+        return data

@@ -1,8 +1,9 @@
 import argparse
+import torch
 from rlenv.Composer import Composer
 from rlenv.generate.Generator import Generator
 from rlenv.generate.util import process_sims
-from sim.envs import SimulatorEnv, NoSlrExpEnv, SlrAccRejEnv
+from sim.envs import SimulatorEnv, NoSlrExpEnv
 from utils import run_func_on_chunks, process_chunk_worker
 from constants import PARTS_DIR, AGENT_PARTITIONS
 
@@ -33,16 +34,12 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--part', type=str, choices=AGENT_PARTITIONS)
     parser.add_argument('--noslrexp', action='store_true')
-    parser.add_argument('--slraccrej', action='store_true')
     args = parser.parse_args()
 
     # environment and output folder
     if args.noslrexp:
         env = NoSlrExpEnv
         output_dir = PARTS_DIR + '{}/noslrexp/'.format(args.part)
-    elif args.slraccrej:
-        env = SlrAccRejEnv
-        output_dir = PARTS_DIR + '{}/slraccrej/'.format(args.part)
     else:
         env = SimulatorEnv
         output_dir = PARTS_DIR + '{}/sim/'.format(args.part)
@@ -60,4 +57,5 @@ def main():
 
 
 if __name__ == '__main__':
+    torch.multiprocessing.set_start_method('forkserver')
     main()

@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 from utils import extract_clock_feats, byr_norm, slr_norm, unpickle
 from constants import FEATS_DIR, PARTS_DIR, PCTILE_DIR, START, IDX, DAY, \
-    HOLIDAYS, MAX_DELAY_TURN, TRAIN_DISCRIM, RL_SLR, RL_BYR
+    HOLIDAYS, MAX_DELAY_TURN, DISCRIM, RL_SLR, RL_BYR
 from featnames import HOLIDAY, DOW_PREFIX, TIME_OF_DAY, AFTERNOON, \
     CLOCK_FEATS, BYR_HIST, SLR, BYR
 
@@ -135,7 +135,7 @@ def get_lstgs(part):
     :return: list of partition-specific listings ids
     """
     d = unpickle(PARTS_DIR + 'partitions.pkl')
-    if part != TRAIN_DISCRIM:
+    if part != DISCRIM:
         return d[part]
     return np.sort(np.concatenate([d[RL_SLR], d[RL_BYR]], axis=0))
 

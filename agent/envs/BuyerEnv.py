@@ -1,16 +1,16 @@
 import numpy as np
 from rlpyt.utils.collections import namedarraytuple
-from constants import HOUR, POLICY_BYR, PCTILE_DIR, INTERVAL_CT_ARRIVAL, \
-    DAY, MAX_DAYS
-from featnames import START_PRICE, BYR_HIST
 from rlenv.util import get_clock_feats, get_con_outcomes
 from utils import load_sizes, unpickle, get_days_since_lstg
 from rlenv.const import FIRST_OFFER, DELAY_EVENT, OFFER_EVENT, RL_ARRIVAL_EVENT
 from rlenv.Sources import ThreadSources
 from agent.envs.AgentEnv import AgentEnv, EventLog
-from agent.util import define_con_set
+from agent.util import define_con_set, load_values
 from rlenv.events.Event import Event
 from rlenv.events.Thread import Thread
+from constants import HOUR, POLICY_BYR, PCTILE_DIR, INTERVAL_CT_ARRIVAL, \
+    DAY, MAX_DAYS, RL_BYR
+from featnames import BYR_HIST
 
 BuyerObs = namedarraytuple('BuyerObs',
                            list(load_sizes(POLICY_BYR)['x'].keys()))
@@ -26,6 +26,10 @@ class BuyerEnv(AgentEnv):
         path = PCTILE_DIR + '{}.pkl'.format(BYR_HIST)
         self.hist_pctile = unpickle(path).values
 
+        # values
+        if not self.test:
+            self.values = load_values(part=RL_BYR)
+
     def reset(self, hist=None):
         """
         Resets the environment by drawing a new listing,
@@ -33,7 +37,8 @@ class BuyerEnv(AgentEnv):
         running the environment
         :return: observation associated with the first rl arrival
         """
-        self.init_reset()  # in BuyerEnv
+        self.init_reset()  # in AgentEnv
+        self.agent_thread = 0
         if hist is None:
             self.hist = self._draw_hist()
         else:  # for TestGenerator
@@ -51,15 +56,10 @@ class BuyerEnv(AgentEnv):
                 return self.get_obs(event=thread, done=False)
 
             # item sells before rl buyer arrival
-            elif not self.test:
+            elif not self.test:  # for training
                 self.init_reset()
             else:  # for testing and evaluation
                 return None
-
-    def init_reset(self):
-        super().init_reset()
-        self.item_value = self.lookup[START_PRICE]  # TODO: allow for different values
-        self.agent_thread = 0
 
     def step(self, action):
         """
@@ -71,17 +71,22 @@ class BuyerEnv(AgentEnv):
                                    turn=self.curr_event.turn)
         con = self.turn_from_action(action=action)
         event_type = self.curr_event.type
+        self.num_actions += 1
         if event_type == FIRST_OFFER:
             if con == 0:
                 return self._step_arrival_delay()
             else:
                 return self._step_first_offer(con)
         elif event_type == OFFER_EVENT:
-            return self._step_thread(con)
+            assert self.curr_event.turn in [3, 5, 7]
+            assert not self.curr_event.thread_expired()
+            return self._execute_offer(con=con)
         else:
             raise ValueError('Invalid event type: {}'.format(event_type))
 
     def _step_arrival_delay(self):
+        if self.recorder is not None:
+            self.recorder.add_agent_delay(self.curr_event.priority)
         next_midnight = (self.curr_event.priority // DAY + 1) * DAY
         if next_midnight == self.end_time:
             return self.agent_tuple(done=True,
@@ -104,32 +109,17 @@ class BuyerEnv(AgentEnv):
                 self.agent_thread, hist))
 
         # create and execute offer
-        return self._execute_offer(con=con, thread=self.curr_event)
+        return self._execute_offer(con=con)
 
-    def _step_thread(self, con=None):
-        # error checking
-        assert self.curr_event.turn in [3, 5, 7]
-        assert not self.curr_event.thread_expired()
-
-        # trajectory ends with buyer reject
-        if con == 0. or (con < 1 and self.curr_event.turn == 7):
-            return self.agent_tuple(done=True,
-                                    event=self.curr_event,
-                                    info=self.get_info(self.last_event))
-
-        # otherwise, execute the offer
-        return self._execute_offer(con=con, thread=self.curr_event)
-
-    def _execute_offer(self, con=None, thread=None):
-        self.num_offers += 1
+    def _execute_offer(self, con=None):
         con_outcomes = get_con_outcomes(con=con,
-                                        sources=thread.sources(),
-                                        turn=thread.turn)
-        offer = thread.update_con_outcomes(con_outcomes=con_outcomes)
-        lstg_complete = self.process_post_offer(thread, offer)
-        if lstg_complete:
-            return self.agent_tuple(event=thread,
-                                    done=lstg_complete,
+                                        sources=self.curr_event.sources(),
+                                        turn=self.curr_event.turn)
+        offer = self.curr_event.update_con_outcomes(con_outcomes=con_outcomes)
+        lstg_complete = self.process_post_offer(self.curr_event, offer)
+        if lstg_complete or con == 0:
+            return self.agent_tuple(event=self.curr_event,
+                                    done=True,
                                     info=self.get_info(self.last_event))
         return self.run()
 
@@ -185,11 +175,11 @@ class BuyerEnv(AgentEnv):
             return 0.
 
         # sale to agent buyer
+        value = self.values.loc[self.loader.lstg]
         if self.verbose:
-            print('Sale to RL buyer. List price: {}. Paid price: {}'.format(
-                self.item_value, self.outcome.price))
-        assert self.item_value >= self.outcome.price
-        return self.item_value - self.outcome.price
+            print('Sale to RL buyer. Price: {0:.2f}. Value: {1:.2f}'.format(
+                self.outcome.price, value))
+        return value - self.outcome.price
 
     def _create_rl_event(self, midnight=None):
         assert midnight % DAY == 0

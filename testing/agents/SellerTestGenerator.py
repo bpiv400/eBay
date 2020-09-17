@@ -31,11 +31,6 @@ class SellerTestGenerator(TestGenerator):
                 done = agent_tuple is None or agent_tuple[2]
         lstg_log.verify_done()
 
-    def generate(self):
-        while self.env.has_next_lstg():
-            self.env.next_lstg()
-            self.simulate_lstg()
-
     @property
     def env_class(self):
         return SellerEnv

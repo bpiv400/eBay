@@ -7,10 +7,10 @@ from rlpyt.utils.collections import namedarraytuple
 from rlenv.EBayEnv import EBayEnv
 from rlenv.events.Thread import Thread
 from agent.ConSpace import ConSpace
-from constants import INTERVAL_TURN, INTERVAL_CT_TURN, DAY, MAX_DELAY_TURN
-from featnames import BYR_HIST
+from constants import INTERVAL_TURN, INTERVAL_CT_TURN, DAY
+from featnames import BYR_HIST, START_PRICE
 
-Info = namedarraytuple("Info", ["days", "max_return", "num_offers", "num_threads",
+Info = namedarraytuple("Info", ["days", "max_return", "num_actions", "num_threads",
                                 "turn", "thread_id", "priority"])
 EventLog = namedtuple("EventLog", ["priority", "thread_id", "turn"])
 
@@ -18,13 +18,12 @@ EventLog = namedtuple("EventLog", ["priority", "thread_id", "turn"])
 class AgentEnv(EBayEnv, Env):
     def __init__(self, **kwargs):
         super().__init__(params=kwargs)
-        self.test = kwargs['test']
+        self.test = False if 'test' not in kwargs else kwargs['test']
 
         # parameters to be set later
         self.curr_event = None
         self.last_event = None
-        self.item_value = None
-        self.num_offers = None  # number of agents offers (excl. byr delays)
+        self.num_actions = None  # number of agents actions (incl. byr delays)
 
         # for passing an empty observation to agents
         self.empty_dict = {k: torch.zeros(v).float()
@@ -52,7 +51,7 @@ class AgentEnv(EBayEnv, Env):
         :return: tuple
         """
         obs = self.get_obs(event=event, done=done)
-        reward = self.get_reward()
+        reward = None if self.test else self.get_reward()
         return obs, reward, done, info
 
     def get_obs(self, event=None, done=None):
@@ -72,8 +71,8 @@ class AgentEnv(EBayEnv, Env):
 
     def get_info(self, event=None):
         return Info(days=self._get_days(event.priority),
-                    max_return=self.item_value,
-                    num_offers=self.num_offers,
+                    max_return=self.lookup[START_PRICE],
+                    num_actions=self.num_actions,
                     num_threads=self.thread_counter - 1,
                     turn=event.turn,
                     thread_id=event.thread_id,
@@ -90,15 +89,15 @@ class AgentEnv(EBayEnv, Env):
                                        max_interval=max_interval)
         return max(1, delay_seconds)
 
-    def init_reset(self):
+    def init_reset(self, push_arrival=True):
         self.curr_event = None
         self.last_event = None
-        self.num_offers = 0
+        self.num_actions = 0
         if not self.test:
             if not self.has_next_lstg():
                 raise RuntimeError("Out of lstgs")
             self.next_lstg()
-        super().reset()  # calls EBayEnvironment.reset()
+        super().reset(push_arrival)  # calls EBayEnv.reset()
 
     def turn_from_action(self, action=None):
         return self.con_set[action]

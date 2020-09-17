@@ -6,7 +6,6 @@ from rlenv.util import get_delay_outcomes, get_con_outcomes
 from utils import load_sizes
 from rlenv.const import DELAY_IND
 from constants import POLICY_SLR, MAX_DELAY_TURN
-from featnames import START_PRICE
 
 SellerObs = namedarraytuple("SellerObs",
                             list(load_sizes(POLICY_SLR)['x'].keys()))
@@ -27,8 +26,8 @@ class SellerEnv(AgentEnv):
                 return not(self.is_lstg_expired(event) or event.thread_expired())
         return False
 
-    def reset(self):
-        self.init_reset()  # in AgentEnvironment
+    def reset(self, hist=None):
+        self.init_reset()  # in AgentEnv
         while True:
             event, lstg_complete = super().run()  # calls EBayEnvironment.run()
 
@@ -47,10 +46,6 @@ class SellerEnv(AgentEnv):
             else:
                 return None  # for EvalGenerator
 
-    def init_reset(self):
-        super().init_reset()
-        self.item_value = self.lookup[START_PRICE]
-
     def step(self, action):
         """
         Process int giving concession/delay
@@ -65,7 +60,7 @@ class SellerEnv(AgentEnv):
             print('AGENT TURN: con: {}'.format(con))
 
         # execute offer
-        self.num_offers += 1
+        self.num_actions += 1
         if con <= 1:
             con_outcomes = get_con_outcomes(con=con,
                                             sources=self.curr_event.sources(),

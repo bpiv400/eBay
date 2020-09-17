@@ -94,11 +94,6 @@ class TestGenerator(Generator):
         }
         return params
 
-    def generate(self):
-        while self.env.has_next_lstg():
-            self.env.next_lstg()
-            self.simulate_lstg()
-
     def simulate_lstg(self):
         """
         Simulates a particular listing once

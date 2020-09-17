@@ -7,7 +7,7 @@ from constants import VALIDATION, RL_SLR, PARTS_DIR, DAY
 from featnames import LOOKUP, START_PRICE, SIM, OBS, X_OFFER, END_TIME
 
 PARTS = [VALIDATION, RL_SLR]
-FIXED_RUNS = [OBS, SIM, 'noslrexp', 'slraccrej']
+FIXED_RUNS = [OBS, SIM, 'noslrexp']
 
 
 def get_values(folder=None, part=None, subfolder='', restricted=False):
@@ -54,13 +54,9 @@ def populate_df(df=None, part=None, log_dir=None, run_ids=None,
 def main():
     # buyer flag
     parser = argparse.ArgumentParser()
-    parser.add_argument('--byr', action='store_true')
     parser.add_argument('--heuristic', action='store_true')
     args = parser.parse_args()
-    log_dir = get_log_dir(byr=args.byr)
-
-    if args.byr:
-        raise NotImplementedError()
+    log_dir = get_log_dir(byr=False)
 
     # initialize output dataframe
     run_ids = [p for p in os.listdir(log_dir) if os.path.isdir(log_dir + p)]

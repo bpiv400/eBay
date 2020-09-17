@@ -1,19 +1,18 @@
 import argparse
 import torch
 from agent.AgentComposer import AgentComposer
-from agent.models.AgentModel import AgentModel
-from agent.models.HeuristicSlr import HeuristicSlr
-from agent.util import get_paths
 from agent.envs.BuyerEnv import BuyerEnv
 from agent.envs.SellerEnv import SellerEnv
 from rlenv.generate.Generator import Generator
-from rlenv.generate.util import process_sims
 from rlenv.interfaces.PlayerInterface import SimulatedBuyer, SimulatedSeller
 from rlenv.util import sample_categorical
+from agent.models.AgentModel import AgentModel
+from agent.models.HeuristicSlr import HeuristicSlr
+from agent.util import get_paths
+from rlenv.generate.util import process_sims
 from utils import run_func_on_chunks, process_chunk_worker, compose_args
 from agent.const import PARAMS, AGENT_STATE, OPTIM_STATE
-from constants import VALIDATION, RL_SLR, RL_BYR, TEST, DROPOUT_GRID
-from featnames import BYR, DROPOUT
+from constants import VALIDATION, RL_SLR, RL_BYR, TEST
 
 
 class AgentGenerator(Generator):
@@ -46,11 +45,11 @@ class AgentGenerator(Generator):
                               test=True)
 
     def simulate_lstg(self):
-        obs = self.env.reset(next_lstg=False)
+        obs = self.env.reset()
         if obs is not None:
             done = False
             while not done:
-                probs, _ = self.model(observation=obs)
+                probs = self.model(observation=obs)
                 action = int(sample_categorical(probs=probs))
                 agent_tuple = self.env.step(action)
                 done = agent_tuple[2]
@@ -64,6 +63,7 @@ def load_agent_model(model_args=None, run_dir=None):
     if OPTIM_STATE in d:
         d = d[AGENT_STATE]
         torch.save(d, path)
+    d = {k: v for k, v in d.items() if not k.startswith('value')}
     model.load_state_dict(d, strict=True)
     for param in model.parameters(recurse=True):
         param.requires_grad = False
@@ -72,34 +72,30 @@ def load_agent_model(model_args=None, run_dir=None):
 
 
 def main():
+    # parameters from command line
     parser = argparse.ArgumentParser()
     parser.add_argument('--part', choices=[RL_SLR, RL_BYR, VALIDATION, TEST])
     parser.add_argument('--heuristic', action='store_true')
+    parser.add_argument('--suffix', type=str)
     compose_args(arg_dict=PARAMS, parser=parser)
-    args = vars(parser.parse_args())
-    byr, part, heuristic = args[BYR], args['part'], args['heuristic']
+    args = parser.parse_args()
 
-    if byr:
-        assert part != RL_SLR
-
-    # dropout as tuple of floats
-    args[DROPOUT] = DROPOUT_GRID[args[DROPOUT]]
+    # error checking
+    if args.byr:
+        assert args.part != RL_SLR
 
     # environment class and run directory
-    _, _, run_dir = get_paths(**args)
+    _, _, run_dir = get_paths(**vars(args))
 
     # recreate model
-    if heuristic:
-        if byr:
+    if args.heuristic:
+        if args.byr:
             raise NotImplementedError()
         else:
             model = HeuristicSlr()
     else:
-
         model = load_agent_model(
-            model_args=dict(byr=byr,
-                            dropout=args[DROPOUT],
-                            con_set=args['con_set']),
+            model_args=dict(byr=args.byr, con_set=args.con_set, value=False),
             run_dir=run_dir
         )
 
@@ -107,24 +103,24 @@ def main():
     sims = run_func_on_chunks(
         f=process_chunk_worker,
         func_kwargs=dict(
-            part=args['part'],
+            part=args.part,
             gen_class=AgentGenerator,
             gen_kwargs=dict(
                 model=model,
-                byr=byr,
-                slr=not byr,
-                con_set=args['con_set']
+                byr=args.byr,
+                slr=not args.byr,
+                con_set=args.con_set
             )
         )
     )
 
     # combine and process output
-    output_dir = run_dir + '{}/'.format(part)
-    if heuristic:
+    output_dir = run_dir + '{}/'.format(args.part)
+    if args.heuristic:
         output_dir += 'heuristic/'
-    process_sims(part=part, sims=sims, output_dir=output_dir)
+    process_sims(part=args.part, sims=sims, output_dir=output_dir)
 
 
 if __name__ == '__main__':
-    torch.multiprocessing.set_start_method('spawn')
+    torch.multiprocessing.set_start_method('forkserver')
     main()

@@ -1,6 +1,5 @@
 from compress_pickle import dump
-from utils import load_file
-from inputs.discrim import load_threads_offers
+from utils import load_file, load_data
 from constants import TEST, PLOT_DIR, IDX
 from featnames import META, START_PRICE, CON, NORM, SIM, OBS, SLR
 
@@ -30,8 +29,8 @@ def partition_d(d, idx):
 
 def main():
     # observed and simulated outcomes
-    threads_obs, offers_obs = load_threads_offers(sim=False)
-    threads_sim, offers_sim = load_threads_offers(sim=True)
+    threads_obs, offers_obs = load_data(sim=False)
+    threads_sim, offers_sim = load_data(sim=True)
 
     # lookup file
     lookup = load_file(TEST, 'lookup')

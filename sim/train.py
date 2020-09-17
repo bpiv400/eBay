@@ -1,4 +1,5 @@
 import argparse
+import torch
 from sim.SimTrainer import SimTrainer
 from utils import set_gpu
 from constants import MODELS, DISCRIM_MODEL, DROPOUT_GRID
@@ -16,7 +17,7 @@ def main():
     args = parser.parse_args()
 
     # set gpu and cpu affinity
-    set_gpu(args.gpu, spawn=False)
+    set_gpu(args.gpu)
 
     # initialize trainer
     trainer = SimTrainer(name=args.name)
@@ -29,4 +30,5 @@ def main():
 
 
 if __name__ == '__main__':
+    torch.multiprocessing.set_start_method('fork')
     main()

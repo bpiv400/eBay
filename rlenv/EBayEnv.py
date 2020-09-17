@@ -1,7 +1,6 @@
 from collections import namedtuple
-from utils import get_cut
 from constants import DAY, BYR_HIST_MODEL, INTERARRIVAL_MODEL, MAX_DELAY_ARRIVAL
-from featnames import DEC_PRICE, START_PRICE, DELAY, START_TIME, META, BYR
+from featnames import DEC_PRICE, START_PRICE, DELAY, START_TIME, BYR
 from utils import get_days_since_lstg
 from rlenv.Heap import Heap
 from rlenv.time.TimeFeatures import TimeFeatures
@@ -35,8 +34,6 @@ class EBayEnv:
         self.queue = Heap(entry_type=Event)
 
         # lstg params
-        self.cut = None
-        self.relist_count = 0
         self.end_time = None
         self.start_time = None
         self.thread_counter = 1
@@ -55,20 +52,20 @@ class EBayEnv:
             x_lstg_cols = self.composer.x_lstg_cols
             self.loader = TrainLoader(x_lstg_cols=x_lstg_cols, byr=False)
 
-    def reset(self):
+    def reset(self, push_arrival=True):
+        self.last_arrival_time = self.start_time
         self.queue.reset()
         self.time_feats.reset()
         self.outcome = None
         self.thread_counter = 1
-        sources = ArrivalSources(x_lstg=self.x_lstg)
-        event = Arrival(priority=self.start_time, sources=sources)
-        self.queue.push(event)
-        if self.recorder is not None:
-            self.recorder.reset_sim()
+        if push_arrival:
+            event = Arrival(priority=self.start_time,
+                            sources=ArrivalSources(x_lstg=self.x_lstg))
+            self.queue.push(event)
+        if self.verbose:
+            Recorder.print_lstg(self.lookup)
 
     def has_next_lstg(self):
-        if not self.loader.did_init:
-            self.loader.init()
         return self.loader.has_next()
 
     def next_lstg(self):
@@ -79,18 +76,13 @@ class EBayEnv:
         self.x_lstg = self.composer.decompose_x_lstg(x_lstg)
         self.lookup = lookup
         self.start_time = int(self.lookup[START_TIME])
-        self.last_arrival_time = self.start_time
         self.end_time = self.start_time + MAX_DELAY_ARRIVAL
-        self.relist_count = 0
         self.query_strategy.update_p_arrival(p_arrival=p_arrival)
-        self.cut = get_cut(self.lookup[META])
         if self.recorder is not None:
             # update listing in recorder
             self.recorder.update_lstg(lookup=self.lookup,
                                       lstg=self.loader.lstg)
-        else:
-            if self.verbose:
-                Recorder.print_lstg(lookup)
+        return self.loader.lstg
 
     def run(self):
         while True:
