@@ -173,7 +173,7 @@ class EBayPPO:
                     opt_info['{}{}'.format(prefix, 'Con')] = \
                         con_t[(con_t > 0) & (con_t < 1)]
 
-        opt_info['Rate_Sale'] = np.mean(reward[done].numpy() != 0)
+        opt_info['Rate_Sale'] = np.mean(reward[done].numpy() != 0.)
         opt_info['DollarReturn'] = return_[done].numpy()
         opt_info['NormReturn'] = (return_[done] / info.max_return[done]).numpy()
 
@@ -253,7 +253,7 @@ class EBayPPO:
         the ``agents.distribution`` to compute likelihoods and entropies.
         """
         # agents outputs
-        pi_new, value_params = self.agent(*agent_inputs, vparams=True)
+        pi_new, value_params = self.agent(*agent_inputs)
 
         # loss from policy
         ratio = self.agent.distribution.likelihood_ratio(action,

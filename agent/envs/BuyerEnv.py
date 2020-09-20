@@ -8,9 +8,10 @@ from agent.envs.AgentEnv import AgentEnv, EventLog
 from agent.util import define_con_set, load_values
 from rlenv.events.Event import Event
 from rlenv.events.Thread import Thread
+from agent.const import LSTG_SIM_CT
 from constants import HOUR, POLICY_BYR, PCTILE_DIR, INTERVAL_CT_ARRIVAL, \
     DAY, MAX_DAYS, RL_BYR
-from featnames import BYR_HIST
+from featnames import BYR_HIST, START_PRICE
 
 BuyerObs = namedarraytuple('BuyerObs',
                            list(load_sizes(POLICY_BYR)['x'].keys()))
@@ -21,6 +22,7 @@ class BuyerEnv(AgentEnv):
         super().__init__(**kwargs)
         self.hist = None
         self.agent_thread = None
+        self.lstg_sim_ct = None
 
         # for drawing experience
         path = PCTILE_DIR + '{}.pkl'.format(BYR_HIST)
@@ -37,13 +39,7 @@ class BuyerEnv(AgentEnv):
         running the environment
         :return: observation associated with the first rl arrival
         """
-        self.init_reset()  # in AgentEnv
-        self.agent_thread = 0
-        if hist is None:
-            self.hist = self._draw_hist()
-        else:  # for TestGenerator
-            self.hist = hist
-
+        self.init_reset(hist=hist)  # in ByrEnv
         while True:
             # put an RL arrival into the queue and run environment
             self.queue.push(self._create_rl_event(self.start_time))
@@ -60,6 +56,25 @@ class BuyerEnv(AgentEnv):
                 self.init_reset()
             else:  # for testing and evaluation
                 return None
+
+    def init_reset(self, hist=None, push_arrival=True):
+        self.curr_event = None
+        self.last_event = None
+        self.num_actions = 0
+        if not self.test:
+            if not self.has_next_lstg():
+                raise RuntimeError("Out of lstgs")
+            if self.lstg_sim_ct is None or self.lstg_sim_ct == LSTG_SIM_CT:
+                self.next_lstg()
+                self.lstg_sim_ct = 1
+            else:
+                self.lstg_sim_ct += 1
+        super().reset(push_arrival)  # calls EBayEnv.reset()
+        self.agent_thread = 0
+        if hist is None:
+            self.hist = self._draw_hist()
+        else:  # for TestGenerator
+            self.hist = hist
 
     def step(self, action):
         """
@@ -175,7 +190,8 @@ class BuyerEnv(AgentEnv):
             return 0.
 
         # sale to agent buyer
-        value = self.values.loc[self.loader.lstg]
+        # value = self.values.loc[self.loader.lstg]
+        value = self.lookup[START_PRICE]
         if self.verbose:
             print('Sale to RL buyer. Price: {0:.2f}. Value: {1:.2f}'.format(
                 self.outcome.price, value))

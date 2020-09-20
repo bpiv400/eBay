@@ -9,7 +9,8 @@ from rlpyt.utils.logging.context import logger_context
 from agent.const import AGENT_STATE, BATCH_SIZE
 from agent.util import get_paths
 from agent.AgentComposer import AgentComposer
-from agent.models.AgentModel import AgentModel, SplitCategoricalPgAgent
+from agent.models.AgentModel import AgentModel
+from agent.agents import SplitCategoricalPgAgent
 from rlenv.QueryStrategy import DefaultQueryStrategy
 from agent.envs.SellerEnv import SellerEnv
 from agent.envs.BuyerEnv import BuyerEnv
@@ -31,14 +32,15 @@ class RlTrainer:
         )
 
     def _generate_agent(self, serial=False):
-        kwargs = dict(
+        model_kwargs = dict(
                 byr=self.byr,
-                serial=serial,
                 con_set=self.con_set
             )
         return SplitCategoricalPgAgent(
             ModelCls=AgentModel,
-            model_kwargs=kwargs
+            model_kwargs=model_kwargs,
+            byr=self.byr,
+            serial=serial
         )
 
     def _generate_sampler(self, serial=False):

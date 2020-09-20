@@ -1,7 +1,6 @@
 import argparse
 import numpy as np
 import pandas as pd
-
 from agent.util import get_sale_norm
 from utils import unpickle, load_file
 from assess.const import SPLITS
@@ -121,20 +120,30 @@ def nw(y, kernel=None, dim=None):
     return y_hat
 
 
-def get_last_norm(norm=None):
-    return norm.groupby(norm.index.names[:-1]).shift().dropna()
+def get_last(x=None):
+    return x.groupby(x.index.names[:-1]).shift().dropna()
 
 
 def norm_norm(offers=None):
-    last_norm = get_last_norm(offers[NORM])
+    last_norm = get_last(offers[NORM])
+    last_auto = get_last(offers[AUTO])
     dim = np.arange(.5, .9 + EPS, .01)
     y_hat = {}
-    for t in [2, 4, 6]:
-        x = last_norm.xs(t, level='index')
-        y = 1 - offers[NORM].xs(t, level='index')
+    for t in range(2, 7):
+        x = last_norm.xs(t, level=INDEX)
+        y = offers[NORM].xs(t, level=INDEX)
         assert np.all(y.index == x.index)
-        kernel = gaussian_kernel(x)
-        y_hat[t] = nw(y, kernel=kernel, dim=dim)
+        if t % 2 == 0:
+            y = 1 - y
+        else:
+            x = 1 - x
+        if np.std(x) > .01:
+            kernel = gaussian_kernel(x)
+            y_hat[t] = nw(y, kernel=kernel, dim=dim)
+            if t % 2 == 1:
+                auto_t = last_auto.xs(t, level=INDEX)
+                y_hat[t].loc[1.] = y[(x == 1) & ~auto_t].mean()
+                y_hat[t].loc[1.05] = y[(x == 1) & auto_t].mean()
     return y_hat
 
 
@@ -159,7 +168,7 @@ def dim_from_df(df):
 
 
 def accept3d(offers=None, other=None):
-    last_norm = get_last_norm(offers[NORM])
+    last_norm = get_last(offers[NORM])
     df = last_norm.to_frame().join(other)
 
     y_hat = {}
@@ -174,7 +183,7 @@ def accept3d(offers=None, other=None):
 
 
 def action_dist(offers=None, dims=None):
-    norm = get_last_norm(offers[NORM])
+    norm = get_last(offers[NORM])
     y_hat = {}
     for t in dims.keys():
         # inputs

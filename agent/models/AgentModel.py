@@ -1,8 +1,5 @@
 import numpy as np
 import torch
-from rlpyt.agents.pg.categorical import CategoricalPgAgent
-from rlpyt.distributions.categorical import DistInfo
-from rlpyt.utils.buffer import buffer_to
 from torch.nn.functional import softmax, softplus
 from nets.FeedForward import FeedForward
 from agent.util import define_con_set
@@ -21,11 +18,10 @@ class AgentModel(torch.nn.Module):
     4. Both networks use batch normalization
     5. Both networks use dropout with shared dropout hyperparameters
     """
-    def __init__(self, byr=None, serial=False, con_set=None, value=True):
+    def __init__(self, byr=None, con_set=None, value=True):
         """
         Initializes feed-forward networks for agents.
         :param bool byr: use buyer sizes if True.
-        :param bool serial: serial sampler doesn't like squeezed outputs.
         :param str con_set: restricts concession set.
         :param bool value: estimate value if true
         """
@@ -33,7 +29,6 @@ class AgentModel(torch.nn.Module):
 
         # save params to self
         self.byr = byr
-        self.serial = serial
         self.con_set = con_set
         self.value = value
 
@@ -50,13 +45,13 @@ class AgentModel(torch.nn.Module):
             sizes['out'] = 4 if byr else 5
             self.value_net = FeedForward(sizes=sizes, dropout=DROPOUT)
 
-    def forward(self, observation, prev_action=None, prev_reward=None, vparams=False):
+    def forward(self, observation, prev_action=None, prev_reward=None, value_only=False):
         """
         Predicts policy distribution and state value.
         :param namedtuplearray observation: contains dict of agents inputs
         :param None prev_action: (not used; for recurrent agents only)
         :param None prev_reward: (not used; for recurrent agents only)
-        :param bool vparams: return parameters of value distribution if True, mean if False
+        :param bool value_only: only return value if True
         :return: tuple of policy distribution, value
         """
         # noinspection PyProtectedMember
@@ -71,6 +66,15 @@ class AgentModel(torch.nn.Module):
                 input_dict[elem_name] = elem.unsqueeze(0)
             if self.training:
                 self.eval()
+
+        if self.value:
+            value_params = self.value_net(input_dict)
+            pi = softmax(value_params[:, :-2], dim=-1)
+            beta_params = softplus(torch.clamp(value_params[:, -2:], min=-5))
+            a, b = beta_params[:, 0], beta_params[:, 1]
+
+            if value_only:
+                return pi, a, b
 
         # policy as categorical distribution
         theta = self.policy_net(input_dict)
@@ -87,47 +91,8 @@ class AgentModel(torch.nn.Module):
             theta[t7, 1:100] = -np.inf
 
         pdf = softmax(theta, dim=-1)
-        if not self.serial:
-            pdf = pdf.squeeze()
 
-        if not self.value:
-            return pdf
-
-        # value
-        value_params = self.value_net(input_dict)
-        pi = softmax(value_params[:, :-2], dim=-1)
-        beta_params = softplus(torch.clamp(value_params[:, -2:], min=-5))
-        a, b = beta_params[:, 0], beta_params[:, 1]
-
-        if vparams:
-            if not self.serial:
-                pi = pi.squeeze()
-                a = a.squeeze()
-                b = b.squeeze()
+        if self.value:
             return pdf, (pi, a, b)
-
-        if self.byr:  # values range from -1 to 1
-            v = pi[:, -1] * (a / (a + b) * 2 - 1)
         else:
-            v += pi[:, 1] + pi[:, -1] * a / (a + b)
-
-        if not self.serial:
-            v = v.squeeze()
-
-        return pdf, v
-
-
-class SplitCategoricalPgAgent(CategoricalPgAgent):
-
-    def __call__(self, observation, prev_action, prev_reward, vparams=False):
-        prev_action = self.distribution.to_onehot(prev_action)
-        model_inputs = buffer_to((observation, prev_action, prev_reward),
-                                 device=self.device)
-        pi, v = self.model(*model_inputs, vparams=vparams)
-        return buffer_to((DistInfo(prob=pi), v), device="cpu")
-
-    def value_parameters(self):
-        return self.model.value_net.parameters()
-
-    def policy_parameters(self):
-        return self.model.policy_net.parameters()
+            return pdf

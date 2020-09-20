@@ -5,7 +5,7 @@ from agent.util import find_best_run, get_valid_slr
 from utils import topickle
 from constants import PLOT_DIR, TEST
 from featnames import SLR, START_PRICE, OBS, RL, ARRIVAL, BYR_HIST, DELAY, CON, \
-    ACCEPT
+    ACCEPT, NORM
 
 
 def collect_outputs(data=None, lookup=None, name=None):
@@ -27,7 +27,7 @@ def collect_outputs(data=None, lookup=None, name=None):
     d['cdf_{}'.format(CON)] = con_dist(offers)
 
     # norm-norm plot
-    d['norm-norm'] = norm_norm(offers)
+    d['norm-norm'] = norm_norm(offers[NORM])
 
     # thread and offer counts
     for k in ['threads', 'offers']:

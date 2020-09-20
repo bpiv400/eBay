@@ -61,9 +61,13 @@ def process_sim_threads(df=None, lstg_start=None):
 
 
 def process_sim_delays(s=None, lstg_start=None):
-    s = (s - lstg_start.reindex(index=s.index)) / DAY
-    s = s.rename(DAYS_SINCE_LSTG)
-    return s
+    tdiff = s - lstg_start.reindex(index=s.index)
+    day = tdiff // DAY
+    sec = tdiff % DAY
+    delays = pd.concat([sec.rename('sec_since_midnight'),
+                        day.rename('day')], axis=1)
+    delays = delays.set_index('day', append=True).sort_index().squeeze()
+    return delays
 
 
 def concat_sim_chunks(sims):

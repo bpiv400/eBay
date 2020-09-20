@@ -1,5 +1,5 @@
 from sklearn.tree import DecisionTreeClassifier, export_text
-from assess.util import load_data, get_last_norm, get_log_dir
+from assess.util import load_data, get_last, get_log_dir
 from agent.util import find_best_run
 from utils import load_file
 from constants import TEST, DAY
@@ -34,7 +34,7 @@ def main():
         X = threads[BYR_HIST].reindex(index=idx).to_frame()
         X['thread_num'] = X.index.get_level_values('thread')
         X['days'] = (clock.loc[idx] - lookup[START_TIME]) / DAY
-        X = X.join(get_last_norm(offers[NORM]))
+        X = X.join(get_last(offers[NORM]))
         X = X.join(lookup[START_PRICE])
 
         # split out columns names

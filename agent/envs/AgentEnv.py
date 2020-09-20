@@ -52,6 +52,8 @@ class AgentEnv(EBayEnv, Env):
         """
         obs = self.get_obs(event=event, done=done)
         reward = None if self.test else self.get_reward()
+        if self.verbose and not self.test and done:
+            print('Agent reward: ${0:.2f}'.format(reward))
         return obs, reward, done, info
 
     def get_obs(self, event=None, done=None):
