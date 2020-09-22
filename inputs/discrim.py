@@ -2,7 +2,7 @@ import numpy as np
 from inputs.util import save_featnames_and_sizes, \
     convert_x_to_numpy, get_x_thread, get_ind_x
 from utils import topickle, load_file, input_partition, load_data
-from constants import DISCRIM, VALIDATION, TEST, DISCRIM_MODEL, INPUT_DIR
+from constants import TRAIN_RL, VALIDATION, TEST, DISCRIM_MODEL, INPUT_DIR
 from featnames import SPLIT, DAYS, DELAY, EXP, AUTO, REJECT, MSG, LOOKUP, THREAD, \
     INDEX, X_THREAD, X_OFFER
 
@@ -88,7 +88,7 @@ def construct_x(part=None, sim=False):
 def main():
     # extract parameters from command line
     part = input_partition()
-    assert part in [DISCRIM, VALIDATION, TEST]
+    assert part in [TRAIN_RL, VALIDATION, TEST]
     print('{}/{}'.format(part, DISCRIM_MODEL))
 
     # listing ids

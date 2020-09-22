@@ -41,17 +41,15 @@ FIG_DIR = os.path.expanduser('~/eBay/figures/')  # for saving figures
 
 # partitions
 TRAIN_MODELS = 'sim'
-DISCRIM = 'discrim'
-RL_SLR = 'rl_slr'
-RL_BYR = 'rl_byr'
+TRAIN_RL = 'rl'
 VALIDATION = 'valid'
 TEST = VALIDATION  # TODO: rename to 'testing' when using real testing data
-PARTITIONS = [TRAIN_MODELS, DISCRIM, RL_SLR, RL_BYR, VALIDATION, TEST]
+PARTITIONS = [TRAIN_MODELS, TRAIN_RL, VALIDATION, TEST]
 SIM_PARTITIONS = [TRAIN_MODELS, VALIDATION, TEST]
-AGENT_PARTITIONS = [RL_SLR, RL_BYR, DISCRIM, VALIDATION, TEST]
+AGENT_PARTITIONS = [TRAIN_RL, TRAIN_RL, VALIDATION, TEST]
 
 # for splitting data
-SHARES = {TRAIN_MODELS: 0.75, RL_SLR: 0.05, RL_BYR: 0.05, VALIDATION: 0.05}
+SHARES = {TRAIN_MODELS: 0.75, TRAIN_RL: 0.1, VALIDATION: 0.05}
 
 # listing window stays open this many days
 MAX_DAYS = 8
@@ -131,8 +129,8 @@ BYR_DROP = ['lstg_ct', 'bo_ct', 'auto_decline', 'has_decline']
 # for precision issues
 EPS = 1e-8
 
-# number of times to simulate each listing
-VALUE_SIMS = 10
+# number of sales to simulate for each listing
+VALUE_SIMS = 25
 
 # dropout options
 DROPOUT_GRID = []

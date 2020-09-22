@@ -3,10 +3,10 @@ import os
 import pandas as pd
 from agent.util import get_log_dir, get_valid_slr, get_value_slr
 from utils import unpickle, load_file, topickle
-from constants import VALIDATION, RL_SLR, PARTS_DIR, DAY
+from constants import VALIDATION, TRAIN_RL, PARTS_DIR, DAY
 from featnames import LOOKUP, START_PRICE, SIM, OBS, X_OFFER, END_TIME
 
-PARTS = [VALIDATION, RL_SLR]
+PARTS = [VALIDATION, TRAIN_RL]
 FIXED_RUNS = [OBS, SIM, 'noslrexp']
 
 

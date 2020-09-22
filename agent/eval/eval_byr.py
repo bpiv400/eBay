@@ -2,9 +2,9 @@ import os
 import pandas as pd
 from agent.util import get_log_dir, find_best_run, get_valid_byr, get_value_byr
 from utils import unpickle, topickle, load_data
-from constants import VALIDATION, RL_BYR
+from constants import VALIDATION, TRAIN_RL
 
-PARTS = [VALIDATION, RL_BYR]
+PARTS = [VALIDATION, TRAIN_RL]
 
 
 def main():

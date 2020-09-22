@@ -10,7 +10,7 @@ from rlpyt.utils.collections import AttrDict
 from rlpyt.utils.seed import set_seed, make_seed, set_envs_seeds
 from rlpyt.utils.logging import logger
 from rlpyt.utils.prog_bar import ProgBarCounter
-from rlenv.LstgLoader import TrainLoader
+from agent.AgentLoader import AgentLoader
 
 
 class EBayBaseRunner(BaseRunner):

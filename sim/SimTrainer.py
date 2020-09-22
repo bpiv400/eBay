@@ -8,7 +8,7 @@ from sim.EBayDataset import EBayDataset
 from nets.FeedForward import FeedForward
 from sim.Sample import get_batches
 from constants import MODEL_DIR, LOG_DIR, CENSORED_MODELS, BYR_HIST_MODEL, \
-    MODEL_NORM, VALIDATION, DISCRIM_MODEL, TRAIN_MODELS, DISCRIM
+    MODEL_NORM, VALIDATION, DISCRIM_MODEL, TRAIN_MODELS, TRAIN_RL
 from utils import load_sizes
 
 LR_FACTOR = 0.1  # multiply learning rate by this factor when training slows
@@ -42,7 +42,7 @@ class SimTrainer:
         print(self.sizes)
 
         # load datasets
-        train_part = DISCRIM if name == DISCRIM_MODEL else TRAIN_MODELS
+        train_part = TRAIN_RL if name == DISCRIM_MODEL else TRAIN_MODELS
         self.train = EBayDataset(part=train_part, name=name)
         self.valid = EBayDataset(part=VALIDATION, name=name)
 

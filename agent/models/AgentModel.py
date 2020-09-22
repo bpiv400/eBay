@@ -1,6 +1,6 @@
 import numpy as np
 import torch
-from torch.nn.functional import softmax, softplus
+from torch.nn.functional import softmax
 from nets.FeedForward import FeedForward
 from agent.util import define_con_set
 from utils import load_sizes
@@ -38,12 +38,13 @@ class AgentModel(torch.nn.Module):
         # policy net
         sizes = load_sizes(POLICY_BYR if byr else POLICY_SLR)
         sizes['out'] = self.out
-        self.policy_net = FeedForward(sizes=sizes, dropout=DROPOUT)
+        self.policy_net = FeedForward(sizes=sizes, hidden=512, dropout=DROPOUT)
+        print(self.policy_net)
 
         # value net
         if self.value:
-            sizes['out'] = 4 if byr else 5
-            self.value_net = FeedForward(sizes=sizes, dropout=DROPOUT)
+            sizes['out'] = 5
+            self.value_net = FeedForward(sizes=sizes, hidden=512, dropout=DROPOUT)
 
     def forward(self, observation, prev_action=None, prev_reward=None, value_only=False):
         """
@@ -69,14 +70,15 @@ class AgentModel(torch.nn.Module):
 
         if self.value:
             value_params = self.value_net(input_dict)
-            pi = softmax(value_params[:, :-2], dim=-1)
-            beta_params = softplus(torch.clamp(value_params[:, -2:], min=-5))
-            a, b = beta_params[:, 0], beta_params[:, 1]
-
             if value_only:
-                return pi, a, b
+                return value_params
+            else:
+                pdf = self._get_pdf(input_dict)
+                return pdf, value_params
+        else:
+            return self._get_pdf(input_dict)
 
-        # policy as categorical distribution
+    def _get_pdf(self, input_dict):
         theta = self.policy_net(input_dict)
         if self.byr:
             # no small concessions on turn 1
@@ -88,11 +90,10 @@ class AgentModel(torch.nn.Module):
 
             # accept or reject on turn 7
             t7 = torch.sum(input_dict[LSTG][:, [-3, -2, -1]], dim=1) == 0
-            theta[t7, 1:100] = -np.inf
+            theta[t7, 0] = 0.
+            if self.con_set == FULL:
+                theta[t7, 1:100] = -np.inf
+            else:
+                theta[t7, 1:10] = -np.inf
 
-        pdf = softmax(theta, dim=-1)
-
-        if self.value:
-            return pdf, (pi, a, b)
-        else:
-            return pdf
+        return softmax(theta, dim=-1)

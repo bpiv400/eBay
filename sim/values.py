@@ -5,7 +5,7 @@ import pandas as pd
 from sim.envs import SimulatorEnv
 from sim.generate import OutcomeGenerator
 from utils import run_func_on_chunks, process_chunk_worker, input_partition, topickle
-from constants import PARTS_DIR, RL_BYR, VALIDATION, TEST, VALUE_SIMS
+from constants import PARTS_DIR, VALUE_SIMS
 from featnames import LSTG
 
 COLS = [LSTG, 'sale', 'sale_price', 'relist_ct']
@@ -51,7 +51,6 @@ class ValueGenerator(OutcomeGenerator):
 
 def main():
     part = input_partition()
-    assert part in [RL_BYR, VALIDATION, TEST]
 
     # process chunks in parallel
     sims = run_func_on_chunks(

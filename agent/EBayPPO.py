@@ -1,6 +1,5 @@
 import numpy as np
 import torch
-from torch.distributions import Beta
 from torch.optim import Adam
 from collections import namedtuple, OrderedDict
 from rlpyt.agents.base import AgentInputs
@@ -10,7 +9,7 @@ from rlpyt.utils.collections import namedarraytuple
 from agent.util import define_con_set
 from agent.const import PERIOD_EPOCHS, LR_POLICY, LR_VALUE, RATIO_CLIP, \
     ENTROPY_THRESHOLD, ENTROPY
-from constants import IDX, EPS
+from constants import IDX
 from featnames import BYR, SLR
 
 LossInputs = namedarraytuple("LossInputs",
@@ -173,9 +172,11 @@ class EBayPPO:
                     opt_info['{}{}'.format(prefix, 'Con')] = \
                         con_t[(con_t > 0) & (con_t < 1)]
 
-        opt_info['Rate_Sale'] = np.mean(reward[done].numpy() != 0.)
-        opt_info['DollarReturn'] = return_[done].numpy()
-        opt_info['NormReturn'] = (return_[done] / info.max_return[done]).numpy()
+        traj_value = return_[done]
+        no_sale = torch.isclose(traj_value, torch.zeros_like(traj_value))
+        opt_info['Rate_Sale'] = np.mean(~no_sale.numpy())
+        opt_info['DollarReturn'] = traj_value.numpy()
+        opt_info['NormReturn'] = (traj_value / info.max_return[done]).numpy()
 
         # normalize return and calculate advantage
         return_ /= info.max_return
@@ -266,20 +267,7 @@ class EBayPPO:
         pi_loss = - valid_mean(surrogate, valid)
 
         # loss from value estimation
-        pi, a, b = value_params
-        idx0 = (return_ == 0) & valid  # no sale
-        lnL = torch.sum(torch.log(pi[idx0, 0] + EPS))
-        if not self.byr:
-            idx1 = (return_ == 1) & valid  # sells for list price
-            lnL += torch.sum(torch.log(pi[idx1, 1] + EPS))
-            idx_beta = (0 < return_) & (return_ < 1) & valid  # intermediate outcome
-            return_beta = return_[idx_beta]
-        else:
-            idx_beta = (return_ != 0) & valid
-            return_beta = torch.clamp((return_[idx_beta] + 1) / 2, min=EPS)
-        lnL += torch.sum(torch.log(pi[idx_beta, -1] + EPS))
-        lnL += torch.sum(Beta(a[idx_beta], b[idx_beta]).log_prob(return_beta))
-        value_loss = -lnL
+        value_loss = self.agent.get_value_loss(value_params, return_, valid)
 
         # entropy bonus
         entropy = self.agent.distribution.entropy(pi_new)[valid]

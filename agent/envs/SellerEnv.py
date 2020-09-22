@@ -6,6 +6,7 @@ from rlenv.util import get_delay_outcomes, get_con_outcomes
 from utils import load_sizes
 from rlenv.const import DELAY_IND
 from constants import POLICY_SLR, MAX_DELAY_TURN
+from featnames import START_PRICE
 
 SellerObs = namedarraytuple("SellerObs",
                             list(load_sizes(POLICY_SLR)['x'].keys()))
@@ -118,6 +119,9 @@ class SellerEnv(AgentEnv):
 
     def _define_con_set(self, con_set):
         return define_con_set(con_set=con_set, byr=False)
+
+    def _define_max_return(self):
+        return self.lookup[START_PRICE]
 
     @property
     def horizon(self):

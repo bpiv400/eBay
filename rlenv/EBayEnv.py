@@ -14,7 +14,7 @@ from rlenv.events.Thread import Thread
 from rlenv.const import INTERACT, ACC_IND, CON, MSG, REJ_IND, OFF_IND, \
     ARRIVAL, FIRST_OFFER, OFFER_EVENT, DELAY_EVENT
 from rlenv.util import get_clock_feats, get_con_outcomes, need_msg, model_str
-from rlenv.LstgLoader import TrainLoader
+from agent.AgentLoader import AgentLoader
 
 
 class EBayEnv:
@@ -50,7 +50,7 @@ class EBayEnv:
             self.loader = params['loader']
         else:
             x_lstg_cols = self.composer.x_lstg_cols
-            self.loader = TrainLoader(x_lstg_cols=x_lstg_cols, byr=False)
+            self.loader = AgentLoader(x_lstg_cols=x_lstg_cols, byr=False)
 
     def reset(self, push_arrival=True):
         self.last_arrival_time = self.start_time

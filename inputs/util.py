@@ -3,9 +3,10 @@ import pandas as pd
 from utils import unpickle, topickle
 from inputs.const import NUM_OUT
 from constants import INPUT_DIR, INDEX_DIR, VALIDATION, \
-    IDX, DISCRIM_MODEL, POLICY_BYR, BYR_DROP
+    IDX, DISCRIM_MODEL, POLICY_BYR, POLICY_MODELS, BYR_DROP
 from featnames import CLOCK_FEATS, OUTCOME_FEATS, SPLIT, MSG, AUTO, LSTG, X_LSTG, \
-    EXP, REJECT, DAYS, DELAY, TIME_FEATS, THREAD_COUNT, BYR, INDEX, SLR, THREAD
+    EXP, REJECT, DAYS, DELAY, TIME_FEATS, THREAD_COUNT, BYR, INDEX, SLR, THREAD, \
+    META, LEAF
 
 
 def add_turn_indicators(df):
@@ -108,9 +109,12 @@ def save_featnames_and_sizes(x=None, m=None):
     sizes = dict()
     sizes['x'] = {k: len(v) for k, v in featnames.items()}
 
+    if m in POLICY_MODELS:
+        for k in [SLR, META, LEAF]:
+            del featnames[k]
+            del sizes['x'][k]
+
     if m == POLICY_BYR:
-        del featnames[SLR]
-        del sizes['x'][SLR]
         featnames[LSTG] = [k for k in featnames[LSTG] if k not in BYR_DROP]
         sizes['x'][LSTG] = len(featnames[LSTG])
 

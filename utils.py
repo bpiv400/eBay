@@ -234,10 +234,7 @@ def input_partition():
     :return part: string partition name.
     """
     parser = argparse.ArgumentParser()
-
-    # partition
-    parser.add_argument('--part', required=True, type=str,
-                        choices=PARTITIONS, help='partition name')
+    parser.add_argument('--part', required=True, type=str)
     return parser.parse_args().part
 
 

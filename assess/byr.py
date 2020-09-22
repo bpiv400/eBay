@@ -1,7 +1,7 @@
 from agent.util import get_log_dir, get_valid_byr, load_values
 from assess.util import discrete_pdf, discrete_cdf, get_sale_norm, norm_norm
 from utils import load_data
-from constants import TEST, RL_BYR
+from constants import TEST, TRAIN_RL
 from featnames import CON, INDEX, THREAD, X_OFFER, X_THREAD, LOOKUP, START_PRICE, \
     DAYS_SINCE_LSTG, AUTO, LSTG, NORM
 

@@ -5,7 +5,7 @@ import numpy as np
 from agent.util import get_agent_name
 from constants import PARTS_DIR, VALIDATION, BYR_DROP
 from featnames import OUTCOME_FEATS, DAYS_SINCE_LSTG, BYR_HIST, \
-    TIME_FEATS, CLOCK_FEATS, THREAD_COUNT, TURN_FEATS, SLR, BYR
+    TIME_FEATS, CLOCK_FEATS, THREAD_COUNT, TURN_FEATS, SLR, BYR, META, LEAF
 from rlenv.Composer import Composer
 from rlenv.const import LSTG_MAP, OFFER_MAPS, THREAD_COUNT_IND, \
     TIME_START_IND, TIME_END_IND
@@ -67,15 +67,13 @@ class AgentComposer(Composer):
         return obs_dict
 
     def _build_agent_lstg_vector(self, sources=None):
-        feats = []
+        feats = [sources[LSTG_MAP]]
         solo_feats = [sources[DAYS_SINCE_LSTG], sources[BYR_HIST]]
 
         # set base, add thread count if slr
         if self.byr:
-            byr_subset = [sources[LSTG_MAP][i] for i in self.byr_idx]
-            feats.append(byr_subset)
+            feats = [np.array([feats[0][i] for i in self.byr_idx])]
         else:
-            feats.append(sources[LSTG_MAP])
             solo_feats.append(sources[OFFER_MAPS[1]][THREAD_COUNT_IND] + 1)
 
         # append solo feats and turn indicators
@@ -105,8 +103,10 @@ class AgentComposer(Composer):
             assert len(set(lstg) & set(BYR_DROP)) == 0
             lstg_sets[LSTG_MAP] = lstg
 
-            # remove slr feats
-            del lstg_sets[SLR]
+        # remove slr, meta and leaf feats
+        for k in [SLR, META, LEAF]:
+            del lstg_sets[k]
+
         # verify shared lstg features
         Composer.verify_lstg_sets_shared(self.agent_name,
                                          self.x_lstg_cols,

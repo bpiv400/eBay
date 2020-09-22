@@ -24,6 +24,7 @@ class AgentEnv(EBayEnv, Env):
         self.curr_event = None
         self.last_event = None
         self.num_actions = None  # number of agents actions (incl. byr delays)
+        self.max_return = None
 
         # for passing an empty observation to agents
         self.empty_dict = {k: torch.zeros(v).float()
@@ -53,7 +54,8 @@ class AgentEnv(EBayEnv, Env):
         obs = self.get_obs(event=event, done=done)
         reward = None if self.test else self.get_reward()
         if self.verbose and not self.test and done:
-            print('Agent reward: ${0:.2f}'.format(reward))
+            print('Agent reward: ${0:.2f}. Normalized: {1:.1f}%'.format(
+                reward, 100 * reward / self.max_return))
         return obs, reward, done, info
 
     def get_obs(self, event=None, done=None):
@@ -73,7 +75,7 @@ class AgentEnv(EBayEnv, Env):
 
     def get_info(self, event=None):
         return Info(days=self._get_days(event.priority),
-                    max_return=self.lookup[START_PRICE],
+                    max_return=self.max_return,
                     num_actions=self.num_actions,
                     num_threads=self.thread_counter - 1,
                     turn=event.turn,
@@ -100,6 +102,10 @@ class AgentEnv(EBayEnv, Env):
                 raise RuntimeError("Out of lstgs")
             self.next_lstg()
         super().reset(push_arrival)  # calls EBayEnv.reset()
+        self.max_return = self._define_max_return()
+
+    def _define_max_return(self):
+        raise NotImplementedError()
 
     def turn_from_action(self, action=None):
         return self.con_set[action]

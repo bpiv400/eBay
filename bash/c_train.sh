@@ -56,7 +56,7 @@ python repo/sim/best_models.py
 #python repo/plots/training_curves.py
 
 # chunks
-for part in valid discrim rl_slr rl_byr
+for part in valid discrim rl
 do
   python repo/sim/chunks.py --part $part
 done

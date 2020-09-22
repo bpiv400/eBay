@@ -12,7 +12,7 @@ from agent.util import get_paths
 from rlenv.generate.util import process_sims
 from utils import run_func_on_chunks, process_chunk_worker, compose_args
 from agent.const import PARAMS, AGENT_STATE, OPTIM_STATE
-from constants import VALIDATION, RL_SLR, RL_BYR, TEST
+from constants import VALIDATION, TRAIN_RL, TRAIN_RL, TEST
 
 
 class AgentGenerator(Generator):
@@ -74,7 +74,7 @@ def load_agent_model(model_args=None, run_dir=None):
 def main():
     # parameters from command line
     parser = argparse.ArgumentParser()
-    parser.add_argument('--part', choices=[RL_SLR, RL_BYR, VALIDATION, TEST])
+    parser.add_argument('--part', choices=[TRAIN_RL, TRAIN_RL, VALIDATION, TEST])
     parser.add_argument('--heuristic', action='store_true')
     parser.add_argument('--suffix', type=str)
     compose_args(arg_dict=PARAMS, parser=parser)
@@ -82,7 +82,7 @@ def main():
 
     # error checking
     if args.byr:
-        assert args.part != RL_SLR
+        assert args.part != TRAIN_RL
 
     # environment class and run directory
     _, _, run_dir = get_paths(**vars(args))

@@ -10,19 +10,23 @@ from agent.const import AGENT_STATE, BATCH_SIZE
 from agent.util import get_paths
 from agent.AgentComposer import AgentComposer
 from agent.models.AgentModel import AgentModel
-from agent.agents import SplitCategoricalPgAgent
+from agent.agents import SellerAgent, BuyerBINAgent, BuyerMarketAgent
 from rlenv.QueryStrategy import DefaultQueryStrategy
 from agent.envs.SellerEnv import SellerEnv
 from agent.envs.BuyerEnv import BuyerEnv
 from rlenv.interfaces.ArrivalInterface import ArrivalInterface
 from rlenv.interfaces.PlayerInterface import SimulatedSeller, SimulatedBuyer
-from rlenv.LstgLoader import TrainLoader
+from agent.AgentLoader import AgentLoader
 
 
 class RlTrainer:
-    def __init__(self, byr=False, con_set=False):
+    def __init__(self, byr=False, con_set=False, market=False):
         self.byr = byr
         self.con_set = con_set
+        if not self.byr:
+            assert not market
+        else:
+            self.market = market
 
     def _generate_query_strategy(self):
         return DefaultQueryStrategy(
@@ -36,27 +40,32 @@ class RlTrainer:
                 byr=self.byr,
                 con_set=self.con_set
             )
-        return SplitCategoricalPgAgent(
+        if self.byr:
+            agent_cls = BuyerMarketAgent if self.market else BuyerBINAgent
+        else:
+            agent_cls = SellerAgent
+        return agent_cls(
             ModelCls=AgentModel,
             model_kwargs=model_kwargs,
-            byr=self.byr,
             serial=serial
         )
 
-    def _generate_sampler(self, serial=False):
-        # environment
+    def _generate_env(self, verbose):
         composer = AgentComposer(byr=self.byr)
         env_params = dict(
             composer=composer,
-            verbose=serial,
+            verbose=verbose,
             query_strategy=self._generate_query_strategy(),
             con_set=self.con_set,
-            loader=TrainLoader(
-                x_lstg_cols=composer.x_lstg_cols,
-                byr=self.byr
-            )
+            loader=AgentLoader()
         )
+        if self.byr:
+            env_params['market'] = self.market
         env = BuyerEnv if self.byr else SellerEnv
+        return env, env_params
+
+    def _generate_sampler(self, serial=False):
+        env, env_params = self._generate_env(serial)
 
         # sampler and batch sizes
         if serial:
