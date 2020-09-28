@@ -157,9 +157,9 @@ def save_featnames_and_sizes(x=None, m=None):
 def convert_x_to_numpy(x, idx):
     """
     Converts dictionary of dataframes to dictionary of numpy arrays.
-    :param x: dictionary of input dataframes.
-    :param idx: pandas index for error checking indices.
-    :return: dictionary of numpy arrays.
+    :param dict x: contains input dataframes.
+    :param pd.(Multi)Index idx: for error checking indices.
+    :return: dict of numpy arrays.
     """
     for k, v in x.items():
         assert np.all(v.index == idx)

@@ -6,7 +6,7 @@ from featnames import CON, AUTO, LOOKUP, SLR, INDEX, MSG, REJECT, NORM, \
     SPLIT, THREAD, X_THREAD, X_OFFER
 
 
-def get_x_offer(offers, idx):
+def get_x_offer(offers=None, idx=None):
     # initialize dictionary of offer features
     x_offer = {}
 
@@ -42,11 +42,11 @@ def get_x_offer(offers, idx):
     return x_offer
 
 
-def construct_x(idx=None, threads=None, offers=None):
+def construct_x(idx=None, data=None):
     # initialize dictionary with thread features
-    x = {THREAD: get_x_thread(threads, idx, turn_indicators=True)}
+    x = {THREAD: get_x_thread(data[X_THREAD], idx, turn_indicators=True)}
     # offer features
-    x.update(get_x_offer(offers, idx))
+    x.update(get_x_offer(data[X_OFFER], idx))
     # no nans
     for v in x.values():
         assert v.isna().sum().sum() == 0
@@ -60,23 +60,18 @@ def create_index(offers):
     return idx
 
 
-def process_inputs():
-    # load dataframes
-    lstgs = load_file(VALIDATION, LOOKUP).index
-    threads = load_file(VALIDATION, X_THREAD)
-    offers = load_file(VALIDATION, X_OFFER)
-
+def process_slr_inputs(data=None):
     # master index
-    idx = create_index(offers)
+    idx = create_index(data[X_OFFER])
 
     # outcome and master index
-    y = (offers.loc[idx, CON] * CON_MULTIPLIER).astype('int8')
+    y = (data[X_OFFER].loc[idx, CON] * CON_MULTIPLIER).astype('int8')
 
     # input features dictionary
-    x = construct_x(idx=idx, threads=threads, offers=offers)
+    x = construct_x(idx=idx, data=data)
 
     # indices for fixed features
-    idx_x = get_ind_x(lstgs=lstgs, idx=idx)
+    idx_x = get_ind_x(lstgs=data[LOOKUP].index, idx=idx)
 
     return {'y': y, 'x': x, 'idx_x': idx_x}
 
@@ -84,8 +79,11 @@ def process_inputs():
 def main():
     print('{}/{}'.format(VALIDATION, POLICY_SLR))
 
+    data = {k: load_file(VALIDATION, k)
+            for k in [LOOKUP, X_THREAD, X_OFFER]}
+
     # input dataframes, output processed dataframes
-    d = process_inputs()
+    d = process_slr_inputs(data)
 
     # save various output files
     save_files(d, VALIDATION, POLICY_SLR)

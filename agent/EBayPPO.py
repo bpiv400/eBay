@@ -1,31 +1,17 @@
+from collections import namedtuple
 import numpy as np
 import torch
 from torch.optim import Adam
-from collections import namedtuple, OrderedDict
 from rlpyt.agents.base import AgentInputs
 from rlpyt.utils.tensor import valid_mean
 from rlpyt.utils.buffer import buffer_to
 from rlpyt.utils.collections import namedarraytuple
-from agent.util import define_con_set
-from agent.const import PERIOD_EPOCHS, LR_POLICY, LR_VALUE, RATIO_CLIP, \
-    ENTROPY_THRESHOLD, ENTROPY
-from constants import IDX
-from featnames import BYR, SLR
+from agent.const import LR_POLICY, LR_VALUE, RATIO_CLIP, STOP_ENTROPY, \
+    FIELDS, PERIOD_EPOCHS
 
 LossInputs = namedarraytuple("LossInputs",
                              ["agent_inputs", "action", "return_", "advantage",
                               "valid", "pi_old"])
-FIELDS = ["ActionsPerTraj", "ThreadsPerTraj", "ActionsPerThread", "DaysToDone",
-          "Turn1_AccRate", "Turn1_RejRate", "Turn1_ConRate", "Turn1Con",
-          "Turn2_AccRate", "Turn2_RejRate", "Turn2_ExpRate", "Turn2_ConRate", "Turn2Con",
-          "Turn3_AccRate", "Turn3_RejRate", "Turn3_ConRate", "Turn3Con",
-          "Turn4_AccRate", "Turn4_RejRate", "Turn4_ExpRate", "Turn4_ConRate", "Turn4Con",
-          "Turn5_AccRate", "Turn5_RejRate", "Turn5_ConRate", "Turn5Con",
-          "Turn6_AccRate", "Turn6_RejRate", "Turn6_ExpRate", "Turn6_ConRate", "Turn6Con",
-          "Turn7_AccRate",
-          "Rate_1", "Rate_2", "Rate_3", "Rate_4", "Rate_5", "Rate_6", "Rate_7", "Rate_Sale",
-          "DollarReturn", "NormReturn", "Value", "Advantage", "Entropy",
-          "Loss_Policy", "Loss_Value", "Loss_EntropyBonus"]
 OptInfo = namedtuple("OptInfo", FIELDS)
 
 
@@ -41,10 +27,9 @@ class EBayPPO:
     def __init__(self):
         # parameters to be defined later
         self.agent = None
-        self.byr = None
-        self.con_set = None
         self.entropy_coef = None
         self.entropy_step = None
+        self.epochs = None
         self._optim_value = None
         self._optim_policy = None
 
@@ -59,57 +44,15 @@ class EBayPPO:
         Called by runner.
         """
         self.agent = agent
-        self.byr = agent.model.byr
-        self.con_set = define_con_set(con_set=agent.model.con_set,
-                                      byr=self.byr)
-        self.entropy_coef = ENTROPY[agent.model.con_set]
-        self.entropy_step = self.entropy_coef / PERIOD_EPOCHS
+        self.epochs = PERIOD_EPOCHS[agent.model.con_set]
+        self.entropy_coef = agent.entropy
+        self.entropy_step = self.entropy_coef / self.epochs
 
         # optimizers
         self._optim_value = Adam(self.agent.value_parameters(),
                                  lr=LR_VALUE, amsgrad=True)
         self._optim_policy = Adam(self.agent.policy_parameters(),
                                   lr=LR_POLICY, amsgrad=True)
-
-    @staticmethod
-    def backward_from_done(x=None, done=None):
-        """
-        Propagates value at done across trajectory. Operations
-        vectorized across all trailing dimensions after the first [T,].
-        :param tensor x: tensor to propagate across trajectory
-        :param tensor done: indicator for end of trajectory
-        :return tensor newx: value at done at every step of trajectory
-        """
-        dtype = x.dtype  # cast new tensors to this data type
-        T, N = x.shape  # time steps, number of envs
-
-        # recast
-        done = done.type(torch.int)
-
-        # initialize output tensor
-        newx = torch.zeros(x.shape, dtype=dtype)
-
-        # vector for given time period
-        v = torch.zeros(N, dtype=dtype)
-
-        for t in reversed(range(T)):
-            v = v * (1 - done[t]) + x[t] * done[t]
-            newx[t] += v
-
-        return newx
-
-    @staticmethod
-    def valid_from_done(done):
-        """Returns a float mask which is zero for all time-steps after the last
-        `done=True` is signaled.  This function operates on the leading dimension
-        of `done`, assumed to correspond to time [T,...], other dimensions are
-        preserved."""
-        done = done.type(torch.float)
-        done_count = torch.cumsum(done, dim=0)
-        done_max, _ = torch.max(done_count, dim=0)
-        valid = torch.abs(done_count - done_max) + done
-        valid = torch.clamp(valid, max=1)
-        return valid.bool()
 
     def optimize_agent(self, samples):
         """
@@ -121,74 +64,20 @@ class EBayPPO:
         if self.agent.recurrent or hasattr(self.agent, "update_obs_rms"):
             raise NotImplementedError()
 
-        # break out samples
-        env = samples.env
-        reward, done, info = (env.reward, env.done, env.env_info)
+        # initialize opt_info, compute valid obs and (discounted) return
+        opt_info, valid, return_ = self.agent.process_samples(samples)
+
+        # calculate advantage
         value = samples.agent.agent_info.value
-
-        # ignore steps from unfinished trajectories
-        valid = self.valid_from_done(done)
-
-        # propagate return from end of trajectory (and discount, if necessary)
-        return_ = self.backward_from_done(x=reward, done=done)
-
-        # initialize opt_info
-        opt_info = OrderedDict()
-
-        # various counts
-        num_actions = info.num_actions[done].numpy()
-        num_threads = info.num_threads[done].numpy()
-        opt_info['ActionsPerTraj'] = num_actions
-        opt_info['ThreadsPerTraj'] = num_threads
-        if not self.byr:
-            opt_info['ActionsPerThread'] = num_actions / num_threads
-        opt_info['DaysToDone'] = info.days[done].numpy()
-
-        # action stats
-        action = samples.agent.action[valid].numpy()
-        con = np.take_along_axis(self.con_set, action, 0)
-        turn = info.turn[valid].numpy()
-        role = BYR if self.byr else SLR
-        for t in IDX[role]:
-            # rate of reaching turn t
-            if self.byr:
-                last_turn = self.backward_from_done(x=info.turn, done=done)
-                turn_ct = last_turn[valid].numpy()
-            else:
-                turn_ct = turn
-            opt_info['Rate_{}'.format(t)] = np.mean(turn_ct == t)
-
-            # accept, reject, and expiration rates, and moments of concession dist
-            con_t = con[turn == t]
-            prefix = 'Turn{}'.format(t)
-            opt_info['{}_{}'.format(prefix, 'AccRate')] = np.mean(con_t == 1)
-            if not self.byr:
-                opt_info['{}_{}'.format(prefix, 'ExpRate')] = np.mean(con_t > 1)
-            if t < 7:
-                opt_info['{}_{}'.format(prefix, 'RejRate')] = np.mean(con_t == 0)
-                if len(self.con_set) > 3:
-                    opt_info['{}_{}'.format(prefix, 'ConRate')] = \
-                        np.mean((con_t > 0) & (con_t < 1))
-                    opt_info['{}{}'.format(prefix, 'Con')] = \
-                        con_t[(con_t > 0) & (con_t < 1)]
-
-        traj_value = return_[done]
-        no_sale = torch.isclose(traj_value, torch.zeros_like(traj_value))
-        opt_info['Rate_Sale'] = np.mean(~no_sale.numpy())
-        opt_info['DollarReturn'] = traj_value.numpy()
-        opt_info['NormReturn'] = (traj_value / info.max_return[done]).numpy()
-
-        # normalize return and calculate advantage
-        return_ /= info.max_return
         advantage = return_ - value
         opt_info['Value'] = value[valid].numpy()
         opt_info['Advantage'] = advantage[valid].numpy()
 
         # for getting policy and value in eval mode
         agent_inputs = AgentInputs(
-            observation=env.observation,
+            observation=samples.env.observation,
             prev_action=samples.agent.prev_action,
-            prev_reward=env.prev_reward,
+            prev_reward=samples.env.prev_reward,
         )
         agent_inputs = buffer_to(agent_inputs, device=self.agent.device)
 
@@ -231,9 +120,10 @@ class EBayPPO:
 
         # increment counter, reduce entropy bonus, and set complete flag
         self.update_counter += 1
-        if 2 * PERIOD_EPOCHS > self.update_counter >= PERIOD_EPOCHS:
+        period = int(self.update_counter // self.epochs)
+        if period in [1, 3]:
             self.entropy_coef -= self.entropy_step
-        if entropy.mean() < ENTROPY_THRESHOLD:
+        if entropy.mean() < STOP_ENTROPY:
             self.training_complete = True
 
         # enclose in lists

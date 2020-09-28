@@ -70,7 +70,7 @@ def reshape_offers(offers=None, clock=None, idx0=None, idx1=None):
     return df
 
 
-def append_arrival_delays(clock=None, lstg_start=None):
+def append_arrival_delays(clock=None, lstg_start=None, delays=None):
     # buyer turns
     first_offer = clock.xs(1, level=INDEX, drop_level=False)
     later_offers = clock[clock.index.isin(range(2, 8), level=INDEX)]
@@ -80,32 +80,31 @@ def append_arrival_delays(clock=None, lstg_start=None):
         'day', append=True).squeeze()
     later_offers = later_offers.to_frame().join(days.droplevel(INDEX)).set_index(
         'day', append=True).squeeze()
-    # expand by number of days
-    ranges = days[days > 0].apply(range)
-    wide = pd.DataFrame.from_records(ranges.values, index=ranges.index)
-    s = wide.rename_axis('day', axis=1).stack().astype('int64')
-    # create fake non-arrival timestamps
-    ts_delay = s * DAY + lstg_start
-    ts_delay += (np.random.uniform(size=len(ts_delay)) * DAY).astype('int64')
+
+    if delays is None:
+        # create fake non-arrival timestamps
+        ranges = days[days > 0].apply(range)
+        wide = pd.DataFrame.from_records(ranges.values, index=ranges.index)
+        s = wide.rename_axis('day', axis=1).stack().astype('int64')
+        ts_delay = s * DAY + lstg_start
+        ts_delay += (np.random.uniform(size=len(ts_delay)) * DAY).astype('int64')
+    else:
+        # match format and index
+        ts_delay = delays + lstg_start
+
     # concatenate with offers
     ts_offer = pd.concat([first_offer, later_offers], axis=0).sort_index()
     ts = pd.concat([ts_delay, ts_offer], axis=0).sort_index()
     return ts, ts_delay.index, ts_offer.index
 
 
-def process_inputs():
-    # load dataframes
-    offers = load_file(VALIDATION, X_OFFER)
-    threads = load_file(VALIDATION, X_THREAD)
-    clock = load_file(VALIDATION, CLOCK)
-    lookup = load_file(VALIDATION, LOOKUP)
-
+def process_byr_inputs(data=None):
     # append arrival timestamps to clock
-    clock, idx0, idx1 = append_arrival_delays(clock=clock,
-                                              lstg_start=lookup[START_TIME])
+    clock, idx0, idx1 = append_arrival_delays(clock=data[CLOCK],
+                                              lstg_start=data[LOOKUP][START_TIME])
 
     # reshape offers dataframe
-    offers = reshape_offers(offers=offers,
+    offers = reshape_offers(offers=data[X_OFFER],
                             clock=clock,
                             idx0=idx0,
                             idx1=idx1)
@@ -119,13 +118,13 @@ def process_inputs():
 
     # input feature dictionary
     x = construct_x(idx=idx,
-                    threads=threads,
+                    threads=data[X_THREAD],
                     clock=clock,
-                    lookup=lookup,
+                    lookup=data[LOOKUP],
                     offers=offers)
 
     # indices for listing features
-    idx_x = get_ind_x(lstgs=lookup.index, idx=idx)
+    idx_x = get_ind_x(lstgs=data[LOOKUP].index, idx=idx)
 
     return {'y': y, 'x': x, 'idx_x': idx_x}
 
@@ -133,8 +132,11 @@ def process_inputs():
 def main():
     print('{}/{}'.format(VALIDATION, POLICY_BYR))
 
+    data = {k: load_file(VALIDATION, k)
+            for k in [LOOKUP, X_THREAD, X_OFFER, CLOCK]}
+
     # input dataframes, output processed dataframes
-    d = process_inputs()
+    d = process_byr_inputs(data)
 
     # save various output files
     save_files(d, VALIDATION, POLICY_BYR)

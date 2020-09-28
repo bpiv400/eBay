@@ -6,13 +6,13 @@ from agent.envs.SellerEnv import SellerEnv
 from rlenv.generate.Generator import Generator
 from rlenv.interfaces.PlayerInterface import SimulatedBuyer, SimulatedSeller
 from rlenv.util import sample_categorical
-from agent.models.AgentModel import AgentModel
+from agent.models.AgentModel import load_agent_model
 from agent.models.HeuristicSlr import HeuristicSlr
 from agent.util import get_paths
 from rlenv.generate.util import process_sims
 from utils import run_func_on_chunks, process_chunk_worker, compose_args
-from agent.const import PARAMS, AGENT_STATE, OPTIM_STATE
-from constants import VALIDATION, TRAIN_RL, TRAIN_RL, TEST
+from agent.const import PARAMS
+from constants import HOLDOUT_PARTITIONS
 
 
 class AgentGenerator(Generator):
@@ -56,33 +56,14 @@ class AgentGenerator(Generator):
                 obs = agent_tuple[0]
 
 
-def load_agent_model(model_args=None, run_dir=None):
-    model = AgentModel(**model_args)
-    path = run_dir + 'params.pkl'
-    d = torch.load(path, map_location=torch.device('cpu'))
-    if OPTIM_STATE in d:
-        d = d[AGENT_STATE]
-        torch.save(d, path)
-    d = {k: v for k, v in d.items() if not k.startswith('value')}
-    model.load_state_dict(d, strict=True)
-    for param in model.parameters(recurse=True):
-        param.requires_grad = False
-    model.eval()
-    return model
-
-
 def main():
     # parameters from command line
     parser = argparse.ArgumentParser()
-    parser.add_argument('--part', choices=[TRAIN_RL, TRAIN_RL, VALIDATION, TEST])
+    parser.add_argument('--part', choices=HOLDOUT_PARTITIONS)
     parser.add_argument('--heuristic', action='store_true')
     parser.add_argument('--suffix', type=str)
     compose_args(arg_dict=PARAMS, parser=parser)
     args = parser.parse_args()
-
-    # error checking
-    if args.byr:
-        assert args.part != TRAIN_RL
 
     # environment class and run directory
     _, _, run_dir = get_paths(**vars(args))
@@ -118,7 +99,10 @@ def main():
     output_dir = run_dir + '{}/'.format(args.part)
     if args.heuristic:
         output_dir += 'heuristic/'
-    process_sims(part=args.part, sims=sims, output_dir=output_dir)
+    process_sims(part=args.part,
+                 sims=sims,
+                 output_dir=output_dir,
+                 byr=args.byr)
 
 
 if __name__ == '__main__':

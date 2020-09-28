@@ -1,12 +1,12 @@
 from assess.util import load_data, get_lookup
-from agent.util import find_best_run, get_valid_slr
+from agent.util import find_best_run, get_slr_valid
 from constants import TEST
 from featnames import SLR, OBS, SIM, RL, NORM, MSG, DELAY, DAYS_SINCE_LSTG, \
     BYR_HIST, TIME_FEATS, START_PRICE
 
 
 def run_test(data=None, lookup=None):
-    data, lookup = get_valid_slr(data=data, lookup=lookup)  # restrict to valid listings
+    data, lookup = get_slr_valid(data=data, lookup=lookup)  # restrict to valid listings
     threads, offers = [data[k] for k in ['threads', 'offers']]
 
     msg2 = offers[MSG].xs(2, level='index').astype(bool)

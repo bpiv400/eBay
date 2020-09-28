@@ -7,7 +7,7 @@ from featnames import START_TIME, START_PRICE, TIME_FEATS, MSG, CON, \
     LSTG, THREAD, INDEX, BYR_HIST, DEC_PRICE, CLOCK
 
 OFFER_COLS = [LSTG, THREAD, INDEX, CLOCK, CON, MSG] + TIME_FEATS
-DELAY_COLS = [LSTG, CLOCK]
+DELAY_COLS = [LSTG, CLOCK, BYR_HIST]
 THREAD_COLS = [LSTG, THREAD, BYR_HIST, CLOCK]
 INDEX_COLS = [LSTG, THREAD, INDEX]
 
@@ -180,9 +180,9 @@ class OutcomeRecorder(Recorder):
         if self.verbose:
             self.print_offer(event)
 
-    def add_agent_delay(self, priority):
+    def add_agent_delay(self, priority=None, byr_hist=None):
         assert self.byr_agent
-        self.delays.append([self.lstg, priority])
+        self.delays.append([self.lstg, priority, byr_hist])
 
     def construct_output(self):
         # convert lists to dataframes
@@ -205,6 +205,6 @@ class OutcomeRecorder(Recorder):
         data = dict(offers=self.offers.sort_index(),
                     threads=self.threads.sort_index())
         if self.byr_agent:
-            data['delays'] = self.delays.squeeze().sort_index()
+            data['delays'] = self.delays.sort_index()
 
         return data

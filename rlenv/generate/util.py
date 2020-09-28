@@ -1,8 +1,11 @@
 import os
 import pandas as pd
+from inputs.policy_byr import process_byr_inputs
+from inputs.policy_slr import process_slr_inputs
+from inputs.util import convert_x_to_numpy
 from processing.util import collect_date_clock_feats, get_days_delay, get_norm
 from utils import topickle, is_split, load_file
-from constants import IDX, DAY, MAX_DAYS
+from constants import IDX, DAY, MAX_DAYS, POLICY_BYR, POLICY_SLR
 from featnames import DAYS, DELAY, CON, SPLIT, NORM, REJECT, AUTO, EXP, \
     CLOCK_FEATS, TIME_FEATS, OUTCOME_FEATS, DAYS_SINCE_LSTG, \
     BYR_HIST, START_TIME, LOOKUP, SLR, X_THREAD, X_OFFER, CLOCK
@@ -60,14 +63,10 @@ def process_sim_threads(df=None, lstg_start=None):
     return df
 
 
-def process_sim_delays(s=None, lstg_start=None):
-    tdiff = s - lstg_start.reindex(index=s.index)
-    day = tdiff // DAY
-    sec = tdiff % DAY
-    delays = pd.concat([sec.rename('sec_since_midnight'),
-                        day.rename('day')], axis=1)
-    delays = delays.set_index('day', append=True).sort_index().squeeze()
-    return delays
+def process_sim_delays(df=None, lstg_start=None):
+    df['day'] = (df[CLOCK] - lstg_start.reindex(index=df.index)) // DAY
+    df = df.set_index('day', append=True).sort_index()
+    return df
 
 
 def concat_sim_chunks(sims):
@@ -89,19 +88,29 @@ def concat_sim_chunks(sims):
     return data
 
 
-def process_sims(part=None, sims=None, output_dir=None):
+def process_sims(part=None, sims=None, output_dir=None, byr=None):
     # concatenate chunks
     data = concat_sim_chunks(sims)
 
     # create output dataframes
     d = dict()
-    lstg_start = load_file(part, LOOKUP)[START_TIME]
+    d[LOOKUP] = load_file(part, LOOKUP)
     d[X_THREAD] = process_sim_threads(df=data['threads'],
-                                      lstg_start=lstg_start)
+                                      lstg_start=d[LOOKUP][START_TIME])
     d[X_OFFER], d[CLOCK] = process_sim_offers(df=data['offers'])
-    if 'delays' in data:
-        d['delays'] = process_sim_delays(s=data['delays'],
-                                         lstg_start=lstg_start)
+
+    # agent specific outputs
+    if byr is not None:
+        if byr:
+            d['delays'] = process_sim_delays(df=data['delays'],
+                                             lstg_start=d[LOOKUP][START_TIME])
+            model_inputs = process_byr_inputs(d)
+        else:
+            model_inputs = process_slr_inputs(d)
+        convert_x_to_numpy(x=model_inputs['x'],
+                           idx=model_inputs['y'].index)
+        model_inputs['y'] = model_inputs['y'].to_numpy()
+        d[POLICY_BYR if byr else POLICY_SLR] = model_inputs
 
     # create directory if it doesn't exist
     if not os.path.isdir(output_dir):
@@ -109,4 +118,5 @@ def process_sims(part=None, sims=None, output_dir=None):
 
     # save
     for k, df in d.items():
-        topickle(df, output_dir + '{}.pkl'.format(k))
+        if k != LOOKUP:
+            topickle(df, output_dir + '{}.pkl'.format(k))

@@ -1,17 +1,17 @@
 import numpy as np
 from torch.utils.data import Dataset
-from compress_pickle import load
-from utils import load_file
+from utils import load_file, unpickle
 from constants import INPUT_DIR
-from featnames import X_LSTG
+from featnames import X_LSTG, LSTG, THREAD
 
 
 class EBayDataset(Dataset):
-    def __init__(self, part=None, name=None):
+    def __init__(self, part=None, name=None, folder=INPUT_DIR):
         """
         Defines a parent class that extends torch.utils.data.Dataset.
-        :param part: string partition name (e.g., train_models).
-        :param name: string model name.
+        :param str part: partition name (e.g., train_models)
+        :param str name: name of inputs folder
+        :param str folder: contains part/name.pkl
         """
         # save name to self
         self.part = part
@@ -21,7 +21,7 @@ class EBayDataset(Dataset):
         self.x_lstg = load_file(self.part, X_LSTG)
 
         # dictionary of inputs
-        self.d = load(INPUT_DIR + '{}/{}.pkl'.format(part, name))
+        self.d = unpickle(folder + '{}/{}.pkl'.format(part, name))
         if 'x' in self.d:
             self.offer_keys = [k for k in self.d['x'].keys() if 'offer' in k]
 
@@ -43,8 +43,8 @@ class EBayDataset(Dataset):
 
         # add in thread and offer features
         if 'x' in self.d:
-            x_thread = self.d['x']['thread'][idx, :]
-            x['lstg'] = np.concatenate([x['lstg'], x_thread])
+            x_thread = self.d['x'][THREAD][idx, :]
+            x[LSTG] = np.concatenate([x[LSTG], x_thread])
             if len(self.offer_keys) > 0:
                 for k in self.offer_keys:
                     x[k] = self.d['x'][k][idx, :]

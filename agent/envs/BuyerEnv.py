@@ -5,12 +5,12 @@ from utils import load_sizes, unpickle, get_days_since_lstg
 from rlenv.const import FIRST_OFFER, DELAY_EVENT, OFFER_EVENT, RL_ARRIVAL_EVENT
 from rlenv.Sources import ThreadSources
 from agent.envs.AgentEnv import AgentEnv, EventLog
-from agent.util import define_con_set, load_values
+from agent.util import define_con_space
 from rlenv.events.Event import Event
 from rlenv.events.Thread import Thread
 from constants import HOUR, POLICY_BYR, PCTILE_DIR, INTERVAL_CT_ARRIVAL, \
-    DAY, MAX_DAYS, TRAIN_RL
-from featnames import BYR_HIST, START_PRICE
+    DAY, MAX_DAYS
+from featnames import BYR_HIST
 
 BuyerObs = namedarraytuple('BuyerObs',
                            list(load_sizes(POLICY_BYR)['x'].keys()))
@@ -18,21 +18,15 @@ BuyerObs = namedarraytuple('BuyerObs',
 
 class BuyerEnv(AgentEnv):
     def __init__(self, **kwargs):
-        self.market = kwargs['market']
         super().__init__(**kwargs)
 
         # to be set later
         self.hist = None
         self.agent_thread = None
-        self.lstg_sim_ct = None
 
         # for drawing experience
         path = PCTILE_DIR + '{}.pkl'.format(BYR_HIST)
         self.hist_pctile = unpickle(path).values
-
-        # values
-        if not self.test and self.market:
-            self.values = load_values(part=TRAIN_RL)
 
     def reset(self, hist=None):
         """
@@ -90,12 +84,13 @@ class BuyerEnv(AgentEnv):
 
     def _step_arrival_delay(self):
         if self.recorder is not None:
-            self.recorder.add_agent_delay(self.curr_event.priority)
+            self.recorder.add_agent_delay(priority=self.curr_event.priority,
+                                          byr_hist=self.hist)
         next_midnight = (self.curr_event.priority // DAY + 1) * DAY
         if next_midnight == self.end_time:
             return self.agent_tuple(done=True,
                                     event=self.curr_event,
-                                    info=self.get_info(self.last_event))
+                                    last_event=self.last_event)
         self.queue.push(self._create_rl_event(next_midnight))
         self.curr_event = None
         return self.run()
@@ -124,7 +119,7 @@ class BuyerEnv(AgentEnv):
         if lstg_complete or con == 0:
             return self.agent_tuple(event=self.curr_event,
                                     done=True,
-                                    info=self.get_info(self.last_event))
+                                    last_event=self.last_event)
         return self.run()
 
     def is_agent_turn(self, event):
@@ -163,7 +158,7 @@ class BuyerEnv(AgentEnv):
                 # return if done or time for agent action
                 return self.agent_tuple(done=lstg_complete,
                                         event=event,
-                                        info=self.get_info(self.last_event))
+                                        last_event=self.last_event)
 
     def get_reward(self):
         """
@@ -172,22 +167,19 @@ class BuyerEnv(AgentEnv):
         """
         # no sale
         if self.outcome is None or not self.outcome.sale:
-            return 0.
+            return 0., False
 
         # sale to different buyer
         if self.outcome.thread != self.agent_thread:
-            return 0.
+            return 0., False
 
         # sale to agent buyer
-        if self.market:
-            value = self.values.loc[self.loader.lstg]
-        else:
-            value = self.lookup[START_PRICE]
+        value = self.values.loc[self.loader.lstg]
         if self.verbose:
             print('Sale to RL buyer. Price: ${0:.2f}. Value: ${1:.2f}'.format(
                 self.outcome.price, value))
 
-        return value - self.outcome.price
+        return value - self.outcome.price, True
 
     def _create_rl_event(self, midnight=None):
         assert midnight % DAY == 0
@@ -233,10 +225,7 @@ class BuyerEnv(AgentEnv):
         return hist
 
     def _define_con_set(self, con_set):
-        return define_con_set(con_set=con_set, byr=True)
-
-    def _define_max_return(self):
-        return 0.6 * self.lookup[START_PRICE]
+        return define_con_space(con_set=con_set, byr=True)
 
     @property
     def horizon(self):

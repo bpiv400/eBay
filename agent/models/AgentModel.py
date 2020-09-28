@@ -2,9 +2,9 @@ import numpy as np
 import torch
 from torch.nn.functional import softmax
 from nets.FeedForward import FeedForward
-from agent.util import define_con_set
+from agent.util import define_con_space
 from utils import load_sizes
-from agent.const import DROPOUT, FULL
+from agent.const import DROPOUT, FULL, AGENT_HIDDEN, BYR_MIN_CON1, AGENT_STATE
 from constants import POLICY_SLR, POLICY_BYR
 from featnames import LSTG
 
@@ -33,18 +33,21 @@ class AgentModel(torch.nn.Module):
         self.value = value
 
         # size of policy output
-        self.out = len(define_con_set(byr=byr, con_set=con_set))
+        self.out = len(define_con_space(byr=byr, con_set=con_set))
 
         # policy net
         sizes = load_sizes(POLICY_BYR if byr else POLICY_SLR)
         sizes['out'] = self.out
-        self.policy_net = FeedForward(sizes=sizes, hidden=512, dropout=DROPOUT)
-        print(self.policy_net)
+        self.policy_net = FeedForward(sizes=sizes,
+                                      hidden=AGENT_HIDDEN,
+                                      dropout=DROPOUT)
 
         # value net
         if self.value:
-            sizes['out'] = 5
-            self.value_net = FeedForward(sizes=sizes, hidden=512, dropout=DROPOUT)
+            sizes['out'] = 6 if byr else 5
+            self.value_net = FeedForward(sizes=sizes,
+                                         hidden=AGENT_HIDDEN,
+                                         dropout=DROPOUT)
 
     def forward(self, observation, prev_action=None, prev_reward=None, value_only=False):
         """
@@ -84,9 +87,10 @@ class AgentModel(torch.nn.Module):
             # no small concessions on turn 1
             t1 = input_dict[LSTG][:, -3] == 1
             if self.con_set == FULL:
-                theta[t1, 1:40] = -np.inf
+                theta[t1, 1:BYR_MIN_CON1] = -np.inf
             else:
-                theta[t1, 1:4] = -np.inf
+                upper = int(BYR_MIN_CON1 / 10)
+                theta[t1, 1:upper] = -np.inf
 
             # accept or reject on turn 7
             t7 = torch.sum(input_dict[LSTG][:, [-3, -2, -1]], dim=1) == 0
@@ -97,3 +101,17 @@ class AgentModel(torch.nn.Module):
                 theta[t7, 1:10] = -np.inf
 
         return softmax(theta, dim=-1)
+
+
+def load_agent_model(model_args=None, run_dir=None):
+    model = AgentModel(**model_args)
+    path = run_dir + 'params.pkl'
+    d = torch.load(path, map_location=torch.device('cpu'))
+    if AGENT_STATE in d:
+        d = d[AGENT_STATE]
+    d = {k: v for k, v in d.items() if not k.startswith('value')}
+    model.load_state_dict(d, strict=True)
+    for param in model.parameters(recurse=True):
+        param.requires_grad = False
+    model.eval()
+    return model

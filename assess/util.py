@@ -4,11 +4,10 @@ import pandas as pd
 from agent.util import get_sale_norm
 from utils import unpickle, load_file
 from assess.const import SPLITS
-from constants import PARTS_DIR, IDX, BYR, EPS, COLLECTIBLES, TEST, MAX_DAYS, \
+from constants import IDX, BYR, EPS, COLLECTIBLES, TEST, MAX_DAYS, \
     MAX_DELAY_ARRIVAL, MAX_DELAY_TURN, INTERVAL_ARRIVAL, PCTILE_DIR, DAY, HOUR
 from featnames import DELAY, CON, NORM, AUTO, START_TIME, STORE, SLR_BO_CT, \
-    START_PRICE, META, LOOKUP, MSG, DAYS_SINCE_LSTG, BYR_HIST, X_THREAD, \
-    X_OFFER, CLOCK, INDEX
+    START_PRICE, META, LOOKUP, MSG, DAYS_SINCE_LSTG, BYR_HIST, INDEX
 
 
 def discrete_pdf(y=None):
@@ -77,31 +76,6 @@ def get_pctiles(s):
                         index=idx, name='pctile')
     pctiles = pctiles.groupby(pctiles.index).max()
     return pctiles
-
-
-def load_data(part=None, lstgs=None, obs=False, sim=False, run_dir=None):
-    # folder of simulation output
-    if obs:  # using data
-        assert not sim and run_dir is None
-        folder = PARTS_DIR + '{}/'.format(part)
-    elif sim:
-        assert run_dir is None
-        folder = PARTS_DIR + '{}/sim/'.format(part)
-    else:
-        folder = run_dir + '{}/'.format(part)
-
-    # load dataframes
-    data = dict()
-    data['threads'] = unpickle(folder + '{}.pkl'.format(X_THREAD))
-    data['offers'] = unpickle(folder + '{}.pkl'.format(X_OFFER))
-    data['clock'] = unpickle(folder + '{}.pkl'.format(CLOCK))
-
-    # restrict to lstgs
-    if lstgs is not None:
-        for k, v in data.items():
-            data[k] = v.reindex(index=lstgs, level='lstg')
-
-    return data
 
 
 def gaussian_kernel(x, bw=.25):

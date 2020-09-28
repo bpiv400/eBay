@@ -5,7 +5,7 @@ import pandas as pd
 from sim.envs import SimulatorEnv
 from sim.generate import OutcomeGenerator
 from utils import run_func_on_chunks, process_chunk_worker, input_partition, topickle
-from constants import PARTS_DIR, VALUE_SIMS
+from constants import SIM_DIR, VALUE_SIMS
 from featnames import LSTG
 
 COLS = [LSTG, 'sale', 'sale_price', 'relist_ct']
@@ -39,13 +39,13 @@ class ValueGenerator(OutcomeGenerator):
         Simulate until sale.
         :return: (sale price, relist count)
         """
-        relist_ct = 0
-        while True:
+        relist_ct = -1
+        while relist_ct < 1000:
+            relist_ct += 1
             self.env.reset()
             self.env.run()
             if self.env.outcome.sale:
                 break
-            relist_ct += 1
         return self.env.outcome.price, relist_ct
 
 
@@ -62,7 +62,7 @@ def main():
 
     # concat and save output
     df = pd.concat(sims, axis=0).sort_index()
-    output_dir = PARTS_DIR + '{}/sim/'.format(part)
+    output_dir = SIM_DIR + '{}/'.format(part)
     if not os.path.isdir(output_dir):
         os.mkdir(output_dir)
     topickle(df, output_dir + 'values.pkl')

@@ -6,11 +6,11 @@ from agent.EBayPPO import EBayPPO
 from rlpyt.samplers.serial.sampler import SerialSampler
 from rlpyt.samplers.parallel.gpu.alternating_sampler import AlternatingSampler
 from rlpyt.utils.logging.context import logger_context
-from agent.const import AGENT_STATE, BATCH_SIZE
+from agent.const import BATCH_SIZE
 from agent.util import get_paths
 from agent.AgentComposer import AgentComposer
 from agent.models.AgentModel import AgentModel
-from agent.agents import SellerAgent, BuyerBINAgent, BuyerMarketAgent
+from agent.agents import SellerAgent, BuyerAgent
 from rlenv.QueryStrategy import DefaultQueryStrategy
 from agent.envs.SellerEnv import SellerEnv
 from agent.envs.BuyerEnv import BuyerEnv
@@ -20,13 +20,11 @@ from agent.AgentLoader import AgentLoader
 
 
 class RlTrainer:
-    def __init__(self, byr=False, con_set=False, market=False):
+    def __init__(self, byr=None, con_set=None, delta=None, entropy=None):
         self.byr = byr
         self.con_set = con_set
-        if not self.byr:
-            assert not market
-        else:
-            self.market = market
+        self.delta = delta
+        self.entropy = entropy
 
     def _generate_query_strategy(self):
         return DefaultQueryStrategy(
@@ -41,26 +39,26 @@ class RlTrainer:
                 con_set=self.con_set
             )
         if self.byr:
-            agent_cls = BuyerMarketAgent if self.market else BuyerBINAgent
+            agent_cls = BuyerAgent
         else:
             agent_cls = SellerAgent
         return agent_cls(
             ModelCls=AgentModel,
             model_kwargs=model_kwargs,
-            serial=serial
+            serial=serial,
+            entropy=self.entropy
         )
 
-    def _generate_env(self, verbose):
+    def _generate_env(self, verbose=False):
         composer = AgentComposer(byr=self.byr)
         env_params = dict(
             composer=composer,
             verbose=verbose,
             query_strategy=self._generate_query_strategy(),
             con_set=self.con_set,
-            loader=AgentLoader()
+            loader=AgentLoader(),
+            delta=self.delta
         )
-        if self.byr:
-            env_params['market'] = self.market
         env = BuyerEnv if self.byr else SellerEnv
         return env, env_params
 
@@ -121,7 +119,9 @@ class RlTrainer:
         else:
             log_dir, run_id, run_dir = get_paths(byr=self.byr,
                                                  con_set=self.con_set,
-                                                 suffix=kwargs['suffix'])
+                                                 suffix=kwargs['suffix'],
+                                                 delta=self.delta,
+                                                 entropy=self.entropy)
             if os.path.isdir(run_dir):
                 print('{} already exists.'.format(run_id))
                 exit()
@@ -133,8 +133,3 @@ class RlTrainer:
                                 run_ID=run_id,
                                 snapshot_mode='last'):
                 runner.train()
-
-            # delete optimization parameters
-            path = run_dir + 'params.pkl'
-            d = torch.load(path)
-            torch.save(d[AGENT_STATE], path)

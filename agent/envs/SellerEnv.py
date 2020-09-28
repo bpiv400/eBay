@@ -1,12 +1,11 @@
 from rlpyt.utils.collections import namedarraytuple
 from rlenv.const import DELAY_EVENT, OFFER_EVENT
 from agent.envs.AgentEnv import AgentEnv, EventLog
-from agent.util import define_con_set
+from agent.util import define_con_space
 from rlenv.util import get_delay_outcomes, get_con_outcomes
 from utils import load_sizes
 from rlenv.const import DELAY_IND
 from constants import POLICY_SLR, MAX_DELAY_TURN
-from featnames import START_PRICE
 
 SellerObs = namedarraytuple("SellerObs",
                             list(load_sizes(POLICY_SLR)['x'].keys()))
@@ -71,7 +70,7 @@ class SellerEnv(AgentEnv):
             if lstg_complete:
                 return self.agent_tuple(event=self.curr_event,
                                         done=lstg_complete,
-                                        info=self.get_info(self.last_event))
+                                        last_event=self.last_event)
         else:
             # get initial delay from sources
             turn = self.curr_event.turn
@@ -103,7 +102,7 @@ class SellerEnv(AgentEnv):
                     self.prepare_offer(event)
                 return self.agent_tuple(done=lstg_complete,
                                         event=event,
-                                        info=self.get_info(self.last_event))
+                                        last_event=self.last_event)
 
     def _process_slr_delay(self, event):
         delay_seconds = self.draw_agent_delay(event)
@@ -113,15 +112,20 @@ class SellerEnv(AgentEnv):
         self.queue.push(event)
 
     def get_reward(self):
-        if self.outcome is None or not self.outcome.sale:
-            return 0.
-        return self.outcome.price
+        # listing not complete
+        if self.outcome is None:
+            return 0, False
+
+        # item does not sell
+        value = self.values.loc[self.loader.lstg]
+        if not self.outcome.sale:
+            return self.delta * value, False
+
+        # item does sell
+        return self.outcome.price, True
 
     def _define_con_set(self, con_set):
-        return define_con_set(con_set=con_set, byr=False)
-
-    def _define_max_return(self):
-        return self.lookup[START_PRICE]
+        return define_con_space(con_set=con_set, byr=False)
 
     @property
     def horizon(self):

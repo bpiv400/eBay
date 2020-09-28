@@ -1,7 +1,7 @@
 import numpy as np
 from assess.util import load_data, get_action_dist, merge_dicts, count_dist, cdf_days, cdf_sale, get_lookup, arrival_dist, \
     hist_dist, delay_dist, con_dist, norm_norm, accept3d
-from agent.util import find_best_run, get_valid_slr
+from agent.util import find_best_run, get_slr_valid
 from utils import topickle
 from constants import PLOT_DIR, TEST
 from featnames import SLR, START_PRICE, OBS, RL, ARRIVAL, BYR_HIST, DELAY, CON, \
@@ -9,7 +9,7 @@ from featnames import SLR, START_PRICE, OBS, RL, ARRIVAL, BYR_HIST, DELAY, CON, 
 
 
 def collect_outputs(data=None, lookup=None, name=None):
-    data, lookup = get_valid_slr(data=data, lookup=lookup)  # restrict to valid listings
+    data, lookup = get_slr_valid(data=data, lookup=lookup)  # restrict to valid listings
     threads, offers, clock = [data[k] for k in ['threads', 'offers', 'clock']]
 
     d = dict()

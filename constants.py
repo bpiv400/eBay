@@ -18,6 +18,7 @@ else:  # cluster and AWS
     PREFIX = os.path.expanduser('~/weka/eBay')
 
 PARTS_DIR = '{}/partitions/'.format(PREFIX)     # post-partition features
+SIM_DIR = '{}/sim/'.format(PREFIX)              # simulated threads and offers
 INDEX_DIR = '{}/index/'.format(PREFIX)          # indices for input files
 PCTILE_DIR = '{}/pctile/'.format(PREFIX)        # percentiles of features
 CLEAN_DIR = '{}/clean/'.format(PREFIX)          # cleaned csvs
@@ -46,7 +47,8 @@ VALIDATION = 'valid'
 TEST = VALIDATION  # TODO: rename to 'testing' when using real testing data
 PARTITIONS = [TRAIN_MODELS, TRAIN_RL, VALIDATION, TEST]
 SIM_PARTITIONS = [TRAIN_MODELS, VALIDATION, TEST]
-AGENT_PARTITIONS = [TRAIN_RL, TRAIN_RL, VALIDATION, TEST]
+AGENT_PARTITIONS = [TRAIN_RL, VALIDATION, TEST]
+HOLDOUT_PARTITIONS = [VALIDATION, TEST]
 
 # for splitting data
 SHARES = {TRAIN_MODELS: 0.75, TRAIN_RL: 0.1, VALIDATION: 0.05}
@@ -123,14 +125,14 @@ SEED = 123456
 # number of chunks
 NUM_CHUNKS = 64
 
+# simulations for value calculation
+VALUE_SIMS = 25
+
 # features to drop from 'lstg' grouping for byr agent
 BYR_DROP = ['lstg_ct', 'bo_ct', 'auto_decline', 'has_decline']
 
 # for precision issues
 EPS = 1e-8
-
-# number of sales to simulate for each listing
-VALUE_SIMS = 25
 
 # dropout options
 DROPOUT_GRID = []

@@ -7,11 +7,12 @@ from rlpyt.utils.collections import namedarraytuple
 from rlenv.EBayEnv import EBayEnv
 from rlenv.events.Thread import Thread
 from agent.ConSpace import ConSpace
-from constants import INTERVAL_TURN, INTERVAL_CT_TURN, DAY
+from agent.util import load_values
+from constants import INTERVAL_TURN, INTERVAL_CT_TURN, DAY, TRAIN_RL
 from featnames import BYR_HIST, START_PRICE
 
 Info = namedarraytuple("Info", ["days", "max_return", "num_actions", "num_threads",
-                                "turn", "thread_id", "priority"])
+                                "turn", "thread_id", "priority", "agent_sale"])
 EventLog = namedtuple("EventLog", ["priority", "thread_id", "turn"])
 
 
@@ -24,7 +25,6 @@ class AgentEnv(EBayEnv, Env):
         self.curr_event = None
         self.last_event = None
         self.num_actions = None  # number of agents actions (incl. byr delays)
-        self.max_return = None
 
         # for passing an empty observation to agents
         self.empty_dict = {k: torch.zeros(v).float()
@@ -37,25 +37,31 @@ class AgentEnv(EBayEnv, Env):
         # observation space
         self._observation_space = self.define_observation_space()
 
+        # values
+        if not self.test:
+            self.delta = kwargs['delta']
+            self.values = load_values(part=TRAIN_RL, delta=self.delta)
+
     def define_observation_space(self):
         sizes = self.composer.agent_sizes['x']
         boxes = [FloatBox(-1000, 1000, shape=size) for size in sizes.values()]
         return Composite(boxes, self._obs_class)
 
-    def agent_tuple(self, event=None, done=None, info=None):
+    def agent_tuple(self, event=None, done=None, last_event=None):
         """
         Constructs observation and calls child environment to get reward
         and info, then sets self.last_event to current event.
         :param Thread event: either agents's turn or trajectory is complete.
         :param bool done: True if trajectory complete.
-        :param namedtuple info: from get_info(event).
+        :param EventLog last_event: for constructing info tuple.
         :return: tuple
         """
         obs = self.get_obs(event=event, done=done)
-        reward = None if self.test else self.get_reward()
+        reward, agent_sale = None if self.test else self.get_reward()
+        info = self.get_info(event=last_event, agent_sale=agent_sale)
         if self.verbose and not self.test and done:
             print('Agent reward: ${0:.2f}. Normalized: {1:.1f}%'.format(
-                reward, 100 * reward / self.max_return))
+                reward, 100 * reward / self.lookup[START_PRICE]))
         return obs, reward, done, info
 
     def get_obs(self, event=None, done=None):
@@ -73,14 +79,15 @@ class AgentEnv(EBayEnv, Env):
     def get_reward(self):
         raise NotImplementedError()
 
-    def get_info(self, event=None):
+    def get_info(self, event=None, agent_sale=None):
         return Info(days=self._get_days(event.priority),
-                    max_return=self.max_return,
+                    max_return=self.lookup[START_PRICE],
                     num_actions=self.num_actions,
                     num_threads=self.thread_counter - 1,
                     turn=event.turn,
                     thread_id=event.thread_id,
-                    priority=event.priority)
+                    priority=event.priority,
+                    agent_sale=agent_sale)
 
     def draw_agent_delay(self, event):
         input_dict = self.get_delay_input_dict(event=event)
@@ -102,10 +109,6 @@ class AgentEnv(EBayEnv, Env):
                 raise RuntimeError("Out of lstgs")
             self.next_lstg()
         super().reset(push_arrival)  # calls EBayEnv.reset()
-        self.max_return = self._define_max_return()
-
-    def _define_max_return(self):
-        raise NotImplementedError()
 
     def turn_from_action(self, action=None):
         return self.con_set[action]

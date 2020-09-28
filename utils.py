@@ -1,6 +1,7 @@
 import argparse
 import os
 import pickle
+import pandas as pd
 import psutil
 from time import sleep
 import torch
@@ -9,9 +10,9 @@ from torch.nn.functional import log_softmax
 import numpy as np
 from nets.FeedForward import FeedForward
 from sim.Sample import get_batches
-from constants import DAY, SPLIT_PCTS, INPUT_DIR, MODEL_DIR, PARTITIONS, \
+from constants import DAY, SPLIT_PCTS, INPUT_DIR, MODEL_DIR, SIM_DIR, \
     PARTS_DIR, MAX_DELAY_TURN, MAX_DELAY_ARRIVAL, NUM_CHUNKS
-from featnames import LOOKUP, X_THREAD, X_OFFER, CLOCK
+from featnames import LOOKUP, X_THREAD, X_OFFER, CLOCK, LSTG
 
 
 def unpickle(file):
@@ -243,28 +244,33 @@ def init_optional_arg(kwargs=None, name=None, default=None):
         kwargs[name] = default
 
 
-def load_file(part, x):
+def load_file(part, x, folder=PARTS_DIR):
     """
     Loads file from partitions directory.
     :param str part: name of partition
     :param str x: name of file
+    :param str folder: name of folder
     :return: dataframe
     """
-    return unpickle(PARTS_DIR + '{}/{}.pkl'.format(part, x))
+    path = folder + '{}/{}.pkl'.format(part, x)
+    if not os.path.isfile(path):
+        return None
+    return unpickle(path)
 
 
-def load_data(part=None, sim=False, folder=PARTS_DIR):
-    folder += '{}/'.format(part)
-    if sim:
-        assert folder == PARTS_DIR
-        folder += 'sim/'
-    data = {LOOKUP: load_file(part, LOOKUP),
-            X_THREAD: unpickle(folder + '{}.pkl'.format(X_THREAD)),
-            X_OFFER: unpickle(folder + '{}.pkl'.format(X_OFFER)),
-            CLOCK: unpickle(folder + '{}.pkl'.format(CLOCK))}
-    delay_path = folder + 'delays.pkl'
-    if os.path.isfile(delay_path):
-        data['delays'] = unpickle(delay_path)
+def load_data(part=None, sim=False, run_dir=None):
+    if not sim and run_dir is None:
+        folder = PARTS_DIR
+    elif sim:
+        assert run_dir is None
+        folder = SIM_DIR
+    else:
+        folder = run_dir
+    data = dict()
+    for k in [LOOKUP, X_THREAD, X_OFFER, CLOCK, 'delays']:
+        df = load_file(part, k, folder=folder)
+        if df is not None:
+            data[k] = df
     return data
 
 
@@ -280,3 +286,10 @@ def set_gpu(gpu=None):
 def compose_args(arg_dict=None, parser=None):
     for k, v in arg_dict.items():
         parser.add_argument('--{}'.format(k), **v)
+
+
+def restrict_to_lstgs(obj=None, lstgs=None):
+    if isinstance(obj.index, pd.MultiIndex):
+        return obj.reindex(index=lstgs, level=LSTG)
+    else:
+        return obj.reindex(index=lstgs)
