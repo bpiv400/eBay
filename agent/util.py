@@ -5,7 +5,7 @@ import torch
 from agent.const import FULL, SPARSE, NOCON
 from constants import AGENT_DIR, POLICY_SLR, POLICY_BYR, VALIDATION, IDX
 from featnames import SLR, BYR, NORM, AUTO, INDEX, THREAD, LSTG, CON, \
-    LOOKUP, X_THREAD, X_OFFER, START_PRICE
+    LOOKUP, X_THREAD, X_OFFER, START_PRICE, CON_SET, ENTROPY, DELTA, DROPOUT
 from utils import unpickle, load_file, restrict_to_lstgs
 
 
@@ -23,10 +23,11 @@ def get_log_dir(byr=None, delta=None):
 
 def get_paths(**kwargs):
     # log directory
-    log_dir = get_log_dir(byr=kwargs[BYR], delta=kwargs['delta'])
+    log_dir = get_log_dir(byr=kwargs[BYR], delta=kwargs[DELTA])
 
     # run id
-    run_id = '{}_{}'.format(kwargs['con_set'], kwargs['entropy'])
+    d1, d2 = [int(elem * 10) for elem in kwargs[DROPOUT]]
+    run_id = '{}_{}_{}_{}'.format(kwargs[CON_SET], kwargs[ENTROPY], d1, d2)
     if kwargs['suffix'] is not None:
         run_id += '_{}'.format(kwargs['suffix'])
 

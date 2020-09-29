@@ -1,10 +1,10 @@
-from constants import BYR, SLR
+from constants import DROPOUT_GRID
+from featnames import BYR, CON_SET, DELTA, DROPOUT, ENTROPY
 
 # concession sets
 FULL = 'full'
 SPARSE = 'sparse'
 NOCON = 'nocon'
-CON_SETS = [FULL, SPARSE, NOCON]
 
 # optimization parameters
 AGENT_HIDDEN = 512
@@ -12,20 +12,21 @@ LR_POLICY = 1e-4
 LR_VALUE = 1e-3
 RATIO_CLIP = 0.1
 BATCH_SIZE = 4096
-DROPOUT = (.0, .1)
 STOP_ENTROPY = .01
 
 # state dictionaries
 AGENT_STATE = 'agent_state_dict'
 
 # agent parameters
-DELTA = [.75, .9]
-PARAMS = dict(byr=dict(action='store_true'),
-              con_set=dict(choices=CON_SETS, default=FULL),
-              delta=dict(type=float, choices=DELTA),
-              entropy=dict(type=float, default=.02))
+DELTA_CHOICES = [.75, .9]
+PARAMS = {BYR: dict(action='store_true'),
+          CON_SET: dict(choices=[FULL, SPARSE, NOCON], default=FULL),
+          DELTA: dict(type=float, choices=DELTA_CHOICES),
+          ENTROPY: dict(type=float, default=.025),
+          DROPOUT: dict(type=int, default=1,
+                        choices=range(len(DROPOUT_GRID)))}
 
-# count for stepping down entropy and stopping
+# epoch count for stepping down entropy and stopping
 PERIOD_EPOCHS = {NOCON: 500, SPARSE: 1000, FULL: 1500}
 
 # minimum byr concession on turn 1

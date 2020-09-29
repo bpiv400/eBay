@@ -57,11 +57,14 @@ class AgentEnv(EBayEnv, Env):
         :return: tuple
         """
         obs = self.get_obs(event=event, done=done)
-        reward, agent_sale = None if self.test else self.get_reward()
+        if self.test:
+            reward, agent_sale = None, None
+        else:
+            reward, agent_sale = self.get_reward()
+            if self.verbose and done:
+                print('Agent reward: ${0:.2f}. Normalized: {1:.1f}%'.format(
+                    reward, 100 * reward / self.lookup[START_PRICE]))
         info = self.get_info(event=last_event, agent_sale=agent_sale)
-        if self.verbose and not self.test and done:
-            print('Agent reward: ${0:.2f}. Normalized: {1:.1f}%'.format(
-                reward, 100 * reward / self.lookup[START_PRICE]))
         return obs, reward, done, info
 
     def get_obs(self, event=None, done=None):

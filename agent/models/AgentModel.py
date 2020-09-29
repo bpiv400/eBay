@@ -4,7 +4,7 @@ from torch.nn.functional import softmax
 from nets.FeedForward import FeedForward
 from agent.util import define_con_space
 from utils import load_sizes
-from agent.const import DROPOUT, FULL, AGENT_HIDDEN, BYR_MIN_CON1, AGENT_STATE
+from agent.const import FULL, AGENT_HIDDEN, BYR_MIN_CON1, AGENT_STATE
 from constants import POLICY_SLR, POLICY_BYR
 from featnames import LSTG
 
@@ -18,11 +18,12 @@ class AgentModel(torch.nn.Module):
     4. Both networks use batch normalization
     5. Both networks use dropout with shared dropout hyperparameters
     """
-    def __init__(self, byr=None, con_set=None, value=True):
+    def __init__(self, byr=None, con_set=None, dropout=None, value=True):
         """
         Initializes feed-forward networks for agents.
-        :param bool byr: use buyer sizes if True.
-        :param str con_set: restricts concession set.
+        :param bool byr: use buyer sizes if True
+        :param str con_set: restricts concession set
+        :param tuple dropout: pair of dropout rates
         :param bool value: estimate value if true
         """
         super().__init__()
@@ -40,14 +41,14 @@ class AgentModel(torch.nn.Module):
         sizes['out'] = self.out
         self.policy_net = FeedForward(sizes=sizes,
                                       hidden=AGENT_HIDDEN,
-                                      dropout=DROPOUT)
+                                      dropout=dropout)
 
         # value net
         if self.value:
             sizes['out'] = 6 if byr else 5
             self.value_net = FeedForward(sizes=sizes,
                                          hidden=AGENT_HIDDEN,
-                                         dropout=DROPOUT)
+                                         dropout=dropout)
 
     def forward(self, observation, prev_action=None, prev_reward=None, value_only=False):
         """

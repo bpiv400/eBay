@@ -10,7 +10,8 @@ from rlpyt.utils.buffer import buffer_to
 from torch.nn.functional import softmax, softplus
 from agent.util import define_con_space, backward_from_done, valid_from_done
 from agent.const import NOCON, BYR_MIN_CON1
-from constants import EPS, IDX, BYR, SLR
+from constants import EPS, IDX, SLR
+from featnames import BYR, CON_SET
 
 
 def parse_value_params(value_params):
@@ -25,10 +26,10 @@ class SplitCategoricalPgAgent(CategoricalPgAgent):
         super().__init__(**kwargs)
         self.serial = serial
 
-        con_set = kwargs['model_kwargs']['con_set']
+        con_set = kwargs['model_kwargs'][CON_SET]
         byr = kwargs['model_kwargs'][BYR]
         self.con_space = define_con_space(con_set=con_set, byr=byr)
-        self.entropy = entropy * np.log(len(self.con_space))
+        self.entropy = entropy / np.log(len(self.con_space))
 
     def __call__(self, observation, prev_action, prev_reward):
         model_inputs = self._model_inputs(observation, prev_action, prev_reward)

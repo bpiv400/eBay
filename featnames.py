@@ -2,7 +2,12 @@
 SLR = 'slr'
 BYR = 'byr'
 ARRIVAL = 'arrival'
+
+# hyperparameters
+CON_SET = 'con_set'
+DELTA = 'delta'
 DROPOUT = 'dropout'
+ENTROPY = 'entropy'
 
 # clock feats
 HOLIDAY = 'holiday'

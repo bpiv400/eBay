@@ -17,14 +17,16 @@ from agent.envs.BuyerEnv import BuyerEnv
 from rlenv.interfaces.ArrivalInterface import ArrivalInterface
 from rlenv.interfaces.PlayerInterface import SimulatedSeller, SimulatedBuyer
 from agent.AgentLoader import AgentLoader
+from featnames import BYR, CON_SET, DELTA, ENTROPY, DROPOUT
 
 
 class RlTrainer:
-    def __init__(self, byr=None, con_set=None, delta=None, entropy=None):
-        self.byr = byr
-        self.con_set = con_set
-        self.delta = delta
-        self.entropy = entropy
+    def __init__(self, **kwargs):
+        self.byr = kwargs[BYR]
+        self.con_set = kwargs[CON_SET]
+        self.delta = kwargs[DELTA]
+        self.entropy = kwargs[ENTROPY]
+        self.dropout = kwargs[DROPOUT]
 
     def _generate_query_strategy(self):
         return DefaultQueryStrategy(
@@ -36,7 +38,8 @@ class RlTrainer:
     def _generate_agent(self, serial=False):
         model_kwargs = dict(
                 byr=self.byr,
-                con_set=self.con_set
+                con_set=self.con_set,
+                dropout=self.dropout
             )
         if self.byr:
             agent_cls = BuyerAgent
@@ -121,7 +124,8 @@ class RlTrainer:
                                                  con_set=self.con_set,
                                                  suffix=kwargs['suffix'],
                                                  delta=self.delta,
-                                                 entropy=self.entropy)
+                                                 entropy=self.entropy,
+                                                 dropout=self.dropout)
             if os.path.isdir(run_dir):
                 print('{} already exists.'.format(run_id))
                 exit()

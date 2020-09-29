@@ -266,8 +266,8 @@ def load_data(part=None, sim=False, run_dir=None):
         folder = SIM_DIR
     else:
         folder = run_dir
-    data = dict()
-    for k in [LOOKUP, X_THREAD, X_OFFER, CLOCK, 'delays']:
+    data = {LOOKUP: load_file(part, LOOKUP)}
+    for k in [X_THREAD, X_OFFER, CLOCK, 'delays']:
         df = load_file(part, k, folder=folder)
         if df is not None:
             data[k] = df
