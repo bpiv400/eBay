@@ -4,11 +4,12 @@ from inputs.policy_byr import process_byr_inputs
 from inputs.policy_slr import process_slr_inputs
 from inputs.util import convert_x_to_numpy
 from processing.util import collect_date_clock_feats, get_days_delay, get_norm
+from agent.util import get_agent_name
 from utils import topickle, is_split, load_file
-from constants import IDX, DAY, MAX_DAYS, POLICY_BYR, POLICY_SLR
+from constants import IDX, DAY, MAX_DAYS
 from featnames import DAYS, DELAY, CON, SPLIT, NORM, REJECT, AUTO, EXP, \
-    CLOCK_FEATS, TIME_FEATS, OUTCOME_FEATS, DAYS_SINCE_LSTG, \
-    BYR_HIST, START_TIME, LOOKUP, SLR, X_THREAD, X_OFFER, CLOCK
+    CLOCK_FEATS, TIME_FEATS, OUTCOME_FEATS, DAYS_SINCE_LSTG, INDEX, BYR_AGENT, \
+    BYR_HIST, START_TIME, LOOKUP, SLR, X_THREAD, X_OFFER, CLOCK, BYR_DELAYS
 
 
 def diff_tf(df):
@@ -42,7 +43,7 @@ def process_sim_offers(df=None):
     df[NORM] = get_norm(df[CON])
     # reject auto and exp are last
     df[REJECT] = df[CON] == 0
-    df[AUTO] = (df[DELAY] == 0) & df.index.isin(IDX[SLR], level='index')
+    df[AUTO] = (df[DELAY] == 0) & df.index.isin(IDX[SLR], level=INDEX)
     df[EXP] = df[DELAY] == 1
     # select and sort features
     df = df.loc[:, CLOCK_FEATS + TIME_FEATS + OUTCOME_FEATS]
@@ -52,13 +53,13 @@ def process_sim_offers(df=None):
 def process_sim_threads(df=None, lstg_start=None):
     # convert clock to months_since_lstg
     df = df.join(lstg_start)
-    df[DAYS_SINCE_LSTG] = (df.clock - df.start_time) / DAY
+    df[DAYS_SINCE_LSTG] = (df[CLOCK] - df[START_TIME]) / DAY
     assert df[DAYS_SINCE_LSTG].max() < MAX_DAYS
-    df = df.drop(['clock', 'start_time'], axis=1)
+    df = df.drop([CLOCK, START_TIME], axis=1)
     # reorder columns to match observed
     thread_cols = [DAYS_SINCE_LSTG, BYR_HIST]
-    if 'byr_agent' in df.columns:
-        thread_cols += ['byr_agent']
+    if BYR_AGENT in df.columns:
+        thread_cols += [BYR_AGENT]
     df = df.loc[:, thread_cols]
     return df
 
@@ -95,22 +96,13 @@ def process_sims(part=None, sims=None, output_dir=None, byr=None):
     # create output dataframes
     d = dict()
     d[LOOKUP] = load_file(part, LOOKUP)
-    d[X_THREAD] = process_sim_threads(df=data['threads'],
+    d[X_THREAD] = process_sim_threads(df=data[X_THREAD],
                                       lstg_start=d[LOOKUP][START_TIME])
-    d[X_OFFER], d[CLOCK] = process_sim_offers(df=data['offers'])
+    d[X_OFFER], d[CLOCK] = process_sim_offers(df=data[X_OFFER])
 
-    # agent specific outputs
-    if byr is not None:
-        if byr:
-            d['delays'] = process_sim_delays(df=data['delays'],
-                                             lstg_start=d[LOOKUP][START_TIME])
-            model_inputs = process_byr_inputs(d)
-        else:
-            model_inputs = process_slr_inputs(d)
-        convert_x_to_numpy(x=model_inputs['x'],
-                           idx=model_inputs['y'].index)
-        model_inputs['y'] = model_inputs['y'].to_numpy()
-        d[POLICY_BYR if byr else POLICY_SLR] = model_inputs
+    if BYR_DELAYS in data:
+        d[BYR_DELAYS] = process_sim_delays(df=data[BYR_DELAYS],
+                                           lstg_start=d[LOOKUP][START_TIME])
 
     # create directory if it doesn't exist
     if not os.path.isdir(output_dir):
@@ -120,3 +112,10 @@ def process_sims(part=None, sims=None, output_dir=None, byr=None):
     for k, df in d.items():
         if k != LOOKUP:
             topickle(df, output_dir + '{}.pkl'.format(k))
+
+    # model inputs for agent logs
+    if byr is not None:
+        inputs = process_byr_inputs(d) if byr else process_slr_inputs(d)
+        convert_x_to_numpy(x=inputs['x'], idx=inputs['y'].index)
+        inputs['y'] = inputs['y'].to_numpy()
+        topickle(inputs, output_dir + '{}.pkl'.format(get_agent_name(byr)))

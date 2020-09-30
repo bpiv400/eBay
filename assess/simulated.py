@@ -1,5 +1,5 @@
 from assess.util import load_data, get_action_dist, merge_dicts, count_dist, \
-    cdf_days, cdf_sale, get_lookup, arrival_dist, hist_dist, delay_dist, con_dist
+    cdf_days, cdf_sale, get_lstgs, arrival_dist, hist_dist, delay_dist, con_dist
 from utils import topickle
 from constants import PLOT_DIR, TEST
 from featnames import START_PRICE, OBS, SIM, ARRIVAL, BYR_HIST, DELAY, CON
@@ -55,7 +55,7 @@ def construct_d(lookup=None):
 
 
 def main():
-    lookup, filename = get_lookup(prefix=SIM)
+    lookup, filename = get_lstgs(prefix=SIM)
 
     # dictionary of inputs for plots
     d = construct_d(lookup)

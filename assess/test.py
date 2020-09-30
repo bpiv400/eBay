@@ -1,4 +1,4 @@
-from assess.util import load_data, get_lookup
+from assess.util import load_data, get_lstgs
 from agent.util import find_best_run, get_slr_valid
 from constants import TEST
 from featnames import SLR, OBS, SIM, RL, NORM, MSG, DELAY, DAYS_SINCE_LSTG, \
@@ -40,7 +40,7 @@ def run_test(data=None, lookup=None):
 
 
 def main():
-    lookup, filename = get_lookup(prefix=SLR)
+    lookup, filename = get_lstgs(prefix=SLR)
     run_dir = find_best_run()
 
     data = dict()

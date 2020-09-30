@@ -4,7 +4,7 @@ from torch.nn.functional import softmax
 from nets.FeedForward import FeedForward
 from agent.util import define_con_space
 from utils import load_sizes
-from agent.const import FULL, AGENT_HIDDEN, BYR_MIN_CON1, AGENT_STATE
+from agent.const import FULL, BYR_MIN_CON1, AGENT_STATE
 from constants import POLICY_SLR, POLICY_BYR
 from featnames import LSTG
 
@@ -33,6 +33,10 @@ class AgentModel(torch.nn.Module):
         self.con_set = con_set
         self.value = value
 
+        # in case of no dropout
+        if dropout is None:
+            dropout = (0., 0.)
+
         # size of policy output
         self.out = len(define_con_space(byr=byr, con_set=con_set))
 
@@ -40,15 +44,15 @@ class AgentModel(torch.nn.Module):
         sizes = load_sizes(POLICY_BYR if byr else POLICY_SLR)
         sizes['out'] = self.out
         self.policy_net = FeedForward(sizes=sizes,
-                                      hidden=AGENT_HIDDEN,
-                                      dropout=dropout)
+                                      dropout=dropout,
+                                      agent=True)
 
         # value net
         if self.value:
             sizes['out'] = 6 if byr else 5
             self.value_net = FeedForward(sizes=sizes,
-                                         hidden=AGENT_HIDDEN,
-                                         dropout=dropout)
+                                         dropout=dropout,
+                                         agent=True)
 
     def forward(self, observation, prev_action=None, prev_reward=None, value_only=False):
         """
@@ -59,34 +63,37 @@ class AgentModel(torch.nn.Module):
         :param bool value_only: only return value if True
         :return: tuple of policy distribution, value
         """
-        # noinspection PyProtectedMember
-        input_dict = observation._asdict()
+        if type(observation) is torch.Tensor:
+            x = observation
+        else:
+            # noinspection PyProtectedMember
+            x = observation._asdict()
 
-        # processing for single observations
-        x_lstg = input_dict[LSTG]
-        if x_lstg.dim() == 1:
-            if x_lstg.sum == 0:
-                print('Warning: should only occur in initialization')
-            for elem_name, elem in input_dict.items():
-                input_dict[elem_name] = elem.unsqueeze(0)
-            if self.training:
-                self.eval()
+            # processing for single observations
+            x_lstg = x[LSTG]
+            if x_lstg.dim() == 1:
+                if x_lstg.sum == 0:
+                    print('Warning: should only occur in initialization')
+                for elem_name, elem in x.items():
+                    x[elem_name] = elem.unsqueeze(0)
+                if self.training:
+                    self.eval()
 
         if self.value:
-            value_params = self.value_net(input_dict)
+            value_params = self.value_net(x)
             if value_only:
                 return value_params
             else:
-                pdf = self._get_pdf(input_dict)
+                pdf = self._get_pdf(x)
                 return pdf, value_params
         else:
-            return self._get_pdf(input_dict)
+            return self._get_pdf(x)
 
-    def _get_pdf(self, input_dict):
-        theta = self.policy_net(input_dict)
+    def _get_pdf(self, x):
+        theta = self.policy_net(x)
         if self.byr:
             # no small concessions on turn 1
-            t1 = input_dict[LSTG][:, -3] == 1
+            t1 = x[LSTG][:, -3] == 1
             if self.con_set == FULL:
                 theta[t1, 1:BYR_MIN_CON1] = -np.inf
             else:
@@ -94,7 +101,7 @@ class AgentModel(torch.nn.Module):
                 theta[t1, 1:upper] = -np.inf
 
             # accept or reject on turn 7
-            t7 = torch.sum(input_dict[LSTG][:, [-3, -2, -1]], dim=1) == 0
+            t7 = torch.sum(x[LSTG][:, [-3, -2, -1]], dim=1) == 0
             theta[t7, 0] = 0.
             if self.con_set == FULL:
                 theta[t7, 1:100] = -np.inf

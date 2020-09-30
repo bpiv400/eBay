@@ -252,16 +252,14 @@ def merge_dicts(d, d_other):
     return d
 
 
-def count_dist(df=None, level=None):
+def count_dist(df=None):
     # level-specific parameters
-    if level == 'threads':
+    if INDEX not in df.index.names:
         group = df.index.names[0]
         censoring = 4
-    elif level == 'offers':
+    else:
         group = df.index.names[:-1]
         censoring = None
-    else:
-        raise NotImplementedError()
 
     # count by level
     s = df.iloc[:, 0].groupby(group).count()
@@ -307,7 +305,7 @@ def cdf_sale(offers=None, start_price=None):
     return norm_pctile, price_pctile
 
 
-def get_lookup(prefix=None):
+def get_lstgs(prefix=None):
     # subset from command line
     parser = argparse.ArgumentParser()
     parser.add_argument('--subset', type=str)
@@ -341,4 +339,4 @@ def get_lookup(prefix=None):
         filename = prefix
 
     print('{}: {} listings'.format(filename, len(lookup)))
-    return lookup, filename
+    return lookup.index, filename

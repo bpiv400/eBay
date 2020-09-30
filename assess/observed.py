@@ -1,4 +1,4 @@
-from assess.util import load_data, get_action_dist, get_lookup, \
+from assess.util import load_data, get_action_dist, get_lstgs, \
     arrival_dist, hist_dist, delay_dist, con_dist
 from utils import topickle
 from constants import PLOT_DIR, TEST
@@ -25,7 +25,7 @@ def construct_d(lookup=None):
 
 
 def main():
-    lookup, filename = get_lookup(prefix=OBS)
+    lookup, filename = get_lstgs(prefix=OBS)
 
     # dictionary of inputs for plots
     d = construct_d(lookup)

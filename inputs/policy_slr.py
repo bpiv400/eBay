@@ -1,6 +1,6 @@
 import pandas as pd
 from inputs.util import save_files, get_x_thread, get_ind_x, check_zero
-from utils import load_file
+from utils import load_data
 from constants import IDX, CON_MULTIPLIER, POLICY_SLR, VALIDATION
 from featnames import CON, AUTO, LOOKUP, SLR, INDEX, MSG, REJECT, NORM, \
     SPLIT, THREAD, X_THREAD, X_OFFER
@@ -79,10 +79,8 @@ def process_slr_inputs(data=None):
 def main():
     print('{}/{}'.format(VALIDATION, POLICY_SLR))
 
-    data = {k: load_file(VALIDATION, k)
-            for k in [LOOKUP, X_THREAD, X_OFFER]}
-
     # input dataframes, output processed dataframes
+    data = load_data(part=VALIDATION)
     d = process_slr_inputs(data)
 
     # save various output files

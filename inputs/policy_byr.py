@@ -2,11 +2,11 @@ import numpy as np
 import pandas as pd
 from inputs.util import save_files, get_x_thread, check_zero, get_ind_x
 from processing.util import collect_date_clock_feats
-from utils import load_file
+from utils import load_data
 from constants import DAY, IDX, CON_MULTIPLIER, POLICY_BYR, VALIDATION
 from featnames import CON, THREAD_COUNT, LOOKUP, BYR, X_OFFER, X_THREAD, CLOCK, \
     INDEX, START_TIME, TIME_FEATS, OUTCOME_FEATS, MSG, REJECT, NORM, SPLIT, THREAD, \
-    DAYS_SINCE_LSTG
+    DAYS_SINCE_LSTG, BYR_DELAYS, BYR_AGENT
 
 
 def get_x_offer(offers, idx):
@@ -45,83 +45,85 @@ def get_x_offer(offers, idx):
     return x_offer
 
 
-def construct_x(idx=None, threads=None, clock=None, lookup=None, offers=None):
+def construct_x(idx=None, data=None):
     # thread features
-    x_thread = get_x_thread(threads, idx, turn_indicators=True)
+    x_thread = get_x_thread(data[X_THREAD], idx, turn_indicators=True)
     x_thread.drop(THREAD_COUNT, axis=1, inplace=True)
-    days = (clock - lookup[START_TIME]) / DAY
+    days = (data[CLOCK] - data[LOOKUP][START_TIME]) / DAY
     x_thread[DAYS_SINCE_LSTG] = np.minimum(x_thread[DAYS_SINCE_LSTG], days)
     # initialize x with thread features
     x = {THREAD: x_thread}
     # offer features
-    x.update(get_x_offer(offers, idx))
+    x.update(get_x_offer(data[X_OFFER], idx))
     # no nans
     for v in x.values():
         assert v.isna().sum().sum() == 0
     return x
 
 
-def reshape_offers(offers=None, clock=None, idx0=None, idx1=None):
-    df = offers.drop(TIME_FEATS, axis=1).reindex(index=idx1)
-    arrivals = collect_date_clock_feats(clock.loc[idx0])
+def reshape_offers(data=None, idx0=None, idx1=None):
+    df = data[X_OFFER].drop(TIME_FEATS, axis=1).reindex(index=idx1)
+    arrivals = collect_date_clock_feats(data[CLOCK].loc[idx0])
     outcomes = [False if df[c].dtype == 'bool' else 0. for c in OUTCOME_FEATS]
     arrivals[OUTCOME_FEATS] = outcomes
-    df = pd.concat([df, arrivals], axis=0).sort_index()
-    return df
+    data[X_OFFER] = pd.concat([df, arrivals], axis=0).sort_index()
+    assert np.all(data[X_OFFER].index == data[CLOCK].index)
 
 
-def append_arrival_delays(clock=None, lstg_start=None, delays=None):
+def append_arrival_delays(data=None):
     # buyer turns
-    first_offer = clock.xs(1, level=INDEX, drop_level=False)
-    later_offers = clock[clock.index.isin(range(2, 8), level=INDEX)]
+    first_offer = data[CLOCK].xs(1, level=INDEX, drop_level=False)
+    later_offers = data[CLOCK][data[CLOCK].index.isin(range(2, 8), level=INDEX)]
+
     # days from listing start to thread start
-    days = (first_offer - lstg_start).rename('day') // DAY
+    days = (first_offer - data[LOOKUP][START_TIME]).rename('day') // DAY
     first_offer = pd.concat([first_offer, days], axis=1).set_index(
         'day', append=True).squeeze()
     later_offers = later_offers.to_frame().join(days.droplevel(INDEX)).set_index(
         'day', append=True).squeeze()
 
-    if delays is None:
-        # create fake non-arrival timestamps
+    # for observed data, create fake non-arrival timestamps
+    if BYR_DELAYS not in data:
         ranges = days[days > 0].apply(range)
         wide = pd.DataFrame.from_records(ranges.values, index=ranges.index)
         s = wide.rename_axis('day', axis=1).stack().astype('int64')
-        ts_delay = s * DAY + lstg_start
+        ts_delay = s * DAY + data[LOOKUP][START_TIME]
         ts_delay += (np.random.uniform(size=len(ts_delay)) * DAY).astype('int64')
+
+    # for agent data, match format and index for recorded delays
     else:
-        # match format and index
-        ts_delay = delays + lstg_start
+        ts_delay = data[BYR_DELAYS][CLOCK].to_frame().assign(index=1)
+        byr_threads = data[X_THREAD].loc[data[X_THREAD][BYR_AGENT], BYR_AGENT]
+        byr_threads = byr_threads.reset_index(THREAD)[THREAD]
+        ts_delay = ts_delay.join(byr_threads)
+        ts_delay.loc[ts_delay[THREAD].isna(), THREAD] = 0
+        ts_delay[THREAD] = ts_delay[THREAD].astype('uint64')
+        ts_delay = ts_delay.set_index([THREAD, INDEX], append=True).squeeze()
+        ts_delay.index = ts_delay.index.reorder_levels(first_offer.index.names)
+        ts_delay = ts_delay.sort_index()
 
     # concatenate with offers
-    ts_offer = pd.concat([first_offer, later_offers], axis=0).sort_index()
-    ts = pd.concat([ts_delay, ts_offer], axis=0).sort_index()
-    return ts, ts_delay.index, ts_offer.index
+    ts_offer = pd.concat([first_offer, later_offers]).sort_index()
+    data[CLOCK] = pd.concat([ts_delay, ts_offer]).sort_index()
+
+    return ts_delay.index, ts_offer.index
 
 
 def process_byr_inputs(data=None):
     # append arrival timestamps to clock
-    clock, idx0, idx1 = append_arrival_delays(clock=data[CLOCK],
-                                              lstg_start=data[LOOKUP][START_TIME])
+    idx0, idx1 = append_arrival_delays(data)
 
     # reshape offers dataframe
-    offers = reshape_offers(offers=data[X_OFFER],
-                            clock=clock,
-                            idx0=idx0,
-                            idx1=idx1)
-    assert np.all(offers.index == clock.index)
+    reshape_offers(data=data, idx0=idx0, idx1=idx1)
 
     # buyer index
-    idx = clock[clock.index.isin(IDX[BYR], level=INDEX)].index
+    idx = data[CLOCK][data[CLOCK].index.isin(IDX[BYR], level=INDEX)].index
 
     # outcome
-    y = (offers.loc[idx, CON] * CON_MULTIPLIER).astype('int8')
+    y = (data[X_OFFER].loc[idx, CON] * CON_MULTIPLIER).astype('int8')
 
     # input feature dictionary
-    x = construct_x(idx=idx,
-                    threads=data[X_THREAD],
-                    clock=clock,
-                    lookup=data[LOOKUP],
-                    offers=offers)
+    x = construct_x(idx=idx, data=data)
 
     # indices for listing features
     idx_x = get_ind_x(lstgs=data[LOOKUP].index, idx=idx)
@@ -132,10 +134,8 @@ def process_byr_inputs(data=None):
 def main():
     print('{}/{}'.format(VALIDATION, POLICY_BYR))
 
-    data = {k: load_file(VALIDATION, k)
-            for k in [LOOKUP, X_THREAD, X_OFFER, CLOCK]}
-
     # input dataframes, output processed dataframes
+    data = load_data(part=VALIDATION)
     d = process_byr_inputs(data)
 
     # save various output files

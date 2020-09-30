@@ -1,3 +1,4 @@
+from collections import OrderedDict
 import numpy as np
 import pandas as pd
 from utils import unpickle, topickle
@@ -107,7 +108,9 @@ def save_featnames_and_sizes(x=None, m=None):
     # initialize dictionaries from listing feature names
     featnames = unpickle(INPUT_DIR + 'featnames/{}.pkl'.format(X_LSTG))
     sizes = dict()
-    sizes['x'] = {k: len(v) for k, v in featnames.items()}
+    sizes['x'] = OrderedDict()
+    for k, v in featnames.items():
+        sizes['x'][k] = len(v)
 
     if m in POLICY_MODELS:
         for k in [SLR, META, LEAF]:

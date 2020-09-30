@@ -18,11 +18,11 @@ STOP_ENTROPY = .01
 AGENT_STATE = 'agent_state_dict'
 
 # agent parameters
-DELTA_CHOICES = [.75, .9]
+DELTA_CHOICES = [.7, .9]
 PARAMS = {BYR: dict(action='store_true'),
           CON_SET: dict(choices=[FULL, SPARSE, NOCON], default=FULL),
           DELTA: dict(type=float, choices=DELTA_CHOICES),
-          ENTROPY: dict(type=float, default=.025),
+          ENTROPY: dict(type=float, default=.01),
           DROPOUT: dict(type=int, default=1,
                         choices=range(len(DROPOUT_GRID)))}
 

@@ -5,7 +5,8 @@ import torch
 from agent.const import FULL, SPARSE, NOCON
 from constants import AGENT_DIR, POLICY_SLR, POLICY_BYR, VALIDATION, IDX
 from featnames import SLR, BYR, NORM, AUTO, INDEX, THREAD, LSTG, CON, \
-    LOOKUP, X_THREAD, X_OFFER, START_PRICE, CON_SET, ENTROPY, DELTA, DROPOUT
+    LOOKUP, X_THREAD, X_OFFER, START_PRICE, CON_SET, ENTROPY, DELTA, DROPOUT, \
+    BYR_DELAYS
 from utils import unpickle, load_file, restrict_to_lstgs
 
 
@@ -28,7 +29,7 @@ def get_paths(**kwargs):
     # run id
     d1, d2 = [int(elem * 10) for elem in kwargs[DROPOUT]]
     run_id = '{}_{}_{}_{}'.format(kwargs[CON_SET], kwargs[ENTROPY], d1, d2)
-    if kwargs['suffix'] is not None:
+    if 'suffix' in kwargs and kwargs['suffix'] is not None:
         run_id += '_{}'.format(kwargs['suffix'])
 
     # concatenate
@@ -53,12 +54,10 @@ def define_con_space(con_set=None, byr=False):
     return con_space
 
 
-def find_best_run(byr=None, sales=False, verbose=True):
-    log_dir = get_log_dir(byr=byr)
-    df = unpickle(log_dir + 'runs.pkl')
-    s = df.xs(VALIDATION, level='part')[NORM]
-    s = s.xs('sales' if sales else 'all', level='listings')
-    run_id = s[~s.isna()].astype('float64').idxmax()
+def find_best_run(byr=None, delta=None, verbose=True):
+    log_dir = get_log_dir(byr=byr, delta=delta)
+    norm = unpickle(log_dir + '{}.pkl'.format(VALIDATION))[NORM]
+    run_id = norm[~norm.isna()].astype('float64').idxmax()
     if verbose:
         print('Best run: {}'.format(run_id))
     return log_dir + '{}/'.format(run_id)
@@ -89,7 +88,7 @@ def get_slr_reward(data=None, values=None, delta=None):
 
 def get_byr_valid(data=None):
     idx_offers = data[X_THREAD][data[X_THREAD]['byr_agent']].index
-    idx_delays = data['delays'].xs(0, level='day').index
+    idx_delays = data[BYR_DELAYS].xs(0, level='day').index
     lstgs = idx_offers.droplevel(THREAD).union(idx_delays)
     for k, v in data.items():
         data[k] = restrict_to_lstgs(obj=v, lstgs=lstgs)
@@ -138,7 +137,10 @@ def get_sale_norm(offers=None, drop_thread=True):
 
 def load_values(part=None, delta=None):
     df = load_file(part, 'values')
-    v = df.sale_price * delta ** df.relist_ct
+    if delta == 0:
+        v = pd.DataFrame(0., index=df.index)
+    else:
+        v = df.sale_price * delta ** df.relist_ct
     v = v.groupby(LSTG).mean()
     return v
 

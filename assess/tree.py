@@ -1,28 +1,25 @@
 from sklearn.tree import DecisionTreeClassifier, export_text
-from assess.util import load_data, get_last, get_log_dir
+from assess.util import get_last
 from agent.util import find_best_run
-from utils import load_file
-from constants import TEST, DAY
-from featnames import LOOKUP, AUTO, CON, NORM, START_PRICE, START_TIME, BYR_HIST
+from utils import load_data
+from constants import TEST, DAY, MAX_DAYS
+from featnames import LOOKUP, AUTO, CON, NORM, START_PRICE, START_TIME, \
+    BYR_HIST, X_OFFER, X_THREAD, INDEX, CLOCK, THREAD
 
 
 def main():
-    lookup = load_file(TEST, LOOKUP)
-    # run_dir = find_best_run()
-    run_dir = get_log_dir(byr=False) + 'run_nocon_0_1/'
+    run_dir = find_best_run(byr=False, delta=.75)
     data = load_data(part=TEST, run_dir=run_dir)
-    threads, offers, clock = [data[k] for k in ['threads', 'offers', 'clock']]
 
     for turn in [2, 4, 6]:
         # find valid indices
-        is_turn = offers.index.get_level_values('index') == turn
-        idx = offers[~offers[AUTO] & is_turn].index
+        is_turn = data[X_OFFER].index.get_level_values(INDEX) == turn
+        idx = data[X_OFFER][~data[X_OFFER][AUTO] & is_turn].index
 
         # outcome
-        con = offers.loc[idx, CON]
+        con = data[X_OFFER].loc[idx, CON]
         # y = ((0 < con) & (con < 1)) + 2 * (con == 1)
-        y = con == 1
-        y = y.values
+        y = (con == 1).values
         print('Turn {0:d} accept rate: {1:2.1f}%'.format(
             turn, 100 * y.mean()))
         # print('Turn {0:d} concession rate: {1:2.1f}%'.format(
@@ -31,18 +28,19 @@ def main():
         #     turn, 100 * (y == 2).mean()))
 
         # features
-        X = threads[BYR_HIST].reindex(index=idx).to_frame()
-        X['thread_num'] = X.index.get_level_values('thread')
-        X['days'] = (clock.loc[idx] - lookup[START_TIME]) / DAY
-        X = X.join(get_last(offers[NORM]))
-        X = X.join(lookup[START_PRICE])
+        X = data[X_THREAD][BYR_HIST].reindex(index=idx).to_frame()
+        X['thread_num'] = X.index.get_level_values(THREAD)
+        tdiff = data[CLOCK].loc[idx] - data[LOOKUP][START_TIME]
+        X['elapsed'] = tdiff / (MAX_DAYS * DAY)
+        X = X.join(get_last(data[X_OFFER][NORM]))
+        X = X.join(data[LOOKUP][START_PRICE])
 
         # split out columns names
         cols = list(X.columns)
         X = X.values
 
         # decision tree
-        clf = DecisionTreeClassifier(max_depth=2).fit(X, y)
+        clf = DecisionTreeClassifier(max_depth=3).fit(X, y)
         r = export_text(clf, feature_names=cols)
         print(r)
 

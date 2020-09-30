@@ -12,7 +12,7 @@ from nets.FeedForward import FeedForward
 from sim.Sample import get_batches
 from constants import DAY, SPLIT_PCTS, INPUT_DIR, MODEL_DIR, SIM_DIR, \
     PARTS_DIR, MAX_DELAY_TURN, MAX_DELAY_ARRIVAL, NUM_CHUNKS
-from featnames import LOOKUP, X_THREAD, X_OFFER, CLOCK, LSTG
+from featnames import LOOKUP, X_THREAD, X_OFFER, CLOCK, LSTG, BYR_DELAYS
 
 
 def unpickle(file):
@@ -120,24 +120,11 @@ def load_featnames(name):
     return unpickle(INPUT_DIR + 'featnames/{}.pkl'.format(name))
 
 
-def load_state_dict(name=None):
-    """
-    Loads state dict of a model
-    :param name: string giving name of model (see consts)
-    :return: dict
-    """
-    model_path = '{}{}.net'.format(MODEL_DIR, name)
-    state_dict = torch.load(model_path,
-                            map_location=torch.device('cpu'))
-    return state_dict
-
-
-def load_model(name, verbose=False, use_trained=True):
+def load_model(name, verbose=False):
     """
     Initialize PyTorch network for some model
     :param str name: full name of the model
-    :param verbose: boolean for printing statements
-    :param use_trained: loads trained model when True
+    :param bool verbose: print statements if True
     :return: torch.nn.Module
     """
     if verbose:
@@ -147,12 +134,13 @@ def load_model(name, verbose=False, use_trained=True):
     sizes = load_sizes(name)
     net = FeedForward(sizes)  # type: torch.nn.Module
 
-    if use_trained:
-        # read in model parameters
-        state_dict = load_state_dict(name=name)
+    # read in model parameters
+    path = '{}{}.net'.format(MODEL_DIR, name)
+    state_dict = torch.load(path, map_location=torch.device('cpu'))
 
-        # load parameters into model
-        net.load_state_dict(state_dict, strict=True)
+    # load parameters into model
+    net.load_state_dict(state_dict, strict=True)
+
     # eval mode
     for param in net.parameters(recurse=True):
         param.requires_grad = False
@@ -258,7 +246,7 @@ def load_file(part, x, folder=PARTS_DIR):
     return unpickle(path)
 
 
-def load_data(part=None, sim=False, run_dir=None):
+def load_data(part=None, sim=False, run_dir=None, lstgs=None):
     if not sim and run_dir is None:
         folder = PARTS_DIR
     elif sim:
@@ -267,9 +255,11 @@ def load_data(part=None, sim=False, run_dir=None):
     else:
         folder = run_dir
     data = {LOOKUP: load_file(part, LOOKUP)}
-    for k in [X_THREAD, X_OFFER, CLOCK, 'delays']:
+    for k in [X_THREAD, X_OFFER, CLOCK, BYR_DELAYS]:
         df = load_file(part, k, folder=folder)
         if df is not None:
+            if lstgs is not None:
+                df = restrict_to_lstgs(obj=df, lstgs=lstgs)
             data[k] = df
     return data
 

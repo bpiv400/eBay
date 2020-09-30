@@ -4,7 +4,7 @@ import pandas as pd
 from agent.util import get_log_dir, get_reward, load_values
 from utils import topickle, load_data
 from agent.const import DELTA_CHOICES
-from constants import HOLDOUT_PARTITIONS, TEST
+from constants import AGENT_PARTITIONS, TEST
 from featnames import SIM, OBS, X_OFFER
 
 
@@ -13,7 +13,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--delta', type=float, choices=DELTA_CHOICES)
     parser.add_argument('--part', type=str,
-                        choices=HOLDOUT_PARTITIONS, default=TEST)
+                        choices=AGENT_PARTITIONS, default=TEST)
     parser.add_argument('--byr', action='store_true')
     args = parser.parse_args()
 

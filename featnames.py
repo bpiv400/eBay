@@ -70,6 +70,7 @@ ALL_OFFER_FEATS = CLOCK_FEATS + TIME_FEATS + OUTCOME_FEATS
 BYR_HIST = 'byr_hist'
 DAYS_SINCE_LSTG = 'days_since_lstg'
 DAYS_SINCE_LAST = 'days_since_last'
+BYR_AGENT = 'byr_agent'
 
 # index labels
 LSTG = 'lstg'
@@ -99,6 +100,7 @@ X_THREAD = 'x_thread'
 CLOCK = 'clock'
 LOOKUP = 'lookup'
 P_ARRIVAL = 'p_arrival'
+BYR_DELAYS = 'delays'
 
 # outcome types
 SIM = 'sim'

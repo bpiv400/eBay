@@ -4,7 +4,8 @@ from rlenv.events.Thread import Thread
 from rlenv.const import FIRST_OFFER
 from constants import MAX_DELAY_ARRIVAL
 from featnames import START_TIME, START_PRICE, TIME_FEATS, MSG, CON, \
-    LSTG, THREAD, INDEX, BYR_HIST, DEC_PRICE, CLOCK
+    LSTG, THREAD, INDEX, BYR_HIST, DEC_PRICE, CLOCK, BYR_DELAYS, BYR_AGENT, \
+    X_THREAD, X_OFFER
 
 OFFER_COLS = [LSTG, THREAD, INDEX, CLOCK, CON, MSG] + TIME_FEATS
 DELAY_COLS = [LSTG, CLOCK, BYR_HIST]
@@ -189,7 +190,7 @@ class OutcomeRecorder(Recorder):
         self.offers = self.record2frame(self.offers, OFFER_COLS)
         thread_cols = THREAD_COLS
         if self.byr_agent:
-            thread_cols += ['byr_agent']
+            thread_cols += [BYR_AGENT]
         self.threads = self.record2frame(self.threads, thread_cols)
         if self.byr_agent:
             self.delays = self.record2frame(self.delays, DELAY_COLS)
@@ -202,9 +203,9 @@ class OutcomeRecorder(Recorder):
             self.delays.set_index(LSTG, inplace=True)
 
         # output dictionary
-        data = dict(offers=self.offers.sort_index(),
-                    threads=self.threads.sort_index())
+        data = {X_OFFER: self.offers.sort_index(),
+                X_THREAD: self.threads.sort_index()}
         if self.byr_agent:
-            data['delays'] = self.delays.sort_index()
+            data[BYR_DELAYS] = self.delays.sort_index()
 
         return data

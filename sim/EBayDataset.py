@@ -6,12 +6,11 @@ from featnames import X_LSTG, LSTG, THREAD
 
 
 class EBayDataset(Dataset):
-    def __init__(self, part=None, name=None, folder=INPUT_DIR):
+    def __init__(self, part=None, name=None):
         """
         Defines a parent class that extends torch.utils.data.Dataset.
         :param str part: partition name (e.g., train_models)
         :param str name: name of inputs folder
-        :param str folder: contains part/name.pkl
         """
         # save name to self
         self.part = part
@@ -21,7 +20,7 @@ class EBayDataset(Dataset):
         self.x_lstg = load_file(self.part, X_LSTG)
 
         # dictionary of inputs
-        self.d = unpickle(folder + '{}/{}.pkl'.format(part, name))
+        self.d = unpickle(INPUT_DIR + '{}/{}.pkl'.format(part, name))
         if 'x' in self.d:
             self.offer_keys = [k for k in self.d['x'].keys() if 'offer' in k]
 
