@@ -11,7 +11,7 @@ from agent.models.HeuristicSlr import HeuristicSlr
 from agent.util import get_paths
 from rlenv.generate.util import process_sims
 from utils import run_func_on_chunks, process_chunk_worker, compose_args
-from agent.const import PARAMS
+from agent.const import AGENT_PARAMS, HYPER_PARAMS
 from constants import AGENT_PARTITIONS, DROPOUT_GRID
 from featnames import BYR, DROPOUT
 
@@ -42,9 +42,7 @@ class AgentGenerator(Generator):
             while not done:
                 probs = self.model(observation=obs)
                 action = int(sample_categorical(probs=probs))
-                agent_tuple = self.env.step(action)
-                done = agent_tuple[2]
-                obs = agent_tuple[0]
+                obs, _, done, _ = self.env.step(action)
 
 
 def main():
@@ -53,7 +51,8 @@ def main():
     parser.add_argument('--part', choices=AGENT_PARTITIONS)
     parser.add_argument('--heuristic', action='store_true')
     parser.add_argument('--suffix', type=str)
-    compose_args(arg_dict=PARAMS, parser=parser)
+    compose_args(arg_dict=AGENT_PARAMS, parser=parser)
+    compose_args(arg_dict=HYPER_PARAMS, parser=parser)
     args = vars(parser.parse_args())
 
     # translate dropout index

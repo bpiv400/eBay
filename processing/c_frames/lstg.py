@@ -2,7 +2,7 @@ from collections import OrderedDict
 import numpy as np
 from processing.util import extract_day_feats, get_lstgs, load_feats
 from constants import PARTS_DIR, INPUT_DIR, DAY, VALIDATION
-from featnames import START_PRICE, META, LEAF, SLR, BYR
+from featnames import START_PRICE, META, LEAF, SLR, BYR, LSTG, X_LSTG
 from utils import input_partition, topickle
 
 AS_IS_FEATS = ['store', 'slr_us', 'fast', 'photos', 'slr_lstg_ct',
@@ -55,7 +55,7 @@ def create_x_lstg(lstgs=None):
     x = dict()
 
     # listing features
-    x['lstg'] = construct_lstg_feats(listings)
+    x[LSTG] = construct_lstg_feats(listings)
 
     # word2vec features
     for role in [BYR, SLR]:
@@ -89,7 +89,7 @@ def create_x_lstg(lstgs=None):
 
 def main():
     part = input_partition()
-    print('{}/x_lstg'.format(part))
+    print('{}/{}'.format(part, X_LSTG))
 
     # create dataframe
     x_lstg = create_x_lstg(lstgs=get_lstgs(part))
@@ -99,11 +99,11 @@ def main():
         cols = OrderedDict()
         for k, v in x_lstg.items():
             cols[k] = list(v.columns)
-        topickle(cols, INPUT_DIR + 'featnames/x_lstg.pkl')
+        topickle(cols, INPUT_DIR + 'featnames/{}.pkl'.format(X_LSTG))
 
     # convert to numpy and save
     x_lstg = {k: v.values for k, v in x_lstg.items()}
-    topickle(x_lstg, PARTS_DIR + '{}/x_lstg.pkl'.format(part))
+    topickle(x_lstg, PARTS_DIR + '{}/{}.pkl'.format(part, X_LSTG))
 
 
 if __name__ == "__main__":

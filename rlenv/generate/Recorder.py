@@ -205,7 +205,6 @@ class OutcomeRecorder(Recorder):
         # set index
         self.offers.set_index(INDEX_COLS, inplace=True)
         self.threads.set_index(INDEX_COLS[:-1], inplace=True)
-        assert np.all(self.offers.xs(1, level=INDEX)[CON] > 0)
 
         # output dictionary
         return {X_OFFER: self.offers.sort_index(),

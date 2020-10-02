@@ -195,7 +195,7 @@ class BuyerEnv(AgentEnv):
         if self.recorder is not None:
             self.recorder.start_thread(thread_id=thread.thread_id,
                                        byr_hist=hist,
-                                       time=self.curr_event.priority,
+                                       time=thread.priority,
                                        agent=True)
 
         return thread

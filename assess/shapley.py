@@ -5,8 +5,9 @@ import torch
 import shap
 from agent.models.AgentModel import load_agent_model
 from agent.util import find_best_run
-from utils import unpickle, load_file, load_sizes, load_featnames, get_role
-from agent.const import DELTA_CHOICES
+from utils import unpickle, load_file, load_sizes, load_featnames, get_role, \
+    compose_args
+from agent.const import AGENT_PARAMS
 from constants import TEST, IDX
 from featnames import BYR, SLR, X_LSTG, BYR_HIST, DAYS, DELAY, \
     DAYS_SINCE_LSTG, LSTG, THREAD, CLOCK_FEATS, OUTCOME_FEATS, \
@@ -123,17 +124,17 @@ def main():
     # parameters from command line
     parser = argparse.ArgumentParser()
     parser.add_argument('--turn', type=int, choices=range(1, 8))
-    parser.add_argument('--delta', type=float, choices=DELTA_CHOICES)
+    compose_args(arg_dict=AGENT_PARAMS, parser=parser)
     args = parser.parse_args()
-    byr = args.turn in IDX[BYR]
-    role = get_role(byr)
+    role = get_role(args.byr)
+    assert args.turn in IDX[role]
 
     # components for shapley value estimation
     x, model = load_inputs_model(turn=args.turn, delta=args.delta)
 
     # shapley values by group
     df, idx = compute_shapley_vals(x=x, role=role, model=model)
-    groups = collapse_by_group(df, byr=byr, turn=args.turn)
+    groups = collapse_by_group(df, byr=args.byr, turn=args.turn)
 
     # add in P(reject)
     reject = get_pdf(model, x[idx, :])[:, 0] > .99

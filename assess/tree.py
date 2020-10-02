@@ -1,14 +1,21 @@
+import argparse
 from sklearn.tree import DecisionTreeClassifier, export_text
 from assess.util import get_last
 from agent.util import find_best_run
-from utils import load_data
+from utils import load_data, compose_args
+from agent.const import AGENT_PARAMS
 from constants import TEST, DAY, MAX_DAYS
 from featnames import LOOKUP, AUTO, CON, NORM, START_PRICE, START_TIME, \
     BYR_HIST, X_OFFER, X_THREAD, INDEX, CLOCK, THREAD
 
 
 def main():
-    run_dir = find_best_run(byr=False, delta=.75)
+    # parameters from command line
+    parser = argparse.ArgumentParser()
+    compose_args(arg_dict=AGENT_PARAMS, parser=parser)
+    args = vars(parser.parse_args())
+
+    run_dir = find_best_run(**args)
     data = load_data(part=TEST, run_dir=run_dir)
 
     for turn in [2, 4, 6]:

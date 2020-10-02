@@ -17,14 +17,15 @@ AGENT_STATE = 'agent_state_dict'
 
 # agent parameters
 DELTA_CHOICES = [.7, .9]
-PARAMS = {BYR: dict(action='store_true'),
-          DELTA: dict(type=float,
-                      choices=DELTA_CHOICES,
-                      required=True),
-          ENTROPY: dict(type=float, default=.01),
-          DROPOUT: dict(type=int,
-                        default=1,
-                        choices=range(len(DROPOUT_GRID)))}
+AGENT_PARAMS = {BYR: dict(action='store_true'),
+                DELTA: dict(type=float,
+                            choices=DELTA_CHOICES,
+                            required=True)}
+
+HYPER_PARAMS = {ENTROPY: dict(type=float, default=.01),
+                DROPOUT: dict(type=int,
+                              default=1,
+                              choices=range(len(DROPOUT_GRID)))}
 
 # epoch count for stepping down entropy and stopping
 PERIOD_EPOCHS = 1000

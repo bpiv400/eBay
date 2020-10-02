@@ -279,10 +279,12 @@ def compose_args(arg_dict=None, parser=None):
 
 
 def restrict_to_lstgs(obj=None, lstgs=None):
+    assert isinstance(lstgs, pd.MultiIndex) and list(lstgs.names) == [LSTG]
     if isinstance(obj.index, pd.MultiIndex):
         return obj.reindex(index=lstgs, level=LSTG)
     else:
         return obj.reindex(index=lstgs)
+
 
 def get_role(byr=None):
     return BYR if byr else SLR

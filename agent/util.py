@@ -5,7 +5,7 @@ import torch
 from agent.const import NUM_CON
 from constants import AGENT_DIR, VALIDATION, IDX
 from featnames import SLR, BYR, NORM, AUTO, INDEX, THREAD, LSTG, CON, \
-    LOOKUP, X_THREAD, X_OFFER, START_PRICE, ENTROPY, DELTA, DROPOUT
+    LOOKUP, X_THREAD, X_OFFER, START_PRICE, ENTROPY, DELTA, DROPOUT, BYR_AGENT
 from utils import unpickle, load_file, restrict_to_lstgs
 
 
@@ -74,24 +74,23 @@ def get_slr_reward(data=None, values=None, delta=None):
 
 
 def get_byr_valid(data=None):
-    idx_offers = data[X_THREAD][data[X_THREAD]['byr_agent']].index
-    lstgs = idx_offers.droplevel(THREAD)
+    idx_offers = data[X_THREAD][data[X_THREAD][BYR_AGENT]].index
+    lstg_sim = idx_offers.droplevel(THREAD)
     for k, v in data.items():
-        data[k] = restrict_to_lstgs(obj=v, lstgs=lstgs)
+        data[k] = pd.DataFrame(index=lstg_sim).join(v)
     return data
 
 
 def get_byr_reward(data=None, values=None):
-    start_price = data[LOOKUP][START_PRICE]
-    lstgs = start_price.index
-    norm_value = values.mean(axis=1).loc[lstgs] / start_price
+    df = data[LOOKUP][[START_PRICE]].join(values.rename('vals'))
+    norm_value = df.vals / df[START_PRICE]
     sale_norm = get_sale_norm(data[X_OFFER], drop_thread=False)
-    if X_THREAD in data and 'byr_agent' in data[X_THREAD].columns:
-        sale_norm = sale_norm[data[X_THREAD]['byr_agent']]
+    if X_THREAD in data and BYR_AGENT in data[X_THREAD].columns:
+        sale_norm = sale_norm[data[X_THREAD][BYR_AGENT]]
     sale_norm = sale_norm.droplevel(THREAD)
-    reward = norm_value.loc[sale_norm.index] - sale_norm
-    reward = reward.reindex(index=lstgs, fill_value=0)
-    return reward.mean(), (reward * start_price).mean()
+    reward = norm_value.reindex(index=sale_norm.index) - sale_norm
+    reward = reward.reindex(index=df.index, fill_value=0)
+    return reward.mean(), (reward * df[START_PRICE]).mean()
 
 
 def get_reward(data=None, values=None, part=None, delta=None, byr=False):
