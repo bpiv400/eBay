@@ -1,24 +1,20 @@
-from agent.util import get_agent_name
 from rlenv.Heap import Heap
 from testing.agents.Action import Action
 from testing.util import compare_input_dicts
-from constants import DAY
+from utils import get_role
 
 
 class ActionQueue:
     def __init__(self, byr=False):
         self.byr = byr
-        self.model_name = get_agent_name(byr=self.byr)
         self.action_queue = Heap(entry_type=Action)
         self.last_action = None
 
     def push_action(self, action=None):
         self.action_queue.push(action)
 
-    def get_buyer_delay(self):
-        days_since_lstg = self.action_queue.peek().time
-        seconds_since_midnight = days_since_lstg % DAY
-        return seconds_since_midnight
+    def get_buyer_arrival(self):
+        return self.action_queue.peek().time
 
     def get_agent_con(self, agent_tuple=None):
         obs, _, _, info = agent_tuple
@@ -33,11 +29,10 @@ class ActionQueue:
             assert info.turn % 2 == int(self.byr)
             assert self.last_action.turn == info.turn
 
-            # after first turn, check that thread id matches
-            if self.last_action.turn > 1:
-                if self.last_action.thread_id != info.thread_id:
-                    raise RuntimeError('Invalid thread ids: ({}, {})'.format(
-                        self.last_action.thread_id, info.thread_id))
+            # check that thread id matches
+            if self.last_action.thread_id != info.thread_id:
+                raise RuntimeError('Invalid thread ids: ({}, {})'.format(
+                    self.last_action.thread_id, info.thread_id))
 
             # check that time is the same
             if self.last_action.time != info.priority:
@@ -51,7 +46,7 @@ class ActionQueue:
         if not next_action.censored:
             for feat_set in obs.keys():
                 obs[feat_set] = obs[feat_set].unsqueeze(0)
-            compare_input_dicts(model=self.model_name,
+            compare_input_dicts(model=get_role(self.byr),
                                 stored_inputs=next_action.input_dict,
                                 env_inputs=obs)
 

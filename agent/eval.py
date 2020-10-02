@@ -23,7 +23,8 @@ def main():
     df = pd.DataFrame(columns=['norm', 'price'])  # for output
 
     # rewards from data
-    for dset in [OBS, SIM]:
+    # for dset in [OBS, SIM]:
+    for dset in [OBS]:
         data = load_data(part=args.part, sim=(dset == SIM))
         df.loc[dset, :] = get_reward(
             data=data,

@@ -1,15 +1,13 @@
 import os
 import pandas as pd
-from inputs.policy_byr import process_byr_inputs
-from inputs.policy_slr import process_slr_inputs
+from inputs.agents import process_inputs
 from inputs.util import convert_x_to_numpy
 from processing.util import collect_date_clock_feats, get_days_delay, get_norm
-from agent.util import get_agent_name
-from utils import topickle, is_split, load_file
+from utils import topickle, is_split, load_file, get_role
 from constants import IDX, DAY, MAX_DAYS
 from featnames import DAYS, DELAY, CON, SPLIT, NORM, REJECT, AUTO, EXP, \
     CLOCK_FEATS, TIME_FEATS, OUTCOME_FEATS, DAYS_SINCE_LSTG, INDEX, BYR_AGENT, \
-    BYR_HIST, START_TIME, LOOKUP, SLR, X_THREAD, X_OFFER, CLOCK, BYR_DELAYS
+    BYR_HIST, START_TIME, LOOKUP, SLR, X_THREAD, X_OFFER, CLOCK
 
 
 def diff_tf(df):
@@ -64,12 +62,6 @@ def process_sim_threads(df=None, lstg_start=None):
     return df
 
 
-def process_sim_delays(df=None, lstg_start=None):
-    df['day'] = (df[CLOCK] - lstg_start.reindex(index=df.index)) // DAY
-    df = df.set_index('day', append=True).sort_index()
-    return df
-
-
 def concat_sim_chunks(sims):
     """
     Loops over simulations, concatenates dataframes.
@@ -100,10 +92,6 @@ def process_sims(part=None, sims=None, output_dir=None, byr=None):
                                       lstg_start=d[LOOKUP][START_TIME])
     d[X_OFFER], d[CLOCK] = process_sim_offers(df=data[X_OFFER])
 
-    if BYR_DELAYS in data:
-        d[BYR_DELAYS] = process_sim_delays(df=data[BYR_DELAYS],
-                                           lstg_start=d[LOOKUP][START_TIME])
-
     # create directory if it doesn't exist
     if not os.path.isdir(output_dir):
         os.mkdir(output_dir)
@@ -115,7 +103,7 @@ def process_sims(part=None, sims=None, output_dir=None, byr=None):
 
     # model inputs for agent logs
     if byr is not None:
-        inputs = process_byr_inputs(d) if byr else process_slr_inputs(d)
+        inputs = process_inputs(data=d, byr=byr)
         convert_x_to_numpy(x=inputs['x'], idx=inputs['y'].index)
         inputs['y'] = inputs['y'].to_numpy()
-        topickle(inputs, output_dir + '{}.pkl'.format(get_agent_name(byr)))
+        topickle(inputs, output_dir + '{}.pkl'.format(get_role(byr)))

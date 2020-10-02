@@ -6,7 +6,7 @@ from utils import unpickle, load_featnames
 from rlenv.util import load_featnames
 from utils import load_file
 from constants import MODELS, INPUT_DIR, INDEX_DIR, BYR_DROP, \
-    FIRST_ARRIVAL_MODEL, POLICY_SLR, POLICY_BYR, IDX
+    FIRST_ARRIVAL_MODEL, SLR, BYR, IDX
 from featnames import SLR, X_LSTG, X_OFFER, LOOKUP, NORM, AUTO, \
     CLOCK, LSTG, INDEX, DEC_PRICE, START_PRICE, MSG, THREAD
 
@@ -129,7 +129,7 @@ def load_model_inputs(model=None, part=None, x_lstg=None):
     # fixing lstg
     lstg_vals = x_lstg[LSTG][x_idx, :]
     # drop bo_ct, lstg_ct, & auto decline features from policy byr
-    if model == POLICY_BYR:
+    if model == BYR:
         lstg_names = load_featnames(X_LSTG)[LSTG]
         keep = [i for i in range(len(lstg_names))
                 if lstg_names[i] not in BYR_DROP]
@@ -152,9 +152,9 @@ def load_all_inputs(part=None, byr=False, slr=False):
     models = MODELS.copy()
     models.remove(FIRST_ARRIVAL_MODEL)
     if byr:
-        models += [POLICY_BYR]
+        models += [BYR]
     elif slr:
-        models += [POLICY_SLR]
+        models += [SLR]
 
     inputs_dict = dict()
     for model in models:

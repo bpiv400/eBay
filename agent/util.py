@@ -2,16 +2,11 @@ import os
 import numpy as np
 import pandas as pd
 import torch
-from agent.const import FULL, SPARSE, NOCON
-from constants import AGENT_DIR, POLICY_SLR, POLICY_BYR, VALIDATION, IDX
+from agent.const import NUM_CON
+from constants import AGENT_DIR, VALIDATION, IDX
 from featnames import SLR, BYR, NORM, AUTO, INDEX, THREAD, LSTG, CON, \
-    LOOKUP, X_THREAD, X_OFFER, START_PRICE, CON_SET, ENTROPY, DELTA, DROPOUT, \
-    BYR_DELAYS
+    LOOKUP, X_THREAD, X_OFFER, START_PRICE, ENTROPY, DELTA, DROPOUT
 from utils import unpickle, load_file, restrict_to_lstgs
-
-
-def get_agent_name(byr=False):
-    return POLICY_BYR if byr else POLICY_SLR
 
 
 def get_log_dir(byr=None, delta=None):
@@ -28,7 +23,7 @@ def get_paths(**kwargs):
 
     # run id
     d1, d2 = [int(elem * 10) for elem in kwargs[DROPOUT]]
-    run_id = '{}_{}_{}_{}'.format(kwargs[CON_SET], kwargs[ENTROPY], d1, d2)
+    run_id = '{}_{}_{}'.format(kwargs[ENTROPY], d1, d2)
     if 'suffix' in kwargs and kwargs['suffix'] is not None:
         run_id += '_{}'.format(kwargs['suffix'])
 
@@ -38,16 +33,8 @@ def get_paths(**kwargs):
     return log_dir, run_id, run_dir
 
 
-def define_con_space(con_set=None, byr=False):
-    if con_set == FULL:
-        num_con = 101
-    elif con_set == SPARSE:
-        num_con = 11
-    elif con_set == NOCON:
-        num_con = 2
-    else:
-        raise ValueError('Invalid concession set: {}'.format(con_set))
-
+def define_con_space(byr=False, test=False):
+    num_con = 101 if test else NUM_CON
     con_space = np.arange(num_con) / (num_con - 1)
     if not byr:
         con_space = np.concatenate([con_space, [1.1]])  # expiration rejection
@@ -88,8 +75,7 @@ def get_slr_reward(data=None, values=None, delta=None):
 
 def get_byr_valid(data=None):
     idx_offers = data[X_THREAD][data[X_THREAD]['byr_agent']].index
-    idx_delays = data[BYR_DELAYS].xs(0, level='day').index
-    lstgs = idx_offers.droplevel(THREAD).union(idx_delays)
+    lstgs = idx_offers.droplevel(THREAD)
     for k, v in data.items():
         data[k] = restrict_to_lstgs(obj=v, lstgs=lstgs)
     return data

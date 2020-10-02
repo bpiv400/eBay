@@ -7,9 +7,9 @@ from rlpyt.utils.collections import namedarraytuple
 from rlenv.EBayEnv import EBayEnv
 from rlenv.events.Thread import Thread
 from agent.ConSpace import ConSpace
-from agent.util import load_values
+from agent.util import load_values, define_con_space
 from constants import INTERVAL_TURN, INTERVAL_CT_TURN, DAY, TRAIN_RL
-from featnames import BYR_HIST, START_PRICE
+from featnames import BYR_HIST, START_PRICE, BYR
 
 Info = namedarraytuple("Info", ["days", "max_return", "num_actions", "num_threads",
                                 "turn", "thread_id", "priority", "agent_sale"])
@@ -19,7 +19,10 @@ EventLog = namedtuple("EventLog", ["priority", "thread_id", "turn"])
 class AgentEnv(EBayEnv, Env):
     def __init__(self, **kwargs):
         super().__init__(params=kwargs)
+
+        # mode
         self.test = False if 'test' not in kwargs else kwargs['test']
+        self.train = False if 'train' not in kwargs else kwargs['train']
 
         # parameters to be set later
         self.curr_event = None
@@ -31,14 +34,14 @@ class AgentEnv(EBayEnv, Env):
                            for k, v in self.composer.agent_sizes['x'].items()}
 
         # action space
-        self.con_set = self._define_con_set(kwargs['con_set'])
+        self.con_set = define_con_space(byr=kwargs[BYR], test=self.test)
         self._action_space = self._define_action_space()
 
         # observation space
         self._observation_space = self.define_observation_space()
 
         # values
-        if not self.test:
+        if self.train:
             self.delta = kwargs['delta']
             self.values = load_values(part=TRAIN_RL, delta=self.delta)
 
@@ -57,7 +60,7 @@ class AgentEnv(EBayEnv, Env):
         :return: tuple
         """
         obs = self.get_obs(event=event, done=done)
-        if self.test:
+        if not self.train:
             reward, agent_sale = None, None
         else:
             reward, agent_sale = self.get_reward()
@@ -107,7 +110,7 @@ class AgentEnv(EBayEnv, Env):
         self.curr_event = None
         self.last_event = None
         self.num_actions = 0
-        if not self.test:
+        if self.train:
             if not self.has_next_lstg():
                 raise RuntimeError("Out of lstgs")
             self.next_lstg()
@@ -126,9 +129,6 @@ class AgentEnv(EBayEnv, Env):
 
     def _define_action_space(self):
         return ConSpace(size=len(self.con_set))
-
-    def _define_con_set(self, con_set):
-        raise NotImplementedError()
 
     def is_agent_turn(self, event):
         raise NotImplementedError()

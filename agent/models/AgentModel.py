@@ -4,8 +4,8 @@ from torch.nn.functional import softmax
 from nets.FeedForward import FeedForward
 from agent.util import define_con_space
 from utils import load_sizes
-from agent.const import FULL, BYR_MIN_CON1, AGENT_STATE
-from constants import POLICY_SLR, POLICY_BYR
+from agent.const import BYR_MIN_CON1, AGENT_STATE
+from constants import SLR, BYR
 from featnames import LSTG
 
 
@@ -18,11 +18,10 @@ class AgentModel(torch.nn.Module):
     4. Both networks use batch normalization
     5. Both networks use dropout with shared dropout hyperparameters
     """
-    def __init__(self, byr=None, con_set=None, dropout=None, value=True):
+    def __init__(self, byr=None, dropout=None, value=True):
         """
         Initializes feed-forward networks for agents.
         :param bool byr: use buyer sizes if True
-        :param str con_set: restricts concession set
         :param tuple dropout: pair of dropout rates
         :param bool value: estimate value if true
         """
@@ -30,7 +29,6 @@ class AgentModel(torch.nn.Module):
 
         # save params to self
         self.byr = byr
-        self.con_set = con_set
         self.value = value
 
         # in case of no dropout
@@ -38,10 +36,11 @@ class AgentModel(torch.nn.Module):
             dropout = (0., 0.)
 
         # size of policy output
-        self.out = len(define_con_space(byr=byr, con_set=con_set))
+        self.con_space = define_con_space(byr=byr)
+        self.out = len(self.con_space)
 
         # policy net
-        sizes = load_sizes(POLICY_BYR if byr else POLICY_SLR)
+        sizes = load_sizes(BYR if byr else SLR)
         sizes['out'] = self.out
         self.policy_net = FeedForward(sizes=sizes,
                                       dropout=dropout,
@@ -94,19 +93,13 @@ class AgentModel(torch.nn.Module):
         if self.byr:
             # no small concessions on turn 1
             t1 = x[LSTG][:, -3] == 1
-            if self.con_set == FULL:
-                theta[t1, 1:BYR_MIN_CON1] = -np.inf
-            else:
-                upper = int(BYR_MIN_CON1 / 10)
-                theta[t1, 1:upper] = -np.inf
+            middle = np.where(self.con_space == BYR_MIN_CON1)[0][0]
+            theta[t1, 1:middle] = -np.inf
 
             # accept or reject on turn 7
             t7 = torch.sum(x[LSTG][:, [-3, -2, -1]], dim=1) == 0
             theta[t7, 0] = 0.
-            if self.con_set == FULL:
-                theta[t7, 1:100] = -np.inf
-            else:
-                theta[t7, 1:10] = -np.inf
+            theta[t7, 1:self.out-1] = -np.inf
 
         return softmax(theta, dim=-1)
 

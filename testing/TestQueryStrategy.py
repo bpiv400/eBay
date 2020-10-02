@@ -12,9 +12,7 @@ class TestQueryStrategy(QueryStrategy):
         self.lstg_log = log
 
     def get_first_arrival(self, *args, **kwargs):
-        init_optional_arg(kwargs=kwargs, name='intervals', default=None)
-        agent = kwargs['intervals'] is not None
-        if agent:
+        if 'test' in kwargs and kwargs['test']:  # agent turn
             return self.lstg_log.get_agent_arrival()
         else:
             return self.lstg_log.get_inter_arrival(time=kwargs['time'],

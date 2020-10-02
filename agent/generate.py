@@ -12,15 +12,14 @@ from agent.util import get_paths
 from rlenv.generate.util import process_sims
 from utils import run_func_on_chunks, process_chunk_worker, compose_args
 from agent.const import PARAMS
-from constants import HOLDOUT_PARTITIONS, DROPOUT_GRID
-from featnames import BYR, CON_SET, DROPOUT
+from constants import AGENT_PARTITIONS, DROPOUT_GRID
+from featnames import BYR, DROPOUT
 
 
 class AgentGenerator(Generator):
-    def __init__(self, model=None, byr=False, slr=False, con_set=None):
-        super().__init__(verbose=False, byr=byr, slr=slr, test=True)
+    def __init__(self, model=None, byr=False, slr=False):
+        super().__init__(verbose=False, byr=byr, slr=slr)
         self.model = model
-        self.con_set = con_set
         assert byr or slr
 
     def generate_composer(self):
@@ -35,15 +34,6 @@ class AgentGenerator(Generator):
     @property
     def env_class(self):
         return BuyerEnv if self.byr else SellerEnv
-
-    def generate_env(self):
-        return self.env_class(query_strategy=self.query_strategy,
-                              loader=self.loader,
-                              recorder=self.recorder,
-                              verbose=self.verbose,
-                              composer=self.composer,
-                              con_set=self.con_set,
-                              test=True)
 
     def simulate_lstg(self):
         obs = self.env.reset()
@@ -60,13 +50,13 @@ class AgentGenerator(Generator):
 def main():
     # parameters from command line
     parser = argparse.ArgumentParser()
-    parser.add_argument('--part', choices=HOLDOUT_PARTITIONS)
+    parser.add_argument('--part', choices=AGENT_PARTITIONS)
     parser.add_argument('--heuristic', action='store_true')
     parser.add_argument('--suffix', type=str)
     compose_args(arg_dict=PARAMS, parser=parser)
     args = vars(parser.parse_args())
 
-    # convert dropout
+    # translate dropout index
     args[DROPOUT] = DROPOUT_GRID[args[DROPOUT]]
 
     # environment class and run directory
@@ -79,9 +69,7 @@ def main():
         else:
             model = HeuristicSlr()
     else:
-        model_args = {k: v for k, v in args.items()
-                      if k in [BYR, CON_SET, DROPOUT]}
-        model_args['value'] = False
+        model_args = {BYR: args[BYR], 'value': False}
         model = load_agent_model(model_args=model_args, run_dir=run_dir)
 
     # run in parallel on chunks
@@ -94,7 +82,6 @@ def main():
                 model=model,
                 byr=args[BYR],
                 slr=not args[BYR],
-                con_set=args[CON_SET]
             )
         )
     )

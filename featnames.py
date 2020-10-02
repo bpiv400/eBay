@@ -4,7 +4,6 @@ BYR = 'byr'
 ARRIVAL = 'arrival'
 
 # hyperparameters
-CON_SET = 'con_set'
 DELTA = 'delta'
 DROPOUT = 'dropout'
 ENTROPY = 'entropy'
@@ -100,7 +99,6 @@ X_THREAD = 'x_thread'
 CLOCK = 'clock'
 LOOKUP = 'lookup'
 P_ARRIVAL = 'p_arrival'
-BYR_DELAYS = 'delays'
 
 # outcome types
 SIM = 'sim'

@@ -1,17 +1,17 @@
 from rlpyt.utils.collections import namedarraytuple
 from rlenv.const import DELAY_EVENT, OFFER_EVENT
 from agent.envs.AgentEnv import AgentEnv, EventLog
-from agent.util import define_con_space
 from rlenv.util import get_delay_outcomes, get_con_outcomes
 from utils import load_sizes
 from rlenv.const import DELAY_IND
-from constants import POLICY_SLR, MAX_DELAY_TURN
+from constants import SLR, MAX_DELAY_TURN
 
-SellerObs = namedarraytuple("SellerObs",
-                            list(load_sizes(POLICY_SLR)['x'].keys()))
+SellerObs = namedarraytuple("SellerObs", list(load_sizes(SLR)['x'].keys()))
 
 
 class SellerEnv(AgentEnv):
+    def __init__(self, **kwargs):
+        super().__init__(byr=False, **kwargs)
 
     def is_agent_turn(self, event):
         """
@@ -41,7 +41,7 @@ class SellerEnv(AgentEnv):
                     return self.get_obs(event=event, done=False)
 
             # if the lstg is complete
-            elif not self.test:  # queue up next lstg in training
+            elif self.train:  # queue up next lstg in training
                 self.init_reset()
             else:
                 return None  # for EvalGenerator
@@ -123,9 +123,6 @@ class SellerEnv(AgentEnv):
 
         # item does sell
         return self.outcome.price, True
-
-    def _define_con_set(self, con_set):
-        return define_con_space(con_set=con_set, byr=False)
 
     @property
     def horizon(self):

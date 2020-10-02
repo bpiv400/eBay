@@ -1,32 +1,20 @@
-import numpy as np
 from rlpyt.utils.collections import namedarraytuple
 from rlenv.util import get_clock_feats, get_con_outcomes
-from utils import load_sizes, unpickle, get_days_since_lstg
+from utils import load_sizes, get_days_since_lstg
 from rlenv.const import FIRST_OFFER, DELAY_EVENT, OFFER_EVENT, RL_ARRIVAL_EVENT
 from rlenv.Sources import ThreadSources
 from agent.envs.AgentEnv import AgentEnv, EventLog
-from agent.util import define_con_space
 from rlenv.events.Event import Event
 from rlenv.events.Thread import Thread
-from constants import HOUR, POLICY_BYR, PCTILE_DIR, INTERVAL_CT_ARRIVAL, \
-    DAY, MAX_DAYS
-from featnames import BYR_HIST
+from constants import BYR, BYR_HIST_MODEL
 
-BuyerObs = namedarraytuple('BuyerObs',
-                           list(load_sizes(POLICY_BYR)['x'].keys()))
+BuyerObs = namedarraytuple('BuyerObs', list(load_sizes(BYR)['x'].keys()))
 
 
 class BuyerEnv(AgentEnv):
     def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-
-        # to be set later
-        self.hist = None
-        self.agent_thread = None
-
-        # for drawing experience
-        path = PCTILE_DIR + '{}.pkl'.format(BYR_HIST)
-        self.hist_pctile = unpickle(path).values
+        super().__init__(byr=True, **kwargs)
+        self.agent_thread = None  # to be set later
 
     def reset(self, hist=None):
         """
@@ -36,26 +24,33 @@ class BuyerEnv(AgentEnv):
         :return: observation associated with the first rl arrival
         """
         self.init_reset()  # in AgentEnv
-        self.agent_thread = 0
-        if hist is None:
-            self.hist = self._draw_hist()
-        else:  # for TestGenerator
-            self.hist = hist
+        self.agent_thread = None
 
         while True:
+            # RL arrival time
+            priority = self.start_time + self.get_first_arrival(test=self.test)
+            if self.verbose:
+                print('RL to arrive at {}.'.format(priority))
+
             # put an RL arrival into the queue and run environment
-            self.queue.push(self._create_rl_event(self.start_time))
-            event, lstg_complete = super().run()  # calls EBayEnv.run()
+            if priority < self.end_time:
+                rl_event = Event(event_type=RL_ARRIVAL_EVENT, priority=priority)
+                self.queue.push(rl_event)
+                event, lstg_complete = super().run()  # calls EBayEnv.run()
 
-            # when rl buyer arrives, create a prospective thread but do not put in queue
-            if not lstg_complete:
-                thread = self._create_thread(event.priority)
-                self.curr_event = thread
-                return self.get_obs(event=thread, done=False)
+                # when rl buyer arrives, create a prospective thread
+                if not lstg_complete:
+                    self.curr_event = self._create_thread(
+                        arrival_time=event.priority,
+                        hist=hist
+                    )
+                    self.agent_thread = self.curr_event.thread_id
+                    return self.get_obs(event=self.curr_event, done=False)
 
-            # item sells before rl buyer arrival
-            elif not self.test:  # for training
+            # no RL arrival or listing ends before RL arrival
+            if self.train:  # queue up next listing
                 self.init_reset()
+                self.agent_thread = None
             else:  # for testing and evaluation
                 return None
 
@@ -70,47 +65,30 @@ class BuyerEnv(AgentEnv):
         con = self.turn_from_action(action=action)
         event_type = self.curr_event.type
         self.num_actions += 1
-        if event_type == FIRST_OFFER:
-            if con == 0:
-                return self._step_arrival_delay()
-            else:
-                return self._step_first_offer(con)
-        elif event_type == OFFER_EVENT:
-            assert self.curr_event.turn in [3, 5, 7]
-            assert not self.curr_event.thread_expired()
+        if event_type == FIRST_OFFER and con == 0:
+            return self._step_arrival_delay()
+        elif event_type == OFFER_EVENT or (event_type == FIRST_OFFER and con > 0):
             return self._execute_offer(con=con)
         else:
             raise ValueError('Invalid event type: {}'.format(event_type))
 
     def _step_arrival_delay(self):
+        # record offer
         if self.recorder is not None:
-            self.recorder.add_agent_delay(priority=self.curr_event.priority,
-                                          byr_hist=self.hist)
-        next_midnight = (self.curr_event.priority // DAY + 1) * DAY
-        if next_midnight == self.end_time:
-            return self.agent_tuple(done=True,
-                                    event=self.curr_event,
-                                    last_event=self.last_event)
-        self.queue.push(self._create_rl_event(next_midnight))
-        self.curr_event = None
-        return self.run()
+            self.recorder.add_buyer_walk(
+                event=self.curr_event,
+                time_feats=self.curr_event.sources.offer_prev_time
+            )
 
-    def _step_first_offer(self, con=None):
-        # save thread id and increment counter
-        self.agent_thread = self.curr_event.thread_id
-        self.thread_counter += 1
-
-        # record and print
-        hist = self.curr_event.sources()[BYR_HIST]
-        self.record(self.curr_event, byr_hist=hist, agent=True)
+        # print
         if self.verbose:
-            print('Agent thread {} initiated | Buyer hist: {}'.format(
-                self.agent_thread, hist))
-
-        # create and execute offer
-        return self._execute_offer(con=con)
+            print('Agent buyer walks at {}.'.format(self.curr_event.priority))
+        return self.agent_tuple(done=True,
+                                event=self.curr_event,
+                                last_event=self.last_event)
 
     def _execute_offer(self, con=None):
+        assert not self.curr_event.thread_expired()
         con_outcomes = get_con_outcomes(con=con,
                                         sources=self.curr_event.sources(),
                                         turn=self.curr_event.turn)
@@ -181,55 +159,50 @@ class BuyerEnv(AgentEnv):
 
         return value - self.outcome.price, True
 
-    def _create_rl_event(self, midnight=None):
-        assert midnight % DAY == 0
-        arrival_time = self._get_arrival_time(midnight)
-        return Event(event_type=RL_ARRIVAL_EVENT, priority=arrival_time)
+    def _create_thread(self, arrival_time=None, hist=None):
+        # construct thread, increment counter
+        thread = Thread(priority=arrival_time, agent=True)
+        thread.set_id(self.thread_counter)
+        self.thread_counter += 1
 
-    def _create_thread(self, arrival_time=None):
         # construct sources
         sources = ThreadSources(x_lstg=self.x_lstg)
         clock_feats = get_clock_feats(arrival_time)
         time_feats = self.time_feats.get_feats(time=arrival_time,
-                                               thread_id=self.thread_counter)
+                                               thread_id=thread.thread_id)
         days_since_lstg = get_days_since_lstg(lstg_start=self.start_time,
                                               time=arrival_time)
         sources.prepare_hist(clock_feats=clock_feats,
                              time_feats=time_feats,
                              days_since_lstg=days_since_lstg)
 
-        # construct thread, then return
-        thread = Thread(priority=arrival_time, agent=True)
-        thread.set_id(self.thread_counter)
-        thread.init_thread(sources=sources, hist=self.hist)
+        # sample history
+        if hist is None:
+            input_dict = self.composer.build_input_dict(model_name=BYR_HIST_MODEL,
+                                                        sources=sources(),
+                                                        turn=None)
+            hist = self.get_hist(input_dict=input_dict,
+                                 time=arrival_time,
+                                 thread_id=thread.thread_id)
+        thread.init_thread(sources=sources, hist=hist)
+
+        # print
+        if self.verbose:
+            print('Agent thread {} initiated | Buyer hist: {}'.format(
+                thread.thread_id, hist))
+
+        # record thread
+        if self.recorder is not None:
+            self.recorder.start_thread(thread_id=thread.thread_id,
+                                       byr_hist=hist,
+                                       time=self.curr_event.priority,
+                                       agent=True)
 
         return thread
 
-    def _get_arrival_time(self, priority):
-        """
-        Gets an arrival time for the RL, forces the arrival to occur before
-        the lstg ends
-        :param int priority: midnight of some day in listing window
-        :return: int giving arrival time
-        """
-        curr = int((priority - self.start_time) / HOUR)
-        intervals_in_day = int(INTERVAL_CT_ARRIVAL / MAX_DAYS)
-        intervals = (curr, curr + intervals_in_day)
-        seconds = self.get_first_arrival(intervals=intervals)
-        return priority + seconds
-
-    def _draw_hist(self):
-        q = np.random.uniform()
-        idx = np.searchsorted(self.hist_pctile, q) - 1
-        hist = self.hist_pctile[idx]
-        return hist
-
-    def _define_con_set(self, con_set):
-        return define_con_space(con_set=con_set, byr=True)
-
     @property
     def horizon(self):
-        return MAX_DAYS + 3
+        return 4
 
     @property
     def _obs_class(self):

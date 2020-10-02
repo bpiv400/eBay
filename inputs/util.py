@@ -4,7 +4,7 @@ import pandas as pd
 from utils import unpickle, topickle
 from inputs.const import NUM_OUT
 from constants import INPUT_DIR, INDEX_DIR, VALIDATION, \
-    IDX, DISCRIM_MODEL, POLICY_BYR, POLICY_MODELS, BYR_DROP
+    IDX, DISCRIM_MODEL, BYR, SLR, BYR_DROP
 from featnames import CLOCK_FEATS, OUTCOME_FEATS, SPLIT, MSG, AUTO, LSTG, X_LSTG, \
     EXP, REJECT, DAYS, DELAY, TIME_FEATS, THREAD_COUNT, BYR, INDEX, SLR, THREAD, \
     META, LEAF
@@ -105,26 +105,19 @@ def save_featnames_and_sizes(x=None, m=None):
     :param dict x: input dataframes.
     :param str m: name of model.
     """
-    # initialize dictionaries from listing feature names
+    # initialize from listing feature names
     featnames = unpickle(INPUT_DIR + 'featnames/{}.pkl'.format(X_LSTG))
-    sizes = dict()
-    sizes['x'] = OrderedDict()
-    for k, v in featnames.items():
-        sizes['x'][k] = len(v)
 
-    if m in POLICY_MODELS:
+    if m in [BYR, SLR]:
         for k in [SLR, META, LEAF]:
             del featnames[k]
-            del sizes['x'][k]
 
-    if m == POLICY_BYR:
+    if m == BYR:
         featnames[LSTG] = [k for k in featnames[LSTG] if k not in BYR_DROP]
-        sizes['x'][LSTG] = len(featnames[LSTG])
 
     # add thread features to end of lstg grouping
     if x is not None:
         featnames[LSTG] += list(x[THREAD].columns)
-        sizes['x'][LSTG] += len(x[THREAD].columns)
 
         # for offer models
         if 'offer1' in x:
@@ -132,10 +125,9 @@ def save_featnames_and_sizes(x=None, m=None):
                 for i in range(1, 8):
                     k = 'offer{}'.format(i)
                     featnames[k] = list(x[k].columns)
-                    sizes['x'][k] = len(featnames[k])
             else:
                 # buyer models do not have time feats
-                if m == POLICY_BYR or m[-1] in [str(i) for i in IDX[BYR]]:
+                if m == BYR or m[-1] in [str(i) for i in IDX[BYR]]:
                     feats = CLOCK_FEATS + OUTCOME_FEATS
                 else:
                     feats = CLOCK_FEATS + TIME_FEATS + OUTCOME_FEATS
@@ -144,13 +136,24 @@ def save_featnames_and_sizes(x=None, m=None):
                 for k in x.keys():
                     if 'offer' in k:
                         assert list(x[k].columns) == feats
-                        sizes['x'][k] = len(feats)  # put length in sizes
 
                 # one vector of featnames for offer groupings
                 featnames['offer'] = feats
 
-    # length of model output vector
-    sizes['out'] = NUM_OUT[m]
+    # create sizes
+    sizes = dict()
+    sizes['x'] = OrderedDict()
+    for k, v in featnames.items():
+        if k == 'offer':
+            for t in range(1, 8):
+                key = 'offer{}'.format(t)
+                if key in x:
+                    sizes['x'][key] = len(v)
+        else:
+            sizes['x'][k] = len(v)
+
+    if m not in [BYR, SLR]:
+        sizes['out'] = NUM_OUT[m]
 
     # save
     topickle(featnames, INPUT_DIR + 'featnames/{}.pkl'.format(m))

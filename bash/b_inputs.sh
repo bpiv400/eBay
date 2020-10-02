@@ -21,7 +21,6 @@ for part in sim valid; do
   done
 done
 
-# only valid partition for policy inputs
-for f in policy_slr policy_byr; do
-  python repo/inputs/$f\.py &
-done
+# for testing agent environments: valid partition for agent inputs
+python repo/inputs/agents.py &
+python repo/inputs/agents.py --byr &

@@ -108,11 +108,6 @@ CENSORED_MODELS = [INTERARRIVAL_MODEL] + DELAY_MODELS
 # discriminator models
 DISCRIM_MODEL = 'discrim'
 
-# policy initializations
-POLICY_SLR = 'policy_slr'
-POLICY_BYR = 'policy_byr'
-POLICY_MODELS = [POLICY_SLR, POLICY_BYR]
-
 # normalization type
 MODEL_NORM = 'batch'
 
@@ -125,7 +120,8 @@ SEED = 123456
 # number of chunks
 NUM_CHUNKS = 64
 
-# simulations for value calculation
+# simulation counts
+OUTCOME_SIMS = 2
 VALUE_SIMS = 25
 
 # features to drop from 'lstg' grouping for byr agent

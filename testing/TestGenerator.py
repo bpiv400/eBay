@@ -8,7 +8,6 @@ from testing.util import load_all_inputs, reindex_dict, \
     get_auto_safe_lstgs, drop_duplicated_timestamps
 from testing.TestLoader import TestLoader
 from utils import unpickle, load_file
-from agent.const import FULL
 from featnames import X_THREAD, X_OFFER, LOOKUP, LSTG
 
 
@@ -21,15 +20,6 @@ class TestGenerator(Generator):
             print('Testing seller agent')
         else:
             print('Testing Simulator')
-
-    def generate_env(self):
-        return self.env_class(query_strategy=self.query_strategy,
-                              loader=self.loader,
-                              recorder=None,
-                              verbose=self.verbose,
-                              composer=self.composer,
-                              con_set=FULL,
-                              test=True)
 
     def generate_query_strategy(self):
         return TestQueryStrategy()
@@ -108,3 +98,6 @@ class TestGenerator(Generator):
     @property
     def env_class(self):
         return SimulatorEnv
+
+    def generate_recorder(self):
+        return None

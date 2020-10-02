@@ -5,6 +5,7 @@ from rlenv.interfaces.PlayerInterface import SimulatedSeller, SimulatedBuyer
 from rlenv.LstgLoader import ChunkLoader
 from rlenv.QueryStrategy import DefaultQueryStrategy
 from rlenv.util import get_env_sim_dir, load_chunk
+from constants import OUTCOME_SIMS
 
 
 class Generator:
@@ -59,7 +60,9 @@ class Generator:
         t0 = dt.now()
         while self.env.has_next_lstg():
             self.env.next_lstg()
-            self.simulate_lstg()
+            for i in range(OUTCOME_SIMS):
+                self.simulate_lstg()
+                self.recorder.increment_sim()
 
         # time elapsed
         print('Avg time per listing: {} seconds'.format(

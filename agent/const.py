@@ -1,10 +1,8 @@
 from constants import DROPOUT_GRID
-from featnames import BYR, CON_SET, DELTA, DROPOUT, ENTROPY
+from featnames import BYR, DELTA, DROPOUT, ENTROPY
 
-# concession sets
-FULL = 'full'
-SPARSE = 'sparse'
-NOCON = 'nocon'
+# number of concessions
+NUM_CON = 21  # every 5 percentage points
 
 # optimization parameters
 AGENT_HIDDEN = 512
@@ -20,17 +18,19 @@ AGENT_STATE = 'agent_state_dict'
 # agent parameters
 DELTA_CHOICES = [.7, .9]
 PARAMS = {BYR: dict(action='store_true'),
-          CON_SET: dict(choices=[FULL, SPARSE, NOCON], default=FULL),
-          DELTA: dict(type=float, choices=DELTA_CHOICES),
+          DELTA: dict(type=float,
+                      choices=DELTA_CHOICES,
+                      required=True),
           ENTROPY: dict(type=float, default=.01),
-          DROPOUT: dict(type=int, default=1,
+          DROPOUT: dict(type=int,
+                        default=1,
                         choices=range(len(DROPOUT_GRID)))}
 
 # epoch count for stepping down entropy and stopping
-PERIOD_EPOCHS = {NOCON: 500, SPARSE: 1000, FULL: 1500}
+PERIOD_EPOCHS = 1000
 
 # minimum byr concession on turn 1
-BYR_MIN_CON1 = 50
+BYR_MIN_CON1 = .5
 
 # names for opt_info namedtuple
 FIELDS = ["ActionsPerTraj", "ThreadsPerTraj", "DaysToDone",

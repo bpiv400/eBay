@@ -12,7 +12,7 @@ from nets.FeedForward import FeedForward
 from sim.Sample import get_batches
 from constants import DAY, SPLIT_PCTS, INPUT_DIR, MODEL_DIR, SIM_DIR, \
     PARTS_DIR, MAX_DELAY_TURN, MAX_DELAY_ARRIVAL, NUM_CHUNKS
-from featnames import LOOKUP, X_THREAD, X_OFFER, CLOCK, LSTG, BYR_DELAYS
+from featnames import LOOKUP, X_THREAD, X_OFFER, CLOCK, LSTG, BYR, SLR
 
 
 def unpickle(file):
@@ -255,7 +255,7 @@ def load_data(part=None, sim=False, run_dir=None, lstgs=None):
     else:
         folder = run_dir
     data = {LOOKUP: load_file(part, LOOKUP)}
-    for k in [X_THREAD, X_OFFER, CLOCK, BYR_DELAYS]:
+    for k in [X_THREAD, X_OFFER, CLOCK]:
         df = load_file(part, k, folder=folder)
         if df is not None:
             if lstgs is not None:
@@ -283,3 +283,6 @@ def restrict_to_lstgs(obj=None, lstgs=None):
         return obj.reindex(index=lstgs, level=LSTG)
     else:
         return obj.reindex(index=lstgs)
+
+def get_role(byr=None):
+    return BYR if byr else SLR

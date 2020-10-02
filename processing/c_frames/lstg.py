@@ -1,7 +1,7 @@
+from collections import OrderedDict
 import numpy as np
-import pandas as pd
 from processing.util import extract_day_feats, get_lstgs, load_feats
-from constants import PARTS_DIR, INPUT_DIR, DAY, VALIDATION, TRAIN_RL
+from constants import PARTS_DIR, INPUT_DIR, DAY, VALIDATION
 from featnames import START_PRICE, META, LEAF, SLR, BYR
 from utils import input_partition, topickle
 
@@ -96,13 +96,10 @@ def main():
 
     # extract column names and save
     if part == VALIDATION:
-        cols = {k: list(v.columns) for k, v in x_lstg.items()}
+        cols = OrderedDict()
+        for k, v in x_lstg.items():
+            cols[k] = list(v.columns)
         topickle(cols, INPUT_DIR + 'featnames/x_lstg.pkl')
-
-    # save standard deviations
-    if part == TRAIN_RL:
-        x_lstg_std = pd.concat([df.std(axis=0) for df in x_lstg.values()])
-        topickle(x_lstg_std, PARTS_DIR + '{}/x_lstg_std.pkl'.format(part))
 
     # convert to numpy and save
     x_lstg = {k: v.values for k, v in x_lstg.items()}

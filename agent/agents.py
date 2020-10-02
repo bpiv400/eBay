@@ -8,10 +8,10 @@ from rlpyt.agents.pg.categorical import CategoricalPgAgent
 from rlpyt.distributions.categorical import DistInfo
 from rlpyt.utils.buffer import buffer_to
 from torch.nn.functional import softmax, softplus
-from agent.util import define_con_space, backward_from_done, valid_from_done
-from agent.const import NOCON, BYR_MIN_CON1
+from agent.util import backward_from_done, valid_from_done
+from agent.const import BYR_MIN_CON1
 from constants import EPS, IDX, SLR
-from featnames import BYR, CON_SET
+from featnames import BYR
 
 
 def parse_value_params(value_params):
@@ -22,14 +22,9 @@ def parse_value_params(value_params):
 
 
 class SplitCategoricalPgAgent(CategoricalPgAgent):
-    def __init__(self, serial=False, entropy=None, **kwargs):
+    def __init__(self, serial=False, **kwargs):
         super().__init__(**kwargs)
         self.serial = serial
-
-        con_set = kwargs['model_kwargs'][CON_SET]
-        byr = kwargs['model_kwargs'][BYR]
-        self.con_space = define_con_space(con_set=con_set, byr=byr)
-        self.entropy = entropy / np.log(len(self.con_space))
 
     def __call__(self, observation, prev_action, prev_reward):
         model_inputs = self._model_inputs(observation, prev_action, prev_reward)
@@ -100,7 +95,7 @@ class SplitCategoricalPgAgent(CategoricalPgAgent):
 
         # action stats
         action = samples.agent.action[valid].numpy()
-        con = np.take_along_axis(self.con_space, action, 0)
+        con = np.take_along_axis(self.model.con_space, action, 0)
 
         opt_info = self._get_turn_info(opt_info=opt_info,
                                        env=env,
@@ -165,18 +160,17 @@ class SellerAgent(SplitCategoricalPgAgent):
             opt_info['{}_{}'.format(prefix, 'RejRate')] = np.mean(con_t == 0)
 
             # moments of concession distribution
-            if self.model.con_set != NOCON:
-                opt_info['{}_{}'.format(prefix, 'ConRate')] = \
-                    np.mean((con_t > 0) & (con_t < 1))
-                opt_info['{}{}'.format(prefix, 'Con')] = \
-                    con_t[(con_t > 0) & (con_t < 1)]
+            opt_info['{}_{}'.format(prefix, 'ConRate')] = \
+                np.mean((con_t > 0) & (con_t < 1))
+            opt_info['{}{}'.format(prefix, 'Con')] = \
+                con_t[(con_t > 0) & (con_t < 1)]
         return opt_info
 
 
 class BuyerAgent(SplitCategoricalPgAgent):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.length = 2 - BYR_MIN_CON1 / 100  # of [-1, 1 - BYR_MIN_CON1 / 100]
+        self.length = 2 - BYR_MIN_CON1  # of [-1, 1 - BYR_MIN_CON1]
         self.max_return = self.length - 1
 
     def _calculate_value(self, value_params):

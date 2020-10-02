@@ -17,13 +17,12 @@ from agent.envs.BuyerEnv import BuyerEnv
 from rlenv.interfaces.ArrivalInterface import ArrivalInterface
 from rlenv.interfaces.PlayerInterface import SimulatedSeller, SimulatedBuyer
 from agent.AgentLoader import AgentLoader
-from featnames import BYR, CON_SET, DELTA, ENTROPY, DROPOUT
+from featnames import BYR, DELTA, ENTROPY, DROPOUT
 
 
 class RlTrainer:
     def __init__(self, **kwargs):
         self.byr = kwargs[BYR]
-        self.con_set = kwargs[CON_SET]
         self.delta = kwargs[DELTA]
         self.entropy = kwargs[ENTROPY]
         self.dropout = kwargs[DROPOUT]
@@ -38,7 +37,6 @@ class RlTrainer:
     def _generate_agent(self, serial=False):
         model_kwargs = dict(
                 byr=self.byr,
-                con_set=self.con_set,
                 dropout=self.dropout
             )
         if self.byr:
@@ -48,8 +46,7 @@ class RlTrainer:
         return agent_cls(
             ModelCls=AgentModel,
             model_kwargs=model_kwargs,
-            serial=serial,
-            entropy=self.entropy
+            serial=serial
         )
 
     def _generate_env(self, verbose=False):
@@ -58,9 +55,9 @@ class RlTrainer:
             composer=composer,
             verbose=verbose,
             query_strategy=self._generate_query_strategy(),
-            con_set=self.con_set,
             loader=AgentLoader(),
-            delta=self.delta
+            delta=self.delta,
+            train=True
         )
         env = BuyerEnv if self.byr else SellerEnv
         return env, env_params
@@ -91,7 +88,7 @@ class RlTrainer:
             )
 
     def _generate_runner(self, agent=None, sampler=None):
-        algo = EBayPPO()
+        algo = EBayPPO(entropy=self.entropy)
         affinity = dict(master_cpus=self._cpus,
                         master_torch_threads=len(self._cpus),
                         workers_cpus=self._cpus,
@@ -121,7 +118,6 @@ class RlTrainer:
             runner.train()
         else:
             log_dir, run_id, run_dir = get_paths(byr=self.byr,
-                                                 con_set=self.con_set,
                                                  suffix=kwargs['suffix'],
                                                  delta=self.delta,
                                                  entropy=self.entropy,

@@ -4,15 +4,14 @@ from rlenv.events.Thread import Thread
 from rlenv.const import FIRST_OFFER
 from constants import MAX_DELAY_ARRIVAL
 from featnames import START_TIME, START_PRICE, TIME_FEATS, MSG, CON, \
-    LSTG, THREAD, INDEX, BYR_HIST, DEC_PRICE, CLOCK, BYR_DELAYS, BYR_AGENT, \
+    LSTG, SIM, THREAD, INDEX, BYR_HIST, DEC_PRICE, CLOCK, BYR_AGENT, \
     X_THREAD, X_OFFER
 
-OFFER_COLS = [LSTG, THREAD, INDEX, CLOCK, CON, MSG] + TIME_FEATS
-DELAY_COLS = [LSTG, CLOCK, BYR_HIST]
-THREAD_COLS = [LSTG, THREAD, BYR_HIST, CLOCK]
-INDEX_COLS = [LSTG, THREAD, INDEX]
+OFFER_COLS = [LSTG, SIM, THREAD, INDEX, CLOCK, CON, MSG] + TIME_FEATS
+THREAD_COLS = [LSTG, SIM, THREAD, BYR_HIST, CLOCK]
+INDEX_COLS = [LSTG, SIM, THREAD, INDEX]
 
-DTYPES = {LSTG: np.int32, THREAD: np.uint16, INDEX: np.uint8,
+DTYPES = {LSTG: np.int32, SIM: np.uint8, THREAD: np.uint8, INDEX: np.uint8,
           MSG: bool, CON: np.uint8, CLOCK: np.int32}
 for name in TIME_FEATS:
     if 'offers' in name or 'count' in name:
@@ -26,6 +25,7 @@ class Recorder:
         self.lstg = None
         self.start_time = None
         self.start_price = None
+        self.sim_ct = None
 
     def update_lstg(self, lookup, lstg):
         """
@@ -36,8 +36,12 @@ class Recorder:
         self.lstg = lstg
         self.start_time = lookup[START_TIME]
         self.start_price = lookup[START_PRICE]
+        self.sim_ct = 0
         if self.verbose:
             self.print_lstg(lookup)
+
+    def increment_sim(self):
+        self.sim_ct += 1
 
     @staticmethod
     def print_offer(event):
@@ -158,18 +162,18 @@ class OutcomeRecorder(Recorder):
         :param int time: time of the offer
         :param bool agent: True if agents byr starts thread
         """
-        row = [self.lstg, thread_id, byr_hist, time]
+        row = [self.lstg, self.sim_ct, thread_id, byr_hist, time]
         if self.byr_agent:
             row += [agent]
         self.threads.append(row)
 
     def add_offer(self, event=None, time_feats=None):
         # change ordering if OFFER_COLS changes
-        summary = event.summary()
-        con, norm, msg = summary
+        con, norm, msg = event.summary()
         if event.turn == 1:
             assert con > 0
         row = [self.lstg,
+               self.sim_ct,
                event.thread_id,
                event.turn,
                event.priority,
@@ -181,9 +185,14 @@ class OutcomeRecorder(Recorder):
         if self.verbose:
             self.print_offer(event)
 
-    def add_agent_delay(self, priority=None, byr_hist=None):
-        assert self.byr_agent
-        self.delays.append([self.lstg, priority, byr_hist])
+    def add_buyer_walk(self, event=None, time_feats=None):
+        assert event.turn == 1
+        row = [self.lstg, self.sim_ct, event.thread_id, 1,
+               event.priority, 0, 0]
+        row += list(time_feats)
+        self.offers.append(row)
+        if self.verbose:
+            self.print_offer(event)
 
     def construct_output(self):
         # convert lists to dataframes
@@ -192,20 +201,12 @@ class OutcomeRecorder(Recorder):
         if self.byr_agent:
             thread_cols += [BYR_AGENT]
         self.threads = self.record2frame(self.threads, thread_cols)
-        if self.byr_agent:
-            self.delays = self.record2frame(self.delays, DELAY_COLS)
 
         # set index
         self.offers.set_index(INDEX_COLS, inplace=True)
         self.threads.set_index(INDEX_COLS[:-1], inplace=True)
         assert np.all(self.offers.xs(1, level=INDEX)[CON] > 0)
-        if self.byr_agent:
-            self.delays.set_index(LSTG, inplace=True)
 
         # output dictionary
-        data = {X_OFFER: self.offers.sort_index(),
+        return {X_OFFER: self.offers.sort_index(),
                 X_THREAD: self.threads.sort_index()}
-        if self.byr_agent:
-            data[BYR_DELAYS] = self.delays.sort_index()
-
-        return data

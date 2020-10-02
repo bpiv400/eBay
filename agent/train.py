@@ -38,8 +38,6 @@ def startup():
 def main():
     init_params, train_params = startup()
     trainer = RlTrainer(**init_params)
-
-    # train
     trainer.train(**train_params)
 
 

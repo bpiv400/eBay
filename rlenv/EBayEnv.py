@@ -113,7 +113,7 @@ class EBayEnv:
         else:
             raise NotImplementedError()
 
-    def record(self, event, byr_hist=None, agent=False):
+    def record(self, event, byr_hist=None):
         if self.recorder is None:
             if self.verbose and byr_hist is None:
                 Recorder.print_offer(event)
@@ -125,8 +125,7 @@ class EBayEnv:
             else:
                 self.recorder.start_thread(thread_id=event.thread_id,
                                            byr_hist=byr_hist,
-                                           time=event.priority,
-                                           agent=agent)
+                                           time=event.priority)
 
     def process_offer(self, event):
         # check whether the lstg expired, censoring this offer

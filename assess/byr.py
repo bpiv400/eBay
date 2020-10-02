@@ -1,9 +1,11 @@
+import numpy as np
+from sklearn.neighbors import KernelDensity
 from agent.util import get_log_dir, get_byr_valid, load_values
 from assess.util import discrete_pdf, discrete_cdf, get_sale_norm, norm_norm
 from utils import load_data
-from constants import TEST, TRAIN_RL
+from constants import TEST, EPS
 from featnames import CON, INDEX, THREAD, X_OFFER, X_THREAD, LOOKUP, START_PRICE, \
-    DAYS_SINCE_LSTG, AUTO, LSTG, NORM
+    AUTO, LSTG, NORM
 
 PART = TEST
 
@@ -13,13 +15,19 @@ def get_turn(s=None, turn=None, agent_threads=None):
         index=agent_threads).dropna().droplevel(THREAD)
 
 
+def values_pdf(X=None):
+    dim = np.arange(0, 1.01, .01)
+    kde = KernelDensity(bandwidth=.1).fit(X.reshape(-1, 1))
+    pdf = np.exp(kde.score_samples(dim.reshape(-1, 1)))
+    return pdf
+
+
 # byr run
-byr_dir = get_log_dir(True) + 'run_full_delta_0.9/'
+byr_dir = get_log_dir(byr=True, delta=.9)
 data = load_data(part=PART, folder=byr_dir)
 
 # values
-delta = float(byr_dir.split('/')[-2].split('_')[-1])
-values = load_values(part=PART, delta=delta)
+values = load_values(part=PART, delta=.9)
 norm_values = values / data[LOOKUP][START_PRICE]
 
 # restrict data to valid

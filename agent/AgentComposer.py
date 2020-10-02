@@ -2,7 +2,6 @@ import argparse
 import math
 import torch
 import numpy as np
-from agent.util import get_agent_name
 from constants import PARTS_DIR, VALIDATION, BYR_DROP
 from featnames import OUTCOME_FEATS, DAYS_SINCE_LSTG, BYR_HIST, \
     TIME_FEATS, CLOCK_FEATS, THREAD_COUNT, TURN_FEATS, SLR, BYR, META, LEAF
@@ -10,7 +9,7 @@ from rlenv.Composer import Composer
 from rlenv.const import LSTG_MAP, OFFER_MAPS, THREAD_COUNT_IND, \
     TIME_START_IND, TIME_END_IND
 from rlenv.util import load_chunk
-from utils import load_sizes, load_featnames
+from utils import load_sizes, load_featnames, get_role
 
 
 class AgentComposer(Composer):
@@ -25,7 +24,7 @@ class AgentComposer(Composer):
             self.byr_idx = [i for i in range(len(self.lstg_sets[LSTG_MAP]))
                             if self.lstg_sets[LSTG_MAP][i] not in BYR_DROP]
 
-        self.agent_name = get_agent_name(byr=self.byr)
+        self.agent_name = get_role(byr=self.byr)
         self.sizes['agents'] = load_sizes(self.agent_name)
         self.x_lstg_cols = cols if type(cols) is list else list(cols)
 

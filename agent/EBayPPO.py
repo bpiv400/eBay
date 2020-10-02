@@ -24,12 +24,12 @@ class EBayPPO:
     bootstrap_value = True
     opt_info_fields = FIELDS
 
-    def __init__(self):
+    def __init__(self, entropy=None):
+        self.entropy_coef = entropy
+        self.entropy_step = self.entropy_coef / PERIOD_EPOCHS
+
         # parameters to be defined later
         self.agent = None
-        self.entropy_coef = None
-        self.entropy_step = None
-        self.epochs = None
         self._optim_value = None
         self._optim_policy = None
 
@@ -44,9 +44,6 @@ class EBayPPO:
         Called by runner.
         """
         self.agent = agent
-        self.epochs = PERIOD_EPOCHS[agent.model.con_set]
-        self.entropy_coef = agent.entropy
-        self.entropy_step = self.entropy_coef / self.epochs
 
         # optimizers
         self._optim_value = Adam(self.agent.value_parameters(),
@@ -120,7 +117,7 @@ class EBayPPO:
 
         # increment counter, reduce entropy bonus, and set complete flag
         self.update_counter += 1
-        period = int(self.update_counter // self.epochs)
+        period = int(self.update_counter / PERIOD_EPOCHS)
         if period % 2 == 1:
             self.entropy_coef -= self.entropy_step
         if entropy.mean() < STOP_ENTROPY:
