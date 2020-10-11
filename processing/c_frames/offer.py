@@ -1,7 +1,7 @@
 import pandas as pd
 from processing.util import collect_date_clock_feats, \
-    get_days_delay, get_norm, get_con, get_lstgs, load_feats
-from utils import topickle, is_split, input_partition
+    get_days_delay, get_lstgs
+from utils import topickle, is_split, input_partition, load_feats
 from constants import PARTS_DIR, IDX
 from featnames import DAYS, DELAY, CON, NORM, SPLIT, MSG, REJECT, \
     AUTO, EXP, START_PRICE, SLR, CLOCK, INDEX
@@ -25,11 +25,7 @@ def get_x_offer(start_price, offers, tf):
     df[EXP] = df[DELAY] == 1
 
     # concession
-    df[CON] = get_con(offers.price.unstack(), start_price)
-
-    # reject, total concession, and split are functions of con
-    df[REJECT] = df[CON] == 0
-    df[NORM] = get_norm(df[CON])
+    df.loc[[CON, REJECT, NORM]] = offers[[CON, REJECT, NORM]]
     df[SPLIT] = df[CON].apply(is_split)
 
     # message indicator is last

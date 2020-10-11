@@ -81,7 +81,8 @@ def concat_sim_chunks(sims):
     return data
 
 
-def process_sims(part=None, sims=None, output_dir=None, byr=None):
+def process_sims(part=None, sims=None, output_dir=None,
+                 byr=None, save_inputs=True):
     # concatenate chunks
     data = concat_sim_chunks(sims)
 
@@ -102,7 +103,7 @@ def process_sims(part=None, sims=None, output_dir=None, byr=None):
             topickle(df, output_dir + '{}.pkl'.format(k))
 
     # model inputs for agent logs
-    if byr is not None:
+    if byr is not None and save_inputs:
         inputs = process_inputs(data=d, byr=byr)
         convert_x_to_numpy(x=inputs['x'], idx=inputs['y'].index)
         inputs['y'] = inputs['y'].to_numpy()

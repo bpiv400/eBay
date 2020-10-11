@@ -2,8 +2,7 @@ import argparse
 from datetime import datetime as dt
 import pandas as pd
 from processing.b_feats.util import create_events, get_all_cat_feats
-from processing.util import load_feats
-from utils import unpickle, topickle, run_func_on_chunks
+from utils import unpickle, topickle, run_func_on_chunks, load_feats
 from constants import FEATS_DIR
 from featnames import META, LEAF, SLR, LSTG
 

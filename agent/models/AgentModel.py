@@ -1,11 +1,10 @@
-import numpy as np
+from collections import OrderedDict
 import torch
 from torch.nn.functional import softmax
 from nets.FeedForward import FeedForward
-from agent.util import define_con_space
 from utils import load_sizes
-from agent.const import BYR_MIN_CON1, AGENT_STATE
-from constants import SLR, BYR
+from agent.const import AGENT_STATE, AGENT_HIDDEN
+from constants import SLR, BYR, NUM_AGENT_CONS
 from featnames import LSTG
 
 
@@ -28,30 +27,28 @@ class AgentModel(torch.nn.Module):
         super().__init__()
 
         # save params to self
-        self.byr = byr
         self.value = value
+
+        # save x sizes for coverting tensor input to dictionary
+        sizes = load_sizes(BYR if byr else SLR)
+        self.x_sizes = sizes['x']
 
         # in case of no dropout
         if dropout is None:
             dropout = (0., 0.)
 
-        # size of policy output
-        self.con_space = define_con_space(byr=byr)
-        self.out = len(self.con_space)
-
         # policy net
-        sizes = load_sizes(BYR if byr else SLR)
-        sizes['out'] = self.out
+        sizes['out'] = NUM_AGENT_CONS + (2 if byr else 3)
         self.policy_net = FeedForward(sizes=sizes,
                                       dropout=dropout,
-                                      agent=True)
+                                      hidden=AGENT_HIDDEN)
 
         # value net
         if self.value:
             sizes['out'] = 6 if byr else 5
             self.value_net = FeedForward(sizes=sizes,
                                          dropout=dropout,
-                                         agent=True)
+                                         hidden=AGENT_HIDDEN)
 
     def forward(self, observation, prev_action=None, prev_reward=None, value_only=False):
         """
@@ -63,7 +60,14 @@ class AgentModel(torch.nn.Module):
         :return: tuple of policy distribution, value
         """
         if type(observation) is torch.Tensor:
-            x = observation
+            d = OrderedDict()
+            ct = 0
+            for k, v in self.x_sizes.items():
+                d[k] = observation[:, ct:ct + v]
+                ct += v
+            assert observation.size()[-1] == ct
+            x = d
+
         else:
             # noinspection PyProtectedMember
             x = observation._asdict()
@@ -90,16 +94,10 @@ class AgentModel(torch.nn.Module):
 
     def _get_pdf(self, x):
         theta = self.policy_net(x)
-        if self.byr:
-            # no small concessions on turn 1
-            t1 = x[LSTG][:, -3] == 1
-            middle = np.where(self.con_space == BYR_MIN_CON1)[0][0]
-            theta[t1, 1:middle] = -np.inf
 
-            # accept or reject on turn 7
-            t7 = torch.sum(x[LSTG][:, [-3, -2, -1]], dim=1) == 0
-            theta[t7, 0] = 0.
-            theta[t7, 1:self.out-1] = -np.inf
+        # for shapley values, get x as dict
+        if type(theta) is tuple:
+            theta, x = theta
 
         return softmax(theta, dim=-1)
 

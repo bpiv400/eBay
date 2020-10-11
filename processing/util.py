@@ -1,7 +1,6 @@
-import numpy as np
 import pandas as pd
 from utils import extract_clock_feats, byr_norm, slr_norm, unpickle
-from constants import FEATS_DIR, PARTS_DIR, PCTILE_DIR, START, IDX, DAY, \
+from constants import PARTS_DIR, PCTILE_DIR, START, IDX, DAY, \
     HOLIDAYS, MAX_DELAY_TURN
 from featnames import HOLIDAY, DOW_PREFIX, TIME_OF_DAY, AFTERNOON, \
     CLOCK_FEATS, BYR_HIST, SLR, BYR
@@ -59,38 +58,6 @@ def get_days_delay(clock):
     return days, delay
 
 
-def round_con(con):
-    """
-    Round concession to nearest percentage point.
-    :param con: pandas series of unrounded concessions.
-    :return: pandas series of rounded concessions.
-    """
-    rounded = np.round(con, decimals=2)
-    rounded.loc[(rounded == 1) & (con < 1)] = 0.99
-    rounded.loc[(rounded == 0) & (con > 0)] = 0.01
-    return rounded
-
-
-def get_con(offers, start_price):
-    # compute concessions
-    con = pd.DataFrame(index=offers.index)
-    con[1] = offers[1] / start_price
-    con[2] = (offers[2] - start_price) / (offers[1] - start_price)
-    for i in range(3, 8):
-        con[i] = (offers[i] - offers[i - 2]) / (offers[i - 1] - offers[i - 2])
-
-    # stack into series
-    con = con.rename_axis('index', axis=1).stack()
-
-    # first buyer concession should be greater than 0
-    assert con.loc[con.index.isin([1], level='index')].min() > 0
-
-    # round concessions
-    rounded = round_con(con)
-
-    return rounded
-
-
 def get_norm(con):
     """
     Calculate normalized concession from rounded concessions.
@@ -136,32 +103,3 @@ def get_lstgs(part):
     """
     d = unpickle(PARTS_DIR + 'partitions.pkl')
     return d[part]
-
-
-def load_feats(name, lstgs=None, fill_zero=False):
-    """
-    Loads dataframe of features (and reindexes).
-    :param str name: filename
-    :param lstgs: listings to restrict to
-    :param bool fill_zero: fill missings with 0's if True
-    :return: dataframe of features
-    """
-    df = unpickle(FEATS_DIR + '{}.pkl'.format(name))
-    if lstgs is None:
-        return df
-    kwargs = {'index': lstgs}
-    if len(df.index.names) > 1:
-        kwargs['level'] = 'lstg'
-    if fill_zero:
-        kwargs['fill_value'] = 0.
-    return df.reindex(**kwargs)
-
-
-def get_pctiles(s=None):
-    """
-    Converts values into percentiles.
-    :param pandas.Series s: values to calculate percentiles from
-    :return: pandas.Series with index of unique values and percentiles as values
-    """
-    return (s.groupby(s).count() / len(s)).cumsum().shift(
-        fill_value=0.).rename('pctile')

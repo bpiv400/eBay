@@ -55,7 +55,8 @@ class SellerEnv(AgentEnv):
         self.last_event = EventLog(priority=self.curr_event.priority,
                                    thread_id=self.curr_event.thread_id,
                                    turn=self.curr_event.turn)
-        con = self.turn_from_action(action)
+        con = self.turn_from_action(turn=self.curr_event.turn,
+                                    action=action)
         if self.verbose:
             print('AGENT TURN: con: {}'.format(con))
 

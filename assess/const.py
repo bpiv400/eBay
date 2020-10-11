@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+from statsmodels.nonparametric._kernel_base import EstimatorSettings
 from constants import CLEAN_DIR
 from featnames import META
 
@@ -11,3 +12,5 @@ PRICE_CUTOFFS = [0, 5, 9, 13, 20, 25, 40, 60, 100, 225, np.inf]
 
 # for splitting concessions
 SPLITS = [0., .2, .4, .6, .8, .99]
+
+OPT = EstimatorSettings(efficient=True)

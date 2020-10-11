@@ -1,54 +1,21 @@
 import argparse
 import torch
-from agent.AgentComposer import AgentComposer
-from agent.envs.BuyerEnv import BuyerEnv
-from agent.envs.SellerEnv import SellerEnv
-from rlenv.generate.Generator import Generator
-from rlenv.interfaces.PlayerInterface import SimulatedBuyer, SimulatedSeller
-from rlenv.util import sample_categorical
+from agent.eval.AgentGenerator import AgentGenerator
 from agent.models.AgentModel import load_agent_model
+from agent.models.HeuristicByr import HeuristicByr
 from agent.models.HeuristicSlr import HeuristicSlr
 from agent.util import get_paths
 from rlenv.generate.util import process_sims
 from utils import run_func_on_chunks, process_chunk_worker, compose_args
 from agent.const import AGENT_PARAMS, HYPER_PARAMS
-from constants import AGENT_PARTITIONS, DROPOUT_GRID
+from constants import AGENT_PARTITIONS, DROPOUT_GRID, TEST
 from featnames import BYR, DROPOUT
-
-
-class AgentGenerator(Generator):
-    def __init__(self, model=None, byr=False, slr=False):
-        super().__init__(verbose=False, byr=byr, slr=slr)
-        self.model = model
-        assert byr or slr
-
-    def generate_composer(self):
-        return AgentComposer(byr=self.byr)
-
-    def generate_buyer(self):
-        return SimulatedBuyer(full=True)
-
-    def generate_seller(self):
-        return SimulatedSeller(full=self.byr)
-
-    @property
-    def env_class(self):
-        return BuyerEnv if self.byr else SellerEnv
-
-    def simulate_lstg(self):
-        obs = self.env.reset()
-        if obs is not None:
-            done = False
-            while not done:
-                probs = self.model(observation=obs)
-                action = int(sample_categorical(probs=probs))
-                obs, _, done, _ = self.env.step(action)
 
 
 def main():
     # parameters from command line
     parser = argparse.ArgumentParser()
-    parser.add_argument('--part', choices=AGENT_PARTITIONS)
+    parser.add_argument('--part', choices=AGENT_PARTITIONS, default=TEST)
     parser.add_argument('--heuristic', action='store_true')
     parser.add_argument('--suffix', type=str)
     compose_args(arg_dict=AGENT_PARAMS, parser=parser)
@@ -64,7 +31,7 @@ def main():
     # recreate model
     if args['heuristic']:
         if args[BYR]:
-            raise NotImplementedError()
+            model = HeuristicByr()
         else:
             model = HeuristicSlr()
     else:

@@ -50,7 +50,10 @@ def construct_x(idx=None, data=None, byr=False):
     # initialize dictionary with thread features
     x = {THREAD: get_x_thread(data[X_THREAD], idx, turn_indicators=True)}
     if byr:
-        x[THREAD].drop(THREAD_COUNT, axis=1, inplace=True)
+        todrop = [THREAD_COUNT]
+        if BYR_AGENT in x[THREAD].columns:
+            todrop += [BYR_AGENT]
+        x[THREAD].drop(todrop, axis=1, inplace=True)
 
     # offer features
     x.update(get_x_offer(offers=data[X_OFFER], idx=idx, byr=byr))

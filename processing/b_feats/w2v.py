@@ -3,9 +3,8 @@ import psutil
 import numpy as np
 import pandas as pd
 from gensim.models import Word2Vec
-from utils import topickle
+from utils import topickle, get_role
 from constants import SEED, CLEAN_DIR, FEATS_DIR
-from featnames import SLR, BYR
 
 VOCAB_SIZE = 32  # vocabulary size for embeddings
 
@@ -40,9 +39,9 @@ def run_model(s):
 def main():
     # parse parameters
     parser = argparse.ArgumentParser()
-    parser.add_argument('--slr', action='store_true')
-    slr = parser.parse_args().slr
-    role = SLR if slr else BYR
+    parser.add_argument('--byr', action='store_true')
+    byr = parser.parse_args().byr
+    role = get_role(byr)
 
     # load sentences
     filename = CLEAN_DIR + 'leaf_{}.csv'.format(role)

@@ -1,9 +1,9 @@
 import pandas as pd
 from constants import PARTS_DIR, DAY
-from featnames import LOOKUP, META, START_TIME, END_TIME, START_PRICE, \
+from featnames import LOOKUP, META, LEAF, START_TIME, END_TIME, START_PRICE, \
     DEC_PRICE, START_DATE, SLR_BO_CT, STORE
-from processing.util import get_lstgs, load_feats
-from utils import topickle, input_partition
+from processing.util import get_lstgs
+from utils import topickle, input_partition, load_feats
 
 
 def create_lookup(lstgs=None):
@@ -15,7 +15,7 @@ def create_lookup(lstgs=None):
     start_time = start_time.rename(START_TIME)
 
     # subset features
-    lookup = listings[[META, START_PRICE, DEC_PRICE, SLR_BO_CT, STORE]]
+    lookup = listings[[META, LEAF, START_PRICE, DEC_PRICE, SLR_BO_CT, STORE]]
     lookup = pd.concat([lookup, start_time, listings[END_TIME]], axis=1)
 
     return lookup
@@ -23,7 +23,7 @@ def create_lookup(lstgs=None):
 
 def main():
     part = input_partition()
-    print('{}/lookup'.format(part))
+    print('{}/{}'.format(part, LOOKUP))
 
     lookup = create_lookup(lstgs=get_lstgs(part))
     topickle(lookup, PARTS_DIR + '{}/{}.pkl'.format(part, LOOKUP))

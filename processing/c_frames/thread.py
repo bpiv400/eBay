@@ -1,8 +1,8 @@
 import pandas as pd
 from constants import PARTS_DIR, MAX_DAYS
 from featnames import BYR_HIST, DAYS_SINCE_LSTG, START_DATE
-from processing.util import get_lstgs, load_feats, hist_to_pctile
-from utils import topickle, get_days_since_lstg, input_partition
+from processing.util import get_lstgs, hist_to_pctile
+from utils import topickle, get_days_since_lstg, input_partition, load_feats
 
 
 def create_x_thread(lstgs=None):

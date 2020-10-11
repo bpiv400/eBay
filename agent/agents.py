@@ -2,23 +2,15 @@ from collections import OrderedDict
 import numpy as np
 import torch
 from torch.distributions import Beta
+from torch.nn.functional import softmax, softplus
 from rlpyt.agents.base import AgentStep
 from rlpyt.agents.pg.base import AgentInfo
 from rlpyt.agents.pg.categorical import CategoricalPgAgent
 from rlpyt.distributions.categorical import DistInfo
 from rlpyt.utils.buffer import buffer_to
-from torch.nn.functional import softmax, softplus
-from agent.util import backward_from_done, valid_from_done
-from agent.const import BYR_MIN_CON1
+from agent.const import AGENT_CONS
 from constants import EPS, IDX, SLR
 from featnames import BYR
-
-
-def parse_value_params(value_params):
-    p = softmax(value_params[:, :-2], dim=-1)
-    beta_params = softplus(torch.clamp(value_params[:, -2:], min=-5))
-    a, b = beta_params[:, 0], beta_params[:, 1]
-    return p, a, b
 
 
 class SplitCategoricalPgAgent(CategoricalPgAgent):
@@ -95,10 +87,13 @@ class SplitCategoricalPgAgent(CategoricalPgAgent):
 
         # action stats
         action = samples.agent.action[valid].numpy()
-        con = np.take_along_axis(self.model.con_space, action, 0)
+        turn = env.env_info.turn[valid].numpy()
+        sets = np.stack([AGENT_CONS[t] for t in turn])
+        con = np.take_along_axis(sets, np.expand_dims(action, 1), 1)
 
         opt_info = self._get_turn_info(opt_info=opt_info,
                                        env=env,
+                                       turn=turn,
                                        con=con,
                                        valid=valid)
 
@@ -113,7 +108,8 @@ class SplitCategoricalPgAgent(CategoricalPgAgent):
 
         return opt_info, valid, return_
 
-    def _get_turn_info(self, opt_info=None, env=None, con=None, valid=None):
+    def _get_turn_info(self, opt_info=None, env=None, turn=None,
+                       con=None, valid=None):
         raise NotImplementedError()
 
 
@@ -146,8 +142,8 @@ class SellerAgent(SplitCategoricalPgAgent):
 
         return -lnL
 
-    def _get_turn_info(self, opt_info=None, env=None, con=None, valid=None):
-        turn = env.env_info.turn[valid].numpy()
+    def _get_turn_info(self, opt_info=None, env=None, turn=None,
+                       con=None, valid=None):
         for t in IDX[SLR]:
             # rate of reaching turn t
             opt_info['Rate_{}'.format(t)] = np.mean(turn == t)
@@ -170,7 +166,7 @@ class SellerAgent(SplitCategoricalPgAgent):
 class BuyerAgent(SplitCategoricalPgAgent):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.length = 2 - BYR_MIN_CON1  # of [-1, 1 - BYR_MIN_CON1]
+        self.length = 2 - AGENT_CONS[1][0]  # of [-1, .5]
         self.max_return = self.length - 1
 
     def _calculate_value(self, value_params):
@@ -204,8 +200,8 @@ class BuyerAgent(SplitCategoricalPgAgent):
 
         return -lnL
 
-    def _get_turn_info(self, opt_info=None, env=None, con=None, valid=None):
-        turn = env.env_info.turn[valid].numpy()
+    def _get_turn_info(self, opt_info=None, env=None, turn=None,
+                       con=None, valid=None):
         turn_ct = backward_from_done(x=env.env_info.turn, done=env.done)
         turn_ct = turn_ct[valid].numpy()
         for t in IDX[BYR]:
@@ -223,3 +219,50 @@ class BuyerAgent(SplitCategoricalPgAgent):
                 opt_info['{}{}'.format(prefix, 'Con')] = \
                     con_t[(con_t > 0) & (con_t < 1)]
         return opt_info
+
+
+def parse_value_params(value_params):
+    p = softmax(value_params[:, :-2], dim=-1)
+    beta_params = softplus(torch.clamp(value_params[:, -2:], min=-5))
+    a, b = beta_params[:, 0], beta_params[:, 1]
+    return p, a, b
+
+
+def backward_from_done(x=None, done=None):
+    """
+    Propagates value at done across trajectory. Operations
+    vectorized across all trailing dimensions after the first [T,].
+    :param tensor x: tensor to propagate across trajectory
+    :param tensor done: indicator for end of trajectory
+    :return tensor newx: value at done at every step of trajectory
+    """
+    dtype = x.dtype  # cast new tensors to this data type
+    T, N = x.shape  # time steps, number of envs
+
+    # recast
+    done = done.type(torch.int)
+
+    # initialize output tensor
+    newx = torch.zeros(x.shape, dtype=dtype)
+
+    # vector for given time period
+    v = torch.zeros(N, dtype=dtype)
+
+    for t in reversed(range(T)):
+        v = v * (1 - done[t]) + x[t] * done[t]
+        newx[t] += v
+
+    return newx
+
+
+def valid_from_done(done):
+    """Returns a float mask which is zero for all time-steps after the last
+    `done=True` is signaled.  This function operates on the leading dimension
+    of `done`, assumed to correspond to time [T,...], other dimensions are
+    preserved."""
+    done = done.type(torch.float)
+    done_count = torch.cumsum(done, dim=0)
+    done_max, _ = torch.max(done_count, dim=0)
+    valid = torch.abs(done_count - done_max) + done
+    valid = torch.clamp(valid, max=1)
+    return valid.bool()

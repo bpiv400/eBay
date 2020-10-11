@@ -4,20 +4,22 @@ import pandas as pd
 import torch
 import shap
 from agent.models.AgentModel import load_agent_model
-from agent.util import find_best_run
-from utils import unpickle, load_file, load_sizes, load_featnames, get_role, \
-    compose_args
-from agent.const import AGENT_PARAMS
-from constants import TEST, IDX
+from agent.util import find_best_run, get_turn
+from utils import unpickle, load_file, load_sizes, load_featnames, get_role
+from agent.const import DELTA_CHOICES
+from constants import TEST, IDX, BYR_DROP
 from featnames import BYR, SLR, X_LSTG, BYR_HIST, DAYS, DELAY, \
     DAYS_SINCE_LSTG, LSTG, THREAD, CLOCK_FEATS, OUTCOME_FEATS, \
     TIME_FEATS, THREAD_COUNT
 
 BACKGROUND_SIZE = 100
 SAMPLES = 10
+BASE_IDX = {1: 0, 2: 0, 3: 1, 4: 0, 5: 1, 6: 0, 7: 0}
 
 
-def collapse_by_group(df=None, byr=None, turn=None):
+def collapse_by_group(df=None, turn=None):
+    byr = turn in IDX[BYR]
+
     # sum by feature group
     cols = dict()
     cols['w2v'] = ['{}{}'.format(name, num)
@@ -58,25 +60,28 @@ def collapse_by_group(df=None, byr=None, turn=None):
     return groups
 
 
-def wrapper(model=None, x=None):
-    return np.argmax(get_pdf(model, x), axis=1) == 0
+def wrapper(model=None, x=None, base_idx=None):
+    return np.argmax(get_pdf(model, x), axis=1) == base_idx
 
 
 def get_pdf(model=None, x=None):
     return model(torch.from_numpy(x).float()).numpy()
 
 
-def compute_shapley_vals(x=None, role=None, model=None):
+def compute_shapley_vals(x=None, turn=None, model=None):
     idx_rand = np.random.choice(range(np.shape(x)[0]),
                                 size=BACKGROUND_SIZE + SAMPLES,
                                 replace=False)
     background = x[idx_rand[:BACKGROUND_SIZE], :]
-    e = shap.KernelExplainer(lambda z: wrapper(model, z), background)
+    base_idx = BASE_IDX[turn]
+    e = shap.KernelExplainer(
+        lambda z: wrapper(model, z, base_idx), background)
 
     idx = idx_rand[BACKGROUND_SIZE:]
     shap_vals = e.shap_values(x[idx, :])
 
     # put in dataframe
+    role = get_role(byr=(turn in IDX[BYR]))
     featnames, names = load_featnames(role), []
     for k, v in featnames.items():
         if k == 'offer':
@@ -100,18 +105,19 @@ def load_inputs_model(delta=None, turn=None):
     sizes = load_sizes(role)['x']
     x_lstg = load_file(TEST, X_LSTG)
     x = {k: v[d['idx_x'], :] for k, v in x_lstg.items() if k in sizes}
+    if byr:
+        x_lstg_feats = load_featnames(X_LSTG)[LSTG]
+        idx_keep = [i for i in range(len(x_lstg_feats))
+                    if x_lstg_feats[i] not in BYR_DROP]
+        x[LSTG] = x[LSTG][:, idx_keep]
     x[LSTG] = np.concatenate([x[LSTG], d['x'][THREAD]], axis=1)
     for k, v in d['x'].items():
         if k != THREAD:
+            assert np.shape(v)[1] == sizes[k]
             x[k] = v
     x = np.concatenate([x[k] for k in sizes.keys()], axis=1)
     # turn number
-    if byr:
-        dummies = d['x'][THREAD][:, -3:]
-        x_turn = 7 - 6 * dummies[:, 0] - 4 * dummies[:, 1] - 2 * dummies[:, 2]
-    else:
-        dummies = d['x'][THREAD][:, -2:]
-        x_turn = 6 - 4 * dummies[:, 0] - 2 * dummies[:, 1]
+    x_turn = get_turn(x[THREAD], byr=byr)
     # subset to turn
     x = x[x_turn == turn, :]
     # model
@@ -124,21 +130,21 @@ def main():
     # parameters from command line
     parser = argparse.ArgumentParser()
     parser.add_argument('--turn', type=int, choices=range(1, 8))
-    compose_args(arg_dict=AGENT_PARAMS, parser=parser)
+    parser.add_argument('--delta', type=float, choices=DELTA_CHOICES)
     args = parser.parse_args()
-    role = get_role(args.byr)
-    assert args.turn in IDX[role]
 
     # components for shapley value estimation
     x, model = load_inputs_model(turn=args.turn, delta=args.delta)
 
     # shapley values by group
-    df, idx = compute_shapley_vals(x=x, role=role, model=model)
-    groups = collapse_by_group(df, byr=args.byr, turn=args.turn)
+    df, idx = compute_shapley_vals(x=x, turn=args.turn, model=model)
+    groups = collapse_by_group(df, turn=args.turn)
 
     # add in P(reject)
-    reject = get_pdf(model, x[idx, :])[:, 0] > .99
-    s = pd.Series(reject, name='reject')
+    base_outcome = wrapper(x=x[idx, :],
+                           model=model,
+                           base_idx=BASE_IDX[args.turn])
+    s = pd.Series(base_outcome, name='reject')
     groups = pd.concat([s, groups], axis=1)
     print(groups)
 

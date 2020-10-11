@@ -1,12 +1,12 @@
 import os
 import numpy as np
 import pandas as pd
-from processing.util import get_con, get_norm, get_pctiles
+from processing.util import get_norm
 from utils import topickle
 from constants import CLEAN_DIR, FEATS_DIR, PARTS_DIR, PCTILE_DIR, START, SEED, \
-    SHARES, NUM_CHUNKS, DAY
+    SHARES, NUM_CHUNKS, DAY, NUM_AGENT_CONS
 from featnames import START_PRICE, BYR_HIST, NORM, SLR, LSTG, THREAD, INDEX, \
-    CLOCK
+    CLOCK, CON, ACCEPT, REJECT
 
 # data types for csv read
 OTYPES = {LSTG: 'int64',
@@ -65,9 +65,6 @@ def create_chunks(listings=None, threads=None, offers=None):
     chunk_dir = FEATS_DIR + 'chunks/'
     if not os.path.isdir(chunk_dir):
         os.mkdir(chunk_dir)
-    # add norm to offers
-    con = get_con(offers.price.unstack(), listings[START_PRICE])
-    offers[NORM] = get_norm(con)
     # split into chunks by seller
     slrs = listings[SLR].reset_index().sort_values(
         by=[SLR, LSTG]).set_index(SLR).squeeze()
@@ -117,6 +114,16 @@ def get_seconds(t):
     return t.hour * 3600 + t.minute * 60 + t.second
 
 
+def get_pctiles(s=None):
+    """
+    Converts values into percentiles.
+    :param s: values to calculate percentiles from
+    :return: pandas.Series with index of unique values and percentiles as values
+    """
+    rates = s.groupby(s).count() / len(s)
+    return rates.cumsum().shift(fill_value=0.).rename('pctile')
+
+
 def series_to_pctiles(s=None, pctiles=None):
     """
     Converts values into percentiles
@@ -128,6 +135,44 @@ def series_to_pctiles(s=None, pctiles=None):
         pctiles = get_pctiles(s)
     return s.to_frame().join(pctiles, on=s.name).drop(
         s.name, axis=1).squeeze().rename(s.name)
+
+
+def get_con(price=None, start_price=None):
+    # unstack
+    price = price.unstack()
+
+    # compute concessions
+    con = pd.DataFrame(index=price.index)
+    con[1] = price[1] / start_price
+    con[2] = (price[2] - start_price) / (price[1] - start_price)
+    for i in range(3, 8):
+        con[i] = (price[i] - price[i-2]) / (price[i-1] - price[i-2])
+
+    # stack into series
+    con = con.rename_axis('index', axis=1).stack()
+
+    # first buyer concession should be greater than 0
+    assert con.loc[con.index.isin([1], level=INDEX)].min() > 0
+
+    # round concessions
+    rounded = np.round(con, decimals=2)
+    rounded.loc[(rounded == 1) & (con < 1)] = 0.99
+    rounded.loc[(rounded == 0) & (con > 0)] = 0.01
+
+    return rounded
+
+
+def get_agent_cons(con=None):
+    con = con[(con > 0) & (con < 1)]
+    d = dict()
+    for t in range(1, 7):
+        s = con.xs(t, level=INDEX)
+        pdf = s.groupby(s).count().sort_values() / len(s)
+        cons = pdf.index.values[-NUM_AGENT_CONS:]
+        other = [0., 1.] if t % 2 == 1 else [0., 1., 1.1]
+        d[t] = np.sort(np.concatenate([cons, other]))
+    d[7] = np.concatenate([np.zeros(NUM_AGENT_CONS + 1), [1.]])
+    return d
 
 
 def main():
@@ -202,11 +247,23 @@ def main():
     idx = df[df[CLOCK] > df['end_time']].index
     offers.loc[idx, CLOCK] = df.loc[idx, 'end_time']
 
-    # save offers and threads
-    topickle(offers, FEATS_DIR + 'offers.pkl')
-
     # update listing end time
     listings.loc[end_time.index, 'end_time'] = end_time
+
+    # add concession and norm to offers and save
+    offers[CON] = get_con(offers['price'], listings[START_PRICE])
+    offers[NORM] = get_norm(offers[CON])
+
+    assert offers.loc[offers[CON] == 1, ACCEPT].all()
+    assert offers.loc[offers[CON] == 0, REJECT].all()
+    assert (offers.loc[offers[ACCEPT], CON] == 1).all()
+    assert (offers.loc[offers[REJECT], CON] == 0).all()
+
+    topickle(offers, FEATS_DIR + 'offers.pkl')
+
+    # save common concessions for agent
+    agent_cons = get_agent_cons(offers[CON])
+    topickle(agent_cons, FEATS_DIR + 'agent_cons.pkl')
 
     # add arrivals per day to listings
     arrivals = thread_start.groupby(LSTG).count().reindex(

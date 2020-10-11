@@ -24,6 +24,7 @@ PCTILE_DIR = '{}/pctile/'.format(PREFIX)        # percentiles of features
 CLEAN_DIR = '{}/clean/'.format(PREFIX)          # cleaned csvs
 W2V_DIR = '{}/w2v/'.format(PREFIX)              # for word2vec features
 FEATS_DIR = '{}/feats/'.format(PREFIX)          # pre-partion features
+HEURISTIC_DIR = '{}/heuristic/'.format(PREFIX)  # heuristic byr and slr sims
 
 INPUT_DIR = '{}/inputs/'.format(PREFIX)         # inputs for models
 SIZES_DIR = INPUT_DIR + 'sizes/'                # for initializing models
@@ -121,7 +122,7 @@ SEED = 123456
 NUM_CHUNKS = 64
 
 # simulation counts
-OUTCOME_SIMS = 2
+OUTCOME_SIMS = 5
 VALUE_SIMS = 25
 
 # features to drop from 'lstg' grouping for byr agent
@@ -136,3 +137,6 @@ for j in range(8):
     for i in range(j+1):
         if j - i <= 1:
             DROPOUT_GRID.append((float(i) / 10, float(j) / 10))
+
+# number of concessions available to agent
+NUM_AGENT_CONS = 7

@@ -11,8 +11,8 @@ import numpy as np
 from nets.FeedForward import FeedForward
 from sim.Sample import get_batches
 from constants import DAY, SPLIT_PCTS, INPUT_DIR, MODEL_DIR, SIM_DIR, \
-    PARTS_DIR, MAX_DELAY_TURN, MAX_DELAY_ARRIVAL, NUM_CHUNKS
-from featnames import LOOKUP, X_THREAD, X_OFFER, CLOCK, LSTG, BYR, SLR
+    PARTS_DIR, MAX_DELAY_TURN, MAX_DELAY_ARRIVAL, NUM_CHUNKS, FEATS_DIR
+from featnames import LOOKUP, X_THREAD, X_OFFER, CLOCK, BYR, SLR
 
 
 def unpickle(file):
@@ -259,7 +259,7 @@ def load_data(part=None, sim=False, run_dir=None, lstgs=None):
         df = load_file(part, k, folder=folder)
         if df is not None:
             if lstgs is not None:
-                df = restrict_to_lstgs(obj=df, lstgs=lstgs)
+                df = pd.DataFrame(index=lstgs).join(df)
             data[k] = df
     return data
 
@@ -278,13 +278,32 @@ def compose_args(arg_dict=None, parser=None):
         parser.add_argument('--{}'.format(k), **v)
 
 
-def restrict_to_lstgs(obj=None, lstgs=None):
-    assert isinstance(lstgs, pd.MultiIndex) and list(lstgs.names) == [LSTG]
-    if isinstance(obj.index, pd.MultiIndex):
-        return obj.reindex(index=lstgs, level=LSTG)
-    else:
-        return obj.reindex(index=lstgs)
-
-
 def get_role(byr=None):
     return BYR if byr else SLR
+
+
+def safe_reindex(df=None, idx=None):
+    df = pd.DataFrame(index=idx).join(df)
+    if len(df.columns) == 1:
+        return df.squeeze()
+    else:
+        return df
+
+
+def load_feats(name, lstgs=None, fill_zero=False):
+    """
+    Loads dataframe of features (and reindexes).
+    :param str name: filename
+    :param lstgs: listings to restrict to
+    :param bool fill_zero: fill missings with 0's if True
+    :return: dataframe of features
+    """
+    df = unpickle(FEATS_DIR + '{}.pkl'.format(name))
+    if lstgs is None:
+        return df
+    kwargs = {'index': lstgs}
+    if len(df.index.names) > 1:
+        kwargs['level'] = 'lstg'
+    if fill_zero:
+        kwargs['fill_value'] = 0.
+    return df.reindex(**kwargs)

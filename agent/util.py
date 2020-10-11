@@ -1,12 +1,10 @@
 import os
-import numpy as np
 import pandas as pd
-import torch
-from agent.const import NUM_CON
 from constants import AGENT_DIR, VALIDATION, IDX
 from featnames import SLR, BYR, NORM, AUTO, INDEX, THREAD, LSTG, CON, \
-    LOOKUP, X_THREAD, X_OFFER, START_PRICE, ENTROPY, DELTA, DROPOUT, BYR_AGENT
-from utils import unpickle, load_file, restrict_to_lstgs
+    LOOKUP, X_THREAD, X_OFFER, START_PRICE, ENTROPY, DELTA, DROPOUT, \
+    BYR_AGENT
+from utils import unpickle, load_file, load_data, get_role, safe_reindex
 
 
 def get_log_dir(byr=None, delta=None):
@@ -33,20 +31,16 @@ def get_paths(**kwargs):
     return log_dir, run_id, run_dir
 
 
-def define_con_space(byr=False, test=False):
-    num_con = 101 if test else NUM_CON
-    con_space = np.arange(num_con) / (num_con - 1)
-    if not byr:
-        con_space = np.concatenate([con_space, [1.1]])  # expiration rejection
-    return con_space
-
-
 def find_best_run(byr=None, delta=None, verbose=True):
     log_dir = get_log_dir(byr=byr, delta=delta)
-    norm = unpickle(log_dir + '{}.pkl'.format(VALIDATION))[NORM]
+    path = log_dir + '{}.pkl'.format(VALIDATION)
+    if os.path.isfile(path):
+        norm = unpickle(path)[NORM]
+    else:
+        return None
     run_id = norm[~norm.isna()].astype('float64').idxmax()
     if verbose:
-        print('Best run: {}'.format(run_id))
+        print('Best {} run: {}'.format(get_role(byr), run_id))
     return log_dir + '{}/'.format(run_id)
 
 
@@ -54,58 +48,62 @@ def get_slr_valid(data=None):
     # count non-automatic seller offers
     auto = data[X_OFFER][AUTO]
     valid = ~auto[auto.index.isin(IDX[SLR], level=INDEX)]
-    s = valid.groupby(LSTG).sum()
-    lstgs = s[s > 0].index.intersection(data[LOOKUP].index, sort=None)
+    valid = valid.droplevel([THREAD, INDEX])
+    s = valid.groupby(valid.index.names).sum()
+    lstg_sim = s[s > 0].index
     for k, v in data.items():
-        data[k] = restrict_to_lstgs(obj=v, lstgs=lstgs)
+        data[k] = safe_reindex(v, idx=lstg_sim)
     return data
 
 
-def get_slr_reward(data=None, values=None, delta=None):
+def get_slr_return(data=None, values=None):
+    assert values.max() < 1
     sale_norm = get_sale_norm(data[X_OFFER])
     start_price = data[LOOKUP][START_PRICE]
-    sale_price = sale_norm * start_price.reindex(index=sale_norm.index)
-    cont_value = (delta * values).reindex(index=start_price.index)
-    no_sale = cont_value.drop(sale_price.index)
-    reward = pd.concat([sale_price, no_sale]).sort_index()
-    assert not reward.index.duplicated().max()
-    norm_reward = reward / start_price
+    cont_value = safe_reindex(values, idx=start_price.index)
+    no_sale = cont_value.drop(sale_norm.index)
+    norm_reward = pd.concat([sale_norm, no_sale]).sort_index()
+    assert not norm_reward.index.duplicated().max()
+    reward = norm_reward * start_price
     return norm_reward.mean(), reward.mean()
 
 
+def get_byr_agent(data=None):
+    return data[X_THREAD][data[X_THREAD][BYR_AGENT]].index
+
+
 def get_byr_valid(data=None):
-    idx_offers = data[X_THREAD][data[X_THREAD][BYR_AGENT]].index
-    lstg_sim = idx_offers.droplevel(THREAD)
+    # for observed data, all listings are valid
+    if BYR_AGENT not in data[X_THREAD].columns:
+        return data
+
+    lstg_sim = get_byr_agent(data).droplevel(THREAD)
     for k, v in data.items():
-        data[k] = pd.DataFrame(index=lstg_sim).join(v)
+        data[k] = safe_reindex(v, idx=lstg_sim)
     return data
 
 
-def get_byr_reward(data=None, values=None):
-    df = data[LOOKUP][[START_PRICE]].join(values.rename('vals'))
-    norm_value = df.vals / df[START_PRICE]
+def get_byr_return(data=None, values=None):
     sale_norm = get_sale_norm(data[X_OFFER], drop_thread=False)
-    if X_THREAD in data and BYR_AGENT in data[X_THREAD].columns:
+    if BYR_AGENT in data[X_THREAD].columns:
         sale_norm = sale_norm[data[X_THREAD][BYR_AGENT]]
+    start_price = data[LOOKUP][START_PRICE]
     sale_norm = sale_norm.droplevel(THREAD)
-    reward = norm_value.reindex(index=sale_norm.index) - sale_norm
-    reward = reward.reindex(index=df.index, fill_value=0)
-    return reward.mean(), (reward * df[START_PRICE]).mean()
+    norm_vals = safe_reindex(values, idx=sale_norm.index)
+    return_norm = norm_vals - sale_norm
+    return_norm = return_norm.reindex(index=data[LOOKUP].index, fill_value=0)
+    return_dollar = return_norm * start_price
+    return return_norm.mean(), return_dollar.mean()
 
 
-def get_reward(data=None, values=None, part=None, delta=None, byr=False):
-    if values is None:
-        values = load_values(part=part, delta=delta)
-
-    # restrict to valid and calculate rewards
+def load_valid_data(part=None, run_dir=None):
+    data = load_data(part=part, run_dir=run_dir)
+    byr = BYR in run_dir
     if byr:
         data = get_byr_valid(data)
-        reward = get_byr_reward(data=data, values=values)
     else:
         data = get_slr_valid(data)
-        reward = get_slr_reward(data=data, values=values, delta=delta)
-
-    return reward
+    return data
 
 
 def get_sale_norm(offers=None, drop_thread=True):
@@ -120,51 +118,22 @@ def get_sale_norm(offers=None, drop_thread=True):
     return sale_norm
 
 
-def load_values(part=None, delta=None):
+def load_values(part=None, delta=None, normalize=True):
     df = load_file(part, 'values')
     if delta == 0:
         v = pd.DataFrame(0., index=df.index)
     else:
         v = df.sale_price * delta ** df.relist_ct
-    v = v.groupby(LSTG).mean()
+        if normalize:
+            start_price = load_file(part, LOOKUP)[START_PRICE]
+            v /= start_price
+    v = v.groupby(LSTG).mean().rename('vals')
     return v
 
 
-def backward_from_done(x=None, done=None):
-    """
-    Propagates value at done across trajectory. Operations
-    vectorized across all trailing dimensions after the first [T,].
-    :param tensor x: tensor to propagate across trajectory
-    :param tensor done: indicator for end of trajectory
-    :return tensor newx: value at done at every step of trajectory
-    """
-    dtype = x.dtype  # cast new tensors to this data type
-    T, N = x.shape  # time steps, number of envs
-
-    # recast
-    done = done.type(torch.int)
-
-    # initialize output tensor
-    newx = torch.zeros(x.shape, dtype=dtype)
-
-    # vector for given time period
-    v = torch.zeros(N, dtype=dtype)
-
-    for t in reversed(range(T)):
-        v = v * (1 - done[t]) + x[t] * done[t]
-        newx[t] += v
-
-    return newx
-
-
-def valid_from_done(done):
-    """Returns a float mask which is zero for all time-steps after the last
-    `done=True` is signaled.  This function operates on the leading dimension
-    of `done`, assumed to correspond to time [T,...], other dimensions are
-    preserved."""
-    done = done.type(torch.float)
-    done_count = torch.cumsum(done, dim=0)
-    done_max, _ = torch.max(done_count, dim=0)
-    valid = torch.abs(done_count - done_max) + done
-    valid = torch.clamp(valid, max=1)
-    return valid.bool()
+def get_turn(x, byr=None):
+    last = 4 * x[:, -2] + 2 * x[:, -1]
+    if byr:
+        return 7 - 6 * x[:, -3] - last
+    else:
+        return 6 - last

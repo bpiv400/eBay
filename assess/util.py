@@ -1,25 +1,36 @@
 import argparse
 import numpy as np
 import pandas as pd
+from statsmodels.nonparametric.kernel_regression import KernelReg
 from agent.util import get_sale_norm
 from utils import unpickle, load_file
-from assess.const import SPLITS
+from assess.const import SPLITS, OPT
 from constants import IDX, BYR, EPS, COLLECTIBLES, TEST, MAX_DAYS, \
     MAX_DELAY_ARRIVAL, MAX_DELAY_TURN, INTERVAL_ARRIVAL, PCTILE_DIR, DAY, HOUR
 from featnames import DELAY, CON, NORM, AUTO, START_TIME, STORE, SLR_BO_CT, \
-    START_PRICE, META, LOOKUP, MSG, DAYS_SINCE_LSTG, BYR_HIST, INDEX
+    START_PRICE, META, LOOKUP, MSG, DAYS_SINCE_LSTG, BYR_HIST, INDEX, \
+    X_OFFER, CLOCK
 
 
-def discrete_pdf(y=None):
-    y = y.astype('int64')
+def continuous_pdf(y=None):
     counts = y.groupby(y).count()
     pdf = counts / counts.sum()
     return pdf
 
 
+def continuous_cdf(y=None):
+    cdf = continuous_pdf(y).cumsum()
+    if cdf.index[0] > 0.:
+        cdf.loc[0.] = 0.  # where cdf is 0
+    return cdf.sort_index()
+
+
+def discrete_pdf(y=None):
+    return continuous_pdf(y.astype('int64'))
+
+
 def discrete_cdf(y=None):
-    pdf = discrete_pdf(y)
-    cdf = pdf.cumsum()
+    cdf = discrete_pdf(y).cumsum()
     if cdf.index[0] > 0.:
         cdf.loc[0.] = 0.  # where cdf is 0
     return cdf.sort_index()
@@ -59,7 +70,7 @@ def con_dist(offers=None):
     con = offers.loc[~offers[AUTO], CON]
     p = dict()
     for turn in range(1, 8):
-        s = con.xs(turn, level='index') * 100
+        s = con.xs(turn, level=INDEX) * 100
         p[turn] = discrete_cdf(s)
     return p
 
@@ -280,10 +291,10 @@ def count_dist(df=None):
     return s
 
 
-def cdf_days(offers=None, clock=None, lookup=None):
-    idx_sale = offers[offers[CON] == 1].index
-    clock_sale = clock.loc[idx_sale].reset_index(clock.index.names[1:], drop=True)
-    days = (clock_sale - lookup[START_TIME]) / DAY
+def cdf_days(data=None):
+    idx_sale = data[X_OFFER][data[X_OFFER][CON] == 1].index
+    clock_sale = data[CLOCK].loc[idx_sale].reset_index(data[CLOCK].index.names[1:], drop=True)
+    days = (clock_sale - data[LOOKUP][START_TIME]) / DAY
     assert days.max() < MAX_DAYS
     days[days.isna()] = MAX_DAYS
     pctile = get_pctiles(days)
@@ -340,3 +351,53 @@ def get_lstgs(prefix=None):
 
     print('{}: {} listings'.format(filename, len(lookup)))
     return lookup.index, filename
+
+
+def local_linear(y, x, dim=None, bw=None):
+    if bw is None:
+        ll = KernelReg(y, x, var_type='c', defaults=OPT)
+    else:
+        ll = KernelReg(y, x, var_type='c', bw=bw)
+    beta = ll.fit(dim)[0]
+    return beta, ll.bw
+
+
+def bootstrap_se(y, x, dim=None, bw=None, n_boot=100):
+    n = len(y)
+    df = pd.DataFrame(index=dim, columns=range(n_boot))
+    for b in range(n_boot):
+        idx = np.random.choice(range(n), n, replace=True)
+        y_b, x_b = y[idx], x[idx]
+        df.loc[:, b], _ = local_linear(y_b, x_b, dim=dim, bw=bw)
+    return df.std(axis=1)
+
+
+def ll_wrapper(y, x, dim=None, discrete=(), ci=True):
+    # initialize output
+    line, dots = pd.DataFrame(index=dim), pd.DataFrame()
+
+    # discrete
+    mask = np.ones_like(y).astype(np.bool)
+    for val in discrete:
+        isval = np.isclose(x, val)
+        if isval.sum() > 0:
+            y_val = y[isval]
+            dots.loc[val, 'beta'] = y_val.mean()
+            se = np.sqrt(y_val.var() / isval.sum())
+            if ci:
+                dots.loc[val, 'low'] = dots.loc[val, 'beta'] - 1.96 * se
+                dots.loc[val, 'high'] = dots.loc[val, 'beta'] + 1.96 * se
+            mask[isval] = False
+
+    # continuous
+    line['beta'], bw = local_linear(y[mask], x[mask], dim=dim, bw=(.05,))
+
+    # bootstrap confidence intervals
+    if ci:
+        line_se = bootstrap_se(y, x, dim=dim, bw=bw)
+        line['low'] = line['beta'] - 1.96 * line_se
+        line['high'] = line['beta'] + 1.96 * line_se
+    else:
+        line, dots = line.squeeze(), dots.squeeze()
+
+    return line, dots

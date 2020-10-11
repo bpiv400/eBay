@@ -1,4 +1,5 @@
 from collections import namedtuple
+import numpy as np
 import torch
 from rlpyt.envs.base import Env
 from rlpyt.spaces.composite import Composite
@@ -7,9 +8,11 @@ from rlpyt.utils.collections import namedarraytuple
 from rlenv.EBayEnv import EBayEnv
 from rlenv.events.Thread import Thread
 from agent.ConSpace import ConSpace
-from agent.util import load_values, define_con_space
-from constants import INTERVAL_TURN, INTERVAL_CT_TURN, DAY, TRAIN_RL
-from featnames import BYR_HIST, START_PRICE, BYR
+from agent.util import load_values
+from agent.const import AGENT_CONS
+from constants import INTERVAL_TURN, INTERVAL_CT_TURN, DAY, TRAIN_RL, \
+    NUM_AGENT_CONS
+from featnames import BYR_HIST, START_PRICE, BYR, DELTA
 
 Info = namedarraytuple("Info", ["days", "max_return", "num_actions", "num_threads",
                                 "turn", "thread_id", "priority", "agent_sale"])
@@ -19,6 +22,7 @@ EventLog = namedtuple("EventLog", ["priority", "thread_id", "turn"])
 class AgentEnv(EBayEnv, Env):
     def __init__(self, **kwargs):
         super().__init__(params=kwargs)
+        self.byr = kwargs[BYR]
 
         # mode
         self.test = False if 'test' not in kwargs else kwargs['test']
@@ -34,7 +38,7 @@ class AgentEnv(EBayEnv, Env):
                            for k, v in self.composer.agent_sizes['x'].items()}
 
         # action space
-        self.con_set = define_con_space(byr=kwargs[BYR], test=self.test)
+        self.con_set = self._define_con_space()
         self._action_space = self._define_action_space()
 
         # observation space
@@ -42,8 +46,10 @@ class AgentEnv(EBayEnv, Env):
 
         # values
         if self.train:
-            self.delta = kwargs['delta']
-            self.values = load_values(part=TRAIN_RL, delta=self.delta)
+            self.delta = kwargs[DELTA]
+            self.values = load_values(part=TRAIN_RL,
+                                      delta=self.delta,
+                                      normalize=False)
 
     def define_observation_space(self):
         sizes = self.composer.agent_sizes['x']
@@ -116,8 +122,8 @@ class AgentEnv(EBayEnv, Env):
             self.next_lstg()
         super().reset(push_arrival)  # calls EBayEnv.reset()
 
-    def turn_from_action(self, action=None):
-        return self.con_set[action]
+    def turn_from_action(self, turn=None, action=None):
+        return self.con_set[turn][action]
 
     @property
     def horizon(self):
@@ -127,8 +133,19 @@ class AgentEnv(EBayEnv, Env):
     def _obs_class(self):
         raise NotImplementedError()
 
+    def _define_con_space(self):
+        if self.test:
+            cons = np.arange(101) / 100
+            return {t: cons for t in range(1, 8)}
+        else:
+            return AGENT_CONS
+
     def _define_action_space(self):
-        return ConSpace(size=len(self.con_set))
+        if self.test:
+            num_cons = 101
+        else:
+            num_cons = NUM_AGENT_CONS + (2 if self.byr else 3)
+        return ConSpace(size=num_cons)
 
     def is_agent_turn(self, event):
         raise NotImplementedError()

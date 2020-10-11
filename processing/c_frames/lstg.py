@@ -1,19 +1,24 @@
 from collections import OrderedDict
 import numpy as np
-from processing.util import extract_day_feats, get_lstgs, load_feats
+from processing.util import extract_day_feats, get_lstgs
 from constants import PARTS_DIR, INPUT_DIR, DAY, VALIDATION
 from featnames import START_PRICE, META, LEAF, SLR, BYR, LSTG, X_LSTG
-from utils import input_partition, topickle
+from utils import input_partition, topickle, load_feats
 
 AS_IS_FEATS = ['store', 'slr_us', 'fast', 'photos', 'slr_lstg_ct',
                'slr_bo_ct', 'start_price_pctile', 'fdbk_score', 'fdbk_pstv']
 
 
-# returns booleans for whether offer is round and ends in nines
-def do_rounding(offer):
-    digits = np.ceil(np.log10(offer.clip(lower=0.01)))
+def do_rounding(price):
+    """
+    Returns booleans for whether offer is round and ends in nines
+    :param price: price in dollars and cents
+    :return: (bool, bool)
+    """
+    assert np.min(price) >= .01
+    digits = np.ceil(np.log10(price))
     factor = 5 * np.power(10, digits-3)
-    diff = np.round(offer / factor) * factor - offer
+    diff = np.round(price / factor) * factor - price
     is_round = diff == 0
     is_nines = (diff > 0) & (diff <= factor / 5)
     return is_round, is_nines

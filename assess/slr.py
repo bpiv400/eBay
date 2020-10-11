@@ -4,8 +4,8 @@ from assess.util import get_action_dist, merge_dicts, count_dist, cdf_days, cdf_
 from agent.util import find_best_run, get_slr_valid
 from utils import topickle, load_data
 from constants import PLOT_DIR, TEST
-from featnames import SLR, START_PRICE, OBS, RL, ARRIVAL, BYR_HIST, DELAY, CON, \
-    ACCEPT, NORM, X_OFFER, LOOKUP, X_THREAD, CLOCK
+from featnames import SLR, START_PRICE, OBS, RL, ARRIVAL, BYR_HIST, DELAY, \
+    CON, X_OFFER, LOOKUP, X_THREAD
 
 
 def collect_outputs(data=None, name=None):
@@ -17,9 +17,7 @@ def collect_outputs(data=None, name=None):
         start_price=data[LOOKUP][START_PRICE]
     )
 
-    d['cdf_days'] = cdf_days(offers=data[X_OFFER],
-                             clock=data[CLOCK],
-                             lookup=data[LOOKUP])
+    d['cdf_days'] = cdf_days(data=data)
 
     # offer distributions
     d['pdf_{}'.format(ARRIVAL)] = arrival_dist(data[X_THREAD])

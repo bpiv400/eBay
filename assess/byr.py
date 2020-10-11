@@ -1,11 +1,12 @@
 import numpy as np
-from sklearn.neighbors import KernelDensity
-from agent.util import get_log_dir, get_byr_valid, load_values
+import pandas as pd
+from agent.util import find_best_run, get_byr_valid, load_values
 from assess.util import discrete_pdf, discrete_cdf, get_sale_norm, norm_norm
 from utils import load_data
-from constants import TEST, EPS
-from featnames import CON, INDEX, THREAD, X_OFFER, X_THREAD, LOOKUP, START_PRICE, \
-    AUTO, LSTG, NORM
+from agent.const import BYR_MIN_CON1
+from constants import TEST, OUTCOME_SIMS
+from featnames import CON, INDEX, THREAD, X_OFFER, X_THREAD, LOOKUP, \
+    AUTO, LSTG, NORM, SIM, BYR_AGENT
 
 PART = TEST
 
@@ -15,38 +16,37 @@ def get_turn(s=None, turn=None, agent_threads=None):
         index=agent_threads).dropna().droplevel(THREAD)
 
 
-def values_pdf(X=None):
-    dim = np.arange(0, 1.01, .01)
-    kde = KernelDensity(bandwidth=.1).fit(X.reshape(-1, 1))
-    pdf = np.exp(kde.score_samples(dim.reshape(-1, 1)))
-    return pdf
-
-
 # byr run
-byr_dir = get_log_dir(byr=True, delta=.9)
-data = load_data(part=PART, folder=byr_dir)
+run_dir = find_best_run(byr=True, delta=.9)
+data = load_data(part=PART, run_dir=run_dir)
 
 # values
-values = load_values(part=PART, delta=.9)
-norm_values = values / data[LOOKUP][START_PRICE]
+vals = load_values(part=PART, delta=.9)
+
+# master index
+lstgs = data[LOOKUP].index
+lstg_sim = pd.MultiIndex.from_product([lstgs, range(OUTCOME_SIMS)],
+                                      names=[LSTG, SIM])
 
 # restrict data to valid
 data = get_byr_valid(data)
 valid = data[LOOKUP].index
-invalid = values.index.drop(valid)
-print('Valid listings: {0:.1f}%'.format(
-    100 * len(valid) / len(values.index)))
-print('Avg norm value for valid [invalid] listings: {0:.1f}% [{1:.1f}%]'.format(
-    100 * norm_values[valid].mean(), 100 * norm_values[invalid].mean()))
+invalid = lstg_sim.drop(valid)
+valid_vals = pd.DataFrame(index=valid).join(vals).squeeze()
+invalid_vals = pd.DataFrame(index=invalid).join(vals).squeeze()
 
-# restrict values to valid
-norm_values = norm_values.reindex(index=valid)
-print('Share of valid norm values above 40%: {0:.1f}%'.format(
-    100 * (norm_values > .4).mean()))
+# statistics on (valid) values
+print('Valid listings: {0:.1f}%'.format(100 * len(valid) / (len(lstg_sim))))
+print('Avg norm value for valid [invalid] listings: {0:.1f}% [{1:.1f}%]'.format(
+    100 * valid_vals.mean(), 100 * invalid_vals.mean()))
+print('Share of all values below {0:.1f}: {1:.1f}%'.format(
+    BYR_MIN_CON1, 100 * (vals < BYR_MIN_CON1).mean()))
+print('Share of valid values below {0:.1f}: {1:.1f}%'.format(
+    BYR_MIN_CON1, 100 * (valid_vals < BYR_MIN_CON1).mean()))
 
 # count and timing of sales
 sale = data[X_OFFER][data[X_OFFER][CON] == 1].index
-byr_agent = data[X_THREAD]['byr_agent'].reindex(index=sale)
+byr_agent = data[X_THREAD][BYR_AGENT].reindex(index=sale)
 agent_sale = byr_agent[byr_agent].index
 other_sale = byr_agent[~byr_agent].index
 print('Share of valid listings resulting in sale: {0:.1f}%'.format(

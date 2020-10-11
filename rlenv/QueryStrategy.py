@@ -82,5 +82,5 @@ class DefaultQueryStrategy(QueryStrategy):
                                      turn=kwargs['turn'],
                                      max_interval=kwargs['max_interval'])
         seconds = int((index + np.random.uniform()) * INTERVAL_TURN)
-        seconds = min(seconds, MAX_DELAY_TURN)
+        seconds = max(1, min(seconds, MAX_DELAY_TURN))
         return seconds

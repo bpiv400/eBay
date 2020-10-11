@@ -62,7 +62,8 @@ class BuyerEnv(AgentEnv):
         self.last_event = EventLog(priority=self.curr_event.priority,
                                    thread_id=self.curr_event.thread_id,
                                    turn=self.curr_event.turn)
-        con = self.turn_from_action(action=action)
+        con = self.turn_from_action(turn=self.curr_event.turn,
+                                    action=action)
         event_type = self.curr_event.type
         self.num_actions += 1
         if event_type == FIRST_OFFER and con == 0:
