@@ -1,15 +1,15 @@
 import os
 import pandas as pd
-from constants import AGENT_DIR, VALIDATION, IDX
+from constants import AGENT_DIR, IDX
 from featnames import SLR, BYR, NORM, AUTO, INDEX, THREAD, LSTG, CON, \
     LOOKUP, X_THREAD, X_OFFER, START_PRICE, ENTROPY, DELTA, DROPOUT, \
-    BYR_AGENT
+    BYR_AGENT, VALIDATION
 from utils import unpickle, load_file, load_data, get_role, safe_reindex
 
 
-def get_log_dir(byr=None, delta=None):
-    role = BYR if byr else SLR
-    log_dir = AGENT_DIR + '{}/delta_{}/'.format(role, delta)
+def get_log_dir(**kwargs):
+    role = BYR if kwargs[BYR] else SLR
+    log_dir = AGENT_DIR + '{}/delta_{}/'.format(role, kwargs[DELTA])
     if not os.path.isdir(log_dir):
         os.makedirs(log_dir)
     return log_dir
@@ -40,7 +40,8 @@ def find_best_run(byr=None, delta=None, verbose=True):
         return None
     run_id = norm[~norm.isna()].astype('float64').idxmax()
     if verbose:
-        print('Best {} run: {}'.format(get_role(byr), run_id))
+        print('Best {} run for delta = {}: {}'.format(
+            get_role(byr), delta, run_id))
     return log_dir + '{}/'.format(run_id)
 
 
@@ -56,16 +57,18 @@ def get_slr_valid(data=None):
     return data
 
 
+def get_norm_reward(data=None, values=None):
+    sale_norm = get_sale_norm(data[X_OFFER])
+    idx_no_sale = data[LOOKUP].index.drop(sale_norm.index)
+    cont_value = safe_reindex(values, idx=idx_no_sale)
+    return sale_norm, cont_value
+
+
 def get_slr_return(data=None, values=None):
     assert values.max() < 1
-    sale_norm = get_sale_norm(data[X_OFFER])
-    start_price = data[LOOKUP][START_PRICE]
-    cont_value = safe_reindex(values, idx=start_price.index)
-    no_sale = cont_value.drop(sale_norm.index)
-    norm_reward = pd.concat([sale_norm, no_sale]).sort_index()
-    assert not norm_reward.index.duplicated().max()
-    reward = norm_reward * start_price
-    return norm_reward.mean(), reward.mean()
+    norm = pd.concat(get_norm_reward(data=data, values=values)).sort_index()
+    reward = norm * data[LOOKUP][START_PRICE]
+    return norm.mean(), reward.mean()
 
 
 def get_byr_agent(data=None):
@@ -120,15 +123,15 @@ def get_sale_norm(offers=None, drop_thread=True):
 
 def load_values(part=None, delta=None, normalize=True):
     df = load_file(part, 'values')
-    if delta == 0:
-        v = pd.DataFrame(0., index=df.index)
-    else:
-        v = df.sale_price * delta ** df.relist_ct
-        if normalize:
-            start_price = load_file(part, LOOKUP)[START_PRICE]
-            v /= start_price
-    v = v.groupby(LSTG).mean().rename('vals')
-    return v
+    x = df.sale_price.groupby(LSTG).mean()
+    num_sales = df.relist_ct.groupby(LSTG).count()
+    num_exps = df.relist_ct.groupby(LSTG).sum()
+    p = num_sales / (num_sales + num_exps)
+    v = p * x / (1 - (1-p) * delta)
+    if normalize:
+        start_price = load_file(part, LOOKUP)[START_PRICE]
+        v /= start_price
+    return v.rename('vals')
 
 
 def get_turn(x, byr=None):

@@ -1,37 +1,26 @@
-from assess.util import load_data, get_action_dist, get_lstgs, \
-    arrival_dist, hist_dist, delay_dist, con_dist
-from utils import topickle
-from constants import PLOT_DIR, TEST
-from featnames import OBS, ARRIVAL, BYR_HIST, DELAY, CON
+from assess.util import get_action_dist, arrival_dist, hist_dist, delay_dist, con_dist
+from utils import topickle, load_data
+from constants import PLOT_DIR
+from featnames import TEST, X_THREAD, X_OFFER
 
 
-def construct_d(lookup=None):
-    # observed sellers
-    data = load_data(part=TEST, lstgs=lookup.index, obs=True)
-    threads, offers = [data[k] for k in ['threads', 'offers']]
+def main():
+    data = load_data(part=TEST)
 
     d = dict()
 
     # offer distributions
-    d['pdf_{}'.format(ARRIVAL)] = arrival_dist(threads)
-    d['cdf_{}'.format(BYR_HIST)] = hist_dist(threads)
-    d['cdf_{}'.format(DELAY)] = delay_dist(offers)
-    d['cdf_{}'.format(CON)] = con_dist(offers)
+    d['pdf_arrival'] = arrival_dist(data[X_THREAD])
+    d['cdf_hist'] = hist_dist(data[X_THREAD])
+    d['cdf_delay'] = delay_dist(data[X_OFFER])
+    d['cdf_con'] = con_dist(data[X_OFFER])
 
     # action probabilities
-    d['action'] = get_action_dist(offers_dim=offers, offers_action=offers)
-
-    return d
-
-
-def main():
-    lookup, filename = get_lstgs(prefix=OBS)
-
-    # dictionary of inputs for plots
-    d = construct_d(lookup)
+    d['action'] = get_action_dist(offers_dim=data[X_OFFER],
+                                  offers_action=data[X_OFFER])
 
     # save
-    topickle(d, PLOT_DIR + '{}.pkl'.format(filename))
+    topickle(d, PLOT_DIR + 'obs.pkl')
 
 
 if __name__ == '__main__':

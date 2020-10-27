@@ -1,0 +1,6 @@
+\beamer@sectionintoc {1}{Gameplay}{15}{0}{1}
+\beamer@sectionintoc {2}{Data}{24}{0}{2}
+\beamer@sectionintoc {3}{Simulator}{35}{0}{3}
+\beamer@sectionintoc {4}{Payoffs}{55}{0}{4}
+\beamer@sectionintoc {5}{RL seller}{65}{0}{5}
+\beamer@sectionintoc {6}{RL buyer}{69}{0}{6}

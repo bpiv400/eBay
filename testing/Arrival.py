@@ -1,6 +1,5 @@
-from constants import BYR_HIST_MODEL, INTERARRIVAL_MODEL
 from testing.util import compare_input_dicts
-from featnames import LSTG
+from featnames import LSTG, INTERARRIVAL_MODEL, BYR_HIST_MODEL
 
 
 class Arrival:

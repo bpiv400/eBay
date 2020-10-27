@@ -1,5 +1,6 @@
 import numpy as np
-from constants import TRAIN_RL, NUM_CHUNKS, PARTS_DIR
+from constants import NUM_CHUNKS, PARTS_DIR
+from featnames import TRAIN_RL
 from rlenv.LstgLoader import LstgLoader, ChunkLoader
 from rlenv.util import load_chunk
 

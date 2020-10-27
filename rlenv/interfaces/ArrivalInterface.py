@@ -1,6 +1,6 @@
 import numpy as np
-from constants import BYR_HIST_MODEL, INTERARRIVAL_MODEL, PCTILE_DIR
-from featnames import BYR_HIST
+from constants import PCTILE_DIR
+from featnames import BYR_HIST, INTERARRIVAL_MODEL, BYR_HIST_MODEL
 from rlenv.util import sample_categorical
 from utils import load_model, unpickle
 

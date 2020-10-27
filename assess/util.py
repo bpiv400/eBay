@@ -1,15 +1,16 @@
 import argparse
 import numpy as np
 import pandas as pd
+from statsmodels.nonparametric.kde import KDEUnivariate
 from statsmodels.nonparametric.kernel_regression import KernelReg
 from agent.util import get_sale_norm
-from utils import unpickle, load_file
-from assess.const import SPLITS, OPT
-from constants import IDX, BYR, EPS, COLLECTIBLES, TEST, MAX_DAYS, \
-    MAX_DELAY_ARRIVAL, MAX_DELAY_TURN, INTERVAL_ARRIVAL, PCTILE_DIR, DAY, HOUR
+from utils import unpickle, load_file, safe_reindex
+from assess.const import SPLITS, OPT, VALUES_DIM, POINTS
+from constants import IDX, BYR, EPS, COLLECTIBLES, DAY, HOUR, PCTILE_DIR, \
+    MAX_DELAY_TURN, MAX_DELAY_ARRIVAL, INTERVAL_ARRIVAL, INTERVAL_CT_ARRIVAL
 from featnames import DELAY, CON, NORM, AUTO, START_TIME, STORE, SLR_BO_CT, \
     START_PRICE, META, LOOKUP, MSG, DAYS_SINCE_LSTG, BYR_HIST, INDEX, \
-    X_OFFER, CLOCK
+    X_OFFER, CLOCK, TEST, THREAD, X_THREAD, REJECT
 
 
 def continuous_pdf(y=None):
@@ -36,15 +37,27 @@ def discrete_cdf(y=None):
     return cdf.sort_index()
 
 
-def arrival_dist(threads=None):
-    s = threads[DAYS_SINCE_LSTG] * MAX_DELAY_ARRIVAL
-    pdf = discrete_pdf(s)
-
-    # sum over interval
+def sum_over_arrival_interval(pdf, scale=None):
     pdf.index = (pdf.index // INTERVAL_ARRIVAL).astype('int64')
     pdf = pdf.groupby(pdf.index.name).sum()
-    pdf.index = pdf.index / (DAY / INTERVAL_ARRIVAL)
+    pdf.index = pdf.index / scale
+    return pdf
 
+
+def arrival_dist(threads=None):
+    s = threads[DAYS_SINCE_LSTG] * DAY
+    pdf = discrete_pdf(s)
+    pdf = sum_over_arrival_interval(pdf, scale=INTERVAL_CT_ARRIVAL)
+    return pdf
+
+
+def interarrival_dist(threads=None):
+    s = threads[DAYS_SINCE_LSTG] * DAY
+    ct = s.groupby(s.index.names[:-1]).count()
+    s = s[safe_reindex(ct, idx=s.index) > 1]
+    s = s.groupby(s.index.names[:-1]).diff().dropna()
+    pdf = discrete_pdf(s)
+    pdf = sum_over_arrival_interval(pdf, scale=(HOUR / INTERVAL_ARRIVAL))
     return pdf
 
 
@@ -70,13 +83,20 @@ def con_dist(offers=None):
     con = offers.loc[~offers[AUTO], CON]
     p = dict()
     for turn in range(1, 8):
-        s = con.xs(turn, level=INDEX) * 100
-        p[turn] = discrete_cdf(s)
+        s = discrete_cdf(con.xs(turn, level=INDEX) * 100)
+        s.index /= 100
+        p[turn] = s
     return p
 
 
 def msg_dist(offers=None):
-    return offers[MSG].groupby('index').mean()
+    idx_auto = offers[offers[AUTO]].index
+    idx_acc = offers[~offers[AUTO] & (offers[CON] == 1)].index
+    idx_rej = offers[offers.index.isin(IDX[BYR], level=INDEX)
+                     & offers[REJECT]].index
+    idx = offers.index.drop(idx_auto).drop(idx_acc).drop(idx_rej)
+    s = offers.loc[idx, MSG]
+    return s.groupby(INDEX).mean()
 
 
 def get_pctiles(s):
@@ -172,8 +192,8 @@ def action_dist(offers=None, dims=None):
     y_hat = {}
     for t in dims.keys():
         # inputs
-        x = norm.xs(t, level='index')
-        con = offers[CON].xs(t, level='index')
+        x = norm.xs(t, level=INDEX)
+        con = offers[CON].xs(t, level=INDEX)
         assert np.all(con.index == x.index)
         if t in IDX[BYR]:
             x_plus = x[x > 0]
@@ -263,56 +283,56 @@ def merge_dicts(d, d_other):
     return d
 
 
-def count_dist(df=None):
-    # level-specific parameters
-    if INDEX not in df.index.names:
-        group = df.index.names[0]
-        censoring = 4
-    else:
-        group = df.index.names[:-1]
-        censoring = None
+def num_threads(data):
+    # count threads
+    s = data[X_THREAD][DAYS_SINCE_LSTG]
+    s = s.groupby(s.index.names[:-1]).count()
 
-    # count by level
-    s = df.iloc[:, 0].groupby(group).count()
+    # add in zeros
+    s = s.reindex(index=data[LOOKUP].index, fill_value=0)
 
-    # convert counts to pdf
+    # pdf
     s = s.groupby(s).count() / len(s)
 
-    # censor
-    if censoring is not None:
-        s.loc[censoring] = s[s.index >= censoring].sum(axis=0)
-        s = s[s.index <= censoring]
-        assert np.abs(s.sum() - 1) < 1e-8
-        # relabel index
-        idx = s.index.astype(str).tolist()
-        idx[-1] += '+'
-        s.index = idx
+    # censor at 4 threads per listing
+    s.loc[4] = s[s.index >= 4].sum(axis=0)
+    s = s[s.index <= 4]
+    assert np.abs(s.sum() - 1) < EPS
 
+    # relabel index
+    idx = s.index.astype(str).tolist()
+    idx[-1] += '+'
+    s.index = idx
+
+    return s
+
+
+def num_offers(offers):
+    # pdf of counts
+    s = offers.iloc[:, 0].groupby(offers.index.names[:-1]).count()
+    s = s.groupby(s).count() / len(s)
     return s
 
 
 def cdf_days(data=None):
     idx_sale = data[X_OFFER][data[X_OFFER][CON] == 1].index
-    clock_sale = data[CLOCK].loc[idx_sale].reset_index(data[CLOCK].index.names[1:], drop=True)
-    days = (clock_sale - data[LOOKUP][START_TIME]) / DAY
-    assert days.max() < MAX_DAYS
-    days[days.isna()] = MAX_DAYS
-    pctile = get_pctiles(days)
+    clock_sale = data[CLOCK].loc[idx_sale].droplevel([THREAD, INDEX])
+    dur = (clock_sale - data[LOOKUP][START_TIME]) / MAX_DELAY_ARRIVAL
+    assert dur.max() < 1
+    dur[dur.isna()] = 1
+    pctile = get_pctiles(dur)
     return pctile
 
 
-def cdf_sale(offers=None, start_price=None):
-    sale_norm = get_sale_norm(offers)
-
-    # restrict / add in 0's
-    sale_norm = sale_norm.reindex(index=start_price.index, fill_value=0.)
+def cdf_sale(data=None):
+    sale_norm = get_sale_norm(data[X_OFFER])
 
     # multiply by start price to get sale price
-    sale_price = np.round(sale_norm * start_price, decimals=2)
+    sale_price = np.round(sale_norm * data[LOOKUP][START_PRICE], decimals=2)
 
     # percentiles
-    norm_pctile = get_pctiles(sale_norm)
-    price_pctile = get_pctiles(sale_price)
+    norm_pctile = continuous_cdf(sale_norm)
+    price_pctile = continuous_cdf(sale_price)
     return norm_pctile, price_pctile
 
 
@@ -372,32 +392,88 @@ def bootstrap_se(y, x, dim=None, bw=None, n_boot=100):
     return df.std(axis=1)
 
 
-def ll_wrapper(y, x, dim=None, discrete=(), ci=True):
-    # initialize output
-    line, dots = pd.DataFrame(index=dim), pd.DataFrame()
+def calculate_row(v=None):
+    beta = v.mean()
+    err = 1.96 * np.sqrt(v.var() / len(v))
+    return beta, err
 
+
+def ll_wrapper(y, x, dim=None, discrete=(), ci=True, bw=None):
     # discrete
+    dots = pd.DataFrame()
     mask = np.ones_like(y).astype(np.bool)
     for val in discrete:
         isval = np.isclose(x, val)
         if isval.sum() > 0:
-            y_val = y[isval]
-            dots.loc[val, 'beta'] = y_val.mean()
-            se = np.sqrt(y_val.var() / isval.sum())
+            beta, err = calculate_row(y[isval])
+            dots.loc[val, 'beta'] = beta
             if ci:
-                dots.loc[val, 'low'] = dots.loc[val, 'beta'] - 1.96 * se
-                dots.loc[val, 'high'] = dots.loc[val, 'beta'] + 1.96 * se
+                dots.loc[val, 'err'] = err
             mask[isval] = False
 
     # continuous
-    line['beta'], bw = local_linear(y[mask], x[mask], dim=dim, bw=(.05,))
+    if dim is None:
+        dim = get_dim(x[mask])
+    line = pd.DataFrame(index=dim)
+
+    if bw is None:
+        line['beta'], bw = local_linear(y[mask], x[mask], dim=dim)
+    else:
+        line['beta'], _ = local_linear(y[mask], x[mask], dim=dim, bw=bw)
 
     # bootstrap confidence intervals
     if ci:
-        line_se = bootstrap_se(y, x, dim=dim, bw=bw)
-        line['low'] = line['beta'] - 1.96 * line_se
-        line['high'] = line['beta'] + 1.96 * line_se
+        line['err'] = 1.96 * bootstrap_se(y, x, dim=dim, bw=bw)
     else:
         line, dots = line.squeeze(), dots.squeeze()
 
-    return line, dots
+    if len(discrete) == 0:
+        return line, bw
+    else:
+        return line, dots, bw
+
+
+def transform(x):
+    z = np.clip(x, EPS, 1 - EPS)
+    return np.log(z / (1 - z))
+
+
+def kdens(x, dim=None):
+    f = KDEUnivariate(transform(x))
+    f.fit(kernel='gau', bw='silverman', fft=True)
+    f_hat = f.evaluate(transform(dim))
+    return f_hat
+
+
+def kdens_wrapper(dim=VALUES_DIM, **kwargs):
+    df = pd.DataFrame(index=dim)
+    for k, v in kwargs.items():
+        df[k] = kdens(v, dim=dim)
+    df /= df.max().max()
+    return df
+
+
+def get_dim(x, low=.05, high=.95):
+    lower = np.quantile(x, low)
+    upper = np.quantile(x, high)
+    dim = np.linspace(lower, upper, POINTS)
+    return dim
+
+
+def get_mesh(x1=None, x2=None):
+    dim1, dim2 = get_dim(x1, low=.1, high=.9), get_dim(x2, low=.1, high=.9)
+    xx1, xx2 = np.meshgrid(dim1, dim2)
+    mesh = np.concatenate([xx1.reshape(-1, 1), xx2.reshape(-1, 1)], axis=1)
+    return mesh
+
+
+def kreg2(y=None, x1=None, x2=None, names=None):
+    x = np.stack([x1, x2], axis=1)
+    ll2 = KernelReg(y, x, var_type='cc', bw=(.025, .025))
+    mesh = get_mesh(x1, x2)
+    y_hat = ll2.fit(mesh)[0]
+    idx = pd.MultiIndex.from_arrays([mesh[:, 0], mesh[:, 1]])
+    if names is not None:
+        idx.names = names
+    s = pd.Series(y_hat, index=idx)
+    return s

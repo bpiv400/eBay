@@ -4,10 +4,10 @@ import pandas as pd
 from processing.util import get_days_delay
 from inputs.util import save_files, check_zero, get_x_thread, get_ind_x
 from utils import get_remaining, load_file
-from constants import IDX, SIM_PARTITIONS, MAX_DELAY_TURN, \
+from constants import IDX, MAX_DELAY_TURN, \
     INTERVAL_TURN, INTERVAL_CT_TURN
 from featnames import INT_REMAINING, TIME_FEATS, LOOKUP, SLR, BYR, DELAY, \
-    X_THREAD, X_OFFER, CLOCK, LSTG, THREAD, INDEX, START_TIME, END_TIME, CON
+    X_THREAD, X_OFFER, CLOCK, LSTG, THREAD, INDEX, START_TIME, END_TIME, CON, SIM_PARTITIONS
 
 
 def calculate_remaining(clock=None, lstg_start=None, idx=None, turn=None):

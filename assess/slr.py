@@ -3,9 +3,9 @@ from assess.util import get_action_dist, merge_dicts, count_dist, cdf_days, cdf_
     hist_dist, delay_dist, con_dist, norm_norm, accept3d
 from agent.util import find_best_run, get_slr_valid
 from utils import topickle, load_data
-from constants import PLOT_DIR, TEST
+from constants import PLOT_DIR
 from featnames import SLR, START_PRICE, OBS, RL, ARRIVAL, BYR_HIST, DELAY, \
-    CON, X_OFFER, LOOKUP, X_THREAD
+    CON, X_OFFER, LOOKUP, X_THREAD, TEST
 
 
 def collect_outputs(data=None, name=None):
@@ -21,7 +21,7 @@ def collect_outputs(data=None, name=None):
 
     # offer distributions
     d['pdf_{}'.format(ARRIVAL)] = arrival_dist(data[X_THREAD])
-    d['cdf_{}'.format(BYR_HIST)] = hist_dist(data[X_THREAD])
+    d['cdf_{}'.format('hist')] = hist_dist(data[X_THREAD])
     d['cdf_{}'.format(DELAY)] = delay_dist(data[X_OFFER])
     d['cdf_{}'.format(CON)] = con_dist(data[X_OFFER])
 
@@ -29,8 +29,8 @@ def collect_outputs(data=None, name=None):
     # d['norm-norm'] = norm_norm(data[X_OFFER])
 
     # thread and offer counts
-    d['num_threads'] = count_dist(data[X_THREAD])
-    d['num_offers'] = count_dist(data[X_OFFER])
+    d['bar_threads'] = count_dist(data[X_THREAD])
+    d['bar_offers'] = count_dist(data[X_OFFER])
 
     # rename series
     for k, v in d.items():
@@ -51,7 +51,7 @@ def construct_d(lstgs=None):
     d = collect_outputs(data=data[OBS], name='Observed sellers')
 
     # RL seller
-    run_dir = find_best_run(byr=False, delta=.75)
+    run_dir = find_best_run(byr=False, delta=.7)
     data[RL] = load_data(part=TEST, lstgs=lstgs, run_dir=run_dir)
     d_rl = collect_outputs(data=data[RL], name='RL seller')
 

@@ -6,8 +6,8 @@ import pandas as pd
 from torch.distributions.categorical import Categorical
 from torch.distributions.bernoulli import Bernoulli
 from constants import INPUT_DIR
-from featnames import LOOKUP, X_LSTG, P_ARRIVAL
-from constants import PARTS_DIR, DAY, ARRIVAL_MODELS, MAX_DELAY_TURN
+from featnames import LOOKUP, X_LSTG, P_ARRIVAL, ARRIVAL_MODELS
+from constants import PARTS_DIR, DAY, MAX_DELAY_TURN
 from rlenv.const import (SIM_CHUNKS_DIR, SIM_VALS_DIR, OFFER_MAPS,
                          SIM_DISCRIM_DIR, DATE_FEATS_DF, NORM_IND)
 from utils import unpickle, extract_clock_feats, is_split, slr_norm, byr_norm
@@ -190,15 +190,18 @@ def align_x_lstg_lookup(x_lstg, lookup):
     return x_lstg
 
 
-def load_chunk(base_dir=None, num=None, input_path=None):
+def load_chunk(part=None, base_dir=None, num=None, input_path=None):
     """
     Loads a simulator chunk containing x_lstg and lookup
+    :param str part: name of partition
     :param base_dir: base directory of partition
     :param num: number of chunk
     :param input_path: optional path to the chunk
     :return: (pd.Dataframe giving x_lstg, pd.DataFrame giving lookup)
     """
     if input_path is None:
+        if base_dir is None:
+            base_dir = PARTS_DIR + '{}/'.format(part)
         input_path = base_dir + 'chunks/{}.pkl'.format(num)
     input_dict = unpickle(input_path)
     return [input_dict[k] for k in [X_LSTG, LOOKUP, P_ARRIVAL]]

@@ -1,0 +1,673 @@
+\documentclass{beamer}
+\usecolortheme{dove}
+\setbeamertemplate{navigation symbols}{}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{bbm,amsmath,amssymb,amsfonts,textcomp,setspace,graphicx}
+\usepackage{booktabs}
+\usepackage{mathcomp}
+\usepackage{appendix}
+\setbeamertemplate{section in toc}[sections numbered]
+\usepackage{float}
+\usepackage{verbatim}
+\usepackage{pgfplots}
+\usepackage[normalem]{ulem}
+\usepackage{subcaption}
+\usepackage{tikz}
+\AtBeginSection[]
+{
+  \begin{frame}[plain]{Outline}
+    \tableofcontents[currentsection]
+  \end{frame}
+}
+
+\graphicspath{{../../figures/}}
+
+\title{Optimal Bargaining on eBay \\Using Deep Reinforcement Learning}
+
+\author[Green, Plunkett]{Etan Green\inst{1} \and E.~Barry Plunkett\inst{1,2}}
+
+\institute{
+  \inst{1}%
+  University of Pennsylvania
+  \and
+  \inst{2}%
+  D.~E.~Shaw
+}
+
+\date{November 2020}
+
+\begin{document}
+
+\frame{\titlepage}
+
+\begin{frame}
+	What offer should I make?
+\end{frame}
+
+\begin{frame}{``Best Offer'' listings on eBay}
+
+\end{frame}
+
+\begin{frame}{This project}
+	For any listing and at any point in the offer history, what offer maximizes the eventual payoff? For the seller? For the buyer?
+	\begin{itemize}
+		\item Characterize optimal behavior in a way that humans can use.
+	\end{itemize}
+\end{frame}
+
+%\begin{frame}{An abridged answer for the buyer}
+%	Start low and do not accept until you have to.\pause
+%	\begin{itemize}
+%		\item Human buyers make generous first offers and accept counters.
+%	\end{itemize}
+%\end{frame}
+%
+%\begin{frame}{An abridged answer for the seller}
+%	Reject generous first offers.\pause
+%	\begin{itemize}
+%		\item Human sellers accept generous first offers.
+%	\end{itemize}
+%\end{frame}
+
+\begin{frame}{Larger goal}
+	Tutorial for solving real-world dynamic decision problems---and characterizing the solutions.
+\end{frame}
+
+\begin{frame}{Reinforcement learning}
+	In each state, finds the action that maximizes the eventual payoff.
+	$$\pi(s): s \rightarrow a$$
+\end{frame}
+
+\begin{frame}{Chess}
+	\begin{itemize}
+		\item State: board position
+		\item Action: allowable move
+		\item Payoff: 1 for a win, 0 for a loss
+	\end{itemize}
+	\vspace{5mm}
+	Play randomly at first, reinforce actions that lead to higher payoffs.
+\end{frame}
+
+\begin{frame}{Deep reinforcement learning}
+	Approximates states from features.
+	$$\pi(\boldsymbol{x}): \boldsymbol{x} \rightarrow a$$
+\end{frame}
+
+\begin{frame}{AlphaZero}
+
+\end{frame}
+
+\begin{frame}{``Best Offer'' listings on eBay}
+	\begin{itemize}
+		\item State: listing features + offer history
+		\item Action: an offer
+		\item Payoff: (tbd)
+	\end{itemize}
+	\vspace{5mm}
+	Can we train an algorithm to play optimally against human buyers and sellers on eBay?\pause
+	\begin{itemize}
+		\item Optimal $\neq$ equilibrium
+	\end{itemize}
+\end{frame}
+
+%\begin{frame}{Problem \#1}
+%	Chess is a two-player, zero-sum game.
+%	\begin{itemize}
+%		\item There is a minimax move, which is optimal regardless of whether the opponent plays optimally.
+%	\end{itemize}\pause
+%	\vspace{5mm}
+%	Bargaining is neither two-player nor zero-sum.
+%	\vspace{5mm}
+%	Our approach: play optimally against humans on eBay.
+%	\begin{itemize}
+%		\item optimal $\neq$ equilibrium
+%	\end{itemize}
+%\end{frame}
+
+\begin{frame}
+	Ideally, we would train the algorithm by bargaining on eBay.
+	\begin{itemize}
+		\item AlphaZero achieved superhuman performance only after millions of games.
+	\end{itemize}\pause
+	\vspace{5mm}
+	Our approach:
+	\begin{enumerate}
+		\item Train neural nets to mimic human buyers and sellers.
+		\item Train reinforcement learning agents to play optimally against these simulated buyers and sellers.
+	\end{enumerate}
+\end{frame}
+
+\begin{frame}{Outline}\tableofcontents\end{frame}
+
+\section{Gameplay}
+
+\begin{frame}{Seller sets three prices}
+	\begin{enumerate}
+		\item A \textbf{list price}, at which the item may be purchased immediately.
+		\item An optional \textbf{auto-accept price}, above which buyer offers are immediately accepted.
+		\item An optional \textbf{auto-reject price}, below which buyer offers are immediately rejected.
+	\end{enumerate}
+\end{frame}
+
+\begin{frame}{Order of operations (circa 2013)}
+	\begin{enumerate}
+		\item Buyer makes an offer.\pause
+		\item If offer is between the automatic thresholds, seller may accept, counter or reject.
+		\begin{itemize}
+			\item If seller does not respond in 48 hours, offer is rejected.
+		\end{itemize}\pause
+		\item If seller does not accept, buyer may accept, counter or walk.
+		\begin{itemize}
+			\item If buyer does not respond in 48 hours, buyer walks.
+		\end{itemize}\pause
+		\item Repeat (2) \& (3) until buyer and seller have each had 3 turns.\pause
+		\item After 3rd seller response, buyer faces take-it-or-leave-it offer.\pause
+	\end{enumerate}
+\end{frame}
+
+\begin{frame}{A thread ends when...}
+	\begin{enumerate}
+		\item An offer is accepted (on any thread).
+		\item The buyer walks (actively or passively).
+		\item The listing expires.
+	\end{enumerate}		
+\end{frame}
+
+\section{Data}\label{sec:data}
+
+\begin{frame}{Backus et al. (2020) data}
+	98M ``Best Offer'' listings on eBay from 2012-13.\pause
+	\begin{enumerate}
+		\item Plausibly unique listings (unique title): XXXM\pause
+		\item and list price between \$9.95 and \$1000.00: XXXM\pause
+		\item and fixed list price: XXXM\pause
+		\item and no other funny stuff: XXXM
+	\end{enumerate}
+\end{frame}
+
+\begin{frame}{Partitions}
+	XXXM listings, from XXX sellers, split into 4 partitions:
+	\begin{enumerate}
+		\item Simulator training: 75\% of sellers
+		\item RL training: 10\%
+		\item Validation: 5\%
+		\item Test: 10\%
+	\end{enumerate}
+	\vspace{5mm}
+	All results that follow are from validation partition.
+\end{frame}
+
+\begin{frame}{What's in the data?}
+	Complete offer histories for all negotiations.
+	\begin{itemize}
+		\item Unique among datasets of this size.
+	\end{itemize}
+\end{frame}
+
+\begin{frame}{What else is in the data?}
+	An incomplete list:
+	\begin{itemize}
+		\item List price and automatic thresholds.
+		\item Category and subcategory.
+		\item Listing start and end dates.
+		\item Number of photos.
+		\item Seller's rating.
+		\item Offer timestamps.
+		\item Whether a message is attached to the offer.
+	\end{itemize}
+\end{frame}
+
+\begin{frame}{What's not in the data}
+	\begin{itemize}
+		\item The photos themselves.
+		\item The messages themselves.
+		\item Item descriptions.
+	\end{itemize}
+\end{frame}
+
+\begin{frame}
+	\begin{figure}
+		\centering
+		\includegraphics[height=\textheight]{\detokenize{w2v/w2v_meta.png}}
+	\end{figure}
+\end{frame}
+
+%\begin{frame}{Other constructed features}
+%	\begin{itemize}
+%		\item Distributions of offer components by seller and category.
+%			\begin{itemize}
+%				\item e.g., normalized first offer.
+%				\item Excluding focal listing.
+%				\item Visible only to simulator models, not to reinforcement learners.
+%			\end{itemize}\pause
+%		\item Summary statistics of activity on other threads.
+%		\begin{itemize}
+%			\item Number of offers, best offer, number of threads.
+%			\item Since listing began, in last 48 hours, among open offers.
+%			\item Visible only to simulator models for seller turns and seller RL.
+%		\end{itemize}
+%	\end{itemize}
+%\end{frame}
+
+\section{Simulator}\label{sec:simulator}
+
+\begin{frame}{Goal}
+	Generate credible counterfactual offer paths.
+\end{frame}
+
+\begin{frame}{Example listing}
+	\begin{itemize}
+		\item \$100 list price
+		\item \$50 auto-reject price
+		\item No auto-accept price
+	\end{itemize}
+	\vspace{5mm}
+	In the data, the item sells for the list price to the first buyer.\pause
+	\vspace{5mm}
+	Counterfactual:
+	\begin{enumerate}
+		\item Buyer 1 offers 50\% of list price.
+		\item Seller auto-rejects.
+		\item Buyer 1 offers 75\% of list price.
+		\item Buyer 2 purchases the item for the list price.
+	\end{enumerate}
+\end{frame}
+
+\begin{frame}{Overview}
+	Simulate:
+	\begin{enumerate}
+		\item The arrival of buyers.
+		\item The offer path of each thread.
+	\end{enumerate}
+	\vspace{5mm}
+	All features of the listing are held constant.
+	\begin{itemize}
+		\item e.g., list price and automatic thresholds
+	\end{itemize}
+	\vspace{5mm}
+	Listings expire after 1 week.
+	\begin{itemize}
+		\item Common listing duration in the data.
+	\end{itemize}
+\end{frame}
+
+\begin{frame}{Arrival time of first buyer}
+	\begin{figure}
+		\centering
+		\includegraphics[height=.8\textheight]{\detokenize{sim/pdf_arrival.png}}
+	\end{figure}
+	70\% of listings expire without an arrival.
+\end{frame}
+
+\begin{frame}{Interarrival time}
+	\begin{figure}
+		\centering
+		\includegraphics[height=.8\textheight]{\detokenize{sim/pdf_interarrival.png}}
+	\end{figure}
+\end{frame}
+
+\begin{frame}{Buyer experience}
+	\begin{figure}
+		\centering
+		\includegraphics[height=.8\textheight]{\detokenize{sim/cdf_hist.png}}
+	\end{figure}
+\end{frame}
+
+\begin{frame}{First buyer offer}
+	\begin{figure}
+		\centering
+		\includegraphics[height=.8\textheight]{\detokenize{sim/cdf_con_1.png}}
+	\end{figure}
+\end{frame}
+
+\begin{frame}{Offers as concessions}
+	How much of the bargaining zone is conceded.
+	\begin{itemize}
+		\item e.g., buyer last offered \$50 and seller last offered \$100.
+		\item \$60 buyer offer $=$ 20\% concession
+		\item \$90 seller offer $=$ 20\% concession
+	\end{itemize}
+\end{frame}
+
+\begin{frame}
+\begin{figure}[h]
+    \centering
+	\begin{subfigure}[b]{0.32\textwidth}
+		\caption*{2}
+		\includegraphics[width=\textwidth]{\detokenize{sim/cdf_con_2.png}}
+	\end{subfigure}
+	\begin{subfigure}[b]{0.32\textwidth}
+		\caption*{4}
+		\includegraphics[width=\textwidth]{\detokenize{sim/cdf_con_4.png}}
+	\end{subfigure}
+	\begin{subfigure}[b]{0.32\textwidth}
+		\caption*{6}
+		\includegraphics[width=\textwidth]{\detokenize{sim/cdf_con_6.png}}
+	\end{subfigure}
+	\begin{subfigure}[b]{0.32\textwidth}
+		\caption*{3}
+		\includegraphics[width=\textwidth]{\detokenize{sim/cdf_con_3.png}}
+	\end{subfigure}
+	\begin{subfigure}[b]{0.32\textwidth}
+		\caption*{5}
+		\includegraphics[width=\textwidth]{\detokenize{sim/cdf_con_5.png}}
+	\end{subfigure}
+	\begin{subfigure}[b]{0.32\textwidth}
+		\caption*{7}
+		\includegraphics[width=\textwidth]{\detokenize{sim/cdf_con_7.png}}
+	\end{subfigure}
+\end{figure}
+\end{frame}
+
+\begin{frame}
+\begin{figure}[h]
+    \centering
+	\begin{subfigure}[b]{0.32\textwidth}
+		\caption*{2}
+		\includegraphics[width=\textwidth]{\detokenize{sim/cdf_delay_2.png}}
+	\end{subfigure}
+	\begin{subfigure}[b]{0.32\textwidth}
+		\caption*{4}
+		\includegraphics[width=\textwidth]{\detokenize{sim/cdf_delay_4.png}}
+	\end{subfigure}
+	\begin{subfigure}[b]{0.32\textwidth}
+		\caption*{6}
+		\includegraphics[width=\textwidth]{\detokenize{sim/cdf_delay_6.png}}
+	\end{subfigure}
+	\begin{subfigure}[b]{0.32\textwidth}
+		\caption*{3}
+		\includegraphics[width=\textwidth]{\detokenize{sim/cdf_delay_3.png}}
+	\end{subfigure}
+	\begin{subfigure}[b]{0.32\textwidth}
+		\caption*{5}
+		\includegraphics[width=\textwidth]{\detokenize{sim/cdf_delay_5.png}}
+	\end{subfigure}
+	\begin{subfigure}[b]{0.32\textwidth}
+		\caption*{7}
+		\includegraphics[width=\textwidth]{\detokenize{sim/cdf_delay_7.png}}
+	\end{subfigure}
+\end{figure}
+\end{frame}
+
+\begin{frame}{Message rates}
+	\begin{figure}
+		\centering
+		\includegraphics[height=.8\textheight]{\detokenize{sim/bar_msg.png}}
+	\end{figure}
+\end{frame}
+
+\begin{frame}{Summary statistics}
+\begin{figure}[h]
+    \centering
+	\begin{subfigure}[b]{0.49\textwidth}
+		\caption{Threads per listing}
+		\includegraphics[width=\textwidth]{\detokenize{sim/bar_threads.png}}
+	\end{subfigure}
+	\begin{subfigure}[b]{0.49\textwidth}
+		\caption{Offers per thread}
+		\includegraphics[width=\textwidth]{\detokenize{sim/bar_offers.png}}
+	\end{subfigure}
+\end{figure}
+\end{frame}
+
+\begin{frame}{Sale time and price}
+\begin{figure}[h]
+    \centering
+	\begin{subfigure}[b]{0.32\textwidth}
+		\caption{Time to sale}
+		\includegraphics[height=3.5cm]{\detokenize{sim/cdf_days.png}}
+	\end{subfigure}
+	\begin{subfigure}[b]{0.32\textwidth}
+		\caption{Sale price}
+		\includegraphics[height=3.5cm]{\detokenize{sim/cdf_price.png}}
+	\end{subfigure}
+	\begin{subfigure}[b]{0.32\textwidth}
+		\caption{Normalized}
+		\includegraphics[height=3.5cm]{\detokenize{sim/cdf_norm.png}}
+	\end{subfigure}
+\end{figure}
+\end{frame}
+
+\begin{frame}{By category: time to sale}
+\begin{figure}[h]
+    \centering
+	\begin{subfigure}[b]{0.49\textwidth}
+		\caption{Collectibles}
+		\includegraphics[width=\textwidth]{\detokenize{sim/collectibles/cdf_days.png}}
+	\end{subfigure}
+	\begin{subfigure}[b]{0.49\textwidth}
+		\caption{Other}
+		\includegraphics[width=\textwidth]{\detokenize{sim/other/cdf_days.png}}
+	\end{subfigure}
+\end{figure}
+\end{frame}
+
+\begin{frame}{By category: sale price}
+\begin{figure}[h]
+    \centering
+	\begin{subfigure}[b]{0.49\textwidth}
+		\caption{Collectibles}
+		\includegraphics[width=\textwidth]{\detokenize{sim/collectibles/cdf_price.png}}
+	\end{subfigure}
+	\begin{subfigure}[b]{0.49\textwidth}
+		\caption{Other}
+		\includegraphics[width=\textwidth]{\detokenize{sim/other/cdf_price.png}}
+	\end{subfigure}
+\end{figure}
+\end{frame}
+
+\begin{frame}{By category: normalized sale price}
+\begin{figure}[h]
+    \centering
+	\begin{subfigure}[b]{0.49\textwidth}
+		\caption{Collectibles}
+		\includegraphics[width=\textwidth]{\detokenize{sim/collectibles/cdf_norm.png}}
+	\end{subfigure}
+	\begin{subfigure}[b]{0.49\textwidth}
+		\caption{Other}
+		\includegraphics[width=\textwidth]{\detokenize{sim/other/cdf_norm.png}}
+	\end{subfigure}
+\end{figure}
+\end{frame}
+
+\begin{frame}{Discriminator}
+	Observes a complete thread, either from the data or the simulation.
+	\begin{itemize}
+		\item Fixed listing features.
+		\item Offer path.
+	\end{itemize}
+	\vspace{5mm}
+	Predicts the whether the thread is real or simulated.
+\end{frame}
+
+\begin{frame}{Discriminator performance}
+	\begin{figure}
+		\centering
+		\includegraphics[height=.8\textheight]{\detokenize{training/simple_roc.png}}
+	\end{figure}
+	AUC: 53.5\%
+\end{frame}
+
+\section{Payoffs}
+
+\begin{frame}{Payoffs}
+	Buyer:
+	\begin{itemize}
+		\item $\texttt{value} - \texttt{price}$, if item is purchased
+		\item 0, otherwise
+	\end{itemize}
+	\vspace{5mm}
+	Seller:
+	\begin{itemize}
+		\item $\texttt{price}$, if item is sold
+		\item $\delta \cdot \texttt{value}$, otherwise
+	\end{itemize}
+	\vspace{5mm}
+	What is an item's value?
+	\begin{itemize}
+		\item Calculate a ``market value'' for each item.
+		\item Characterize optimal behavior under these values.
+	\end{itemize}
+\end{frame}
+
+\begin{frame}{Values}
+	$$\texttt{value} = P(\texttt{sale}) \cdot \mathbb{E}[\texttt{price} | \texttt{sale}] + \big(1 - P(\texttt{sale})\big) \cdot \delta \cdot \texttt{value}$$
+\end{frame}
+
+\begin{frame}{Values}
+	$$\texttt{value} = \frac{P(\texttt{sale}) \cdot \mathbb{E}[\texttt{price} | \texttt{sale}]}{1 - \big(1 - P(\texttt{sale})\big) \cdot \delta}$$\pause
+	\vspace{5mm}
+	\begin{itemize}
+		\item $\delta = 0 \rightarrow \texttt{value} = P(\texttt{sale}) \cdot \mathbb{E}[\texttt{price} | \texttt{sale}]$
+		\item $\delta = 1 \rightarrow \texttt{value} = \mathbb{E}[\texttt{price} | \texttt{sale}]$
+	\end{itemize}\pause
+	\vspace{5mm}
+	Simulate each listing to estimate $P(\texttt{sale})$ and $\mathbb{E}[\texttt{price} | \texttt{sale}]$.
+\end{frame}
+
+\begin{frame}{Normalized values}
+	\begin{figure}
+		\centering
+		\includegraphics[height=.8\textheight]{\detokenize{values/pdf_values.png}}
+	\end{figure}
+\end{frame}
+
+\begin{frame}{Category predicts value}
+	\begin{figure}
+		\centering
+		\includegraphics[height=.9\textheight]{\detokenize{w2v/w2v_values.png}}
+	\end{figure}
+\end{frame}
+
+\begin{frame}{Round list prices have higher values}
+	\begin{figure}
+		\centering
+		\includegraphics[height=.8\textheight]{\detokenize{values/response_binvals.png}}
+	\end{figure}
+\end{frame}
+
+\begin{frame}{Some other predictors of value}
+\begin{figure}[h]
+    \centering
+	\begin{subfigure}[t]{0.49\textwidth}
+		\caption{Number of photos}
+		\includegraphics[height=5cm]{\detokenize{values/coef_photovals.png}}
+	\end{subfigure}
+	\begin{subfigure}[t]{0.49\textwidth}
+		\caption{Day of listing start}
+		\includegraphics[height=5cm]{\detokenize{values/coef_dowvals.png}}
+	\end{subfigure}
+\end{figure}
+\end{frame}
+
+\section{RL seller}
+
+\begin{frame}
+	\[\pi(\boldsymbol{x}): \boldsymbol{x} \rightarrow f(a)\]
+	\begin{itemize}
+		\item[$\boldsymbol{x}$]: features that are observable to seller.
+		\begin{itemize}
+			\item e.g., features that summarize offers on other threads.
+			\item Seller does not observe item value.
+		\end{itemize}
+		\vspace{5mm}
+		\item[$a$] $\in \{\texttt{reject}, .2, .25, .33, .4, .5, .6, .67, \texttt{accept}\}$
+		\begin{itemize}
+			\item Cannot send a message.
+			\item Delay drawn from simulated seller model.
+		\end{itemize}	
+	\end{itemize}
+\end{frame}
+
+\begin{frame}{Delays}
+\begin{figure}
+	\centering
+	\begin{subfigure}[b]{0.32\textwidth}
+		\caption*{2}
+		\includegraphics[width=\textwidth]{\detokenize{sim/cdf_delay_2.png}}
+	\end{subfigure}
+	\begin{subfigure}[b]{0.32\textwidth}
+		\caption*{4}
+		\includegraphics[width=\textwidth]{\detokenize{sim/cdf_delay_4.png}}
+	\end{subfigure}
+	\begin{subfigure}[b]{0.32\textwidth}
+		\caption*{6}
+		\includegraphics[width=\textwidth]{\detokenize{sim/cdf_delay_6.png}}
+	\end{subfigure}
+\end{figure}
+	Drawn from turn-specific distribution for simulated seller.
+	\begin{itemize}
+		\item Conditional on delay $<$ 48 hours.
+	\end{itemize}
+\end{frame}
+
+\begin{frame}{Training procedure}
+	Initialize seller policy $\pi$.
+	\begin{enumerate}
+		\item Draw a listing from RL Training partition.
+		\item Simulate until the listing ends using $\pi$ to draw seller offers.
+		\item If listing sells, payoff is \texttt{sale price}.
+		\begin{itemize}
+			\item Otherwise payoff is $\delta \cdot \texttt{value}$.
+		\end{itemize}
+		\item Update $\pi$.
+	\end{enumerate}
+	\vspace{5mm}
+	Repeat until $\pi$ converges to deterministic policy.
+\end{frame}
+
+\section{RL buyer}
+
+\begin{frame}{Arrival process}
+	\begin{figure}
+		\centering
+		\includegraphics[height=.7\textheight]{\detokenize{sim/pdf_arrival.png}}
+	\end{figure}
+	70\% of listings expire without an arrival.
+	\begin{itemize}
+		\item No agent arrival for 70\% of simulations.
+	\end{itemize}
+\end{frame}
+
+\begin{frame}{Offers}
+	\[\pi(\boldsymbol{x}): \boldsymbol{x} \rightarrow f(a)\]
+	Restrictions:
+	\begin{itemize}
+		\item[$\boldsymbol{x}$]: only features that buyers can observe.
+		\begin{itemize}
+			\item e.g., excludes automatic thresholds, activity on other threads.
+		\end{itemize}
+		\item[$a$]: 7 most common concessions, plus \texttt{walk} and \texttt{accept}.
+		\begin{itemize}
+			\item Turn 1: $\{\texttt{walk}, .5, .6, .67, .7, .75, .8, .83, \texttt{accept}\}$
+			\item Turns 3 \& 5: $\{\texttt{walk}, .17, .2, .25, .29, .33, .4, .5, \texttt{accept}\}$
+			\item Turn 7: $\{\texttt{walk}, \texttt{accept}\}$
+		\end{itemize}
+		\item Cannot send a message.
+	\end{itemize}
+\end{frame}
+	
+\begin{frame}{Delays}
+\begin{figure}
+	\centering
+	\begin{subfigure}[b]{0.32\textwidth}
+		\caption*{3}
+		\includegraphics[width=\textwidth]{\detokenize{sim/cdf_delay_3.png}}
+	\end{subfigure}
+	\begin{subfigure}[b]{0.32\textwidth}
+		\caption*{5}
+		\includegraphics[width=\textwidth]{\detokenize{sim/cdf_delay_5.png}}
+	\end{subfigure}
+	\begin{subfigure}[b]{0.32\textwidth}
+		\caption*{7}
+		\includegraphics[width=\textwidth]{\detokenize{sim/cdf_delay_7.png}}
+	\end{subfigure}
+\end{figure}
+	Drawn from turn-specific distribution for simulated buyer.
+	\begin{itemize}
+		\item Conditional on delay $<$ 48 hours.
+	\end{itemize}
+\end{frame}
+
+\end{document}

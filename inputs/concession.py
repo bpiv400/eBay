@@ -2,9 +2,9 @@ import argparse
 import pandas as pd
 from inputs.util import save_files, check_zero, get_x_thread, get_ind_x
 from utils import load_file
-from constants import IDX, SIM_PARTITIONS, CON_MULTIPLIER
+from constants import IDX, CON_MULTIPLIER
 from featnames import CON, NORM, SPLIT, MSG, AUTO, EXP, REJECT, TIME_FEATS, \
-    LOOKUP, BYR, X_THREAD, X_OFFER, THREAD, INDEX
+    LOOKUP, BYR, X_THREAD, X_OFFER, THREAD, INDEX, SIM_PARTITIONS
 
 
 def get_y(offers, turn):

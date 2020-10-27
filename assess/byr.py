@@ -4,9 +4,9 @@ from agent.util import find_best_run, get_byr_valid, load_values
 from assess.util import discrete_pdf, discrete_cdf, get_sale_norm, norm_norm
 from utils import load_data
 from agent.const import BYR_MIN_CON1
-from constants import TEST, OUTCOME_SIMS
+from constants import OUTCOME_SIMS
 from featnames import CON, INDEX, THREAD, X_OFFER, X_THREAD, LOOKUP, \
-    AUTO, LSTG, NORM, SIM, BYR_AGENT
+    AUTO, LSTG, NORM, SIM, BYR_AGENT, TEST
 
 PART = TEST
 

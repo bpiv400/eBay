@@ -1,7 +1,7 @@
 from inputs.util import get_arrival_times, save_files, get_ind_x
 from utils import input_partition, load_file
-from featnames import START_TIME, END_TIME, LOOKUP, CLOCK, THREAD
-from constants import FIRST_ARRIVAL_MODEL, INTERVAL_ARRIVAL, INTERVAL_CT_ARRIVAL
+from featnames import START_TIME, END_TIME, LOOKUP, CLOCK, THREAD, FIRST_ARRIVAL_MODEL
+from constants import INTERVAL_ARRIVAL, INTERVAL_CT_ARRIVAL
 
 
 def process_inputs(part):

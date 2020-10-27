@@ -4,9 +4,9 @@ from assess.util import get_last
 from agent.util import find_best_run
 from utils import load_data, compose_args
 from agent.const import AGENT_PARAMS
-from constants import TEST, DAY, MAX_DAYS
+from constants import DAY, MAX_DAYS
 from featnames import LOOKUP, AUTO, CON, NORM, START_PRICE, START_TIME, \
-    BYR_HIST, X_OFFER, X_THREAD, INDEX, CLOCK, THREAD
+    BYR_HIST, X_OFFER, X_THREAD, INDEX, CLOCK, THREAD, TEST
 
 
 def main():

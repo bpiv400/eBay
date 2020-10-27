@@ -1,7 +1,7 @@
 import os
 from pandas.tseries.holiday import USFederalHolidayCalendar as Calendar
 from platform import platform
-from featnames import DELAY, CON, MSG, SLR, BYR
+from featnames import SLR, BYR, TRAIN_MODELS, TRAIN_RL, VALIDATION
 
 # paths and directories
 if 'Ubuntu' in platform():  # Etan's box(es)
@@ -24,7 +24,6 @@ PCTILE_DIR = '{}/pctile/'.format(PREFIX)        # percentiles of features
 CLEAN_DIR = '{}/clean/'.format(PREFIX)          # cleaned csvs
 W2V_DIR = '{}/w2v/'.format(PREFIX)              # for word2vec features
 FEATS_DIR = '{}/feats/'.format(PREFIX)          # pre-partion features
-HEURISTIC_DIR = '{}/heuristic/'.format(PREFIX)  # heuristic byr and slr sims
 
 INPUT_DIR = '{}/inputs/'.format(PREFIX)         # inputs for models
 SIZES_DIR = INPUT_DIR + 'sizes/'                # for initializing models
@@ -40,16 +39,6 @@ DATE_FEATS_PATH = FEATS_DIR + 'date_feats.pkl'
 META_PATH = CLEAN_DIR + 'meta.csv'
 
 FIG_DIR = os.path.expanduser('~/eBay/figures/')  # for saving figures
-
-# partitions
-TRAIN_MODELS = 'sim'
-TRAIN_RL = 'rl'
-VALIDATION = 'valid'
-TEST = VALIDATION  # TODO: rename to 'testing' when using real testing data
-PARTITIONS = [TRAIN_MODELS, TRAIN_RL, VALIDATION, TEST]
-SIM_PARTITIONS = [TRAIN_MODELS, VALIDATION, TEST]
-AGENT_PARTITIONS = [TRAIN_RL, VALIDATION, TEST]
-HOLDOUT_PARTITIONS = [VALIDATION, TEST]
 
 # for splitting data
 SHARES = {TRAIN_MODELS: 0.75, TRAIN_RL: 0.1, VALIDATION: 0.05}
@@ -89,25 +78,6 @@ IDX = {
 START = '2012-06-01 00:00:00'
 END = '2013-05-31 23:59:59'
 HOLIDAYS = Calendar().holidays(start=START, end=END)
-
-# model names
-FIRST_ARRIVAL_MODEL = 'first_arrival'
-INTERARRIVAL_MODEL = 'next_arrival'
-BYR_HIST_MODEL = 'hist'
-
-# model sets
-ARRIVAL_MODELS = [FIRST_ARRIVAL_MODEL, INTERARRIVAL_MODEL, BYR_HIST_MODEL]
-DELAY_MODELS = ['{}{}'.format(DELAY, i) for i in range(2, 8)]
-CON_MODELS = ['{}{}'.format(CON, i) for i in range(1, 8)]
-MSG_MODELS = ['{}{}'.format(MSG, i) for i in range(1, 7)]
-OFFER_MODELS = DELAY_MODELS + CON_MODELS + MSG_MODELS
-MODELS = ARRIVAL_MODELS + OFFER_MODELS
-
-# censored models
-CENSORED_MODELS = [INTERARRIVAL_MODEL] + DELAY_MODELS
-
-# discriminator models
-DISCRIM_MODEL = 'discrim'
 
 # normalization type
 MODEL_NORM = 'batch'

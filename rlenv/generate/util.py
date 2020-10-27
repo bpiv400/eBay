@@ -95,7 +95,7 @@ def process_sims(part=None, sims=None, output_dir=None,
 
     # create directory if it doesn't exist
     if not os.path.isdir(output_dir):
-        os.mkdir(output_dir)
+        os.makedirs(output_dir)
 
     # save
     for k, df in d.items():

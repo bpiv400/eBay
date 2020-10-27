@@ -1,5 +1,7 @@
 import numpy as np
 import pandas as pd
+
+import assess.util
 from processing.util import hist_to_pctile
 from constants import START, IDX, MAX_DELAY_TURN, DAY
 from featnames import BYR_HIST, DELAY, LSTG, THREAD, INDEX, CLOCK, ACCEPT, \
@@ -247,7 +249,7 @@ def fast_quantiles(df, l, featname):
 def get_quantiles(df, l, featname):
     # initialize output dataframe
     df = df.copy()
-    df['lstg_counter'] = df['lstg_id'].groupby(by=l).transform(
+    df['lstg_counter'] = assess.util.transform(
         lambda x: x.factorize()[0].astype(np.int64))
     df = df.drop(columns=THREAD)
     converter = df[['lstg_counter']]

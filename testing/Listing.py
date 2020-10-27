@@ -1,10 +1,9 @@
 from testing.Arrival import Arrival
 from testing.Thread import Thread
 from testing.util import subset_inputs, populate_inputs
-from constants import MAX_DELAY_ARRIVAL, DAY, BYR_HIST_MODEL, \
-   INTERARRIVAL_MODEL, OFFER_MODELS
+from constants import MAX_DELAY_ARRIVAL, DAY
 from featnames import START_TIME, DAYS_SINCE_LSTG, BYR_HIST, CON, AUTO, \
-    X_THREAD, X_OFFER, THREAD, LSTG, LOOKUP
+    X_THREAD, X_OFFER, THREAD, LSTG, LOOKUP, OFFER_MODELS, INTERARRIVAL_MODEL, BYR_HIST_MODEL
 
 
 class Listing:

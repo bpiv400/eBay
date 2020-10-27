@@ -2,9 +2,9 @@ import argparse
 import math
 import torch
 import numpy as np
-from constants import PARTS_DIR, VALIDATION, BYR_DROP
+from constants import PARTS_DIR, BYR_DROP
 from featnames import OUTCOME_FEATS, DAYS_SINCE_LSTG, BYR_HIST, \
-    TIME_FEATS, CLOCK_FEATS, THREAD_COUNT, TURN_FEATS, SLR, BYR, META, LEAF
+    TIME_FEATS, CLOCK_FEATS, THREAD_COUNT, TURN_FEATS, SLR, BYR, META, LEAF, VALIDATION
 from rlenv.Composer import Composer
 from rlenv.const import LSTG_MAP, OFFER_MAPS, THREAD_COUNT_IND, \
     TIME_START_IND, TIME_END_IND

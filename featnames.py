@@ -79,11 +79,13 @@ INDEX = 'index'
 # lookup column names
 META = 'meta'
 LEAF = 'leaf'
+CNDTN = 'cndtn'
 START_DATE = 'start_date'
 START_TIME = 'start_time'
 END_TIME = 'end_time'
 START_PRICE = 'start_price'
 DEC_PRICE = 'decline_price'
+FDBK_SCORE = 'fdbk_score'
 SLR_BO_CT = 'slr_bo_ct'
 STORE = 'store'
 
@@ -110,3 +112,30 @@ TURN_FEATS = {
     BYR: ['t1', 't3', 't5'],
     SLR: ['t2', 't4']
 }
+
+# partitions
+TRAIN_MODELS = 'sim'
+TRAIN_RL = 'rl'
+VALIDATION = 'valid'
+TEST = VALIDATION  # TODO: rename to 'testing' when using real testing data
+PARTITIONS = [TRAIN_MODELS, TRAIN_RL, VALIDATION, TEST]
+SIM_PARTITIONS = [TRAIN_MODELS, VALIDATION, TEST]
+AGENT_PARTITIONS = [TRAIN_RL, VALIDATION, TEST]
+HOLDOUT_PARTITIONS = [VALIDATION, TEST]
+
+# model names
+FIRST_ARRIVAL_MODEL = 'first_arrival'
+INTERARRIVAL_MODEL = 'next_arrival'
+BYR_HIST_MODEL = 'hist'
+DISCRIM_MODEL = 'discrim'
+VALUES_MODEL = 'values'
+
+# model groups
+ARRIVAL_MODELS = [FIRST_ARRIVAL_MODEL, INTERARRIVAL_MODEL, BYR_HIST_MODEL]
+DELAY_MODELS = ['{}{}'.format(DELAY, i) for i in range(2, 8)]
+CON_MODELS = ['{}{}'.format(CON, i) for i in range(1, 8)]
+MSG_MODELS = ['{}{}'.format(MSG, i) for i in range(1, 7)]
+OFFER_MODELS = DELAY_MODELS + CON_MODELS + MSG_MODELS
+MODELS = ARRIVAL_MODELS + OFFER_MODELS
+CENSORED_MODELS = [INTERARRIVAL_MODEL] + DELAY_MODELS
+TRAIN_RL_MODELS = [DISCRIM_MODEL, VALUES_MODEL]

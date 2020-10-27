@@ -2,63 +2,52 @@ import numpy as np
 import pandas as pd
 from statsmodels.nonparametric.kernel_regression import KernelReg
 from agent.util import find_best_run, get_byr_agent, load_values
+from assess.util import kreg2
 from utils import load_data, topickle
-from assess.const import OPT
-from constants import TEST, PLOT_DIR
-from featnames import X_OFFER, CON, NORM, INDEX, LSTG, AUTO, EXP, BYR
-
-MANUAL = 'manual'
+from agent.const import DELTA_CHOICES
+from constants import PLOT_DIR
+from featnames import X_OFFER, CON, NORM, INDEX, LSTG, EXP, BYR, TEST
 
 
-# output dimensions
-dim1 = np.arange(.65, .91, .01)
-dim2 = np.arange(0.5, .86, .01)
-xx1, xx2 = np.meshgrid(dim1, dim2)
-mesh = np.concatenate([xx1.reshape(-1, 1), xx2.reshape(-1, 1)], axis=1)
+def main():
+    d = {}
+    for delta in DELTA_CHOICES:
+        # byr run
+        run_dir = find_best_run(byr=True, delta=delta)
+        if run_dir is None:
+            continue
+        data = load_data(part=TEST, run_dir=run_dir)
+        vals = load_values(part=TEST, delta=delta)
 
-# byr run
-run_dir = find_best_run(byr=True, delta=.9)
-data = load_data(part=TEST, run_dir=run_dir)
-vals = load_values(part=TEST, delta=.9)
+        # restrict to agent threads
+        idx = get_byr_agent(data)
+        offers = pd.DataFrame(index=idx).join(data[X_OFFER])
 
-# restrict to agent threads
-idx = get_byr_agent(data)
-offers = pd.DataFrame(index=idx).join(data[X_OFFER])
+        con = offers[CON].xs(5, level=INDEX)
+        last = offers.xs(4, level=INDEX).reindex(index=con.index)
+        norm = 1 - last[NORM]
+        # norm[(last[CON] == 0) & (last[DELAY] == 1)] = 1.1
+        y = con.values.astype(np.float64)
+        x1 = norm.values
+        x2 = vals.reindex(index=norm.index, level=LSTG).values
 
-byr5 = offers[CON].xs(5, level=INDEX)
-slr = dict()
-for t in [2, 4]:
-    slr[t] = offers.xs(t, level=INDEX).reindex(
-        index=byr5.index)[[AUTO, EXP, NORM]]
-    slr[t].loc[:, NORM] = 1 - slr[t][NORM]
-    slr[t]['manual'] = ~slr[t][AUTO] & ~slr[t][EXP]
-    assert (slr[t][[MANUAL, AUTO, EXP]].sum(axis=1) == 1).all()
+        # # univariate regressions for rejections
+        # cols = {'Non-expiration': 1, 'Expiration': 1.1}
+        # df = pd.DataFrame(columns=cols, index=get_dim(x2))
+        # for k, v in cols.items():
+        #     ll = KernelReg(y, x2, var_type='c', bw=(.025,))
+        #     df[k] = ll.fit(df.index)[0]
+        #     print('{}: {}'.format(k, ll.bw[0]))
+        # d['simple_valcon_{}'.format(delta)] = df
 
-y = byr5.values.astype(np.float64)
-x1 = slr[4][NORM].values
-x2 = vals.reindex(index=slr[4].index, level=LSTG).values
-x = np.stack([x1, x2], axis=1)
+        # bivariate kernel regression
+        mask = x1 < 1
+        d['contour_normval_{}'.format(delta)] = kreg2(y=y[mask],
+                                                      x1=x1[mask],
+                                                      x2=x2[mask])
 
-# univariate regressions for rejections
-rej = slr[4][NORM] == 1
-df = pd.DataFrame(columns=[MANUAL, AUTO, EXP],
-                  index=pd.Index(dim2, name='value'))
-for feat in [MANUAL, AUTO, EXP]:
-    mask = rej & slr[2][feat] & slr[4][feat] & (x2 > .35)
-    ll = KernelReg(y[mask], x2[mask], var_type='c', defaults=OPT)
-    df[feat] = ll.fit(dim2)[0]
-    print('{}: {}'.format(feat, ll.bw[0]))
+    topickle(d, PLOT_DIR + '{}3.pkl'.format(BYR))
 
 
-# bivariate kernel regression
-mask = (x1 > .55) & (x1 < 1) & (x2 > .4) & (x2 < .95)
-ll2 = KernelReg(y[mask], x[mask, :], var_type='cc', defaults=OPT)
-y_hat2 = ll2.fit(mesh)[0]
-s2 = pd.Series(y_hat2, index=pd.MultiIndex.from_arrays(
-    [mesh[:, 0], mesh[:, 1]], names=['norm', 'value']))
-
-# put in dictionary
-d = dict(normval=dict())
-d['normval'] = s2
-
-topickle(d, PLOT_DIR + '{}5.pkl'.format(BYR))
+if __name__ == '__main__':
+    main()

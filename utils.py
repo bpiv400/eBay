@@ -258,9 +258,10 @@ def load_data(part=None, sim=False, run_dir=None, lstgs=None):
     for k in [X_THREAD, X_OFFER, CLOCK]:
         df = load_file(part, k, folder=folder)
         if df is not None:
-            if lstgs is not None:
-                df = pd.DataFrame(index=lstgs).join(df)
             data[k] = df
+    if lstgs is not None:
+        for k, df in data.items():
+            data[k] = safe_reindex(df, idx=lstgs)
     return data
 
 
@@ -307,3 +308,16 @@ def load_feats(name, lstgs=None, fill_zero=False):
     if fill_zero:
         kwargs['fill_value'] = 0.
     return df.reindex(**kwargs)
+
+
+def load_inputs(part=None, name=None):
+    """
+    Loads model inputs file from inputs directory.
+    :param str part: name of partition
+    :param str name: name of file
+    :return: dataframe
+    """
+    path = INPUT_DIR + '{}/{}.pkl'.format(part, name)
+    if not os.path.isfile(path):
+        return None
+    return unpickle(path)

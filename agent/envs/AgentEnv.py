@@ -10,9 +10,8 @@ from rlenv.events.Thread import Thread
 from agent.ConSpace import ConSpace
 from agent.util import load_values
 from agent.const import AGENT_CONS
-from constants import INTERVAL_TURN, INTERVAL_CT_TURN, DAY, TRAIN_RL, \
-    NUM_AGENT_CONS
-from featnames import BYR_HIST, START_PRICE, BYR, DELTA
+from constants import INTERVAL_TURN, INTERVAL_CT_TURN, DAY, NUM_AGENT_CONS
+from featnames import BYR_HIST, START_PRICE, BYR, DELTA, TRAIN_RL
 
 Info = namedarraytuple("Info", ["days", "max_return", "num_actions", "num_threads",
                                 "turn", "thread_id", "priority", "agent_sale"])

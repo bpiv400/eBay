@@ -4,8 +4,8 @@ from statsmodels.nonparametric.kernel_regression import KernelReg
 from agent.util import find_best_run, get_byr_agent, load_values
 from utils import load_data, topickle, safe_reindex
 from assess.const import OPT
-from constants import TEST, PLOT_DIR
-from featnames import X_OFFER, CON, NORM, INDEX, LSTG, AUTO, EXP, BYR
+from constants import PLOT_DIR
+from featnames import X_OFFER, CON, NORM, INDEX, LSTG, AUTO, EXP, BYR, TEST
 
 data = load_data(part=TEST)
 

@@ -6,7 +6,6 @@ from utils import load_feats
 AGENT_CONS = load_feats('agent_cons')
 
 # optimization parameters
-AGENT_HIDDEN = 512
 LR_POLICY = 1e-4
 LR_VALUE = 1e-3
 RATIO_CLIP = 0.1

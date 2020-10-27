@@ -2,9 +2,9 @@ import argparse
 import pandas as pd
 from inputs.util import save_files, get_x_thread, get_ind_x, check_zero
 from utils import load_data, get_role
-from constants import IDX, CON_MULTIPLIER, VALIDATION
+from constants import IDX, CON_MULTIPLIER
 from featnames import CON, AUTO, LOOKUP, BYR, SLR, INDEX, MSG, REJECT, NORM, \
-    SPLIT, THREAD, X_THREAD, X_OFFER, CLOCK, THREAD_COUNT, TIME_FEATS, BYR_AGENT
+    SPLIT, THREAD, X_THREAD, X_OFFER, CLOCK, THREAD_COUNT, TIME_FEATS, BYR_AGENT, VALIDATION
 
 
 def get_x_offer(offers=None, idx=None, byr=False):

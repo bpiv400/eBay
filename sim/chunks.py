@@ -3,9 +3,9 @@ import pandas as pd
 from sim.EBayDataset import EBayDataset
 from utils import topickle, get_model_predictions, load_file, load_featnames, \
     input_partition
-from constants import FIRST_ARRIVAL_MODEL, PARTS_DIR, NUM_CHUNKS, INTERVAL_CT_ARRIVAL
+from constants import PARTS_DIR, NUM_CHUNKS, INTERVAL_CT_ARRIVAL
 from featnames import LOOKUP, X_LSTG, P_ARRIVAL, META, START_PRICE, START_TIME, \
-    DEC_PRICE
+    DEC_PRICE, FIRST_ARRIVAL_MODEL
 
 
 def save_chunks(p_arrival=None, part=None, lookup=None):

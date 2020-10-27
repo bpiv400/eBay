@@ -1,9 +1,8 @@
-from collections import OrderedDict
 import torch
 from torch.nn.functional import softmax
 from nets.FeedForward import FeedForward
 from utils import load_sizes
-from agent.const import AGENT_STATE, AGENT_HIDDEN
+from agent.const import AGENT_STATE
 from constants import SLR, BYR, NUM_AGENT_CONS
 from featnames import LSTG
 
@@ -39,16 +38,12 @@ class AgentModel(torch.nn.Module):
 
         # policy net
         sizes['out'] = NUM_AGENT_CONS + (2 if byr else 3)
-        self.policy_net = FeedForward(sizes=sizes,
-                                      dropout=dropout,
-                                      hidden=AGENT_HIDDEN)
+        self.policy_net = FeedForward(sizes=sizes, dropout=dropout)
 
         # value net
         if self.value:
             sizes['out'] = 6 if byr else 5
-            self.value_net = FeedForward(sizes=sizes,
-                                         dropout=dropout,
-                                         hidden=AGENT_HIDDEN)
+            self.value_net = FeedForward(sizes=sizes, dropout=dropout)
 
     def forward(self, observation, prev_action=None, prev_reward=None, value_only=False):
         """
@@ -59,28 +54,18 @@ class AgentModel(torch.nn.Module):
         :param bool value_only: only return value if True
         :return: tuple of policy distribution, value
         """
-        if type(observation) is torch.Tensor:
-            d = OrderedDict()
-            ct = 0
-            for k, v in self.x_sizes.items():
-                d[k] = observation[:, ct:ct + v]
-                ct += v
-            assert observation.size()[-1] == ct
-            x = d
+        # noinspection PyProtectedMember
+        x = observation._asdict()
 
-        else:
-            # noinspection PyProtectedMember
-            x = observation._asdict()
-
-            # processing for single observations
-            x_lstg = x[LSTG]
-            if x_lstg.dim() == 1:
-                if x_lstg.sum == 0:
-                    print('Warning: should only occur in initialization')
-                for elem_name, elem in x.items():
-                    x[elem_name] = elem.unsqueeze(0)
-                if self.training:
-                    self.eval()
+        # processing for single observations
+        x_lstg = x[LSTG]
+        if x_lstg.dim() == 1:
+            if x_lstg.sum == 0:
+                print('Warning: should only occur in initialization')
+            for elem_name, elem in x.items():
+                x[elem_name] = elem.unsqueeze(0)
+            if self.training:
+                self.eval()
 
         if self.value:
             value_params = self.value_net(x)

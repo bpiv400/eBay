@@ -52,8 +52,8 @@ done
 # best models and training plots
 ./repo/bash/util/wait.sh
 python repo/sim/best_models.py
-#python repo/assess/training_curves.py
-#python repo/plots/training_curves.py
+#python repo/assess/training.py
+#python repo/plots/training.py
 
 # chunks
 for part in valid discrim rl

@@ -1,14 +1,14 @@
 import os
 import torch
-from torch.nn.functional import log_softmax, nll_loss
+from torch.nn.functional import log_softmax, nll_loss, mse_loss
 from datetime import datetime as dt
 from torch.utils.tensorboard import SummaryWriter
 from torch.optim import Adam, lr_scheduler
 from sim.EBayDataset import EBayDataset
 from nets.FeedForward import FeedForward
 from sim.Sample import get_batches
-from constants import MODEL_DIR, LOG_DIR, CENSORED_MODELS, BYR_HIST_MODEL, \
-    MODEL_NORM, VALIDATION, DISCRIM_MODEL, TRAIN_MODELS, TRAIN_RL
+from constants import MODEL_DIR, LOG_DIR, MODEL_NORM
+from featnames import CENSORED_MODELS, BYR_HIST_MODEL, VALUES_MODEL
 from utils import load_sizes
 
 LR_FACTOR = 0.1  # multiply learning rate by this factor when training slows
@@ -36,15 +36,15 @@ class SimTrainer:
         # boolean for different loss functions
         self.use_time_loss = name in CENSORED_MODELS
         self.use_count_loss = name == BYR_HIST_MODEL
+        self.use_mse_loss = name == VALUES_MODEL
 
         # load model size parameters
         self.sizes = load_sizes(name)
         print(self.sizes)
 
         # load datasets
-        train_part = TRAIN_RL if name == DISCRIM_MODEL else TRAIN_MODELS
-        self.train = EBayDataset(part=train_part, name=name)
-        self.valid = EBayDataset(part=VALIDATION, name=name)
+        self.train = EBayDataset(name=name, train=True)
+        self.valid = EBayDataset(name=name, train=False)
 
     def train_model(self, dropout=(0.0, 0.0), norm=MODEL_NORM, log=True):
         """
@@ -83,7 +83,7 @@ class SimTrainer:
         print(optimizer)
 
         # training loop
-        epoch, lnl_test0 = 0, None
+        epoch, loss_test0 = 0, None
         while True:
             # run one epoch
             print('Epoch {}'.format(epoch))
@@ -94,7 +94,7 @@ class SimTrainer:
 
             # set 0th-epoch log-likelihood
             if epoch == 0:
-                lnl_test0 = output['lnL_test']
+                loss_test0 = output['loss_test']
 
             # save model
             if log:
@@ -108,13 +108,11 @@ class SimTrainer:
                 break
 
             # stop training if holdout objective hasn't improved in 9 epochs
-            if epoch >= 8 and output['lnL_test'] < lnl_test0:
+            if epoch >= 8 and output['loss_test'] > loss_test0:
                 break
 
             # increment epoch
             epoch += 1
-
-        return -output['lnL_test']
 
     @staticmethod
     def _get_lr(optimizer):
@@ -233,8 +231,11 @@ class SimTrainer:
         net.train(is_training)
         theta = net(b['x'])
 
-        if self.use_count_loss:
-            loss = self._count_loss(theta, b['y'])
+        if self.use_mse_loss:
+            theta = torch.sigmoid(theta.squeeze())
+            loss = mse_loss(theta, b['y'], reduction='sum')
+        elif self.use_count_loss:
+            loss = self._count_loss(theta, b['y'].long())
         else:
             # softmax
             if theta.size()[1] == 1:
@@ -243,9 +244,9 @@ class SimTrainer:
 
             # calculate loss
             if self.use_time_loss:
-                loss = self._time_loss(lnq, b['y'])
+                loss = self._time_loss(lnq, b['y'].long())
             else:
-                loss = nll_loss(lnq, b['y'], reduction='sum')
+                loss = nll_loss(lnq, b['y'].long(), reduction='sum')
 
         # add in regularization penalty and step down gradients
         if is_training:
@@ -259,9 +260,9 @@ class SimTrainer:
         # calculate log-likelihood on validation set
         with torch.no_grad():
             loss_train = self._run_loop(self.train, net)
-            output['lnL_train'] = -loss_train / self.train.N
             loss_test = self._run_loop(self.valid, net)
-            output['lnL_test'] = -loss_test / self.valid.N
+            output['loss_train'] = loss_train / self.train.N
+            output['loss_test'] = loss_test / self.valid.N
 
         # save output to tensorboard writer
         for k, v in output.items():

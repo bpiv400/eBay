@@ -140,37 +140,37 @@ def series_to_pctiles(s=None, pctiles=None):
 def get_con(price=None, start_price=None):
     # unstack
     price = price.unstack()
-
     # compute concessions
     con = pd.DataFrame(index=price.index)
     con[1] = price[1] / start_price
     con[2] = (price[2] - start_price) / (price[1] - start_price)
     for i in range(3, 8):
         con[i] = (price[i] - price[i-2]) / (price[i-1] - price[i-2])
-
     # stack into series
     con = con.rename_axis('index', axis=1).stack()
-
     # first buyer concession should be greater than 0
     assert con.loc[con.index.isin([1], level=INDEX)].min() > 0
-
     # round concessions
     rounded = np.round(con, decimals=2)
     rounded.loc[(rounded == 1) & (con < 1)] = 0.99
     rounded.loc[(rounded == 0) & (con > 0)] = 0.01
-
     return rounded
+
+
+def restrict_cons(con, turns=None):
+    s = con[con.index.isin(turns, level=INDEX)]
+    pdf = s.groupby(s).count().sort_values() / len(s)
+    cons = pdf.index.values[-NUM_AGENT_CONS:]
+    other = [0., 1., 1.1] if 2 in turns else [0., 1.]
+    return np.sort(np.concatenate([cons, other]))
 
 
 def get_agent_cons(con=None):
     con = con[(con > 0) & (con < 1)]
     d = dict()
-    for t in range(1, 7):
-        s = con.xs(t, level=INDEX)
-        pdf = s.groupby(s).count().sort_values() / len(s)
-        cons = pdf.index.values[-NUM_AGENT_CONS:]
-        other = [0., 1.] if t % 2 == 1 else [0., 1., 1.1]
-        d[t] = np.sort(np.concatenate([cons, other]))
+    d[1] = restrict_cons(con, turns=[1])
+    d[3] = d[5] = restrict_cons(con, turns=[3, 5])
+    d[2] = d[4] = d[6] = restrict_cons(con, turns=[2, 4, 6])
     d[7] = np.concatenate([np.zeros(NUM_AGENT_CONS + 1), [1.]])
     return d
 

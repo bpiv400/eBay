@@ -1,9 +1,8 @@
 import numpy as np
 from inputs.util import save_files, get_ind_x
 from utils import load_file, input_partition, load_feats
-from constants import BYR_HIST_MODEL
 from featnames import CLOCK_FEATS, THREAD_COUNT, BYR_HIST, LOOKUP, THREAD, \
-	X_THREAD, X_OFFER, INDEX
+    X_THREAD, X_OFFER, INDEX, BYR_HIST_MODEL
 
 
 def process_inputs(part):

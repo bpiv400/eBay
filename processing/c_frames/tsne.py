@@ -3,8 +3,8 @@ import pandas as pd
 from sklearn.manifold import TSNE
 from utils import unpickle, topickle, load_file, load_feats
 from assess.const import META_LABELS
-from constants import FEATS_DIR, TEST
-from featnames import BYR, SLR, LEAF, LOOKUP, META
+from constants import FEATS_DIR
+from featnames import BYR, SLR, LEAF, LOOKUP, META, TEST
 
 
 def get_meta_labels():

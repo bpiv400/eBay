@@ -1,26 +1,40 @@
 import numpy as np
 from torch.utils.data import Dataset
-from utils import load_file, unpickle
-from constants import INPUT_DIR
-from featnames import X_LSTG, LSTG, THREAD
+from utils import load_file, load_inputs
+from featnames import X_LSTG, LSTG, THREAD, SLR, META, LEAF, \
+    TRAIN_RL_MODELS, VALUES_MODEL, VALIDATION, TRAIN_MODELS, TRAIN_RL
 
 
 class EBayDataset(Dataset):
-    def __init__(self, part=None, name=None):
+    def __init__(self, name=None, train=None, part=None):
         """
         Defines a parent class that extends torch.utils.data.Dataset.
-        :param str part: partition name (e.g., train_models)
-        :param str name: name of inputs folder
+        :param str name: name of inputs file
+        :param bool train: use valid partition if False
+        :param str part: partition name
         """
         # save name to self
-        self.part = part
         self.name = name
+
+        # partition
+        if part is not None:
+            self.part = part
+        elif not train:
+            self.part = VALIDATION
+        else:
+            if name in TRAIN_RL_MODELS:
+                self.part = TRAIN_RL
+            else:
+                self.part = TRAIN_MODELS
 
         # listing features
         self.x_lstg = load_file(self.part, X_LSTG)
+        if name == VALUES_MODEL:
+            for k in [SLR, META, LEAF]:
+                del self.x_lstg[k]
 
         # dictionary of inputs
-        self.d = unpickle(INPUT_DIR + '{}/{}.pkl'.format(part, name))
+        self.d = load_inputs(self.part, name)
         if 'x' in self.d:
             self.offer_keys = [k for k in self.d['x'].keys() if 'offer' in k]
 

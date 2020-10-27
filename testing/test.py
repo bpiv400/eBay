@@ -3,7 +3,7 @@ from testing.TestGenerator import TestGenerator
 from testing.agents.SellerTestGenerator import SellerTestGenerator
 from testing.agents.BuyerTestGenerator import BuyerTestGenerator
 from utils import compose_args
-from constants import VALIDATION
+from featnames import VALIDATION
 
 SCRIPT_PARAMS = {'byr': {'action': 'store_true'},
                  'slr': {'action': 'store_true'},

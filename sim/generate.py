@@ -5,7 +5,8 @@ from rlenv.generate.Generator import Generator
 from rlenv.generate.util import process_sims
 from sim.envs import SimulatorEnv, NoSlrExpEnv
 from utils import run_func_on_chunks, process_chunk_worker
-from constants import PARTS_DIR, AGENT_PARTITIONS
+from constants import PARTS_DIR
+from featnames import AGENT_PARTITIONS
 
 
 class OutcomeGenerator(Generator):

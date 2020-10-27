@@ -5,10 +5,10 @@ from collections.abc import Iterable
 from utils import unpickle, load_featnames
 from rlenv.util import load_featnames
 from utils import load_file
-from constants import MODELS, INPUT_DIR, INDEX_DIR, BYR_DROP, \
-    FIRST_ARRIVAL_MODEL, SLR, BYR, IDX
+from constants import INPUT_DIR, INDEX_DIR, BYR_DROP, \
+    SLR, BYR, IDX
 from featnames import SLR, X_LSTG, X_OFFER, LOOKUP, NORM, AUTO, \
-    CLOCK, LSTG, INDEX, DEC_PRICE, START_PRICE, MSG, THREAD
+    CLOCK, LSTG, INDEX, DEC_PRICE, START_PRICE, MSG, THREAD, MODELS, FIRST_ARRIVAL_MODEL
 
 
 class Subsetter:

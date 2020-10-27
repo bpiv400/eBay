@@ -6,7 +6,8 @@ from rlenv.Sources import ThreadSources
 from agent.envs.AgentEnv import AgentEnv, EventLog
 from rlenv.events.Event import Event
 from rlenv.events.Thread import Thread
-from constants import BYR, BYR_HIST_MODEL
+from constants import BYR
+from featnames import BYR_HIST_MODEL
 
 BuyerObs = namedarraytuple('BuyerObs', list(load_sizes(BYR)['x'].keys()))
 

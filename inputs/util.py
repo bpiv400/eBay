@@ -3,11 +3,11 @@ import numpy as np
 import pandas as pd
 from utils import unpickle, topickle
 from inputs.const import NUM_OUT
-from constants import INPUT_DIR, INDEX_DIR, VALIDATION, \
-    IDX, DISCRIM_MODEL, BYR, SLR, BYR_DROP
-from featnames import CLOCK_FEATS, OUTCOME_FEATS, SPLIT, MSG, AUTO, LSTG, X_LSTG, \
-    EXP, REJECT, DAYS, DELAY, TIME_FEATS, THREAD_COUNT, BYR, INDEX, SLR, THREAD, \
-    META, LEAF
+from constants import INPUT_DIR, INDEX_DIR, IDX, BYR_DROP
+from featnames import CLOCK_FEATS, OUTCOME_FEATS, SPLIT, MSG, AUTO, \
+    LSTG, X_LSTG, EXP, REJECT, DAYS, DELAY, TIME_FEATS, THREAD_COUNT, \
+    BYR, INDEX, SLR, THREAD, META, LEAF, VALIDATION, DISCRIM_MODEL, \
+    VALUES_MODEL
 
 
 def add_turn_indicators(df):
@@ -108,7 +108,7 @@ def save_featnames_and_sizes(x=None, m=None):
     # initialize from listing feature names
     featnames = unpickle(INPUT_DIR + 'featnames/{}.pkl'.format(X_LSTG))
 
-    if m in [BYR, SLR]:
+    if m in [BYR, SLR, VALUES_MODEL]:
         for k in [SLR, META, LEAF]:
             del featnames[k]
 

@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 from utils import extract_clock_feats, byr_norm, slr_norm, unpickle
 from constants import PARTS_DIR, PCTILE_DIR, START, IDX, DAY, \
@@ -103,3 +104,19 @@ def get_lstgs(part):
     """
     d = unpickle(PARTS_DIR + 'partitions.pkl')
     return d[part]
+
+
+def do_rounding(price):
+    """
+    Returns booleans for whether offer is round and ends in nines
+    :param price: price in dollars and cents
+    :return: (bool, bool)
+    """
+    assert np.min(price) >= .01
+    cents = np.round(100 * (price % 1)).astype(np.int8)
+    dollars = np.floor(price).astype(np.int64)
+    is_nines = (cents >= 90) | np.isin(dollars, [9, 99] + list(range(990, 1000)))
+    is_round = (cents == 0) & ~is_nines & \
+               (((dollars <= 100) & (dollars % 5 == 0)) | (dollars % 50 == 0))
+    assert np.all(~(is_round & is_nines))
+    return is_round, is_nines

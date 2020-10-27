@@ -3,7 +3,8 @@ from shutil import copyfile
 import numpy as np
 from tensorboard.backend.event_processing.event_multiplexer import \
     EventMultiplexer
-from constants import MODEL_DIR, LOG_DIR, MODELS, DISCRIM_MODEL
+from constants import MODEL_DIR, LOG_DIR
+from featnames import MODELS, TRAIN_RL_MODELS
 
 
 def get_lnl(em=None, run=None, name=None):
@@ -35,10 +36,7 @@ def main():
     discrim = parser.parse_args().discrim
 
     # model group
-    if discrim:
-        models = [DISCRIM_MODEL]
-    else:
-        models = MODELS
+    models = TRAIN_RL_MODELS if discrim else MODELS
 
     # loop over models
     for m in models:

@@ -1,8 +1,7 @@
 from assess.util import load_data, get_lstgs
 from agent.util import find_best_run, get_slr_valid
-from constants import TEST
 from featnames import SLR, OBS, SIM, RL, NORM, MSG, DELAY, DAYS_SINCE_LSTG, \
-    BYR_HIST, TIME_FEATS, START_PRICE
+    BYR_HIST, TIME_FEATS, START_PRICE, TEST
 
 
 def run_test(data=None, lookup=None):

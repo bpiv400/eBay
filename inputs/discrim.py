@@ -2,9 +2,9 @@ import numpy as np
 from inputs.util import save_featnames_and_sizes, \
     convert_x_to_numpy, get_x_thread, get_ind_x
 from utils import topickle, load_file, input_partition, load_data
-from constants import TRAIN_RL, VALIDATION, TEST, DISCRIM_MODEL, INPUT_DIR
+from constants import INPUT_DIR
 from featnames import SPLIT, DAYS, DELAY, EXP, AUTO, REJECT, MSG, LOOKUP, THREAD, \
-    INDEX, X_THREAD, X_OFFER
+    INDEX, X_THREAD, X_OFFER, TRAIN_RL, VALIDATION, TEST, DISCRIM_MODEL
 
 
 def save_discrim_files(part=None, x_obs=None, x_sim=None, lstgs=None):

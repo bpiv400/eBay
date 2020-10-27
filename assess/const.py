@@ -13,4 +13,15 @@ PRICE_CUTOFFS = [0, 5, 9, 13, 20, 25, 40, 60, 100, 225, np.inf]
 # for splitting concessions
 SPLITS = [0., .2, .4, .6, .8, .99]
 
+# for finding kernel regression bandwidth
 OPT = EstimatorSettings(efficient=True)
+
+# delta for values figures
+DELTA_SHAP = .9
+
+# various dimensions for plotting
+POINTS = 100
+VALUES_DIM = np.linspace(1 / 1000, 1, POINTS)
+NORM1_DIM = np.linspace(.4, .99, POINTS)
+NORM2_DIM = np.linspace(.65, .9, POINTS)
+LOG10_BIN_DIM = np.linspace(1, 3, POINTS)

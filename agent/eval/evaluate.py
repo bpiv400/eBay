@@ -3,10 +3,9 @@ import os
 import pandas as pd
 from agent.util import get_log_dir, load_values, \
     get_byr_valid, get_byr_return, get_slr_valid, get_slr_return
-from utils import topickle, load_data, get_role, compose_args
+from utils import topickle, unpickle, load_data, get_role, compose_args
 from agent.const import AGENT_PARAMS
-from constants import HEURISTIC_DIR, AGENT_PARTITIONS, TEST
-from featnames import SIM, OBS, X_OFFER
+from featnames import SIM, OBS, X_OFFER, TEST, AGENT_PARTITIONS
 
 
 def get_return(data=None, values=None, byr=False):
@@ -30,8 +29,17 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--part', type=str,
                         choices=AGENT_PARTITIONS, default=TEST)
+    parser.add_argument('--read', action='store_true')
     compose_args(arg_dict=AGENT_PARAMS, parser=parser)
     args = parser.parse_args()
+
+    log_dir = get_log_dir(byr=args.byr, delta=args.delta)
+    if args.read:
+        path = log_dir + '{}.pkl'.format(args.part)
+        if os.path.isfile(path):
+            df = unpickle(path)
+            print(df)
+            exit()
 
     # preliminaries
     values = load_values(part=args.part, delta=args.delta)
@@ -46,13 +54,13 @@ def main():
         df.loc[dset, :] = f(data)
 
     # rewards from heuristic strategy
-    heuristic_dir = HEURISTIC_DIR + '{}/'.format(get_role(args.byr))
+    heuristic_dir = get_log_dir(**vars(args)) + 'heuristic/'
     data = load_data(part=args.part, run_dir=heuristic_dir)
     df.loc['heuristic', :] = f(data)
 
     # rewards from agent runs
-    log_dir = get_log_dir(byr=args.byr, delta=args.delta)
-    run_ids = [p for p in os.listdir(log_dir) if os.path.isdir(log_dir + p)]
+    run_ids = [p for p in os.listdir(log_dir)
+               if os.path.isdir(log_dir + p)]
     for run_id in run_ids:
         run_dir = log_dir + '{}/'.format(run_id)
         data = load_data(part=args.part, run_dir=run_dir)

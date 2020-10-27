@@ -1,20 +1,10 @@
 import argparse
 import os
-from plots.util import count_plot, action_plot, cdf_plot, diag_plot, \
-    response_plot, contour_plot, w2v_plot, pdf_plot
+import numpy as np
+import pandas as pd
+import plots.util as util
 from utils import unpickle
 from constants import PLOT_DIR, FIG_DIR
-
-PLOT_TYPES = {'num_threads': count_plot,
-              'num_offers': count_plot,
-              'accept': contour_plot,
-              'response': response_plot,
-              'norm-norm': diag_plot,
-              'action': action_plot,
-              'normval': contour_plot,
-              'w2v': w2v_plot,
-              'cdf': cdf_plot,
-              'pdf': pdf_plot}
 
 
 def main():
@@ -35,24 +25,28 @@ def main():
         os.makedirs(FIG_DIR + folder)
 
     d = unpickle('{}.pkl'.format(path))
-    for k, v in d.items():
-        prefix = k.split('_')[0]
-        f = PLOT_TYPES[prefix]
-        if type(v) is not dict:
-            path = folder + k
-            print(path)
-            f(path, v)
-        elif k == 'accept':
-            for t, d_k in v.items():
-                for key, s in d_k.items():
-                    path = folder + '{}_{}_{}'.format(k, key, t)
-                    print(path)
-                    f(path, s)
-        else:
-            for t, df in v.items():
-                path = folder + '{}_{}'.format(k, t)
+    if type(d) is pd.DataFrame:
+        print(np.abs(d).mean())
+    else:
+        for k, v in d.items():
+            prefix = k.split('_')[0]
+            f_name = '{}_plot'.format(prefix)
+            f = getattr(util, f_name)
+            if type(v) is not dict or prefix == 'slr':
+                path = folder + k
                 print(path)
-                f(path, df)
+                f(path, v)
+            elif k == 'accept':
+                for t, d_k in v.items():
+                    for key, s in d_k.items():
+                        path = folder + '{}_{}_{}'.format(k, key, t)
+                        print(path)
+                        f(path, s)
+            else:
+                for t, df in v.items():
+                    path = folder + '{}_{}'.format(k, t)
+                    print(path)
+                    f(path, df)
 
 
 if __name__ == '__main__':

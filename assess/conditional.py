@@ -1,7 +1,7 @@
 from compress_pickle import dump
 from utils import load_file, load_data
-from constants import TEST, PLOT_DIR, IDX
-from featnames import META, START_PRICE, CON, NORM, SIM, OBS, SLR
+from constants import PLOT_DIR, IDX
+from featnames import META, START_PRICE, CON, NORM, SIM, OBS, SLR, TEST
 
 
 def sale_price_rate(df, idx):
