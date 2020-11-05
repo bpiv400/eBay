@@ -7,19 +7,18 @@ from rlenv.generate.util import process_sims
 from agent.util import get_log_dir
 from utils import run_func_on_chunks, process_chunk_worker, compose_args
 from agent.const import AGENT_PARAMS
-from featnames import BYR, AGENT_PARTITIONS
+from featnames import BYR, AGENT_PARTITIONS, TEST, DELTA
 
 
 def main():
     # parameters from command line
     parser = argparse.ArgumentParser()
-    parser.add_argument('--part', choices=AGENT_PARTITIONS)
+    parser.add_argument('--part', choices=AGENT_PARTITIONS, default=TEST)
     compose_args(arg_dict=AGENT_PARAMS, parser=parser)
     args = vars(parser.parse_args())
 
     # recreate model
-    model_cls = HeuristicByr if args[BYR] else HeuristicSlr()
-    model = model_cls(**args)
+    model = HeuristicByr(delta=args[DELTA]) if args[BYR] else HeuristicSlr()
 
     # run in parallel on chunks
     sims = run_func_on_chunks(

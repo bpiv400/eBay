@@ -1,22 +1,17 @@
-import argparse
 from sklearn.tree import DecisionTreeClassifier, export_text
 from assess.util import get_last
 from agent.util import find_best_run
-from utils import load_data, compose_args
-from agent.const import AGENT_PARAMS
+from utils import load_data
+from assess.const import DELTA_SLR
 from constants import DAY, MAX_DAYS
 from featnames import LOOKUP, AUTO, CON, NORM, START_PRICE, START_TIME, \
     BYR_HIST, X_OFFER, X_THREAD, INDEX, CLOCK, THREAD, TEST
 
 
 def main():
-    # parameters from command line
-    parser = argparse.ArgumentParser()
-    compose_args(arg_dict=AGENT_PARAMS, parser=parser)
-    args = vars(parser.parse_args())
-
-    run_dir = find_best_run(**args)
+    run_dir = find_best_run(byr=False, delta=DELTA_SLR)
     data = load_data(part=TEST, run_dir=run_dir)
+    # data = load_data(part=TEST)
 
     for turn in [2, 4, 6]:
         # find valid indices
@@ -25,14 +20,12 @@ def main():
 
         # outcome
         con = data[X_OFFER].loc[idx, CON]
-        # y = ((0 < con) & (con < 1)) + 2 * (con == 1)
-        y = (con == 1).values
-        print('Turn {0:d} accept rate: {1:2.1f}%'.format(
-            turn, 100 * y.mean()))
-        # print('Turn {0:d} concession rate: {1:2.1f}%'.format(
-        #     turn, 100 * (y == 1).mean()))
-        # print('Turn {0:d} accept rate: {1:2.1f}%'.format(
-        #     turn, 100 * (y == 2).mean()))
+        y = (((0 < con) & (con < 1)) + 2 * (con == 1)).values
+
+        con_rate = con.groupby(con).count() / len(con)
+        con_rate = con_rate[con_rate > .01]
+        print('Turn {}'.format(turn))
+        print(con_rate)
 
         # features
         X = data[X_THREAD][BYR_HIST].reindex(index=idx).to_frame()
@@ -47,7 +40,7 @@ def main():
         X = X.values
 
         # decision tree
-        clf = DecisionTreeClassifier(max_depth=3).fit(X, y)
+        clf = DecisionTreeClassifier(max_depth=1).fit(X, y)
         r = export_text(clf, feature_names=cols)
         print(r)
 

@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 from compress_pickle import dump
 from inputs.offer import get_y_msg
-from processing.util import hist_to_pctile
+from processing.util import feat_to_pctile
 from assess.util import discrete_pdf
 from utils import load_file, load_data
 from constants import PLOT_DIR, CON_MULTIPLIER, \
@@ -37,7 +37,7 @@ def get_arrival_distributions(threads):
     p[ARRIVAL] = pdf.groupby('period').sum().squeeze()
 
     # buyer history
-    y = hist_to_pctile(threads[BYR_HIST], reverse=True)
+    y = feat_to_pctile(threads[BYR_HIST], reverse=True)
     p[BYR_HIST_MODEL] = get_cdf(y=y, intervals=y.max())
 
     return p

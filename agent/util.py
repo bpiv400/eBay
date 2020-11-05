@@ -1,5 +1,4 @@
 import os
-import pandas as pd
 from constants import AGENT_DIR, IDX
 from featnames import SLR, BYR, NORM, AUTO, INDEX, THREAD, LSTG, CON, \
     LOOKUP, X_THREAD, X_OFFER, START_PRICE, ENTROPY, DELTA, DROPOUT, \
@@ -64,13 +63,6 @@ def get_norm_reward(data=None, values=None):
     return sale_norm, cont_value
 
 
-def get_slr_return(data=None, values=None):
-    assert values.max() < 1
-    norm = pd.concat(get_norm_reward(data=data, values=values)).sort_index()
-    reward = norm * data[LOOKUP][START_PRICE]
-    return norm.mean(), reward.mean()
-
-
 def get_byr_agent(data=None):
     return data[X_THREAD][data[X_THREAD][BYR_AGENT]].index
 
@@ -86,22 +78,13 @@ def get_byr_valid(data=None):
     return data
 
 
-def get_byr_return(data=None, values=None):
-    sale_norm = get_sale_norm(data[X_OFFER], drop_thread=False)
-    if BYR_AGENT in data[X_THREAD].columns:
-        sale_norm = sale_norm[data[X_THREAD][BYR_AGENT]]
-    start_price = data[LOOKUP][START_PRICE]
-    sale_norm = sale_norm.droplevel(THREAD)
-    norm_vals = safe_reindex(values, idx=sale_norm.index)
-    return_norm = norm_vals - sale_norm
-    return_norm = return_norm.reindex(index=data[LOOKUP].index, fill_value=0)
-    return_dollar = return_norm * start_price
-    return return_norm.mean(), return_dollar.mean()
-
-
 def load_valid_data(part=None, run_dir=None):
     data = load_data(part=part, run_dir=run_dir)
-    byr = BYR in run_dir
+    if X_OFFER not in data:
+        return None
+
+    # restrict to valid listings
+    byr = False if run_dir is None else BYR in run_dir
     if byr:
         data = get_byr_valid(data)
     else:

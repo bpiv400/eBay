@@ -1,10 +1,10 @@
-\documentclass{beamer}
+\documentclass[aspectratio=169]{beamer}
 \usecolortheme{dove}
 \setbeamertemplate{navigation symbols}{}
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
 \usepackage{bbm,amsmath,amssymb,amsfonts,textcomp,setspace,graphicx}
-\usepackage{booktabs}
+\usepackage{booktabs,multicol,multirow}
 \usepackage{mathcomp}
 \usepackage{appendix}
 \setbeamertemplate{section in toc}[sections numbered]
@@ -13,7 +13,7 @@
 \usepackage{pgfplots}
 \usepackage[normalem]{ulem}
 \usepackage{subcaption}
-\usepackage{tikz}
+\usepackage{tikz,forest}
 \AtBeginSection[]
 {
   \begin{frame}[plain]{Outline}
@@ -21,18 +21,16 @@
   \end{frame}
 }
 
-\graphicspath{{../../figures/}}
+\graphicspath{{../../../figures/}}
 
-\title{Optimal Bargaining on eBay \\Using Deep Reinforcement Learning}
+\title{Optimal Bargaining on eBay\\Using Deep Reinforcement Learning}
 
 \author[Green, Plunkett]{Etan Green\inst{1} \and E.~Barry Plunkett\inst{1,2}}
 
 \institute{
-  \inst{1}%
-  University of Pennsylvania
+  \inst{1}{University of Pennsylvania}
   \and
-  \inst{2}%
-  D.~E.~Shaw
+  \inst{2}{D.~E.~Shaw}
 }
 
 \date{November 2020}
@@ -71,12 +69,15 @@
 %\end{frame}
 
 \begin{frame}{Larger goal}
-	Tutorial for solving real-world dynamic decision problems---and characterizing the solutions.
+	Tutorial for solving real-world dynamic decision problems.
+	\begin{itemize}
+		\item And characterizing the solutions.
+	\end{itemize}
 \end{frame}
 
 \begin{frame}{Reinforcement learning}
-	In each state, finds the action that maximizes the eventual payoff.
-	$$\pi(s): s \rightarrow a$$
+	In each state, finds the policy that maximizes the eventual payoff.
+	$$\pi(s): s \rightarrow f(a)$$
 \end{frame}
 
 \begin{frame}{Chess}
@@ -91,7 +92,7 @@
 
 \begin{frame}{Deep reinforcement learning}
 	Approximates states from features.
-	$$\pi(\boldsymbol{x}): \boldsymbol{x} \rightarrow a$$
+	$$\pi(\boldsymbol{x}): \boldsymbol{x} \rightarrow f(a)$$
 \end{frame}
 
 \begin{frame}{AlphaZero}
@@ -162,7 +163,7 @@
 			\item If buyer does not respond in 48 hours, buyer walks.
 		\end{itemize}\pause
 		\item Repeat (2) \& (3) until buyer and seller have each had 3 turns.\pause
-		\item After 3rd seller response, buyer faces take-it-or-leave-it offer.\pause
+		\item After 3rd seller response, buyer faces take-it-or-leave-it offer.
 	\end{enumerate}
 \end{frame}
 
@@ -177,17 +178,17 @@
 \section{Data}\label{sec:data}
 
 \begin{frame}{Backus et al. (2020) data}
-	98M ``Best Offer'' listings on eBay from 2012-13.\pause
+	98.3M ``Best Offer'' listings on eBay from 2012-13.\pause
 	\begin{enumerate}
-		\item Plausibly unique listings (unique title): XXXM\pause
-		\item and list price between \$9.95 and \$1000.00: XXXM\pause
-		\item and fixed list price: XXXM\pause
-		\item and no other funny stuff: XXXM
+		\item Plausibly unique listings (unique title): 28.6M\pause
+		\item and fixed list price: 18.6M\pause
+		\item and list price between \$9.95 and \$1000.00: 14.6M\pause
+		\item and no other funny stuff: 13.4M
 	\end{enumerate}
 \end{frame}
 
 \begin{frame}{Partitions}
-	XXXM listings, from XXX sellers, split into 4 partitions:
+	13.4M listings, from 771.6k sellers, split into 4 partitions:
 	\begin{enumerate}
 		\item Simulator training: 75\% of sellers
 		\item RL training: 10\%
@@ -252,10 +253,6 @@
 
 \section{Simulator}\label{sec:simulator}
 
-\begin{frame}{Goal}
-	Generate credible counterfactual offer paths.
-\end{frame}
-
 \begin{frame}{Example listing}
 	\begin{itemize}
 		\item \$100 list price
@@ -317,7 +314,7 @@
 \begin{frame}{First buyer offer}
 	\begin{figure}
 		\centering
-		\includegraphics[height=.8\textheight]{\detokenize{sim/cdf_con_1.png}}
+		\includegraphics[height=.8\textheight]{{sim/cdf_con_1}.png}
 	\end{figure}
 \end{frame}
 
@@ -330,7 +327,7 @@
 	\end{itemize}
 \end{frame}
 
-\begin{frame}
+\begin{frame}{Concessions: seller turns}
 \begin{figure}[h]
     \centering
 	\begin{subfigure}[b]{0.32\textwidth}
@@ -345,6 +342,12 @@
 		\caption*{6}
 		\includegraphics[width=\textwidth]{\detokenize{sim/cdf_con_6.png}}
 	\end{subfigure}
+\end{figure}
+{\footnotesize Note: excludes automatic offers and expirations.}
+\end{frame}
+
+\begin{frame}{Concessions: buyer turns}
+\begin{figure}
 	\begin{subfigure}[b]{0.32\textwidth}
 		\caption*{3}
 		\includegraphics[width=\textwidth]{\detokenize{sim/cdf_con_3.png}}
@@ -358,9 +361,10 @@
 		\includegraphics[width=\textwidth]{\detokenize{sim/cdf_con_7.png}}
 	\end{subfigure}
 \end{figure}
+{\footnotesize Note: excludes expirations.}
 \end{frame}
 
-\begin{frame}
+\begin{frame}{Response time: seller turns}
 \begin{figure}[h]
     \centering
 	\begin{subfigure}[b]{0.32\textwidth}
@@ -375,6 +379,12 @@
 		\caption*{6}
 		\includegraphics[width=\textwidth]{\detokenize{sim/cdf_delay_6.png}}
 	\end{subfigure}
+\end{figure}
+{\footnotesize Note: excludes automatic offers.}
+\end{frame}
+
+\begin{frame}{Response time: buyer turns}
+\begin{figure}
 	\begin{subfigure}[b]{0.32\textwidth}
 		\caption*{3}
 		\includegraphics[width=\textwidth]{\detokenize{sim/cdf_delay_3.png}}
@@ -401,12 +411,12 @@
 \begin{figure}[h]
     \centering
 	\begin{subfigure}[b]{0.49\textwidth}
-		\caption{Threads per listing}
-		\includegraphics[width=\textwidth]{\detokenize{sim/bar_threads.png}}
+		\centering\caption{Threads per listing}
+		\includegraphics[width=6cm]{\detokenize{sim/bar_threads.png}}
 	\end{subfigure}
 	\begin{subfigure}[b]{0.49\textwidth}
-		\caption{Offers per thread}
-		\includegraphics[width=\textwidth]{\detokenize{sim/bar_offers.png}}
+		\centering\caption{Offers per thread}
+		\includegraphics[width=6cm]{\detokenize{sim/bar_offers.png}}
 	\end{subfigure}
 \end{figure}
 \end{frame}
@@ -416,15 +426,15 @@
     \centering
 	\begin{subfigure}[b]{0.32\textwidth}
 		\caption{Time to sale}
-		\includegraphics[height=3.5cm]{\detokenize{sim/cdf_days.png}}
+		\includegraphics[height=\textwidth]{\detokenize{sim/cdf_days.png}}
 	\end{subfigure}
 	\begin{subfigure}[b]{0.32\textwidth}
 		\caption{Sale price}
-		\includegraphics[height=3.5cm]{\detokenize{sim/cdf_price.png}}
+		\includegraphics[height=\textwidth]{\detokenize{sim/cdf_saleprice.png}}
 	\end{subfigure}
 	\begin{subfigure}[b]{0.32\textwidth}
 		\caption{Normalized}
-		\includegraphics[height=3.5cm]{\detokenize{sim/cdf_norm.png}}
+		\includegraphics[height=\textwidth]{\detokenize{sim/cdf_salenorm.png}}
 	\end{subfigure}
 \end{figure}
 \end{frame}
@@ -433,12 +443,12 @@
 \begin{figure}[h]
     \centering
 	\begin{subfigure}[b]{0.49\textwidth}
-		\caption{Collectibles}
-		\includegraphics[width=\textwidth]{\detokenize{sim/collectibles/cdf_days.png}}
+		\centering\caption{Collectibles}
+		\includegraphics[width=6cm]{\detokenize{sim/collectibles/cdf_days.png}}
 	\end{subfigure}
 	\begin{subfigure}[b]{0.49\textwidth}
-		\caption{Other}
-		\includegraphics[width=\textwidth]{\detokenize{sim/other/cdf_days.png}}
+		\centering\caption{Other}
+		\includegraphics[width=6cm]{\detokenize{sim/other/cdf_days.png}}
 	\end{subfigure}
 \end{figure}
 \end{frame}
@@ -447,12 +457,12 @@
 \begin{figure}[h]
     \centering
 	\begin{subfigure}[b]{0.49\textwidth}
-		\caption{Collectibles}
-		\includegraphics[width=\textwidth]{\detokenize{sim/collectibles/cdf_price.png}}
+		\centering\caption{Collectibles}
+		\includegraphics[width=6cm]{\detokenize{sim/collectibles/cdf_saleprice.png}}
 	\end{subfigure}
 	\begin{subfigure}[b]{0.49\textwidth}
-		\caption{Other}
-		\includegraphics[width=\textwidth]{\detokenize{sim/other/cdf_price.png}}
+		\centering\caption{Other}
+		\includegraphics[width=6cm]{\detokenize{sim/other/cdf_saleprice.png}}
 	\end{subfigure}
 \end{figure}
 \end{frame}
@@ -461,18 +471,18 @@
 \begin{figure}[h]
     \centering
 	\begin{subfigure}[b]{0.49\textwidth}
-		\caption{Collectibles}
-		\includegraphics[width=\textwidth]{\detokenize{sim/collectibles/cdf_norm.png}}
+		\centering\caption{Collectibles}
+		\includegraphics[width=6cm]{\detokenize{sim/collectibles/cdf_salenorm.png}}
 	\end{subfigure}
 	\begin{subfigure}[b]{0.49\textwidth}
-		\caption{Other}
-		\includegraphics[width=\textwidth]{\detokenize{sim/other/cdf_norm.png}}
+		\centering\caption{Other}
+		\includegraphics[width=6cm]{\detokenize{sim/other/cdf_salenorm.png}}
 	\end{subfigure}
 \end{figure}
 \end{frame}
 
 \begin{frame}{Discriminator}
-	Observes a complete thread, either from the data or the simulation.
+	Observes a complete thread, either from data or simulations.
 	\begin{itemize}
 		\item Fixed listing features.
 		\item Offer path.
@@ -494,15 +504,15 @@
 \begin{frame}{Payoffs}
 	Buyer:
 	\begin{itemize}
-		\item $\texttt{value} - \texttt{price}$, if item is purchased
+		\item item value less sale price, if buyer purchases item
 		\item 0, otherwise
-	\end{itemize}
+	\end{itemize}\pause
 	\vspace{5mm}
 	Seller:
 	\begin{itemize}
-		\item $\texttt{price}$, if item is sold
-		\item $\delta \cdot \texttt{value}$, otherwise
-	\end{itemize}
+		\item sale price, if item sells
+		\item item value discounted by $\delta \in [0, 1]$, otherwise
+	\end{itemize}\pause
 	\vspace{5mm}
 	What is an item's value?
 	\begin{itemize}
@@ -512,12 +522,8 @@
 \end{frame}
 
 \begin{frame}{Values}
-	$$\texttt{value} = P(\texttt{sale}) \cdot \mathbb{E}[\texttt{price} | \texttt{sale}] + \big(1 - P(\texttt{sale})\big) \cdot \delta \cdot \texttt{value}$$
-\end{frame}
-
-\begin{frame}{Values}
-	$$\texttt{value} = \frac{P(\texttt{sale}) \cdot \mathbb{E}[\texttt{price} | \texttt{sale}]}{1 - \big(1 - P(\texttt{sale})\big) \cdot \delta}$$\pause
-	\vspace{5mm}
+	$$v = P(\texttt{sale}) \cdot \mathbb{E}[\texttt{price} | \texttt{sale}] + \big(1 - P(\texttt{sale})\big) \cdot \ v$$\pause
+	$$v = \frac{P(\texttt{sale}) \cdot \mathbb{E}[\texttt{price} | \texttt{sale}]}{1 - \delta\big(1 - P(\texttt{sale})\big)}$$\pause
 	\begin{itemize}
 		\item $\delta = 0 \rightarrow \texttt{value} = P(\texttt{sale}) \cdot \mathbb{E}[\texttt{price} | \texttt{sale}]$
 		\item $\delta = 1 \rightarrow \texttt{value} = \mathbb{E}[\texttt{price} | \texttt{sale}]$
@@ -540,6 +546,13 @@
 	\end{figure}
 \end{frame}
 
+\begin{frame}{Seller experience predicts value}
+	\begin{figure}
+		\centering
+		\includegraphics[height=.9\textheight]{\detokenize{values/response_slrbo.png}}
+	\end{figure}
+\end{frame}
+
 \begin{frame}{Round list prices have higher values}
 	\begin{figure}
 		\centering
@@ -551,49 +564,67 @@
 \begin{figure}[h]
     \centering
 	\begin{subfigure}[t]{0.49\textwidth}
-		\caption{Number of photos}
-		\includegraphics[height=5cm]{\detokenize{values/coef_photovals.png}}
+		\centering\caption{Number of photos}
+		\includegraphics[height=6cm]{\detokenize{values/coef_photovals.png}}
 	\end{subfigure}
 	\begin{subfigure}[t]{0.49\textwidth}
-		\caption{Day of listing start}
-		\includegraphics[height=5cm]{\detokenize{values/coef_dowvals.png}}
+		\centering\caption{Day of listing start}
+		\includegraphics[height=6cm]{\detokenize{values/coef_dowvals.png}}
 	\end{subfigure}
 \end{figure}
 \end{frame}
 
 \section{RL seller}
 
-\begin{frame}
+\begin{frame}{Training procedure}
+	\[\pi(\boldsymbol{x}): \boldsymbol{x} \rightarrow f(a)\]
+	Initialize seller policy $\pi$.
+	\begin{enumerate}
+		\item Draw a listing from RL Training partition.
+		\item Simulate using $\pi$ to draw seller offers.
+		\item If listing sells, payoff is \texttt{sale price}.
+		\begin{itemize}
+			\item Otherwise payoff is $\delta v$.
+		\end{itemize}
+		\item Update $\pi$.
+	\end{enumerate}
+	\vspace{5mm}
+	Repeat until $\pi$ converges to deterministic policy.
+	\begin{itemize}
+		\item Simulate each listing in holdout partition 10 times.
+	\end{itemize}
+\end{frame}
+
+\begin{frame}{Seller offers}
 	\[\pi(\boldsymbol{x}): \boldsymbol{x} \rightarrow f(a)\]
 	\begin{itemize}
 		\item[$\boldsymbol{x}$]: features that are observable to seller.
 		\begin{itemize}
 			\item e.g., features that summarize offers on other threads.
-			\item Seller does not observe item value.
+			\item Excludes item value.
 		\end{itemize}
 		\vspace{5mm}
-		\item[$a$] $\in \{\texttt{reject}, .2, .25, .33, .4, .5, .6, .67, \texttt{accept}\}$
+		\item[$a$] $\in \{\texttt{expiration}, \texttt{reject}, .2, .25, .33, .4, .5, .6, .67, \texttt{accept}\}$
 		\begin{itemize}
 			\item Cannot send a message.
-			\item Delay drawn from simulated seller model.
 		\end{itemize}	
 	\end{itemize}
 \end{frame}
 
-\begin{frame}{Delays}
+\begin{frame}{When does agent seller make offers?}
 \begin{figure}
 	\centering
 	\begin{subfigure}[b]{0.32\textwidth}
 		\caption*{2}
-		\includegraphics[width=\textwidth]{\detokenize{sim/cdf_delay_2.png}}
+		\includegraphics[width=\textwidth]{{slr/cdf_delay_2}.png}
 	\end{subfigure}
 	\begin{subfigure}[b]{0.32\textwidth}
 		\caption*{4}
-		\includegraphics[width=\textwidth]{\detokenize{sim/cdf_delay_4.png}}
+		\includegraphics[width=\textwidth]{{slr/cdf_delay_4}.png}
 	\end{subfigure}
 	\begin{subfigure}[b]{0.32\textwidth}
 		\caption*{6}
-		\includegraphics[width=\textwidth]{\detokenize{sim/cdf_delay_6.png}}
+		\includegraphics[width=\textwidth]{{slr/cdf_delay_6}.png}
 	\end{subfigure}
 \end{figure}
 	Drawn from turn-specific distribution for simulated seller.
@@ -602,72 +633,587 @@
 	\end{itemize}
 \end{frame}
 
-\begin{frame}{Training procedure}
-	Initialize seller policy $\pi$.
+\begin{frame}{Valid listings}
+	A listing is valid if agent seller makes $\ge 1$ non-automatic offer.
 	\begin{enumerate}
-		\item Draw a listing from RL Training partition.
-		\item Simulate until the listing ends using $\pi$ to draw seller offers.
-		\item If listing sells, payoff is \texttt{sale price}.
-		\begin{itemize}
-			\item Otherwise payoff is $\delta \cdot \texttt{value}$.
-		\end{itemize}
-		\item Update $\pi$.
+		\item i.e., a buyer arrives and
+		\item make an offer between the automatic thresholds and
+		\item seller has an opportunity to respond before listing ends.
 	\end{enumerate}
-	\vspace{5mm}
-	Repeat until $\pi$ converges to deterministic policy.
 \end{frame}
 
-\section{RL buyer}
-
-\begin{frame}{Arrival process}
+\begin{frame}{Values $(\delta = 0.7)$}
 	\begin{figure}
 		\centering
-		\includegraphics[height=.7\textheight]{\detokenize{sim/pdf_arrival.png}}
+		\includegraphics[height=.8\textheight]{{slr2/pdf_values_0.7}.png}
 	\end{figure}
-	70\% of listings expire without an arrival.
+\end{frame}
+
+\begin{frame}{Values $(\delta = 0.7)$}
+\begin{figure}
+	\centering
+	\begin{subfigure}[t]{0.49\textwidth}
+		\centering\caption{Unsold items}
+		\includegraphics[width=5cm]{{slr2/pdf_unsoldvals_0.7}.png}
+	\end{subfigure}
+	\begin{subfigure}[t]{0.49\textwidth}
+		\centering\caption{Sold items}
+		\includegraphics[width=5cm]{{slr2/pdf_soldvals_0.7}.png}
+	\end{subfigure}
+\end{figure}
+80.7\% of valid listings sell in data vs. 80.3\% for agent.
+\end{frame}
+
+\begin{frame}{Sale prices}
+	\begin{figure}
+		\centering
+		\includegraphics[height=.8\textheight]{{slr/cdf_lstgnorm}.png}
+	\end{figure}
+    Avg normalized sale price (among sales): .76 in data / .83 for agent
+\end{frame}
+
+\begin{frame}{Is the agent more patient than human sellers?}
+\begin{figure}
+	\centering
+	\begin{subfigure}[t]{0.49\textwidth}
+		\centering\caption{Time to sale}
+		\includegraphics[width=6cm]{{slr/cdf_days}.png}
+	\end{subfigure}
+	\begin{subfigure}[t]{0.49\textwidth}
+		\centering\caption{Threads per listing}
+		\includegraphics[width=6cm]{{slr/bar_threads}.png}
+	\end{subfigure}
+\end{figure}
+\end{frame}
+
+\begin{frame}{Agent seller induces full-price offers on turn 3}
+\begin{figure}
+	\centering
+	\begin{subfigure}[t]{0.49\textwidth}
+		\centering\caption{Turn 1}
+		\includegraphics[width=6cm]{{slr/cdf_norm_1}.png}
+	\end{subfigure}
+	\begin{subfigure}[t]{0.49\textwidth}
+		\centering\caption{Turn 3}
+		\includegraphics[width=6cm]{{slr/cdf_norm_3}.png}
+	\end{subfigure}
+\end{figure}
+\end{frame}
+
+\begin{frame}{Humans and agent diverge in turn 2}
+\begin{figure}[h]
+    \centering
+	\begin{subfigure}[t]{0.49\textwidth}
+		\centering\caption{Accept rate}
+		\includegraphics[width=6cm]{{turn2/response_accept}.png}
+	\end{subfigure}
+	\begin{subfigure}[t]{0.49\textwidth}
+		\centering\caption{Reject rate}
+		\includegraphics[width=6cm]{{turn2/response_reject}.png}
+	\end{subfigure}
+\end{figure}
+{\footnotesize Note: excludes auto-accepts and auto-rejects.}
+\end{frame}
+
+\begin{frame}{Turn 2 rejects induce accepts}
+\begin{figure}
+	\centering
+	\begin{subfigure}[t]{0.24\textwidth}
+		\caption*{$\frac{\text{First buyer offer}}{\text{list price}} = \frac{1}{2}$}
+		\includegraphics[width=\textwidth]{{slr3/response_slrrejacc_0.5}.png}
+	\end{subfigure}
+	\begin{subfigure}[t]{0.24\textwidth}
+		\caption*{$\frac{\text{First buyer offer}}{\text{list price}} = \frac{2}{3}$}
+		\includegraphics[width=\textwidth]{{slr3/response_slrrejacc_0.67}.png}
+	\end{subfigure}
+	\begin{subfigure}[t]{0.24\textwidth}
+		\caption*{$\frac{\text{First buyer offer}}{\text{list price}} = \frac{3}{4}$}
+		\includegraphics[width=\textwidth]{{slr3/response_slrrejacc_0.75}.png}
+	\end{subfigure}
+	\begin{subfigure}[t]{0.24\textwidth}
+		\caption*{$\frac{\text{First buyer offer}}{\text{list price}} = \frac{4}{5}$}
+		\includegraphics[width=\textwidth]{{slr3/response_slrrejacc_0.8}.png}
+	\end{subfigure}
+\end{figure}
+\end{frame}
+
+\begin{frame}{Summary so far}
+	Human sellers accept higher first offers at higher rates.
 	\begin{itemize}
-		\item No agent arrival for 70\% of simulations.
+		\item Consistent with comparing offer to reservation value or goal.
+	\end{itemize}\pause
+	\vspace{5mm}
+	The agent seller rejects higher first offers at higher rates.
+	\begin{itemize}
+		\item Consistent with inferring willingness to pay from offer.
+	\end{itemize}
+	\vspace{5mm}\pause
+	Rejections induce higher accept rates than small concessions.
+	\begin{itemize}
+		\item Consistent with a price integrity hypothesis.
 	\end{itemize}
 \end{frame}
 
-\begin{frame}{Offers}
-	\[\pi(\boldsymbol{x}): \boldsymbol{x} \rightarrow f(a)\]
-	Restrictions:
-	\begin{itemize}
-		\item[$\boldsymbol{x}$]: only features that buyers can observe.
-		\begin{itemize}
-			\item e.g., excludes automatic thresholds, activity on other threads.
-		\end{itemize}
-		\item[$a$]: 7 most common concessions, plus \texttt{walk} and \texttt{accept}.
-		\begin{itemize}
-			\item Turn 1: $\{\texttt{walk}, .5, .6, .67, .7, .75, .8, .83, \texttt{accept}\}$
-			\item Turns 3 \& 5: $\{\texttt{walk}, .17, .2, .25, .29, .33, .4, .5, \texttt{accept}\}$
-			\item Turn 7: $\{\texttt{walk}, \texttt{accept}\}$
-		\end{itemize}
-		\item Cannot send a message.
-	\end{itemize}
+\begin{frame}{Don't play hard to get}
+	\begin{figure}
+		\centering
+		\includegraphics[height=.8\textheight]{{slr3/response_rejacc}.png}
+	\end{figure}
 \end{frame}
-	
-\begin{frame}{Delays}
-\begin{figure}
-	\centering
-	\begin{subfigure}[b]{0.32\textwidth}
-		\caption*{3}
-		\includegraphics[width=\textwidth]{\detokenize{sim/cdf_delay_3.png}}
+
+\begin{frame}{Reject rates}
+\begin{table}[ht]
+\centering
+\begin{tabular}{lcccccc}
+\toprule
+& \multicolumn{2}{c}{Turn 2} & \multicolumn{2}{c}{Turn 4} & \multicolumn{2}{c}{Turn 6} \\ \cmidrule{2-3} \cmidrule{4-5} \cmidrule{6-7}
+& Data & Agent & Data & Agent & Data & Agent \\ \midrule
+Expire & .04 & - & .04 & - & .03 & - \\
+Reject & .14 & .63 & .22 & - & .22 & - \\ \bottomrule
+\end{tabular}
+\caption*{Note: excludes auto-rejects.}
+\end{table}
+\end{frame}
+
+
+\begin{frame}{Active rejections don't have same effect in later turns}
+\begin{figure}[h]
+    \centering
+	\begin{subfigure}[t]{0.49\textwidth}
+		\centering\caption{Active rejections in turn 2}
+		\includegraphics[width=6cm]{{slr3/response_rejacc_Active}.png}
 	\end{subfigure}
-	\begin{subfigure}[b]{0.32\textwidth}
-		\caption*{5}
-		\includegraphics[width=\textwidth]{\detokenize{sim/cdf_delay_5.png}}
-	\end{subfigure}
-	\begin{subfigure}[b]{0.32\textwidth}
-		\caption*{7}
-		\includegraphics[width=\textwidth]{\detokenize{sim/cdf_delay_7.png}}
+	\begin{subfigure}[t]{0.49\textwidth}
+		\centering\caption{Active rejections in turns 2 \& 4}
+		\includegraphics[width=6cm]{{slr5/response_rejrejacc}.png}
 	\end{subfigure}
 \end{figure}
-	Drawn from turn-specific distribution for simulated buyer.
-	\begin{itemize}
-		\item Conditional on delay $<$ 48 hours.
-	\end{itemize}
 \end{frame}
+
+\begin{frame}{A more complete picture}
+\begin{figure}
+	\centering
+	\begin{subfigure}[t]{0.49\textwidth}
+		\centering\caption*{Some buyers accept...}
+		\includegraphics[width=6cm]{{slr3/response_rejacc_Active}.png}
+	\end{subfigure}
+	\begin{subfigure}[t]{0.49\textwidth}
+		\centering\caption*{...but others walk.}
+		\includegraphics[width=6cm]{{slr3/response_rejrej_Active}.png}
+	\end{subfigure}
+\end{figure}
+\end{frame}
+
+\begin{frame}{A more complete picture}
+	\begin{figure}
+		\centering
+		\includegraphics[height=.8\textheight]{{slr3/response_rejnorm_Active}.png}
+	\end{figure}
+\end{frame}
+
+%\begin{frame}{A more complete picture}
+%\begin{figure}
+%	\centering
+%	\begin{subfigure}[t]{0.49\textwidth}
+%		\centering\caption*{Sale price to focal buyer}
+%		\includegraphics[width=6cm]{{slr3/response_rejnorm_Active}.png}
+%	\end{subfigure}
+%	\begin{subfigure}[t]{0.49\textwidth}
+%		\centering\caption*{Sale price to any buyer}
+%		\includegraphics[width=6cm]{{turn2/response_salenorm_Active}.png}
+%	\end{subfigure}
+%\end{figure}
+%\end{frame}
+
+
+\begin{frame}{Bargaining is a dynamic problem}
+	Goal is to maximize \emph{eventual} payoff.
+	\begin{itemize}
+		\item Not to maximize counterparty's response in next turn.
+	\end{itemize}\pause
+	\vspace{5mm}
+	The payoff to the rejecting on turn 2 comes from:
+	\begin{enumerate}
+		\item Buyer acceptances on turn 3.
+		\item Agreements with the same buyer in a later turn.
+		\item An agreement with another buyer.
+	\end{enumerate}
+\end{frame}
+
+\begin{frame}{Is there a simple agent that does almost as well?}
+\begin{figure}
+	\centering
+	\begin{subfigure}[t]{0.49\textwidth}
+		\centering\caption{Normalized reward}
+		\includegraphics[width=6cm]{{evaluate/bar_slrnorm}.png}
+	\end{subfigure}
+	\begin{subfigure}[t]{0.49\textwidth}
+		\centering\caption{Dollar reward}
+		\includegraphics[width=6cm]{{evaluate/bar_slrdollar}.png}
+	\end{subfigure}
+\end{figure}
+\end{frame}
+
+\begin{frame}[t]{Heuristic agent}
+\begin{columns}
+    \begin{column}[t]{0.33\linewidth}
+    \begin{figure}
+    \caption*{\underline{Turn 2}}
+    \begin{forest}
+	[\texttt{elapsed}
+    	[$\le .62$ 
+    		[reject, tier=outcome] 
+    	]
+    	[$>.62$ 
+    		[accept, tier=outcome] 
+		] 
+	]
+	\end{forest}
+    \end{figure}
+	\end{column}
+
+    \begin{column}[t]{0.33\linewidth}
+    \begin{figure}
+    \caption*{\underline{Turn 4}}
+    \begin{forest}
+	[\texttt{elapsed}
+    	[$\le .31$ 
+    		[counter, tier=outcome]
+    	]
+    	[$>.31$ 
+    		[accept, tier=outcome]
+		] 
+	]
+	\end{forest}
+    \end{figure}
+    \end{column}
+    
+    \begin{column}[t]{0.33\linewidth}
+	\begin{figure}
+    \caption*{\underline{Turn 6}}
+    \begin{forest}
+	[$\texttt{offer}_1$
+    	[$\le .8$ 
+    		[counter, tier=outcome] 
+    	]
+    	[$>.8$ 
+    		[accept, tier=outcome]
+		] 
+	]
+	\end{forest}
+    \end{figure}    
+    \end{column}
+\end{columns}\pause
+\vspace{15mm}
+Reject early, concede later.
+\end{frame}
+
+\begin{frame}[t]{Heuristic human agent}
+\begin{columns}
+    \begin{column}[t]{0.33\linewidth}
+    \begin{figure}
+    \caption*{\underline{Turn 2}}
+    \begin{forest}
+	[$\texttt{offer}_1$
+    	[$\le .67$ 
+    		[counter, tier=outcome] 
+    	]
+    	[$>.67$ 
+    		[accept, tier=outcome] 
+		] 
+	]
+	\end{forest}
+    \end{figure}
+	\end{column}
+
+    \begin{column}[t]{0.33\linewidth}
+    \begin{figure}
+    \caption*{\underline{Turn 4}}
+    \begin{forest}
+	[$\texttt{offer}_1$
+    	[$\le .66$ 
+    		[counter, tier=outcome]
+    	]
+    	[$>.66$ 
+    		[accept, tier=outcome]
+		] 
+	]
+	\end{forest}
+    \end{figure}
+    \end{column}
+    
+    \begin{column}[t]{0.33\linewidth}
+	\begin{figure}
+    \caption*{\underline{Turn 6}}
+    \begin{forest}
+	[accept]
+	\end{forest}
+    \end{figure}    
+    \end{column}
+\end{columns}
+\end{frame}
+
+
+%\begin{frame}{Offer rates}
+%\begin{table}[ht]
+%\centering
+%\begin{tabular}{lcccccc}
+%\toprule
+%& \multicolumn{2}{c}{Turn 2} & \multicolumn{2}{c}{Turn 4} & \multicolumn{2}{c}{Turn 6} \\ \cmidrule{2-3} \cmidrule{4-5} \cmidrule{6-7}
+%& Data & Agent & Data & Agent & Data & Agent \\ \midrule
+%Expire & .04 & - & .04 & - & .03 & - \\
+%Reject & .14 & .63 & .22 & - & .22 & - \\
+%Counter & .37 & .19 & .34 & .44 & .28 & .60 \\
+%Accept & .45 & .18 & .40 & .56 & .47 & .40 \\ \bottomrule
+%\end{tabular}
+%\caption*{Note: excludes auto-accepts and auto-rejects.}
+%\end{table}
+%\end{frame}
+
+
+%\section{RL buyer}
+%
+%\begin{frame}{Training procedure}
+%	\[\pi(\boldsymbol{x}): \boldsymbol{x} \rightarrow f(a)\]
+%	Initialize agent buyer policy $\pi$.
+%	\begin{enumerate}
+%		\item Draw a listing from RL Training partition.
+%		\item Draw an agent buyer arrival.
+%		\item Simulate using $\pi$ to draw agent buyer offers.
+%		\item If agent buyer purchases the item, payoff is $v - \texttt{sale price}$.
+%		\begin{itemize}
+%			\item Otherwise payoff is 0.
+%		\end{itemize}
+%		\item Update $\pi$.
+%	\end{enumerate}
+%	\vspace{5mm}
+%	Repeat until $\pi$ converges to deterministic policy.
+%	\begin{itemize}
+%		\item Simulate each listing in holdout partition 10 times.
+%	\end{itemize}
+%\end{frame}
+%
+%\begin{frame}{Buyer offers}
+%	\[\pi(\boldsymbol{x}): \boldsymbol{x} \rightarrow f(a)\]
+%	\begin{itemize}
+%		\item[$\boldsymbol{x}$]: only features that buyers can observe.
+%		\begin{itemize}
+%			\item e.g., excludes automatic thresholds, activity on other threads.
+%		\end{itemize}
+%		\item[$a$]:
+%		\begin{itemize}
+%			\item Turn 1: $\{\texttt{walk}, .5, .6, .67, .7, .75, .8, .83, \texttt{accept}\}$
+%			\item Turns 3 \& 5: $\{\texttt{walk}, .17, .2, .25, .29, .33, .4, .5, \texttt{accept}\}$
+%			\item Turn 7: $\{\texttt{walk}, \texttt{accept}\}$
+%			\item Cannot send a message.
+%		\end{itemize}
+%	\end{itemize}
+%\end{frame}
+%
+%\begin{frame}{When does the agent buyer arrive?}
+%	\begin{figure}
+%		\centering
+%		\includegraphics[height=.7\textheight]{{obs/pdf_arrival}.png}
+%	\end{figure}
+%	70\% of listings expire without an arrival.
+%	\begin{itemize}
+%		\item No agent arrival for 70\% of simulations.
+%	\end{itemize}
+%\end{frame}
+%
+%\begin{frame}{When does the agent buyer make subsequent offers?}
+%\begin{figure}
+%	\centering
+%	\begin{subfigure}[t]{0.32\textwidth}
+%		\caption*{3}
+%		\includegraphics[width=\textwidth]{{byr/cdf_delay_3}.png}
+%	\end{subfigure}
+%	\begin{subfigure}[t]{0.32\textwidth}
+%		\caption*{5}
+%		\includegraphics[width=\textwidth]{{byr/cdf_delay_5}.png}
+%	\end{subfigure}
+%	\begin{subfigure}[t]{0.32\textwidth}
+%		\caption*{7}
+%		\includegraphics[width=\textwidth]{{byr/cdf_delay_7}.png}
+%	\end{subfigure}
+%\end{figure}
+%	Drawn from turn-specific distribution for simulated buyer.
+%	\begin{itemize}
+%		\item Conditional on delay $<$ 48 hours.
+%	\end{itemize}
+%\end{frame}
+%
+%\begin{frame}{Valid listings}
+%	A listing is valid if the agent buyer arrives before it ends.
+%	\begin{itemize}
+%		\item i.e., before listing expires and
+%		\item before item sells to another buyer.
+%	\end{itemize}
+%\end{frame}
+%
+%\begin{frame}{Values $(\delta = 0.9)$}
+%	\begin{figure}
+%		\centering
+%		\includegraphics[height=.8\textheight]{{byr1/pdf_values_0.9}.png}
+%	\end{figure}
+%\end{frame}
+
+\appendix
+
+\begin{frame}{Appendix}\end{frame}
+
+\begin{frame}
+\vspace{-3mm}
+\begin{figure}
+	\centering
+	\begin{subfigure}[t]{0.115\textwidth}
+		\caption*{$\texttt{arrival}_0$}
+		\includegraphics[width=\textwidth]{{training/bar_training_first_arrival}.png}
+	\end{subfigure}
+	\begin{subfigure}[t]{0.115\textwidth}
+		\caption*{$\texttt{arrival}_1$}
+		\includegraphics[width=\textwidth]{{training/bar_training_next_arrival}.png}
+	\end{subfigure}
+	\begin{subfigure}[t]{0.115\textwidth}
+		\caption*{$\texttt{byr\_hist}$}
+		\includegraphics[width=\textwidth]{{training/bar_training_hist}.png}
+	\end{subfigure}
+	\begin{subfigure}[t]{0.115\textwidth}
+		\caption*{$\texttt{con}_1$}
+		\includegraphics[width=\textwidth]{{training/bar_training_con1}.png}
+	\end{subfigure}
+	\begin{subfigure}[t]{0.115\textwidth}
+		\caption*{$\texttt{con}_2$}
+		\includegraphics[width=\textwidth]{{training/bar_training_con2}.png}
+	\end{subfigure}
+	\begin{subfigure}[t]{0.115\textwidth}
+		\caption*{$\texttt{con}_3$}
+		\includegraphics[width=\textwidth]{{training/bar_training_con3}.png}
+	\end{subfigure}
+	\begin{subfigure}[t]{0.115\textwidth}
+		\caption*{$\texttt{con}_4$}
+		\includegraphics[width=\textwidth]{{training/bar_training_con4}.png}
+	\end{subfigure}
+	\begin{subfigure}[t]{0.115\textwidth}
+		\caption*{$\texttt{con}_5$}
+		\includegraphics[width=\textwidth]{{training/bar_training_con5}.png}
+	\end{subfigure}
+	\begin{subfigure}[t]{0.115\textwidth}
+		\caption*{$\texttt{con}_6$}
+		\includegraphics[width=\textwidth]{{training/bar_training_con6}.png}
+	\end{subfigure}
+	\begin{subfigure}[t]{0.115\textwidth}
+		\caption*{$\texttt{con}_7$}
+		\includegraphics[width=\textwidth]{{training/bar_training_con7}.png}
+	\end{subfigure}
+	\begin{subfigure}[t]{0.115\textwidth}
+		\caption*{$\texttt{delay}_2$}
+		\includegraphics[width=\textwidth]{{training/bar_training_delay2}.png}
+	\end{subfigure}
+	\begin{subfigure}[t]{0.115\textwidth}
+		\caption*{$\texttt{delay}_3$}
+		\includegraphics[width=\textwidth]{{training/bar_training_delay3}.png}
+	\end{subfigure}
+	\begin{subfigure}[t]{0.115\textwidth}
+		\caption*{$\texttt{delay}_4$}
+		\includegraphics[width=\textwidth]{{training/bar_training_delay4}.png}
+	\end{subfigure}
+	\begin{subfigure}[t]{0.115\textwidth}
+		\caption*{$\texttt{delay}_5$}
+		\includegraphics[width=\textwidth]{{training/bar_training_delay5}.png}
+	\end{subfigure}
+	\begin{subfigure}[t]{0.115\textwidth}
+		\caption*{$\texttt{delay}_6$}
+		\includegraphics[width=\textwidth]{{training/bar_training_delay6}.png}
+	\end{subfigure}
+	\begin{subfigure}[t]{0.115\textwidth}
+		\caption*{$\texttt{delay}_7$}
+		\includegraphics[width=\textwidth]{{training/bar_training_delay7}.png}
+	\end{subfigure}
+	\begin{subfigure}[t]{0.115\textwidth}
+		\caption*{$\texttt{msg}_1$}
+		\includegraphics[width=\textwidth]{{training/bar_training_msg1}.png}
+	\end{subfigure}
+	\begin{subfigure}[t]{0.115\textwidth}
+		\caption*{$\texttt{msg}_2$}
+		\includegraphics[width=\textwidth]{{training/bar_training_msg2}.png}
+	\end{subfigure}
+	\begin{subfigure}[t]{0.115\textwidth}
+		\caption*{$\texttt{msg}_3$}
+		\includegraphics[width=\textwidth]{{training/bar_training_msg3}.png}
+	\end{subfigure}
+	\begin{subfigure}[t]{0.115\textwidth}
+		\caption*{$\texttt{msg}_4$}
+		\includegraphics[width=\textwidth]{{training/bar_training_msg4}.png}
+	\end{subfigure}
+	\begin{subfigure}[t]{0.115\textwidth}
+		\caption*{$\texttt{msg}_5$}
+		\includegraphics[width=\textwidth]{{training/bar_training_msg5}.png}
+	\end{subfigure}
+	\begin{subfigure}[t]{0.115\textwidth}
+		\caption*{$\texttt{msg}_6$}
+		\includegraphics[width=\textwidth]{{training/bar_training_msg6}.png}
+	\end{subfigure}
+\end{figure}
+\end{frame}
+
+\begin{frame}{Sale prices}
+	\begin{figure}
+		\centering
+		\includegraphics[height=.8\textheight]{{slr/cdf_lstgprice}.png}
+	\end{figure}
+\end{frame}
+
+\begin{frame}{Turn 3 accept rates}
+\begin{figure}
+	\centering\caption*{$\frac{\text{First buyer offer}}{\text{list price}} = \frac{2}{3}$}
+	\begin{subfigure}[t]{0.32\textwidth}
+		\caption*{Overall}
+		\includegraphics[width=\textwidth]{{slr3/response_slrrejacc_0.67}.png}
+	\end{subfigure}
+	\begin{subfigure}[t]{0.32\textwidth}
+		\caption*{After a reject, by price}
+		\includegraphics[width=\textwidth]{{slr3/simple_slrrejaccbin_0.67}.png}
+	\end{subfigure}
+	\begin{subfigure}[t]{0.32\textwidth}
+		\caption*{By price and seller response}
+		\includegraphics[width=\textwidth]{{slr3/contourline_bincon_0.67}.png}
+	\end{subfigure}	
+\end{figure}
+\end{frame}
+
+\begin{frame}{Turn 3 accept rates}
+\begin{figure}
+	\centering\caption*{$\frac{\text{First buyer offer}}{\text{list price}} = \frac{3}{4}$}
+	\begin{subfigure}[t]{0.32\textwidth}
+		\caption*{Overall}
+		\includegraphics[width=\textwidth]{{slr3/response_slrrejacc_0.75}.png}
+	\end{subfigure}
+	\begin{subfigure}[t]{0.32\textwidth}
+		\caption*{After a reject, by price}
+		\includegraphics[width=\textwidth]{{slr3/simple_slrrejaccbin_0.75}.png}
+	\end{subfigure}
+	\begin{subfigure}[t]{0.32\textwidth}
+		\caption*{By price and seller response}
+		\includegraphics[width=\textwidth]{{slr3/contourline_bincon_0.75}.png}
+	\end{subfigure}	
+\end{figure}
+\end{frame}
+
+
+\begin{frame}{Turn 2 rejection rates}
+\begin{figure}[h]
+    \centering
+	\begin{subfigure}[t]{0.49\textwidth}
+		\centering\caption{Data}
+		\includegraphics[width=6cm]{{turn2/contour_rejdata}.png}
+	\end{subfigure}
+	\begin{subfigure}[t]{0.49\textwidth}
+		\centering\caption{Agent}
+		\includegraphics[width=6cm]{{turn2/contour_rejagent}.png}
+	\end{subfigure}
+\end{figure}
+\end{frame}
+
 
 \end{document}

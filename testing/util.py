@@ -5,14 +5,13 @@ from collections.abc import Iterable
 from utils import unpickle, load_featnames
 from rlenv.util import load_featnames
 from utils import load_file
-from constants import INPUT_DIR, INDEX_DIR, BYR_DROP, \
-    SLR, BYR, IDX
-from featnames import SLR, X_LSTG, X_OFFER, LOOKUP, NORM, AUTO, \
-    CLOCK, LSTG, INDEX, DEC_PRICE, START_PRICE, MSG, THREAD, MODELS, FIRST_ARRIVAL_MODEL
+from constants import INPUT_DIR, INDEX_DIR, BYR_DROP, BYR, IDX
+from featnames import SLR, X_LSTG, X_OFFER, LOOKUP, NORM, AUTO, CLOCK, LSTG, \
+    INDEX, DEC_PRICE, ACC_PRICE, START_PRICE, MSG, THREAD, MODELS, FIRST_ARRIVAL_MODEL
 
 
 class Subsetter:
-    def __init__(self, multi_value=False, level='lstg'):
+    def __init__(self, multi_value=False, level=LSTG):
         self.multi_value = multi_value
         self.index_is_cached = False
         self.multi_index = False
@@ -223,8 +222,9 @@ def get_auto_safe_lstgs(chunk=None):
     """
     # print('Lstg count: {}'.format(len(lookup)))
     lookup = chunk[LOOKUP].copy()
-    # normalize decline prices
+    # normalize auto prices
     lookup[DEC_PRICE] /= lookup[START_PRICE]
+    lookup[ACC_PRICE] /= lookup[START_PRICE]
     # drop offers that are 0 or 1 (and very near or 1)
     offers = chunk[X_OFFER].copy()
     near_null_offers = (offers[NORM] >= .99) | (offers[NORM] <= 0.01)
@@ -239,7 +239,8 @@ def get_auto_safe_lstgs(chunk=None):
     # inner join offers with lookup
     offers = offers.join(other=lookup, on=LSTG)
     offers['diff_dec'] = (offers[NORM] - offers[DEC_PRICE]).abs()
-    offers['low_diff'] = offers['diff_dec'] < 0.01
+    offers['diff_acc'] = (offers[NORM] - offers[ACC_PRICE]).abs()
+    offers['low_diff'] = (offers['diff_dec'] < .01) & (offers['diff_acc'] < .01)
     low_diff_count = offers['low_diff'].groupby(level=LSTG).sum()
     no_low_diffs_lstgs = low_diff_count.index[low_diff_count == 0]
     output_lstgs = no_low_diffs_lstgs.union(null_offer_lstgs)

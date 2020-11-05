@@ -19,6 +19,7 @@ def process_inputs(part):
     arrivals = arrivals[arrivals.index.isin([0, 1], level=THREAD)]
     arrivals = arrivals.sort_index().unstack()
     diff = arrivals[1] - arrivals[0]
+    assert diff.min() >= 0
 
     # interarrival time in periods
     y = diff // INTERVAL_ARRIVAL

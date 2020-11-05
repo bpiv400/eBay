@@ -3,7 +3,7 @@ import pandas as pd
 from inputs.util import save_files, check_zero, get_x_thread, get_ind_x
 from utils import load_file
 from constants import IDX, CON_MULTIPLIER
-from featnames import CON, NORM, SPLIT, MSG, AUTO, EXP, REJECT, TIME_FEATS, \
+from featnames import CON, NORM, COMMON, MSG, AUTO, EXP, REJECT, TIME_FEATS, \
     LOOKUP, BYR, X_THREAD, X_OFFER, THREAD, INDEX, SIM_PARTITIONS
 
 
@@ -35,7 +35,7 @@ def get_x_offer(offers=None, idx=None, turn=None):
             index=idx, fill_value=0).astype('float32')
         # set unseen feats to 0
         if i == turn:
-            offer[[CON, NORM, SPLIT, AUTO, EXP, REJECT, MSG]] = 0.0
+            offer[[CON, NORM, COMMON, AUTO, EXP, REJECT, MSG]] = 0.0
         # put in dictionary
         x_offer['offer{}'.format(i)] = offer.astype('float32')
 

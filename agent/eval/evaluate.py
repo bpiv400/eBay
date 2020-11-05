@@ -1,27 +1,56 @@
 import argparse
 import os
 import pandas as pd
-from agent.util import get_log_dir, load_values, \
-    get_byr_valid, get_byr_return, get_slr_valid, get_slr_return
-from utils import topickle, unpickle, load_data, get_role, compose_args
+from agent.util import get_log_dir, load_values, load_valid_data, \
+    get_sale_norm, get_norm_reward
+from utils import topickle, unpickle, compose_args, safe_reindex
 from agent.const import AGENT_PARAMS
-from featnames import SIM, OBS, X_OFFER, TEST, AGENT_PARTITIONS
+from featnames import OBS, X_OFFER, TEST, AGENT_PARTITIONS, THREAD, \
+    LOOKUP, START_PRICE, BYR_AGENT, X_THREAD
 
 
-def get_return(data=None, values=None, byr=False):
-    # restrict to valid and calculate rewards
-    if byr:
-        data = get_byr_valid(data)
-        reward = get_byr_return(data=data, values=values)
-    else:
-        data = get_slr_valid(data)
-        reward = get_slr_return(data=data, values=values)
+def get_byr_return(data=None, values=None):
+    sale_norm = get_sale_norm(data[X_OFFER], drop_thread=False)
+    if BYR_AGENT in data[X_THREAD].columns:
+        sale_norm = sale_norm[data[X_THREAD][BYR_AGENT]]
+    start_price = data[LOOKUP][START_PRICE]
+    sale_norm = sale_norm.droplevel(THREAD)
+    norm_vals = safe_reindex(values, idx=sale_norm.index)
+    norm = norm_vals - sale_norm
+    norm = norm.reindex(index=data[LOOKUP].index, fill_value=0)
+    dollar = norm * start_price
 
-    return reward
+    s = pd.Series()
+    s['norm'] = norm.mean()
+    s['dollar'] = dollar.mean()
+    return s
+
+
+def get_slr_return(data=None, values=None):
+    assert values.max() < 1
+    start_price = data[LOOKUP][START_PRICE]
+    sale_norm, cont_value = get_norm_reward(data=data, values=values)
+    norm = pd.concat([sale_norm, cont_value]).sort_index()
+    dollar = norm * start_price
+    net_norm = norm - values
+    dollar_norm = net_norm * start_price
+
+    s = pd.Series()
+    s['norm'] = norm.mean()
+    s['dollar'] = dollar.mean()
+    s['sold_pct'] = len(sale_norm) / (len(sale_norm) + len(cont_value))
+    s['norm_cont'] = cont_value.mean()
+    s['dollar_cont'] = dollar.loc[cont_value.index].mean()
+    s['norm_sold'] = sale_norm.mean()
+    s['dollar_sold'] = dollar.loc[sale_norm.index].mean()
+    s['net_norm'] = net_norm.mean()
+    s['dollar_norm'] = dollar_norm.mean()
+    return s
 
 
 def wrapper(values=None, byr=False):
-    return lambda d: get_return(data=d, values=values, byr=byr)
+    return_func = get_byr_return if byr else get_slr_return
+    return lambda d: return_func(data=d, values=values)
 
 
 def main():
@@ -46,28 +75,30 @@ def main():
     if not args.byr:
         values *= args.delta
     f = wrapper(values=values, byr=args.byr)
-    df = pd.DataFrame(columns=['norm', 'dollar'])  # for output
+    output = dict()
 
     # rewards from data
-    for dset in [OBS]:
-        data = load_data(part=args.part, sim=(dset == SIM))
-        df.loc[dset, :] = f(data)
+    if not args.byr:
+        data = load_valid_data(part=args.part)
+        output[OBS] = f(data)
 
     # rewards from heuristic strategy
     heuristic_dir = get_log_dir(**vars(args)) + 'heuristic/'
-    data = load_data(part=args.part, run_dir=heuristic_dir)
-    df.loc['heuristic', :] = f(data)
+    data = load_valid_data(part=args.part, run_dir=heuristic_dir)
+    if data is not None:
+        output['heuristic'] = f(data)
 
     # rewards from agent runs
     run_ids = [p for p in os.listdir(log_dir)
                if os.path.isdir(log_dir + p)]
     for run_id in run_ids:
         run_dir = log_dir + '{}/'.format(run_id)
-        data = load_data(part=args.part, run_dir=run_dir)
-        if X_OFFER in data:
-            df.loc[run_id, :] = f(data)
+        data = load_valid_data(part=args.part, run_dir=run_dir)
+        if data is not None:
+            output[run_id] = f(data)
 
     # save table
+    df = pd.DataFrame.from_dict(output, orient='index')
     print(df)
     topickle(df, log_dir + '{}.pkl'.format(args.part))
 

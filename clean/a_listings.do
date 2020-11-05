@@ -1,6 +1,6 @@
 clear all
-cd ~/weka/eBay
-import delim using raw/listings.csv
+cd ~/eBay/
+import delim using /data/eBay/raw/listings.csv
 
 * rename variables
 
@@ -27,11 +27,11 @@ drop if meta == 316 | meta == 6000 | meta == 10542 | meta == 172008
 
 * for word2vec features
 
-savesome lstg slr leaf using dta/w2v_slr, replace
+savesome lstg slr leaf using /data/eBay/dta/w2v_slr, replace
 
 * encode variables
 
-do ~/Dropbox/eBay/repo/clean/encode.do
+do repo/clean/encode.do
 
 * keep only unique listings
 
@@ -77,11 +77,6 @@ g int days = end_date - start_date
 drop if sale_price == . & days < 7
 drop days
 
-* drop listings with an auto-accept price
-
-drop if accept_price < start_price
-drop accept_price
-
 * feedback variables
 
 replace fdbk_score = 0 if fdbk_score == .
@@ -98,4 +93,4 @@ rename temp fdbk_pstv
 drop ct? ref_price? product relisted
 order lstg slr meta leaf cndtn start_date end_date
 sort lstg
-save dta/listings, replace
+save /data/eBay/dta/listings, replace

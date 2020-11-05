@@ -4,7 +4,8 @@ from inputs.util import save_files, get_x_thread, get_ind_x, check_zero
 from utils import load_data, get_role
 from constants import IDX, CON_MULTIPLIER
 from featnames import CON, AUTO, LOOKUP, BYR, SLR, INDEX, MSG, REJECT, NORM, \
-    SPLIT, THREAD, X_THREAD, X_OFFER, CLOCK, THREAD_COUNT, TIME_FEATS, BYR_AGENT, VALIDATION
+    COMMON, THREAD, X_THREAD, X_OFFER, CLOCK, THREAD_COUNT, TIME_FEATS, \
+    BYR_AGENT, VALIDATION
 
 
 def get_x_offer(offers=None, idx=None, byr=False):
@@ -33,7 +34,7 @@ def get_x_offer(offers=None, idx=None, byr=False):
         offer.loc[i > turn, :] = 0.
 
         # for current turn, post-delay features set to 0
-        offer.loc[i == turn, [CON, REJECT, NORM, SPLIT]] = 0.
+        offer.loc[i == turn, [CON, REJECT, NORM, COMMON]] = 0.
         if i in IDX[role]:
             assert offer.loc[i == turn, [AUTO, MSG]].max().max() == 0.
 

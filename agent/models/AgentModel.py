@@ -3,7 +3,7 @@ from torch.nn.functional import softmax
 from nets.FeedForward import FeedForward
 from utils import load_sizes
 from agent.const import AGENT_STATE
-from constants import SLR, BYR, NUM_AGENT_CONS
+from constants import SLR, BYR, NUM_COMMON_CONS
 from featnames import LSTG
 
 
@@ -37,7 +37,7 @@ class AgentModel(torch.nn.Module):
             dropout = (0., 0.)
 
         # policy net
-        sizes['out'] = NUM_AGENT_CONS + (2 if byr else 3)
+        sizes['out'] = NUM_COMMON_CONS + (2 if byr else 3)
         self.policy_net = FeedForward(sizes=sizes, dropout=dropout)
 
         # value net

@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 from statsmodels.nonparametric.kernel_regression import KernelReg
-from agent.const import AGENT_CONS
+from agent.const import COMMON_CONS
 from assess.const import OPT, NORM1_DIM, LOG10_BIN_DIM, POINTS
 from assess.util import ll_wrapper
 from utils import load_data, topickle, safe_reindex

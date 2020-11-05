@@ -1,17 +1,18 @@
+import argparse
 from assess.util import merge_dicts, cdf_days, cdf_sale, msg_dist, \
     arrival_dist, hist_dist, delay_dist, con_dist, num_threads, \
-    num_offers, interarrival_dist, get_lstgs
-from utils import topickle, load_data
-from constants import PLOT_DIR
-from featnames import X_THREAD, X_OFFER, TEST
+    num_offers, interarrival_dist, norm_dist
+from utils import topickle, load_data, load_file
+from constants import PLOT_DIR, COLLECTIBLES
+from featnames import X_THREAD, X_OFFER, TEST, LOOKUP, STORE, START_PRICE, META
 
 
 def collect_outputs(data=None, name=None):
     d = dict()
 
-    d['cdf_norm'], d['cdf_price'] = cdf_sale(data)
-
+    # sale outcomes
     d['cdf_days'] = cdf_days(data)
+    d['cdf_salenorm'], d['cdf_saleprice'] = cdf_sale(data)
 
     # offer distributions
     d['pdf_arrival'] = arrival_dist(data[X_THREAD])
@@ -19,6 +20,7 @@ def collect_outputs(data=None, name=None):
     d['cdf_hist'] = hist_dist(data[X_THREAD])
     d['cdf_delay'] = delay_dist(data[X_OFFER])
     d['cdf_con'] = con_dist(data[X_OFFER])
+    d['cdf_norm'] = norm_dist(data[X_OFFER])
 
     d['bar_msg'] = msg_dist(data[X_OFFER])
     d['bar_threads'] = num_threads(data)
@@ -34,7 +36,40 @@ def collect_outputs(data=None, name=None):
     return d
 
 
-def construct_d(lstgs=None):
+def get_lstgs(subset=None):
+    # restrict listings
+    lookup = load_file(TEST, LOOKUP)
+    if subset is not None:
+        filename = 'sim_{}'.format(subset)
+        if subset == 'store':
+            lookup = lookup[lookup[STORE]]
+        elif subset == 'no_store':
+            lookup = lookup[~lookup[STORE]]
+        elif subset == 'price_low':
+            lookup = lookup[lookup[START_PRICE] <= 20]
+        elif subset == 'price_high':
+            lookup = lookup[lookup[START_PRICE] >= 99]
+        elif subset == 'collectibles':
+            lookup = lookup[lookup[META].apply(lambda x: x in COLLECTIBLES)]
+        elif subset == 'other':
+            lookup = lookup[lookup[META].apply(lambda x: x not in COLLECTIBLES)]
+        else:
+            raise NotImplementedError('Unrecognized subset: {}'.format(subset))
+    else:
+        filename = 'sim'
+
+    print('{}: {} listings'.format(filename, len(lookup)))
+    return lookup.index, filename
+
+
+def main():
+    # subset from command line
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--subset', type=str)
+    subset = parser.parse_args().subset
+
+    lstgs, filename = get_lstgs(subset=subset)
+
     # data
     d = collect_outputs(data=load_data(part=TEST, lstgs=lstgs),
                         name='Data')
@@ -45,15 +80,6 @@ def construct_d(lstgs=None):
 
     # concatenate DataFrames
     d = merge_dicts(d, d_sim)
-
-    return d
-
-
-def main():
-    lstgs, filename = get_lstgs('sim')
-
-    # dictionary of inputs for plots
-    d = construct_d(lstgs)
 
     # save
     topickle(d, PLOT_DIR + '{}.pkl'.format(filename))

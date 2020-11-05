@@ -10,7 +10,7 @@ from torch.nn.functional import log_softmax
 import numpy as np
 from nets.FeedForward import FeedForward
 from sim.Sample import get_batches
-from constants import DAY, SPLIT_PCTS, INPUT_DIR, MODEL_DIR, SIM_DIR, \
+from constants import DAY, INPUT_DIR, MODEL_DIR, SIM_DIR, \
     PARTS_DIR, MAX_DELAY_TURN, MAX_DELAY_ARRIVAL, NUM_CHUNKS, FEATS_DIR
 from featnames import LOOKUP, X_THREAD, X_OFFER, CLOCK, BYR, SLR
 
@@ -31,7 +31,7 @@ def topickle(contents=None, path=None):
     :param str path: path to file
     :return: contents of file
     """
-    return pickle.dump(contents, open(path, "wb"))
+    return pickle.dump(contents, open(path, "wb"), protocol=4)
 
 
 def get_remaining(lstg_start, delay_start):
@@ -57,15 +57,6 @@ def extract_clock_feats(seconds):
     time_of_day = np.sin(sec_norm * np.pi)
     afternoon = sec_norm >= 0.5
     return time_of_day, afternoon
-
-
-def is_split(con):
-    """
-    Boolean for whether concession is (close to) an even split.
-    :param con: scalar or Series of concessions.
-    :return: boolean or Series of booleans.
-    """
-    return con in SPLIT_PCTS
 
 
 def get_days_since_lstg(lstg_start=None, time=None):
@@ -169,6 +160,7 @@ def run_func_on_chunks(f=None, func_kwargs=None, num_chunks=NUM_CHUNKS):
     :return: list of worker-specific output
     """
     num_workers = min(num_chunks, psutil.cpu_count())
+    print('Using {} workers'.format(num_workers))
     pool = mp.Pool(num_workers)
     jobs = []
     for i in range(num_chunks):
@@ -240,7 +232,10 @@ def load_file(part, x, folder=PARTS_DIR):
     :param str folder: name of folder
     :return: dataframe
     """
-    path = folder + '{}/{}.pkl'.format(part, x)
+    if part in folder:
+        path = folder + '{}.pkl'.format(x)
+    else:
+        path = folder + '{}/{}.pkl'.format(part, x)
     if not os.path.isfile(path):
         return None
     return unpickle(path)
@@ -270,7 +265,7 @@ def set_gpu(gpu=None):
     Sets the GPU index and the CPU affinity.
     :param int gpu: index of cuda device.
     """
-    torch.cuda.set_device(gpu)
+    torch.cuda.device(gpu)
     print('Using cuda:{}'.format(gpu))
 
 

@@ -4,7 +4,7 @@ from agent.util import get_byr_agent, load_values, find_best_run, \
     load_valid_data, get_norm_reward
 from assess.util import ll_wrapper, continuous_cdf, kdens_wrapper
 from utils import load_data, topickle, safe_reindex
-from agent.const import AGENT_CONS, DELTA_CHOICES
+from agent.const import COMMON_CONS, DELTA_CHOICES
 from assess.const import NORM1_DIM
 from constants import PLOT_DIR, INTERVAL_ARRIVAL, INTERVAL_CT_ARRIVAL
 from featnames import X_OFFER, X_THREAD, BYR_HIST, CON, INDEX, THREAD, \
@@ -67,7 +67,7 @@ def main():
     mask = x > .33
     d['response_hist'], bw = ll_wrapper(y[mask], x[mask],
                                         dim=NORM1_DIM,
-                                        discrete=AGENT_CONS[1])
+                                        discrete=COMMON_CONS[1])
     print('hist: {}'.format(bw[0]))
 
     # duration into listing

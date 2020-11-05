@@ -109,4 +109,4 @@ for j in range(8):
             DROPOUT_GRID.append((float(i) / 10, float(j) / 10))
 
 # number of concessions available to agent
-NUM_AGENT_CONS = 7
+NUM_COMMON_CONS = 6

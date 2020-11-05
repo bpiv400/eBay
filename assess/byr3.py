@@ -3,7 +3,7 @@ import pandas as pd
 from statsmodels.nonparametric.kernel_regression import KernelReg
 from agent.util import find_best_run, get_byr_agent, load_values
 from assess.util import get_dim, kreg2
-from utils import load_data, topickle
+from utils import load_data, topickle, safe_reindex
 from agent.const import DELTA_CHOICES
 from constants import PLOT_DIR
 from featnames import X_OFFER, CON, NORM, INDEX, LSTG, EXP, AUTO, BYR, TEST
@@ -20,8 +20,7 @@ def main():
         vals = load_values(part=TEST, delta=delta)
 
         # restrict to agent threads
-        idx = get_byr_agent(data)
-        offers = pd.DataFrame(index=idx).join(data[X_OFFER])
+        offers = safe_reindex(data[X_OFFER], idx=get_byr_agent(data))
 
         con = offers[CON].xs(3, level=INDEX)
         last = offers.xs(2, level=INDEX).reindex(index=con.index)

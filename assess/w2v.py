@@ -1,7 +1,7 @@
 import pandas as pd
 from agent.util import load_values, get_sale_norm
 from utils import unpickle, topickle, load_data, load_feats
-from assess.const import DELTA_SHAP
+from assess.const import DELTA_BYR
 from constants import FEATS_DIR, PLOT_DIR
 from featnames import META, LEAF, CNDTN, LOOKUP, TEST, X_OFFER, CON, LSTG
 
@@ -31,7 +31,7 @@ def main():
     leaf = load_feats('listings', lstgs=data[LOOKUP].index)[LEAF]
 
     # color by value
-    vals = load_values(part=TEST, delta=DELTA_SHAP)
+    vals = load_values(part=TEST, delta=DELTA_BYR)
     mean_vals = vals.groupby(leaf).mean().rename('c')
     d['w2v_values'] = tsne.join(mean_vals, on=LEAF)
 

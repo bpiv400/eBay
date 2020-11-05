@@ -1,52 +1,64 @@
+import numpy as np
 import torch
-from rlenv.const import DAYS_IND
-from constants import NUM_AGENT_CONS
+from agent.util import get_turn
+from rlenv.const import DAYS_IND, NORM_IND
+from agent.const import COMMON_CONS
+from constants import NUM_COMMON_CONS, MAX_DAYS
 from featnames import LSTG
+
+
+def get_elapsed(x=None, turn=None):
+    """
+    Fraction of listing window elapsed.
+    :param dict x: input features
+    :param int turn: one of [2, 4, 6]
+    :return: float
+    """
+    elapsed = x[LSTG][-5].item() / MAX_DAYS
+    for i in range(2, turn + 1):
+        elapsed += x['offer{}'.format(i)][DAYS_IND].item() / MAX_DAYS
+    assert elapsed < 1.
+    return elapsed
 
 
 class HeuristicSlr:
 
     def __call__(self, observation=None):
         # noinspection PyProtectedMember
-        input_dict = observation._asdict()
+        x = observation._asdict()
 
         # turn number
-        turn_feats = input_dict[LSTG][-2:]
-        turn = int(6 - 4 * turn_feats[0] - 2 * turn_feats[1])
+        turn_feats = x[LSTG][-2:].unsqueeze(dim=0)
+        turn = int(get_turn(x=turn_feats, byr=False).item())
+        assert turn in [2, 4, 6]
 
-        # # extract other features
-        # thread_num = input_dict[LSTG][-3] + 1
-        # months = input_dict[LSTG][-5]
-        # for i in range(1, turn + 1):
-        #     months += input_dict['offer{}'.format(i)][DAYS_IND] / 31
-        # assert months < 1.
-
-        # initialize output distribution with zeros
-        pdf = torch.zeros(NUM_AGENT_CONS + 3, dtype=torch.float)
-
+        # index of action
+        cons = COMMON_CONS[turn]
         if turn == 2:
-            pdf[0] = 1.
-        elif turn in [4, 6]:
-            pdf[-1] = 1.
+            elapsed = get_elapsed(x=x, turn=turn)
+            if elapsed <= .62:
+                idx = np.nonzero(cons == 0)[0][0]
+            else:
+                idx = np.nonzero(cons == 1)[0][0]
+
+        elif turn == 4:
+            elapsed = get_elapsed(x=x, turn=turn)
+            if elapsed > .31:
+                idx = np.nonzero(cons == 1)[0][0]
+            else:
+                idx = np.nonzero(cons == .6)[0][0]
+
+        elif turn == 6:
+            norm = x['offer{}'.format(turn - 1)][NORM_IND].item()
+            if norm > .8:
+                idx = np.nonzero(cons == 1)[0][0]
+            else:
+                idx = np.nonzero(cons == .6)[0][0]
+
         else:
             raise ValueError('Invalid turn: {}'.format(turn))
 
-        # if turn == 2:
-        #     if months > .55 and thread_num <= 2:
-        #         pdf[-1] = 1.
-        #     else:
-        #         pdf[0] = 1.
-        # elif turn == 4:
-        #     if months > .51 and thread_num <= 3:
-        #         pdf[-1] = 1.
-        #     else:
-        #         pdf[0] = 1.
-        # elif turn == 6:
-        #     if months > .31 and thread_num <= 6:
-        #         pdf[-1] = 1.
-        #     else:
-        #         pdf[0] = 1.
-        # else:
-        #     raise ValueError('Invalid turn: {}'.format(turn))
-
+        # deterministic categorical action distribution
+        pdf = torch.zeros(NUM_COMMON_CONS + 3, dtype=torch.float)
+        pdf[idx] = 1.
         return pdf

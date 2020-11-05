@@ -5,12 +5,13 @@ import numpy as np
 import pandas as pd
 from torch.distributions.categorical import Categorical
 from torch.distributions.bernoulli import Bernoulli
+from agent.const import COMMON_CONS
 from constants import INPUT_DIR
 from featnames import LOOKUP, X_LSTG, P_ARRIVAL, ARRIVAL_MODELS
 from constants import PARTS_DIR, DAY, MAX_DELAY_TURN
 from rlenv.const import (SIM_CHUNKS_DIR, SIM_VALS_DIR, OFFER_MAPS,
                          SIM_DISCRIM_DIR, DATE_FEATS_DF, NORM_IND)
-from utils import unpickle, extract_clock_feats, is_split, slr_norm, byr_norm
+from utils import unpickle, extract_clock_feats, slr_norm, byr_norm
 
 
 def model_str(model_name, turn=None):
@@ -273,8 +274,11 @@ def get_con_outcomes(con=None, sources=None, turn=0):
         prev_byr_norm = last_norm(sources=sources, turn=turn)
         prev_slr_norm = prev_norm(sources=sources, turn=turn)
         norm = byr_norm(con=con, prev_byr_norm=prev_byr_norm, prev_slr_norm=prev_slr_norm)
-    split = is_split(con)
-    return np.array([con, reject, norm, split], dtype=np.float)
+    if turn == 7:
+        common = False
+    else:
+        common = con in COMMON_CONS[turn]
+    return np.array([con, reject, norm, common], dtype=np.float)
 
 
 def get_reject(con):

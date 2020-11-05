@@ -1,7 +1,7 @@
 from utils import unpickle
 from constants import DATE_FEATS_PATH
 from featnames import (CON, DELAY, MSG, ALL_OFFER_FEATS, CLOCK_FEATS,
-                       TIME_FEATS, DAYS, EXP, NORM, SPLIT, AUTO, REJECT,
+                       TIME_FEATS, DAYS, EXP, NORM, COMMON, AUTO, REJECT,
                        THREAD_COUNT)
 
 INTERACT = False
@@ -60,7 +60,7 @@ CON_START_IND = ALL_OFFER_FEATS.index(CON)
 NORM_IND = ALL_OFFER_FEATS.index(NORM)
 CON_IND = ALL_OFFER_FEATS.index(CON)
 DELAY_IND = ALL_OFFER_FEATS.index(DELAY)
-SPLIT_IND = ALL_OFFER_FEATS.index(SPLIT)
+SPLIT_IND = ALL_OFFER_FEATS.index(COMMON)
 MSG_IND = ALL_OFFER_FEATS.index(MSG)
 DAYS_IND = ALL_OFFER_FEATS.index(DAYS)
 AUTO_IND = ALL_OFFER_FEATS.index(AUTO)

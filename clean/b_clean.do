@@ -1,5 +1,5 @@
 clear all
-cd ~/weka/eBay
+cd /data/eBay/
 import delim using raw/threads.csv
 
 rename anon_* *

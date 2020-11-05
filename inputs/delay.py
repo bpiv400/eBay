@@ -60,7 +60,7 @@ def get_y(offers=None, clock=None, lstg_end=None, turn=None):
     # replace censored delays with negative index
     assert intervals.loc[idx].min() >= 0
     intervals.loc[idx] -= INTERVAL_CT_TURN
-    # drop automatic seller rejections
+    # drop automatic offers
     if turn in IDX[SLR]:
         intervals = intervals[delay_seconds > 0]
     # restrict to turn

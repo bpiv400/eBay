@@ -21,7 +21,7 @@ class SimulatorEnv(EBayEnv):
         return False
 
 
-class NoSlrExpEnv(SimulatorEnv):
+class SlrRejectEnv(SimulatorEnv):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.reject_next = dict()  # use thread_id as key
@@ -60,8 +60,8 @@ class NoSlrExpEnv(SimulatorEnv):
             # update thread features
             self.prepare_offer(event)
 
-            # reject if previously sampled an expiration
-            if self.reject_next[event.thread_id]:
+            # reject on turn 2 or if previously sampled an expiration
+            if self.reject_next[event.thread_id] or event.turn == 2:
                 con_outcomes = get_con_outcomes(con=0,
                                                 sources=event.sources(),
                                                 turn=event.turn)

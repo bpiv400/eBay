@@ -13,7 +13,7 @@ python repo/processing/b_feats/category.py --name slr
 python repo/processing/b_feats/tf.py
 
 # create frames
-for part in sim discrim rl valid
+for part in sim rl valid
 do
   for f in lookup lstg thread offer
   do

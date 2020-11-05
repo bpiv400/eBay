@@ -4,8 +4,7 @@ from datetime import datetime as dt
 from processing.b_feats.util import collapse_dict
 from utils import unpickle, topickle, run_func_on_chunks
 from constants import START, IDX, FEATS_DIR
-from featnames import SLR, BYR, LSTG, THREAD, INDEX, ACCEPT, REJECT, CLOCK, \
-    NORM
+from featnames import SLR, BYR, LSTG, THREAD, INDEX, ACCEPT, REJECT, CLOCK, NORM
 
 
 def open_offers(df, levels, role):
@@ -272,10 +271,10 @@ def get_lstg_time_feats(events, full=False):
         tf[cols[0]], tf[cols[1]] = get_recent_feats(subset, role, full=full)
     tf['thread_count'] = thread_count(subset, full=full)
     # error checking
-    assert (tf.byr_offers >= tf.slr_offers).min()
-    assert (tf.byr_offers >= tf.byr_offers_open).min()
-    assert (tf.slr_best >= tf.slr_best_open).min()
-    assert (tf.byr_best >= tf.byr_best_open).min()
+    assert np.min(tf.byr_offers >= tf.slr_offers)
+    assert np.min(tf.byr_offers >= tf.byr_offers_open)
+    assert np.min(tf.slr_best >= tf.slr_best_open)
+    assert np.min(tf.byr_best >= tf.byr_best_open)
     # sort and return
     return tf
 

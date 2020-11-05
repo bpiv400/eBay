@@ -1,8 +1,8 @@
 import numpy as np
 from torch.utils.data import Dataset
 from utils import load_file, load_inputs
-from featnames import X_LSTG, LSTG, THREAD, SLR, META, LEAF, \
-    TRAIN_RL_MODELS, VALUES_MODEL, VALIDATION, TRAIN_MODELS, TRAIN_RL
+from featnames import X_LSTG, LSTG, THREAD, TRAIN_RL_MODELS, VALIDATION, \
+    TRAIN_MODELS, TRAIN_RL
 
 
 class EBayDataset(Dataset):
@@ -29,9 +29,6 @@ class EBayDataset(Dataset):
 
         # listing features
         self.x_lstg = load_file(self.part, X_LSTG)
-        if name == VALUES_MODEL:
-            for k in [SLR, META, LEAF]:
-                del self.x_lstg[k]
 
         # dictionary of inputs
         self.d = load_inputs(self.part, name)

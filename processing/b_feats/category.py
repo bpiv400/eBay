@@ -1,10 +1,11 @@
 import argparse
+import os
 from datetime import datetime as dt
 import pandas as pd
 from processing.b_feats.util import create_events, get_all_cat_feats
-from utils import unpickle, topickle, run_func_on_chunks, load_feats
+from utils import unpickle, topickle, run_func_on_chunks
 from constants import FEATS_DIR
-from featnames import META, LEAF, SLR, LSTG
+from featnames import META, LEAF, SLR
 
 
 def create_feats(data=None, name=None):
@@ -14,25 +15,11 @@ def create_feats(data=None, name=None):
     return feats
 
 
-def process_subset(data=None, name=None, meta=None, chunk=None):
+def process_chunk(chunk=None, name=None):
     start = dt.now()
-    val = meta[chunk]
-    lstgs = data['listings'].loc[data['listings'][META] == val].index
-    for k, v in data.items():
-        if len(v.index.names) == 1:
-            data[k] = v.reindex(index=lstgs)
-        else:
-            data[k] = v.reindex(index=lstgs, level=LSTG)
+    path = FEATS_DIR + 'chunks/{}{}.pkl'.format(META if name != SLR else '', chunk)
+    data = unpickle(path)
     feats = create_feats(data=data, name=name)
-    sec = (dt.now() - start).total_seconds()
-    print('{} {}: {} listings, {} seconds'.format(META, val, len(lstgs), sec))
-    return feats
-
-
-def process_chunk(chunk=None):
-    start = dt.now()
-    data = unpickle(FEATS_DIR + 'chunks/{}.pkl'.format(chunk))
-    feats = create_feats(data=data, name=SLR)
     sec = (dt.now() - start).total_seconds()
     print('Chunk {}: {} listings, {} seconds'.format(chunk, len(feats), sec))
     return feats
@@ -47,22 +34,12 @@ def main():
     name = parser.parse_args().name
     print('Creating feats at {} level'.format(name))
 
-    if name == SLR:
-        res = run_func_on_chunks(f=process_chunk, func_kwargs=dict())
-
-    else:
-        # load data
-        data = dict()
-        for level in ['listings', 'threads', 'offers']:
-            data[level] = load_feats(level)
-
-        # parallel processing
-        meta = data['listings'][META].unique()
-        print('{} unique meta categories'.format(len(meta)))
-        kwargs = dict(data=data, name=name, meta=meta)
-        res = run_func_on_chunks(f=process_subset,
-                                 func_kwargs=kwargs,
-                                 num_chunks=len(meta))
+    kw = dict(f=process_chunk, func_kwargs=dict(name=name))
+    if name != SLR:
+        chunks_dir = FEATS_DIR + 'chunks/'
+        kw['num_chunks'] = len([name for name in os.listdir(chunks_dir)
+                                if name.startswith(META)])
+    res = run_func_on_chunks(**kw)
 
     # concatenate dataframes
     feats = pd.concat(res).sort_index()

@@ -1,8 +1,7 @@
 from collections import namedtuple
-
-import processing.a_clean
 from constants import DAY, MAX_DELAY_ARRIVAL
-from featnames import DEC_PRICE, START_PRICE, DELAY, START_TIME, BYR, INTERARRIVAL_MODEL, BYR_HIST_MODEL
+from featnames import DEC_PRICE, ACC_PRICE, START_PRICE, DELAY, START_TIME, BYR, \
+    INTERARRIVAL_MODEL, BYR_HIST_MODEL
 from utils import get_days_since_lstg
 from rlenv.Heap import Heap
 from rlenv.time.TimeFeatures import TimeFeatures
@@ -322,7 +321,9 @@ class EBayEnv:
             self.queue.pop()
 
     def _check_slr_autos(self, norm):
-        if norm < self.lookup[DEC_PRICE] / self.lookup[START_PRICE]:
+        if norm >= self.lookup[ACC_PRICE] / self.lookup[START_PRICE]:
+            return ACC_IND
+        elif norm < self.lookup[DEC_PRICE] / self.lookup[START_PRICE]:
             return REJ_IND
         else:
             return OFF_IND

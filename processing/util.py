@@ -1,10 +1,12 @@
 import numpy as np
 import pandas as pd
+
+from agent.const import COMMON_CONS
 from utils import extract_clock_feats, byr_norm, slr_norm, unpickle
 from constants import PARTS_DIR, PCTILE_DIR, START, IDX, DAY, \
     HOLIDAYS, MAX_DELAY_TURN
 from featnames import HOLIDAY, DOW_PREFIX, TIME_OF_DAY, AFTERNOON, \
-    CLOCK_FEATS, BYR_HIST, SLR, BYR
+    CLOCK_FEATS, BYR_HIST, SLR, BYR, INDEX
 
 
 def extract_day_feats(seconds):
@@ -81,18 +83,19 @@ def get_norm(con):
     return norm.rename_axis('index', axis=1).stack().astype('float64')
 
 
-def hist_to_pctile(s, reverse=False):
+def feat_to_pctile(s, reverse=False, feat=BYR_HIST):
     """
     Converts byr hist counts to percentiles or visa versa.
     :param Series s: counts, or percentiles if reverse.
     :param bool reverse: convert pctile to hist if True.
+    :param str feat: feature to convert
     :return: Series
     """
-    pctile = unpickle(PCTILE_DIR + '{}.pkl'.format(BYR_HIST))
+    pctile = unpickle(PCTILE_DIR + '{}.pkl'.format(feat))
     if reverse:
         pctile = pctile.reset_index().set_index('pctile').squeeze()
     v = pctile.reindex(index=s.values, method='pad').values
-    hist = pd.Series(v, index=s.index, name=BYR_HIST)
+    hist = pd.Series(v, index=s.index, name=feat)
     return hist
 
 
@@ -120,3 +123,17 @@ def do_rounding(price):
                (((dollars <= 100) & (dollars % 5 == 0)) | (dollars % 50 == 0))
     assert np.all(~(is_round & is_nines))
     return is_round, is_nines
+
+
+def get_common_cons(con=None):
+    """
+    Identifies whether concession is a common concession.
+    :param pd.Series con: concessions
+    :return: pd.Series
+    """
+    turn = con.index.get_level_values(INDEX)
+    s = pd.Series(False, index=con.index)
+    for t in range(1, 7):
+        mask = turn == t
+        s.loc[mask] = con[mask].apply(lambda x: max(np.isclose(x, COMMON_CONS[t])))
+    return s

@@ -3,14 +3,18 @@ import pandas as pd
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator, FuncFormatter
-from constants import FIG_DIR, IDX, BYR, MAX_DELAY_TURN, MAX_DELAY_ARRIVAL, \
+from viscid.plot import vpyplot as vlt
+from plots.const import BIN_TICKS
+from constants import FIG_DIR, IDX, MAX_DELAY_TURN, MAX_DELAY_ARRIVAL, \
     DAY, HOUR, EPS
 from featnames import CON, NORM, DELAY, ARRIVAL, MSG, ACCEPT, \
-    REJECT, META, CNDTN
+    REJECT, META, CNDTN, BYR, SLR
 
 FONTSIZE = {'training': 24}  # fontsize by plot type
 
 plt.style.use('seaborn-colorblind')
+COLORS = vlt.get_current_colorcycle()
+
 mpl.rcParams['axes.grid'] = True
 
 
@@ -18,10 +22,21 @@ def get_name(path):
     return path.split('/')[-1].split('_')[1]
 
 
+def get_bin_ticks(idx=None):
+    upper = 10 ** idx.max()
+    lower = 10 ** idx.min()
+    ticks = [t for t in BIN_TICKS if lower <= t <= upper]
+    return ticks
+
+
 def remove_leading_zero(x, pos):
     """Format 1 as 1, 0 as 0, and all values whose absolute values is between
     0 and 1 without the leading "0." (e.g., 0.7 is formatted as .7 and -0.4 is
-    formatted as -.4)."""
+    formatted as -.4).
+    :param x: value to reformat
+    :param pos: unused
+    :return: string
+    """
     val_str = '{:g}'.format(x)
     if 0 < np.abs(x) < 1:
         return val_str.replace("0", "", 1)
@@ -33,11 +48,10 @@ def save_fig(path, legend=True, legend_kwargs=None, reverse_legend=False,
              xlabel=None, ylabel=None, square=True, xaxis=True, yaxis=True,
              xticks=None, yticks=None, xticklabels=None, yticklabels=None,
              xlim=None, ylim=None, gridlines=True, integer_xticks=False, logx=False):
-    name = path.split('/')[-1]
-    cat = name.split('_')[0]
+    name = get_name(path)
 
     # font size
-    fontsize = 16 if cat not in FONTSIZE else FONTSIZE[cat]
+    fontsize = 16 if name not in FONTSIZE else FONTSIZE[name]
 
     # axis limits
     if xlim is not None:
@@ -50,9 +64,11 @@ def save_fig(path, legend=True, legend_kwargs=None, reverse_legend=False,
         if legend_kwargs is None:
             legend_kwargs = dict()
         plt.legend(**legend_kwargs,
+                   handlelength=1.,
                    fancybox=False,
-                   frameon=False,
-                   fontsize=fontsize)
+                   frameon=True,
+                   fontsize=fontsize,
+                   title_fontsize=fontsize)
         if reverse_legend:
             handles, labels = plt.gca().get_legend_handles_labels()
             plt.gca().legend(reversed(handles), reversed(labels))
@@ -131,23 +147,28 @@ def add_vline(x=None, y=None):
     plt.plot([x, x], y, '-k', lw=1)
 
 
-def cdf_plot(path, df):
+def cdf_plot(path, obj):
     name = get_name(path)
 
+    agent = path.startswith(BYR) or path.startswith(SLR)
+    den = 'valid listings' if agent else 'listings'
+
     # labels and plot arguments
-    den, ylim, vline = 'listings', [0, 1], None
-    if name == 'price':
-        df.index = np.log10(df.index)
-        ticks = [1, 10, 100, 1000]
+    ylim, vline = [0, 1], None
+    if name in ['lstgprice', 'saleprice']:
+        obj.index = np.log10(obj.index)
+        ticks = range(4)
         args = dict(xlim=[0, 3],
-                    xticks=np.log10(ticks),
-                    xticklabels=['${}'.format(i) for i in ticks],
-                    xlabel='Sale price')
-        den = 'sales'
-    elif name == NORM:
+                    xticks=ticks,
+                    xticklabels=['$10^{}$'.format(i) for i in ticks],
+                    xlabel='Sale price ($)')
+        if name == 'saleprice':
+            den = 'sales'
+    elif name in ['lstgnorm', 'salenorm']:
         args = dict(xlim=[0, 1],
                     xlabel='Sale price / list price')
-        den = 'sales'
+        if name == 'salenorm':
+            den = 'sales'
     elif name.startswith('days'):
         args = dict(xlim=[0, 1],
                     xlabel='Fraction of listing window')
@@ -168,9 +189,10 @@ def cdf_plot(path, df):
                     xlabel='Response time in hours')
         den = 'offers'
     elif name == CON:
-        args = dict(xlim=[0, 1],
-                    # xticks=np.arange(0, 100 + 1e-8, 10),
-                    xlabel='Concession')
+        args = dict(xlim=[0, 1], xlabel='Concession')
+        den = 'offers'
+    elif name == NORM:
+        args = dict(xlim=[0, 1], xlabel='Offer / list price')
         den = 'offers'
     elif name.startswith('values'):
         args = dict(xlim=[0, 1],
@@ -186,22 +208,22 @@ def cdf_plot(path, df):
     elif name == 'realval':
         args = dict(xlim=[0, 1],
                     xlabel='Realized value')
-    elif name == 'contval':
-        args = dict(xlim=[0, 1],
-                    xlabel='Value of unsold items')
     else:
         raise NotImplementedError('Invalid name: {}'.format(name))
 
     # create plot and save
-    for c in df.columns:
-        s = df[c].dropna()
-        plt.plot(s.index, s, label=c, ds='steps-post')
+    if type(obj) is pd.Series:
+        plt.plot(obj.index, obj, ds='steps-post')
+    else:
+        for c in obj.columns:
+            s = obj[c].dropna()
+            plt.plot(s.index, s, label=c, ds='steps-post')
     if vline is not None:
         add_vline(x=vline, y=ylim)
     save_fig(path,
              ylim=[0, 1],
              ylabel='Cumulative share of {}'.format(den),
-             legend=isinstance(df, pd.DataFrame), **args)
+             legend=isinstance(obj, pd.DataFrame), **args)
 
 
 def simple_plot(path, obj):
@@ -227,22 +249,17 @@ def simple_plot(path, obj):
     elif name == 'valcon':
         args = dict(ylim=[0, .5], xlabel='Value',
                     ylabel='Average buyer concession')
-    elif name == 'rejacc':
-        args = dict(xlim=[.4, .9], ylim=[0, 1],
-                    xlabel='First buyer offer / list price',
-                    ylabel='Pr(accept) in turn 3')
-    elif name == 'rejrej':
-        args = dict(xlim=[.4, .9], ylim=[0, 1],
-                    xlabel='First buyer offer / list price',
-                    ylabel='Pr(reject) in turn 3')
-    elif name == 'rejnorm':
-        args = dict(xlim=[.4, 1], ylim=[.4, 1],
-                    xlabel='First buyer offer / list price',
-                    ylabel='Turn 3 buyer offer / list price')
     elif name == 'roc':
         args = dict(xlim=[0, 1], ylim=[0, 1],
                     xlabel='False positive rate',
                     ylabel='True positive rate')
+    elif name == 'slrrejaccbin':
+        ticks = get_bin_ticks(obj.index)
+        args = dict(ylim=[0, 1],
+                    xticks=np.log10(ticks),
+                    xticklabels=ticks,
+                    xlabel='List price ($)',
+                    ylabel='Turn 3: Pr(accept)')
     else:
         raise NotImplementedError('Invalid name: {}'.format(name))
 
@@ -261,7 +278,7 @@ def simple_plot(path, obj):
         if plot_ci:
             plt.plot(obj.index, obj.beta, '-k')
             plt.plot(obj.index, obj.beta + obj.err, '--k')
-            plt.plot(obj, obj.beta - obj.err, '--k')
+            plt.plot(obj.index, obj.beta - obj.err, '--k')
         else:
             for c in obj.columns:
                 plt.plot(obj.index, obj[c], label=c)
@@ -269,14 +286,13 @@ def simple_plot(path, obj):
         save_fig(path, legend=(not plot_ci), **args)
 
     else:
-        colors = ['r', 'g', 'b']
         dsets = obj.columns.get_level_values(0).unique()
         for i in range(len(dsets)):
             dset = dsets[i]
             df_i = obj.xs(dset, level=0, axis=1)
-            plt.plot(df_i.index, df_i.beta, '-', color=colors[i], label=dset)
-            plt.plot(df_i.index, df_i.beta + df_i.err, '--', color=colors[i])
-            plt.plot(df_i.index, df_i.beta - df_i.err, '--', color=colors[i])
+            plt.plot(df_i.index, df_i.beta, '-', color=COLORS[i], label=dset)
+            plt.plot(df_i.index, df_i.beta + df_i.err, '--', color=COLORS[i])
+            plt.plot(df_i.index, df_i.beta - df_i.err, '--', color=COLORS[i])
 
         if name == 'rejnorm':
             add_diagonal(obj)
@@ -298,7 +314,7 @@ def training_plot(path, df):
              ylabel='')
 
 
-def draw_response(line=None, dots=None, label=None, c='k'):
+def draw_response(line=None, dots=None, diagonal=False, connect=False, label=None, c='k'):
     plt.plot(line.index, line.beta, '-', label=label, color=c)
     if 'err' in line.columns:
         plt.plot(line.index, line.beta + line.err, '--', color=c)
@@ -308,50 +324,109 @@ def draw_response(line=None, dots=None, label=None, c='k'):
         for i in range(len(dots.index)):
             x = dots.index[i]
             row = dots.iloc[i]
-            plt.plot(x, row['beta'], 'o', color=c, ms=3)
+            plt.plot(x, row['beta'], 'o', color=c, ms=5)
             if 'err' in dots.columns:
                 high = row['beta'] + row['err']
                 low = row['beta'] - row['err']
                 plt.plot([x, x], [low, high], '-', color=c)
+
+    if diagonal:
+        add_diagonal(line)
+
+    if connect:
+        y = dots.loc[0, 'beta']
+        idx = (np.abs(line['beta'].values - y)).argmin()
+        x = line.index[idx]
+        plt.plot([0, x], [y, y], '-k', lw=1)
+        plt.plot([x, x], [0, y], '-k', lw=1)
 
 
 def response_plot(path, obj):
     name = get_name(path)
 
     if name.startswith('bin'):
-        ticks = [10, 20, 50, 100, 250, 1000]
-        args = dict(xticks=np.log10(ticks),
-                    xticklabels=['${}'.format(t) for t in ticks],
+        args = dict(xticks=np.log10(BIN_TICKS),
+                    xticklabels=['${}'.format(t) for t in BIN_TICKS],
                     xlabel='List price')
 
         if name == 'bin':
             args['ylim'] = [.7, 1]
             args['ylabel'] = 'Average response to 50% first offer'
         elif name == 'binvals':
-            args['ylabel'] = 'Average normalized value'
+            args['ylabel'] = 'Normalized value'
         else:
             raise NotImplementedError('Invalid name: {}'.format(name))
 
     elif name in [ACCEPT, REJECT, CON]:
-        ylabel = 'Average seller concession' if name == CON \
-            else 'Pr(seller {}s)'.format(name)
-        args = dict(xlim=[.4, .99], ylim=[0, 1],
-                    xlabel='First buyer offer / list price',
-                    ylabel=ylabel)
+        ylabel = 'Average concession' if name == CON else 'Pr({})'.format(name)
+        args = dict(xlim=[.4, .9], ylim=[0, 1],
+                    xlabel='Turn 1: Offer / list price',
+                    ylabel='Turn 2: ' + ylabel)
     elif name == NORM:
         args = dict(xlim=[.4, 1], ylim=[.4, 1],
-                    xlabel='First buyer offer / list price',
-                    ylabel='Avg seller counter / list price')
+                    xlabel='Turn 1: Offer / list price',
+                    ylabel='Turn 2: Offer / list price')
+    elif name == 'salenorm':
+        args = dict(xlim=[.4, 1], ylim=[0, 1],
+                    xlabel='Turn 1: Offer / list price',
+                    ylabel='Sale price / list price')
+    elif name == 'rewardnorm':
+        args = dict(xlim=[.4, 1], ylim=[.4, 1],
+                    xlabel='Turn 1: Offer / list price',
+                    ylabel='Reward / list price')
     elif name == 'hist':
         args = dict(xlim=[.4, 1], ylim=[0, .7],
-                    xlabel='First buyer offer / list price',
-                    ylabel='Average buyer experience percentile')
-    elif name == 'rejnorm':
-        args = dict(xlabel='First buyer offer / list price',
-                    ylabel='Average buyer concession in turn 3')
+                    xlabel='Turn 1: Offer / list price',
+                    ylabel='Buyer experience percentile')
     elif name == 'accnorm':
-        args = dict(xlabel='First buyer offer / list price',
-                    ylabel='Pr(accept) in turn 3')
+        args = dict(xlabel='Turn 1: Concession',
+                    ylabel='Turn 3: Pr(accept)')
+    elif name == 'slrrejacc':
+        args = dict(ylim=[0, .8],
+                    xlabel='Turn 2: Concession',
+                    ylabel='Turn 3: Pr(accept)')
+    elif name == 'slrrejnorm':
+        args = dict(ylim=[0, .8],
+                    xlabel='Turn 2: Concession',
+                    ylabel='Turn 3: Offer / list price')
+    elif name == 'rejacc':
+        args = dict(xlim=[.4, .9], ylim=[0, 1],
+                    xlabel='Turn 1: Offer / list price',
+                    ylabel='Turn 3: Pr(accept)',
+                    legend_kwargs=dict(title='Turn 2 reject type'))
+    elif name == 'rejrej':
+        args = dict(xlim=[.4, .9], ylim=[0, 1],
+                    xlabel='Turn 1: Offer / list price',
+                    ylabel='Turn 3: Pr(walk)')
+    elif name == 'rejnorm':
+        args = dict(xlim=[.4, .9], ylim=[0, 1],
+                    xlabel='Turn 1: Offer / list price',
+                    ylabel='Turn 3: Offer / list price')
+    elif name == 'rejrejacc':
+        args = dict(xlim=[.4, .9], ylim=[0, 1],
+                    xlabel='Turn 3: Offer / list price',
+                    ylabel='Turn 5: Pr(accept)')
+    elif name == 'rejrejrej':
+        args = dict(xlim=[.4, .9], ylim=[0, 1],
+                    xlabel='Turn 3: Offer / list price',
+                    ylabel='Turn 5: Pr(reject)')
+    elif name == 'rejrejnorm':
+        args = dict(xlim=[.4, .9], ylim=[0, 1],
+                    xlabel='Turn 3: Offer / list price',
+                    ylabel='Turn 5: Offer / list price')
+    elif name == 'expslrbo':
+        ticks = [1, 10, 100, 1000, 10000]
+        args = dict(ylim=[0, .25],
+                    xlabel='Number of best offer listings',
+                    ylabel='Expirations / manual rejects',
+                    xticks=np.log10(ticks),
+                    xticklabels=ticks)
+    elif name == 'slrbo':
+        ticks = [1, 10, 100, 1000, 10000]
+        args = dict(xlabel='Number of best offer listings',
+                    ylabel='Normalized value',
+                    xticks=np.log10(ticks),
+                    xticklabels=ticks)
     else:
         raise NotImplementedError('Invalid name: {}'.format(name))
 
@@ -361,62 +436,31 @@ def response_plot(path, obj):
         line, dots = obj, None
 
     if len(line.columns.names) > 1:
-        # first plot data by itself
-        draw_response(line=line.xs('Data', level=0, axis=1),
-                      dots=dots.xs('Data', level=0, axis=1))
-        if name == NORM:
-            add_diagonal(line)
-        save_fig(path, legend=False, **args)
-
-        # then plot data with one agent run
         dsets = line.columns.get_level_values(0).unique()
-        agent_runs = [dset for dset in dsets if dset.startswith('Agent')]
-        for i in range(len(agent_runs)):
-            agent_run = agent_runs[i]
-            delta = agent_run.split('_'[-1])
-            draw_response(line=line.xs('Data', level=0, axis=1),
-                          dots=dots.xs('Data', level=0, axis=1),
-                          label='Data', c='r')
-            draw_response(line=line.xs(agent_run, level=0, axis=1),
-                          dots=dots.xs(agent_run, level=0, axis=1),
-                          label='Agent', c='b')
-            if name == NORM:
-                add_diagonal(line)
-            save_fig('{}_{}'.format(path, delta), legend=True, **args)
+
+        # first plot data by itself
+        for i in range(len(dsets)):
+            dset = dsets[i]
+            draw_response(line=line.xs(dset, level=0, axis=1),
+                          dots=dots.xs(dset, level=0, axis=1),
+                          diagonal=(NORM in name), connect=(name == 'slrrejacc'))
+            save_fig('{}_{}'.format(path, dset), legend=False, **args)
+            plt.clf()
+
+        # then plot data all together
+        if len(dsets) < len(COLORS):
+            for i in range(len(dsets)):
+                dset = dsets[i]
+                draw_response(line=line.xs(dset, level=0, axis=1),
+                              dots=dots.xs(dset, level=0, axis=1),
+                              diagonal=(NORM in name),
+                              label=dset, c=COLORS[i])
+
+            save_fig(path, legend=True, **args)
 
     else:
-        draw_response(line=line, dots=dots)
-        if name == NORM:
-            add_diagonal(line)
+        draw_response(line=line, dots=dots, diagonal=(NORM in name))
         save_fig(path, legend=False, **args)
-
-
-def slr_plot(path, d):
-    name = get_name(path)
-    if name == 'vals':
-        save_args = dict(ylabel='Average normalized value')
-    elif name == 'sale':
-        save_args = dict(ylabel='Pr(sale)')
-    elif name == 'norm':
-        save_args = dict(ylabel='Average sale price, among sales')
-    else:
-        raise NotImplementedError('Invalid name: {}'.format(name))
-
-    colors = {'Store': 'r', 'No store': 'b'}
-    for k in ['Store', 'No store']:
-        df = d[k]
-        x = df.index
-        c = colors[k]
-        plt.plot(x, df.beta, color=c, ls='-', label=k)
-        plt.plot(x, df.beta + df.err, color=c, ls='--')
-        plt.plot(x, df.beta - df.err, color=c, ls='--')
-
-    xticks = np.arange(2, 5)
-    xticklabels = (10 ** xticks).astype(np.int64)
-    plt.gca().set_xticks(xticks)
-    plt.gca().set_xticklabels(xticklabels)
-
-    save_fig(path, xlabel='Seller reviews', **save_args)
 
 
 def coef_plot(path, df):
@@ -424,10 +468,10 @@ def coef_plot(path, df):
     if name == 'photovals':
         args = dict(xlim=[.45, .61],
                     ylabel='Number of photos',
-                    xlabel='Average normalized value')
+                    xlabel='Normalized value')
     elif name == 'dowvals':
         args = dict(xlim=[.46, .57], ylabel='',
-                    xlabel='Average normalized value')
+                    xlabel='Normalized value')
     else:
         raise NotImplementedError('Invalid name: {}'.format(name))
 
@@ -449,19 +493,30 @@ def bar_plot(path, df):
                     xlabel='Turn of last offer',
                     ylabel='Fraction of threads')
     elif name == 'threads':
+        agent = path.startswith(BYR) or path.startswith(SLR)
+        ylabel = 'valid listings' if agent else 'listings'
         args = dict(ylim=[0, 1],
                     xlabel='Number of threads',
-                    ylabel='Fraction of listings')
+                    ylabel='Fraction of ' + ylabel)
     elif name == MSG:
         args = dict(ylim=[0, .5],
                     xlabel='Turn',
                     ylabel='Fraction of eligible offers')
+    elif name == 'slrnorm':
+        args = dict(ylim=[.66, .74], legend=False, xlabel='',
+                    ylabel='Average normalized reward')
+    elif name == 'slrdollar':
+        args = dict(ylim=[76, 86], legend=False, xlabel='',
+                    ylabel='Average reward ($)')
+    elif name == 'training':
+        args = dict(ylim=[df['Baserate'], None], legend=False,
+                    xlabel='', ylabel='')
     else:
         raise NotImplementedError('Invalid name: {}'.format(name))
 
     df.plot.bar(rot=0)
 
-    save_fig(path, xticklabels=df.index, **args)
+    save_fig(path, xticklabels=df.index, gridlines=False, **args)
 
 
 def draw_area(df, xlim=None, ylim=None):
@@ -475,16 +530,16 @@ def action_plot(path, df, turn=None):
                  'Seller' if turn in IDX[BYR] else 'Buyer'))
 
 
-def draw_contour(s, vmin=None, vmax=None):
+def draw_contour(s=None, inc=.01):
     idx = [s.index.get_level_values(i) for i in range(2)]
     X = np.unique(idx[0])
     Y = np.unique(idx[1])
     Z = np.reshape(s.values, (len(Y), len(X)))
 
-    lower = np.floor(s.min() * 100) / 100
-    upper = np.ceil(s.max() * 100) / 100
-    levels = np.arange(lower, upper, .002)
-    subset = [i for i in levels if int(i * 1000) % 5 == 0]
+    vmin = np.floor(s.min() * 100) / 100
+    vmax = np.ceil(s.max() * 100) / 100
+    levels = np.arange(0, 1 + inc, inc)
+    subset = [levels[i] for i in range(len(levels)) if i % 5 == 0]
 
     fig, ax = plt.subplots()
     CS = ax.contour(X, Y, Z, levels=levels,
@@ -494,37 +549,45 @@ def draw_contour(s, vmin=None, vmax=None):
 
 
 def contour_plot(path, s):
-    name = get_name(path)
+    name, inc = get_name(path), .01
     if name == 'normval':
         inc = .002
         args = dict(xlabel='Seller counter / list price',
                     ylabel='Value')
     elif name == 'delayacc':
-        inc = .01
         args = dict(xlabel='First buyer offer / list price',
                     ylabel='Seller concession')
     elif name.startswith('hist'):
-        inc = .01
         args = dict(xlabel='First buyer offer / list price',
                     ylabel='Seller experience percentile')
+    elif name in ['rejdata', 'rejagent']:
+        ticks = get_bin_ticks(s.index.levels[1])
+        args = dict(yticks=np.log10(ticks),
+                    yticklabels=ticks,
+                    xlabel='Turn 1: Offer / list price',
+                    ylabel='List price ($)')
     else:
         raise NotImplementedError('Invalid name: {}'.format(name))
 
-    idx = [s.index.get_level_values(i) for i in range(2)]
-    X = np.unique(idx[0])
-    Y = np.unique(idx[1])
-    Z = np.reshape(s.values, (len(Y), len(X)))
+    draw_contour(s, inc=inc)
+    save_fig(path, legend=False, **args)
 
-    lower = np.floor(s.min() * 100) / 100
-    upper = np.ceil(s.max() * 100) / 100
-    levels = np.arange(0, 1 + inc, inc)
-    subset = [levels[i] for i in range(len(levels)) if i % 5 == 0]
 
-    fig, ax = plt.subplots()
-    CS = ax.contour(X, Y, Z, levels=levels,
-                    cmap=plt.get_cmap('plasma'),
-                    vmin=lower, vmax=upper)
-    ax.clabel(CS, inline=True, fontsize=10, levels=subset)
+def contourline_plot(path, tup):
+    contour, line = tup
+    name = get_name(path)
+    if name == 'bincon':
+        ticks = get_bin_ticks(contour.index.levels[0])
+        args = dict(xticks=np.log10(ticks),
+                    xticklabels=ticks,
+                    ylabel='Turn 2: Concession',
+                    xlabel='List price ($)')
+    else:
+        raise NotImplementedError('Invalid name: {}'.format(name))
+
+    draw_contour(contour)
+
+    plt.plot(line.index, line.values, '-k')
 
     save_fig(path, legend=False, **args)
 
@@ -571,8 +634,8 @@ def w2v_plot(path, df):
 
 def pdf_plot(path, obj):
     name = get_name(path)
-    if name == 'values':
-        args = dict(xlim=[0, 1], xlabel='Value')
+    if name in ['values', 'unsoldvals', 'soldvals']:
+        args = dict(xlim=[0, 1], xlabel='Normalized value')
     elif name == 'arrival':
         args = dict(xlim=[0, 1],
                     xlabel='Fraction of listing window')

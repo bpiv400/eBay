@@ -2,10 +2,11 @@ import os
 import pandas as pd
 from inputs.agents import process_inputs
 from inputs.util import convert_x_to_numpy
-from processing.util import collect_date_clock_feats, get_days_delay, get_norm
-from utils import topickle, is_split, load_file, get_role
+from processing.util import collect_date_clock_feats, get_days_delay, get_norm, \
+    get_common_cons
+from utils import topickle, load_file, get_role
 from constants import IDX, DAY, MAX_DAYS
-from featnames import DAYS, DELAY, CON, SPLIT, NORM, REJECT, AUTO, EXP, \
+from featnames import DAYS, DELAY, CON, COMMON, NORM, REJECT, AUTO, EXP, \
     CLOCK_FEATS, TIME_FEATS, OUTCOME_FEATS, DAYS_SINCE_LSTG, INDEX, BYR_AGENT, \
     BYR_HIST, START_TIME, LOOKUP, SLR, X_THREAD, X_OFFER, CLOCK
 
@@ -36,7 +37,7 @@ def process_sim_offers(df=None):
     # concession as a decimal
     df.loc[:, CON] /= 100
     # indicator for split
-    df[SPLIT] = df[CON].apply(lambda x: is_split(x))
+    df[COMMON] = get_common_cons(df[CON])
     # total concession
     df[NORM] = get_norm(df[CON])
     # reject auto and exp are last
@@ -69,7 +70,7 @@ def concat_sim_chunks(sims):
     :return tuple (threads, offers): dataframes of threads and offers.
     """
     # collect chunks
-    data = dict()
+    data = {}
     for sim in sims:
         for k, v in sim.items():
             if k not in data:

@@ -3,7 +3,7 @@ import torch
 from rlenv.Composer import Composer
 from rlenv.generate.Generator import Generator
 from rlenv.generate.util import process_sims
-from sim.envs import SimulatorEnv, NoSlrExpEnv
+from sim.envs import SimulatorEnv, SlrRejectEnv
 from utils import run_func_on_chunks, process_chunk_worker
 from constants import PARTS_DIR
 from featnames import AGENT_PARTITIONS
@@ -34,13 +34,13 @@ class OutcomeGenerator(Generator):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--part', type=str, choices=AGENT_PARTITIONS)
-    parser.add_argument('--noslrexp', action='store_true')
+    parser.add_argument('--reject', action='store_true')
     args = parser.parse_args()
 
     # environment and output folder
-    if args.noslrexp:
-        env = NoSlrExpEnv
-        output_dir = PARTS_DIR + '{}/noslrexp/'.format(args.part)
+    if args.reject:
+        env = SlrRejectEnv
+        output_dir = PARTS_DIR + '{}/slrreject/'.format(args.part)
     else:
         env = SimulatorEnv
         output_dir = PARTS_DIR + '{}/sim/'.format(args.part)

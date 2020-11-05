@@ -3,7 +3,7 @@ from inputs.util import save_featnames_and_sizes, \
     convert_x_to_numpy, get_x_thread, get_ind_x
 from utils import topickle, load_file, input_partition, load_data
 from constants import INPUT_DIR
-from featnames import SPLIT, DAYS, DELAY, EXP, AUTO, REJECT, MSG, LOOKUP, THREAD, \
+from featnames import COMMON, DAYS, DELAY, EXP, AUTO, REJECT, MSG, LOOKUP, THREAD, \
     INDEX, X_THREAD, X_OFFER, TRAIN_RL, VALIDATION, TEST, DISCRIM_MODEL
 
 
@@ -65,7 +65,7 @@ def get_x_offer(offers, idx):
                 assert (offer[feat].min() == 0) and (offer[feat].max() == 0)
                 offer.drop(feat, axis=1, inplace=True)
         if i == 7:
-            for feat in [MSG, SPLIT]:
+            for feat in [MSG, COMMON]:
                 assert (offer[feat].min() == 0) and (offer[feat].max() == 0)
                 offer.drop(feat, axis=1, inplace=True)
         # put in dictionary

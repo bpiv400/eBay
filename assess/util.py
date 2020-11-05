@@ -1,16 +1,14 @@
-import argparse
 import numpy as np
 import pandas as pd
 from statsmodels.nonparametric.kde import KDEUnivariate
 from statsmodels.nonparametric.kernel_regression import KernelReg
 from agent.util import get_sale_norm
-from utils import unpickle, load_file, safe_reindex
-from assess.const import SPLITS, OPT, VALUES_DIM, POINTS
-from constants import IDX, BYR, EPS, COLLECTIBLES, DAY, HOUR, PCTILE_DIR, \
+from utils import unpickle, safe_reindex
+from assess.const import OPT, VALUES_DIM, POINTS
+from constants import IDX, BYR, EPS, DAY, HOUR, PCTILE_DIR, \
     MAX_DELAY_TURN, MAX_DELAY_ARRIVAL, INTERVAL_ARRIVAL, INTERVAL_CT_ARRIVAL
-from featnames import DELAY, CON, NORM, AUTO, START_TIME, STORE, SLR_BO_CT, \
-    START_PRICE, META, LOOKUP, MSG, DAYS_SINCE_LSTG, BYR_HIST, INDEX, \
-    X_OFFER, CLOCK, TEST, THREAD, X_THREAD, REJECT
+from featnames import DELAY, CON, NORM, AUTO, START_TIME, START_PRICE, LOOKUP, \
+    MSG, DAYS_SINCE_LSTG, BYR_HIST, INDEX, X_OFFER, CLOCK, THREAD, X_THREAD, REJECT, EXP, SLR
 
 
 def continuous_pdf(y=None):
@@ -70,200 +68,49 @@ def hist_dist(threads=None):
 
 
 def delay_dist(offers=None):
+    delay = offers.loc[~offers[AUTO], DELAY]
     p = dict()
-    for turn in range(2, 8):
-        s = offers[DELAY].xs(turn, level=INDEX) * MAX_DELAY_TURN
-        cdf = discrete_cdf(s)
+    for t in range(2, 8):
+        s = delay.xs(t, level=INDEX) * MAX_DELAY_TURN
+        cdf = continuous_cdf(s)
         cdf.index = cdf.index.values / HOUR
-        p[turn] = cdf
+        p[t] = cdf
     return p
 
 
 def con_dist(offers=None):
-    con = offers.loc[~offers[AUTO], CON]
+    con = offers.loc[~offers[AUTO] & ~offers[EXP], CON]
     p = dict()
-    for turn in range(1, 8):
-        s = discrete_cdf(con.xs(turn, level=INDEX) * 100)
+    for t in range(1, 8):
+        s = discrete_cdf(con.xs(t, level=INDEX) * 100)
         s.index /= 100
-        p[turn] = s
+        p[t] = s
+    return p
+
+
+def norm_dist(offers=None):
+    norm = offers[NORM]
+    byr = norm.index.isin(IDX[BYR], level=INDEX) % 2
+    norm = byr * (~offers[REJECT]) * norm + (1-byr) * (1-norm)
+    p = {t: continuous_cdf(norm.xs(t, level=INDEX))
+         for t in range(1, 8)}
     return p
 
 
 def msg_dist(offers=None):
     idx_auto = offers[offers[AUTO]].index
-    idx_acc = offers[~offers[AUTO] & (offers[CON] == 1)].index
+    idx_exp = offers[offers[EXP]].index
+    idx_acc = offers[offers[CON] == 1].index
     idx_rej = offers[offers.index.isin(IDX[BYR], level=INDEX)
                      & offers[REJECT]].index
-    idx = offers.index.drop(idx_auto).drop(idx_acc).drop(idx_rej)
+    idx_drop = idx_auto.union(idx_exp).union(idx_acc).union(idx_rej)
+    idx = offers.index.drop(idx_drop)
     s = offers.loc[idx, MSG]
     return s.groupby(INDEX).mean()
 
 
-def get_pctiles(s):
-    n = len(s.index)
-    # create series of index name and values pctile
-    idx = pd.Index(np.sort(s.values), name=s.name)
-    pctiles = pd.Series(np.arange(1, n+1) / n,
-                        index=idx, name='pctile')
-    pctiles = pctiles.groupby(pctiles.index).max()
-    return pctiles
-
-
-def gaussian_kernel(x, bw=.25):
-    if len(np.shape(x)) == 1:
-        x = np.expand_dims(x, 1)
-    bw *= np.std(x, axis=0)  # scale bandwidth by standard deviation
-    return lambda z: np.exp(-0.5 * np.sum(((x - z) / bw) ** 2, axis=1))
-
-
-def nw(y, kernel=None, dim=None):
-    y_hat = pd.Series(index=dim)
-    for i in range(len(dim)):
-        k = kernel(dim[i])
-        v = np.sum(y * k) / np.sum(k)
-        y_hat.iloc[i] = v
-    return y_hat
-
-
 def get_last(x=None):
     return x.groupby(x.index.names[:-1]).shift().dropna()
-
-
-def norm_norm(offers=None):
-    last_norm = get_last(offers[NORM])
-    last_auto = get_last(offers[AUTO])
-    dim = np.arange(.5, .9 + EPS, .01)
-    y_hat = {}
-    for t in range(2, 7):
-        x = last_norm.xs(t, level=INDEX)
-        y = offers[NORM].xs(t, level=INDEX)
-        assert np.all(y.index == x.index)
-        if t % 2 == 0:
-            y = 1 - y
-        else:
-            x = 1 - x
-        if np.std(x) > .01:
-            kernel = gaussian_kernel(x)
-            y_hat[t] = nw(y, kernel=kernel, dim=dim)
-            if t % 2 == 1:
-                auto_t = last_auto.xs(t, level=INDEX)
-                y_hat[t].loc[1.] = y[(x == 1) & ~auto_t].mean()
-                y_hat[t].loc[1.05] = y[(x == 1) & auto_t].mean()
-    return y_hat
-
-
-def get_bounds(df, interval=.05, num=50):
-    assert len(df.columns) == 2
-    dims = []
-    for col in df.columns:
-        s = df[col]
-        lower = np.floor(np.percentile(s, 10) / interval) * interval
-        upper = np.ceil(np.percentile(s, 90) / interval) * interval
-        dim = np.linspace(lower, upper, num)
-        dims.append(dim)
-    return dims
-
-
-def dim_from_df(df):
-    dim1, dim2 = get_bounds(df)
-    X, Y = np.meshgrid(dim1, dim2)
-    dims = [np.reshape(v, -1) for v in [X, Y]]
-    dim = pd.MultiIndex.from_arrays(dims, names=['last_norm', 'log_price'])
-    return dim
-
-
-def accept3d(offers=None, other=None):
-    last_norm = get_last(offers[NORM])
-    df = last_norm.to_frame().join(other)
-
-    y_hat = {}
-    for t in [2, 4, 6]:
-        x = df.xs(t, level='index')
-        y = (offers[CON] == 1).xs(t, level='index')
-        assert np.all(x.index == y.index)
-        y_hat[t] = nw(y=y.values,
-                      kernel=gaussian_kernel(x.values),
-                      dim=dim_from_df(x))
-    return y_hat
-
-
-def action_dist(offers=None, dims=None):
-    norm = get_last(offers[NORM])
-    y_hat = {}
-    for t in dims.keys():
-        # inputs
-        x = norm.xs(t, level=INDEX)
-        con = offers[CON].xs(t, level=INDEX)
-        assert np.all(con.index == x.index)
-        if t in IDX[BYR]:
-            x_plus = x[x > 0]
-            con_zero = con.reindex(index=x[x == 0.].index)
-            con_plus = con.reindex(index=x_plus.index)
-        else:
-            x_plus = x
-            con_plus = con
-            con_zero = None
-        kernel = gaussian_kernel(x_plus)
-
-        # reject, concession, and accept probabilities
-        df = pd.DataFrame(index=dims[t])
-        df['Reject'] = nw(y=(con_plus == 0), kernel=kernel, dim=dims[t])
-        if t < 7:
-            for i in range(len(SPLITS) - 1):
-                low, high = SPLITS[i], SPLITS[i + 1]
-                y = (con_plus > low) & (con_plus <= high)
-                k = '{}-{}% concession'.format(int(low * 100), int(high * 100))
-                df[k] = nw(y=y, kernel=kernel, dim=dims[t])
-        df['Accept'] = 1 - df.sum(axis=1)
-
-        # when seller has not conceded
-        if t in IDX[BYR]:
-            df.loc[0., 'Reject'] = (con_zero == 0).mean()
-            if t < 7:
-                for i in range(len(SPLITS) - 1):
-                    low, high = SPLITS[i], SPLITS[i + 1]
-                    k = '{}-{}% concession'.format(int(low * 100), int(high * 100))
-                    df.loc[0., k] = np.mean((con_zero > low) & (con_zero <= high))
-            df.loc[0., 'Accept'] = (con_zero == 1).mean()
-            assert abs(df.loc[0].sum() - 1.) < EPS
-
-        # sort and put in dictionary
-        y_hat[t] = df.sort_index()
-
-    return y_hat
-
-
-def get_dims(offers=None, byr=None):
-    norm = offers[NORM].groupby(offers.index.names[:-1]).shift().dropna()
-    dim = dict()
-    if byr is None:
-        turns = range(2, 8)
-    elif byr:
-        turns = [3, 5, 7]
-    else:
-        turns = [2, 4, 6]
-    for t in turns:
-        x = norm.xs(t, level='index')
-        if t in IDX[BYR]:
-            x = x[x > 0]
-        low = np.ceil(np.percentile(x, 10) * 20) / 20
-        high = np.floor(np.percentile(x, 90) * 20) / 20
-        dim[t] = np.linspace(low, high, 100)
-    return dim
-
-
-def get_action_dist(offers_dim=None, offers_action=None, byr=None):
-    """
-    Wrapper function for calling action_dist when sharing x dimension across
-    multiple datasets.
-    :param DataFrame offers_dim: observed data for measuring dimension
-    :param DataFrame offers_action: data from which to create action distributions
-    :param bool byr: estimate buyer turns if true
-    :return: dict of dataframes
-    """
-    dims = get_dims(offers=offers_dim, byr=byr)
-    d = action_dist(offers=offers_action, dims=dims)
-    return d
 
 
 def concat_and_fill(v1, v2):
@@ -309,7 +156,9 @@ def num_threads(data):
 
 def num_offers(offers):
     # pdf of counts
-    s = offers.iloc[:, 0].groupby(offers.index.names[:-1]).count()
+    group = list(offers.index.names)
+    group.remove(INDEX)
+    s = offers[CON].groupby(group).count()
     s = s.groupby(s).count() / len(s)
     return s
 
@@ -320,12 +169,16 @@ def cdf_days(data=None):
     dur = (clock_sale - data[LOOKUP][START_TIME]) / MAX_DELAY_ARRIVAL
     assert dur.max() < 1
     dur[dur.isna()] = 1
-    pctile = get_pctiles(dur)
-    return pctile
+    cdf = continuous_cdf(dur)
+    return cdf
 
 
-def cdf_sale(data=None):
+def cdf_sale(data=None, sales=True):
     sale_norm = get_sale_norm(data[X_OFFER])
+
+    # add in non-sales
+    if not sales:
+        sale_norm = sale_norm.reindex(index=data[LOOKUP].index, fill_value=0)
 
     # multiply by start price to get sale price
     sale_price = np.round(sale_norm * data[LOOKUP][START_PRICE], decimals=2)
@@ -334,43 +187,6 @@ def cdf_sale(data=None):
     norm_pctile = continuous_cdf(sale_norm)
     price_pctile = continuous_cdf(sale_price)
     return norm_pctile, price_pctile
-
-
-def get_lstgs(prefix=None):
-    # subset from command line
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--subset', type=str)
-    subset = parser.parse_args().subset
-
-    # restrict listings
-    lookup = load_file(TEST, LOOKUP)
-    if subset is not None:
-        filename = '{}_{}'.format(prefix, subset)
-        if subset == 'store':
-            lookup = lookup[lookup[STORE]]
-        elif subset == 'no_store':
-            lookup = lookup[~lookup[STORE]]
-        elif subset == 'exp_high':
-            pc75 = np.percentile(lookup[SLR_BO_CT], 75)
-            lookup = lookup[lookup[SLR_BO_CT] >= pc75]
-        elif subset == 'exp_low':
-            pc25 = np.percentile(lookup[SLR_BO_CT], 25)
-            lookup = lookup[lookup[SLR_BO_CT] <= pc25]
-        elif subset == 'price_low':
-            lookup = lookup[lookup[START_PRICE] <= 20]
-        elif subset == 'price_high':
-            lookup = lookup[lookup[START_PRICE] >= 99]
-        elif subset == 'collectibles':
-            lookup = lookup[lookup[META].apply(lambda x: x in COLLECTIBLES)]
-        elif subset == 'other':
-            lookup = lookup[lookup[META].apply(lambda x: x not in COLLECTIBLES)]
-        else:
-            raise NotImplementedError('Unrecognized subset: {}'.format(subset))
-    else:
-        filename = prefix
-
-    print('{}: {} listings'.format(filename, len(lookup)))
-    return lookup.index, filename
 
 
 def local_linear(y, x, dim=None, bw=None):
@@ -467,13 +283,31 @@ def get_mesh(x1=None, x2=None):
     return mesh
 
 
-def kreg2(y=None, x1=None, x2=None, names=None):
+def kreg2(y=None, x1=None, x2=None, names=None, mesh=None, bw=None):
     x = np.stack([x1, x2], axis=1)
-    ll2 = KernelReg(y, x, var_type='cc', bw=(.025, .025))
-    mesh = get_mesh(x1, x2)
+    if bw is None:
+        ll2 = KernelReg(y, x, var_type='cc', defaults=OPT)
+    else:
+        ll2 = KernelReg(y, x, var_type='cc', bw=bw)
+    if mesh is None:
+        mesh = get_mesh(x1, x2)
     y_hat = ll2.fit(mesh)[0]
     idx = pd.MultiIndex.from_arrays([mesh[:, 0], mesh[:, 1]])
     if names is not None:
         idx.names = names
     s = pd.Series(y_hat, index=idx)
-    return s
+    return s, ll2.bw
+
+
+def add_byr_reject_on_listing_expiration(con=None):
+    sale = (con == 1).groupby(con.index.names[:-2]).max()
+    s = con.reset_index(INDEX)[INDEX]
+    slr_last = s.groupby(s.index.names).max().apply(lambda x: x in IDX[SLR])
+    idx = slr_last[slr_last & ~safe_reindex(sale, idx=slr_last.index)].index
+    con = con.unstack()
+    for t in [3, 5, 7]:
+        tochange = con[t].loc[idx][con[t].loc[idx].isna()].index
+        con.loc[tochange, t] = 0.
+        idx = idx.drop(tochange)
+    con = con.stack()
+    return con

@@ -55,14 +55,14 @@ DAYS = 'days'
 DELAY = 'delay'
 CON = 'con'
 NORM = 'norm'
-SPLIT = 'split'
+COMMON = 'common'
 MSG = 'msg'
 ACCEPT = 'accept'
 REJECT = 'reject'
 AUTO = 'auto'
 EXP = 'exp'
 
-OUTCOME_FEATS = [DAYS, DELAY, AUTO, EXP, CON, REJECT, NORM, SPLIT, MSG]
+OUTCOME_FEATS = [DAYS, DELAY, AUTO, EXP, CON, REJECT, NORM, COMMON, MSG]
 ALL_OFFER_FEATS = CLOCK_FEATS + TIME_FEATS + OUTCOME_FEATS
 
 # thread features
@@ -85,6 +85,7 @@ START_TIME = 'start_time'
 END_TIME = 'end_time'
 START_PRICE = 'start_price'
 DEC_PRICE = 'decline_price'
+ACC_PRICE = 'accept_price'
 FDBK_SCORE = 'fdbk_score'
 SLR_BO_CT = 'slr_bo_ct'
 STORE = 'store'

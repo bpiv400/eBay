@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # first arrival model in all partitions
-for part in sim discrim rl valid; do
+for part in sim rl valid; do
   python repo/inputs/first_arrival.py --part $part &
 done
 

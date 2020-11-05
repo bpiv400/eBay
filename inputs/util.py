@@ -4,10 +4,9 @@ import pandas as pd
 from utils import unpickle, topickle
 from inputs.const import NUM_OUT
 from constants import INPUT_DIR, INDEX_DIR, IDX, BYR_DROP
-from featnames import CLOCK_FEATS, OUTCOME_FEATS, SPLIT, MSG, AUTO, \
+from featnames import CLOCK_FEATS, OUTCOME_FEATS, COMMON, MSG, AUTO, \
     LSTG, X_LSTG, EXP, REJECT, DAYS, DELAY, TIME_FEATS, THREAD_COUNT, \
-    BYR, INDEX, SLR, THREAD, META, LEAF, VALIDATION, DISCRIM_MODEL, \
-    VALUES_MODEL
+    BYR, INDEX, SLR, THREAD, META, LEAF, VALIDATION, DISCRIM_MODEL
 
 
 def add_turn_indicators(df):
@@ -58,7 +57,7 @@ def get_arrival_times(clock=None, lstg_start=None, lstg_end=None, append_last=Fa
     arrivals = pd.concat([s, thread_start], axis=0).sort_index()
 
     # thread to int
-    idx = arrivals.index
+    idx = arrivals.index  # type: pd.MultiIndex
     arrivals.index.set_levels(idx.levels[-1].astype('int16'),
                               level=-1, inplace=True)
 
@@ -84,7 +83,7 @@ def check_zero(x, byr_exp=True):
             if i % 2 == 1:
                 assert_zero(x[k], byr_cols, k)
             if i == 7:
-                assert_zero(x[k], [SPLIT, MSG], k)
+                assert_zero(x[k], [COMMON, MSG], k)
 
 
 def get_ind_x(lstgs=None, idx=None):
@@ -108,7 +107,7 @@ def save_featnames_and_sizes(x=None, m=None):
     # initialize from listing feature names
     featnames = unpickle(INPUT_DIR + 'featnames/{}.pkl'.format(X_LSTG))
 
-    if m in [BYR, SLR, VALUES_MODEL]:
+    if m in [BYR, SLR]:
         for k in [SLR, META, LEAF]:
             del featnames[k]
 

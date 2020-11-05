@@ -5,7 +5,7 @@ from utils import topickle, get_model_predictions, load_file, load_featnames, \
     input_partition
 from constants import PARTS_DIR, NUM_CHUNKS, INTERVAL_CT_ARRIVAL
 from featnames import LOOKUP, X_LSTG, P_ARRIVAL, META, START_PRICE, START_TIME, \
-    DEC_PRICE, FIRST_ARRIVAL_MODEL
+    DEC_PRICE, ACC_PRICE, FIRST_ARRIVAL_MODEL
 
 
 def save_chunks(p_arrival=None, part=None, lookup=None):
@@ -18,7 +18,7 @@ def save_chunks(p_arrival=None, part=None, lookup=None):
     assert x_lstg.isna().sum().sum() == 0
 
     # drop extraneous lookup columns
-    lookup = lookup[[META, START_PRICE, DEC_PRICE, START_TIME]]
+    lookup = lookup[[META, START_PRICE, DEC_PRICE, ACC_PRICE, START_TIME]]
 
     # sort by no arrival probability
     p_arrival = p_arrival.sort_values(INTERVAL_CT_ARRIVAL)

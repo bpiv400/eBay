@@ -1,13 +1,13 @@
 import pandas as pd
 from processing.util import collect_date_clock_feats, \
-    get_days_delay, get_lstgs
-from utils import topickle, is_split, input_partition, load_feats
+    get_days_delay, get_lstgs, get_common_cons
+from utils import topickle, input_partition, load_feats
 from constants import PARTS_DIR, IDX
-from featnames import DAYS, DELAY, CON, NORM, SPLIT, MSG, REJECT, \
-    AUTO, EXP, START_PRICE, SLR, CLOCK, INDEX
+from featnames import DAYS, DELAY, CON, NORM, COMMON, MSG, REJECT, \
+    AUTO, EXP, SLR, CLOCK, INDEX
 
 
-def get_x_offer(start_price, offers, tf):
+def get_x_offer(offers, tf):
     # initialize output dataframe
     df = pd.DataFrame(index=offers.index).sort_index()
 
@@ -25,26 +25,29 @@ def get_x_offer(start_price, offers, tf):
     df[EXP] = df[DELAY] == 1
 
     # concession
-    df.loc[[CON, REJECT, NORM]] = offers[[CON, REJECT, NORM]]
-    df[SPLIT] = df[CON].apply(is_split)
+    df.loc[:, [CON, REJECT, NORM]] = offers.loc[:, [CON, REJECT, NORM]]
+
+    # common concessions
+    df[COMMON] = get_common_cons(con=df[CON])
 
     # message indicator is last
     df[MSG] = offers.message
 
     # error checking
     assert all(df.loc[df[EXP], REJECT])
+    assert all(~df.loc[df[CON] == 0, COMMON])
+    assert all(~df.loc[df[CON] == 1, COMMON])
 
     return df
 
 
 def create_x_offer(lstgs=None):
     # load data
-    start_price = load_feats('listings', lstgs=lstgs)[START_PRICE]
     offers = load_feats('offers', lstgs=lstgs)
     tf = load_feats('tf', lstgs=lstgs)
 
     # offer features
-    x_offer = get_x_offer(start_price, offers, tf)
+    x_offer = get_x_offer(offers, tf)
 
     return x_offer, offers.clock
 

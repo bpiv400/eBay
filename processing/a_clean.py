@@ -4,9 +4,9 @@ import pandas as pd
 from processing.util import get_norm
 from utils import topickle
 from constants import CLEAN_DIR, FEATS_DIR, PARTS_DIR, PCTILE_DIR, START, SEED, \
-    SHARES, NUM_CHUNKS, DAY, NUM_AGENT_CONS
+    SHARES, NUM_CHUNKS, DAY, NUM_COMMON_CONS
 from featnames import START_PRICE, BYR_HIST, NORM, SLR, LSTG, THREAD, INDEX, \
-    CLOCK, CON, ACCEPT, REJECT
+    CLOCK, CON, ACCEPT, REJECT, META, LEAF
 
 # data types for csv read
 OTYPES = {LSTG: 'int64',
@@ -26,9 +26,9 @@ TTYPES = {LSTG: 'int64',
           'byr_us': bool}
 
 LTYPES = {LSTG: 'int64',
-          'slr': 'int64',
-          'meta': 'int64',
-          'leaf': 'int64',
+          SLR: 'int64',
+          META: 'int64',
+          LEAF: 'int64',
           'cndtn': 'uint8',
           'start_date': 'uint16',
           'end_time': 'int64',
@@ -54,29 +54,47 @@ IDX_NAMES = {'offers': [LSTG, THREAD, INDEX],
              'listings': LSTG}
 
 
-def create_chunks(listings=None, threads=None, offers=None):
+def create_slr_chunks(listings=None, threads=None, offers=None, chunk_dir=None):
     """
     Chunks data by listing.
     :param DataFrame listings: listing features with index ['lstg']
     :param DataFrame threads: thread features with index ['lstg', 'thread']
     :param DataFrame offers: offer features with index ['lstg', 'thread', 'index']
+    :param str chunk_dir: path to output directory
     """
-    # output directory
-    chunk_dir = FEATS_DIR + 'chunks/'
-    if not os.path.isdir(chunk_dir):
-        os.mkdir(chunk_dir)
     # split into chunks by seller
-    slrs = listings[SLR].reset_index().sort_values(
+    slr = listings[SLR].reset_index().sort_values(
         by=[SLR, LSTG]).set_index(SLR).squeeze()
-    u = np.unique(listings[SLR].values)
+    u = np.unique(slr.index)
     groups = np.array_split(u, NUM_CHUNKS)
     for i in range(NUM_CHUNKS):
-        print('Creating chunk {} of {}'.format(i + 1, NUM_CHUNKS))
-        lstgs = slrs.loc[groups[i]].values
+        print('Creating slr chunk {} of {}'.format(i + 1, NUM_CHUNKS))
+        lstgs = slr.loc[groups[i]].values
         chunk = {'listings': listings.reindex(index=lstgs),
                  'threads': threads.reindex(index=lstgs, level=LSTG),
                  'offers': offers.reindex(index=lstgs, level=LSTG)}
         topickle(chunk, chunk_dir + '{}.pkl'.format(i))
+
+
+def create_meta_chunks(listings=None, threads=None, offers=None, chunk_dir=None):
+    """
+    Chunks data by listing.
+    :param DataFrame listings: listing features with index ['lstg']
+    :param DataFrame threads: thread features with index ['lstg', 'thread']
+    :param DataFrame offers: offer features with index ['lstg', 'thread', 'index']
+    :param str chunk_dir: path to output directory
+    """
+    # split into chunks by seller
+    meta = listings[META].reset_index().sort_values(
+        by=[META, LSTG]).set_index(META).squeeze()
+    u = np.unique(meta.index)
+    for i in range(len(u)):
+        print('Creating meta chunk {} of {}'.format(i + 1, len(u)))
+        lstgs = meta.loc[u[i]].values
+        chunk = {'listings': listings.reindex(index=lstgs),
+                 'threads': threads.reindex(index=lstgs, level=LSTG),
+                 'offers': offers.reindex(index=lstgs, level=LSTG)}
+        topickle(chunk, chunk_dir + 'meta{}.pkl'.format(i))
 
 
 def partition_lstgs(s):
@@ -94,7 +112,7 @@ def partition_lstgs(s):
         curr = last + int(u.size * val)
         d[key] = np.sort(slrs.loc[u[last:curr]].values)
         last = curr
-    d['testing'] = np.sort(slrs.loc[u[last:]].values)
+    d['test'] = np.sort(slrs.loc[u[last:]].values)
     return d
 
 
@@ -160,18 +178,16 @@ def get_con(price=None, start_price=None):
 def restrict_cons(con, turns=None):
     s = con[con.index.isin(turns, level=INDEX)]
     pdf = s.groupby(s).count().sort_values() / len(s)
-    cons = pdf.index.values[-NUM_AGENT_CONS:]
-    other = [0., 1., 1.1] if 2 in turns else [0., 1.]
-    return np.sort(np.concatenate([cons, other]))
+    cons = pdf.index.values[-NUM_COMMON_CONS:]
+    return np.sort(cons)
 
 
-def get_agent_cons(con=None):
+def get_common_cons(con=None):
     con = con[(con > 0) & (con < 1)]
     d = dict()
     d[1] = restrict_cons(con, turns=[1])
     d[3] = d[5] = restrict_cons(con, turns=[3, 5])
     d[2] = d[4] = d[6] = restrict_cons(con, turns=[2, 4, 6])
-    d[7] = np.concatenate([np.zeros(NUM_AGENT_CONS + 1), [1.]])
     return d
 
 
@@ -187,23 +203,12 @@ def main():
     topickle(threads, FEATS_DIR + 'threads.pkl')
 
     # arrival time
-    thread_start = offers.clock.xs(1, level=INDEX)
-    s = pd.to_datetime(thread_start, origin=START, unit='s')
+    thread_start = offers[CLOCK].xs(1, level=INDEX)
+    ts = pd.to_datetime(thread_start, origin=START, unit='s')
 
     # split off missing
     to_replace = threads.bin & ((thread_start + 1) % DAY == 0)
-    missing = pd.to_datetime(s.loc[to_replace].dt.date)
-    labeled = s.loc[~to_replace]
-
-    # cdf using labeled data
-    N = len(labeled.index)
-    sec = pd.Series(np.arange(1, N + 1) / N,
-                    index=np.sort(get_seconds(labeled.dt).values),
-                    name='pctile')
-    pctile = sec.groupby(sec.index).min()
-    pctile.loc[-1] = 0
-    pctile = pctile.sort_index().rename('pctile')
-    cdf = pctile.rename('x').reset_index().set_index('x').squeeze()
+    missing = pd.to_datetime(ts.loc[to_replace].dt.date)
 
     # calculate censoring second
     last = offers[CLOCK].groupby([LSTG, THREAD]).max()
@@ -216,20 +221,28 @@ def main():
     same_date = pd.to_datetime(last.dt.date) == missing.reindex(last.index)
     lower = get_seconds(last.dt).loc[same_date].rename('lower')
 
-    # make end time one second after last observed same day offer before BIN
-    lower += 1
-    lower.loc[lower == DAY] -= 1
-
     # uniform random
+    np.random.seed(SEED)
     rand = pd.Series(np.random.rand(len(missing.index)),
                      index=missing.index, name='x')
 
     # amend rand for censored observations
+    sec = thread_start[~to_replace] % DAY
+    pdf = sec.groupby(sec).count() / len(sec)
+    pdf = pdf.reindex(index=range(DAY), fill_value=0)
+    pctile = pdf.cumsum().rename('pctile')
     tau = lower.to_frame().join(pctile, on='lower')['pctile']
-    rand.loc[tau.index] = tau
+
+    rand.loc[tau.index] *= 1 - tau
+    rand.loc[tau.index] += tau
 
     # read off of cdf
-    newsec = cdf.reindex(index=rand, method='ffill').values
+    cdf = pctile.rename('x').reset_index().set_index('x').squeeze()
+    assert not cdf.index.duplicated().max()
+    newsec = cdf.reindex(index=rand, method='pad').values
+    newsec[np.isnan(newsec)] = 0
+    assert newsec.min() >= 0
+    assert newsec.max() < DAY
     delta = pd.Series(pd.to_timedelta(newsec, unit='second'),
                       index=rand.index)
 
@@ -238,11 +251,10 @@ def main():
     tdiff = tdiff.dt.total_seconds().astype('int64')
 
     # end time of listing
-    end_time = tdiff.reset_index(
-        THREAD, drop=True).rename('end_time')
+    end_time = tdiff.reset_index(THREAD, drop=True).rename('end_time')
 
     # update offers clock
-    df = offers.clock.reindex(index=end_time.index, level=LSTG)
+    df = offers[CLOCK].reindex(index=end_time.index, level=LSTG)
     df = df.to_frame().join(end_time)
     idx = df[df[CLOCK] > df['end_time']].index
     offers.loc[idx, CLOCK] = df.loc[idx, 'end_time']
@@ -262,8 +274,8 @@ def main():
     topickle(offers, FEATS_DIR + 'offers.pkl')
 
     # save common concessions for agent
-    agent_cons = get_agent_cons(offers[CON])
-    topickle(agent_cons, FEATS_DIR + 'agent_cons.pkl')
+    common_cons = get_common_cons(offers[CON])
+    topickle(common_cons, FEATS_DIR + 'common_cons.pkl')
 
     # add arrivals per day to listings
     arrivals = thread_start.groupby(LSTG).count().reindex(
@@ -292,7 +304,12 @@ def main():
     topickle(listings, FEATS_DIR + 'listings.pkl')
 
     # chunk by listing
-    create_chunks(listings=listings, threads=threads, offers=offers)
+    chunk_dir = FEATS_DIR + 'chunks/'
+    if not os.path.isdir(chunk_dir):
+        os.mkdir(chunk_dir)
+    kw = dict(listings=listings, threads=threads, offers=offers, chunk_dir=chunk_dir)
+    create_slr_chunks(**kw)
+    create_meta_chunks(**kw)
 
     # partition by seller
     partitions = partition_lstgs(listings[SLR])

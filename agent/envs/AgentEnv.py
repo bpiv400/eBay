@@ -9,8 +9,8 @@ from rlenv.EBayEnv import EBayEnv
 from rlenv.events.Thread import Thread
 from agent.ConSpace import ConSpace
 from agent.util import load_values
-from agent.const import AGENT_CONS
-from constants import INTERVAL_TURN, INTERVAL_CT_TURN, DAY, NUM_AGENT_CONS
+from agent.const import COMMON_CONS
+from constants import INTERVAL_TURN, INTERVAL_CT_TURN, DAY, NUM_COMMON_CONS
 from featnames import BYR_HIST, START_PRICE, BYR, DELTA, TRAIN_RL
 
 Info = namedarraytuple("Info", ["days", "max_return", "num_actions", "num_threads",
@@ -137,13 +137,13 @@ class AgentEnv(EBayEnv, Env):
             cons = np.arange(101) / 100
             return {t: cons for t in range(1, 8)}
         else:
-            return AGENT_CONS
+            return COMMON_CONS
 
     def _define_action_space(self):
         if self.test:
             num_cons = 101
         else:
-            num_cons = NUM_AGENT_CONS + (2 if self.byr else 3)
+            num_cons = NUM_COMMON_CONS + (2 if self.byr else 3)
         return ConSpace(size=num_cons)
 
     def is_agent_turn(self, event):

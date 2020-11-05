@@ -1,13 +1,13 @@
 clear all
-cd ~/weka/eBay
+cd /data/eBay
 use dta/conform
 
 * flag weird behavior with prices
 
 g byte flag = 0
 
-replace flag = 1 if sale_price != start_price & bin
-replace flag = 1 if sale_price != price & accept
+//replace flag = 1 if sale_price != start_price & bin
+//replace flag = 1 if sale_price != price & accept
 drop sale_price
 
 replace flag = 1 if price > start_price
@@ -20,9 +20,12 @@ by lstg thread: replace flag = 1 if price < price[_n-1] & mod(index,2) == 0
 by lstg thread: replace flag = 1 if price > price[_n-1] & _n > 1 & mod(index,2) == 1
 
 by lstg thread: replace flag = 1 if _n == _N & price < decline_price & mod(index,2) == 1 & !reject
-by lstg thread: replace flag = 1 if _n < _N & price < decline_price & mod(index,2) == 1 & clock != clock[_n+1]
-by lstg thread: replace flag = 1 if _n < _N & price < decline_price & mod(index,2) == 1 & !reject[_n+1]
-by lstg thread: replace flag = 1 if _n < _N & price < start_price & price > decline_price & clock == clock[_n+1]
+by lstg thread: replace flag = 1 if _n < _N & price < decline_price & mod(index,2) == 1 & (clock != clock[_n+1] | !reject[_n+1])
+
+by lstg thread: replace flag = 1 if _n == _N & price >= accept_price & mod(index,2) == 1 & !accept
+by lstg thread: replace flag = 1 if _n < _N & price >= accept_price & mod(index,2) == 1 & (clock != clock[_n+1] | !accept[_n+1])
+
+by lstg thread: replace flag = 1 if _n < _N & price < accept_price & price >= decline_price & clock == clock[_n+1]
 drop start_price decline_price
 
 replace flag = 1 if price == 0 & index == 1
@@ -36,11 +39,6 @@ by lstg thread: replace flag = 1 if (clock - clock[_n-1]) / 1000 > 48 * 3600 & _
 
 sort lstg thread index
 by lstg thread: replace flag = 1 if (clock - clock[_n-1]) / 1000 == 48 * 3600 & !reject & _n > 1
-
-* flag offers that appear to be auto accepts
-
-sort lstg thread index
-by lstg thread: replace flag = 1 if clock == clock[_n-1] & !reject & mod(index, 2) == 0 & _n > 1
 
 * flag in-thread buyer bin offers before seller responds
 

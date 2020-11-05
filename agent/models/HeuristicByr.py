@@ -1,5 +1,5 @@
 import torch
-from constants import NUM_AGENT_CONS, IDX
+from constants import NUM_COMMON_CONS, IDX
 from featnames import LSTG, BYR, DELTA
 
 
@@ -19,7 +19,7 @@ class HeuristicByr:
         assert turn in IDX[BYR]
 
         # initialize output distribution with zeros
-        pdf = torch.zeros(NUM_AGENT_CONS + 2, dtype=torch.float)
+        pdf = torch.zeros(NUM_COMMON_CONS + 2, dtype=torch.float)
 
         if turn == 1:
             pdf[1] = 1.  # 50%

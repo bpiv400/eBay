@@ -2,7 +2,8 @@ from collections import OrderedDict
 import numpy as np
 from processing.util import extract_day_feats, get_lstgs, do_rounding
 from constants import PARTS_DIR, INPUT_DIR, DAY
-from featnames import START_PRICE, META, LEAF, CNDTN, SLR, BYR, LSTG, X_LSTG, VALIDATION
+from featnames import START_PRICE, META, LEAF, CNDTN, SLR, BYR, LSTG, X_LSTG, \
+    VALIDATION, DEC_PRICE, ACC_PRICE
 from utils import input_partition, topickle, load_feats
 
 AS_IS_FEATS = ['store', 'slr_us', 'fast', 'photos', 'slr_lstg_ct',
@@ -29,8 +30,10 @@ def construct_lstg_feats(listings):
     df['refurb'] = s.isin([2, 3, 4, 5, 6])
     df['wear'] = s.isin([8, 9, 10, 11]) * (s - 7)
     # auto decline/accept prices
-    df['auto_decline'] = listings.decline_price / listings.start_price
-    df['has_decline'] = df.auto_decline > 0
+    df['auto_decline'] = listings[DEC_PRICE] / listings[START_PRICE]
+    df['has_decline'] = listings[DEC_PRICE] > 0
+    df['auto_accept'] = listings[ACC_PRICE] / listings[START_PRICE]
+    df['has_accept'] = listings[ACC_PRICE] < listings[START_PRICE]
     # remove slr prefix
     df.rename(lambda c: c[4:] if c.startswith('slr_') else c, 
               axis=1, inplace=True)

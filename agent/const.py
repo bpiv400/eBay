@@ -3,7 +3,7 @@ from featnames import BYR, DELTA, DROPOUT, ENTROPY
 from utils import load_feats
 
 # concessions for agent to use
-AGENT_CONS = load_feats('agent_cons')
+COMMON_CONS = load_feats('common_cons')
 
 # optimization parameters
 LR_POLICY = 1e-4
