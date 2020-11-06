@@ -71,12 +71,14 @@
 \begin{frame}{Larger goal}
 	Tutorial for solving real-world dynamic decision problems.
 	\begin{itemize}
-		\item And characterizing the solutions.
+		\item Where experimentation is infeasible but data are plentiful.
 	\end{itemize}
+	\vspace{5mm}
+	And characterizing the solutions.
 \end{frame}
 
 \begin{frame}{Reinforcement learning}
-	In each state, finds the policy that maximizes the eventual payoff.
+	In each state, find the policy that maximizes the eventual payoff.
 	$$\pi(s): s \rightarrow f(a)$$
 \end{frame}
 
@@ -129,7 +131,7 @@
 \begin{frame}
 	Ideally, we would train the algorithm by bargaining on eBay.
 	\begin{itemize}
-		\item AlphaZero achieved superhuman performance only after millions of games.
+		\item Would require millions of negotiations.
 	\end{itemize}\pause
 	\vspace{5mm}
 	Our approach:
@@ -177,32 +179,10 @@
 
 \section{Data}\label{sec:data}
 
-\begin{frame}{Backus et al. (2020) data}
-	98.3M ``Best Offer'' listings on eBay from 2012-13.\pause
-	\begin{enumerate}
-		\item Plausibly unique listings (unique title): 28.6M\pause
-		\item and fixed list price: 18.6M\pause
-		\item and list price between \$9.95 and \$1000.00: 14.6M\pause
-		\item and no other funny stuff: 13.4M
-	\end{enumerate}
-\end{frame}
-
-\begin{frame}{Partitions}
-	13.4M listings, from 771.6k sellers, split into 4 partitions:
-	\begin{enumerate}
-		\item Simulator training: 75\% of sellers
-		\item RL training: 10\%
-		\item Validation: 5\%
-		\item Test: 10\%
-	\end{enumerate}
-	\vspace{5mm}
-	All results that follow are from validation partition.
-\end{frame}
-
-\begin{frame}{What's in the data?}
-	Complete offer histories for all negotiations.
+\begin{frame}{Backus et al. (2020)}
+	Universe of ``Best Offer'' listings on eBay from 2012-13.
 	\begin{itemize}
-		\item Unique among datasets of this size.
+		\item Complete offer histories for all negotiations.
 	\end{itemize}
 \end{frame}
 
@@ -251,12 +231,34 @@
 %	\end{itemize}
 %\end{frame}
 
+\begin{frame}{Data restrictions}
+	Original data: 98.3M listings.\pause
+	\begin{enumerate}
+		\item Plausibly unique listings (unique title): 28.6M\pause
+		\item and fixed list price: 18.6M\pause
+		\item and list price between \$9.95 and \$1000.00: 14.6M\pause
+		\item and no other funny stuff: 13.4M
+	\end{enumerate}
+\end{frame}
+
+\begin{frame}{Partitions}
+	13.4M listings, from 771.6k sellers, split into 4 partitions:
+	\begin{enumerate}
+		\item Simulator training: 75\% of sellers
+		\item RL training: 10\%
+		\item Validation: 5\%
+		\item Test: 10\%
+	\end{enumerate}
+	\vspace{5mm}
+	All results that follow are from validation partition.
+\end{frame}
+
 \section{Simulator}\label{sec:simulator}
 
 \begin{frame}{Example listing}
 	\begin{itemize}
 		\item \$100 list price
-		\item \$50 auto-reject price
+		\item \$60 auto-reject price
 		\item No auto-accept price
 	\end{itemize}
 	\vspace{5mm}
@@ -264,9 +266,9 @@
 	\vspace{5mm}
 	Counterfactual:
 	\begin{enumerate}
-		\item Buyer 1 offers 50\% of list price.
+		\item Buyer 1 offers \$50.
 		\item Seller auto-rejects.
-		\item Buyer 1 offers 75\% of list price.
+		\item Buyer 1 offers \$75 of list price.
 		\item Buyer 2 purchases the item for the list price.
 	\end{enumerate}
 \end{frame}
@@ -496,7 +498,7 @@
 		\centering
 		\includegraphics[height=.8\textheight]{\detokenize{training/simple_roc.png}}
 	\end{figure}
-	AUC: 53.5\%
+	AUC: 56\%
 \end{frame}
 
 \section{Payoffs}

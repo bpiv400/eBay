@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.14159265-2.6-1.40.18 (TeX Live 2017/Debian) (preloaded format=pdflatex 2020.7.31)  4 NOV 2020 13:49
+This is pdfTeX, Version 3.14159265-2.6-1.40.18 (TeX Live 2017/Debian) (preloaded format=pdflatex 2020.7.31)  6 NOV 2020 12:41
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -2081,9 +2081,20 @@ thkerncmss.
 
 ] [26
 
-] [27
+]
+<../../../figures/w2v/w2v_meta.png, id=204, 281.1303pt x 281.1303pt>
+File: ../../../figures/w2v/w2v_meta.png Graphic file (type png)
+<use ../../../figures/w2v/w2v_meta.png>
+Package pdftex.def Info: ../../../figures/w2v/w2v_meta.png  used on input line 
+215.
+(pdftex.def)             Requested size: 252.07549pt x 252.0748pt.
 
-] [28
+Overfull \vbox (13.0pt too high) detected at line 215
+ []
+
+[27
+
+ <../../../figures/w2v/w2v_meta.png>] [28
 
 ] [29
 
@@ -2093,23 +2104,12 @@ thkerncmss.
 
 ] [32
 
-]
-<../../../figures/w2v/w2v_meta.png, id=235, 281.1303pt x 281.1303pt>
-File: ../../../figures/w2v/w2v_meta.png Graphic file (type png)
-<use ../../../figures/w2v/w2v_meta.png>
-Package pdftex.def Info: ../../../figures/w2v/w2v_meta.png  used on input line 
-235.
-(pdftex.def)             Requested size: 252.07549pt x 252.0748pt.
-
-Overfull \vbox (13.0pt too high) detected at line 235
- []
-
-[33
-
- <../../../figures/w2v/w2v_meta.png>] (./201120 DataColada.toc) [34
+] [33
 
 ]
-[35
+(./201120 DataColada.toc) [34
+
+] [35
 
 ] [36
 
@@ -2120,10 +2120,10 @@ Overfull \vbox (13.0pt too high) detected at line 235
 File: ../../../figures/sim/pdf_arrival.png Graphic file (type png)
 <use ../../../figures/sim/pdf_arrival.png>
 Package pdftex.def Info: ../../../figures/sim/pdf_arrival.png  used on input li
-ne 298.
+ne 300.
 (pdftex.def)             Requested size: 183.0384pt x 201.6606pt.
 
-Overfull \vbox (1.4892pt too high) detected at line 298
+Overfull \vbox (1.4892pt too high) detected at line 300
  []
 
 [38
@@ -2133,7 +2133,7 @@ Overfull \vbox (1.4892pt too high) detected at line 298
 File: ../../../figures/sim/pdf_interarrival.png Graphic file (type png)
 <use ../../../figures/sim/pdf_interarrival.png>
 Package pdftex.def Info: ../../../figures/sim/pdf_interarrival.png  used on inp
-ut line 305.
+ut line 307.
 (pdftex.def)             Requested size: 186.21774pt x 201.6606pt.
  [39
 
@@ -2142,7 +2142,7 @@ ut line 305.
 File: ../../../figures/sim/cdf_hist.png Graphic file (type png)
 <use ../../../figures/sim/cdf_hist.png>
 Package pdftex.def Info: ../../../figures/sim/cdf_hist.png  used on input line 
-312.
+314.
 (pdftex.def)             Requested size: 208.35233pt x 201.6606pt.
  [40
 
@@ -2151,7 +2151,7 @@ Package pdftex.def Info: ../../../figures/sim/cdf_hist.png  used on input line
 File: ../../../figures/sim/cdf_con_1.png Graphic file (type png)
 <use ../../../figures/sim/cdf_con_1.png>
 Package pdftex.def Info: ../../../figures/sim/cdf_con_1.png  used on input line
- 319.
+ 321.
 (pdftex.def)             Requested size: 202.1062pt x 201.6606pt.
  [41
 
@@ -2162,19 +2162,19 @@ Package pdftex.def Info: ../../../figures/sim/cdf_con_1.png  used on input line
 File: ../../../figures/sim/cdf_con_2.png Graphic file (type png)
 <use ../../../figures/sim/cdf_con_2.png>
 Package pdftex.def Info: ../../../figures/sim/cdf_con_2.png  used on input line
- 347.
+ 349.
 (pdftex.def)             Requested size: 127.47125pt x 127.19267pt.
 <../../../figures/sim/cdf_con_4.png, id=304, 327.3831pt x 326.6604pt>
 File: ../../../figures/sim/cdf_con_4.png Graphic file (type png)
 <use ../../../figures/sim/cdf_con_4.png>
 Package pdftex.def Info: ../../../figures/sim/cdf_con_4.png  used on input line
- 347.
+ 349.
 (pdftex.def)             Requested size: 127.47125pt x 127.19267pt.
 <../../../figures/sim/cdf_con_6.png, id=305, 327.3831pt x 326.6604pt>
 File: ../../../figures/sim/cdf_con_6.png Graphic file (type png)
 <use ../../../figures/sim/cdf_con_6.png>
 Package pdftex.def Info: ../../../figures/sim/cdf_con_6.png  used on input line
- 347.
+ 349.
 (pdftex.def)             Requested size: 127.47125pt x 127.19267pt.
  [43
 
@@ -2184,19 +2184,19 @@ Package pdftex.def Info: ../../../figures/sim/cdf_con_6.png  used on input line
 File: ../../../figures/sim/cdf_con_3.png Graphic file (type png)
 <use ../../../figures/sim/cdf_con_3.png>
 Package pdftex.def Info: ../../../figures/sim/cdf_con_3.png  used on input line
- 365.
+ 367.
 (pdftex.def)             Requested size: 127.47125pt x 127.19267pt.
 <../../../figures/sim/cdf_con_5.png, id=317, 327.3831pt x 326.6604pt>
 File: ../../../figures/sim/cdf_con_5.png Graphic file (type png)
 <use ../../../figures/sim/cdf_con_5.png>
 Package pdftex.def Info: ../../../figures/sim/cdf_con_5.png  used on input line
- 365.
+ 367.
 (pdftex.def)             Requested size: 127.47125pt x 127.19267pt.
 <../../../figures/sim/cdf_con_7.png, id=318, 327.3831pt x 326.6604pt>
 File: ../../../figures/sim/cdf_con_7.png Graphic file (type png)
 <use ../../../figures/sim/cdf_con_7.png>
 Package pdftex.def Info: ../../../figures/sim/cdf_con_7.png  used on input line
- 365.
+ 367.
 (pdftex.def)             Requested size: 127.47125pt x 127.19267pt.
  [44
 
@@ -2206,19 +2206,19 @@ Package pdftex.def Info: ../../../figures/sim/cdf_con_7.png  used on input line
 File: ../../../figures/sim/cdf_delay_2.png Graphic file (type png)
 <use ../../../figures/sim/cdf_delay_2.png>
 Package pdftex.def Info: ../../../figures/sim/cdf_delay_2.png  used on input li
-ne 384.
+ne 386.
 (pdftex.def)             Requested size: 127.47125pt x 125.25372pt.
 <../../../figures/sim/cdf_delay_4.png, id=328, 332.442pt x 326.6604pt>
 File: ../../../figures/sim/cdf_delay_4.png Graphic file (type png)
 <use ../../../figures/sim/cdf_delay_4.png>
 Package pdftex.def Info: ../../../figures/sim/cdf_delay_4.png  used on input li
-ne 384.
+ne 386.
 (pdftex.def)             Requested size: 127.47125pt x 125.25372pt.
 <../../../figures/sim/cdf_delay_6.png, id=329, 332.442pt x 326.6604pt>
 File: ../../../figures/sim/cdf_delay_6.png Graphic file (type png)
 <use ../../../figures/sim/cdf_delay_6.png>
 Package pdftex.def Info: ../../../figures/sim/cdf_delay_6.png  used on input li
-ne 384.
+ne 386.
 (pdftex.def)             Requested size: 127.47125pt x 125.25372pt.
  [45
 
@@ -2228,19 +2228,19 @@ ne 384.
 File: ../../../figures/sim/cdf_delay_3.png Graphic file (type png)
 <use ../../../figures/sim/cdf_delay_3.png>
 Package pdftex.def Info: ../../../figures/sim/cdf_delay_3.png  used on input li
-ne 401.
+ne 403.
 (pdftex.def)             Requested size: 127.47125pt x 125.25372pt.
 <../../../figures/sim/cdf_delay_5.png, id=339, 332.442pt x 326.6604pt>
 File: ../../../figures/sim/cdf_delay_5.png Graphic file (type png)
 <use ../../../figures/sim/cdf_delay_5.png>
 Package pdftex.def Info: ../../../figures/sim/cdf_delay_5.png  used on input li
-ne 401.
+ne 403.
 (pdftex.def)             Requested size: 127.47125pt x 125.25372pt.
 <../../../figures/sim/cdf_delay_7.png, id=340, 332.442pt x 326.6604pt>
 File: ../../../figures/sim/cdf_delay_7.png Graphic file (type png)
 <use ../../../figures/sim/cdf_delay_7.png>
 Package pdftex.def Info: ../../../figures/sim/cdf_delay_7.png  used on input li
-ne 401.
+ne 403.
 (pdftex.def)             Requested size: 127.47125pt x 125.25372pt.
  [46
 
@@ -2250,7 +2250,7 @@ ne 401.
 File: ../../../figures/sim/bar_msg.png Graphic file (type png)
 <use ../../../figures/sim/bar_msg.png>
 Package pdftex.def Info: ../../../figures/sim/bar_msg.png  used on input line 4
-08.
+10.
 (pdftex.def)             Requested size: 198.98315pt x 201.6606pt.
  [47
 
@@ -2259,13 +2259,13 @@ Package pdftex.def Info: ../../../figures/sim/bar_msg.png  used on input line 4
 File: ../../../figures/sim/bar_threads.png Graphic file (type png)
 <use ../../../figures/sim/bar_threads.png>
 Package pdftex.def Info: ../../../figures/sim/bar_threads.png  used on input li
-ne 422.
+ne 424.
 (pdftex.def)             Requested size: 170.71652pt x 173.01454pt.
 <../../../figures/sim/bar_offers.png, id=357, 322.3242pt x 326.6604pt>
 File: ../../../figures/sim/bar_offers.png Graphic file (type png)
 <use ../../../figures/sim/bar_offers.png>
 Package pdftex.def Info: ../../../figures/sim/bar_offers.png  used on input lin
-e 422.
+e 424.
 (pdftex.def)             Requested size: 170.71652pt x 173.01454pt.
  [48
 
@@ -2274,16 +2274,16 @@ e 422.
 File: ../../../figures/sim/cdf_days.png Graphic file (type png)
 <use ../../../figures/sim/cdf_days.png>
 Package pdftex.def Info: ../../../figures/sim/cdf_days.png  used on input line 
-440.
+442.
 (pdftex.def)             Requested size: 127.75381pt x 127.47125pt.
 <../../../figures/sim/cdf_saleprice.png, id=366, 336.0555pt x 330.9966pt>
 File: ../../../figures/sim/cdf_saleprice.png Graphic file (type png)
 <use ../../../figures/sim/cdf_saleprice.png>
 Package pdftex.def Info: ../../../figures/sim/cdf_saleprice.png  used on input 
-line 440.
+line 442.
 (pdftex.def)             Requested size: 129.42021pt x 127.47125pt.
 
-Overfull \hbox (1.94896pt too wide) in paragraph at lines 440--440
+Overfull \hbox (1.94896pt too wide) in paragraph at lines 442--442
 [][] 
  []
 
@@ -2291,7 +2291,7 @@ Overfull \hbox (1.94896pt too wide) in paragraph at lines 440--440
 File: ../../../figures/sim/cdf_salenorm.png Graphic file (type png)
 <use ../../../figures/sim/cdf_salenorm.png>
 Package pdftex.def Info: ../../../figures/sim/cdf_salenorm.png  used on input l
-ine 440.
+ine 442.
 (pdftex.def)             Requested size: 127.75381pt x 127.47125pt.
 [49
 
@@ -2302,13 +2302,13 @@ t>
 File: ../../../figures/sim/collectibles/cdf_days.png Graphic file (type png)
 <use ../../../figures/sim/collectibles/cdf_days.png>
 Package pdftex.def Info: ../../../figures/sim/collectibles/cdf_days.png  used o
-n input line 454.
+n input line 456.
 (pdftex.def)             Requested size: 170.71652pt x 170.34288pt.
 <../../../figures/sim/other/cdf_days.png, id=378, 327.3831pt x 326.6604pt>
 File: ../../../figures/sim/other/cdf_days.png Graphic file (type png)
 <use ../../../figures/sim/other/cdf_days.png>
 Package pdftex.def Info: ../../../figures/sim/other/cdf_days.png  used on input
- line 454.
+ line 456.
 (pdftex.def)             Requested size: 170.71652pt x 170.34288pt.
  [50
 
@@ -2320,14 +2320,14 @@ File: ../../../figures/sim/collectibles/cdf_saleprice.png Graphic file (type pn
 g)
 <use ../../../figures/sim/collectibles/cdf_saleprice.png>
 Package pdftex.def Info: ../../../figures/sim/collectibles/cdf_saleprice.png  u
-sed on input line 468.
+sed on input line 470.
 (pdftex.def)             Requested size: 170.71652pt x 160.42386pt.
 <../../../figures/sim/other/cdf_saleprice.png, id=387, 347.6187pt x 326.6604pt>
 
 File: ../../../figures/sim/other/cdf_saleprice.png Graphic file (type png)
 <use ../../../figures/sim/other/cdf_saleprice.png>
 Package pdftex.def Info: ../../../figures/sim/other/cdf_saleprice.png  used on 
-input line 468.
+input line 470.
 (pdftex.def)             Requested size: 170.71652pt x 160.42386pt.
  [51
 
@@ -2339,13 +2339,13 @@ File: ../../../figures/sim/collectibles/cdf_salenorm.png Graphic file (type png
 )
 <use ../../../figures/sim/collectibles/cdf_salenorm.png>
 Package pdftex.def Info: ../../../figures/sim/collectibles/cdf_salenorm.png  us
-ed on input line 482.
+ed on input line 484.
 (pdftex.def)             Requested size: 170.71652pt x 170.34288pt.
 <../../../figures/sim/other/cdf_salenorm.png, id=396, 327.3831pt x 326.6604pt>
 File: ../../../figures/sim/other/cdf_salenorm.png Graphic file (type png)
 <use ../../../figures/sim/other/cdf_salenorm.png>
 Package pdftex.def Info: ../../../figures/sim/other/cdf_salenorm.png  used on i
-nput line 482.
+nput line 484.
 (pdftex.def)             Requested size: 170.71652pt x 170.34288pt.
  [52
 
@@ -2357,7 +2357,7 @@ er/cdf_salenorm.png>] [53
 File: ../../../figures/training/simple_roc.png Graphic file (type png)
 <use ../../../figures/training/simple_roc.png>
 Package pdftex.def Info: ../../../figures/training/simple_roc.png  used on inpu
-t line 500.
+t line 502.
 (pdftex.def)             Requested size: 202.1062pt x 201.6606pt.
  [54
 
@@ -2370,7 +2370,7 @@ t line 500.
 ] [58
 
 ]
-LaTeX Font Info:    Try loading font information for T1+cmtt on input line 533.
+LaTeX Font Info:    Try loading font information for T1+cmtt on input line 535.
 
 
 (/usr/share/texlive/texmf-dist/tex/latex/base/t1cmtt.fd
@@ -2389,7 +2389,7 @@ File: t1cmtt.fd 2014/09/29 v2.5h Standard LaTeX font definitions
 File: ../../../figures/values/pdf_values.png Graphic file (type png)
 <use ../../../figures/values/pdf_values.png>
 Package pdftex.def Info: ../../../figures/values/pdf_values.png  used on input 
-line 540.
+line 542.
 (pdftex.def)             Requested size: 183.0384pt x 201.6606pt.
  [63
 
@@ -2398,10 +2398,10 @@ line 540.
 File: ../../../figures/w2v/w2v_values.png Graphic file (type png)
 <use ../../../figures/w2v/w2v_values.png>
 Package pdftex.def Info: ../../../figures/w2v/w2v_values.png  used on input lin
-e 547.
+e 549.
 (pdftex.def)             Requested size: 259.36023pt x 226.86577pt.
 
-Overfull \vbox (10.96573pt too high) detected at line 547
+Overfull \vbox (10.96573pt too high) detected at line 549
  []
 
 [64
@@ -2411,10 +2411,10 @@ Overfull \vbox (10.96573pt too high) detected at line 547
 File: ../../../figures/values/response_slrbo.png Graphic file (type png)
 <use ../../../figures/values/response_slrbo.png>
 Package pdftex.def Info: ../../../figures/values/response_slrbo.png  used on in
-put line 554.
+put line 556.
 (pdftex.def)             Requested size: 244.74944pt x 226.86577pt.
 
-Overfull \vbox (10.96573pt too high) detected at line 554
+Overfull \vbox (10.96573pt too high) detected at line 556
  []
 
 [65
@@ -2425,7 +2425,7 @@ Overfull \vbox (10.96573pt too high) detected at line 554
 File: ../../../figures/values/response_binvals.png Graphic file (type png)
 <use ../../../figures/values/response_binvals.png>
 Package pdftex.def Info: ../../../figures/values/response_binvals.png  used on 
-input line 561.
+input line 563.
 (pdftex.def)             Requested size: 223.91548pt x 201.6606pt.
  [66
 
@@ -2434,16 +2434,16 @@ input line 561.
 File: ../../../figures/values/coef_photovals.png Graphic file (type png)
 <use ../../../figures/values/coef_photovals.png>
 Package pdftex.def Info: ../../../figures/values/coef_photovals.png  used on in
-put line 575.
+put line 577.
 (pdftex.def)             Requested size: 174.1766pt x 170.71652pt.
 <../../../figures/values/coef_dowvals.png, id=495, 381.5856pt x 320.8788pt>
 File: ../../../figures/values/coef_dowvals.png Graphic file (type png)
 <use ../../../figures/values/coef_dowvals.png>
 Package pdftex.def Info: ../../../figures/values/coef_dowvals.png  used on inpu
-t line 575.
+t line 577.
 (pdftex.def)             Requested size: 203.0138pt x 170.71652pt.
 
-Overfull \hbox (7.8257pt too wide) in paragraph at lines 575--575
+Overfull \hbox (7.8257pt too wide) in paragraph at lines 577--577
  [][] 
  []
 
@@ -2461,19 +2461,19 @@ vals.png>] (./201120 DataColada.toc) [68
 File: ../../../figures/slr/cdf_delay_2.png Graphic file (type png)
 <use ../../../figures/slr/cdf_delay_2.png>
 Package pdftex.def Info: ../../../figures/slr/cdf_delay_2.png  used on input li
-ne 634.
+ne 636.
 (pdftex.def)             Requested size: 127.47125pt x 125.25372pt.
 <../../../figures/slr/cdf_delay_4.png, id=524, 332.442pt x 326.6604pt>
 File: ../../../figures/slr/cdf_delay_4.png Graphic file (type png)
 <use ../../../figures/slr/cdf_delay_4.png>
 Package pdftex.def Info: ../../../figures/slr/cdf_delay_4.png  used on input li
-ne 634.
+ne 636.
 (pdftex.def)             Requested size: 127.47125pt x 125.25372pt.
 <../../../figures/slr/cdf_delay_6.png, id=525, 332.442pt x 326.6604pt>
 File: ../../../figures/slr/cdf_delay_6.png Graphic file (type png)
 <use ../../../figures/slr/cdf_delay_6.png>
 Package pdftex.def Info: ../../../figures/slr/cdf_delay_6.png  used on input li
-ne 634.
+ne 636.
 (pdftex.def)             Requested size: 127.47125pt x 125.25372pt.
  [71
 
@@ -2485,7 +2485,7 @@ ne 634.
 File: ../../../figures/slr2/pdf_values_0.7.png Graphic file (type png)
 <use ../../../figures/slr2/pdf_values_0.7.png>
 Package pdftex.def Info: ../../../figures/slr2/pdf_values_0.7.png  used on inpu
-t line 650.
+t line 652.
 (pdftex.def)             Requested size: 183.0384pt x 201.6606pt.
  [73
 
@@ -2495,13 +2495,13 @@ t line 650.
 File: ../../../figures/slr2/pdf_unsoldvals_0.7.png Graphic file (type png)
 <use ../../../figures/slr2/pdf_unsoldvals_0.7.png>
 Package pdftex.def Info: ../../../figures/slr2/pdf_unsoldvals_0.7.png  used on 
-input line 665.
+input line 667.
 (pdftex.def)             Requested size: 142.26378pt x 156.74236pt.
 <../../../figures/slr2/pdf_soldvals_0.7.png, id=550, 291.2481pt x 320.8788pt>
 File: ../../../figures/slr2/pdf_soldvals_0.7.png Graphic file (type png)
 <use ../../../figures/slr2/pdf_soldvals_0.7.png>
 Package pdftex.def Info: ../../../figures/slr2/pdf_soldvals_0.7.png  used on in
-put line 665.
+put line 667.
 (pdftex.def)             Requested size: 142.26378pt x 156.74236pt.
 
 [74
@@ -2512,10 +2512,10 @@ vals_0.7.png>]
 File: ../../../figures/slr/cdf_lstgnorm.png Graphic file (type png)
 <use ../../../figures/slr/cdf_lstgnorm.png>
 Package pdftex.def Info: ../../../figures/slr/cdf_lstgnorm.png  used on input l
-ine 673.
+ine 675.
 (pdftex.def)             Requested size: 202.1062pt x 201.6606pt.
 
-Overfull \vbox (2.09746pt too high) detected at line 673
+Overfull \vbox (2.09746pt too high) detected at line 675
  []
 
 [75
@@ -2525,13 +2525,13 @@ Overfull \vbox (2.09746pt too high) detected at line 673
 File: ../../../figures/slr/cdf_days.png Graphic file (type png)
 <use ../../../figures/slr/cdf_days.png>
 Package pdftex.def Info: ../../../figures/slr/cdf_days.png  used on input line 
-687.
+689.
 (pdftex.def)             Requested size: 170.71652pt x 170.34288pt.
 <../../../figures/slr/bar_threads.png, id=566, 322.3242pt x 326.6604pt>
 File: ../../../figures/slr/bar_threads.png Graphic file (type png)
 <use ../../../figures/slr/bar_threads.png>
 Package pdftex.def Info: ../../../figures/slr/bar_threads.png  used on input li
-ne 687.
+ne 689.
 (pdftex.def)             Requested size: 170.71652pt x 173.01454pt.
  [76
 
@@ -2540,13 +2540,13 @@ ne 687.
 File: ../../../figures/slr/cdf_norm_1.png Graphic file (type png)
 <use ../../../figures/slr/cdf_norm_1.png>
 Package pdftex.def Info: ../../../figures/slr/cdf_norm_1.png  used on input lin
-e 701.
+e 703.
 (pdftex.def)             Requested size: 170.71652pt x 170.34288pt.
 <../../../figures/slr/cdf_norm_3.png, id=575, 327.3831pt x 326.6604pt>
 File: ../../../figures/slr/cdf_norm_3.png Graphic file (type png)
 <use ../../../figures/slr/cdf_norm_3.png>
 Package pdftex.def Info: ../../../figures/slr/cdf_norm_3.png  used on input lin
-e 701.
+e 703.
 (pdftex.def)             Requested size: 170.71652pt x 170.34288pt.
  [77
 
@@ -2555,16 +2555,16 @@ e 701.
 File: ../../../figures/turn2/response_accept.png Graphic file (type png)
 <use ../../../figures/turn2/response_accept.png>
 Package pdftex.def Info: ../../../figures/turn2/response_accept.png  used on in
-put line 716.
+put line 718.
 (pdftex.def)             Requested size: 170.71652pt x 169.2164pt.
 <../../../figures/turn2/response_reject.png, id=584, 329.5512pt x 326.6604pt>
 File: ../../../figures/turn2/response_reject.png Graphic file (type png)
 <use ../../../figures/turn2/response_reject.png>
 Package pdftex.def Info: ../../../figures/turn2/response_reject.png  used on in
-put line 716.
+put line 718.
 (pdftex.def)             Requested size: 170.71652pt x 169.2164pt.
 
-Overfull \vbox (0.19212pt too high) detected at line 716
+Overfull \vbox (0.19212pt too high) detected at line 718
  []
 
 [78
@@ -2576,7 +2576,7 @@ reject.png>]
 File: ../../../figures/slr3/response_slrrejacc_0.5.png Graphic file (type png)
 <use ../../../figures/slr3/response_slrrejacc_0.5.png>
 Package pdftex.def Info: ../../../figures/slr3/response_slrrejacc_0.5.png  used
- on input line 738.
+ on input line 740.
 (pdftex.def)             Requested size: 95.60344pt x 96.88734pt.
 <../../../figures/slr3/response_slrrejacc_0.67.png, id=593, 322.3242pt x 326.66
 04pt>
@@ -2584,7 +2584,7 @@ File: ../../../figures/slr3/response_slrrejacc_0.67.png Graphic file (type png)
 
 <use ../../../figures/slr3/response_slrrejacc_0.67.png>
 Package pdftex.def Info: ../../../figures/slr3/response_slrrejacc_0.67.png  use
-d on input line 738.
+d on input line 740.
 (pdftex.def)             Requested size: 95.60344pt x 96.88734pt.
 <../../../figures/slr3/response_slrrejacc_0.75.png, id=594, 322.3242pt x 326.66
 04pt>
@@ -2592,14 +2592,14 @@ File: ../../../figures/slr3/response_slrrejacc_0.75.png Graphic file (type png)
 
 <use ../../../figures/slr3/response_slrrejacc_0.75.png>
 Package pdftex.def Info: ../../../figures/slr3/response_slrrejacc_0.75.png  use
-d on input line 738.
+d on input line 740.
 (pdftex.def)             Requested size: 95.60344pt x 96.88734pt.
 <../../../figures/slr3/response_slrrejacc_0.8.png, id=595, 322.3242pt x 326.660
 4pt>
 File: ../../../figures/slr3/response_slrrejacc_0.8.png Graphic file (type png)
 <use ../../../figures/slr3/response_slrrejacc_0.8.png>
 Package pdftex.def Info: ../../../figures/slr3/response_slrrejacc_0.8.png  used
- on input line 738.
+ on input line 740.
 (pdftex.def)             Requested size: 95.60344pt x 96.88734pt.
  [79
 
@@ -2617,7 +2617,7 @@ onse_slrrejacc_0.67.png> <../../../figures/slr3/response_slrrejacc_0.75.png> <.
 File: ../../../figures/slr3/response_rejacc.png Graphic file (type png)
 <use ../../../figures/slr3/response_rejacc.png>
 Package pdftex.def Info: ../../../figures/slr3/response_rejacc.png  used on inp
-ut line 762.
+ut line 764.
 (pdftex.def)             Requested size: 203.44464pt x 201.6606pt.
  [83
 
@@ -2629,14 +2629,14 @@ ut line 762.
 File: ../../../figures/slr3/response_rejacc_Active.png Graphic file (type png)
 <use ../../../figures/slr3/response_rejacc_Active.png>
 Package pdftex.def Info: ../../../figures/slr3/response_rejacc_Active.png  used
- on input line 791.
+ on input line 793.
 (pdftex.def)             Requested size: 170.71652pt x 169.2164pt.
 <../../../figures/slr5/response_rejrejacc.png, id=635, 329.5512pt x 326.6604pt>
 
 File: ../../../figures/slr5/response_rejrejacc.png Graphic file (type png)
 <use ../../../figures/slr5/response_rejrejacc.png>
 Package pdftex.def Info: ../../../figures/slr5/response_rejrejacc.png  used on 
-input line 791.
+input line 793.
 (pdftex.def)             Requested size: 170.71652pt x 169.2164pt.
  [85
 
@@ -2645,14 +2645,14 @@ onse_rejrejacc.png>]
 File: ../../../figures/slr3/response_rejacc_Active.png Graphic file (type png)
 <use ../../../figures/slr3/response_rejacc_Active.png>
 Package pdftex.def Info: ../../../figures/slr3/response_rejacc_Active.png  used
- on input line 805.
+ on input line 807.
 (pdftex.def)             Requested size: 170.71652pt x 169.2164pt.
 <../../../figures/slr3/response_rejrej_Active.png, id=644, 329.5512pt x 326.660
 4pt>
 File: ../../../figures/slr3/response_rejrej_Active.png Graphic file (type png)
 <use ../../../figures/slr3/response_rejrej_Active.png>
 Package pdftex.def Info: ../../../figures/slr3/response_rejrej_Active.png  used
- on input line 805.
+ on input line 807.
 (pdftex.def)             Requested size: 170.71652pt x 169.2164pt.
  [86
 
@@ -2663,7 +2663,7 @@ File: ../../../figures/slr3/response_rejnorm_Active.png Graphic file (type png)
 
 <use ../../../figures/slr3/response_rejnorm_Active.png>
 Package pdftex.def Info: ../../../figures/slr3/response_rejnorm_Active.png  use
-d on input line 812.
+d on input line 814.
 (pdftex.def)             Requested size: 203.44464pt x 201.6606pt.
  [87
 
@@ -2676,13 +2676,13 @@ d on input line 812.
 File: ../../../figures/evaluate/bar_slrnorm.png Graphic file (type png)
 <use ../../../figures/evaluate/bar_slrnorm.png>
 Package pdftex.def Info: ../../../figures/evaluate/bar_slrnorm.png  used on inp
-ut line 855.
+ut line 857.
 (pdftex.def)             Requested size: 170.71652pt x 158.468pt.
 <../../../figures/evaluate/bar_slrdollar.png, id=671, 327.3831pt x 308.5929pt>
 File: ../../../figures/evaluate/bar_slrdollar.png Graphic file (type png)
 <use ../../../figures/evaluate/bar_slrdollar.png>
 Package pdftex.def Info: ../../../figures/evaluate/bar_slrdollar.png  used on i
-nput line 855.
+nput line 857.
 (pdftex.def)             Requested size: 170.71652pt x 160.92126pt.
  [90
 
@@ -2697,7 +2697,7 @@ dollar.png>] [91
 ]
 
 Package hyperref Warning: Token not allowed in a PDF string (PDFDocEncoding):
-(hyperref)                removing `\translate ' on input line 1062.
+(hyperref)                removing `\translate ' on input line 1064.
 
 [94
 
@@ -2708,7 +2708,7 @@ File: ../../../figures/training/bar_training_first_arrival.png Graphic file (ty
 pe png)
 <use ../../../figures/training/bar_training_first_arrival.png>
 Package pdftex.def Info: ../../../figures/training/bar_training_first_arrival.p
-ng  used on input line 1158.
+ng  used on input line 1160.
 (pdftex.def)             Requested size: 45.81111pt x 39.97847pt.
 <../../../figures/training/bar_training_next_arrival.png, id=701, 341.8371pt x 
 312.2064pt>
@@ -2716,63 +2716,63 @@ File: ../../../figures/training/bar_training_next_arrival.png Graphic file (typ
 e png)
 <use ../../../figures/training/bar_training_next_arrival.png>
 Package pdftex.def Info: ../../../figures/training/bar_training_next_arrival.pn
-g  used on input line 1158.
+g  used on input line 1160.
 (pdftex.def)             Requested size: 45.81111pt x 41.83638pt.
 <../../../figures/training/bar_training_hist.png, id=702, 372.9132pt x 317.988p
 t>
 File: ../../../figures/training/bar_training_hist.png Graphic file (type png)
 <use ../../../figures/training/bar_training_hist.png>
 Package pdftex.def Info: ../../../figures/training/bar_training_hist.png  used 
-on input line 1158.
+on input line 1160.
 (pdftex.def)             Requested size: 45.81111pt x 39.0594pt.
 <../../../figures/training/bar_training_con1.png, id=703, 341.8371pt x 320.1561
 pt>
 File: ../../../figures/training/bar_training_con1.png Graphic file (type png)
 <use ../../../figures/training/bar_training_con1.png>
 Package pdftex.def Info: ../../../figures/training/bar_training_con1.png  used 
-on input line 1158.
+on input line 1160.
 (pdftex.def)             Requested size: 45.81111pt x 42.90166pt.
 <../../../figures/training/bar_training_con2.png, id=704, 326.6604pt x 312.2064
 pt>
 File: ../../../figures/training/bar_training_con2.png Graphic file (type png)
 <use ../../../figures/training/bar_training_con2.png>
 Package pdftex.def Info: ../../../figures/training/bar_training_con2.png  used 
-on input line 1158.
+on input line 1160.
 (pdftex.def)             Requested size: 45.81111pt x 43.78004pt.
 <../../../figures/training/bar_training_con3.png, id=705, 326.6604pt x 316.5426
 pt>
 File: ../../../figures/training/bar_training_con3.png Graphic file (type png)
 <use ../../../figures/training/bar_training_con3.png>
 Package pdftex.def Info: ../../../figures/training/bar_training_con3.png  used 
-on input line 1158.
+on input line 1160.
 (pdftex.def)             Requested size: 45.81111pt x 44.3881pt.
 <../../../figures/training/bar_training_con4.png, id=706, 326.6604pt x 312.2064
 pt>
 File: ../../../figures/training/bar_training_con4.png Graphic file (type png)
 <use ../../../figures/training/bar_training_con4.png>
 Package pdftex.def Info: ../../../figures/training/bar_training_con4.png  used 
-on input line 1158.
+on input line 1160.
 (pdftex.def)             Requested size: 45.81111pt x 43.78004pt.
 <../../../figures/training/bar_training_con5.png, id=707, 326.6604pt x 312.2064
 pt>
 File: ../../../figures/training/bar_training_con5.png Graphic file (type png)
 <use ../../../figures/training/bar_training_con5.png>
 Package pdftex.def Info: ../../../figures/training/bar_training_con5.png  used 
-on input line 1158.
+on input line 1160.
 (pdftex.def)             Requested size: 45.81111pt x 43.78004pt.
 <../../../figures/training/bar_training_con6.png, id=708, 326.6604pt x 312.2064
 pt>
 File: ../../../figures/training/bar_training_con6.png Graphic file (type png)
 <use ../../../figures/training/bar_training_con6.png>
 Package pdftex.def Info: ../../../figures/training/bar_training_con6.png  used 
-on input line 1158.
+on input line 1160.
 (pdftex.def)             Requested size: 45.81111pt x 43.78004pt.
 <../../../figures/training/bar_training_con7.png, id=709, 341.8371pt x 312.2064
 pt>
 File: ../../../figures/training/bar_training_con7.png Graphic file (type png)
 <use ../../../figures/training/bar_training_con7.png>
 Package pdftex.def Info: ../../../figures/training/bar_training_con7.png  used 
-on input line 1158.
+on input line 1160.
 (pdftex.def)             Requested size: 45.81111pt x 41.83638pt.
 <../../../figures/training/bar_training_delay2.png, id=710, 341.8371pt x 321.60
 15pt>
@@ -2780,7 +2780,7 @@ File: ../../../figures/training/bar_training_delay2.png Graphic file (type png)
 
 <use ../../../figures/training/bar_training_delay2.png>
 Package pdftex.def Info: ../../../figures/training/bar_training_delay2.png  use
-d on input line 1158.
+d on input line 1160.
 (pdftex.def)             Requested size: 45.81111pt x 43.09535pt.
 <../../../figures/training/bar_training_delay3.png, id=711, 341.8371pt x 312.20
 64pt>
@@ -2788,7 +2788,7 @@ File: ../../../figures/training/bar_training_delay3.png Graphic file (type png)
 
 <use ../../../figures/training/bar_training_delay3.png>
 Package pdftex.def Info: ../../../figures/training/bar_training_delay3.png  use
-d on input line 1158.
+d on input line 1160.
 (pdftex.def)             Requested size: 45.81111pt x 41.83638pt.
 <../../../figures/training/bar_training_delay4.png, id=712, 342.5598pt x 312.20
 64pt>
@@ -2796,7 +2796,7 @@ File: ../../../figures/training/bar_training_delay4.png Graphic file (type png)
 
 <use ../../../figures/training/bar_training_delay4.png>
 Package pdftex.def Info: ../../../figures/training/bar_training_delay4.png  use
-d on input line 1158.
+d on input line 1160.
 (pdftex.def)             Requested size: 45.81111pt x 41.75064pt.
 <../../../figures/training/bar_training_delay5.png, id=713, 341.8371pt x 312.20
 64pt>
@@ -2804,7 +2804,7 @@ File: ../../../figures/training/bar_training_delay5.png Graphic file (type png)
 
 <use ../../../figures/training/bar_training_delay5.png>
 Package pdftex.def Info: ../../../figures/training/bar_training_delay5.png  use
-d on input line 1158.
+d on input line 1160.
 (pdftex.def)             Requested size: 45.81111pt x 41.83638pt.
 <../../../figures/training/bar_training_delay6.png, id=714, 342.5598pt x 312.20
 64pt>
@@ -2812,7 +2812,7 @@ File: ../../../figures/training/bar_training_delay6.png Graphic file (type png)
 
 <use ../../../figures/training/bar_training_delay6.png>
 Package pdftex.def Info: ../../../figures/training/bar_training_delay6.png  use
-d on input line 1158.
+d on input line 1160.
 (pdftex.def)             Requested size: 45.81111pt x 41.75064pt.
 <../../../figures/training/bar_training_delay7.png, id=715, 326.6604pt x 315.81
 99pt>
@@ -2820,49 +2820,49 @@ File: ../../../figures/training/bar_training_delay7.png Graphic file (type png)
 
 <use ../../../figures/training/bar_training_delay7.png>
 Package pdftex.def Info: ../../../figures/training/bar_training_delay7.png  use
-d on input line 1158.
+d on input line 1160.
 (pdftex.def)             Requested size: 45.81111pt x 44.28676pt.
 <../../../figures/training/bar_training_msg1.png, id=716, 326.6604pt x 312.2064
 pt>
 File: ../../../figures/training/bar_training_msg1.png Graphic file (type png)
 <use ../../../figures/training/bar_training_msg1.png>
 Package pdftex.def Info: ../../../figures/training/bar_training_msg1.png  used 
-on input line 1158.
+on input line 1160.
 (pdftex.def)             Requested size: 45.81111pt x 43.78004pt.
 <../../../figures/training/bar_training_msg2.png, id=717, 326.6604pt x 312.2064
 pt>
 File: ../../../figures/training/bar_training_msg2.png Graphic file (type png)
 <use ../../../figures/training/bar_training_msg2.png>
 Package pdftex.def Info: ../../../figures/training/bar_training_msg2.png  used 
-on input line 1158.
+on input line 1160.
 (pdftex.def)             Requested size: 45.81111pt x 43.78004pt.
 <../../../figures/training/bar_training_msg3.png, id=718, 326.6604pt x 312.2064
 pt>
 File: ../../../figures/training/bar_training_msg3.png Graphic file (type png)
 <use ../../../figures/training/bar_training_msg3.png>
 Package pdftex.def Info: ../../../figures/training/bar_training_msg3.png  used 
-on input line 1158.
+on input line 1160.
 (pdftex.def)             Requested size: 45.81111pt x 43.78004pt.
 <../../../figures/training/bar_training_msg4.png, id=719, 326.6604pt x 312.2064
 pt>
 File: ../../../figures/training/bar_training_msg4.png Graphic file (type png)
 <use ../../../figures/training/bar_training_msg4.png>
 Package pdftex.def Info: ../../../figures/training/bar_training_msg4.png  used 
-on input line 1158.
+on input line 1160.
 (pdftex.def)             Requested size: 45.81111pt x 43.78004pt.
 <../../../figures/training/bar_training_msg5.png, id=720, 326.6604pt x 312.2064
 pt>
 File: ../../../figures/training/bar_training_msg5.png Graphic file (type png)
 <use ../../../figures/training/bar_training_msg5.png>
 Package pdftex.def Info: ../../../figures/training/bar_training_msg5.png  used 
-on input line 1158.
+on input line 1160.
 (pdftex.def)             Requested size: 45.81111pt x 43.78004pt.
 <../../../figures/training/bar_training_msg6.png, id=721, 326.6604pt x 312.2064
 pt>
 File: ../../../figures/training/bar_training_msg6.png Graphic file (type png)
 <use ../../../figures/training/bar_training_msg6.png>
 Package pdftex.def Info: ../../../figures/training/bar_training_msg6.png  used 
-on input line 1158.
+on input line 1160.
 (pdftex.def)             Requested size: 45.81111pt x 43.78004pt.
  [95
 
@@ -2885,7 +2885,7 @@ g> <../../../figures/training/bar_training_msg5.png> <../../../figures/training
 File: ../../../figures/slr/cdf_lstgprice.png Graphic file (type png)
 <use ../../../figures/slr/cdf_lstgprice.png>
 Package pdftex.def Info: ../../../figures/slr/cdf_lstgprice.png  used on input 
-line 1165.
+line 1167.
 (pdftex.def)             Requested size: 214.59842pt x 201.6606pt.
  [96
 
@@ -2894,7 +2894,7 @@ File: ../../../figures/slr3/response_slrrejacc_0.67.png Graphic file (type png)
 
 <use ../../../figures/slr3/response_slrrejacc_0.67.png>
 Package pdftex.def Info: ../../../figures/slr3/response_slrrejacc_0.67.png  use
-d on input line 1183.
+d on input line 1185.
 (pdftex.def)             Requested size: 127.47125pt x 129.18645pt.
 <../../../figures/slr3/simple_slrrejaccbin_0.67.png, id=757, 322.3242pt x 326.6
 604pt>
@@ -2902,7 +2902,7 @@ File: ../../../figures/slr3/simple_slrrejaccbin_0.67.png Graphic file (type png
 )
 <use ../../../figures/slr3/simple_slrrejaccbin_0.67.png>
 Package pdftex.def Info: ../../../figures/slr3/simple_slrrejaccbin_0.67.png  us
-ed on input line 1183.
+ed on input line 1185.
 (pdftex.def)             Requested size: 127.47125pt x 129.18645pt.
 <../../../figures/slr3/contourline_bincon_0.67.png, id=758, 322.3242pt x 320.87
 88pt>
@@ -2910,7 +2910,7 @@ File: ../../../figures/slr3/contourline_bincon_0.67.png Graphic file (type png)
 
 <use ../../../figures/slr3/contourline_bincon_0.67.png>
 Package pdftex.def Info: ../../../figures/slr3/contourline_bincon_0.67.png  use
-d on input line 1183.
+d on input line 1185.
 (pdftex.def)             Requested size: 127.47125pt x 126.89996pt.
 
 [97
@@ -2921,7 +2921,7 @@ File: ../../../figures/slr3/response_slrrejacc_0.75.png Graphic file (type png)
 
 <use ../../../figures/slr3/response_slrrejacc_0.75.png>
 Package pdftex.def Info: ../../../figures/slr3/response_slrrejacc_0.75.png  use
-d on input line 1201.
+d on input line 1203.
 (pdftex.def)             Requested size: 127.47125pt x 129.18645pt.
 <../../../figures/slr3/simple_slrrejaccbin_0.75.png, id=767, 322.3242pt x 326.6
 604pt>
@@ -2929,7 +2929,7 @@ File: ../../../figures/slr3/simple_slrrejaccbin_0.75.png Graphic file (type png
 )
 <use ../../../figures/slr3/simple_slrrejaccbin_0.75.png>
 Package pdftex.def Info: ../../../figures/slr3/simple_slrrejaccbin_0.75.png  us
-ed on input line 1201.
+ed on input line 1203.
 (pdftex.def)             Requested size: 127.47125pt x 129.18645pt.
 <../../../figures/slr3/contourline_bincon_0.75.png, id=768, 322.3242pt x 326.66
 04pt>
@@ -2937,7 +2937,7 @@ File: ../../../figures/slr3/contourline_bincon_0.75.png Graphic file (type png)
 
 <use ../../../figures/slr3/contourline_bincon_0.75.png>
 Package pdftex.def Info: ../../../figures/slr3/contourline_bincon_0.75.png  use
-d on input line 1201.
+d on input line 1203.
 (pdftex.def)             Requested size: 127.47125pt x 129.18645pt.
  [98
 
@@ -2947,13 +2947,13 @@ ntourline_bincon_0.75.png>]
 File: ../../../figures/turn2/contour_rejdata.png Graphic file (type png)
 <use ../../../figures/turn2/contour_rejdata.png>
 Package pdftex.def Info: ../../../figures/turn2/contour_rejdata.png  used on in
-put line 1216.
+put line 1218.
 (pdftex.def)             Requested size: 170.71652pt x 159.57237pt.
 <../../../figures/turn2/contour_rejagent.png, id=777, 343.2825pt x 320.8788pt>
 File: ../../../figures/turn2/contour_rejagent.png Graphic file (type png)
 <use ../../../figures/turn2/contour_rejagent.png>
 Package pdftex.def Info: ../../../figures/turn2/contour_rejagent.png  used on i
-nput line 1216.
+nput line 1218.
 (pdftex.def)             Requested size: 170.71652pt x 159.57237pt.
  [99
 
@@ -2968,12 +2968,12 @@ ejagent.png>]
 \tf@snm=\write9
 \openout9 = `"201120 DataColada.snm"'.
 
-Package atveryend Info: Empty hook `BeforeClearDocument' on input line 1219.
-Package atveryend Info: Empty hook `AfterLastShipout' on input line 1219.
+Package atveryend Info: Empty hook `BeforeClearDocument' on input line 1221.
+Package atveryend Info: Empty hook `AfterLastShipout' on input line 1221.
 
 (./201120 DataColada.aux)
-Package atveryend Info: Executing hook `AtVeryEndDocument' on input line 1219.
-Package atveryend Info: Executing hook `AtEndAfterFileList' on input line 1219.
+Package atveryend Info: Executing hook `AtVeryEndDocument' on input line 1221.
+Package atveryend Info: Executing hook `AtEndAfterFileList' on input line 1221.
 
 Package rerunfilecheck Info: File `"201120 DataColada".out' has not changed.
 (rerunfilecheck)             Checksum: 1FECDC02E6B8E038878CF770A1E1D199;253.
@@ -3005,7 +3005,7 @@ er/sfss1095.pfb></usr/share/texmf/fonts/type1/public/cm-super/sfss1440.pfb></us
 r/share/texmf/fonts/type1/public/cm-super/sfsx1095.pfb></usr/share/texmf/fonts/
 type1/public/cm-super/sftt1000.pfb></usr/share/texmf/fonts/type1/public/cm-supe
 r/sftt1095.pfb>
-Output written on "201120 DataColada.pdf" (99 pages, 2561134 bytes).
+Output written on "201120 DataColada.pdf" (99 pages, 2560922 bytes).
 PDF statistics:
  900 PDF objects out of 1000 (max. 8388607)
  588 compressed objects within 6 object streams

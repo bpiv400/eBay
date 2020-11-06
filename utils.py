@@ -139,7 +139,10 @@ def load_model(name, verbose=False):
     net.eval()
 
     # use shared memory
-    net.share_memory()
+    try:
+        net.share_memory()
+    except RuntimeError:
+        pass
 
     return net
 

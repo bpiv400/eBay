@@ -1,5 +1,6 @@
 #!/bin/bash
 #$ -t 1-4096
+#$ -q short.q
 #$ -l m_mem_free=2G
 #$ -N values
 #$ -j y

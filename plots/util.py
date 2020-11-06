@@ -66,7 +66,7 @@ def save_fig(path, legend=True, legend_kwargs=None, reverse_legend=False,
         plt.legend(**legend_kwargs,
                    handlelength=1.,
                    fancybox=False,
-                   frameon=True,
+                   frameon=gridlines,
                    fontsize=fontsize,
                    title_fontsize=fontsize)
         if reverse_legend:

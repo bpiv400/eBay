@@ -53,7 +53,7 @@ def get_p_arrival(part=None, lookup=None):
 
 def main():
     # command line parameters
-    part = input_partition()
+    part = input_partition(agent=True)
     print('Saving {} chunks'.format(part))
 
     # lookup file
