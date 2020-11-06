@@ -1,4 +1,5 @@
 from testing.agents.AgentListing import AgentListing
+from featnames import SLR
 
 
 class SellerListing(AgentListing):
@@ -9,7 +10,7 @@ class SellerListing(AgentListing):
         return True
 
     def _push_actions(self, params):
-        full_inputs = params['inputs'][self.actions.model_name]
+        full_inputs = params['inputs'][SLR]
         for thread_id, thread in self.threads.items():
             agent_turns = thread.get_agent_turns()
             if len(agent_turns) != 0:

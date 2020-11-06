@@ -1,9 +1,9 @@
 import os
-from constants import AGENT_DIR, IDX
+from utils import unpickle, load_file, load_data, get_role, safe_reindex
+from constants import AGENT_DIR, IDX, SIM_DIR
 from featnames import SLR, BYR, NORM, AUTO, INDEX, THREAD, LSTG, CON, \
     LOOKUP, X_THREAD, X_OFFER, START_PRICE, ENTROPY, DELTA, DROPOUT, \
     BYR_AGENT, VALIDATION
-from utils import unpickle, load_file, load_data, get_role, safe_reindex
 
 
 def get_log_dir(**kwargs):
@@ -105,7 +105,7 @@ def get_sale_norm(offers=None, drop_thread=True):
 
 
 def load_values(part=None, delta=None, normalize=True):
-    df = load_file(part, 'values')
+    df = unpickle(SIM_DIR + '{}/values.pkl'.format(part))
     x = df.sale_price.groupby(LSTG).mean()
     num_sales = df.relist_ct.groupby(LSTG).count()
     num_exps = df.relist_ct.groupby(LSTG).sum()

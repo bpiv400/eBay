@@ -4,7 +4,7 @@ from rlenv.events.Thread import Thread
 from rlenv.const import FIRST_OFFER
 from constants import MAX_DELAY_ARRIVAL
 from featnames import START_TIME, START_PRICE, TIME_FEATS, MSG, CON, \
-    LSTG, SIM, THREAD, INDEX, BYR_HIST, DEC_PRICE, CLOCK, BYR_AGENT, \
+    LSTG, SIM, THREAD, INDEX, BYR_HIST, DEC_PRICE, ACC_PRICE, CLOCK, BYR_AGENT, \
     X_THREAD, X_OFFER
 
 OFFER_COLS = [LSTG, SIM, THREAD, INDEX, CLOCK, CON, MSG] + TIME_FEATS
@@ -81,8 +81,10 @@ class Recorder:
         print('start time: {} | end time: {}'.format(
             int(lookup[START_TIME]), int(lookup[START_TIME] + MAX_DELAY_ARRIVAL)))
         norm_dec = lookup[DEC_PRICE] / lookup[START_PRICE]
-        print('Start price: {} | decline price: {} | norm decline price: {}'.format(
-            lookup[START_PRICE], lookup[DEC_PRICE], norm_dec))
+        norm_acc = lookup[ACC_PRICE] / lookup[START_PRICE]
+        print('Start price: {} | dec price: {} ({}) | acc price: {} ({})'.format(
+            lookup[START_PRICE], lookup[DEC_PRICE], norm_dec,
+            lookup[ACC_PRICE], norm_acc))
 
     @staticmethod
     def print_next_event(event):

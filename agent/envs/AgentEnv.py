@@ -135,9 +135,15 @@ class AgentEnv(EBayEnv, Env):
     def _define_con_space(self):
         if self.test:
             cons = np.arange(101) / 100
-            return {t: cons for t in range(1, 8)}
+            cons = {t: cons for t in range(1, 8)}
+        elif self.byr:
+            cons = {t: np.sort(np.concatenate([[0, 1], COMMON_CONS[t]]))
+                    for t in [1, 3, 5]}
+            cons[7] = np.concatenate([np.zeros(NUM_COMMON_CONS + 1), [1.]])
         else:
-            return COMMON_CONS
+            cons = {t: np.sort(np.concatenate([[0, 1, 1.1], COMMON_CONS[t]]))
+                    for t in [2, 4, 6]}
+        return cons
 
     def _define_action_space(self):
         if self.test:

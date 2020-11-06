@@ -1,4 +1,4 @@
-from featnames import START_TIME
+from featnames import START_TIME, BYR
 from constants import MAX_DELAY_ARRIVAL
 from testing.agents.AgentListing import AgentListing
 
@@ -14,7 +14,7 @@ class BuyerListing(AgentListing):
         self.update_arrival_time()
 
     def _push_actions(self, params=None):
-        full_inputs = params['inputs'][self.actions.model_name]
+        full_inputs = params['inputs'][BYR]
         agent_turns = self.threads[self.agent_thread].get_agent_turns()
         self.record_thread(turns=agent_turns,
                            thread_id=self.agent_thread,

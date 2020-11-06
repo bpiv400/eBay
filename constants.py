@@ -62,9 +62,6 @@ INTERVAL_ARRIVAL = int(15 * MINUTE)
 INTERVAL_CT_TURN = int(MAX_DELAY_TURN / INTERVAL_TURN)
 INTERVAL_CT_ARRIVAL = int(MAX_DELAY_ARRIVAL / INTERVAL_ARRIVAL)
 
-# concessions that denote an (almost) even split
-SPLIT_PCTS = [.49, .50, .51]
-
 # multiplier for concession
 CON_MULTIPLIER = 100
 
@@ -89,14 +86,16 @@ COLLECTIBLES = [1, 237, 260, 550, 870, 11116, 20081, 45100, 64482]
 SEED = 123456
 
 # number of chunks
-NUM_CHUNKS = 64
+NUM_CHUNKS = 4096
 
 # simulation counts
-OUTCOME_SIMS = 5
-VALUE_SIMS = 25
+OUTCOME_SIMS = 10
+VALUE_SIMS = 100
 
 # features to drop from 'lstg' grouping for byr agent
-BYR_DROP = ['lstg_ct', 'bo_ct', 'auto_decline', 'has_decline']
+BYR_DROP = ['lstg_ct', 'bo_ct',
+            'auto_decline', 'has_decline',
+            'auto_accept', 'has_accept']
 
 # for precision issues
 EPS = 1e-8

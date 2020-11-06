@@ -1,11 +1,17 @@
 from datetime import datetime as dt
+import pandas as pd
+from rlenv.Composer import Composer
 from rlenv.generate.Recorder import OutcomeRecorder
 from rlenv.interfaces.ArrivalInterface import ArrivalInterface
 from rlenv.interfaces.PlayerInterface import SimulatedSeller, SimulatedBuyer
 from rlenv.LstgLoader import ChunkLoader
 from rlenv.QueryStrategy import DefaultQueryStrategy
 from rlenv.util import get_env_sim_dir, load_chunk
-from constants import OUTCOME_SIMS
+from constants import OUTCOME_SIMS, VALUE_SIMS
+from featnames import LSTG
+
+
+VALUE_COLS = [LSTG, 'sale', 'sale_price', 'relist_ct']
 
 
 class Generator:
@@ -62,7 +68,8 @@ class Generator:
             self.env.next_lstg()
             for i in range(OUTCOME_SIMS):
                 self.simulate_lstg()
-                self.recorder.increment_sim()
+                if self.recorder is not None:
+                    self.recorder.increment_sim()
 
         # time elapsed
         print('Avg time per listing: {} seconds'.format(
@@ -108,3 +115,63 @@ class Generator:
         return ChunkLoader(x_lstg=x_lstg,
                            lookup=lookup,
                            p_arrival=p_arrival)
+
+
+class OutcomeGenerator(Generator):
+
+    def __init__(self, env):
+        super().__init__(verbose=False, test=True)
+        self.env = env
+
+    def generate_composer(self):
+        return Composer(cols=self.loader.x_lstg_cols)
+
+    @property
+    def env_class(self):
+        return self.env
+
+    def simulate_lstg(self):
+        """
+        Simulates listing once.
+        :return: None
+        """
+        self.env.reset()
+        self.env.run()
+
+
+class ValueGenerator(OutcomeGenerator):
+
+    def generate_recorder(self):
+        return None
+
+    def generate(self):
+        rows = []
+        while self.env.has_next_lstg():
+            start = dt.now()
+            lstg = self.env.next_lstg()
+            for i in range(VALUE_SIMS):
+                row = self.simulate_lstg()
+                rows.append([lstg, i] + list(row))
+
+            # print listing summary
+            elapsed = int(round((dt.now() - start).total_seconds()))
+            print('{}: {} sec'.format(lstg, elapsed))
+
+        # convert to dataframe
+        df = pd.DataFrame.from_records(rows, columns=VALUE_COLS)
+        df = df.set_index([LSTG, 'sale']).sort_index()
+        return df
+
+    def simulate_lstg(self):
+        """
+        Simulate until sale.
+        :return: (sale price, relist count)
+        """
+        relist_ct = -1
+        while relist_ct < 1000:
+            relist_ct += 1
+            self.env.reset()
+            self.env.run()
+            if self.env.outcome.sale:
+                break
+        return self.env.outcome.price, relist_ct

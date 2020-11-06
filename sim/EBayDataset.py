@@ -1,7 +1,7 @@
 import numpy as np
 from torch.utils.data import Dataset
 from utils import load_file, load_inputs
-from featnames import X_LSTG, LSTG, THREAD, TRAIN_RL_MODELS, VALIDATION, \
+from featnames import X_LSTG, LSTG, THREAD, DISCRIM_MODEL, VALIDATION, \
     TRAIN_MODELS, TRAIN_RL
 
 
@@ -22,7 +22,7 @@ class EBayDataset(Dataset):
         elif not train:
             self.part = VALIDATION
         else:
-            if name in TRAIN_RL_MODELS:
+            if name == DISCRIM_MODEL:
                 self.part = TRAIN_RL
             else:
                 self.part = TRAIN_MODELS

@@ -240,7 +240,7 @@ def get_auto_safe_lstgs(chunk=None):
     offers = offers.join(other=lookup, on=LSTG)
     offers['diff_dec'] = (offers[NORM] - offers[DEC_PRICE]).abs()
     offers['diff_acc'] = (offers[NORM] - offers[ACC_PRICE]).abs()
-    offers['low_diff'] = (offers['diff_dec'] < .01) & (offers['diff_acc'] < .01)
+    offers['low_diff'] = (offers['diff_dec'] < .01) | (offers['diff_acc'] < .01)
     low_diff_count = offers['low_diff'].groupby(level=LSTG).sum()
     no_low_diffs_lstgs = low_diff_count.index[low_diff_count == 0]
     output_lstgs = no_low_diffs_lstgs.union(null_offer_lstgs)

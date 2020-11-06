@@ -4,7 +4,7 @@ from inputs.util import save_featnames_and_sizes, \
 from utils import topickle, load_file, input_partition, load_data
 from constants import INPUT_DIR
 from featnames import COMMON, DAYS, DELAY, EXP, AUTO, REJECT, MSG, LOOKUP, THREAD, \
-    INDEX, X_THREAD, X_OFFER, TRAIN_RL, VALIDATION, TEST, DISCRIM_MODEL
+    INDEX, X_THREAD, X_OFFER, AGENT_PARTITIONS, VALIDATION, DISCRIM_MODEL
 
 
 def save_discrim_files(part=None, x_obs=None, x_sim=None, lstgs=None):
@@ -76,6 +76,11 @@ def get_x_offer(offers, idx):
 def construct_x(part=None, sim=False):
     # load files
     data = load_data(part=part, sim=sim)
+    # only use first sim
+    if sim:
+        for k, v in data.items():
+            if k != LOOKUP:
+                data[k] = v.xs(0, level='sim')
     # master index
     idx = data[X_THREAD].index
     # thread features
@@ -88,7 +93,7 @@ def construct_x(part=None, sim=False):
 def main():
     # extract parameters from command line
     part = input_partition()
-    assert part in [TRAIN_RL, VALIDATION, TEST]
+    assert part in AGENT_PARTITIONS
     print('{}/{}'.format(part, DISCRIM_MODEL))
 
     # listing ids

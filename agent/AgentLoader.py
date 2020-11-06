@@ -1,4 +1,6 @@
+import psutil
 import numpy as np
+import pandas as pd
 from constants import NUM_CHUNKS, PARTS_DIR
 from featnames import TRAIN_RL
 from rlenv.LstgLoader import LstgLoader, ChunkLoader
@@ -14,15 +16,21 @@ class AgentLoader(LstgLoader):
         self._internal_loader = None
 
     def init(self, rank):
-        filename = self._get_train_file_path(rank)
-        chunk = load_chunk(input_path=filename)
-        self._x_lstg_slice, self._lookup_slice, self._p_arrival_slice = chunk
+        self._load_chunks(rank)
         self._draw_lstgs()
 
-    @staticmethod
-    def _get_train_file_path(rank=None):
-        rank = rank % NUM_CHUNKS  # for using more workers
-        return PARTS_DIR + '{}/chunks/{}.pkl'.format(TRAIN_RL, rank)
+    def _load_chunks(self, rank=None):
+        nums = np.split(np.arange(NUM_CHUNKS), psutil.cpu_count())[rank]
+        x_lstg, lookup, p_arrival = [], [], []
+        for num in nums:
+            path = PARTS_DIR + '{}/chunks/{}.pkl'.format(TRAIN_RL, num)
+            chunk = load_chunk(input_path=path)
+            x_lstg.append(chunk[0])
+            lookup.append(chunk[1])
+            p_arrival.append(chunk[2])
+        self._x_lstg_slice = pd.concat(x_lstg, axis=0)
+        self._lookup_slice = pd.concat(lookup, axis=0)
+        self._p_arrival_slice = pd.concat(p_arrival, axis=0)
 
     def next_lstg(self):
         self.verify_init()

@@ -3,8 +3,8 @@
 GPU=0
 while true
 do
-  PID=$(nvidia-smi -i $GPU | grep '      C   ' | awk '{ print $3 }')
-  if [[ "$PID" == "" ]]; then
+  MB=$(nvidia-smi -i $GPU | grep '      C   ' | awk '{ print $8 }' | uniq)
+  if [[ "$MB" == "0MiB" || "$MB" == "" ]]; then
     break
   fi
   if [ $GPU == 3 ]; then

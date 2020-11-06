@@ -12,7 +12,8 @@ from nets.FeedForward import FeedForward
 from sim.Sample import get_batches
 from constants import DAY, INPUT_DIR, MODEL_DIR, SIM_DIR, \
     PARTS_DIR, MAX_DELAY_TURN, MAX_DELAY_ARRIVAL, NUM_CHUNKS, FEATS_DIR
-from featnames import LOOKUP, X_THREAD, X_OFFER, CLOCK, BYR, SLR
+from featnames import LOOKUP, X_THREAD, X_OFFER, CLOCK, BYR, SLR, AGENT_PARTITIONS, \
+    PARTITIONS
 
 
 def unpickle(file):
@@ -209,14 +210,20 @@ def get_model_predictions(data, softmax=True):
     return p
 
 
-def input_partition():
+def input_partition(agent=False):
     """
     Parses command line input for partition name.
+    :param bool agent: if True, raise error when 'sim' partition is called.
     :return part: string partition name.
     """
     parser = argparse.ArgumentParser()
     parser.add_argument('--part', required=True, type=str)
-    return parser.parse_args().part
+    part = parser.parse_args().part
+    if agent:
+        assert part in AGENT_PARTITIONS
+    else:
+        assert part in PARTITIONS
+    return part
 
 
 def init_optional_arg(kwargs=None, name=None, default=None):
@@ -265,7 +272,7 @@ def set_gpu(gpu=None):
     Sets the GPU index and the CPU affinity.
     :param int gpu: index of cuda device.
     """
-    torch.cuda.device(gpu)
+    torch.cuda.set_device(gpu)
     print('Using cuda:{}'.format(gpu))
 
 
