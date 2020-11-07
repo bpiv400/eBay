@@ -8,7 +8,7 @@ def main():
     N = pd.to_datetime(END) - pd.to_datetime(START) \
         + pd.to_timedelta(MAX_DAYS, unit='d') \
         + pd.to_timedelta(1, unit='s')
-    days = pd.to_datetime(range(N.days), unit='D', origin=START)
+    days = pd.to_datetime(list(range(N.days)), unit='D', origin=START)
     df = pd.DataFrame(index=days)
     df[HOLIDAY] = days.isin(HOLIDAYS)
     for i in range(6):

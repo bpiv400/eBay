@@ -22,9 +22,8 @@ def unpickle(file):
     :param file: str giving path to file
     :return: contents of file
     """
-    f = open(file, "rb")
-    obj = pickle.load(f)
-    f.close()
+    with open(file, "rb") as f:
+        obj = pickle.load(f)
     return obj
 
 
@@ -35,7 +34,8 @@ def topickle(contents=None, path=None):
     :param str path: path to file
     :return: contents of file
     """
-    pickle.dump(contents, open(path, "wb"), protocol=4)
+    with open(path, "wb") as f:
+        pickle.dump(contents, f, protocol=4)
 
 
 def get_remaining(lstg_start, delay_start):
