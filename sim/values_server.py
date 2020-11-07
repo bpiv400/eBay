@@ -23,7 +23,7 @@ def main():
 
     # process one chunk
     path = output_dir + '{}.pkl'.format(chunk)
-    if os.path.isfile():
+    if os.path.isfile(path):
         print('Values for chunk {} already exists.'.format(chunk))
         exit(0)
     gen = ValueGenerator(env=SimulatorEnv)
