@@ -608,32 +608,13 @@
 		\vspace{5mm}
 		\item[$a$] $\in \{\texttt{expiration}, \texttt{reject}, .2, .25, .33, .4, .5, .6, .67, \texttt{accept}\}$
 		\begin{itemize}
+			\item Make offer when a human seller would.
 			\item Cannot send a message.
 		\end{itemize}	
 	\end{itemize}
 \end{frame}
 
-\begin{frame}{When does agent seller make offers?}
-\begin{figure}
-	\centering
-	\begin{subfigure}[b]{0.32\textwidth}
-		\caption*{2}
-		\includegraphics[width=\textwidth]{{slr/cdf_delay_2}.png}
-	\end{subfigure}
-	\begin{subfigure}[b]{0.32\textwidth}
-		\caption*{4}
-		\includegraphics[width=\textwidth]{{slr/cdf_delay_4}.png}
-	\end{subfigure}
-	\begin{subfigure}[b]{0.32\textwidth}
-		\caption*{6}
-		\includegraphics[width=\textwidth]{{slr/cdf_delay_6}.png}
-	\end{subfigure}
-\end{figure}
-	Drawn from turn-specific distribution for simulated seller.
-	\begin{itemize}
-		\item Conditional on delay $<$ 48 hours.
-	\end{itemize}
-\end{frame}
+
 
 \begin{frame}{Valid listings}
 	A listing is valid if agent seller makes $\ge 1$ non-automatic offer.
@@ -651,22 +632,7 @@
 	\end{figure}
 \end{frame}
 
-\begin{frame}{Values $(\delta = 0.7)$}
-\begin{figure}
-	\centering
-	\begin{subfigure}[t]{0.49\textwidth}
-		\centering\caption{Unsold items}
-		\includegraphics[width=5cm]{{slr2/pdf_unsoldvals_0.7}.png}
-	\end{subfigure}
-	\begin{subfigure}[t]{0.49\textwidth}
-		\centering\caption{Sold items}
-		\includegraphics[width=5cm]{{slr2/pdf_soldvals_0.7}.png}
-	\end{subfigure}
-\end{figure}
-80.7\% of valid listings sell in data vs. 80.3\% for agent.
-\end{frame}
-
-\begin{frame}{Sale prices}
+\begin{frame}{Sale prices $(\delta = 0.7)$}
 	\begin{figure}
 		\centering
 		\includegraphics[height=.8\textheight]{{slr/cdf_lstgnorm}.png}
@@ -1157,6 +1123,43 @@ Reject early, concede later.
 		\includegraphics[width=\textwidth]{{training/bar_training_msg6}.png}
 	\end{subfigure}
 \end{figure}
+\end{frame}
+
+\begin{frame}{When does agent seller make offers?}
+\begin{figure}
+	\centering
+	\begin{subfigure}[b]{0.32\textwidth}
+		\caption*{2}
+		\includegraphics[width=\textwidth]{{slr/cdf_delay_2}.png}
+	\end{subfigure}
+	\begin{subfigure}[b]{0.32\textwidth}
+		\caption*{4}
+		\includegraphics[width=\textwidth]{{slr/cdf_delay_4}.png}
+	\end{subfigure}
+	\begin{subfigure}[b]{0.32\textwidth}
+		\caption*{6}
+		\includegraphics[width=\textwidth]{{slr/cdf_delay_6}.png}
+	\end{subfigure}
+\end{figure}
+	Drawn from turn-specific distribution for simulated seller.
+	\begin{itemize}
+		\item Conditional on delay $<$ 48 hours.
+	\end{itemize}
+\end{frame}
+
+\begin{frame}{Values $(\delta = 0.7)$}
+\begin{figure}
+	\centering
+	\begin{subfigure}[t]{0.49\textwidth}
+		\centering\caption{Unsold items}
+		\includegraphics[width=5cm]{{slr2/pdf_unsoldvals_0.7}.png}
+	\end{subfigure}
+	\begin{subfigure}[t]{0.49\textwidth}
+		\centering\caption{Sold items}
+		\includegraphics[width=5cm]{{slr2/pdf_soldvals_0.7}.png}
+	\end{subfigure}
+\end{figure}
+80.7\% of valid listings sell in data vs. 80.3\% for agent.
 \end{frame}
 
 \begin{frame}{Sale prices}

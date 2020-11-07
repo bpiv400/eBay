@@ -23,6 +23,9 @@ def main():
 
     # process one chunk
     path = output_dir + '{}.pkl'.format(chunk)
+    if os.path.isfile():
+        print('Values for chunk {} already exists.'.format(chunk))
+        exit(0)
     gen = ValueGenerator(env=SimulatorEnv)
     df = gen.process_chunk(part=args.part, chunk=chunk)
     topickle(df, path)
