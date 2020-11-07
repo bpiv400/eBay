@@ -6,4 +6,5 @@
 #$ -j y
 #$ -o logs/values/
 
+ulimit -n 4096
 python repo/sim/values_server.py --num "$SGE_TASK_ID" --part "$1"
