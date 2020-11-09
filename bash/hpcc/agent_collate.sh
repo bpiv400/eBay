@@ -1,8 +1,8 @@
 #!/bin/bash
 #$ -l m_mem_free=25G
-#$ -N collate
+#$ -N agent
 #$ -j y
 #$ -o logs/collate/
 
 ulimit -n 4096
-python repo/sim/collate.py --part "$1" --type "$2"
+python repo/agent/eval/collate.py "$1"

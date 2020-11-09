@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from assess.util import ll_wrapper, add_byr_reject_on_listing_expiration, kreg2
+from assess.util import ll_wrapper, add_byr_reject_on_lstg_expiration, kreg2
 from utils import topickle, load_data, safe_reindex
 from agent.const import COMMON_CONS
 from assess.const import NORM1_DIM, CON2_DIM
@@ -14,7 +14,7 @@ def rejection_plot(y=None, x1=None, x2=None):
     for k, v in cols.items():
         mask = np.isclose(x2, v) & (x1 > .33)
         line, dots, bw = ll_wrapper(y[mask], x1[mask],
-                                    discrete=COMMON_CONS[1][1:-1],
+                                    discrete=COMMON_CONS[1],
                                     dim=NORM1_DIM)
         if tup is None:
             line.columns = pd.MultiIndex.from_product([[k], line.columns])
@@ -32,7 +32,7 @@ def main():
     d = dict()
 
     data = load_data(part=TEST)
-    con = add_byr_reject_on_listing_expiration(con=data[X_OFFER][CON])
+    con = add_byr_reject_on_lstg_expiration(con=data[X_OFFER][CON])
     norm = data[X_OFFER][NORM]
 
     con3 = con.xs(3, level=INDEX)
@@ -55,7 +55,7 @@ def main():
         d[key] = rejection_plot(y=y, x1=x1, x2=x2)
 
     # turn2 vs. turn3, excluding turn2 reject
-    for c in COMMON_CONS[1][1:-1]:
+    for c in COMMON_CONS[1]:
         k = '{}'.format(c)
         mask = np.isclose(x1, c) & (x2 >= 0) & (x2 <= .9)
         for feat in ['acc', 'norm']:
@@ -65,7 +65,7 @@ def main():
                                         discrete=[0, .5], dim=CON2_DIM)
             print('{}_{}: {}'.format(feat, c, bw[0]))
 
-            if c == COMMON_CONS[1][1]:
+            if c == COMMON_CONS[1][0]:
                 line.columns = pd.MultiIndex.from_product([[k], line.columns])
                 dots.columns = pd.MultiIndex.from_product([[k], dots.columns])
                 d[key] = line, dots
@@ -75,7 +75,7 @@ def main():
                     d[key][1].loc[:, (k, col)] = dots[col]
 
     # list price vs. turn3, after active turn2 reject or concession
-    for c in COMMON_CONS[1][1:-1]:
+    for c in COMMON_CONS[1]:
         mask = np.isclose(x1, c) & (x2 > 0)
         s1, bw = kreg2(y=y_acc[mask], x1=x3[mask], x2=x2[mask])
         print('List price 2-D, {}: {}'.format(c, bw))

@@ -1,9 +1,9 @@
+import numpy as np
 from agent.AgentComposer import AgentComposer
 from agent.envs.BuyerEnv import BuyerEnv
 from agent.envs.SellerEnv import SellerEnv
 from rlenv.generate.Generator import Generator
 from rlenv.interfaces.PlayerInterface import SimulatedBuyer, SimulatedSeller
-from rlenv.util import sample_categorical
 
 
 class AgentGenerator(Generator):
@@ -31,5 +31,5 @@ class AgentGenerator(Generator):
             done = False
             while not done:
                 probs = self.model(observation=obs)
-                action = int(sample_categorical(probs=probs))
+                action = np.argmax(probs)
                 obs, _, done, _ = self.env.step(action)

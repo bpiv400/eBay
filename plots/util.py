@@ -466,11 +466,11 @@ def response_plot(path, obj):
 def coef_plot(path, df):
     name = get_name(path)
     if name == 'photovals':
-        args = dict(xlim=[.45, .61],
+        args = dict(xlim=[.31, .45],
                     ylabel='Number of photos',
                     xlabel='Normalized value')
     elif name == 'dowvals':
-        args = dict(xlim=[.46, .57], ylabel='',
+        args = dict(xlim=[.34, .38], ylabel='',
                     xlabel='Normalized value')
     else:
         raise NotImplementedError('Invalid name: {}'.format(name))
@@ -509,7 +509,9 @@ def bar_plot(path, df):
         args = dict(ylim=[76, 86], legend=False, xlabel='',
                     ylabel='Average reward ($)')
     elif name == 'training':
-        args = dict(ylim=[df['Baserate'], None], legend=False,
+        baserate = df['Baserate']
+        df.drop('Baserate', inplace=True)
+        args = dict(ylim=[baserate, None], legend=False,
                     xlabel='', ylabel='')
     else:
         raise NotImplementedError('Invalid name: {}'.format(name))

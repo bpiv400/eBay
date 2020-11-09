@@ -12,10 +12,8 @@ elif 'Windows' in platform() and 'A:' in os.getcwd():  # Barry's pc
     PREFIX = 'A:/ebay/data'
 elif 'Windows' in platform() and 'C:' in os.getcwd():  # Barry's laptop
     PREFIX = os.path.expanduser('~/ebay/data')
-elif 'Darwin' in platform():  # Etan's Mac laptop
-    PREFIX = os.path.expanduser('~/eBay/data')
 else:  # cluster and AWS
-    PREFIX = os.path.expanduser('~/Dropbox/eBay/data')
+    PREFIX = os.path.expanduser('~/eBay/data')
 
 PARTS_DIR = '{}/partitions/'.format(PREFIX)     # post-partition features
 SIM_DIR = '{}/sim/'.format(PREFIX)              # simulated threads and offers

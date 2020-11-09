@@ -299,7 +299,7 @@ def kreg2(y=None, x1=None, x2=None, names=None, mesh=None, bw=None):
     return s, ll2.bw
 
 
-def add_byr_reject_on_listing_expiration(con=None):
+def add_byr_reject_on_lstg_expiration(con=None):
     sale = (con == 1).groupby(con.index.names[:-2]).max()
     s = con.reset_index(INDEX)[INDEX]
     slr_last = s.groupby(s.index.names).max().apply(lambda x: x in IDX[SLR])

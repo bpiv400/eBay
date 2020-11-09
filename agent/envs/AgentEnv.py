@@ -37,7 +37,7 @@ class AgentEnv(EBayEnv, Env):
                            for k, v in self.composer.agent_sizes['x'].items()}
 
         # action space
-        self.con_set = self._define_con_space()
+        self.con_set = self._define_con_set()
         self._action_space = self._define_action_space()
 
         # observation space
@@ -132,7 +132,7 @@ class AgentEnv(EBayEnv, Env):
     def _obs_class(self):
         raise NotImplementedError()
 
-    def _define_con_space(self):
+    def _define_con_set(self):
         if self.test:
             cons = np.arange(101) / 100
             cons = {t: cons for t in range(1, 8)}

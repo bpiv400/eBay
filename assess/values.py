@@ -5,7 +5,7 @@ from assess.util import kdens_wrapper, ll_wrapper, calculate_row
 from processing.util import do_rounding, extract_day_feats, feat_to_pctile
 from utils import topickle, load_data, load_feats
 from agent.const import DELTA_CHOICES
-from assess.const import DELTA_BYR, LOG10_BIN_DIM, LOG10_BO_DIM
+from assess.const import DELTA_SLR, LOG10_BIN_DIM, LOG10_BO_DIM
 from constants import PLOT_DIR, DAY
 from featnames import LOOKUP, SLR_BO_CT, TEST, START_PRICE
 
@@ -57,7 +57,7 @@ def main():
     # various data
     data = load_data(part=TEST)
     listings = load_feats('listings', lstgs=data[LOOKUP].index)
-    vals = load_values(part=TEST, delta=DELTA_BYR)
+    vals = load_values(part=TEST, delta=DELTA_SLR)
 
     d = dict()
 
