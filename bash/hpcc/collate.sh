@@ -5,4 +5,4 @@
 #$ -o logs/
 
 ulimit -n 4096
-python repo/sim/collate.py --values --part "$1"
+python repo/sim/collate.py --part "$1" --type "$2"

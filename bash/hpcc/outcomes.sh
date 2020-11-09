@@ -2,7 +2,7 @@
 #$ -t 1-512
 #$ -q short.q
 #$ -l m_mem_free=2G
-#$ -N values
+#$ -N outcomes
 #$ -j y
 #$ -o logs/outcomes/
 
