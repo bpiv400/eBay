@@ -10,10 +10,10 @@ from torch.nn.functional import log_softmax
 import numpy as np
 from nets.FeedForward import FeedForward
 from sim.Sample import get_batches
-from constants import DAY, INPUT_DIR, MODEL_DIR, SIM_DIR, \
-    PARTS_DIR, MAX_DELAY_TURN, MAX_DELAY_ARRIVAL, NUM_CHUNKS, FEATS_DIR
+from constants import DAY, INPUT_DIR, MODEL_DIR, SIM_DIR, PARTS_DIR, OUTCOME_SIMS, \
+    MAX_DELAY_TURN, MAX_DELAY_ARRIVAL, NUM_CHUNKS, FEATS_DIR
 from featnames import LOOKUP, X_THREAD, X_OFFER, CLOCK, BYR, SLR, AGENT_PARTITIONS, \
-    PARTITIONS
+    PARTITIONS, LSTG, SIM
 
 
 def unpickle(file):
@@ -262,14 +262,28 @@ def load_data(part=None, sim=False, run_dir=None, lstgs=None):
         folder = SIM_DIR
     else:
         folder = run_dir
+
+    # initialize dictionary with lookup file
     data = {LOOKUP: load_file(part, LOOKUP)}
+
+    # load other components
     for k in [X_THREAD, X_OFFER, CLOCK]:
         df = load_file(part, k, folder=folder)
         if df is not None:
             data[k] = df
+
+    # restrict to lstgs
     if lstgs is not None:
         for k, df in data.items():
             data[k] = safe_reindex(df, idx=lstgs)
+
+    # expand lookup index by OUTCOME_SIMS
+    if sim or run_dir is not None:
+        lstgs = data[LOOKUP].index if lstgs is None else lstgs
+        idx = pd.MultiIndex.from_product([lstgs, range(OUTCOME_SIMS)],
+                                         names=[LSTG, SIM])
+        data[LOOKUP] = safe_reindex(data[LOOKUP], idx=idx)
+
     return data
 
 

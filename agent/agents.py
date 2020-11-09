@@ -8,7 +8,7 @@ from rlpyt.agents.pg.base import AgentInfo
 from rlpyt.agents.pg.categorical import CategoricalPgAgent
 from rlpyt.distributions.categorical import DistInfo
 from rlpyt.utils.buffer import buffer_to
-from agent.const import COMMON_CONS
+from agent.const import AGENT_CONS
 from constants import EPS, IDX, SLR
 from featnames import BYR
 
@@ -88,7 +88,7 @@ class SplitCategoricalPgAgent(CategoricalPgAgent):
         # action stats
         action = samples.agent.action[valid].numpy()
         turn = env.env_info.turn[valid].numpy()
-        sets = np.stack([COMMON_CONS[t] for t in turn])
+        sets = np.stack([AGENT_CONS[t] for t in turn])
         con = np.take_along_axis(sets, np.expand_dims(action, 1), 1)
 
         opt_info = self._get_turn_info(opt_info=opt_info,
@@ -166,7 +166,7 @@ class SellerAgent(SplitCategoricalPgAgent):
 class BuyerAgent(SplitCategoricalPgAgent):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.length = 2 - COMMON_CONS[1][0]  # of [-1, .5]
+        self.length = 2 - AGENT_CONS[1][1]  # length of [-1, .5]
         self.max_return = self.length - 1
 
     def _calculate_value(self, value_params):

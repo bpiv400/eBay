@@ -1,9 +1,15 @@
-from constants import DROPOUT_GRID
+import numpy as np
+from constants import DROPOUT_GRID, NUM_COMMON_CONS
 from featnames import BYR, DELTA, DROPOUT, ENTROPY
 from utils import load_feats
 
 # concessions for agent to use
 COMMON_CONS = load_feats('common_cons')
+AGENT_CONS = COMMON_CONS.copy()
+for t in range(1, 7):
+    other = [0, 1] if t in [1, 3, 5] else [0, 1, 1.1]
+    AGENT_CONS[t] = np.sort(np.concatenate([other, COMMON_CONS[t]]))
+AGENT_CONS[7] = np.concatenate([np.zeros(NUM_COMMON_CONS + 1), [1.]])
 
 # optimization parameters
 LR_POLICY = 1e-4
@@ -16,7 +22,7 @@ STOP_ENTROPY = .01
 AGENT_STATE = 'agent_state_dict'
 
 # agent parameters
-DELTA_CHOICES = [.7, .9, .99]
+DELTA_CHOICES = [.67, .7, .9, .99]
 AGENT_PARAMS = {BYR: dict(action='store_true'),
                 DELTA: dict(type=float,
                             choices=DELTA_CHOICES,

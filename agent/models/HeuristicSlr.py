@@ -2,7 +2,7 @@ import numpy as np
 import torch
 from agent.util import get_turn
 from rlenv.const import DAYS_IND, NORM_IND
-from agent.const import COMMON_CONS
+from agent.const import AGENT_CONS
 from constants import NUM_COMMON_CONS, MAX_DAYS
 from featnames import LSTG
 
@@ -33,7 +33,7 @@ class HeuristicSlr:
         assert turn in [2, 4, 6]
 
         # index of action
-        cons = COMMON_CONS[turn]
+        cons = AGENT_CONS[turn]
         if turn == 2:
             elapsed = get_elapsed(x=x, turn=turn)
             if elapsed <= .62:

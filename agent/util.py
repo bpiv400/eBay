@@ -1,7 +1,7 @@
 import os
 from utils import unpickle, load_file, load_data, get_role, safe_reindex
 from constants import AGENT_DIR, IDX, SIM_DIR
-from featnames import SLR, BYR, NORM, AUTO, INDEX, THREAD, LSTG, CON, \
+from featnames import SLR, BYR, NORM, AUTO, INDEX, THREAD, CON, \
     LOOKUP, X_THREAD, X_OFFER, START_PRICE, ENTROPY, DELTA, DROPOUT, \
     BYR_AGENT, VALIDATION
 
@@ -106,11 +106,7 @@ def get_sale_norm(offers=None, drop_thread=True):
 
 def load_values(part=None, delta=None, normalize=True):
     df = unpickle(SIM_DIR + '{}/values.pkl'.format(part))
-    x = df.sale_price.groupby(LSTG).mean()
-    num_sales = df.relist_ct.groupby(LSTG).count()
-    num_exps = df.relist_ct.groupby(LSTG).sum()
-    p = num_sales / (num_sales + num_exps)
-    v = p * x / (1 - (1-p) * delta)
+    v = df.p * df.x / (1 - (1-df.p) * delta)
     if normalize:
         start_price = load_file(part, LOOKUP)[START_PRICE]
         v /= start_price

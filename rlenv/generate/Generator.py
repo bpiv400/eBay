@@ -160,7 +160,15 @@ class ValueGenerator(OutcomeGenerator):
         # convert to dataframe
         df = pd.DataFrame.from_records(rows, columns=VALUE_COLS)
         df = df.set_index([LSTG, 'sale']).sort_index()
-        return df
+
+        # collapse
+        x = df.sale_price.groupby(LSTG).mean()
+        num_sales = df.relist_ct.groupby(LSTG).count()
+        num_exps = df.relist_ct.groupby(LSTG).sum()
+        p = num_sales / (num_sales + num_exps)
+        values = pd.concat([x.rename('x'), p.rename('p')], axis=1).sort_index()
+
+        return values
 
     def simulate_lstg(self):
         """

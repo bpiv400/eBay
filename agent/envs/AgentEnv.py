@@ -9,9 +9,9 @@ from rlenv.EBayEnv import EBayEnv
 from rlenv.events.Thread import Thread
 from agent.ConSpace import ConSpace
 from agent.util import load_values
-from agent.const import COMMON_CONS
-from constants import INTERVAL_TURN, INTERVAL_CT_TURN, DAY, NUM_COMMON_CONS
-from featnames import BYR_HIST, START_PRICE, BYR, DELTA, TRAIN_RL
+from agent.const import AGENT_CONS
+from constants import INTERVAL_TURN, INTERVAL_CT_TURN, DAY, NUM_COMMON_CONS, IDX
+from featnames import BYR_HIST, START_PRICE, BYR, SLR, DELTA, TRAIN_RL
 
 Info = namedarraytuple("Info", ["days", "max_return", "num_actions", "num_threads",
                                 "turn", "thread_id", "priority", "agent_sale"])
@@ -137,12 +137,9 @@ class AgentEnv(EBayEnv, Env):
             cons = np.arange(101) / 100
             cons = {t: cons for t in range(1, 8)}
         elif self.byr:
-            cons = {t: np.sort(np.concatenate([[0, 1], COMMON_CONS[t]]))
-                    for t in [1, 3, 5]}
-            cons[7] = np.concatenate([np.zeros(NUM_COMMON_CONS + 1), [1.]])
+            cons = {t: AGENT_CONS[t] for t in IDX[BYR]}
         else:
-            cons = {t: np.sort(np.concatenate([[0, 1, 1.1], COMMON_CONS[t]]))
-                    for t in [2, 4, 6]}
+            cons = {t: AGENT_CONS[t] for t in IDX[SLR]}
         return cons
 
     def _define_action_space(self):
