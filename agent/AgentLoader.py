@@ -1,6 +1,6 @@
-import psutil
 import numpy as np
 import pandas as pd
+import torch.multiprocessing as mp
 from constants import NUM_CHUNKS, PARTS_DIR
 from featnames import TRAIN_RL
 from rlenv.LstgLoader import LstgLoader, ChunkLoader
@@ -20,7 +20,7 @@ class AgentLoader(LstgLoader):
         self._draw_lstgs()
 
     def _load_chunks(self, rank=None):
-        nums = np.split(np.arange(NUM_CHUNKS), psutil.cpu_count())[rank]
+        nums = np.split(np.arange(NUM_CHUNKS), mp.cpu_count())[rank]
         x_lstg, lookup, p_arrival = [], [], []
         for num in nums:
             path = PARTS_DIR + '{}/chunks/{}.pkl'.format(TRAIN_RL, num)
