@@ -2,7 +2,6 @@ import argparse
 import os
 import pickle
 import pandas as pd
-import psutil
 from time import sleep
 import torch
 import torch.multiprocessing as mp
@@ -166,7 +165,7 @@ def run_func_on_chunks(f=None, func_kwargs=None, num_chunks=NUM_CHUNKS):
     :param int num_chunks: number of chunks
     :return: list of worker-specific output
     """
-    num_workers = min(num_chunks, psutil.cpu_count())
+    num_workers = min(num_chunks, mp.cpu_count())
     print('Using {} workers'.format(num_workers))
     pool = mp.Pool(num_workers)
     jobs = []
