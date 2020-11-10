@@ -7,4 +7,4 @@
 #$ -o logs/sims/
 
 ulimit -n 4096
-python repo/agent/eval/sims.py --num "$SGE_TASK_ID" "$1"
+python repo/agent/eval/sims.py --num "$SGE_TASK_ID" --delta "$1"
