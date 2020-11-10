@@ -25,37 +25,65 @@ def print_summary(data=None, name=None):
             turn, (con == 1).mean()))
         print('Turn {0:d} concession rate: {1:.3f}'.format(
             turn, ((con > 0) & (con < 1)).mean()))
-        if name == 'Agent':
-            con_rate = con.groupby(con).count() / len(con)
-            con_rate = con_rate[con_rate > .001]
-            print(con_rate)
-        else:
-            print('Turn {0:d} avg concession: {1:.3f}'.format(
-                turn, con[(con > 0) & (con < 1)].mean()))
 
 
-def get_feats(data=None, values=None):
+def get_feats(data=None, values=None, feat=None):
     norm = data[X_OFFER].loc[~data[X_OFFER][AUTO] & ~data[X_OFFER][EXP], NORM]
     idx = norm.xs(2, level=INDEX).index
     norm1 = norm.xs(1, level=INDEX).loc[idx]
+
     # throw out small opening concessions (helps with bandwidth estimation)
     norm1 = norm1[norm1 > .33]
     idx = norm1.index
-    # sale norm and reward
+
+    # sale norm and continuation value
     sale_norm, cont_value = get_norm_reward(data=data,
                                             values=(DELTA_SLR * values))
-    reward = pd.concat([sale_norm, cont_value]).sort_index().rename('reward')
-    reward = safe_reindex(reward, idx=idx)
-    sale_norm = safe_reindex(sale_norm, idx=idx)
-    sale_norm[sale_norm.isna()] = 0
-    return norm1.values, sale_norm.values, reward.values
+
+    if feat == 'sale':
+        sale_norm = safe_reindex(sale_norm, idx=idx)
+        sale_norm[sale_norm.isna()] = 0
+        return norm1.values, sale_norm.values
+    elif feat == 'reward':
+        reward = pd.concat([sale_norm, cont_value]).sort_index().rename('reward')
+        reward = safe_reindex(reward, idx=idx)
+        return norm1.values, reward.values
+    else:
+        raise ValueError('Invalid feat name: {}'.format(feat))
 
 
-def collect_outputs(data=None, values=None, name=None, bw=None):
-    d = dict()
-
+def wrapper(data=None, values=None, feat=None, bw=None):
+    x, y = get_feats(data=data, values=values, feat=feat)
     if bw is None:
-        bw = dict()
+        line, dots, bw = ll_wrapper(y, x,
+                                    dim=NORM1_DIM,
+                                    discrete=COMMON_CONS[1])
+        return line, dots, bw
+    else:
+        line, dots, _ = ll_wrapper(y, x,
+                                   dim=NORM1_DIM,
+                                   discrete=COMMON_CONS[1],
+                                   bw=bw, ci=False)
+        return line, dots
+
+
+def compare_rewards(data_obs=None, data_rl=None, values=None, feat=None):
+    # observed data
+    line, dots, bw = wrapper(data=data_obs, values=values, feat=feat)
+    line.columns = pd.MultiIndex.from_product([['Data'], line.columns])
+    dots.columns = pd.MultiIndex.from_product([['Data'], dots.columns])
+    tup = line, dots
+    print('{}: {}'.format(feat, bw[0]))
+
+    line, dots = wrapper(data=data_rl, values=values, feat=feat, bw=bw)
+    tup[0].loc[:, ('Agent', 'beta')] = line
+    tup[1].loc[:, ('Agent', 'beta')] = dots
+
+    return tup
+
+
+def collect_outputs(data=None, name=None):
+    d = dict()
 
     # print summary
     print_summary(data=data, name=name)
@@ -75,27 +103,6 @@ def collect_outputs(data=None, values=None, name=None, bw=None):
     d['bar_threads'] = num_threads(data)
     d['bar_offers'] = num_offers(data[X_OFFER])
 
-    x, y_sale, y_reward = get_feats(data=data, values=values)
-    for feat in ['sale', 'reward']:
-        key = 'response_{}norm'.format(feat)
-        y = locals()['y_{}'.format(feat)]
-
-        if name == 'Data':
-            line, dots, bw[feat] = ll_wrapper(y, x,
-                                              dim=NORM1_DIM,
-                                              discrete=COMMON_CONS[1])
-            line.columns = pd.MultiIndex.from_product([[name], line.columns])
-            dots.columns = pd.MultiIndex.from_product([[name], dots.columns])
-            d[key] = line, dots
-            print('{}: {}'.format(feat, bw[feat][0]))
-        else:
-            line, dots, _ = ll_wrapper(y, x,
-                                       dim=NORM1_DIM,
-                                       discrete=COMMON_CONS[1],
-                                       bw=bw[feat], ci=False)
-            d[key][0].loc[:, (name, 'beta')] = line
-            d[key][1].loc[:, (name, 'beta')] = dots
-
     # rename series
     for k, v in d.items():
         if type(v) is dict:
@@ -108,21 +115,24 @@ def collect_outputs(data=None, values=None, name=None, bw=None):
 
 
 def main():
+    # data
     values = load_values(part=TEST, delta=DELTA_SLR)
-
-    # observed sellers
-    d, bw = collect_outputs(data=get_slr_valid(load_data(part=TEST)),
-                            values=values,
-                            name='Data')
-
-    # rl seller
+    data_obs = get_slr_valid(load_data(part=TEST))
     run_dir = find_best_run(byr=False, delta=DELTA_SLR)
-    d_rl, _ = collect_outputs(data=load_valid_data(part=TEST, run_dir=run_dir),
-                              values=values,
-                              name='Agent')
+    data_rl = load_valid_data(part=TEST, run_dir=run_dir)
 
-    # concatenate DataFrames
+    # descriptives
+    d = collect_outputs(data=data_obs, name='Data')
+    d_rl = collect_outputs(data=data_rl, name='Agent')
     d = merge_dicts(d, d_rl)
+
+    # reward comparison
+    for feat in ['sale', 'reward']:
+        key = 'response_{}norm'.format(feat)
+        d[key] = compare_rewards(data_obs=data_obs,
+                                 data_rl=data_rl,
+                                 values=values,
+                                 feat=feat)
 
     # save
     topickle(d, PLOT_DIR + 'slr.pkl')

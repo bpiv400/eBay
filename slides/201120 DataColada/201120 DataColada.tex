@@ -551,7 +551,7 @@
 \begin{frame}{Seller experience predicts value}
 	\begin{figure}
 		\centering
-		\includegraphics[height=.9\textheight]{\detokenize{values/response_slrbo.png}}
+		\includegraphics[height=.9\textheight]{{values/response_slrbo}.png}
 	\end{figure}
 \end{frame}
 
@@ -562,18 +562,11 @@
 	\end{figure}
 \end{frame}
 
-\begin{frame}{Some other predictors of value}
-\begin{figure}[h]
-    \centering
-	\begin{subfigure}[t]{0.49\textwidth}
-		\centering\caption{Number of photos}
-		\includegraphics[height=6cm]{\detokenize{values/coef_photovals.png}}
-	\end{subfigure}
-	\begin{subfigure}[t]{0.49\textwidth}
-		\centering\caption{Day of listing start}
-		\includegraphics[height=6cm]{\detokenize{values/coef_dowvals.png}}
-	\end{subfigure}
-\end{figure}
+\begin{frame}{Listings with more photos generally have higher values}
+	\begin{figure}[h]
+    	\centering
+		\includegraphics[height=.8\textheight]{\detokenize{values/coef_photovals.png}}
+	\end{figure}
 \end{frame}
 
 \section{RL seller}
@@ -624,10 +617,10 @@
 	\end{enumerate}
 \end{frame}
 
-\begin{frame}{Values $(\delta = 0.7)$}
+\begin{frame}{Values $(\delta = 0.67)$}
 	\begin{figure}
 		\centering
-		\includegraphics[height=.8\textheight]{{slr2/pdf_values_0.7}.png}
+		\includegraphics[height=.8\textheight]{{slrvals/pdf_values}.png}
 	\end{figure}
 \end{frame}
 
@@ -676,7 +669,7 @@
 	\end{subfigure}
 	\begin{subfigure}[t]{0.49\textwidth}
 		\centering\caption{Reject rate}
-		\includegraphics[width=6cm]{{turn2/response_reject}.png}
+		\includegraphics[width=6cm]{{slr2/response_reject}.png}
 	\end{subfigure}
 \end{figure}
 {\footnotesize Note: excludes auto-accepts and auto-rejects.}
@@ -787,7 +780,7 @@ Reject & .14 & .63 & .22 & - & .22 & - \\ \bottomrule
 %	\end{subfigure}
 %	\begin{subfigure}[t]{0.49\textwidth}
 %		\centering\caption*{Sale price to any buyer}
-%		\includegraphics[width=6cm]{{turn2/response_salenorm_Active}.png}
+%		\includegraphics[width=6cm]{{slr2/response_salenorm_Active}.png}
 %	\end{subfigure}
 %\end{figure}
 %\end{frame}
@@ -1151,11 +1144,11 @@ Reject early, concede later.
 	\centering
 	\begin{subfigure}[t]{0.49\textwidth}
 		\centering\caption{Unsold items}
-		\includegraphics[width=5cm]{{slr2/pdf_unsoldvals_0.7}.png}
+		\includegraphics[width=5cm]{{slrvals/pdf_unsoldvals}.png}
 	\end{subfigure}
 	\begin{subfigure}[t]{0.49\textwidth}
 		\centering\caption{Sold items}
-		\includegraphics[width=5cm]{{slr2/pdf_soldvals_0.7}.png}
+		\includegraphics[width=5cm]{{slrvals/pdf_soldvals}.png}
 	\end{subfigure}
 \end{figure}
 80.7\% of valid listings sell in data vs. 80.3\% for agent.
@@ -1210,11 +1203,11 @@ Reject early, concede later.
     \centering
 	\begin{subfigure}[t]{0.49\textwidth}
 		\centering\caption{Data}
-		\includegraphics[width=6cm]{{turn2/contour_rejdata}.png}
+		\includegraphics[width=6cm]{{slr2/contour_rejdata}.png}
 	\end{subfigure}
 	\begin{subfigure}[t]{0.49\textwidth}
 		\centering\caption{Agent}
-		\includegraphics[width=6cm]{{turn2/contour_rejagent}.png}
+		\includegraphics[width=6cm]{{slr2/contour_rejagent}.png}
 	\end{subfigure}
 \end{figure}
 \end{frame}

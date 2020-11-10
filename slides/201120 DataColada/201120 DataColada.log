@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.14159265-2.6-1.40.18 (TeX Live 2017/Debian) (preloaded format=pdflatex 2020.7.31)  9 NOV 2020 10:24
+This is pdfTeX, Version 3.14159265-2.6-1.40.18 (TeX Live 2017/Debian) (preloaded format=pdflatex 2020.7.31)  10 NOV 2020 09:57
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -2353,30 +2353,15 @@ nput line 484.
 er/cdf_salenorm.png>] [53
 
 ]
+<../../../figures/training/simple_roc.png, id=409, 327.3831pt x 326.6604pt>
+File: ../../../figures/training/simple_roc.png Graphic file (type png)
+<use ../../../figures/training/simple_roc.png>
+Package pdftex.def Info: ../../../figures/training/simple_roc.png  used on inpu
+t line 502.
+(pdftex.def)             Requested size: 202.1062pt x 201.6606pt.
+ [54
 
-LaTeX Warning: File `training/simple_roc.png' not found on input line 502.
-
-
-! Package pdftex.def Error: File `training/simple_roc.png' not found: using dra
-ft setting.
-
-See the pdftex.def package documentation for explanation.
-Type  H <return>  for immediate help.
- ...                                              
-                                                  
-l.502 \end{frame}
-                 
-Try typing  <return>  to proceed.
-If that doesn't work, type  X <return>  to quit.
-
-LaTeX Font Info:    Try loading font information for T1+cmtt on input line 502.
-
-(/usr/share/texlive/texmf-dist/tex/latex/base/t1cmtt.fd
-File: t1cmtt.fd 2014/09/29 v2.5h Standard LaTeX font definitions
-) [54
-
-]
-(./201120 DataColada.toc) [55
+ <../../../figures/training/simple_roc.png>] (./201120 DataColada.toc) [55
 
 ] [56
 
@@ -2384,35 +2369,32 @@ File: t1cmtt.fd 2014/09/29 v2.5h Standard LaTeX font definitions
 
 ] [58
 
-] [59
+]
+LaTeX Font Info:    Try loading font information for T1+cmtt on input line 535.
+
+
+(/usr/share/texlive/texmf-dist/tex/latex/base/t1cmtt.fd
+File: t1cmtt.fd 2014/09/29 v2.5h Standard LaTeX font definitions
+) [59
 
 ] [60
 
 ] [61
 
-] [62
+]
+[62
 
 ]
+<../../../figures/values/pdf_values.png, id=465, 291.2481pt x 320.8788pt>
+File: ../../../figures/values/pdf_values.png Graphic file (type png)
+<use ../../../figures/values/pdf_values.png>
+Package pdftex.def Info: ../../../figures/values/pdf_values.png  used on input 
+line 542.
+(pdftex.def)             Requested size: 183.0384pt x 201.6606pt.
+ [63
 
-LaTeX Warning: File `values/pdf_values.png' not found on input line 542.
-
-
-! Package pdftex.def Error: File `values/pdf_values.png' not found: using draft
- setting.
-
-See the pdftex.def package documentation for explanation.
-Type  H <return>  for immediate help.
- ...                                              
-                                                  
-l.542 \end{frame}
-                 
-Try typing  <return>  to proceed.
-If that doesn't work, type  X <return>  to quit.
-
-[63
-
-]
-<../../../figures/w2v/w2v_values.png, id=468, 328.8285pt x 287.6346pt>
+ <../../../figures/values/pdf_values.png>]
+<../../../figures/w2v/w2v_values.png, id=472, 328.8285pt x 287.6346pt>
 File: ../../../figures/w2v/w2v_values.png Graphic file (type png)
 <use ../../../figures/w2v/w2v_values.png>
 Package pdftex.def Info: ../../../figures/w2v/w2v_values.png  used on input lin
@@ -2425,83 +2407,39 @@ Overfull \vbox (10.96573pt too high) detected at line 549
 [64
 
  <../../../figures/w2v/w2v_values.png>]
-
-LaTeX Warning: File `values/response_slrbo.png' not found on input line 556.
-
-
-! Package pdftex.def Error: File `values/response_slrbo.png' not found: using d
-raft setting.
-
-See the pdftex.def package documentation for explanation.
-Type  H <return>  for immediate help.
- ...                                              
-                                                  
-l.556 \end{frame}
-                 
-Try typing  <return>  to proceed.
-If that doesn't work, type  X <return>  to quit.
-
+<../../../figures/values/response_slrbo.png, id=480, 346.1733pt x 320.8788pt>
+File: ../../../figures/values/response_slrbo.png Graphic file (type png)
+<use ../../../figures/values/response_slrbo.png>
+Package pdftex.def Info: ../../../figures/values/response_slrbo.png  used on in
+put line 556.
+(pdftex.def)             Requested size: 244.74944pt x 226.86577pt.
 
 Overfull \vbox (10.96573pt too high) detected at line 556
  []
 
 [65
 
-]
+ <../../../figures/values/response_slrbo.png>]
+<../../../figures/values/response_binvals.png, id=487, 346.1733pt x 320.8788pt>
 
-LaTeX Warning: File `values/response_binvals.png' not found on input line 563.
+File: ../../../figures/values/response_binvals.png Graphic file (type png)
+<use ../../../figures/values/response_binvals.png>
+Package pdftex.def Info: ../../../figures/values/response_binvals.png  used on 
+input line 563.
+(pdftex.def)             Requested size: 217.55682pt x 201.6606pt.
+ [66
 
+ <../../../figures/values/response_binvals.png>]
+<../../../figures/values/coef_photovals.png, id=494, 327.3831pt x 320.8788pt>
+File: ../../../figures/values/coef_photovals.png Graphic file (type png)
+<use ../../../figures/values/coef_photovals.png>
+Package pdftex.def Info: ../../../figures/values/coef_photovals.png  used on in
+put line 570.
+(pdftex.def)             Requested size: 205.7479pt x 201.6606pt.
+ [67
 
-! Package pdftex.def Error: File `values/response_binvals.png' not found: using
- draft setting.
-
-See the pdftex.def package documentation for explanation.
-Type  H <return>  for immediate help.
- ...                                              
-                                                  
-l.563 \end{frame}
-                 
-Try typing  <return>  to proceed.
-If that doesn't work, type  X <return>  to quit.
-
-[66
-
-]
-
-LaTeX Warning: File `values/coef_photovals.png' not found on input line 577.
-
-
-! Package pdftex.def Error: File `values/coef_photovals.png' not found: using d
-raft setting.
-
-See the pdftex.def package documentation for explanation.
-Type  H <return>  for immediate help.
- ...                                              
-                                                  
-l.577 \end{frame}
-                 
-Try typing  <return>  to proceed.
-If that doesn't work, type  X <return>  to quit.
-
-
-LaTeX Warning: File `values/coef_dowvals.png' not found on input line 577.
-
-
-! Package pdftex.def Error: File `values/coef_dowvals.png' not found: using dra
-ft setting.
-
-See the pdftex.def package documentation for explanation.
-Type  H <return>  for immediate help.
- ...                                              
-                                                  
-l.577 \end{frame}
-                 
-Try typing  <return>  to proceed.
-If that doesn't work, type  X <return>  to quit.
-
-[67
-
-] (./201120 DataColada.toc) [68
+ <../../../figures/values/coef_photovals.png>]
+(./201120 DataColada.toc) [68
 
 ] [69
 
@@ -2511,17 +2449,17 @@ If that doesn't work, type  X <return>  to quit.
 
 ]
 
-LaTeX Warning: File `{slr2/pdf_values_0.7}.png' not found on input line 632.
+LaTeX Warning: File `{slrvals/pdf_values}.png' not found on input line 625.
 
 
-! Package pdftex.def Error: File `slr2/pdf_values_0.7.png' not found: using dra
-ft setting.
+! Package pdftex.def Error: File `slrvals/pdf_values.png' not found: using draf
+t setting.
 
 See the pdftex.def package documentation for explanation.
 Type  H <return>  for immediate help.
  ...                                              
                                                   
-l.632 \end{frame}
+l.625 \end{frame}
                  
 Try typing  <return>  to proceed.
 If that doesn't work, type  X <return>  to quit.
@@ -2530,7 +2468,7 @@ If that doesn't work, type  X <return>  to quit.
 
 ]
 
-LaTeX Warning: File `{slr/cdf_lstgnorm}.png' not found on input line 640.
+LaTeX Warning: File `{slr/cdf_lstgnorm}.png' not found on input line 633.
 
 
 ! Package pdftex.def Error: File `slr/cdf_lstgnorm.png' not found: using draft 
@@ -2540,20 +2478,20 @@ See the pdftex.def package documentation for explanation.
 Type  H <return>  for immediate help.
  ...                                              
                                                   
-l.640 \end{frame}
+l.633 \end{frame}
                  
 Try typing  <return>  to proceed.
 If that doesn't work, type  X <return>  to quit.
 
 
-Overfull \vbox (2.09746pt too high) detected at line 640
+Overfull \vbox (2.09746pt too high) detected at line 633
  []
 
 [73
 
 ]
 
-LaTeX Warning: File `{slr/cdf_days}.png' not found on input line 654.
+LaTeX Warning: File `{slr/cdf_days}.png' not found on input line 647.
 
 
 ! Package pdftex.def Error: File `slr/cdf_days.png' not found: using draft sett
@@ -2563,13 +2501,13 @@ See the pdftex.def package documentation for explanation.
 Type  H <return>  for immediate help.
  ...                                              
                                                   
-l.654 \end{frame}
+l.647 \end{frame}
                  
 Try typing  <return>  to proceed.
 If that doesn't work, type  X <return>  to quit.
 
 
-LaTeX Warning: File `{slr/bar_threads}.png' not found on input line 654.
+LaTeX Warning: File `{slr/bar_threads}.png' not found on input line 647.
 
 
 ! Package pdftex.def Error: File `slr/bar_threads.png' not found: using draft s
@@ -2579,7 +2517,7 @@ See the pdftex.def package documentation for explanation.
 Type  H <return>  for immediate help.
  ...                                              
                                                   
-l.654 \end{frame}
+l.647 \end{frame}
                  
 Try typing  <return>  to proceed.
 If that doesn't work, type  X <return>  to quit.
@@ -2588,7 +2526,7 @@ If that doesn't work, type  X <return>  to quit.
 
 ]
 
-LaTeX Warning: File `{slr/cdf_norm_1}.png' not found on input line 668.
+LaTeX Warning: File `{slr/cdf_norm_1}.png' not found on input line 661.
 
 
 ! Package pdftex.def Error: File `slr/cdf_norm_1.png' not found: using draft se
@@ -2598,13 +2536,13 @@ See the pdftex.def package documentation for explanation.
 Type  H <return>  for immediate help.
  ...                                              
                                                   
-l.668 \end{frame}
+l.661 \end{frame}
                  
 Try typing  <return>  to proceed.
 If that doesn't work, type  X <return>  to quit.
 
 
-LaTeX Warning: File `{slr/cdf_norm_3}.png' not found on input line 668.
+LaTeX Warning: File `{slr/cdf_norm_3}.png' not found on input line 661.
 
 
 ! Package pdftex.def Error: File `slr/cdf_norm_3.png' not found: using draft se
@@ -2614,7 +2552,7 @@ See the pdftex.def package documentation for explanation.
 Type  H <return>  for immediate help.
  ...                                              
                                                   
-l.668 \end{frame}
+l.661 \end{frame}
                  
 Try typing  <return>  to proceed.
 If that doesn't work, type  X <return>  to quit.
@@ -2623,7 +2561,7 @@ If that doesn't work, type  X <return>  to quit.
 
 ]
 
-LaTeX Warning: File `{turn2/response_accept}.png' not found on input line 683.
+LaTeX Warning: File `{turn2/response_accept}.png' not found on input line 676.
 
 
 ! Package pdftex.def Error: File `turn2/response_accept.png' not found: using d
@@ -2633,232 +2571,138 @@ See the pdftex.def package documentation for explanation.
 Type  H <return>  for immediate help.
  ...                                              
                                                   
-l.683 \end{frame}
+l.676 \end{frame}
                  
 Try typing  <return>  to proceed.
 If that doesn't work, type  X <return>  to quit.
 
 
-LaTeX Warning: File `{turn2/response_reject}.png' not found on input line 683.
+LaTeX Warning: File `{slr2/response_reject}.png' not found on input line 676.
 
 
-! Package pdftex.def Error: File `turn2/response_reject.png' not found: using d
-raft setting.
-
-See the pdftex.def package documentation for explanation.
-Type  H <return>  for immediate help.
- ...                                              
-                                                  
-l.683 \end{frame}
-                 
-Try typing  <return>  to proceed.
-If that doesn't work, type  X <return>  to quit.
-
-
-Overfull \vbox (1.70166pt too high) detected at line 683
- []
-
-[76
-
-]
-
-LaTeX Warning: File `{slr3/response_slrrejacc_0.5}.png' not found on input line
- 705.
-
-
-! Package pdftex.def Error: File `slr3/response_slrrejacc_0.5.png' not found: u
-sing draft setting.
-
-See the pdftex.def package documentation for explanation.
-Type  H <return>  for immediate help.
- ...                                              
-                                                  
-l.705 \end{frame}
-                 
-Try typing  <return>  to proceed.
-If that doesn't work, type  X <return>  to quit.
-
-
-LaTeX Warning: File `{slr3/response_slrrejacc_0.67}.png' not found on input lin
-e 705.
-
-
-! Package pdftex.def Error: File `slr3/response_slrrejacc_0.67.png' not found: 
-using draft setting.
-
-See the pdftex.def package documentation for explanation.
-Type  H <return>  for immediate help.
- ...                                              
-                                                  
-l.705 \end{frame}
-                 
-Try typing  <return>  to proceed.
-If that doesn't work, type  X <return>  to quit.
-
-
-LaTeX Warning: File `{slr3/response_slrrejacc_0.75}.png' not found on input lin
-e 705.
-
-
-! Package pdftex.def Error: File `slr3/response_slrrejacc_0.75.png' not found: 
-using draft setting.
-
-See the pdftex.def package documentation for explanation.
-Type  H <return>  for immediate help.
- ...                                              
-                                                  
-l.705 \end{frame}
-                 
-Try typing  <return>  to proceed.
-If that doesn't work, type  X <return>  to quit.
-
-
-LaTeX Warning: File `{slr3/response_slrrejacc_0.8}.png' not found on input line
- 705.
-
-
-! Package pdftex.def Error: File `slr3/response_slrrejacc_0.8.png' not found: u
-sing draft setting.
-
-See the pdftex.def package documentation for explanation.
-Type  H <return>  for immediate help.
- ...                                              
-                                                  
-l.705 \end{frame}
-                 
-Try typing  <return>  to proceed.
-If that doesn't work, type  X <return>  to quit.
-
-[77
-
-] [78
-
-] [79
-
-] [80
-
-]
-
-LaTeX Warning: File `{slr3/response_rejacc}.png' not found on input line 729.
-
-
-! Package pdftex.def Error: File `slr3/response_rejacc.png' not found: using dr
+! Package pdftex.def Error: File `slr2/response_reject.png' not found: using dr
 aft setting.
 
 See the pdftex.def package documentation for explanation.
 Type  H <return>  for immediate help.
  ...                                              
                                                   
-l.729 \end{frame}
+l.676 \end{frame}
                  
 Try typing  <return>  to proceed.
 If that doesn't work, type  X <return>  to quit.
+
+
+Overfull \vbox (1.70166pt too high) detected at line 676
+ []
+
+[76
+
+]
+<../../../figures/slr3/response_slrrejacc_0.5.png, id=554, 322.3242pt x 326.660
+4pt>
+File: ../../../figures/slr3/response_slrrejacc_0.5.png Graphic file (type png)
+<use ../../../figures/slr3/response_slrrejacc_0.5.png>
+Package pdftex.def Info: ../../../figures/slr3/response_slrrejacc_0.5.png  used
+ on input line 698.
+(pdftex.def)             Requested size: 95.60344pt x 96.88734pt.
+<../../../figures/slr3/response_slrrejacc_0.67.png, id=555, 322.3242pt x 326.66
+04pt>
+File: ../../../figures/slr3/response_slrrejacc_0.67.png Graphic file (type png)
+
+<use ../../../figures/slr3/response_slrrejacc_0.67.png>
+Package pdftex.def Info: ../../../figures/slr3/response_slrrejacc_0.67.png  use
+d on input line 698.
+(pdftex.def)             Requested size: 95.60344pt x 96.88734pt.
+<../../../figures/slr3/response_slrrejacc_0.75.png, id=556, 322.3242pt x 326.66
+04pt>
+File: ../../../figures/slr3/response_slrrejacc_0.75.png Graphic file (type png)
+
+<use ../../../figures/slr3/response_slrrejacc_0.75.png>
+Package pdftex.def Info: ../../../figures/slr3/response_slrrejacc_0.75.png  use
+d on input line 698.
+(pdftex.def)             Requested size: 95.60344pt x 96.88734pt.
+<../../../figures/slr3/response_slrrejacc_0.8.png, id=557, 322.3242pt x 326.660
+4pt>
+File: ../../../figures/slr3/response_slrrejacc_0.8.png Graphic file (type png)
+<use ../../../figures/slr3/response_slrrejacc_0.8.png>
+Package pdftex.def Info: ../../../figures/slr3/response_slrrejacc_0.8.png  used
+ on input line 698.
+(pdftex.def)             Requested size: 95.60344pt x 96.88734pt.
+ [77
+
+ <../../../figures/slr3/response_slrrejacc_0.5.png> <../../../figures/slr3/resp
+onse_slrrejacc_0.67.png> <../../../figures/slr3/response_slrrejacc_0.75.png> <.
+./../../figures/slr3/response_slrrejacc_0.8.png>] [78
+
+] [79
+
+] [80
+
+]
+<../../../figures/slr3/response_rejacc.png, id=584, 329.5512pt x 326.6604pt>
+File: ../../../figures/slr3/response_rejacc.png Graphic file (type png)
+<use ../../../figures/slr3/response_rejacc.png>
+Package pdftex.def Info: ../../../figures/slr3/response_rejacc.png  used on inp
+ut line 722.
+(pdftex.def)             Requested size: 203.44464pt x 201.6606pt.
 
 [81
 
-] [82
+ <../../../figures/slr3/response_rejacc.png>] [82
 
 ]
+<../../../figures/slr3/response_rejacc_Active.png, id=596, 329.5512pt x 326.660
+4pt>
+File: ../../../figures/slr3/response_rejacc_Active.png Graphic file (type png)
+<use ../../../figures/slr3/response_rejacc_Active.png>
+Package pdftex.def Info: ../../../figures/slr3/response_rejacc_Active.png  used
+ on input line 751.
+(pdftex.def)             Requested size: 170.71652pt x 169.2164pt.
+<../../../figures/slr5/response_rejrejacc.png, id=597, 329.5512pt x 326.6604pt>
 
-LaTeX Warning: File `{slr3/response_rejacc_Active}.png' not found on input line
- 758.
+File: ../../../figures/slr5/response_rejrejacc.png Graphic file (type png)
+<use ../../../figures/slr5/response_rejrejacc.png>
+Package pdftex.def Info: ../../../figures/slr5/response_rejrejacc.png  used on 
+input line 751.
+(pdftex.def)             Requested size: 170.71652pt x 169.2164pt.
+ [83
 
-
-! Package pdftex.def Error: File `slr3/response_rejacc_Active.png' not found: u
-sing draft setting.
-
-See the pdftex.def package documentation for explanation.
-Type  H <return>  for immediate help.
- ...                                              
-                                                  
-l.758 \end{frame}
-                 
-Try typing  <return>  to proceed.
-If that doesn't work, type  X <return>  to quit.
-
-
-LaTeX Warning: File `{slr5/response_rejrejacc}.png' not found on input line 758
-.
-
-
-! Package pdftex.def Error: File `slr5/response_rejrejacc.png' not found: using
- draft setting.
-
-See the pdftex.def package documentation for explanation.
-Type  H <return>  for immediate help.
- ...                                              
-                                                  
-l.758 \end{frame}
-                 
-Try typing  <return>  to proceed.
-If that doesn't work, type  X <return>  to quit.
-
-[83
-
-]
-
-LaTeX Warning: File `{slr3/response_rejacc_Active}.png' not found on input line
- 772.
-
-
-! Package pdftex.def Error: File `slr3/response_rejacc_Active.png' not found: u
-sing draft setting.
-
-See the pdftex.def package documentation for explanation.
-Type  H <return>  for immediate help.
- ...                                              
-                                                  
-l.772 \end{frame}
-                 
-Try typing  <return>  to proceed.
-If that doesn't work, type  X <return>  to quit.
-
-
-LaTeX Warning: File `{slr3/response_rejrej_Active}.png' not found on input line
- 772.
-
-
-! Package pdftex.def Error: File `slr3/response_rejrej_Active.png' not found: u
-sing draft setting.
-
-See the pdftex.def package documentation for explanation.
-Type  H <return>  for immediate help.
- ...                                              
-                                                  
-l.772 \end{frame}
-                 
-Try typing  <return>  to proceed.
-If that doesn't work, type  X <return>  to quit.
+ <../../../figures/slr3/response_rejacc_Active.png> <../../../figures/slr5/resp
+onse_rejrejacc.png>]
+File: ../../../figures/slr3/response_rejacc_Active.png Graphic file (type png)
+<use ../../../figures/slr3/response_rejacc_Active.png>
+Package pdftex.def Info: ../../../figures/slr3/response_rejacc_Active.png  used
+ on input line 765.
+(pdftex.def)             Requested size: 170.71652pt x 169.2164pt.
+<../../../figures/slr3/response_rejrej_Active.png, id=605, 329.5512pt x 326.660
+4pt>
+File: ../../../figures/slr3/response_rejrej_Active.png Graphic file (type png)
+<use ../../../figures/slr3/response_rejrej_Active.png>
+Package pdftex.def Info: ../../../figures/slr3/response_rejrej_Active.png  used
+ on input line 765.
+(pdftex.def)             Requested size: 170.71652pt x 169.2164pt.
 
 [84
 
-]
+ <../../../figures/slr3/response_rejrej_Active.png>]
+<../../../figures/slr3/response_rejnorm_Active.png, id=612, 329.5512pt x 326.66
+04pt>
+File: ../../../figures/slr3/response_rejnorm_Active.png Graphic file (type png)
 
-LaTeX Warning: File `{slr3/response_rejnorm_Active}.png' not found on input lin
-e 779.
+<use ../../../figures/slr3/response_rejnorm_Active.png>
+Package pdftex.def Info: ../../../figures/slr3/response_rejnorm_Active.png  use
+d on input line 772.
+(pdftex.def)             Requested size: 203.44464pt x 201.6606pt.
+ [85
 
-
-! Package pdftex.def Error: File `slr3/response_rejnorm_Active.png' not found: 
-using draft setting.
-
-See the pdftex.def package documentation for explanation.
-Type  H <return>  for immediate help.
- ...                                              
-                                                  
-l.779 \end{frame}
-                 
-Try typing  <return>  to proceed.
-If that doesn't work, type  X <return>  to quit.
-
-[85
-
-] [86
+ <../../../figures/slr3/response_rejnorm_Active.png>] [86
 
 ] [87
 
 ]
 
-LaTeX Warning: File `{evaluate/bar_slrnorm}.png' not found on input line 822.
+LaTeX Warning: File `{evaluate/bar_slrnorm}.png' not found on input line 815.
 
 
 ! Package pdftex.def Error: File `evaluate/bar_slrnorm.png' not found: using dr
@@ -2868,13 +2712,13 @@ See the pdftex.def package documentation for explanation.
 Type  H <return>  for immediate help.
  ...                                              
                                                   
-l.822 \end{frame}
+l.815 \end{frame}
                  
 Try typing  <return>  to proceed.
 If that doesn't work, type  X <return>  to quit.
 
 
-LaTeX Warning: File `{evaluate/bar_slrdollar}.png' not found on input line 822.
+LaTeX Warning: File `{evaluate/bar_slrdollar}.png' not found on input line 815.
 
 
 
@@ -2885,7 +2729,7 @@ See the pdftex.def package documentation for explanation.
 Type  H <return>  for immediate help.
  ...                                              
                                                   
-l.822 \end{frame}
+l.815 \end{frame}
                  
 Try typing  <return>  to proceed.
 If that doesn't work, type  X <return>  to quit.
@@ -2901,390 +2745,192 @@ If that doesn't work, type  X <return>  to quit.
 ]
 
 Package hyperref Warning: Token not allowed in a PDF string (PDFDocEncoding):
-(hyperref)                removing `\translate ' on input line 1029.
+(hyperref)                removing `\translate ' on input line 1022.
 
 [92
 
 ]
-
-LaTeX Warning: File `{training/bar_training_first_arrival}.png' not found on in
-put line 1125.
-
-
-! Package pdftex.def Error: File `training/bar_training_first_arrival.png' not 
-found: using draft setting.
-
-See the pdftex.def package documentation for explanation.
-Type  H <return>  for immediate help.
- ...                                              
-                                                  
-l.1125 \end{frame}
-                  
-Try typing  <return>  to proceed.
-If that doesn't work, type  X <return>  to quit.
-
-
-LaTeX Warning: File `{training/bar_training_next_arrival}.png' not found on inp
-ut line 1125.
-
-
-! Package pdftex.def Error: File `training/bar_training_next_arrival.png' not f
-ound: using draft setting.
-
-See the pdftex.def package documentation for explanation.
-Type  H <return>  for immediate help.
- ...                                              
-                                                  
-l.1125 \end{frame}
-                  
-Try typing  <return>  to proceed.
-If that doesn't work, type  X <return>  to quit.
-
-
-LaTeX Warning: File `{training/bar_training_hist}.png' not found on input line 
-1125.
-
-
-! Package pdftex.def Error: File `training/bar_training_hist.png' not found: us
-ing draft setting.
-
-See the pdftex.def package documentation for explanation.
-Type  H <return>  for immediate help.
- ...                                              
-                                                  
-l.1125 \end{frame}
-                  
-Try typing  <return>  to proceed.
-If that doesn't work, type  X <return>  to quit.
-
-
-LaTeX Warning: File `{training/bar_training_con1}.png' not found on input line 
-1125.
-
-
-! Package pdftex.def Error: File `training/bar_training_con1.png' not found: us
-ing draft setting.
-
-See the pdftex.def package documentation for explanation.
-Type  H <return>  for immediate help.
- ...                                              
-                                                  
-l.1125 \end{frame}
-                  
-Try typing  <return>  to proceed.
-If that doesn't work, type  X <return>  to quit.
-
-
-LaTeX Warning: File `{training/bar_training_con2}.png' not found on input line 
-1125.
-
-
-! Package pdftex.def Error: File `training/bar_training_con2.png' not found: us
-ing draft setting.
-
-See the pdftex.def package documentation for explanation.
-Type  H <return>  for immediate help.
- ...                                              
-                                                  
-l.1125 \end{frame}
-                  
-Try typing  <return>  to proceed.
-If that doesn't work, type  X <return>  to quit.
-
-
-LaTeX Warning: File `{training/bar_training_con3}.png' not found on input line 
-1125.
-
-
-! Package pdftex.def Error: File `training/bar_training_con3.png' not found: us
-ing draft setting.
-
-See the pdftex.def package documentation for explanation.
-Type  H <return>  for immediate help.
- ...                                              
-                                                  
-l.1125 \end{frame}
-                  
-Try typing  <return>  to proceed.
-If that doesn't work, type  X <return>  to quit.
-
-
-LaTeX Warning: File `{training/bar_training_con4}.png' not found on input line 
-1125.
-
-
-! Package pdftex.def Error: File `training/bar_training_con4.png' not found: us
-ing draft setting.
-
-See the pdftex.def package documentation for explanation.
-Type  H <return>  for immediate help.
- ...                                              
-                                                  
-l.1125 \end{frame}
-                  
-Try typing  <return>  to proceed.
-If that doesn't work, type  X <return>  to quit.
-
-
-LaTeX Warning: File `{training/bar_training_con5}.png' not found on input line 
-1125.
-
-
-! Package pdftex.def Error: File `training/bar_training_con5.png' not found: us
-ing draft setting.
-
-See the pdftex.def package documentation for explanation.
-Type  H <return>  for immediate help.
- ...                                              
-                                                  
-l.1125 \end{frame}
-                  
-Try typing  <return>  to proceed.
-If that doesn't work, type  X <return>  to quit.
-
-
-LaTeX Warning: File `{training/bar_training_con6}.png' not found on input line 
-1125.
-
-
-! Package pdftex.def Error: File `training/bar_training_con6.png' not found: us
-ing draft setting.
-
-See the pdftex.def package documentation for explanation.
-Type  H <return>  for immediate help.
- ...                                              
-                                                  
-l.1125 \end{frame}
-                  
-Try typing  <return>  to proceed.
-If that doesn't work, type  X <return>  to quit.
-
-
-LaTeX Warning: File `{training/bar_training_con7}.png' not found on input line 
-1125.
-
-
-! Package pdftex.def Error: File `training/bar_training_con7.png' not found: us
-ing draft setting.
-
-See the pdftex.def package documentation for explanation.
-Type  H <return>  for immediate help.
- ...                                              
-                                                  
-l.1125 \end{frame}
-                  
-Try typing  <return>  to proceed.
-If that doesn't work, type  X <return>  to quit.
-
-
-LaTeX Warning: File `{training/bar_training_delay2}.png' not found on input lin
-e 1125.
-
-
-! Package pdftex.def Error: File `training/bar_training_delay2.png' not found: 
-using draft setting.
-
-See the pdftex.def package documentation for explanation.
-Type  H <return>  for immediate help.
- ...                                              
-                                                  
-l.1125 \end{frame}
-                  
-Try typing  <return>  to proceed.
-If that doesn't work, type  X <return>  to quit.
-
-
-LaTeX Warning: File `{training/bar_training_delay3}.png' not found on input lin
-e 1125.
-
-
-! Package pdftex.def Error: File `training/bar_training_delay3.png' not found: 
-using draft setting.
-
-See the pdftex.def package documentation for explanation.
-Type  H <return>  for immediate help.
- ...                                              
-                                                  
-l.1125 \end{frame}
-                  
-Try typing  <return>  to proceed.
-If that doesn't work, type  X <return>  to quit.
-
-
-LaTeX Warning: File `{training/bar_training_delay4}.png' not found on input lin
-e 1125.
-
-
-! Package pdftex.def Error: File `training/bar_training_delay4.png' not found: 
-using draft setting.
-
-See the pdftex.def package documentation for explanation.
-Type  H <return>  for immediate help.
- ...                                              
-                                                  
-l.1125 \end{frame}
-                  
-Try typing  <return>  to proceed.
-If that doesn't work, type  X <return>  to quit.
-
-
-LaTeX Warning: File `{training/bar_training_delay5}.png' not found on input lin
-e 1125.
-
-
-! Package pdftex.def Error: File `training/bar_training_delay5.png' not found: 
-using draft setting.
-
-See the pdftex.def package documentation for explanation.
-Type  H <return>  for immediate help.
- ...                                              
-                                                  
-l.1125 \end{frame}
-                  
-Try typing  <return>  to proceed.
-If that doesn't work, type  X <return>  to quit.
-
-
-LaTeX Warning: File `{training/bar_training_delay6}.png' not found on input lin
-e 1125.
-
-
-! Package pdftex.def Error: File `training/bar_training_delay6.png' not found: 
-using draft setting.
-
-See the pdftex.def package documentation for explanation.
-Type  H <return>  for immediate help.
- ...                                              
-                                                  
-l.1125 \end{frame}
-                  
-Try typing  <return>  to proceed.
-If that doesn't work, type  X <return>  to quit.
-
-
-LaTeX Warning: File `{training/bar_training_delay7}.png' not found on input lin
-e 1125.
-
-
-! Package pdftex.def Error: File `training/bar_training_delay7.png' not found: 
-using draft setting.
-
-See the pdftex.def package documentation for explanation.
-Type  H <return>  for immediate help.
- ...                                              
-                                                  
-l.1125 \end{frame}
-                  
-Try typing  <return>  to proceed.
-If that doesn't work, type  X <return>  to quit.
-
-
-LaTeX Warning: File `{training/bar_training_msg1}.png' not found on input line 
-1125.
-
-
-! Package pdftex.def Error: File `training/bar_training_msg1.png' not found: us
-ing draft setting.
-
-See the pdftex.def package documentation for explanation.
-Type  H <return>  for immediate help.
- ...                                              
-                                                  
-l.1125 \end{frame}
-                  
-Try typing  <return>  to proceed.
-If that doesn't work, type  X <return>  to quit.
-
-
-LaTeX Warning: File `{training/bar_training_msg2}.png' not found on input line 
-1125.
-
-
-! Package pdftex.def Error: File `training/bar_training_msg2.png' not found: us
-ing draft setting.
-
-See the pdftex.def package documentation for explanation.
-Type  H <return>  for immediate help.
- ...                                              
-                                                  
-l.1125 \end{frame}
-                  
-Try typing  <return>  to proceed.
-If that doesn't work, type  X <return>  to quit.
-
-
-LaTeX Warning: File `{training/bar_training_msg3}.png' not found on input line 
-1125.
-
-
-! Package pdftex.def Error: File `training/bar_training_msg3.png' not found: us
-ing draft setting.
-
-See the pdftex.def package documentation for explanation.
-Type  H <return>  for immediate help.
- ...                                              
-                                                  
-l.1125 \end{frame}
-                  
-Try typing  <return>  to proceed.
-If that doesn't work, type  X <return>  to quit.
-
-
-LaTeX Warning: File `{training/bar_training_msg4}.png' not found on input line 
-1125.
-
-
-! Package pdftex.def Error: File `training/bar_training_msg4.png' not found: us
-ing draft setting.
-
-See the pdftex.def package documentation for explanation.
-Type  H <return>  for immediate help.
- ...                                              
-                                                  
-l.1125 \end{frame}
-                  
-Try typing  <return>  to proceed.
-If that doesn't work, type  X <return>  to quit.
-
-
-LaTeX Warning: File `{training/bar_training_msg5}.png' not found on input line 
-1125.
-
-
-! Package pdftex.def Error: File `training/bar_training_msg5.png' not found: us
-ing draft setting.
-
-See the pdftex.def package documentation for explanation.
-Type  H <return>  for immediate help.
- ...                                              
-                                                  
-l.1125 \end{frame}
-                  
-Try typing  <return>  to proceed.
-If that doesn't work, type  X <return>  to quit.
-
-
-LaTeX Warning: File `{training/bar_training_msg6}.png' not found on input line 
-1125.
-
-
-! Package pdftex.def Error: File `training/bar_training_msg6.png' not found: us
-ing draft setting.
-
-See the pdftex.def package documentation for explanation.
-Type  H <return>  for immediate help.
- ...                                              
-                                                  
-l.1125 \end{frame}
-                  
-Try typing  <return>  to proceed.
-If that doesn't work, type  X <return>  to quit.
-
-[93
-
-]
-
-LaTeX Warning: File `{slr/cdf_delay_2}.png' not found on input line 1147.
+<../../../figures/training/bar_training_first_arrival.png, id=658, 357.7365pt x
+ 312.2064pt>
+File: ../../../figures/training/bar_training_first_arrival.png Graphic file (ty
+pe png)
+<use ../../../figures/training/bar_training_first_arrival.png>
+Package pdftex.def Info: ../../../figures/training/bar_training_first_arrival.p
+ng  used on input line 1118.
+(pdftex.def)             Requested size: 45.81111pt x 39.97847pt.
+<../../../figures/training/bar_training_next_arrival.png, id=659, 341.8371pt x 
+312.2064pt>
+File: ../../../figures/training/bar_training_next_arrival.png Graphic file (typ
+e png)
+<use ../../../figures/training/bar_training_next_arrival.png>
+Package pdftex.def Info: ../../../figures/training/bar_training_next_arrival.pn
+g  used on input line 1118.
+(pdftex.def)             Requested size: 45.81111pt x 41.83638pt.
+<../../../figures/training/bar_training_hist.png, id=660, 372.9132pt x 317.2653
+pt>
+File: ../../../figures/training/bar_training_hist.png Graphic file (type png)
+<use ../../../figures/training/bar_training_hist.png>
+Package pdftex.def Info: ../../../figures/training/bar_training_hist.png  used 
+on input line 1118.
+(pdftex.def)             Requested size: 45.81111pt x 38.97063pt.
+<../../../figures/training/bar_training_con1.png, id=661, 341.8371pt x 312.2064
+pt>
+File: ../../../figures/training/bar_training_con1.png Graphic file (type png)
+<use ../../../figures/training/bar_training_con1.png>
+Package pdftex.def Info: ../../../figures/training/bar_training_con1.png  used 
+on input line 1118.
+(pdftex.def)             Requested size: 45.81111pt x 41.83638pt.
+<../../../figures/training/bar_training_con2.png, id=662, 326.6604pt x 312.2064
+pt>
+File: ../../../figures/training/bar_training_con2.png Graphic file (type png)
+<use ../../../figures/training/bar_training_con2.png>
+Package pdftex.def Info: ../../../figures/training/bar_training_con2.png  used 
+on input line 1118.
+(pdftex.def)             Requested size: 45.81111pt x 43.78004pt.
+<../../../figures/training/bar_training_con3.png, id=663, 326.6604pt x 312.2064
+pt>
+File: ../../../figures/training/bar_training_con3.png Graphic file (type png)
+<use ../../../figures/training/bar_training_con3.png>
+Package pdftex.def Info: ../../../figures/training/bar_training_con3.png  used 
+on input line 1118.
+(pdftex.def)             Requested size: 45.81111pt x 43.78004pt.
+<../../../figures/training/bar_training_con4.png, id=664, 326.6604pt x 312.2064
+pt>
+File: ../../../figures/training/bar_training_con4.png Graphic file (type png)
+<use ../../../figures/training/bar_training_con4.png>
+Package pdftex.def Info: ../../../figures/training/bar_training_con4.png  used 
+on input line 1118.
+(pdftex.def)             Requested size: 45.81111pt x 43.78004pt.
+<../../../figures/training/bar_training_con5.png, id=665, 326.6604pt x 312.2064
+pt>
+File: ../../../figures/training/bar_training_con5.png Graphic file (type png)
+<use ../../../figures/training/bar_training_con5.png>
+Package pdftex.def Info: ../../../figures/training/bar_training_con5.png  used 
+on input line 1118.
+(pdftex.def)             Requested size: 45.81111pt x 43.78004pt.
+<../../../figures/training/bar_training_con6.png, id=666, 326.6604pt x 312.2064
+pt>
+File: ../../../figures/training/bar_training_con6.png Graphic file (type png)
+<use ../../../figures/training/bar_training_con6.png>
+Package pdftex.def Info: ../../../figures/training/bar_training_con6.png  used 
+on input line 1118.
+(pdftex.def)             Requested size: 45.81111pt x 43.78004pt.
+<../../../figures/training/bar_training_con7.png, id=667, 341.8371pt x 321.6015
+pt>
+File: ../../../figures/training/bar_training_con7.png Graphic file (type png)
+<use ../../../figures/training/bar_training_con7.png>
+Package pdftex.def Info: ../../../figures/training/bar_training_con7.png  used 
+on input line 1118.
+(pdftex.def)             Requested size: 45.81111pt x 43.09535pt.
+<../../../figures/training/bar_training_delay2.png, id=668, 341.8371pt x 312.20
+64pt>
+File: ../../../figures/training/bar_training_delay2.png Graphic file (type png)
+
+<use ../../../figures/training/bar_training_delay2.png>
+Package pdftex.def Info: ../../../figures/training/bar_training_delay2.png  use
+d on input line 1118.
+(pdftex.def)             Requested size: 45.81111pt x 41.83638pt.
+<../../../figures/training/bar_training_delay3.png, id=669, 341.8371pt x 312.20
+64pt>
+File: ../../../figures/training/bar_training_delay3.png Graphic file (type png)
+
+<use ../../../figures/training/bar_training_delay3.png>
+Package pdftex.def Info: ../../../figures/training/bar_training_delay3.png  use
+d on input line 1118.
+(pdftex.def)             Requested size: 45.81111pt x 41.83638pt.
+<../../../figures/training/bar_training_delay4.png, id=670, 342.5598pt x 312.20
+64pt>
+File: ../../../figures/training/bar_training_delay4.png Graphic file (type png)
+
+<use ../../../figures/training/bar_training_delay4.png>
+Package pdftex.def Info: ../../../figures/training/bar_training_delay4.png  use
+d on input line 1118.
+(pdftex.def)             Requested size: 45.81111pt x 41.75064pt.
+<../../../figures/training/bar_training_delay5.png, id=671, 341.8371pt x 312.20
+64pt>
+File: ../../../figures/training/bar_training_delay5.png Graphic file (type png)
+
+<use ../../../figures/training/bar_training_delay5.png>
+Package pdftex.def Info: ../../../figures/training/bar_training_delay5.png  use
+d on input line 1118.
+(pdftex.def)             Requested size: 45.81111pt x 41.83638pt.
+<../../../figures/training/bar_training_delay6.png, id=672, 342.5598pt x 312.20
+64pt>
+File: ../../../figures/training/bar_training_delay6.png Graphic file (type png)
+
+<use ../../../figures/training/bar_training_delay6.png>
+Package pdftex.def Info: ../../../figures/training/bar_training_delay6.png  use
+d on input line 1118.
+(pdftex.def)             Requested size: 45.81111pt x 41.75064pt.
+<../../../figures/training/bar_training_delay7.png, id=673, 326.6604pt x 312.20
+64pt>
+File: ../../../figures/training/bar_training_delay7.png Graphic file (type png)
+
+<use ../../../figures/training/bar_training_delay7.png>
+Package pdftex.def Info: ../../../figures/training/bar_training_delay7.png  use
+d on input line 1118.
+(pdftex.def)             Requested size: 45.81111pt x 43.78004pt.
+<../../../figures/training/bar_training_msg1.png, id=674, 326.6604pt x 312.2064
+pt>
+File: ../../../figures/training/bar_training_msg1.png Graphic file (type png)
+<use ../../../figures/training/bar_training_msg1.png>
+Package pdftex.def Info: ../../../figures/training/bar_training_msg1.png  used 
+on input line 1118.
+(pdftex.def)             Requested size: 45.81111pt x 43.78004pt.
+<../../../figures/training/bar_training_msg2.png, id=675, 326.6604pt x 313.6518
+pt>
+File: ../../../figures/training/bar_training_msg2.png Graphic file (type png)
+<use ../../../figures/training/bar_training_msg2.png>
+Package pdftex.def Info: ../../../figures/training/bar_training_msg2.png  used 
+on input line 1118.
+(pdftex.def)             Requested size: 45.81111pt x 43.98273pt.
+<../../../figures/training/bar_training_msg3.png, id=676, 326.6604pt x 315.0972
+pt>
+File: ../../../figures/training/bar_training_msg3.png Graphic file (type png)
+<use ../../../figures/training/bar_training_msg3.png>
+Package pdftex.def Info: ../../../figures/training/bar_training_msg3.png  used 
+on input line 1118.
+(pdftex.def)             Requested size: 45.81111pt x 44.18542pt.
+<../../../figures/training/bar_training_msg4.png, id=677, 326.6604pt x 312.2064
+pt>
+File: ../../../figures/training/bar_training_msg4.png Graphic file (type png)
+<use ../../../figures/training/bar_training_msg4.png>
+Package pdftex.def Info: ../../../figures/training/bar_training_msg4.png  used 
+on input line 1118.
+(pdftex.def)             Requested size: 45.81111pt x 43.78004pt.
+<../../../figures/training/bar_training_msg5.png, id=678, 326.6604pt x 312.2064
+pt>
+File: ../../../figures/training/bar_training_msg5.png Graphic file (type png)
+<use ../../../figures/training/bar_training_msg5.png>
+Package pdftex.def Info: ../../../figures/training/bar_training_msg5.png  used 
+on input line 1118.
+(pdftex.def)             Requested size: 45.81111pt x 43.78004pt.
+<../../../figures/training/bar_training_msg6.png, id=679, 326.6604pt x 312.2064
+pt>
+File: ../../../figures/training/bar_training_msg6.png Graphic file (type png)
+<use ../../../figures/training/bar_training_msg6.png>
+Package pdftex.def Info: ../../../figures/training/bar_training_msg6.png  used 
+on input line 1118.
+(pdftex.def)             Requested size: 45.81111pt x 43.78004pt.
+ [93
+
+ <../../../figures/training/bar_training_first_arrival.png> <../../../figures/t
+raining/bar_training_next_arrival.png> <../../../figures/training/bar_training_
+hist.png> <../../../figures/training/bar_training_con1.png> <../../../figures/t
+raining/bar_training_con2.png> <../../../figures/training/bar_training_con3.png
+> <../../../figures/training/bar_training_con4.png> <../../../figures/training/
+bar_training_con5.png> <../../../figures/training/bar_training_con6.png> <../..
+/../figures/training/bar_training_con7.png> <../../../figures/training/bar_trai
+ning_delay2.png> <../../../figures/training/bar_training_delay3.png> <../../../
+figures/training/bar_training_delay4.png> <../../../figures/training/bar_traini
+ng_delay5.png> <../../../figures/training/bar_training_delay6.png> <../../../fi
+gures/training/bar_training_delay7.png> <../../../figures/training/bar_training
+_msg1.png> <../../../figures/training/bar_training_msg2.png> <../../../figures/
+training/bar_training_msg3.png> <../../../figures/training/bar_training_msg4.pn
+g> <../../../figures/training/bar_training_msg5.png> <../../../figures/training
+/bar_training_msg6.png>]
+
+LaTeX Warning: File `{slr/cdf_delay_2}.png' not found on input line 1140.
 
 
 ! Package pdftex.def Error: File `slr/cdf_delay_2.png' not found: using draft s
@@ -3294,13 +2940,13 @@ See the pdftex.def package documentation for explanation.
 Type  H <return>  for immediate help.
  ...                                              
                                                   
-l.1147 \end{frame}
+l.1140 \end{frame}
                   
 Try typing  <return>  to proceed.
 If that doesn't work, type  X <return>  to quit.
 
 
-LaTeX Warning: File `{slr/cdf_delay_4}.png' not found on input line 1147.
+LaTeX Warning: File `{slr/cdf_delay_4}.png' not found on input line 1140.
 
 
 ! Package pdftex.def Error: File `slr/cdf_delay_4.png' not found: using draft s
@@ -3310,13 +2956,13 @@ See the pdftex.def package documentation for explanation.
 Type  H <return>  for immediate help.
  ...                                              
                                                   
-l.1147 \end{frame}
+l.1140 \end{frame}
                   
 Try typing  <return>  to proceed.
 If that doesn't work, type  X <return>  to quit.
 
 
-LaTeX Warning: File `{slr/cdf_delay_6}.png' not found on input line 1147.
+LaTeX Warning: File `{slr/cdf_delay_6}.png' not found on input line 1140.
 
 
 ! Package pdftex.def Error: File `slr/cdf_delay_6.png' not found: using draft s
@@ -3326,7 +2972,7 @@ See the pdftex.def package documentation for explanation.
 Type  H <return>  for immediate help.
  ...                                              
                                                   
-l.1147 \end{frame}
+l.1140 \end{frame}
                   
 Try typing  <return>  to proceed.
 If that doesn't work, type  X <return>  to quit.
@@ -3335,35 +2981,34 @@ If that doesn't work, type  X <return>  to quit.
 
 ]
 
-LaTeX Warning: File `{slr2/pdf_unsoldvals_0.7}.png' not found on input line 116
-2.
+LaTeX Warning: File `{slrvals/pdf_unsoldvals}.png' not found on input line 1155
+.
 
 
-! Package pdftex.def Error: File `slr2/pdf_unsoldvals_0.7.png' not found: using
- draft setting.
+! Package pdftex.def Error: File `slrvals/pdf_unsoldvals.png' not found: using 
+draft setting.
 
 See the pdftex.def package documentation for explanation.
 Type  H <return>  for immediate help.
  ...                                              
                                                   
-l.1162 \end{frame}
+l.1155 \end{frame}
                   
 Try typing  <return>  to proceed.
 If that doesn't work, type  X <return>  to quit.
 
 
-LaTeX Warning: File `{slr2/pdf_soldvals_0.7}.png' not found on input line 1162.
+LaTeX Warning: File `{slrvals/pdf_soldvals}.png' not found on input line 1155.
 
 
-
-! Package pdftex.def Error: File `slr2/pdf_soldvals_0.7.png' not found: using d
-raft setting.
+! Package pdftex.def Error: File `slrvals/pdf_soldvals.png' not found: using dr
+aft setting.
 
 See the pdftex.def package documentation for explanation.
 Type  H <return>  for immediate help.
  ...                                              
                                                   
-l.1162 \end{frame}
+l.1155 \end{frame}
                   
 Try typing  <return>  to proceed.
 If that doesn't work, type  X <return>  to quit.
@@ -3372,7 +3017,7 @@ If that doesn't work, type  X <return>  to quit.
 
 ]
 
-LaTeX Warning: File `{slr/cdf_lstgprice}.png' not found on input line 1169.
+LaTeX Warning: File `{slr/cdf_lstgprice}.png' not found on input line 1162.
 
 
 ! Package pdftex.def Error: File `slr/cdf_lstgprice.png' not found: using draft
@@ -3382,7 +3027,7 @@ See the pdftex.def package documentation for explanation.
 Type  H <return>  for immediate help.
  ...                                              
                                                   
-l.1169 \end{frame}
+l.1162 \end{frame}
                   
 Try typing  <return>  to proceed.
 If that doesn't work, type  X <return>  to quit.
@@ -3390,144 +3035,87 @@ If that doesn't work, type  X <return>  to quit.
 [96
 
 ]
+File: ../../../figures/slr3/response_slrrejacc_0.67.png Graphic file (type png)
 
-LaTeX Warning: File `{slr3/response_slrrejacc_0.67}.png' not found on input lin
-e 1187.
+<use ../../../figures/slr3/response_slrrejacc_0.67.png>
+Package pdftex.def Info: ../../../figures/slr3/response_slrrejacc_0.67.png  use
+d on input line 1180.
+(pdftex.def)             Requested size: 127.47125pt x 129.18645pt.
+<../../../figures/slr3/simple_slrrejaccbin_0.67.png, id=723, 322.3242pt x 326.6
+604pt>
+File: ../../../figures/slr3/simple_slrrejaccbin_0.67.png Graphic file (type png
+)
+<use ../../../figures/slr3/simple_slrrejaccbin_0.67.png>
+Package pdftex.def Info: ../../../figures/slr3/simple_slrrejaccbin_0.67.png  us
+ed on input line 1180.
+(pdftex.def)             Requested size: 127.47125pt x 129.18645pt.
+<../../../figures/slr3/contourline_bincon_0.67.png, id=724, 322.3242pt x 320.87
+88pt>
+File: ../../../figures/slr3/contourline_bincon_0.67.png Graphic file (type png)
 
+<use ../../../figures/slr3/contourline_bincon_0.67.png>
+Package pdftex.def Info: ../../../figures/slr3/contourline_bincon_0.67.png  use
+d on input line 1180.
+(pdftex.def)             Requested size: 127.47125pt x 126.89996pt.
+ [97
 
-! Package pdftex.def Error: File `slr3/response_slrrejacc_0.67.png' not found: 
-using draft setting.
+ <../../../figures/slr3/simple_slrrejaccbin_0.67.png> <../../../figures/slr3/co
+ntourline_bincon_0.67.png>]
+File: ../../../figures/slr3/response_slrrejacc_0.75.png Graphic file (type png)
 
-See the pdftex.def package documentation for explanation.
-Type  H <return>  for immediate help.
- ...                                              
-                                                  
-l.1187 \end{frame}
-                  
-Try typing  <return>  to proceed.
-If that doesn't work, type  X <return>  to quit.
+<use ../../../figures/slr3/response_slrrejacc_0.75.png>
+Package pdftex.def Info: ../../../figures/slr3/response_slrrejacc_0.75.png  use
+d on input line 1198.
+(pdftex.def)             Requested size: 127.47125pt x 129.18645pt.
+<../../../figures/slr3/simple_slrrejaccbin_0.75.png, id=733, 322.3242pt x 326.6
+604pt>
+File: ../../../figures/slr3/simple_slrrejaccbin_0.75.png Graphic file (type png
+)
+<use ../../../figures/slr3/simple_slrrejaccbin_0.75.png>
+Package pdftex.def Info: ../../../figures/slr3/simple_slrrejaccbin_0.75.png  us
+ed on input line 1198.
+(pdftex.def)             Requested size: 127.47125pt x 129.18645pt.
+<../../../figures/slr3/contourline_bincon_0.75.png, id=734, 322.3242pt x 326.66
+04pt>
+File: ../../../figures/slr3/contourline_bincon_0.75.png Graphic file (type png)
 
+<use ../../../figures/slr3/contourline_bincon_0.75.png>
+Package pdftex.def Info: ../../../figures/slr3/contourline_bincon_0.75.png  use
+d on input line 1198.
+(pdftex.def)             Requested size: 127.47125pt x 129.18645pt.
+ [98
 
-LaTeX Warning: File `{slr3/simple_slrrejaccbin_0.67}.png' not found on input li
-ne 1187.
+ <../../../figures/slr3/simple_slrrejaccbin_0.75.png> <../../../figures/slr3/co
+ntourline_bincon_0.75.png>]
 
-
-! Package pdftex.def Error: File `slr3/simple_slrrejaccbin_0.67.png' not found:
- using draft setting.
-
-See the pdftex.def package documentation for explanation.
-Type  H <return>  for immediate help.
- ...                                              
-                                                  
-l.1187 \end{frame}
-                  
-Try typing  <return>  to proceed.
-If that doesn't work, type  X <return>  to quit.
-
-
-LaTeX Warning: File `{slr3/contourline_bincon_0.67}.png' not found on input lin
-e 1187.
-
-
-! Package pdftex.def Error: File `slr3/contourline_bincon_0.67.png' not found: 
-using draft setting.
-
-See the pdftex.def package documentation for explanation.
-Type  H <return>  for immediate help.
- ...                                              
-                                                  
-l.1187 \end{frame}
-                  
-Try typing  <return>  to proceed.
-If that doesn't work, type  X <return>  to quit.
-
-[97
-
-]
-
-LaTeX Warning: File `{slr3/response_slrrejacc_0.75}.png' not found on input lin
-e 1205.
+LaTeX Warning: File `{slr2/contour_rejdata}.png' not found on input line 1213.
 
 
-! Package pdftex.def Error: File `slr3/response_slrrejacc_0.75.png' not found: 
-using draft setting.
+! Package pdftex.def Error: File `slr2/contour_rejdata.png' not found: using dr
+aft setting.
 
 See the pdftex.def package documentation for explanation.
 Type  H <return>  for immediate help.
  ...                                              
                                                   
-l.1205 \end{frame}
+l.1213 \end{frame}
                   
 Try typing  <return>  to proceed.
 If that doesn't work, type  X <return>  to quit.
 
 
-LaTeX Warning: File `{slr3/simple_slrrejaccbin_0.75}.png' not found on input li
-ne 1205.
-
-
-! Package pdftex.def Error: File `slr3/simple_slrrejaccbin_0.75.png' not found:
- using draft setting.
-
-See the pdftex.def package documentation for explanation.
-Type  H <return>  for immediate help.
- ...                                              
-                                                  
-l.1205 \end{frame}
-                  
-Try typing  <return>  to proceed.
-If that doesn't work, type  X <return>  to quit.
-
-
-LaTeX Warning: File `{slr3/contourline_bincon_0.75}.png' not found on input lin
-e 1205.
-
-
-! Package pdftex.def Error: File `slr3/contourline_bincon_0.75.png' not found: 
-using draft setting.
-
-See the pdftex.def package documentation for explanation.
-Type  H <return>  for immediate help.
- ...                                              
-                                                  
-l.1205 \end{frame}
-                  
-Try typing  <return>  to proceed.
-If that doesn't work, type  X <return>  to quit.
-
-[98
-
-]
-
-LaTeX Warning: File `{turn2/contour_rejdata}.png' not found on input line 1220.
+LaTeX Warning: File `{slr2/contour_rejagent}.png' not found on input line 1213.
 
 
 
-! Package pdftex.def Error: File `turn2/contour_rejdata.png' not found: using d
+! Package pdftex.def Error: File `slr2/contour_rejagent.png' not found: using d
 raft setting.
 
 See the pdftex.def package documentation for explanation.
 Type  H <return>  for immediate help.
  ...                                              
                                                   
-l.1220 \end{frame}
-                  
-Try typing  <return>  to proceed.
-If that doesn't work, type  X <return>  to quit.
-
-
-LaTeX Warning: File `{turn2/contour_rejagent}.png' not found on input line 1220
-.
-
-
-! Package pdftex.def Error: File `turn2/contour_rejagent.png' not found: using 
-draft setting.
-
-See the pdftex.def package documentation for explanation.
-Type  H <return>  for immediate help.
- ...                                              
-                                                  
-l.1220 \end{frame}
+l.1213 \end{frame}
                   
 Try typing  <return>  to proceed.
 If that doesn't work, type  X <return>  to quit.
@@ -3544,20 +3132,20 @@ If that doesn't work, type  X <return>  to quit.
 \tf@snm=\write9
 \openout9 = `"201120 DataColada.snm"'.
 
-Package atveryend Info: Empty hook `BeforeClearDocument' on input line 1223.
-Package atveryend Info: Empty hook `AfterLastShipout' on input line 1223.
+Package atveryend Info: Empty hook `BeforeClearDocument' on input line 1216.
+Package atveryend Info: Empty hook `AfterLastShipout' on input line 1216.
  (./201120 DataColada.aux)
-Package atveryend Info: Executing hook `AtVeryEndDocument' on input line 1223.
-Package atveryend Info: Executing hook `AtEndAfterFileList' on input line 1223.
+Package atveryend Info: Executing hook `AtVeryEndDocument' on input line 1216.
+Package atveryend Info: Executing hook `AtEndAfterFileList' on input line 1216.
 
 Package rerunfilecheck Info: File `"201120 DataColada".out' has not changed.
 (rerunfilecheck)             Checksum: 1FECDC02E6B8E038878CF770A1E1D199;253.
  ) 
 Here is how much of TeX's memory you used:
- 51371 strings out of 492982
- 1237106 string characters out of 6134896
- 1378337 words of memory out of 5000000
- 53844 multiletter control sequences out of 15000+600000
+ 51531 strings out of 492982
+ 1245589 string characters out of 6134896
+ 1379107 words of memory out of 5000000
+ 54004 multiletter control sequences out of 15000+600000
  563330 words of font info for 108 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
  127i,12n,155p,10388b,1532s stack positions out of 5000i,500n,10000p,200000b,80000s
@@ -3580,10 +3168,10 @@ er/sfss1095.pfb></usr/share/texmf/fonts/type1/public/cm-super/sfss1440.pfb></us
 r/share/texmf/fonts/type1/public/cm-super/sfsx1095.pfb></usr/share/texmf/fonts/
 type1/public/cm-super/sftt1000.pfb></usr/share/texmf/fonts/type1/public/cm-supe
 r/sftt1095.pfb>
-Output written on "201120 DataColada.pdf" (99 pages, 1008831 bytes).
+Output written on "201120 DataColada.pdf" (99 pages, 1940358 bytes).
 PDF statistics:
- 782 PDF objects out of 1000 (max. 8388607)
+ 862 PDF objects out of 1000 (max. 8388607)
  588 compressed objects within 6 object streams
  207 named destinations out of 1000 (max. 500000)
- 241 words of extra memory for PDF output out of 10000 (max. 10000000)
+ 441 words of extra memory for PDF output out of 10000 (max. 10000000)
 

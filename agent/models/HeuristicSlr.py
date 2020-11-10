@@ -36,24 +36,21 @@ class HeuristicSlr:
         cons = AGENT_CONS[turn]
         if turn == 2:
             elapsed = get_elapsed(x=x, turn=turn)
-            if elapsed <= .62:
+            if elapsed <= .61:
                 idx = np.nonzero(cons == 0)[0][0]
             else:
                 idx = np.nonzero(cons == 1)[0][0]
 
         elif turn == 4:
             elapsed = get_elapsed(x=x, turn=turn)
-            if elapsed > .31:
-                idx = np.nonzero(cons == 1)[0][0]
+            if elapsed <= .26:
+                idx = np.nonzero(cons == 0)[0][0]
             else:
-                idx = np.nonzero(cons == .6)[0][0]
+                idx = np.nonzero(cons == 1)[0][0]
 
         elif turn == 6:
-            norm = x['offer{}'.format(turn - 1)][NORM_IND].item()
-            if norm > .8:
-                idx = np.nonzero(cons == 1)[0][0]
-            else:
-                idx = np.nonzero(cons == .6)[0][0]
+            # norm = x['offer{}'.format(turn - 1)][NORM_IND].item()
+            idx = np.nonzero(cons == 1)[0][0]
 
         else:
             raise ValueError('Invalid turn: {}'.format(turn))

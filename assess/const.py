@@ -18,7 +18,7 @@ OPT = EstimatorSettings(efficient=True)
 
 # delta for values figures
 DELTA_BYR = .9
-DELTA_SLR = .67
+DELTA_SLR = .7
 
 # various dimensions for plotting
 POINTS = 100

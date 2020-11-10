@@ -9,10 +9,10 @@ from torch.nn.functional import log_softmax
 import numpy as np
 from nets.FeedForward import FeedForward
 from sim.Sample import get_batches
-from constants import DAY, INPUT_DIR, MODEL_DIR, SIM_DIR, PARTS_DIR, OUTCOME_SIMS, \
+from constants import DAY, INPUT_DIR, MODEL_DIR, SIM_DIR, PARTS_DIR, \
     MAX_DELAY_TURN, MAX_DELAY_ARRIVAL, NUM_CHUNKS, FEATS_DIR
 from featnames import LOOKUP, X_THREAD, X_OFFER, CLOCK, BYR, SLR, AGENT_PARTITIONS, \
-    PARTITIONS, LSTG, SIM
+    PARTITIONS
 
 
 def unpickle(file):
@@ -276,13 +276,6 @@ def load_data(part=None, sim=False, run_dir=None, lstgs=None):
         for k, df in data.items():
             data[k] = safe_reindex(df, idx=lstgs)
 
-    # expand lookup index by OUTCOME_SIMS
-    if sim or run_dir is not None:
-        lstgs = data[LOOKUP].index if lstgs is None else lstgs
-        idx = pd.MultiIndex.from_product([lstgs, range(OUTCOME_SIMS)],
-                                         names=[LSTG, SIM])
-        data[LOOKUP] = safe_reindex(data[LOOKUP], idx=idx)
-
     return data
 
 
@@ -304,12 +297,13 @@ def get_role(byr=None):
     return BYR if byr else SLR
 
 
-def safe_reindex(df=None, idx=None):
+def safe_reindex(df=None, idx=None, fill_value=None):
     df = pd.DataFrame(index=idx).join(df)
     if len(df.columns) == 1:
-        return df.squeeze()
-    else:
-        return df
+        df = df.squeeze()
+    if fill_value is not None:
+        df.loc[df.isna()] = fill_value
+    return df
 
 
 def load_feats(name, lstgs=None, fill_zero=False):

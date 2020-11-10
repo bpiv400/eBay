@@ -5,10 +5,11 @@ from statsmodels.nonparametric.kernel_regression import KernelReg
 from agent.util import get_sale_norm
 from utils import unpickle, safe_reindex
 from assess.const import OPT, VALUES_DIM, POINTS
-from constants import IDX, BYR, EPS, DAY, HOUR, PCTILE_DIR, \
+from constants import IDX, BYR, EPS, DAY, HOUR, PCTILE_DIR, OUTCOME_SIMS, \
     MAX_DELAY_TURN, MAX_DELAY_ARRIVAL, INTERVAL_ARRIVAL, INTERVAL_CT_ARRIVAL
 from featnames import DELAY, CON, NORM, AUTO, START_TIME, START_PRICE, LOOKUP, \
-    MSG, DAYS_SINCE_LSTG, BYR_HIST, INDEX, X_OFFER, CLOCK, THREAD, X_THREAD, REJECT, EXP, SLR
+    MSG, DAYS_SINCE_LSTG, BYR_HIST, INDEX, X_OFFER, CLOCK, THREAD, X_THREAD, \
+    REJECT, EXP, SLR, SIM, LSTG
 
 
 def continuous_pdf(y=None):
@@ -136,7 +137,7 @@ def num_threads(data):
     s = s.groupby(s.index.names[:-1]).count()
 
     # add in zeros
-    s = s.reindex(index=data[LOOKUP].index, fill_value=0)
+    s = safe_reindex(s, idx=data[LOOKUP].index, fill_value=0)
 
     # pdf
     s = s.groupby(s).count() / len(s)
