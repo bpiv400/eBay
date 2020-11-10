@@ -5,4 +5,4 @@
 #$ -o logs/collate/
 
 ulimit -n 4096
-python repo/agent/eval/collate.py "$1"
+python repo/agent/eval/collate.py --delta "$1"
