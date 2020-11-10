@@ -1,4 +1,3 @@
-import psutil
 import numpy as np
 import torch
 from torch.utils.data import Sampler, DataLoader
@@ -67,6 +66,6 @@ def get_batches(data, is_training=False):
     batches = DataLoader(data,
                          collate_fn=collate,
                          batch_sampler=Sample(data, is_training),
-                         num_workers=psutil.cpu_count(),
+                         num_workers=torch.multiprocessing.cpu_count(),
                          pin_memory=True)
     return batches
