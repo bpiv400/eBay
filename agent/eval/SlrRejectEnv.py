@@ -5,7 +5,7 @@ from sim.sims import SimulatorEnv
 
 class SlrRejectEnv(SimulatorEnv):
     def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+        super().__init__(kwargs)
         self.reject_next = dict()  # use thread_id as key
 
     def process_delay(self, event):

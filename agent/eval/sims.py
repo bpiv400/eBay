@@ -1,6 +1,6 @@
 import os
 from agent.eval.AgentGenerator import AgentGenerator
-from agent.eval.SlrRejEnv import SlrRejectEnv
+from agent.eval.SlrRejectEnv import SlrRejectEnv
 from agent.models.AgentModel import load_agent_model
 from agent.models.HeuristicByr import HeuristicByr
 from agent.models.HeuristicSlr import HeuristicSlr
