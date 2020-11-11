@@ -357,7 +357,7 @@ def response_plot(path, obj):
         else:
             raise NotImplementedError('Invalid name: {}'.format(name))
 
-    elif name in [ACCEPT, REJECT, CON]:
+    elif name in [ACCEPT, REJECT, 'counter', CON]:
         ylabel = 'Average concession' if name == CON else 'Pr({})'.format(name)
         args = dict(xlim=[.4, .9], ylim=[0, 1],
                     xlabel='Turn 1: Offer / list price',
@@ -385,6 +385,14 @@ def response_plot(path, obj):
         args = dict(ylim=[0, .8],
                     xlabel='Turn 2: Concession',
                     ylabel='Turn 3: Pr(accept)')
+    elif name == 'slrrejrej':
+        args = dict(ylim=[0, .8],
+                    xlabel='Turn 2: Concession',
+                    ylabel='Turn 3: Pr(walk)')
+    elif name == 'slrrejcon':
+        args = dict(ylim=[0, .8],
+                    xlabel='Turn 2: Concession',
+                    ylabel='Turn 3: Concession')
     elif name == 'slrrejnorm':
         args = dict(ylim=[0, .8],
                     xlabel='Turn 2: Concession',
@@ -443,7 +451,8 @@ def response_plot(path, obj):
             dset = dsets[i]
             draw_response(line=line.xs(dset, level=0, axis=1),
                           dots=dots.xs(dset, level=0, axis=1),
-                          diagonal=(NORM in name), connect=(name == 'slrrejacc'))
+                          diagonal=(NORM in name),
+                          connect=(name in ['slrrejrej', 'slrrejacc']))
             save_fig('{}_{}'.format(path, dset), legend=False, **args)
             plt.clf()
 
@@ -503,10 +512,10 @@ def bar_plot(path, df):
                     xlabel='Turn',
                     ylabel='Fraction of eligible offers')
     elif name == 'slrnorm':
-        args = dict(ylim=[.66, .74], legend=False, xlabel='',
+        args = dict(ylim=[.65, .75], legend=False, xlabel='',
                     ylabel='Average normalized reward')
     elif name == 'slrdollar':
-        args = dict(ylim=[76, 86], legend=False, xlabel='',
+        args = dict(ylim=[80, 90], legend=False, xlabel='',
                     ylabel='Average reward ($)')
     elif name == 'training':
         baserate = df['Baserate']

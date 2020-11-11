@@ -46,7 +46,8 @@ def main():
     assert con2.min() == -.1
 
     x1, x2, x3 = norm1.values, con2.values, log10_price.values
-    y_acc, y_rej, y_norm = (con3 == 1).values, (con3 == 0).values, norm3.values
+    y_con, y_norm = con3.values, norm3.values
+    y_acc, y_rej = (y_con == 1), (y_con == 0)
 
     # turn1 vs. turn3 after turn2 reject
     for feat in ['acc', 'rej', 'norm']:
@@ -58,13 +59,16 @@ def main():
     for c in COMMON_CONS[1]:
         k = '{}'.format(c)
         mask = np.isclose(x1, c) & (x2 >= 0) & (x2 <= .9)
-        for feat in ['acc', 'norm']:
+        for feat in ['acc', 'rej', 'con', 'norm']:
             key = 'response_slrrej{}'.format(feat)
             y = locals()['y_{}'.format(feat)]
-            line, dots, bw = ll_wrapper(y=y[mask], x=x2[mask],
-                                        discrete=[0, .5], dim=CON2_DIM)
+            if feat == 'con':
+                x = x2[mask & (y > 0) & (y < 1)]
+                y = y[mask & (y > 0) & (y < 1)]
+            else:
+                y, x = y[mask], x2[mask]
+            line, dots, bw = ll_wrapper(y, x, discrete=[0, .5], dim=CON2_DIM)
             print('{}_{}: {}'.format(feat, c, bw[0]))
-
             if c == COMMON_CONS[1][0]:
                 line.columns = pd.MultiIndex.from_product([[k], line.columns])
                 dots.columns = pd.MultiIndex.from_product([[k], dots.columns])

@@ -9,7 +9,7 @@ from rlenv.generate.util import process_sims
 from utils import compose_args, topickle, run_func_on_chunks, process_chunk_worker
 from agent.const import AGENT_PARAMS, HYPER_PARAMS
 from constants import DROPOUT_GRID, NUM_CHUNKS
-from featnames import BYR, DROPOUT, TEST, AGENT_PARTITIONS, DELTA
+from featnames import BYR, DROPOUT, TEST, AGENT_PARTITIONS
 
 
 def main():
@@ -31,9 +31,9 @@ def main():
         args[DROPOUT] = DROPOUT_GRID[args[DROPOUT]]
         _, _, run_dir = get_paths(**args)
 
-    # recreate model
+    # (re)create model
     if args['heuristic']:
-        model = HeuristicByr(delta=args[DELTA]) if args[BYR] else HeuristicSlr()
+        model = HeuristicByr() if args[BYR] else HeuristicSlr()
     else:
         model_args = {BYR: args[BYR], 'value': False}
         model = load_agent_model(model_args=model_args, run_dir=run_dir)

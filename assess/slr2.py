@@ -9,7 +9,7 @@ from constants import PLOT_DIR
 from featnames import X_OFFER, CON, INDEX, TEST, NORM, ACCEPT, REJECT, AUTO, \
     LOOKUP, START_PRICE
 
-KEYS = [ACCEPT, REJECT, NORM]
+KEYS = [ACCEPT, REJECT, 'counter', NORM]
 
 
 def get_y_x(feats=None, key=None):
@@ -18,6 +18,8 @@ def get_y_x(feats=None, key=None):
         y = feats[2].values == 1
     elif key == REJECT:
         y = feats[2].values == 0
+    elif key == 'counter':
+        y = ((feats[2] < 1) & (feats[2] > 0)).values
     elif key == NORM:
         y = feats[1].values
     elif key == CON:
