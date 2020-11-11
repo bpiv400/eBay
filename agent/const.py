@@ -26,7 +26,7 @@ DELTA_CHOICES = [0, .7, 1]
 AGENT_PARAMS = {BYR: dict(action='store_true'),
                 DELTA: dict(type=float,
                             choices=DELTA_CHOICES,
-                            required=True)}
+                            default=DELTA_CHOICES[1])}
 
 HYPER_PARAMS = {ENTROPY: dict(type=float, default=.01),
                 DROPOUT: dict(type=int,

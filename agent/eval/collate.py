@@ -1,28 +1,14 @@
-import argparse
-from agent.util import get_log_dir, get_paths
 from rlenv.generate.util import process_sims
-from utils import unpickle, compose_args
-from agent.const import AGENT_PARAMS, HYPER_PARAMS
-from constants import DROPOUT_GRID, NUM_CHUNKS
-from featnames import AGENT_PARTITIONS, DROPOUT, TEST
+from agent.eval.util import sim_run_dir, sim_args
+from utils import unpickle
+from constants import NUM_CHUNKS
 
 
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--part', type=str,
-                        choices=AGENT_PARTITIONS, default=TEST)
-    parser.add_argument('--heuristic', action='store_true')
-    parser.add_argument('--suffix', type=str)
-    compose_args(arg_dict=AGENT_PARAMS, parser=parser)
-    compose_args(arg_dict=HYPER_PARAMS, parser=parser)
-    args = vars(parser.parse_args())
+    args = sim_args()
 
     # output directory
-    if args['heuristic']:
-        run_dir = get_log_dir(**args) + 'heuristic/'
-    else:
-        args[DROPOUT] = DROPOUT_GRID[args[DROPOUT]]
-        _, _, run_dir = get_paths(**args)
+    run_dir = sim_run_dir(args)
     output_dir = run_dir + '{}/'.format(args['part'])
 
     # concatenate

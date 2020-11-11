@@ -7,4 +7,10 @@
 #$ -o logs/sims/
 
 ulimit -n 4096
-python repo/agent/eval/sims.py --num "$SGE_TASK_ID" --delta "$1"
+if [ "$1" == "slrrej" ]; then
+  python repo/agent/eval/sims.py --num "$SGE_TASK_ID" --slrrej
+elif [ "$2" == "heuristic" ]; then
+  python repo/agent/eval/sims.py --num "$SGE_TASK_ID" --delta "$1" --heuristic
+else
+  python repo/agent/eval/sims.py --num "$SGE_TASK_ID" --delta "$1"
+fi

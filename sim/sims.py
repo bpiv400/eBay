@@ -1,12 +1,28 @@
 import argparse
 import os
 import pandas as pd
+from rlenv.EBayEnv import EBayEnv
 from rlenv.generate.Generator import OutcomeGenerator, ValueGenerator
 from rlenv.generate.util import process_sims
-from sim.envs import SimulatorEnv
 from utils import run_func_on_chunks, process_chunk_worker, topickle
 from constants import SIM_DIR, NUM_CHUNKS
 from featnames import AGENT_PARTITIONS, TEST
+
+
+class SimulatorEnv(EBayEnv):
+
+    def run(self):
+        """
+        Runs a simulation of a single lstg until sale or expiration
+
+        :return: a 3-tuple of (bool, float, int) giving whether the listing sells,
+        the amount it sells for if it sells, and the amount of time it took to sell
+        """
+        super().run()
+        return self.outcome
+
+    def is_agent_turn(self, event):
+        return False
 
 
 def main():

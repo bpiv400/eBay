@@ -1,4 +1,4 @@
-from sim.envs import SimulatorEnv
+from sim.sims import SimulatorEnv
 from rlenv.Composer import Composer
 from rlenv.generate.Generator import Generator
 from rlenv.util import get_env_sim_subdir

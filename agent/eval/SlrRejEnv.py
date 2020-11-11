@@ -1,24 +1,6 @@
 from constants import MAX_DELAY_TURN
-from rlenv.EBayEnv import EBayEnv
 from rlenv.util import get_con_outcomes
-
-
-class SimulatorEnv(EBayEnv):
-    def __init__(self, **kwargs):
-        super().__init__(kwargs)
-
-    def run(self):
-        """
-        Runs a simulation of a single lstg until sale or expiration
-
-        :return: a 3-tuple of (bool, float, int) giving whether the listing sells,
-        the amount it sells for if it sells, and the amount of time it took to sell
-        """
-        super().run()
-        return self.outcome
-
-    def is_agent_turn(self, event):
-        return False
+from sim.sims import SimulatorEnv
 
 
 class SlrRejectEnv(SimulatorEnv):
