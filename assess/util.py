@@ -85,9 +85,7 @@ def con_dist(offers=None):
 
 
 def norm_dist(offers=None):
-    norm = offers[NORM]
-    byr = norm.index.isin(IDX[BYR], level=INDEX) % 2
-    norm = byr * (~offers[REJECT]) * norm + (1-byr) * (1-norm)
+    norm = offers.loc[~offers[REJECT] & ~offers[AUTO], NORM]
     p = {t: continuous_cdf(norm.xs(t, level=INDEX))
          for t in range(1, 8)}
     return p

@@ -2,7 +2,7 @@ import numpy as np
 import torch
 from agent.util import get_turn
 from rlenv.const import DAYS_IND, NORM_IND
-from agent.const import AGENT_CONS
+from agent.const import AGENT_CONS, DELTA_CHOICES
 from constants import NUM_COMMON_CONS, MAX_DAYS
 from featnames import LSTG
 
@@ -24,6 +24,7 @@ def get_elapsed(x=None, turn=None):
 class HeuristicSlr:
     def __init__(self, delta=None):
         self.delta = delta
+        assert self.delta in DELTA_CHOICES[:-1]
 
     def __call__(self, observation=None):
         # noinspection PyProtectedMember
@@ -38,22 +39,35 @@ class HeuristicSlr:
         cons = AGENT_CONS[turn]
         if turn == 2:
             elapsed = get_elapsed(x=x, turn=turn)
-            if elapsed <= .61:
+            threshold = .61 if self.delta == .7 else .38
+            if elapsed <= threshold:
                 idx = np.nonzero(cons == 0)[0][0]
             else:
                 idx = np.nonzero(cons == 1)[0][0]
 
         elif turn == 4:
-            elapsed = get_elapsed(x=x, turn=turn)
-            if elapsed <= .26:
-                idx = np.nonzero(cons == 0)[0][0]
+            if self.delta == .7:
+                elapsed = get_elapsed(x=x, turn=turn)
+                if elapsed <= .26:
+                    idx = np.nonzero(cons == 0)[0][0]
+                else:
+                    idx = np.nonzero(cons == 1)[0][0]
             else:
-                idx = np.nonzero(cons == 1)[0][0]
+                norm = x['offer{}'.format(turn - 1)][NORM_IND].item()
+                if norm <= .69:
+                    idx = np.nonzero(np.isclose(cons, .5))[0][0]
+                else:
+                    idx = np.nonzero(cons == 1)[0][0]
 
         elif turn == 6:
-            # norm = x['offer{}'.format(turn - 1)][NORM_IND].item()
-            idx = np.nonzero(cons == 1)[0][0]
-
+            if self.delta == .7:
+                idx = np.nonzero(cons == 1)[0][0]
+            else:
+                norm = x['offer{}'.format(turn - 1)][NORM_IND].item()
+                if norm <= .61:
+                    idx = np.nonzero(np.isclose(cons, .5))[0][0]
+                else:
+                    idx = np.nonzero(cons == 1)[0][0]
         else:
             raise ValueError('Invalid turn: {}'.format(turn))
 

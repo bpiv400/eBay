@@ -66,7 +66,7 @@ def main():
                                                mesh=CON1_BIN_MESH)
 
     # seller runs
-    for delta in DELTA_CHOICES:
+    for delta in DELTA_CHOICES[:-1]:
         run_dir = find_best_run(byr=False, delta=delta)
         data = load_valid_data(part=TEST, run_dir=run_dir)
         feats = get_feats(data=data)

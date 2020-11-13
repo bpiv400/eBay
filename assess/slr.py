@@ -63,7 +63,7 @@ def main():
     d = collect_outputs(data=data_obs, name='Data')
 
     # seller runs
-    for delta in DELTA_CHOICES:
+    for delta in DELTA_CHOICES[:-1]:
         run_dir = find_best_run(byr=False, delta=delta)
         data_rl = load_valid_data(part=TEST, run_dir=run_dir)
         d_rl = collect_outputs(data=data_rl,

@@ -13,7 +13,7 @@ from featnames import CON, NORM, DELAY, ARRIVAL, MSG, ACCEPT, \
 FONTSIZE = {'training': 24}  # fontsize by plot type
 
 plt.style.use('seaborn-colorblind')
-COLORS = vlt.get_current_colorcycle()
+COLORS = ['k'] + vlt.get_current_colorcycle()
 
 mpl.rcParams['axes.grid'] = True
 
@@ -147,12 +147,6 @@ def add_vline(x=None, y=None):
     plt.plot([x, x], y, '-k', lw=1)
 
 
-def draw_cdfs(df):
-    for c in df.columns:
-        s = df[c].dropna()
-        plt.plot(s.index, s, label=c, ds='steps-post')
-
-
 def cdf_plot(path, obj):
     name = get_name(path)
 
@@ -203,9 +197,9 @@ def cdf_plot(path, obj):
     elif name == NORM:
         args = dict(xlim=[0, 1], xlabel='Offer / list price')
         den = 'offers'
-    elif name.startswith('values'):
+    elif name in ['values', 'unsoldvals', 'soldvals']:
         args = dict(xlim=[0, 1],
-                    xlabel='value / list price')
+                    xlabel='Value / list price')
     elif name.startswith('t1value'):
         vline = .5
         args = dict(xlim=[.1, .9],
@@ -232,27 +226,16 @@ def cdf_plot(path, obj):
     # create plot and save
     if type(obj) is pd.Series:
         plt.plot(obj.index, obj, ds='steps-post')
-        if vline is not None:
-            add_vline(x=vline, y=ylim)
-        save_fig(path, ylim=[0, 1],
-                 ylabel='Cumulative share of {}'.format(den),
-                 legend=False, **args)
-    elif len(obj.columns) == 2:
-        draw_cdfs(obj)
-        if vline is not None:
-            add_vline(x=vline, y=ylim)
-        save_fig(path, ylim=[0, 1],
-                 ylabel='Cumulative share of {}'.format(den),
-                 legend=True, **args)
     else:
-        assert obj.columns[0] == 'Data'
-        for c in obj.columns[1:]:
-            draw_cdfs(obj[['Data', c]])
-            if vline is not None:
-                add_vline(x=vline, y=ylim)
-            save_fig(path, ylim=[0, 1],
-                     ylabel='Cumulative share of {}'.format(den),
-                     legend=True, **args)
+        for c in obj.columns:
+            s = obj[c].dropna()
+            plt.plot(s.index, s, label=c, ds='steps-post')
+
+    if vline is not None:
+        add_vline(x=vline, y=ylim)
+    save_fig(path, ylim=[0, 1],
+             ylabel='Cumulative share of {}'.format(den),
+             legend=True, **args)
 
 
 def simple_plot(path, obj):
@@ -343,8 +326,13 @@ def training_plot(path, df):
              ylabel='')
 
 
-def draw_response(line=None, dots=None, diagonal=False, connect=False, label=None, c='k'):
-    plt.plot(line.index, line.beta, '-', label=label, color=c)
+def draw_response(line=None, dots=None, diagonal=False, connect=False,
+                  label=None, c='k'):
+    if label is None or label == 'Data':
+        plt.plot(line.index, line.beta, '-', color=c)
+    else:
+        plt.plot(line.index, line.beta, '-',
+                 label=label.replace('Agent: ', ''), color=c)
     if 'err' in line.columns:
         plt.plot(line.index, line.beta + line.err, '--', color=c)
         plt.plot(line.index, line.beta - line.err, '--', color=c)
@@ -478,14 +466,12 @@ def response_plot(path, obj):
         dsets = line.columns.get_level_values(0).unique()
 
         # first plot data by itself
-        for i in range(len(dsets)):
-            dset = dsets[i]
-            draw_response(line=line.xs(dset, level=0, axis=1),
-                          dots=dots.xs(dset, level=0, axis=1),
+        if 'Data' in dsets:
+            draw_response(line=line.xs('Data', level=0, axis=1),
+                          dots=dots.xs('Data', level=0, axis=1),
                           diagonal=(NORM in name),
                           connect=(name in ['slrrejrej', 'slrrejacc']))
-            save_fig('{}_{}'.format(path, dset), legend=False, **args)
-            plt.clf()
+            save_fig('{}_Data'.format(path), legend=False, **args)
 
         # then plot data all together
         if len(dsets) < len(COLORS):
@@ -496,7 +482,8 @@ def response_plot(path, obj):
                               diagonal=(NORM in name),
                               label=dset, c=COLORS[i])
 
-            save_fig(path, legend=True, **args)
+            save_fig(path, legend=True,
+                     legend_kwargs=dict(loc='upper left'), **args)
 
     else:
         draw_response(line=line, dots=dots, diagonal=(NORM in name))
@@ -556,14 +543,8 @@ def bar_plot(path, df):
     else:
         raise NotImplementedError('Invalid name: {}'.format(name))
 
-    if len(df.columns) > 2:
-        assert df.columns[0] == 'Data'
-        for c in df.columns[1:]:
-            df[['Data', c]].plot.bar(rot=0)
-            save_fig(path, xticklabels=df.index, gridlines=False, **args)
-    else:
-        df.plot.bar(rot=0)
-        save_fig(path, xticklabels=df.index, gridlines=False, **args)
+    df.plot.bar(rot=0)
+    save_fig(path, xticklabels=df.index, gridlines=False, **args)
 
 
 def draw_area(df, xlim=None, ylim=None):
@@ -607,7 +588,7 @@ def contour_plot(path, s):
     elif name.startswith('hist'):
         args = dict(xlabel='First buyer offer / list price',
                     ylabel='Seller experience percentile')
-    elif name in ['rejdata', 'rejagent']:
+    elif name == 'rej':
         ticks = get_log_ticks(s.index.levels[1])
         args = dict(yticks=np.log10(ticks),
                     yticklabels=ticks,
@@ -668,11 +649,12 @@ def w2v_plot(path, df):
 
 def pdf_plot(path, obj):
     name = get_name(path)
-    if name in ['values', 'unsoldvals', 'soldvals']:
-        args = dict(xlim=[0, 1], xlabel='Value / list price')
-    elif name == 'arrival':
+    if name == 'arrival':
         args = dict(xlim=[0, 1],
                     xlabel='Fraction of listing window')
+    elif name == 'values':
+        args = dict(xlim=[0, 1],
+                    xlabel='Value / list price')
     else:
         raise NotImplementedError('Invalid name: {}'.format(name))
 
@@ -686,7 +668,7 @@ def pdf_plot(path, obj):
                  gridlines=False,
                  **args)
 
-    elif len(obj.columns) == 2:
+    else:
         for c in obj.columns:
             plt.plot(obj.index, obj[c], label=c)
         save_fig(path,
@@ -695,15 +677,3 @@ def pdf_plot(path, obj):
                  ylim=[0, obj.max().max()],
                  gridlines=False,
                  **args)
-
-    else:
-        assert obj.columns[0] == 'Data'
-        for c in obj.columns[1:]:
-            plt.plot(obj.index, obj['Data'], label='Data')
-            plt.plot(obj.index, obj[c], label=c)
-            save_fig(path,
-                     legend=legend,
-                     yaxis=False,
-                     ylim=[0, obj.max().max()],
-                     gridlines=False,
-                     **args)

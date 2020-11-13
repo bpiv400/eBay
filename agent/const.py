@@ -22,7 +22,7 @@ STOP_ENTROPY = .01
 AGENT_STATE = 'agent_state_dict'
 
 # agent parameters
-DELTA_CHOICES = [0, .7, 1]
+DELTA_CHOICES = [0., .7, 1.]
 AGENT_PARAMS = {BYR: dict(action='store_true'),
                 DELTA: dict(type=float,
                             choices=DELTA_CHOICES,
