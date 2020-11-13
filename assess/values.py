@@ -3,10 +3,10 @@ import pandas as pd
 from agent.util import load_values
 from assess.util import kdens_wrapper, ll_wrapper, calculate_row
 from processing.util import do_rounding, extract_day_feats, feat_to_pctile
-from utils import topickle, load_data, load_feats
+from utils import unpickle, topickle, load_data, load_feats
 from agent.const import DELTA_CHOICES
 from assess.const import DELTA_SLR, LOG10_BIN_DIM, LOG10_BO_DIM
-from constants import PLOT_DIR, DAY
+from constants import PLOT_DIR, SIM_DIR, DAY
 from featnames import LOOKUP, SLR_BO_CT, TEST, START_PRICE
 
 
@@ -19,6 +19,7 @@ def bin_plot(start_price=None, vals=None):
     line, dots, bw = ll_wrapper(y=y, x=x,
                                 dim=LOG10_BIN_DIM,
                                 discrete=discrete)
+    print('bw: {}'.format(bw[0]))
     return line, dots
 
 
@@ -42,14 +43,12 @@ def photos_plot(listings=None, vals=None):
     return df
 
 
-def slr_plot(data=None, vals=None):
-    assert np.all(data[LOOKUP].index == vals.index)
+def slr_plot(data=None, y=None):
     x = np.log10(data[LOOKUP][SLR_BO_CT]).values  # log seller experience
-    y = vals.values
-
     line, dots, bw = ll_wrapper(y=y, x=x,
                                 discrete=[0],
                                 dim=LOG10_BO_DIM)
+    print('bw: {}'.format(bw[0]))
     return line, dots
 
 
@@ -63,7 +62,12 @@ def main():
 
     # seller experience
     print('Seller')
-    d['response_slrbo'] = slr_plot(data=data, vals=vals)
+    d['response_slrbo'] = slr_plot(data=data, y=vals)
+    df = unpickle(SIM_DIR + '{}/values.pkl'.format(TEST))
+    assert np.all(df.index == data[LOOKUP].index)
+    d['response_slrbosale'] = slr_plot(data=data, y=df.p.values)
+    d['response_slrboprice'] = slr_plot(
+        data=data, y=(df.x / data[LOOKUP][START_PRICE]).values)
 
     # day of week of listing
     print('Day of week')

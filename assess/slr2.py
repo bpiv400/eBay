@@ -3,8 +3,8 @@ import pandas as pd
 from agent.util import find_best_run, load_valid_data
 from assess.util import ll_wrapper, kreg2
 from utils import topickle, load_data, safe_reindex
-from agent.const import COMMON_CONS
-from assess.const import NORM1_DIM, DELTA_SLR
+from agent.const import COMMON_CONS, DELTA_CHOICES
+from assess.const import NORM1_DIM, CON1_BIN_MESH
 from constants import PLOT_DIR
 from featnames import X_OFFER, CON, INDEX, TEST, NORM, ACCEPT, REJECT, AUTO, \
     LOOKUP, START_PRICE
@@ -62,28 +62,33 @@ def main():
         print('{}: {}'.format(key, bw[key][0]))
 
         if key == REJECT:
-            d['contour_rejdata'], bw2 = kreg2(y=y, x1=x, x2=feats[3].values)
+            d['contour_rej_data'], bw2 = kreg2(y=y, x1=x, x2=feats[3].values,
+                                               mesh=CON1_BIN_MESH)
 
-    # seller run
-    run_dir = find_best_run(byr=False, delta=DELTA_SLR)
-    data = load_valid_data(part=TEST, run_dir=run_dir)
-    feats = get_feats(data=data)
+    # seller runs
+    for delta in DELTA_CHOICES:
+        run_dir = find_best_run(byr=False, delta=delta)
+        data = load_valid_data(part=TEST, run_dir=run_dir)
+        feats = get_feats(data=data)
 
-    for key in KEYS:
-        y, x = get_y_x(feats=feats, key=key)
-        line, dots, _ = ll_wrapper(y, x,
-                                   dim=NORM1_DIM,
-                                   discrete=COMMON_CONS[1],
-                                   bw=bw[key],
-                                   ci=False)
+        for key in KEYS:
+            y, x = get_y_x(feats=feats, key=key)
+            line, dots, _ = ll_wrapper(y, x,
+                                       dim=NORM1_DIM,
+                                       discrete=COMMON_CONS[1],
+                                       bw=bw[key],
+                                       ci=False)
 
-        k = 'response_{}'.format(key)
-        d[k][0].loc[:, ('Agent', 'beta')] = line
-        d[k][1].loc[:, ('Agent', 'beta')] = dots
+            k = 'response_{}'.format(key)
+            col = 'Agent: $\\delta = {}$'.format(delta)
+            d[k][0].loc[:, (col, 'beta')] = line
+            d[k][1].loc[:, (col, 'beta')] = dots
 
-        # 2D: norm1 and log10_start_price
-        if key == REJECT:
-            d['contour_rejagent'], _ = kreg2(y=y, x1=x, x2=feats[3].values, bw=bw2)
+            # 2D: norm1 and log10_start_price
+            if key == REJECT and delta < 1:
+                key = 'contour_rej_{}'.format(delta)
+                d[key], _ = kreg2(y=y, x1=x, x2=feats[3].values,
+                                  bw=bw2, mesh=CON1_BIN_MESH)
 
     topickle(d, PLOT_DIR + 'slr2.pkl')
 

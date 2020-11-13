@@ -16,7 +16,7 @@ def collect_outputs(data=None, name=None):
 
     # offer distributions
     d['pdf_arrival'] = arrival_dist(data[X_THREAD])
-    d['pdf_interarrival'] = interarrival_dist(data[X_THREAD])
+    d['cdf_interarrival'] = interarrival_dist(data[X_THREAD])
     d['cdf_hist'] = hist_dist(data[X_THREAD])
     d['cdf_delay'] = delay_dist(data[X_OFFER])
     d['cdf_con'] = con_dist(data[X_OFFER])
@@ -57,7 +57,6 @@ def get_lstgs(subset=None):
             raise NotImplementedError('Unrecognized subset: {}'.format(subset))
     else:
         filename = 'sim'
-
     print('{}: {} listings'.format(filename, len(lookup)))
     return lookup.index, filename
 
@@ -71,12 +70,14 @@ def main():
     lstgs, filename = get_lstgs(subset=subset)
 
     # data
-    d = collect_outputs(data=load_data(part=TEST, lstgs=lstgs),
-                        name='Data')
+    data_obs = load_data(part=TEST, lstgs=lstgs)
+    data_sim = load_data(part=TEST, sim=True, lstgs=lstgs)
+
+    # observed
+    d = collect_outputs(data=data_obs, name='Data')
 
     # simulations
-    d_sim = collect_outputs(data=load_data(part=TEST, sim=True, lstgs=lstgs),
-                            name='Simulations')
+    d_sim = collect_outputs(data=data_sim, name='Simulations')
 
     # concatenate DataFrames
     d = merge_dicts(d, d_sim)

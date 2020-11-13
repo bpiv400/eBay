@@ -4,7 +4,7 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator, FuncFormatter
 from viscid.plot import vpyplot as vlt
-from plots.const import BIN_TICKS
+from plots.const import BIN_TICKS, SLRBO_TICKS
 from constants import FIG_DIR, IDX, MAX_DELAY_TURN, MAX_DELAY_ARRIVAL, \
     DAY, HOUR, EPS
 from featnames import CON, NORM, DELAY, ARRIVAL, MSG, ACCEPT, \
@@ -22,10 +22,10 @@ def get_name(path):
     return path.split('/')[-1].split('_')[1]
 
 
-def get_bin_ticks(idx=None):
+def get_log_ticks(idx=None, ticks=BIN_TICKS):
     upper = 10 ** idx.max()
     lower = 10 ** idx.min()
-    ticks = [t for t in BIN_TICKS if lower <= t <= upper]
+    ticks = [t for t in ticks if lower <= t <= upper]
     return ticks
 
 
@@ -147,6 +147,12 @@ def add_vline(x=None, y=None):
     plt.plot([x, x], y, '-k', lw=1)
 
 
+def draw_cdfs(df):
+    for c in df.columns:
+        s = df[c].dropna()
+        plt.plot(s.index, s, label=c, ds='steps-post')
+
+
 def cdf_plot(path, obj):
     name = get_name(path)
 
@@ -169,6 +175,9 @@ def cdf_plot(path, obj):
                     xlabel='Sale price / list price')
         if name == 'salenorm':
             den = 'sales'
+    elif name == 'interarrival':
+        args = dict(xlim=[0, 48], xlabel='Hours',
+                    xticks=np.arange(0, 48 + EPS, 12))
     elif name.startswith('days'):
         args = dict(xlim=[0, 1],
                     xlabel='Fraction of listing window')
@@ -208,22 +217,42 @@ def cdf_plot(path, obj):
     elif name == 'realval':
         args = dict(xlim=[0, 1],
                     xlabel='Realized value')
+    elif name == 'bin':
+        ticks = [10] + list(range(200, 1001, 200))
+        args = dict(xlim=[9.95, 1000], xlabel='List price',
+                    xticks=ticks,
+                    xticklabels=['${}'.format(t) for t in ticks])
+    elif name == 'autoacc':
+        args = dict(xlim=[0, 1], xlabel='Accept price / list price')
+    elif name == 'autodec':
+        args = dict(xlim=[0, 1], xlabel='Decline price / list price')
     else:
         raise NotImplementedError('Invalid name: {}'.format(name))
 
     # create plot and save
     if type(obj) is pd.Series:
         plt.plot(obj.index, obj, ds='steps-post')
+        if vline is not None:
+            add_vline(x=vline, y=ylim)
+        save_fig(path, ylim=[0, 1],
+                 ylabel='Cumulative share of {}'.format(den),
+                 legend=False, **args)
+    elif len(obj.columns) == 2:
+        draw_cdfs(obj)
+        if vline is not None:
+            add_vline(x=vline, y=ylim)
+        save_fig(path, ylim=[0, 1],
+                 ylabel='Cumulative share of {}'.format(den),
+                 legend=True, **args)
     else:
-        for c in obj.columns:
-            s = obj[c].dropna()
-            plt.plot(s.index, s, label=c, ds='steps-post')
-    if vline is not None:
-        add_vline(x=vline, y=ylim)
-    save_fig(path,
-             ylim=[0, 1],
-             ylabel='Cumulative share of {}'.format(den),
-             legend=isinstance(obj, pd.DataFrame), **args)
+        assert obj.columns[0] == 'Data'
+        for c in obj.columns[1:]:
+            draw_cdfs(obj[['Data', c]])
+            if vline is not None:
+                add_vline(x=vline, y=ylim)
+            save_fig(path, ylim=[0, 1],
+                     ylabel='Cumulative share of {}'.format(den),
+                     legend=True, **args)
 
 
 def simple_plot(path, obj):
@@ -254,7 +283,7 @@ def simple_plot(path, obj):
                     xlabel='False positive rate',
                     ylabel='True positive rate')
     elif name == 'slrrejaccbin':
-        ticks = get_bin_ticks(obj.index)
+        ticks = get_log_ticks(obj.index)
         args = dict(ylim=[0, 1],
                     xticks=np.log10(ticks),
                     xticklabels=ticks,
@@ -422,19 +451,21 @@ def response_plot(path, obj):
         args = dict(xlim=[.4, .9], ylim=[0, 1],
                     xlabel='Turn 3: Offer / list price',
                     ylabel='Turn 5: Offer / list price')
-    elif name == 'expslrbo':
-        ticks = [1, 10, 100, 1000, 10000]
-        args = dict(ylim=[0, .25],
-                    xlabel='Number of best offer listings',
-                    ylabel='Expirations / manual rejects',
-                    xticks=np.log10(ticks),
-                    xticklabels=ticks)
-    elif name == 'slrbo':
-        ticks = [1, 10, 100, 1000, 10000]
+    elif 'slrbo' in name:
+        if name == 'expslrbo':
+            ylabel = 'Expirations / manual rejects'
+        elif name == 'slrbo':
+            ylabel = 'Value / list price'
+        elif name == 'slrbosale':
+            ylabel = 'Pr(sale)'
+        elif name == 'slrboprice':
+            ylabel = 'Sale price'
+        else:
+            raise NotImplementedError('Invalid name: {}'.format(name))
         args = dict(xlabel='Number of best offer listings',
-                    ylabel='Normalized value',
-                    xticks=np.log10(ticks),
-                    xticklabels=ticks)
+                    ylabel=ylabel,
+                    xticks=np.log10(SLRBO_TICKS),
+                    xticklabels=SLRBO_TICKS)
     else:
         raise NotImplementedError('Invalid name: {}'.format(name))
 
@@ -498,7 +529,7 @@ def coef_plot(path, df):
 def bar_plot(path, df):
     name = get_name(path)
     if name == 'offers':
-        args = dict(ylim=[0., .5],
+        args = dict(ylim=[0., .6],
                     xlabel='Turn of last offer',
                     ylabel='Fraction of threads')
     elif name == 'threads':
@@ -525,9 +556,14 @@ def bar_plot(path, df):
     else:
         raise NotImplementedError('Invalid name: {}'.format(name))
 
-    df.plot.bar(rot=0)
-
-    save_fig(path, xticklabels=df.index, gridlines=False, **args)
+    if len(df.columns) > 2:
+        assert df.columns[0] == 'Data'
+        for c in df.columns[1:]:
+            df[['Data', c]].plot.bar(rot=0)
+            save_fig(path, xticklabels=df.index, gridlines=False, **args)
+    else:
+        df.plot.bar(rot=0)
+        save_fig(path, xticklabels=df.index, gridlines=False, **args)
 
 
 def draw_area(df, xlim=None, ylim=None):
@@ -572,7 +608,13 @@ def contour_plot(path, s):
         args = dict(xlabel='First buyer offer / list price',
                     ylabel='Seller experience percentile')
     elif name in ['rejdata', 'rejagent']:
-        ticks = get_bin_ticks(s.index.levels[1])
+        ticks = get_log_ticks(s.index.levels[1])
+        args = dict(yticks=np.log10(ticks),
+                    yticklabels=ticks,
+                    xlabel='Turn 1: Offer / list price',
+                    ylabel='List price ($)')
+    elif name.startswith('slrrejbin'):
+        ticks = get_log_ticks(s.index.levels[1])
         args = dict(yticks=np.log10(ticks),
                     yticklabels=ticks,
                     xlabel='Turn 1: Offer / list price',
@@ -581,25 +623,6 @@ def contour_plot(path, s):
         raise NotImplementedError('Invalid name: {}'.format(name))
 
     draw_contour(s, inc=inc)
-    save_fig(path, legend=False, **args)
-
-
-def contourline_plot(path, tup):
-    contour, line = tup
-    name = get_name(path)
-    if name == 'bincon':
-        ticks = get_bin_ticks(contour.index.levels[0])
-        args = dict(xticks=np.log10(ticks),
-                    xticklabels=ticks,
-                    ylabel='Turn 2: Concession',
-                    xlabel='List price ($)')
-    else:
-        raise NotImplementedError('Invalid name: {}'.format(name))
-
-    draw_contour(contour)
-
-    plt.plot(line.index, line.values, '-k')
-
     save_fig(path, legend=False, **args)
 
 
@@ -646,28 +669,41 @@ def w2v_plot(path, df):
 def pdf_plot(path, obj):
     name = get_name(path)
     if name in ['values', 'unsoldvals', 'soldvals']:
-        args = dict(xlim=[0, 1], xlabel='Normalized value')
+        args = dict(xlim=[0, 1], xlabel='Value / list price')
     elif name == 'arrival':
         args = dict(xlim=[0, 1],
                     xlabel='Fraction of listing window')
-    elif name == 'interarrival':
-        args = dict(xlim=[0, 36], xlabel='Hours',
-                    xticks=np.arange(0, 36 + EPS, 6))
     else:
         raise NotImplementedError('Invalid name: {}'.format(name))
 
     legend = type(obj) is pd.DataFrame
     if not legend:
-        upper = obj.max()
         plt.plot(obj.index, obj)
-    else:
-        upper = obj.max().max()
+        save_fig(path,
+                 legend=legend,
+                 yaxis=False,
+                 ylim=[0, obj.max()],
+                 gridlines=False,
+                 **args)
+
+    elif len(obj.columns) == 2:
         for c in obj.columns:
             plt.plot(obj.index, obj[c], label=c)
+        save_fig(path,
+                 legend=legend,
+                 yaxis=False,
+                 ylim=[0, obj.max().max()],
+                 gridlines=False,
+                 **args)
 
-    save_fig(path,
-             legend=legend,
-             yaxis=False,
-             ylim=[0, upper],
-             gridlines=False,
-             **args)
+    else:
+        assert obj.columns[0] == 'Data'
+        for c in obj.columns[1:]:
+            plt.plot(obj.index, obj['Data'], label='Data')
+            plt.plot(obj.index, obj[c], label=c)
+            save_fig(path,
+                     legend=legend,
+                     yaxis=False,
+                     ylim=[0, obj.max().max()],
+                     gridlines=False,
+                     **args)

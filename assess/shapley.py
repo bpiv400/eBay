@@ -7,7 +7,7 @@ from agent.models.AgentModel import load_agent_model
 from agent.util import find_best_run, get_turn
 from utils import unpickle, load_file, load_sizes, load_featnames, \
     run_func_on_chunks, get_role, topickle
-from assess.const import DELTA_SLR, DELTA_BYR
+from agent.const import DELTA_CHOICES
 from constants import IDX, BYR_DROP, NUM_CHUNKS, PLOT_DIR
 from featnames import BYR, SLR, X_LSTG, BYR_HIST, DAYS, DELAY, \
     DAYS_SINCE_LSTG, LSTG, THREAD, CLOCK_FEATS, OUTCOME_FEATS, \
@@ -137,19 +137,20 @@ def main():
     # parameters from command line
     parser = argparse.ArgumentParser()
     parser.add_argument('--turn', type=int, choices=range(1, 8))
-    turn = parser.parse_args().turn
-    delta = DELTA_BYR if turn in IDX[BYR] else DELTA_SLR
+    parser.add_argument('--delta', type=float,
+                        choices=DELTA_CHOICES, required=True)
+    args = parser.parse_args()
 
     # components for shapley value estimation
-    x, model = load_inputs_model(turn=turn, delta=delta)
+    x, model = load_inputs_model(turn=args.turn, delta=args.delta)
 
     groups = run_func_on_chunks(
         f=process_chunk,
-        func_kwargs=dict(x=x, model=model, turn=turn)
+        func_kwargs=dict(x=x, model=model, turn=args.turn)
     )
     groups = pd.concat(groups)
 
-    topickle(groups, PLOT_DIR + 'shap{}.pkl'.format(turn))
+    topickle(groups, PLOT_DIR + 'shap{}.pkl'.format(args.turn))
 
 
 if __name__ == '__main__':

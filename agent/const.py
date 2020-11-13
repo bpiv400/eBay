@@ -34,7 +34,7 @@ HYPER_PARAMS = {ENTROPY: dict(type=float, default=.01),
                               choices=range(len(DROPOUT_GRID)))}
 
 # epoch count for stepping down entropy and stopping
-PERIOD_EPOCHS = 1000
+PERIOD_EPOCHS = 1500
 
 # names for opt_info namedtuple
 FIELDS = ["ActionsPerTraj", "ThreadsPerTraj", "DaysToDone",

@@ -5,48 +5,41 @@ from statsmodels.nonparametric.kernel_regression import KernelReg
 from agent.util import get_sale_norm
 from utils import unpickle, safe_reindex
 from assess.const import OPT, VALUES_DIM, POINTS
-from constants import IDX, BYR, EPS, DAY, HOUR, PCTILE_DIR, OUTCOME_SIMS, \
-    MAX_DELAY_TURN, MAX_DELAY_ARRIVAL, INTERVAL_ARRIVAL, INTERVAL_CT_ARRIVAL
+from constants import IDX, BYR, EPS, DAY, HOUR, PCTILE_DIR, MAX_DELAY_TURN, \
+    MAX_DELAY_ARRIVAL, INTERVAL_ARRIVAL, INTERVAL_CT_ARRIVAL
 from featnames import DELAY, CON, NORM, AUTO, START_TIME, START_PRICE, LOOKUP, \
     MSG, DAYS_SINCE_LSTG, BYR_HIST, INDEX, X_OFFER, CLOCK, THREAD, X_THREAD, \
-    REJECT, EXP, SLR, SIM, LSTG
+    REJECT, EXP, SLR
 
 
-def continuous_pdf(y=None):
-    counts = y.groupby(y).count()
-    pdf = counts / counts.sum()
-    return pdf
+def continuous_pdf(s=None):
+    return s.groupby(s).count() / len(s)
 
 
-def continuous_cdf(y=None):
-    cdf = continuous_pdf(y).cumsum()
+def continuous_cdf(s=None):
+    cdf = continuous_pdf(s).cumsum()
     if cdf.index[0] > 0.:
         cdf.loc[0.] = 0.  # where cdf is 0
     return cdf.sort_index()
 
 
-def discrete_pdf(y=None):
-    return continuous_pdf(y.astype('int64'))
+def discrete_pdf(s=None):
+    return continuous_pdf(s.astype('int64'))
 
 
-def discrete_cdf(y=None):
-    cdf = discrete_pdf(y).cumsum()
+def discrete_cdf(s=None):
+    cdf = discrete_pdf(s).cumsum()
     if cdf.index[0] > 0.:
         cdf.loc[0.] = 0.  # where cdf is 0
     return cdf.sort_index()
-
-
-def sum_over_arrival_interval(pdf, scale=None):
-    pdf.index = (pdf.index // INTERVAL_ARRIVAL).astype('int64')
-    pdf = pdf.groupby(pdf.index.name).sum()
-    pdf.index = pdf.index / scale
-    return pdf
 
 
 def arrival_dist(threads=None):
     s = threads[DAYS_SINCE_LSTG] * DAY
     pdf = discrete_pdf(s)
-    pdf = sum_over_arrival_interval(pdf, scale=INTERVAL_CT_ARRIVAL)
+    pdf.index = (pdf.index // INTERVAL_ARRIVAL).astype('int64')
+    pdf = pdf.groupby(pdf.index.name).sum()
+    pdf.index = pdf.index / INTERVAL_CT_ARRIVAL
     return pdf
 
 
@@ -55,9 +48,11 @@ def interarrival_dist(threads=None):
     ct = s.groupby(s.index.names[:-1]).count()
     s = s[safe_reindex(ct, idx=s.index) > 1]
     s = s.groupby(s.index.names[:-1]).diff().dropna()
-    pdf = discrete_pdf(s)
-    pdf = sum_over_arrival_interval(pdf, scale=(HOUR / INTERVAL_ARRIVAL))
-    return pdf
+    cdf = discrete_cdf(s)
+    cdf.index /= HOUR
+    cdf.index.name = 'hours'
+    cdf = cdf.rename('pctile')
+    return cdf
 
 
 def hist_dist(threads=None):
@@ -131,28 +126,28 @@ def merge_dicts(d, d_other):
     return d
 
 
-def num_threads(data):
+def num_threads(data, censor=4):
     # count threads
     s = data[X_THREAD][DAYS_SINCE_LSTG]
     s = s.groupby(s.index.names[:-1]).count()
 
     # add in zeros
-    s = safe_reindex(s, idx=data[LOOKUP].index, fill_value=0)
+    s = s.reindex(index=data[LOOKUP].index, fill_value=0)
 
     # pdf
-    s = s.groupby(s).count() / len(s)
+    pdf = discrete_pdf(s)
 
-    # censor at 4 threads per listing
-    s.loc[4] = s[s.index >= 4].sum(axis=0)
-    s = s[s.index <= 4]
-    assert np.abs(s.sum() - 1) < EPS
+    # censor threads per listing
+    pdf.loc[censor] = pdf[pdf.index >= censor].sum(axis=0)
+    pdf = pdf[pdf.index <= censor]
+    assert np.isclose(pdf.sum(), 1)
 
     # relabel index
-    idx = s.index.astype(str).tolist()
+    idx = pdf.index.astype(str).tolist()
     idx[-1] += '+'
-    s.index = idx
+    pdf.index = idx
 
-    return s
+    return pdf
 
 
 def num_offers(offers):
@@ -165,11 +160,16 @@ def num_offers(offers):
 
 
 def cdf_days(data=None):
+    # time to sale
     idx_sale = data[X_OFFER][data[X_OFFER][CON] == 1].index
     clock_sale = data[CLOCK].loc[idx_sale].droplevel([THREAD, INDEX])
     dur = (clock_sale - data[LOOKUP][START_TIME]) / MAX_DELAY_ARRIVAL
     assert dur.max() < 1
-    dur[dur.isna()] = 1
+
+    # add in non-sales
+    dur = dur.reindex(index=data[LOOKUP].index, fill_value=1)
+
+    # get cdf
     cdf = continuous_cdf(dur)
     return cdf
 
@@ -182,7 +182,8 @@ def cdf_sale(data=None, sales=True):
         sale_norm = sale_norm.reindex(index=data[LOOKUP].index, fill_value=0)
 
     # multiply by start price to get sale price
-    sale_price = np.round(sale_norm * data[LOOKUP][START_PRICE], decimals=2)
+    start_price = safe_reindex(data[LOOKUP][START_PRICE], idx=sale_norm.index)
+    sale_price = np.round(sale_norm * start_price, decimals=2)
 
     # percentiles
     norm_pctile = continuous_cdf(sale_norm)

@@ -118,7 +118,7 @@ class EBayPPO:
         # increment counter, reduce entropy bonus, and set complete flag
         self.update_counter += 1
         period = int(self.update_counter / PERIOD_EPOCHS)
-        if period not in [0, 2]:
+        if period == 1:
             self.entropy_coef -= self.entropy_step
         if entropy.mean() < STOP_ENTROPY:
             self.training_complete = True

@@ -8,7 +8,7 @@ from agent.eval.util import sim_run_dir, sim_args
 from rlenv.generate.Generator import OutcomeGenerator
 from rlenv.generate.util import process_sims
 from utils import topickle, run_func_on_chunks, process_chunk_worker
-from featnames import BYR
+from featnames import BYR, DELTA
 
 
 def main():
@@ -24,7 +24,8 @@ def main():
     else:
         gen_cls = AgentGenerator
         if args['heuristic']:
-            model = HeuristicByr() if args[BYR] else HeuristicSlr()
+            model_cls = HeuristicByr if args[BYR] else HeuristicSlr
+            model = model_cls(args[DELTA])
         else:
             model_args = {BYR: args[BYR], 'value': False}
             model = load_agent_model(model_args=model_args, run_dir=run_dir)

@@ -22,6 +22,8 @@ def get_elapsed(x=None, turn=None):
 
 
 class HeuristicSlr:
+    def __init__(self, delta=None):
+        self.delta = delta
 
     def __call__(self, observation=None):
         # noinspection PyProtectedMember

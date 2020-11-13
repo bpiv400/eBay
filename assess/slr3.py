@@ -3,14 +3,14 @@ import pandas as pd
 from assess.util import ll_wrapper, add_byr_reject_on_lstg_expiration, kreg2
 from utils import topickle, load_data, safe_reindex
 from agent.const import COMMON_CONS
-from assess.const import NORM1_DIM, CON2_DIM
+from assess.const import NORM1_DIM, CON2_DIM, CON1_BIN_MESH
 from constants import PLOT_DIR
 from featnames import X_OFFER, CON, INDEX, TEST, EXP, AUTO, NORM, REJECT, \
     LOOKUP, START_PRICE
 
 
 def rejection_plot(y=None, x1=None, x2=None):
-    cols, tup = {'Active': 0, 'Expiration': -.1}, None
+    cols, tup = {'Active': 0, 'Expiration': -.1, 'Automatic': -.05}, None
     for k, v in cols.items():
         mask = np.isclose(x2, v) & (x1 > .33)
         line, dots, bw = ll_wrapper(y[mask], x1[mask],
@@ -78,24 +78,11 @@ def main():
                     d[key][0].loc[:, (k, col)] = line[col]
                     d[key][1].loc[:, (k, col)] = dots[col]
 
-    # list price vs. turn3, after active turn2 reject or concession
-    for c in COMMON_CONS[1]:
-        mask = np.isclose(x1, c) & (x2 > 0)
-        s1, bw = kreg2(y=y_acc[mask], x1=x3[mask], x2=x2[mask])
-        print('List price 2-D, {}: {}'.format(c, bw))
-        dim = s1.index.levels[0]
-        mask = np.isclose(x1, c) & np.isclose(x2, 0)
-        s2, _ = ll_wrapper(y=y_acc[mask], x=x3[mask],
-                           dim=dim, bw=(bw[0],), ci=False)
-        for z in dim:
-            idx = np.abs(s1.loc[z] - s2.loc[z]).argmin()
-            s2.loc[z] = s1.loc[z].index[idx]
-        d['contourline_bincon_{}'.format(c)] = s1, s2
-
-        key = 'simple_slrrejaccbin_{}'.format(c)
-        mask = np.isclose(x1, c) & np.isclose(x2, 0)
-        d[key], bw = ll_wrapper(y=y_acc[mask], x=x3[mask])
-        print('List price, {}: {}'.format(c, bw[0]))
+    # by first offer and list price
+    mask = np.isclose(x2, 0) & (x1 > .33)
+    d['contour_slrrejbinacc'], bw = \
+        kreg2(y=y_acc[mask], x1=x1[mask], x2=x3[mask], mesh=CON1_BIN_MESH)
+    print('List price: {}'.format(bw))
 
     topickle(d, PLOT_DIR + 'slr3.pkl')
 

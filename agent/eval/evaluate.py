@@ -3,10 +3,12 @@ import os
 import pandas as pd
 from agent.util import get_log_dir, load_values, load_valid_data, \
     get_sale_norm, get_norm_reward
+from agent.eval.util import slrrej_dir
 from utils import topickle, unpickle, compose_args, safe_reindex
 from agent.const import AGENT_PARAMS
+from constants import EPS
 from featnames import OBS, X_OFFER, TEST, AGENT_PARTITIONS, THREAD, \
-    LOOKUP, START_PRICE, BYR_AGENT, X_THREAD
+    LOOKUP, START_PRICE, BYR_AGENT, X_THREAD, INDEX
 
 
 def get_byr_return(data=None, values=None):
@@ -27,10 +29,10 @@ def get_byr_return(data=None, values=None):
 
 
 def get_slr_return(data=None, values=None):
-    assert values.max() < 1
-    start_price = data[LOOKUP][START_PRICE]
+    assert values.max() <= 1 + EPS
     sale_norm, cont_value = get_norm_reward(data=data, values=values)
     norm = pd.concat([sale_norm, cont_value]).sort_index()
+    start_price = data[LOOKUP][START_PRICE]
     dollar = norm * start_price
     net_norm = norm - values
     dollar_norm = net_norm * start_price
@@ -82,6 +84,12 @@ def main():
         data = load_valid_data(part=args.part)
         output[OBS] = f(data)
 
+    # seller reject environment
+    if not args.byr:
+        data = load_valid_data(part=args.part, run_dir=slrrej_dir())
+        if data is not None:
+            output['slrrej'] = f(data)
+
     # rewards from heuristic strategy
     heuristic_dir = get_log_dir(**vars(args)) + 'heuristic/'
     data = load_valid_data(part=args.part, run_dir=heuristic_dir)
@@ -98,7 +106,7 @@ def main():
             output[run_id] = f(data)
 
     # save table
-    df = pd.DataFrame.from_dict(output, orient='index')
+    df = pd.DataFrame.from_dict(output, orient=INDEX)
     print(df)
     topickle(df, log_dir + '{}.pkl'.format(args.part))
 

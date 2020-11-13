@@ -6,11 +6,15 @@ from featnames import SLR, DROPOUT, AGENT_PARTITIONS, TEST
 from utils import compose_args
 
 
+def slrrej_dir():
+    return AGENT_DIR + '{}/rej/'.format(SLR)
+
+
 def sim_run_dir(args=None):
     if args['heuristic']:
         run_dir = get_log_dir(**args) + 'heuristic/'
     elif args['slrrej']:
-        run_dir = AGENT_DIR + '{}/rej/'.format(SLR)
+        run_dir = slrrej_dir()
     else:
         args[DROPOUT] = DROPOUT_GRID[args[DROPOUT]]
         _, _, run_dir = get_paths(**args)
