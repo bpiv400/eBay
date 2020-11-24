@@ -21,9 +21,9 @@ from agent.AgentLoader import AgentLoader
 class EBayEnv:
     Outcome = namedtuple('outcome', ['sale', 'price', 'days', 'thread'])
 
-    def __init__(self, params=None):
+    def __init__(self, **kwargs):
         # interfaces
-        self.verbose = params['verbose']
+        self.verbose = kwargs['verbose']
 
         # features
         self.x_lstg = None
@@ -41,14 +41,14 @@ class EBayEnv:
         self.outcome = None
         self.last_arrival_time = None
 
-        self.composer = params['composer']
-        self.query_strategy = params['query_strategy']
-        if 'recorder' in params:
-            self.recorder = params['recorder']
+        self.composer = kwargs['composer']
+        self.query_strategy = kwargs['query_strategy']
+        if 'recorder' in kwargs:
+            self.recorder = kwargs['recorder']
         else:
             self.recorder = None
-        if 'loader' in params:
-            self.loader = params['loader']
+        if 'loader' in kwargs:
+            self.loader = kwargs['loader']
         else:
             x_lstg_cols = self.composer.x_lstg_cols
             self.loader = AgentLoader(x_lstg_cols=x_lstg_cols, byr=False)

@@ -20,7 +20,7 @@ EventLog = namedtuple("EventLog", ["priority", "thread_id", "turn"])
 
 class AgentEnv(EBayEnv, Env):
     def __init__(self, **kwargs):
-        super().__init__(params=kwargs)
+        super().__init__(kwargs=kwargs)
         self.byr = kwargs[BYR]
 
         # mode
