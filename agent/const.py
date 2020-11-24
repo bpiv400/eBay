@@ -16,7 +16,7 @@ LR_POLICY = 1e-4
 LR_VALUE = 1e-3
 RATIO_CLIP = 0.1
 BATCH_SIZE = 4096
-STOP_ENTROPY = .01
+STOP_ENTROPY = .1
 
 # state dictionaries
 AGENT_STATE = 'agent_state_dict'

@@ -34,11 +34,16 @@ def discrete_cdf(s=None):
     return cdf.sort_index()
 
 
-def arrival_dist(threads=None):
-    s = threads[DAYS_SINCE_LSTG] * DAY
+def arrival_pdf(s=None):
     pdf = discrete_pdf(s)
     pdf.index = (pdf.index // INTERVAL_ARRIVAL).astype('int64')
     pdf = pdf.groupby(pdf.index.name).sum()
+    return pdf
+
+
+def arrival_dist(threads=None):
+    s = threads[DAYS_SINCE_LSTG] * DAY
+    pdf = arrival_pdf(s)
     pdf.index = pdf.index / INTERVAL_CT_ARRIVAL
     return pdf
 
@@ -48,11 +53,10 @@ def interarrival_dist(threads=None):
     ct = s.groupby(s.index.names[:-1]).count()
     s = s[safe_reindex(ct, idx=s.index) > 1]
     s = s.groupby(s.index.names[:-1]).diff().dropna()
-    cdf = discrete_cdf(s)
-    cdf.index /= HOUR
-    cdf.index.name = 'hours'
-    cdf = cdf.rename('pctile')
-    return cdf
+    pdf = arrival_pdf(s)
+    pdf.index *= (INTERVAL_ARRIVAL / HOUR)
+    pdf.index.name = 'hours'
+    return pdf
 
 
 def hist_dist(threads=None):

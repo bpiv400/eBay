@@ -16,7 +16,7 @@ def collect_outputs(data=None, name=None):
 
     # offer distributions
     d['pdf_arrival'] = arrival_dist(data[X_THREAD])
-    d['cdf_interarrival'] = interarrival_dist(data[X_THREAD])
+    d['pdf_interarrival'] = interarrival_dist(data[X_THREAD])
     d['cdf_hist'] = hist_dist(data[X_THREAD])
     d['cdf_delay'] = delay_dist(data[X_OFFER])
     d['cdf_con'] = con_dist(data[X_OFFER])

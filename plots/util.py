@@ -8,7 +8,7 @@ from plots.const import BIN_TICKS, SLRBO_TICKS
 from constants import FIG_DIR, IDX, MAX_DELAY_TURN, MAX_DELAY_ARRIVAL, \
     DAY, HOUR, EPS
 from featnames import CON, NORM, DELAY, ARRIVAL, MSG, ACCEPT, \
-    REJECT, META, CNDTN, BYR, SLR
+    REJECT, META, CNDTN, BYR, SLR, EXP
 
 FONTSIZE = {'training': 24}  # fontsize by plot type
 
@@ -169,9 +169,6 @@ def cdf_plot(path, obj):
                     xlabel='Sale price / list price')
         if name == 'salenorm':
             den = 'sales'
-    elif name == 'interarrival':
-        args = dict(xlim=[0, 48], xlabel='Hours',
-                    xticks=np.arange(0, 48 + EPS, 12))
     elif name.startswith('days'):
         args = dict(xlim=[0, 1],
                     xlabel='Fraction of listing window')
@@ -225,10 +222,42 @@ def cdf_plot(path, obj):
 
     # create plot and save
     if type(obj) is pd.Series:
-        plt.plot(obj.index, obj, ds='steps-post')
+        plt.plot(obj.index, obj, ds='steps-post', color='k')
     else:
-        for c in obj.columns:
-            s = obj[c].dropna()
+        if 'Data' in obj.columns:
+            assert obj.columns[0] == 'Data'
+            s = obj['Data'].dropna()
+
+            # plot separately
+            plt.plot(s.index, s, ds='steps-post', color='k')
+            if vline is not None:
+                add_vline(x=vline, y=ylim)
+            save_fig('{}_Data'.format(path), ylim=[0, 1],
+                     ylabel='Cumulative share of {}'.format(den),
+                     legend=False, **args)
+
+            # plot data and each agent
+            for i in range(1, len(obj.columns)):
+                plt.plot(s.index, s, ds='steps-post', color='k',
+                         label='Data' if 'Simulations' in obj.columns else 'Humans')
+                s_agent = obj.iloc[:, i].dropna()
+                label = obj.columns[i]
+                plt.plot(s_agent.index, s_agent, ds='steps-post',
+                         color=COLORS[i], label=label)
+                save_fig('{}_{}'.format(path, label[10:13]),
+                         ylim=[0, 1],
+                         ylabel='Cumulative share of {}'.format(den),
+                         legend=True, **args)
+
+            # plot together
+            plt.plot(s.index, s,
+                     label='Data' if 'Simulations' in obj.columns else 'Humans',
+                     ds='steps-post', color='k')
+            df = obj.drop('Data', axis=1)
+        else:
+            df = obj
+        for c in df.columns:
+            s = df[c].dropna()
             plt.plot(s.index, s, label=c, ds='steps-post')
 
     if vline is not None:
@@ -272,6 +301,12 @@ def simple_plot(path, obj):
                     xticklabels=ticks,
                     xlabel='List price ($)',
                     ylabel='Turn 3: Pr(accept)')
+    elif name == 'interarrival':
+        args = dict(ylim=[0, 7], xlim=[0, 2],
+                    xticks=[0, .5, 1, 1.5, 2],
+                    xlabel='Days to first arrival',
+                    ylabel='Days between first two arrivals',
+                    legend_kwargs=dict(title='First offer'))
     else:
         raise NotImplementedError('Invalid name: {}'.format(name))
 
@@ -302,11 +337,11 @@ def simple_plot(path, obj):
         for i in range(len(dsets)):
             dset = dsets[i]
             df_i = obj.xs(dset, level=0, axis=1)
-            plt.plot(df_i.index, df_i.beta, '-', color=COLORS[i], label=dset)
-            plt.plot(df_i.index, df_i.beta + df_i.err, '--', color=COLORS[i])
-            plt.plot(df_i.index, df_i.beta - df_i.err, '--', color=COLORS[i])
+            plt.plot(df_i.index, df_i.beta, '-', color=COLORS[i+1], label=dset)
+            plt.plot(df_i.index, df_i.beta + 1.96 * df_i.err, '--', color=COLORS[i+1])
+            plt.plot(df_i.index, df_i.beta - 1.96 * df_i.err, '--', color=COLORS[i+1])
 
-        if name == 'rejnorm':
+        if NORM in name:
             add_diagonal(obj)
 
         save_fig(path, legend=True, **args)
@@ -332,10 +367,10 @@ def draw_response(line=None, dots=None, diagonal=False, connect=False,
         plt.plot(line.index, line.beta, '-', color=c)
     else:
         plt.plot(line.index, line.beta, '-',
-                 label=label.replace('Agent: ', ''), color=c)
+                 label=label, color=c)
     if 'err' in line.columns:
-        plt.plot(line.index, line.beta + line.err, '--', color=c)
-        plt.plot(line.index, line.beta - line.err, '--', color=c)
+        plt.plot(line.index, line.beta + 1.96 * line.err, '--', color=c)
+        plt.plot(line.index, line.beta - 1.96 * line.err, '--', color=c)
 
     if dots is not None:
         for i in range(len(dots.index)):
@@ -343,8 +378,8 @@ def draw_response(line=None, dots=None, diagonal=False, connect=False,
             row = dots.iloc[i]
             plt.plot(x, row['beta'], 'o', color=c, ms=5)
             if 'err' in dots.columns:
-                high = row['beta'] + row['err']
-                low = row['beta'] - row['err']
+                high = row['beta'] + 1.96 * row['err']
+                low = row['beta'] - 1.96 * row['err']
                 plt.plot([x, x], [low, high], '-', color=c)
 
     if diagonal:
@@ -374,11 +409,10 @@ def response_plot(path, obj):
         else:
             raise NotImplementedError('Invalid name: {}'.format(name))
 
-    elif name in [ACCEPT, REJECT, 'counter', CON]:
-        ylabel = 'Average concession' if name == CON else 'Pr({})'.format(name)
+    elif name in [ACCEPT, REJECT, 'counter']:
         args = dict(xlim=[.4, .9], ylim=[0, 1],
                     xlabel='Turn 1: Offer / list price',
-                    ylabel='Turn 2: ' + ylabel)
+                    ylabel='Turn 2: Pr({})'.format(name))
     elif name == NORM:
         args = dict(xlim=[.4, 1], ylim=[.4, 1],
                     xlabel='Turn 1: Offer / list price',
@@ -468,22 +502,30 @@ def response_plot(path, obj):
         # first plot data by itself
         if 'Data' in dsets:
             draw_response(line=line.xs('Data', level=0, axis=1),
-                          dots=dots.xs('Data', level=0, axis=1),
+                          dots=None if dots is None else dots.xs('Data', level=0, axis=1),
                           diagonal=(NORM in name),
                           connect=(name in ['slrrejrej', 'slrrejacc']))
             save_fig('{}_Data'.format(path), legend=False, **args)
+
+        else:
+            for dset in dsets:
+                draw_response(line=line.xs(dset, level=0, axis=1),
+                              dots=None if dots is None else dots.xs(dset, level=0, axis=1),
+                              diagonal=(NORM in name),
+                              connect=(name in ['slrrejrej', 'slrrejacc']),
+                              label=dset)
+                save_fig('{}_{}'.format(path, dset), legend=False, **args)
 
         # then plot data all together
         if len(dsets) < len(COLORS):
             for i in range(len(dsets)):
                 dset = dsets[i]
                 draw_response(line=line.xs(dset, level=0, axis=1),
-                              dots=dots.xs(dset, level=0, axis=1),
+                              dots=None if dots is None else dots.xs(dset, level=0, axis=1),
                               diagonal=(NORM in name),
                               label=dset, c=COLORS[i])
 
-            save_fig(path, legend=True,
-                     legend_kwargs=dict(loc='upper left'), **args)
+            save_fig(path, legend=True, **args)
 
     else:
         draw_response(line=line, dots=dots, diagonal=(NORM in name))
@@ -502,7 +544,7 @@ def coef_plot(path, df):
     else:
         raise NotImplementedError('Invalid name: {}'.format(name))
 
-    plt.barh(df.index, df.beta, xerr=df.err, color='none')
+    plt.barh(df.index, df.beta, xerr=(1.96 * df.err), color='none')
     plt.scatter(df.beta, df.index, s=20, color='black')
     plt.gca().invert_yaxis()  # labels read top-to-bottom
 
@@ -513,7 +555,7 @@ def coef_plot(path, df):
              **args)
 
 
-def bar_plot(path, df):
+def bar_plot(path, obj):
     name = get_name(path)
     if name == 'offers':
         args = dict(ylim=[0., .6],
@@ -529,22 +571,37 @@ def bar_plot(path, df):
         args = dict(ylim=[0, .5],
                     xlabel='Turn',
                     ylabel='Fraction of eligible offers')
-    elif name == 'slrnorm':
-        args = dict(ylim=[.65, .75], legend=False, xlabel='',
-                    ylabel='Average normalized reward')
-    elif name == 'slrdollar':
-        args = dict(ylim=[80, 90], legend=False, xlabel='',
-                    ylabel='Average reward ($)')
+    elif name == 'norm':
+        lower = np.floor(obj.min() * 100) / 100 - .01
+        upper = np.ceil(obj.max() * 100) / 100 + .01
+        args = dict(ylim=[lower, upper],
+                    legend=False, xlabel='',
+                    ylabel='Reward / list price')
+    elif name == 'dollar':
+        lower, upper = np.floor(obj.min()) - 1, np.ceil(obj.max()) + 1
+        args = dict(ylim=[lower, upper],
+                    legend=False, xlabel='',
+                    ylabel='Reward ($)')
     elif name == 'training':
-        baserate = df['Baserate']
-        df.drop('Baserate', inplace=True)
+        baserate = obj['Baserate']
+        obj.drop('Baserate', inplace=True)
         args = dict(ylim=[baserate, None], legend=False,
                     xlabel='', ylabel='')
+    elif name == REJECT:
+        args = dict(xlabel='Turn', ylabel='Pr(reject)')
+    elif name == EXP:
+        args = dict(xlabel='Turn', ylabel='Pr(expire)')
     else:
         raise NotImplementedError('Invalid name: {}'.format(name))
 
-    df.plot.bar(rot=0)
-    save_fig(path, xticklabels=df.index, gridlines=False, **args)
+    if type(obj) is pd.Series:
+        if 'Data' in obj.index:
+            obj.rename({'Data': 'Humans'}, inplace=True)
+        obj.plot.bar(rot=0)
+    else:
+        rot = 45 if len(obj.columns) > 3 else 0
+        obj.plot.bar(rot=rot, color=COLORS)
+    save_fig(path, xticklabels=obj.index, gridlines=False, **args)
 
 
 def draw_area(df, xlim=None, ylim=None):
@@ -566,14 +623,14 @@ def draw_contour(s=None, inc=.01):
 
     vmin = np.floor(s.min() * 100) / 100
     vmax = np.ceil(s.max() * 100) / 100
-    levels = np.arange(0, 1 + inc, inc)
+    levels = np.arange(0, np.ceil(vmax) + inc, inc)
     subset = [levels[i] for i in range(len(levels)) if i % 5 == 0]
 
     fig, ax = plt.subplots()
     CS = ax.contour(X, Y, Z, levels=levels,
                     cmap=plt.get_cmap('plasma'),
                     vmin=vmin, vmax=vmax)
-    ax.clabel(CS, inline=True, fontsize=10, levels=subset)
+    ax.clabel(CS, inline=True, fontsize=14, levels=subset)
 
 
 def contour_plot(path, s):
@@ -588,18 +645,15 @@ def contour_plot(path, s):
     elif name.startswith('hist'):
         args = dict(xlabel='First buyer offer / list price',
                     ylabel='Seller experience percentile')
-    elif name == 'rej':
+    elif 'rejbin' in name:
         ticks = get_log_ticks(s.index.levels[1])
         args = dict(yticks=np.log10(ticks),
                     yticklabels=ticks,
                     xlabel='Turn 1: Offer / list price',
                     ylabel='List price ($)')
-    elif name.startswith('slrrejbin'):
-        ticks = get_log_ticks(s.index.levels[1])
-        args = dict(yticks=np.log10(ticks),
-                    yticklabels=ticks,
-                    xlabel='Turn 1: Offer / list price',
-                    ylabel='List price ($)')
+    elif name == 'rejdays':
+        args = dict(ylabel='Days to first offer',
+                    xlabel='Turn 1: Offer / list price')
     else:
         raise NotImplementedError('Invalid name: {}'.format(name))
 
@@ -652,6 +706,9 @@ def pdf_plot(path, obj):
     if name == 'arrival':
         args = dict(xlim=[0, 1],
                     xlabel='Fraction of listing window')
+    elif name == 'interarrival':
+        args = dict(xlim=[0, 48], xlabel='Hours',
+                    xticks=np.arange(0, 48 + EPS, 12))
     elif name == 'values':
         args = dict(xlim=[0, 1],
                     xlabel='Value / list price')
@@ -660,7 +717,7 @@ def pdf_plot(path, obj):
 
     legend = type(obj) is pd.DataFrame
     if not legend:
-        plt.plot(obj.index, obj)
+        plt.plot(obj.index, obj, color='k')
         save_fig(path,
                  legend=legend,
                  yaxis=False,
@@ -668,8 +725,34 @@ def pdf_plot(path, obj):
                  gridlines=False,
                  **args)
 
+    elif 'Data' in obj.columns:
+        s = obj['Data']
+
+        # plot separately
+        plt.plot(s.index, s, color='k')
+        save_fig('{}_Data'.format(path),
+                 legend=False,
+                 yaxis=False,
+                 ylim=[0, obj.max().max()],
+                 gridlines=False,
+                 **args)
+
+        # plot together
+        plt.plot(s.index, s, label='Data', color='k')
+        df = obj.drop('Data', axis=1)
+        for i in range(len(df.columns)):
+            c = df.columns[i]
+            plt.plot(df.index, df[c], label=c)
+        save_fig(path,
+                 legend=legend,
+                 yaxis=False,
+                 ylim=[0, obj.max().max()],
+                 gridlines=False,
+                 **args)
+
     else:
-        for c in obj.columns:
+        for i in range(len(obj.columns)):
+            c = obj.columns[i]
             plt.plot(obj.index, obj[c], label=c)
         save_fig(path,
                  legend=legend,
