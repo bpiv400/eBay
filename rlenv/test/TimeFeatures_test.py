@@ -2,7 +2,7 @@ import pytest
 import torch
 import numpy as np
 from featnames import TIME_FEATS, THREAD_COUNT
-from constants import EXPIRATION
+from constants import MAX_DELAY_TURN
 from rlenv.time.TimeFeatures import TimeFeatures
 import rlenv.time.offer_types as time_triggers
 
@@ -831,9 +831,9 @@ def test_byr_offer_best_expire_no_backup(init_timefeats, lstgs):
         else:
             raise RuntimeError()
 
-    next1 = timefeats.get_feats(thread1, 8 + EXPIRATION)
-    next2 = timefeats.get_feats(thread2, 8 + EXPIRATION)
-    next3 = timefeats.get_feats(thread3, 8 + EXPIRATION)
+    next1 = timefeats.get_feats(thread1, 8 + MAX_DELAY_TURN)
+    next2 = timefeats.get_feats(thread2, 8 + MAX_DELAY_TURN)
+    next3 = timefeats.get_feats(thread3, 8 + MAX_DELAY_TURN)
 
     for i, feat in enumerate(TIME_FEATS):
         if 'byr_offers' in feat:
@@ -904,9 +904,9 @@ def test_byr_best_expire_with_backup(init_timefeats, lstgs):
                               })
 
 
-    next1 = timefeats.get_feats(thread1, 16 + EXPIRATION)
-    next2 = timefeats.get_feats(thread2, 16 + EXPIRATION)
-    next3 = timefeats.get_feats(thread3, 16 + EXPIRATION)
+    next1 = timefeats.get_feats(thread1, 16 + MAX_DELAY_TURN)
+    next2 = timefeats.get_feats(thread2, 16 + MAX_DELAY_TURN)
+    next3 = timefeats.get_feats(thread3, 16 + MAX_DELAY_TURN)
 
     for i, feat in enumerate(TIME_FEATS):
         if 'byr_offers' in feat:
@@ -981,9 +981,9 @@ def test_overriding_recent_max(init_timefeats, lstgs):
                                   'price': .35
                               })
 
-    next1 = timefeats.get_feats(thread1, 16 + EXPIRATION)
-    next2 = timefeats.get_feats(thread2, 16 + EXPIRATION)
-    next3 = timefeats.get_feats(thread3, 16 + EXPIRATION)
+    next1 = timefeats.get_feats(thread1, 16 + MAX_DELAY_TURN)
+    next2 = timefeats.get_feats(thread2, 16 + MAX_DELAY_TURN)
+    next3 = timefeats.get_feats(thread3, 16 + MAX_DELAY_TURN)
 
     for i, feat in enumerate(TIME_FEATS):
         if 'byr_offers' in feat:
@@ -1037,9 +1037,9 @@ def test_overriding_recent_max_same_thread(init_timefeats, lstgs):
                                   'price': .35
                               })
 
-    next1 = timefeats.get_feats(thread1, 16 + EXPIRATION)
-    next2 = timefeats.get_feats(thread2, 16 + EXPIRATION)
-    next3 = timefeats.get_feats(thread3, 16 + EXPIRATION)
+    next1 = timefeats.get_feats(thread1, 16 + MAX_DELAY_TURN)
+    next2 = timefeats.get_feats(thread2, 16 + MAX_DELAY_TURN)
+    next3 = timefeats.get_feats(thread3, 16 + MAX_DELAY_TURN)
 
     for i, feat in enumerate(TIME_FEATS):
         if 'byr_offers' in feat:

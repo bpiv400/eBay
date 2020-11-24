@@ -7,8 +7,8 @@
 #$ -o logs/sims/
 
 ulimit -n 4096
-if [ "$1" == "values" ]; then
-  python repo/sim/sims.py --num "$SGE_TASK_ID" --values
+if [ "$2" == "values" ]; then
+  python repo/sim/sims.py --num "$SGE_TASK_ID" --part "$1" --values
 else
-  python repo/sim/sims.py --num "$SGE_TASK_ID"
+  python repo/sim/sims.py --num "$SGE_TASK_ID" --part "$1"
 fi

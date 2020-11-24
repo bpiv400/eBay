@@ -12,7 +12,7 @@ import math
 from collections import deque, Counter
 import numpy as np
 from featnames import TIME_FEATS, THREAD_COUNT, BYR
-from constants import EXPIRATION
+from constants import MAX_DELAY_TURN
 from rlenv.Heap import Heap
 from rlenv.time.Offer import Offer
 from rlenv.time.offer_types import BYR_REJECTION, SLR_REJECTION, OFFER
@@ -109,13 +109,13 @@ class TimeFeatures:
             return ThreadSet()
         if 'best' not in feat:
             if 'recent' in feat:  # will be ignored for the timebeing
-                return ExpirationQueue(expiration=EXPIRATION)
+                return ExpirationQueue(expiration=MAX_DELAY_TURN)
             else:
                 return FeatureCounter(feat)
         else:
             if 'recent' in feat:  # will be ignored for the timebeing
                 return ExpirationHeap(min_heap=False,
-                                      expiration=EXPIRATION)
+                                      expiration=MAX_DELAY_TURN)
             else:
                 return FeatureHeap(min_heap=False)
 
