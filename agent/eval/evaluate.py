@@ -24,6 +24,7 @@ def get_byr_return(data=None, values=None):
     s = pd.Series()
     s['norm'] = norm.mean()
     s['dollar'] = dollar.mean()
+    s['sold_pct'] = len(sale_norm.index) / len(data[LOOKUP].index)
     return s
 
 

@@ -2,6 +2,7 @@ from rlenv.generate.util import process_sims
 from agent.eval.util import sim_run_dir, sim_args
 from utils import unpickle
 from constants import NUM_CHUNKS
+from featnames import BYR
 
 
 def main():
@@ -18,7 +19,7 @@ def main():
         sims.append(unpickle(chunk_path))
 
     # clean and save
-    process_sims(part=args['part'], sims=sims, output_dir=output_dir)
+    process_sims(part=args['part'], sims=sims, output_dir=output_dir, byr=args[BYR])
 
 
 if __name__ == '__main__':

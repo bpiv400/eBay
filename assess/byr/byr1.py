@@ -1,10 +1,9 @@
 import numpy as np
 import pandas as pd
-from agent.util import get_byr_agent, load_values, find_best_run, \
-    load_valid_data, get_norm_reward
-from assess.util import ll_wrapper, continuous_cdf, kdens_wrapper
-from utils import load_data, topickle, safe_reindex
-from agent.const import COMMON_CONS, DELTA_SLR
+from agent.util import get_norm_reward
+from assess.util import ll_wrapper
+from utils import load_data, topickle
+from agent.const import COMMON_CONS
 from assess.const import NORM1_DIM
 from constants import PLOT_DIR, INTERVAL_ARRIVAL, INTERVAL_CT_ARRIVAL
 from featnames import X_OFFER, X_THREAD, BYR_HIST, CON, INDEX, THREAD, \
@@ -27,34 +26,6 @@ def time_to_sale_plot(data=None, values=None):
 
 def main():
     d = dict()
-
-    # values when buyer arrives
-    for delta in DELTA_SLR:
-        vals = load_values(part=TEST, delta=delta)
-        run_dir = find_best_run(byr=True, delta=delta)
-        if run_dir is None:
-            continue
-        data = load_valid_data(part=TEST, run_dir=run_dir)
-        valid_vals = safe_reindex(vals, idx=data[LOOKUP].index)
-
-        # comparing all to valid values
-        kwargs = {'All': vals, 'Valid': valid_vals}
-        d['pdf_values_{}'.format(delta)] = kdens_wrapper(**kwargs)
-
-        # comparing first-turn offers to walks
-        threads = get_byr_agent(data)
-        df = safe_reindex(data[X_OFFER], idx=threads)
-        rej1 = (df[CON].xs(1, level=INDEX) == 0).droplevel(THREAD)
-        other = rej1[~rej1].index
-        reject = rej1[rej1].index
-        if len(reject) == 0:
-            elem = {'Offer': continuous_cdf(valid_vals.loc[other])}
-        elif len(other) == 0:
-            elem = {'Reject': continuous_cdf(valid_vals.loc[reject])}
-        else:
-            elem = {'Reject': continuous_cdf(valid_vals.loc[reject]),
-                    'Offer': continuous_cdf(valid_vals.loc[other])}
-        d['cdf_t1value_{}'.format(delta)] = pd.DataFrame.from_dict(elem)
 
     # distributions of byr_hist for those who make 50% concessions
     data = load_data(part=TEST)

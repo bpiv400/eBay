@@ -200,8 +200,8 @@ def cdf_plot(path, obj):
     elif name.startswith('t1value'):
         vline = .5
         args = dict(xlim=[.1, .9],
-                    xlabel='value / list price')
-    elif name.startswith('netvalue'):
+                    xlabel='Value / list price')
+    elif name.startswith('t7value'):
         vline = 0
         args = dict(xlim=[-.25, .25],
                     xlabel='(Value $-$ final seller offer) / list price')
