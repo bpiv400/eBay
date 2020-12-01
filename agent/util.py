@@ -31,6 +31,7 @@ def get_paths(**kwargs):
 
 
 def find_best_run(byr=None, delta=None, verbose=True):
+    delta = float(delta)
     log_dir = get_log_dir(byr=byr, delta=delta)
     path = log_dir + '{}.pkl'.format(VALIDATION)
     if os.path.isfile(path):

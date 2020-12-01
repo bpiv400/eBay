@@ -3,7 +3,7 @@ import pandas as pd
 from agent.util import find_best_run, load_valid_data, get_slr_valid
 from assess.util import ll_wrapper, kreg2
 from utils import topickle, load_data, safe_reindex
-from agent.const import DELTA_CHOICES
+from agent.const import DELTA_SLR
 from assess.const import NORM1_DIM, NORM1_BIN_MESH
 from constants import PLOT_DIR
 from featnames import X_OFFER, CON, INDEX, TEST, NORM, ACCEPT, REJECT, AUTO, \
@@ -65,7 +65,7 @@ def main():
                 bin_plot(y=y, x1=x, x2=feats[2].values)
 
     # seller runs
-    for delta in DELTA_CHOICES[:-1]:
+    for delta in DELTA_SLR[:-1]:
         run_dir = find_best_run(byr=False, delta=delta)
         data = load_valid_data(part=TEST, run_dir=run_dir)
         feats = get_feats(data=data)

@@ -1,7 +1,7 @@
 from agent.util import find_best_run, load_valid_data, get_slr_valid
 from assess.util import kreg2
 from utils import topickle, load_data
-from agent.const import DELTA_CHOICES
+from agent.const import DELTA_SLR
 from assess.const import NORM1_DAYS_MESH
 from constants import PLOT_DIR
 from featnames import X_OFFER, REJECT, INDEX, TEST, NORM, AUTO, X_THREAD, \
@@ -36,7 +36,7 @@ def main():
     d['contour_rejdays_data'], bw = days_plot(y=y, x1=x1, x2=x2)
 
     # seller runs
-    for delta in DELTA_CHOICES[:-1]:
+    for delta in DELTA_SLR[:-1]:
         run_dir = find_best_run(byr=False, delta=delta)
         data = load_valid_data(part=TEST, run_dir=run_dir)
         y, x1, x2 = get_feats(data=data)

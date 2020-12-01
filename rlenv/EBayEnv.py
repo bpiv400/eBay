@@ -22,17 +22,13 @@ class EBayEnv:
     Outcome = namedtuple('outcome', ['sale', 'price', 'days', 'thread'])
 
     def __init__(self, **kwargs):
-        # interfaces
+        # for printing
         self.verbose = kwargs['verbose']
 
         # features
         self.x_lstg = None
         self.lookup = None
         self.p_arrival = None
-
-        self.time_feats = TimeFeatures()
-        # queue
-        self.queue = Heap(entry_type=Event)
 
         # lstg params
         self.end_time = None
@@ -41,12 +37,12 @@ class EBayEnv:
         self.outcome = None
         self.last_arrival_time = None
 
+        # classes
+        self.time_feats = TimeFeatures()
+        self.queue = Heap(entry_type=Event)
         self.composer = kwargs['composer']
         self.query_strategy = kwargs['query_strategy']
-        if 'recorder' in kwargs:
-            self.recorder = kwargs['recorder']
-        else:
-            self.recorder = None
+        self.recorder = None if 'recorder' not in kwargs else kwargs['recorder']
         if 'loader' in kwargs:
             self.loader = kwargs['loader']
         else:

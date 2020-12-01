@@ -2,7 +2,7 @@ import numpy as np
 import torch
 from agent.util import get_turn
 from rlenv.const import DAYS_IND, NORM_IND
-from agent.const import AGENT_CONS, DELTA_CHOICES
+from agent.const import AGENT_CONS
 from constants import NUM_COMMON_CONS, MAX_DAYS
 from featnames import LSTG
 
@@ -23,8 +23,7 @@ def get_elapsed(x=None, turn=None):
 
 class HeuristicSlr:
     def __init__(self, delta=None):
-        self.delta = delta
-        assert self.delta in DELTA_CHOICES[:-1]
+        self.high = np.isclose(delta, .7)
 
     def __call__(self, observation=None):
         # noinspection PyProtectedMember
@@ -39,14 +38,14 @@ class HeuristicSlr:
         cons = AGENT_CONS[turn]
         if turn == 2:
             elapsed = get_elapsed(x=x, turn=turn)
-            threshold = .61 if self.delta == .7 else .38
+            threshold = .61 if self.high else .38
             if elapsed <= threshold:
                 idx = np.nonzero(cons == 0)[0][0]
             else:
                 idx = np.nonzero(cons == 1)[0][0]
 
         elif turn == 4:
-            if self.delta == .7:
+            if self.high:
                 elapsed = get_elapsed(x=x, turn=turn)
                 if elapsed <= .26:
                     idx = np.nonzero(cons == 0)[0][0]
@@ -60,7 +59,7 @@ class HeuristicSlr:
                     idx = np.nonzero(cons == 1)[0][0]
 
         elif turn == 6:
-            if self.delta == .7:
+            if self.high:
                 idx = np.nonzero(cons == 1)[0][0]
             else:
                 norm = x['offer{}'.format(turn - 1)][NORM_IND].item()

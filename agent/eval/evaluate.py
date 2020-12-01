@@ -3,7 +3,6 @@ import os
 import pandas as pd
 from agent.util import get_log_dir, load_values, load_valid_data, \
     get_sale_norm, get_norm_reward
-from agent.eval.util import slrrej_dir
 from utils import topickle, unpickle, compose_args, safe_reindex
 from agent.const import AGENT_PARAMS
 from constants import EPS
@@ -83,12 +82,6 @@ def main():
     if not args.byr:
         data = load_valid_data(part=args.part)
         output[OBS] = f(data)
-
-    # seller reject environment
-    if not args.byr:
-        data = load_valid_data(part=args.part, run_dir=slrrej_dir())
-        if data is not None:
-            output['slrrej'] = f(data)
 
     # rewards from heuristic strategy
     heuristic_dir = get_log_dir(**vars(args)) + 'heuristic/'

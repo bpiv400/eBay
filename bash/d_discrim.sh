@@ -7,7 +7,7 @@ python repo/sim/best_models.py
 for part in valid rl
 do
   python repo/sim/chunks.py --part $part
-  python repo/sim/generate.py --part $part
+  python repo/sim/sims.py --part $part
   python repo/inputs/discrim.py --part $part
 done
 

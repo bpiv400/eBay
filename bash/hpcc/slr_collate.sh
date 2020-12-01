@@ -5,9 +5,7 @@
 #$ -o logs/collate/
 
 ulimit -n 4096
-if [ "$1" == "slrrej" ]; then
-  python repo/agent/eval/collate.py --slrrej
-elif [ "$2" == "heuristic" ]; then
+if [ "$2" == "heuristic" ]; then
   python repo/agent/eval/collate.py --delta "$1" --heuristic
 else
   python repo/agent/eval/collate.py --delta "$1"

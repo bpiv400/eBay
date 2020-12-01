@@ -3,7 +3,7 @@ from sklearn.tree import DecisionTreeClassifier, export_text
 from assess.util import get_last
 from agent.util import find_best_run
 from utils import load_data
-from agent.const import DELTA_CHOICES
+from agent.const import DELTA_SLR
 from constants import DAY, MAX_DAYS
 from featnames import LOOKUP, AUTO, CON, NORM, START_PRICE, START_TIME, \
     BYR_HIST, X_OFFER, X_THREAD, INDEX, CLOCK, THREAD, TEST
@@ -13,12 +13,11 @@ def main():
     # delta from command line
     parser = argparse.ArgumentParser()
     parser.add_argument('--delta', type=float,
-                        choices=DELTA_CHOICES, required=True)
+                        choices=DELTA_SLR, required=True)
     delta = parser.parse_args().delta
 
     run_dir = find_best_run(byr=False, delta=delta)
     data = load_data(part=TEST, run_dir=run_dir)
-    # data = load_data(part=TEST)
 
     for turn in [2, 4, 6]:
         print('Turn {}'.format(turn))
@@ -48,7 +47,7 @@ def main():
         X = X.values
 
         # decision tree
-        clf = DecisionTreeClassifier(max_depth=1).fit(X, y)
+        clf = DecisionTreeClassifier(max_depth=2).fit(X, y)
         r = export_text(clf, feature_names=cols)
         print(r)
 

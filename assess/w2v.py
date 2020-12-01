@@ -1,7 +1,7 @@
 import pandas as pd
 from agent.util import load_values
 from utils import unpickle, topickle, load_data, load_feats
-from agent.const import DELTA_CHOICES
+from assess.const import DELTA_ASSESS
 from constants import FEATS_DIR, PLOT_DIR
 from featnames import META, LEAF, LOOKUP, TEST
 
@@ -31,10 +31,9 @@ def main():
     leaf = load_feats('listings', lstgs=data[LOOKUP].index)[LEAF]
 
     # color by value
-    for delta in DELTA_CHOICES:
-        vals = load_values(part=TEST, delta=delta)
-        mean_vals = vals.groupby(leaf).mean().rename('c')
-        d['w2v_values_{}'.format(delta)] = tsne.join(mean_vals, on=LEAF)
+    vals = load_values(part=TEST, delta=DELTA_ASSESS)
+    mean_vals = vals.groupby(leaf).mean().rename('c')
+    d['w2v_values'] = tsne.join(mean_vals, on=LEAF)
 
     # save
     topickle(d, PLOT_DIR + 'w2v.pkl')

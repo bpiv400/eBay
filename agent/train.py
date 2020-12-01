@@ -2,9 +2,9 @@ import argparse
 import torch
 from agent.RlTrainer import RlTrainer
 from utils import compose_args, set_gpu
-from agent.const import AGENT_PARAMS, HYPER_PARAMS
+from agent.const import AGENT_PARAMS, HYPER_PARAMS, DELTA_SLR, DELTA_BYR
 from constants import DROPOUT_GRID
-from featnames import DROPOUT
+from featnames import BYR, DROPOUT, DELTA
 
 
 def startup():
@@ -17,6 +17,12 @@ def startup():
     compose_args(arg_dict=AGENT_PARAMS, parser=parser)
     compose_args(arg_dict=HYPER_PARAMS, parser=parser)
     args = vars(parser.parse_args())
+
+    # error checking
+    if args[BYR]:
+        assert args[DELTA] in DELTA_BYR
+    else:
+        assert args[DELTA] in DELTA_SLR
 
     # set gpu and cpu affinity
     set_gpu(gpu=args['gpu'])

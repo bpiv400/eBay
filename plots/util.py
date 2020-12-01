@@ -237,17 +237,18 @@ def cdf_plot(path, obj):
                      legend=False, **args)
 
             # plot data and each agent
-            for i in range(1, len(obj.columns)):
-                plt.plot(s.index, s, ds='steps-post', color='k',
-                         label='Data' if 'Simulations' in obj.columns else 'Humans')
-                s_agent = obj.iloc[:, i].dropna()
-                label = obj.columns[i]
-                plt.plot(s_agent.index, s_agent, ds='steps-post',
-                         color=COLORS[i], label=label)
-                save_fig('{}_{}'.format(path, label[10:13]),
-                         ylim=[0, 1],
-                         ylabel='Cumulative share of {}'.format(den),
-                         legend=True, **args)
+            if len(obj.columns) > 2:
+                for i in range(1, len(obj.columns)):
+                    plt.plot(s.index, s, ds='steps-post', color='k',
+                             label='Data' if 'Simulations' in obj.columns else 'Humans')
+                    s_agent = obj.iloc[:, i].dropna()
+                    label = obj.columns[i]
+                    plt.plot(s_agent.index, s_agent, ds='steps-post',
+                             color=COLORS[i], label=label)
+                    save_fig('{}_{}'.format(path, label[10:13]),
+                             ylim=[0, 1],
+                             ylabel='Cumulative share of {}'.format(den),
+                             legend=True, **args)
 
             # plot together
             plt.plot(s.index, s,

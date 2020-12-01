@@ -1,11 +1,9 @@
 import os
 from agent.eval.AgentGenerator import AgentGenerator
-from agent.eval.SlrRejectEnv import SlrRejectEnv
 from agent.models.AgentModel import load_agent_model
 from agent.models.HeuristicByr import HeuristicByr
 from agent.models.HeuristicSlr import HeuristicSlr
 from agent.eval.util import sim_run_dir, sim_args
-from rlenv.generate.Generator import OutcomeGenerator
 from rlenv.generate.util import process_sims
 from utils import topickle, run_func_on_chunks, process_chunk_worker
 from featnames import BYR, DELTA
@@ -18,18 +16,14 @@ def main():
     run_dir = sim_run_dir(args)
 
     # generator
-    if args['slrrej']:
-        gen_cls = OutcomeGenerator
-        gen_args = dict(env=SlrRejectEnv)
+    gen_cls = AgentGenerator
+    if args['heuristic']:
+        model_cls = HeuristicByr if args[BYR] else HeuristicSlr
+        model = model_cls(args[DELTA])
     else:
-        gen_cls = AgentGenerator
-        if args['heuristic']:
-            model_cls = HeuristicByr if args[BYR] else HeuristicSlr
-            model = model_cls(args[DELTA])
-        else:
-            model_args = {BYR: args[BYR], 'value': False}
-            model = load_agent_model(model_args=model_args, run_dir=run_dir)
-        gen_args = dict(model=model, byr=args[BYR], slr=not args[BYR])
+        model_args = {BYR: args[BYR], 'value': False}
+        model = load_agent_model(model_args=model_args, run_dir=run_dir)
+    gen_args = dict(model=model, byr=args[BYR], slr=not args[BYR])
 
     # generate
     if args['num'] is not None:

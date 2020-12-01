@@ -21,8 +21,12 @@ STOP_ENTROPY = .1
 # state dictionaries
 AGENT_STATE = 'agent_state_dict'
 
+# discount parameter
+DELTA_SLR = [0., .7]
+DELTA_BYR = [.7, .8, .9, 1.]
+DELTA_CHOICES = np.unique(DELTA_SLR + DELTA_BYR)
+
 # agent parameters
-DELTA_CHOICES = [0., .7, 1.]
 AGENT_PARAMS = {BYR: dict(action='store_true'),
                 DELTA: dict(type=float,
                             choices=DELTA_CHOICES,

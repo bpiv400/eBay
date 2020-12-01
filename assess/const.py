@@ -17,8 +17,7 @@ SPLITS = [0., .2, .4, .6, .8, .99]
 OPT = EstimatorSettings(efficient=True)
 
 # delta for values figures
-DELTA_BYR = .9
-DELTA_SLR = .7
+DELTA_ASSESS = .7
 
 # various dimensions for plotting
 POINTS = 100

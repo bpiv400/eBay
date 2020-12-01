@@ -4,7 +4,7 @@ from agent.util import get_byr_agent, load_values, find_best_run, \
     load_valid_data, get_norm_reward
 from assess.util import ll_wrapper, continuous_cdf, kdens_wrapper
 from utils import load_data, topickle, safe_reindex
-from agent.const import COMMON_CONS, DELTA_CHOICES
+from agent.const import COMMON_CONS, DELTA_SLR
 from assess.const import NORM1_DIM
 from constants import PLOT_DIR, INTERVAL_ARRIVAL, INTERVAL_CT_ARRIVAL
 from featnames import X_OFFER, X_THREAD, BYR_HIST, CON, INDEX, THREAD, \
@@ -29,7 +29,7 @@ def main():
     d = dict()
 
     # values when buyer arrives
-    for delta in DELTA_CHOICES:
+    for delta in DELTA_SLR:
         vals = load_values(part=TEST, delta=delta)
         run_dir = find_best_run(byr=True, delta=delta)
         if run_dir is None:
