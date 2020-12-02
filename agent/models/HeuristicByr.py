@@ -1,39 +1,43 @@
+import numpy as np
 import torch
-from constants import NUM_COMMON_CONS, IDX
-from featnames import LSTG, BYR, DELTA
+from agent.models.util import wrapper, get_elapsed, get_norm, get_agent_turn
+from agent.const import DELTA_BYR
+from constants import NUM_COMMON_CONS
 
 
 class HeuristicByr:
-
-    def __init__(self, **kwargs):
-        self.delta = kwargs[DELTA]
-        assert self.delta in [.9, .99]
+    def __init__(self, delta=None):
+        self.high = np.isclose(delta, DELTA_BYR[-1])
 
     def __call__(self, observation=None):
         # noinspection PyProtectedMember
-        input_dict = observation._asdict()
+        x = observation._asdict()
 
         # turn number
-        turn_feats = input_dict[LSTG][-3:]
-        turn = int(7 - 6 * turn_feats[0] - 4 * turn_feats[1] - 2 * turn_feats[2])
-        assert turn in IDX[BYR]
+        turn = get_agent_turn(x=x, byr=True)
 
-        # initialize output distribution with zeros
-        pdf = torch.zeros(NUM_COMMON_CONS + 2, dtype=torch.float)
-
+        # index of action
+        f = wrapper(turn)
         if turn == 1:
-            pdf[1] = 1.  # 50%
+            if self.high:
+                idx = f(.5)
+            else:
+                elapsed = get_elapsed(x=x, turn=turn)
+                idx = f(.5) if elapsed <= .25 else f(0)
+
         elif turn in [3, 5]:
-            if self.delta == .9:
-                pdf[1] = 1.  # 17%
+            idx = f(.17)
+
+        elif turn == 7:
+            if not self.high:
+                idx = f(0)
             else:
-                pdf[-3] = 1.  # 40%
+                norm = get_norm(turn=turn, x=x)
+                idx = f(1) if norm <= .75 else f(0)
         else:
-            if self.delta == .9:
-                pdf[0] = 1  # reject
-            else:
-                pdf[-1] = 1  # accept
+            raise ValueError('Invalid turn: {}'.format(turn))
 
-        assert torch.isclose(torch.sum(pdf), torch.tensor(1.))
-
+        # deterministic categorical action distribution
+        pdf = torch.zeros(NUM_COMMON_CONS + 2, dtype=torch.float)
+        pdf[idx] = 1.
         return pdf

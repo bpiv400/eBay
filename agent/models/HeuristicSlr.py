@@ -1,72 +1,42 @@
 import numpy as np
 import torch
-from agent.util import get_turn
-from rlenv.const import DAYS_IND, NORM_IND
-from agent.const import AGENT_CONS
-from constants import NUM_COMMON_CONS, MAX_DAYS
-from featnames import LSTG
-
-
-def get_elapsed(x=None, turn=None):
-    """
-    Fraction of listing window elapsed.
-    :param dict x: input features
-    :param int turn: one of [2, 4, 6]
-    :return: float
-    """
-    elapsed = x[LSTG][-5].item() / MAX_DAYS
-    for i in range(2, turn + 1):
-        elapsed += x['offer{}'.format(i)][DAYS_IND].item() / MAX_DAYS
-    assert elapsed < 1.
-    return elapsed
+from agent.models.util import wrapper, get_elapsed, get_norm, get_agent_turn
+from agent.const import DELTA_SLR
+from constants import NUM_COMMON_CONS
 
 
 class HeuristicSlr:
     def __init__(self, delta=None):
-        self.high = np.isclose(delta, .7)
+        self.high = np.isclose(delta, DELTA_SLR[-1])
 
     def __call__(self, observation=None):
         # noinspection PyProtectedMember
         x = observation._asdict()
 
         # turn number
-        turn_feats = x[LSTG][-2:].unsqueeze(dim=0)
-        turn = int(get_turn(x=turn_feats, byr=False).item())
-        assert turn in [2, 4, 6]
+        turn = get_agent_turn(x=x, byr=False)
 
         # index of action
-        cons = AGENT_CONS[turn]
+        f = wrapper(turn)
         if turn == 2:
             elapsed = get_elapsed(x=x, turn=turn)
             threshold = .61 if self.high else .38
-            if elapsed <= threshold:
-                idx = np.nonzero(cons == 0)[0][0]
-            else:
-                idx = np.nonzero(cons == 1)[0][0]
+            idx = f(0) if elapsed <= threshold else f(1)
 
         elif turn == 4:
             if self.high:
                 elapsed = get_elapsed(x=x, turn=turn)
-                if elapsed <= .26:
-                    idx = np.nonzero(cons == 0)[0][0]
-                else:
-                    idx = np.nonzero(cons == 1)[0][0]
+                idx = f(0) if elapsed <= .26 else f(1)
             else:
-                norm = x['offer{}'.format(turn - 1)][NORM_IND].item()
-                if norm <= .69:
-                    idx = np.nonzero(np.isclose(cons, .5))[0][0]
-                else:
-                    idx = np.nonzero(cons == 1)[0][0]
+                norm = get_norm(turn=turn, x=x)
+                idx = f(.5) if norm <= .69 else f(1)
 
         elif turn == 6:
             if self.high:
-                idx = np.nonzero(cons == 1)[0][0]
+                idx = f(1)
             else:
-                norm = x['offer{}'.format(turn - 1)][NORM_IND].item()
-                if norm <= .61:
-                    idx = np.nonzero(np.isclose(cons, .5))[0][0]
-                else:
-                    idx = np.nonzero(cons == 1)[0][0]
+                norm = get_norm(turn=turn, x=x)
+                idx = f(.5) if norm <= .61 else f(1)
         else:
             raise ValueError('Invalid turn: {}'.format(turn))
 
