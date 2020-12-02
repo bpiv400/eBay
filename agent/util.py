@@ -71,21 +71,28 @@ def get_byr_agent(data=None):
 def get_byr_valid(data=None):
     # for observed data, all listings are valid
     if BYR_AGENT not in data[X_THREAD].columns:
-        return data
-
-    lstg_sim = get_byr_agent(data).droplevel(THREAD)
+        idx = data[X_THREAD].xs(1, level=THREAD).index
+    else:
+        idx = get_byr_agent(data).droplevel(THREAD)
     for k, v in data.items():
-        data[k] = safe_reindex(v, idx=lstg_sim)
+        data[k] = safe_reindex(v, idx=idx)
     return data
 
 
-def load_valid_data(part=None, run_dir=None):
+def load_valid_data(part=None, run_dir=None, byr=False):
+    # error checking
+    if run_dir is not None:
+        if byr:
+            assert BYR in run_dir
+        else:
+            assert SLR in run_dir
+
+    # load data
     data = load_data(part=part, run_dir=run_dir)
     if X_OFFER not in data:
         return None
 
     # restrict to valid listings
-    byr = False if run_dir is None else BYR in run_dir
     if byr:
         data = get_byr_valid(data)
     else:

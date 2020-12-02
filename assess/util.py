@@ -315,3 +315,8 @@ def add_byr_reject_on_lstg_expiration(con=None):
         idx = idx.drop(tochange)
     con = con.stack()
     return con
+
+
+def create_cdfs(elem):
+    elem = {k: continuous_cdf(v) for k, v in elem.items()}
+    return pd.DataFrame(elem)

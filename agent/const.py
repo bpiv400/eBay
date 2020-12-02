@@ -23,7 +23,7 @@ AGENT_STATE = 'agent_state_dict'
 
 # discount parameter
 DELTA_SLR = [0., .7]
-DELTA_BYR = [.7, .9]
+DELTA_BYR = [.7, 1.]
 DELTA_CHOICES = np.unique(DELTA_SLR + DELTA_BYR)
 
 # agent parameters

@@ -13,13 +13,12 @@ from featnames import OBS, X_OFFER, TEST, AGENT_PARTITIONS, THREAD, \
 def get_byr_return(data=None, values=None):
     sale_norm = get_sale_norm(data[X_OFFER], drop_thread=False)
     if BYR_AGENT in data[X_THREAD].columns:
-        sale_norm = sale_norm[data[X_THREAD][BYR_AGENT]]
-    start_price = data[LOOKUP][START_PRICE]
-    sale_norm = sale_norm.droplevel(THREAD)
-    norm_vals = safe_reindex(values, idx=sale_norm.index)
-    norm = norm_vals - sale_norm
+        sale_norm = sale_norm[data[X_THREAD][BYR_AGENT]].droplevel(THREAD)
+    else:
+        sale_norm = sale_norm.xs(1, level=THREAD)
+    norm = safe_reindex(values, idx=sale_norm.index) - sale_norm
     norm = norm.reindex(index=data[LOOKUP].index, fill_value=0)
-    dollar = norm * start_price
+    dollar = norm * data[LOOKUP][START_PRICE]
 
     s = pd.Series()
     s['norm'] = norm.mean()
@@ -80,13 +79,16 @@ def main():
     output = dict()
 
     # rewards from data
-    if not args.byr:
-        data = load_valid_data(part=args.part)
-        output[OBS] = f(data)
+    data = load_valid_data(part=args.part, byr=args.byr)
+    output[OBS] = f(data)
+
+    # rewards to first non-agent buyer
+    if args.byr:
+        pass
 
     # rewards from heuristic strategy
     heuristic_dir = get_log_dir(**vars(args)) + 'heuristic/'
-    data = load_valid_data(part=args.part, run_dir=heuristic_dir)
+    data = load_valid_data(part=args.part, run_dir=heuristic_dir, byr=args.byr)
     if data is not None:
         output['heuristic'] = f(data)
 
@@ -95,7 +97,7 @@ def main():
                if os.path.isdir(log_dir + p)]
     for run_id in run_ids:
         run_dir = log_dir + '{}/'.format(run_id)
-        data = load_valid_data(part=args.part, run_dir=run_dir)
+        data = load_valid_data(part=args.part, run_dir=run_dir, byr=args.byr)
         if data is not None:
             output[run_id] = f(data)
 

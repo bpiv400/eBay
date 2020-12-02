@@ -1,6 +1,6 @@
 import numpy as np
 from agent.util import get_turn
-from rlenv.const import TIME_FEATS, DAYS_IND, NORM_IND
+from rlenv.const import TIME_FEATS, DAYS_IND, NORM_IND, AUTO_IND, EXP_IND
 from agent.const import AGENT_CONS
 from constants import MAX_DAYS, IDX
 from featnames import LSTG, BYR
@@ -19,9 +19,9 @@ def get_agent_turn(x=None, byr=None):
     return turn
 
 
-def get_norm(turn=None, x=None):
+def get_last_norm(turn=None, x=None):
     """
-    Fraction of listing window elapsed.
+    Normalized last offer.
     :param dict x: input features
     :param int turn: turn number
     :return: float
@@ -33,6 +33,32 @@ def get_norm(turn=None, x=None):
     if turn in IDX[BYR]:
         norm = 1 - norm
     return norm
+
+
+def get_last_auto(x=None, turn=None):
+    """
+    Indicator for whether last offer was an auto-reject.
+    :param dict x: input features
+    :param int turn: turn number
+    :return: float
+    """
+    assert turn in [3, 5, 7]
+    auto_ind = AUTO_IND - len(TIME_FEATS)
+    auto = x['offer{}'.format(turn - 1)][auto_ind].item()
+    return auto
+
+
+def get_last_exp(x=None, turn=None):
+    """
+    Indicator for whether last offer was an expiration reject.
+    :param dict x: input features
+    :param int turn: turn number
+    :return: float
+    """
+    assert turn in [3, 5, 7]
+    exp_ind = EXP_IND - len(TIME_FEATS)
+    exp = x['offer{}'.format(turn - 1)][exp_ind].item()
+    return exp
 
 
 def get_elapsed(x=None, turn=None):
@@ -51,3 +77,5 @@ def get_elapsed(x=None, turn=None):
             elapsed += x['offer{}'.format(i)][days_ind].item() / MAX_DAYS
     assert elapsed < 1.
     return elapsed
+
+
