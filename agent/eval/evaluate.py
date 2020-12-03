@@ -11,7 +11,8 @@ from featnames import OBS, X_OFFER, TEST, AGENT_PARTITIONS, THREAD, \
 
 
 def get_byr_return(data=None, values=None):
-    sale_norm = get_sale_norm(data[X_OFFER].xs(1, level=THREAD))
+    sale_norm = get_sale_norm(data[X_OFFER].xs(1, level=THREAD,
+                                               drop_level=False))
     norm = safe_reindex(values, idx=sale_norm.index) - sale_norm
     norm = norm.reindex(index=data[LOOKUP].index, fill_value=0)
     dollar = norm * data[LOOKUP][START_PRICE]

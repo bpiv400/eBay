@@ -70,7 +70,7 @@ def create_index(data=None, byr=False, agent=False):
 
     # restrict to byr agent threads
     if byr and agent:
-        thread1 = pd.Series(data[CLOCK].index.isin(1, level=THREAD),
+        thread1 = pd.Series(data[CLOCK].index.isin([1], level=THREAD),
                             index=data[CLOCK].index)
         mask = mask & thread1
 
