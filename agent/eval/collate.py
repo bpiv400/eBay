@@ -20,7 +20,7 @@ def main():
 
     # clean and save
     process_sims(part=args['part'], sims=sims, output_dir=output_dir,
-                 byr=args[BYR], save_inputs=(not args.heuristic))
+                 byr=args[BYR], save_inputs=(not args['heuristic']))
 
 
 if __name__ == '__main__':
