@@ -7,15 +7,11 @@ from utils import topickle, unpickle, compose_args, safe_reindex
 from agent.const import AGENT_PARAMS
 from constants import EPS
 from featnames import OBS, X_OFFER, TEST, AGENT_PARTITIONS, THREAD, \
-    LOOKUP, START_PRICE, BYR_AGENT, X_THREAD, INDEX
+    LOOKUP, START_PRICE, INDEX
 
 
 def get_byr_return(data=None, values=None):
-    sale_norm = get_sale_norm(data[X_OFFER], drop_thread=False)
-    if BYR_AGENT in data[X_THREAD].columns:
-        sale_norm = sale_norm[data[X_THREAD][BYR_AGENT]].droplevel(THREAD)
-    else:
-        sale_norm = sale_norm.xs(1, level=THREAD)
+    sale_norm = get_sale_norm(data[X_OFFER].xs(1, level=THREAD))
     norm = safe_reindex(values, idx=sale_norm.index) - sale_norm
     norm = norm.reindex(index=data[LOOKUP].index, fill_value=0)
     dollar = norm * data[LOOKUP][START_PRICE]

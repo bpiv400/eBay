@@ -5,7 +5,7 @@ from utils import load_data, get_role
 from constants import IDX, CON_MULTIPLIER
 from featnames import CON, AUTO, LOOKUP, BYR, SLR, INDEX, MSG, REJECT, NORM, \
     COMMON, THREAD, X_THREAD, X_OFFER, CLOCK, THREAD_COUNT, TIME_FEATS, \
-    BYR_AGENT, VALIDATION
+    VALIDATION
 
 
 def get_x_offer(offers=None, idx=None, byr=False):
@@ -51,10 +51,7 @@ def construct_x(idx=None, data=None, byr=False):
     # initialize dictionary with thread features
     x = {THREAD: get_x_thread(data[X_THREAD], idx, turn_indicators=True)}
     if byr:
-        todrop = [THREAD_COUNT]
-        if BYR_AGENT in x[THREAD].columns:
-            todrop += [BYR_AGENT]
-        x[THREAD].drop(todrop, axis=1, inplace=True)
+        x[THREAD].drop(THREAD_COUNT, axis=1, inplace=True)
 
     # offer features
     x.update(get_x_offer(offers=data[X_OFFER], idx=idx, byr=byr))
@@ -66,14 +63,16 @@ def construct_x(idx=None, data=None, byr=False):
     return x
 
 
-def create_index(data=None, byr=False):
+def create_index(data=None, byr=False, agent=False):
     role = get_role(byr)
     mask = pd.Series(data[CLOCK].index.isin(IDX[role], level=INDEX),
                      index=data[CLOCK].index)
 
     # restrict to byr agent threads
-    if byr and BYR_AGENT in data[X_THREAD]:
-        mask = mask & data[X_THREAD][BYR_AGENT].reindex(index=mask.index)
+    if byr and agent:
+        thread1 = pd.Series(data[CLOCK].index.isin(1, level=THREAD),
+                            index=data[CLOCK].index)
+        mask = mask & thread1
 
     # drop auto-rejects
     if not byr:
@@ -83,9 +82,9 @@ def create_index(data=None, byr=False):
     return idx
 
 
-def process_inputs(data=None, byr=False):
+def process_inputs(data=None, byr=False, agent=False):
     # master index
-    idx = create_index(data=data, byr=byr)
+    idx = create_index(data=data, byr=byr, agent=agent)
 
     # outcome and master index
     y = (data[X_OFFER].loc[idx, CON] * CON_MULTIPLIER).astype('int8')

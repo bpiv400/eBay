@@ -7,7 +7,7 @@ from processing.util import collect_date_clock_feats, get_days_delay, get_norm, 
 from utils import topickle, load_file, get_role
 from constants import IDX, DAY, MAX_DAYS
 from featnames import DAYS, DELAY, CON, COMMON, NORM, REJECT, AUTO, EXP, \
-    CLOCK_FEATS, TIME_FEATS, OUTCOME_FEATS, DAYS_SINCE_LSTG, INDEX, BYR_AGENT, \
+    CLOCK_FEATS, TIME_FEATS, OUTCOME_FEATS, DAYS_SINCE_LSTG, INDEX, \
     BYR_HIST, START_TIME, LOOKUP, SLR, X_THREAD, X_OFFER, CLOCK
 
 
@@ -57,8 +57,6 @@ def process_sim_threads(df=None, lstg_start=None):
     df = df.drop([CLOCK, START_TIME], axis=1)
     # reorder columns to match observed
     thread_cols = [DAYS_SINCE_LSTG, BYR_HIST]
-    if BYR_AGENT in df.columns:
-        thread_cols += [BYR_AGENT]
     df = df.loc[:, thread_cols]
     return df
 
@@ -105,7 +103,7 @@ def process_sims(part=None, sims=None, output_dir=None,
 
     # model inputs for agent logs
     if byr is not None and save_inputs:
-        inputs = process_inputs(data=d, byr=byr)
+        inputs = process_inputs(data=d, byr=byr, agent=True)
         convert_x_to_numpy(x=inputs['x'], idx=inputs['y'].index)
         inputs['y'] = inputs['y'].to_numpy()
         topickle(inputs, output_dir + '{}.pkl'.format(get_role(byr)))

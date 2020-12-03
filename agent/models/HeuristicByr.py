@@ -1,6 +1,6 @@
 import numpy as np
 import torch
-from agent.models.util import wrapper, get_elapsed, get_last_norm, \
+from agent.models.util import wrapper, get_store, get_last_norm, \
     get_last_auto, get_last_exp, get_agent_turn
 from agent.const import DELTA_BYR
 from constants import NUM_COMMON_CONS
@@ -23,8 +23,8 @@ class HeuristicByr:
             if self.high:
                 idx = f(.5)
             else:
-                elapsed = get_elapsed(x=x, turn=turn)
-                idx = f(.5) if elapsed <= .25 else f(0)
+                store = get_store(x)
+                idx = f(0) if store else f(.5)
 
         elif turn in [3, 5]:
             idx = f(.17)

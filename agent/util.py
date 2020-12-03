@@ -3,7 +3,7 @@ from utils import unpickle, load_file, load_data, get_role, safe_reindex
 from constants import AGENT_DIR, IDX, SIM_DIR
 from featnames import SLR, BYR, NORM, AUTO, INDEX, THREAD, CON, \
     LOOKUP, X_THREAD, X_OFFER, START_PRICE, ENTROPY, DELTA, DROPOUT, \
-    BYR_AGENT, VALIDATION
+    VALIDATION
 
 
 def get_log_dir(**kwargs):
@@ -65,15 +65,11 @@ def get_norm_reward(data=None, values=None):
 
 
 def get_byr_agent(data=None):
-    return data[X_THREAD][data[X_THREAD][BYR_AGENT]].index
+    return data[X_THREAD].xs(1, level=THREAD, drop_level=False).index
 
 
 def get_byr_valid(data=None):
-    # for observed data, all listings are valid
-    if BYR_AGENT not in data[X_THREAD].columns:
-        idx = data[X_THREAD].xs(1, level=THREAD).index
-    else:
-        idx = get_byr_agent(data).droplevel(THREAD)
+    idx = get_byr_agent(data).droplevel(THREAD)
     for k, v in data.items():
         data[k] = safe_reindex(v, idx=idx)
     return data
