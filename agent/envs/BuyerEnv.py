@@ -4,7 +4,6 @@ from utils import load_sizes, get_days_since_lstg
 from rlenv.const import FIRST_OFFER, DELAY_EVENT, OFFER_EVENT, ARRIVAL
 from rlenv.Sources import ThreadSources
 from agent.envs.AgentEnv import AgentEnv, EventLog
-from rlenv.events.Thread import Thread
 from constants import BYR
 from featnames import BYR_HIST_MODEL
 

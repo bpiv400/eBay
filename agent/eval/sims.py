@@ -23,7 +23,7 @@ def main():
     else:
         model_args = {BYR: args[BYR], 'value': False}
         model = load_agent_model(model_args=model_args, run_dir=run_dir)
-    gen_args = dict(model=model, byr=args[BYR], slr=not args[BYR])
+    gen_args = dict(model=model, byr=args[BYR])
 
     # generate
     if args['num'] is not None:

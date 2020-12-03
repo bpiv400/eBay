@@ -1,12 +1,13 @@
 from datetime import datetime as dt
 import pandas as pd
 from rlenv.Composer import Composer
+from rlenv.EBayEnv import EBayEnv
 from rlenv.generate.Recorder import OutcomeRecorder
 from rlenv.interfaces.ArrivalInterface import ArrivalInterface
 from rlenv.interfaces.PlayerInterface import SimulatedSeller, SimulatedBuyer
 from rlenv.LstgLoader import ChunkLoader
 from rlenv.QueryStrategy import DefaultQueryStrategy
-from rlenv.util import get_env_sim_dir, load_chunk
+from rlenv.util import load_chunk
 from constants import OUTCOME_SIMS, VALUE_SIMS
 from featnames import LSTG
 
@@ -46,7 +47,7 @@ class Generator:
         self.initialized = True
 
     def generate_recorder(self):
-        return OutcomeRecorder(verbose=self.verbose)
+        raise NotImplementedError()
 
     def generate_composer(self):
         return Composer()
@@ -69,10 +70,12 @@ class Generator:
                               composer=self.composer,
                               test=self.test)
 
-    def generate_buyer(self):
+    @staticmethod
+    def generate_buyer():
         return SimulatedBuyer(full=True)
 
-    def generate_seller(self):
+    @staticmethod
+    def generate_seller():
         return SimulatedSeller(full=True)
 
     def generate_query_strategy(self):
@@ -84,23 +87,13 @@ class Generator:
                                     arrival=arrival)
 
     def load_chunk(self, part=None, chunk=None):
-        base_dir = get_env_sim_dir(part=part)
-        x_lstg, lookup, p_arrival = load_chunk(base_dir=base_dir,
-                                               num=chunk)
+        x_lstg, lookup, p_arrival = load_chunk(part=part, num=chunk)
         return ChunkLoader(x_lstg=x_lstg,
                            lookup=lookup,
                            p_arrival=p_arrival)
 
 
 class OutcomeGenerator(Generator):
-
-    def __init__(self, env):
-        super().__init__(verbose=False, test=True)
-        self.env = env
-
-    @property
-    def env_class(self):
-        return self.env
 
     def simulate_lstg(self):
         """
@@ -131,11 +124,15 @@ class OutcomeGenerator(Generator):
         if self.recorder is not None:
             return self.recorder.construct_output()
 
-
-class ValueGenerator(OutcomeGenerator):
-
     def generate_recorder(self):
-        return None
+        return OutcomeRecorder(verbose=self.verbose)
+
+    @property
+    def env_class(self):
+        return SimulatorEnv
+
+
+class ValueGenerator(Generator):
 
     def generate(self):
         rows = []
@@ -176,3 +173,26 @@ class ValueGenerator(OutcomeGenerator):
             if self.env.outcome.sale:
                 break
         return self.env.outcome.price, relist_ct
+
+    def generate_recorder(self):
+        return None
+
+    @property
+    def env_class(self):
+        return SimulatorEnv
+
+
+class SimulatorEnv(EBayEnv):
+
+    def run(self):
+        """
+        Runs a simulation of a single lstg until sale or expiration
+
+        :return: a 3-tuple of (bool, float, int) giving whether the listing sells,
+        the amount it sells for if it sells, and the amount of time it took to sell
+        """
+        super().run()
+        return self.outcome
+
+    def is_agent_turn(self, event):
+        return False

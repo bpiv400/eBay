@@ -1,5 +1,4 @@
-from sim.sims import SimulatorEnv
-from rlenv.generate.Generator import Generator
+from rlenv.generate.Generator import Generator, SimulatorEnv
 from rlenv.util import get_env_sim_subdir
 from testing.Listing import Listing
 from testing.TestQueryStrategy import TestQueryStrategy
