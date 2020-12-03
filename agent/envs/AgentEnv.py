@@ -111,7 +111,7 @@ class AgentEnv(EBayEnv, Env):
                                        max_interval=max_interval)
         return max(1, delay_seconds)
 
-    def init_reset(self, push_arrival=True):
+    def init_reset(self):
         self.curr_event = None
         self.last_event = None
         self.num_actions = 0
@@ -119,7 +119,7 @@ class AgentEnv(EBayEnv, Env):
             if not self.has_next_lstg():
                 raise RuntimeError("Out of lstgs")
             self.next_lstg()
-        super().reset(push_arrival)  # calls EBayEnv.reset()
+        super().reset()  # calls EBayEnv.reset()
 
     def turn_from_action(self, turn=None, action=None):
         return self.con_set[turn][action]

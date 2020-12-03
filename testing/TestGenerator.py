@@ -1,11 +1,10 @@
 from sim.sims import SimulatorEnv
-from rlenv.Composer import Composer
 from rlenv.generate.Generator import Generator
 from rlenv.util import get_env_sim_subdir
 from testing.Listing import Listing
 from testing.TestQueryStrategy import TestQueryStrategy
 from testing.util import load_all_inputs, reindex_dict, \
-    get_auto_safe_lstgs, drop_duplicated_timestamps
+    get_auto_safe_lstgs, drop_duplicated_timestamps, get_agent_lstgs
 from testing.TestLoader import TestLoader
 from utils import unpickle, load_file
 from featnames import X_THREAD, X_OFFER, LOOKUP, LSTG
@@ -13,19 +12,21 @@ from featnames import X_THREAD, X_OFFER, LOOKUP, LSTG
 
 class TestGenerator(Generator):
     def __init__(self, verbose=False, byr=False, slr=False):
-        super().__init__(verbose=verbose, byr=byr, slr=slr, test=True)
+        if byr:
+            assert not slr
+        self.byr = byr
+        self.slr = slr
+        self.agent = byr or slr
         if byr:
             print('Testing buyer agent')
         elif slr:
             print('Testing seller agent')
         else:
             print('Testing Simulator')
+        super().__init__(verbose=verbose, test=True)
 
     def generate_query_strategy(self):
-        return TestQueryStrategy()
-
-    def generate_composer(self):
-        return Composer(cols=self.loader.x_lstg_cols)
+        return TestQueryStrategy(byr=self.byr)
 
     def load_chunk(self, chunk=None, part=None):
         """
@@ -71,7 +72,13 @@ class TestGenerator(Generator):
         # lstgs without duplicated time stamps first
         non_dups = drop_duplicated_timestamps(part=part, chunk=chunk)
         auto_safe = get_auto_safe_lstgs(chunk)
-        return non_dups.intersection(auto_safe, sort=None)
+        lstgs = non_dups.intersection(auto_safe, sort=None)
+
+        if self.agent:
+            agent_lstgs = get_agent_lstgs(chunk=chunk, byr=self.byr)
+            lstgs = lstgs.intersection(agent_lstgs, sort=None)
+
+        return lstgs
 
     def _get_listing_params(self):
         params = {
@@ -101,3 +108,11 @@ class TestGenerator(Generator):
 
     def generate_recorder(self):
         return None
+
+    def generate(self):
+        """
+        Simulates all lstgs in chunk according to experiment parameters
+        """
+        while self.env.has_next_lstg():
+            self.env.next_lstg()
+            self.simulate_lstg()

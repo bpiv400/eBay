@@ -2,23 +2,19 @@ import argparse
 import math
 import torch
 import numpy as np
-from constants import PARTS_DIR, BYR_DROP
+from constants import BYR_DROP
 from featnames import OUTCOME_FEATS, DAYS_SINCE_LSTG, BYR_HIST, \
-    TIME_FEATS, CLOCK_FEATS, THREAD_COUNT, TURN_FEATS, SLR, BYR, META, LEAF, VALIDATION
+    TIME_FEATS, CLOCK_FEATS, THREAD_COUNT, TURN_FEATS, SLR, BYR, META, LEAF
 from rlenv.Composer import Composer
 from rlenv.const import LSTG_MAP, OFFER_MAPS, THREAD_COUNT_IND, \
     TIME_START_IND, TIME_END_IND
-from rlenv.util import load_chunk
 from utils import load_sizes, load_featnames, get_role
 
 
 class AgentComposer(Composer):
 
     def __init__(self, byr=None):
-        # create columns and initialize Composer class
-        chunk_path = PARTS_DIR + '{}/chunks/1.pkl'.format(VALIDATION)
-        cols = load_chunk(input_path=chunk_path)[0].columns
-        super().__init__(cols)
+        super().__init__()
         self.byr = byr
         if byr:
             self.byr_idx = [i for i in range(len(self.lstg_sets[LSTG_MAP]))
@@ -26,7 +22,6 @@ class AgentComposer(Composer):
 
         self.agent_name = get_role(byr=self.byr)
         self.sizes['agents'] = load_sizes(self.agent_name)
-        self.x_lstg_cols = cols if type(cols) is list else list(cols)
 
         # parameters to be set later
         self.turn_inds = None
@@ -107,9 +102,8 @@ class AgentComposer(Composer):
             del lstg_sets[k]
 
         # verify shared lstg features
-        Composer.verify_lstg_sets_shared(self.agent_name,
-                                         self.x_lstg_cols,
-                                         lstg_sets)
+        self.verify_lstg_sets_shared(self.agent_name, lstg_sets)
+
         # verify appended features
         agent_feats = load_featnames(self.agent_name)
         lstg_append = Composer.remove_shared_feats(agent_feats[LSTG_MAP],

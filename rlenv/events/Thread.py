@@ -17,9 +17,8 @@ class Thread(Event):
     """
     Attributes:
     """
-    def __init__(self, priority=None, agent=False):
+    def __init__(self, priority=None):
         super().__init__(event_type=FIRST_OFFER, priority=priority)
-        self.agent = agent
 
         # to be initialized later
         self.sources = None

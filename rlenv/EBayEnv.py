@@ -49,16 +49,15 @@ class EBayEnv:
             x_lstg_cols = self.composer.x_lstg_cols
             self.loader = AgentLoader(x_lstg_cols=x_lstg_cols, byr=False)
 
-    def reset(self, push_arrival=True):
+    def reset(self):
         self.last_arrival_time = self.start_time
         self.queue.reset()
         self.time_feats.reset()
         self.outcome = None
         self.thread_counter = 1
-        if push_arrival:
-            event = Arrival(priority=self.start_time,
-                            sources=ArrivalSources(x_lstg=self.x_lstg))
-            self.queue.push(event)
+        event = Arrival(priority=self.start_time,
+                        sources=ArrivalSources(x_lstg=self.x_lstg))
+        self.queue.push(event)
         if self.verbose:
             Recorder.print_lstg(self.lookup)
 

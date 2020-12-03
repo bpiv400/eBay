@@ -7,10 +7,10 @@ from rlenv.interfaces.PlayerInterface import SimulatedBuyer, SimulatedSeller
 
 
 class AgentGenerator(Generator):
-    def __init__(self, model=None, byr=False, slr=False):
-        super().__init__(verbose=False, byr=byr, slr=slr)
+    def __init__(self, model=None, byr=False):
+        super().__init__(verbose=False)
         self.model = model
-        assert byr or slr
+        self.byr = byr
 
     def generate_composer(self):
         return AgentComposer(byr=self.byr)

@@ -15,20 +15,13 @@ VALUE_COLS = [LSTG, 'sale', 'sale_price', 'relist_ct']
 
 
 class Generator:
-    def __init__(self, verbose=False, byr=False, slr=False, test=False):
+    def __init__(self, verbose=False, test=False):
         """
         Constructor
         :param bool verbose: if True, print info about simulator activity
-        :param bool byr: byr agents if True
-        :param bool slr: slr agents if True
         :param bool test: if True, does not advance listing
         """
         self.verbose = verbose
-        self.byr = byr
-        self.slr = slr
-        self.agent = byr or slr
-        if byr:
-            assert not slr
         self.initialized = False
         self.test = test
 
@@ -53,31 +46,13 @@ class Generator:
         self.initialized = True
 
     def generate_recorder(self):
-        return OutcomeRecorder(verbose=self.verbose, byr_agent=self.byr)
+        return OutcomeRecorder(verbose=self.verbose)
 
     def generate_composer(self):
-        raise NotImplementedError()
+        return Composer()
 
     def generate(self):
-        """
-        Simulates all lstgs in chunk according to experiment parameters
-        """
-        print('Total listings: {}'.format(len(self.loader)))
-        t0 = dt.now()
-        while self.env.has_next_lstg():
-            self.env.next_lstg()
-            for i in range(OUTCOME_SIMS):
-                self.simulate_lstg()
-                if self.recorder is not None:
-                    self.recorder.increment_sim()
-
-        # time elapsed
-        print('Avg time per listing: {} seconds'.format(
-            (dt.now() - t0).total_seconds() / len(self.loader)))
-
-        # return a dictionary
-        if self.recorder is not None:
-            return self.recorder.construct_output()
+        raise NotImplementedError()
 
     def simulate_lstg(self):
         raise NotImplementedError()
@@ -123,9 +98,6 @@ class OutcomeGenerator(Generator):
         super().__init__(verbose=False, test=True)
         self.env = env
 
-    def generate_composer(self):
-        return Composer(cols=self.loader.x_lstg_cols)
-
     @property
     def env_class(self):
         return self.env
@@ -137,6 +109,27 @@ class OutcomeGenerator(Generator):
         """
         self.env.reset()
         self.env.run()
+
+    def generate(self):
+        """
+        Simulates all lstgs in chunk according to experiment parameters
+        """
+        print('Total listings: {}'.format(len(self.loader)))
+        t0 = dt.now()
+        while self.env.has_next_lstg():
+            self.env.next_lstg()
+            for i in range(OUTCOME_SIMS):
+                self.simulate_lstg()
+                if self.recorder is not None:
+                    self.recorder.increment_sim()
+
+        # time elapsed
+        print('Avg time per listing: {} seconds'.format(
+            (dt.now() - t0).total_seconds() / len(self.loader)))
+
+        # return a dictionary
+        if self.recorder is not None:
+            return self.recorder.construct_output()
 
 
 class ValueGenerator(OutcomeGenerator):

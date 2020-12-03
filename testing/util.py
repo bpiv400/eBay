@@ -258,3 +258,9 @@ def get_slr_lstgs(chunk=None):
     s = valid.groupby(LSTG).sum()
     output_lstgs = s[s > 0].index
     return output_lstgs
+
+def get_agent_lstgs(chunk=None, byr=None):
+    if byr:
+        return get_byr_lstgs(chunk)
+    else:
+        return get_slr_lstgs(chunk)
