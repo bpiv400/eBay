@@ -1,8 +1,8 @@
 import argparse
 import numpy as np
 import pandas as pd
-from sklearn.tree import DecisionTreeClassifier, export_text
 from agent.util import find_best_run, get_byr_agent
+from assess.util import estimate_tree
 from utils import load_data, load_feats, safe_reindex
 from agent.const import DELTA_BYR
 from constants import DAY, MAX_DAYS, IDX
@@ -45,7 +45,6 @@ def main():
         y.loc[con == 1] = 'Accept'
         y.loc[(con > 0) & (con <= .25)] = 'Low'
         y.loc[(con < 1) & (con > .25)] = 'High'
-        y = y.values
         print(np.unique(y))
 
         con_rate = con.groupby(con).count() / len(con)
@@ -62,14 +61,8 @@ def main():
             X = X.join(last)
         X = X.join(d[LOOKUP][START_PRICE]).join(d['listings'])
 
-        # split out columns names
-        cols = list(X.columns)
-        X = X.values
-
         # decision tree
-        clf = DecisionTreeClassifier(max_depth=1).fit(X, y)
-        r = export_text(clf, feature_names=cols)
-        print(r)
+        estimate_tree(X=X, y=y)
 
 
 if __name__ == '__main__':

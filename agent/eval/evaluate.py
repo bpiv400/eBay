@@ -13,14 +13,17 @@ from featnames import OBS, X_OFFER, TEST, AGENT_PARTITIONS, THREAD, \
 def get_byr_return(data=None, values=None):
     sale_norm = get_sale_norm(data[X_OFFER].xs(1, level=THREAD,
                                                drop_level=False))
-    norm = safe_reindex(values, idx=sale_norm.index) - sale_norm
+    vals = safe_reindex(values, idx=sale_norm.index)
+    norm = vals - sale_norm
     norm = norm.reindex(index=data[LOOKUP].index, fill_value=0)
     dollar = norm * data[LOOKUP][START_PRICE]
 
     s = pd.Series()
     s['norm'] = norm.mean()
     s['dollar'] = dollar.mean()
+    s['value'] = (norm / vals).mean()
     s['sold_pct'] = len(sale_norm.index) / len(data[LOOKUP].index)
+    s['sale_norm'] = sale_norm.mean()
     return s
 
 

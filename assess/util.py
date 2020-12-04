@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+from sklearn.tree import DecisionTreeClassifier, export_text
 from statsmodels.nonparametric.kde import KDEUnivariate
 from statsmodels.nonparametric.kernel_regression import KernelReg
 from agent.util import get_sale_norm
@@ -320,3 +321,10 @@ def add_byr_reject_on_lstg_expiration(con=None):
 def create_cdfs(elem):
     elem = {k: continuous_cdf(v) for k, v in elem.items()}
     return pd.DataFrame(elem)
+
+
+def estimate_tree(X=None, y=None, max_depth=1, criterion='entropy'):
+    tree = DecisionTreeClassifier(max_depth=max_depth, criterion=criterion)
+    clf = tree.fit(X.values, y.values)
+    r = export_text(clf, feature_names=X.columns)
+    print(r)

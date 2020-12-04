@@ -26,29 +26,26 @@ class HeuristicByr:
                 store = get_store(x)
                 idx = f(0) if store else f(.5)
 
-        elif turn in [3, 5]:
-            idx = f(.17)
+        elif turn == 3:
+            if not self.high:
+                idx = f(.17)
+            else:
+                auto = get_last_auto(x=x, turn=turn)
+                idx = f(.4) if auto else f(.17)
 
-        # elif turn == 3:
-        #     if not self.high:
-        #         idx = f(.17)
-        #     else:
-        #         auto = get_last_auto(x=x, turn=turn)
-        #         idx = f(.4) if auto else f(.17)
-        #
-        # elif turn == 5:
-        #     if not self.high:
-        #         idx = f(.17)
-        #     else:
-        #         exp = get_last_exp(x=x, turn=turn)
-        #         idx = f(.17) if exp else f(.4)
+        elif turn == 5:
+            if not self.high:
+                idx = f(.17)
+            else:
+                exp = get_last_exp(x=x, turn=turn)
+                idx = f(.17) if exp else f(.4)
 
         elif turn == 7:
             if not self.high:
                 idx = f(0)
             else:
                 norm = get_last_norm(turn=turn, x=x)
-                idx = f(1) if norm <= .75 else f(0)
+                idx = f(1) if norm <= .91 else f(0)
         else:
             raise ValueError('Invalid turn: {}'.format(turn))
 

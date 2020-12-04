@@ -1,6 +1,5 @@
 import argparse
-from sklearn.tree import DecisionTreeClassifier, export_text
-from assess.util import get_last
+from assess.util import get_last, estimate_tree
 from agent.util import find_best_run
 from utils import load_data
 from agent.const import DELTA_SLR
@@ -28,7 +27,7 @@ def main():
 
         # outcome
         con = data[X_OFFER].loc[idx, CON]
-        y = (((0 < con) & (con < 1)) + 2 * (con == 1)).values
+        y = ((0 < con) & (con < 1)) + 2 * (con == 1)
 
         con_rate = con.groupby(con).count() / len(con)
         con_rate = con_rate[con_rate > .01]
@@ -42,14 +41,8 @@ def main():
         X = X.join(get_last(data[X_OFFER][NORM]))
         X = X.join(data[LOOKUP][START_PRICE])
 
-        # split out columns names
-        cols = list(X.columns)
-        X = X.values
-
         # decision tree
-        clf = DecisionTreeClassifier(max_depth=2).fit(X, y)
-        r = export_text(clf, feature_names=cols)
-        print(r)
+        estimate_tree(X=X, y=y)
 
 
 if __name__ == '__main__':
