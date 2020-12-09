@@ -1,7 +1,8 @@
 from assess.util import merge_dicts, cdf_days, cdf_sale, norm_dist, \
-    arrival_dist, hist_dist, delay_dist, con_dist, num_threads, num_offers
-from agent.util import find_best_run, get_slr_valid, load_valid_data
-from utils import topickle, load_data
+    arrival_dist, hist_dist, delay_dist, con_dist, num_threads, \
+    num_offers, get_lstgs
+from agent.util import find_best_run, load_valid_data
+from utils import topickle
 from agent.const import DELTA_SLR
 from constants import PLOT_DIR, IDX
 from featnames import ARRIVAL, DELAY, CON, X_OFFER, X_THREAD, TEST, AUTO, INDEX, \
@@ -46,20 +47,22 @@ def collect_outputs(data=None, name=None):
 
 
 def main():
+    lstgs, suffix = get_lstgs()
+
     # observed
-    data_obs = get_slr_valid(load_data(part=TEST))
+    data_obs = load_valid_data(part=TEST, byr=False, lstgs=lstgs)
     d = collect_outputs(data=data_obs, name='Data')
 
     # seller runs
-    for delta in DELTA_SLR[:-1]:
+    for delta in DELTA_SLR:
         run_dir = find_best_run(byr=False, delta=delta)
-        data_rl = load_valid_data(part=TEST, run_dir=run_dir)
+        data_rl = load_valid_data(part=TEST, run_dir=run_dir, lstgs=lstgs)
         d_rl = collect_outputs(data=data_rl,
                                name='$\\delta = {}$'.format(delta))
         d = merge_dicts(d, d_rl)
 
     # save
-    topickle(d, PLOT_DIR + 'slr.pkl')
+    topickle(d, PLOT_DIR + '{}.pkl'.format(SLR, suffix))
 
 
 if __name__ == '__main__':

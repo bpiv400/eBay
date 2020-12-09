@@ -143,8 +143,13 @@ def add_diagonal(df):
     plt.plot([low, high], [low, high], '-k', lw=0.5)
 
 
-def add_vline(x=None, y=None):
-    plt.plot([x, x], y, '-k', lw=1)
+def add_line(x=None, y=None):
+    if type(x) is list:
+        plt.plot(x, [y, y], '-k', lw=1)
+    elif type(y) is list:
+        plt.plot([x, x], y, '-k', lw=1)
+    else:
+        raise ValueError('x or y must a list.')
 
 
 def cdf_plot(path, obj):
@@ -197,11 +202,15 @@ def cdf_plot(path, obj):
     elif name in ['values', 'unsoldvals', 'soldvals']:
         args = dict(xlim=[0, 1],
                     xlabel='Value / list price')
-    elif name.startswith('t1value'):
+    elif name == 't1value':
         vline = .5
         args = dict(xlim=[.1, .9],
                     xlabel='Value / list price')
-    elif name.startswith('t7value'):
+    elif name in ['t3value', 't5value']:
+        vline = 0
+        args = dict(xlim=[-.25, .25],
+                    xlabel='(Value $-$ smallest counter) / list price')
+    elif name == 't7value':
         vline = 0
         args = dict(xlim=[-.25, .25],
                     xlabel='(Value $-$ final seller offer) / list price')
@@ -231,7 +240,7 @@ def cdf_plot(path, obj):
             # plot separately
             plt.plot(s.index, s, ds='steps-post', color='k')
             if vline is not None:
-                add_vline(x=vline, y=ylim)
+                add_line(x=vline, y=ylim)
             save_fig('{}_Data'.format(path), ylim=[0, 1],
                      ylabel='Cumulative share of {}'.format(den),
                      legend=False, **args)
@@ -262,7 +271,7 @@ def cdf_plot(path, obj):
             plt.plot(s.index, s, label=c, ds='steps-post')
 
     if vline is not None:
-        add_vline(x=vline, y=ylim)
+        add_line(x=vline, y=ylim)
     save_fig(path, ylim=[0, 1],
              ylabel='Cumulative share of {}'.format(den),
              legend=True, **args)
@@ -308,6 +317,21 @@ def simple_plot(path, obj):
                     xlabel='Days to first arrival',
                     ylabel='Days between first two arrivals',
                     legend_kwargs=dict(title='First offer'))
+    elif name in ['responds', 'autoacc', 'autorej', 'hours', 'manhours']:
+        ylim = None if 'hours' in name else [0, 1]
+        if name == 'responds':
+            ylabel = 'Pr(response)'
+        elif name == 'autoacc':
+            ylabel = 'Pr(auto-accept)'
+        elif name == 'autorej':
+            ylabel = 'Pr(auto-reject)'
+        elif name == 'hours':
+            ylabel = 'Hours to response'
+        else:
+            ylabel = 'Hours to response (excl. auto responses)'
+        args = dict(xlim=[.4, .9], ylim=ylim,
+                    xlabel='Turn 1: Offer / list price',
+                    ylabel='Turn 2: {}'.format(ylabel))
     else:
         raise NotImplementedError('Invalid name: {}'.format(name))
 
@@ -427,7 +451,7 @@ def response_plot(path, obj):
                     xlabel='Turn 1: Offer / list price',
                     ylabel='Reward / list price')
     elif name == 'hist':
-        args = dict(xlim=[.4, 1], ylim=[0, .7],
+        args = dict(xlim=[.4, 1.01], ylim=[0, .7],
                     xlabel='Turn 1: Offer / list price',
                     ylabel='Buyer experience percentile')
     elif name == 'accnorm':
@@ -575,12 +599,14 @@ def bar_plot(path, obj):
     elif name == 'norm':
         lower = np.floor(obj.min() * 100) / 100 - .01
         upper = np.ceil(obj.max() * 100) / 100 + .01
-        args = dict(ylim=[lower, upper],
+        ylim = [lower, upper]
+        args = dict(ylim=ylim,
                     legend=False, xlabel='',
                     ylabel='Reward / list price')
     elif name == 'dollar':
         lower, upper = np.floor(obj.min()) - 1, np.ceil(obj.max()) + 1
-        args = dict(ylim=[lower, upper],
+        ylim = [lower, upper]
+        args = dict(ylim=ylim,
                     legend=False, xlabel='',
                     ylabel='Reward ($)')
     elif name == 'training':
@@ -596,12 +622,11 @@ def bar_plot(path, obj):
         raise NotImplementedError('Invalid name: {}'.format(name))
 
     if type(obj) is pd.Series:
-        if 'Data' in obj.index:
-            obj.rename({'Data': 'Humans'}, inplace=True)
-        obj.plot.bar(rot=0)
+        obj.plot.bar(rot=0, color=COLORS[0])
+        plt.gca().axhline(c='k', lw=1)
     else:
         rot = 45 if len(obj.columns) > 3 else 0
-        obj.plot.bar(rot=rot, color=COLORS)
+        obj.plot.bar(rot=rot)
     save_fig(path, xticklabels=obj.index, gridlines=False, **args)
 
 
@@ -646,7 +671,7 @@ def contour_plot(path, s):
     elif name.startswith('hist'):
         args = dict(xlabel='First buyer offer / list price',
                     ylabel='Seller experience percentile')
-    elif 'rejbin' in name:
+    elif name in ['rejbin', 'normbin']:
         ticks = get_log_ticks(s.index.levels[1])
         args = dict(yticks=np.log10(ticks),
                     yticklabels=ticks,

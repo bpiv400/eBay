@@ -1,51 +1,41 @@
 import numpy as np
-import pandas as pd
-from statsmodels.nonparametric.kernel_regression import KernelReg
+from agent.util import load_valid_data, only_byr_agent
+from assess.util import ll_wrapper, bin_plot
+from utils import topickle, safe_reindex
 from agent.const import COMMON_CONS
-from assess.const import OPT, NORM1_DIM, LOG10_BIN_DIM, POINTS
-from assess.util import ll_wrapper
-from utils import load_data, topickle, safe_reindex
+from assess.const import NORM1_DIM
 from constants import PLOT_DIR
-from featnames import INDEX, X_OFFER, NORM, ACCEPT, REJECT, CON, LOOKUP, \
-    START_PRICE, TEST
+from featnames import X_OFFER, INDEX, TEST, NORM, LOOKUP, START_PRICE
+
+
+def get_feats(data=None):
+    norm = data[X_OFFER][NORM]
+    norm1 = norm.xs(1, level=INDEX)
+    norm2 = norm.xs(2, level=INDEX).reindex(index=norm1.index, fill_value=0)
+    norm2 = 1 - norm2
+    # throw out small opening concessions (helps with bandwidth estimation)
+    norm1 = norm1[norm1 > .33]
+    norm2 = norm2.loc[norm1.index]
+    # log of start price
+    log10_price = np.log10(safe_reindex(data[LOOKUP][START_PRICE],
+                                        idx=norm1.index))
+    return norm1.values, norm2.values, log10_price.values
 
 
 def main():
     d = dict()
 
-    # load data
-    data = load_data(part=TEST)
+    # observed
+    data = only_byr_agent(load_valid_data(part=TEST, byr=True))
+    x, y, z = get_feats(data=data)
 
-    # first offer and response
-    df = data[X_OFFER][[CON, NORM]]
-    norm1 = df[NORM].xs(1, level=INDEX)
-    norm1 = norm1[(.33 <= norm1) & (norm1 < 1)]  # remove BINs and very small offers
-    norm2 = 1 - df[NORM].xs(2, level=INDEX).reindex(index=norm1.index, fill_value=0)
-    norm2 = norm2.reindex(index=norm1.index)
+    # norm2 ~ norm1
+    line, dots, bw = ll_wrapper(y, x, dim=NORM1_DIM, discrete=COMMON_CONS[1])
+    d['response_norm'] = line, dots
+    print('norm: {}'.format(bw[0]))
 
-    # by start price
-    start_price = safe_reindex(data[LOOKUP][START_PRICE], idx=norm1.index)
-    x2 = np.log10(start_price).values
-
-    # remove values not close to .5
-    x1 = norm1.values
-    mask = (.4 < x1) & (x1 < .6)
-    yy = norm2.values[mask]
-    xx = np.stack([x1, x2], axis=1)[mask, :]
-
-    # exact estimate
-    is50 = np.isclose(xx[:, 0], .5)
-    ll = KernelReg(yy[is50], xx[is50, 1], var_type='c', defaults=OPT)
-
-    # approximate
-    ll2 = KernelReg(yy[~is50], xx[~is50, :], var_type='cc', defaults=OPT)
-    dim2 = np.stack([np.repeat(0.5, POINTS), LOG10_BIN_DIM], axis=1)
-
-    df = pd.DataFrame(index=LOG10_BIN_DIM)
-    df['Approximate'] = ll2.fit(dim2)[0]
-    df['Exact'] = ll.fit(LOG10_BIN_DIM)[0]
-
-    d['response_bin'] = df
+    # norm2 ~ norm1, list price
+    d['contour_normbin'], bw2 = bin_plot(y=y, x1=x, x2=z)
 
     topickle(d, PLOT_DIR + 'byr2.pkl')
 

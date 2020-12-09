@@ -1,10 +1,10 @@
 import numpy as np
 import pandas as pd
 from agent.util import find_best_run, load_valid_data, get_slr_valid
-from assess.util import ll_wrapper, kreg2
+from assess.util import ll_wrapper, bin_plot
 from utils import topickle, load_data, safe_reindex
 from agent.const import DELTA_SLR
-from assess.const import NORM1_DIM, NORM1_BIN_MESH
+from assess.const import NORM1_DIM
 from constants import PLOT_DIR
 from featnames import X_OFFER, CON, INDEX, TEST, NORM, ACCEPT, REJECT, AUTO, \
     LOOKUP, START_PRICE
@@ -38,14 +38,6 @@ def get_feats(data=None):
     return norm1, con2, log10_price
 
 
-def bin_plot(y=None, x1=None, x2=None, bw=None):
-    mask = x1 < .9
-    s, bw = kreg2(y=y[mask], x1=x1[mask], x2=x2[mask],
-                  mesh=NORM1_BIN_MESH, bw=bw)
-    print('bin: {}'.format(bw))
-    return s, bw
-
-
 def main():
     d, bw, bw2 = dict(), dict(), None
 
@@ -65,7 +57,7 @@ def main():
                 bin_plot(y=y, x1=x, x2=feats[2].values)
 
     # seller runs
-    for delta in DELTA_SLR[:-1]:
+    for delta in DELTA_SLR:
         run_dir = find_best_run(byr=False, delta=delta)
         data = load_valid_data(part=TEST, run_dir=run_dir)
         feats = get_feats(data=data)

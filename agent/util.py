@@ -68,6 +68,13 @@ def get_byr_agent(data=None):
     return data[X_THREAD].xs(1, level=THREAD, drop_level=False).index
 
 
+def only_byr_agent(data=None):
+    for k, v in data.items():
+        if THREAD in v.index.names:
+            data[k] = v.xs(1, level=THREAD, drop_level=False)
+    return data
+
+
 def get_byr_valid(data=None):
     idx = get_byr_agent(data).droplevel(THREAD)
     for k, v in data.items():
@@ -75,7 +82,7 @@ def get_byr_valid(data=None):
     return data
 
 
-def load_valid_data(part=None, run_dir=None, byr=False):
+def load_valid_data(part=None, run_dir=None, byr=False, lstgs=None):
     # error checking
     if run_dir is not None:
         if byr:
@@ -84,7 +91,7 @@ def load_valid_data(part=None, run_dir=None, byr=False):
             assert SLR in run_dir
 
     # load data
-    data = load_data(part=part, run_dir=run_dir)
+    data = load_data(part=part, run_dir=run_dir, lstgs=lstgs)
     if X_OFFER not in data:
         return None
 

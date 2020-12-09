@@ -36,12 +36,9 @@ ACC_IND = 0
 REJ_IND = 1
 OFF_IND = 2
 
-# lstg level
+# event types
 ARRIVAL = 'ARRIVAL'
-
-# thread level
 FIRST_OFFER = 'FIRST_OFFER'  # first buyer offer
-RL_ARRIVAL_EVENT = 'RL_ARRIVE'
 OFFER_EVENT = 'OFFER'
 DELAY_EVENT = 'DELAY'
 

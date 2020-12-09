@@ -1,10 +1,9 @@
-import argparse
 from assess.util import merge_dicts, cdf_days, cdf_sale, msg_dist, \
     arrival_dist, hist_dist, delay_dist, con_dist, num_threads, \
-    num_offers, interarrival_dist, norm_dist
-from utils import topickle, load_data, load_file
-from constants import PLOT_DIR, COLLECTIBLES
-from featnames import X_THREAD, X_OFFER, TEST, LOOKUP, STORE, START_PRICE, META
+    num_offers, interarrival_dist, norm_dist, get_lstgs
+from utils import topickle, load_data
+from constants import PLOT_DIR
+from featnames import X_THREAD, X_OFFER, TEST, SIM
 
 
 def collect_outputs(data=None, name=None):
@@ -36,38 +35,8 @@ def collect_outputs(data=None, name=None):
     return d
 
 
-def get_lstgs(subset=None):
-    # restrict listings
-    lookup = load_file(TEST, LOOKUP)
-    if subset is not None:
-        filename = 'sim_{}'.format(subset)
-        if subset == 'store':
-            lookup = lookup[lookup[STORE]]
-        elif subset == 'no_store':
-            lookup = lookup[~lookup[STORE]]
-        elif subset == 'price_low':
-            lookup = lookup[lookup[START_PRICE] <= 20]
-        elif subset == 'price_high':
-            lookup = lookup[lookup[START_PRICE] >= 99]
-        elif subset == 'collectibles':
-            lookup = lookup[lookup[META].apply(lambda x: x in COLLECTIBLES)]
-        elif subset == 'other':
-            lookup = lookup[lookup[META].apply(lambda x: x not in COLLECTIBLES)]
-        else:
-            raise NotImplementedError('Unrecognized subset: {}'.format(subset))
-    else:
-        filename = 'sim'
-    print('{}: {} listings'.format(filename, len(lookup)))
-    return lookup.index, filename
-
-
 def main():
-    # subset from command line
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--subset', type=str)
-    subset = parser.parse_args().subset
-
-    lstgs, filename = get_lstgs(subset=subset)
+    lstgs, suffix = get_lstgs()
 
     # data
     data_obs = load_data(part=TEST, lstgs=lstgs)
@@ -83,7 +52,7 @@ def main():
     d = merge_dicts(d, d_sim)
 
     # save
-    topickle(d, PLOT_DIR + '{}.pkl'.format(filename))
+    topickle(d, PLOT_DIR + '{}{}.pkl'.format(SIM, suffix))
 
 
 if __name__ == '__main__':
