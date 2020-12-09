@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 from agent.models.util import wrapper, get_store, get_last_norm, \
-    get_last_auto, get_last_exp, get_agent_turn
+    get_last_auto, get_agent_turn
 from agent.const import DELTA_BYR
 from constants import NUM_COMMON_CONS
 
@@ -34,11 +34,7 @@ class HeuristicByr:
                 idx = f(.4) if auto else f(.17)
 
         elif turn == 5:
-            if not self.high:
-                idx = f(.17)
-            else:
-                exp = get_last_exp(x=x, turn=turn)
-                idx = f(.17) if exp else f(.4)
+            idx = f(.4) if self.high else f(.17)
 
         elif turn == 7:
             if not self.high:
