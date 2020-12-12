@@ -23,8 +23,6 @@ def get_run_dir(**kwargs):
     log_dir = get_log_dir(**kwargs)
     run_id = get_run_id(**kwargs)
     run_dir = log_dir + 'run_{}/'.format(run_id)
-    if 'heuristic' in kwargs and kwargs['heuristic']:
-        run_dir += '{}/heuristic/'.format(kwargs['part'])
     return run_dir
 
 
