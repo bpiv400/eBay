@@ -5,8 +5,8 @@
 #$ -o logs/collate/
 
 ulimit -n 4096
-if [ "$2" == "heuristic" ]; then
-  python repo/agent/eval/collate.py --byr --delta "$1" --heuristic
+if [ "$3" == "heuristic" ]; then
+  python repo/agent/eval/collate.py --byr --delta "$1" --turn_cost "$2" --heuristic
 else
-  python repo/agent/eval/collate.py --byr --delta "$1"
+  python repo/agent/eval/collate.py --byr --delta "$1" --turn_cost "$2"
 fi
