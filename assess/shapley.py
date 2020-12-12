@@ -6,8 +6,8 @@ import shap
 from agent.models.AgentModel import load_agent_model
 from agent.util import get_run_dir, get_turn
 from utils import unpickle, load_file, load_sizes, load_featnames, \
-    run_func_on_chunks, get_role, topickle
-from agent.const import DELTA_CHOICES
+    run_func_on_chunks, get_role, topickle, compose_args
+from agent.const import AGENT_PARAMS
 from constants import IDX, BYR_DROP, NUM_CHUNKS, PLOT_DIR
 from featnames import BYR, SLR, X_LSTG, BYR_HIST, DAYS, DELAY, \
     DAYS_SINCE_LSTG, LSTG, THREAD, CLOCK_FEATS, OUTCOME_FEATS, \
@@ -104,17 +104,16 @@ def process_chunk(chunk=None, x=None, model=None, turn=None):
     return groups
 
 
-def load_inputs_model(delta=None, turn=None):
+def load_inputs_model(turn=None, **params):
     # preliminaries
-    byr = turn in IDX[BYR]
-    run_dir = get_run_dir(byr=byr, delta=delta)
-    role = get_role(byr)
+    run_dir = get_run_dir(**params)
+    role = get_role(params[BYR])
     # inputs
     d = unpickle(run_dir + '{}/{}.pkl'.format(TEST, role))
     sizes = load_sizes(role)['x']
     x_lstg = load_file(TEST, X_LSTG)
     x = {k: v[d['idx_x'], :] for k, v in x_lstg.items() if k in sizes}
-    if byr:
+    if params[BYR]:
         x_lstg_feats = load_featnames(X_LSTG)[LSTG]
         idx_keep = [i for i in range(len(x_lstg_feats))
                     if x_lstg_feats[i] not in BYR_DROP]
@@ -126,9 +125,9 @@ def load_inputs_model(delta=None, turn=None):
             x[k] = v
     x = np.concatenate([x[k] for k in sizes.keys()], axis=1)
     # subset to turn
-    x = x[get_turn(d['x'][THREAD], byr=byr) == turn, :]
+    x = x[get_turn(d['x'][THREAD], byr=params[BYR]) == turn, :]
     # model
-    model_args = dict(byr=byr, value=False)
+    model_args = dict(byr=params[BYR], value=False)
     model = load_agent_model(model_args=model_args, run_dir=run_dir)
     return x, model
 
@@ -136,21 +135,22 @@ def load_inputs_model(delta=None, turn=None):
 def main():
     # parameters from command line
     parser = argparse.ArgumentParser()
-    parser.add_argument('--turn', type=int, choices=range(1, 8))
-    parser.add_argument('--delta', type=float,
-                        choices=DELTA_CHOICES, required=True)
-    args = parser.parse_args()
+    compose_args(arg_dict=AGENT_PARAMS, parser=parser)
+    params = vars(parser.parse_args())
+    role = get_role(params[BYR])
 
     # components for shapley value estimation
-    x, model = load_inputs_model(turn=args.turn, delta=args.delta)
+    for turn in IDX[role]:
+        print('Turn {}'.format(turn))
+        x, model = load_inputs_model(turn=turn, **params)
 
-    groups = run_func_on_chunks(
-        f=process_chunk,
-        func_kwargs=dict(x=x, model=model, turn=args.turn)
-    )
-    groups = pd.concat(groups)
+        groups = run_func_on_chunks(
+            f=process_chunk,
+            func_kwargs=dict(x=x, model=model, turn=turn)
+        )
+        groups = pd.concat(groups)
 
-    topickle(groups, PLOT_DIR + 'shap{}.pkl'.format(args.turn))
+        topickle(groups, PLOT_DIR + 'shap{}.pkl'.format(turn))
 
 
 if __name__ == '__main__':

@@ -3,8 +3,8 @@ import numpy as np
 import pandas as pd
 from agent.util import get_run_dir, get_byr_agent
 from assess.util import estimate_tree
-from utils import load_data, load_feats, safe_reindex
-from agent.const import DELTA_BYR
+from utils import load_data, load_feats, safe_reindex, compose_args
+from agent.const import AGENT_PARAMS
 from constants import DAY, MAX_DAYS, IDX
 from featnames import LOOKUP, CON, NORM, START_PRICE, START_TIME, \
     BYR_HIST, X_OFFER, X_THREAD, INDEX, CLOCK, THREAD, TEST, BYR, AUTO, EXP, MSG
@@ -13,13 +13,13 @@ LISTING_FEATS = ['fdbk_score', 'fdbk_pstv', 'photos', 'store', 'slr_us', 'fast']
 
 
 def main():
-    # delta from command line
+    # agent params from command line
     parser = argparse.ArgumentParser()
-    parser.add_argument('--delta', type=float,
-                        choices=DELTA_BYR, required=True)
-    delta = parser.parse_args().delta
+    compose_args(arg_dict=AGENT_PARAMS, parser=parser)
+    params = vars(parser.parse_args())
+    assert params[BYR]
 
-    run_dir = get_run_dir(byr=True, delta=delta)
+    run_dir = get_run_dir(**params)
     data = load_data(part=TEST, run_dir=run_dir)
 
     # add listing features to data
@@ -43,8 +43,12 @@ def main():
         y = pd.Series('', index=con.index)
         y.loc[con == 0] = 'Walk'
         y.loc[con == 1] = 'Accept'
-        y.loc[(con > 0) & (con <= .25)] = 'Low'
-        y.loc[(con < 1) & (con > .25)] = 'High'
+        if turn == 1:
+            y.loc[(con > 0) & (con <= .5)] = 'Low'
+            y.loc[(con < .5) & (con > 1)] = 'High'
+        else:
+            y.loc[(con > 0) & (con <= .25)] = 'Low'
+            y.loc[(con < 1) & (con > .25)] = 'High'
         print(np.unique(y))
 
         con_rate = con.groupby(con).count() / len(con)

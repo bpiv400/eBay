@@ -6,8 +6,9 @@ from constants import NUM_COMMON_CONS
 
 
 class HeuristicSlr:
-    def __init__(self, delta=None):
+    def __init__(self, delta=None, turn_cost=None):
         self.high = np.isclose(delta, DELTA_SLR[-1])
+        self.turn_cost = turn_cost
 
     def __call__(self, observation=None):
         # noinspection PyProtectedMember

@@ -4,14 +4,14 @@ import pandas as pd
 from sklearn.tree import DecisionTreeClassifier, export_text
 from statsmodels.nonparametric.kde import KDEUnivariate
 from statsmodels.nonparametric.kernel_regression import KernelReg
-from agent.util import get_sale_norm, get_run_dir, get_log_dir
+from agent.util import get_sale_norm, get_run_dir
 from utils import unpickle, safe_reindex, load_file
 from assess.const import OPT, VALUES_DIM, POINTS, NORM1_BIN_MESH
 from constants import IDX, BYR, EPS, DAY, HOUR, PCTILE_DIR, MAX_DELAY_TURN, \
     MAX_DELAY_ARRIVAL, INTERVAL_ARRIVAL, INTERVAL_CT_ARRIVAL, COLLECTIBLES
 from featnames import DELAY, CON, NORM, AUTO, START_TIME, START_PRICE, LOOKUP, \
     MSG, DAYS_SINCE_LSTG, BYR_HIST, INDEX, X_OFFER, CLOCK, THREAD, X_THREAD, \
-    REJECT, EXP, SLR, TEST, STORE, META, OBS
+    REJECT, EXP, SLR, TEST, STORE, META
 
 
 def continuous_pdf(s=None):
@@ -372,19 +372,10 @@ def get_lstgs():
     return lookup.index, '_{}'.format(subset)
 
 
-def get_eval_df(byr=None, delta=None):
-    run_id = get_run_dir(byr=byr, delta=delta).split('/')[-2]
-    log_dir = get_log_dir(byr=byr, delta=delta)
-    path = log_dir + '{}.pkl'.format(TEST)
+def get_eval_df(**kwargs):
+    run_dir = get_run_dir(**kwargs)
+    path = run_dir + '{}.pkl'.format(TEST)
     df = unpickle(path)[['norm', 'dollar']]
-
-    # rename rows
-    newkeys = {OBS: 'Humans',
-               'heuristic': 'Heuristic',
-               run_id: 'Agent'}
-    df = df.rename(index=newkeys)
-    df = df.loc[newkeys.values(), :]
-
     return df
 
 

@@ -7,8 +7,9 @@ from constants import NUM_COMMON_CONS
 
 
 class HeuristicByr:
-    def __init__(self, delta=None):
+    def __init__(self, delta=None, turn_cost=None):
         self.high = np.isclose(delta, DELTA_BYR[-1])
+        self.turn_cost = turn_cost
 
     def __call__(self, observation=None):
         # noinspection PyProtectedMember
@@ -29,9 +30,11 @@ class HeuristicByr:
         elif turn == 3:
             if not self.high:
                 idx = f(.17)
-            else:
+            elif self.turn_cost == 0:
                 auto = get_last_auto(x=x, turn=turn)
                 idx = f(.4) if auto else f(.17)
+            else:
+                idx = f(.4)
 
         elif turn == 5:
             idx = f(.4) if self.high else f(.17)

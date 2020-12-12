@@ -1,21 +1,21 @@
 import argparse
 from assess.util import get_last, estimate_tree
 from agent.util import get_run_dir
-from utils import load_data
-from agent.const import DELTA_SLR
+from utils import load_data, compose_args
+from agent.const import AGENT_PARAMS
 from constants import DAY, MAX_DAYS
 from featnames import LOOKUP, AUTO, CON, NORM, START_PRICE, START_TIME, \
-    BYR_HIST, X_OFFER, X_THREAD, INDEX, CLOCK, THREAD, TEST
+    BYR_HIST, X_OFFER, X_THREAD, INDEX, CLOCK, THREAD, TEST, BYR
 
 
 def main():
-    # delta from command line
+    # agent params from command line
     parser = argparse.ArgumentParser()
-    parser.add_argument('--delta', type=float,
-                        choices=DELTA_SLR, required=True)
-    delta = parser.parse_args().delta
+    compose_args(arg_dict=AGENT_PARAMS, parser=parser)
+    params = vars(parser.parse_args())
+    assert not params[BYR]
 
-    run_dir = get_run_dir(byr=False, delta=delta)
+    run_dir = get_run_dir(**params)
     data = load_data(part=TEST, run_dir=run_dir)
 
     for turn in [2, 4, 6]:

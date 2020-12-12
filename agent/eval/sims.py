@@ -20,7 +20,7 @@ def main():
     gen_cls = AgentGenerator
     if args['heuristic']:
         model_cls = HeuristicByr if args[BYR] else HeuristicSlr
-        model = model_cls(args[DELTA])
+        model = model_cls(**args)
     else:
         run_dir = get_run_dir(**args)
         model_args = {BYR: args[BYR], 'value': False}

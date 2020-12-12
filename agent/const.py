@@ -23,17 +23,20 @@ PERIOD_EPOCHS = 1500    # epoch count for stepping down entropy
 # state dictionaries
 AGENT_STATE = 'agent_state_dict'
 
-# discount parameter
+# economic parameters
 DELTA_SLR = [0., .7]
 DELTA_BYR = [.7, .995]
 DELTA_CHOICES = np.unique(DELTA_SLR + DELTA_BYR)
+TURN_COST_CHOICES = [0, 1, 5]
 
 # agent parameters
 AGENT_PARAMS = {BYR: dict(action='store_true'),
                 DELTA: dict(type=float,
                             choices=DELTA_CHOICES,
                             default=DELTA_CHOICES[1]),
-                TURN_COST: dict(type=int, default=0)}
+                TURN_COST: dict(type=int,
+                                choices=TURN_COST_CHOICES,
+                                default=TURN_COST_CHOICES[0])}
 
 # names for opt_info namedtuple
 FIELDS = ["ActionsPerTraj", "ThreadsPerTraj", "DaysToDone",

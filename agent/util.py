@@ -13,9 +13,9 @@ def get_log_dir(**kwargs):
 
 
 def get_run_id(**kwargs):
-    run_id = '{}'.format(kwargs[DELTA])
-    if TURN_COST in kwargs and kwargs[TURN_COST] > 0:
-        run_id += '_{}'.format(kwargs[TURN_COST])
+    if TURN_COST not in kwargs:
+        kwargs[TURN_COST] = 0
+    run_id = '{}_{}'.format(kwargs[DELTA], kwargs[TURN_COST])
     return run_id
 
 
