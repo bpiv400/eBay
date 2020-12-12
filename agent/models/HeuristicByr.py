@@ -4,12 +4,13 @@ from agent.models.util import wrapper, get_store, get_last_norm, \
     get_last_auto, get_agent_turn
 from agent.const import DELTA_BYR
 from constants import NUM_COMMON_CONS
+from featnames import DELTA, TURN_COST
 
 
 class HeuristicByr:
-    def __init__(self, delta=None, turn_cost=None):
-        self.high = np.isclose(delta, DELTA_BYR[-1])
-        self.turn_cost = turn_cost
+    def __init__(self, **params):
+        self.high = np.isclose(params[DELTA], DELTA_BYR[-1])
+        self.turn_cost = params[TURN_COST]
 
     def __call__(self, observation=None):
         # noinspection PyProtectedMember
