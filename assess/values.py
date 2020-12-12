@@ -45,11 +45,9 @@ def photos_plot(listings=None, vals=None):
 
 def slr_plot(data=None, y=None):
     x = np.log10(data[LOOKUP][SLR_BO_CT]).values  # log seller experience
-    line, dots, bw = ll_wrapper(y=y, x=x,
-                                discrete=[0],
-                                dim=LOG10_BO_DIM)
+    line, bw = ll_wrapper(y=y, x=x, dim=LOG10_BO_DIM)
     print('bw: {}'.format(bw[0]))
-    return line, dots
+    return line
 
 
 def main():
@@ -65,8 +63,8 @@ def main():
     d['response_slrbo'] = slr_plot(data=data, y=vals)
     df = unpickle(SIM_DIR + '{}/values.pkl'.format(TEST))
     assert np.all(df.index == data[LOOKUP].index)
-    d['response_slrbosale'] = slr_plot(data=data, y=df.p.values)
-    d['response_slrboprice'] = slr_plot(
+    d['simple_slrbosale'] = slr_plot(data=data, y=df.p.values)
+    d['simple_slrboprice'] = slr_plot(
         data=data, y=(df.x / data[LOOKUP][START_PRICE]).values)
 
     # day of week of listing

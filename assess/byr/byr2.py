@@ -3,7 +3,7 @@ from agent.util import load_valid_data, only_byr_agent
 from assess.util import ll_wrapper, bin_plot
 from utils import topickle, safe_reindex
 from agent.const import COMMON_CONS
-from assess.const import NORM1_DIM
+from assess.const import NORM1_DIM_LONG
 from constants import PLOT_DIR
 from featnames import X_OFFER, INDEX, TEST, NORM, LOOKUP, START_PRICE
 
@@ -11,11 +11,10 @@ from featnames import X_OFFER, INDEX, TEST, NORM, LOOKUP, START_PRICE
 def get_feats(data=None):
     norm = data[X_OFFER][NORM]
     norm1 = norm.xs(1, level=INDEX)
+    norm1 = norm1[norm1 > .3]  # throw out small opening concessions
+    # seller response
     norm2 = norm.xs(2, level=INDEX).reindex(index=norm1.index, fill_value=0)
     norm2 = 1 - norm2
-    # throw out small opening concessions (helps with bandwidth estimation)
-    norm1 = norm1[norm1 > .33]
-    norm2 = norm2.loc[norm1.index]
     # log of start price
     log10_price = np.log10(safe_reindex(data[LOOKUP][START_PRICE],
                                         idx=norm1.index))
@@ -30,7 +29,9 @@ def main():
     x, y, z = get_feats(data=data)
 
     # norm2 ~ norm1
-    line, dots, bw = ll_wrapper(y, x, dim=NORM1_DIM, discrete=COMMON_CONS[1])
+    line, dots, bw = ll_wrapper(y, x,
+                                dim=NORM1_DIM_LONG,
+                                discrete=COMMON_CONS[1])
     d['response_norm'] = line, dots
     print('norm: {}'.format(bw[0]))
 

@@ -1,7 +1,7 @@
 import argparse
 import numpy as np
 import pandas as pd
-from agent.util import find_best_run, get_byr_agent
+from agent.util import get_run_dir, get_byr_agent
 from assess.util import estimate_tree
 from utils import load_data, load_feats, safe_reindex
 from agent.const import DELTA_BYR
@@ -19,7 +19,7 @@ def main():
                         choices=DELTA_BYR, required=True)
     delta = parser.parse_args().delta
 
-    run_dir = find_best_run(byr=True, delta=delta)
+    run_dir = get_run_dir(byr=True, delta=delta)
     data = load_data(part=TEST, run_dir=run_dir)
 
     # add listing features to data

@@ -1,5 +1,4 @@
 import psutil
-import os
 import torch
 from agent.EBayRunner import EBayRunner
 from agent.EBayPPO import EBayPPO
@@ -7,7 +6,7 @@ from rlpyt.samplers.serial.sampler import SerialSampler
 from rlpyt.samplers.parallel.gpu.alternating_sampler import AlternatingSampler
 from rlpyt.utils.logging.context import logger_context
 from agent.const import BATCH_SIZE
-from agent.util import get_paths
+from agent.util import get_log_dir, get_run_id
 from agent.AgentComposer import AgentComposer
 from agent.models.AgentModel import AgentModel
 from agent.agents import SellerAgent, BuyerAgent
@@ -17,41 +16,42 @@ from agent.envs.BuyerEnv import BuyerEnv
 from rlenv.interfaces.ArrivalInterface import ArrivalInterface
 from rlenv.interfaces.PlayerInterface import SimulatedSeller, SimulatedBuyer
 from agent.AgentLoader import AgentLoader
-from featnames import ENTROPY, DROPOUT
+from featnames import BYR, DELTA, TURN_COST
 
 
 class RlTrainer:
-    def __init__(self, byr=None, delta=None):
-        self.byr = byr
-        self.delta = delta
+    def __init__(self, **params):
+        self.params = params
 
     def _generate_query_strategy(self):
         return DefaultQueryStrategy(
             arrival=ArrivalInterface(),
-            seller=SimulatedSeller(full=self.byr),
+            seller=SimulatedSeller(full=self.params[BYR]),
             buyer=SimulatedBuyer(full=True)
         )
 
-    def _generate_agent(self, serial=False, dropout=None):
-        model_kwargs = dict(byr=self.byr, dropout=dropout)
-        agent_cls = BuyerAgent if self.byr else SellerAgent
+    def _generate_agent(self, serial=False):
+        model_kwargs = dict(byr=self.params[BYR])
+        agent_cls = BuyerAgent if self.params[BYR] else SellerAgent
         return agent_cls(
             ModelCls=AgentModel,
             model_kwargs=model_kwargs,
+            turn_cost=self.params[TURN_COST],
             serial=serial
         )
 
     def _generate_env(self, verbose=False):
-        composer = AgentComposer(byr=self.byr)
+        composer = AgentComposer(byr=self.params[BYR])
         env_params = dict(
             composer=composer,
             verbose=verbose,
             query_strategy=self._generate_query_strategy(),
             loader=AgentLoader(),
-            delta=self.delta,
+            delta=self.params[DELTA],
+            turn_cost=self.params[TURN_COST],
             train=True
         )
-        env = BuyerEnv if self.byr else SellerEnv
+        env = BuyerEnv if self.params[BYR] else SellerEnv
         return env, env_params
 
     def _generate_sampler(self, serial=False):
@@ -79,8 +79,7 @@ class RlTrainer:
                 eval_max_steps=50,
             )
 
-    def _generate_runner(self, agent=None, sampler=None, entropy=None):
-        algo = EBayPPO(entropy=entropy)
+    def _generate_runner(self, serial=None):
         affinity = dict(master_cpus=self._cpus,
                         master_torch_threads=len(self._cpus),
                         workers_cpus=self._cpus,
@@ -88,36 +87,24 @@ class RlTrainer:
                         cuda_idx=torch.cuda.current_device(),
                         alternating=True,
                         set_affinity=True)
-        return EBayRunner(algo=algo,
-                          agent=agent,
-                          sampler=sampler,
+        return EBayRunner(algo=EBayPPO(),
+                          agent=self._generate_agent(serial),
+                          sampler=self._generate_sampler(serial),
                           affinity=affinity)
 
     @property
     def _cpus(self):
         return list(psutil.Process().cpu_affinity())
 
-    def train(self, **kwargs):
-        if kwargs['serial']:
-            assert not kwargs['log']
-
+    def train(self, log=None, serial=None):
         # construct runner
-        agent = self._generate_agent(serial=kwargs['serial'],
-                                     dropout=kwargs[DROPOUT])
-        sampler = self._generate_sampler(kwargs['serial'])
-        runner = self._generate_runner(agent=agent,
-                                       sampler=sampler,
-                                       entropy=kwargs[ENTROPY])
+        runner = self._generate_runner(serial)
 
-        if not kwargs['log']:
+        if not log:
             runner.train()
         else:
-            log_dir, run_id, run_dir = \
-                get_paths(byr=self.byr, delta=self.delta, **kwargs)
-            if os.path.isdir(run_dir):
-                print('{} already exists.'.format(run_id))
-                exit()
-
+            log_dir = get_log_dir(**self.params)
+            run_id = get_run_id(**self.params)
             with logger_context(log_dir=log_dir,
                                 name='log',
                                 use_summary_writer=True,

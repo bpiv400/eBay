@@ -15,7 +15,7 @@ def main():
         for c in df.columns:
             d['bar_{}_{}'.format(c, delta)] = df[c]
 
-    topickle(d, PLOT_DIR + '{}_eval.pkl'.format(SLR))
+    topickle(d, PLOT_DIR + '{}eval.pkl'.format(SLR))
 
 
 if __name__ == '__main__':

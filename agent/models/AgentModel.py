@@ -14,13 +14,12 @@ class AgentModel(torch.nn.Module):
     2. Policy network outputs parameters of sampling distribution
     3. Value network outputs a scalar between 0 and 1
     4. Both networks use batch normalization
-    5. Both networks use dropout with shared dropout hyperparameters
+    5. Neither network uses dropout
     """
-    def __init__(self, byr=None, dropout=None, value=True):
+    def __init__(self, byr=None, value=True):
         """
         Initializes feed-forward networks for agents.
         :param bool byr: use buyer sizes if True
-        :param tuple dropout: pair of dropout rates
         :param bool value: estimate value if true
         """
         super().__init__()
@@ -32,18 +31,14 @@ class AgentModel(torch.nn.Module):
         sizes = load_sizes(BYR if byr else SLR)
         self.x_sizes = sizes['x']
 
-        # in case of no dropout
-        if dropout is None:
-            dropout = (0., 0.)
-
         # policy net
         sizes['out'] = NUM_COMMON_CONS + (2 if byr else 3)
-        self.policy_net = FeedForward(sizes=sizes, dropout=dropout)
+        self.policy_net = FeedForward(sizes=sizes)
 
         # value net
         if self.value:
-            sizes['out'] = 6 if byr else 5
-            self.value_net = FeedForward(sizes=sizes, dropout=dropout)
+            sizes['out'] = 4 if byr else 5
+            self.value_net = FeedForward(sizes=sizes)
 
     def forward(self, observation, prev_action=None, prev_reward=None, value_only=False):
         """

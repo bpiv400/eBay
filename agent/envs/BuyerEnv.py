@@ -13,7 +13,7 @@ BuyerObs = namedarraytuple('BuyerObs', list(load_sizes(BYR)['x'].keys()))
 class BuyerEnv(AgentEnv):
     def __init__(self, **kwargs):
         super().__init__(byr=True, **kwargs)
-        self.agent_arrived = None  # be set later
+        self.agent_arrived = None  # to be set later
 
     def reset(self, hist=None):
         """
@@ -47,11 +47,12 @@ class BuyerEnv(AgentEnv):
         Takes in a buyer action, updates the relevant event, then continues
         the simulation
         """
-        self.last_event = EventLog(priority=self.curr_event.priority,
-                                   thread_id=self.curr_event.thread_id,
-                                   turn=self.curr_event.turn)
         con = self.turn_from_action(turn=self.curr_event.turn,
                                     action=action)
+        self.last_event = EventLog(priority=self.curr_event.priority,
+                                   thread_id=self.curr_event.thread_id,
+                                   turn=self.curr_event.turn,
+                                   con=con)
         event_type = self.curr_event.type
         self.num_actions += 1
         if event_type == FIRST_OFFER and con == 0:
@@ -130,16 +131,24 @@ class BuyerEnv(AgentEnv):
 
     def get_reward(self):
         """
-        Returns the buyer reward for the current turn. For now, assumes
-        that the buyer values the item at the start price
+        Returns the buyer reward for the current turn.
         """
+        # turn cost
+        if self.turn_cost > 0:
+            num_cons = (self.last_event.turn + 1) / 2
+            if self.last_event.con in [0, 1]:
+                num_cons -= 1
+            penalty = self.turn_cost * num_cons
+        else:
+            penalty = 0.
+
         # no sale
         if self.outcome is None or not self.outcome.sale:
-            return 0., False
+            return -penalty, False
 
         # sale to different buyer
         if self.outcome.thread > 1:
-            return 0., False
+            return -penalty, False
 
         # sale to agent buyer
         value = self.values.loc[self.loader.lstg]
@@ -147,7 +156,7 @@ class BuyerEnv(AgentEnv):
             print('Sale to RL buyer. Price: ${0:.2f}. Value: ${1:.2f}'.format(
                 self.outcome.price, value))
 
-        return value - self.outcome.price, True
+        return value - self.outcome.price - penalty, True
 
     def _init_agent_thread(self, thread=None, hist=None):
         # increment counter

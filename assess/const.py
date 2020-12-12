@@ -23,12 +23,16 @@ DELTA_ASSESS = .7
 POINTS = 100
 VALUES_DIM = np.linspace(1 / 1000, 1, POINTS)
 CON2_DIM = np.linspace(0, .8, POINTS)
-NORM1_DIM = np.linspace(.4, .99, POINTS)
+NORM1_DIM = np.linspace(.4, .9, POINTS)
+NORM1_DIM_LONG = np.linspace(.4, 1., POINTS)
 NORM1_DIM_SHORT = np.linspace(.5, .8, POINTS)
 NORM2_DIM = np.linspace(.65, .9, POINTS)
+NORM3_DIM = np.linspace(.5, .9, POINTS)
+NORM5_DIM = np.linspace(.55, .9, POINTS)
 LOG10_BIN_DIM = np.linspace(1, 3, POINTS)
 LOG10_BO_DIM = np.linspace(0, 4, POINTS)
 DAYS_DIM = np.linspace(0, 2, POINTS)
+BYR_NORM_DIMS = {1: NORM1_DIM, 3: NORM3_DIM, 5: NORM5_DIM}
 
 # for 2D plotting of first offer against list price
 xx1, xx2 = np.meshgrid(NORM1_DIM_SHORT, LOG10_BIN_DIM)

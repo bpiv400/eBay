@@ -4,7 +4,7 @@ import pandas as pd
 from sklearn.tree import DecisionTreeClassifier, export_text
 from statsmodels.nonparametric.kde import KDEUnivariate
 from statsmodels.nonparametric.kernel_regression import KernelReg
-from agent.util import get_sale_norm, find_best_run, get_log_dir
+from agent.util import get_sale_norm, get_run_dir, get_log_dir
 from utils import unpickle, safe_reindex, load_file
 from assess.const import OPT, VALUES_DIM, POINTS, NORM1_BIN_MESH
 from constants import IDX, BYR, EPS, DAY, HOUR, PCTILE_DIR, MAX_DELAY_TURN, \
@@ -158,7 +158,9 @@ def num_offers(offers):
     # pdf of counts
     group = list(offers.index.names)
     group.remove(INDEX)
-    s = offers[CON].groupby(group).count()
+    walk = (offers[CON] == 0) & offers.index.isin(IDX[BYR], level=INDEX)
+    con = offers.loc[~walk, CON]
+    s = con.groupby(group).count()
     s = s.groupby(s).count() / len(s)
     return s
 
@@ -371,7 +373,7 @@ def get_lstgs():
 
 
 def get_eval_df(byr=None, delta=None):
-    run_id = find_best_run(byr=byr, delta=delta).split('/')[-2]
+    run_id = get_run_dir(byr=byr, delta=delta).split('/')[-2]
     log_dir = get_log_dir(byr=byr, delta=delta)
     path = log_dir + '{}.pkl'.format(TEST)
     df = unpickle(path)[['norm', 'dollar']]
@@ -384,3 +386,13 @@ def get_eval_df(byr=None, delta=None):
     df = df.loc[newkeys.values(), :]
 
     return df
+
+
+def winzorize(s, q=.025, lower=True, upper=False):
+    low = np.quantile(s, q)
+    high = np.quantile(s, 1-q)
+    if lower:
+        s = s[s > low]
+    if upper:
+        s = s[s < high]
+    return s

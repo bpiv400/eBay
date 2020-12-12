@@ -1,7 +1,7 @@
 from assess.util import merge_dicts, cdf_days, cdf_sale, norm_dist, \
     arrival_dist, hist_dist, delay_dist, con_dist, num_threads, \
     num_offers, get_lstgs
-from agent.util import find_best_run, load_valid_data
+from agent.util import get_run_dir, load_valid_data
 from utils import topickle
 from agent.const import DELTA_SLR
 from constants import PLOT_DIR, IDX
@@ -55,7 +55,7 @@ def main():
 
     # seller runs
     for delta in DELTA_SLR:
-        run_dir = find_best_run(byr=False, delta=delta)
+        run_dir = get_run_dir(byr=False, delta=delta)
         data_rl = load_valid_data(part=TEST, run_dir=run_dir, lstgs=lstgs)
         d_rl = collect_outputs(data=data_rl,
                                name='$\\delta = {}$'.format(delta))

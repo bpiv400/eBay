@@ -7,7 +7,7 @@ from rlpyt.utils.tensor import valid_mean
 from rlpyt.utils.buffer import buffer_to
 from rlpyt.utils.collections import namedarraytuple
 from agent.const import LR_POLICY, LR_VALUE, RATIO_CLIP, STOP_ENTROPY, \
-    FIELDS, PERIOD_EPOCHS
+    FIELDS, PERIOD_EPOCHS, ENTROPY_COEF
 
 LossInputs = namedarraytuple("LossInputs",
                              ["agent_inputs", "action", "return_", "advantage",
@@ -24,8 +24,8 @@ class EBayPPO:
     bootstrap_value = True
     opt_info_fields = FIELDS
 
-    def __init__(self, entropy=None):
-        self.entropy_coef = entropy
+    def __init__(self):
+        self.entropy_coef = ENTROPY_COEF
         self.entropy_step = self.entropy_coef / PERIOD_EPOCHS
 
         # parameters to be defined later

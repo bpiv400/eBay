@@ -11,11 +11,11 @@ from agent.ConSpace import ConSpace
 from agent.util import load_values
 from agent.const import AGENT_CONS
 from constants import INTERVAL_TURN, INTERVAL_CT_TURN, DAY, NUM_COMMON_CONS, IDX
-from featnames import BYR_HIST, START_PRICE, BYR, SLR, DELTA, TRAIN_RL
+from featnames import BYR_HIST, START_PRICE, BYR, SLR, DELTA, TRAIN_RL, TURN_COST
 
 Info = namedarraytuple("Info", ["days", "max_return", "num_actions", "num_threads",
                                 "turn", "thread_id", "priority", "agent_sale"])
-EventLog = namedtuple("EventLog", ["priority", "thread_id", "turn"])
+EventLog = namedtuple("EventLog", ["priority", "thread_id", "turn", "con"])
 
 
 class AgentEnv(EBayEnv, Env):
@@ -46,6 +46,7 @@ class AgentEnv(EBayEnv, Env):
         # values
         if self.train:
             self.delta = kwargs[DELTA]
+            self.turn_cost = kwargs[TURN_COST]
             self.values = load_values(part=TRAIN_RL,
                                       delta=self.delta,
                                       normalize=False)
@@ -59,7 +60,7 @@ class AgentEnv(EBayEnv, Env):
         """
         Constructs observation and calls child environment to get reward
         and info, then sets self.last_event to current event.
-        :param Thread event: either agents's turn or trajectory is complete.
+        :param Thread event: either agent's turn or trajectory is complete.
         :param bool done: True if trajectory complete.
         :param EventLog last_event: for constructing info tuple.
         :return: tuple

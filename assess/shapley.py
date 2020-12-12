@@ -4,7 +4,7 @@ import pandas as pd
 import torch
 import shap
 from agent.models.AgentModel import load_agent_model
-from agent.util import find_best_run, get_turn
+from agent.util import get_run_dir, get_turn
 from utils import unpickle, load_file, load_sizes, load_featnames, \
     run_func_on_chunks, get_role, topickle
 from agent.const import DELTA_CHOICES
@@ -107,7 +107,7 @@ def process_chunk(chunk=None, x=None, model=None, turn=None):
 def load_inputs_model(delta=None, turn=None):
     # preliminaries
     byr = turn in IDX[BYR]
-    run_dir = find_best_run(byr=byr, delta=delta)
+    run_dir = get_run_dir(byr=byr, delta=delta)
     role = get_role(byr)
     # inputs
     d = unpickle(run_dir + '{}/{}.pkl'.format(TEST, role))

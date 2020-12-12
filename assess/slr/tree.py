@@ -1,6 +1,6 @@
 import argparse
 from assess.util import get_last, estimate_tree
-from agent.util import find_best_run
+from agent.util import get_run_dir
 from utils import load_data
 from agent.const import DELTA_SLR
 from constants import DAY, MAX_DAYS
@@ -15,7 +15,7 @@ def main():
                         choices=DELTA_SLR, required=True)
     delta = parser.parse_args().delta
 
-    run_dir = find_best_run(byr=False, delta=delta)
+    run_dir = get_run_dir(byr=False, delta=delta)
     data = load_data(part=TEST, run_dir=run_dir)
 
     for turn in [2, 4, 6]:

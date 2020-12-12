@@ -1,48 +1,31 @@
 import os
 from utils import unpickle, load_file, load_data, get_role, safe_reindex
 from constants import AGENT_DIR, IDX, SIM_DIR
-from featnames import SLR, BYR, NORM, AUTO, INDEX, THREAD, CON, \
-    LOOKUP, X_THREAD, X_OFFER, START_PRICE, ENTROPY, DELTA, DROPOUT, \
-    VALIDATION
+from featnames import SLR, BYR, NORM, AUTO, INDEX, THREAD, CON, TURN_COST, \
+    LOOKUP, X_THREAD, X_OFFER, START_PRICE, DELTA
 
 
 def get_log_dir(**kwargs):
-    role = BYR if kwargs[BYR] else SLR
-    log_dir = AGENT_DIR + '{}/delta_{}/'.format(role, kwargs[DELTA])
+    log_dir = AGENT_DIR + '{}/'.format(get_role(kwargs[BYR]))
     if not os.path.isdir(log_dir):
         os.makedirs(log_dir)
     return log_dir
 
 
-def get_paths(**kwargs):
-    # log directory
-    log_dir = get_log_dir(byr=kwargs[BYR], delta=kwargs[DELTA])
+def get_run_id(**kwargs):
+    run_id = '{}'.format(kwargs[DELTA])
+    if TURN_COST in kwargs and kwargs[TURN_COST] > 0:
+        run_id += '_{}'.format(kwargs[TURN_COST])
+    return run_id
 
-    # run id
-    d1, d2 = [int(elem * 10) for elem in kwargs[DROPOUT]]
-    run_id = '{}_{}_{}'.format(kwargs[ENTROPY], d1, d2)
-    if 'suffix' in kwargs and kwargs['suffix'] is not None:
-        run_id += '_{}'.format(kwargs['suffix'])
 
-    # concatenate
+def get_run_dir(**kwargs):
+    log_dir = get_log_dir(**kwargs)
+    run_id = get_run_id(**kwargs)
     run_dir = log_dir + 'run_{}/'.format(run_id)
-
-    return log_dir, run_id, run_dir
-
-
-def find_best_run(byr=None, delta=None, verbose=True):
-    delta = float(delta)
-    log_dir = get_log_dir(byr=byr, delta=delta)
-    path = log_dir + '{}.pkl'.format(VALIDATION)
-    if os.path.isfile(path):
-        norm = unpickle(path)[NORM]
-    else:
-        return None
-    run_id = norm[~norm.isna()].astype('float64').idxmax()
-    if verbose:
-        print('Best {} run for delta = {}: {}'.format(
-            get_role(byr), delta, run_id))
-    return log_dir + '{}/'.format(run_id)
+    if 'heuristic' in kwargs and kwargs['heuristic']:
+        run_dir += '{}/heuristic/'.format(kwargs['part'])
+    return run_dir
 
 
 def get_slr_valid(data=None):
@@ -68,10 +51,10 @@ def get_byr_agent(data=None):
     return data[X_THREAD].xs(1, level=THREAD, drop_level=False).index
 
 
-def only_byr_agent(data=None):
+def only_byr_agent(data=None, drop_thread=False):
     for k, v in data.items():
         if THREAD in v.index.names:
-            data[k] = v.xs(1, level=THREAD, drop_level=False)
+            data[k] = v.xs(1, level=THREAD, drop_level=drop_thread)
     return data
 
 

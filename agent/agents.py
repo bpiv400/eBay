@@ -14,9 +14,10 @@ from featnames import BYR
 
 
 class SplitCategoricalPgAgent(CategoricalPgAgent):
-    def __init__(self, serial=False, **kwargs):
+    def __init__(self, turn_cost=0, serial=False, **kwargs):
         super().__init__(**kwargs)
         self.serial = serial
+        self.turn_cost = turn_cost
 
     def __call__(self, observation, prev_action, prev_reward):
         model_inputs = self._model_inputs(observation, prev_action, prev_reward)
@@ -126,7 +127,7 @@ class SellerAgent(SplitCategoricalPgAgent):
         p, a, b = parse_value_params(value_params)
         zeros = torch.zeros_like(return_)
 
-        # no sale (and worth zero)
+        # no sale and worth zero
         idx0 = torch.isclose(return_, zeros) & valid
         lnL = torch.sum(torch.log(p[idx0, 0] + EPS))
 
@@ -166,13 +167,13 @@ class SellerAgent(SplitCategoricalPgAgent):
 class BuyerAgent(SplitCategoricalPgAgent):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.length = 2 - AGENT_CONS[1][1]  # length of [-1, .5]
-        self.max_return = self.length - 1
+        self.max_loss = self.turn_cost / 9.95 + 1
+        self.length = AGENT_CONS[1][1] + self.max_loss  # length of [-max_loss, .5]
 
     def _calculate_value(self, value_params):
         p, a, b = parse_value_params(value_params)
-        beta_mean = a / (a + b) * self.length - 1
-        v = p[:, 2] * self.max_return - p[:, 1] + p[:, -1] * beta_mean
+        beta_mean = a / (a + b) * self.length - self.max_loss
+        v = p[:, -1] * beta_mean
         return v
 
     def get_value_loss(self, value_params, return_, valid):
@@ -183,19 +184,11 @@ class BuyerAgent(SplitCategoricalPgAgent):
         idx0 = torch.isclose(return_, zeros) & valid
         lnL = torch.sum(torch.log(p[idx0, 0] + EPS))
 
-        # worth 0, sells for list price
-        idx1 = torch.isclose(return_, zeros - 1) & valid
-        lnL += torch.sum(torch.log(p[idx1, 1] + EPS))
-
-        # worth 1, sells for minimum offer
-        idx2 = torch.isclose(return_, zeros + self.max_return) & valid
-        lnL += torch.sum(torch.log(p[idx2, 2] + EPS))
-
         # intermediate outcome
-        idx_beta = ~idx0 & ~idx1 & ~idx2 & valid
+        idx_beta = ~idx0 & valid
         lnL += torch.sum(torch.log(p[idx_beta, -1] + EPS))
         dist = Beta(a[idx_beta], b[idx_beta])
-        norm_return = (return_[idx_beta] + 1) / self.length
+        norm_return = (return_[idx_beta] + self.max_loss) / self.length
         lnL += torch.sum(dist.log_prob(norm_return))
 
         return -lnL

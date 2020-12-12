@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from agent.util import find_best_run, load_valid_data, get_slr_valid
+from agent.util import get_run_dir, load_valid_data, get_slr_valid
 from assess.util import ll_wrapper, bin_plot
 from utils import topickle, load_data, safe_reindex
 from agent.const import DELTA_SLR
@@ -58,7 +58,7 @@ def main():
 
     # seller runs
     for delta in DELTA_SLR:
-        run_dir = find_best_run(byr=False, delta=delta)
+        run_dir = get_run_dir(byr=False, delta=delta)
         data = load_valid_data(part=TEST, run_dir=run_dir)
         feats = get_feats(data=data)
 

@@ -1,6 +1,6 @@
 import numpy as np
-from constants import DROPOUT_GRID, NUM_COMMON_CONS
-from featnames import BYR, DELTA, DROPOUT, ENTROPY
+from constants import NUM_COMMON_CONS
+from featnames import BYR, DELTA, TURN_COST
 from utils import load_feats
 
 # concessions for agent to use
@@ -12,11 +12,13 @@ for t in range(1, 7):
 AGENT_CONS[7] = np.concatenate([np.zeros(NUM_COMMON_CONS + 1), [1.]])
 
 # optimization parameters
-LR_POLICY = 1e-4
-LR_VALUE = 1e-3
-RATIO_CLIP = 0.1
-BATCH_SIZE = 4096
-STOP_ENTROPY = .1
+LR_POLICY = 1e-4        # learning rate for policy network
+LR_VALUE = 1e-3         # learning rate for value network
+RATIO_CLIP = 0.1        # for PPO
+BATCH_SIZE = 4096       # number of actions to collect per update
+ENTROPY_COEF = .01      # initial weight on entropy on objective function
+STOP_ENTROPY = .1       # stop when entropy reaches this value
+PERIOD_EPOCHS = 1500    # epoch count for stepping down entropy
 
 # state dictionaries
 AGENT_STATE = 'agent_state_dict'
@@ -30,15 +32,8 @@ DELTA_CHOICES = np.unique(DELTA_SLR + DELTA_BYR)
 AGENT_PARAMS = {BYR: dict(action='store_true'),
                 DELTA: dict(type=float,
                             choices=DELTA_CHOICES,
-                            default=DELTA_CHOICES[1])}
-
-HYPER_PARAMS = {ENTROPY: dict(type=float, default=.01),
-                DROPOUT: dict(type=int,
-                              default=0,
-                              choices=range(len(DROPOUT_GRID)))}
-
-# epoch count for stepping down entropy and stopping
-PERIOD_EPOCHS = 1500
+                            default=DELTA_CHOICES[1]),
+                TURN_COST: dict(type=int, default=0)}
 
 # names for opt_info namedtuple
 FIELDS = ["ActionsPerTraj", "ThreadsPerTraj", "DaysToDone",

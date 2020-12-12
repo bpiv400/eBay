@@ -1,4 +1,4 @@
-from agent.util import load_values, find_best_run, load_valid_data, \
+from agent.util import load_values, get_run_dir, load_valid_data, \
     get_norm_reward, get_slr_valid
 from assess.util import create_cdfs
 from utils import topickle, safe_reindex, load_data
@@ -14,7 +14,7 @@ def main():
 
     # value comparison
     for delta in DELTA_SLR:
-        run_dir = find_best_run(byr=False, delta=delta)
+        run_dir = get_run_dir(byr=False, delta=delta)
         data = load_valid_data(part=TEST, run_dir=run_dir)
         vals = load_values(part=TEST, delta=delta)
 

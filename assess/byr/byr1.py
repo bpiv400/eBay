@@ -2,7 +2,7 @@ import numpy as np
 from agent.util import only_byr_agent, load_valid_data
 from assess.util import ll_wrapper
 from utils import topickle
-from assess.const import POINTS
+from assess.const import NORM1_DIM_LONG
 from constants import PLOT_DIR
 from featnames import X_OFFER, X_THREAD, BYR_HIST, CON, INDEX, TEST
 
@@ -18,10 +18,10 @@ def main():
     assert np.all(con.index == hist.index)
     y, x = hist.values, con.values
 
-    mask = x > .33
-    dim = np.linspace(.4, 1, POINTS)
+    mask = x > .3
     line, dots, bw = ll_wrapper(y[mask], x[mask],
-                                dim=dim, discrete=[.5, 1])
+                                dim=NORM1_DIM_LONG,
+                                discrete=[.5, 1])
     d['response_hist'] = line, dots
     print('hist: {}'.format(bw[0]))
 

@@ -1,4 +1,4 @@
-from agent.util import get_byr_agent, load_values, find_best_run, \
+from agent.util import get_byr_agent, load_values, get_run_dir, \
     load_valid_data, get_sale_norm
 from assess.util import create_cdfs
 from utils import safe_reindex, topickle
@@ -58,7 +58,7 @@ def main():
     # values when buyer arrives
     for delta in DELTA_BYR:
         vals = load_values(part=TEST, delta=delta)
-        run_dir = find_best_run(byr=True, delta=delta)
+        run_dir = get_run_dir(byr=True, delta=delta)
         if run_dir is None:
             continue
         data = load_valid_data(part=TEST, run_dir=run_dir, byr=True)

@@ -47,7 +47,8 @@ def remove_leading_zero(x, pos):
 def save_fig(path, legend=True, legend_kwargs=None, reverse_legend=False,
              xlabel=None, ylabel=None, square=True, xaxis=True, yaxis=True,
              xticks=None, yticks=None, xticklabels=None, yticklabels=None,
-             xlim=None, ylim=None, gridlines=True, integer_xticks=False, logx=False):
+             xlim=None, ylim=None, gridlines=True, integer_xticks=False,
+             logx=False, legend_outside=False):
     name = get_name(path)
 
     # font size
@@ -61,17 +62,27 @@ def save_fig(path, legend=True, legend_kwargs=None, reverse_legend=False,
 
     # legend
     if legend:
+        handles, labels = plt.gca().get_legend_handles_labels()
+
+        if reverse_legend:
+            handles = reversed(handles)
+            labels = reversed(labels)
+
         if legend_kwargs is None:
             legend_kwargs = dict()
-        plt.legend(**legend_kwargs,
+        if legend_outside:
+            legend_kwargs['bbox_to_anchor'] = (1, 1)
+            legend_kwargs['loc'] = 'upper left'
+            legend_kwargs['frameon'] = False
+        else:
+            legend_kwargs['frameon'] = gridlines
+        plt.legend(handles=handles,
+                   labels=labels,
                    handlelength=1.,
                    fancybox=False,
-                   frameon=gridlines,
                    fontsize=fontsize,
-                   title_fontsize=fontsize)
-        if reverse_legend:
-            handles, labels = plt.gca().get_legend_handles_labels()
-            plt.gca().legend(reversed(handles), reversed(labels))
+                   title_fontsize=fontsize,
+                   **legend_kwargs)
 
     # axis labels and tick labels
     formatter = FuncFormatter(remove_leading_zero)
@@ -254,7 +265,7 @@ def cdf_plot(path, obj):
                     label = obj.columns[i]
                     plt.plot(s_agent.index, s_agent, ds='steps-post',
                              color=COLORS[i], label=label)
-                    save_fig('{}_{}'.format(path, label[10:13]),
+                    save_fig('{}_{}'.format(path, label[10:-1]),
                              ylim=[0, 1],
                              ylabel='Cumulative share of {}'.format(den),
                              legend=True, **args)
@@ -317,21 +328,11 @@ def simple_plot(path, obj):
                     xlabel='Days to first arrival',
                     ylabel='Days between first two arrivals',
                     legend_kwargs=dict(title='First offer'))
-    elif name in ['responds', 'autoacc', 'autorej', 'hours', 'manhours']:
-        ylim = None if 'hours' in name else [0, 1]
-        if name == 'responds':
-            ylabel = 'Pr(response)'
-        elif name == 'autoacc':
-            ylabel = 'Pr(auto-accept)'
-        elif name == 'autorej':
-            ylabel = 'Pr(auto-reject)'
-        elif name == 'hours':
-            ylabel = 'Hours to response'
-        else:
-            ylabel = 'Hours to response (excl. auto responses)'
-        args = dict(xlim=[.4, .9], ylim=ylim,
+    elif name == 'hours':
+        args = dict(xlim=[min(obj.index), max(obj.index)],
+                    ylim=[0, 9],
                     xlabel='Turn 1: Offer / list price',
-                    ylabel='Turn 2: {}'.format(ylabel))
+                    ylabel='Turn 2: Hours to response')
     else:
         raise NotImplementedError('Invalid name: {}'.format(name))
 
@@ -630,15 +631,20 @@ def bar_plot(path, obj):
     save_fig(path, xticklabels=obj.index, gridlines=False, **args)
 
 
-def draw_area(df, xlim=None, ylim=None):
-    df.plot.area(xlim=xlim, ylim=ylim, cmap=plt.get_cmap('plasma'))
+def area_plot(path, df):
+    name = get_name(path)
+    if name == 'response':
+        turn = path.split('_')[-1]
+        args = dict(xlim=[min(df.index), max(df.index)],
+                    ylim=[0, 1],
+                    xlabel='Turn {}: Offer / list price'.format(turn),
+                    ylabel='',
+                    legend_outside=True)
+    else:
+        raise NotImplementedError('Invalid name: {}'.format(name))
 
-
-def action_plot(path, df, turn=None):
-    draw_area(df, ylim=[0, 1])
-    save_fig(path, reverse_legend=True,
-             xlabel='{} offer as fraction of list price'.format(
-                 'Seller' if turn in IDX[BYR] else 'Buyer'))
+    df.plot.area(cmap=plt.get_cmap('plasma'))
+    save_fig(path, reverse_legend=True, **args)
 
 
 def draw_contour(s=None, inc=.01):
