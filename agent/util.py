@@ -91,7 +91,7 @@ def get_sale_norm(offers=None, drop_thread=True):
     sale_norm = slr_turn * (1. - sale_norm) + (1. - slr_turn) * sale_norm
     # restrict index levels
     sale_norm = sale_norm.droplevel(INDEX)
-    if drop_thread:
+    if drop_thread and THREAD in sale_norm.index.names:
         sale_norm = sale_norm.droplevel(THREAD)
     return sale_norm
 

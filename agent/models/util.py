@@ -1,13 +1,10 @@
 import numpy as np
 from agent.util import get_turn
-from utils import load_featnames
 from rlenv.const import TIME_FEATS, DAYS_IND, NORM_IND, AUTO_IND, EXP_IND
+from agent.models.const import DAYS_SINCE_START_IND, STORE_IND, START_PRICE_IND
 from agent.const import AGENT_CONS
 from constants import MAX_DAYS, IDX
-from featnames import LSTG, BYR, X_LSTG, STORE
-
-DAYS_SINCE_START_IND = -5
-STORE_IND = load_featnames(X_LSTG)[LSTG].index(STORE)
+from featnames import LSTG, BYR
 
 
 def wrapper(turn=None):
@@ -83,3 +80,7 @@ def get_elapsed(x=None, turn=None):
 
 def get_store(x=None):
     return bool(x[LSTG][STORE_IND].item())
+
+
+def get_start_price(x=None):
+    return x[LSTG][START_PRICE_IND].item()

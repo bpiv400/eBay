@@ -167,7 +167,7 @@ class SellerAgent(SplitCategoricalPgAgent):
 class BuyerAgent(SplitCategoricalPgAgent):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.max_loss = self.turn_cost / 9.95 + 1
+        self.max_loss = 3 * self.turn_cost / 9.95 + 1
         self.length = AGENT_CONS[1][1] + self.max_loss  # length of [-max_loss, .5]
 
     def _calculate_value(self, value_params):

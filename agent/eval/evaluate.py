@@ -7,13 +7,13 @@ from agent.eval.util import get_output_dir
 from utils import topickle, unpickle, compose_args, safe_reindex
 from agent.const import AGENT_PARAMS
 from constants import EPS
-from featnames import X_OFFER, TEST, AGENT_PARTITIONS, CON, LSTG, \
+from featnames import X_OFFER, TEST, AGENT_PARTITIONS, CON, THREAD, \
     LOOKUP, START_PRICE, INDEX, BYR, DELTA, TURN_COST
 
 
 def get_byr_return(data=None, values=None, turn_cost=None):
     data = only_byr_agent(data=data)
-    df = data[X_OFFER]
+    df = data[X_OFFER].droplevel(THREAD)
 
     # without turn cost penalty
     sale_norm = get_sale_norm(df)
@@ -21,13 +21,13 @@ def get_byr_return(data=None, values=None, turn_cost=None):
     norm = vals - sale_norm
     norm = norm.reindex(index=data[LOOKUP].index, fill_value=0)
     dollar = norm * data[LOOKUP][START_PRICE]
+    walk = df[CON].xs(1, level=INDEX) == 0
 
     # add in turn cost penalty
     if turn_cost > 0:
         con = df.loc[df.index.isin([1, 3, 5], level=INDEX), CON]
         is_con = (con > 0) & (con < 1)
-        penalty = (is_con.groupby(LSTG).sum() * turn_cost).reindex(
-            index=data[LOOKUP].index, fill_value=0)
+        penalty = is_con.groupby(is_con.index.names[:-1]).sum() * turn_cost
         dollar -= penalty
         norm -= penalty / data[LOOKUP][START_PRICE]
 
@@ -36,6 +36,10 @@ def get_byr_return(data=None, values=None, turn_cost=None):
     s['norm'] = norm.mean()
     s['dollar'] = dollar.mean()
     s['value'] = (norm / vals).mean()
+    s['offer_pct'] = 1 - walk.mean()
+    s['norm_offer'] = norm[~walk].mean()
+    s['dollar_offer'] = dollar[~walk].mean()
+    s['value_offer'] = (norm / vals)[~walk].mean()
     s['sold_pct'] = len(sale_norm.index) / len(data[LOOKUP].index)
     s['sale_norm'] = sale_norm.mean()
     return s
@@ -108,7 +112,9 @@ def main():
         output['Heuristic'] = f(data)
 
     # rewards from agent run
-    data = load_valid_data(part=params['part'], run_dir=run_dir, byr=params[BYR])
+    data = load_valid_data(part=params['part'],
+                           run_dir=run_dir,
+                           byr=params[BYR])
     if data is not None:
         output['Agent'] = f(data)
 
