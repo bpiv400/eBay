@@ -6,7 +6,7 @@ from utils import topickle
 from constants import CLEAN_DIR, FEATS_DIR, PARTS_DIR, PCTILE_DIR, START, SEED, \
     SHARES, NUM_CHUNKS, DAY, NUM_COMMON_CONS
 from featnames import START_PRICE, BYR_HIST, NORM, SLR, LSTG, THREAD, INDEX, \
-    CLOCK, CON, ACCEPT, REJECT, META, LEAF
+    CLOCK, CON, ACCEPT, REJECT, META, LEAF, SLR_BO_CT
 
 # data types for csv read
 OTYPES = {LSTG: 'int64',
@@ -283,9 +283,6 @@ def main():
     duration = (listings.end_time + 1) / DAY - listings.start_date
     listings['arrival_rate'] = arrivals / duration
 
-    # add start_price percentile
-    listings['start_price_pctile'] = series_to_pctiles(s=listings[START_PRICE])
-
     # convert fdbk_pstv to a rate
     listings.loc[listings.fdbk_score < 0, 'fdbk_score'] = 0
     listings.loc[:, 'fdbk_pstv'] = listings.fdbk_pstv / listings.fdbk_score
@@ -293,12 +290,13 @@ def main():
 
     # replace count and rate variables with percentiles
     listings.loc[:, 'arrival_rate'] = series_to_pctiles(s=listings['arrival_rate'])
-    for feat in ['fdbk_score', 'photos', 'slr_lstg_ct', 'slr_bo_ct']:
+    for feat in ['fdbk_score', 'photos', 'slr_lstg_ct', SLR_BO_CT, START_PRICE]:
         print(feat)
         pctiles = get_pctiles(listings[feat])
-        listings.loc[:, feat] = series_to_pctiles(
-            s=listings[feat], pctiles=pctiles)
         topickle(pctiles, PCTILE_DIR + '{}.pkl'.format(feat))
+        newfeat = '{}{}'.format(feat, '_pctile' if feat == START_PRICE else '')
+        listings.loc[:, newfeat] = series_to_pctiles(
+            s=listings[feat], pctiles=pctiles)
 
     # save listings
     topickle(listings, FEATS_DIR + 'listings.pkl')

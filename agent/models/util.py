@@ -1,10 +1,12 @@
 import numpy as np
 from agent.util import get_turn
+from utils import unpickle
 from rlenv.const import TIME_FEATS, DAYS_IND, NORM_IND, AUTO_IND, EXP_IND
-from agent.models.const import DAYS_SINCE_START_IND, STORE_IND, START_PRICE_IND
+from agent.models.const import DAYS_SINCE_START_IND, STORE_IND, \
+    START_PRICE_PCTILE_IND
 from agent.const import AGENT_CONS
-from constants import MAX_DAYS, IDX
-from featnames import LSTG, BYR
+from constants import MAX_DAYS, IDX, PCTILE_DIR
+from featnames import LSTG, BYR, START_PRICE
 
 
 def wrapper(turn=None):
@@ -83,4 +85,7 @@ def get_store(x=None):
 
 
 def get_start_price(x=None):
-    return x[LSTG][START_PRICE_IND].item()
+    p = x[LSTG][START_PRICE_PCTILE_IND].item()
+    s = unpickle(PCTILE_DIR + '{}.pkl'.format(START_PRICE))
+    price = s[np.isclose(s, p)].index[0]
+    return price
