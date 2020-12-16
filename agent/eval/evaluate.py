@@ -21,6 +21,7 @@ def get_byr_return(data=None, values=None, turn_cost=None):
     norm = vals - sale_norm
     norm = norm.reindex(index=data[LOOKUP].index, fill_value=0)
     dollar = norm * data[LOOKUP][START_PRICE]
+    norm_value = norm / vals
     walk = df[CON].xs(1, level=INDEX) == 0
 
     # add in turn cost penalty
@@ -35,12 +36,15 @@ def get_byr_return(data=None, values=None, turn_cost=None):
     s = pd.Series()
     s['norm'] = norm.mean()
     s['dollar'] = dollar.mean()
-    s['value'] = (norm / vals).mean()
-    s['offer_pct'] = 1 - walk.mean()
+    s['value'] = norm_value.mean()
     s['norm_offer'] = norm[~walk].mean()
     s['dollar_offer'] = dollar[~walk].mean()
-    s['value_offer'] = (norm / vals)[~walk].mean()
-    s['sold_pct'] = len(sale_norm.index) / len(data[LOOKUP].index)
+    s['value_offer'] = norm_value[~walk].mean()
+    s['offer_pct'] = 1 - walk.mean()
+    s['norm_sale'] = norm.loc[sale_norm.index].mean()
+    s['dollar_sale'] = dollar.loc[sale_norm.index].mean()
+    s['value_sale'] = norm_value.loc[sale_norm.index].mean()
+    s['sale_pct'] = len(sale_norm.index) / len(data[LOOKUP].index)
     s['sale_norm'] = sale_norm.mean()
     return s
 
@@ -75,6 +79,15 @@ def wrapper(values=None, **params):
                                  turn_cost=params[TURN_COST])
 
 
+def print_table(df):
+    cols = list(df.columns)
+    print(df[[c for c in cols if '_' not in c]])
+    for name in ['offer', 'sale']:
+        newdf = df[[c for c in cols if name in c]].rename(
+            lambda x: x.replace('_{}'.format(name), ''), axis=1)
+        print(newdf)
+
+
 def main():
     # parameters from command line
     parser = argparse.ArgumentParser()
@@ -89,7 +102,7 @@ def main():
         path = run_dir + '{}.pkl'.format(params['part'])
         if os.path.isfile(path):
             df = unpickle(path)
-            print(df)
+            print_table(df)
             exit()
 
     # preliminaries
@@ -120,8 +133,8 @@ def main():
 
     # save table
     df = pd.DataFrame.from_dict(output, orient=INDEX)
-    print(df)
     topickle(df, run_dir + '{}.pkl'.format(params['part']))
+    print_table(df)
 
 
 if __name__ == '__main__':

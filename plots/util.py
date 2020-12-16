@@ -499,6 +499,22 @@ def response_plot(path, obj):
         args = dict(xlim=[.4, .9], ylim=[0, 1],
                     xlabel='Turn 3: Offer / list price',
                     ylabel='Turn 5: Offer / list price')
+    elif name == 'norm2con3':
+        args = dict(xlim=[.4, 1], ylim=[0, 1],
+                    xlabel='Turn 2: Offer / list price',
+                    ylabel='Turn 3: Concession')
+    elif name == 'norm2con3':
+        args = dict(xlim=[.6, 1.01], ylim=[0, 1],
+                    xlabel='Turn 2: Offer / list price',
+                    ylabel='Turn 3: Concession')
+    elif name == 'norm2acc3':
+        args = dict(xlim=[.6, 1.01], ylim=[0, 1],
+                    xlabel='Turn 2: Offer / list price',
+                    ylabel='Turn 3: Pr(accept)')
+    elif name == 'norm2walk3':
+        args = dict(xlim=[.6, 1.01], ylim=[0, 1],
+                    xlabel='Turn 2: Offer / list price',
+                    ylabel='Turn 3: Pr(walk)')
     elif 'slrbo' in name:
         if name == 'expslrbo':
             ylabel = 'Expirations / manual rejects'
@@ -529,7 +545,7 @@ def response_plot(path, obj):
         if 'Data' in dsets:
             draw_response(line=line.xs('Data', level=0, axis=1),
                           dots=None if dots is None else dots.xs('Data', level=0, axis=1),
-                          diagonal=(NORM in name),
+                          diagonal=name.endswith(NORM),
                           connect=(name in ['slrrejrej', 'slrrejacc']))
             save_fig('{}_Data'.format(path), legend=False, **args)
 
@@ -537,7 +553,7 @@ def response_plot(path, obj):
             for dset in dsets:
                 draw_response(line=line.xs(dset, level=0, axis=1),
                               dots=None if dots is None else dots.xs(dset, level=0, axis=1),
-                              diagonal=(NORM in name),
+                              diagonal=name.endswith(NORM),
                               connect=(name in ['slrrejrej', 'slrrejacc']),
                               label=dset)
                 save_fig('{}_{}'.format(path, dset), legend=False, **args)
@@ -548,13 +564,13 @@ def response_plot(path, obj):
                 dset = dsets[i]
                 draw_response(line=line.xs(dset, level=0, axis=1),
                               dots=None if dots is None else dots.xs(dset, level=0, axis=1),
-                              diagonal=(NORM in name),
+                              diagonal=name.endswith(NORM),
                               label=dset, c=COLORS[i])
 
             save_fig(path, legend=True, **args)
 
     else:
-        draw_response(line=line, dots=dots, diagonal=(NORM in name))
+        draw_response(line=line, dots=dots, diagonal=name.endswith(NORM))
         save_fig(path, legend=False, **args)
 
 

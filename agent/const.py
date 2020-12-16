@@ -27,7 +27,7 @@ AGENT_STATE = 'agent_state_dict'
 DELTA_SLR = [0., .7]
 DELTA_BYR = [.7, .995]
 DELTA_CHOICES = np.unique(DELTA_SLR + DELTA_BYR)
-TURN_COST_CHOICES = [0, 1, 5]
+TURN_COST_CHOICES = list(range(6))
 
 # agent parameters
 AGENT_PARAMS = {BYR: dict(action='store_true'),

@@ -9,15 +9,12 @@ from featnames import TEST, X_OFFER, CON, INDEX, NORM
 
 
 def get_feats(data=None):
-    con1 = data[X_OFFER][CON].xs(1, level=INDEX)
-    con3 = data[X_OFFER][CON].xs(3, level=INDEX)
-    idx = con1[con1 == .5].index.intersection(con3.index)
-    con3 = con3.loc[idx]
-    norm2 = 1 - data[X_OFFER][NORM].xs(2, level=INDEX).loc[con3.index]
-    x = norm2.values
-    y = {'con': con3.values,
-         'acc': (con3 == 1).values,
-         'walk': (con3 == 0).values}
+    con5 = data[X_OFFER][CON].xs(5, level=INDEX)
+    norm4 = 1 - data[X_OFFER][NORM].xs(4, level=INDEX).loc[con5.index]
+    x = norm4.values
+    y = {'con': con5.values,
+         'acc': (con5 == 1).values,
+         'walk': (con5 == 0).values}
     return y, x
 
 
@@ -57,7 +54,7 @@ def main():
             d[key][0].loc[:, (col, 'beta')] = line
             d[key][1].loc[:, (col, 'beta')] = dots
 
-    topickle(d, PLOT_DIR + 'byr3.pkl')
+    topickle(d, PLOT_DIR + 'byr5.pkl')
 
 
 if __name__ == '__main__':

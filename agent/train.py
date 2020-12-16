@@ -5,7 +5,7 @@ from agent.RlTrainer import RlTrainer
 from agent.util import get_run_dir
 from utils import compose_args, set_gpu
 from agent.const import AGENT_PARAMS, DELTA_SLR, DELTA_BYR
-from featnames import BYR, DELTA, TURN_COST
+from featnames import BYR, DELTA
 
 
 def startup():
@@ -22,7 +22,6 @@ def startup():
         assert args[DELTA] in DELTA_BYR
     else:
         assert args[DELTA] in DELTA_SLR
-        assert args[TURN_COST] == 0
 
     if args['serial']:
         assert not args['log']

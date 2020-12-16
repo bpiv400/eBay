@@ -43,12 +43,9 @@ def main():
         y = pd.Series('', index=con.index)
         y.loc[con == 0] = 'Walk'
         y.loc[con == 1] = 'Accept'
-        if turn == 1:
-            y.loc[(con > 0) & (con <= .5)] = 'Low'
-            y.loc[(con < .5) & (con > 1)] = 'High'
-        else:
-            y.loc[(con > 0) & (con <= .25)] = 'Low'
-            y.loc[(con < 1) & (con > .25)] = 'High'
+        threshold = .5 if turn == 1 else .25
+        y.loc[(con > 0) & (con <= threshold)] = 'Low'
+        y.loc[(con > threshold) & (con < 1)] = 'High'
         print(np.unique(y))
 
         con_rate = con.groupby(con).count() / len(con)

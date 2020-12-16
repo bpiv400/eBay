@@ -49,12 +49,14 @@ class BuyerEnv(AgentEnv):
         """
         con = self.turn_from_action(turn=self.curr_event.turn,
                                     action=action)
+        if 0. < con < 1.:
+            self.num_actions += 1
+
         self.last_event = EventLog(priority=self.curr_event.priority,
                                    thread_id=self.curr_event.thread_id,
-                                   turn=self.curr_event.turn,
-                                   con=con)
+                                   turn=self.curr_event.turn)
+
         event_type = self.curr_event.type
-        self.num_actions += 1
         if event_type == FIRST_OFFER and con == 0:
             return self._step_arrival_delay()
         elif event_type == OFFER_EVENT or (event_type == FIRST_OFFER and con > 0):
@@ -134,13 +136,7 @@ class BuyerEnv(AgentEnv):
         Returns the buyer reward for the current turn.
         """
         # turn cost
-        if self.turn_cost > 0:
-            num_cons = (self.last_event.turn + 1) / 2
-            if self.last_event.con in [0, 1]:
-                num_cons -= 1
-            penalty = self.turn_cost * num_cons
-        else:
-            penalty = 0.
+        penalty = self.turn_cost * self.num_actions
 
         # no sale
         if self.outcome is None or not self.outcome.sale:

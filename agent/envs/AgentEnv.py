@@ -15,7 +15,7 @@ from featnames import BYR_HIST, START_PRICE, BYR, SLR, DELTA, TRAIN_RL, TURN_COS
 
 Info = namedarraytuple("Info", ["days", "max_return", "num_actions", "num_threads",
                                 "turn", "thread_id", "priority", "agent_sale"])
-EventLog = namedtuple("EventLog", ["priority", "thread_id", "turn", "con"])
+EventLog = namedtuple("EventLog", ["priority", "thread_id", "turn"])
 
 
 class AgentEnv(EBayEnv, Env):

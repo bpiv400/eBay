@@ -52,16 +52,19 @@ class SellerEnv(AgentEnv):
         :param action: int returned from agents
         :return: tuple described in rlenv
         """
+        con = self.turn_from_action(turn=self.curr_event.turn,
+                                    action=action)
+        if con < 1:  # active rejections and concessions count as actions
+            self.num_actions += 1
+
         self.last_event = EventLog(priority=self.curr_event.priority,
                                    thread_id=self.curr_event.thread_id,
                                    turn=self.curr_event.turn)
-        con = self.turn_from_action(turn=self.curr_event.turn,
-                                    action=action)
+
         if self.verbose:
             print('AGENT TURN: con: {}'.format(con))
 
         # execute offer
-        self.num_actions += 1
         if con <= 1:
             con_outcomes = get_con_outcomes(con=con,
                                             sources=self.curr_event.sources(),
@@ -117,13 +120,18 @@ class SellerEnv(AgentEnv):
         if self.outcome is None:
             return 0, False
 
-        # item does not sell
-        value = self.values.loc[self.loader.lstg]
-        if not self.outcome.sale:
-            return self.delta * value, False
+        # calculate penalty
+        penalty = self.turn_cost * self.num_actions
 
-        # item does sell
-        return self.outcome.price, True
+        # item does not sell
+        if not self.outcome.sale:
+            value = self.values.loc[self.loader.lstg]
+            return self.delta * value - penalty, False
+
+        # item sells
+        if self.verbose:
+            print('Sale price: ${0:.2f}.'.format(self.outcome.price))
+        return self.outcome.price - penalty, True
 
     @property
     def horizon(self):
