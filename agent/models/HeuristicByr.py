@@ -29,11 +29,16 @@ class HeuristicByr:
                 idx = f(.5)
             elif self.turn_cost == 1:
                 idx = f(.5)
-            elif self.turn_cost == 5:
-                start_price = get_start_price(x)
-                idx = f(0) if start_price < 72 else f(.5)
             else:
-                raise RuntimeError("")
+                start_price = get_start_price(x)
+                if self.turn_cost == 3:
+                    idx = f(0) if start_price <= 45 else f(.5)
+                elif self.turn_cost == 4:
+                    idx = f(0) if start_price <= 60 else f(.5)
+                elif self.turn_cost == 5:
+                    idx = f(0) if start_price < 72 else f(.5)
+                else:
+                    raise RuntimeError("")
 
         elif turn == 3:
             if not self.high:
@@ -43,6 +48,12 @@ class HeuristicByr:
                 idx = f(.4) if auto else f(.17)
             elif self.turn_cost == 1:
                 idx = f(.4)
+            elif self.turn_cost == 3:
+                auto = get_last_auto(x=x, turn=turn)
+                idx = f(.4) if auto else f(0)
+            elif self.turn_cost == 4:
+                auto = get_last_auto(x=x, turn=turn)
+                idx = f(0) if auto else f(.25)
             elif self.turn_cost == 5:
                 norm = get_last_norm(turn=turn, x=x)
                 idx = f(0) if norm >= .855 else f(.4)
@@ -56,6 +67,11 @@ class HeuristicByr:
                 idx = f(.4)
             elif self.turn_cost == 1:
                 idx = f(.4)
+            elif self.turn_cost == 3:
+                auto = get_last_auto(x=x, turn=turn)
+                idx = f(.4) if auto else f(.17)
+            elif self.turn_cost == 4:
+                idx = f(.25)
             elif self.turn_cost == 5:
                 norm = get_last_norm(turn=turn, x=x)
                 idx = f(.4) if norm > .79 else f(1)
@@ -71,6 +87,10 @@ class HeuristicByr:
                     tau = .91
                 elif self.turn_cost == 1:
                     tau = .91
+                elif self.turn_cost == 3:
+                    tau = .91
+                elif self.turn_cost == 4:
+                    tau = .83
                 elif self.turn_cost == 5:
                     tau = .86
                 else:

@@ -1,13 +1,13 @@
 import argparse
 import numpy as np
 import pandas as pd
-from agent.util import get_run_dir, get_byr_agent
+from agent.util import get_run_dir, only_byr_agent, load_valid_data
 from assess.util import estimate_tree
-from utils import load_data, load_feats, safe_reindex, compose_args
+from utils import load_feats, safe_reindex, compose_args
 from agent.const import AGENT_PARAMS
 from constants import DAY, MAX_DAYS, IDX
 from featnames import LOOKUP, CON, NORM, START_PRICE, START_TIME, \
-    BYR_HIST, X_OFFER, X_THREAD, INDEX, CLOCK, THREAD, TEST, BYR, AUTO, EXP, MSG
+    BYR_HIST, X_OFFER, X_THREAD, INDEX, CLOCK, TEST, BYR, AUTO, EXP, MSG
 
 LISTING_FEATS = ['fdbk_score', 'fdbk_pstv', 'photos', 'store', 'slr_us', 'fast']
 
@@ -20,16 +20,14 @@ def main():
     assert params[BYR]
 
     run_dir = get_run_dir(**params)
-    data = load_data(part=TEST, run_dir=run_dir)
+    data = load_valid_data(part=TEST, run_dir=run_dir, byr=True)
 
     # add listing features to data
     listings = load_feats('listings')[LISTING_FEATS]
     data['listings'] = safe_reindex(listings, idx=data[LOOKUP].index)
 
     # restrict to byr agent
-    threads = get_byr_agent(data)
-    for k, v in data.items():
-        data[k] = safe_reindex(v, idx=threads).droplevel(THREAD)
+    data = only_byr_agent(data)
 
     for turn in IDX[BYR]:
         print('Turn {}'.format(turn))

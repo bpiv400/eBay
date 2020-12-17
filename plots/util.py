@@ -333,6 +333,18 @@ def simple_plot(path, obj):
                     ylim=[0, 9],
                     xlabel='Turn 1: Offer / list price',
                     ylabel='Turn 2: Hours to response')
+    elif name == 'norm2con3':
+        args = dict(xlim=[.6, 1], ylim=[0, 1],
+                    xlabel='Turn 2: Offer / list price',
+                    ylabel='Turn 3: Concession')
+    elif name == 'norm2acc3':
+        args = dict(xlim=[.6, 1], ylim=[0, 1],
+                    xlabel='Turn 2: Offer / list price',
+                    ylabel='Turn 3: Pr(accept)')
+    elif name == 'norm2walk3':
+        args = dict(xlim=[.6, 1], ylim=[0, 1],
+                    xlabel='Turn 2: Offer / list price',
+                    ylabel='Turn 3: Pr(walk)')
     else:
         raise NotImplementedError('Invalid name: {}'.format(name))
 
@@ -360,14 +372,18 @@ def simple_plot(path, obj):
 
     else:
         dsets = obj.columns.get_level_values(0).unique()
+        colors = COLORS if dsets[0] == 'Humans' else COLORS[1:]
         for i in range(len(dsets)):
             dset = dsets[i]
             df_i = obj.xs(dset, level=0, axis=1)
-            plt.plot(df_i.index, df_i.beta, '-', color=COLORS[i+1], label=dset)
-            plt.plot(df_i.index, df_i.beta + 1.96 * df_i.err, '--', color=COLORS[i+1])
-            plt.plot(df_i.index, df_i.beta - 1.96 * df_i.err, '--', color=COLORS[i+1])
+            plt.plot(df_i.index, df_i.beta, '-', color=colors[i], label=dset)
+            if 'err' in df_i.columns:
+                plt.plot(df_i.index, df_i.beta + 1.96 * df_i.err, '--',
+                         color=colors[i])
+                plt.plot(df_i.index, df_i.beta - 1.96 * df_i.err, '--',
+                         color=colors[i])
 
-        if NORM in name:
+        if name.endswith(NORM):
             add_diagonal(obj)
 
         save_fig(path, legend=True, **args)
@@ -503,18 +519,6 @@ def response_plot(path, obj):
         args = dict(xlim=[.4, 1], ylim=[0, 1],
                     xlabel='Turn 2: Offer / list price',
                     ylabel='Turn 3: Concession')
-    elif name == 'norm2con3':
-        args = dict(xlim=[.6, 1.01], ylim=[0, 1],
-                    xlabel='Turn 2: Offer / list price',
-                    ylabel='Turn 3: Concession')
-    elif name == 'norm2acc3':
-        args = dict(xlim=[.6, 1.01], ylim=[0, 1],
-                    xlabel='Turn 2: Offer / list price',
-                    ylabel='Turn 3: Pr(accept)')
-    elif name == 'norm2walk3':
-        args = dict(xlim=[.6, 1.01], ylim=[0, 1],
-                    xlabel='Turn 2: Offer / list price',
-                    ylabel='Turn 3: Pr(walk)')
     elif 'slrbo' in name:
         if name == 'expslrbo':
             ylabel = 'Expirations / manual rejects'
@@ -635,6 +639,8 @@ def bar_plot(path, obj):
         args = dict(xlabel='Turn', ylabel='Pr(reject)')
     elif name == EXP:
         args = dict(xlabel='Turn', ylabel='Pr(expire)')
+    elif name == 'saleturn':
+        args = dict(xlabel='Turn', ylabel='Share of sales')
     else:
         raise NotImplementedError('Invalid name: {}'.format(name))
 

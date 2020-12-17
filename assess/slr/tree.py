@@ -1,7 +1,8 @@
 import argparse
+import pandas as pd
 from assess.util import get_last, estimate_tree
-from agent.util import get_run_dir
-from utils import load_data, compose_args
+from agent.util import get_run_dir, load_valid_data
+from utils import compose_args
 from agent.const import AGENT_PARAMS
 from constants import DAY, MAX_DAYS
 from featnames import LOOKUP, AUTO, CON, NORM, START_PRICE, START_TIME, \
@@ -16,7 +17,7 @@ def main():
     assert not params[BYR]
 
     run_dir = get_run_dir(**params)
-    data = load_data(part=TEST, run_dir=run_dir)
+    data = load_valid_data(part=TEST, run_dir=run_dir, byr=False)
 
     for turn in [2, 4, 6]:
         print('Turn {}'.format(turn))
@@ -27,10 +28,15 @@ def main():
 
         # outcome
         con = data[X_OFFER].loc[idx, CON]
-        y = ((0 < con) & (con < 1)) + 2 * (con == 1)
+        y = pd.Series('', index=con.index)
+        y.loc[con == 0] = 'Reject'
+        y.loc[con == 1] = 'Accept'
+        y.loc[con == .5] = 'Half'
+        y.loc[(con > 0) & (con < .5)] = 'Low'
+        y.loc[(con > .5) & (con < 1)] = 'High'
+        print(list(y.unique()))
 
         con_rate = con.groupby(con).count() / len(con)
-        con_rate = con_rate[con_rate > .01]
         print(con_rate)
 
         # features
@@ -42,7 +48,7 @@ def main():
         X = X.join(data[LOOKUP][START_PRICE])
 
         # decision tree
-        estimate_tree(X=X, y=y)
+        estimate_tree(X=X, y=y, max_depth=2)
 
 
 if __name__ == '__main__':

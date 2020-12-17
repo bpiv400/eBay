@@ -22,17 +22,15 @@ def get_feats(data=None):
 
 
 def main():
-    d, bw = dict(), dict()
+    d = dict()
 
     data = only_byr_agent(load_valid_data(part=TEST, byr=True))
     y, x = get_feats(data)
 
     for k, v in y.items():
-        line, dots, bw[k] = ll_wrapper(v, x, dim=NORM2_DIM_LONG, discrete=[1])
+        line, _ = ll_wrapper(v, x, dim=NORM2_DIM_LONG, bw=(.05,))
         line.columns = pd.MultiIndex.from_product([['Humans'], line.columns])
-        dots.columns = pd.MultiIndex.from_product([['Humans'], dots.columns])
-        d['response_norm2{}3'.format(k)] = line, dots
-        print('{}: {}'.format(k, bw[k][0]))
+        d['simple_norm2{}3'.format(k)] = line
 
     for turn_cost in TURN_COST_CHOICES:
         col = '${}'.format(turn_cost)
@@ -47,15 +45,9 @@ def main():
 
         for k, v in y.items():
             print('{}: {}'.format(col, k))
-            key = 'response_norm2{}3'.format(k)
-            line, dots, _ = ll_wrapper(v, x,
-                                       dim=NORM2_DIM_LONG,
-                                       discrete=[1],
-                                       bw=bw[k],
-                                       ci=False)
-
-            d[key][0].loc[:, (col, 'beta')] = line
-            d[key][1].loc[:, (col, 'beta')] = dots
+            key = 'simple_norm2{}3'.format(k)
+            line, _ = ll_wrapper(v, x, dim=NORM2_DIM_LONG, bw=(.05,), ci=False)
+            d[key].loc[:, (col, 'beta')] = line
 
     topickle(d, PLOT_DIR + 'byr3.pkl')
 

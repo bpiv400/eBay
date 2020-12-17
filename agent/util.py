@@ -15,7 +15,7 @@ def get_log_dir(**kwargs):
 def get_run_id(**kwargs):
     if TURN_COST not in kwargs:
         kwargs[TURN_COST] = 0
-    run_id = '{}_{}'.format(kwargs[DELTA], kwargs[TURN_COST])
+    run_id = '{}_{}'.format(float(kwargs[DELTA]), kwargs[TURN_COST])
     return run_id
 
 
@@ -34,7 +34,7 @@ def get_slr_valid(data=None):
     s = valid.groupby(valid.index.names).sum()
     lstg_sim = s[s > 0].index
     for k, v in data.items():
-        data[k] = safe_reindex(v, idx=lstg_sim)
+        data[k] = safe_reindex(v, idx=lstg_sim).reorder_levels(v.index.names)
     return data
 
 
