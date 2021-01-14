@@ -7,7 +7,7 @@ from agent.eval.util import get_output_dir, sim_args
 from agent.util import get_run_dir
 from rlenv.generate.util import process_sims
 from utils import topickle, run_func_on_chunks, process_chunk_worker
-from featnames import BYR, DELTA
+from featnames import BYR
 
 
 def main():

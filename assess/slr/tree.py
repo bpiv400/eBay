@@ -48,7 +48,7 @@ def main():
         X = X.join(data[LOOKUP][START_PRICE])
 
         # decision tree
-        estimate_tree(X=X, y=y, max_depth=2)
+        estimate_tree(X=X, y=y)
 
 
 if __name__ == '__main__':

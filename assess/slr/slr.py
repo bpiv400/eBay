@@ -4,9 +4,10 @@ from assess.util import merge_dicts, cdf_days, cdf_sale, norm_dist, \
 from agent.util import get_run_dir, load_valid_data
 from utils import topickle
 from agent.const import DELTA_SLR
+from assess.const import SLR_NAMES
 from constants import PLOT_DIR, IDX
-from featnames import ARRIVAL, DELAY, CON, X_OFFER, X_THREAD, TEST, AUTO, INDEX, \
-    NORM, SLR, REJECT
+from featnames import ARRIVAL, DELAY, CON, X_OFFER, X_THREAD, TEST, AUTO, \
+    INDEX, NORM, SLR, REJECT
 
 
 def reject_rate(offers=None):
@@ -51,18 +52,17 @@ def main():
 
     # observed
     data_obs = load_valid_data(part=TEST, byr=False, lstgs=lstgs)
-    d = collect_outputs(data=data_obs, name='Data')
+    d = collect_outputs(data=data_obs, name='Humans')
 
     # seller runs
     for delta in DELTA_SLR:
         run_dir = get_run_dir(byr=False, delta=delta)
         data_rl = load_valid_data(part=TEST, run_dir=run_dir, lstgs=lstgs)
-        d_rl = collect_outputs(data=data_rl,
-                               name='$\\delta = {}$'.format(delta))
+        d_rl = collect_outputs(data=data_rl, name=SLR_NAMES[delta])
         d = merge_dicts(d, d_rl)
 
     # save
-    topickle(d, PLOT_DIR + '{}.pkl'.format(SLR, suffix))
+    topickle(d, PLOT_DIR + 'slr_{}.pkl'.format(suffix))
 
 
 if __name__ == '__main__':

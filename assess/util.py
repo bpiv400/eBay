@@ -335,9 +335,7 @@ def estimate_tree(X=None, y=None, max_depth=1, criterion='entropy'):
 
 
 def bin_plot(y=None, x1=None, x2=None, bw=None):
-    mask = x1 < .9
-    s, bw = kreg2(y=y[mask], x1=x1[mask], x2=x2[mask],
-                  mesh=NORM1_BIN_MESH, bw=bw)
+    s, bw = kreg2(y=y, x1=x1, x2=x2, mesh=NORM1_BIN_MESH, bw=bw)
     print('bin: {}'.format(bw))
     return s, bw
 

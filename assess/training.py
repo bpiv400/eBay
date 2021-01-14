@@ -39,8 +39,9 @@ def get_roc():
     # check for doubles
     assert len(s.index) == len(s.index.unique())
 
-    # print auc
-    print('Discriminator AUC: {}'.format(get_auc(s)))
+    # print accuracy and auc
+    print('Accuracy: {}'.format(((p >= .5) == y).mean()))
+    print('AUC: {}'.format(get_auc(s)))
 
     return s
 

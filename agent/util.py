@@ -34,7 +34,9 @@ def get_slr_valid(data=None):
     s = valid.groupby(valid.index.names).sum()
     lstg_sim = s[s > 0].index
     for k, v in data.items():
-        data[k] = safe_reindex(v, idx=lstg_sim).reorder_levels(v.index.names)
+        data[k] = safe_reindex(v, idx=lstg_sim)
+        if k == X_OFFER:
+            data[k] = data[k].reorder_levels(v.index.names)
     return data
 
 

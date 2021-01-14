@@ -50,7 +50,6 @@ def get_byr_return(data=None, values=None, turn_cost=None):
 
 
 def get_slr_return(data=None, values=None, turn_cost=None):
-    # TODO: implement turn cost for seller
     assert values.max() <= 1 + EPS
     sale_norm, cont_value = get_norm_reward(data=data, values=values)
     norm = pd.concat([sale_norm, cont_value]).sort_index()
@@ -85,7 +84,8 @@ def print_table(df):
     for name in ['offer', 'sale']:
         newdf = df[[c for c in cols if name in c]].rename(
             lambda x: x.replace('_{}'.format(name), ''), axis=1)
-        print(newdf)
+        if len(newdf.columns) > 0:
+            print(newdf)
 
 
 def main():

@@ -36,7 +36,7 @@ AGENT_DIR = OUTPUT_DIR + 'agent/'               # agents logs and models
 DATE_FEATS_PATH = FEATS_DIR + 'date_feats.pkl'
 META_PATH = CLEAN_DIR + 'meta.csv'
 
-FIG_DIR = os.path.expanduser('~/eBay/figures/')  # for saving figures
+FIG_DIR = os.path.expanduser('~/Dropbox/eBay/figures/')  # for saving figures
 
 # for splitting data
 SHARES = {TRAIN_MODELS: 0.75, TRAIN_RL: 0.1, VALIDATION: 0.05}
