@@ -1,13 +1,14 @@
 import os
 import pandas as pd
-from compress_pickle import dump
-from processing.util import collect_date_clock_feats, \
-    get_days_delay, get_norm
-from utils import is_split, load_file
-from constants import IDX, SLR, MONTH
-from featnames import DAYS, DELAY, CON, SPLIT, NORM, REJECT, AUTO, EXP, \
-    CENSORED, CLOCK_FEATS, TIME_FEATS, OUTCOME_FEATS, MONTHS_SINCE_LSTG, \
-    BYR_HIST, START_TIME
+from inputs.agents import process_inputs
+from inputs.util import convert_x_to_numpy
+from processing.util import collect_date_clock_feats, get_days_delay, get_norm, \
+    get_common_cons
+from utils import topickle, load_file, get_role
+from constants import IDX, DAY, MAX_DAYS
+from featnames import DAYS, DELAY, CON, COMMON, NORM, REJECT, AUTO, EXP, \
+    CLOCK_FEATS, TIME_FEATS, OUTCOME_FEATS, DAYS_SINCE_LSTG, INDEX, \
+    BYR_HIST, START_TIME, LOOKUP, SLR, X_THREAD, X_OFFER, CLOCK
 
 
 def diff_tf(df):
@@ -21,65 +22,43 @@ def diff_tf(df):
         diff = wide.diff(axis=1).stack()
         df[c] = pd.concat([first, diff], axis=0).sort_index()
         assert df[c].isna().sum() == 0
-    # censored feats to 0
-    df.loc[df[CENSORED], TIME_FEATS] = 0
     return df
 
 
-def process_sim_offers(df, end_time):
+def process_sim_offers(df=None):
     # difference time features
     df = diff_tf(df)
-    # censor timestamps
-    ts = df.clock.to_frame().join(end_time.rename('end'))
-    ts = ts.reorder_levels(df.index.names)
-    clock = ts.min(axis=1)
     # clock features
+    clock = df[CLOCK]
+    df.drop(CLOCK, axis=1, inplace=True)
     df = df.join(collect_date_clock_feats(clock))
     # days and delay
     df[DAYS], df[DELAY] = get_days_delay(clock.unstack())
     # concession as a decimal
     df.loc[:, CON] /= 100
     # indicator for split
-    df[SPLIT] = df[CON].apply(lambda x: is_split(x))
+    df[COMMON] = get_common_cons(df[CON])
     # total concession
     df[NORM] = get_norm(df[CON])
     # reject auto and exp are last
     df[REJECT] = df[CON] == 0
-    df[AUTO] = (df[DELAY] == 0) & df.index.isin(IDX[SLR], level='index')
-    df[EXP] = (df[DELAY] == 1) | df[CENSORED]
+    df[AUTO] = (df[DELAY] == 0) & df.index.isin(IDX[SLR], level=INDEX)
+    df[EXP] = df[DELAY] == 1
     # select and sort features
     df = df.loc[:, CLOCK_FEATS + TIME_FEATS + OUTCOME_FEATS]
     return df, clock
 
 
-def process_sim_threads(df, start_time):
+def process_sim_threads(df=None, lstg_start=None):
     # convert clock to months_since_lstg
-    df = df.join(start_time)
-    df[MONTHS_SINCE_LSTG] = (df.clock - df.start_time) / MONTH
-    df = df.drop(['clock', 'start_time'], axis=1)
+    df = df.join(lstg_start)
+    df[DAYS_SINCE_LSTG] = (df[CLOCK] - df[START_TIME]) / DAY
+    assert df[DAYS_SINCE_LSTG].max() < MAX_DAYS
+    df = df.drop([CLOCK, START_TIME], axis=1)
     # reorder columns to match observed
-    df = df.loc[:, [MONTHS_SINCE_LSTG, BYR_HIST]]
+    thread_cols = [DAYS_SINCE_LSTG, BYR_HIST]
+    df = df.loc[:, thread_cols]
     return df
-
-
-def clean_components(threads, offers, lstg_start):
-    # output dictionary
-    d = dict()
-
-    # index of 'lstg' or ['lstg', 'sim']
-    idx = threads.reset_index('thread', drop=True).index.unique()
-
-    # end of listing
-    sale_time = offers.loc[offers[CON] == 100, 'clock'].reset_index(
-        level=['thread', 'index'], drop=True)
-    lstg_end = sale_time.reindex(index=idx, fill_value=-1)
-    lstg_end.loc[lstg_end == -1] += lstg_start + MONTH
-
-    # conform to observed inputs
-    d['x_thread'] = process_sim_threads(threads, lstg_start)
-    d['x_offer'], d['clock'] = process_sim_offers(offers, lstg_end)
-
-    return d
 
 
 def concat_sim_chunks(sims):
@@ -89,31 +68,42 @@ def concat_sim_chunks(sims):
     :return tuple (threads, offers): dataframes of threads and offers.
     """
     # collect chunks
-    threads, offers = [], []
+    data = {}
     for sim in sims:
-        threads.append(sim['threads'])
-        offers.append(sim['offers'])
+        for k, v in sim.items():
+            if k not in data:
+                data[k] = []
+            data[k].append(v)
     # concatenate
-    threads = pd.concat(threads, axis=0).sort_index()
-    offers = pd.concat(offers, axis=0).sort_index()
-    return threads, offers
+    for k, v in data.items():
+        data[k] = pd.concat(v, axis=0).sort_index()
+    return data
 
 
-def process_sims(part=None, sims=None, parent_dir=None):
+def process_sims(part=None, sims=None, output_dir=None,
+                 byr=None, save_inputs=True):
     # concatenate chunks
-    threads, offers = concat_sim_chunks(sims)
-    lstg_start = load_file(part, 'lookup', agent=True)[START_TIME]
+    data = concat_sim_chunks(sims)
+
     # create output dataframes
-    d = clean_components(threads, offers, lstg_start)
+    d = dict()
+    d[LOOKUP] = load_file(part, LOOKUP)
+    d[X_THREAD] = process_sim_threads(df=data[X_THREAD],
+                                      lstg_start=d[LOOKUP][START_TIME])
+    d[X_OFFER], d[CLOCK] = process_sim_offers(df=data[X_OFFER])
 
     # create directory if it doesn't exist
-    folder = parent_dir + '{}/'.format(part)
-    if os.path.isdir(folder):
-        os.mkdir(folder)
+    if not os.path.isdir(output_dir):
+        os.makedirs(output_dir)
 
     # save
     for k, df in d.items():
-        path = folder + '{}.gz'.format(k)
-        suffix = '_sim' if os.path.isfile(path) else ''
-        dump(df, folder + '{}{}.gz'.format(k, suffix))
+        if k != LOOKUP:
+            topickle(df, output_dir + '{}.pkl'.format(k))
 
+    # model inputs for agent logs
+    if byr is not None and save_inputs:
+        inputs = process_inputs(data=d, byr=byr, agent=True)
+        convert_x_to_numpy(x=inputs['x'], idx=inputs['y'].index)
+        inputs['y'] = inputs['y'].to_numpy()
+        topickle(inputs, output_dir + '{}.pkl'.format(get_role(byr)))

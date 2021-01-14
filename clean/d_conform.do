@@ -1,5 +1,5 @@
 clear all
-cd ~/weka/eBay
+cd /data/eBay/
 use dta/bins
 
 * recode accepts and rejects
@@ -47,16 +47,35 @@ by lstg thread: egen byte temp2 = min(temp)
 drop if index > temp2
 drop check temp*
 
-* delete activity after 31 days
+* delete activity after a week
 
 merge m:1 lstg using dta/listings, nogen keep(3) keepus(*_date)
 format clock %tc
 
-replace end_date = start_date + 30 if end_date > start_date + 30
+replace end_date = start_date + 7 if end_date > start_date + 7
 g double new_end_time = clock(string(end_date, "%td") + " 23:59:59", "DMYhms")
 replace end_time = new_end_time if end_time > new_end_time
 drop new_end_time *_date
 drop if clock > end_time
+
+* add expired rejects when seller does not return
+
+sort lstg thread index
+by lstg thread: g byte check = !accept & !reject & _n == _N & mod(index,2) == 1 & index < 7
+expand 2*check, gen(copy)
+drop check
+
+replace index = index + 1 if copy
+replace reject = 1 if copy
+replace message = . if copy
+
+sort lstg thread index
+by lstg thread: replace clock = clock[_n-1] + 48 * 3600 * 1000 if copy
+by lstg thread: replace price = price[_n-2] if copy
+by lstg thread: replace price = start_price if copy & _n == 2
+
+drop if clock > end_time
+drop copy
 
 * add expired rejects when buyer does not return
 
@@ -70,28 +89,10 @@ replace reject = 1 if copy
 replace message = . if copy
 
 sort lstg thread index
-by lstg thread: replace clock = min(end_time, clock[_n-1] + 48 * 3600 * 1000) if copy
+by lstg thread: replace clock = clock[_n-1] + 48 * 3600 * 1000 if copy
 by lstg thread: replace price = price[_n-2] if copy
 
-g byte censored = copy & clock == end_time
-drop copy
-
-* add expired rejects when listing ends or sells on different thread
-
-by lstg thread: g byte check = !accept & _n == _N & mod(index,2) == 1 & price != price[_n-2]
-expand 2*check, gen(copy)
-drop check
-
-replace index = index + 1 if copy
-replace reject = 1 if copy
-replace message = . if copy
-
-sort lstg thread index
-by lstg thread: replace clock = end_time if copy
-by lstg thread: replace price = price[_n-2] if copy & index > 2
-by lstg thread: replace price = start_price if copy & index == 2
-
-replace censored = 1 if copy
+drop if clock > end_time
 drop copy
 
 * renumber threads

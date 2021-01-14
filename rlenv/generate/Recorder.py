@@ -1,31 +1,21 @@
 import numpy as np
 import pandas as pd
-from constants import MONTH
-from featnames import (START_TIME, START_PRICE, TIME_FEATS,
-                       MSG, CON, LSTG, BYR_HIST, ACC_PRICE,
-                       DEC_PRICE)
-from rlenv.const import ARRIVAL, RL_ARRIVAL_EVENT
+from rlenv.events.Thread import Thread
+from rlenv.const import FIRST_OFFER
+from constants import MAX_DELAY_ARRIVAL
+from featnames import START_TIME, START_PRICE, TIME_FEATS, MSG, CON, \
+    LSTG, SIM, THREAD, INDEX, BYR_HIST, DEC_PRICE, ACC_PRICE, CLOCK, \
+    X_THREAD, X_OFFER
 
-# variable names
-INDEX = 'index'
-VAL = 'value'
-THREAD = 'thread'
-CLOCK = 'clock'
-SE = 'se'
-AVG_PRICE = 'avg_price'
-NUM_SALES = 'num_sales'
-P_SALE = 'p_sale'
-CUT = 'cut'
-CENSOR = 'censored'
+OFFER_COLS = [LSTG, SIM, THREAD, INDEX, CLOCK, CON, MSG] + TIME_FEATS
+THREAD_COLS = [LSTG, SIM, THREAD, BYR_HIST, CLOCK]
+INDEX_COLS = [LSTG, SIM, THREAD, INDEX]
 
-# for discriminator
-OFFER_COLS = [LSTG, THREAD, INDEX, CLOCK, CON, MSG, CENSOR] + TIME_FEATS
-THREAD_COLS = [LSTG, THREAD, BYR_HIST, CLOCK]
-INDEX_COLS = {False: ['lstg', 'thread', 'index'],
-              True: ['lstg', 'sim', 'thread', 'index']}
-
-# for values
-VAL_COLS = [LSTG, VAL, SE, AVG_PRICE, NUM_SALES, P_SALE, CUT]
+DTYPES = {LSTG: np.int32, SIM: np.uint8, THREAD: np.uint8, INDEX: np.uint8,
+          MSG: bool, CON: np.uint8, CLOCK: np.int32}
+for name in TIME_FEATS:
+    if 'offers' in name or 'count' in name:
+        DTYPES[name] = np.uint8
 
 
 class Recorder:
@@ -35,7 +25,7 @@ class Recorder:
         self.lstg = None
         self.start_time = None
         self.start_price = None
-        self.sim = None
+        self.sim_ct = None
 
     def update_lstg(self, lookup, lstg):
         """
@@ -44,15 +34,14 @@ class Recorder:
         :param int lstg: listing id
         """
         self.lstg = lstg
-        self.sim = -1
         self.start_time = lookup[START_TIME]
         self.start_price = lookup[START_PRICE]
+        self.sim_ct = 0
         if self.verbose:
             self.print_lstg(lookup)
 
-    def reset_sim(self):
-        self.sim += 1
-        print('Simulation {}'.format(self.sim))
+    def increment_sim(self):
+        self.sim_ct += 1
 
     @staticmethod
     def print_offer(event):
@@ -88,24 +77,22 @@ class Recorder:
 
     @staticmethod
     def print_lstg(lookup):
-        print("LSTG: {}".format(int(lookup[LSTG])))
-        print('start time: {} | end time: {}'.format(int(lookup[START_TIME]),
-                                                     int(lookup[START_TIME] + MONTH)))
-        print(('Start price: {} | accept price: {}' +
-              ' | decline price: {}').format(lookup[START_PRICE], lookup[ACC_PRICE],
-                                             lookup[DEC_PRICE]))
+        print("\n\nLSTG: {}".format(int(lookup[LSTG])))
+        print('start time: {} | end time: {}'.format(
+            int(lookup[START_TIME]), int(lookup[START_TIME] + MAX_DELAY_ARRIVAL)))
+        norm_dec = lookup[DEC_PRICE] / lookup[START_PRICE]
         norm_acc = lookup[ACC_PRICE] / lookup[START_PRICE]
-        norm_dec = lookup[DEC_PRICE] / lookup[START_PRICE] if lookup[DEC_PRICE] > 0 else 0.0
-        print('Norm accept price: {} | Norm decline price: {}'.format(norm_acc, norm_dec))
+        print('Start price: {} | dec price: {} ({}) | acc price: {} ({})'.format(
+            lookup[START_PRICE], lookup[DEC_PRICE], norm_dec,
+            lookup[ACC_PRICE], norm_acc))
 
     @staticmethod
     def print_next_event(event):
         print('NEXT EVENT DRAWING...')
-        print_string = 'Type: {}'.format(event.type)
-        if event.type not in [ARRIVAL, RL_ARRIVAL_EVENT]:
-            print_string += ' | '
-            print_string += 'Thread: {} | Turn: {}'.format(event.thread_id,
-                                                           event.turn)
+        print_string = 'Type: {} at {}'.format(event.type, event.priority)
+        if isinstance(event, Thread) and event.type != FIRST_OFFER:
+            print_string += ' | Thread: {} | Turn: {}'.format(
+                event.thread_id, event.turn)
         print(print_string)
 
     @staticmethod
@@ -133,21 +120,19 @@ class Recorder:
         :param [str] cols:
         :return: pd.DataFrame with columns given by cols
         """
-        return pd.DataFrame(data=record, columns=cols)
+        df = pd.DataFrame(data=record, columns=cols)
+        for c in df.columns:
+            if c in DTYPES:
+                df[c] = df[c].astype(DTYPES[c])
+        return df
 
     def start_thread(self, thread_id=None, time=None, byr_hist=None):
         raise NotImplementedError()
 
-    def add_offer(self, event, time_feats=None, censored=False):
-        raise NotImplementedError()
-
-    def _records2frames(self):
+    def add_offer(self, event, time_feats=None):
         raise NotImplementedError()
 
     def construct_output(self):
-        raise NotImplementedError()
-
-    def _compress_frames(self):
         raise NotImplementedError()
 
     def reset_recorders(self):
@@ -155,11 +140,10 @@ class Recorder:
 
 
 class OutcomeRecorder(Recorder):
-    def __init__(self, verbose=None, record_sim=False):
+    def __init__(self, verbose=None):
         super().__init__(verbose)
         self.offers = None
         self.threads = None
-        self.record_sim = record_sim
         self.reset_recorders()
 
     def reset_recorders(self):
@@ -174,74 +158,45 @@ class OutcomeRecorder(Recorder):
         :param byr_hist: float giving byr history decile
         :param int time: time of the offer
         """
-        byr_hist = int(10 * byr_hist)
-        row = [self.lstg, thread_id, byr_hist, time]
-        if self.record_sim:
-            row.append(self.sim)
+        row = [self.lstg, self.sim_ct, thread_id, byr_hist, time]
         self.threads.append(row)
 
-    def add_offer(self, event=None, time_feats=None, censored=False):
+    def add_offer(self, event=None, time_feats=None):
         # change ordering if OFFER_COLS changes
-        summary = event.summary()
-        con, norm, msg = summary
+        con, norm, msg = event.summary()
         if event.turn == 1:
             assert con > 0
         row = [self.lstg,
+               self.sim_ct,
                event.thread_id,
                event.turn,
                event.priority,
                con,
-               msg,
-               censored
+               msg
                ]
         row += list(time_feats)
-        if self.record_sim:
-            row.append(self.sim)
         self.offers.append(row)
         if self.verbose:
-            if censored:
-                print('censored')
             self.print_offer(event)
 
-    @staticmethod
-    def compress_common_cols(cols, frames, dtypes):
-        for i, col in enumerate(cols):
-            for frame in frames:
-                frame[col] = frame[col].astype(dtypes[i])
-
-    def _compress_frames(self):
-        # offers dataframe
-        self.offers[INDEX] = self.offers[INDEX].astype(np.uint8)
-        self.offers[CON] = self.offers[CON].astype(np.uint8)
-        self.offers[MSG] = self.offers[MSG].astype(bool)
-        self.offers[CENSOR] = self.offers[CENSOR].astype(bool)
-        for name in TIME_FEATS:
-            if 'offers' in name or 'count' in name:
-                self.offers[name] = self.offers[name].astype(np.uint8)
-
-        # threads dataframe
-        self.threads[BYR_HIST] = self.threads[BYR_HIST].astype(np.uint8)
-
-        # common columns in offers and threads dataframes
-        self.compress_common_cols([LSTG, THREAD, CLOCK],
-                                  [self.threads, self.offers],
-                                  [np.int32, np.uint16, np.int32])
-        self.offers.set_index(INDEX_COLS[self.record_sim], inplace=True)
-        self.threads.set_index(INDEX_COLS[self.record_sim][:-1], inplace=True)
-        assert np.all(self.offers.xs(1, level='index')[CON] > 0)
-
-    def _records2frames(self):
-        # convert both dictionaries to dataframes
-        offer_cols = OFFER_COLS
-        thread_cols = THREAD_COLS
-        if self.record_sim:
-            offer_cols += ['sim']
-            thread_cols += ['sim']
-        self.offers = self.record2frame(self.offers, offer_cols)
-        self.threads = self.record2frame(self.threads, thread_cols)
+    def add_buyer_walk(self, event=None, time_feats=None):
+        assert event.turn == 1
+        row = [self.lstg, self.sim_ct, event.thread_id, 1,
+               event.priority, 0, 0]
+        row += list(time_feats)
+        self.offers.append(row)
+        if self.verbose:
+            self.print_offer(event)
 
     def construct_output(self):
-        self._records2frames()
-        self._compress_frames()
-        return {'offers': self.offers.sort_index(),
-                'threads': self.threads.sort_index()}
+        # convert lists to dataframes
+        self.offers = self.record2frame(self.offers, OFFER_COLS)
+        self.threads = self.record2frame(self.threads, THREAD_COLS)
+
+        # set index
+        self.offers.set_index(INDEX_COLS, inplace=True)
+        self.threads.set_index(INDEX_COLS[:-1], inplace=True)
+
+        # output dictionary
+        return {X_OFFER: self.offers.sort_index(),
+                X_THREAD: self.threads.sort_index()}

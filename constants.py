@@ -1,16 +1,7 @@
 import os
 from pandas.tseries.holiday import USFederalHolidayCalendar as Calendar
 from platform import platform
-from featnames import DELAY, CON, MSG
-
-# strings for referencing quantities related to buyer and seller interface
-SLR = 'slr'
-BYR = 'byr'
-ARRIVAL = 'arrival'
-DROPOUT = 'dropout'
-
-# count concessions within this range as 1/2
-TOL_HALF = 0.02
+from featnames import SLR, BYR, TRAIN_MODELS, TRAIN_RL, VALIDATION
 
 # paths and directories
 if 'Ubuntu' in platform():  # Etan's box(es)
@@ -21,68 +12,52 @@ elif 'Windows' in platform() and 'A:' in os.getcwd():  # Barry's pc
     PREFIX = 'A:/ebay/data'
 elif 'Windows' in platform() and 'C:' in os.getcwd():  # Barry's laptop
     PREFIX = os.path.expanduser('~/ebay/data')
-elif 'Darwin' in platform():  # Etan's Mac laptop
-    PREFIX = os.path.expanduser('~/eBay/data')
 else:  # cluster and AWS
-    PREFIX = os.path.expanduser('~/weka/eBay')
+    PREFIX = os.path.expanduser('~/eBay/data')
 
-MODEL_PARTS_DIR = '{}/partitions/models/'.format(PREFIX)
-AGENT_PARTS_DIR = '{}/partitions/agent/'.format(PREFIX)
-INDEX_DIR = '{}/index/'.format(PREFIX)
-PCTILE_DIR = '{}/pctile/'.format(PREFIX)
-CLEAN_DIR = '{}/clean/'.format(PREFIX)
-W2V_DIR = '{}/w2v/'.format(PREFIX)
-FEATS_DIR = '{}/feats/'.format(PREFIX)
+PARTS_DIR = '{}/partitions/'.format(PREFIX)     # post-partition features
+SIM_DIR = '{}/sim/'.format(PREFIX)              # simulated threads and offers
+INDEX_DIR = '{}/index/'.format(PREFIX)          # indices for input files
+PCTILE_DIR = '{}/pctile/'.format(PREFIX)        # percentiles of features
+CLEAN_DIR = '{}/clean/'.format(PREFIX)          # cleaned csvs
+W2V_DIR = '{}/w2v/'.format(PREFIX)              # for word2vec features
+FEATS_DIR = '{}/feats/'.format(PREFIX)          # pre-partion features
 
-INPUT_DIR = '{}/inputs/'.format(PREFIX)
-SIZES_DIR = INPUT_DIR + 'sizes/'
-FEATNAMES_DIR = INPUT_DIR + 'featnames/'
+INPUT_DIR = '{}/inputs/'.format(PREFIX)         # inputs for models
+SIZES_DIR = INPUT_DIR + 'sizes/'                # for initializing models
+FEATNAMES_DIR = INPUT_DIR + 'featnames/'        # for testing
 
-OUTPUT_DIR = '{}/outputs/'.format(PREFIX)
-LOG_DIR = OUTPUT_DIR + 'logs/'
-MODEL_DIR = OUTPUT_DIR + 'models/'
-PLOT_DIR = OUTPUT_DIR + 'plots/'
-AGENT_DIR = OUTPUT_DIR + 'agent/'
+OUTPUT_DIR = '{}/outputs/'.format(PREFIX)       # for saving outputs
+LOG_DIR = OUTPUT_DIR + 'logs/'                  # model logs
+MODEL_DIR = OUTPUT_DIR + 'models/'              # trained models
+PLOT_DIR = OUTPUT_DIR + 'plots/'                # for creating figures
+AGENT_DIR = OUTPUT_DIR + 'agent/'               # agents logs and models
 
 DATE_FEATS_PATH = FEATS_DIR + 'date_feats.pkl'
+META_PATH = CLEAN_DIR + 'meta.csv'
 
-# partitions
-TRAIN_MODELS = 'sim'
-TRAIN_RL = 'rl'
-VALIDATION = 'valid'
-TEST = VALIDATION  # TODO: rename to 'testing' when using real testing data
-PARTITIONS = [TRAIN_MODELS, TRAIN_RL, VALIDATION, TEST]
-SIM_PARTITIONS = [TRAIN_MODELS, VALIDATION, TEST]
-AGENT_PARTITIONS = [TRAIN_RL, VALIDATION, TEST]
+FIG_DIR = os.path.expanduser('~/Dropbox/eBay/figures/')  # for saving figures
 
 # for splitting data
-SHARES = {TRAIN_MODELS: 0.6, TRAIN_RL: 0.16, VALIDATION: 0.04}
+SHARES = {TRAIN_MODELS: 0.75, TRAIN_RL: 0.1, VALIDATION: 0.05}
 
-# delete activity after lstg is open MAX_DAYS
-MAX_DAYS = 31
+# listing window stays open this many days
+MAX_DAYS = 8
 
 # temporal constants
 MINUTE = 60
 HOUR = 60 * MINUTE
 DAY = 24 * HOUR
-MONTH = MAX_DAYS * DAY
-EXPIRATION = 2 * DAY
 
 # maximal delay times
-MAX_DELAY_ARRIVAL = MONTH
+MAX_DELAY_ARRIVAL = MAX_DAYS * DAY
 MAX_DELAY_TURN = 2 * DAY
 
 # intervals
 INTERVAL_TURN = int(5 * MINUTE)
-INTERVAL_ARRIVAL = int(HOUR)
+INTERVAL_ARRIVAL = int(5 * MINUTE)
 INTERVAL_CT_TURN = int(MAX_DELAY_TURN / INTERVAL_TURN)
 INTERVAL_CT_ARRIVAL = int(MAX_DELAY_ARRIVAL / INTERVAL_ARRIVAL)
-
-# concessions that denote an (almost) even split
-SPLIT_PCTS = [.49, .50, .51]
-
-# quantiles of byr_hist distribution
-HIST_QUANTILES = 10
 
 # multiplier for concession
 CON_MULTIPLIER = 100
@@ -98,63 +73,36 @@ START = '2012-06-01 00:00:00'
 END = '2013-05-31 23:59:59'
 HOLIDAYS = Calendar().holidays(start=START, end=END)
 
-# model names
-FIRST_ARRIVAL_MODEL = 'first_arrival'
-INTERARRIVAL_MODEL = 'next_arrival'
-BYR_HIST_MODEL = 'hist'
-
-# model sets
-ARRIVAL_MODELS = [FIRST_ARRIVAL_MODEL, INTERARRIVAL_MODEL, BYR_HIST_MODEL]
-DELAY_MODELS = ['{}{}'.format(DELAY, i) for i in range(2, 8)]
-CON_MODELS = ['{}{}'.format(CON, i) for i in range(1, 8)]
-MSG_MODELS = ['{}{}'.format(MSG, i) for i in range(1, 7)]
-OFFER_MODELS = DELAY_MODELS + CON_MODELS + MSG_MODELS
-MODELS = ARRIVAL_MODELS + OFFER_MODELS
-
-# censored models
-CENSORED_MODELS = [FIRST_ARRIVAL_MODEL, INTERARRIVAL_MODEL] + DELAY_MODELS
-
-# discriminator models
-DISCRIM_LISTINGS = 'listings'
-DISCRIM_THREADS = 'threads'
-DISCRIM_THREADS_NO_TF = 'threads_no_tf'
-DISCRIM_MODELS = [DISCRIM_LISTINGS, DISCRIM_THREADS, DISCRIM_THREADS_NO_TF]
-
-# policy initializations
-AGENTS = [SLR, BYR]
-POLICY_SLR = 'policy_slr'
-POLICY_BYR = 'policy_byr'
-POLICY_MODELS = [POLICY_SLR, POLICY_BYR]
-
-TURN_FEATS = {
-    BYR: ['t1', 't3', 't5'],
-    SLR: ['t2', 't4']
-}
-
-# outcome types
-SIM = 'simulation'
-OBS = 'data'
-
 # normalization type
 MODEL_NORM = 'batch'
 
-# fee constants
-LISTING_FEE = .03
-
-# meta categories with sale fees != .09 * price
-META_7 = [11116, 619]
-META_6 = [58058, 1249, 625, 293, 15032]
-
-# threshold for likelihood of no arrivals
-NO_ARRIVAL_CUTOFF = .50 ** (1.0 / 12)
+# meta categories for collectibles
+COLLECTIBLES = [1, 237, 260, 550, 870, 11116, 20081, 45100, 64482]
 
 # fixed random seed
 SEED = 123456
 
 # number of chunks
-NUM_CHUNKS = 16
+NUM_CHUNKS = 512
 
-# features to drop from 'lstg' grouping for byr
-BYR_DROP = ['auto_decline', 'auto_accept',
-            'has_decline', 'has_accept',
-            'lstg_ct', 'bo_ct']
+# simulation counts
+OUTCOME_SIMS = 10
+VALUE_SIMS = 100
+
+# features to drop from 'lstg' grouping for byr agent
+BYR_DROP = ['lstg_ct', 'bo_ct',
+            'auto_decline', 'has_decline',
+            'auto_accept', 'has_accept']
+
+# for precision issues
+EPS = 1e-8
+
+# dropout options
+DROPOUT_GRID = []
+for j in range(8):
+    for i in range(j+1):
+        if j - i <= 1:
+            DROPOUT_GRID.append((float(i) / 10, float(j) / 10))
+
+# number of concessions available to agent
+NUM_COMMON_CONS = 6

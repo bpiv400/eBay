@@ -1,25 +1,24 @@
 import argparse
+import torch
 from sim.SimTrainer import SimTrainer
-from utils import set_gpu_workers
-
-DROPOUT_GRID = []
-for j in range(8):
-    for i in range(j+1):
-        if j - i <= 3:
-            DROPOUT_GRID.append((float(i) / 10, float(j) / 10))
+from utils import set_gpu
+from constants import DROPOUT_GRID
+from featnames import MODELS, DISCRIM_MODEL
 
 
 def main():
     # extract parameters from command line
     parser = argparse.ArgumentParser()
-    parser.add_argument('--name', type=str, required=True)
-    parser.add_argument('--dropout', type=int, required=True)
+    parser.add_argument('--name', type=str, required=True,
+                        choices=MODELS + [DISCRIM_MODEL])
+    parser.add_argument('--dropout', type=int, required=True,
+                        choices=range(len(DROPOUT_GRID)))
     parser.add_argument('--nolog', action='store_true')
     parser.add_argument('--gpu', type=int, required=True)
     args = parser.parse_args()
 
     # set gpu and cpu affinity
-    set_gpu_workers(args.gpu)
+    set_gpu(args.gpu)
 
     # initialize trainer
     trainer = SimTrainer(name=args.name)
@@ -32,4 +31,5 @@ def main():
 
 
 if __name__ == '__main__':
+    torch.multiprocessing.set_start_method('fork')
     main()

@@ -1,6 +1,6 @@
 clear all
-cd ~/weka/eBay
-import delim using raw/listings.csv
+cd ~/eBay/
+import delim using /data/eBay/raw/listings.csv
 
 * rename variables
 
@@ -20,6 +20,24 @@ rename lstg_gen_type relisted
 rename price sale_price
 rename item lstg
 rename bo_ck_yn bo
+
+* drop sparse meta categories
+
+drop if meta == 316 | meta == 6000 | meta == 10542 | meta == 172008
+
+* for word2vec features
+
+savesome lstg slr leaf using /data/eBay/dta/w2v_slr, replace
+
+* encode variables
+
+do repo/clean/encode.do
+
+* keep only unique listings
+
+by title, sort: egen int temp = sum(1)
+keep if temp == 1
+drop temp title
 	
 * convert start and end to ints
 	
@@ -27,10 +45,6 @@ g int start_date = date(auct_start_dt,"DMY")
 g int end_date = date(auct_end_dt,"DMY")
 format *_date %td
 drop auct_*_dt
-
-* encode variables
-
-do ~/Dropbox/eBay/repo/clean/encode.do
 
 * fill in accept/decline prices
 
@@ -46,22 +60,22 @@ replace bin_rev = 1 if decline_price > accept_price
 replace decline_price = start_price if decline_price > start_price
 replace accept_price = start_price if accept_price > start_price
 
-* title occurs only once?
+* drop listings with changed bin price
 
-by title, sort: egen int temp = sum(1)
-g byte unique = temp == 1
-drop temp title
+drop if bin_rev
+drop bin_rev
 
-* listings to keep
-
-keep if unique & !bin_rev
-drop unique bin_rev
+* drop listings with high or low bin prices
 
 g long cents = round(start_price * 100)
 keep if cents <= 1000 * 100 & cents >= 9.95 * 100
 drop cents
 
-drop if meta == 316 | meta == 6000 | meta == 10542 | meta == 172008
+* drop listings that expire before a week
+
+g int days = end_date - start_date
+drop if sale_price == . & days < 7
+drop days
 
 * feedback variables
 
@@ -79,4 +93,4 @@ rename temp fdbk_pstv
 drop ct? ref_price? product relisted
 order lstg slr meta leaf cndtn start_date end_date
 sort lstg
-save dta/listings, replace
+save /data/eBay/dta/listings, replace

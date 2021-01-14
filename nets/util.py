@@ -1,13 +1,11 @@
-import time
 import torch
 import torch.nn as nn
 from collections import OrderedDict
-from nets.const import AFFINE, LAYERS_EMBEDDING, LAYERS_FULL, HIDDEN
-from constants import MODEL_NORM
+from nets.const import AFFINE, LAYERS_EMBEDDING, LAYERS_FULL
 
 
 class Layer(nn.Module):
-    def __init__(self, num_in, num_out, dropout=0.0, norm=MODEL_NORM):
+    def __init__(self, num_in, num_out, dropout=None, norm=None):
         """
         :param num_in: scalar number of input weights.
         :param num_out: scalar number of output weights.
@@ -47,7 +45,7 @@ class Layer(nn.Module):
         return x
 
 
-def stack_layers(num, layers=1, dropout=0.0, norm=MODEL_NORM):
+def stack_layers(num, layers=None, dropout=None, norm=None):
     """
     :param num: scalar number of input and output weights.
     :param layers: scalar number of layers to stack.
@@ -62,7 +60,7 @@ def stack_layers(num, layers=1, dropout=0.0, norm=MODEL_NORM):
 
 
 class Embedding(nn.Module):
-    def __init__(self, counts, dropout=0.0, norm=MODEL_NORM):
+    def __init__(self, counts, dropout=None, norm=None):
         """
         :param counts: dictionary of scalar input sizes.
         :param dropout: scalar dropout rate.
@@ -76,7 +74,10 @@ class Embedding(nn.Module):
         # first stack of layers: N to N
         self.layer1 = nn.ModuleDict()
         for k, v in counts.items():
-            self.layer1[k] = stack_layers(v, layers=1, norm=norm)
+            self.layer1[k] = stack_layers(v,
+                                          layers=1,
+                                          dropout=0.,
+                                          norm=norm)
 
         # second layer: concatenation
         num = sum(counts.values())
@@ -108,21 +109,22 @@ class Embedding(nn.Module):
 
 
 class FullyConnected(nn.Module):
-    def __init__(self, num_in, dropout=0.0, norm=MODEL_NORM):
+    def __init__(self, num_in, dropout=None, hidden=None, norm=None):
         """
         :param num_in: scalar number of input weights.
         :param dropout: scalar dropout rate.
+        :param hidden: size of each hidden layer.
         :param norm: string type of normalization.
         """
         super(FullyConnected, self).__init__()
 
         # intermediate layer
-        self.seq = nn.ModuleList([Layer(num_in, HIDDEN, 
+        self.seq = nn.ModuleList([Layer(num_in, hidden,
                                         dropout=dropout,
                                         norm=norm)])
 
         # fully connected network
-        self.seq += stack_layers(HIDDEN,
+        self.seq += stack_layers(hidden,
                                  layers=LAYERS_FULL-1,
                                  dropout=dropout,
                                  norm=norm)
@@ -141,16 +143,13 @@ def create_groupings(sizes):
     groups['w2v'] = ['lstg', 'w2v_slr', 'w2v_byr']
     if 'slr' in sizes['x']:
         groups['other'] = ['lstg', 'meta', 'leaf', 'slr']
-    else:
-        groups['other'] = ['lstg', 'meta', 'leaf']
     if 'offer1' in sizes['x']:
         groups['offer'] = ['lstg'] \
             + [k for k in sizes['x'].keys() if 'offer' in k]
     return groups
 
 
-def create_embedding_layers(groups=None, sizes=None,
-                            dropout=0.0, norm=MODEL_NORM):
+def create_embedding_layers(groups=None, sizes=None, dropout=None, norm=None):
     # embeddings
     d, total = OrderedDict(), 0
     for name, group in groups.items():

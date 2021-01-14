@@ -1,12 +1,12 @@
+from collections import OrderedDict
 import numpy as np
 import pandas as pd
-from compress_pickle import load, dump
-from utils import get_remaining
+from utils import unpickle, topickle
 from inputs.const import NUM_OUT
-from constants import INPUT_DIR, INDEX_DIR, VALIDATION, \
-    IDX, BYR, DISCRIM_MODELS, HIST_QUANTILES, POLICY_BYR, BYR_DROP
-from featnames import CLOCK_FEATS, OUTCOME_FEATS, BYR_HIST, \
-    SPLIT, MSG, AUTO, EXP, REJECT, DAYS, DELAY, TIME_FEATS, THREAD_COUNT
+from constants import INPUT_DIR, INDEX_DIR, IDX, BYR_DROP
+from featnames import CLOCK_FEATS, OUTCOME_FEATS, COMMON, MSG, AUTO, \
+    LSTG, X_LSTG, EXP, REJECT, DAYS, DELAY, TIME_FEATS, THREAD_COUNT, \
+    BYR, INDEX, SLR, THREAD, META, LEAF, VALIDATION, DISCRIM_MODEL
 
 
 def add_turn_indicators(df):
@@ -15,21 +15,18 @@ def add_turn_indicators(df):
     :param df: dataframe with index ['lstg', 'thread', 'index'].
     :return: dataframe with turn indicators appended
     """
-    indices = np.sort(np.unique(df.index.get_level_values('index')))
+    indices = np.sort(np.unique(df.index.get_level_values(INDEX)))
     for i in range(len(indices) - 1):
         ind = indices[i]
-        df['t{}'.format(ind)] = df.index.isin([ind], level='index')
+        df['t{}'.format(ind)] = df.index.isin([ind], level=INDEX)
     return df
 
 
 def get_x_thread(threads, idx, turn_indicators=False):
     # initialize x_thread as copy
     x_thread = threads.copy()
-    # byr_hist as a decimal
-    x_thread.loc[:, BYR_HIST] = \
-        x_thread.byr_hist.astype('float32') / HIST_QUANTILES
     # thread count, including current thread
-    x_thread[THREAD_COUNT] = x_thread.index.get_level_values(level='thread')
+    x_thread[THREAD_COUNT] = x_thread.index.get_level_values(level=THREAD)
     # reindex to create x_thread
     x_thread = pd.DataFrame(index=idx).join(x_thread)
     x_thread.index = x_thread.index.reorder_levels(idx.names)
@@ -60,84 +57,33 @@ def get_arrival_times(clock=None, lstg_start=None, lstg_end=None, append_last=Fa
     arrivals = pd.concat([s, thread_start], axis=0).sort_index()
 
     # thread to int
-    idx = arrivals.index
+    idx = arrivals.index  # type: pd.MultiIndex
     arrivals.index.set_levels(idx.levels[-1].astype('int16'),
                               level=-1, inplace=True)
 
     return arrivals.rename('arrival')
 
 
-def calculate_remaining(lstg_start=None, clock=None, idx=None):
-    # start of delay period
-    delay_start = clock.groupby(
-        ['lstg', 'thread']).shift().dropna().astype('int64')
-    # remaining is turn-specific
-    remaining = pd.Series(1.0, index=idx)
-    turns = idx.unique(level='index')
-    for turn in turns:
-        if turn > 1:
-            turn_start = delay_start.xs(turn, level='index').reindex(index=idx)
-            mask = idx.get_level_values(level='index') == turn
-            remaining.loc[mask] = get_remaining(
-                lstg_start, turn_start)
-    # error checking
-    assert np.all(remaining > 0) and np.all(remaining <= 1)
-    return remaining
-
-
-def assert_zero(offer, cols):
+def assert_zero(offer, cols, k):
     for c in cols:
-        assert offer[c].max() == 0
-        assert offer[c].min() == 0
+        if offer[c].max() != 0 or offer[c].min() != 0:
+            raise RuntimeError('Non-zero entry in {}: {}'.format(k, c))
 
 
-def check_zero(x):
+def check_zero(x, byr_exp=True):
     keys = [k for k in x.keys() if k.startswith('offer')]
+    byr_cols = [AUTO, REJECT]
+    if byr_exp:
+        byr_cols += [EXP]
     for k in keys:
         if k in x:
             i = int(k[-1])
             if i == 1:
-                assert_zero(x[k], [DAYS, DELAY])
+                assert_zero(x[k], [DAYS, DELAY], k)
             if i % 2 == 1:
-                assert_zero(x[k], [AUTO, EXP, REJECT])
+                assert_zero(x[k], byr_cols, k)
             if i == 7:
-                assert_zero(x[k], [SPLIT, MSG])
-
-
-def get_x_offer_init(offers, idx, role=None):
-    # initialize dictionary of offer features
-    x_offer = {}
-
-    # dataframe of offer features for relevant threads
-    threads = idx.droplevel(level='index').unique()
-    offers = pd.DataFrame(index=threads).join(offers)
-
-    # drop time feats from buyer models
-    if role == BYR:
-        offers.drop(TIME_FEATS, axis=1, inplace=True)
-
-    # turn features
-    last = max(IDX[role]) - 1
-    for i in range(1, last + 1):
-        # offer features at turn i, and turn number
-        offer = offers.xs(i, level='index').reindex(
-            index=idx, fill_value=0).astype('float32')
-        turn = offer.index.get_level_values(level='index')
-
-        # all features are zero for current and future turns
-        offer.loc[i >= turn, :] = 0.
-
-        # msg is 0 for turns of focal player
-        if i in IDX[role]:
-            offer.loc[:, MSG] = 0.
-
-        # put in dictionary
-        x_offer['offer%d' % i] = offer
-
-    # error checking
-    check_zero(x_offer)
-
-    return x_offer
+                assert_zero(x[k], [COMMON, MSG], k)
 
 
 def get_ind_x(lstgs=None, idx=None):
@@ -147,7 +93,7 @@ def get_ind_x(lstgs=None, idx=None):
     :param idx: index of outcome.
     :return: array of indices in lstgs.
     """
-    idx = idx.get_level_values(level='lstg')  # restrict to lstg id
+    idx = idx.get_level_values(level=LSTG)  # restrict to lstg id
     idx_x = np.searchsorted(lstgs, idx)
     return idx_x
 
@@ -158,32 +104,29 @@ def save_featnames_and_sizes(x=None, m=None):
     :param dict x: input dataframes.
     :param str m: name of model.
     """
-    # initialize dictionaries from listing feature names
-    featnames = load(INPUT_DIR + 'featnames/x_lstg.pkl')
-    sizes = dict()
-    sizes['x'] = {k: len(v) for k, v in featnames.items()}
+    # initialize from listing feature names
+    featnames = unpickle(INPUT_DIR + 'featnames/{}.pkl'.format(X_LSTG))
 
-    if m == POLICY_BYR:
-        del featnames['slr']
-        del sizes['x']['slr']
-        featnames['lstg'] = [k for k in featnames['lstg'] if k not in BYR_DROP]
-        sizes['x']['lstg'] = len(featnames['lstg'])
+    if m in [BYR, SLR]:
+        for k in [SLR, META, LEAF]:
+            del featnames[k]
+
+    if m == BYR:
+        featnames[LSTG] = [k for k in featnames[LSTG] if k not in BYR_DROP]
 
     # add thread features to end of lstg grouping
     if x is not None:
-        featnames['lstg'] += list(x['thread'].columns)
-        sizes['x']['lstg'] += len(x['thread'].columns)
+        featnames[LSTG] += list(x[THREAD].columns)
 
         # for offer models
         if 'offer1' in x:
-            if m in DISCRIM_MODELS:
+            if m == DISCRIM_MODEL:
                 for i in range(1, 8):
                     k = 'offer{}'.format(i)
                     featnames[k] = list(x[k].columns)
-                    sizes['x'][k] = len(featnames[k])
             else:
                 # buyer models do not have time feats
-                if BYR in m or m[-1] in [str(i) for i in IDX[BYR]]:
+                if m == BYR or m[-1] in [str(i) for i in IDX[BYR]]:
                     feats = CLOCK_FEATS + OUTCOME_FEATS
                 else:
                     feats = CLOCK_FEATS + TIME_FEATS + OUTCOME_FEATS
@@ -192,32 +135,42 @@ def save_featnames_and_sizes(x=None, m=None):
                 for k in x.keys():
                     if 'offer' in k:
                         assert list(x[k].columns) == feats
-                        sizes['x'][k] = len(feats)  # put length in sizes
 
                 # one vector of featnames for offer groupings
                 featnames['offer'] = feats
 
-    # length of model output vector
-    sizes['out'] = NUM_OUT[m]
+    # create sizes
+    sizes = dict()
+    sizes['x'] = OrderedDict()
+    for k, v in featnames.items():
+        if k == 'offer':
+            for t in range(1, 8):
+                key = 'offer{}'.format(t)
+                if key in x:
+                    sizes['x'][key] = len(v)
+        else:
+            sizes['x'][k] = len(v)
+
+    if m not in [BYR, SLR]:
+        sizes['out'] = NUM_OUT[m]
 
     # save
-    dump(featnames, INPUT_DIR + 'featnames/{}.pkl'.format(m))
-    dump(sizes, INPUT_DIR + 'sizes/{}.pkl'.format(m))
+    topickle(featnames, INPUT_DIR + 'featnames/{}.pkl'.format(m))
+    topickle(sizes, INPUT_DIR + 'sizes/{}.pkl'.format(m))
 
 
 def convert_x_to_numpy(x, idx):
     """
     Converts dictionary of dataframes to dictionary of numpy arrays.
-    :param x: dictionary of input dataframes.
-    :param idx: pandas index for error checking indices.
-    :return: dictionary of numpy arrays.
+    :param dict x: contains input dataframes.
+    :param pd.(Multi)Index idx: for error checking indices.
+    :return: dict of numpy arrays.
     """
     for k, v in x.items():
         assert np.all(v.index == idx)
         x[k] = v.to_numpy(dtype='float32')
 
 
-# save featnames and sizes
 def save_files(d, part, name):
     # featnames and sizes
     if part == VALIDATION:
@@ -235,7 +188,7 @@ def save_files(d, part, name):
     d['y'] = d['y'].to_numpy()
 
     # save data
-    dump(d, INPUT_DIR + '{}/{}.gz'.format(part, name))
+    topickle(d, INPUT_DIR + '{}/{}.pkl'.format(part, name))
 
     # save index
-    dump(idx, INDEX_DIR + '{}/{}.gz'.format(part, name))
+    topickle(idx, INDEX_DIR + '{}/{}.pkl'.format(part, name))

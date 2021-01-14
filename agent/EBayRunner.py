@@ -5,24 +5,25 @@ import numpy as np
 from collections import deque
 from rlpyt.runners.base import BaseRunner
 from rlpyt.samplers.parallel.base import ParallelSamplerBase
-from rlpyt.utils.seed import set_seed, make_seed
+from rlpyt.samplers.parallel.worker import initialize_worker
+from rlpyt.utils.collections import AttrDict
+from rlpyt.utils.seed import set_seed, make_seed, set_envs_seeds
 from rlpyt.utils.logging import logger
 from rlpyt.utils.prog_bar import ProgBarCounter
-from agent.util import ebay_sampling_process
+from agent.AgentLoader import AgentLoader
 
 
-class EBayMinibatchRlBase(BaseRunner):
+class EBayBaseRunner(BaseRunner):
     """
-    Implements startup, logging, and agent checkpointing functionality, to be
+    Implements startup, logging, and agents checkpointing functionality, to be
     called in the `train()` method of the subclassed runner.  Subclasses will
     modify/extend many of the methods here.
     Args:
         algo: The algorithm instance.
-        agent: The learning agent instance.
+        agent: The learning agents instance.
         sampler: The sampler instance.
         seed (int): Random seed to use, if ``None`` will generate randomly.
         affinity (dict): Hardware component assignments for sampler and algorithm.
-        log_interval_steps (int): Number of environment steps between logging to csv.
     """
     def __init__(
             self,
@@ -31,7 +32,6 @@ class EBayMinibatchRlBase(BaseRunner):
             sampler,
             seed=None,
             affinity=None,
-            log_interval_steps=1e5,
     ):
         # save parameters to self
         self.algo = algo
@@ -39,8 +39,8 @@ class EBayMinibatchRlBase(BaseRunner):
         self.sampler = sampler
         self.seed = seed
         self.affinity = dict() if affinity is None else affinity
-        self.log_interval_steps = int(log_interval_steps)
         self.rank = 0
+        self.log_interval_itrs = 1
 
         # other fixed parameters
         self.min_itr_learn = getattr(self.algo, 'min_itr_learn', 0)
@@ -48,7 +48,6 @@ class EBayMinibatchRlBase(BaseRunner):
 
         # parameters to be set later
         self.itr_batch_size = None
-        self.log_interval_itrs = None
         self._start_time = None
         self._last_time = None
         self._cum_time = None
@@ -61,7 +60,7 @@ class EBayMinibatchRlBase(BaseRunner):
     def startup(self):
         """
         Sets hardware affinities, initializes the following: 1) sampler (which
-        should initialize the agent), 2) agent device and data-parallel wrapper (if applicable),
+        should initialize the agents), 2) agents device and data-parallel wrapper (if applicable),
         3) algorithm, 4) logger.
         """
         p = psutil.Process()
@@ -99,8 +98,6 @@ class EBayMinibatchRlBase(BaseRunner):
         self.sampler.initialize(**sampler_init_args)
 
         self.itr_batch_size = self.sampler.batch_spec.size
-        self.log_interval_itrs = max(1,
-                                     self.log_interval_steps // self.itr_batch_size)
         self.agent.to_device(self.affinity.get("cuda_idx", None))
         self.algo.initialize(agent=self.agent)
         self.initialize_logging()
@@ -119,7 +116,7 @@ class EBayMinibatchRlBase(BaseRunner):
     def get_itr_snapshot(self, itr):
         """
         Returns all state needed for full checkpoint/snapshot of training run,
-        including agent parameters and optimizer parameters.
+        including agents parameters and optimizer parameters.
         """
         return dict(itr=itr,
                     cum_steps=itr * self.sampler.batch_size,
@@ -159,22 +156,21 @@ class EBayMinibatchRlBase(BaseRunner):
         self._cum_time = new_time - self._start_time
         train_time_elapsed = new_time - self._last_time - eval_time
         new_updates = self.algo.update_counter - self._last_update_counter
-        new_samples = (self.sampler.batch_size *
-                       self.log_interval_itrs)
+        new_samples = (self.sampler.batch_size * self.log_interval_itrs)
         updates_per_second = (new_updates / train_time_elapsed)
         samples_per_second = (new_samples / train_time_elapsed)
-        cum_steps = (itr + 1) * self.sampler.batch_size
+        # cum_steps = (itr + 1) * self.sampler.batch_size
 
         with logger.tabular_prefix(prefix):
-            logger.record_tabular('Iteration', itr)
-            logger.record_tabular('CumSeconds', self._cum_time)
-            logger.record_tabular('CumSteps', cum_steps)
+            # logger.record_tabular('Iteration', itr)
+            # logger.record_tabular('CumSeconds', self._cum_time)
+            # logger.record_tabular('CumSteps', cum_steps)
             logger.record_tabular('CumCompletedTrajs', self._cum_completed_trajs)
-            logger.record_tabular('CumUpdates', self.algo.update_counter)
+            # logger.record_tabular('CumUpdates', self.algo.update_counter)
             logger.record_tabular('StepsPerSecond', samples_per_second)
             logger.record_tabular('UpdatesPerSecond', updates_per_second)
 
-        self._log_infos(traj_infos)
+        self._log_infos()
         logger.dump_tabular(with_prefix=False)
 
         self._last_time = new_time
@@ -183,25 +179,19 @@ class EBayMinibatchRlBase(BaseRunner):
             logger.log(f"Optimizing over {self.log_interval_itrs} iterations.")
             self.pbar = ProgBarCounter(self.log_interval_itrs)
 
-    def _log_infos(self, traj_infos=None):
+    def _log_infos(self):
         """
         Writes trajectory info and optimizer info into csv via the logger.
         Resets stored optimizer info.
         """
-        if traj_infos is None:
-            traj_infos = self._traj_infos
-        if traj_infos:
-            for k in traj_infos[0]:
-                # if not k.startswith("_"):
-                if k == 'Length':
-                    v = [info[k] for info in traj_infos]
-                    logger.record_tabular_misc_stat(k, v)
-
         if self._opt_infos:
             for k, v in self._opt_infos.items():
+                if len(v) == 0:
+                    continue
                 if type(v[0]) is np.ndarray:
                     logger.record_tabular_misc_stat(k, np.concatenate(v))
                 else:
+                    k = k.replace('_', '/')
                     logger.record_tabular(k, np.average(v))
         self._opt_infos = {k: list() for k in self._opt_infos}  # (reset)
 
@@ -209,7 +199,7 @@ class EBayMinibatchRlBase(BaseRunner):
         raise NotImplementedError()
 
 
-class EBayMinibatchRl(EBayMinibatchRlBase):
+class EBayRunner(EBayBaseRunner):
     """
     Runs RL on minibatches; tracks performance online using learning
     trajectories.
@@ -234,7 +224,7 @@ class EBayMinibatchRl(EBayMinibatchRlBase):
         while True:
             logger.set_iteration(itr)
             with logger.prefix(f"itr #{itr} "):
-                self.agent.sample_mode(itr)  # Might not be this agent sampling.
+                self.agent.sample_mode(itr)  # Might not be this agents sampling.
                 samples, traj_infos = self.sampler.obtain_samples(itr)
                 self.agent.train_mode(itr)
                 opt_info = self.algo.optimize_agent(samples)
@@ -263,7 +253,56 @@ class EBayMinibatchRl(EBayMinibatchRlBase):
         with logger.tabular_prefix(prefix):
             logger.record_tabular('NewCompletedTrajs',
                                   self._new_completed_trajs)
-            steps = sum(info["Length"] for info in self._traj_infos)
-            logger.record_tabular('StepsInTrajWindow', steps)
+            # steps = sum(info["Length"] for info in self._traj_infos)
+            # logger.record_tabular('StepsInTrajWindow', steps)
         super().log_diagnostics(itr, prefix=prefix)
         self._new_completed_trajs = 0
+
+
+def ebay_sampling_process(common_kwargs, worker_kwargs):
+    """Target function used for forking parallel worker processes in the
+    samplers. After ``initialize_worker()``, it creates the specified number
+    of environment instances and gives them to the collector when
+    instantiating it.  It then calls collector startup methods for
+    envs and agents.  If applicable, instantiates evaluation
+    environment instances and evaluation collector.
+    Then enters infinite loop, waiting for signals from master to collect
+    training samples or else run evaluation, until signaled to exit.
+    """
+    c, w = AttrDict(**common_kwargs), AttrDict(**worker_kwargs)
+    initialize_worker(w.rank, w.seed, w.cpus, c.torch_threads)
+    envs = list()
+    for env_rank in w.env_ranks:
+        c.env_kwargs['loader'].init(env_rank)
+        envs.append(c.EnvCls(**c.env_kwargs))
+    set_envs_seeds(envs, w.seed)
+    collector = c.CollectorCls(
+        rank=w.rank,
+        envs=envs,
+        samples_np=w.samples_np,
+        batch_T=c.batch_T,
+        TrajInfoCls=c.TrajInfoCls,
+        agent=c.get("agents", None),  # Optional depending on parallel setup.
+        sync=w.get("sync", None),
+        step_buffer_np=w.get("step_buffer_np", None),
+        global_B=c.get("global_B", 1),
+        env_ranks=w.get("env_ranks", None),
+    )
+    agent_inputs, traj_infos = collector.start_envs(c.max_decorrelation_steps)
+    collector.start_agent()
+
+    ctrl = c.ctrl
+    ctrl.barrier_out.wait()
+    while True:
+        collector.reset_if_needed(agent_inputs)  # Outside barrier?
+        ctrl.barrier_in.wait()
+        if ctrl.quit.value:
+            break
+        agent_inputs, traj_infos, completed_infos = collector.collect_batch(
+            agent_inputs, traj_infos, ctrl.itr.value)
+        for info in completed_infos:
+            c.traj_infos_queue.put(info)
+        ctrl.barrier_out.wait()
+
+    for env in envs:
+        env.close()

@@ -1,23 +1,13 @@
-from compress_pickle import dump
+from collections import OrderedDict
 import numpy as np
-from processing.util import extract_day_feats, get_lstgs, load_feats
-from constants import MODEL_PARTS_DIR, INPUT_DIR, DAY, BYR, SLR, \
-    TRAIN_MODELS, VALIDATION, TEST
-from featnames import START_PRICE, META, LEAF
-from utils import input_partition
+from processing.util import extract_day_feats, get_lstgs, do_rounding
+from constants import PARTS_DIR, INPUT_DIR, DAY
+from featnames import START_PRICE, META, LEAF, CNDTN, SLR, BYR, LSTG, X_LSTG, \
+    VALIDATION, DEC_PRICE, ACC_PRICE
+from utils import input_partition, topickle, load_feats
 
 AS_IS_FEATS = ['store', 'slr_us', 'fast', 'photos', 'slr_lstg_ct',
                'slr_bo_ct', 'start_price_pctile', 'fdbk_score', 'fdbk_pstv']
-
-
-# returns booleans for whether offer is round and ends in nines
-def do_rounding(offer):
-    digits = np.ceil(np.log10(offer.clip(lower=0.01)))
-    factor = 5 * np.power(10, digits-3)
-    diff = np.round(offer / factor) * factor - offer
-    is_round = diff == 0
-    is_nines = (diff > 0) & (diff <= factor / 5)
-    return is_round, is_nines
 
 
 def construct_lstg_feats(listings):
@@ -34,16 +24,16 @@ def construct_lstg_feats(listings):
     date_feats = extract_day_feats(listings.start_date * DAY)
     df = df.join(date_feats.rename(lambda x: 'start_' + x, axis=1))
     # condition
-    s = listings.cndtn
+    s = listings[CNDTN]
     df['new'] = s == 1
     df['used'] = s == 7
     df['refurb'] = s.isin([2, 3, 4, 5, 6])
     df['wear'] = s.isin([8, 9, 10, 11]) * (s - 7)
     # auto decline/accept prices
-    df['auto_decline'] = listings.decline_price / listings.start_price
-    df['auto_accept'] = listings.accept_price / listings.start_price
-    df['has_decline'] = df.auto_decline > 0
-    df['has_accept'] = df.auto_accept < 1 
+    df['auto_decline'] = listings[DEC_PRICE] / listings[START_PRICE]
+    df['has_decline'] = listings[DEC_PRICE] > 0
+    df['auto_accept'] = listings[ACC_PRICE] / listings[START_PRICE]
+    df['has_accept'] = listings[ACC_PRICE] < listings[START_PRICE]
     # remove slr prefix
     df.rename(lambda c: c[4:] if c.startswith('slr_') else c, 
               axis=1, inplace=True)
@@ -58,7 +48,7 @@ def create_x_lstg(lstgs=None):
     x = dict()
 
     # listing features
-    x['lstg'] = construct_lstg_feats(listings)
+    x[LSTG] = construct_lstg_feats(listings)
 
     # word2vec features
     for role in [BYR, SLR]:
@@ -92,20 +82,21 @@ def create_x_lstg(lstgs=None):
 
 def main():
     part = input_partition()
-    assert part in [TRAIN_MODELS, VALIDATION, TEST]
-    print('{}/x_lstg'.format(part))
+    print('{}/{}'.format(part, X_LSTG))
 
     # create dataframe
     x_lstg = create_x_lstg(lstgs=get_lstgs(part))
 
     # extract column names and save
     if part == VALIDATION:
-        cols = {k: list(v.columns) for k, v in x_lstg.items()}
-        dump(cols, INPUT_DIR + 'featnames/x_lstg.pkl')
+        cols = OrderedDict()
+        for k, v in x_lstg.items():
+            cols[k] = list(v.columns)
+        topickle(cols, INPUT_DIR + 'featnames/{}.pkl'.format(X_LSTG))
 
     # convert to numpy and save
     x_lstg = {k: v.values for k, v in x_lstg.items()}
-    dump(x_lstg, MODEL_PARTS_DIR + '{}/x_lstg.pkl'.format(part))
+    topickle(x_lstg, PARTS_DIR + '{}/{}.pkl'.format(part, X_LSTG))
 
 
 if __name__ == "__main__":

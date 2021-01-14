@@ -1,21 +1,17 @@
 """
 Utility functions for use in objects related to the RL environment
 """
-import torch
-import os
 import numpy as np
 import pandas as pd
-from compress_pickle import load
 from torch.distributions.categorical import Categorical
 from torch.distributions.bernoulli import Bernoulli
+from agent.const import COMMON_CONS
 from constants import INPUT_DIR
-from featnames import LOOKUP, X_LSTG, P_ARRIVAL
-from constants import MODEL_PARTS_DIR, DAY, ARRIVAL_MODELS, \
-    MAX_DELAY_TURN, AGENT_PARTS_DIR
+from featnames import LOOKUP, X_LSTG, P_ARRIVAL, ARRIVAL_MODELS
+from constants import PARTS_DIR, DAY, MAX_DELAY_TURN
 from rlenv.const import (SIM_CHUNKS_DIR, SIM_VALS_DIR, OFFER_MAPS,
-                         SIM_DISCRIM_DIR, DATE_FEATS, NORM_IND)
-from utils import extract_clock_feats, is_split, slr_norm,\
-    byr_norm
+                         SIM_DISCRIM_DIR, DATE_FEATS_DF, NORM_IND)
+from utils import unpickle, extract_clock_feats, slr_norm, byr_norm
 
 
 def model_str(model_name, turn=None):
@@ -45,7 +41,7 @@ def get_clock_feats(time):
     and index 8 is an indicator for whether the time is in the afternoon.
     """
     # holiday and day of week indicators
-    date_feats = DATE_FEATS[time // DAY]
+    date_feats = DATE_FEATS_DF[time // DAY]
 
     # concatenate
     return np.append(date_feats, extract_clock_feats(time)).astype('float32')
@@ -63,20 +59,26 @@ def proper_squeeze(tensor):
     return tensor
 
 
-def sample_categorical(logits=None):
+def sample_categorical(logits=None, probs=None):
     """
     Samples from a categorical distribution
-    :param torch.FloatTensor logits: logits of categorical distribution
+    :param logits: logits of categorical distribution
+    :param probs: probabilities of categorical distribution
     :return: 1 dimensional np.array
     """
-    cat = Categorical(logits=logits)
-    sample = proper_squeeze(cat.sample(sample_shape=(1,)).float()).numpy()
-    return sample
+    assert logits is None or probs is None
+    if logits is not None:
+        cat = Categorical(logits=logits)
+    else:
+        cat = Categorical(probs=probs)
+    sample = proper_squeeze(cat.sample(sample_shape=(1,)).float())
+    return sample.numpy()
 
 
 def sample_bernoulli(params):
     dist = Bernoulli(logits=params)
-    return proper_squeeze(dist.sample((1,))).numpy()
+    sample = proper_squeeze(dist.sample((1,)))
+    return sample.numpy()
 
 
 def last_norm(sources=None, turn=0):
@@ -148,31 +150,11 @@ def slr_auto_acc_outcomes(sources, turn):
     return np.array([con, 0.0, norm, 0.0], dtype=np.float32)
 
 
-def get_checkpoint_path(part_dir, chunk_num, discrim=False):
-    """
-    Returns path to checkpoint file for the given chunk
-    and environment simulation (discrim or values)
-    :param str part_dir: path to root directory of partition
-    :param int chunk_num: chunk id
-    :param bool discrim: whether this is a discrim input sim
-    :return: str
-    """
-    if discrim:
-        insert = 'discrim'
-    else:
-        insert = 'val'
-    return '{}chunks/{}_check_{}.gz'.format(part_dir, chunk_num, insert)
-
-
-def get_env_sim_dir(part, model=False):
+def get_env_sim_dir(part):
     """
     Gets path to root directory of partition
     """
-    if model:
-        prefix = MODEL_PARTS_DIR
-    else:
-        prefix = AGENT_PARTS_DIR
-    return  '{}{}/'.format(prefix, part)
+    return PARTS_DIR + '{}/'.format(part)
 
 
 def get_env_sim_subdir(part=None, base_dir=None, chunks=False,
@@ -203,69 +185,27 @@ def get_env_sim_subdir(part=None, base_dir=None, chunks=False,
     return '{}{}/'.format(base_dir, subdir)
 
 
-def load_output_chunk(directory, c):
-    """
-    Loads all the simulator output pieces for a chunk
-    :param str directory: path to records directory
-    :param int c: chunk num
-    :return: list containing all output pieces (dicts or dataframes)
-    """
-    subdir = '{}{}/'.format(directory, c)
-    pieces = os.listdir(subdir)
-    print(subdir)
-    print(pieces)
-    pieces = [piece for piece in pieces if '.gz' in piece]
-    output_list = list()
-    for piece in pieces:
-        piece_path = '{}{}'.format(subdir, piece)
-        output_list.append(load(piece_path))
-    return output_list
-
-
-def load_sim_outputs(part, values=False):
-    """
-    Loads all simulator outputs for a value estimation or discrim input sim
-    and concatenates each set of output dataframes into 1 dataframe
-    :param str part: partition in PARTITIONS
-    :param bool values: whether this is a value simulation
-    :return: {str: pd.Dataframe}
-    """
-    directory = get_env_sim_subdir(part=part, values=values, discrim=not values)
-    chunks = [path for path in os.listdir(directory) if path.isnumeric()]
-    output_list = list()
-    for chunk in chunks:
-        output_list = output_list + load_output_chunk(directory, int(chunk))
-    if values:
-        output = {'values': pd.concat(output_list, axis=1)}
-    else:
-        output = dict()
-        for dataset in ['offers', 'threads', 'sales']:
-            output[dataset] = [piece[dataset] for piece in output_list]
-            output[dataset] = pd.concat(output[dataset], axis=1)
-    return output
-
-
 def align_x_lstg_lookup(x_lstg, lookup):
     x_lstg = pd.concat([df.reindex(index=lookup.index) for df in x_lstg.values()],
                        axis=1)
     return x_lstg
 
 
-def load_chunk(base_dir=None, num=None, input_path=None):
+def load_chunk(part=None, base_dir=None, num=None, input_path=None):
     """
     Loads a simulator chunk containing x_lstg and lookup
+    :param str part: name of partition
     :param base_dir: base directory of partition
     :param num: number of chunk
     :param input_path: optional path to the chunk
     :return: (pd.Dataframe giving x_lstg, pd.DataFrame giving lookup)
     """
     if input_path is None:
-        input_path = '{}chunks/{}.gz'.format(base_dir, num)
-    input_dict = load(input_path)
-    x_lstg = input_dict[X_LSTG]
-    lookup = input_dict[LOOKUP]
-    p_arrival = input_dict[P_ARRIVAL]
-    return x_lstg, lookup, p_arrival
+        if base_dir is None:
+            base_dir = PARTS_DIR + '{}/'.format(part)
+        input_path = base_dir + 'chunks/{}.pkl'.format(num)
+    input_dict = unpickle(input_path)
+    return [input_dict[k] for k in [X_LSTG, LOOKUP, P_ARRIVAL]]
 
 
 def get_delay_outcomes(seconds=0, turn=0):
@@ -313,7 +253,7 @@ def load_featnames(name):
      see const.py for model names
     :return: dict
     """
-    return load(INPUT_DIR + 'featnames/{}.pkl'.format(name))
+    return unpickle(INPUT_DIR + 'featnames/{}.pkl'.format(name))
 
 
 def get_con_outcomes(con=None, sources=None, turn=0):
@@ -334,8 +274,11 @@ def get_con_outcomes(con=None, sources=None, turn=0):
         prev_byr_norm = last_norm(sources=sources, turn=turn)
         prev_slr_norm = prev_norm(sources=sources, turn=turn)
         norm = byr_norm(con=con, prev_byr_norm=prev_byr_norm, prev_slr_norm=prev_slr_norm)
-    split = is_split(con)
-    return np.array([con, reject, norm, split], dtype=np.float)
+    if turn == 7:
+        common = False
+    else:
+        common = con in COMMON_CONS[turn]
+    return np.array([con, reject, norm, common], dtype=np.float)
 
 
 def get_reject(con):
@@ -347,5 +290,3 @@ def need_msg(con, slr=None):
         return 0 < con < 1
     else:
         return con < 1
-
-

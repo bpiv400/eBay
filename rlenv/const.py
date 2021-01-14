@@ -1,7 +1,7 @@
 from utils import unpickle
 from constants import DATE_FEATS_PATH
 from featnames import (CON, DELAY, MSG, ALL_OFFER_FEATS, CLOCK_FEATS,
-                       TIME_FEATS, DAYS, EXP, NORM, SPLIT, AUTO, REJECT,
+                       TIME_FEATS, DAYS, EXP, NORM, COMMON, AUTO, REJECT,
                        THREAD_COUNT)
 
 INTERACT = False
@@ -12,10 +12,7 @@ SIM_VALS_DIR = 'vals'
 SIM_DISCRIM_DIR = 'outcomes'
 
 # holiday and day-of-week indicators, indexed by days since START
-DATE_FEATS = unpickle(DATE_FEATS_PATH)
-
-# number of hours the val generation job may run before termination
-VAL_TIME_LIMIT = 48
+DATE_FEATS_DF = unpickle(DATE_FEATS_PATH)
 
 # outcome tuple names
 SALE = 'sale'
@@ -23,8 +20,6 @@ DUR = 'dur'
 PRICE = 'price'
 
 # param names
-MIN_SALES = 20
-SE_TOL = .5
 
 # composer maps
 SIZE = 'size'
@@ -41,12 +36,9 @@ ACC_IND = 0
 REJ_IND = 1
 OFF_IND = 2
 
-# lstg level
+# event types
 ARRIVAL = 'ARRIVAL'
-
-# thread level
-FIRST_OFFER = 'FIRST_OFFER'  # first byer offer
-RL_ARRIVAL_EVENT = 'RL_ARRIVE'
+FIRST_OFFER = 'FIRST_OFFER'  # first buyer offer
 OFFER_EVENT = 'OFFER'
 DELAY_EVENT = 'DELAY'
 
@@ -65,7 +57,7 @@ CON_START_IND = ALL_OFFER_FEATS.index(CON)
 NORM_IND = ALL_OFFER_FEATS.index(NORM)
 CON_IND = ALL_OFFER_FEATS.index(CON)
 DELAY_IND = ALL_OFFER_FEATS.index(DELAY)
-SPLIT_IND = ALL_OFFER_FEATS.index(SPLIT)
+SPLIT_IND = ALL_OFFER_FEATS.index(COMMON)
 MSG_IND = ALL_OFFER_FEATS.index(MSG)
 DAYS_IND = ALL_OFFER_FEATS.index(DAYS)
 AUTO_IND = ALL_OFFER_FEATS.index(AUTO)

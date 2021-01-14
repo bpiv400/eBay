@@ -1,5 +1,5 @@
 from random import random
-from constants import BYR, SLR
+from featnames import SLR, BYR
 from rlenv.time.offer_types import BYR_REJECTION, SLR_REJECTION, OFFER
 
 

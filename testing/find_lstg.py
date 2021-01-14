@@ -2,7 +2,9 @@
 Finds an arbitrary lstg given partition
 """
 import argparse
-from constants import VALIDATION, PARTITIONS, NUM_CHUNKS
+import numpy as np
+from constants import NUM_CHUNKS
+from featnames import VALIDATION, PARTITIONS
 from rlenv.util import load_chunk, get_env_sim_dir
 from utils import compose_args
 
@@ -10,20 +12,20 @@ from utils import compose_args
 def main():
     parser = argparse.ArgumentParser()
     args = {
-        'lstg': {'required': True,
-                 'type': int},
-        'part': {'required': True,
-                 'default': VALIDATION,
-                 'choices': PARTITIONS}
+        'lstg': {'required': True, 'type': int},
+        'part': {'default': VALIDATION, 'choices': PARTITIONS}
     }
     compose_args(parser=parser, arg_dict=args)
     args = parser.parse_args()
-    base_dir = get_env_sim_dir(args.part)
+    part, lstg = args.part, args.lstg
+
+    base_dir = get_env_sim_dir(part)
     for i in range(NUM_CHUNKS):
         _, lookup, _ = load_chunk(base_dir=base_dir, num=i)
-        if args.lstg in lookup.index:
-            print('Found lstg in {} chunk {}'.format(args.part,
-                                                     i))
+        lstgs = lookup.index
+        if lstg in lstgs:
+            print('Found lstg in {} chunk {}: index {} of {}'.format(
+                part, i, np.where(lstgs == lstg)[0][0] + 1, len(lstgs)))
             exit(0)
 
 

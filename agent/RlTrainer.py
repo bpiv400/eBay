@@ -1,109 +1,85 @@
-import os
 import psutil
 import torch
-from datetime import datetime as dt
-from agent.algo.SellerPPO import SellerPPO
-from agent.algo.BuyerPPO import BuyerPPO
-from agent.EBayRunner import EBayMinibatchRl
-from agent.models.SplitCategoricalPgAgent import SplitCategoricalPgAgent
+from agent.EBayRunner import EBayRunner
+from agent.EBayPPO import EBayPPO
 from rlpyt.samplers.serial.sampler import SerialSampler
 from rlpyt.samplers.parallel.gpu.alternating_sampler import AlternatingSampler
 from rlpyt.utils.logging.context import logger_context
-from constants import AGENT_DIR, BYR, SLR
-from agent.const import FEAT_TYPE
+from agent.const import BATCH_SIZE
+from agent.util import get_log_dir, get_run_id
 from agent.AgentComposer import AgentComposer
-from agent.models.PgCategoricalAgentModel import PgCategoricalAgentModel
-from rlenv.DefaultQueryStrategy import DefaultQueryStrategy
-from rlenv.environments.SellerEnvironment import SellerEnvironment
-from rlenv.environments.BuyerEnvironment import BuyerEnvironment
+from agent.models.AgentModel import AgentModel
+from agent.agents import SellerAgent, BuyerAgent
+from rlenv.QueryStrategy import DefaultQueryStrategy
+from agent.envs.SellerEnv import SellerEnv
+from agent.envs.BuyerEnv import BuyerEnv
 from rlenv.interfaces.ArrivalInterface import ArrivalInterface
 from rlenv.interfaces.PlayerInterface import SimulatedSeller, SimulatedBuyer
-from rlenv.LstgLoader import TrainLoader
-from featnames import BYR_HIST
+from agent.AgentLoader import AgentLoader
+from featnames import BYR, DELTA, TURN_COST
 
 
 class RlTrainer:
-    def __init__(self, **kwargs):
-        # save parameters directly
-        self.agent_params = kwargs['agent_params']
-        self.econ_params = kwargs['econ_params']
-        self.model_params = kwargs['model_params']
-        self.ppo_params = kwargs['ppo_params']
-        self.system_params = kwargs['system_params']
-
-        # buyer indicator
-        self.byr = kwargs['agent_params'][BYR]
-
-        # counts
-        self.itr = 0
-        self.batch_size = self.system_params['batch_size']
-
-        # initialize composer
-        self.composer = AgentComposer(agent_params=self.agent_params)
-
-        # rlpyt components
-        self.sampler = self._generate_sampler()
-        self.runner = self._generate_runner()
-
-        # for logging
-        if self.system_params['log']:
-            self.log_dir = self._make_log_dir()
-            self.run_id = dt.now().strftime('%y%m%d-%H%M%S')
-
-    def _make_log_dir(self):
-        if self.byr:
-            log_dir = AGENT_DIR + '{}/hist_{}'.format(
-                BYR, self.agent_params[BYR_HIST])
-        else:
-            log_dir = AGENT_DIR + '{}/{}'.format(
-                SLR, self.agent_params[FEAT_TYPE])
-        if not os.path.isdir(log_dir):
-            os.mkdir(log_dir)
-        return log_dir
+    def __init__(self, **params):
+        self.params = params
 
     def _generate_query_strategy(self):
         return DefaultQueryStrategy(
             arrival=ArrivalInterface(),
-            seller=SimulatedSeller(full=self.byr),
+            seller=SimulatedSeller(full=self.params[BYR]),
             buyer=SimulatedBuyer(full=True)
         )
 
-    def _generate_sampler(self):
-        env_params = dict(composer=self.composer,
-                          verbose=self.system_params['verbose'],
-                          query_strategy=self._generate_query_strategy(),
-                          recorder=None)
+    def _generate_agent(self, serial=False):
+        model_kwargs = dict(byr=self.params[BYR])
+        agent_cls = BuyerAgent if self.params[BYR] else SellerAgent
+        return agent_cls(
+            ModelCls=AgentModel,
+            model_kwargs=model_kwargs,
+            turn_cost=self.params[TURN_COST],
+            serial=serial
+        )
+
+    def _generate_env(self, verbose=False):
+        composer = AgentComposer(byr=self.params[BYR])
+        env_params = dict(
+            composer=composer,
+            verbose=verbose,
+            query_strategy=self._generate_query_strategy(),
+            loader=AgentLoader(),
+            delta=self.params[DELTA],
+            turn_cost=self.params[TURN_COST],
+            train=True
+        )
+        env = BuyerEnv if self.params[BYR] else SellerEnv
+        return env, env_params
+
+    def _generate_sampler(self, serial=False):
+        env, env_params = self._generate_env(serial)
+
         # sampler and batch sizes
-        if self.system_params['serial']:
+        if serial:
             sampler_cls = SerialSampler
-            batch_b = 1
-            x_lstg_cols = env_params['composer'].x_lstg_cols
-            env_params['loader'] = TrainLoader(x_lstg_cols=x_lstg_cols)
+            batch_B = 1
+            batch_T = 128
         else:
             sampler_cls = AlternatingSampler
-            batch_b = len(self._cpus)
+            batch_B = len(self._cpus)
+            batch_T = int(BATCH_SIZE / batch_B)
 
         # environment
-        env = BuyerEnvironment if self.byr else SellerEnvironment
         return sampler_cls(
                 EnvCls=env,
                 env_kwargs=env_params,
-                batch_B=batch_b,
-                batch_T=int(self.batch_size / batch_b),
+                batch_B=batch_B,
+                batch_T=batch_T,
                 max_decorrelation_steps=0,
                 eval_n_envs=0,
                 eval_env_kwargs={},
                 eval_max_steps=50,
             )
 
-    def _generate_algo(self):
-        algo = BuyerPPO if self.byr else SellerPPO
-        return algo(ppo_params=self.ppo_params,
-                    econ_params=self.econ_params)
-
-    def _generate_runner(self):
-        agent = SplitCategoricalPgAgent(ModelCls=PgCategoricalAgentModel,
-                                        model_kwargs=self.model_params)
+    def _generate_runner(self, serial=None):
         affinity = dict(master_cpus=self._cpus,
                         master_torch_threads=len(self._cpus),
                         workers_cpus=self._cpus,
@@ -111,25 +87,28 @@ class RlTrainer:
                         cuda_idx=torch.cuda.current_device(),
                         alternating=True,
                         set_affinity=True)
-        runner = EBayMinibatchRl(algo=self._generate_algo(),
-                                 agent=agent,
-                                 sampler=self.sampler,
-                                 log_interval_steps=self.batch_size,
-                                 affinity=affinity)
-        return runner
+        return EBayRunner(algo=EBayPPO(),
+                          agent=self._generate_agent(serial),
+                          sampler=self._generate_sampler(serial),
+                          affinity=affinity)
 
     @property
     def _cpus(self):
         return list(psutil.Process().cpu_affinity())
 
-    def train(self):
-        if not self.system_params['log']:
-            self.itr = self.runner.train()
+    def train(self, log=None, serial=None):
+        # construct runner
+        runner = self._generate_runner(serial)
+
+        if not log:
+            runner.train()
         else:
-            with logger_context(log_dir=self.log_dir,
+            log_dir = get_log_dir(**self.params)
+            run_id = get_run_id(**self.params)
+            with logger_context(log_dir=log_dir,
                                 name='log',
                                 use_summary_writer=True,
                                 override_prefix=True,
-                                run_ID=self.run_id,
+                                run_ID=run_id,
                                 snapshot_mode='last'):
-                self.itr = self.runner.train()
+                runner.train()

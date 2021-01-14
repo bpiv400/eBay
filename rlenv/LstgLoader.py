@@ -1,8 +1,5 @@
-import numpy as np
 import pandas as pd
-from constants import TRAIN_RL, AGENT_PARTS_DIR
 from featnames import LSTG
-from rlenv.util import load_chunk
 
 
 class LstgLoader:
@@ -33,7 +30,7 @@ class LstgLoader:
         """
         raise NotImplementedError()
 
-    def init(self):
+    def init(self, rank):
         """
         Performs loader initialization if any
         """
@@ -78,7 +75,7 @@ class ChunkLoader(LstgLoader):
             self.lookup = self._lookup_slice.iloc[self._ix, :]
             self.x_lstg = self._x_lstg_slice.iloc[self._ix, :]
             self.p_arrival = self._p_arrival_slice.iloc[self._ix, :]
-            self.lstg = self.lookup[LSTG]
+            self.lstg = int(self.lookup[LSTG])
             self._ix += 1
             return self.x_lstg, self.lookup, self.p_arrival
         else:
@@ -88,7 +85,7 @@ class ChunkLoader(LstgLoader):
         self.verify_init()
         return self._ix < self._num_lstgs
 
-    def init(self):
+    def init(self, rank):
         pass
 
     def did_init(self):
@@ -100,62 +97,3 @@ class ChunkLoader(LstgLoader):
     @property
     def x_lstg_cols(self):
         return list(self._x_lstg_slice.columns)
-
-
-class TrainLoader(LstgLoader):
-    def __init__(self, **kwargs):
-        super().__init__()
-        if 'rank' not in kwargs:
-            self._filename = self._get_train_file_path(rank=0)
-        else:
-            self._filename = self._get_train_file_path(rank=kwargs['rank'])
-        chunk = load_chunk(input_path=self._filename)
-        self._x_lstg_slice, self._lookup_slice, self._p_arrival_slice = chunk
-        self._internal_loader = None
-        self._draw_lstgs()
-
-    @staticmethod
-    def _get_train_file_path(rank=None):
-        return AGENT_PARTS_DIR + '{}/chunks/{}.gz'.format(TRAIN_RL, rank)
-
-    def next_lstg(self):
-        self.verify_init()
-        if self._cache_empty():
-            self._draw_lstgs()
-        return self._internal_loader.next_lstg()
-
-    def _cache_empty(self):
-        return not self._internal_loader.has_next()
-
-    def has_next(self):
-        self.verify_init()
-        return True
-
-    @property
-    def x_lstg_cols(self):
-        return self._internal_loader.x_lstg_cols
-
-    @property
-    def did_init(self):
-        return True
-
-    def next_id(self):
-        self.verify_init()
-        if self._cache_empty():
-            self._draw_lstgs()
-        return self._internal_loader.next_id()
-
-    def init(self):
-        pass
-
-    def _draw_lstgs(self):
-        lstgs = np.array(self._lookup_slice.index)
-        np.random.shuffle(lstgs)
-        self._x_lstg_slice = self._x_lstg_slice.reindex(lstgs)
-        self._p_arrival_slice = self._p_arrival_slice.reindex(lstgs)
-        self._lookup_slice = self._lookup_slice.reindex(lstgs)
-        self._internal_loader = ChunkLoader(
-            x_lstg=self._x_lstg_slice,
-            lookup=self._lookup_slice,
-            p_arrival=self._p_arrival_slice
-        )

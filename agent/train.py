@@ -1,129 +1,61 @@
-import torch.multiprocessing as mp
-import os
 import argparse
-import gc
-import pandas as pd
+import os
 import torch
-from compress_pickle import load
 from agent.RlTrainer import RlTrainer
-from agent.const import AGENT_STATE, PARAM_DICTS, AGENT_PARAMS, SYSTEM_PARAMS
-from agent.eval.EvalGenerator import EvalGenerator
-from utils import set_gpu_workers, run_func_on_chunks, compose_args,\
-    process_chunk_worker
-from rlenv.generate.util import process_sims
-from constants import AGENT_DIR, BYR, DROPOUT, TRAIN_RL, VALIDATION, \
-    POLICY_BYR, POLICY_SLR, MODEL_DIR
-
-MAIN_GENERATOR = False
+from agent.util import get_run_dir
+from utils import compose_args, set_gpu
+from agent.const import AGENT_PARAMS, DELTA_SLR, DELTA_BYR
+from featnames import BYR, DELTA
 
 
-def simulate(part=None, run_dir=None, agent_params=None, model_kwargs=None):
-    eval_kwargs = dict(
-        agent_params=agent_params,
-        model_kwargs=model_kwargs,
-        run_dir=run_dir,
-        verbose=False
-    )
-    process_args = dict(
-            part=part,
-            gen_class=EvalGenerator,
-            gen_kwargs=eval_kwargs
-        )
-    if MAIN_GENERATOR:
-        process_chunk_worker(**process_args, chunk=1)
-    else:
-        sims = run_func_on_chunks(
-            f=process_chunk_worker,
-            func_kwargs=process_args
-        )
-        process_sims(part=part, parent_dir=run_dir, sims=sims)
-
-
-def main():
+def startup():
     # command-line parameters
     parser = argparse.ArgumentParser()
-    for d in PARAM_DICTS.values():
-        compose_args(arg_dict=d, parser=parser)
+    parser.add_argument('--gpu', type=int, default=0)
+    parser.add_argument('--log', action='store_true')
+    parser.add_argument('--serial', action='store_true')
+    compose_args(arg_dict=AGENT_PARAMS, parser=parser)
     args = vars(parser.parse_args())
 
+    # error checking
+    if args[BYR]:
+        assert args[DELTA] in DELTA_BYR
+    else:
+        assert args[DELTA] in DELTA_SLR
+
+    if args['serial']:
+        assert not args['log']
+
+    # make sure run doesn't already exist
+    if args['log']:
+        run_dir = get_run_dir(**args)
+        if os.path.isdir(run_dir):
+            print('Run already exists.')
+            exit()
+
     # set gpu and cpu affinity
-    set_gpu_workers(gpu=args['gpu'])
-
-    # swap in experiment parameters
-    if args['exp'] is not None:
-        print('Using parameters for experiment {}'.format(args['exp']))
-        exp_path = AGENT_DIR + 'exps.csv'
-        params = pd.read_csv(exp_path, index_col=0).loc[args['exp']].to_dict()
-        for k, v in params.items():
-            if k not in args:
-                raise RuntimeError('{} not in args'.format(k))
-            args[k] = v
-
-    # add dropout
-    s = load(MODEL_DIR + 'dropout.pkl')
-    args[DROPOUT] = s.loc[POLICY_BYR if args['byr'] else POLICY_SLR]
+    set_gpu(gpu=args['gpu'])
+    del args['gpu']
 
     # print to console
     for k, v in args.items():
         print('{}: {}'.format(k, v))
 
-    # split parameters
-    trainer_args = dict()
-    for param_set, param_dict in PARAM_DICTS.items():
-        curr_params = dict()
-        for k in param_dict:
-            if k in args:
-                curr_params[k] = args[k]
-        trainer_args[param_set] = curr_params
+    # params for trainer initialization
+    agent_params = {k: v for k, v in args.items()
+                    if k in AGENT_PARAMS.keys()}
+    train_params = {k: v for k, v in args.items()
+                    if k not in AGENT_PARAMS.keys()}
 
-    # model parameters
-    model_params = {BYR: args[BYR],
-                    DROPOUT: args[DROPOUT]}
-    trainer_args['model_params'] = model_params
+    return agent_params, train_params
 
-    # training loop
-    trainer = RlTrainer(**trainer_args)
-    trainer.train()
 
-    # when logging, simulate and reconfigure outputs
-    if args['log']:
-        run_dir = trainer.log_dir + '/run_{}/'.format(trainer.run_id)
-
-        # drop optimization parameters
-        path = run_dir + 'params.pkl'
-        d = torch.load(path)
-        torch.save(d[AGENT_STATE], path)
-
-        # save run parameters
-        run_path = trainer.log_dir + 'runs.csv'
-        if os.path.isfile(run_path):
-            df = pd.read_csv(run_path, index_col=0)
-        else:
-            df = pd.DataFrame(index=pd.Index([], name='run_id'))
-
-        exclude = list({**AGENT_PARAMS, **SYSTEM_PARAMS}.keys())
-        exclude += [DROPOUT]
-        exclude.remove('batch_size')
-        for k, v in args.items():
-            if k not in exclude:
-                df.loc[trainer.run_id, k] = v
-        df.to_csv(run_path)
-
-        # housekeeping
-        del trainer
-        del d
-        gc.collect()
-
-        # simulate outcomes
-        for part in [TRAIN_RL, VALIDATION]:
-            os.mkdir(run_dir + '{}/'.format(part))
-            print('Simulating {}...'.format(part))
-            simulate(part=part,
-                     run_dir=run_dir,
-                     model_kwargs=model_params,
-                     agent_params=trainer_args['agent_params'])
+def main():
+    agent_params, train_params = startup()
+    trainer = RlTrainer(**agent_params)
+    trainer.train(**train_params)
 
 
 if __name__ == '__main__':
-    mp.set_start_method('spawn')
+    torch.multiprocessing.set_start_method('fork')
     main()

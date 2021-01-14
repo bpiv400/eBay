@@ -1,17 +1,18 @@
 import argparse
+import os
 import pickle
-import psutil
+import pandas as pd
 from time import sleep
 import torch
 import torch.multiprocessing as mp
 from torch.nn.functional import log_softmax
 import numpy as np
-from compress_pickle import load
 from nets.FeedForward import FeedForward
-from constants import DAY, MONTH, SPLIT_PCTS, INPUT_DIR, \
-    MODEL_DIR, META_6, META_7, PARTITIONS, MODEL_PARTS_DIR, \
-    MAX_DELAY_TURN, MAX_DELAY_ARRIVAL, NUM_CHUNKS, AGENT_PARTS_DIR
-from featnames import DELAY, EXP, X_LSTG
+from sim.Sample import get_batches
+from constants import DAY, INPUT_DIR, MODEL_DIR, SIM_DIR, PARTS_DIR, \
+    MAX_DELAY_TURN, MAX_DELAY_ARRIVAL, NUM_CHUNKS, FEATS_DIR, OUTCOME_SIMS
+from featnames import LOOKUP, X_THREAD, X_OFFER, CLOCK, BYR, SLR, AGENT_PARTITIONS, \
+    PARTITIONS, LSTG, SIM
 
 
 def unpickle(file):
@@ -20,7 +21,20 @@ def unpickle(file):
     :param file: str giving path to file
     :return: contents of file
     """
-    return pickle.load(open(file, "rb"))
+    with open(file, "rb") as f:
+        obj = pickle.load(f)
+    return obj
+
+
+def topickle(contents=None, path=None):
+    """
+    Pickles a .pkl file encoded with Python 3
+    :param contents: pickle-able object
+    :param str path: path to file
+    :return: contents of file
+    """
+    with open(path, "wb") as f:
+        pickle.dump(contents, f, protocol=4)
 
 
 def get_remaining(lstg_start, delay_start):
@@ -48,23 +62,14 @@ def extract_clock_feats(seconds):
     return time_of_day, afternoon
 
 
-def is_split(con):
+def get_days_since_lstg(lstg_start=None, time=None):
     """
-    Boolean for whether concession is (close to) an even split.
-    :param con: scalar or Series of concessions.
-    :return: boolean or Series of booleans.
-    """
-    return con in SPLIT_PCTS
-
-
-def get_months_since_lstg(lstg_start=None, time=None):
-    """
-    Float number of months between inputs.
+    Float number of days between inputs.
     :param lstg_start: seconds from START to lstg start.
     :param time: seconds from START to focal event.
-    :return: number of months between lstg_start and start.
+    :return: number of days between lstg_start and start.
     """
-    return (time - lstg_start) / MONTH
+    return (time - lstg_start) / DAY
 
 
 def slr_norm(con=None, prev_byr_norm=None, prev_slr_norm=None):
@@ -96,7 +101,7 @@ def load_sizes(name):
      see const.py for model names
     :return: dict
     """
-    return load(INPUT_DIR + 'sizes/{}.pkl'.format(name))
+    return unpickle(INPUT_DIR + 'sizes/{}.pkl'.format(name))
 
 
 def load_featnames(name):
@@ -106,27 +111,14 @@ def load_featnames(name):
      see const.py for model names
     :return: dict
     """
-    return load(INPUT_DIR + 'featnames/{}.pkl'.format(name))
+    return unpickle(INPUT_DIR + 'featnames/{}.pkl'.format(name))
 
 
-def load_state_dict(name=None):
-    """
-    Loads state dict of a model
-    :param name: string giving name of model (see consts)
-    :return: dict
-    """
-    model_path = '{}{}.net'.format(MODEL_DIR, name)
-    state_dict = torch.load(model_path,
-                            map_location=torch.device('cpu'))
-    return state_dict
-
-
-def load_model(name, verbose=False, use_trained=True):
+def load_model(name, verbose=False):
     """
     Initialize PyTorch network for some model
     :param str name: full name of the model
-    :param verbose: boolean for printing statements
-    :param use_trained: loads trained model when True
+    :param bool verbose: print statements if True
     :return: torch.nn.Module
     """
     if verbose:
@@ -136,41 +128,48 @@ def load_model(name, verbose=False, use_trained=True):
     sizes = load_sizes(name)
     net = FeedForward(sizes)  # type: torch.nn.Module
 
-    if use_trained:
-        # read in model parameters
-        state_dict = load_state_dict(name=name)
+    # read in model parameters
+    path = '{}{}.net'.format(MODEL_DIR, name)
+    state_dict = torch.load(path, map_location=torch.device('cpu'))
 
-        # load parameters into model
-        net.load_state_dict(state_dict, strict=True)
+    # load parameters into model
+    net.load_state_dict(state_dict, strict=True)
+
     # eval mode
     for param in net.parameters(recurse=True):
         param.requires_grad = False
     net.eval()
 
     # use shared memory
-    net.share_memory()
+    try:
+        net.share_memory()
+    except RuntimeError:
+        pass
 
     return net
 
 
-def process_chunk_worker(part=None, chunk=None,
-                         gen_class=None, gen_kwargs=None):
+def process_chunk_worker(part=None, chunk=None, gen_class=None, gen_kwargs=None):
+    if gen_kwargs is None:
+        gen_kwargs = dict()
     gen = gen_class(**gen_kwargs)
     return gen.process_chunk(chunk=chunk, part=part)
 
 
-def run_func_on_chunks(f=None, func_kwargs=None):
+def run_func_on_chunks(f=None, func_kwargs=None, num_chunks=NUM_CHUNKS):
     """
     Applies f to all chunks in parallel.
     :param f: function that takes chunk number as input along with
     other arguments
     :param func_kwargs: dictionary of other keyword arguments
+    :param int num_chunks: number of chunks
     :return: list of worker-specific output
     """
-    num_workers = min(NUM_CHUNKS, psutil.cpu_count() - 1)
+    num_workers = min(num_chunks, mp.cpu_count())
+    print('Using {} workers'.format(num_workers))
     pool = mp.Pool(num_workers)
     jobs = []
-    for i in range(NUM_CHUNKS):
+    for i in range(num_chunks):
         kw = func_kwargs.copy()
         kw['chunk'] = i
         jobs.append(pool.apply_async(f, kwds=kw))
@@ -185,58 +184,51 @@ def run_func_on_chunks(f=None, func_kwargs=None):
     return res
 
 
-def get_cut(meta):
-    if meta in META_6:
-        return .06
-    if meta in META_7:
-        return .07
-    return .09
-
-
-def get_model_predictions(m, x):
+def get_model_predictions(data, softmax=True):
     """
     Returns predicted categorical distribution.
-    :param str m: name of model
-    :param dict x: dictionary of input tensors
+    :param EBayDataset data: model to simulate
+    :param bool softmax: take softmax if True
     :return: torch tensor
     """
     # initialize neural net
-    net = load_model(m, verbose=False)
+    net = load_model(data.name, verbose=False)
     if torch.cuda.is_available():
         net = net.to('cuda')
 
-    # split into batches
-    vec = np.array(range(len(x['lstg'])))
-    batches = np.array_split(vec, 1 + len(vec) // 2048)
-
-    # convert to 32-bit numpy arrays
-    if 'DataFrame' in str(type(x['lstg'])):
-        x = {k: v.values.astype('float32') for k, v in x.items()}
-
-    # model predictions
-    p0 = []
+    # get predictions from neural net
+    theta = []
+    batches = get_batches(data)
     for b in batches:
-        x_b = {k: torch.from_numpy(v[b, :]) for k, v in x.items()}
         if torch.cuda.is_available():
-            x_b = {k: v.to('cuda') for k, v in x_b.items()}
-        theta_b = net(x_b).cpu().double()
-        p0.append(np.exp(log_softmax(theta_b, dim=-1)))
+            b['x'] = {k: v.to('cuda') for k, v in b['x'].items()}
+        theta.append(net(b['x']).cpu().double())
+    theta = torch.cat(theta)
 
-    # concatenate and return
-    return torch.cat(p0, dim=0).numpy()
+    if not softmax:
+        return theta.numpy()
+
+    # take softmax
+    if theta.size()[1] == 1:
+        theta = torch.cat((torch.zeros_like(theta), theta), dim=1)
+    p = np.exp(log_softmax(theta, dim=-1).numpy())
+    return p
 
 
-def input_partition():
+def input_partition(agent=False):
     """
     Parses command line input for partition name.
+    :param bool agent: if True, raise error when 'sim' partition is called.
     :return part: string partition name.
     """
     parser = argparse.ArgumentParser()
-
-    # partition
-    parser.add_argument('--part', required=True, type=str,
-                        choices=PARTITIONS, help='partition name')
-    return parser.parse_args().part
+    parser.add_argument('--part', required=True, type=str)
+    part = parser.parse_args().part
+    if agent:
+        assert part in AGENT_PARTITIONS
+    else:
+        assert part in PARTITIONS
+    return part
 
 
 def init_optional_arg(kwargs=None, name=None, default=None):
@@ -244,44 +236,107 @@ def init_optional_arg(kwargs=None, name=None, default=None):
         kwargs[name] = default
 
 
-def load_file(part, x, agent=None):
+def load_file(part, x, folder=PARTS_DIR):
     """
     Loads file from partitions directory.
     :param str part: name of partition
     :param str x: name of file
-    :param bool agent: use agent files if True
+    :param str folder: name of folder
     :return: dataframe
     """
-    folder = AGENT_PARTS_DIR if agent else MODEL_PARTS_DIR
-    suffix = 'pkl' if x == X_LSTG else 'gz'
-    return load('{}{}/{}.{}'.format(folder, part, x, suffix))
+    if part in folder:
+        path = folder + '{}.pkl'.format(x)
+    else:
+        path = folder + '{}/{}.pkl'.format(part, x)
+    if not os.path.isfile(path):
+        return None
+    return unpickle(path)
 
 
-def drop_censored(df):
-    """
-    Removes censored observations from a dataframe of offers
-    :param df: dataframe with index ['lstg', 'thread', 'index']
-    :return: dataframe
-    """
-    censored = df[EXP] & (df[DELAY] < 1)
-    return df[~censored]
+def load_data(part=None, sim=False, run_dir=None, lstgs=None):
+    if not sim and run_dir is None:
+        folder = PARTS_DIR
+    elif sim:
+        assert run_dir is None
+        folder = SIM_DIR
+    else:
+        folder = run_dir
+
+    # initialize dictionary with lookup file
+    data = {LOOKUP: load_file(part, LOOKUP)}
+    if sim or run_dir is not None:
+        idx = pd.MultiIndex.from_product([data[LOOKUP].index, range(OUTCOME_SIMS)],
+                                         names=[LSTG, SIM])
+        data[LOOKUP] = safe_reindex(data[LOOKUP], idx=idx)
+
+    # load other components
+    for k in [X_THREAD, X_OFFER, CLOCK]:
+        df = load_file(part, k, folder=folder)
+        if df is not None:
+            data[k] = df
+
+    # restrict to lstgs
+    if lstgs is not None:
+        for k, df in data.items():
+            data[k] = safe_reindex(df, idx=lstgs)
+
+    return data
 
 
-def set_gpu_workers(gpu=None):
+def set_gpu(gpu=None):
     """
     Sets the GPU index and the CPU affinity.
+    :param int gpu: index of cuda device.
     """
     torch.cuda.set_device(gpu)
-    print('Training on cuda:{}'.format(gpu))
-
-    # set cpu affinity
-    p = psutil.Process()
-    start = NUM_CHUNKS * gpu
-    workers = list(range(start, start + NUM_CHUNKS))
-    p.cpu_affinity(workers)
-    print('vCPUs: {}'.format(p.cpu_affinity()))
+    print('Using cuda:{}'.format(gpu))
 
 
 def compose_args(arg_dict=None, parser=None):
     for k, v in arg_dict.items():
         parser.add_argument('--{}'.format(k), **v)
+
+
+def get_role(byr=None):
+    return BYR if byr else SLR
+
+
+def safe_reindex(df=None, idx=None, fill_value=None):
+    df = pd.DataFrame(index=idx).join(df)
+    if len(df.columns) == 1:
+        df = df.squeeze()
+    if fill_value is not None:
+        df.loc[df.isna()] = fill_value
+    return df
+
+
+def load_feats(name, lstgs=None, fill_zero=False):
+    """
+    Loads dataframe of features (and reindexes).
+    :param str name: filename
+    :param lstgs: listings to restrict to
+    :param bool fill_zero: fill missings with 0's if True
+    :return: dataframe of features
+    """
+    df = unpickle(FEATS_DIR + '{}.pkl'.format(name))
+    if lstgs is None:
+        return df
+    kwargs = {'index': lstgs}
+    if len(df.index.names) > 1:
+        kwargs['level'] = 'lstg'
+    if fill_zero:
+        kwargs['fill_value'] = 0.
+    return df.reindex(**kwargs)
+
+
+def load_inputs(part=None, name=None):
+    """
+    Loads model inputs file from inputs directory.
+    :param str part: name of partition
+    :param str name: name of file
+    :return: dataframe
+    """
+    path = INPUT_DIR + '{}/{}.pkl'.format(part, name)
+    if not os.path.isfile(path):
+        return None
+    return unpickle(path)

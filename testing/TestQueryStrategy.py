@@ -1,22 +1,18 @@
 from rlenv.QueryStrategy import QueryStrategy
-from testing.LstgLog import LstgLog
-from utils import init_optional_arg
 
 
 class TestQueryStrategy(QueryStrategy):
-    def __init__(self):
+    def __init__(self, byr=None):
         super().__init__()
-        self.lstg_log = None  # type: LstgLog
+        self.byr = byr
+        self.lstg_log = None
 
     def update_log(self, log):
         self.lstg_log = log
 
     def get_first_arrival(self, *args, **kwargs):
-        init_optional_arg(kwargs=kwargs, name='intervals', default=None)
-        agent = kwargs['intervals'] is not None
-        if agent:
-            return self.lstg_log.get_agent_arrival(time=kwargs['time'],
-                                                   thread_id=kwargs['thread_id'])
+        if self.byr and kwargs['thread_id'] == 1:  # buyer agent turn
+            return self.lstg_log.get_agent_arrival()
         else:
             return self.lstg_log.get_inter_arrival(time=kwargs['time'],
                                                    thread_id=kwargs['thread_id'])
@@ -32,11 +28,10 @@ class TestQueryStrategy(QueryStrategy):
                                       input_dict=kwargs['input_dict'])
 
     def get_con(self, *args, **kwargs):
-        con = self.lstg_log.get_con(thread_id=kwargs['thread_id'],
-                                    time=kwargs['time'],
-                                    input_dict=kwargs['input_dict'],
-                                    turn=kwargs['turn'])
-        return con
+        return self.lstg_log.get_con(thread_id=kwargs['thread_id'],
+                                     time=kwargs['time'],
+                                     input_dict=kwargs['input_dict'],
+                                     turn=kwargs['turn'])
 
     def get_msg(self, *args, **kwargs):
         return self.lstg_log.get_msg(thread_id=kwargs['thread_id'],
@@ -49,4 +44,3 @@ class TestQueryStrategy(QueryStrategy):
                                        time=kwargs['time'],
                                        input_dict=kwargs['input_dict'],
                                        turn=kwargs['turn'])
-

@@ -1,4 +1,4 @@
-from rlenv.const import ARRIVAL, RL_ARRIVAL_EVENT
+from rlenv.const import ARRIVAL
 
 
 class Event:
@@ -25,16 +25,10 @@ class Event:
         based on priority alone
 
         If events have the same priority, any non-arrival event takes
-        priority over an arrival event. If both events are arrival events,
-        the ordinary arrival event takes priority over the RL arrival event
+        priority over an arrival event.
         """
         if self.priority == other.priority:
-            if self.type == ARRIVAL:
-                return other.type == RL_ARRIVAL_EVENT
-            elif self.type == RL_ARRIVAL_EVENT:
-                return other.type != ARRIVAL
-            else:
-                return True
+            return self.type == ARRIVAL
         else:
             return self.priority < other.priority
 

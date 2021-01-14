@@ -1,24 +1,27 @@
 import numpy as np
 import pandas as pd
-from constants import START, IDX, MAX_DELAY_TURN
+from processing.util import feat_to_pctile
+from constants import START, IDX, MAX_DELAY_TURN, DAY
+from featnames import BYR_HIST, DELAY, LSTG, THREAD, INDEX, CLOCK, ACCEPT, \
+    BYR, START_TIME, START_PRICE, START_DATE, END_TIME, REJECT
 
-QUANTILES = [0.25, 0.5, 0.75, 1]  # quantiles of feature distribution
+QUANTILES = [25, 50, 75, 100]  # quantiles of feature distribution
 
 
 def prep_tf(events):
-    tf = events[['clock']].xs(0, level='thread', drop_level=True)
-    tf = tf.drop(columns=['clock'])
-    tf = tf.xs(0, level='index', drop_level=True)
-    tf = tf.reset_index('lstg', drop=False)
+    tf = events[[CLOCK]].xs(0, level=THREAD, drop_level=True)
+    tf = tf.drop(columns=[CLOCK])
+    tf = tf.xs(0, level=INDEX, drop_level=True)
+    tf = tf.reset_index(LSTG, drop=False)
     tf = tf.reset_index(drop=True)
-    tf = tf.set_index('lstg', drop=True)
+    tf = tf.set_index(LSTG, drop=True)
     return tf
 
 
 def collapse_dict(feat_dict, index_names, meta=False):
     if not meta:
-        remaining = [ind for ind in index_names if ind != 'thread']
-        df = pd.concat(feat_dict, names=['thread'] + remaining)
+        remaining = [ind for ind in index_names if ind != THREAD]
+        df = pd.concat(feat_dict, names=[THREAD] + remaining)
     else:
         remaining = [ind for ind in index_names if ind != 'lstg_counter']
         df = pd.concat(feat_dict, names=['lstg_counter'] + remaining)
@@ -26,55 +29,55 @@ def collapse_dict(feat_dict, index_names, meta=False):
     return df
 
 
-def quant_vector_index(quant_vector, l, name, new=False):
+def quant_vector_index(quant_vector, elems, name, new=False):
     lstg_ind = 'lstg_id' if new else 'lstg_counter'
     quant_vector = quant_vector.reset_index(drop=False)
-    quant_vector = quant_vector[[name, lstg_ind] + l]
-    quant_vector = quant_vector.set_index(l + [lstg_ind], append=False,
+    quant_vector = quant_vector[[name, lstg_ind] + elems]
+    quant_vector = quant_vector.set_index(elems + [lstg_ind], append=False,
                                           drop=True)
     quant_vector = quant_vector[name]
     return quant_vector
 
 
-def prep_quantiles(df, l, featname, new=False):
+def prep_quantiles(df, elems, featname, new=False):
     lstg_ind = 'lstg_id' if new else 'lstg_counter'
     if featname == 'accept_norm':
         quant_vector = df.reset_index(drop=False)
-        quant_vector = quant_vector[[featname, lstg_ind] + l]
-        quant_vector = quant_vector.groupby(by=l + [lstg_ind]).max()[featname]
-    elif featname == 'first_offer' or featname == 'byr_hist':
-        quant_vector = df.xs(1, level='index')
-        quant_vector = quant_vector_index(quant_vector, l, featname, new=new)
+        quant_vector = quant_vector[[featname, lstg_ind] + elems]
+        quant_vector = quant_vector.groupby(by=elems + [lstg_ind]).max()[featname]
+    elif featname == 'first_offer' or featname == BYR_HIST:
+        quant_vector = df.xs(1, level=INDEX)
+        quant_vector = quant_vector_index(quant_vector, elems, featname, new=new)
     elif featname == 'slr_delay' or featname == 'byr_delay':
         if featname == 'slr_delay':
-            other_turn = df.index.get_level_values('index').isin([3, 5])
+            other_turn = df.index.get_level_values(INDEX).isin([3, 5])
         else:
-            other_turn = df.index.get_level_values('index').isin([2, 4, 6])
+            other_turn = df.index.get_level_values(INDEX).isin([2, 4, 6])
         # removing the other turn from the distribution
-        df.loc[other_turn, 'delay'] = np.NaN
+        df.loc[other_turn, DELAY] = np.NaN
         # removing expiration rejects from the distribution
-        auto_rej = df['delay'] == 1
-        df.loc[auto_rej, 'delay'] = np.NaN
-        quant_vector = quant_vector_index(df, l, 'delay', new=new)
+        auto_rej = df[DELAY] == 1
+        df.loc[auto_rej, DELAY] = np.NaN
+        quant_vector = quant_vector_index(df, elems, DELAY, new=new)
         quant_vector = quant_vector.rename(featname)
     elif featname == 'start_price_pctile' or featname == 'arrival_rate':
-        quant_vector = df.xs(0, level='thread').xs(0, level='index')
-        quant_vector = quant_vector_index(quant_vector, l, featname, new=new)
-    elif featname == 'byr_hist':
-        quant_vector = df.xs(1, level='index')
-        quant_vector = quant_vector_index(quant_vector, l, featname, new=new)
+        quant_vector = df.xs(0, level=THREAD).xs(0, level=INDEX)
+        quant_vector = quant_vector_index(quant_vector, elems, featname, new=new)
+    elif featname == BYR_HIST:
+        quant_vector = df.xs(1, level=INDEX)
+        quant_vector = quant_vector_index(quant_vector, elems, featname, new=new)
     else:
         raise NotImplementedError()
     return quant_vector
 
 
-def get_perc(df, l, num, denom, name=None):
+def get_perc(df, elems, num, denom, name=None):
     df = df.copy()
     if 'msg_rate' not in name:
         df[num] = df[num].astype(int)
         df[denom] = df[denom].astype(int)
-    level_group = df[[num, denom]].groupby(by=l).sum()
-    lstg_group = df[[num, denom]].groupby(by=l + ['lstg']).sum()
+    level_group = df[[num, denom]].groupby(by=elems).sum()
+    lstg_group = df[[num, denom]].groupby(by=elems + [LSTG]).sum()
     num_level = level_group[num]
     num_lstg = lstg_group[num]
     num_ser = num_level - num_lstg
@@ -88,44 +91,45 @@ def get_perc(df, l, num, denom, name=None):
 
     output_ser = (num_ser / denom_ser).fillna(0)
     assert not np.any(np.isinf(output_ser.values))
-    output_ser.index = output_ser.index.droplevel(level=l)
-    output_ser = output_ser.rename('{}_{}'.format(l[-1], name))
+    output_ser.index = output_ser.index.droplevel(level=elems)
+    output_ser = output_ser.rename('{}_{}'.format(elems[-1], name))
     return output_ser
 
 
-def get_expire_perc(df, l, byr=False):
+def get_expire_perc(df, elems, byr=False):
     df = df.copy()
     if byr:
-        other_turn = df.index.get_level_values('index').isin([2, 4, 6])
+        other_turn = df.index.get_level_values(INDEX).isin([2, 4, 6])
         name = 'byr_expire'
     else:
-        other_turn = df.index.get_level_values('index').isin([3, 5])
+        other_turn = df.index.get_level_values(INDEX).isin([3, 5])
         name = 'slr_expire'
-    df.loc[other_turn, 'delay'] = np.NaN
-    df['expire'] = (df['delay'] == 1).astype(bool)
-    df['curr_offer'] = df['delay'].notna()
-    return get_perc(df, l, 'expire', 'curr_offer', name=name)
+    df.loc[other_turn, DELAY] = np.NaN
+    df['expire'] = (df[DELAY] == 1).astype(bool)
+    df['curr_offer'] = df[DELAY].notna()
+    return get_perc(df, elems, 'expire', 'curr_offer', name=name)
 
 
-def original_quantiles(quant_vector=None, total_lstgs=None, featname=None, l=None, converter=None):
+def original_quantiles(quant_vector=None, total_lstgs=None, featname=None,
+                       elems=None, converter=None):
     quants = dict()
     # loop over quantiles
     for n in range(int(total_lstgs.max()) + 1):
         cut = quant_vector.loc[total_lstgs >= n].drop(n, level='lstg_counter')
         rel_groups = cut.index.droplevel('lstg_counter').drop_duplicates()
-        cut = cut.groupby(by=l)
+        cut = cut.groupby(by=elems)
         partial = pd.DataFrame(index=rel_groups)
         for q in QUANTILES:
-            tfname = '_'.join([l[-1], featname, str(int(100 * q))])
+            tfname = '_'.join([elems[-1], featname, str(q)])
             partial[tfname] = cut.quantile(q=q, interpolation='lower')
             partial[tfname] = partial[tfname].fillna(0)
         quants[n] = partial
     # combine
-    output = collapse_dict(quants, l + ['lstg_counter'], meta=True)
+    output = collapse_dict(quants, elems + ['lstg_counter'], meta=True)
     assert output.index.is_unique
     output = output.join(converter, how='right')
-    output = output.reset_index('lstg_counter', drop=True).set_index('lstg', append=False,
-                                                                     drop=True)
+    output = output.reset_index('lstg_counter', drop=True)
+    output = output.set_index(LSTG, append=False, drop=True)
     output = output.fillna(0)
     assert not output.isna().any().any()
     return output
@@ -147,16 +151,16 @@ def inplace_quantiles(df):
     filled_count = total_count - nan_count
     # edge case of all nans
     if filled_count == 0:
-        lstgs = df['lstg'].unique()
-        lstgs = pd.Index(lstgs, name='lstg')
-        cols = [str(i) for i in [25, 50, 75, 100]]
+        lstgs = df[LSTG].unique()
+        lstgs = pd.Index(lstgs, name=LSTG)
+        cols = [str(i) for i in QUANTILES]
         res_dict = pd.DataFrame(0, columns=cols, index=lstgs)
         return res_dict
     last_filled = filled_count - 1
     targs = df['targ'].values
-    lstgs = df['lstg'].values
+    lstgs = df[LSTG].values
     # compute indices of quantiles in full distribution
-    full_quant_inds = {q:int(q * last_filled / 100) for q in [25, 50, 75, 100]}
+    full_quant_inds = {q: int(q * last_filled / 100) for q in QUANTILES}
     lstg_ind_dict = dict()
     lstg_count_dict = dict()
     # populate dictionary of lstgs with lists containing indices corresponding
@@ -169,7 +173,7 @@ def inplace_quantiles(df):
         if i <= last_filled:
             lstg_count_dict[curr_lstg] += 1
 
-    res_dict = {i: list() for i in [25, 50, 75, 100]}
+    res_dict = {i: list() for i in QUANTILES}
     lstg_order = []
     # iterate over all lstgs
     for curr_lstg, curr_inds in lstg_ind_dict.items():
@@ -202,17 +206,17 @@ def inplace_quantiles(df):
     # convert output into a dataframe
     res_dict = pd.DataFrame.from_dict(res_dict, orient='columns')
     res_dict = res_dict.rename(columns=lambda col: str(col))
-    lstg_order = pd.Index(lstg_order, name='lstg')
+    lstg_order = pd.Index(lstg_order, name=LSTG)
     res_dict.index = lstg_order
     return res_dict
 
 
-def fast_quantiles(df, l, featname):
+def fast_quantiles(df, elems, featname):
     # initialize output dataframe
     df = df.copy()
-    df = df.drop(columns='thread')
+    df = df.drop(columns=THREAD)
     # subset to minimal entries per lstg
-    quant_vector = prep_quantiles(df, l, featname, new=True)
+    quant_vector = prep_quantiles(df, elems, featname, new=True)
     # sort
     quant_vector = quant_vector.sort_values(na_position='last')
     # name feature series
@@ -220,11 +224,11 @@ def fast_quantiles(df, l, featname):
     # reset index and add unique counter
     quant_vector = quant_vector.reset_index(drop=False)
     quant_vector.index.name = 'counter'
-    quant_vector = quant_vector.set_index(l, append=True, drop=True)
+    quant_vector = quant_vector.set_index(elems, append=True, drop=True)
     # add lstg column
-    quant_vector = quant_vector.rename(columns={'lstg_id': 'lstg'})
+    quant_vector = quant_vector.rename(columns={'lstg_id': LSTG})
     # group
-    vector_groups = quant_vector.groupby(by=l)
+    vector_groups = quant_vector.groupby(by=elems)
     acc = list()
     # iterate over groups
     for index_subset in vector_groups.groups.values():
@@ -234,55 +238,58 @@ def fast_quantiles(df, l, featname):
     # concatenate results for each group
     output = pd.concat(acc, axis=0, sort=False)
     # append feature and level name to the column
-    level_name = l[-1]
+    level_name = elems[-1]
     output = output.rename(columns=lambda q: '{}_{}_{}'.format(level_name,
                                                                featname, q))
     output = output.sort_index()
     return output
 
 
-def get_quantiles(df, l, featname):
+def get_quantiles(df, elems, featname):
     # initialize output dataframe
     df = df.copy()
-    df['lstg_counter'] = df['lstg_id'].groupby(by=l).transform(
+    df['lstg_counter'] = df['lstg_id'].groupby(by=elems).transform(
         lambda x: x.factorize()[0].astype(np.int64))
-    df = df.drop(columns='thread')
+    df = df.drop(columns=THREAD)
     converter = df[['lstg_counter']]
     converter = converter.set_index('lstg_counter', append=True)
-    converter = converter.reset_index('lstg', drop=False)['lstg']
+    converter = converter.reset_index(LSTG, drop=False)[LSTG]
     drop_levels = [ind_level for ind_level in converter.index.names if ind_level != 'lstg_counter'
-                   and ind_level not in l]
+                   and ind_level not in elems]
     converter.index = converter.index.droplevel(drop_levels)
     converter = converter.drop_duplicates(keep='first')
 
     # subset to 1 entry per lstg per hierarchy group
-    quant_vector = prep_quantiles(df, l, featname)
+    quant_vector = prep_quantiles(df, elems, featname)
     # total lstgs
-    total_lstgs = df.reset_index().groupby(by=l).max()['lstg_counter']
-    if len(l) == 1:
-        total_lstgs = total_lstgs.reindex(quant_vector.index, level=l[0])
+    total_lstgs = df.reset_index().groupby(by=elems).max()['lstg_counter']
+    if len(elems) == 1:
+        total_lstgs = total_lstgs.reindex(quant_vector.index, level=elems[0])
     else:
         total_lstgs = total_lstgs.reindex(quant_vector.index)
 
-    return original_quantiles(quant_vector=quant_vector, total_lstgs=total_lstgs,
-                              featname=featname, l=l, converter=converter)
+    return original_quantiles(quant_vector=quant_vector,
+                              total_lstgs=total_lstgs,
+                              featname=featname,
+                              elems=elems,
+                              converter=converter)
 
 
 def make_helper_feats(events):
     df = events.sort_index()
-    df['clock'] = pd.to_datetime(df.clock, unit='s', origin=START)
-    df['lstg_ind'] = (df.index.get_level_values('index') == 0).astype(bool)
+    df[CLOCK] = pd.to_datetime(df[CLOCK], unit='s', origin=START)
+    df['lstg_ind'] = (df.index.get_level_values(INDEX) == 0).astype(bool)
     df['base'] = (df.index.get_level_values('thread') == 0).astype(bool)
-    df['thread'] = (df.index.get_level_values('index') == 1).astype(bool)
-    df['thread'] = (df.thread & ~df.base).astype(bool)
-    df['slr_offer'] = (~df.byr & ~df.reject & ~df.lstg_ind & ~df.accept & ~df.base).astype(bool)
-    df['byr_offer'] = df.byr & ~df.reject & ~df.accept
-    df['lstg_id'] = df.index.get_level_values('lstg').astype(np.int64)
-    df['offer_norm'] = df.price / df.start_price
-    real_threads = (df.index.get_level_values('thread') != 0).astype(bool)
-    first_offer = (df.index.get_level_values('index') == 1).astype(bool)
+    df[THREAD] = (df.index.get_level_values(INDEX) == 1).astype(bool)
+    df[THREAD] = (df[THREAD] & ~df.base).astype(bool)
+    df['slr_offer'] = (~df[BYR] & ~df[REJECT] & ~df.lstg_ind & ~df[ACCEPT] & ~df.base).astype(bool)
+    df['byr_offer'] = df[BYR] & ~df[REJECT] & ~df[ACCEPT]
+    df['lstg_id'] = df.index.get_level_values(LSTG).astype(np.int64)
+    df['offer_norm'] = df.price / df[START_PRICE]
+    real_threads = (df.index.get_level_values(THREAD) != 0).astype(bool)
+    first_offer = (df.index.get_level_values(INDEX) == 1).astype(bool)
     df['bin'] = (first_offer & real_threads & (df.offer_norm == 1).astype(bool)).astype(bool)
-    df['bin'] = (df['bin'] & df['accept']).astype(bool)
+    df['bin'] = (df['bin'] & df[ACCEPT]).astype(bool)
     first_offer = first_offer & real_threads & ~df.bin
     df['first_offer'] = (df.offer_norm[first_offer]).astype(np.float64)
     return df
@@ -325,13 +332,12 @@ def get_cat_feat(events, levels=None, feat_ind=None):
 
 def get_msg_rate(events, levels, turn):
     events = events[['message']].copy()
-    other_turns = ~events.index.get_level_values('index').isin([turn])
+    other_turns = ~events.index.get_level_values(INDEX).isin([turn])
     events.loc[other_turns, 'message'] = np.NaN
 
     events['is_turn'] = (~events.message.isna())
     events.loc[:, 'is_turn'] = events['is_turn'].astype(bool)
     events.loc[:, 'is_turn'] = events['is_turn'].astype(int)
-    print(events.dtypes)
     name = 'msg_rate_{}'.format(turn)
     msg_rate = get_perc(events, levels, 'message', 'is_turn', name)
     return msg_rate
@@ -339,17 +345,10 @@ def get_msg_rate(events, levels, turn):
 
 def get_cat_msg_rate(events, levels):
     tf = prep_tf(events)
-    print(tf.index.names)
-    print(events.index.names)
-    print(events.columns)
-    print(events[['message']].dtypes)
     for i in range(len(levels)):
         curr_levels = levels[: i+1]
         for turn in range(1, 7):
             tf = tf.join(get_msg_rate(events.copy(), curr_levels, turn))
-    print(tf.min())
-    print(tf.max())
-    print(tf.mean())
     return tf
 
 
@@ -360,8 +359,7 @@ def get_cat_lstg_counts(events, levels):
     for i in range(len(levels)):
         curr_levels = levels[: i+1]
         # open listings
-
-        events = events.sort_values(['clock', 'censored'] + curr_levels)
+        events = events.sort_values([CLOCK] + curr_levels)
 
         #########
         # REMOVED OPEN LSTGS
@@ -370,12 +368,12 @@ def get_cat_lstg_counts(events, levels):
         ##########
 
         # count features grouped by current level
-        ct_feats = events[['lstg_ind', 'thread', 'slr_offer',
-                           'byr_offer', 'accept']].groupby(by=curr_levels).sum()
-        ctl_feats = events[['lstg_ind', 'thread', 'slr_offer',
-                            'byr_offer', 'accept']].groupby(by=curr_levels + ['lstg']).sum()
+        ct_feats = events[['lstg_ind', THREAD, 'slr_offer',
+                           'byr_offer', ACCEPT]].groupby(by=curr_levels).sum()
+        ctl_feats = events[['lstg_ind', THREAD, 'slr_offer',
+                            'byr_offer', ACCEPT]].groupby(by=curr_levels + [LSTG]).sum()
         ct_feats = ct_feats - ctl_feats
-        per_lstg_feats = ['accept', 'slr_offer', 'byr_offer', 'thread']
+        per_lstg_feats = [ACCEPT, 'slr_offer', 'byr_offer', THREAD]
         divisor = ct_feats['lstg_ind'].copy()
         divisor[divisor == 0] = 1
         for feat in per_lstg_feats:
@@ -394,12 +392,11 @@ def get_cat_lstg_counts(events, levels):
 
 def get_cat_accepts(events, levels):
     # loop over hierarchy, excluding lstg
-    events['accept_norm'] = events.price[events.accept & ~events.bin] / events.start_price
+    events['accept_norm'] = events.price[events[ACCEPT] & ~events.bin] / events[START_PRICE]
     tf = prep_tf(events)
 
     for i in range(len(levels)):
         curr_levels = levels[: i + 1]
-        print('curr level: {}'.format(curr_levels[-1]))
         # quantiles of (normalized) accept price over 30-day window
         quants = fast_quantiles(events, curr_levels, 'accept_norm')
         tf = tf.join(quants)
@@ -416,11 +413,11 @@ def get_cat_con(events, levels):
         curr_levels = levels[: i + 1]
         perc = get_perc(events,  curr_levels, 'bin', 'lstg_ind', name='bin')
         tf = tf.join(perc)
+
         # quantiles of (normalized) accept price over 30-day window
         quants = fast_quantiles(events, curr_levels, 'first_offer')
         tf = tf.join(quants)
-        # for identical timestamps
-        cols = [c for c in tf.columns if c.startswith(levels[-1])]
+
     # collapse to lstg
     return tf.sort_index()
 
@@ -444,8 +441,6 @@ def get_cat_delay(events, levels):
     events['delay'] = delay.rename_axis('index', axis=1).stack()
     # excluding auto rejections
     events.loc[events['delay'] == 0, 'delay'] = np.NaN
-    # excluding censored rejections
-    events.loc[events['censored'], 'delay'] = np.NaN
     for i in range(len(levels)):
         curr_levels = levels[: i + 1]
         tf = tf.join(fast_quantiles(events, curr_levels, 'slr_delay'))
@@ -461,9 +456,9 @@ def get_cat_start_price(events, levels):
 
 
 def get_cat_byr_hist(events, levels):
-    events.loc[events.base, 'byr_hist'] = np.NaN
-    events.byr_hist = events.byr_hist.astype(np.float)
-    return get_cat_quantiles_wrapper(events, levels, 'byr_hist')
+    events.loc[events.base, BYR_HIST] = np.NaN
+    events.loc[:, BYR_HIST] = feat_to_pctile(events[BYR_HIST])
+    return get_cat_quantiles_wrapper(events, levels, BYR_HIST)
 
 
 def get_cat_arrival(events, levels):
@@ -479,30 +474,28 @@ def get_cat_quantiles_wrapper(events, levels, featname):
 
 
 def create_obs(df, is_start, cols):
-    toAppend = pd.DataFrame(index=df.index, columns=['index'] + cols)
-    for c in ['accept', 'message']:
+    toAppend = pd.DataFrame(index=df.index, columns=[INDEX] + cols)
+    for c in [ACCEPT, 'message']:
         if c in cols:
             toAppend[c] = False
     if is_start:
-        toAppend.loc[:, 'reject'] = False
-        toAppend.loc[:, 'index'] = 0
-        toAppend.loc[:, 'censored'] = False
-        toAppend.loc[:, 'price'] = df.start_price
-        toAppend.loc[:, 'clock'] = df.start_time
+        toAppend.loc[:, REJECT] = False
+        toAppend.loc[:, INDEX] = 0
+        toAppend.loc[:, 'price'] = df[START_PRICE]
+        toAppend.loc[:, CLOCK] = df[START_TIME]
     else:
-        toAppend.loc[:, 'reject'] = True
-        toAppend.loc[:, 'index'] = 1
-        toAppend.loc[:, 'censored'] = True
+        toAppend.loc[:, REJECT] = True
+        toAppend.loc[:, INDEX] = 1
         toAppend.loc[:, 'price'] = np.nan
-        toAppend.loc[:, 'clock'] = df.end_time
-    return toAppend.set_index('index', append=True)
+        toAppend.loc[:, CLOCK] = df[END_TIME]
+    return toAppend.set_index(INDEX, append=True)
 
 
 def expand_index(df, levels):
     df.set_index(levels, append=True, inplace=True)
-    idxcols = levels + ['lstg', 'thread']
-    if 'index' in df.index.names:
-        idxcols += ['index']
+    idxcols = levels + [LSTG, THREAD]
+    if INDEX in df.index.names:
+        idxcols += [INDEX]
     df = df.reorder_levels(idxcols)
     df.sort_values(idxcols, inplace=True)
     return df
@@ -510,13 +503,13 @@ def expand_index(df, levels):
 
 def add_start_end(offers, listings, levels):
     # listings dataframe
-    lstgs = listings[levels + ['start_date', 'end_time', 'start_price']].copy()
-    lstgs['thread'] = 0
-    lstgs.set_index('thread', append=True, inplace=True)
+    lstgs = listings[levels + [START_DATE, END_TIME, START_PRICE]].copy()
+    lstgs[THREAD] = 0
+    lstgs.set_index(THREAD, append=True, inplace=True)
     lstgs = expand_index(lstgs, levels)
-    lstgs['start_time'] = lstgs.start_date * 60 * 60 * 24
-    lstgs.drop('start_date', axis=1, inplace=True)
-    lstgs = lstgs.join(offers['accept'].groupby('lstg').max())
+    lstgs[START_TIME] = lstgs[START_DATE] * DAY
+    lstgs.drop(START_DATE, axis=1, inplace=True)
+    lstgs = lstgs.join(offers[ACCEPT].groupby(LSTG).max())
     # create data frames to append to offers
     cols = list(offers.columns)
     start = create_obs(lstgs, True, cols)
@@ -529,15 +522,13 @@ def add_start_end(offers, listings, levels):
 
 def create_events(data=None, levels=None):
     # initial offers data frame
-    offers = data['offers'].join(data['threads']['byr_hist'])
+    offers = data['offers'].join(data['threads'][BYR_HIST])
     offers = offers.join(data['listings'][levels])
     offers = expand_index(offers, levels)
     # add start times and expirations for unsold listings
     events = add_start_end(offers, data['listings'], levels)
     # add features for later use
-    events['byr'] = events.index.isin(IDX['byr'], level='index')
-    lstg_cols = ['start_price', 'arrival_rate', 'start_price_pctile']
+    events[BYR] = events.index.isin(IDX[BYR], level=INDEX)
+    lstg_cols = [START_PRICE, 'arrival_rate', 'start_price_pctile']
     events = events.join(data['listings'][lstg_cols])
     return events
-
-

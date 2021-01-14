@@ -1,5 +1,4 @@
 import os
-import numpy as np
 import torch
 from torch.nn.functional import log_softmax, nll_loss
 from datetime import datetime as dt
@@ -8,14 +7,15 @@ from torch.optim import Adam, lr_scheduler
 from sim.EBayDataset import EBayDataset
 from nets.FeedForward import FeedForward
 from sim.Sample import get_batches
-from constants import MODEL_DIR, LOG_DIR, CENSORED_MODELS, \
-    MODEL_NORM, VALIDATION, MODELS, TRAIN_MODELS, TRAIN_RL
+from constants import MODEL_DIR, LOG_DIR, MODEL_NORM
+from featnames import CENSORED_MODELS, BYR_HIST_MODEL
 from utils import load_sizes
 
 LR_FACTOR = 0.1  # multiply learning rate by this factor when training slows
-LR0 = [1e-3]  # initial learning rates to search over
+LR0 = 1e-3  # initial learning rate
 LR1 = 1e-7  # stop training when learning rate is lower than this
 FTOL = 1e-2  # decrease learning rate when relative improvement in loss is less than this
+AMSGRAD = True  # use AMSgrad version of ADAM if True
 
 
 class SimTrainer:
@@ -35,15 +35,15 @@ class SimTrainer:
 
         # boolean for different loss functions
         self.use_time_loss = name in CENSORED_MODELS
+        self.use_count_loss = name == BYR_HIST_MODEL
 
         # load model size parameters
         self.sizes = load_sizes(name)
         print(self.sizes)
 
         # load datasets
-        train_part = TRAIN_MODELS if name in MODELS else TRAIN_RL
-        self.train = EBayDataset(train_part, name)
-        self.valid = EBayDataset(VALIDATION, name)
+        self.train = EBayDataset(name=name, train=True)
+        self.valid = EBayDataset(name=name, train=False)
 
     def train_model(self, dropout=(0.0, 0.0), norm=MODEL_NORM, log=True):
         """
@@ -64,32 +64,25 @@ class SimTrainer:
         else:
             writer = None
 
-        # tune initial learning rate
-        lr, net, lnl_test0 = self._tune_lr(writer=writer,
-                                           dropout=dropout,
-                                           norm=norm)
-
         # path to save model
         model_dir = MODEL_DIR + '{}/'.format(self.name)
         if not os.path.isdir(model_dir):
             os.mkdir(model_dir)
         model_path = model_dir + '{}.net'.format(expid)
 
-        # save model
-        if log:
-            torch.save(net.state_dict(), model_path)
-
-        # initialize optimizer and scheduler
-        optimizer = Adam(net.parameters(), lr=lr)
+        # initialize neural net, optimizer and scheduler
+        net = FeedForward(self.sizes, dropout=dropout, norm=norm).to('cuda')
+        optimizer = Adam(net.parameters(), lr=LR0, amsgrad=AMSGRAD)
         scheduler = lr_scheduler.ReduceLROnPlateau(optimizer,
                                                    mode='min',
                                                    factor=LR_FACTOR,
                                                    patience=0,
                                                    threshold=FTOL)
+        print(net)
         print(optimizer)
 
         # training loop
-        epoch = 1
+        epoch, lnl_test0 = 0, None
         while True:
             # run one epoch
             print('Epoch {}'.format(epoch))
@@ -97,6 +90,10 @@ class SimTrainer:
                                      optimizer=optimizer,
                                      writer=writer,
                                      epoch=epoch)
+
+            # set 0th-epoch log-likelihood
+            if epoch == 0:
+                lnl_test0 = output['lnL_test']
 
             # save model
             if log:
@@ -109,14 +106,12 @@ class SimTrainer:
             if self._get_lr(optimizer) < LR1:
                 break
 
-            # stop training if holdout objective hasn't improved in 12 epochs
-            if epoch >= 11 and output['lnL_test'] < lnl_test0:
+            # stop training if holdout objective hasn't improved in 9 epochs
+            if epoch >= 8 and output['lnL_test'] < lnl_test0:
                 break
 
             # increment epoch
             epoch += 1
-
-        return -output['lnL_test']
 
     @staticmethod
     def _get_lr(optimizer):
@@ -148,8 +143,7 @@ class SimTrainer:
         batches = get_batches(data, is_training=is_training)
 
         # loop over batches, calculate log-likelihood
-        loss = 0.0
-        gpu_time = 0.0
+        loss, gpu_time = 0., 0.
         t0 = dt.now()
         for b in batches:
             t1 = dt.now()
@@ -190,6 +184,37 @@ class SimTrainer:
 
         return -lnl
 
+    @staticmethod
+    def _count_loss(theta, y):
+        # transformations
+        pi = torch.sigmoid(theta[:, 0])
+        params = torch.exp(theta[:, 1:])
+
+        # split by y
+        idx0, idx1 = y == 0, y > 0
+        pi0, pi1 = pi[idx0], pi[idx1]
+        a0, a1 = params[idx0, 0], params[idx1, 0]
+        b0, b1 = params[idx0, 1], params[idx1, 1]
+        y1 = y[idx1]
+
+        # zeros
+        if len(pi0) > 0:
+            lnl = torch.sum(torch.log(pi0 + (1-pi0) * a0 / (a0 + b0)))
+        else:
+            lnl = 0.
+
+        # non-zeros
+        if len(y1) > 0:
+            lnl += torch.sum(torch.log(1-pi1)
+                             + torch.log(a1)
+                             - torch.log(a1 + b1 + y1)
+                             + torch.lgamma(b1 + y1)
+                             - torch.lgamma(a1 + b1 + y1)
+                             + torch.lgamma(a1 + b1)
+                             - torch.lgamma(b1))
+
+        return -lnl
+
     def _run_batch(self, b, net, optimizer):
         """
         Loops over examples in batch, calculates loss.
@@ -204,16 +229,19 @@ class SimTrainer:
         net.train(is_training)
         theta = net(b['x'])
 
-        # softmax
-        if theta.size()[1] == 1:
-            theta = torch.cat((torch.zeros_like(theta), theta), dim=1)
-        lnq = log_softmax(theta, dim=-1)
-
-        # calculate loss
-        if self.use_time_loss:
-            loss = self._time_loss(lnq, b['y'])
+        if self.use_count_loss:
+            loss = self._count_loss(theta, b['y'])
         else:
-            loss = nll_loss(lnq, b['y'], reduction='sum')
+            # softmax
+            if theta.size()[1] == 1:
+                theta = torch.cat((torch.zeros_like(theta), theta), dim=1)
+            lnq = log_softmax(theta, dim=-1)
+
+            # calculate loss
+            if self.use_time_loss:
+                loss = self._time_loss(lnq, b['y'])
+            else:
+                loss = nll_loss(lnq, b['y'], reduction='sum')
 
         # add in regularization penalty and step down gradients
         if is_training:
@@ -223,44 +251,12 @@ class SimTrainer:
 
         return loss.item()
 
-    def _tune_lr(self, writer=None, dropout=None, norm=None):
-        nets, loss = [], []
-        for lr in LR0:
-            # initialize model and optimizer
-            net = FeedForward(self.sizes, dropout=dropout, norm=norm)
-            nets.append(net.to('cuda'))
-            optimizer = Adam(nets[-1].parameters(), lr=lr)
- 
-            # print to console
-            if len(nets) == 1:
-                print(nets[-1])
-            print('Tuning with lr of {}'.format(lr))
- 
-            # run model for one epoch
-            loss.append(self._run_loop(self.train, nets[-1], optimizer))
-            print('\tloss: {}'.format(loss[-1]))
- 
-        # best learning rate and model
-        idx = int(np.argmin(loss))
-        lr = LR0[idx]
-        net = nets[idx]
- 
-        # initialize output with log10 learning rate
-        output = {'lr': lr, 'loss': loss[idx]}
- 
-        # collect remaining output and print
-        print('Epoch 0')
-        output = self._collect_output(net, writer, output)
- 
-        # return lr of smallest loss and corresponding model
-        return lr, net, output['lnL_test']
-
     def _collect_output(self, net, writer, output, epoch=0):
         # calculate log-likelihood on validation set
         with torch.no_grad():
             loss_train = self._run_loop(self.train, net)
-            output['lnL_train'] = -loss_train / self.train.N
             loss_test = self._run_loop(self.valid, net)
+            output['lnL_train'] = -loss_train / self.train.N
             output['lnL_test'] = -loss_test / self.valid.N
 
         # save output to tensorboard writer

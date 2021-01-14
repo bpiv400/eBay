@@ -1,11 +1,12 @@
 import numpy as np
 import pandas as pd
-from compress_pickle import load
-from utils import extract_clock_feats, byr_norm, slr_norm
-from constants import FEATS_DIR, MODEL_PARTS_DIR, START, IDX, BYR, SLR, \
-    DAY, HOLIDAYS, MAX_DELAY_TURN
+
+from agent.const import COMMON_CONS
+from utils import extract_clock_feats, byr_norm, slr_norm, unpickle
+from constants import PARTS_DIR, PCTILE_DIR, START, IDX, DAY, \
+    HOLIDAYS, MAX_DELAY_TURN
 from featnames import HOLIDAY, DOW_PREFIX, TIME_OF_DAY, AFTERNOON, \
-    CLOCK_FEATS
+    CLOCK_FEATS, BYR_HIST, SLR, BYR, INDEX
 
 
 def extract_day_feats(seconds):
@@ -60,38 +61,6 @@ def get_days_delay(clock):
     return days, delay
 
 
-def round_con(con):
-    """
-    Round concession to nearest percentage point.
-    :param con: pandas series of unrounded concessions.
-    :return: pandas series of rounded concessions.
-    """
-    rounded = np.round(con, decimals=2)
-    rounded.loc[(rounded == 1) & (con < 1)] = 0.99
-    rounded.loc[(rounded == 0) & (con > 0)] = 0.01
-    return rounded
-
-
-def get_con(offers, start_price):
-    # compute concessions
-    con = pd.DataFrame(index=offers.index)
-    con[1] = offers[1] / start_price
-    con[2] = (offers[2] - start_price) / (offers[1] - start_price)
-    for i in range(3, 8):
-        con[i] = (offers[i] - offers[i - 2]) / (offers[i - 1] - offers[i - 2])
-
-    # stack into series
-    con = con.rename_axis('index', axis=1).stack()
-
-    # first buyer concession should be greater than 0
-    assert con.loc[con.index.isin([1], level='index')].min() > 0
-
-    # round concessions
-    rounded = round_con(con)
-
-    return rounded
-
-
 def get_norm(con):
     """
     Calculate normalized concession from rounded concessions.
@@ -114,29 +83,57 @@ def get_norm(con):
     return norm.rename_axis('index', axis=1).stack().astype('float64')
 
 
+def feat_to_pctile(s, reverse=False, feat=BYR_HIST):
+    """
+    Converts byr hist counts to percentiles or visa versa.
+    :param Series s: counts, or percentiles if reverse.
+    :param bool reverse: convert pctile to hist if True.
+    :param str feat: feature to convert
+    :return: Series
+    """
+    pctile = unpickle(PCTILE_DIR + '{}.pkl'.format(feat))
+    if reverse:
+        pctile = pctile.reset_index().set_index('pctile').squeeze()
+    v = pctile.reindex(index=s.values, method='pad').values
+    hist = pd.Series(v, index=s.index, name=feat)
+    return hist
+
+
 def get_lstgs(part):
     """
     Grabs list of partition-specific listing ids.
     :param str part: name of partition
     :return: list of partition-specific listings ids
     """
-    return load(MODEL_PARTS_DIR + 'partitions.pkl')[part]
+    d = unpickle(PARTS_DIR + 'partitions.pkl')
+    return d[part]
 
 
-def load_feats(name, lstgs=None, fill_zero=False):
+def do_rounding(price):
     """
-    Loads dataframe of features (and reindexes).
-    :param str name: filename
-    :param lstgs: listings to restrict to
-    :param bool fill_zero: fill missings with 0's if True
-    :return: dataframe of features
+    Returns booleans for whether offer is round and ends in nines
+    :param price: price in dollars and cents
+    :return: (bool, bool)
     """
-    df = load(FEATS_DIR + '{}.gz'.format(name))
-    if lstgs is None:
-        return df
-    kwargs = {'index': lstgs}
-    if len(df.index.names) > 1:
-        kwargs['level'] = 'lstg'
-    if fill_zero:
-        kwargs['fill_value'] = 0.
-    return df.reindex(**kwargs)
+    assert np.min(price) >= .01
+    cents = np.round(100 * (price % 1)).astype(np.int8)
+    dollars = np.floor(price).astype(np.int64)
+    is_nines = (cents >= 90) | np.isin(dollars, [9, 99] + list(range(990, 1000)))
+    is_round = (cents == 0) & ~is_nines & \
+               (((dollars <= 100) & (dollars % 5 == 0)) | (dollars % 50 == 0))
+    assert np.all(~(is_round & is_nines))
+    return is_round, is_nines
+
+
+def get_common_cons(con=None):
+    """
+    Identifies whether concession is a common concession.
+    :param pd.Series con: concessions
+    :return: pd.Series
+    """
+    turn = con.index.get_level_values(INDEX)
+    s = pd.Series(False, index=con.index)
+    for t in range(1, 7):
+        mask = turn == t
+        s.loc[mask] = con[mask].apply(lambda x: max(np.isclose(x, COMMON_CONS[t])))
+    return s

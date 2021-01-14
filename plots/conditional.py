@@ -2,7 +2,8 @@ from compress_pickle import load
 import pandas as pd
 from plots.util import grouped_bar
 from plots.const import SPLIT_LABELS, SPLIT_YLABELS
-from constants import PLOT_DIR, SIM, OBS
+from constants import PLOT_DIR
+from featnames import SIM, OBS
 
 
 def construct_df(split_feat, ps, key):

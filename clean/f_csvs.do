@@ -1,5 +1,5 @@
 clear all
-cd ~/weka/eBay
+cd /data/eBay
 
 *** threads
 
@@ -40,7 +40,7 @@ drop ship_*
 * reformat clock variables
 
 order end_time, a(start_date)
-replace end_date = start_date + 30 if end_date > start_date + 30
+replace end_date = start_date + 7 if end_date > start_date + 7
 replace end_time = clock(string(end_date + 1, "%td"), "DMY") - 1000 if end_time == .
 drop end_date
 
@@ -58,7 +58,9 @@ export delim using clean/listings.csv, nolab dataf replace
 
 *** seller sentences for word2vec
 
-keep slr leaf
+use dta/w2v_slr, clear
+
+drop lstg
 sort slr leaf
 by slr leaf: keep if _n == 1
 
@@ -70,12 +72,7 @@ export delim using clean/leaf_slr.csv, dataf replace
 
 *** buyer sentences for word2vec
 
-use dta/threads, clear
-drop if flag
-keep lstg byr
-
-merge m:1 lstg using dta/listings, nogen keep(3) keepus(leaf)
-drop lstg
+use dta/w2v_byr, clear
 
 sort byr leaf
 by byr leaf: keep if _n == 1

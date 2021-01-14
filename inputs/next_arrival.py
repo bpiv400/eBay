@@ -2,12 +2,10 @@ import pandas as pd
 import numpy as np
 from processing.util import collect_date_clock_feats
 from inputs.util import get_arrival_times, save_files, get_ind_x
-from utils import get_months_since_lstg, input_partition, load_file
-from constants import MONTH, INTERVAL_ARRIVAL, INTERVAL_CT_ARRIVAL
-from featnames import THREAD_COUNT, MONTHS_SINCE_LAST, MONTHS_SINCE_LSTG, \
-    START_TIME, END_TIME
-
-AGENT = False
+from utils import get_days_since_lstg, input_partition, load_file
+from constants import DAY, MAX_DAYS, INTERVAL_ARRIVAL, INTERVAL_CT_ARRIVAL
+from featnames import THREAD_COUNT, DAYS_SINCE_LAST, DAYS_SINCE_LSTG, \
+    START_TIME, END_TIME, LOOKUP, LSTG, THREAD, CLOCK
 
 
 def get_interarrival_period(arrivals):
@@ -24,13 +22,13 @@ def get_interarrival_period(arrivals):
     # indicator for whether observation is last in lstg
     thread = pd.Series(diff.index.get_level_values(level='thread'),
                        index=diff.index)
-    last_thread = thread.groupby('lstg').max().reindex(
-        index=thread.index, level='lstg')
+    last_thread = thread.groupby(LSTG).max().reindex(
+        index=thread.index, level=LSTG)
     censored = thread == last_thread
 
     # drop interarrivals after BINs
     diff = diff[diff > 0]
-    y = diff[diff.index.get_level_values(level='thread') > 1]
+    y = diff[diff.index.get_level_values(level=THREAD) > 1]
     censored = censored.reindex(index=y.index)
 
     # convert y to periods
@@ -43,31 +41,32 @@ def get_interarrival_period(arrivals):
 
 def get_x_thread_arrival(arrivals=None, lstg_start=None, idx=None, diff=None):
     # seconds since START at beginning of arrival window
-    seconds = arrivals.groupby('lstg').shift().dropna().astype(
+    seconds = arrivals.groupby(LSTG).shift().dropna().astype(
         'int64').reindex(index=idx)
 
     # clock features
     clock_feats = collect_date_clock_feats(seconds)
 
     # thread count so far
-    thread_num = seconds.index.get_level_values(level='thread')
+    thread_num = seconds.index.get_level_values(level=THREAD)
     thread_count = pd.Series(thread_num - 1,
                              index=seconds.index,
                              name=THREAD_COUNT)
 
-    # months since lstg start
-    months_since_lstg = get_months_since_lstg(lstg_start, seconds)
-    assert (months_since_lstg.max() < 1) & (months_since_lstg.min() >= 0)
+    # days since lstg start
+    days_since_lstg = get_days_since_lstg(lstg_start, seconds)
+    assert days_since_lstg.max() < MAX_DAYS
+    assert days_since_lstg.min() >= 0
 
-    # months since last arrival
-    months_since_last = diff.groupby('lstg').shift().dropna() / MONTH
-    assert np.all(months_since_last.index == idx)
+    # days since last arrival
+    days_since_last = diff.groupby(LSTG).shift().dropna() / DAY
+    assert np.all(days_since_last.index == idx)
 
     # concatenate into dataframe
     x_thread = pd.concat(
         [clock_feats,
-         months_since_lstg.rename(MONTHS_SINCE_LSTG),
-         months_since_last.rename(MONTHS_SINCE_LAST),
+         days_since_lstg.rename(DAYS_SINCE_LSTG),
+         days_since_last.rename(DAYS_SINCE_LAST),
          thread_count], axis=1)
 
     return x_thread.astype('float32')
@@ -75,8 +74,8 @@ def get_x_thread_arrival(arrivals=None, lstg_start=None, idx=None, diff=None):
 
 def process_inputs(part):
     # data
-    clock = load_file(part, 'clock', agent=AGENT)
-    lookup = load_file(part, 'lookup', agent=AGENT)
+    clock = load_file(part, CLOCK)
+    lookup = load_file(part, LOOKUP)
     lstg_start = lookup[START_TIME]
     lstg_end = lookup[END_TIME]
 
@@ -90,10 +89,10 @@ def process_inputs(part):
     y, diff = get_interarrival_period(arrivals)
 
     # thread features
-    x = {'thread': get_x_thread_arrival(arrivals=arrivals,
-                                        lstg_start=lstg_start,
-                                        idx=y.index,
-                                        diff=diff)}
+    x = {THREAD: get_x_thread_arrival(arrivals=arrivals,
+                                      lstg_start=lstg_start,
+                                      idx=y.index,
+                                      diff=diff)}
 
     # indices for listing features
     idx_x = get_ind_x(lstgs=lookup.index, idx=y.index)

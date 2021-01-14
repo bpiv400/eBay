@@ -1,48 +1,39 @@
 import torch
 import numpy as np
 import pandas as pd
-from constants import (MODELS, OFFER_MODELS, FIRST_ARRIVAL_MODEL,
-                       SLR, BYR_HIST_MODEL, INTERARRIVAL_MODEL)
-from featnames import (OUTCOME_FEATS, CLOCK_FEATS, TIME_FEATS,
-                       MONTHS_SINCE_LSTG, BYR_HIST, DELAY, CON,
-                       INT_REMAINING, MONTHS_SINCE_LAST, THREAD_COUNT)
+from rlenv.util import load_chunk, model_str
 from utils import load_sizes, load_featnames
 from rlenv.const import LSTG_MAP, CLOCK_MAP, OFFER_MAPS, THREAD_COUNT_IND, \
     TIME_START_IND, TIME_END_IND, CLOCK_START_IND, CLOCK_END_IND
-from rlenv.util import model_str
+from featnames import OUTCOME_FEATS, CLOCK_FEATS, TIME_FEATS, DAYS_SINCE_LSTG, \
+    BYR_HIST, DELAY, CON, INT_REMAINING, DAYS_SINCE_LAST, THREAD_COUNT, SLR, \
+    OFFER_MODELS, MODELS, FIRST_ARRIVAL_MODEL, INTERARRIVAL_MODEL, BYR_HIST_MODEL, \
+    VALIDATION
 
 
 class Composer:
     """
     Class for composing inputs to interface from various input streams
     """
-    def __init__(self, cols):
-        self.sizes = Composer.make_sizes()
-        self.lstg_sets = self.build_lstg_sets(cols)
+    def __init__(self):
+        self.sizes = {m: load_sizes(m) for m in MODELS}
+        cols = load_chunk(part=VALIDATION, num=1)[0].columns
+        self.x_lstg_cols = cols if type(cols) is list else list(cols)
+        self.lstg_sets = self.build_lstg_sets()
 
-    @staticmethod
-    def make_sizes():
-        output = dict()
-        for model in MODELS:
-            output[model] = load_sizes(model)
-        return output
-
-    @staticmethod
-    def build_lstg_sets(x_lstg_cols):
+    def build_lstg_sets(self):
         """
         Constructs a dictionary containing the input groups constructed
         from the features in x_lstg
-
-        :param x_lstg_cols: pd.Index containing names of features in x_lstg
         :return: dict
         """
-        x_lstg_cols = list(x_lstg_cols)
         featnames = load_featnames(FIRST_ARRIVAL_MODEL)
-        featnames[LSTG_MAP] = [feat for feat in featnames[LSTG_MAP] if feat in x_lstg_cols]
+        for c in featnames[LSTG_MAP]:
+            assert c in self.x_lstg_cols
         featnames[SLR] = load_featnames(model_str(CON, turn=2))[SLR]
         for model in MODELS:
             # verify all x_lstg based sets contain the same features in the same order
-            Composer.verify_lstg_sets_shared(model, x_lstg_cols, featnames.copy())
+            self.verify_lstg_sets_shared(model, featnames.copy())
             if model in OFFER_MODELS:
                 Composer.verify_offer_feats(model)
                 if DELAY not in model:
@@ -65,7 +56,8 @@ class Composer:
         else:
             assumed_feats = CLOCK_FEATS + OUTCOME_FEATS
         model_feats = load_featnames(model)['offer']
-        Composer.verify_all_feats(assumed_feats=assumed_feats, model_feats=model_feats)
+        Composer.verify_all_feats(assumed_feats=assumed_feats,
+                                  model_feats=model_feats)
         model_sizes = load_sizes(model)
         for j in range(1, 8):
             if j < turn or (j == turn and DELAY not in model):
@@ -73,13 +65,11 @@ class Composer:
             else:
                 assert 'offer{}'.format(j) not in model_sizes['x']
 
-    @staticmethod
-    def verify_lstg_sets_shared(model, x_lstg_cols, featnames):
+    def verify_lstg_sets_shared(self, model, featnames):
         """
         Ensures that all the input groupings that contain features from x_lstg
         have a common ordering
         :param str model: model name
-        :param [str] x_lstg_cols: list of featnames in x_lstg
         :param dict featnames: dictionary containing all x_lstg features
         that appear in the model organized into feature groupings
         :return: None
@@ -88,20 +78,21 @@ class Composer:
         missing_idx = list()
         # check that all features in LSTG not in x_lstg are appended to the end of LSTG
         for feat in model_featnames[LSTG_MAP]:
-            if feat not in x_lstg_cols:
+            if feat not in self.x_lstg_cols:
                 missing_idx.append(model_featnames[LSTG_MAP].index(feat))
         if len(missing_idx) != 0:
             missing_idx_min = min(missing_idx)
             assert missing_idx_min == len(featnames[LSTG_MAP])
         # remove those missing features
-        model_featnames[LSTG_MAP] = [feat for feat in model_featnames[LSTG_MAP] if feat in x_lstg_cols]
+        model_featnames[LSTG_MAP] = [feat for feat in model_featnames[LSTG_MAP]
+                                     if feat in self.x_lstg_cols]
         # iterate over all x_lstg features based and check that have same elements in the same order
         for grouping_name, lstg_feats in featnames.items():
             model_grouping = model_featnames[grouping_name]
             assert len(model_grouping) == len(lstg_feats)
             for model_feat, lstg_feat in zip(model_grouping, lstg_feats):
                 assert model_feat == lstg_feat
-                assert model_feat in x_lstg_cols
+                assert model_feat in self.x_lstg_cols
 
     def decompose_x_lstg(self, x_lstg):
         """
@@ -154,20 +145,22 @@ class Composer:
     @staticmethod
     def _build_lstg_vector(model_name, sources=None):
         if model_name == INTERARRIVAL_MODEL:
-            solo_feats = np.array([sources[MONTHS_SINCE_LSTG], sources[MONTHS_SINCE_LAST],
+            solo_feats = np.array([sources[DAYS_SINCE_LSTG],
+                                   sources[DAYS_SINCE_LAST],
                                    sources[THREAD_COUNT]])
-            lstg = np.concatenate([sources[LSTG_MAP], sources[CLOCK_MAP], solo_feats])
+            lstg = np.concatenate([sources[LSTG_MAP],
+                                   sources[CLOCK_MAP],
+                                   solo_feats])
         elif model_name == FIRST_ARRIVAL_MODEL:
-            # append nothing
-            lstg = sources[LSTG_MAP]
+            lstg = sources[LSTG_MAP]  # append nothing
         elif model_name == BYR_HIST_MODEL:
-            solo_feats = np.array([sources[MONTHS_SINCE_LSTG],
+            solo_feats = np.array([sources[DAYS_SINCE_LSTG],
                                    sources[OFFER_MAPS[1]][THREAD_COUNT_IND]])
             lstg = np.concatenate([sources[LSTG_MAP],
                                    sources[OFFER_MAPS[1]][CLOCK_START_IND:CLOCK_END_IND],
                                    solo_feats])
         else:
-            solo_feats = [sources[MONTHS_SINCE_LSTG], 
+            solo_feats = [sources[DAYS_SINCE_LSTG],
                           sources[BYR_HIST],
                           sources[OFFER_MAPS[1]][THREAD_COUNT_IND] + 1]
             if DELAY in model_name:
@@ -190,7 +183,7 @@ class Composer:
     def verify_offer_append(model, shared_feats):
         model_feats = load_featnames(model)[LSTG_MAP]
         model_feats = Composer.remove_shared_feats(model_feats, shared_feats)
-        assert model_feats[0] == MONTHS_SINCE_LSTG
+        assert model_feats[0] == DAYS_SINCE_LSTG
         assert model_feats[1] == BYR_HIST
         assert model_feats[2] == THREAD_COUNT
         assert len(model_feats) == 3
@@ -205,7 +198,7 @@ class Composer:
     def verify_delay_append(model, shared_feats):
         model_feats = load_featnames(model)[LSTG_MAP]
         model_feats = Composer.remove_shared_feats(model_feats, shared_feats)
-        assert model_feats[0] == MONTHS_SINCE_LSTG
+        assert model_feats[0] == DAYS_SINCE_LSTG
         assert model_feats[1] == BYR_HIST
         assert model_feats[2] == THREAD_COUNT
         assert model_feats[3] == INT_REMAINING
@@ -217,8 +210,8 @@ class Composer:
         model_feats = Composer.remove_shared_feats(model_feats, shared_feats)
         Composer.verify_sequence(model_feats, CLOCK_FEATS, 0)
         next_ind = len(CLOCK_FEATS)
-        assert model_feats[next_ind] == MONTHS_SINCE_LSTG
-        assert model_feats[next_ind + 1] == MONTHS_SINCE_LAST
+        assert model_feats[next_ind] == DAYS_SINCE_LSTG
+        assert model_feats[next_ind + 1] == DAYS_SINCE_LAST
         assert model_feats[next_ind + 2] == THREAD_COUNT
 
     @staticmethod
@@ -232,5 +225,5 @@ class Composer:
         model_feats = load_featnames(BYR_HIST_MODEL)[LSTG_MAP]
         model_feats = Composer.remove_shared_feats(model_feats, shared_feats)
         Composer.verify_sequence(model_feats, CLOCK_FEATS, 0)
-        assert model_feats[len(CLOCK_FEATS)] == MONTHS_SINCE_LSTG
+        assert model_feats[len(CLOCK_FEATS)] == DAYS_SINCE_LSTG
         assert model_feats[len(CLOCK_FEATS) + 1] == THREAD_COUNT

@@ -1,25 +1,25 @@
 import numpy as np
 import pandas as pd
 from datetime import datetime as dt
-from compress_pickle import dump, load
 from processing.b_feats.util import collapse_dict
-from utils import run_func_on_chunks
-from constants import START, IDX, BYR, SLR, FEATS_DIR
+from utils import unpickle, topickle, run_func_on_chunks
+from constants import START, IDX, FEATS_DIR
+from featnames import SLR, BYR, LSTG, THREAD, INDEX, ACCEPT, REJECT, CLOCK, NORM
 
 
 def open_offers(df, levels, role):
     # index number
-    if 'index' in df.columns:
-        index = df['index']
+    if INDEX in df.columns:
+        index = df[INDEX]
     else:
-        index = df.index.get_level_values('index')
+        index = df.index.get_level_values(INDEX)
     # open and closed markers
     if role == SLR:
-        start = ~df.byr & ~df.accept & (index > 0) & ~df.censored
-        end = df.byr & (index > 1) & ~df.censored
+        start = ~df[BYR] & ~df[ACCEPT] & (index > 0)
+        end = df.byr & (index > 1)
     else:
-        start = df.byr & ~df.reject & ~df.accept
-        end = ~df.byr & (index > 1) & ~df.censored
+        start = df[BYR] & ~df[REJECT] & ~df[ACCEPT]
+        end = ~df[BYR] & (index > 1)
     # open - closed
     s = start.astype(np.int64) - end.astype(np.int64)
     # cumulative sum by levels grouping
@@ -28,13 +28,13 @@ def open_offers(df, levels, role):
 
 def thread_count(subset, full=False):
     df = subset.copy()
-    index_names = [ind for ind in df.index.names if ind != 'index']
-    thread_counter = df.reset_index()['index'] == 1
+    index_names = [ind for ind in df.index.names if ind != INDEX]
+    thread_counter = df.reset_index()[INDEX] == 1
     thread_counter.index = df.index
-    total_threads = thread_counter.reset_index('thread').thread.groupby('lstg').max()
-    thread_counter = thread_counter.unstack('thread')
+    total_threads = thread_counter.reset_index(THREAD).thread.groupby(LSTG).max()
+    thread_counter = thread_counter.unstack(THREAD)
     total_threads = total_threads.reindex(index=thread_counter.index,
-                                          level='lstg')
+                                          level=LSTG)
     if full:
         counts = thread_counter.sum(axis=1)
         counts = counts.groupby('lstg').cumsum()
@@ -85,12 +85,13 @@ def full_recent(max_offers=None, offer_counter=None):
 
 def prepare_counters(df, role):
     if role == 'byr':
-        offer_counter = df.byr & ~df.reject & ~df.censored
+        offer_counter = df[BYR] & ~df[REJECT]
     else:
-        offer_counter = ~df.byr & ~df.reject & ~df.censored
-    thread_counter = offer_counter.reset_index('thread').thread.groupby('lstg').max()
-    offer_counter = offer_counter.unstack(level='thread')
-    thread_counter = thread_counter.reindex(index=offer_counter.index, level='lstg')
+        offer_counter = ~df[BYR] & ~df[REJECT]
+    thread_counter = offer_counter.reset_index(THREAD).thread.groupby(LSTG).max()
+    offer_counter = offer_counter.unstack(level=THREAD)
+    thread_counter = thread_counter.reindex(index=offer_counter.index,
+                                            level=LSTG)
     return offer_counter, thread_counter
 
 
@@ -120,28 +121,30 @@ def exclude_focal_recent(max_offers=None, offer_counter=None, thread_counter=Non
 
 def get_recent_feats(subset, role, full=False):
     df, index_names = prepare_feat(subset)
-    if role == 'slr':
-        df.loc[df.byr, 'norm'] = np.nan
-    elif role == 'byr':
-        df.loc[~df.byr, 'norm'] = np.nan
-    df.loc[df.reject, 'norm'] = np.nan
-    converter = df.index.levels[df.index.names.index('clock')]
+    if role == SLR:
+        df.loc[df.byr, NORM] = np.nan
+    elif role == BYR:
+        df.loc[~df[BYR], NORM] = np.nan
+    df.loc[df[REJECT], NORM] = np.nan
+    converter = df.index.levels[df.index.names.index(CLOCK)]
     converter = pd.to_datetime(converter, origin=START, unit='s')
-    df.index = df.index.set_levels(converter, level='clock')
+    df.index = df.index.set_levels(converter, level=CLOCK)
     # use max value for thread events at same clock time
     max_offers = df.norm.groupby(df.index.names).max()
-    max_offers = max_offers.unstack(level='thread')
+    max_offers = max_offers.unstack(level=THREAD)
 
     offer_counter, thread_counter = prepare_counters(df, role)
 
     if not full:
-        count, best = exclude_focal_recent(max_offers=max_offers, offer_counter=offer_counter,
+        count, best = exclude_focal_recent(max_offers=max_offers,
+                                           offer_counter=offer_counter,
                                            thread_counter=thread_counter)
         # concat into series
         count = collapse_dict(count, index_names)
         best = collapse_dict(best, index_names)
     else:
-        count, best = full_recent(max_offers=max_offers, offer_counter=offer_counter)
+        count, best = full_recent(max_offers=max_offers,
+                                  offer_counter=offer_counter)
 
     count = fix_clock(count)
     best = fix_clock(best)
@@ -150,9 +153,9 @@ def get_recent_feats(subset, role, full=False):
 
 def fix_clock(df):
     start = pd.to_datetime(START)
-    diff = df.index.levels[df.index.names.index('clock')] - start
+    diff = df.index.levels[df.index.names.index(CLOCK)] - start
     diff = diff.total_seconds().astype(int)
-    df.index = df.index.set_levels(diff, level='clock')
+    df.index = df.index.set_levels(diff, level=CLOCK)
     return df
 
 
@@ -172,7 +175,7 @@ def exclude_focal(max_offers=None, offer_counter=None, thread_counter=None,
             count[n] = (max_cut > 0).sum(axis=1)
         else:
             counts = counter_cut.sum(axis=1)
-            count[n] = counts.groupby('lstg').cumsum()
+            count[n] = counts.groupby(LSTG).cumsum()
 
         # best offer
         curr_best = max_cut.max(axis=1).fillna(0.0)
@@ -183,13 +186,13 @@ def exclude_focal(max_offers=None, offer_counter=None, thread_counter=None,
 
 def full_feat(max_offers=None, offer_counter=None, role=False, is_open=False, open_counter=None):
     # count and max over all threads
-    if is_open and role == 'slr':
+    if is_open and role == SLR:
         count = open_counter.sum(axis=1)
     elif is_open:
         count = (max_offers > 0).sum(axis=1)
     else:
         count = offer_counter.sum(axis=1)
-        count = count.groupby('lstg').cumsum()
+        count = count.groupby(LSTG).cumsum()
     # best offer
     best = max_offers.max(axis=1).fillna(0.0)
     # keep only later timestep
@@ -200,10 +203,9 @@ def full_feat(max_offers=None, offer_counter=None, role=False, is_open=False, op
 
 def prepare_feat(subset):
     df = subset.copy()
-    df.byr = df.byr.astype(bool)
-    df.reject = df.reject.astype(bool)
-    df.accept = df.accept.astype(bool)
-    df.censored = df.censored.astype(bool)
+    df[BYR] = df[BYR].astype(bool)
+    df[REJECT] = df[REJECT].astype(bool)
+    df[ACCEPT] = df[ACCEPT].astype(bool)
     index_names = [ind for ind in df.index.names if ind != 'index']
     return df, index_names
 
@@ -211,50 +213,54 @@ def prepare_feat(subset):
 def add_lstg_time_feats(subset, role, is_open, full=False):
     df, index_names = prepare_feat(subset)
     if is_open:
-        open_counter = open_offers(df, ['lstg', 'thread'], role)
+        open_counter = open_offers(df, [LSTG, THREAD], role)
         assert (open_counter.max() <= 1) & (open_counter.min() == 0)
-        df.loc[open_counter == 0, 'norm'] = 0.0
-        if role == 'slr':
-            open_counter = open_counter.unstack(level='thread').groupby('lstg').ffill()
+        df.loc[open_counter == 0, NORM] = 0.0
+        if role == SLR:
+            open_counter = open_counter.unstack(level=THREAD).groupby(LSTG).ffill()
     else:
         open_counter = None
-        if role == 'slr':
-            df.loc[df.byr, 'norm'] = np.nan
-        elif role == 'byr':
-            df.loc[~df.byr, 'norm'] = np.nan
-    df.loc[df.censored, 'norm'] = np.nan
+        if role == SLR:
+            df.loc[df[BYR], NORM] = np.nan
+        elif role == BYR:
+            df.loc[~df[BYR], NORM] = np.nan
     # use max value for thread events at same clock time
     max_offers = df.norm.groupby(df.index.names).max()
     # unstack by thread and fill with last value
-    max_offers = max_offers.unstack(level='thread').groupby('lstg').ffill()
+    max_offers = max_offers.unstack(level=THREAD).groupby(LSTG).ffill()
     offer_counter, thread_counter = prepare_counters(df, role)
     # initialize dictionaries for later concatenation
     if not full:
-        count, best = exclude_focal(max_offers=max_offers, offer_counter=offer_counter,
-                                    thread_counter=thread_counter, open_counter=open_counter,
+        count, best = exclude_focal(max_offers=max_offers,
+                                    offer_counter=offer_counter,
+                                    thread_counter=thread_counter,
+                                    open_counter=open_counter,
                                     role=role, is_open=is_open)
         # concat into series and return
         return collapse_dict(count, index_names), collapse_dict(best, index_names)
     else:
-        return full_feat(max_offers=max_offers, offer_counter=offer_counter,
-                         open_counter=open_counter, role=role, is_open=is_open)
+        return full_feat(max_offers=max_offers,
+                         offer_counter=offer_counter,
+                         open_counter=open_counter,
+                         role=role,
+                         is_open=is_open)
 
 
 def get_lstg_time_feats(events, full=False):
     # create dataframe for variable creation
-    ordered = events.sort_values(['lstg', 'clock', 'index', 'censored']).drop(
+    ordered = events.sort_values([LSTG, CLOCK, INDEX]).drop(
         ['message', 'price'], axis=1)
     # identify listings with multiple threads
     if not full:
-        threads = ordered.reset_index().groupby('lstg')['thread'].nunique()
+        threads = ordered.reset_index().groupby(LSTG)[THREAD].nunique()
         check = threads > 1
-        subset = ordered.loc[check[check].index].set_index(['clock'], append=True)
+        subset = ordered.loc[check[check].index].set_index([CLOCK], append=True)
     else:
-        subset = ordered.set_index(['clock'], append=True)
-    subset = subset.reorder_levels(['lstg', 'thread', 'clock', 'index'])
+        subset = ordered.set_index([CLOCK], append=True)
+    subset = subset.reorder_levels([LSTG, THREAD, CLOCK, INDEX])
     # add features for open offers
     tf = pd.DataFrame()
-    for role in ['slr', 'byr']:
+    for role in [SLR, BYR]:
         cols = [role + c for c in ['_offers', '_best']]
         for is_open in [False, True]:
             if is_open:
@@ -265,10 +271,10 @@ def get_lstg_time_feats(events, full=False):
         tf[cols[0]], tf[cols[1]] = get_recent_feats(subset, role, full=full)
     tf['thread_count'] = thread_count(subset, full=full)
     # error checking
-    assert (tf.byr_offers >= tf.slr_offers).min()
-    assert (tf.byr_offers >= tf.byr_offers_open).min()
-    assert (tf.slr_best >= tf.slr_best_open).min()
-    assert (tf.byr_best >= tf.byr_best_open).min()
+    assert np.min(tf.byr_offers >= tf.slr_offers)
+    assert np.min(tf.byr_offers >= tf.byr_offers_open)
+    assert np.min(tf.slr_best >= tf.slr_best_open)
+    assert np.min(tf.byr_best >= tf.byr_best_open)
     # sort and return
     return tf
 
@@ -294,20 +300,21 @@ def drop_zeros(diff):
 def arrival_time_feats(tf_lstg):
     df = tf_lstg.copy()
     # sort and group
-    df = df.sort_index(level='clock')
-    diff = get_diffs(df.groupby('lstg'), df)
+    df = df.sort_index(level=CLOCK)
+    diff = get_diffs(df.groupby(LSTG), df)
     return diff
 
 
 def prepare_index_join(tf, events):
     events = events.reset_index(drop=False)
     # one entry for each lstg, thread, index
-    events = events[['lstg', 'thread', 'clock', 'index']]
-    events = events.set_index(['lstg', 'thread', 'clock'], append=False, drop=True)
+    events = events[[LSTG, THREAD, CLOCK, INDEX]]
+    events = events.set_index([LSTG, THREAD, CLOCK],
+                              append=False, drop=True)
     events = events.reorder_levels(tf.index.names)
     # subset events to lstgs contained in tf
-    event_lstgs = events.index.get_level_values('lstg')
-    subset_lstgs = tf.index.get_level_values('lstg')
+    event_lstgs = events.index.get_level_values(LSTG)
+    subset_lstgs = tf.index.get_level_values(LSTG)
     events = events.loc[event_lstgs.isin(subset_lstgs), :]
     return events
 
@@ -317,24 +324,24 @@ def subset_to_turns(tf, events):
     # subset tf to only include turns
     # add index to tf
     tf = tf.join(events, how='inner')
-    tf = tf.set_index('index', append=True, drop=True)
+    tf = tf.set_index(INDEX, append=True, drop=True)
     # drop clock
-    tf = tf.reset_index('clock', drop=True)
-    tf = tf.sort_index(level=['lstg', 'thread', 'index'])
+    tf = tf.reset_index(CLOCK, drop=True)
+    tf = tf.sort_index(level=[LSTG, THREAD, INDEX])
     return tf
 
 
 def con_time_feats(tf_lstg, events):
     tf = subset_to_turns(tf_lstg.copy(), events.copy())
     print('getting diffs')
-    diff = get_diffs(tf.groupby(['lstg', 'thread']), tf, remove_zeros=True)
+    diff = get_diffs(tf.groupby([LSTG, THREAD]), tf, remove_zeros=True)
     return diff
 
 
 def delay_time_feats(tf_lstg, events):
     tf_lstg = tf_lstg.copy()
     # compute timestep differences
-    deltas = get_diffs(tf_lstg.groupby(['lstg', 'thread']), tf_lstg, remove_zeros=False)
+    deltas = get_diffs(tf_lstg.groupby([LSTG, THREAD]), tf_lstg, remove_zeros=False)
     deltas = add_deltas_index(deltas, events.copy())
     deltas = drop_zeros(deltas)
     return deltas
@@ -343,18 +350,18 @@ def delay_time_feats(tf_lstg, events):
 def add_deltas_index(deltas, events):
     # prepare events
     events = prepare_index_join(deltas, events)
-    events = events.rename(columns={'index': 'ind'})
+    events = events.rename(columns={INDEX: 'ind'})
     events = events.sort_values(by='ind')
-    events = events.groupby(by=['lstg', 'thread', 'clock']).first()
+    events = events.groupby(by=[LSTG, THREAD, CLOCK]).first()
 
     # add index to deltas
     deltas = deltas.join(events, how='left')
     deltas = deltas.reset_index(drop=False)
-    deltas = deltas.sort_values(['lstg', 'thread', 'clock', 'ind'])
+    deltas = deltas.sort_values([LSTG, THREAD, CLOCK, 'ind'])
     deltas = deltas.reset_index(drop=False)
-    deltas = deltas.set_index(['lstg', 'thread'], drop=True, append=False)
-    deltas = deltas.groupby(level=['lstg', 'thread']).bfill()
-    deltas = deltas.set_index(['ind', 'clock'], drop=True, append=True)
+    deltas = deltas.set_index([LSTG, THREAD], drop=True, append=False)
+    deltas = deltas.groupby(level=[LSTG, THREAD]).bfill()
+    deltas = deltas.set_index(['ind', CLOCK], drop=True, append=True)
 
     # drop first turn and nans
     # nans occur because some rows give values after the last turn in a thread
@@ -364,18 +371,16 @@ def add_deltas_index(deltas, events):
     deltas = deltas.loc[drops, :]
 
     # rename index and check for nans
-    deltas.index = deltas.index.rename(names='index', level='ind')
-    assert (~deltas.index.get_level_values('index').isna()).all()
+    deltas.index = deltas.index.rename(names=INDEX, level='ind')
+    assert (~deltas.index.get_level_values(INDEX).isna()).all()
     return deltas
 
 
-def create_tf(path_generator=None, chunk=None):
-
+def create_tf(chunk=None):
     start = dt.now()
-    path = path_generator(chunk)
-    events = load(path)
+    events = unpickle(FEATS_DIR + 'chunks/{}.pkl'.format(chunk))['offers']
     print('{} offers'.format(len(events)))
-    events[BYR] = events.index.isin(IDX[BYR], level='index')
+    events[BYR] = events.index.isin(IDX[BYR], level=INDEX)
     tf_lstg_focal = get_lstg_time_feats(events, full=False)
     con_feats = con_time_feats(tf_lstg_focal, events)
     assert not con_feats.isna().any().any()
@@ -384,15 +389,9 @@ def create_tf(path_generator=None, chunk=None):
 
 
 def main():
-    res = run_func_on_chunks(
-        f=create_tf,
-        func_kwargs=dict(
-            path_generator=
-            lambda i: FEATS_DIR + 'chunks/{}.gz'.format(i)
-        )
-    )
+    res = run_func_on_chunks(f=create_tf, func_kwargs=dict())
     df = pd.concat(res).sort_index()
-    dump(df, FEATS_DIR + 'tf.gz')
+    topickle(df, FEATS_DIR + 'tf.pkl')
 
 
 if __name__ == "__main__":
