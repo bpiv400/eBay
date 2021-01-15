@@ -44,8 +44,9 @@ class HeuristicByr:
             if not self.high:
                 idx = f(.17)
             elif self.turn_cost == 0:
-                auto = get_last_auto(x=x, turn=turn)
-                idx = f(.4) if auto else f(.17)
+                # auto = get_last_auto(x=x, turn=turn)
+                # idx = f(.4) if auto else f(.17)
+                idx = f(.17)
             elif self.turn_cost == 1:
                 idx = f(.4)
             elif self.turn_cost == 3:

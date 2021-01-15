@@ -7,7 +7,7 @@ from utils import load_feats, safe_reindex, compose_args
 from agent.const import AGENT_PARAMS
 from constants import DAY, MAX_DAYS, IDX
 from featnames import LOOKUP, CON, NORM, START_PRICE, START_TIME, \
-    BYR_HIST, X_OFFER, X_THREAD, INDEX, CLOCK, TEST, BYR, AUTO, EXP, MSG
+    BYR_HIST, X_OFFER, X_THREAD, INDEX, CLOCK, TEST, BYR, REJECT, MSG, AUTO
 
 LISTING_FEATS = ['fdbk_score', 'fdbk_pstv', 'photos', 'store', 'slr_us', 'fast']
 
@@ -54,7 +54,7 @@ def main():
         X = d[X_THREAD][BYR_HIST].to_frame()
         X['elapsed'] = (d[CLOCK] - d[LOOKUP][START_TIME]) / (MAX_DAYS * DAY)
         if turn > 1:
-            last = data[X_OFFER][[CON, NORM, AUTO, EXP, MSG]].xs(
+            last = data[X_OFFER][[NORM, AUTO, REJECT, MSG]].xs(
                 turn-1, level=INDEX).loc[d[CLOCK].index]
             last[NORM] = 1 - last[NORM]
             X = X.join(last)

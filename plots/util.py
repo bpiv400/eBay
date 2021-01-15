@@ -739,16 +739,19 @@ def contour_plot(path, s):
         args = dict(xlabel='Turn 1: Offer / list price',
                     ylabel='Days to first arrival',
                     zlabel='Turn 2: Pr(accept)' if suffix == 'store' else None)
-    elif 'rejbin' in name:
-        turn = 2 if name == 'rejbin' else 3
-        action = 'reject' if turn == 2 else 'accept'
-        zlabel = 'Turn {}: Pr({})'.format(turn, action)
+    elif 'rejbin' in name or name == 'normbin':
+        if name == 'normbin':
+            zlabel = 'Turn 2: Offer / list price'
+        else:
+            turn = 2 if name == 'rejbin' else 3
+            action = 'reject' if turn == 2 else 'accept'
+            zlabel = 'Turn {}: Pr({})'.format(turn, action)
         ticks = get_log_ticks(s.index.levels[1])
         args = dict(yticks=np.log10(ticks),
                     yticklabels=ticks,
                     xlabel='Turn 1: Offer / list price',
                     ylabel='List price ($)',
-                    zlabel=zlabel if suffix == 'data' else None)
+                    zlabel=zlabel if suffix in ['data', name] else None)
     elif name == 'rejdays':
         args = dict(ylabel='Days to first offer',
                     xlabel='Turn 1: Offer / list price')

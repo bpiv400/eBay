@@ -2,8 +2,7 @@ import argparse
 import os
 import pandas as pd
 from agent.util import get_run_dir, load_values, load_valid_data, \
-    get_sale_norm, get_norm_reward, only_byr_agent
-from agent.eval.util import get_output_dir
+    get_sale_norm, get_norm_reward, only_byr_agent, get_output_dir
 from utils import topickle, unpickle, compose_args, safe_reindex
 from agent.const import AGENT_PARAMS
 from constants import EPS

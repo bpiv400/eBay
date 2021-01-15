@@ -1,5 +1,6 @@
 from rlenv.generate.util import process_sims
-from agent.eval.util import get_output_dir, sim_args
+from agent.eval.util import sim_args
+from agent.util import get_output_dir
 from utils import unpickle
 from constants import NUM_CHUNKS
 from featnames import BYR

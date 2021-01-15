@@ -26,6 +26,14 @@ def get_run_dir(**kwargs):
     return run_dir
 
 
+def get_output_dir(**kwargs):
+    run_dir = get_run_dir(**kwargs)
+    output_dir = run_dir + '{}/'.format(kwargs['part'])
+    if kwargs['heuristic']:
+        output_dir += 'heuristic/'
+    return output_dir
+
+
 def get_slr_valid(data=None):
     # count non-automatic seller offers
     auto = data[X_OFFER][AUTO]
@@ -62,6 +70,8 @@ def get_byr_valid(data=None):
     idx = get_byr_agent(data).droplevel(THREAD)
     for k, v in data.items():
         data[k] = safe_reindex(v, idx=idx)
+        if k == X_OFFER:
+            data[k] = data[k].reorder_levels(v.index.names)
     return data
 
 

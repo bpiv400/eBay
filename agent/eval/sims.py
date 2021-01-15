@@ -3,8 +3,8 @@ from agent.eval.AgentGenerator import AgentGenerator
 from agent.models.AgentModel import load_agent_model
 from agent.models.HeuristicByr import HeuristicByr
 from agent.models.HeuristicSlr import HeuristicSlr
-from agent.eval.util import get_output_dir, sim_args
-from agent.util import get_run_dir
+from agent.eval.util import sim_args
+from agent.util import get_run_dir, get_output_dir
 from rlenv.generate.util import process_sims
 from utils import topickle, run_func_on_chunks, process_chunk_worker
 from featnames import BYR
