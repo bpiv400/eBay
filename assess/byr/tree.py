@@ -52,9 +52,9 @@ def main():
 
         # features
         X = d[X_THREAD][BYR_HIST].to_frame()
-        X['elapsed'] = (d[CLOCK] - d[LOOKUP][START_TIME]) / (MAX_DAYS * DAY)
+        # X['elapsed'] = (d[CLOCK] - d[LOOKUP][START_TIME]) / (MAX_DAYS * DAY)
         if turn > 1:
-            last = data[X_OFFER][[NORM, AUTO, REJECT, MSG]].xs(
+            last = data[X_OFFER][[NORM, REJECT, MSG]].xs(
                 turn-1, level=INDEX).loc[d[CLOCK].index]
             last[NORM] = 1 - last[NORM]
             X = X.join(last)

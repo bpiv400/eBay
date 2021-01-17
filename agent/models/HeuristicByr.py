@@ -46,7 +46,9 @@ class HeuristicByr:
             elif self.turn_cost == 0:
                 # auto = get_last_auto(x=x, turn=turn)
                 # idx = f(.4) if auto else f(.17)
-                idx = f(.17)
+                # idx = f(.17)
+                norm = get_last_norm(turn=turn, x=x)
+                idx = f(.17) if norm <= .84 else f(.4)
             elif self.turn_cost == 1:
                 idx = f(.4)
             elif self.turn_cost == 3:
@@ -65,7 +67,9 @@ class HeuristicByr:
             if not self.high:
                 idx = f(.17)
             elif self.turn_cost == 0:
-                idx = f(.4)
+                # idx = f(.4)
+                norm = get_last_norm(turn=turn, x=x)
+                idx = f(.17) if norm <= .7 else f(.4)
             elif self.turn_cost == 1:
                 idx = f(.4)
             elif self.turn_cost == 3:
