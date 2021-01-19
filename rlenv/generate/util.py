@@ -1,10 +1,8 @@
 import os
 import pandas as pd
-from inputs.agents import process_inputs
-from inputs.util import convert_x_to_numpy
 from processing.util import collect_date_clock_feats, get_days_delay, get_norm, \
     get_common_cons
-from utils import topickle, load_file, get_role
+from utils import topickle, load_file
 from constants import IDX, DAY, MAX_DAYS
 from featnames import DAYS, DELAY, CON, COMMON, NORM, REJECT, AUTO, EXP, \
     CLOCK_FEATS, TIME_FEATS, OUTCOME_FEATS, DAYS_SINCE_LSTG, INDEX, \
@@ -80,8 +78,7 @@ def concat_sim_chunks(sims):
     return data
 
 
-def process_sims(part=None, sims=None, output_dir=None,
-                 byr=None, save_inputs=True):
+def process_sims(part=None, sims=None, output_dir=None):
     # concatenate chunks
     data = concat_sim_chunks(sims)
 
@@ -100,10 +97,3 @@ def process_sims(part=None, sims=None, output_dir=None,
     for k, df in d.items():
         if k != LOOKUP:
             topickle(df, output_dir + '{}.pkl'.format(k))
-
-    # model inputs for agent logs
-    if byr is not None and save_inputs:
-        inputs = process_inputs(data=d, byr=byr, agent=True)
-        convert_x_to_numpy(x=inputs['x'], idx=inputs['y'].index)
-        inputs['y'] = inputs['y'].to_numpy()
-        topickle(inputs, output_dir + '{}.pkl'.format(get_role(byr)))

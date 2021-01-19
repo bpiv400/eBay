@@ -23,7 +23,7 @@ def main():
 
     # check if chunk has already been processed
     chunk = args.num - 1
-    path = output_dir + '{}.pkl'.format(chunk)
+    path = output_dir + 'outcomes/{}.pkl'.format(chunk)
     if os.path.isfile(path):
         print('Chunk {} already exists.'.format(chunk))
         exit(0)

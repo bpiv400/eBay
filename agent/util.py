@@ -1,8 +1,8 @@
 import pandas as pd
 from utils import unpickle, load_file, load_data, safe_reindex
-from constants import AGENT_DIR, IDX, SIM_DIR, OUTCOME_SIMS
+from constants import AGENT_DIR, IDX, SIM_DIR
 from featnames import SLR, BYR, NORM, AUTO, INDEX, THREAD, CON, \
-    LOOKUP, X_OFFER, START_PRICE, LSTG, SIM
+    LOOKUP, X_OFFER, START_PRICE, X_THREAD
 
 
 def get_run_id(delta=None):
@@ -51,6 +51,10 @@ def only_byr_agent(data=None, drop_thread=False):
     for k, v in data.items():
         if THREAD in v.index.names:
             data[k] = v.xs(1, level=THREAD, drop_level=drop_thread)
+        idx = data[X_THREAD].index
+        if THREAD in idx.names:
+            idx = idx.droplevel(THREAD)
+        data[LOOKUP] = data[LOOKUP].loc[idx]
     return data
 
 
@@ -58,9 +62,7 @@ def get_byr_valid(data=None, lstgs=None):
     if lstgs is None:  # find sales in data
         con = data[X_OFFER][CON]
         lstgs = con[con == 1].index.droplevel([THREAD, INDEX])
-    else:  # create multiindex
-        lstgs = pd.MultiIndex.from_product([lstgs, range(OUTCOME_SIMS)],
-                                           names=[LSTG, SIM])
+
     for k, v in data.items():
         data[k] = safe_reindex(v, idx=lstgs)
         if k == X_OFFER:
@@ -87,8 +89,6 @@ def load_valid_data(part=None, run_dir=None, byr=None, lstgs=None):
     if run_dir is not None:
         assert byr is None
         byr = BYR in run_dir
-        if byr:
-            assert lstgs is not None
     if lstgs is not None:  # for constraining simulated buyer output to sold listings in data
         assert byr
         assert run_dir is not None

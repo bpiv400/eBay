@@ -20,11 +20,7 @@ def main():
         sims.append(unpickle(chunk_path))
 
     # clean and save
-    process_sims(part=args.part,
-                 sims=sims,
-                 output_dir=output_dir,
-                 byr=args.delta is None,
-                 save_inputs=(not args.heuristic))
+    process_sims(part=args.part, sims=sims, output_dir=output_dir)
 
 
 if __name__ == '__main__':
