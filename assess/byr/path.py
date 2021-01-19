@@ -1,5 +1,4 @@
 from agent.util import only_byr_agent, load_valid_data, get_output_dir
-from agent.const import DELTA_BYR
 from featnames import X_OFFER, CON, AUTO, TEST
 
 
@@ -17,8 +16,8 @@ def feats_from_con(con=None, auto=None):
 
 
 def main():
-    run_dir = get_output_dir(byr=True, delta=DELTA_BYR[-1], part=TEST, heuristic=True)
-    data = only_byr_agent(load_valid_data(part=TEST, byr=True, run_dir=run_dir))
+    run_dir = get_output_dir(part=TEST, heuristic=True)
+    data = only_byr_agent(load_valid_data(part=TEST, run_dir=run_dir))
     con = data[X_OFFER][CON].unstack()
     con[con.isna()] = -1
     auto = data[X_OFFER][AUTO].unstack()

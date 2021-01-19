@@ -1,7 +1,7 @@
 import numpy as np
 from constants import NUM_COMMON_CONS
-from featnames import BYR, DELTA, TURN_COST
 from utils import load_feats
+
 
 # concessions for agent to use
 COMMON_CONS = load_feats('common_cons')
@@ -24,19 +24,7 @@ PERIOD_EPOCHS = 1500    # epoch count for stepping down entropy
 AGENT_STATE = 'agent_state_dict'
 
 # economic parameters
-DELTA_SLR = [0., .7]
-DELTA_BYR = [.7, .995]
-DELTA_CHOICES = np.unique(DELTA_SLR + DELTA_BYR)
-TURN_COST_CHOICES = list(range(6))
-
-# agent parameters
-AGENT_PARAMS = {BYR: dict(action='store_true'),
-                DELTA: dict(type=float,
-                            choices=DELTA_CHOICES,
-                            default=DELTA_CHOICES[1]),
-                TURN_COST: dict(type=int,
-                                choices=TURN_COST_CHOICES,
-                                default=TURN_COST_CHOICES[0])}
+DELTA_CHOICES = [0., .7]
 
 # names for opt_info namedtuple
 FIELDS = ["ActionsPerTraj", "ThreadsPerTraj", "DaysToDone",

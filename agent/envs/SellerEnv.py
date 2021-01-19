@@ -1,17 +1,24 @@
 from rlpyt.utils.collections import namedarraytuple
 from rlenv.const import DELAY_EVENT, OFFER_EVENT
 from agent.envs.AgentEnv import AgentEnv, EventLog
+from agent.util import load_values
 from rlenv.util import get_delay_outcomes, get_con_outcomes
 from utils import load_sizes
 from rlenv.const import DELAY_IND
 from constants import SLR, MAX_DELAY_TURN
+from featnames import TRAIN_RL
 
 SellerObs = namedarraytuple("SellerObs", list(load_sizes(SLR)['x'].keys()))
 
 
 class SellerEnv(AgentEnv):
-    def __init__(self, **kwargs):
+    def __init__(self, delta=None, **kwargs):
         super().__init__(byr=False, **kwargs)
+        if self.train:
+            assert delta is not None
+            self.values = delta * load_values(part=TRAIN_RL,
+                                              delta=delta,
+                                              normalize=False)
 
     def is_agent_turn(self, event):
         """
@@ -120,18 +127,14 @@ class SellerEnv(AgentEnv):
         if self.outcome is None:
             return 0, False
 
-        # calculate penalty
-        penalty = self.turn_cost * self.num_actions
-
         # item does not sell
         if not self.outcome.sale:
-            value = self.values.loc[self.loader.lstg]
-            return self.delta * value - penalty, False
+            return self.values.loc[self.loader.lstg], False
 
         # item sells
         if self.verbose:
             print('Sale price: ${0:.2f}.'.format(self.outcome.price))
-        return self.outcome.price - penalty, True
+        return self.outcome.price, True
 
     @property
     def horizon(self):

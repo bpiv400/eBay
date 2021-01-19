@@ -37,7 +37,7 @@ class AgentModel(torch.nn.Module):
 
         # value net
         if self.value:
-            sizes['out'] = 4 if byr else 5
+            sizes['out'] = 5
             self.value_net = FeedForward(sizes=sizes)
 
     def forward(self, observation, prev_action=None, prev_reward=None, value_only=False):

@@ -1,10 +1,9 @@
-from assess.util import merge_dicts, delay_dist, cdf_sale, get_lstgs, \
+from assess.util import merge_dicts, delay_dist, cdf_sale, \
     con_dist, num_offers
 from agent.util import get_run_dir, load_valid_data, only_byr_agent
 from utils import topickle
-from agent.const import DELTA_BYR
 from constants import PLOT_DIR
-from featnames import DELAY, X_OFFER, TEST, BYR, CON
+from featnames import DELAY, X_OFFER, TEST, CON, LOOKUP
 
 
 def collect_outputs(data=None, name=None):
@@ -28,24 +27,21 @@ def collect_outputs(data=None, name=None):
 
 
 def main():
-    lstgs, suffix = get_lstgs()
-
     # observed buyers
-    data = only_byr_agent(load_valid_data(part=TEST, byr=True, lstgs=lstgs))
+    data = only_byr_agent(load_valid_data(part=TEST, byr=True))
     d = collect_outputs(data=data, name='Humans')
 
     # rl buyer
-    for delta in DELTA_BYR:
-        run_dir = get_run_dir(byr=True, delta=delta)
-        data_rl = load_valid_data(
-            part=TEST, run_dir=run_dir, byr=True, lstgs=lstgs)
-        data_rl = only_byr_agent(data_rl)
-        d_rl = collect_outputs(
-            data=data_rl, name='$\\delta = {}$'.format(delta))
-        d = merge_dicts(d, d_rl)
+    run_dir = get_run_dir()
+    data_rl = load_valid_data(part=TEST,
+                              run_dir=run_dir,
+                              lstgs=data[LOOKUP].index)
+    data_rl = only_byr_agent(data_rl)
+    d_rl = collect_outputs(data=data_rl, name='Agent')
+    d = merge_dicts(d, d_rl)
 
     # save
-    topickle(d, PLOT_DIR + '{}{}.pkl'.format(BYR, suffix))
+    topickle(d, PLOT_DIR + 'byr.pkl')
 
 
 if __name__ == '__main__':

@@ -2,7 +2,6 @@ import pandas as pd
 from agent.util import only_byr_agent, load_valid_data, get_run_dir
 from assess.util import ll_wrapper
 from utils import topickle
-from agent.const import TURN_COST_CHOICES, DELTA_BYR
 from assess.const import NORM2_DIM_LONG
 from constants import PLOT_DIR
 from featnames import TEST, X_OFFER, CON, INDEX, NORM
@@ -32,22 +31,14 @@ def main():
         line.columns = pd.MultiIndex.from_product([['Humans'], line.columns])
         d['simple_norm2{}3'.format(k)] = line
 
-    for turn_cost in TURN_COST_CHOICES:
-        col = '${}'.format(turn_cost)
-        run_dir = get_run_dir(byr=True,
-                              delta=DELTA_BYR[-1],
-                              turn_cost=turn_cost)
-        data = load_valid_data(part=TEST, run_dir=run_dir, byr=True)
-        if data is None:
-            continue
-        data = only_byr_agent(data)
-        y, x = get_feats(data)
+    run_dir = get_run_dir()
+    data = only_byr_agent(load_valid_data(part=TEST, run_dir=run_dir))
+    y, x = get_feats(data)
 
-        for k, v in y.items():
-            print('{}: {}'.format(col, k))
-            key = 'simple_norm2{}3'.format(k)
-            line, _ = ll_wrapper(v, x, dim=NORM2_DIM_LONG, bw=(.05,), ci=False)
-            d[key].loc[:, (col, 'beta')] = line
+    for k, v in y.items():
+        print('{}'.format(k))
+        key = 'simple_norm2{}3'.format(k)
+        d[key], _ = ll_wrapper(v, x, dim=NORM2_DIM_LONG, bw=(.05,), ci=False)
 
     topickle(d, PLOT_DIR + 'byr3.pkl')
 

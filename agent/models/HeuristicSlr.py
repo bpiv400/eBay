@@ -1,14 +1,13 @@
 import numpy as np
 import torch
 from agent.models.util import wrapper, get_elapsed, get_last_norm, get_agent_turn
-from agent.const import DELTA_SLR
+from agent.const import DELTA_CHOICES
 from constants import NUM_COMMON_CONS
-from featnames import DELTA
 
 
 class HeuristicSlr:
-    def __init__(self, **params):
-        self.high = np.isclose(params[DELTA], DELTA_SLR[-1])
+    def __init__(self, delta=None):
+        self.high = np.isclose(delta, DELTA_CHOICES[-1])
 
     def __call__(self, observation=None):
         # noinspection PyProtectedMember

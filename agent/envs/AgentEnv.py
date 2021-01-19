@@ -8,10 +8,9 @@ from rlpyt.utils.collections import namedarraytuple
 from rlenv.EBayEnv import EBayEnv
 from rlenv.events.Thread import Thread
 from agent.ConSpace import ConSpace
-from agent.util import load_values
 from agent.const import AGENT_CONS
 from constants import INTERVAL_TURN, INTERVAL_CT_TURN, DAY, NUM_COMMON_CONS, IDX
-from featnames import BYR_HIST, START_PRICE, BYR, SLR, DELTA, TRAIN_RL, TURN_COST
+from featnames import BYR_HIST, START_PRICE, BYR, SLR
 
 Info = namedarraytuple("Info", ["days", "max_return", "num_actions", "num_threads",
                                 "turn", "thread_id", "priority", "agent_sale"])
@@ -42,14 +41,6 @@ class AgentEnv(EBayEnv, Env):
 
         # observation space
         self._observation_space = self.define_observation_space()
-
-        # values
-        if self.train:
-            self.delta = kwargs[DELTA]
-            self.turn_cost = kwargs[TURN_COST]
-            self.values = load_values(part=TRAIN_RL,
-                                      delta=self.delta,
-                                      normalize=False)
 
     def define_observation_space(self):
         sizes = self.composer.agent_sizes['x']

@@ -4,9 +4,9 @@ import pandas as pd
 from sklearn.tree import DecisionTreeClassifier, export_text
 from statsmodels.nonparametric.kde import KDEUnivariate
 from statsmodels.nonparametric.kernel_regression import KernelReg
-from agent.util import get_sale_norm, get_run_dir
+from agent.util import get_sale_norm, get_run_dir, get_norm_reward
 from utils import unpickle, safe_reindex, load_file
-from assess.const import OPT, VALUES_DIM, POINTS, NORM1_BIN_MESH
+from assess.const import OPT, VALUES_DIM, POINTS, NORM1_BIN_MESH, LOG10_BIN_DIM
 from constants import IDX, BYR, EPS, DAY, HOUR, PCTILE_DIR, MAX_DELAY_TURN, \
     MAX_DELAY_ARRIVAL, INTERVAL_ARRIVAL, INTERVAL_CT_ARRIVAL, COLLECTIBLES
 from featnames import DELAY, CON, NORM, AUTO, START_TIME, START_PRICE, LOOKUP, \
@@ -370,8 +370,8 @@ def get_lstgs():
     return lookup.index, '_{}'.format(subset)
 
 
-def get_eval_df(**kwargs):
-    run_dir = get_run_dir(**kwargs)
+def get_eval_df(delta=None):
+    run_dir = get_run_dir(delta=delta)
     path = run_dir + '{}.pkl'.format(TEST)
     df = unpickle(path)[['norm', 'dollar']]
     return df
@@ -385,3 +385,15 @@ def winzorize(s, q=.025, lower=True, upper=False):
     if upper:
         s = s[s < high]
     return s
+
+
+def bin_vs_reward(data=None, values=None, byr=False, bw=None):
+    reward = pd.concat(get_norm_reward(data=data, values=values, byr=byr))
+    y = reward.reindex(index=data[LOOKUP].index).values
+    x = np.log10(data[LOOKUP][START_PRICE].values)
+    line, bw = ll_wrapper(y=y,
+                          x=x,
+                          dim=LOG10_BIN_DIM,
+                          bw=bw,
+                          ci=(bw is None))
+    return line, bw

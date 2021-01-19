@@ -4,9 +4,7 @@ BYR = 'byr'
 ARRIVAL = 'arrival'
 
 # hyperparameters
-DELTA = 'delta'
 DROPOUT = 'dropout'
-TURN_COST = 'turn_cost'
 
 # clock feats
 HOLIDAY = 'holiday'

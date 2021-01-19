@@ -1,7 +1,6 @@
 import argparse
 from agent.util import get_run_dir, only_byr_agent, load_valid_data
-from utils import compose_args
-from agent.const import AGENT_PARAMS
+from agent.const import DELTA_CHOICES
 from constants import IDX
 from featnames import CON, X_OFFER, INDEX, TEST, BYR, AUTO, SLR
 
@@ -9,19 +8,20 @@ from featnames import CON, X_OFFER, INDEX, TEST, BYR, AUTO, SLR
 def main():
     # agent params from command line
     parser = argparse.ArgumentParser()
-    compose_args(arg_dict=AGENT_PARAMS, parser=parser)
-    params = vars(parser.parse_args())
+    parser.add_argument('--delta', type=float, choices=DELTA_CHOICES)
+    delta = parser.parse_args().delta
+    byr = delta is None
 
-    run_dir = get_run_dir(**params)
-    data = load_valid_data(part=TEST, run_dir=run_dir, byr=params[BYR])
-    if params[BYR]:
+    run_dir = get_run_dir(delta=delta)
+    data = load_valid_data(part=TEST, run_dir=run_dir)
+    if byr:
         data = only_byr_agent(data)
 
-    turns = IDX[BYR] if params[BYR] else IDX[SLR]
+    turns = IDX[BYR] if byr else IDX[SLR]
     for turn in turns:
         print('Turn {}'.format(turn))
         con = data[X_OFFER][CON]
-        if not params[BYR]:
+        if not byr:
             con = con.loc[~data[X_OFFER][AUTO]]
         con = con.xs(turn, level=INDEX)
         con_rate = con.groupby(con).count() / len(con)

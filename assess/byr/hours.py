@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 from agent.util import load_valid_data, only_byr_agent
-from assess.util import ll_wrapper, winzorize
+from assess.util import ll_wrapper
 from utils import topickle
 from assess.const import BYR_NORM_DIMS
 from constants import PLOT_DIR, HOUR, IDX
@@ -15,7 +15,6 @@ def get_feats(data=None, turn=None):
     norm = norm[norm < 1]  # throw out accepts
     if turn > 1:  # throw out buyer rejections
         norm = norm[~df[REJECT].xs(turn, level=INDEX)]
-    norm = winzorize(norm)
 
     # create features
     wide = data[CLOCK].unstack().loc[norm.index]

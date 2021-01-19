@@ -5,8 +5,7 @@ from agent.EBayPPO import EBayPPO
 from rlpyt.samplers.serial.sampler import SerialSampler
 from rlpyt.samplers.parallel.gpu.alternating_sampler import AlternatingSampler
 from rlpyt.utils.logging.context import logger_context
-from agent.const import BATCH_SIZE
-from agent.util import get_log_dir, get_run_id
+from agent.util import get_run_id
 from agent.AgentComposer import AgentComposer
 from agent.models.AgentModel import AgentModel
 from agent.agents import SellerAgent, BuyerAgent
@@ -16,42 +15,42 @@ from agent.envs.BuyerEnv import BuyerEnv
 from rlenv.interfaces.ArrivalInterface import ArrivalInterface
 from rlenv.interfaces.PlayerInterface import SimulatedSeller, SimulatedBuyer
 from agent.AgentLoader import AgentLoader
-from featnames import BYR, DELTA, TURN_COST
+from agent.const import BATCH_SIZE
+from constants import AGENT_DIR
 
 
 class RlTrainer:
-    def __init__(self, **params):
-        self.params = params
+    def __init__(self, delta=None):
+        self.delta = delta
+        self.byr = delta is None
 
     def _generate_query_strategy(self):
         return DefaultQueryStrategy(
             arrival=ArrivalInterface(),
-            seller=SimulatedSeller(full=self.params[BYR]),
+            seller=SimulatedSeller(full=self.byr),
             buyer=SimulatedBuyer(full=True)
         )
 
     def _generate_agent(self, serial=False):
-        model_kwargs = dict(byr=self.params[BYR])
-        agent_cls = BuyerAgent if self.params[BYR] else SellerAgent
+        model_kwargs = dict(byr=self.byr)
+        agent_cls = BuyerAgent if self.byr else SellerAgent
         return agent_cls(
             ModelCls=AgentModel,
             model_kwargs=model_kwargs,
-            turn_cost=self.params[TURN_COST],
             serial=serial
         )
 
     def _generate_env(self, verbose=False):
-        composer = AgentComposer(byr=self.params[BYR])
+        composer = AgentComposer(byr=self.byr)
         env_params = dict(
             composer=composer,
             verbose=verbose,
             query_strategy=self._generate_query_strategy(),
             loader=AgentLoader(),
-            delta=self.params[DELTA],
-            turn_cost=self.params[TURN_COST],
+            delta=self.delta,
             train=True
         )
-        env = BuyerEnv if self.params[BYR] else SellerEnv
+        env = BuyerEnv if self.byr else SellerEnv
         return env, env_params
 
     def _generate_sampler(self, serial=False):
@@ -103,9 +102,8 @@ class RlTrainer:
         if not log:
             runner.train()
         else:
-            log_dir = get_log_dir(**self.params)
-            run_id = get_run_id(**self.params)
-            with logger_context(log_dir=log_dir,
+            run_id = get_run_id(delta=self.delta)
+            with logger_context(log_dir=AGENT_DIR,
                                 name='log',
                                 use_summary_writer=True,
                                 override_prefix=True,

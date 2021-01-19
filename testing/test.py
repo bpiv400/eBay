@@ -1,19 +1,15 @@
 import argparse
 from testing.TestGenerator import TestGenerator
 from testing.agents.AgentTestGenerator import AgentTestGenerator
-from utils import compose_args
 from featnames import VALIDATION
-
-SCRIPT_PARAMS = {'byr': {'action': 'store_true'},
-                 'slr': {'action': 'store_true'},
-                 'num': {'type': int, 'default': 0},
-                 'verbose': {'action': 'store_true'}
-                 }
 
 
 def main():
     parser = argparse.ArgumentParser()
-    compose_args(arg_dict=SCRIPT_PARAMS, parser=parser)
+    parser.add_argument('--byr', action='store_true')
+    parser.add_argument('--slr', action='store_true')
+    parser.add_argument('--num', type=int, default=0)
+    parser.add_argument('--verbose', action='store_true')
     args = parser.parse_args()
     if args.byr or args.slr:
         assert not (args.slr and args.byr)

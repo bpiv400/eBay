@@ -5,7 +5,7 @@ from rlenv.const import FIRST_OFFER, DELAY_EVENT, OFFER_EVENT, ARRIVAL
 from rlenv.Sources import ThreadSources
 from agent.envs.AgentEnv import AgentEnv, EventLog
 from constants import BYR
-from featnames import BYR_HIST_MODEL
+from featnames import BYR_HIST_MODEL, START_PRICE
 
 BuyerObs = namedarraytuple('BuyerObs', list(load_sizes(BYR)['x'].keys()))
 
@@ -135,24 +135,20 @@ class BuyerEnv(AgentEnv):
         """
         Returns the buyer reward for the current turn.
         """
-        # turn cost
-        penalty = self.turn_cost * self.num_actions
-
         # no sale
         if self.outcome is None or not self.outcome.sale:
-            return -penalty, False
+            return 0, False
 
         # sale to different buyer
         if self.outcome.thread > 1:
-            return -penalty, False
+            return 0, False
 
         # sale to agent buyer
-        value = self.values.loc[self.loader.lstg]
         if self.verbose:
-            print('Sale to RL buyer. Price: ${0:.2f}. Value: ${1:.2f}'.format(
-                self.outcome.price, value))
+            print('Sale to RL buyer. Price: ${0:.2f}.'.format(
+                self.outcome.price))
 
-        return value - self.outcome.price - penalty, True
+        return self.lookup[START_PRICE] - self.outcome.price, True
 
     def _init_agent_thread(self, thread=None, hist=None):
         # increment counter

@@ -1,37 +1,71 @@
-import os
-from utils import unpickle, load_file, load_data, get_role, safe_reindex
-from constants import AGENT_DIR, IDX, SIM_DIR
-from featnames import SLR, BYR, NORM, AUTO, INDEX, THREAD, CON, TURN_COST, \
-    LOOKUP, X_THREAD, X_OFFER, START_PRICE, DELTA
+import pandas as pd
+from utils import unpickle, load_file, load_data, safe_reindex
+from constants import AGENT_DIR, IDX, SIM_DIR, OUTCOME_SIMS
+from featnames import SLR, BYR, NORM, AUTO, INDEX, THREAD, CON, \
+    LOOKUP, X_OFFER, START_PRICE, LSTG, SIM
 
 
-def get_log_dir(**kwargs):
-    log_dir = AGENT_DIR + '{}/'.format(get_role(kwargs[BYR]))
-    if not os.path.isdir(log_dir):
-        os.makedirs(log_dir)
-    return log_dir
+def get_run_id(delta=None):
+    return '{}'.format(BYR if delta is None else float(delta))
 
 
-def get_run_id(**kwargs):
-    if TURN_COST not in kwargs:
-        kwargs[TURN_COST] = 0
-    run_id = '{}_{}'.format(float(kwargs[DELTA]), kwargs[TURN_COST])
-    return run_id
-
-
-def get_run_dir(**kwargs):
-    log_dir = get_log_dir(**kwargs)
-    run_id = get_run_id(**kwargs)
-    run_dir = log_dir + 'run_{}/'.format(run_id)
+def get_run_dir(delta=None):
+    run_id = get_run_id(delta=delta)
+    run_dir = AGENT_DIR + 'run_{}/'.format(run_id)
     return run_dir
 
 
-def get_output_dir(**kwargs):
-    run_dir = get_run_dir(**kwargs)
-    output_dir = run_dir + '{}/'.format(kwargs['part'])
-    if kwargs['heuristic']:
+def get_output_dir(delta=None, part=None, heuristic=False):
+    run_dir = get_run_dir(delta=delta)
+    output_dir = run_dir + '{}/'.format(part)
+    if heuristic:
         output_dir += 'heuristic/'
     return output_dir
+
+
+def get_sale_norm(offers=None, drop_thread=True):
+    sale_norm = offers.loc[offers[CON] == 1, NORM]
+    # redefine norm to be fraction of list price
+    slr_turn = (sale_norm.index.get_level_values(level=INDEX) % 2) == 0
+    sale_norm = slr_turn * (1. - sale_norm) + (1. - slr_turn) * sale_norm
+    # restrict index levels
+    sale_norm = sale_norm.droplevel(INDEX)
+    if drop_thread and THREAD in sale_norm.index.names:
+        sale_norm = sale_norm.droplevel(THREAD)
+    return sale_norm
+
+
+def get_norm_reward(data=None, values=None, byr=False):
+    sale_norm = get_sale_norm(data[X_OFFER])
+    idx_no_sale = data[LOOKUP].index.drop(sale_norm.index)
+    if byr:
+        sale_norm = 1 - sale_norm
+        assert values is None
+        cont_value = pd.Series(0., index=idx_no_sale, name='vals')
+    else:
+        cont_value = safe_reindex(values, idx=idx_no_sale)
+    return sale_norm, cont_value
+
+
+def only_byr_agent(data=None, drop_thread=False):
+    for k, v in data.items():
+        if THREAD in v.index.names:
+            data[k] = v.xs(1, level=THREAD, drop_level=drop_thread)
+    return data
+
+
+def get_byr_valid(data=None, lstgs=None):
+    if lstgs is None:  # find sales in data
+        con = data[X_OFFER][CON]
+        lstgs = con[con == 1].index.droplevel([THREAD, INDEX])
+    else:  # create multiindex
+        lstgs = pd.MultiIndex.from_product([lstgs, range(OUTCOME_SIMS)],
+                                           names=[LSTG, SIM])
+    for k, v in data.items():
+        data[k] = safe_reindex(v, idx=lstgs)
+        if k == X_OFFER:
+            data[k] = data[k].reorder_levels(v.index.names)
+    return data
 
 
 def get_slr_valid(data=None):
@@ -48,64 +82,27 @@ def get_slr_valid(data=None):
     return data
 
 
-def get_norm_reward(data=None, values=None):
-    sale_norm = get_sale_norm(data[X_OFFER])
-    idx_no_sale = data[LOOKUP].index.drop(sale_norm.index)
-    cont_value = safe_reindex(values, idx=idx_no_sale)
-    return sale_norm, cont_value
-
-
-def get_byr_agent(data=None):
-    return data[X_THREAD].xs(1, level=THREAD, drop_level=False).index
-
-
-def only_byr_agent(data=None, drop_thread=False):
-    for k, v in data.items():
-        if THREAD in v.index.names:
-            data[k] = v.xs(1, level=THREAD, drop_level=drop_thread)
-    return data
-
-
-def get_byr_valid(data=None):
-    idx = get_byr_agent(data).droplevel(THREAD)
-    for k, v in data.items():
-        data[k] = safe_reindex(v, idx=idx)
-        if k == X_OFFER:
-            data[k] = data[k].reorder_levels(v.index.names)
-    return data
-
-
-def load_valid_data(part=None, run_dir=None, byr=False, lstgs=None):
+def load_valid_data(part=None, run_dir=None, byr=None, lstgs=None):
     # error checking
     if run_dir is not None:
+        assert byr is None
+        byr = BYR in run_dir
         if byr:
-            assert BYR in run_dir
-        else:
-            assert SLR in run_dir
+            assert lstgs is not None
+    if lstgs is not None:  # for constraining simulated buyer output to sold listings in data
+        assert byr
+        assert run_dir is not None
 
     # load data
-    data = load_data(part=part, run_dir=run_dir, lstgs=lstgs)
+    data = load_data(part=part, run_dir=run_dir)
     if X_OFFER not in data:
         return None
 
     # restrict to valid listings
     if byr:
-        data = get_byr_valid(data)
+        return get_byr_valid(data=data, lstgs=lstgs)
     else:
-        data = get_slr_valid(data)
-    return data
-
-
-def get_sale_norm(offers=None, drop_thread=True):
-    sale_norm = offers.loc[offers[CON] == 1, NORM]
-    # redefine norm to be fraction of list price
-    slr_turn = (sale_norm.index.get_level_values(level=INDEX) % 2) == 0
-    sale_norm = slr_turn * (1. - sale_norm) + (1. - slr_turn) * sale_norm
-    # restrict index levels
-    sale_norm = sale_norm.droplevel(INDEX)
-    if drop_thread and THREAD in sale_norm.index.names:
-        sale_norm = sale_norm.droplevel(THREAD)
-    return sale_norm
+        return get_slr_valid(data=data)
 
 
 def load_values(part=None, delta=None, normalize=True):

@@ -292,11 +292,6 @@ def set_gpu(gpu=None):
     print('Using cuda:{}'.format(gpu))
 
 
-def compose_args(arg_dict=None, parser=None):
-    for k, v in arg_dict.items():
-        parser.add_argument('--{}'.format(k), **v)
-
-
 def get_role(byr=None):
     return BYR if byr else SLR
 

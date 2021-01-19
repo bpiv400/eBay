@@ -5,65 +5,44 @@ from agent.models.HeuristicByr import HeuristicByr
 from agent.models.HeuristicSlr import HeuristicSlr
 from agent.eval.util import sim_args
 from agent.util import get_run_dir, get_output_dir
-from rlenv.generate.util import process_sims
-from utils import topickle, run_func_on_chunks, process_chunk_worker
-from featnames import BYR
+from utils import topickle
 
 
 def main():
     args = sim_args(num=True)
+    byr = args.delta is None
 
     # output directory
-    output_dir = get_output_dir(**args)
+    output_dir = get_output_dir(part=args.part,
+                                heuristic=args.heuristic,
+                                delta=args.delta)
+
+    # create output folder
+    if not os.path.isdir(output_dir):
+        os.makedirs(output_dir)
+
+    # check if chunk has already been processed
+    chunk = args.num - 1
+    path = output_dir + '{}.pkl'.format(chunk)
+    if os.path.isfile(path):
+        print('Chunk {} already exists.'.format(chunk))
+        exit(0)
 
     # generator
     gen_cls = AgentGenerator
-    if args['heuristic']:
-        model_cls = HeuristicByr if args[BYR] else HeuristicSlr
-        model = model_cls(**args)
+    if args.heuristic:
+        model = HeuristicByr() if byr else HeuristicSlr(delta=args.delta)
     else:
-        run_dir = get_run_dir(**args)
-        model_args = {BYR: args[BYR], 'value': False}
+        run_dir = get_run_dir(delta=args.delta)
+        model_args = dict(byr=byr, value=False)
         model = load_agent_model(model_args=model_args, run_dir=run_dir)
-    gen_args = dict(model=model, byr=args[BYR])
+    gen = gen_cls(model=model, byr=byr)
 
-    # generate
-    if args['num'] is not None:
-        # create output folder
-        outcome_dir = output_dir + 'outcomes/'
-        if not os.path.isdir(outcome_dir):
-            os.makedirs(outcome_dir)
+    # process one chunk
+    df = gen.process_chunk(part=args.part, chunk=chunk)
 
-        # check if chunk has already been processed
-        chunk = args['num'] - 1
-        path = outcome_dir + '{}.pkl'.format(chunk)
-        if os.path.isfile(path):
-            print('Chunk {} already exists.'.format(chunk))
-            exit(0)
-
-        # process one chunk
-        gen = gen_cls(**gen_args)
-        df = gen.process_chunk(part=args['part'], chunk=chunk)
-
-        # save
-        topickle(df, path)
-
-    else:
-        # run in parallel on chunks
-        sims = run_func_on_chunks(
-            f=process_chunk_worker,
-            func_kwargs=dict(
-                part=args['part'],
-                gen_class=gen_cls,
-                gen_kwargs=gen_args
-            )
-        )
-
-        # combine and process output
-        process_sims(part=args['part'],
-                     sims=sims,
-                     output_dir=output_dir,
-                     byr=args[BYR])
+    # save
+    topickle(df, path)
 
 
 if __name__ == '__main__':

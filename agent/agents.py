@@ -14,10 +14,9 @@ from featnames import BYR
 
 
 class SplitCategoricalPgAgent(CategoricalPgAgent):
-    def __init__(self, turn_cost=0, serial=False, **kwargs):
+    def __init__(self, serial=False, **kwargs):
         super().__init__(**kwargs)
         self.serial = serial
-        self.turn_cost = turn_cost
 
     def __call__(self, observation, prev_action, prev_reward):
         model_inputs = self._model_inputs(observation, prev_action, prev_reward)
@@ -115,14 +114,10 @@ class SplitCategoricalPgAgent(CategoricalPgAgent):
 
 
 class SellerAgent(SplitCategoricalPgAgent):
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.max_loss = self.turn_cost  # arbitrary value
-        self.length = 1 + self.max_loss  # length of [-max_loss, 1]
 
     def _calculate_value(self, value_params):
         p, a, b = parse_value_params(value_params)
-        beta_mean = a / (a + b) * self.length - self.max_loss
+        beta_mean = a / (a + b)
         v = p[:, 1] + p[:, -1] * beta_mean
         return v
 
@@ -134,7 +129,7 @@ class SellerAgent(SplitCategoricalPgAgent):
         idx0 = torch.isclose(return_, zeros) & valid
         lnL = torch.sum(torch.log(p[idx0, 0] + EPS))
 
-        # sells for list price (and no penalty)
+        # sells for list price
         idx1 = torch.isclose(return_, zeros + 1) & valid
         lnL += torch.sum(torch.log(p[idx1, 1] + EPS))
 
@@ -142,8 +137,7 @@ class SellerAgent(SplitCategoricalPgAgent):
         idx_beta = ~idx0 & ~idx1 & valid
         lnL += torch.sum(torch.log(p[idx_beta, -1] + EPS))
         dist = Beta(a[idx_beta], b[idx_beta])
-        norm_return = (return_[idx_beta] + self.max_loss) / self.length
-        lnL += torch.sum(dist.log_prob(norm_return))
+        lnL += torch.sum(dist.log_prob(return_[idx_beta]))
 
         return -lnL
 
@@ -169,31 +163,30 @@ class SellerAgent(SplitCategoricalPgAgent):
 
 
 class BuyerAgent(SplitCategoricalPgAgent):
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.max_loss = 3 * self.turn_cost / 9.95 + 1
-        self.length = AGENT_CONS[1][1] + self.max_loss  # length of [-max_loss, .5]
 
     def _calculate_value(self, value_params):
         p, a, b = parse_value_params(value_params)
-        beta_mean = a / (a + b) * self.length - self.max_loss
-        v = p[:, -1] * beta_mean
+        v = (p[:, 1] + p[:, -1] * a / (a + b)) / 2
         return v
 
     def get_value_loss(self, value_params, return_, valid):
         p, a, b = parse_value_params(value_params)
+        norm_return = 2 * return_
 
         # no sale
-        zeros = torch.zeros_like(return_)
-        idx0 = torch.isclose(return_, zeros) & valid
+        zeros = torch.zeros_like(norm_return)
+        idx0 = torch.isclose(norm_return, zeros) & valid
         lnL = torch.sum(torch.log(p[idx0, 0] + EPS))
 
+        # sells for half of list price
+        idx1 = torch.isclose(norm_return, zeros + 1) & valid
+        lnL += torch.sum(torch.log(p[idx1, 1] + EPS))
+
         # intermediate outcome
-        idx_beta = ~idx0 & valid
+        idx_beta = ~idx0 & ~idx1 & valid
         lnL += torch.sum(torch.log(p[idx_beta, -1] + EPS))
         dist = Beta(a[idx_beta], b[idx_beta])
-        norm_return = (return_[idx_beta] + self.max_loss) / self.length
-        lnL += torch.sum(dist.log_prob(norm_return))
+        lnL += torch.sum(dist.log_prob(norm_return[idx_beta]))
 
         return -lnL
 

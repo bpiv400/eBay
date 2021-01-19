@@ -2,7 +2,7 @@ import numpy as np
 from agent.util import get_run_dir, load_valid_data, get_slr_valid
 from assess.util import kreg2
 from utils import topickle, load_data, load_feats, safe_reindex
-from agent.const import DELTA_SLR
+from agent.const import DELTA_CHOICES
 from assess.const import NORM1_DIM_SHORT
 from constants import PLOT_DIR
 from featnames import X_OFFER, REJECT, CON, INDEX, TEST, NORM, AUTO, EXP, \
@@ -46,8 +46,8 @@ def main():
                 d[key], _ = kreg2(y=y, x1=x1, x2=x2, mesh=mesh, bw=bw[feat])
 
     # seller runs
-    for delta in DELTA_SLR:
-        run_dir = get_run_dir(byr=False, delta=delta)
+    for delta in DELTA_CHOICES:
+        run_dir = get_run_dir(delta=delta)
         data = load_valid_data(part=TEST, run_dir=run_dir)
         y_acc, y_rej, x1, x2 = get_feats(data=data)
         for feat in ['acc', 'rej']:

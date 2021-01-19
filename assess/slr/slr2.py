@@ -3,7 +3,7 @@ import pandas as pd
 from agent.util import get_run_dir, load_valid_data, get_slr_valid
 from assess.util import ll_wrapper, kreg2
 from utils import topickle, load_data, safe_reindex
-from agent.const import DELTA_SLR
+from agent.const import DELTA_CHOICES
 from assess.const import NORM1_DIM, NORM1_BIN_MESH, SLR_NAMES
 from constants import PLOT_DIR
 from featnames import X_OFFER, CON, INDEX, TEST, NORM, ACCEPT, REJECT, AUTO, \
@@ -51,8 +51,8 @@ def main():
             print('rejbin: {}'.format(bw2))
 
     # seller runs
-    for delta in DELTA_SLR:
-        run_dir = get_run_dir(byr=False, delta=delta)
+    for delta in DELTA_CHOICES:
+        run_dir = get_run_dir(delta=delta)
         data = load_valid_data(part=TEST, run_dir=run_dir)
         x, con, x2 = get_feats(data=data)
 

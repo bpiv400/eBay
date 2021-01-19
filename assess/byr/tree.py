@@ -1,10 +1,8 @@
-import argparse
 import numpy as np
 import pandas as pd
 from agent.util import get_run_dir, only_byr_agent, load_valid_data
 from assess.util import estimate_tree
-from utils import load_feats, safe_reindex, compose_args
-from agent.const import AGENT_PARAMS
+from utils import load_feats, safe_reindex
 from constants import DAY, MAX_DAYS, IDX
 from featnames import LOOKUP, CON, NORM, START_PRICE, START_TIME, \
     BYR_HIST, X_OFFER, X_THREAD, INDEX, CLOCK, TEST, BYR, REJECT, MSG, AUTO
@@ -13,14 +11,8 @@ LISTING_FEATS = ['fdbk_score', 'fdbk_pstv', 'photos', 'store', 'slr_us', 'fast']
 
 
 def main():
-    # agent params from command line
-    parser = argparse.ArgumentParser()
-    compose_args(arg_dict=AGENT_PARAMS, parser=parser)
-    params = vars(parser.parse_args())
-    assert params[BYR]
-
-    run_dir = get_run_dir(**params)
-    data = load_valid_data(part=TEST, run_dir=run_dir, byr=True)
+    run_dir = get_run_dir()
+    data = load_valid_data(part=TEST, run_dir=run_dir)
 
     # add listing features to data
     listings = load_feats('listings')[LISTING_FEATS]
@@ -52,9 +44,9 @@ def main():
 
         # features
         X = d[X_THREAD][BYR_HIST].to_frame()
-        # X['elapsed'] = (d[CLOCK] - d[LOOKUP][START_TIME]) / (MAX_DAYS * DAY)
+        X['elapsed'] = (d[CLOCK] - d[LOOKUP][START_TIME]) / (MAX_DAYS * DAY)
         if turn > 1:
-            last = data[X_OFFER][[NORM, REJECT, MSG]].xs(
+            last = data[X_OFFER][[NORM, REJECT, AUTO, MSG]].xs(
                 turn-1, level=INDEX).loc[d[CLOCK].index]
             last[NORM] = 1 - last[NORM]
             X = X.join(last)

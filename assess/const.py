@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 from statsmodels.nonparametric._kernel_base import EstimatorSettings
-from agent.const import DELTA_SLR
+from agent.const import DELTA_CHOICES
 from constants import CLEAN_DIR
 from featnames import META
 
@@ -21,8 +21,8 @@ OPT = EstimatorSettings(efficient=True)
 DELTA_ASSESS = .7
 
 # agent names
-SLR_NAMES = {DELTA_SLR[0]: 'Impatient agent',
-             DELTA_SLR[1]: 'Patient agent'}
+SLR_NAMES = {DELTA_CHOICES[0]: 'Impatient agent',
+             DELTA_CHOICES[1]: 'Patient agent'}
 
 # various dimensions for plotting
 POINTS = 100

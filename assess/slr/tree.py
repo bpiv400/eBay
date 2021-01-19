@@ -2,22 +2,20 @@ import argparse
 import pandas as pd
 from assess.util import get_last, estimate_tree
 from agent.util import get_run_dir, load_valid_data
-from utils import compose_args
-from agent.const import AGENT_PARAMS
+from agent.const import DELTA_CHOICES
 from constants import DAY, MAX_DAYS
 from featnames import LOOKUP, AUTO, CON, NORM, START_PRICE, START_TIME, \
-    BYR_HIST, X_OFFER, X_THREAD, INDEX, CLOCK, THREAD, TEST, BYR
+    BYR_HIST, X_OFFER, X_THREAD, INDEX, CLOCK, THREAD, TEST
 
 
 def main():
     # agent params from command line
     parser = argparse.ArgumentParser()
-    compose_args(arg_dict=AGENT_PARAMS, parser=parser)
-    params = vars(parser.parse_args())
-    assert not params[BYR]
+    parser.add_argument('--delta', type=float, choices=DELTA_CHOICES)
+    delta = parser.parse_args().delta
 
-    run_dir = get_run_dir(**params)
-    data = load_valid_data(part=TEST, run_dir=run_dir, byr=False)
+    run_dir = get_run_dir(delta=delta)
+    data = load_valid_data(part=TEST, run_dir=run_dir)
 
     for turn in [2, 4, 6]:
         print('Turn {}'.format(turn))

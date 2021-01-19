@@ -3,14 +3,15 @@ from agent.eval.util import sim_args
 from agent.util import get_output_dir
 from utils import unpickle
 from constants import NUM_CHUNKS
-from featnames import BYR
 
 
 def main():
     args = sim_args()
 
     # output directory
-    output_dir = get_output_dir(**args)
+    output_dir = get_output_dir(part=args.part,
+                                heuristic=args.heuristic,
+                                delta=args.delta)
 
     # concatenate
     sims = []
@@ -19,11 +20,11 @@ def main():
         sims.append(unpickle(chunk_path))
 
     # clean and save
-    process_sims(part=args['part'],
+    process_sims(part=args.part,
                  sims=sims,
                  output_dir=output_dir,
-                 byr=args[BYR],
-                 save_inputs=(not args['heuristic']))
+                 byr=args.delta is None,
+                 save_inputs=(not args.heuristic))
 
 
 if __name__ == '__main__':
