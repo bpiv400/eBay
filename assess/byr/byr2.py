@@ -1,9 +1,9 @@
 import numpy as np
 from agent.util import load_valid_data, only_byr_agent
-from assess.util import ll_wrapper, bin_plot
+from assess.util import ll_wrapper, kreg2
 from utils import topickle, safe_reindex
 from agent.const import COMMON_CONS
-from assess.const import NORM1_DIM_LONG
+from assess.const import NORM1_DIM_LONG, NORM1_BIN_MESH
 from constants import PLOT_DIR
 from featnames import X_OFFER, INDEX, TEST, NORM, LOOKUP, START_PRICE
 
@@ -36,7 +36,9 @@ def main():
     print('norm: {}'.format(bw[0]))
 
     # norm2 ~ norm1, list price
-    d['contour_normbin'], bw2 = bin_plot(y=y, x1=x, x2=z)
+    d['contour_normbin'], bw2 = kreg2(y=y, x1=x, x2=z,
+                                      mesh=NORM1_BIN_MESH, bw=bw)
+    print('bin: {}'.format(bw2))
 
     topickle(d, PLOT_DIR + 'byr2.pkl')
 

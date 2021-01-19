@@ -7,8 +7,8 @@
 #$ -o logs/sims/
 
 ulimit -n 4096
-if [ "$3" == "heuristic" ]; then
-  python repo/agent/eval/sims.py --byr --num "$SGE_TASK_ID" --delta "$1" --turn_cost "$2" --heuristic
+if [ "$1" == "heuristic" ]; then
+  python repo/agent/eval/sims.py --byr --num "$SGE_TASK_ID" --heuristic
 else
-  python repo/agent/eval/sims.py --byr --num "$SGE_TASK_ID" --delta "$1" --turn_cost "$2"
+  python repo/agent/eval/sims.py --byr --num "$SGE_TASK_ID"
 fi

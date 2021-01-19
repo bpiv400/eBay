@@ -1,17 +1,16 @@
-import argparse
 import numpy as np
 import pandas as pd
 from sklearn.tree import DecisionTreeClassifier, export_text
 from statsmodels.nonparametric.kde import KDEUnivariate
 from statsmodels.nonparametric.kernel_regression import KernelReg
 from agent.util import get_sale_norm, get_run_dir, get_norm_reward
-from utils import unpickle, safe_reindex, load_file
-from assess.const import OPT, VALUES_DIM, POINTS, NORM1_BIN_MESH, LOG10_BIN_DIM
+from utils import unpickle, safe_reindex
+from assess.const import OPT, VALUES_DIM, POINTS, LOG10_BIN_DIM
 from constants import IDX, BYR, EPS, DAY, HOUR, PCTILE_DIR, MAX_DELAY_TURN, \
-    MAX_DELAY_ARRIVAL, INTERVAL_ARRIVAL, INTERVAL_CT_ARRIVAL, COLLECTIBLES
+    MAX_DELAY_ARRIVAL, INTERVAL_ARRIVAL, INTERVAL_CT_ARRIVAL
 from featnames import DELAY, CON, NORM, AUTO, START_TIME, START_PRICE, LOOKUP, \
     MSG, DAYS_SINCE_LSTG, BYR_HIST, INDEX, X_OFFER, CLOCK, THREAD, X_THREAD, \
-    REJECT, EXP, SLR, TEST, STORE, META
+    REJECT, EXP, SLR, TEST
 
 
 def continuous_pdf(s=None):
@@ -334,57 +333,11 @@ def estimate_tree(X=None, y=None, max_depth=1, criterion='entropy'):
     print(r)
 
 
-def bin_plot(y=None, x1=None, x2=None, bw=None):
-    s, bw = kreg2(y=y, x1=x1, x2=x2, mesh=NORM1_BIN_MESH, bw=bw)
-    print('bin: {}'.format(bw))
-    return s, bw
-
-
-def get_lstgs():
-    # subset from command line
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--subset', type=str)
-    subset = parser.parse_args().subset
-
-    if subset is None:
-        return None, ''
-
-    # restrict listings
-    lookup = load_file(TEST, LOOKUP)
-    if subset == 'store':
-        lookup = lookup[lookup[STORE]]
-    elif subset == 'no_store':
-        lookup = lookup[~lookup[STORE]]
-    elif subset == 'price_low':
-        lookup = lookup[lookup[START_PRICE] < 99]
-    elif subset == 'price_high':
-        lookup = lookup[lookup[START_PRICE] >= 99]
-    elif subset == 'collectibles':
-        lookup = lookup[lookup[META].apply(lambda x: x in COLLECTIBLES)]
-    elif subset == 'other':
-        lookup = lookup[lookup[META].apply(lambda x: x not in COLLECTIBLES)]
-    else:
-        raise NotImplementedError('Unrecognized subset: {}'.format(subset))
-    print('{}: {} listings'.format(subset, len(lookup)))
-
-    return lookup.index, '_{}'.format(subset)
-
-
 def get_eval_df(delta=None):
     run_dir = get_run_dir(delta=delta)
     path = run_dir + '{}.pkl'.format(TEST)
     df = unpickle(path)[['norm', 'dollar']]
     return df
-
-
-def winzorize(s, q=.025, lower=True, upper=False):
-    low = np.quantile(s, q)
-    high = np.quantile(s, 1-q)
-    if lower:
-        s = s[s > low]
-    if upper:
-        s = s[s < high]
-    return s
 
 
 def bin_vs_reward(data=None, values=None, byr=False, bw=None):

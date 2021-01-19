@@ -1,9 +1,11 @@
+import argparse
 from assess.util import merge_dicts, cdf_days, cdf_sale, msg_dist, \
     arrival_dist, hist_dist, delay_dist, con_dist, num_threads, \
-    num_offers, interarrival_dist, norm_dist, get_lstgs
-from utils import topickle, load_data
-from constants import PLOT_DIR
-from featnames import X_THREAD, X_OFFER, TEST, SIM
+    num_offers, interarrival_dist, norm_dist
+from utils import topickle, load_data, load_file
+from constants import PLOT_DIR, COLLECTIBLES
+from featnames import X_THREAD, X_OFFER, TEST, SIM, LOOKUP, STORE, \
+    START_PRICE, META
 
 
 def collect_outputs(data=None, name=None):
@@ -33,6 +35,36 @@ def collect_outputs(data=None, name=None):
             d[k] = v.rename(name)
 
     return d
+
+
+def get_lstgs():
+    # subset from command line
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--subset', type=str)
+    subset = parser.parse_args().subset
+
+    if subset is None:
+        return None, ''
+
+    # restrict listings
+    lookup = load_file(TEST, LOOKUP)
+    if subset == 'store':
+        lookup = lookup[lookup[STORE]]
+    elif subset == 'no_store':
+        lookup = lookup[~lookup[STORE]]
+    elif subset == 'price_low':
+        lookup = lookup[lookup[START_PRICE] < 99]
+    elif subset == 'price_high':
+        lookup = lookup[lookup[START_PRICE] >= 99]
+    elif subset == 'collectibles':
+        lookup = lookup[lookup[META].apply(lambda x: x in COLLECTIBLES)]
+    elif subset == 'other':
+        lookup = lookup[lookup[META].apply(lambda x: x not in COLLECTIBLES)]
+    else:
+        raise NotImplementedError('Unrecognized subset: {}'.format(subset))
+    print('{}: {} listings'.format(subset, len(lookup)))
+
+    return lookup.index, '_{}'.format(subset)
 
 
 def main():

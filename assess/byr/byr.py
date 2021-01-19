@@ -1,5 +1,4 @@
-from assess.util import merge_dicts, delay_dist, cdf_sale, \
-    con_dist, num_offers
+from assess.util import merge_dicts, delay_dist, cdf_sale, con_dist, num_offers
 from agent.util import get_run_dir, load_valid_data, only_byr_agent
 from utils import topickle
 from constants import PLOT_DIR
@@ -32,9 +31,8 @@ def main():
     d = collect_outputs(data=data, name='Humans')
 
     # rl buyer
-    run_dir = get_run_dir()
     data_rl = load_valid_data(part=TEST,
-                              run_dir=run_dir,
+                              run_dir=get_run_dir(),
                               lstgs=data[LOOKUP].index)
     data_rl = only_byr_agent(data_rl)
     d_rl = collect_outputs(data=data_rl, name='Agent')

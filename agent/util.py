@@ -39,7 +39,7 @@ def get_norm_reward(data=None, values=None, byr=False):
     sale_norm = get_sale_norm(data[X_OFFER])
     idx_no_sale = data[LOOKUP].index.drop(sale_norm.index)
     if byr:
-        sale_norm = 1 - sale_norm
+        sale_norm = 1 - sale_norm  # discount on list price
         assert values is None
         cont_value = pd.Series(0., index=idx_no_sale, name='vals')
     else:
