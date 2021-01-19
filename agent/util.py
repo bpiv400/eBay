@@ -54,17 +54,14 @@ def only_byr_agent(data=None, drop_thread=False):
         idx = data[X_THREAD].index
         if THREAD in idx.names:
             idx = idx.droplevel(THREAD)
-        data[LOOKUP] = data[LOOKUP].loc[idx]
+        data[LOOKUP] = data[LOOKUP].loc[idx.unique()]
     return data
 
 
-def get_byr_valid(data=None, lstgs=None):
-    if lstgs is None:  # find sales in data
-        con = data[X_OFFER][CON]
-        lstgs = con[con == 1].index.droplevel([THREAD, INDEX])
-
+def get_byr_valid(data=None):
+    idx = data[X_THREAD].xs(1, level=THREAD).index
     for k, v in data.items():
-        data[k] = safe_reindex(v, idx=lstgs)
+        data[k] = safe_reindex(v, idx=idx)
         if k == X_OFFER:
             data[k] = data[k].reorder_levels(v.index.names)
     return data
@@ -84,14 +81,11 @@ def get_slr_valid(data=None):
     return data
 
 
-def load_valid_data(part=None, run_dir=None, byr=None, lstgs=None):
+def load_valid_data(part=None, run_dir=None, byr=None):
     # error checking
     if run_dir is not None:
         assert byr is None
         byr = BYR in run_dir
-    if lstgs is not None:  # for constraining simulated buyer output to sold listings in data
-        assert byr
-        assert run_dir is not None
 
     # load data
     data = load_data(part=part, run_dir=run_dir)
@@ -99,10 +93,7 @@ def load_valid_data(part=None, run_dir=None, byr=None, lstgs=None):
         return None
 
     # restrict to valid listings
-    if byr:
-        return get_byr_valid(data=data, lstgs=lstgs)
-    else:
-        return get_slr_valid(data=data)
+    return get_byr_valid(data) if byr else get_slr_valid(data)
 
 
 def load_values(part=None, delta=None, normalize=True):

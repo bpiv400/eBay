@@ -1,5 +1,5 @@
 import torch
-from agent.models.util import wrapper, get_last_norm, get_agent_turn
+from agent.models.util import wrapper, get_agent_turn
 from constants import NUM_COMMON_CONS
 
 
@@ -17,13 +17,8 @@ class HeuristicByr:
         if turn == 1:
             idx = f(.5)
 
-        elif turn == 3:
-            norm = get_last_norm(turn=turn, x=x)
-            idx = f(.17) if norm <= .84 else f(.4)
-
-        elif turn == 5:
-            norm = get_last_norm(turn=turn, x=x)
-            idx = f(.17) if norm <= .7 else f(.4)
+        elif turn in [3, 5]:
+            idx = f(.4)
 
         elif turn == 7:
             idx = f(1)

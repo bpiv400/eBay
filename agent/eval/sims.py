@@ -16,14 +16,15 @@ def main():
     output_dir = get_output_dir(part=args.part,
                                 heuristic=args.heuristic,
                                 delta=args.delta)
+    outcome_dir = output_dir + 'outcomes/'
 
     # create output folder
-    if not os.path.isdir(output_dir):
-        os.makedirs(output_dir)
+    if not os.path.isdir(outcome_dir):
+        os.makedirs(outcome_dir)
 
     # check if chunk has already been processed
     chunk = args.num - 1
-    path = output_dir + 'outcomes/{}.pkl'.format(chunk)
+    path = outcome_dir + '{}.pkl'.format(chunk)
     if os.path.isfile(path):
         print('Chunk {} already exists.'.format(chunk))
         exit(0)

@@ -11,8 +11,7 @@ LISTING_FEATS = ['fdbk_score', 'fdbk_pstv', 'photos', 'store', 'slr_us', 'fast']
 
 
 def main():
-    run_dir = get_run_dir()
-    data = load_valid_data(part=TEST, run_dir=run_dir)
+    data = load_valid_data(part=TEST, run_dir=get_run_dir())
 
     # add listing features to data
     listings = load_feats('listings')[LISTING_FEATS]

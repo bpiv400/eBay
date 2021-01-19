@@ -1,7 +1,8 @@
 import argparse
 import pandas as pd
-from agent.eval.util import read_table, collect_output
-from agent.util import get_run_dir, load_values, get_norm_reward
+from agent.eval.util import read_table, save_table
+from agent.util import get_run_dir, load_values, get_norm_reward, \
+    get_output_dir, load_valid_data
 from agent.const import DELTA_CHOICES
 from constants import EPS
 from featnames import TEST, LOOKUP, START_PRICE
@@ -40,12 +41,26 @@ def main():
     if params.read:
         read_table(run_dir=run_dir)
 
-    # seller values
+    # preliminaries
     values = delta * load_values(part=TEST, delta=delta)
+    output = dict()
 
-    # create and save table
-    collect_output(run_dir=run_dir, delta=delta,
-                   f=lambda d: get_return(data=d, values=values))
+    # rewards from data
+    data = load_valid_data(part=TEST, byr=False)
+    output['Humans'] = get_return(data=data, values=values)
+
+    # rewards from heuristic strategy
+    heuristic_dir = get_output_dir(heuristic=True, part=TEST, delta=delta)
+    data = load_valid_data(part=TEST, run_dir=heuristic_dir)
+    if data is not None:
+        output['Heuristic'] = get_return(data=data, values=values)
+
+    # rewards from agent run
+    data = load_valid_data(part=TEST, run_dir=run_dir)
+    if data is not None:
+        output['Agent'] = get_return(data=data, values=values)
+
+    save_table(run_dir=run_dir, output=output)
 
 
 if __name__ == '__main__':

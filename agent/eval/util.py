@@ -1,11 +1,10 @@
 import argparse
 import os
 import pandas as pd
-from agent.util import load_valid_data, get_output_dir
 from utils import topickle, unpickle
 from agent.const import DELTA_CHOICES
 from constants import NUM_CHUNKS
-from featnames import AGENT_PARTITIONS, TEST, INDEX, LOOKUP
+from featnames import AGENT_PARTITIONS, TEST, INDEX
 
 
 def sim_args(num=False):
@@ -22,9 +21,9 @@ def sim_args(num=False):
 
 def print_table(df):
     cols = list(df.columns)
-    print(df[[c for c in cols if '_' not in c]])
-    newdf = df[[c for c in cols if 'sale' in c]].rename(
-        lambda x: x.replace('_{}'.format('sale'), ''), axis=1)
+    print(df[[c for c in cols if 'buy' not in c]])
+    newdf = df[[c for c in cols if 'buy' in c]].rename(
+        lambda x: x.replace('_{}'.format('buy'), ''), axis=1)
     if len(newdf.columns) > 0:
         print(newdf)
 
@@ -37,27 +36,7 @@ def read_table(run_dir=None):
         exit()
 
 
-def collect_output(run_dir=None, delta=None, f=None):
-    byr = delta is None
-    output = dict()
-
-    # rewards from data
-    data = load_valid_data(part=TEST, byr=byr)
-    lstgs = data[LOOKUP].index
-    output['Humans'] = f(data)
-
-    # rewards from heuristic strategy
-    heuristic_dir = get_output_dir(heuristic=True, part=TEST, delta=delta)
-    data = load_valid_data(part=TEST, run_dir=heuristic_dir, lstgs=lstgs)
-    if data is not None:
-        output['Heuristic'] = f(data)
-
-    # rewards from agent run
-    data = load_valid_data(part=TEST, run_dir=run_dir, lstgs=lstgs)
-    if data is not None:
-        output['Agent'] = f(data)
-
-    # convert to table and save
+def save_table(run_dir=None, output=None):
     df = pd.DataFrame.from_dict(output, orient=INDEX)
     topickle(df, run_dir + '{}.pkl'.format(TEST))
     print_table(df)
