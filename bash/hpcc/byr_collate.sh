@@ -6,7 +6,7 @@
 
 ulimit -n 4096
 if [ "$1" == "heuristic" ]; then
-  python repo/agent/eval/collate.py --byr --heuristic
+  python repo/agent/eval/collate.py --heuristic
 else
-  python repo/agent/eval/collate.py --byr
+  python repo/agent/eval/collate.py
 fi
