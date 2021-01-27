@@ -2,7 +2,7 @@ import argparse
 import os
 import pandas as pd
 from utils import topickle, unpickle
-from agent.const import DELTA_SLR
+from agent.const import DELTA_CHOICES
 from constants import NUM_CHUNKS
 from featnames import AGENT_PARTITIONS, TEST, INDEX, BYR
 
@@ -13,7 +13,7 @@ def sim_args(num=False):
                         choices=AGENT_PARTITIONS, default=TEST)
     parser.add_argument('--heuristic', action='store_true')
     parser.add_argument('--byr', action='store_true')
-    parser.add_argument('--delta', type=float, choices=DELTA_SLR)
+    parser.add_argument('--delta', type=float, choices=DELTA_CHOICES)
     if num:
         parser.add_argument('--num', type=int,
                             choices=range(1, NUM_CHUNKS + 1))
