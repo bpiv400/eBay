@@ -2,7 +2,7 @@ from assess.util import merge_dicts, cdf_days, cdf_sale, norm_dist, \
     arrival_dist, hist_dist, delay_dist, con_dist, num_threads, num_offers
 from agent.util import get_run_dir, load_valid_data
 from utils import topickle
-from agent.const import DELTA_CHOICES
+from agent.const import DELTA_SLR
 from assess.const import SLR_NAMES
 from constants import PLOT_DIR, IDX
 from featnames import ARRIVAL, DELAY, CON, X_OFFER, X_THREAD, TEST, AUTO, \
@@ -52,7 +52,7 @@ def main():
     d = collect_outputs(data=data_obs, name='Humans')
 
     # seller runs
-    for delta in DELTA_CHOICES:
+    for delta in DELTA_SLR:
         run_dir = get_run_dir(delta=delta)
         data_rl = load_valid_data(part=TEST, run_dir=run_dir)
         d_rl = collect_outputs(data=data_rl, name=SLR_NAMES[delta])

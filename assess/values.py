@@ -3,7 +3,7 @@ from agent.util import load_values
 from assess.util import kdens_wrapper, ll_wrapper
 from processing.util import do_rounding
 from utils import unpickle, topickle, load_data
-from agent.const import DELTA_CHOICES
+from agent.const import DELTA_SLR
 from assess.const import LOG10_BIN_DIM, LOG10_BO_DIM, DELTA_ASSESS
 from constants import PLOT_DIR, SIM_DIR
 from featnames import LOOKUP, SLR_BO_CT, TEST, START_PRICE
@@ -54,7 +54,7 @@ def main():
     print('Values distribution')
     kwargs = {'$\\delta = {}$'.format(delta):
               load_values(part=TEST, delta=delta)
-              for delta in DELTA_CHOICES}
+              for delta in DELTA_SLR}
     d['pdf_values'] = kdens_wrapper(**kwargs)
 
     # save

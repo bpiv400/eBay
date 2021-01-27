@@ -144,11 +144,12 @@ class BuyerEnv(AgentEnv):
             return 0, False
 
         # sale to agent buyer
+        value = self.delta * self.lookup[START_PRICE]
         if self.verbose:
             print('Sale to RL buyer. Price: ${0:.2f}.'.format(
                 self.outcome.price))
 
-        return self.lookup[START_PRICE] - self.outcome.price, True
+        return value - self.outcome.price, True
 
     def _init_agent_thread(self, thread=None, hist=None):
         # increment counter

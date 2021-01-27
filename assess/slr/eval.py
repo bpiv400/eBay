@@ -2,7 +2,7 @@ import pandas as pd
 from agent.util import load_valid_data, load_values, get_run_dir
 from assess.util import get_eval_df, bin_vs_reward
 from utils import topickle
-from agent.const import DELTA_CHOICES
+from agent.const import DELTA_SLR
 from assess.const import SLR_NAMES
 from constants import PLOT_DIR
 from featnames import TEST
@@ -15,7 +15,7 @@ def main():
     data_obs = load_valid_data(part=TEST, byr=False)
 
     # seller
-    for delta in DELTA_CHOICES:
+    for delta in DELTA_SLR:
         # average reward at each list price
         key = 'simple_rewardbin_{}'.format(delta)
         values = delta * load_values(part=TEST, delta=delta)

@@ -13,6 +13,7 @@ from featnames import CON, NORM, DELAY, ARRIVAL, MSG, ACCEPT, \
 plt.style.use('seaborn-colorblind')
 COLORS = ['k'] + vlt.get_current_colorcycle()
 TRICOLOR = {'Humans': COLORS[0],
+            'Agent': COLORS[1],
             'Impatient agent': COLORS[1],
             'Patient agent': COLORS[2]}
 
@@ -49,7 +50,7 @@ def save_fig(path, legend=True, legend_kwargs=None, reverse_legend=False,
              xlabel=None, ylabel=None, square=True, xaxis=True, yaxis=True,
              xticks=None, yticks=None, xticklabels=None, yticklabels=None,
              xlim=None, ylim=None, gridlines=True, integer_xticks=False,
-             logx=False, legend_outside=False, fontsize=FONTSIZE, **args):
+             logx=False, logy=False, legend_outside=False, fontsize=FONTSIZE, **args):
 
     # axis limits
     if xlim is not None:
@@ -104,6 +105,8 @@ def save_fig(path, legend=True, legend_kwargs=None, reverse_legend=False,
 
     if logx:
         plt.xscale('log')
+    if logy:
+        plt.yscale('log')
 
     if integer_xticks:
         plt.gca().xaxis.set_major_locator(MaxNLocator(integer=True))
@@ -234,6 +237,10 @@ def cdf_plot(path, obj):
         args = dict(xlim=[0, 1], xlabel='Accept price / list price')
     elif name == 'autodec':
         args = dict(xlim=[0, 1], xlabel='Decline price / list price')
+    elif name == 'discount':
+        args = dict(xlim=[0, .5], xlabel='Discount / list price')
+    elif name == 'totaldiscount':
+        args = dict(xlim=[0, 200], xlabel='Discount ($)')
     else:
         raise NotImplementedError('Invalid name: {}'.format(name))
 
@@ -348,10 +355,35 @@ def simple_plot(path, obj):
                     xlabel='Turn 1: Offer / list price',
                     ylabel='Turn 3: Offer / list price')
     elif name == 'rewardbin':
-        args = dict(xticks=np.log10(BIN_TICKS),
+        args = dict(xlim=[1, 2.5],
+                    xticks=np.log10(BIN_TICKS),
                     xticklabels=BIN_TICKS,
                     xlabel='List price ($)',
                     ylabel='Payoff / list price')
+    elif name == 'discountbin':
+        args = dict(xlim=[1, 2.5], ylim=[.1, .35],
+                    xticks=np.log10(BIN_TICKS),
+                    xticklabels=BIN_TICKS,
+                    xlabel='List price ($)',
+                    ylabel='Discount')
+    elif name == 'offersbin':
+        args = dict(xlim=[1, 2.5], ylim=[1, 2.4],
+                    xticks=np.log10(BIN_TICKS),
+                    xticklabels=BIN_TICKS,
+                    xlabel='List price ($)',
+                    ylabel='Number of buyer offers')
+    elif name == 'avgdiscountbin':
+        args = dict(xlim=[1, 2.5], ylim=[0, 50],
+                    xticks=np.log10(BIN_TICKS),
+                    xticklabels=BIN_TICKS,
+                    xlabel='List price ($)',
+                    ylabel='Discount / buyer offer ($)')
+    elif name == 'discount':
+        args = dict(xlim=[1, 2.5], ylim=[0, .4],
+                    xticks=np.log10(BIN_TICKS),
+                    xticklabels=BIN_TICKS,
+                    xlabel='List price ($)',
+                    ylabel='Discount / list price')
     else:
         raise NotImplementedError('Invalid name: {}'.format(name))
 
@@ -534,6 +566,11 @@ def response_plot(path, obj):
         args = dict(xlim=[.4, 1], ylim=[0, 1],
                     xlabel='Turn 2: Offer / list price',
                     ylabel='Turn 3: Concession')
+    elif name in ['offer2walk', 'offer2acc']:
+        ylabel = 'walk' if name.endswith('walk') else 'accept'
+        args = dict(xlim=[.65, 1], ylim=[0, 1],
+                    xlabel='Turn 2: Offer / list price',
+                    ylabel='Turn 3: Pr({})'.format(ylabel))
     elif 'slrbo' in name:
         if name == 'expslrbo':
             ylabel = 'Expirations / manual rejects'
@@ -631,20 +668,23 @@ def bar_plot(path, obj):
         args = dict(ylim=[0, .5],
                     xlabel='Turn',
                     ylabel='Fraction of eligible offers')
-    elif name == NORM:
+    elif NORM in name:
         lower = np.floor(obj.min() * 100) / 100 - .01
         upper = np.ceil(obj.max() * 100) / 100 + .01
         ylim = [lower, upper]
+        ylabel = '{} / list price'.format(
+            'Discount' if name.endswith('2') else 'Payoff')
         args = dict(ylim=ylim,
                     legend=False, xlabel='',
-                    ylabel='Payoff / list price',
+                    ylabel=ylabel,
                     fontsize=20)
-    elif name == 'dollar':
+    elif 'dollar' in name:
         lower, upper = np.floor(obj.min()) - 1, np.ceil(obj.max()) + 1
         ylim = [lower, upper]
+        ylabel = '{} ($)'.format('Discount' if name.endswith('2') else 'Payoff')
         args = dict(ylim=ylim,
                     legend=False, xlabel='',
-                    ylabel='Payoff ($)',
+                    ylabel=ylabel,
                     fontsize=20)
     elif name == 'training':
         baserate = obj['Baserate']
@@ -657,6 +697,8 @@ def bar_plot(path, obj):
         args = dict(xlabel='Turn', ylabel='Pr(expire)')
     elif name == 'saleturn':
         args = dict(xlabel='Turn', ylabel='Share of sales')
+    elif name == 'discount':
+        args = dict(xlabel='Turn', ylabel='Average discount ($)')
     else:
         raise NotImplementedError('Invalid name: {}'.format(name))
 
@@ -755,6 +797,16 @@ def contour_plot(path, s):
     elif name == 'rejdays':
         args = dict(ylabel='Days to first offer',
                     xlabel='Turn 1: Offer / list price')
+    elif name in ['offer2binwalk', 'offer2binacc']:
+        turn = int(name[5])
+        ticks = get_log_ticks(s.index.levels[1])
+        zlabel = 'walk' if name.endswith('walk') else 'accept'
+        args = dict(yticks=np.log10(ticks),
+                    yticklabels=ticks,
+                    xlabel='Turn {}: Offer / list price'.format(turn),
+                    ylabel='List price ($)',
+                    zlabel='Turn {}: Pr({})'.format(turn+1, zlabel),
+                    vmax=.5)
     else:
         raise NotImplementedError('Invalid name: {}'.format(name))
 

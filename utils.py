@@ -296,13 +296,22 @@ def get_role(byr=None):
     return BYR if byr else SLR
 
 
-def safe_reindex(df=None, idx=None, fill_value=None):
-    df = pd.DataFrame(index=idx).join(df)
-    if len(df.columns) == 1:
-        df = df.squeeze()
+def safe_reindex(obj=None, idx=None, fill_value=None):
+    if type(obj) is dict:
+        for k, v in obj.items():
+            obj[k] = safe_reindex(v, idx=idx, fill_value=fill_value)
+        return obj
+
+    obj = pd.DataFrame(index=idx).join(obj)
     if fill_value is not None:
-        df.loc[df.isna()] = fill_value
-    return df
+        obj.loc[obj.isna()] = fill_value
+    else:
+        assert obj.isna().sum().sum() == 0
+
+    if len(obj.columns) == 1:
+        obj = obj.squeeze()
+
+    return obj
 
 
 def load_feats(name, lstgs=None, fill_zero=False):

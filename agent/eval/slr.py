@@ -3,7 +3,7 @@ import pandas as pd
 from agent.eval.util import read_table, save_table
 from agent.util import get_run_dir, load_values, get_norm_reward, \
     get_output_dir, load_valid_data
-from agent.const import DELTA_CHOICES
+from agent.const import DELTA_SLR
 from constants import EPS
 from featnames import TEST, LOOKUP, START_PRICE
 
@@ -33,7 +33,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--read', action='store_true')
     parser.add_argument('--delta', type=float,
-                        choices=DELTA_CHOICES, required=True)
+                        choices=DELTA_SLR, required=True)
     params = parser.parse_args()
     delta = params.delta
 

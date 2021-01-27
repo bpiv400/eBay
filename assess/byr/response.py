@@ -1,84 +1,67 @@
 import numpy as np
 import pandas as pd
-from agent.util import load_valid_data, only_byr_agent
-from assess.util import ll_wrapper
-from utils import topickle
-from assess.const import BYR_NORM_DIMS
-from constants import PLOT_DIR, IDX
-from featnames import X_OFFER, INDEX, TEST, NORM, AUTO, CON, REJECT, EXP, BYR
+from agent.util import only_byr_agent, load_valid_data, get_run_dir
+from assess.util import kreg2, ll_wrapper
+from utils import topickle, safe_reindex
+from assess.const import NORM2_BIN_MESH, POINTS
+from constants import PLOT_DIR
+from featnames import X_OFFER, CON, NORM, TEST, INDEX, LOOKUP, START_PRICE
 
-
-def get_reindex_f(norm=None):
-    return lambda s: s.reindex(index=norm.index, fill_value=False)
+DIM = {2: np.linspace(.65, .95, POINTS)}
 
 
 def get_feats(data=None, turn=None):
-    assert turn in IDX[BYR][:-1]
-    df0 = data[X_OFFER][[NORM, REJECT]].xs(turn, level=INDEX)
-    df1 = data[X_OFFER][[AUTO, CON, REJECT, EXP]].xs(turn+1, level=INDEX)
-    norm = df0[NORM]
-
-    # running variable
-    norm = norm[norm < 1]  # throw out accepts
-    if turn > 1:  # throw out buyer rejections
-        norm = norm[~df0[REJECT]]
-    f = get_reindex_f(norm)
-
-    # create features
-    autorej = f(df1[REJECT] & df1[AUTO])
-    autoacc = f(~df1[REJECT] & df1[AUTO])
-    acc = f((df1[CON] == 1) & ~df1[AUTO])
-    rej = f(df1[REJECT] & ~df1[AUTO])
-    counter = f((df1[CON] > 0) & df1[CON] < 1)
-    exp = f(df1[EXP])
-    end = pd.Series(False, index=df1.index).reindex(
-        index=norm.index, fill_value=True)
-
-    # put in dictionary
-    y = {'Auto-accept': autoacc,
-         'Manual accept': acc,
-         'Counter': counter,
-         'Auto-reject': autorej,
-         'Manual reject': rej,
-         'Expiration reject': exp,
-         'Listing ends': end}
-
-    for k, v in y.items():
-        assert np.all(norm.index == v.index)
-        y[k] = v.values
-
-    return norm.values, y
+    con = data[X_OFFER][CON].xs(turn + 1, level=INDEX)
+    x1 = 1 - data[X_OFFER][NORM].xs(turn, level=INDEX).loc[con.index].values
+    x2 = np.log10(safe_reindex(data[LOOKUP][START_PRICE], idx=con.index).values)
+    y = con.values
+    return x1, x2, y
 
 
 def main():
     d = dict()
 
-    # first threads in data
-    data = only_byr_agent(load_valid_data(part=TEST, byr=True),
-                          drop_thread=True)
+    data_obs = only_byr_agent(load_valid_data(part=TEST, byr=True))
+    data_rl = only_byr_agent(load_valid_data(part=TEST, run_dir=get_run_dir()))
 
-    # response type ~ buyer offer
-    for t in IDX[BYR][:-1]:
-        key = 'area_response_{}'.format(t)
-        x, y = get_feats(data=data, turn=t)
-        flag = False
-        for k, v in y.items():
-            line, bw = ll_wrapper(x=x, y=v,
-                                  dim=BYR_NORM_DIMS[t],
-                                  ci=False,
-                                  bw=(.05,))
-            line = line.rename(k)
+    for turn in [2]:
+        x1_obs, x2_obs, y_obs = get_feats(data=data_obs, turn=turn)
+        x1_rl, x2_rl, y_rl = get_feats(data=data_rl, turn=turn)
 
-            if not flag:
-                d[key] = line
-                flag = True
-            else:
-                d[key] = pd.concat([d[key], line], axis=1)
+        # walk rate
+        key = 'offer{}walk'.format(turn)
+        line, dots, bw = ll_wrapper(y=(y_obs == 0), x=x1_obs,
+                                    discrete=[1.], dim=DIM[turn])
+        print('{}: {}'.format(key, bw[0]))
+        d['response_{}'.format(key)] = line, dots
 
-        # normalize
-        totals = d[key].sum(axis=1)
-        for c in d[key].columns:
-            d[key][c] /= totals
+        # accept rate
+        key = 'offer{}acc'.format(turn)
+        line, dots, bw = ll_wrapper(y=(y_obs == 1), x=x1_obs,
+                                    discrete=[1.], dim=DIM[turn])
+        print('{}: {}'.format(key, bw[0]))
+        for obj in [line, dots]:
+            obj.columns = pd.MultiIndex.from_product([['Humans'], obj.columns])
+        d['response_{}'.format(key)] = line, dots
+
+        line, dots, _ = ll_wrapper(y=(y_rl == 1), x=x1_rl,
+                                   discrete=[0.], dim=DIM[turn], bw=bw, ci=False)
+        d['response_{}'.format(key)][0].loc[:, ('Agent', 'beta')] = line
+        d['response_{}'.format(key)][1].loc[:, ('Agent', 'beta')] = dots
+
+        # k = 'offer{}binwalk'.format(turn)
+        # d['contour_{}_data'.format(k)], bw = \
+        #     kreg2(y=(y_obs == 0), x1=x1_obs, x2=x2_obs, mesh=NORM2_BIN_MESH)
+        # print('{}: {}'.format(k, bw))
+        #
+        # k = 'offer{}binacc'.format(turn)
+        # d['contour_{}_data'.format(k)], bw = \
+        #     kreg2(y=(y_obs == 1), x1=x1_obs, x2=x2_obs, mesh=NORM2_BIN_MESH)
+        # print('{}: {}'.format(k, bw))
+        #
+        # d['contour_{}_agent'.format(k)], _ = \
+        #     kreg2(y=(y_rl == 1), x1=x1_rl, x2=x2_rl,
+        #           mesh=NORM2_BIN_MESH, bw=bw)
 
     topickle(d, PLOT_DIR + 'byrresponse.pkl')
 

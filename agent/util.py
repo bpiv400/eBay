@@ -1,22 +1,21 @@
 import pandas as pd
-from utils import unpickle, load_file, load_data, safe_reindex
+from utils import unpickle, load_file, load_data, safe_reindex, get_role
 from constants import AGENT_DIR, IDX, SIM_DIR
 from featnames import SLR, BYR, NORM, AUTO, INDEX, THREAD, CON, \
     LOOKUP, X_OFFER, START_PRICE, X_THREAD
 
 
-def get_run_id(delta=None):
-    return '{}'.format(BYR if delta is None else float(delta))
+def get_log_dir(byr=None):
+    return AGENT_DIR + '{}/'.format(get_role(byr))
 
 
-def get_run_dir(delta=None):
-    run_id = get_run_id(delta=delta)
-    run_dir = AGENT_DIR + 'run_{}/'.format(run_id)
-    return run_dir
+def get_run_dir(byr=None, delta=None):
+    log_dir = get_log_dir(byr=byr)
+    return log_dir + 'run_{}/'.format(float(delta))
 
 
-def get_output_dir(delta=None, part=None, heuristic=False):
-    run_dir = get_run_dir(delta=delta)
+def get_output_dir(byr=None, delta=None, part=None, heuristic=False):
+    run_dir = get_run_dir(byr=byr, delta=delta)
     output_dir = run_dir + '{}/'.format(part)
     if heuristic:
         output_dir += 'heuristic/'
@@ -47,7 +46,7 @@ def get_norm_reward(data=None, values=None, byr=False):
     return sale_norm, cont_value
 
 
-def only_byr_agent(data=None, drop_thread=False):
+def only_byr_agent(data=None, drop_thread=True):
     for k, v in data.items():
         if THREAD in v.index.names:
             data[k] = v.xs(1, level=THREAD, drop_level=drop_thread)

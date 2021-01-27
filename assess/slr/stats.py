@@ -1,6 +1,6 @@
 from agent.util import load_values, load_valid_data, get_run_dir, get_sale_norm
 from utils import safe_reindex, load_data
-from agent.const import DELTA_CHOICES
+from agent.const import DELTA_SLR
 from assess.const import SLR_NAMES
 from featnames import TEST, LOOKUP, X_THREAD, X_OFFER, LSTG, INDEX, NORM, REJECT
 
@@ -13,7 +13,7 @@ def main():
     valid = valid_data[LOOKUP].index
     invalid = lstgs.drop(valid)
 
-    values = load_values(part=TEST, delta=DELTA_CHOICES[-1])
+    values = load_values(part=TEST, delta=DELTA_SLR[-1])
     valid_vals = safe_reindex(values, idx=valid)
 
     print('Average value (all listings): {}'.format(values.mean()))
@@ -40,7 +40,7 @@ def main():
         print('Share of turn {} for list price in valid data: {}'.format(
             t, (locals()['{}{}'.format(NORM, t)] == 1).mean()))
 
-    for delta in DELTA_CHOICES:
+    for delta in DELTA_SLR:
         run_dir = get_run_dir(delta=delta)
         data_rl = load_valid_data(part=TEST, run_dir=run_dir)
         sale_norm_rl = get_sale_norm(offers=data_rl[X_OFFER]).reindex(

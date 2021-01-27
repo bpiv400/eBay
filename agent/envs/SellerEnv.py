@@ -12,13 +12,12 @@ SellerObs = namedarraytuple("SellerObs", list(load_sizes(SLR)['x'].keys()))
 
 
 class SellerEnv(AgentEnv):
-    def __init__(self, delta=None, **kwargs):
+    def __init__(self, **kwargs):
         super().__init__(byr=False, **kwargs)
         if self.train:
-            assert delta is not None
-            self.values = delta * load_values(part=TRAIN_RL,
-                                              delta=delta,
-                                              normalize=False)
+            self.values = self.delta * load_values(part=TRAIN_RL,
+                                                   delta=self.delta,
+                                                   normalize=False)
 
     def is_agent_turn(self, event):
         """

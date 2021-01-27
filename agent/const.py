@@ -24,7 +24,9 @@ PERIOD_EPOCHS = 1500    # epoch count for stepping down entropy
 AGENT_STATE = 'agent_state_dict'
 
 # economic parameters
-DELTA_CHOICES = [0., .7]
+DELTA_SLR = [0., .7]
+DELTA_BYR = [.75, 1., 1.5, 2.]
+DELTA_CHOICES = DELTA_SLR + DELTA_BYR
 
 # names for opt_info namedtuple
 FIELDS = ["ActionsPerTraj", "ThreadsPerTraj", "DaysToDone",

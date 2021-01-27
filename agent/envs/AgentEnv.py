@@ -10,7 +10,7 @@ from rlenv.events.Thread import Thread
 from agent.ConSpace import ConSpace
 from agent.const import AGENT_CONS
 from constants import INTERVAL_TURN, INTERVAL_CT_TURN, DAY, NUM_COMMON_CONS, IDX
-from featnames import BYR_HIST, START_PRICE, BYR, SLR
+from featnames import BYR_HIST, START_PRICE, BYR, SLR, DELTA
 
 Info = namedarraytuple("Info", ["days", "max_return", "num_actions", "num_threads",
                                 "turn", "thread_id", "priority", "agent_sale"])
@@ -21,6 +21,7 @@ class AgentEnv(EBayEnv, Env):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.byr = kwargs[BYR]
+        self.delta = kwargs[DELTA]
 
         # mode
         self.test = False if 'test' not in kwargs else kwargs['test']

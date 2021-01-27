@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 from statsmodels.nonparametric._kernel_base import EstimatorSettings
-from agent.const import DELTA_CHOICES
+from agent.const import DELTA_SLR
 from constants import CLEAN_DIR
 from featnames import META
 
@@ -21,8 +21,8 @@ OPT = EstimatorSettings(efficient=True)
 DELTA_ASSESS = .7
 
 # agent names
-SLR_NAMES = {DELTA_CHOICES[0]: 'Impatient agent',
-             DELTA_CHOICES[1]: 'Patient agent'}
+SLR_NAMES = {DELTA_SLR[0]: 'Impatient agent',
+             DELTA_SLR[1]: 'Patient agent'}
 
 # various dimensions for plotting
 POINTS = 100
@@ -34,7 +34,7 @@ NORM2_DIM = np.linspace(.65, .9, POINTS)
 NORM2_DIM_LONG = np.linspace(.6, 1, POINTS)
 NORM3_DIM = np.linspace(.5, .9, POINTS)
 NORM5_DIM = np.linspace(.55, .9, POINTS)
-LOG10_BIN_DIM = np.linspace(1, 3, POINTS)
+LOG10_BIN_DIM = np.linspace(1, 2.5, POINTS)
 LOG10_BO_DIM = np.linspace(0, 4, POINTS)
 BYR_NORM_DIMS = {1: NORM1_DIM, 3: NORM3_DIM, 5: NORM5_DIM}
 
@@ -43,3 +43,6 @@ NORM1_DIM_SHORT = np.linspace(.4, .85, 50)
 
 xx1, xx2 = np.meshgrid(NORM1_DIM_SHORT, np.linspace(1, 2.5, 50))
 NORM1_BIN_MESH = np.concatenate([xx1.reshape(-1, 1), xx2.reshape(-1, 1)], axis=1)
+
+xx1, xx2 = np.meshgrid(np.linspace(.65, .95, 50), np.linspace(1, 2.5, 50))
+NORM2_BIN_MESH = np.concatenate([xx1.reshape(-1, 1), xx2.reshape(-1, 1)], axis=1)

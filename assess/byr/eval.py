@@ -1,8 +1,9 @@
 import numpy as np
 import pandas as pd
-from agent.util import load_valid_data, get_run_dir, only_byr_agent, get_sale_norm
+from agent.util import load_valid_data, get_run_dir, only_byr_agent, \
+    get_sale_norm
 from assess.util import get_eval_df, bin_vs_reward, ll_wrapper
-from utils import topickle
+from utils import topickle, safe_reindex
 from assess.const import LOG10_BIN_DIM
 from constants import PLOT_DIR
 from featnames import TEST, LOOKUP, X_OFFER, START_PRICE, CON, INDEX
@@ -60,37 +61,31 @@ def compare(data_obs=None, data_rl=None, f=None):
 def main():
     d = dict()
 
-    # load data
-    data_obs = only_byr_agent(load_valid_data(part=TEST, byr=True))
-    data_rl = only_byr_agent(load_valid_data(part=TEST,
-                                             run_dir=get_run_dir(),
-                                             lstgs=data_obs[LOOKUP].index))
-
-    # discount ~ list price
-    d['simple_discountbin'] = compare(
-        data_obs=data_obs,
-        data_rl=data_rl,
-        f=lambda data, bw: bin_vs_reward(data=data, bw=bw, byr=True)
-    )
-
-    # num offer ~ list price
-    d['simple_offersbin'] = compare(
-        data_obs=data_obs,
-        data_rl=data_rl,
-        f=bin_vs_offers
-    )
-
-    # discount per offer ~ list price
-    d['simple_avgdiscountbin'] = compare(
-        data_obs=data_obs,
-        data_rl=data_rl,
-        f=bin_vs_avg_discount
-    )
-
     # bar chart of reward
-    df = get_eval_df()
+    df = get_eval_df(suffix='sales')
     for c in df.columns:
         d['bar_{}'.format(c)] = df[c]
+
+    # load data
+    data_obs = load_valid_data(part=TEST, byr=True)
+    sale_norm = get_sale_norm(offers=data_obs[X_OFFER])
+    sale_norm = sale_norm[sale_norm < 1]
+    sale_price = (sale_norm * data_obs[LOOKUP][START_PRICE]).rename('sale_price')
+    del data_obs
+
+    data_rl = load_valid_data(part=TEST, run_dir=get_run_dir())
+    data_rl = only_byr_agent(safe_reindex(data_rl, idx=sale_price.index))
+
+    # discount ~ sale price
+    sale_norm_rl = get_sale_norm(offers=data_rl[X_OFFER], drop_thread=True)
+    sale_price_rl = sale_norm_rl * data_rl[LOOKUP][START_PRICE]
+    sale_price = safe_reindex(sale_price, idx=sale_price_rl.index)
+    discount = 1 - sale_price_rl / sale_price
+    discount.loc[discount.isna()] = 0
+
+    line, bw = ll_wrapper(y=discount.values, x=np.log10(sale_price.values),
+                          dim=LOG10_BIN_DIM, ci=False, bw=(.05,))
+    d['simple_discountsale'] =
 
     topickle(d, PLOT_DIR + 'byreval.pkl')
 

@@ -2,7 +2,7 @@ import argparse
 import pandas as pd
 from assess.util import get_last, estimate_tree
 from agent.util import get_run_dir, load_valid_data
-from agent.const import DELTA_CHOICES
+from agent.const import DELTA_SLR
 from constants import DAY, MAX_DAYS
 from featnames import LOOKUP, AUTO, CON, NORM, START_PRICE, START_TIME, \
     BYR_HIST, X_OFFER, X_THREAD, INDEX, CLOCK, THREAD, TEST
@@ -11,7 +11,7 @@ from featnames import LOOKUP, AUTO, CON, NORM, START_PRICE, START_TIME, \
 def main():
     # agent params from command line
     parser = argparse.ArgumentParser()
-    parser.add_argument('--delta', type=float, choices=DELTA_CHOICES)
+    parser.add_argument('--delta', type=float, choices=DELTA_SLR)
     delta = parser.parse_args().delta
 
     run_dir = get_run_dir(delta=delta)

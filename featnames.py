@@ -5,6 +5,7 @@ ARRIVAL = 'arrival'
 
 # hyperparameters
 DROPOUT = 'dropout'
+DELTA = 'delta'
 
 # clock feats
 HOLIDAY = 'holiday'

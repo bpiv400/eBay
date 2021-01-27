@@ -4,7 +4,7 @@ import torch
 from agent.RlTrainer import RlTrainer
 from agent.util import get_run_dir
 from utils import set_gpu
-from agent.const import DELTA_CHOICES
+from agent.const import DELTA_CHOICES, DELTA_BYR, DELTA_SLR
 
 
 def main():
@@ -13,12 +13,18 @@ def main():
     parser.add_argument('--gpu', type=int, default=0)
     parser.add_argument('--log', action='store_true')
     parser.add_argument('--serial', action='store_true')
+    parser.add_argument('--byr', action='store_true')
     parser.add_argument('--delta', type=float, choices=DELTA_CHOICES)
     args = parser.parse_args()
 
     # error checking
     if args.serial:
         assert not args.log
+
+    if args.byr:
+        assert args.delta in DELTA_BYR
+    else:
+        assert args.delta in DELTA_SLR
 
     # make sure run doesn't already exist
     if args.log:
@@ -34,7 +40,7 @@ def main():
     for k, v in vars(args).items():
         print('{}: {}'.format(k, v))
 
-    trainer = RlTrainer(delta=args.delta)
+    trainer = RlTrainer(byr=args.byr, delta=args.delta)
     trainer.train(log=args.log, serial=args.serial)
 
 

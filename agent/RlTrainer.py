@@ -5,7 +5,7 @@ from agent.EBayPPO import EBayPPO
 from rlpyt.samplers.serial.sampler import SerialSampler
 from rlpyt.samplers.parallel.gpu.alternating_sampler import AlternatingSampler
 from rlpyt.utils.logging.context import logger_context
-from agent.util import get_run_id
+from agent.util import get_log_dir
 from agent.AgentComposer import AgentComposer
 from agent.models.AgentModel import AgentModel
 from agent.agents import SellerAgent, BuyerAgent
@@ -16,13 +16,12 @@ from rlenv.interfaces.ArrivalInterface import ArrivalInterface
 from rlenv.interfaces.PlayerInterface import SimulatedSeller, SimulatedBuyer
 from agent.AgentLoader import AgentLoader
 from agent.const import BATCH_SIZE
-from constants import AGENT_DIR
 
 
 class RlTrainer:
-    def __init__(self, delta=None):
+    def __init__(self, byr=None, delta=None):
+        self.byr = byr
         self.delta = delta
-        self.byr = delta is None
 
     def _generate_query_strategy(self):
         return DefaultQueryStrategy(
@@ -37,7 +36,8 @@ class RlTrainer:
         return agent_cls(
             ModelCls=AgentModel,
             model_kwargs=model_kwargs,
-            serial=serial
+            serial=serial,
+            delta=self.delta
         )
 
     def _generate_env(self, verbose=False):
@@ -102,11 +102,10 @@ class RlTrainer:
         if not log:
             runner.train()
         else:
-            run_id = get_run_id(delta=self.delta)
-            with logger_context(log_dir=AGENT_DIR,
+            with logger_context(log_dir=get_log_dir(byr=self.byr),
                                 name='log',
                                 use_summary_writer=True,
                                 override_prefix=True,
-                                run_ID=run_id,
+                                run_ID='{}'.format(self.delta),
                                 snapshot_mode='last'):
                 runner.train()

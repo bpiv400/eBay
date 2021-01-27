@@ -14,9 +14,10 @@ from featnames import BYR
 
 
 class SplitCategoricalPgAgent(CategoricalPgAgent):
-    def __init__(self, serial=False, **kwargs):
+    def __init__(self, serial=False, delta=None, **kwargs):
         super().__init__(**kwargs)
         self.serial = serial
+        self.delta = delta
 
     def __call__(self, observation, prev_action, prev_reward):
         model_inputs = self._model_inputs(observation, prev_action, prev_reward)
@@ -163,23 +164,29 @@ class SellerAgent(SplitCategoricalPgAgent):
 
 
 class BuyerAgent(SplitCategoricalPgAgent):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.min = self.delta - 1  # lowest reward from a sale
+        self.max = self.delta - AGENT_CONS[1][1]  # length of [.5, value]
 
     def _calculate_value(self, value_params):
         p, a, b = parse_value_params(value_params)
-        v = (p[:, 1] + p[:, -1] * a / (a + b)) / 2
+        beta_mean = a / (a + b) * (self.max - self.min) + self.min
+        v = p[:, 1] * self.max + p[:, -1] * beta_mean
         return v
 
     def get_value_loss(self, value_params, return_, valid):
         p, a, b = parse_value_params(value_params)
-        norm_return = 2 * return_
+        norm_return = (return_ - self.min) / (self.max - self.min)
 
-        # no sale
-        zeros = torch.zeros_like(norm_return)
-        idx0 = torch.isclose(norm_return, zeros) & valid
+        # no sale or sells for value
+        zeros = torch.zeros_like(return_)
+        idx0 = (torch.isclose(norm_return, zeros, atol=1e-6) |
+                torch.isclose(return_, zeros, atol=1e-6)) & valid
         lnL = torch.sum(torch.log(p[idx0, 0] + EPS))
 
         # sells for half of list price
-        idx1 = torch.isclose(norm_return, zeros + 1) & valid
+        idx1 = torch.isclose(norm_return, zeros + 1, atol=1e-6) & valid
         lnL += torch.sum(torch.log(p[idx1, 1] + EPS))
 
         # intermediate outcome

@@ -333,10 +333,13 @@ def estimate_tree(X=None, y=None, max_depth=1, criterion='entropy'):
     print(r)
 
 
-def get_eval_df(delta=None):
+def get_eval_df(delta=None, suffix=None):
     run_dir = get_run_dir(delta=delta)
     path = run_dir + '{}.pkl'.format(TEST)
-    df = unpickle(path)[['norm', 'dollar']]
+    cols = ['norm', 'dollar']
+    if suffix is not None:
+        cols = ['{}_{}'.format(c, suffix) for c in cols]
+    df = unpickle(path)[cols]
     return df
 
 
