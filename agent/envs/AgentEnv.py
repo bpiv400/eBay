@@ -21,11 +21,13 @@ class AgentEnv(EBayEnv, Env):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.byr = kwargs[BYR]
-        self.delta = kwargs[DELTA]
 
         # mode
         self.test = False if 'test' not in kwargs else kwargs['test']
         self.train = False if 'train' not in kwargs else kwargs['train']
+
+        if self.train:  # for reward calculation
+            self.delta = kwargs[DELTA]
 
         # parameters to be set later
         self.curr_event = None
