@@ -11,6 +11,7 @@ def main():
     # output directory
     output_dir = get_output_dir(part=args.part,
                                 heuristic=args.heuristic,
+                                byr=args.byr,
                                 delta=args.delta)
 
     # concatenate

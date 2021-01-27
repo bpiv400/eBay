@@ -12,6 +12,7 @@ def sim_args(num=False):
     parser.add_argument('--part', type=str,
                         choices=AGENT_PARTITIONS, default=TEST)
     parser.add_argument('--heuristic', action='store_true')
+    parser.add_argument('--byr', action='store_true')
     parser.add_argument('--delta', type=float, choices=DELTA_SLR)
     if num:
         parser.add_argument('--num', type=int,
