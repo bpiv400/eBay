@@ -4,6 +4,7 @@ from agent.eval.util import read_table, save_table
 from agent.util import get_run_dir, get_sale_norm, only_byr_agent, \
     get_output_dir, load_valid_data
 from utils import safe_reindex
+from agent.const import DELTA_BYR
 from featnames import X_OFFER, LOOKUP, START_PRICE, TEST, THREAD
 
 
@@ -44,10 +45,11 @@ def get_return(data=None, idx=None):
 def main():
     # parameters from command line
     parser = argparse.ArgumentParser()
+    parser.add_argument('--delta', type=float, choices=DELTA_BYR)
     parser.add_argument('--read', action='store_true')
     params = parser.parse_args()
 
-    run_dir = get_run_dir(byr=True, delta=1.)
+    run_dir = get_run_dir(byr=True, delta=params.delta)
     if params.read:
         read_table(run_dir=run_dir)
     output = dict()
@@ -58,7 +60,10 @@ def main():
     output['Humans'] = get_return(data=data, idx=idx)
 
     # rewards from heuristic strategy
-    heur_dir = get_output_dir(byr=True, delta=1., heuristic=True, part=TEST)
+    heur_dir = get_output_dir(byr=True,
+                              delta=params.delta,
+                              heuristic=True,
+                              part=TEST)
     data = load_valid_data(part=TEST, run_dir=heur_dir)
     if data is not None:
         output['Heuristic'] = get_return(data=data, idx=idx)
