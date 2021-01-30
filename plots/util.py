@@ -913,3 +913,21 @@ def pdf_plot(path, obj):
                  ylim=[0, obj.max().max()],
                  gridlines=False,
                  **args)
+
+
+def pareto_plot(path, df):
+    name = get_name(path)
+    if name == 'sales':
+        args = dict(xlabel='Purchase rate',
+                    ylabel='Savings ($)',
+                    ylim=[0, 20], xlim=[min(df['x']), 1])
+    else:
+        raise NotImplementedError('Invalid name: {}'.format(name))
+
+    plt.plot(df.x, df.y, 'ok')
+    for label in df.index:
+        x = df.loc[label, 'x'] + (args['xlim'][1] - args['xlim'][0]) / 100
+        y = df.loc[label, 'y'] + (args['ylim'][1] - args['ylim'][0]) / 100
+        plt.text(x, y, label)
+
+    save_fig(path, legend=False, **args)

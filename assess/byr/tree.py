@@ -1,8 +1,10 @@
+import argparse
 import numpy as np
 import pandas as pd
 from agent.util import get_run_dir, only_byr_agent, load_valid_data
 from assess.util import estimate_tree
 from utils import load_feats, safe_reindex
+from agent.const import DELTA_BYR
 from constants import DAY, MAX_DAYS, IDX
 from featnames import LOOKUP, CON, NORM, START_PRICE, START_TIME, \
     BYR_HIST, X_OFFER, X_THREAD, INDEX, CLOCK, TEST, BYR, REJECT, MSG, AUTO
@@ -11,7 +13,13 @@ LISTING_FEATS = ['fdbk_score', 'fdbk_pstv', 'photos', 'store', 'slr_us', 'fast']
 
 
 def main():
-    data = load_valid_data(part=TEST, run_dir=get_run_dir())
+    # parameters from command line
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--delta', type=float, choices=DELTA_BYR)
+    delta = parser.parse_args().delta
+
+    run_dir = get_run_dir(byr=True, delta=delta)
+    data = load_valid_data(part=TEST, run_dir=run_dir, clock=True)
 
     # add listing features to data
     listings = load_feats('listings')[LISTING_FEATS]

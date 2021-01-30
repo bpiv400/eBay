@@ -1,9 +1,10 @@
+import os
 import numpy as np
 import pandas as pd
 from sklearn.tree import DecisionTreeClassifier, export_text
 from statsmodels.nonparametric.kde import KDEUnivariate
 from statsmodels.nonparametric.kernel_regression import KernelReg
-from agent.util import get_sale_norm, get_run_dir, get_norm_reward
+from agent.util import get_sale_norm, get_norm_reward, get_run_dir
 from utils import unpickle, safe_reindex
 from assess.const import OPT, VALUES_DIM, POINTS, LOG10_BIN_DIM
 from constants import IDX, BYR, EPS, DAY, HOUR, PCTILE_DIR, MAX_DELAY_TURN, \
@@ -333,16 +334,6 @@ def estimate_tree(X=None, y=None, max_depth=1, criterion='entropy'):
     print(r)
 
 
-def get_eval_df(delta=None, suffix=None):
-    run_dir = get_run_dir(delta=delta)
-    path = run_dir + '{}.pkl'.format(TEST)
-    cols = ['norm', 'dollar']
-    if suffix is not None:
-        cols = ['{}_{}'.format(c, suffix) for c in cols]
-    df = unpickle(path)[cols]
-    return df
-
-
 def bin_vs_reward(data=None, values=None, byr=False, bw=None):
     reward = pd.concat(get_norm_reward(data=data, values=values, byr=byr))
     y = reward.reindex(index=data[LOOKUP].index).values
@@ -353,3 +344,19 @@ def bin_vs_reward(data=None, values=None, byr=False, bw=None):
                           bw=bw,
                           ci=(bw is None))
     return line, bw
+
+
+def get_eval_df(byr=False, delta=None, suffix=None):
+    run_dir = get_run_dir(byr=byr, delta=delta)
+    path = run_dir + '{}.pkl'.format(TEST)
+    if not os.path.isfile(path):
+        return None
+    df = unpickle(path)
+    cols = ['dollar', 'buyrate'] if byr else ['norm', 'dollar']
+    if suffix is None:
+        return df[cols]
+    else:
+        df = df[['{}_{}'.format(c, suffix) for c in cols]]
+        k = len(suffix) + 1
+        df = df.rename(lambda c: c[:-k], axis=1)
+        return df

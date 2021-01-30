@@ -80,14 +80,14 @@ def get_slr_valid(data=None):
     return data
 
 
-def load_valid_data(part=None, run_dir=None, byr=None):
+def load_valid_data(part=None, run_dir=None, byr=None, clock=False):
     # error checking
     if run_dir is not None:
         assert byr is None
         byr = BYR in run_dir
 
     # load data
-    data = load_data(part=part, run_dir=run_dir)
+    data = load_data(part=part, run_dir=run_dir, clock=clock)
     if X_OFFER not in data:
         return None
 

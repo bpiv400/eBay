@@ -5,39 +5,32 @@ from agent.util import get_run_dir, get_sale_norm, only_byr_agent, \
     get_output_dir, load_valid_data
 from utils import safe_reindex
 from agent.const import DELTA_BYR
-from featnames import X_OFFER, LOOKUP, START_PRICE, TEST, THREAD
+from featnames import X_OFFER, LOOKUP, X_THREAD, START_PRICE, TEST
 
 
-def create_output(data=None, suffix=None):
-    sale_norm = get_sale_norm(data[X_OFFER])
-    discount = (1 - sale_norm).reindex(
-        index=data[LOOKUP].index, fill_value=0)
-    dollar = discount * data[LOOKUP][START_PRICE]
-    s = pd.Series()
-    s['discount'] = discount.mean()
-    s['dollar'] = dollar.mean()
-    s['buyrate'] = len(sale_norm) / len(data[LOOKUP])
-    if suffix is not None:
-        s = s.add_suffix('_{}'.format(suffix))
-    return s
-
-
-def get_return(data=None, idx=None):
-    # first buyer only
+def get_return(data=None, norm=None):
+    """
+    Calculates (dollar) discount and sale rate.
+    :param dict data: contains DataFrames.
+    :param pd.Series norm: normalized sale prices.
+    :return: pd.Series of eval stats.
+    """
+    # first buyer only, sales only
     data = only_byr_agent(data)
+    data = safe_reindex(data, idx=norm.index)
 
-    # all listings
-    s = create_output(data=data)
+    # discount
+    sale_norm = get_sale_norm(data[X_OFFER])
+    discount = (norm - sale_norm).dropna()
 
-    # only sales
-    idx0 = idx.droplevel(THREAD)
-    data = safe_reindex(data, idx=idx0)
-    s = s.append(create_output(data=data, suffix='sales'))
+    # dollar discount
+    start_price = safe_reindex(data[LOOKUP][START_PRICE],
+                               idx=discount.index)
+    dollar = discount * start_price
 
-    # only sales to first buyer
-    idx1 = pd.Series(index=idx).xs(1, level=THREAD).index
-    data = safe_reindex(data, idx=idx1)
-    s = s.append(create_output(data=data, suffix='sales1'))
+    s = pd.Series()
+    s['dollar'] = dollar.mean()
+    s['buyrate'] = len(sale_norm) / len(data[X_THREAD])
 
     return s
 
@@ -56,8 +49,8 @@ def main():
 
     # rewards from data
     data = load_valid_data(part=TEST, byr=True)
-    idx = get_sale_norm(offers=data[X_OFFER], drop_thread=False).index
-    output['Humans'] = get_return(data=data, idx=idx)
+    norm = get_sale_norm(offers=data[X_OFFER])
+    output['Humans'] = get_return(data=data, norm=norm)
 
     # rewards from heuristic strategy
     heur_dir = get_output_dir(byr=True,
@@ -66,12 +59,12 @@ def main():
                               part=TEST)
     data = load_valid_data(part=TEST, run_dir=heur_dir)
     if data is not None:
-        output['Heuristic'] = get_return(data=data, idx=idx)
+        output['Heuristic'] = get_return(data=data, norm=norm)
 
     # rewards from agent run
     data = load_valid_data(part=TEST, run_dir=run_dir)
     if data is not None:
-        output['Agent'] = get_return(data=data, idx=idx)
+        output['Agent'] = get_return(data=data, norm=norm)
 
     save_table(run_dir=run_dir, output=output)
 

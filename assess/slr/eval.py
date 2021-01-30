@@ -1,6 +1,6 @@
 import pandas as pd
 from agent.util import load_valid_data, load_values, get_run_dir
-from assess.util import get_eval_df, bin_vs_reward
+from assess.util import bin_vs_reward, get_eval_df
 from utils import topickle
 from agent.const import DELTA_SLR
 from assess.const import SLR_NAMES

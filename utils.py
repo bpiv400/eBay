@@ -253,7 +253,7 @@ def load_file(part, x, folder=PARTS_DIR):
     return unpickle(path)
 
 
-def load_data(part=None, sim=False, run_dir=None, lstgs=None):
+def load_data(part=None, sim=False, run_dir=None, lstgs=None, clock=False):
     if not sim and run_dir is None:
         folder = PARTS_DIR
     elif sim:
@@ -270,7 +270,10 @@ def load_data(part=None, sim=False, run_dir=None, lstgs=None):
         data[LOOKUP] = safe_reindex(data[LOOKUP], idx=idx)
 
     # load other components
-    for k in [X_THREAD, X_OFFER, CLOCK]:
+    keys = [X_THREAD, X_OFFER]
+    if clock:
+        keys += [CLOCK]
+    for k in keys:
         df = load_file(part, k, folder=folder)
         if df is not None:
             data[k] = df
@@ -298,6 +301,7 @@ def get_role(byr=None):
 
 def safe_reindex(obj=None, idx=None, fill_value=None):
     if type(obj) is dict:
+        obj = obj.copy()
         for k, v in obj.items():
             obj[k] = safe_reindex(v, idx=idx, fill_value=fill_value)
         return obj
