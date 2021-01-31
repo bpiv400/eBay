@@ -40,7 +40,7 @@ def main():
         y = pd.Series('', index=con.index)
         y.loc[con == 0] = 'Walk'
         y.loc[con == 1] = 'Accept'
-        threshold = .5 if turn == 1 else .25
+        threshold = .6 if turn == 1 else .25
         y.loc[(con > 0) & (con <= threshold)] = 'Low'
         y.loc[(con > threshold) & (con < 1)] = 'High'
         print(np.unique(y))

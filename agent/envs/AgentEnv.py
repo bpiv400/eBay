@@ -10,7 +10,7 @@ from rlenv.events.Thread import Thread
 from agent.ConSpace import ConSpace
 from agent.const import AGENT_CONS
 from constants import INTERVAL_TURN, INTERVAL_CT_TURN, DAY, NUM_COMMON_CONS, IDX
-from featnames import BYR_HIST, START_PRICE, BYR, SLR, DELTA
+from featnames import BYR_HIST, START_PRICE, BYR, SLR, DELTA, TURN_COST
 
 Info = namedarraytuple("Info", ["days", "max_return", "num_actions", "num_threads",
                                 "turn", "thread_id", "priority", "agent_sale"])
@@ -28,11 +28,12 @@ class AgentEnv(EBayEnv, Env):
 
         if self.train:  # for reward calculation
             self.delta = kwargs[DELTA]
+            self.turn_cost = kwargs[TURN_COST]
 
         # parameters to be set later
         self.curr_event = None
         self.last_event = None
-        self.num_actions = None  # number of agents actions (incl. byr delays)
+        self.num_actions = None  # number of agent actions
 
         # for passing an empty observation to agents
         self.empty_dict = {k: torch.zeros(v).float()

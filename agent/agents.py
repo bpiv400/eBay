@@ -14,10 +14,9 @@ from featnames import BYR
 
 
 class SplitCategoricalPgAgent(CategoricalPgAgent):
-    def __init__(self, serial=False, delta=None, **kwargs):
+    def __init__(self, serial=False, **kwargs):
         super().__init__(**kwargs)
         self.serial = serial
-        self.delta = delta
 
     def __call__(self, observation, prev_action, prev_reward):
         model_inputs = self._model_inputs(observation, prev_action, prev_reward)
@@ -164,10 +163,10 @@ class SellerAgent(SplitCategoricalPgAgent):
 
 
 class BuyerAgent(SplitCategoricalPgAgent):
-    def __init__(self, **kwargs):
+    def __init__(self, delta=None, **kwargs):
         super().__init__(**kwargs)
-        self.min = self.delta - 1  # lowest reward from a sale
-        self.max = self.delta - AGENT_CONS[1][1]  # length of [.5, value]
+        self.min = delta - 1  # lowest reward from a sale
+        self.max = delta - AGENT_CONS[1][1]  # length of [.5, value]
 
     def _calculate_value(self, value_params):
         p, a, b = parse_value_params(value_params)
@@ -216,6 +215,23 @@ class BuyerAgent(SplitCategoricalPgAgent):
                 opt_info['{}{}'.format(prefix, 'Con')] = \
                     con_t[(con_t > 0) & (con_t < 1)]
         return opt_info
+
+
+class BuyerTurnCostAgent(BuyerAgent):
+    def __init__(self, turn_cost=None, **kwargs):
+        super().__init__(**kwargs)
+        self.min -= 3 * turn_cost / 9.95 + EPS
+
+    def _calculate_value(self, value_params):
+        _, a, b = parse_value_params(value_params)
+        beta_mean = a / (a + b) * (self.max - self.min) + self.min
+        return beta_mean
+
+    def get_value_loss(self, value_params, return_, valid):
+        _, a, b = parse_value_params(value_params)
+        norm_return = (return_ - self.min) / (self.max - self.min)
+        lnL = torch.sum(Beta(a, b).log_prob(norm_return))
+        return -lnL
 
 
 def parse_value_params(value_params):

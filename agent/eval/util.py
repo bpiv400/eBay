@@ -4,7 +4,7 @@ import pandas as pd
 from utils import topickle, unpickle
 from agent.const import DELTA_CHOICES
 from constants import NUM_CHUNKS
-from featnames import AGENT_PARTITIONS, TEST, INDEX
+from featnames import AGENT_PARTITIONS, TEST, INDEX, BYR
 
 
 def sim_args(num=False):
@@ -24,8 +24,17 @@ def read_table(run_dir=None):
     path = run_dir + '{}.pkl'.format(TEST)
     if os.path.isfile(path):
         df = unpickle(path)
-        print(df)
-        exit()
+        if BYR in run_dir:
+            cols1 = [c for c in df.columns if c.endswith('sales')]
+            cols0 = [c for c in df.columns if not c.endswith('sales')]
+
+            print('All listings')
+            print(df[cols0])
+
+            print('\nSales only')
+            print(df[cols1].rename(lambda x: x.split('_')[0], axis=1))
+        else:
+            print(df)
 
 
 def save_table(run_dir=None, output=None):

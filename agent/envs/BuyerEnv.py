@@ -135,13 +135,16 @@ class BuyerEnv(AgentEnv):
         """
         Returns the buyer reward for the current turn.
         """
+        # turn cost penalty
+        penalty = self.num_actions * self.turn_cost
+
         # no sale
         if self.outcome is None or not self.outcome.sale:
-            return 0, False
+            return -penalty, False
 
         # sale to different buyer
         if self.outcome.thread > 1:
-            return 0, False
+            return -penalty, False
 
         # sale to agent buyer
         value = self.delta * self.lookup[START_PRICE]
@@ -149,7 +152,7 @@ class BuyerEnv(AgentEnv):
             print('Sale to RL buyer. Price: ${0:.2f}.'.format(
                 self.outcome.price))
 
-        return value - self.outcome.price, True
+        return value - self.outcome.price - penalty, True
 
     def _init_agent_thread(self, thread=None, hist=None):
         # increment counter

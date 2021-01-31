@@ -9,9 +9,17 @@ def get_log_dir(byr=None):
     return AGENT_DIR + '{}/'.format(get_role(byr))
 
 
+def get_run_id(byr=None, delta=None, turn_cost=0):
+    if byr and turn_cost > 0:
+        return '{}_{}/'.format(float(delta), turn_cost)
+    else:
+        return '{}/'.format(float(delta))
+
+
 def get_run_dir(byr=None, delta=None):
     log_dir = get_log_dir(byr=byr)
-    return log_dir + 'run_{}/'.format(float(delta))
+    run_id = get_run_id(byr=byr, delta=delta, turn_cost=0)
+    return log_dir + 'run_{}/'.format(run_id)
 
 
 def get_output_dir(byr=None, delta=None, part=None, heuristic=False):

@@ -6,6 +6,7 @@ ARRIVAL = 'arrival'
 # hyperparameters
 DROPOUT = 'dropout'
 DELTA = 'delta'
+TURN_COST = 'turn_cost'
 
 # clock feats
 HOLIDAY = 'holiday'

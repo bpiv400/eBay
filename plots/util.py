@@ -917,10 +917,14 @@ def pdf_plot(path, obj):
 
 def pareto_plot(path, df):
     name = get_name(path)
-    if name == 'sales':
+    if name == 'all':
+        args = dict(xlabel='Purchase rate',
+                    ylabel='Discount on list price ($)',
+                    ylim=[15, 40], xlim=[.6, 1])
+    elif name == 'sales':
         args = dict(xlabel='Purchase rate',
                     ylabel='Savings ($)',
-                    ylim=[0, 20], xlim=[min(df['x']), 1])
+                    ylim=[0, 20], xlim=[.6, 1])
     else:
         raise NotImplementedError('Invalid name: {}'.format(name))
 

@@ -15,6 +15,7 @@ def main():
     parser.add_argument('--serial', action='store_true')
     parser.add_argument('--byr', action='store_true')
     parser.add_argument('--delta', type=float, choices=DELTA_CHOICES)
+    parser.add_argument('--turn_cost', type=int, default=0)
     args = parser.parse_args()
 
     # error checking
@@ -40,7 +41,9 @@ def main():
     for k, v in vars(args).items():
         print('{}: {}'.format(k, v))
 
-    trainer = RlTrainer(byr=args.byr, delta=args.delta)
+    trainer = RlTrainer(byr=args.byr,
+                        delta=args.delta,
+                        turn_cost=args.turn_cost)
     trainer.train(log=args.log, serial=args.serial)
 
 

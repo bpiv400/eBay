@@ -5,10 +5,10 @@ from agent.EBayPPO import EBayPPO
 from rlpyt.samplers.serial.sampler import SerialSampler
 from rlpyt.samplers.parallel.gpu.alternating_sampler import AlternatingSampler
 from rlpyt.utils.logging.context import logger_context
-from agent.util import get_log_dir
+from agent.util import get_log_dir, get_run_id
 from agent.AgentComposer import AgentComposer
 from agent.models.AgentModel import AgentModel
-from agent.agents import SellerAgent, BuyerAgent
+from agent.agents import SellerAgent, BuyerAgent, BuyerTurnCostAgent
 from rlenv.QueryStrategy import DefaultQueryStrategy
 from agent.envs.SellerEnv import SellerEnv
 from agent.envs.BuyerEnv import BuyerEnv
@@ -16,12 +16,14 @@ from rlenv.interfaces.ArrivalInterface import ArrivalInterface
 from rlenv.interfaces.PlayerInterface import SimulatedSeller, SimulatedBuyer
 from agent.AgentLoader import AgentLoader
 from agent.const import BATCH_SIZE
+from featnames import DELTA, TURN_COST
 
 
 class RlTrainer:
-    def __init__(self, byr=None, delta=None):
+    def __init__(self, byr=None, delta=None, turn_cost=None):
         self.byr = byr
         self.delta = delta
+        self.turn_cost = turn_cost
 
     def _generate_query_strategy(self):
         return DefaultQueryStrategy(
@@ -32,13 +34,19 @@ class RlTrainer:
 
     def _generate_agent(self, serial=False):
         model_kwargs = dict(byr=self.byr)
-        agent_cls = BuyerAgent if self.byr else SellerAgent
-        return agent_cls(
-            ModelCls=AgentModel,
-            model_kwargs=model_kwargs,
-            serial=serial,
-            delta=self.delta
-        )
+        agent_kwargs = dict(ModelCls=AgentModel,
+                            model_kwargs=model_kwargs,
+                            serial=serial)
+        if self.byr:
+            agent_kwargs[DELTA] = self.delta
+            if self.turn_cost > 0:
+                agent_cls = BuyerTurnCostAgent
+                agent_kwargs[TURN_COST] = self.turn_cost
+            else:
+                agent_cls = BuyerAgent
+        else:
+            agent_cls = SellerAgent
+        return agent_cls(**agent_kwargs)
 
     def _generate_env(self, verbose=False):
         composer = AgentComposer(byr=self.byr)
@@ -48,6 +56,7 @@ class RlTrainer:
             query_strategy=self._generate_query_strategy(),
             loader=AgentLoader(),
             delta=self.delta,
+            turn_cost=self.turn_cost,
             train=True
         )
         env = BuyerEnv if self.byr else SellerEnv
@@ -106,6 +115,8 @@ class RlTrainer:
                                 name='log',
                                 use_summary_writer=True,
                                 override_prefix=True,
-                                run_ID='{}'.format(self.delta),
+                                run_ID=get_run_id(byr=self.byr,
+                                                  delta=self.delta,
+                                                  turn_cost=self.turn_cost),
                                 snapshot_mode='last'):
                 runner.train()
