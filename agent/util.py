@@ -11,9 +11,9 @@ def get_log_dir(byr=None):
 
 def get_run_id(byr=None, delta=None, turn_cost=0):
     if byr and turn_cost > 0:
-        return '{}_{}/'.format(float(delta), turn_cost)
+        return '{}_{}'.format(float(delta), turn_cost)
     else:
-        return '{}/'.format(float(delta))
+        return '{}'.format(float(delta))
 
 
 def get_run_dir(byr=None, delta=None, turn_cost=0):

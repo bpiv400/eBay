@@ -34,7 +34,9 @@ def main():
     if args.heuristic:
         model = HeuristicByr() if args.byr else HeuristicSlr(delta=args.delta)
     else:
-        run_dir = get_run_dir(byr=args.byr, delta=args.delta)
+        run_dir = get_run_dir(byr=args.byr,
+                              delta=args.delta,
+                              turn_cost=args.turn_cost)
         model_args = dict(byr=args.byr, value=False)
         model = load_agent_model(model_args=model_args, run_dir=run_dir)
     gen = gen_cls(model=model, byr=args.byr)

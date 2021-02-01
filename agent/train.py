@@ -4,7 +4,7 @@ import torch
 from agent.RlTrainer import RlTrainer
 from agent.util import get_run_dir
 from utils import set_gpu
-from agent.const import DELTA_CHOICES, DELTA_BYR, DELTA_SLR
+from agent.const import DELTA_CHOICES, DELTA_BYR, DELTA_SLR, TURN_COST_CHOICES
 
 
 def main():
@@ -15,7 +15,8 @@ def main():
     parser.add_argument('--serial', action='store_true')
     parser.add_argument('--byr', action='store_true')
     parser.add_argument('--delta', type=float, choices=DELTA_CHOICES)
-    parser.add_argument('--turn_cost', type=int, default=0)
+    parser.add_argument('--turn_cost', type=int, default=0,
+                        choices=TURN_COST_CHOICES)
     args = parser.parse_args()
 
     # error checking

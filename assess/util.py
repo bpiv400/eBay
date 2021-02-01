@@ -346,8 +346,8 @@ def bin_vs_reward(data=None, values=None, byr=False, bw=None):
     return line, bw
 
 
-def get_eval_df(byr=False, delta=None, suffix=None):
-    run_dir = get_run_dir(byr=byr, delta=delta)
+def get_eval_df(byr=False, delta=None, turn_cost=0, suffix=None):
+    run_dir = get_run_dir(byr=byr, delta=delta, turn_cost=turn_cost)
     path = run_dir + '{}.pkl'.format(TEST)
     if not os.path.isfile(path):
         return None

@@ -1,7 +1,7 @@
 import pandas as pd
 from assess.util import get_eval_df
 from utils import topickle
-from agent.const import DELTA_BYR
+from agent.const import DELTA_BYR, TURN_COST_CHOICES
 from constants import PLOT_DIR
 
 
@@ -20,13 +20,18 @@ def main():
          'pareto_sales': pd.DataFrame(columns=['x', 'y'])}
 
     for delta in DELTA_BYR:
-        df = get_eval_df(byr=True, delta=delta)
-        if df is None or 'Agent' not in df.index:
-            continue
-        df_sales = get_eval_df(byr=True, delta=delta, suffix='sales')
+        for turn_cost in TURN_COST_CHOICES:
+            params = dict(byr=True, delta=delta, turn_cost=turn_cost)
+            df = get_eval_df(**params)
+            if df is None or 'Agent' not in df.index:
+                continue
+            df_sales = get_eval_df(suffix='sales', **params)
 
-        add_lines(output=d['pareto_all'], df=df, k=delta)
-        add_lines(output=d['pareto_sales'], df=df_sales, k=delta)
+            k = '{}_{}'.format(delta, turn_cost)
+            add_lines(output=d['pareto_all'], df=df, k=k)
+            add_lines(output=d['pareto_sales'], df=df_sales, k=k)
+
+    print(d)
 
     topickle(d, PLOT_DIR + 'byrpareto.pkl')
 

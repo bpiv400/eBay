@@ -1,11 +1,13 @@
 import argparse
+import os
 import pandas as pd
 from agent.eval.util import read_table, save_table
 from agent.util import get_run_dir, get_sale_norm, only_byr_agent, \
     get_output_dir, load_valid_data
 from utils import safe_reindex
-from agent.const import DELTA_BYR
-from featnames import X_OFFER, LOOKUP, X_THREAD, START_PRICE, TEST, DELTA
+from agent.const import DELTA_BYR, TURN_COST_CHOICES
+from featnames import X_OFFER, LOOKUP, X_THREAD, START_PRICE, TEST, \
+    DELTA, TURN_COST
 
 
 def calculate_stats(data=None, norm=None):
@@ -45,8 +47,11 @@ def get_return(data=None, norm=None):
     return s
 
 
-def create_output(delta=None, read=False):
-    run_dir = get_run_dir(byr=True, delta=delta)
+def create_output(delta=None, turn_cost=None, read=False):
+    run_dir = get_run_dir(byr=True, delta=delta, turn_cost=turn_cost)
+    if not os.path.isdir(run_dir):
+        return
+
     if read:
         read_table(run_dir=run_dir)
         exit()
@@ -60,6 +65,7 @@ def create_output(delta=None, read=False):
     # rewards from heuristic strategy
     heur_dir = get_output_dir(byr=True,
                               delta=delta,
+                              turn_cost=turn_cost,
                               heuristic=True,
                               part=TEST)
     data = load_valid_data(part=TEST, run_dir=heur_dir)
@@ -78,14 +84,19 @@ def main():
     # parameters from command line
     parser = argparse.ArgumentParser()
     parser.add_argument('--delta', type=float, choices=DELTA_BYR)
+    parser.add_argument('--turn_cost', type=int, default=0,
+                        choices=TURN_COST_CHOICES)
     parser.add_argument('--read', action='store_true')
     params = vars(parser.parse_args())
 
     if params[DELTA] is None:
         for delta in DELTA_BYR:
-            print('Delta: {}'.format(delta))
-            params[DELTA] = delta
-            create_output(**params)
+            for turn_cost in TURN_COST_CHOICES:
+                print('(delta, turn cost): ({}, {})'.format(
+                    delta, turn_cost))
+                params[DELTA] = delta
+                params[TURN_COST] = turn_cost
+                create_output(**params)
     else:
         create_output(**params)
 
