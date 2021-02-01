@@ -12,7 +12,8 @@ def main():
     output_dir = get_output_dir(part=args.part,
                                 heuristic=args.heuristic,
                                 byr=args.byr,
-                                delta=args.delta)
+                                delta=args.delta,
+                                turn_cost=args.turn_cost)
 
     # concatenate
     sims = []

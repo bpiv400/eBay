@@ -16,14 +16,15 @@ def get_run_id(byr=None, delta=None, turn_cost=0):
         return '{}/'.format(float(delta))
 
 
-def get_run_dir(byr=None, delta=None):
+def get_run_dir(byr=None, delta=None, turn_cost=0):
     log_dir = get_log_dir(byr=byr)
-    run_id = get_run_id(byr=byr, delta=delta, turn_cost=0)
+    run_id = get_run_id(byr=byr, delta=delta, turn_cost=turn_cost)
     return log_dir + 'run_{}/'.format(run_id)
 
 
-def get_output_dir(byr=None, delta=None, part=None, heuristic=False):
-    run_dir = get_run_dir(byr=byr, delta=delta)
+def get_output_dir(byr=None, delta=None, part=None,
+                   heuristic=False, turn_cost=0):
+    run_dir = get_run_dir(byr=byr, delta=delta, turn_cost=turn_cost)
     output_dir = run_dir + '{}/'.format(part)
     if heuristic:
         output_dir += 'heuristic/'

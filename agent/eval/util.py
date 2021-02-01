@@ -14,6 +14,7 @@ def sim_args(num=False):
     parser.add_argument('--heuristic', action='store_true')
     parser.add_argument('--byr', action='store_true')
     parser.add_argument('--delta', type=float, choices=DELTA_CHOICES)
+    parser.add_argument('--turn_cost', type=int, default=0)
     if num:
         parser.add_argument('--num', type=int,
                             choices=range(1, NUM_CHUNKS + 1))

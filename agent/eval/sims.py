@@ -14,7 +14,8 @@ def main():
     output_dir = get_output_dir(part=args.part,
                                 heuristic=args.heuristic,
                                 byr=args.byr,
-                                delta=args.delta)
+                                delta=args.delta,
+                                turn_cost=args.turn_cost)
     outcome_dir = output_dir + 'outcomes/'
 
     # create output folder
