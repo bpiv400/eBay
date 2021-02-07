@@ -16,7 +16,7 @@ from rlenv.interfaces.ArrivalInterface import ArrivalInterface
 from rlenv.interfaces.PlayerInterface import SimulatedSeller, SimulatedBuyer
 from agent.AgentLoader import AgentLoader
 from agent.const import BATCH_SIZE
-from featnames import DELTA, TURN_COST
+from featnames import DELTA
 
 
 class RlTrainer:
@@ -40,8 +40,8 @@ class RlTrainer:
         if self.byr:
             agent_kwargs[DELTA] = self.delta
             if self.turn_cost > 0:
+                model_kwargs['num_value_params'] = 1
                 agent_cls = BuyerTurnCostAgent
-                agent_kwargs[TURN_COST] = self.turn_cost
             else:
                 agent_cls = BuyerAgent
         else:

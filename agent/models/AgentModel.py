@@ -2,7 +2,7 @@ import torch
 from torch.nn.functional import softmax
 from nets.FeedForward import FeedForward
 from utils import load_sizes
-from agent.const import AGENT_STATE
+from agent.const import AGENT_STATE, NUM_VALUE_PARAMS
 from constants import SLR, BYR, NUM_COMMON_CONS
 from featnames import LSTG
 
@@ -16,11 +16,13 @@ class AgentModel(torch.nn.Module):
     4. Both networks use batch normalization
     5. Neither network uses dropout
     """
-    def __init__(self, byr=None, value=True):
+    def __init__(self, byr=None, value=True,
+                 num_value_params=NUM_VALUE_PARAMS):
         """
         Initializes feed-forward networks for agents.
         :param bool byr: use buyer sizes if True
         :param bool value: estimate value if true
+        :param int num_value_params: size of value network output
         """
         super().__init__()
 
@@ -37,7 +39,7 @@ class AgentModel(torch.nn.Module):
 
         # value net
         if self.value:
-            sizes['out'] = 5
+            sizes['out'] = num_value_params
             self.value_net = FeedForward(sizes=sizes)
 
     def forward(self, observation, prev_action=None, prev_reward=None, value_only=False):

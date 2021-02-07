@@ -308,7 +308,7 @@ def safe_reindex(obj=None, idx=None, fill_value=None):
 
     obj = pd.DataFrame(index=idx).join(obj)
     if fill_value is not None:
-        obj.loc[obj.isna()] = fill_value
+        obj.loc[obj.isna().squeeze()] = fill_value
     else:
         assert obj.isna().sum().sum() == 0
 

@@ -218,20 +218,13 @@ class BuyerAgent(SplitCategoricalPgAgent):
 
 
 class BuyerTurnCostAgent(BuyerAgent):
-    def __init__(self, turn_cost=None, **kwargs):
-        super().__init__(**kwargs)
-        self.min -= 3 * turn_cost / 9.95 + EPS
 
     def _calculate_value(self, value_params):
-        _, a, b = parse_value_params(value_params)
-        beta_mean = a / (a + b) * (self.max - self.min) + self.min
-        return beta_mean
+        return value_params
 
     def get_value_loss(self, value_params, return_, valid):
-        _, a, b = parse_value_params(value_params)
-        norm_return = (return_ - self.min) / (self.max - self.min)
-        lnL = torch.sum(Beta(a, b).log_prob(norm_return))
-        return -lnL
+        value_error = 0.5 * (value_params - return_) ** 2
+        return value_error[valid].mean()
 
 
 def parse_value_params(value_params):

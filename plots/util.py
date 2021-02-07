@@ -4,6 +4,7 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator, FuncFormatter
 from viscid.plot import vpyplot as vlt
+from agent.const import TURN_COST_CHOICES
 from plots.const import BIN_TICKS, SLRBO_TICKS, FONTSIZE
 from constants import FIG_DIR, MAX_DELAY_TURN, MAX_DELAY_ARRIVAL, \
     DAY, HOUR, EPS
@@ -915,23 +916,53 @@ def pdf_plot(path, obj):
                  **args)
 
 
+def plot_humans(df=None, offsets=None):
+    humans = df.loc[('Humans', None), :]
+    plt.plot(humans.x, humans.y, 'Xk')
+    plt.text(humans.x + offsets[0], humans.y + offsets[1], 'Humans')
+
+
+def plot_agents(df=None, offsets=None, label=None, lspec='-o', color='k'):
+    plt.plot(df.x, df.y, lspec, label=label, color=color)
+    if offsets is not None:
+        for label in df.index:
+            plt.text(df.loc[label, 'x'] + offsets[0],
+                     df.loc[label, 'y'] + offsets[1],
+                     label)
+
+
 def pareto_plot(path, df):
     name = get_name(path)
-    if name == 'all':
+    if name == 'discount':
+        args = dict(xlabel='Purchase rate',
+                    ylabel='Discount on list price (%)',
+                    ylim=[15, 40], xlim=[.5, 1])
+        df['y'] *= 100
+    elif name == 'dollar':
         args = dict(xlabel='Purchase rate',
                     ylabel='Discount on list price ($)',
-                    ylim=[15, 40], xlim=[.6, 1])
+                    ylim=[15, 40], xlim=[.5, 1])
     elif name == 'sales':
         args = dict(xlabel='Purchase rate',
-                    ylabel='Savings ($)',
-                    ylim=[0, 20], xlim=[.6, 1])
+                    ylabel='Savings on observed sale price ($)',
+                    ylim=[0, 20], xlim=[.5, 1])
     else:
         raise NotImplementedError('Invalid name: {}'.format(name))
 
-    plt.plot(df.x, df.y, 'ok')
-    for label in df.index:
-        x = df.loc[label, 'x'] + (args['xlim'][1] - args['xlim'][0]) / 100
-        y = df.loc[label, 'y'] + (args['ylim'][1] - args['ylim'][0]) / 100
-        plt.text(x, y, label)
+    offsets = [(args[k][1] - args[k][0]) / 100
+               for k in ['xlim', 'ylim']]
 
+    # zero turn cost
+    plot_humans(df=df, offsets=offsets)
+    df0 = df.xs('0', level='turn_cost')
+    plot_agents(df=df0, offsets=offsets)
     save_fig(path, legend=False, **args)
+
+    # values item at list price
+    names = {'$1-\\epsilon$': 'minus', '$1+\\epsilon$': 'plus'}
+    for gamma in ['$1-\\epsilon$', '$1+\\epsilon$']:
+        plot_humans(df=df, offsets=offsets)
+        plot_agents(df=df0, lspec='-', color='gray')
+        subset = df.xs(gamma, level='gamma')
+        plot_agents(df=subset, offsets=offsets)
+        save_fig('{}_{}'.format(path, names[gamma]), legend=False, **args)

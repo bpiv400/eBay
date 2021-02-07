@@ -25,9 +25,12 @@ AGENT_STATE = 'agent_state_dict'
 
 # economic parameters
 DELTA_SLR = [0., .7]
-DELTA_BYR = [.85, .9, 1., 1.25, 1.5, 2.]
+DELTA_BYR = [.75, .85, .9, 1., 1.25, 1.5, 2.]
 DELTA_CHOICES = DELTA_SLR + DELTA_BYR
-TURN_COST_CHOICES = [0, 1, 2, 5]
+TURN_COST_CHOICES = range(6)
+
+# size of value network output
+NUM_VALUE_PARAMS = 5
 
 # names for opt_info namedtuple
 FIELDS = ["ActionsPerTraj", "ThreadsPerTraj", "DaysToDone",

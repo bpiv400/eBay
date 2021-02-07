@@ -2,7 +2,7 @@ import pandas as pd
 from utils import unpickle, load_file, load_data, safe_reindex, get_role
 from constants import AGENT_DIR, IDX, SIM_DIR
 from featnames import SLR, BYR, NORM, AUTO, INDEX, THREAD, CON, \
-    LOOKUP, X_OFFER, START_PRICE, X_THREAD
+    LOOKUP, X_OFFER, START_PRICE, X_THREAD, OUTCOME_FEATS, TEST
 
 
 def get_log_dir(byr=None):
@@ -56,6 +56,9 @@ def get_norm_reward(data=None, values=None, byr=False):
 
 
 def only_byr_agent(data=None, drop_thread=True):
+    if data is None:
+        return None
+
     for k, v in data.items():
         if THREAD in v.index.names:
             data[k] = v.xs(1, level=THREAD, drop_level=drop_thread)
@@ -89,7 +92,8 @@ def get_slr_valid(data=None):
     return data
 
 
-def load_valid_data(part=None, run_dir=None, byr=None, clock=False):
+def load_valid_data(part=TEST, run_dir=None, byr=None,
+                    clock=False, minimal=False):
     # error checking
     if run_dir is not None:
         assert byr is None
@@ -99,6 +103,10 @@ def load_valid_data(part=None, run_dir=None, byr=None, clock=False):
     data = load_data(part=part, run_dir=run_dir, clock=clock)
     if X_OFFER not in data:
         return None
+
+    # restrict columns
+    if minimal:
+        data[X_OFFER] = data[X_OFFER][OUTCOME_FEATS]
 
     # restrict to valid listings
     return get_byr_valid(data) if byr else get_slr_valid(data)
