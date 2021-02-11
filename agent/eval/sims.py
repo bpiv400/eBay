@@ -32,7 +32,8 @@ def main():
     # generator
     gen_cls = AgentGenerator
     if args.heuristic:
-        model = HeuristicByr() if args.byr else HeuristicSlr(delta=args.delta)
+        model_cls = HeuristicByr if args.byr else HeuristicSlr
+        model = model_cls(delta=args.delta)
     else:
         run_dir = get_run_dir(byr=args.byr,
                               delta=args.delta,
