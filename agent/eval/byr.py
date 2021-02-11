@@ -102,7 +102,7 @@ def main():
                     byr_con = data[X_OFFER][CON].unstack()[IDX[BYR]]
 
                     # rejects list price
-                    key = '$1-\\epsilon$_{}'.format(turn_cost)
+                    key = '$1-\\epsilon$_${}'.format(turn_cost)
                     data_rej = amend_outcome(data=data,
                                              slr_norm=slr_norm,
                                              byr_con=byr_con,
@@ -110,7 +110,7 @@ def main():
                     output[key] = get_return(data=data_rej, norm=norm)
 
                     # accepts list price
-                    key = '$1+\\epsilon$_{}'.format(turn_cost)
+                    key = '$1+\\epsilon$_${}'.format(turn_cost)
                     data_acc = amend_outcome(data=data,
                                              slr_norm=slr_norm,
                                              byr_con=byr_con,
@@ -118,7 +118,7 @@ def main():
                     output[key] = get_return(data=data_acc, norm=norm)
 
                 else:
-                    key = '${}$_{}'.format(delta, turn_cost)
+                    key = '${}$_${}'.format(delta, turn_cost)
                     output[key] = get_return(data=data, norm=norm)
 
     save_table(run_dir=log_dir, output=output)

@@ -51,6 +51,9 @@ class HeuristicSlr:
 
 
 class HeuristicByr:
+    def __init__(self, delta=None):
+        assert delta in [.75, 1., 1.5]
+        self.delta = delta
 
     def __call__(self, observation=None):
         # noinspection PyProtectedMember
@@ -62,13 +65,25 @@ class HeuristicByr:
         # index of action
         f = wrapper(turn)
         if turn == 1:
-            idx = f(.5)
+            if self.delta == 1.5:
+                idx = f(.6)
+            else:
+                idx = f(.5)
 
         elif turn in [3, 5]:
-            idx = f(.4)
+            if self.delta == 1:
+                idx = f(.4)
+            elif self.delta == 1.5:
+                idx = f(.5)
+            else:
+                idx = f(.17) if turn == 3 else f(.33)
 
         elif turn == 7:
-            idx = f(1)
+            if self.delta >= 1:
+                idx = f(1)
+            else:
+                norm = get_last_norm(turn=turn, x=x)
+                idx = f(0) if norm > self.delta else f(1)
         else:
             raise ValueError('Invalid turn: {}'.format(turn))
 

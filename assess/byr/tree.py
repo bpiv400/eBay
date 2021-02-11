@@ -7,7 +7,7 @@ from utils import load_feats, safe_reindex
 from agent.const import DELTA_BYR
 from constants import DAY, MAX_DAYS, IDX
 from featnames import LOOKUP, CON, NORM, START_PRICE, START_TIME, \
-    BYR_HIST, X_OFFER, X_THREAD, INDEX, CLOCK, TEST, BYR, REJECT, MSG, AUTO
+    BYR_HIST, X_OFFER, X_THREAD, INDEX, CLOCK, BYR, REJECT, MSG, AUTO
 
 LISTING_FEATS = ['fdbk_score', 'fdbk_pstv', 'photos', 'store', 'slr_us', 'fast']
 
@@ -19,7 +19,7 @@ def main():
     delta = parser.parse_args().delta
 
     run_dir = get_run_dir(byr=True, delta=delta)
-    data = load_valid_data(part=TEST, run_dir=run_dir, clock=True)
+    data = load_valid_data(run_dir=run_dir, clock=True)
 
     # add listing features to data
     listings = load_feats('listings')[LISTING_FEATS]
@@ -40,7 +40,7 @@ def main():
         y = pd.Series('', index=con.index)
         y.loc[con == 0] = 'Walk'
         y.loc[con == 1] = 'Accept'
-        threshold = .6 if turn == 1 else .25
+        threshold = .6 if turn == 1 else .33
         y.loc[(con > 0) & (con <= threshold)] = 'Low'
         y.loc[(con > threshold) & (con < 1)] = 'High'
         print(np.unique(y))

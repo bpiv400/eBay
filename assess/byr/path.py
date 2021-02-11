@@ -1,48 +1,41 @@
-from agent.util import only_byr_agent, load_valid_data, get_output_dir
-from featnames import X_OFFER, CON, TEST
+import pandas as pd
+from agent.util import only_byr_agent, load_valid_data, get_run_dir
+from utils import topickle
+from constants import PLOT_DIR
+from featnames import X_OFFER, NORM, CON, LOOKUP, START_PRICE
 
 
-def feats_from_con(con=None):
-    d = {'ends': con == -1, 'acc': con == 1, 'rej': con == 0}
-    d['counter'] = ~d['acc'] & ~d['rej'] & ~d['ends']
-    print('\tListing ends: {}'.format(d['ends'].mean()))
-    print('\tSeller accepts: {}'.format(d['acc'].mean()))
-    print('\tSeller counters: {}'.format(d['counter'].mean()))
-    print('\tSeller rejects: {}'.format(d['rej'].mean()))
-    return d
+def get_path(data=None):
+    con = data[X_OFFER][CON].unstack()
+    norm = data[X_OFFER][NORM].unstack()
+    norm = norm.loc[(con[5] > 0) & (con[5] < 1), range(1, 7)]
+    norm.loc[norm[6].isna(), 6] = 0
+    start_price = data[LOOKUP][START_PRICE].loc[norm.index]
+    for t in norm.columns:
+        if t in [2, 4, 6]:
+            norm[t] = 1 - norm[t]
+        norm[t] *= start_price
+    norm[0] = start_price
+    norm = norm.sort_index(axis=1)
+    print(norm.mean())
+    return norm.mean()
 
 
 def main():
-    run_dir = get_output_dir(part=TEST, heuristic=True)
-    data = only_byr_agent(load_valid_data(part=TEST, run_dir=run_dir))
-    con = data[X_OFFER][CON].unstack()
-    con[con.isna()] = -1
+    df = pd.DataFrame(index=range(1, 8))
 
-    # first offer is half of list price
-    assert all(con[1] == .5)
+    data_obs = only_byr_agent(load_valid_data(byr=True, minimal=True))
+    df['Humans'] = get_path(data_obs)
 
-    # turn 2
-    print('Turn 2')
-    feats2 = feats_from_con(con=con[2])
+    for delta in [.9, 1, 2]:
+        run_dir = get_run_dir(byr=True, delta=delta)
+        data_rl = only_byr_agent(load_valid_data(run_dir=run_dir,
+                                                 minimal=True))
+        df['$\\lambda = {}$'.format(delta)] = get_path(data_rl)
 
-    # turn 4
-    idx4 = con[con[3] > -1].index
-    feats4 = dict()
-    for k in ['counter', 'rej']:
-        print('Turn 4 after turn 2 {}'.format(k))
-        mask = feats2[k].loc[idx4]
-        idx = mask[mask].index
-        feats4[k] = feats_from_con(con=con[4].loc[idx])
+    d = {'simple_conpath': df}
 
-    # turn 6
-    for k2 in ['counter', 'rej']:
-        s = con[5].loc[feats2[k2][feats2[k2]].index]
-        idx6 = s[s > -1].index
-        for k4 in ['counter', 'rej']:
-            print('Turn 6 after turn 2 {} & turn 4 {}'.format(k2, k4))
-            mask = feats4[k2][k4].loc[idx6]
-            idx = mask[mask].index
-            _ = feats_from_con(con=con[6].loc[idx])
+    topickle(d, PLOT_DIR + 'byrpath.pkl')
 
 
 if __name__ == '__main__':

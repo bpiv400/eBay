@@ -2,23 +2,23 @@ import numpy as np
 import pandas as pd
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-from matplotlib.ticker import MaxNLocator, FuncFormatter
 from viscid.plot import vpyplot as vlt
-from agent.const import TURN_COST_CHOICES
+from agent.const import DELTA_CHOICES
 from plots.const import BIN_TICKS, SLRBO_TICKS, FONTSIZE
-from constants import FIG_DIR, MAX_DELAY_TURN, MAX_DELAY_ARRIVAL, \
+from constants import MAX_DELAY_TURN, MAX_DELAY_ARRIVAL, \
     DAY, HOUR, EPS
 from featnames import CON, NORM, DELAY, ARRIVAL, MSG, ACCEPT, \
     REJECT, META, CNDTN, BYR, SLR, EXP
+from plots.save import save_fig
 
 plt.style.use('seaborn-colorblind')
+mpl.rcParams['axes.grid'] = True
+
 COLORS = ['k'] + vlt.get_current_colorcycle()
 TRICOLOR = {'Humans': COLORS[0],
             'Agent': COLORS[1],
             'Impatient agent': COLORS[1],
             'Patient agent': COLORS[2]}
-
-mpl.rcParams['axes.grid'] = True
 
 
 def get_name(path):
@@ -30,124 +30,6 @@ def get_log_ticks(idx=None, ticks=BIN_TICKS):
     lower = 10 ** idx.min()
     ticks = [t for t in ticks if lower <= t <= upper]
     return ticks
-
-
-def remove_leading_zero(x, pos):
-    """Format 1 as 1, 0 as 0, and all values whose absolute values is between
-    0 and 1 without the leading "0." (e.g., 0.7 is formatted as .7 and -0.4 is
-    formatted as -.4).
-    :param x: value to reformat
-    :param pos: unused
-    :return: string
-    """
-    val_str = '{:g}'.format(x)
-    if 0 < np.abs(x) < 1:
-        return val_str.replace("0", "", 1)
-    else:
-        return val_str
-
-
-def save_fig(path, legend=True, legend_kwargs=None, reverse_legend=False,
-             xlabel=None, ylabel=None, square=True, xaxis=True, yaxis=True,
-             xticks=None, yticks=None, xticklabels=None, yticklabels=None,
-             xlim=None, ylim=None, gridlines=True, integer_xticks=False,
-             logx=False, logy=False, legend_outside=False, fontsize=FONTSIZE, **args):
-
-    # axis limits
-    if xlim is not None:
-        plt.gca().set_xbound(xlim)
-    if ylim is not None:
-        plt.gca().set_ybound(ylim)
-
-    # legend
-    if legend:
-        handles, labels = plt.gca().get_legend_handles_labels()
-
-        if reverse_legend:
-            handles = reversed(handles)
-            labels = reversed(labels)
-
-        if legend_kwargs is None:
-            legend_kwargs = dict()
-        if legend_outside:
-            legend_kwargs['bbox_to_anchor'] = (1, 1)
-            legend_kwargs['loc'] = 'upper left'
-            legend_kwargs['frameon'] = False
-        else:
-            legend_kwargs['frameon'] = gridlines
-        plt.legend(handles=handles,
-                   labels=labels,
-                   handlelength=1.,
-                   fancybox=False,
-                   fontsize=fontsize,
-                   title_fontsize=fontsize,
-                   **legend_kwargs)
-
-    # axis labels and tick labels
-    formatter = FuncFormatter(remove_leading_zero)
-    if xlabel is not None:
-        plt.xticks(fontsize=fontsize)
-        plt.gca().xaxis.set_major_formatter(formatter)
-        plt.xlabel(xlabel, fontsize=fontsize)
-    else:
-        plt.xticks([])
-
-    if ylabel is not None:
-        plt.yticks(fontsize=fontsize)
-        plt.gca().yaxis.set_major_formatter(formatter)
-        plt.ylabel(ylabel, fontsize=fontsize)
-    else:
-        plt.yticks([])
-
-    if xticks is not None:
-        plt.gca().set_xticks(xticks)
-    if yticks is not None:
-        plt.gca().set_yticks(yticks)
-
-    if logx:
-        plt.xscale('log')
-    if logy:
-        plt.yscale('log')
-
-    if integer_xticks:
-        plt.gca().xaxis.set_major_locator(MaxNLocator(integer=True))
-
-    if xticklabels is not None:
-        plt.gca().set_xticklabels(xticklabels)
-    if yticklabels is not None:
-        plt.gca().set_yticklabels(yticklabels)
-
-    # gridlines
-    if gridlines:
-        plt.grid(axis='both',
-                 which='both',
-                 color='gray',
-                 linestyle='-',
-                 linewidth=0.5)
-    else:
-        plt.grid(axis='both', visible=False)
-
-    # hide axes
-    if not xaxis or not yaxis:
-        plt.gca().spines['right'].set_visible(False)
-        plt.gca().spines['top'].set_visible(False)
-    if not xaxis:
-        plt.gca().spines['bottom'].set_visible(False)
-    if not yaxis:
-        plt.gca().spines['left'].set_visible(False)
-
-    if square:
-        plt.gca().set_aspect(1.0 / plt.gca().get_data_ratio(),
-                             adjustable='box')
-
-    # save
-    plt.savefig(FIG_DIR + '{}.png'.format(path),
-                format='png',
-                # transparent=True,
-                bbox_inches='tight')
-
-    # close
-    plt.close()
 
 
 def add_diagonal(df):
@@ -270,7 +152,7 @@ def cdf_plot(path, obj):
                     label = obj.columns[i]
                     plt.plot(s_agent.index, s_agent, ds='steps-post',
                              color=COLORS[i], label=label)
-                    save_fig('{}_{}'.format(path, label[10:-1]),
+                    save_fig('{}_{}'.format(path, label.split(' ')[0]),
                              ylim=[0, 1],
                              ylabel='Cumulative share of {}'.format(den),
                              legend=True, **args)
@@ -289,6 +171,19 @@ def cdf_plot(path, obj):
     save_fig(path, ylim=[0, 1],
              ylabel='Cumulative share of {}'.format(den),
              legend=True, **args)
+
+
+def draw_simple(obj=None, dsets=None, i=None, colors=None):
+    dset = dsets[i]
+    df_i = obj.xs(dset, level=0, axis=1)
+    c = colors[dset] if type(colors) is dict else colors[i]
+    plt.plot(df_i.index, df_i.beta, '-', color=c,
+             label=(None if dset == 'Humans' else dset))
+    if 'err' in df_i.columns:
+        plt.plot(df_i.index, df_i.beta + 1.96 * df_i.err, '--',
+                 color=c)
+        plt.plot(df_i.index, df_i.beta - 1.96 * df_i.err, '--',
+                 color=c)
 
 
 def simple_plot(path, obj):
@@ -367,12 +262,6 @@ def simple_plot(path, obj):
                     xticklabels=BIN_TICKS,
                     xlabel='List price ($)',
                     ylabel='Discount')
-    elif name == 'offersbin':
-        args = dict(xlim=[1, 2.5], ylim=[1, 2.4],
-                    xticks=np.log10(BIN_TICKS),
-                    xticklabels=BIN_TICKS,
-                    xlabel='List price ($)',
-                    ylabel='Number of buyer offers')
     elif name == 'avgdiscountbin':
         args = dict(xlim=[1, 2.5], ylim=[0, 50],
                     xticks=np.log10(BIN_TICKS),
@@ -385,10 +274,30 @@ def simple_plot(path, obj):
                     xticklabels=BIN_TICKS,
                     xlabel='List price ($)',
                     ylabel='Discount / list price')
+    elif name == 'listbin':
+        args = dict(xlim=[1, 2.5], ylim=[0, 1],
+                    xticks=np.log10(BIN_TICKS),
+                    xticklabels=BIN_TICKS,
+                    xlabel='List price ($)',
+                    ylabel='Turn 1: Pr(accept)')
+    elif name == 'listoffers':
+        args = dict(xlim=[1, 2.5], ylim=[1, 3],
+                    xticks=np.log10(BIN_TICKS),
+                    xticklabels=BIN_TICKS,
+                    xlabel='List price ($)',
+                    ylabel='Number of buyer offers',
+                    legend_kwargs=dict(loc='upper left'))
+    elif name == 'listfirst':
+        args = dict(xlim=[1, 3], ylim=[.5, .75],
+                    xticks=np.log10(BIN_TICKS),
+                    xticklabels=BIN_TICKS,
+                    xlabel='List price ($)',
+                    ylabel='Turn 1: Offer  / list price')
+    elif name == 'conpath':
+        args = dict(xlabel='Turn', ylabel='Offer / list price',
+                    xlim=[1, 6], ylim=[.5, 1])
     else:
         raise NotImplementedError('Invalid name: {}'.format(name))
-
-    plt.clf()
 
     if type(obj) is pd.Series:
         plt.plot(obj.index, obj, '-k')
@@ -412,19 +321,17 @@ def simple_plot(path, obj):
 
     else:
         dsets = obj.columns.get_level_values(0).unique()
-        colors = TRICOLOR if dsets[0] == 'Humans' else COLORS[1:]
+        if dsets[0] == 'Humans':
+            if dsets[1] not in ['$0'] + DELTA_CHOICES:
+                colors = TRICOLOR
+            else:
+                colors = COLORS
+        else:
+            colors = COLORS[1:]
 
         # plot together
         for i in range(len(dsets)):
-            dset = dsets[i]
-            df_i = obj.xs(dset, level=0, axis=1)
-            c = colors[dset] if type(colors) is dict else colors[i]
-            plt.plot(df_i.index, df_i.beta, '-', label=dset, color=c)
-            if 'err' in df_i.columns:
-                plt.plot(df_i.index, df_i.beta + 1.96 * df_i.err, '--',
-                         color=c)
-                plt.plot(df_i.index, df_i.beta - 1.96 * df_i.err, '--',
-                         color=c)
+            draw_simple(obj=obj, dsets=dsets, i=i, colors=colors)
 
         if name.endswith(NORM):
             add_diagonal(obj)
@@ -433,17 +340,13 @@ def simple_plot(path, obj):
 
         # plot separately
         for i in range(len(dsets)):
-            dset = dsets[i]
-            df_i = obj.xs(dset, level=0, axis=1)
-            plt.plot(df_i.index, df_i.beta, '-k', label=dset)
-            if 'err' in df_i.columns:
-                plt.plot(df_i.index, df_i.beta + 1.96 * df_i.err, '--k')
-                plt.plot(df_i.index, df_i.beta - 1.96 * df_i.err, '--k')
+            for j in range(i+1):
+                draw_simple(obj=obj, dsets=dsets, i=j, colors=colors)
 
-            if name.endswith(NORM):
-                add_diagonal(obj)
+                if j == 0 and name.endswith(NORM):
+                    add_diagonal(obj)
 
-            save_fig('{}_{}'.format(path, dset), legend=False, **args)
+            save_fig('{}_{}'.format(path, i), legend=(i > 0), **args)
 
 
 def training_plot(path, df):
@@ -528,10 +431,6 @@ def response_plot(path, obj):
         args = dict(xlim=[.4, 1], ylim=[.4, 1],
                     xlabel='Turn 1: Offer / list price',
                     ylabel='Payoff / list price')
-    elif name == 'hist':
-        args = dict(xlim=[.4, 1.01], ylim=[0, .7],
-                    xlabel='Turn 1: Offer / list price',
-                    ylabel='Buyer experience percentile')
     elif name == 'accnorm':
         args = dict(xlabel='Turn 1: Concession',
                     ylabel='Turn 3: Pr(accept)')
@@ -572,6 +471,30 @@ def response_plot(path, obj):
         args = dict(xlim=[.65, 1], ylim=[0, 1],
                     xlabel='Turn 2: Offer / list price',
                     ylabel='Turn 3: Pr({})'.format(ylabel))
+    elif name == 'conacc':
+        t = int(path[-1])
+        dim = obj[0].index
+        args = dict(xlabel='Turn {}: Concession'.format(t - 1),
+                    ylabel='Turn {}: Pr(accept)'.format(t),
+                    ylim=[0, 1], xlim=[min(dim), max(dim)],
+                    legend_kwargs=dict(loc='upper left'))
+    elif name.startswith('hist'):
+        if name.endswith('acc1'):
+            ylabel = 'Turn 1: Pr(accept)'
+            ylim = [0, 1]
+        elif name.endswith('con1'):
+            ylabel = 'Turn 1: Offer / list price'
+            ylim = [.5, .75]
+        elif name.endswith('offers'):
+            ylabel = 'Number of buyer offers'
+            ylim = [1, 2]
+        else:
+            raise NotImplementedError('Invalid name: {}'.format(name))
+        labels = [0, 1, 3, 10, 30, 100, 300, 1000]
+        ticks = list(obj[1].index) + list(np.log10(labels[1:]))
+        args = dict(xticks=ticks, xticklabels=labels,
+                    ylabel=ylabel, xlabel='Buyer experience',
+                    ylim=ylim)
     elif 'slrbo' in name:
         if name == 'expslrbo':
             ylabel = 'Expirations / manual rejects'
@@ -611,7 +534,8 @@ def response_plot(path, obj):
                               dots=None if dots is None else dots.xs(dset, level=0, axis=1),
                               diagonal=name.endswith(NORM),
                               label=dset)
-                save_fig('{}_{}'.format(path, dset), legend=False, **args)
+                save_fig('{}_{}'.format(path, dset.split(' ')[0]),
+                         legend=False, **args)
 
         # then plot data all together
         if len(dsets) < len(COLORS):
@@ -682,7 +606,8 @@ def bar_plot(path, obj):
     elif 'dollar' in name:
         lower, upper = np.floor(obj.min()) - 1, np.ceil(obj.max()) + 1
         ylim = [lower, upper]
-        ylabel = '{} ($)'.format('Discount' if name.endswith('2') else 'Payoff')
+        ylabel = '{} ($)'.format('Discount' if name.endswith('2')
+                                 else 'Payoff')
         args = dict(ylim=ylim,
                     legend=False, xlabel='',
                     ylabel=ylabel,
@@ -700,12 +625,30 @@ def bar_plot(path, obj):
         args = dict(xlabel='Turn', ylabel='Share of sales')
     elif name == 'discount':
         args = dict(xlabel='Turn', ylabel='Average discount ($)')
+    elif name == 'listoffers':
+        args = dict(xlabel='List price multiplier',
+                    ylabel='Number of buyer offers',
+                    ylim=[1, 3])
+    elif name == 'listfirst':
+        args = dict(xlabel='List price multiplier',
+                    ylabel='Turn 1: Offer / list price',
+                    ylim=[.49, .66])
+    elif name == 'listbin':
+        args = dict(xlabel='List price multiplier',
+                    ylabel='Turn 1: Pr(accept)',
+                    ylim=[0, .3])
     else:
         raise NotImplementedError('Invalid name: {}'.format(name))
 
     if type(obj) is pd.Series:
-        obj.plot.bar(rot=0, color=COLORS[0])
-        plt.gca().axhline(c='k', lw=1)
+        if 'Humans' in obj.index:
+            plt.gca().axhline(y=obj.loc['Humans'], label='Humans',
+                              c='k', ls='--', lw=1)
+            obj = obj.drop('Humans')
+            obj.plot.bar(rot=45, color='gray', label='')
+        else:
+            obj.plot.bar(rot=0, color=COLORS[0])
+            plt.gca().axhline(c='k', lw=1)
     else:
         rot = 45 if len(obj.columns) > 3 else 0
         obj.plot.bar(rot=rot)
@@ -777,7 +720,7 @@ def contour_plot(path, s):
     elif name == 'rejdays':
         args = dict(xlabel='Turn 1: Offer / list price',
                     ylabel='Days to first arrival',
-                    zlabel='Turn 2: Pr(reject)' if suffix == 'store' else None)
+                    zlabel='Turn 2: Pr(reject)')
     elif name == 'accdays':
         args = dict(xlabel='Turn 1: Offer / list price',
                     ylabel='Days to first arrival',
@@ -795,9 +738,6 @@ def contour_plot(path, s):
                     xlabel='Turn 1: Offer / list price',
                     ylabel='List price ($)',
                     zlabel=zlabel if suffix in ['data', name] else None)
-    elif name == 'rejdays':
-        args = dict(ylabel='Days to first offer',
-                    xlabel='Turn 1: Offer / list price')
     elif name in ['offer2binwalk', 'offer2binacc']:
         turn = int(name[5])
         ticks = get_log_ticks(s.index.levels[1])
@@ -811,6 +751,12 @@ def contour_plot(path, s):
     else:
         raise NotImplementedError('Invalid name: {}'.format(name))
 
+    # with colorbar
+    draw_contour(s=s, **args)
+    save_fig('{}_bar'.format(path), legend=False, **args)
+
+    # without colorbar
+    args['zlabel'] = None
     draw_contour(s=s, **args)
     save_fig(path, legend=False, **args)
 
@@ -936,12 +882,12 @@ def pareto_plot(path, df):
     if name == 'discount':
         args = dict(xlabel='Purchase rate',
                     ylabel='Discount on list price (%)',
-                    ylim=[15, 40], xlim=[.5, 1])
+                    ylim=[15, 45], xlim=[.5, 1])
         df['y'] *= 100
     elif name == 'dollar':
         args = dict(xlabel='Purchase rate',
                     ylabel='Discount on list price ($)',
-                    ylim=[15, 40], xlim=[.5, 1])
+                    ylim=[15, 45], xlim=[.5, 1])
     elif name == 'sales':
         args = dict(xlabel='Purchase rate',
                     ylabel='Savings on observed sale price ($)',
@@ -954,7 +900,7 @@ def pareto_plot(path, df):
 
     # zero turn cost
     plot_humans(df=df, offsets=offsets)
-    df0 = df.xs('0', level='turn_cost')
+    df0 = df.xs('$0', level='turn_cost')
     plot_agents(df=df0, offsets=offsets)
     save_fig(path, legend=False, **args)
 
