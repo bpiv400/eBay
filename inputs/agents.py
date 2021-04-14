@@ -108,7 +108,7 @@ def main():
     print('{}/{}'.format(VALIDATION, role))
 
     # input dataframes, output processed dataframes
-    data = load_data(part=VALIDATION)
+    data = load_data(part=VALIDATION, clock=True)
     d = process_inputs(data=data, byr=byr)
 
     # save various output files

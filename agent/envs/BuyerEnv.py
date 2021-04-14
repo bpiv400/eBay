@@ -155,10 +155,6 @@ class BuyerEnv(AgentEnv):
         return value - self.outcome.price - penalty, True
 
     def _init_agent_thread(self, thread=None, hist=None):
-        # increment counter
-        thread.set_id(self.thread_counter)
-        self.thread_counter += 1
-
         # construct sources
         sources = ThreadSources(x_lstg=self.x_lstg)
         clock_feats = get_clock_feats(thread.priority)

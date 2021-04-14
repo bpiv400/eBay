@@ -15,10 +15,6 @@ merge m:1 lstg using dta/w2v_slr, nogen keep(3) keepus(leaf)
 savesome byr leaf using dta/w2v_byr, replace
 drop leaf
 
-* restrict lstgs and merge in start_price
-
-merge m:1 lstg using dta/listings, nogen keep(3) keepus(start_price)
-
 * clean clock
 
 g double clock = clock(src_cre_date, "DMYhms")
@@ -31,7 +27,7 @@ by slr lstg byr thread: replace seconds = (clock[_n+1] - clock) / 1000 if status
 
 * double entries
 
-collapse (min) *_hist, by(slr lstg byr thread clock seconds type status price message byr_us start_price)
+collapse (min) *_hist, by(slr lstg byr thread clock seconds type status price message byr_us)
 
 * double entries with different responses (keep first)
 
@@ -52,7 +48,7 @@ drop *length
 
 * double threads with identical attributes
 
-collapse (min) thread (min) seconds, by(slr lstg byr clock type status price message byr_us *_hist start_price)
+collapse (min) thread (min) seconds, by(slr lstg byr clock type status price message byr_us *_hist)
 
 * double threads with identical beginning (keep first response)
 
@@ -118,6 +114,16 @@ sort lstg thread index
 by lstg thread: replace clock = clock[_n-1] + 1000 * seconds[_n-1] if clock == .
 drop if clock == .
 drop seconds
+
+* save clock
+
+format %tc clock
+save clean/clock, replace
+
+* restrict lstgs and merge in start_price
+
+merge m:1 lstg using dta/listings, nogen keep(3) keepus(start_price)
+drop byr_hist
 
 * clean prices
 

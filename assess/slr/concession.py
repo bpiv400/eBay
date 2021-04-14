@@ -1,43 +1,54 @@
+import numpy as np
 import pandas as pd
-from agent.util import load_valid_data, load_values, get_run_dir
-from assess.util import bin_vs_reward, get_eval_df
+from agent.util import load_valid_data, get_run_dir
 from utils import topickle, safe_reindex
 from agent.const import DELTA_SLR
-from assess.const import SLR_NAMES
-from constants import PLOT_DIR
-from featnames import START_PRICE, LOOKUP, X_OFFER, NORM, AUTO
+from constants import PLOT_DIR, IDX, SLR
+from featnames import START_PRICE, LOOKUP, X_OFFER, X_THREAD, NORM, DAYS_SINCE_LSTG
 
 
-def mean_con(data=None):
-    auto = data[X_OFFER][AUTO]
-    norm = 1 - data[X_OFFER].loc[~auto, NORM].unstack()[[2, 4, 6]]
-    norm = norm[norm.count(axis=1) > 0]
+def get_con(data=None):
+    norm = data[X_OFFER][NORM].unstack()
+    norm.loc[:, IDX[SLR]] = 1 - norm.loc[:, IDX[SLR]]
     start_price = safe_reindex(data[LOOKUP][START_PRICE], idx=norm.index)
     for t in norm.columns:
         norm[t] *= start_price
-
     con = pd.DataFrame(index=norm.index)
+    con[1] = norm[1]
     con[2] = start_price - norm[2]
+    for t in range(3, 8):
+        con[t] = np.abs(norm[t - 2] - norm[t])
+    for t in con.columns:
+        con[t] /= start_price
+    return con.fillna(0)
 
-    for t in [4, 6]:
-        con[t] = norm[t - 2] - norm[t]
-        mask = norm[t - 2].isna() & ~norm[t].isna()
-        con.loc[mask, t] = start_price.loc[mask] - norm.loc[mask, t]
 
-    return con.mean()
+def get_day(data=None):
+    return 1 + np.floor(data[X_THREAD][DAYS_SINCE_LSTG])
+
+
+def get_df(data=None):
+    con = get_con(data=data)
+    day = get_day(data=data)
+    assert np.all(con.index == day.index)
+    df = pd.concat([con[t].groupby(day).mean() for t in con.columns], axis=1)
+    return df
 
 
 def main():
+    d, prefix = dict(), 'area_turncon'
+
     # human sellers
     data_obs = load_valid_data(byr=False, minimal=True)
-    con_obs = mean_con(data_obs)
-    print(con_obs)
+    d['{}_Humans'.format(prefix)] = get_df(data=data_obs)
 
+    # agent sellers
     for delta in DELTA_SLR:
         run_dir = get_run_dir(delta=delta)
         data_rl = load_valid_data(run_dir=run_dir, minimal=True)
-        con_rl = mean_con(data_rl)
-        print(con_rl)
+        d['{}_{}'.format(prefix, delta)] = get_df(data=data_rl)
+
+    topickle(d, PLOT_DIR + 'slrcon.pkl')
 
 
 if __name__ == '__main__':

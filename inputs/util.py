@@ -41,9 +41,9 @@ def get_arrival_times(clock=None, lstg_start=None, lstg_end=None, append_last=Fa
         'thread', append=True).squeeze()
 
     # threads 1 to N: real threads
-    thread_start = clock.xs(1, level='index')
-    threads = thread_start.reset_index('thread').drop(
-        'clock', axis=1).squeeze().groupby('lstg').max().reindex(
+    thread_start = clock.xs(1, level=INDEX)
+    threads = thread_start.reset_index(THREAD).drop(
+        'clock', axis=1).squeeze().groupby(LSTG).max().reindex(
         index=lstg_start.index, fill_value=0)
 
     # thread N+1: end of lstg

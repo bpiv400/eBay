@@ -34,15 +34,16 @@ NORM2_DIM = np.linspace(.65, .9, POINTS)
 NORM2_DIM_LONG = np.linspace(.6, 1, POINTS)
 NORM3_DIM = np.linspace(.5, .9, POINTS)
 NORM5_DIM = np.linspace(.55, .9, POINTS)
-LOG10_BIN_DIM = np.linspace(1, 3, POINTS)
+LOG10_BIN_DIM = np.linspace(1, 2.5, POINTS)
 LOG10_BO_DIM = np.linspace(0, 4, POINTS)
 BYR_NORM_DIMS = {1: NORM1_DIM, 3: NORM3_DIM, 5: NORM5_DIM}
 
 # for 2D plotting
 NORM1_DIM_SHORT = np.linspace(.4, .85, 50)
+LOG10_BIN_DIM_SHORT = np.linspace(1, 2.5, 50)
 
-xx1, xx2 = np.meshgrid(NORM1_DIM_SHORT, np.linspace(1, 2.5, 50))
+xx1, xx2 = np.meshgrid(NORM1_DIM_SHORT, LOG10_BIN_DIM_SHORT)
 NORM1_BIN_MESH = np.concatenate([xx1.reshape(-1, 1), xx2.reshape(-1, 1)], axis=1)
 
-xx1, xx2 = np.meshgrid(np.linspace(.65, .95, 50), np.linspace(1, 2.5, 50))
+xx1, xx2 = np.meshgrid(np.linspace(.65, .95, 50), LOG10_BIN_DIM_SHORT)
 NORM2_BIN_MESH = np.concatenate([xx1.reshape(-1, 1), xx2.reshape(-1, 1)], axis=1)

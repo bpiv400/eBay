@@ -12,8 +12,8 @@ from agent.const import AGENT_CONS
 from constants import INTERVAL_TURN, INTERVAL_CT_TURN, DAY, NUM_COMMON_CONS, IDX
 from featnames import BYR_HIST, START_PRICE, BYR, SLR, DELTA, TURN_COST
 
-Info = namedarraytuple("Info", ["days", "max_return", "num_actions", "num_threads",
-                                "turn", "thread_id", "priority", "agent_sale"])
+Info = namedarraytuple("Info", ["days", "max_return", "num_actions", "turn",
+                                "thread_id", "priority", "agent_sale"])
 EventLog = namedtuple("EventLog", ["priority", "thread_id", "turn"])
 
 
@@ -90,7 +90,6 @@ class AgentEnv(EBayEnv, Env):
         return Info(days=self._get_days(event.priority),
                     max_return=self.lookup[START_PRICE],
                     num_actions=self.num_actions,
-                    num_threads=self.thread_counter - 1,
                     turn=event.turn,
                     thread_id=event.thread_id,
                     priority=event.priority,

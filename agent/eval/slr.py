@@ -1,6 +1,6 @@
 import argparse
 import pandas as pd
-from agent.eval.util import read_table, save_table
+from agent.eval.util import load_table, save_table
 from agent.util import get_run_dir, load_values, get_norm_reward, \
     get_output_dir, load_valid_data
 from agent.const import DELTA_SLR
@@ -39,18 +39,18 @@ def main():
 
     run_dir = get_run_dir(delta=delta)
     if params.read:
-        read_table(run_dir=run_dir)
+        load_table(run_dir=run_dir)
 
     # preliminaries
-    values = delta * load_values(part=TEST, delta=delta)
+    values = delta * load_values(delta=delta)
     output = dict()
 
     # rewards from data
-    data = load_valid_data(part=TEST, byr=False)
+    data = load_valid_data(byr=False)
     output['Humans'] = get_return(data=data, values=values)
 
     # rewards from heuristic strategy
-    heuristic_dir = get_output_dir(heuristic=True, part=TEST, delta=delta)
+    heuristic_dir = get_output_dir(heuristic=True, delta=delta)
     data = load_valid_data(part=TEST, run_dir=heuristic_dir)
     if data is not None:
         output['Heuristic'] = get_return(data=data, values=values)

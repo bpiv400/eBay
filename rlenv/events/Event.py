@@ -28,7 +28,7 @@ class Event:
         priority over an arrival event.
         """
         if self.priority == other.priority:
-            return self.type == ARRIVAL
+            return self.type != ARRIVAL
         else:
             return self.priority < other.priority
 

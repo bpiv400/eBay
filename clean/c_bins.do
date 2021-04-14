@@ -32,7 +32,6 @@ rename *_thread *
 
 replace thread = . if bin
 replace index = . if bin
-replace byr_hist = . if bin
 replace clock = . if bin
 
 * differentiate between BINs from new buyers and BINs in threads
@@ -50,7 +49,6 @@ replace index = 1 if bin
 
 gsort lstg byr -thread
 by lstg byr: replace thread = thread[_n-1] if index == .
-by lstg byr: replace byr_hist = byr_hist[_n-1] if index == .
 
 * bins in threads: during buyer turn
 

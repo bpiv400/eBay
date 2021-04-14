@@ -18,7 +18,7 @@ do
     printf "Model %s: " $NAME
     GPU=$(bash repo/bash/gpu.sh)
     printf "starting on GPU %d\n" "$GPU"
-    python repo/sim/train.py --gpu "$GPU" --name "$NAME" --dropout $D  &>/dev/null &
+    python repo/sim/train.py --gpu "$GPU" --name "$NAME" --dropout "$D"  &>/dev/null &
     sleep 30
   done
 done
@@ -31,7 +31,7 @@ do
     printf "Model %s: " $NAME
     GPU=$(bash repo/bash/gpu.sh)
     printf "starting on GPU %d\n" "$GPU"
-    python repo/sim/train.py --gpu "$GPU" --name "$NAME" --dropout $D  &>/dev/null &
+    python repo/sim/train.py --gpu "$GPU" --name "$NAME" --dropout "$D"  &>/dev/null &
     sleep 30
   done
 done
@@ -44,7 +44,7 @@ do
     printf "Model %s: " $NAME
     GPU=$(bash repo/bash/gpu.sh)
     printf "starting on GPU %d\n" "$GPU"
-    python repo/sim/train.py --gpu "$GPU" --name "$NAME" --dropout $D  &>/dev/null &
+    python repo/sim/train.py --gpu "$GPU" --name "$NAME" --dropout "$D"  &>/dev/null &
     sleep 30
   done
 done

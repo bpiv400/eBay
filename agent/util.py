@@ -25,7 +25,7 @@ def get_run_dir(byr=None, delta=None, turn_cost=0, verbose=True):
     return run_dir
 
 
-def get_output_dir(byr=None, delta=None, part=None,
+def get_output_dir(byr=None, delta=None, part=TEST,
                    heuristic=False, turn_cost=0):
     run_dir = get_run_dir(byr=byr,
                           delta=delta,
@@ -118,7 +118,7 @@ def load_valid_data(part=TEST, run_dir=None, byr=None,
     return get_byr_valid(data) if byr else get_slr_valid(data)
 
 
-def load_values(part=None, delta=None, normalize=True):
+def load_values(part=TEST, delta=None, normalize=True):
     df = unpickle(SIM_DIR + '{}/values.pkl'.format(part))
     v = df.p * df.x / (1 - (1-df.p) * delta)
     if normalize:

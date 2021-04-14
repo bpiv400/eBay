@@ -11,12 +11,12 @@ for part in sim valid; do
     python repo/inputs/$f\.py --part $part &
   done
   for turn in {1..7}; do
-    python repo/inputs/concession.py --part $part --turn $turn &
-    if [ $turn -gt 1 ]; then
-      python repo/inputs/delay.py --part $part --turn $turn &
+    python repo/inputs/concession.py --part $part --turn "$turn" &
+    if [ "$turn" -gt 1 ]; then
+      python repo/inputs/delay.py --part $part --turn "$turn" &
     fi
-    if [ $turn -lt 7 ]; then
-      python repo/inputs/msg.py --part $part --turn $turn &
+    if [ "$turn" -lt 7 ]; then
+      python repo/inputs/msg.py --part $part --turn "$turn" &
     fi
   done
 done

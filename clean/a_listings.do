@@ -1,6 +1,6 @@
 clear all
-cd ~/eBay/
-import delim using /data/eBay/raw/listings.csv
+cd /data/eBay/
+import delim using raw/listings.csv
 
 * rename variables
 

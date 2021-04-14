@@ -80,9 +80,7 @@ class SplitCategoricalPgAgent(CategoricalPgAgent):
 
         # various counts
         num_actions = info.num_actions[done].numpy()
-        num_threads = info.num_threads[done].numpy()
         opt_info['ActionsPerTraj'] = num_actions
-        opt_info['ThreadsPerTraj'] = num_threads
         opt_info['DaysToDone'] = info.days[done].numpy()
 
         # action stats

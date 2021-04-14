@@ -37,8 +37,7 @@ def main():
     d = dict()
 
     # first threads in data
-    data = only_byr_agent(load_valid_data(part=TEST, byr=True),
-                          drop_thread=True)
+    data = only_byr_agent(load_valid_data(byr=True, minimal=True))
 
     # response type ~ buyer offer
     for t in IDX[BYR][:-1]:

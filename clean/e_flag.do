@@ -70,11 +70,9 @@ drop temp
 
 sort lstg thread index
 by lstg thread: egen double start_time = min(clock)
-foreach x in byr slr {
-	sort `x' start_time lstg thread index
-	by `x': replace `x'_hist = `x'_hist[_n-1] if `x'_hist == . & _n > 1
-	replace `x'_hist = 0 if `x'_hist == .
-}
+sort slr start_time lstg thread index
+by slr: replace slr_hist = slr_hist[_n-1] if slr_hist == . & _n > 1
+replace slr_hist = 0 if slr_hist == .
 drop slr start_time
 
 replace message = 0 if message == .
@@ -87,8 +85,8 @@ savesome lstg-message if !flag using dta/offers, replace
 
 * save threads
 
-collapse (max) bin (max) byr_us, by(lstg thread byr byr_hist end_time flag)
-	
-replace byr_hist = byr_hist - (1-bin)
+collapse (max) bin (max) byr_us, by(lstg thread byr end_time flag)
+merge 1:1 lstg byr using clean/hist, nogen keep(3) keepus(byr_hist)
 
+sort lstg thread
 save dta/threads, replace

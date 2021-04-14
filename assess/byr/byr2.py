@@ -2,10 +2,9 @@ import numpy as np
 from agent.util import load_valid_data, only_byr_agent
 from assess.util import ll_wrapper, kreg2
 from utils import topickle, safe_reindex
-from agent.const import COMMON_CONS
 from assess.const import NORM1_DIM_LONG, NORM1_BIN_MESH
 from constants import PLOT_DIR
-from featnames import X_OFFER, INDEX, TEST, NORM, LOOKUP, START_PRICE
+from featnames import X_OFFER, INDEX, NORM, LOOKUP, START_PRICE
 
 
 def get_feats(data=None):
@@ -21,24 +20,31 @@ def get_feats(data=None):
     return norm1.values, norm2.values, log10_price.values
 
 
+def wrapper(x=None, dim=NORM1_DIM_LONG, bw=(.05,)):
+    return lambda y: ll_wrapper(y=y, x=x, dim=dim, bw=bw)
+
+
 def main():
     d = dict()
 
     # observed
-    data = only_byr_agent(load_valid_data(part=TEST, byr=True))
+    data = only_byr_agent(load_valid_data(byr=True))
     x, y, z = get_feats(data=data)
+    f = wrapper(x=x)
 
     # norm2 ~ norm1
-    line, dots, bw = ll_wrapper(y, x,
-                                dim=NORM1_DIM_LONG,
-                                discrete=COMMON_CONS[1])
-    d['response_norm'] = line, dots
-    print('norm: {}'.format(bw[0]))
+    d['simple_norm'], bw = f(y)
 
-    # norm2 ~ norm1, list price
-    d['contour_normbin'], bw2 = kreg2(y=y, x1=x, x2=z,
-                                      mesh=NORM1_BIN_MESH, bw=bw)
-    print('bin: {}'.format(bw2))
+    # acc2 ~ norm1
+    d['simple_accept'], bw = f((y == x))
+
+    # rej2 ~ norm1
+    d['simple_reject'], bw = f((y == 1))
+
+    # # norm2 ~ norm1, list price
+    # d['contour_normbin'], bw2 = kreg2(y=y, x1=x, x2=z,
+    #                                   mesh=NORM1_BIN_MESH, bw=bw)
+    # print('bin: {}'.format(bw2))
 
     topickle(d, PLOT_DIR + 'byr2.pkl')
 

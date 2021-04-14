@@ -2,8 +2,9 @@ import numpy as np
 import pandas as pd
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+from matplotlib.colors import ListedColormap
 from viscid.plot import vpyplot as vlt
-from agent.const import DELTA_CHOICES
+from agent.const import DELTA_CHOICES, DELTA_SLR
 from plots.const import BIN_TICKS, SLRBO_TICKS, FONTSIZE
 from constants import MAX_DELAY_TURN, MAX_DELAY_ARRIVAL, \
     DAY, HOUR, EPS
@@ -19,6 +20,7 @@ TRICOLOR = {'Humans': COLORS[0],
             'Agent': COLORS[1],
             'Impatient agent': COLORS[1],
             'Patient agent': COLORS[2]}
+ALTERNATING = ListedColormap([COLORS[int(i % 2)+1] for i in range(1, 8)])
 
 
 def get_name(path):
@@ -213,6 +215,14 @@ def simple_plot(path, obj):
         args = dict(xlim=[0, 1], ylim=[0, 1],
                     xlabel='False positive rate',
                     ylabel='True positive rate')
+    elif name in [ACCEPT, REJECT]:
+        args = dict(xlim=[.4, .9], ylim=[0, 1],
+                    xlabel='Turn 1: Offer / list price',
+                    ylabel='Turn 2: Pr({})'.format(name))
+    elif name == NORM:
+        args = dict(xlim=[.4, 1], ylim=[.4, 1],
+                    xlabel='Turn 1: Offer / list price',
+                    ylabel='Turn 2: Offer / list price')
     elif name == 'slrrejaccbin':
         ticks = get_log_ticks(obj.index)
         args = dict(ylim=[0, 1],
@@ -288,14 +298,31 @@ def simple_plot(path, obj):
                     ylabel='Number of buyer offers',
                     legend_kwargs=dict(loc='upper left'))
     elif name == 'listfirst':
-        args = dict(xlim=[1, 3], ylim=[.5, .75],
+        args = dict(xlim=[1, 2.5], ylim=[.5, .75],
                     xticks=np.log10(BIN_TICKS),
                     xticklabels=BIN_TICKS,
                     xlabel='List price ($)',
                     ylabel='Turn 1: Offer  / list price')
+    elif name == 'listrej':
+        args = dict(xlim=[1, 2.5], ylim=[0, 1],
+                    xticks=np.log10(BIN_TICKS),
+                    xticklabels=BIN_TICKS,
+                    xlabel='List price ($)',
+                    ylabel='Pr(reject)')
+    elif name == 'listcon':
+        args = dict(xlim=[1, 2.5], ylim=[0, 2],
+                    xticks=np.log10(BIN_TICKS),
+                    xticklabels=BIN_TICKS,
+                    xlabel='List price ($)',
+                    ylabel='Average concession')
     elif name == 'conpath':
         args = dict(xlabel='Turn', ylabel='Offer / list price',
                     xlim=[1, 6], ylim=[.5, 1])
+    elif name == 'conrepeat':
+        args = dict(xlim=[.4, .9], ylim=[0, .25],
+                    xlabel='Turn 1: Offer / list price',
+                    ylabel='',
+                    legend_kwargs=dict(title='Turn 2'))
     else:
         raise NotImplementedError('Invalid name: {}'.format(name))
 
@@ -316,6 +343,9 @@ def simple_plot(path, obj):
         else:
             for c in obj.columns:
                 plt.plot(obj.index, obj[c], label=c)
+
+        if name == NORM:
+            add_diagonal(obj)
 
         save_fig(path, legend=(not plot_ci), **args)
 
@@ -657,18 +687,22 @@ def bar_plot(path, obj):
 
 def area_plot(path, df):
     name = get_name(path)
-    if name == 'response':
-        turn = path.split('_')[-1]
-        args = dict(xlim=[min(df.index), max(df.index)],
-                    ylim=[0, 1],
-                    xlabel='Turn {}: Offer / list price'.format(turn),
-                    ylabel='',
-                    legend_outside=True)
+    if name == 'turncon':
+        args = dict(xlim=[1, 7], ylim=[.6, 1],
+                    xlabel='Day of first offer',
+                    ylabel='Concession / list price')
+        if path.endswith(str(DELTA_SLR[-1])):
+            args['legend'] = True
+            args['reverse_legend'] = True
+            args['legend_outside'] = True
+            args['legend_kwargs'] = dict(title='Turn')
+        else:
+            args['legend'] = False
     else:
         raise NotImplementedError('Invalid name: {}'.format(name))
 
-    df.plot.area(cmap=plt.get_cmap('plasma'))
-    save_fig(path, reverse_legend=True, **args)
+    df.plot.area(cmap=ALTERNATING, legend=False)
+    save_fig(path, **args)
 
 
 def draw_contour(s=None, vmin=0, vmax=1, inc=.01, zlabel=None,
@@ -891,18 +925,28 @@ def pareto_plot(path, df):
     elif name == 'sales':
         args = dict(xlabel='Purchase rate',
                     ylabel='Savings on observed sale price ($)',
-                    ylim=[0, 20], xlim=[.5, 1])
+                    ylim=[0, 20], xlim=[.48, 1])
     else:
         raise NotImplementedError('Invalid name: {}'.format(name))
 
     offsets = [(args[k][1] - args[k][0]) / 100
                for k in ['xlim', 'ylim']]
+    idx_h = [k for k in df.index.get_level_values('gamma')
+             if k.startswith('h: ')]
 
     # zero turn cost
     plot_humans(df=df, offsets=offsets)
-    df0 = df.xs('$0', level='turn_cost')
+    df0 = df.xs('$0', level='turn_cost').drop(idx_h)
     plot_agents(df=df0, offsets=offsets)
     save_fig(path, legend=False, **args)
+
+    # heuristic agents
+    plot_humans(df=df, offsets=offsets)
+    df_h = df.xs('$0', level='turn_cost').loc[idx_h]
+    plot_agents(df=df_h, lspec='o-', color='k')
+    idx = [k[3:] for k in idx_h]
+    plot_agents(df=df0.loc[idx], lspec='o-', color='gray', offsets=offsets)
+    save_fig('{}_h'.format(path), legend=False, **args)
 
     # values item at list price
     names = {'$1-\\epsilon$': 'minus', '$1+\\epsilon$': 'plus'}

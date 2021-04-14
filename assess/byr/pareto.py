@@ -1,12 +1,12 @@
 import pandas as pd
 from agent.util import get_log_dir
-from utils import topickle, unpickle
+from agent.eval.util import load_table
+from utils import topickle
 from constants import PLOT_DIR
-from featnames import TEST
 
 
 def main():
-    df = unpickle(get_log_dir(byr=True) + '{}.pkl'.format(TEST))
+    df = load_table(run_dir=get_log_dir(byr=True))
     tuples = [s.split('_') for s in list(df.index)]
     idx = pd.MultiIndex.from_tuples(tuples, names=['gamma', 'turn_cost'])
     df.index = idx

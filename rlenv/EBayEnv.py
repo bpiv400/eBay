@@ -33,7 +33,7 @@ class EBayEnv:
         # lstg params
         self.end_time = None
         self.start_time = None
-        self.thread_counter = 1
+        self.thread_counter = 0
         self.outcome = None
         self.last_arrival_time = None
 
@@ -54,7 +54,7 @@ class EBayEnv:
         self.queue.reset()
         self.time_feats.reset()
         self.outcome = None
-        self.thread_counter = 1
+        self.thread_counter = 0
         event = Arrival(priority=self.start_time,
                         sources=ArrivalSources(x_lstg=self.x_lstg))
         self.queue.push(event)
@@ -186,10 +186,6 @@ class EBayEnv:
         Processes the buyer's first offer in a thread
         :return:
         """
-        # assign thread id
-        event.set_id(self.thread_counter)
-        self.thread_counter += 1
-
         # prepare sources and features
         sources = ThreadSources(x_lstg=self.x_lstg)
         days_since_lstg = get_days_since_lstg(lstg_start=self.start_time,
@@ -232,14 +228,14 @@ class EBayEnv:
         if self.is_lstg_expired(event):
             return self.process_lstg_expiration(event)
 
-        # update sources with clock feats
-
-        event.update_arrival(thread_count=self.time_feats.get_thread_count(),
+        # update event
+        event.update_arrival(thread_count=self.thread_counter,
                              last_arrival_time=self.last_arrival_time)
+
         # call model to sample inter arrival time and update arrival check priority
         if event.priority == self.start_time:
             seconds = self.get_first_arrival(time=event.priority,
-                                             thread_id=self.thread_counter)
+                                             thread_id=self.thread_counter+1)
         else:
             seconds = self.get_inter_arrival(event=event)
         check_in_time = event.priority
@@ -251,7 +247,10 @@ class EBayEnv:
         # if a buyer arrives, create a thread at the arrival time
         if event.priority < self.end_time:
             self.last_arrival_time = check_in_time
-            self.queue.push(Thread(priority=event.priority))
+            thread = Thread(priority=event.priority)
+            self.thread_counter += 1
+            thread.set_id(self.thread_counter)
+            self.queue.push(thread)
         self.queue.push(event)
         return False
 
@@ -363,8 +362,9 @@ class EBayEnv:
         input_dict = self.composer.build_input_dict(model_name=INTERARRIVAL_MODEL,
                                                     sources=event.sources(),
                                                     turn=None)
+
         return self.query_strategy.get_inter_arrival(time=event.priority,
-                                                     thread_id=self.thread_counter,
+                                                     thread_id=self.thread_counter+1,
                                                      input_dict=input_dict)
 
     def get_hist(self, *args, **kwargs):

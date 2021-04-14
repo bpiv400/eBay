@@ -2,9 +2,9 @@ import argparse
 import os
 from copy import deepcopy
 import pandas as pd
-from agent.eval.util import read_table, save_table
+from agent.eval.util import load_table, print_table, save_table
 from agent.util import get_run_dir, get_sale_norm, only_byr_agent, \
-    load_valid_data, get_log_dir
+    load_valid_data, get_log_dir, get_output_dir
 from utils import safe_reindex
 from agent.const import DELTA_BYR, TURN_COST_CHOICES
 from constants import IDX
@@ -64,24 +64,51 @@ def amend_outcome(data=None, byr_con=None, slr_norm=None, reject=True):
     return data_alt
 
 
+def amend_and_process(data=None, norm=None):
+    slr_norm = 1 - data[X_OFFER][NORM].unstack()[IDX[SLR]]
+    byr_con = data[X_OFFER][CON].unstack()[IDX[BYR]]
+
+    # rejects list price
+    data_rej = amend_outcome(data=data,
+                             slr_norm=slr_norm,
+                             byr_con=byr_con,
+                             reject=True)
+    return_minus = get_return(data=data_rej, norm=norm)
+
+    # accepts list price
+    data_acc = amend_outcome(data=data,
+                             slr_norm=slr_norm,
+                             byr_con=byr_con,
+                             reject=False)
+    return_plus = get_return(data=data_acc, norm=norm)
+    return return_minus, return_plus
+
+
 def main():
     # parameters from command line
     parser = argparse.ArgumentParser()
     parser.add_argument('--read', action='store_true')
+    parser.add_argument('--overwrite', action='store_true')
     read = parser.parse_args().read
+    overwrite = parser.parse_args().overwrite
 
     log_dir = get_log_dir(byr=True)
+    df = load_table(run_dir=log_dir)
     if read:
-        read_table(run_dir=log_dir)
+        print_table(df, byr=True)
         exit()
 
-    output = dict()
+    if overwrite:
+        output = dict()
+    else:
+        output = df.to_dict(orient=INDEX)
 
     # rewards from data
     data = load_valid_data(byr=True, minimal=True)
     norm = get_sale_norm(offers=data[X_OFFER])
-    data = only_byr_agent(data)
-    output['Humans'] = get_return(data=data, norm=norm)
+    if 'Humans' not in output:
+        data = only_byr_agent(data)
+        output['Humans'] = get_return(data=data, norm=norm)
 
     for delta in DELTA_BYR:
         for turn_cost in TURN_COST_CHOICES:
@@ -96,30 +123,32 @@ def main():
             data = only_byr_agent(load_valid_data(run_dir=run_dir,
                                                   minimal=True))
 
+            h_dir = get_output_dir(byr=True, heuristic=True,
+                                   delta=delta, turn_cost=turn_cost)
+            data_h = load_valid_data(run_dir=h_dir, minimal=True)
+
             if data is not None:
                 if delta == 1:
-                    slr_norm = 1 - data[X_OFFER][NORM].unstack()[IDX[SLR]]
-                    byr_con = data[X_OFFER][CON].unstack()[IDX[BYR]]
+                    keys = ['$1{}\\epsilon$_${}'.format(sign, turn_cost)
+                            for sign in ['-', '+']]
+                    if keys[0] not in output:
+                        output[keys[0]], output[keys[1]] = \
+                            amend_and_process(data=data, norm=norm)
 
-                    # rejects list price
-                    key = '$1-\\epsilon$_${}'.format(turn_cost)
-                    data_rej = amend_outcome(data=data,
-                                             slr_norm=slr_norm,
-                                             byr_con=byr_con,
-                                             reject=True)
-                    output[key] = get_return(data=data_rej, norm=norm)
-
-                    # accepts list price
-                    key = '$1+\\epsilon$_${}'.format(turn_cost)
-                    data_acc = amend_outcome(data=data,
-                                             slr_norm=slr_norm,
-                                             byr_con=byr_con,
-                                             reject=False)
-                    output[key] = get_return(data=data_acc, norm=norm)
+                    keys_h = ['h: {}'.format(k) for k in keys]
+                    if data_h is not None and keys_h[0] not in output:
+                        output[keys_h[0]], output[keys_h[1]] = \
+                            amend_and_process(data=data_h, norm=norm)
 
                 else:
                     key = '${}$_${}'.format(delta, turn_cost)
-                    output[key] = get_return(data=data, norm=norm)
+                    if key not in output:
+                        output[key] = get_return(data=data, norm=norm)
+
+                    key_h = 'h: {}'.format(key)
+                    if data_h is not None and key_h not in output:
+                        output[key_h] = get_return(
+                            data=data_h, norm=norm)
 
     save_table(run_dir=log_dir, output=output)
 
