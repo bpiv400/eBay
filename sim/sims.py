@@ -34,8 +34,7 @@ def main():
             exit(0)
 
         # process one chunk
-        gen = gen_cls(env=SimulatorEnv)
-        obj = gen.process_chunk(part=args.part, chunk=chunk)
+        obj = gen_cls().process_chunk(part=args.part, chunk=chunk)
 
         # save
         topickle(obj, path)
@@ -43,10 +42,7 @@ def main():
     else:
         sims = run_func_on_chunks(
             f=process_chunk_worker,
-            func_kwargs=dict(part=args.part,
-                             gen_class=gen_cls,
-                             gen_kwargs=dict(env=SimulatorEnv))
-        )
+            func_kwargs=dict(part=args.part, gen_class=gen_cls))
 
         # concatenate, clean, and save
         output_dir = SIM_DIR + '{}/'.format(args.part)
