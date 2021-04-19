@@ -15,5 +15,6 @@ elif [ "$2" != "" ]; then
   else
     python repo/agent/eval/sims.py --byr --delta "$1" --turn_cost "$2" --num "$SGE_TASK_ID"
   fi
+else
   python repo/agent/eval/sims.py --byr --delta "$1" --num "$SGE_TASK_ID"
 fi
