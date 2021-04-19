@@ -13,5 +13,6 @@ elif [ "$2" != "" ]; then
   else
     python repo/agent/eval/collate.py --byr --delta "$1" --turn_cost "$2"
   fi
+else
   python repo/agent/eval/collate.py --byr --delta "$1"
 fi
