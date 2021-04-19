@@ -64,8 +64,7 @@ class Listing:
         time = self.start_time + MAX_DELAY_ARRIVAL
         return Arrival(check_time=check_time,
                        arrival_inputs=arrival_inputs, time=time,
-                       first_arrival=thread_id == 1,
-                       agent_buyer=self.is_agent_buyer)
+                       first_arrival=thread_id == 1)
 
     def arrival_check_time(self, params=None, thread_id=None):
         if thread_id == 1:
@@ -90,8 +89,7 @@ class Listing:
                        arrival_inputs=arrival_inputs,
                        hist_inputs=hist_inputs,
                        check_time=check_time,
-                       first_arrival=thread_id == 1,
-                       agent_buyer=self.is_agent_buyer)
+                       first_arrival=thread_id == 1)
 
     def generate_thread(self, thread_id=None, params=None):
         thread_params = dict()

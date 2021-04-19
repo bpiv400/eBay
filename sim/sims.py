@@ -1,7 +1,7 @@
 import argparse
 import os
 import pandas as pd
-from rlenv.generate.Generator import OutcomeGenerator, ValueGenerator, SimulatorEnv
+from rlenv.generate.Generator import OutcomeGenerator, ValueGenerator
 from rlenv.generate.util import process_sims
 from utils import run_func_on_chunks, process_chunk_worker, topickle
 from constants import SIM_DIR, NUM_CHUNKS

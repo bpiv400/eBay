@@ -1,21 +1,20 @@
 from rlpyt.utils.collections import namedarraytuple
-from rlenv.util import get_clock_feats, get_con_outcomes
-from utils import load_sizes, get_days_since_lstg
+from rlenv.util import get_con_outcomes
+from utils import load_sizes
 from rlenv.const import FIRST_OFFER, DELAY_EVENT, OFFER_EVENT, ARRIVAL
-from rlenv.Sources import ThreadSources
 from agent.envs.AgentEnv import AgentEnv, EventLog
 from constants import BYR
-from featnames import BYR_HIST_MODEL, START_PRICE
+from featnames import START_PRICE
 
 BuyerObs = namedarraytuple('BuyerObs', list(load_sizes(BYR)['x'].keys()))
 
 
 class BuyerEnv(AgentEnv):
-    def __init__(self, **kwargs):
+    def __init__(self, agent_thread=1, **kwargs):
         super().__init__(byr=True, **kwargs)
-        self.agent_arrived = None  # to be set later
+        self.agent_thread = agent_thread
 
-    def reset(self, hist=None):
+    def reset(self):
         """
         Resets the environment by drawing a new listing,
         resetting the queue, adding a buyer rl arrival event, then
@@ -23,22 +22,19 @@ class BuyerEnv(AgentEnv):
         :return: observation associated with the first rl arrival
         """
         self.init_reset()  # in AgentEnv
-        self.agent_arrived = False
 
         while True:
             event, lstg_complete = super().run()  # calls EBayEnv.run()
 
             # when rl buyer arrives, create a prospective thread
-            if not lstg_complete:
-                self._init_agent_thread(thread=event, hist=hist)
+            if not lstg_complete and event.thread_id == self.agent_thread:
+                self.create_thread(event)
                 self.curr_event = event
-                self.agent_arrived = True
                 return self.get_obs(event=self.curr_event, done=False)
 
             # listing ends before RL arrival
             if self.train:  # queue up next listing
                 self.init_reset()
-                self.agent_arrived = False
             else:  # for testing and evaluation
                 return None
 
@@ -100,11 +96,8 @@ class BuyerEnv(AgentEnv):
         if event.type == ARRIVAL:
             return False
 
-        if event.type == FIRST_OFFER:
-            return not self.agent_arrived
-
-        # catch buyer turns on first thread
-        if event.thread_id == 1 and event.turn % 2 == 1:
+        # catch buyer turns on agent thread
+        if event.thread_id == self.agent_thread and event.turn % 2 == 1:
             return not self.is_lstg_expired(event) and not event.thread_expired()
 
         return False
@@ -143,7 +136,7 @@ class BuyerEnv(AgentEnv):
             return -penalty, False
 
         # sale to different buyer
-        if self.outcome.thread > 1:
+        if self.outcome.thread != self.agent_thread:
             return -penalty, False
 
         # sale to agent buyer
@@ -153,39 +146,6 @@ class BuyerEnv(AgentEnv):
                 self.outcome.price))
 
         return value - self.outcome.price - penalty, True
-
-    def _init_agent_thread(self, thread=None, hist=None):
-        # construct sources
-        sources = ThreadSources(x_lstg=self.x_lstg)
-        clock_feats = get_clock_feats(thread.priority)
-        time_feats = self.time_feats.get_feats(time=thread.priority,
-                                               thread_id=thread.thread_id)
-        days_since_lstg = get_days_since_lstg(lstg_start=self.start_time,
-                                              time=thread.priority)
-        sources.prepare_hist(clock_feats=clock_feats,
-                             time_feats=time_feats,
-                             days_since_lstg=days_since_lstg)
-
-        # sample history
-        if hist is None:
-            input_dict = self.composer.build_input_dict(model_name=BYR_HIST_MODEL,
-                                                        sources=sources(),
-                                                        turn=None)
-            hist = self.get_hist(input_dict=input_dict,
-                                 time=thread.priority,
-                                 thread_id=thread.thread_id)
-        thread.init_thread(sources=sources, hist=hist)
-
-        # print
-        if self.verbose:
-            print('Agent thread {} initiated | Buyer hist: {}'.format(
-                thread.thread_id, hist))
-
-        # record thread
-        if self.recorder is not None:
-            self.recorder.start_thread(thread_id=thread.thread_id,
-                                       byr_hist=hist,
-                                       time=thread.priority)
 
     @property
     def horizon(self):

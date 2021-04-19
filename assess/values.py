@@ -23,8 +23,9 @@ def bin_plot(start_price=None, vals=None):
 
 
 def slr_plot(data=None, y=None):
-    x = np.log10(data[LOOKUP][SLR_BO_CT]).values  # log seller experience
-    line, bw = ll_wrapper(y=y, x=x, dim=LOG10_BO_DIM)
+    x = np.log10(data[LOOKUP][SLR_BO_CT])  # log seller experience
+    assert np.all(y.index == x.index)
+    line, bw = ll_wrapper(y=y.values, x=x.values, dim=LOG10_BO_DIM)
     print('bw: {}'.format(bw[0]))
     return line
 
@@ -41,9 +42,9 @@ def main():
     d['response_slrbo'] = slr_plot(data=data, y=vals)
     df = unpickle(SIM_DIR + '{}/values.pkl'.format(TEST))
     assert np.all(df.index == data[LOOKUP].index)
-    d['simple_slrbosale'] = slr_plot(data=data, y=df.p.values)
+    d['simple_slrbosale'] = slr_plot(data=data, y=df.p)
     d['simple_slrboprice'] = slr_plot(
-        data=data, y=(df.x / data[LOOKUP][START_PRICE]).values)
+        data=data, y=(df.x / data[LOOKUP][START_PRICE]))
 
     # start price
     print('Start price')

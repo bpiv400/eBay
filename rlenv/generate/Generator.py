@@ -11,7 +11,6 @@ from rlenv.util import load_chunk
 from constants import OUTCOME_SIMS, VALUE_SIMS
 from featnames import LSTG
 
-
 VALUE_COLS = [LSTG, 'sale', 'sale_price', 'relist_ct']
 
 
@@ -62,13 +61,17 @@ class Generator:
     def env_class(self):
         raise NotImplementedError
 
+    @property
+    def env_args(self):
+        return dict(query_strategy=self.query_strategy,
+                    loader=self.loader,
+                    recorder=self.recorder,
+                    verbose=self.verbose,
+                    composer=self.composer,
+                    test=self.test)
+
     def generate_env(self):
-        return self.env_class(query_strategy=self.query_strategy,
-                              loader=self.loader,
-                              recorder=self.recorder,
-                              verbose=self.verbose,
-                              composer=self.composer,
-                              test=self.test)
+        return self.env_class(**self.env_args)
 
     @staticmethod
     def generate_buyer():

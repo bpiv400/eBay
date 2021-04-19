@@ -2,20 +2,16 @@ from rlenv.QueryStrategy import QueryStrategy
 
 
 class TestQueryStrategy(QueryStrategy):
-    def __init__(self, byr=None):
+    def __init__(self):
         super().__init__()
-        self.byr = byr
         self.lstg_log = None
 
     def update_log(self, log):
         self.lstg_log = log
 
     def get_first_arrival(self, *args, **kwargs):
-        if self.byr and kwargs['thread_id'] == 1:  # buyer agent turn
-            return self.lstg_log.get_agent_arrival()
-        else:
-            return self.lstg_log.get_inter_arrival(time=kwargs['time'],
-                                                   thread_id=kwargs['thread_id'])
+        return self.lstg_log.get_inter_arrival(time=kwargs['time'],
+                                               thread_id=kwargs['thread_id'])
 
     def get_inter_arrival(self, *args, **kwargs):
         return self.lstg_log.get_inter_arrival(input_dict=kwargs['input_dict'],

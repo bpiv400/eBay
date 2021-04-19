@@ -30,7 +30,9 @@ def main():
 
     # make sure run doesn't already exist
     if args.log:
-        run_dir = get_run_dir(delta=args.delta)
+        run_dir = get_run_dir(byr=args.byr,
+                              delta=args.delta,
+                              turn_cost=args.turn_cost)
         if os.path.isdir(run_dir):
             print('Run already exists.')
             exit()

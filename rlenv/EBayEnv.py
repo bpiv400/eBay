@@ -96,15 +96,13 @@ class EBayEnv:
 
     def process_event(self, event):
         if event.type == ARRIVAL:
-            # print('processing arrival')
             return self.process_arrival(event)
         elif event.type == FIRST_OFFER:
-            # print('processing first offer for thread {} for turn 1'.format(event.thread_id))
-            return self.process_first_offer(event)
+            self.create_thread(event)
+            return self.process_offer(event)
         elif event.type == OFFER_EVENT:
             return self.process_offer(event)
         elif event.type == DELAY_EVENT:
-            # print('processing delay for thread {} for turn {}'.format(event.thread_id,event.turn))
             return self.process_delay(event)
         else:
             raise NotImplementedError()
@@ -181,7 +179,7 @@ class EBayEnv:
         self.outcome = self.Outcome(True, sale_price, days, offer.thread_id)
         self.empty_queue()
 
-    def process_first_offer(self, event):
+    def create_thread(self, event):
         """
         Processes the buyer's first offer in a thread
         :return:
@@ -209,7 +207,6 @@ class EBayEnv:
         # update features with history
         event.init_thread(sources=sources, hist=hist)
         self.record(event, byr_hist=hist)
-        return self.process_offer(event)
 
     def prepare_offer(self, event):
         # if offer not expired and thread still active, prepare this turn's inputs

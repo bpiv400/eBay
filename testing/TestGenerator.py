@@ -3,7 +3,7 @@ from rlenv.util import get_env_sim_subdir
 from testing.Listing import Listing
 from testing.TestQueryStrategy import TestQueryStrategy
 from testing.util import load_all_inputs, reindex_dict, \
-    get_auto_safe_lstgs, drop_duplicated_timestamps, get_agent_lstgs
+    get_auto_safe_lstgs, drop_duplicated_timestamps
 from testing.TestLoader import TestLoader
 from utils import unpickle, load_file
 from featnames import X_THREAD, X_OFFER, LOOKUP, LSTG
@@ -25,7 +25,7 @@ class TestGenerator(Generator):
         super().__init__(verbose=verbose, test=True)
 
     def generate_query_strategy(self):
-        return TestQueryStrategy(byr=self.byr)
+        return TestQueryStrategy()
 
     def load_chunk(self, chunk=None, part=None):
         """
@@ -72,11 +72,6 @@ class TestGenerator(Generator):
         non_dups = drop_duplicated_timestamps(part=part, chunk=chunk)
         auto_safe = get_auto_safe_lstgs(chunk)
         lstgs = non_dups.intersection(auto_safe, sort=None)
-
-        if self.agent:
-            agent_lstgs = get_agent_lstgs(chunk=chunk, byr=self.byr)
-            lstgs = lstgs.intersection(agent_lstgs, sort=None)
-
         return lstgs
 
     def _get_listing_params(self):

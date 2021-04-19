@@ -13,9 +13,6 @@ class ActionQueue:
     def push_action(self, action=None):
         self.action_queue.push(action)
 
-    def get_buyer_arrival(self):
-        return self.action_queue.peek().time
-
     def get_agent_con(self, agent_tuple=None):
         obs, _, _, info = agent_tuple
         obs = obs._asdict()
