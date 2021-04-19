@@ -9,11 +9,7 @@ def main():
     args = sim_args()
 
     # output directory
-    output_dir = get_output_dir(part=args.part,
-                                heuristic=args.heuristic,
-                                byr=args.byr,
-                                delta=args.delta,
-                                turn_cost=args.turn_cost)
+    output_dir = get_output_dir(**vars(args))
 
     # concatenate
     sims = []

@@ -2,7 +2,7 @@ import torch
 from torch.nn.functional import softmax
 from nets.FeedForward import FeedForward
 from utils import load_sizes
-from agent.const import AGENT_STATE, NUM_VALUE_PARAMS
+from agent.const import AGENT_STATE
 from constants import SLR, BYR, NUM_COMMON_CONS
 from featnames import LSTG
 
@@ -12,17 +12,16 @@ class AgentModel(torch.nn.Module):
     Agent for eBay simulation.
     1. Fully separate networks for value and policy networks
     2. Policy network outputs parameters of sampling distribution
-    3. Value network outputs a scalar between 0 and 1
+    3. Value network outputs parameters of value distribution
     4. Both networks use batch normalization
     5. Neither network uses dropout
     """
-    def __init__(self, byr=None, value=True,
-                 num_value_params=NUM_VALUE_PARAMS):
+    def __init__(self, byr=None, value=True, num_value=None):
         """
         Initializes feed-forward networks for agents.
         :param bool byr: use buyer sizes if True
         :param bool value: estimate value if true
-        :param int num_value_params: size of value network output
+        :param int num_value: size of value network output
         """
         super().__init__()
 
@@ -39,7 +38,7 @@ class AgentModel(torch.nn.Module):
 
         # value net
         if self.value:
-            sizes['out'] = num_value_params
+            sizes['out'] = num_value
             self.value_net = FeedForward(sizes=sizes)
 
     def forward(self, observation, prev_action=None, prev_reward=None, value_only=False):

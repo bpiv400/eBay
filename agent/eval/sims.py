@@ -1,5 +1,5 @@
 import os
-from agent.eval.AgentGenerator import AgentGenerator
+from agent.eval.AgentGenerator import SellerGenerator, BuyerGenerator
 from agent.models.AgentModel import load_agent_model
 from agent.models.heuristics import HeuristicSlr, HeuristicByr
 from agent.eval.util import sim_args
@@ -11,11 +11,7 @@ def main():
     args = sim_args(num=True)
 
     # output directory
-    output_dir = get_output_dir(part=args.part,
-                                heuristic=args.heuristic,
-                                byr=args.byr,
-                                delta=args.delta,
-                                turn_cost=args.turn_cost)
+    output_dir = get_output_dir(**vars(args))
     outcome_dir = output_dir + 'outcomes/'
 
     # create output folder
@@ -29,8 +25,7 @@ def main():
         print('Chunk {} already exists.'.format(chunk))
         exit(0)
 
-    # generator
-    gen_cls = AgentGenerator
+    # model
     if args.heuristic:
         model_cls = HeuristicByr if args.byr else HeuristicSlr
         model = model_cls(delta=args.delta)
@@ -40,7 +35,12 @@ def main():
                               turn_cost=args.turn_cost)
         model_args = dict(byr=args.byr, value=False)
         model = load_agent_model(model_args=model_args, run_dir=run_dir)
-    gen = gen_cls(model=model, byr=args.byr)
+
+    # generator
+    if args.byr:
+        gen = BuyerGenerator(model=model, agent_thread=args.agent_thread)
+    else:
+        gen = SellerGenerator(model=model)
 
     # process one chunk
     df = gen.process_chunk(part=args.part, chunk=chunk)

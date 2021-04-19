@@ -169,25 +169,28 @@ class BuyerAgent(SplitCategoricalPgAgent):
     def _calculate_value(self, value_params):
         p, a, b = parse_value_params(value_params)
         beta_mean = a / (a + b) * (self.max - self.min) + self.min
-        v = p[:, 1] * self.max + p[:, -1] * beta_mean
+        v = p[:, 1] * self.min + p[:, 2] * self.max + p[:, -1] * beta_mean
         return v
 
     def get_value_loss(self, value_params, return_, valid):
         p, a, b = parse_value_params(value_params)
         norm_return = (return_ - self.min) / (self.max - self.min)
 
-        # no sale or sells for value
+        # no sale
         zeros = torch.zeros_like(return_)
-        idx0 = (torch.isclose(norm_return, zeros, atol=1e-6) |
-                torch.isclose(return_, zeros, atol=1e-6)) & valid
+        idx0 = torch.isclose(return_, zeros, atol=1e-6) & valid
         lnL = torch.sum(torch.log(p[idx0, 0] + EPS))
 
-        # sells for half of list price
-        idx1 = torch.isclose(norm_return, zeros + 1, atol=1e-6) & valid
+        # purchased at list price
+        idx1 = torch.isclose(norm_return, zeros, atol=1e-6) & valid
         lnL += torch.sum(torch.log(p[idx1, 1] + EPS))
 
+        # purchased for half of list price
+        idx2 = torch.isclose(norm_return, zeros + 1, atol=1e-6) & valid
+        lnL += torch.sum(torch.log(p[idx2, 2] + EPS))
+
         # intermediate outcome
-        idx_beta = ~idx0 & ~idx1 & valid
+        idx_beta = ~idx0 & ~idx1 & ~idx2 & valid
         lnL += torch.sum(torch.log(p[idx_beta, -1] + EPS))
         dist = Beta(a[idx_beta], b[idx_beta])
         lnL += torch.sum(dist.log_prob(norm_return[idx_beta]))

@@ -95,10 +95,13 @@ def main():
     log_dir = get_log_dir(byr=True)
     df = load_table(run_dir=log_dir)
     if read:
-        print_table(df, byr=True)
+        if df is None:
+            print('No output table exists.')
+        else:
+            print_table(df, byr=True)
         exit()
 
-    if overwrite:
+    if overwrite or df is None:
         output = dict()
     else:
         output = df.to_dict(orient=INDEX)
@@ -125,7 +128,8 @@ def main():
 
             h_dir = get_output_dir(byr=True, heuristic=True,
                                    delta=delta, turn_cost=turn_cost)
-            data_h = load_valid_data(run_dir=h_dir, minimal=True)
+            data_h = only_byr_agent(load_valid_data(run_dir=h_dir,
+                                                    minimal=True))
 
             if data is not None:
                 if delta == 1:

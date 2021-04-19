@@ -16,6 +16,7 @@ def sim_args(num=False):
     parser.add_argument('--delta', type=float, choices=DELTA_CHOICES)
     parser.add_argument('--turn_cost', type=int, default=0,
                         choices=TURN_COST_CHOICES)
+    parser.add_argument('--agent_thread', type=int, default=1)
     if num:
         parser.add_argument('--num', type=int,
                             choices=range(1, NUM_CHUNKS + 1))

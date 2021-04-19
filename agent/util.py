@@ -26,7 +26,7 @@ def get_run_dir(byr=None, delta=None, turn_cost=0, verbose=True):
 
 
 def get_output_dir(byr=None, delta=None, part=TEST,
-                   heuristic=False, turn_cost=0):
+                   heuristic=False, turn_cost=0, agent_thread=1, **kwargs):
     run_dir = get_run_dir(byr=byr,
                           delta=delta,
                           turn_cost=turn_cost,
@@ -34,6 +34,8 @@ def get_output_dir(byr=None, delta=None, part=TEST,
     output_dir = run_dir + '{}/'.format(part)
     if heuristic:
         output_dir += 'heuristic/'
+    elif byr:
+        output_dir += '{}/'.format(agent_thread)
     return output_dir
 
 
@@ -61,13 +63,13 @@ def get_norm_reward(data=None, values=None, byr=False):
     return sale_norm, cont_value
 
 
-def only_byr_agent(data=None, drop_thread=True):
+def only_byr_agent(data=None, drop_thread=True, agent_thread=1):
     if data is None:
         return None
 
     for k, v in data.items():
         if THREAD in v.index.names:
-            data[k] = v.xs(1, level=THREAD, drop_level=drop_thread)
+            data[k] = v.xs(agent_thread, level=THREAD, drop_level=drop_thread)
         idx = data[X_THREAD].index
         if THREAD in idx.names:
             idx = idx.droplevel(THREAD)
@@ -75,8 +77,8 @@ def only_byr_agent(data=None, drop_thread=True):
     return data
 
 
-def get_byr_valid(data=None):
-    idx = data[X_THREAD].xs(1, level=THREAD).index
+def get_byr_valid(data=None, agent_thread=1):
+    idx = data[X_THREAD].xs(agent_thread, level=THREAD).index
     for k, v in data.items():
         data[k] = safe_reindex(v, idx=idx)
         if k == X_OFFER:
@@ -99,7 +101,7 @@ def get_slr_valid(data=None):
 
 
 def load_valid_data(part=TEST, run_dir=None, byr=None,
-                    clock=False, minimal=False):
+                    clock=False, minimal=False, agent_thread=1):
     # error checking
     if run_dir is not None:
         assert byr is None
@@ -115,21 +117,23 @@ def load_valid_data(part=TEST, run_dir=None, byr=None,
         data[X_OFFER] = data[X_OFFER][OUTCOME_FEATS]
 
     # restrict to valid listings
-    return get_byr_valid(data) if byr else get_slr_valid(data)
+    if byr:
+        return get_byr_valid(data=data, agent_thread=agent_thread)
+    else:
+        return get_slr_valid(data=data)
 
 
 def load_values(part=TEST, delta=None, normalize=True):
+    """
+    Calculates discounted value of each item in partition.
+    :param str part: partition name
+    :param float delta: discount parameter
+    :param bool normalize: normalize by list price if True
+    :return: pd.DataFrame of (normalized) values
+    """
     df = unpickle(SIM_DIR + '{}/values.pkl'.format(part))
     v = df.p * df.x / (1 - (1-df.p) * delta)
     if normalize:
         start_price = load_file(part, LOOKUP)[START_PRICE]
         v /= start_price
     return v.rename('vals')
-
-
-def get_turn(x, byr=None):
-    last = 4 * x[:, -2] + 2 * x[:, -1]
-    if byr:
-        return 7 - 6 * x[:, -3] - last
-    else:
-        return 6 - last

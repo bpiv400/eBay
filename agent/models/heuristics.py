@@ -1,6 +1,5 @@
 import numpy as np
 import torch
-from agent.util import get_turn
 from agent.const import DELTA_SLR, AGENT_CONS
 from rlenv.const import TIME_FEATS, DAYS_IND, NORM_IND
 from constants import MAX_DAYS, IDX, NUM_COMMON_CONS
@@ -136,3 +135,11 @@ def get_elapsed(x=None, turn=None):
             elapsed += x['offer{}'.format(i)][days_ind].item() / MAX_DAYS
     assert elapsed < 1.
     return elapsed
+
+
+def get_turn(x, byr=None):
+    last = 4 * x[:, -2] + 2 * x[:, -1]
+    if byr:
+        return 7 - 6 * x[:, -3] - last
+    else:
+        return 6 - last

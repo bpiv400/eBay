@@ -30,7 +30,8 @@ DELTA_CHOICES = DELTA_SLR + DELTA_BYR
 TURN_COST_CHOICES = range(5)
 
 # size of value network output
-NUM_VALUE_PARAMS = 5
+NUM_VALUE_SLR = 5
+NUM_VALUE_BYR = 6
 
 # names for opt_info namedtuple
 FIELDS = ["ActionsPerTraj", "ThreadsPerTraj", "DaysToDone",
