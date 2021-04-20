@@ -6,7 +6,7 @@
 
 ulimit -n 4096
 if [ "$2" == "" ]; then
-  python repo/agent/eval/collate.py --byr --delta "$1" --heuristic --num "$SGE_TASK_ID"
+  python repo/agent/eval/collate.py --byr --delta "$1" --heuristic
 else
-  python repo/agent/eval/collate.py --byr --delta "$1" --turn_cost "$2" --heuristic --num "$SGE_TASK_ID"
+  python repo/agent/eval/collate.py --byr --delta "$1" --turn_cost "$2" --heuristic
 fi

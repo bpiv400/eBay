@@ -1,8 +1,9 @@
 import argparse
 import pandas as pd
-from agent.eval.util import load_table, save_table
+from agent.eval.util import save_table
 from agent.util import get_run_dir, load_values, get_norm_reward, \
     get_output_dir, load_valid_data
+from utils import unpickle
 from agent.const import DELTA_SLR
 from constants import EPS
 from featnames import TEST, LOOKUP, START_PRICE
@@ -39,7 +40,12 @@ def main():
 
     run_dir = get_run_dir(delta=delta)
     if params.read:
-        load_table(run_dir=run_dir)
+        path = run_dir + '{}.pkl'.format(TEST)
+        try:
+            df = unpickle(path)
+            print(df)
+        except FileNotFoundError:
+            print('{} not found.'.format(path))
 
     # preliminaries
     values = delta * load_values(delta=delta)

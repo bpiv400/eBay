@@ -2,14 +2,14 @@ import argparse
 import os
 from copy import deepcopy
 import pandas as pd
-from agent.eval.util import load_table, print_table, save_table
+from agent.eval.util import print_table, save_table
 from agent.util import get_run_dir, get_sale_norm, only_byr_agent, \
     load_valid_data, get_log_dir, get_output_dir
-from utils import safe_reindex
+from utils import safe_reindex, unpickle
 from agent.const import DELTA_BYR, TURN_COST_CHOICES
 from constants import IDX
 from featnames import X_OFFER, LOOKUP, X_THREAD, START_PRICE, \
-    NORM, CON, REJECT, INDEX, BYR, SLR
+    NORM, CON, REJECT, INDEX, BYR, SLR, TEST
 
 
 def calculate_stats(data=None, norm=None):
@@ -93,12 +93,12 @@ def main():
     overwrite = parser.parse_args().overwrite
 
     log_dir = get_log_dir(byr=True)
-    df = load_table(run_dir=log_dir)
+    df = unpickle(log_dir + '{}.pkl'.format(TEST))
     if read:
         if df is None:
             print('No output table exists.')
         else:
-            print_table(df, byr=True)
+            print(df)
         exit()
 
     if overwrite or df is None:
