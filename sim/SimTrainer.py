@@ -186,6 +186,12 @@ class SimTrainer:
 
     @staticmethod
     def _count_loss(theta, y):
+        """
+        Implements beta negative binomial distribution with r=1
+        :param float tensor theta: parameters from model
+        :param int tensor y: count of previous best-offer listings
+        :return: negative log-likelihood
+        """
         # transformations
         pi = torch.sigmoid(theta[:, 0])
         params = torch.exp(theta[:, 1:])
@@ -195,23 +201,39 @@ class SimTrainer:
         pi0, pi1 = pi[idx0], pi[idx1]
         a0, a1 = params[idx0, 0], params[idx1, 0]
         b0, b1 = params[idx0, 1], params[idx1, 1]
-        y1 = y[idx1]
+        r0, r1 = params[idx0, 2] + 1, params[idx1, 2] + 1
+        y1 = y[idx1].float()
 
         # zeros
         if len(pi0) > 0:
-            lnl = torch.sum(torch.log(pi0 + (1-pi0) * a0 / (a0 + b0)))
+            # lnl = torch.sum(torch.log(pi0 + (1-pi0) * a0 / (a0 + b0)))
+            f0 = torch.exp(torch.lgamma(r0 + a0)
+                           + torch.lgamma(a0 + b0)
+                           - torch.lgamma(a0)
+                           - torch.lgamma(a0 + b0 + r0))
+            lnl = torch.sum(torch.log(pi0 + (1-pi0) * f0))
         else:
             lnl = 0.
 
         # non-zeros
         if len(y1) > 0:
+            # lnl += torch.sum(torch.log(1-pi1)
+            #                  + torch.log(a1)
+            #                  - torch.log(a1 + b1 + y1)
+            #                  + torch.lgamma(b1 + y1)
+            #                  - torch.lgamma(a1 + b1 + y1)
+            #                  + torch.lgamma(a1 + b1)
+            #                  - torch.lgamma(b1))
             lnl += torch.sum(torch.log(1-pi1)
-                             + torch.log(a1)
-                             - torch.log(a1 + b1 + y1)
+                             + torch.lgamma(r1 + y1)
+                             + torch.lgamma(r1 + a1)
                              + torch.lgamma(b1 + y1)
-                             - torch.lgamma(a1 + b1 + y1)
                              + torch.lgamma(a1 + b1)
-                             - torch.lgamma(b1))
+                             - torch.lgamma(r1)
+                             - torch.lgamma(a1 + b1 + r1 + y1)
+                             - torch.lgamma(a1)
+                             - torch.lgamma(b1)
+                             - torch.lgamma(y1 + 1))
 
         return -lnl
 
@@ -243,7 +265,7 @@ class SimTrainer:
             else:
                 loss = nll_loss(lnq, b['y'], reduction='sum')
 
-        # add in regularization penalty and step down gradients
+        # step down gradients
         if is_training:
             optimizer.zero_grad()
             loss.backward()

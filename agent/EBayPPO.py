@@ -6,8 +6,8 @@ from rlpyt.agents.base import AgentInputs
 from rlpyt.utils.tensor import valid_mean
 from rlpyt.utils.buffer import buffer_to
 from rlpyt.utils.collections import namedarraytuple
-from agent.const import LR_POLICY, LR_VALUE, RATIO_CLIP, STOP_ENTROPY, \
-    FIELDS, PERIOD_EPOCHS, ENTROPY_COEF
+from agent.const import LR_POLICY, LR_VALUE, RATIO_CLIP, STOP_ENTROPY_BYR, \
+    STOP_ENTROPY_SLR, FIELDS, PERIOD_EPOCHS, ENTROPY_COEF
 
 LossInputs = namedarraytuple("LossInputs",
                              ["agent_inputs", "action", "return_", "advantage",
@@ -32,6 +32,7 @@ class EBayPPO:
         self.agent = None
         self._optim_value = None
         self._optim_policy = None
+        self._stop_entropy = None
 
         # count number of updates
         self.update_counter = 0
@@ -44,6 +45,7 @@ class EBayPPO:
         Called by runner.
         """
         self.agent = agent
+        self._stop_entropy = STOP_ENTROPY_BYR if agent.byr else STOP_ENTROPY_SLR
 
         # optimizers
         self._optim_value = Adam(self.agent.value_parameters(),
@@ -120,7 +122,7 @@ class EBayPPO:
         period = int(self.update_counter / PERIOD_EPOCHS)
         if period == 1:
             self.entropy_coef -= self.entropy_step
-        if entropy.mean() < STOP_ENTROPY:
+        if entropy.mean() < self._stop_entropy:
             self.training_complete = True
 
         # enclose in lists

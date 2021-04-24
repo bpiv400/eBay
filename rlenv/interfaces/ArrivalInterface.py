@@ -51,5 +51,8 @@ class ArrivalInterface:
         b = np.exp(theta[2])
         p = np.random.beta(a, b)
 
-        # draw from negative binomial with n=1
-        return np.random.negative_binomial(1, p)
+        # r for negative binomial, of at least 1
+        r = np.exp(theta[3]) + 1
+
+        # draw from negative binomial
+        return np.random.negative_binomial(r, p)

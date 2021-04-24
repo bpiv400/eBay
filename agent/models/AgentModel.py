@@ -27,6 +27,7 @@ class AgentModel(torch.nn.Module):
 
         # save params to self
         self.value = value
+        self.byr = byr
 
         # save x sizes for coverting tensor input to dictionary
         sizes = load_sizes(BYR if byr else SLR)

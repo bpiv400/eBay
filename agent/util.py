@@ -26,7 +26,8 @@ def get_run_dir(byr=None, delta=None, turn_cost=0, verbose=True):
 
 
 def get_output_dir(byr=None, delta=None, part=TEST,
-                   heuristic=False, turn_cost=0, agent_thread=1, **kwargs):
+                   heuristic=False, turn_cost=0,
+                   agent_thread=1, **kwargs):
     run_dir = get_run_dir(byr=byr,
                           delta=delta,
                           turn_cost=turn_cost,

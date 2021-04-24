@@ -1,9 +1,7 @@
 import argparse
-import pandas as pd
-from utils import topickle
 from agent.const import DELTA_CHOICES, TURN_COST_CHOICES
 from constants import NUM_CHUNKS
-from featnames import AGENT_PARTITIONS, TEST, INDEX
+from featnames import AGENT_PARTITIONS, TEST
 
 
 def sim_args(num=False):
@@ -20,8 +18,3 @@ def sim_args(num=False):
         parser.add_argument('--num', type=int,
                             choices=range(1, NUM_CHUNKS + 1))
     return parser.parse_args()
-
-
-def save_table(run_dir=None, output=None):
-    df = pd.DataFrame.from_dict(output, orient=INDEX)
-    topickle(df, run_dir + '{}.pkl'.format(TEST))

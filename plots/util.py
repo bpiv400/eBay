@@ -681,7 +681,7 @@ def bar_plot(path, obj):
             plt.gca().axhline(c='k', lw=1)
     else:
         rot = 45 if len(obj.columns) > 3 else 0
-        obj.plot.bar(rot=rot)
+        obj.plot.bar(rot=rot, color=COLORS)
     save_fig(path, xticklabels=obj.index, gridlines=False, **args)
 
 

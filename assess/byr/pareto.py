@@ -1,23 +1,30 @@
 import pandas as pd
 from agent.util import get_log_dir
-from agent.eval.util import load_table
-from utils import topickle
+from utils import unpickle, topickle
 from constants import PLOT_DIR
+from featnames import TEST
 
 
 def main():
-    df = load_table(run_dir=get_log_dir(byr=True))
-    tuples = [s.split('_') for s in list(df.index)]
-    idx = pd.MultiIndex.from_tuples(tuples, names=['gamma', 'turn_cost'])
-    df.index = idx
+    d = unpickle(get_log_dir(byr=True) + '{}.pkl'.format(TEST))
 
-    d = {'pareto_discount': df[['buyrate', 'discount']],
-         'pareto_dollar': df[['buyrate', 'dollar']],
-         'pareto_sales': df[['buyrate_sales', 'dollar_sales']]}
-    for k, v in d.items():
+    output = {'discount': d['thread1'][['buyrate', 'discount']],
+              'dollar': d['thread1'][['buyrate', 'dollar']],
+              'sales': d['sales'][['buyrate', 'dollar']]}
+
+    for name in ['minus', 'plus']:
+        key = 'cost_{}'.format(name)
+        output[key] = pd.concat([d['thread1'], d['turn_{}'.format(key)]])
+        output[key] = output[key][['buyrate', 'discount']]
+
+    for k, v in output.items():
         v.columns = ['x', 'y']
 
-    topickle(d, PLOT_DIR + 'byrpareto.pkl')
+    keys = list(output.keys())
+    for k in keys:
+        output['pareto_{}'.format(k)] = output.pop(k)
+
+    topickle(output, PLOT_DIR + 'byrpareto.pkl')
 
 
 if __name__ == '__main__':

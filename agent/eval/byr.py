@@ -2,17 +2,16 @@ import argparse
 import os
 from copy import deepcopy
 import pandas as pd
-from agent.eval.util import print_table, save_table
 from agent.util import get_run_dir, get_sale_norm, only_byr_agent, \
     load_valid_data, get_log_dir, get_output_dir
-from utils import safe_reindex, unpickle
+from utils import safe_reindex, unpickle, topickle
 from agent.const import DELTA_BYR, TURN_COST_CHOICES
 from constants import IDX
 from featnames import X_OFFER, LOOKUP, X_THREAD, START_PRICE, \
     NORM, CON, REJECT, INDEX, BYR, SLR, TEST
 
 
-def calculate_stats(data=None, norm=None):
+def get_return(data=None, norm=None):
     # discount
     sale_norm = get_sale_norm(data[X_OFFER])
     if norm is None:
@@ -31,21 +30,6 @@ def calculate_stats(data=None, norm=None):
     s['discount'] = discount.mean()
     s['dollar'] = dollar.mean()
     s['buyrate'] = len(sale_norm) / len(data[X_THREAD])
-
-    return s
-
-
-def get_return(data=None, norm=None):
-    """
-    Calculates (dollar) discount and sale rate.
-    :param dict data: contains DataFrames.
-    :param pd.Series norm: normalized sale prices.
-    :return: pd.Series of eval stats.
-    """
-    s = calculate_stats(data=data)
-
-    data = safe_reindex(data, idx=norm.index)
-    s = s.append(calculate_stats(data=data, norm=norm).add_suffix('_sales'))
 
     return s
 
@@ -84,77 +68,157 @@ def amend_and_process(data=None, norm=None):
     return return_minus, return_plus
 
 
+def get_keys(delta=None):
+    if delta == 1:
+        keys = ['$1{}\\epsilon$'.format(sign) for sign in ['-', '+']]
+    else:
+        keys = ['${}$'.format(delta)]
+    return keys
+
+
+def get_output(d=None, agent_thread=1):
+    print('Agent thread {}'.format(agent_thread))
+    k = 'thread{}'.format(agent_thread)
+    if k not in d:
+        d[k] = pd.DataFrame()
+
+    if 'Humans' not in d[k].index:
+        data = load_valid_data(byr=True, agent_thread=agent_thread, minimal=True)
+        data = only_byr_agent(data=data, agent_thread=agent_thread)
+        d[k]['Humans'] = get_return(data=data)
+
+    for delta in DELTA_BYR:
+        keys = get_keys(delta=delta)
+        if keys[0] in d[k].index:
+            continue
+
+        run_dir = get_run_dir(byr=True, delta=delta)
+        if not os.path.isdir(run_dir):
+            continue
+
+        run_dir = get_output_dir(byr=True, delta=delta)
+        data = load_valid_data(run_dir=run_dir,
+                               agent_thread=agent_thread,
+                               minimal=True)
+        data = only_byr_agent(data=data, agent_thread=agent_thread)
+        if data is None:
+            continue
+
+        if delta == 1:
+            keys = ['$1{}\\epsilon$'.format(sign) for sign in ['-', '+']]
+            d[k].loc[keys[0], :], d[k].loc[keys[1], :] = \
+                amend_and_process(data=data)
+        else:
+            d[k].loc[keys[0], :] = get_return(data=data)
+
+
+def get_sales_output(d=None):
+    print('Sales only')
+    k = 'sales'
+    if k not in d:
+        d[k] = pd.DataFrame()
+
+    data = load_valid_data(byr=True, minimal=True)
+    norm = get_sale_norm(offers=data[X_OFFER])
+    if 'Humans' not in d[k].index:
+        data = only_byr_agent(data=data)
+        data = safe_reindex(data, idx=norm.index)
+        d[k]['Humans'] = get_return(data=data, norm=norm)
+
+    for delta in DELTA_BYR:
+        keys = get_keys(delta=delta)
+        if keys[0] in d[k].index:
+            continue
+
+        run_dir = get_output_dir(byr=True, delta=delta)
+        data = only_byr_agent(load_valid_data(run_dir=run_dir, minimal=True))
+        if data is None:
+            continue
+        data = safe_reindex(data, idx=norm.index)
+
+        if delta == 1:
+            d[k].loc[keys[0], :], d[k].loc[keys[1], :] = \
+                amend_and_process(data=data, norm=norm)
+        else:
+            d[k].loc[keys[0], :] = get_return(data=data, norm=norm)
+
+
+def get_heuristic_output(d=None):
+    print('Heuristic agents')
+    k = 'heuristic'
+    if k not in d:
+        d[k] = pd.DataFrame()
+
+    for delta in DELTA_BYR:
+        keys = get_keys(delta=delta)
+        if keys[0] in d[k].index:
+            continue
+
+        run_dir = get_output_dir(byr=True, heuristic=True, delta=delta)
+        if not os.path.isdir(run_dir):
+            continue
+
+        data = only_byr_agent(load_valid_data(run_dir=run_dir, minimal=True))
+        if data is None:
+            continue
+
+        if delta == 1:
+            d[k].loc[keys[0], :], d[k].loc[keys[1], :] = \
+                amend_and_process(data=data)
+        else:
+            d[k].loc[keys[0], :] = get_return(data=data)
+
+
+def get_turn_cost_output(d=None):
+    print('Turn cost penalties')
+    plus, minus = 'turn_cost_plus', 'turn_cost_minus'
+    if plus not in d:
+        d[plus], d[minus] = pd.DataFrame(), pd.DataFrame()
+
+    for c in TURN_COST_CHOICES:
+        key = '${}'.format(c)
+        if key in d[plus].index:
+            continue
+
+        run_dir = get_output_dir(byr=True, delta=1, turn_cost=c)
+        if not os.path.isdir(run_dir):
+            continue
+
+        data = only_byr_agent(load_valid_data(run_dir=run_dir, minimal=True))
+        if data is None:
+            continue
+
+        d[minus].loc[key, :], d[plus].loc[key, :] = \
+            amend_and_process(data=data)
+
+
 def main():
     # parameters from command line
     parser = argparse.ArgumentParser()
     parser.add_argument('--read', action='store_true')
-    parser.add_argument('--overwrite', action='store_true')
     read = parser.parse_args().read
-    overwrite = parser.parse_args().overwrite
 
+    # load existing file
     log_dir = get_log_dir(byr=True)
-    df = unpickle(log_dir + '{}.pkl'.format(TEST))
+    try:
+        d = unpickle(log_dir + '{}.pkl'.format(TEST))
+    except FileNotFoundError:
+        d = dict()
     if read:
-        if df is None:
-            print('No output table exists.')
-        else:
-            print(df)
+        for k, v in d.items():
+            print(k)
+            print(v)
         exit()
 
-    if overwrite or df is None:
-        output = dict()
-    else:
-        output = df.to_dict(orient=INDEX)
+    # create output statistics
+    get_output(d, agent_thread=1)
+    get_output(d, agent_thread=2)
+    get_sales_output(d)
+    get_heuristic_output(d)
+    get_turn_cost_output(d)
 
-    # rewards from data
-    data = load_valid_data(byr=True, minimal=True)
-    norm = get_sale_norm(offers=data[X_OFFER])
-    if 'Humans' not in output:
-        data = only_byr_agent(data)
-        output['Humans'] = get_return(data=data, norm=norm)
-
-    for delta in DELTA_BYR:
-        for turn_cost in TURN_COST_CHOICES:
-            run_dir = get_run_dir(byr=True,
-                                  delta=delta,
-                                  turn_cost=turn_cost)
-            if not os.path.isdir(run_dir):
-                continue
-
-            print('(delta, turn cost): ({}, {})'.format(
-                delta, turn_cost))
-            data = only_byr_agent(load_valid_data(run_dir=run_dir,
-                                                  minimal=True))
-
-            h_dir = get_output_dir(byr=True, heuristic=True,
-                                   delta=delta, turn_cost=turn_cost)
-            data_h = only_byr_agent(load_valid_data(run_dir=h_dir,
-                                                    minimal=True))
-
-            if data is not None:
-                if delta == 1:
-                    keys = ['$1{}\\epsilon$_${}'.format(sign, turn_cost)
-                            for sign in ['-', '+']]
-                    if keys[0] not in output:
-                        output[keys[0]], output[keys[1]] = \
-                            amend_and_process(data=data, norm=norm)
-
-                    keys_h = ['h: {}'.format(k) for k in keys]
-                    if data_h is not None and keys_h[0] not in output:
-                        output[keys_h[0]], output[keys_h[1]] = \
-                            amend_and_process(data=data_h, norm=norm)
-
-                else:
-                    key = '${}$_${}'.format(delta, turn_cost)
-                    if key not in output:
-                        output[key] = get_return(data=data, norm=norm)
-
-                    key_h = 'h: {}'.format(key)
-                    if data_h is not None and key_h not in output:
-                        output[key_h] = get_return(
-                            data=data_h, norm=norm)
-
-    save_table(run_dir=log_dir, output=output)
+    # save
+    topickle(d, log_dir + '{}.pkl'.format(TEST))
 
 
 if __name__ == '__main__':

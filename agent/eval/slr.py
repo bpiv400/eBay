@@ -1,12 +1,11 @@
 import argparse
 import pandas as pd
-from agent.eval.util import save_table
 from agent.util import get_run_dir, load_values, get_norm_reward, \
     get_output_dir, load_valid_data
-from utils import unpickle
+from utils import unpickle, topickle
 from agent.const import DELTA_SLR
 from constants import EPS
-from featnames import TEST, LOOKUP, START_PRICE
+from featnames import TEST, LOOKUP, START_PRICE, INDEX
 
 
 def get_return(data=None, values=None):
@@ -66,7 +65,8 @@ def main():
     if data is not None:
         output['Agent'] = get_return(data=data, values=values)
 
-    save_table(run_dir=run_dir, output=output)
+    df = pd.DataFrame.from_dict(output, orient=INDEX)
+    topickle(df, run_dir + '{}.pkl'.format(TEST))
 
 
 if __name__ == '__main__':

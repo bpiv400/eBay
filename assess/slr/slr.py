@@ -48,13 +48,13 @@ def collect_outputs(data=None, name=None):
 
 def main():
     # observed
-    data_obs = load_valid_data(part=TEST, byr=False)
+    data_obs = load_valid_data(part=TEST, byr=False, clock=True)
     d = collect_outputs(data=data_obs, name='Humans')
 
     # seller runs
     for delta in DELTA_SLR:
         run_dir = get_run_dir(delta=delta)
-        data_rl = load_valid_data(part=TEST, run_dir=run_dir)
+        data_rl = load_valid_data(part=TEST, run_dir=run_dir, clock=True)
         d_rl = collect_outputs(data=data_rl, name=SLR_NAMES[delta])
         d = merge_dicts(d, d_rl)
 
