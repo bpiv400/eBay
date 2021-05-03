@@ -1,5 +1,5 @@
 #!/bin/bash
-#$ -t 1-512
+#$ -t 1-1024
 #$ -q short.q
 #$ -l m_mem_free=2G
 #$ -N slr_sims
