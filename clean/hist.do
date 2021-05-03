@@ -43,12 +43,16 @@ drop end_date
 
 replace byr_hist = byr_hist - 1
 
-sort byr clock
+sort byr clock byr_hist
+by byr: replace byr_hist = byr_hist[_n-1] if byr_hist == .
+
+gsort byr -clock
 by byr: replace byr_hist = byr_hist[_n-1] if byr_hist == .
 
 g byte missing = byr_hist == .
 replace byr_hist = 0 if missing
 
+sort byr clock
 save clean/hist, replace
 
 * unique interactions

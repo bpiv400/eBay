@@ -83,7 +83,7 @@ COLLECTIBLES = [1, 237, 260, 550, 870, 11116, 20081, 45100, 64482]
 SEED = 123456
 
 # number of chunks
-NUM_CHUNKS = 512
+NUM_CHUNKS = 1024
 
 # simulation counts
 OUTCOME_SIMS = 10

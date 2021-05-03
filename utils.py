@@ -9,7 +9,7 @@ from torch.nn.functional import log_softmax
 import numpy as np
 from nets.FeedForward import FeedForward
 from sim.Sample import get_batches
-from constants import DAY, INPUT_DIR, MODEL_DIR, SIM_DIR, PARTS_DIR, \
+from constants import DAY, INPUT_DIR, MODEL_DIR, SIM_DIR, PARTS_DIR, PCTILE_DIR, \
     MAX_DELAY_TURN, MAX_DELAY_ARRIVAL, NUM_CHUNKS, FEATS_DIR, OUTCOME_SIMS
 from featnames import LOOKUP, X_THREAD, X_OFFER, CLOCK, BYR, SLR, AGENT_PARTITIONS, \
     PARTITIONS, LSTG, SIM
@@ -331,7 +331,7 @@ def load_feats(name, lstgs=None, fill_zero=False):
         return df
     kwargs = {'index': lstgs}
     if len(df.index.names) > 1:
-        kwargs['level'] = 'lstg'
+        kwargs['level'] = LSTG
     if fill_zero:
         kwargs['fill_value'] = 0.
     return df.reindex(**kwargs)
@@ -347,4 +347,14 @@ def load_inputs(part=None, name=None):
     path = INPUT_DIR + '{}/{}.pkl'.format(part, name)
     if not os.path.isfile(path):
         return None
+    return unpickle(path)
+
+
+def load_pctile(name=None):
+    """
+    Loads the percentile file given by name.
+    :param str name: name of feature
+    :return: pd.Series with feature values in the index and percentiles in the values
+    """
+    path = PCTILE_DIR + '{}.pkl'.format(name)
     return unpickle(path)

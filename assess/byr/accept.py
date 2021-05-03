@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from agent.util import only_byr_agent, load_valid_data, get_run_dir
+from agent.util import only_byr_agent, load_valid_data, get_output_dir
 from assess.util import ll_wrapper
 from utils import topickle
 from assess.const import POINTS
@@ -34,7 +34,7 @@ def main():
         d['{}_{}'.format(prefix, t)] = line, dots
 
     for delta in [1, 2]:
-        run_dir = get_run_dir(byr=True, delta=delta)
+        run_dir = get_output_dir(byr=True, delta=delta)
         data_rl = only_byr_agent(load_valid_data(run_dir=run_dir,
                                                  minimal=True))
         for t in [3, 5]:

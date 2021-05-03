@@ -352,7 +352,7 @@ def simple_plot(path, obj):
     else:
         dsets = obj.columns.get_level_values(0).unique()
         if dsets[0] == 'Humans':
-            if dsets[1] not in ['$0'] + DELTA_CHOICES:
+            if dsets[1] not in ['$0'] + ['{}'.format(d) for d in DELTA_CHOICES]:
                 colors = TRICOLOR
             else:
                 colors = COLORS

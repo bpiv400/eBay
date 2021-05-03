@@ -17,18 +17,17 @@ LR_VALUE = 1e-3         # learning rate for value network
 RATIO_CLIP = 0.1        # for PPO
 BATCH_SIZE = 4096       # number of actions to collect per update
 ENTROPY_COEF = .01      # initial weight on entropy on objective function
-STOP_ENTROPY_BYR = .15  # stop when entropy reaches this value
-STOP_ENTROPY_SLR = .1   # stop when entropy reaches this value
+STOP_ENTROPY = .1       # stop when entropy reaches this value
 PERIOD_EPOCHS = 1500    # epoch count for stepping down entropy
 
 # state dictionaries
 AGENT_STATE = 'agent_state_dict'
 
 # economic parameters
-DELTA_SLR = [0., .75]
+DELTA_SLR = [0., .67, .7, .75]
 DELTA_BYR = [.75, .8, .9, 1., 1.25, 1.5, 2.]
 DELTA_CHOICES = np.unique(DELTA_SLR + DELTA_BYR)
-TURN_COST_CHOICES = range(1, 5)
+TURN_COST_CHOICES = range(0, 5)
 
 # size of value network output
 NUM_VALUE_SLR = 5

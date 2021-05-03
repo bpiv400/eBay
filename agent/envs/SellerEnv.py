@@ -14,7 +14,7 @@ SellerObs = namedarraytuple("SellerObs", list(load_sizes(SLR)['x'].keys()))
 class SellerEnv(AgentEnv):
     def __init__(self, **kwargs):
         super().__init__(byr=False, **kwargs)
-        if self.train:
+        if self.train and self.delta > 0:
             self.values = self.delta * load_values(part=TRAIN_RL,
                                                    delta=self.delta,
                                                    normalize=False)
@@ -128,7 +128,10 @@ class SellerEnv(AgentEnv):
 
         # item does not sell
         if not self.outcome.sale:
-            return self.values.loc[self.loader.lstg], False
+            if self.delta == 0:
+                return 0, False
+            else:
+                return self.values.loc[self.loader.lstg], False
 
         # item sells
         if self.verbose:
