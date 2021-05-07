@@ -315,6 +315,13 @@ def simple_plot(path, obj):
                     xticklabels=BIN_TICKS,
                     xlabel='List price ($)',
                     ylabel='Average concession')
+    elif name.startswith('listcounter'):
+        t = path.split('_')[-1]
+        args = dict(xlim=[1, 2.5], ylim=[0, 1],
+                    xticks=np.log10(BIN_TICKS),
+                    xticklabels=BIN_TICKS,
+                    xlabel='List price ($)',
+                    ylabel='Turn {}: Pr(counter)'.format(t))
     elif name == 'conpath':
         args = dict(xlabel='Turn', ylabel='Offer / list price',
                     xlim=[1, 6], ylim=[.5, 1])
@@ -392,6 +399,21 @@ def training_plot(path, df):
              xlabel='Epoch',
              ylabel='',
              fontsize=24)
+
+
+def stacked_plot(path, df):
+    name = get_name(path)
+    if name == CON:
+        args = dict(xlabel='Concession / list price', ylabel='',
+                    xlim=[.45, 1],
+                    yticks=range(len(df.columns)), yticklabels=df.columns,
+                    legend_outside=True, legend_kwargs=dict(title='Turn'))
+    else:
+        raise NotImplementedError('Invalid name: {}'.format(name))
+
+    df.transpose().plot.barh(stacked=True, color=COLORS[1:3])
+    plt.gca().invert_yaxis()
+    save_fig(path, **args)
 
 
 def draw_response(line=None, dots=None, diagonal=False, connect=False,
@@ -501,6 +523,11 @@ def response_plot(path, obj):
         args = dict(xlim=[.65, 1], ylim=[0, 1],
                     xlabel='Turn 2: Offer / list price',
                     ylabel='Turn 3: Pr({})'.format(ylabel))
+    elif name == 'counter':
+        t = int(path[-1])
+        args = dict(xlabel='Turn {}: Offer / list price'.format(t - 1),
+                    ylabel='Turn {}: Pr(counter)'.format(t),
+                    ylim=[0, 1])
     elif name == 'conacc':
         t = int(path[-1])
         dim = obj[0].index
@@ -656,17 +683,22 @@ def bar_plot(path, obj):
     elif name == 'discount':
         args = dict(xlabel='Turn', ylabel='Average discount ($)')
     elif name == 'listoffers':
-        args = dict(xlabel='List price multiplier',
+        args = dict(xlabel='List price multiplier $(\\lambda)$',
                     ylabel='Number of buyer offers',
                     ylim=[1, 3])
     elif name == 'listfirst':
-        args = dict(xlabel='List price multiplier',
+        args = dict(xlabel='List price multiplier $(\\lambda)$',
                     ylabel='Turn 1: Offer / list price',
                     ylim=[.49, .66])
     elif name == 'listbin':
         args = dict(xlabel='List price multiplier',
                     ylabel='Turn 1: Pr(accept)',
                     ylim=[0, .3])
+    elif name.startswith('listcounter'):
+        t = path.split('_')[-1]
+        args = dict(xlabel='List price multiplier $(\\lambda)$',
+                    ylabel='Turn {}: Pr(counter)'.format(t),
+                    ylim=[0, 1])
     else:
         raise NotImplementedError('Invalid name: {}'.format(name))
 

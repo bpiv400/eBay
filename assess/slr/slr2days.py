@@ -48,7 +48,7 @@ def main():
     # seller runs
     for delta in DELTA_SLR:
         run_dir = get_run_dir(delta=delta)
-        data = load_valid_data(part=TEST, run_dir=run_dir)
+        data = load_valid_data(part=TEST, sim_dir=run_dir)
         y_acc, y_rej, x1, x2 = get_feats(data=data)
         for feat in ['acc', 'rej']:
             y = locals()['y_{}'.format(feat)]

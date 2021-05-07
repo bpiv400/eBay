@@ -3,7 +3,7 @@ from agent.eval.AgentGenerator import SellerGenerator, BuyerGenerator
 from agent.models.AgentModel import load_agent_model
 from agent.models.heuristics import HeuristicSlr, HeuristicByr
 from agent.eval.util import sim_args
-from agent.util import get_run_dir, get_output_dir
+from agent.util import get_run_dir, get_sim_dir
 from utils import topickle
 
 
@@ -11,7 +11,7 @@ def main():
     args = sim_args(num=True)
 
     # output directory
-    output_dir = get_output_dir(**vars(args))
+    output_dir = get_sim_dir(**vars(args))
     outcome_dir = output_dir + 'outcomes/'
 
     # create output folder

@@ -1,10 +1,8 @@
 import numpy as np
 import pandas as pd
-
 from agent.const import COMMON_CONS
-from utils import extract_clock_feats, byr_norm, slr_norm, unpickle
-from constants import PARTS_DIR, PCTILE_DIR, START, IDX, DAY, \
-    HOLIDAYS, MAX_DELAY_TURN
+from utils import extract_clock_feats, byr_norm, slr_norm, unpickle, load_pctile
+from constants import PARTS_DIR, START, IDX, DAY, HOLIDAYS, MAX_DELAY_TURN
 from featnames import HOLIDAY, DOW_PREFIX, TIME_OF_DAY, AFTERNOON, \
     CLOCK_FEATS, BYR_HIST, SLR, BYR, INDEX
 
@@ -91,10 +89,10 @@ def feat_to_pctile(s, reverse=False, feat=BYR_HIST):
     :param str feat: feature to convert
     :return: Series
     """
-    pctile = unpickle(PCTILE_DIR + '{}.pkl'.format(feat))
+    pc = load_pctile(name=feat)
     if reverse:
-        pctile = pctile.reset_index().set_index('pctile').squeeze()
-    v = pctile.reindex(index=s.values, method='pad').values
+        pc = pc.reset_index().set_index('pctile').squeeze()
+    v = pc.reindex(index=s.values, method='pad').values
     hist = pd.Series(v, index=s.index, name=feat)
     return hist
 

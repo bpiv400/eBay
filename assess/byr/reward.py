@@ -36,7 +36,7 @@ def main():
     share_accept(data=data)
 
     run_dir = get_run_dir()
-    data = only_byr_agent(load_valid_data(part=TEST, run_dir=run_dir))
+    data = only_byr_agent(load_valid_data(part=TEST, sim_dir=run_dir))
 
     share_accept(data=data)
 

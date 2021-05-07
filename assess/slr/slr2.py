@@ -1,8 +1,8 @@
 import numpy as np
 import pandas as pd
-from agent.util import get_run_dir, load_valid_data, get_slr_valid
+from agent.util import get_run_dir, load_valid_data
 from assess.util import ll_wrapper, kreg2
-from utils import topickle, load_data, safe_reindex
+from utils import topickle, safe_reindex
 from agent.const import DELTA_SLR
 from assess.const import NORM1_DIM, NORM1_BIN_MESH, SLR_NAMES
 from constants import PLOT_DIR
@@ -13,12 +13,17 @@ KEYS = [ACCEPT, REJECT, CON]
 
 
 def get_y(con=None, key=None):
+    mask = np.ones_like(con).astype(bool)
     if key == ACCEPT:
-        return con == 1
+        y = con == 1
     elif key == REJECT:
-        return con == 0
+        y = con == 0
     elif key == CON:
-        return con
+        y = con
+        mask = (con > 0) & (con < 1)
+    else:
+        raise ValueError('Invalid key: {}'.format(key))
+    return y, mask
 
 
 def get_feats(data=None):
@@ -35,12 +40,12 @@ def main():
     d, bw, bw2 = dict(), dict(), None
 
     # load data
-    data = get_slr_valid(load_data(part=TEST))
+    data = load_valid_data(part=TEST, byr=False)
     x, con, x2 = get_feats(data=data)
 
     for key in KEYS:
-        y = get_y(con=con, key=key)
-        line, bw[key] = ll_wrapper(y, x, dim=NORM1_DIM)
+        y, mask = get_y(con=con, key=key)
+        line, bw[key] = ll_wrapper(y=y[mask], x=x[mask], dim=NORM1_DIM)
         line.columns = pd.MultiIndex.from_product([['Humans'], line.columns])
         d['response_{}'.format(key)] = line
         print('{}: {}'.format(key, bw[key][0]))
@@ -53,14 +58,14 @@ def main():
     # seller runs
     for delta in DELTA_SLR:
         run_dir = get_run_dir(delta=delta)
-        data = load_valid_data(part=TEST, run_dir=run_dir)
+        data = load_valid_data(part=TEST, sim_dir=run_dir)
         x, con, x2 = get_feats(data=data)
 
         for key in KEYS:
-            y = get_y(con=con, key=key)
-            k = 'response_{}'.format(key)
-            d[k].loc[:, (SLR_NAMES[delta], 'beta')], _ = \
-                ll_wrapper(y, x, dim=NORM1_DIM, bw=bw[key], ci=False)
+            y, mask = get_y(con=con, key=key)
+            d['response_{}'.format(key)].loc[:, (SLR_NAMES[delta], 'beta')], _ = \
+                ll_wrapper(y=y[mask], x=x[mask],
+                           dim=NORM1_DIM, bw=bw[key], ci=False)
 
             # 2D: norm1 and log10_start_price
             if key == REJECT:

@@ -1,7 +1,7 @@
 import argparse
 import pandas as pd
 from agent.util import get_run_dir, load_values, get_norm_reward, \
-    get_output_dir, load_valid_data
+    get_sim_dir, load_valid_data
 from utils import unpickle, topickle
 from agent.const import DELTA_SLR
 from constants import EPS
@@ -55,13 +55,13 @@ def main():
     output['Humans'] = get_return(data=data, values=values)
 
     # rewards from heuristic strategy
-    heuristic_dir = get_output_dir(heuristic=True, delta=delta)
-    data = load_valid_data(part=TEST, run_dir=heuristic_dir)
+    heuristic_dir = get_sim_dir(heuristic=True, delta=delta)
+    data = load_valid_data(part=TEST, sim_dir=heuristic_dir)
     if data is not None:
         output['Heuristic'] = get_return(data=data, values=values)
 
     # rewards from agent run
-    data = load_valid_data(part=TEST, run_dir=run_dir)
+    data = load_valid_data(part=TEST, sim_dir=run_dir)
     if data is not None:
         output['Agent'] = get_return(data=data, values=values)
 

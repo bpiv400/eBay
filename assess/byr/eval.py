@@ -73,7 +73,7 @@ def main():
     sale_price = (sale_norm * data_obs[LOOKUP][START_PRICE]).rename('sale_price')
     del data_obs
 
-    data_rl = load_valid_data(part=TEST, run_dir=get_run_dir())
+    data_rl = load_valid_data(part=TEST, sim_dir=get_run_dir())
     data_rl = only_byr_agent(safe_reindex(data_rl, idx=sale_price.index))
 
     # discount ~ sale price

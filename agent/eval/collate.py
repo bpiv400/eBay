@@ -1,7 +1,7 @@
 from shutil import rmtree
 from rlenv.generate.util import process_sims
 from agent.eval.util import sim_args
-from agent.util import get_output_dir
+from agent.util import get_sim_dir
 from utils import unpickle
 from constants import NUM_CHUNKS
 
@@ -10,7 +10,7 @@ def main():
     args = sim_args()
 
     # output directory
-    output_dir = get_output_dir(**vars(args))
+    output_dir = get_sim_dir(**vars(args))
     outcome_dir = output_dir + 'outcomes/'
 
     # concatenate

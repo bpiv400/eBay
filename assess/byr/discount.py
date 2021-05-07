@@ -35,7 +35,7 @@ def main():
     d['cdf_totaldiscount_data'] = cdf_wrapper(dollars_obs)
 
     # agent
-    data_rl = only_byr_agent(load_valid_data(part=TEST, run_dir=get_run_dir()))
+    data_rl = only_byr_agent(load_valid_data(part=TEST, sim_dir=get_run_dir()))
     discount_rl, dollars_rl, start_price_rl = get_feats(data_rl)
     d['cdf_discount_agent'] = cdf_wrapper(discount_rl)
     d['cdf_totaldiscount_agent'] = cdf_wrapper(dollars_rl)

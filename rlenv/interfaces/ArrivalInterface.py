@@ -1,8 +1,7 @@
 import numpy as np
-from constants import PCTILE_DIR
 from featnames import BYR_HIST, INTERARRIVAL_MODEL, BYR_HIST_MODEL
 from rlenv.util import sample_categorical
-from utils import load_model, unpickle
+from utils import load_model, load_pctile
 
 
 class ArrivalInterface:
@@ -12,7 +11,7 @@ class ArrivalInterface:
         self.hist_model = load_model(BYR_HIST_MODEL)
 
         # for hist model
-        s = unpickle(PCTILE_DIR + '{}.pkl'.format(BYR_HIST))
+        s = load_pctile(name=BYR_HIST)
         s = s.reindex(index=range(s.index.max() + 1), method='pad')
         self.hist_pctile = s
 

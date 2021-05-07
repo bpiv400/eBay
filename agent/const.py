@@ -24,7 +24,8 @@ PERIOD_EPOCHS = 1500    # epoch count for stepping down entropy
 AGENT_STATE = 'agent_state_dict'
 
 # economic parameters
-DELTA_SLR = [0., .67, .7, .75]
+DELTA_SLR = [0., .75]
+# DELTA_BYR = [.85, .9, 1., 1.5, 2., 3.]
 DELTA_BYR = [.75, .8, .9, 1., 1.25, 1.5, 2.]
 DELTA_CHOICES = np.unique(DELTA_SLR + DELTA_BYR)
 TURN_COST_CHOICES = range(0, 5)

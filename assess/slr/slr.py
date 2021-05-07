@@ -54,7 +54,7 @@ def main():
     # seller runs
     for delta in DELTA_SLR:
         run_dir = get_run_dir(delta=delta)
-        data_rl = load_valid_data(part=TEST, run_dir=run_dir, clock=True)
+        data_rl = load_valid_data(part=TEST, sim_dir=run_dir, clock=True)
         d_rl = collect_outputs(data=data_rl, name=SLR_NAMES[delta])
         d = merge_dicts(d, d_rl)
 

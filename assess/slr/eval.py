@@ -26,7 +26,7 @@ def main():
         print('{}: {}'.format(delta, bw[0]))
 
         run_dir = get_run_dir(delta=delta)
-        data_rl = load_valid_data(part=TEST, run_dir=run_dir)
+        data_rl = load_valid_data(part=TEST, sim_dir=run_dir)
 
         line, _ = bin_vs_reward(data=data_rl, values=values, bw=bw)
         d[key].loc[:, (SLR_NAMES[delta], 'beta')] = line

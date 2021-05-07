@@ -15,7 +15,7 @@ def main():
     # value comparison
     for delta in DELTA_SLR:
         run_dir = get_run_dir(delta=delta)
-        data = load_valid_data(part=TEST, run_dir=run_dir)
+        data = load_valid_data(part=TEST, sim_dir=run_dir)
         vals = load_values(part=TEST, delta=delta)
 
         valid_vals = safe_reindex(vals, idx=data[LOOKUP].index)

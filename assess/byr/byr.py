@@ -32,7 +32,7 @@ def main():
 
     # rl buyer
     data_rl = load_valid_data(part=TEST,
-                              run_dir=get_run_dir(),
+                              sim_dir=get_run_dir(),
                               lstgs=data[LOOKUP].index)
     data_rl = only_byr_agent(data_rl)
     d_rl = collect_outputs(data=data_rl, name='Agent')

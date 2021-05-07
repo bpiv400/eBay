@@ -1,13 +1,13 @@
 from copy import deepcopy
 import numpy as np
 import pandas as pd
-from agent.util import only_byr_agent, load_valid_data, get_output_dir
+from agent.util import only_byr_agent, load_valid_data, get_sim_dir
 from assess.util import ll_wrapper
-from utils import topickle, safe_reindex
+from utils import topickle, safe_reindex, load_pctile
 from agent.const import TURN_COST_CHOICES, DELTA_BYR
 from assess.const import LOG10_BIN_DIM
 from constants import PLOT_DIR
-from featnames import LOOKUP, START_PRICE
+from featnames import LOOKUP, START_PRICE, BYR_HIST
 
 
 def get_x(data=None, idx=None):
@@ -37,8 +37,8 @@ def bin_plot(name=None, get_y=None):
     key = 'simple_list{}'.format(name)
     d[key] = deepcopy(line)
     for t in TURN_COST_CHOICES:
-        run_dir = get_output_dir(byr=True, delta=1, turn_cost=t)
-        data_rl = only_byr_agent(load_valid_data(run_dir=run_dir,
+        sim_dir = get_sim_dir(byr=True, delta=1, turn_cost=t)
+        data_rl = only_byr_agent(load_valid_data(sim_dir=sim_dir,
                                                  minimal=True))
         y, x = get_feats(data=data_rl, get_y=get_y)
         line, _ = ll_wrapper(y=y, x=x,
@@ -53,11 +53,32 @@ def bin_plot(name=None, get_y=None):
     # bar chart of means
     for delta in DELTA_BYR:
         if np.isnan(means.loc[delta]):
-            run_dir = get_output_dir(byr=True, delta=delta)
-            data_rl = only_byr_agent(load_valid_data(run_dir=run_dir,
+            sim_dir = get_sim_dir(byr=True, delta=delta)
+            data_rl = only_byr_agent(load_valid_data(sim_dir=sim_dir,
                                                      minimal=True))
             means.loc[delta] = get_y(data=data_rl).mean()
 
     d['bar_list{}'.format(name)] = means
+    return d
 
+
+def save_dict(d=None, name=None):
     topickle(d, PLOT_DIR + 'byr{}.pkl'.format(name))
+
+
+def get_hist_bins(num=6):
+    s = load_pctile(name=BYR_HIST)
+    start = []
+    for i in range(num):
+        idx = np.searchsorted(s, i / num)
+        start.append(s.index[idx])
+    start = np.unique(start)
+    labels = []
+    for i in range(len(start) - 1):
+        first, last = start[i], start[i+1]-1
+        label = '{}'.format(first)
+        if last > first:
+            label += '-{}'.format(last)
+        labels.append(label)
+    labels.append('{}+'.format(start[-1]))
+    return start, labels

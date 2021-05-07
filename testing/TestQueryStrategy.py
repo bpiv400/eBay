@@ -1,3 +1,4 @@
+import assess.util
 from rlenv.QueryStrategy import QueryStrategy
 
 
@@ -24,10 +25,10 @@ class TestQueryStrategy(QueryStrategy):
                                       input_dict=kwargs['input_dict'])
 
     def get_con(self, *args, **kwargs):
-        return self.lstg_log.get_con(thread_id=kwargs['thread_id'],
-                                     time=kwargs['time'],
-                                     input_dict=kwargs['input_dict'],
-                                     turn=kwargs['turn'])
+        return assess.util.get_total_con(thread_id=kwargs['thread_id'],
+                                         time=kwargs['time'],
+                                         input_dict=kwargs['input_dict'],
+                                         turn=kwargs['turn'])
 
     def get_msg(self, *args, **kwargs):
         return self.lstg_log.get_msg(thread_id=kwargs['thread_id'],

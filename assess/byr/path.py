@@ -29,7 +29,7 @@ def main():
 
     for delta in [.9, 1, 2]:
         run_dir = get_run_dir(byr=True, delta=delta)
-        data_rl = only_byr_agent(load_valid_data(run_dir=run_dir,
+        data_rl = only_byr_agent(load_valid_data(sim_dir=run_dir,
                                                  minimal=True))
         df['$\\lambda = {}$'.format(delta)] = get_path(data_rl)
 

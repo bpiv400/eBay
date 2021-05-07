@@ -12,7 +12,7 @@ from sim.Sample import get_batches
 from constants import DAY, INPUT_DIR, MODEL_DIR, SIM_DIR, PARTS_DIR, PCTILE_DIR, \
     MAX_DELAY_TURN, MAX_DELAY_ARRIVAL, NUM_CHUNKS, FEATS_DIR, OUTCOME_SIMS
 from featnames import LOOKUP, X_THREAD, X_OFFER, CLOCK, BYR, SLR, AGENT_PARTITIONS, \
-    PARTITIONS, LSTG, SIM
+    PARTITIONS, LSTG, SIM, TEST
 
 
 def unpickle(file):
@@ -253,18 +253,18 @@ def load_file(part, x, folder=PARTS_DIR):
     return unpickle(path)
 
 
-def load_data(part=None, sim=False, run_dir=None, lstgs=None, clock=False):
-    if not sim and run_dir is None:
+def load_data(part=TEST, sim=False, sim_dir=None, lstgs=None, clock=False):
+    if not sim and sim_dir is None:
         folder = PARTS_DIR
     elif sim:
-        assert run_dir is None
+        assert sim_dir is None
         folder = SIM_DIR
     else:
-        folder = run_dir
+        folder = sim_dir
 
     # initialize dictionary with lookup file
     data = {LOOKUP: load_file(part, LOOKUP)}
-    if sim or run_dir is not None:
+    if sim or sim_dir is not None:
         idx = pd.MultiIndex.from_product([data[LOOKUP].index, range(OUTCOME_SIMS)],
                                          names=[LSTG, SIM])
         data[LOOKUP] = safe_reindex(data[LOOKUP], idx=idx)

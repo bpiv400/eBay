@@ -1,7 +1,7 @@
 import argparse
 import numpy as np
 import pandas as pd
-from agent.util import get_run_dir, only_byr_agent, load_valid_data
+from agent.util import get_sim_dir, only_byr_agent, load_valid_data
 from assess.util import estimate_tree
 from utils import load_feats, safe_reindex
 from agent.const import DELTA_BYR
@@ -18,21 +18,15 @@ def main():
     parser.add_argument('--delta', type=float, choices=DELTA_BYR)
     delta = parser.parse_args().delta
 
-    run_dir = get_run_dir(byr=True, delta=delta)
-    data = load_valid_data(run_dir=run_dir, clock=True)
+    sim_dir = get_sim_dir(byr=True, delta=delta)
+    data = only_byr_agent(load_valid_data(sim_dir=sim_dir, clock=True, minimal=True))
 
-    # add listing features to data
-    listings = load_feats('listings')[LISTING_FEATS]
-    data['listings'] = safe_reindex(listings, idx=data[LOOKUP].index)
-
-    # restrict to byr agent
-    data = only_byr_agent(data)
-
-    for turn in IDX[BYR]:
+    turns = IDX[BYR] if delta < 1 else IDX[BYR][:-1]
+    for turn in turns:
         print('Turn {}'.format(turn))
 
         d = {k: data[k].xs(turn, level=INDEX) for k in [X_OFFER, CLOCK]}
-        for k in ['listings', LOOKUP, X_THREAD]:
+        for k in [LOOKUP, X_THREAD]:
             d[k] = safe_reindex(data[k], idx=d[CLOCK].index)
 
         # outcome
@@ -40,9 +34,9 @@ def main():
         y = pd.Series('', index=con.index)
         y.loc[con == 0] = 'Walk'
         y.loc[con == 1] = 'Accept'
-        threshold = .6 if turn == 1 else .33
-        y.loc[(con > 0) & (con <= threshold)] = 'Low'
-        y.loc[(con > threshold) & (con < 1)] = 'High'
+        y.loc[np.isclose(con, .5)] = 'Half'
+        y.loc[(con > 0) & (con < .5)] = 'Low'
+        y.loc[(con > .5) & (con < 1)] = 'High'
         print(np.unique(y))
 
         con_rate = con.groupby(con).count() / len(con)
@@ -50,14 +44,11 @@ def main():
         print(con_rate)
 
         # features
-        X = d[X_THREAD][BYR_HIST].to_frame()
+        X = d[X_THREAD][BYR_HIST].to_frame().join(d[LOOKUP][START_PRICE])
         X['elapsed'] = (d[CLOCK] - d[LOOKUP][START_TIME]) / (MAX_DAYS * DAY)
         if turn > 1:
-            last = data[X_OFFER][[NORM, REJECT, AUTO, MSG]].xs(
-                turn-1, level=INDEX).loc[d[CLOCK].index]
-            last[NORM] = 1 - last[NORM]
+            last = 1 - data[X_OFFER][NORM].xs(turn-1, level=INDEX).loc[d[CLOCK].index]
             X = X.join(last)
-        X = X.join(d[LOOKUP][START_PRICE]).join(d['listings'])
 
         # decision tree
         estimate_tree(X=X, y=y)

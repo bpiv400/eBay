@@ -5,9 +5,9 @@ from sklearn.tree import DecisionTreeClassifier, export_text
 from statsmodels.nonparametric.kde import KDEUnivariate
 from statsmodels.nonparametric.kernel_regression import KernelReg
 from agent.util import get_sale_norm, get_norm_reward, get_run_dir
-from utils import unpickle, safe_reindex
+from utils import unpickle, safe_reindex, load_pctile
 from assess.const import OPT, VALUES_DIM, POINTS, LOG10_BIN_DIM
-from constants import IDX, BYR, EPS, DAY, HOUR, PCTILE_DIR, MAX_DELAY_TURN, \
+from constants import IDX, BYR, EPS, DAY, HOUR, MAX_DELAY_TURN, \
     MAX_DELAY_ARRIVAL, INTERVAL_ARRIVAL, INTERVAL_CT_ARRIVAL
 from featnames import DELAY, CON, NORM, AUTO, START_TIME, START_PRICE, LOOKUP, \
     MSG, DAYS_SINCE_LSTG, BYR_HIST, INDEX, X_OFFER, CLOCK, THREAD, X_THREAD, \
@@ -62,7 +62,7 @@ def interarrival_dist(threads=None):
 
 
 def hist_dist(threads=None):
-    pc = unpickle(PCTILE_DIR + '{}.pkl'.format(BYR_HIST))
+    pc = load_pctile(name=BYR_HIST)
     pc = pc.reset_index().set_index('pctile').squeeze()
     y = pc.reindex(index=threads[BYR_HIST], method='pad')
     cdf = discrete_cdf(y)
@@ -360,3 +360,19 @@ def get_eval_df(byr=False, delta=None, turn_cost=0, suffix=None):
         k = len(suffix) + 1
         df = df.rename(lambda c: c[:-k], axis=1)
         return df
+
+
+def get_total_con(data=None):
+    norm = data[X_OFFER][NORM].unstack()
+    norm.loc[:, IDX[SLR]] = 1 - norm.loc[:, IDX[SLR]]
+    start_price = safe_reindex(data[LOOKUP][START_PRICE], idx=norm.index)
+    for t in norm.columns:
+        norm[t] *= start_price
+    con = pd.DataFrame(index=norm.index)
+    con[1] = norm[1]
+    con[2] = start_price - norm[2]
+    for t in range(3, 8):
+        con[t] = np.abs(norm[t - 2] - norm[t])
+    for t in con.columns:
+        con[t] /= start_price
+    return con.fillna(0)

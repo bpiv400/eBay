@@ -15,7 +15,7 @@ def main():
     delta = parser.parse_args().delta
 
     run_dir = get_run_dir(delta=delta)
-    data = load_valid_data(part=TEST, run_dir=run_dir)
+    data = load_valid_data(part=TEST, sim_dir=run_dir)
 
     for turn in [2, 4, 6]:
         print('Turn {}'.format(turn))

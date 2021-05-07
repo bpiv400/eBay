@@ -25,21 +25,21 @@ def get_run_dir(byr=None, delta=None, turn_cost=0, verbose=True):
     return run_dir
 
 
-def get_output_dir(byr=None, delta=None, part=TEST,
-                   heuristic=False, turn_cost=0,
-                   agent_thread=1, verbose=True, **kwargs):
+def get_sim_dir(byr=None, delta=None, part=TEST,
+                heuristic=False, turn_cost=0,
+                agent_thread=1, verbose=True, **kwargs):
     run_dir = get_run_dir(byr=byr,
                           delta=delta,
                           turn_cost=turn_cost,
                           verbose=False)
-    output_dir = run_dir + '{}/'.format(part)
+    sim_dir = run_dir + '{}/'.format(part)
     if heuristic:
-        output_dir += 'heuristic/'
+        sim_dir += 'heuristic/'
     elif byr:
-        output_dir += '{}/'.format(agent_thread)
+        sim_dir += '{}/'.format(agent_thread)
     if verbose:
-        print(output_dir)
-    return output_dir
+        print(sim_dir)
+    return sim_dir
 
 
 def get_sale_norm(offers=None, drop_thread=True):
@@ -103,15 +103,15 @@ def get_slr_valid(data=None):
     return data
 
 
-def load_valid_data(part=TEST, run_dir=None, byr=None,
+def load_valid_data(part=TEST, sim_dir=None, byr=None,
                     clock=False, minimal=False, agent_thread=1):
     # error checking
-    if run_dir is not None:
+    if sim_dir is not None:
         assert byr is None
-        byr = BYR in run_dir
+        byr = BYR in sim_dir
 
     # load data
-    data = load_data(part=part, run_dir=run_dir, clock=clock)
+    data = load_data(part=part, sim_dir=sim_dir, clock=clock)
     if X_OFFER not in data:
         return None
 

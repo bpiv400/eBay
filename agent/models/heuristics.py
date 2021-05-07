@@ -51,7 +51,7 @@ class HeuristicSlr:
 
 class HeuristicByr:
     def __init__(self, delta=None):
-        assert delta in [.75, 1., 1.5]
+        assert delta in [.8, .9, 1, 1.5, 2]
         self.delta = delta
 
     def __call__(self, observation=None):
@@ -64,18 +64,23 @@ class HeuristicByr:
         # index of action
         f = wrapper(turn)
         if turn == 1:
-            if self.delta == 1.5:
-                idx = f(.6)
+            idx = f(.5) if self.delta < 2 else f(.6)
+
+        elif turn == 3:
+            if self.delta < .9:
+                idx = f(.17)
+            elif self.delta <= 1:
+                idx = f(.4)
             else:
                 idx = f(.5)
 
-        elif turn in [3, 5]:
-            if self.delta == 1:
+        elif turn == 5:
+            if self.delta < 1:
                 idx = f(.4)
-            elif self.delta == 1.5:
+            elif self.delta < 2:
                 idx = f(.5)
             else:
-                idx = f(.17) if turn == 3 else f(.33)
+                idx = f(1)
 
         elif turn == 7:
             if self.delta >= 1:
