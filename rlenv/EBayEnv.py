@@ -25,6 +25,9 @@ class EBayEnv:
         # for printing
         self.verbose = kwargs['verbose']
 
+        # simulate all arrivals initially
+        self.arrivals_first = False
+
         # features
         self.x_lstg = None
         self.lookup = None
@@ -55,11 +58,40 @@ class EBayEnv:
         self.time_feats.reset()
         self.outcome = None
         self.thread_counter = 0
-        event = Arrival(priority=self.start_time,
-                        sources=ArrivalSources(x_lstg=self.x_lstg))
-        self.queue.push(event)
+        if self.arrivals_first:
+            self.simulate_arrivals(priority=self.start_time)
+        else:
+            event = Arrival(priority=self.start_time,
+                            sources=ArrivalSources(x_lstg=self.x_lstg))
+            self.queue.push(event)
         if self.verbose:
             Recorder.print_lstg(self.lookup)
+
+    def simulate_arrivals(self, priority):
+        if priority >= self.end_time:
+            return
+
+        if priority == self.start_time:
+            assert self.thread_counter == 0
+            seconds = self.get_first_arrival(time=self.start_time, thread_id=1)
+
+        else:
+            event = Arrival(priority=priority,
+                            sources=ArrivalSources(x_lstg=self.x_lstg))
+            event.update_arrival(thread_count=self.thread_counter,
+                                 last_arrival_time=self.last_arrival_time)
+            seconds = self.get_inter_arrival(event=event)
+
+        new_priority = min(priority + seconds, self.end_time)
+
+        # if a buyer arrives, create a thread at the arrival time
+        if new_priority < self.end_time:
+            self.last_arrival_time = priority
+            thread = Thread(priority=new_priority)
+            self.thread_counter += 1
+            thread.set_id(self.thread_counter)
+            self.queue.push(thread)
+        return False
 
     def has_next_lstg(self):
         return self.loader.has_next()
@@ -96,6 +128,8 @@ class EBayEnv:
 
     def process_event(self, event):
         if event.type == ARRIVAL:
+            if self.arrivals_first:
+                raise RuntimeError('Should not have arrival event in queue when simulating arrivals first.')
             return self.process_arrival(event)
         elif event.type == FIRST_OFFER:
             self.create_thread(event)
