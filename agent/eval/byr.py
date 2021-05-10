@@ -92,12 +92,12 @@ def get_output(d=None, agent_thread=1):
         if keys[0] in d[k].index:
             continue
 
-        run_dir = get_run_dir(byr=True, delta=delta)
-        if not os.path.isdir(run_dir):
+        sim_dir = get_run_dir(byr=True, delta=delta)
+        if not os.path.isdir(sim_dir):
             continue
 
-        run_dir = get_sim_dir(byr=True, delta=delta)
-        data = load_valid_data(sim_dir=run_dir,
+        sim_dir = get_sim_dir(byr=True, delta=delta)
+        data = load_valid_data(sim_dir=sim_dir,
                                agent_thread=agent_thread,
                                minimal=True)
         data = only_byr_agent(data=data, agent_thread=agent_thread)
@@ -130,8 +130,8 @@ def get_sales_output(d=None):
         if keys[0] in d[k].index:
             continue
 
-        run_dir = get_sim_dir(byr=True, delta=delta)
-        data = only_byr_agent(load_valid_data(sim_dir=run_dir, minimal=True))
+        sim_dir = get_sim_dir(byr=True, delta=delta)
+        data = only_byr_agent(load_valid_data(sim_dir=sim_dir, minimal=True))
         if data is None:
             continue
         data = safe_reindex(data, idx=norm.index)
@@ -154,11 +154,11 @@ def get_heuristic_output(d=None):
         if keys[0] in d[k].index:
             continue
 
-        run_dir = get_sim_dir(byr=True, heuristic=True, delta=delta)
-        if not os.path.isdir(run_dir):
+        sim_dir = get_sim_dir(byr=True, heuristic=True, delta=delta)
+        if not os.path.isdir(sim_dir):
             continue
 
-        data = only_byr_agent(load_valid_data(sim_dir=run_dir, minimal=True))
+        data = only_byr_agent(load_valid_data(sim_dir=sim_dir, minimal=True))
         if data is None:
             continue
 
@@ -176,15 +176,18 @@ def get_turn_cost_output(d=None):
         d[plus], d[minus] = pd.DataFrame(), pd.DataFrame()
 
     for c in TURN_COST_CHOICES:
+        if c == 0:
+            continue
+
         key = '${}'.format(c)
         if key in d[plus].index:
             continue
 
-        run_dir = get_sim_dir(byr=True, delta=1, turn_cost=c)
-        if not os.path.isdir(run_dir):
+        sim_dir = get_sim_dir(byr=True, delta=1, turn_cost=c)
+        if not os.path.isdir(sim_dir):
             continue
 
-        data = only_byr_agent(load_valid_data(sim_dir=run_dir, minimal=True))
+        data = only_byr_agent(load_valid_data(sim_dir=sim_dir, minimal=True))
         if data is None:
             continue
 

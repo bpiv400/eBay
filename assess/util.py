@@ -1,7 +1,7 @@
 import os
 import numpy as np
 import pandas as pd
-from sklearn.tree import DecisionTreeClassifier, export_text
+from sklearn import tree
 from statsmodels.nonparametric.kde import KDEUnivariate
 from statsmodels.nonparametric.kernel_regression import KernelReg
 from agent.util import get_sale_norm, get_norm_reward, get_run_dir
@@ -328,10 +328,11 @@ def create_cdfs(elem):
 
 def estimate_tree(X=None, y=None, max_depth=1, criterion='entropy'):
     assert np.all(X.index == y.index)
-    tree = DecisionTreeClassifier(max_depth=max_depth, criterion=criterion)
-    clf = tree.fit(X.values, y.values)
-    r = export_text(clf, feature_names=list(X.columns))
+    dt = tree.DecisionTreeClassifier(max_depth=max_depth, criterion=criterion)
+    clf = dt.fit(X.values, y.values)
+    r = tree.export_text(clf, feature_names=list(X.columns))
     print(r)
+    return r
 
 
 def bin_vs_reward(data=None, values=None, byr=False, bw=None):
