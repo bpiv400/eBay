@@ -2,7 +2,7 @@
 #$ -t 1-1024
 #$ -q short.q
 #$ -l m_mem_free=2G
-#$ -N byr_sims_1
+#$ -N byr_sims
 #$ -j y
 #$ -o logs/sims/
 

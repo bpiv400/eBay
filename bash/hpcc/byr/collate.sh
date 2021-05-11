@@ -1,6 +1,6 @@
 #!/bin/bash
 #$ -l m_mem_free=25G
-#$ -N byr_collate_1
+#$ -N byr_collate
 #$ -j y
 #$ -o logs/collate/
 
