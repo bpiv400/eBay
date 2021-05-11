@@ -14,6 +14,7 @@ class Listing:
         """
         self.lstg = params[LSTG]
         self.lookup = params[LOOKUP]
+        self.arrivals_first = params['arrivals_first']
         self.start_time = int(round(self.lookup[START_TIME]))
         self.verbose = params['verbose']
         self.arrivals = self.generate_arrivals(params)
@@ -39,11 +40,13 @@ class Listing:
                 arrivals[thread_id] = self.generate_arrival(params=params,
                                                             thread_id=thread_id)
 
-        if num_arrivals == 0 or not self.check_bin(params=params,
-                                                   thread_id=num_arrivals):
+        is_bin = self.check_bin(params=params, thread_id=num_arrivals)
+        if self.arrivals_first or num_arrivals == 0 or not is_bin:
             thread_id = num_arrivals + 1
+            phantom = self.arrivals_first and is_bin
             arrivals[thread_id] = self.generate_censored_arrival(params=params,
-                                                                 thread_id=thread_id)
+                                                                 thread_id=thread_id,
+                                                                 phantom=phantom)
         return arrivals
 
     @staticmethod
@@ -57,14 +60,19 @@ class Listing:
                 value=thread_id)
         return arrival_inputs
 
-    def generate_censored_arrival(self, params=None, thread_id=None):
-        arrival_inputs = self.get_arrival_inputs(params=params,
-                                                 thread_id=thread_id)
+    def generate_censored_arrival(self, params=None, thread_id=None, phantom=False):
+        if phantom:
+            arrival_inputs = None
+        else:
+            arrival_inputs = self.get_arrival_inputs(params=params,
+                                                     thread_id=thread_id)
         check_time = self.arrival_check_time(params=params, thread_id=thread_id)
         time = self.start_time + MAX_DELAY_ARRIVAL
         return Arrival(check_time=check_time,
-                       arrival_inputs=arrival_inputs, time=time,
-                       first_arrival=thread_id == 1)
+                       arrival_inputs=arrival_inputs,
+                       time=time,
+                       first_arrival=thread_id == 1,
+                       phantom=phantom)
 
     def arrival_check_time(self, params=None, thread_id=None):
         if thread_id == 1:
@@ -144,6 +152,8 @@ class Listing:
 
     @staticmethod
     def check_bin(params=None, thread_id=None):
+        if thread_id == 0:
+            return False
         thread1 = params[X_OFFER].xs(thread_id, level=THREAD)
         if len(thread1.index) == 1:
             return thread1.loc[1, CON] == 1

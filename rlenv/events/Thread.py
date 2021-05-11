@@ -22,7 +22,6 @@ class Thread(Event):
 
         # to be initialized later
         self.sources = None
-        self.thread_id = None
 
     def set_id(self, thread_id=None):
         self.thread_id = thread_id

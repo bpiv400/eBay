@@ -11,7 +11,8 @@ class Arrival:
             arrival_inputs=None,
             hist_inputs=None,
             check_time=None,
-            first_arrival=False
+            first_arrival=False,
+            phantom=False
     ):
         self.censored = hist is None
         self.time = time
@@ -20,10 +21,11 @@ class Arrival:
         self.hist_inputs = hist_inputs
         self.hist = hist
         self.check_time = check_time
+        self.phantom = phantom
 
     def get_inter_arrival(self, check_time=None, input_dict=None):
         assert check_time == self.check_time
-        if input_dict is not None:
+        if input_dict is not None and not self.phantom:
             compare_input_dicts(model=INTERARRIVAL_MODEL,
                                 stored_inputs=self.arrival_inputs,
                                 env_inputs=input_dict)

@@ -17,9 +17,6 @@ SPLITS = [0., .2, .4, .6, .8, .99]
 # for finding kernel regression bandwidth
 OPT = EstimatorSettings(efficient=True)
 
-# delta for values figures
-DELTA_ASSESS = .7
-
 # agent names
 SLR_NAMES = {DELTA_SLR[0]: 'Impatient agent',
              DELTA_SLR[1]: 'Patient agent'}

@@ -10,8 +10,7 @@ class TestQueryStrategy(QueryStrategy):
         self.lstg_log = log
 
     def get_first_arrival(self, *args, **kwargs):
-        return self.lstg_log.get_inter_arrival(time=kwargs['time'],
-                                               thread_id=kwargs['thread_id'])
+        return self.lstg_log.get_inter_arrival(time=kwargs['time'], thread_id=1)
 
     def get_inter_arrival(self, *args, **kwargs):
         return self.lstg_log.get_inter_arrival(input_dict=kwargs['input_dict'],

@@ -1,17 +1,53 @@
 import os
-from agent.eval.AgentGenerator import SellerGenerator, BuyerGenerator
+import numpy as np
+from agent.AgentComposer import AgentComposer
+from agent.envs.BuyerEnv import BuyerEnv
+from agent.envs.SellerEnv import SellerEnv
 from agent.models.AgentModel import load_agent_model
 from agent.models.heuristics import HeuristicSlr, HeuristicByr
 from agent.eval.util import sim_args
 from agent.util import get_run_dir, get_sim_dir
+from rlenv.generate.Generator import OutcomeGenerator
+from rlenv.generate.Recorder import OutcomeRecorder
+from rlenv.interfaces.PlayerInterface import SimulatedSeller
 from utils import topickle
+
+
+class AgentGenerator(OutcomeGenerator):
+    def __init__(self, model=None, byr=None):
+        super().__init__(verbose=False, test=False)
+        self.model = model
+        self.byr = byr
+
+    def simulate_lstg(self):
+        obs = self.env.reset()
+        if obs is not None:
+            done = False
+            while not done:
+                probs = self.model(observation=obs)
+                action = np.argmax(probs)
+                obs, _, done, _ = self.env.step(action)
+
+    def generate_recorder(self):
+        return OutcomeRecorder(verbose=self.verbose, byr=self.byr)
+
+    def generate_composer(self):
+        return AgentComposer(byr=self.byr)
+
+    def generate_seller(self):
+        return SimulatedSeller(full=self.byr)
+
+    @property
+    def env_class(self):
+        return BuyerEnv if self.byr else SellerEnv
 
 
 def main():
     args = sim_args(num=True)
 
     # output directory
-    output_dir = get_sim_dir(**vars(args))
+    params = {k: v for k, v in vars(args).items() if k != 'num'}
+    output_dir = get_sim_dir(**params)
     outcome_dir = output_dir + 'outcomes/'
 
     # create output folder
@@ -37,10 +73,7 @@ def main():
         model = load_agent_model(model_args=model_args, run_dir=run_dir)
 
     # generator
-    if args.byr:
-        gen = BuyerGenerator(model=model, agent_thread=args.agent_thread)
-    else:
-        gen = SellerGenerator(model=model)
+    gen = AgentGenerator(model=model, byr=args.byr)
 
     # process one chunk
     df = gen.process_chunk(part=args.part, chunk=chunk)

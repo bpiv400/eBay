@@ -7,7 +7,7 @@ from featnames import LOOKUP, X_THREAD, X_OFFER, LSTG, INDEX, NORM, REJECT, CON,
 
 
 def main():
-    valid_data = load_valid_data(minimal=True)
+    valid_data = load_valid_data(byr=False, minimal=True)
     data = load_data()
 
     # valid vs. invalid listings

@@ -1,7 +1,7 @@
 import numpy as np
-from agent.util import get_run_dir, load_valid_data, get_slr_valid
+from agent.util import get_run_dir, load_valid_data
 from assess.util import kreg2
-from utils import topickle, load_data, load_feats, safe_reindex
+from utils import topickle, load_feats, safe_reindex
 from agent.const import DELTA_SLR
 from assess.const import NORM1_DIM_SHORT
 from constants import PLOT_DIR
@@ -27,7 +27,7 @@ def main():
     mesh = np.concatenate([xx1.reshape(-1, 1), xx2.reshape(-1, 1)], axis=1)
 
     # observed sellers, by store
-    data = get_slr_valid(load_data(part=TEST))
+    data = load_valid_data(byr=False)
     store = load_feats('listings', lstgs=data[LOOKUP].index)[STORE]
     obs = {'nostore': {k: safe_reindex(v, idx=store[~store].index)
                        for k, v in data.items()},

@@ -78,7 +78,7 @@ def concat_sim_chunks(sims):
     return data
 
 
-def process_sims(part=None, sims=None, output_dir=None):
+def process_sims(part=None, sims=None, sim_dir=None):
     # concatenate chunks
     data = concat_sim_chunks(sims)
 
@@ -90,10 +90,10 @@ def process_sims(part=None, sims=None, output_dir=None):
     d[X_OFFER], d[CLOCK] = process_sim_offers(df=data[X_OFFER])
 
     # create directory if it doesn't exist
-    if not os.path.isdir(output_dir):
-        os.makedirs(output_dir)
+    if not os.path.isdir(sim_dir):
+        os.makedirs(sim_dir)
 
     # save
     for k, df in d.items():
         if k != LOOKUP:
-            topickle(df, output_dir + '{}.pkl'.format(k))
+            topickle(df, sim_dir + '{}.pkl'.format(k))

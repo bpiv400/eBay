@@ -5,7 +5,7 @@ from utils import topickle, load_data, safe_reindex
 from agent.const import COMMON_CONS
 from assess.const import NORM1_DIM, POINTS, NORM1_BIN_MESH
 from constants import PLOT_DIR
-from featnames import X_OFFER, CON, INDEX, TEST, EXP, AUTO, NORM, LOOKUP, START_PRICE
+from featnames import X_OFFER, CON, INDEX, EXP, AUTO, NORM, LOOKUP, START_PRICE
 
 
 def rejection_plot(y=None, x1=None, x2=None):
@@ -26,7 +26,7 @@ def rejection_plot(y=None, x1=None, x2=None):
 def main():
     d = dict()
 
-    data = load_data(part=TEST)
+    data = load_data()
     con = add_byr_reject_on_lstg_expiration(con=data[X_OFFER][CON])
 
     con3 = con.xs(3, level=INDEX)

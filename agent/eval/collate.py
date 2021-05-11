@@ -10,8 +10,8 @@ def main():
     args = sim_args()
 
     # output directory
-    output_dir = get_sim_dir(**vars(args))
-    outcome_dir = output_dir + 'outcomes/'
+    sim_dir = get_sim_dir(**vars(args))
+    outcome_dir = sim_dir + 'outcomes/'
 
     # concatenate
     sims = []
@@ -20,7 +20,7 @@ def main():
         sims.append(unpickle(chunk_path))
 
     # clean and save
-    process_sims(part=args.part, sims=sims, output_dir=output_dir)
+    process_sims(part=args.part, sims=sims, sim_dir=sim_dir)
 
     # delete chunk files
     rmtree(outcome_dir)

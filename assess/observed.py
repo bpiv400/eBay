@@ -4,9 +4,8 @@ from scipy.optimize import minimize
 from utils import topickle, load_data
 from constants import PLOT_DIR, DAY
 from assess.const import NORM1_DIM_SHORT
-from featnames import DAYS_SINCE_LSTG, X_OFFER, X_THREAD, TEST, INDEX, \
-    NORM, THREAD, LOOKUP, START_PRICE, ACC_PRICE, DEC_PRICE, START_TIME, \
-    END_TIME
+from featnames import DAYS_SINCE_LSTG, X_OFFER, X_THREAD, INDEX, NORM, THREAD, \
+    LOOKUP, START_PRICE, ACC_PRICE, DEC_PRICE, START_TIME, END_TIME
 
 
 def get_feats(data=None):
@@ -53,7 +52,7 @@ def main():
     d = dict()
 
     # data
-    data = load_data(part=TEST)
+    data = load_data()
 
     # interarrival waiting time
     y, x1, x2 = get_feats(data)

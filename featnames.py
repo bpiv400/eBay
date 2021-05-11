@@ -69,6 +69,7 @@ ALL_OFFER_FEATS = CLOCK_FEATS + TIME_FEATS + OUTCOME_FEATS
 BYR_HIST = 'byr_hist'
 DAYS_SINCE_LSTG = 'days_since_lstg'
 DAYS_SINCE_LAST = 'days_since_last'
+IS_AGENT = 'is_agent'
 
 # index labels
 LSTG = 'lstg'

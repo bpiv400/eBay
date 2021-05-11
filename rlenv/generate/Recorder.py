@@ -5,7 +5,7 @@ from rlenv.const import FIRST_OFFER
 from constants import MAX_DELAY_ARRIVAL
 from featnames import START_TIME, START_PRICE, TIME_FEATS, MSG, CON, \
     LSTG, SIM, THREAD, INDEX, BYR_HIST, DEC_PRICE, ACC_PRICE, CLOCK, \
-    X_THREAD, X_OFFER
+    X_THREAD, X_OFFER, IS_AGENT
 
 OFFER_COLS = [LSTG, SIM, THREAD, INDEX, CLOCK, CON, MSG] + TIME_FEATS
 THREAD_COLS = [LSTG, SIM, THREAD, BYR_HIST, CLOCK]
@@ -140,10 +140,14 @@ class Recorder:
 
 
 class OutcomeRecorder(Recorder):
-    def __init__(self, verbose=None):
+    def __init__(self, verbose=None, byr=False):
         super().__init__(verbose)
+        self.byr = byr
         self.offers = None
         self.threads = None
+        self.thread_cols = THREAD_COLS
+        if byr:
+            self.thread_cols += [IS_AGENT]
         self.reset_recorders()
 
     def reset_recorders(self):
@@ -151,14 +155,17 @@ class OutcomeRecorder(Recorder):
         self.offers = []
         self.threads = []
 
-    def start_thread(self, thread_id=None, byr_hist=None, time=None):
+    def start_thread(self, thread_id=None, byr_hist=None, time=None, is_agent=False):
         """
         Records an arrival
         :param thread_id: int giving the thread id
         :param byr_hist: float giving byr history decile
         :param int time: time of the offer
+        :param bool is_agent: whether thread is buyer agent
         """
         row = [self.lstg, self.sim_ct, thread_id, byr_hist, time]
+        if self.byr:
+            row += [is_agent]
         self.threads.append(row)
 
     def add_offer(self, event=None, time_feats=None):
@@ -180,6 +187,7 @@ class OutcomeRecorder(Recorder):
             self.print_offer(event)
 
     def add_buyer_walk(self, event=None, time_feats=None):
+        assert self.byr
         assert event.turn == 1
         row = [self.lstg, self.sim_ct, event.thread_id, 1,
                event.priority, 0, 0]
@@ -191,7 +199,7 @@ class OutcomeRecorder(Recorder):
     def construct_output(self):
         # convert lists to dataframes
         self.offers = self.record2frame(self.offers, OFFER_COLS)
-        self.threads = self.record2frame(self.threads, THREAD_COLS)
+        self.threads = self.record2frame(self.threads, self.thread_cols)
 
         # set index
         self.offers.set_index(INDEX_COLS, inplace=True)

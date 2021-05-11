@@ -2,10 +2,10 @@ from rlenv.generate.Generator import Generator, SimulatorEnv
 from rlenv.util import get_env_sim_subdir
 from testing.Listing import Listing
 from testing.TestQueryStrategy import TestQueryStrategy
-from testing.util import load_all_inputs, reindex_dict, \
-    get_auto_safe_lstgs, drop_duplicated_timestamps
+from testing.util import load_all_inputs, get_auto_safe_lstgs, \
+    drop_duplicated_timestamps
 from testing.TestLoader import TestLoader
-from utils import unpickle, load_file
+from utils import unpickle, load_file, safe_reindex
 from featnames import X_THREAD, X_OFFER, LOOKUP, LSTG
 
 
@@ -44,13 +44,13 @@ class TestGenerator(Generator):
 
         # model inputs, subset to lstgs
         inputs = load_all_inputs(part=part, byr=self.byr, slr=self.slr)
-        inputs = reindex_dict(d=inputs, lstgs=lstgs)
+        inputs = safe_reindex(inputs, idx=lstgs)
 
         # subset to valid listings
         valid = self._get_valid_lstgs(part=part, chunk=chunk)
         if len(valid) < len(lstgs):
-            chunk = reindex_dict(d=chunk, lstgs=valid)
-            inputs = reindex_dict(d=inputs, lstgs=valid)
+            chunk = safe_reindex(chunk, idx=valid)
+            inputs = safe_reindex(inputs, idx=valid)
         print('{} listings in chunk, {} of them valid'.format(
             len(lstgs), len(valid)))
 
@@ -81,6 +81,7 @@ class TestGenerator(Generator):
             X_THREAD: self.loader.x_thread,
             X_OFFER: self.loader.x_offer,
             LOOKUP: self.loader.lookup,
+            'arrivals_first': self.byr,
             'verbose': self.verbose
         }
         return params

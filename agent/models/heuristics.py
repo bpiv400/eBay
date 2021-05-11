@@ -1,16 +1,14 @@
 import numpy as np
 import torch
 from agent.const import DELTA_SLR, AGENT_CONS
-from rlenv.const import TIME_FEATS, DAYS_IND, NORM_IND
-from constants import MAX_DAYS, IDX, NUM_COMMON_CONS
-from featnames import LSTG, BYR
-
-DAYS_SINCE_START_IND = -5
+from rlenv.const import TIME_FEATS, DAYS_IND, NORM_IND, BYR_OFFERS_RECENT_IND
+from constants import IDX, NUM_COMMON_CONS, MAX_DAYS
+from featnames import LSTG, BYR, SLR
 
 
 class HeuristicSlr:
     def __init__(self, delta=None):
-        self.high = np.isclose(delta, DELTA_SLR[-1])
+        self.patient = np.isclose(delta, DELTA_SLR[-1])
 
     def __call__(self, observation=None):
         # noinspection PyProtectedMember
@@ -22,24 +20,30 @@ class HeuristicSlr:
         # index of action
         f = wrapper(turn)
         if turn == 2:
-            elapsed = get_elapsed(x=x, turn=turn)
-            tau = .49 if self.high else .38
-            idx = f(0) if elapsed <= tau else f(1)
+            days = get_days(x=x, turn=turn)
+            tau = 5.05 if self.patient else 3.03
+            idx = f(0) if days <= tau else f(1)
 
         elif turn == 4:
-            if self.high:
-                elapsed = get_elapsed(x=x, turn=turn)
-                idx = f(0) if elapsed <= .33 else f(1)
+            if self.patient:
+                days = get_days(x=x, turn=turn)
+                idx = f(0) if days <= 2.01 else f(.5)
             else:
-                norm = get_last_norm(turn=turn, x=x)
-                idx = f(.5) if norm <= .69 else f(1)
+                num_offers = get_recent_byr_offers(x=x, turn=turn)
+                print(num_offers)
+                idx = f(1) if num_offers <= .5 else f(0)
 
         elif turn == 6:
-            if self.high:
-                idx = f(1)
+            if self.patient:
+                days4 = get_days(x=x, turn=4)
+                if days4 <= 2.01:
+                    days6 = get_days(x=x, turn=6)
+                    idx = f(0) if days6 <= 2.04 else f(1)
+                else:
+                    norm = get_last_norm(x=x, turn=turn)
+                    idx = f(.5) if norm <= .67 else f(1)
             else:
-                norm = get_last_norm(turn=turn, x=x)
-                idx = f(.5) if norm <= .65 else f(1)
+                idx = f(0)
         else:
             raise ValueError('Invalid turn: {}'.format(turn))
 
@@ -97,17 +101,6 @@ class HeuristicByr:
         return pdf
 
 
-def wrapper(turn=None):
-    return lambda x: np.nonzero(np.isclose(AGENT_CONS[turn], x))[0][0]
-
-
-def get_agent_turn(x=None, byr=None):
-    turn_feats = x[LSTG][-3:] if byr else x[LSTG][-2:]
-    turn_feats = turn_feats.unsqueeze(dim=0)
-    turn = int(get_turn(x=turn_feats, byr=byr).item())
-    return turn
-
-
 def get_last_norm(turn=None, x=None):
     """
     Normalized last offer.
@@ -124,27 +117,54 @@ def get_last_norm(turn=None, x=None):
     return norm
 
 
-def get_elapsed(x=None, turn=None):
+def get_days(x=None, turn=None):
     """
-    Fraction of listing window elapsed.
+    Days since listing began.
     :param dict x: input features
     :param int turn: turn number
     :return: float
     """
-    elapsed = x[LSTG][DAYS_SINCE_START_IND].item() / MAX_DAYS
+    DAYS_SINCE_START_IND = -5
+    days = x[LSTG][DAYS_SINCE_START_IND].item()
     if turn > 1:
         days_ind = DAYS_IND
         if turn in IDX[BYR]:
             days_ind -= len(TIME_FEATS)
-        for i in range(2, turn + 1):
-            elapsed += x['offer{}'.format(i)][days_ind].item() / MAX_DAYS
-    assert elapsed < 1.
-    return elapsed
+        for t in range(2, turn + 1):
+            days += x['offer{}'.format(t)][days_ind].item()
+    assert days < MAX_DAYS
+    return days
+
+
+def get_recent_byr_offers(x=None, turn=None):
+    """
+    Number of buyer offers in last 48 hours.
+    :param dict x: input features
+    :param int turn: turn number
+    :return: float
+    """
+    assert turn in IDX[SLR]
+    num_offers = x['offer1'][BYR_OFFERS_RECENT_IND].item()
+    for t in range(2, turn + 1):
+        num_offers += x['offer{}'.format(t)][BYR_OFFERS_RECENT_IND].item()
+    assert num_offers >= 0
+    return num_offers
+
+
+def wrapper(turn=None):
+    return lambda x: np.nonzero(np.isclose(AGENT_CONS[turn], x))[0][0]
 
 
 def get_turn(x, byr=None):
     last = 4 * x[:, -2] + 2 * x[:, -1]
     if byr:
-        return 7 - 6 * x[:, -3] - last
+        turn = 7 - 6 * x[:, -3] - last
     else:
-        return 6 - last
+        turn = 6 - last
+    return int(turn.item())
+
+
+def get_agent_turn(x=None, byr=None):
+    turn_feats = x[LSTG][-3:] if byr else x[LSTG][-2:]
+    turn_feats = turn_feats.unsqueeze(dim=0)
+    return get_turn(x=turn_feats, byr=byr)

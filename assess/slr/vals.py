@@ -1,22 +1,21 @@
-from agent.util import load_values, get_run_dir, load_valid_data, \
-    get_norm_reward, get_slr_valid
+from agent.util import load_values, get_sim_dir, load_valid_data, get_norm_reward
 from assess.util import create_cdfs
-from utils import topickle, safe_reindex, load_data
+from utils import topickle, safe_reindex
 from agent.const import DELTA_SLR
 from constants import PLOT_DIR
-from featnames import TEST, LOOKUP
+from featnames import LOOKUP
 
 
 def main():
     d = dict()
 
-    obs = get_slr_valid(load_data(part=TEST))
+    obs = load_valid_data(byr=False)
 
     # value comparison
     for delta in DELTA_SLR:
-        run_dir = get_run_dir(delta=delta)
-        data = load_valid_data(part=TEST, sim_dir=run_dir)
-        vals = load_values(part=TEST, delta=delta)
+        sim_dir = get_sim_dir(delta=delta)
+        data = load_valid_data(sim_dir=sim_dir)
+        vals = load_values(delta=delta)
 
         valid_vals = safe_reindex(vals, idx=data[LOOKUP].index)
         elem = {'All': vals, 'Valid': valid_vals}

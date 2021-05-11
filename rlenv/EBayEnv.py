@@ -25,9 +25,6 @@ class EBayEnv:
         # for printing
         self.verbose = kwargs['verbose']
 
-        # simulate all arrivals initially
-        self.arrivals_first = False
-
         # features
         self.x_lstg = None
         self.lookup = None
@@ -39,6 +36,7 @@ class EBayEnv:
         self.thread_counter = 0
         self.outcome = None
         self.last_arrival_time = None
+        self.arrivals_first = False  # simulate all arrivals initially
 
         # classes
         self.time_feats = TimeFeatures()
@@ -58,40 +56,11 @@ class EBayEnv:
         self.time_feats.reset()
         self.outcome = None
         self.thread_counter = 0
-        if self.arrivals_first:
-            self.simulate_arrivals(priority=self.start_time)
-        else:
-            event = Arrival(priority=self.start_time,
-                            sources=ArrivalSources(x_lstg=self.x_lstg))
-            self.queue.push(event)
+        event = Arrival(priority=self.start_time,
+                        sources=ArrivalSources(x_lstg=self.x_lstg))
+        self.queue.push(event)
         if self.verbose:
             Recorder.print_lstg(self.lookup)
-
-    def simulate_arrivals(self, priority):
-        if priority >= self.end_time:
-            return
-
-        if priority == self.start_time:
-            assert self.thread_counter == 0
-            seconds = self.get_first_arrival(time=self.start_time, thread_id=1)
-
-        else:
-            event = Arrival(priority=priority,
-                            sources=ArrivalSources(x_lstg=self.x_lstg))
-            event.update_arrival(thread_count=self.thread_counter,
-                                 last_arrival_time=self.last_arrival_time)
-            seconds = self.get_inter_arrival(event=event)
-
-        new_priority = min(priority + seconds, self.end_time)
-
-        # if a buyer arrives, create a thread at the arrival time
-        if new_priority < self.end_time:
-            self.last_arrival_time = priority
-            thread = Thread(priority=new_priority)
-            self.thread_counter += 1
-            thread.set_id(self.thread_counter)
-            self.queue.push(thread)
-        return False
 
     def has_next_lstg(self):
         return self.loader.has_next()
@@ -128,8 +97,8 @@ class EBayEnv:
 
     def process_event(self, event):
         if event.type == ARRIVAL:
-            if self.arrivals_first:
-                raise RuntimeError('Should not have arrival event in queue when simulating arrivals first.')
+            if self.is_lstg_expired(event):
+                return self.process_lstg_expiration(event)
             return self.process_arrival(event)
         elif event.type == FIRST_OFFER:
             self.create_thread(event)
@@ -141,19 +110,14 @@ class EBayEnv:
         else:
             raise NotImplementedError()
 
-    def record(self, event, byr_hist=None):
+    def record_offer(self, event):
         if self.recorder is None:
-            if self.verbose and byr_hist is None:
+            if self.verbose:
                 Recorder.print_offer(event)
         else:
-            if byr_hist is None:
-                time_feats = self.time_feats.get_feats(thread_id=event.thread_id,
-                                                       time=event.priority)
-                self.recorder.add_offer(event=event, time_feats=time_feats)
-            else:
-                self.recorder.start_thread(thread_id=event.thread_id,
-                                           byr_hist=byr_hist,
-                                           time=event.priority)
+            time_feats = self.time_feats.get_feats(thread_id=event.thread_id,
+                                                   time=event.priority)
+            self.recorder.add_offer(event=event, time_feats=time_feats)
 
     def process_offer(self, event):
         # check whether the lstg expired, censoring this offer
@@ -178,7 +142,7 @@ class EBayEnv:
         slr_offer = event.turn % 2 == 0
         # print('summary right before record')
         # print(event.summary())
-        self.record(event)
+        self.record_offer(event)
         # check whether the offer is an acceptance
         if event.is_sale():
             self._process_sale(offer)
@@ -213,7 +177,7 @@ class EBayEnv:
         self.outcome = self.Outcome(True, sale_price, days, offer.thread_id)
         self.empty_queue()
 
-    def create_thread(self, event):
+    def create_thread(self, event, is_agent=False):
         """
         Processes the buyer's first offer in a thread
         :return:
@@ -240,7 +204,11 @@ class EBayEnv:
 
         # update features with history
         event.init_thread(sources=sources, hist=hist)
-        self.record(event, byr_hist=hist)
+        if self.recorder is not None:
+            self.recorder.start_thread(thread_id=event.thread_id,
+                                       byr_hist=hist,
+                                       time=event.priority,
+                                       is_agent=is_agent)
 
     def prepare_offer(self, event):
         # if offer not expired and thread still active, prepare this turn's inputs
@@ -256,18 +224,12 @@ class EBayEnv:
         :param event: Event corresponding to current event
         :return: boolean indicating whether the lstg has ended
         """
-        if self.is_lstg_expired(event):
-            return self.process_lstg_expiration(event)
-
-        # update event
-        event.update_arrival(thread_count=self.thread_counter,
-                             last_arrival_time=self.last_arrival_time)
-
         # call model to sample inter arrival time and update arrival check priority
         if event.priority == self.start_time:
-            seconds = self.get_first_arrival(time=event.priority,
-                                             thread_id=self.thread_counter+1)
+            seconds = self.get_first_arrival(time=self.start_time)
         else:
+            event.update_arrival(thread_count=self.thread_counter,
+                                 last_arrival_time=self.last_arrival_time)
             seconds = self.get_inter_arrival(event=event)
         check_in_time = event.priority
         event.priority = min(event.priority + seconds, self.end_time)
@@ -276,18 +238,22 @@ class EBayEnv:
             print('Next arrival at {}'.format(event.priority))
 
         # if a buyer arrives, create a thread at the arrival time
-        if event.priority < self.end_time:
+        lstg_expired = self.is_lstg_expired(event)
+        if not lstg_expired:
             self.last_arrival_time = check_in_time
             thread = Thread(priority=event.priority)
             self.thread_counter += 1
             thread.set_id(self.thread_counter)
             self.queue.push(thread)
-        self.queue.push(event)
+            if self.arrivals_first:
+                self.process_arrival(event)
+        if lstg_expired or not self.arrivals_first:
+            self.queue.push(event)
         return False
 
     def process_byr_expire(self, event):
         event.byr_expire()
-        self.record(event)
+        self.record_offer(event)
         offer_params = {
             'thread_id': event.thread_id,
             'time': event.priority,
@@ -301,7 +267,7 @@ class EBayEnv:
                                                time=event.priority)
         event.init_offer(time_feats=time_feats)
         offer = event.slr_expire_rej()
-        self.record(event)
+        self.record_offer(event)
         self.time_feats.update_features(offer=offer)
         self._init_delay(event)
         return False
@@ -366,13 +332,13 @@ class EBayEnv:
         time_feats = self.time_feats.get_feats(thread_id=event.thread_id,
                                                time=event.priority)
         offer = event.slr_auto_rej(time_feats=time_feats)
-        self.record(event)
+        self.record_offer(event)
         self.time_feats.update_features(offer=offer)
         self._init_delay(event)
 
     def _process_slr_auto_acc(self, event):
         offer = event.slr_auto_acc()
-        self.record(event)
+        self.record_offer(event)
         self._process_sale(offer)
 
     def _init_delay(self, event):

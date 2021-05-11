@@ -4,7 +4,7 @@ from assess.util import kdens_wrapper, ll_wrapper
 from processing.util import do_rounding
 from utils import unpickle, topickle, load_data
 from agent.const import DELTA_SLR
-from assess.const import LOG10_BIN_DIM, LOG10_BO_DIM, DELTA_ASSESS
+from assess.const import LOG10_BIN_DIM, LOG10_BO_DIM
 from constants import PLOT_DIR, SIM_DIR
 from featnames import LOOKUP, SLR_BO_CT, TEST, START_PRICE
 
@@ -32,8 +32,8 @@ def slr_plot(data=None, y=None):
 
 def main():
     # various data
-    data = load_data(part=TEST)
-    vals = load_values(part=TEST, delta=DELTA_ASSESS)
+    data = load_data()
+    vals = load_values(delta=DELTA_SLR[-1])
 
     d = dict()
 

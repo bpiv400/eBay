@@ -2,7 +2,7 @@ import pandas as pd
 from utils import unpickle, load_file, load_data, safe_reindex, get_role
 from constants import AGENT_DIR, IDX, SIM_DIR
 from featnames import SLR, BYR, NORM, AUTO, INDEX, THREAD, CON, \
-    LOOKUP, X_OFFER, START_PRICE, X_THREAD, OUTCOME_FEATS, TEST
+    LOOKUP, X_OFFER, START_PRICE, X_THREAD, OUTCOME_FEATS, TEST, SIM, IS_AGENT
 
 
 def get_log_dir(byr=None):
@@ -25,9 +25,7 @@ def get_run_dir(byr=None, delta=None, turn_cost=0, verbose=True):
     return run_dir
 
 
-def get_sim_dir(byr=None, delta=None, part=TEST,
-                heuristic=False, turn_cost=0,
-                agent_thread=1, verbose=True, **kwargs):
+def get_sim_dir(byr=None, delta=None, part=TEST, heuristic=False, turn_cost=0):
     run_dir = get_run_dir(byr=byr,
                           delta=delta,
                           turn_cost=turn_cost,
@@ -35,10 +33,7 @@ def get_sim_dir(byr=None, delta=None, part=TEST,
     sim_dir = run_dir + '{}/'.format(part)
     if heuristic:
         sim_dir += 'heuristic/'
-    elif byr:
-        sim_dir += '{}/'.format(agent_thread)
-    if verbose:
-        print(sim_dir)
+    print(sim_dir)
     return sim_dir
 
 
@@ -66,49 +61,47 @@ def get_norm_reward(data=None, values=None, byr=False):
     return sale_norm, cont_value
 
 
-def only_byr_agent(data=None, drop_thread=True, agent_thread=1):
+def only_byr_agent(data=None):
     if data is None:
         return None
 
-    for k, v in data.items():
-        if THREAD in v.index.names:
-            data[k] = v.xs(agent_thread, level=THREAD, drop_level=drop_thread)
-        idx = data[X_THREAD].index
-        if THREAD in idx.names:
-            idx = idx.droplevel(THREAD)
-        data[LOOKUP] = data[LOOKUP].loc[idx.unique()]
+    # from observed data, keep all threads
+    if IS_AGENT not in data[X_THREAD].columns:
+        assert SIM not in data[X_THREAD].index.names
+        return data
+
+    # from buyer simulations, keep only agent threads
+    mask = data[X_THREAD][IS_AGENT]
+    threads = mask[mask].index
+    data = safe_reindex(data, idx=threads)
     return data
 
 
-def get_byr_valid(data=None, agent_thread=1):
-    idx = data[X_THREAD].xs(agent_thread, level=THREAD).index
-    for k, v in data.items():
-        data[k] = safe_reindex(v, idx=idx)
-        if k == X_OFFER:
-            data[k] = data[k].reorder_levels(v.index.names)
-    return data
+def get_byr_valid(data=None):
+    threads = data[X_THREAD]
+    if SIM in threads.index.names:
+        threads = threads[IS_AGENT]
+    valid = threads.index.droplevel(THREAD).unique()
+    return valid
 
 
 def get_slr_valid(data=None):
     # count non-automatic seller offers
     auto = data[X_OFFER][AUTO]
-    valid = ~auto[auto.index.isin(IDX[SLR], level=INDEX)]
-    valid = valid.droplevel([THREAD, INDEX])
-    s = valid.groupby(valid.index.names).sum()
-    lstg_sim = s[s > 0].index
-    for k, v in data.items():
-        data[k] = safe_reindex(v, idx=lstg_sim)
-        if k == X_OFFER:
-            data[k] = data[k].reorder_levels(v.index.names)
-    return data
+    mask = ~auto[auto.index.isin(IDX[SLR], level=INDEX)]
+    mask = mask.droplevel([THREAD, INDEX])
+    s = mask.groupby(mask.index.names).sum()
+    valid = s[s > 0].index
+    return valid
 
 
 def load_valid_data(part=TEST, sim_dir=None, byr=None,
-                    clock=False, minimal=False, agent_thread=1):
+                    clock=False, minimal=False):
     # error checking
     if sim_dir is not None:
         assert byr is None
         byr = BYR in sim_dir
+    assert byr is not None
 
     # load data
     data = load_data(part=part, sim_dir=sim_dir, clock=clock)
@@ -120,10 +113,11 @@ def load_valid_data(part=TEST, sim_dir=None, byr=None,
         data[X_OFFER] = data[X_OFFER][OUTCOME_FEATS]
 
     # restrict to valid listings
-    if byr:
-        return get_byr_valid(data=data, agent_thread=agent_thread)
-    else:
-        return get_slr_valid(data=data)
+    valid = get_byr_valid(data) if byr else get_slr_valid(data)
+    data = safe_reindex(data, idx=valid)
+    data[X_OFFER] = data[X_OFFER].reorder_levels(list(valid.names) + [THREAD, INDEX])
+
+    return data
 
 
 def load_values(part=TEST, delta=None, normalize=True):

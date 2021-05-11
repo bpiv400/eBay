@@ -24,7 +24,7 @@ def main():
 
     # concatenate, clean, and save
     if args.type == 'outcomes':
-        process_sims(part=args.part, sims=sims, output_dir=output_dir)
+        process_sims(part=args.part, sims=sims, sim_dir=output_dir)
     else:
         df = pd.concat(sims).sort_index()
         topickle(df, output_dir + 'values.pkl')

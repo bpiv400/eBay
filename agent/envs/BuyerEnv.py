@@ -1,3 +1,4 @@
+import numpy as np
 from rlpyt.utils.collections import namedarraytuple
 from rlenv.util import get_con_outcomes
 from utils import load_sizes
@@ -10,9 +11,42 @@ BuyerObs = namedarraytuple('BuyerObs', list(load_sizes(BYR)['x'].keys()))
 
 
 class BuyerEnv(AgentEnv):
-    def __init__(self, agent_thread=1, **kwargs):
+    def __init__(self, **kwargs):
         super().__init__(byr=True, **kwargs)
-        self.agent_thread = agent_thread
+        self.arrivals_first = True
+        self.agent_thread = None
+
+    def is_agent_turn(self, event):
+        """
+        When the agents thread comes back on the buyer's turn, it's time to act.
+        :return bool: True if agents buyer takes an action
+        """
+        if event.type == ARRIVAL:
+            return False
+
+        # catch first buyer, determine which buyer is agent
+        if event.thread_id == 1 and event.type == FIRST_OFFER:
+            assert self.agent_thread is None
+            self.agent_thread = np.random.randint(1, self.thread_counter + 1)
+            if self.verbose:
+                print('{} buyer{}, agent is #{}.'.format(
+                    self.thread_counter,
+                    's' if self.thread_counter > 1 else '',
+                    self.agent_thread)
+                )
+            return self.agent_thread == 1
+
+        # catch buyer turns on agent thread
+        assert self.agent_thread is not None
+        if event.thread_id == self.agent_thread and event.turn % 2 == 1:
+            return not self.is_lstg_expired(event) and not event.thread_expired()
+
+        # other buyers or seller turn
+        return False
+
+    def init_reset(self):
+        super().init_reset()
+        self.agent_thread = None
 
     def reset(self):
         """
@@ -21,19 +55,21 @@ class BuyerEnv(AgentEnv):
         running the environment
         :return: observation associated with the first rl arrival
         """
-        self.init_reset()  # in AgentEnv
-
+        self.init_reset()  # in BuyerEnv
         while True:
             event, lstg_complete = super().run()  # calls EBayEnv.run()
 
-            # when rl buyer arrives, create a prospective thread
-            if not lstg_complete and event.thread_id == self.agent_thread:
-                self.create_thread(event)
-                self.curr_event = event
-                return self.get_obs(event=self.curr_event, done=False)
+            # when agent buyer arrives, create a thread and get an offer
+            if not lstg_complete:
+                if event.thread_id == self.agent_thread:
+                    if event.type != FIRST_OFFER:
+                        raise ValueError('Incorrect event type: {}'.format(event.type))
+                    self.create_thread(event, is_agent=True)
+                    self.curr_event = event
+                    return self.get_obs(event=self.curr_event, done=False)
 
             # listing ends before RL arrival
-            if self.train:  # queue up next listing
+            elif self.train:  # queue up next listing
                 self.init_reset()
             else:  # for testing and evaluation
                 return None
@@ -87,20 +123,6 @@ class BuyerEnv(AgentEnv):
                                     done=True,
                                     last_event=self.last_event)
         return self.run()
-
-    def is_agent_turn(self, event):
-        """
-        When the agents thread comes back on the buyer's turn, it's time to act.
-        :return bool: True if agents buyer takes an action
-        """
-        if event.type == ARRIVAL:
-            return False
-
-        # catch buyer turns on agent thread
-        if event.thread_id == self.agent_thread and event.turn % 2 == 1:
-            return not self.is_lstg_expired(event) and not event.thread_expired()
-
-        return False
 
     def run(self):
         while True:

@@ -182,8 +182,11 @@ class BuyerAgent(SplitCategoricalPgAgent):
         lnL = torch.sum(torch.log(p[idx0, 0] + EPS))
 
         # purchased at list price
-        idx1 = torch.isclose(norm_return, zeros, atol=1e-6) & valid
-        lnL += torch.sum(torch.log(p[idx1, 1] + EPS))
+        if not np.isclose(self.min, 0):
+            idx1 = torch.isclose(norm_return, zeros, atol=1e-6) & valid
+            lnL += torch.sum(torch.log(p[idx1, 1] + EPS))
+        else:
+            idx1 = idx0
 
         # purchased for half of list price
         idx2 = torch.isclose(norm_return, zeros + 1, atol=1e-6) & valid

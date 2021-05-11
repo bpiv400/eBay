@@ -163,22 +163,6 @@ def load_all_inputs(part=None, byr=False, slr=False):
     return inputs_dict
 
 
-def reindex_dict(d=None, lstgs=None):
-    for m, v in d.items():
-        if isinstance(v, dict):
-            for k, df in v.items():
-                if len(df.index.names) == 1:
-                    d[m][k] = df.reindex(index=lstgs)
-                else:
-                    d[m][k] = df.reindex(index=lstgs, level='lstg')
-        else:
-            if len(v.index.names) == 1:
-                d[m] = v.reindex(index=lstgs)
-            else:
-                d[m] = v.reindex(index=lstgs, level='lstg')
-    return d
-
-
 def populate_inputs(full_inputs=None, value=None, agent_byr=False, agent=False):
     inputs = dict()
     for feat_set_name, feat_df in full_inputs.items():
@@ -247,10 +231,6 @@ def get_auto_safe_lstgs(chunk=None):
     return output_lstgs
 
 
-def get_byr_lstgs(chunk=None):
-    return chunk[X_OFFER].index.get_level_values(LSTG).unique()
-
-
 def get_slr_lstgs(chunk=None):
     # keep all lstgs with at least 1 non-auto seller offer
     auto = chunk[X_OFFER][AUTO]
@@ -258,10 +238,3 @@ def get_slr_lstgs(chunk=None):
     s = valid.groupby(LSTG).sum()
     output_lstgs = s[s > 0].index
     return output_lstgs
-
-
-def get_agent_lstgs(chunk=None, byr=None):
-    if byr:
-        return get_byr_lstgs(chunk)
-    else:
-        return get_slr_lstgs(chunk)
