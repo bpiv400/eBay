@@ -26,7 +26,7 @@ class AgentEnv(EBayEnv, Env):
         self.test = False if 'test' not in kwargs else kwargs['test']
         self.train = False if 'train' not in kwargs else kwargs['train']
 
-        if self.train:  # for reward calculation
+        if not self.test:  # for reward calculation
             self.delta = kwargs[DELTA]
             self.turn_cost = kwargs[TURN_COST]
 

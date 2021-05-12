@@ -1,6 +1,6 @@
 import numpy as np
 import torch
-from agent.const import DELTA_SLR, AGENT_CONS
+from agent.const import DELTA_SLR, DELTA_BYR, AGENT_CONS
 from rlenv.const import TIME_FEATS, DAYS_IND, NORM_IND, BYR_OFFERS_RECENT_IND
 from constants import IDX, NUM_COMMON_CONS, MAX_DAYS
 from featnames import LSTG, BYR, SLR
@@ -54,7 +54,7 @@ class HeuristicSlr:
 
 class HeuristicByr:
     def __init__(self, delta=None):
-        assert delta in [.8, .9, 1, 1.5, 2]
+        assert delta in DELTA_BYR
         self.delta = delta
 
     def __call__(self, observation=None):
@@ -85,12 +85,6 @@ class HeuristicByr:
             else:
                 idx = f(1)
 
-        elif turn == 7:
-            if self.delta >= 1:
-                idx = f(1)
-            else:
-                norm = get_last_norm(turn=turn, x=x)
-                idx = f(0) if norm > self.delta else f(1)
         else:
             raise ValueError('Invalid turn: {}'.format(turn))
 
@@ -107,12 +101,8 @@ def get_last_norm(turn=None, x=None):
     :param int turn: turn number
     :return: float
     """
-    norm_ind = NORM_IND
-    if turn in IDX[BYR]:
-        norm_ind -= len(TIME_FEATS)
-    norm = x['offer{}'.format(turn - 1)][norm_ind].item()
-    if turn in IDX[BYR]:
-        norm = 1 - norm
+    assert turn in IDX[SLR]
+    norm = 1 - x['offer{}'.format(turn - 1)][NORM_IND].item()
     return norm
 
 
@@ -155,15 +145,11 @@ def wrapper(turn=None):
 
 
 def get_turn(x, byr=None):
-    last = 4 * x[:, -2] + 2 * x[:, -1]
-    if byr:
-        turn = 7 - 6 * x[:, -3] - last
-    else:
-        turn = 6 - last
+    last = 5 if byr else 6
+    turn = last - (4 * x[:, 0] + 2 * x[:, 1])
     return int(turn.item())
 
 
 def get_agent_turn(x=None, byr=None):
-    turn_feats = x[LSTG][-3:] if byr else x[LSTG][-2:]
-    turn_feats = turn_feats.unsqueeze(dim=0)
+    turn_feats = x[LSTG][-2:].unsqueeze(dim=0)
     return get_turn(x=turn_feats, byr=byr)

@@ -11,13 +11,16 @@ from rlenv.generate.Generator import OutcomeGenerator
 from rlenv.generate.Recorder import OutcomeRecorder
 from rlenv.interfaces.PlayerInterface import SimulatedSeller
 from utils import topickle
+from featnames import DELTA, TURN_COST
 
 
 class AgentGenerator(OutcomeGenerator):
-    def __init__(self, model=None, byr=None):
+    def __init__(self, model=None, byr=None, delta=None, turn_cost=None):
         super().__init__(verbose=False, test=False)
         self.model = model
         self.byr = byr
+        self.delta = delta
+        self.turn_cost = turn_cost
 
     def simulate_lstg(self):
         obs = self.env.reset()
@@ -36,6 +39,12 @@ class AgentGenerator(OutcomeGenerator):
 
     def generate_seller(self):
         return SimulatedSeller(full=self.byr)
+
+    def generate_env(self):
+        args = self.env_args
+        args[DELTA] = self.delta
+        args[TURN_COST] = self.turn_cost
+        return self.env_class(**args)
 
     @property
     def env_class(self):
@@ -73,7 +82,8 @@ def main():
         model = load_agent_model(model_args=model_args, run_dir=run_dir)
 
     # generator
-    gen = AgentGenerator(model=model, byr=args.byr)
+    gen = AgentGenerator(model=model, byr=args.byr,
+                         delta=args.delta, turn_cost=args.turn_cost)
 
     # process one chunk
     df = gen.process_chunk(part=args.part, chunk=chunk)
