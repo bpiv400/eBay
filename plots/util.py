@@ -2,12 +2,10 @@ import numpy as np
 import pandas as pd
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-from matplotlib.colors import ListedColormap
-from viscid.plot import vpyplot as vlt
 from agent.const import DELTA_CHOICES, DELTA_SLR
-from plots.const import BIN_TICKS, SLRBO_TICKS, FONTSIZE
-from constants import MAX_DELAY_TURN, MAX_DELAY_ARRIVAL, \
-    DAY, HOUR, EPS
+from plots.const import BIN_TICKS, BIN_TICKS_SHORT, SLRBO_TICKS, FONTSIZE, \
+    COLORS, TRICOLOR, ALTERNATING
+from constants import MAX_DELAY_TURN, MAX_DELAY_ARRIVAL, DAY, HOUR, EPS
 from featnames import CON, NORM, DELAY, ARRIVAL, MSG, ACCEPT, \
     REJECT, META, CNDTN, BYR, SLR, EXP
 from plots.save import save_fig
@@ -15,23 +13,9 @@ from plots.save import save_fig
 plt.style.use('seaborn-colorblind')
 mpl.rcParams['axes.grid'] = True
 
-COLORS = ['k'] + vlt.get_current_colorcycle()
-TRICOLOR = {'Humans': COLORS[0],
-            'Agent': COLORS[1],
-            'Impatient agent': COLORS[1],
-            'Patient agent': COLORS[2]}
-ALTERNATING = ListedColormap([COLORS[int(i % 2)+1] for i in range(1, 8)])
-
 
 def get_name(path):
     return path.split('/')[-1].split('_')[1]
-
-
-def get_log_ticks(idx=None, ticks=BIN_TICKS):
-    upper = 10 ** idx.max()
-    lower = 10 ** idx.min()
-    ticks = [t for t in ticks if lower <= t <= upper]
-    return ticks
 
 
 def add_diagonal(df):
@@ -179,13 +163,10 @@ def draw_simple(obj=None, dsets=None, i=None, colors=None):
     dset = dsets[i]
     df_i = obj.xs(dset, level=0, axis=1)
     c = colors[dset] if type(colors) is dict else colors[i]
-    plt.plot(df_i.index, df_i.beta, '-', color=c,
-             label=(None if dset == 'Humans' else dset))
+    plt.plot(df_i.index, df_i.beta, '-', color=c, label=dset)
     if 'err' in df_i.columns:
-        plt.plot(df_i.index, df_i.beta + 1.96 * df_i.err, '--',
-                 color=c)
-        plt.plot(df_i.index, df_i.beta - 1.96 * df_i.err, '--',
-                 color=c)
+        plt.plot(df_i.index, df_i.beta + 1.96 * df_i.err, '--', color=c)
+        plt.plot(df_i.index, df_i.beta - 1.96 * df_i.err, '--', color=c)
 
 
 def simple_plot(path, obj):
@@ -224,10 +205,9 @@ def simple_plot(path, obj):
                     xlabel='Turn 1: Offer / list price',
                     ylabel='Turn 2: Offer / list price')
     elif name == 'slrrejaccbin':
-        ticks = get_log_ticks(obj.index)
         args = dict(ylim=[0, 1],
-                    xticks=np.log10(ticks),
-                    xticklabels=ticks,
+                    xticks=np.log10(BIN_TICKS),
+                    xticklabels=BIN_TICKS,
                     xlabel='List price ($)',
                     ylabel='Turn 3: Pr(accept)')
     elif name == 'hours':
@@ -261,50 +241,51 @@ def simple_plot(path, obj):
                     xlabel='Turn 1: Offer / list price',
                     ylabel='Turn 3: Offer / list price')
     elif name == 'rewardbin':
-        args = dict(xlim=[1, 2.5],
+        args = dict(xlim=[min(obj.index), max(obj.index)],
                     xticks=np.log10(BIN_TICKS),
                     xticklabels=BIN_TICKS,
                     xlabel='List price ($)',
-                    ylabel='Payoff / list price')
+                    ylabel='Payoff / list price',
+                    legend=(path.split('_')[-1] == '0.0'))
     elif name == 'discountbin':
-        args = dict(xlim=[1, 2.5], ylim=[.1, .35],
+        args = dict(xlim=[min(obj.index), max(obj.index)], ylim=[.1, .35],
                     xticks=np.log10(BIN_TICKS),
                     xticklabels=BIN_TICKS,
                     xlabel='List price ($)',
                     ylabel='Discount')
     elif name == 'avgdiscountbin':
-        args = dict(xlim=[1, 2.5], ylim=[0, 50],
+        args = dict(xlim=[min(obj.index), max(obj.index)], ylim=[0, 50],
                     xticks=np.log10(BIN_TICKS),
                     xticklabels=BIN_TICKS,
                     xlabel='List price ($)',
                     ylabel='Discount / buyer offer ($)')
     elif name == 'discount':
-        args = dict(xlim=[1, 2.5], ylim=[0, .4],
+        args = dict(xlim=[min(obj.index), max(obj.index)], ylim=[0, .4],
                     xticks=np.log10(BIN_TICKS),
                     xticklabels=BIN_TICKS,
                     xlabel='List price ($)',
                     ylabel='Discount / list price')
     elif name == 'listbin':
-        args = dict(xlim=[1, 2.5], ylim=[0, 1],
+        args = dict(xlim=[min(obj.index), max(obj.index)], ylim=[0, 1],
                     xticks=np.log10(BIN_TICKS),
                     xticklabels=BIN_TICKS,
                     xlabel='List price ($)',
                     ylabel='Turn 1: Pr(accept)')
     elif name == 'listoffers':
-        args = dict(xlim=[1, 2.5], ylim=[1, 3],
+        args = dict(xlim=[min(obj.index), max(obj.index)], ylim=[1, 3],
                     xticks=np.log10(BIN_TICKS),
                     xticklabels=BIN_TICKS,
                     xlabel='List price ($)',
                     ylabel='Number of buyer offers',
                     legend_kwargs=dict(loc='upper left'))
     elif name == 'listfirst':
-        args = dict(xlim=[1, 2.5], ylim=[.5, .75],
+        args = dict(xlim=[min(obj.index), max(obj.index)], ylim=[.5, .75],
                     xticks=np.log10(BIN_TICKS),
                     xticklabels=BIN_TICKS,
                     xlabel='List price ($)',
                     ylabel='Turn 1: Offer  / list price')
     elif name == 'listrej':
-        args = dict(xlim=[1, 2.5], ylim=[0, 1],
+        args = dict(xlim=[min(obj.index), max(obj.index)], ylim=[0, 1],
                     xticks=np.log10(BIN_TICKS),
                     xticklabels=BIN_TICKS,
                     xlabel='List price ($)',
@@ -317,7 +298,7 @@ def simple_plot(path, obj):
                     ylabel='Average concession')
     elif name.startswith('listcounter'):
         t = path.split('_')[-1]
-        args = dict(xlim=[1, 2.5], ylim=[0, 1],
+        args = dict(xlim=[min(obj.index), max(obj.index)], ylim=[0, 1],
                     xticks=np.log10(BIN_TICKS),
                     xticklabels=BIN_TICKS,
                     xlabel='List price ($)',
@@ -373,7 +354,7 @@ def simple_plot(path, obj):
         if name.endswith(NORM):
             add_diagonal(obj)
 
-        save_fig(path, legend=True, **args)
+        save_fig(path, **args)
 
         # plot separately
         for i in range(len(dsets)):
@@ -383,7 +364,7 @@ def simple_plot(path, obj):
                 if j == 0 and name.endswith(NORM):
                     add_diagonal(obj)
 
-            save_fig('{}_{}'.format(path, i), legend=(i > 0), **args)
+            save_fig('{}_{}'.format(path, i), **args)
 
 
 def training_plot(path, df):
@@ -682,28 +663,29 @@ def bar_plot(path, obj):
         args = dict(xlabel='Turn', ylabel='Share of sales')
     elif name == 'discount':
         args = dict(xlabel='Turn', ylabel='Average discount ($)')
-    elif name == 'listoffers':
-        args = dict(xlabel='List price multiplier $(\\lambda)$',
-                    ylabel='Number of buyer offers',
-                    ylim=[1, 3])
-    elif name == 'listfirst':
-        args = dict(xlabel='List price multiplier $(\\lambda)$',
-                    ylabel='Turn 1: Offer / list price',
-                    ylim=[.49, .66])
-    elif name == 'listbin':
-        args = dict(xlabel='List price multiplier',
-                    ylabel='Turn 1: Pr(accept)',
-                    ylim=[0, .3])
-    elif name.startswith('listcounter'):
-        t = path.split('_')[-1]
-        args = dict(xlabel='List price multiplier $(\\lambda)$',
-                    ylabel='Turn {}: Pr(counter)'.format(t),
-                    ylim=[0, 1])
+    elif name == 'lambda':
+        args = dict(xlabel='List price multiplier $(\\lambda)$')
+        last = path.split('/')[-1].split('_')[2]
+        if last == 'offers':
+            args['ylabel'] = 'Number of buyer offers'
+            args['ylim'] = [1, 3]
+        elif last == 'first':
+            args['ylabel'] = 'Turn 1: Offer / list price',
+            args['ylim'] = [.49, .66]
+        elif last == 'bin':
+            args['ylabel'] = 'Turn 1: Pr(accept)'
+            args['ylim'] = [0, .3]
+        elif last == 'counter':
+            t = path.split('_')[-1]
+            args['ylabel'] = 'Turn {}: Pr(counter)'.format(t)
+            args['ylim'] = [0, 1]
+        else:
+            raise ValueError('Invalid name: {}'.format(last))
     else:
         raise NotImplementedError('Invalid name: {}'.format(name))
 
     if type(obj) is pd.Series:
-        if 'Humans' in obj.index:
+        if name == 'lambda':
             plt.gca().axhline(y=obj.loc['Humans'], label='Humans',
                               c='k', ls='--', lw=1)
             obj = obj.drop('Humans')
@@ -798,18 +780,16 @@ def contour_plot(path, s):
             turn = 2 if name == 'rejbin' else 3
             action = 'reject' if turn == 2 else 'accept'
             zlabel = 'Turn {}: Pr({})'.format(turn, action)
-        ticks = get_log_ticks(s.index.levels[1])
-        args = dict(yticks=np.log10(ticks),
-                    yticklabels=ticks,
+        args = dict(yticks=np.log10(BIN_TICKS_SHORT),
+                    yticklabels=BIN_TICKS_SHORT,
                     xlabel='Turn 1: Offer / list price',
                     ylabel='List price ($)',
                     zlabel=zlabel if suffix in ['data', name] else None)
     elif name in ['offer2binwalk', 'offer2binacc']:
         turn = int(name[5])
-        ticks = get_log_ticks(s.index.levels[1])
         zlabel = 'walk' if name.endswith('walk') else 'accept'
-        args = dict(yticks=np.log10(ticks),
-                    yticklabels=ticks,
+        args = dict(yticks=np.log10(BIN_TICKS_SHORT),
+                    yticklabels=BIN_TICKS_SHORT,
                     xlabel='Turn {}: Offer / list price'.format(turn),
                     ylabel='List price ($)',
                     zlabel='Turn {}: Pr({})'.format(turn+1, zlabel),

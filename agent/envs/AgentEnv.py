@@ -130,9 +130,9 @@ class AgentEnv(EBayEnv, Env):
     def _define_con_set(self):
         if self.test:
             cons = np.arange(101) / 100
-            cons = {t: cons for t in range(1, 8)}
+            cons = {t: cons for t in range(1, 7)}
         elif self.byr:
-            cons = {t: AGENT_CONS[t] for t in IDX[BYR]}
+            cons = {t: AGENT_CONS[t] for t in IDX[BYR][:-1]}
         else:
             cons = {t: AGENT_CONS[t] for t in IDX[SLR]}
         return cons

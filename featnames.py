@@ -110,7 +110,7 @@ RL = 'rl'
 
 # turn feats
 TURN_FEATS = {
-    BYR: ['t1', 't3', 't5'],
+    BYR: ['t1', 't3'],
     SLR: ['t2', 't4']
 }
 

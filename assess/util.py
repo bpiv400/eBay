@@ -1,17 +1,16 @@
-import os
 import numpy as np
 import pandas as pd
 from sklearn import tree
 from statsmodels.nonparametric.kde import KDEUnivariate
 from statsmodels.nonparametric.kernel_regression import KernelReg
-from agent.util import get_sale_norm, get_norm_reward, get_run_dir
-from utils import unpickle, safe_reindex, load_pctile
+from agent.util import get_sale_norm, get_norm_reward
+from utils import safe_reindex, load_pctile
 from assess.const import OPT, VALUES_DIM, POINTS, LOG10_BIN_DIM
 from constants import IDX, BYR, EPS, DAY, HOUR, MAX_DELAY_TURN, \
     MAX_DELAY_ARRIVAL, INTERVAL_ARRIVAL, INTERVAL_CT_ARRIVAL
 from featnames import DELAY, CON, NORM, AUTO, START_TIME, START_PRICE, LOOKUP, \
     MSG, DAYS_SINCE_LSTG, BYR_HIST, INDEX, X_OFFER, CLOCK, THREAD, X_THREAD, \
-    REJECT, EXP, SLR, TEST
+    REJECT, EXP, SLR
 
 
 def continuous_pdf(s=None):
@@ -307,7 +306,7 @@ def kreg2(y=None, x1=None, x2=None, names=None, mesh=None, bw=None):
     return s, ll2.bw
 
 
-def add_byr_reject_on_lstg_expiration(con=None):
+def add_byr_reject_on_lstg_end(con=None):
     sale = (con == 1).groupby(con.index.names[:-2]).max()
     s = con.reset_index(INDEX)[INDEX]
     slr_last = s.groupby(s.index.names).max().apply(lambda x: x in IDX[SLR])
@@ -345,22 +344,6 @@ def bin_vs_reward(data=None, values=None, byr=False, bw=None):
                           bw=bw,
                           ci=(bw is None))
     return line, bw
-
-
-def get_eval_df(byr=False, delta=None, turn_cost=0, suffix=None):
-    run_dir = get_run_dir(byr=byr, delta=delta, turn_cost=turn_cost)
-    path = run_dir + '{}.pkl'.format(TEST)
-    if not os.path.isfile(path):
-        return None
-    df = unpickle(path)
-    cols = ['dollar', 'buyrate'] if byr else ['norm', 'dollar']
-    if suffix is None:
-        return df[cols]
-    else:
-        df = df[['{}_{}'.format(c, suffix) for c in cols]]
-        k = len(suffix) + 1
-        df = df.rename(lambda c: c[:-k], axis=1)
-        return df
 
 
 def get_total_con(data=None):

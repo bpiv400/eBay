@@ -30,10 +30,7 @@ class AgentComposer(Composer):
         self.verify_agent()
 
     def _update_turn_inds(self, turn):
-        if not self.byr:
-            inds = np.zeros(2, dtype=np.float32)
-        else:
-            inds = np.zeros(3, dtype=np.float32)
+        inds = np.zeros(2, dtype=np.float32)
         active = math.floor((turn - 1) / 2)
         if active < inds.shape[0]:
             inds[active] = 1
@@ -122,13 +119,11 @@ class AgentComposer(Composer):
         if not self.byr:
             assert lstg_append[2] == THREAD_COUNT
             start_index = 3
-            agent_role = SLR
         else:
             start_index = 2
-            agent_role = BYR
 
         # ensure turn indicators are next in all cases
-        turn_feats = TURN_FEATS[agent_role]
+        turn_feats = TURN_FEATS[get_role(self.byr)]
         AgentComposer.verify_sequence(lstg_append, turn_feats, start_index)
         start_index += len(turn_feats)
 
@@ -142,7 +137,7 @@ class AgentComposer(Composer):
             assumed_feats = CLOCK_FEATS + OUTCOME_FEATS
         AgentComposer.verify_all_feats(assumed_feats=assumed_feats,
                                        model_feats=offer_feats)
-        last_turn = 7 if self.byr else 6
+        last_turn = 5 if self.byr else 6
         for turn in range(1, 8):
             if turn <= last_turn:
                 assert 'offer{}'.format(turn) in self.agent_sizes['x']

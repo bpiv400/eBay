@@ -2,7 +2,8 @@ import numpy as np
 import pandas as pd
 from agent.util import load_valid_data, get_run_dir, only_byr_agent, \
     get_sale_norm
-from assess.util import bin_vs_reward, ll_wrapper, get_eval_df
+from assess.util import bin_vs_reward, ll_wrapper
+from assess.slr.eval import get_eval_df
 from utils import topickle, safe_reindex
 from assess.const import LOG10_BIN_DIM
 from constants import PLOT_DIR

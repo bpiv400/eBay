@@ -26,9 +26,7 @@ LSTG_MAP = 'lstg'
 TURN_IND_MAP = 'turns'
 CLOCK_MAP = 'clock'
 TIME_MAP = 'time'
-OFFER_MAPS = dict()
-for i in range(1, 8):
-    OFFER_MAPS[i] = 'offer{}'.format(i)
+OFFER_MAPS = {t: 'offer{}'.format(t) for t in range(1, 8)}
 
 # offer response indicators
 ACC_IND = 0

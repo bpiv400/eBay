@@ -63,7 +63,7 @@ def bin_plot(name=None, get_y=None):
 
 
 def save_dict(d=None, name=None):
-    topickle(d, PLOT_DIR + 'byr{}.pkl'.format(name))
+    topickle(d, PLOT_DIR + 'byr_lambda_{}.pkl'.format(name))
 
 
 def get_hist_bins(num=6):

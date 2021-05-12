@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from assess.util import ll_wrapper, add_byr_reject_on_lstg_expiration, kreg2
+from assess.util import ll_wrapper, add_byr_reject_on_lstg_end, kreg2
 from utils import topickle, load_data, safe_reindex
 from agent.const import COMMON_CONS
 from assess.const import NORM1_DIM, POINTS, NORM1_BIN_MESH
@@ -27,7 +27,7 @@ def main():
     d = dict()
 
     data = load_data()
-    con = add_byr_reject_on_lstg_expiration(con=data[X_OFFER][CON])
+    con = add_byr_reject_on_lstg_end(con=data[X_OFFER][CON])
 
     con3 = con.xs(3, level=INDEX)
     norm1 = data[X_OFFER][NORM].xs(1, level=INDEX).loc[con3.index]
@@ -71,7 +71,7 @@ def main():
         y = locals()['y_{}'.format(feat)]
         d['contour_slrrejbin{}'.format(feat)], bw = \
             kreg2(y=y[mask], x1=x1[mask], x2=x3[mask], mesh=NORM1_BIN_MESH)
-    print('List price, {}: {}'.format(feat, bw))
+        print('List price, {}: {}'.format(feat, bw))
 
     topickle(d, PLOT_DIR + 'slr3.pkl')
 

@@ -1,6 +1,6 @@
 import pandas as pd
 from assess.byr.util import get_hist_bins
-from assess.util import ll_wrapper, add_byr_reject_on_lstg_expiration
+from assess.util import ll_wrapper, add_byr_reject_on_lstg_end
 from processing.util import feat_to_pctile
 from utils import load_data, topickle
 from assess.const import NORM1_DIM
@@ -11,7 +11,7 @@ from featnames import X_OFFER, X_THREAD, CON, INDEX, TEST, EXP, AUTO, NORM, REJE
 
 def main():
     data = load_data(part=TEST)
-    con = add_byr_reject_on_lstg_expiration(con=data[X_OFFER][CON])
+    con = add_byr_reject_on_lstg_end(con=data[X_OFFER][CON])
 
     # outcome: buyer accepts in turn 3
     acc3 = con.xs(3, level=INDEX) == 1

@@ -1,6 +1,6 @@
 import pandas as pd
 from utils import unpickle, load_file, load_data, safe_reindex, get_role
-from constants import AGENT_DIR, IDX, SIM_DIR
+from constants import AGENT_DIR, IDX, SIM_DIR, EPS
 from featnames import SLR, BYR, NORM, AUTO, INDEX, THREAD, CON, \
     LOOKUP, X_OFFER, START_PRICE, X_THREAD, OUTCOME_FEATS, TEST, SIM, IS_AGENT
 
@@ -55,7 +55,8 @@ def get_norm_reward(data=None, values=None, byr=False):
     if byr:
         sale_norm = 1 - sale_norm  # discount on list price
         assert values is None
-        cont_value = pd.Series(0., index=idx_no_sale, name='vals')
+    if byr or (type(values) is int and values == 0):
+        cont_value = pd.Series(0, index=idx_no_sale, name='vals')
     else:
         cont_value = safe_reindex(values, idx=idx_no_sale)
     return sale_norm, cont_value
@@ -133,4 +134,5 @@ def load_values(part=TEST, delta=None, normalize=True):
     if normalize:
         start_price = load_file(part, LOOKUP)[START_PRICE]
         v /= start_price
+        assert v.max() <= 1 + EPS
     return v.rename('vals')

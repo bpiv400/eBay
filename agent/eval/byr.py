@@ -1,14 +1,13 @@
-import argparse
 import os
 from copy import deepcopy
 import pandas as pd
-from agent.util import get_run_dir, get_sale_norm, only_byr_agent, \
-    load_valid_data, get_log_dir, get_sim_dir
+from agent.util import get_sale_norm, only_byr_agent, load_valid_data, get_sim_dir
+from agent.eval.util import eval_args, get_eval_path
 from utils import safe_reindex, unpickle, topickle
 from agent.const import DELTA_BYR, TURN_COST_CHOICES
 from constants import IDX
-from featnames import X_OFFER, LOOKUP, X_THREAD, START_PRICE, \
-    NORM, CON, REJECT, INDEX, BYR, SLR, TEST
+from featnames import X_OFFER, LOOKUP, X_THREAD, START_PRICE, NORM, CON, REJECT, \
+    INDEX, BYR, SLR
 
 
 def get_return(data=None, norm=None):
@@ -76,15 +75,14 @@ def get_keys(delta=None):
     return keys
 
 
-def get_output(d=None, agent_thread=1):
-    print('Agent thread {}'.format(agent_thread))
-    k = 'thread{}'.format(agent_thread)
+def get_output(d=None):
+    print('Full agent')
+    k = 'full'
     if k not in d:
         d[k] = pd.DataFrame()
 
     if 'Humans' not in d[k].index:
-        data = load_valid_data(byr=True, agent_thread=agent_thread, minimal=True)
-        data = only_byr_agent(data=data, agent_thread=agent_thread)
+        data = only_byr_agent(load_valid_data(byr=True, minimal=True))
         d[k]['Humans'] = get_return(data=data)
 
     for delta in DELTA_BYR:
@@ -92,15 +90,8 @@ def get_output(d=None, agent_thread=1):
         if keys[0] in d[k].index:
             continue
 
-        sim_dir = get_run_dir(byr=True, delta=delta)
-        if not os.path.isdir(sim_dir):
-            continue
-
         sim_dir = get_sim_dir(byr=True, delta=delta)
-        data = load_valid_data(sim_dir=sim_dir,
-                               agent_thread=agent_thread,
-                               minimal=True)
-        data = only_byr_agent(data=data, agent_thread=agent_thread)
+        data = only_byr_agent(load_valid_data(sim_dir=sim_dir, minimal=True))
         if data is None:
             continue
 
@@ -196,32 +187,28 @@ def get_turn_cost_output(d=None):
 
 
 def main():
-    # parameters from command line
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--read', action='store_true')
-    read = parser.parse_args().read
+    args = eval_args()
 
     # load existing file
-    log_dir = get_log_dir(byr=True)
+    path = get_eval_path(byr=True)
     try:
-        d = unpickle(log_dir + '{}.pkl'.format(TEST))
+        d = unpickle(path)
     except FileNotFoundError:
         d = dict()
-    if read:
+    if args.read:
         for k, v in d.items():
             print(k)
             print(v)
         exit()
 
     # create output statistics
-    get_output(d, agent_thread=1)
-    get_output(d, agent_thread=2)
+    get_output(d)
     get_sales_output(d)
     get_heuristic_output(d)
     get_turn_cost_output(d)
 
     # save
-    topickle(d, log_dir + '{}.pkl'.format(TEST))
+    topickle(d, path)
 
 
 if __name__ == '__main__':

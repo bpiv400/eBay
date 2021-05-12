@@ -1,5 +1,4 @@
 import numpy as np
-from constants import NUM_COMMON_CONS
 from utils import load_feats
 
 
@@ -9,7 +8,6 @@ AGENT_CONS = COMMON_CONS.copy()
 for t in range(1, 7):
     other = [0, 1] if t in [1, 3, 5] else [0, 1, 1.1]
     AGENT_CONS[t] = np.sort(np.concatenate([other, COMMON_CONS[t]]))
-AGENT_CONS[7] = np.concatenate([np.zeros(NUM_COMMON_CONS + 1), [1.]])
 
 # optimization parameters
 LR_POLICY = 1e-4        # learning rate for policy network

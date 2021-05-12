@@ -1,9 +1,9 @@
 import torch
 from torch.nn.functional import softmax
 from nets.FeedForward import FeedForward
-from utils import load_sizes
+from utils import load_sizes, get_role
 from agent.const import AGENT_STATE
-from constants import SLR, BYR, NUM_COMMON_CONS
+from constants import NUM_COMMON_CONS
 from featnames import LSTG
 
 
@@ -30,7 +30,7 @@ class AgentModel(torch.nn.Module):
         self.byr = byr
 
         # save x sizes for coverting tensor input to dictionary
-        sizes = load_sizes(BYR if byr else SLR)
+        sizes = load_sizes(get_role(byr))
         self.x_sizes = sizes['x']
 
         # policy net

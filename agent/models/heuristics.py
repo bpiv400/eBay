@@ -30,7 +30,6 @@ class HeuristicSlr:
                 idx = f(0) if days <= 2.01 else f(.5)
             else:
                 num_offers = get_recent_byr_offers(x=x, turn=turn)
-                print(num_offers)
                 idx = f(1) if num_offers <= .5 else f(0)
 
         elif turn == 6:

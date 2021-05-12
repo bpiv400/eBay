@@ -10,7 +10,6 @@ from rlpyt.distributions.categorical import DistInfo
 from rlpyt.utils.buffer import buffer_to
 from agent.const import AGENT_CONS
 from constants import EPS, IDX, SLR
-from featnames import BYR
 
 
 class SplitCategoricalPgAgent(CategoricalPgAgent):
@@ -204,7 +203,7 @@ class BuyerAgent(SplitCategoricalPgAgent):
                        con=None, valid=None):
         turn_ct = backward_from_done(x=env.env_info.turn, done=env.done)
         turn_ct = turn_ct[valid].numpy()
-        for t in IDX[BYR]:
+        for t in [1, 3, 5]:
             # rate of reaching turn t
             opt_info['Rate_{}'.format(t)] = np.mean(turn_ct == t)
 
@@ -212,12 +211,11 @@ class BuyerAgent(SplitCategoricalPgAgent):
             con_t = con[turn == t]
             prefix = 'Turn{}'.format(t)
             opt_info['{}_{}'.format(prefix, 'AccRate')] = np.mean(con_t == 1)
-            if t < 7:
-                opt_info['{}_{}'.format(prefix, 'RejRate')] = np.mean(con_t == 0)
-                opt_info['{}_{}'.format(prefix, 'ConRate')] = \
-                    np.mean((con_t > 0) & (con_t < 1))
-                opt_info['{}{}'.format(prefix, 'Con')] = \
-                    con_t[(con_t > 0) & (con_t < 1)]
+            opt_info['{}_{}'.format(prefix, 'RejRate')] = np.mean(con_t == 0)
+            opt_info['{}_{}'.format(prefix, 'ConRate')] = \
+                np.mean((con_t > 0) & (con_t < 1))
+            opt_info['{}{}'.format(prefix, 'Con')] = \
+                con_t[(con_t > 0) & (con_t < 1)]
         return opt_info
 
 

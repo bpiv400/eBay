@@ -2,7 +2,8 @@ import numpy as np
 from rlpyt.utils.collections import namedarraytuple
 from rlenv.util import get_con_outcomes
 from utils import load_sizes
-from rlenv.const import FIRST_OFFER, DELAY_EVENT, OFFER_EVENT, ARRIVAL
+from rlenv.const import FIRST_OFFER, DELAY_EVENT, OFFER_EVENT, ARRIVAL, \
+    OFFER_MAPS, NORM_IND
 from agent.envs.AgentEnv import AgentEnv, EventLog
 from constants import BYR
 from featnames import START_PRICE
@@ -79,8 +80,7 @@ class BuyerEnv(AgentEnv):
         Takes in a buyer action, updates the relevant event, then continues
         the simulation
         """
-        con = self.turn_from_action(turn=self.curr_event.turn,
-                                    action=action)
+        con = self.turn_from_action(turn=self.curr_event.turn, action=action)
         if 0. < con < 1.:
             self.num_actions += 1
 
@@ -90,13 +90,13 @@ class BuyerEnv(AgentEnv):
 
         event_type = self.curr_event.type
         if event_type == FIRST_OFFER and con == 0:
-            return self._step_arrival_delay()
+            return self._execute_walk()
         elif event_type == OFFER_EVENT or (event_type == FIRST_OFFER and con > 0):
             return self._execute_offer(con=con)
         else:
             raise ValueError('Invalid event type: {}'.format(event_type))
 
-    def _step_arrival_delay(self):
+    def _execute_walk(self):
         # record offer
         if self.recorder is not None:
             self.recorder.add_buyer_walk(
@@ -129,10 +129,26 @@ class BuyerEnv(AgentEnv):
             event, lstg_complete = super().run()  # calls EBayEnv.run()
 
             # for RL buyer delay, draw delay and put back in queue
-            if event.type == DELAY_EVENT:  # sample delay and put back in queue
+            if not lstg_complete and event.type == DELAY_EVENT:  # sample delay and put back in queue
                 delay_seconds = self.draw_agent_delay(event)
                 event.update_delay(seconds=delay_seconds)
                 self.queue.push(event)
+
+            # turn 7 decision
+            elif not lstg_complete and event.turn == 7:
+                if self.delta >= 1:
+                    con = 1.
+                else:
+                    norm = 1 - event.sources()[OFFER_MAPS[6]][NORM_IND]
+                    con = float(self.delta >= norm)
+                con_outcomes = get_con_outcomes(con=con,
+                                                sources=event.sources(),
+                                                turn=7)
+                offer = event.update_con_outcomes(con_outcomes=con_outcomes)
+                self.process_post_offer(event, offer)
+                return self.agent_tuple(event=event,
+                                        done=True,
+                                        last_event=self.last_event)
 
             # agent's turn to make a concession
             else:
