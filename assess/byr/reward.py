@@ -1,6 +1,6 @@
-from agent.util import only_byr_agent, load_valid_data, get_run_dir, get_sale_norm
+from agent.util import load_valid_data, get_sim_dir, get_sale_norm
 from utils import safe_reindex
-from featnames import X_OFFER, CON, AUTO, INDEX, TEST, LOOKUP, START_PRICE, THREAD
+from featnames import X_OFFER, CON, AUTO, INDEX, LOOKUP, START_PRICE, THREAD
 
 
 def share_accept(data=None):
@@ -32,13 +32,12 @@ def share_accept(data=None):
 
 
 def main():
-    data = only_byr_agent(load_valid_data(part=TEST, byr=True))
-    share_accept(data=data)
+    data_obs = load_valid_data(byr=True, minimal=True)
+    share_accept(data=data_obs)
 
-    run_dir = get_run_dir()
-    data = only_byr_agent(load_valid_data(part=TEST, sim_dir=run_dir))
-
-    share_accept(data=data)
+    sim_dir = get_sim_dir(byr=True, delta=1)
+    data_rl = load_valid_data(sim_dir=sim_dir, minimal=True)
+    share_accept(data=data_rl)
 
 
 if __name__ == '__main__':

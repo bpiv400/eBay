@@ -6,7 +6,7 @@ from utils import topickle, load_file
 from constants import IDX, DAY, MAX_DAYS
 from featnames import DAYS, DELAY, CON, COMMON, NORM, REJECT, AUTO, EXP, \
     CLOCK_FEATS, TIME_FEATS, OUTCOME_FEATS, DAYS_SINCE_LSTG, INDEX, \
-    BYR_HIST, START_TIME, LOOKUP, SLR, X_THREAD, X_OFFER, CLOCK
+    BYR_HIST, START_TIME, LOOKUP, SLR, X_THREAD, X_OFFER, CLOCK, IS_AGENT
 
 
 def diff_tf(df):
@@ -55,6 +55,8 @@ def process_sim_threads(df=None, lstg_start=None):
     df = df.drop([CLOCK, START_TIME], axis=1)
     # reorder columns to match observed
     thread_cols = [DAYS_SINCE_LSTG, BYR_HIST]
+    if IS_AGENT in df.columns:
+        thread_cols += [IS_AGENT]
     df = df.loc[:, thread_cols]
     return df
 

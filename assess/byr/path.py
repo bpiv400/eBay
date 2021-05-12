@@ -1,5 +1,5 @@
 import pandas as pd
-from agent.util import only_byr_agent, load_valid_data, get_run_dir
+from agent.util import load_valid_data, get_run_dir
 from utils import topickle
 from constants import PLOT_DIR
 from featnames import X_OFFER, NORM, CON, LOOKUP, START_PRICE
@@ -24,13 +24,12 @@ def get_path(data=None):
 def main():
     df = pd.DataFrame(index=range(1, 8))
 
-    data_obs = only_byr_agent(load_valid_data(byr=True, minimal=True))
+    data_obs = load_valid_data(byr=True, minimal=True)
     df['Humans'] = get_path(data_obs)
 
     for delta in [.9, 1, 2]:
         run_dir = get_run_dir(byr=True, delta=delta)
-        data_rl = only_byr_agent(load_valid_data(sim_dir=run_dir,
-                                                 minimal=True))
+        data_rl = load_valid_data(sim_dir=run_dir, minimal=True)
         df['$\\lambda = {}$'.format(delta)] = get_path(data_rl)
 
     d = {'simple_conpath': df}

@@ -1,7 +1,7 @@
 import argparse
 import numpy as np
 import pandas as pd
-from agent.util import get_sim_dir, only_byr_agent, load_valid_data
+from agent.util import get_sim_dir, load_valid_data
 from assess.util import estimate_tree
 from utils import load_feats, safe_reindex
 from agent.const import DELTA_BYR
@@ -92,9 +92,6 @@ def main():
     # add listing features to data
     listings = load_feats('listings')[LISTING_FEATS]
     data['listings'] = safe_reindex(listings, idx=data[LOOKUP].index)
-
-    # restrict to byr agent
-    data = only_byr_agent(data)
 
     # start recursion
     print('Turn 1:')

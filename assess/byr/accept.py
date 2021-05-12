@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from agent.util import only_byr_agent, load_valid_data, get_sim_dir
+from agent.util import load_valid_data, get_sim_dir
 from assess.util import ll_wrapper
 from utils import topickle
 from assess.const import POINTS
@@ -23,7 +23,7 @@ def main():
     d, bw = dict(), dict()
     prefix = 'response_conacc'
 
-    data_obs = only_byr_agent(load_valid_data(byr=True, minimal=True))
+    data_obs = load_valid_data(byr=True, minimal=True)
     for t in [3, 5]:
         y, x = get_feats(data=data_obs, t=t)
         line, dots, bw[t] = ll_wrapper(y=y, x=x, discrete=[.5], dim=DIM)
@@ -34,9 +34,8 @@ def main():
         d['{}_{}'.format(prefix, t)] = line, dots
 
     for delta in [1, 2]:
-        run_dir = get_sim_dir(byr=True, delta=delta)
-        data_rl = only_byr_agent(load_valid_data(sim_dir=run_dir,
-                                                 minimal=True))
+        sim_dir = get_sim_dir(byr=True, delta=delta)
+        data_rl = load_valid_data(sim_dir=sim_dir, minimal=True)
         for t in [3, 5]:
             y, x = get_feats(data=data_rl, t=t)
             line, dots, _ = ll_wrapper(y=y, x=x,

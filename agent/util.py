@@ -1,7 +1,7 @@
 import pandas as pd
 from utils import unpickle, load_file, load_data, safe_reindex, get_role
 from constants import AGENT_DIR, IDX, SIM_DIR, EPS
-from featnames import SLR, BYR, NORM, AUTO, INDEX, THREAD, CON, \
+from featnames import SLR, BYR, NORM, AUTO, INDEX, THREAD, CON, CLOCK, \
     LOOKUP, X_OFFER, START_PRICE, X_THREAD, OUTCOME_FEATS, TEST, SIM, IS_AGENT
 
 
@@ -62,28 +62,17 @@ def get_norm_reward(data=None, values=None, byr=False):
     return sale_norm, cont_value
 
 
-def only_byr_agent(data=None):
-    if data is None:
-        return None
-
-    # from observed data, keep all threads
-    if IS_AGENT not in data[X_THREAD].columns:
-        assert SIM not in data[X_THREAD].index.names
-        return data
-
-    # from buyer simulations, keep only agent threads
-    mask = data[X_THREAD][IS_AGENT]
-    threads = mask[mask].index
-    data = safe_reindex(data, idx=threads)
-    return data
-
-
 def get_byr_valid(data=None):
-    threads = data[X_THREAD]
-    if SIM in threads.index.names:
-        threads = threads[IS_AGENT]
-    valid = threads.index.droplevel(THREAD).unique()
-    return valid
+    if IS_AGENT in data[X_THREAD].columns:  # agent simulations
+        assert SIM in data[X_THREAD].index.names
+        data[X_THREAD] = data[X_THREAD][data[X_THREAD][IS_AGENT]].drop(IS_AGENT, axis=1)
+        agent_threads = data[X_THREAD].index
+        for k in [X_OFFER, CLOCK]:
+            if k in data.keys():
+                data[k] = safe_reindex(data[k], idx=agent_threads)
+        lstg_sim = data[X_THREAD].index.droplevel(THREAD).unique()
+        data[LOOKUP] = safe_reindex(data[LOOKUP], idx=lstg_sim)
+    return data
 
 
 def get_slr_valid(data=None):
@@ -93,6 +82,8 @@ def get_slr_valid(data=None):
     mask = mask.droplevel([THREAD, INDEX])
     s = mask.groupby(mask.index.names).sum()
     valid = s[s > 0].index
+    data = safe_reindex(data, idx=valid)
+    data[X_OFFER] = data[X_OFFER].reorder_levels(list(valid.names) + [THREAD, INDEX])
     return valid
 
 
@@ -114,10 +105,7 @@ def load_valid_data(part=TEST, sim_dir=None, byr=None,
         data[X_OFFER] = data[X_OFFER][OUTCOME_FEATS]
 
     # restrict to valid listings
-    valid = get_byr_valid(data) if byr else get_slr_valid(data)
-    data = safe_reindex(data, idx=valid)
-    data[X_OFFER] = data[X_OFFER].reorder_levels(list(valid.names) + [THREAD, INDEX])
-
+    data = get_byr_valid(data) if byr else get_slr_valid(data)
     return data
 
 

@@ -1,12 +1,11 @@
 import pandas as pd
-from agent.util import get_log_dir
+from agent.eval.util import get_eval_path
 from utils import unpickle, topickle
 from constants import PLOT_DIR
-from featnames import TEST
 
 
 def main():
-    d = unpickle(get_log_dir(byr=True) + '{}.pkl'.format(TEST))
+    d = unpickle(get_eval_path(byr=True))
 
     output = {'discount': d['thread1'][['buyrate', 'discount']],
               'dollar': d['thread1'][['buyrate', 'dollar']],

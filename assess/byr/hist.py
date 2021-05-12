@@ -1,5 +1,5 @@
 import numpy as np
-from agent.util import only_byr_agent, load_valid_data
+from agent.util import load_valid_data
 from assess.util import ll_wrapper
 from processing.util import feat_to_pctile
 from utils import topickle
@@ -15,7 +15,7 @@ def main():
     d = dict()
 
     # average buyer experience by first offer
-    data = only_byr_agent(load_valid_data(byr=True, minimal=True))
+    data = load_valid_data(byr=True, minimal=True)
 
     # log experience
     hist = feat_to_pctile(data[X_THREAD][BYR_HIST], reverse=True)
@@ -35,9 +35,7 @@ def main():
     for outcome in ['acc1', 'con1', 'offers']:
         x = loghist.loc[locals()[outcome].index].values
         y = locals()[outcome].values
-        line, dots, bw = ll_wrapper(y=y, x=x,
-                                    discrete=[LOG10ZERO],
-                                    dim=DIM)
+        line, dots, bw = ll_wrapper(y=y, x=x, discrete=[LOG10ZERO], dim=DIM)
         print('{}: {}'.format(outcome, bw[0]))
         d['response_hist{}'.format(outcome)] = line, dots
 

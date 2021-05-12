@@ -1,13 +1,15 @@
 import os
 from copy import deepcopy
 import pandas as pd
-from agent.util import get_sale_norm, only_byr_agent, load_valid_data, get_sim_dir
+from agent.util import get_sale_norm, load_valid_data, get_sim_dir
 from agent.eval.util import eval_args, get_eval_path
 from utils import safe_reindex, unpickle, topickle
 from agent.const import DELTA_BYR, TURN_COST_CHOICES
 from constants import IDX
 from featnames import X_OFFER, LOOKUP, X_THREAD, START_PRICE, NORM, CON, REJECT, \
     INDEX, BYR, SLR
+
+COLS = ['discount', 'dollar', 'buyrate']
 
 
 def get_return(data=None, norm=None):
@@ -79,11 +81,11 @@ def get_output(d=None):
     print('Full agent')
     k = 'full'
     if k not in d:
-        d[k] = pd.DataFrame()
+        d[k] = pd.DataFrame(columns=COLS)
 
     if 'Humans' not in d[k].index:
-        data = only_byr_agent(load_valid_data(byr=True, minimal=True))
-        d[k]['Humans'] = get_return(data=data)
+        data = load_valid_data(byr=True, minimal=True)
+        d[k].loc['Humans', :] = get_return(data=data)
 
     for delta in DELTA_BYR:
         keys = get_keys(delta=delta)
@@ -91,7 +93,7 @@ def get_output(d=None):
             continue
 
         sim_dir = get_sim_dir(byr=True, delta=delta)
-        data = only_byr_agent(load_valid_data(sim_dir=sim_dir, minimal=True))
+        data = load_valid_data(sim_dir=sim_dir, minimal=True)
         if data is None:
             continue
 
@@ -107,14 +109,13 @@ def get_sales_output(d=None):
     print('Sales only')
     k = 'sales'
     if k not in d:
-        d[k] = pd.DataFrame()
+        d[k] = pd.DataFrame(columns=COLS)
 
     data = load_valid_data(byr=True, minimal=True)
     norm = get_sale_norm(offers=data[X_OFFER])
     if 'Humans' not in d[k].index:
-        data = only_byr_agent(data=data)
         data = safe_reindex(data, idx=norm.index)
-        d[k]['Humans'] = get_return(data=data, norm=norm)
+        d[k].loc['Humans', :] = get_return(data=data, norm=norm)
 
     for delta in DELTA_BYR:
         keys = get_keys(delta=delta)
@@ -122,7 +123,7 @@ def get_sales_output(d=None):
             continue
 
         sim_dir = get_sim_dir(byr=True, delta=delta)
-        data = only_byr_agent(load_valid_data(sim_dir=sim_dir, minimal=True))
+        data = load_valid_data(sim_dir=sim_dir, minimal=True)
         if data is None:
             continue
         data = safe_reindex(data, idx=norm.index)
@@ -138,7 +139,7 @@ def get_heuristic_output(d=None):
     print('Heuristic agents')
     k = 'heuristic'
     if k not in d:
-        d[k] = pd.DataFrame()
+        d[k] = pd.DataFrame(columns=COLS)
 
     for delta in DELTA_BYR:
         keys = get_keys(delta=delta)
@@ -149,7 +150,7 @@ def get_heuristic_output(d=None):
         if not os.path.isdir(sim_dir):
             continue
 
-        data = only_byr_agent(load_valid_data(sim_dir=sim_dir, minimal=True))
+        data = load_valid_data(sim_dir=sim_dir, minimal=True)
         if data is None:
             continue
 
@@ -164,7 +165,7 @@ def get_turn_cost_output(d=None):
     print('Turn cost penalties')
     plus, minus = 'turn_cost_plus', 'turn_cost_minus'
     if plus not in d:
-        d[plus], d[minus] = pd.DataFrame(), pd.DataFrame()
+        d[plus], d[minus] = pd.DataFrame(columns=COLS), pd.DataFrame(columns=COLS)
 
     for c in TURN_COST_CHOICES:
         if c == 0:
@@ -178,7 +179,7 @@ def get_turn_cost_output(d=None):
         if not os.path.isdir(sim_dir):
             continue
 
-        data = only_byr_agent(load_valid_data(sim_dir=sim_dir, minimal=True))
+        data = load_valid_data(sim_dir=sim_dir, minimal=True)
         if data is None:
             continue
 

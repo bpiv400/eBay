@@ -47,10 +47,10 @@ class Turn:
     def agent_time(self):
         return self.offer_time
 
-    def agent_check(self, model):
-        if self.agent:
-            raise RuntimeError("Environment unexpectedly queried" +
-                               "{} model on an agents turn".format(model))
+    def agent_check(self, model=None):
+        if self.agent and self.turn < 7:
+            raise RuntimeError("Environment unexpectedly queried " +
+                               "{} model on an agent's turn".format(model))
 
     @property
     def is_censored(self):
@@ -61,9 +61,10 @@ class Turn:
         if self.con_inputs is None:
             raise RuntimeError("Environment unexpectedly queried concession model")
         assert check_time == self.offer_time
-        compare_input_dicts(model=self.con_model_name,
-                            stored_inputs=self.con_inputs,
-                            env_inputs=input_dict)
+        if not (self.agent and self.turn == 7):
+            compare_input_dicts(model=self.con_model_name,
+                                stored_inputs=self.con_inputs,
+                                env_inputs=input_dict)
         return self.con
 
     def get_delay(self, check_time=None, input_dict=None):

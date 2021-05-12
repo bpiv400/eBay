@@ -1,11 +1,11 @@
 import numpy as np
 import pandas as pd
-from agent.util import load_valid_data, only_byr_agent
+from agent.util import load_valid_data
 from assess.util import ll_wrapper
 from utils import topickle
 from assess.const import BYR_NORM_DIMS
 from constants import PLOT_DIR, HOUR, IDX
-from featnames import X_OFFER, INDEX, TEST, NORM, CLOCK, AUTO, REJECT, BYR
+from featnames import X_OFFER, INDEX, NORM, CLOCK, AUTO, REJECT, BYR
 
 
 def get_feats(data=None, turn=None):
@@ -36,8 +36,8 @@ def get_feats(data=None, turn=None):
 def main():
     d = dict()
 
-    # first threads in data
-    data = only_byr_agent(load_valid_data(byr=True, minimal=True))
+    # load data
+    data = load_valid_data(byr=True, minimal=True)
 
     # response type ~ buyer offer
     for t in IDX[BYR][:-1]:

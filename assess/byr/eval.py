@@ -1,7 +1,6 @@
 import numpy as np
 import pandas as pd
-from agent.util import load_valid_data, get_run_dir, only_byr_agent, \
-    get_sale_norm
+from agent.util import load_valid_data, get_run_dir, get_sale_norm
 from assess.util import bin_vs_reward, ll_wrapper
 from assess.slr.eval import get_eval_df
 from utils import topickle, safe_reindex
@@ -68,14 +67,14 @@ def main():
         d['bar_{}'.format(c)] = df[c]
 
     # load data
-    data_obs = load_valid_data(part=TEST, byr=True)
+    data_obs = load_valid_data(byr=True, minimal=True)
     sale_norm = get_sale_norm(offers=data_obs[X_OFFER])
     sale_norm = sale_norm[sale_norm < 1]
     sale_price = (sale_norm * data_obs[LOOKUP][START_PRICE]).rename('sale_price')
     del data_obs
 
-    data_rl = load_valid_data(part=TEST, sim_dir=get_run_dir())
-    data_rl = only_byr_agent(safe_reindex(data_rl, idx=sale_price.index))
+    data_rl = load_valid_data(sim_dir=get_run_dir())
+    data_rl = safe_reindex(data_rl, idx=sale_price.index)
 
     # discount ~ sale price
     sale_norm_rl = get_sale_norm(offers=data_rl[X_OFFER], drop_thread=True)

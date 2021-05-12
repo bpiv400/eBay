@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from agent.util import only_byr_agent, load_valid_data, get_sim_dir
+from agent.util import load_valid_data, get_sim_dir
 from assess.util import ll_wrapper
 from utils import topickle
 from constants import PLOT_DIR
@@ -29,7 +29,7 @@ def get_feats(data=None, turn=None):
 def main():
     d, bw, prefix = dict(), dict(), 'response_counter'
 
-    data_obs = only_byr_agent(load_valid_data(byr=True, minimal=True))
+    data_obs = load_valid_data(byr=True, minimal=True)
 
     for t in [3, 5]:
         y, x = get_feats(data=data_obs, turn=t)
@@ -41,7 +41,7 @@ def main():
 
     for delta in [1, 1.5, 2]:
         sim_dir = get_sim_dir(byr=True, delta=delta)
-        data_rl = only_byr_agent(load_valid_data(sim_dir=sim_dir, minimal=True))
+        data_rl = load_valid_data(sim_dir=sim_dir, minimal=True)
 
         for t in [3, 5]:
             y, x = get_feats(data=data_rl, turn=t)

@@ -92,7 +92,7 @@ class BuyerEnv(AgentEnv):
         if event_type == FIRST_OFFER and con == 0:
             return self._execute_walk()
         elif event_type == OFFER_EVENT or (event_type == FIRST_OFFER and con > 0):
-            return self._execute_offer(con=con)
+            return self._execute_offer(con=con, event=self.curr_event)
         else:
             raise ValueError('Invalid event type: {}'.format(event_type))
 
@@ -111,15 +111,15 @@ class BuyerEnv(AgentEnv):
                                 event=self.curr_event,
                                 last_event=self.last_event)
 
-    def _execute_offer(self, con=None):
-        assert not self.curr_event.thread_expired()
+    def _execute_offer(self, con=None, event=None):
+        assert not event.thread_expired()
         con_outcomes = get_con_outcomes(con=con,
-                                        sources=self.curr_event.sources(),
-                                        turn=self.curr_event.turn)
-        offer = self.curr_event.update_con_outcomes(con_outcomes=con_outcomes)
-        lstg_complete = self.process_post_offer(self.curr_event, offer)
+                                        sources=event.sources(),
+                                        turn=event.turn)
+        offer = event.update_con_outcomes(con_outcomes=con_outcomes)
+        lstg_complete = self.process_post_offer(event, offer)
         if lstg_complete or con == 0:
-            return self.agent_tuple(event=self.curr_event,
+            return self.agent_tuple(event=event,
                                     done=True,
                                     last_event=self.last_event)
         return self.run()
@@ -136,19 +136,17 @@ class BuyerEnv(AgentEnv):
 
             # turn 7 decision
             elif not lstg_complete and event.turn == 7:
-                if self.delta >= 1:
+                if self.test:
+                    con = self.get_con(input_dict=None,
+                                       thread_id=event.thread_id,
+                                       time=event.priority,
+                                       turn=7)
+                elif self.delta >= 1:
                     con = 1.
                 else:
                     norm = 1 - event.sources()[OFFER_MAPS[6]][NORM_IND]
                     con = float(self.delta >= norm)
-                con_outcomes = get_con_outcomes(con=con,
-                                                sources=event.sources(),
-                                                turn=7)
-                offer = event.update_con_outcomes(con_outcomes=con_outcomes)
-                self.process_post_offer(event, offer)
-                return self.agent_tuple(event=event,
-                                        done=True,
-                                        last_event=self.last_event)
+                return self._execute_offer(con=con, event=event)
 
             # agent's turn to make a concession
             else:

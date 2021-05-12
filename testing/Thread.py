@@ -111,7 +111,7 @@ class Thread:
         for i in range(1, last_turn + 1):
             # checks that turn corresponds to the current agents and offer isn't automatic
             agent_turn = self.is_agent_turn(turn=i, auto=self.turns[i].auto)
-            if agent_turn and not self.turns[i].expired:
+            if agent_turn and not self.turns[i].expired and i < 7:
                 # adds turn if an expiration does not occur on agents's turn
                 agent_turns[i] = (self.turns[i])
         return agent_turns
