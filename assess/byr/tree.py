@@ -13,9 +13,6 @@ LISTING_FEATS = ['fdbk_score', 'fdbk_pstv', 'photos', 'store', 'slr_us', 'fast']
 
 
 def get_tree(data=None, turn=None, idx=None):
-    if turn == 7:
-        return
-
     # turn-specific dictionary
     d = {k: data[k].xs(turn, level=INDEX) for k in [X_OFFER, CLOCK]}
     for k in ['listings', LOOKUP, X_THREAD]:
@@ -56,28 +53,26 @@ def get_tree(data=None, turn=None, idx=None):
     r = estimate_tree(X=X, y=y)
 
     # find split
-    feat = r.split(' ')[1]
-    val = float(r.split(' ')[3][:-2])
-    idx1 = r.find('class:', 0, -1) + 7
-    idx2 = r.find('class:', idx1, -1) + 7
-    low = r[idx1:].split('\n')[0]
-    high = r[idx2:].split('\n')[0]
+    if turn < 5:
+        feat = r.split(' ')[1]
+        val = float(r.split(' ')[3][:-2])
+        idx1 = r.find('class:', 0, -1) + 7
+        idx2 = r.find('class:', idx1, -1) + 7
+        low = r[idx1:].split('\n')[0]
+        high = r[idx2:].split('\n')[0]
 
-    if low == high:  # no split
-        print('Turn {}:'.format(turn+2))
-        mask = y == low
-        idx = mask[mask].index
-        get_tree(data=data, turn=turn+2, idx=idx)
-    else:
-        print('Turn {}, {} <= {}:'.format(turn+2, feat, val))
-        mask_l = (X[feat] <= val) & (y == low)
-        idx_l = mask_l[mask_l].index
-        get_tree(data=data, turn=turn+2, idx=idx_l)
+        if low == high:  # no split
+            print('Turn {}:'.format(turn+2))
+            idx = y[y == low].index
+            get_tree(data=data, turn=turn+2, idx=idx)
+        else:
+            print('Turn {}, {} <= {}:'.format(turn+2, feat, val))
+            idx_l = y[(X[feat] <= val) & (y == low)].index
+            get_tree(data=data, turn=turn+2, idx=idx_l)
 
-        print('Turn {}, {} > {}:'.format(turn + 2, feat, val))
-        mask_h = (X[feat] > val) & (y == high)
-        idx_h = mask_h[mask_h].index
-        get_tree(data=data, turn=turn+2, idx=idx_h)
+            print('Turn {}, {} > {}:'.format(turn + 2, feat, val))
+            idx_h = y[(X[feat] > val) & (y == high)].index
+            get_tree(data=data, turn=turn+2, idx=idx_h)
 
 
 def main():

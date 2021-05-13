@@ -2,11 +2,11 @@ import numpy as np
 import pandas as pd
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-from agent.const import DELTA_CHOICES, DELTA_SLR
+from agent.const import DELTA_CHOICES, DELTA_SLR, DELTA_BYR
 from plots.const import BIN_TICKS, BIN_TICKS_SHORT, SLRBO_TICKS, FONTSIZE, \
     COLORS, TRICOLOR, ALTERNATING
 from constants import MAX_DELAY_TURN, MAX_DELAY_ARRIVAL, DAY, HOUR, EPS
-from featnames import CON, NORM, DELAY, ARRIVAL, MSG, ACCEPT, \
+from featnames import CON, NORM, DELAY, MSG, ACCEPT, \
     REJECT, META, CNDTN, BYR, SLR, EXP
 from plots.save import save_fig
 
@@ -57,12 +57,16 @@ def cdf_plot(path, obj):
     elif name.startswith('days'):
         args = dict(xlim=[0, 1],
                     xlabel='Fraction of listing window')
-    elif name.startswith(ARRIVAL):
+    elif name == 'arrival':
         upper = MAX_DELAY_ARRIVAL / DAY
         args = dict(xticks=np.arange(0, upper, 3),
                     xlim=[0, upper], ylim=[0, 0.02],
                     xlabel='Days since listing start')
         den = 'buyers, by hour'
+    elif name == 'arrivaltime':
+        args = dict(xlim=[0, 1],
+                    xlabel='Fraction of listing window')
+        den = 'arrivals'
     elif name.startswith('hist'):
         args = dict(xlim=[0, 250],
                     xlabel='Prior best-offer threads for buyer')
@@ -670,7 +674,7 @@ def bar_plot(path, obj):
             args['ylabel'] = 'Number of buyer offers'
             args['ylim'] = [1, 3]
         elif last == 'first':
-            args['ylabel'] = 'Turn 1: Offer / list price',
+            args['ylabel'] = 'Turn 1: Offer / list price'
             args['ylim'] = [.49, .66]
         elif last == 'bin':
             args['ylabel'] = 'Turn 1: Pr(accept)'
@@ -680,7 +684,7 @@ def bar_plot(path, obj):
             args['ylabel'] = 'Turn {}: Pr(counter)'.format(t)
             args['ylim'] = [0, 1]
         else:
-            raise ValueError('Invalid name: {}'.format(last))
+            raise NotImplementedError('Invalid name: {}'.format(last))
     else:
         raise NotImplementedError('Invalid name: {}'.format(name))
 
@@ -909,18 +913,29 @@ def pdf_plot(path, obj):
 
 
 def plot_humans(df=None, offsets=None):
-    humans = df.loc[('Humans', None), :]
+    humans = df.loc['Humans', :]
     plt.plot(humans.x, humans.y, 'Xk')
     plt.text(humans.x + offsets[0], humans.y + offsets[1], 'Humans')
 
 
 def plot_agents(df=None, offsets=None, label=None, lspec='-o', color='k'):
-    plt.plot(df.x, df.y, lspec, label=label, color=color)
+    labels = []
+    for d in DELTA_BYR:
+        if d != 1:
+            label = '${}$'.format(d)
+            if label in df.index:
+                labels.append(label)
+        else:
+            labels.append('$1-\\epsilon$')
+            labels.append('$1+\\epsilon$')
+    agents = df.loc[labels, :]
+    plt.plot(agents.x, agents.y, lspec, label=label, color=color)
     if offsets is not None:
-        for label in df.index:
-            plt.text(df.loc[label, 'x'] + offsets[0],
-                     df.loc[label, 'y'] + offsets[1],
-                     label)
+        for label in labels:
+            if label in agents.index:
+                plt.text(agents.loc[label, 'x'] + offsets[0],
+                         agents.loc[label, 'y'] + offsets[1],
+                         label)
 
 
 def pareto_plot(path, df):
@@ -928,12 +943,12 @@ def pareto_plot(path, df):
     if name == 'discount':
         args = dict(xlabel='Purchase rate',
                     ylabel='Discount on list price (%)',
-                    ylim=[15, 45], xlim=[.5, 1])
+                    ylim=[15, 40], xlim=[.5, 1])
         df['y'] *= 100
     elif name == 'dollar':
         args = dict(xlabel='Purchase rate',
                     ylabel='Discount on list price ($)',
-                    ylim=[15, 45], xlim=[.5, 1])
+                    ylim=[15, 40], xlim=[.5, 1])
     elif name == 'sales':
         args = dict(xlabel='Purchase rate',
                     ylabel='Savings on observed sale price ($)',
@@ -941,30 +956,31 @@ def pareto_plot(path, df):
     else:
         raise NotImplementedError('Invalid name: {}'.format(name))
 
-    offsets = [(args[k][1] - args[k][0]) / 100
-               for k in ['xlim', 'ylim']]
-    idx_h = [k for k in df.index.get_level_values('gamma')
-             if k.startswith('h: ')]
+    offsets = [(args[k][1] - args[k][0]) / 100 for k in ['xlim', 'ylim']]
 
-    # zero turn cost
-    plot_humans(df=df, offsets=offsets)
-    df0 = df.xs('$0', level='turn_cost').drop(idx_h)
-    plot_agents(df=df0, offsets=offsets)
+    plot_humans(df, offsets)
+    plot_agents(df, offsets)
     save_fig(path, legend=False, **args)
 
-    # heuristic agents
-    plot_humans(df=df, offsets=offsets)
-    df_h = df.xs('$0', level='turn_cost').loc[idx_h]
-    plot_agents(df=df_h, lspec='o-', color='k')
-    idx = [k[3:] for k in idx_h]
-    plot_agents(df=df0.loc[idx], lspec='o-', color='gray', offsets=offsets)
-    save_fig('{}_h'.format(path), legend=False, **args)
-
-    # values item at list price
-    names = {'$1-\\epsilon$': 'minus', '$1+\\epsilon$': 'plus'}
-    for gamma in ['$1-\\epsilon$', '$1+\\epsilon$']:
-        plot_humans(df=df, offsets=offsets)
-        plot_agents(df=df0, lspec='-', color='gray')
-        subset = df.xs(gamma, level='gamma')
-        plot_agents(df=subset, offsets=offsets)
-        save_fig('{}_{}'.format(path, names[gamma]), legend=False, **args)
+    # # zero turn cost
+    # plot_humans(df=df, offsets=offsets)
+    # df0 = df.xs('$0', level='turn_cost').drop(idx_h)
+    # plot_agents(df=df0, offsets=offsets)
+    # save_fig(path, legend=False, **args)
+    #
+    # # heuristic agents
+    # plot_humans(df=df, offsets=offsets)
+    # df_h = df.xs('$0', level='turn_cost').loc[idx_h]
+    # plot_agents(df=df_h, lspec='o-', color='k')
+    # idx = [k[3:] for k in idx_h]
+    # plot_agents(df=df0.loc[idx], lspec='o-', color='gray', offsets=offsets)
+    # save_fig('{}_h'.format(path), legend=False, **args)
+    #
+    # # values item at list price
+    # names = {'$1-\\epsilon$': 'minus', '$1+\\epsilon$': 'plus'}
+    # for gamma in ['$1-\\epsilon$', '$1+\\epsilon$']:
+    #     plot_humans(df=df, offsets=offsets)
+    #     plot_agents(df=df0, lspec='-', color='gray')
+    #     subset = df.xs(gamma, level='gamma')
+    #     plot_agents(df=subset, offsets=offsets)
+    #     save_fig('{}_{}'.format(path, names[gamma]), legend=False, **args)

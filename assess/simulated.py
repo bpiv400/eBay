@@ -71,8 +71,8 @@ def main():
     lstgs, suffix = get_lstgs()
 
     # data
-    data_obs = load_data(part=TEST, lstgs=lstgs, clock=True)
-    data_sim = load_data(part=TEST, sim=True, lstgs=lstgs, clock=True)
+    data_obs = load_data(lstgs=lstgs, clock=True)
+    data_sim = load_data(sim=True, lstgs=lstgs, clock=True)
 
     # observed
     d = collect_outputs(data=data_obs, name='Data')

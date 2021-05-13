@@ -39,6 +39,8 @@ def bin_plot(name=None, get_y=None):
     for t in TURN_COST_CHOICES:
         sim_dir = get_sim_dir(byr=True, delta=1, turn_cost=t)
         data_rl = load_valid_data(sim_dir=sim_dir, minimal=True)
+        if data_rl is None:
+            continue
         y, x = get_feats(data=data_rl, get_y=get_y)
         line, _ = ll_wrapper(y=y, x=x,
                              dim=LOG10_BIN_DIM,
@@ -54,11 +56,13 @@ def bin_plot(name=None, get_y=None):
         if np.isnan(means.loc[delta]):
             sim_dir = get_sim_dir(byr=True, delta=delta)
             data_rl = load_valid_data(sim_dir=sim_dir, minimal=True)
+            if data_rl is None:
+                continue
             means.loc[delta] = get_y(data=data_rl).mean()
 
-    d['bar_list{}'.format(name)] = means
+    d['bar_lambda_{}'.format(name)] = means
     return d
 
 
 def save_dict(d=None, name=None):
-    topickle(d, PLOT_DIR + 'byr_lambda_{}.pkl'.format(name))
+    topickle(d, PLOT_DIR + 'byr{}.pkl'.format(name))

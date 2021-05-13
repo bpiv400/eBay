@@ -6,7 +6,7 @@ from statsmodels.nonparametric.kernel_regression import KernelReg
 from agent.util import get_sale_norm, get_norm_reward
 from utils import safe_reindex, load_pctile
 from assess.const import OPT, VALUES_DIM, POINTS, LOG10_BIN_DIM
-from constants import IDX, BYR, EPS, DAY, HOUR, MAX_DELAY_TURN, \
+from constants import IDX, BYR, EPS, DAY, HOUR, MAX_DAYS, MAX_DELAY_TURN, \
     MAX_DELAY_ARRIVAL, INTERVAL_ARRIVAL, INTERVAL_CT_ARRIVAL
 from featnames import DELAY, CON, NORM, AUTO, START_TIME, START_PRICE, LOOKUP, \
     MSG, DAYS_SINCE_LSTG, BYR_HIST, INDEX, X_OFFER, CLOCK, THREAD, X_THREAD, \
@@ -58,6 +58,11 @@ def interarrival_dist(threads=None):
     pdf.index *= (INTERVAL_ARRIVAL / HOUR)
     pdf.index.name = 'hours'
     return pdf
+
+
+def arrival_cdf(threads=None):
+    s = threads[DAYS_SINCE_LSTG] / MAX_DAYS
+    return continuous_cdf(s)
 
 
 def hist_dist(threads=None):
@@ -129,6 +134,25 @@ def merge_dicts(d, d_other):
     return d
 
 
+def censor_threads(pdf=None, censor=4):
+    # censor threads per listing
+    pdf.loc[censor] = pdf[pdf.index >= censor].sum(axis=0)
+    pdf = pdf[pdf.index <= censor]
+    assert np.isclose(pdf.sum(), 1)
+    # relabel index
+    idx = pdf.index.astype(str).tolist()
+    idx[-1] += '+'
+    pdf.index = idx
+    return pdf
+
+
+def thread_number(threads):
+    s = threads.reset_index()[THREAD]
+    pdf = s.groupby(s).count() / len(s)
+    pdf = censor_threads(pdf)
+    return pdf
+
+
 def num_threads(data, censor=4):
     # count threads
     s = data[X_THREAD][DAYS_SINCE_LSTG]
@@ -141,14 +165,7 @@ def num_threads(data, censor=4):
     pdf = discrete_pdf(s)
 
     # censor threads per listing
-    pdf.loc[censor] = pdf[pdf.index >= censor].sum(axis=0)
-    pdf = pdf[pdf.index <= censor]
-    assert np.isclose(pdf.sum(), 1)
-
-    # relabel index
-    idx = pdf.index.astype(str).tolist()
-    idx[-1] += '+'
-    pdf.index = idx
+    pdf = censor_threads(pdf=pdf, censor=censor)
 
     return pdf
 

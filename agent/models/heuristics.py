@@ -70,15 +70,15 @@ class HeuristicByr:
             idx = f(.5) if self.delta < 2 else f(.6)
 
         elif turn == 3:
-            if self.delta < .9:
-                idx = f(.17)
-            elif self.delta <= 1:
+            if self.delta <= 1:
                 idx = f(.4)
             else:
                 idx = f(.5)
 
         elif turn == 5:
-            if self.delta <= 1:
+            if self.delta < 1:
+                idx = f(.2)
+            elif self.delta == 1:
                 idx = f(.4)
             elif self.delta < 2:
                 idx = f(.5)

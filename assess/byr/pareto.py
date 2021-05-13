@@ -7,14 +7,15 @@ from constants import PLOT_DIR
 def main():
     d = unpickle(get_eval_path(byr=True))
 
-    output = {'discount': d['thread1'][['buyrate', 'discount']],
-              'dollar': d['thread1'][['buyrate', 'dollar']],
+    output = {'discount': d['full'][['buyrate', 'discount']],
+              'dollar': d['full'][['buyrate', 'dollar']],
               'sales': d['sales'][['buyrate', 'dollar']]}
 
     for name in ['minus', 'plus']:
-        key = 'cost_{}'.format(name)
-        output[key] = pd.concat([d['thread1'], d['turn_{}'.format(key)]])
-        output[key] = output[key][['buyrate', 'discount']]
+        key = 'turn_cost_{}'.format(name)
+        if len(d[key]) > 0:
+            output[key] = pd.concat([d['full'], d[key]])
+            output[key] = output[key][['buyrate', 'discount']]
 
     for k, v in output.items():
         v.columns = ['x', 'y']
