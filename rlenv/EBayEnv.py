@@ -1,21 +1,18 @@
 from collections import namedtuple
-from constants import DAY, MAX_DELAY_ARRIVAL
-from featnames import DEC_PRICE, ACC_PRICE, START_PRICE, DELAY, START_TIME, BYR, \
-    INTERARRIVAL_MODEL, BYR_HIST_MODEL
 from utils import get_days_since_lstg
 from rlenv.Heap import Heap
 from rlenv.time.TimeFeatures import TimeFeatures
 from rlenv.time.Offer import Offer
 from rlenv.events.Event import Event
-from rlenv.events.Arrival import Arrival
 from rlenv.generate.Recorder import Recorder
-from rlenv.Sources import ArrivalSources
 from rlenv.Sources import ThreadSources
 from rlenv.events.Thread import Thread
-from rlenv.const import INTERACT, ACC_IND, CON, MSG, REJ_IND, OFF_IND, \
-    ARRIVAL, FIRST_OFFER, OFFER_EVENT, DELAY_EVENT
 from rlenv.util import get_clock_feats, get_con_outcomes, need_msg, model_str
-from agent.AgentLoader import AgentLoader
+from rlenv.const import INTERACT, ACC_IND, CON, MSG, REJ_IND, OFF_IND, \
+    EXPIRATION, FIRST_OFFER, OFFER_EVENT, DELAY_EVENT
+from constants import DAY, MAX_DELAY_ARRIVAL
+from featnames import DEC_PRICE, ACC_PRICE, START_PRICE, DELAY, START_TIME, BYR, \
+    BYR_HIST_MODEL
 
 
 class EBayEnv:
@@ -28,15 +25,12 @@ class EBayEnv:
         # features
         self.x_lstg = None
         self.lookup = None
-        self.p_arrival = None
+        self.arrivals = None
 
         # lstg params
         self.end_time = None
         self.start_time = None
-        self.thread_counter = 0
         self.outcome = None
-        self.last_arrival_time = None
-        self.arrivals_first = False  # simulate all arrivals initially
 
         # classes
         self.time_feats = TimeFeatures()
@@ -44,23 +38,22 @@ class EBayEnv:
         self.composer = kwargs['composer']
         self.query_strategy = kwargs['query_strategy']
         self.recorder = None if 'recorder' not in kwargs else kwargs['recorder']
-        if 'loader' in kwargs:
-            self.loader = kwargs['loader']
-        else:
-            x_lstg_cols = self.composer.x_lstg_cols
-            self.loader = AgentLoader(x_lstg_cols=x_lstg_cols, byr=False)
+        self.loader = kwargs['loader']
 
     def reset(self):
-        self.last_arrival_time = self.start_time
         self.queue.reset()
         self.time_feats.reset()
         self.outcome = None
-        self.thread_counter = 0
-        event = Arrival(priority=self.start_time,
-                        sources=ArrivalSources(x_lstg=self.x_lstg))
+        # load threads into queue
+        for i, priority in enumerate(self.arrivals):
+            thread = Thread(priority=priority)
+            thread.set_id(i+1)
+            self.queue.push(thread)
+        # add expiration event
+        event = Event(EXPIRATION, priority=self.end_time)
         self.queue.push(event)
         if self.verbose:
-            Recorder.print_lstg(self.lookup)
+            Recorder.print_lstg(lookup=self.lookup, sim=self.loader.sim)
 
     def has_next_lstg(self):
         return self.loader.has_next()
@@ -69,16 +62,17 @@ class EBayEnv:
         """
         Sample a new lstg from the file and set lookup and x_lstg series
         """
-        x_lstg, lookup, p_arrival = self.loader.next_lstg()
-        self.x_lstg = self.composer.decompose_x_lstg(x_lstg)
+        x_lstg, lookup, arrivals = self.loader.next_lstg()
+        self.x_lstg = x_lstg
         self.lookup = lookup
+        self.arrivals = arrivals
         self.start_time = int(self.lookup[START_TIME])
         self.end_time = self.start_time + MAX_DELAY_ARRIVAL
-        self.query_strategy.update_p_arrival(p_arrival=p_arrival)
         if self.recorder is not None:
             # update listing in recorder
             self.recorder.update_lstg(lookup=self.lookup,
-                                      lstg=self.loader.lstg)
+                                      lstg=self.loader.lstg,
+                                      sim=self.loader.sim)
         return self.loader.lstg
 
     def run(self):
@@ -86,7 +80,7 @@ class EBayEnv:
             event = self.queue.pop()
             if self.verbose:
                 Recorder.print_next_event(event)
-            if INTERACT and event.type != ARRIVAL:
+            if INTERACT and event.type != EXPIRATION:
                 input('Press Enter to continue...\n')
             if self.is_agent_turn(event):
                 return event, False
@@ -96,10 +90,8 @@ class EBayEnv:
                     return event, True
 
     def process_event(self, event):
-        if event.type == ARRIVAL:
-            if self.is_lstg_expired(event):
-                return self.process_lstg_expiration(event)
-            return self.process_arrival(event)
+        if event.type == EXPIRATION:
+            return self.process_lstg_expiration(event)
         elif event.type == FIRST_OFFER:
             self.create_thread(event)
             return self.process_offer(event)
@@ -218,39 +210,6 @@ class EBayEnv:
             event.init_offer(time_feats=time_feats)
         return False
 
-    def process_arrival(self, event):
-        """
-        Updates queue with results of an Arrival Event
-        :param event: Event corresponding to current event
-        :return: boolean indicating whether the lstg has ended
-        """
-        # call model to sample inter arrival time and update arrival check priority
-        if event.priority == self.start_time:
-            seconds = self.get_first_arrival(time=self.start_time)
-        else:
-            event.update_arrival(thread_count=self.thread_counter,
-                                 last_arrival_time=self.last_arrival_time)
-            seconds = self.get_inter_arrival(event=event)
-        check_in_time = event.priority
-        event.priority = min(event.priority + seconds, self.end_time)
-
-        if self.verbose:
-            print('Next arrival at {}'.format(event.priority))
-
-        # if a buyer arrives, create a thread at the arrival time
-        lstg_expired = self.is_lstg_expired(event)
-        if not lstg_expired:
-            self.last_arrival_time = check_in_time
-            thread = Thread(priority=event.priority)
-            self.thread_counter += 1
-            thread.set_id(self.thread_counter)
-            self.queue.push(thread)
-            if self.arrivals_first:
-                self.process_arrival(event)
-        if lstg_expired or not self.arrivals_first:
-            self.queue.push(event)
-        return False
-
     def process_byr_expire(self, event):
         event.byr_expire()
         self.record_offer(event)
@@ -351,18 +310,6 @@ class EBayEnv:
 
     def get_msg(self, *args, **kwargs):
         return self.query_strategy.get_msg(*args, **kwargs)
-
-    def get_first_arrival(self, *args, **kwargs):
-        return self.query_strategy.get_first_arrival(*args, **kwargs)
-
-    def get_inter_arrival(self, event=None):
-        input_dict = self.composer.build_input_dict(model_name=INTERARRIVAL_MODEL,
-                                                    sources=event.sources(),
-                                                    turn=None)
-
-        return self.query_strategy.get_inter_arrival(time=event.priority,
-                                                     thread_id=self.thread_counter+1,
-                                                     input_dict=input_dict)
 
     def get_hist(self, *args, **kwargs):
         return self.query_strategy.get_hist(*args, **kwargs)

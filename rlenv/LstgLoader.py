@@ -1,4 +1,5 @@
 import pandas as pd
+from constants import ARRIVAL_SIMS
 from featnames import LSTG
 
 
@@ -9,7 +10,7 @@ class LstgLoader:
     """
     def __init__(self):
         self.lookup = None
-        self.p_arrival = None
+        self.arrivals = None
         self.x_lstg = None
         self.lstg = None
 
@@ -50,16 +51,21 @@ class ChunkLoader(LstgLoader):
     """
     Loads lstgs from a chunk or chunk subset
     """
-    def __init__(self, x_lstg=None, lookup=None, p_arrival=None):
+    def __init__(self, x_lstg=None, lookup=None, arrivals=None, num_sims=None):
         """
         :param pd.DataFrame x_lstg:
         :param pd.DataFrame lookup:
+        :param dict arrivals:
+        :param int num_sims:
         """
         super().__init__()
+        assert num_sims <= ARRIVAL_SIMS
         self._x_lstg_slice = x_lstg
         self._lookup_slice = lookup.reset_index(drop=False)
-        self._p_arrival_slice = p_arrival
+        self._arrivals_slice = arrivals
         self._ix = 0
+        self.sim = 0
+        self._num_sims = num_sims
         self._num_lstgs = len(lookup.index)
 
     def next_id(self):
@@ -73,17 +79,22 @@ class ChunkLoader(LstgLoader):
         self.verify_init()
         if self.has_next():
             self.lookup = self._lookup_slice.iloc[self._ix, :]
-            self.x_lstg = self._x_lstg_slice.iloc[self._ix, :]
-            self.p_arrival = self._p_arrival_slice.iloc[self._ix, :]
             self.lstg = int(self.lookup[LSTG])
+            self.x_lstg = {k: v.iloc[self._ix, :].values
+                           for k, v in self._x_lstg_slice.items()}
+            self.arrivals = self._arrivals_slice[self.lstg][self.sim]
+
             self._ix += 1
-            return self.x_lstg, self.lookup, self.p_arrival
+            if self._ix == self._num_lstgs:
+                self._ix = 0
+                self.sim += 1
+            return self.x_lstg, self.lookup, self.arrivals
         else:
             raise RuntimeError("Exhausted lstgs")
 
     def has_next(self):
         self.verify_init()
-        return self._ix < self._num_lstgs
+        return self.sim < self._num_sims
 
     def init(self, rank):
         pass
@@ -94,6 +105,3 @@ class ChunkLoader(LstgLoader):
     def __len__(self):
         return self._num_lstgs
 
-    @property
-    def x_lstg_cols(self):
-        return list(self._x_lstg_slice.columns)

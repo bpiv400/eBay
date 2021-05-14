@@ -2,7 +2,7 @@ import numpy as np
 from rlpyt.utils.collections import namedarraytuple
 from rlenv.util import get_con_outcomes
 from utils import load_sizes
-from rlenv.const import FIRST_OFFER, DELAY_EVENT, OFFER_EVENT, ARRIVAL, \
+from rlenv.const import FIRST_OFFER, DELAY_EVENT, OFFER_EVENT, EXPIRATION, \
     OFFER_MAPS, NORM_IND
 from agent.envs.AgentEnv import AgentEnv, EventLog
 from constants import BYR
@@ -14,7 +14,6 @@ BuyerObs = namedarraytuple('BuyerObs', list(load_sizes(BYR)['x'].keys()))
 class BuyerEnv(AgentEnv):
     def __init__(self, **kwargs):
         super().__init__(byr=True, **kwargs)
-        self.arrivals_first = True
         self.agent_thread = None
 
     def is_agent_turn(self, event):
@@ -22,19 +21,17 @@ class BuyerEnv(AgentEnv):
         When the agents thread comes back on the buyer's turn, it's time to act.
         :return bool: True if agents buyer takes an action
         """
-        if event.type == ARRIVAL:
+        if event.type == EXPIRATION:
             return False
 
         # catch first buyer, determine which buyer is agent
         if event.thread_id == 1 and event.type == FIRST_OFFER:
             assert self.agent_thread is None
-            self.agent_thread = np.random.randint(1, self.thread_counter + 1)
+            num_buyers = len(self.arrivals)
+            self.agent_thread = np.random.randint(1, num_buyers + 1)
             if self.verbose:
                 print('{} buyer{}, agent is #{}.'.format(
-                    self.thread_counter,
-                    's' if self.thread_counter > 1 else '',
-                    self.agent_thread)
-                )
+                    num_buyers, 's' if num_buyers > 1 else '', self.agent_thread))
             return self.agent_thread == 1
 
         # catch buyer turns on agent thread
@@ -185,7 +182,7 @@ class BuyerEnv(AgentEnv):
 
     @property
     def horizon(self):
-        return 4
+        return 3
 
     @property
     def _obs_class(self):

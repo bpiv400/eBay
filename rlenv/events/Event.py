@@ -1,4 +1,4 @@
-from rlenv.const import ARRIVAL
+from rlenv.const import EXPIRATION
 
 
 class Event:
@@ -25,15 +25,15 @@ class Event:
         Overrides less-than comparison method to make comparisons
         based on priority alone
 
-        If events have the same priority, any non-arrival event takes
-        priority over an arrival event. Between two non-arrival events,
+        If events have the same priority, any expiration takes precedence
+        over any non-expiration event. Between two non-expiration events,
         lower thread_id takes precendence.
         """
         if self.priority == other.priority:
-            if self.type == ARRIVAL and other.type != ARRIVAL:
-                return False
-            elif other.type == ARRIVAL:
+            if self.type == EXPIRATION and other.type != EXPIRATION:
                 return True
+            elif other.type == EXPIRATION:
+                return False
             else:
                 assert self.thread_id is not None
                 assert other.thread_id is not None

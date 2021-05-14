@@ -101,7 +101,7 @@ X_OFFER = 'x_offer'
 X_THREAD = 'x_thread'
 CLOCK = 'clock'
 LOOKUP = 'lookup'
-P_ARRIVAL = 'p_arrival'
+ARRIVALS = 'arrivals'
 
 # outcome types
 SIM = 'sim'

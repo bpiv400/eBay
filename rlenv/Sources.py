@@ -1,11 +1,11 @@
 import numpy as np
-from rlenv.const import OFFER_MAPS, CLOCK_MAP, CLOCK_START_IND, \
+from rlenv.const import OFFER_MAPS, CLOCK_START_IND, \
     CLOCK_END_IND, TIME_START_IND, TIME_END_IND, NORM_IND, MSG_IND, \
     DELAY_START_IND, DELAY_END_IND, CON_IND, DELAY_IND, CON_START_IND, \
     DAYS_IND, AUTO_IND, REJECT_IND, EXP_IND
 from rlenv.util import last_norm
 from featnames import DAYS_SINCE_LSTG, INT_REMAINING, BYR_HIST, \
-    ALL_OFFER_FEATS, THREAD_COUNT, DAYS_SINCE_LAST
+    ALL_OFFER_FEATS
 from copy import deepcopy
 
 
@@ -107,17 +107,3 @@ class ThreadSources(Sources):
         rej = self.source_dict[offer_map][REJECT_IND]
         exp = self.source_dict[offer_map][EXP_IND]
         return auto, exp, rej
-
-
-class ArrivalSources(Sources):
-    def __init__(self, x_lstg=None):
-        super().__init__(x_lstg=x_lstg)
-        self.source_dict[DAYS_SINCE_LAST] = 0.0
-        self.source_dict[THREAD_COUNT] = 0.0
-
-    def update_arrival(self, clock_feats=None, days_since_lstg=None,
-                       thread_count=None, days_since_last=None):
-        self.source_dict[THREAD_COUNT] = thread_count
-        self.source_dict[CLOCK_MAP] = clock_feats
-        self.source_dict[DAYS_SINCE_LSTG] = days_since_lstg
-        self.source_dict[DAYS_SINCE_LAST] = days_since_last

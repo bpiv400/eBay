@@ -3,12 +3,11 @@ import pandas as pd
 from rlenv.Composer import Composer
 from rlenv.EBayEnv import EBayEnv
 from rlenv.generate.Recorder import OutcomeRecorder
-from rlenv.interfaces.ArrivalInterface import ArrivalInterface
-from rlenv.interfaces.PlayerInterface import SimulatedSeller, SimulatedBuyer
+from rlenv.Player import SimulatedSeller, SimulatedBuyer
 from rlenv.LstgLoader import ChunkLoader
 from rlenv.QueryStrategy import DefaultQueryStrategy
 from rlenv.util import load_chunk
-from constants import OUTCOME_SIMS, VALUE_SIMS
+from constants import VALUE_SIMS
 from featnames import LSTG
 
 VALUE_COLS = [LSTG, 'sale', 'sale_price', 'relist_ct']
@@ -32,8 +31,8 @@ class Generator:
         self.query_strategy = None
         self.env = None
 
-    def process_chunk(self, part=None, chunk=None):
-        self.loader = self.load_chunk(part=part, chunk=chunk)
+    def process_chunk(self, part=None, chunk=None, num_sims=1):
+        self.loader = self.load_chunk(part=part, chunk=chunk, num_sims=num_sims)
         if not self.initialized:
             self.initialize()
         self.env = self.generate_env()
@@ -84,16 +83,14 @@ class Generator:
     def generate_query_strategy(self):
         buyer = self.generate_buyer()
         seller = self.generate_seller()
-        arrival = ArrivalInterface()
-        return DefaultQueryStrategy(buyer=buyer,
-                                    seller=seller,
-                                    arrival=arrival)
+        return DefaultQueryStrategy(buyer=buyer, seller=seller)
 
-    def load_chunk(self, part=None, chunk=None):
-        x_lstg, lookup, p_arrival = load_chunk(part=part, num=chunk)
+    def load_chunk(self, part=None, chunk=None, num_sims=None):
+        x_lstg, lookup, arrivals = load_chunk(part=part, num=chunk)
         return ChunkLoader(x_lstg=x_lstg,
                            lookup=lookup,
-                           p_arrival=p_arrival)
+                           arrivals=arrivals,
+                           num_sims=num_sims)
 
 
 class OutcomeGenerator(Generator):
@@ -114,10 +111,7 @@ class OutcomeGenerator(Generator):
         t0 = dt.now()
         while self.env.has_next_lstg():
             self.env.next_lstg()
-            for i in range(OUTCOME_SIMS):
-                self.simulate_lstg()
-                if self.recorder is not None:
-                    self.recorder.increment_sim()
+            self.simulate_lstg()
 
         # time elapsed
         print('Avg time per listing: {} seconds'.format(

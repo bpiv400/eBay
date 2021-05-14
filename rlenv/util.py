@@ -7,7 +7,7 @@ from torch.distributions.categorical import Categorical
 from torch.distributions.bernoulli import Bernoulli
 from agent.const import COMMON_CONS
 from constants import INPUT_DIR
-from featnames import LOOKUP, X_LSTG, P_ARRIVAL, ARRIVAL_MODELS
+from featnames import LOOKUP, X_LSTG, ARRIVALS, ARRIVAL_MODELS
 from constants import PARTS_DIR, DAY, MAX_DELAY_TURN
 from rlenv.const import (SIM_CHUNKS_DIR, SIM_VALS_DIR, OFFER_MAPS,
                          SIM_DISCRIM_DIR, DATE_FEATS_DF, NORM_IND)
@@ -205,7 +205,7 @@ def load_chunk(part=None, base_dir=None, num=None, input_path=None):
             base_dir = PARTS_DIR + '{}/'.format(part)
         input_path = base_dir + 'chunks/{}.pkl'.format(num)
     input_dict = unpickle(input_path)
-    return [input_dict[k] for k in [X_LSTG, LOOKUP, P_ARRIVAL]]
+    return [input_dict[k] for k in [X_LSTG, LOOKUP, ARRIVALS]]
 
 
 def get_delay_outcomes(seconds=0, turn=0):

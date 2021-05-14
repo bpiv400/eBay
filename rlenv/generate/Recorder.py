@@ -25,23 +25,19 @@ class Recorder:
         self.lstg = None
         self.start_time = None
         self.start_price = None
-        self.sim_ct = None
+        self.sim = None
 
-    def update_lstg(self, lookup, lstg):
+    def update_lstg(self, lookup=None, lstg=None, sim=None):
         """
         Resets lstg that the recorder is tracking data about
         :param pd.Series lookup: lstg meta data
         :param int lstg: listing id
+        :param int sim: simulation number
         """
         self.lstg = lstg
         self.start_time = lookup[START_TIME]
         self.start_price = lookup[START_PRICE]
-        self.sim_ct = 0
-        if self.verbose:
-            self.print_lstg(lookup)
-
-    def increment_sim(self):
-        self.sim_ct += 1
+        self.sim = sim
 
     @staticmethod
     def print_offer(event):
@@ -76,8 +72,8 @@ class Recorder:
         print('Concession: {} | norm: {} | message: {}'.format(con, norm, msg))
 
     @staticmethod
-    def print_lstg(lookup):
-        print("\n\nLSTG: {}".format(int(lookup[LSTG])))
+    def print_lstg(lookup=None, sim=None):
+        print("\n\nLSTG: {}, SIM: {}".format(int(lookup[LSTG]), sim))
         print('start time: {} | end time: {}'.format(
             int(lookup[START_TIME]), int(lookup[START_TIME] + MAX_DELAY_ARRIVAL)))
         norm_dec = lookup[DEC_PRICE] / lookup[START_PRICE]
@@ -163,7 +159,7 @@ class OutcomeRecorder(Recorder):
         :param int time: time of the offer
         :param bool is_agent: whether thread is buyer agent
         """
-        row = [self.lstg, self.sim_ct, thread_id, byr_hist, time]
+        row = [self.lstg, self.sim, thread_id, byr_hist, time]
         if self.byr:
             row += [is_agent]
         self.threads.append(row)
@@ -174,7 +170,7 @@ class OutcomeRecorder(Recorder):
         if event.turn == 1:
             assert con > 0
         row = [self.lstg,
-               self.sim_ct,
+               self.sim,
                event.thread_id,
                event.turn,
                event.priority,
@@ -189,7 +185,7 @@ class OutcomeRecorder(Recorder):
     def add_buyer_walk(self, event=None, time_feats=None):
         assert self.byr
         assert event.turn == 1
-        row = [self.lstg, self.sim_ct, event.thread_id, 1,
+        row = [self.lstg, self.sim, event.thread_id, 1,
                event.priority, 0, 0]
         row += list(time_feats)
         self.offers.append(row)
