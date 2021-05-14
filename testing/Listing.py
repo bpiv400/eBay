@@ -14,7 +14,6 @@ class Listing:
         """
         self.lstg = params[LSTG]
         self.lookup = params[LOOKUP]
-        self.arrivals_first = params['arrivals_first']
         self.start_time = int(round(self.lookup[START_TIME]))
         self.verbose = params['verbose']
         self.arrivals = self.generate_arrivals(params)
@@ -41,12 +40,10 @@ class Listing:
                                                             thread_id=thread_id)
 
         is_bin = self.check_bin(params=params, thread_id=num_arrivals)
-        if self.arrivals_first or num_arrivals == 0 or not is_bin:
-            thread_id = num_arrivals + 1
-            phantom = self.arrivals_first and is_bin
-            arrivals[thread_id] = self.generate_censored_arrival(params=params,
-                                                                 thread_id=thread_id,
-                                                                 phantom=phantom)
+        thread_id = num_arrivals + 1
+        arrivals[thread_id] = self.generate_censored_arrival(params=params,
+                                                             thread_id=thread_id,
+                                                             phantom=is_bin)
         return arrivals
 
     @staticmethod

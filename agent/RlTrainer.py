@@ -12,7 +12,7 @@ from agent.agents import SellerAgent, BuyerAgent, BuyerTurnCostAgent
 from rlenv.QueryStrategy import DefaultQueryStrategy
 from agent.envs.SellerEnv import SellerEnv
 from agent.envs.BuyerEnv import BuyerEnv
-from sim.chunks import ArrivalInterface
+from sim.arrivals import ArrivalInterface
 from rlenv.Player import SimulatedSeller, SimulatedBuyer
 from agent.AgentLoader import AgentLoader
 from agent.const import BATCH_SIZE, NUM_VALUE_BYR, NUM_VALUE_SLR

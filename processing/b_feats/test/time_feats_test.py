@@ -3,9 +3,7 @@ import pandas as pd
 import torch
 from processing.b_feats.tf import get_lstg_time_feats
 from rlenv.time.TimeFeatures import TimeFeatures
-from rlenv.time.offer_types import *
-from rlenv.const import EXPIRATION
-
+from rlenv.const import EXPIRATION, SLR_REJECTION, BYR_REJECTION, OFFER
 
 # consts
 COLS = ['accept', 'clock', 'reject', 'byr',

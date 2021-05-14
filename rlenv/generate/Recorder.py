@@ -84,7 +84,6 @@ class Recorder:
 
     @staticmethod
     def print_next_event(event):
-        print('NEXT EVENT DRAWING...')
         print_string = 'Type: {} at {}'.format(event.type, event.priority)
         if isinstance(event, Thread) and event.type != FIRST_OFFER:
             print_string += ' | Thread: {} | Turn: {}'.format(

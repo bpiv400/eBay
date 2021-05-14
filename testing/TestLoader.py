@@ -1,14 +1,12 @@
 import pandas as pd
 from rlenv.LstgLoader import ChunkLoader
 from testing.util import subset_inputs
-from featnames import X_LSTG, X_OFFER, X_THREAD, LOOKUP, P_ARRIVAL, LSTG
+from featnames import X_LSTG, X_OFFER, X_THREAD, LOOKUP, LSTG
 
 
 class TestLoader(ChunkLoader):
     def __init__(self, chunk=None):
-        super().__init__(x_lstg=chunk[X_LSTG],
-                         lookup=chunk[LOOKUP],
-                         p_arrival=chunk[P_ARRIVAL])
+        super().__init__(x_lstg=chunk[X_LSTG], lookup=chunk[LOOKUP])
         self._chunk = chunk
         self.x_offer = None
         self.x_thread = None
@@ -20,7 +18,7 @@ class TestLoader(ChunkLoader):
         self.x_thread = self.subset_df(df=self._chunk[X_THREAD])
         self.inputs = subset_inputs(input_data=self._chunk['inputs'],
                                     level=LSTG, value=self.lstg)
-        return self.x_lstg, self.lookup, self.p_arrival
+        return self.x_lstg, self.lookup, self.arrivals
 
     def subset_df(self, df=None):
         """

@@ -10,7 +10,7 @@ from rlenv.events.Thread import Thread
 from agent.ConSpace import ConSpace
 from agent.const import AGENT_CONS
 from constants import INTERVAL_TURN, INTERVAL_CT_TURN, DAY, NUM_COMMON_CONS, IDX
-from featnames import BYR_HIST, START_PRICE, BYR, SLR, DELTA, TURN_COST
+from featnames import START_PRICE, BYR, SLR, DELTA, TURN_COST
 
 Info = namedarraytuple("Info", ["days", "max_return", "num_actions", "turn",
                                 "thread_id", "priority", "agent_sale"])
@@ -21,10 +21,6 @@ class AgentEnv(EBayEnv, Env):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.byr = kwargs[BYR]
-
-        # mode
-        self.test = False if 'test' not in kwargs else kwargs['test']
-        self.train = False if 'train' not in kwargs else kwargs['train']
 
         if not self.test:  # for reward calculation
             self.delta = kwargs[DELTA]
@@ -72,14 +68,13 @@ class AgentEnv(EBayEnv, Env):
         return obs, reward, done, info
 
     def get_obs(self, event=None, done=None):
-        if event.sources() is None or event.turn is None:
-            raise RuntimeError("Missing arguments to get observation")
-        if BYR_HIST in event.sources():
+        if not done:
+            if event.sources() is None or event.turn is None:
+                raise RuntimeError("Missing arguments to get observation")
             obs_dict = self.composer.build_input_dict(model_name=None,
                                                       sources=event.sources(),
                                                       turn=event.turn)
-        else:  # incomplete sources; triggers warning in AgentModel
-            assert done
+        else:
             obs_dict = self.empty_dict
         return self._obs_class(**obs_dict)
 

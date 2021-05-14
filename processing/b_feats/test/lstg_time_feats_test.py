@@ -3,9 +3,8 @@ from processing.b_feats.tf import get_lstg_time_feats
 from processing.b_feats.test.test_utils import (compare_all,
                                                 get_exp_feats,
                                                 update)
+from rlenv.const import SLR_REJECTION, BYR_REJECTION, OFFER
 from rlenv.time.TimeFeatures import TimeFeatures
-from rlenv.time.offer_types import *
-
 
 # consts
 COLS = ['accept', 'clock', 'reject', 'byr',

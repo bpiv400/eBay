@@ -51,7 +51,7 @@ class ChunkLoader(LstgLoader):
     """
     Loads lstgs from a chunk or chunk subset
     """
-    def __init__(self, x_lstg=None, lookup=None, arrivals=None, num_sims=None):
+    def __init__(self, x_lstg=None, lookup=None, arrivals=None, num_sims=1):
         """
         :param pd.DataFrame x_lstg:
         :param pd.DataFrame lookup:
@@ -64,7 +64,7 @@ class ChunkLoader(LstgLoader):
         self._lookup_slice = lookup.reset_index(drop=False)
         self._arrivals_slice = arrivals
         self._ix = 0
-        self.sim = 0
+        self.sim = -1
         self._num_sims = num_sims
         self._num_lstgs = len(lookup.index)
 
@@ -78,23 +78,27 @@ class ChunkLoader(LstgLoader):
     def next_lstg(self):
         self.verify_init()
         if self.has_next():
+            if self._ix == 0:
+                self.sim += 1
             self.lookup = self._lookup_slice.iloc[self._ix, :]
             self.lstg = int(self.lookup[LSTG])
             self.x_lstg = {k: v.iloc[self._ix, :].values
                            for k, v in self._x_lstg_slice.items()}
-            self.arrivals = self._arrivals_slice[self.lstg][self.sim]
+            if self._arrivals_slice is not None:
+                self.arrivals = self._arrivals_slice[self.lstg][self.sim]
+            else:
+                self.arrivals = None
 
             self._ix += 1
             if self._ix == self._num_lstgs:
                 self._ix = 0
-                self.sim += 1
             return self.x_lstg, self.lookup, self.arrivals
         else:
             raise RuntimeError("Exhausted lstgs")
 
     def has_next(self):
         self.verify_init()
-        return self.sim < self._num_sims
+        return self._ix > 0 or self.sim < self._num_sims - 1
 
     def init(self, rank):
         pass
@@ -104,4 +108,3 @@ class ChunkLoader(LstgLoader):
 
     def __len__(self):
         return self._num_lstgs
-

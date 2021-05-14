@@ -15,7 +15,7 @@ from featnames import TIME_FEATS, THREAD_COUNT, BYR
 from constants import MAX_DELAY_TURN
 from rlenv.Heap import Heap
 from rlenv.time.Offer import Offer
-from rlenv.time.offer_types import BYR_REJECTION, SLR_REJECTION, OFFER
+from rlenv.const import SLR_REJECTION, BYR_REJECTION, OFFER
 
 
 class TimeFeatures:

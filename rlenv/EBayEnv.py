@@ -10,6 +10,7 @@ from rlenv.events.Thread import Thread
 from rlenv.util import get_clock_feats, get_con_outcomes, need_msg, model_str
 from rlenv.const import INTERACT, ACC_IND, CON, MSG, REJ_IND, OFF_IND, \
     EXPIRATION, FIRST_OFFER, OFFER_EVENT, DELAY_EVENT
+from sim.arrivals import ArrivalSimulator
 from constants import DAY, MAX_DELAY_ARRIVAL
 from featnames import DEC_PRICE, ACC_PRICE, START_PRICE, DELAY, START_TIME, BYR, \
     BYR_HIST_MODEL
@@ -21,6 +22,10 @@ class EBayEnv:
     def __init__(self, **kwargs):
         # for printing
         self.verbose = kwargs['verbose']
+
+        # mode
+        self.test = False if 'test' not in kwargs else kwargs['test']
+        self.train = False if 'train' not in kwargs else kwargs['train']
 
         # features
         self.x_lstg = None
@@ -44,16 +49,26 @@ class EBayEnv:
         self.queue.reset()
         self.time_feats.reset()
         self.outcome = None
+
+        if self.verbose:
+            Recorder.print_lstg(lookup=self.lookup, sim=self.loader.sim)
+
+        if self.test:  # populate arrivals
+            simulator = ArrivalSimulator(start_time=self.start_time,
+                                         x_lstg=self.x_lstg,
+                                         composer=self.composer,
+                                         query_strategy=self.query_strategy)
+            self.arrivals = simulator.simulate_arrivals()
+
         # load threads into queue
         for i, priority in enumerate(self.arrivals):
-            thread = Thread(priority=priority)
+            thread = Thread(priority=int(priority))
             thread.set_id(i+1)
             self.queue.push(thread)
+
         # add expiration event
         event = Event(EXPIRATION, priority=self.end_time)
         self.queue.push(event)
-        if self.verbose:
-            Recorder.print_lstg(lookup=self.lookup, sim=self.loader.sim)
 
     def has_next_lstg(self):
         return self.loader.has_next()

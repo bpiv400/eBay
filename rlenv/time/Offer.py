@@ -1,6 +1,6 @@
 from random import random
 from featnames import SLR, BYR
-from rlenv.time.offer_types import BYR_REJECTION, SLR_REJECTION, OFFER
+from rlenv.const import SLR_REJECTION, BYR_REJECTION, OFFER
 
 
 class Offer:
@@ -57,5 +57,3 @@ class Offer:
     def __str__(self):
         rep = 'price: {} | time: {} | player: {}'.format(self.price, self.time, self.player)
         return rep
-
-

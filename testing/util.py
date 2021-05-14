@@ -72,6 +72,7 @@ def subset_inputs(models=None, input_data=None, value=None, level=None):
 
 
 def compare_input_dicts(model=None, stored_inputs=None, env_inputs=None):
+    print('Comparing inputs for {} model'.format(model))
     for feat_set_name, stored_feats in stored_inputs.items():
         env_feats = env_inputs[feat_set_name]
         feat_eq = torch.lt(torch.abs(torch.add(-stored_feats, env_feats)), 1e-4)

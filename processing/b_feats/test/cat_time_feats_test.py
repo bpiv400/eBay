@@ -1,7 +1,8 @@
 import numpy as np
 from copy import deepcopy
 import pandas as pd
-from rlenv.time.offer_types import *
+
+from rlenv.const import SLR_REJECTION, BYR_REJECTION, OFFER
 from processing.b_feats.util import get_all_cat_feats
 from constants import MAX_DELAY_TURN
 

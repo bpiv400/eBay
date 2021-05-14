@@ -6,7 +6,7 @@ from testing.util import load_all_inputs, get_auto_safe_lstgs, \
     drop_duplicated_timestamps
 from testing.TestLoader import TestLoader
 from utils import unpickle, load_file, safe_reindex
-from featnames import X_THREAD, X_OFFER, LOOKUP, LSTG
+from featnames import X_THREAD, X_OFFER, LOOKUP, LSTG, ARRIVALS
 
 
 class TestGenerator(Generator):
@@ -27,7 +27,7 @@ class TestGenerator(Generator):
     def generate_query_strategy(self):
         return TestQueryStrategy()
 
-    def load_chunk(self, chunk=None, part=None):
+    def load_chunk(self, chunk=None, part=None, num_sims=1):
         """
         Initializes lstg loader for the
         """
@@ -35,6 +35,7 @@ class TestGenerator(Generator):
         chunk_dir = get_env_sim_subdir(part=part, chunks=True)
         chunk_path = chunk_dir + '{}.pkl'.format(chunk)
         chunk = unpickle(chunk_path)
+        del chunk[ARRIVALS]
         lstgs = chunk[LOOKUP].index
 
         # add in threads and offers
@@ -81,7 +82,6 @@ class TestGenerator(Generator):
             X_THREAD: self.loader.x_thread,
             X_OFFER: self.loader.x_offer,
             LOOKUP: self.loader.lookup,
-            'arrivals_first': self.byr,
             'verbose': self.verbose
         }
         return params

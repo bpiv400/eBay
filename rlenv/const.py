@@ -62,3 +62,8 @@ REJECT_IND = ALL_OFFER_FEATS.index(REJECT)
 EXP_IND = ALL_OFFER_FEATS.index(EXP)
 BYR_OFFERS_RECENT_IND = ALL_OFFER_FEATS.index(BYR_OFFERS_RECENT)
 THREAD_COUNT_IND = ALL_OFFER_FEATS.index(THREAD_COUNT)
+
+# used to update time valued features after some event has occurred
+SLR_REJECTION = 'SLR_REJECTION'  # slr rejecting an offer on turn 2 or turn 4
+BYR_REJECTION = 'BYR_REJECTION'  # closes the thread
+OFFER = 'OFFER'  # buyer or seller offer that's not an acceptance or rejection

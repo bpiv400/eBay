@@ -1,10 +1,10 @@
 import pytest
 import torch
 import numpy as np
+import rlenv.const
 from featnames import TIME_FEATS, THREAD_COUNT
 from constants import MAX_DELAY_TURN
 from rlenv.time.TimeFeatures import TimeFeatures
-import rlenv.time.offer_types as time_triggers
 
 
 @pytest.fixture
@@ -60,8 +60,8 @@ def test_first_byr_offer(lstgs, init_timefeats):
     timefeats = init_timefeats
     thread1, thread2, thread3 = lstgs
     prev = timefeats.get_feats(thread1, 0)
-    timefeats.update_features_old(trigger_type=time_triggers.OFFER, thread_id=thread1,
-                              offer={
+    timefeats.update_features_old(trigger_type=rlenv.const.OFFER, thread_id=thread1,
+                                  offer={
                                   'type': 'byr',
                                   'time': 5,
                                   'price': .2
@@ -74,8 +74,8 @@ def test_first_byr_offer(lstgs, init_timefeats):
     exp = torch.tensor([0, 0, 0, 0, 0, 0, 1, .2, 1, .2, 1, .2, 1]).float()
     compare(next, exp)
 
-    timefeats.update_features_old(trigger_type=time_triggers.OFFER, thread_id=thread2,
-                              offer={
+    timefeats.update_features_old(trigger_type=rlenv.const.OFFER, thread_id=thread2,
+                                  offer={
                                   'type': 'byr',
                                   'time': 6,
                                   'price': .3
@@ -98,20 +98,20 @@ def test_first_slr_offer(init_timefeats, lstgs):
     thread1, thread2, thread3 = lstgs
     timefeats = init_timefeats
     prev = timefeats.get_feats(thread1, 0)
-    timefeats.update_features_old(trigger_type=time_triggers.OFFER, thread_id=thread1,
-                              offer={
+    timefeats.update_features_old(trigger_type=rlenv.const.OFFER, thread_id=thread1,
+                                  offer={
                                   'type': 'byr',
                                   'time': 5,
                                   'price': .2
                               })
-    timefeats.update_features_old(trigger_type=time_triggers.OFFER, thread_id=thread2,
-                              offer={
+    timefeats.update_features_old(trigger_type=rlenv.const.OFFER, thread_id=thread2,
+                                  offer={
                                   'type': 'byr',
                                   'time': 6,
                                   'price': .3
                               })
-    timefeats.update_features_old(trigger_type=time_triggers.OFFER, thread_id=thread1,
-                              offer={
+    timefeats.update_features_old(trigger_type=rlenv.const.OFFER, thread_id=thread1,
+                                  offer={
                                   'type': 'slr',
                                   'time': 7,
                                   'price': 1-.8,
@@ -153,8 +153,8 @@ def test_first_slr_offer(init_timefeats, lstgs):
         else:
             raise RuntimeError()
 
-    timefeats.update_features_old(trigger_type=time_triggers.OFFER, thread_id=thread2,
-                              offer={
+    timefeats.update_features_old(trigger_type=rlenv.const.OFFER, thread_id=thread2,
+                                  offer={
                                   'type': 'slr',
                                   'time': 7,
                                   'price': 1 - .7,
@@ -202,32 +202,32 @@ def test_byr_offer(init_timefeats, lstgs):
     thread1, thread2, thread3 = lstgs
     timefeats = init_timefeats
     prev = timefeats.get_feats(thread1, 0)
-    timefeats.update_features_old(trigger_type=time_triggers.OFFER, thread_id=thread1,
-                              offer={
+    timefeats.update_features_old(trigger_type=rlenv.const.OFFER, thread_id=thread1,
+                                  offer={
                                   'type': 'byr',
                                   'time': 5,
                                   'price': .2
                               })
-    timefeats.update_features_old(trigger_type=time_triggers.OFFER, thread_id=thread2,
-                              offer={
+    timefeats.update_features_old(trigger_type=rlenv.const.OFFER, thread_id=thread2,
+                                  offer={
                                   'type': 'byr',
                                   'time': 6,
                                   'price': .3
                               })
-    timefeats.update_features_old(trigger_type=time_triggers.OFFER, thread_id=thread1,
-                              offer={
+    timefeats.update_features_old(trigger_type=rlenv.const.OFFER, thread_id=thread1,
+                                  offer={
                                   'type': 'slr',
                                   'time': 7,
                                   'price': 1-.8,
                               })
-    timefeats.update_features_old(trigger_type=time_triggers.OFFER, thread_id=thread2,
-                              offer={
+    timefeats.update_features_old(trigger_type=rlenv.const.OFFER, thread_id=thread2,
+                                  offer={
                                   'type': 'slr',
                                   'time': 7,
                                   'price': 1 - .7,
                               })
-    timefeats.update_features_old(trigger_type=time_triggers.OFFER, thread_id=thread1,
-                              offer={
+    timefeats.update_features_old(trigger_type=rlenv.const.OFFER, thread_id=thread1,
+                                  offer={
                                   'type': 'byr',
                                   'time': 5,
                                   'price': .4
@@ -279,8 +279,8 @@ def test_byr_offer(init_timefeats, lstgs):
         else:
             raise RuntimeError()
 
-    timefeats.update_features_old(trigger_type=time_triggers.OFFER, thread_id=thread2,
-                              offer={
+    timefeats.update_features_old(trigger_type=rlenv.const.OFFER, thread_id=thread2,
+                                  offer={
                                   'type': 'byr',
                                   'time': 8,
                                   'price': .35
@@ -338,44 +338,44 @@ def test_slr_offer(init_timefeats, lstgs):
     thread1, thread2, thread3 = lstgs
     timefeats = init_timefeats
     prev = timefeats.get_feats(thread1, 0)
-    timefeats.update_features_old(trigger_type=time_triggers.OFFER, thread_id=thread1,
-                              offer={
+    timefeats.update_features_old(trigger_type=rlenv.const.OFFER, thread_id=thread1,
+                                  offer={
                                   'type': 'byr',
                                   'time': 5,
                                   'price': .2
                               })
-    timefeats.update_features_old(trigger_type=time_triggers.OFFER, thread_id=thread2,
-                              offer={
+    timefeats.update_features_old(trigger_type=rlenv.const.OFFER, thread_id=thread2,
+                                  offer={
                                   'type': 'byr',
                                   'time': 6,
                                   'price': .3
                               })
-    timefeats.update_features_old(trigger_type=time_triggers.OFFER, thread_id=thread1,
-                              offer={
+    timefeats.update_features_old(trigger_type=rlenv.const.OFFER, thread_id=thread1,
+                                  offer={
                                   'type': 'slr',
                                   'time': 7,
                                   'price': 1-.8,
                               })
-    timefeats.update_features_old(trigger_type=time_triggers.OFFER, thread_id=thread2,
-                              offer={
+    timefeats.update_features_old(trigger_type=rlenv.const.OFFER, thread_id=thread2,
+                                  offer={
                                   'type': 'slr',
                                   'time': 7,
                                   'price': 1 - .7,
                               })
-    timefeats.update_features_old(trigger_type=time_triggers.OFFER, thread_id=thread1,
-                              offer={
+    timefeats.update_features_old(trigger_type=rlenv.const.OFFER, thread_id=thread1,
+                                  offer={
                                   'type': 'byr',
                                   'time': 5,
                                   'price': .4
                               })
-    timefeats.update_features_old(trigger_type=time_triggers.OFFER, thread_id=thread2,
-                              offer={
+    timefeats.update_features_old(trigger_type=rlenv.const.OFFER, thread_id=thread2,
+                                  offer={
                                   'type': 'byr',
                                   'time': 8,
                                   'price': .35
                               })
-    timefeats.update_features_old(trigger_type=time_triggers.OFFER, thread_id=thread1,
-                              offer={
+    timefeats.update_features_old(trigger_type=rlenv.const.OFFER, thread_id=thread1,
+                                  offer={
                                   'type': 'slr',
                                   'time': 9,
                                   'price': 1-.6
@@ -426,8 +426,8 @@ def test_slr_offer(init_timefeats, lstgs):
             compare(next2[i], torch.tensor(1).float())
         else:
             raise RuntimeError()
-    timefeats.update_features_old(trigger_type=time_triggers.OFFER, thread_id=thread2,
-                              offer={
+    timefeats.update_features_old(trigger_type=rlenv.const.OFFER, thread_id=thread2,
+                                  offer={
                                   'type': 'slr',
                                   'time': 9,
                                   'price': 1 - .65
@@ -485,55 +485,55 @@ def test_byr_rejection(init_timefeats, lstgs):
     thread1, thread2, thread3 = lstgs
     timefeats = init_timefeats
     prev = timefeats.get_feats(thread1, 0)
-    timefeats.update_features_old(trigger_type=time_triggers.OFFER, thread_id=thread1,
-                              offer={
+    timefeats.update_features_old(trigger_type=rlenv.const.OFFER, thread_id=thread1,
+                                  offer={
                                   'type': 'byr',
                                   'time': 5,
                                   'price': .2
                               })
-    timefeats.update_features_old(trigger_type=time_triggers.OFFER, thread_id=thread2,
-                              offer={
+    timefeats.update_features_old(trigger_type=rlenv.const.OFFER, thread_id=thread2,
+                                  offer={
                                   'type': 'byr',
                                   'time': 6,
                                   'price': .3
                               })
-    timefeats.update_features_old(trigger_type=time_triggers.OFFER, thread_id=thread1,
-                              offer={
+    timefeats.update_features_old(trigger_type=rlenv.const.OFFER, thread_id=thread1,
+                                  offer={
                                   'type': 'slr',
                                   'time': 7,
                                   'price': 1-.8,
                               })
-    timefeats.update_features_old(trigger_type=time_triggers.OFFER, thread_id=thread2,
-                              offer={
+    timefeats.update_features_old(trigger_type=rlenv.const.OFFER, thread_id=thread2,
+                                  offer={
                                   'type': 'slr',
                                   'time': 7,
                                   'price': 1 - .7,
                               })
-    timefeats.update_features_old(trigger_type=time_triggers.OFFER, thread_id=thread1,
-                              offer={
+    timefeats.update_features_old(trigger_type=rlenv.const.OFFER, thread_id=thread1,
+                                  offer={
                                   'type': 'byr',
                                   'time': 5,
                                   'price': .4
                               })
-    timefeats.update_features_old(trigger_type=time_triggers.OFFER, thread_id=thread2,
-                              offer={
+    timefeats.update_features_old(trigger_type=rlenv.const.OFFER, thread_id=thread2,
+                                  offer={
                                   'type': 'byr',
                                   'time': 8,
                                   'price': .35
                               })
-    timefeats.update_features_old(trigger_type=time_triggers.OFFER, thread_id=thread1,
-                              offer={
+    timefeats.update_features_old(trigger_type=rlenv.const.OFFER, thread_id=thread1,
+                                  offer={
                                   'type': 'slr',
                                   'time': 9,
                                   'price': 1-.6
                               })
-    timefeats.update_features_old(trigger_type=time_triggers.OFFER, thread_id=thread2,
-                              offer={
+    timefeats.update_features_old(trigger_type=rlenv.const.OFFER, thread_id=thread2,
+                                  offer={
                                   'type': 'slr',
                                   'time': 9,
                                   'price': 1 - .65
                               })
-    timefeats.update_features_old(trigger_type=time_triggers.BYR_REJECTION, thread_id=thread1,
+    timefeats.update_features_old(trigger_type=rlenv.const.BYR_REJECTION, thread_id=thread1,
                                   offer={'time': 9})
 
     next3 = timefeats.get_feats(thread3, 9)
@@ -583,7 +583,7 @@ def test_byr_rejection(init_timefeats, lstgs):
         else:
             raise RuntimeError()
 
-    timefeats.update_features_old(trigger_type=time_triggers.BYR_REJECTION, thread_id=thread2,
+    timefeats.update_features_old(trigger_type=rlenv.const.BYR_REJECTION, thread_id=thread2,
                                   offer={'time': 9})
     next3 = timefeats.get_feats(thread3, 9)
     next2 = timefeats.get_feats(thread2, 9)
@@ -638,44 +638,44 @@ def test_slr_rejection_early(init_timefeats, lstgs):
     thread1, thread2, thread3 = lstgs
     timefeats = init_timefeats
     prev = timefeats.get_feats(thread1, 0)
-    timefeats.update_features_old(trigger_type=time_triggers.OFFER, thread_id=thread1,
-                              offer={
+    timefeats.update_features_old(trigger_type=rlenv.const.OFFER, thread_id=thread1,
+                                  offer={
                                   'type': 'byr',
                                   'time': 5,
                                   'price': .2
                               })
-    timefeats.update_features_old(trigger_type=time_triggers.OFFER, thread_id=thread2,
-                              offer={
+    timefeats.update_features_old(trigger_type=rlenv.const.OFFER, thread_id=thread2,
+                                  offer={
                                   'type': 'byr',
                                   'time': 6,
                                   'price': .3
                               })
-    timefeats.update_features_old(trigger_type=time_triggers.OFFER, thread_id=thread1,
-                              offer={
+    timefeats.update_features_old(trigger_type=rlenv.const.OFFER, thread_id=thread1,
+                                  offer={
                                   'type': 'slr',
                                   'time': 7,
                                   'price': 1-.8,
                               })
-    timefeats.update_features_old(trigger_type=time_triggers.OFFER, thread_id=thread2,
-                              offer={
+    timefeats.update_features_old(trigger_type=rlenv.const.OFFER, thread_id=thread2,
+                                  offer={
                                   'type': 'slr',
                                   'time': 7,
                                   'price': 1 - .7,
                               })
-    timefeats.update_features_old(trigger_type=time_triggers.OFFER, thread_id=thread1,
-                              offer={
+    timefeats.update_features_old(trigger_type=rlenv.const.OFFER, thread_id=thread1,
+                                  offer={
                                   'type': 'byr',
                                   'time': 5,
                                   'price': .4
                               })
-    timefeats.update_features_old(trigger_type=time_triggers.OFFER, thread_id=thread2,
-                              offer={
+    timefeats.update_features_old(trigger_type=rlenv.const.OFFER, thread_id=thread2,
+                                  offer={
                                   'type': 'byr',
                                   'time': 8,
                                   'price': .35
                               })
-    timefeats.update_features_old(trigger_type=time_triggers.SLR_REJECTION, thread_id=thread1,
-                              offer={
+    timefeats.update_features_old(trigger_type=rlenv.const.SLR_REJECTION, thread_id=thread1,
+                                  offer={
                                   'type': 'slr',
                                   'time': 7,
                                   'price': 1 - .8,
@@ -723,8 +723,8 @@ def test_slr_rejection_early(init_timefeats, lstgs):
             compare(next2[i], torch.tensor(1).float())
         else:
             raise RuntimeError()
-    timefeats.update_features_old(trigger_type=time_triggers.SLR_REJECTION, thread_id=thread2,
-                              offer={
+    timefeats.update_features_old(trigger_type=rlenv.const.SLR_REJECTION, thread_id=thread2,
+                                  offer={
                                   'type': 'slr',
                                   'time': 7,
                                   'price': 1 - .7,
@@ -782,14 +782,14 @@ def test_byr_offer_best_expire_no_backup(init_timefeats, lstgs):
     thread1, thread2, thread3 = lstgs
     timefeats = init_timefeats
     prev = timefeats.get_feats(thread1, 0)
-    timefeats.update_features_old(trigger_type=time_triggers.OFFER, thread_id=thread1,
-                              offer={
+    timefeats.update_features_old(trigger_type=rlenv.const.OFFER, thread_id=thread1,
+                                  offer={
                                   'type': 'byr',
                                   'time': 5,
                                   'price': .2
                               })
-    timefeats.update_features_old(trigger_type=time_triggers.OFFER, thread_id=thread2,
-                              offer={
+    timefeats.update_features_old(trigger_type=rlenv.const.OFFER, thread_id=thread2,
+                                  offer={
                                   'type': 'byr',
                                   'time': 6,
                                   'price': .3
@@ -878,26 +878,26 @@ def test_byr_best_expire_with_backup(init_timefeats, lstgs):
     thread1, thread2, thread3 = lstgs
     timefeats = init_timefeats
     prev = timefeats.get_feats(thread1, 0)
-    timefeats.update_features_old(trigger_type=time_triggers.OFFER, thread_id=thread1,
-                              offer={
+    timefeats.update_features_old(trigger_type=rlenv.const.OFFER, thread_id=thread1,
+                                  offer={
                                   'type': 'byr',
                                   'time': 5,
                                   'price': .2
                               })
-    timefeats.update_features_old(trigger_type=time_triggers.OFFER, thread_id=thread2,
-                              offer={
+    timefeats.update_features_old(trigger_type=rlenv.const.OFFER, thread_id=thread2,
+                                  offer={
                                   'type': 'byr',
                                   'time': 6,
                                   'price': .3
                               })
-    timefeats.update_features_old(trigger_type=time_triggers.OFFER, thread_id=thread1,
-                              offer={
+    timefeats.update_features_old(trigger_type=rlenv.const.OFFER, thread_id=thread1,
+                                  offer={
                                   'type': 'slr',
                                   'time': 15,
                                   'price': .25
                               })
-    timefeats.update_features_old(trigger_type=time_triggers.OFFER, thread_id=thread1,
-                              offer={
+    timefeats.update_features_old(trigger_type=rlenv.const.OFFER, thread_id=thread1,
+                                  offer={
                                   'type': 'byr',
                                   'time': 20,
                                   'price': .18
@@ -968,14 +968,14 @@ def test_byr_best_expire_with_backup(init_timefeats, lstgs):
 def test_overriding_recent_max(init_timefeats, lstgs):
     thread1, thread2, thread3 = lstgs
     timefeats = init_timefeats
-    timefeats.update_features_old(trigger_type=time_triggers.OFFER, thread_id=thread1,
-                              offer={
+    timefeats.update_features_old(trigger_type=rlenv.const.OFFER, thread_id=thread1,
+                                  offer={
                                   'type': 'byr',
                                   'time': 5,
                                   'price': .2
                               })
-    timefeats.update_features_old(trigger_type=time_triggers.OFFER, thread_id=thread2,
-                              offer={
+    timefeats.update_features_old(trigger_type=rlenv.const.OFFER, thread_id=thread2,
+                                  offer={
                                   'type': 'byr',
                                   'time': 25,
                                   'price': .35
@@ -1011,27 +1011,27 @@ def test_overriding_recent_max(init_timefeats, lstgs):
 def test_overriding_recent_max_same_thread(init_timefeats, lstgs):
     thread1, thread2, thread3 = lstgs
     timefeats = init_timefeats
-    timefeats.update_features_old(trigger_type=time_triggers.OFFER, thread_id=thread1,
-                              offer={
+    timefeats.update_features_old(trigger_type=rlenv.const.OFFER, thread_id=thread1,
+                                  offer={
                                   'type': 'byr',
                                   'time': 5,
                                   'price': .2
                               })
-    timefeats.update_features_old(trigger_type=time_triggers.OFFER, thread_id=thread2,
-                              offer={
+    timefeats.update_features_old(trigger_type=rlenv.const.OFFER, thread_id=thread2,
+                                  offer={
                                   'type': 'byr',
                                   'time': 25,
                                   'price': .18
                               })
-    timefeats.update_features_old(trigger_type=time_triggers.OFFER, thread_id=thread1,
-                              offer={
+    timefeats.update_features_old(trigger_type=rlenv.const.OFFER, thread_id=thread1,
+                                  offer={
                                     'type': 'slr',
                                     'time': 35,
                                     'price': .3
                               })
 
-    timefeats.update_features_old(trigger_type=time_triggers.OFFER, thread_id=thread1,
-                              offer={
+    timefeats.update_features_old(trigger_type=rlenv.const.OFFER, thread_id=thread1,
+                                  offer={
                                   'type': 'byr',
                                   'time': 40,
                                   'price': .35

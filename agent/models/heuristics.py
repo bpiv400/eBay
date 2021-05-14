@@ -67,23 +67,36 @@ class HeuristicByr:
         # index of action
         f = wrapper(turn)
         if turn == 1:
-            idx = f(.5) if self.delta < 2 else f(.6)
+            if self.delta < 2:
+                idx = f(.5)
+            elif self.delta == 2:
+                idx = f(.6)
+            else:
+                raise ValueError('Invalid delta: {}'.format(self.delta))
 
         elif turn == 3:
-            if self.delta <= 1:
+            if self.delta == .8:
+                idx = f(.33)
+            elif self.delta in [.9, 1]:
                 idx = f(.4)
-            else:
+            elif self.delta in [1.5, 2]:
                 idx = f(.5)
+            else:
+                raise ValueError('Invalid delta: {}'.format(self.delta))
 
         elif turn == 5:
-            if self.delta < 1:
+            if self.delta == .8:
+                idx = f(.25)
+            elif self.delta == .9:
                 idx = f(.2)
             elif self.delta == 1:
                 idx = f(.4)
-            elif self.delta < 2:
+            elif self.delta == 1.5:
                 idx = f(.5)
-            else:
+            elif self.delta == 2:
                 idx = f(1)
+            else:
+                raise ValueError('Invalid delta: {}'.format(self.delta))
 
         else:
             raise ValueError('Invalid turn: {}'.format(turn))
