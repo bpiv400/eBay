@@ -5,4 +5,4 @@
 #$ -o logs/collate/
 
 ulimit -n 4096
-python repo/agent_thread.py --part "$1"
+python repo/agent/agent_thread.py --part "$1"
