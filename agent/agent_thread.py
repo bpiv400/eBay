@@ -33,3 +33,7 @@ def main():
     part = input_partition(agent=True)
     agent_thread = sample_agent(part)
     topickle(agent_thread, PARTS_DIR + '{}/agent_thread.pkl'.format(part))
+
+
+if __name__ == '__main__':
+    main()
