@@ -53,7 +53,7 @@ class ChunkLoader(LstgLoader):
     """
     def __init__(self, x_lstg=None, lookup=None, arrivals=None, num_sims=1):
         """
-        :param pd.DataFrame x_lstg:
+        :param dict x_lstg:
         :param pd.DataFrame lookup:
         :param dict arrivals:
         :param int num_sims:

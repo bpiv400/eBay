@@ -1,8 +1,9 @@
 import pandas as pd
+
+from agent.agent_thread import sample_agent
 from utils import unpickle, load_file, load_data, safe_reindex, get_role
-from constants import AGENT_DIR, IDX, SIM_DIR, EPS
-from featnames import SLR, BYR, NORM, AUTO, INDEX, THREAD, CON, CLOCK, \
-    LOOKUP, X_OFFER, START_PRICE, X_THREAD, OUTCOME_FEATS, TEST, SIM, IS_AGENT
+from constants import AGENT_DIR, IDX, SIM_DIR, EPS, PARTS_DIR
+from featnames import SLR, BYR, NORM, AUTO, INDEX, THREAD, CON, LOOKUP, X_OFFER, START_PRICE, X_THREAD, OUTCOME_FEATS, TEST, SIM, IS_AGENT
 
 
 def get_log_dir(byr=None):
@@ -62,16 +63,19 @@ def get_norm_reward(data=None, values=None, byr=False):
     return sale_norm, cont_value
 
 
-def get_byr_valid(data=None):
+def get_byr_valid(data=None, part=None):
     if IS_AGENT in data[X_THREAD].columns:  # agent simulations
         assert SIM in data[X_THREAD].index.names
+        assert part is None
         data[X_THREAD] = data[X_THREAD][data[X_THREAD][IS_AGENT]].drop(IS_AGENT, axis=1)
         agent_threads = data[X_THREAD].index
-        for k in [X_OFFER, CLOCK]:
-            if k in data.keys():
-                data[k] = safe_reindex(data[k], idx=agent_threads)
-        lstg_sim = data[X_THREAD].index.droplevel(THREAD).unique()
-        data[LOOKUP] = safe_reindex(data[LOOKUP], idx=lstg_sim)
+    else:  # synthetic data
+        try:
+            agent_threads = unpickle(PARTS_DIR + '{}/randthread.pkl'.format(part))
+        except FileNotFoundError:
+            agent_threads = sample_agent(part)
+    data = safe_reindex(data, idx=agent_threads)
+    data[LOOKUP] = data[LOOKUP].droplevel(THREAD).drop_duplicates()
     return data
 
 
@@ -105,8 +109,10 @@ def load_valid_data(part=TEST, sim_dir=None, byr=None,
         data[X_OFFER] = data[X_OFFER][OUTCOME_FEATS]
 
     # restrict to valid listings
-    data = get_byr_valid(data) if byr else get_slr_valid(data)
-    return data
+    if byr:
+        return get_byr_valid(data=data, part=part)
+    else:
+        return get_slr_valid(data)
 
 
 def load_values(part=TEST, delta=None, normalize=True):

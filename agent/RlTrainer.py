@@ -12,7 +12,6 @@ from agent.agents import SellerAgent, BuyerAgent, BuyerTurnCostAgent
 from rlenv.QueryStrategy import DefaultQueryStrategy
 from agent.envs.SellerEnv import SellerEnv
 from agent.envs.BuyerEnv import BuyerEnv
-from sim.arrivals import ArrivalInterface
 from rlenv.Player import SimulatedSeller, SimulatedBuyer
 from agent.AgentLoader import AgentLoader
 from agent.const import BATCH_SIZE, NUM_VALUE_BYR, NUM_VALUE_SLR
@@ -27,7 +26,6 @@ class RlTrainer:
 
     def _generate_query_strategy(self):
         return DefaultQueryStrategy(
-            arrival=ArrivalInterface(),
             seller=SimulatedSeller(full=self.byr),
             buyer=SimulatedBuyer(full=True)
         )
@@ -51,9 +49,8 @@ class RlTrainer:
         return agent_cls(**agent_kwargs)
 
     def _generate_env(self, verbose=False):
-        composer = AgentComposer(byr=self.byr)
         env_params = dict(
-            composer=composer,
+            composer=AgentComposer(byr=self.byr),
             verbose=verbose,
             query_strategy=self._generate_query_strategy(),
             loader=AgentLoader(),
