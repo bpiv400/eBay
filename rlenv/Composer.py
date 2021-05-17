@@ -1,9 +1,9 @@
 import torch
 import numpy as np
 from rlenv.util import model_str
-from utils import load_sizes, load_featnames
+from utils import load_sizes, load_featnames, load_pctile
 from rlenv.const import LSTG_MAP, CLOCK_MAP, OFFER_MAPS, THREAD_COUNT_IND, \
-    TIME_START_IND, TIME_END_IND, CLOCK_START_IND, CLOCK_END_IND
+    TIME_START_IND, TIME_END_IND
 from featnames import OUTCOME_FEATS, CLOCK_FEATS, TIME_FEATS, DAYS_SINCE_LSTG, \
     BYR_HIST, DELAY, CON, INT_REMAINING, DAYS_SINCE_LAST, THREAD_COUNT, SLR, \
     OFFER_MODELS, MODELS, FIRST_ARRIVAL_MODEL, INTERARRIVAL_MODEL, BYR_HIST_MODEL, \
@@ -18,6 +18,21 @@ class Composer:
         self.sizes = {m: load_sizes(m) for m in MODELS}
         self.x_lstg_cols = load_featnames(X_LSTG)
         self.lstg_sets = self.build_lstg_sets()
+
+        # for hist model
+        s = load_pctile(name=BYR_HIST)
+        s = s.reindex(index=range(s.index.max() + 1), method='pad')
+        self.hist_pctile = s
+
+    def hist_to_pctile(self, hist=None):
+        """
+        Converts integer number of past listings into a percentile.
+        :param int hist: number of prior Best Offer listings.
+        :return: float percentile
+        """
+        if hist > self.hist_pctile.index[-1]:
+            return 1.
+        return self.hist_pctile.loc[hist]
 
     def build_lstg_sets(self):
         """
@@ -127,20 +142,20 @@ class Composer:
 
     @staticmethod
     def _build_lstg_vector(model_name, sources=None):
-        if model_name == INTERARRIVAL_MODEL:
+        if model_name == FIRST_ARRIVAL_MODEL:
+            lstg = sources[LSTG_MAP]  # append nothing
+        elif model_name == INTERARRIVAL_MODEL:
             solo_feats = np.array([sources[DAYS_SINCE_LSTG],
                                    sources[DAYS_SINCE_LAST],
                                    sources[THREAD_COUNT]])
             lstg = np.concatenate([sources[LSTG_MAP],
                                    sources[CLOCK_MAP],
                                    solo_feats])
-        elif model_name == FIRST_ARRIVAL_MODEL:
-            lstg = sources[LSTG_MAP]  # append nothing
         elif model_name == BYR_HIST_MODEL:
             solo_feats = np.array([sources[DAYS_SINCE_LSTG],
-                                   sources[OFFER_MAPS[1]][THREAD_COUNT_IND]])
+                                   sources[THREAD_COUNT] - 1])
             lstg = np.concatenate([sources[LSTG_MAP],
-                                   sources[OFFER_MAPS[1]][CLOCK_START_IND:CLOCK_END_IND],
+                                   sources[CLOCK_MAP],
                                    solo_feats])
         else:
             solo_feats = [sources[DAYS_SINCE_LSTG],

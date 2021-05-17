@@ -1,6 +1,8 @@
 import numpy as np
 import pandas as pd
+from rlenv.Composer import Composer
 from sim.arrivals import ArrivalSimulator
+from sim.chunks import ArrivalInterface, ArrivalQueryStrategy
 from utils import topickle, load_data, load_file, safe_reindex
 from constants import PARTS_DIR
 from featnames import LSTG, THREAD, TEST, X_OFFER, X_THREAD, CLOCK, INDEX, LOOKUP, \
@@ -15,7 +17,9 @@ def main():
     num_buyers = data[X_THREAD].iloc[:, 0].groupby(LSTG).count().rename('arrivals')
 
     # initialize arrivals simulator
-    simulator = ArrivalSimulator()
+    composer = Composer()
+    qs = ArrivalQueryStrategy(arrival=ArrivalInterface())
+    simulator = ArrivalSimulator(composer=composer, query_strategy=qs)
     x_lstg = load_file(TEST, X_LSTG)
 
     # simulate unseen arrival process for listings that do not sell

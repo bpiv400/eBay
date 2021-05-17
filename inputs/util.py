@@ -1,12 +1,12 @@
 from collections import OrderedDict
 import numpy as np
 import pandas as pd
-from utils import unpickle, topickle
+from utils import unpickle, topickle, feat_to_pctile
 from inputs.const import NUM_OUT
 from constants import INPUT_DIR, INDEX_DIR, IDX, BYR_DROP
 from featnames import CLOCK_FEATS, OUTCOME_FEATS, COMMON, MSG, AUTO, \
     LSTG, X_LSTG, EXP, REJECT, DAYS, DELAY, TIME_FEATS, THREAD_COUNT, \
-    BYR, INDEX, SLR, THREAD, META, LEAF, VALIDATION, DISCRIM_MODEL
+    BYR, INDEX, SLR, THREAD, META, LEAF, VALIDATION, DISCRIM_MODEL, BYR_HIST
 
 
 def add_turn_indicators(df):
@@ -27,6 +27,8 @@ def get_x_thread(threads, idx, turn_indicators=False):
     x_thread = threads.copy()
     # thread count, including current thread
     x_thread[THREAD_COUNT] = x_thread.index.get_level_values(level=THREAD)
+    # convert byr hist to percentile
+    x_thread[BYR_HIST] = feat_to_pctile(x_thread[BYR_HIST])
     # reindex to create x_thread
     x_thread = pd.DataFrame(index=idx).join(x_thread)
     x_thread.index = x_thread.index.reorder_levels(idx.names)

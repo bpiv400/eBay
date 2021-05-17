@@ -150,18 +150,20 @@ class OutcomeRecorder(Recorder):
         self.offers = []
         self.threads = []
 
-    def start_thread(self, thread_id=None, byr_hist=None, time=None, is_agent=False):
+    def start_thread(self, thread_id=None, byr_hist=None, time=None):
         """
         Records an arrival
         :param thread_id: int giving the thread id
         :param byr_hist: float giving byr history decile
         :param int time: time of the offer
-        :param bool is_agent: whether thread is buyer agent
         """
         row = [self.lstg, self.sim, thread_id, byr_hist, time]
         if self.byr:
-            row += [is_agent]
+            row += [False]  # may be amended by assign_agent
         self.threads.append(row)
+
+    def assign_agent(self, thread_id=None):
+        self.threads[thread_id - 1][-1] = True
 
     def add_offer(self, event=None, time_feats=None):
         # change ordering if OFFER_COLS changes

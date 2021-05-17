@@ -1,12 +1,11 @@
-import numpy as np
 import torch
 from torch.distributions.categorical import Categorical
 from torch.distributions.bernoulli import Bernoulli
 from rlenv.util import model_str, proper_squeeze, sample_categorical, \
     sample_bernoulli
 from constants import IDX
-from featnames import CON, DELAY, MSG, SLR, BYR, BYR_HIST, BYR_HIST_MODEL
-from utils import load_model, load_pctile
+from featnames import CON, DELAY, MSG, SLR, BYR
+from utils import load_model
 
 
 class PlayerInterface:
@@ -112,44 +111,7 @@ class SimulatedPlayer(PlayerInterface):
 class SimulatedBuyer(SimulatedPlayer):
     def __init__(self, full=True):
         super().__init__(byr=True, full=full)
-        self.hist_model = load_model(BYR_HIST_MODEL)
         self.load_models()
-
-        # for hist model
-        s = load_pctile(name=BYR_HIST)
-        s = s.reindex(index=range(s.index.max() + 1), method='pad')
-        self.hist_pctile = s
-
-    def hist(self, input_dict=None):
-        params = self.query_hist(input_dict=input_dict)
-        return self.sample_hist(params=params)
-
-    def query_hist(self, input_dict=None):
-        params = self.hist_model(input_dict).squeeze()
-        return params
-
-    def sample_hist(self, params=None):
-        # draw a random uniform for mass at 0
-        pi = 1 / (1 + np.exp(-params[0]))  # sigmoid
-        if np.random.uniform() < pi:
-            hist = 0
-        else:
-            # draw p of negative binomial from beta
-            a = np.exp(params[1])
-            b = np.exp(params[2])
-            p = np.random.beta(a, b)
-
-            # r for negative binomial, of at least 1
-            r = np.exp(params[3]) + 1
-
-            # draw from negative binomial
-            hist = np.random.negative_binomial(r, p)
-        # convert to percentile
-        if hist > self.hist_pctile.index[-1]:
-            pctile = 1.
-        else:
-            pctile = self.hist_pctile.loc[hist]
-        return pctile
 
     def sample_con(self, params=None, turn=None):
         if turn != 7:

@@ -10,7 +10,8 @@ from sim.arrivals import ArrivalSimulator
 from utils import topickle, load_file, load_featnames, load_model
 from constants import PARTS_DIR, NUM_CHUNKS, ARRIVAL_SIMS, INTERVAL_ARRIVAL
 from featnames import LOOKUP, X_LSTG, ARRIVALS, META, START_PRICE, START_TIME, \
-    DEC_PRICE, ACC_PRICE, AGENT_PARTITIONS, INTERARRIVAL_MODEL, FIRST_ARRIVAL_MODEL
+    DEC_PRICE, ACC_PRICE, AGENT_PARTITIONS, INTERARRIVAL_MODEL, FIRST_ARRIVAL_MODEL, \
+    BYR_HIST_MODEL
 
 LOOKUP_COLS = [META, START_PRICE, DEC_PRICE, ACC_PRICE, START_TIME]
 
@@ -27,6 +28,9 @@ class ArrivalQueryStrategy:
         interval = self.arrival.inter_arrival(input_dict=kwargs['input_dict'])
         return self._seconds_from_interval(interval)
 
+    def get_hist(self, **kwargs):
+        return self.arrival.hist(input_dict=kwargs['input_dict'])
+
     @staticmethod
     def _seconds_from_interval(interval=None):
         return int((interval + np.random.uniform()) * INTERVAL_ARRIVAL)
@@ -35,6 +39,7 @@ class ArrivalQueryStrategy:
 class ArrivalInterface:
     def __init__(self):
         self.interarrival_model = load_model(INTERARRIVAL_MODEL)
+        self.hist_model = load_model(BYR_HIST_MODEL)
 
     @staticmethod
     def first_arrival(logits=None):
@@ -42,9 +47,32 @@ class ArrivalInterface:
         return sample
 
     def inter_arrival(self, input_dict=None):
-        logits = self.interarrival_model(input_dict).cpu().squeeze()
+        logits = self.interarrival_model(input_dict).squeeze()
         sample = sample_categorical(logits=logits)
         return sample
+
+    def hist(self, input_dict=None):
+        params = self.hist_model(input_dict).squeeze()
+        return self._sample_hist(params=params)
+
+    @staticmethod
+    def _sample_hist(params=None):
+        # draw a random uniform for mass at 0
+        pi = 1 / (1 + np.exp(-params[0]))  # sigmoid
+        if np.random.uniform() < pi:
+            hist = 0
+        else:
+            # draw p of negative binomial from beta
+            a = np.exp(params[1])
+            b = np.exp(params[2])
+            p = np.random.beta(a, b)
+
+            # r for negative binomial, of at least 1
+            r = np.exp(params[3]) + 1
+
+            # draw from negative binomial
+            hist = np.random.negative_binomial(r, p)
+        return hist
 
 
 def first_arrival_pdf(x=None):
@@ -98,7 +126,8 @@ def main():
                            start_time=lookup.loc[lstg, START_TIME])
         arrivals[lstg] = []
         for _ in range(ARRIVAL_SIMS):
-            arrivals[lstg].append(simulator.simulate_arrivals())
+            tups = simulator.simulate_arrivals()
+            arrivals[lstg].append(tups)
 
         t1 = process_time()
         print('Listing {0:d} of {1:d}: {2:.1f}sec'.format(i+1, len(lstgs), t1-t0))

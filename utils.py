@@ -360,3 +360,17 @@ def load_pctile(name=None):
     """
     path = PCTILE_DIR + '{}.pkl'.format(name)
     return unpickle(path)
+
+
+def feat_to_pctile(s, reverse=False):
+    """
+    Converts byr hist counts to percentiles or visa versa.
+    :param Series s: counts, or percentiles if reverse.
+    :param bool reverse: convert pctile to hist if True.
+    :return: Series
+    """
+    pc = load_pctile(name=s.name)
+    if reverse:
+        pc = pc.reset_index().set_index('pctile').squeeze()
+    v = pc.reindex(index=s.values, method='pad').values
+    return pd.Series(v, index=s.index, name=s.name)

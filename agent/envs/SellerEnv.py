@@ -1,5 +1,5 @@
 from rlpyt.utils.collections import namedarraytuple
-from rlenv.const import DELAY_EVENT, OFFER_EVENT
+from rlenv.const import DELAY_EVENT, OFFER_EVENT, EXPIRATION
 from agent.envs.AgentEnv import AgentEnv, EventLog
 from agent.util import load_values
 from rlenv.util import get_delay_outcomes, get_con_outcomes
@@ -25,6 +25,9 @@ class SellerEnv(AgentEnv):
         :param rlenv.events.Thread.Thread event:
         :return: bool
         """
+        if event.type == EXPIRATION:
+            return False
+
         if event.turn % 2 == 0:
             if event.type == DELAY_EVENT:
                 return True

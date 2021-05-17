@@ -2,7 +2,6 @@
 class for encapsulating data and methods related to the first buyer offer
 """
 import numpy as np
-from rlenv.Sources import ThreadSources
 from rlenv.events.Event import Event
 from rlenv.const import FIRST_OFFER, DELAY_EVENT, OFFER_EVENT
 from featnames import SLR, BYR
@@ -17,18 +16,10 @@ class Thread(Event):
     """
     Attributes:
     """
-    def __init__(self, priority=None):
-        super().__init__(event_type=FIRST_OFFER, priority=priority)
-
-        # to be initialized later
-        self.sources = None
-
-    def set_id(self, thread_id=None):
-        self.thread_id = thread_id
-
-    def init_thread(self, sources=None, hist=None):
-        self.sources = sources  # type: ThreadSources
-        self.sources.init_thread(hist=hist)
+    def __init__(self, priority=None, thread_id=None, sources=None):
+        super().__init__(event_type=FIRST_OFFER, priority=priority, thread_id=thread_id)
+        self.turn = 1
+        self.sources = sources
 
     def thread_expired(self):
         if self.turn == 1:

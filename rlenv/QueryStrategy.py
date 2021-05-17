@@ -5,9 +5,6 @@ from constants import INTERVAL_TURN, MAX_DELAY_TURN
 
 class QueryStrategy:
 
-    def get_hist(self, *args, **kwargs):
-        raise NotImplementedError("")
-
     def get_con(self, *args, **kwargs):
         raise NotImplementedError("")
 
@@ -41,9 +38,6 @@ class DefaultQueryStrategy(QueryStrategy):
             msg = self.buyer.msg(input_dict=kwargs['input_dict'],
                                  turn=kwargs['turn'])
         return msg
-
-    def get_hist(self, *args, **kwargs):
-        return self.buyer.hist(input_dict=kwargs['input_dict'])
 
     def get_delay(self, *args, **kwargs):
         init_optional_arg(kwargs=kwargs, name='max_interval', default=None)

@@ -7,13 +7,12 @@ from rlenv.events.Event import Event
 from rlenv.generate.Recorder import Recorder
 from rlenv.Sources import ThreadSources
 from rlenv.events.Thread import Thread
-from rlenv.util import get_clock_feats, get_con_outcomes, need_msg, model_str
+from rlenv.util import get_con_outcomes, need_msg, model_str
 from rlenv.const import INTERACT, ACC_IND, CON, MSG, REJ_IND, OFF_IND, \
     EXPIRATION, FIRST_OFFER, OFFER_EVENT, DELAY_EVENT
 from sim.arrivals import ArrivalSimulator
 from constants import DAY, MAX_DELAY_ARRIVAL
-from featnames import DEC_PRICE, ACC_PRICE, START_PRICE, DELAY, START_TIME, BYR, \
-    BYR_HIST_MODEL
+from featnames import DEC_PRICE, ACC_PRICE, START_PRICE, DELAY, START_TIME, BYR
 
 
 class EBayEnv:
@@ -60,14 +59,41 @@ class EBayEnv:
             self.arrivals = simulator.simulate_arrivals()
 
         # load threads into queue
-        for i, priority in enumerate(self.arrivals):
-            thread = Thread(priority=int(priority))
-            thread.set_id(i+1)
+        for i, tup in enumerate(self.arrivals):
+            priority, hist = tup
+            thread = self.create_thread(priority=int(priority),
+                                        hist=hist,
+                                        thread_id=i+1)
             self.queue.push(thread)
 
         # add expiration event
         event = Event(EXPIRATION, priority=self.end_time)
         self.queue.push(event)
+
+    def create_thread(self, priority=None, hist=None, thread_id=None):
+        """
+        Processes the buyer's first offer in a thread
+        :return:
+        """
+        # prepare sources and features
+        hist_pctile = self.composer.hist_to_pctile(hist)
+        days_since_lstg = get_days_since_lstg(lstg_start=self.start_time,
+                                              time=priority)
+        sources = ThreadSources(x_lstg=self.x_lstg,
+                                hist_pctile=hist_pctile,
+                                days_since_lstg=days_since_lstg)
+        thread = Thread(priority=priority, thread_id=thread_id, sources=sources)
+
+        # print
+        if self.verbose:
+            print('Thread {} initiated | Buyer hist: {}'.format(thread_id, hist))
+
+        # record thread
+        if self.recorder is not None:
+            self.recorder.start_thread(thread_id=thread_id,
+                                       byr_hist=hist_pctile,
+                                       time=priority)
+        return thread
 
     def has_next_lstg(self):
         return self.loader.has_next()
@@ -107,7 +133,6 @@ class EBayEnv:
         if event.type == EXPIRATION:
             return self.process_lstg_expiration(event)
         elif event.type == FIRST_OFFER:
-            self.create_thread(event)
             return self.process_offer(event)
         elif event.type == OFFER_EVENT:
             return self.process_offer(event)
@@ -183,45 +208,11 @@ class EBayEnv:
         self.outcome = self.Outcome(True, sale_price, days, offer.thread_id)
         self.empty_queue()
 
-    def create_thread(self, event, is_agent=False):
-        """
-        Processes the buyer's first offer in a thread
-        :return:
-        """
-        # prepare sources and features
-        sources = ThreadSources(x_lstg=self.x_lstg)
-        days_since_lstg = get_days_since_lstg(lstg_start=self.start_time,
-                                              time=event.priority)
-        time_feats = self.time_feats.get_feats(time=event.priority,
-                                               thread_id=event.thread_id)
-        sources.prepare_hist(time_feats=time_feats,
-                             clock_feats=get_clock_feats(event.priority),
-                             days_since_lstg=days_since_lstg)
-        # sample history
-        input_dict = self.composer.build_input_dict(model_name=BYR_HIST_MODEL,
-                                                    sources=sources(),
-                                                    turn=None)
-        hist = self.get_hist(input_dict=input_dict,
-                             time=event.priority,
-                             thread_id=event.thread_id)
-        # print
-        if self.verbose:
-            print('Thread {} initiated | Buyer hist: {}'.format(event.thread_id, hist))
-
-        # update features with history
-        event.init_thread(sources=sources, hist=hist)
-        if self.recorder is not None:
-            self.recorder.start_thread(thread_id=event.thread_id,
-                                       byr_hist=hist,
-                                       time=event.priority,
-                                       is_agent=is_agent)
-
     def prepare_offer(self, event):
         # if offer not expired and thread still active, prepare this turn's inputs
-        if event.turn != 1:
-            time_feats = self.time_feats.get_feats(thread_id=event.thread_id,
-                                                   time=event.priority)
-            event.init_offer(time_feats=time_feats)
+        time_feats = self.time_feats.get_feats(thread_id=event.thread_id,
+                                               time=event.priority)
+        event.init_offer(time_feats=time_feats)
         return False
 
     def process_byr_expire(self, event):
@@ -324,9 +315,6 @@ class EBayEnv:
 
     def get_msg(self, *args, **kwargs):
         return self.query_strategy.get_msg(*args, **kwargs)
-
-    def get_hist(self, *args, **kwargs):
-        return self.query_strategy.get_hist(*args, **kwargs)
 
     def get_delay(self, *args, **kwargs):
         return self.query_strategy.get_delay(*args, **kwargs)

@@ -10,15 +10,14 @@ class Event:
         priority: integer giving time of event
         ids: tuple giving identifiers for event (lstg, thread_id)
     """
-    def __init__(self, event_type, priority=None):
+    def __init__(self, event_type, priority=None, thread_id=None):
         super(Event, self).__init__()
         # error checking
         assert(isinstance(event_type, str))
         assert(isinstance(priority, int))
         self.type = event_type
         self.priority = priority
-        self.turn = 1
-        self.thread_id = None
+        self.thread_id = thread_id
 
     def __lt__(self, other):
         """

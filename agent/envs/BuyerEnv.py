@@ -62,7 +62,9 @@ class BuyerEnv(AgentEnv):
                 if event.thread_id == self.agent_thread:
                     if event.type != FIRST_OFFER:
                         raise ValueError('Incorrect event type: {}'.format(event.type))
-                    self.create_thread(event, is_agent=True)
+                    if self.recorder is not None:
+                        self.recorder.assign_agent(thread_id=event.thread_id)
+                    self.prepare_offer(event)
                     self.curr_event = event
                     return self.get_obs(event=self.curr_event, done=False)
 

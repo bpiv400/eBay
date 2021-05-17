@@ -5,8 +5,7 @@ from rlenv.const import OFFER_MAPS, CLOCK_START_IND, \
     CLOCK_END_IND, TIME_START_IND, TIME_END_IND, NORM_IND, MSG_IND, \
     DELAY_START_IND, DELAY_END_IND, CON_IND, DELAY_IND, CON_START_IND, \
     DAYS_IND, AUTO_IND, REJECT_IND, EXP_IND
-from featnames import DAYS_SINCE_LSTG, INT_REMAINING, BYR_HIST, \
-    ALL_OFFER_FEATS
+from featnames import DAYS_SINCE_LSTG, INT_REMAINING, BYR_HIST, ALL_OFFER_FEATS
 
 
 class Sources:
@@ -19,27 +18,16 @@ class Sources:
 
 
 class ThreadSources(Sources):
-    def __init__(self, x_lstg=None):
+    def __init__(self, x_lstg=None, hist_pctile=None, days_since_lstg=None):
         super().__init__(x_lstg=x_lstg)
         # other clock features initialized to lstg start date
         self.source_dict[INT_REMAINING] = 0.0
-        self.source_dict[BYR_HIST] = 0.0
+        self.source_dict[BYR_HIST] = hist_pctile
+        self.source_dict[DAYS_SINCE_LSTG] = days_since_lstg
         for i in range(1, 8):
             self.source_dict[OFFER_MAPS[i]] = np.zeros(len(ALL_OFFER_FEATS),
                                                        dtype=np.float)
         self.offer_prev_time = None
-
-    def prepare_hist(self, time_feats=None, clock_feats=None, days_since_lstg=None):
-        self.source_dict[DAYS_SINCE_LSTG] = days_since_lstg
-        offer_map = OFFER_MAPS[1]
-        self.source_dict[offer_map][CLOCK_START_IND:CLOCK_END_IND] = clock_feats
-        self.source_dict[offer_map][TIME_START_IND:TIME_END_IND] = time_feats
-        self.offer_prev_time = time_feats
-
-    def init_thread(self, hist=None):
-        # (time features and clock_feats already set during prepare_hist)
-        # add byr history
-        self.source_dict[BYR_HIST] = hist
 
     def update_con_outcomes(self, con_outcomes=None, turn=None):
         offer_map = OFFER_MAPS[turn]
@@ -53,9 +41,11 @@ class ThreadSources(Sources):
         self.source_dict[offer_map][MSG_IND] = msg
 
     def init_offer(self, time_feats=None, clock_feats=None, turn=None):
-        # NOTE : Not called on turn 1
-        time_diff = time_feats - self.offer_prev_time
         offer_map = OFFER_MAPS[turn]
+        if turn == 1:
+            time_diff = time_feats
+        else:
+            time_diff = time_feats - self.offer_prev_time
         self.offer_prev_time = time_feats
         feats = np.concatenate([clock_feats, time_diff])
         self.source_dict[offer_map][CLOCK_START_IND:TIME_END_IND] = feats

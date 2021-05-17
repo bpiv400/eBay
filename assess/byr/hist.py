@@ -1,8 +1,7 @@
 import numpy as np
 from agent.util import load_valid_data
 from assess.util import ll_wrapper
-from processing.util import feat_to_pctile
-from utils import topickle
+from utils import topickle, feat_to_pctile
 from assess.const import POINTS
 from constants import PLOT_DIR
 from featnames import X_OFFER, X_THREAD, BYR_HIST, CON
