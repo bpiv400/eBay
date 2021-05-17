@@ -3,7 +3,7 @@ from copy import deepcopy
 import pandas as pd
 from agent.util import get_sale_norm, load_valid_data, get_sim_dir
 from agent.eval.util import eval_args, get_eval_path
-from utils import safe_reindex, unpickle, topickle
+from utils import safe_reindex, unpickle, topickle, load_data
 from agent.const import DELTA_BYR, TURN_COST_CHOICES
 from constants import IDX
 from featnames import X_OFFER, LOOKUP, X_THREAD, START_PRICE, NORM, CON, REJECT, \
@@ -111,8 +111,10 @@ def get_sales_output(d=None):
     if k not in d:
         d[k] = pd.DataFrame(columns=COLS)
 
+    offers = load_data()[X_OFFER]
+    norm = get_sale_norm(offers=offers)
     data = load_valid_data(byr=True, minimal=True)
-    norm = get_sale_norm(offers=data[X_OFFER])
+    norm = norm.loc[norm.index.intersection(data[LOOKUP].index)]
     if 'Humans' not in d[k].index:
         data = safe_reindex(data, idx=norm.index)
         d[k].loc['Humans', :] = get_return(data=data, norm=norm)

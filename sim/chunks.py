@@ -3,8 +3,7 @@ import argparse
 from time import process_time
 import numpy as np
 import pandas as pd
-from rlenv.Composer import Composer
-from sim.arrivals import ArrivalInterface, ArrivalQueryStrategy, ArrivalSimulator
+from sim.arrivals import ArrivalSimulator
 from utils import topickle, load_file, load_featnames
 from constants import PARTS_DIR, NUM_CHUNKS, ARRIVAL_SIMS
 from featnames import LOOKUP, X_LSTG, ARRIVALS, META, START_PRICE, START_TIME, \
@@ -39,19 +38,15 @@ def main():
         assert v.isna().sum().sum() == 0
         assert np.all(lookup.index == v.index)
 
-    # arrival interface and composer
-    qs = ArrivalQueryStrategy(arrival=ArrivalInterface())
-    composer = Composer()
+    # initialize arrival simulator
+    simulator = ArrivalSimulator()
 
     # loop over listings
     arrivals = {}
     for i, lstg in enumerate(lstgs):
         t0 = process_time()
         x_i = {k: v.loc[lstg].values for k, v in x_lstg.items()}
-        simulator = ArrivalSimulator(start_time=lookup.loc[lstg, START_TIME],
-                                     composer=composer,
-                                     query_strategy=qs,
-                                     x_lstg=x_i)
+        simulator.set_lstg(start_time=lookup.loc[lstg, START_TIME], x_lstg=x_i)
         arrivals[lstg] = []
         for _ in range(ARRIVAL_SIMS):
             arrivals[lstg].append(simulator.simulate_arrivals())

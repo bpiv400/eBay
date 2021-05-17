@@ -1,9 +1,8 @@
 import pandas as pd
-
-from agent.agent_thread import sample_agent
 from utils import unpickle, load_file, load_data, safe_reindex, get_role
 from constants import AGENT_DIR, IDX, SIM_DIR, EPS, PARTS_DIR
-from featnames import SLR, BYR, NORM, AUTO, INDEX, THREAD, CON, LOOKUP, X_OFFER, START_PRICE, X_THREAD, OUTCOME_FEATS, TEST, SIM, IS_AGENT
+from featnames import SLR, BYR, NORM, AUTO, INDEX, THREAD, CON, LOOKUP, X_OFFER, \
+    START_PRICE, X_THREAD, OUTCOME_FEATS, TEST, SIM, IS_AGENT
 
 
 def get_log_dir(byr=None):
@@ -63,19 +62,13 @@ def get_norm_reward(data=None, values=None, byr=False):
     return sale_norm, cont_value
 
 
-def get_byr_valid(data=None, part=None):
+def get_byr_valid(data=None):
     if IS_AGENT in data[X_THREAD].columns:  # agent simulations
         assert SIM in data[X_THREAD].index.names
-        assert part is None
         data[X_THREAD] = data[X_THREAD][data[X_THREAD][IS_AGENT]].drop(IS_AGENT, axis=1)
-        agent_threads = data[X_THREAD].index
-    else:  # synthetic data
-        try:
-            agent_threads = unpickle(PARTS_DIR + '{}/randthread.pkl'.format(part))
-        except FileNotFoundError:
-            agent_threads = sample_agent(part)
-    data = safe_reindex(data, idx=agent_threads)
-    data[LOOKUP] = data[LOOKUP].droplevel(THREAD).drop_duplicates()
+        agent_thread = data[X_THREAD].index
+        data = safe_reindex(data, idx=agent_thread)
+        data[LOOKUP] = data[LOOKUP].loc[data[X_THREAD].index].droplevel(THREAD)
     return data
 
 
@@ -100,19 +93,20 @@ def load_valid_data(part=TEST, sim_dir=None, byr=None,
     assert byr is not None
 
     # load data
-    data = load_data(part=part, sim_dir=sim_dir, clock=clock)
-    if X_OFFER not in data:
-        return None
+    if byr and sim_dir is None:
+        assert part == TEST
+        data = unpickle(PARTS_DIR + '{}/synthetic.pkl'.format(TEST))
+    else:
+        data = load_data(part=part, sim_dir=sim_dir, clock=clock)
+        if X_OFFER not in data:
+            return None
 
     # restrict columns
     if minimal:
         data[X_OFFER] = data[X_OFFER][OUTCOME_FEATS]
 
     # restrict to valid listings
-    if byr:
-        return get_byr_valid(data=data, part=part)
-    else:
-        return get_slr_valid(data)
+    return get_byr_valid(data=data) if byr else get_slr_valid(data)
 
 
 def load_values(part=TEST, delta=None, normalize=True):

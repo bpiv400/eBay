@@ -201,7 +201,7 @@ def cdf_sale(data=None, sales=True):
 
     # add in non-sales
     if not sales:
-        sale_norm = sale_norm.reindex(index=data[LOOKUP].index, fill_value=0)
+        sale_norm = safe_reindex(sale_norm, idx=data[LOOKUP].index, fill_value=0)
 
     # multiply by start price to get sale price
     start_price = safe_reindex(data[LOOKUP][START_PRICE], idx=sale_norm.index)

@@ -1,8 +1,8 @@
 #!/bin/bash
 #$ -l m_mem_free=25G
-#$ -N agent_thread
+#$ -N synthetic
 #$ -j y
 #$ -o logs/collate/
 
 ulimit -n 4096
-python repo/agent/agent_thread.py --part "$1"
+python repo/sim/synthetic.py

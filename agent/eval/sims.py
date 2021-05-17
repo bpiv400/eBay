@@ -9,7 +9,7 @@ from agent.eval.util import sim_args
 from agent.util import get_run_dir, get_sim_dir
 from rlenv.generate.Generator import OutcomeGenerator
 from rlenv.generate.Recorder import OutcomeRecorder
-from rlenv.interfaces.Player import SimulatedSeller
+from rlenv.Player import SimulatedSeller
 from utils import topickle
 from featnames import DELTA, TURN_COST
 

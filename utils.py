@@ -303,16 +303,16 @@ def safe_reindex(obj=None, idx=None, fill_value=None, dropna=False):
     if type(obj) is dict:
         obj = obj.copy()
         for k, v in obj.items():
-            obj[k] = safe_reindex(v, idx=idx, fill_value=fill_value)
+            obj[k] = safe_reindex(v, idx=idx, fill_value=fill_value, dropna=dropna)
         return obj
 
+    dtypes = obj.dtypes.to_dict() if dropna else None
     obj = pd.DataFrame(index=idx).join(obj)
     if fill_value is not None:
         obj.loc[obj.isna().squeeze()] = fill_value
     elif dropna:
-        obj = obj.loc[~obj.isna().max(axis=1)]
-    else:
-        assert obj.isna().sum().sum() == 0
+        obj = obj.loc[~obj.isna().max(axis=1)].astype(dtypes)
+    assert obj.isna().sum().sum() == 0
 
     if len(obj.columns) == 1:
         obj = obj.squeeze()
