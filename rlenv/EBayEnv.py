@@ -54,10 +54,9 @@ class EBayEnv:
             Recorder.print_lstg(lookup=self.lookup, sim=self.loader.sim)
 
         if self.test:  # populate arrivals
-            simulator = ArrivalSimulator(start_time=self.start_time,
-                                         x_lstg=self.x_lstg,
-                                         composer=self.composer,
+            simulator = ArrivalSimulator(composer=self.composer,
                                          query_strategy=self.query_strategy)
+            simulator.set_lstg(x_lstg=self.x_lstg, start_time=self.start_time)
             self.arrivals = simulator.simulate_arrivals()
 
         # load threads into queue
