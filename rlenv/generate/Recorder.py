@@ -1,7 +1,6 @@
 import numpy as np
 import pandas as pd
 from rlenv.events.Thread import Thread
-from rlenv.const import FIRST_OFFER
 from constants import MAX_DELAY_ARRIVAL
 from featnames import START_TIME, START_PRICE, TIME_FEATS, MSG, CON, \
     LSTG, SIM, THREAD, INDEX, BYR_HIST, DEC_PRICE, ACC_PRICE, CLOCK, \
@@ -85,7 +84,7 @@ class Recorder:
     @staticmethod
     def print_next_event(event):
         print_string = 'Type: {} at {}'.format(event.type, event.priority)
-        if isinstance(event, Thread) and event.type != FIRST_OFFER:
+        if isinstance(event, Thread) and event.turn > 1:
             print_string += ' | Thread: {} | Turn: {}'.format(
                 event.thread_id, event.turn)
         print(print_string)
@@ -150,20 +149,18 @@ class OutcomeRecorder(Recorder):
         self.offers = []
         self.threads = []
 
-    def start_thread(self, thread_id=None, byr_hist=None, time=None):
+    def start_thread(self, thread_id=None, byr_hist=None, time=None, is_agent=False):
         """
         Records an arrival
         :param thread_id: int giving the thread id
         :param byr_hist: float giving byr history decile
         :param int time: time of the offer
+        :param bool is_agent: whether agent is acting as buyer
         """
         row = [self.lstg, self.sim, thread_id, byr_hist, time]
         if self.byr:
-            row += [False]  # may be amended by assign_agent
+            row += [is_agent]
         self.threads.append(row)
-
-    def assign_agent(self, thread_id=None):
-        self.threads[thread_id - 1][-1] = True
 
     def add_offer(self, event=None, time_feats=None):
         # change ordering if OFFER_COLS changes

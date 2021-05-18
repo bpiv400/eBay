@@ -9,7 +9,7 @@ from rlenv.Sources import ThreadSources
 from rlenv.events.Thread import Thread
 from rlenv.util import get_con_outcomes, need_msg, model_str
 from rlenv.const import INTERACT, ACC_IND, CON, MSG, REJ_IND, OFF_IND, \
-    EXPIRATION, FIRST_OFFER, OFFER_EVENT, DELAY_EVENT
+    EXPIRATION, OFFER_EVENT, DELAY_EVENT
 from sim.arrivals import ArrivalSimulator
 from constants import DAY, MAX_DELAY_ARRIVAL
 from featnames import DEC_PRICE, ACC_PRICE, START_PRICE, DELAY, START_TIME, BYR
@@ -82,17 +82,15 @@ class EBayEnv:
         sources = ThreadSources(x_lstg=self.x_lstg,
                                 hist_pctile=hist_pctile,
                                 days_since_lstg=days_since_lstg)
-        thread = Thread(priority=priority, thread_id=thread_id, sources=sources)
+        thread = Thread(priority=priority,
+                        thread_id=thread_id,
+                        hist=hist,
+                        sources=sources)
 
         # print
         if self.verbose:
             print('Thread {} initiated | Buyer hist: {}'.format(thread_id, hist))
 
-        # record thread
-        if self.recorder is not None:
-            self.recorder.start_thread(thread_id=thread_id,
-                                       byr_hist=hist_pctile,
-                                       time=priority)
         return thread
 
     def has_next_lstg(self):
@@ -132,8 +130,6 @@ class EBayEnv:
     def process_event(self, event):
         if event.type == EXPIRATION:
             return self.process_lstg_expiration(event)
-        elif event.type == FIRST_OFFER:
-            return self.process_offer(event)
         elif event.type == OFFER_EVENT:
             return self.process_offer(event)
         elif event.type == DELAY_EVENT:
@@ -154,7 +150,14 @@ class EBayEnv:
         # check whether the lstg expired, censoring this offer
         if self.is_lstg_expired(event):
             return self.process_lstg_expiration(event)
-        # otherwise check whether this offer corresponds to an expiration rej
+
+        # record thread
+        if self.recorder is not None and event.turn == 1:
+            self.recorder.start_thread(thread_id=event.thread_id,
+                                       byr_hist=event.hist,
+                                       time=event.priority)
+
+        # check whether this offer corresponds to an expiration rej
         slr_offer = event.turn % 2 == 0
         if event.thread_expired():
             if slr_offer:

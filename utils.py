@@ -3,10 +3,8 @@ import os
 import pickle
 import pandas as pd
 import torch
-from torch.nn.functional import log_softmax
 import numpy as np
 from nets.FeedForward import FeedForward
-from sim.Sample import get_batches
 from constants import DAY, INPUT_DIR, MODEL_DIR, SIM_DIR, PARTS_DIR, PCTILE_DIR, \
     MAX_DELAY_TURN, MAX_DELAY_ARRIVAL, FEATS_DIR, OUTCOME_SIMS
 from featnames import LOOKUP, X_THREAD, X_OFFER, CLOCK, BYR, SLR, AGENT_PARTITIONS, \
@@ -145,37 +143,6 @@ def load_model(name, verbose=False):
         pass
 
     return net
-
-
-def get_model_predictions(data, softmax=True):
-    """
-    Returns predicted categorical distribution.
-    :param EBayDataset data: model to simulate
-    :param bool softmax: take softmax if True
-    :return: torch tensor
-    """
-    # initialize neural net
-    net = load_model(data.name, verbose=False)
-    if torch.cuda.is_available():
-        net = net.to('cuda')
-
-    # get predictions from neural net
-    theta = []
-    batches = get_batches(data)
-    for b in batches:
-        if torch.cuda.is_available():
-            b['x'] = {k: v.to('cuda') for k, v in b['x'].items()}
-        theta.append(net(b['x']).cpu().double())
-    theta = torch.cat(theta)
-
-    if not softmax:
-        return theta.numpy()
-
-    # take softmax
-    if theta.size()[1] == 1:
-        theta = torch.cat((torch.zeros_like(theta), theta), dim=1)
-    p = np.exp(log_softmax(theta, dim=-1).numpy())
-    return p
 
 
 def input_partition(agent=False, opt_arg=None):

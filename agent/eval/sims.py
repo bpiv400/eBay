@@ -11,6 +11,7 @@ from rlenv.generate.Generator import OutcomeGenerator
 from rlenv.generate.Recorder import OutcomeRecorder
 from rlenv.Player import SimulatedSeller
 from utils import topickle
+from constants import OUTCOME_SIMS
 from featnames import DELTA, TURN_COST
 
 
@@ -86,7 +87,7 @@ def main():
                          delta=args.delta, turn_cost=args.turn_cost)
 
     # process one chunk
-    df = gen.process_chunk(part=args.part, chunk=chunk)
+    df = gen.process_chunk(part=args.part, chunk=chunk, num_sims=OUTCOME_SIMS)
 
     # save
     topickle(df, path)

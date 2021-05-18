@@ -2,8 +2,7 @@ import numpy as np
 from rlpyt.utils.collections import namedarraytuple
 from rlenv.util import get_con_outcomes
 from utils import load_sizes
-from rlenv.const import FIRST_OFFER, DELAY_EVENT, OFFER_EVENT, EXPIRATION, \
-    OFFER_MAPS, NORM_IND
+from rlenv.const import DELAY_EVENT, OFFER_EVENT, EXPIRATION, OFFER_MAPS, NORM_IND
 from agent.envs.AgentEnv import AgentEnv, EventLog
 from constants import BYR
 from featnames import START_PRICE
@@ -25,7 +24,7 @@ class BuyerEnv(AgentEnv):
             return False
 
         # catch first buyer, determine which buyer is agent
-        if event.thread_id == 1 and event.type == FIRST_OFFER:
+        if event.thread_id == 1 and event.turn == 1:
             assert self.agent_thread is None
             num_buyers = len(self.arrivals)
             self.agent_thread = np.random.randint(1, num_buyers + 1)
@@ -60,10 +59,13 @@ class BuyerEnv(AgentEnv):
             # when agent buyer arrives, create a thread and get an offer
             if not lstg_complete:
                 if event.thread_id == self.agent_thread:
-                    if event.type != FIRST_OFFER:
+                    if event.type != OFFER_EVENT:
                         raise ValueError('Incorrect event type: {}'.format(event.type))
                     if self.recorder is not None:
-                        self.recorder.assign_agent(thread_id=event.thread_id)
+                        self.recorder.start_thread(thread_id=event.thread_id,
+                                                   byr_hist=event.hist,
+                                                   time=event.priority,
+                                                   is_agent=True)
                     self.prepare_offer(event)
                     self.curr_event = event
                     return self.get_obs(event=self.curr_event, done=False)
@@ -87,13 +89,11 @@ class BuyerEnv(AgentEnv):
                                    thread_id=self.curr_event.thread_id,
                                    turn=self.curr_event.turn)
 
-        event_type = self.curr_event.type
-        if event_type == FIRST_OFFER and con == 0:
+        assert self.curr_event.type == OFFER_EVENT
+        if self.curr_event.turn == 1 and con == 0:
             return self._execute_walk()
-        elif event_type == OFFER_EVENT or (event_type == FIRST_OFFER and con > 0):
-            return self._execute_offer(con=con, event=self.curr_event)
         else:
-            raise ValueError('Invalid event type: {}'.format(event_type))
+            return self._execute_offer(con=con, event=self.curr_event)
 
     def _execute_walk(self):
         # record offer

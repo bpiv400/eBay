@@ -35,7 +35,6 @@ OFF_IND = 2
 
 # event types
 EXPIRATION = 'EXPIRATION'
-FIRST_OFFER = 'FIRST_OFFER'  # first buyer offer
 OFFER_EVENT = 'OFFER'
 DELAY_EVENT = 'DELAY'
 

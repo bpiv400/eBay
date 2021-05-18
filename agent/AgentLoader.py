@@ -56,6 +56,10 @@ class AgentLoader(LstgLoader):
     def did_init(self):
         return self._lookup_slice is not None
 
+    @property
+    def sim(self):
+        return self._internal_loader.sim
+
     def next_id(self):
         self.verify_init()
         if self._cache_empty():

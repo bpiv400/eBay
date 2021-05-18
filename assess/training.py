@@ -1,10 +1,13 @@
 import numpy as np
 import pandas as pd
+import torch
 from scipy.optimize import minimize
 from scipy.special import loggamma, expit
+from torch.nn.functional import log_softmax
+from sim.Sample import get_batches
 from sim.best_models import extract_best_run
 from sim.EBayDataset import EBayDataset
-from utils import load_inputs, topickle, get_model_predictions
+from utils import load_inputs, topickle, load_model
 from inputs.const import NUM_OUT
 from constants import PLOT_DIR
 from featnames import TEST, MODELS, CENSORED_MODELS, DISCRIM_MODELS, BYR_HIST_MODEL
@@ -17,6 +20,29 @@ def get_auc(s):
     tp_bar = (tp[1:] + tp[:-1]) / 2
     auc = (fp_delta * tp_bar).sum()
     return auc
+
+
+def get_model_predictions(data):
+    """
+    Returns predicted categorical distribution.
+    :param EBayDataset data: model to simulate
+    :return: np.array of probabilities
+    """
+    # initialize neural net
+    net = load_model(data.name, verbose=False)
+
+    # get predictions from neural net
+    theta = []
+    batches = get_batches(data)
+    for b in batches:
+        theta.append(net(b['x']).double())
+    theta = torch.cat(theta)
+
+    # take softmax
+    if theta.size()[1] == 1:
+        theta = torch.cat((torch.zeros_like(theta), theta), dim=1)
+    p = np.exp(log_softmax(theta, dim=-1).numpy())
+    return p
 
 
 def get_roc(model=None):
