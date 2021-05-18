@@ -91,6 +91,7 @@ class ArrivalSimulator:
         # to be set later
         self.start_time = None
         self.end_time = None
+        self.first_arrival = None
         self.first_arrivals = None
         self.sources = None
         self.thread_count = None
@@ -109,6 +110,8 @@ class ArrivalSimulator:
         self.thread_count = 0
         self.last_arrival_time = self.start_time
         self.sim_num += 1
+        if self.first_arrivals is not None:
+            self.first_arrival = self.first_arrivals[self.sim_num]
 
     def simulate_arrivals(self, arrivals=None):
         self.reset()
@@ -116,7 +119,7 @@ class ArrivalSimulator:
             arrivals = []
             seconds = self.query_strategy.get_first_arrival(
                 time=self.start_time,
-                seconds=self.first_arrivals[self.sim_num]
+                seconds=self.first_arrival
             )
             priority = self.start_time + seconds
         else:
