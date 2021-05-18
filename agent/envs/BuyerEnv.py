@@ -136,10 +136,12 @@ class BuyerEnv(AgentEnv):
             # turn 7 decision
             elif not lstg_complete and event.turn == 7:
                 if self.test:
-                    con = self.get_con(input_dict=None,
-                                       thread_id=event.thread_id,
-                                       time=event.priority,
-                                       turn=7)
+                    con = self.query_strategy.get_con(
+                        input_dict=None,
+                        thread_id=event.thread_id,
+                        time=event.priority,
+                        turn=7
+                    )
                 elif self.delta >= 1:
                     con = 1.
                 else:

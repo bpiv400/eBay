@@ -75,12 +75,11 @@ def get_x_offer(offers, idx):
 
 def construct_x(part=None, sim=False):
     # load files
-    data = load_data(part=part, sim=sim)
+    data = load_data(part=part, sim=sim, lookup=False)
     # only use first sim
     if sim:
         for k, v in data.items():
-            if k != LOOKUP:
-                data[k] = v.xs(0, level=SIM)
+            data[k] = v.xs(0, level=SIM)
     # master index
     idx = data[X_THREAD].index
     # thread features

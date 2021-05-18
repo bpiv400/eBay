@@ -68,7 +68,7 @@ def get_byr_valid(data=None):
         data[X_THREAD] = data[X_THREAD][data[X_THREAD][IS_AGENT]].drop(IS_AGENT, axis=1)
         agent_thread = data[X_THREAD].index
         data = safe_reindex(data, idx=agent_thread)
-        data[LOOKUP] = data[LOOKUP].loc[data[X_THREAD].index].droplevel(THREAD)
+    data[LOOKUP] = data[LOOKUP].loc[data[X_THREAD].index].droplevel(THREAD)
     return data
 
 
@@ -93,9 +93,10 @@ def load_valid_data(part=TEST, sim_dir=None, byr=None,
     assert byr is not None
 
     # load data
-    if byr and sim_dir is None:
-        assert part == TEST
-        data = unpickle(PARTS_DIR + '{}/synthetic.pkl'.format(TEST))
+    if byr and sim_dir is None:  # synthetic data
+        data = load_data(part=part, clock=clock)
+        idx = unpickle(PARTS_DIR + '{}/synthetic.pkl'.format(part))
+        data = safe_reindex(data, idx=idx)
     else:
         data = load_data(part=part, sim_dir=sim_dir, clock=clock)
         if X_OFFER not in data:

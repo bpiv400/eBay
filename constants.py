@@ -88,7 +88,7 @@ NUM_CHUNKS = 1024
 # simulation counts
 OUTCOME_SIMS = 10
 VALUE_SIMS = 100
-ARRIVAL_SIMS = 1000
+ARRIVAL_SIMS = 100
 
 # features to drop from 'lstg' grouping for byr agent
 BYR_DROP = ['lstg_ct', 'bo_ct',

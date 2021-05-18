@@ -213,7 +213,6 @@ class EBayEnv:
         time_feats = self.time_feats.get_feats(thread_id=event.thread_id,
                                                time=event.priority)
         event.init_offer(time_feats=time_feats)
-        return False
 
     def process_byr_expire(self, event):
         event.byr_expire()
@@ -239,10 +238,12 @@ class EBayEnv:
     def process_delay(self, event):
         # no need to check expiration since this must occur at the same time as the previous offer
         input_dict = self.get_delay_input_dict(event)
-        delay_seconds = self.get_delay(input_dict=input_dict,
-                                       turn=event.turn,
-                                       thread_id=event.thread_id,
-                                       time=event.priority)
+        delay_seconds = self.query_strategy.get_delay(
+            input_dict=input_dict,
+            turn=event.turn,
+            thread_id=event.thread_id,
+            time=event.priority
+        )
         # Test environment returns None when delay model is mistakenly called
         if delay_seconds is None:
             # print("No delay returned; exiting listing.")
@@ -310,25 +311,18 @@ class EBayEnv:
         event.init_delay(self.start_time)
         self.queue.push(event)
 
-    def get_con(self, *args, **kwargs):
-        return self.query_strategy.get_con(*args, **kwargs)
-
-    def get_msg(self, *args, **kwargs):
-        return self.query_strategy.get_msg(*args, **kwargs)
-
-    def get_delay(self, *args, **kwargs):
-        return self.query_strategy.get_delay(*args, **kwargs)
-
     def get_offer_outcomes(self, event, slr=False):
         # sample concession
         model_name = model_str(CON, turn=event.turn)
         input_dict = self.composer.build_input_dict(model_name=model_name,
                                                     sources=event.sources(),
                                                     turn=event.turn)
-        con = self.get_con(input_dict=input_dict,
-                           time=event.priority,
-                           turn=event.turn,
-                           thread_id=event.thread_id)
+        con = self.query_strategy.get_con(
+            input_dict=input_dict,
+            time=event.priority,
+            turn=event.turn,
+            thread_id=event.thread_id
+        )
         con_outcomes = get_con_outcomes(con=con,
                                         sources=event.sources(),
                                         turn=event.turn)
@@ -340,10 +334,12 @@ class EBayEnv:
             input_dict = self.composer.build_input_dict(model_name=model_name,
                                                         sources=event.sources(),
                                                         turn=event.turn)
-            msg = self.get_msg(input_dict=input_dict,
-                               time=event.priority,
-                               turn=event.turn,
-                               thread_id=event.thread_id)
+            msg = self.query_strategy.get_msg(
+                input_dict=input_dict,
+                time=event.priority,
+                turn=event.turn,
+                thread_id=event.thread_id
+            )
             event.update_msg(msg=msg)
         return offer
 

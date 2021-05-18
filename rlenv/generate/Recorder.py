@@ -12,7 +12,7 @@ THREAD_COLS = [LSTG, SIM, THREAD, BYR_HIST, CLOCK]
 INDEX_COLS = [LSTG, SIM, THREAD, INDEX]
 
 DTYPES = {LSTG: np.int32, SIM: np.uint8, THREAD: np.uint8, INDEX: np.uint8,
-          MSG: bool, CON: np.uint8, CLOCK: np.int32}
+          BYR_HIST: np.uint32, MSG: bool, CON: np.uint8, CLOCK: np.int32}
 for name in TIME_FEATS:
     if 'offers' in name or 'count' in name:
         DTYPES[name] = np.uint8

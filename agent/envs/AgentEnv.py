@@ -94,11 +94,13 @@ class AgentEnv(EBayEnv, Env):
         input_dict = self.get_delay_input_dict(event=event)
         intervals = (self.end_time - event.priority) / INTERVAL_TURN
         max_interval = max(1, min(int(intervals), INTERVAL_CT_TURN))
-        delay_seconds = self.get_delay(input_dict=input_dict,
-                                       turn=event.turn,
-                                       thread_id=event.thread_id,
-                                       time=event.priority,
-                                       max_interval=max_interval)
+        delay_seconds = self.query_strategy.get_delay(
+            input_dict=input_dict,
+            turn=event.turn,
+            thread_id=event.thread_id,
+            time=event.priority,
+            max_interval=max_interval
+        )
         return max(1, delay_seconds)
 
     def init_reset(self):

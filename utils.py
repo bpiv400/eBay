@@ -253,7 +253,7 @@ def load_file(part, x, folder=PARTS_DIR):
     return unpickle(path)
 
 
-def load_data(part=TEST, sim=False, sim_dir=None, lstgs=None, clock=False):
+def load_data(part=TEST, sim=False, sim_dir=None, lstgs=None, clock=False, lookup=True):
     if not sim and sim_dir is None:
         folder = PARTS_DIR
     elif sim:
@@ -263,11 +263,13 @@ def load_data(part=TEST, sim=False, sim_dir=None, lstgs=None, clock=False):
         folder = sim_dir
 
     # initialize dictionary with lookup file
-    data = {LOOKUP: load_file(part, LOOKUP)}
-    if sim or sim_dir is not None:
-        idx = pd.MultiIndex.from_product([data[LOOKUP].index, range(OUTCOME_SIMS)],
-                                         names=[LSTG, SIM])
-        data[LOOKUP] = safe_reindex(data[LOOKUP], idx=idx)
+    data = {}
+    if lookup:
+        data[LOOKUP] = load_file(part, LOOKUP)
+        if sim or sim_dir is not None:
+            idx = pd.MultiIndex.from_product([data[LOOKUP].index, range(OUTCOME_SIMS)],
+                                             names=[LSTG, SIM])
+            data[LOOKUP] = safe_reindex(data[LOOKUP], idx=idx)
 
     # load other components
     keys = [X_THREAD, X_OFFER]
