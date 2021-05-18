@@ -1,5 +1,5 @@
 from assess.util import merge_dicts, delay_dist, cdf_sale, con_dist, \
-    num_offers, thread_number, arrival_cdf
+    num_offers, thread_number, arrival_cdf, hist_dist
 from agent.util import get_sim_dir, load_valid_data
 from utils import topickle
 from constants import PLOT_DIR
@@ -12,6 +12,7 @@ def collect_outputs(data=None, name=None):
     # offer distributions
     d['cdf_lstgnorm'], d['cdf_lstgprice'] = cdf_sale(data, sales=False)
     d['cdf_arrivaltime'] = arrival_cdf(data[X_THREAD])
+    d['cdf_hist'] = hist_dist(data[X_THREAD])
     d['cdf_{}'.format(DELAY)] = delay_dist(data[X_OFFER])
     d['cdf_{}'.format(CON)] = con_dist(data[X_OFFER])
     d['bar_threads'] = thread_number(data[X_THREAD])

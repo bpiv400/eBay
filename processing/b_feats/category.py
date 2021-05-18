@@ -3,7 +3,8 @@ import os
 from datetime import datetime as dt
 import pandas as pd
 from processing.b_feats.util import create_events, get_all_cat_feats
-from utils import unpickle, topickle, run_func_on_chunks
+from utils import unpickle, topickle
+from processing.util import run_func_on_chunks
 from constants import FEATS_DIR
 from featnames import META, LEAF, SLR
 

@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 from rlenv.Composer import Composer
 from sim.arrivals import ArrivalSimulator, ArrivalInterface, ArrivalQueryStrategy
-from utils import topickle, load_data, load_file, safe_reindex, input_partition
+from utils import topickle, load_data, load_file, input_partition
 from constants import PARTS_DIR
 from featnames import LSTG, THREAD, X_OFFER, X_THREAD, CLOCK, LOOKUP, \
     START_TIME, X_LSTG, CON, INDEX, BYR_HIST
@@ -37,7 +37,6 @@ def main():
         arrivals_i = simulator.simulate_arrivals(arrivals=arrivals_i)
         assert len(arrivals_i) >= num_buyers.loc[lstg]
         num_buyers.loc[lstg] = len(arrivals_i)
-        print('{}: {}'.format(lstg, arrivals_i))
 
     # pick one buyer at random
     agent_thread = pd.Series(np.random.randint(low=1, high=num_buyers.values + 1),

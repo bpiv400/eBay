@@ -1,5 +1,4 @@
 import numpy as np
-from utils import init_optional_arg
 from constants import INTERVAL_TURN, MAX_DELAY_TURN
 
 
@@ -40,7 +39,8 @@ class DefaultQueryStrategy(QueryStrategy):
         return msg
 
     def get_delay(self, *args, **kwargs):
-        init_optional_arg(kwargs=kwargs, name='max_interval', default=None)
+        if 'max_interval' not in kwargs:
+            kwargs['max_interval'] = None
         if kwargs['turn'] % 2 == 0:
             index = self.seller.delay(input_dict=kwargs['input_dict'],
                                       turn=kwargs['turn'],

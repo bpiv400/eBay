@@ -2,15 +2,13 @@ import argparse
 import os
 import pickle
 import pandas as pd
-from time import sleep
 import torch
-import torch.multiprocessing as mp
 from torch.nn.functional import log_softmax
 import numpy as np
 from nets.FeedForward import FeedForward
 from sim.Sample import get_batches
 from constants import DAY, INPUT_DIR, MODEL_DIR, SIM_DIR, PARTS_DIR, PCTILE_DIR, \
-    MAX_DELAY_TURN, MAX_DELAY_ARRIVAL, NUM_CHUNKS, FEATS_DIR, OUTCOME_SIMS
+    MAX_DELAY_TURN, MAX_DELAY_ARRIVAL, FEATS_DIR, OUTCOME_SIMS
 from featnames import LOOKUP, X_THREAD, X_OFFER, CLOCK, BYR, SLR, AGENT_PARTITIONS, \
     PARTITIONS, LSTG, SIM, TEST
 
@@ -149,41 +147,6 @@ def load_model(name, verbose=False):
     return net
 
 
-def process_chunk_worker(part=None, chunk=None, gen_class=None, gen_kwargs=None):
-    if gen_kwargs is None:
-        gen_kwargs = dict()
-    gen = gen_class(**gen_kwargs)
-    return gen.process_chunk(chunk=chunk, part=part)
-
-
-def run_func_on_chunks(f=None, func_kwargs=None, num_chunks=NUM_CHUNKS):
-    """
-    Applies f to all chunks in parallel.
-    :param f: function that takes chunk number as input along with
-    other arguments
-    :param func_kwargs: dictionary of other keyword arguments
-    :param int num_chunks: number of chunks
-    :return: list of worker-specific output
-    """
-    num_workers = min(num_chunks, mp.cpu_count())
-    print('Using {} workers'.format(num_workers))
-    pool = mp.Pool(num_workers)
-    jobs = []
-    for i in range(num_chunks):
-        kw = func_kwargs.copy()
-        kw['chunk'] = i
-        jobs.append(pool.apply_async(f, kwds=kw))
-    res = []
-    for job in jobs:
-        while True:
-            if job.ready():
-                res.append(job.get())
-                break
-            else:
-                sleep(5)
-    return res
-
-
 def get_model_predictions(data, softmax=True):
     """
     Returns predicted categorical distribution.
@@ -215,25 +178,27 @@ def get_model_predictions(data, softmax=True):
     return p
 
 
-def input_partition(agent=False):
+def input_partition(agent=False, opt_arg=None):
     """
-    Parses command line input for partition name.
-    :param bool agent: if True, raise error when 'sim' partition is called.
+    Parses command line input for partition name (and optional argument).
+    :param bool agent: if True, raise error when 'sim' partition is called
+    :param str opt_arg: optional boolean argument
     :return part: string partition name.
     """
     parser = argparse.ArgumentParser()
     parser.add_argument('--part', required=True, type=str)
-    part = parser.parse_args().part
+    if opt_arg is not None:
+        parser.add_argument('--{}'.format(opt_arg), action='store_true')
+    args = parser.parse_args()
     if agent:
-        assert part in AGENT_PARTITIONS
+        assert args.part in AGENT_PARTITIONS
     else:
-        assert part in PARTITIONS
-    return part
-
-
-def init_optional_arg(kwargs=None, name=None, default=None):
-    if name not in kwargs:
-        kwargs[name] = default
+        assert args.part in PARTITIONS
+    if opt_arg is None:
+        return args.part
+    else:
+        args = vars(args)
+        return args['part'], args[opt_arg]
 
 
 def load_file(part, x, folder=PARTS_DIR):

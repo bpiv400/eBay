@@ -1,10 +1,9 @@
 import argparse
 from shutil import copyfile
 import numpy as np
-from tensorboard.backend.event_processing.event_multiplexer import \
-    EventMultiplexer
+from tensorboard.backend.event_processing.event_multiplexer import EventMultiplexer
 from constants import MODEL_DIR, LOG_DIR
-from featnames import MODELS, DISCRIM_MODEL
+from featnames import MODELS, DISCRIM_MODELS
 
 
 def get_lnl(em=None, run=None, name=None):
@@ -32,11 +31,11 @@ def extract_best_run(m):
 def main():
     # command line parameter for model group
     parser = argparse.ArgumentParser()
-    parser.add_argument('--discrim', action='store_true')
+    parser.add_argument('--discriminator', action='store_true')
     discrim = parser.parse_args().discrim
 
     # model group
-    models = [DISCRIM_MODEL] if discrim else MODELS
+    models = DISCRIM_MODELS if discrim else MODELS
 
     # loop over models
     for m in models:

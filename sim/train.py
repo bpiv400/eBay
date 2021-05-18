@@ -3,14 +3,14 @@ import torch
 from sim.SimTrainer import SimTrainer
 from utils import set_gpu
 from constants import DROPOUT_GRID
-from featnames import MODELS, DISCRIM_MODEL
+from featnames import MODELS, DISCRIM_MODELS
 
 
 def main():
     # extract parameters from command line
     parser = argparse.ArgumentParser()
     parser.add_argument('--name', type=str, required=True,
-                        choices=MODELS + [DISCRIM_MODEL])
+                        choices=MODELS + DISCRIM_MODELS)
     parser.add_argument('--dropout', type=int, required=True,
                         choices=range(len(DROPOUT_GRID)))
     parser.add_argument('--nolog', action='store_true')

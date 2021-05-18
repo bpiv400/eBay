@@ -4,7 +4,7 @@ from sklearn import tree
 from statsmodels.nonparametric.kde import KDEUnivariate
 from statsmodels.nonparametric.kernel_regression import KernelReg
 from agent.util import get_sale_norm, get_norm_reward
-from utils import safe_reindex, load_pctile
+from utils import safe_reindex
 from assess.const import OPT, VALUES_DIM, POINTS, LOG10_BIN_DIM
 from constants import IDX, BYR, EPS, DAY, HOUR, MAX_DAYS, MAX_DELAY_TURN, \
     MAX_DELAY_ARRIVAL, INTERVAL_ARRIVAL, INTERVAL_CT_ARRIVAL
@@ -66,11 +66,8 @@ def arrival_cdf(threads=None):
 
 
 def hist_dist(threads=None):
-    pc = load_pctile(name=BYR_HIST)
-    pc = pc.reset_index().set_index('pctile').squeeze()
-    y = pc.reindex(index=threads[BYR_HIST], method='pad')
-    cdf = discrete_cdf(y)
-    return cdf
+    s = threads[BYR_HIST]
+    return discrete_cdf(s)
 
 
 def delay_dist(offers=None):

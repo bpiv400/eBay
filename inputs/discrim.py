@@ -1,24 +1,26 @@
 import numpy as np
-from inputs.util import save_featnames_and_sizes, \
-    convert_x_to_numpy, get_x_thread, get_ind_x
-from utils import topickle, load_file, input_partition, load_data
+from agent.util import get_sim_dir, load_valid_data
 from constants import INPUT_DIR
-from featnames import COMMON, DAYS, DELAY, EXP, AUTO, REJECT, MSG, LOOKUP, THREAD, \
-    INDEX, X_THREAD, X_OFFER, AGENT_PARTITIONS, VALIDATION, DISCRIM_MODEL, SIM
+from inputs.util import get_x_thread, save_featnames_and_sizes, convert_x_to_numpy, \
+    get_ind_x
+from utils import load_file, input_partition, load_data, topickle
+from featnames import LOOKUP, THREAD, X_THREAD, X_OFFER, DISCRIM_MODEL, \
+    PLACEBO_MODEL, SIM, INDEX, DAYS, DELAY, EXP, REJECT, AUTO, MSG, COMMON, VALIDATION
 
 
-def save_discrim_files(part=None, x_obs=None, x_sim=None, lstgs=None):
+def save_discrim_files(part=None, model=None, x_obs=None, x_sim=None, lstgs=None):
     """
     Packages discriminator inputs for training.
-    :param part: string name of partition.
-    :param x_obs: dictionary of observed data.
-    :param x_sim: dictionary of simulated data.
-    :param lstgs: index of lstg ids.
+    :param str part: string name of partition
+    :param str model: either DISCRIM_MODEL or PLACEBO_MODEL
+    :param dict x_obs: dictionary of observed data
+    :param dict x_sim: dictionary of simulated data
+    :param pd.Index lstgs: index of lstg ids
     :return: None
     """
     # featnames and sizes
     if part == VALIDATION:
-        save_featnames_and_sizes(x_obs, DISCRIM_MODEL)
+        save_featnames_and_sizes(x_obs, model)
 
     # indices
     idx_obs = x_obs[THREAD].index
@@ -44,7 +46,7 @@ def save_discrim_files(part=None, x_obs=None, x_sim=None, lstgs=None):
     d['idx_x'] = np.concatenate((idx_x_obs, idx_x_sim), axis=0)
 
     # save inputs
-    topickle(d, INPUT_DIR + '{}/{}.pkl'.format(part, DISCRIM_MODEL))
+    topickle(d, INPUT_DIR + '{}/{}.pkl'.format(part, model))
 
 
 def get_x_offer(offers, idx):
@@ -73,40 +75,53 @@ def get_x_offer(offers, idx):
     return x_offer
 
 
-def construct_x(part=None, sim=False):
+def construct_x(data=None):
+    idx = data[X_THREAD].index  # master index
+    x = {THREAD: get_x_thread(data[X_THREAD], idx)}  # thread features
+    x.update(get_x_offer(data[X_OFFER], idx))  # offer features
+    return x
+
+
+def import_data(part=None, sim=False, placebo=False):
     # load files
-    data = load_data(part=part, sim=sim, lookup=False)
+    if placebo:
+        if sim:
+            sim_dir = get_sim_dir(byr=True, delta=1)
+            data = load_valid_data(part=part, sim_dir=sim_dir, lookup=False)
+        else:
+            data = load_valid_data(part=part, byr=True, lookup=False)
+    else:
+        data = load_data(part=part, sim=sim, lookup=False)
     # only use first sim
     if sim:
         for k, v in data.items():
             data[k] = v.xs(0, level=SIM)
-    # master index
-    idx = data[X_THREAD].index
-    # thread features
-    x = {THREAD: get_x_thread(data[X_THREAD], idx)}
-    # offer features
-    x.update(get_x_offer(data[X_OFFER], idx))
-    return x
+    return data
 
 
 def main():
     # extract parameters from command line
-    part = input_partition()
-    assert part in AGENT_PARTITIONS
-    print('{}/{}'.format(part, DISCRIM_MODEL))
+    part, placebo = input_partition(agent=True, opt_arg='placebo')
+    model = PLACEBO_MODEL if placebo else DISCRIM_MODEL
+    print('{}/{}'.format(part, model))
 
     # listing ids
     lstgs = load_file(part, LOOKUP).index
 
+    # data files
+    data_obs = import_data(part=part, sim=False, placebo=placebo)
+    data_sim = import_data(part=part, sim=True, placebo=placebo)
+
     # construct input variable dictionaries
-    x_obs = construct_x(part=part, sim=False)
-    x_sim = construct_x(part=part, sim=True)
+    x_obs = construct_x(data=data_obs)
+    x_sim = construct_x(data=data_sim)
 
     # save data
     save_discrim_files(part=part,
                        x_obs=x_obs,
                        x_sim=x_sim,
-                       lstgs=lstgs)
+                       lstgs=lstgs,
+                       model=model)
 
 
 if __name__ == '__main__':

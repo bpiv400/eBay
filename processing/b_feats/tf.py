@@ -2,7 +2,8 @@ import numpy as np
 import pandas as pd
 from datetime import datetime as dt
 from processing.b_feats.util import collapse_dict
-from utils import unpickle, topickle, run_func_on_chunks
+from utils import unpickle, topickle
+from processing.util import run_func_on_chunks
 from constants import START, IDX, FEATS_DIR
 from featnames import SLR, BYR, LSTG, THREAD, INDEX, ACCEPT, REJECT, CLOCK, NORM
 

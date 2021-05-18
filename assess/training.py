@@ -7,7 +7,7 @@ from sim.EBayDataset import EBayDataset
 from utils import load_inputs, topickle, get_model_predictions
 from inputs.const import NUM_OUT
 from constants import PLOT_DIR
-from featnames import TEST, MODELS, CENSORED_MODELS, DISCRIM_MODEL, BYR_HIST_MODEL
+from featnames import TEST, MODELS, CENSORED_MODELS, DISCRIM_MODELS, BYR_HIST_MODEL
 
 
 def get_auc(s):
@@ -19,9 +19,9 @@ def get_auc(s):
     return auc
 
 
-def get_roc():
+def get_roc(model=None):
     # vectors of predicted probabilities, by ground truth
-    data = EBayDataset(part=TEST, name=DISCRIM_MODEL)
+    data = EBayDataset(part=TEST, name=model)
     y = data.d['y']
     p = get_model_predictions(data)
     p = p[:, 1]
@@ -112,7 +112,8 @@ def main():
         d[key] = np.exp(d[key])
 
     # roc curve
-    d['simple_roc'] = get_roc()
+    for m in DISCRIM_MODELS:
+        d['simple_roc_{}'.format(m)] = get_roc(model=m)
 
     # save output
     topickle(d, PLOT_DIR + 'training.pkl')

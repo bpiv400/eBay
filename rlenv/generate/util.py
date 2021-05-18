@@ -2,7 +2,7 @@ import os
 import pandas as pd
 from processing.util import collect_date_clock_feats, get_days_delay, get_norm, \
     get_common_cons
-from utils import topickle, load_file
+from utils import load_file, topickle
 from constants import IDX, DAY, MAX_DAYS
 from featnames import DAYS, DELAY, CON, COMMON, NORM, REJECT, AUTO, EXP, \
     CLOCK_FEATS, TIME_FEATS, OUTCOME_FEATS, DAYS_SINCE_LSTG, INDEX, \
@@ -80,6 +80,22 @@ def concat_sim_chunks(sims):
     return data
 
 
+def save_components(data=None, out_dir=None):
+    """
+    Saves each DataFrame in data as separate file.
+    :param dict data: of DataFrames, to save
+    :param str out_dir: directory to save files in
+    """
+    # create directory if it doesn't exist
+    if not os.path.isdir(out_dir):
+        os.makedirs(out_dir)
+
+    # save
+    for k, df in data.items():
+        if k != LOOKUP:
+            topickle(df, out_dir + '{}.pkl'.format(k))
+
+
 def process_sims(part=None, sims=None, sim_dir=None):
     # concatenate chunks
     data = concat_sim_chunks(sims)
@@ -91,11 +107,4 @@ def process_sims(part=None, sims=None, sim_dir=None):
                                       lstg_start=d[LOOKUP][START_TIME])
     d[X_OFFER], d[CLOCK] = process_sim_offers(df=data[X_OFFER])
 
-    # create directory if it doesn't exist
-    if not os.path.isdir(sim_dir):
-        os.makedirs(sim_dir)
-
-    # save
-    for k, df in d.items():
-        if k != LOOKUP:
-            topickle(df, sim_dir + '{}.pkl'.format(k))
+    save_components(data=d, out_dir=sim_dir)

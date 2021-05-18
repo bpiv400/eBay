@@ -161,14 +161,14 @@ def get_env_sim_subdir(part=None, base_dir=None, chunks=False,
                        values=False, discrim=False):
     """
     Returns the path to a chosen data subdirectory of the current
-    environment simulation (discrim dir, vals dir, or chunks dir)
+    environment simulation (discriminator dir, vals dir, or chunks dir)
 
     Either give base_dir or part
     :param str part: partition in PARTITIONS
     :param str base_dir: path to base dir of partition
     :param bool chunks: whether to make path to chunk directory
     :param bool values: whether to make path to value estimates directory
-    :param bool discrim: whether to make path discrim inputs directory
+    :param bool discrim: whether to make path discriminator inputs directory
     :return: str
     :raises RuntimeError: when subdir type is not set explicitly
     """

@@ -68,7 +68,8 @@ def get_byr_valid(data=None):
         data[X_THREAD] = data[X_THREAD][data[X_THREAD][IS_AGENT]].drop(IS_AGENT, axis=1)
         agent_thread = data[X_THREAD].index
         data = safe_reindex(data, idx=agent_thread)
-    data[LOOKUP] = data[LOOKUP].loc[data[X_THREAD].index].droplevel(THREAD)
+    if LOOKUP in data:
+        data[LOOKUP] = data[LOOKUP].loc[data[X_THREAD].index].droplevel(THREAD)
     return data
 
 
@@ -81,11 +82,11 @@ def get_slr_valid(data=None):
     valid = s[s > 0].index
     data = safe_reindex(data, idx=valid)
     data[X_OFFER] = data[X_OFFER].reorder_levels(list(valid.names) + [THREAD, INDEX])
-    return valid
+    return data
 
 
 def load_valid_data(part=TEST, sim_dir=None, byr=None,
-                    clock=False, minimal=False):
+                    clock=False, minimal=False, lookup=True):
     # error checking
     if sim_dir is not None:
         assert byr is None
@@ -94,11 +95,11 @@ def load_valid_data(part=TEST, sim_dir=None, byr=None,
 
     # load data
     if byr and sim_dir is None:  # synthetic data
-        data = load_data(part=part, clock=clock)
+        data = load_data(part=part, clock=clock, lookup=lookup)
         idx = unpickle(PARTS_DIR + '{}/synthetic.pkl'.format(part))
         data = safe_reindex(data, idx=idx)
     else:
-        data = load_data(part=part, sim_dir=sim_dir, clock=clock)
+        data = load_data(part=part, sim_dir=sim_dir, clock=clock, lookup=lookup)
         if X_OFFER not in data:
             return None
 

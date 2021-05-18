@@ -6,12 +6,14 @@ python repo/sim/best_models.py
 # chunks, simulations, and discriminator input
 for part in valid rl
 do
+  python repo/sim/synthetic.py --part $part
   python repo/sim/chunks.py --part $part
   python repo/sim/sims.py --part $part
   python repo/inputs/discrim.py --part $part
+  python repo/inputs/discrim.py --part $part --placebo
 done
 
-# run discrim model
+# run discriminator model
 for D in {0..7}
 do
   printf "Model discrim: "

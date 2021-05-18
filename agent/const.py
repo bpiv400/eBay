@@ -23,7 +23,7 @@ AGENT_STATE = 'agent_state_dict'
 
 # economic parameters
 DELTA_SLR = [0., .75]
-DELTA_BYR = [.8, .9, 1., 1.5, 2]
+DELTA_BYR = [.8, .9, 1., 1.5, 2, 3]
 DELTA_CHOICES = np.unique(DELTA_SLR + DELTA_BYR)
 TURN_COST_CHOICES = range(0, 5)
 
@@ -39,7 +39,6 @@ FIELDS = ["ActionsPerTraj", "ThreadsPerTraj", "DaysToDone",
           "Turn4_AccRate", "Turn4_RejRate", "Turn4_ExpRate", "Turn4_ConRate", "Turn4Con",
           "Turn5_AccRate", "Turn5_RejRate", "Turn5_ConRate", "Turn5Con",
           "Turn6_AccRate", "Turn6_RejRate", "Turn6_ExpRate", "Turn6_ConRate", "Turn6Con",
-          "Turn7_AccRate",
-          "Rate_1", "Rate_2", "Rate_3", "Rate_4", "Rate_5", "Rate_6", "Rate_7", "Rate_Sale",
+          "Rate_1", "Rate_2", "Rate_3", "Rate_4", "Rate_5", "Rate_6", "Rate_Sale",
           "DollarReturn", "NormReturn", "Value", "Advantage", "Entropy",
           "Loss_Policy", "Loss_Value", "Loss_EntropyBonus"]

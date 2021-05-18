@@ -1,8 +1,10 @@
+from time import sleep
 import numpy as np
 import pandas as pd
+from torch import multiprocessing as mp
 from agent.const import COMMON_CONS
 from utils import extract_clock_feats, byr_norm, slr_norm, unpickle
-from constants import PARTS_DIR, START, IDX, DAY, HOLIDAYS, MAX_DELAY_TURN
+from constants import PARTS_DIR, START, IDX, DAY, HOLIDAYS, MAX_DELAY_TURN, NUM_CHUNKS
 from featnames import HOLIDAY, DOW_PREFIX, TIME_OF_DAY, AFTERNOON, \
     CLOCK_FEATS, SLR, BYR, INDEX
 
@@ -119,3 +121,38 @@ def get_common_cons(con=None):
         mask = turn == t
         s.loc[mask] = con[mask].apply(lambda x: max(np.isclose(x, COMMON_CONS[t])))
     return s
+
+
+def run_func_on_chunks(f=None, func_kwargs=None, num_chunks=NUM_CHUNKS):
+    """
+    Applies f to all chunks in parallel.
+    :param f: function that takes chunk number as input along with
+    other arguments
+    :param func_kwargs: dictionary of other keyword arguments
+    :param int num_chunks: number of chunks
+    :return: list of worker-specific output
+    """
+    num_workers = min(num_chunks, mp.cpu_count())
+    print('Using {} workers'.format(num_workers))
+    pool = mp.Pool(num_workers)
+    jobs = []
+    for i in range(num_chunks):
+        kw = func_kwargs.copy()
+        kw['chunk'] = i
+        jobs.append(pool.apply_async(f, kwds=kw))
+    res = []
+    for job in jobs:
+        while True:
+            if job.ready():
+                res.append(job.get())
+                break
+            else:
+                sleep(5)
+    return res
+
+
+def process_chunk_worker(part=None, chunk=None, gen_class=None, gen_kwargs=None):
+    if gen_kwargs is None:
+        gen_kwargs = dict()
+    gen = gen_class(**gen_kwargs)
+    return gen.process_chunk(chunk=chunk, part=part)
