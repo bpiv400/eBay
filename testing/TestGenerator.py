@@ -1,4 +1,4 @@
-from rlenv.generate.Generator import Generator, SimulatorEnv
+from rlenv.generate.Generator import Generator
 from rlenv.util import get_env_sim_subdir
 from testing.Listing import Listing
 from testing.TestQueryStrategy import TestQueryStrategy
@@ -96,13 +96,6 @@ class TestGenerator(Generator):
         self.query_strategy.update_log(lstg_log)
         self.env.reset()
         self.env.run()
-
-    @property
-    def env_class(self):
-        return SimulatorEnv
-
-    def generate_recorder(self):
-        return None
 
     def generate(self):
         """

@@ -111,7 +111,7 @@ class EBayEnv:
             self.recorder.update_lstg(lookup=self.lookup,
                                       lstg=self.loader.lstg,
                                       sim=self.loader.sim)
-        return self.loader.lstg
+        return self.loader.lstg, self.loader.sim
 
     def run(self):
         while True:
@@ -256,7 +256,7 @@ class EBayEnv:
         return False
 
     def is_agent_turn(self, event):
-        raise NotImplementedError()
+        return False
 
     def is_lstg_expired(self, event):
         return event.priority >= self.end_time

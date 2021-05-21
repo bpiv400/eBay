@@ -3,25 +3,24 @@ import numpy as np
 from agent.AgentComposer import AgentComposer
 from agent.envs.BuyerEnv import BuyerEnv
 from agent.envs.SellerEnv import SellerEnv
-from agent.models.AgentModel import load_agent_model
-from agent.models.heuristics import HeuristicSlr, HeuristicByr
+from agent.heuristics.HeuristicSlr import HeuristicSlr
+from agent.heuristics.HeuristicByr import HeuristicByr
 from agent.eval.util import sim_args
-from agent.util import get_run_dir, get_sim_dir
+from agent.util import get_run_dir, get_sim_dir, load_agent_model
 from rlenv.generate.Generator import OutcomeGenerator
 from rlenv.generate.Recorder import OutcomeRecorder
 from rlenv.Player import SimulatedSeller
 from utils import topickle
 from constants import OUTCOME_SIMS
-from featnames import DELTA, TURN_COST
+from featnames import DELTA
 
 
 class AgentGenerator(OutcomeGenerator):
-    def __init__(self, model=None, byr=None, delta=None, turn_cost=None):
+    def __init__(self, model=None, byr=None, delta=None):
         super().__init__(verbose=False, test=False)
         self.model = model
         self.byr = byr
         self.delta = delta
-        self.turn_cost = turn_cost
 
     def simulate_lstg(self):
         obs = self.env.reset()
@@ -44,7 +43,6 @@ class AgentGenerator(OutcomeGenerator):
     def generate_env(self):
         args = self.env_args
         args[DELTA] = self.delta
-        args[TURN_COST] = self.turn_cost
         return self.env_class(**args)
 
     @property
@@ -57,8 +55,8 @@ def main():
 
     # output directory
     params = {k: v for k, v in vars(args).items() if k != 'num'}
-    output_dir = get_sim_dir(**params)
-    outcome_dir = output_dir + 'outcomes/'
+    sim_dir = get_sim_dir(**params)
+    outcome_dir = sim_dir + 'outcomes/'
 
     # create output folder
     if not os.path.isdir(outcome_dir):
@@ -73,21 +71,25 @@ def main():
 
     # model
     if args.heuristic:
-        model_cls = HeuristicByr if args.byr else HeuristicSlr
-        model = model_cls(delta=args.delta)
+        if args.byr:
+            args.delta = 1
+            model = HeuristicByr(index=args.index)
+        else:
+            model = HeuristicSlr(delta=args.delta)
+        num_sims = 1
     else:
         run_dir = get_run_dir(byr=args.byr,
                               delta=args.delta,
                               turn_cost=args.turn_cost)
         model_args = dict(byr=args.byr, value=False)
         model = load_agent_model(model_args=model_args, run_dir=run_dir)
+        num_sims = OUTCOME_SIMS
 
     # generator
-    gen = AgentGenerator(model=model, byr=args.byr,
-                         delta=args.delta, turn_cost=args.turn_cost)
+    gen = AgentGenerator(model=model, byr=args.byr, delta=args.delta)
 
     # process one chunk
-    df = gen.process_chunk(part=args.part, chunk=chunk, num_sims=OUTCOME_SIMS)
+    df = gen.process_chunk(part=args.part, chunk=chunk, num_sims=num_sims)
 
     # save
     topickle(df, path)

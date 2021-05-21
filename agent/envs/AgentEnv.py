@@ -24,6 +24,8 @@ class AgentEnv(EBayEnv, Env):
 
         if not self.test:  # for reward calculation
             self.delta = kwargs[DELTA]
+
+        if self.train:
             self.turn_cost = kwargs[TURN_COST]
 
         # parameters to be set later

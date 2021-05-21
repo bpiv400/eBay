@@ -31,7 +31,7 @@ def extract_best_run(m):
 def main():
     # command line parameter for model group
     parser = argparse.ArgumentParser()
-    parser.add_argument('--discriminator', action='store_true')
+    parser.add_argument('--discrim', action='store_true')
     discrim = parser.parse_args().discrim
 
     # model group

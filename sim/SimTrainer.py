@@ -217,13 +217,6 @@ class SimTrainer:
 
         # non-zeros
         if len(y1) > 0:
-            # lnl += torch.sum(torch.log(1-pi1)
-            #                  + torch.log(a1)
-            #                  - torch.log(a1 + b1 + y1)
-            #                  + torch.lgamma(b1 + y1)
-            #                  - torch.lgamma(a1 + b1 + y1)
-            #                  + torch.lgamma(a1 + b1)
-            #                  - torch.lgamma(b1))
             lnl += torch.sum(torch.log(1-pi1)
                              + torch.lgamma(r1 + y1)
                              + torch.lgamma(r1 + a1)

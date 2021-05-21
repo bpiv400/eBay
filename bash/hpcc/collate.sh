@@ -5,4 +5,8 @@
 #$ -o logs/collate/
 
 ulimit -n 4096
-python repo/sim/collate.py --part "$1" --type "$2"
+if [ "$2" == "values" ]; then
+  python repo/sim/collate.py --part "$1" --values
+else
+  python repo/sim/collate.py --part "$1"
+fi

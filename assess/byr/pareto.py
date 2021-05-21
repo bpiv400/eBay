@@ -7,22 +7,23 @@ from constants import PLOT_DIR
 def main():
     d = unpickle(get_eval_path(byr=True))
 
-    output = {'discount': d['full'][['buyrate', 'discount']],
-              'dollar': d['full'][['buyrate', 'dollar']],
-              'sales': d['sales'][['buyrate', 'dollar']]}
+    output = {}
+    for name in ['discount', 'dollar', 'sales']:
+        key = 'pareto_{}'.format(name)
+        output[key] = {}
+        for k in ['full', 'heuristic']:
+            x = 'buyrate_sales' if name == 'sales' else 'buyrate'
+            y = 'dollar_sales' if name == 'sales' else name
+            output[key][k] = d[k].loc[:, [x, y]]
+            output[key][k].columns = ['x', 'y']
+            if name == 'discount':
+                output[key][k]['y'] *= 100
 
-    for name in ['minus', 'plus']:
-        key = 'turn_cost_{}'.format(name)
-        if len(d[key]) > 0:
-            output[key] = pd.concat([d['full'], d[key]])
-            output[key] = output[key][['buyrate', 'discount']]
-
-    for k, v in output.items():
-        v.columns = ['x', 'y']
-
-    keys = list(output.keys())
-    for k in keys:
-        output['pareto_{}'.format(k)] = output.pop(k)
+    # for name in ['minus', 'plus']:
+    #     key = 'turn_cost_{}'.format(name)
+    #     if len(d[key]) > 0:
+    #         output[key] = pd.concat([d['full'], d[key]])
+    #         output[key] = output[key][['buyrate', 'discount']]
 
     topickle(output, PLOT_DIR + 'byrpareto.pkl')
 

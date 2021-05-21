@@ -39,6 +39,7 @@ def save_fig(path, legend=True, legend_kwargs=None, reverse_legend=False,
                    fancybox=False,
                    fontsize=fontsize,
                    title_fontsize=fontsize,
+                   framealpha=0,
                    **legend_kwargs)
 
     # axis labels and tick labels

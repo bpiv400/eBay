@@ -1,17 +1,27 @@
 from agent.util import load_values, load_valid_data, get_run_dir, get_sale_norm
-from utils import safe_reindex, load_data
+from utils import safe_reindex, load_data, load_feats, feat_to_pctile
 from agent.const import DELTA_SLR
 from assess.const import SLR_NAMES
 from constants import IDX
-from featnames import LOOKUP, X_THREAD, X_OFFER, LSTG, INDEX, NORM, REJECT, CON, SLR
+from featnames import LOOKUP, X_THREAD, X_OFFER, LSTG, INDEX, NORM, REJECT, CON, SLR, \
+    STORE, SLR_BO_CT
 
 
 def main():
-    valid_data = load_valid_data(byr=False, minimal=True)
     data = load_data()
+    lstgs = data[LOOKUP].index
+
+    # correlation between store and experience
+    lstg_feats = load_feats('listings', lstgs=lstgs)[[SLR, STORE, SLR_BO_CT]]
+    df = lstg_feats.groupby(SLR).max()
+    df[SLR_BO_CT] = feat_to_pctile(df[SLR_BO_CT], reverse=True)
+    print('Median number of BOs for sellers w/store: {}'.format(
+        df.loc[df[STORE], SLR_BO_CT].median()))
+    print('Median number of BOs for sellers w/o store: {}'.format(
+        df.loc[~df[STORE], SLR_BO_CT].median()))
 
     # valid vs. invalid listings
-    lstgs = data[LOOKUP].index
+    valid_data = load_valid_data(byr=False, minimal=True)
     valid = valid_data[LOOKUP].index
     invalid = lstgs.drop(valid)
 
@@ -45,7 +55,7 @@ def main():
     # small concessions by sellers
     con = data[X_OFFER].loc[data[X_OFFER].index.isin(IDX[SLR], level=INDEX), CON]
     con = con[(con > 0) & (con < 1)]
-    print('con < 0.5): {}'.format((con < .5).mean()))
+    print('con < 0.5: {}'.format((con < .5).mean()))
 
     # for the agent sellers
     for delta in DELTA_SLR:

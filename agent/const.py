@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 from utils import load_feats
 
 
@@ -18,18 +19,24 @@ ENTROPY_COEF = .01      # initial weight on entropy on objective function
 STOP_ENTROPY = .1       # stop when entropy reaches this value
 PERIOD_EPOCHS = 1500    # epoch count for stepping down entropy
 
-# state dictionaries
-AGENT_STATE = 'agent_state_dict'
-
 # economic parameters
 DELTA_SLR = [0., .75]
 DELTA_BYR = [.8, .9, 1., 1.5, 2, 3]
-DELTA_CHOICES = np.unique(DELTA_SLR + DELTA_BYR)
 TURN_COST_CHOICES = range(0, 5)
 
 # size of value network output
 NUM_VALUE_SLR = 5
 NUM_VALUE_BYR = 6
+
+# concessions for buyer heuristic
+BYR_CONS = pd.DataFrame(columns=[1, 3, 5])
+i = 0
+for con1 in [.5, .6, .67, .75]:
+    for con3 in [.2, .33, .5, 1.]:
+        for con5 in [.2, .33, .5, 1.]:
+            BYR_CONS.loc[i, :] = (con1, con3, con5)
+            i += 1
+
 
 # names for opt_info namedtuple
 FIELDS = ["ActionsPerTraj", "ThreadsPerTraj", "DaysToDone",

@@ -2,7 +2,7 @@ import argparse
 import os
 from rlenv.generate.Generator import OutcomeGenerator, ValueGenerator
 from utils import topickle
-from constants import SIM_DIR, NUM_CHUNKS, ARRIVAL_SIMS
+from constants import SIM_DIR, NUM_CHUNKS, ARRIVAL_SIMS, OUTCOME_SIMS
 from featnames import AGENT_PARTITIONS, TEST
 
 
@@ -34,7 +34,9 @@ def main():
 
     # process one chunk
     gen = gen_cls(verbose=args.verbose)
-    obj = gen.process_chunk(part=args.part, chunk=chunk, num_sims=ARRIVAL_SIMS)
+    obj = gen.process_chunk(part=args.part,
+                            chunk=chunk,
+                            num_sims=ARRIVAL_SIMS if args.values else OUTCOME_SIMS)
 
     # save
     topickle(obj, path)

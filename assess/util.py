@@ -3,9 +3,9 @@ import pandas as pd
 from sklearn import tree
 from statsmodels.nonparametric.kde import KDEUnivariate
 from statsmodels.nonparametric.kernel_regression import KernelReg
-from agent.util import get_sale_norm, get_norm_reward
+from agent.util import get_sale_norm
 from utils import safe_reindex
-from assess.const import OPT, VALUES_DIM, POINTS, LOG10_BIN_DIM
+from assess.const import OPT, VALUES_DIM, POINTS
 from constants import IDX, BYR, EPS, DAY, HOUR, MAX_DAYS, MAX_DELAY_TURN, \
     MAX_DELAY_ARRIVAL, INTERVAL_ARRIVAL, INTERVAL_CT_ARRIVAL
 from featnames import DELAY, CON, NORM, AUTO, START_TIME, START_PRICE, LOOKUP, \
@@ -346,18 +346,6 @@ def estimate_tree(X=None, y=None, max_depth=1, criterion='entropy'):
     r = tree.export_text(clf, feature_names=list(X.columns))
     print(r)
     return r
-
-
-def bin_vs_reward(data=None, values=None, byr=False, bw=None):
-    reward = pd.concat(get_norm_reward(data=data, values=values, byr=byr))
-    y = reward.reindex(index=data[LOOKUP].index).values
-    x = np.log10(data[LOOKUP][START_PRICE].values)
-    line, bw = ll_wrapper(y=y,
-                          x=x,
-                          dim=LOG10_BIN_DIM,
-                          bw=bw,
-                          ci=(bw is None))
-    return line, bw
 
 
 def get_total_con(data=None):

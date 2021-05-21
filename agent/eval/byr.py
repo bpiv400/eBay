@@ -9,10 +9,11 @@ from constants import IDX
 from featnames import X_OFFER, LOOKUP, X_THREAD, START_PRICE, NORM, CON, REJECT, \
     INDEX, BYR, SLR
 
-COLS = ['discount', 'dollar', 'buyrate']
+COLS = ['discount', 'dollar', 'buyrate',
+        'discount_sales', 'dollar_sales', 'buyrate_sales']
 
 
-def get_return(data=None, norm=None):
+def calculate_return(data=None, norm=None):
     # discount
     sale_norm = get_sale_norm(data[X_OFFER])
     if norm is None:
@@ -21,18 +22,29 @@ def get_return(data=None, norm=None):
         norm = safe_reindex(norm, idx=sale_norm.index)
         assert norm.isna().sum() == 0
     discount = norm - sale_norm
-
     # dollar discount
     start_price = safe_reindex(data[LOOKUP][START_PRICE],
                                idx=discount.index)
     dollar = discount * start_price
-
     s = pd.Series()
     s['discount'] = discount.mean()
     s['dollar'] = dollar.mean()
     s['buyrate'] = len(sale_norm) / len(data[X_THREAD])
-
     return s
+
+
+def get_return(data=None, norm=None):
+    s0 = calculate_return(data=data)
+    data = safe_reindex(data, idx=norm.index, dropna=True)
+    s1 = calculate_return(data=data, norm=deepcopy(norm)).rename(
+        lambda x: '{}_sales'.format(x), axis=1)
+    s = pd.concat([s0, s1])
+    return s
+
+
+def wrapper():
+    norm = get_sale_norm(offers=load_data()[X_OFFER])
+    return lambda d: get_return(data=d, norm=norm)
 
 
 def amend_outcome(data=None, byr_con=None, slr_norm=None, reject=True):
@@ -49,7 +61,7 @@ def amend_outcome(data=None, byr_con=None, slr_norm=None, reject=True):
     return data_alt
 
 
-def amend_and_process(data=None, norm=None):
+def amend_and_process(data=None, f=None):
     slr_norm = 1 - data[X_OFFER][NORM].unstack()[IDX[SLR]]
     byr_con = data[X_OFFER][CON].unstack()[IDX[BYR]]
 
@@ -58,14 +70,14 @@ def amend_and_process(data=None, norm=None):
                              slr_norm=slr_norm,
                              byr_con=byr_con,
                              reject=True)
-    return_minus = get_return(data=data_rej, norm=norm)
+    return_minus = f(data_rej)
 
     # accepts list price
     data_acc = amend_outcome(data=data,
                              slr_norm=slr_norm,
                              byr_con=byr_con,
                              reject=False)
-    return_plus = get_return(data=data_acc, norm=norm)
+    return_plus = f(data_acc)
     return return_minus, return_plus
 
 
@@ -77,7 +89,7 @@ def get_keys(delta=None):
     return keys
 
 
-def get_output(d=None):
+def get_output(d=None, f=None):
     print('Full agent')
     k = 'full'
     if k not in d:
@@ -85,7 +97,7 @@ def get_output(d=None):
 
     if 'Humans' not in d[k].index:
         data = load_valid_data(byr=True, minimal=True)
-        d[k].loc['Humans', :] = get_return(data=data)
+        d[k].loc['Humans', :] = f(data)
 
     for delta in DELTA_BYR:
         keys = get_keys(delta=delta)
@@ -100,44 +112,12 @@ def get_output(d=None):
         if delta == 1:
             keys = ['$1{}\\epsilon$'.format(sign) for sign in ['-', '+']]
             d[k].loc[keys[0], :], d[k].loc[keys[1], :] = \
-                amend_and_process(data=data)
+                amend_and_process(data=data, f=f)
         else:
-            d[k].loc[keys[0], :] = get_return(data=data)
+            d[k].loc[keys[0], :] = f(data)
 
 
-def get_sales_output(d=None):
-    print('Sales only')
-    k = 'sales'
-    if k not in d:
-        d[k] = pd.DataFrame(columns=COLS)
-
-    offers = load_data()[X_OFFER]
-    norm = get_sale_norm(offers=offers)
-    data = load_valid_data(byr=True, minimal=True)
-    norm = norm.loc[norm.index.intersection(data[LOOKUP].index)]
-    if 'Humans' not in d[k].index:
-        data = safe_reindex(data, idx=norm.index)
-        d[k].loc['Humans', :] = get_return(data=data, norm=norm)
-
-    for delta in DELTA_BYR:
-        keys = get_keys(delta=delta)
-        if keys[0] in d[k].index:
-            continue
-
-        sim_dir = get_sim_dir(byr=True, delta=delta)
-        data = load_valid_data(sim_dir=sim_dir, minimal=True)
-        if data is None:
-            continue
-        data = safe_reindex(data, idx=norm.index)
-
-        if delta == 1:
-            d[k].loc[keys[0], :], d[k].loc[keys[1], :] = \
-                amend_and_process(data=data, norm=norm)
-        else:
-            d[k].loc[keys[0], :] = get_return(data=data, norm=norm)
-
-
-def get_heuristic_output(d=None):
+def get_heuristic_output(d=None, f=None):
     print('Heuristic agents')
     k = 'heuristic'
     if k not in d:
@@ -158,12 +138,12 @@ def get_heuristic_output(d=None):
 
         if delta == 1:
             d[k].loc[keys[0], :], d[k].loc[keys[1], :] = \
-                amend_and_process(data=data)
+                amend_and_process(data=data, f=f)
         else:
-            d[k].loc[keys[0], :] = get_return(data=data)
+            d[k].loc[keys[0], :] = f(data)
 
 
-def get_turn_cost_output(d=None):
+def get_turn_cost_output(d=None, f=None):
     print('Turn cost penalties')
     plus, minus = 'turn_cost_plus', 'turn_cost_minus'
     if plus not in d:
@@ -186,7 +166,7 @@ def get_turn_cost_output(d=None):
             continue
 
         d[minus].loc[key, :], d[plus].loc[key, :] = \
-            amend_and_process(data=data)
+            amend_and_process(data=data, f=f)
 
 
 def main():
@@ -204,11 +184,13 @@ def main():
             print(v)
         exit()
 
+    # wrapper function with normalized sale price in the data
+    f = wrapper()
+
     # create output statistics
-    get_output(d)
-    get_sales_output(d)
-    get_heuristic_output(d)
-    get_turn_cost_output(d)
+    get_output(d, f)
+    get_heuristic_output(d, f)
+    get_turn_cost_output(d, f)
 
     # save
     topickle(d, path)

@@ -2,7 +2,7 @@ import argparse
 from assess.util import merge_dicts, cdf_days, cdf_sale, msg_dist, \
     arrival_dist, hist_dist, delay_dist, con_dist, num_threads, \
     num_offers, interarrival_dist, norm_dist
-from utils import topickle, load_data, load_file
+from utils import topickle, load_data, load_file, load_feats
 from constants import PLOT_DIR, COLLECTIBLES
 from featnames import X_THREAD, X_OFFER, TEST, SIM, LOOKUP, STORE, \
     START_PRICE, META
@@ -47,24 +47,25 @@ def get_lstgs():
         return None, ''
 
     # restrict listings
-    lookup = load_file(TEST, LOOKUP)
+    lstgs = load_file(TEST, LOOKUP).index
+    feats = load_feats('listings', lstgs=lstgs)
     if subset == 'store':
-        lookup = lookup[lookup[STORE]]
+        lstgs = feats[feats[STORE]]
     elif subset == 'no_store':
-        lookup = lookup[~lookup[STORE]]
+        lstgs = feats[~feats[STORE]]
     elif subset == 'price_low':
-        lookup = lookup[lookup[START_PRICE] < 99]
+        lstgs = feats[feats[START_PRICE] < 99]
     elif subset == 'price_high':
-        lookup = lookup[lookup[START_PRICE] >= 99]
+        lstgs = feats[feats[START_PRICE] >= 99]
     elif subset == 'collectibles':
-        lookup = lookup[lookup[META].apply(lambda x: x in COLLECTIBLES)]
+        lstgs = feats[feats[META].apply(lambda x: x in COLLECTIBLES)]
     elif subset == 'other':
-        lookup = lookup[lookup[META].apply(lambda x: x not in COLLECTIBLES)]
+        lstgs = feats[feats[META].apply(lambda x: x not in COLLECTIBLES)]
     else:
         raise NotImplementedError('Unrecognized subset: {}'.format(subset))
-    print('{}: {} listings'.format(subset, len(lookup)))
+    print('{}: {} listings'.format(subset, len(lstgs)))
 
-    return lookup.index, '_{}'.format(subset)
+    return lstgs, '_{}'.format(subset)
 
 
 def main():

@@ -22,3 +22,13 @@ do
   python repo/sim/train.py --gpu "$GPU" --name discrim --dropout "$D"  &>/dev/null &
   sleep 30
 done
+
+# run placebo discriminator
+for D in {7..14}
+do
+  printf "Model placebo: "
+  GPU=$(bash repo/bash/gpu.sh)
+  printf "starting on GPU %d\n" "$GPU"
+  python repo/sim/train.py --gpu "$GPU" --name placebo --dropout "$D"  &>/dev/null &
+  sleep 30
+done

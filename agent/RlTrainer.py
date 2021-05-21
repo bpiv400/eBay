@@ -7,15 +7,16 @@ from rlpyt.samplers.parallel.gpu.alternating_sampler import AlternatingSampler
 from rlpyt.utils.logging.context import logger_context
 from agent.util import get_log_dir, get_run_id
 from agent.AgentComposer import AgentComposer
-from agent.models.AgentModel import AgentModel
-from agent.agents import SellerAgent, BuyerAgent, BuyerTurnCostAgent
+from agent.AgentModel import AgentModel
+from agent.agents.SellerAgent import SellerAgent
+from agent.agents.BuyerAgent import BuyerAgent
 from rlenv.QueryStrategy import DefaultQueryStrategy
 from agent.envs.SellerEnv import SellerEnv
 from agent.envs.BuyerEnv import BuyerEnv
 from rlenv.Player import SimulatedSeller, SimulatedBuyer
 from agent.AgentLoader import AgentLoader
-from agent.const import BATCH_SIZE, NUM_VALUE_BYR, NUM_VALUE_SLR
-from featnames import DELTA
+from agent.const import BATCH_SIZE
+from featnames import DELTA, TURN_COST
 
 
 class RlTrainer:
@@ -31,21 +32,14 @@ class RlTrainer:
         )
 
     def _generate_agent(self, serial=False):
-        model_kwargs = dict(byr=self.byr)
+        model_kwargs = dict(byr=self.byr, turn_cost=self.turn_cost)
         agent_kwargs = dict(ModelCls=AgentModel,
                             model_kwargs=model_kwargs,
                             serial=serial)
         if self.byr:
             agent_kwargs[DELTA] = self.delta
-            if self.turn_cost > 0:
-                model_kwargs['num_value'] = 1
-                agent_cls = BuyerTurnCostAgent
-            else:
-                model_kwargs['num_value'] = NUM_VALUE_BYR
-                agent_cls = BuyerAgent
-        else:
-            model_kwargs['num_value'] = NUM_VALUE_SLR
-            agent_cls = SellerAgent
+            agent_kwargs[TURN_COST] = self.turn_cost
+        agent_cls = BuyerAgent if self.byr else SellerAgent
         return agent_cls(**agent_kwargs)
 
     def _generate_env(self, verbose=False):

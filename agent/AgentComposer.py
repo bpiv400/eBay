@@ -4,7 +4,7 @@ import torch
 import numpy as np
 from constants import BYR_DROP
 from featnames import OUTCOME_FEATS, DAYS_SINCE_LSTG, BYR_HIST, \
-    TIME_FEATS, CLOCK_FEATS, THREAD_COUNT, TURN_FEATS, SLR, BYR, META, LEAF
+    TIME_FEATS, CLOCK_FEATS, THREAD_COUNT, TURN_FEATS, SLR, META, LEAF
 from rlenv.Composer import Composer
 from rlenv.const import LSTG_MAP, OFFER_MAPS, THREAD_COUNT_IND, \
     TIME_START_IND, TIME_END_IND

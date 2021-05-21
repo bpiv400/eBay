@@ -128,7 +128,7 @@ HOLDOUT_PARTITIONS = [VALIDATION, TEST]
 FIRST_ARRIVAL_MODEL = 'first_arrival'
 INTERARRIVAL_MODEL = 'next_arrival'
 BYR_HIST_MODEL = 'hist'
-DISCRIM_MODEL = 'discriminator'
+DISCRIM_MODEL = 'discrim'
 PLACEBO_MODEL = 'placebo'
 
 # model groups

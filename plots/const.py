@@ -12,5 +12,7 @@ COLORS = ['k'] + vlt.get_current_colorcycle()
 TRICOLOR = {'Humans': COLORS[0],
             'Agent': COLORS[1],
             'Impatient agent': COLORS[1],
-            'Patient agent': COLORS[2]}
+            'Patient agent': COLORS[2],
+            'Heuristic impatient agent': COLORS[1],
+            'Heuristic patient agent': COLORS[2]}
 ALTERNATING = ListedColormap([COLORS[int(i % 2) + 1] for i in range(1, 8)])

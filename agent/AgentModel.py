@@ -2,7 +2,7 @@ import torch
 from torch.nn.functional import softmax
 from nets.FeedForward import FeedForward
 from utils import load_sizes, get_role
-from agent.const import AGENT_STATE
+from agent.const import NUM_VALUE_BYR, NUM_VALUE_SLR
 from constants import NUM_COMMON_CONS
 from featnames import LSTG
 
@@ -16,12 +16,12 @@ class AgentModel(torch.nn.Module):
     4. Both networks use batch normalization
     5. Neither network uses dropout
     """
-    def __init__(self, byr=None, value=True, num_value=None):
+    def __init__(self, byr=None, value=True, turn_cost=0):
         """
         Initializes feed-forward networks for agents.
         :param bool byr: use buyer sizes if True
         :param bool value: estimate value if true
-        :param int num_value: size of value network output
+        :param int turn_cost: for determining size of value network output
         """
         super().__init__()
 
@@ -39,6 +39,10 @@ class AgentModel(torch.nn.Module):
 
         # value net
         if self.value:
+            if self.byr:
+                num_value = 1 if turn_cost > 0 else NUM_VALUE_BYR
+            else:
+                num_value = NUM_VALUE_SLR
             sizes['out'] = num_value
             self.value_net = FeedForward(sizes=sizes)
 
@@ -82,17 +86,3 @@ class AgentModel(torch.nn.Module):
             theta, x = theta
 
         return softmax(theta, dim=-1)
-
-
-def load_agent_model(model_args=None, run_dir=None):
-    model = AgentModel(**model_args)
-    path = run_dir + 'params.pkl'
-    d = torch.load(path, map_location=torch.device('cpu'))
-    if AGENT_STATE in d:
-        d = d[AGENT_STATE]
-    d = {k: v for k, v in d.items() if not k.startswith('value')}
-    model.load_state_dict(d, strict=True)
-    for param in model.parameters(recurse=True):
-        param.requires_grad = False
-    model.eval()
-    return model

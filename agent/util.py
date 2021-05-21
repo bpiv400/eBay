@@ -1,4 +1,6 @@
 import pandas as pd
+import torch
+from agent.AgentModel import AgentModel
 from utils import unpickle, load_file, load_data, safe_reindex, get_role
 from constants import AGENT_DIR, IDX, SIM_DIR, EPS, PARTS_DIR
 from featnames import SLR, BYR, NORM, AUTO, INDEX, THREAD, CON, LOOKUP, X_OFFER, \
@@ -25,14 +27,21 @@ def get_run_dir(byr=None, delta=None, turn_cost=0, verbose=True):
     return run_dir
 
 
-def get_sim_dir(byr=None, delta=None, part=TEST, heuristic=False, turn_cost=0):
-    run_dir = get_run_dir(byr=byr,
-                          delta=delta,
-                          turn_cost=turn_cost,
-                          verbose=False)
-    sim_dir = run_dir + '{}/'.format(part)
-    if heuristic:
-        sim_dir += 'heuristic/'
+def get_sim_dir(byr=None, delta=None, part=TEST, heuristic=False,
+                turn_cost=0, index=None):
+    if byr and heuristic:
+        assert delta is None
+        assert turn_cost == 0
+        sim_dir = get_log_dir(byr=True) + 'heuristic/{}/{}/'.format(index, part)
+    else:
+        assert index is None
+        run_dir = get_run_dir(byr=byr,
+                              delta=delta,
+                              turn_cost=turn_cost,
+                              verbose=False)
+        sim_dir = run_dir + '{}/'.format(part)
+        if heuristic:
+            sim_dir += 'heuristic/'
     print(sim_dir)
     return sim_dir
 
@@ -63,8 +72,8 @@ def get_norm_reward(data=None, values=None, byr=False):
 
 
 def get_byr_valid(data=None):
-    if IS_AGENT in data[X_THREAD].columns:  # agent simulations
-        assert SIM in data[X_THREAD].index.names
+    if SIM in data[X_THREAD].index.names:  # agent simulations
+        assert IS_AGENT in data[X_THREAD].columns
         data[X_THREAD] = data[X_THREAD][data[X_THREAD][IS_AGENT]].drop(IS_AGENT, axis=1)
         agent_thread = data[X_THREAD].index
         data = safe_reindex(data, idx=agent_thread)
@@ -126,3 +135,17 @@ def load_values(part=TEST, delta=None, normalize=True):
         v /= start_price
         assert v.max() <= 1 + EPS
     return v.rename('vals')
+
+
+def load_agent_model(model_args=None, run_dir=None):
+    model = AgentModel(**model_args)
+    path = run_dir + 'params.pkl'
+    d = torch.load(path, map_location=torch.device('cpu'))
+    if 'agent_state_dict' in d:
+        d = d['agent_state_dict']
+    d = {k: v for k, v in d.items() if not k.startswith('value')}
+    model.load_state_dict(d, strict=True)
+    for param in model.parameters(recurse=True):
+        param.requires_grad = False
+    model.eval()
+    return model

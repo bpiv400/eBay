@@ -1,21 +1,31 @@
+import numpy as np
 import pandas as pd
-from agent.eval.util import get_eval_path
-from agent.util import load_valid_data, load_values, get_sim_dir
-from assess.util import bin_vs_reward
-from utils import topickle, unpickle
+from agent.util import load_valid_data, load_values, get_sim_dir, get_norm_reward
+from assess.util import ll_wrapper
+from featnames import LOOKUP, START_PRICE
+from utils import topickle
 from agent.const import DELTA_SLR
-from assess.const import SLR_NAMES
+from assess.const import SLR_NAMES, LOG10_BIN_DIM
 from constants import PLOT_DIR
+
+
+def bin_vs_reward(data=None, values=None, bw=None):
+    reward = pd.concat(get_norm_reward(data=data, values=values, byr=False))
+    y = reward.reindex(index=data[LOOKUP].index).values
+    x = np.log10(data[LOOKUP][START_PRICE].values)
+    line, bw = ll_wrapper(y=y,
+                          x=x,
+                          dim=LOG10_BIN_DIM,
+                          bw=bw,
+                          ci=(bw is None))
+    return line, bw
 
 
 def main():
     d = dict()
 
     # human sellers
-    data_obs = load_valid_data(byr=False)
-
-    # evals
-    evals = unpickle(get_eval_path(byr=False))
+    data_obs = load_valid_data(byr=False, minimal=True)
 
     # seller
     for delta in DELTA_SLR:
@@ -28,15 +38,19 @@ def main():
         d[key] = line
         print('{}: {}'.format(delta, bw[0]))
 
-        sim_dir = get_sim_dir(delta=delta)
+        sim_dir = get_sim_dir(byr=False, delta=delta)
         data_rl = load_valid_data(sim_dir=sim_dir, minimal=True)
 
         line, _ = bin_vs_reward(data=data_rl, values=values, bw=bw)
-        d[key].loc[:, (SLR_NAMES[delta], 'beta')] = line
+        name = SLR_NAMES[delta]
+        d[key].loc[:, (name, 'beta')] = line
 
-        # bar chart of reward
-        for c in ['norm', 'dollar']:
-            d['bar_{}_{}'.format(c, delta)] = evals[SLR_NAMES[delta]].loc[c, :]
+        h_dir = get_sim_dir(byr=False, delta=delta, heuristic=True)
+        data_h = load_valid_data(sim_dir=h_dir, minimal=True)
+
+        line, _ = bin_vs_reward(data=data_h, values=values, bw=bw)
+        name = 'Heuristic {}'.format(name.lower())
+        d[key].loc[:, (name, 'beta')] = line
 
     topickle(d, PLOT_DIR + 'slreval.pkl')
 

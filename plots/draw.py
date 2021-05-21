@@ -1,8 +1,6 @@
 import argparse
 import os
-import numpy as np
-import pandas as pd
-import plots.util as util
+from importlib import import_module
 from utils import unpickle
 from constants import PLOT_DIR, FIG_DIR
 
@@ -25,28 +23,26 @@ def main():
         os.makedirs(FIG_DIR + folder)
 
     d = unpickle('{}.pkl'.format(path))
-    if type(d) is pd.DataFrame:
-        print(np.abs(d).mean())
-    else:
-        for k, v in d.items():
-            prefix = k.split('_')[0]
-            f_name = '{}_plot'.format(prefix)
-            f = getattr(util, f_name)
-            if type(v) is not dict or prefix == 'slr':
-                path = folder + k
-                print(path)
-                f(path, v)
-            elif k == 'accept':
-                for t, d_k in v.items():
-                    for key, s in d_k.items():
-                        path = folder + '{}_{}_{}'.format(k, key, t)
-                        print(path)
-                        f(path, s)
-            else:
-                for t, df in v.items():
-                    path = folder + '{}_{}'.format(k, t)
+    for k, v in d.items():
+        prefix = k.split('_')[0]
+        m = import_module('.{}'.format(prefix), 'plots.types')
+        f_name = '{}_plot'.format(prefix)
+        f = getattr(m, f_name)
+        if type(v) is not dict or prefix in ['slr', 'pareto']:
+            path = folder + k
+            print(path)
+            f(path, v)
+        elif k == 'accept':
+            for t, d_k in v.items():
+                for key, s in d_k.items():
+                    path = folder + '{}_{}_{}'.format(k, key, t)
                     print(path)
-                    f(path, df)
+                    f(path, s)
+        else:
+            for t, df in v.items():
+                path = folder + '{}_{}'.format(k, t)
+                print(path)
+                f(path, df)
 
 
 if __name__ == '__main__':

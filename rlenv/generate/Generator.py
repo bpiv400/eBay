@@ -7,10 +7,7 @@ from rlenv.Player import SimulatedSeller, SimulatedBuyer
 from rlenv.LstgLoader import ChunkLoader
 from rlenv.QueryStrategy import DefaultQueryStrategy
 from rlenv.util import load_chunk
-from constants import VALUE_SIMS
-from featnames import LSTG
-
-VALUE_COLS = [LSTG, 'sale', 'sale_price', 'relist_ct']
+from featnames import LSTG, SIM
 
 
 class Generator:
@@ -45,7 +42,7 @@ class Generator:
         self.initialized = True
 
     def generate_recorder(self):
-        raise NotImplementedError()
+        return None
 
     def generate_composer(self):
         return Composer()
@@ -54,11 +51,16 @@ class Generator:
         raise NotImplementedError()
 
     def simulate_lstg(self):
-        raise NotImplementedError()
+        """
+        Simulates listing once.
+        :return: None
+        """
+        self.env.reset()
+        self.env.run()
 
     @property
     def env_class(self):
-        raise NotImplementedError
+        return EBayEnv
 
     @property
     def env_args(self):
@@ -95,14 +97,6 @@ class Generator:
 
 class OutcomeGenerator(Generator):
 
-    def simulate_lstg(self):
-        """
-        Simulates listing once.
-        :return: None
-        """
-        self.env.reset()
-        self.env.run()
-
     def generate(self):
         """
         Simulates all lstgs in chunk according to experiment parameters
@@ -118,78 +112,29 @@ class OutcomeGenerator(Generator):
             (dt.now() - t0).total_seconds() / len(self.loader)))
 
         # return a dictionary
-        if self.recorder is not None:
-            return self.recorder.construct_output()
+        return self.recorder.construct_output()
 
     def generate_recorder(self):
         return OutcomeRecorder(verbose=self.verbose)
-
-    @property
-    def env_class(self):
-        return SimulatorEnv
 
 
 class ValueGenerator(Generator):
 
     def generate(self):
+        print('Total listings: {}'.format(len(self.loader)))
+        t0 = dt.now()
+
         rows = []
         while self.env.has_next_lstg():
-            start = dt.now()
-            lstg = self.env.next_lstg()
-            for i in range(VALUE_SIMS):
-                row = self.simulate_lstg()
-                rows.append([lstg, i] + list(row))
+            lstg, sim = self.env.next_lstg()
+            self.simulate_lstg()
+            rows.append([lstg, sim, self.env.outcome.price])
 
-            # print listing summary
-            elapsed = int(round((dt.now() - start).total_seconds()))
-            print('{}: {} sec'.format(lstg, elapsed))
+        # time elapsed
+        print('Avg time per listing: {} seconds'.format(
+            (dt.now() - t0).total_seconds() / len(self.loader)))
 
-        # convert to dataframe
-        df = pd.DataFrame.from_records(rows, columns=VALUE_COLS)
-        df = df.set_index([LSTG, 'sale']).sort_index()
-
-        # collapse
-        x = df.sale_price.groupby(LSTG).mean()
-        num_sales = df.relist_ct.groupby(LSTG).count()
-        num_exps = df.relist_ct.groupby(LSTG).sum()
-        p = num_sales / (num_sales + num_exps)
-        values = pd.concat([x.rename('x'), p.rename('p')], axis=1).sort_index()
-
-        return values
-
-    def simulate_lstg(self):
-        """
-        Simulate until sale.
-        :return: (sale price, relist count)
-        """
-        relist_ct = -1
-        while relist_ct < 1000:
-            relist_ct += 1
-            self.env.reset()
-            self.env.run()
-            if self.env.outcome.sale:
-                break
-        return self.env.outcome.price, relist_ct
-
-    def generate_recorder(self):
-        return None
-
-    @property
-    def env_class(self):
-        return SimulatorEnv
-
-
-class SimulatorEnv(EBayEnv):
-
-    def run(self):
-        """
-        Runs a simulation of a single lstg until sale or expiration
-
-        :return: a 3-tuple of (bool, float, int) giving whether the listing sells,
-        the amount it sells for if it sells, and the amount of time it took to sell
-        """
-        super().run()
-        return self.outcome
-
-    def is_agent_turn(self, event):
-        return False
+        # return series of sale prices
+        df = pd.DataFrame.from_records(rows, columns=[LSTG, SIM, 'sale_price'])
+        s = df.set_index([LSTG, SIM]).sort_index().squeeze()
+        return s

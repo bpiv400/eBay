@@ -10,7 +10,8 @@ from sim.EBayDataset import EBayDataset
 from utils import load_inputs, topickle, load_model
 from inputs.const import NUM_OUT
 from constants import PLOT_DIR
-from featnames import TEST, MODELS, CENSORED_MODELS, DISCRIM_MODELS, BYR_HIST_MODEL
+from featnames import TEST, MODELS, CENSORED_MODELS, DISCRIM_MODELS, \
+    DISCRIM_MODEL, PLACEBO_MODEL, BYR_HIST_MODEL
 
 
 def get_auc(s):
@@ -29,18 +30,22 @@ def get_model_predictions(data):
     :return: np.array of probabilities
     """
     # initialize neural net
-    net = load_model(data.name, verbose=False)
+    net = load_model(data.name, verbose=False).to('cuda')
 
     # get predictions from neural net
     theta = []
     batches = get_batches(data)
     for b in batches:
-        theta.append(net(b['x']).double())
+        for key, value in b.items():
+            if type(value) is dict:
+                b[key] = {k: v.to('cuda') for k, v in value.items()}
+            else:
+                b[key] = value.to('cuda')
+        theta.append(net(b['x']).cpu())
     theta = torch.cat(theta)
 
     # take softmax
-    if theta.size()[1] == 1:
-        theta = torch.cat((torch.zeros_like(theta), theta), dim=1)
+    theta = torch.cat((torch.zeros_like(theta), theta), dim=1)
     p = np.exp(log_softmax(theta, dim=-1).numpy())
     return p
 
@@ -66,8 +71,8 @@ def get_roc(model=None):
     assert len(s.index) == len(s.index.unique())
 
     # print accuracy and auc
-    print('Accuracy: {}'.format(((p >= .5) == y).mean()))
-    print('AUC: {}'.format(get_auc(s)))
+    print('{} accuracy: {}'.format(model, ((p >= .5) == y).mean()))
+    print('{} AUC: {}'.format(model, get_auc(s)))
 
     return s
 
@@ -138,8 +143,13 @@ def main():
         d[key] = np.exp(d[key])
 
     # roc curve
+    elem = []
+    names = {DISCRIM_MODEL: 'Discriminator',
+             PLACEBO_MODEL: 'Placebo'}
     for m in DISCRIM_MODELS:
-        d['simple_roc_{}'.format(m)] = get_roc(model=m)
+        elem.append(get_roc(model=m).rename(names[m]))
+
+    d['simple_roc'] = pd.concat(elem, axis=1)
 
     # save output
     topickle(d, PLOT_DIR + 'training.pkl')
