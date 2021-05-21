@@ -6,7 +6,7 @@
 
 ulimit -n 4096
 if [ "$2" == "" ]; then
-  python repo/agent/eval/collate.py --byr --delta "$1" --heuristic
+  python repo/agent/eval/collate.py --byr --index "$1" --heuristic
 else
-  python repo/agent/eval/collate.py --byr --delta "$1" --part "$2" --heuristic
+  python repo/agent/eval/collate.py --byr --index "$1" --part "$2" --heuristic
 fi
