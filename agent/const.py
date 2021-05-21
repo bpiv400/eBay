@@ -31,11 +31,15 @@ NUM_VALUE_BYR = 6
 # concessions for buyer heuristic
 BYR_CONS = pd.DataFrame(columns=[1, 3, 5])
 i = 0
-for con1 in [.5, .6, .67, .75]:
-    for con3 in [.2, .33, .5, 1.]:
-        for con5 in [.2, .33, .5, 1.]:
-            BYR_CONS.loc[i, :] = (con1, con3, con5)
+for con1 in [.5, .6, .67, .75, .8]:
+    for con3 in [.17, .2, .25, .33, .4, .5, 1.]:
+        if con3 == 1:
+            BYR_CONS.loc[i, :] = (con1, con3, -1)
             i += 1
+        else:
+            for con5 in [.17, .2, .25, .33, .4, .5, 1.]:
+                BYR_CONS.loc[i, :] = (con1, con3, con5)
+                i += 1
 
 
 # names for opt_info namedtuple

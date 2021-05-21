@@ -12,7 +12,7 @@ from rlenv.generate.Recorder import OutcomeRecorder
 from rlenv.Player import SimulatedSeller
 from utils import topickle
 from constants import OUTCOME_SIMS
-from featnames import DELTA
+from featnames import DELTA, X_THREAD
 
 
 class AgentGenerator(OutcomeGenerator):
@@ -56,9 +56,14 @@ def main():
     # output directory
     params = {k: v for k, v in vars(args).items() if k != 'num'}
     sim_dir = get_sim_dir(**params)
-    outcome_dir = sim_dir + 'outcomes/'
+
+    # check for collated output
+    if os.path.isfile(sim_dir + '{}.pkl'.format(X_THREAD)):
+        print('Output already exists.')
+        exit(0)
 
     # create output folder
+    outcome_dir = sim_dir + 'outcomes/'
     if not os.path.isdir(outcome_dir):
         os.makedirs(outcome_dir)
 

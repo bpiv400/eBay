@@ -4,13 +4,12 @@ import pandas as pd
 from agent.util import get_sale_norm, load_valid_data, get_sim_dir
 from agent.eval.util import eval_args, get_eval_path
 from utils import safe_reindex, unpickle, topickle, load_data
-from agent.const import DELTA_BYR, TURN_COST_CHOICES
+from agent.const import DELTA_BYR, TURN_COST_CHOICES, BYR_CONS
 from constants import IDX
 from featnames import X_OFFER, LOOKUP, X_THREAD, START_PRICE, NORM, CON, REJECT, \
     INDEX, BYR, SLR
 
-COLS = ['discount', 'dollar', 'buyrate',
-        'discount_sales', 'dollar_sales', 'buyrate_sales']
+COLS = ['discount', 'dollar', 'buyrate']
 
 
 def calculate_return(data=None, norm=None):
@@ -49,7 +48,7 @@ def wrapper():
 
 def amend_outcome(data=None, byr_con=None, slr_norm=None, reject=True):
     data_alt = deepcopy(data)
-    for t in IDX[BYR]:
+    for t in byr_con.columns:
         mask = byr_con[t] == int(reject)
         if t > 1:
             mask = mask & (slr_norm[t-1] == 1)
@@ -62,8 +61,13 @@ def amend_outcome(data=None, byr_con=None, slr_norm=None, reject=True):
 
 
 def amend_and_process(data=None, f=None):
-    slr_norm = 1 - data[X_OFFER][NORM].unstack()[IDX[SLR]]
-    byr_con = data[X_OFFER][CON].unstack()[IDX[BYR]]
+    slr_norm = 1 - data[X_OFFER][NORM].unstack()
+    slr_cols = [c for c in IDX[SLR] if c in slr_norm.columns]
+    slr_norm = slr_norm.loc[:, slr_cols]
+
+    byr_con = data[X_OFFER][CON].unstack()
+    byr_cols = [c for c in IDX[BYR] if c in byr_con.columns]
+    byr_con = byr_con.loc[:, byr_cols]
 
     # rejects list price
     data_rej = amend_outcome(data=data,
@@ -89,11 +93,14 @@ def get_keys(delta=None):
     return keys
 
 
-def get_output(d=None, f=None):
+def get_output(d=None):
     print('Full agent')
     k = 'full'
     if k not in d:
-        d[k] = pd.DataFrame(columns=COLS)
+        d[k] = pd.DataFrame(columns=COLS + ['{}_sales'.format(c) for c in COLS])
+
+    # wrapper function with normalized sale price in the data
+    f = wrapper()
 
     if 'Humans' not in d[k].index:
         data = load_valid_data(byr=True, minimal=True)
@@ -117,18 +124,18 @@ def get_output(d=None, f=None):
             d[k].loc[keys[0], :] = f(data)
 
 
-def get_heuristic_output(d=None, f=None):
+def get_heuristic_output(d=None):
     print('Heuristic agents')
     k = 'heuristic'
     if k not in d:
         d[k] = pd.DataFrame(columns=COLS)
 
-    for delta in DELTA_BYR:
-        keys = get_keys(delta=delta)
+    for key in BYR_CONS.index:
+        keys = ['{}{}'.format(key, sign) for sign in ['-', '+']]
         if keys[0] in d[k].index:
             continue
 
-        sim_dir = get_sim_dir(byr=True, heuristic=True, delta=delta)
+        sim_dir = get_sim_dir(byr=True, heuristic=True, index=key)
         if not os.path.isdir(sim_dir):
             continue
 
@@ -136,14 +143,11 @@ def get_heuristic_output(d=None, f=None):
         if data is None:
             continue
 
-        if delta == 1:
-            d[k].loc[keys[0], :], d[k].loc[keys[1], :] = \
-                amend_and_process(data=data, f=f)
-        else:
-            d[k].loc[keys[0], :] = f(data)
+        d[k].loc[keys[0], :], d[k].loc[keys[1], :] = \
+            amend_and_process(data=data, f=calculate_return)
 
 
-def get_turn_cost_output(d=None, f=None):
+def get_turn_cost_output(d=None):
     print('Turn cost penalties')
     plus, minus = 'turn_cost_plus', 'turn_cost_minus'
     if plus not in d:
@@ -166,7 +170,7 @@ def get_turn_cost_output(d=None, f=None):
             continue
 
         d[minus].loc[key, :], d[plus].loc[key, :] = \
-            amend_and_process(data=data, f=f)
+            amend_and_process(data=data, f=calculate_return)
 
 
 def main():
@@ -184,13 +188,10 @@ def main():
             print(v)
         exit()
 
-    # wrapper function with normalized sale price in the data
-    f = wrapper()
-
     # create output statistics
-    get_output(d, f)
-    get_heuristic_output(d, f)
-    get_turn_cost_output(d, f)
+    get_output(d)
+    get_heuristic_output(d)
+    get_turn_cost_output(d)
 
     # save
     topickle(d, path)

@@ -10,7 +10,7 @@ def plot_humans(df=None, offsets=None):
     plt.text(humans.x + offsets[0], humans.y + offsets[1], 'Humans')
 
 
-def plot_agents(df=None, offsets=None, name=None, lspec='-o', color='k'):
+def plot_agents(df=None, offsets=None, lspec='-o', color='k'):
     labels = []
     for d in DELTA_BYR:
         if d != 1:
@@ -21,13 +21,22 @@ def plot_agents(df=None, offsets=None, name=None, lspec='-o', color='k'):
             labels.append('$1-\\epsilon$')
             labels.append('$1+\\epsilon$')
     agents = df.loc[labels, :]
-    plt.plot(agents.x, agents.y, lspec, label=name, color=color)
+    plt.plot(agents.x, agents.y, lspec, label='Agents', color=color)
     if offsets is not None:
         for label in labels:
             if label in agents.index:
                 plt.text(agents.loc[label, 'x'] + offsets[0],
                          agents.loc[label, 'y'] + offsets[1],
                          label)
+
+
+def plot_heuristics(df=None, offsets=None, lspec='-o', color='gray'):
+    plt.plot(df.x, df.y, lspec, label='Agents', color=color)
+    if offsets is not None:
+        for label in df.index:
+            plt.text(df.loc[label, 'x'] - 3.5 * offsets[0],
+                     df.loc[label, 'y'] - 3.5 * offsets[1],
+                     label)
 
 
 def pareto_plot(path, d):
@@ -52,6 +61,7 @@ def pareto_plot(path, d):
     offsets = [(args[k][1] - args[k][0]) / 100 for k in ['xlim', 'ylim']]
 
     plot_humans(df=d['full'], offsets=offsets)
-    plot_agents(df=d['full'], offsets=offsets, name='Agents')
-    plot_agents(df=d['heuristic'], name='Heuristics', color='gray')
+    plot_agents(df=d['full'], offsets=offsets)
+    if name != 'sales':
+        plot_heuristics(df=d['heuristic'], offsets=offsets)
     save_fig(path, **args)
