@@ -3,13 +3,13 @@ import os
 from rlenv.generate.Generator import OutcomeGenerator, ValueGenerator
 from utils import topickle
 from constants import SIM_DIR, NUM_CHUNKS, ARRIVAL_SIMS, OUTCOME_SIMS
-from featnames import AGENT_PARTITIONS, TEST
+from featnames import AGENT_PARTITIONS
 
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--part', type=str,
-                        choices=AGENT_PARTITIONS, default=TEST)
+    parser.add_argument('--part', type=str, required=True,
+                        choices=AGENT_PARTITIONS)
     parser.add_argument('--num', type=int, required=True,
                         choices=range(1, NUM_CHUNKS + 1))
     parser.add_argument('--values', action='store_true')

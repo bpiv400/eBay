@@ -5,7 +5,7 @@ from processing.util import get_days_delay
 from inputs.util import save_files, check_zero, get_x_thread, get_ind_x
 from utils import get_remaining, load_file
 from constants import IDX, MAX_DELAY_TURN, \
-    INTERVAL_TURN, INTERVAL_CT_TURN
+    INTERVAL, INTERVAL_CT_TURN
 from featnames import INT_REMAINING, TIME_FEATS, LOOKUP, SLR, BYR, DELAY, \
     X_THREAD, X_OFFER, CLOCK, LSTG, THREAD, INDEX, START_TIME, END_TIME, CON, SIM_PARTITIONS
 
@@ -54,7 +54,7 @@ def get_y(offers=None, clock=None, lstg_end=None, turn=None):
     _, delay = get_days_delay(ts.unstack())
     delay_seconds = np.round(delay * MAX_DELAY_TURN).astype('int64')
     # convert to periods
-    intervals = delay_seconds // INTERVAL_TURN
+    intervals = delay_seconds // INTERVAL
     # replace expired delays with last index
     intervals.loc[intervals == INTERVAL_CT_TURN] = -1
     # replace censored delays with negative index

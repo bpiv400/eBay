@@ -1,9 +1,7 @@
 from matplotlib import pyplot as plt
-
-from featnames import CON
+from plots.util import save_fig, get_name
 from plots.const import COLORS
-from plots.save import save_fig
-from plots.util import get_name
+from featnames import CON
 
 
 def stacked_plot(path, df):

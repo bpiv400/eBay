@@ -3,7 +3,7 @@ import numpy as np
 from processing.util import collect_date_clock_feats
 from inputs.util import get_arrival_times, save_files, get_ind_x
 from utils import get_days_since_lstg, input_partition, load_file
-from constants import DAY, MAX_DAYS, INTERVAL_ARRIVAL, INTERVAL_CT_ARRIVAL
+from constants import DAY, MAX_DAYS, INTERVAL, INTERVAL_CT_ARRIVAL
 from featnames import THREAD_COUNT, DAYS_SINCE_LAST, DAYS_SINCE_LSTG, \
     START_TIME, END_TIME, LOOKUP, LSTG, THREAD, CLOCK
 
@@ -32,7 +32,7 @@ def get_interarrival_period(arrivals):
     censored = censored.reindex(index=y.index)
 
     # convert y to periods
-    y //= INTERVAL_ARRIVAL
+    y //= INTERVAL
 
     # replace censored interarrival times negative count of censored buckets
     y.loc[censored] -= INTERVAL_CT_ARRIVAL

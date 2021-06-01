@@ -1,7 +1,7 @@
 from inputs.util import get_arrival_times, save_files, get_ind_x
 from utils import input_partition, load_file
 from featnames import START_TIME, END_TIME, LOOKUP, CLOCK, THREAD, FIRST_ARRIVAL_MODEL
-from constants import INTERVAL_ARRIVAL, INTERVAL_CT_ARRIVAL
+from constants import INTERVAL, INTERVAL_CT_ARRIVAL
 
 
 def process_inputs(part):
@@ -22,7 +22,7 @@ def process_inputs(part):
     assert diff.min() >= 0
 
     # interarrival time in periods
-    y = diff // INTERVAL_ARRIVAL
+    y = diff // INTERVAL
 
     # fill in missings
     y[y.isna()] = INTERVAL_CT_ARRIVAL

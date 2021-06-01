@@ -1,8 +1,6 @@
 from assess.util import merge_dicts, delay_dist, cdf_sale, con_dist, \
-    num_offers, thread_number, arrival_cdf, hist_dist
+    num_offers, thread_number, arrival_cdf, hist_dist, save_dict
 from agent.util import get_sim_dir, load_valid_data
-from utils import topickle
-from constants import PLOT_DIR
 from featnames import DELAY, X_OFFER, X_THREAD, CON
 
 
@@ -41,7 +39,7 @@ def main():
     d = merge_dicts(d, d_rl)
 
     # save
-    topickle(d, PLOT_DIR + 'byr.pkl')
+    save_dict(d, 'byr')
 
 
 if __name__ == '__main__':

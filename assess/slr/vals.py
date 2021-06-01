@@ -1,8 +1,7 @@
 from agent.util import load_values, get_sim_dir, load_valid_data, get_norm_reward
-from assess.util import create_cdfs
-from utils import topickle, safe_reindex
+from assess.util import create_cdfs, save_dict
+from utils import safe_reindex
 from agent.const import DELTA_SLR
-from constants import PLOT_DIR
 from featnames import LOOKUP
 
 
@@ -41,7 +40,7 @@ def main():
         d['cdf_soldvals_{}'.format(delta)] = create_cdfs(elem)
 
     # save
-    topickle(d, PLOT_DIR + 'slrvals.pkl')
+    save_dict(d, 'slrvals')
 
 
 if __name__ == '__main__':

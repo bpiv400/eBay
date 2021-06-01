@@ -1,10 +1,9 @@
 from assess.util import merge_dicts, cdf_days, cdf_sale, norm_dist, \
-    arrival_dist, hist_dist, delay_dist, con_dist, num_threads, num_offers
+    arrival_dist, hist_dist, delay_dist, con_dist, num_threads, num_offers, save_dict
 from agent.util import get_run_dir, load_valid_data
-from utils import topickle
 from agent.const import DELTA_SLR
 from assess.const import SLR_NAMES
-from constants import PLOT_DIR, IDX
+from constants import IDX
 from featnames import ARRIVAL, DELAY, CON, X_OFFER, X_THREAD, TEST, AUTO, \
     INDEX, NORM, SLR, REJECT
 
@@ -59,7 +58,7 @@ def main():
         d = merge_dicts(d, d_rl)
 
     # save
-    topickle(d, PLOT_DIR + 'slr.pkl')
+    save_dict(d, 'slr')
 
 
 if __name__ == '__main__':

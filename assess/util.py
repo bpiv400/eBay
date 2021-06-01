@@ -1,16 +1,15 @@
 import numpy as np
 import pandas as pd
-from sklearn import tree
 from statsmodels.nonparametric.kde import KDEUnivariate
 from statsmodels.nonparametric.kernel_regression import KernelReg
 from agent.util import get_sale_norm
 from utils import safe_reindex, topickle
 from assess.const import OPT, VALUES_DIM, POINTS
 from constants import IDX, BYR, EPS, DAY, HOUR, MAX_DAYS, MAX_DELAY_TURN, \
-    MAX_DELAY_ARRIVAL, INTERVAL_ARRIVAL, INTERVAL_CT_ARRIVAL, PLOT_DIR
+    MAX_DELAY_ARRIVAL, INTERVAL, INTERVAL_CT_ARRIVAL, PLOT_DIR
 from featnames import DELAY, CON, NORM, AUTO, START_TIME, START_PRICE, LOOKUP, \
     MSG, DAYS_SINCE_LSTG, BYR_HIST, INDEX, X_OFFER, CLOCK, THREAD, X_THREAD, \
-    REJECT, EXP, SLR
+    REJECT, EXP
 
 
 def continuous_pdf(s=None):
@@ -37,7 +36,7 @@ def discrete_cdf(s=None):
 
 def arrival_pdf(s=None):
     pdf = discrete_pdf(s)
-    pdf.index = (pdf.index // INTERVAL_ARRIVAL).astype('int64')
+    pdf.index = (pdf.index // INTERVAL).astype('int64')
     pdf = pdf.groupby(pdf.index.name).sum()
     return pdf
 
@@ -55,7 +54,7 @@ def interarrival_dist(threads=None):
     s = s[safe_reindex(ct, idx=s.index) > 1]
     s = s.groupby(s.index.names[:-1]).diff().dropna()
     pdf = arrival_pdf(s)
-    pdf.index *= (INTERVAL_ARRIVAL / HOUR)
+    pdf.index *= (INTERVAL / HOUR)
     pdf.index.name = 'hours'
     return pdf
 
@@ -320,50 +319,9 @@ def kreg2(y=None, x1=None, x2=None, names=None, mesh=None, bw=None):
     return s, ll2.bw
 
 
-def add_byr_reject_on_lstg_end(con=None):
-    sale = (con == 1).groupby(con.index.names[:-2]).max()
-    s = con.reset_index(INDEX)[INDEX]
-    slr_last = s.groupby(s.index.names).max().apply(lambda x: x in IDX[SLR])
-    idx = slr_last[slr_last & ~safe_reindex(sale, idx=slr_last.index)].index
-    con = con.unstack()
-    for t in [3, 5, 7]:
-        tochange = con[t].loc[idx][con[t].loc[idx].isna()].index
-        con.loc[tochange, t] = 0.
-        idx = idx.drop(tochange)
-    con = con.stack()
-    return con
-
-
 def create_cdfs(elem):
     elem = {k: continuous_cdf(v) for k, v in elem.items()}
     return pd.DataFrame(elem)
-
-
-def estimate_tree(X=None, y=None, max_depth=1, criterion='entropy'):
-    assert np.all(X.index == y.index)
-    dt = tree.DecisionTreeClassifier(max_depth=max_depth, criterion=criterion)
-    clf = dt.fit(X.values, y.values)
-    r = tree.export_text(clf, feature_names=list(X.columns))
-    print(r)
-    return r
-
-
-def get_total_con(data=None, drop_bin=False):
-    norm = data[X_OFFER][NORM].unstack()
-    if drop_bin:
-        norm = norm[norm[1] < 1]
-    norm.loc[:, IDX[SLR]] = 1 - norm.loc[:, IDX[SLR]]
-    start_price = safe_reindex(data[LOOKUP][START_PRICE], idx=norm.index)
-    for t in norm.columns:
-        norm[t] *= start_price
-    con = pd.DataFrame(index=norm.index)
-    con[1] = norm[1]
-    con[2] = start_price - norm[2]
-    for t in range(3, 8):
-        con[t] = np.abs(norm[t - 2] - norm[t])
-    for t in con.columns:
-        con[t] /= start_price
-    return con.fillna(0)
 
 
 def save_dict(d=None, name=None):

@@ -1,11 +1,10 @@
 import numpy as np
 import pandas as pd
 from agent.util import get_sim_dir, load_valid_data
-from assess.util import ll_wrapper, kreg2
-from utils import topickle, safe_reindex
+from assess.util import ll_wrapper, kreg2, save_dict
+from utils import safe_reindex
 from agent.const import DELTA_SLR
 from assess.const import NORM1_DIM, NORM1_BIN_MESH, SLR_NAMES
-from constants import PLOT_DIR
 from featnames import X_OFFER, CON, INDEX, NORM, ACCEPT, REJECT, AUTO, LOOKUP, START_PRICE
 
 KEYS = [ACCEPT, REJECT, CON]
@@ -46,7 +45,7 @@ def main():
         y, mask = get_y(con=con, key=key)
         line, bw[key] = ll_wrapper(y=y[mask], x=x[mask], dim=NORM1_DIM)
         line.columns = pd.MultiIndex.from_product([['Humans'], line.columns])
-        d['response_{}'.format(key)] = line
+        d['simple_{}'.format(key)] = line
         print('{}: {}'.format(key, bw[key][0]))
 
         if key == REJECT:
@@ -62,7 +61,7 @@ def main():
 
         for key in KEYS:
             y, mask = get_y(con=con, key=key)
-            d['response_{}'.format(key)].loc[:, (SLR_NAMES[delta], 'beta')], _ = \
+            d['simple_{}'.format(key)].loc[:, (SLR_NAMES[delta], 'beta')], _ = \
                 ll_wrapper(y=y[mask], x=x[mask],
                            dim=NORM1_DIM, bw=bw[key], ci=False)
 
@@ -71,7 +70,8 @@ def main():
                 d['contour_rejbin_{}'.format(delta)], _ = \
                     kreg2(y=y, x1=x, x2=x2, mesh=NORM1_BIN_MESH, bw=bw2)
 
-    topickle(d, PLOT_DIR + 'slr2.pkl')
+    # save
+    save_dict(d, 'slr2')
 
 
 if __name__ == '__main__':

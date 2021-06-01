@@ -1,13 +1,6 @@
 """
 Class for storing and updating time valued features
-
-TODO:
-1. Update expiration queue and heap if necessary
-2. Double check expiration queue and heap tests to ensure they still pass
-3. Add expiring features to TimeFeatures object
-
 """
-
 import math
 from collections import deque, Counter
 import numpy as np

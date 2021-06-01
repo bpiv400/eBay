@@ -1,41 +1,24 @@
 import os
 from pandas.tseries.holiday import USFederalHolidayCalendar as Calendar
-from platform import platform
 from featnames import SLR, BYR, TRAIN_MODELS, TRAIN_RL, VALIDATION
 
 # paths and directories
-if 'Ubuntu' in platform():  # Etan's box(es)
-    PREFIX = os.path.expanduser('/data/eBay')
-elif 'debian' in platform():
-    PREFIX = os.path.expanduser('~/shared/ebay/data')
-elif 'Windows' in platform() and 'A:' in os.getcwd():  # Barry's pc
-    PREFIX = 'A:/ebay/data'
-elif 'Windows' in platform() and 'C:' in os.getcwd():  # Barry's laptop
-    PREFIX = os.path.expanduser('~/ebay/data')
-else:  # cluster and AWS
-    PREFIX = os.path.expanduser('~/eBay/data')
+DATA_DIR = os.path.expanduser(open('data_folder.txt', 'r').read()[:-1])
 
-PARTS_DIR = '{}/partitions/'.format(PREFIX)     # post-partition features
-SIM_DIR = '{}/sim/'.format(PREFIX)              # simulated threads and offers
-INDEX_DIR = '{}/index/'.format(PREFIX)          # indices for input files
-PCTILE_DIR = '{}/pctile/'.format(PREFIX)        # percentiles of features
-CLEAN_DIR = '{}/clean/'.format(PREFIX)          # cleaned csvs
-W2V_DIR = '{}/w2v/'.format(PREFIX)              # for word2vec features
-FEATS_DIR = '{}/feats/'.format(PREFIX)          # pre-partion features
+PARTS_DIR = DATA_DIR + 'partitions/'    # post-partition features
+SIM_DIR = DATA_DIR + 'sim/'             # simulated threads and offers
+INDEX_DIR = DATA_DIR + 'index/'         # indices for input files
+PCTILE_DIR = DATA_DIR + 'pctile/'       # percentiles of features
+FEATS_DIR = DATA_DIR + 'feats/'         # pre-partion features
 
-INPUT_DIR = '{}/inputs/'.format(PREFIX)         # inputs for models
-SIZES_DIR = INPUT_DIR + 'sizes/'                # for initializing models
-FEATNAMES_DIR = INPUT_DIR + 'featnames/'        # for testing
+INPUT_DIR = DATA_DIR + 'inputs/'         # inputs for models
+SIZES_DIR = INPUT_DIR + 'sizes/'         # for initializing models
+FEATNAMES_DIR = INPUT_DIR + 'featnames/'  # for testing
 
-OUTPUT_DIR = '{}/outputs/'.format(PREFIX)       # for saving outputs
-LOG_DIR = OUTPUT_DIR + 'logs/'                  # model logs
-MODEL_DIR = OUTPUT_DIR + 'models/'              # trained models
-PLOT_DIR = OUTPUT_DIR + 'plots/'                # for creating figures
-AGENT_DIR = OUTPUT_DIR + 'agent/'               # agents logs and models
-
-META_PATH = CLEAN_DIR + 'meta.csv'
-
-FIG_DIR = os.path.expanduser('~/Dropbox/eBay/figures/')  # for saving figures
+LOG_DIR = DATA_DIR + 'logs/'             # model logs
+MODEL_DIR = DATA_DIR + 'models/'         # trained models
+PLOT_DIR = DATA_DIR + 'plots/'           # for creating figures
+AGENT_DIR = DATA_DIR + 'agent/'          # agents logs and models
 
 # for splitting data
 SHARES = {TRAIN_MODELS: 0.75, TRAIN_RL: 0.1, VALIDATION: 0.05}
@@ -53,10 +36,9 @@ MAX_DELAY_ARRIVAL = MAX_DAYS * DAY
 MAX_DELAY_TURN = 2 * DAY
 
 # intervals
-INTERVAL_TURN = int(5 * MINUTE)
-INTERVAL_ARRIVAL = int(5 * MINUTE)
-INTERVAL_CT_TURN = int(MAX_DELAY_TURN / INTERVAL_TURN)
-INTERVAL_CT_ARRIVAL = int(MAX_DELAY_ARRIVAL / INTERVAL_ARRIVAL)
+INTERVAL = int(5 * MINUTE)
+INTERVAL_CT_TURN = int(MAX_DELAY_TURN / INTERVAL)
+INTERVAL_CT_ARRIVAL = int(MAX_DELAY_ARRIVAL / INTERVAL)
 
 # multiplier for concession
 CON_MULTIPLIER = 100

@@ -8,7 +8,7 @@ from torch.distributions.categorical import Categorical
 from rlenv.Composer import Composer
 from sim.arrivals import ArrivalSimulator, ArrivalInterface, ArrivalQueryStrategy
 from utils import topickle, load_file, load_featnames, load_model
-from constants import PARTS_DIR, NUM_CHUNKS, ARRIVAL_SIMS, INTERVAL_ARRIVAL
+from constants import PARTS_DIR, NUM_CHUNKS, ARRIVAL_SIMS, INTERVAL
 from featnames import LOOKUP, X_LSTG, ARRIVALS, START_PRICE, START_TIME, \
     DEC_PRICE, ACC_PRICE, AGENT_PARTITIONS, FIRST_ARRIVAL_MODEL
 
@@ -20,7 +20,7 @@ def get_first_arrivals(x=None):
     x = {k: torch.from_numpy(v.values) for k, v in x.items()}
     dist = Categorical(logits=net(x))
     intervals = dist.sample(torch.Size(torch.tensor((ARRIVAL_SIMS,)))).numpy()
-    sec = (intervals + np.random.uniform(size=np.shape(intervals))) * INTERVAL_ARRIVAL
+    sec = (intervals + np.random.uniform(size=np.shape(intervals))) * INTERVAL
     return sec.astype(np.uint32).transpose()
 
 

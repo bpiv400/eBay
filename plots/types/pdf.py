@@ -2,8 +2,7 @@ import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
 from constants import EPS
-from plots.save import save_fig
-from plots.util import get_name
+from plots.util import save_fig, get_name
 
 
 def pdf_plot(path, obj):

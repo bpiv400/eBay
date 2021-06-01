@@ -1,9 +1,7 @@
 import numpy as np
 from agent.util import load_valid_data
-from assess.util import ll_wrapper
-from utils import topickle
+from assess.util import ll_wrapper, save_dict
 from assess.const import POINTS
-from constants import PLOT_DIR
 from featnames import X_OFFER, X_THREAD, BYR_HIST, CON
 
 DIM = np.linspace(0, 3, POINTS)
@@ -38,7 +36,7 @@ def main():
         d['response_hist{}'.format(outcome)] = line, dots
 
     # save
-    topickle(d, PLOT_DIR + 'byrhist.pkl')
+    save_dict(d, 'byrhist')
 
 
 if __name__ == '__main__':

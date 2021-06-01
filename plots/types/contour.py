@@ -1,12 +1,10 @@
 import numpy as np
 from matplotlib import pyplot as plt
 from plots.const import BIN_TICKS_SHORT, FONTSIZE
-from plots.save import save_fig
-from plots.util import get_name
+from plots.util import save_fig, get_name
 
 
-def draw_contour(s=None, vmin=0, vmax=1, inc=.01, zlabel=None,
-                 reverse=False, **args):
+def draw_contour(s=None, vmin=0, vmax=1, inc=.01, zlabel=None, reverse=False):
     idx = [s.index.get_level_values(i) for i in range(2)]
     X = np.unique(idx[0])
     Y = np.unique(idx[1])
@@ -34,60 +32,39 @@ def draw_contour(s=None, vmin=0, vmax=1, inc=.01, zlabel=None,
 
 def contour_plot(path, s):
     name = get_name(path)
-    suffix = path.split('_')[-1]
-    if name == 'normval':
-        args = dict(xlabel='Seller counter / list price',
-                    ylabel='Value',
-                    inc=.002)
-    elif name == 'delayacc':
-        args = dict(xlabel='First buyer offer / list price',
-                    ylabel='Seller concession')
-    elif name.startswith('hist'):
-        args = dict(xlabel='First buyer offer / list price',
-                    ylabel='Seller experience percentile')
-    elif name == 'interarrival':
+    reverse, vmax, zlabel = False, 1, 'Turn 2: Pr(reject)'
+    if name == 'interarrival':
         args = dict(xlabel='Turn 1: Offer / list price',
-                    ylabel='Days to first arrival',
-                    zlabel='Days between first two arrivals',
-                    vmax=np.ceil(s.max()),
-                    reverse=True)
+                    ylabel='Days to first arrival')
+        reverse = True
+        vmax = np.ceil(s.max())
+        zlabel = 'Days between first two arrivals'
     elif name == 'rejdays':
         args = dict(xlabel='Turn 1: Offer / list price',
-                    ylabel='Days to first arrival',
-                    zlabel='Turn 2: Pr(reject)')
+                    ylabel='Days to first arrival')
     elif name == 'accdays':
         args = dict(xlabel='Turn 1: Offer / list price',
-                    ylabel='Days to first arrival',
-                    zlabel='Turn 2: Pr(accept)' if suffix == 'store' else None)
-    elif 'rejbin' in name or name == 'normbin':
-        if name == 'normbin':
-            zlabel = 'Turn 2: Offer / list price'
-        else:
-            turn = 2 if name == 'rejbin' else 3
-            action = 'reject' if turn == 2 else 'accept'
-            zlabel = 'Turn {}: Pr({})'.format(turn, action)
+                    ylabel='Days to first arrival')
+        zlabel = 'Turn 2: Pr(accept)'
+    elif name == 'rejbin':
         args = dict(yticks=np.log10(BIN_TICKS_SHORT),
                     yticklabels=BIN_TICKS_SHORT,
                     xlabel='Turn 1: Offer / list price',
-                    ylabel='List price ($)',
-                    zlabel=zlabel if suffix in ['data', name] else None)
-    elif name in ['offer2binwalk', 'offer2binacc']:
-        turn = int(name[5])
-        zlabel = 'walk' if name.endswith('walk') else 'accept'
+                    ylabel='List price ($)')
+    elif name == 'slrrejbinacc':
         args = dict(yticks=np.log10(BIN_TICKS_SHORT),
                     yticklabels=BIN_TICKS_SHORT,
-                    xlabel='Turn {}: Offer / list price'.format(turn),
-                    ylabel='List price ($)',
-                    zlabel='Turn {}: Pr({})'.format(turn+1, zlabel),
-                    vmax=.5)
+                    xlabel='Turn 1: Offer / list price',
+                    ylabel='List price ($)')
+        zlabel = 'Turn 3: Pr(accept)'
+
     else:
         raise NotImplementedError('Invalid name: {}'.format(name))
 
     # with colorbar
-    draw_contour(s=s, **args)
+    draw_contour(s=s, vmax=vmax, reverse=reverse, zlabel=zlabel)
     save_fig('{}_bar'.format(path), legend=False, **args)
 
     # without colorbar
-    args['zlabel'] = None
-    draw_contour(s=s, **args)
+    draw_contour(s=s, vmax=vmax, reverse=reverse, zlabel=None)
     save_fig(path, legend=False, **args)

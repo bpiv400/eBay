@@ -1,25 +1,11 @@
 import numpy as np
 from agent.util import load_values
-from assess.util import kdens_wrapper, ll_wrapper
-from processing.util import do_rounding
-from utils import unpickle, topickle, load_data, load_feats
+from assess.util import kdens_wrapper, ll_wrapper, save_dict
+from utils import unpickle, load_data, load_feats
 from agent.const import DELTA_SLR
-from assess.const import LOG10_BIN_DIM, LOG10_BO_DIM
-from constants import PLOT_DIR, SIM_DIR
+from assess.const import LOG10_BO_DIM
+from constants import SIM_DIR
 from featnames import LOOKUP, SLR_BO_CT, TEST, START_PRICE
-
-
-def bin_plot(start_price=None, vals=None):
-    x = start_price.values
-    is_round, _ = do_rounding(x)
-    x = np.log10(x)
-    y = vals.values
-    discrete = np.unique(x[is_round])
-    line, dots, bw = ll_wrapper(y=y, x=x,
-                                dim=LOG10_BIN_DIM,
-                                discrete=discrete)
-    print('bw: {}'.format(bw[0]))
-    return line, dots
 
 
 def slr_plot(x=None, y=None):
@@ -48,11 +34,6 @@ def main():
     d['simple_slrboprice'] = slr_plot(
         x=x, y=(df.x / data[LOOKUP][START_PRICE]))
 
-    # start price
-    print('Start price')
-    d['response_binvals'] = bin_plot(start_price=data[LOOKUP][START_PRICE],
-                                     vals=vals)
-
     # pdf of values, for different values of delta
     print('Values distribution')
     kwargs = {'$\\delta = {}$'.format(delta):
@@ -61,7 +42,7 @@ def main():
     d['pdf_values'] = kdens_wrapper(**kwargs)
 
     # save
-    topickle(d, PLOT_DIR + 'values.pkl')
+    save_dict(d, 'values')
 
 
 if __name__ == '__main__':

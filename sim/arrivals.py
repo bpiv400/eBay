@@ -3,7 +3,7 @@ from rlenv.Sources import Sources
 from rlenv.util import get_clock_feats, sample_categorical
 from utils import get_days_since_lstg, load_model
 from rlenv.const import CLOCK_MAP
-from constants import MAX_DELAY_ARRIVAL, DAY, INTERVAL_ARRIVAL
+from constants import MAX_DELAY_ARRIVAL, DAY, INTERVAL
 from featnames import INTERARRIVAL_MODEL, BYR_HIST_MODEL, DAYS_SINCE_LAST, \
     THREAD_COUNT, DAYS_SINCE_LSTG
 
@@ -20,7 +20,7 @@ class ArrivalInterface:
     def inter_arrival(self, input_dict=None):
         logits = self.interarrival_model(input_dict).squeeze()
         sample = sample_categorical(logits=logits)
-        seconds = int((sample + np.random.uniform()) * INTERVAL_ARRIVAL)
+        seconds = int((sample + np.random.uniform()) * INTERVAL)
         return seconds
 
     def hist(self, input_dict=None):

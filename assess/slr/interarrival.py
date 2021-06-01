@@ -2,10 +2,10 @@ import numpy as np
 import pandas as pd
 from scipy.optimize import minimize
 from agent.util import get_sim_dir, load_valid_data
-from assess.util import kreg2
-from utils import topickle, load_data, load_feats, safe_reindex
+from assess.util import kreg2, save_dict
+from utils import load_data, load_feats, safe_reindex
 from agent.const import DELTA_SLR
-from constants import PLOT_DIR, DAY
+from constants import DAY
 from assess.const import NORM1_DIM_SHORT
 from featnames import DAYS_SINCE_LSTG, X_OFFER, X_THREAD, INDEX, NORM, THREAD, \
     LOOKUP, START_PRICE, ACC_PRICE, DEC_PRICE, START_TIME, END_TIME, AUTO, EXP, \
@@ -117,7 +117,7 @@ def main():
     d['contour_interarrival'] = run_poisson()
 
     # save
-    topickle(d, PLOT_DIR + 'interarrival.pkl')
+    save_dict(d, 'interarrival')
 
 
 if __name__ == '__main__':

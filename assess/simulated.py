@@ -1,11 +1,10 @@
 import argparse
 from assess.util import merge_dicts, cdf_days, cdf_sale, msg_dist, \
     arrival_dist, hist_dist, delay_dist, con_dist, num_threads, \
-    num_offers, interarrival_dist, norm_dist
-from utils import topickle, load_data, load_file, load_feats
-from constants import PLOT_DIR, COLLECTIBLES
-from featnames import X_THREAD, X_OFFER, TEST, SIM, LOOKUP, STORE, \
-    START_PRICE, META
+    num_offers, interarrival_dist, norm_dist, save_dict
+from utils import load_data, load_file, load_feats
+from constants import COLLECTIBLES
+from featnames import X_THREAD, X_OFFER, TEST, SIM, LOOKUP, STORE, START_PRICE, META
 
 
 def collect_outputs(data=None, name=None):
@@ -85,7 +84,7 @@ def main():
     d = merge_dicts(d, d_sim)
 
     # save
-    topickle(d, PLOT_DIR + '{}{}.pkl'.format(SIM, suffix))
+    save_dict(d, SIM + suffix)
 
 
 if __name__ == '__main__':

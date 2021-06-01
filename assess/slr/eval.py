@@ -1,13 +1,10 @@
 import numpy as np
 import pandas as pd
 from agent.util import load_valid_data, load_values, get_sim_dir, get_norm_reward
-from assess.util import ll_wrapper
-from featnames import LOOKUP, START_PRICE
-from utils import topickle
+from assess.util import ll_wrapper, save_dict
 from agent.const import DELTA_SLR
 from assess.const import SLR_NAMES, LOG10_BIN_DIM
-from constants import PLOT_DIR
-
+from featnames import LOOKUP, START_PRICE
 
 def bin_vs_reward(data=None, values=None, bw=None):
     reward = pd.concat(get_norm_reward(data=data, values=values, byr=False))
@@ -52,7 +49,8 @@ def main():
         name = 'Heuristic {}'.format(name.lower())
         d[key].loc[:, (name, 'beta')] = line
 
-    topickle(d, PLOT_DIR + 'slreval.pkl')
+    # save
+    save_dict(d, 'slreval')
 
 
 if __name__ == '__main__':

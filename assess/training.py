@@ -7,9 +7,9 @@ from torch.nn.functional import log_softmax
 from sim.Sample import get_batches
 from sim.best_models import extract_best_run
 from sim.EBayDataset import EBayDataset
-from utils import load_inputs, topickle, load_model
+from assess.util import save_dict
+from utils import load_inputs, load_model
 from inputs.const import NUM_OUT
-from constants import PLOT_DIR
 from featnames import TEST, MODELS, CENSORED_MODELS, DISCRIM_MODELS, \
     DISCRIM_MODEL, PLACEBO_MODEL, BYR_HIST_MODEL
 
@@ -152,7 +152,7 @@ def main():
     d['simple_roc'] = pd.concat(elem, axis=1)
 
     # save output
-    topickle(d, PLOT_DIR + 'training.pkl')
+    save_dict(d, 'training')
 
 
 if __name__ == '__main__':

@@ -1,8 +1,12 @@
+import os
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap
 from viscid.plot import vpyplot as vlt
 
 plt.style.use('seaborn-colorblind')
+
+# for saving figures
+FIG_DIR = os.path.expanduser('~/Dropbox/eBay/figures/')
 
 BIN_TICKS = [10, 20, 50, 100, 200, 500]
 BIN_TICKS_SHORT = [10, 20, 30, 50, 100, 200, 300]

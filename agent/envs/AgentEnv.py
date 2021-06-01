@@ -9,7 +9,7 @@ from rlenv.EBayEnv import EBayEnv
 from rlenv.events.Thread import Thread
 from agent.ConSpace import ConSpace
 from agent.const import AGENT_CONS
-from constants import INTERVAL_TURN, INTERVAL_CT_TURN, DAY, NUM_COMMON_CONS, IDX
+from constants import INTERVAL, INTERVAL_CT_TURN, DAY, NUM_COMMON_CONS, IDX
 from featnames import START_PRICE, BYR, SLR, DELTA, TURN_COST
 
 Info = namedarraytuple("Info", ["days", "max_return", "num_actions", "turn",
@@ -94,7 +94,7 @@ class AgentEnv(EBayEnv, Env):
 
     def draw_agent_delay(self, event):
         input_dict = self.get_delay_input_dict(event=event)
-        intervals = (self.end_time - event.priority) / INTERVAL_TURN
+        intervals = (self.end_time - event.priority) / INTERVAL
         max_interval = max(1, min(int(intervals), INTERVAL_CT_TURN))
         delay_seconds = self.query_strategy.get_delay(
             input_dict=input_dict,

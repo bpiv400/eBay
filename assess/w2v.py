@@ -1,6 +1,7 @@
 import pandas as pd
-from utils import unpickle, topickle
-from constants import FEATS_DIR, PLOT_DIR
+from assess.util import save_dict
+from utils import unpickle
+from constants import FEATS_DIR
 from featnames import META, LEAF
 
 
@@ -25,7 +26,7 @@ def main():
     d['w2v_{}'.format(META)] = tsne.join(colors, on=META)
 
     # save
-    topickle(d, PLOT_DIR + 'w2v.pkl')
+    save_dict(d, 'w2v')
 
 
 if __name__ == '__main__':

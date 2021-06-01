@@ -1,13 +1,23 @@
 import argparse
 import numpy as np
 import pandas as pd
-from assess.util import get_last, estimate_tree
+from sklearn import tree
+from assess.util import get_last
 from agent.util import get_sim_dir, load_valid_data
 from utils import safe_reindex
 from agent.const import DELTA_SLR
 from constants import DAY
 from featnames import LOOKUP, AUTO, CON, NORM, START_PRICE, START_TIME, LSTG, SIM, \
     BYR_HIST, X_OFFER, X_THREAD, INDEX, CLOCK, DAYS, TIME_FEATS
+
+
+def estimate_tree(X=None, y=None, max_depth=1, criterion='entropy'):
+    assert np.all(X.index == y.index)
+    dt = tree.DecisionTreeClassifier(max_depth=max_depth, criterion=criterion)
+    clf = dt.fit(X.values, y.values)
+    r = tree.export_text(clf, feature_names=list(X.columns))
+    print(r)
+    return r
 
 
 def get_tree(data=None, turn=None, idx=None):

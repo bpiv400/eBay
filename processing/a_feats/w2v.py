@@ -3,8 +3,8 @@ import psutil
 import numpy as np
 import pandas as pd
 from gensim.models import Word2Vec
-from utils import topickle, get_role
-from constants import SEED, CLEAN_DIR, FEATS_DIR
+from utils import unpickle, topickle, get_role
+from constants import SEED, FEATS_DIR
 
 VOCAB_SIZE = 32  # vocabulary size for embeddings
 
@@ -44,8 +44,7 @@ def main():
     role = get_role(byr)
 
     # load sentences
-    filename = CLEAN_DIR + 'leaf_{}.csv'.format(role)
-    s = pd.read_csv(filename).set_index(role).squeeze().astype(str)
+    s = unpickle(FEATS_DIR + 'leaf_{}.pkl'.format(role))
 
     # run model
     df = run_model(s).rename(lambda x: role + x, axis=1).sort_index()

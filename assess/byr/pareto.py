@@ -1,8 +1,8 @@
 import numpy as np
 from agent.eval.util import get_eval_path
-from utils import unpickle, topickle
+from assess.util import save_dict
+from utils import unpickle
 from agent.const import BYR_CONS
-from constants import PLOT_DIR
 
 
 def get_pareto(df0=None):
@@ -68,7 +68,8 @@ def main():
         for k in output[key].keys():
             output[key][k].columns = ['x', 'y']
 
-    topickle(output, PLOT_DIR + 'byrpareto.pkl')
+    # save
+    save_dict(output, 'byrpareto')
 
 
 if __name__ == '__main__':

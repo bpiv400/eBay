@@ -1,5 +1,5 @@
 import numpy as np
-from constants import INTERVAL_TURN, MAX_DELAY_TURN
+from constants import INTERVAL, MAX_DELAY_TURN
 
 
 class QueryStrategy:
@@ -49,6 +49,6 @@ class DefaultQueryStrategy(QueryStrategy):
             index = self.buyer.delay(input_dict=kwargs['input_dict'],
                                      turn=kwargs['turn'],
                                      max_interval=kwargs['max_interval'])
-        seconds = int((index + np.random.uniform()) * INTERVAL_TURN)
+        seconds = int((index + np.random.uniform()) * INTERVAL)
         seconds = max(1, min(seconds, MAX_DELAY_TURN))
         return seconds

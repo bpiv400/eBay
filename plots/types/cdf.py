@@ -1,11 +1,10 @@
 import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
-from constants import MAX_DELAY_ARRIVAL, DAY, MAX_DELAY_TURN, HOUR, EPS
+from constants import MAX_DELAY_TURN, HOUR, EPS
 from featnames import DELAY, CON, NORM
 from plots.const import COLORS
-from plots.save import save_fig
-from plots.util import get_name
+from plots.util import save_fig, get_name
 
 
 def add_line(x=None, y=None):
@@ -37,24 +36,16 @@ def cdf_plot(path, obj):
                     xlabel='Sale price / list price')
         if name == 'salenorm':
             den = 'sales'
-    elif name.startswith('days'):
+    elif name in ['days', 'arrivaltime']:
         args = dict(xlim=[0, 1],
                     xlabel='Fraction of listing window')
-    elif name == 'arrival':
-        upper = MAX_DELAY_ARRIVAL / DAY
-        args = dict(xticks=np.arange(0, upper, 3),
-                    xlim=[0, upper], ylim=[0, 0.02],
-                    xlabel='Days since listing start')
-        den = 'buyers, by hour'
-    elif name == 'arrivaltime':
-        args = dict(xlim=[0, 1],
-                    xlabel='Fraction of listing window')
-        den = 'arrivals'
-    elif name.startswith('hist'):
+        if name == 'arrivaltime':
+            den = 'arrivals'
+    elif name == 'hist':
         args = dict(xlim=[0, 250],
-                    xlabel='Prior best-offer threads for buyer')
+                    xlabel='Prior Best Offer threads for buyer')
         den = 'threads'
-    elif name.startswith(DELAY):
+    elif name == DELAY:
         upper = int(MAX_DELAY_TURN / HOUR)
         args = dict(xlim=[0, upper],
                     xticks=np.arange(0, upper + EPS, 6),
@@ -69,18 +60,6 @@ def cdf_plot(path, obj):
     elif name in ['values', 'unsoldvals', 'soldvals']:
         args = dict(xlim=[0, 1],
                     xlabel='Value / list price')
-    elif name == 't1value':
-        vline = .5
-        args = dict(xlim=[.1, .9],
-                    xlabel='Value / list price')
-    elif name in ['t3value', 't5value']:
-        vline = 0
-        args = dict(xlim=[-.25, .25],
-                    xlabel='(Value $-$ smallest counter) / list price')
-    elif name == 't7value':
-        vline = 0
-        args = dict(xlim=[-.25, .25],
-                    xlabel='(Value $-$ final seller offer) / list price')
     elif name == 'realval':
         args = dict(xlim=[0, 1],
                     xlabel='Realized value')
@@ -89,14 +68,7 @@ def cdf_plot(path, obj):
         args = dict(xlim=[9.95, 1000], xlabel='List price',
                     xticks=ticks,
                     xticklabels=['${}'.format(t) for t in ticks])
-    elif name == 'autoacc':
-        args = dict(xlim=[0, 1], xlabel='Accept price / list price')
-    elif name == 'autodec':
-        args = dict(xlim=[0, 1], xlabel='Decline price / list price')
-    elif name == 'discount':
-        args = dict(xlim=[0, .5], xlabel='Discount / list price')
-    elif name == 'totaldiscount':
-        args = dict(xlim=[0, 200], xlabel='Discount ($)')
+
     else:
         raise NotImplementedError('Invalid name: {}'.format(name))
 
