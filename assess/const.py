@@ -2,38 +2,9 @@ import numpy as np
 from statsmodels.nonparametric._kernel_base import EstimatorSettings
 from agent.const import DELTA_SLR
 
-# labels for meta
-META_LABELS = {1: 'Collectibles',
-               99: 'Everything Else',
-               220: 'Toys',
-               237: 'Dolls',
-               260: 'Stamps',
-               267: 'Books',
-               281: 'Jewelry',
-               293: 'Consumer Electronics',
-               550: 'Art',
-               619: 'Musical Instruments',
-               625: 'Cameras',
-               870: 'Pottery',
-               888: 'Sporting Goods',
-               1249: 'Video Games',
-               1281: 'Pet Supplies',
-               1305: 'Tickets',
-               2984: 'Baby',
-               3252: 'Travel',
-               11116: 'Coins',
-               11232: 'DVDs',
-               11233: 'Music',
-               11450: 'Clothing',
-               11700: 'Home',
-               12576: 'Business',
-               14339: 'Crafts',
-               15032: 'Cell Phones',
-               20081: 'Antiques',
-               26395: 'Health & Beauty',
-               45100: 'Entertainment Memorabilia',
-               58058: 'Computers',
-               64482: 'Sports Memorabilia'}
+
+# meta categories for collectibles
+COLLECTIBLES = [1, 237, 260, 550, 870, 11116, 20081, 45100, 64482]
 
 # for finding kernel regression bandwidth
 OPT = EstimatorSettings(efficient=True)

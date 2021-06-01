@@ -4,7 +4,8 @@ from datetime import datetime as dt
 from processing.a_feats.util import collapse_dict
 from utils import unpickle, topickle
 from processing.util import run_func_on_chunks
-from constants import START, IDX, FEATS_DIR
+from constants import IDX, FEATS_DIR
+from processing.const import START
 from featnames import SLR, BYR, LSTG, THREAD, INDEX, ACCEPT, REJECT, CLOCK, NORM
 
 

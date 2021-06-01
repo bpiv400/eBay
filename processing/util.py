@@ -4,7 +4,8 @@ import pandas as pd
 from torch import multiprocessing as mp
 from agent.const import COMMON_CONS
 from utils import extract_clock_feats, byr_norm, slr_norm, unpickle
-from constants import PARTS_DIR, START, IDX, DAY, HOLIDAYS, MAX_DELAY_TURN, NUM_CHUNKS
+from constants import PARTS_DIR, IDX, DAY, MAX_DELAY_TURN, NUM_CHUNKS
+from processing.const import START, HOLIDAYS
 from featnames import HOLIDAY, DOW_PREFIX, TIME_OF_DAY, AFTERNOON, \
     CLOCK_FEATS, SLR, BYR, INDEX
 

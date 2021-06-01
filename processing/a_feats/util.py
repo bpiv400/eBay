@@ -1,7 +1,8 @@
 import numpy as np
 import pandas as pd
 from utils import feat_to_pctile
-from constants import START, IDX, MAX_DELAY_TURN, DAY
+from constants import IDX, MAX_DELAY_TURN, DAY
+from processing.const import START
 from featnames import BYR_HIST, DELAY, LSTG, THREAD, INDEX, CLOCK, ACCEPT, \
     BYR, START_TIME, START_PRICE, START_DATE, END_TIME, REJECT
 

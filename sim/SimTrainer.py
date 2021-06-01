@@ -7,7 +7,7 @@ from torch.optim import Adam, lr_scheduler
 from sim.EBayDataset import EBayDataset
 from nets.FeedForward import FeedForward
 from sim.Sample import get_batches
-from constants import MODEL_DIR, LOG_DIR, MODEL_NORM
+from constants import MODEL_DIR, LOG_DIR
 from featnames import CENSORED_MODELS, BYR_HIST_MODEL
 from utils import load_sizes
 
@@ -45,11 +45,10 @@ class SimTrainer:
         self.train = EBayDataset(name=name, train=True)
         self.valid = EBayDataset(name=name, train=False)
 
-    def train_model(self, dropout=(0.0, 0.0), norm=MODEL_NORM, log=True):
+    def train_model(self, dropout=(0.0, 0.0), log=True):
         """
         Public method to train model.
         :param dropout: pair of dropout rates, one for last embedding, one for fully connected.
-        :param norm: one of ['batch', 'layer', 'weight']
         :param log: True for Tensorboard logging.
         """
         # experiment id
@@ -71,7 +70,7 @@ class SimTrainer:
         model_path = model_dir + '{}.net'.format(expid)
 
         # initialize neural net, optimizer and scheduler
-        net = FeedForward(self.sizes, dropout=dropout, norm=norm).to('cuda')
+        net = FeedForward(self.sizes, dropout=dropout).to('cuda')
         optimizer = Adam(net.parameters(), lr=LR0, amsgrad=AMSGRAD)
         scheduler = lr_scheduler.ReduceLROnPlateau(optimizer,
                                                    mode='min',

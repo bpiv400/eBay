@@ -4,7 +4,8 @@ import numpy as np
 import pandas as pd
 from gensim.models import Word2Vec
 from utils import unpickle, topickle, get_role
-from constants import SEED, FEATS_DIR
+from constants import FEATS_DIR
+from processing.const import SEED
 
 VOCAB_SIZE = 32  # vocabulary size for embeddings
 

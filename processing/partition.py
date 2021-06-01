@@ -1,7 +1,8 @@
 import os
 import numpy as np
 from utils import topickle, load_feats
-from constants import FEATS_DIR, PARTS_DIR, NUM_CHUNKS, SHARES, SEED
+from constants import FEATS_DIR, PARTS_DIR, NUM_CHUNKS, SHARES
+from processing.const import SEED
 from featnames import SLR, LSTG, META
 
 

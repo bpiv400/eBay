@@ -1,18 +1,17 @@
 import torch
 import torch.nn as nn
 from nets.const import HIDDEN_LARGE, HIDDEN_SMALL, HIDDEN_TINY
-from nets.util import FullyConnected, create_embedding_layers, \
-    create_groupings
-from constants import MODEL_NORM
+from nets.util import FullyConnected, create_embedding_layers, create_groupings
 from featnames import META
+
+MODEL_NORM = 'batch'  # normalization type
 
 
 class FeedForward(nn.Module):
-    def __init__(self, sizes, dropout=(0.0, 0.0), norm=MODEL_NORM):
+    def __init__(self, sizes, dropout=(0.0, 0.0)):
         """
         :param sizes: dictionary of scalar input sizes; sizes['x'] is an OrderedDict
         :param tuple dropout: pair of dropout rates.
-        :param str norm: type of normalization.
         """
         super().__init__()
         self.sizes = sizes
@@ -23,7 +22,7 @@ class FeedForward(nn.Module):
         self.nn0, total = create_embedding_layers(groups=groups,
                                                   sizes=sizes,
                                                   dropout=dropout[0],
-                                                  norm=norm)
+                                                  norm=MODEL_NORM)
 
         # number of hidden nodes
         if META in sizes['x']:
@@ -37,7 +36,7 @@ class FeedForward(nn.Module):
         self.nn1 = FullyConnected(total,
                                   hidden=hidden,
                                   dropout=dropout[1],
-                                  norm=norm)
+                                  norm=MODEL_NORM)
 
         self.output = nn.Linear(hidden, sizes['out'])
 

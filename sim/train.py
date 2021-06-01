@@ -2,8 +2,13 @@ import argparse
 import torch
 from sim.SimTrainer import SimTrainer
 from utils import set_gpu
-from constants import DROPOUT_GRID
 from featnames import MODELS, DISCRIM_MODELS
+
+DROPOUT_GRID = []  # dropout options
+for j in range(8):
+    for i in range(j+1):
+        if j - i <= 1:
+            DROPOUT_GRID.append((float(i) / 10, float(j) / 10))
 
 
 def main():

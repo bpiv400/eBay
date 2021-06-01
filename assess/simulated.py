@@ -3,7 +3,7 @@ from assess.util import merge_dicts, cdf_days, cdf_sale, msg_dist, \
     arrival_dist, hist_dist, delay_dist, con_dist, num_threads, \
     num_offers, interarrival_dist, norm_dist, save_dict
 from utils import load_data, load_file, load_feats
-from constants import COLLECTIBLES
+from assess.const import COLLECTIBLES
 from featnames import X_THREAD, X_OFFER, TEST, SIM, LOOKUP, STORE, START_PRICE, META
 
 

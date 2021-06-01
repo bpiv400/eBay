@@ -1,7 +1,8 @@
 import numpy as np
 import pandas as pd
 from utils import topickle, load_feats
-from constants import FEATS_DIR, START, END, MAX_DAYS, HOLIDAYS, NUM_COMMON_CONS
+from constants import FEATS_DIR, MAX_DAYS, NUM_COMMON_CONS
+from processing.const import START, END, HOLIDAYS
 from featnames import HOLIDAY, DOW_PREFIX, CON, INDEX
 
 
