@@ -1,5 +1,5 @@
 from agent.util import load_values, load_valid_data, get_run_dir, get_sale_norm
-from utils import safe_reindex, load_data, load_feats, feat_to_pctile
+from utils import safe_reindex, load_data, load_feats
 from agent.const import DELTA_SLR
 from assess.const import SLR_NAMES
 from constants import IDX
@@ -14,7 +14,6 @@ def main():
     # correlation between store and experience
     lstg_feats = load_feats('listings', lstgs=lstgs)[[SLR, STORE, SLR_BO_CT]]
     df = lstg_feats.groupby(SLR).max()
-    df[SLR_BO_CT] = feat_to_pctile(df[SLR_BO_CT], reverse=True)
     print('Median number of BOs for sellers w/store: {}'.format(
         df.loc[df[STORE], SLR_BO_CT].median()))
     print('Median number of BOs for sellers w/o store: {}'.format(

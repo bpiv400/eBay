@@ -1,10 +1,9 @@
 import pytest
-from rlenv.interface.model_names import model_str
-from rlenv.composer.maps import *
-from rlenv.composer.Composer import Composer
+import torch
+from rlenv.Composer import Composer
 from rlenv.const import *
 from rlenv.util import *
-from rlenv.interface import model_names
+
 
 @pytest.fixture
 def new_composer():

@@ -1,6 +1,6 @@
 import pytest
-from processing.b_feats.tf import get_lstg_time_feats
-from processing.b_feats.test.test_utils import (compare_all,
+from processing.a_feats.tf import get_lstg_time_feats
+from processing.a_feats.test.test_utils import (compare_all,
                                                 get_exp_feats,
                                                 update)
 from rlenv.const import SLR_REJECTION, BYR_REJECTION, OFFER

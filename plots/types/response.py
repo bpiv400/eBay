@@ -1,11 +1,9 @@
 import numpy as np
 from matplotlib import pyplot as plt
-
-from featnames import ACCEPT, REJECT, CON, NORM
-from plots.const import BIN_TICKS, SLRBO_TICKS, COLORS
 from plots.save import save_fig
-
 from plots.util import add_diagonal, get_name
+from plots.const import BIN_TICKS, COLORS
+from featnames import ACCEPT, REJECT, CON, NORM
 
 
 def draw_response(line=None, dots=None, diagonal=False, connect=False,
@@ -110,11 +108,6 @@ def response_plot(path, obj):
         args = dict(xlim=[.4, 1], ylim=[0, 1],
                     xlabel='Turn 2: Offer / list price',
                     ylabel='Turn 3: Concession')
-    elif name in ['offer2walk', 'offer2acc']:
-        ylabel = 'walk' if name.endswith('walk') else 'accept'
-        args = dict(xlim=[.65, 1], ylim=[0, 1],
-                    xlabel='Turn 2: Offer / list price',
-                    ylabel='Turn 3: Pr({})'.format(ylabel))
     elif name == 'counter':
         t = int(path[-1])
         args = dict(xlabel='Turn {}: Offer / list price'.format(t - 1),
@@ -135,8 +128,8 @@ def response_plot(path, obj):
             ylabel = 'Turn 1: Offer / list price'
             ylim = [.5, .75]
         elif name.endswith('offers'):
-            ylabel = 'Number of buyer offers'
-            ylim = [1, 2]
+            ylabel = 'Buyer offers per thread'
+            ylim = [1, 1.5]
         else:
             raise NotImplementedError('Invalid name: {}'.format(name))
         labels = [0, 1, 3, 10, 30, 100, 300, 1000]
@@ -144,21 +137,6 @@ def response_plot(path, obj):
         args = dict(xticks=ticks, xticklabels=labels,
                     ylabel=ylabel, xlabel='Buyer experience',
                     ylim=ylim)
-    elif 'slrbo' in name:
-        if name == 'expslrbo':
-            ylabel = 'Expirations / manual rejects'
-        elif name == 'slrbo':
-            ylabel = 'Value / list price'
-        elif name == 'slrbosale':
-            ylabel = 'Pr(sale)'
-        elif name == 'slrboprice':
-            ylabel = 'Sale price'
-        else:
-            raise NotImplementedError('Invalid name: {}'.format(name))
-        args = dict(xlabel='Number of best offer listings',
-                    ylabel=ylabel,
-                    xticks=np.log10(SLRBO_TICKS),
-                    xticklabels=SLRBO_TICKS)
     else:
         raise NotImplementedError('Invalid name: {}'.format(name))
 

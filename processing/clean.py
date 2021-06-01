@@ -2,11 +2,12 @@ import os
 import numpy as np
 import pandas as pd
 from processing.util import get_norm
-from utils import topickle
+from utils import topickle, feat_to_pctile
 from constants import CLEAN_DIR, FEATS_DIR, PARTS_DIR, PCTILE_DIR, START, SEED, \
-    SHARES, NUM_CHUNKS, DAY, NUM_COMMON_CONS
-from featnames import START_PRICE, BYR_HIST, NORM, SLR, LSTG, THREAD, INDEX, \
-    CLOCK, CON, ACCEPT, REJECT, META, LEAF, SLR_BO_CT
+    SHARES, NUM_CHUNKS, DAY
+from featnames import START_PRICE, BYR_HIST, NORM, BYR, SLR, LSTG, THREAD, INDEX, \
+    CLOCK, CON, ACCEPT, REJECT, META, LEAF, SLR_BO_CT, START_DATE, END_TIME, \
+    STORE, ACC_PRICE, DEC_PRICE
 
 # data types for csv read
 OTYPES = {LSTG: 'int64',
@@ -15,13 +16,13 @@ OTYPES = {LSTG: 'int64',
           CLOCK: 'int64',
           'price': 'float64',
           'accept': bool,
-          'reject': bool,
+          REJECT: bool,
           'message': bool}
 
 TTYPES = {LSTG: 'int64',
           THREAD: 'int64',
-          'byr': 'int64',
-          'byr_hist': 'int64',
+          BYR: 'int64',
+          BYR_HIST: 'int64',
           'bin': bool,
           'byr_us': bool}
 
@@ -30,17 +31,17 @@ LTYPES = {LSTG: 'int64',
           META: 'int64',
           LEAF: 'int64',
           'cndtn': 'uint8',
-          'start_date': 'uint16',
-          'end_time': 'int64',
+          START_DATE: 'uint16',
+          END_TIME: 'int64',
           'fdbk_score': 'int64',
           'fdbk_pstv': 'int64',
-          'start_price': 'float64',
+          START_PRICE: 'float64',
           'photos': 'uint8',
           'slr_lstg_ct': 'int64',
-          'slr_bo_ct': 'int64',
-          'decline_price': 'float64',
-          'accept_price': 'float64',
-          'store': bool,
+          SLR_BO_CT: 'int64',
+          DEC_PRICE: 'float64',
+          ACC_PRICE: 'float64',
+          STORE: bool,
           'slr_us': bool,
           'fast': bool}
 
@@ -142,19 +143,6 @@ def get_pctiles(s=None):
     return rates.cumsum().shift(fill_value=0.).rename('pctile')
 
 
-def series_to_pctiles(s=None, pctiles=None):
-    """
-    Converts values into percentiles
-    :param pandas.Series s: values from which percentiles are calculated from
-    :param pandas.Series pctiles: corresponding percentiles
-    :return: pandas.Series with same index as s and values from pctiles
-    """
-    if pctiles is None:
-        pctiles = get_pctiles(s)
-    return s.to_frame().join(pctiles, on=s.name).drop(
-        s.name, axis=1).squeeze().rename(s.name)
-
-
 def get_con(price=None, start_price=None):
     # unstack
     price = price.unstack()
@@ -173,22 +161,6 @@ def get_con(price=None, start_price=None):
     rounded.loc[(rounded == 1) & (con < 1)] = 0.99
     rounded.loc[(rounded == 0) & (con > 0)] = 0.01
     return rounded
-
-
-def restrict_cons(con, turns=None):
-    s = con[con.index.isin(turns, level=INDEX)]
-    pdf = s.groupby(s).count().sort_values() / len(s)
-    cons = pdf.index.values[-NUM_COMMON_CONS:]
-    return np.sort(cons)
-
-
-def get_common_cons(con=None):
-    con = con[(con > 0) & (con < 1)]
-    d = dict()
-    d[1] = restrict_cons(con, turns=[1])
-    d[3] = d[5] = restrict_cons(con, turns=[3, 5])
-    d[2] = d[4] = d[6] = restrict_cons(con, turns=[2, 4, 6])
-    return d
 
 
 def main():
@@ -273,30 +245,24 @@ def main():
 
     topickle(offers, FEATS_DIR + 'offers.pkl')
 
-    # save common concessions for agent
-    common_cons = get_common_cons(offers[CON])
-    topickle(common_cons, FEATS_DIR + 'common_cons.pkl')
-
-    # add arrivals per day to listings
+    # add arrivals per day to listings, as percentile
     arrivals = thread_start.groupby(LSTG).count().reindex(
         index=listings.index, fill_value=0)
     duration = (listings.end_time + 1) / DAY - listings.start_date
-    listings['arrival_rate'] = arrivals / duration
+    arrival_rate = arrivals / duration
+    listings['arrival_rate'] = feat_to_pctile(s=arrival_rate,
+                                              pc=get_pctiles(arrival_rate))
 
     # convert fdbk_pstv to a rate
     listings.loc[listings.fdbk_score < 0, 'fdbk_score'] = 0
     listings.loc[:, 'fdbk_pstv'] = listings.fdbk_pstv / listings.fdbk_score
     listings.loc[listings.fdbk_pstv.isna(), 'fdbk_pstv'] = 1
 
-    # replace count and rate variables with percentiles
-    listings.loc[:, 'arrival_rate'] = series_to_pctiles(s=listings['arrival_rate'])
+    # save percentiles for count features
     for feat in ['fdbk_score', 'photos', 'slr_lstg_ct', SLR_BO_CT, START_PRICE]:
         print(feat)
         pctiles = get_pctiles(listings[feat])
         topickle(pctiles, PCTILE_DIR + '{}.pkl'.format(feat))
-        newfeat = '{}{}'.format(feat, '_pctile' if feat == START_PRICE else '')
-        listings.loc[:, newfeat] = series_to_pctiles(
-            s=listings[feat], pctiles=pctiles)
 
     # save listings
     topickle(listings, FEATS_DIR + 'listings.pkl')

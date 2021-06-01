@@ -1,5 +1,4 @@
-from utils import unpickle
-from constants import DATE_FEATS_PATH
+from utils import load_feats
 from featnames import CON, DELAY, MSG, ALL_OFFER_FEATS, CLOCK_FEATS, TIME_FEATS, \
     DAYS, EXP, NORM, COMMON, AUTO, REJECT, BYR_OFFERS_RECENT, THREAD_COUNT
 
@@ -11,7 +10,7 @@ SIM_VALS_DIR = 'vals'
 SIM_DISCRIM_DIR = 'outcomes'
 
 # holiday and day-of-week indicators, indexed by days since START
-DATE_FEATS_DF = unpickle(DATE_FEATS_PATH)
+DATE_FEATS_ARRAY = load_feats('date_feats')
 
 # outcome tuple names
 SALE = 'sale'

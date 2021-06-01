@@ -86,7 +86,7 @@ def import_data(part=None, sim=False, placebo=False):
     # load files
     if placebo:
         if sim:
-            sim_dir = get_sim_dir(part=part, byr=True, delta=1, heuristic=True)
+            sim_dir = get_sim_dir(part=part, byr=True, index=33, heuristic=True)
             data = load_valid_data(part=part, sim_dir=sim_dir, lookup=False)
         else:
             data = load_valid_data(part=part, byr=True, lookup=False)

@@ -1,11 +1,10 @@
 import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
-
-from featnames import BYR, SLR, MSG, NORM, REJECT, EXP
-from plots.const import COLORS
 from plots.save import save_fig
 from plots.util import get_name
+from plots.const import COLORS
+from featnames import BYR, MSG, NORM, REJECT, EXP
 
 
 def bar_plot(path, obj):
@@ -15,11 +14,10 @@ def bar_plot(path, obj):
                     xlabel='Turn of last offer',
                     ylabel='Fraction of threads')
     elif name == 'threads':
-        agent = path.startswith(BYR) or path.startswith(SLR)
-        ylabel = 'valid listings' if agent else 'listings'
+        xlabel = 'Buyer number' if path.startswith(BYR) else 'Number of threads'
         args = dict(ylim=[0, 1],
-                    xlabel='Number of threads',
-                    ylabel='Fraction of ' + ylabel)
+                    xlabel=xlabel,
+                    ylabel='Fraction of listings')
     elif name == MSG:
         args = dict(ylim=[0, .5],
                     xlabel='Turn',
@@ -82,7 +80,7 @@ def bar_plot(path, obj):
             plt.gca().axhline(y=obj.loc['Humans'], label='Humans',
                               c='k', ls='--', lw=1)
             obj = obj.drop('Humans')
-            obj.plot.bar(rot=45, color='gray', label='')
+            obj.plot.bar(rot=0, color='gray', label='')
         else:
             obj.plot.bar(rot=0, color=COLORS[0])
             plt.gca().axhline(c='k', lw=1)

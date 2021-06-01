@@ -1,7 +1,7 @@
 import numpy as np
 from agent.util import load_valid_data
 from assess.util import ll_wrapper
-from utils import topickle, feat_to_pctile
+from utils import topickle
 from assess.const import POINTS
 from constants import PLOT_DIR
 from featnames import X_OFFER, X_THREAD, BYR_HIST, CON
@@ -17,9 +17,8 @@ def main():
     data = load_valid_data(byr=True, minimal=True)
 
     # log experience
-    hist = feat_to_pctile(data[X_THREAD][BYR_HIST], reverse=True)
-    loghist = np.log10(hist)
-    loghist[hist == 0] = LOG10ZERO
+    loghist = np.log10(data[X_THREAD][BYR_HIST])
+    loghist[loghist.isna()] = LOG10ZERO
 
     # outcomes
     con = data[X_OFFER][CON].unstack()

@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
 from featnames import ACCEPT, REJECT, NORM
-from plots.const import BIN_TICKS, TRICOLOR, COLORS
+from plots.const import BIN_TICKS, TRICOLOR, COLORS, SLRBO_TICKS
 from plots.save import save_fig
 from plots.util import get_name, add_diagonal
 
@@ -12,7 +12,8 @@ def draw_simple(obj=None, dsets=None, i=None, colors=None):
     df_i = obj.xs(dset, level=0, axis=1).dropna()
     c = colors[dset] if type(colors) is dict else colors[i]
     connect = '--' if dset.startswith('Heuristic') else '-'
-    plt.plot(df_i.index, df_i.beta, connect, color=c, label=dset)
+    label = None if dset == 'Humans' and '$1' in dsets else dset
+    plt.plot(df_i.index, df_i.beta, connect, color=c, label=label)
     if 'err' in df_i.columns:
         plt.plot(df_i.index, df_i.beta + 1.96 * df_i.err, '--', color=c)
         plt.plot(df_i.index, df_i.beta - 1.96 * df_i.err, '--', color=c)
@@ -20,6 +21,7 @@ def draw_simple(obj=None, dsets=None, i=None, colors=None):
 
 def simple_plot(path, obj):
     name = get_name(path)
+    diagonal = False
     if name == 'timevals':
         upper = np.ceil(obj.max() * 5) / 5
         lower = np.floor(obj.min() * 5) / 5
@@ -45,6 +47,7 @@ def simple_plot(path, obj):
         args = dict(xlim=[0, 1], ylim=[0, 1],
                     xlabel='False positive rate',
                     ylabel='True positive rate')
+        diagonal = True
     elif name in [ACCEPT, REJECT]:
         args = dict(xlim=[.4, .9], ylim=[0, 1],
                     xlabel='Turn 1: Offer / list price',
@@ -59,11 +62,6 @@ def simple_plot(path, obj):
                     xticklabels=BIN_TICKS,
                     xlabel='List price ($)',
                     ylabel='Turn 3: Pr(accept)')
-    elif name == 'hours':
-        args = dict(xlim=[min(obj.index), max(obj.index)],
-                    ylim=[0, 9],
-                    xlabel='Turn 1: Offer / list price',
-                    ylabel='Turn 2: Hours to response')
     elif name == 'norm2con3':
         args = dict(xlim=[.6, 1], ylim=[0, 1],
                     xlabel='Turn 2: Offer / list price',
@@ -89,6 +87,7 @@ def simple_plot(path, obj):
         args = dict(xlim=[.4, .9], ylim=[0, 1],
                     xlabel='Turn 1: Offer / list price',
                     ylabel='Turn 3: Offer / list price')
+        diagonal = True
     elif name == 'rewardbin':
         delta = float(path.split('_')[-1])
         ylim = [.54, .71] if delta == 0 else [.64, .77]
@@ -123,16 +122,18 @@ def simple_plot(path, obj):
                     xticks=np.log10(BIN_TICKS),
                     xticklabels=BIN_TICKS,
                     xlabel='List price ($)',
-                    ylabel='Turn 1: Pr(accept)')
+                    ylabel='Turn 1: Pr(accept)',
+                    legend_kwargs=dict(title='Offer cost'))
     elif name == 'listoffers':
-        args = dict(xlim=[min(obj.index), max(obj.index)], ylim=[1, 3],
+        args = dict(xlim=[min(obj.index), max(obj.index)], ylim=[1, 2.5],
                     xticks=np.log10(BIN_TICKS),
                     xticklabels=BIN_TICKS,
                     xlabel='List price ($)',
-                    ylabel='Number of buyer offers',
-                    legend_kwargs=dict(loc='upper left'))
+                    yticks=np.arange(1, 3, .5),
+                    ylabel='Buyer offers per thread',
+                    legend=False)
     elif name == 'listfirst':
-        args = dict(xlim=[min(obj.index), max(obj.index)], ylim=[.5, .75],
+        args = dict(xlim=[np.log10(20), max(obj.index)], ylim=[.5, .75],
                     xticks=np.log10(BIN_TICKS),
                     xticklabels=BIN_TICKS,
                     xlabel='List price ($)',
@@ -164,6 +165,38 @@ def simple_plot(path, obj):
                     xlabel='Turn 1: Offer / list price',
                     ylabel='',
                     legend_kwargs=dict(title='Turn 2'))
+    elif name == 'listsale':
+        args = dict(xlim=[1, max(obj.index)], ylim=[.5, 1],
+                    xticks=np.log10(BIN_TICKS),
+                    xticklabels=BIN_TICKS,
+                    xlabel='List price ($)',
+                    ylabel='Negotiated sale price / list price')
+    elif name == 'offer2norm':
+        bounds = [min(obj.index), max(obj.index)]
+        args = dict(xlim=bounds, ylim=bounds,
+                    xlabel='Turn 1: Offer / list price',
+                    ylabel='Turn 2: Offer / list price')
+        diagonal = True
+    elif name == 'offer2time':
+        args = dict(xlim=[min(obj.index), max(obj.index)],
+                    ylim=[0, 1],
+                    xlabel='Turn 1: Offer / list price',
+                    ylabel='Pr(Seller responds within 6 hours)')
+    elif 'slrbo' in name:
+        if name == 'expslrbo':
+            ylabel = 'Expirations / manual rejects'
+        elif name == 'slrbo':
+            ylabel = 'Value / list price'
+        elif name == 'slrbosale':
+            ylabel = 'Pr(sale)'
+        elif name == 'slrboprice':
+            ylabel = 'Sale price'
+        else:
+            raise NotImplementedError('Invalid name: {}'.format(name))
+        args = dict(xlabel='Number of best offer listings',
+                    ylabel=ylabel,
+                    xticks=np.log10(SLRBO_TICKS),
+                    xticklabels=SLRBO_TICKS)
     else:
         raise NotImplementedError('Invalid name: {}'.format(name))
 
@@ -183,7 +216,7 @@ def simple_plot(path, obj):
                 s = obj[c].dropna()
                 plt.plot(s.index, s, label=c)
 
-        if name in [NORM, 'roc']:
+        if diagonal:
             add_diagonal(obj)
 
         save_fig(path, legend=(not plot_ci), **args)
@@ -202,7 +235,7 @@ def simple_plot(path, obj):
         for i in range(len(dsets)):
             draw_simple(obj=obj, dsets=dsets, i=i, colors=colors)
 
-        if name.endswith(NORM):
+        if diagonal:
             add_diagonal(obj)
 
         save_fig(path, **args)
@@ -221,7 +254,7 @@ def simple_plot(path, obj):
             for j in range(i+1):
                 draw_simple(obj=obj, dsets=dsets, i=j, colors=colors)
 
-                if j == 0 and name.endswith(NORM):
+                if j == 0 and diagonal:
                     add_diagonal(obj)
 
             save_fig('{}_{}'.format(path, i), **args)

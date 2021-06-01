@@ -3,7 +3,7 @@ from copy import deepcopy
 import pandas as pd
 
 from rlenv.const import SLR_REJECTION, BYR_REJECTION, OFFER
-from processing.b_feats.util import get_all_cat_feats
+from processing.a_feats.util import get_all_cat_feats
 from constants import MAX_DELAY_TURN
 
 

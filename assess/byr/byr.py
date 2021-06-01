@@ -37,7 +37,7 @@ def main():
     # rl buyer
     sim_dir = get_sim_dir(byr=True, delta=1)
     data_rl = load_valid_data(sim_dir=sim_dir, minimal=True)
-    d_rl = collect_outputs(data=data_rl, name='Agent')
+    d_rl = collect_outputs(data=data_rl, name='$\\lambda = 1$ agent')
     d = merge_dicts(d, d_rl)
 
     # save

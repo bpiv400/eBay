@@ -1,27 +1,27 @@
+import os
 from collections import OrderedDict
 import numpy as np
 from processing.util import extract_day_feats, get_lstgs, do_rounding
-from constants import PARTS_DIR, INPUT_DIR, DAY
+from constants import PARTS_DIR, INPUT_DIR, DAY, PCTILE_DIR
 from featnames import START_PRICE, META, LEAF, CNDTN, SLR, BYR, LSTG, X_LSTG, \
-    VALIDATION, DEC_PRICE, ACC_PRICE
-from utils import input_partition, topickle, load_feats
+    VALIDATION, DEC_PRICE, ACC_PRICE, STORE, SLR_BO_CT, START_DATE
+from utils import input_partition, topickle, load_feats, feat_to_pctile
 
-AS_IS_FEATS = ['store', 'slr_us', 'fast', 'photos', 'slr_lstg_ct',
-               'slr_bo_ct', 'start_price_pctile', 'fdbk_score', 'fdbk_pstv']
+AS_IS_FEATS = [STORE, 'slr_us', 'fast', 'photos', 'slr_lstg_ct',
+               SLR_BO_CT, START_PRICE, 'fdbk_score', 'fdbk_pstv']
 
 
-def construct_lstg_feats(listings):
+def construct_lstg_feats(listings=None, start_price=None):
     # initialize output dataframe with as-is features
     df = listings[AS_IS_FEATS].copy()
     # binary feats
     df['has_photos'] = listings.photos > 0
     df['fdbk_100'] = listings.fdbk_pstv == 1
-    df['start_is_round'], df['start_is_nines'] = \
-        do_rounding(listings[START_PRICE])
+    df['start_is_round'], df['start_is_nines'] = do_rounding(start_price)
     # normalize start_date to years
-    df['start_years'] = listings.start_date / 365
+    df['start_years'] = listings[START_DATE] / 365
     # date features
-    date_feats = extract_day_feats(listings.start_date * DAY)
+    date_feats = extract_day_feats(listings[START_DATE] * DAY)
     df = df.join(date_feats.rename(lambda x: 'start_' + x, axis=1))
     # condition
     s = listings[CNDTN]
@@ -30,10 +30,10 @@ def construct_lstg_feats(listings):
     df['refurb'] = s.isin([2, 3, 4, 5, 6])
     df['wear'] = s.isin([8, 9, 10, 11]) * (s - 7)
     # auto decline/accept prices
-    df['auto_decline'] = listings[DEC_PRICE] / listings[START_PRICE]
+    df['auto_decline'] = listings[DEC_PRICE] / start_price
     df['has_decline'] = listings[DEC_PRICE] > 0
-    df['auto_accept'] = listings[ACC_PRICE] / listings[START_PRICE]
-    df['has_accept'] = listings[ACC_PRICE] < listings[START_PRICE]
+    df['auto_accept'] = listings[ACC_PRICE] / start_price
+    df['has_accept'] = listings[ACC_PRICE] < start_price
     # remove slr prefix
     df.rename(lambda c: c[4:] if c.startswith('slr_') else c, 
               axis=1, inplace=True)
@@ -43,12 +43,19 @@ def construct_lstg_feats(listings):
 def create_x_lstg(lstgs=None):
     # listing features
     listings = load_feats('listings', lstgs=lstgs)
+    start_price = listings[START_PRICE].copy()
+
+    # convert count features to percentiles
+    for feat in listings.columns:
+        path = PCTILE_DIR + '{}.pkl'.format(feat)
+        if os.path.isfile(path):
+            listings.loc[:, feat] = feat_to_pctile(listings[feat])
 
     # initialize output dictionary
     x = dict()
 
     # listing features
-    x[LSTG] = construct_lstg_feats(listings)
+    x[LSTG] = construct_lstg_feats(listings=listings, start_price=start_price)
 
     # word2vec features
     for role in [BYR, SLR]:

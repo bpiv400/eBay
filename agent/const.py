@@ -21,7 +21,7 @@ PERIOD_EPOCHS = 1500    # epoch count for stepping down entropy
 
 # economic parameters
 DELTA_SLR = [0., .75]
-DELTA_BYR = [.8, .9, 1., 1.5, 2, 3]
+DELTA_BYR = [.9, 1, 1.5, 2, 3]
 TURN_COST_CHOICES = range(0, 5)
 
 # size of value network output

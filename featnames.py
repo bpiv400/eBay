@@ -86,14 +86,8 @@ END_TIME = 'end_time'
 START_PRICE = 'start_price'
 DEC_PRICE = 'decline_price'
 ACC_PRICE = 'accept_price'
-FDBK_SCORE = 'fdbk_score'
 SLR_BO_CT = 'slr_bo_ct'
 STORE = 'store'
-
-# agents costs
-MONTHLY_DISCOUNT = 'monthly_discount'
-ACTION_DISCOUNT = 'action_discount'
-ACTION_COST = 'action_cost'
 
 # partition components
 X_LSTG = 'x_lstg'

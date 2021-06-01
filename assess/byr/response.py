@@ -1,56 +1,38 @@
-import numpy as np
-import pandas as pd
-from agent.util import load_valid_data, get_sim_dir
+from agent.util import load_valid_data
 from assess.util import ll_wrapper
-from utils import topickle
-from constants import PLOT_DIR
-from featnames import X_OFFER, CON, INDEX, NORM, AUTO, EXP
-
-DIM = np.linspace(.7, 1, 100)
-
-
-def get_feats(data=None, turn=None):
-    assert turn in [3, 5]
-    # whether buyer counters in turn
-    byrcon = data[X_OFFER][CON].xs(turn, level=INDEX)
-    byrcounter = (byrcon > 0) & (byrcon < 1)
-    # seller offer in turn - 1
-    df0 = data[X_OFFER].xs(turn-1, level=INDEX)
-    active = ~df0[AUTO] & ~df0[EXP]
-    slrnorm = (1 - df0[NORM])[active]
-    # common index
-    idx = byrcon.index.intersection(slrnorm.index)
-    # features
-    y = byrcounter.loc[idx].values
-    x = slrnorm.loc[idx].values
-    return y, x
+from utils import topickle, safe_reindex
+from assess.const import NORM1_DIM, NORM1_DIM_LONG
+from constants import PLOT_DIR, HOUR
+from featnames import X_OFFER, NORM, INDEX, LOOKUP, END_TIME, CLOCK
 
 
 def main():
-    d, bw, prefix = dict(), dict(), 'response_counter'
+    d = dict()
 
-    data_obs = load_valid_data(byr=True, minimal=True)
+    data = load_valid_data(byr=True, minimal=True, clock=True)
 
-    for t in [3, 5]:
-        y, x = get_feats(data=data_obs, turn=t)
-        line, dots, bw[t] = ll_wrapper(y=y, x=x, dim=DIM, discrete=[1.])
-        print('bw for turn {}: {}'.format(t, bw[t][0]))
-        line.columns = pd.MultiIndex.from_product([['Humans'], line.columns])
-        dots.columns = pd.MultiIndex.from_product([['Humans'], dots.columns])
-        d['{}_{}'.format(prefix, t)] = line, dots
+    # features
+    norm1 = data[X_OFFER][NORM].xs(1, level=INDEX)
+    norm2 = 1 - data[X_OFFER][NORM].xs(2, level=INDEX)
+    norm2 = norm2.reindex(norm1.index)
+    norm2.loc[norm2.isna()] = 1
+    wide = data[CLOCK].unstack().loc[norm1.index][[1, 2]]
+    idxna = wide[wide[2].isna()].index
+    wide.loc[idxna, 2] = safe_reindex(data[LOOKUP][END_TIME], idx=idxna)
+    hours = (wide[2] - wide[1]) / HOUR
+    quick = hours <= 6
 
-    for delta in [1, 1.5, 2]:
-        sim_dir = get_sim_dir(byr=True, delta=delta)
-        data_rl = load_valid_data(sim_dir=sim_dir, minimal=True)
+    # offer in response to first offer
+    key = 'offer2norm'
+    line, bw = ll_wrapper(y=norm2.values, x=norm1.values, dim=NORM1_DIM_LONG)
+    print('{}: {}'.format(key, bw[0]))
+    d['simple_{}'.format(key)] = line
 
-        for t in [3, 5]:
-            y, x = get_feats(data=data_rl, turn=t)
-            line, dots, _ = ll_wrapper(y=y, x=x, dim=DIM,
-                                       discrete=[1.], bw=bw[t], ci=False)
-            key = '{}_{}'.format(prefix, t)
-            cols = ('$\\lambda = {}$'.format(delta), 'beta')
-            d[key][0].loc[:, cols] = line
-            d[key][1].loc[:, cols] = dots
+    # response time
+    key = 'offer2time'
+    line, bw = ll_wrapper(y=quick.values, x=norm1.values, dim=NORM1_DIM)
+    print('{}: {}'.format(key, bw[0]))
+    d['simple_{}'.format(key)] = line
 
     topickle(d, PLOT_DIR + 'byrresponse.pkl')
 

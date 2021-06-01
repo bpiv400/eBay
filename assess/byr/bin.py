@@ -1,4 +1,5 @@
-from assess.byr.util import bin_plot, save_dict
+from assess.byr.util import bin_plot
+from assess.util import save_dict
 from featnames import X_OFFER, CON, INDEX
 
 
@@ -10,7 +11,7 @@ def get_y(data=None):
 
 
 def main():
-    d = bin_plot(name='bin', get_y=get_y)
+    d = bin_plot(name='byrbin', get_y=get_y)
     save_dict(d, 'bin')
 
 

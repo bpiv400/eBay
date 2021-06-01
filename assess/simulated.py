@@ -65,7 +65,7 @@ def get_lstgs():
         raise NotImplementedError('Unrecognized subset: {}'.format(subset))
     print('{}: {} listings'.format(subset, len(lstgs)))
 
-    return lstgs, '_{}'.format(subset)
+    return lstgs.index, '_{}'.format(subset)
 
 
 def main():

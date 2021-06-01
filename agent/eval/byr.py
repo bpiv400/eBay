@@ -36,13 +36,14 @@ def get_return(data=None, norm=None):
     s0 = calculate_return(data=data)
     data = safe_reindex(data, idx=norm.index, dropna=True)
     s1 = calculate_return(data=data, norm=deepcopy(norm)).rename(
-        lambda x: '{}_sales'.format(x), axis=1)
+        lambda x: '{}_best'.format(x), axis=1)
     s = pd.concat([s0, s1])
     return s
 
 
 def wrapper():
-    norm = get_sale_norm(offers=load_data()[X_OFFER])
+    byr_max = load_data()[X_OFFER][NORM].unstack()[IDX[BYR]].max(axis=1)
+    norm = byr_max.unstack().max(axis=1).rename('best')
     return lambda d: get_return(data=d, norm=norm)
 
 
@@ -93,14 +94,11 @@ def get_keys(delta=None):
     return keys
 
 
-def get_output(d=None):
+def get_output(d=None, f=None):
     print('Full agent')
     k = 'full'
     if k not in d:
-        d[k] = pd.DataFrame(columns=COLS + ['{}_sales'.format(c) for c in COLS])
-
-    # wrapper function with normalized sale price in the data
-    f = wrapper()
+        d[k] = pd.DataFrame(columns=COLS + ['{}_best'.format(c) for c in COLS])
 
     if 'Humans' not in d[k].index:
         data = load_valid_data(byr=True, minimal=True)
@@ -124,11 +122,11 @@ def get_output(d=None):
             d[k].loc[keys[0], :] = f(data)
 
 
-def get_heuristic_output(d=None):
+def get_heuristic_output(d=None, f=None):
     print('Heuristic agents')
     k = 'heuristic'
     if k not in d:
-        d[k] = pd.DataFrame(columns=COLS)
+        d[k] = pd.DataFrame(columns=COLS + ['{}_best'.format(c) for c in COLS])
 
     for key in BYR_CONS.index:
         keys = ['{}{}'.format(key, sign) for sign in ['-', '+']]
@@ -144,7 +142,7 @@ def get_heuristic_output(d=None):
             continue
 
         d[k].loc[keys[0], :], d[k].loc[keys[1], :] = \
-            amend_and_process(data=data, f=calculate_return)
+            amend_and_process(data=data, f=f)
 
 
 def get_turn_cost_output(d=None):
@@ -188,9 +186,12 @@ def main():
             print(v)
         exit()
 
+    # wrapper function with normalized sale price in the data
+    f = wrapper()
+
     # create output statistics
-    get_output(d)
-    get_heuristic_output(d)
+    get_output(d, f)
+    get_heuristic_output(d, f)
     get_turn_cost_output(d)
 
     # save

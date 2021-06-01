@@ -1,6 +1,6 @@
 import pandas as pd
 import torch
-from processing.b_feats.tf import get_lstg_time_feats
+from processing.a_feats.tf import get_lstg_time_feats
 
 # consts
 COLS = ['accept', 'clock', 'reject', 'byr',

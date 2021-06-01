@@ -1,7 +1,8 @@
 import torch
 from rlenv.util import *
+from utils import load_model
 import rlenv.const as model_names
-from constants import ENV_SIM_DIR
+from featnames import TRAIN_RL
 from rlenv.Composer import Composer
 
 
@@ -61,6 +62,5 @@ def test_load_model():
 
 
 def test_create_composer():
-    d = load('{}{}/chunks/{}.gz'.format(ENV_SIM_DIR, 'train_rl', 1))
-    x_lstg = d['x_lstg']
-    Composer(x_lstg.columns)
+    d = load_chunk(part=TRAIN_RL, num=1)
+    Composer(d['x_lstg'].columns)

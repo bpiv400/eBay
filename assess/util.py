@@ -4,10 +4,10 @@ from sklearn import tree
 from statsmodels.nonparametric.kde import KDEUnivariate
 from statsmodels.nonparametric.kernel_regression import KernelReg
 from agent.util import get_sale_norm
-from utils import safe_reindex
+from utils import safe_reindex, topickle
 from assess.const import OPT, VALUES_DIM, POINTS
 from constants import IDX, BYR, EPS, DAY, HOUR, MAX_DAYS, MAX_DELAY_TURN, \
-    MAX_DELAY_ARRIVAL, INTERVAL_ARRIVAL, INTERVAL_CT_ARRIVAL
+    MAX_DELAY_ARRIVAL, INTERVAL_ARRIVAL, INTERVAL_CT_ARRIVAL, PLOT_DIR
 from featnames import DELAY, CON, NORM, AUTO, START_TIME, START_PRICE, LOOKUP, \
     MSG, DAYS_SINCE_LSTG, BYR_HIST, INDEX, X_OFFER, CLOCK, THREAD, X_THREAD, \
     REJECT, EXP, SLR
@@ -348,8 +348,10 @@ def estimate_tree(X=None, y=None, max_depth=1, criterion='entropy'):
     return r
 
 
-def get_total_con(data=None):
+def get_total_con(data=None, drop_bin=False):
     norm = data[X_OFFER][NORM].unstack()
+    if drop_bin:
+        norm = norm[norm[1] < 1]
     norm.loc[:, IDX[SLR]] = 1 - norm.loc[:, IDX[SLR]]
     start_price = safe_reindex(data[LOOKUP][START_PRICE], idx=norm.index)
     for t in norm.columns:
@@ -362,3 +364,7 @@ def get_total_con(data=None):
     for t in con.columns:
         con[t] /= start_price
     return con.fillna(0)
+
+
+def save_dict(d=None, name=None):
+    topickle(d, PLOT_DIR + '{}.pkl'.format(name))
