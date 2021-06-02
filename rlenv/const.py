@@ -4,11 +4,6 @@ from featnames import CON, DELAY, MSG, ALL_OFFER_FEATS, CLOCK_FEATS, TIME_FEATS,
 
 INTERACT = False
 
-# partition subdir names
-SIM_CHUNKS_DIR = 'chunks'
-SIM_VALS_DIR = 'vals'
-SIM_DISCRIM_DIR = 'outcomes'
-
 # holiday and day-of-week indicators, indexed by days since START
 DATE_FEATS_ARRAY = load_feats('date_feats')
 
@@ -17,14 +12,7 @@ SALE = 'sale'
 DUR = 'dur'
 PRICE = 'price'
 
-# param names
-
 # composer maps
-SIZE = 'size'
-LSTG_MAP = 'lstg'
-TURN_IND_MAP = 'turns'
-CLOCK_MAP = 'clock'
-TIME_MAP = 'time'
 OFFER_MAPS = {t: 'offer{}'.format(t) for t in range(1, 8)}
 
 # offer response indicators

@@ -1,11 +1,10 @@
 from rlenv.generate.Generator import Generator
-from rlenv.util import get_env_sim_subdir
 from testing.Listing import Listing
 from testing.TestQueryStrategy import TestQueryStrategy
 from testing.util import load_all_inputs, get_auto_safe_lstgs, \
     drop_duplicated_timestamps
 from testing.TestLoader import TestLoader
-from utils import unpickle, load_file, safe_reindex
+from utils import load_file, safe_reindex, load_chunk
 from featnames import X_THREAD, X_OFFER, LOOKUP, LSTG, ARRIVALS
 
 
@@ -32,9 +31,7 @@ class TestGenerator(Generator):
         Initializes lstg loader for the
         """
         print('Loading testing data...')
-        chunk_dir = get_env_sim_subdir(part=part, chunks=True)
-        chunk_path = chunk_dir + '{}.pkl'.format(chunk)
-        chunk = unpickle(chunk_path)
+        chunk = load_chunk(part=part, num=chunk)
         del chunk[ARRIVALS]
         lstgs = chunk[LOOKUP].index
 

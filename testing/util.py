@@ -3,7 +3,6 @@ import pandas as pd
 import torch
 from collections.abc import Iterable
 from utils import unpickle, load_featnames
-from rlenv.util import load_featnames
 from utils import load_file
 from constants import INPUT_DIR, INDEX_DIR, BYR_DROP, BYR, IDX
 from featnames import SLR, X_LSTG, X_OFFER, LOOKUP, NORM, AUTO, CLOCK, LSTG, \

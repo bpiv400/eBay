@@ -530,6 +530,6 @@ def create_events(data=None, levels=None):
     events = add_start_end(offers, data['listings'], levels)
     # add features for later use
     events[BYR] = events.index.isin(IDX[BYR], level=INDEX)
-    lstg_cols = [START_PRICE, 'arrival_rate', 'start_price_pctile']
-    events = events.join(data['listings'][lstg_cols])
+    events = events.join(data['listings'][[START_PRICE, 'arrival_rate']])
+    events['start_price_pctile'] = feat_to_pctile(data['listings'][START_PRICE])
     return events

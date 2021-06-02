@@ -6,7 +6,7 @@ from rlenv.generate.Recorder import OutcomeRecorder
 from rlenv.Player import SimulatedSeller, SimulatedBuyer
 from rlenv.LstgLoader import ChunkLoader
 from rlenv.QueryStrategy import DefaultQueryStrategy
-from rlenv.util import load_chunk
+from utils import load_chunk
 from featnames import LSTG, SIM
 
 
@@ -88,11 +88,8 @@ class Generator:
         return DefaultQueryStrategy(buyer=buyer, seller=seller)
 
     def load_chunk(self, part=None, chunk=None, num_sims=None):
-        x_lstg, lookup, arrivals = load_chunk(part=part, num=chunk)
-        return ChunkLoader(x_lstg=x_lstg,
-                           lookup=lookup,
-                           arrivals=arrivals,
-                           num_sims=num_sims)
+        chunk = load_chunk(part=part, num=chunk)
+        return ChunkLoader(num_sims=num_sims, **chunk)
 
 
 class OutcomeGenerator(Generator):

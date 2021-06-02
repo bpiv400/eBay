@@ -1,10 +1,10 @@
 import numpy as np
 import pandas as pd
 import torch.multiprocessing as mp
-from constants import NUM_CHUNKS, PARTS_DIR
-from featnames import TRAIN_RL
+from constants import NUM_CHUNKS
+from featnames import TRAIN_RL, X_LSTG, LOOKUP, ARRIVALS
 from rlenv.LstgLoader import LstgLoader, ChunkLoader
-from rlenv.util import load_chunk
+from utils import load_chunk
 
 
 class AgentLoader(LstgLoader):
@@ -23,15 +23,14 @@ class AgentLoader(LstgLoader):
         nums = np.split(np.arange(NUM_CHUNKS), mp.cpu_count())[rank]
         x_lstg, lookup, arrivals = None, [], {}
         for i, num in enumerate(nums):
-            path = PARTS_DIR + '{}/chunks/{}.pkl'.format(TRAIN_RL, num)
-            chunk = load_chunk(input_path=path)
+            chunk = load_chunk(part=TRAIN_RL, num=num)
             if i == 0:
-                x_lstg = chunk[0]
+                x_lstg = chunk[X_LSTG]
             else:
                 for k, v in x_lstg.items():
-                    x_lstg[k] = pd.concat([v, chunk[0][k]])
-            lookup.append(chunk[1])
-            arrivals.update(chunk[2])
+                    x_lstg[k] = pd.concat([v, chunk[X_LSTG][k]])
+            lookup.append(chunk[LOOKUP])
+            arrivals.update(chunk[ARRIVALS])
         self._x_lstg_slice = x_lstg
         self._lookup_slice = pd.concat(lookup, axis=0)
         self._arrivals_slice = arrivals

@@ -2,10 +2,9 @@ import numpy as np
 from rlenv.Sources import Sources
 from rlenv.util import get_clock_feats, sample_categorical
 from utils import get_days_since_lstg, load_model
-from rlenv.const import CLOCK_MAP
 from constants import MAX_DELAY_ARRIVAL, DAY, INTERVAL
 from featnames import INTERARRIVAL_MODEL, BYR_HIST_MODEL, DAYS_SINCE_LAST, \
-    THREAD_COUNT, DAYS_SINCE_LSTG
+    THREAD_COUNT, DAYS_SINCE_LSTG, CLOCK
 
 
 class ArrivalInterface:
@@ -75,7 +74,7 @@ class ArrivalSources(Sources):
 
     def update_arrival(self, arrival_time=None, last_arrival_time=None, thread_count=None):
         self.source_dict[THREAD_COUNT] = thread_count
-        self.source_dict[CLOCK_MAP] = get_clock_feats(arrival_time)
+        self.source_dict[CLOCK] = get_clock_feats(arrival_time)
         self.source_dict[DAYS_SINCE_LSTG] = \
             get_days_since_lstg(lstg_start=self.start_time, time=arrival_time)
         self.source_dict[DAYS_SINCE_LAST] = \

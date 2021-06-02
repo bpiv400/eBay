@@ -5,8 +5,7 @@ import numpy as np
 from rlenv.events.Event import Event
 from rlenv.const import DELAY_EVENT, OFFER_EVENT
 from featnames import SLR, BYR
-from rlenv.util import slr_rej_outcomes, slr_auto_acc_outcomes, \
-    get_delay_outcomes, get_clock_feats
+from rlenv.util import last_norm, prev_norm, get_delay_outcomes, get_clock_feats
 from rlenv.time.Offer import Offer
 from constants import MAX_DELAY_TURN
 from utils import get_remaining
@@ -80,8 +79,10 @@ class Thread(Event):
         return self.slr_rej()
 
     def slr_rej(self):
-        con_outcomes = slr_rej_outcomes(self.sources(), self.turn)
-        norm = self.sources.update_con_outcomes(con_outcomes=con_outcomes, turn=self.turn)
+        last = last_norm(sources=self.sources(), turn=self.turn)
+        con_outcomes = np.array([0.0, 1.0, last, 0.0], dtype=np.float32)
+        norm = self.sources.update_con_outcomes(con_outcomes=con_outcomes,
+                                                turn=self.turn)
         offer_params = {
             'price': norm,
             'player': SLR,
@@ -94,7 +95,8 @@ class Thread(Event):
         self.change_turn()
         delay_outcomes = np.array([0.0, 0.0, 1.0, 0.0], dtype=np.float)
         self.sources.update_delay(delay_outcomes=delay_outcomes, turn=self.turn)
-        outcomes = slr_auto_acc_outcomes(self.sources(), self.turn)
+        prev = prev_norm(sources=self.sources(), turn=self.turn)
+        outcomes = np.array([1.0, 0.0, 1.0 - prev, 0.0], dtype=np.float32)
         norm = self.sources.update_con_outcomes(con_outcomes=outcomes, turn=self.turn)
         offer_params = {
             'price': norm,

@@ -307,3 +307,14 @@ def feat_to_pctile(s=None, pc=None):
         pc = load_pctile(name=str(s.name))
     v = pc.reindex(index=s.values, method='pad').values
     return pd.Series(v, index=s.index, name=s.name)
+
+
+def load_chunk(part=None, num=None):
+    """
+    Loads a simulator chunk containing x_lstg and lookup
+    :param str part: name of partition
+    :param int num: number of chunk
+    :return: (pd.Dataframe giving x_lstg, pd.DataFrame giving lookup)
+    """
+    path = PARTS_DIR + '{}/chunks/{}.pkl'.format(part, num)
+    return unpickle(path)

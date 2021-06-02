@@ -4,10 +4,9 @@ import torch
 import numpy as np
 from constants import BYR_DROP
 from featnames import OUTCOME_FEATS, DAYS_SINCE_LSTG, BYR_HIST, \
-    TIME_FEATS, CLOCK_FEATS, THREAD_COUNT, TURN_FEATS, SLR, META, LEAF
+    TIME_FEATS, CLOCK_FEATS, THREAD_COUNT, TURN_FEATS, SLR, META, LEAF, LSTG
 from rlenv.Composer import Composer
-from rlenv.const import LSTG_MAP, OFFER_MAPS, THREAD_COUNT_IND, \
-    TIME_START_IND, TIME_END_IND
+from rlenv.const import OFFER_MAPS, THREAD_COUNT_IND, TIME_START_IND, TIME_END_IND
 from utils import load_sizes, load_featnames, get_role
 
 
@@ -17,8 +16,8 @@ class AgentComposer(Composer):
         super().__init__()
         self.byr = byr
         if byr:
-            self.byr_idx = [i for i in range(len(self.lstg_sets[LSTG_MAP]))
-                            if self.lstg_sets[LSTG_MAP][i] not in BYR_DROP]
+            self.byr_idx = [i for i in range(len(self.lstg_sets[LSTG]))
+                            if self.lstg_sets[LSTG][i] not in BYR_DROP]
 
         self.agent_name = get_role(byr=self.byr)
         self.sizes['agents'] = load_sizes(self.agent_name)
@@ -49,7 +48,7 @@ class AgentComposer(Composer):
         obs_dict = dict()
         self._update_turn_inds(turn)
         for set_name in self.agent_sizes['x'].keys():
-            if set_name == LSTG_MAP:
+            if set_name == LSTG:
                 obs_dict[set_name] = self._build_agent_lstg_vector(sources)
             elif set_name[:-1] == 'offer':
                 obs_dict[set_name] = self._build_agent_offer_vector(sources[set_name])
@@ -58,7 +57,7 @@ class AgentComposer(Composer):
         return obs_dict
 
     def _build_agent_lstg_vector(self, sources=None):
-        feats = [sources[LSTG_MAP]]
+        feats = [sources[LSTG]]
         solo_feats = [sources[DAYS_SINCE_LSTG], sources[BYR_HIST]]
 
         # set base, add thread count if slr
@@ -90,9 +89,9 @@ class AgentComposer(Composer):
         lstg_sets = self.lstg_sets.copy()
         if self.byr:
             # exclude auto reject features and lstg_ct + bo_ct
-            lstg = [lstg_sets[LSTG_MAP][i] for i in self.byr_idx]
+            lstg = [lstg_sets[LSTG][i] for i in self.byr_idx]
             assert len(set(lstg) & set(BYR_DROP)) == 0
-            lstg_sets[LSTG_MAP] = lstg
+            lstg_sets[LSTG] = lstg
 
         # remove slr, meta and leaf feats
         for k in [SLR, META, LEAF]:
@@ -103,8 +102,8 @@ class AgentComposer(Composer):
 
         # verify appended features
         agent_feats = load_featnames(self.agent_name)
-        lstg_append = Composer.remove_shared_feats(agent_feats[LSTG_MAP],
-                                                   lstg_sets[LSTG_MAP])
+        lstg_append = Composer.remove_shared_feats(agent_feats[LSTG],
+                                                   lstg_sets[LSTG])
         self.verify_lstg_append(lstg_append=lstg_append)
         # verify offer feats
         offer_feats = agent_feats['offer']

@@ -2,12 +2,11 @@ import torch
 import numpy as np
 from rlenv.util import model_str
 from utils import load_sizes, load_featnames, load_pctile
-from rlenv.const import LSTG_MAP, CLOCK_MAP, OFFER_MAPS, THREAD_COUNT_IND, \
-    TIME_START_IND, TIME_END_IND
+from rlenv.const import OFFER_MAPS, THREAD_COUNT_IND, TIME_START_IND, TIME_END_IND
 from featnames import OUTCOME_FEATS, CLOCK_FEATS, TIME_FEATS, DAYS_SINCE_LSTG, \
     BYR_HIST, DELAY, CON, INT_REMAINING, DAYS_SINCE_LAST, THREAD_COUNT, SLR, \
     OFFER_MODELS, MODELS, FIRST_ARRIVAL_MODEL, INTERARRIVAL_MODEL, BYR_HIST_MODEL, \
-    X_LSTG
+    X_LSTG, LSTG, CLOCK
 
 
 class Composer:
@@ -41,8 +40,8 @@ class Composer:
         :return: dict
         """
         featnames = load_featnames(FIRST_ARRIVAL_MODEL)
-        for c in featnames[LSTG_MAP]:
-            assert c in self.x_lstg_cols[LSTG_MAP]
+        for c in featnames[LSTG]:
+            assert c in self.x_lstg_cols[LSTG]
         featnames[SLR] = load_featnames(model_str(CON, turn=2))[SLR]
         for model in MODELS:
             # verify all x_lstg based sets contain the same features in the same order
@@ -50,15 +49,15 @@ class Composer:
             if model in OFFER_MODELS:
                 Composer.verify_offer_feats(model)
                 if DELAY not in model:
-                    Composer.verify_offer_append(model, featnames[LSTG_MAP])
+                    Composer.verify_offer_append(model, featnames[LSTG])
                 else:
-                    Composer.verify_delay_append(model, featnames[LSTG_MAP])
+                    Composer.verify_delay_append(model, featnames[LSTG])
             elif model == FIRST_ARRIVAL_MODEL:
-                Composer.verify_first_arrival_append(featnames[LSTG_MAP])
+                Composer.verify_first_arrival_append(featnames[LSTG])
             elif model == INTERARRIVAL_MODEL:
-                Composer.verify_interarrival_append(featnames[LSTG_MAP])
+                Composer.verify_interarrival_append(featnames[LSTG])
             else:
-                Composer.verify_hist_append(featnames[LSTG_MAP])
+                Composer.verify_hist_append(featnames[LSTG])
         return featnames
 
     @staticmethod
@@ -90,15 +89,15 @@ class Composer:
         model_featnames = load_featnames(model)
         missing_idx = list()
         # check that all features in LSTG not in x_lstg are appended to the end of LSTG
-        for feat in model_featnames[LSTG_MAP]:
-            if feat not in self.x_lstg_cols[LSTG_MAP]:
-                missing_idx.append(model_featnames[LSTG_MAP].index(feat))
+        for feat in model_featnames[LSTG]:
+            if feat not in self.x_lstg_cols[LSTG]:
+                missing_idx.append(model_featnames[LSTG].index(feat))
         if len(missing_idx) != 0:
             missing_idx_min = min(missing_idx)
-            assert missing_idx_min == len(featnames[LSTG_MAP])
+            assert missing_idx_min == len(featnames[LSTG])
         # remove those missing features
-        model_featnames[LSTG_MAP] = [feat for feat in model_featnames[LSTG_MAP]
-                                     if feat in self.x_lstg_cols[LSTG_MAP]]
+        model_featnames[LSTG] = [feat for feat in model_featnames[LSTG]
+                                 if feat in self.x_lstg_cols[LSTG]]
         # iterate over all x_lstg features based and check that have same elements in the same order
         for grouping_name, lstg_feats in featnames.items():
             model_grouping = model_featnames[grouping_name]
@@ -121,7 +120,7 @@ class Composer:
         input_dict = dict()
         fixed_sizes = self.sizes[model_name]['x']  # dict
         for input_set, size in fixed_sizes.items():
-            if input_set == LSTG_MAP:
+            if input_set == LSTG:
                 input_dict[input_set] = self._build_lstg_vector(
                     model_name, sources=sources)
             elif 'offer' == input_set[:-1]:
@@ -143,19 +142,19 @@ class Composer:
     @staticmethod
     def _build_lstg_vector(model_name, sources=None):
         if model_name == FIRST_ARRIVAL_MODEL:
-            lstg = sources[LSTG_MAP]  # append nothing
+            lstg = sources[LSTG]  # append nothing
         elif model_name == INTERARRIVAL_MODEL:
             solo_feats = np.array([sources[DAYS_SINCE_LSTG],
                                    sources[DAYS_SINCE_LAST],
                                    sources[THREAD_COUNT]])
-            lstg = np.concatenate([sources[LSTG_MAP],
-                                   sources[CLOCK_MAP],
+            lstg = np.concatenate([sources[LSTG],
+                                   sources[CLOCK],
                                    solo_feats])
         elif model_name == BYR_HIST_MODEL:
             solo_feats = np.array([sources[DAYS_SINCE_LSTG],
                                    sources[THREAD_COUNT] - 1])
-            lstg = np.concatenate([sources[LSTG_MAP],
-                                   sources[CLOCK_MAP],
+            lstg = np.concatenate([sources[LSTG],
+                                   sources[CLOCK],
                                    solo_feats])
         else:
             solo_feats = [sources[DAYS_SINCE_LSTG],
@@ -163,7 +162,7 @@ class Composer:
                           sources[OFFER_MAPS[1]][THREAD_COUNT_IND] + 1]
             if DELAY in model_name:
                 solo_feats += [sources[INT_REMAINING]]
-            lstg = np.concatenate([sources[LSTG_MAP], solo_feats])
+            lstg = np.concatenate([sources[LSTG], solo_feats])
         lstg = lstg.astype(np.float32)
         return torch.from_numpy(lstg).float().unsqueeze(0)
 
@@ -179,7 +178,7 @@ class Composer:
 
     @staticmethod
     def verify_offer_append(model, shared_feats):
-        model_feats = load_featnames(model)[LSTG_MAP]
+        model_feats = load_featnames(model)[LSTG]
         model_feats = Composer.remove_shared_feats(model_feats, shared_feats)
         assert model_feats[0] == DAYS_SINCE_LSTG
         assert model_feats[1] == BYR_HIST
@@ -194,7 +193,7 @@ class Composer:
 
     @staticmethod
     def verify_delay_append(model, shared_feats):
-        model_feats = load_featnames(model)[LSTG_MAP]
+        model_feats = load_featnames(model)[LSTG]
         model_feats = Composer.remove_shared_feats(model_feats, shared_feats)
         assert model_feats[0] == DAYS_SINCE_LSTG
         assert model_feats[1] == BYR_HIST
@@ -204,7 +203,7 @@ class Composer:
 
     @staticmethod
     def verify_interarrival_append(shared_feats):
-        model_feats = load_featnames(INTERARRIVAL_MODEL)[LSTG_MAP]
+        model_feats = load_featnames(INTERARRIVAL_MODEL)[LSTG]
         model_feats = Composer.remove_shared_feats(model_feats, shared_feats)
         Composer.verify_sequence(model_feats, CLOCK_FEATS, 0)
         next_ind = len(CLOCK_FEATS)
@@ -214,13 +213,13 @@ class Composer:
 
     @staticmethod
     def verify_first_arrival_append(shared_feats):
-        model_feats = load_featnames(FIRST_ARRIVAL_MODEL)[LSTG_MAP]
+        model_feats = load_featnames(FIRST_ARRIVAL_MODEL)[LSTG]
         model_feats = Composer.remove_shared_feats(model_feats, shared_feats)
         assert len(model_feats) == 0
 
     @staticmethod
     def verify_hist_append(shared_feats):
-        model_feats = load_featnames(BYR_HIST_MODEL)[LSTG_MAP]
+        model_feats = load_featnames(BYR_HIST_MODEL)[LSTG]
         model_feats = Composer.remove_shared_feats(model_feats, shared_feats)
         Composer.verify_sequence(model_feats, CLOCK_FEATS, 0)
         assert model_feats[len(CLOCK_FEATS)] == DAYS_SINCE_LSTG
