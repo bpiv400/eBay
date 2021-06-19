@@ -1,10 +1,9 @@
 import pandas as pd
-import torch
-from agent.AgentModel import AgentModel
 from utils import unpickle, load_file, load_data, safe_reindex, get_role
-from constants import AGENT_DIR, IDX, SIM_DIR, EPS, PARTS_DIR
+from constants import IDX, SIM_DIR, EPS, PARTS_DIR
+from agent.const import AGENT_DIR
 from featnames import SLR, BYR, NORM, AUTO, INDEX, THREAD, CON, LOOKUP, X_OFFER, \
-    START_PRICE, X_THREAD, OUTCOME_FEATS, TEST, SIM, IS_AGENT
+    START_PRICE, X_THREAD, OUTCOME_FEATS, TEST, SIM, IS_AGENT, CLOCK
 
 
 def get_log_dir(byr=None):
@@ -90,7 +89,9 @@ def get_slr_valid(data=None):
     s = mask.groupby(mask.index.names).sum()
     valid = s[s > 0].index
     data = safe_reindex(data, idx=valid)
-    data[X_OFFER] = data[X_OFFER].reorder_levels(list(valid.names) + [THREAD, INDEX])
+    for k in [X_OFFER, CLOCK]:
+        if k in data:
+            data[k] = data[k].reorder_levels(list(valid.names) + [THREAD, INDEX])
     return data
 
 
@@ -135,17 +136,3 @@ def load_values(part=TEST, delta=None, normalize=True):
         v /= start_price
         assert v.max() <= 1 + EPS
     return v.rename('vals')
-
-
-def load_agent_model(model_args=None, run_dir=None):
-    model = AgentModel(**model_args)
-    path = run_dir + 'params.pkl'
-    d = torch.load(path, map_location=torch.device('cpu'))
-    if 'agent_state_dict' in d:
-        d = d['agent_state_dict']
-    d = {k: v for k, v in d.items() if not k.startswith('value')}
-    model.load_state_dict(d, strict=True)
-    for param in model.parameters(recurse=True):
-        param.requires_grad = False
-    model.eval()
-    return model

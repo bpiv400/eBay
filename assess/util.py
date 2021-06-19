@@ -92,8 +92,8 @@ def con_dist(offers=None):
 
 def norm_dist(offers=None):
     norm = offers.loc[~offers[REJECT] & ~offers[AUTO], NORM]
-    p = {t: continuous_cdf(norm.xs(t, level=INDEX))
-         for t in range(1, 8)}
+    turns = np.sort(np.unique((norm.index.get_level_values(INDEX))))
+    p = {t: continuous_cdf(norm.xs(t, level=INDEX)) for t in turns}
     return p
 
 
@@ -124,7 +124,8 @@ def merge_dicts(d, d_other):
     for k, v in d.items():
         if type(v) is dict:
             for t, value in v.items():
-                d[k][t] = concat_and_fill(value, d_other[k][t])
+                if t in d_other[k]:
+                    d[k][t] = concat_and_fill(value, d_other[k][t])
         else:
             d[k] = concat_and_fill(v, d_other[k])
     return d

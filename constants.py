@@ -12,7 +12,6 @@ FEATS_DIR = DATA_DIR + 'feats/'           # pre-partion features
 LOG_DIR = DATA_DIR + 'logs/'              # model logs
 MODEL_DIR = DATA_DIR + 'models/'          # trained models
 PLOT_DIR = DATA_DIR + 'plots/'            # for creating figures
-AGENT_DIR = DATA_DIR + 'agent/'           # agents logs and models
 INPUT_DIR = DATA_DIR + 'inputs/'          # inputs for models
 SIZES_DIR = INPUT_DIR + 'sizes/'          # for initializing models
 FEATNAMES_DIR = INPUT_DIR + 'featnames/'  # for testing

@@ -1,4 +1,4 @@
-from agent.util import load_values, load_valid_data, get_run_dir, get_sale_norm
+from agent.util import load_values, load_valid_data, get_sim_dir, get_sale_norm
 from utils import safe_reindex, load_data, load_feats
 from agent.const import DELTA_SLR
 from assess.const import SLR_NAMES
@@ -7,12 +7,27 @@ from featnames import LOOKUP, X_THREAD, X_OFFER, LSTG, INDEX, NORM, REJECT, CON,
     STORE, SLR_BO_CT
 
 
+def print_sales_stats(data=None):
+    sale_norm = get_sale_norm(offers=data[X_OFFER]).reindex(
+        index=data[LOOKUP].index, fill_value=0)
+    offers = data[X_OFFER]
+    norm1 = offers[NORM].xs(1, level=INDEX)
+    norm3 = offers.loc[~offers[REJECT], NORM].xs(3, level=INDEX)
+    print('Share of valid listings in data that do not sell: {}'.format(
+        (sale_norm == 0).mean()))
+    print('Share of valid listings in data that sell for list price: {}'.format(
+        (sale_norm == 1).mean()))
+    for t in [1, 3]:
+        print('Share of turn {} for list price in valid data: {}'.format(
+            t, (locals()['{}{}'.format(NORM, t)] == 1).mean()))
+
+
 def main():
     data = load_data()
     lstgs = data[LOOKUP].index
+    lstg_feats = load_feats('listings', lstgs=lstgs)[[SLR, STORE, SLR_BO_CT]]
 
     # correlation between store and experience
-    lstg_feats = load_feats('listings', lstgs=lstgs)[[SLR, STORE, SLR_BO_CT]]
     df = lstg_feats.groupby(SLR).max()
     print('Median number of BOs for sellers w/store: {}'.format(
         df.loc[df[STORE], SLR_BO_CT].median()))
@@ -38,40 +53,23 @@ def main():
         (num_threads.loc[invalid] == 0).mean()))
 
     # sales
-    sale_norm = get_sale_norm(offers=valid_data[X_OFFER]).reindex(
-        index=valid, fill_value=0)
-    offers = valid_data[X_OFFER]
-    norm1 = offers[NORM].xs(1, level=INDEX)
-    norm3 = offers.loc[~offers[REJECT], NORM].xs(3, level=INDEX)
-    print('Share of valid listings in data that do not sell: {}'.format(
-        (sale_norm == 0).mean()))
-    print('Share of valid listings in data that sell for list price: {}'.format(
-        (sale_norm == 1).mean()))
-    for t in [1, 3]:
-        print('Share of turn {} for list price in valid data: {}'.format(
-            t, (locals()['{}{}'.format(NORM, t)] == 1).mean()))
+    print_sales_stats(valid_data)
 
     # small concessions by sellers
     con = data[X_OFFER].loc[data[X_OFFER].index.isin(IDX[SLR], level=INDEX), CON]
     con = con[(con > 0) & (con < 1)]
-    print('con < 0.5: {}'.format((con < .5).mean()))
+    print('con < .5: {}'.format((con < .5).mean()))
+
+    store = safe_reindex(lstg_feats[STORE], idx=con.index)
+    print('Store, con < .5: {}'.format((con[store] < .5).mean()))
+    print('No store, con < .5: {}'.format((con[~store] < .5).mean()))
 
     # for the agent sellers
     for delta in DELTA_SLR:
-        run_dir = get_run_dir(delta=delta)
-        data_rl = load_valid_data(sim_dir=run_dir)
-        sale_norm_rl = get_sale_norm(offers=data_rl[X_OFFER]).reindex(
-            index=data_rl[LOOKUP].index, fill_value=0)
-        offers_rl = data_rl[X_OFFER]
-        norm1_rl = offers_rl[NORM].xs(1, level=INDEX)
-        norm3_rl = offers_rl.loc[~offers_rl[REJECT], NORM].xs(3, level=INDEX)
-        print('{}. Share of listings that do not sell: {}'.format(
-            SLR_NAMES[delta], (sale_norm_rl == 0).mean()))
-        print('{}. Share of listings that sell for list price: {}'.format(
-            SLR_NAMES[delta], (sale_norm_rl == 1).mean()))
-        for t in [1, 3]:
-            print('{}. Share of turn {} for list price in valid data: {}'.format(
-                SLR_NAMES[delta], t, (locals()['{}{}_rl'.format(NORM, t)] == 1).mean()))
+        print('{}:'.format(SLR_NAMES[delta]))
+        sim_dir = get_sim_dir(byr=False, delta=delta)
+        data_rl = load_valid_data(sim_dir=sim_dir)
+        print_sales_stats(data_rl)
 
 
 if __name__ == '__main__':

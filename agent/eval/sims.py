@@ -1,12 +1,14 @@
 import os
 import numpy as np
+import torch
 from agent.AgentComposer import AgentComposer
+from agent.AgentModel import AgentModel
 from agent.envs.BuyerEnv import BuyerEnv
 from agent.envs.SellerEnv import SellerEnv
 from agent.heuristics.HeuristicSlr import HeuristicSlr
 from agent.heuristics.HeuristicByr import HeuristicByr
 from agent.eval.util import sim_args
-from agent.util import get_run_dir, get_sim_dir, load_agent_model
+from agent.util import get_run_dir, get_sim_dir
 from rlenv.generate.Generator import OutcomeGenerator
 from rlenv.generate.Recorder import OutcomeRecorder
 from rlenv.Player import SimulatedSeller
@@ -50,6 +52,23 @@ class AgentGenerator(OutcomeGenerator):
         return BuyerEnv if self.byr else SellerEnv
 
 
+def load_agent_model(args=None):
+    model = AgentModel(byr=args.byr, value=False)
+    run_dir = get_run_dir(byr=args.byr,
+                          delta=args.delta,
+                          turn_cost=args.turn_cost)
+    path = run_dir + 'params.pkl'
+    d = torch.load(path, map_location=torch.device('cpu'))
+    if 'agent_state_dict' in d:
+        d = d['agent_state_dict']
+    d = {k: v for k, v in d.items() if not k.startswith('value')}
+    model.load_state_dict(d, strict=True)
+    for param in model.parameters(recurse=True):
+        param.requires_grad = False
+    model.eval()
+    return model
+
+
 def main():
     args = sim_args(num=True)
 
@@ -83,11 +102,7 @@ def main():
             model = HeuristicSlr(delta=args.delta)
         num_sims = 1
     else:
-        run_dir = get_run_dir(byr=args.byr,
-                              delta=args.delta,
-                              turn_cost=args.turn_cost)
-        model_args = dict(byr=args.byr, value=False)
-        model = load_agent_model(model_args=model_args, run_dir=run_dir)
+        model = load_agent_model(args)
         num_sims = OUTCOME_SIMS
 
     # generator

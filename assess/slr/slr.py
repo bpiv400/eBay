@@ -1,11 +1,11 @@
+import argparse
 from assess.util import merge_dicts, cdf_days, cdf_sale, norm_dist, \
     arrival_dist, hist_dist, delay_dist, con_dist, num_threads, num_offers, save_dict
-from agent.util import get_run_dir, load_valid_data
+from agent.util import get_sim_dir, load_valid_data
 from agent.const import DELTA_SLR
 from assess.const import SLR_NAMES
 from constants import IDX
-from featnames import ARRIVAL, DELAY, CON, X_OFFER, X_THREAD, TEST, AUTO, \
-    INDEX, NORM, SLR, REJECT
+from featnames import ARRIVAL, DELAY, CON, X_OFFER, X_THREAD, AUTO, INDEX, NORM, SLR, REJECT
 
 
 def reject_rate(offers=None):
@@ -46,19 +46,27 @@ def collect_outputs(data=None, name=None):
 
 
 def main():
+    # command line arguments
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--heuristic', action='store_true')
+    heuristic = parser.parse_args().heuristic
+
     # observed
-    data_obs = load_valid_data(part=TEST, byr=False, clock=True)
+    data_obs = load_valid_data(byr=False, clock=True)
     d = collect_outputs(data=data_obs, name='Humans')
 
     # seller runs
     for delta in DELTA_SLR:
-        run_dir = get_run_dir(delta=delta)
-        data_rl = load_valid_data(part=TEST, sim_dir=run_dir, clock=True)
-        d_rl = collect_outputs(data=data_rl, name=SLR_NAMES[delta])
+        sim_dir = get_sim_dir(delta=delta, heuristic=heuristic)
+        data_rl = load_valid_data(sim_dir=sim_dir, clock=True)
+        name = SLR_NAMES[delta]
+        if heuristic:
+            name = name.replace('agent', 'heuristic agent')
+        d_rl = collect_outputs(data=data_rl, name=name)
         d = merge_dicts(d, d_rl)
 
     # save
-    save_dict(d, 'slr')
+    save_dict(d, 'slr{}'.format('heuristic' if heuristic else ''))
 
 
 if __name__ == '__main__':

@@ -33,7 +33,8 @@ def cdf_plot(path, obj):
             den = 'sales'
     elif name in ['lstgnorm', 'salenorm']:
         args = dict(xlim=[0, 1],
-                    xlabel='Sale price / list price')
+                    xlabel='Sale price / list price',
+                    legend_outside=('heuristic' in path))
         if name == 'salenorm':
             den = 'sales'
     elif name in ['days', 'arrivaltime']:

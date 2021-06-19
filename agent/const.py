@@ -1,7 +1,11 @@
 import numpy as np
 import pandas as pd
 from utils import load_feats
+from constants import DATA_DIR
 
+
+# contains agent training logs, models, and simulations
+AGENT_DIR = DATA_DIR + 'agent/'
 
 # concessions for agent to use
 COMMON_CONS = load_feats('common_cons')
