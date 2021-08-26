@@ -1,6 +1,6 @@
 from constants import MAX_DELAY_TURN, MAX_DELAY_ARRIVAL
 from featnames import MSG, CON, DELAY, EXP, AUTO
-from rlenv.util import model_str
+from env.util import model_str
 from testing.util import compare_input_dicts
 
 

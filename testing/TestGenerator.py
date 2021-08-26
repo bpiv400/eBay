@@ -1,4 +1,4 @@
-from rlenv.generate.Generator import Generator
+from env.generate.Generator import Generator
 from testing.Listing import Listing
 from testing.TestQueryStrategy import TestQueryStrategy
 from testing.util import load_all_inputs, get_auto_safe_lstgs, \

@@ -6,7 +6,7 @@ from rlenv.events.Event import Event
 from rlenv.const import DELAY_EVENT, OFFER_EVENT
 from featnames import SLR, BYR
 from rlenv.util import last_norm, prev_norm, get_delay_outcomes, get_clock_feats
-from rlenv.time.Offer import Offer
+from rlenv.events.Offer import Offer
 from constants import MAX_DELAY_TURN
 from utils import get_remaining
 

@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from rlenv.Composer import Composer
+from env.Composer import Composer
 from sim.arrivals import ArrivalSimulator, ArrivalInterface, ArrivalQueryStrategy
 from utils import topickle, load_data, load_file, input_partition
 from paths import PARTS_DIR

@@ -1,4 +1,4 @@
-from rlenv.QueryStrategy import QueryStrategy
+from env.QueryStrategy import QueryStrategy
 
 
 class TestQueryStrategy(QueryStrategy):

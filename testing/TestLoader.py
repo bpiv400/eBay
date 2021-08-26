@@ -1,5 +1,5 @@
 import pandas as pd
-from rlenv.LstgLoader import ChunkLoader
+from env.LstgLoader import ChunkLoader
 from testing.util import subset_inputs
 from featnames import X_LSTG, X_OFFER, X_THREAD, LOOKUP, LSTG
 

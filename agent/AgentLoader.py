@@ -3,7 +3,7 @@ import pandas as pd
 import torch.multiprocessing as mp
 from constants import NUM_CHUNKS
 from featnames import TRAIN_RL, X_LSTG, LOOKUP, ARRIVALS
-from rlenv.LstgLoader import LstgLoader, ChunkLoader
+from env.LstgLoader import LstgLoader, ChunkLoader
 from utils import load_chunk
 
 

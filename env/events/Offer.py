@@ -1,6 +1,6 @@
 from random import random
 from featnames import SLR, BYR
-from rlenv.const import SLR_REJECTION, BYR_REJECTION, OFFER
+from env.const import SLR_REJECTION, BYR_REJECTION, OFFER
 
 
 class Offer:

@@ -1,13 +1,13 @@
 import numpy as np
 import torch
 from torch.distributions import Beta
-from agent.agents.SplitCategoricalPgAgent import SplitCategoricalPgAgent
+from agent.agents.EBayAgent import EBayAgent
 from agent.agents.util import parse_value_params, backward_from_done
 from agent.const import AGENT_CONS
 from constants import EPS
 
 
-class BuyerAgent(SplitCategoricalPgAgent):
+class BuyerAgent(EBayAgent):
     def __init__(self, delta=None, turn_cost=0, **kwargs):
         super().__init__(**kwargs)
         self.min = delta - 1  # lowest reward from a sale
@@ -34,26 +34,26 @@ class BuyerAgent(SplitCategoricalPgAgent):
         # no sale
         zeros = torch.zeros_like(return_)
         idx0 = torch.isclose(return_, zeros, atol=1e-6) & valid
-        lnL = torch.sum(torch.log(p[idx0, 0] + EPS))
+        ln_l = torch.sum(torch.log(p[idx0, 0] + EPS))
 
         # purchased at list price
         if not np.isclose(self.min, 0):
             idx1 = torch.isclose(norm_return, zeros, atol=1e-6) & valid
-            lnL += torch.sum(torch.log(p[idx1, 1] + EPS))
+            ln_l += torch.sum(torch.log(p[idx1, 1] + EPS))
         else:
             idx1 = idx0
 
         # purchased for half of list price
         idx2 = torch.isclose(norm_return, zeros + 1, atol=1e-6) & valid
-        lnL += torch.sum(torch.log(p[idx2, 2] + EPS))
+        ln_l += torch.sum(torch.log(p[idx2, 2] + EPS))
 
         # intermediate outcome
         idx_beta = ~idx0 & ~idx1 & ~idx2 & valid
-        lnL += torch.sum(torch.log(p[idx_beta, -1] + EPS))
+        ln_l += torch.sum(torch.log(p[idx_beta, -1] + EPS))
         dist = Beta(a[idx_beta], b[idx_beta])
-        lnL += torch.sum(dist.log_prob(norm_return[idx_beta]))
+        ln_l += torch.sum(dist.log_prob(norm_return[idx_beta]))
 
-        return -lnL
+        return -ln_l
 
     def _get_turn_info(self, opt_info=None, env=None, turn=None,
                        con=None, valid=None):

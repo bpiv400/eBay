@@ -5,8 +5,8 @@ from rlpyt.envs.base import Env
 from rlpyt.spaces.composite import Composite
 from rlpyt.spaces.float_box import FloatBox
 from rlpyt.utils.collections import namedarraytuple
-from rlenv.EBayEnv import EBayEnv
-from rlenv.events.Thread import Thread
+from env.EBayEnv import EBayEnv
+from env.events.Thread import Thread
 from agent.ConSpace import ConSpace
 from agent.const import AGENT_CONS
 from constants import INTERVAL, INTERVAL_CT_TURN, DAY, NUM_COMMON_CONS, IDX

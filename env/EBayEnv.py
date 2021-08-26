@@ -1,14 +1,14 @@
 from collections import namedtuple
 from utils import get_days_since_lstg
-from rlenv.Heap import Heap
-from rlenv.time.TimeFeatures import TimeFeatures
-from rlenv.time.Offer import Offer
-from rlenv.events.Event import Event
-from rlenv.generate.Recorder import Recorder
-from rlenv.Sources import ThreadSources
-from rlenv.events.Thread import Thread
-from rlenv.util import get_con_outcomes, need_msg, model_str
-from rlenv.const import INTERACT, ACC_IND, CON, MSG, REJ_IND, OFF_IND, \
+from env.Heap import Heap
+from env.time.TimeFeatures import TimeFeatures
+from env.events.Offer import Offer
+from env.events.Event import Event
+from env.generate.Recorder import Recorder
+from env.Sources import ThreadSources
+from env.events.Thread import Thread
+from env.util import get_con_outcomes, need_msg, model_str
+from env.const import INTERACT, ACC_IND, CON, MSG, REJ_IND, OFF_IND, \
     EXPIRATION, OFFER_EVENT, DELAY_EVENT
 from sim.arrivals import ArrivalSimulator
 from constants import DAY, MAX_DELAY_ARRIVAL
@@ -265,7 +265,7 @@ class EBayEnv:
         """
         Checks whether the lstg has expired by the time of the event
         If so, record the reward as negative insertion fees
-        :param event: rlenv.Event subclass
+        :param event: env.Event subclass
         :return: boolean
         """
         self.outcome = self.Outcome(False, 0, MAX_DELAY_ARRIVAL, None)

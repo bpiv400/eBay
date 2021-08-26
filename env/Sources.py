@@ -1,7 +1,7 @@
 from copy import deepcopy
 import numpy as np
-from rlenv.util import last_norm
-from rlenv.const import OFFER_MAPS, CLOCK_START_IND, TIME_END_IND, NORM_IND, \
+from env.util import last_norm
+from env.const import OFFER_MAPS, CLOCK_START_IND, TIME_END_IND, NORM_IND, \
     MSG_IND, DELAY_START_IND, DELAY_END_IND, CON_IND, DELAY_IND, CON_START_IND, \
     DAYS_IND, AUTO_IND, REJECT_IND, EXP_IND
 from featnames import DAYS_SINCE_LSTG, INT_REMAINING, BYR_HIST, ALL_OFFER_FEATS

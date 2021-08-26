@@ -1,4 +1,4 @@
-from rlenv.util import model_str, need_msg
+from env.util import model_str, need_msg
 from testing.util import populate_inputs
 from testing.Turn import Turn
 from testing.CensoredTurn import CensoredTurn

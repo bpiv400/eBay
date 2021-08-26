@@ -18,7 +18,7 @@ def backward_from_done(x=None, done=None):
     :return tensor newx: value at done at every step of trajectory
     """
     dtype = x.dtype  # cast new tensors to this data type
-    T, N = x.shape  # time steps, number of envs
+    num_t, num_envs = x.shape  # time steps, number of envs
 
     # recast
     done = done.type(torch.int)
@@ -27,9 +27,9 @@ def backward_from_done(x=None, done=None):
     newx = torch.zeros(x.shape, dtype=dtype)
 
     # vector for given time period
-    v = torch.zeros(N, dtype=dtype)
+    v = torch.zeros(num_envs, dtype=dtype)
 
-    for t in reversed(range(T)):
+    for t in reversed(range(num_t)):
         v = v * (1 - done[t]) + x[t] * done[t]
         newx[t] += v
 

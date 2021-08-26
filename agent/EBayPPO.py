@@ -93,12 +93,12 @@ class EBayPPO:
         self._optim_policy.zero_grad()
 
         # loss/error
-        T, B = samples.env.reward.shape[:2]
-        idxs = np.arange(T * B)
-        T_idxs = idxs % T
-        B_idxs = idxs // T
+        t, b = samples.env.reward.shape[:2]
+        idxs = np.arange(t * b)
+        t_idxs = idxs % t
+        b_idxs = idxs // t
         policy_loss, value_loss, entropy = \
-            self.loss(*loss_inputs[T_idxs, B_idxs])
+            self.loss(*loss_inputs[t_idxs, b_idxs])
 
         # policy step
         policy_loss.backward()

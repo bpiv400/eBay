@@ -34,7 +34,7 @@ class Heap:
         """
         Pop an item off the top of the heap
 
-        :return: instance of rlenv.Event subclass
+        :return: instance of env.Event subclass
         """
         if self.empty:
             raise RuntimeError('Cant remove from empty queue')

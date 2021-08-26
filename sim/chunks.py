@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 import torch
 from torch.distributions.categorical import Categorical
-from rlenv.Composer import Composer
+from env.Composer import Composer
 from sim.arrivals import ArrivalSimulator, ArrivalInterface, ArrivalQueryStrategy
 from utils import topickle, load_file, load_featnames, load_model
 from constants import NUM_CHUNKS, ARRIVAL_SIMS, INTERVAL

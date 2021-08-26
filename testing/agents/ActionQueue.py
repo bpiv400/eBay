@@ -1,4 +1,4 @@
-from rlenv.Heap import Heap
+from env.Heap import Heap
 from testing.agents.Action import Action
 from testing.util import compare_input_dicts
 from utils import get_role
@@ -15,6 +15,7 @@ class ActionQueue:
 
     def get_agent_con(self, agent_tuple=None):
         obs, _, _, info = agent_tuple
+        # noinspection PyProtectedMember
         obs = obs._asdict()
 
         # check that turn matches agents type

@@ -6,7 +6,7 @@ from torch.distributions.categorical import Categorical
 from torch.distributions.bernoulli import Bernoulli
 from utils import extract_clock_feats, slr_norm, byr_norm
 from agent.const import COMMON_CONS
-from rlenv.const import OFFER_MAPS, DATE_FEATS_ARRAY, NORM_IND
+from env.const import OFFER_MAPS, DATE_FEATS_ARRAY, NORM_IND
 from constants import DAY, MAX_DELAY_TURN
 from featnames import ARRIVAL_MODELS
 

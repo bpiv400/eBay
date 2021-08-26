@@ -10,7 +10,7 @@ from agent.agents.util import valid_from_done, backward_from_done
 from agent.const import AGENT_CONS
 
 
-class SplitCategoricalPgAgent(CategoricalPgAgent):
+class EBayAgent(CategoricalPgAgent):
     def __init__(self, serial=False, **kwargs):
         super().__init__(**kwargs)
         self.serial = serial

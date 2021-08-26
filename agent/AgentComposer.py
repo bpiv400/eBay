@@ -5,8 +5,8 @@ import numpy as np
 from constants import BYR_DROP
 from featnames import OUTCOME_FEATS, DAYS_SINCE_LSTG, BYR_HIST, \
     TIME_FEATS, CLOCK_FEATS, THREAD_COUNT, TURN_FEATS, SLR, META, LEAF, LSTG
-from rlenv.Composer import Composer
-from rlenv.const import OFFER_MAPS, THREAD_COUNT_IND, TIME_START_IND, TIME_END_IND
+from env.Composer import Composer
+from env.const import OFFER_MAPS, THREAD_COUNT_IND, TIME_START_IND, TIME_END_IND
 from utils import load_sizes, load_featnames, get_role
 
 

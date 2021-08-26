@@ -1,10 +1,10 @@
 from rlpyt.utils.collections import namedarraytuple
-from rlenv.const import DELAY_EVENT, OFFER_EVENT, EXPIRATION
+from env.const import DELAY_EVENT, OFFER_EVENT, EXPIRATION
 from agent.envs.AgentEnv import AgentEnv, EventLog
 from agent.util import load_values
-from rlenv.util import get_delay_outcomes, get_con_outcomes
+from env.util import get_delay_outcomes, get_con_outcomes
 from utils import load_sizes
-from rlenv.const import DELAY_IND
+from env.const import DELAY_IND
 from constants import SLR, MAX_DELAY_TURN
 from featnames import TRAIN_RL
 
@@ -59,7 +59,7 @@ class SellerEnv(AgentEnv):
         """
         Process int giving concession/delay
         :param action: int returned from agents
-        :return: tuple described in rlenv
+        :return: tuple described in env
         """
         con = self.turn_from_action(turn=self.curr_event.turn,
                                     action=action)

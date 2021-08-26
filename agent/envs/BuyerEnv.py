@@ -1,8 +1,8 @@
 import numpy as np
 from rlpyt.utils.collections import namedarraytuple
-from rlenv.util import get_con_outcomes
+from env.util import get_con_outcomes
 from utils import load_sizes
-from rlenv.const import DELAY_EVENT, OFFER_EVENT, EXPIRATION, OFFER_MAPS, NORM_IND
+from env.const import DELAY_EVENT, OFFER_EVENT, EXPIRATION, OFFER_MAPS, NORM_IND
 from agent.envs.AgentEnv import AgentEnv, EventLog
 from constants import BYR
 from featnames import START_PRICE

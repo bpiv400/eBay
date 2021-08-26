@@ -15,8 +15,8 @@ from agent.agents.BuyerAgent import BuyerAgent
 from agent.envs.SellerEnv import SellerEnv
 from agent.envs.BuyerEnv import BuyerEnv
 from agent.util import get_run_dir, get_log_dir, get_run_id
-from rlenv.QueryStrategy import DefaultQueryStrategy
-from rlenv.Player import SimulatedSeller, SimulatedBuyer
+from env.QueryStrategy import DefaultQueryStrategy
+from env.Player import SimulatedSeller, SimulatedBuyer
 from utils import set_gpu
 from agent.const import DELTA_BYR, DELTA_SLR, TURN_COST_CHOICES, BATCH_SIZE
 from featnames import DELTA, TURN_COST

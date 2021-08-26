@@ -1,8 +1,8 @@
 import torch
 import numpy as np
-from rlenv.util import model_str
+from env.util import model_str
 from utils import load_sizes, load_featnames, load_pctile
-from rlenv.const import OFFER_MAPS, THREAD_COUNT_IND, TIME_START_IND, TIME_END_IND
+from env.const import OFFER_MAPS, THREAD_COUNT_IND, TIME_START_IND, TIME_END_IND
 from featnames import OUTCOME_FEATS, CLOCK_FEATS, TIME_FEATS, DAYS_SINCE_LSTG, \
     BYR_HIST, DELAY, CON, INT_REMAINING, DAYS_SINCE_LAST, THREAD_COUNT, SLR, \
     OFFER_MODELS, MODELS, FIRST_ARRIVAL_MODEL, INTERARRIVAL_MODEL, BYR_HIST_MODEL, \

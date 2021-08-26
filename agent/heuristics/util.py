@@ -1,6 +1,6 @@
 import numpy as np
 from agent.const import AGENT_CONS
-from rlenv.const import NORM_IND, DAYS_IND, BYR_OFFERS_RECENT_IND
+from env.const import NORM_IND, DAYS_IND, BYR_OFFERS_RECENT_IND
 from constants import IDX, MAX_DAYS
 from featnames import SLR, LSTG, BYR, TIME_FEATS
 
