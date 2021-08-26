@@ -7,7 +7,7 @@ from torch.optim import Adam, lr_scheduler
 from sim.EBayDataset import EBayDataset
 from nets.FeedForward import FeedForward
 from sim.Sample import get_batches
-from constants import MODEL_DIR, LOG_DIR
+from paths import LOG_DIR, MODEL_DIR
 from featnames import CENSORED_MODELS, BYR_HIST_MODEL
 from utils import load_sizes
 

@@ -2,7 +2,7 @@ import argparse
 from shutil import copyfile
 import numpy as np
 from tensorboard.backend.event_processing.event_multiplexer import EventMultiplexer
-from constants import MODEL_DIR, LOG_DIR
+from paths import LOG_DIR, MODEL_DIR
 from featnames import MODELS, DISCRIM_MODELS
 
 

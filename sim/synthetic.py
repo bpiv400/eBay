@@ -3,7 +3,7 @@ import pandas as pd
 from rlenv.Composer import Composer
 from sim.arrivals import ArrivalSimulator, ArrivalInterface, ArrivalQueryStrategy
 from utils import topickle, load_data, load_file, input_partition
-from constants import PARTS_DIR
+from paths import PARTS_DIR
 from featnames import LSTG, THREAD, X_OFFER, X_THREAD, CLOCK, LOOKUP, \
     START_TIME, X_LSTG, CON, INDEX, BYR_HIST
 

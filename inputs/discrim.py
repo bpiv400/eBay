@@ -1,6 +1,6 @@
 import numpy as np
 from agent.util import get_sim_dir, load_valid_data
-from constants import INPUT_DIR
+from paths import INPUT_DIR
 from inputs.util import get_x_thread, save_featnames_and_sizes, convert_x_to_numpy, \
     get_ind_x
 from utils import load_file, input_partition, load_data, topickle

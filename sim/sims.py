@@ -2,7 +2,8 @@ import argparse
 import os
 from rlenv.generate.Generator import OutcomeGenerator, ValueGenerator
 from utils import topickle
-from constants import SIM_DIR, NUM_CHUNKS, ARRIVAL_SIMS, OUTCOME_SIMS
+from constants import NUM_CHUNKS, ARRIVAL_SIMS, OUTCOME_SIMS
+from paths import SIM_DIR
 from featnames import AGENT_PARTITIONS
 
 

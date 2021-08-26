@@ -4,7 +4,8 @@ import torch
 from collections.abc import Iterable
 from utils import unpickle, load_featnames
 from utils import load_file
-from constants import INPUT_DIR, INDEX_DIR, BYR_DROP, BYR, IDX
+from constants import BYR_DROP, BYR, IDX
+from paths import INDEX_DIR, INPUT_DIR
 from featnames import SLR, X_LSTG, X_OFFER, LOOKUP, NORM, AUTO, CLOCK, LSTG, \
     INDEX, DEC_PRICE, ACC_PRICE, START_PRICE, MSG, THREAD, MODELS, FIRST_ARRIVAL_MODEL
 

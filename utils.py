@@ -5,8 +5,8 @@ import pandas as pd
 import torch
 import numpy as np
 from nets.FeedForward import FeedForward
-from constants import DAY, INPUT_DIR, MODEL_DIR, SIM_DIR, PARTS_DIR, PCTILE_DIR, \
-    MAX_DELAY_TURN, MAX_DELAY_ARRIVAL, FEATS_DIR, OUTCOME_SIMS
+from constants import DAY, MAX_DELAY_TURN, MAX_DELAY_ARRIVAL, OUTCOME_SIMS
+from paths import PARTS_DIR, SIM_DIR, PCTILE_DIR, FEATS_DIR, MODEL_DIR, INPUT_DIR
 from featnames import LOOKUP, X_THREAD, X_OFFER, CLOCK, BYR, SLR, AGENT_PARTITIONS, \
     PARTITIONS, LSTG, SIM, TEST
 

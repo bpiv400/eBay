@@ -2,7 +2,8 @@ from shutil import rmtree
 import pandas as pd
 from rlenv.generate.util import process_sims
 from utils import unpickle, topickle, input_partition
-from constants import SIM_DIR, NUM_CHUNKS
+from constants import NUM_CHUNKS
+from paths import SIM_DIR
 from featnames import LSTG
 
 

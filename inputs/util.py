@@ -3,7 +3,8 @@ import numpy as np
 import pandas as pd
 from utils import unpickle, topickle, feat_to_pctile
 from inputs.const import NUM_OUT
-from constants import INPUT_DIR, INDEX_DIR, IDX, BYR_DROP
+from constants import IDX, BYR_DROP
+from paths import INDEX_DIR, INPUT_DIR
 from featnames import CLOCK_FEATS, OUTCOME_FEATS, COMMON, MSG, AUTO, \
     LSTG, X_LSTG, EXP, REJECT, DAYS, DELAY, TIME_FEATS, THREAD_COUNT, \
     BYR, INDEX, SLR, THREAD, META, LEAF, VALIDATION, DISCRIM_MODELS, BYR_HIST
