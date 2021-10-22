@@ -2,12 +2,12 @@ from collections import namedtuple
 import numpy as np
 import torch
 from rlpyt.envs.base import Env
+from rlpyt.spaces.base import Space
 from rlpyt.spaces.composite import Composite
 from rlpyt.spaces.float_box import FloatBox
 from rlpyt.utils.collections import namedarraytuple
 from env.EBayEnv import EBayEnv
 from env.events.Thread import Thread
-from agent.ConSpace import ConSpace
 from agent.const import AGENT_CONS
 from constants import INTERVAL, INTERVAL_CT_TURN, DAY, NUM_COMMON_CONS, IDX
 from featnames import START_PRICE, BYR, SLR, DELTA, TURN_COST
@@ -156,3 +156,30 @@ class AgentEnv(EBayEnv, Env):
 
     def _get_days(self, priority=None):
         return (priority - self.start_time) / DAY
+
+
+class ConSpace(Space):
+    def __init__(self, size=None):
+        self.size = size
+        self.dtype = np.int64
+        self._null_value = 0
+        self.shape = ()
+
+    def sample(self):
+        index = np.random.randint(0, self.size)
+        return np.array(index)
+
+    def null_value(self):
+        return np.array(self._null_value, dtype=np.int64)
+
+    @property
+    def bounds(self):
+        return 0, self.size
+
+    @property
+    def n(self):
+        """Number of elements in the space"""
+        return self.size
+
+    def __repr__(self):
+        return "ConSpace"

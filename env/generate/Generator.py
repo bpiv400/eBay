@@ -1,11 +1,11 @@
 from datetime import datetime as dt
 import pandas as pd
-from rlenv.Composer import Composer
-from rlenv.EBayEnv import EBayEnv
-from rlenv.generate.Recorder import OutcomeRecorder
-from rlenv.Player import SimulatedSeller, SimulatedBuyer
-from rlenv.LstgLoader import ChunkLoader
-from rlenv.QueryStrategy import DefaultQueryStrategy
+from env.Composer import Composer
+from env.EBayEnv import EBayEnv
+from env.generate.Recorder import OutcomeRecorder
+from env.Player import SimulatedSeller, SimulatedBuyer
+from env.LstgLoader import ChunkLoader
+from env.QueryStrategy import DefaultQueryStrategy
 from utils import load_chunk
 from featnames import LSTG, SIM
 

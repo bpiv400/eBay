@@ -1,6 +1,5 @@
 import numpy as np
 import pandas as pd
-import torch.multiprocessing as mp
 from constants import NUM_CHUNKS
 from featnames import TRAIN_RL, X_LSTG, LOOKUP, ARRIVALS
 from env.LstgLoader import LstgLoader, ChunkLoader
@@ -8,19 +7,20 @@ from utils import load_chunk
 
 
 class AgentLoader(LstgLoader):
-    def __init__(self):
+    def __init__(self, num_workers=None):
+        self.chunk_nums = np.split(np.arange(NUM_CHUNKS), num_workers)
         super().__init__()
 
         # to be initialized later
         self._x_lstg_slice = self._lookup_slice = self._arrivals_slice = None
         self._internal_loader = None
 
-    def init(self, rank):
-        self._load_chunks(rank)
+    def init(self, rank=None):
+        self._load_chunks(rank=rank)
         self._draw_lstgs()
 
     def _load_chunks(self, rank=None):
-        nums = np.split(np.arange(NUM_CHUNKS), mp.cpu_count())[rank]
+        nums = self.chunk_nums[rank]
         x_lstg, lookup, arrivals = None, [], {}
         for i, num in enumerate(nums):
             chunk = load_chunk(part=TRAIN_RL, num=num)

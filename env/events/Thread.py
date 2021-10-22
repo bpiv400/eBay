@@ -2,11 +2,11 @@
 class for encapsulating data and methods related to the first buyer offer
 """
 import numpy as np
-from rlenv.events.Event import Event
-from rlenv.const import DELAY_EVENT, OFFER_EVENT
+from env.events.Event import Event
+from env.const import DELAY_EVENT, OFFER_EVENT
 from featnames import SLR, BYR
-from rlenv.util import last_norm, prev_norm, get_delay_outcomes, get_clock_feats
-from rlenv.events.Offer import Offer
+from env.util import last_norm, prev_norm, get_delay_outcomes, get_clock_feats
+from env.events.Offer import Offer
 from constants import MAX_DELAY_TURN
 from utils import get_remaining
 

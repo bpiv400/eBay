@@ -61,6 +61,23 @@ def main():
         print('{}: {}'.format(k, v))
 
     # create sampler
+    if serial:
+        sampler_cls = SerialSampler
+        batch_b, batch_t = 1, 64
+        affinity = None
+    else:
+        sampler_cls = AlternatingSampler
+        cpus = list(psutil.Process().cpu_affinity())
+        # workers = [w for w in cpus if w % 2 == (args.gpu % 2)]
+        workers = cpus
+        affinity = dict(workers_cpus=workers + workers,
+                        cuda_idx=torch.cuda.current_device(),
+                        set_affinity=True,
+                        alternating=True)
+
+        batch_b = 2 * len(workers)
+        batch_t = int(BATCH_SIZE / batch_b)
+
     qs = DefaultQueryStrategy(
         seller=SimulatedSeller(full=args.byr),
         buyer=SimulatedBuyer(full=True)
@@ -69,33 +86,17 @@ def main():
         composer=AgentComposer(byr=args.byr),
         verbose=serial,
         query_strategy=qs,
-        loader=AgentLoader(),
+        loader=AgentLoader(num_workers=batch_b),
         delta=args.delta,
         turn_cost=args.turn_cost,
         train=True
     )
-    sampler_kwargs = dict(
+    sampler = sampler_cls(
+        batch_B=batch_b,
+        batch_T=batch_t,
         EnvCls=BuyerEnv if args.byr else SellerEnv,
         env_kwargs=env_kwargs,
-        max_decorrelation_steps=0,
-    )
-    if serial:
-        sampler = SerialSampler(batch_B=1, batch_T=64, **sampler_kwargs)
-        affinity = None
-    else:
-        cpus = list(psutil.Process().cpu_affinity())
-        workers = [w for w in cpus if w % 2 == (args.gpu % 2)]
-        affinity = dict(workers_cpus=workers + workers,
-                        cuda_idx=torch.cuda.current_device(),
-                        set_affinity=True,
-                        alternating=True)
-
-        batch_b = 2 * len(workers)
-        sampler = AlternatingSampler(
-            batch_B=batch_b,
-            batch_T=int(BATCH_SIZE / batch_b),
-            **sampler_kwargs
-        )
+        max_decorrelation_steps=0,)
 
     # construct agent
     model_kwargs = dict(byr=args.byr, turn_cost=args.turn_cost)

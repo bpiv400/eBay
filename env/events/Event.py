@@ -1,4 +1,4 @@
-from rlenv.const import EXPIRATION
+from env.const import EXPIRATION
 
 
 class Event:

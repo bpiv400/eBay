@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from rlenv.events.Thread import Thread
+from env.events.Thread import Thread
 from constants import MAX_DELAY_ARRIVAL
 from featnames import START_TIME, START_PRICE, TIME_FEATS, MSG, CON, \
     LSTG, SIM, THREAD, INDEX, BYR_HIST, DEC_PRICE, ACC_PRICE, CLOCK, \

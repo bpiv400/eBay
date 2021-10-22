@@ -6,9 +6,9 @@ from collections import deque, Counter
 import numpy as np
 from featnames import TIME_FEATS, THREAD_COUNT, BYR
 from constants import MAX_DELAY_TURN
-from rlenv.Heap import Heap
-from rlenv.events.Offer import Offer
-from rlenv.const import SLR_REJECTION, BYR_REJECTION, OFFER
+from env.Heap import Heap
+from env.events.Offer import Offer
+from env.const import SLR_REJECTION, BYR_REJECTION, OFFER
 
 
 class TimeFeatures:
