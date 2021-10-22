@@ -4,6 +4,8 @@ from env.const import NORM_IND, DAYS_IND, BYR_OFFERS_RECENT_IND
 from constants import IDX, MAX_DAYS
 from featnames import SLR, LSTG, BYR, TIME_FEATS
 
+DAYS_SINCE_START_IND = -5
+
 
 def get_last_norm(turn=None, x=None):
     """
@@ -24,7 +26,6 @@ def get_days(x=None, turn=None):
     :param int turn: turn number
     :return: float
     """
-    DAYS_SINCE_START_IND = -5
     days = x[LSTG][DAYS_SINCE_START_IND].item()
     if turn > 1:
         days_ind = DAYS_IND

@@ -26,6 +26,9 @@ DELTA_SLR = [0., .75]
 DELTA_BYR = [.9, 1, 1.5, 2, 3]
 TURN_COST_CHOICES = range(0, 5)
 
+SLR_NAMES = {DELTA_SLR[0]: 'Impatient agent',
+             DELTA_SLR[1]: 'Patient agent'}
+
 # concessions for buyer heuristic
 BYR_CONS = pd.DataFrame(columns=[1, 3, 5])
 i = 0
