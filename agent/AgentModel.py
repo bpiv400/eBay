@@ -2,7 +2,6 @@ import torch
 from torch.nn.functional import softmax
 from nets.FeedForward import FeedForward
 from utils import load_sizes, get_role
-from agent.const import NUM_VALUE_BYR, NUM_VALUE_SLR
 from constants import NUM_COMMON_CONS
 from featnames import LSTG
 
@@ -39,19 +38,13 @@ class AgentModel(torch.nn.Module):
 
         # value net
         if self.value:
-            if self.byr:
-                num_value = 1 if turn_cost > 0 else NUM_VALUE_BYR
-            else:
-                num_value = NUM_VALUE_SLR
-            sizes['out'] = num_value
+            sizes['out'] = 1
             self.value_net = FeedForward(sizes=sizes)
 
-    def forward(self, observation, prev_action=None, prev_reward=None, value_only=False):
+    def forward(self, observation, value_only=False):
         """
         Predicts policy distribution and state value.
         :param namedtuplearray observation: contains dict of agents inputs
-        :param None prev_action: (not used; for recurrent agents only)
-        :param None prev_reward: (not used; for recurrent agents only)
         :param bool value_only: only return value if True
         :return: tuple of policy distribution, value
         """
@@ -80,9 +73,4 @@ class AgentModel(torch.nn.Module):
 
     def _get_pdf(self, x):
         theta = self.policy_net(x)
-
-        # for shapley values, get x as dict
-        if type(theta) is tuple:
-            theta, x = theta
-
         return softmax(theta, dim=-1)

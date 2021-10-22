@@ -9,9 +9,8 @@ from agent.AgentComposer import AgentComposer
 from agent.AgentLoader import AgentLoader
 from agent.AgentModel import AgentModel
 from agent.EBayRunner import EBayRunner
-from agent.EBayPPO import EBayPPO
-from agent.agents.SellerAgent import SellerAgent
-from agent.agents.BuyerAgent import BuyerAgent
+from agent.A2C import A2C
+from agent.EBayAgent import EBayAgent
 from agent.envs.SellerEnv import SellerEnv
 from agent.envs.BuyerEnv import BuyerEnv
 from agent.util import get_run_dir, get_log_dir, get_run_id
@@ -67,9 +66,7 @@ def main():
         affinity = None
     else:
         sampler_cls = AlternatingSampler
-        cpus = list(psutil.Process().cpu_affinity())
-        # workers = [w for w in cpus if w % 2 == (args.gpu % 2)]
-        workers = cpus
+        workers = list(psutil.Process().cpu_affinity())
         affinity = dict(workers_cpus=workers + workers,
                         cuda_idx=torch.cuda.current_device(),
                         set_affinity=True,
@@ -106,11 +103,10 @@ def main():
     if args.byr:
         agent_kwargs[DELTA] = args.delta
         agent_kwargs[TURN_COST] = args.turn_cost
-    agent_cls = BuyerAgent if args.byr else SellerAgent
-    agent = agent_cls(**agent_kwargs)
+    agent = EBayAgent(**agent_kwargs)
 
     # create runner
-    runner = EBayRunner(algo=EBayPPO(),
+    runner = EBayRunner(algo=A2C(),
                         agent=agent,
                         sampler=sampler,
                         affinity=affinity)

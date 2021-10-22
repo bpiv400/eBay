@@ -14,9 +14,8 @@ for t in range(1, 7):
     AGENT_CONS[t] = np.sort(np.concatenate([other, COMMON_CONS[t]]))
 
 # optimization parameters
-LR_POLICY = 1e-4        # learning rate for policy network
-LR_VALUE = 1e-3         # learning rate for value network
-RATIO_CLIP = 0.1        # for PPO
+LR = 1e-5               # learning rate
+MAX_GRAD_NORM = .5      # for clipping gradients
 BATCH_SIZE = 4096       # number of actions to collect per update
 ENTROPY_COEF = .01      # initial weight on entropy on objective function
 STOP_ENTROPY = .1       # stop when entropy reaches this value
@@ -26,10 +25,6 @@ PERIOD_EPOCHS = 1500    # epoch count for stepping down entropy
 DELTA_SLR = [0., .75]
 DELTA_BYR = [.9, 1, 1.5, 2, 3]
 TURN_COST_CHOICES = range(0, 5)
-
-# size of value network output
-NUM_VALUE_SLR = 5
-NUM_VALUE_BYR = 6
 
 # concessions for buyer heuristic
 BYR_CONS = pd.DataFrame(columns=[1, 3, 5])
@@ -55,4 +50,4 @@ FIELDS = ["ActionsPerTraj", "ThreadsPerTraj", "DaysToDone",
           "Turn6_AccRate", "Turn6_RejRate", "Turn6_ExpRate", "Turn6_ConRate", "Turn6Con",
           "Rate_1", "Rate_2", "Rate_3", "Rate_4", "Rate_5", "Rate_6", "Rate_Sale",
           "DollarReturn", "NormReturn", "Value", "Advantage", "Entropy",
-          "Loss_Policy", "Loss_Value", "Loss_EntropyBonus"]
+          "Loss_Policy", "Loss_GradNorm", "Loss_Value", "Loss_EntropyBonus"]

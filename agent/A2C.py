@@ -1,21 +1,17 @@
 from collections import namedtuple
 import numpy as np
 import torch
+from torch.nn.functional import huber_loss
 from torch.optim import Adam
-from rlpyt.agents.base import AgentInputs
-from rlpyt.utils.tensor import valid_mean
-from rlpyt.utils.buffer import buffer_to
 from rlpyt.utils.collections import namedarraytuple
-from agent.const import LR_POLICY, LR_VALUE, RATIO_CLIP, STOP_ENTROPY, \
-    FIELDS, PERIOD_EPOCHS, ENTROPY_COEF
+from agent.const import LR, STOP_ENTROPY, FIELDS, PERIOD_EPOCHS, ENTROPY_COEF, MAX_GRAD_NORM
 
 LossInputs = namedarraytuple("LossInputs",
-                             ["agent_inputs", "action", "return_", "advantage",
-                              "valid", "pi_old"])
+                             ["observation", "action", "return_", "advantage", "valid"])
 OptInfo = namedtuple("OptInfo", FIELDS)
 
 
-class EBayPPO:
+class A2C:
     """
     Swaps entropy bonus with cross-entropy penalty, where cross-entropy
     is calculated using the policy from the initialized agents.
@@ -47,9 +43,9 @@ class EBayPPO:
 
         # optimizers
         self._optim_value = Adam(self.agent.value_parameters(),
-                                 lr=LR_VALUE, amsgrad=True)
+                                 lr=LR, amsgrad=True)
         self._optim_policy = Adam(self.agent.policy_parameters(),
-                                  lr=LR_POLICY, amsgrad=True)
+                                  lr=LR, amsgrad=True)
 
     def optimize_agent(self, samples):
         """
@@ -58,9 +54,6 @@ class EBayPPO:
         moves them to device (e.g. GPU) up front, so that minibatches are
         formed within device, without further data transfer.
         """
-        if self.agent.recurrent or hasattr(self.agent, "update_obs_rms"):
-            raise NotImplementedError()
-
         # initialize opt_info, compute valid obs and (discounted) return
         opt_info, valid, return_ = self.agent.process_samples(samples)
 
@@ -70,22 +63,13 @@ class EBayPPO:
         opt_info['Value'] = value[valid].numpy()
         opt_info['Advantage'] = advantage[valid].numpy()
 
-        # for getting policy and value in eval mode
-        agent_inputs = AgentInputs(
-            observation=samples.env.observation,
-            prev_action=samples.agent.prev_action,
-            prev_reward=samples.env.prev_reward,
-        )
-        agent_inputs = buffer_to(agent_inputs, device=self.agent.device)
-
         # reshape inputs to loss function
         loss_inputs = LossInputs(
-            agent_inputs=agent_inputs,
+            observation=samples.env.observation,
             action=samples.agent.action,
             return_=return_,
             advantage=advantage,
-            valid=valid,
-            pi_old=samples.agent.agent_info.dist_info
+            valid=valid
         )
 
         # zero gradients
@@ -95,13 +79,13 @@ class EBayPPO:
         # loss/error
         t, b = samples.env.reward.shape[:2]
         idxs = np.arange(t * b)
-        t_idxs = idxs % t
-        b_idxs = idxs // t
         policy_loss, value_loss, entropy = \
-            self.loss(*loss_inputs[t_idxs, b_idxs])
+            self.loss(*loss_inputs[idxs % t, idxs // t])
 
         # policy step
         policy_loss.backward()
+        grad_norm = torch.nn.utils.clip_grad_norm_(
+            self.agent.policy_parameters(), MAX_GRAD_NORM)
         self._optim_policy.step()
 
         # value step
@@ -110,10 +94,10 @@ class EBayPPO:
 
         # save for logging
         opt_info['Loss_Policy'] = policy_loss.item()
+        opt_info['Loss_GradNorm'] = grad_norm.item()
         opt_info['Loss_Value'] = value_loss.item()
         opt_info['Loss_EntropyBonus'] = self.entropy_coef
-        entropy = entropy.detach().numpy()
-        opt_info['Entropy'] = entropy
+        opt_info['Entropy'] = entropy.detach().numpy()
 
         # increment counter, reduce entropy bonus, and set complete flag
         self.update_counter += 1
@@ -132,32 +116,25 @@ class EBayPPO:
 
         return OptInfo(**opt_info)
 
-    def loss(self, agent_inputs, action, return_, advantage, valid, pi_old):
+    def loss(self, observation, action, return_, advantage, valid):
         """
-        Compute the training loss: policy_loss + value_loss + entropy_loss
-        Policy loss: min(likelhood-ratio * advantage, clip(likelihood_ratio, 1-eps, 1+eps) * advantage)
-        Value loss:  0.5 * (estimated_value - return) ^ 2
-        Calls the agents to compute forward pass on training data, and uses
-        the ``agents.distribution`` to compute likelihoods and entropies.
+        Computes A2C loss.
         """
         # agents outputs
-        pi_new, value_params = self.agent(*agent_inputs)
+        pi, v = self.agent(observation)
 
         # loss from policy
-        ratio = self.agent.distribution.likelihood_ratio(action,
-                                                         old_dist_info=pi_old,
-                                                         new_dist_info=pi_new)
-        clipped = torch.clamp(ratio, 1. - RATIO_CLIP, 1. + RATIO_CLIP)
-        surr_1 = ratio * advantage
-        surr_2 = clipped * advantage
-        surrogate = torch.min(surr_1, surr_2)
-        pi_loss = - valid_mean(surrogate, valid)
+        lnl = self.agent.distribution.log_likelihood(action, pi)
+        assert lnl.shape == advantage.shape
+        surrogate = lnl * advantage
+        pi_loss = - surrogate[valid].mean()
 
         # loss from value estimation
-        value_loss = self.agent.get_value_loss(value_params, return_, valid)
+        assert v.shape == return_.shape
+        value_loss = huber_loss(v, return_.float(), reduction='none')[valid].mean()
 
         # entropy bonus
-        entropy = self.agent.distribution.entropy(pi_new)[valid]
+        entropy = self.agent.distribution.entropy(pi)[valid]
         entropy_loss = - self.entropy_coef * entropy.mean()
 
         # total loss
