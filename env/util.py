@@ -2,9 +2,12 @@
 Utility functions for use in objects related to the RL environment
 """
 import numpy as np
+import torch
+from nets.FeedForward import FeedForward
+from paths import MODEL_DIR
 from torch.distributions.categorical import Categorical
 from torch.distributions.bernoulli import Bernoulli
-from utils import extract_clock_feats, slr_norm, byr_norm
+from utils import load_sizes
 from agent.const import COMMON_CONS
 from env.const import OFFER_MAPS, DATE_FEATS_ARRAY, NORM_IND
 from constants import DAY, MAX_DELAY_TURN
@@ -152,3 +155,72 @@ def need_msg(con, slr=None):
         return 0 < con < 1
     else:
         return con < 1
+
+
+def load_model(name, verbose=False):
+    """
+    Initialize PyTorch network for some model
+    :param str name: full name of the model
+    :param bool verbose: print statements if True
+    :return: torch.nn.Module
+    """
+    if verbose:
+        print('Loading {} model'.format(name))
+
+    # create neural network
+    sizes = load_sizes(name)
+    net = FeedForward(sizes)  # type: torch.nn.Module
+
+    # read in model parameters
+    path = '{}{}.net'.format(MODEL_DIR, name)
+    state_dict = torch.load(path, map_location=torch.device('cpu'))
+
+    # load parameters into model
+    net.load_state_dict(state_dict, strict=True)
+
+    # eval mode
+    for param in net.parameters(recurse=True):
+        param.requires_grad = False
+    net.eval()
+
+    # use shared memory
+    try:
+        net.share_memory()
+    except RuntimeError:
+        pass
+
+    return net
+
+
+def slr_norm(con=None, prev_byr_norm=None, prev_slr_norm=None):
+    """
+    Normalized offer for seller turn.
+    :param con: current concession, between 0 and 1.
+    :param prev_byr_norm: normalized concession from one turn ago.
+    :param prev_slr_norm: normalized concession from two turns ago.
+    :return: normalized distance of current offer from start_price to 0.
+    """
+    return 1 - con * prev_byr_norm - (1 - prev_slr_norm) * (1 - con)
+
+
+def byr_norm(con=None, prev_byr_norm=None, prev_slr_norm=None):
+    """
+    Normalized offer for buyer turn.
+    :param con: current concession, between 0 and 1.
+    :param prev_byr_norm: normalized concession from two turns ago.
+    :param prev_slr_norm: normalized concession from one turn ago.
+    :return: normalized distance of current offer from 0 to start_price.
+    """
+    return (1 - prev_slr_norm) * con + prev_byr_norm * (1 - con)
+
+
+def extract_clock_feats(seconds):
+    """
+    Creates clock features from timestamps.
+    :param seconds: seconds since START.
+    :return: tuple of time_of_day sine transform and afternoon indicator.
+    """
+    sec_norm = (seconds % DAY) / DAY
+    time_of_day = np.sin(sec_norm * np.pi)
+    afternoon = sec_norm >= 0.5
+    return time_of_day, afternoon

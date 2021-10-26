@@ -1,4 +1,5 @@
 #!/bin/bash
+# evaluates every agent and heuristic agent
 
 # chunks, simulations, and discriminator input
 for n in {1..1024}

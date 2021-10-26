@@ -1,4 +1,5 @@
 #!/bin/bash
+# creates the inputs for the placebo discriminator, and trains it with dropout
 
 # chunks, simulations, and discriminator input
 for part in valid rl

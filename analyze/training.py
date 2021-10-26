@@ -8,7 +8,8 @@ from sim.Sample import get_batches
 from sim.best_models import extract_best_run
 from sim.EBayDataset import EBayDataset
 from analyze.util import save_dict
-from utils import load_inputs, load_model
+from utils import load_inputs
+from env.util import load_model
 from inputs.const import NUM_OUT
 from featnames import TEST, MODELS, CENSORED_MODELS, DISCRIM_MODELS, \
     DISCRIM_MODEL, PLACEBO_MODEL, BYR_HIST_MODEL

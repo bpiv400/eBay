@@ -1,4 +1,5 @@
 #!/bin/bash
+# creates model inputs
 
 # first arrival model in all partitions
 for part in sim rl valid; do

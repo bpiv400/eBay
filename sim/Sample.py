@@ -1,8 +1,7 @@
 import numpy as np
 import torch
 from torch.utils.data import Sampler, DataLoader
-
-MBSIZE = {True: 128, False: 1e5}  # True for training, False for validation
+from sim.const import MBSIZE
 
 
 class Sample(Sampler):

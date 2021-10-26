@@ -239,3 +239,19 @@ def get_slr_lstgs(chunk=None):
     s = valid.groupby(LSTG).sum()
     output_lstgs = s[s > 0].index
     return output_lstgs
+
+
+def compare_delay_inputs(turn=None, check_time=None, input_dict=None):
+    if turn.delay_inputs is None:
+        print("Environment unexpectedly queried delay model.")
+        input("Exiting listing. Press Enter to continue...")
+        return None
+    if check_time != turn.delay_time:
+        print('-- INCONSISTENCY IN delay time --')
+        print('stored value = {} | env value = {}'.format(
+            turn.delay_time, check_time))
+        input("Exiting listing. Press Enter to continue...")
+        return None
+    compare_input_dicts(model=turn.delay_model_name,
+                        stored_inputs=turn.delay_inputs,
+                        env_inputs=input_dict)

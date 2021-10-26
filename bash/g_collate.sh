@@ -1,4 +1,5 @@
 #!/bin/bash
+# collates the agent evaluation output
 
 # seller agent
 for DELTA in {0.0,0.75}

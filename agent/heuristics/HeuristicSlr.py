@@ -2,8 +2,7 @@ import numpy as np
 import torch
 from agent.heuristics.util import get_agent_turn, wrapper, get_days, \
     get_recent_byr_offers, get_last_norm
-from agent.const import DELTA_SLR
-from constants import NUM_COMMON_CONS
+from agent.const import DELTA_SLR, NUM_COMMON_CONS
 
 
 class HeuristicSlr:

@@ -8,8 +8,8 @@ from rlpyt.spaces.float_box import FloatBox
 from rlpyt.utils.collections import namedarraytuple
 from env.EBayEnv import EBayEnv
 from env.events.Thread import Thread
-from agent.const import AGENT_CONS
-from constants import INTERVAL, INTERVAL_CT_TURN, DAY, NUM_COMMON_CONS, IDX
+from agent.const import AGENT_CONS, NUM_COMMON_CONS
+from constants import INTERVAL, INTERVAL_CT_TURN, DAY, IDX
 from featnames import START_PRICE, BYR, SLR, DELTA, TURN_COST
 
 Info = namedarraytuple("Info", ["days", "max_return", "num_actions", "turn",

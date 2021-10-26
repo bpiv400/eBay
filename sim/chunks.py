@@ -7,7 +7,8 @@ import torch
 from torch.distributions.categorical import Categorical
 from env.Composer import Composer
 from sim.arrivals import ArrivalSimulator, ArrivalInterface, ArrivalQueryStrategy
-from utils import topickle, load_file, load_featnames, load_model
+from utils import topickle, load_file, load_featnames
+from env.util import load_model
 from constants import NUM_CHUNKS, ARRIVAL_SIMS, INTERVAL
 from paths import PARTS_DIR
 from featnames import LOOKUP, X_LSTG, ARRIVALS, START_PRICE, START_TIME, \

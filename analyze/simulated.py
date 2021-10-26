@@ -1,13 +1,13 @@
 import argparse
 from analyze.util import merge_dicts, cdf_days, cdf_sale, msg_dist, \
     arrival_dist, hist_dist, delay_dist, con_dist, num_threads, \
-    num_offers, interarrival_dist, norm_dist, save_dict
+    num_offers, interarrival_dist, norm_dist, save_dict, rename_series
 from utils import load_data, load_file, load_feats
 from analyze.const import COLLECTIBLES
 from featnames import X_THREAD, X_OFFER, TEST, SIM, LOOKUP, STORE, START_PRICE, META
 
 
-def collect_outputs(data=None, name=None):
+def collect_outputs(data=None):
     d = dict()
 
     # sale outcomes
@@ -25,13 +25,6 @@ def collect_outputs(data=None, name=None):
     d['bar_msg'] = msg_dist(data[X_OFFER])
     d['bar_threads'] = num_threads(data)
     d['bar_offers'] = num_offers(data[X_OFFER])
-
-    for k, v in d.items():
-        if type(v) is dict:
-            for key, value in v.items():
-                d[k][key] = value.rename(name)
-        else:
-            d[k] = v.rename(name)
 
     return d
 
@@ -75,10 +68,10 @@ def main():
     data_sim = load_data(sim=True, lstgs=lstgs, clock=True)
 
     # observed
-    d = collect_outputs(data=data_obs, name='Data')
+    d = rename_series(collect_outputs(data=data_obs), name='Data')
 
     # simulations
-    d_sim = collect_outputs(data=data_sim, name='Simulations')
+    d_sim = rename_series(collect_outputs(data=data_sim), name='Simulations')
 
     # concatenate DataFrames
     d = merge_dicts(d, d_sim)

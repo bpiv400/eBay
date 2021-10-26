@@ -1,13 +1,12 @@
 import numpy as np
 import pandas as pd
 from utils import load_feats
-from paths import DATA_DIR
 
-# contains agent training logs, models, and simulations
-AGENT_DIR = DATA_DIR + 'agent/'
 
 # concessions for agent to use
 COMMON_CONS = load_feats('common_cons')
+NUM_COMMON_CONS = len(COMMON_CONS[1])
+
 AGENT_CONS = COMMON_CONS.copy()
 for t in range(1, 7):
     other = [0, 1] if t in [1, 3, 5] else [0, 1, 1.1]

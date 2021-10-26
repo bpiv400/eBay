@@ -1,6 +1,7 @@
 #!/bin/bash
+# collates simulations, creates disciminator input, and trains discriminator
 
-# chunks, simulations, and discriminator input
+# collate simulations and create discriminator input
 for part in valid rl
 do
   python repo/sim/collate.py --part $part

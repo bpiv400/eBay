@@ -1,4 +1,5 @@
 #!/bin/bash
+# finds the best simulator models, breaks simulator input into chunks, and simulates each chunk
 
 DIR=$(<data_folder.txt)
 

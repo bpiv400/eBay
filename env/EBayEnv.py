@@ -16,6 +16,9 @@ from featnames import DEC_PRICE, ACC_PRICE, START_PRICE, DELAY, START_TIME, BYR
 
 
 class EBayEnv:
+    """
+    Simulates the offer path of a Best Offer listing.
+    """
     Outcome = namedtuple('outcome', ['sale', 'price', 'days', 'thread'])
 
     def __init__(self, **kwargs):
@@ -23,8 +26,8 @@ class EBayEnv:
         self.verbose = kwargs['verbose']
 
         # mode
-        self.test = False if 'test' not in kwargs else kwargs['test']
-        self.train = False if 'train' not in kwargs else kwargs['train']
+        self.test = kwargs.get('test', False)
+        self.train = kwargs.get('train', False)
 
         # features
         self.x_lstg = None
@@ -41,7 +44,7 @@ class EBayEnv:
         self.queue = Heap(entry_type=Event)
         self.composer = kwargs['composer']
         self.query_strategy = kwargs['query_strategy']
-        self.recorder = None if 'recorder' not in kwargs else kwargs['recorder']
+        self.recorder = kwargs.get('recorder', None)
         self.loader = kwargs['loader']
 
     def reset(self):

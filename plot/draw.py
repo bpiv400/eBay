@@ -2,8 +2,7 @@ import argparse
 import os
 from importlib import import_module
 from utils import unpickle
-from paths import PLOT_DIR
-from plot.const import FIG_DIR
+from paths import PLOT_DIR, FIG_DIR
 
 
 def main():

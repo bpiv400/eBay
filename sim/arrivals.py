@@ -1,7 +1,7 @@
 import numpy as np
 from env.Sources import Sources
-from env.util import get_clock_feats, sample_categorical
-from utils import get_days_since_lstg, load_model
+from env.util import get_clock_feats, sample_categorical, load_model
+from utils import get_days_since_lstg
 from constants import MAX_DELAY_ARRIVAL, DAY, INTERVAL
 from featnames import INTERARRIVAL_MODEL, BYR_HIST_MODEL, DAYS_SINCE_LAST, \
     THREAD_COUNT, DAYS_SINCE_LSTG, CLOCK

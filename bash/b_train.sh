@@ -1,4 +1,5 @@
 #!/bin/bash
+# trains simulator models, varying dropout rates
 
 # no dropout
 for NAME in first_arrival next_arrival hist

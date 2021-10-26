@@ -12,7 +12,7 @@ from agent.util import get_run_dir, get_sim_dir
 from env.generate.Generator import OutcomeGenerator
 from env.generate.Recorder import OutcomeRecorder
 from env.Player import SimulatedSeller
-from utils import topickle
+from utils import topickle, verify_path
 from constants import OUTCOME_SIMS
 from featnames import DELTA, X_THREAD
 
@@ -71,6 +71,7 @@ def load_agent_model(args=None):
 
 def main():
     args = sim_args(num=True)
+    chunk = args.num - 1
 
     # output directory
     params = {k: v for k, v in vars(args).items() if k != 'num'}
@@ -83,15 +84,8 @@ def main():
 
     # create output folder
     outcome_dir = sim_dir + 'outcomes/'
-    if not os.path.isdir(outcome_dir):
-        os.makedirs(outcome_dir)
-
-    # check if chunk has already been processed
-    chunk = args.num - 1
-    path = outcome_dir + '{}.pkl'.format(chunk)
-    if os.path.isfile(path):
-        print('Chunk {} already exists.'.format(chunk))
-        exit(0)
+    path = outcome_dir + f'{chunk}.pkl'
+    verify_path(path)
 
     # model
     if args.heuristic:

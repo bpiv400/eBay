@@ -1,7 +1,6 @@
 import argparse
-import os
-from rlenv.generate.Generator import OutcomeGenerator, ValueGenerator
-from utils import topickle
+from env.generate.Generator import OutcomeGenerator, ValueGenerator
+from utils import topickle, verify_path
 from constants import NUM_CHUNKS, ARRIVAL_SIMS, OUTCOME_SIMS
 from paths import SIM_DIR
 from featnames import AGENT_PARTITIONS
@@ -23,15 +22,11 @@ def main():
     # create output folder
     output_dir = SIM_DIR + '{}/{}/'.format(
         args.part, 'values' if args.values else 'outcomes')
-    if not os.path.isdir(output_dir):
-        os.makedirs(output_dir)
 
     # check if chunk has already been processed
     chunk = args.num - 1
-    path = output_dir + '{}.pkl'.format(chunk)
-    if os.path.isfile(path):
-        print('Chunk {} already exists.'.format(chunk))
-        exit(0)
+    path = output_dir + f'{chunk}.pkl'
+    verify_path(path)
 
     # process one chunk
     gen = gen_cls(verbose=args.verbose)

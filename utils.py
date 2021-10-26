@@ -4,9 +4,8 @@ import pickle
 import pandas as pd
 import torch
 import numpy as np
-from nets.FeedForward import FeedForward
 from constants import DAY, MAX_DELAY_TURN, MAX_DELAY_ARRIVAL, OUTCOME_SIMS
-from paths import PARTS_DIR, SIM_DIR, PCTILE_DIR, FEATS_DIR, MODEL_DIR, INPUT_DIR
+from paths import PARTS_DIR, SIM_DIR, PCTILE_DIR, FEATS_DIR, INPUT_DIR
 from featnames import LOOKUP, X_THREAD, X_OFFER, CLOCK, BYR, SLR, AGENT_PARTITIONS, \
     PARTITIONS, LSTG, SIM, TEST
 
@@ -46,18 +45,6 @@ def get_remaining(lstg_start, delay_start):
     return remaining
 
 
-def extract_clock_feats(seconds):
-    """
-    Creates clock features from timestamps.
-    :param seconds: seconds since START.
-    :return: tuple of time_of_day sine transform and afternoon indicator.
-    """
-    sec_norm = (seconds % DAY) / DAY
-    time_of_day = np.sin(sec_norm * np.pi)
-    afternoon = sec_norm >= 0.5
-    return time_of_day, afternoon
-
-
 def get_days_since_lstg(lstg_start=None, time=None):
     """
     Float number of days between inputs.
@@ -66,28 +53,6 @@ def get_days_since_lstg(lstg_start=None, time=None):
     :return: number of days between lstg_start and start.
     """
     return (time - lstg_start) / DAY
-
-
-def slr_norm(con=None, prev_byr_norm=None, prev_slr_norm=None):
-    """
-    Normalized offer for seller turn.
-    :param con: current concession, between 0 and 1.
-    :param prev_byr_norm: normalized concession from one turn ago.
-    :param prev_slr_norm: normalized concession from two turns ago.
-    :return: normalized distance of current offer from start_price to 0.
-    """
-    return 1 - con * prev_byr_norm - (1 - prev_slr_norm) * (1 - con)
-
-
-def byr_norm(con=None, prev_byr_norm=None, prev_slr_norm=None):
-    """
-    Normalized offer for buyer turn.
-    :param con: current concession, between 0 and 1.
-    :param prev_byr_norm: normalized concession from two turns ago.
-    :param prev_slr_norm: normalized concession from one turn ago.
-    :return: normalized distance of current offer from 0 to start_price.
-    """
-    return (1 - prev_slr_norm) * con + prev_byr_norm * (1 - con)
 
 
 def load_sizes(name):
@@ -108,41 +73,6 @@ def load_featnames(name):
     :return: dict
     """
     return unpickle(INPUT_DIR + 'featnames/{}.pkl'.format(name))
-
-
-def load_model(name, verbose=False):
-    """
-    Initialize PyTorch network for some model
-    :param str name: full name of the model
-    :param bool verbose: print statements if True
-    :return: torch.nn.Module
-    """
-    if verbose:
-        print('Loading {} model'.format(name))
-
-    # create neural network
-    sizes = load_sizes(name)
-    net = FeedForward(sizes)  # type: torch.nn.Module
-
-    # read in model parameters
-    path = '{}{}.net'.format(MODEL_DIR, name)
-    state_dict = torch.load(path, map_location=torch.device('cpu'))
-
-    # load parameters into model
-    net.load_state_dict(state_dict, strict=True)
-
-    # eval mode
-    for param in net.parameters(recurse=True):
-        param.requires_grad = False
-    net.eval()
-
-    # use shared memory
-    try:
-        net.share_memory()
-    except RuntimeError:
-        pass
-
-    return net
 
 
 def input_partition(agent=False, opt_arg=None):
@@ -296,19 +226,6 @@ def load_pctile(name=None):
     return unpickle(path)
 
 
-def feat_to_pctile(s=None, pc=None):
-    """
-    Converts byr hist counts to percentiles or visa versa.
-    :param pandas.Series s: counts
-    :param pandas.Series pc: percentiles
-    :return: Series
-    """
-    if pc is None:
-        pc = load_pctile(name=str(s.name))
-    v = pc.reindex(index=s.values, method='pad').values
-    return pd.Series(v, index=s.index, name=s.name)
-
-
 def load_chunk(part=None, num=None):
     """
     Loads a simulator chunk containing x_lstg and lookup
@@ -318,3 +235,13 @@ def load_chunk(part=None, num=None):
     """
     path = PARTS_DIR + '{}/chunks/{}.pkl'.format(part, num)
     return unpickle(path)
+
+
+def verify_path(path=None):
+    elem = path.split('/')
+    folder = '/'.join(elem[:-1])
+    if not os.path.isdir(folder):
+        os.makedirs(folder)
+    if os.path.isfile(path):
+        print(f'{path} already exists.')
+        exit(0)

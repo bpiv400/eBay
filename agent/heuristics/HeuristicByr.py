@@ -1,7 +1,6 @@
 import torch
 from agent.heuristics.util import get_agent_turn, wrapper
-from agent.const import BYR_CONS
-from constants import NUM_COMMON_CONS
+from agent.const import BYR_CONS, NUM_COMMON_CONS
 
 
 class HeuristicByr:

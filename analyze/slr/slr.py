@@ -1,6 +1,7 @@
 import argparse
 from analyze.util import merge_dicts, cdf_days, cdf_sale, norm_dist, \
-    arrival_dist, hist_dist, delay_dist, con_dist, num_threads, num_offers, save_dict
+    arrival_dist, hist_dist, delay_dist, con_dist, num_threads, num_offers, \
+    save_dict, rename_series
 from agent.util import get_sim_dir, load_valid_data
 from agent.const import DELTA_SLR
 from analyze.const import SLR_NAMES
@@ -13,7 +14,7 @@ def reject_rate(offers=None):
     return (offers[CON] == 0).groupby(INDEX).mean()
 
 
-def collect_outputs(data=None, name=None):
+def collect_outputs(data=None):
     d = dict()
 
     # sales
@@ -34,14 +35,6 @@ def collect_outputs(data=None, name=None):
     # turn-specific active rejection rates
     d['bar_{}'.format(REJECT)] = reject_rate(data[X_OFFER])
 
-    # rename series
-    for k, v in d.items():
-        if type(v) is dict:
-            for key, value in v.items():
-                d[k][key] = value.rename(name)
-        else:
-            d[k] = v.rename(name)
-
     return d
 
 
@@ -53,7 +46,7 @@ def main():
 
     # observed
     data_obs = load_valid_data(byr=False, clock=True)
-    d = collect_outputs(data=data_obs, name='Humans')
+    d = rename_series(collect_outputs(data=data_obs), name='Humans')
 
     # seller runs
     for delta in DELTA_SLR:
@@ -62,7 +55,7 @@ def main():
         name = SLR_NAMES[delta]
         if heuristic:
             name = name.replace('agent', 'heuristic agent')
-        d_rl = collect_outputs(data=data_rl, name=name)
+        d_rl = rename_series(collect_outputs(data=data_rl), name=name)
         d = merge_dicts(d, d_rl)
 
     # save

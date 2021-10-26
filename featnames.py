@@ -75,6 +75,7 @@ IS_AGENT = 'is_agent'
 LSTG = 'lstg'
 THREAD = 'thread'
 INDEX = 'index'
+CLOCK = 'clock'
 
 # lookup column names
 META = 'meta'
@@ -93,7 +94,6 @@ STORE = 'store'
 X_LSTG = 'x_lstg'
 X_OFFER = 'x_offer'
 X_THREAD = 'x_thread'
-CLOCK = 'clock'
 LOOKUP = 'lookup'
 ARRIVALS = 'arrivals'
 

@@ -1,10 +1,10 @@
 from analyze.util import merge_dicts, delay_dist, cdf_sale, con_dist, \
-    num_offers, thread_number, arrival_cdf, hist_dist, save_dict
+    num_offers, thread_number, arrival_cdf, hist_dist, save_dict, rename_series
 from agent.util import get_sim_dir, load_valid_data
 from featnames import DELAY, X_OFFER, X_THREAD, CON
 
 
-def collect_outputs(data=None, name=None):
+def collect_outputs(data=None):
     d = dict()
 
     # offer distributions
@@ -16,26 +16,18 @@ def collect_outputs(data=None, name=None):
     d['bar_threads'] = thread_number(data[X_THREAD])
     d['bar_offers'] = num_offers(data[X_OFFER])
 
-    # rename series
-    for k, v in d.items():
-        if type(v) is dict:
-            for key, value in v.items():
-                d[k][key] = value.rename(name)
-        else:
-            d[k] = v.rename(name)
-
     return d
 
 
 def main():
     # observed buyers
     data = load_valid_data(byr=True, minimal=True)
-    d = collect_outputs(data=data, name='Humans')
+    d = rename_series(collect_outputs(data=data), name='Humans')
 
     # rl buyer
     sim_dir = get_sim_dir(byr=True, delta=1)
     data_rl = load_valid_data(sim_dir=sim_dir, minimal=True)
-    d_rl = collect_outputs(data=data_rl, name='$\\lambda = 1$ agent')
+    d_rl = rename_series(collect_outputs(data=data_rl), name='$\\lambda = 1$ agent')
     d = merge_dicts(d, d_rl)
 
     # save

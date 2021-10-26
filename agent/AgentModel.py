@@ -2,7 +2,7 @@ import torch
 from torch.nn.functional import softmax
 from nets.FeedForward import FeedForward
 from utils import load_sizes, get_role
-from constants import NUM_COMMON_CONS
+from agent.const import NUM_COMMON_CONS
 from featnames import LSTG
 
 

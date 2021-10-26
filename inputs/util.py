@@ -1,7 +1,7 @@
 from collections import OrderedDict
 import numpy as np
 import pandas as pd
-from utils import unpickle, topickle, feat_to_pctile
+from utils import unpickle, topickle, load_pctile
 from inputs.const import NUM_OUT
 from constants import IDX, BYR_DROP
 from paths import INDEX_DIR, INPUT_DIR
@@ -195,3 +195,16 @@ def save_files(d, part, name):
 
     # save index
     topickle(idx, INDEX_DIR + '{}/{}.pkl'.format(part, name))
+
+
+def feat_to_pctile(s=None, pc=None):
+    """
+    Converts byr hist counts to percentiles or visa versa.
+    :param pandas.Series s: counts
+    :param pandas.Series pc: percentiles
+    :return: Series
+    """
+    if pc is None:
+        pc = load_pctile(name=str(s.name))
+    v = pc.reindex(index=s.values, method='pad').values
+    return pd.Series(v, index=s.index, name=s.name)

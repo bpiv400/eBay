@@ -2,7 +2,8 @@ import numpy as np
 import matplotlib as mpl
 from matplotlib import pyplot as plt
 from matplotlib.ticker import FuncFormatter, MaxNLocator
-from plot.const import FONTSIZE, FIG_DIR
+from plot.const import FONTSIZE
+from paths import FIG_DIR
 
 plt.style.use('seaborn-colorblind')
 mpl.rcParams['axes.grid'] = True

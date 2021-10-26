@@ -1,4 +1,5 @@
 #!/bin/bash
+# trains the seller and buyer agents
 
 # seller models
 for DELTA in {0.0,0.75}

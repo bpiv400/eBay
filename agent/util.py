@@ -1,8 +1,7 @@
 import pandas as pd
 from utils import unpickle, load_file, load_data, safe_reindex, get_role
 from constants import IDX, EPS
-from paths import PARTS_DIR, SIM_DIR
-from agent.const import AGENT_DIR
+from paths import PARTS_DIR, SIM_DIR, AGENT_DIR
 from featnames import SLR, BYR, NORM, AUTO, INDEX, THREAD, CON, LOOKUP, X_OFFER, \
     START_PRICE, X_THREAD, OUTCOME_FEATS, TEST, SIM, IS_AGENT, CLOCK
 

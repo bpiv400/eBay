@@ -1,7 +1,4 @@
-from featnames import SLR, BYR, TRAIN_MODELS, TRAIN_RL, VALIDATION
-
-# for splitting data
-SHARES = {TRAIN_MODELS: 0.75, TRAIN_RL: 0.1, VALIDATION: 0.05}
+from featnames import SLR, BYR
 
 # listing window stays open this many days
 MAX_DAYS = 8
@@ -43,6 +40,3 @@ BYR_DROP = ['lstg_ct', 'bo_ct',
 
 # for precision issues
 EPS = 1e-8
-
-# number of concessions available to agent
-NUM_COMMON_CONS = 6

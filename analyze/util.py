@@ -132,6 +132,16 @@ def merge_dicts(d, d_other):
     return d
 
 
+def rename_series(d=None, name=None):
+    for k, v in d.items():
+        if type(v) is dict:
+            for key, value in v.items():
+                d[k][key] = value.rename(name)
+        else:
+            d[k] = v.rename(name)
+    return d
+
+
 def censor_threads(pdf=None, censor=4):
     # censor threads per listing
     pdf.loc[censor] = pdf[pdf.index >= censor].sum(axis=0)

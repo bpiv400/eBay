@@ -9,13 +9,8 @@ from nets.FeedForward import FeedForward
 from sim.Sample import get_batches
 from paths import LOG_DIR, MODEL_DIR
 from featnames import CENSORED_MODELS, BYR_HIST_MODEL
+from sim.const import LR_FACTOR, LR0, LR1, FTOL, AMSGRAD
 from utils import load_sizes
-
-LR_FACTOR = 0.1  # multiply learning rate by this factor when training slows
-LR0 = 1e-3  # initial learning rate
-LR1 = 1e-7  # stop training when learning rate is lower than this
-FTOL = 1e-2  # decrease learning rate when relative improvement in loss is less than this
-AMSGRAD = True  # use AMSgrad version of ADAM if True
 
 
 class SimTrainer:

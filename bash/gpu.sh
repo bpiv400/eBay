@@ -1,4 +1,5 @@
 #!/bin/bash
+# checks for an open GPU every minute
 
 GPU=0
 while true
