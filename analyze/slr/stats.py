@@ -1,5 +1,5 @@
 from agent.util import load_values, load_valid_data, get_sim_dir, get_sale_norm
-from utils import safe_reindex, load_data, load_feats
+from utils import safe_reindex, load_data
 from agent.const import DELTA_SLR
 from analyze.const import SLR_NAMES
 from constants import IDX
@@ -25,7 +25,7 @@ def print_sales_stats(data=None):
 def main():
     data = load_data()
     lstgs = data[LOOKUP].index
-    lstg_feats = load_feats('listings', lstgs=lstgs)[[SLR, STORE, SLR_BO_CT]]
+    lstg_feats = data[LOOKUP][[SLR, STORE, SLR_BO_CT]]
 
     # correlation between store and experience
     df = lstg_feats.groupby(SLR).max()

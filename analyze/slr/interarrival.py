@@ -3,7 +3,7 @@ import pandas as pd
 from scipy.optimize import minimize
 from agent.util import get_sim_dir, load_valid_data
 from analyze.util import kreg2, save_dict
-from utils import load_data, load_feats, safe_reindex
+from utils import load_data, safe_reindex
 from agent.const import DELTA_SLR
 from constants import DAY
 from analyze.const import NORM1_DIM_SHORT
@@ -82,7 +82,7 @@ def run_slr():
 
     # observed sellers, by store
     data = load_valid_data(byr=False, minimal=True)
-    store = load_feats('listings', lstgs=data[LOOKUP].index)[STORE]
+    store = data[LOOKUP][STORE]
     obs = {'nostore': {k: safe_reindex(v, idx=store[~store].index)
                        for k, v in data.items()},
            'store': {k: safe_reindex(v, idx=store[store].index)

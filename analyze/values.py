@@ -1,7 +1,7 @@
 import numpy as np
 from agent.util import load_values
 from analyze.util import kdens_wrapper, ll_wrapper, save_dict
-from utils import unpickle, load_data, load_feats
+from utils import unpickle, load_data
 from agent.const import DELTA_SLR
 from analyze.const import LOG10_BO_DIM
 from paths import SIM_DIR
@@ -24,8 +24,7 @@ def main():
 
     # seller experience
     print('Seller')
-    slrbo = load_feats('listings').loc[data[LOOKUP].index, SLR_BO_CT]
-    x = np.log10(slrbo)  # log seller experience
+    x = np.log10(data[LOOKUP][SLR_BO_CT])  # log seller experience
 
     d['simple_slrbo'] = slr_plot(x=x, y=vals)
     df = unpickle(SIM_DIR + '{}/values.pkl'.format(TEST))

@@ -1,10 +1,11 @@
 import numpy as np
 import pandas as pd
-from utils import load_feats
+from utils import unpickle
+from paths import FEATS_DIR
 
 
 # concessions for agent to use
-COMMON_CONS = load_feats('common_cons')
+COMMON_CONS = unpickle(FEATS_DIR + 'common_cons.pkl')
 NUM_COMMON_CONS = len(COMMON_CONS[1])
 
 AGENT_CONS = COMMON_CONS.copy()

@@ -1,9 +1,9 @@
 import pandas as pd
 from sklearn.manifold import TSNE
 from analyze.util import save_dict
-from utils import unpickle, load_feats
+from utils import unpickle, load_data
 from paths import FEATS_DIR
-from featnames import BYR, SLR, LEAF, META
+from featnames import BYR, SLR, LEAF, META, LOOKUP
 
 NO_LABEL = ['Everything Else', 'Travel', 'Pet Supplies']
 META_LABELS = {1: 'Collectibles',
@@ -48,7 +48,7 @@ def create_df(s=None, leaf=None, tsne=None, reindex=True):
 
 
 def do_tsne():
-    cats = load_feats('listings')[[META, LEAF]]
+    cats = load_data()[LOOKUP][[META, LEAF]]
     leaf_ct = cats.groupby(LEAF).count().squeeze().rename('count')
 
     # labels

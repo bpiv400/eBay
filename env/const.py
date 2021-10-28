@@ -1,11 +1,12 @@
-from utils import load_feats
+from utils import unpickle
 from featnames import CON, DELAY, MSG, ALL_OFFER_FEATS, CLOCK_FEATS, TIME_FEATS, \
     DAYS, EXP, NORM, COMMON, AUTO, REJECT, BYR_OFFERS_RECENT, THREAD_COUNT
+from paths import FEATS_DIR
 
 INTERACT = False
 
 # holiday and day-of-week indicators, indexed by days since START
-DATE_FEATS_ARRAY = load_feats('date_feats')
+DATE_FEATS_ARRAY = unpickle(FEATS_DIR + 'date_feats.pkl')
 
 # outcome tuple names
 SALE = 'sale'
@@ -13,7 +14,7 @@ DUR = 'dur'
 PRICE = 'price'
 
 # composer maps
-OFFER_MAPS = {t: 'offer{}'.format(t) for t in range(1, 8)}
+OFFER_MAPS = {t: f'offer{t}' for t in range(1, 8)}
 
 # offer response indicators
 ACC_IND = 0

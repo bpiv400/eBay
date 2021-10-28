@@ -2,7 +2,7 @@ import argparse
 from analyze.util import merge_dicts, cdf_days, cdf_sale, msg_dist, \
     arrival_dist, hist_dist, delay_dist, con_dist, num_threads, \
     num_offers, interarrival_dist, norm_dist, save_dict, rename_series
-from utils import load_data, load_file, load_feats
+from utils import load_data, load_file
 from analyze.const import COLLECTIBLES
 from featnames import X_THREAD, X_OFFER, TEST, SIM, LOOKUP, STORE, START_PRICE, META
 
@@ -39,8 +39,7 @@ def get_lstgs():
         return None, ''
 
     # restrict listings
-    lstgs = load_file(TEST, LOOKUP).index
-    feats = load_feats('listings', lstgs=lstgs)
+    feats = load_file(TEST, LOOKUP)
     if subset == 'store':
         lstgs = feats[feats[STORE]]
     elif subset == 'no_store':

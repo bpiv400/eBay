@@ -5,7 +5,7 @@ import pandas as pd
 import torch
 import numpy as np
 from constants import DAY, MAX_DELAY_TURN, MAX_DELAY_ARRIVAL, OUTCOME_SIMS
-from paths import PARTS_DIR, SIM_DIR, PCTILE_DIR, FEATS_DIR, INPUT_DIR
+from paths import PARTS_DIR, SIM_DIR, PCTILE_DIR, INPUT_DIR
 from featnames import LOOKUP, X_THREAD, X_OFFER, CLOCK, BYR, SLR, AGENT_PARTITIONS, \
     PARTITIONS, LSTG, SIM, TEST
 
@@ -182,25 +182,6 @@ def safe_reindex(obj=None, idx=None, fill_value=None, dropna=False):
         obj = obj.squeeze()
 
     return obj
-
-
-def load_feats(name, lstgs=None, fill_zero=False):
-    """
-    Loads dataframe of features (and reindexes).
-    :param str name: filename
-    :param lstgs: listings to restrict to
-    :param bool fill_zero: fill missings with 0's if True
-    :return: dataframe of features
-    """
-    df = unpickle(FEATS_DIR + '{}.pkl'.format(name))
-    if lstgs is None:
-        return df
-    kwargs = {'index': lstgs}
-    if len(df.index.names) > 1:
-        kwargs['level'] = LSTG
-    if fill_zero:
-        kwargs['fill_value'] = 0.
-    return df.reindex(**kwargs)
 
 
 def load_inputs(part=None, name=None):
