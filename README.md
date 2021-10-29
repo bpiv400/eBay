@@ -1,4 +1,4 @@
-# eBay-processing
+# eBay
 Replication files for "Optimal Bargaining on eBay".
 
 Order of operations:
