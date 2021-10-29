@@ -1,5 +1,4 @@
-# eBay
-Replication files for "Optimal Bargaining on eBay".
+# Replication files for "Optimal Bargaining on eBay".
 
 Order of operations:
 1. Clone this repo.
